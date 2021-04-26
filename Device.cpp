@@ -166,7 +166,7 @@ namespace Device {
 
 	void RTLSDR::Play()
 	{
-		Control::Play(); Start();
+		Control::Play(); 
 
 		rtlsdr_reset_buffer(dev);
 		async_thread = std::thread(RTLSDR::start_async_static, this);
@@ -181,7 +181,7 @@ namespace Device {
 			async_thread.join();
 		}
 
-		Stop(); Control::Pause();
+		Control::Pause();
 	}
 
 	void RTLSDR::getAvailableSampleRates(std::vector<uint32_t>& rates)
@@ -271,7 +271,7 @@ namespace Device {
 
 	void AIRSPYHF::Play()
 	{
-		Control::Play(); Start();
+		Control::Play(); 
 
 		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS)
 			throw "AIRSPYHF: Cannot open device";
@@ -284,7 +284,7 @@ namespace Device {
 		airspyhf_stop(dev);
 		streaming = false;
 
-		Stop(); Control::Pause();
+		Control::Pause();
 	}
 
 	void AIRSPYHF::getAvailableSampleRates(std::vector<uint32_t> &rates)

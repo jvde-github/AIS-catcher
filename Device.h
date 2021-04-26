@@ -100,8 +100,8 @@ namespace Device{
 	public:
 
 		// Control
-		void Play() { Control::Play(); Start(); }
-		void Pause() { Stop(); Control::Pause(); }
+		void Play() { Control::Play(); }
+		void Pause() { Control::Pause(); }
 
 		void setSampleRate(uint32_t s) { }
 
@@ -134,8 +134,8 @@ namespace Device{
 	public:
 
 		// Control
-		void Play() { Control::Play(); Start(); }
-		void Pause() { Stop(); Control::Pause(); }
+		void Play() { Control::Play(); }
+		void Pause() { Control::Pause(); }
 
 		bool isCallback() { return false; }
 		bool isStreaming();

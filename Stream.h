@@ -32,9 +32,6 @@ class StreamIn
 {
 public:
 
-	virtual void Start() {}
-	virtual void Stop() {}
-
 	virtual void Receive(const T* data, int len) {}
 	virtual void Receive(T* data, int len) 
 	{ 
@@ -62,15 +59,6 @@ public:
 			for (auto c : connections) c->Receive((const S*)data, len);
 	}
 
-	void Start()
-	{
-		for (auto c : connections) c->Start();
-	}
-	void Stop()
-	{
-		for (auto c : connections) c->Stop();
-	}
-
 	void Connect(StreamIn<S>* s)
 	{
 		connections.push_back(s);
@@ -83,16 +71,6 @@ class StreamOut
 public:
 
 	Connection<S> out;
-
-	void Start()
-	{
-		out.Start();
-	}
-
-	void Stop()
-	{
-		out.Stop();
-	}
 
 	void Send(const S* data, int len)
 	{
@@ -110,19 +88,6 @@ class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T>
 {
 public:
 
-	virtual void Start()
-	{
-		StreamIn<T>::Start();
-		StreamOut<S>::Start();
-	}
-
-	virtual void Stop()
-	{
-		StreamOut<S>::Stop();
-		StreamIn<T>::Stop();
-	}
-
-	
 	void sendOut(const S* data, int len)
 	{
 		StreamOut<S>::Send(data, len);
