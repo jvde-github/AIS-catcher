@@ -12,7 +12,7 @@ use: AIS-catcher [options]
 	[-q surpress NMEA messages to screen (default: false)]
 	[-p:xx frequency offset (reserved for future version)]
 	[-u UDP address and port (default: off)]
-	[-u display this message and terminate (default: false)]
+	[-h display this message and terminate (default: false)]
 	[-c run challenger model - for development purposes (default: off)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 
