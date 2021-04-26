@@ -66,9 +66,9 @@ int checkDigitSequence(std::string in, int min, int max, int repeat, char sep)
         {
                 n = 0;
                 while(in[i] >= '0' && in[i] <= '9') n = n * 10 + (int)(in[i++]-'0');
-                if(i == 0 || n < min || n > max) return -1;
+                if(n < min || n > max) return -1;
 
-        } while(--repeat > 0 && in[i++] == sep);
+        } while(--repeat > 0 && i < in.length()-1 && in[i++] == sep);
 
         if( repeat != 0 || i < in.length() ) return -1;
 
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 					int s = checkDigitSequence(arg1,0,1536000,1,' ');
 					if(s == -1)
 					{
-						std::cerr << "Error: invalid sample rate.";
+						std::cerr << "Error: invalid sample rate:" << arg1 << std::endl;
 						return -1;
 					}
 					sample_rate = s;

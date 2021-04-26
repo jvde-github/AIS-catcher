@@ -213,6 +213,7 @@ namespace Device {
 		return rtlsdr_get_device_count();
 	}
 
+
 #endif
 
 
