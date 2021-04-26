@@ -66,15 +66,10 @@ namespace AIS
 
 	class ModelStandard : public Model
 	{
-		IO::SampleCounter<CFLOAT32> statistics;
-
-		IO::SampleCounter<CFLOAT32> stat1;
-		IO::SampleCounter<NMEA> stat2;
-
 		DSP::Downsample3Complex DS3;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
-		DSP::FilterCIC5 filter_cic5_a, filter_cic5_b;
+		DSP::FilterCIC5 F_a, F_b;
 
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;
@@ -97,15 +92,10 @@ namespace AIS
 
 	class ModelChallenge : public Model
 	{
-		IO::SampleCounter<CFLOAT32> statistics;
-
-		IO::SampleCounter<CFLOAT32> stat1;
-		IO::SampleCounter<NMEA> stat2;
-
 		DSP::Downsample3Complex DS3;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
-		DSP::FilterCIC5 filter_cic5_a, filter_cic5_b;
+		DSP::FilterCIC5 F_a, F_b;
 
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;

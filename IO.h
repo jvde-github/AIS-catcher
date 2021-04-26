@@ -37,7 +37,8 @@ SOFTWARE.
 
 namespace IO
 {
-	template<typename T> class SampleCounter : public StreamIn<T>
+	template<typename T> 
+	class SampleCounter : public StreamIn<T>
 	{
 		uint64_t count = 0;
 		uint64_t lastcount = 0;
@@ -133,5 +134,4 @@ namespace IO
 
 		~UDP() { closeWSA(); }
 	};
-
 }

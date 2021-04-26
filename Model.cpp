@@ -45,23 +45,23 @@ namespace AIS
 		{
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		case 768000:
 			physical >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		case 384000:
 			physical >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		case 288000:
 			physical >> DS3;
-			DS3 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS3 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in standard model.";
@@ -94,28 +94,27 @@ namespace AIS
 		{
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		case 768000:
 			physical >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		case 384000:
 			physical >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		case 288000:
 			physical >> DS3;
-			DS3 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS3 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in challenger model.";
 		}
-
 
 		DEC_a.DecoderStateMessage.Connect(sampler_a);
 		DEC_b.DecoderStateMessage.Connect(sampler_b);

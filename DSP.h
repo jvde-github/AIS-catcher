@@ -20,7 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
 #pragma once
 
 #include <fstream>
@@ -208,6 +207,4 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 		void setDCShift(float s) { DC_shift = s; }
 	};
-
-
 }
