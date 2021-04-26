@@ -57,7 +57,7 @@ namespace DSP
 #define MA2(idx)		h##idx = z; z += r##idx;
 
 // CIC5 downsample
-	
+
 	void Downsample2CIC5::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 2 == 0);
@@ -77,7 +77,7 @@ namespace DSP
 
 		sendOut(output.data(), len / 2);
 	}
-	
+
 	// FilterCIC5
 
 	void FilterCIC5::Receive(const CFLOAT32* data, int len)
@@ -87,7 +87,7 @@ namespace DSP
 		assert(len % 2 == 0);
 
 		if (output.size() < len) output.resize(len);
-		
+
 		for (int i = 0; i < len; i += 2)
 		{
 			z = data[i];
@@ -107,7 +107,7 @@ namespace DSP
 		assert(len % 3 == 0);
 
 		if (output.size() < len/3) output.resize(len/3);
-		
+
 		for (j = i = 0, ptr = 21 - 1; i < 21 - 1; i += 3)
 		{
 			buffer[ptr++] = data[i];
@@ -143,7 +143,7 @@ namespace DSP
 		{
 			buffer[ptr++] = data[i];
 		}
-		
+
 		sendOut(output.data(), len / 3);
 	}
 
