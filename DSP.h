@@ -197,18 +197,6 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-	class FMDemodulationToInt : public SimpleStreamInOut<CFLOAT32, S16>
-	{
-		std::vector <S16> output;
-		CFLOAT32 prev = 0.0;
-		float DC_shift = 0.0;
-
-	public:
-
-		void Receive(const CFLOAT32* data, int len);
-		void setDCShift(float s) { DC_shift = s; }
-	};
-
 	class FMDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
 	{
 		std::vector <FLOAT32> output;
@@ -222,82 +210,4 @@ namespace DSP
 	};
 
 
-	template<typename T> class SampleCounter : public StreamIn<T>
-	{
-		uint64_t count = 0;
-		uint64_t lastcount = 0;
-		float rate = 0.0f;
-
-		high_resolution_clock::time_point time_lastupdate;
-
-	public:
-
-		SampleCounter() : StreamIn<T>()
-		{
-			resetStatistic();
-		}
-
-		Connection<S16> out;
-
-		void Receive(const T* data, int len)
-		{
-			count += len;
-		}
-
-		uint64_t getCount() { return count; }
-
-		float getRate() 
-		{ 
-			auto timeNow = high_resolution_clock::now();
-			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
-
-			rate += 0.9f * ( (count - lastcount) / seconds - rate);
-			time_lastupdate = timeNow;
-			lastcount = count;
-
-			return rate; 
-		}
-		void resetStatistic() 
-		{ 
-			count = 0; 
-			time_lastupdate = high_resolution_clock::now();
-		}
-	};
-
-	template <typename T>
-	class DumpFile : public StreamIn<T>
-	{
-		std::ofstream file;
-		std::string filename;
-
-	public:
-
-		~DumpFile()
-		{
-			if (file.is_open())
-				file.close();
-		}
-		void openFile(std::string fn)
-		{
-			filename = fn;
-			file.open(filename, std::ios::out | std::ios::binary);
-		}
-
-		void Receive(const T* data, int len)
-		{
-			file.write((char*)data, len * sizeof(T));
-		}
-	};
-
-	class DumpScreen : public StreamIn<NMEA>
-	{
-	public:
-
-		void Receive(const NMEA* data, int len)
-		{
-			for (int i = 0; i < len; i++)
-				for(auto s : data[i].sentence)
-					std::cout << s << " (" << data[i].msg << " , " << data[i].mmsi << ")" << std::endl;
-		}
-	};
 }

@@ -29,6 +29,7 @@ SOFTWARE.
 #include "Signal.h"
 #include "Device.h"
 #include "DSP.h"
+#include "IO.h"
 #include "Model.h"
 #include "AIS.h"
 #include "Filters.h"
@@ -89,13 +90,15 @@ int main(int argc, char* argv[])
 	uint64_t handle = 0;
 
 	Device::Type input_type = Device::Type::NONE;
+	IO::UDP udp;
+
 	std::string filename_in = "";
 	std::string filename_out = "";
-	std::string udp_address = "";
+	std::string udp_host = "";
 	std::string udp_port = "";
 
 	std::vector<uint32_t> model_rates{ 288000, 384000, 768000, 1536000 };
-	std::vector<Model*> model;
+	std::vector<AIS::Model*> model;
 
 	try
 	{
@@ -120,8 +123,10 @@ int main(int argc, char* argv[])
 		while (ptr < argc)
 		{
 			std::string param = std::string(argv[ptr]);
-			bool has_arg = ptr < argc - 1 && argv[ptr + 1][0] != '-';
-			std::string arg = has_arg ? std::string(argv[ptr + 1]) : "";
+			bool has_arg1 = ptr < argc - 1 && argv[ptr + 1][0] != '-';
+			std::string arg1 = has_arg1 ? std::string(argv[ptr + 1]) : "";
+			bool has_arg2 = ptr < argc - 2 && argv[ptr + 2][0] != '-';
+			std::string arg2 = has_arg2 ? std::string(argv[ptr + 2]) : "";
 
 			if (param[0] != '-')
 			{
@@ -132,7 +137,7 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				sample_rate = std::stoi(arg);
+				sample_rate = std::stoi(arg1);
 				ptr++;
 				break;
 			case 'v':
@@ -149,12 +154,12 @@ int main(int argc, char* argv[])
 				break;
 			case 'w':
 				input_type = Device::Type::WAVFILE;
-				filename_in = arg;
+				filename_in = arg1;
 				ptr++;
 				break;
 			case 'r':
 				input_type = Device::Type::RAWFILE;
-				filename_in = arg;
+				filename_in = arg1;
 				ptr++;
 				break;
 			case 'l':
@@ -177,6 +182,11 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'u':
+				udp_host = arg1;
+				udp_port = arg2;
+				ptr += 2;
+				break;
+			case 'h':
 				Usage();
 				return 0;
 
@@ -215,7 +225,7 @@ int main(int argc, char* argv[])
 		// RTLSDR conversion from usigned char to float
 		DSP::ConvertCU8ToCFLOAT32 conversion;
 		Connection<CFLOAT32>* out = NULL; 
-		DSP::DumpScreen nmea_print;
+		IO::DumpScreen nmea_print;
 
 		switch (input_type)
 		{
@@ -296,17 +306,23 @@ int main(int argc, char* argv[])
 			if (!found) throw "Sampling rate not available for this device.";
 		}
 
-		std::vector<DSP::SampleCounter<NMEA>> statistics(2);
+		std::vector<IO::SampleCounter<NMEA>> statistics(2);
 
-		Model *m = new ModelStandard(sample_rate, control, out);
+		AIS::Model *m = new AIS::ModelStandard(sample_rate, control, out);
 		m->BuildModel(timer_on);
 		if(verbose) m->Output() >> statistics[0];
+
+		if(udp_host != "")
+		{
+			udp.open(udp_host,udp_port);
+			m->Output() >> udp;
+		}
 		if(NMEA_to_screen) m->Output() >> nmea_print;
 		model.push_back(m);
 
 		if (run_challenger)
 		{
-			m = new ModelChallenge(sample_rate, control, out);
+			m = new AIS::ModelChallenge(sample_rate, control, out);
 			m->BuildModel(timer_on);
 			if (verbose) m->Output() >> statistics[1];
 			model.push_back(m);
@@ -345,10 +361,10 @@ int main(int argc, char* argv[])
 		}
 
 		if(timer_on)
-			for (Model* m : model)
+			for (AIS::Model* m : model)
 				std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
 
-		for(Model *m : model) delete m;
+		for(AIS::Model *m : model) delete m;
 		if(control) delete control;
 	}
 	catch (const char * msg)

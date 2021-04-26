@@ -57,13 +57,13 @@ namespace AIS
 
 	bool Decoder::CRC16(int len)
 	{
-		const uint16_t check = ~0x0F47;
+		const uint16_t checksum = ~0x0F47;
  		uint16_t CRC = 0xFFFF;
 
  		for(int i = 0; i < len; i++)
  			CRC = (DataFCS_Bits[i] ^ CRC) & 1 ? (CRC >> 1) ^ 0x8408 : CRC >> 1;
 
-		return CRC == check;
+		return CRC == checksum;
 	}
 
 	void Decoder::setByteData(int len)

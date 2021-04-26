@@ -22,101 +22,104 @@ SOFTWARE.
 
 #include "Model.h"
 
-void ModelStandard::BuildModel(bool timerOn)
+namespace AIS
 {
-	setName("AIS Catcher v0.01");
-
-	const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
-
-	FR_a.setTaps(Filters::Receiver);
-	FR_b.setTaps(Filters::Receiver);
-
-	DEC_a.setChannel('A');
-	DEC_b.setChannel('B');
-
-	Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
-
-	FM_a.setDCShift(+FrequencyShift);
-	FM_b.setDCShift(-FrequencyShift);
-
-	switch (sample_rate)
+	void ModelStandard::BuildModel(bool timerOn)
 	{
-	case 1536000:
-		physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-		DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	case 768000:
-		physical >> DS2_3 >> DS2_2 >> DS2_1;
-		DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	case 384000:
-		physical >> DS2_2 >> DS2_1;
-		DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	case 288000:
-		physical  >> DS3;
-		DS3 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS3 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	default:
-		throw "Internal error: sample rate not supported in standard model.";
+		setName("AIS Catcher v0.01");
+
+		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
+
+		FR_a.setTaps(Filters::Receiver);
+		FR_b.setTaps(Filters::Receiver);
+
+		DEC_a.setChannel('A');
+		DEC_b.setChannel('B');
+
+		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
+
+		FM_a.setDCShift(+FrequencyShift);
+		FM_b.setDCShift(-FrequencyShift);
+
+		switch (sample_rate)
+		{
+		case 1536000:
+			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
+			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		case 768000:
+			physical >> DS2_3 >> DS2_2 >> DS2_1;
+			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		case 384000:
+			physical >> DS2_2 >> DS2_1;
+			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		case 288000:
+			physical >> DS3;
+			DS3 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS3 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		default:
+			throw "Internal error: sample rate not supported in standard model.";
+		}
+
+		DEC_a.DecoderStateMessage.Connect(sampler_a);
+		DEC_b.DecoderStateMessage.Connect(sampler_b);
+
+		return;
 	}
 
-	DEC_a.DecoderStateMessage.Connect(sampler_a);
-	DEC_b.DecoderStateMessage.Connect(sampler_b);
-
-	return;
-}
-
-void ModelChallenge::BuildModel(bool timerOn)
-{
-	setName("Challenger model");
-
-	const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
-
-	FR_a.setTaps(Filters::Receiver);
-	FR_b.setTaps(Filters::Receiver);
-
-	DEC_a.setChannel('A');
-	DEC_b.setChannel('B');
-
-	Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
-
-	FM_a.setDCShift(+FrequencyShift);
-	FM_b.setDCShift(-FrequencyShift);
-
-	switch (sample_rate)
+	void ModelChallenge::BuildModel(bool timerOn)
 	{
-	case 1536000:
-		physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-		DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	case 768000:
-		physical >> DS2_3 >> DS2_2 >> DS2_1;
-		DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	case 384000:
-		physical >> DS2_2 >> DS2_1;
-		DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	case 288000:
-		physical >> DS3;
-		DS3 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		DS3 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-		break;
-	default:
-		throw "Internal error: sample rate not supported in challenger model.";
+		setName("Challenger model");
+
+		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
+
+		FR_a.setTaps(Filters::Receiver);
+		FR_b.setTaps(Filters::Receiver);
+
+		DEC_a.setChannel('A');
+		DEC_b.setChannel('B');
+
+		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
+
+		FM_a.setDCShift(+FrequencyShift);
+		FM_b.setDCShift(-FrequencyShift);
+
+		switch (sample_rate)
+		{
+		case 1536000:
+			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
+			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		case 768000:
+			physical >> DS2_3 >> DS2_2 >> DS2_1;
+			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		case 384000:
+			physical >> DS2_2 >> DS2_1;
+			DS2_1 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS2_1 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		case 288000:
+			physical >> DS3;
+			DS3 >> ROT_a >> DS2_a >> filter_cic5_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+			DS3 >> ROT_b >> DS2_b >> filter_cic5_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		default:
+			throw "Internal error: sample rate not supported in challenger model.";
+		}
+
+
+		DEC_a.DecoderStateMessage.Connect(sampler_a);
+		DEC_b.DecoderStateMessage.Connect(sampler_b);
+
+		return;
 	}
-
-
-	DEC_a.DecoderStateMessage.Connect(sampler_a);
-	DEC_b.DecoderStateMessage.Connect(sampler_b);
-
-	return;
 }
