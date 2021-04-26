@@ -55,7 +55,6 @@ namespace IO
 	{
 #ifdef WIN32
 		WSACleanup();
-
 #endif
 	}
 	void UDP::open(std::string host, std::string portname)
