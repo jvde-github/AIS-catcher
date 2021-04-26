@@ -73,5 +73,5 @@ If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make```
 To do
 -----
 
-PPU correction, UDP output
+PPU correction
 
