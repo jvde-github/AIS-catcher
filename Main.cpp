@@ -63,18 +63,18 @@ bool rateDefined(uint32_t s, std::vector<uint32_t> rates)
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
-        std::cerr << "\t[-s sample rate in Hz (default: based on SDR device)]" << std::endl;
-        std::cerr << "\t[-d:x device index (default: 0)]" << std::endl;
-        std::cerr << "\t[-v enable verbose mode (default: false)]" << std::endl;
-        std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
-        std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
-        std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
-        std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
-        std::cerr << "\t[-p:xx frequency offset (reserved for future version)]" << std::endl;
-        std::cerr << "\t[-u UDP address and host (reserved for future version)]" << std::endl;
-        std::cerr << "\t[-u display this message and terminate (default: false)]" << std::endl;
-        std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
-        std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
+	std::cerr << "\t[-s sample rate in Hz (default: based on SDR device)]" << std::endl;
+	std::cerr << "\t[-d:x device index (default: 0)]" << std::endl;
+	std::cerr << "\t[-v enable verbose mode (default: false)]" << std::endl;
+	std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
+	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
+	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
+	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
+	std::cerr << "\t[-p:xx frequency offset (reserved for future version)]" << std::endl;
+	std::cerr << "\t[-u UDP address and host (reserved for future version)]" << std::endl;
+	std::cerr << "\t[-u display this message and terminate (default: false)]" << std::endl;
+	std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
+	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -84,8 +84,8 @@ int main(int argc, char* argv[])
 	bool list_devices = false;
 	bool run_challenger = false;
 	bool verbose = false;
-	bool timer_on = true;
-	bool NMEA_to_screen = false;
+	bool timer_on = false;
+	bool NMEA_to_screen = true;
 	uint64_t handle = 0;
 
 	Device::Type input_type = Device::Type::NONE;
@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
 		if(NMEA_to_screen) m->Output() >> nmea_print;
 		model.push_back(m);
 
-		if (true)
+		if (run_challenger)
 		{
 			m = new ModelChallenge(sample_rate, control, out);
 			m->BuildModel(timer_on);
@@ -344,10 +344,10 @@ int main(int argc, char* argv[])
 
 		}
 
-		for (Model* m : model)
-		{
-			std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
-		}
+		if(timer_on)
+			for (Model* m : model)
+				std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
+
 		for(Model *m : model) delete m;
 		if(control) delete control;		
 	}
