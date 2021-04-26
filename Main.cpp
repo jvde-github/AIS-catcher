@@ -82,10 +82,10 @@ int main(int argc, char* argv[])
 	int sample_rate = 0;
 	int input_device = -1;
 	bool list_devices = false;
-	bool run_challenger = true;
+	bool run_challenger = false;
 	bool verbose = false;
 	bool timer_on = true;
-	bool NMEA_to_screen = true;
+	bool NMEA_to_screen = false;
 	uint64_t handle = 0;
 
 	Device::Type input_type = Device::Type::NONE;
