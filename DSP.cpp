@@ -204,10 +204,7 @@ namespace DSP
 	{
 		assert(len % 4 == 0);
 
-		if (output.size() < len)
-		{
-			output.resize(len);
-		}
+		if (output.size() < len) output.resize(len);
 
 		for (int i = 0; i < output.size(); i += 4)
 		{
@@ -230,10 +227,7 @@ namespace DSP
 	{
 		assert(len % 4 == 0);
 
-		if (output.size() < len)
-		{
-			output.resize(len);
-		}
+		if (output.size() < len) output.resize(len);
 
 		for (int i = 0; i < output.size(); i += 4)
 		{
