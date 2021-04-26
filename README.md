@@ -17,6 +17,11 @@ use: AIS-catcher [options]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 
 ```
+
+Releases
+--------
+A release in binary format for Windows x64 (including required libraries) can be found in the release section. For Linux systems, compilation instructions are below.
+
 Compiling
 ---------
 Make sure you have the following dependencies:
