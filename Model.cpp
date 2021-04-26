@@ -26,7 +26,7 @@ namespace AIS
 {
 	void ModelStandard::BuildModel(bool timerOn)
 	{
-		setName("AIS Catcher v0.01");
+		setName("AIS Catcher v0.00");
 
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
 
