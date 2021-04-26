@@ -20,7 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
 #include "AIS.h"
 
 // Sources:
@@ -29,7 +28,6 @@ SOFTWARE.
 
 namespace AIS
 {
-
 	Decoder::Decoder()
 	{
 		channel = 'A';

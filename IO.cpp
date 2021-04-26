@@ -29,7 +29,6 @@ SOFTWARE.
 #pragma comment(lib, "Ws2_32.lib")
 #endif
 
-
 namespace IO
 {
 	void UDP::Receive(const NMEA* data, int len)
@@ -55,7 +54,7 @@ namespace IO
 	void UDP::closeWSA()
 	{
 #ifdef WIN32
-			WSACleanup();
+		WSACleanup();
 
 #endif
 	}
