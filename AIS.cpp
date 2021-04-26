@@ -136,8 +136,6 @@ namespace AIS
 
 	void Decoder::ProcessData(int len)
 	{
-		int ptr;
-
 		if(CRC16(len))
 		{
 			// reverse bytes (HDLC format) and exclude 16 FCS bits
