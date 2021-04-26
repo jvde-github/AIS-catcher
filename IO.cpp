@@ -74,7 +74,7 @@ namespace IO
 
 		int code = getaddrinfo(host.c_str(), portname.c_str(), &h, &address);
 
-		if(code == -1 || address == NULL)
+		if(code != 0 || address == NULL)
 		{
 			throw "Failed to resolve remote socket address for UDP connection.";
 			return;

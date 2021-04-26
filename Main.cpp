@@ -61,6 +61,22 @@ bool rateDefined(uint32_t s, std::vector<uint32_t> rates)
 	return false;
 }
 
+int checkPattern(std::string in, int min, int max, int repeat, char sep)
+{
+        int i = 0, n;
+        do
+        {
+                n = 0;
+                while(in[i] >= '0' && in[i] <= '9') n = n * 10 + (int)(in[i++]-'0');
+                if(i == 0 || n < min || n > max) return -1;
+
+        } while(--repeat > 0 && in[i++] == sep);
+
+        if(repeat != 0) return -1;
+
+        return n;
+}
+
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
@@ -80,6 +96,7 @@ void Usage()
 
 int main(int argc, char* argv[])
 {
+
 	int sample_rate = 0;
 	int input_device = -1;
 	bool list_devices = false;
@@ -137,8 +154,16 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				sample_rate = std::stoi(arg1);
-				ptr++;
+				{
+					int s = checkPattern(arg1,0,1536000,1,' ');
+					if(s == -1)
+					{
+						std::cerr << "Error: invalid sample rate.";
+						return -1;
+					}
+					sample_rate = s;
+					ptr++;
+				}
 				break;
 			case 'v':
 				verbose = true;
@@ -182,8 +207,13 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'u':
-				udp_address = arg1;
-				udp_port = arg2;
+				udp_address = arg1; udp_port = arg2;
+
+				if(checkPattern(udp_address,0,255,4,'.')==-1 || checkPattern(udp_port,0,65535,1,' ')==-1)
+				{
+					std::cerr << "UDP address not valid." << std::endl;
+					return -1;
+				}
 				ptr += 2;
 				break;
 			case 'h':
@@ -208,6 +238,7 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 
+		// Select device
 		if (device_list.size() == 0 && input_type == Device::Type::NONE) throw "No input device available.";
 
 		if (input_type != Device::Type::RAWFILE && input_type != Device::Type::WAVFILE)
@@ -223,7 +254,7 @@ int main(int argc, char* argv[])
 		// Device and output stream of device;
 		Device::Control* control = NULL;
 		Connection<CFLOAT32>* out = NULL;
-		// RTLSDR conversion from usigned char to float
+		// Required for RTLSDR: conversion from usigned char to float
 		DSP::ConvertCU8ToCFLOAT32 conversion;
 
 		switch (input_type)
@@ -290,6 +321,7 @@ int main(int argc, char* argv[])
 		if (sample_rate != 0)
 		{
 			if (!rateDefined(sample_rate,model_rates)) throw "Sampling rate not supported in this version.";
+			if (!rateDefined(sample_rate,device_rates)) throw "Sampling rate not supported for this device.";
 		}
 		else
 		{
@@ -305,7 +337,6 @@ int main(int argc, char* argv[])
 			if (!found) throw "Sampling rate not available for this device.";
 		}
 
-		
 		std::vector<IO::SampleCounter<NMEA>> statistics(2);
 
 		AIS::Model *m = new AIS::ModelStandard(sample_rate, control, out);
@@ -324,6 +355,7 @@ int main(int argc, char* argv[])
 
 		model.push_back(m);
 
+		// Set up challenger model
 		if (run_challenger)
 		{
 			m = new AIS::ModelChallenge(sample_rate, control, out);
@@ -341,6 +373,7 @@ int main(int argc, char* argv[])
 		std::cerr << "Frequency (Hz)     : " << control->getFrequency() << std::endl;
 		std::cerr << "Sampling rate (Hz) : " << control->getSampleRate() << std::endl;
 
+		// Main loop
 		control->Play();
 
 		while(control->isStreaming())
