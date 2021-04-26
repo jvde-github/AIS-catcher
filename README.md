@@ -1,5 +1,5 @@
 # AIS-catcher - An AIS receiver for RTL-SDR dongles and the Airspy HF+
-This package will add the AIS-catcher command which is an AIS receiver for RTL SDR dongles and Airspy HF+ Software Defined Radio devices.
+This package will add the AIS-catcher command which is an AIS receiver for RTL SDR dongles and the Airspy HF+.
 
 ```
 use: AIS-catcher [options]
@@ -34,5 +34,10 @@ $ make
 $ ./AIS-catcher
 ```
 
-If you do not have an Airspy HF+ or an RTL-SDR dongle replace ```make``` in the above with ```make rtl-only``` or ```make airspyhf-only```.
+If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make``` in the above with ```make rtl-only``` or ```make airspyhf-only``` which will remove the dependency on the external libraries.
+
+To do
+-----
+
+PPU correction, UDP output
 
