@@ -18,6 +18,35 @@ use: AIS-catcher [options]
 
 ```
 
+Examples
+--------
+
+To list the devices available for AIS reception:
+```
+~/AIS-catcher$ ./AIS-catcher -l
+Available devices:
+-d:0 AIRSPY HF+  [3652A98081343F89]
+```
+
+To start AIS demodulation and print some occasional statistics, we can then use the following command:
+```
+./AIS-catcher -v
+```
+or
+```
+./AIS-catcher -d:0 -v
+```
+If succesful, NMEA messages will start to come in and appear on the screen. These can be surpressed with the opton ```-q```. 
+
+The following command reads input from an IQ input file recorded with ```rtl_sdr``` at a sampling rate of 288K Hz.
+```
+~/AIS-catcher$ ./AIS-catcher -r Signals/rtl/25042021_288000_1.raw -s 288000 -v -q 
+Frequency     : 162000000
+Sampling rate : 288000
+----------------------
+[AIS Catcher v0.01]	: 34 msgs at 388.054 msg/s
+```
+
 Releases
 --------
 A release in binary format for Windows x64 (including required libraries) can be found in the release section. For Linux systems, compilation instructions are below.
