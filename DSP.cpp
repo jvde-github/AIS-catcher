@@ -270,21 +270,4 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
-	void FMDemodulationToInt::Receive(const CFLOAT32* data, int len)
-	{
-		const float PI = 3.141592653589793f;
-
-		if (output.size() < len) output.resize(len);
-
-		for (int i = 0; i < len; i++)
-		{
-			float re = data[i].real() * prev.real() + data[i].imag() * prev.imag();
-			float im = -data[i].real() * prev.imag() + data[i].imag() * prev.real();
-
-			output[i] = (int)((atan2f(im, re) + DC_shift) / PI * (1 << 14));
-			prev = data[i];
-		}
-
-		sendOut(output.data(), len);
-	}
 }
