@@ -109,8 +109,8 @@ namespace AIS
 			if (nSentences > 1) sentence += std::to_string(SequenceNumber);
 			sentence += comma + channel + comma;
 
-			for (int i = 0; frame < AISletters && i < 56; i++)
-				sentence += NMEchar(getFrame(frame++, nBytes));
+			for (int i = 0; frame < AISletters && i < 56; i++, frame++)
+				sentence += NMEchar(getFrame(frame, nBytes));
 
 			if (nSentences > 1 && idx == nSentences - 1)
 				sentence += comma + std::to_string(AISletters * 6 - nBytes * 8);
