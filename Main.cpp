@@ -59,7 +59,7 @@ bool rateDefined(uint32_t s, std::vector<uint32_t> rates)
 	return false;
 }
 
-int checkPattern(std::string in, int min, int max, int repeat, char sep)
+int checkDigitSequence(std::string in, int min, int max, int repeat, char sep)
 {
         int i = 0, n;
         do
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 			{
 			case 's':
 				{
-					int s = checkPattern(arg1,0,1536000,1,' ');
+					int s = checkDigitSequence(arg1,0,1536000,1,' ');
 					if(s == -1)
 					{
 						std::cerr << "Error: invalid sample rate.";
@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
 			case 'u':
 				udp_address = arg1; udp_port = arg2;
 
-				if(checkPattern(udp_address,0,255,4,'.')==-1 || checkPattern(udp_port,0,65535,1,' ')==-1)
+				if(checkDigitSequence(udp_address,0,255,4,'.')==-1 || checkDigitSequence(udp_port,0,65535,1,' ')==-1)
 				{
 					std::cerr << "UDP address not valid." << std::endl;
 					return -1;
@@ -368,8 +368,11 @@ int main(int argc, char* argv[])
 		control->setAGCtoAuto();
 		control->setFrequency((int)(162e6));
 
-		std::cerr << "Frequency (Hz)     : " << control->getFrequency() << std::endl;
-		std::cerr << "Sampling rate (Hz) : " << control->getSampleRate() << std::endl;
+		if(verbose)
+		{
+			std::cerr << "Frequency (Hz)     : " << control->getFrequency() << std::endl;
+			std::cerr << "Sampling rate (Hz) : " << control->getSampleRate() << std::endl;
+		}
 
 		// Main loop
 		control->Play();
