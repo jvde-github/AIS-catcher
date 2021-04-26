@@ -349,12 +349,18 @@ int main(int argc, char* argv[])
 				std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
 
 		for(Model *m : model) delete m;
-		if(control) delete control;		
+		if(control) delete control;
 	}
 	catch (const char * msg)
 	{
-		std::cerr << msg << std::endl;		
+		std::cerr << msg << std::endl;
+		return -1;
 	}
-	
+	catch (const std::exception &m)
+	{
+    		std::cerr << "Exception, please check command line." << std::endl;
+		return -1;
+	}
+
 	return 0;
 }
