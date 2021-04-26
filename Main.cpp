@@ -72,7 +72,7 @@ int checkPattern(std::string in, int min, int max, int repeat, char sep)
 
         } while(--repeat > 0 && in[i++] == sep);
 
-        if(repeat != 0) return -1;
+        if( repeat != 0 || i < in.length() ) return -1;
 
         return n;
 }
