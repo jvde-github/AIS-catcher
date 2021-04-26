@@ -72,7 +72,7 @@ void Usage()
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-p:xx frequency offset (reserved for future version)]" << std::endl;
-	std::cerr << "\t[-u UDP address and host (reserved for future version)]" << std::endl;
+	std::cerr << "\t[-u UDP address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-u display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 
 	std::string filename_in = "";
 	std::string filename_out = "";
-	std::string udp_host = "";
+	std::string udp_address = "";
 	std::string udp_port = "";
 
 	std::vector<uint32_t> model_rates{ 288000, 384000, 768000, 1536000 };
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'u':
-				udp_host = arg1;
+				udp_address = arg1;
 				udp_port = arg2;
 				ptr += 2;
 				break;
@@ -220,12 +220,11 @@ int main(int argc, char* argv[])
 			handle = device_selected.getHandle();
 		}
 
-		// device and output stream of device;
+		// Device and output stream of device;
 		Device::Control* control = NULL;
+		Connection<CFLOAT32>* out = NULL;
 		// RTLSDR conversion from usigned char to float
 		DSP::ConvertCU8ToCFLOAT32 conversion;
-		Connection<CFLOAT32>* out = NULL; 
-		IO::DumpScreen nmea_print;
 
 		switch (input_type)
 		{
@@ -306,18 +305,23 @@ int main(int argc, char* argv[])
 			if (!found) throw "Sampling rate not available for this device.";
 		}
 
+		
 		std::vector<IO::SampleCounter<NMEA>> statistics(2);
 
 		AIS::Model *m = new AIS::ModelStandard(sample_rate, control, out);
 		m->BuildModel(timer_on);
 		if(verbose) m->Output() >> statistics[0];
 
-		if(udp_host != "")
+		// Attach output to model
+		if(udp_address != "")
 		{
-			udp.open(udp_host,udp_port);
+			udp.open(udp_address,udp_port);
 			m->Output() >> udp;
 		}
+
+		IO::DumpScreen nmea_print;
 		if(NMEA_to_screen) m->Output() >> nmea_print;
+
 		model.push_back(m);
 
 		if (run_challenger)
@@ -327,18 +331,19 @@ int main(int argc, char* argv[])
 			if (verbose) m->Output() >> statistics[1];
 			model.push_back(m);
 		}
+
 		// Set up Device
 
 		control->setSampleRate(sample_rate);
 		control->setAGCtoAuto();
 		control->setFrequency((int)(162e6));
 
-		std::cerr << "Frequency     : " << control->getFrequency() << std::endl;
-		std::cerr << "Sampling rate : " << control->getSampleRate() << std::endl;
+		std::cerr << "Frequency (Hz)     : " << control->getFrequency() << std::endl;
+		std::cerr << "Sampling rate (Hz) : " << control->getSampleRate() << std::endl;
 
 		control->Play();
 
-		for (int i = 0; (i < 3600 * 24 || !control->isCallback()) && control->isStreaming(); i++)
+		while(control->isStreaming())
 		{
 			if (control->isCallback()) // don't go to sleep in case we are reading from a file
 			{

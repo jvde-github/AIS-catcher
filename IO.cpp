@@ -72,7 +72,9 @@ namespace IO
 
 		startWSA();
 
-		if(getaddrinfo(host.c_str(), portname.c_str(), &h, &address) == -1)
+		int code = getaddrinfo(host.c_str(), portname.c_str(), &h, &address);
+
+		if(code == -1 || address == NULL)
 		{
 			throw "Failed to resolve remote socket address for UDP connection.";
 			return;
@@ -82,7 +84,7 @@ namespace IO
 
 		if (sock == -1)
 		{
-			throw "error creating socket for UDP.";
+			throw "Error creating socket for UDP.";
 		}
 
 	}
