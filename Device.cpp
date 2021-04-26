@@ -53,6 +53,8 @@ namespace Device {
 	{
 		rates.clear();
 		rates.push_back(288000);
+		rates.push_back(384000);
+		rates.push_back(768000);
 		rates.push_back(1536000);
 	}
 
