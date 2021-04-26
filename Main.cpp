@@ -38,16 +38,14 @@ SOFTWARE.
 MessageHub<SystemMessage> SystemMessages;
 
 #ifdef WIN32
-BOOL WINAPI consoleHandler(DWORD signal) {
-
-	if (signal == CTRL_C_EVENT)
-	{
-		SystemMessages.Send(SystemMessage::Stop);
-	}
+BOOL WINAPI consoleHandler(DWORD signal) 
+{
+	if (signal == CTRL_C_EVENT) SystemMessages.Send(SystemMessage::Stop);
 	return TRUE;
 }
 #else
-void consoleHandler(int signum) {
+void consoleHandler(int signal) 
+{
 	SystemMessages.Send(SystemMessage::Stop);
 }
 #endif
