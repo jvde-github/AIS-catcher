@@ -23,11 +23,7 @@ SOFTWARE.
 #include "Device.h"
 #include "Common.h"
 
-
 namespace Device {
-
-	//---------------------------------------
-	// Device
 
 	//---------------------------------------
 	// RAW CU8 file
