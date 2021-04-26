@@ -67,14 +67,14 @@ namespace Device {
 		uint32_t size;
 		uint32_t riffType;
 		uint32_t chunkID;
-		uint32_t chunkSize;	
+		uint32_t chunkSize;
 		uint16_t wFormatTag;
 		uint16_t wChannels;
-		uint32_t dwSamplesPerSec;	
+		uint32_t dwSamplesPerSec;
 		uint32_t dwAvgBytesPerSec;
 		uint16_t wBlockAlign;
 		uint16_t wBitsPerSample;
-		uint32_t dataID;	
+		uint32_t dataID;
 		uint32_t dataSize;
 	};
 
@@ -84,13 +84,14 @@ namespace Device {
 
 		file.read((char*)buffer.data(), buffer_size);
 
-		if (!file) 
+		if (!file)
 			Pause();
 		else
 			StreamOut<CFLOAT32>::Send((CFLOAT32*)buffer.data(), file.gcount() / (sizeof(CFLOAT32)));
-		
+
 		return streaming;
 	}
+
 	void WAVFile::openFile(std::string filename)
 	{
 		struct WAVFileFormat header;
