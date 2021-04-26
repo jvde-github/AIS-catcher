@@ -59,7 +59,7 @@ public:
 	float getTotalTiming() { return timer.getTotalTiming(); }
 };
 
-// Challenger model
+// Standard demodulation model
 
 class ModelStandard : public Model
 {
@@ -90,6 +90,7 @@ public:
 };
 
 
+// challenger model for development purposes
 
 class ModelChallenge: public Model
 {
