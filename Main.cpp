@@ -414,15 +414,11 @@ int main(int argc, char* argv[])
 
 		for(AIS::Model *m : model) delete m;
 		if(control) delete control;
+
 	}
 	catch (const char * msg)
 	{
 		std::cerr << msg << std::endl;
-		return -1;
-	}
-	catch (const std::exception &m)
-	{
-    		std::cerr << "Exception, please check command line." << std::endl;
 		return -1;
 	}
 
