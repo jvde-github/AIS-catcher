@@ -106,9 +106,6 @@ namespace AIS
 		DSP::PLLSampler sampler_a, sampler_b;
 		AIS::Decoder DEC_a, DEC_b;
 
-		IO::DumpFile<CFLOAT32> file_in;
-		IO::DumpFile<CFLOAT32> file_out;
-
 	public:
 
 		ModelChallenge(int s, Device::Control* c, Connection<CFLOAT32>* i) : Model(s, c, i) {}

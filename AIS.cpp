@@ -36,7 +36,7 @@ namespace AIS
 		DataFCS.resize(MaxBits / 8, 0);
 	}
 
-	char Decoder::NMEchar(int i)
+	char Decoder::NMEAchar(int i)
 	{
 		return i < 40 ? (char)(i + 48) : (char)(i + 56);
 	}
@@ -45,7 +45,7 @@ namespace AIS
 	{
 		state = s;
 		position = pos;
-		bit_stuff_count = 0;
+		one_seq_count = 0;
 
 		if (s == State::TRAINING)
 			DecoderStateMessage.Send(DecoderMessage::StartTraining);
@@ -67,10 +67,10 @@ namespace AIS
 	void Decoder::setByteData(int len)
 	{
 		// reverse bytes (HDLC format)
-		for (int i = 0, ptr = 0; i < len/8; i++)
+		for (int i = 0, ptr = 0; i < (len+7)/8; i++)
  		{
 			DataFCS[i] = 0;
-			for (int j = 0; j < 8; j++, ptr++)
+			for (int j = 0; j < 8 && ptr < len; j++, ptr++)
 				DataFCS[i] |= (DataFCS_Bits[ptr] << j);
 		}
 
@@ -108,7 +108,7 @@ namespace AIS
 			sentence += comma + channel + comma;
 
 			for (int i = 0; frame < AISletters && i < 56; i++, frame++)
-				sentence += NMEchar(getFrame(frame, nBytes));
+				sentence += NMEAchar(getFrame(frame, nBytes));
 
 			if (nSentences > 1 && idx == nSentences - 1)
 				sentence += comma + std::to_string(AISletters * 6 - nBytes * 8);
@@ -155,36 +155,14 @@ namespace AIS
 			// At this stage: "position" bits into sequence, inspect the next bit:
 			switch (state)
 			{
-			case State::DATAFCS:
-				DataFCS_Bits[position++] = Bit;
-
-				if (Bit == 1)
-				{
-					if (bit_stuff_count == 5)
-					{
-						ProcessData(position - 7);
-						NextState(State::TRAINING, 0);
-					}
-					else
-						bit_stuff_count++;
-				}
-				else
-				{
-					if (bit_stuff_count == 5) position--;
-					bit_stuff_count = 0;
-				}
-
-				if (position == MaxBits) NextState(State::TRAINING, 0);
-				break;
-
 			case State::TRAINING:
 				if (Bit != lastBit) // 01 10
 				{
 					position++;
 				}
-				else// 11 or 00
+				else // 11 or 00
 				{
-					if (position > 10) NextState(State::STARTFLAG, Bit ? 3 : 1); // we are at * in 01*111110 010101010|*01111110
+					if (position > 10) NextState(State::STARTFLAG, Bit ? 3 : 1); // we are at * in ..0101|01*111110 ..010|*01111110
 					else NextState(State::TRAINING, 0);
 				}
 				break;
@@ -192,7 +170,7 @@ namespace AIS
 
 				if (position == 7)
 				{
-					if (Bit == 0) NextState(State::DATAFCS, 0); // 01111110*....
+					if (Bit == 0) NextState(State::DATAFCS, 0); // 0111111*0....
 					else NextState(State::TRAINING, 0);
 				}
 				else
@@ -201,6 +179,28 @@ namespace AIS
 					else NextState(State::TRAINING, 0);
 				}
 				break;
+                        case State::DATAFCS:
+                                DataFCS_Bits[position++] = Bit;
+
+                                if (Bit == 1)
+                                {
+                                        if (one_seq_count == 5)
+                                        {
+                                                ProcessData(position - 7);
+                                                NextState(State::TRAINING, 0);
+                                        }
+                                        else
+                                                one_seq_count++;
+                                }
+                                else
+                                {
+                                        if (one_seq_count == 5) position--;
+                                        one_seq_count = 0;
+                                }
+
+                                if (position == MaxBits) NextState(State::TRAINING, 0);
+                                break;
+
 			}
 			lastBit = Bit;
 		}

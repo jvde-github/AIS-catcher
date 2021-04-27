@@ -43,12 +43,12 @@ namespace AIS
 		BIT prev = 0;
 
 		int position = 0;
-		int bit_stuff_count = 0;
+		int one_seq_count = 0;
 		int SequenceNumber = 0;
 		State state = State::TRAINING;
 
 		void NextState(State s, int pos);
-		char NMEchar(int i);
+		char NMEAchar(int i);
 		bool CRC16(int len);
 		void setByteData(int len);
 		char getFrame(int pos, int len);

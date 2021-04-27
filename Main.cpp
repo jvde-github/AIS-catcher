@@ -23,7 +23,7 @@ SOFTWARE.
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <chrono>
+#include <string>
 #include <typeinfo>
 
 #include "Signal.h"
@@ -52,7 +52,7 @@ void consoleHandler(int signal)
 
 // -------------------------------
 
-bool rateDefined(uint32_t s, std::vector<uint32_t> rates)
+bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
 {
 	for(uint32_t r : rates) if(r == s) return true;
 
@@ -61,18 +61,27 @@ bool rateDefined(uint32_t s, std::vector<uint32_t> rates)
 
 int checkDigitSequence(std::string in, int min, int max, int repeat, char sep)
 {
-        int i = 0, n;
-        do
+	int count = 0, number = 0;
+
+	try
+	{
+		std::stringstream str(in);
+		std::string s;
+
+		while (std::getline(str, s, sep))
+		{
+			number = std::stoi(s);
+			count ++;
+			if(number < min || number > max) return -1;
+		}
+	}
+        catch (const std::exception &m)
         {
-                n = 0;
-                while(in[i] >= '0' && in[i] <= '9') n = n * 10 + (int)(in[i++]-'0');
-                if(n < min || n > max) return -1;
-
-        } while(--repeat > 0 && i < in.length()-1 && in[i++] == sep);
-
-        if( repeat != 0 || i < in.length() ) return -1;
-
-        return n;
+                return -1;
+        }
+ 
+	if(count != repeat) return -1;
+	return number;
 }
 
 void Usage()
@@ -87,7 +96,7 @@ void Usage()
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-p:xx frequency offset (reserved for future version)]" << std::endl;
 	std::cerr << "\t[-u UDP address and port (default: off)]" << std::endl;
-	std::cerr << "\t[-u display this message and terminate (default: false)]" << std::endl;
+	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 }
@@ -318,15 +327,15 @@ int main(int argc, char* argv[])
 
 		if (sample_rate != 0)
 		{
-			if (!rateDefined(sample_rate,model_rates)) throw "Sampling rate not supported in this version.";
-			if (!rateDefined(sample_rate,device_rates)) throw "Sampling rate not supported for this device.";
+			if (!isRateDefined(sample_rate,model_rates)) throw "Sampling rate not supported in this version.";
+			if (!isRateDefined(sample_rate,device_rates)) throw "Sampling rate not supported for this device.";
 		}
 		else
 		{
 			bool found = false;
 			for(int i = 0; i < model_rates.size() && !found; i++)
 			{
-				if(rateDefined(model_rates[i], device_rates))
+				if(isRateDefined(model_rates[i], device_rates))
 				{
 					sample_rate = model_rates[i];
 					found = true;
