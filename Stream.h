@@ -53,10 +53,12 @@ public:
 
 	void Send(S* data, int len)
 	{
-		if(connections.size() == 1)
-			for (auto c : connections) c->Receive(data, len);
-		else
-			for (auto c : connections) c->Receive((const S*)data, len);
+		int sz1 = connections.size()-1;
+
+		for(int i = 0; i < sz1; i++)
+			connections[i]->Receive((const S*)data, len);
+
+		connections[sz1]->Receive(data, len);
 	}
 
 	void Connect(StreamIn<S>* s)
