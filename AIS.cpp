@@ -96,8 +96,8 @@ namespace AIS
 		NMEA nmea;
 
 		int nBytes = len / 8;
-		int AISletters = (nBytes * 8 + 5) / 6;
-		int nSentences = (len + 6 * 56 - 1) / (6 * 56);
+		int AISletters = (len + 6 - 1) / 6;
+		int nSentences = (AISletters + 56 - 1) / 56;
 		int frame = 0;
 
 		for (int idx = 0; idx < nSentences; idx++)
@@ -111,7 +111,7 @@ namespace AIS
 				sentence += NMEAchar(getFrame(frame, nBytes));
 
 			if (nSentences > 1 && idx == nSentences - 1)
-				sentence += comma + std::to_string(AISletters * 6 - nBytes * 8);
+				sentence += comma + std::to_string(AISletters * 6 - len);
 			else
 				sentence += std::string(",0");
 
@@ -124,7 +124,7 @@ namespace AIS
 		}
 
 		nmea.channel = channel;
-		nmea.msg = getFrame(0,nBytes);
+		nmea.msg = getFrame(0, nBytes);
 		nmea.mmsi = (DataFCS[1]<<22)|(DataFCS[2]<<14)|(DataFCS[3]<<6)|(DataFCS[4]>>2);
 
 		sendOut(&nmea, 1);
