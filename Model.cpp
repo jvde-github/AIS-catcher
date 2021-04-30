@@ -24,9 +24,14 @@ SOFTWARE.
 
 namespace AIS
 {
-	void ModelStandard::BuildModel(bool timerOn)
+	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
 	{
-		setName("AIS Catcher v0.00");
+		return { 288000, 384000, 768000, 1536000 };
+	}
+
+	void ModelStandard::buildModel(int sample_rate, bool timerOn)
+	{
+		setName("AIS Engine v0.05");
 
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
 
@@ -73,9 +78,14 @@ namespace AIS
 		return;
 	}
 
-	void ModelChallenge::BuildModel(bool timerOn)
+	std::vector<uint32_t> ModelChallenge::SupportedSampleRates()
 	{
-		setName("Challenger model");
+		return { 288000, 384000, 768000, 1536000 };
+	}
+
+	void ModelChallenge::buildModel(int sample_rate,bool timerOn)
+	{
+		setName("Challenger Model");
 
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
 

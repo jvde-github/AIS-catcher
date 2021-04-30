@@ -80,7 +80,7 @@ namespace Device{
 		virtual bool isCallback() { return true; }
 		virtual bool isStreaming() { return streaming;  }
 
-		virtual void getAvailableSampleRates(std::vector<uint32_t>& rates) { rates.clear(); }
+		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 
 		static void getDeviceList(std::vector<Description>& DeviceList) {}
 		static int getDeviceCount() { return 0; }
@@ -88,7 +88,6 @@ namespace Device{
 		// MessageIn
 		virtual void Message(const SystemMessage& msg) { Pause(); };
 	};
-
 
 	class WAVFile : public Control, public StreamOut<CFLOAT32>
 	{
@@ -114,11 +113,8 @@ namespace Device{
 			DeviceList.push_back(d);
 		}
 
-		static int getDeviceCount()
-		{
-			return 1;
-		}
-		void getAvailableSampleRates(std::vector<uint32_t>& rates);
+		static int getDeviceCount() { return 1; }
+		std::vector<uint32_t> SupportedSampleRates();
 
 		// Device specific
 		void openFile(std::string filename);
@@ -129,7 +125,7 @@ namespace Device{
 		std::ifstream file;
 
 		std::vector<CU8> buffer;
-		const int buffer_size = 8096*2*3;
+		const int buffer_size = 8096 * 2 * 3;
 
 	public:
 
@@ -145,12 +141,9 @@ namespace Device{
 			Description d = Description("FILE (RAW-FORMAT)", 0, Type::RAWFILE);
 			DeviceList.push_back(d);
 		}
-		static int getDeviceCount()
-		{
-			return 1;
-		}
+		static int getDeviceCount() { return 1; }
 
-		void getAvailableSampleRates(std::vector<uint32_t>& rates);
+		std::vector<uint32_t> SupportedSampleRates();
 
 		// Device specific
 		void openFile(std::string filename);
@@ -181,7 +174,7 @@ namespace Device{
 		void setFrequency(uint32_t);
 		void setAGCtoAuto(void);
 
-		void getAvailableSampleRates(std::vector<uint32_t>& rates);
+		std::vector<uint32_t> SupportedSampleRates();
 
 		bool isCallback() { return true; }
 
@@ -191,6 +184,7 @@ namespace Device{
 		// Device specific
 
 		void openDevice(uint64_t h);
+		void setFrequencyCorrection(int);
 	#endif
 	};
 
@@ -210,10 +204,11 @@ namespace Device{
 		void Play();
 		void Pause();
 
-		void getAvailableSampleRates(std::vector<uint32_t>& rates);
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
 		void setAGCtoAuto(void);
+
+		std::vector<uint32_t> SupportedSampleRates();
 
 		bool isStreaming();
 
@@ -227,5 +222,4 @@ namespace Device{
 		void openDevice();
 #endif
 	};
-
 }

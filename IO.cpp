@@ -20,13 +20,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "IO.h"
-
 #include <cstring>
-#ifdef WIN32
-#include <ws2tcpip.h>
-#pragma comment(lib, "Ws2_32.lib")
-#endif
+
+#include "IO.h"
 
 namespace IO
 {
@@ -56,7 +52,7 @@ namespace IO
 		WSACleanup();
 #endif
 	}
-	void UDP::open(std::string host, std::string portname)
+	void UDP::openConnection(std::string host, std::string portname)
 	{
 		struct addrinfo h;
 		memset(&h, 0, sizeof(h));

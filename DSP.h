@@ -22,8 +22,6 @@ SOFTWARE.
 
 #pragma once
 
-#include <fstream>
-
 #include "Stream.h"
 #include "Filters.h"
 #include "Signal.h"
@@ -35,13 +33,13 @@ namespace DSP
 		std::vector<BIT> output;
 		BIT prev = 0;
 
-		uint32_t PLL;
+		int PLL;
 		bool FastPLL = true;
 
-		const uint32_t FullRotation = 0x10000;
-		const uint32_t MidPoint = FullRotation / 2;
-		const uint32_t SamplesPerSymbol = 5;
-		const uint32_t Increment = FullRotation / SamplesPerSymbol;
+		const int FullRotation = 0x100000;
+		const int MidPoint = FullRotation >> 1;
+		const int SamplesPerSymbol = 5;
+		const int Increment = FullRotation / SamplesPerSymbol;
 
 	public:
 
@@ -53,13 +51,9 @@ namespace DSP
 		{
 			switch (in)
 			{
-			case DecoderMessage::StartTraining:
-				FastPLL = true;
-				break;
-			case DecoderMessage::StartMessage:
-				FastPLL = false;
-			default:
-				break;
+			case DecoderMessage::StartTraining: FastPLL = true; break;
+			case DecoderMessage::StartMessage: FastPLL = false; break;
+			default: break;
 			}
 		}
 	};
@@ -94,8 +88,6 @@ namespace DSP
 		std::vector <CFLOAT32> buffer;
 		std::vector <FLOAT32> taps;
 
-		const int buffer_size = 1024;
-
 		inline CFLOAT32 filter(const CFLOAT32* data)
 		{
 			CFLOAT32 x = 0.0f;
@@ -124,8 +116,6 @@ namespace DSP
 		std::vector <FLOAT32> buffer;
 		std::vector <FLOAT32> taps;
 
-		const int buffer_size = 1024;
-
 		inline FLOAT32 filter(const FLOAT32* data)
 		{
 			FLOAT32 x = 0.0f;
@@ -134,9 +124,6 @@ namespace DSP
 		}
 
 	public:
-
-		Filter() { }
-		Filter(const std::vector <FLOAT32>& t) { setTaps(t); }
 
 		void setTaps(const std::vector<FLOAT32>& t)
 		{

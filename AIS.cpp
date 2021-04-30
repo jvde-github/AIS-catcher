@@ -30,8 +30,6 @@ namespace AIS
 {
 	Decoder::Decoder()
 	{
-		channel = 'A';
-
 		DataFCS_Bits.resize(MaxBits, 0);
 		DataFCS.resize(MaxBits / 8, 0);
 	}
@@ -73,7 +71,6 @@ namespace AIS
 			for (int j = 0; j < 8 && ptr < len; j++, ptr++)
 				DataFCS[i] |= (DataFCS_Bits[ptr] << j);
 		}
-
 	}
 
 	char Decoder::getFrame(int pos, int len)
@@ -91,18 +88,18 @@ namespace AIS
 
 	void Decoder::SendNMEA(int len)
 	{
-		std::string sentence = "";
+		std::string sentence;
 		const std::string comma = ",";
 		NMEA nmea;
 
-		int nBytes = len / 8;
+		int nBytes = (len + 7) / 8;
 		int AISletters = (len + 6 - 1) / 6;
 		int nSentences = (AISletters + 56 - 1) / 56;
 		int frame = 0;
 
-		for (int idx = 0; idx < nSentences; idx++)
+		for (int s = 0; s < nSentences; s++)
 		{
-			sentence = std::string("AIVDM,") + std::to_string(nSentences) + comma + std::to_string(idx + 1) + comma;
+			sentence = std::string("AIVDM,") + std::to_string(nSentences) + comma + std::to_string(s + 1) + comma;
 
 			if (nSentences > 1) sentence += std::to_string(SequenceNumber);
 			sentence += comma + channel + comma;
@@ -110,7 +107,7 @@ namespace AIS
 			for (int i = 0; frame < AISletters && i < 56; i++, frame++)
 				sentence += NMEAchar(getFrame(frame, nBytes));
 
-			if (nSentences > 1 && idx == nSentences - 1)
+			if (nSentences > 1 && s == nSentences - 1)
 				sentence += comma + std::to_string(AISletters * 6 - len);
 			else
 				sentence += std::string(",0");
@@ -136,7 +133,7 @@ namespace AIS
 	{
 		if(CRC16(len))
 		{
-			// reverse bytes (HDLC format) and exclude 16 FCS bits
+			// Populate Byte array and send msg, exclude 16 FCS bits
 			setByteData(len-16);
 			SendNMEA(len-16);
 		}
@@ -144,7 +141,6 @@ namespace AIS
 
 	void Decoder::Receive(const BIT* data, int len)
 	{
-
 		for (int i = 0; i < len; i++)
 		{
 			// NRZI
@@ -194,13 +190,12 @@ namespace AIS
                                 }
                                 else
                                 {
-                                        if (one_seq_count == 5) position--;
+                                        if (one_seq_count == 5) position--; // bit-destuff
                                         one_seq_count = 0;
                                 }
 
                                 if (position == MaxBits) NextState(State::TRAINING, 0);
                                 break;
-
 			}
 			lastBit = Bit;
 		}

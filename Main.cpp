@@ -21,19 +21,12 @@ SOFTWARE.
 */
 
 #include <iostream>
-#include <string>
-#include <sstream>
-#include <string>
-#include <typeinfo>
+#include <string.h>
 
 #include "Signal.h"
 #include "Device.h"
-#include "DSP.h"
 #include "IO.h"
 #include "Model.h"
-#include "AIS.h"
-#include "Filters.h"
-
 
 MessageHub<SystemMessage> SystemMessages;
 
@@ -55,47 +48,81 @@ void consoleHandler(int signal)
 bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
 {
 	for(uint32_t r : rates) if(r == s) return true;
-
 	return false;
 }
 
-int checkDigitSequence(std::string in, int min, int max, int repeat, char sep)
+int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> model_rates)
 {
-	int count = 0, number = 0;
+	int sample_rate = 0;
+	bool found = false;
 
-	try
+	for (auto r : model_rates) if (isRateDefined(r, dev_rates)) return r;
+
+	throw "Sampling rate not available for this combination of model and device.";
+
+	return 0;
+}
+
+int getNumber(std::string str, int min, int max)
+{
+	int sign = 1, ptr = 0, number = 0;
+
+	if (str[ptr] == '-')
 	{
-		std::stringstream str(in);
-		std::string s;
-
-		while (std::getline(str, s, sep))
-		{
-			number = std::stoi(s);
-			count ++;
-			if(number < min || number > max) return -1;
-		}
+		ptr++; sign = -1;
 	}
-        catch (const std::exception &m)
-        {
-                return -1;
-        }
- 
-	if(count != repeat) return -1;
+
+	if (str[ptr] == '0' && str.length() != 1) throw "Error on command line. Not a valid integer.";
+
+	while (ptr < str.length())
+	{
+		if (str[ptr] < '0' || str[ptr] > '9') throw "Error on command line. Not a number.";
+		number = 10 * number + (str[ptr] - '0');
+		ptr++;
+	}
+
+	number *= sign;
+
+	if(number < min || number > max) throw "Error on command line. Number out of range.";
+
 	return number;
+}
+
+bool checkNetworkAddress(std::string s)
+{
+	bool correct = true;
+	int count = 0;
+
+	char str[20];
+	int len = s.copy(str, 20);  str[len] = '\0';
+
+	char* token = strtok(str, ".");
+
+	while (token)
+	{
+		correct &= getNumber(std::string(token),0,255)>=0;
+		token = strtok(NULL, ".");
+		count++;
+	}
+
+	if (correct && count == 4) return true;
+	return false;
 }
 
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
-	std::cerr << "\t[-s sample rate in Hz (default: based on SDR device)]" << std::endl;
+	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
 	std::cerr << "\t[-d:x device index (default: 0)]" << std::endl;
 	std::cerr << "\t[-v enable verbose mode (default: false)]" << std::endl;
 	std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
-	std::cerr << "\t[-p:xx frequency offset (reserved for future version)]" << std::endl;
-	std::cerr << "\t[-u UDP address and port (default: off)]" << std::endl;
+#ifdef HAS_RTLSDR
+	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
+#endif
+	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
@@ -103,7 +130,6 @@ void Usage()
 
 int main(int argc, char* argv[])
 {
-
 	int sample_rate = 0;
 	int input_device = -1;
 	bool list_devices = false;
@@ -111,22 +137,21 @@ int main(int argc, char* argv[])
 	bool verbose = false;
 	bool timer_on = false;
 	bool NMEA_to_screen = true;
+	int ppm_correction = 0;
 	uint64_t handle = 0;
-
-	Device::Type input_type = Device::Type::NONE;
-	IO::UDP udp;
 
 	std::string filename_in = "";
 	std::string filename_out = "";
 	std::string udp_address = "";
 	std::string udp_port = "";
 
-	std::vector<uint32_t> model_rates{ 288000, 384000, 768000, 1536000 };
-	std::vector<AIS::Model*> model;
+	std::vector<AIS::Model*> liveModels;
+	Device::Type input_type = Device::Type::NONE;
+	IO::UDP udp;
+	IO::DumpScreen nmea_screen;
 
 	try
 	{
-
 #ifdef WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
 			throw "ERROR: Could not set control handler";
@@ -147,10 +172,9 @@ int main(int argc, char* argv[])
 		while (ptr < argc)
 		{
 			std::string param = std::string(argv[ptr]);
-			bool has_arg1 = ptr < argc - 1 && argv[ptr + 1][0] != '-';
-			std::string arg1 = has_arg1 ? std::string(argv[ptr + 1]) : "";
-			bool has_arg2 = ptr < argc - 2 && argv[ptr + 2][0] != '-';
-			std::string arg2 = has_arg2 ? std::string(argv[ptr + 2]) : "";
+
+			std::string arg1 = ptr < argc - 1 ? std::string(argv[ptr + 1]) : "";
+			std::string arg2 = ptr < argc - 2 ? std::string(argv[ptr + 2]) : "";
 
 			if (param[0] != '-')
 			{
@@ -161,16 +185,8 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				{
-					int s = checkDigitSequence(arg1,0,1536000,1,' ');
-					if(s == -1)
-					{
-						std::cerr << "Error: invalid sample rate:" << arg1 << std::endl;
-						return -1;
-					}
-					sample_rate = s;
-					ptr++;
-				}
+				sample_rate = getNumber(arg1,0,1536000);
+				ptr++;
 				break;
 			case 'v':
 				verbose = true;
@@ -216,9 +232,9 @@ int main(int argc, char* argv[])
 			case 'u':
 				udp_address = arg1; udp_port = arg2;
 
-				if(checkDigitSequence(udp_address,0,255,4,'.')==-1 || checkDigitSequence(udp_port,0,65535,1,' ')==-1)
+				if(!checkNetworkAddress(udp_address) || getNumber(udp_port,0,65535)<0)
 				{
-					std::cerr << "UDP address not valid." << std::endl;
+					std::cerr << "UDP network address and/or port not valid." << std::endl;
 					return -1;
 				}
 				ptr += 2;
@@ -226,7 +242,12 @@ int main(int argc, char* argv[])
 			case 'h':
 				Usage();
 				return 0;
-
+#ifdef HASRTLSDR
+			case 'p':
+				ppm_correction = getNumber(arg1, -50, 50);
+				ptr++;
+				break;
+#endif
 			default:
 				std::cerr << "Unknown option " << param << std::endl;
 				return -1;
@@ -246,23 +267,24 @@ int main(int argc, char* argv[])
 		}
 
 		// Select device
-		if (device_list.size() == 0 && input_type == Device::Type::NONE) throw "No input device available.";
 
-		if (input_type != Device::Type::RAWFILE && input_type != Device::Type::WAVFILE)
+		if (input_type == Device::Type::NONE)
 		{
-			Device::Description device_selected = device_list[0];
+			if (device_list.size() == 0) throw "No input device available.";
 
-			if (input_device >= 0) device_selected = device_list[input_device];
+			Device::Description sel = device_list[0];
+			if (input_device >= 0) sel = device_list[input_device];
 
-			input_type = device_selected.getType();
-			handle = device_selected.getHandle();
+			input_type = sel.getType();
+			handle = sel.getHandle();
 		}
 
 		// Device and output stream of device;
 		Device::Control* control = NULL;
 		Connection<CFLOAT32>* out = NULL;
+
 		// Required for RTLSDR: conversion from usigned char to float
-		DSP::ConvertCU8ToCFLOAT32 conversion;
+		DSP::ConvertCU8ToCFLOAT32 convertCU8;
 
 		switch (input_type)
 		{
@@ -292,10 +314,10 @@ int main(int argc, char* argv[])
 		{
 			Device::RAWFile* device = new Device::RAWFile();
 			device->openFile(filename_in);
-			device->out.Connect(&conversion);
+			device->out.Connect(&convertCU8);
 
 			control = device;
-			out = &(conversion.out);
+			out = &(convertCU8.out);
 			break;
 		}
 		case Device::Type::RTLSDR:
@@ -303,11 +325,12 @@ int main(int argc, char* argv[])
 #ifdef HASRTLSDR
 			Device::RTLSDR* device = new Device::RTLSDR();
 			device->openDevice(handle);
-			device->out.Connect(&conversion);
+			device->out.Connect(&convertCU8);
 
 			control = device;
-			out = &(conversion.out);
+			out = &(convertCU8.out);
 
+			device->setFrequencyCorrection(ppm_correction);
 #else
 			std::cerr << "RTLSDR not included in this package. Please build version including RTLSDR support.";
 #endif
@@ -320,10 +343,17 @@ int main(int argc, char* argv[])
 
 		SystemMessages.Connect(*control);
 
-		// set and check the sampling rate
+		// Create demodulation models
 
-		std::vector<uint32_t> device_rates;
-		control->getAvailableSampleRates(device_rates);
+		liveModels.push_back(new AIS::ModelStandard(control, out));
+		if (run_challenger)
+		{
+			liveModels.push_back(new AIS::ModelChallenge(control, out));
+		}
+
+		// set and check the sampling rate
+		std::vector<uint32_t> device_rates = control->SupportedSampleRates();
+		std::vector<uint32_t> model_rates = liveModels[0]->SupportedSampleRates();
 
 		if (sample_rate != 0)
 		{
@@ -332,47 +362,30 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			bool found = false;
-			for(int i = 0; i < model_rates.size() && !found; i++)
-			{
-				if(isRateDefined(model_rates[i], device_rates))
-				{
-					sample_rate = model_rates[i];
-					found = true;
-				}
-			}
-			if (!found) throw "Sampling rate not available for this device.";
+			sample_rate = setRateAutomatic(device_rates, model_rates);
 		}
 
-		std::vector<IO::SampleCounter<NMEA>> statistics(2);
+		// Build model and attach output to main model
 
-		AIS::Model *m = new AIS::ModelStandard(sample_rate, control, out);
-		m->BuildModel(timer_on);
-		if(verbose) m->Output() >> statistics[0];
+		std::vector<IO::SampleCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
 
-		// Attach output to model
-		if(udp_address != "")
+		for (int i = 0; i < liveModels.size(); i++)
 		{
-			udp.open(udp_address,udp_port);
-			m->Output() >> udp;
+			liveModels[i]->buildModel(sample_rate, timer_on);
+			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
-		IO::DumpScreen nmea_print;
-		if(NMEA_to_screen) m->Output() >> nmea_print;
-
-		model.push_back(m);
-
-		// Set up challenger model
-		if (run_challenger)
+		// Connect output to UDP stream
+		if (udp_address != "")
 		{
-			m = new AIS::ModelChallenge(sample_rate, control, out);
-			m->BuildModel(timer_on);
-			if (verbose) m->Output() >> statistics[1];
-			model.push_back(m);
+			udp.openConnection(udp_address, udp_port);
+			liveModels[0]->Output() >> udp;
 		}
+
+		if (NMEA_to_screen) 
+			liveModels[0]->Output() >> nmea_screen;
 
 		// Set up Device
-
 		control->setSampleRate(sample_rate);
 		control->setAGCtoAuto();
 		control->setFrequency((int)(162e6));
@@ -393,8 +406,8 @@ int main(int argc, char* argv[])
 				SleepSystem(3000);
 
 				if(verbose)
-					for(int j = 0; j < model.size(); j++)
-						std::cerr << "[" << model[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+					for(int j = 0; j < liveModels.size(); j++)
+						std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
 			}
 		}
 
@@ -403,16 +416,16 @@ int main(int argc, char* argv[])
 		if (verbose)
 		{
 			std::cerr << "----------------------" << std::endl;
-			for(int j = 0; j < model.size(); j++)
-				std::cerr << "[" << model[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+			for(int j = 0; j < liveModels.size(); j++)
+				std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
 
 		}
 
 		if(timer_on)
-			for (AIS::Model* m : model)
+			for (auto m : liveModels)
 				std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
 
-		for(AIS::Model *m : model) delete m;
+		for(auto model : liveModels) delete model;
 		if(control) delete control;
 
 	}

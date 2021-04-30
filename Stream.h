@@ -22,24 +22,23 @@ SOFTWARE.
 
 #pragma once
 
-#include <iostream>
 #include <vector>
 
 #include "Common.h"
 
-template<typename T> 
+template<typename T>
 class StreamIn
 {
 public:
 
 	virtual void Receive(const T* data, int len) {}
-	virtual void Receive(T* data, int len) 
-	{ 
-		Receive( (const T *) data, len);  
+	virtual void Receive(T* data, int len)
+	{
+		Receive( (const T *) data, len);
 	}
 };
 
-template <typename S> 
+template <typename S>
 class Connection
 {
 	std::vector<StreamIn<S>*> connections;
@@ -53,15 +52,15 @@ public:
 
 	void Send(S* data, int len)
 	{
-		if(connections.size())
-		{
-			int sz1 = connections.size()-1;
+		if(connections.size() == 0) return;
 
-			for(int i = 0; i < sz1; i++)
-				connections[i]->Receive((const S*)data, len);
+		int sz1 = connections.size()-1;
 
-			connections[sz1]->Receive(data, len);
-		}
+		for(int i = 0; i < sz1; i++)
+			connections[i]->Receive((const S*)data, len);
+
+		connections[sz1]->Receive(data, len);
+
 	}
 
 	void Connect(StreamIn<S>* s)
@@ -71,7 +70,7 @@ public:
 };
 
 template <typename S>
-class StreamOut 
+class StreamOut
 {
 public:
 
@@ -142,10 +141,9 @@ public:
 	float getTotalTiming() { return timing; }
 };
 
-
-template <typename S> 
+template <typename S>
 inline StreamIn<S>& operator>>(Connection<S>& a, StreamIn<S>& b) { a.Connect(&b); return b; }
-template <typename T, typename S> 
+template <typename T, typename S>
 inline SimpleStreamInOut<S,T>& operator>>(Connection<S>& a, SimpleStreamInOut<S,T>& b) { a.Connect(&b); return b; }
 
 template <typename S>
@@ -153,7 +151,7 @@ inline StreamIn<S>& operator>>(StreamOut<S>& a, StreamIn<S>& b) { a.out.Connect(
 template <typename S, typename U>
 inline SimpleStreamInOut<S, U>& operator>>(StreamOut<S>& a, SimpleStreamInOut<S, U>& b) { a.out.Connect(&b); return b; }
 
-template <typename T, typename S> 
+template <typename T, typename S>
 inline StreamIn<S>& operator>>(SimpleStreamInOut<T,S>& a, StreamIn<S>& b) { a.out.Connect(&b); return b; }
-template <typename T, typename S, typename U> 
+template <typename T, typename S, typename U>
 inline SimpleStreamInOut<S,U>& operator>>(SimpleStreamInOut<T,S>& a, SimpleStreamInOut<S,U>& b) { a.out.Connect(&b); return b; }

@@ -58,11 +58,10 @@ namespace AIS
 	public:
 
 		Decoder();
-	
+
 		virtual void setChannel(char c) { channel = c; }
 		void Receive(const BIT* data, int len);
 
 		MessageHub<DecoderMessage> DecoderStateMessage;
 	};
-
 }

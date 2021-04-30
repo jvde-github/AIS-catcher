@@ -43,7 +43,6 @@ class MessageHub
 public:
 
 	std::vector<MessageIn<T> *> destinations;
-	
 	void Send(const T& m)
 	{
 		for (auto d : destinations)
@@ -54,4 +53,3 @@ public:
 		destinations.push_back(&s);
 	}
 };
-

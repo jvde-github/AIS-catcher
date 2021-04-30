@@ -42,4 +42,3 @@ typedef char BIT;
 typedef struct { std::vector<std::string> sentence; char channel; uint32_t mmsi; int msg; } NMEA;
 
 using namespace std::chrono;
-
