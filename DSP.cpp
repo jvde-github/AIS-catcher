@@ -36,19 +36,17 @@ namespace DSP
 
 			if (bit != prev)
 			{
-				if (FastPLL)
-					PLL += ((int)(MidPoint - PLL)) >> 1;
-				else
-					PLL += ((int)(MidPoint - PLL)) >> 4;
+				PLL += (MidPoint - PLL) >> (FastPLL ? 1 : 4);
 			}
-			prev = bit;
 
 			PLL += Increment;
-			if (PLL > 0xFFFF)
+
+			if (PLL >= FullRotation)
 			{
-				sendOut(&bit, 1);
-				PLL &= 0xFFFF;
+				sendOut((const BIT *) &bit, 1);
+				PLL &= (FullRotation-1);
 			}
+			prev = bit;
 		}
 	}
 
@@ -66,11 +64,11 @@ namespace DSP
 
 		CFLOAT32 z, r0, r1, r2, r3, r4;
 
-		for (int i = 0; i < len; i += 2)
+		for (int i = 0, j = 0; i < len; i += 2, j++)
 		{
 			z = data[i];
 			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
-			output[i / 2] = z * (FLOAT32)0.03125f;
+			output[j] = z * (FLOAT32)0.03125f;
 			z = data[i + 1];
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}
@@ -103,12 +101,13 @@ namespace DSP
 
 	void Downsample3Complex::Receive(const CFLOAT32* data, int len)
 	{
-		int ptr, i, j;
 		assert(len % 3 == 0);
+
+		int ptr, i, j;
 
 		if (output.size() < len/3) output.resize(len/3);
 
-		for (j = i = 0, ptr = 21 - 1; i < 21 - 1; i += 3)
+		for (j = i = 0, ptr = 21 - 1; i < 21 - 1; i += 3, j++)
 		{
 			buffer[ptr++] = data[i];
 			buffer[ptr++] = data[i + 1];
@@ -123,10 +122,10 @@ namespace DSP
 			x += 0.12579695977f * (buffer[i + 8] + buffer[i + 12]);
 			x += 0.26922914593f * (buffer[i + 9] + buffer[i + 11]);
 
-			output[j++] = x;
+			output[j] = x;
 		}
 
-		for (i = 1; i < len - 21 + 1; i += 3)
+		for (i = 1; i < len - 21 + 1; i += 3, j++)
 		{
 			CFLOAT32 x = 0.33292088503f * data[i + 10];
 			x -= 0.00101073661f * (data[i + 0] + data[i + 20]);
@@ -137,11 +136,11 @@ namespace DSP
 			x += 0.12579695977f * (data[i + 8] + data[i + 12]);
 			x += 0.26922914593f * (data[i + 9] + data[i + 11]);
 
-			output[j++] = x;
+			output[j] = x;
 		}
-		for (ptr = 0; i < len; i++)
+		for (ptr = 0; i < len; i++, ptr++)
 		{
-			buffer[ptr++] = data[i];
+			buffer[ptr] = data[i];
 		}
 
 		sendOut(output.data(), len / 3);
@@ -155,20 +154,20 @@ namespace DSP
 
 		if (output.size() < len) output.resize(len);
 
-		for (j = i = 0, ptr = taps.size() - 1; i < taps.size() - 1; i++)
+		for (j = i = 0, ptr = taps.size() - 1; i < taps.size() - 1; i++, ptr++, j++)
 		{
-			buffer[ptr++] = data[i];
-			output[j++] = filter(&buffer[i]);
+			buffer[ptr] = data[i];
+			output[j] = filter(&buffer[i]);
 		}
 
-		for (i = 0; i < len - taps.size() + 1; i++)
+		for (i = 0; i < len - taps.size() + 1; i++, j++)
 		{
-			output[j++] = filter(&data[i]);
+			output[j] = filter(&data[i]);
 		}
 
-		for (ptr = 0; i < len; i++)
+		for (ptr = 0; i < len; i++, ptr++)
 		{
-			buffer[ptr++] = data[i];
+			buffer[ptr] = data[i];
 		}
 
 		sendOut(output.data(), len);
@@ -180,20 +179,20 @@ namespace DSP
 
 		if (output.size() < len) output.resize(len);
 
-		for (j = i = 0, ptr = taps.size() - 1; i < taps.size() - 1; i++)
+		for (j = i = 0, ptr = taps.size() - 1; i < taps.size() - 1; i++, ptr++, j++)
 		{
-			buffer[ptr++] = data[i];
-			output[j++] = filter(&buffer[i]);
+			buffer[ptr] = data[i];
+			output[j] = filter(&buffer[i]);
 		}
 
-		for (i = 0; i < len - taps.size() + 1; i++)
+		for (i = 0; i < len - taps.size() + 1; i++, j++)
 		{
-			output[j++] = filter(&data[i]);
+			output[j] = filter(&data[i]);
 		}
 
-		for (ptr = 0; i < len; i++)
+		for (ptr = 0; i < len; i++, ptr++)
 		{
-			buffer[ptr++] = data[i];
+			buffer[ptr] = data[i];
 		}
 
 		sendOut(output.data(), len);
@@ -251,7 +250,7 @@ namespace DSP
 		const float PI = 3.141592653589793f;
 
 		if (output.size() < len) output.resize(len);
-		
+
 		for (int i = 0; i < len; i++)
 		{
 			float re = data[i].real() * prev.real() + data[i].imag() * prev.imag();
@@ -263,5 +262,4 @@ namespace DSP
 
 		sendOut(output.data(), len);
 	}
-
 }

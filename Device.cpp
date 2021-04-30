@@ -49,13 +49,9 @@ namespace Device {
 		if (!file) throw "Error: Cannot read from RAW file.";
 	}
 
-	void RAWFile::getAvailableSampleRates(std::vector<uint32_t>& rates)
+	std::vector<uint32_t> RAWFile::SupportedSampleRates()
 	{
-		rates.clear();
-		rates.push_back(288000);
-		rates.push_back(384000);
-		rates.push_back(768000);
-		rates.push_back(1536000);
+		return { 288000, 384000, 768000, 1536000 };
 	}
 
 	//---------------------------------------
@@ -115,10 +111,9 @@ namespace Device {
 		sample_rate = header.dwSamplesPerSec;
 	}
 
-	void WAVFile::getAvailableSampleRates(std::vector<uint32_t>& rates)
+	std::vector<uint32_t> WAVFile::SupportedSampleRates()
 	{
-		rates.clear();
-		rates.push_back(sample_rate);
+		return { sample_rate };
 	}
 
 	//---------------------------------------
@@ -184,11 +179,15 @@ namespace Device {
 		Control::Pause();
 	}
 
-	void RTLSDR::getAvailableSampleRates(std::vector<uint32_t>& rates)
+	void RTLSDR::setFrequencyCorrection(int ppm)
 	{
-		rates.clear();
-		rates.push_back(288000);
-		rates.push_back(1536000);
+		if(ppm !=0)
+			if (rtlsdr_set_freq_correction(dev, ppm)<0) throw "RTLSDR: cannot set ppm error.";
+	}
+
+	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
+	{
+		return { 288000, 1536000 };
 	}
 
 	void RTLSDR::pushDeviceList(std::vector<Description>& DeviceList)
@@ -213,7 +212,6 @@ namespace Device {
 	{
 		return rtlsdr_get_device_count();
 	}
-
 
 #endif
 
@@ -253,7 +251,7 @@ namespace Device {
 	{
 		airspyhf_set_hf_agc(dev, 1);
 		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC to auto.";
-		if (airspyhf_set_hf_agc_threshold(dev, 1) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold to high.";
+		if (airspyhf_set_hf_agc_threshold(dev, 0) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold to low.";
 
 		Control::setAGCtoAuto();
 	}
@@ -287,15 +285,17 @@ namespace Device {
 		Control::Pause();
 	}
 
-	void AIRSPYHF::getAvailableSampleRates(std::vector<uint32_t> &rates)
+	std::vector<uint32_t> AIRSPYHF::SupportedSampleRates()
 	{
 		uint32_t nRates; 
-		std::vector<uint32_t> s;
+		std::vector<uint32_t> rates;
 
 		airspyhf_get_samplerates(dev, &nRates, 0);
 		rates.resize(nRates);
 
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
+
+		return rates;
 	}
 
 	void AIRSPYHF::pushDeviceList(std::vector<Description>& DeviceList)

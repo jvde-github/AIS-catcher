@@ -21,23 +21,22 @@ SOFTWARE.
 */
 
 #pragma once
+#include <fstream>
+#include <iostream>
 
 #ifdef WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <sys/socket.h>
 #include <netdb.h>
 #endif
 
-#include <fstream>
-
 #include "Stream.h"
-#include "Filters.h"
-#include "Signal.h"
 
 namespace IO
 {
-	template<typename T> 
+	template<typename T>
 	class SampleCounter : public StreamIn<T>
 	{
 		uint64_t count = 0;
@@ -113,7 +112,7 @@ namespace IO
 		{
 			for (int i = 0; i < len; i++)
 				for (auto s : data[i].sentence)
-					std::cout << s << " (" << data[i].msg << " , " << data[i].mmsi << ")" << std::endl;
+					std::cout << s << " ( MSG: " << data[i].msg << " , MMSI: " << data[i].mmsi << ")" << std::endl;
 		}
 	};
 
@@ -130,7 +129,7 @@ namespace IO
 	public:
 
 		void Receive(const NMEA* data, int len);
-		void open(std::string host, std::string portname);
+		void openConnection(std::string host, std::string portname);
 
 		~UDP() { closeWSA(); }
 	};

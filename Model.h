@@ -32,7 +32,6 @@ namespace AIS
 {
 	class Model
 	{
-
 	protected:
 
 		std::string name;
@@ -41,18 +40,16 @@ namespace AIS
 		Timer<CFLOAT32> timer;
 		PassThrough<NMEA> output;
 
-		int sample_rate;
-
 	public:
 
-		Model(int s, Device::Control* c, Connection<CFLOAT32>* i)
+		Model(Device::Control* ctrl, Connection<CFLOAT32>* in)
 		{
-			sample_rate = s;
-			control = c;
-			input = i;
+			control = ctrl;
+			input = in;
 		}
 
-		virtual void BuildModel(bool timerOn) {}
+		virtual void buildModel(int, bool) {}
+		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 
 		StreamOut<NMEA>& Output() { return output; }
 
@@ -80,11 +77,11 @@ namespace AIS
 		DSP::PLLSampler sampler_a, sampler_b;
 		AIS::Decoder DEC_a, DEC_b;
 
-
 	public:
-		ModelStandard(int s, Device::Control* c, Connection<CFLOAT32>* i) : Model(s, c, i) {}
+		ModelStandard(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		std::vector<uint32_t> SupportedSampleRates();
 
-		void BuildModel(bool timerOn);
+		void buildModel(int,bool);
 	};
 
 
@@ -108,8 +105,9 @@ namespace AIS
 
 	public:
 
-		ModelChallenge(int s, Device::Control* c, Connection<CFLOAT32>* i) : Model(s, c, i) {}
+		ModelChallenge(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		std::vector<uint32_t> SupportedSampleRates();
 
-		void BuildModel(bool timerOn);
+		void buildModel(int, bool);
 	};
 }
