@@ -3,15 +3,14 @@ This package will add the AIS-catcher command which is an AIS receiver for RTL S
 
 ```
 use: AIS-catcher [options]
-	[-s sample rate in Hz (default: based on SDR device)]
+	[-s xxx sample rate in Hz (default: based on SDR device)]
 	[-d:x device index (default: 0)]
 	[-v enable verbose mode (default: false)]
 	[-r filename - read IQ data from raw 'unsigned char' file]
 	[-w filename - read IQ data from WAV file in 'float' format]
 	[-l list available devices and terminate (default: off)]
 	[-q surpress NMEA messages to screen (default: false)]
-	[-p:xx frequency offset (reserved for future version)]
-	[-u UDP address and port (default: off)]
+	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-c run challenger model - for development purposes (default: off)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
@@ -28,13 +27,13 @@ Available devices:
 -d:0 AIRSPY HF+  [3652A98081343F89]
 ```
 
-To start AIS demodulation and print some occasional statistics, we can then use the following command:
+To start AIS demodulation, print some occasional statistics and broadcast them via UDP, we can use the following command:
 ```
-./AIS-catcher -v
+./AIS-catcher -v -u 127.0.0.1 12345
 ```
-or
+or, equivalently,
 ```
-./AIS-catcher -d:0 -v
+./AIS-catcher -d:0 -v -u 127.0.0.1 12345
 ```
 If succesful, NMEA messages will start to come in and appear on the screen. These can be surpressed with the opton ```-q```. 
 
@@ -73,5 +72,5 @@ If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make```
 To do
 -----
 
-PPU correction
+...
 
