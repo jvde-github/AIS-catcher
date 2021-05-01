@@ -119,7 +119,7 @@ void Usage()
 	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
-#ifdef HAS_RTLSDR
+#ifdef HASRTLSDR
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
 	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
