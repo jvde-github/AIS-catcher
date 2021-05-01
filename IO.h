@@ -52,8 +52,6 @@ namespace IO
 			resetStatistic();
 		}
 
-		//Connection<S16> out;
-
 		void Receive(const T* data, int len)
 		{
 			count += len;
