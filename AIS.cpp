@@ -45,7 +45,6 @@ namespace AIS
 		int check = 0;
 		for(char c : s) check ^= c;
 		return check;
-
 	}
 
 	void Decoder::NextState(State s, int pos)
