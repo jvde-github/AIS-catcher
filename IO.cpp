@@ -52,6 +52,7 @@ namespace IO
 		WSACleanup();
 #endif
 	}
+
 	void UDP::openConnection(std::string host, std::string portname)
 	{
 		struct addrinfo h;
@@ -79,6 +80,5 @@ namespace IO
 		{
 			throw "Error creating socket for UDP.";
 		}
-
 	}
 }
