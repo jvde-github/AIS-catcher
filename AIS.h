@@ -47,12 +47,15 @@ namespace AIS
 		int SequenceNumber = 0;
 		State state = State::TRAINING;
 
+		int nBytes = 0;
+		int nBits = 0;
+
 		void NextState(State s, int pos);
 		char NMEAchar(int i);
 		bool CRC16(int len);
-		void setByteData(int len);
-		char getFrame(int pos, int len);
-		void SendNMEA(int len);
+		void setByteData();
+		char getFrame(int pos);
+		void SendNMEA();
 		void ProcessData(int len);
 
 	public:

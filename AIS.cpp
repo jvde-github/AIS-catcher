@@ -48,7 +48,7 @@ namespace AIS
 		if (s == State::TRAINING)
 			DecoderStateMessage.Send(DecoderMessage::StartTraining);
 		if (s == State::STARTFLAG)
-			DecoderStateMessage.Send(DecoderMessage::StartMessage);
+			DecoderStateMessage.Send(DecoderMessage::StopTraining);
 	}
 
 	bool Decoder::CRC16(int len)
@@ -62,38 +62,34 @@ namespace AIS
 		return CRC == checksum;
 	}
 
-	void Decoder::setByteData(int len)
+	void Decoder::setByteData()
 	{
-		// reverse bytes (HDLC format)
-		for (int i = 0, ptr = 0; i < (len+7)/8; i++)
- 		{
-			DataFCS[i] = 0;
-			for (int j = 0; j < 8 && ptr < len; j++, ptr++)
-				DataFCS[i] |= (DataFCS_Bits[ptr] << j);
-		}
+		DataFCS.assign(nBytes,0);
+
+		for(int b = 0; b < nBits; b++)
+			DataFCS[b >> 3] |= (DataFCS_Bits[b] << (b & 7));
 	}
 
-	char Decoder::getFrame(int pos, int len)
+	char Decoder::getFrame(int pos)
 	{
 		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
 
 		// zero padding
-		uint8_t b0 = x < len ? DataFCS[x] : 0;
-		uint8_t b1 = x + 1 < len ? DataFCS[x + 1] : 0;
+		uint8_t b0 = x < nBytes ? DataFCS[x] : 0;
+		uint8_t b1 = x + 1 < nBytes ? DataFCS[x + 1] : 0;
 		uint16_t w = (b0 << 8) | b1;
 
 		const int mask = (1 << 6) - 1;
 		return (w >> (16 - 6 - y)) & mask;
 	}
 
-	void Decoder::SendNMEA(int len)
+	void Decoder::SendNMEA()
 	{
 		std::string sentence;
 		const std::string comma = ",";
 		NMEA nmea;
 
-		int nBytes = (len + 7) / 8;
-		int AISletters = (len + 6 - 1) / 6;
+		int AISletters = (nBits + 6 - 1) / 6;
 		int nSentences = (AISletters + 56 - 1) / 56;
 		int frame = 0;
 
@@ -105,10 +101,10 @@ namespace AIS
 			sentence += comma + channel + comma;
 
 			for (int i = 0; frame < AISletters && i < 56; i++, frame++)
-				sentence += NMEAchar(getFrame(frame, nBytes));
+				sentence += NMEAchar(getFrame(frame));
 
 			if (nSentences > 1 && s == nSentences - 1)
-				sentence += comma + std::to_string(AISletters * 6 - len);
+				sentence += comma + std::to_string(AISletters * 6 - nBits);
 			else
 				sentence += std::string(",0");
 
@@ -121,7 +117,7 @@ namespace AIS
 		}
 
 		nmea.channel = channel;
-		nmea.msg = getFrame(0, nBytes);
+		nmea.msg = getFrame(0);
 		nmea.mmsi = (DataFCS[1]<<22)|(DataFCS[2]<<14)|(DataFCS[3]<<6)|(DataFCS[4]>>2);
 
 		sendOut(&nmea, 1);
@@ -133,9 +129,12 @@ namespace AIS
 	{
 		if(CRC16(len))
 		{
+			nBits = len - 16;
+			nBytes = (nBits + 7)/8;
+
 			// Populate Byte array and send msg, exclude 16 FCS bits
-			setByteData(len-16);
-			SendNMEA(len-16);
+			setByteData();
+			SendNMEA();
 		}
 	}
 
