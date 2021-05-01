@@ -25,6 +25,7 @@ SOFTWARE.
 // Sources:
 //	https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.1371-0-199811-S!!PDF-E.pdf
 //	https://fidus.com/wp-content/uploads/2016/03/Guide_to_System_Development_March_2009.pdf
+// 	https://gpsd.gitlab.io/gpsd/AIVDM.html
 
 namespace AIS
 {
@@ -37,6 +38,14 @@ namespace AIS
 	char Decoder::NMEAchar(int i)
 	{
 		return i < 40 ? (char)(i + 48) : (char)(i + 56);
+	}
+
+	int Decoder::NMEAchecksum(std::string s)
+	{
+		int check = 0;
+		for(char c : s) check ^= c;
+		return check;
+
 	}
 
 	void Decoder::NextState(State s, int pos)
@@ -53,11 +62,11 @@ namespace AIS
 
 	bool Decoder::CRC16(int len)
 	{
-		const uint16_t checksum = ~0x0F47;
+		const uint16_t checksum = ~0x0F47, poly = 0x8408;
  		uint16_t CRC = 0xFFFF;
 
  		for(int i = 0; i < len; i++)
- 			CRC = (DataFCS_Bits[i] ^ CRC) & 1 ? (CRC >> 1) ^ 0x8408 : CRC >> 1;
+ 			CRC = (DataFCS_Bits[i] ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
 
 		return CRC == checksum;
 	}
@@ -89,28 +98,20 @@ namespace AIS
 		const std::string comma = ",";
 		NMEA nmea;
 
-		int AISletters = (nBits + 6 - 1) / 6;
-		int nSentences = (AISletters + 56 - 1) / 56;
-		int frame = 0;
+		int nAISletters = (nBits + 6 - 1) / 6;
+		int nSentences = (nAISletters + 56 - 1) / 56;
 
-		for (int s = 0; s < nSentences; s++)
+		for (int s = 0, l = 0; s < nSentences; s++)
 		{
 			sentence = std::string("AIVDM,") + std::to_string(nSentences) + comma + std::to_string(s + 1) + comma;
+			sentence += (nSentences > 1 ? std::to_string(MessageID) : "") + comma + channel + comma;
 
-			if (nSentences > 1) sentence += std::to_string(SequenceNumber);
-			sentence += comma + channel + comma;
+			for (int i = 0; l < nAISletters && i < 56; i++, l++)
+				sentence += NMEAchar(getFrame(l));
 
-			for (int i = 0; frame < AISletters && i < 56; i++, frame++)
-				sentence += NMEAchar(getFrame(frame));
+			sentence += comma + std::to_string( (nSentences > 1 && s == nSentences - 1) ? nAISletters * 6 - nBits : 0);
 
-			if (nSentences > 1 && s == nSentences - 1)
-				sentence += comma + std::to_string(AISletters * 6 - nBits);
-			else
-				sentence += std::string(",0");
-
-			int check = 0;
-			for(char c : sentence) check ^= c;
-			char hex[3]; sprintf(hex, "%02X", check);
+			char hex[3]; sprintf(hex, "%02X", NMEAchecksum(sentence));
 			sentence += std::string("*") + hex;
 
 			nmea.sentence.push_back("!" + sentence);
@@ -122,7 +123,7 @@ namespace AIS
 
 		sendOut(&nmea, 1);
 
-		SequenceNumber = (SequenceNumber + 1) % 10;
+		MessageID = (MessageID + 1) % 10;
 	}
 
 	void Decoder::ProcessData(int len)

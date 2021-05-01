@@ -42,20 +42,22 @@ namespace AIS
 		BIT lastBit = 0;
 		BIT prev = 0;
 
-		int position = 0;
-		int one_seq_count = 0;
-		int SequenceNumber = 0;
-		State state = State::TRAINING;
-
+		int MessageID = 0;
 		int nBytes = 0;
 		int nBits = 0;
 
+		int position = 0;
+		int one_seq_count = 0;
+		State state = State::TRAINING;
+
 		void NextState(State s, int pos);
 		char NMEAchar(int i);
+		int NMEAchecksum(std::string);
+
+		void SendNMEA();
 		bool CRC16(int len);
 		void setByteData();
 		char getFrame(int pos);
-		void SendNMEA();
 		void ProcessData(int len);
 
 	public:
