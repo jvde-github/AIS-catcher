@@ -25,7 +25,7 @@ SOFTWARE.
 #include <iostream>
 #include <vector>
 
-enum class DecoderMessage { StartMessage, StartTraining };
+enum class DecoderMessage { StopTraining, StartTraining };
 enum class SystemMessage { Stop };
 
 template<typename T>

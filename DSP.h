@@ -52,7 +52,7 @@ namespace DSP
 			switch (in)
 			{
 			case DecoderMessage::StartTraining: FastPLL = true; break;
-			case DecoderMessage::StartMessage: FastPLL = false; break;
+			case DecoderMessage::StopTraining: FastPLL = false; break;
 			default: break;
 			}
 		}

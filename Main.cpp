@@ -314,7 +314,7 @@ int main(int argc, char* argv[])
 		{
 			Device::RAWFile* device = new Device::RAWFile();
 			device->openFile(filename_in);
-			device->out.Connect(&convertCU8);
+			device->out >> convertCU8;
 
 			control = device;
 			out = &(convertCU8.out);
@@ -325,7 +325,7 @@ int main(int argc, char* argv[])
 #ifdef HASRTLSDR
 			Device::RTLSDR* device = new Device::RTLSDR();
 			device->openDevice(handle);
-			device->out.Connect(&convertCU8);
+			device->out >> convertCU8;
 
 			control = device;
 			out = &(convertCU8.out);
