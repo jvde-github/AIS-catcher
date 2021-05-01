@@ -22,24 +22,30 @@ Examples
 
 To list the devices available for AIS reception:
 ```
-~/AIS-catcher$ ./AIS-catcher -l
+AIS-catcher -l
+```
+Wich reports depending on the devices connected, something like:
+```
 Available devices:
 -d:0 AIRSPY HF+  [3652A98081343F89]
 ```
 
 To start AIS demodulation, print some occasional statistics and broadcast them via UDP, we can use the following command:
 ```
-./AIS-catcher -v -u 127.0.0.1 12345
+AIS-catcher -v -u 127.0.0.1 12345
 ```
 or, equivalently,
 ```
-./AIS-catcher -d:0 -v -u 127.0.0.1 12345
+AIS-catcher -d:0 -v -u 127.0.0.1 12345
 ```
 If succesful, NMEA messages will start to come in and appear on the screen. These can be surpressed with the opton ```-q```. 
 
 The following command reads input from an IQ input file recorded with ```rtl_sdr``` at a sampling rate of 288K Hz.
 ```
-~/AIS-catcher$ ./AIS-catcher -r Signals/rtl/25042021_288000_1.raw -s 288000 -v -q 
+AIS-catcher -r Signals/rtl/25042021_288000_1.raw -s 288000 -v -q 
+```
+The output will be resembling:
+```
 Frequency     : 162000000
 Sampling rate : 288000
 ----------------------
@@ -60,14 +66,14 @@ Make sure you have the following dependencies:
 The steps to compile AIS-catcher are as follows:
 
 ```console
-$ # Get the source code:
-$ git clone https://github.com/jvde-github/AIS-catcher.git
-$ cd AIS-catcher
-$ make
-$ ./AIS-catcher
+
+git clone https://github.com/jvde-github/AIS-catcher.git
+cd AIS-catcher
+make
+./AIS-catcher
 ```
 
-If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make``` in the above with ```make rtl-only``` or ```make airspyhf-only``` which will remove the dependency on the external libraries.
+If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make``` in the above with ```make rtl-only``` or ```make airspyhf-only``` which will remove the dependency on these external libraries.
 
 To do
 -----
