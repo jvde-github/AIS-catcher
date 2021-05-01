@@ -23,6 +23,9 @@ Examples
 To list the devices available for AIS reception:
 ```
 AIS-catcher -l
+```
+Wich reports depending on the devices connected, something like:
+```
 Available devices:
 -d:0 AIRSPY HF+  [3652A98081343F89]
 ```
@@ -40,6 +43,9 @@ If succesful, NMEA messages will start to come in and appear on the screen. Thes
 The following command reads input from an IQ input file recorded with ```rtl_sdr``` at a sampling rate of 288K Hz.
 ```
 AIS-catcher -r Signals/rtl/25042021_288000_1.raw -s 288000 -v -q 
+```
+The output will be resembling:
+```
 Frequency     : 162000000
 Sampling rate : 288000
 ----------------------
