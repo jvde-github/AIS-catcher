@@ -117,7 +117,8 @@ namespace AIS
 		}
 
 		nmea.channel = channel;
-		nmea.msg = getFrame(0);
+		nmea.msg = DataFCS[0] >> 2;
+		nmea.repeat = DataFCS[0] & 3;
 		nmea.mmsi = (DataFCS[1]<<22)|(DataFCS[2]<<14)|(DataFCS[3]<<6)|(DataFCS[4]>>2);
 
 		sendOut(&nmea, 1);

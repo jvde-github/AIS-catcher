@@ -52,7 +52,7 @@ namespace IO
 			resetStatistic();
 		}
 
-		Connection<S16> out;
+		//Connection<S16> out;
 
 		void Receive(const T* data, int len)
 		{
@@ -67,6 +67,7 @@ namespace IO
 			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
 
 			rate += 0.9f * ((count - lastcount) / seconds - rate);
+
 			time_lastupdate = timeNow;
 			lastcount = count;
 
@@ -112,7 +113,7 @@ namespace IO
 		{
 			for (int i = 0; i < len; i++)
 				for (auto s : data[i].sentence)
-					std::cout << s << " ( MSG: " << data[i].msg << " , MMSI: " << data[i].mmsi << ")" << std::endl;
+					std::cout << s << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")" << std::endl;
 		}
 	};
 
