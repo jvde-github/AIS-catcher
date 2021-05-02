@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -91,7 +91,7 @@ namespace AIS
 		return (w >> (16 - 6 - y)) & mask;
 	}
 
-	void Decoder::SendNMEA()
+	void Decoder::sendNMEA()
 	{
 		std::string sentence;
 		const std::string comma = ",";
@@ -126,7 +126,7 @@ namespace AIS
 		MessageID = (MessageID + 1) % 10;
 	}
 
-	void Decoder::ProcessData(int len)
+	void Decoder::processData(int len)
 	{
 		if(CRC16(len))
 		{
@@ -135,7 +135,7 @@ namespace AIS
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			setByteData();
-			SendNMEA();
+			sendNMEA();
 		}
 	}
 
@@ -182,7 +182,7 @@ namespace AIS
                                 {
                                         if (one_seq_count == 5)
                                         {
-                                                ProcessData(position - 7);
+                                                processData(position - 7);
                                                 NextState(State::TRAINING, 0);
                                         }
                                         else

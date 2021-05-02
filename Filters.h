@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,6 @@ SOFTWARE.
 
 namespace Filters
 {
-	const std::vector<FLOAT32> CIC5 
-	{ 
-		0.03125, 0.15625, 0.3125 , 0.3125 , 0.15625, 0.03125 
-	};
-
 	const std::vector <FLOAT32>  Receiver
 	{
 		0.00119025, -0.00148464, -0.00282428, -0.00200561, -0.00068852,

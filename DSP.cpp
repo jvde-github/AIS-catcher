@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,24 +30,24 @@ namespace DSP
 {
 	void PLLSampler::Receive(const FLOAT32* data, int len)
 	{
-		for (int i = 0; i < len; i++)
-		{
-			BIT bit = (data[i] > 0);
+                for (int i = 0; i < len; i++)
+                {
+                        BIT bit = (data[i] > 0);
 
-			if (bit != prev)
-			{
-				PLL += (MidPoint - PLL) >> (FastPLL ? 1 : 4);
-			}
+                        if (bit != prev)
+                        {
+                                PLL += (0.5f - PLL) * (FastPLL ? 0.6f : 0.05f);
+                        }
 
-			PLL += Increment;
+                        PLL += 0.2f;
 
-			if (PLL >= FullRotation)
-			{
-				sendOut((const BIT *) &bit, 1);
-				PLL &= (FullRotation-1);
-			}
-			prev = bit;
-		}
+                        if (PLL >= 1.0f)
+                        {
+                                sendOut((const BIT *) &bit, 1);
+                                PLL -= (int) PLL;
+                        }
+                        prev = bit;
+                }
 	}
 
 // helper macros for moving averages
@@ -258,6 +258,30 @@ namespace DSP
 
 			output[i] = (atan2f(im, re) + DC_shift) / PI;
 			prev = data[i];
+		}
+
+		sendOut(output.data(), len);
+	}
+
+	void RealPart::Receive(const CFLOAT32* data, int len)
+	{
+		if (output.size() < len) output.resize(len);
+
+		for (int i = 0; i < len; i++)
+		{
+			output[i] = data[i].real();
+		}
+
+		sendOut(output.data(), len);
+	}
+
+	void ImaginaryPart::Receive(const CFLOAT32* data, int len)
+	{
+		if (output.size() < len) output.resize(len);
+
+		for (int i = 0; i < len; i++)
+		{
+			output[i] = data[i].imag();
 		}
 
 		sendOut(output.data(), len);

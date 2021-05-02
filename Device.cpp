@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ namespace Device {
 
 	std::vector<uint32_t> RAWFile::SupportedSampleRates()
 	{
-		return { 288000, 384000, 768000, 1536000 };
+		return { 48000, 288000, 384000, 768000, 1536000 };
 	}
 
 	//---------------------------------------

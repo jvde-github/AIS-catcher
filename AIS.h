@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -54,11 +54,11 @@ namespace AIS
 		char NMEAchar(int i);
 		int NMEAchecksum(std::string);
 
-		void SendNMEA();
+		void sendNMEA();
 		bool CRC16(int len);
 		void setByteData();
 		char getFrame(int pos);
-		void ProcessData(int len);
+		void processData(int len);
 
 	public:
 
