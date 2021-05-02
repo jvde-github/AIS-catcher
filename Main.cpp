@@ -22,6 +22,7 @@ SOFTWARE.
 
 #include <iostream>
 #include <string.h>
+#include <iomanip>
 
 #include "Signal.h"
 #include "Device.h"
@@ -404,7 +405,7 @@ int main(int argc, char* argv[])
 
 				if(verbose)
 					for(int j = 0; j < liveModels.size(); j++)
-						std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+						std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << std::setprecision(2) << statistics[j].getRate() << " msg/s" << std::endl;
 			}
 		}
 
@@ -414,7 +415,7 @@ int main(int argc, char* argv[])
 		{
 			std::cerr << "----------------------" << std::endl;
 			for(int j = 0; j < liveModels.size(); j++)
-				std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+				std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << std::setprecision(2) << statistics[j].getRate() << " msg/s" << std::endl;
 
 		}
 
