@@ -55,7 +55,7 @@ Sampling rate : 288000
 
 Releases
 --------
-A release in binary format for Windows 64 and 32 bit (including required libraries) can be found as part of the code. For Linux systems, compilation instructions are below. Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/).
+A release in binary format for Windows 64 and 32 bit (including required libraries) can be found as part of the code. Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). For Linux systems, compilation instructions are below. 
 
 Compiling
 ---------
