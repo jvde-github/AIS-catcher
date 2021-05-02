@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -71,6 +71,9 @@ namespace AIS
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;
 
+		DSP::RealPart RP;
+		DSP::ImaginaryPart IP;
+
 		DSP::FMDemodulation FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
@@ -96,6 +99,9 @@ namespace AIS
 
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;
+
+		DSP::RealPart RP;
+		DSP::ImaginaryPart IP;
 
 		DSP::FMDemodulation FM_a, FM_b;
 

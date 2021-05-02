@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,13 +33,8 @@ namespace DSP
 		std::vector<BIT> output;
 		BIT prev = 0;
 
-		int PLL;
+		float PLL;
 		bool FastPLL = true;
-
-		const int FullRotation = 0x100000;
-		const int MidPoint = FullRotation >> 1;
-		const int SamplesPerSymbol = 5;
-		const int Increment = FullRotation / SamplesPerSymbol;
 
 	public:
 
@@ -158,8 +153,8 @@ namespace DSP
 
 			for (int i = 0; i < len; i++)
 			{
-				output[i].real((float)data[i].real()/255.0f - 0.5f);
-				output[i].imag((float)data[i].imag()/255.0f - 0.5f);
+				output[i].real((float)data[i].real()/128.0f-1.0f);
+				output[i].imag((float)data[i].imag()/128.0f-1.0f);
 			}
 			out.Send(output.data(), len);
 		}
@@ -193,5 +188,23 @@ namespace DSP
 
 		void Receive(const CFLOAT32* data, int len);
 		void setDCShift(float s) { DC_shift = s; }
+	};
+
+	class RealPart : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	{
+		std::vector <FLOAT32> output;
+
+	public:
+
+		void Receive(const CFLOAT32* data, int len);
+	};
+
+	class ImaginaryPart : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	{
+		std::vector <FLOAT32> output;
+
+	public:
+
+		void Receive(const CFLOAT32* data, int len);
 	};
 }

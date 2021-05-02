@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 Jasper van den Eshof
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
 	{
-		return { 288000, 384000, 768000, 1536000 };
+		return { 48000, 288000, 384000, 768000, 1536000 };
 	}
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
@@ -68,6 +68,10 @@ namespace AIS
 			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
 			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
+		case 48000:
+			physical >> RP >> FR_a >> sampler_a >> DEC_a >> output;
+			physical >> IP >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
 		default:
 			throw "Internal error: sample rate not supported in standard model.";
 		}
@@ -80,7 +84,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelChallenge::SupportedSampleRates()
 	{
-		return { 288000, 384000, 768000, 1536000 };
+		return { 48000, 288000, 384000, 768000, 1536000 };
 	}
 
 	void ModelChallenge::buildModel(int sample_rate,bool timerOn)
@@ -121,6 +125,10 @@ namespace AIS
 			physical >> DS3;
 			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
 			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			break;
+		case 48000:
+			physical >> RP >> FR_a >> sampler_a >> DEC_a >> output;
+			physical >> IP >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in challenger model.";
