@@ -26,20 +26,24 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
 	{
-		return { 48000, 288000, 384000, 768000, 1536000 };
+		return { 1536000, 768000, 384000, 288000, 48000 };
 	}
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
 	{
 		setName("AIS Engine v0.05");
 
+		const int nSymbolsPerSample = 48000/9600;
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
 
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		DEC_a.setChannel('A');
-		DEC_b.setChannel('B');
+		S_a.setBuckets(nSymbolsPerSample);
+		S_b.setBuckets(nSymbolsPerSample);
+
+		DEC_a.resize(nSymbolsPerSample);
+		DEC_b.resize(nSymbolsPerSample);
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
 
@@ -50,34 +54,52 @@ namespace AIS
 		{
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
 			break;
 		case 768000:
 			physical >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
 			break;
 		case 384000:
 			physical >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
+			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
 			break;
 		case 288000:
 			physical >> DS3;
-			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
+			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
 			break;
 		case 48000:
-			physical >> RP >> FR_a >> sampler_a >> DEC_a >> output;
-			physical >> IP >> FR_b >> sampler_b >> DEC_b >> output;
+			physical >> RP >> FR_a;
+			physical >> IP >> FR_b;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in standard model.";
 		}
 
-		DEC_a.DecoderStateMessage.Connect(sampler_a);
-		DEC_b.DecoderStateMessage.Connect(sampler_b);
+		FR_a >> S_a;
+		FR_b >> S_b;
+
+		for (int i = 0; i < nSymbolsPerSample; i++)
+		{
+			DEC_a[i].setChannel('A');
+			DEC_b[i].setChannel('B');
+
+			S_a.out[i] >> DEC_a[i] >> output;
+			S_b.out[i] >> DEC_b[i] >> output;
+
+			for (int j = 0; j < nSymbolsPerSample; j++)
+			{
+				if (i != j)
+				{
+					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
+					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+				}
+			}
+		}
 
 		return;
 	}
@@ -89,7 +111,7 @@ namespace AIS
 
 	void ModelChallenge::buildModel(int sample_rate,bool timerOn)
 	{
-		setName("Challenger Model");
+		setName("Base model");
 
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
 
@@ -131,11 +153,11 @@ namespace AIS
 			physical >> IP >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		default:
-			throw "Internal error: sample rate not supported in challenger model.";
+			throw "Internal error: sample rate not supported in base model.";
 		}
 
-		DEC_a.DecoderStateMessage.Connect(sampler_a);
-		DEC_b.DecoderStateMessage.Connect(sampler_b);
+		DEC_a.DecoderMessage.Connect(sampler_a);
+		DEC_b.DecoderMessage.Connect(sampler_b);
 
 		return;
 	}

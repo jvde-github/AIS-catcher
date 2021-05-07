@@ -28,7 +28,7 @@ SOFTWARE.
 
 namespace DSP
 {
-	void PLLSampler::Receive(const FLOAT32* data, int len)
+	void SamplerPLL::Receive(const FLOAT32* data, int len)
 	{
                 for (int i = 0; i < len; i++)
                 {
@@ -43,11 +43,36 @@ namespace DSP
 
                         if (PLL >= 1.0f)
                         {
-                                sendOut((const BIT *) &bit, 1);
+                                sendOut(&data[i], 1);
                                 PLL -= (int) PLL;
                         }
                         prev = bit;
                 }
+	}
+
+	void SamplerPLL::Message(const DecoderMessages& in)
+	{
+		switch (in)
+		{
+		case DecoderMessages::StartTraining: FastPLL = true; break;
+		case DecoderMessages::StopTraining: FastPLL = false; break;
+		default: break;
+		}
+	}
+
+	void SamplerParallel::setBuckets(int n)
+	{
+		nBuckets = n;
+		out.resize(nBuckets);
+	}
+
+	void SamplerParallel::Receive(const FLOAT32* data, int len)
+	{
+		for (int i = 0; i < len; i++)
+		{
+			out[lastSymbol].Send(&data[i], 1);
+			lastSymbol = (lastSymbol + 1) % nBuckets;
+		}
 	}
 
 // helper macros for moving averages
@@ -258,30 +283,6 @@ namespace DSP
 
 			output[i] = (atan2f(im, re) + DC_shift) / PI;
 			prev = data[i];
-		}
-
-		sendOut(output.data(), len);
-	}
-
-	void RealPart::Receive(const CFLOAT32* data, int len)
-	{
-		if (output.size() < len) output.resize(len);
-
-		for (int i = 0; i < len; i++)
-		{
-			output[i] = data[i].real();
-		}
-
-		sendOut(output.data(), len);
-	}
-
-	void ImaginaryPart::Receive(const CFLOAT32* data, int len)
-	{
-		if (output.size() < len) output.resize(len);
-
-		for (int i = 0; i < len; i++)
-		{
-			output[i] = data[i].imag();
 		}
 
 		sendOut(output.data(), len);
