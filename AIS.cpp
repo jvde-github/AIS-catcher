@@ -191,28 +191,28 @@ namespace AIS
 					else NextState(State::TRAINING, 0);
 				}
 				break;
-                        case State::DATAFCS:
-                                DataFCS_Bits[position++] = Bit;
+			case State::DATAFCS:
+				DataFCS_Bits[position++] = Bit;
 
-                                if (Bit == 1)
-                                {
-                                        if (one_seq_count == 5)
-                                        {
-                                               if( processData(position - 7))
-												   NextState(State::FOUNDMESSAGE, 0);
-                                                NextState(State::TRAINING, 0);
-                                        }
-                                        else
-                                                one_seq_count++;
-                                }
-                                else
-                                {
-                                        if (one_seq_count == 5) position--; // bit-destuff
-                                        one_seq_count = 0;
-                                }
+				if (Bit == 1)
+				{
+					if (one_seq_count == 5)
+					{
+						if( processData(position - 7))
+							NextState(State::FOUNDMESSAGE, 0);
+						NextState(State::TRAINING, 0);
+					}
+					else
+						one_seq_count++;
+				}
+				else
+				{
+					if (one_seq_count == 5) position--; // bit-destuff
+					one_seq_count = 0;
+				}
 
-                                if (position == MaxBits) NextState(State::TRAINING, 0);
-                                break;
+				if (position == MaxBits) NextState(State::TRAINING, 0);
+				break;
 			}
 			lastBit = Bit;
 		}
