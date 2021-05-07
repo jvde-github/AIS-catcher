@@ -28,7 +28,7 @@ SOFTWARE.
 
 namespace DSP
 {
-	class PLLSampler : public SimpleStreamInOut<FLOAT32, BIT>, public MessageIn<DecoderMessage>
+	class SamplerPLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public MessageIn<DecoderMessages>
 	{
 		std::vector<BIT> output;
 		BIT prev = 0;
@@ -37,20 +37,28 @@ namespace DSP
 		bool FastPLL = true;
 
 	public:
-
 		// StreamIn
 		virtual void Receive(const FLOAT32* data, int len);
 
 		// MessageIn
-		virtual void Message(const DecoderMessage& in)
-		{
-			switch (in)
-			{
-			case DecoderMessage::StartTraining: FastPLL = true; break;
-			case DecoderMessage::StopTraining: FastPLL = false; break;
-			default: break;
-			}
-		}
+		virtual void Message(const DecoderMessages& in);
+	};
+
+
+	class SamplerParallel : public StreamIn<FLOAT32>
+	{
+		std::vector <FLOAT32> output;
+		int lastSymbol = 0;
+		int nBuckets = 0;
+
+	public:
+		void setBuckets(int n);
+
+		// Streams out
+		std::vector<Connection<FLOAT32>> out;
+
+		// Streams in
+		void Receive(const FLOAT32* data, int len);
 	};
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -59,7 +67,6 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-
 		void Receive(const CFLOAT32* data, int len);
 	};
 
@@ -92,8 +99,6 @@ namespace DSP
 
 	public:
 		FilterComplex() { }
-		FilterComplex(const std::vector <FLOAT32>& t) { setTaps(t); }
-
 
 		void setTaps(const std::vector<FLOAT32>& t)
 		{
@@ -115,11 +120,11 @@ namespace DSP
 		{
 			FLOAT32 x = 0.0f;
 			for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
+
 			return x;
 		}
 
 	public:
-
 		void setTaps(const std::vector<FLOAT32>& t)
 		{
 			taps = t;
@@ -137,7 +142,6 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-
 		void Receive(const CFLOAT32* data, int len);
 	};
 
@@ -146,7 +150,6 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-
 		void Receive(const CU8* data, int len)
 		{
 			if (output.size() < len) output.resize(len);
@@ -165,7 +168,6 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-
 		void Receive(const CFLOAT32* data, int len);
 	};
 
@@ -174,7 +176,6 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-
 		void Receive(const CFLOAT32* data, int len);
 	};
 
@@ -188,23 +189,5 @@ namespace DSP
 
 		void Receive(const CFLOAT32* data, int len);
 		void setDCShift(float s) { DC_shift = s; }
-	};
-
-	class RealPart : public SimpleStreamInOut<CFLOAT32, FLOAT32>
-	{
-		std::vector <FLOAT32> output;
-
-	public:
-
-		void Receive(const CFLOAT32* data, int len);
-	};
-
-	class ImaginaryPart : public SimpleStreamInOut<CFLOAT32, FLOAT32>
-	{
-		std::vector <FLOAT32> output;
-
-	public:
-
-		void Receive(const CFLOAT32* data, int len);
 	};
 }

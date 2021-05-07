@@ -103,43 +103,7 @@ public:
 	}
 };
 
-template <typename T>
-class PassThrough : public SimpleStreamInOut<T,T>
-{
 
-public:
-
-	virtual void Receive(const T* data, int len) { SimpleStreamInOut<T,T>::sendOut(data, len);  }
-	virtual void Receive(T* data, int len) { SimpleStreamInOut<T, T>::sendOut(data, len); }
-
-};
-
-
-template <typename T>
-class Timer : public SimpleStreamInOut<T, T>
-{
-
-	high_resolution_clock::time_point time_start;
-	float timing = 0.0;
-
-	void tic()
-	{
-		time_start = high_resolution_clock::now();
-	}
-
-	void toc()
-	{
-		timing += 1e-3f * duration_cast<microseconds>(high_resolution_clock::now() - time_start).count();
-	}
-
-public:
-
-	virtual void Receive(const T* data, int len) { tic();  SimpleStreamInOut<T, T>::sendOut(data, len);  toc();  }
-	virtual void Receive(T* data, int len) { tic();  SimpleStreamInOut<T, T>::sendOut(data, len); toc();  }
-
-
-	float getTotalTiming() { return timing; }
-};
 
 template <typename S>
 inline StreamIn<S>& operator>>(Connection<S>& a, StreamIn<S>& b) { a.Connect(&b); return b; }

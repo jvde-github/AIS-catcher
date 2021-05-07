@@ -53,10 +53,13 @@ namespace AIS
 		position = pos;
 		one_seq_count = 0;
 
-		if (s == State::TRAINING)
-			DecoderStateMessage.Send(DecoderMessage::StartTraining);
-		if (s == State::STARTFLAG)
-			DecoderStateMessage.Send(DecoderMessage::StopTraining);
+		switch (s)
+		{
+		case State::TRAINING: DecoderMessage.Send(DecoderMessages::StartTraining); break;
+		case State::STARTFLAG: DecoderMessage.Send(DecoderMessages::StopTraining); break;
+		case State::FOUNDMESSAGE: DecoderMessage.Send(DecoderMessages::Reset); break;
+		default: break;
+		}
 	}
 
 	bool Decoder::CRC16(int len)
@@ -126,7 +129,7 @@ namespace AIS
 		MessageID = (MessageID + 1) % 10;
 	}
 
-	void Decoder::processData(int len)
+	bool Decoder::processData(int len)
 	{
 		if(CRC16(len))
 		{
@@ -136,16 +139,29 @@ namespace AIS
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			setByteData();
 			sendNMEA();
+
+			return true;
+		}
+		return false;
+	}
+
+	void Decoder::Message(const DecoderMessages& in)
+	{
+		switch (in)
+		{
+		case DecoderMessages::Reset: NextState(State::TRAINING, 0);  break;
+		default: break;
 		}
 	}
 
-	void Decoder::Receive(const BIT* data, int len)
+	void Decoder::Receive(const FLOAT32* data, int len)
 	{
 		for (int i = 0; i < len; i++)
 		{
 			// NRZI
-			BIT Bit = !(data[i] ^ prev);
-			prev = data[i];
+			BIT d = data[i] > 0;
+			BIT Bit = !(d ^ prev);
+			prev = d;
 
 			// State machine
 			// At this stage: "position" bits into sequence, inspect the next bit:
@@ -182,7 +198,8 @@ namespace AIS
                                 {
                                         if (one_seq_count == 5)
                                         {
-                                                processData(position - 7);
+                                               if( processData(position - 7))
+												   NextState(State::FOUNDMESSAGE, 0);
                                                 NextState(State::TRAINING, 0);
                                         }
                                         else

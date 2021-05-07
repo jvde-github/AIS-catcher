@@ -33,7 +33,7 @@ SOFTWARE.
 #include <rtl-sdr.h>
 #endif
 #ifdef HASAIRSPYHF
-#include <airspyhf.h>
+#include <libairspyhf/airspyhf.h>
 #endif
 
 namespace Device{

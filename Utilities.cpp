@@ -20,57 +20,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#pragma once
+#include "Utilities.h"
 
-#include "Stream.h"
-#include "AIS.h"
-#include "Signal.h"
-
-namespace AIS
+namespace Util
 {
-	enum class State { TRAINING, STARTFLAG, STOPFLAG, DATAFCS, FOUNDMESSAGE };
-
-	class Decoder : public SimpleStreamInOut<FLOAT32, NMEA>, public MessageIn<DecoderMessages>
+	void RealPart::Receive(const CFLOAT32* data, int len)
 	{
-		char channel = '?';
+		if (output.size() < len) output.resize(len);
 
-		std::vector<BIT> DataFCS_Bits;
-		std::vector<uint8_t> DataFCS;
+		for (int i = 0; i < len; i++)
+		{
+			output[i] = data[i].real();
+		}
 
-		const int MaxBits = 512;
+		sendOut(output.data(), len);
+	}
 
-		State state = State::TRAINING;
+	void ImaginaryPart::Receive(const CFLOAT32* data, int len)
+	{
+		if (output.size() < len) output.resize(len);
 
-		BIT lastBit = 0;
-		BIT prev = 0;
+		for (int i = 0; i < len; i++)
+		{
+			output[i] = data[i].imag();
+		}
 
-		int MessageID = 0;
-		int nBytes = 0;
-		int nBits = 0;
-
-		int position = 0;
-		int one_seq_count = 0;
-
-		void NextState(State s, int pos);
-		char NMEAchar(int i);
-		int NMEAchecksum(std::string);
-
-		void sendNMEA();
-		bool CRC16(int len);
-		void setByteData();
-		char getFrame(int pos);
-		bool processData(int len);
-
-	public:
-
-		Decoder();
-
-		virtual void setChannel(char c) { channel = c; }
-		void Receive(const FLOAT32* data, int len);
-
-		// MessageIn
-		virtual void Message(const DecoderMessages& in);
-		// MessageOut
-		MessageHub<DecoderMessages> DecoderMessage;
-	};
+		sendOut(output.data(), len);
+	}
 }

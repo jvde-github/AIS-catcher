@@ -26,6 +26,7 @@ SOFTWARE.
 #include "DSP.h"
 #include "Device.h"
 #include "AIS.h"
+#include "Utilities.h"
 #include "IO.h"
 
 namespace AIS
@@ -37,8 +38,8 @@ namespace AIS
 		std::string name;
 		Device::Control* control;
 		Connection<CFLOAT32>* input;
-		Timer<CFLOAT32> timer;
-		PassThrough<NMEA> output;
+		Util::Timer<CFLOAT32> timer;
+		Util::PassThrough<NMEA> output;
 
 	public:
 
@@ -71,14 +72,14 @@ namespace AIS
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;
 
-		DSP::RealPart RP;
-		DSP::ImaginaryPart IP;
+		Util::RealPart RP;
+		Util::ImaginaryPart IP;
 
 		DSP::FMDemodulation FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
-		DSP::PLLSampler sampler_a, sampler_b;
-		AIS::Decoder DEC_a, DEC_b;
+		std::vector<AIS::Decoder> DEC_a, DEC_b;
+		DSP::SamplerParallel S_a, S_b;
 
 	public:
 		ModelStandard(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
@@ -100,13 +101,13 @@ namespace AIS
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;
 
-		DSP::RealPart RP;
-		DSP::ImaginaryPart IP;
+		Util::RealPart RP;
+		Util::ImaginaryPart IP;
 
 		DSP::FMDemodulation FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
-		DSP::PLLSampler sampler_a, sampler_b;
+		DSP::SamplerPLL sampler_a, sampler_b;
 		AIS::Decoder DEC_a, DEC_b;
 
 	public:
