@@ -28,12 +28,12 @@ Note: if sample rate is 48 KHz, input signal is assumed in stereo audio format
 Examples
 --------
 
-To test a proper installation and/or compilation, we can try first to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
+To test a proper installation and/or compilation, we can first try to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
 ./AIS-catcher  -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-AIS-catcher on this file should extract roughly 360 NMEA messages. Notice that if the sample rate is set at 48 KHz, AIS-catcher assumes that the input is in audio format and hence already FM demodulated. The program is similar to the usage of GNUAIS:
+AIS-catcher on this file should extract roughly 360 NMEA messages. Notice that if the sample rate is set at 48 KHz, AIS-catcher assumes that the input is in audio format and hence already FM demodulated. In this case the program is similar to the following usage of GNUAIS:
 ```
 gnuais -l helsinki-210-messages.raw
 ```
