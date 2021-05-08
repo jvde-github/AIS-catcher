@@ -73,7 +73,7 @@ namespace AIS
 		return CRC == checksum;
 	}
 
-	void Decoder::setByteData()
+	void Decoder::setData()
 	{
 		DataFCS.assign(nBytes,0);
 
@@ -81,7 +81,7 @@ namespace AIS
 			DataFCS[b >> 3] |= (DataFCS_Bits[b] << (b & 7));
 	}
 
-	char Decoder::getFrame(int pos)
+	char Decoder::getLetter(int pos)
 	{
 		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
 
@@ -109,7 +109,7 @@ namespace AIS
 			sentence += (nSentences > 1 ? std::to_string(MessageID) : "") + comma + channel + comma;
 
 			for (int i = 0; l < nAISletters && i < 56; i++, l++)
-				sentence += NMEAchar(getFrame(l));
+				sentence += NMEAchar(getLetter(l));
 
 			sentence += comma + std::to_string( (nSentences > 1 && s == nSentences - 1) ? nAISletters * 6 - nBits : 0);
 
@@ -137,7 +137,7 @@ namespace AIS
 			nBytes = (nBits + 7)/8;
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
-			setByteData();
+			setData();
 			sendNMEA();
 
 			return true;
