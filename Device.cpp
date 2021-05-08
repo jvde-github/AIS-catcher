@@ -30,16 +30,61 @@ namespace Device {
 
 	bool RAWFile::isStreaming()
 	{
+		int len;
+
 		buffer.resize(buffer_size);
-		file.read((char*)buffer.data(), buffer.size() * sizeof(CU8));
-		int len = file.gcount() / sizeof(CU8);
+		file.read((char*)buffer.data(), buffer.size());
 
 		if (!file)
-			Pause();
-		else
 		{
-			Send((CU8*)buffer.data(), len);
+			Pause();
+			return streaming;
 		}
+
+		if(format == Format::CU8)
+		{
+			len = file.gcount() / sizeof(CU8);
+			CU8 *ptr = (CU8*)buffer.data();
+
+			if(output.size() < len) output.resize(len);
+
+			for(int i = 0; i < len; i++)
+			{
+                                output[i].real((float)ptr[i].real()/128.0f-1.0f);
+                                output[i].imag((float)ptr[i].imag()/128.0f-1.0f);
+			}
+		}
+
+                if(format == Format::CS16)
+                {
+                        len = file.gcount() / sizeof(CS16);
+                        CS16 *ptr = (CS16*)buffer.data();
+
+                        if(output.size() < len) output.resize(len);
+
+                        for(int i = 0; i < len; i++)
+                        {
+                                output[i].real(ptr[i].real()/32768.0f);
+                                output[i].imag(ptr[i].imag()/32768.0f);
+                        }
+                }
+
+                if(format == Format::CF32)
+                {
+                        len = file.gcount() / sizeof(CFLOAT32);
+                        CFLOAT32 *ptr = (CFLOAT32*)buffer.data();
+
+                        if(output.size() < len) output.resize(len);
+
+                        for(int i = 0; i < len; i++)
+                        {
+                                output[i].real(ptr[i].real());
+                                output[i].imag(ptr[i].imag());
+                        }
+                }
+
+
+		Send(output.data(), len);
 
 		return streaming;
 	}

@@ -39,6 +39,7 @@ SOFTWARE.
 namespace Device{
 
 	enum class Type { NONE, RTLSDR, AIRSPYHF, WAVFILE, RAWFILE };
+	enum class Format { CU8, CF32, CS16, UNKNOWN };
 
 	class Description
 	{
@@ -120,12 +121,15 @@ namespace Device{
 		void openFile(std::string filename);
 	};
 
-	class RAWFile : public Control, public StreamOut<CU8>
+	class RAWFile : public Control, public StreamOut<CFLOAT32>
 	{
 		std::ifstream file;
 
-		std::vector<CU8> buffer;
-		const int buffer_size = 8096 * 2 * 3;
+		std::vector<char> buffer;
+		std::vector<CFLOAT32> output;
+		const int buffer_size = 8096 * 8 * 3;
+
+		Format format = Format::CU8;
 
 	public:
 
@@ -146,6 +150,7 @@ namespace Device{
 		std::vector<uint32_t> SupportedSampleRates();
 
 		// Device specific
+		void setFormat(Format f) { format = f; }
 		void openFile(std::string filename);
 	};
 
