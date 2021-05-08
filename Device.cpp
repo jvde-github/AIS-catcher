@@ -30,61 +30,54 @@ namespace Device {
 
 	bool RAWFile::isStreaming()
 	{
-		int len;
+		int len = 0;
 
-		buffer.resize(buffer_size);
+		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
+		buffer.assign(buffer_size, 0.0f);
+
+		if (output.size() < buffer_size/sizeof(CU8)) output.resize(buffer_size / sizeof(CU8));
+
 		file.read((char*)buffer.data(), buffer.size());
-
-		if (!file)
-		{
-			Pause();
-			return streaming;
-		}
 
 		if(format == Format::CU8)
 		{
-			len = file.gcount() / sizeof(CU8);
+			len = buffer.size() / sizeof(CU8);
 			CU8 *ptr = (CU8*)buffer.data();
-
-			if(output.size() < len) output.resize(len);
 
 			for(int i = 0; i < len; i++)
 			{
-                                output[i].real((float)ptr[i].real()/128.0f-1.0f);
-                                output[i].imag((float)ptr[i].imag()/128.0f-1.0f);
+				output[i].real((float)ptr[i].real()/128.0f-1.0f);
+				output[i].imag((float)ptr[i].imag()/128.0f-1.0f);
 			}
 		}
 
-                if(format == Format::CS16)
-                {
-                        len = file.gcount() / sizeof(CS16);
-                        CS16 *ptr = (CS16*)buffer.data();
+        if(format == Format::CS16)
+        {
+			len = buffer.size()/sizeof(CS16);
+			CS16 *ptr = (CS16*)buffer.data();
 
-                        if(output.size() < len) output.resize(len);
+			for(int i = 0; i < len; i++)
+			{
+					output[i].real((float)ptr[i].real()/32768.0f);
+					output[i].imag((float)ptr[i].imag()/32768.0f);
+			}
+        }
 
-                        for(int i = 0; i < len; i++)
-                        {
-                                output[i].real(ptr[i].real()/32768.0f);
-                                output[i].imag(ptr[i].imag()/32768.0f);
-                        }
-                }
+        if(format == Format::CF32)
+        {
+			len = buffer.size()/sizeof(CFLOAT32);
+			CFLOAT32 *ptr = (CFLOAT32*)buffer.data();
 
-                if(format == Format::CF32)
-                {
-                        len = file.gcount() / sizeof(CFLOAT32);
-                        CFLOAT32 *ptr = (CFLOAT32*)buffer.data();
-
-                        if(output.size() < len) output.resize(len);
-
-                        for(int i = 0; i < len; i++)
-                        {
-                                output[i].real(ptr[i].real());
-                                output[i].imag(ptr[i].imag());
-                        }
-                }
-
+			for(int i = 0; i < len; i++)
+			{
+					output[i].real(ptr[i].real());
+					output[i].imag(ptr[i].imag());
+			}
+        }
 
 		Send(output.data(), len);
+
+		if (!file) Pause();
 
 		return streaming;
 	}
