@@ -57,8 +57,8 @@ namespace AIS
 
 		void sendNMEA();
 		bool CRC16(int len);
-		void setByteData();
-		char getFrame(int pos);
+		void setData();
+		char getLetter(int pos);
 		bool processData(int len);
 
 	public:
