@@ -95,6 +95,7 @@ If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make```
 
 To do
 -----
-
-...
+- Further improvements to reception (add coherent modulation)
+- Windows GUI
+- ...
 
