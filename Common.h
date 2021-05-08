@@ -37,6 +37,7 @@ SOFTWARE.
 typedef float FLOAT32;
 typedef std::complex <float> CFLOAT32;
 typedef int16_t S16;
+typedef std::complex <int16_t> CS16;
 typedef std::complex <uint8_t> CU8;
 typedef char BIT;
 typedef struct { std::vector<std::string> sentence; char channel; int msg; uint32_t mmsi; int repeat; } NMEA;

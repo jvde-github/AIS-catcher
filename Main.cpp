@@ -22,6 +22,7 @@ SOFTWARE.
 
 #include <iostream>
 #include <string.h>
+#include <cctype>
 #include <iomanip>
 
 #include "Signal.h"
@@ -113,7 +114,12 @@ void Usage()
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
 	std::cerr << "\t[-d:x device index (default: 0)]" << std::endl;
 	std::cerr << "\t[-v enable verbose mode (default: false)]" << std::endl;
+	std::cerr << std::endl;
 	std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
+	std::cerr << "\t[-r cu8 filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
+	std::cerr << "\t[-r cs16 filename - read IQ data from raw \'signed 16 bit integer\' file]" << std::endl;
+	std::cerr << "\t[-r cf32 filename - read IQ data from WAV file in \'float\' format]" << std::endl;
+	std::cerr << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
@@ -124,6 +130,8 @@ void Usage()
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
+	std::cerr << std::endl;
+	std::cerr << "Note: if sample rate is 48 KHz, input signal is assumed in stereo audio format" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -137,6 +145,7 @@ int main(int argc, char* argv[])
 	bool NMEA_to_screen = true;
 	int ppm_correction = 0;
 	uint64_t handle = 0;
+	Device::Format RAWformat = Device::Format::CU8;
 
 	std::string filename_in = "";
 	std::string filename_out = "";
@@ -205,8 +214,26 @@ int main(int argc, char* argv[])
 				break;
 			case 'r':
 				input_type = Device::Type::RAWFILE;
-				filename_in = arg1;
-				ptr++;
+				if(arg2 == "" || arg2[0] == '-')
+				{
+					filename_in = arg1;
+					ptr++;
+				}
+				else
+				{
+					filename_in = arg2;
+
+					if(arg1 == "cu8") RAWformat = Device::Format::CU8;
+					else if(arg1 == "cs16") RAWformat = Device::Format::CS16;
+					else if(arg1 == "cf32") RAWformat = Device::Format::CF32;
+					else
+					{
+						std::cerr << "Unsupported RAW file format specified : " << arg1 << std::endl;
+						return -1;
+					}
+					ptr += 2;
+					
+				}
 				break;
 			case 'l':
 				list_devices = true;
@@ -312,10 +339,10 @@ int main(int argc, char* argv[])
 		{
 			Device::RAWFile* device = new Device::RAWFile();
 			device->openFile(filename_in);
-			device->out >> convertCU8;
+			device->setFormat(RAWformat);
 
 			control = device;
-			out = &(convertCU8.out);
+			out = &(device->out);
 			break;
 		}
 		case Device::Type::RTLSDR:
