@@ -72,7 +72,7 @@ Sampling rate : 288000
 
 Releases
 --------
-A release in binary format for Windows 64 and 32 bit (including required libraries) can be found as part of the code. Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). For Linux systems, compilation instructions are below. 
+A release in binary format for Windows 32 bit (including required libraries) can be found as part of the code (AIS-catcher W32.zip). Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
 
 Compiling
 ---------
