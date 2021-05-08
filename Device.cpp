@@ -51,29 +51,29 @@ namespace Device {
 			}
 		}
 
-        if(format == Format::CS16)
-        {
+		if(format == Format::CS16)
+		{
 			len = buffer.size()/sizeof(CS16);
 			CS16 *ptr = (CS16*)buffer.data();
 
 			for(int i = 0; i < len; i++)
 			{
-					output[i].real((float)ptr[i].real()/32768.0f);
-					output[i].imag((float)ptr[i].imag()/32768.0f);
+				output[i].real((float)ptr[i].real()/32768.0f);
+				output[i].imag((float)ptr[i].imag()/32768.0f);
 			}
-        }
+        	}
 
-        if(format == Format::CF32)
-        {
+        	if(format == Format::CF32)
+        	{
 			len = buffer.size()/sizeof(CFLOAT32);
 			CFLOAT32 *ptr = (CFLOAT32*)buffer.data();
 
 			for(int i = 0; i < len; i++)
 			{
-					output[i].real(ptr[i].real());
-					output[i].imag(ptr[i].imag());
+				output[i].real(ptr[i].real());
+				output[i].imag(ptr[i].imag());
 			}
-        }
+        	}
 
 		Send(output.data(), len);
 
@@ -81,6 +81,7 @@ namespace Device {
 
 		return streaming;
 	}
+
 	void RAWFile::openFile(std::string filename)
 	{
 		file.open(filename, std::ios::out | std::ios::binary);
