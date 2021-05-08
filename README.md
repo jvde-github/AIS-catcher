@@ -6,7 +6,12 @@ use: AIS-catcher [options]
 	[-s xxx sample rate in Hz (default: based on SDR device)]
 	[-d:x device index (default: 0)]
 	[-v enable verbose mode (default: false)]
+
 	[-r filename - read IQ data from raw 'unsigned char' file]
+	[-r cu8 filename - read IQ data from raw 'unsigned char' file]
+	[-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
+	[-r cf32 filename - read IQ data from WAV file in 'float' format]
+
 	[-w filename - read IQ data from WAV file in 'float' format]
 	[-l list available devices and terminate (default: off)]
 	[-q surpress NMEA messages to screen (default: false)]
@@ -16,10 +21,22 @@ use: AIS-catcher [options]
 	[-c run challenger model - for development purposes (default: off)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 
+Note: if sample rate is 48 KHz, input signal is assumed in stereo audio format
+
 ```
 
 Examples
 --------
+
+To test a proper installation and/or compilation, we can try first to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
+```
+wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
+./AIS-catcher  -v -s 48000 -r cs16 helsinki-210-messages.raw
+```
+AIS-catcher on this file should extract roughly 360 NMEA messages. Notice that if the sample rate is set at 48 KHz, AIS-catcher assumes that the input is in audio format and hence already FM demodulated. The program is similar to the usage of GNUAIS:
+```
+gnuais -l helsinki-210-messages.raw
+```
 
 To list the devices available for AIS reception:
 ```
