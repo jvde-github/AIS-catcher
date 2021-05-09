@@ -131,7 +131,7 @@ namespace AIS
 
 	bool Decoder::processData(int len)
 	{
-		if(CRC16(len))
+		if(len > 16 && CRC16(len))
 		{
 			nBits = len - 16;
 			nBytes = (nBits + 7)/8;
