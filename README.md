@@ -96,12 +96,12 @@ If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make```
 To do
 -----
 - Further testing
-- Ongoing: further improvements to reception (e.g. add coherent modulation, downsampling, etc)
+- Ongoing:  improvements to reception (e.g. add coherent modulation, tweak downsampling, etc)
 - Windows GUI
 - Ability to select specific receiver engine(s) at the command line
 - Overflow detection
 - Windows driver improvements
-- Automatic frequency correction function
+- Automatic frequency correction
 - ....
 - ...
 
