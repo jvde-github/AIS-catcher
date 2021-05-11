@@ -105,7 +105,7 @@ sudo make install
 
 If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf.
 
-The process to install AIS-catcher then becomes (```make airspyhf-only``` produces a version with only Airspy support):
+The process to install AIS-catcher then becomes:
 ```console
 make
 sudo make install
