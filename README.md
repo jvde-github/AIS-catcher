@@ -93,7 +93,7 @@ sudo apt-get install librtlsdr-dev -y
 
 ```
 
-Next step is to download AIS-catcher source and compile:
+Next step is to download AIS-catcher source and install the program:
 
 ```console
 
@@ -103,9 +103,7 @@ make rtl-only
 sudo make install
 ```
 
-If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf.
-
-The process to install AIS-catcher then becomes:
+If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf. The process to install AIS-catcher then becomes:
 ```console
 make
 sudo make install
