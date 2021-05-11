@@ -45,7 +45,7 @@ To list the devices available for AIS reception:
 ```console
 AIS-catcher -l
 ```
-Wich reports depending on the devices connected, something like:
+Which reports depending on the devices connected, something like:
 ```console
 Available devices:
 -d:0 AIRSPY HF+  [3652A98081343F89]
