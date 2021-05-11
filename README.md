@@ -24,7 +24,7 @@ use: AIS-catcher [options]
 	[-c run challenger model - for development purposes (default: off)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 
-Note: if sample rate is 48 KHz, input signal is assumed in stereo audio format
+Note: if sample rate is set at 48 KHz, input is assumed to be the output of a FM discriminator
 
 ```
 
