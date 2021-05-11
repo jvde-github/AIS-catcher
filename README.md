@@ -77,12 +77,12 @@ Releases
 --------
 A release in binary format for Windows 32 bit (including required libraries) can be found for your convenience as part of the release sectioin (AIS-catcher W32.zip). Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
 
-Compiling
----------
+Compilation process
+-------------------
 Make sure you have the following dependencies:
   - librtlsdr and/or libairspyhf
  
-The steps to compile AIS-catcher for RTL-SDR dongles are failry simple on a Raspberry Pi and Ubuntu systems. First ensure you have the necessary dependencies:
+The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
 
 ```console
 sudo apt-get update
@@ -105,7 +105,7 @@ sudo make install
 
 If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf.
 
-The process to install AIS-catcher is then simply:
+The process to install AIS-catcher then becomes (```make airspyhf-only``` produces a version with only Airspy support):
 ```console
 make
 sudo make install
