@@ -131,7 +131,7 @@ void Usage()
 	std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "Note: if sample rate is 48 KHz, input signal is assumed in stereo audio format" << std::endl;
+	std::cerr << "Note: if sample rate is set at 48 KHz, input is assumed to be the output of a FM discriminator" << std::endl;
 }
 
 int main(int argc, char* argv[])
