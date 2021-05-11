@@ -1,5 +1,9 @@
 # AIS-catcher - An AIS receiver for RTL-SDR dongles and the Airspy HF+
-This package will add the AIS-catcher command which is an AIS receiver for RTL SDR dongles and the Airspy HF+.
+This package will add the AIS-catcher command - a dual channel AIS receiver for RTL SDR dongles and the Airspy HF+.  
+The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. Output is send in the form of NMEA messages to either screen or broadcasted over UDP.
+
+AIS-catcher is created for research and educational purposes. DO NOT rely upon this software for navigation and/or safety of life or property purposes.
+
 
 ```
 use: AIS-catcher [options]
@@ -31,9 +35,10 @@ Examples
 To test a proper installation and/or compilation, we can first try to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
-./AIS-catcher  -v -s 48000 -r cs16 helsinki-210-messages.raw
+AIS-catcher  -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-AIS-catcher on this file should extract roughly 360 NMEA messages. Notice that if the sample rate is set at 48 KHz, AIS-catcher assumes that the input is in audio format and hence already FM demodulated. In this case the program is similar to the following usage of GNUAIS:
+AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz, AIS-catcher assumes that the input is in audio format and hence the output of a FM discriminator. 
+In this case the program is similar to the following usage of GNUAIS:
 ```
 gnuais -l helsinki-210-messages.raw
 ```
@@ -78,30 +83,45 @@ Compiling
 ---------
 Make sure you have the following dependencies:
   - librtlsdr and/or libairspyhf
-  - libusb
-  - libpthread
  
-The steps to compile AIS-catcher are as follows:
+The steps to compile AIS-catcher for RTL-SDR dongles are failry simple on a Raspberry Pi and Ubuntu systems. First ensure you have the necessary dependencies:
+
+```console
+sudo apt-get update
+sudo apt-get upgrade
+
+sudo apt-get install git make gcc g++ -y
+sudo apt-get install librtlsdr-dev -y
+
+```
+
+Next step is to download AIS-catcher source and compile:
 
 ```console
 
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
-make
-./AIS-catcher
+make rtl-only
+sudo make install
 ```
 
-If you do not have an Airspy HF+ or an RTL-SDR dongle you can replace ```make``` in the above with ```make rtl-only``` or ```make airspyhf-only``` which will remove the dependency on these external libraries.
+If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf.
+
+The process to install AIS-catcher is simply:
+```console
+make
+sudo make install
+```
 
 To do
 -----
-- Further testing
-- Ongoing:  improvements to reception (e.g. add coherent modulation, tweak downsampling, etc)
+- Ongoing: further improvements to reception and testing (e.g. add coherent modulation, downsampling, etc)
+- Access to hardware specific functionality, e.g. gain control
 - Windows GUI
 - Ability to select specific receiver engine(s) at the command line
 - Overflow detection
 - Windows driver improvements
-- Automatic frequency correction
+- Automatic frequency correction function
 - ....
 - ...
 

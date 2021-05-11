@@ -2,7 +2,7 @@ SRC = Main.cpp IO.cpp DSP.cpp Device.cpp AIS.cpp Model.cpp Utilities.cpp
 OBJ = Main.o IO.o DSP.o Device.o AIS.o Model.o Utilities.o
 
 CC = gcc 
-CFLAGS = -O3  
+CFLAGS = -O3 -Wno-psabi 
 LFLAGS = -lstdc++ -lm -o AIS-catcher 
 
 CFLAGS_RTL = -DHASRTLSDR 
@@ -32,3 +32,6 @@ lib-airspyhf:
 clean:
 	rm *.o 
 	rm AIS-catcher
+
+install:
+	cp AIS-catcher /usr/local/bin/AIS-catcher
