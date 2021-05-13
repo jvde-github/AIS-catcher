@@ -77,12 +77,13 @@ Releases
 --------
 A release in binary format for Windows 32 bit (including required libraries) can be found for your convenience as part of the release sectioin (AIS-catcher W32.zip). Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
 
-Compilation process
--------------------
+Compilation process for Linux/Raspberry Pi
+------------------------------------------
+
 Make sure you have the following dependencies:
   - librtlsdr and/or libairspyhf
  
-The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
+The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
 
 ```console
 sudo apt-get update
@@ -107,6 +108,19 @@ If you want to include Airspy HF+ functionality, ensure you install the required
 ```console
 make
 sudo make install
+```
+Comments
+--------
+
+AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal osciallator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in ppm to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. https://github.com/steve-m/kalibrate-rtl and provide as input via the ```-p``` switch on the command line.
+
+On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle. I am not sure why (some power issue?) but it is wortwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command:
+```console
+rtl_test -s 1536000
+```
+In case you observe a high number of lost data, the advice is to run AIS-catcher at a lower sampling rate for RTL SDR dongles:
+```console
+AIS-catcher -s 288000
 ```
 
 To do
