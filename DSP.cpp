@@ -278,10 +278,9 @@ namespace DSP
 
 		for (int i = 0; i < len; i++)
 		{
-			float re = data[i].real() * prev.real() + data[i].imag() * prev.imag();
-			float im = -data[i].real() * prev.imag() + data[i].imag() * prev.real();
+			auto p = data[i] * std::conj(prev);
 
-			output[i] = (atan2f(im, re) + DC_shift) / PI;
+			output[i] = (atan2f(p.imag(), p.real()) + DC_shift) / PI;
 			prev = data[i];
 		}
 
