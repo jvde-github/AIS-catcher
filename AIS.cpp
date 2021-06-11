@@ -31,13 +31,25 @@ namespace AIS
 {
 	Decoder::Decoder()
 	{
-		DataFCS_Bits.resize(MaxBits, 0);
 		DataFCS.resize(MaxBits / 8, 0);
 	}
 
 	char Decoder::NMEAchar(int i)
 	{
 		return i < 40 ? (char)(i + 48) : (char)(i + 56);
+	}
+
+	void Decoder::setBit(int i, bool b)
+	{
+		if(b)
+			DataFCS[i >> 3] |=  (1 << (i & 7));
+		else
+			DataFCS[i >> 3] &= ~ (1 << (i & 7));
+	}
+
+	bool Decoder::getBit(int i)
+	{
+		return DataFCS[i >> 3] & (1 << (i & 7));
 	}
 
 	int Decoder::NMEAchecksum(std::string s)
@@ -68,17 +80,9 @@ namespace AIS
  		uint16_t CRC = 0xFFFF;
 
  		for(int i = 0; i < len; i++)
- 			CRC = (DataFCS_Bits[i] ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
+ 			CRC = (getBit(i) ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
 
 		return CRC == checksum;
-	}
-
-	void Decoder::setData()
-	{
-		DataFCS.assign(nBytes,0);
-
-		for(int b = 0; b < nBits; b++)
-			DataFCS[b >> 3] |= (DataFCS_Bits[b] << (b & 7));
 	}
 
 	char Decoder::getLetter(int pos)
@@ -137,7 +141,6 @@ namespace AIS
 			nBytes = (nBits + 7)/8;
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
-			setData();
 			sendNMEA();
 
 			return true;
@@ -192,7 +195,8 @@ namespace AIS
 				}
 				break;
 			case State::DATAFCS:
-				DataFCS_Bits[position++] = Bit;
+
+				setBit(position++,Bit);
 
 				if (Bit == 1)
 				{

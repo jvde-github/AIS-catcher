@@ -34,7 +34,6 @@ namespace AIS
 	{
 		char channel = '?';
 
-		std::vector<BIT> DataFCS_Bits;
 		std::vector<uint8_t> DataFCS;
 
 		const int MaxBits = 512;
@@ -51,13 +50,15 @@ namespace AIS
 		int position = 0;
 		int one_seq_count = 0;
 
+		void setBit(int i, bool b);
+                bool getBit(int i);
+
 		void NextState(State s, int pos);
 		char NMEAchar(int i);
 		int NMEAchecksum(std::string);
 
 		void sendNMEA();
 		bool CRC16(int len);
-		void setData();
 		char getLetter(int pos);
 		bool processData(int len);
 
