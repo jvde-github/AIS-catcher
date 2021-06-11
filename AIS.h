@@ -51,7 +51,7 @@ namespace AIS
 		int one_seq_count = 0;
 
 		void setBit(int i, bool b);
-                bool getBit(int i);
+		bool getBit(int i);
 
 		void NextState(State s, int pos);
 		char NMEAchar(int i);
