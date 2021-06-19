@@ -74,7 +74,20 @@ Sampling rate : 288000
 
 Latest Developments
 -------------------
-The ```-c``` switch has been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. This has been added to allow for inclusion of a very simple coherent decoding model in the coming weeks which can be selected by running ```-m 2```. Notice that you can select multiple models to allow for benchmarking but only the messages from the first model specified are displayed and forwarded. For benchmarking different models specify ```-b``` for timing or ```-v``` to compare message count.
+The ```-c``` switch has been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. This has been added to allow for inclusion of a very simple coherent decoding model in the coming weeks which can be selected by running ```-m 2```. Notice that you can select multiple models to allow for benchmarking but only the messages from the first model specified are displayed and forwarded. For benchmarking different models specify ```-b``` for timing or ```-v``` to compare message count, e.g.:
+```
+AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 0 -m 1 -q -b -v
+```
+The porgram will run and summarize the performance (count and timing) of the two decoding models:
+```
+Frequency (Hz)     : 162000000
+Sampling rate (Hz) : 1536000
+----------------------
+[AIS Engine v0.05]	: 3 msgs at 5.3 msg/s
+[Base model]	: 2 msgs at 3.5 msg/s
+[AIS Engine v0.05]	: 2.6e+02 ms
+[Base model]	: 2.4e+02 ms
+```
 
 Releases
 --------
