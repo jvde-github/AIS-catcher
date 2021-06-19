@@ -21,11 +21,10 @@ use: AIS-catcher [options]
 	[-p xx frequency correction for RTL SDR]
 	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 	[-h display this message and terminate (default: false)]
-	[-c run challenger model - for development purposes (default: off)]
+	[-m xx run specific decoding model - 0: standard, 1: base, 2: coherent (default: 0)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 
 Note: if sample rate is set at 48 KHz, input is assumed to be the output of a FM discriminator
-
 ```
 
 Examples
@@ -72,6 +71,10 @@ Sampling rate : 288000
 ----------------------
 [AIS Catcher v0.01]	: 34 msgs at 388.054 msg/s
 ```
+
+Latest Developments
+-------------------
+The '''-c''' switch has been replaced with the more targeted '''--m''' option which allows the selection of specific decoding models. Notice that you can select multiple models to allow for benchmarking. This has been added to allow for inclusion of a very simple coherent decoding model in the coming weeks which can be selected by running '''-m 2'''. Notice that only the messages from the first model specified on the command line are are displayed and forwarded. For benchmarking different models include '''-b''' for timing and '''--v''' for decoding quality.
 
 Releases
 --------
