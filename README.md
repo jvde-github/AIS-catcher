@@ -74,7 +74,7 @@ Sampling rate : 288000
 
 Latest Developments
 -------------------
-The ```-c``` switch has been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. This has been added to allow for inclusion of a very simple coherent decoding model in the coming weeks which can be selected by running ```-m 2```. Notice that you can select multiple models to allow for benchmarking but only the messages from the first model specified are displayed and forwarded. For benchmarking different models specify ```-b``` for timing or ```--v``` to compare message count.
+The ```-c``` switch has been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. This has been added to allow for inclusion of a very simple coherent decoding model in the coming weeks which can be selected by running ```-m 2```. Notice that you can select multiple models to allow for benchmarking but only the messages from the first model specified are displayed and forwarded. For benchmarking different models specify ```-b``` for timing or ```-v``` to compare message count.
 
 Releases
 --------
