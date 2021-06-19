@@ -128,7 +128,7 @@ void Usage()
 #endif
 	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
-	std::cerr << "\t[-c run challenger model - for development purposes (default: off)]" << std::endl;
+	std::cerr << "\t[-m xx run specific decoding model - 0: standard, 1: base, 2: coherent (default: 0)]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "Note: if sample rate is set at 48 KHz, input is assumed to be the output of a FM discriminator" << std::endl;
@@ -139,7 +139,6 @@ int main(int argc, char* argv[])
 	int sample_rate = 0;
 	int input_device = -1;
 	bool list_devices = false;
-	bool run_challenger = false;
 	bool verbose = false;
 	bool timer_on = false;
 	bool NMEA_to_screen = true;
@@ -153,6 +152,7 @@ int main(int argc, char* argv[])
 	std::string udp_port = "";
 
 	std::vector<AIS::Model*> liveModels;
+	std::vector<int> liveModelsSelected;
 	Device::Type input_type = Device::Type::NONE;
 	IO::UDP udp;
 	IO::DumpScreen nmea_screen;
@@ -195,11 +195,12 @@ int main(int argc, char* argv[])
 				sample_rate = getNumber(arg1,0,1536000);
 				ptr++;
 				break;
+			case 'm':
+				liveModelsSelected.push_back(getNumber(arg1,0,3));
+				ptr++;
+				break;
 			case 'v':
 				verbose = true;
-				break;
-			case 'c':
-				run_challenger = true;
 				break;
 			case 'q':
 				NMEA_to_screen = false;
@@ -232,7 +233,6 @@ int main(int argc, char* argv[])
 						return -1;
 					}
 					ptr += 2;
-					
 				}
 				break;
 			case 'l':
@@ -370,10 +370,18 @@ int main(int argc, char* argv[])
 
 		// Create demodulation models
 
-		liveModels.push_back(new AIS::ModelStandard(control, out));
-		if (run_challenger)
+		if(liveModelsSelected.size() == 0)
+			liveModelsSelected.push_back(0);
+
+		for (int i = 0; i < liveModelsSelected.size(); i++)
 		{
-			liveModels.push_back(new AIS::ModelChallenge(control, out));
+			switch(liveModelsSelected[i])
+			{
+			case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
+			case 1: liveModels.push_back(new AIS::ModelChallenge(control, out)); break;
+			case 2:
+			default: throw "Model not implemented in this version. Check in later.."; break;
+			}
 		}
 
 		// set and check the sampling rate
