@@ -38,7 +38,7 @@ namespace FFT
 		return y;
 	}
 
-        int rev(int x,int logN)
+	int rev(int x,int logN)
 	{
 		int y = 0;
 
@@ -51,24 +51,24 @@ namespace FFT
 		return y;
 	}
 
-        template <typename T>
-        static void copyBitReverse(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out,int logN)
+	template <typename T>
+	static void copyBitReverse(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out,int logN)
 	{
 		for(int i = 0; i < in.size(); i++)
 			out[rev(i,logN)] = in[i];
 	}
 
-        template <typename T>
-        static void calcOmega(std::vector<std::complex<T>> &Omega,int logN)
-        {
+	template <typename T>
+	static void calcOmega(std::vector<std::complex<T>> &Omega,int logN)
+	{
 		std::cout << "Init FFT" << std::endl;
 		Omega.resize(logN);
 
 		for(int s = 0, m = 2; s < logN; s++, m *= 2)
-  			Omega[s] = std::polar(T(1), T(-2.0*M_PI/m));
+			Omega[s] = std::polar(T(1), T(-2.0*M_PI/m));
 	}
 
-        template <typename T>
+	template <typename T>
 	void fft(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out)
 	{
 		assert(out.size() == in.size());
