@@ -27,6 +27,75 @@ SOFTWARE.
 
 namespace FFT
 {
+        static int log2(int x)
+        {
+                int y = 0;
+                while(x >>= 1) y++;
+                return y;
+        }
+
+        static int rev(int x,int logN)
+        {
+                int y = 0;
+
+                for(int i = 0; i < logN; i++)
+                {
+                        y <<= 1;
+                        y |= (x & 1);
+                        x >>= 1;
+                }
+                return y;
+        }
+
+        template <typename T>
+        static void copyBitReverse(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out,int logN)
+        {
+                for(int i = 0; i < in.size(); i++)
+                        out[rev(i,logN)] = in[i];
+        }
+
+        template <typename T>
+        static void calcOmega(std::vector<std::complex<T>> &Omega,int logN)
+        {
+                Omega.resize(logN);
+
+                for(int s = 0, m = 2; s < logN; s++, m *= 2)
+                        Omega[s] = std::polar(T(1), T(-2.0*M_PI/m));
+        }
+
+
 	template <typename T>
-	void fft(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out);
+	void fft(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out)
+        {
+                assert(out.size() == in.size());
+                std::complex<T> o, u, t;
+                static std::vector<std::complex<T>> Omega;
+
+                int logN = log2(in.size());
+                int m = 2, m2 = 1;
+
+                copyBitReverse(in,out,logN);
+                if(Omega.size()<logN) calcOmega(Omega,logN);
+
+                for(int s = 0; s < logN; s++)
+                {
+                        for(int k = 0; k<in.size(); k+= m)
+                        {
+                                o = T(1.0);
+
+                                for(int j = 0; j < m2; j++)
+                                {
+                                        t = o * out[k + j + m2];
+                                        u = out[k + j];
+
+                                        out[k + j] = u + t;
+                                        out[k + j + m2] = u - t;
+
+                                        o *= Omega[s];
+                                }
+                        }
+                        m <<= 1;
+                        m2 <<= 1;
+                }
+        }
 }
