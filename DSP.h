@@ -224,14 +224,17 @@ namespace DSP
                 void Receive(const CFLOAT32* data, int len);
         };
 
-        class CoherentBruteForceDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+        class CoherentDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
         {
                 static const int nHistory = 16;
 		static const int nPhases = 16;
                 std::vector <CFLOAT32> phase;
 
                 FLOAT32 memory[nPhases][nHistory];
+
+		int rot = 0;
                 int last = 0;
+
         public:
 
                 void Receive(const CFLOAT32* data, int len);

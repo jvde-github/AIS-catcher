@@ -24,6 +24,7 @@ SOFTWARE.
 #include <cassert>
 #include <complex>
 
+#include "FFT.h"
 #include "DSP.h"
 
 namespace DSP
@@ -74,6 +75,21 @@ namespace DSP
 			lastSymbol = (lastSymbol + 1) % nBuckets;
 		}
 	}
+
+        void SamplerParallelComplex::setBuckets(int n)
+        {
+                nBuckets = n;
+                out.resize(nBuckets);
+        }
+
+        void SamplerParallelComplex::Receive(const CFLOAT32* data, int len)
+        {
+                for (int i = 0; i < len; i++)
+                {
+                        out[lastSymbol].Send(&data[i], 1);
+                        lastSymbol = (lastSymbol + 1) % nBuckets;
+                }
+        }
 
 // helper macros for moving averages
 #define MA1(idx)		r##idx = z; z += h##idx;
@@ -286,4 +302,118 @@ namespace DSP
 
 		sendOut(output.data(), len);
 	}
+
+	void SquareFreqOffsetCorrection::correctFrequency()
+	{
+                double max_val = 0.0, fz = -1;
+                int delta = 819; // 9600/48000*4096
+
+                FFT::fft(in,out);
+
+                for(int i = 0; i<4096-delta; i++)
+                {
+                        double h = std::abs(out[(i+2048)%4096])+std::abs(out[(i+delta+2048)%4096]);
+
+                        if(h > max_val)
+                        {
+                                max_val = h;
+                                fz = (2048-(i+delta/2.0));
+                        }
+                }
+
+                CFLOAT32 rot_step = std::polar(1.0f, (float)(fz/2/4096*2*M_PI));
+
+                for(int i = 0; i<4096; i++)
+                {
+                        rot *= rot_step;
+                        output[i] *= rot;
+                }
+        }
+
+        void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
+        {
+                if(in.size() < 4096) in.resize(4096);
+                if(out.size() < 4096) out.resize(4096);
+                if(output.size() < 4096) output.resize(4096);
+
+
+                for(int i = 0; i< len; i++)
+                {
+                        in[count] = data[i] * data[i];
+                        output[count] = data[i];
+
+                        if(++count == 4096)
+                        {
+                                correctFrequency();
+                                sendOut(output.data(),4096);
+                                count = 0;
+                        }
+                }
+        }
+
+      void CoherentDemodulation::Receive(const CFLOAT32* data, int len)
+        {
+                if(phase.size() == 0)
+                {
+			int np2 = nPhases/2;
+                        phase.resize(np2);
+                        for(int i = 0; i<np2; i++)
+                        {
+                                float alpha = M_PI/2.0/np2*i+M_PI/(2.0*np2);
+                                phase[i] = std::polar(1.0f,alpha);
+                        }
+                }
+
+                for(int i = 0; i<len; i++)
+                {
+                        FLOAT32 re, im;
+                        // rotate on the real axis
+                        switch(rot)
+                        {
+                                case 0: re = data[i].real(); im = data[i].imag(); break;
+                                case 1: im = data[i].real(); re = -data[i].imag(); break;
+                                case 2: re = -data[i].real(); im = -data[i].imag(); break;
+                                case 3: im = -data[i].real(); re = data[i].imag(); break;
+                        }
+
+                        rot = (rot+1) % 4;
+
+                        //  seperate bits
+                        for(int j=0; j<nPhases/2; j++)
+                        {
+                                FLOAT32 a = re*phase[j].real();
+                                FLOAT32 b = -im*phase[j].imag();
+
+                                memory[j][last] = a+b;
+                                memory[j+nPhases/2][last] = a-b; 
+                        }
+
+                        FLOAT32 maxval = 0;
+                        int maxi = 0;
+
+                        for(int j = 0; j<nPhases; j++)
+                        {
+                                FLOAT32 min_abs = std::abs(memory[j][0]);
+                                for(int l = 1; l<nHistory; l++)
+                                {
+                                        FLOAT32 v = std::abs(memory[j][l]);
+                                        if(v<min_abs) min_abs = v;
+                                }
+
+                                if(min_abs>maxval)
+                                {
+                                        maxval = min_abs;
+                                        maxi = j;
+                                }
+                        }
+
+                        bool b1 = memory[maxi][last]>0;
+                        bool b2 = memory[maxi][(last+nHistory-1) % nHistory]>0;
+
+                        FLOAT32 b = b1 ^ b2 ? 1.0f:-1.0f;
+
+                        sendOut(&b,1);
+                        last = (last+1) % nHistory;
+                }
+        }
 }

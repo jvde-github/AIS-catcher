@@ -161,4 +161,81 @@ namespace AIS
 
 		return;
 	}
+
+
+        std::vector<uint32_t> ModelCoherent::SupportedSampleRates()
+        {
+                return { 1536000, 768000, 384000, 288000 };
+        }
+
+        void ModelCoherent::buildModel(int sample_rate, bool timerOn)
+        {
+                setName("Coherent experimental");
+
+                const int nSymbolsPerSample = 48000/9600;
+                const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
+
+                FR_a.setTaps(Filters::Coherent);
+                FR_b.setTaps(Filters::Coherent);
+
+                S_a.setBuckets(nSymbolsPerSample);
+                S_b.setBuckets(nSymbolsPerSample);
+
+                DEC_a.resize(nSymbolsPerSample);
+                DEC_b.resize(nSymbolsPerSample);
+
+                CD_a.resize(nSymbolsPerSample);
+                CD_b.resize(nSymbolsPerSample);
+
+                Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
+
+
+                switch (sample_rate)
+                {
+                case 1536000:
+                        physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
+                        DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
+                        DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+                        break;
+                case 768000:
+                        physical >> DS2_3 >> DS2_2 >> DS2_1;
+                        DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
+                        DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+                        break;
+                case 384000:
+                        physical >> DS2_2 >> DS2_1;
+                        DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
+                        DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+                        break;
+                case 288000:
+                        physical >> DS3;
+                        DS3 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
+                        DS3 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+                        break;
+
+                default:
+                        throw "Internal error: sample rate not supported in standard model.";
+                }
+
+                for (int i = 0; i < nSymbolsPerSample; i++)
+                {
+                        DEC_a[i].setChannel('A');
+                        DEC_b[i].setChannel('B');
+
+                        S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
+                        S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
+
+                        for (int j = 0; j < nSymbolsPerSample; j++)
+                        {
+                                if (i != j)
+                                {
+                                        DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
+                                        DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+                                }
+                        }
+                }
+
+                return;
+        }
+
 }
