@@ -231,6 +231,7 @@ namespace DSP
                 std::vector <CFLOAT32> phase;
 
                 FLOAT32 memory[nPhases][nHistory];
+                char bits[nPhases];
 
 		int rot = 0;
                 int last = 0;

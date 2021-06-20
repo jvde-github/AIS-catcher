@@ -378,14 +378,23 @@ namespace DSP
 
                         rot = (rot+1) % 4;
 
-                        //  seperate bits
+                        //  approach as linear classification maximizing margin, seperate bits with maxmin search
                         for(int j=0; j<nPhases/2; j++)
                         {
                                 FLOAT32 a = re*phase[j].real();
                                 FLOAT32 b = -im*phase[j].imag();
 
-                                memory[j][last] = a+b;
-                                memory[j+nPhases/2][last] = a-b; 
+				bits[j] <<= 1;
+				bits[j+nPhases/2] <<= 1;
+
+				FLOAT32 t;
+				t = a+b;
+                                bits[j] |= ((t)>0) & 1;
+                                memory[j][last] = std::abs(t);
+
+				t = a-b;
+                                bits[j+nPhases/2] |= ((t)>0) & 1;
+                                memory[j+nPhases/2][last] = std::abs(t);
                         }
 
                         FLOAT32 maxval = 0;
@@ -393,22 +402,22 @@ namespace DSP
 
                         for(int j = 0; j<nPhases; j++)
                         {
-                                FLOAT32 min_abs = std::abs(memory[j][0]);
+                                FLOAT32 min_abs = memory[j][0];
                                 for(int l = 1; l<nHistory; l++)
                                 {
-                                        FLOAT32 v = std::abs(memory[j][l]);
-                                        if(v<min_abs) min_abs = v;
+                                        FLOAT32 v = memory[j][l];
+                                        if(v < min_abs) min_abs = v;
                                 }
 
-                                if(min_abs>maxval)
+                                if(min_abs > maxval)
                                 {
                                         maxval = min_abs;
                                         maxi = j;
                                 }
                         }
 
-                        bool b1 = memory[maxi][last]>0;
-                        bool b2 = memory[maxi][(last+nHistory-1) % nHistory]>0;
+			bool b2 = (bits[maxi] & 2) >> 1;
+			bool b1 = bits[maxi] & 1;
 
                         FLOAT32 b = b1 ^ b2 ? 1.0f:-1.0f;
 
