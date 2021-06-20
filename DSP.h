@@ -61,6 +61,24 @@ namespace DSP
 		void Receive(const FLOAT32* data, int len);
 	};
 
+
+        class SamplerParallelComplex : public StreamIn<CFLOAT32>
+        {
+                std::vector <CFLOAT32> output;
+                int lastSymbol = 0;
+                int nBuckets = 0;
+
+        public:
+                void setBuckets(int n);
+
+                // Streams out
+                std::vector<Connection<CFLOAT32>> out;
+
+                // Streams in
+                void Receive(const CFLOAT32* data, int len);
+        };
+
+
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		CFLOAT32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
@@ -190,4 +208,34 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 		void setDCShift(float s) { DC_shift = s; }
 	};
+
+        class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+        {
+                std::vector <CFLOAT32> output;
+                std::vector <CFLOAT64> in;
+                std::vector <CFLOAT64> out;
+
+                CFLOAT32 rot = 1.0f;
+                int count = 0;
+
+                void correctFrequency();
+
+        public:
+                void Receive(const CFLOAT32* data, int len);
+        };
+
+        class CoherentBruteForceDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+        {
+                static const int nHistory = 16;
+		static const int nPhases = 16;
+                std::vector <CFLOAT32> phase;
+
+                FLOAT32 memory[nPhases][nHistory];
+                int last = 0;
+        public:
+
+                void Receive(const CFLOAT32* data, int len);
+        };
+
+
 }
