@@ -74,11 +74,11 @@ Sampling rate : 288000
 
 Latest Developments
 -------------------
-The ```-c``` switch has been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. This has been added to allow for inclusion of a very simple coherent decoding model which can be selected by running ```-m 2```. Notice that you can select multiple models to allow for benchmarking but only the messages from the first model specified are displayed and forwarded. For benchmarking different models specify ```-b``` for timing or ```-v``` to compare message count, e.g.:
+A simple coherent demodulation model has been added to ```AIS-catcher```. For this purpose has the ```-c``` switch been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. The coherent decoding model can be selected by using the ```-m 2``` option on the command line. Notice that you can select multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 1 -q -b -v
 ```
-The porgram will run and summarize the performance (count and timing) of the two decoding models:
+The program will run and summarize the performance (count and timing) of the two decoding models coherent and base. The output will looks something like:
 ```
 Frequency (Hz)     : 162000000
 Sampling rate (Hz) : 1536000
@@ -88,7 +88,7 @@ Sampling rate (Hz) : 1536000
 [Coherent experimental]	: 5e+02 ms
 [Base model]	: 2e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine. This is typical in case there are few messages with poor quality. The prototype engine still will underperform if message density is high and signal quality strong because of the lack of precision of the frequency correction. Notice that the prototype is quite brute force but at least I got a first version to work. So the journey has started!  
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. Notice that the prototype is quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
 
 Releases
 --------
