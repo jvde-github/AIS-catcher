@@ -78,7 +78,7 @@ A simple coherent demodulation model has been added to ```AIS-catcher```. For th
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 1 -q -b -v
 ```
-The program will run and summarize the performance (count and timing) of the two decoding models coherent and base. The output will looks something like:
+The program will run and summarize the performance (count and timing) of the two decoding models coherent and base. The output will look something like:
 ```
 Frequency (Hz)     : 162000000
 Sampling rate (Hz) : 1536000
