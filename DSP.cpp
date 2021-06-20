@@ -303,6 +303,7 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
+	// square the signal, find the mid-point between two peaks
 	void SquareFreqOffsetCorrection::correctFrequency()
 	{
                 double max_val = 0.0, fz = -1;
