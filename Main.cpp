@@ -379,7 +379,7 @@ int main(int argc, char* argv[])
 			{
 			case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
 			case 1: liveModels.push_back(new AIS::ModelChallenge(control, out)); break;
-			case 2:
+			case 2: liveModels.push_back(new AIS::ModelCoherent(control, out)); break;
 			default: throw "Model not implemented in this version. Check in later.."; break;
 			}
 		}
