@@ -379,7 +379,8 @@ namespace DSP
 
                         rot = (rot+1) % 4;
 
-                        //  approach as linear classification maximizing margin, seperate bits with maxmin search
+                        // approach as linear classification maximizing margin, seperate bits with maxmin search
+			// First, project on different phase planes
                         for(int j=0; j<nPhases/2; j++)
                         {
                                 FLOAT32 a = re*phase[j].real();
@@ -398,27 +399,34 @@ namespace DSP
                                 memory[j+nPhases/2][last] = std::abs(t);
                         }
 
-                        FLOAT32 maxval = 0;
-                        int maxi = 0;
+			// Every 4 iteration determine phase approximation based on minmax search 
+			update = (update + 1) & 3;
 
-                        for(int j = 0; j<nPhases; j++)
-                        {
-                                FLOAT32 min_abs = memory[j][0];
-                                for(int l = 1; l<nHistory; l++)
-                                {
-                                        FLOAT32 v = memory[j][l];
-                                        if(v < min_abs) min_abs = v;
-                                }
+			if(update == 0)
+			{
+                        	FLOAT32 maxval = 0;
+                        	max_idx= 0;
 
-                                if(min_abs > maxval)
-                                {
-                                        maxval = min_abs;
-                                        maxi = j;
-                                }
-                        }
+                        	for(int j = 0; j<nPhases; j++)
+                        	{
+                                	FLOAT32 min_abs = memory[j][0];
+                                	for(int l = 1; l<nHistory; l++)
+                                	{
+                                        	FLOAT32 v = memory[j][l];
+                                        	if(v < min_abs) min_abs = v;
+                                	}
 
-			bool b2 = (bits[maxi] & 2) >> 1;
-			bool b1 = bits[maxi] & 1;
+                                	if(min_abs > maxval)
+                                	{
+                                        	maxval = min_abs;
+                                        	max_idx = j;
+                                	}
+                        	}
+			}
+
+			// determine the bit
+			bool b2 = (bits[max_idx] & 2) >> 1;
+			bool b1 = bits[max_idx] & 1;
 
                         FLOAT32 b = b1 ^ b2 ? 1.0f:-1.0f;
 
