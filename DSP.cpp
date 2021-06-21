@@ -387,7 +387,7 @@ namespace DSP
                                 FLOAT32 b = -im*phase[j].imag();
 
 				bits[j] <<= 1;
-				bits[j+nPhases/2] <<= 1;
+				bits[nPhases-1-j] <<= 1;
 
 				FLOAT32 t;
 				t = a+b;
@@ -395,8 +395,8 @@ namespace DSP
                                 memory[j][last] = std::abs(t);
 
 				t = a-b;
-                                bits[j+nPhases/2] |= ((t)>0) & 1;
-                                memory[j+nPhases/2][last] = std::abs(t);
+                                bits[nPhases-1-j] |= ((t)>0) & 1;
+                                memory[nPhases-1-j][last] = std::abs(t);
                         }
 
 			// Every 4 iteration determine phase approximation based on minmax search 
@@ -405,11 +405,13 @@ namespace DSP
 			if(update == 0)
 			{
                         	FLOAT32 maxval = 0;
-                        	max_idx= 0;
+				int prev_max = max_idx;
 
-                        	for(int j = 0; j<nPhases; j++)
-                        	{
-                                	FLOAT32 min_abs = memory[j][0];
+                                for(int m = nPhases-nSearch; m <= nPhases+nSearch; m++)
+                                {
+                                        int j = (m + prev_max) % nPhases;
+                                        FLOAT32 min_abs = memory[j][0];
+
                                 	for(int l = 1; l<nHistory; l++)
                                 	{
                                         	FLOAT32 v = memory[j][l];
