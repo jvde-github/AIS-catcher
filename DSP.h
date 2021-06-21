@@ -233,6 +233,8 @@ namespace DSP
                 FLOAT32 memory[nPhases][nHistory];
                 char bits[nPhases];
 
+		int max_idx = 0;
+		int update = 0;
 		int rot = 0;
                 int last = 0;
 
