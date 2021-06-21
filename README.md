@@ -21,7 +21,7 @@ use: AIS-catcher [options]
 	[-p xx frequency correction for RTL SDR]
 	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 	[-h display this message and terminate (default: false)]
-	[-m xx run specific decoding model - 0: standard, 1: base, 2: coherent (default: 0)]
+	[-m xx run specific decoding model - 0: non-coherent, 1: base, 2: coherent (default: 2)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 
 Note: if sample rate is set at 48 KHz, input is assumed to be the output of a FM discriminator
@@ -33,9 +33,9 @@ Examples
 To test a proper installation and/or compilation, we can first try to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
-AIS-catcher  -v -s 48000 -r cs16 helsinki-210-messages.raw
+AIS-catcher  -m 0 -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz, AIS-catcher assumes that the input is the output of a FM discriminator. In this case the program is similar to the following usage of GNUAIS:
+AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz with switch ```-m 0```, AIS-catcher assumes that the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
 ```console
 gnuais -l helsinki-210-messages.raw
 ```
@@ -66,10 +66,10 @@ AIS-catcher -r Signals/rtl/25042021_288000_1.raw -s 288000 -v -q
 ```
 The output will be resembling:
 ```
-Frequency     : 162000000
-Sampling rate : 288000
+Frequency (Hz)     : 162000000
+Sampling rate (Hz) : 288000
 ----------------------
-[AIS Catcher v0.01]	: 34 msgs at 388.054 msg/s
+[AIS engine v0.10]	: 34 msgs at 1.4e+02 msg/s
 ```
 
 Coherent Demodulation Engine
@@ -88,7 +88,7 @@ Sampling rate (Hz) : 1536000
 [Coherent experimental]	: 4e+02 ms
 [AIS Engine v0.05]	: 2.2e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 30 messages indentified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. Notice that the prototype is quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 30 messages indentified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. The coherent model is now the standard. It is still quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
 
 Releases
 --------
