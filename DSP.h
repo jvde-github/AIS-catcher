@@ -226,9 +226,10 @@ namespace DSP
 
         class CoherentDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
         {
-                static const int nHistory = 16;
+                static const int nHistory = 4;
 		static const int nPhases = 16;
-		static const int nSearch = 3;
+		static const int nSearch = 2;
+		static const int nUpdate = 1;
 
                 std::vector <CFLOAT32> phase;
                 FLOAT32 memory[nPhases][nHistory];
