@@ -146,10 +146,9 @@ To do
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, downsampling, etc)
 - Access to hardware specific functionality, e.g. gain control
 - Windows GUI
-- Ability to select specific receiver engine(s) at the command line
 - Overflow detection
 - Windows driver improvements
-- Automatic frequency correction function
+- Refining automatic frequency correction function
 - ....
 - ...
 
