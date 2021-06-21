@@ -400,7 +400,7 @@ namespace DSP
                         }
 
 			// Every 4 iteration determine phase approximation based on minmax search 
-			update = (update + 1) & 3;
+			update = (update + 1) % nUpdate;
 
 			if(update == 0)
 			{
