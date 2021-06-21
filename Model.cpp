@@ -31,7 +31,7 @@ namespace AIS
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("AIS Engine v0.05");
+		setName("Non-coherent Standard model");
 
 		const int nSymbolsPerSample = 48000/9600;
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
@@ -170,7 +170,7 @@ namespace AIS
 
         void ModelCoherent::buildModel(int sample_rate, bool timerOn)
         {
-                setName("Coherent experimental");
+                setName("AIS engine v0.10");
 
                 const int nSymbolsPerSample = 48000/9600;
                 const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
@@ -237,5 +237,4 @@ namespace AIS
 
                 return;
         }
-
 }
