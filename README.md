@@ -88,7 +88,7 @@ Sampling rate (Hz) : 1536000
 [AIS engine v0.10]	: 3.9e+02 ms
 [Non-coherent Standard model]	: 2.1e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 30 messages indentified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. The coherent model is now the standard. It is still quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 30 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. The coherent model is now the standard. It is still quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
 
 Releases
 --------
