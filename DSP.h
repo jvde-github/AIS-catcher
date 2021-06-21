@@ -228,8 +228,9 @@ namespace DSP
         {
                 static const int nHistory = 16;
 		static const int nPhases = 16;
-                std::vector <CFLOAT32> phase;
+		static const int nSearch = 3;
 
+                std::vector <CFLOAT32> phase;
                 FLOAT32 memory[nPhases][nHistory];
                 char bits[nPhases];
 
