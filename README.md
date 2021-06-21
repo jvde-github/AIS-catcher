@@ -72,9 +72,9 @@ Sampling rate : 288000
 [AIS Catcher v0.01]	: 34 msgs at 388.054 msg/s
 ```
 
-Latest Developments
--------------------
-A simple coherent demodulation model has been added to ```AIS-catcher```. For this purpose has the ```-c``` switch been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. The coherent decoding model can be selected by using the ```-m 2``` option on the command line. Notice that you can select multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+Coherent Demodulation Engine
+----------------------------
+A simple coherent demodulation model has been added to ```AIS-catcher```. For this purpose, the ```-c``` switch been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. The coherent decoding model can be selected by using ```-m 2```. Notice that you can select multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
