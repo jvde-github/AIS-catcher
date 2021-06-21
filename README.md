@@ -72,9 +72,9 @@ Sampling rate : 288000
 [AIS Catcher v0.01]	: 34 msgs at 388.054 msg/s
 ```
 
-Latest Developments
--------------------
-A simple coherent demodulation model has been added to ```AIS-catcher```. For this purpose has the ```-c``` switch been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. The coherent decoding model can be selected by using the ```-m 2``` option on the command line. Notice that you can select multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+Coherent Demodulation Engine
+----------------------------
+A simple coherent demodulation model has been added to ```AIS-catcher```. For this purpose, the ```-c``` switch been replaced with the more targeted ```-m``` option which allows the selection of specific decoding models. The coherent decoding model can be selected by using ```-m 2```. Notice that you can select multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
@@ -82,13 +82,14 @@ The program will run and summarize the performance (count and timing) of the two
 ```
 Frequency (Hz)     : 162000000
 Sampling rate (Hz) : 1536000
+
 ----------------------
-[Coherent experimental]	: 24 msgs at 35 msg/s
-[AIS Engine v0.05]	: 3 msgs at 4.4 msg/s
-[Coherent experimental]	: 4.1e+02 ms
+[Coherent experimental]	: 26 msgs at 41 msg/s
+[AIS Engine v0.05]	: 3 msgs at 4.8 msg/s
+[Coherent experimental]	: 3.6e+02 ms
 [AIS Engine v0.05]	: 1.9e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 24 messages indentified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. Notice that the prototype is quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 26 messages indentified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. Notice that the prototype is quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
 
 Releases
 --------
@@ -145,10 +146,9 @@ To do
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, downsampling, etc)
 - Access to hardware specific functionality, e.g. gain control
 - Windows GUI
-- Ability to select specific receiver engine(s) at the command line
 - Overflow detection
 - Windows driver improvements
-- Automatic frequency correction function
+- Refining automatic frequency correction function
 - ....
 - ...
 
