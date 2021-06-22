@@ -405,8 +405,12 @@ namespace DSP
                         }
 
 			// Determine phase that maximizes minunum distance to zero on real line every nUpdate iterations
-			// We only consder nSearches below and above the current maximum. This is crtiical as the global maximum
-			// might not make sense if there are not sufficient both 1s and 0s. For example with a short nHistory. 
+			// We only consider nSearches below and above the current maximum. This is crtiical as the global maximum
+			// might not make sense if there are not sufficient both 1s and 0s. For example with a short nHistory.
+			// A short nHistory will make the algorithm less sensitive to frequency offsets but more sensitive to noise.
+			// For the moment I have preset nHistory at 4 which is a tradeoff that seems to work well. 
+			// I have some ideas how to solve this issue but requires a bit more experimentation. This is also the reason
+			// why below code is not fully optimized yet.
 
 			update = (update + 1) % nUpdate;
 			if(update == 0)
