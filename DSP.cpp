@@ -372,7 +372,7 @@ namespace DSP
                 {
                         FLOAT32 re, im;
 
-                        //  multiply samples with (1j) ** i 
+                        //  multiply samples with (1j) ** i, to get all points on the same line 
                         switch(rot)
                         {
                                 case 0: re = data[i].real(); im = data[i].imag(); break;
@@ -383,9 +383,8 @@ namespace DSP
 
                         rot = (rot+1) % 4;
 
-                        // the points are on one line with unknown phase, approach as linear classification w 
-			// problem where we maximize the margin, i.e. the minimum distance to zero on the reak line
-			// first we calculate the this for all nPhases
+                        // Determining the phase is approached as a linear classification problem. 
+			// first we calculate the distance to zero on the real line for all nPhases 
                         for(int j=0; j<nPhases/2; j++)
                         {
                                 FLOAT32 a = re*phase[j].real();
@@ -406,11 +405,11 @@ namespace DSP
 
 			// Determine phase that maximizes minunum distance to zero on real line every nUpdate iterations
 			// We only consider nSearches below and above the current maximum. This is crtiical as the global maximum
-			// might not make sense if there are not sufficient both 1s and 0s. For example with a short nHistory.
+			// might not make sense if there are not sufficient 1s and 0s. For example with a short nHistory.
 			// A short nHistory will make the algorithm less sensitive to frequency offsets but more sensitive to noise.
 			// For the moment I have preset nHistory at 4 which is a tradeoff that seems to work well. 
 			// I have some ideas how to solve this issue but requires a bit more experimentation. This is also the reason
-			// why below code is not fully optimized yet.
+			// why below code is not fully optimized yet as it likely will change many times.
 
 			update = (update + 1) % nUpdate;
 			if(update == 0)
