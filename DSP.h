@@ -212,8 +212,7 @@ namespace DSP
         class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
         {
                 std::vector <CFLOAT32> output;
-                std::vector <CFLOAT64> in;
-                std::vector <CFLOAT64> out;
+                std::vector <CFLOAT32> fft_data;
 
                 CFLOAT32 rot = 1.0f;
                 int count = 0;
@@ -240,10 +239,9 @@ namespace DSP
 		int rot = 0;
                 int last = 0;
 
+		void setPhases();
         public:
 
                 void Receive(const CFLOAT32* data, int len);
         };
-
-
 }

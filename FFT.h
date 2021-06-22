@@ -64,32 +64,32 @@ namespace FFT
         }
 
 
+	// UNOPTIMIZED Cooley-Tukey textbook implementation
 	template <typename T>
-	void fft(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out)
+	void fft(std::vector<std::complex<T>> &x)
         {
-                assert(out.size() == in.size());
                 std::complex<T> o, u, t;
                 static std::vector<std::complex<T>> Omega;
 
-                int logN = log2(in.size());
+		int N = x.size();
+                int logN = log2(N);
                 int m = 2, m2 = 1;
 
-                copyBitReverse(in,out,logN);
                 if(Omega.size()<logN) calcOmega(Omega,logN);
 
                 for(int s = 0; s < logN; s++)
                 {
-                        for(int k = 0; k<in.size(); k+= m)
+                        for(int k = 0; k < N; k+= m)
                         {
                                 o = T(1.0);
 
                                 for(int j = 0; j < m2; j++)
                                 {
-                                        t = o * out[k + j + m2];
-                                        u = out[k + j];
+                                        t = o * x[k + j + m2];
+                                        u = x[k + j];
 
-                                        out[k + j] = u + t;
-                                        out[k + j + m2] = u - t;
+                                        x[k + j] = u + t;
+                                        x[k + j + m2] = u - t;
 
                                         o *= Omega[s];
                                 }
