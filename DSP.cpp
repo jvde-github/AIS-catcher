@@ -306,54 +306,53 @@ namespace DSP
 	// square the signal, find the mid-point between two peaks
 	void SquareFreqOffsetCorrection::correctFrequency()
 	{
-                double max_val = 0.0, fz = -1;
-                int delta = 819; // 9600/48000*4096
+ 		FLOAT32 max_val = 0.0, fz = -1;
+		int delta = 819; // 9600/48000*4096
 
-                FFT::fft(fft_data);
+		FFT::fft(fft_data);
 
-                for(int i = 0; i<4096-delta; i++)
-                {
-                        double h = std::abs(fft_data[(i+2048)%4096])+std::abs(fft_data[(i+delta+2048) % 4096]);
+		for(int i = 0; i<4096-delta; i++)
+		{
+			FLOAT32 h = std::abs(fft_data[(i+2048)%4096])+std::abs(fft_data[(i+delta+2048) % 4096]);
 
-                        if(h > max_val)
-                        {
-                                max_val = h;
-                                fz = (2048-(i+delta/2.0));
-                        }
-                }
+			if(h > max_val)
+			{
+				max_val = h;
+				fz = (2048-(i+delta/2.0));
+			}
+		}
 
-                CFLOAT32 rot_step = std::polar(1.0f, (float)(fz/2/4096*2*M_PI));
+		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz/2/4096*2*M_PI));
 
-                for(int i = 0; i<4096; i++)
-                {
-                        rot *= rot_step;
-                        output[i] *= rot;
-                }
-        }
+		for(int i = 0; i<4096; i++)
+		{
+			rot *= rot_step;
+			output[i] *= rot;
+		}
+	}
 
-        void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
-        {
+	void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
+	{
 		const int logN = 12; //FFT::log2(4096);
 
-                if(fft_data.size() < 4096) fft_data.resize(4096);
-                if(output.size() < 4096) output.resize(4096);
+		if(fft_data.size() < 4096) fft_data.resize(4096);
+		if(output.size() < 4096) output.resize(4096);
 
+		for(int i = 0; i< len; i++)
+		{
+			fft_data[FFT::rev(count,logN)] = data[i] * data[i];
+			output[count] = data[i];
 
-                for(int i = 0; i< len; i++)
-                {
-                        fft_data[FFT::rev(count,logN)] = data[i] * data[i];
-                        output[count] = data[i];
+			if(++count == 4096)
+			{
+				correctFrequency();
+				sendOut(output.data(),4096);
+				count = 0;
+			}
+		}
+	}
 
-                        if(++count == 4096)
-                        {
-                                correctFrequency();
-                                sendOut(output.data(),4096);
-                                count = 0;
-                        }
-                }
-        }
-
-      void CoherentDemodulation::setPhases()
+	void CoherentDemodulation::setPhases()
 	{
 		int np2 = nPhases/2;
  		phase.resize(np2);
@@ -364,13 +363,13 @@ namespace DSP
 		}
 	}
 
-      void CoherentDemodulation::Receive(const CFLOAT32* data, int len)
-        {
-                if(phase.size() == 0) setPhases();
+	void CoherentDemodulation::Receive(const CFLOAT32* data, int len)
+	{
+		if(phase.size() == 0) setPhases();
 
-                for(int i = 0; i<len; i++)
-                {
-                        FLOAT32 re, im;
+		for(int i = 0; i<len; i++)
+		{
+			FLOAT32 re, im;
 
                         //  multiply samples with (1j) ** i, to get all points on the same line 
                         switch(rot)
@@ -402,6 +401,7 @@ namespace DSP
                                 bits[nPhases-1-j] |= ((t)>0) & 1;
                                 memory[nPhases-1-j][last] = std::abs(t);
                         }
+                        last = (last+1) % nHistory;
 
 			// Determine phase that maximizes minunum distance to zero on real line every nUpdate iterations
 			// We only consider nSearches below and above the current maximum. This is crtiical as the global maximum
@@ -416,7 +416,7 @@ namespace DSP
 			{
                         	FLOAT32 maxval = 0;
 				int prev_max = max_idx;
-				
+
 				// local minmax search
                                 for(int m = nPhases-nSearch; m <= nPhases+nSearch; m++)
                                 {
@@ -444,7 +444,6 @@ namespace DSP
                         FLOAT32 b = b1 ^ b2 ? 1.0f:-1.0f;
 
                         sendOut(&b,1);
-                        last = (last+1) % nHistory;
                 }
         }
 }
