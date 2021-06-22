@@ -309,11 +309,11 @@ namespace DSP
                 double max_val = 0.0, fz = -1;
                 int delta = 819; // 9600/48000*4096
 
-                FFT::fft(in,out);
+                FFT::fft(fft_data);
 
                 for(int i = 0; i<4096-delta; i++)
                 {
-                        double h = std::abs(out[(i+2048)%4096])+std::abs(out[(i+delta+2048)%4096]);
+                        double h = std::abs(fft_data[(i+2048)%4096])+std::abs(fft_data[(i+delta+2048) % 4096]);
 
                         if(h > max_val)
                         {
@@ -333,14 +333,15 @@ namespace DSP
 
         void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
         {
-                if(in.size() < 4096) in.resize(4096);
-                if(out.size() < 4096) out.resize(4096);
+		const int logN = 12; //FFT::log2(4096);
+
+                if(fft_data.size() < 4096) fft_data.resize(4096);
                 if(output.size() < 4096) output.resize(4096);
 
 
                 for(int i = 0; i< len; i++)
                 {
-                        in[count] = data[i] * data[i];
+                        fft_data[FFT::rev(count,logN)] = data[i] * data[i];
                         output[count] = data[i];
 
                         if(++count == 4096)
@@ -352,23 +353,26 @@ namespace DSP
                 }
         }
 
+      void CoherentDemodulation::setPhases()
+	{
+		int np2 = nPhases/2;
+ 		phase.resize(np2);
+		for(int i = 0; i<np2; i++)
+		{
+			float alpha = M_PI/2.0/np2*i+M_PI/(2.0*np2);
+			phase[i] = std::polar(1.0f,alpha);
+		}
+	}
+
       void CoherentDemodulation::Receive(const CFLOAT32* data, int len)
         {
-                if(phase.size() == 0)
-                {
-			int np2 = nPhases/2;
-                        phase.resize(np2);
-                        for(int i = 0; i<np2; i++)
-                        {
-                                float alpha = M_PI/2.0/np2*i+M_PI/(2.0*np2);
-                                phase[i] = std::polar(1.0f,alpha);
-                        }
-                }
+                if(phase.size() == 0) setPhases();
 
                 for(int i = 0; i<len; i++)
                 {
                         FLOAT32 re, im;
-                        // rotate on the real axis
+
+                        //  multiply samples with (1j) ** i 
                         switch(rot)
                         {
                                 case 0: re = data[i].real(); im = data[i].imag(); break;
@@ -379,8 +383,9 @@ namespace DSP
 
                         rot = (rot+1) % 4;
 
-                        // approach as linear classification maximizing margin, seperate bits with maxmin search
-			// First, project on different phase planes
+                        // the points are on one line with unknown phase, approach as linear classification w 
+			// problem where we maximize the margin, i.e. the minimum distance to zero on the reak line
+			// first we calculate the this for all nPhases
                         for(int j=0; j<nPhases/2; j++)
                         {
                                 FLOAT32 a = re*phase[j].real();
@@ -399,14 +404,17 @@ namespace DSP
                                 memory[nPhases-1-j][last] = std::abs(t);
                         }
 
-			// Every 4 iteration determine phase approximation based on minmax search 
-			update = (update + 1) % nUpdate;
+			// Determine phase that maximizes minunum distance to zero on real line every nUpdate iterations
+			// We only consder nSearches below and above the current maximum. This is crtiical as the global maximum
+			// might not make sense if there are not sufficient both 1s and 0s. For example with a short nHistory. 
 
+			update = (update + 1) % nUpdate;
 			if(update == 0)
 			{
                         	FLOAT32 maxval = 0;
 				int prev_max = max_idx;
-
+				
+				// local minmax search
                                 for(int m = nPhases-nSearch; m <= nPhases+nSearch; m++)
                                 {
                                         int j = (m + prev_max) % nPhases;
