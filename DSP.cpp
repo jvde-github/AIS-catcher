@@ -358,7 +358,7 @@ namespace DSP
  		phase.resize(np2);
 		for(int i = 0; i<np2; i++)
 		{
-			float alpha = M_PI/2.0/np2*i+M_PI/(2.0*np2);
+			float alpha = M_PI/2.0/np2*i+M_PI/2.0/(2.0*np2);
 			phase[i] = std::polar(1.0f,alpha);
 		}
 	}
