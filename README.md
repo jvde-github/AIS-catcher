@@ -22,9 +22,8 @@ use: AIS-catcher [options]
 	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-m xx run specific decoding model - 0: non-coherent, 1: base, 2: coherent (default: 2)]
+	[	0: non-coherent, 1: base, 2: coherent, 3: FM discrimator output (default: 2)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
-
-Note: if sample rate is set at 48 KHz, input is assumed to be the output of a FM discriminator
 ```
 
 Examples
@@ -33,11 +32,16 @@ Examples
 To test a proper installation and/or compilation, we can first try to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
-AIS-catcher  -m 0 -v -s 48000 -r cs16 helsinki-210-messages.raw
+AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz with switch ```-m 0```, AIS-catcher assumes that the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
+AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz with switch ```-m 3```, AIS-catcher assumes that the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
 ```console
 gnuais -l helsinki-210-messages.raw
+```
+which produces:
+```
+2021/06/23 07:58:44.022880 gnuais[30841:140158714418624] INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
+2021/06/23 07:58:44.022890 gnuais[30841:140158714418624] INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
 
 To list the devices available for AIS reception:
