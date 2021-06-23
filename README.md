@@ -39,7 +39,7 @@ AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if 
 gnuais -l helsinki-210-messages.raw
 ```
 which produces:
-```
+```console
 2021/06/23 07:58:44.022880 gnuais[30841:140158714418624] INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
 2021/06/23 07:58:44.022890 gnuais[30841:140158714418624] INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
