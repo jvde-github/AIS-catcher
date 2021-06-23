@@ -383,7 +383,7 @@ namespace DSP
                         rot = (rot+1) % 4;
 
                         // Determining the phase is approached as a linear classification problem. 
-			// first we calculate the distance to zero on the real line for all nPhases 
+			// First we calculate the distance to zero on the real line for all nPhases and the last nHistory samples 
                         for(int j=0; j<nPhases/2; j++)
                         {
                                 FLOAT32 a = re*phase[j].real();
@@ -403,9 +403,9 @@ namespace DSP
                         }
                         last = (last+1) % nHistory;
 
-			// Determine phase that maximizes minunum distance to zero on real line every nUpdate iterations
-			// We only consider nSearches below and above the current maximum. This is crtiical as the global maximum
-			// might not make sense if there are not sufficient 1s and 0s. For example with a short nHistory.
+			// Determine phase that maximizes mininum distance to zero on the real line every nUpdate iterations
+			// We only consider nSearches below and above the last maximum. This is crtiical as the global maximum
+			// might not make sense if there are not sufficient 1s and 0s in the history. For example with a low nHistory.
 			// A short nHistory will make the algorithm less sensitive to frequency offsets but more sensitive to noise.
 			// For the moment I have preset nHistory at 4 which is a tradeoff that seems to work well. 
 			// I have some ideas how to solve this issue but requires a bit more experimentation. This is also the reason
