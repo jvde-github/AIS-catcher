@@ -73,7 +73,7 @@ The output will be resembling:
 Frequency (Hz)     : 162000000
 Sampling rate (Hz) : 288000
 ----------------------
-[AIS engine v0.10]	: 34 msgs at 1.4e+02 msg/s
+[AIS engine v0.10]	: 35 msgs at 1.5e+02 msg/s
 ```
 
 Coherent Demodulation Engine
@@ -87,7 +87,7 @@ The program will run and summarize the performance (count and timing) of the two
 Frequency (Hz)     : 162000000
 Sampling rate (Hz) : 1536000
 ----------------------
-[AIS engine v0.10]	: 30 msgs at 44 msg/s
+[AIS engine v0.10]	: 31 msgs at 45 msg/s
 [Non-coherent Standard model]	: 3 msgs at 4.4 msg/s
 [AIS engine v0.10]	: 3.9e+02 ms
 [Non-coherent Standard model]	: 2.1e+02 ms
