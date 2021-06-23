@@ -72,9 +72,6 @@ namespace AIS
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;
 
-		Util::RealPart RP;
-		Util::ImaginaryPart IP;
-
 		DSP::FMDemodulation FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
@@ -89,7 +86,7 @@ namespace AIS
 	};
 
 
-	// challenger model for development purposes
+	// Base model for development purposes, simplest and fastest
 
 	class ModelChallenge : public Model
 	{
@@ -100,9 +97,6 @@ namespace AIS
 
 		DSP::RotateUp ROT_a;
 		DSP::RotateDown ROT_b;
-
-		Util::RealPart RP;
-		Util::ImaginaryPart IP;
 
 		DSP::FMDemodulation FM_a, FM_b;
 
@@ -118,6 +112,7 @@ namespace AIS
 		void buildModel(int, bool);
 	};
 
+	// simple model embedding some elements of a coherent model with local phase estimation
         class ModelCoherent : public Model
         {
                 DSP::Downsample3Complex DS3;
@@ -128,9 +123,6 @@ namespace AIS
 
                 DSP::RotateUp ROT_a;
                 DSP::RotateDown ROT_b;
-
-                Util::RealPart RP;
-                Util::ImaginaryPart IP;
 
                 std::vector<DSP::CoherentDemodulation> CD_a, CD_b;
 
@@ -145,5 +137,22 @@ namespace AIS
                 void buildModel(int,bool);
         };
 
+        // Standard demodulation model for FM demodulated files
+
+        class ModelDiscriminator : public Model
+        {
+                Util::RealPart RP;
+                Util::ImaginaryPart IP;
+
+                DSP::Filter FR_a, FR_b;
+                std::vector<AIS::Decoder> DEC_a, DEC_b;
+                DSP::SamplerParallel S_a, S_b;
+
+        public:
+                ModelDiscriminator(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+                std::vector<uint32_t> SupportedSampleRates();
+
+                void buildModel(int,bool);
+        };
 
 }

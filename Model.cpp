@@ -26,7 +26,7 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000, 48000 };
+		return { 1536000, 768000, 384000, 288000 };
 	}
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
@@ -72,10 +72,6 @@ namespace AIS
 			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
 			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
 			break;
-		case 48000:
-			physical >> RP >> FR_a;
-			physical >> IP >> FR_b;
-			break;
 		default:
 			throw "Internal error: sample rate not supported in standard model.";
 		}
@@ -106,7 +102,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelChallenge::SupportedSampleRates()
 	{
-		return { 48000, 288000, 384000, 768000, 1536000 };
+		return {  288000, 384000, 768000, 1536000 };
 	}
 
 	void ModelChallenge::buildModel(int sample_rate,bool timerOn)
@@ -147,10 +143,6 @@ namespace AIS
 			physical >> DS3;
 			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
 			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-			break;
-		case 48000:
-			physical >> RP >> FR_a >> sampler_a >> DEC_a >> output;
-			physical >> IP >> FR_b >> sampler_b >> DEC_b >> output;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in base model.";
@@ -237,4 +229,61 @@ namespace AIS
 
                 return;
         }
+
+       std::vector<uint32_t> ModelDiscriminator::SupportedSampleRates()
+        {
+                return { 48000 };
+        }
+
+        void ModelDiscriminator::buildModel(int sample_rate, bool timerOn)
+        {
+                setName("FM discriminator output model");
+
+                const int nSymbolsPerSample = 48000/9600;
+
+                FR_a.setTaps(Filters::Receiver);
+                FR_b.setTaps(Filters::Receiver);
+
+                S_a.setBuckets(nSymbolsPerSample);
+                S_b.setBuckets(nSymbolsPerSample);
+
+                DEC_a.resize(nSymbolsPerSample);
+                DEC_b.resize(nSymbolsPerSample);
+
+                Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
+
+                switch (sample_rate)
+                {
+                case 48000:
+                        physical >> RP >> FR_a;
+                        physical >> IP >> FR_b;
+                        break;
+                default:
+                        throw "Internal error: sample rate not supported in standard model.";
+                }
+
+                FR_a >> S_a;
+                FR_b >> S_b;
+
+                for (int i = 0; i < nSymbolsPerSample; i++)
+                {
+                        DEC_a[i].setChannel('A');
+                        DEC_b[i].setChannel('B');
+
+                        S_a.out[i] >> DEC_a[i] >> output;
+                        S_b.out[i] >> DEC_b[i] >> output;
+
+                        for (int j = 0; j < nSymbolsPerSample; j++)
+                        {
+                                if (i != j)
+                                {
+                                        DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
+                                        DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+                                }
+                        }
+                }
+
+                return;
+        }
+
 }

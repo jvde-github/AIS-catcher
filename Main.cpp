@@ -129,9 +129,9 @@ void Usage()
 	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model - 0: non-coherent, 1: base, 2: coherent (default: 2)]" << std::endl;
+	std::cerr << "\t[\t0: non-coherent, 1: base, 2: coherent, 3: FM discrimator output (default: 2)]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "Note: if sample rate is set at 48 KHz, input is assumed to be the output of a FM discriminator" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
 				ptr++;
 				break;
 			case 'm':
-				liveModelsSelected.push_back(getNumber(arg1,0,3));
+				liveModelsSelected.push_back(getNumber(arg1,0,4));
 				ptr++;
 				break;
 			case 'v':
@@ -380,6 +380,7 @@ int main(int argc, char* argv[])
 			case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
 			case 1: liveModels.push_back(new AIS::ModelChallenge(control, out)); break;
 			case 2: liveModels.push_back(new AIS::ModelCoherent(control, out)); break;
+			case 3: liveModels.push_back(new AIS::ModelDiscriminator(control, out)); break;
 			default: throw "Model not implemented in this version. Check in later.."; break;
 			}
 		}
