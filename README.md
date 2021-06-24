@@ -73,7 +73,7 @@ The output will be resembling:
 Frequency (Hz)     : 162000000
 Sampling rate (Hz) : 288000
 ----------------------
-[AIS engine v0.10]	: 35 msgs at 1.5e+02 msg/s
+[AIS engine v0.10]	: 33 msgs at 1.4e+02 msg/s
 ```
 
 Coherent Demodulation Engine
@@ -87,12 +87,12 @@ The program will run and summarize the performance (count and timing) of the two
 Frequency (Hz)     : 162000000
 Sampling rate (Hz) : 1536000
 ----------------------
-[AIS engine v0.10]	: 31 msgs at 45 msg/s
-[Non-coherent Standard model]	: 3 msgs at 4.4 msg/s
-[AIS engine v0.10]	: 3.9e+02 ms
+[AIS engine v0.10]	: 34 msgs at 47 msg/s
+[Non-coherent Standard model]	: 3 msgs at 4.2 msg/s
+[AIS engine v0.10]	: 4e+02 ms
 [Non-coherent Standard model]	: 2.1e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 31 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The prototype engine still will underperform if message density is very high and signal quality is strong because of the lack of precision of the frequency correction. The coherent model is now the standard. It is still quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the standard but the improvements seen for this particular file are exceptional. It is still quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
 
 Releases
 --------
