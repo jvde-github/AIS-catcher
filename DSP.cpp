@@ -388,12 +388,12 @@ namespace DSP
                         {
                                 FLOAT32 a = re*phase[j].real();
                                 FLOAT32 b = -im*phase[j].imag();
+				FLOAT32 t;
 
 				bits[j] <<= 1;
 				bits[nPhases-1-j] <<= 1;
 
-				FLOAT32 t;
-				t = a+b;
+				t = a + b;
                                 bits[j] |= ((t)>0) & 1;
                                 memory[j][last] = std::abs(t);
 
@@ -414,24 +414,21 @@ namespace DSP
 			update = (update + 1) % nUpdate;
 			if(update == 0)
 			{
-                        	FLOAT32 maxval = 0;
+				FLOAT32 max_val = 0;
 				int prev_max = max_idx;
 
 				// local minmax search
-                                for(int m = nPhases-nSearch; m <= nPhases+nSearch; m++)
-                                {
-                                        int j = (m + prev_max) % nPhases;
-                                        FLOAT32 min_abs = memory[j][0];
+				for(int p = nPhases - nSearch; p <= nPhases + nSearch; p++)
+				{
+					int j = (p + prev_max) % nPhases;
+					FLOAT32 min_abs = memory[j][0];
 
                                 	for(int l = 1; l<nHistory; l++)
-                                	{
-                                        	FLOAT32 v = memory[j][l];
-                                        	if(v < min_abs) min_abs = v;
-                                	}
+						min_abs = memory[j][l] < min_abs ? memory[j][l] : min_abs;
 
-                                	if(min_abs > maxval)
+                                	if(min_abs > max_val)
                                 	{
-                                        	maxval = min_abs;
+                                        	max_val = min_abs;
                                         	max_idx = j;
                                 	}
                         	}
@@ -441,7 +438,7 @@ namespace DSP
 			bool b2 = (bits[max_idx] & 2) >> 1;
 			bool b1 = bits[max_idx] & 1;
 
-                        FLOAT32 b = b1 ^ b2 ? 1.0f:-1.0f;
+                        FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
 
                         sendOut(&b,1);
                 }
