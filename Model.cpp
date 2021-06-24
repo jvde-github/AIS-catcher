@@ -206,7 +206,7 @@ namespace AIS
                         break;
 
                 default:
-                        throw "Internal error: sample rate not supported in standard model.";
+                        throw "Internal error: sample rate not supported in default engine.";
                 }
 
                 for (int i = 0; i < nSymbolsPerSample; i++)
@@ -259,7 +259,7 @@ namespace AIS
                         physical >> IP >> FR_b;
                         break;
                 default:
-                        throw "Internal error: sample rate not supported in standard model.";
+                        throw "Internal error: sample rate not supported in FM discriminator model.";
                 }
 
                 FR_a >> S_a;

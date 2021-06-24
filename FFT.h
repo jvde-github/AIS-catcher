@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include <vector>
 #include <complex>
+#include <math.h>
 
 namespace FFT
 {
