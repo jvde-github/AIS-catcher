@@ -304,23 +304,23 @@ namespace DSP
 	// square the signal, find the mid-point between two peaks
 	void SquareFreqOffsetCorrection::correctFrequency()
 	{
- 		FLOAT32 max_val = 0.0, fz = -1;
+		FLOAT32 max_val = 0.0, fz = -1;
 		int delta = 819; // 9600/48000*4096
 
 		FFT::fft(fft_data);
 
 		for(int i = 0; i<4096-delta; i++)
 		{
-			FLOAT32 h = std::abs(fft_data[(i+2048)%4096])+std::abs(fft_data[(i+delta+2048) % 4096]);
+			FLOAT32 h = std::abs(fft_data[(i + 2048) % 4096]) + std::abs(fft_data[(i + delta + 2048) % 4096]);
 
 			if(h > max_val)
 			{
 				max_val = h;
-				fz = (2048-(i+delta/2.0));
+				fz = (2048 - (i + delta / 2.0));
 			}
 		}
 
-		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz/2/4096*2*PI));
+		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz / 2 / 4096 * 2 * PI));
 
 		for(int i = 0; i<4096; i++)
 		{
@@ -338,13 +338,13 @@ namespace DSP
 
 		for(int i = 0; i< len; i++)
 		{
-			fft_data[FFT::rev(count,logN)] = data[i] * data[i];
+			fft_data[FFT::rev(count, logN)] = data[i] * data[i];
 			output[count] = data[i];
 
 			if(++count == 4096)
 			{
 				correctFrequency();
-				sendOut(output.data(),4096);
+				sendOut(output.data(), 4096);
 				count = 0;
 			}
 		}
@@ -352,12 +352,13 @@ namespace DSP
 
 	void CoherentDemodulation::setPhases()
 	{
-		int np2 = nPhases/2;
- 		phase.resize(np2);
+		int np2 = nPhases / 2;
+		phase.resize(np2);
+
 		for(int i = 0; i<np2; i++)
 		{
-			float alpha = PI/2.0/np2*i+PI/2.0/(2.0*np2);
-			phase[i] = std::polar(1.0f,alpha);
+			float alpha = PI / 2.0 / np2 * i + PI / 2.0 / (2.0 * np2);
+			phase[i] = std::polar(1.0f, alpha);
 		}
 	}
 
