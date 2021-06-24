@@ -288,8 +288,6 @@ namespace DSP
 
 	void FMDemodulation::Receive(const CFLOAT32* data, int len)
 	{
-		const float PI = 3.141592653589793f;
-
 		if (output.size() < len) output.resize(len);
 
 		for (int i = 0; i < len; i++)
@@ -322,7 +320,7 @@ namespace DSP
 			}
 		}
 
-		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz/2/4096*2*M_PI));
+		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz/2/4096*2*PI));
 
 		for(int i = 0; i<4096; i++)
 		{
@@ -358,7 +356,7 @@ namespace DSP
  		phase.resize(np2);
 		for(int i = 0; i<np2; i++)
 		{
-			float alpha = M_PI/2.0/np2*i+M_PI/2.0/(2.0*np2);
+			float alpha = PI/2.0/np2*i+PI/2.0/(2.0*np2);
 			phase[i] = std::polar(1.0f,alpha);
 		}
 	}
