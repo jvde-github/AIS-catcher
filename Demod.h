@@ -22,28 +22,44 @@ SOFTWARE.
 
 #pragma once
 
-#include <chrono>
-#include <complex>
+#include "Stream.h"
+#include "Filters.h"
+#include "Signal.h"
 
-#ifdef WIN32
-#include <windows.h>
-#define SleepSystem(x) Sleep(x)
-#else
-#include <unistd.h>
-#include <signal.h>
-#define SleepSystem(x) usleep(x*1000)
-#endif
+namespace DSP
+{
+	class FMDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	{
+		std::vector <FLOAT32> output;
+		CFLOAT32 prev = 0.0;
+		float DC_shift = 0.0;
 
-typedef float FLOAT32;
-typedef double FLOAT64;
-typedef std::complex <FLOAT32> CFLOAT32;
-typedef std::complex <FLOAT64> CFLOAT64;
-typedef int16_t S16;
-typedef std::complex <int16_t> CS16;
-typedef std::complex <uint8_t> CU8;
-typedef char BIT;
-typedef struct { std::vector<std::string> sentence; char channel; int msg; uint32_t mmsi; int repeat; } NMEA;
+	public:
 
-using namespace std::chrono;
+		void Receive(const CFLOAT32* data, int len);
+		void setDCShift(float s) { DC_shift = s; }
+	};
 
-#define PI	3.14159265358979323846
+	class CoherentDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	{
+		static const int nHistory = 5;
+		static const int nPhases = 16;
+		static const int nSearch = 2;
+		static const int nUpdate = 1;
+
+		std::vector <CFLOAT32> phase;
+		FLOAT32 memory[nPhases][nHistory];
+		char bits[nPhases];
+
+		int max_idx = 0;
+		int update = 0;
+		int rot = 0;
+		int last = 0;
+
+		void setPhases();
+
+	public:
+
+		void Receive(const CFLOAT32* data, int len);
+	};
+}

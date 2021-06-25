@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
 			switch(liveModelsSelected[i])
 			{
 			case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
-			case 1: liveModels.push_back(new AIS::ModelChallenge(control, out)); break;
+			case 1: liveModels.push_back(new AIS::ModelBase(control, out)); break;
 			case 2: liveModels.push_back(new AIS::ModelCoherent(control, out)); break;
 			case 3: liveModels.push_back(new AIS::ModelDiscriminator(control, out)); break;
 			default: throw "Model not implemented in this version. Check in later.."; break;

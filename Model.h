@@ -26,6 +26,7 @@ SOFTWARE.
 #include "DSP.h"
 #include "Device.h"
 #include "AIS.h"
+#include "Demod.h"
 #include "Utilities.h"
 #include "IO.h"
 
@@ -88,7 +89,7 @@ namespace AIS
 
 	// Base model for development purposes, simplest and fastest
 
-	class ModelChallenge : public Model
+	class ModelBase : public Model
 	{
 		DSP::Downsample3Complex DS3;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
@@ -106,53 +107,52 @@ namespace AIS
 
 	public:
 
-		ModelChallenge(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		ModelBase(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
 		std::vector<uint32_t> SupportedSampleRates();
 
 		void buildModel(int, bool);
 	};
 
 	// simple model embedding some elements of a coherent model with local phase estimation
-        class ModelCoherent : public Model
-        {
-                DSP::Downsample3Complex DS3;
-                DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
-                DSP::Downsample2CIC5 DS2_a, DS2_b;
-                DSP::FilterCIC5 F_a, F_b;
-                DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
+	class ModelCoherent : public Model
+	{
+		DSP::Downsample3Complex DS3;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
+		DSP::Downsample2CIC5 DS2_a, DS2_b;
+		DSP::FilterCIC5 F_a, F_b;
+		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 
-                DSP::RotateUp ROT_a;
-                DSP::RotateDown ROT_b;
+		DSP::RotateUp ROT_a;
+		DSP::RotateDown ROT_b;
 
-                std::vector<DSP::CoherentDemodulation> CD_a, CD_b;
+		std::vector<DSP::CoherentDemodulation> CD_a, CD_b;
 
-                DSP::FilterComplex FR_a, FR_b;
-                std::vector<AIS::Decoder> DEC_a, DEC_b;
-                DSP::SamplerParallelComplex S_a, S_b;
+		DSP::FilterComplex FR_a, FR_b;
+		std::vector<AIS::Decoder> DEC_a, DEC_b;
+		DSP::SamplerParallelComplex S_a, S_b;
 
-        public:
-                ModelCoherent(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-                std::vector<uint32_t> SupportedSampleRates();
+	public:
+		ModelCoherent(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		std::vector<uint32_t> SupportedSampleRates();
 
-                void buildModel(int,bool);
-        };
+		void buildModel(int,bool);
+	};
 
-        // Standard demodulation model for FM demodulated files
+	// Standard demodulation model for FM demodulated files
 
-        class ModelDiscriminator : public Model
-        {
-                Util::RealPart RP;
-                Util::ImaginaryPart IP;
+	class ModelDiscriminator : public Model
+	{
+		Util::RealPart RP;
+		Util::ImaginaryPart IP;
 
-                DSP::Filter FR_a, FR_b;
-                std::vector<AIS::Decoder> DEC_a, DEC_b;
-                DSP::SamplerParallel S_a, S_b;
+		DSP::Filter FR_a, FR_b;
+		std::vector<AIS::Decoder> DEC_a, DEC_b;
+		DSP::SamplerParallel S_a, S_b;
 
-        public:
-                ModelDiscriminator(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-                std::vector<uint32_t> SupportedSampleRates();
+	public:
+		ModelDiscriminator(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		std::vector<uint32_t> SupportedSampleRates();
 
-                void buildModel(int,bool);
-        };
-
+		void buildModel(int,bool);
+	};
 }

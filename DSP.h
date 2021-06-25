@@ -197,51 +197,17 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-	class FMDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
-		std::vector <FLOAT32> output;
-		CFLOAT32 prev = 0.0;
-		float DC_shift = 0.0;
+		std::vector <CFLOAT32> output;
+		std::vector <CFLOAT32> fft_data;
+
+		CFLOAT32 rot = 1.0f;
+		int count = 0;
+
+		void correctFrequency();
 
 	public:
-
 		void Receive(const CFLOAT32* data, int len);
-		void setDCShift(float s) { DC_shift = s; }
 	};
-
-        class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
-        {
-                std::vector <CFLOAT32> output;
-                std::vector <CFLOAT32> fft_data;
-
-                CFLOAT32 rot = 1.0f;
-                int count = 0;
-
-                void correctFrequency();
-
-        public:
-                void Receive(const CFLOAT32* data, int len);
-        };
-
-        class CoherentDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
-        {
-                static const int nHistory = 5;
-		static const int nPhases = 16;
-		static const int nSearch = 2;
-		static const int nUpdate = 1;
-
-                std::vector <CFLOAT32> phase;
-                FLOAT32 memory[nPhases][nHistory];
-                char bits[nPhases];
-
-		int max_idx = 0;
-		int update = 0;
-		int rot = 0;
-                int last = 0;
-
-		void setPhases();
-        public:
-
-                void Receive(const CFLOAT32* data, int len);
-        };
 }

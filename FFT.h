@@ -25,7 +25,7 @@ SOFTWARE.
 #include <vector>
 #include <complex>
 
-#define PI	3.14159265358979323846
+#include "Common.h"
 
 namespace FFT
 {
