@@ -1,5 +1,5 @@
-SRC = Main.cpp IO.cpp DSP.cpp Device.cpp AIS.cpp Model.cpp Utilities.cpp
-OBJ = Main.o IO.o DSP.o Device.o AIS.o Model.o Utilities.o
+SRC = Main.cpp IO.cpp DSP.cpp Device.cpp AIS.cpp Model.cpp Utilities.cpp Demod.cpp
+OBJ = Main.o IO.o DSP.o Device.o AIS.o Model.o Utilities.o Demod.o
 
 CC = gcc 
 CFLAGS = -O3 -Wno-psabi 
