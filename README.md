@@ -123,7 +123,7 @@ AISRec has some excellent sensitivity and is one of the most user friendly packa
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. These non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
 
-Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespear antenna with quite some blockage from buildings:
+Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespears antenna with quite some blockage from buildings:
 
 | Model | Run 1 | 
 | :---: | :---: | 
@@ -138,7 +138,7 @@ Same results for a different set up. Location: The Hague residential area with R
 
 ## Releases
 
-A release in binary format for Windows 32 bit (including required libraries) can be found for your convenience as part of the release section (AIS-catcher W32.zip). Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
+A release in binary format for Windows 32 bit (including required libraries) can be found for your convenience as part of the release section (AIS-catcher 0.06 W32.zip). Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
 
 ## Compilation process for Linux/Raspberry Pi
 
