@@ -95,7 +95,7 @@ The default model is the most time and memory consuming but experiments suggest 
 
 To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
 
-Location: Vlieland with NESDR RTL-SDR dongle with standard provided antenna included:
+Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system):
  | Model | Run 1 | Run 2 |
  | :---: | :---: | :---: |
 | AIS-catcher Default @ 288K Windows | 590 | 636 |
