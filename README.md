@@ -17,7 +17,7 @@ use: AIS-catcher [options]
 
 	[-w filename - read IQ data from WAV file in 'float' format]
 	[-l list available devices and terminate (default: off)]
-	[-q surpress NMEA messages to screen (default: false)]
+	[-q surpress NMEA messages to screen (default: false)]https://github.com/dgiardini/rtl-ais
 	[-p xx frequency correction for RTL SDR]
 	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 	[-h display this message and terminate (default: false)]
@@ -119,7 +119,7 @@ Location: Vlieland with NESDR RTL-SDR dongle with standard antenna included:
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
 | AISRec 2.003 (trial) @ Low Windows | 557 | 569 |
 
-AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is due to the USB ports on my laptopn, I could not get it to run for newer versions. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient open source AIS receiver with minimal hardware requirements. 
+AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop, I could not get it to run for newer versions which indicate a higher sampling rate. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient open source AIS receiver with minimal hardware requirements. 
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. These non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
 
