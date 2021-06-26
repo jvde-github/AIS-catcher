@@ -24,7 +24,7 @@ use: AIS-catcher [options]
 	[-p xx frequency correction for RTL SDR]
 	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 	[-h display this message and terminate (default: false)]
-	[-m xx run specific decoding model - 0: non-coherent, 1: base, 2: coherent (default: 2)]
+	[-m xx run specific decoding model]
 	[	0: non-coherent, 1: base, 2: coherent, 3: FM discrimator output (default: 2)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 ````
