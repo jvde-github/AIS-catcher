@@ -25,7 +25,7 @@ use: AIS-catcher [options]
 	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-m xx run specific decoding model]
-	[	0: non-coherent, 1: base, 2: coherent, 3: FM discrimator output (default: 2)]
+	[	0: standard (non-coherent), 1: base (non-coherent), 2: default (coherent), 3: FM discrimator output (default: 2)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 ````
 
