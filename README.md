@@ -37,7 +37,7 @@ To test a proper installation and/or compilation (see below), we can first try t
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
 AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz with switch ```-m 3```, AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
+AIS-catcher on this file should extract roughly ``361`` AIVDM lines. Notice that if the sample rate is set at 48 KHz with switch ```-m 3```, AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
 ```console
 gnuais -l helsinki-210-messages.raw
 ```
