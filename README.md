@@ -1,7 +1,9 @@
 # AIS-catcher - An AIS receiver for RTL-SDR dongles and Airspy HF+
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL SDR dongles and the Airspy HF+. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The idea behind ```AIS-catcher``` is that it should be easy to run various decoding model in parallel and read input from file to create an environment to test and benchmark different decoding models in a live environment.
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles and the Airspy HF+. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The idea behind ```AIS-catcher``` is that it should be easy to run various decoding model in parallel and read input from file to create an environment to test and benchmark different decoding models in a live environment.
 
 AIS-catcher is created for research and educational purposes. DO NOT rely upon this software including for navigation and/or safety of life or property purposes.
+
+AIS-catcher is developed to provide a platform that caters for continuous improvements. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was self made by investigating signals and trying different ways to get a coherent model running. So far, I have not come across the approach but undoubtly, with such a widely researched area, it might exist. Nevertheless it looks promising as a starting point for further developments. If I have some more free time I will try to expand on my blog. 
 
 ## Usage
 ````
@@ -82,7 +84,7 @@ AIS-catcher -s 288000
 
 ## Running multiple models
 
-Currently 4 different models have been included in ```AIS-catcher```, including a simple coherent demodulation model which is the default model. For this purpose, the command line provides  the ```-m``` option which allows for the selection of specific models.  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+The command line provides  the ```-m``` option which allows for the selection of specific receiver models (```AIS-catcher```has 4 models currently included).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
@@ -93,14 +95,14 @@ The program will run and summarize the performance (count and timing) of the two
 [AIS engine v0.06]		: 4.1e+02 ms
 [Standard (non-coherent)]	: 2.2e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the defauklt but the improvements seen for this particular file are exceptional. 
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the default but the improvements seen for this particular file are exceptional. 
 
 
 ## Available models
 
-Currently 4 models are included in the program:
+As highlighted in the previous section Currently 4 models are included in the program:
 
-- `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. idea is to find a balance between the reception quality of coherent models and robustness of non-coherent model. 
+- `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. The idea was to find a balance between the reception quality of coherent models and robustness of non-coherent model. 
 - `Base model (non-coherent)`: base model similar to rtl-ais with some modifications to PLL and filter [see https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
 - `Standard model (non-coherent)`: as the base model with more aggressive PLL
 - `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place.
@@ -119,11 +121,11 @@ Location: Vlieland with NESDR RTL-SDR dongle with standard provided antenna incl
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
 | AISRec 2.003 (trial) @ Low Windows | 557 | 569 |
 
-AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop with Windows drivers, I could not get it to run for newer versions which suggest that a higher sampling rate is used than in the 2.003 version. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements. 
+For information, I performed seperate runs with AISRec and RTL-AIS as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used than in the 2.003 version. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer for open source AIS software.
 
-The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. These non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
+The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time. Nevertheless, these non-scientific conducted experiments suggest that the default model can perform better than the standard model and a higher sampling rate should be preferred over a lower rate where possible.
 
-Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespeare antenna with quite some blockage from buildings:
+Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespeare antenna with quite some blockage from surrounding buildings:
 
 | Model | Run 1 | 
 | :---: | :---: | 
