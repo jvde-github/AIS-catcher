@@ -58,7 +58,7 @@ To start AIS demodulation, print some occasional statistics and broadcast them v
 ```console
 AIS-catcher -v -u 127.0.0.1 12345
 ```
-If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These can be surpressed with the option ```-q```. 
+If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These console messages can be surpressed with the option ```-q```. 
 
 The following commands recorded a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
 ```console
