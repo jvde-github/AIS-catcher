@@ -89,7 +89,7 @@ In the current version 4 different receiver models are embedded:
 - `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. The idea was to find a balance between the reception quality of coherent models and robustness of non-coherent model towards frequency and phase offsets. 
 - `Base model (non-coherent)`: base model similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter [see e.g. https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
 - `Standard model (non-coherent)`: as the base model with more aggressive PLL
-- `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place.
+- `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
 
 The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```m 1``` if needed.
 
