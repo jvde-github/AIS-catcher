@@ -103,7 +103,7 @@ Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with
 | AIS-catcher Base (non-coherent) @ 288K Windows| 434 | 413 |
 | AIS-catcher Default @ 1536K Ubuntu | 748 | 708 |
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
-| AISRec 2.003 (trial) @ Low Windows | 557 | 569 |
+| AISRec 2.003 (trial) @ Low rate Windows | 557 | 569 |
 
 For completeness I performed seperate runs with AISRec and RTL-AIS as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used in the newer versions of AISrec. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software.
 
@@ -120,7 +120,7 @@ Same results for a different set up. Location: The Hague residential area with R
 | AIS-catcher Standard (non-coherent) @ 1536K Raspberry Pi 4B | 63 | 
 | AIS-catcher Base (non-coherent) @ 1536K Raspberry Pi 4B | 54 | 
 | RTL-AIS @ 1600K Ubuntu | 4 | 
-| AISRec 2.003 (trial) @ Low Windows | 59 | 
+| AISRec 2.003 (trial) @ Low rate Windows | 59 | 
 
 
 
