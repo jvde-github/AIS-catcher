@@ -60,7 +60,7 @@ AIS-catcher -v -u 127.0.0.1 12345
 ```
 If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These can be surpressed with the option ```-q```. 
 
-The following commands recored a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
+The following commands recorded a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
 ```console
 rtl_sdr -s 288K -f 162M  test_288.raw
 AIS-catcher -r test_288.raw -s 288000 -v 
@@ -103,7 +103,7 @@ Currently 4 models are included in the program:
 - `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. idea is to find a balance between the reception quality of coherent models and robustness of non-coherent model. 
 - `Base model (non-coherent)`: base model similar to rtl-ais with some modifications to PLL and filter [see https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
 - `Standard model (non-coherent)`: as the base model with more aggressive PLL
-- `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator hence no FM demodulation takes place.
+- `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place.
 
 The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```m 1``` if needed.
 
@@ -123,7 +123,7 @@ AISRec has some excellent sensitivity and is one of the most user friendly packa
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. These non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
 
-Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespears antenna with quite some blockage from buildings:
+Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespeare antenna with quite some blockage from buildings:
 
 | Model | Run 1 | 
 | :---: | :---: | 
