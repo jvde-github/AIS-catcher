@@ -82,7 +82,7 @@ AIS-catcher -s 288000
 
 ## Running multiple models
 
-Currently 4 different models have been included in ```AIS-catcher````, including a simple coherent demodulation model which is the default model. For this purpose, the command line provides  the ```-m``` option which allows for the selection of specific models.  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+Currently 4 different models have been included in ```AIS-catcher```, including a simple coherent demodulation model which is the default model. For this purpose, the command line provides  the ```-m``` option which allows for the selection of specific models.  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
@@ -106,12 +106,13 @@ Currently 4 models are included in the program:
 - `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. idea is to find a balance between the reception quality of coherent models and robustness of non-coherent model. 
 - `Base model (non-coherent)`: base model similar to rtl-ais with some modifications to PLL and filter [see https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
 - `Standard model (non-coherent)`: as the base model with more aggressive PLL
+- `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator hence no FM demodulation takes place.
 
-The default model is the most time and memory consuming but experimentally appears to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in calculation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```m 1``` if needed.
+The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```m 1``` if needed.
 
-To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes. Due to the USB issues I have on my laptop for Windows, I have ran on Windows at a low 288K samples per second.
+To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
 
-Location: Vlieland with NESDR RTL-SDR dongle with standard antenna:
+Location: Vlieland with NESDR RTL-SDR dongle with standard antenna included:
  | Model | Run 1 | Run 2 |
  | :---: | :---: | :---: |
 | Default @ 288K Windows | 590 | 636 |
@@ -121,9 +122,9 @@ Location: Vlieland with NESDR RTL-SDR dongle with standard antenna:
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
 | AISRec 2.03 (trial) @ Low Windows | 557 | 569 |
 
-The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. However, these non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
+The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. These non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
 
-Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespear antenna:
+Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespear antenna with quite some blockage from buildings:
 
 | Model | Run 1 | 
 | :---: | :---: | 
