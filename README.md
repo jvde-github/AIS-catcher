@@ -63,7 +63,7 @@ AIS-catcher -v -u 127.0.0.1 12345
 ```
 If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These console messages can be surpressed with the option ```-q```. 
 
-The following commands recorded a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
+The following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
 ```console
 rtl_sdr -s 288K -f 162M  test_288.raw
 AIS-catcher -r test_288.raw -s 288000 -v 
