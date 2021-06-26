@@ -88,13 +88,10 @@ AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of the two decoding models "coherent" and "standard". The output will look something like:
 ```
-Frequency (Hz)     : 162000000
-Sampling rate (Hz) : 1536000
-----------------------
-[AIS engine v0.10]	: 34 msgs at 47 msg/s
-[Non-coherent Standard model]	: 3 msgs at 4.2 msg/s
-[AIS engine v0.10]	: 4e+02 ms
-[Non-coherent Standard model]	: 2.1e+02 ms
+[AIS engine v0.06]	: 34 msgs at 45 msg/s
+[Standard (non-coherent)]	: 3 msgs at 4 msg/s
+[AIS engine v0.06]	: 4.1e+02 ms
+[Standard (non-coherent)]	: 2.2e+02 ms
 ```
 In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the defauklt but the improvements seen for this particular file are exceptional. 
 
