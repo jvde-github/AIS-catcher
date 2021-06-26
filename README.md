@@ -88,9 +88,9 @@ AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of the two decoding models "coherent" and "standard". The output will look something like:
 ```
-[AIS engine v0.06]	: 34 msgs at 45 msg/s
+[AIS engine v0.06]		: 34 msgs at 45 msg/s
 [Standard (non-coherent)]	: 3 msgs at 4 msg/s
-[AIS engine v0.06]	: 4.1e+02 ms
+[AIS engine v0.06]		: 4.1e+02 ms
 [Standard (non-coherent)]	: 2.2e+02 ms
 ```
 In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the defauklt but the improvements seen for this particular file are exceptional. 
@@ -112,12 +112,14 @@ To get a sense of the performance of the different models, I have run a simple t
 Location: Vlieland with NESDR RTL-SDR dongle with standard antenna included:
  | Model | Run 1 | Run 2 |
  | :---: | :---: | :---: |
-| Default @ 288K Windows | 590 | 636 |
-| Standard (non-coherent) @ 288K Windows| 455 | 429 |
-| Base (non-coherent) @ 288K Windows| 434 | 413 |
-| Default @ 1536K Ubuntu | 748 | 708 |
+| AIS-catcher Default @ 288K Windows | 590 | 636 |
+| AIS-catcher Standard (non-coherent) @ 288K Windows| 455 | 429 |
+| AIS-catcher Base (non-coherent) @ 288K Windows| 434 | 413 |
+| AIS-catcher Default @ 1536K Ubuntu | 748 | 708 |
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
-| AISRec 2.03 (trial) @ Low Windows | 557 | 569 |
+| AISRec 2.003 (trial) @ Low Windows | 557 | 569 |
+
+AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is due to the USB ports on my laptopn, I could not get it to run for newer versions. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient open source AIS receiver with minimal hardware requirements. 
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. These non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
 
@@ -125,14 +127,14 @@ Same results for a different set up. Location: The Hague residential area with R
 
 | Model | Run 1 | 
 | :---: | :---: | 
-| Default @ 288K Windows | 101 | 
-| Standard (non-coherent) @ 288K Windows| 27 | 
-| Base (non-coherent) @ 288K Windows| 21 | 
-| Default @ 1536K Raspberry Pi 4B | 175 | 
-| Standard (non-coherent) @ 1536K Raspberry Pi 4B | 63 | 
-| Base (non-coherent) @ 1536K Raspberry Pi 4B | 54 | 
+| AIS-catcher Default @ 288K Windows | 101 | 
+| AIS-catcher Standard (non-coherent) @ 288K Windows| 27 | 
+| AIS-catcher Base (non-coherent) @ 288K Windows| 21 | 
+| AIS-catcher Default @ 1536K Raspberry Pi 4B | 175 | 
+| AIS-catcher Standard (non-coherent) @ 1536K Raspberry Pi 4B | 63 | 
+| AIS-catcher Base (non-coherent) @ 1536K Raspberry Pi 4B | 54 | 
 | RTL-AIS @ 1600K Ubuntu | 4 | 
-| AISRec 2.03 (trial) @ Low Windows | 59 | 
+| AISRec 2.003 (trial) @ Low Windows | 59 | 
 
 ## Releases
 
