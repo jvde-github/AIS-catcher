@@ -109,7 +109,7 @@ For completeness I performed seperate runs with AISRec and RTL-AIS as well. AISR
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time. Nevertheless, these non-scientifically conducted experiments suggest that 1) the default model can perform better than the standard model and 2) a higher sampling rate should be preferred over a lower rate where possible.
 
-Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespeare antenna with quite some blockage from surrounding buildings:
+Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some blockage from surrounding buildings:
 
 | Model | Run 1 | 
 | :---: | :---: | 
@@ -137,7 +137,7 @@ The program will run and summarize the performance (count and timing) of the two
 [AIS engine v0.06]		: 4.1e+02 ms
 [Standard (non-coherent)]	: 2.2e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is the default model but please note that the improvements seen for this particular file are exceptional for this set up. 
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is the default model but please note that the improvements seen for this particular file are an exception. 
 
 ## Releases
 
