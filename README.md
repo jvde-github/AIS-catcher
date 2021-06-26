@@ -109,7 +109,7 @@ The default model is the most time and memory consuming but experiments suggest 
 
 To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
 
-Location: Vlieland with NESDR RTL-SDR dongle with standard antenna included:
+Location: Vlieland with NESDR RTL-SDR dongle with standard provided antenna included:
  | Model | Run 1 | Run 2 |
  | :---: | :---: | :---: |
 | AIS-catcher Default @ 288K Windows | 590 | 636 |
@@ -119,7 +119,7 @@ Location: Vlieland with NESDR RTL-SDR dongle with standard antenna included:
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
 | AISRec 2.003 (trial) @ Low Windows | 557 | 569 |
 
-AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop, I could not get it to run for newer versions which suggest that a higher sampling rate is used than in the 2.003 version. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements. 
+AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop with Windows drivers, I could not get it to run for newer versions which suggest that a higher sampling rate is used than in the 2.003 version. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements. 
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. These non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
 
