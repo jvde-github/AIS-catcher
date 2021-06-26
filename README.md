@@ -82,7 +82,7 @@ In case you observe a high number of lost data, the advice is to run AIS-catcher
 AIS-catcher -s 288000
 ```
 
-## Available models
+## Multiple receiver models
 
 In the current version 4 different receiver models are embedded in the program:
 
