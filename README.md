@@ -1,10 +1,10 @@
 # AIS-catcher - An AIS receiver for RTL-SDR dongles and Airspy HF+
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL SDR dongles and the Airspy HF+. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. Output is send in the form of NMEA messages to either screen or broadcasted over UDP.
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL SDR dongles and the Airspy HF+. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The idea behind ```AIS-catcher``` is that it should be easy to run various decoding model in parallel and read input from file to create an environment to test and benchmark different decoding models in a live environment.
 
-AIS-catcher is created for research and educational purposes. DO NOT rely upon this software for navigation and/or safety of life or property purposes.
+AIS-catcher is created for research and educational purposes. DO NOT rely upon this software including for navigation and/or safety of life or property purposes.
 
-
-```
+## Usage
+````
 use: AIS-catcher [options]
 	[-s xxx sample rate in Hz (default: based on SDR device)]
 	[-d:x device index (default: 0)]
@@ -24,17 +24,17 @@ use: AIS-catcher [options]
 	[-m xx run specific decoding model - 0: non-coherent, 1: base, 2: coherent (default: 2)]
 	[	0: non-coherent, 1: base, 2: coherent, 3: FM discrimator output (default: 2)]
 	[-b benchmark demodulation models - for development purposes (default: off)]
-```
+````
 
-Examples
---------
+## Examples
+
 
 To test a proper installation and/or compilation, we can first try to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
 AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz with switch ```-m 3```, AIS-catcher assumes that the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
+AIS-catcher on this file should extract roughly 361 AIVDM lines. Notice that if the sample rate is set at 48 KHz with switch ```-m 3```, AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
 ```console
 gnuais -l helsinki-210-messages.raw
 ```
@@ -48,7 +48,7 @@ To list the devices available for AIS reception:
 ```console
 AIS-catcher -l
 ```
-Which reports depending on the devices connected, something like:
+The output depends on the available devices but will look something like:
 ```console
 Available devices:
 -d:0 AIRSPY HF+  [3652A98081343F89]
@@ -58,27 +58,31 @@ To start AIS demodulation, print some occasional statistics and broadcast them v
 ```console
 AIS-catcher -v -u 127.0.0.1 12345
 ```
-or, equivalently,
-```console
-AIS-catcher -d:0 -v -u 127.0.0.1 12345
-```
-If succesful, NMEA messages will start to come in and appear on the screen. These can be surpressed with the option ```-q```. 
+If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These can be surpressed with the option ```-q```. 
 
-The following command reads input from an IQ input file recorded with ```rtl_sdr``` at a sampling rate of 288K Hz.
+The following commands recored a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
 ```console
-AIS-catcher -r Signals/rtl/25042021_288000_1.raw -s 288000 -v -q 
-```
-The output will be resembling:
-```
-Frequency (Hz)     : 162000000
-Sampling rate (Hz) : 288000
-----------------------
-[AIS engine v0.10]	: 33 msgs at 1.4e+02 msg/s
+rtl_sdr -s 288K -f 162M  test_288.raw
+AIS-catcher -r test_288.raw -s 288000 -v 
 ```
 
-Coherent Demodulation Engine
-----------------------------
-A simple coherent demodulation model has been added to ```AIS-catcher```. For this purpose, the ```-c``` switch been replaced with the more targeted ```-m``` option which allows for the selection of specific decoding models. The coherent decoding model can be selected using ```-m 2```. Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+## Comments
+
+AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. using https://github.com/steve-m/kalibrate-rtl and provide as input via the ```-p``` switch on the command line.
+
+On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is wortwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
+```console
+rtl_test -s 1536000
+```
+In case you observe a high number of lost data, the advice is to run AIS-catcher at a lower sampling rate for RTL SDR dongles:
+```console
+AIS-catcher -s 288000
+```
+
+
+## Running multiple models
+
+Currently 4 different models have been included in ```AIS-catcher````, including a simple coherent demodulation model which is the default model. For this purpose, the command line provides  the ```-m``` option which allows for the selection of specific models.  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
@@ -92,14 +96,51 @@ Sampling rate (Hz) : 1536000
 [AIS engine v0.10]	: 4e+02 ms
 [Non-coherent Standard model]	: 2.1e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the standard but the improvements seen for this particular file are exceptional. It is still quite brute force but at least I got a first version of a coherent model to work. The journey has started!  
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the defauklt but the improvements seen for this particular file are exceptional. 
 
-Releases
---------
+
+## Available models
+
+Currently 4 models are included in the program:
+
+- `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. idea is to find a balance between the reception quality of coherent models and robustness of non-coherent model. 
+- `Base model (non-coherent)`: base model similar to rtl-ais with some modifications to PLL and filter [see https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
+- `Standard model (non-coherent)`: as the base model with more aggressive PLL
+
+The default model is the most time and memory consuming but experimentally appears to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in calculation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```m 1``` if needed.
+
+To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes. Due to the USB issues I have on my laptop for Windows, I have ran on Windows at a low 288K samples per second.
+
+Location: Vlieland with NESDR RTL-SDR dongle with standard antenna:
+ | Model | Run 1 | Run 2 |
+ | :---: | :---: | :---: |
+| Default @ 288K Windows | 590 | 636 |
+| Standard (non-coherent) @ 288K Windows| 455 | 429 |
+| Base (non-coherent) @ 288K Windows| 434 | 413 |
+| Default @ 1536K Ubuntu | 748 | 708 |
+| RTL-AIS @ 1600K Ubuntu | 521 | 428 |
+| AISRec 2.03 (trial) @ Low Windows | 557 | 569 |
+
+The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared. However, these non-scientific results provide some evidence that the default model can perform better than the standard model and a higher sampling rate should be preferred.
+
+Same results for a different set up. Location: The Hague residential area with RTL-SDR dongle and Shakespear antenna:
+
+| Model | Run 1 | 
+| :---: | :---: | 
+| Default @ 288K Windows | 101 | 
+| Standard (non-coherent) @ 288K Windows| 27 | 
+| Base (non-coherent) @ 288K Windows| 21 | 
+| Default @ 1536K Raspberry Pi 4B | 175 | 
+| Standard (non-coherent) @ 1536K Raspberry Pi 4B | 63 | 
+| Base (non-coherent) @ 1536K Raspberry Pi 4B | 54 | 
+| RTL-AIS @ 1600K Ubuntu | 4 | 
+| AISRec 2.03 (trial) @ Low Windows | 59 | 
+
+## Releases
+
 A release in binary format for Windows 32 bit (including required libraries) can be found for your convenience as part of the release section (AIS-catcher W32.zip). Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
 
-Compilation process for Linux/Raspberry Pi
-------------------------------------------
+## Compilation process for Linux/Raspberry Pi
 
 Make sure you have the following dependencies:
   - librtlsdr and/or libairspyhf
@@ -130,22 +171,9 @@ If you want to include Airspy HF+ functionality, ensure you install the required
 make
 sudo make install
 ```
-Comments
---------
 
-AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. using https://github.com/steve-m/kalibrate-rtl and provide as input via the ```-p``` switch on the command line.
+## To do
 
-On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is wortwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
-```console
-rtl_test -s 1536000
-```
-In case you observe a high number of lost data, the advice is to run AIS-catcher at a lower sampling rate for RTL SDR dongles:
-```console
-AIS-catcher -s 288000
-```
-
-To do
------
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, downsampling, etc)
 - Access to hardware specific functionality, e.g. gain control
 - Windows GUI
