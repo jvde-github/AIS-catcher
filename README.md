@@ -82,26 +82,9 @@ In case you observe a high number of lost data, the advice is to run AIS-catcher
 AIS-catcher -s 288000
 ```
 
-
-## Running multiple models
-
-The command line provides  the ```-m``` option which allows for the selection of specific receiver models (```AIS-catcher```has 4 models currently included).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
-```
-AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
-```
-The program will run and summarize the performance (count and timing) of the two decoding models "coherent" and "standard". The output will look something like:
-```
-[AIS engine v0.06]		: 34 msgs at 45 msg/s
-[Standard (non-coherent)]	: 3 msgs at 4 msg/s
-[AIS engine v0.06]		: 4.1e+02 ms
-[Standard (non-coherent)]	: 2.2e+02 ms
-```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the default but the improvements seen for this particular file are exceptional. 
-
-
 ## Available models
 
-As highlighted in the previous section Currently 4 models are included in the program:
+As highlighted in the previous section 4 different receiver models are embedded in the program:
 
 - `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. The idea was to find a balance between the reception quality of coherent models and robustness of non-coherent model. 
 - `Base model (non-coherent)`: base model similar to rtl-ais with some modifications to PLL and filter [see https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
@@ -138,6 +121,23 @@ Same results for a different set up. Location: The Hague residential area with R
 | AIS-catcher Base (non-coherent) @ 1536K Raspberry Pi 4B | 54 | 
 | RTL-AIS @ 1600K Ubuntu | 4 | 
 | AISRec 2.003 (trial) @ Low Windows | 59 | 
+
+
+
+## Running multiple models
+
+The command line provides  the ```-m``` option which allows for the selection of specific receiver models (```AIS-catcher```has 4 models currently included).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+```
+AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
+```
+The program will run and summarize the performance (count and timing) of the two decoding models "coherent" and "standard". The output will look something like:
+```
+[AIS engine v0.06]		: 34 msgs at 45 msg/s
+[Standard (non-coherent)]	: 3 msgs at 4 msg/s
+[AIS engine v0.06]		: 4.1e+02 ms
+[Standard (non-coherent)]	: 2.2e+02 ms
+```
+In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is now the default but the improvements seen for this particular file are exceptional. 
 
 ## Releases
 
