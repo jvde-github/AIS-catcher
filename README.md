@@ -84,7 +84,7 @@ AIS-catcher -s 288000
 
 ## Available models
 
-As highlighted in the previous section 4 different receiver models are embedded in the program:
+In the current version 4 different receiver models are embedded in the program:
 
 - `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. The idea was to find a balance between the reception quality of coherent models and robustness of non-coherent model. 
 - `Base model (non-coherent)`: base model similar to rtl-ais with some modifications to PLL and filter [see https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
