@@ -99,7 +99,7 @@ To get a sense of the performance of the different models, I have run a simple t
 
 Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system as per table) gives the following message count (5 minute run):
  | Model | Run 1 | Run 2 |
- | :---: | :---: | :---: |
+ | :--- | :---: | :---: |
 | AIS-catcher Default @ 288K Windows | 590 | 636 |
 | AIS-catcher Standard (non-coherent) @ 288K Windows| 455 | 429 |
 | AIS-catcher Base (non-coherent) @ 288K Windows| 434 | 413 |
@@ -114,7 +114,7 @@ The first three rows are ran in parallel (i.e. on the same input signal) and the
 Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some blockage from surrounding buildings, we have the following message count (over 5 minute run).
 
 | Model | Run 1 | 
-| :---: | :---: | 
+| :--- | :---: | 
 | AIS-catcher Default @ 288K Windows | 101 | 
 | AIS-catcher Standard (non-coherent) @ 288K Windows| 27 | 
 | AIS-catcher Base (non-coherent) @ 288K Windows| 21 | 
