@@ -4,7 +4,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 ## Purpose
 ```AIS-catcher``` is created for research and educational purposes under the MIT license. DO NOT rely upon this software including for navigation and/or safety of life or property purposes.
 
-The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was self made by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. So far I have not come across the implemented approach, perhaps because memory and system requirements are a barrier (I am not a digital systems expert by far), but undoubtly, in such a widely researched area, it might be well known and investigated. Nevertheless it looks promising as a starting point for further developments. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
+The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was made in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
 
 ## Usage
 ````
@@ -107,7 +107,7 @@ Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
 | AISRec 2.003 (trial) @ Low rate Windows | 557 | 569 |
 
-For completeness I performed seperate runs with AISRec and RTL-AIS as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used in the newer versions of AISrec. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. Again as settings and system resource requirements can be different one can not directly compare results.
+For completeness I performed seperate runs with AISRec and RTL-AIS as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used in the newer versions of AISrec. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. 
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time. Nevertheless, these non-scientifically conducted experiments suggest that 1) the default model can perform better than the standard model and 2) a higher sampling rate should be preferred over a lower rate where possible.
 
@@ -124,7 +124,7 @@ Same results for a different set up. Location: The Hague residential area with R
 | RTL-AIS @ 1600K Ubuntu | 4 | 
 | AISRec 2.003 (trial) @ Low rate Windows | 59 | 
 
-The results from run 1-3 and 4-6 are on the same input signal and comparable.
+The results of 1-3 are on the same input signal and comparable, same for results 4-6. The other results are from seperate runs and cannot be compared as messeage density, even a few minutes later. can be different, same as settings and hardware requirements.
 
 ## Running multiple models
 
