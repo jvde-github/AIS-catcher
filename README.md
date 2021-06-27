@@ -91,11 +91,11 @@ In the current version 4 different receiver models are embedded:
 - `Standard model (non-coherent)`: as the base model with more aggressive PLL
 - `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
 
-The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```m 1``` if needed.
+The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1``` if needed.
 
-To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
+To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes and we counted the number of detected messages. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
 
-Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system):
+Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system as per table):
  | Model | Run 1 | Run 2 |
  | :---: | :---: | :---: |
 | AIS-catcher Default @ 288K Windows | 590 | 636 |
