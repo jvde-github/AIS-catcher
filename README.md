@@ -139,7 +139,7 @@ The program will run and summarize the performance (count and timing) of the two
 [AIS engine v0.06]		: 3.8e+02 ms
 [Standard (non-coherent)]	: 2e+02 ms
 ```
-In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is the default model but please note that the improvements seen for this particular file are an exception. 
+In this example the default model performs quite well in contrast to the standard non-coherent engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. Please note that the improvements seen for this particular file are an exception. 
 
 ## Releases
 
