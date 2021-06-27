@@ -9,23 +9,25 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 ## Usage
 ````
 use: AIS-catcher [options]
+
+	[-h display this message and terminate (default: false)]
 	[-s xxx sample rate in Hz (default: based on SDR device)]
-	[-d:x device index (default: 0)]
 	[-v enable verbose mode (default: false)]
+	[-q surpress NMEA messages to screen (default: false)]
+	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
 
 	[-r filename - read IQ data from raw 'unsigned char' file]
 	[-r cu8 filename - read IQ data from raw 'unsigned char' file]
 	[-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
 	[-r cf32 filename - read IQ data from WAV file in 'float' format]
-
 	[-w filename - read IQ data from WAV file in 'float' format]
+
 	[-l list available devices and terminate (default: off)]
-	[-q surpress NMEA messages to screen (default: false)]
+	[-d:x device index (default: 0)]
 	[-p xx frequency correction for RTL SDR]
-	[-u xx.xx.xx.xx yyy UDP address and port (default: off)]
-	[-h display this message and terminate (default: false)]
-	[-m xx run specific decoding model]
-	[	0: standard (non-coherent), 1: base (non-coherent), 2: default (coherent), 3: FM discrimator output (default: 2)]
+
+	[-m xx run specific decoding model (default: 2)]
+	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 ````
 
