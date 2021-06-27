@@ -111,25 +111,27 @@ bool checkNetworkAddress(std::string s)
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
+	std::cerr << std::endl;
+	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
-	std::cerr << "\t[-d:x device index (default: 0)]" << std::endl;
 	std::cerr << "\t[-v enable verbose mode (default: false)]" << std::endl;
+	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
+	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
 	std::cerr << "\t[-r cu8 filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
 	std::cerr << "\t[-r cs16 filename - read IQ data from raw \'signed 16 bit integer\' file]" << std::endl;
 	std::cerr << "\t[-r cf32 filename - read IQ data from WAV file in \'float\' format]" << std::endl;
-	std::cerr << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
+	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
-	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
+	std::cerr << "\t[-d:x device index (default: 0)]" << std::endl;
 #ifdef HASRTLSDR
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
-	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
-	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
-	std::cerr << "\t[-m xx run specific decoding model - 0: non-coherent, 1: base, 2: coherent (default: 2)]" << std::endl;
-	std::cerr << "\t[\t0: non-coherent, 1: base, 2: coherent, 3: FM discrimator output (default: 2)]" << std::endl;
+	std::cerr << std::endl;
+	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
+	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
 }
