@@ -4,7 +4,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 ## Purpose
 ```AIS-catcher``` is created for research and educational purposes under the MIT license. DO NOT rely upon this software including for navigation and/or safety of life or property purposes.
 
-The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was made in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
+The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was created in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
 
 ## Usage
 ````
