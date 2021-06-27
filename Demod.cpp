@@ -37,7 +37,6 @@ namespace DSP
 		for (int i = 0; i < len; i++)
 		{
 			auto p = data[i] * std::conj(prev);
-
 			output[i] = (atan2f(p.imag(), p.real()) + DC_shift) / PI;
 			prev = data[i];
 		}
