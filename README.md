@@ -34,7 +34,7 @@ use: AIS-catcher [options]
 ## Examples
 
 
-To test a proper installation and/or compilation (see below), we can first try to run the program on a RAW audio file as in this tutorial (https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
+To test a proper installation and/or compilation (see below), we can first try to run the program on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
 AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
