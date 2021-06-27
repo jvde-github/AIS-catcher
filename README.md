@@ -180,6 +180,7 @@ sudo make install
 ## To do
 
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, downsampling, etc)
+- Performance improvements
 - Access to hardware specific functionality, e.g. gain control
 - Windows GUI
 - Overflow detection
