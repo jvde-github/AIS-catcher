@@ -95,7 +95,7 @@ The default model is the most time and memory consuming but experiments suggest 
 
 To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes and we counted the number of detected messages. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
 
-Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system as per table):
+Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system as per table) gives the following message count (5 minute run):
  | Model | Run 1 | Run 2 |
  | :---: | :---: | :---: |
 | AIS-catcher Default @ 288K Windows | 590 | 636 |
@@ -105,11 +105,11 @@ Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with
 | RTL-AIS @ 1600K Ubuntu | 521 | 428 |
 | AISRec 2.003 (trial) @ Low rate Windows | 557 | 569 |
 
-For completeness I performed seperate runs with AISRec and RTL-AIS as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used in the newer versions of AISrec. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software.
+For completeness I performed seperate runs with AISRec and RTL-AIS as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there (https://sites.google.com/site/feverlaysoft/home). It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used in the newer versions of AISrec. RTL-AIS (https://github.com/dgiardini/rtl-ais) is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. Again as settings and system resource requirements can be different one can not directly compare results.
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time. Nevertheless, these non-scientifically conducted experiments suggest that 1) the default model can perform better than the standard model and 2) a higher sampling rate should be preferred over a lower rate where possible.
 
-Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some blockage from surrounding buildings:
+Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some blockage from surrounding buildings, we have the following message count (over 5 minute run).
 
 | Model | Run 1 | 
 | :---: | :---: | 
@@ -122,7 +122,7 @@ Same results for a different set up. Location: The Hague residential area with R
 | RTL-AIS @ 1600K Ubuntu | 4 | 
 | AISRec 2.003 (trial) @ Low rate Windows | 59 | 
 
-
+The results from run 1-3 and 4-6 are on the same input signal and comparable.
 
 ## Running multiple models
 
@@ -132,10 +132,10 @@ AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of the two decoding models "coherent" and "standard". The output will look something like:
 ```
-[AIS engine v0.06]		: 34 msgs at 45 msg/s
-[Standard (non-coherent)]	: 3 msgs at 4 msg/s
-[AIS engine v0.06]		: 4.1e+02 ms
-[Standard (non-coherent)]	: 2.2e+02 ms
+[AIS engine v0.06]		: 34 msgs at 51 msg/s
+[Standard (non-coherent)]	: 3 msgs at 4.5 msg/s
+[AIS engine v0.06]		: 3.8e+02 ms
+[Standard (non-coherent)]	: 2e+02 ms
 ```
 In this example the experimental coherent demodulation model performs quite well in contrast to the standard engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. The coherent model is the default model but please note that the improvements seen for this particular file are an exception. 
 
