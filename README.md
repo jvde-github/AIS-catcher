@@ -138,6 +138,7 @@ The program will run and summarize the performance (count and timing) of the fou
 [AIS engine v0.06]			: 34 msgs at 24 msg/s
 [Standard (non-coherent)]		: 3 msgs at 2.1 msg/s
 [Base (non-coherent)]			: 2 msgs at 1.4 msg/s
+
 [Challenger model (experimental)]	: 4.5e+02 ms
 [AIS engine v0.06]			: 4e+02 ms
 [Standard (non-coherent)]		: 2.1e+02 ms
