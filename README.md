@@ -132,7 +132,7 @@ The command line provides  the ```-m``` option which allows for the selection of
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 4 -m 2 -m 0 -m 1 -q -b -v
 ```
-The program will run and summarize the performance (count and timing) of the four decoding models "coherent" and "standard". The output will look something like:
+The program will run and summarize the performance (count and timing) of the four decoding models:
 ```
 [Challenger model (experimental)]	: 35 msgs at 25 msg/s
 [AIS engine v0.06]			: 34 msgs at 24 msg/s
