@@ -177,7 +177,7 @@ namespace AIS
 				}
 				else // 11 or 00
 				{
-					if (position > 10) NextState(State::STARTFLAG, Bit ? 3 : 1); // we are at * in ..0101|01*111110 ..010|*01111110
+					if (position > 5) NextState(State::STARTFLAG, Bit ? 3 : 1); // we are at * in ..0101|01*111110 ..010|*01111110
 					else NextState(State::TRAINING, 0);
 				}
 				break;

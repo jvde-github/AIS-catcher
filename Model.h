@@ -155,4 +155,30 @@ namespace AIS
 
 		void buildModel(int,bool);
 	};
+
+	// Challenger model, some small improvements to test before moving into the default engine
+	class ModelChallenger : public Model
+	{
+		DSP::Downsample3Complex DS3;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
+		DSP::Downsample2CIC5 DS2_a, DS2_b;
+		DSP::FilterCIC5 F_a, F_b;
+		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
+
+		DSP::RotateUp ROT_a;
+		DSP::RotateDown ROT_b;
+
+		std::vector<DSP::ChallengerDemodulation> CD_a, CD_b;
+
+		DSP::FilterComplex FR_a, FR_b;
+		std::vector<AIS::Decoder> DEC_a, DEC_b;
+		DSP::SamplerParallelComplex S_a, S_b;
+
+	public:
+		ModelChallenger(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		std::vector<uint32_t> SupportedSampleRates();
+
+		void buildModel(int, bool);
+	};
+
 }
