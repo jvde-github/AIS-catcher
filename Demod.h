@@ -62,4 +62,29 @@ namespace DSP
 
 		void Receive(const CFLOAT32* data, int len);
 	};
+
+	class ChallengerDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>, public MessageIn<DecoderMessages>
+	{
+		static const int nHistory = 6;
+		static const int nPhases = 16;
+		int nSearch = 2;
+		static const int nUpdate = 1;
+
+		std::vector <CFLOAT32> phase;
+		FLOAT32 memory[nPhases][nHistory];
+		char bits[nPhases];
+
+		int max_idx = 0;
+		int update = 0;
+		int rot = 0;
+		int last = 0;
+
+		void setPhases();
+
+	public:
+
+		// MessageIn
+		virtual void Message(const DecoderMessages& in);
+		void Receive(const CFLOAT32* data, int len);
+	};
 }

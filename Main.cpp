@@ -131,7 +131,7 @@ void Usage()
 #endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
-	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]" << std::endl;
+	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output, 4: challenger model]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
 }
@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
 				ptr++;
 				break;
 			case 'm':
-				liveModelsSelected.push_back(getNumber(arg1,0,4));
+				liveModelsSelected.push_back(getNumber(arg1,0,5));
 				ptr++;
 				break;
 			case 'v':
@@ -383,6 +383,7 @@ int main(int argc, char* argv[])
 			case 1: liveModels.push_back(new AIS::ModelBase(control, out)); break;
 			case 2: liveModels.push_back(new AIS::ModelCoherent(control, out)); break;
 			case 3: liveModels.push_back(new AIS::ModelDiscriminator(control, out)); break;
+			case 4: liveModels.push_back(new AIS::ModelChallenger(control, out)); break;
 			default: throw "Model not implemented in this version. Check in later.."; break;
 			}
 		}
