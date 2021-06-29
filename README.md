@@ -124,15 +124,15 @@ Same results for a different set up. Location: The Hague residential area with R
 | RTL-AIS @ 1600K Ubuntu | 4 | 
 | AISRec 2.003 (trial) @ Sampling rate: Low, Processing: super fast, Windows | 59 | 
 
-The results of 1-3 are on the same input signal and comparable, same for results 4-6. The other results are from seperate runs and cannot be compared as messeage density, even a few minutes later. can be different, same as settings and hardware requirements.
+The results of 1-3 are on the same input signal and comparable, same for results 4-6. The other results are from seperate runs and cannot be compared as messeage density, even a few minutes later, is different and there are differences in hardware settings and system requirements.
 
 ## Running multiple models
 
-The command line provides  the ```-m``` option which allows for the selection of the specific receiver models (```AIS-catcher```has 4 models currently included which includes an experimental challenger model).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+The command line provides  the ```-m``` option which allows for the selection of the specific receiver models (```AIS-catcher```has 4 tested models included and one so-called Challenger model).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 4 -m 2 -m 0 -m 1 -q -b -v
 ```
-The program will run and summarize the performance (count and timing) of the four decoding models:
+The program will run and summarize the performance (count and timing) of four decoding models:
 ```
 [Challenger model (experimental)]	: 35 msgs at 25 msg/s
 [AIS engine v0.06]			: 34 msgs at 24 msg/s
