@@ -123,7 +123,7 @@ The results for each column are comparable as based on the same input signal.
 
 ## Running multiple models
 
-The command line provides  the ```-m``` option which allows for the selection of the specific receiver models (```AIS-catcher```has 4 tested models included and one so-called Challenger model).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+The command line provides  the ```-m``` option which allows for the selection of the specific receiver models (```AIS-catcher```has 4 tested models included and one so-called Challenger model - the potential next Default model).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
 ```
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 4 -m 2 -m 0 -m 1 -q -b -v
 ```
