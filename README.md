@@ -73,7 +73,7 @@ AIS-catcher -r test_288.raw -s 288000 -v
 
 ## Considerations
 
-AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. using https://github.com/steve-m/kalibrate-rtl and provide as input via the ```-p``` switch on the command line.
+AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide as input via the ```-p``` switch on the command line.
 
 On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is wortwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
 ```console
@@ -89,7 +89,7 @@ AIS-catcher -s 288000
 In the current version 4 different receiver models are embedded:
 
 - `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. The idea was to find a balance between the reception quality of coherent models and robustness of non-coherent model towards frequency and phase offsets. 
-- `Base model (non-coherent)`: base model similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter [see e.g. https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html].
+- `Base model (non-coherent)`: base model similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter ([taken from here](https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html)).
 - `Standard model (non-coherent)`: as the base model with more aggressive PLL
 - `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
 
@@ -98,31 +98,28 @@ The default model is the most time and memory consuming but experiments suggest 
 To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes and we counted the number of detected messages. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
 
 Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system as per table) gives the following message count (5 minute run):
- | Model | Run 1 | Run 2 |
- | :--- | :---: | :---: |
-| AIS-catcher Default @ 288K Windows | 590 | 636 |
-| AIS-catcher Standard (non-coherent) @ 288K Windows| 455 | 429 |
-| AIS-catcher Base (non-coherent) @ 288K Windows| 434 | 413 |
-| AIS-catcher Default @ 1536K Ubuntu | 748 | 708 |
-| RTL-AIS @ 1600K Ubuntu | 521 | 428 |
-| AISRec 2.003 (trial)  @ Sampling rate: Low, Processing: super fast, Windows | 557 | 569 |
+ | Model | Settings | Run 1 | Run 2 |
+ | :--- | :--- | :---: | :---: |
+| AIS-catcher Default @ 288K Windows | ```-m 2 -s 288000``` | 590 | 636 |
+| AIS-catcher Standard (non-coherent) @ 288K Windows|```-m 0 -s 288000``` |   455 | 429 |
+| AIS-catcher Base (non-coherent) @ 288K Windows|```-m 1 -s 288000``` | 434 | 413 |
+| AIS-catcher Default @ 1536K Ubuntu | ```-m 2```|  748 | 708 |
+| RTL-AIS @ 1600K Ubuntu |```-n``` | 521 | 428 |
+| AISRec 2.003 (trial)  @ Windows | Sampling: Low, super fast| 557 | 569 |
 
 For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there. It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used in the newer versions of AISrec. RTL-AIS  is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. 
 
-The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time. Nevertheless, these non-scientifically conducted experiments suggest that 1) the default model can perform better than the standard model and 2) a higher sampling rate should be preferred over a lower rate where possible.
+The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time and have different system and hardware requirements. Nevertheless, these non-scientifically conducted experiments suggest that 1) the Default model can perform better than the Standard model and 2) a higher sampling rate should be preferred over a lower rate where possible. 
 
 Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some blockage from surrounding buildings, we have the following message count (over 5 minute run).
 
-| Model | Run 1 | 
-| :--- | :---: | 
-| AIS-catcher Default @ 288K Windows | 101 | 
-| AIS-catcher Standard (non-coherent) @ 288K Windows| 27 | 
-| AIS-catcher Base (non-coherent) @ 288K Windows| 21 | 
-| AIS-catcher Default @ 1536K Raspberry Pi 4B | 175 | 
-| AIS-catcher Standard (non-coherent) @ 1536K Raspberry Pi 4B | 63 | 
-| AIS-catcher Base (non-coherent) @ 1536K Raspberry Pi 4B | 54 | 
+| Model | 288K Windows | 1536K Ubuntu |
+| :--- | :---: | :---: | 
+| AIS-catcher Default | 101 | 175|
+| AIS-catcher Standard (non-coherent) | 27 | 63| 
+| AIS-catcher Base (non-coherent) | 21 | 54|
 
-The results of 1-3 are on the same input signal and comparable, same for results 4-6. The other results are from seperate runs and cannot be compared as messeage density, even a few minutes later, is different and there are differences in hardware settings and system requirements.
+The results for each column are comparable as based on the same input signal. 
 
 ## Running multiple models
 
