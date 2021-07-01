@@ -121,8 +121,6 @@ Same results for a different set up. Location: The Hague residential area with R
 | AIS-catcher Default @ 1536K Raspberry Pi 4B | 175 | 
 | AIS-catcher Standard (non-coherent) @ 1536K Raspberry Pi 4B | 63 | 
 | AIS-catcher Base (non-coherent) @ 1536K Raspberry Pi 4B | 54 | 
-| RTL-AIS @ 1600K Ubuntu | 4 | 
-| AISRec 2.003 (trial) @ Sampling rate: Low, Processing: super fast, Windows | 59 | 
 
 The results of 1-3 are on the same input signal and comparable, same for results 4-6. The other results are from seperate runs and cannot be compared as messeage density, even a few minutes later, is different and there are differences in hardware settings and system requirements.
 
