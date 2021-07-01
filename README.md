@@ -103,7 +103,7 @@ Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with
 | AIS-catcher Default @ 288K Windows | ```-s 288000``` | 590 | 636 |
 | AIS-catcher Standard (non-coherent) @ 288K Windows|```-m 0 -s 288000``` |   455 | 429 |
 | AIS-catcher Base (non-coherent) @ 288K Windows|```-m 1 -s 288000``` | 434 | 413 |
-| AIS-catcher Default @ 1536K Ubuntu | ```-m 2```|  748 | 708 |
+| AIS-catcher Default @ 1536K Ubuntu | |  748 | 708 |
 | RTL-AIS @ 1600K Ubuntu |```-n``` | 521 | 428 |
 | AISRec 2.003 (trial)  @ Windows | Sampling: Low, super fast| 557 | 569 |
 
