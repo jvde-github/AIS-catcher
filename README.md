@@ -100,7 +100,7 @@ To get a sense of the performance of the different models, I have run a simple t
 Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system as per table) gives the following message count (5 minute run):
  | Model | Settings | Run 1 | Run 2 |
  | :--- | :--- | :---: | :---: |
-| AIS-catcher Default @ 288K Windows | ```-m 2 -s 288000``` | 590 | 636 |
+| AIS-catcher Default @ 288K Windows | ```-s 288000``` | 590 | 636 |
 | AIS-catcher Standard (non-coherent) @ 288K Windows|```-m 0 -s 288000``` |   455 | 429 |
 | AIS-catcher Base (non-coherent) @ 288K Windows|```-m 1 -s 288000``` | 434 | 413 |
 | AIS-catcher Default @ 1536K Ubuntu | ```-m 2```|  748 | 708 |
