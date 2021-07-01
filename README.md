@@ -190,6 +190,7 @@ The current code has what I call a Challenger model that embeds some improvement
 
 ## To do
 
+- Documenting and finetuning the default decoding model
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, downsampling, etc)
 - Performance improvements
 - More testing: in particular in an area with high message density
