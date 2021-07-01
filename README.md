@@ -177,15 +177,28 @@ make
 sudo make install
 ```
 
+## In progress
+
+The current code has what I call a Challenger model that embeds some improvements to the default engine I am playing with. This can be activated on the command line with the switch ```-m 4```. At the time of writing the challenger model increases the range in which we update the phase estimate when the model is detecting training bits and then narrows it down again when a message has started. On my home station it gives a slight improvement after running for 5 hours 4 models in parallel:
+```
+[Challenger model (experimental)]	: 18335 msgs at 0.016 msg/s
+[AIS engine v0.06]			: 17228 msgs at 0.015 msg/s
+[Standard (non-coherent)]		: 5169 msgs at 0.009 msg/s
+[Base (non-coherent)]			: 4659 msgs at 0.009 msg/s
+```
+
+
 ## To do
 
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, downsampling, etc)
 - Performance improvements
+- More testing: in particular in an area with high message density
 - Access to hardware specific functionality, e.g. gain control
 - Windows GUI
 - Overflow detection
 - Windows driver improvements
 - Refining automatic frequency correction function
+-
 - ....
 - ...
 
