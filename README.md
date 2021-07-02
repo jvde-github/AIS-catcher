@@ -111,7 +111,7 @@ For completeness I performed seperate runs with [AISRec](https://sites.google.co
 
 The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time and have different system and hardware requirements. Nevertheless, these non-scientifically conducted experiments suggest that 1) the Default model can perform better than the Standard model and 2) a higher sampling rate should be preferred over a lower rate where possible. 
 
-Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some blockage from surrounding buildings, we have the following message count (over 5 minute run).
+Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings, we have the following message count (over 5 minute run).
 
 | Model | 288K Windows | 1536K Ubuntu |
 | :--- | :---: | :---: | 
@@ -120,6 +120,15 @@ Same results for a different set up. Location: The Hague residential area with R
 | AIS-catcher Base (non-coherent) | 21 | 54|
 
 The results for each column are comparable as based on the same input signal. 
+
+Finally some results with direct sight at the beach (Scheveningen) with a higher message density over 3 minutes (NESDR dongle with factory included antenna):
+| Model | 288K Ubuntu | 1536K Ubuntu |
+| :--- | :---: | :---: | 
+| AIS-catcher Default | 489 | 499|
+| AIS-catcher Standard (non-coherent) | 417 | 439| 
+| AIS-catcher Base (non-coherent) | 408 | 439|
+
+The results for each column are comparable as based on the same input signal. Notice that with a better reception there is less of a difference between the different models and sampling rates.
 
 ## Running multiple models
 
