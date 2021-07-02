@@ -126,7 +126,7 @@ Finally some results with direct sight at the beach (Scheveningen) with a higher
 | :--- | :---: | :---: | 
 | AIS-catcher Default | 489 | 499|
 | AIS-catcher Standard (non-coherent) | 417 | 439| 
-| AIS-catcher Base (non-coherent) | 408 | 439|
+| AIS-catcher Base (non-coherent) | 408 | 429|
 
 The results for each column are comparable as based on the same input signal. Notice that with a better reception there is less of a difference between the different models and sampling rates.
 
