@@ -138,15 +138,15 @@ AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 4 -m 2 -m 0 -m 1 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of four decoding models:
 ```
-[Challenger model (experimental)]	: 35 msgs at 25 msg/s
-[AIS engine v0.06]			: 34 msgs at 24 msg/s
+[Challenger model (experimental)]	: 37 msgs at 25 msg/s
+[AIS engine v0.06]			: 34 msgs at 23 msg/s
 [Standard (non-coherent)]		: 3 msgs at 2.1 msg/s
 [Base (non-coherent)]			: 2 msgs at 1.4 msg/s
 
 [Challenger model (experimental)]	: 4.5e+02 ms
-[AIS engine v0.06]			: 4e+02 ms
-[Standard (non-coherent)]		: 2.1e+02 ms
-[Base (non-coherent)]			: 1.9e+02 ms
+[AIS engine v0.06]			: 4.1e+02 ms
+[Standard (non-coherent)]		: 2.2e+02 ms
+[Base (non-coherent)]			: 2e+02 ms
 ```
 In this example the default model performs quite well in contrast to the standard non-coherent engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage (800 floats) so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception. 
 
