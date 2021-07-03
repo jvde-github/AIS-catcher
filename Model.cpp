@@ -299,8 +299,8 @@ namespace AIS
 		const int nSymbolsPerSample = 48000 / 9600;
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
 
-		FR_a.setTaps(Filters::Coherent);
-		FR_b.setTaps(Filters::Coherent);
+		FR_a.setTaps(Filters::CoherentChallenger);
+		FR_b.setTaps(Filters::CoherentChallenger);
 
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
