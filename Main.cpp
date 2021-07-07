@@ -24,6 +24,7 @@ SOFTWARE.
 #include <string.h>
 #include <cctype>
 #include <iomanip>
+#include <algorithm>
 
 #include "Signal.h"
 #include "Device.h"
@@ -175,6 +176,7 @@ int main(int argc, char* argv[])
 #ifdef HASAIRSPYHF
 		Device::AIRSPYHF::pushDeviceList(device_list);
 #endif
+		std::sort(device_list.begin(), device_list.end());
 
 		int ptr = 1;
 
