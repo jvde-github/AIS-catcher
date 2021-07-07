@@ -162,7 +162,7 @@ namespace AIS
 
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("AIS engine v0.06+");
+		setName("AIS engine v0.07");
 
 		const int nSymbolsPerSample = 48000/9600;
 		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
@@ -219,11 +219,11 @@ namespace AIS
 
 			for (int j = 0; j < nSymbolsPerSample; j++)
 			{
-					if (i != j)
-					{
-							DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
-							DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
-					}
+				if (i != j)
+				{
+					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
+					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+				}
 			}
 		}
 
@@ -277,8 +277,8 @@ namespace AIS
 			{
 				if (i != j)
 				{
-						DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
-						DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
+					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
 			}
 		}
