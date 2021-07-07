@@ -95,38 +95,28 @@ In the current version 4 different receiver models are embedded:
 
 The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1``` if needed.
 
-To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes and we counted the number of detected messages. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows at a low sampling rate of 288K samples per second.
+To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes and we counted the number of detected messages. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows.
 
-Location: Vlieland with NESDR RTL-SDR dongle with factory included antenna (with sampling rate and system as per table) gives the following message count (5 minute run):
- | Model | Settings | Run 1 | Run 2 |
- | :--- | :--- | :---: | :---: |
-| AIS-catcher Default @ 288K Windows | ```-s 288000``` | 590 | 636 |
-| AIS-catcher Standard (non-coherent) @ 288K Windows|```-m 0 -s 288000``` |   455 | 429 |
-| AIS-catcher Base (non-coherent) @ 288K Windows|```-m 1 -s 288000``` | 434 | 413 |
-| AIS-catcher Default @ 1536K Ubuntu | |  748 | 708 |
-| RTL-AIS @ 1600K Ubuntu |```-n``` | 521 | 428 |
-| AISRec 2.003 (trial)  @ Windows | Sampling: Low, super fast| 557 | 569 |
+Location: he Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings, we have the following message count (over 3 minute run):
+ | Model | Settings | Run 1 | Run 2 | Run 3 |
+ | :--- | :--- | :---: | :---: | :---: |
+ | AIS-catcher v0.07 Default @ 1536K Windows |  | 153 | 131 | 152 |
+| AIS-catcher v0.07 Standard (non-coherent) @ 1536K Windows|```-m 0``` |   69 | 44 | 51 |
+| AIS-catcher v0.07 Default @ 288K Windows | ```-s 288000``` | 111 | 136 | 117 |
+| AIS-catcher v0.07 Standard (non-coherent) @ 288K Windows|```-m 0 -s 288000``` |   47 | 49 | 35 |
+| AISRec 2.2 (trial)  @ Windows | Sampling: very high, super fast| 132 | 140 | 121 |
+| rtl-ais v0.3  @ 1600K Windows | ```-n``` | 15 | 17  | 6 |
+ 
+For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there. It is highly recommended. RTL-AIS  is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. 
 
-For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there. It is highly recommended. Unfortunately, and I believe it is again due to the USB ports on my laptop for Windows, I could not get it to run for newer versions which suggest that a higher sampling rate is used in the newer versions of AISrec. RTL-AIS  is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. 
-
-The first three rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time and have different system and hardware requirements. Nevertheless, these non-scientifically conducted experiments suggest that 1) the Default model can perform better than the Standard model and 2) a higher sampling rate should be preferred over a lower rate where possible. 
-
-Same results for a different set up. Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings, we have the following message count (over 5 minute run).
-
-| Model | 288K Windows | 1536K Ubuntu |
-| :--- | :---: | :---: | 
-| AIS-catcher Default | 101 | 175|
-| AIS-catcher Standard (non-coherent) | 27 | 63| 
-| AIS-catcher Base (non-coherent) | 21 | 54|
-
-The results for each column are comparable as based on the same input signal. 
+The first two rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time and have different system and hardware requirements. Nevertheless, these non-scientifically conducted experiments suggest that 1) the Default model can perform better than the Standard model and 2) a higher sampling rate should be preferred over a lower rate where possible. 
 
 Finally some results with direct sight at the beach (Scheveningen) with a higher message density over 3 minutes (NESDR dongle with factory included antenna):
 | Model | 288K Ubuntu | 1536K Ubuntu |
 | :--- | :---: | :---: | 
-| AIS-catcher Default | 489 | 499|
-| AIS-catcher Standard (non-coherent) | 417 | 439| 
-| AIS-catcher Base (non-coherent) | 408 | 429|
+| AIS-catcher v0.06 Default | 489 | 499|
+| AIS-catcher v0.06 Standard (non-coherent) | 417 | 439| 
+| AIS-catcher v0.06 Base (non-coherent) | 408 | 429|
 
 The results for each column are comparable as based on the same input signal. Notice that with a better reception there is less of a difference between the different models and sampling rates.
 
@@ -152,7 +142,7 @@ In this example the default model performs quite well in contrast to the standar
 
 ## Releases
 
-A release in binary format for Windows 32 bit (including required libraries) can be found for your convenience as part of the release section (AIS-catcher 0.06 W32.zip). Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
+A release in binary format for Windows 32 bit (including required libraries) can be found for your convenience as part of the release section. Please note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below. 
 
 ## Compilation process for Linux/Raspberry Pi
 
@@ -199,16 +189,15 @@ The current code has what I call a Challenger model that embeds some improvement
 
 ## To do
 
-- Documenting and finetuning the default decoding model
-- Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, downsampling, etc)
+- Documenting and finetuning the default decoding model 
+- Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, filters, etc)
 - Performance improvements
 - More testing: in particular in an area with high message density
-- Access to hardware specific functionality, e.g. gain control
+- Access to SDR hardware specific functionality, e.g. gain control
 - Windows GUI
 - Overflow detection
 - Windows driver improvements
 - Refining automatic frequency correction function
--
 - ....
-- ...
+- ....
 
