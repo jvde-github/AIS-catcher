@@ -95,9 +95,9 @@ In the current version 4 different receiver models are embedded:
 
 The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1``` if needed.
 
-To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the three models in parallel for 5 minutes and we counted the number of detected messages. Due to the USB issues I have on my laptop for Windows (as described in a previous section), I have ran on Windows.
+To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the main two models in parallel for 3 minutes and we counted the number of detected messages. 
 
-Location: he Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings, we have the following message count (over 3 minute run):
+Location: he Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings, we have the following message count for various models and sample rates (over 3 minute run):
  | Model | Settings | Run 1 | Run 2 | Run 3 |
  | :--- | :--- | :---: | :---: | :---: |
  | AIS-catcher v0.07 Default @ 1536K Windows |  | 153 | 131 | 152 |
