@@ -120,25 +120,26 @@ Finally some results with direct sight at the beach (Scheveningen) with a higher
 
 The results for each column are comparable as based on the same input signal. Notice that with a better reception there is less of a difference between the different models and sampling rates.
 
-## Running multiple models
+## Running multiple	 	models
 
-The command line provides  the ```-m``` option which allows for the selection of the specific receiver models (```AIS-catcher```has 4 tested models included and one so-called Challenger model - the potential next Default model).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.:
+The command line	 pro
 ```
-AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 4 -m 2 -m 0 -m 1 -q -b -v
+```vides  the ``	`-m``` option which allows for the selection of the specific receiver models (```AIS-catcher```has 4 tested models included and one so-called Challenger model - a possible release candidate).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
 ```
-The program will run and summarize the performance (count and timing) of four decoding models:
+AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -m 1 -q -b -v
 ```
-[Challenger model (experimental)]	: 37 msgs at 25 msg/s
-[AIS engine v0.06]			: 34 msgs at 23 msg/s
-[Standard (non-coherent)]		: 3 msgs at 2.1 msg/s
-[Base (non-coherent)]			: 2 msgs at 1.4 msg/s
-
-[Challenger model (experimental)]	: 4.5e+02 ms
-[AIS engine v0.06]			: 4.1e+02 ms
-[Standard (non-coherent)]		: 2.2e+02 ms
-[Base (non-coherent)]			: 2e+02 ms
+The program will run and summarize the performance (count and timing) of three decoding models:
 ```
-In this example the default model performs quite well in contrast to the standard non-coherent engine with 34 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage (800 floats) so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception. 
+[AIS engine v0.07]		: 36 msgs at 45 msg/s
+[Standard (non-coherent)]	: 3 msgs at 3.8 msg/s
+[Base (non-coherent)]		: 2 msgs at 2.5 msg/s
+```
+```
+[AIS engine v0.07]		: 3.4e+02 ms
+[Standard (non-coherent)]	: 1.9e+02 ms
+[Base (non-coherent)]		: 1.7e+02 ms
+```
+In this example the default model performs quite well in contrast to the standard non-coherent engine with 36 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage (800 floats) so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception. 
 
 ## Releases
 
