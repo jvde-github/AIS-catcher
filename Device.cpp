@@ -240,7 +240,7 @@ namespace Device {
 			rtlsdr_get_device_usb_strings(i, vendor, product, serial);
 
 			std::stringstream s;
-			s << "RTL SDR " << vendor << " " << product << " [" << serial << "]";
+			s << "[" << serial << "] RTL SDR " << vendor << " " << product;
 
 			Description d = Description(s.str(), (uint64_t)i, Type::RTLSDR);
 			DeviceList.push_back(d);
@@ -348,7 +348,7 @@ namespace Device {
 		{
 			for (int i = 0; i < device_count; i++) {
 				std::stringstream s;
-				s << "AIRSPY HF+  [" << std::uppercase << std::hex << serials[i] << "]";
+				s << "[" << std::uppercase << std::hex << serials[i] << "] AIRSPY HF+";
 
 				Description d = Description(s.str(), (uint64_t)i, Type::AIRSPYHF);
 				DeviceList.push_back(d);

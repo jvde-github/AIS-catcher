@@ -54,6 +54,11 @@ namespace Device{
 		std::string getDescription() { return description; }
 		Type getType() { return type; }
 		uint64_t getHandle() { return handle; }
+
+ 		bool operator < (const Description& b) const
+		{
+			return (description < b.description);
+		}
 	};
 
 	class Control : public MessageIn<SystemMessage>
