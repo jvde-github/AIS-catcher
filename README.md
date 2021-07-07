@@ -100,12 +100,12 @@ To get a sense of the performance of the different models, I have run a simple t
 Location: he Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings, we have the following message count for various models and sample rates (over 3 minute run):
  | Model | Settings | Run 1 | Run 2 | Run 3 |
  | :--- | :--- | :---: | :---: | :---: |
- | AIS-catcher v0.07 Default @ 1536K Windows |  | 153 | 131 | 152 |
-| AIS-catcher v0.07 Standard (non-coherent) @ 1536K Windows|```-m 0``` |   69 | 44 | 51 |
-| AIS-catcher v0.07 Default @ 288K Windows | ```-s 288000``` | 111 | 136 | 117 |
-| AIS-catcher v0.07 Standard (non-coherent) @ 288K Windows|```-m 0 -s 288000``` |   47 | 49 | 35 |
-| AISRec 2.2 (trial)  @ Windows | Sampling: very high, super fast| 132 | 140 | 121 |
-| rtl-ais v0.3  @ 1600K Windows | ```-n``` | 15 | 17  | 6 |
+ | AIS-catcher v0.07 Default @ 1536K  |  | 153 | 131 | 152 |
+| AIS-catcher v0.07 Standard (non-coherent) @ 1536K |```-m 0``` |   69 | 44 | 51 |
+| AIS-catcher v0.07 Default @ 288K  | ```-s 288000``` | 111 | 136 | 117 |
+| AIS-catcher v0.07 Standard (non-coherent) @ 288K |```-m 0 -s 288000``` |   47 | 49 | 35 |
+| AISRec 2.2 (trial)   | Sampling: very high, super fast| 132 | 140 | 121 |
+| rtl-ais v0.3  @ 1600K  | ```-n``` | 15 | 17  | 6 |
  
 For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there. It is highly recommended. RTL-AIS  is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. 
 
