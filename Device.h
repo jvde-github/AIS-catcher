@@ -43,22 +43,25 @@ namespace Device{
 
 	class Description
 	{
-		std::string description;
 		uint64_t handle;
 		Type type;
 
+		std::string vendor;
+		std::string product;
+		std::string serial;
+
 	public:
 
-		Description(std::string d, uint64_t h, Type t) : description(d), handle(h), type(t) {}
+		Description(std::string v, std::string p, std::string s, uint64_t h, Type t) : vendor(v), product(p), serial(s), handle(h), type(t) {}
 
-		std::string getDescription() { return description; }
+		std::string getVendor() { return vendor; }
+		std::string getProduct() { return product; }
+		std::string getSerial() { return serial; }
+
 		Type getType() { return type; }
 		uint64_t getHandle() { return handle; }
 
- 		bool operator < (const Description& b) const
-		{
-			return (description < b.description);
-		}
+ 		bool operator < (const Description& b) const { return (serial < b.serial); }
 	};
 
 	class Control : public MessageIn<SystemMessage>
@@ -115,8 +118,7 @@ namespace Device{
 
 		static void pushDeviceList(std::vector<Description>& DeviceList)
 		{
-			Description d = Description("FILE (WAV-FORMAT)", 0, Type::WAVFILE);
-			DeviceList.push_back(d);
+			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
 		}
 
 		static int getDeviceCount() { return 1; }
@@ -147,8 +149,7 @@ namespace Device{
 
 		static void pushDeviceList(std::vector<Description>& DeviceList)
 		{
-			Description d = Description("FILE (RAW-FORMAT)", 0, Type::RAWFILE);
-			DeviceList.push_back(d);
+			DeviceList.push_back(Description("FILE", "RAV", "0", 0, Type::RAWFILE));
 		}
 		static int getDeviceCount() { return 1; }
 

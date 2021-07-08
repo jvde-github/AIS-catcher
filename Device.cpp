@@ -238,12 +238,7 @@ namespace Device {
 		for (int i = 0; i < DeviceCount; i++)
 		{
 			rtlsdr_get_device_usb_strings(i, vendor, product, serial);
-
-			std::stringstream s;
-			s << "[" << serial << "] RTL SDR " << vendor << " " << product;
-
-			Description d = Description(s.str(), (uint64_t)i, Type::RTLSDR);
-			DeviceList.push_back(d);
+			DeviceList.push_back(Description(vendor, product, serial, (uint64_t)i, Type::RTLSDR));
 		}
 	}
 
@@ -347,11 +342,10 @@ namespace Device {
 		if (airspyhf_list_devices(serials.data(), device_count) > 0) 
 		{
 			for (int i = 0; i < device_count; i++) {
-				std::stringstream s;
-				s << "[" << std::uppercase << std::hex << serials[i] << "] AIRSPY HF+";
-
-				Description d = Description(s.str(), (uint64_t)i, Type::AIRSPYHF);
-				DeviceList.push_back(d);
+				std::stringstream serial;
+				serial << std::uppercase << std::hex << serials[i];
+				//Description d = Description("AIRSPY HF+","AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF);
+				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF));
 			}
 		}
 	}
