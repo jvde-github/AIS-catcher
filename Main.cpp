@@ -126,8 +126,10 @@ void Usage()
 	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
-	std::cerr << "\t[-d:x device index (default: 0)]" << std::endl;
+	std::cerr << "\t[-d:x select device based on index (default: 0)]" << std::endl;
+	std::cerr << "\t[-d xxxx select device with  serial number]" << std::endl;
 #ifdef HASRTLSDR
+	std::cerr << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
 	std::cerr << std::endl;
@@ -137,10 +139,49 @@ void Usage()
 	std::cerr << std::endl;
 }
 
+std::vector<Device::Description> getDevices()
+{
+	std::vector<Device::Description> device_list;
+
+#ifdef HASRTLSDR
+	Device::RTLSDR::pushDeviceList(device_list);
+#endif
+#ifdef HASAIRSPYHF
+	Device::AIRSPYHF::pushDeviceList(device_list);
+#endif
+	std::sort(device_list.begin(), device_list.end());
+
+	return device_list;
+}
+
+std::string getDeviceDescription(Device::Description& d)
+{
+	return d.getVendor() + ", " + d.getProduct() + ", SN: " + d.getSerial();
+}
+
+void printDevices(std::vector<Device::Description>& device_list)
+{
+	std::cerr << "Found " << device_list.size() << " devices:" << std::endl;
+	for (int i = 0; i < device_list.size(); i++)
+	{
+		std::cerr << i << ": " << getDeviceDescription(device_list[i]) << std::endl;
+	}
+}
+
+int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial)
+{
+	for (int i = 0; i < device_list.size(); i++)
+	{
+		if (device_list[i].getSerial() == serial) return i;
+	}
+	std::cerr << "Searching for device with SN " << serial << "." << std::endl;
+	return -1;
+}
+
 int main(int argc, char* argv[])
 {
 	int sample_rate = 0;
-	int input_device = -1;
+	int input_device = 0;
 	bool list_devices = false;
 	bool verbose = false;
 	bool timer_on = false;
@@ -169,14 +210,7 @@ int main(int argc, char* argv[])
 		signal(SIGINT, consoleHandler);
 #endif
 
-		std::vector<Device::Description> device_list;
-#ifdef HASRTLSDR
-		Device::RTLSDR::pushDeviceList(device_list);
-#endif
-#ifdef HASAIRSPYHF
-		Device::AIRSPYHF::pushDeviceList(device_list);
-#endif
-		std::sort(device_list.begin(), device_list.end());
+		std::vector<Device::Description> device_list = getDevices();
 
 		int ptr = 1;
 
@@ -246,15 +280,15 @@ int main(int argc, char* argv[])
 				if (param.length() == 4 && param[2] == ':')
 				{
 					input_device = (param[3] - '0');
-					if (input_device < 0 || input_device >= device_list.size())
-					{
-						std::cerr << "Device does not exist : " << param << std::endl;
-						list_devices = true;
-					}
 				}
 				else
 				{
-					std::cerr << "Invalid syntax : " << param << std::endl;
+					input_device = getDeviceFromSerial(device_list, arg1);
+					ptr++;
+				}
+				if (input_device < 0 || input_device >= device_list.size())
+				{
+					std::cerr << "Device does not exist." << std::endl;
 					list_devices = true;
 				}
 				break;
@@ -287,11 +321,7 @@ int main(int argc, char* argv[])
 
 		if (list_devices)
 		{
-			std::cerr << "Available devices:" << std::endl;
-			for(int i = 0; i < device_list.size(); i++)
-			{
-				std::cerr << "-d:"<< i << " " << device_list[i].getDescription() << std::endl;
-			}
+			printDevices(device_list);
 			return 0;
 		}
 
@@ -301,11 +331,11 @@ int main(int argc, char* argv[])
 		{
 			if (device_list.size() == 0) throw "No input device available.";
 
-			Device::Description sel = device_list[0];
-			if (input_device >= 0) sel = device_list[input_device];
+			Device::Description d = device_list[input_device];
+			input_type = d.getType();
+			handle = d.getHandle();
 
-			input_type = sel.getType();
-			handle = sel.getHandle();
+			std::cerr << "Device selected: " << getDeviceDescription(d) << std::endl;
 		}
 
 		// Device and output stream of device;
