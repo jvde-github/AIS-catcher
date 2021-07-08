@@ -134,7 +134,7 @@ void Usage()
 #endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
-	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output, 4: challenger model]" << std::endl;
+	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
 }
