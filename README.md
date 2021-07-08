@@ -24,7 +24,7 @@ use: AIS-catcher [options]
 
 	[-l list available devices and terminate (default: off)]
 	[-d:x select device based on index (default: 0)]
-	[-d xxxx select device with  serial number]
+	[-d xxxx select device based on serial number]
 
 	[-p xx frequency correction for RTL SDR]
 
@@ -93,8 +93,8 @@ AIS-catcher -s 288000
 In the current version 4 different receiver models are embedded:
 
 - **Default model** (``-m 2``): the default demodulation engine 
-- **Base model (non-coherent)** (``-m 0``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter ([taken from here](https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html)).
-- **Standard model (non-coherent)** (``-m 1``): as the base model with brute force timing recovery.
+- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter ([taken from here](https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html)).
+- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery.
 - **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
 
 The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
