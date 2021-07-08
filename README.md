@@ -65,7 +65,7 @@ A specific device can be selected with the ``d``-switch like ``-d:0`` or ``-d 00
 
 To start AIS demodulation, print some occasional statistics and broadcast them via UDP, we can use the following command:
 ```console
-AIS-catcher -d:-v -u 127.0.0.1 12345
+AIS-catcher -v -u 127.0.0.1 12345
 ```
 If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These console messages can be surpressed with the option ```-q```. 
 
