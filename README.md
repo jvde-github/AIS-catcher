@@ -23,11 +23,13 @@ use: AIS-catcher [options]
 	[-w filename - read IQ data from WAV file in 'float' format]
 
 	[-l list available devices and terminate (default: off)]
-	[-d:x device index (default: 0)]
+	[-d:x select device based on index (default: 0)]
+	[-d xxxx select device with  serial number]
+
 	[-p xx frequency correction for RTL SDR]
 
 	[-m xx run specific decoding model (default: 2)]
-	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output, 4: challenger model]
+	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
 	[-b benchmark demodulation models - for development purposes (default: off)]
 ````
 
@@ -55,13 +57,15 @@ AIS-catcher -l
 ```
 The output depends on the available devices but will look something like:
 ```console
-Available devices:
--d:0 AIRSPY HF+  [3652A98081343F89]
+Found 1 devices:
+0: Realtek, RTL2838UHIDIR, SN: 00000001
 ```
+A specific device can be selected with the ``d``-switch like ``-d:0`` or ``-d 00000001``.
+
 
 To start AIS demodulation, print some occasional statistics and broadcast them via UDP, we can use the following command:
 ```console
-AIS-catcher -v -u 127.0.0.1 12345
+AIS-catcher -d:-v -u 127.0.0.1 12345
 ```
 If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These console messages can be surpressed with the option ```-q```. 
 
@@ -88,16 +92,16 @@ AIS-catcher -s 288000
 
 In the current version 4 different receiver models are embedded:
 
-- `Default model`: a simple coherent demodulation model that tries to make local estimates of the phase offset. The idea was to find a balance between the reception quality of coherent models and robustness of non-coherent model towards frequency and phase offsets. 
-- `Base model (non-coherent)`: base model similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter ([taken from here](https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html)).
-- `Standard model (non-coherent)`: as the base model with more aggressive PLL
-- `FM discriminator model`: as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
+- **Default model** (``-m 2``): the default demodulation engine 
+- **Base model (non-coherent)** (``-m 0``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter ([taken from here](https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html)).
+- **Standard model (non-coherent)** (``-m 1``): as the base model with brute force timing recovery.
+- **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
 
-The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1``` if needed.
+The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
 
 To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the main two models in parallel for 3 minutes and we counted the number of detected messages. 
 
-Location: he Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings, we have the following message count for various models and sample rates (over 3 minute run):
+Location: he Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings and antenna placed within a window, we have the following message count for various models and sample rates (over 3 minute run):
  | Model | Settings | Run 1 | Run 2 | Run 3 |
  | :--- | :--- | :---: | :---: | :---: |
  | AIS-catcher v0.07 Default @ 1536K  |  | 153 | 131 | 152 |
@@ -109,7 +113,7 @@ Location: he Hague residential area with RTL-SDR v3 dongle and Shakespeare anten
  
 For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. AISRec has some excellent sensitivity and is one of the most user friendly packages out there. It is highly recommended. RTL-AIS  is a very efficient and elegant open source AIS receiver with minimal hardware requirements and is a pioneer in the field of open source AIS software. 
 
-The first two rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time and have different system and hardware requirements. Nevertheless, these non-scientifically conducted experiments suggest that 1) the Default model can perform better than the Standard model and 2) a higher sampling rate should be preferred over a lower rate where possible. 
+The first two rows are ran in parallel (i.e. on the same input signal) and therefore are comparable. Same for the two rows following. The other runs are provided for information purposes and cannot be compared as message density fluctuates over time and have different system and hardware requirements. Nevertheless, these non-scientifically conducted experiments suggest that 1) the Default model can perform better than the Standard model and 2) a higher sampling rate should be preferred over a lower rate where possible. 
 
 Finally some results with direct sight at the beach (Scheveningen) with a higher message density over 3 minutes (NESDR dongle with factory included antenna):
 | Model | 288K Ubuntu | 1536K Ubuntu |
@@ -120,7 +124,7 @@ Finally some results with direct sight at the beach (Scheveningen) with a higher
 
 The results for each column are comparable as based on the same input signal. Notice that with a better reception there is less of a difference between the different models and sampling rates.
 
-## Running multiple	 	models
+## Running multiple models
 
 The command line provides  the ```-m``` option which allows for the selection of the specific receiver models (```AIS-catcher```has 4 tested models included and one so-called Challenger model - a possible release candidate).  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
 ```
@@ -174,17 +178,6 @@ If you want to include Airspy HF+ functionality, ensure you install the required
 make
 sudo make install
 ```
-
-## In progress
-
-The current code has what I call a Challenger model that embeds some improvements to the default engine I am playing with. This can be activated on the command line with the switch ```-m 4```. At the time of writing the challenger model increases the range in which we update the phase estimate when the model is detecting training bits and then narrows it down again when a message has started. On my home station it gives a slight improvement after running for 5 hours 4 models in parallel:
-```
-[Challenger model (experimental)]	: 18335 msgs at 0.016 msg/s
-[AIS engine v0.06]			: 17228 msgs at 0.015 msg/s
-[Standard (non-coherent)]		: 5169 msgs at 0.009 msg/s
-[Base (non-coherent)]			: 4659 msgs at 0.009 msg/s
-```
-
 
 ## To do
 
