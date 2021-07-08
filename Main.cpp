@@ -127,7 +127,7 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-d:x select device based on index (default: 0)]" << std::endl;
-	std::cerr << "\t[-d xxxx select device with  serial number]" << std::endl;
+	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 #ifdef HASRTLSDR
 	std::cerr << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
@@ -407,9 +407,9 @@ int main(int argc, char* argv[])
 		if(liveModelsSelected.size() == 0)
 			liveModelsSelected.push_back(2);
 
-		for (int i = 0; i < liveModelsSelected.size(); i++)
+		for (auto mi: liveModelsSelected)
 		{
-			switch(liveModelsSelected[i])
+			switch(mi)
 			{
 			case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
 			case 1: liveModels.push_back(new AIS::ModelBase(control, out)); break;
