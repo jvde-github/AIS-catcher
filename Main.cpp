@@ -161,7 +161,7 @@ std::string getDeviceDescription(Device::Description& d)
 
 void printDevices(std::vector<Device::Description>& device_list)
 {
-	std::cerr << "Found " << device_list.size() << " devices:" << std::endl;
+	std::cerr << "Found " << device_list.size() << " device(s):" << std::endl;
 	for (int i = 0; i < device_list.size(); i++)
 	{
 		std::cerr << i << ": " << getDeviceDescription(device_list[i]) << std::endl;
