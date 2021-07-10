@@ -163,6 +163,16 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
+        class FilterCIC2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+        {
+                CFLOAT32 h0 = 0, h1 = 0;
+                std::vector <CFLOAT32> output;
+
+        public:
+                void Receive(const CFLOAT32* data, int len);
+        };
+
+
 	class ConvertCU8ToCFLOAT32 : public SimpleStreamInOut<CU8, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
