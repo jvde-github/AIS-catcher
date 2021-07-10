@@ -344,7 +344,6 @@ namespace Device {
 			for (int i = 0; i < device_count; i++) {
 				std::stringstream serial;
 				serial << std::uppercase << std::hex << serials[i];
-				//Description d = Description("AIRSPY HF+","AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF);
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF));
 			}
 		}
