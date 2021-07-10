@@ -140,6 +140,30 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
+        // FilterCIC2
+
+        void FilterCIC2::Receive(const CFLOAT32* data, int len)
+        {
+                CFLOAT32 z, r0, r1;
+
+                assert(len % 2 == 0);
+
+                if (output.size() < len) output.resize(len);
+
+                for (int i = 0; i < len; i += 2)
+                {
+                        z = data[i];
+                        MA1(0); MA1(1);
+                        output[i] = z * (FLOAT32)0.25f;
+                        z = data[i + 1];
+                        MA2(0); MA2(1);
+                        output[i + 1] = z * (FLOAT32)0.25f;
+                }
+
+                sendOut(output.data(), len);
+        }
+
+
 	void Downsample3Complex::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 3 == 0);
