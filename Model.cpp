@@ -297,13 +297,13 @@ namespace AIS
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1;
+			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 384000:
-			physical >> DS2_2 >> DS2_1;
+			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3;
+			physical >> DS3 >> ROT;
 			break;
 
 		default:
