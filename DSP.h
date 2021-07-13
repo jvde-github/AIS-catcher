@@ -62,21 +62,21 @@ namespace DSP
 	};
 
 
-        class SamplerParallelComplex : public StreamIn<CFLOAT32>
-        {
-                std::vector <CFLOAT32> output;
-                int lastSymbol = 0;
-                int nBuckets = 0;
+    class SamplerParallelComplex : public StreamIn<CFLOAT32>
+    {
+            std::vector <CFLOAT32> output;
+            int lastSymbol = 0;
+            int nBuckets = 0;
 
-        public:
-                void setBuckets(int n);
+    public:
+            void setBuckets(int n);
 
-                // Streams out
-                std::vector<Connection<CFLOAT32>> out;
+            // Streams out
+            std::vector<Connection<CFLOAT32>> out;
 
-                // Streams in
-                void Receive(const CFLOAT32* data, int len);
-        };
+            // Streams in
+            void Receive(const CFLOAT32* data, int len);
+    };
 
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -105,6 +105,7 @@ namespace DSP
 	class FilterComplex : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
+
 		std::vector <CFLOAT32> buffer;
 		std::vector <FLOAT32> taps;
 
@@ -191,19 +192,27 @@ namespace DSP
 		}
 	};
 
-	class RotateUp : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	class Rotate : public StreamIn<CFLOAT32>
 	{
-		std::vector <CFLOAT32> output;
+		std::vector <CFLOAT32> output_up, output_down;
+		CFLOAT32 rot_up = 1.0f;
+		CFLOAT32 rot_down = 1.0f;
+		CFLOAT32 mult_up = 1.0f;
+		CFLOAT32 mult_down = 1.0f;
 
 	public:
-		void Receive(const CFLOAT32* data, int len);
-	};
 
-	class RotateDown : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
-	{
-		std::vector <CFLOAT32> output;
+		void setRotation(float angle) 
+		{ 
+			mult_up = std::polar(1.0f, angle);
+			mult_down = std::conj(mult_up);
+		}
 
-	public:
+		// Streams out
+		Connection<CFLOAT32> up;
+		Connection<CFLOAT32> down;
+
+		// Streams in
 		void Receive(const CFLOAT32* data, int len);
 	};
 
@@ -212,6 +221,7 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 		std::vector <CFLOAT32> fft_data;
 
+		static const int N = 4096;
 		CFLOAT32 rot = 1.0f;
 		int count = 0;
 

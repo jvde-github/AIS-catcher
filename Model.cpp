@@ -34,7 +34,8 @@ namespace AIS
 		setName("Standard (non-coherent)");
 
 		const int nSymbolsPerSample = 48000/9600;
-		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
+
+		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
@@ -47,37 +48,26 @@ namespace AIS
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
 
-		FM_a.setDCShift(+FrequencyShift);
-		FM_b.setDCShift(-FrequencyShift);
-
 		switch (sample_rate)
 		{
 		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
+			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
+			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 384000:
-			physical >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
+			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3;
-			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a;
-			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b;
+			physical >> DS3 >> ROT;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in standard model.";
 		}
 
-		FR_a >> S_a;
-		FR_b >> S_b;
+		ROT.up >> DS2_a >> F_a >> FM_a >> FR_a >> S_a;
+		ROT.down >> DS2_b >> F_b >> FM_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -109,7 +99,7 @@ namespace AIS
 	{
 		setName("Base (non-coherent)");
 
-		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
+		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
@@ -119,34 +109,27 @@ namespace AIS
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
 
-		FM_a.setDCShift(+FrequencyShift);
-		FM_b.setDCShift(-FrequencyShift);
-
 		switch (sample_rate)
 		{
 		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 384000:
-			physical >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3;
-			DS3 >> ROT_a >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-			DS3 >> ROT_b >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+			physical >> DS3 >> ROT;
+
 			break;
 		default:
 			throw "Internal error: sample rate not supported in base model.";
 		}
+
+		ROT.up >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+		ROT.down >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 
 		DEC_a.DecoderMessage.Connect(sampler_a);
 		DEC_b.DecoderMessage.Connect(sampler_b);
@@ -165,10 +148,11 @@ namespace AIS
 		setName("AIS engine v0.08");
 
 		const int nSymbolsPerSample = 48000/9600;
-		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
 
-		FR_a.setTaps(Filters::Coherent);
-		FR_b.setTaps(Filters::Coherent);
+		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
+
+		FC_a.setTaps(Filters::Coherent);
+		FC_b.setTaps(Filters::Coherent);
 
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
@@ -181,33 +165,27 @@ namespace AIS
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
 
-
 		switch (sample_rate)
 		{
 		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 384000:
-			physical >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3;
-			DS3 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS3 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+			physical >> DS3 >> ROT;
 			break;
 
 		default:
 				throw "Internal error: sample rate not supported in default engine.";
 		}
+
+		ROT.up >> DS2_a >> F_a >> CGF_a >> FC_a >> S_a;
+		ROT.down >> DS2_b >> F_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -267,11 +245,11 @@ namespace AIS
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
-			DEC_a[i].setChannel('A');
-			DEC_b[i].setChannel('B');
-
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
+
+			DEC_a[i].setChannel('A');
+			DEC_b[i].setChannel('B');
 
 			for (int j = 0; j < nSymbolsPerSample; j++)
 			{
@@ -286,7 +264,6 @@ namespace AIS
 		return;
 	}
 
-
 	std::vector<uint32_t> ModelChallenger::SupportedSampleRates()
 	{
 		return { 1536000, 768000, 384000, 288000 };
@@ -297,7 +274,7 @@ namespace AIS
 		setName("Challenger model (experimental)");
 
 		const int nSymbolsPerSample = 48000 / 9600;
-		const float FrequencyShift = 2.0f * 3.141592653589793f * 1000.0f / 48000.0f;
+		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		FR_a.setTaps(Filters::CoherentChallenger);
 		FR_b.setTaps(Filters::CoherentChallenger);
@@ -317,37 +294,32 @@ namespace AIS
 		switch (sample_rate)
 		{
 		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 768000:
 			physical >> DS2_3 >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
 			break;
 		case 384000:
 			physical >> DS2_2 >> DS2_1;
-			DS2_1 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS2_1 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
 			break;
 		case 288000:
 			physical >> DS3;
-			DS3 >> ROT_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-			DS3 >> ROT_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
 			break;
 
 		default:
 			throw "Internal error: sample rate not supported in default engine.";
 		}
 
+		ROT.up >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
+		ROT.down >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
-			DEC_a[i].setChannel('A');
-			DEC_b[i].setChannel('B');
-
 			S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
+
+			DEC_a[i].setChannel('A');
+			DEC_b[i].setChannel('B');
 
 			for (int j = 0; j < nSymbolsPerSample; j++)
 			{

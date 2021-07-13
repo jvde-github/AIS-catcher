@@ -65,14 +65,15 @@ namespace AIS
 
 	class ModelStandard : public Model
 	{
+		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
+
 		DSP::Downsample3Complex DS3;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
 
-		DSP::RotateUp ROT_a;
-		DSP::RotateDown ROT_b;
-
+		DSP::Rotate ROT;
+		
 		DSP::FMDemodulation FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
@@ -95,12 +96,8 @@ namespace AIS
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
-
-		DSP::RotateUp ROT_a;
-		DSP::RotateDown ROT_b;
-
+		DSP::Rotate ROT;
 		DSP::FMDemodulation FM_a, FM_b;
-
 		DSP::Filter FR_a, FR_b;
 		DSP::SamplerPLL sampler_a, sampler_b;
 		AIS::Decoder DEC_a, DEC_b;
@@ -121,13 +118,10 @@ namespace AIS
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-
-		DSP::RotateUp ROT_a;
-		DSP::RotateDown ROT_b;
-
+		DSP::Rotate ROT;
 		std::vector<DSP::CoherentDemodulation> CD_a, CD_b;
 
-		DSP::FilterComplex FR_a, FR_b;
+		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::SamplerParallelComplex S_a, S_b;
 
@@ -164,12 +158,8 @@ namespace AIS
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-
-		DSP::RotateUp ROT_a;
-		DSP::RotateDown ROT_b;
-
+		DSP::Rotate ROT;
 		std::vector<DSP::ChallengerDemodulation> CD_a, CD_b;
-
 		DSP::FilterComplex FR_a, FR_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::SamplerParallelComplex S_a, S_b;
