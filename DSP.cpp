@@ -140,28 +140,28 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
-        // FilterCIC2
+    // FilterCIC2
 
-        void FilterCIC2::Receive(const CFLOAT32* data, int len)
-        {
-                CFLOAT32 z, r0, r1;
+    void FilterCIC2::Receive(const CFLOAT32* data, int len)
+    {
+            CFLOAT32 z, r0, r1;
 
-                assert(len % 2 == 0);
+            assert(len % 2 == 0);
 
-                if (output.size() < len) output.resize(len);
+            if (output.size() < len) output.resize(len);
 
-                for (int i = 0; i < len; i += 2)
-                {
-                        z = data[i];
-                        MA1(0); MA1(1);
-                        output[i] = z * (FLOAT32)0.25f;
-                        z = data[i + 1];
-                        MA2(0); MA2(1);
-                        output[i + 1] = z * (FLOAT32)0.25f;
-                }
+            for (int i = 0; i < len; i += 2)
+            {
+                    z = data[i];
+                    MA1(0); MA1(1);
+                    output[i] = z * (FLOAT32)0.25f;
+                    z = data[i + 1];
+                    MA2(0); MA2(1);
+                    output[i + 1] = z * (FLOAT32)0.25f;
+            }
 
-                sendOut(output.data(), len);
-        }
+            sendOut(output.data(), len);
+    }
 
 
 	void Downsample3Complex::Receive(const CFLOAT32* data, int len)
@@ -263,75 +263,48 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
-
-	void RotateDown::Receive(const CFLOAT32* data, int len)
+	void Rotate::Receive(const CFLOAT32* data, int len)
 	{
-		assert(len % 4 == 0);
+		//CFLOAT32 rot_step = std::polar(1.0f, (float)(PI * 25000.0 / 48000.0));
 
-		if (output.size() < len) output.resize(len);
+		if (output_up.size() < len) output_up.resize(len);
+		if (output_down.size() < len) output_down.resize(len);
 
-		for (int i = 0; i < output.size(); i += 4)
+		for (int i = 0; i < len; i++)
 		{
-			output[i] = data[i];
+			output_up[i] = rot_up * data[i];
+			rot_up *= mult_up;
 
-			output[i + 1].real(data[i + 1].imag());
-			output[i + 1].imag(-data[i + 1].real());
-
-			output[i + 2].real(-data[i + 2].real());
-			output[i + 2].imag(-data[i + 2].imag());
-
-			output[i + 3].real(-data[i + 3].imag());
-			output[i + 3].imag(data[i + 3].real());
+			output_down[i] = rot_down * data[i];
+			rot_down *= mult_down;
 		}
 
-		sendOut(output.data(), len);
-	}
-
-	void RotateUp::Receive(const CFLOAT32* data, int len)
-	{
-		assert(len % 4 == 0);
-
-		if (output.size() < len) output.resize(len);
-
-		for (int i = 0; i < output.size(); i += 4)
-		{
-			output[i] = data[i];
-
-			output[i + 1].real(-data[i + 1].imag());
-			output[i + 1].imag(data[i + 1].real());
-
-			output[i + 2].real(-data[i + 2].real());
-			output[i + 2].imag(-data[i + 2].imag());
-
-			output[i + 3].real(data[i + 3].imag());
-			output[i + 3].imag(-data[i + 3].real());
-		}
-
-		sendOut(output.data(), len);
+		up.Send(output_up.data(), len);
+		down.Send(output_down.data(), len);
 	}
 
 	// square the signal, find the mid-point between two peaks
 	void SquareFreqOffsetCorrection::correctFrequency()
 	{
 		FLOAT32 max_val = 0.0, fz = -1;
-		int delta = 819; // 9600/48000*4096
+		int delta = (int) 9600.0/48000.0*N;
 
 		FFT::fft(fft_data);
 
-		for(int i = 0; i<4096-delta; i++)
+		for(int i = 0; i<N-delta; i++)
 		{
-			FLOAT32 h = std::abs(fft_data[(i + 2048) % 4096]) + std::abs(fft_data[(i + delta + 2048) % 4096]);
+			FLOAT32 h = std::abs(fft_data[(i + N/2) % N]) + std::abs(fft_data[(i + delta + N/2) % N]);
 
 			if(h > max_val)
 			{
 				max_val = h;
-				fz = (2048 - (i + delta / 2.0));
+				fz = (N/2 - (i + delta / 2.0));
 			}
 		}
 
-		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz / 2 / 4096 * 2 * PI));
+		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz / 2.0 / N * 2 * PI));
 
-		for(int i = 0; i<4096; i++)
+		for(int i = 0; i<N; i++)
 		{
 			rot *= rot_step;
 			output[i] *= rot;
@@ -340,20 +313,20 @@ namespace DSP
 
 	void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
 	{
-		const int logN = 12; //FFT::log2(4096);
+		const int logN = FFT::log2(N);
 
-		if(fft_data.size() < 4096) fft_data.resize(4096);
-		if(output.size() < 4096) output.resize(4096);
+		if(fft_data.size() < N) fft_data.resize(N);
+		if(output.size() < N) output.resize(N);
 
 		for(int i = 0; i< len; i++)
 		{
 			fft_data[FFT::rev(count, logN)] = data[i] * data[i];
 			output[count] = data[i];
 
-			if(++count == 4096)
+			if(++count == N)
 			{
 				correctFrequency();
-				sendOut(output.data(), 4096);
+				sendOut(output.data(), N);
 				count = 0;
 			}
 		}
