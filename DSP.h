@@ -229,13 +229,16 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 		std::vector <CFLOAT32> fft_data;
 
-		static const int N = 2048;
 		CFLOAT32 rot = 1.0f;
+		int N = 2048;
+		int logN = 11;
 		int count = 0;
+		int window = 750;
 
 		void correctFrequency();
 
 	public:
+		void setN(int,int);
 		void Receive(const CFLOAT32* data, int len);
 	};
 }
