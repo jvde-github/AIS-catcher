@@ -279,9 +279,6 @@ namespace AIS
 		FR_a.setTaps(Filters::Coherent);
 		FR_b.setTaps(Filters::Coherent);
 
-		F96_a.setTaps(Filters::Filter96);
-		F96_b.setTaps(Filters::Filter96);
-
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
 
@@ -313,8 +310,8 @@ namespace AIS
 			throw "Internal error: sample rate not supported in default engine.";
 		}
 
-		ROT.up >> F96_a >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-		ROT.down >> F96_b >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+		ROT.up >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
+		ROT.down >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
