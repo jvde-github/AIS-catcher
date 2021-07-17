@@ -305,7 +305,7 @@ namespace DSP
 
 		FFT::fft(fft_data);
 
-		for(int i = 0; i<N-delta; i++)
+		for(int i = 1500; i<N-1500-delta; i++)
 		{
 			FLOAT32 h = std::abs(fft_data[(i + N/2) % N]) + std::abs(fft_data[(i + delta + N/2) % N]);
 
