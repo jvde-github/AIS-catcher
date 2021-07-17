@@ -305,7 +305,7 @@ namespace DSP
 
 		FFT::fft(fft_data);
 
-		for(int i = 750; i<N-750-delta; i++)
+		for(int i = window; i<N-window-delta; i++)
 		{
 			FLOAT32 h = std::abs(fft_data[(i + N/2) % N]) + std::abs(fft_data[(i + delta + N/2) % N]);
 
@@ -325,9 +325,15 @@ namespace DSP
 		}
 	}
 
+	void SquareFreqOffsetCorrection::setN(int n,int w)
+	{
+		N = n;
+		logN = FFT::log2(N);
+		window = w;
+	}
+
 	void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
 	{
-		const int logN = FFT::log2(N);
 
 		if(fft_data.size() < N) fft_data.resize(N);
 		if(output.size() < N) output.resize(N);
