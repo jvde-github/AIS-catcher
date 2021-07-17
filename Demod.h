@@ -67,7 +67,7 @@ namespace DSP
 	{
 		static const int nHistory = 5;
 		static const int nPhases = 16;
-		int nSearch = 2;
+		static const int nSearch = 2;
 		static const int nUpdate = 1;
 
 		std::vector <CFLOAT32> phase;

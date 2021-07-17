@@ -88,6 +88,14 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
+	class Downsample2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+
+	public:
+		void Receive(const CFLOAT32* data, int len);
+	};
+
 	class Downsample3Complex : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
