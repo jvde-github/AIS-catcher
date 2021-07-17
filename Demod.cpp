@@ -79,7 +79,7 @@ namespace DSP
 			for (int j = 0; j < nPhases / 2; j++)
 			{
 				FLOAT32 a = re * phase[j].real();
-				FLOAT32 b = -im * phase[j].imag();
+				FLOAT32 b = im * phase[j].imag();
 				FLOAT32 t;
 
 				bits[j] <<= 1;
@@ -143,12 +143,6 @@ namespace DSP
 
 	void ChallengerDemodulation::Message(const DecoderMessages& in)
 	{
-		switch (in)
-		{
-		case DecoderMessages::StartTraining: nSearch = 2; break;
-		case DecoderMessages::StopTraining: nSearch = 2; break;
-		default: break;
-		}
 	}
 
 	void ChallengerDemodulation::Receive(const CFLOAT32* data, int len)
@@ -222,5 +216,4 @@ namespace DSP
 			sendOut(&b, 1);
 		}
 	}
-
 }
