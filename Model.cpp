@@ -313,12 +313,6 @@ namespace AIS
 			throw "Internal error: sample rate not supported in default engine.";
 		}
 
-		//CGF_a.setN(1024,375);
-		//CGF_b.setN(1024,375);
-
-		CGF_a.setN(1024/2,375/2);;
-		CGF_b.setN(1024/2,375/2);
-
 		ROT.up >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
 		ROT.down >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
 
