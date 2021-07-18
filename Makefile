@@ -2,7 +2,7 @@ SRC = Main.cpp IO.cpp DSP.cpp Device.cpp AIS.cpp Model.cpp Utilities.cpp Demod.c
 OBJ = Main.o IO.o DSP.o Device.o AIS.o Model.o Utilities.o Demod.o
 
 CC = gcc 
-CFLAGS = -O3 -Wno-psabi 
+CFLAGS = -O3 -Wno-psabi -ffast-math
 LFLAGS = -lstdc++ -lm -o AIS-catcher 
 
 CFLAGS_RTL = -DHASRTLSDR 
