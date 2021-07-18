@@ -155,7 +155,7 @@ namespace AIS
 	{
 		DSP::Downsample3Complex DS3;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3;
-		DSP::Downsample2CIC1 DS2_4;
+		DSP::Downsample2CIC5 DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
