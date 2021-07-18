@@ -117,6 +117,27 @@ namespace DSP
 		sendOut(output.data(), len / 2);
 	}
 
+        void Downsample2CIC1::Receive(const CFLOAT32* data, int len)
+        {
+                assert(len % 2 == 0);
+
+                if (output.size() < len / 2) output.resize(len / 2);
+
+                CFLOAT32 z, r0;
+
+                for (int i = 0, j = 0; i < len; i += 2, j++)
+                {
+                        z = data[i];
+                        MA1(0);
+                        output[j] = z * (FLOAT32)0.5f;
+                        z = data[i + 1];
+                        MA2(0);
+                }
+
+                sendOut(output.data(), len / 2);
+        }
+
+
 	void Downsample2::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 2 == 0);
