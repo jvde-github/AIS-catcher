@@ -115,7 +115,7 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
-	std::cerr << "\t[-v enable verbose mode (default: false)]" << std::endl;
+	std::cerr << "\t[-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
@@ -178,14 +178,62 @@ int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::stri
 	return -1;
 }
 
+std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Device::Control* control, Connection<CFLOAT32>* out)
+{
+	std::vector<AIS::Model*> liveModels;
+
+	if (liveModelsSelected.size() == 0)
+		liveModelsSelected.push_back(2);
+
+	for (auto mi : liveModelsSelected)
+	{
+		switch (mi)
+		{
+		case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
+		case 1: liveModels.push_back(new AIS::ModelBase(control, out)); break;
+		case 2: liveModels.push_back(new AIS::ModelCoherent(control, out)); break;
+		case 3: liveModels.push_back(new AIS::ModelDiscriminator(control, out)); break;
+		case 4: liveModels.push_back(new AIS::ModelChallenger(control, out)); break;
+		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
+		}
+	}
+
+	return liveModels;
+}
+
+void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liveModels, Device::Control* control)
+{
+
+	std::vector<uint32_t> device_rates = control->SupportedSampleRates();
+	std::vector<uint32_t> model_rates = liveModels[0]->SupportedSampleRates();
+
+	if (sample_rate != 0)
+	{
+		if (model_rate == 0) model_rate = sample_rate;
+
+		if (!isRateDefined(model_rate, model_rates)) throw "Sampling rate not supported in this version.";
+		if (!isRateDefined(sample_rate, device_rates)) throw "Sampling rate not supported for this device.";
+	}
+	else
+	{
+		model_rate = sample_rate = setRateAutomatic(device_rates, model_rates);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	int sample_rate = 0;
+	int model_rate = 0;
+
 	int input_device = 0;
+
 	bool list_devices = false;
 	bool verbose = false;
 	bool timer_on = false;
 	bool NMEA_to_screen = true;
+	bool RTLSDRfastDS = true;
+	int verboseUpdateTime = 3000;
+
 	int ppm_correction = 0;
 	uint64_t handle = 0;
 	Device::Format RAWformat = Device::Format::CU8;
@@ -239,6 +287,11 @@ int main(int argc, char* argv[])
 				break;
 			case 'v':
 				verbose = true;
+				if (arg1 != "" && arg1[0] != '-')
+				{
+					verboseUpdateTime = getNumber(arg1, 0, 3600) * 1000;
+					ptr++;
+				}
 				break;
 			case 'q':
 				NMEA_to_screen = false;
@@ -344,6 +397,7 @@ int main(int argc, char* argv[])
 
 		// Required for RTLSDR: conversion from usigned char to float
 		DSP::ConvertCU8ToCFLOAT32 convertCU8;
+		DSP::RTLSDRFastDownsample convertFastDS;
 
 		switch (input_type)
 		{
@@ -382,14 +436,30 @@ int main(int argc, char* argv[])
 		case Device::Type::RTLSDR:
 		{
 #ifdef HASRTLSDR
+ 
 			Device::RTLSDR* device = new Device::RTLSDR();
 			device->openDevice(handle);
-			device->out >> convertCU8;
+
+			if(sample_rate == 0 and RTLSDRfastDS)
+			{
+				device->out >> convertFastDS;
+				out = &(convertFastDS.out);
+
+				sample_rate = 1536000;
+				model_rate = 96000;
+			}
+			else
+			{
+				sample_rate = 1536000;
+				model_rate = 1536000;
+
+				device->out >> convertCU8;
+				out = &(convertCU8.out);
+			}
+			device->setFrequencyCorrection(ppm_correction);
 
 			control = device;
-			out = &(convertCU8.out);
 
-			device->setFrequencyCorrection(ppm_correction);
 #else
 			std::cerr << "RTLSDR not included in this package. Please build version including RTLSDR support.";
 #endif
@@ -403,36 +473,10 @@ int main(int argc, char* argv[])
 		SystemMessages.Connect(*control);
 
 		// Create demodulation models
-
-		if(liveModelsSelected.size() == 0)
-			liveModelsSelected.push_back(2);
-
-		for (auto mi: liveModelsSelected)
-		{
-			switch(mi)
-			{
-			case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
-			case 1: liveModels.push_back(new AIS::ModelBase(control, out)); break;
-			case 2: liveModels.push_back(new AIS::ModelCoherent(control, out)); break;
-			case 3: liveModels.push_back(new AIS::ModelDiscriminator(control, out)); break;
-			case 4: liveModels.push_back(new AIS::ModelChallenger(control, out)); break;
-			default: throw "Model not implemented in this version. Check in later.."; break;
-			}
-		}
+		liveModels = setupModels(liveModelsSelected, control, out);
 
 		// set and check the sampling rate
-		std::vector<uint32_t> device_rates = control->SupportedSampleRates();
-		std::vector<uint32_t> model_rates = liveModels[0]->SupportedSampleRates();
-
-		if (sample_rate != 0)
-		{
-			if (!isRateDefined(sample_rate,model_rates)) throw "Sampling rate not supported in this version.";
-			if (!isRateDefined(sample_rate,device_rates)) throw "Sampling rate not supported for this device.";
-		}
-		else
-		{
-			sample_rate = setRateAutomatic(device_rates, model_rates);
-		}
+		setupRates(sample_rate, model_rate, liveModels, control);
 
 		// Build model and attach output to main model
 
@@ -440,7 +484,7 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->buildModel(sample_rate, timer_on);
+			liveModels[i]->buildModel(model_rate, timer_on);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
@@ -472,7 +516,7 @@ int main(int argc, char* argv[])
 		{
 			if (control->isCallback()) // don't go to sleep in case we are reading from a file
 			{
-				SleepSystem(3000);
+				SleepSystem(verboseUpdateTime);
 
 				if(verbose)
 					for(int j = 0; j < liveModels.size(); j++)

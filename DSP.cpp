@@ -31,24 +31,24 @@ namespace DSP
 {
 	void SamplerPLL::Receive(const FLOAT32* data, int len)
 	{
-                for (int i = 0; i < len; i++)
-                {
-                        BIT bit = (data[i] > 0);
+		for (int i = 0; i < len; i++)
+		{
+			BIT bit = (data[i] > 0);
 
-                        if (bit != prev)
-                        {
-                                PLL += (0.5f - PLL) * (FastPLL ? 0.6f : 0.05f);
-                        }
+			if (bit != prev)
+			{
+				PLL += (0.5f - PLL) * (FastPLL ? 0.6f : 0.05f);
+			}
 
-                        PLL += 0.2f;
+			PLL += 0.2f;
 
-                        if (PLL >= 1.0f)
-                        {
-                                sendOut(&data[i], 1);
-                                PLL -= (int) PLL;
-                        }
-                        prev = bit;
-                }
+			if (PLL >= 1.0f)
+			{
+				sendOut(&data[i], 1);
+				PLL -= (int) PLL;
+			}
+			prev = bit;
+		}
 	}
 
 	void SamplerPLL::Message(const DecoderMessages& in)
@@ -76,20 +76,20 @@ namespace DSP
 		}
 	}
 
-        void SamplerParallelComplex::setBuckets(int n)
-        {
-                nBuckets = n;
-                out.resize(nBuckets);
-        }
+	void SamplerParallelComplex::setBuckets(int n)
+	{
+		nBuckets = n;
+		out.resize(nBuckets);
+	}
 
-        void SamplerParallelComplex::Receive(const CFLOAT32* data, int len)
-        {
-                for (int i = 0; i < len; i++)
-                {
-                        out[lastSymbol].Send(&data[i], 1);
-                        lastSymbol = (lastSymbol + 1) % nBuckets;
-                }
-        }
+	void SamplerParallelComplex::Receive(const CFLOAT32* data, int len)
+	{
+		for (int i = 0; i < len; i++)
+		{
+			out[lastSymbol].Send(&data[i], 1);
+			lastSymbol = (lastSymbol + 1) % nBuckets;
+		}
+	}
 
 // helper macros for moving averages
 #define MA1(idx)		r##idx = z; z += h##idx;
@@ -117,28 +117,21 @@ namespace DSP
 		sendOut(output.data(), len / 2);
 	}
 
-        void Downsample2CIC1::Receive(const CFLOAT32* data, int len)
-        {
-                assert(len % 2 == 0);
+	void Downsample2CS32::Run(CS32* data, int len)
+	{
+		CS32 z, r0, r1, r2, r3, r4;
 
-                if (output.size() < len / 2) output.resize(len / 2);
+		for (int i = 0, j = 0; i < len; i += 2, j++)
+		{
+			z = data[i];
+			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
+			data[j] = z;
+			z = data[i + 1];
+			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
+		}
+	}
 
-                CFLOAT32 z, r0;
-
-                for (int i = 0, j = 0; i < len; i += 2, j++)
-                {
-                        z = data[i];
-                        MA1(0);
-                        output[j] = z * (FLOAT32)0.5f;
-                        z = data[i + 1];
-                        MA2(0);
-                }
-
-                sendOut(output.data(), len / 2);
-        }
-
-
-	void Downsample2::Receive(const CFLOAT32* data, int len)
+	void Decimate2::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 2 == 0);
 
@@ -174,30 +167,6 @@ namespace DSP
 
 		sendOut(output.data(), len);
 	}
-
-	// FilterCIC2
-
-	void FilterCIC2::Receive(const CFLOAT32* data, int len)
-	{
-		CFLOAT32 z, r0, r1;
-
-		assert(len % 2 == 0);
-
-		if (output.size() < len) output.resize(len);
-
-		for (int i = 0; i < len; i += 2)
-		{
-			z = data[i];
-			MA1(0); MA1(1);
-			output[i] = z * (FLOAT32)0.25f;
-			z = data[i + 1];
-			MA2(0); MA2(1);
-			output[i + 1] = z * (FLOAT32)0.25f;
-		}
-
-		sendOut(output.data(), len);
-	}
-
 
 	void Downsample3Complex::Receive(const CFLOAT32* data, int len)
 	{
@@ -316,6 +285,9 @@ namespace DSP
 
 		up.Send(output_up.data(), len);
 		down.Send(output_down.data(), len);
+
+		rot_up /= std::abs(rot_up);
+		rot_down /= std::abs(rot_down);
 	}
 
 	// square the signal, find the mid-point between two peaks
@@ -344,6 +316,8 @@ namespace DSP
 			rot *= rot_step;
 			output[i] *= rot;
 		}
+
+		rot /= std::abs(rot);
 	}
 
 	void SquareFreqOffsetCorrection::setN(int n,int w)
@@ -355,7 +329,6 @@ namespace DSP
 
 	void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
 	{
-
 		if(fft_data.size() < N) fft_data.resize(N);
 		if(output.size() < N) output.resize(N);
 

@@ -26,7 +26,7 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000 };
+		return { 1536000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
@@ -62,6 +62,9 @@ namespace AIS
 		case 288000:
 			physical >> DS3 >> ROT;
 			break;
+		case 96000:
+			physical >> ROT;
+			break;
 		default:
 			throw "Internal error: sample rate not supported in standard model.";
 		}
@@ -92,7 +95,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelBase::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000 };
+		return { 1536000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelBase::buildModel(int sample_rate,bool timerOn)
@@ -122,7 +125,9 @@ namespace AIS
 			break;
 		case 288000:
 			physical >> DS3 >> ROT;
-
+			break;
+		case 96000:
+			physical >> ROT;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in base model.";
@@ -140,7 +145,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelCoherent::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000 };
+		return { 1536000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
@@ -163,7 +168,7 @@ namespace AIS
 		CD_a.resize(nSymbolsPerSample);
 		CD_b.resize(nSymbolsPerSample);
 
-		CGF_a.setN(512,375/2);;
+		CGF_a.setN(512,375/2);
 		CGF_b.setN(512,375/2);
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
@@ -182,9 +187,11 @@ namespace AIS
 		case 288000:
 			physical >> DS3 >> ROT;
 			break;
-
+		case 96000:
+			physical >> ROT;
+			break;
 		default:
-				throw "Internal error: sample rate not supported in default engine.";
+			throw "Internal error: sample rate not supported in default engine.";
 		}
 
 		ROT.up >> DS2_a >> F_a >> CGF_a >> FC_a >> S_a;
@@ -291,7 +298,7 @@ namespace AIS
 		CD_a.resize(nSymbolsPerSample);
 		CD_b.resize(nSymbolsPerSample);
 
-		CGF_a.setN(512,375/2);;
+		CGF_a.setN(512,375/2);
 		CGF_b.setN(512,375/2);
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
