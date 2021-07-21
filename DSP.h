@@ -64,18 +64,18 @@ namespace DSP
 
     class SamplerParallelComplex : public StreamIn<CFLOAT32>
     {
-            std::vector <CFLOAT32> output;
-            int lastSymbol = 0;
-            int nBuckets = 0;
+		std::vector <CFLOAT32> output;
+		int lastSymbol = 0;
+		int nBuckets = 0;
 
-    public:
-            void setBuckets(int n);
+public:
+		void setBuckets(int n);
 
-            // Streams out
-            std::vector<Connection<CFLOAT32>> out;
+		// Streams out
+		std::vector<Connection<CFLOAT32>> out;
 
-            // Streams in
-            void Receive(const CFLOAT32* data, int len);
+		// Streams in
+		void Receive(const CFLOAT32* data, int len);
     };
 
 
@@ -88,16 +88,15 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-        class Downsample2CIC1 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
-        {
-                CFLOAT32 h0 = 0; 
-                std::vector <CFLOAT32> output;
+    class Downsample2CS32
+    {
+		CS32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 
-        public:
-                void Receive(const CFLOAT32* data, int len);
-        };
+    public:
+		void Run(CS32* data, int len);
+    };
 
-	class Downsample2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
 
@@ -181,16 +180,6 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-        class FilterCIC2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
-        {
-                CFLOAT32 h0 = 0, h1 = 0;
-                std::vector <CFLOAT32> output;
-
-        public:
-                void Receive(const CFLOAT32* data, int len);
-        };
-
-
 	class ConvertCU8ToCFLOAT32 : public SimpleStreamInOut<CU8, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
@@ -204,6 +193,39 @@ namespace DSP
 			{
 				output[i].real((float)data[i].real()/128.0f-1.0f);
 				output[i].imag((float)data[i].imag()/128.0f-1.0f);
+			}
+			out.Send(output.data(), len);
+		}
+	};
+
+	class RTLSDRFastDownsample : public SimpleStreamInOut<CU8, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+		std::vector <CS32> buffer;
+
+		Downsample2CS32 DS1, DS2, DS3, DS4;
+
+	public:
+		void Receive(const CU8* data, int len)
+		{
+			if (output.size() < len / 16) output.resize(len / 16);
+			if (buffer.size() < len) buffer.resize(len);
+
+			for (int i = 0; i < len; i++)
+			{
+				buffer[i].real((int32_t)data[i].real() - 128);
+				buffer[i].imag((int32_t)data[i].imag() - 128);
+			}
+
+			DS1.Run(buffer.data(), len); len >>= 1;
+			DS2.Run(buffer.data(), len); len >>= 1;
+			DS3.Run(buffer.data(), len); len >>= 1;
+			DS4.Run(buffer.data(), len); len >>= 1;
+
+			for (int i = 0; i < len; i++)
+			{
+				output[i].real((float)buffer[i].real() / (128 * 32 * 32 * 32 * 32));
+				output[i].imag((float)buffer[i].imag() / (128 * 32 * 32 * 32 * 32));
 			}
 			out.Send(output.data(), len);
 		}

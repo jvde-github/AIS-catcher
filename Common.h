@@ -39,6 +39,7 @@ typedef double FLOAT64;
 typedef std::complex <FLOAT32> CFLOAT32;
 typedef std::complex <FLOAT64> CFLOAT64;
 typedef int16_t S16;
+typedef std::complex <int32_t> CS32;
 typedef std::complex <int16_t> CS16;
 typedef std::complex <uint8_t> CU8;
 typedef char BIT;

@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include <cstring>
+
 #include "Device.h"
 #include "Common.h"
 
@@ -185,7 +187,26 @@ namespace Device {
 
 	void RTLSDR::callback(CU8* buf, int len)
 	{
-		Send((const CU8*)buf, len / 2);
+		if(count == 10)
+		{
+			std::cerr << "Buffer overrun!" << std::endl;
+		}
+		else
+		{
+			if(fifo[tail].size() != len) fifo[tail].resize(len);
+
+			std::memcpy(fifo[tail].data(),buf,len);
+
+			tail = (tail + 1) % 10;
+
+    			{
+    				std::lock_guard<std::mutex> lock(fifo_mutex);
+				count ++;
+
+    			}
+
+			fifo_cond.notify_one();
+		}
 	}
 
 	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx)
@@ -198,24 +219,69 @@ namespace Device {
 		rtlsdr_read_async(c->getDevice(), (rtlsdr_read_async_cb_t) &(RTLSDR::callback_static), c, 0, BufferLen);
 	}
 
+	void RTLSDR::demod()
+	{
+		std::cerr << "Start demodulation thread." << std::endl;
+
+		if(fifo.size() < 10) fifo.resize(10);
+
+		count = 0;
+		tail = 0;
+		head = 0;
+
+		while(isStreaming()) 
+		{
+			if (count == 0)
+			{
+				std::unique_lock <std::mutex> lock(fifo_mutex);
+				fifo_cond.wait_for(lock, std::chrono::milliseconds(500), [this]{return count != 0;});
+				if (count == 0) 
+					std::cerr << "Timeout on RTL SDR dongle" << std::endl;
+			}
+
+			if (count != 0)  
+			{
+				Send((const CU8*)fifo[head].data(), fifo[head].size()/2);
+				head = (head + 1) % 10;
+				count --;
+			}
+		}
+
+		std::cerr << "Stop demodulation thread" << std::endl;
+	}
+
+        void RTLSDR::demod_async_static(RTLSDR* c)
+        {
+		c->demod();
+        }
+
+
 	void RTLSDR::Play()
 	{
 		Control::Play(); 
 
 		rtlsdr_reset_buffer(dev);
 		async_thread = std::thread(RTLSDR::start_async_static, this);
+		demod_thread = std::thread(RTLSDR::demod_async_static, this);
 		SleepSystem(10);
 	}
 
 	void RTLSDR::Pause()
 	{
+		Control::Pause();
+
 		if (async_thread.joinable())
 		{
 			rtlsdr_cancel_async(dev);
 			async_thread.join();
 		}
 
-		Control::Pause();
+
+		if (demod_thread.joinable())
+		{
+			demod_thread.join();
+		}
+
 	}
 
 	void RTLSDR::setFrequencyCorrection(int ppm)

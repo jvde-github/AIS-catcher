@@ -26,6 +26,10 @@ SOFTWARE.
 #include <thread>
 #include <fstream>
 
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+
 #include "Stream.h"
 #include "Signal.h"
 
@@ -166,11 +170,22 @@ namespace Device{
 
 		rtlsdr_dev_t* dev = NULL;
 		std::thread async_thread;
+		std::thread demod_thread;
+
+		std::vector<std::vector<CU8>> fifo;
+		int head = 0;
+		int tail = 0;
+		std::atomic<int> count;
+
+		std::mutex fifo_mutex;
+		std::condition_variable fifo_cond;
 
 		static void callback_static(CU8* buf, uint32_t len, void* ctx);
 		static void start_async_static(RTLSDR* c);
+		static void demod_async_static(RTLSDR* c);
 
 		void callback(CU8* buf, int len);
+		void demod();
 
 		static const uint32_t BufferLen = 2048 * 2 * 2 * 6;
 		rtlsdr_dev_t* getDevice() { return dev; }
