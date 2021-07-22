@@ -22,6 +22,8 @@ SOFTWARE.
 
 #pragma once
 
+#include <assert.h>
+
 #include "Stream.h"
 #include "Filters.h"
 #include "Signal.h"
@@ -93,7 +95,7 @@ public:
 		CS32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 
     public:
-		void Run(CS32* data, int len);
+		int Run(CS32* data, int len);
     };
 
 	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -208,6 +210,8 @@ public:
 	public:
 		void Receive(const CU8* data, int len)
 		{
+			assert(len % 16 == 0);
+
 			if (output.size() < len / 16) output.resize(len / 16);
 			if (buffer.size() < len) buffer.resize(len);
 
@@ -217,10 +221,10 @@ public:
 				buffer[i].imag((int32_t)data[i].imag() - 128);
 			}
 
-			DS1.Run(buffer.data(), len); len >>= 1;
-			DS2.Run(buffer.data(), len); len >>= 1;
-			DS3.Run(buffer.data(), len); len >>= 1;
-			DS4.Run(buffer.data(), len); len >>= 1;
+			len = DS1.Run(buffer.data(), len);
+			len = DS2.Run(buffer.data(), len);
+			len = DS3.Run(buffer.data(), len);
+			len = DS4.Run(buffer.data(), len);
 
 			for (int i = 0; i < len; i++)
 			{

@@ -173,6 +173,7 @@ namespace Device{
 		std::thread demod_thread;
 
 		std::vector<std::vector<CU8>> fifo;
+		static const int sizeFIFO = 10;
 		int head = 0;
 		int tail = 0;
 		std::atomic<int> count;
@@ -185,7 +186,7 @@ namespace Device{
 		static void demod_async_static(RTLSDR* c);
 
 		void callback(CU8* buf, int len);
-		void demod();
+		void Demodulation();
 
 		static const uint32_t BufferLen = 2048 * 2 * 2 * 6;
 		rtlsdr_dev_t* getDevice() { return dev; }

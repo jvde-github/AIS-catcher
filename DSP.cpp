@@ -117,7 +117,7 @@ namespace DSP
 		sendOut(output.data(), len / 2);
 	}
 
-	void Downsample2CS32::Run(CS32* data, int len)
+	int Downsample2CS32::Run(CS32* data, int len)
 	{
 		CS32 z, r0, r1, r2, r3, r4;
 
@@ -129,6 +129,7 @@ namespace DSP
 			z = data[i + 1];
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}
+		return len/2;
 	}
 
 	void Decimate2::Receive(const CFLOAT32* data, int len)
@@ -269,8 +270,6 @@ namespace DSP
 
 	void Rotate::Receive(const CFLOAT32* data, int len)
 	{
-		//CFLOAT32 rot_step = std::polar(1.0f, (float)(PI * 25000.0 / 48000.0));
-
 		if (output_up.size() < len) output_up.resize(len);
 		if (output_down.size() < len) output_down.resize(len);
 
@@ -294,18 +293,18 @@ namespace DSP
 	void SquareFreqOffsetCorrection::correctFrequency()
 	{
 		FLOAT32 max_val = 0.0, fz = -1;
-		int delta = (int) 9600.0/48000.0*N;
+		int delta = (int)9600.0 / 48000.0 * N;
 
 		FFT::fft(fft_data);
 
 		for(int i = window; i<N-window-delta; i++)
 		{
-			FLOAT32 h = std::abs(fft_data[(i + N/2) % N]) + std::abs(fft_data[(i + delta + N/2) % N]);
+			FLOAT32 h = std::abs(fft_data[(i + N / 2) % N]) + std::abs(fft_data[(i + delta + N / 2) % N]);
 
 			if(h > max_val)
 			{
 				max_val = h;
-				fz = (N/2 - (i + delta / 2.0));
+				fz = (N / 2 - (i + delta / 2.0));
 			}
 		}
 
