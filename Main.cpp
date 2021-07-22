@@ -231,7 +231,7 @@ int main(int argc, char* argv[])
 	bool verbose = false;
 	bool timer_on = false;
 	bool NMEA_to_screen = true;
-	bool RTLSDRfastDS = true;
+	bool RTLSDRfastDS = false;
 	int verboseUpdateTime = 3000;
 
 	int ppm_correction = 0;
@@ -450,9 +450,6 @@ int main(int argc, char* argv[])
 			}
 			else
 			{
-				sample_rate = 1536000;
-				model_rate = 1536000;
-
 				device->out >> convertCU8;
 				out = &(convertCU8.out);
 			}
