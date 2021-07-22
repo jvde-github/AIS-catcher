@@ -197,7 +197,7 @@ namespace Device {
 
 			std::memcpy(fifo[tail].data(),buf,len);
 
-			tail = (tail + 1) % 10;
+			tail = (tail + 1) % sizeFIFO;
 
     			{
     				std::lock_guard<std::mutex> lock(fifo_mutex);
@@ -219,50 +219,53 @@ namespace Device {
 		rtlsdr_read_async(c->getDevice(), (rtlsdr_read_async_cb_t) &(RTLSDR::callback_static), c, 0, BufferLen);
 	}
 
-	void RTLSDR::demod()
+	void RTLSDR::Demodulation()
 	{
 		std::cerr << "Start demodulation thread." << std::endl;
-
-		if(fifo.size() < 10) fifo.resize(10);
-
-		count = 0;
-		tail = 0;
-		head = 0;
 
 		while(isStreaming()) 
 		{
 			if (count == 0)
 			{
 				std::unique_lock <std::mutex> lock(fifo_mutex);
-				fifo_cond.wait_for(lock, std::chrono::milliseconds(500), [this]{return count != 0;});
-				if (count == 0) 
+				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BufferLen / (float)sample_rate * 1100.0f)), [this] {return count != 0; });
+
+				if (count == 0)
 					std::cerr << "Timeout on RTL SDR dongle" << std::endl;
 			}
 
 			if (count != 0)  
 			{
-				Send((const CU8*)fifo[head].data(), fifo[head].size()/2);
-				head = (head + 1) % 10;
-				count --;
+				Send((const CU8*)fifo[head].data(), fifo[head].size() / 2);
+				head = (head + 1) % sizeFIFO;
+				count--;
 			}
 		}
 
-		std::cerr << "Stop demodulation thread" << std::endl;
+		std::cerr << "Stop demodulation thread." << std::endl;
 	}
 
         void RTLSDR::demod_async_static(RTLSDR* c)
         {
-		c->demod();
+		c->Demodulation();
         }
 
 
 	void RTLSDR::Play()
 	{
+		// set up FIFO
+		fifo.resize(sizeFIFO);
+
+		count = 0;
+		tail = 0;
+		head = 0;
+
 		Control::Play(); 
 
 		rtlsdr_reset_buffer(dev);
 		async_thread = std::thread(RTLSDR::start_async_static, this);
 		demod_thread = std::thread(RTLSDR::demod_async_static, this);
+
 		SleepSystem(10);
 	}
 
