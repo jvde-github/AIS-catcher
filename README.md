@@ -1,8 +1,15 @@
 # AIS-catcher - An AIS receiver for RTL-SDR dongles and Airspy HF+
 This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles and the Airspy HF+. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The idea behind ```AIS-catcher``` is that it should be easy to run various decoding model in parallel and read input from file to create an environment to test and benchmark different decoding models in a live setting. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
+```AIS-catcher``` is created for research and educational purposes under the MIT license. DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes. It is not reliable and fully tested.
+
+## Developments
+Release version 0.09: Some updates to improve stability when continuously running on a Rapberry Pi:
+- added threading with buffer overrun and timeout detection, faster downsampling, some stability improvements
+- ```v```-switch allows for bespoke update frequency to keep logs maneagable
+- small improvement in reception
+
 ## Purpose
-```AIS-catcher``` is created for research and educational purposes under the MIT license. DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was created in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
 
