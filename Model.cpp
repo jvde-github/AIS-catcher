@@ -150,7 +150,7 @@ namespace AIS
 
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("AIS engine v0.08+");
+		setName("AIS engine v0.09");
 
 		const int nSymbolsPerSample = 48000/9600;
 
@@ -276,7 +276,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelChallenger::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000 };
+		return { 1536000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
@@ -317,7 +317,9 @@ namespace AIS
 		case 288000:
 			physical >> DS3 >> ROT;
 			break;
-
+		case 96000:
+			physical >> ROT;
+			break;
 		default:
 			throw "Internal error: sample rate not supported in default engine.";
 		}
