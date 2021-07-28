@@ -173,6 +173,32 @@ If you want to include Airspy HF+ functionality, ensure you install the required
 make
 sudo make install
 ```
+
+## Container images
+
+Pre-built container images containing AIS-catcher are available from the GitHub Container Registry. Available container tags are documented on the [package's page](https://github.com/jvde-github/AIS-catcher/pkgs/container/ais-catcher), with `latest` (the latest release) and `edge` (the bleeding edge of the `main` branch) being the two main ones.
+
+The following `docker run` command provides an example of the usage of this container image, running the latest release of AIS-catcher interactively:
+
+```console
+docker run --rm -it --pull always --device /dev/bus/usb ghcr.io/jvde-github/ais-catcher:latest <ais-catcher command line options>
+```
+
+Alternatively, the following `docker-compose.yml` configuration provides a good starting point should you wish to use [Docker Compose](https://docs.docker.com/compose/):
+
+```yaml
+services:
+  ais-catcher:
+    command: <ais-catcher command line options>
+    container_name: ais-catcher
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    image: ghcr.io/jvde-github/ais-catcher:latest
+    restart: always
+```
+
+Note that the container images only support RTL-SDR at this time, and do not yet support Airspy HF+.
+
 ## Considerations
 
 AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide as input via the ```-p``` switch on the command line.
