@@ -34,13 +34,13 @@ SOFTWARE.
 MessageHub<SystemMessage> SystemMessages;
 
 #ifdef WIN32
-BOOL WINAPI consoleHandler(DWORD signal) 
+BOOL WINAPI consoleHandler(DWORD signal)
 {
 	if (signal == CTRL_C_EVENT) SystemMessages.Send(SystemMessage::Stop);
 	return TRUE;
 }
 #else
-void consoleHandler(int signal) 
+void consoleHandler(int signal)
 {
 	SystemMessages.Send(SystemMessage::Stop);
 }
@@ -88,27 +88,6 @@ int getNumber(std::string str, int min, int max)
 	return number;
 }
 
-bool checkNetworkAddress(std::string s)
-{
-	bool correct = true;
-	int count = 0;
-
-	char str[20];
-	int len = s.copy(str, 20);  str[len] = '\0';
-
-	char* token = strtok(str, ".");
-
-	while (token)
-	{
-		correct &= getNumber(std::string(token),0,255)>=0;
-		token = strtok(NULL, ".");
-		count++;
-	}
-
-	if (correct && count == 4) return true;
-	return false;
-}
-
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
@@ -117,7 +96,7 @@ void Usage()
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
 	std::cerr << "\t[-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
-	std::cerr << "\t[-u xx.xx.xx.xx yyy UDP address and port (default: off)]" << std::endl;
+	std::cerr << "\t[-u address port - UDP address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
 	std::cerr << "\t[-r cu8 filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
@@ -347,12 +326,6 @@ int main(int argc, char* argv[])
 				break;
 			case 'u':
 				udp_address = arg1; udp_port = arg2;
-
-				if(!checkNetworkAddress(udp_address) || getNumber(udp_port,0,65535)<0)
-				{
-					std::cerr << "UDP network address and/or port not valid." << std::endl;
-					return -1;
-				}
 				ptr += 2;
 				break;
 			case 'h':
@@ -436,7 +409,7 @@ int main(int argc, char* argv[])
 		case Device::Type::RTLSDR:
 		{
 #ifdef HASRTLSDR
- 
+
 			Device::RTLSDR* device = new Device::RTLSDR();
 			device->openDevice(handle);
 
@@ -492,7 +465,7 @@ int main(int argc, char* argv[])
 			liveModels[0]->Output() >> udp;
 		}
 
-		if (NMEA_to_screen) 
+		if (NMEA_to_screen)
 			liveModels[0]->Output() >> nmea_screen;
 
 		// Set up Device
