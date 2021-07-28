@@ -70,7 +70,7 @@ namespace IO
 
 		if(code != 0 || address == NULL)
 		{
-			throw "Failed to resolve remote socket address for UDP connection.";
+			throw "UDP network address and/or port not valid.";
 			return;
 		}
 
