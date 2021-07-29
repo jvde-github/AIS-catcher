@@ -23,7 +23,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=edge,branch=main
-            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=tag
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v1
