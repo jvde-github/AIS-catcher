@@ -120,6 +120,39 @@ public:
 		void Receive(const CFLOAT32* data, int len);
 	};
 
+        class Downsample3Filter : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+        {
+                std::vector <CFLOAT32> output;
+
+                std::vector <CFLOAT32> buffer;
+                std::vector <FLOAT32> taps;
+
+
+                int idx_in = 0;
+                int idx_out = 0;
+
+                int nTaps;
+
+                static const int outputSize = 16384/2;
+
+                inline CFLOAT32 filter(const CFLOAT32* data)
+                {
+                        CFLOAT32 x = 0.0f;
+                        for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
+                        return x;
+                }
+
+        public:
+
+                void setTaps(const std::vector<FLOAT32>& t)
+                {
+                        taps = t;
+                }
+
+                // StreamIn
+                void Receive(const CFLOAT32* data, int len);
+        };
+
 	class FilterComplex : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
