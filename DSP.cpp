@@ -216,6 +216,40 @@ namespace DSP
 		sendOut(output.data(), len / 3);
 	}
 
+        void Downsample3Filter::Receive(const CFLOAT32* data, int len)
+        {
+                int i, j;
+
+                nTaps = taps.size();
+
+                if (output.size() < outputSize) output.resize(outputSize);
+                if (buffer.size() < len) buffer.resize(len + nTaps - 1,0.0f);
+
+                for (i = 0, j = nTaps - 1; i < len; i++, j++)
+                {
+                        buffer[j] = data[i];
+                }
+
+                while(idx_in < len)
+                {
+                        output[idx_out] = filter(&buffer[idx_in]);
+
+                        if(++idx_out == outputSize)
+                        {
+                                sendOut(output.data(), outputSize);
+                                idx_out = 0;
+                        }
+                        idx_in += 3;
+                }
+
+                idx_in -= len;
+
+
+                for (j = 0, i = len - nTaps + 1; j < nTaps - 1; i++, j++)
+                        buffer[j] = data[i];
+        }
+
+
 	// Filter Generic
 
 	void FilterComplex::Receive(const CFLOAT32* data, int len)

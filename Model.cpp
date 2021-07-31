@@ -40,6 +40,8 @@ namespace AIS
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
+		DS3.setTaps(Filters::BlackmanHarris);
+
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
 
@@ -107,6 +109,8 @@ namespace AIS
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
+		DS3.setTaps(Filters::BlackmanHarris);
+
 		DEC_a.setChannel('A');
 		DEC_b.setChannel('B');
 
@@ -158,6 +162,8 @@ namespace AIS
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
+
+		DS3.setTaps(Filters::BlackmanHarris);
 
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
@@ -288,6 +294,8 @@ namespace AIS
 
 		FR_a.setTaps(Filters::Coherent);
 		FR_b.setTaps(Filters::Coherent);
+
+		DS3.setTaps(Filters::BlackmanHarris);
 
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
