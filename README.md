@@ -218,7 +218,7 @@ AIS-catcher -s 288000
 
 - Documenting and finetuning the default decoding model
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, filters, etc)
-- Performance improvements (align USB buffer size with multiple of 16K)
+- Performance improvements
 - More testing: in particular in an area with high message density
 - Access to SDR hardware specific functionality, e.g. gain control
 - Windows GUI
