@@ -333,7 +333,7 @@ int main(int argc, char* argv[])
 				return 0;
 #ifdef HASRTLSDR
 			case 'p':
-				ppm_correction = getNumber(arg1, -50, 50);
+				ppm_correction = getNumber(arg1, -100, 100);
 				ptr++;
 				break;
 #endif
@@ -427,7 +427,6 @@ int main(int argc, char* argv[])
 				out = &(convertCU8.out);
 			}
 			device->setFrequencyCorrection(ppm_correction);
-
 			control = device;
 
 #else
