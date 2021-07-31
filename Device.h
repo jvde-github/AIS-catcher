@@ -138,7 +138,7 @@ namespace Device{
 
 		std::vector<char> buffer;
 		std::vector<CFLOAT32> output;
-		const int buffer_size = 16384;
+		const int buffer_size = 16 * 16384;
 
 		Format format = Format::CU8;
 
@@ -173,7 +173,7 @@ namespace Device{
 		std::thread demod_thread;
 
 		std::vector<std::vector<CU8>> fifo;
-		static const int sizeFIFO = 10;
+		static const int sizeFIFO = 2;
 		int head = 0;
 		int tail = 0;
 		std::atomic<int> count;
@@ -188,7 +188,7 @@ namespace Device{
 		void callback(CU8* buf, int len);
 		void Demodulation();
 
-		static const uint32_t BufferLen = 16384;
+		static const uint32_t BufferLen = 16 * 16384;
 		rtlsdr_dev_t* getDevice() { return dev; }
 
 	public:
