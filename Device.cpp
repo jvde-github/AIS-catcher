@@ -187,7 +187,7 @@ namespace Device {
 
 	void RTLSDR::callback(CU8* buf, int len)
 	{
-		if(count == 10)
+		if(count == sizeFIFO)
 		{
 			std::cerr << "Buffer overrun!" << std::endl;
 		}
@@ -223,7 +223,7 @@ namespace Device {
 	{
 		std::cerr << "Start demodulation thread." << std::endl;
 
-		while(isStreaming()) 
+		while(isStreaming())
 		{
 			if (count == 0)
 			{
@@ -234,7 +234,7 @@ namespace Device {
 					std::cerr << "Timeout on RTL SDR dongle" << std::endl;
 			}
 
-			if (count != 0)  
+			if (count != 0)
 			{
 				Send((const CU8*)fifo[head].data(), fifo[head].size() / 2);
 				head = (head + 1) % sizeFIFO;
