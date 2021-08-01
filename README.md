@@ -112,7 +112,7 @@ The program will run and summarize the performance (count and timing) of three d
 [Standard (non-coherent)]	: 1.9e+02 ms
 [Base (non-coherent)]		: 1.7e+02 ms
 ```
-In this example the default model performs quite well in contrast to the standard non-coherent engine with 36 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage (800 floats) so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
+In this example the default model performs quite well in contrast to the standard non-coherent engine with 36 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
 ## Validation
 
@@ -122,8 +122,8 @@ Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare ante
 
  | Model | Settings | Run 1 | Run 2 | 
  | :--- | :--- | :---: | :---: |
- | AIS-catcher v0.07 Default @ 1536K  |  | 191 | 194 | 
-| AIS-catcher v0.07 Standard (non-coherent) @ 1536K |```-m 0``` |   64 | 72 | 
+ | AIS-catcher v0.13 Default @ 1536K  |  | 191 | 194 | 
+| AIS-catcher Standard (non-coherent) @ 1536K |```-m 0``` |   64 | 72 | 
 | AISRec 2.2 (trial)   | Sampling: very high, super fast| 161 | 119 |
 | rtl-ais v0.3  @ 1600K  | ```-n``` | 33 | 30  | 
 
@@ -159,7 +159,11 @@ make rtl-only
 sudo make install
 ```
 
-If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf. The process to install AIS-catcher then becomes:
+If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf. If not installed yet, you might first want to try:
+```console
+sudo apt-get install libairspy-dev
+```
+The process to install AIS-catcher then becomes:
 ```console
 make
 sudo make install
