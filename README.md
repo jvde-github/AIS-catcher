@@ -68,7 +68,7 @@ AIS-catcher -l
 ```
 The output depends on the available devices but will look something like:
 ```console
-Found 1 devices:
+Found 1 device(s):
 0: Realtek, RTL2838UHIDIR, SN: 00000001
 ```
 A specific device can be selected with the ``d``-switch like ``-d:0`` or ``-d 00000001``.
@@ -103,16 +103,16 @@ AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -m 1 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of three decoding models:
 ```
-[AIS engine v0.07]		: 36 msgs at 45 msg/s
-[Standard (non-coherent)]	: 3 msgs at 3.8 msg/s
-[Base (non-coherent)]		: 2 msgs at 2.5 msg/s
+[AIS engine v0.13+]	        : 38 msgs at 43 msg/s
+[Standard (non-coherent)]	: 4 msgs at 4.6 msg/s
+[Base (non-coherent)]	        : 3 msgs at 3.4 msg/s
 ```
 ```
-[AIS engine v0.07]		: 3.4e+02 ms
-[Standard (non-coherent)]	: 1.9e+02 ms
-[Base (non-coherent)]		: 1.7e+02 ms
+[AIS engine v0.13+]	        : 3.5e+02 ms
+[Standard (non-coherent)]	: 2.2e+02 ms
+[Base (non-coherent)]	        : 2e+02 ms
 ```
-In this example the default model performs quite well in contrast to the standard non-coherent engine with 36 messages identified versus 3 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
+In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
 ## Validation
 
