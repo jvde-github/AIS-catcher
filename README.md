@@ -131,7 +131,7 @@ For completeness I performed seperate runs with [AISRec](https://sites.google.co
 
 ## Releases
 
-A release in binary format for Windows 32 bit (including required libraries) can be found sometimes with the latest release but in case not, please reach out and I will share. Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below.
+A release in binary format for Windows 32 bit (including required libraries) can be occasionally found with the latest release but if not, please reach out and I will make it available. Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below.
 
 ## Compilation process for Linux/Raspberry Pi
 
