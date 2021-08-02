@@ -325,8 +325,8 @@ namespace AIS
 		CD_a.resize(nSymbolsPerSample);
 		CD_b.resize(nSymbolsPerSample);
 
-		CGF_a.setN(4096,0);
-		CGF_b.setN(4096,0);
+                CGF_a.setN(512,375/2);
+                CGF_b.setN(512,375/2);
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
 
