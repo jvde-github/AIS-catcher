@@ -201,7 +201,7 @@ namespace DSP
 
 					if (avg > max_val)
 					{
-						max_val = mavg;
+						max_val = avg;
 						max_idx = j;
 					}
 				}
