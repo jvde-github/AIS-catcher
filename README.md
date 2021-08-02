@@ -1,9 +1,11 @@
 # AIS-catcher - An AIS receiver for RTL-SDR dongles and Airspy HF+
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles and the Airspy HF+. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The idea behind ```AIS-catcher``` is that it should be easy to run various decoding model in parallel and read input from file to create an environment to test and benchmark different decoding models in a live setting. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles and the Airspy HF+. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
 
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
 ## Developments
+Release version 0.14: Support for sampling rates of 2304KHz and 1920KHz. Default remains 1536K samples/second.
+
 Release version 0.13: Align the size of the USB transfer blocks on a multiple of 16KB.
 
 Release version 0.12: Introduction of a basic container image for AIS-catcher for use with Docker, Podman and the like.
@@ -206,6 +208,7 @@ In case you observe a high number of lost data, the advice is to run AIS-catcher
 ```console
 AIS-catcher -s 288000
 ```
+If your system allows for it you might opt to run ```AIS-catcher``` at a sample rate of ```2304000```. 
 
 ## To do
 
