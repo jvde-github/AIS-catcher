@@ -4,7 +4,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
 ## Developments
-Release version 0.14: Support for samplig rates at 2304K and 1920K samples per second. Default remains 1536K samples/second.
+Release version 0.14: Support for samplnig rates of 2304K and 1920K samples/second. Default remains 1536K samples/second.
 
 Release version 0.13: Align the size of the USB transfer blocks on a multiple of 16KB.
 
