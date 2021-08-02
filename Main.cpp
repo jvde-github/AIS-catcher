@@ -257,7 +257,7 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				sample_rate = getNumber(arg1,0,1536000);
+				sample_rate = getNumber(arg1, 0, 2304000);
 				ptr++;
 				break;
 			case 'm':

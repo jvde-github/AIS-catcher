@@ -26,7 +26,7 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000, 96000 };
+		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
@@ -40,8 +40,6 @@ namespace AIS
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		DS3.setTaps(Filters::BlackmanHarris);
-
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
 
@@ -52,6 +50,14 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 2304000:
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 1920000:
+			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
+			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
@@ -62,7 +68,8 @@ namespace AIS
 			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3 >> ROT;
+			DSK.setParams(Filters::BlackmanHarris_28_3,3);
+			physical >> DSK >> ROT;
 			break;
 		case 96000:
 			physical >> ROT;
@@ -97,7 +104,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelBase::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000, 96000 };
+		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelBase::buildModel(int sample_rate,bool timerOn)
@@ -109,8 +116,6 @@ namespace AIS
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		DS3.setTaps(Filters::BlackmanHarris);
-
 		DEC_a.setChannel('A');
 		DEC_b.setChannel('B');
 
@@ -118,6 +123,14 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 2304000:
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 1920000:
+			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
+			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
@@ -128,7 +141,8 @@ namespace AIS
 			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3 >> ROT;
+			DSK.setParams(Filters::BlackmanHarris_28_3,3);
+			physical >> DSK >> ROT;
 			break;
 		case 96000:
 			physical >> ROT;
@@ -149,12 +163,12 @@ namespace AIS
 
 	std::vector<uint32_t> ModelCoherent::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000, 96000 };
+		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("AIS engine v0.13+");
+		setName("AIS engine v0.14");
 
 		const int nSymbolsPerSample = 48000/9600;
 
@@ -162,8 +176,6 @@ namespace AIS
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
-
-		DS3.setTaps(Filters::BlackmanHarris);
 
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
@@ -181,6 +193,14 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 2304000:
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 1920000:
+			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
+			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
@@ -191,7 +211,8 @@ namespace AIS
 			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3 >> ROT;
+			DSK.setParams(Filters::BlackmanHarris_28_3,3);
+			physical >> DSK >> ROT;
 			break;
 		case 96000:
 			physical >> ROT;
@@ -282,7 +303,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelChallenger::SupportedSampleRates()
 	{
-		return { 1536000, 768000, 384000, 288000, 96000 };
+		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
@@ -294,8 +315,6 @@ namespace AIS
 
 		FR_a.setTaps(Filters::Coherent);
 		FR_b.setTaps(Filters::Coherent);
-
-		DS3.setTaps(Filters::BlackmanHarris);
 
 		S_a.setBuckets(nSymbolsPerSample);
 		S_b.setBuckets(nSymbolsPerSample);
@@ -313,6 +332,14 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 2304000:
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 1920000:
+			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
+			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
@@ -323,7 +350,8 @@ namespace AIS
 			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			physical >> DS3 >> ROT;
+			DSK.setParams(Filters::BlackmanHarris_28_3,3);
+			physical >> DSK >> ROT;
 			break;
 		case 96000:
 			physical >> ROT;

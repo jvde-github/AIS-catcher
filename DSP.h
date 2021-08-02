@@ -120,7 +120,7 @@ public:
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-        class Downsample3Filter : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+        class DownsampleKFilter : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
         {
                 std::vector <CFLOAT32> output;
 
@@ -131,6 +131,7 @@ public:
                 int idx_in = 0;
                 int idx_out = 0;
 
+		int K = 1;
                 int nTaps;
 
                 static const int outputSize = 16384/2;
@@ -144,14 +145,13 @@ public:
 
         public:
 
-                void setTaps(const std::vector<FLOAT32>& t)
-                {
-                        taps = t;
-                }
+		void setParams(const std::vector<FLOAT32>& t, int k) { taps = t; K = k; }
+		void setTaps(const std::vector<FLOAT32>& t) { taps = t; }
+		void setK(int k) { K = k; }
 
-                // StreamIn
-                void Receive(const CFLOAT32* data, int len);
-        };
+		// StreamIn
+		void Receive(const CFLOAT32* data, int len);
+	};
 
 	class FilterComplex : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
