@@ -65,7 +65,7 @@ namespace DSP
 
 	class ChallengerDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>, public MessageIn<DecoderMessages>
 	{
-		static const int nHistory = 5;
+		static const int nHistory = 8;
 		static const int nPhases = 16;
 		static const int nSearch = 2;
 		static const int nUpdate = 1;
