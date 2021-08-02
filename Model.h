@@ -67,7 +67,7 @@ namespace AIS
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 
-		DSP::Downsample3Filter DS3;
+		DSP::DownsampleKFilter DSK;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
@@ -92,7 +92,7 @@ namespace AIS
 
 	class ModelBase : public Model
 	{
-		DSP::Downsample3Filter DS3;
+		DSP::DownsampleKFilter DSK;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
@@ -113,7 +113,7 @@ namespace AIS
 	// simple model embedding some elements of a coherent model with local phase estimation
 	class ModelCoherent : public Model
 	{
-		DSP::Downsample3Filter DS3;
+		DSP::DownsampleKFilter DSK;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::FilterCIC5 F_a, F_b;
@@ -153,7 +153,7 @@ namespace AIS
 	// Challenger model, some small improvements to test before moving into the default engine
 	class ModelChallenger : public Model
 	{
-		DSP::Downsample3Filter DS3;
+		DSP::DownsampleKFilter DSK;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3;
 		DSP::Downsample2CIC5 DS2_4;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;

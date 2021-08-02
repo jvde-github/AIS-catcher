@@ -92,7 +92,7 @@ namespace Device {
 
 	std::vector<uint32_t> RAWFile::SupportedSampleRates()
 	{
-		return { 48000, 288000, 384000, 768000, 1536000 };
+		return { 48000, 288000, 384000, 768000, 1536000, 1920000, 2304000 };
 	}
 
 	//---------------------------------------
@@ -167,7 +167,6 @@ namespace Device {
 		if (rtlsdr_open(&dev, h) != 0) throw "RTLSDR: cannot open device.";
 	}
 
-
 	void RTLSDR::setSampleRate(uint32_t s)
 	{
 		if (rtlsdr_set_sample_rate(dev, s) < 0) throw "RTLSDR: cannot set sample rate.";
@@ -199,11 +198,10 @@ namespace Device {
 
 			tail = (tail + 1) % sizeFIFO;
 
-    			{
-    				std::lock_guard<std::mutex> lock(fifo_mutex);
+    		{
+    			std::lock_guard<std::mutex> lock(fifo_mutex);
 				count ++;
-
-    			}
+    		}
 
 			fifo_cond.notify_one();
 		}
@@ -228,7 +226,7 @@ namespace Device {
 			if (count == 0)
 			{
 				std::unique_lock <std::mutex> lock(fifo_mutex);
-				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BufferLen / (float)sample_rate * 1100.0f)), [this] {return count != 0; });
+				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BufferLen / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
 
 				if (count == 0)
 					std::cerr << "Timeout on RTL SDR dongle" << std::endl;
@@ -245,11 +243,10 @@ namespace Device {
 		std::cerr << "Stop demodulation thread." << std::endl;
 	}
 
-        void RTLSDR::demod_async_static(RTLSDR* c)
-        {
+    void RTLSDR::demod_async_static(RTLSDR* c)
+    {
 		c->Demodulation();
-        }
-
+    }
 
 	void RTLSDR::Play()
 	{
@@ -279,12 +276,10 @@ namespace Device {
 			async_thread.join();
 		}
 
-
 		if (demod_thread.joinable())
 		{
 			demod_thread.join();
 		}
-
 	}
 
 	void RTLSDR::setFrequencyCorrection(int ppm)
@@ -295,7 +290,7 @@ namespace Device {
 
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
 	{
-		return { 288000, 1536000 };
+		return { 288000, 1536000, 1920000, 2304000 };
 	}
 
 	void RTLSDR::pushDeviceList(std::vector<Description>& DeviceList)
@@ -317,7 +312,6 @@ namespace Device {
 	}
 
 #endif
-
 
 	//---------------------------------------
 	// Device AIRSPYHF
