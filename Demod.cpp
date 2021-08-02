@@ -106,14 +106,14 @@ namespace DSP
 				for (int p = nPhases - nSearch; p <= nPhases + nSearch; p++)
 				{
 					int j = (p + prev_max) % nPhases;
-					FLOAT32 min_abs = memory[j][0];
+					FLOAT32 avg = memory[j][0];
 
 					for (int l = 1; l < nHistory; l++)
-						min_abs = memory[j][l] < min_abs ? memory[j][l] : min_abs;
+						avg +=  memory[j][l];
 
-					if (min_abs > max_val)
+					if (avg > max_val)
 					{
-						max_val = min_abs;
+						max_val = avg;
 						max_idx = j;
 					}
 				}
