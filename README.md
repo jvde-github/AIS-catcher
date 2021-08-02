@@ -208,6 +208,7 @@ In case you observe a high number of lost data, the advice is to run AIS-catcher
 ```console
 AIS-catcher -s 288000
 ```
+If your system allows for it you might opt to run ```AIS-catcher``` at a sample rate of ```2304000```. 
 
 ## To do
 
