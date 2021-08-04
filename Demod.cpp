@@ -95,28 +95,29 @@ namespace DSP
 			}
 			last = (last + 1) % nHistory;
 
-			update = (update + 1) % nUpdate;
-			if (update == 0)
-			{
-				FLOAT32 max_val = 0;
-				int prev_max = max_idx;
+                        update = (update + 1) % nUpdate;
+                        if (update == 0)
+                        {
+                                FLOAT32 max_val = 0;
+                                int prev_max = max_idx;
 
-				// local minmax search
-				for (int p = nPhases - nSearch; p <= nPhases + nSearch; p++)
-				{
-					int j = (p + prev_max) % nPhases;
-					FLOAT32 min_abs = memory[j][0];
+                                // local minmax search
+                                for (int p = nPhases - nSearch; p <= nPhases + nSearch; p++)
+                                {
+                                        int j = (p + prev_max) % nPhases;
+                                        FLOAT32 avg = memory[j][0];
 
-					for (int l = 1; l < nHistory; l++)
-						min_abs = memory[j][l] < min_abs ? memory[j][l] : min_abs;
+                                        for (int l = 1; l < nHistory; l++)
+                                                avg += memory[j][l];
 
-					if (min_abs > max_val)
-					{
-						max_val = min_abs;
-						max_idx = j;
-					}
-				}
-			}
+                                        if (avg > max_val)
+                                        {
+                                                max_val = avg;
+                                                max_idx = j;
+                                        }
+                                }
+                        }
+
 
 			// determine the bit
 			bool b2 = (bits[max_idx] & 2) >> 1;
@@ -193,18 +194,19 @@ namespace DSP
 				for (int p = nPhases - nSearch; p <= nPhases + nSearch; p++)
 				{
 					int j = (p + prev_max) % nPhases;
-					FLOAT32 avg = memory[j][0];
+					FLOAT32 min_abs = memory[j][0];
 
 					for (int l = 1; l < nHistory; l++)
-						avg += memory[j][l];
+						min_abs = memory[j][l] < min_abs ? memory[j][l] : min_abs;
 
-					if (avg > max_val)
+					if (min_abs > max_val)
 					{
-						max_val = avg;
+						max_val = min_abs;
 						max_idx = j;
 					}
 				}
 			}
+
 
 			// determine the bit
 			bool b2 = (bits[max_idx] & 2) >> 1;
