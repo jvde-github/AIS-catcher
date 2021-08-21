@@ -3,7 +3,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
-## Developments
+## Recent Developments
 Release version 0.17: Upgrade challenger model to default model (max-min to max-avg) 
 
 Release version 0.14: Support for sampling rates of 2304KHz and 1920KHz. Default remains 1536K samples/second.
@@ -211,6 +211,5 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - More testing: in particular in an area with high message density
 - Access to SDR hardware specific functionality, e.g. gain control
 - Windows GUI
-- Windows driver improvements
 - ....
 - ....
