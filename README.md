@@ -8,15 +8,6 @@ Release version 0.17: Upgrade challenger model to default model (max-min to max-
 
 Release version 0.14: Support for sampling rates of 2304KHz and 1920KHz. Default remains 1536K samples/second.
 
-Release version 0.13: Align the size of the USB transfer blocks on a multiple of 16KB.
-
-Release version 0.12: Introduction of a basic container image for AIS-catcher for use with Docker, Podman and the like.
-
-Release version 0.09: Some updates to improve stability when continuously running on a Rapberry Pi:
-- added threading with buffer overrun and timeout detection, faster downsampling, some stability improvements
-- ```v```-switch allows for bespoke update frequency to keep logs maneagable
-- small improvement in reception
-
 ## Purpose
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was created in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
