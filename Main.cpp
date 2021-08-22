@@ -213,7 +213,10 @@ int main(int argc, char* argv[])
 	bool RTLSDRfastDS = true;
 	int verboseUpdateTime = 3000;
 
-	int ppm_correction = 0;
+	Device::SettingsRTLSDR settingsRTL;
+	Device::SettingsAIRSPYHF settingsAIRSPYHF;
+
+
 	uint64_t handle = 0;
 	Device::Format RAWformat = Device::Format::CU8;
 
@@ -333,7 +336,7 @@ int main(int argc, char* argv[])
 				return 0;
 #ifdef HASRTLSDR
 			case 'p':
-				ppm_correction = getNumber(arg1, -100, 100);
+				settingsRTL.correctionPPM = getNumber(arg1, -100, 100);
 				ptr++;
 				break;
 #endif
@@ -382,6 +385,8 @@ int main(int argc, char* argv[])
 
 			control = device;
 			out = &(device->out);
+
+			device->setSettings(settingsAIRSPYHF);
 #else
 			std::cerr << "AIRSPYHF+ not included in this package. Please build version including AIRSPYHF+ support.";
 #endif
@@ -426,7 +431,7 @@ int main(int argc, char* argv[])
 				device->out >> convertCU8;
 				out = &(convertCU8.out);
 			}
-			device->setFrequencyCorrection(ppm_correction);
+			device->setSettings(settingsRTL);
 			control = device;
 
 #else
@@ -469,7 +474,6 @@ int main(int argc, char* argv[])
 
 		// Set up Device
 		control->setSampleRate(sample_rate);
-		control->setAGCtoAuto();
 		control->setFrequency((int)(162e6));
 
 		if(verbose)
