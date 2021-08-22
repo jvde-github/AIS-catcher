@@ -68,6 +68,22 @@ namespace Device{
  		bool operator < (const Description& b) const { return (serial < b.serial); }
 	};
 
+	class DeviceSettings
+	{
+	};
+
+	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
+	class SettingsRTLSDR : public DeviceSettings
+	{
+	public:
+		int correctionPPM = 0;
+	};
+
+	class SettingsAIRSPYHF : public DeviceSettings
+	{
+	public:
+	};
+
 	class Control : public MessageIn<SystemMessage>
 	{
 	protected:
@@ -84,7 +100,7 @@ namespace Device{
 
 		virtual void setSampleRate(uint32_t s) { sample_rate = s; }
 		virtual void setFrequency(uint32_t f) { frequency = f; }
-		virtual void setAGCtoAuto() {}
+		//virtual void setAGCtoAuto() {}
 
 		virtual uint32_t getSampleRate() { return sample_rate; }
 		virtual uint32_t getFrequency() { return frequency; }
@@ -199,7 +215,10 @@ namespace Device{
 
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
-		void setAGCtoAuto(void);
+		void setAGC(void);
+		void setGainManual(void);
+		void setTunerGain(int);
+
 
 		std::vector<uint32_t> SupportedSampleRates();
 
@@ -212,6 +231,8 @@ namespace Device{
 
 		void openDevice(uint64_t h);
 		void setFrequencyCorrection(int);
+
+		void setSettings(SettingsRTLSDR &s);
 	#endif
 	};
 
@@ -233,7 +254,7 @@ namespace Device{
 
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
-		void setAGCtoAuto(void);
+		void setAGC(void);
 
 		std::vector<uint32_t> SupportedSampleRates();
 
@@ -247,6 +268,9 @@ namespace Device{
 		// Device specific
 		void openDevice(uint64_t h);
 		void openDevice();
+
+		void setSettings(SettingsAIRSPYHF& s);
+
 #endif
 	};
 }

@@ -179,9 +179,19 @@ namespace Device {
 		Control::setFrequency(f);
 	}
 
-	void RTLSDR::setAGCtoAuto()
+	void RTLSDR::setAGC()
 	{
 		if (rtlsdr_set_tuner_gain_mode(dev, 0) != 0) throw "RTLSDR: cannot set AGC.";
+	}
+
+	void RTLSDR::setGainManual()
+	{
+		if (rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDR: cannot set Manual.";
+	}
+
+	void RTLSDR::setTunerGain(int g)
+	{
+		if (rtlsdr_set_tuner_gain(dev, g) != 0) throw "RTLSDR: cannot set TunerGain.";
 	}
 
 	void RTLSDR::callback(CU8* buf, int len)
@@ -288,6 +298,12 @@ namespace Device {
 			if (rtlsdr_set_freq_correction(dev, ppm)<0) throw "RTLSDR: cannot set ppm error.";
 	}
 
+	void RTLSDR::setSettings(SettingsRTLSDR &s)
+	{
+		setFrequencyCorrection(s.correctionPPM);
+		setAGC();
+	}
+	
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
 	{
 		return { 288000, 1536000, 1920000, 2304000 };
@@ -344,13 +360,11 @@ namespace Device {
 		Control::setFrequency(f);
 	}
 
-	void AIRSPYHF::setAGCtoAuto()
+	void AIRSPYHF::setAGC()
 	{
 		airspyhf_set_hf_agc(dev, 1);
 		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC to auto.";
 		if (airspyhf_set_hf_agc_threshold(dev, 0) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold to low.";
-
-		Control::setAGCtoAuto();
 	}
 
 	void AIRSPYHF::callback(CFLOAT32* data, int len)
@@ -421,5 +435,11 @@ namespace Device {
 	{
 		return airspyhf_is_streaming(dev) == 1;
 	}
+
+	void AIRSPYHF::setSettings(SettingsAIRSPYHF &s)
+	{
+		setAGC();
+	}
+
 #endif
 }
