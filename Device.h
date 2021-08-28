@@ -33,13 +33,6 @@ SOFTWARE.
 #include "Stream.h"
 #include "Signal.h"
 
-#ifdef HASRTLSDR
-#include <rtl-sdr.h>
-#endif
-#ifdef HASAIRSPYHF
-#include <libairspyhf/airspyhf.h>
-#endif
-
 namespace Device{
 
 	enum class Type { NONE, RTLSDR, AIRSPYHF, WAVFILE, RAWFILE };
@@ -70,18 +63,6 @@ namespace Device{
 
 	class DeviceSettings
 	{
-	};
-
-	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
-	class SettingsRTLSDR : public DeviceSettings
-	{
-	public:
-		int correctionPPM = 0;
-	};
-
-	class SettingsAIRSPYHF : public DeviceSettings
-	{
-	public:
 	};
 
 	class Control : public MessageIn<SystemMessage>
@@ -116,161 +97,5 @@ namespace Device{
 
 		// MessageIn
 		virtual void Message(const SystemMessage& msg) { Pause(); };
-	};
-
-	class WAVFile : public Control, public StreamOut<CFLOAT32>
-	{
-		std::ifstream file;
-
-		std::vector<uint8_t> buffer;
-		const int buffer_size = 384000;
-
-	public:
-
-		// Control
-		void Play() { Control::Play(); }
-		void Pause() { Control::Pause(); }
-
-		void setSampleRate(uint32_t s) { }
-
-		bool isCallback() { return false; }
-		bool isStreaming();
-
-		static void pushDeviceList(std::vector<Description>& DeviceList)
-		{
-			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
-		}
-
-		static int getDeviceCount() { return 1; }
-		std::vector<uint32_t> SupportedSampleRates();
-
-		// Device specific
-		void openFile(std::string filename);
-	};
-
-	class RAWFile : public Control, public StreamOut<CFLOAT32>
-	{
-		std::ifstream file;
-
-		std::vector<char> buffer;
-		std::vector<CFLOAT32> output;
-		const int buffer_size = 16 * 16384;
-
-		Format format = Format::CU8;
-
-	public:
-
-		// Control
-		void Play() { Control::Play(); }
-		void Pause() { Control::Pause(); }
-
-		bool isCallback() { return false; }
-		bool isStreaming();
-
-		static void pushDeviceList(std::vector<Description>& DeviceList)
-		{
-			DeviceList.push_back(Description("FILE", "RAV", "0", 0, Type::RAWFILE));
-		}
-		static int getDeviceCount() { return 1; }
-
-		std::vector<uint32_t> SupportedSampleRates();
-
-		// Device specific
-		void setFormat(Format f) { format = f; }
-		void openFile(std::string filename);
-	};
-
-	class RTLSDR : public Control, public StreamOut<CU8>
-	{
-#ifdef HASRTLSDR
-
-		rtlsdr_dev_t* dev = NULL;
-		std::thread async_thread;
-		std::thread demod_thread;
-
-		std::vector<std::vector<CU8>> fifo;
-		static const int sizeFIFO = 2;
-		int head = 0;
-		int tail = 0;
-		std::atomic<int> count;
-
-		std::mutex fifo_mutex;
-		std::condition_variable fifo_cond;
-
-		static void callback_static(CU8* buf, uint32_t len, void* ctx);
-		static void start_async_static(RTLSDR* c);
-		static void demod_async_static(RTLSDR* c);
-
-		void callback(CU8* buf, int len);
-		void Demodulation();
-
-		static const uint32_t BufferLen = 16 * 16384;
-		rtlsdr_dev_t* getDevice() { return dev; }
-
-	public:
-
-		// Control
-		void Play();
-		void Pause();
-
-		void setSampleRate(uint32_t);
-		void setFrequency(uint32_t);
-		void setAGC(void);
-		void setGainManual(void);
-		void setTunerGain(int);
-
-
-		std::vector<uint32_t> SupportedSampleRates();
-
-		bool isCallback() { return true; }
-
-		static void pushDeviceList(std::vector<Description>& DeviceList);
-		static int getDeviceCount();
-
-		// Device specific
-
-		void openDevice(uint64_t h);
-		void setFrequencyCorrection(int);
-
-		void setSettings(SettingsRTLSDR &s);
-	#endif
-	};
-
-	class AIRSPYHF : public Control, public StreamOut<CFLOAT32>
-	{
-#ifdef HASAIRSPYHF
-
-		struct airspyhf_device* dev = NULL;
-
-		static int callback_static(airspyhf_transfer_t* tf);
-		void callback(CFLOAT32 *,int);
-
-	public:
-
-		// Control
-
-		void Play();
-		void Pause();
-
-		void setSampleRate(uint32_t);
-		void setFrequency(uint32_t);
-		void setAGC(void);
-
-		std::vector<uint32_t> SupportedSampleRates();
-
-		bool isStreaming();
-
-		virtual bool isCallback() { return true; }
-
-		static void pushDeviceList(std::vector<Description>& DeviceList);
-		static int getDeviceCount();
-
-		// Device specific
-		void openDevice(uint64_t h);
-		void openDevice();
-
-		void setSettings(SettingsAIRSPYHF& s);
-
-#endif
 	};
 }
