@@ -27,11 +27,12 @@ SOFTWARE.
 #include <algorithm>
 
 #include "Signal.h"
-#include "Device.h"
+
 #include "DeviceFileRAW.h"
 #include "DeviceFileWAV.h"
 #include "DeviceRTLSDR.h"
 #include "DeviceAIRSPYHF.h"
+
 #include "IO.h"
 #include "Model.h"
 
