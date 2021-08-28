@@ -47,7 +47,7 @@ namespace Device{
 
 		static void pushDeviceList(std::vector<Description>& DeviceList)
 		{
-			DeviceList.push_back(Description("FILE", "RAV", "0", 0, Type::RAWFILE));
+			DeviceList.push_back(Description("FILE", "RAW", "0", 0, Type::RAWFILE));
 		}
 		static int getDeviceCount() { return 1; }
 
@@ -57,5 +57,4 @@ namespace Device{
 		void setFormat(Format f) { format = f; }
 		void openFile(std::string filename);
 	};
-
 }
