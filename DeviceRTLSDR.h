@@ -90,6 +90,6 @@ namespace Device{
 		void setFrequencyCorrection(int);
 
 		void setSettings(SettingsRTLSDR &s);
-	#endif
+#endif
 	};
 }

@@ -138,7 +138,7 @@ namespace Device {
 		tail = 0;
 		head = 0;
 
-		Control::Play(); 
+		Control::Play();
 
 		rtlsdr_reset_buffer(dev);
 		async_thread = std::thread(RTLSDR::start_async_static, this);
@@ -174,7 +174,7 @@ namespace Device {
 		setFrequencyCorrection(s.correctionPPM);
 		setAGC();
 	}
-	
+
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
 	{
 		return { 288000, 1536000, 1920000, 2304000 };
