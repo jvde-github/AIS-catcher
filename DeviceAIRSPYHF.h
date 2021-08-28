@@ -24,9 +24,6 @@ SOFTWARE.
 
 #include "Device.h"
 
-#ifdef HASRTLSDR
-#include <rtl-sdr.h>
-#endif
 #ifdef HASAIRSPYHF
 #include <libairspyhf/airspyhf.h>
 #endif
