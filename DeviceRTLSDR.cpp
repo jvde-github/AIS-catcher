@@ -124,10 +124,10 @@ namespace Device {
 		std::cerr << "Stop demodulation thread." << std::endl;
 	}
 
-    void RTLSDR::demod_async_static(RTLSDR* c)
-    {
+	void RTLSDR::demod_async_static(RTLSDR* c)
+	{
 		c->Demodulation();
-    }
+	}
 
 	void RTLSDR::Play()
 	{
