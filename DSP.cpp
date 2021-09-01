@@ -250,17 +250,17 @@ namespace DSP
 			buffer[j] = data[i];
 	}
 
-	// Quick version, needs proper interpolation so does not work!!
+	// Work in progress
 	void Upsample::Receive(const CFLOAT32* data, int len)
 	{
 		if(output.size() < len) output.resize(len);
 
-		idx_in = 0;
-
-		while(idx_in < len)
+		while(ptr < len - 1)
 		{
-			CFLOAT32 a = data[(int)idx_in];
-			output[idx_out] = a;
+			b = data[ (int) (ptr+1) ];
+			FLOAT32 alpha = ptr - (int) ptr;
+
+			output[idx_out] = (alpha) * a + (1-alpha) * b;
 
 			if (++idx_out == len)
 			{
@@ -268,8 +268,10 @@ namespace DSP
 				idx_out = 0;
 			}
 
-			idx_in += increment;
+			ptr += increment;
+			a = data[(int)ptr];
 		}
+		ptr -= len - 1;
 	}
 
 	// Filter Generic
