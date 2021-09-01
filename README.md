@@ -158,7 +158,7 @@ sudo make install
 
 If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf. If not installed yet, you might first want to try:
 ```console
-sudo apt-get install libairspy-dev
+sudo apt-get install libairspyhf-dev
 ```
 The process to install AIS-catcher then becomes:
 ```console
