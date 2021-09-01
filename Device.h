@@ -1,5 +1,6 @@
 /*
 Copyright(c) 2021 jvde.github@gmail.com
+CC-BY 4.0    2021 gtlittlewing
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +36,7 @@ SOFTWARE.
 
 namespace Device{
 
-	enum class Type { NONE, RTLSDR, AIRSPYHF, WAVFILE, RAWFILE };
+	enum class Type { NONE, RTLSDR, AIRSPYHF, AIRSPY, WAVFILE, RAWFILE };
 	enum class Format { CU8, CF32, CS16, UNKNOWN };
 
 	class Description
