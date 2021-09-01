@@ -257,8 +257,9 @@ namespace DSP
 
 		while(ptr < len - 1)
 		{
-			b = data[ (int) (ptr+1) ];
-			FLOAT32 alpha = ptr - (int) ptr;
+			FLOAT32 ptrp1 = ptr + 1;
+			b = data[ (int) ptrp1 ];
+			FLOAT32 alpha = ptrp1 - (int) ptrp1;
 
 			output[idx_out] = (1-alpha) * a + alpha * b;
 
@@ -269,9 +270,10 @@ namespace DSP
 			}
 
 			ptr += increment;
-			a = data[(int)ptr];
+			if(ptr >= 0)
+				a = data[(int)ptr];
 		}
-		ptr -= len - 1;
+		ptr -= len;
 	}
 
 	// Filter Generic
