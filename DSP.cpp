@@ -250,7 +250,7 @@ namespace DSP
 			buffer[j] = data[i];
 	}
 
-	// Quick version, needs proper interpolation
+	// Quick version, needs proper interpolation so does not work!!
 	void Upsample::Receive(const CFLOAT32* data, int len)
 	{
 		if(output.size() < len) output.resize(len);
