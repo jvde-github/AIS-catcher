@@ -124,12 +124,11 @@ public:
 	{
 		std::vector <CFLOAT32> output;
 
-		FLOAT32 idx_in = 0;
-		CFLOAT32 a = 0;
-		int idx_out = 0;
+		FLOAT32 ptr = 0, increment = 1.0;
+		CFLOAT32 a = 0, b = 0;
 
+		int idx_out = 0;
 		int in_size = 0, out_size = 0;
-		FLOAT32 increment = 1.0;
 
 	public:
 
