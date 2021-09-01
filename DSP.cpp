@@ -260,7 +260,7 @@ namespace DSP
 			b = data[ (int) (ptr+1) ];
 			FLOAT32 alpha = ptr - (int) ptr;
 
-			output[idx_out] = (alpha) * a + (1-alpha) * b;
+			output[idx_out] = (1-alpha) * a + alpha * b;
 
 			if (++idx_out == len)
 			{
