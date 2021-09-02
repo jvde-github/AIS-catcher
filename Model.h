@@ -68,8 +68,9 @@ namespace AIS
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 
 		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
+		DSP::Upsample US;
 		DSP::FilterCIC5 F_a, F_b;
 
 		DSP::Rotate ROT;
@@ -93,8 +94,9 @@ namespace AIS
 	class ModelBase : public Model
 	{
 		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
+		DSP::Upsample US;
 		DSP::FilterCIC5 F_a, F_b;
 		DSP::Rotate ROT;
 		DSP::FMDemodulation FM_a, FM_b;
@@ -114,8 +116,9 @@ namespace AIS
 	class ModelCoherent : public Model
 	{
 		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
+		DSP::Upsample US;
 		DSP::FilterCIC5 F_a, F_b;
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		DSP::Rotate ROT;
@@ -154,9 +157,9 @@ namespace AIS
 	class ModelChallenger : public Model
 	{
 		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3;
-		DSP::Downsample2CIC5 DS2_4;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
+		DSP::Upsample US;
 		DSP::FilterCIC5 F_a, F_b;
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		DSP::Rotate ROT;

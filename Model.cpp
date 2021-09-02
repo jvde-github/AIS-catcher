@@ -26,7 +26,7 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
 	{
-		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
+		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
@@ -50,6 +50,10 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 3000000:
+			US.setParams(1500000, 1536000);
+			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -104,7 +108,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelBase::SupportedSampleRates()
 	{
-		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
+		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelBase::buildModel(int sample_rate,bool timerOn)
@@ -123,6 +127,10 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 3000000:
+			US.setParams(1500000, 1536000);
+			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -163,12 +171,12 @@ namespace AIS
 
 	std::vector<uint32_t> ModelCoherent::SupportedSampleRates()
 	{
-		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
+		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("AIS engine v0.17+");
+		setName("AIS engine v0.18");
 
 		const int nSymbolsPerSample = 48000/9600;
 
@@ -193,6 +201,10 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 3000000:
+			US.setParams(1500000, 1536000);
+			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -303,7 +315,7 @@ namespace AIS
 
 	std::vector<uint32_t> ModelChallenger::SupportedSampleRates()
 	{
-		return { 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
+		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
 	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
@@ -325,13 +337,17 @@ namespace AIS
 		CD_a.resize(nSymbolsPerSample);
 		CD_b.resize(nSymbolsPerSample);
 
-                CGF_a.setN(512,375/2);
-                CGF_b.setN(512,375/2);
+		CGF_a.setN(512,375/2);
+		CGF_b.setN(512,375/2);
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
 
 		switch (sample_rate)
 		{
+		case 3000000:
+			US.setParams(1500000, 1536000);
+			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;

@@ -120,30 +120,47 @@ public:
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-        class DownsampleKFilter : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
-        {
-                std::vector <CFLOAT32> output;
+	class Upsample : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
 
-                std::vector <CFLOAT32> buffer;
-                std::vector <FLOAT32> taps;
+		FLOAT32 ptr = 0, increment = 1.0;
+		CFLOAT32 a = 0, b = 0;
+
+		int idx_out = 0;
+		int in_size = 0, out_size = 0;
+
+	public:
+
+		void setParams(int n, int m) { int in_size = n; out_size = m; increment = (FLOAT32) n / (FLOAT32) m; }
+		// StreamIn
+		void Receive(const CFLOAT32* data, int len);
+	};
+
+	class DownsampleKFilter : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+
+		std::vector <CFLOAT32> buffer;
+		std::vector <FLOAT32> taps;
 
 
-                int idx_in = 0;
-                int idx_out = 0;
+		int idx_in = 0;
+		int idx_out = 0;
 
 		int K = 1;
-                int nTaps;
+		int nTaps;
 
-                static const int outputSize = 16384/2;
+		static const int outputSize = 16384/2;
 
-                inline CFLOAT32 filter(const CFLOAT32* data)
-                {
-                        CFLOAT32 x = 0.0f;
-                        for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
-                        return x;
-                }
+		inline CFLOAT32 filter(const CFLOAT32* data)
+		{
+				CFLOAT32 x = 0.0f;
+				for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
+				return x;
+		}
 
-        public:
+	public:
 
 		void setParams(const std::vector<FLOAT32>& t, int k) { taps = t; K = k; }
 		void setTaps(const std::vector<FLOAT32>& t) { taps = t; }
