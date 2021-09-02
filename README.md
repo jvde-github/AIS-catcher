@@ -4,6 +4,8 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
 ## Recent Developments
+Release version 0.18: Update to Dockerfile to accomodate Airspy HF+
+
 Release version 0.17: Upgrade challenger model to default model (max-min to max-avg) 
 
 Release version 0.14: Support for sampling rates of 2304KHz and 1920KHz. Default remains 1536K samples/second.
@@ -156,7 +158,7 @@ sudo make install
 
 If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf. If not installed yet, you might first want to try:
 ```console
-sudo apt-get install libairspy-dev
+sudo apt-get install libairspyhf-dev
 ```
 The process to install AIS-catcher then becomes:
 ```console
@@ -186,8 +188,6 @@ services:
     image: ghcr.io/jvde-github/ais-catcher:latest
     restart: always
 ```
-
-Note that the container images only support RTL-SDR at this time, and do not yet support Airspy HF+.
 
 ## Considerations
 

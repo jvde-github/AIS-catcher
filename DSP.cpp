@@ -250,6 +250,31 @@ namespace DSP
 			buffer[j] = data[i];
 	}
 
+	// Work in progress
+	void Upsample::Receive(const CFLOAT32* data, int len)
+	{
+		if(output.size() < len) output.resize(len);
+
+		while(ptr < len - 1)
+		{
+			FLOAT32 ptrp1 = ptr + 1;
+			b = data[ (int) ptrp1 ];
+			FLOAT32 alpha = ptrp1 - (int) ptrp1;
+
+			output[idx_out] = (1-alpha) * a + alpha * b;
+
+			if (++idx_out == len)
+			{
+				sendOut(output.data(), len);
+				idx_out = 0;
+			}
+
+			ptr += increment;
+			if(ptr >= 0)
+				a = data[(int)ptr];
+		}
+		ptr -= len;
+	}
 
 	// Filter Generic
 
