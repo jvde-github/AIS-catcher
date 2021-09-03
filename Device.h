@@ -63,6 +63,8 @@ namespace Device{
 
 	class DeviceSettings
 	{
+	public:
+		void Print(void) {}
 	};
 
 	class Control : public MessageIn<SystemMessage>

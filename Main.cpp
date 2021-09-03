@@ -117,6 +117,10 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
+#ifdef HASAIRSPY
+	std::cerr << std::endl;
+	std::cerr << "\t[-gm Airspy gain control in form SENSITIVITY/LINEARITY/VGA/LNA/MIXER followed by gain level or \"auto\" where applicable]" << std::endl;
+#endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
 	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]" << std::endl;
@@ -206,6 +210,59 @@ void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liv
 	{
 		model_rate = sample_rate = setRateAutomatic(device_rates, model_rates);
 	}
+}
+
+// Needs clean up and streamlining....
+void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int argc)
+{
+	while (++ptr < argc - 1)
+	{
+		if (argv[ptr][0] == '-') break;
+
+		if (strcmp(argv[ptr], "SENSITIVITY") == 0)
+		{
+			s.mode = Device::Sensitivity;
+			s.gain = getNumber(argv[++ptr], 0, 22);
+		}
+		else if (strcmp(argv[ptr], "LINEARITY") == 0)
+		{
+			s.mode = Device::Linearity;
+			s.gain = getNumber(argv[++ptr], 0, 22);
+		}
+		else if (strcmp(argv[ptr], "VGA") == 0)
+		{
+			s.mode = Device::Manual;
+			ptr++;
+			s.VGA_Gain = getNumber(argv[ptr], 0, 15);
+		}
+		else if (strcmp(argv[ptr], "MIXER") == 0)
+		{
+			s.mode = Device::Manual;
+			ptr++;
+			if (strcmp(argv[ptr], "auto") == 0)
+				s.mixer_AGC = true;
+			else
+			{
+				s.mixer_AGC = false;
+				s.mixer_Gain = getNumber(argv[ptr], 0, 15);
+			}
+		}
+		else if (strcmp(argv[ptr], "LNA") == 0)
+		{
+			s.mode = Device::Manual;
+			ptr++;
+			if (strcmp(argv[ptr], "auto") == 0)
+				s.LNA_AGC = true;
+			else
+			{
+				s.LNA_AGC = false;
+				s.LNA_Gain = getNumber(argv[ptr], 0, 15);
+			}
+		}
+		else
+			throw " Invalid Gain setting for AIRSPY";
+	}
+	ptr --;
 }
 
 int main(int argc, char* argv[])
@@ -349,6 +406,12 @@ int main(int argc, char* argv[])
 				settingsRTL.correctionPPM = getNumber(arg1, -100, 100);
 				ptr++;
 				break;
+			case 'g':
+				if(param == "-gm")
+					parseAirspySettings(settingsAIRSPY, argv, ptr, argc);
+				else
+					throw "Invalid -gx switch on command line";
+				break;
 #endif
 			default:
 				std::cerr << "Unknown option " << param << std::endl;
@@ -412,6 +475,7 @@ int main(int argc, char* argv[])
 			out = &(device->out);
 
 			device->setSettings(settingsAIRSPY);
+			settingsAIRSPY.Print();
 #else
 			std::cerr << "AIRSPY not included in this package. Please build version including AIRSPY support.";
 #endif
