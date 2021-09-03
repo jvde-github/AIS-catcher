@@ -25,7 +25,7 @@ SOFTWARE.
 #include "Device.h"
 
 #ifdef HASAIRSPY
-#include <libairspy/airspy.h> 
+#include <libairspy/airspy.h>
 #endif
 
 namespace Device{
