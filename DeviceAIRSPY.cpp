@@ -117,11 +117,11 @@ namespace Device {
 
 	void AIRSPY::setSensitivity_Gain(int a)
 	{
-		if (airspy_set_sensitivity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA gain.";
+		if (airspy_set_sensitivity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Sensitivity gain.";
 	}
 	void AIRSPY::setLinearity_Gain(int a)
 	{
-		if (airspy_set_linearity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA gain.";
+		if (airspy_set_linearity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Linearity gain.";
 	}
 
 	void AIRSPY::callback(CFLOAT32* data, int len)
