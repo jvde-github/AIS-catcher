@@ -64,13 +64,13 @@ namespace DSP
 	};
 
 
-    class SamplerParallelComplex : public StreamIn<CFLOAT32>
-    {
+	class SamplerParallelComplex : public StreamIn<CFLOAT32>
+	{
 		std::vector <CFLOAT32> output;
 		int lastSymbol = 0;
 		int nBuckets = 0;
 
-public:
+	public:
 		void setBuckets(int n);
 
 		// Streams out
@@ -78,7 +78,7 @@ public:
 
 		// Streams in
 		void Receive(const CFLOAT32* data, int len);
-    };
+	};
 
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -90,13 +90,14 @@ public:
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-    class Downsample2CS32
-    {
+	class Downsample2CS32
+	{
 		CS32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 
-    public:
+		public:
+
 		int Run(CS32* data, int len);
-    };
+	};
 
 	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
