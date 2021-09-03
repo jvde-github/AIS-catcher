@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles and the Airspy HF+. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy and the Airspy HF+. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
 
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
@@ -132,8 +132,10 @@ A release in binary format for Windows 32 bit (including required libraries) can
 
 ## Compilation process for Linux/Raspberry Pi
 
-Make sure you have the following dependencies:
-  - librtlsdr and/or libairspyhf
+Make sure you have the following dependencies, depending on the device you are using:
+  - librtlsdr
+  - libairspyhf
+  - libairspy
 
 The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
 

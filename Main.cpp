@@ -30,7 +30,7 @@ SOFTWARE.
 
 #include "DeviceFileRAW.h"
 #include "DeviceFileWAV.h"
-#include "DeviceRTLSDR.h"
+#include "DeviceRTLSDR.h" 
 #include "DeviceAIRSPYHF.h"
 #include "DeviceAIRSPY.h"
 
