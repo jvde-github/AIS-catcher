@@ -157,9 +157,9 @@ make rtl-only
 sudo make install
 ```
 
-If you want to include Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf. If not installed yet, you might first want to try:
+If you want to include Airspy and Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
 ```console
-sudo apt-get install libairspyhf-dev
+sudo apt-get install libairspyhf-dev libairspy-dev
 ```
 The process to install AIS-catcher then becomes:
 ```console
