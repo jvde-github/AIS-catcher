@@ -62,7 +62,6 @@ namespace Device {
 
 	void AIRSPYHF::setAGC()
 	{
-		airspyhf_set_hf_agc(dev, 1);
 		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC to auto.";
 		if (airspyhf_set_hf_agc_threshold(dev, 0) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold to low.";
 	}
@@ -91,7 +90,7 @@ namespace Device {
 	void AIRSPYHF::Pause()
 	{
 		airspyhf_stop(dev);
-		streaming = false;
+		//streaming = false;
 
 		Control::Pause();
 	}
