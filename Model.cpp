@@ -176,7 +176,7 @@ namespace AIS
 
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("AIS engine v0.18");
+		setName("AIS engine v0.19");
 
 		const int nSymbolsPerSample = 48000/9600;
 
