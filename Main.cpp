@@ -32,6 +32,7 @@ SOFTWARE.
 #include "DeviceFileWAV.h"
 #include "DeviceRTLSDR.h"
 #include "DeviceAIRSPYHF.h"
+#include "DeviceAIRSPY.h"
 
 #include "IO.h"
 #include "Model.h"
@@ -133,6 +134,9 @@ std::vector<Device::Description> getDevices()
 #ifdef HASAIRSPYHF
 	Device::AIRSPYHF::pushDeviceList(device_list);
 #endif
+#ifdef HASAIRSPY
+	Device::AIRSPY::pushDeviceList(device_list);
+#endif
 	std::sort(device_list.begin(), device_list.end());
 
 	return device_list;
@@ -220,6 +224,7 @@ int main(int argc, char* argv[])
 
 	Device::SettingsRTLSDR settingsRTL;
 	Device::SettingsAIRSPYHF settingsAIRSPYHF;
+	Device::SettingsAIRSPY settingsAIRSPY;
 
 
 	uint64_t handle = 0;
@@ -394,6 +399,21 @@ int main(int argc, char* argv[])
 			device->setSettings(settingsAIRSPYHF);
 #else
 			std::cerr << "AIRSPYHF+ not included in this package. Please build version including AIRSPYHF+ support.";
+#endif
+			break;
+		}
+		case Device::Type::AIRSPY:
+		{
+#ifdef HASAIRSPY
+			Device::AIRSPY* device = new Device::AIRSPY();
+			device->openDevice();
+
+			control = device;
+			out = &(device->out);
+
+			device->setSettings(settingsAIRSPY);
+#else
+			std::cerr << "AIRSPY not included in this package. Please build version including AIRSPY support.";
 #endif
 			break;
 		}
