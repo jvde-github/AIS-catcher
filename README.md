@@ -101,7 +101,7 @@ Finally, full control is obtained with the command:
 ```
 AIS-catcher -gm LNA auto VGA 12 MIXER 12
 ```
-More guidance on setting the gain model and levels can be obtained from the reference.
+More guidance on setting the gain model and levels can be obtained from the reference. Please note that for now the settings are case sensitive.
 
 ## Multiple receiver models
 
