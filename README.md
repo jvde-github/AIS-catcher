@@ -89,11 +89,11 @@ The command line allows you to set some device specific parameters. Below some e
 
 ### Airspy Mini
 
-The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As described in the reference there are three few different gain modes: linearity, sensitivity and free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using:
+The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in the reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
 ```
 AIS-catcher -gm LINEARITY 10
 ```
-Similar for 'sensitivity'  mode:
+And similar for 'sensitivity'  mode:
 ```
 AIS-catcher -gm SENSITIVITY 10
 ```
@@ -101,7 +101,7 @@ Finally, full control is obtained with the command:
 ```
 AIS-catcher -gm LNA auto VGA 12 MIXER 12
 ```
-More guidance on setting the gain model and levels can be obtained from the reference. Please note that for now the settings are case sensitive.
+More guidance on setting the gain model and levels can be obtained from the reference. Please note that for now the settings on the command line are case sensitive.
 
 ## Multiple receiver models
 
