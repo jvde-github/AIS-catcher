@@ -17,27 +17,29 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 ````
 use: AIS-catcher [options]
 
-        [-h display this message and terminate (default: false)]
-        [-s xxx sample rate in Hz (default: based on SDR device)]
-        [-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]
-        [-q surpress NMEA messages to screen (default: false)]
-        [-u address port - UDP address and port (default: off)]
+	[-h display this message and terminate (default: false)]
+	[-s xxx sample rate in Hz (default: based on SDR device)]
+	[-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]
+	[-q surpress NMEA messages to screen (default: false)]
+	[-u address port - UDP address and port (default: off)]
 
-        [-r filename - read IQ data from raw 'unsigned char' file]
-        [-r cu8 filename - read IQ data from raw 'unsigned char' file]
-        [-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
-        [-r cf32 filename - read IQ data from WAV file in 'float' format]
-        [-w filename - read IQ data from WAV file in 'float' format]
+	[-r filename - read IQ data from raw 'unsigned char' file]
+	[-r cu8 filename - read IQ data from raw 'unsigned char' file]
+	[-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
+	[-r cf32 filename - read IQ data from WAV file in 'float' format]
+	[-w filename - read IQ data from WAV file in 'float' format]
 
-        [-l list available devices and terminate (default: off)]
-        [-d:x select device based on index (default: 0)]
-        [-d xxxx select device based on serial number]
+	[-l list available devices and terminate (default: off)]
+	[-d:x select device based on index (default: 0)]
+	[-d xxxx select device based on serial number]
 
-        [-p xx frequency correction for RTL SDR]
+	[-p xx frequency correction for RTL SDR]
 
-        [-m xx run specific decoding model (default: 2)]
-        [       0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
-        [-b benchmark demodulation models - for development purposes (default: off)]
+	[-gm Airspy gain control in form SENSITIVITY/LINEARITY/VGA/LNA/MIXER followed by gain level or "auto" where applicable]
+
+	[-m xx run specific decoding model (default: 2)]
+	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
+	[-b benchmark demodulation models - for development purposes (default: off)]
 ````
 
 ## Examples
