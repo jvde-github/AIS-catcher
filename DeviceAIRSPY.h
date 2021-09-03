@@ -1,5 +1,6 @@
 /*
 Copyright(c) 2021 gtlittlewing
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,12 +29,32 @@ SOFTWARE.
 #include <libairspy/airspy.h>
 #endif
 
-namespace Device{
+namespace Device {
 
+	enum AIRSPYGainMode
+	{
+		Manual,
+		Sensitivity,
+		Linearity,
+		Legacy
+	};
 
 	class SettingsAIRSPY : public DeviceSettings
 	{
 	public:
+
+		AIRSPYGainMode mode = Legacy; // LNA AGC only
+
+		int gain = 0;
+
+		bool mixer_AGC = true;
+		bool LNA_AGC = true;
+
+		int mixer_Gain = 12;
+		int LNA_Gain = 14;
+		int VGA_Gain = 10;
+
+		void Print();
 	};
 
 	class AIRSPY : public Control, public StreamOut<CFLOAT32>
@@ -45,6 +66,15 @@ namespace Device{
 		static int callback_static(airspy_transfer_t* tf);
 		void callback(CFLOAT32 *,int);
 
+		void setLNA_AGC(int);
+		void setMIXER_AGC(int);
+
+		void setLNA_Gain(int);
+		void setVGA_Gain(int);
+		void setMixer_Gain(int);
+
+		void setSensitivity_Gain(int);
+		void setLinearity_Gain(int);
 	public:
 
 		// Control
@@ -54,7 +84,7 @@ namespace Device{
 
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
-		void setAGC(void);
+
 
 		std::vector<uint32_t> SupportedSampleRates();
 

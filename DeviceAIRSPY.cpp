@@ -1,5 +1,6 @@
 /*
 Copyright(c) 2021 gtlittlewing
+Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +29,33 @@ SOFTWARE.
 
 namespace Device {
 
+
+	void SettingsAIRSPY::Print()
+	{
+		std::cerr << "Airspy Gain Settings" << std::endl;
+
+		switch (mode)
+		{
+		case Device::Legacy:
+			std::cerr << "  Mode    : Legacy (LNA AGC only)" << std::endl;
+			break;
+
+		case Device::Sensitivity:
+			std::cerr << "  Mode    : SENSITIVITY set at " << gain << std::endl;
+			break;
+
+		case Device::Linearity:
+			std::cerr << "  Mode    : LINEARITY set at " << gain << std::endl;
+			break;
+
+		case Device::Manual:
+			std::cerr << "  Mode   : Free" << std::endl;
+			std::cerr << "  LNA    : " << (LNA_AGC?"auto" : "manual") << " mode - gain @ " << LNA_Gain << std::endl;
+			std::cerr << "  VGA    : gain @ " << VGA_Gain << std::endl;
+			std::cerr << "  MIXER  : " << (mixer_AGC ? "auto" : "manual") << " mode - gain @ " << mixer_Gain << std::endl;;
+			break;
+		}
+	}
 
 	//---------------------------------------
 	// Device AIRSPY
@@ -60,10 +88,40 @@ namespace Device {
 		Control::setFrequency(f);
 	}
 
-	void AIRSPY::setAGC()
+	void AIRSPY::setLNA_AGC(int a)
 	{
-		airspy_set_lna_agc(dev, 1);
-		if (airspy_set_lna_agc(dev, 1) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set AGC to auto.";
+		if (airspy_set_lna_agc(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA AGC.";
+	}
+
+	void AIRSPY::setMIXER_AGC(int a)
+	{
+		if (airspy_set_mixer_agc(dev, 1) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set MIXER AGC.";
+	}
+
+	void AIRSPY::setLNA_Gain(int a)
+	{
+		if (airspy_set_lna_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA gain.";
+	}
+
+
+	void AIRSPY::setMixer_Gain(int a)
+	{
+		if (airspy_set_mixer_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Mixer gain.";
+	}
+
+
+	void AIRSPY::setVGA_Gain(int a)
+	{
+		if (airspy_set_vga_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set VGA gain.";
+	}
+
+	void AIRSPY::setSensitivity_Gain(int a)
+	{
+		if (airspy_set_sensitivity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA gain.";
+	}
+	void AIRSPY::setLinearity_Gain(int a)
+	{
+		if (airspy_set_linearity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA gain.";
 	}
 
 	void AIRSPY::callback(CFLOAT32* data, int len)
@@ -137,7 +195,29 @@ namespace Device {
 
 	void AIRSPY::setSettings(SettingsAIRSPY &s)
 	{
-		setAGC();
+		switch (s.mode)
+		{
+		case Device::Legacy:
+			setLNA_AGC(1);
+			break;
+
+		case Device::Sensitivity:
+			setSensitivity_Gain(s.gain);
+			break;
+
+		case Device::Linearity:
+			setLinearity_Gain(s.gain);
+			break;
+
+		case Device::Manual:
+			setLNA_AGC((int)s.LNA_AGC);
+			if (!s.LNA_AGC) setLNA_Gain(s.LNA_Gain);
+			setMIXER_AGC((int)s.mixer_AGC);
+			if (!s.mixer_AGC) setLNA_Gain(s.mixer_Gain);
+			setVGA_Gain(s.VGA_Gain);
+
+			break;
+		}
 	}
 
 #endif
