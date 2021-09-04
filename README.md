@@ -241,7 +241,6 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- Access to SDR hardware specific functionality, e.g. gain control
 - Documenting and finetuning the default decoding model
 - Ongoing: further improvements to reception and testing (e.g. improve coherent demodulation, filters, etc)
 - Performance improvements
