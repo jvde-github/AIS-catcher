@@ -90,14 +90,15 @@ AIS-catcher -r test_288.raw -s 288000 -v
 The command line allows you to set some device specific parameters. Below some examples.
 
 ### RTL SDR
-Bespoke gain switches for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the follow command sets the tuner gain to automatic and the RTL AGC off:
+Gain settings specific for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the following command sets the tuner gain to automatic and the RTL AGC off:
 ```console
 AIS-catcher -gr TUNER auto RTLAGC off
 ```
-To set the tuner gain to a manual level of 12:
+To set the tuner gain to a manual level of 12, we can use the following command:
 ```console
 AIS-catcher -gr TUNER 12 
 ```
+Please note that for now the settings on the command line are case sensitive.
 ### Airspy Mini
 
 The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
@@ -112,7 +113,7 @@ Finally, full control is obtained with the command:
 ```console
 AIS-catcher -gm LNA auto VGA 12 MIXER 12
 ```
-More guidance on setting the gain model and levels can be obtained from the reference. Please note that for now the settings on the command line are case sensitive.
+More guidance on setting the gain model and levels can be obtained from the reference.
 
 ## Multiple receiver models
 
