@@ -28,6 +28,14 @@ SOFTWARE.
 
 namespace Device {
 
+	void SettingsRTLSDR::Print()
+	{
+		std::cerr << "RTLSDR Gain Settings" << std::endl;
+
+		std::cerr << "  Tuner    : " << (tuner_AGC?"auto" : "manual") << " mode - gain @ " << tuner_Gain << std::endl;
+		std::cerr << "  RTLAGC   : " << (RTL_AGC?"on" : "off") << std::endl;
+        }
+
 	//---------------------------------------
 	// Device RTLSDR
 
@@ -50,17 +58,18 @@ namespace Device {
 		Control::setFrequency(f);
 	}
 
-	void RTLSDR::setAGC()
+	void RTLSDR::setTuner_AGC(int a)
 	{
-		if (rtlsdr_set_tuner_gain_mode(dev, 0) != 0) throw "RTLSDR: cannot set AGC.";
+		if (rtlsdr_set_tuner_gain_mode(dev, a) != 0) throw "RTLSDR: cannot set AGC.";
 	}
 
-	void RTLSDR::setGainManual()
+	void RTLSDR::setRTL_AGC(int a)
 	{
-		if (rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDR: cannot set Manual.";
+		if (rtlsdr_set_agc_mode(dev, a) != 0) throw "RTLSDR: cannot set AGC.";
 	}
 
-	void RTLSDR::setTunerGain(int g)
+
+	void RTLSDR::setTuner_Gain(int g)
 	{
 		if (rtlsdr_set_tuner_gain(dev, g) != 0) throw "RTLSDR: cannot set TunerGain.";
 	}
@@ -171,8 +180,13 @@ namespace Device {
 
 	void RTLSDR::setSettings(SettingsRTLSDR &s)
 	{
-		setFrequencyCorrection(s.correctionPPM);
-		setAGC();
+		setFrequencyCorrection(s.FreqCorrection);
+		setTuner_AGC((int)s.tuner_AGC);
+
+		if(!s.tuner_AGC)
+			setTuner_Gain(s.tuner_Gain);
+
+		setRTL_AGC((int)s.RTL_AGC);
 	}
 
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()

@@ -30,11 +30,23 @@ SOFTWARE.
 
 namespace Device{
 
+        enum RTLSDRGainMode
+        {
+                Default
+        };
+
+
 	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
 	class SettingsRTLSDR : public DeviceSettings
 	{
 	public:
-		int correctionPPM = 0;
+		int FreqCorrection = 0;
+
+		bool tuner_AGC = true;
+		bool RTL_AGC = false;
+		int tuner_Gain = 0;
+
+		void Print();
 	};
 
 	class RTLSDR : public Control, public StreamOut<CU8>
@@ -64,6 +76,10 @@ namespace Device{
 		static const uint32_t BufferLen = 16 * 16384;
 		rtlsdr_dev_t* getDevice() { return dev; }
 
+		void setTuner_AGC(int);
+		void setTuner_Gain(int);
+		void setRTL_AGC(int);
+
 	public:
 
 		// Control
@@ -72,9 +88,6 @@ namespace Device{
 
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
-		void setAGC(void);
-		void setGainManual(void);
-		void setTunerGain(int);
 
 
 		std::vector<uint32_t> SupportedSampleRates();
