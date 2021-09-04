@@ -34,6 +34,7 @@ namespace Device {
 
 		std::cerr << "  Tuner    : " << (tuner_AGC?"auto" : "manual") << " mode - gain @ " << tuner_Gain << std::endl;
 		std::cerr << "  RTLAGC   : " << (RTL_AGC?"on" : "off") << std::endl;
+		std::cerr << "  BIAS TEE : " << (bias_tee?"on" : "off") << std::endl;
         }
 
 	//---------------------------------------
@@ -58,7 +59,7 @@ namespace Device {
 		Control::setFrequency(f);
 	}
 
-	void RTLSDR::setTuner_AGC(int a)
+	void RTLSDR::setTuner_GainMode(int a)
 	{
 		if (rtlsdr_set_tuner_gain_mode(dev, a) != 0) throw "RTLSDR: cannot set AGC.";
 	}
@@ -66,6 +67,12 @@ namespace Device {
 	void RTLSDR::setRTL_AGC(int a)
 	{
 		if (rtlsdr_set_agc_mode(dev, a) != 0) throw "RTLSDR: cannot set AGC.";
+	}
+
+	void RTLSDR::setBiasTee(int a)
+	{
+		std::cerr << "BT " << a << std::endl;
+		if (rtlsdr_set_bias_tee(dev, a) != 0) throw "RTLSDR: cannot set bias tee.";
 	}
 
 
@@ -181,13 +188,16 @@ namespace Device {
 	void RTLSDR::setSettings(SettingsRTLSDR &s)
 	{
 		setFrequencyCorrection(s.FreqCorrection);
-		setTuner_AGC((int) !s.tuner_AGC);
+		setTuner_GainMode(s.tuner_AGC?0:1);
 
 		if(!s.tuner_AGC)
 			setTuner_Gain(s.tuner_Gain);
 
 		if(s.RTL_AGC)
 			setRTL_AGC((int)s.RTL_AGC);
+
+		if(s.bias_tee)
+			setBiasTee(1);
 	}
 
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()

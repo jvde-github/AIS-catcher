@@ -45,14 +45,16 @@ namespace Device {
 
 		AIRSPYGainMode mode = Legacy; // LNA AGC only
 
-		int gain = 0;
+		int gain = 16;
 
 		bool mixer_AGC = true;
 		bool LNA_AGC = true;
 
-		int mixer_Gain = 12;
-		int LNA_Gain = 14;
+		int mixer_Gain = 10;
+		int LNA_Gain = 10;
 		int VGA_Gain = 10;
+
+		bool bias_tee = false;
 
 		void Print();
 	};
@@ -66,6 +68,7 @@ namespace Device {
 		static int callback_static(airspy_transfer_t* tf);
 		void callback(CFLOAT32 *,int);
 
+		void setBiasTee(bool);
 		void setLNA_AGC(int);
 		void setMIXER_AGC(int);
 

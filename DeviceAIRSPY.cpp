@@ -55,6 +55,7 @@ namespace Device {
 			std::cerr << "  MIXER  : " << (mixer_AGC ? "auto" : "manual") << " mode - gain @ " << mixer_Gain << std::endl;;
 			break;
 		}
+		std::cerr << "  BIASTEE : " << (bias_tee ? "on" : "off") << std::endl;;
 	}
 
 	//---------------------------------------
@@ -109,6 +110,10 @@ namespace Device {
 		if (airspy_set_mixer_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Mixer gain.";
 	}
 
+        void AIRSPY::setBiasTee(bool b)
+        {
+                if (airspy_set_rf_bias(dev, b) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Bias Tee.";
+        }
 
 	void AIRSPY::setVGA_Gain(int a)
 	{
@@ -218,6 +223,8 @@ namespace Device {
 
 			break;
 		}
+		if(s.bias_tee)
+			setBiasTee(true);
 	}
 
 #endif

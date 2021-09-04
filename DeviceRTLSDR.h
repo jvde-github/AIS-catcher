@@ -46,6 +46,8 @@ namespace Device{
 		bool RTL_AGC = false;
 		int tuner_Gain = 0;
 
+		bool bias_tee = false;
+
 		void Print();
 	};
 
@@ -76,9 +78,10 @@ namespace Device{
 		static const uint32_t BufferLen = 16 * 16384;
 		rtlsdr_dev_t* getDevice() { return dev; }
 
-		void setTuner_AGC(int);
+		void setTuner_GainMode(int);
 		void setTuner_Gain(int);
 		void setRTL_AGC(int);
+		void setBiasTee(int);
 
 	public:
 
