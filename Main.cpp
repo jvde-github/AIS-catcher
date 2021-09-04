@@ -115,12 +115,12 @@ void Usage()
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 #ifdef HASRTLSDR
 	std::cerr << std::endl;
-	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0+] RTLAGC [on/off]" << std::endl;
+	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0+] RTLAGC [on/off] BIASTEE [on/off]" << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
 #ifdef HASAIRSPY
 	std::cerr << std::endl;
-	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] ]" << std::endl;
+	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] BIASTEE [on/off] ]" << std::endl;
 #endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
@@ -260,6 +260,18 @@ void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int a
 				s.LNA_Gain = getNumber(argv[ptr], 0, 15);
 			}
 		}
+                else if (strcmp(argv[ptr], "BIASTEE") == 0)
+                {
+                        ptr++;
+                        if (strcmp(argv[ptr], "on") == 0)
+                                s.bias_tee = true;
+                        else if (strcmp(argv[ptr], "off") == 0)
+                        {
+                                s.bias_tee = false;
+                        }
+                        else
+                                throw "Invalid RTLAGC switch on command line [on/off]";
+                }
 		else
 			throw " Invalid Gain setting for AIRSPY";
 	}
@@ -296,6 +308,18 @@ void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int a
 			else
 				throw "Invalid RTLAGC switch on command line [on/off]";
 		}
+                else if (strcmp(argv[ptr], "BIASTEE") == 0)
+                {
+                        ptr++;
+                        if (strcmp(argv[ptr], "on") == 0)
+                                s.bias_tee = true;
+                        else if (strcmp(argv[ptr], "off") == 0)
+                        {
+                                s.bias_tee = false;
+                        }
+                        else
+                                throw "Invalid RTLAGC switch on command line [on/off]";
+                }
 		else
 			throw " Invalid Gain setting for RTLSDR";
 	}
