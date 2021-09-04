@@ -87,6 +87,42 @@ AIS-catcher -r test_288.raw -s 288000 -v
 
 The command line allows you to set some device specific parameters. Below some examples.
 
+### RTL SDR
+Bespoke gain switches for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the follow command sets the tuner gain to automatic and the RTL AGC off:
+```console
+AIS-catcher -gr TUNER auto RTLAGC off
+```
+To set the tuner gain to a manual level of 12        void SettingsAIRSPY::Print()
+        {
+                std::cerr << "Airspy Gain Settings" << std::endl;
+
+                switch (mode)
+                {
+                case Device::Legacy:
+                        std::cerr << "  Mode    : Legacy (LNA AGC only)" << std::endl;
+                        break;
+
+                case Device::Sensitivity:
+                        std::cerr << "  Mode    : SENSITIVITY set at " << gain << std::endl;
+                        break;
+
+                case Device::Linearity:
+                        std::cerr << "  Mode    : LINEARITY set at " << gain << std::endl;
+                        break;
+
+                case Device::Manual:
+                        std::cerr << "  Mode   : Free" << std::endl;
+                        std::cerr << "  LNA    : " << (LNA_AGC?"auto" : "manual") << " mode - gain @ " << LNA_Gain << std::endl;
+                        std::cerr << "  VGA    : gain @ " << VGA_Gain << std::endl;
+                        std::cerr << "  MIXER  : " << (mixer_AGC ? "auto" : "manual") << " mode - gain @ " << mixer_Gain << std::endl;;
+                        break;
+                }
+        }
+, we can use:
+
+```console
+AIS-catcher -gr TUNER 12 RTLAGC off
+```
 ### Airspy Mini
 
 The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
