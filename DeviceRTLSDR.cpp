@@ -181,12 +181,13 @@ namespace Device {
 	void RTLSDR::setSettings(SettingsRTLSDR &s)
 	{
 		setFrequencyCorrection(s.FreqCorrection);
-		setTuner_AGC((int)s.tuner_AGC);
+		setTuner_AGC((int) !s.tuner_AGC);
 
 		if(!s.tuner_AGC)
 			setTuner_Gain(s.tuner_Gain);
 
-		setRTL_AGC((int)s.RTL_AGC);
+		if(s.RTL_AGC)
+			setRTL_AGC((int)s.RTL_AGC);
 	}
 
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
