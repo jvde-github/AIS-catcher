@@ -115,11 +115,12 @@ void Usage()
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 #ifdef HASRTLSDR
 	std::cerr << std::endl;
+	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0+] RTLAGC [on/off]" << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
 #ifdef HASAIRSPY
 	std::cerr << std::endl;
-	std::cerr << "\t[-gm Airspy gain control in form SENSITIVITY/LINEARITY/VGA/LNA/MIXER followed by gain level or \"auto\" where applicable]" << std::endl;
+	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] ]" << std::endl;
 #endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
@@ -265,6 +266,42 @@ void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int a
 	ptr --;
 }
 
+// Needs clean up and streamlining....
+void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int argc)
+{
+	while (++ptr < argc - 1)
+	{
+		if (argv[ptr][0] == '-') break;
+
+		else if (strcmp(argv[ptr], "TUNER") == 0)
+		{
+			ptr++;
+			if (strcmp(argv[ptr], "auto") == 0)
+				s.tuner_AGC = true;
+			else
+			{
+				s.tuner_AGC = false;
+				s.tuner_Gain = getNumber(argv[ptr], 0, 100);
+			}
+		}
+		else if (strcmp(argv[ptr], "RTLAGC") == 0)
+		{
+			ptr++;
+			if (strcmp(argv[ptr], "on") == 0)
+				s.RTL_AGC = true;
+			else if (strcmp(argv[ptr], "off") == 0)
+			{
+				s.RTL_AGC = false;
+			}
+			else
+				throw "Invalid RTLAGC switch on command line [on/off]";
+		}
+		else
+			throw " Invalid Gain setting for RTLSDR";
+	}
+	ptr --;
+}
+
 int main(int argc, char* argv[])
 {
 	int sample_rate = 0;
@@ -403,12 +440,14 @@ int main(int argc, char* argv[])
 				return 0;
 #ifdef HASRTLSDR
 			case 'p':
-				settingsRTL.correctionPPM = getNumber(arg1, -100, 100);
+				settingsRTL.FreqCorrection = getNumber(arg1, -100, 100);
 				ptr++;
 				break;
 			case 'g':
 				if(param == "-gm")
 					parseAirspySettings(settingsAIRSPY, argv, ptr, argc);
+				else if(param == "-gr")
+					parseRTLSDRSettings(settingsRTL, argv, ptr, argc);
 				else
 					throw "Invalid -gx switch on command line";
 				break;
@@ -475,7 +514,7 @@ int main(int argc, char* argv[])
 			out = &(device->out);
 
 			device->setSettings(settingsAIRSPY);
-			settingsAIRSPY.Print();
+			if(verbose) settingsAIRSPY.Print();
 #else
 			std::cerr << "AIRSPY not included in this package. Please build version including AIRSPY support.";
 #endif
@@ -521,6 +560,7 @@ int main(int argc, char* argv[])
 				out = &(convertCU8.out);
 			}
 			device->setSettings(settingsRTL);
+			if(verbose) settingsRTL.Print();
 			control = device;
 
 #else
