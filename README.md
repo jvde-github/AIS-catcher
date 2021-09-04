@@ -111,7 +111,7 @@ And similar for 'sensitivity'  mode:
 ```console
 AIS-catcher -gm SENSITIVITY 10
 ```
-Finally, full control is obtained with the command:
+Finally, full control is obtained with a command like:
 ```console
 AIS-catcher -gm LNA auto VGA 12 MIXER 12
 ```
