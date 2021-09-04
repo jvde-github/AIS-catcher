@@ -33,13 +33,15 @@ use: AIS-catcher [options]
 	[-d:x select device based on index (default: 0)]
 	[-d xxxx select device based on serial number]
 
+	[-gr RTLSDR specic settings: TUNER [auto/0+] RTLAGC [on/off]
 	[-p xx frequency correction for RTL SDR]
 
-	[-gm Airspy gain control in form SENSITIVITY/LINEARITY/VGA/LNA/MIXER followed by gain level or "auto" where applicable]
+	[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] ]
 
 	[-m xx run specific decoding model (default: 2)]
 	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
 	[-b benchmark demodulation models - for development purposes (default: off)]
+
 ````
 
 ## Examples
@@ -92,36 +94,9 @@ Bespoke gain switches for the RTL SDR can be set on the command line with the ``
 ```console
 AIS-catcher -gr TUNER auto RTLAGC off
 ```
-To set the tuner gain to a manual level of 12        void SettingsAIRSPY::Print()
-        {
-                std::cerr << "Airspy Gain Settings" << std::endl;
-
-                switch (mode)
-                {
-                case Device::Legacy:
-                        std::cerr << "  Mode    : Legacy (LNA AGC only)" << std::endl;
-                        break;
-
-                case Device::Sensitivity:
-                        std::cerr << "  Mode    : SENSITIVITY set at " << gain << std::endl;
-                        break;
-
-                case Device::Linearity:
-                        std::cerr << "  Mode    : LINEARITY set at " << gain << std::endl;
-                        break;
-
-                case Device::Manual:
-                        std::cerr << "  Mode   : Free" << std::endl;
-                        std::cerr << "  LNA    : " << (LNA_AGC?"auto" : "manual") << " mode - gain @ " << LNA_Gain << std::endl;
-                        std::cerr << "  VGA    : gain @ " << VGA_Gain << std::endl;
-                        std::cerr << "  MIXER  : " << (mixer_AGC ? "auto" : "manual") << " mode - gain @ " << mixer_Gain << std::endl;;
-                        break;
-                }
-        }
-, we can use:
-
+To set the tuner gain to a manual level of 12:
 ```console
-AIS-catcher -gr TUNER 12 RTLAGC off
+AIS-catcher -gr TUNER 12 
 ```
 ### Airspy Mini
 
