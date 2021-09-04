@@ -270,7 +270,7 @@ void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int a
                                 s.bias_tee = false;
                         }
                         else
-                                throw "Invalid RTLAGC switch on command line [on/off]";
+                                throw "Invalid BIASTEE switch on command line [on/off]";
                 }
 		else
 			throw " Invalid Gain setting for AIRSPY";
@@ -318,7 +318,7 @@ void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int a
                                 s.bias_tee = false;
                         }
                         else
-                                throw "Invalid RTLAGC switch on command line [on/off]";
+                                throw "Invalid BIASTEE switch on command line [on/off]";
                 }
 		else
 			throw " Invalid Gain setting for RTLSDR";
