@@ -50,11 +50,11 @@ namespace Device {
 
 		case Device::Manual:
 			std::cerr << "mode free, ";
-			std::cerr << "lna_mode " << (LNA_AGC?"auto" : "manual") << ", lna_gain " << LNA_Gain << ", vga_gain " << VGA_Gain;
-			std::cerr << ", mixer_mode " << (mixer_AGC ? "auto" : "manual") << ", mixer_gain: " << mixer_Gain;
+			std::cerr << "lna_mode " << (LNA_AGC?"AUTO" : "MANUAL") << ", lna_gain " << LNA_Gain << ", vga_gain " << VGA_Gain;
+			std::cerr << ", mixer_mode " << (mixer_AGC ? "AUTO" : "MANUAL") << ", mixer_gain: " << mixer_Gain;
 			break;
 		}
-		std::cerr << ", bias_tee " << (bias_tee ? "on" : "off") << std::endl;;
+		std::cerr << ", bias_tee " << (bias_tee ? "ON" : "OFF") << std::endl;;
 	}
 
 	//---------------------------------------
