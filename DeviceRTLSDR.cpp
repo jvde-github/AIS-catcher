@@ -70,7 +70,6 @@ namespace Device {
 
 	void RTLSDR::setBiasTee(int a)
 	{
-		std::cerr << "BT " << a << std::endl;
 		if (rtlsdr_set_bias_tee(dev, a) != 0) throw "RTLSDR: cannot set bias tee.";
 	}
 
@@ -92,7 +91,6 @@ namespace Device {
 		for(auto h : gains) 
 			if(abs(h - g) < abs(g - gain)) gain = h;
 
-		std::cerr << "Tuner gain set to  " << gain << std::endl;
 		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw "RTLSDR: cannot set Tuner gain.";
 	}
 
