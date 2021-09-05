@@ -201,16 +201,11 @@ namespace Device {
 	void RTLSDR::setSettings(SettingsRTLSDR &s)
 	{
 		setFrequencyCorrection(s.FreqCorrection);
-
 		setTuner_GainMode(s.tuner_AGC ? 0 : 1);
-		if(!s.tuner_AGC)
-			setTuner_Gain(s.tuner_Gain);
 
-		if(s.RTL_AGC)
-			setRTL_AGC((int)s.RTL_AGC);
-
-		if(s.bias_tee)
-			setBiasTee(1);
+		if(!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
+		if(s.RTL_AGC) setRTL_AGC( 1 );
+		if(s.bias_tee) setBiasTee(1);
 	}
 
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()

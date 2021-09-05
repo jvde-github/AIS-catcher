@@ -214,7 +214,7 @@ namespace Device {
 			break;
 
 		case Device::Manual:
-			setLNA_AGC((int)s.LNA_AGC);
+			setLNA_AGC( (int) s.LNA_AGC );
 			if (!s.LNA_AGC) setLNA_Gain(s.LNA_Gain);
 
 			setMixer_AGC((int)s.mixer_AGC);
@@ -224,8 +224,7 @@ namespace Device {
 
 			break;
 		}
-		if(s.bias_tee)
-			setBiasTee(true);
+		if(s.bias_tee) setBiasTee(true);
 	}
 
 #endif
