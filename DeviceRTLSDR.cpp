@@ -77,7 +77,20 @@ namespace Device {
 
 	void RTLSDR::setTuner_Gain(int g)
 	{
-		if (rtlsdr_set_tuner_gain(dev, g) != 0) throw "RTLSDR: cannot set TunerGain.";
+		if(rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDRL cannot set gain mode";
+
+		int nGains = rtlsdr_get_tuner_gains(dev, NULL);
+		if (nGains <= 0) throw "RTLSDR: no gains available";
+
+		std::vector<int> gains(nGains);
+		nGains = rtlsdr_get_tuner_gains(dev, gains.data());
+
+		int gain = gains[0];
+
+		for(auto h : gains) 
+			if(abs(h - g) < abs(g - gain)) gain = h;
+
+		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw "RTLSDR: cannot set Tuner gain.";
 	}
 
 	void RTLSDR::callback(CU8* buf, int len)

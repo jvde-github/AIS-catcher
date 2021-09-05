@@ -293,7 +293,7 @@ void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int a
 			else
 			{
 				s.tuner_AGC = false;
-				s.tuner_Gain = getNumber(argv[ptr], 0, 100);
+				s.tuner_Gain = getNumber(argv[ptr], 0, 500);
 			}
 		}
 		else if (strcmp(argv[ptr], "RTLAGC") == 0)
@@ -631,7 +631,7 @@ int main(int argc, char* argv[])
 
 		if(verbose)
 		{
-			std::cerr << "Generic settings: Freq  " << control->getFrequency() << ", " << "sample rate " << control->getSampleRate() << ", model rate " << model_rate << std::endl;
+			std::cerr << "Generic settings: Freq  " << control->getFrequency()/1000000 << "M, " << "sample rate " << control->getSampleRate()/1000 << "K, model rate " << model_rate/1000 << "K" << std::endl;
 		}
 
 		// Main loop
