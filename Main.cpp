@@ -63,7 +63,6 @@ bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
 int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> model_rates)
 {
 	for (auto r : model_rates) if (isRateDefined(r, dev_rates)) return r;
-
 	throw "Sampling rate not available for this combination of model and device.";
 
 	return 0;
@@ -76,7 +75,6 @@ int parseInteger(std::string str, int min, int max)
 	try
 	{
 		number = std::stoi(str);
-
 	} catch (const std::exception& e) { throw "Error: expected a number on command line"; }
 
 	if(number < min || number > max) throw "Error: Number out of range on command line";
@@ -91,7 +89,6 @@ FLOAT32 parseFloat(std::string str, FLOAT32 min, FLOAT32 max)
         try
         {
                 number = std::stof(str);
-
         } catch (const std::exception& e) { throw "Error: expected a number on command line"; }
 
         if(number < min || number > max) throw "Error: Number out of range on command line";
@@ -101,11 +98,8 @@ FLOAT32 parseFloat(std::string str, FLOAT32 min, FLOAT32 max)
 
 bool parseSwitch(std::string arg)
 {
-	if (arg == "OFF")
-		return false;
-
-	if (arg != "ON")
-	        throw "Error on command line expected [on/off]";
+	if (arg == "OFF") return false;
+	if (arg != "ON") throw "Error on command line expected [on/off]";
 
 	return true;
 }

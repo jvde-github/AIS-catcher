@@ -41,11 +41,11 @@ namespace Device {
 			break;
 
 		case Device::Sensitivity:
-			std::cerr << "mode sensitivity, gain " << gain;
+			std::cerr << "mode sensitivity " << gain;
 			break;
 
 		case Device::Linearity:
-			std::cerr << "mode linearity, gain " << gain;
+			std::cerr << "mode linearity " << gain;
 			break;
 
 		case Device::Manual:
