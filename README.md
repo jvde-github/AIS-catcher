@@ -100,7 +100,7 @@ To set the tuner gain to a manual level of 35.4, we can use the following comman
 ```console
 AIS-catcher -gr TUNER 35.4 
 ```
-Please note that for now the settings on the command line are case sensitive.
+Please note that these settings are not case sensitive.
 ### Airspy Mini
 
 The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
