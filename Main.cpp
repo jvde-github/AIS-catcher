@@ -631,8 +631,7 @@ int main(int argc, char* argv[])
 
 		if(verbose)
 		{
-			std::cerr << "Frequency (Hz)     : " << control->getFrequency() << std::endl;
-			std::cerr << "Sampling rate (Hz) : " << control->getSampleRate() << std::endl;
+			std::cerr << "Generic settings: Freq  " << control->getFrequency() << ", " << "sample rate " << control->getSampleRate() << ", model rate " << model_rate << std::endl;
 		}
 
 		// Main loop

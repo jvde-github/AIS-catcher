@@ -30,11 +30,10 @@ namespace Device {
 
 	void SettingsRTLSDR::Print()
 	{
-		std::cerr << "RTLSDR Gain Settings" << std::endl;
+		std::cerr << "RTLSDR settings: ";
 
-		std::cerr << "  Tuner    : " << (tuner_AGC?"auto" : "manual") << " mode - gain @ " << tuner_Gain << std::endl;
-		std::cerr << "  RTLAGC   : " << (RTL_AGC?"on" : "off") << std::endl;
-		std::cerr << "  BIAS TEE : " << (bias_tee?"on" : "off") << std::endl;
+		std::cerr << "tuner_mode " << (tuner_AGC?"auto" : "manual") << ", tuner_gain "  << tuner_Gain << ", RTLAGC " << (RTL_AGC?"on" : "off");
+		std::cerr << ", bias_tee " << (bias_tee?"on" : "off") << std::endl;
         }
 
 	//---------------------------------------

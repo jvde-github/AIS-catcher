@@ -43,7 +43,7 @@ namespace Device {
 	{
 	public:
 
-		AIRSPYGainMode mode = Legacy; // LNA AGC only
+		AIRSPYGainMode mode = Legacy; // LNA AGC only, will be removed
 
 		int gain = 16;
 
