@@ -69,7 +69,7 @@ int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> mode
 	return 0;
 }
 
-int getNumber(std::string str, int min, int max)
+int parseInteger(std::string str, int min, int max)
 {
 	int number = 0;
 
@@ -84,7 +84,7 @@ int getNumber(std::string str, int min, int max)
 	return number;
 }
 
-FLOAT32 getFloat(std::string str, FLOAT32 min, FLOAT32 max)
+FLOAT32 parseFloat(std::string str, FLOAT32 min, FLOAT32 max)
 {
         FLOAT32 number = 0;
 
@@ -221,114 +221,119 @@ void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liv
 // Needs clean up and streamlining....
 void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int argc)
 {
-	while (++ptr < argc - 1)
+	while (ptr < argc - 1)
 	{
-		if (argv[ptr][0] == '-') break;
+		std::string option = argv[ptr];
+		std::string arg = argv[ptr + 1];
 
-		if (strcmp(argv[ptr], "SENSITIVITY") == 0)
+		if (option[0] == '-') break;
+
+		for (auto& c : option) c = toupper(c);
+		for (auto& c : arg) c = toupper(c);
+
+		if (option == "SENSITIVITY")
 		{
 			s.mode = Device::Sensitivity;
-			s.gain = getNumber(argv[++ptr], 0, 22);
+			s.gain = parseInteger(arg, 0, 22);
 		}
-		else if (strcmp(argv[ptr], "LINEARITY") == 0)
+		else if (option == "LINEARITY")
 		{
 			s.mode = Device::Linearity;
-			s.gain = getNumber(argv[++ptr], 0, 22);
+			s.gain = parseInteger(arg, 0, 22);
 		}
-		else if (strcmp(argv[ptr], "VGA") == 0)
+		else if (option == "VGA")
+		{
+			s.mode = Device::Manual;			
+			s.VGA_Gain = parseInteger(arg, 0, 15);
+		}
+		else if (option == "MIXER")
 		{
 			s.mode = Device::Manual;
-			ptr++;
-			s.VGA_Gain = getNumber(argv[ptr], 0, 15);
-		}
-		else if (strcmp(argv[ptr], "MIXER") == 0)
-		{
-			s.mode = Device::Manual;
-			ptr++;
-			if (strcmp(argv[ptr], "auto") == 0)
+			
+			if (arg == "AUTO")
 				s.mixer_AGC = true;
 			else
 			{
 				s.mixer_AGC = false;
-				s.mixer_Gain = getNumber(argv[ptr], 0, 15);
+				s.mixer_Gain = parseInteger(arg, 0, 15);
 			}
 		}
-		else if (strcmp(argv[ptr], "LNA") == 0)
+		else if (option == "LNA")
 		{
 			s.mode = Device::Manual;
-			ptr++;
-			if (strcmp(argv[ptr], "auto") == 0)
+			
+			if (option == "AUTO")
 				s.LNA_AGC = true;
 			else
 			{
 				s.LNA_AGC = false;
-				s.LNA_Gain = getNumber(argv[ptr], 0, 15);
+				s.LNA_Gain = parseInteger(arg, 0, 15);
 			}
 		}
-                else if (strcmp(argv[ptr], "BIASTEE") == 0)
-                {
-                        ptr++;
-                        if (strcmp(argv[ptr], "on") == 0)
-                                s.bias_tee = true;
-                        else if (strcmp(argv[ptr], "off") == 0)
-                        {
-                                s.bias_tee = false;
-                        }
-                        else
-                                throw "Invalid BIASTEE switch on command line [on/off]";
-                }
+        else if (option == "BIASTEE")
+        {
+                if (arg == "ON")
+                        s.bias_tee = true;
+                else if (option == "OFF")
+                        s.bias_tee = false;
+                else
+                        throw "Invalid BIASTEE switch on command line [on/off]";
+        }
 		else
-			throw " Invalid Gain setting for AIRSPY";
+			throw " Invalid  setting for AIRSPY on command line";
+
+		option += 2;
 	}
-	ptr --;
 }
 
 // Needs clean up and streamlining....
 void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int argc)
 {
-	while (++ptr < argc - 1)
+	while (ptr < argc - 1)
 	{
-		if (argv[ptr][0] == '-') break;
+		std::string option = argv[ptr];
+		std::string arg = argv[ptr+1];
 
-		else if (strcmp(argv[ptr], "TUNER") == 0)
+		if (option[0] == '-') break;
+
+		for (auto& c : option) c = toupper(c);
+		for (auto& c : arg) c = toupper(c);
+
+		if (option == "TUNER")
 		{
-			ptr++;
-			if (strcmp(argv[ptr], "auto") == 0)
+			if (arg == "AUTO")
 				s.tuner_AGC = true;
 			else
 			{
 				s.tuner_AGC = false;
-				s.tuner_Gain = getFloat(argv[ptr], 0, 50);
+				s.tuner_Gain = parseFloat(arg, 0, 50);
 			}
 		}
-		else if (strcmp(argv[ptr], "RTLAGC") == 0)
+		else if (option == "RTLAGC")
 		{
-			ptr++;
-			if (strcmp(argv[ptr], "on") == 0)
+			if (arg == "ON")
 				s.RTL_AGC = true;
-			else if (strcmp(argv[ptr], "off") == 0)
+			else if (arg == "OFF")
 			{
 				s.RTL_AGC = false;
 			}
 			else
 				throw "Invalid RTLAGC switch on command line [on/off]";
 		}
-                else if (strcmp(argv[ptr], "BIASTEE") == 0)
-                {
-                        ptr++;
-                        if (strcmp(argv[ptr], "on") == 0)
-                                s.bias_tee = true;
-                        else if (strcmp(argv[ptr], "off") == 0)
-                        {
-                                s.bias_tee = false;
-                        }
-                        else
-                                throw "Invalid BIASTEE switch on command line [on/off]";
-                }
+        else if (option == "BIASTEE")
+        {
+                if (arg == "ON")
+                        s.bias_tee = true;
+                else if (arg == "OFF") 
+                        s.bias_tee = false;
+                else
+                        throw "Invalid BIASTEE switch on command line [on/off]";
+        }
 		else
-			throw " Invalid Gain setting for RTLSDR";
+			throw "Invalid setting for RTLSDR on command line";
+
+		ptr += 2;
 	}
-	ptr --;
 }
 
 int main(int argc, char* argv[])
@@ -393,38 +398,41 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				sample_rate = getNumber(arg1, 0, 3000000);
-				ptr++;
+				sample_rate = parseInteger(arg1, 0, 3000000);
+				ptr+=2;
 				break;
 			case 'm':
-				liveModelsSelected.push_back(getNumber(arg1,0,5));
-				ptr++;
+				liveModelsSelected.push_back(parseInteger(arg1,0,5));
+				ptr+=2;
 				break;
 			case 'v':
 				verbose = true;
 				if (arg1 != "" && arg1[0] != '-')
 				{
-					verboseUpdateTime = getNumber(arg1, 0, 3600) * 1000;
+					verboseUpdateTime = parseInteger(arg1, 0, 3600) * 1000;
 					ptr++;
 				}
+				ptr++;
 				break;
 			case 'q':
 				NMEA_to_screen = false;
+				ptr++;
 				break;
 			case 'b':
 				timer_on = true;
+				ptr++;
 				break;
 			case 'w':
 				input_type = Device::Type::WAVFILE;
 				filename_in = arg1;
-				ptr++;
+				ptr+=2;
 				break;
 			case 'r':
 				input_type = Device::Type::RAWFILE;
 				if(arg2 == "" || arg2[0] == '-')
 				{
 					filename_in = arg1;
-					ptr++;
+					ptr+=2;
 				}
 				else
 				{
@@ -438,21 +446,23 @@ int main(int argc, char* argv[])
 						std::cerr << "Unsupported RAW file format specified : " << arg1 << std::endl;
 						return -1;
 					}
-					ptr += 2;
+					ptr += 3;
 				}
 				break;
 			case 'l':
 				list_devices = true;
+				ptr++;
 				break;
 			case 'd':
 				if (param.length() == 4 && param[2] == ':')
 				{
 					input_device = (param[3] - '0');
+					ptr++;
 				}
 				else
 				{
 					input_device = getDeviceFromSerial(device_list, arg1);
-					ptr++;
+					ptr+=2;
 				}
 				if (input_device < 0 || input_device >= device_list.size())
 				{
@@ -462,21 +472,21 @@ int main(int argc, char* argv[])
 				break;
 			case 'u':
 				udp_address = arg1; udp_port = arg2;
-				ptr += 2;
+				ptr += 3;
 				break;
 			case 'h':
 				Usage();
 				return 0;
 #ifdef HASRTLSDR
 			case 'p':
-				settingsRTL.FreqCorrection = getNumber(arg1, -100, 100);
-				ptr++;
+				settingsRTL.FreqCorrection = parseInteger(arg1, -100, 100);
+				ptr += 2;
 				break;
 			case 'g':
 				if(param == "-gm")
-					parseAirspySettings(settingsAIRSPY, argv, ptr, argc);
+					parseAirspySettings(settingsAIRSPY, argv, ++ptr, argc);
 				else if(param == "-gr")
-					parseRTLSDRSettings(settingsRTL, argv, ptr, argc);
+					parseRTLSDRSettings(settingsRTL, argv, ++ptr, argc);
 				else
 					throw "Invalid -gx switch on command line";
 				break;
@@ -485,8 +495,6 @@ int main(int argc, char* argv[])
 				std::cerr << "Unknown option " << param << std::endl;
 				return -1;
 			}
-
-			ptr++;
 		}
 
 		if (list_devices)
