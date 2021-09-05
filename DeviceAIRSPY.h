@@ -70,7 +70,7 @@ namespace Device {
 
 		void setBiasTee(bool);
 		void setLNA_AGC(int);
-		void setMIXER_AGC(int);
+		void setMixer_AGC(int);
 
 		void setLNA_Gain(int);
 		void setVGA_Gain(int);

@@ -93,7 +93,7 @@ namespace Device {
 		if (airspy_set_lna_agc(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA AGC.";
 	}
 
-	void AIRSPY::setMIXER_AGC(int a)
+	void AIRSPY::setMixer_AGC(int a)
 	{
 		if (airspy_set_mixer_agc(dev, 1) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set MIXER AGC.";
 	}
@@ -216,8 +216,10 @@ namespace Device {
 		case Device::Manual:
 			setLNA_AGC((int)s.LNA_AGC);
 			if (!s.LNA_AGC) setLNA_Gain(s.LNA_Gain);
-			setMIXER_AGC((int)s.mixer_AGC);
-			if (!s.mixer_AGC) setLNA_Gain(s.mixer_Gain);
+
+			setMixer_AGC((int)s.mixer_AGC);
+			if (!s.mixer_AGC) setMixer_Gain(s.mixer_Gain);
+
 			setVGA_Gain(s.VGA_Gain);
 
 			break;

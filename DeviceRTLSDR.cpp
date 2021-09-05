@@ -201,8 +201,8 @@ namespace Device {
 	void RTLSDR::setSettings(SettingsRTLSDR &s)
 	{
 		setFrequencyCorrection(s.FreqCorrection);
-		setTuner_GainMode(s.tuner_AGC?0:1);
 
+		setTuner_GainMode(s.tuner_AGC ? 0 : 1);
 		if(!s.tuner_AGC)
 			setTuner_Gain(s.tuner_Gain);
 
