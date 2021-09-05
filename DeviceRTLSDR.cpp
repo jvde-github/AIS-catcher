@@ -33,7 +33,7 @@ namespace Device {
 		std::cerr << "RTLSDR settings: ";
 
 		std::cerr << "tuner_mode " << (tuner_AGC?"auto" : "manual") << ", tuner_gain "  << tuner_Gain << ", RTLAGC " << (RTL_AGC?"on" : "off");
-		std::cerr << ", bias_tee " << (bias_tee?"on" : "off") << std::endl;
+		std::cerr << ", bias_tee " << (bias_tee?"on" : "off") << ", freq correction " << FreqCorrection << std::endl;
         }
 
 	//---------------------------------------
@@ -75,8 +75,10 @@ namespace Device {
 	}
 
 
-	void RTLSDR::setTuner_Gain(int g)
+	void RTLSDR::setTuner_Gain(FLOAT32 a)
 	{
+		int g = (int) a * 10;
+
 		if(rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDRL cannot set gain mode";
 
 		int nGains = rtlsdr_get_tuner_gains(dev, NULL);
@@ -90,6 +92,7 @@ namespace Device {
 		for(auto h : gains) 
 			if(abs(h - g) < abs(g - gain)) gain = h;
 
+		std::cerr << "Tuner gain set to  " << gain << std::endl;
 		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw "RTLSDR: cannot set Tuner gain.";
 	}
 

@@ -71,27 +71,32 @@ int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> mode
 
 int getNumber(std::string str, int min, int max)
 {
-	int sign = 1, ptr = 0, number = 0;
+	int number = 0;
 
-	if (str[ptr] == '-')
+	try
 	{
-		ptr++; sign = -1;
-	}
+		number = std::stoi(str);
 
-	if (str[ptr] == '0' && str.length() != 1) throw "Error on command line. Not a valid integer.";
+	} catch (const std::exception& e) { throw "Error: expected a number on command line"; }
 
-	while (ptr < str.length())
-	{
-		if (str[ptr] < '0' || str[ptr] > '9') throw "Error on command line. Not a number.";
-		number = 10 * number + (str[ptr] - '0');
-		ptr++;
-	}
-
-	number *= sign;
-
-	if(number < min || number > max) throw "Error on command line. Number out of range.";
+	if(number < min || number > max) throw "Error: Number out of range on command line";
 
 	return number;
+}
+
+FLOAT32 getFloat(std::string str, FLOAT32 min, FLOAT32 max)
+{
+        FLOAT32 number = 0;
+
+        try
+        {
+                number = std::stof(str);
+
+        } catch (const std::exception& e) { throw "Error: expected a number on command line"; }
+
+        if(number < min || number > max) throw "Error: Number out of range on command line";
+
+        return number;
 }
 
 void Usage()
@@ -115,7 +120,7 @@ void Usage()
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 #ifdef HASRTLSDR
 	std::cerr << std::endl;
-	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0+] RTLAGC [on/off] BIASTEE [on/off]" << std::endl;
+	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off]" << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
 #ifdef HASAIRSPY
@@ -293,7 +298,7 @@ void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int a
 			else
 			{
 				s.tuner_AGC = false;
-				s.tuner_Gain = getNumber(argv[ptr], 0, 500);
+				s.tuner_Gain = getFloat(argv[ptr], 0, 50);
 			}
 		}
 		else if (strcmp(argv[ptr], "RTLAGC") == 0)
