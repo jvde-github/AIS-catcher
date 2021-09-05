@@ -99,6 +99,33 @@ FLOAT32 parseFloat(std::string str, FLOAT32 min, FLOAT32 max)
         return number;
 }
 
+bool parseSwitch(std::string arg)
+{
+	if (arg == "OFF")
+		return false;
+
+	if (arg != "ON")
+	        throw "Error on command line expected [on/off]";
+
+	return true;
+}
+
+bool parseAutoInteger(std::string arg,int min, int max, int &val)
+{
+	if (arg == "AUTO") return true;
+
+	val = parseInteger(arg,min,max);
+	return false;
+}
+
+bool parseAutoFloat(std::string arg,int min, int max, FLOAT32 &val)
+{
+	if (arg == "AUTO") return true;
+
+	val = parseFloat(arg,min,max);
+	return false;
+}
+
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
@@ -243,44 +270,25 @@ void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int a
 		}
 		else if (option == "VGA")
 		{
-			s.mode = Device::Manual;			
+			s.mode = Device::Manual;
 			s.VGA_Gain = parseInteger(arg, 0, 15);
 		}
 		else if (option == "MIXER")
 		{
 			s.mode = Device::Manual;
-
-			if (arg == "AUTO")
-				s.mixer_AGC = true;
-			else
-			{
-				s.mixer_AGC = false;
-				s.mixer_Gain = parseInteger(arg, 0, 15);
-			}
+			s.mixer_AGC = parseAutoInteger(arg,0,15,s.mixer_Gain);
 		}
 		else if (option == "LNA")
 		{
 			s.mode = Device::Manual;
-
-			if (arg == "AUTO")
-				s.LNA_AGC = true;
-			else
-			{
-				s.LNA_AGC = false;
-				s.LNA_Gain = parseInteger(arg, 0, 15);
-			}
+			s.LNA_AGC = parseAutoInteger(arg,0,15,s.LNA_Gain);;
 		}
         	else if (option == "BIASTEE")
         	{
-                	if (arg == "ON")
-                        	s.bias_tee = true;
-                	else if (arg == "OFF")
-                        	s.bias_tee = false;
-                	else
-                        	throw "Invalid BIASTEE switch on command line [on/off]";
+			s.bias_tee = parseSwitch(arg);
         	}
 		else
-			throw " Invalid  setting for AIRSPY on command line";
+			throw " Invalid setting for AIRSPY on command line";
 
 		ptr += 2;
 	}
@@ -301,33 +309,15 @@ void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int a
 
 		if (option == "TUNER")
 		{
-			if (arg == "AUTO")
-				s.tuner_AGC = true;
-			else
-			{
-				s.tuner_AGC = false;
-				s.tuner_Gain = parseFloat(arg, 0, 50);
-			}
+			s.tuner_AGC = parseAutoFloat(arg,0,50,s.tuner_Gain);
 		}
 		else if (option == "RTLAGC")
 		{
-			if (arg == "ON")
-				s.RTL_AGC = true;
-			else if (arg == "OFF")
-			{
-				s.RTL_AGC = false;
-			}
-			else
-				throw "Invalid RTLAGC switch on command line [on/off]";
+			s.RTL_AGC = parseSwitch(arg);
 		}
 		else if (option == "BIASTEE")
 		{
-			if (arg == "ON")
-				s.bias_tee = true;
-			else if (arg == "OFF") 
-				s.bias_tee = false;
-			else
-				throw "Invalid BIASTEE switch on command line [on/off]";
+			s.bias_tee = parseSwitch(arg);
 		}
 		else
 			throw "Invalid setting for RTLSDR on command line";
