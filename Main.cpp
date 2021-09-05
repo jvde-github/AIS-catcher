@@ -320,15 +320,15 @@ void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int a
 			else
 				throw "Invalid RTLAGC switch on command line [on/off]";
 		}
-        else if (option == "BIASTEE")
-        {
-                if (arg == "ON")
-                        s.bias_tee = true;
-                else if (arg == "OFF") 
-                        s.bias_tee = false;
-                else
-                        throw "Invalid BIASTEE switch on command line [on/off]";
-        }
+		else if (option == "BIASTEE")
+		{
+			if (arg == "ON")
+				s.bias_tee = true;
+			else if (arg == "OFF") 
+				s.bias_tee = false;
+			else
+				throw "Invalid BIASTEE switch on command line [on/off]";
+		}
 		else
 			throw "Invalid setting for RTLSDR on command line";
 
