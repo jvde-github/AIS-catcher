@@ -32,30 +32,30 @@ namespace Device {
 
 	void SettingsAIRSPY::Print()
 	{
-		std::cerr << "Airspy Gain Settings" << std::endl;
+		std::cerr << "Airspy Settings: ";
 
 		switch (mode)
 		{
 		case Device::Legacy:
-			std::cerr << "  Mode    : Legacy (LNA AGC only)" << std::endl;
+			std::cerr << "mode kegacy (LNA AGC only)";
 			break;
 
 		case Device::Sensitivity:
-			std::cerr << "  Mode    : SENSITIVITY set at " << gain << std::endl;
+			std::cerr << "mode sensitivity, gain " << gain;
 			break;
 
 		case Device::Linearity:
-			std::cerr << "  Mode    : LINEARITY set at " << gain << std::endl;
+			std::cerr << "mode linearity, gain " << gain;
 			break;
 
 		case Device::Manual:
-			std::cerr << "  Mode   : Free" << std::endl;
-			std::cerr << "  LNA    : " << (LNA_AGC?"auto" : "manual") << " mode - gain @ " << LNA_Gain << std::endl;
-			std::cerr << "  VGA    : gain @ " << VGA_Gain << std::endl;
-			std::cerr << "  MIXER  : " << (mixer_AGC ? "auto" : "manual") << " mode - gain @ " << mixer_Gain << std::endl;;
+			std::cerr << "mode free, ";
+			std::cerr << "lna_mode " << (LNA_AGC?"auto" : "manual") << ", lna_gain " << LNA_Gain;
+			std::cerr << ", vga_gain  " << VGA_Gain;
+			std::cerr << ", mixer_mode " << (mixer_AGC ? "auto" : "manual") << ", mixer_gain: " << mixer_Gain;
 			break;
 		}
-		std::cerr << "  BIASTEE : " << (bias_tee ? "on" : "off") << std::endl;;
+		std::cerr << ", bias_tee " << (bias_tee ? "on" : "off") << std::endl;;
 	}
 
 	//---------------------------------------
