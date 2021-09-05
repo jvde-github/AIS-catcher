@@ -249,7 +249,7 @@ void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int a
 		else if (option == "MIXER")
 		{
 			s.mode = Device::Manual;
-			
+
 			if (arg == "AUTO")
 				s.mixer_AGC = true;
 			else
@@ -261,8 +261,8 @@ void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int a
 		else if (option == "LNA")
 		{
 			s.mode = Device::Manual;
-			
-			if (option == "AUTO")
+
+			if (arg == "AUTO")
 				s.LNA_AGC = true;
 			else
 			{
@@ -270,19 +270,19 @@ void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int a
 				s.LNA_Gain = parseInteger(arg, 0, 15);
 			}
 		}
-        else if (option == "BIASTEE")
-        {
-                if (arg == "ON")
-                        s.bias_tee = true;
-                else if (option == "OFF")
-                        s.bias_tee = false;
-                else
-                        throw "Invalid BIASTEE switch on command line [on/off]";
-        }
+        	else if (option == "BIASTEE")
+        	{
+                	if (arg == "ON")
+                        	s.bias_tee = true;
+                	else if (arg == "OFF")
+                        	s.bias_tee = false;
+                	else
+                        	throw "Invalid BIASTEE switch on command line [on/off]";
+        	}
 		else
 			throw " Invalid  setting for AIRSPY on command line";
 
-		option += 2;
+		ptr += 2;
 	}
 }
 
