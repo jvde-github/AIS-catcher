@@ -37,7 +37,7 @@ namespace Device {
 		switch (mode)
 		{
 		case Device::Legacy:
-			std::cerr << "mode kegacy (LNA AGC only)";
+			std::cerr << "mode legacy";
 			break;
 
 		case Device::Sensitivity:
