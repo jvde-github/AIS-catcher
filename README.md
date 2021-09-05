@@ -35,7 +35,7 @@ use: AIS-catcher [options]
 	[-d:x select device based on index (default: 0)]
 	[-d xxxx select device based on serial number]
 
-	[-gr RTLSDR specic settings: TUNER [auto/0+] RTLAGC [on/off] BIASTEE [on/off]
+	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off]
 	[-p xx frequency correction for RTL SDR]
 
 	[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] BIASTEE [on/off] ]
@@ -96,9 +96,9 @@ Gain settings specific for the RTL SDR can be set on the command line with the `
 ```console
 AIS-catcher -gr TUNER auto RTLAGC off
 ```
-To set the tuner gain to a manual level of 12, we can use the following command:
+To set the tuner gain to a manual level of 35.4, we can use the following command:
 ```console
-AIS-catcher -gr TUNER 12 
+AIS-catcher -gr TUNER 35.4 
 ```
 Please note that for now the settings on the command line are case sensitive.
 ### Airspy Mini
