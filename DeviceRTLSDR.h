@@ -44,7 +44,7 @@ namespace Device{
 
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
-		int tuner_Gain = 0;
+		FLOAT32 tuner_Gain = 33.0;
 
 		bool bias_tee = false;
 
@@ -79,7 +79,7 @@ namespace Device{
 		rtlsdr_dev_t* getDevice() { return dev; }
 
 		void setTuner_GainMode(int);
-		void setTuner_Gain(int);
+		void setTuner_Gain(FLOAT32);
 		void setRTL_AGC(int);
 		void setBiasTee(int);
 
