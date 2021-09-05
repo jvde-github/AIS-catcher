@@ -32,8 +32,8 @@ namespace Device {
 	{
 		std::cerr << "RTLSDR settings: ";
 
-		std::cerr << "tuner_mode " << (tuner_AGC?"auto" : "manual") << ", tuner_gain "  << tuner_Gain << ", RTLAGC " << (RTL_AGC?"on" : "off");
-		std::cerr << ", bias_tee " << (bias_tee?"on" : "off") << ", freq correction " << FreqCorrection << std::endl;
+		std::cerr << "tuner_mode " << (tuner_AGC?"AUTO" : "MANUAL") << ", tuner_gain "  << tuner_Gain << ", RTLAGC " << (RTL_AGC?"ON" : "OFF");
+		std::cerr << ", bias_tee " << (bias_tee?"ON" : "OFF") << ", freq correction " << FreqCorrection << std::endl;
         }
 
 	//---------------------------------------
