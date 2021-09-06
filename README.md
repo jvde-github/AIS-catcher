@@ -95,26 +95,19 @@ Gain settings specific for the RTL SDR can be set on the command line with the `
 ```console
 AIS-catcher -gr tuner 33.3 rtlagc ON
 ```
-To set the tuner gain to a manual level of 35.4, we can use the following command:
-```console
-AIS-catcher -gr tuner 35.4 
-```
 Please note that these settings are not case sensitive.
+
 ### Airspy Mini
 
 The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
 ```console
 AIS-catcher -gm linearity 10
 ```
-And similar for 'sensitivity'  mode:
-```console
-AIS-catcher -gm sensitivity 10
-```
-Finally, full control is obtained with a command like:
+Finally, gains at different stages can be set as follows:
 ```console
 AIS-catcher -gm lna AUTO vga 12 mixer 12
 ```
-More guidance on setting the gain model and levels can be obtained from the reference.
+More guidance on setting the gain model and levels can be obtained in the mentioned reference.
 
 ## Multiple receiver models
 
