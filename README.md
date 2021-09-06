@@ -91,9 +91,9 @@ AIS-catcher -r test_288.raw -s 288000 -v
 The command line allows you to set some device specific parameters. Below some examples.
 
 ### RTL SDR
-Gain settings specific for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the following command sets the tuner gain to automatic and the RTL AGC off:
+Gain settings specific for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the following command sets the tuner gain to +33.3 and the RTL AGC on:
 ```console
-AIS-catcher -gr tuner AUTO RTLAGC OFF
+AIS-catcher -gr tuner 33.3 rtlagc ON
 ```
 To set the tuner gain to a manual level of 35.4, we can use the following command:
 ```console
