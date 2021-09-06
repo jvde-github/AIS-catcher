@@ -32,29 +32,36 @@ namespace Device {
 
 	void SettingsAIRSPY::Print()
 	{
-		std::cerr << "Airspy Settings: ";
+		std::cerr << "Airspy Settings: -gm";
 
 		switch (mode)
 		{
 		case Device::Legacy:
-			std::cerr << "mode legacy";
+			std::cerr << "";
 			break;
 
 		case Device::Sensitivity:
-			std::cerr << "mode sensitivity " << gain;
+			std::cerr << " sensitivity " << gain;
 			break;
 
 		case Device::Linearity:
-			std::cerr << "mode linearity " << gain;
+			std::cerr << " linearity " << gain;
 			break;
 
 		case Device::Manual:
-			std::cerr << "mode free, ";
-			std::cerr << "lna_mode " << (LNA_AGC?"AUTO" : "MANUAL") << ", lna_gain " << LNA_Gain << ", vga_gain " << VGA_Gain;
-			std::cerr << ", mixer_mode " << (mixer_AGC ? "AUTO" : "MANUAL") << ", mixer_gain: " << mixer_Gain;
+
+			std::cerr << " lna ";
+			if(LNA_AGC) std::cerr << "AUTO";
+			else std::cerr << LNA_Gain;
+
+			std::cerr << " mixer ";
+			if(mixer_AGC) std::cerr << "AUTO";
+			else std::cerr << mixer_Gain; 
+
+			std::cerr << " vga " << VGA_Gain;
 			break;
 		}
-		std::cerr << ", bias_tee " << (bias_tee ? "ON" : "OFF") << std::endl;;
+		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << std::endl;;
 	}
 
 	//---------------------------------------
