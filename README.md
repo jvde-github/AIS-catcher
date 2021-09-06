@@ -5,7 +5,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
-Release version 0.2: Added advanced gain and bias tee support for Airspy and RTLSDR 
+Release version 0.21: Added advanced gain and bias tee support for Airspy and RTLSDR 
 
 Release version 0.19: Added Airspy support
 
