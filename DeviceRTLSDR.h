@@ -30,25 +30,28 @@ SOFTWARE.
 
 namespace Device{
 
-        enum RTLSDRGainMode
-        {
-                Default
-        };
-
+    enum class RTLSDRGainMode
+    {
+            Default
+    };
 
 	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
 	class SettingsRTLSDR : public DeviceSettings
 	{
-	public:
-		int FreqCorrection = 0;
+	private:
 
+		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
-
 		bool bias_tee = false;
 
+	public:
+
+		friend class RTLSDR;
+
 		void Print();
+		void Set(std::string option, std::string arg);
 	};
 
 	class RTLSDR : public Control, public StreamOut<CU8>

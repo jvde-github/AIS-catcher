@@ -76,4 +76,63 @@ namespace Util
 
 		float getTotalTiming() { return timing; }
 	};
+
+	class Parse
+	{
+	public:
+
+		static int Integer(std::string str, int min, int max)
+		{
+			int number = 0;
+
+			try
+			{
+				number = std::stoi(str);
+			}
+			catch (const std::exception& e) { throw "Error: expected a number on command line"; }
+
+			if (number < min || number > max) throw "Error: Number out of range on command line";
+
+			return number;
+		}
+
+		static FLOAT32 Float(std::string str, FLOAT32 min, FLOAT32 max)
+		{
+			FLOAT32 number = 0;
+
+			try
+			{
+				number = std::stof(str);
+			}
+			catch (const std::exception& e) { throw "Error: expected a number on command line"; }
+
+			if (number < min || number > max) throw "Error: Number out of range on command line";
+
+			return number;
+		}
+
+		static bool Switch(std::string arg)
+		{
+			if (arg == "OFF") return false;
+			if (arg != "ON") throw "Error on command line expected [on/off]";
+
+			return true;
+		}
+
+		static bool AutoInteger(std::string arg, int min, int max, int& val)
+		{
+			if (arg == "AUTO") return true;
+
+			val = Integer(arg, min, max);
+			return false;
+		}
+
+		static bool AutoFloat(std::string arg, int min, int max, FLOAT32& val)
+		{
+			if (arg == "AUTO") return true;
+
+			val = Float(arg, min, max);
+			return false;
+		}
+	};
 }

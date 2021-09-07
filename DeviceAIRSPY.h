@@ -31,19 +31,18 @@ SOFTWARE.
 
 namespace Device {
 
-	enum AIRSPYGainMode
+	enum class AIRSPYGainMode
 	{
-		Manual,
+		Free,
 		Sensitivity,
-		Linearity,
-		Legacy
+		Linearity
 	};
 
 	class SettingsAIRSPY : public DeviceSettings
 	{
-	public:
+	private:
 
-		AIRSPYGainMode mode = Legacy; // LNA AGC only, will be removed
+		AIRSPYGainMode mode = AIRSPYGainMode::Free;
 
 		int gain = 16;
 
@@ -56,7 +55,12 @@ namespace Device {
 
 		bool bias_tee = false;
 
+	public:
+
+		friend class AIRSPY;
+
 		void Print();
+		void Set(std::string option, std::string arg);
 	};
 
 	class AIRSPY : public Control, public StreamOut<CFLOAT32>
@@ -78,6 +82,7 @@ namespace Device {
 
 		void setSensitivity_Gain(int);
 		void setLinearity_Gain(int);
+
 	public:
 
 		// Control
@@ -87,7 +92,6 @@ namespace Device {
 
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
-
 
 		std::vector<uint32_t> SupportedSampleRates();
 
@@ -103,7 +107,6 @@ namespace Device {
 		void openDevice();
 
 		void setSettings(SettingsAIRSPY& s);
-
 #endif
 	};
 }
