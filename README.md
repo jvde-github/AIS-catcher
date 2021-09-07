@@ -34,7 +34,7 @@ use: AIS-catcher [options]
 	[-d:x select device based on index (default: 0)]
 	[-d xxxx select device based on serial number]
 
-	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off]
+	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
 	[-p xx frequency correction for RTL SDR]
 
 	[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] BIASTEE [on/off] ]
