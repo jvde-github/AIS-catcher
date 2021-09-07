@@ -31,6 +31,8 @@ namespace AIS
 
 	void ModelFrontend::buildModel(int sample_rate, bool timerOn)
 	{
+		setName("Front end only");
+
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
@@ -82,7 +84,6 @@ namespace AIS
 	void ModelBase::buildModel(int sample_rate, bool timerOn)
 	{
 		setName("Base (non-coherent)");
-
 		ModelFrontend::buildModel(sample_rate, timerOn);
 
 		FR_a.setTaps(Filters::Receiver);
@@ -99,7 +100,7 @@ namespace AIS
 
 		return;
 	}
-	
+
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
 	{
 		setName("Standard (non-coherent)");
@@ -141,7 +142,6 @@ namespace AIS
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
 		setName("AIS engine v0.21");
-
 		ModelFrontend::buildModel(sample_rate, timerOn);
 
 		FC_a.setTaps(Filters::Coherent);
@@ -178,6 +178,55 @@ namespace AIS
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
 			}
+		}
+
+		return;
+	}
+
+
+	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
+	{
+		setName("Challenger model (experimental)");
+		ModelFrontend::buildModel(sample_rate, timerOn);
+
+
+		FR_a.setTaps(Filters::Coherent);
+		FR_b.setTaps(Filters::Coherent);
+
+		S_a.setBuckets(nSymbolsPerSample);
+		S_b.setBuckets(nSymbolsPerSample);
+
+		DEC_a.resize(nSymbolsPerSample);
+		DEC_b.resize(nSymbolsPerSample);
+
+		CD_a.resize(nSymbolsPerSample);
+		CD_b.resize(nSymbolsPerSample);
+
+		CGF_a.setN(512,375/2);
+		CGF_b.setN(512,375/2);
+
+		F_a >> CGF_a >> FR_a >> S_a;
+		F_b >> CGF_b >> FR_b >> S_b;
+
+		for (int i = 0; i < nSymbolsPerSample; i++)
+		{
+			S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
+			S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
+
+			DEC_a[i].setChannel('A');
+			DEC_b[i].setChannel('B');
+
+			for (int j = 0; j < nSymbolsPerSample; j++)
+			{
+				if (i != j)
+				{
+					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
+					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+				}
+			}
+
+			DEC_a[i].DecoderMessage.Connect(CD_a[i]);
+			DEC_b[i].DecoderMessage.Connect(CD_b[i]);
 		}
 
 		return;
@@ -234,54 +283,6 @@ namespace AIS
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
 			}
-		}
-
-		return;
-	}
-
-	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
-	{
-		setName("Challenger model (experimental)");
-		ModelFrontend::buildModel(sample_rate, timerOn);
-
-
-		FR_a.setTaps(Filters::Coherent);
-		FR_b.setTaps(Filters::Coherent);
-
-		S_a.setBuckets(nSymbolsPerSample);
-		S_b.setBuckets(nSymbolsPerSample);
-
-		DEC_a.resize(nSymbolsPerSample);
-		DEC_b.resize(nSymbolsPerSample);
-
-		CD_a.resize(nSymbolsPerSample);
-		CD_b.resize(nSymbolsPerSample);
-
-		CGF_a.setN(512,375/2);
-		CGF_b.setN(512,375/2);
-
-		F_a >> CGF_a >> FR_a >> S_a;
-		F_b >> CGF_b >> FR_b >> S_b;
-
-		for (int i = 0; i < nSymbolsPerSample; i++)
-		{
-			S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
-			S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
-
-			DEC_a[i].setChannel('A');
-			DEC_b[i].setChannel('B');
-
-			for (int j = 0; j < nSymbolsPerSample; j++)
-			{
-				if (i != j)
-				{
-					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
-					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
-				}
-			}
-
-			DEC_a[i].DecoderMessage.Connect(CD_a[i]);
-			DEC_b[i].DecoderMessage.Connect(CD_b[i]);
 		}
 
 		return;
