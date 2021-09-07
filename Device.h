@@ -65,6 +65,7 @@ namespace Device{
 	{
 	public:
 		virtual void Print(void) {}
+		virtual void Set(std::string option, std::string arg) {}
 	};
 
 	class Control : public MessageIn<SystemMessage>

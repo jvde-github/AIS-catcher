@@ -24,32 +24,23 @@ SOFTWARE.
 
 namespace AIS
 {
-	std::vector<uint32_t> ModelStandard::SupportedSampleRates()
+	std::vector<uint32_t> ModelFrontend::SupportedSampleRates()
 	{
-		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
+		return { 3000000, 6000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
 	}
 
-	void ModelStandard::buildModel(int sample_rate, bool timerOn)
+	void ModelFrontend::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("Standard (non-coherent)");
-
-		const int nSymbolsPerSample = 48000/9600;
-
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
-
-		FR_a.setTaps(Filters::Receiver);
-		FR_b.setTaps(Filters::Receiver);
-
-		S_a.setBuckets(nSymbolsPerSample);
-		S_b.setBuckets(nSymbolsPerSample);
-
-		DEC_a.resize(nSymbolsPerSample);
-		DEC_b.resize(nSymbolsPerSample);
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
 
 		switch (sample_rate)
 		{
+		case 6000000:
+			US.setParams(1500000, 1536000);
+			physical >> DS2_6 >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
 		case 3000000:
 			US.setParams(1500000, 1536000);
 			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -72,18 +63,59 @@ namespace AIS
 			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
-			DSK.setParams(Filters::BlackmanHarris_28_3,3);
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> DSK >> ROT;
 			break;
 		case 96000:
 			physical >> ROT;
 			break;
 		default:
-			throw "Internal error: sample rate not supported in standard model.";
+			throw "Internal error: sample rate not supported in default engine.";
 		}
 
-		ROT.up >> DS2_a >> F_a >> FM_a >> FR_a >> S_a;
-		ROT.down >> DS2_b >> F_b >> FM_b >> FR_b >> S_b;
+		ROT.up >> DS2_a >> F_a;
+		ROT.down >> DS2_b >> F_b;
+
+		return;
+	}
+
+	void ModelBase::buildModel(int sample_rate, bool timerOn)
+	{
+		setName("Base (non-coherent)");
+
+		ModelFrontend::buildModel(sample_rate, timerOn);
+
+		FR_a.setTaps(Filters::Receiver);
+		FR_b.setTaps(Filters::Receiver);
+
+		DEC_a.setChannel('A');
+		DEC_b.setChannel('B');
+
+		F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+		F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+
+		DEC_a.DecoderMessage.Connect(sampler_a);
+		DEC_b.DecoderMessage.Connect(sampler_b);
+
+		return;
+	}
+	
+	void ModelStandard::buildModel(int sample_rate, bool timerOn)
+	{
+		setName("Standard (non-coherent)");
+		ModelFrontend::buildModel(sample_rate, timerOn);
+
+		FR_a.setTaps(Filters::Receiver);
+		FR_b.setTaps(Filters::Receiver);
+
+		S_a.setBuckets(nSymbolsPerSample);
+		S_b.setBuckets(nSymbolsPerSample);
+
+		DEC_a.resize(nSymbolsPerSample);
+		DEC_b.resize(nSymbolsPerSample);
+
+		F_a >> FM_a >> FR_a >> S_a;
+		F_b >> FM_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -106,81 +138,11 @@ namespace AIS
 		return;
 	}
 
-	std::vector<uint32_t> ModelBase::SupportedSampleRates()
-	{
-		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
-	}
-
-	void ModelBase::buildModel(int sample_rate,bool timerOn)
-	{
-		setName("Base (non-coherent)");
-
-		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
-
-		FR_a.setTaps(Filters::Receiver);
-		FR_b.setTaps(Filters::Receiver);
-
-		DEC_a.setChannel('A');
-		DEC_b.setChannel('B');
-
-		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
-
-		switch (sample_rate)
-		{
-		case 3000000:
-			US.setParams(1500000, 1536000);
-			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 2304000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 1920000:
-			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
-			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 384000:
-			physical >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 288000:
-			DSK.setParams(Filters::BlackmanHarris_28_3,3);
-			physical >> DSK >> ROT;
-			break;
-		case 96000:
-			physical >> ROT;
-			break;
-		default:
-			throw "Internal error: sample rate not supported in base model.";
-		}
-
-		ROT.up >> DS2_a >> F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		ROT.down >> DS2_b >> F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
-
-		DEC_a.DecoderMessage.Connect(sampler_a);
-		DEC_b.DecoderMessage.Connect(sampler_b);
-
-		return;
-	}
-
-
-	std::vector<uint32_t> ModelCoherent::SupportedSampleRates()
-	{
-		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
-	}
-
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
 		setName("AIS engine v0.21");
 
-		const int nSymbolsPerSample = 48000/9600;
-
-		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
+		ModelFrontend::buildModel(sample_rate, timerOn);
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
@@ -197,44 +159,8 @@ namespace AIS
 		CGF_a.setN(512,375/2);
 		CGF_b.setN(512,375/2);
 
-		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
-
-		switch (sample_rate)
-		{
-		case 3000000:
-			US.setParams(1500000, 1536000);
-			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 2304000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 1920000:
-			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
-			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 384000:
-			physical >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 288000:
-			DSK.setParams(Filters::BlackmanHarris_28_3,3);
-			physical >> DSK >> ROT;
-			break;
-		case 96000:
-			physical >> ROT;
-			break;
-		default:
-			throw "Internal error: sample rate not supported in default engine.";
-		}
-
-		ROT.up >> DS2_a >> F_a >> CGF_a >> FC_a >> S_a;
-		ROT.down >> DS2_b >> F_b >> CGF_b >> FC_b >> S_b;
+		F_a >> CGF_a >> FC_a >> S_a;
+		F_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -313,17 +239,11 @@ namespace AIS
 		return;
 	}
 
-	std::vector<uint32_t> ModelChallenger::SupportedSampleRates()
-	{
-		return { 3000000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 96000 };
-	}
-
 	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
 	{
 		setName("Challenger model (experimental)");
+		ModelFrontend::buildModel(sample_rate, timerOn);
 
-		const int nSymbolsPerSample = 48000 / 9600;
-		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		FR_a.setTaps(Filters::Coherent);
 		FR_b.setTaps(Filters::Coherent);
@@ -340,44 +260,8 @@ namespace AIS
 		CGF_a.setN(512,375/2);
 		CGF_b.setN(512,375/2);
 
-		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
-
-		switch (sample_rate)
-		{
-		case 3000000:
-			US.setParams(1500000, 1536000);
-			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 2304000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 1920000:
-			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
-			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 384000:
-			physical >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 288000:
-			DSK.setParams(Filters::BlackmanHarris_28_3,3);
-			physical >> DSK >> ROT;
-			break;
-		case 96000:
-			physical >> ROT;
-			break;
-		default:
-			throw "Internal error: sample rate not supported in default engine.";
-		}
-
-		ROT.up >> DS2_a >> F_a >> CGF_a >> FR_a >> S_a;
-		ROT.down >> DS2_b >> F_b >> CGF_b >> FR_b >> S_b;
+		F_a >> CGF_a >> FR_a >> S_a;
+		F_b >> CGF_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{

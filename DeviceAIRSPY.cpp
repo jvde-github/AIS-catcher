@@ -26,6 +26,7 @@ SOFTWARE.
 #include "Device.h"
 #include "DeviceAIRSPY.h"
 #include "Common.h"
+#include "Utilities.h"
 
 namespace Device {
 
@@ -36,19 +37,15 @@ namespace Device {
 
 		switch (mode)
 		{
-		case Device::Legacy:
-			std::cerr << "";
-			break;
-
-		case Device::Sensitivity:
+		case Device::AIRSPYGainMode::Sensitivity:
 			std::cerr << " sensitivity " << gain;
 			break;
 
-		case Device::Linearity:
+		case Device::AIRSPYGainMode::Linearity:
 			std::cerr << " linearity " << gain;
 			break;
 
-		case Device::Manual:
+		case Device::AIRSPYGainMode::Free:
 
 			std::cerr << " lna ";
 			if(LNA_AGC) std::cerr << "AUTO";
@@ -62,6 +59,44 @@ namespace Device {
 			break;
 		}
 		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << std::endl;;
+	}
+
+	void SettingsAIRSPY::Set(std::string option, std::string arg)
+	{
+		for (auto& c : option) c = toupper(c);
+		for (auto& c : arg) c = toupper(c);
+
+		if (option == "SENSITIVITY")
+		{
+			mode = Device::AIRSPYGainMode::Sensitivity;
+			gain = Util::Parse::Integer(arg, 0, 22);
+		}
+		else if (option == "LINEARITY")
+		{
+			mode = Device::AIRSPYGainMode::Linearity;
+			gain = Util::Parse::Integer(arg, 0, 22);
+		}
+		else if (option == "VGA")
+		{
+			mode = Device::AIRSPYGainMode::Free;
+			VGA_Gain = Util::Parse::Integer(arg, 0, 15);
+		}
+		else if (option == "MIXER")
+		{
+			mode = Device::AIRSPYGainMode::Free;
+			mixer_AGC = Util::Parse::AutoInteger(arg, 0, 15, mixer_Gain);
+		}
+		else if (option == "LNA")
+		{
+			mode = Device::AIRSPYGainMode::Free;
+			LNA_AGC = Util::Parse::AutoInteger(arg, 0, 15, LNA_Gain);;
+		}
+		else if (option == "BIASTEE")
+		{
+			bias_tee = Util::Parse::Switch(arg);
+		}
+		else
+			throw " Invalid setting for AIRSPY.";
 	}
 
 	//---------------------------------------
@@ -116,10 +151,10 @@ namespace Device {
 		if (airspy_set_mixer_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Mixer gain.";
 	}
 
-        void AIRSPY::setBiasTee(bool b)
-        {
-                if (airspy_set_rf_bias(dev, b) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Bias Tee.";
-        }
+    void AIRSPY::setBiasTee(bool b)
+    {
+            if (airspy_set_rf_bias(dev, b) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Bias Tee.";
+    }
 
 	void AIRSPY::setVGA_Gain(int a)
 	{
@@ -208,19 +243,15 @@ namespace Device {
 	{
 		switch (s.mode)
 		{
-		case Device::Legacy:
-			setLNA_AGC(1);
-			break;
-
-		case Device::Sensitivity:
+		case Device::AIRSPYGainMode::Sensitivity:
 			setSensitivity_Gain(s.gain);
 			break;
 
-		case Device::Linearity:
+		case Device::AIRSPYGainMode::Linearity:
 			setLinearity_Gain(s.gain);
 			break;
 
-		case Device::Manual:
+		case Device::AIRSPYGainMode::Free:
 			setLNA_AGC( (int) s.LNA_AGC );
 			if (!s.LNA_AGC) setLNA_Gain(s.LNA_Gain);
 

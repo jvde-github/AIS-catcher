@@ -32,6 +32,7 @@ SOFTWARE.
 
 namespace AIS
 {
+	// Abstract demodulation model
 	class Model
 	{
 	protected:
@@ -61,20 +62,30 @@ namespace AIS
 		float getTotalTiming() { return timer.getTotalTiming(); }
 	};
 
-	// Standard demodulation model
 
-	class ModelStandard : public Model
+	// common downsampling model 
+	class ModelFrontend : public Model
 	{
-		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-
+	private:
 		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5, DS2_6;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::Upsample US;
-		DSP::FilterCIC5 F_a, F_b;
 
+	protected:
+		const int nSymbolsPerSample = 48000 / 9600;
+
+		DSP::FilterCIC5 F_a, F_b;
 		DSP::Rotate ROT;
-		
+	public:
+		ModelFrontend(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		std::vector<uint32_t> SupportedSampleRates();
+		void buildModel(int, bool);
+	};
+
+	// Standard demodulation model
+	class ModelStandard : public ModelFrontend
+	{
 		DSP::FMDemodulation FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
@@ -82,23 +93,14 @@ namespace AIS
 		DSP::SamplerParallel S_a, S_b;
 
 	public:
-		ModelStandard(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-		std::vector<uint32_t> SupportedSampleRates();
-
-		void buildModel(int,bool);
+		ModelStandard(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		void buildModel(int, bool);
 	};
 
 
 	// Base model for development purposes, simplest and fastest
-
-	class ModelBase : public Model
+	class ModelBase : public ModelFrontend
 	{
-		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
-		DSP::Downsample2CIC5 DS2_a, DS2_b;
-		DSP::Upsample US;
-		DSP::FilterCIC5 F_a, F_b;
-		DSP::Rotate ROT;
 		DSP::FMDemodulation FM_a, FM_b;
 		DSP::Filter FR_a, FR_b;
 		DSP::SamplerPLL sampler_a, sampler_b;
@@ -106,22 +108,14 @@ namespace AIS
 
 	public:
 
-		ModelBase(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-		std::vector<uint32_t> SupportedSampleRates();
-
+		ModelBase(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
 		void buildModel(int, bool);
 	};
 
 	// simple model embedding some elements of a coherent model with local phase estimation
-	class ModelCoherent : public Model
+	class ModelCoherent : public ModelFrontend
 	{
-		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
-		DSP::Downsample2CIC5 DS2_a, DS2_b;
-		DSP::Upsample US;
-		DSP::FilterCIC5 F_a, F_b;
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		DSP::Rotate ROT;
 		std::vector<DSP::CoherentDemodulation> CD_a, CD_b;
 
 		DSP::FilterComplex FC_a, FC_b;
@@ -129,8 +123,7 @@ namespace AIS
 		DSP::SamplerParallelComplex S_a, S_b;
 
 	public:
-		ModelCoherent(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-		std::vector<uint32_t> SupportedSampleRates();
+		ModelCoherent(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
 
 		void buildModel(int,bool);
 	};
@@ -154,24 +147,16 @@ namespace AIS
 	};
 
 	// Challenger model, some small improvements to test before moving into the default engine
-	class ModelChallenger : public Model
+	class ModelChallenger : public ModelFrontend
 	{
-		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5;
-		DSP::Downsample2CIC5 DS2_a, DS2_b;
-		DSP::Upsample US;
-		DSP::FilterCIC5 F_a, F_b;
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		DSP::Rotate ROT;
 		std::vector<DSP::ChallengerDemodulation> CD_a, CD_b;
 		DSP::FilterComplex FR_a, FR_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::SamplerParallelComplex S_a, S_b;
 
 	public:
-		ModelChallenger(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-		std::vector<uint32_t> SupportedSampleRates();
-
+		ModelChallenger(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
 		void buildModel(int, bool);
 	};
 

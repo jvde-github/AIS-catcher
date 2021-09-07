@@ -52,74 +52,6 @@ void consoleHandler(int signal)
 }
 #endif
 
-// -------------------------------
-
-bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
-{
-	for(uint32_t r : rates) if(r == s) return true;
-	return false;
-}
-
-int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> model_rates)
-{
-	for (auto r : model_rates) if (isRateDefined(r, dev_rates)) return r;
-	throw "Sampling rate not available for this combination of model and device.";
-
-	return 0;
-}
-
-int parseInteger(std::string str, int min, int max)
-{
-	int number = 0;
-
-	try
-	{
-		number = std::stoi(str);
-	} catch (const std::exception& e) { throw "Error: expected a number on command line"; }
-
-	if(number < min || number > max) throw "Error: Number out of range on command line";
-
-	return number;
-}
-
-FLOAT32 parseFloat(std::string str, FLOAT32 min, FLOAT32 max)
-{
-        FLOAT32 number = 0;
-
-        try
-        {
-                number = std::stof(str);
-        } catch (const std::exception& e) { throw "Error: expected a number on command line"; }
-
-        if(number < min || number > max) throw "Error: Number out of range on command line";
-
-        return number;
-}
-
-bool parseSwitch(std::string arg)
-{
-	if (arg == "OFF") return false;
-	if (arg != "ON") throw "Error on command line expected [on/off]";
-
-	return true;
-}
-
-bool parseAutoInteger(std::string arg,int min, int max, int &val)
-{
-	if (arg == "AUTO") return true;
-
-	val = parseInteger(arg,min,max);
-	return false;
-}
-
-bool parseAutoFloat(std::string arg,int min, int max, FLOAT32 &val)
-{
-	if (arg == "AUTO") return true;
-
-	val = parseFloat(arg,min,max);
-	return false;
-}
-
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
@@ -141,7 +73,7 @@ void Usage()
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 #ifdef HASRTLSDR
 	std::cerr << std::endl;
-	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off]" << std::endl;
+	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
 #ifdef HASAIRSPY
@@ -220,6 +152,22 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 	return liveModels;
 }
 
+// -------------------------------
+
+bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
+{
+	for (uint32_t r : rates) if (r == s) return true;
+	return false;
+}
+
+int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> model_rates)
+{
+	for (auto r : model_rates) if (isRateDefined(r, dev_rates)) return r;
+	throw "Sampling rate not available for this combination of model and device.";
+
+	return 0;
+}
+
 void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liveModels, Device::Control* control)
 {
 
@@ -239,84 +187,14 @@ void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liv
 	}
 }
 
-// Needs clean up and streamlining....
-void parseAirspySettings(Device::SettingsAIRSPY& s, char* argv[],int &ptr, int argc)
+void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int& ptr, int argc)
 {
-	while (ptr < argc - 1)
+	while (ptr < argc - 1 && argv[ptr][0] != '-')
 	{
-		std::string option = argv[ptr];
-		std::string arg = argv[ptr + 1];
+		std::string option = argv[ptr++];
+		std::string arg = argv[ptr++];
 
-		if (option[0] == '-') break;
-
-		for (auto& c : option) c = toupper(c);
-		for (auto& c : arg) c = toupper(c);
-
-		if (option == "SENSITIVITY")
-		{
-			s.mode = Device::Sensitivity;
-			s.gain = parseInteger(arg, 0, 22);
-		}
-		else if (option == "LINEARITY")
-		{
-			s.mode = Device::Linearity;
-			s.gain = parseInteger(arg, 0, 22);
-		}
-		else if (option == "VGA")
-		{
-			s.mode = Device::Manual;
-			s.VGA_Gain = parseInteger(arg, 0, 15);
-		}
-		else if (option == "MIXER")
-		{
-			s.mode = Device::Manual;
-			s.mixer_AGC = parseAutoInteger(arg,0,15,s.mixer_Gain);
-		}
-		else if (option == "LNA")
-		{
-			s.mode = Device::Manual;
-			s.LNA_AGC = parseAutoInteger(arg,0,15,s.LNA_Gain);;
-		}
-        	else if (option == "BIASTEE")
-        	{
-			s.bias_tee = parseSwitch(arg);
-        	}
-		else
-			throw " Invalid setting for AIRSPY on command line";
-
-		ptr += 2;
-	}
-}
-
-// Needs clean up and streamlining....
-void parseRTLSDRSettings(Device::SettingsRTLSDR& s, char* argv[],int &ptr, int argc)
-{
-	while (ptr < argc - 1)
-	{
-		std::string option = argv[ptr];
-		std::string arg = argv[ptr+1];
-
-		if (option[0] == '-') break;
-
-		for (auto& c : option) c = toupper(c);
-		for (auto& c : arg) c = toupper(c);
-
-		if (option == "TUNER")
-		{
-			s.tuner_AGC = parseAutoFloat(arg,0,50,s.tuner_Gain);
-		}
-		else if (option == "RTLAGC")
-		{
-			s.RTL_AGC = parseSwitch(arg);
-		}
-		else if (option == "BIASTEE")
-		{
-			s.bias_tee = parseSwitch(arg);
-		}
-		else
-			throw "Invalid setting for RTLSDR on command line";
-
-		ptr += 2;
+		s.Set(option, arg);
 	}
 }
 
@@ -343,7 +221,6 @@ int main(int argc, char* argv[])
 	Device::Format RAWformat = Device::Format::CU8;
 
 	std::string filename_in = "";
-	std::string filename_out = "";
 	std::string udp_address = "";
 	std::string udp_port = "";
 
@@ -382,18 +259,18 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				sample_rate = parseInteger(arg1, 0, 3000000);
+				sample_rate = Util::Parse::Integer(arg1, 0, 6000000);
 				ptr+=2;
 				break;
 			case 'm':
-				liveModelsSelected.push_back(parseInteger(arg1,0,5));
+				liveModelsSelected.push_back(Util::Parse::Integer(arg1,0,5));
 				ptr+=2;
 				break;
 			case 'v':
 				verbose = true;
 				if (arg1 != "" && arg1[0] != '-')
 				{
-					verboseUpdateTime = parseInteger(arg1, 0, 3600) * 1000;
+					verboseUpdateTime = Util::Parse::Integer(arg1, 0, 3600) * 1000;
 					ptr++;
 				}
 				ptr++;
@@ -463,16 +340,16 @@ int main(int argc, char* argv[])
 				return 0;
 #ifdef HASRTLSDR
 			case 'p':
-				settingsRTL.FreqCorrection = parseInteger(arg1, -100, 100);
+				settingsRTL.Set("FREQOFFSET",arg1);
 				ptr += 2;
 				break;
 			case 'g':
 				if(param == "-gm")
-					parseAirspySettings(settingsAIRSPY, argv, ++ptr, argc);
+					parseDeviceSettings(settingsAIRSPY, argv, ++ptr, argc);
 				else if(param == "-gr")
-					parseRTLSDRSettings(settingsRTL, argv, ++ptr, argc);
+					parseDeviceSettings(settingsRTL, argv, ++ptr, argc);
 				else
-					throw "Invalid -gx switch on command line";
+					throw "Invalid -g switch on command line";
 				break;
 #endif
 			default:

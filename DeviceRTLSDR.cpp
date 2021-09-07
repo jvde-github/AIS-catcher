@@ -25,6 +25,7 @@ SOFTWARE.
 #include "Device.h"
 #include "DeviceRTLSDR.h"
 #include "Common.h"
+#include "Utilities.h"
 
 namespace Device {
 
@@ -37,8 +38,33 @@ namespace Device {
 		else std::cerr << tuner_Gain;
 
 		std::cerr << " rtlagc " << (RTL_AGC?"ON" : "OFF");
-		std::cerr << " biastee " << (bias_tee?"ON" : "OFF") << " -p " << FreqCorrection << std::endl;
-        }
+		std::cerr << " biastee " << (bias_tee?"ON" : "OFF") << " -p " << freq_offset << std::endl;
+    }
+
+	void SettingsRTLSDR::Set(std::string option, std::string arg)
+	{
+		for (auto& c : option) c = toupper(c);
+		for (auto& c : arg) c = toupper(c);
+
+		if (option == "TUNER")
+		{
+			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);
+		}
+		else if (option == "RTLAGC")
+		{
+			RTL_AGC = Util::Parse::Switch(arg);
+		}
+		else if (option == "BIASTEE")
+		{
+			bias_tee = Util::Parse::Switch(arg);
+		}
+		else if (option == "FREQOFFSET")
+		{
+			freq_offset = Util::Parse::Integer(arg,-150,150);
+		}
+		else
+			throw "Invalid setting for RTLSDR.";
+	}
 
 	//---------------------------------------
 	// Device RTLSDR
@@ -204,7 +230,7 @@ namespace Device {
 
 	void RTLSDR::setSettings(SettingsRTLSDR &s)
 	{
-		setFrequencyCorrection(s.FreqCorrection);
+		setFrequencyCorrection(s.freq_offset);
 		setTuner_GainMode(s.tuner_AGC ? 0 : 1);
 
 		if(!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
