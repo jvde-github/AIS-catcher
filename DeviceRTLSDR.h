@@ -30,10 +30,10 @@ SOFTWARE.
 
 namespace Device{
 
-    enum class RTLSDRGainMode
-    {
-            Default
-    };
+	enum class RTLSDRGainMode
+	{
+		Default
+	};
 
 	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
 	class SettingsRTLSDR : public DeviceSettings

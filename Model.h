@@ -124,25 +124,6 @@ namespace AIS
 
 	public:
 		ModelCoherent(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
-
-		void buildModel(int,bool);
-	};
-
-	// Standard demodulation model for FM demodulated files
-
-	class ModelDiscriminator : public Model
-	{
-		Util::RealPart RP;
-		Util::ImaginaryPart IP;
-
-		DSP::Filter FR_a, FR_b;
-		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::SamplerParallel S_a, S_b;
-
-	public:
-		ModelDiscriminator(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-		std::vector<uint32_t> SupportedSampleRates();
-
 		void buildModel(int,bool);
 	};
 
@@ -160,4 +141,21 @@ namespace AIS
 		void buildModel(int, bool);
 	};
 
+	// Standard demodulation model for FM demodulated files
+
+	class ModelDiscriminator : public Model
+	{
+		Util::RealPart RP;
+		Util::ImaginaryPart IP;
+
+		DSP::Filter FR_a, FR_b;
+		std::vector<AIS::Decoder> DEC_a, DEC_b;
+		DSP::SamplerParallel S_a, S_b;
+
+	public:
+		ModelDiscriminator(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		void buildModel(int,bool);
+
+		std::vector<uint32_t> SupportedSampleRates();
+	};
 }

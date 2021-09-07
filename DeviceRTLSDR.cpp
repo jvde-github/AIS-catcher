@@ -39,7 +39,7 @@ namespace Device {
 
 		std::cerr << " rtlagc " << (RTL_AGC?"ON" : "OFF");
 		std::cerr << " biastee " << (bias_tee?"ON" : "OFF") << " -p " << freq_offset << std::endl;
-    }
+	}
 
 	void SettingsRTLSDR::Set(std::string option, std::string arg)
 	{
@@ -138,10 +138,10 @@ namespace Device {
 
 			tail = (tail + 1) % sizeFIFO;
 
-    		{
-    			std::lock_guard<std::mutex> lock(fifo_mutex);
+			{
+				std::lock_guard<std::mutex> lock(fifo_mutex);
 				count ++;
-    		}
+			}
 
 			fifo_cond.notify_one();
 		}
@@ -168,8 +168,7 @@ namespace Device {
 				std::unique_lock <std::mutex> lock(fifo_mutex);
 				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BufferLen / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
 
-				if (count == 0)
-					std::cerr << "Timeout on RTL SDR dongle" << std::endl;
+				if (count == 0) std::cerr << "Timeout on RTL SDR dongle" << std::endl;
 			}
 
 			if (count != 0)
