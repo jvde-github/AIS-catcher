@@ -5,10 +5,11 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
+Release version **0.22**: Support for 6MHz sampling rate
+
 Release version **0.21**: inclusion of advanced gain and bias tee support for Airspy and RTLSDR. 
 A [Windows binary version](https://drive.google.com/file/d/1wF2L6iu4I79E8j20gVSWhiBj0CHhh9Ik/view?usp=sharing) is available for download or [contact me](mailto:jvde.github@gmail.com).
 
-Release version **0.19**: Airspy Mini support added
 
 ## Purpose
 
