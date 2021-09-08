@@ -100,9 +100,12 @@ namespace Device {
 
 	void RTLSDR::setBiasTee(int a)
 	{
+#ifdef LIBRTLSDR_LEGACY
+		throw "RTLSDR: bias tee not supported in this version of librtlsdr";
+#else
 		if (rtlsdr_set_bias_tee(dev, a) != 0) throw "RTLSDR: cannot set bias tee.";
+#endif
 	}
-
 
 	void RTLSDR::setTuner_Gain(FLOAT32 a)
 	{
