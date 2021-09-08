@@ -83,8 +83,8 @@ namespace AIS
 
 	void ModelBase::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("Base (non-coherent)");
 		ModelFrontend::buildModel(sample_rate, timerOn);
+		setName("Base (non-coherent)");
 
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
@@ -103,8 +103,8 @@ namespace AIS
 
 	void ModelStandard::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("Standard (non-coherent)");
 		ModelFrontend::buildModel(sample_rate, timerOn);
+		setName("Standard (non-coherent)");
 
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
@@ -141,8 +141,8 @@ namespace AIS
 
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("AIS engine v0.21");
 		ModelFrontend::buildModel(sample_rate, timerOn);
+		setName("AIS engine v0.21");
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
@@ -186,9 +186,8 @@ namespace AIS
 
 	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("Challenger model (experimental)");
 		ModelFrontend::buildModel(sample_rate, timerOn);
-
+		setName("Challenger model (experimental)");
 
 		FR_a.setTaps(Filters::Coherent);
 		FR_b.setTaps(Filters::Coherent);

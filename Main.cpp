@@ -78,7 +78,7 @@ void Usage()
 #endif
 #ifdef HASAIRSPY
 	std::cerr << std::endl;
-	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] BIASTEE [on/off] ]" << std::endl;
+	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
 #endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
@@ -505,7 +505,7 @@ int main(int argc, char* argv[])
 
 		if(verbose)
 		{
-			std::cerr << "Generic settings: Freq  " << control->getFrequency()/1000000 << "M, " << "sample rate " << control->getSampleRate()/1000 << "K, model rate " << model_rate/1000 << "K" << std::endl;
+			std::cerr << "Generic settings: " << "sample rate -s " << control->getSampleRate() << ", model rate " << model_rate/1000 << "K" << std::endl;
 		}
 
 		// Main loop
