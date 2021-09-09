@@ -38,7 +38,7 @@ use: AIS-catcher [options]
 	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
 	[-p xx frequency correction for RTL SDR]
 
-	[-gm Airspy specific settings: SENSITIVITY [0-22] LINEARITY [0-22] VGA [0-15] LNA [auto/0-15] MIXER [auto/0-15] BIASTEE [on/off] ]
+	[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 
 	[-m xx run specific decoding model (default: 2)]
 	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
@@ -87,7 +87,7 @@ The following commands record a signal with ```rtl_sdr``` at a sampling rate of 
 rtl_sdr -s 288K -f 162M  test_288.raw
 AIS-catcher -r test_288.raw -s 288000 -v
 ```
-## Examples of device specific settings
+## Device specific settings
 
 The command line allows you to set some device specific parameters. Below some examples.
 
@@ -194,6 +194,8 @@ The process to install AIS-catcher then becomes:
 make
 sudo make install
 ```
+
+AIS-catcher requires a recent version of `librtlsdr-dev` which might result in compilation errors with older versions (e.g. as provided with Ubuntu 16.04). To overcome this, you can try to make with `make CFLAGS=-DLIBRTLSDR_LEGACY rtl-only`.
 
 ## Container images
 

@@ -79,10 +79,10 @@ namespace Device {
 
 	void AIRSPYHF::Play()
 	{
-		Control::Play(); 
+		Control::Play();
 
 		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS)
-			throw "AIRSPYHF: Cannot open device";
+			throw "AIRSPYHF: Cannot start device";
 
 		SleepSystem(10);
 	}
@@ -97,7 +97,7 @@ namespace Device {
 
 	std::vector<uint32_t> AIRSPYHF::SupportedSampleRates()
 	{
-		uint32_t nRates; 
+		uint32_t nRates;
 		std::vector<uint32_t> rates;
 
 		airspyhf_get_samplerates(dev, &nRates, 0);

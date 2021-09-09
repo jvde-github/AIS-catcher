@@ -90,12 +90,12 @@ namespace Device {
 
 	void RTLSDR::setTuner_GainMode(int a)
 	{
-		if (rtlsdr_set_tuner_gain_mode(dev, a) != 0) throw "RTLSDR: cannot set AGC.";
+		if (rtlsdr_set_tuner_gain_mode(dev, a) != 0) throw "RTLSDR: cannot set gain mode.";
 	}
 
 	void RTLSDR::setRTL_AGC(int a)
 	{
-		if (rtlsdr_set_agc_mode(dev, a) != 0) throw "RTLSDR: cannot set AGC.";
+		if (rtlsdr_set_agc_mode(dev, a) != 0) throw "RTLSDR: cannot set RTL AGC.";
 	}
 
 	void RTLSDR::setBiasTee(int a)
@@ -111,7 +111,7 @@ namespace Device {
 	{
 		int g = (int) a * 10;
 
-		if(rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDRL cannot set gain mode";
+		if(rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDR: cannot set gain mode";
 
 		int nGains = rtlsdr_get_tuner_gains(dev, NULL);
 		if (nGains <= 0) throw "RTLSDR: no gains available";
@@ -124,14 +124,14 @@ namespace Device {
 		for(auto h : gains) 
 			if(abs(h - g) < abs(g - gain)) gain = h;
 
-		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw "RTLSDR: cannot set Tuner gain.";
+		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw "RTLSDR: cannot set tuner gain.";
 	}
 
 	void RTLSDR::callback(CU8* buf, int len)
 	{
 		if(count == sizeFIFO)
 		{
-			std::cerr << "Buffer overrun!" << std::endl;
+			std::cerr << "RTLSDR: Buffer overrun!" << std::endl;
 		}
 		else
 		{
@@ -162,7 +162,7 @@ namespace Device {
 
 	void RTLSDR::Demodulation()
 	{
-		std::cerr << "Start demodulation thread." << std::endl;
+		std::cerr << "RTLSDR: Start demodulation thread." << std::endl;
 
 		while(isStreaming())
 		{
@@ -171,7 +171,7 @@ namespace Device {
 				std::unique_lock <std::mutex> lock(fifo_mutex);
 				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BufferLen / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
 
-				if (count == 0) std::cerr << "Timeout on RTL SDR dongle" << std::endl;
+				if (count == 0) std::cerr << "RTLSDR: timeout" << std::endl;
 			}
 
 			if (count != 0)
@@ -182,7 +182,7 @@ namespace Device {
 			}
 		}
 
-		std::cerr << "Stop demodulation thread." << std::endl;
+		std::cerr << "RTLSDR: Stop demodulation thread." << std::endl;
 	}
 
 	void RTLSDR::demod_async_static(RTLSDR* c)

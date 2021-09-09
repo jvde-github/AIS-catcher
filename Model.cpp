@@ -72,7 +72,7 @@ namespace AIS
 			physical >> ROT;
 			break;
 		default:
-			throw "Internal error: sample rate not supported in default engine.";
+			throw "Internal error: sample rate not supported in engine.";
 		}
 
 		ROT.up >> DS2_a >> F_a;
