@@ -31,7 +31,7 @@ namespace Device{
 		std::ifstream file;
 
 		std::vector<uint8_t> buffer;
-		const int buffer_size = 384000;
+		const int buffer_size = 16 * 16384;
 
 	public:
 
