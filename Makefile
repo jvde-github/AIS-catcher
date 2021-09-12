@@ -1,8 +1,8 @@
 SRC = Main.cpp IO.cpp DSP.cpp AIS.cpp Model.cpp Utilities.cpp Demod.cpp DeviceRTLSDR.cpp DeviceAIRSPYHF.cpp DeviceAIRSPY.cpp DeviceFileRAW.cpp DeviceFileWAV.cpp
 OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceAIRSPYHF.o DeviceAIRSPY.o DeviceFileRAW.o DeviceFileWAV.o
 
-CC = gcc 
-override CFLAGS += -O3 -Wno-psabi -ffast-math -std=c++11
+CC = gcc
+override CFLAGS += -Ofast -Wno-psabi -std=c++11
 LFLAGS = -lstdc++ -lm -o AIS-catcher 
 
 CFLAGS_RTL = -DHASRTLSDR 
