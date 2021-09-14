@@ -5,11 +5,11 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
+A Windows binary version is available for [download](https://drive.google.com/file/d/1wF2L6iu4I79E8j20gVSWhiBj0CHhh9Ik/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com).
+
 Release version **0.22**: Support for 6MHz sampling rate
 
 Release version **0.21**: inclusion of advanced gain and bias tee support for Airspy and RTLSDR. 
-A [Windows binary version](https://drive.google.com/file/d/1wF2L6iu4I79E8j20gVSWhiBj0CHhh9Ik/view?usp=sharing) is available for download or [contact me](mailto:jvde.github@gmail.com).
-
 
 ## Purpose
 
@@ -157,7 +157,7 @@ For completeness I performed seperate runs with [AISRec](https://sites.google.co
 
 A release in binary format for Windows 32 bit (including required libraries) can be occasionally found with the latest release but if not, please reach out and I will make it available. Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below.
 
-## Compilation process for Linux/Raspberry Pi
+## Compilation process
 
 Make sure you have the following dependencies, depending on the device you are using:
   - librtlsdr
@@ -195,7 +195,22 @@ make
 sudo make install
 ```
 
-AIS-catcher requires a recent version of `librtlsdr-dev` which might result in compilation errors with older versions (e.g. as provided with Ubuntu 16.04). To overcome this, you can try to make with `make CFLAGS=-DLIBRTLSDR_LEGACY rtl-only`.
+### Additional compilation options
+The command line allows for additional compilation optiopns via setting CFLAGS.
+
+As an example, AIS-catcher requires a recent version of `librtlsdr-dev` (6.x) which might otherwise yield compilation errors (e.g. will happen with Ubuntu 16.04). To overcome this, you can try to make with 
+```
+make CFLAGS='-DLIBRTLSDR_LEGACY' rtl-only
+```
+Please note that these options make the executables less transferable but some options are: 
+
+ | Description | CFLAGS | Impact |
+ | :--- | :--- | :--- |
+ |Use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Removes compilation errors |
+ |Linux x64 performance turning  | -march=native | ~ 5% < decoding time |
+ |RPI 3B performance tuning  | tbc  | |
+ |RPI 3B+ performance tuning |tbc | |
+ |RPI 4 performance tuning |tbc | |
 
 ## Container images
 
