@@ -5,7 +5,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
-A Windows binary version is available for [download](https://drive.google.com/file/d/1wF2L6iu4I79E8j20gVSWhiBj0CHhh9Ik/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com).
+A Windows binary version is available for [download](https://drive.google.com/file/d/1wF2L6iu4I79E8j20gVSWhiBj0CHhh9Ik/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. 
 
 Release version **0.22**: Support for 6MHz sampling rate
 
@@ -155,7 +155,7 @@ For completeness I performed seperate runs with [AISRec](https://sites.google.co
 
 ## Releases
 
-A release in binary format for Windows 32 bit (including required libraries) can be occasionally found with the latest release but if not, please reach out and I will make it available. Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. For Linux systems, compilation instructions are below.
+A release in binary format for Windows 32 bit (including required libraries) is provided above but if not, please reach out and I will make it available. For Linux systems the compilation instructions are below.
 
 ## Compilation process
 
@@ -196,17 +196,15 @@ sudo make install
 ```
 
 ### Additional compilation options
-The command line allows for additional compilation optiopns via setting CFLAGS.
-
-As an example, AIS-catcher requires a recent version of `librtlsdr-dev` (6.x) which might otherwise yield compilation errors (e.g. will happen with Ubuntu 16.04). To overcome this, you can try to make with 
+The command line allows for additional compilation optiopns via setting CFLAGS, e.g.: 
 ```
 make CFLAGS='-DLIBRTLSDR_LEGACY' rtl-only
 ```
-Please note that these options make the executables less transferable but some options are: 
+Please note that these options make the executables possibly system specific but some options are: 
 
  | Description | CFLAGS | Impact |
  | :--- | :--- | :--- |
- |Use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Removes compilation errors |
+ |use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Removes compilation errors with older versions of librtlsdr |
  |Linux x64 performance turning  | -march=native | ~ 5% < decoding time |
  |RPI 3B performance tuning  | tbc  | |
  |RPI 3B+ performance tuning |tbc | |
