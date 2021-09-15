@@ -196,11 +196,11 @@ sudo make install
 ```
 
 ### Additional compilation options
-The command line allows for additional compilation optiopns via setting CFLAGS, e.g.: 
+The make process allows for additional compilation options to be set at the command line via defining CFLAGS, e.g.: 
 ```
 make CFLAGS='-DLIBRTLSDR_LEGACY' rtl-only
 ```
-Please note that these options make the executables possibly system specific but some options are: 
+These options might make the program not transferable between systems but in some instances could resolve some particular issues. Some useful flags are: 
 
  | Description | CFLAGS | Impact |
  | :--- | :--- | :--- |
