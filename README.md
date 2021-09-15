@@ -200,7 +200,7 @@ The make process allows for additional compilation options to be set at the comm
 ```
 make CFLAGS='-DLIBRTLSDR_LEGACY' rtl-only
 ```
-These options might make the program not transferable between systems but in some instances could resolve some particular issues. Some useful flags are: 
+These options might make the program not transferable between systems but in certain instances could resolve particular issues. Some useful flags are: 
 
  | Description | CFLAGS | Impact |
  | :--- | :--- | :--- |
