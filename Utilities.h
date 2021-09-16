@@ -111,10 +111,10 @@ namespace Util
 			return number;
 		}
 
-		static bool Switch(std::string arg)
+		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF")
 		{
-			if (arg == "OFF") return false;
-			if (arg != "ON") throw "Error on command line expected [on/off]";
+			if (arg == FalseString) return false;
+			if (arg != TrueString) throw "Error on command line: unknown switch";
 
 			return true;
 		}
