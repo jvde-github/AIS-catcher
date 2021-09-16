@@ -25,6 +25,7 @@ SOFTWARE.
 #include "Device.h"
 #include "DeviceAIRSPYHF.h"
 #include "Common.h"
+#include "Utilities.h"
 
 namespace Device {
 
@@ -34,6 +35,29 @@ namespace Device {
 
 #ifdef HASAIRSPYHF
 
+	void SettingsAIRSPYHF::Print()
+	{
+		std::cerr << "Airspy HF + Settings: -gh";
+		std::cerr << " agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;;
+	}
+	
+	void SettingsAIRSPYHF::Set(std::string option, std::string arg)
+	{
+		for (auto& c : option) c = toupper(c);
+		for (auto& c : arg) c = toupper(c);
+
+		if (option == "PREAMP")
+		{
+			preamp = Util::Parse::Switch(arg);
+		}
+		else if(option == "TRESHOLD")
+		{
+			treshold_high = Util::Parse::Switch(arg,"HIGH","LOW");
+		}
+		else
+			throw " Invalid setting for AIRSPY HF+.";
+	}
+	
 	void AIRSPYHF::openDevice(uint64_t h)
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS)
@@ -63,9 +87,18 @@ namespace Device {
 	void AIRSPYHF::setAGC()
 	{
 		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC to auto.";
-		if (airspyhf_set_hf_agc_threshold(dev, 0) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold to low.";
 	}
 
+	void AIRSPYHF::setTreshold(int s)
+	{
+		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold";
+	}
+	
+	void AIRSPYHF::setLNA(int s)
+	{
+		if (airspyhf_set_hf_lna(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set LNA";
+	}
+			
 	void AIRSPYHF::callback(CFLOAT32* data, int len)
 	{
 		Send((const CFLOAT32*)data, len );
@@ -138,6 +171,9 @@ namespace Device {
 	void AIRSPYHF::setSettings(SettingsAIRSPYHF &s)
 	{
 		setAGC();
+		
+		setTreshold(s.treshold_high ? 1: 0);
+		if(s.preamp) setLNA(1);		
 	}
 
 #endif

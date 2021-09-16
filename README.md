@@ -37,13 +37,12 @@ use: AIS-catcher [options]
 
 	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
 	[-p xx frequency correction for RTL SDR]
-
 	[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
+	[-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]
 
 	[-m xx run specific decoding model (default: 2)]
 	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
 	[-b benchmark demodulation models - for development purposes (default: off)]
-
 ````
 
 ## Examples
@@ -98,6 +97,12 @@ AIS-catcher -gr tuner 33.3 rtlagc ON
 ```
 Please note that these settings are not case sensitive.
 
+### Airspy HF+
+Gain settings specific for the Airspy HF+ can be set on the command line with the ```-gh``` switch. For example, the following command sets the treshold to High:
+```console
+AIS-catcher -gh treshold HIGH
+```
+Please note that only AGC mode is supported.
 ### Airspy Mini
 
 The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:

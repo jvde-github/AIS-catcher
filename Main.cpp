@@ -71,14 +71,16 @@ void Usage()
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-d:x select device based on index (default: 0)]" << std::endl;
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
-#ifdef HASRTLSDR
 	std::cerr << std::endl;
+#ifdef HASRTLSDR
 	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
 	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
 #endif
 #ifdef HASAIRSPY
-	std::cerr << std::endl;
 	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
+#endif
+#ifdef HASAIRSPYHF
+	std::cerr << "\t[-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
 #endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
@@ -348,6 +350,8 @@ int main(int argc, char* argv[])
 					parseDeviceSettings(settingsAIRSPY, argv, ++ptr, argc);
 				else if(param == "-gr")
 					parseDeviceSettings(settingsRTL, argv, ++ptr, argc);
+				else if(param == "-gh")
+					parseDeviceSettings(settingsAIRSPYHF, argv, ++ptr, argc);
 				else
 					throw "Invalid -g switch on command line";
 				break;
@@ -397,6 +401,7 @@ int main(int argc, char* argv[])
 			out = &(device->out);
 
 			device->setSettings(settingsAIRSPYHF);
+			if(verbose) settingsAIRSPYHF.Print();
 #else
 			std::cerr << "AIRSPYHF+ not included in this package. Please build version including AIRSPYHF+ support.";
 #endif

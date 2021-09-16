@@ -33,7 +33,17 @@ namespace Device{
 
 	class SettingsAIRSPYHF : public DeviceSettings
 	{
+	private:
+
+		bool preamp = false;
+		bool treshold_high = false;
+
 	public:
+
+		friend class AIRSPYHF;
+
+		void Print();
+		void Set(std::string option, std::string arg);
 	};
 
 	class AIRSPYHF : public Control, public StreamOut<CFLOAT32>
@@ -45,6 +55,10 @@ namespace Device{
 		static int callback_static(airspyhf_transfer_t* tf);
 		void callback(CFLOAT32 *,int);
 
+		void setTreshold(int);
+		void setLNA(int);
+		void setAGC(void);
+	
 	public:
 
 		// Control
@@ -54,7 +68,6 @@ namespace Device{
 
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
-		void setAGC(void);
 
 		std::vector<uint32_t> SupportedSampleRates();
 
