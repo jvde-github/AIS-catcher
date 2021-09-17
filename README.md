@@ -7,6 +7,8 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 A Windows binary version is available for [download](https://drive.google.com/file/d/1wF2L6iu4I79E8j20gVSWhiBj0CHhh9Ik/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. 
 
+Release version **0.23**: inclusion of advanced gain support for Airspy HF+. 
+
 Release version **0.22**: Support for 6MHz sampling rate
 
 Release version **0.21**: inclusion of advanced gain and bias tee support for Airspy and RTLSDR. 
