@@ -37,10 +37,9 @@ namespace Device {
 
 	void SettingsAIRSPYHF::Print()
 	{
-		std::cerr << "Airspy HF + Settings: -gh";
-		std::cerr << " agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;;
+		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;;
 	}
-	
+
 	void SettingsAIRSPYHF::Set(std::string option, std::string arg)
 	{
 		for (auto& c : option) c = toupper(c);
@@ -55,19 +54,17 @@ namespace Device {
 			treshold_high = Util::Parse::Switch(arg,"HIGH","LOW");
 		}
 		else
-			throw " Invalid setting for AIRSPY HF+.";
+			throw "Command line: Invalid setting for AIRSPY HF+.";
 	}
-	
+
 	void AIRSPYHF::openDevice(uint64_t h)
 	{
-		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS)
-			throw "AIRSPYHF: cannot open device";
+		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 	}
 
 	void AIRSPYHF::openDevice()
 	{
-		if (airspyhf_open(&dev) != AIRSPYHF_SUCCESS)
-			throw "AIRSPYHF: cannot open device";
+		if (airspyhf_open(&dev) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
 		return;
 	}
@@ -93,12 +90,12 @@ namespace Device {
 	{
 		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold";
 	}
-	
+
 	void AIRSPYHF::setLNA(int s)
 	{
 		if (airspyhf_set_hf_lna(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set LNA";
 	}
-			
+
 	void AIRSPYHF::callback(CFLOAT32* data, int len)
 	{
 		Send((const CFLOAT32*)data, len );
@@ -114,8 +111,7 @@ namespace Device {
 	{
 		Control::Play();
 
-		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS)
-			throw "AIRSPYHF: Cannot start device";
+		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
 
 		SleepSystem(10);
 	}
@@ -123,19 +119,15 @@ namespace Device {
 	void AIRSPYHF::Pause()
 	{
 		airspyhf_stop(dev);
-		//streaming = false;
-
 		Control::Pause();
 	}
 
 	std::vector<uint32_t> AIRSPYHF::SupportedSampleRates()
 	{
 		uint32_t nRates;
-		std::vector<uint32_t> rates;
 
 		airspyhf_get_samplerates(dev, &nRates, 0);
-		rates.resize(nRates);
-
+		std::vector<uint32_t> rates(nRates);
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
 
 		return rates;
@@ -171,10 +163,8 @@ namespace Device {
 	void AIRSPYHF::setSettings(SettingsAIRSPYHF &s)
 	{
 		setAGC();
-		
 		setTreshold(s.treshold_high ? 1: 0);
-		if(s.preamp) setLNA(1);		
+		if(s.preamp) setLNA(1);
 	}
-
 #endif
 }
