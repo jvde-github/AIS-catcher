@@ -58,7 +58,7 @@ namespace Device{
 		void setTreshold(int);
 		void setLNA(int);
 		void setAGC(void);
-	
+
 	public:
 
 		// Control
