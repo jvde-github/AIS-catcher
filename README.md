@@ -213,9 +213,6 @@ Some useful options are:
  | :--- | :--- | :--- |
  |use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Removes compilation errors with older versions of librtlsdr |
  |Linux x64 performance turning  | -march=native | ~ 5% < decoding time |
- |RPI 3B performance tuning  | tbc  | |
- |RPI 3B+ performance tuning |tbc | |
- |RPI 4 performance tuning |tbc | |
 
 ## Container images
 
