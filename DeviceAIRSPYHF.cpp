@@ -33,7 +33,6 @@ namespace Device {
 	//---------------------------------------
 	// Device AIRSPYHF
 
-#ifdef HASAIRSPYHF
 
 	void SettingsAIRSPYHF::Print()
 	{
@@ -56,6 +55,8 @@ namespace Device {
 		else
 			throw "Command line: Invalid setting for AIRSPY HF+.";
 	}
+
+#ifdef HASAIRSPYHF
 
 	void AIRSPYHF::openDevice(uint64_t h)
 	{
