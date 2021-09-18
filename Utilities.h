@@ -77,6 +77,33 @@ namespace Util
 		float getTotalTiming() { return timing; }
 	};
 
+	class Convert
+	{
+	public:
+		static void toUpper(std::string& s)
+		{
+			for (auto& c : s) c = toupper(c);
+		}
+
+		static void toFloat(CU8* in, CFLOAT32* out, int len)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				out[i].real((float)in[i].real() / 128.0f - 1.0f);
+				out[i].imag((float)in[i].imag() / 128.0f - 1.0f);
+			}
+		}
+
+		static void toFloat(CS16* in, CFLOAT32* out, int len)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				out[i].real((float)in[i].real() / 32768.0f);
+				out[i].imag((float)in[i].imag() / 32768.0f);
+			}
+		}
+	};
+
 	class Parse
 	{
 	public:

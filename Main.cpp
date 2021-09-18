@@ -218,7 +218,6 @@ int main(int argc, char* argv[])
 	Device::SettingsAIRSPYHF settingsAIRSPYHF;
 	Device::SettingsAIRSPY settingsAIRSPY;
 
-
 	uint64_t handle = 0;
 	Device::Format RAWformat = Device::Format::CU8;
 
