@@ -31,20 +31,18 @@ namespace Device {
 
 	void SettingsRTLSDR::Print()
 	{
-		std::cerr << "RTLSDR settings: -gr ";
+		std::cerr << "RTLSDR settings: -gr tuner ";
 
-		std::cerr << "tuner ";
-		if (tuner_AGC) std::cerr << "AUTO";
-		else std::cerr << tuner_Gain;
+		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
 
-		std::cerr << " rtlagc " << (RTL_AGC?"ON" : "OFF");
-		std::cerr << " biastee " << (bias_tee?"ON" : "OFF") << " -p " << freq_offset << std::endl;
+		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
+		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << " -p " << freq_offset << std::endl;
 	}
 
 	void SettingsRTLSDR::Set(std::string option, std::string arg)
 	{
-		for (auto& c : option) c = toupper(c);
-		for (auto& c : arg) c = toupper(c);
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
 
 		if (option == "TUNER")
 		{
@@ -135,9 +133,9 @@ namespace Device {
 		}
 		else
 		{
-			if(fifo[tail].size() != len) fifo[tail].resize(len);
+			if (fifo[tail].size() != len) fifo[tail].resize(len);
 
-			std::memcpy(fifo[tail].data(),buf,len);
+			std::memcpy(fifo[tail].data(), buf, len);
 
 			tail = (tail + 1) % sizeFIFO;
 
@@ -157,7 +155,7 @@ namespace Device {
 
 	void RTLSDR::start_async_static(RTLSDR* c)
 	{
-		rtlsdr_read_async(c->getDevice(), (rtlsdr_read_async_cb_t) &(RTLSDR::callback_static), c, 0, BufferLen);
+		rtlsdr_read_async(c->getDevice(), (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), c, 0, BufferLen);
 	}
 
 	void RTLSDR::Demodulation()
@@ -226,8 +224,8 @@ namespace Device {
 
 	void RTLSDR::setFrequencyCorrection(int ppm)
 	{
-		if(ppm !=0)
-			if (rtlsdr_set_freq_correction(dev, ppm)<0) throw "RTLSDR: cannot set ppm error.";
+		if (ppm != 0)
+			if (rtlsdr_set_freq_correction(dev, ppm) < 0) throw "RTLSDR: cannot set ppm error.";
 	}
 
 	void RTLSDR::setSettings(SettingsRTLSDR &s)
@@ -235,9 +233,9 @@ namespace Device {
 		setFrequencyCorrection(s.freq_offset);
 		setTuner_GainMode(s.tuner_AGC ? 0 : 1);
 
-		if(!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
-		if(s.RTL_AGC) setRTL_AGC( 1 );
-		if(s.bias_tee) setBiasTee(1);
+		if (!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
+		if (s.RTL_AGC) setRTL_AGC(1);
+		if (s.bias_tee) setBiasTee(1);
 	}
 
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
