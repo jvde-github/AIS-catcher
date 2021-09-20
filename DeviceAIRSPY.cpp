@@ -63,8 +63,8 @@ namespace Device {
 
 	void SettingsAIRSPY::Set(std::string option, std::string arg)
 	{
-		for (auto& c : option) c = toupper(c);
-		for (auto& c : arg) c = toupper(c);
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
 
 		if (option == "SENSITIVITY")
 		{
@@ -106,16 +106,12 @@ namespace Device {
 
 	void AIRSPY::openDevice(uint64_t h)
 	{
-		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS)
-			throw "AIRSPY: cannot open device";
+		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
 	}
 
 	void AIRSPY::openDevice()
 	{
-		if (airspy_open(&dev) != AIRSPY_SUCCESS)
-			throw "AIRSPY: cannot open device";
-
-		return;
+		if (airspy_open(&dev) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
 	}
 
 	void AIRSPY::setSampleRate(uint32_t s)
@@ -221,7 +217,8 @@ namespace Device {
 
 		if (airspy_list_devices(serials.data(), device_count) > 0) 
 		{
-			for (int i = 0; i < device_count; i++) {
+			for (int i = 0; i < device_count; i++) 
+			{
 				std::stringstream serial;
 				serial << std::uppercase << std::hex << serials[i];
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY", serial.str(), (uint64_t)i, Type::AIRSPY));
