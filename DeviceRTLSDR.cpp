@@ -99,7 +99,7 @@ namespace Device {
 	void RTLSDR::setBiasTee(int a)
 	{
 #ifdef LIBRTLSDR_LEGACY
-		throw "RTLSDR: bias tee not supported in this version of librtlsdr";
+		throw "RTLSDR: bias tee not supported in this version of librtlsdr.";
 #else
 		if (rtlsdr_set_bias_tee(dev, a) != 0) throw "RTLSDR: cannot set bias tee.";
 #endif
@@ -109,7 +109,7 @@ namespace Device {
 	{
 		int g = (int) a * 10;
 
-		if(rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDR: cannot set gain mode";
+		if(rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw "RTLSDR: cannot set gain mode.";
 
 		int nGains = rtlsdr_get_tuner_gains(dev, NULL);
 		if (nGains <= 0) throw "RTLSDR: no gains available";
@@ -169,7 +169,7 @@ namespace Device {
 				std::unique_lock <std::mutex> lock(fifo_mutex);
 				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BufferLen / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
 
-				if (count == 0) std::cerr << "RTLSDR: timeout" << std::endl;
+				if (count == 0) std::cerr << "RTLSDR: timeout." << std::endl;
 			}
 
 			if (count != 0)

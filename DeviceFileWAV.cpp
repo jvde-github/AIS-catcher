@@ -29,7 +29,6 @@ SOFTWARE.
 
 namespace Device {
 
-
 	//---------------------------------------
 	// WAV file, FLOAT only
 

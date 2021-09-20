@@ -36,13 +36,13 @@ namespace Device {
 
 	void SettingsAIRSPYHF::Print()
 	{
-		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;;
+		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;
 	}
 
 	void SettingsAIRSPYHF::Set(std::string option, std::string arg)
 	{
-		for (auto& c : option) c = toupper(c);
-		for (auto& c : arg) c = toupper(c);
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
 
 		if (option == "PREAMP")
 		{
@@ -66,8 +66,6 @@ namespace Device {
 	void AIRSPYHF::openDevice()
 	{
 		if (airspyhf_open(&dev) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
-
-		return;
 	}
 
 	void AIRSPYHF::setSampleRate(uint32_t s)
@@ -143,7 +141,8 @@ namespace Device {
 
 		if (airspyhf_list_devices(serials.data(), device_count) > 0) 
 		{
-			for (int i = 0; i < device_count; i++) {
+			for (int i = 0; i < device_count; i++) 
+			{
 				std::stringstream serial;
 				serial << std::uppercase << std::hex << serials[i];
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF));
