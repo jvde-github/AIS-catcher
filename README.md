@@ -100,9 +100,9 @@ AIS-catcher -gr tuner 33.3 rtlagc ON
 Please note that these settings are not case sensitive.
 
 ### Airspy HF+
-Gain settings specific for the Airspy HF+ can be set on the command line with the ```-gh``` switch. For example, the following command sets the treshold to High:
+Gain settings specific for the Airspy HF+ can be set on the command line with the ```-gh``` switch. For example, the following command switches on the preamp:
 ```console
-AIS-catcher -gh treshold HIGH
+AIS-catcher -gh preamp ON
 ```
 Please note that only AGC mode is supported.
 ### Airspy Mini
