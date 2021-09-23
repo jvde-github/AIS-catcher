@@ -45,6 +45,8 @@ namespace Device {
 	{
 #ifdef HASSDRPLAY
 
+		sdrplay_api_DeviceT device;
+
 	public:
 
 		// Control
