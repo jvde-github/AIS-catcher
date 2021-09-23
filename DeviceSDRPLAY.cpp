@@ -1,5 +1,4 @@
 /*
-Copyright(c) 2021 gtlittlewing
 Copyright(c) 2021 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -119,13 +118,8 @@ namespace Device {
 
 	std::vector<uint32_t> SDRPLAY::SupportedSampleRates()
 	{
-		uint32_t nRates; 
-		std::vector<uint32_t> rates;
+                return { 3000000 };
 
-		nRates = 0;
-		rates.resize(nRates);
-
-		return rates;
 	}
 
 	void SDRPLAY::pushDeviceList(std::vector<Description>& DeviceList)
@@ -155,7 +149,7 @@ namespace Device {
 
 	bool SDRPLAY::isStreaming()
 	{
-		return 1;
+		return streaming;
 	}
 
 	void SDRPLAY::setSettings(SettingsSDRPLAY &s)
