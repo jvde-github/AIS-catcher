@@ -133,9 +133,6 @@ namespace Device {
 
 	void SDRPLAY::Pause()
 	{
-		sdrplay_api_LockDeviceApi();
-		sdrplay_api_ReleaseDevice(&device);
-		sdrplay_api_UnlockDeviceApi();
 		Control::Pause();
 	}
 
