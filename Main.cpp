@@ -427,6 +427,23 @@ int main(int argc, char* argv[])
 #endif
 			break;
 		}
+                case Device::Type::SDRPLAY:
+                {
+#ifdef HASSDRPLAY
+                        Device::SDRPLAY* device = new Device::SDRPLAY();
+                        device->openDevice();
+
+                        control = device;
+                        out = &(device->out);
+
+                        device->setSettings(settingsSDRPLAY);
+                        if(verbose) settingsSDRPLAY.Print();
+#else
+                        std::cerr << "SDRPLAY not included in this package. Please build version including SDRPLAY support.";
+#endif
+                        break;
+                }
+
 		case Device::Type::WAVFILE:
 		{
 			Device::WAVFile* device = new Device::WAVFile();
