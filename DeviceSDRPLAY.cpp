@@ -29,9 +29,12 @@ SOFTWARE.
 
 namespace Device {
 
-// https://www.sdrplay.com/docs/SDRplay_API_Specification_v3.01.pdf
+// Detailed description interface: https://www.sdrplay.com/docs/SDRplay_API_Specification_v3.01.pdf
 
 #ifdef HASSDRPLAY
+
+	// static constructor and data
+
 	SDRPLAY::_API SDRPLAY::_api;
 
         SDRPLAY::_API::_API()
@@ -89,10 +92,27 @@ namespace Device {
 
 	void SDRPLAY::openDevice(uint64_t h)
 	{
+                unsigned int DeviceCount;
+
+		sdrplay_api_LockDeviceApi();
+		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
+		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
+
+		if(DeviceCount < h) throw "SDRPLAY: cannot open device, handle not available.";
+
+		device = devices[h];
+
+		if(sdrplay_api_SelectDevice(&device) != sdrplay_api_Success)
+		{
+			sdrplay_api_UnlockDeviceApi();
+			throw "SDRPLAY: cannot open device";
+		}
+		sdrplay_api_UnlockDeviceApi();
 	}
 
 	void SDRPLAY::openDevice()
 	{
+		openDevice(0);
 	}
 
 	void SDRPLAY::setSampleRate(uint32_t s)
@@ -113,6 +133,9 @@ namespace Device {
 
 	void SDRPLAY::Pause()
 	{
+		sdrplay_api_LockDeviceApi();
+		sdrplay_api_ReleaseDevice(&device);
+		sdrplay_api_UnlockDeviceApi();
 		Control::Pause();
 	}
 
