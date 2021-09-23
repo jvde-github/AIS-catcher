@@ -84,6 +84,7 @@ namespace Device {
 			_API(); ~_API();
 		} _api;
 
+		~SDRPLAY() { sdrplay_api_ReleaseDevice(&device); }
 #endif
 	};
 }
