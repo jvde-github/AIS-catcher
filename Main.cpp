@@ -33,6 +33,7 @@ SOFTWARE.
 #include "DeviceRTLSDR.h"
 #include "DeviceAIRSPYHF.h"
 #include "DeviceAIRSPY.h"
+#include "DeviceSDRPLAY.h"
 
 #include "IO.h"
 #include "Model.h"
@@ -101,6 +102,9 @@ std::vector<Device::Description> getDevices()
 #endif
 #ifdef HASAIRSPY
 	Device::AIRSPY::pushDeviceList(device_list);
+#endif
+#ifdef HASSDRPLAY
+	Device::SDRPLAY::pushDeviceList(device_list);
 #endif
 	std::sort(device_list.begin(), device_list.end());
 
@@ -217,6 +221,7 @@ int main(int argc, char* argv[])
 	Device::SettingsRTLSDR settingsRTL;
 	Device::SettingsAIRSPYHF settingsAIRSPYHF;
 	Device::SettingsAIRSPY settingsAIRSPY;
+	Device::SettingsSDRPLAY settingsSDRPLAY;
 
 	uint64_t handle = 0;
 	Device::Format RAWformat = Device::Format::CU8;

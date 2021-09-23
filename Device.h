@@ -35,7 +35,7 @@ SOFTWARE.
 
 namespace Device{
 
-	enum class Type { NONE, RTLSDR, AIRSPYHF, AIRSPY, WAVFILE, RAWFILE };
+	enum class Type { NONE, RTLSDR, AIRSPYHF, AIRSPY, SDRPLAY, WAVFILE, RAWFILE };
 	enum class Format { CU8, CF32, CS16, UNKNOWN };
 
 	class Description
