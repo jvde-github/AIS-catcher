@@ -107,7 +107,11 @@ namespace Device {
 
 	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params)
 	{
-		if (eventId == sdrplay_api_DeviceRemoved) streaming == false;
+		if (eventId == sdrplay_api_DeviceRemoved)
+		{
+			std::cerr << "SDRPLAY: device disconnected" << std::endl;
+			Pause();
+		}
 	}
 
 	void SDRPLAY::callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int len, unsigned int reset)
@@ -160,7 +164,6 @@ namespace Device {
 			{
 				if (output.size() < buffer_size) output.resize(buffer_size);
 
-			
 				for (int i = 0; i < fifo[head].size(); i++)
 				{
 					output[ptr] = fifo[head][i];
