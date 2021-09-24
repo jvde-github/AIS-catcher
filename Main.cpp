@@ -268,7 +268,7 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				sample_rate = Util::Parse::Integer(arg1, 0, 6000000);
+				sample_rate = Util::Parse::Integer(arg1, 0, 6144000);
 				ptr+=2;
 				break;
 			case 'm':

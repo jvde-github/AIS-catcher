@@ -70,7 +70,7 @@ namespace Device {
 	{
 		float version = 0.0;
 
-		if(sdrplay_api_Open() != sdrplay_api_Success) 
+		if(sdrplay_api_Open() != sdrplay_api_Success)
 		{
 			running = false;
 			return;
@@ -222,7 +222,6 @@ namespace Device {
 		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
 
 		deviceParams->devParams->fsFreq.fsHz = s;
-
 		chParams->tunerParams.ifType = sdrplay_api_IF_Zero;
 		chParams->ctrlParams.decimation.enable = 0;
 		chParams->ctrlParams.decimation.decimationFactor = 1;
@@ -252,16 +251,15 @@ namespace Device {
 		// SDRPLAY
 
 		sdrplay_api_CallbackFnsT cbFns;
-
 		cbFns.StreamACbFn = callback_static;
 		cbFns.EventCbFn = callback_event_static;
 
 		if(sdrplay_api_Init(device.dev, &cbFns, (void *)this) != sdrplay_api_Success)
 			throw "SDRPLAY: cannot start device";
 
-		Control::Play();
-
 		demod_thread = std::thread(SDRPLAY::demod_async_static, this);
+
+		Control::Play();
 
 		SleepSystem(10);
 	}
@@ -280,13 +278,13 @@ namespace Device {
 	std::vector<uint32_t> SDRPLAY::SupportedSampleRates()
 	{
 		// for now....
-		return { 2304000, 3072000 };
+		return { 2304000, 3072000, 3000000, 6000000, 6144000 };
 	}
 
 	void SDRPLAY::pushDeviceList(std::vector<Description>& DeviceList)
 	{
 		unsigned int DeviceCount;
-		if(!_api.running) throw "SDRPLAY: API not running";
+		if(!_api.running) throw "SDRPLAY: API v3.x not running";
 
 		sdrplay_api_LockDeviceApi();
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
@@ -294,6 +292,7 @@ namespace Device {
 
 		for (int i = 0; i < DeviceCount; i++) 
 		{
+			// for now ....
 			if(devices[i].hwVer == SDRPLAY_RSP1A_ID)
 			{
 				DeviceList.push_back(Description("SDRPLAY", "RSP1A", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
@@ -305,7 +304,7 @@ namespace Device {
 
 	int SDRPLAY::getDeviceCount()
 	{
-		return 0;
+		return -1;
 	}
 
 	bool SDRPLAY::isStreaming()
