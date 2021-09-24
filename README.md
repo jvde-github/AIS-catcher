@@ -205,7 +205,7 @@ The process to install AIS-catcher then becomes:
 make
 sudo make install
 ```
-Standard installation will include support for the Airsply devices and RTLSDR dongles. To build an executable with SDRPLAY support use:
+Standard installation will include support for the Airspy devices and RTLSDR dongles but not SDRPLAY. To build an executable with SDRPLAY (only) support use:
 ```console
 make sdrplay-only
 sudo make install
