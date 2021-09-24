@@ -246,6 +246,7 @@ services:
     image: ghcr.io/jvde-github/ais-catcher:latest
     restart: always
 ```
+Please note that the SDRPLAY devices are currently not supported in the Docker images.
 
 ## Considerations
 
