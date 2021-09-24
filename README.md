@@ -8,6 +8,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 A Windows binary version of v0.23 is available for [download](https://drive.google.com/file/d/1BV7X1ewftdYWh5WqGVfTCaw-LHjhRkqy/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. 
 
 Release version **0.25**: inclusion of preliminary support for SDRPLAY RSP1A.
+
 Release version **0.24**: inclusion of advanced gain support for Airspy HF+. 
 
 ## Purpose
