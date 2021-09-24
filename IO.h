@@ -64,7 +64,7 @@ namespace IO
 			auto timeNow = high_resolution_clock::now();
 			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
 
-			rate += 0.9f * ((count - lastcount) / seconds - rate);
+			rate += 0.5f * ((count - lastcount) / seconds - rate);
 
 			time_lastupdate = timeNow;
 			lastcount = count;

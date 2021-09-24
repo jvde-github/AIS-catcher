@@ -33,6 +33,11 @@ namespace Device {
 	class SettingsSDRPLAY : public DeviceSettings
 	{
 	private:
+
+		int LNAstate = 5;
+		int gRdB = 40;
+		bool AGC = false;
+
 	public:
 
 		friend class SDRPLAY;
@@ -43,9 +48,40 @@ namespace Device {
 
 	class SDRPLAY : public Control, public StreamOut<CFLOAT32>
 	{
+
 #ifdef HASSDRPLAY
 
+		// FIFO
+		std::thread demod_thread;
+		static void demod_async_static(SDRPLAY* c);
+
+		std::vector<std::vector<CFLOAT32>> fifo;
+
+		static const int sizeFIFO = 256;
+		int head = 0;
+		int tail = 0;
+		std::atomic<int> count;
+
+		std::mutex fifo_mutex;
+		std::condition_variable fifo_cond;
+
+		// output vector
+		std::vector<CFLOAT32> output;
+		const int buffer_size = 16 * 16384;
+		int ptr = 0;
+
+		void Demodulation();
+
+		// SDRPLAY specific
 		sdrplay_api_DeviceT device;
+		sdrplay_api_DeviceParamsT* deviceParams = NULL;
+		sdrplay_api_RxChannelParamsT* chParams;
+
+		static void callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext);
+		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext);
+
+		void callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset);
+		void callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params);
 
 	public:
 
@@ -76,13 +112,7 @@ namespace Device {
 		static class _API
 		{
 		public:
-
-			float version = 0.0;
-			bool running = false;
-			std::string status = "unknown";
-
-			_API(); ~_API();
-		} _api;
+			bool running = false; _API(); ~_API(); } _api;
 
 		~SDRPLAY() { sdrplay_api_ReleaseDevice(&device); }
 #endif
