@@ -75,13 +75,16 @@ void Usage()
 	std::cerr << std::endl;
 #ifdef HASRTLSDR
 	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
-	std::cerr << "\t[-p xx frequency correction for RTL SDR]" << std::endl;
+	std::cerr << "\t[-p xx equivalent to -gr FREQOFFSET xx]" << std::endl;
 #endif
 #ifdef HASAIRSPY
 	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
 #endif
 #ifdef HASAIRSPYHF
 	std::cerr << "\t[-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
+#endif
+#ifdef HASSDRPLAY
+	std::cerr << "\t[-gs SDRPLAY specific settings: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
 #endif
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
@@ -344,7 +347,6 @@ int main(int argc, char* argv[])
 			case 'h':
 				Usage();
 				return 0;
-#ifdef HASRTLSDR
 			case 'p':
 				settingsRTL.Set("FREQOFFSET",arg1);
 				ptr += 2;
@@ -356,10 +358,11 @@ int main(int argc, char* argv[])
 					parseDeviceSettings(settingsRTL, argv, ++ptr, argc);
 				else if(param == "-gh")
 					parseDeviceSettings(settingsAIRSPYHF, argv, ++ptr, argc);
+				else if(param == "-gs")
+					parseDeviceSettings(settingsSDRPLAY, argv, ++ptr, argc);
 				else
 					throw "Invalid -g switch on command line";
 				break;
-#endif
 			default:
 				std::cerr << "Unknown option " << param << std::endl;
 				return -1;
