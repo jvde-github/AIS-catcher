@@ -51,12 +51,13 @@ namespace Device {
 
 #ifdef HASSDRPLAY
 
-		// FIFO
+		// Data is processed in seperate thread
 		std::thread demod_thread;
 		static void demod_async_static(SDRPLAY* c);
+		void Demodulation();
 
+		// buffer for incoming data
 		std::vector<std::vector<CFLOAT32>> fifo;
-
 		static const int sizeFIFO = 256;
 		int head = 0;
 		int tail = 0;
@@ -69,8 +70,6 @@ namespace Device {
 		std::vector<CFLOAT32> output;
 		const int buffer_size = 16 * 16384;
 		int ptr = 0;
-
-		void Demodulation();
 
 		// SDRPLAY specific
 		sdrplay_api_DeviceT device;
@@ -109,10 +108,7 @@ namespace Device {
 		void setSettings(SettingsSDRPLAY& s);
 
 		// static constructor and data
-		static class _API
-		{
-		public:
-			bool running = false; _API(); ~_API(); } _api;
+		static struct _API { bool running = false; _API(); ~_API(); } _api;
 
 		~SDRPLAY() { sdrplay_api_ReleaseDevice(&device); }
 #endif
