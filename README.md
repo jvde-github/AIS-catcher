@@ -7,11 +7,8 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 A Windows binary version of v0.23 is available for [download](https://drive.google.com/file/d/1BV7X1ewftdYWh5WqGVfTCaw-LHjhRkqy/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. 
 
+Release version **0.25**: inclusion of preliminary support for SDRPLAY RSP1A.
 Release version **0.24**: inclusion of advanced gain support for Airspy HF+. 
-
-Release version **0.22**: Support for 6MHz sampling rate
-
-Release version **0.21**: inclusion of advanced gain and bias tee support for Airspy and RTLSDR. 
 
 ## Purpose
 
@@ -21,30 +18,31 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 ````
 use: AIS-catcher [options]
 
-	[-h display this message and terminate (default: false)]
-	[-s xxx sample rate in Hz (default: based on SDR device)]
-	[-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]
-	[-q surpress NMEA messages to screen (default: false)]
-	[-u address port - UDP address and port (default: off)]
+        [-h display this message and terminate (default: false)]
+        [-s xxx sample rate in Hz (default: based on SDR device)]
+        [-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]
+        [-q surpress NMEA messages to screen (default: false)]
+        [-u address port - UDP address and port (default: off)]
 
-	[-r filename - read IQ data from raw 'unsigned char' file]
-	[-r cu8 filename - read IQ data from raw 'unsigned char' file]
-	[-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
-	[-r cf32 filename - read IQ data from WAV file in 'float' format]
-	[-w filename - read IQ data from WAV file in 'float' format]
+        [-r filename - read IQ data from raw 'unsigned char' file]
+        [-r cu8 filename - read IQ data from raw 'unsigned char' file]
+        [-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
+        [-r cf32 filename - read IQ data from WAV file in 'float' format]
+        [-w filename - read IQ data from WAV file in 'float' format]
 
-	[-l list available devices and terminate (default: off)]
-	[-d:x select device based on index (default: 0)]
-	[-d xxxx select device based on serial number]
+        [-l list available devices and terminate (default: off)]
+        [-d:x select device based on index (default: 0)]
+        [-d xxxx select device based on serial number]
 
-	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
-	[-p xx frequency correction for RTL SDR]
-	[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
-	[-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]
+        [-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
+        [-p xx equivalent to -gr FREQOFFSET xx]
+        [-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
+        [-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]
+        [-gs SDRPLAY specific settings: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
 
-	[-m xx run specific decoding model (default: 2)]
-	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
-	[-b benchmark demodulation models - for development purposes (default: off)]
+        [-m xx run specific decoding model (default: 2)]
+        [       0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
+        [-b benchmark demodulation models - for development purposes (default: off)]
 ````
 
 ## Examples
@@ -117,6 +115,11 @@ AIS-catcher -gm lna AUTO vga 12 mixer 12
 ```
 More guidance on setting the gain model and levels can be obtained in the mentioned reference.
 
+### SDRPLAY RSP1A
+Gain settings specific for the SDRPLAY RSP1A can be set on the command line with the ```-gs``` switch. For example:
+```console
+AIS-catcher -gs lnastate 5
+```
 ## Multiple receiver models
 
 The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
@@ -201,6 +204,12 @@ The process to install AIS-catcher then becomes:
 make
 sudo make install
 ```
+Standard installation will include support for the Airsply devices and RTLSDR dongles. To build an executable with SDRPLAY support use:
+```console
+make sdrplay-only
+sudo make install
+```
+At the moment only RSP1A is support (as that is the only device I can test on).
 
 ### Additional compilation options
 The make process allows for additional compilation options to be set at the command line via defining CFLAGS, e.g.: 
