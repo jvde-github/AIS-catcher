@@ -228,7 +228,7 @@ namespace Device {
 		chParams->ctrlParams.decimation.wideBandSignal = 1;
 		chParams->tunerParams.bwType = sdrplay_api_BW_1_536;
 
-		Control::setSampleRate(s);
+		DeviceBase::setSampleRate(s);
 	}
 
 	void SDRPLAY::setFrequency(uint32_t f)
@@ -236,7 +236,7 @@ namespace Device {
 		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
 
 		chParams->tunerParams.rfFreq.rfHz = f;
-		Control::setFrequency(f);
+		DeviceBase::setFrequency(f);
 	}
 
 	void SDRPLAY::Play()
@@ -259,14 +259,14 @@ namespace Device {
 
 		demod_thread = std::thread(SDRPLAY::demod_async_static, this);
 
-		Control::Play();
+		DeviceBase::Play();
 
 		SleepSystem(10);
 	}
 
 	void SDRPLAY::Pause()
 	{
-		Control::Pause();
+		DeviceBase::Stop();
 
 		if (demod_thread.joinable())
 		{
@@ -302,11 +302,12 @@ namespace Device {
 		sdrplay_api_UnlockDeviceApi();
 	}
 
+	/*
 	int SDRPLAY::getDeviceCount()
 	{
 		return -1;
 	}
-
+	*/
 	bool SDRPLAY::isStreaming()
 	{
 		return streaming;

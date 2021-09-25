@@ -46,7 +46,7 @@ namespace Device{
 		void Set(std::string option, std::string arg);
 	};
 
-	class AIRSPYHF : public Control, public StreamOut<CFLOAT32>
+	class AIRSPYHF : public DeviceBase, public StreamOut<CFLOAT32>
 	{
 #ifdef HASAIRSPYHF
 
@@ -76,7 +76,6 @@ namespace Device{
 		virtual bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
-		static int getDeviceCount();
 
 		// Device specific
 		void openDevice(uint64_t h);

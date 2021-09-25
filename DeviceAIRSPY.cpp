@@ -117,13 +117,13 @@ namespace Device {
 	void AIRSPY::setSampleRate(uint32_t s)
 	{
 		if (airspy_set_samplerate(dev, s) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
-		Control::setSampleRate(s);
+		DeviceBase::setSampleRate(s);
 	}
 
 	void AIRSPY::setFrequency(uint32_t f)
 	{
 		if (airspy_set_freq(dev, f) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
-		Control::setFrequency(f);
+		DeviceBase::setFrequency(f);
 	}
 
 	void AIRSPY::setLNA_AGC(int a)
@@ -179,7 +179,7 @@ namespace Device {
 
 	void AIRSPY::Play()
 	{
-		Control::Play(); 
+		DeviceBase::Play(); 
 
 		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS)
 			throw "AIRSPY: Cannot open device";
@@ -192,7 +192,7 @@ namespace Device {
 		airspy_stop_rx(dev);
 		streaming = false;
 
-		Control::Pause();
+		DeviceBase::Stop();
 	}
 
 	std::vector<uint32_t> AIRSPY::SupportedSampleRates()
@@ -224,11 +224,6 @@ namespace Device {
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY", serial.str(), (uint64_t)i, Type::AIRSPY));
 			}
 		}
-	}
-
-	int AIRSPY::getDeviceCount()
-	{
-		return airspy_list_devices(0, 0);
 	}
 
 	bool AIRSPY::isStreaming()

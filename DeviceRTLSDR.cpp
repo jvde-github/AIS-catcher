@@ -77,13 +77,13 @@ namespace Device {
 	void RTLSDR::setSampleRate(uint32_t s)
 	{
 		if (rtlsdr_set_sample_rate(dev, s) < 0) throw "RTLSDR: cannot set sample rate.";
-		Control::setSampleRate(s);
+		DeviceBase::setSampleRate(s);
 	}
 
 	void RTLSDR::setFrequency(uint32_t f)
 	{
 		if (rtlsdr_set_center_freq(dev, f) < 0) throw "RTLSDR: cannot set frequency.";
-		Control::setFrequency(f);
+		DeviceBase::setFrequency(f);
 	}
 
 	void RTLSDR::setTuner_GainMode(int a)
@@ -197,7 +197,7 @@ namespace Device {
 		tail = 0;
 		head = 0;
 
-		Control::Play();
+		DeviceBase::Play();
 
 		rtlsdr_reset_buffer(dev);
 		async_thread = std::thread(RTLSDR::start_async_static, this);
@@ -208,7 +208,7 @@ namespace Device {
 
 	void RTLSDR::Pause()
 	{
-		Control::Pause();
+		DeviceBase::Stop();
 
 		if (async_thread.joinable())
 		{
@@ -254,11 +254,6 @@ namespace Device {
 			rtlsdr_get_device_usb_strings(i, vendor, product, serial);
 			DeviceList.push_back(Description(vendor, product, serial, (uint64_t)i, Type::RTLSDR));
 		}
-	}
-
-	int RTLSDR::getDeviceCount()
-	{
-		return rtlsdr_get_device_count();
 	}
 
 #endif

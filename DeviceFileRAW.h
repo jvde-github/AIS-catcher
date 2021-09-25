@@ -26,7 +26,7 @@ SOFTWARE.
 
 namespace Device{
 
-	class RAWFile : public Control, public StreamOut<CFLOAT32>
+	class RAWFile : public DeviceBase, public StreamOut<CFLOAT32>
 	{
 		std::ifstream file;
 
@@ -39,8 +39,8 @@ namespace Device{
 	public:
 
 		// Control
-		void Play() { Control::Play(); }
-		void Pause() { Control::Pause(); }
+		void Play() { DeviceBase::Play(); }
+		void Pause() { DeviceBase::Stop(); }
 
 		bool isCallback() { return false; }
 		bool isStreaming();
@@ -49,7 +49,6 @@ namespace Device{
 		{
 			DeviceList.push_back(Description("FILE", "RAW", "0", 0, Type::RAWFILE));
 		}
-		static int getDeviceCount() { return 1; }
 
 		std::vector<uint32_t> SupportedSampleRates();
 
