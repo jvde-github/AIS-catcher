@@ -61,6 +61,7 @@ void Usage()
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
 	std::cerr << "\t[-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
+	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
 	std::cerr << "\t[-u address port - UDP address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
@@ -217,7 +218,7 @@ int main(int argc, char* argv[])
 	bool list_devices = false;
 	bool verbose = false;
 	bool timer_on = false;
-	bool NMEA_to_screen = true;
+	int NMEA_to_screen = 2;
 	bool RTLSDRfastDS = true;
 	int verboseUpdateTime = 3000;
 
@@ -285,7 +286,11 @@ int main(int argc, char* argv[])
 				ptr++;
 				break;
 			case 'q':
-				NMEA_to_screen = false;
+				NMEA_to_screen = 0;
+				ptr++;
+				break;
+			case 'n':
+				NMEA_to_screen = 1;
 				ptr++;
 				break;
 			case 'b':
@@ -525,8 +530,11 @@ int main(int argc, char* argv[])
 			liveModels[0]->Output() >> udp;
 		}
 
-		if (NMEA_to_screen)
+		if (NMEA_to_screen > 0)
+		{
 			liveModels[0]->Output() >> nmea_screen;
+			nmea_screen.setDetail(NMEA_to_screen);
+		}
 
 		// Set up Device
 		control->setSampleRate(sample_rate);
