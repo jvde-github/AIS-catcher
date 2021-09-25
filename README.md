@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, SDRPLAY (RSP1A for now) and input from file. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, SDRplay (RSP1A for now) and input from file. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
 
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
@@ -7,7 +7,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 A Windows binary version of v0.23 is available for [download](https://drive.google.com/file/d/1BV7X1ewftdYWh5WqGVfTCaw-LHjhRkqy/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. 
 
-Release version **0.25**: inclusion of preliminary support for SDRPLAY RSP1A.
+Release version **0.25**: inclusion of preliminary support for SDRplay RSP1A.
 
 Release version **0.24**: inclusion of advanced gain support for Airspy HF+. 
 
@@ -116,8 +116,8 @@ AIS-catcher -gm lna AUTO vga 12 mixer 12
 ```
 More guidance on setting the gain model and levels can be obtained in the mentioned reference.
 
-### SDRPLAY RSP1A
-Gain settings specific for the SDRPLAY RSP1A can be set on the command line with the ```-gs``` switch. For example:
+### SDRplay RSP1A
+Gain settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch. For example:
 ```console
 AIS-catcher -gs lnastate 5
 ```
@@ -205,7 +205,7 @@ The process to install AIS-catcher then becomes:
 make
 sudo make install
 ```
-Standard installation will include support for the Airspy devices and RTLSDR dongles but not SDRPLAY. To build an executable with SDRPLAY (only) support use:
+Standard installation will include support for the Airspy devices and RTLSDR dongles but not SDRplay. To build an executable with SDRplay (only) support use:
 ```console
 make sdrplay-only
 sudo make install
@@ -246,7 +246,7 @@ services:
     image: ghcr.io/jvde-github/ais-catcher:latest
     restart: always
 ```
-Please note that the SDRPLAY devices are currently not supported in the Docker images.
+Please note that the SDRplay devices are currently not supported in the Docker images.
 
 ## Considerations
 
