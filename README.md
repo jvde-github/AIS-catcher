@@ -19,31 +19,33 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 ````
 use: AIS-catcher [options]
 
-	[-h display this message and terminate (default: false)]
-	[-s xxx sample rate in Hz (default: based on SDR device)]
-	[-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]
-	[-q surpress NMEA messages to screen (default: false)]
-	[-n show NMEA messages on screen without detail]
-	[-u address port - UDP address and port (default: off)]
+        [-h display this message and terminate (default: false)]
+        [-s xxx sample rate in Hz (default: based on SDR device)]
+        [-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]
+        [-q surpress NMEA messages to screen (default: false)]
+        [-n show NMEA messages on screen without detail]
+        [-u address port - UDP address and port (default: off)]
 
-	[-r filename - read IQ data from raw 'unsigned char' file]
-	[-r cu8 filename - read IQ data from raw 'unsigned char' file]
-	[-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
-	[-r cf32 filename - read IQ data from WAV file in 'float' format]
-	[-w filename - read IQ data from WAV file in 'float' format]
+        [-r filename - read IQ data from raw 'unsigned char' file]
+        [-r cu8 filename - read IQ data from raw 'unsigned char' file]
+        [-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
+        [-r cf32 filename - read IQ data from WAV file in 'float' format]
+        [-w filename - read IQ data from WAV file in 'float' format]
 
-	[-l list available devices and terminate (default: off)]
-	[-L list supported SDR hardware and terminate (default: off)]
-	[-d:x select device based on index (default: 0)]
-	[-d xxxx select device based on serial number]
+        [-l list available devices and terminate (default: off)]
+        [-L list supported hardware and terminate (default: off)]
+        [-d:x select device based on index (default: 0)]
+        [-d xxxx select device based on serial number]
 
-	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
-	[-p xx equivalent to -gr FREQOFFSET xx]
+        [-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
+        [-p xx equivalent to -gr FREQOFFSET xx]
+        [-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
+        [-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]
+        [-gs SDRPLAY specific settings: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
 
-	[-m xx run specific decoding model (default: 2)]
-	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
-	[-b benchmark demodulation models - for development purposes (default: off)]
-
+        [-m xx run specific decoding model (default: 2)]
+        [       0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
+        [-b benchmark demodulation models - for development purposes (default: off)]
 ````
 
 ## Examples
