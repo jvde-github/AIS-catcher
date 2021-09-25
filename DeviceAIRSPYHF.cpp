@@ -71,13 +71,13 @@ namespace Device {
 	void AIRSPYHF::setSampleRate(uint32_t s)
 	{
 		if (airspyhf_set_samplerate(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
-		Control::setSampleRate(s);
+		DeviceBase::setSampleRate(s);
 	}
 
 	void AIRSPYHF::setFrequency(uint32_t f)
 	{
 		if (airspyhf_set_freq(dev, f) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
-		Control::setFrequency(f);
+		DeviceBase::setFrequency(f);
 	}
 
 	void AIRSPYHF::setAGC()
@@ -108,7 +108,7 @@ namespace Device {
 
 	void AIRSPYHF::Play()
 	{
-		Control::Play();
+		DeviceBase::Play();
 
 		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
 
@@ -118,7 +118,7 @@ namespace Device {
 	void AIRSPYHF::Pause()
 	{
 		airspyhf_stop(dev);
-		Control::Pause();
+		DeviceBase::Stop();
 	}
 
 	std::vector<uint32_t> AIRSPYHF::SupportedSampleRates()
@@ -148,11 +148,6 @@ namespace Device {
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF));
 			}
 		}
-	}
-
-	int AIRSPYHF::getDeviceCount()
-	{
-		return airspyhf_list_devices(0, 0);
 	}
 
 	bool AIRSPYHF::isStreaming()

@@ -26,7 +26,7 @@ SOFTWARE.
 
 namespace Device{
 
-	class WAVFile : public Control, public StreamOut<CFLOAT32>
+	class WAVFile : public DeviceBase, public StreamOut<CFLOAT32>
 	{
 		std::ifstream file;
 
@@ -36,8 +36,8 @@ namespace Device{
 	public:
 
 		// Control
-		void Play() { Control::Play(); }
-		void Pause() { Control::Pause(); }
+		void Play() { DeviceBase::Play(); }
+		void Pause() { DeviceBase::Stop(); }
 
 		void setSampleRate(uint32_t s) { }
 
@@ -49,7 +49,6 @@ namespace Device{
 			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
 		}
 
-		static int getDeviceCount() { return 1; }
 		std::vector<uint32_t> SupportedSampleRates();
 
 		// Device specific

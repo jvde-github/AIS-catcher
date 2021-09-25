@@ -71,6 +71,7 @@ void Usage()
 	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
+	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-d:x select device based on index (default: 0)]" << std::endl;
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 	std::cerr << std::endl;
@@ -129,6 +130,24 @@ void printDevices(std::vector<Device::Description>& device_list)
 	}
 }
 
+void printSupportedDevices(std::vector<Device::Description>& device_list)
+{
+	std::cerr << "Supported SDR: ";
+#ifdef HASRTLSDR
+	std::cerr << "RTLSDR ";
+#endif
+#ifdef HASAIRSPY
+	std::cerr << "AIRSPY ";
+#endif
+#ifdef HASAIRSPYHF
+	std::cerr << "AIRSPYHF+ ";
+#endif
+#ifdef HASSDRPLAY
+	std::cerr << "SDRPLAY ";
+#endif
+	std::cerr << std::endl;
+}
+
 int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial)
 {
 	for (int i = 0; i < device_list.size(); i++)
@@ -139,7 +158,7 @@ int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::stri
 	return -1;
 }
 
-std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Device::Control* control, Connection<CFLOAT32>* out)
+std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Device::DeviceBase* control, Connection<CFLOAT32>* out)
 {
 	std::vector<AIS::Model*> liveModels;
 
@@ -178,7 +197,7 @@ int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> mode
 	return 0;
 }
 
-void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liveModels, Device::Control* control)
+void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liveModels, Device::DeviceBase* control)
 {
 
 	std::vector<uint32_t> device_rates = control->SupportedSampleRates();
@@ -216,6 +235,7 @@ int main(int argc, char* argv[])
 	int input_device = 0;
 
 	bool list_devices = false;
+	bool list_support = false;
 	bool verbose = false;
 	bool timer_on = false;
 	int NMEA_to_screen = 2;
@@ -328,6 +348,10 @@ int main(int argc, char* argv[])
 				list_devices = true;
 				ptr++;
 				break;
+			case 'L':
+				list_support = true;
+				ptr++;
+				break;
 			case 'd':
 				if (param.length() == 4 && param[2] == ':')
 				{
@@ -374,11 +398,9 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		if (list_devices)
-		{
-			printDevices(device_list);
-			return 0;
-		}
+		if (list_devices) printDevices(device_list);
+		if (list_support) printSupportedDevices(device_list);
+		if (list_devices || list_support) return 0;
 
 		// Select device
 
@@ -394,7 +416,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Device and output stream of device;
-		Device::Control* control = NULL;
+		Device::DeviceBase* control = NULL;
 		Connection<CFLOAT32>* out = NULL;
 
 		// Required for RTLSDR: conversion from usigned char to float
@@ -560,7 +582,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		control->Pause();
+		control->Stop();
 
 		if (verbose)
 		{

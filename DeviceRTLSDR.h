@@ -54,7 +54,7 @@ namespace Device{
 		void Set(std::string option, std::string arg);
 	};
 
-	class RTLSDR : public Control, public StreamOut<CU8>
+	class RTLSDR : public DeviceBase, public StreamOut<CU8>
 	{
 #ifdef HASRTLSDR
 
@@ -100,7 +100,6 @@ namespace Device{
 		bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
-		static int getDeviceCount();
 
 		// Device specific
 

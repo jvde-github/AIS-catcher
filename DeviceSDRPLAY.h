@@ -46,7 +46,7 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 	};
 
-	class SDRPLAY : public Control, public StreamOut<CFLOAT32>
+	class SDRPLAY : public DeviceBase, public StreamOut<CFLOAT32>
 	{
 
 #ifdef HASSDRPLAY
@@ -99,7 +99,6 @@ namespace Device {
 		virtual bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
-		static int getDeviceCount();
 
 		// Device specific
 		void openDevice(uint64_t h);

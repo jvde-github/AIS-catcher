@@ -68,7 +68,7 @@ namespace Device{
 		virtual void Set(std::string option, std::string arg) {}
 	};
 
-	class Control : public MessageIn<SystemMessage>
+	class DeviceBase : public MessageIn<SystemMessage>
 	{
 	protected:
 
@@ -78,17 +78,15 @@ namespace Device{
 
 	public:
 
-		// Control
+		// DeviceBase
 		virtual void Play() { streaming = true; }
-		virtual void Pause() { streaming = false; }
+		virtual void Stop() { streaming = false; }
 
 		virtual void setSampleRate(uint32_t s) { sample_rate = s; }
 		virtual void setFrequency(uint32_t f) { frequency = f; }
-		//virtual void setAGCtoAuto() {}
 
 		virtual uint32_t getSampleRate() { return sample_rate; }
 		virtual uint32_t getFrequency() { return frequency; }
-		virtual bool getAGCisAuto() { return false;  }
 
 		virtual bool isCallback() { return true; }
 		virtual bool isStreaming() { return streaming;  }
@@ -96,9 +94,8 @@ namespace Device{
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 
 		static void getDeviceList(std::vector<Description>& DeviceList) {}
-		static int getDeviceCount() { return 0; }
 
 		// MessageIn
-		virtual void Message(const SystemMessage& msg) { Pause(); };
+		virtual void Message(const SystemMessage& msg) { Stop(); };
 	};
 }

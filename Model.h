@@ -38,14 +38,14 @@ namespace AIS
 	protected:
 
 		std::string name;
-		Device::Control* control;
+		Device::DeviceBase* control;
 		Connection<CFLOAT32>* input;
 		Util::Timer<CFLOAT32> timer;
 		Util::PassThrough<NMEA> output;
 
 	public:
 
-		Model(Device::Control* ctrl, Connection<CFLOAT32>* in)
+		Model(Device::DeviceBase* ctrl, Connection<CFLOAT32>* in)
 		{
 			control = ctrl;
 			input = in;
@@ -78,7 +78,7 @@ namespace AIS
 		DSP::FilterCIC5 F_a, F_b;
 		DSP::Rotate ROT;
 	public:
-		ModelFrontend(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		ModelFrontend(Device::DeviceBase* c, Connection<CFLOAT32>* i) : Model(c, i) {}
 		std::vector<uint32_t> SupportedSampleRates();
 		void buildModel(int, bool);
 	};
@@ -93,7 +93,7 @@ namespace AIS
 		DSP::SamplerParallel S_a, S_b;
 
 	public:
-		ModelStandard(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		ModelStandard(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
 		void buildModel(int, bool);
 	};
 
@@ -108,7 +108,7 @@ namespace AIS
 
 	public:
 
-		ModelBase(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		ModelBase(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
 		void buildModel(int, bool);
 	};
 
@@ -123,7 +123,7 @@ namespace AIS
 		DSP::SamplerParallelComplex S_a, S_b;
 
 	public:
-		ModelCoherent(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
 		void buildModel(int,bool);
 	};
 
@@ -137,7 +137,7 @@ namespace AIS
 		DSP::SamplerParallelComplex S_a, S_b;
 
 	public:
-		ModelChallenger(Device::Control* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
 		void buildModel(int, bool);
 	};
 
@@ -153,7 +153,7 @@ namespace AIS
 		DSP::SamplerParallel S_a, S_b;
 
 	public:
-		ModelDiscriminator(Device::Control* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		ModelDiscriminator(Device::DeviceBase* c, Connection<CFLOAT32>* i) : Model(c, i) {}
 		void buildModel(int,bool);
 
 		std::vector<uint32_t> SupportedSampleRates();

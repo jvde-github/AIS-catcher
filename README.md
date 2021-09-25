@@ -33,17 +33,17 @@ use: AIS-catcher [options]
 	[-w filename - read IQ data from WAV file in 'float' format]
 
 	[-l list available devices and terminate (default: off)]
+	[-L list supported SDR hardware and terminate (default: off)]
 	[-d:x select device based on index (default: 0)]
 	[-d xxxx select device based on serial number]
 
 	[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
 	[-p xx equivalent to -gr FREQOFFSET xx]
-	[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
-	[-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]
 
 	[-m xx run specific decoding model (default: 2)]
 	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
 	[-b benchmark demodulation models - for development purposes (default: off)]
+
 ````
 
 ## Examples
