@@ -54,7 +54,7 @@ namespace Device {
 			gRdB = Util::Parse::Integer(arg,0,59);
 		}
 		else
-			throw "Invalid setting for RTLSDR.";
+			throw "Invalid setting for SDRPLAY.";
 	}
 
 	//---------------------------------------
