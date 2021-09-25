@@ -103,15 +103,23 @@ namespace IO
 		}
 	};
 
+
 	class DumpScreen : public StreamIn<NMEA>
 	{
+		int level = 2;
 	public:
+		void setDetail(int l) { level = l; }
 
 		void Receive(const NMEA* data, int len)
 		{
 			for (int i = 0; i < len; i++)
 				for (auto s : data[i].sentence)
-					std::cout << s << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")" << std::endl;
+				{
+					std::cout << s;
+
+					if(level >= 2) std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")";
+					std::cout << std::endl;
+				}
 		}
 	};
 
