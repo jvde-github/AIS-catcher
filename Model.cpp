@@ -148,7 +148,7 @@ namespace AIS
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn);
-		setName("AIS engine v0.21");
+		setName("AIS engine v0.26");
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
