@@ -173,10 +173,6 @@ Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare ante
 
 For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
 
-## Releases
-
-A release in binary format for Windows 32 bit (including required libraries) is provided above but if not, please reach out and I will make it available. For Linux systems the compilation instructions are below.
-
 ## Compilation process
 
 Make sure you have the following dependencies, depending on the device you are using:
