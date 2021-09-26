@@ -187,7 +187,7 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void AIRSPY::Pause()
+	void AIRSPY::Stop()
 	{
 		airspy_stop_rx(dev);
 		streaming = false;

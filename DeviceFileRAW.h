@@ -40,7 +40,7 @@ namespace Device{
 
 		// Control
 		void Play() { DeviceBase::Play(); }
-		void Pause() { DeviceBase::Stop(); }
+		void Stop() { DeviceBase::Stop(); }
 
 		bool isCallback() { return false; }
 		bool isStreaming();

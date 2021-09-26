@@ -90,7 +90,7 @@ namespace Device{
 
 		// Control
 		void Play();
-		void Pause();
+		void Stop();
 
 		void setSampleRate(uint32_t);
 		void setFrequency(uint32_t);
