@@ -5,16 +5,21 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
-A Windows binary version of v0.23 is available for [download](https://drive.google.com/file/d/1BV7X1ewftdYWh5WqGVfTCaw-LHjhRkqy/view?usp=sharing) or get in contact with [me](mailto:jvde.github@gmail.com). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable. 
-
 Release version **0.26**: addition of -n and -L switches.
 
 Release version **0.25**: inclusion of preliminary support for SDRplay RSP1A.
 
-
 ## Purpose
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was created in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
+
+## Installation and Windows Binary
+
+Compilation and installation instructions are provided below for Linux systems including Raspberry Pi.
+
+A Windows binary version of v0.26 (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1_A8ixyeLqIvH3ZWEmj1VOsvAy5xN8x3i/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+
+If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
 
 ## Usage
 ````
@@ -52,22 +57,7 @@ use: AIS-catcher [options]
 ## Examples
 
 
-To test a proper installation and/or compilation (see below), we can first try to run the program on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
-```console
-wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
-AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
-```
-AIS-catcher on this file should extract roughly ``360`` AIVDM lines. Notice that with switch ```-m 3``` on the command line AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
-```console
-gnuais -l helsinki-210-messages.raw
-```
-which produces:
-```console
-INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
-INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
-```
-
-To list the devices available for AIS reception:
+To test a proper installation and/or compilation (see below) we can list the devices available for AIS reception:
 ```console
 AIS-catcher -l
 ```
@@ -90,6 +80,22 @@ The following commands record a signal with ```rtl_sdr``` at a sampling rate of 
 rtl_sdr -s 288K -f 162M  test_288.raw
 AIS-catcher -r test_288.raw -s 288000 -v
 ```
+
+We can run AIS-cactcher on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
+```console
+wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
+AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
+```
+AIS-catcher on this file should extract roughly ``360`` AIVDM lines. Notice that with switch ```-m 3``` on the command line AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
+```console
+gnuais -l helsinki-210-messages.raw
+```
+which produces:
+```console
+INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
+INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
+```
+
 ## Device specific settings
 
 The command line allows you to set some device specific parameters. Below some examples.
@@ -224,7 +230,7 @@ Some useful options are:
 
  | Description | CFLAGS | Impact |
  | :--- | :--- | :--- |
- |use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Removes compilation errors with older versions of librtlsdr |
+ |use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Allows compilation with librtlsdr v5.x |
  |Linux x64 performance turning  | -march=native | ~ 5% < decoding time |
 
 ## Container images
@@ -272,6 +278,6 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - IO: TCP IP
 - Testing: more set ups, assess gap with commercial equipment
 - GUI: Windows, Android
-- Hardware support: rtl_tcp, Hackrf, stdin, a nice RPI hat
+- Hardware support: rtl_tcp, Hackrf, stdin, a nice RPI hat and other SDRplay devices
 - ....
 - ....
