@@ -56,7 +56,7 @@ namespace Device {
 		file.read((char*)buffer.data(), buffer_size);
 
 		if (!file)
-			Pause();
+			Stop();
 		else
 			StreamOut<CFLOAT32>::Send((CFLOAT32*)buffer.data(), file.gcount() / (sizeof(CFLOAT32)));
 

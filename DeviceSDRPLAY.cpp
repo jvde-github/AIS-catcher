@@ -110,7 +110,7 @@ namespace Device {
 		if (eventId == sdrplay_api_DeviceRemoved)
 		{
 			std::cerr << "SDRPLAY: device disconnected" << std::endl;
-			Pause();
+			Stop();
 		}
 	}
 
@@ -264,7 +264,7 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void SDRPLAY::Pause()
+	void SDRPLAY::Stop()
 	{
 		DeviceBase::Stop();
 

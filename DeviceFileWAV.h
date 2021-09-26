@@ -37,7 +37,7 @@ namespace Device{
 
 		// Control
 		void Play() { DeviceBase::Play(); }
-		void Pause() { DeviceBase::Stop(); }
+		void Stop() { DeviceBase::Stop(); }
 
 		void setSampleRate(uint32_t s) { }
 

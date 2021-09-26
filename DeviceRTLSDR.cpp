@@ -206,7 +206,7 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void RTLSDR::Pause()
+	void RTLSDR::Stop()
 	{
 		DeviceBase::Stop();
 

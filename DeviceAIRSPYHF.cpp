@@ -115,7 +115,7 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void AIRSPYHF::Pause()
+	void AIRSPYHF::Stop()
 	{
 		airspyhf_stop(dev);
 		DeviceBase::Stop();

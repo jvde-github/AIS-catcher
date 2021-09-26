@@ -68,7 +68,7 @@ namespace Device {
 
 		Send(output.data(), len);
 
-		if (!file) Pause();
+		if (!file) Stop();
 
 		return streaming;
 	}
