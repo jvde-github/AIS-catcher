@@ -17,7 +17,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 Compilation and installation instructions are provided below for Linux systems including Raspberry Pi.
 
-A Windows binary version of v0.26 (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1_A8ixyeLqIvH3ZWEmj1VOsvAy5xN8x3i/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of v0.26 (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
 
@@ -172,10 +172,6 @@ Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare ante
 | rtl-ais v0.3  @ 1600K  | ```-n``` | 33 | 30  | 
 
 For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
-
-## Releases
-
-A release in binary format for Windows 32 bit (including required libraries) is provided above but if not, please reach out and I will make it available. For Linux systems the compilation instructions are below.
 
 ## Compilation process
 
