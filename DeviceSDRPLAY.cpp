@@ -184,7 +184,7 @@ namespace Device {
 		std::cerr << "SDRPLAY: Stop demodulation thread." << std::endl;
 	}
 
-	void SDRPLAY::openDevice(uint64_t h)
+	void SDRPLAY::Open(uint64_t h)
 	{
 		unsigned int DeviceCount;
 
@@ -211,9 +211,9 @@ namespace Device {
 		chParams = deviceParams->rxChannelA;
 	}
 
-	void SDRPLAY::openDevice()
+	void SDRPLAY::Open()
 	{
-		openDevice(0);
+		Open(0);
 	}
 
 	void SDRPLAY::setSampleRate(uint32_t s)

@@ -26,6 +26,7 @@ SOFTWARE.
 #include <iomanip>
 #include <algorithm>
 
+#include "AIS-catcher.h"
 #include "Signal.h"
 
 #include "DeviceFileRAW.h"
@@ -59,40 +60,40 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
-	std::cerr << "\t[-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
+	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
 	std::cerr << "\t[-u address port - UDP address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-r filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
-	std::cerr << "\t[-r cu8 filename - read IQ data from raw \'unsigned char\' file]" << std::endl;
-	std::cerr << "\t[-r cs16 filename - read IQ data from raw \'signed 16 bit integer\' file]" << std::endl;
-	std::cerr << "\t[-r cf32 filename - read IQ data from WAV file in \'float\' format]" << std::endl;
-	std::cerr << "\t[-w filename - read IQ data from WAV file in \'float\' format]" << std::endl;
+	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file - short for -ga format yy file filename]" << std::endl;
+	std::cerr << "\t[-w filename - read IQ data from WAV file = - short for -gw file filename]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-d:x select device based on index (default: 0)]" << std::endl;
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 	std::cerr << std::endl;
-#ifdef HASRTLSDR
-	std::cerr << "\t[-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
-	std::cerr << "\t[-p xx equivalent to -gr FREQOFFSET xx]" << std::endl;
-#endif
-#ifdef HASAIRSPY
-	std::cerr << "\t[-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
-#endif
-#ifdef HASAIRSPYHF
-	std::cerr << "\t[-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
-#endif
-#ifdef HASSDRPLAY
-	std::cerr << "\t[-gs SDRPLAY specific settings: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
-#endif
-	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
 	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
+	std::cerr << "\tDevice specific settings:" << std::endl;
+	std::cerr << std::endl;
+#ifdef HASRTLSDR
+	std::cerr << "\t[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
+	std::cerr << "\t[-p xx equivalent to -gr FREQOFFSET xx]" << std::endl;
+#endif
+#ifdef HASAIRSPY
+	std::cerr << "\t[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
+#endif
+#ifdef HASAIRSPYHF
+	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
+#endif
+#ifdef HASSDRPLAY
+	std::cerr << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
+#endif
+	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]" << std::endl;
+	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
 }
 
 std::vector<Device::Description> getDevices()
@@ -128,6 +129,14 @@ void printDevices(std::vector<Device::Description>& device_list)
 	{
 		std::cerr << i << ": " << getDeviceDescription(device_list[i]) << std::endl;
 	}
+}
+
+void printVersion()
+{
+	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION <<std::endl ;
+	std::cerr << "(C) Copyright 2021 " << COPYRIGHT << std::endl;
+	std::cerr << "This is free software; see the source for copying conditions.There is NO"  << std::endl;
+	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
 }
 
 void printSupportedDevices(std::vector<Device::Description>& device_list)
@@ -216,8 +225,10 @@ void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liv
 	}
 }
 
-void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int& ptr, int argc)
+void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int argc)
 {
+	ptr++;
+
 	while (ptr < argc - 1 && argv[ptr][0] != '-')
 	{
 		std::string option = argv[ptr++];
@@ -227,6 +238,11 @@ void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int& ptr, int 
 	}
 }
 
+void Assert(bool b)
+{
+	if (!b) throw "Error on command line: invalid options.";
+}
+
 int main(int argc, char* argv[])
 {
 	int sample_rate = 0;
@@ -234,14 +250,15 @@ int main(int argc, char* argv[])
 
 	int input_device = 0;
 
-	bool list_devices = false;
-	bool list_support = false;
+	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false;
 	bool timer_on = false;
 	int NMEA_to_screen = 2;
 	bool RTLSDRfastDS = true;
 	int verboseUpdateTime = 3000;
 
+	Device::SettingsRAWFile settingsRAW;
+	Device::SettingsWAVFile settingsWAV;
 	Device::SettingsRTLSDR settingsRTL;
 	Device::SettingsAIRSPYHF settingsAIRSPYHF;
 	Device::SettingsAIRSPY settingsAIRSPY;
@@ -250,7 +267,6 @@ int main(int argc, char* argv[])
 	uint64_t handle = 0;
 	Device::Format RAWformat = Device::Format::CU8;
 
-	std::string filename_in = "";
 	std::string udp_address = "";
 	std::string udp_port = "";
 
@@ -277,91 +293,77 @@ int main(int argc, char* argv[])
 		{
 			std::string param = std::string(argv[ptr]);
 
-			std::string arg1 = ptr < argc - 1 ? std::string(argv[ptr + 1]) : "";
-			std::string arg2 = ptr < argc - 2 ? std::string(argv[ptr + 2]) : "";
+			Assert(param[0] == '-');
+			
+			int count = 0;
+			while (ptr + count < argc-1 && argv[ptr + 1 + count][0] != '\0' && argv[ptr + 1 + count][0] != '-') count++;
 
-			if (param[0] != '-')
-			{
-				std::cerr << "Invalid argument : " << param << std::endl;
-				return -1;
-			}
+			std::string arg1 = count >= 1 ? std::string(argv[ptr + 1]) : "";
+			std::string arg2 = count >= 2 ? std::string(argv[ptr + 2]) : "";
 
 			switch (param[1])
 			{
 			case 's':
+				Assert(count == 1);
 				sample_rate = Util::Parse::Integer(arg1, 0, 6144000);
-				ptr+=2;
 				break;
 			case 'm':
-				liveModelsSelected.push_back(Util::Parse::Integer(arg1,0,5));
-				ptr+=2;
+				Assert(count == 1);
+				liveModelsSelected.push_back(Util::Parse::Integer(arg1, 0, 5));
 				break;
 			case 'v':
+				Assert(count <= 1);
 				verbose = true;
-				if (arg1 != "" && arg1[0] != '-')
-				{
-					verboseUpdateTime = Util::Parse::Integer(arg1, 0, 3600) * 1000;
-					ptr++;
-				}
-				ptr++;
+				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600) * 1000;
 				break;
 			case 'q':
+				Assert(count == 0);
 				NMEA_to_screen = 0;
-				ptr++;
 				break;
 			case 'n':
+				Assert(count == 0);
 				NMEA_to_screen = 1;
-				ptr++;
 				break;
 			case 'b':
+				Assert(count == 0);
 				timer_on = true;
-				ptr++;
 				break;
 			case 'w':
+				Assert(count <= 1);
 				input_type = Device::Type::WAVFILE;
-				filename_in = arg1;
-				ptr+=2;
+				if (count == 1) settingsWAV.Set("FILE", arg1);
 				break;
 			case 'r':
+				Assert(count <= 2);
 				input_type = Device::Type::RAWFILE;
-				if(arg2 == "" || arg2[0] == '-')
+				if (count == 1)
 				{
-					filename_in = arg1;
-					ptr+=2;
+					settingsRAW.Set("FILE", arg1);
 				}
-				else
+				else if (count == 2)
 				{
-					filename_in = arg2;
-
-					if(arg1 == "cu8") RAWformat = Device::Format::CU8;
-					else if(arg1 == "cs16") RAWformat = Device::Format::CS16;
-					else if(arg1 == "cf32") RAWformat = Device::Format::CF32;
-					else
-					{
-						std::cerr << "Unsupported RAW file format specified : " << arg1 << std::endl;
-						return -1;
-					}
-					ptr += 3;
+					settingsRAW.Set("FORMAT", arg1);
+					settingsRAW.Set("FILE", arg2);
 				}
 				break;
 			case 'l':
+				Assert(count == 0);
 				list_devices = true;
-				ptr++;
 				break;
 			case 'L':
+				Assert(count == 0);
 				list_support = true;
-				ptr++;
 				break;
 			case 'd':
 				if (param.length() == 4 && param[2] == ':')
 				{
+					Assert(count == 0);
 					input_device = (param[3] - '0');
-					ptr++;
 				}
 				else
 				{
+					Assert(count == 1);
 					input_device = getDeviceFromSerial(device_list, arg1);
-					ptr+=2;
 				}
 				if (input_device < 0 || input_device >= device_list.size())
 				{
@@ -370,37 +372,39 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'u':
+				Assert(count == 2);
 				udp_address = arg1; udp_port = arg2;
-				ptr += 3;
 				break;
 			case 'h':
-				Usage();
-				return 0;
+				Assert(count == 0);
+				list_options = true;				
+				break;
 			case 'p':
-				settingsRTL.Set("FREQOFFSET",arg1);
-				ptr += 2;
+				Assert(count == 1);
+				settingsRTL.Set("FREQOFFSET", arg1);
 				break;
 			case 'g':
-				if(param == "-gm")
-					parseDeviceSettings(settingsAIRSPY, argv, ++ptr, argc);
-				else if(param == "-gr")
-					parseDeviceSettings(settingsRTL, argv, ++ptr, argc);
-				else if(param == "-gh")
-					parseDeviceSettings(settingsAIRSPYHF, argv, ++ptr, argc);
-				else if(param == "-gs")
-					parseDeviceSettings(settingsSDRPLAY, argv, ++ptr, argc);
-				else
-					throw "Invalid -g switch on command line";
-				break;
-			default:
-				std::cerr << "Unknown option " << param << std::endl;
-				return -1;
+				Assert(count % 2 == 0 && param.length() == 3);
+				switch (param[2])
+				{
+				case 'm': parseDeviceSettings(settingsAIRSPY, argv, ptr, argc); break;
+				case 'r': parseDeviceSettings(settingsRTL, argv, ptr, argc); break;
+				case 'h': parseDeviceSettings(settingsAIRSPYHF, argv, ptr, argc); break;
+				case 's': parseDeviceSettings(settingsSDRPLAY, argv, ptr, argc); break;
+				case 'a': parseDeviceSettings(settingsRAW, argv, ptr, argc); break;
+				case 'w': parseDeviceSettings(settingsWAV, argv, ptr, argc); break;
+				default: throw "Error on command line: invalid -g switch on command line";
+				}
 			}
+
+			ptr += count + 1;
 		}
 
+		if (verbose || list_devices || list_support || NMEA_to_screen == 2 || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
 		if (list_support) printSupportedDevices(device_list);
-		if (list_devices || list_support) return 0;
+		if (list_options) Usage();
+		if (list_devices || list_support || list_options) return 0;
 
 		// Select device
 
@@ -429,7 +433,7 @@ int main(int argc, char* argv[])
 		{
 #ifdef HASAIRSPYHF
 			Device::AIRSPYHF* device = new Device::AIRSPYHF();
-			device->openDevice();
+			device->Open();
 
 			control = device;
 			out = &(device->out);
@@ -445,7 +449,7 @@ int main(int argc, char* argv[])
 		{
 #ifdef HASAIRSPY
 			Device::AIRSPY* device = new Device::AIRSPY();
-			device->openDevice();
+			device->Open();
 
 			control = device;
 			out = &(device->out);
@@ -461,7 +465,7 @@ int main(int argc, char* argv[])
                 {
 #ifdef HASSDRPLAY
                         Device::SDRPLAY* device = new Device::SDRPLAY();
-                        device->openDevice();
+                        device->Open();
 
                         control = device;
                         out = &(device->out);
@@ -477,20 +481,26 @@ int main(int argc, char* argv[])
 		case Device::Type::WAVFILE:
 		{
 			Device::WAVFile* device = new Device::WAVFile();
-			device->openFile(filename_in);
 
 			control = device;
 			out = &(device->out);
+
+			device->setSettings(settingsWAV);
+			if (verbose) settingsWAV.Print();
+
+			device->Open();
 			break;
 		}
 		case Device::Type::RAWFILE:
 		{
 			Device::RAWFile* device = new Device::RAWFile();
-			device->openFile(filename_in);
-			device->setFormat(RAWformat);
 
 			control = device;
 			out = &(device->out);
+
+			device->setSettings(settingsRAW);
+			if (verbose) settingsRAW.Print();
+
 			break;
 		}
 		case Device::Type::RTLSDR:
@@ -498,7 +508,7 @@ int main(int argc, char* argv[])
 #ifdef HASRTLSDR
 
 			Device::RTLSDR* device = new Device::RTLSDR();
-			device->openDevice(handle);
+			device->Open(handle);
 
 			if(sample_rate == 0 and RTLSDRfastDS)
 			{

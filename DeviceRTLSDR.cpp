@@ -69,7 +69,7 @@ namespace Device {
 
 #ifdef HASRTLSDR
 
-	void RTLSDR::openDevice(uint64_t h)
+	void RTLSDR::Open(uint64_t h)
 	{
 		if (rtlsdr_open(&dev, h) != 0) throw "RTLSDR: cannot open device.";
 	}
