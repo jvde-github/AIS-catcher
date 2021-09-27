@@ -1,6 +1,8 @@
 # AIS-catcher - A multi-platform AIS receiver
 This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, SDRplay (RSP1A for now) and input from file. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
 
+### Disclaimer
+
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
 ## Recent Developments
@@ -25,33 +27,35 @@ If you are looking for a Windows binary supporting SDRplay API 3.08, please get 
 ````
 use: AIS-catcher [options]
 
-        [-h display this message and terminate (default: false)]
-        [-s xxx sample rate in Hz (default: based on SDR device)]
-        [-v [option: xx] enable verbose mode, optional to provide update frequency in seconds (default: false)]
-        [-q surpress NMEA messages to screen (default: false)]
-        [-n show NMEA messages on screen without detail]
-        [-u address port - UDP address and port (default: off)]
+	[-h display this message and terminate (default: false)]
+	[-s xxx sample rate in Hz (default: based on SDR device)]
+	[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]
+	[-q surpress NMEA messages to screen (default: false)]
+	[-n show NMEA messages on screen without detail]
+	[-u address port - UDP address and port (default: off)]
 
-        [-r filename - read IQ data from raw 'unsigned char' file]
-        [-r cu8 filename - read IQ data from raw 'unsigned char' file]
-        [-r cs16 filename - read IQ data from raw 'signed 16 bit integer' file]
-        [-r cf32 filename - read IQ data from WAV file in 'float' format]
-        [-w filename - read IQ data from WAV file in 'float' format]
+	[-r [optional: yy] filename - read IQ data from file - short for -ga format yy file filename]
+	[-w filename - read IQ data from WAV file = - short for -gw file filename]
 
-        [-l list available devices and terminate (default: off)]
-        [-L list supported hardware and terminate (default: off)]
-        [-d:x select device based on index (default: 0)]
-        [-d xxxx select device based on serial number]
+	[-l list available devices and terminate (default: off)]
+	[-L list supported SDR hardware and terminate (default: off)]
+	[-d:x select device based on index (default: 0)]
+	[-d xxxx select device based on serial number]
 
-        [-gr RTLSDR specic settings: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
-        [-p xx equivalent to -gr FREQOFFSET xx]
-        [-gm Airspy specific settings: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
-        [-gh Airspy HF+ specific settings: TRESHOLD [low/high] PREAMP [on/off] ]
-        [-gs SDRPLAY specific settings: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
+	[-m xx run specific decoding model (default: 2)]
+	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
+	[-b benchmark demodulation models - for development purposes (default: off)]
 
-        [-m xx run specific decoding model (default: 2)]
-        [       0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
-        [-b benchmark demodulation models - for development purposes (default: off)]
+	Device specific settings:
+
+	[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
+	[-p xx equivalent to -gr FREQOFFSET xx]
+	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
+	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
+	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
+        [-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]
+	[-gw WAV file: FILE [filename]
+
 ````
 
 ## Examples
@@ -81,12 +85,13 @@ rtl_sdr -s 288K -f 162M  test_288.raw
 AIS-catcher -r test_288.raw -s 288000 -v
 ```
 
-We can run AIS-cactcher on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
+### Input from FM discriminator
+We can run AIS-catcher on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
 AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-AIS-catcher on this file should extract roughly ``360`` AIVDM lines. Notice that with switch ```-m 3``` on the command line AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
+On this file we should extract roughly ``360`` AIVDM lines. Notice that with switch ```-m 3``` on the command line AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
 ```console
 gnuais -l helsinki-210-messages.raw
 ```
