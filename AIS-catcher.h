@@ -22,5 +22,5 @@ SOFTWARE.
 
 #pragma once
 
-#define VERSION	"v0.26"
-#define COPYRIGHT "jvde.github@gmail.com and other contributors"
+#define VERSION     "v0.26"
+#define COPYRIGHT   "jvde.github@gmail.com and other contributors"
