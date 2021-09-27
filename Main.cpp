@@ -65,8 +65,8 @@ void Usage()
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
 	std::cerr << "\t[-u address port - UDP address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file - short for -ga format yy file filename]" << std::endl;
-	std::cerr << "\t[-w filename - read IQ data from WAV file = - short for -gw file filename]" << std::endl;
+	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga format yy file filename]" << std::endl;
+	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw file filename]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
@@ -75,7 +75,7 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
 	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]" << std::endl;
-	std::cerr << "\t[-b benchmark demodulation models - for development purposes (default: off)]" << std::endl;
+	std::cerr << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\tDevice specific settings:" << std::endl;
 	std::cerr << std::endl;
@@ -240,7 +240,7 @@ void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int a
 
 void Assert(bool b)
 {
-	if (!b) throw "Error on command line: invalid options.";
+	if (!b) throw "Error on command line: syntax error.";
 }
 
 int main(int argc, char* argv[])
@@ -265,7 +265,6 @@ int main(int argc, char* argv[])
 	Device::SettingsSDRPLAY settingsSDRPLAY;
 
 	uint64_t handle = 0;
-	Device::Format RAWformat = Device::Format::CU8;
 
 	std::string udp_address = "";
 	std::string udp_port = "";
@@ -273,6 +272,7 @@ int main(int argc, char* argv[])
 	std::vector<AIS::Model*> liveModels;
 	std::vector<int> liveModelsSelected;
 	Device::Type input_type = Device::Type::NONE;
+
 	IO::UDP udp;
 	IO::DumpScreen nmea_screen;
 
@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
 			std::string param = std::string(argv[ptr]);
 
 			Assert(param[0] == '-');
-			
+
 			int count = 0;
 			while (ptr + count < argc-1 && argv[ptr + 1 + count][0] != '\0' && argv[ptr + 1 + count][0] != '-') count++;
 
@@ -377,7 +377,7 @@ int main(int argc, char* argv[])
 				break;
 			case 'h':
 				Assert(count == 0);
-				list_options = true;				
+				list_options = true;
 				break;
 			case 'p':
 				Assert(count == 1);
@@ -485,6 +485,7 @@ int main(int argc, char* argv[])
 			control = device;
 			out = &(device->out);
 
+			// first settings then Open... consistency needs to be fixed
 			device->setSettings(settingsWAV);
 			if (verbose) settingsWAV.Print();
 
@@ -506,7 +507,6 @@ int main(int argc, char* argv[])
 		case Device::Type::RTLSDR:
 		{
 #ifdef HASRTLSDR
-
 			Device::RTLSDR* device = new Device::RTLSDR();
 			device->Open(handle);
 
