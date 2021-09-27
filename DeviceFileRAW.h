@@ -24,23 +24,40 @@ SOFTWARE.
 
 #include "Device.h"
 
-namespace Device{
+namespace Device
+{
+
+	class SettingsRAWFile : public DeviceSettings
+	{
+	private:
+
+		Format format = Format::CU8;
+		std::string file;
+		bool stereo = true;
+
+	public:
+
+		friend class RAWFile;
+
+		void Print();
+		void Set(std::string option, std::string arg);
+	};
 
 	class RAWFile : public DeviceBase, public StreamOut<CFLOAT32>
 	{
 		std::ifstream file;
-
+		std::string filename;
 		std::vector<char> buffer;
 		std::vector<CFLOAT32> output;
 		const int buffer_size = 16 * 16384;
-
+		bool stereo = true;
 		Format format = Format::CU8;
 
 	public:
 
 		// Control
-		void Play() { DeviceBase::Play(); }
-		void Stop() { DeviceBase::Stop(); }
+		void Play();
+		void Stop();
 
 		bool isCallback() { return false; }
 		bool isStreaming();
@@ -54,6 +71,8 @@ namespace Device{
 
 		// Device specific
 		void setFormat(Format f) { format = f; }
-		void openFile(std::string filename);
+
+		void setSettings(SettingsRAWFile& s);
+
 	};
 }

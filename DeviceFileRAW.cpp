@@ -29,6 +29,58 @@ SOFTWARE.
 
 namespace Device {
 
+	void SettingsRAWFile::Print()
+	{
+		std::cerr << "RAW file Settings: -ga";
+
+		switch (format)
+		{
+		case Device::Format::CF32:
+			std::cerr << " CF32";
+			break;
+
+		case Device::Format::CS16:
+			std::cerr << " CS16";
+			break;
+
+		case Device::Format::CU8:
+			std::cerr << " CU8";
+			break;
+
+		}
+		std::cerr << " file " << file << std::endl;;
+	}
+
+	void SettingsRAWFile::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		if (option == "FILE")
+		{
+			file = arg;
+			return;
+		}
+
+		Util::Convert::toUpper(arg);
+
+		if (option == "FORMAT")
+		{
+			if (arg == "CU8")
+				format = Device::Format::CU8;
+			else if (arg == "CF32")
+				format = Device::Format::CF32;
+			else if (arg == "CS16")
+				format = Device::Format::CS16;
+			else throw "RAW FILE: Unknown file format specification.";
+		}
+		else if (option == "STEREO")
+		{
+			stereo = Util::Parse::Switch(arg);
+		}
+		else
+			throw " Invalid setting for FILE RAW.";
+	}
+
 	//---------------------------------------
 	// RAW CU8 file
 
@@ -42,6 +94,8 @@ namespace Device {
 		buffer.assign(buffer_size, 0.0f);
 		file.read((char*)buffer.data(), buffer.size());
 				
+		if (!stereo) throw "FILE RAW: layout not implemented.";
+
 		switch (format)
 		{
 		case Format::CU8:
@@ -73,14 +127,30 @@ namespace Device {
 		return streaming;
 	}
 
-	void RAWFile::openFile(std::string filename)
+	void RAWFile::Play()
 	{
 		file.open(filename, std::ios::out | std::ios::binary);
 		if (!file) throw "Error: Cannot read from RAW file.";
+
+		DeviceBase::Play();
+
+	}
+	void RAWFile::Stop()
+	{
+		file.close();
+
+		DeviceBase::Stop(); 
 	}
 
 	std::vector<uint32_t> RAWFile::SupportedSampleRates()
 	{
 		return { 48000, 288000, 384000, 768000, 1536000, 1920000, 2304000 };
+	}
+
+	void RAWFile::setSettings(SettingsRAWFile& s)
+	{
+		format = s.format;
+		filename = s.file;
+		stereo = s.stereo;
 	}
 }

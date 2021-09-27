@@ -23,21 +23,37 @@ SOFTWARE.
 #pragma once
 
 #include "Device.h"
+#include "Utilities.h"
 
 namespace Device{
+
+	class SettingsWAVFile : public DeviceSettings
+	{
+	private:
+
+		std::string file;
+
+	public:
+
+		friend class WAVFile;
+
+		void Print();
+		void Set(std::string option, std::string arg);
+	};
 
 	class WAVFile : public DeviceBase, public StreamOut<CFLOAT32>
 	{
 		std::ifstream file;
-
+		std::string filename;
 		std::vector<uint8_t> buffer;
 		const int buffer_size = 16 * 16384;
 
 	public:
 
 		// Control
-		void Play() { DeviceBase::Play(); }
-		void Stop() { DeviceBase::Stop(); }
+		void Play();
+		void Stop();
+		void Open();
 
 		void setSampleRate(uint32_t s) { }
 
@@ -52,6 +68,7 @@ namespace Device{
 		std::vector<uint32_t> SupportedSampleRates();
 
 		// Device specific
-		void openFile(std::string filename);
+		void setSettings(SettingsWAVFile& s);
+
 	};
 }

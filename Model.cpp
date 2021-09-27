@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include "AIS-catcher.h"
 #include "Model.h"
 
 namespace AIS
@@ -148,7 +149,7 @@ namespace AIS
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn);
-		setName("AIS engine v0.26");
+		setName("AIS engine " VERSION);
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);

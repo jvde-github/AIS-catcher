@@ -29,6 +29,24 @@ SOFTWARE.
 
 namespace Device {
 
+	void SettingsWAVFile::Print()
+	{
+		std::cerr << "WAV file Settings: -gw";		
+		std::cerr << " file " << file << std::endl;;
+	}
+
+	void SettingsWAVFile::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		if (option == "FILE")
+		{
+			file = arg;
+			return;
+		}
+		throw " Invalid setting for FILE WAV.";
+	}
+
 	//---------------------------------------
 	// WAV file, FLOAT only
 
@@ -63,7 +81,7 @@ namespace Device {
 		return streaming;
 	}
 
-	void WAVFile::openFile(std::string filename)
+	void WAVFile::Open()
 	{
 		struct WAVFileFormat header;
 
@@ -86,9 +104,25 @@ namespace Device {
 		sample_rate = header.dwSamplesPerSec;
 	}
 
+	void WAVFile::Play()
+	{
+		DeviceBase::Play();
+	}
+
+	void WAVFile::Stop()
+	{
+		file.close();
+		DeviceBase::Stop();
+	}
+
 	std::vector<uint32_t> WAVFile::SupportedSampleRates()
 	{
 		return { sample_rate };
+	}
+
+	void WAVFile::setSettings(SettingsWAVFile& s)
+	{
+		filename = s.file;
 	}
 
 }

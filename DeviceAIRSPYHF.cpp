@@ -58,12 +58,12 @@ namespace Device {
 
 #ifdef HASAIRSPYHF
 
-	void AIRSPYHF::openDevice(uint64_t h)
+	void AIRSPYHF::Open(uint64_t h)
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 	}
 
-	void AIRSPYHF::openDevice()
+	void AIRSPYHF::Open()
 	{
 		if (airspyhf_open(&dev) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 	}
