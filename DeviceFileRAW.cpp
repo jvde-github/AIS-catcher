@@ -93,7 +93,7 @@ namespace Device {
 
 		buffer.assign(buffer_size, 0.0f);
 		file.read((char*)buffer.data(), buffer.size());
-				
+
 		if (!stereo) throw "FILE RAW: layout not implemented.";
 
 		switch (format)
@@ -139,7 +139,7 @@ namespace Device {
 	{
 		file.close();
 
-		DeviceBase::Stop(); 
+		DeviceBase::Stop();
 	}
 
 	std::vector<uint32_t> RAWFile::SupportedSampleRates()
