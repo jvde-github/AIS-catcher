@@ -64,9 +64,10 @@ void Usage()
 	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
 	std::cerr << "\t[-u address port - UDP address and port (default: off)]" << std::endl;
+	std::cerr << "\t[-U xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga format yy file filename]" << std::endl;
-	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw file filename]" << std::endl;
+	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename]" << std::endl;
+	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
@@ -79,19 +80,11 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\tDevice specific settings:" << std::endl;
 	std::cerr << std::endl;
-#ifdef HASRTLSDR
 	std::cerr << "\t[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
 	std::cerr << "\t[-p xx equivalent to -gr FREQOFFSET xx]" << std::endl;
-#endif
-#ifdef HASAIRSPY
 	std::cerr << "\t[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
-#endif
-#ifdef HASAIRSPYHF
 	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
-#endif
-#ifdef HASSDRPLAY
 	std::cerr << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
-#endif
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
 }
@@ -269,6 +262,9 @@ int main(int argc, char* argv[])
 	std::string udp_address = "";
 	std::string udp_port = "";
 
+	std::vector<IO::UDPEndPoint> UDPdestinations;
+	std::vector<IO::UDP> UDPconnections;
+
 	std::vector<AIS::Model*> liveModels;
 	std::vector<int> liveModelsSelected;
 	Device::Type input_type = Device::Type::NONE;
@@ -375,6 +371,10 @@ int main(int argc, char* argv[])
 				Assert(count == 2);
 				udp_address = arg1; udp_port = arg2;
 				break;
+			case 'U':
+				Assert(count == 2);
+				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2));
+				break;
 			case 'h':
 				Assert(count == 0);
 				list_options = true;
@@ -395,6 +395,10 @@ int main(int argc, char* argv[])
 				case 'w': parseDeviceSettings(settingsWAV, argv, ptr, argc); break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
+				break;
+			default:
+				std::cerr << "Unknown option on command line ignored (" << param[1] << ")." << std::endl;
+				return 0;
 			}
 
 			ptr += count + 1;
@@ -555,11 +559,20 @@ int main(int argc, char* argv[])
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
-		// Connect output to UDP stream
+		// Connect output to UDP stream, old
 		if (udp_address != "")
 		{
 			udp.openConnection(udp_address, udp_port);
 			liveModels[0]->Output() >> udp;
+		}
+
+		// Connect output to UDP stream, new
+		UDPconnections.resize(UDPdestinations.size());
+
+		for(int i = 0; i < UDPdestinations.size(); i++)
+		{
+			UDPconnections[i].openConnection(UDPdestinations[i]);
+			liveModels[0]->Output() >> UDPconnections[i];
 		}
 
 		if (NMEA_to_screen > 0)
@@ -586,9 +599,9 @@ int main(int argc, char* argv[])
 			{
 				SleepSystem(verboseUpdateTime);
 
-				if(verbose)
-					for(int j = 0; j < liveModels.size(); j++)
-						std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << std::setprecision(2) << statistics[j].getRate() << " msg/s" << std::endl;
+				if (verbose)
+					for (int j = 0; j < liveModels.size(); j++)
+						std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
 			}
 		}
 
@@ -597,8 +610,8 @@ int main(int argc, char* argv[])
 		if (verbose)
 		{
 			std::cerr << "----------------------" << std::endl;
-			for(int j = 0; j < liveModels.size(); j++)
-				std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << std::setprecision(2) << statistics[j].getRate() << " msg/s" << std::endl;
+			for (int j = 0; j < liveModels.size(); j++)
+				std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
 
 		}
 

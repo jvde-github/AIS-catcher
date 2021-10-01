@@ -33,9 +33,10 @@ use: AIS-catcher [options]
 	[-q surpress NMEA messages to screen (default: false)]
 	[-n show NMEA messages on screen without detail]
 	[-u address port - UDP address and port (default: off)]
+	[-U xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
 
-	[-r [optional: yy] filename - read IQ data from file - short for -ga format yy file filename]
-	[-w filename - read IQ data from WAV file = - short for -gw file filename]
+	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename]
+	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
 
 	[-l list available devices and terminate (default: off)]
 	[-L list supported SDR hardware and terminate (default: off)]
@@ -44,7 +45,7 @@ use: AIS-catcher [options]
 
 	[-m xx run specific decoding model (default: 2)]
 	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
-	[-b benchmark demodulation models - for development purposes (default: off)]
+	[-b benchmark demodulation models for time - for development purposes (default: off)]
 
 	Device specific settings:
 
@@ -53,9 +54,8 @@ use: AIS-catcher [options]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
-        [-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]
+	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]
 	[-gw WAV file: FILE [filename]
-
 ````
 
 ## Examples
@@ -77,7 +77,12 @@ To start AIS demodulation, print some occasional statistics (every 10 seconds) a
 ```console
 AIS-catcher -v 10 -u 127.0.0.1 12345
 ```
-If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. These console messages can be surpressed with the option ```-q```.
+If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. 
+These console messages can be surpressed with the option ```-q```. Multiple UDP destinations are allowed with the experimental ``U``-switch, e.g.:
+```console
+AIS-catcher -v 10 -U 127.0.0.1 12345 -U 127.0.0.1 23456
+```
+
 
 The following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
 ```console
