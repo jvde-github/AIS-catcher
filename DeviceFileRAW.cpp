@@ -144,7 +144,7 @@ namespace Device {
 
 	std::vector<uint32_t> RAWFile::SupportedSampleRates()
 	{
-		return { 48000, 288000, 384000, 768000, 1536000, 1920000, 2304000 };
+		return { 48000, 96000, 250000, 288000, 384000, 768000, 1536000, 1920000, 2304000 };
 	}
 
 	void RAWFile::setSettings(SettingsRAWFile& s)
