@@ -69,8 +69,9 @@ namespace IO
 			time_lastupdate = timeNow;
 			lastcount = count;
 
-			return rate;
+			return ((int)(10 * rate + 0.5f)) / 10.0f;
 		}
+
 		void resetStatistic()
 		{
 			count = 0;
@@ -112,15 +113,29 @@ namespace IO
 
 		void Receive(const NMEA* data, int len)
 		{
+			if(level == 0) return;
+
 			for (int i = 0; i < len; i++)
 				for (auto s : data[i].sentence)
 				{
 					std::cout << s;
 
-					if(level >= 2) std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")";
+					if (level >= 2) std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")";
 					std::cout << std::endl;
 				}
 		}
+	};
+
+	class UDPEndPoint
+	{
+		std::string address;
+		std::string port;
+
+	public:
+
+		friend class UDP;
+
+		UDPEndPoint(std::string a, std::string p) { address = a, port = p; }
 	};
 
 	class UDP : public StreamIn<NMEA>
@@ -137,6 +152,7 @@ namespace IO
 
 		void Receive(const NMEA* data, int len);
 		void openConnection(std::string host, std::string portname);
+		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
 
 		~UDP() { closeWSA(); }
 	};
