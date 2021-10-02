@@ -76,14 +76,12 @@ namespace AIS
 			physical >> DSK >> ROT;
 			break;
 		case 250000:
-			US.setParams(250000, 288000);
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> US >> DSK >> ROT;
+			US.setParams(125000, 192000);
+			physical >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 240000:
-			US.setParams(240000, 288000);
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> US >> DSK >> ROT;
+			US.setParams(120000, 192000);
+			physical >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 96000:
 			physical >> ROT;
