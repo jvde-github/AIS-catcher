@@ -31,7 +31,7 @@ namespace Device {
 
 	void SettingsWAVFile::Print()
 	{
-		std::cerr << "WAV file Settings: -gw";		
+		std::cerr << "WAV file Settings: -gw";
 		std::cerr << " file " << file << std::endl;;
 	}
 
