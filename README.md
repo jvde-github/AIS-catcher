@@ -32,8 +32,7 @@ use: AIS-catcher [options]
 	[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]
 	[-q suppress NMEA messages to screen (default: false)]
 	[-n show NMEA messages on screen without detail]
-	[-u address port - UDP address and port (default: off)]
-	[-U xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
+	[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
 
 	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename]
 	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
@@ -75,13 +74,10 @@ A specific device can be selected with the ``d``-switch like ``-d:0`` or ``-d 00
 
 To start AIS demodulation, print some occasional statistics (every 10 seconds) and broadcast AIS messages via UDP, we can use the following command:
 ```console
-AIS-catcher -v 10 -u 127.0.0.1 12345
+AIS-catcher -v 10 -u 127.0.0.1 12345 -u 127.0.0.1 23456
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. 
-These console messages can be suppressed with the option ```-q```. Multiple UDP destinations are allowed with the experimental ``U``-switch, e.g.:
-```console
-AIS-catcher -v 10 -U 127.0.0.1 12345 -U 127.0.0.1 23456
-```
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345` and port `23456`. 
+These console messages can be suppressed with the option ```-q```. 
 
 
 The following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
