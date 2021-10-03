@@ -455,22 +455,21 @@ int main(int argc, char* argv[])
 #endif
 			break;
 		}
-                case Device::Type::SDRPLAY:
-                {
+        case Device::Type::SDRPLAY:
+        {
 #ifdef HASSDRPLAY
-                        Device::SDRPLAY* device = new Device::SDRPLAY();
-                        device->Open(settingsSDRPLAY);
+            Device::SDRPLAY* device = new Device::SDRPLAY();
+            device->Open(settingsSDRPLAY);
 
-                        control = device;
-                        out = &(device->out);
+            control = device;
+            out = &(device->out);
 
-                        if(verbose) settingsSDRPLAY.Print();
+            if(verbose) settingsSDRPLAY.Print();
 #else
-                        std::cerr << "SDRPLAY not included in this package. Please build version including SDRPLAY support.";
+            std::cerr << "SDRPLAY not included in this package. Please build version including SDRPLAY support.";
 #endif
-                        break;
-                }
-
+            break;
+        }
 		case Device::Type::WAVFILE:
 		{
 			Device::WAVFile* device = new Device::WAVFile();
@@ -546,7 +545,7 @@ int main(int argc, char* argv[])
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
-		// Connect output to UDP stream, new
+		// Connect output to UDP stream
 		UDPconnections.resize(UDPdestinations.size());
 
 		for(int i = 0; i < UDPdestinations.size(); i++)
@@ -561,7 +560,7 @@ int main(int argc, char* argv[])
 			nmea_screen.setDetail(NMEA_to_screen);
 		}
 
-		// Set up Device
+		// Set up generic device parameters
 		control->setSampleRate(sample_rate);
 		control->setFrequency((int)(162e6));
 
@@ -570,6 +569,7 @@ int main(int argc, char* argv[])
 			std::cerr << "Generic settings: " << "sample rate -s " << control->getSampleRate() << ", model rate " << model_rate/1000 << "K" << std::endl;
 		}
 
+		// -----------------
 		// Main loop
 		control->Play();
 
@@ -586,6 +586,8 @@ int main(int argc, char* argv[])
 		}
 
 		control->Stop();
+		// End Main loop
+		// -----------------
 
 		if (verbose)
 		{
