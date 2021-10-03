@@ -73,7 +73,7 @@ namespace Device {
 	{
 		if (rtlsdr_open(&dev, h) != 0) throw "RTLSDR: cannot open device.";
 
-		setSettings(s);
+		applySettings(s);
 	}
 
 	void RTLSDR::setSampleRate(uint32_t s)
@@ -230,7 +230,7 @@ namespace Device {
 			if (rtlsdr_set_freq_correction(dev, ppm) < 0) throw "RTLSDR: cannot set ppm error.";
 	}
 
-	void RTLSDR::setSettings(SettingsRTLSDR &s)
+	void RTLSDR::applySettings(SettingsRTLSDR &s)
 	{
 		setFrequencyCorrection(s.freq_offset);
 		setTuner_GainMode(s.tuner_AGC ? 0 : 1);

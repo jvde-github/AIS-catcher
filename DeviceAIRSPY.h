@@ -106,7 +106,7 @@ namespace Device {
 		void Open(uint64_t h,SettingsAIRSPY &s);
 		void Open(SettingsAIRSPY& s);
 
-		void setSettings(SettingsAIRSPY& s);
+		void applySettings(SettingsAIRSPY& s);
 #endif
 	};
 }

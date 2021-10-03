@@ -63,8 +63,7 @@ void Usage()
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
-	std::cerr << "\t[-u address port - UDP address and port (default: off)]" << std::endl;
-	std::cerr << "\t[-U xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
+	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
@@ -259,9 +258,6 @@ int main(int argc, char* argv[])
 
 	uint64_t handle = 0;
 
-	std::string udp_address = "";
-	std::string udp_port = "";
-
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
 
@@ -269,7 +265,6 @@ int main(int argc, char* argv[])
 	std::vector<int> liveModelsSelected;
 	Device::Type input_type = Device::Type::NONE;
 
-	IO::UDP udp;
 	IO::DumpScreen nmea_screen;
 
 	try
@@ -368,9 +363,6 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'u':
-				Assert(count == 2);
-				udp_address = arg1; udp_port = arg2;
-				break;
 			case 'U':
 				Assert(count == 2);
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2));
@@ -552,13 +544,6 @@ int main(int argc, char* argv[])
 		{
 			liveModels[i]->buildModel(model_rate, timer_on);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
-		}
-
-		// Connect output to UDP stream, old
-		if (udp_address != "")
-		{
-			udp.openConnection(udp_address, udp_port);
-			liveModels[0]->Output() >> udp;
 		}
 
 		// Connect output to UDP stream, new

@@ -106,7 +106,7 @@ namespace Device{
 		void Open(uint64_t h,SettingsRTLSDR &s);
 		void setFrequencyCorrection(int);
 
-		void setSettings(SettingsRTLSDR &s);
+		void applySettings(SettingsRTLSDR &s);
 #endif
 	};
 }
