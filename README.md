@@ -7,6 +7,8 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
+Release version **0.27**: support to send messages to multiple UDP destinations
+
 Release version **0.26**: addition of -n and -L switches.
 
 Release version **0.25**: inclusion of preliminary support for SDRplay RSP1A.
@@ -19,7 +21,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 Compilation and installation instructions are provided below for Linux systems including Raspberry Pi.
 
-A Windows binary version of v0.26 (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of v0.27 (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
 
