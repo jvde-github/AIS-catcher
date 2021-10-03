@@ -61,7 +61,7 @@ void Usage()
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
-	std::cerr << "\t[-q surpress NMEA messages to screen (default: false)]" << std::endl;
+	std::cerr << "\t[-q suppress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
 	std::cerr << "\t[-u address port - UDP address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-U xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
@@ -75,7 +75,7 @@ void Usage()
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
-	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]" << std::endl;
+	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discriminator output]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\tDevice specific settings:" << std::endl;
@@ -134,7 +134,7 @@ void printVersion()
 
 void printSupportedDevices(std::vector<Device::Description>& device_list)
 {
-	std::cerr << "Supported SDR: ";
+	std::cerr << "Supported SDR(s): ";
 #ifdef HASRTLSDR
 	std::cerr << "RTLSDR ";
 #endif
@@ -437,12 +437,11 @@ int main(int argc, char* argv[])
 		{
 #ifdef HASAIRSPYHF
 			Device::AIRSPYHF* device = new Device::AIRSPYHF();
-			device->Open();
+			device->Open(settingsAIRSPYHF);
 
 			control = device;
 			out = &(device->out);
 
-			device->setSettings(settingsAIRSPYHF);
 			if(verbose) settingsAIRSPYHF.Print();
 #else
 			std::cerr << "AIRSPYHF+ not included in this package. Please build version including AIRSPYHF+ support.";
@@ -453,12 +452,11 @@ int main(int argc, char* argv[])
 		{
 #ifdef HASAIRSPY
 			Device::AIRSPY* device = new Device::AIRSPY();
-			device->Open();
+			device->Open(settingsAIRSPY);
 
 			control = device;
 			out = &(device->out);
 
-			device->setSettings(settingsAIRSPY);
 			if(verbose) settingsAIRSPY.Print();
 #else
 			std::cerr << "AIRSPY not included in this package. Please build version including AIRSPY support.";
@@ -469,12 +467,11 @@ int main(int argc, char* argv[])
                 {
 #ifdef HASSDRPLAY
                         Device::SDRPLAY* device = new Device::SDRPLAY();
-                        device->Open();
+                        device->Open(settingsSDRPLAY);
 
                         control = device;
                         out = &(device->out);
 
-                        device->setSettings(settingsSDRPLAY);
                         if(verbose) settingsSDRPLAY.Print();
 #else
                         std::cerr << "SDRPLAY not included in this package. Please build version including SDRPLAY support.";
@@ -489,11 +486,9 @@ int main(int argc, char* argv[])
 			control = device;
 			out = &(device->out);
 
-			// first settings then Open... consistency needs to be fixed
-			device->setSettings(settingsWAV);
+			device->Open(settingsWAV);
 			if (verbose) settingsWAV.Print();
 
-			device->Open();
 			break;
 		}
 		case Device::Type::RAWFILE:
@@ -503,7 +498,7 @@ int main(int argc, char* argv[])
 			control = device;
 			out = &(device->out);
 
-			device->setSettings(settingsRAW);
+			device->Open(settingsRAW);
 			if (verbose) settingsRAW.Print();
 
 			break;
@@ -512,7 +507,7 @@ int main(int argc, char* argv[])
 		{
 #ifdef HASRTLSDR
 			Device::RTLSDR* device = new Device::RTLSDR();
-			device->Open(handle);
+			device->Open(handle,settingsRTL);
 
 			if(sample_rate == 0 and RTLSDRfastDS)
 			{
@@ -527,7 +522,7 @@ int main(int argc, char* argv[])
 				device->out >> convertCU8;
 				out = &(convertCU8.out);
 			}
-			device->setSettings(settingsRTL);
+
 			if(verbose) settingsRTL.Print();
 			control = device;
 

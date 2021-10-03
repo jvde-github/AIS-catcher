@@ -103,8 +103,8 @@ namespace Device {
 		//static int getDeviceCount();
 
 		// Device specific
-		void Open(uint64_t h);
-		void Open();
+		void Open(uint64_t h,SettingsAIRSPY &s);
+		void Open(SettingsAIRSPY& s);
 
 		void setSettings(SettingsAIRSPY& s);
 #endif

@@ -104,14 +104,18 @@ namespace Device {
 
 #ifdef HASAIRSPY
 
-	void AIRSPY::Open(uint64_t h)
+	void AIRSPY::Open(uint64_t h,SettingsAIRSPY &s)
 	{
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
+
+		setSettings(s);
 	}
 
-	void AIRSPY::Open()
+	void AIRSPY::Open(SettingsAIRSPY &s)
 	{
 		if (airspy_open(&dev) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
+
+		setSettings(s);
 	}
 
 	void AIRSPY::setSampleRate(uint32_t s)

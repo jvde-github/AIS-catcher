@@ -72,7 +72,7 @@ namespace Device
 		// Device specific
 		void setFormat(Format f) { format = f; }
 
-		void setSettings(SettingsRAWFile& s);
+		void Open(SettingsRAWFile& s);
 
 	};
 }

@@ -150,10 +150,11 @@ namespace IO
 
 	public:
 
+		~UDP();
+		UDP();
+
 		void Receive(const NMEA* data, int len);
 		void openConnection(std::string host, std::string portname);
 		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-
-		~UDP() { closeWSA(); }
 	};
 }

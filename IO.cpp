@@ -26,6 +26,17 @@ SOFTWARE.
 
 namespace IO
 {
+
+	UDP::UDP()
+	{
+		startWSA();
+	}
+
+	UDP::~UDP()
+	{
+		closeWSA();
+	}
+
 	void UDP::Receive(const NMEA* data, int len)
 	{
 		for(int i = 0; i < len; i++)
@@ -37,8 +48,7 @@ namespace IO
 	{
 #ifdef WIN32
 		address = NULL;
-		int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-		if (iResult != 0)
+		if( WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		{
 			throw "Cannot create UDP socket.";
 			return;
@@ -64,7 +74,7 @@ namespace IO
 		h.ai_flags = AI_ADDRCONFIG;
 #endif
 
-		startWSA();
+		//startWSA();
 
 		int code = getaddrinfo(host.c_str(), portname.c_str(), &h, &address);
 

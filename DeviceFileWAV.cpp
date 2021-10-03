@@ -81,8 +81,10 @@ namespace Device {
 		return streaming;
 	}
 
-	void WAVFile::Open()
+	void WAVFile::Open(SettingsWAVFile& s)
 	{
+		filename = s.file;
+
 		struct WAVFileFormat header;
 
 		file.open(filename, std::ios::out | std::ios::binary);
@@ -118,11 +120,6 @@ namespace Device {
 	std::vector<uint32_t> WAVFile::SupportedSampleRates()
 	{
 		return { sample_rate };
-	}
-
-	void WAVFile::setSettings(SettingsWAVFile& s)
-	{
-		filename = s.file;
 	}
 
 }

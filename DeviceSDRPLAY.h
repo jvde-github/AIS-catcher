@@ -101,8 +101,8 @@ namespace Device {
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h);
-		void Open();
+		void Open(uint64_t h,SettingsSDRPLAY &s);
+		void Open(SettingsSDRPLAY &s);
 
 		void setSettings(SettingsSDRPLAY& s);
 

@@ -30,7 +30,7 @@ use: AIS-catcher [options]
 	[-h display this message and terminate (default: false)]
 	[-s xxx sample rate in Hz (default: based on SDR device)]
 	[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]
-	[-q surpress NMEA messages to screen (default: false)]
+	[-q suppress NMEA messages to screen (default: false)]
 	[-n show NMEA messages on screen without detail]
 	[-u address port - UDP address and port (default: off)]
 	[-U xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
@@ -44,7 +44,7 @@ use: AIS-catcher [options]
 	[-d xxxx select device based on serial number]
 
 	[-m xx run specific decoding model (default: 2)]
-	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discrimator output]
+	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discriminator output]
 	[-b benchmark demodulation models for time - for development purposes (default: off)]
 
 	Device specific settings:
@@ -77,8 +77,8 @@ To start AIS demodulation, print some occasional statistics (every 10 seconds) a
 ```console
 AIS-catcher -v 10 -u 127.0.0.1 12345
 ```
-If succesful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. 
-These console messages can be surpressed with the option ```-q```. Multiple UDP destinations are allowed with the experimental ``U``-switch, e.g.:
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345`. 
+These console messages can be suppressed with the option ```-q```. Multiple UDP destinations are allowed with the experimental ``U``-switch, e.g.:
 ```console
 AIS-catcher -v 10 -U 127.0.0.1 12345 -U 127.0.0.1 23456
 ```
@@ -111,7 +111,7 @@ INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 p
 The command line allows you to set some device specific parameters. Below some examples.
 
 ### RTL SDR
-Gain settings specific for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the following command sets the tuner gain to +33.3 and the RTL AGC on:
+Gain and other settings specific for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the following command sets the tuner gain to +33.3 and the RTL AGC on:
 ```console
 AIS-catcher -gr tuner 33.3 rtlagc ON
 ```
@@ -125,7 +125,7 @@ AIS-catcher -gh preamp ON
 Please note that only AGC mode is supported.
 ### Airspy Mini
 
-The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activiate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
+The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
 ```console
 AIS-catcher -gm linearity 10
 ```
@@ -136,7 +136,7 @@ AIS-catcher -gm lna AUTO vga 12 mixer 12
 More guidance on setting the gain model and levels can be obtained in the mentioned reference.
 
 ### SDRplay RSP1A
-Gain settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch. For example:
+Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch. For example:
 ```console
 AIS-catcher -gs lnastate 5
 ```
@@ -181,7 +181,7 @@ Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare ante
 | AISRec 2.2 (trial)   | Sampling: very high, super fast| 161 | 119 |
 | rtl-ais v0.3  @ 1600K  | ```-n``` | 33 | 30  | 
 
-For completeness I performed seperate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
+For completeness I performed separate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
 
 ## Compilation process
 
@@ -211,7 +211,7 @@ make rtl-only
 sudo make install
 ```
 
-If you want to include Airspy and Airspy HF+ functionality, ensure you install the required libraries as descibed on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
+If you want to include Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
 ```console
 sudo apt-get install libairspyhf-dev libairspy-dev
 ```
@@ -225,7 +225,7 @@ Standard installation will include support for the Airspy devices and RTLSDR don
 make sdrplay-only
 sudo make install
 ```
-At the moment only RSP1A is support (as that is the only device I can test on).
+At the moment only RSP1A is supported (as that is the only device I can test on).
 
 ### Additional compilation options
 The make process allows for additional compilation options to be set at the command line via defining CFLAGS, e.g.: 
@@ -267,7 +267,7 @@ Please note that the SDRplay devices are currently not supported in the Docker i
 
 AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide as input via the ```-p``` switch on the command line.
 
-On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is wortwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
+On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is worthwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
 ```console
 rtl_test -s 1536000
 ```
@@ -284,6 +284,6 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - IO: TCP IP
 - Testing: more set ups, assess gap with commercial equipment
 - GUI: Windows, Android
-- Hardware support: rtl_tcp, Hackrf, stdin, a nice RPI hat and other SDRplay devices
+- Hardware support: rtl_tcp, Hackrf, stdin, a nice RPI hat and other SDRplay devices besides RSP1A
 - ....
 - ....
