@@ -429,7 +429,7 @@ int main(int argc, char* argv[])
 		{
 #ifdef HASAIRSPYHF
 			Device::AIRSPYHF* device = new Device::AIRSPYHF();
-			device->Open(settingsAIRSPYHF);
+			device->Open(handle,settingsAIRSPYHF);
 
 			control = device;
 			out = &(device->out);
@@ -444,7 +444,7 @@ int main(int argc, char* argv[])
 		{
 #ifdef HASAIRSPY
 			Device::AIRSPY* device = new Device::AIRSPY();
-			device->Open(settingsAIRSPY);
+			device->Open(handle,settingsAIRSPY);
 
 			control = device;
 			out = &(device->out);
