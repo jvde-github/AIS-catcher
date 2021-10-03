@@ -103,7 +103,7 @@ namespace Device{
 
 		// Device specific
 
-		void Open(uint64_t h);
+		void Open(uint64_t h,SettingsRTLSDR &s);
 		void setFrequencyCorrection(int);
 
 		void setSettings(SettingsRTLSDR &s);

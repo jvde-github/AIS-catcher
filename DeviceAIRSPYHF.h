@@ -78,8 +78,8 @@ namespace Device{
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h);
-		void Open();
+		void Open(uint64_t h,SettingsAIRSPYHF &s);
+		void Open(SettingsAIRSPYHF& s);
 
 		void setSettings(SettingsAIRSPYHF& s);
 

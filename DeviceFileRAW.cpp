@@ -147,7 +147,7 @@ namespace Device {
 		return { 48000, 96000, 240000, 250000, 288000, 384000, 768000, 1536000, 1920000, 2304000 };
 	}
 
-	void RAWFile::setSettings(SettingsRAWFile& s)
+	void RAWFile::Open(SettingsRAWFile& s)
 	{
 		format = s.format;
 		filename = s.file;

@@ -53,7 +53,7 @@ namespace Device{
 		// Control
 		void Play();
 		void Stop();
-		void Open();
+		void Open(SettingsWAVFile& s);
 
 		void setSampleRate(uint32_t s) { }
 
@@ -68,7 +68,7 @@ namespace Device{
 		std::vector<uint32_t> SupportedSampleRates();
 
 		// Device specific
-		void setSettings(SettingsWAVFile& s);
+		//void setSettings(SettingsWAVFile& s);
 
 	};
 }
