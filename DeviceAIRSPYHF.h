@@ -81,7 +81,7 @@ namespace Device{
 		void Open(uint64_t h,SettingsAIRSPYHF &s);
 		void Open(SettingsAIRSPYHF& s);
 
-		void setSettings(SettingsAIRSPYHF& s);
+		void applySettings(SettingsAIRSPYHF& s);
 
 #endif
 	};

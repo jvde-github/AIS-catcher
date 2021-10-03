@@ -104,7 +104,7 @@ namespace Device {
 		void Open(uint64_t h,SettingsSDRPLAY &s);
 		void Open(SettingsSDRPLAY &s);
 
-		void setSettings(SettingsSDRPLAY& s);
+		void applySettings(SettingsSDRPLAY& s);
 
 		// static constructor and data
 		static struct _API { bool running = false; _API(); ~_API(); } _api;

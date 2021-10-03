@@ -62,14 +62,14 @@ namespace Device {
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
-		setSettings(s);
+		applySettings(s);
 	}
 
 	void AIRSPYHF::Open(SettingsAIRSPYHF &s)
 	{
 		if (airspyhf_open(&dev) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
-		setSettings(s);
+		applySettings(s);
 	}
 
 	void AIRSPYHF::setSampleRate(uint32_t s)
@@ -159,7 +159,7 @@ namespace Device {
 		return airspyhf_is_streaming(dev) == 1;
 	}
 
-	void AIRSPYHF::setSettings(SettingsAIRSPYHF &s)
+	void AIRSPYHF::applySettings(SettingsAIRSPYHF &s)
 	{
 		setAGC();
 		setTreshold(s.treshold_high ? 1: 0);

@@ -108,14 +108,14 @@ namespace Device {
 	{
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
 
-		setSettings(s);
+		applySettings(s);
 	}
 
 	void AIRSPY::Open(SettingsAIRSPY &s)
 	{
 		if (airspy_open(&dev) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
 
-		setSettings(s);
+		applySettings(s);
 	}
 
 	void AIRSPY::setSampleRate(uint32_t s)
@@ -235,7 +235,7 @@ namespace Device {
 		return airspy_is_streaming(dev) == 1;
 	}
 
-	void AIRSPY::setSettings(SettingsAIRSPY &s)
+	void AIRSPY::applySettings(SettingsAIRSPY &s)
 	{
 		switch (s.mode)
 		{

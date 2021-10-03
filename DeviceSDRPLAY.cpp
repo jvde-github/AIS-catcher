@@ -210,7 +210,7 @@ namespace Device {
 
 		chParams = deviceParams->rxChannelA;
 
-		setSettings(s);
+		applySettings(s);
 	}
 
 	void SDRPLAY::Open(SettingsSDRPLAY &s)
@@ -315,7 +315,7 @@ namespace Device {
 		return streaming;
 	}
 
-	void SDRPLAY::setSettings(SettingsSDRPLAY &s)
+	void SDRPLAY::applySettings(SettingsSDRPLAY &s)
 	{
 		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
 
