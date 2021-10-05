@@ -47,4 +47,4 @@ typedef struct { std::vector<std::string> sentence; char channel; int msg; uint3
 
 using namespace std::chrono;
 
-#define PI	3.14159265358979323846
+const FLOAT32 PI = 3.14159265358979323846;

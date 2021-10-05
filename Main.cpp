@@ -357,7 +357,7 @@ int main(int argc, char* argv[])
 				if (input_device < 0 || input_device >= device_list.size())
 				{
 					std::cerr << "Device does not exist." << std::endl;
-					list_devices = true;
+					return 0;
 				}
 				break;
 			case 'u':
