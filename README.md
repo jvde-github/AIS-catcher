@@ -11,7 +11,7 @@ Release version **0.27**: support to send messages to multiple UDP destinations
 
 Release version **0.26**: addition of -n and -L switches.
 
-Release version **0.25**: inclusion of preliminary support for SDRplay RSP1A.
+Release version **0.25**: inclusion of preliminary support for SDRplay RSP1A (API 3.x).
 
 ## Purpose
 
@@ -133,7 +133,7 @@ AIS-catcher -gm lna AUTO vga 12 mixer 12
 ```
 More guidance on setting the gain model and levels can be obtained in the mentioned reference.
 
-### SDRplay RSP1A
+### SDRplay RSP1A (API 3.x)
 Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch. For example:
 ```console
 AIS-catcher -gs lnastate 5
@@ -218,7 +218,7 @@ The process to install AIS-catcher then becomes:
 make
 sudo make install
 ```
-Standard installation will include support for the Airspy devices and RTLSDR dongles but not SDRplay. To build an executable with SDRplay (only) support use:
+Standard installation will include support for the Airspy devices and RTLSDR dongles but not SDRplay. To build an executable with SDRplay API 3.x (only) support use:
 ```console
 make sdrplay-only
 sudo make install
@@ -278,7 +278,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 ## To do
 
 - DSP: improve filters (e.g. add droop compensation), performance enhancement, etc
-- Decoding: add new models (e.g. based matched filters, alternative freq correction models), software gain control, document current model
+- Decoding: add new models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - IO: TCP IP
 - Testing: more set ups, assess gap with commercial equipment
 - GUI: Windows, Android
