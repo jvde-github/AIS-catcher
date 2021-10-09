@@ -228,6 +228,11 @@ void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int a
 	}
 }
 
+bool isoption(std::string s)
+{
+	return s.length() >= 2 && s[0] == '-' && std::isalpha(s[1]);
+}
+
 void Assert(bool b)
 {
 	if (!b) throw "Error on command line: syntax error.";
@@ -281,11 +286,10 @@ int main(int argc, char* argv[])
 		while (ptr < argc)
 		{
 			std::string param = std::string(argv[ptr]);
-
 			Assert(param[0] == '-');
 
 			int count = 0;
-			while (ptr + count < argc-1 && argv[ptr + 1 + count][0] != '\0' && argv[ptr + 1 + count][0] != '-') count++;
+			while (ptr + count + 1 < argc && !isoption(argv[ptr + 1 + count])) count++;
 
 			std::string arg1 = count >= 1 ? std::string(argv[ptr + 1]) : "";
 			std::string arg2 = count >= 2 ? std::string(argv[ptr + 2]) : "";
