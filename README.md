@@ -7,7 +7,7 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
-Release version **0.27**: support to send messages to multiple UDP destinations. Fix big for negative frequency corrections (-p switch)
+Release version **0.27**: support to send messages to multiple UDP destinations. Fixed bug for negative frequency corrections (-p switch)
 
 Release version **0.26**: addition of -n and -L switches.
 
