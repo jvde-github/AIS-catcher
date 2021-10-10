@@ -63,7 +63,7 @@ namespace Device{
 		std::thread demod_thread;
 
 		std::vector<std::vector<CU8>> fifo;
-		static const int sizeFIFO = 2;
+		static const int sizeFIFO = 8;
 		int head = 0;
 		int tail = 0;
 		std::atomic<int> count;
