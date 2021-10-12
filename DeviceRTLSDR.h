@@ -72,11 +72,10 @@ namespace Device{
 		std::condition_variable fifo_cond;
 
 		static void callback_static(CU8* buf, uint32_t len, void* ctx);
-		static void start_async_static(RTLSDR* c);
-		static void demod_async_static(RTLSDR* c);
-
 		void callback(CU8* buf, int len);
-		void Demodulation();
+
+		void RunAsync();	
+		void Run();
 
 		static const uint32_t BufferLen = 16 * 16384;
 		rtlsdr_dev_t* getDevice() { return dev; }
@@ -85,6 +84,7 @@ namespace Device{
 		void setTuner_Gain(FLOAT32);
 		void setRTL_AGC(int);
 		void setBiasTee(int);
+		void setFrequencyCorrection(int);
 
 	public:
 
@@ -104,8 +104,6 @@ namespace Device{
 		// Device specific
 
 		void Open(uint64_t h,SettingsRTLSDR &s);
-		void setFrequencyCorrection(int);
-
 		void applySettings(SettingsRTLSDR &s);
 #endif
 	};
