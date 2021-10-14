@@ -51,8 +51,8 @@ namespace Device {
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
-		std::string address = "192.168.1.233";
-		std::string port = "12345";
+		std::string address = "127.0.0.1";
+		std::string port = "1234";
 
 	public:
 
