@@ -31,7 +31,7 @@ namespace Device {
 
 	void SettingsRTLTCP::Print()
 	{
-		std::cerr << "RTLTCP settings: host " << address <<  "port " << port << " - gt tuner ";
+		std::cerr << "RTLTCP settings: host " << address <<  " port " << port << " - gt tuner ";
 
 		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
 
@@ -52,15 +52,11 @@ namespace Device {
 		{
 			RTL_AGC = Util::Parse::Switch(arg);
 		}
-		else if (option == "BIASTEE")
-		{
-			bias_tee = Util::Parse::Switch(arg);
-		}
 		else if (option == "FREQOFFSET")
 		{
 			freq_offset = Util::Parse::Integer(arg, -150, 150);
 		}
-		else if (option == "ADDRESS")
+		else if (option == "HOST")
 		{
 			address = arg;
 		}
@@ -90,7 +86,6 @@ namespace Device {
 #endif
 	}
 
-
 	RTLTCP::~RTLTCP()
 	{
 #ifdef WIN32
@@ -104,7 +99,7 @@ namespace Device {
 		port = s.port;
 
 		struct addrinfo h;
-		memset(&h, 0, sizeof(h));
+		std::memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
 		h.ai_socktype = SOCK_STREAM;
 		h.ai_protocol = IPPROTO_TCP;
@@ -128,7 +123,7 @@ namespace Device {
 			throw "Error creating socket for TCP.";
 
 		if (connect(sock, address->ai_addr, (int)address->ai_addrlen) == -1)
-			throw "RTLTCP: cannot connect socket";
+			throw "RTLTCP: cannot connect to socket";
 
 		applySettings(s);
 	}
@@ -181,7 +176,8 @@ namespace Device {
 			}
 			else
 			{
-				if (fifo[tail].size() != len / 2) fifo[tail].resize(len / 2);
+				int len_iq = len / 2;
+				if (fifo[tail].size() != len_iq) fifo[tail].resize(len_iq);
 
 				std::memcpy(fifo[tail].data(), buffer, len);
 
@@ -254,19 +250,15 @@ namespace Device {
 		DeviceBase::Stop();
 
 		if (async_thread.joinable())
-		{
 			async_thread.join();
-		}
 
 		if (demod_thread.joinable())
-		{
 			demod_thread.join();
-		}
 	}
 
 	void RTLTCP::setFrequencyCorrection(int ppm)
 	{
-
+		// TO DO
 	}
 
 	void RTLTCP::applySettings(SettingsRTLTCP& s)

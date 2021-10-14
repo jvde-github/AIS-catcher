@@ -148,6 +148,9 @@ void printSupportedDevices(std::vector<Device::Description>& device_list)
 #ifdef HASSDRPLAY
 	std::cerr << "SDRPLAY ";
 #endif
+#ifdef HASRTLTCP
+	std::cerr << "RTLTCP ";
+#endif
 	std::cerr << std::endl;
 }
 
@@ -324,6 +327,9 @@ int main(int argc, char* argv[])
 				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
+				Assert(count <= 2);
+				if(count >= 1) settingsRTLTCP.Set("host",arg1);
+				if(count >= 2) settingsRTLTCP.Set("port",arg2);
 				break;
 			case 'b':
 				Assert(count == 0);
@@ -395,6 +401,7 @@ int main(int argc, char* argv[])
 				case 's': parseDeviceSettings(settingsSDRPLAY, argv, ptr, argc); break;
 				case 'a': parseDeviceSettings(settingsRAW, argv, ptr, argc); break;
 				case 'w': parseDeviceSettings(settingsWAV, argv, ptr, argc); break;
+				case 't': parseDeviceSettings(settingsRTLTCP, argv, ptr, argc); break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
