@@ -31,6 +31,7 @@ SOFTWARE.
 #include "DeviceFileWAV.h"
 #include "DeviceRTLSDR.h"
 #include "DeviceAIRSPYHF.h"
+#include "DeviceRTLTCP.h"
 #include "DeviceAIRSPY.h"
 #include "DeviceSDRPLAY.h"
 
@@ -101,6 +102,9 @@ std::vector<Device::Description> getDevices()
 #endif
 #ifdef HASSDRPLAY
 	Device::SDRPLAY::pushDeviceList(device_list);
+#endif
+#ifdef HASRTLTCP
+	Device::RTLTCP::pushDeviceList(device_list);
 #endif
 	std::sort(device_list.begin(), device_list.end());
 
@@ -255,6 +259,7 @@ int main(int argc, char* argv[])
 	Device::SettingsRAWFile settingsRAW;
 	Device::SettingsWAVFile settingsWAV;
 	Device::SettingsRTLSDR settingsRTL;
+	Device::SettingsRTLTCP settingsRTLTCP;
 	Device::SettingsAIRSPYHF settingsAIRSPYHF;
 	Device::SettingsAIRSPY settingsAIRSPY;
 	Device::SettingsSDRPLAY settingsSDRPLAY;
@@ -316,6 +321,9 @@ int main(int argc, char* argv[])
 			case 'n':
 				Assert(count == 0);
 				NMEA_to_screen = 1;
+				break;
+			case 't':
+				input_type = Device::Type::RTLTCP;
 				break;
 			case 'b':
 				Assert(count == 0);
@@ -521,6 +529,34 @@ int main(int argc, char* argv[])
 
 #else
 			std::cerr << "RTLSDR not included in this package. Please build version including RTLSDR support.";
+#endif
+			break;
+		}
+		case Device::Type::RTLTCP:
+		{
+#ifdef HASRTLTCP
+			Device::RTLTCP* device = new Device::RTLTCP();
+			device->Open(handle, settingsRTLTCP);
+
+			if (sample_rate == 0 and RTLSDRfastDS)
+			{
+				device->out >> convertFastDS;
+				out = &(convertFastDS.out);
+
+				sample_rate = 1536000;
+				model_rate = 96000;
+			}
+			else
+			{
+				device->out >> convertCU8;
+				out = &(convertCU8.out);
+			}
+
+			if (verbose) settingsRTLTCP.Print();
+			control = device;
+
+#else
+			std::cerr << "RTLTCP not included in this package. Please build version including RTLTCP support.";
 #endif
 			break;
 		}

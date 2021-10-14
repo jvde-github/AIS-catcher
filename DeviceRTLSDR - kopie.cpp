@@ -135,7 +135,6 @@ namespace Device {
 		}
 		else
 		{
-			// TO DO: half size fifo
 			if (fifo[tail].size() != len) fifo[tail].resize(len);
 
 			std::memcpy(fifo[tail].data(), buf, len);
@@ -176,8 +175,7 @@ namespace Device {
 					continue;
 				}
 			}
-
-			// TO DO: half size fifo
+						
 			Send((const CU8*)fifo[head].data(), fifo[head].size() / 2);
 			head = (head + 1) % sizeFIFO;
 			count--;
