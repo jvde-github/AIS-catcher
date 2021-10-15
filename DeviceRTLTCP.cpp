@@ -31,10 +31,8 @@ namespace Device {
 
 	void SettingsRTLTCP::Print()
 	{
-		std::cerr << "RTLTCP settings: -gt host " << address <<  " port " << port << " tuner ";
-
+		std::cerr << "RTLTCP settings: -gt host " << host <<  " port " << port << " tuner ";
 		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
-
 		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
 		std::cerr << " -p " << freq_offset << std::endl;
 	}
@@ -58,7 +56,7 @@ namespace Device {
 		}
 		else if (option == "HOST")
 		{
-			address = arg;
+			host = arg;
 		}
 		else if (option == "PORT")
 		{
@@ -95,15 +93,20 @@ namespace Device {
 
 	void RTLTCP::Close()
 	{
-		if(sock != -1) close(sock);
+#ifdef WIN32
+		if (sock != -1) closesocket(sock);
+#else
+		if (sock != -1) close(sock);
+#endif
 	}
 
 	void RTLTCP::Open(uint64_t handle, SettingsRTLTCP& s)
 	{
-		host = s.address;
+		struct addrinfo h;
+
+		host = s.host;
 		port = s.port;
 
-		struct addrinfo h;
 		std::memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
 		h.ai_socktype = SOCK_STREAM;
@@ -161,21 +164,23 @@ namespace Device {
 
 	void RTLTCP::setRTL_AGC(int a)
 	{
+		setParameter(8, a);
 	}
 
 	void RTLTCP::setTuner_Gain(FLOAT32 a)
 	{
+		setParameter(4, a);
 	}
 
 	void RTLTCP::RunAsync()
 	{
-		char buffer[1024];
+		char buffer[TRANSFER_SIZE];
 
 		while (isStreaming())
 		{
-			if (count != sizeFIFO)
+			if (count != SIZE_FIFO)
 			{
-				int len = recv(sock, buffer, 1024, 0);
+				int len = recv(sock, buffer, TRANSFER_SIZE, 0);
 
 				if(len == 0)
 				{
@@ -183,13 +188,11 @@ namespace Device {
 					continue;
 				}
 
-				int len_iq = len / 2;
-
-				if (fifo[tail].size() != len_iq) fifo[tail].resize(len_iq);
-
+				// FIFO is CU8 so half the size of input
+				if (fifo[tail].size() != len / 2) fifo[tail].resize(len / 2);
 				std::memcpy(fifo[tail].data(), buffer, len);
 
-				tail = (tail + 1) % sizeFIFO;
+				tail = (tail + 1) % SIZE_FIFO;
 
 				{
 					std::lock_guard<std::mutex> lock(fifo_mutex);
@@ -203,32 +206,32 @@ namespace Device {
 
 	void RTLTCP::Run()
 	{
-		if (output.size() < buffer_size) output.resize(buffer_size);
+		if (output.size() < BUFFER_SIZE) output.resize(BUFFER_SIZE);
 
 		while (isStreaming())
 		{
 			if (count == 0)
 			{
 				std::unique_lock <std::mutex> lock(fifo_mutex);
-				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)buffer_size / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
+				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BUFFER_SIZE / (float)sample_rate * 1000.0f)), [this] {return count != 0; });
 
 				if (count == 0) continue;
 			}
 
-
+			// add latest additions in fifo to output vector and send when output-vector is buffer-size.
 			for (int i = 0; i < fifo[head].size(); i++)
 			{
 				output[ptr] = fifo[head][i];
 
-				if (++ptr == buffer_size)
+				if (++ptr == BUFFER_SIZE)
 				{
 					ptr = 0;
-					Send(output.data(), buffer_size);
+					Send(output.data(), BUFFER_SIZE);
 
 				}
 			}
 
-			head = (head + 1) % sizeFIFO;
+			head = (head + 1) % SIZE_FIFO;
 			count--;
 		}
 	}
@@ -236,36 +239,29 @@ namespace Device {
 	void RTLTCP::Play()
 	{
 		// set up FIFO
-		fifo.resize(sizeFIFO);
+		fifo.resize(SIZE_FIFO);
 
-		count = 0;
-		tail = 0;
-		head = 0;
+		count = 0; tail = 0; head = 0;
 
 		DeviceBase::Play();
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
-		demod_thread = std::thread(&RTLTCP::Run, this);
+		run_thread = std::thread(&RTLTCP::Run, this);
 
 		SleepSystem(10);
 	}
 
 	void RTLTCP::Stop()
 	{
-
 		DeviceBase::Stop();
 
-		if (async_thread.joinable())
-			async_thread.join();
-
-		if (demod_thread.joinable())
-			demod_thread.join();
-
+		if (async_thread.joinable()) async_thread.join();
+		if (run_thread.joinable()) run_thread.join();
 	}
 
 	void RTLTCP::setFrequencyCorrection(int ppm)
 	{
-		// TO DO
+		setParameter(5, ppm);
 	}
 
 	void RTLTCP::applySettings(SettingsRTLTCP& s)
@@ -276,7 +272,7 @@ namespace Device {
 		if (!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
 		if (s.RTL_AGC) setRTL_AGC(1);
 
-		host = s.address;
+		host = s.host;
 		port = s.port;
 	}
 

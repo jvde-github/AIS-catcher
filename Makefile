@@ -18,7 +18,7 @@ LFLAGS_SDRPLAY = -lsdrplay_api -lpthread
 LFLAGS_RTLTCP = -lpthread
 
 all: lib
-	$(CC) $(OBJ) $(LFLAGS_AIRSPYHF) $(LFLAGS_AIRSPY) $(LFLAGS_RTL) $(LFLAGS)
+	$(CC) $(OBJ) $(LFLAGS_AIRSPYHF) $(LFLAGS_AIRSPY) $(LFLAGS_RTL) $(LFLAGS) $(LFLAGS_RTLTCP)
 
 rtl-only: lib-rtl
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_RTL)
@@ -36,7 +36,7 @@ rtltcp-only: lib-rtltcp
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_RTLTCP)
 
 lib: 
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPYHF) $(CFLAGS_AIRSPY) $(CFLAGS_RTL)
+	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPYHF) $(CFLAGS_AIRSPY) $(CFLAGS_RTL) $(CFLAGS_RTLTCP)
 
 lib-rtl:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_RTL)

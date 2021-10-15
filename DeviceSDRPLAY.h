@@ -52,9 +52,8 @@ namespace Device {
 #ifdef HASSDRPLAY
 
 		// Data is processed in seperate thread
-		std::thread demod_thread;
-		static void demod_async_static(SDRPLAY* c);
-		void Demodulation();
+		std::thread run_thread;
+		void Run();
 
 		// buffer for incoming data
 		std::vector<std::vector<CFLOAT32>> fifo;

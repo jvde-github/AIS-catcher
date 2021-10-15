@@ -141,12 +141,7 @@ namespace IO
 	class UDP : public StreamIn<NMEA>
 	{
 		int sock;
-		struct addrinfo* address;
-#ifdef WIN32
-		WSADATA wsaData;
-#endif
-		void startWSA();
-		void closeWSA();
+		struct addrinfo* address = NULL;
 
 	public:
 

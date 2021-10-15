@@ -141,14 +141,11 @@ namespace Device {
 		}
 	}
 
-	void SDRPLAY::demod_async_static(SDRPLAY* c)
-	{
-		c->Demodulation();
-	}
-
-	void SDRPLAY::Demodulation()
+	void SDRPLAY::Run()
 	{
 		std::cerr << "SDRPLAY: Start demodulation thread." << std::endl;
+
+		if (output.size() < buffer_size) output.resize(buffer_size);
 
 		while (isStreaming())
 		{
@@ -162,8 +159,6 @@ namespace Device {
 
 			if (count != 0)
 			{
-				if (output.size() < buffer_size) output.resize(buffer_size);
-
 				for (int i = 0; i < fifo[head].size(); i++)
 				{
 					output[ptr] = fifo[head][i];
@@ -172,7 +167,6 @@ namespace Device {
 					{
 						ptr = 0;
 						Send(output.data(), buffer_size);
-
 					}
 				}
 
@@ -259,7 +253,7 @@ namespace Device {
 		if(sdrplay_api_Init(device.dev, &cbFns, (void *)this) != sdrplay_api_Success)
 			throw "SDRPLAY: cannot start device";
 
-		demod_thread = std::thread(SDRPLAY::demod_async_static, this);
+		run_thread = std::thread(&SDRPLAY::Run, this);
 
 		DeviceBase::Play();
 
@@ -270,10 +264,10 @@ namespace Device {
 	{
 		DeviceBase::Stop();
 
-		if (demod_thread.joinable())
+		if (run_thread.joinable())
 		{
 			sdrplay_api_Uninit(device.dev);
-			demod_thread.join();
+			run_thread.join();
 		}
 	}
 

@@ -60,25 +60,25 @@ namespace Device{
 
 		rtlsdr_dev_t* dev = NULL;
 		std::thread async_thread;
-		std::thread demod_thread;
+		std::thread run_thread;
 
+		// FIFO
 		std::vector<std::vector<CU8>> fifo;
-		static const int sizeFIFO = 8;
-		int head = 0;
-		int tail = 0;
+		static const int SIZE_FIFO = 8;
+		int head = 0, tail = 0;
 		std::atomic<int> count;
 
 		std::mutex fifo_mutex;
 		std::condition_variable fifo_cond;
 
+		// callbacks
 		static void callback_static(CU8* buf, uint32_t len, void* ctx);
 		void callback(CU8* buf, int len);
 
 		void RunAsync();	
 		void Run();
 
-		static const uint32_t BufferLen = 16 * 16384;
-		rtlsdr_dev_t* getDevice() { return dev; }
+		static const uint32_t BUFFER_SIZE = 16 * 16384;
 
 		void setTuner_GainMode(int);
 		void setTuner_Gain(FLOAT32);

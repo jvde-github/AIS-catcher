@@ -129,18 +129,18 @@ namespace Device {
 
 	void RTLSDR::callback(CU8* buf, int len)
 	{
-		if(count == sizeFIFO)
+		if(count == SIZE_FIFO)
 		{
 			std::cerr << "RTLSDR: Buffer overrun!" << std::endl;
 		}
 		else
 		{
-			// TO DO: half size fifo
+			// FIFO is CU8 so half the size of the input
 			if (fifo[tail].size() != len / 2) fifo[tail].resize(len / 2);
 
 			std::memcpy(fifo[tail].data(), buf, len);
 
-			tail = (tail + 1) % sizeFIFO;
+			tail = (tail + 1) % SIZE_FIFO;
 
 			{
 				std::lock_guard<std::mutex> lock(fifo_mutex);
@@ -158,7 +158,7 @@ namespace Device {
 
 	void RTLSDR::RunAsync()
 	{
-		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BufferLen);
+		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
 	}
 
 	void RTLSDR::Run()
@@ -168,7 +168,7 @@ namespace Device {
 			if (count == 0)
 			{
 				std::unique_lock <std::mutex> lock(fifo_mutex);
-				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BufferLen / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
+				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BUFFER_SIZE / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
 
 				if (count == 0)
 				{
@@ -177,9 +177,8 @@ namespace Device {
 				}
 			}
 
-			// TO DO: half size fifo
 			Send((const CU8*)fifo[head].data(), fifo[head].size());
-			head = (head + 1) % sizeFIFO;
+			head = (head + 1) % SIZE_FIFO;
 			count--;
 
 		}
@@ -188,7 +187,7 @@ namespace Device {
 	void RTLSDR::Play()
 	{
 		// set up FIFO
-		fifo.resize(sizeFIFO);
+		fifo.resize(SIZE_FIFO);
 
 		count = 0;
 		tail = 0;
@@ -198,7 +197,7 @@ namespace Device {
 
 		rtlsdr_reset_buffer(dev);
 		async_thread = std::thread(&RTLSDR::RunAsync, this);
-		demod_thread = std::thread(&RTLSDR::Run, this);
+		run_thread = std::thread(&RTLSDR::Run, this);
 
 		SleepSystem(10);
 	}
@@ -213,9 +212,9 @@ namespace Device {
 			async_thread.join();
 		}
 
-		if (demod_thread.joinable())
+		if (run_thread.joinable())
 		{
-			demod_thread.join();
+			run_thread.join();
 		}
 	}
 
