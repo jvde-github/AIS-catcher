@@ -47,6 +47,9 @@ lib-airspyhf:
 lib-airspy:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPY)
 
+lib-sdrplay:
+	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_SDRPLAY)
+
 lib-rtltcp:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_RTLTCP)
 
