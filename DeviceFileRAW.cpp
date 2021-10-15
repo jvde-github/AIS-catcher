@@ -127,6 +127,11 @@ namespace Device {
 		return streaming;
 	}
 
+	void RAWFile::Close()
+	{
+		if(file.is_open()) file.close();
+	}
+
 	void RAWFile::Play()
 	{
 		file.open(filename, std::ios::out | std::ios::binary);
@@ -135,6 +140,7 @@ namespace Device {
 		DeviceBase::Play();
 
 	}
+
 	void RAWFile::Stop()
 	{
 		file.close();

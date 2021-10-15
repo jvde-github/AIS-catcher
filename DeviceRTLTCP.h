@@ -65,10 +65,6 @@ namespace Device {
 	class RTLTCP : public DeviceBase, public StreamOut<CU8>
 	{
 #ifdef HASRTLTCP
-
-#ifdef WIN32
-#endif
-
 		int sock = -1;
 
 		std::string host;
@@ -108,6 +104,7 @@ namespace Device {
 		~RTLTCP();
 
 		// Control
+		void Close();
 		void Play();
 		void Stop();
 

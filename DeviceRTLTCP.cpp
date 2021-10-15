@@ -93,6 +93,11 @@ namespace Device {
 #endif
 	}
 
+	void RTLTCP::Close()
+	{
+		if(sock != -1) close(sock);
+	}
+
 	void RTLTCP::Open(uint64_t handle, SettingsRTLTCP& s)
 	{
 		host = s.address;
@@ -168,15 +173,13 @@ namespace Device {
 
 		while (isStreaming())
 		{
-			int len = recv(sock, buffer, 1024, 0);
 
-			if (count == sizeFIFO)
+			if (count != sizeFIFO)
 			{
-				std::cerr << "RTLTCP: Buffer overrun!" << std::endl;
-			}
-			else
-			{
+				int len = recv(sock, buffer, 1024, 0);
 				int len_iq = len / 2;
+
+				std::cerr << len << std::endl;
 				if (fifo[tail].size() != len_iq) fifo[tail].resize(len_iq);
 
 				std::memcpy(fifo[tail].data(), buffer, len);
@@ -195,6 +198,8 @@ namespace Device {
 
 	void RTLTCP::Run()
 	{
+		if (output.size() < buffer_size) output.resize(buffer_size);
+
 		while (isStreaming())
 		{
 			if (count == 0)
@@ -202,14 +207,9 @@ namespace Device {
 				std::unique_lock <std::mutex> lock(fifo_mutex);
 				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)buffer_size / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
 
-				if (count == 0)
-				{
-					std::cerr << "Device timeout." << std::endl;
-					continue;
-				}
+				if (count == 0) continue;
 			}
 
-			if (output.size() < buffer_size) output.resize(buffer_size);
 
 			for (int i = 0; i < fifo[head].size(); i++)
 			{
@@ -247,6 +247,7 @@ namespace Device {
 
 	void RTLTCP::Stop()
 	{
+
 		DeviceBase::Stop();
 
 		if (async_thread.joinable())
@@ -254,6 +255,7 @@ namespace Device {
 
 		if (demod_thread.joinable())
 			demod_thread.join();
+
 	}
 
 	void RTLTCP::setFrequencyCorrection(int ppm)
@@ -275,7 +277,7 @@ namespace Device {
 
 	std::vector<uint32_t> RTLTCP::SupportedSampleRates()
 	{
-		return { 240000 };
+		return { 240000, 288000, 1536000 };
 	}
 
 	void RTLTCP::pushDeviceList(std::vector<Description>& DeviceList)
