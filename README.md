@@ -160,7 +160,7 @@ AIS-catcher -r temp.raw -s 240000 -v
 ```
 This provides an indirect method of running a RTL-TCP capable AIS receiver on deterministic input from a file. Hence, this provides a methodology for benchmarking AIS-catcher with other receiver packages with the same capability. We might explore more in the future. 
 The remote server can be started with a command like:
-```
+```console
 rtl_tcp -a 192.168.1.235 -p 1234
 ```
 ## Multiple receiver models
