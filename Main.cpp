@@ -453,7 +453,7 @@ int main(int argc, char* argv[])
 
 			if(verbose) settingsAIRSPYHF.Print();
 #else
-			std::cerr << "AIRSPYHF+ not included in this package. Please build version including AIRSPYHF+ support.";
+			throw "AIRSPYHF+ not included in this package. Please build version including AIRSPYHF+ support.";
 #endif
 			break;
 		}
@@ -468,7 +468,7 @@ int main(int argc, char* argv[])
 
 			if(verbose) settingsAIRSPY.Print();
 #else
-			std::cerr << "AIRSPY not included in this package. Please build version including AIRSPY support.";
+			throw "AIRSPY not included in this package. Please build version including AIRSPY support.";
 #endif
 			break;
 		}
@@ -483,7 +483,7 @@ int main(int argc, char* argv[])
 
 			if(verbose) settingsSDRPLAY.Print();
 #else
-			std::cerr << "SDRPLAY not included in this package. Please build version including SDRPLAY support.";
+			throw "SDRPLAY not included in this package. Please build version including SDRPLAY support.";
 #endif
 			break;
 		}
@@ -535,7 +535,7 @@ int main(int argc, char* argv[])
 			control = device;
 
 #else
-			std::cerr << "RTLSDR not included in this package. Please build version including RTLSDR support.";
+			throw "RTLSDR not included in this package. Please build version including RTLSDR support.";
 #endif
 			break;
 		}
@@ -545,25 +545,14 @@ int main(int argc, char* argv[])
 			Device::RTLTCP* device = new Device::RTLTCP();
 			device->Open(handle, settingsRTLTCP);
 
-			if (sample_rate == 0 and RTLSDRfastDS)
-			{
-				device->out >> convertFastDS;
-				out = &(convertFastDS.out);
-
-				sample_rate = 1536000;
-				model_rate = 96000;
-			}
-			else
-			{
-				device->out >> convertCU8;
-				out = &(convertCU8.out);
-			}
+			device->out >> convertCU8;
+			out = &(convertCU8.out);
 
 			if (verbose) settingsRTLTCP.Print();
 			control = device;
 
 #else
-			std::cerr << "RTLTCP not included in this package. Please build version including RTLTCP support.";
+			throw "RTLTCP not included in this package. Please build version including RTLTCP support.";
 #endif
 			break;
 		}
@@ -645,6 +634,8 @@ int main(int argc, char* argv[])
 		if(timer_on)
 			for (auto m : liveModels)
 				std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
+
+		control->Close();
 
 		for(auto model : liveModels) delete model;
 		if(control) delete control;

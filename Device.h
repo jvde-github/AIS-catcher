@@ -79,6 +79,7 @@ namespace Device{
 	public:
 
 		// DeviceBase
+		virtual void Close() { }
 		virtual void Play() { streaming = true; }
 		virtual void Stop() { streaming = false; }
 

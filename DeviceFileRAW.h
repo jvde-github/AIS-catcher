@@ -56,6 +56,7 @@ namespace Device
 	public:
 
 		// Control
+		void Close();
 		void Play();
 		void Stop();
 
