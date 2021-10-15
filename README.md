@@ -1,5 +1,6 @@
 # AIS-catcher - A multi-platform AIS receiver
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, SDRplay (RSP1A for now) and input from file. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, SDRplay (RSP1A for now) and input from file and over RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
+The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
 
 ### Disclaimer
 
@@ -7,11 +8,11 @@ This package will add the ```AIS-catcher``` command - a dual channel AIS receive
 
 ## Recent Developments
 
-Release version **0.27b**: support to send messages to multiple UDP destinations. Fixed bug for negative frequency corrections (-p switch)
+Release version **0.28**: addition of support for RTL TCP
 
-Release version **0.26**: addition of -n and -L switches.
+Release version **0.27b**: send messages to multiple UDP destinations. Fixed bug for negative frequency corrections (-p switch)
 
-Release version **0.25**: inclusion of preliminary support for SDRplay RSP1A (API 3.x).
+Release version **0.25**: inclusion of support for SDRplay RSP1A (API 3.x).
 
 ## Purpose
 
@@ -38,6 +39,7 @@ use: AIS-catcher [options]
 
 	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename]
 	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
+	[-t [host [port]] - read IQ data from remote RTL-TCP instance]
 
 	[-l list available devices and terminate (default: off)]
 	[-L list supported SDR hardware and terminate (default: off)]
@@ -55,6 +57,7 @@ use: AIS-catcher [options]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
+	[-gt RTLTCPs: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]
 	[-gw WAV file: FILE [filename]
 ````
@@ -137,6 +140,28 @@ More guidance on setting the gain model and levels can be obtained in the mentio
 Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch. For example:
 ```console
 AIS-catcher -gs lnastate 5
+```
+
+### RTL TCP
+AIS-catcher can process the data from a rtl_tcp process running remotely, e.g. if the server is on `192.168.1.235' port '1234' running at a sampling rate of `240K` samples/sec: 
+```console
+AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
+```
+To test the setup we can use some input from file, downsample via SOX and then send to a AIS0-catcher as RTL-TCP client:
+```
+sox -t raw -c 2 -e unsigned-integer -b 8 -r 1536000 posterholt_1536_2.raw -t raw -c 2 -e unsigned-integer -b 8 -r 240000 temp.raw 
+truncate -s +1000000 temp.raw
+netcat  -w3 -l 127.0.0.1 1234 <temp.raw &
+AIS-catcher -t localhost -s 240000 -v
+```
+If all works well, this should give the same results as running:
+```
+AIS-catcher -r temp.raw -s 240000 -v
+```
+This provides an indirect method of running a RTL-TCP capable AIS receiver on deterministic input from a file. Hence, this provides a methodology for benchmarking AIS-catcher with other receiver packages with the same capability. We might explore more in the future. 
+The remote server can be started with a command like:
+```
+rtl_tcp -a 192.168.1.235 -p 1234
 ```
 ## Multiple receiver models
 

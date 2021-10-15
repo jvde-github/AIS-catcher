@@ -29,12 +29,22 @@ namespace IO
 
 	UDP::UDP()
 	{
-		startWSA();
+#ifdef WIN32
+		WSADATA wsaData;
+
+		if( WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+		{
+			throw "Cannot initialize Winsocket.";
+			return;
+		}
+#endif
 	}
 
 	UDP::~UDP()
 	{
-		closeWSA();
+#ifdef WIN32
+		WSACleanup();
+#endif
 	}
 
 	void UDP::Receive(const NMEA* data, int len)
@@ -42,25 +52,6 @@ namespace IO
 		for(int i = 0; i < len; i++)
 			for(auto s : data[i].sentence)
 				sendto(sock, (s+"\r\n").c_str(), s.length()+2, 0, address->ai_addr, address->ai_addrlen);
-	}
-
-	void UDP::startWSA()
-	{
-#ifdef WIN32
-		address = NULL;
-		if( WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-		{
-			throw "Cannot create UDP socket.";
-			return;
-		}
-#endif
-	}
-
-	void UDP::closeWSA()
-	{
-#ifdef WIN32
-		WSACleanup();
-#endif
 	}
 
 	void UDP::openConnection(std::string host, std::string portname)

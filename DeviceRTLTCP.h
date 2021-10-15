@@ -51,7 +51,7 @@ namespace Device {
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
-		std::string address = "127.0.0.1";
+		std::string host = "127.0.0.1";
 		std::string port = "1234";
 
 	public:
@@ -71,11 +71,18 @@ namespace Device {
 		std::string port;
 		struct addrinfo* address = NULL;
 
+		// output vector
+		std::vector<CU8> output;
+		int ptr = 0;
+
+		static const int TRANSFER_SIZE = 1024;
+		static const int BUFFER_SIZE = 16 * 16384;
+		static const int SIZE_FIFO = 2 * BUFFER_SIZE / TRANSFER_SIZE;
+
 		std::thread async_thread;
-		std::thread demod_thread;
+		std::thread run_thread;
 
 		std::vector<std::vector<CU8>> fifo;
-		static const int sizeFIFO = 1024;
 		int head = 0;
 		int tail = 0;
 		std::atomic<int> count;
@@ -83,10 +90,7 @@ namespace Device {
 		std::mutex fifo_mutex;
 		std::condition_variable fifo_cond;
 
-		// output vector
-		std::vector<CU8> output;
-		const int buffer_size = 16 * 16384;
-		int ptr = 0;
+
 
 		void RunAsync();
 		void Run();
