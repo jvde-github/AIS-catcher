@@ -31,7 +31,7 @@ namespace Device {
 
 	void SettingsRTLTCP::Print()
 	{
-		std::cerr << "RTLTCP settings: host " << address <<  " port " << port << " - gt tuner ";
+		std::cerr << "RTLTCP settings: -gt host " << address <<  " port " << port << " tuner ";
 
 		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
 
@@ -173,10 +173,16 @@ namespace Device {
 
 		while (isStreaming())
 		{
-
 			if (count != sizeFIFO)
 			{
 				int len = recv(sock, buffer, 1024, 0);
+
+				if(len == 0)
+				{
+					DeviceBase::Stop();
+					continue;
+				}
+
 				int len_iq = len / 2;
 
 				if (fifo[tail].size() != len_iq) fifo[tail].resize(len_iq);
@@ -276,7 +282,7 @@ namespace Device {
 
 	std::vector<uint32_t> RTLTCP::SupportedSampleRates()
 	{
-		return { 240000, 288000, 1536000 };
+		return { 240000, 288000, 1536000, 96000 };
 	}
 
 	void RTLTCP::pushDeviceList(std::vector<Description>& DeviceList)
