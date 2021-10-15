@@ -147,7 +147,7 @@ AIS-catcher can process the data from a rtl_tcp process running remotely, e.g. i
 ```console
 AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
-To test the setup we can start with a recorded signal in a file, downsample via SOX to a lower sample rate and then send to AIS-catcher running as a RTL-TCP client:
+To test the setup we can start with a recorded signal in a file, downsample via SOX to a lower sample rate and then send to AIS-catcher running as an RTL-TCP client:
 ```console
 sox -t raw -c 2 -e unsigned-integer -b 8 -r 1536000 posterholt_1536_2.raw -t raw -c 2 -e unsigned-integer -b 8 -r 240000 temp.raw 
 truncate -s +1000000 temp.raw
@@ -158,8 +158,8 @@ If all works well, this should give the same results as running:
 ```console
 AIS-catcher -r temp.raw -s 240000 -v
 ```
-This provides an indirect method of running a RTL-TCP capable AIS receiver on deterministic input from a file. Hence, this provides a methodology for benchmarking AIS-catcher with other receiver packages with the same capability. We might explore more in the future. 
-The remote server can be started with a command like:
+This provides for an indirect method for running an RTL-TCP capable AIS receiver on deterministic input from a file. We can use this tactic for benchmarking AIS-catcher against other receiver packages with the same capability. We might explore more in the future. 
+Finally for completeness, the remote RTL TCP server can be started with a command like:
 ```console
 rtl_tcp -a 192.168.1.235 -p 1234
 ```
