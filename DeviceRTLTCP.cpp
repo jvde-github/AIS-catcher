@@ -179,7 +179,6 @@ namespace Device {
 				int len = recv(sock, buffer, 1024, 0);
 				int len_iq = len / 2;
 
-				std::cerr << len << std::endl;
 				if (fifo[tail].size() != len_iq) fifo[tail].resize(len_iq);
 
 				std::memcpy(fifo[tail].data(), buffer, len);
