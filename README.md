@@ -143,7 +143,7 @@ AIS-catcher -gs lnastate 5
 ```
 
 ### RTL TCP
-AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org/projects/rtl-sdr/wiki/Rtl-sdr#rtlsdr-library-amp-capture-tool) process running remotely, e.g. if the server is on `192.168.1.235` port `1234` running at a sampling rate of `240K` samples/sec: 
+AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org/projects/rtl-sdr/wiki/Rtl-sdr#rtl_tcp) process running remotely, e.g. if the server is on `192.168.1.235` port `1234` running at a sampling rate of `240K` samples/sec: 
 ```console
 AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
