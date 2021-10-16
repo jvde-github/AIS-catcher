@@ -3,7 +3,7 @@ OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceA
 
 CC = gcc
 override CFLAGS += -Ofast -Wno-psabi -std=c++11
-LFLAGS = -lstdc++ -lm -o AIS-catcher 
+override LFLAGS += -lstdc++ -lm -o AIS-catcher 
 
 CFLAGS_RTL = -DHASRTLSDR 
 CFLAGS_AIRSPYHF = -DHASAIRSPYHF 
