@@ -22,7 +22,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 Compilation and installation instructions are provided below for Linux systems including Raspberry Pi.
 
-A Windows binary version of v0.27 (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of **v0.28** (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
 
@@ -137,30 +137,33 @@ AIS-catcher -gm lna AUTO vga 12 mixer 12
 More guidance on setting the gain model and levels can be obtained in the mentioned reference.
 
 ### SDRplay RSP1A (API 3.x)
-Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch. For example:
+Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch, e.g.:
 ```console
 AIS-catcher -gs lnastate 5
 ```
 
 ### RTL TCP
-AIS-catcher can process the data from a rtl_tcp process running remotely, e.g. if the server is on `192.168.1.235' port '1234' running at a sampling rate of `240K` samples/sec: 
+AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org/projects/rtl-sdr/wiki/Rtl-sdr#rtl_tcp) process running remotely, e.g. if the server is on `192.168.1.235` port `1234` running at a sampling rate of `240K` samples/sec: 
 ```console
 AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
-To test the setup we can use some input from file, downsample via SOX and then send to a AIS0-catcher as RTL-TCP client:
-```
+To test the setup we can start with a recorded signal in a file. In this exampkle we first downsample using SOX to a lower sample rate:
+```console
 sox -t raw -c 2 -e unsigned-integer -b 8 -r 1536000 posterholt_1536_2.raw -t raw -c 2 -e unsigned-integer -b 8 -r 240000 temp.raw 
 truncate -s +1000000 temp.raw
+```
+and then set up the server and client as follows:
+```console
 netcat  -w3 -l 127.0.0.1 1234 <temp.raw &
 AIS-catcher -t localhost -s 240000 -v
 ```
 If all works well, this should give the same results as running:
-```
+```console
 AIS-catcher -r temp.raw -s 240000 -v
 ```
-This provides an indirect method of running a RTL-TCP capable AIS receiver on deterministic input from a file. Hence, this provides a methodology for benchmarking AIS-catcher with other receiver packages with the same capability. We might explore more in the future. 
-The remote server can be started with a command like:
-```
+The above gives an indirect method for running an RTL-TCP capable AIS receiver on deterministic input from a file. We can use this tactic for benchmarking AIS-catcher against other receiver packages with the same capability. We might explore more in the future. 
+Finally for completeness, the remote RTL TCP server can be started with a command like:
+```console
 rtl_tcp -a 192.168.1.235 -p 1234
 ```
 ## Multiple receiver models
@@ -175,7 +178,7 @@ The command line provides  the ```-m``` option which allows for the selection of
 The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
 
  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
-```
+```console
 AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -m 1 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of three decoding models:
