@@ -137,7 +137,7 @@ AIS-catcher -gm lna AUTO vga 12 mixer 12
 More guidance on setting the gain model and levels can be obtained in the mentioned reference.
 
 ### SDRplay RSP1A (API 3.x)
-Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch. For example:
+Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch, e.g.:
 ```console
 AIS-catcher -gs lnastate 5
 ```
