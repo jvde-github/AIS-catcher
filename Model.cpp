@@ -27,7 +27,7 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelFrontend::SupportedSampleRates()
 	{
-		return { 3072000, 6144000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 250000, 240000, 96000, 3000000, 6000000 };
+		return { 3072000, 6144000, 1536000, 1920000, 2304000, 768000, 384000, 288000, 250000, 240000, 192000, 96000, 3000000, 6000000 };
 	}
 
 	void ModelFrontend::buildModel(int sample_rate, bool timerOn)
@@ -82,6 +82,9 @@ namespace AIS
 		case 240000:
 			US.setParams(120000, 192000);
 			physical >> DS2_2 >> US >> DS2_1 >> ROT;
+			break;
+		case 192000:
+			physical >> DS2_1 >> ROT;
 			break;
 		case 96000:
 			physical >> ROT;
