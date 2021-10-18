@@ -310,6 +310,5 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - IO: TCP IP
 - Testing: more set ups, assess gap with commercial equipment
 - GUI: Windows, Android
-- Hardware support: rtl_tcp, Hackrf, stdin, a nice RPI hat and other SDRplay devices besides RSP1A
 - ....
 - ....
