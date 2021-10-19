@@ -143,29 +143,11 @@ AIS-catcher -gs lnastate 5
 ```
 
 ### RTL TCP
-AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org/projects/rtl-sdr/wiki/Rtl-sdr#rtl_tcp) process running remotely, e.g. if the server is on `192.168.1.235` port `1234` running at a sampling rate of `240K` samples/sec: 
+AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org/projects/rtl-sdr/wiki/Rtl-sdr#rtl_tcp) process running remotely, e.g. if the server is on `192.168.1.235` port `1234` and we want a s sampling rate of `240K` samples/sec:
 ```console
 AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
-To test the setup we can start with a recorded signal in a file. In this exampkle we first downsample using SOX to a lower sample rate:
-```console
-sox -t raw -c 2 -e unsigned-integer -b 8 -r 1536000 posterholt_1536_2.raw -t raw -c 2 -e unsigned-integer -b 8 -r 240000 temp.raw 
-truncate -s +1000000 temp.raw
-```
-and then set up the server and client as follows:
-```console
-netcat  -w3 -l 127.0.0.1 1234 <temp.raw &
-AIS-catcher -t localhost -s 240000 -v
-```
-If all works well, this should give the same results as running:
-```console
-AIS-catcher -r temp.raw -s 240000 -v
-```
-The above gives an indirect method for running an RTL-TCP capable AIS receiver on deterministic input from a file. We can use this tactic for benchmarking AIS-catcher against other receiver packages with the same capability. We might explore more in the future. 
-Finally for completeness, the remote RTL TCP server can be started with a command like:
-```console
-rtl_tcp -a 192.168.1.235 -p 1234
-```
+
 ## Multiple receiver models
 
 The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
@@ -208,6 +190,14 @@ Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare ante
 | rtl-ais v0.3  @ 1600K  | ```-n``` | 33 | 30  | 
 
 For completeness I performed separate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
+
+The `rtl_tcp` functionality provides a way to compare different receiver packages on a deterministic input from file. I have tweaked the callback function in `rtl_tcp` so that it sends over input from a file. Same for `rtl-ais`. For both programs I have changed the sampling rate of the input using `sox`. The output was send via UDP to AISdipatcher to remove duplicates. The results for some recordings is as follows (number of messages/unique ships):
+ | File | rtl-ais | AIS-catcher 0.28 | AIS-rec 2.208 (trial) | 
+ | :--- | :--- | :---: | :---: |
+ |Scheveningen |  17/16 | 41/35|23/20 |
+ |Moscow| 146/27 | 195/34 | 171/28 |
+ |Vlieland | 51/31| 86/51 | 56/36 |
+ |Posterholt | 2/2 | 36/22 | 5/5 |
 
 ## Compilation process
 
