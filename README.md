@@ -193,13 +193,13 @@ Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare ante
 For completeness I performed separate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
 
 ### Recorded signals
-The `rtl_tcp` functionality provides a way to compare different receiver packages on a deterministic input from file. I have tweaked the callback function in `rtl_tcp` so that it sends over input from a file. Same for `rtl-ais`. For both programs I have changed the sampling rate of the input using `sox`. The output was send via UDP to AISdipatcher to remove duplicates. The results for some recordings (mostly via `rtl-sdr` with auto gain) are as follows in terms of  number of messages/number of unique ships:
+The `rtl_tcp` functionality provides a way to compare different receiver packages on a deterministic input from file. I have tweaked the callback function in `rtl_tcp` so that it sends over input from a file. Same for `rtl-ais`. For both programs I have changed the sampling rate of the input using `sox`. The output was send via UDP to AISdipatcher to remove any duplicates. The results in terms of  number of messages/distinct vessels:
  | File | rtl-ais | AIS-catcher 0.28 | AISrec 2.208 (trial) | Source |
  | :--- | :--- | :---: | :---: | :---: |
- |Scheveningen |  17/16 | 41/35|23/20 | recorded with `rtl-sdr` using auto gain |
- |Moscow| 146/27 | 195/34 | 171/28 | shared by user in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
- |Vlieland | 51/31| 86/51 | 56/36 |recorded with `rtl-sdr` using auto gain |
- |Posterholt | 2/2 | 36/22 | 5/5 |recorded with `rtl-sdr` using auto gain |
+ |Scheveningen |  17/16 | 41/35|23/20 | recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Moscow| 146/27 | 195/34 | 171/28 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
+ |Vlieland | 51/31| 86/51 | 56/36 |recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Posterholt | 2/2 | 36/22 | 5/5 |recorded @ 1536K with `rtl-sdr` (auto gain) |
  
 
 ## Compilation process
