@@ -193,14 +193,15 @@ Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare ante
 For completeness I performed separate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
 
 ### Recorded signals
-The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. The output of the various receivers was sent via UDP to AISdipatcher which removes any duplicates and counts messages. AISrec recently has a new version (October 23, 2021) with improved stability and reception quality and the tabble below has been updated to include this recent version. The results in terms of  number of messages/distinct vessels:
+The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. The output of the various receivers was sent via UDP to AISdipatcher which removes any duplicates and counts messages. The results in terms of  number of messages/distinct vessels:
  | File | rtl-ais | AIS-catcher 0.28 | AISrec 2.208 (trial) | Source |
  | :--- | :--- | :---: | :---: | :---: |
  |Scheveningen |  17/16 | 41/35|30/27 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  |Moscow| 146/27 | 195/34 | 195/31 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
  |Vlieland | 51/31| 86/51 | 72/44 |recorded @ 1536K with `rtl-sdr` (auto gain) |
- |Posterholt | 2/2 | 36/22 | ?/? |recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Posterholt | 2/2 | 36/22 | 13/12 |recorded @ 1536K with `rtl-sdr` (auto gain) |
  
+ **Update:** AISrec recently has a new version (October 23, 2021) with improved stability and reception quality and the tabble below has been updated to include the results from this recent version. 
 
 ## Compilation process
 
