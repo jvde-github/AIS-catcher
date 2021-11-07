@@ -201,7 +201,7 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
  |Vlieland | 51/31| 86/51 | 72/44 |recorded @ 1536K with `rtl-sdr` (auto gain) |
  |Posterholt | 2/2 | 36/22 | 13/12 |recorded @ 1536K with `rtl-sdr` (auto gain) |
  
- **Update:** AISrec recently had a version update of 2.208 (October 23, 2021) with improved stability and reception quality and the tabble above has been updated to include the results from this recent version. 
+ **Update:** AISrec recently had a version update of 2.208 (October 23, 2021) with improved stability and reception quality and the table above has been updated to include the results from this recent version. 
 
 ## Compilation process
 
