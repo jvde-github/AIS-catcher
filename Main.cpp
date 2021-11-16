@@ -31,6 +31,7 @@ SOFTWARE.
 #include "DeviceFileWAV.h"
 #include "DeviceRTLSDR.h"
 #include "DeviceAIRSPYHF.h"
+#include "DeviceHACKRF.h"
 #include "DeviceRTLTCP.h"
 #include "DeviceAIRSPY.h"
 #include "DeviceSDRPLAY.h"
@@ -84,6 +85,7 @@ void Usage()
 	std::cerr << "\t[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
 	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
 	std::cerr << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
+	std::cerr << "\t[-gf HACKRF: LNA [0-40] VGA [0-62]" << std::endl;
 	std::cerr << "\t[-gt RTLTCPs: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]" << std::endl;
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
@@ -107,6 +109,9 @@ std::vector<Device::Description> getDevices()
 #endif
 #ifdef HASRTLTCP
 	Device::RTLTCP::pushDeviceList(device_list);
+#endif
+#ifdef HASHACKRF
+	Device::HACKRF::pushDeviceList(device_list);
 #endif
 	std::sort(device_list.begin(), device_list.end());
 
@@ -152,6 +157,9 @@ void printSupportedDevices(std::vector<Device::Description>& device_list)
 #endif
 #ifdef HASRTLTCP
 	std::cerr << "RTLTCP ";
+#endif
+#ifdef HASHACKRF
+	std::cerr << "HACKRF ";
 #endif
 	std::cerr << std::endl;
 }
@@ -268,6 +276,7 @@ int main(int argc, char* argv[])
 	Device::SettingsAIRSPYHF settingsAIRSPYHF;
 	Device::SettingsAIRSPY settingsAIRSPY;
 	Device::SettingsSDRPLAY settingsSDRPLAY;
+	Device::SettingsHACKRF settingsHACKRF;
 
 	uint64_t handle = 0;
 
@@ -404,6 +413,7 @@ int main(int argc, char* argv[])
 				case 'a': parseDeviceSettings(settingsRAW, argv, ptr, argc); break;
 				case 'w': parseDeviceSettings(settingsWAV, argv, ptr, argc); break;
 				case 't': parseDeviceSettings(settingsRTLTCP, argv, ptr, argc); break;
+				case 'f': parseDeviceSettings(settingsHACKRF, argv, ptr, argc); break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
@@ -555,6 +565,22 @@ int main(int argc, char* argv[])
 
 #else
 			throw "RTLTCP not included in this package. Please build version including RTLTCP support.";
+#endif
+			break;
+		}
+		case Device::Type::HACKRF:
+		{
+#ifdef HASHACKRF
+			Device::HACKRF* device = new Device::HACKRF();
+			device->Open(handle, settingsHACKRF);
+
+			control = device;
+			out = &(device->out);
+
+			if (verbose) settingsHACKRF.Print();
+
+#else
+			throw "HACKRF not included in this package. Please build version including RTLTCP support.";
 #endif
 			break;
 		}

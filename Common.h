@@ -42,6 +42,7 @@ typedef int16_t S16;
 typedef std::complex <int32_t> CS32;
 typedef std::complex <int16_t> CS16;
 typedef std::complex <uint8_t> CU8;
+typedef std::complex <int8_t> CS8;
 typedef char BIT;
 typedef struct { std::vector<std::string> sentence; char channel; int msg; uint32_t mmsi; int repeat; } NMEA;
 

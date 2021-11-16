@@ -1,5 +1,5 @@
-SRC = Main.cpp IO.cpp DSP.cpp AIS.cpp Model.cpp Utilities.cpp Demod.cpp DeviceRTLSDR.cpp DeviceAIRSPYHF.cpp DeviceAIRSPY.cpp DeviceFileRAW.cpp DeviceFileWAV.cpp DeviceSDRPLAY.cpp DeviceRTLTCP.cpp
-OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceAIRSPYHF.o DeviceAIRSPY.o DeviceFileRAW.o DeviceFileWAV.o DeviceSDRPLAY.o DeviceRTLTCP.o
+SRC = Main.cpp IO.cpp DSP.cpp AIS.cpp Model.cpp Utilities.cpp Demod.cpp DeviceRTLSDR.cpp DeviceAIRSPYHF.cpp DeviceAIRSPY.cpp DeviceFileRAW.cpp DeviceFileWAV.cpp DeviceSDRPLAY.cpp DeviceRTLTCP.cpp DeviceHACKRF.cpp
+OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceAIRSPYHF.o DeviceAIRSPY.o DeviceFileRAW.o DeviceFileWAV.o DeviceSDRPLAY.o DeviceRTLTCP.o DeviceHACKRF.o
 
 CC = gcc
 override CFLAGS += -Ofast -Wno-psabi -std=c++11
@@ -10,15 +10,17 @@ CFLAGS_AIRSPYHF = -DHASAIRSPYHF
 CFLAGS_AIRSPY = -DHASAIRSPY 
 CFLAGS_SDRPLAY = -DHASSDRPLAY 
 CFLAGS_RTLTCP = -DHASRTLTCP 
+CFLAGS_HACKRF = -DHASHACKRF 
 
 LFLAGS_RTL = -lrtlsdr -lpthread
 LFLAGS_AIRSPYHF = -lairspyhf -lpthread
 LFLAGS_AIRSPY = -lairspy -lpthread
 LFLAGS_SDRPLAY = -lsdrplay_api -lpthread
 LFLAGS_RTLTCP = -lpthread
+LFLAGS_HACKRF = -lpthread -lhackrf
 
 all: lib
-	$(CC) $(OBJ) $(LFLAGS_AIRSPYHF) $(LFLAGS_AIRSPY) $(LFLAGS_RTL) $(LFLAGS) $(LFLAGS_RTLTCP)
+	$(CC) $(OBJ) $(LFLAGS_AIRSPYHF) $(LFLAGS_AIRSPY) $(LFLAGS_RTL) $(LFLAGS) $(LFLAGS_RTLTCP) $(LFLAGS_HACKRF)
 
 rtl-only: lib-rtl
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_RTL)
@@ -35,8 +37,11 @@ sdrplay-only: lib-sdrplay
 rtltcp-only: lib-rtltcp
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_RTLTCP)
 
+hackrf-only: lib-hackrf
+	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_HACKRF)
+
 lib: 
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPYHF) $(CFLAGS_AIRSPY) $(CFLAGS_RTL) $(CFLAGS_RTLTCP)
+	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPYHF) $(CFLAGS_AIRSPY) $(CFLAGS_RTL) $(CFLAGS_RTLTCP) $(CFLAGS_HACKRF)
 
 lib-rtl:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_RTL)
@@ -52,6 +57,9 @@ lib-sdrplay:
 
 lib-rtltcp:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_RTLTCP)
+
+lib-hackrf:
+	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_HACKRF)
 
 clean:
 	rm *.o 
