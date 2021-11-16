@@ -226,7 +226,7 @@ make rtl-only
 sudo make install
 ```
 
-If you want to include Hackrf, Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
+If you want to include HackRF, Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
 ```console
 sudo apt-get install libairspyhf-dev libairspy-dev libhackrf-dev
 ```
@@ -235,7 +235,7 @@ The process to install AIS-catcher then becomes:
 make
 sudo make install
 ```
-Standard installation will include support for the Airspy devices, Hackrf and RTLSDR dongles but not SDRplay. To build an executable with SDRplay API 3.x (only) support use:
+Standard installation will include support for the Airspy devices, HackRF and RTLSDR dongles but not SDRplay. To build an executable with SDRplay API 3.x (only) support use:
 ```console
 make sdrplay-only
 sudo make install
