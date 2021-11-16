@@ -205,11 +205,6 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 
 ## Compilation process
 
-Make sure you have the following dependencies, depending on the device you are using:
-  - librtlsdr
-  - libairspyhf
-  - libairspy
-
 The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
 
 ```console
