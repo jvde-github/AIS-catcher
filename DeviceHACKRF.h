@@ -37,6 +37,7 @@ namespace Device {
 
 		int LNA_Gain = 8;
 		int VGA_Gain = 20;
+		bool preamp = false;
 
 	public:
 
@@ -54,9 +55,10 @@ namespace Device {
 
 		void setLNA_Gain(int);
 		void setVGA_Gain(int);
+		void setPREAMP(int);
 
 		static int callback_static(hackrf_transfer* tf);
-		void callback(CS8*, int);
+		void callback(uint8_t*, int);
 
 		std::vector<CFLOAT32> output;
 

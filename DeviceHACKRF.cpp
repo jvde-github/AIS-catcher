@@ -33,6 +33,8 @@ namespace Device {
 	void SettingsHACKRF::Print()
 	{
 		std::cerr << "Hackrf Settings: -gf";
+		std::cerr << " preamp ";
+		if(preamp) std::cerr << "ON"; else std::cerr << "OFF";
 		std::cerr << " lna " << LNA_Gain;
 		std::cerr << " vga " << VGA_Gain;
 		std::cerr << std::endl;
@@ -51,8 +53,12 @@ namespace Device {
 		{
 			VGA_Gain = ((Util::Parse::Integer(arg, 0, 62) + 1) / 2) * 2;
 		}
+		else if (option == "PREAMP")
+		{
+			preamp = Util::Parse::Switch(arg);
+		}
 		else
-				throw "Invalid setting for HACKRF.";
+			throw "Invalid setting for HACKRF.";
 
 	}
 
@@ -71,9 +77,7 @@ namespace Device {
 
 	void HACKRF::Open(SettingsHACKRF& s)
 	{
-
-		int result = hackrf_open(&device);
-		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device";
+		if (hackrf_open(&device) != HACKRF_SUCCESS) throw "HACKRF: cannot open device";
 
 		applySettings(s);
 	}
@@ -88,10 +92,14 @@ namespace Device {
 		if (hackrf_set_vga_gain(device, a) != HACKRF_SUCCESS) throw "HACKRF: cannot set VGA gain.";
 	}
 
+	void HACKRF::setPREAMP(int a)
+	{
+		if (hackrf_set_amp_enable(device, a) != HACKRF_SUCCESS) throw "HACKRF: cannot set amp.";
+	}
+
 	void HACKRF::setSampleRate(uint32_t s)
 	{
-		int result = hackrf_set_sample_rate(device, s);
-		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
+		if (hackrf_set_sample_rate(device, s) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
 
 		DeviceBase::setSampleRate(s);
 	}
@@ -103,19 +111,18 @@ namespace Device {
 
 	void HACKRF::setFrequency(uint32_t f)
 	{
-		int result = hackrf_set_freq(device, f);
-		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
+		if (hackrf_set_freq(device, f) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
 
 		DeviceBase::setFrequency(f);
 	}
 
 	int HACKRF::callback_static(hackrf_transfer* tf)
 	{
-		((HACKRF*)tf->rx_ctx)->callback((CS8*)tf->buffer, tf->valid_length);
+		((HACKRF*)tf->rx_ctx)->callback(tf->buffer, tf->valid_length);
 		return 0;
 	}
 
-	void HACKRF::callback(CS8* data, int len)
+	void HACKRF::callback(uint8_t* data, int len)
 	{
 		int len2 = len / 2;
 
@@ -123,11 +130,11 @@ namespace Device {
 
 		for (int i = 0; i < len2; i++)
 		{
-			output[i].real(data[i].real() / 128.0f);
-			output[i].imag(data[i].imag() / 128.0f);
+			output[i].real(((int8_t)data[2 * i]) / 128.0f);
+			output[i].imag(((int8_t)data[2 * i + 1]) / 128.0f);
 		}
 
-		Send((const CFLOAT32*)output.data(), len2);
+		Send((const CFLOAT32*)output.data(), output.size());
 	}
 
 	void HACKRF::Play()
@@ -180,9 +187,7 @@ namespace Device {
 
 	void HACKRF::applySettings(SettingsHACKRF& s)
 	{
-		//if (hackrf_set_hw_sync_mode(device, 0) != HACKRF_SUCCESS) throw "HACKRF: error setting sync mode";
-		//hackrf_set_amp_enable(device,1);
-
+		setPREAMP(s.preamp ? 1 : 0);
 		setLNA_Gain(s.LNA_Gain);
 		setVGA_Gain(s.VGA_Gain);
 	}
