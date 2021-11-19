@@ -229,7 +229,7 @@ If you want to include HackRF, Airspy and Airspy HF+ functionality, ensure you i
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git make gcc g++ librtlsdr-dev libairspyhf-dev libairspy-dev libhackrf-dev -Y
+sudo apt-get install git make gcc g++ librtlsdr-dev libairspyhf-dev libairspy-dev libhackrf-dev -y
 ```
 The process to install AIS-catcher then becomes:
 ```console
