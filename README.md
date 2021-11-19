@@ -211,15 +211,13 @@ The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward 
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git make gcc g++ -y
-sudo apt-get install librtlsdr-dev -y
+sudo apt-get install git make gcc g++ librtlsdr-dev -y
 
 ```
 
 Next step is to download AIS-catcher source and install the program:
 
 ```console
-
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
 make rtl-only
@@ -228,10 +226,15 @@ sudo make install
 
 If you want to include HackRF, Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
 ```console
-sudo apt-get install libairspyhf-dev libairspy-dev libhackrf-dev
+sudo apt-get update
+sudo apt-get upgrade
+
+sudo apt-get install git make gcc g++ librtlsdr-dev libairspyhf-dev libairspy-dev libhackrf-dev -Y
 ```
 The process to install AIS-catcher then becomes:
 ```console
+git clone https://github.com/jvde-github/AIS-catcher.git
+cd AIS-catcher
 make
 sudo make install
 ```
