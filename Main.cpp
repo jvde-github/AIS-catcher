@@ -108,7 +108,7 @@ std::vector<Device::Description> getDevices()
 	Device::SDRPLAY::pushDeviceList(device_list);
 #endif
 #ifdef HASRTLTCP
-	Device::RTLTCP::pushDeviceList(device_list);
+//	Device::RTLTCP::pushDeviceList(device_list);
 #endif
 #ifdef HASHACKRF
 	Device::HACKRF::pushDeviceList(device_list);
