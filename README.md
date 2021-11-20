@@ -4,7 +4,7 @@ The program provides the option to read and decode the raw discriminator output 
 
 ### Disclaimer
 
-```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
+```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently and in line with local regulations and laws. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
 
 ## Recent Developments
 
