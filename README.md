@@ -311,6 +311,6 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - Testing: more set ups, assess gap with commercial equipment
 - GUI: Windows, Android
 - Code clean up: default sampling rate from device rates and not model rates, generic circular buffer for devices
-- Multiple SDRs: validate location from signal
+- Multiple SDRs: validate location from signal, privacy filter
 - ....
 - ....
