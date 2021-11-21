@@ -94,6 +94,15 @@ namespace Util
 			}
 		}
 
+		static void toFloat(CS8* in, CFLOAT32* out, int len)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				out[i].real((float)in[i].real() / 128.0f);
+				out[i].imag((float)in[i].imag() / 128.0f);
+			}
+		}
+
 		static void toFloat(CS16* in, CFLOAT32* out, int len)
 		{
 			for (int i = 0; i < len; i++)
