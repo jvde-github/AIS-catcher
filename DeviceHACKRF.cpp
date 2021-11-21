@@ -100,6 +100,7 @@ namespace Device {
 	void HACKRF::setSampleRate(uint32_t s)
 	{
 		if (hackrf_set_sample_rate(device, s) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
+		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(s)) != HACKRF_SUCCESS) throw "HACKRF: cannot set bandwidth filter to auto.";
 
 		DeviceBase::setSampleRate(s);
 	}
@@ -178,6 +179,7 @@ namespace Device {
 				DeviceList.push_back(Description("HACKRF", "HACKRF", serial.str(), (uint64_t)i, Type::HACKRF));
 			}
 		}
+		hackrf_device_list_free(list);
 	}
 
 	bool HACKRF::isStreaming()
