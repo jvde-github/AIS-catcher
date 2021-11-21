@@ -47,6 +47,10 @@ namespace Device {
 			std::cerr << " CU8";
 			break;
 
+		case Device::Format::CS8:
+			std::cerr << " CS8";
+			break;
+
 		}
 		std::cerr << " file " << file << std::endl;;
 	}
@@ -71,6 +75,8 @@ namespace Device {
 				format = Device::Format::CF32;
 			else if (arg == "CS16")
 				format = Device::Format::CS16;
+			else if (arg == "CS8")
+				format = Device::Format::CS8;
 			else throw "RAW FILE: Unknown file format specification.";
 		}
 		else if (option == "STEREO")
@@ -108,6 +114,12 @@ namespace Device {
 
 			len = buffer.size() / sizeof(CS16);
 			Util::Convert::toFloat((CS16*)buffer.data(), output.data(), len);
+			break;
+
+		case Format::CS8:
+
+			len = buffer.size() / sizeof(CS8);
+			Util::Convert::toFloat((CS8*)buffer.data(), output.data(), len);
 			break;
 
 		case Format::CF32:

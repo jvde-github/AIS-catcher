@@ -87,7 +87,7 @@ void Usage()
 	std::cerr << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
 	std::cerr << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off]" << std::endl;
 	std::cerr << "\t[-gt RTLTCPs: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]" << std::endl;
-	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8]" << std::endl;
+	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
 }
 
