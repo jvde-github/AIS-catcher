@@ -22,7 +22,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 Compilation and installation instructions are provided below for Linux systems including Raspberry Pi.
 
-A Windows binary version of **v0.28** (ex SDRplay support) is available for [download](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing). Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of **v0.29** (ex SDRplay support) is available for [32-bit](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-bit](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
 
