@@ -8,9 +8,9 @@ The program provides the option to read and decode the raw discriminator output 
 
 ## Recent Developments
 
-Release version **0.28**: addition of support for RTL TCP
+Release version **0.29**: addition of support for HackRF
 
-Release version **0.27b**: send messages to multiple UDP destinations. Fixed bug for negative frequency corrections (-p switch)
+Release version **0.28**: addition of support for RTL TCP
 
 Release version **0.25**: inclusion of support for SDRplay RSP1A (API 3.x).
 
