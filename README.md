@@ -110,7 +110,7 @@ INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 p
 
 ## Device specific settings
 
-The command line allows you to set some device specific parameters. Below some examples.
+The command line allows you to set some device specific parameters. AIS-catcher follows the settings and naming conventions for the devices as much as possible so that parameters and settings determined by SDR software for signal analysis (e.g. SDR#, SDR++, SDRangel) can be directly copied. Below some examples.
 
 ### RTL SDR
 Gain and other settings specific for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the following command sets the tuner gain to +33.3 and the RTL AGC on:
@@ -125,6 +125,7 @@ Gain settings specific for the Airspy HF+ can be set on the command line with th
 AIS-catcher -gh preamp ON
 ```
 Please note that only AGC mode is supported.
+
 ### Airspy Mini
 
 The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
@@ -141,6 +142,12 @@ More guidance on setting the gain model and levels can be obtained in the mentio
 Settings specific for the SDRplay RSP1A can be set on the command line with the ```-gs``` switch, e.g.:
 ```console
 AIS-catcher -gs lnastate 5
+```
+
+### HackRF
+Settings specific for the HackRF can be set on the command line with the ```-gf``` switch, e.g.:
+```console
+AIS-catcher -gf lna 16 vga 16 preamp ON
 ```
 
 ### RTL TCP
