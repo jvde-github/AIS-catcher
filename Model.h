@@ -32,6 +32,8 @@ SOFTWARE.
 
 namespace AIS
 {
+	enum class BandwidthFilter { CIC5, BMH_3 };
+
 	// Abstract demodulation model
 	class Model
 	{
@@ -42,6 +44,8 @@ namespace AIS
 		Connection<CFLOAT32>* input;
 		Util::Timer<CFLOAT32> timer;
 		Util::PassThrough<NMEA> output;
+
+		BandwidthFilter bw;
 
 	public:
 

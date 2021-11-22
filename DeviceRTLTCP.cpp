@@ -278,7 +278,7 @@ namespace Device {
 
 	std::vector<uint32_t> RTLTCP::SupportedSampleRates()
 	{
-		return { 240000, 288000, 1536000, 96000 };
+		return { 1536000, 288000, 96000, 240000 };
 	}
 
 	void RTLTCP::pushDeviceList(std::vector<Description>& DeviceList)
