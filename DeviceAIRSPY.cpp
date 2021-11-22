@@ -145,7 +145,6 @@ namespace Device {
 		if (airspy_set_lna_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA gain.";
 	}
 
-
 	void AIRSPY::setMixer_Gain(int a)
 	{
 		if (airspy_set_mixer_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Mixer gain.";

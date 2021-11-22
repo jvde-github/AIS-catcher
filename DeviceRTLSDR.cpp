@@ -236,7 +236,7 @@ namespace Device {
 
 	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
 	{
-		return { 288000, 1536000, 1920000, 2304000 };
+		return { 1536000, 1920000, 2304000, 288000 };
 	}
 
 	void RTLSDR::pushDeviceList(std::vector<Description>& DeviceList)

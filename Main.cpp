@@ -207,7 +207,7 @@ bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
 
 int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> model_rates)
 {
-	for (auto r : model_rates) if (isRateDefined(r, dev_rates)) return r;
+	for (auto r : dev_rates) if (isRateDefined(r, model_rates)) return r;
 	throw "Sampling rate not available for this combination of model and device.";
 
 	return 0;
