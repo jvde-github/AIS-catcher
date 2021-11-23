@@ -269,6 +269,9 @@ int main(int argc, char* argv[])
 	bool RTLSDRfastDS = true;
 	int verboseUpdateTime = 3000;
 
+	std::string bw_filter = "BM";
+	int bw_cutoff = 16000;
+
 	Device::SettingsRAWFile settingsRAW;
 	Device::SettingsWAVFile settingsWAV;
 	Device::SettingsRTLSDR settingsRTL;
@@ -345,6 +348,13 @@ int main(int argc, char* argv[])
 			case 'b':
 				Assert(count == 0);
 				timer_on = true;
+				break;
+			case 'f':
+				Assert(count <= 2);
+				bw_filter = arg1;
+				if(count == 2)
+					bw_cutoff = Util::Parse::Integer(arg2, 10000, 25000);
+
 				break;
 			case 'w':
 				Assert(count <= 1);
@@ -603,6 +613,8 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < liveModels.size(); i++)
 		{
+			liveModels[i]->setBandwidthFilter(bw_filter);
+			liveModels[i]->setBandwidth(bw_cutoff);
 			liveModels[i]->buildModel(model_rate, timer_on);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}

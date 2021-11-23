@@ -30,6 +30,36 @@ namespace AIS
 		return { 3072000, 6144000, 1536000, 1920000, 2304000, 2000000, 768000, 384000, 288000, 250000, 240000, 192000, 96000, 3000000, 6000000 };
 	}
 
+	void Model::setBandwidth(int w)
+	{
+		Bandwidth = w;
+	}
+
+	void Model::setBandwidthFilter(std::string f)
+	{
+		Util::Convert::toUpper(f);
+
+		if (f == "CIC5")
+			BandwidthFilter = BandwidthFilterType::CIC5;
+		else if (f == "BM")
+			BandwidthFilter = BandwidthFilterType::BlackmanHarris;
+		else
+			throw "Model: Unknown bandwidth filter type.";
+	}
+
+	void ModelFrontend::setBandwidthFilter(BandwidthFilterType t, int bw)
+	{
+		switch (bw)
+		{
+		case 10000: FFIR_a.setTaps(Filters::BM_10000); FFIR_b.setTaps(Filters::BM_10000); break;
+		case 12500: FFIR_a.setTaps(Filters::BM_12500); FFIR_b.setTaps(Filters::BM_12500); break;
+		case 15000: FFIR_a.setTaps(Filters::BM_15000); FFIR_b.setTaps(Filters::BM_15000); break;
+		case 16000: FFIR_a.setTaps(Filters::BM_16000); FFIR_b.setTaps(Filters::BM_16000); break;
+		case 25000: FFIR_a.setTaps(Filters::BM_25000); FFIR_b.setTaps(Filters::BM_25000); break;
+		default: throw "Model: bandwidth not supported for this filter.";
+		}
+	}
+
 	void ModelFrontend::buildModel(int sample_rate, bool timerOn)
 	{
 		setName("Front end only");
@@ -97,9 +127,20 @@ namespace AIS
 			throw "Internal error: sample rate not supported in engine.";
 		}
 
-		ROT.up >> DS2_a >> F_a;
-		ROT.down >> DS2_b >> F_b;
+		ROT.up >> DS2_a;
+		ROT.down >> DS2_b;
 
+		switch (BandwidthFilter)
+		{
+		case BandwidthFilterType::CIC5:
+			DS2_a >> FCIC5_a >> C_a;
+			DS2_b >> FCIC5_b >> C_b;
+			break;
+		default:
+			DS2_a >> FFIR_a >> C_a;
+			DS2_b >> FFIR_b >> C_b;
+			setBandwidthFilter(BandwidthFilter, Bandwidth);
+		}
 		return;
 	}
 
@@ -114,8 +155,8 @@ namespace AIS
 		DEC_a.setChannel('A');
 		DEC_b.setChannel('B');
 
-		F_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		F_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+		C_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+		C_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 
 		DEC_a.DecoderMessage.Connect(sampler_a);
 		DEC_b.DecoderMessage.Connect(sampler_b);
@@ -137,8 +178,8 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		F_a >> FM_a >> FR_a >> S_a;
-		F_b >> FM_b >> FR_b >> S_b;
+		C_a >> FM_a >> FR_a >> S_a;
+		C_b >> FM_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -181,8 +222,8 @@ namespace AIS
 		CGF_a.setN(512,375/2);
 		CGF_b.setN(512,375/2);
 
-		F_a >> CGF_a >> FC_a >> S_a;
-		F_b >> CGF_b >> FC_b >> S_b;
+		C_a >> CGF_a >> FC_a >> S_a;
+		C_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -226,8 +267,8 @@ namespace AIS
 		CGF_a.setN(512,375/2);
 		CGF_b.setN(512,375/2);
 
-		F_a >> CGF_a >> FR_a >> S_a;
-		F_b >> CGF_b >> FR_b >> S_b;
+		C_a >> CGF_a >> FR_a >> S_a;
+		C_b >> CGF_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{

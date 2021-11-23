@@ -32,7 +32,7 @@ SOFTWARE.
 
 namespace AIS
 {
-	enum class BandwidthFilter { CIC5, BMH_3 };
+	enum class BandwidthFilterType { CIC5, BlackmanHarris };
 
 	// Abstract demodulation model
 	class Model
@@ -45,7 +45,8 @@ namespace AIS
 		Util::Timer<CFLOAT32> timer;
 		Util::PassThrough<NMEA> output;
 
-		BandwidthFilter bw;
+		BandwidthFilterType BandwidthFilter = BandwidthFilterType::CIC5;
+		int Bandwidth = 12500;
 
 	public:
 
@@ -64,6 +65,9 @@ namespace AIS
 		std::string getName() { return name; }
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
+
+		virtual void setBandwidthFilter(std::string);
+		virtual void setBandwidth(int);
 	};
 
 
@@ -71,15 +75,20 @@ namespace AIS
 	class ModelFrontend : public Model
 	{
 	private:
+
 		DSP::DownsampleKFilter DSK;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5, DS2_6;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::Upsample US;
+		DSP::FilterCIC5 FCIC5_a, FCIC5_b;
+		DSP::FilterComplex FFIR_a, FFIR_b;
+
+		void setBandwidthFilter(BandwidthFilterType, int);
 
 	protected:
 		const int nSymbolsPerSample = 48000 / 9600;
 
-		DSP::FilterCIC5 F_a, F_b;
+		Util::PassThrough<CFLOAT32> C_a, C_b;
 		DSP::Rotate ROT;
 	public:
 		ModelFrontend(Device::DeviceBase* c, Connection<CFLOAT32>* i) : Model(c, i) {}
