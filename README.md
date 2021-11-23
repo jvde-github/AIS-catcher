@@ -8,7 +8,7 @@ The program provides the option to read and decode the raw discriminator output 
 
 ## Recent Developments
 
-Edge: update of bandwidth filter to improve reception, previous model can be activated via switch "-f CIC5"
+**Edge**: update of bandwidth filter to slighlty improve reception. Previous model can be activated via switch "-f CIC5"
 
 Release version **0.29**: addition of support for HackRF
 
