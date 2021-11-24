@@ -269,7 +269,7 @@ int main(int argc, char* argv[])
 	bool RTLSDRfastDS = true;
 	int verboseUpdateTime = 3000;
 
-	std::string bw_filter = "BM";
+	std::string bw_filter = "CIC5";
 	int bw_cutoff = 16000;
 
 	Device::SettingsRAWFile settingsRAW;
