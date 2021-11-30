@@ -193,22 +193,22 @@ namespace DSP
 				for (int p = nPhases - nSearch; p <= nPhases + nSearch; p++)
 				{
 					int j = (p + prev_max) % nPhases;
-					FLOAT32 min_abs = memory[j][0];
+					FLOAT32 avg = memory[j][0];
 
 					for (int l = 1; l < nHistory; l++)
-						min_abs = memory[j][l] < min_abs ? memory[j][l] : min_abs;
+					avg += memory[j][l];
 
-					if (min_abs > max_val)
+					if (avg > max_val)
 					{
-						max_val = min_abs;
+						max_val = avg;
 						max_idx = j;
 					}
 				}
 			}
 
 			// determine the bit
-			bool b2 = (bits[max_idx] & 2) >> 1;
-			bool b1 = bits[max_idx] & 1;
+			bool b2 = (bits[max_idx] >> 4) & 1;
+			bool b1 = (bits[max_idx] >> 3) & 1;
 
 			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
 
