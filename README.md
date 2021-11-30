@@ -8,7 +8,7 @@ The program provides the option to read and decode the raw discriminator output 
 
 ## Recent Developments
 
-**Edge**: update of bandwidth filter to slightly improve reception. Model can be activated via switch "-f BM 16000"
+**Edge**: update of bandwidth filter and parameters to slightly improve reception. Model can be activated via switch "-m 4 -f BM 16000"
 
 Release version **0.29**: addition of support for HackRF
 
