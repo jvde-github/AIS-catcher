@@ -215,6 +215,7 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 
 ## Compilation process
 
+### RTL-SDR only 
 The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
 
 ```console
@@ -233,7 +234,7 @@ cd AIS-catcher
 make rtl-only
 sudo make install
 ```
-
+### Full version 
 If you want to include HackRF, Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
 ```console
 sudo apt-get update
