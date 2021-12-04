@@ -126,7 +126,7 @@ Please note that these settings are not case sensitive.
 ### Airspy HF+
 Gain settings specific for the Airspy HF+ can be set on the command line with the ```-gh``` switch. For example, the following command switches on the preamp:
 ```console
-AIS-catcher -gh preamp ON
+AIS-catcher -gh preamp OFF
 ```
 Please note that only AGC mode is supported.
 
