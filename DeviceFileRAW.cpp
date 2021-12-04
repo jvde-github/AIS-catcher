@@ -51,6 +51,8 @@ namespace Device {
 			std::cerr << " CS8";
 			break;
 
+		default:
+			break;
 		}
 		std::cerr << " file " << file << std::endl;;
 	}

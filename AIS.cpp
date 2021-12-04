@@ -218,6 +218,9 @@ namespace AIS
 
 				if (position == MaxBits) NextState(State::TRAINING, 0);
 				break;
+
+			default:
+				break;
 			}
 			lastBit = Bit;
 		}
