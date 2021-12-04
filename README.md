@@ -1,6 +1,6 @@
 # AIS-catcher - A multi-platform AIS receiver
 This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
-The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
+The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
 ![Image](https://1.bp.blogspot.com/-YUzJiP0K_38/YE352lEPPjI/AAAAAAAAAA0/7DRYSu18NJAb9U6mLDTvqxOftAR_zyKaQCLcBGAsYHQ/s2689/containership.jpg)
 
@@ -24,7 +24,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 ## Installation and Windows Binary
 
-Compilation and installation instructions are provided below for Linux systems including Raspberry Pi.
+Compilation and installation instructions are provided below for Linux systems including Raspberry Pi and Mac OS X.
 
 A Windows binary version of **v0.29** (ex SDRplay support) is available for [32-bit](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-bit](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
@@ -217,7 +217,8 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 
 ## Compilation process
 
-### RTL-SDR only 
+### Ubuntu and Raspberry Pi
+#### RTL-SDR only 
 The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
 
 ```console
@@ -236,7 +237,7 @@ cd AIS-catcher
 make rtl-only
 sudo make install
 ```
-### Full version 
+#### Full version 
 If you want to include HackRF, Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
 ```console
 sudo apt-get update
@@ -257,6 +258,20 @@ make sdrplay-only
 sudo make install
 ```
 At the moment only RSP1A is supported (as that is the only device I can test on).
+
+### Mac OS X
+The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
+```console
+brew update
+brew install librtlsdr 
+````
+Compiling and installing AIS-catcher is similar to Linux:
+```console
+git clone https://github.com/jvde-github/AIS-catcher.git
+cd AIS-catcher
+make rtl-only
+sudo make install
+```
 
 ### Additional compilation options
 The make process allows for additional compilation options to be set at the command line via defining CFLAGS, e.g.: 
