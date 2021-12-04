@@ -2,6 +2,8 @@
 This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well.
 
+![Image](https://1.bp.blogspot.com/-YUzJiP0K_38/YE352lEPPjI/AAAAAAAAAA0/7DRYSu18NJAb9U6mLDTvqxOftAR_zyKaQCLcBGAsYHQ/s2689/containership.jpg)
+
 ### Disclaimer
 
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project from an unqualified amateur and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently and in line with local regulations and laws. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
