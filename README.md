@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
 ![Image](https://1.bp.blogspot.com/-YUzJiP0K_38/YE352lEPPjI/AAAAAAAAAA0/7DRYSu18NJAb9U6mLDTvqxOftAR_zyKaQCLcBGAsYHQ/s2689/containership.jpg)
@@ -130,9 +130,9 @@ AIS-catcher -gh preamp OFF
 ```
 Please note that only AGC mode is supported.
 
-### Airspy Mini
+### Airspy Mini/R2
 
-The Airspy Mini requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy Mini. We can activate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
+The Airspy Mini and R2 require careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy. We can activate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
 ```console
 AIS-catcher -gm linearity 10
 ```
