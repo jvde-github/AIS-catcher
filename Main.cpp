@@ -320,7 +320,7 @@ int main(int argc, char* argv[])
 			{
 			case 's':
 				Assert(count == 1);
-				sample_rate = Util::Parse::Integer(arg1, 48000, 6144000);
+				sample_rate = Util::Parse::Integer(arg1, 48000, 10000000);
 				break;
 			case 'm':
 				Assert(count == 1);

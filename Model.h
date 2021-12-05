@@ -77,7 +77,7 @@ namespace AIS
 	private:
 
 		DSP::DownsampleKFilter DSK;
-		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5, DS2_6;
+		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5, DS2_6, DS2_7;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::Upsample US;
 		DSP::FilterCIC5 FCIC5_a, FCIC5_b;

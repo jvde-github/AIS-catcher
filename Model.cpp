@@ -27,7 +27,7 @@ namespace AIS
 {
 	std::vector<uint32_t> ModelFrontend::SupportedSampleRates()
 	{
-		return { 3072000, 6144000, 1536000, 1920000, 2304000, 2000000, 768000, 384000, 288000, 250000, 240000, 192000, 96000, 3000000, 6000000 };
+		return { 3072000, 6144000, 1536000, 1920000, 2304000, 2000000, 768000, 384000, 288000, 250000, 240000, 192000, 96000, 3000000, 6000000, 10000000, 2500000 };
 	}
 
 	void Model::setBandwidth(int w)
@@ -70,6 +70,10 @@ namespace AIS
 
 		switch (sample_rate)
 		{
+		case 10000000:
+			US.setParams(10000000, 12288000);
+			physical >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			break;
 		case 6000000:
 			US.setParams(1500000, 1536000);
 			physical >> DS2_6 >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -77,6 +81,10 @@ namespace AIS
 		case 3000000:
 			US.setParams(1500000, 1536000);
 			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 2500000:
+			US.setParams(10000000, 12288000);
+			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
