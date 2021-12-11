@@ -42,17 +42,18 @@ namespace DSP
 
 	class CoherentDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
 	{
-		static const int nHistory = 8;
+		int nHistory = 8;
+		int nDelay = 0;
+
+		static const int maxHistory = 16;
 		static const int nPhases = 16;
 		static const int nSearch = 2;
-		static const int nUpdate = 1;
 
 		std::vector <CFLOAT32> phase;
-		FLOAT32 memory[nPhases][nHistory];
+		FLOAT32 memory[nPhases][maxHistory];
 		char bits[nPhases];
 
 		int max_idx = 0;
-		int update = 0;
 		int rot = 0;
 		int last = 0;
 
@@ -61,6 +62,8 @@ namespace DSP
 	public:
 
 		void Receive(const CFLOAT32* data, int len);
+
+		void setParams(int h, int d) { nHistory = h; nDelay = d; }
 	};
 
 	class ChallengerDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>, public MessageIn<DecoderMessages>

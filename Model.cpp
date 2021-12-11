@@ -238,6 +238,9 @@ namespace AIS
 			DEC_a[i].setChannel('A');
 			DEC_b[i].setChannel('B');
 
+			CD_a[i].setParams(nHistory, nDelay);
+			CD_b[i].setParams(nHistory, nDelay);
+
 			S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
 
@@ -249,54 +252,6 @@ namespace AIS
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
 			}
-		}
-
-		return;
-	}
-
-
-	void ModelChallenger::buildModel(int sample_rate, bool timerOn)
-	{
-		ModelFrontend::buildModel(sample_rate, timerOn);
-		setName("Challenger model (experimental)");
-
-		FR_a.setTaps(Filters::Coherent);
-		FR_b.setTaps(Filters::Coherent);
-
-		S_a.setBuckets(nSymbolsPerSample);
-		S_b.setBuckets(nSymbolsPerSample);
-
-		DEC_a.resize(nSymbolsPerSample);
-		DEC_b.resize(nSymbolsPerSample);
-
-		CD_a.resize(nSymbolsPerSample);
-		CD_b.resize(nSymbolsPerSample);
-
-		CGF_a.setN(512,375/2);
-		CGF_b.setN(512,375/2);
-
-		C_a >> CGF_a >> FR_a >> S_a;
-		C_b >> CGF_b >> FR_b >> S_b;
-
-		for (int i = 0; i < nSymbolsPerSample; i++)
-		{
-			S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
-			S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
-
-			DEC_a[i].setChannel('A');
-			DEC_b[i].setChannel('B');
-
-			for (int j = 0; j < nSymbolsPerSample; j++)
-			{
-				if (i != j)
-				{
-					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
-					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
-				}
-			}
-
-			DEC_a[i].DecoderMessage.Connect(CD_a[i]);
-			DEC_b[i].DecoderMessage.Connect(CD_b[i]);
 		}
 
 		return;
