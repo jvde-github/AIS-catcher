@@ -135,23 +135,19 @@ namespace AIS
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::SamplerParallelComplex S_a, S_b;
 
+		int nHistory = 8;
+		int nDelay = 0;
+
 	public:
-		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 8, int d = 0) : ModelFrontend(c, i) { nHistory = h; nDelay = d; }
 		void buildModel(int,bool);
 	};
 
 	// Challenger model, some small improvements to test before moving into the default engine
-	class ModelChallenger : public ModelFrontend
+	class ModelChallenger : public ModelCoherent
 	{
-		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		std::vector<DSP::ChallengerDemodulation> CD_a, CD_b;
-		DSP::FilterComplex FR_a, FR_b;
-		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::SamplerParallelComplex S_a, S_b;
-
 	public:
-		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
-		void buildModel(int, bool);
+		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 12, int d = 3) : ModelCoherent(c, i, h, d) {}
 	};
 
 	// Standard demodulation model for FM demodulated files
