@@ -99,13 +99,13 @@ namespace DSP
 			int prev_max = max_idx;
 
 			// local minmax search
-			for (int p = nPhases - nSearch; p <= nPhases + nSearch; p++)
+			for (int p = nPhases + prev_max - nSearch; p <= nPhases + prev_max + nSearch; p++)
 			{
-				int j = (p + prev_max) % nPhases;
+				int j = p % nPhases;
 				FLOAT32 avg = memory[j][0];
 
 				for (int l = 1; l < nHistory; l++)
-				avg += memory[j][l];
+					avg += memory[j][l];
 
 				if (avg > max_val)
 				{
