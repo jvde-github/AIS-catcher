@@ -16,10 +16,6 @@ Release version **0.30**: addition of support for Airspy R2
 
 Release version **0.29**: addition of support for HackRF
 
-Release version **0.28**: addition of support for RTL TCP
-
-Release version **0.25**: inclusion of support for SDRplay RSP1A (API 3.x).
-
 ## Purpose
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was created in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
