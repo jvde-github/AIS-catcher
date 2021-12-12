@@ -205,7 +205,7 @@ For completeness I performed separate runs with [AISRec](https://sites.google.co
 ### Recorded signals
 The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. The output of the various receivers was sent via UDP to AISdipatcher which removes any duplicates and counts messages. The results in terms of  number of messages/distinct vessels:
  | File | rtl-ais | AIS-catcher 0.28 | AIS-catcher Edge (-m 4 -f BM 12500) | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
- | :--- | :--- | :---: | :---: | :---: | :---: |
+ | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
  |Scheveningen |  17/16 | 41/35| 43/37| 30/27 | 37/31 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  |Moscow| 146/27 | 195/34 | 204/32 | 195/31 | 183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
  |Vlieland | 51/31| 86/51 | 90/54 | 72/44 | 80/52 | recorded @ 1536K with `rtl-sdr` (auto gain) |
