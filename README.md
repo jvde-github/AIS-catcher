@@ -153,7 +153,7 @@ AIS-catcher -gs lnastate 5
 ### HackRF
 Settings specific for the HackRF can be set on the command line with the ```-gf``` switch, e.g.:
 ```console
-AIS-catcher -gf lna 16 vga 16 preamp ON
+AIS-catcher -gf lna 16 vga 16 preamp OFF
 ```
 
 ### RTL TCP
