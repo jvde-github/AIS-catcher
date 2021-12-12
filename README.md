@@ -211,9 +211,9 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
  |Vlieland | 51/31| 86/51 | 90/54 | 72/44 | 80/52 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  |Posterholt | 2/2 | 36/22 | 38/22 | 13/12 | 31/21 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  
- **Update:** AISrec recently had a version update of 2.208 (October 23, 2021) with improved stability and reception quality and the table above has been updated to include the results from this recent version. 
+ **Update 1:** AISrec recently had a version update of 2.208 (October 23, 2021) with improved stability and reception quality and the table above has been updated to include the results from this recent version. 
 
- **Update:** Feverlaysoft has kindly provided me with a license for version update of 2.208 (October 23, 2021) allowing access additional decoding models. "Slow2" seems to work best and has been included in the above overview.
+ **Update 2:** Feverlaysoft has kindly provided me with a license for version 2.208 of AISrec allowing access to additional decoding models. Some experimentation suggests that "Slow2" works best for these particular examples and has been included in the above overview.
  
 ## Compilation process
 
