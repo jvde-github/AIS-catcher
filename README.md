@@ -24,7 +24,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 Compilation and installation instructions are provided below for Linux systems including Raspberry Pi and Mac OS X.
 
-A Windows binary version of **v0.30** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. Note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of **v0.30** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
 
@@ -188,21 +188,7 @@ In this example the default model performs quite well in contrast to the standar
 
 ## Validation
 
-### My home station
-To get a sense of the performance of the different models, I have run a simple test in two different setups whereby ```AIS-catcher``` ran the main two models in parallel for 2 minutes and we counted the number of detected messages.
-
-Location: The Hague residential area with RTL-SDR v3 dongle and Shakespeare antenna with quite some (perhaps fair to say a lot of) blockage from surrounding buildings and antenna placed within a window, we have the following message count for various models and sample rates (over 2 minute run):
-
- | Model | Settings | Run 1 | Run 2 | 
- | :--- | :--- | :---: | :---: |
- | AIS-catcher v0.13 Default @ 1536K  |  | 191 | 194 | 
-| AIS-catcher Standard (non-coherent) @ 1536K |```-m 0``` |   64 | 72 | 
-| AISRec 2.2 (trial)   | Sampling: very high, super fast| 161 | 119 |
-| rtl-ais v0.3  @ 1600K  | ```-n``` | 33 | 30  | 
-
-For completeness I performed separate runs with [AISRec](https://sites.google.com/site/feverlaysoft/home) and [RTL-AIS](https://github.com/dgiardini/rtl-ais) as well. Results for a [dAISy HAT](http://www.wegmatt.com/) are not listed but in this setup I received roughly ~85 messages over a two minute run.
-
-### Recorded signals
+### Experimenting with recorded signals
 The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. The output of the various receivers was sent via UDP to AISdipatcher which removes any duplicates and counts messages. The results in terms of  number of messages/distinct vessels:
  | File | rtl-ais | AIS-catcher 0.28 | AIS-catcher Edge (-m 4 -f BM 12500) | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
  | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
