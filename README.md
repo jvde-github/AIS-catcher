@@ -10,6 +10,8 @@ The program provides the option to read and decode the raw discriminator output 
 
 ## Recent Developments
 
+**Edge**: update to allow for input from stdin, e.g. ```cat posterholt_1536_2.raw | AIS-catcher -r . -s 1536000```
+
 **Edge**: update of bandwidth filter and parameters to slightly improve reception. Model can be activated via switch ```-m 4 -f BM 12500```.
 
 Release version **0.30**: addition of support for Airspy R2
