@@ -39,7 +39,7 @@ use: AIS-catcher [options]
 	[-n show NMEA messages on screen without detail]
 	[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
 
-	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename]
+	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]
 	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
 	[-t [host [port]] - read IQ data from remote RTL-TCP instance]
 

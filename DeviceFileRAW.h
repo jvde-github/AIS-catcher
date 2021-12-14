@@ -45,7 +45,7 @@ namespace Device
 
 	class RAWFile : public DeviceBase, public StreamOut<CFLOAT32>
 	{
-		std::ifstream file;
+		std::istream *file = NULL;
 		std::string filename;
 		std::vector<char> buffer;
 		std::vector<CFLOAT32> output;
