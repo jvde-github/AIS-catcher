@@ -10,7 +10,14 @@ The program provides the option to read and decode the raw discriminator output 
 
 ## Recent Developments
 
-**Edge**: update to allow for input from stdin, e.g. ```cat posterholt_1536_2.raw | AIS-catcher -r . -s 1536000```
+**Edge**: update to allow for input from stdin, e.g.
+````
+cat posterholt_1536_2.raw | AIS-catcher -r . -s 1536000
+````
+or with some sox sample rate conversion:
+````
+sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt_1536_2.raw -t raw -r 768000 - |AIS-catcher -s 768000 -r . -v
+````
 
 **Edge**: update of bandwidth filter and parameters to slightly improve reception. Model can be activated via switch ```-m 4 -f BM 12500```.
 
