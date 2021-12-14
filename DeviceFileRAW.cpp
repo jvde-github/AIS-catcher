@@ -100,7 +100,7 @@ namespace Device {
 		if (output.size() < buffer_size / sizeof(CU8)) output.resize(buffer_size / sizeof(CU8));
 
 		buffer.assign(buffer_size, 0.0f);
-		file.read((char*)buffer.data(), buffer.size());
+		file->read((char*)buffer.data(), buffer.size());
 
 		if (!stereo) throw "FILE RAW: layout not implemented.";
 
@@ -136,20 +136,31 @@ namespace Device {
 
 		Send(output.data(), len);
 
-		if (!file) Stop();
+		if (file->eof()) Stop();
 
 		return streaming;
 	}
 
 	void RAWFile::Close()
 	{
-		if(file.is_open()) file.close();
+		if(file && file != &std::cin) 
+		{
+			delete file;
+			file = NULL;
+		}
 	}
 
 	void RAWFile::Play()
 	{
-		file.open(filename, std::ios::out | std::ios::binary);
-		if (!file) throw "Error: Cannot read from RAW file.";
+		if(filename == "." || filename == "stdin")
+		{
+			file = &std::cin;
+		}
+		else
+		{
+			file = new std::ifstream(filename, std::ios::out | std::ios::binary);
+			if (!file || file->fail()) throw "Error: Cannot read from RAW file.";
+		}
 
 		DeviceBase::Play();
 
@@ -157,8 +168,6 @@ namespace Device {
 
 	void RAWFile::Stop()
 	{
-		file.close();
-
 		DeviceBase::Stop();
 	}
 
