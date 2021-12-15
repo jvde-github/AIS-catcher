@@ -255,11 +255,9 @@ namespace DSP
 	{
 		if(output.size() < len) output.resize(len);
 
-		while(ptr < len - 1)
+		while(ptr + alpha < len - 1)
 		{
-			FLOAT32 ptrp1 = ptr + 1;
-			b = data[ (int) ptrp1 ];
-			FLOAT32 alpha = ptrp1 - (int) ptrp1;
+			b = data[ptr+1];
 
 			output[idx_out] = (1-alpha) * a + alpha * b;
 
@@ -269,9 +267,11 @@ namespace DSP
 				idx_out = 0;
 			}
 
-			ptr += increment;
-			if(ptr >= 0)
-				a = data[(int)ptr];
+			alpha += increment;
+			ptr += (int)alpha;
+			alpha -= (int) alpha;
+
+			if(alpha + ptr >= 0) a = data[ptr];
 		}
 		ptr -= len;
 	}

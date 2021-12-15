@@ -83,7 +83,7 @@ namespace Device {
 		}
 		else if (option == "STEREO")
 		{
-			stereo = Util::Parse::Switch(arg);
+			layout = Util::Parse::Switch(arg)?FileLayout::Stereo:FileLayout::Mono;
 		}
 		else
 			throw " Invalid setting for FILE RAW.";
@@ -102,7 +102,7 @@ namespace Device {
 		buffer.assign(buffer_size, 0.0f);
 		file->read((char*)buffer.data(), buffer.size());
 
-		if (!stereo) throw "FILE RAW: layout not implemented.";
+		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
 
 		switch (format)
 		{
@@ -159,8 +159,9 @@ namespace Device {
 		else
 		{
 			file = new std::ifstream(filename, std::ios::out | std::ios::binary);
-			if (!file || file->fail()) throw "Error: Cannot read from RAW file.";
 		}
+
+		if (!file || file->fail()) throw "Error: Cannot read RAW input.";
 
 		DeviceBase::Play();
 
@@ -173,13 +174,13 @@ namespace Device {
 
 	std::vector<uint32_t> RAWFile::SupportedSampleRates()
 	{
-		return { 48000, 96000, 192000, 240000, 250000, 288000, 384000, 768000, 1536000, 1920000, 2000000, 2304000, 2500000, 3000000, 6144000, 6000000, 10000000 };
+		return { 1536000, 48000, 96000, 192000, 240000, 250000, 288000, 384000, 768000, 1920000, 2000000, 2304000, 2500000, 3000000, 6144000, 6000000, 10000000 };
 	}
 
 	void RAWFile::Open(SettingsRAWFile& s)
 	{
 		format = s.format;
 		filename = s.file;
-		stereo = s.stereo;
+		layout = s.layout;
 	}
 }

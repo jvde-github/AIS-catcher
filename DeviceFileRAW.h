@@ -27,13 +27,15 @@ SOFTWARE.
 namespace Device
 {
 
+	enum class FileLayout { Stereo, Mono, Left, Right };
+
 	class SettingsRAWFile : public DeviceSettings
 	{
 	private:
 
 		Format format = Format::CU8;
-		std::string file;
-		bool stereo = true;
+		std::string file = "";
+		FileLayout layout = FileLayout::Stereo;
 
 	public:
 
@@ -50,7 +52,7 @@ namespace Device
 		std::vector<char> buffer;
 		std::vector<CFLOAT32> output;
 		const int buffer_size = 16 * 16384;
-		bool stereo = true;
+		FileLayout layout = FileLayout::Stereo;
 		Format format = Format::CU8;
 
 	public:
