@@ -125,7 +125,8 @@ namespace DSP
 	{
 		std::vector <CFLOAT32> output;
 
-		FLOAT32 ptr = 0, increment = 1.0;
+		int ptr = 0;
+		FLOAT32 alpha = 0, increment = 1.0;
 		CFLOAT32 a = 0, b = 0;
 
 		int idx_out = 0;
