@@ -23,6 +23,7 @@ SOFTWARE.
 #include <chrono>
 #include <cassert>
 #include <complex>
+#include <cstring>
 
 #include "FFT.h"
 #include "DSP.h"
@@ -216,6 +217,7 @@ namespace DSP
 		sendOut(output.data(), len / 3);
 	}
 
+	// Work in progress - needs performance improvement
 	void DownsampleKFilter::Receive(const CFLOAT32* data, int len)
 	{
 		int i, j;
@@ -225,10 +227,8 @@ namespace DSP
 		if (output.size() < outputSize) output.resize(outputSize);
 		if (buffer.size() < len) buffer.resize(len + nTaps - 1,0.0f);
 
-		for (i = 0, j = nTaps - 1; i < len; i++, j++)
-		{
-			buffer[j] = data[i];
-		}
+		for (i = 0, j = nTaps - 1; i < len; i++, j++) buffer[j] = data[i];
+		//std::memcpy(buffer.data()+nTaps-1,data,len*sizeof(CFLOAT32));
 
 		while(idx_in < len)
 		{
@@ -255,29 +255,29 @@ namespace DSP
 	{
 		if(output.size() < len) output.resize(len);
 
-		while(ptr + alpha < len - 1)
+		for(int ptr = -1; ptr + 1 < len; ptr++)
 		{
-			b = data[ptr+1];
+			const CFLOAT32 b = data[ ptr + 1 ];
 
-			output[idx_out] = (1-alpha) * a + alpha * b;
-
-			if (++idx_out == len)
+			do
 			{
-				sendOut(output.data(), len);
-				idx_out = 0;
-			}
+				output[idx_out++] = (1-alpha) * a + alpha * b;
+				alpha += increment;
 
-			alpha += increment;
-			ptr += (int)alpha;
-			alpha -= (int) alpha;
+				if (idx_out == len)
+				{
+					sendOut(output.data(), len);
+					idx_out = 0;
+				}
 
-			if(alpha + ptr >= 0) a = data[ptr];
+			} while (alpha < 1.0f);
+
+			alpha -= 1.0f;
+			a = b;
 		}
-		ptr -= len;
 	}
 
 	// Filter Generic
-
 	void FilterComplex::Receive(const CFLOAT32* data, int len)
 	{
 		int ptr, i, j;

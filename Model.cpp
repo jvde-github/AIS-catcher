@@ -71,19 +71,19 @@ namespace AIS
 		switch (sample_rate)
 		{
 		case 10000000:
-			US.setParams(10000000, 12288000);
+			US.setParams(10000, 12288);
 			physical >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 6000000:
-			US.setParams(1500000, 1536000);
-			physical >> DS2_6 >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			US.setParams(1500, 1536);
+			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 3000000:
-			US.setParams(1500000, 1536000);
-			physical >> DS2_5 >> US >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			US.setParams(1500, 1536);
+			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 2500000:
-			US.setParams(10000000, 12288000);
+			US.setParams(2500, 3072);
 			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 2304000:
@@ -91,8 +91,8 @@ namespace AIS
 			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 1920000:
-			DSK.setParams(Filters::BlackmanHarris_32_5, 5);
-			physical >> DSK >> DS2_2 >> DS2_1 >> ROT;
+			US.setParams(1920,3072);
+			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 6144000:
 			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -101,8 +101,8 @@ namespace AIS
 			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 2000000:
-			US.setParams(1000000, 1536000);
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> US >> ROT;
+			US.setParams(2000, 3072);
+			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 		case 1536000:
 			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
