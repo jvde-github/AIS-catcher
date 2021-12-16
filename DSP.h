@@ -125,16 +125,14 @@ namespace DSP
 	{
 		std::vector <CFLOAT32> output;
 
-		int ptr = 0;
-		FLOAT32 alpha = 0, increment = 1.0;
-		CFLOAT32 a = 0, b = 0;
+		FLOAT32 alpha = 0, increment = 1.0f;
+		CFLOAT32 a = 0.0f;
 
 		int idx_out = 0;
-		int in_size = 0, out_size = 0;
 
 	public:
 
-		void setParams(int n, int m) { int in_size = n; out_size = m; increment = (FLOAT32) n / (FLOAT32) m; }
+		void setParams(int n, int m) { assert(n < m); increment = (FLOAT32) n / (FLOAT32) m; }
 		// StreamIn
 		void Receive(const CFLOAT32* data, int len);
 	};
