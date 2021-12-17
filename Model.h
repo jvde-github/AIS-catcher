@@ -57,7 +57,6 @@ namespace AIS
 		}
 
 		virtual void buildModel(int, bool) {}
-		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 
 		StreamOut<NMEA>& Output() { return output; }
 
@@ -92,7 +91,6 @@ namespace AIS
 		DSP::Rotate ROT;
 	public:
 		ModelFrontend(Device::DeviceBase* c, Connection<CFLOAT32>* i) : Model(c, i) {}
-		std::vector<uint32_t> SupportedSampleRates();
 		void buildModel(int, bool);
 	};
 
@@ -164,7 +162,5 @@ namespace AIS
 	public:
 		ModelDiscriminator(Device::DeviceBase* c, Connection<CFLOAT32>* i) : Model(c, i) {}
 		void buildModel(int,bool);
-
-		std::vector<uint32_t> SupportedSampleRates();
 	};
 }

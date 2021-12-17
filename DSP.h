@@ -90,7 +90,7 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-	class Downsample2CS32
+	class HelperDownsample2CS32
 	{
 		CS32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 
@@ -255,7 +255,7 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 		std::vector <CS32> buffer;
 
-		Downsample2CS32 DS1, DS2, DS3, DS4;
+		HelperDownsample2CS32 DS1, DS2, DS3, DS4;
 
 	public:
 		void Receive(const CU8* data, int len)
@@ -288,18 +288,12 @@ namespace DSP
 	class Rotate : public StreamIn<CFLOAT32>
 	{
 		std::vector <CFLOAT32> output_up, output_down;
-		CFLOAT32 rot_up = 1.0f;
-		CFLOAT32 rot_down = 1.0f;
-		CFLOAT32 mult_up = 1.0f;
-		CFLOAT32 mult_down = 1.0f;
+		CFLOAT32 rot = 1.0f;
+		CFLOAT32 mult = 1.0f;
 
 	public:
 
-		void setRotation(float angle) 
-		{ 
-			mult_up = std::polar(1.0f, angle);
-			mult_down = std::conj(mult_up);
-		}
+		void setRotation(float angle) { mult = std::polar(1.0f, angle); }
 
 		// Streams out
 		Connection<CFLOAT32> up;
@@ -323,7 +317,7 @@ namespace DSP
 		void correctFrequency();
 
 	public:
-		void setN(int,int);
+		void setParams(int,int);
 		void Receive(const CFLOAT32* data, int len);
 	};
 }
