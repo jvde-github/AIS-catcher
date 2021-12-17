@@ -61,6 +61,8 @@ namespace DSP
 
 	public:
 
+		CoherentDemodulation() { setPhases(); }
+
 		void Receive(const CFLOAT32* data, int len);
 
 		void setParams(int h, int d) { nHistory = h; nDelay = d; }

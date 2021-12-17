@@ -118,7 +118,7 @@ namespace DSP
 		sendOut(output.data(), len / 2);
 	}
 
-	int Downsample2CS32::Run(CS32* data, int len)
+	int HelperDownsample2CS32::Run(CS32* data, int len)
 	{
 		CS32 z, r0, r1, r2, r3, r4;
 
@@ -148,7 +148,6 @@ namespace DSP
 	}
 
 	// FilterCIC5
-
 	void FilterCIC5::Receive(const CFLOAT32* data, int len)
 	{
 		CFLOAT32 z, r0, r1, r2, r3, r4;
@@ -250,7 +249,7 @@ namespace DSP
 			buffer[j] = data[i];
 	}
 
-	// Work in progress
+	// Upsample with linear interpolation
 	void Upsample::Receive(const CFLOAT32* data, int len)
 	{
 		if(output.size() < len) output.resize(len);
@@ -277,7 +276,7 @@ namespace DSP
 		}
 	}
 
-	// Filter Generic
+	// Filter Generic complex
 	void FilterComplex::Receive(const CFLOAT32* data, int len)
 	{
 		int ptr, i, j;
@@ -303,6 +302,7 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
+	// Filter Generic real
 	void Filter::Receive(const FLOAT32* data, int len)
 	{
 		int ptr, i, j;
@@ -328,6 +328,7 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
+	// Rotate +/- 25K Hz
 	void Rotate::Receive(const CFLOAT32* data, int len)
 	{
 		if (output_up.size() < len) output_up.resize(len);
@@ -335,18 +336,16 @@ namespace DSP
 
 		for (int i = 0; i < len; i++)
 		{
-			output_up[i] = rot_up * data[i];
-			rot_up *= mult_up;
+			output_up[i] = rot * data[i];
+			output_down[i] = std::conj(rot) * data[i];
 
-			output_down[i] = rot_down * data[i];
-			rot_down *= mult_down;
+			rot *= mult;
 		}
 
 		up.Send(output_up.data(), len);
 		down.Send(output_down.data(), len);
 
-		rot_up /= std::abs(rot_up);
-		rot_down /= std::abs(rot_down);
+		rot /= std::abs(rot);
 	}
 
 	// square the signal, find the mid-point between two peaks
@@ -379,7 +378,7 @@ namespace DSP
 		rot /= std::abs(rot);
 	}
 
-	void SquareFreqOffsetCorrection::setN(int n,int w)
+	void SquareFreqOffsetCorrection::setParams(int n,int w)
 	{
 		N = n;
 		logN = FFT::log2(N);

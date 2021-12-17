@@ -25,11 +25,6 @@ SOFTWARE.
 
 namespace AIS
 {
-	std::vector<uint32_t> ModelFrontend::SupportedSampleRates()
-	{
-		return { 3072000, 6144000, 1536000, 1920000, 2304000, 2000000, 768000, 384000, 288000, 250000, 240000, 192000, 96000, 3000000, 6000000, 10000000, 2500000 };
-	}
-
 	void Model::setBandwidth(int w)
 	{
 		Bandwidth = w;
@@ -70,64 +65,72 @@ namespace AIS
 
 		switch (sample_rate)
 		{
-		case 10000000:
-			US.setParams(10000, 12288);
-			physical >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
-			break;
-		case 6000000:
-			US.setParams(1500, 1536);
-			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
-			break;
-		case 3000000:
-			US.setParams(1500, 1536);
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
-			break;
-		case 2500000:
-			US.setParams(2500, 3072);
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
-			break;
+
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 1920000:
-			US.setParams(1920,3072);
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
-			break;
-		case 6144000:
-			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 3072000:
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 2000000:
-			US.setParams(2000, 3072);
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
-			break;
-		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 384000:
-			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 288000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> DSK >> ROT;
 			break;
-		case 250000:
-			US.setParams(125000, 192000);
-			physical >> DS2_2 >> US >> DS2_1 >> ROT;
+
+		// 2^7
+		case 12288000:
+			physical >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 10000000:
+			US.setParams(sample_rate, 12288000);
+			physical >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			break;
+
+		// 2^6
+		case 6144000:
+			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 6000000:
+			US.setParams(sample_rate, 6144000);
+			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			break;
+
+		// 2^5
+		case 3072000:
+			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+		case 1920000:
+		case 2000000:
+		case 2500000:
+		case 3000000:
+			US.setParams(sample_rate, 3072000);
+			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			break;
+
+		// 2^4
+		case 1536000:
+			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+
+		// 2^3
+		case 768000:
+			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			break;
+
+		// 2^2
+		case 384000:
+			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 240000:
-			US.setParams(120000, 192000);
+		case 250000:
+			US.setParams(sample_rate, 384000);
 			physical >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
+
+		// 2^1
 		case 192000:
 			physical >> DS2_1 >> ROT;
 			break;
+
+		// 2^0
 		case 96000:
 			physical >> ROT;
 			break;
@@ -227,8 +230,8 @@ namespace AIS
 		CD_a.resize(nSymbolsPerSample);
 		CD_b.resize(nSymbolsPerSample);
 
-		CGF_a.setN(512,375/2);
-		CGF_b.setN(512,375/2);
+		CGF_a.setParams(512,187);
+		CGF_b.setParams(512,187);
 
 		C_a >> CGF_a >> FC_a >> S_a;
 		C_b >> CGF_b >> FC_b >> S_b;
@@ -255,11 +258,6 @@ namespace AIS
 		}
 
 		return;
-	}
-
-	std::vector<uint32_t> ModelDiscriminator::SupportedSampleRates()
-	{
-		return { 48000 };
 	}
 
 	void ModelDiscriminator::buildModel(int sample_rate, bool timerOn)

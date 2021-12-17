@@ -58,8 +58,6 @@ namespace DSP
 
 	void CoherentDemodulation::Receive(const CFLOAT32* data, int len)
 	{
-		if (phase.size() == 0) setPhases();
-
 		for (int i = 0; i < len; i++)
 		{
 			FLOAT32 re, im;

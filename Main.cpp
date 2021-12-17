@@ -107,9 +107,6 @@ std::vector<Device::Description> getDevices()
 #ifdef HASSDRPLAY
 	Device::SDRPLAY::pushDeviceList(device_list);
 #endif
-#ifdef HASRTLTCP
-//	Device::RTLTCP::pushDeviceList(device_list);
-#endif
 #ifdef HASHACKRF
 	Device::HACKRF::pushDeviceList(device_list);
 #endif
@@ -205,30 +202,19 @@ bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
 	return false;
 }
 
-int setRateAutomatic(std::vector<uint32_t> dev_rates, std::vector<uint32_t> model_rates)
-{
-	for (auto r : dev_rates) if (isRateDefined(r, model_rates)) return r;
-	throw "Sampling rate not available for this combination of model and device.";
-
-	return 0;
-}
-
 void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liveModels, Device::DeviceBase* control)
 {
 
 	std::vector<uint32_t> device_rates = control->SupportedSampleRates();
-	std::vector<uint32_t> model_rates = liveModels[0]->SupportedSampleRates();
 
 	if (sample_rate != 0)
 	{
 		if (model_rate == 0) model_rate = sample_rate;
-
-		if (!isRateDefined(model_rate, model_rates)) throw "Sampling rate not supported in this version.";
 		if (!isRateDefined(sample_rate, device_rates)) throw "Sampling rate not supported for this device.";
 	}
 	else
 	{
-		model_rate = sample_rate = setRateAutomatic(device_rates, model_rates);
+		model_rate = sample_rate = device_rates[0];
 	}
 }
 
@@ -320,7 +306,7 @@ int main(int argc, char* argv[])
 			{
 			case 's':
 				Assert(count == 1);
-				sample_rate = Util::Parse::Integer(arg1, 48000, 10000000);
+				sample_rate = Util::Parse::Integer(arg1, 48000, 12288000);
 				break;
 			case 'm':
 				Assert(count == 1);
