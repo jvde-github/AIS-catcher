@@ -336,8 +336,11 @@ namespace DSP
 
 		for (int i = 0; i < len; i++)
 		{
-			output_up[i] = rot * data[i];
-			output_down[i] = std::conj(rot) * data[i];
+			FLOAT32 RR = data[i].real() * rot.real(), II = data[i].imag() * rot.imag();
+			FLOAT32 RI = data[i].real() * rot.imag(), IR = data[i].imag() * rot.real();
+
+			output_up[i].real(RR-II); output_up[i].imag(IR+RI);
+			output_down[i].real(RR+II); output_down[i].imag(IR-RI);
 
 			rot *= mult;
 		}
