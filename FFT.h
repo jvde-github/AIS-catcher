@@ -39,14 +39,22 @@ namespace FFT
 
 	static int rev(int x,int logN)
 	{
-		int y = 0;
+		static const int rev4[] = { 0, 8,  4, 12,  2, 10, 6, 14, 1, 9,  5, 13, 3, 11, 7, 15 };
 
-		for(int i = 0; i < logN; i++)
+		int y = 0, i, j;
+
+		// 4 bits in one go
+		for(i = 0, j = 0; j < logN >> 2; j++, i += 4)
 		{
-			y <<= 1;
-			y |= (x & 1);
-			x >>= 1;
+			y <<= 4; y |= rev4[x & 15]; x >>= 4;
 		}
+
+		// remaning bits
+		for(; i < logN; i++)
+		{
+			y <<= 1; y |= (x & 1); x >>= 1;
+		}
+
 		return y;
 	}
 
@@ -62,7 +70,7 @@ namespace FFT
 	{
 		Omega.resize(N);
 
-		for (int s = 0, m = 2; s < N; s++)
+		for (int s = 0; s < N; s++)
 			Omega[s] = std::polar(T(1), T(-2.0*PI) * T(s) / T(N));
 	}
 
