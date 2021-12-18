@@ -38,8 +38,8 @@ namespace AIS
 	class Model
 	{
 	protected:
+		std::string name = "";
 
-		std::string name;
 		Device::DeviceBase* control;
 		Connection<CFLOAT32>* input;
 		Util::Timer<CFLOAT32> timer;
@@ -137,7 +137,12 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 12, int d = 3) : ModelFrontend(c, i) { nHistory = h; nDelay = d; }
+		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 12, int d = 3) : ModelFrontend(c, i)
+		{
+			setName("AIS engine " VERSION);
+			nHistory = h; nDelay = d;
+
+		}
 		void buildModel(int,bool);
 	};
 
@@ -145,7 +150,10 @@ namespace AIS
 	class ModelChallenger : public ModelCoherent
 	{
 	public:
-		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 8, int d = 0) : ModelCoherent(c, i, h, d) {}
+		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 8, int d = 0) : ModelCoherent(c, i, h, d) 
+		{
+			setName("Challenger model");
+		}
 	};
 
 	// Standard demodulation model for FM demodulated files
