@@ -57,8 +57,6 @@ namespace AIS
 
 	void ModelFrontend::buildModel(int sample_rate, bool timerOn)
 	{
-		setName("Front end only");
-
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
@@ -225,7 +223,6 @@ namespace AIS
 	void ModelCoherent::buildModel(int sample_rate, bool timerOn)
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn);
-		setName("AIS engine " VERSION);
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
