@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include <vector>
 #include <complex>
+#include <iostream>
 
 #include "Common.h"
 
@@ -57,47 +58,51 @@ namespace FFT
 	}
 
 	template <typename T>
-	static void calcOmega(std::vector<std::complex<T>> &Omega,int logN)
+	static void calcOmega(std::vector<std::complex<T>> &Omega,int N)
 	{
-		Omega.resize(logN);
+		Omega.resize(N);
 
-		for (int s = 0, m = 2; s < logN; s++, m *= 2)
-			Omega[s] = std::polar(T(1), T(-2.0 * PI / m));
+		for (int s = 0, m = 2; s < N; s++)
+			Omega[s] = std::polar(T(1), T(-2.0*PI) * T(s) / T(N));
 	}
 
 
-	// UNOPTIMIZED Cooley-Tukey textbook implementation
+	// Radix-2 FFT, standard algorithm with inner loops reversed and twiddle factors pre-computed
 	template <typename T>
 	void fft(std::vector<std::complex<T>> &x)
 	{
-		std::complex<T> o, u, t;
+		std::complex<T> t;
 		static std::vector<std::complex<T>> Omega;
 
 		int N = x.size();
 		int logN = log2(N);
 		int m = 2, m2 = 1;
+		int w, r = N;
 
-		if(Omega.size()<logN) calcOmega(Omega,logN);
+		if(Omega.size() != N) calcOmega(Omega,N);
 
 		for(int s = 0; s < logN; s++)
 		{
-			for(int k = 0; k < N; k+= m)
-			{
-				o = T(1.0);
+			w = 0;
+			r >>= 1;
 
-				for(int j = 0; j < m2; j++)
+			for(int j = 0; j < m2; j++)
+			{
+				const std::complex<T> &o = Omega[w];
+
+				for(int k = 0; k < N; k += m)
 				{
 					t = o * x[k + j + m2];
-					u = x[k + j];
 
-					x[k + j] = u + t;
-					x[k + j + m2] = u - t;
-
-					o *= Omega[s];
+					x[k + j + m2] = x[k + j] - t;
+					x[k + j] += t;
 				}
+
+				w += r;
 			}
+
+			m2 = m;
 			m <<= 1;
-			m2 <<= 1;
 		}
 	}
 }
