@@ -59,13 +59,6 @@ namespace FFT
 	}
 
 	template <typename T>
-	static void copyBitReverse(const std::vector<std::complex<T>> &in, std::vector<std::complex<T>> &out,int logN)
-	{
-		for (int i = 0; i < in.size(); i++)
-			out[rev(i, logN)] = in[i];
-	}
-
-	template <typename T>
 	static void calcOmega(std::vector<std::complex<T>> &Omega,int N)
 	{
 		Omega.resize(N);
