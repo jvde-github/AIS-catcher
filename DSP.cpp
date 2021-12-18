@@ -254,9 +254,9 @@ namespace DSP
 	{
 		if(output.size() < len) output.resize(len);
 
-		for(int ptr = -1; ptr + 1 < len; ptr++)
+		for(int i = 0; i < len; i++)
 		{
-			const CFLOAT32 b = data[ ptr + 1 ];
+			const CFLOAT32 b = data[ i ];
 
 			do
 			{
