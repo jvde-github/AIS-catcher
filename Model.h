@@ -137,7 +137,7 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 8, int d = 0) : ModelFrontend(c, i) { nHistory = h; nDelay = d; }
+		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 12, int d = 3) : ModelFrontend(c, i) { nHistory = h; nDelay = d; }
 		void buildModel(int,bool);
 	};
 
@@ -145,7 +145,7 @@ namespace AIS
 	class ModelChallenger : public ModelCoherent
 	{
 	public:
-		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 12, int d = 3) : ModelCoherent(c, i, h, d) {}
+		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 8, int d = 0) : ModelCoherent(c, i, h, d) {}
 	};
 
 	// Standard demodulation model for FM demodulated files
