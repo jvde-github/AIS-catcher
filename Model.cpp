@@ -66,22 +66,13 @@ namespace AIS
 		switch (sample_rate)
 		{
 
-		case 2304000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DSK >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 288000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DSK >> ROT;
-			break;
-
 		// 2^7
 		case 12288000:
 			physical >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 10000000:
 			US.setParams(sample_rate, 12288000);
-			physical >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			physical >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
 		// 2^6
@@ -97,13 +88,24 @@ namespace AIS
 		case 3072000:
 			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
-		case 1920000:
-		case 2000000:
 		case 2500000:
 		case 3000000:
 			US.setParams(sample_rate, 3072000);
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			physical >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 			break;
+
+		// 2304K
+		case 2304000:
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
+			break;
+		case 2000000:
+		case 1920000:
+			US.setParams(sample_rate, 2304000);
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+			break;
+
 
 		// 2^4
 		case 1536000:
@@ -119,10 +121,17 @@ namespace AIS
 		case 384000:
 			physical >> DS2_2 >> DS2_1 >> ROT;
 			break;
+
+		// 288K
+		case 288000:
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> DSK >> ROT;
+			break;
 		case 240000:
 		case 250000:
-			US.setParams(sample_rate, 384000);
-			physical >> DS2_2 >> US >> DS2_1 >> ROT;
+			US.setParams(sample_rate, 288000);
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+			physical >> US >> DSK >> ROT;
 			break;
 
 		// 2^1
