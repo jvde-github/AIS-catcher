@@ -10,16 +10,7 @@ The program provides the option to read and decode the raw discriminator output 
 
 ## Recent Developments
 
-**Edge**: update to allow for input from stdin, e.g.
-````
-cat posterholt.raw | AIS-catcher -r . -s 1536000
-````
-or with some sox sample rate conversion:
-````
-sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -r 768000 - |AIS-catcher -s 768000 -r . -v
-````
-
-**Edge**: update of bandwidth filter and parameters to slightly improve reception. Model can be activated via switch ```-m 4 -f BM 12500```.
+Release version **0.31**: allow input from stdin and very minor speed and performance improvements
 
 Release version **0.30**: addition of support for Airspy R2
 
@@ -97,10 +88,13 @@ If successful, NMEA messages will start to come in, appear on the screen and sen
 These console messages can be suppressed with the option ```-q```. 
 
 
-The following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and then subsequently decodes the input with AIS-catcher:
+The following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
 ```console
-rtl_sdr -s 288K -f 162M  test_288.raw
-AIS-catcher -r test_288.raw -s 288000 -v
+rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288000 -v
+```
+An example of using sox for downsampling the signal and then sending the result to AIS-catcher:
+```console
+sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96000 -r CS16 . -v
 ```
 
 ### Input from FM discriminator
