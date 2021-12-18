@@ -12,11 +12,11 @@ The program provides the option to read and decode the raw discriminator output 
 
 **Edge**: update to allow for input from stdin, e.g.
 ````
-cat posterholt_1536_2.raw | AIS-catcher -r . -s 1536000
+cat posterholt.raw | AIS-catcher -r . -s 1536000
 ````
 or with some sox sample rate conversion:
 ````
-sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt_1536_2.raw -t raw -r 768000 - |AIS-catcher -s 768000 -r . -v
+sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -r 768000 - |AIS-catcher -s 768000 -r . -v
 ````
 
 **Edge**: update of bandwidth filter and parameters to slightly improve reception. Model can be activated via switch ```-m 4 -f BM 12500```.
@@ -180,18 +180,19 @@ The default model is the most time and memory consuming but experiments suggest 
 
  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
 ```console
-AIS-catcher -s 1536000 -r posterholt_1536_2.raw -m 2 -m 0 -m 1 -q -b -v
+AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of three decoding models:
 ```
-[AIS engine v0.13+]	        : 38 msgs at 43 msg/s
-[Standard (non-coherent)]	: 4 msgs at 4.6 msg/s
-[Base (non-coherent)]	        : 3 msgs at 3.4 msg/s
+[AIS engine v0.30]		: 38 msgs at 29.5 msg/s
+[Standard (non-coherent)]	: 4 msgs at 3.1 msg/s
+[Base (non-coherent)]		: 3 msgs at 2.3 msg/s
+
 ```
 ```
-[AIS engine v0.13+]	        : 3.5e+02 ms
-[Standard (non-coherent)]	: 2.2e+02 ms
-[Base (non-coherent)]	        : 2e+02 ms
+[AIS engine v0.30]		: 294.878 ms
+[Standard (non-coherent)]	: 177.712 ms
+[Base (non-coherent)]		: 155.859 ms
 ```
 In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
