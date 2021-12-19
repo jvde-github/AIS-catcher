@@ -231,7 +231,7 @@ namespace DSP
 
 		while(idx_in < len)
 		{
-			output[idx_out] = filter(&buffer[idx_in]);
+			output[idx_out] = dot(&buffer[idx_in]);
 
 			if(++idx_out == outputSize)
 			{
@@ -283,15 +283,15 @@ namespace DSP
 
 		if (output.size() < len) output.resize(len);
 
-		for (j = i = 0, ptr = taps.size() - 1; i < taps.size() - 1; i++, ptr++, j++)
+		for (j = 0, ptr = taps.size() - 1; j < taps.size() - 1; ptr++, j++)
 		{
-			buffer[ptr] = data[i];
-			output[j] = filter(&buffer[i]);
+			buffer[ptr] = data[j];
+			output[j] = dot(&buffer[j]);
 		}
 
 		for (i = 0; i < len - taps.size() + 1; i++, j++)
 		{
-			output[j] = filter(&data[i]);
+			output[j] = dot(&data[i]);
 		}
 
 		for (ptr = 0; i < len; i++, ptr++)
@@ -302,22 +302,22 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
-	// Filter Generic real
+	// Filter Generic Real
 	void Filter::Receive(const FLOAT32* data, int len)
 	{
 		int ptr, i, j;
 
 		if (output.size() < len) output.resize(len);
 
-		for (j = i = 0, ptr = taps.size() - 1; i < taps.size() - 1; i++, ptr++, j++)
+		for (j = 0, ptr = taps.size() - 1; j < taps.size() - 1; ptr++, j++)
 		{
-			buffer[ptr] = data[i];
-			output[j] = filter(&buffer[i]);
+			buffer[ptr] = data[j];
+			output[j] = dot(&buffer[j]);
 		}
 
 		for (i = 0; i < len - taps.size() + 1; i++, j++)
 		{
-			output[j] = filter(&data[i]);
+			output[j] = dot(&data[i]);
 		}
 
 		for (ptr = 0; i < len; i++, ptr++)

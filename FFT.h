@@ -41,16 +41,16 @@ namespace FFT
 	{
 		static const int rev4[] = { 0, 8,  4, 12,  2, 10, 6, 14, 1, 9,  5, 13, 3, 11, 7, 15 };
 
-		int y = 0, i, j;
+		int y = 0, j;
 
 		// 4 bits in one go
-		for(i = 0, j = 0; j < logN >> 2; j++, i += 4)
+		for(j = 0; j < logN >> 2; j++)
 		{
 			y <<= 4; y |= rev4[x & 15]; x >>= 4;
 		}
 
 		// remaning bits
-		for(; i < logN; i++)
+		for(int i = j << 2; i < logN; i++)
 		{
 			y <<= 1; y |= (x & 1); x >>= 1;
 		}
@@ -73,14 +73,19 @@ namespace FFT
 	void fft(std::vector<std::complex<T>> &x)
 	{
 		std::complex<T> t;
-		static std::vector<std::complex<T>> Omega;
 
-		int N = x.size();
-		int logN = log2(N);
+		static std::vector<std::complex<T>> Omega;
+		static int N = 0, logN;
+
+		if(N != x.size())
+		{
+			N = x.size();
+			logN = log2(N);
+			calcOmega(Omega,N);
+		}
+
 		int m = 2, m2 = 1;
 		int w, r = N;
-
-		if(Omega.size() != N) calcOmega(Omega,N);
 
 		for(int s = 0; s < logN; s++)
 		{
