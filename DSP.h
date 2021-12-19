@@ -153,7 +153,7 @@ namespace DSP
 
 		static const int outputSize = 16384/2;
 
-		inline CFLOAT32 filter(const CFLOAT32* data)
+		inline CFLOAT32 dot(const CFLOAT32* data)
 		{
 				CFLOAT32 x = 0.0f;
 				for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
@@ -177,7 +177,7 @@ namespace DSP
 		std::vector <CFLOAT32> buffer;
 		std::vector <FLOAT32> taps;
 
-		inline CFLOAT32 filter(const CFLOAT32* data)
+		inline CFLOAT32 dot(const CFLOAT32* data)
 		{
 			CFLOAT32 x = 0.0f;
 			for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
@@ -203,7 +203,7 @@ namespace DSP
 		std::vector <FLOAT32> buffer;
 		std::vector <FLOAT32> taps;
 
-		inline FLOAT32 filter(const FLOAT32* data)
+		inline FLOAT32 dot(const FLOAT32* data)
 		{
 			FLOAT32 x = 0.0f;
 			for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
