@@ -171,13 +171,13 @@ namespace Device {
 
 	void AIRSPY::callback(CFLOAT32* data, int len)
 	{
-		RAW raw;
+		RAW r;
 
-		raw.data = data;
-		raw.len = len * sizeof(CFLOAT32);
-		raw.format = Format::CF32;
+		r.data = data;
+		r.len = len * sizeof(CFLOAT32);
+		r.format = Format::CF32;
 
-		Send(&raw, 1 );
+		Send(&r, 1 );
 	}
 
 	int AIRSPY::callback_static(airspy_transfer_t* tf)

@@ -46,7 +46,7 @@ namespace Device{
 		void Set(std::string option, std::string arg);
 	};
 
-	class AIRSPYHF : public DeviceBase//, public StreamOut<RAW>
+	class AIRSPYHF : public DeviceBase
 	{
 #ifdef HASAIRSPYHF
 
@@ -62,7 +62,6 @@ namespace Device{
 	public:
 
 		// Control
-
 		void Play();
 		void Stop();
 

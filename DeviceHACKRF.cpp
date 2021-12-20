@@ -129,19 +129,20 @@ namespace Device {
 
 		if (output.size() < len2) output.resize(len2);
 
+		// clean up to move conversion to conversion block
 		for (int i = 0; i < len2; i++)
 		{
 			output[i].real(((int8_t)data[2 * i]) / 128.0f);
 			output[i].imag(((int8_t)data[2 * i + 1]) / 128.0f);
 		}
 
-		RAW raw;
+		RAW r;
 
-		raw.data = output.data();
-		raw.len = output.size() * sizeof(CFLOAT32);
-		raw.format = Format::CF32;
+		r.data = output.data();
+		r.len = output.size() * sizeof(CFLOAT32);
+		r.format = Format::CF32;
 
-		Send(&raw, 1);
+		Send(&r, 1);
 	}
 
 	void HACKRF::Play()

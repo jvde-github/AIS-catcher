@@ -413,7 +413,6 @@ int main(int argc, char* argv[])
 		if (list_devices || list_support || list_options) return 0;
 
 		// Select device
-
 		if (input_type == Device::Type::NONE)
 		{
 			if (device_list.size() == 0) throw "No input device available.";
@@ -430,45 +429,40 @@ int main(int argc, char* argv[])
 
 		switch (input_type)
 		{
+#ifdef HASAIRSPYHF
 		case Device::Type::AIRSPYHF:
 		{
-#ifdef HASAIRSPYHF
 			Device::AIRSPYHF* dev = new Device::AIRSPYHF();
 			dev->Open(handle,settingsAIRSPYHF);
-
 			device = dev;
 
 			if(verbose) settingsAIRSPYHF.Print();
-#else
-			throw "AIRSPYHF+ not included in this package. Please build version including AIRSPYHF+ support.";
-#endif
 			break;
 		}
+#endif
+#ifdef HASAIRSPY
 		case Device::Type::AIRSPY:
 		{
-#ifdef HASAIRSPY
 			Device::AIRSPY* dev = new Device::AIRSPY();
 			dev->Open(handle,settingsAIRSPY);
-
 			device = dev;
 
 			if(verbose) settingsAIRSPY.Print();
-#else
-			throw "AIRSPY not included in this package. Please build version including AIRSPY support.";
-#endif
 			break;
 		}
+#endif
+#ifdef HASSDRPLAY
 		case Device::Type::SDRPLAY:
 		{
-#ifdef HASSDRPLAY
+
 			Device::SDRPLAY* dev = new Device::SDRPLAY();
 			dev->Open(handle,settingsSDRPLAY);
 			device = dev;
 
 			if(verbose) settingsSDRPLAY.Print();
-#endif
 			break;
 		}
+#endif
 		case Device::Type::WAVFILE:
 		{
 			Device::WAVFile* dev = new Device::WAVFile();
@@ -476,7 +470,6 @@ int main(int argc, char* argv[])
 			device = dev;
 
 			if (verbose) settingsWAV.Print();
-
 			break;
 		}
 		case Device::Type::RAWFILE:
@@ -486,42 +479,43 @@ int main(int argc, char* argv[])
 			device = dev;
 
 			if (verbose) settingsRAW.Print();
-
 			break;
 		}
+#ifdef HASRTLSDR
 		case Device::Type::RTLSDR:
 		{
-#ifdef HASRTLSDR
 			Device::RTLSDR* dev = new Device::RTLSDR();
 			dev->Open(handle,settingsRTL);
 			device = dev;
 
 			if(verbose) settingsRTL.Print();
-#endif
 			break;
 		}
+#endif
+#ifdef HASRTLTCP
 		case Device::Type::RTLTCP:
 		{
-#ifdef HASRTLTCP
+
 			Device::RTLTCP* dev = new Device::RTLTCP();
 			dev->Open(handle, settingsRTLTCP);
 			device = dev;
 
 			if (verbose) settingsRTLTCP.Print();
-#endif
+
 			break;
 		}
+#endif
+#ifdef HASHACKRF
 		case Device::Type::HACKRF:
 		{
-#ifdef HASHACKRF
 			Device::HACKRF* dev = new Device::HACKRF();
 			dev->Open(handle, settingsHACKRF);
 			device = dev;
 
 			if (verbose) settingsHACKRF.Print();
-#endif
 			break;
 		}
+#endif
 		default:
 			throw "Error: invalid device selection";
 		}

@@ -96,8 +96,7 @@ namespace DSP
 #define MA1(idx)	r##idx = z; z += h##idx;
 #define MA2(idx)	h##idx = z; z += r##idx;
 
-// CIC5 downsample
-
+	// CIC5 downsample
 	void Downsample2CIC5::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 2 == 0);
@@ -118,16 +117,17 @@ namespace DSP
 		sendOut(output.data(), len / 2);
 	}
 
+	// CIC5 downsample, fixed point helper
 	int HelperDownsample2Fixed::Run(uint32_t* data, int len, int shift)
 	{
 		uint32_t z, r0, r1, r2, r3, r4;
 		const uint32_t mask = (0xFFFFU >> shift) | ((0xFFFFU >> shift) << 16);
 
-		for (int i = 0, j = 0; i < len; i += 2, j++)
+		for (int i = 0, j = 0; i < len; i += 2)
 		{
 			z = data[i];
 			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
-			data[j] = (z >> shift) & mask;
+			data[j++] = (z >> shift) & mask;
 			z = data[i + 1];
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}

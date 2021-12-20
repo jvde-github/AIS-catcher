@@ -32,8 +32,6 @@ SOFTWARE.
 
 namespace AIS
 {
-	enum class BandwidthFilterType { CIC5, BlackmanHarris };
-
 	// Abstract demodulation model
 	class Model
 	{
@@ -70,7 +68,6 @@ namespace AIS
 	class ModelFrontend : public Model
 	{
 	private:
-
 		DSP::DownsampleKFilter DSK;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5, DS2_6, DS2_7;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
@@ -80,8 +77,6 @@ namespace AIS
 		DSP::Downsample16Fixed DS16_Fixed;
 
 		Util::ConvertRAW convert;
-
-		void setBandwidthFilter(BandwidthFilterType, int);
 
 	protected:
 		const int nSymbolsPerSample = 48000 / 9600;
@@ -117,7 +112,6 @@ namespace AIS
 		AIS::Decoder DEC_a, DEC_b;
 
 	public:
-
 		ModelBase(Device::DeviceBase* c) : ModelFrontend(c) {}
 		void buildModel(int, bool);
 	};

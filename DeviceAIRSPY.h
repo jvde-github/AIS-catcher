@@ -63,7 +63,7 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 	};
 
-	class AIRSPY : public DeviceBase//, public StreamOut<RAW>
+	class AIRSPY : public DeviceBase
 	{
 #ifdef HASAIRSPY
 
@@ -86,7 +86,6 @@ namespace Device {
 	public:
 
 		// Control
-
 		void Play();
 		void Stop();
 
@@ -100,7 +99,6 @@ namespace Device {
 		virtual bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
-		//static int getDeviceCount();
 
 		// Device specific
 		void Open(uint64_t h,SettingsAIRSPY &s);

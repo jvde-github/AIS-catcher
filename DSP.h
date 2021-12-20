@@ -46,7 +46,7 @@ namespace DSP
 		virtual void Message(const DecoderMessages& in);
 	};
 
-		class SamplerParallel : public StreamIn<FLOAT32>
+	class SamplerParallel : public StreamIn<FLOAT32>
 	{
 		std::vector <FLOAT32> output;
 		int lastSymbol = 0;
@@ -77,7 +77,6 @@ namespace DSP
 		// Streams in
 		void Receive(const CFLOAT32* data, int len);
 	};
-
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
@@ -225,7 +224,7 @@ namespace DSP
 	public:
 		void Receive(const CU8* data, int len)
 		{
-			assert(len % 16 == 0);
+			assert(len % 32 == 0);
 
 			if (output.size() < len / 16) output.resize(len / 16);
 			if (buffer.size() < len) buffer.resize(len);
