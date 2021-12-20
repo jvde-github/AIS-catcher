@@ -76,11 +76,12 @@ namespace Device {
 		if (!file) Stop();
 		else
 		{
-			RAW raw;
-			raw.data = buffer.data();
-			raw.len = file.gcount();
-			raw.format = Format::CF32;
-			StreamOut<RAW>::Send(&raw, 1);
+			RAW r;
+			r.data = buffer.data();
+			r.len = file.gcount();
+			r.format = Format::CF32;
+
+			Send(&r, 1);
 		}
 
 		return streaming;

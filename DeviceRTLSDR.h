@@ -54,7 +54,7 @@ namespace Device{
 		void Set(std::string option, std::string arg);
 	};
 
-	class RTLSDR : public DeviceBase//, public StreamOut<RAW>
+	class RTLSDR : public DeviceBase
 	{
 #ifdef HASRTLSDR
 

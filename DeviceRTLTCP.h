@@ -62,7 +62,7 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 	};
 
-	class RTLTCP : public DeviceBase//, public StreamOut<RAW>
+	class RTLTCP : public DeviceBase
 	{
 #ifdef HASRTLTCP
 		int sock = -1;
@@ -122,7 +122,6 @@ namespace Device {
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-
 		void Open(uint64_t h, SettingsRTLTCP& s);
 		void applySettings(SettingsRTLTCP& s);
 #endif

@@ -41,7 +41,7 @@ namespace Device{
 		void Set(std::string option, std::string arg);
 	};
 
-	class WAVFile : public DeviceBase//, public StreamOut<RAW>
+	class WAVFile : public DeviceBase
 	{
 		std::ifstream file;
 		std::string filename;

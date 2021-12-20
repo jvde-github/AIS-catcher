@@ -45,7 +45,7 @@ namespace Device
 		void Set(std::string option, std::string arg);
 	};
 
-	class RAWFile : public DeviceBase//, public StreamOut<RAW>
+	class RAWFile : public DeviceBase
 	{
 		std::istream *file = NULL;
 		std::string filename;
@@ -74,7 +74,6 @@ namespace Device
 
 		// Device specific
 		void setFormat(Format f) { format = f; }
-
 		void Open(SettingsRAWFile& s);
 
 	};

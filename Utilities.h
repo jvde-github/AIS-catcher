@@ -200,6 +200,7 @@ namespace Util
 				return;
 			}
 
+			// needs clean up and correction
 			if (output.size() < raw->len) output.resize(raw->len);
 
 			int size = 0;

@@ -166,10 +166,12 @@ namespace Device {
 					if (++ptr == buffer_size)
 					{
 						ptr = 0;
+
 						RAW raw;
 						raw.data = output.data();
 						raw.format = Format::CF32;
 						raw.len = buffer_size * sizeof(CFLOAT32);
+
 						Send(&raw,1);
 					}
 				}

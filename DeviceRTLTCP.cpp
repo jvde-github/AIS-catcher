@@ -122,7 +122,6 @@ namespace Device {
 		{
 			throw "TCP network address and/or port not valid.";
 			return;
-
 		}
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
