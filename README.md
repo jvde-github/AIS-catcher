@@ -283,7 +283,7 @@ Some useful options are:
  | Description | CFLAGS | Impact |
  | :--- | :--- | :--- |
  |use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Allows compilation with librtlsdr v5.x |
- |Linux x64 performance turning  | -march=native | ~ 5% < decoding time |
+ |Linux x64 performance turning  | -D-march=native | ~ 5% < decoding time |
 
 ## Container images
 
