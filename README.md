@@ -10,6 +10,10 @@ The program provides the option to read and decode the raw discriminator output 
 
 ## Recent Developments
 
+For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
+
+**Edge**: floating point downsampling now default for RTL-SDR at 1536K samples/second, fixed point downsampling is now less accurate but significantly faster and can be activated with the ```-F``` switch.. 
+
 Release version **0.31**: allow input from stdin and very minor speed and performance improvements
 
 Release version **0.30**: addition of support for Airspy R2
@@ -51,6 +55,7 @@ use: AIS-catcher [options]
 	[-m xx run specific decoding model (default: 2)]
 	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discriminator output]
 	[-b benchmark demodulation models for time - for development purposes (default: off)]
+	[-F fast fixed point downsampling for RTLSDR at 1536K Hz sampling (default: off)]
 
 	Device specific settings:
 
@@ -176,17 +181,22 @@ The default model is the most time and memory consuming but experiments suggest 
 ```console
 AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
 ```
-The program will run and summarize the performance (count and timing) of three decoding models:
+The program will run and summarize the performance (count and timing) of three decoding models (on a Raspberry Pi 4B):
 ```
-[AIS engine v0.30]		: 38 msgs at 29.5 msg/s
-[Standard (non-coherent)]	: 4 msgs at 3.1 msg/s
-[Base (non-coherent)]		: 3 msgs at 2.3 msg/s
-
+[AIS engine v0.31]		: 38 msgs at 6.2 msg/s
+[Standard (non-coherent)]	: 4 msgs at 0.7 msg/s
+[Base (non-coherent)]		: 3 msgs at 0.5 msg/s
 ```
 ```
-[AIS engine v0.30]		: 294.878 ms
-[Standard (non-coherent)]	: 177.712 ms
-[Base (non-coherent)]		: 155.859 ms
+[AIS engine v0.31]		: 1139.2 ms
+[Standard (non-coherent)]	: 900.099 ms
+[Base (non-coherent)]		: 837.641 ms
+```
+If we use the ```-F``` switch to enable fixed point downsampling, the results are the same but the timings become:
+```
+[AIS engine v0.31]		: 891.025 ms
+[Standard (non-coherent)]	: 638.765 ms
+[Base (non-coherent)]		: 586.179 ms
 ```
 In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
