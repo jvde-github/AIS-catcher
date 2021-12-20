@@ -25,121 +25,92 @@ SOFTWARE.
 
 namespace AIS
 {
-	void Model::setBandwidth(int w)
-	{
-		Bandwidth = w;
-	}
-
-	void Model::setBandwidthFilter(std::string f)
-	{
-		Util::Convert::toUpper(f);
-
-		if (f == "CIC5")
-			BandwidthFilter = BandwidthFilterType::CIC5;
-		else if (f == "BM")
-			BandwidthFilter = BandwidthFilterType::BlackmanHarris;
-		else
-			throw "Model: Unknown bandwidth filter type.";
-	}
-
-	void ModelFrontend::setBandwidthFilter(BandwidthFilterType t, int bw)
-	{
-		switch (bw)
-		{
-		case 10000: FFIR_a.setTaps(Filters::BM_10000); FFIR_b.setTaps(Filters::BM_10000); break;
-		case 12500: FFIR_a.setTaps(Filters::BM_12500); FFIR_b.setTaps(Filters::BM_12500); break;
-		case 15000: FFIR_a.setTaps(Filters::BM_15000); FFIR_b.setTaps(Filters::BM_15000); break;
-		case 16000: FFIR_a.setTaps(Filters::BM_16000); FFIR_b.setTaps(Filters::BM_16000); break;
-		case 25000: FFIR_a.setTaps(Filters::BM_25000); FFIR_b.setTaps(Filters::BM_25000); break;
-		default: throw "Model: bandwidth not supported for this filter.";
-		}
-	}
-
 	void ModelFrontend::buildModel(int sample_rate, bool timerOn)
 	{
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
-		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
+		Connection<RAW>& physical = timerOn ? (*control >> timer).out : control->out;
 
 		switch (sample_rate)
 		{
 
 		// 2^7
 		case 12288000:
-			physical >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 10000000:
 			US.setParams(sample_rate, 12288000);
-			physical >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
 		// 2^6
 		case 6144000:
-			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 6000000:
 			US.setParams(sample_rate, 6144000);
-			physical >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			physical >> convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
 			break;
 
 		// 2^5
 		case 3072000:
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 		case 2500000:
 		case 3000000:
 			US.setParams(sample_rate, 3072000);
-			physical >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
 		// 2304K
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
+			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
 			break;
 		case 2000000:
 		case 1920000:
 			US.setParams(sample_rate, 2304000);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 			break;
 
 
 		// 2^4
 		case 1536000:
-			physical >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			if(fixedpointDS) convert.outCU8 >> DS16_Fixed >> ROT;			
 			break;
 
 		// 2^3
 		case 768000:
-			physical >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
 		// 2^2
 		case 384000:
-			physical >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
 		// 288K
 		case 288000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> DSK >> ROT;
+			physical >> convert >> DSK >> ROT;
 			break;
 		case 240000:
 		case 250000:
 			US.setParams(sample_rate, 288000);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> US >> DSK >> ROT;
+			physical >> convert >> US >> DSK >> ROT;
 			break;
 
 		// 2^1
 		case 192000:
-			physical >> DS2_1 >> ROT;
+			physical >> convert >> DS2_1 >> ROT;
 			break;
 
 		// 2^0
 		case 96000:
-			physical >> ROT;
+			physical >> convert >> ROT;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in engine.";
@@ -148,17 +119,9 @@ namespace AIS
 		ROT.up >> DS2_a;
 		ROT.down >> DS2_b;
 
-		switch (BandwidthFilter)
-		{
-		case BandwidthFilterType::CIC5:
-			DS2_a >> FCIC5_a >> C_a;
-			DS2_b >> FCIC5_b >> C_b;
-			break;
-		default:
-			DS2_a >> FFIR_a >> C_a;
-			DS2_b >> FFIR_b >> C_b;
-			setBandwidthFilter(BandwidthFilter, Bandwidth);
-		}
+		DS2_a >> FCIC5_a >> C_a;
+		DS2_b >> FCIC5_b >> C_b;
+
 		return;
 	}
 
@@ -281,13 +244,14 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		Connection<CFLOAT32>& physical = timerOn ? (*input >> timer).out : *input;
+		Connection<RAW>& physical = timerOn ? (*control >> timer).out : control->out;
 
 		switch (sample_rate)
 		{
 		case 48000:
-			physical >> RP >> FR_a;
-			physical >> IP >> FR_b;
+			physical >> convert;
+			convert >> RP >> FR_a;
+			convert >> IP >> FR_b;
 			break;
 		default:
 			throw "Internal error: sample rate not supported in FM discriminator model.";

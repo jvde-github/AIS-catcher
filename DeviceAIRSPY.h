@@ -63,7 +63,7 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 	};
 
-	class AIRSPY : public DeviceBase, public StreamOut<CFLOAT32>
+	class AIRSPY : public DeviceBase//, public StreamOut<RAW>
 	{
 #ifdef HASAIRSPY
 

@@ -41,7 +41,7 @@ namespace Device{
 		void Set(std::string option, std::string arg);
 	};
 
-	class WAVFile : public DeviceBase, public StreamOut<CFLOAT32>
+	class WAVFile : public DeviceBase//, public StreamOut<RAW>
 	{
 		std::ifstream file;
 		std::string filename;
@@ -66,9 +66,5 @@ namespace Device{
 		}
 
 		std::vector<uint32_t> SupportedSampleRates();
-
-		// Device specific
-		//void setSettings(SettingsWAVFile& s);
-
 	};
 }

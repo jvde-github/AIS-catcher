@@ -35,19 +35,19 @@ namespace Device {
 
 		switch (format)
 		{
-		case Device::Format::CF32:
+		case Format::CF32:
 			std::cerr << " CF32";
 			break;
 
-		case Device::Format::CS16:
+		case Format::CS16:
 			std::cerr << " CS16";
 			break;
 
-		case Device::Format::CU8:
+		case Format::CU8:
 			std::cerr << " CU8";
 			break;
 
-		case Device::Format::CS8:
+		case Format::CS8:
 			std::cerr << " CS8";
 			break;
 
@@ -72,13 +72,13 @@ namespace Device {
 		if (option == "FORMAT")
 		{
 			if (arg == "CU8")
-				format = Device::Format::CU8;
+				format = Format::CU8;
 			else if (arg == "CF32")
-				format = Device::Format::CF32;
+				format = Format::CF32;
 			else if (arg == "CS16")
-				format = Device::Format::CS16;
+				format = Format::CS16;
 			else if (arg == "CS8")
-				format = Device::Format::CS8;
+				format = Format::CS8;
 			else throw "RAW FILE: Unknown file format specification.";
 		}
 		else if (option == "STEREO")
@@ -104,6 +104,14 @@ namespace Device {
 
 		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
 
+		RAW r;
+
+		r.data = buffer.data();
+		r.len = buffer.size();
+		r.format = format;
+
+		Send(&r, 1);
+		/*
 		switch (format)
 		{
 		case Format::CU8:
@@ -135,7 +143,7 @@ namespace Device {
 		}
 
 		Send(output.data(), len);
-
+		*/
 		if (file->eof()) Stop();
 
 		return streaming;

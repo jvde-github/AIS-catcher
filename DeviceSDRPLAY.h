@@ -46,7 +46,7 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 	};
 
-	class SDRPLAY : public DeviceBase, public StreamOut<CFLOAT32>
+	class SDRPLAY : public DeviceBase//, public StreamOut<RAW>
 	{
 
 #ifdef HASSDRPLAY

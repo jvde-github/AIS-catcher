@@ -135,7 +135,13 @@ namespace Device {
 			output[i].imag(((int8_t)data[2 * i + 1]) / 128.0f);
 		}
 
-		Send((const CFLOAT32*)output.data(), output.size());
+		RAW raw;
+
+		raw.data = output.data();
+		raw.len = output.size() * sizeof(CFLOAT32);
+		raw.format = Format::CF32;
+
+		Send(&raw, 1);
 	}
 
 	void HACKRF::Play()

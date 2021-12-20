@@ -45,7 +45,7 @@ namespace DSP
 		int nHistory = 8;
 		int nDelay = 0;
 
-		static const int maxHistory = 16;
+		static const int maxHistory = 14;
 		static const int nPhases = 16;
 		static const int nSearch = 2;
 
@@ -65,6 +65,6 @@ namespace DSP
 
 		void Receive(const CFLOAT32* data, int len);
 
-		void setParams(int h, int d) { nHistory = h; nDelay = d; }
+		void setParams(int h, int d) { assert(nHistory <= maxHistory); assert(nDelay <= nHistory); nHistory = h; nDelay = d; }
 	};
 }

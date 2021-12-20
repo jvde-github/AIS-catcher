@@ -177,7 +177,13 @@ namespace Device {
 				}
 			}
 
-			Send((const CU8*)fifo[head].data(), fifo[head].size());
+			RAW raw;
+			raw.data = fifo[head].data();
+			raw.format = Format::CU8;
+			raw.len = fifo[head].size() * sizeof(CU8);
+
+			Send(&raw, 1);
+
 			head = (head + 1) % SIZE_FIFO;
 			count--;
 

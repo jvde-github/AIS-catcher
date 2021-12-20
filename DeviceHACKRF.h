@@ -47,7 +47,7 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 	};
 
-	class HACKRF : public DeviceBase, public StreamOut<CFLOAT32>
+	class HACKRF : public DeviceBase//, public StreamOut<RAW>
 	{
 #ifdef HASHACKRF
 

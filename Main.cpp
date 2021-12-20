@@ -77,6 +77,7 @@ void Usage()
 	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
 	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discriminator output]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]" << std::endl;
+	std::cerr << "\t[-F fast fixed point downsampling for RTLSDR at 1536K Hz sampling (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\tDevice specific settings:" << std::endl;
 	std::cerr << std::endl;
@@ -171,22 +172,21 @@ int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::stri
 	return -1;
 }
 
-std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Device::DeviceBase* control, Connection<CFLOAT32>* out)
+std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Device::DeviceBase* dev)
 {
 	std::vector<AIS::Model*> liveModels;
 
-	if (liveModelsSelected.size() == 0)
-		liveModelsSelected.push_back(2);
+	if (liveModelsSelected.size() == 0) liveModelsSelected.push_back(2);
 
 	for (auto mi : liveModelsSelected)
 	{
 		switch (mi)
 		{
-		case 0: liveModels.push_back(new AIS::ModelStandard(control, out)); break;
-		case 1: liveModels.push_back(new AIS::ModelBase(control, out)); break;
-		case 2: liveModels.push_back(new AIS::ModelCoherent(control, out)); break;
-		case 3: liveModels.push_back(new AIS::ModelDiscriminator(control, out)); break;
-		case 4: liveModels.push_back(new AIS::ModelChallenger(control, out)); break;
+		case 0: liveModels.push_back(new AIS::ModelStandard(dev)); break;
+		case 1: liveModels.push_back(new AIS::ModelBase(dev)); break;
+		case 2: liveModels.push_back(new AIS::ModelCoherent(dev)); break;
+		case 3: liveModels.push_back(new AIS::ModelDiscriminator(dev)); break;
+		case 4: liveModels.push_back(new AIS::ModelChallenger(dev)); break;
 		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
 		}
 	}
@@ -202,20 +202,16 @@ bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
 	return false;
 }
 
-void setupRates(int& sample_rate, int& model_rate, std::vector<AIS::Model*>& liveModels, Device::DeviceBase* control)
+void setupRates(int& sample_rate, std::vector<AIS::Model*>& liveModels, Device::DeviceBase* control)
 {
-
 	std::vector<uint32_t> device_rates = control->SupportedSampleRates();
 
 	if (sample_rate != 0)
 	{
-		if (model_rate == 0) model_rate = sample_rate;
 		if (!isRateDefined(sample_rate, device_rates)) throw "Sampling rate not supported for this device.";
 	}
-	else
-	{
-		model_rate = sample_rate = device_rates[0];
-	}
+	else 
+		sample_rate = device_rates[0];
 }
 
 void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int argc)
@@ -243,20 +239,14 @@ void Assert(bool b)
 
 int main(int argc, char* argv[])
 {
-	int sample_rate = 0;
-	int model_rate = 0;
-
-	int input_device = 0;
+	int sample_rate = 0, input_device = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false;
 	bool timer_on = false;
 	int NMEA_to_screen = 2;
-	bool RTLSDRfastDS = true;
 	int verboseUpdateTime = 3000;
-
-	std::string bw_filter = "CIC5";
-	int bw_cutoff = 16000;
+	bool fixedpoint_DS = false;
 
 	Device::SettingsRAWFile settingsRAW;
 	Device::SettingsWAVFile settingsWAV;
@@ -277,7 +267,6 @@ int main(int argc, char* argv[])
 	Device::Type input_type = Device::Type::NONE;
 
 	IO::DumpScreen nmea_screen;
-
 	try
 	{
 #ifdef WIN32
@@ -325,6 +314,9 @@ int main(int argc, char* argv[])
 				Assert(count == 0);
 				NMEA_to_screen = 1;
 				break;
+			case 'F':
+				fixedpoint_DS = true;
+				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
 				Assert(count <= 2);
@@ -334,13 +326,6 @@ int main(int argc, char* argv[])
 			case 'b':
 				Assert(count == 0);
 				timer_on = true;
-				break;
-			case 'f':
-				Assert(count <= 2);
-				bw_filter = arg1;
-				if(count == 2)
-					bw_cutoff = Util::Parse::Integer(arg2, 10000, 25000);
-
 				break;
 			case 'w':
 				Assert(count <= 1);
@@ -441,23 +426,17 @@ int main(int argc, char* argv[])
 		}
 
 		// Device and output stream of device;
-		Device::DeviceBase* control = NULL;
-		Connection<CFLOAT32>* out = NULL;
-
-		// Required for RTLSDR: conversion from usigned char to float
-		DSP::ConvertCU8ToCFLOAT32 convertCU8;
-		DSP::RTLSDRFastDownsample convertFastDS;
+		Device::DeviceBase* device = NULL;
 
 		switch (input_type)
 		{
 		case Device::Type::AIRSPYHF:
 		{
 #ifdef HASAIRSPYHF
-			Device::AIRSPYHF* device = new Device::AIRSPYHF();
-			device->Open(handle,settingsAIRSPYHF);
+			Device::AIRSPYHF* dev = new Device::AIRSPYHF();
+			dev->Open(handle,settingsAIRSPYHF);
 
-			control = device;
-			out = &(device->out);
+			device = dev;
 
 			if(verbose) settingsAIRSPYHF.Print();
 #else
@@ -468,11 +447,10 @@ int main(int argc, char* argv[])
 		case Device::Type::AIRSPY:
 		{
 #ifdef HASAIRSPY
-			Device::AIRSPY* device = new Device::AIRSPY();
-			device->Open(handle,settingsAIRSPY);
+			Device::AIRSPY* dev = new Device::AIRSPY();
+			dev->Open(handle,settingsAIRSPY);
 
-			control = device;
-			out = &(device->out);
+			device = dev;
 
 			if(verbose) settingsAIRSPY.Print();
 #else
@@ -483,38 +461,30 @@ int main(int argc, char* argv[])
 		case Device::Type::SDRPLAY:
 		{
 #ifdef HASSDRPLAY
-			Device::SDRPLAY* device = new Device::SDRPLAY();
-			device->Open(handle,settingsSDRPLAY);
-
-			control = device;
-			out = &(device->out);
+			Device::SDRPLAY* dev = new Device::SDRPLAY();
+			dev->Open(handle,settingsSDRPLAY);
+			device = dev;
 
 			if(verbose) settingsSDRPLAY.Print();
-#else
-			throw "SDRPLAY not included in this package. Please build version including SDRPLAY support.";
 #endif
 			break;
 		}
 		case Device::Type::WAVFILE:
 		{
-			Device::WAVFile* device = new Device::WAVFile();
+			Device::WAVFile* dev = new Device::WAVFile();
+			dev->Open(settingsWAV);
+			device = dev;
 
-			control = device;
-			out = &(device->out);
-
-			device->Open(settingsWAV);
 			if (verbose) settingsWAV.Print();
 
 			break;
 		}
 		case Device::Type::RAWFILE:
 		{
-			Device::RAWFile* device = new Device::RAWFile();
+			Device::RAWFile* dev = new Device::RAWFile();
+			dev->Open(settingsRAW);
+			device = dev;
 
-			control = device;
-			out = &(device->out);
-
-			device->Open(settingsRAW);
 			if (verbose) settingsRAW.Print();
 
 			break;
@@ -522,76 +492,48 @@ int main(int argc, char* argv[])
 		case Device::Type::RTLSDR:
 		{
 #ifdef HASRTLSDR
-			Device::RTLSDR* device = new Device::RTLSDR();
-			device->Open(handle,settingsRTL);
-
-			if(sample_rate == 0 and RTLSDRfastDS)
-			{
-				device->out >> convertFastDS;
-				out = &(convertFastDS.out);
-
-				sample_rate = 1536000;
-				model_rate = 96000;
-			}
-			else
-			{
-				device->out >> convertCU8;
-				out = &(convertCU8.out);
-			}
+			Device::RTLSDR* dev = new Device::RTLSDR();
+			dev->Open(handle,settingsRTL);
+			device = dev;
 
 			if(verbose) settingsRTL.Print();
-			control = device;
-
-#else
-			throw "RTLSDR not included in this package. Please build version including RTLSDR support.";
 #endif
 			break;
 		}
 		case Device::Type::RTLTCP:
 		{
 #ifdef HASRTLTCP
-			Device::RTLTCP* device = new Device::RTLTCP();
-			device->Open(handle, settingsRTLTCP);
-
-			device->out >> convertCU8;
-			out = &(convertCU8.out);
+			Device::RTLTCP* dev = new Device::RTLTCP();
+			dev->Open(handle, settingsRTLTCP);
+			device = dev;
 
 			if (verbose) settingsRTLTCP.Print();
-			control = device;
-
-#else
-			throw "RTLTCP not included in this package. Please build version including RTLTCP support.";
 #endif
 			break;
 		}
 		case Device::Type::HACKRF:
 		{
 #ifdef HASHACKRF
-			Device::HACKRF* device = new Device::HACKRF();
-			device->Open(handle, settingsHACKRF);
-
-			control = device;
-			out = &(device->out);
+			Device::HACKRF* dev = new Device::HACKRF();
+			dev->Open(handle, settingsHACKRF);
+			device = dev;
 
 			if (verbose) settingsHACKRF.Print();
-
-#else
-			throw "HACKRF not included in this package. Please build version including RTLTCP support.";
 #endif
 			break;
 		}
 		default:
 			throw "Error: invalid device selection";
 		}
-		if (control == 0) throw "Error: cannot set up device";
+		if (device == 0) throw "Error: cannot set up device";
 
-		SystemMessages.Connect(*control);
+		SystemMessages.Connect(*device);
 
 		// Create demodulation models
-		liveModels = setupModels(liveModelsSelected, control, out);
+		liveModels = setupModels(liveModelsSelected, device);
 
 		// set and check the sampling rate
-		setupRates(sample_rate, model_rate, liveModels, control);
+		setupRates(sample_rate, liveModels, device);
 
 		// Build model and attach output to main model
 
@@ -599,9 +541,8 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->setBandwidthFilter(bw_filter);
-			liveModels[i]->setBandwidth(bw_cutoff);
-			liveModels[i]->buildModel(model_rate, timer_on);
+			liveModels[i]->setFixedPointDownsampling(fixedpoint_DS);			
+			liveModels[i]->buildModel(sample_rate, timer_on);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
@@ -621,21 +562,21 @@ int main(int argc, char* argv[])
 		}
 
 		// Set up generic device parameters
-		control->setSampleRate(sample_rate);
-		control->setFrequency((int)(162e6));
+		device->setSampleRate(sample_rate);
+		device->setFrequency((int)(162e6));
 
 		if(verbose)
 		{
-			std::cerr << "Generic settings: " << "sample rate -s " << control->getSampleRate() << ", model rate " << model_rate/1000 << "K" << std::endl;
+			std::cerr << "Generic settings: " << "sample rate -s " << device->getSampleRate() << "K" << std::endl;
 		}
 
 		// -----------------
 		// Main loop
-		control->Play();
+		device->Play();
 
-		while(control->isStreaming())
+		while(device->isStreaming())
 		{
-			if (control->isCallback()) // don't go to sleep in case we are reading from a file
+			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 			{
 				SleepSystem(verboseUpdateTime);
 
@@ -645,7 +586,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		control->Stop();
+		device->Stop();
 		// End Main loop
 		// -----------------
 
@@ -661,10 +602,10 @@ int main(int argc, char* argv[])
 			for (auto m : liveModels)
 				std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
 
-		control->Close();
+		device->Close();
 
 		for(auto model : liveModels) delete model;
-		if(control) delete control;
+		if(device) delete device;
 
 	}
 	catch (const char * msg)

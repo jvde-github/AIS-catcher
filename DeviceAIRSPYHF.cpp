@@ -101,7 +101,13 @@ namespace Device {
 
 	void AIRSPYHF::callback(CFLOAT32* data, int len)
 	{
-		Send((const CFLOAT32*)data, len );
+		RAW raw;
+
+		raw.data = data;
+		raw.len = len * sizeof(CFLOAT32);
+		raw.format = Format::CF32;
+
+		Send(&raw, 1);
 	}
 
 	int AIRSPYHF::callback_static(airspyhf_transfer_t* tf)
