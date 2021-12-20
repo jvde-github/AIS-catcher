@@ -73,10 +73,15 @@ namespace Device {
 
 		file.read((char*)buffer.data(), buffer_size);
 
-		if (!file)
-			Stop();
+		if (!file) Stop();
 		else
-			StreamOut<CFLOAT32>::Send((CFLOAT32*)buffer.data(), file.gcount() / (sizeof(CFLOAT32)));
+		{
+			RAW raw;
+			raw.data = buffer.data();
+			raw.len = file.gcount();
+			raw.format = Format::CF32;
+			StreamOut<RAW>::Send(&raw, 1);
+		}
 
 		return streaming;
 	}

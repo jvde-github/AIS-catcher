@@ -62,7 +62,7 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 	};
 
-	class RTLTCP : public DeviceBase, public StreamOut<CU8>
+	class RTLTCP : public DeviceBase//, public StreamOut<RAW>
 	{
 #ifdef HASRTLTCP
 		int sock = -1;

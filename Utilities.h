@@ -22,7 +22,10 @@ SOFTWARE.
 
 #pragma once
 
+#include <cstring>
+#include <cassert>
 #include <vector>
+
 #include "Stream.h"
 
 namespace Util
@@ -169,6 +172,63 @@ namespace Util
 
 			val = Float(arg, min, max);
 			return false;
+		}
+	};
+
+	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+
+	public:
+
+		Connection<CU8> outCU8;
+
+		void Receive(const RAW* raw, int len)
+		{
+			assert(len == 1);
+
+			// if CU8 connected, silence on CFLOAT32 output
+			if (raw->format == Format::CU8 && outCU8.isConnected())
+			{
+				outCU8.Send((CU8*)raw->data, raw->len/2);
+				return;
+			}
+
+			if (raw->format == Format::CF32)
+			{
+				out.Send((CFLOAT32*)raw->data, raw->len / sizeof(CFLOAT32) );
+				return;
+			}
+
+			if (output.size() < raw->len) output.resize(raw->len);
+
+			int size = 0;
+
+			switch (raw->format)
+			{
+			case Format::CU8:
+
+				size = raw->len / sizeof(CU8);
+				Util::Convert::toFloat((CU8*)raw->data, output.data(), size);
+				break;
+
+			case Format::CS16:
+
+				size = raw->len / sizeof(CS16);
+				Util::Convert::toFloat((CS16*)raw->data, output.data(), size);
+				break;
+
+			case Format::CS8:
+
+				size = raw->len / sizeof(CS8);
+				Util::Convert::toFloat((CS8*)raw->data, output.data(), size);
+				break;
+
+			default:
+				throw "Internal error: nexpected format";
+			}
+			out.Send(output.data(), size);
+
 		}
 	};
 }

@@ -32,11 +32,11 @@ SOFTWARE.
 
 #include "Stream.h"
 #include "Signal.h"
+#include "Common.h"
 
 namespace Device{
 
 	enum class Type { NONE, RTLSDR, AIRSPYHF, AIRSPY, SDRPLAY, WAVFILE, RAWFILE, RTLTCP, HACKRF };
-	enum class Format { CU8, CF32, CS16, CS8, UNKNOWN };
 
 	class Description
 	{
@@ -68,7 +68,7 @@ namespace Device{
 		virtual void Set(std::string option, std::string arg) {}
 	};
 
-	class DeviceBase : public MessageIn<SystemMessage>
+	class DeviceBase : public MessageIn<SystemMessage>, public StreamOut<RAW>
 	{
 	protected:
 

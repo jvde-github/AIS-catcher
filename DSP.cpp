@@ -118,21 +118,22 @@ namespace DSP
 		sendOut(output.data(), len / 2);
 	}
 
-	int HelperDownsample2CS32::Run(CS32* data, int len)
+	int HelperDownsample2Fixed::Run(uint32_t* data, int len, int shift)
 	{
-		CS32 z, r0, r1, r2, r3, r4;
+		uint32_t z, r0, r1, r2, r3, r4;
+		const uint32_t mask = (0xFFFFU >> shift) | ((0xFFFFU >> shift) << 16);
 
 		for (int i = 0, j = 0; i < len; i += 2, j++)
 		{
 			z = data[i];
 			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
-			data[j] = z;
+			data[j] = (z >> shift) & mask;
 			z = data[i + 1];
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}
-		return len/2;
+		return len / 2;
 	}
-
+	
 	void Decimate2::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 2 == 0);
@@ -167,53 +168,6 @@ namespace DSP
 		}
 
 		sendOut(output.data(), len);
-	}
-
-	void Downsample3Complex::Receive(const CFLOAT32* data, int len)
-	{
-		assert(len % 3 == 0);
-
-		int ptr, i, j;
-
-		if (output.size() < len/3) output.resize(len/3);
-
-		for (j = i = 0, ptr = 21 - 1; i < 21 - 1; i += 3, j++)
-		{
-			buffer[ptr++] = data[i];
-			buffer[ptr++] = data[i + 1];
-			buffer[ptr++] = data[i + 2];
-
-			CFLOAT32 x = 0.33292088503f * buffer[i + 10];
-			x -= 0.00101073661f * (buffer[i + 0] + buffer[i + 20]);
-			x += 0.00616649466f * (buffer[i + 2] + buffer[i + 18]);
-			x += 0.01130778123f * (buffer[i + 3] + buffer[i + 17]);
-			x -= 0.03044260089f * (buffer[i + 5] + buffer[i + 15]);
-			x -= 0.04750748661f * (buffer[i + 6] + buffer[i + 14]);
-			x += 0.12579695977f * (buffer[i + 8] + buffer[i + 12]);
-			x += 0.26922914593f * (buffer[i + 9] + buffer[i + 11]);
-
-			output[j] = x;
-		}
-
-		for (i = 1; i < len - 21 + 1; i += 3, j++)
-		{
-			CFLOAT32 x = 0.33292088503f * data[i + 10];
-			x -= 0.00101073661f * (data[i + 0] + data[i + 20]);
-			x += 0.00616649466f * (data[i + 2] + data[i + 18]);
-			x += 0.01130778123f * (data[i + 3] + data[i + 17]);
-			x -= 0.03044260089f * (data[i + 5] + data[i + 15]);
-			x -= 0.04750748661f * (data[i + 6] + data[i + 14]);
-			x += 0.12579695977f * (data[i + 8] + data[i + 12]);
-			x += 0.26922914593f * (data[i + 9] + data[i + 11]);
-
-			output[j] = x;
-		}
-		for (ptr = 0; i < len; i++, ptr++)
-		{
-			buffer[ptr] = data[i];
-		}
-
-		sendOut(output.data(), len / 3);
 	}
 
 	// Work in progress - needs performance improvement

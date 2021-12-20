@@ -41,19 +41,16 @@ namespace AIS
 		std::string name = "";
 
 		Device::DeviceBase* control;
-		Connection<CFLOAT32>* input;
-		Util::Timer<CFLOAT32> timer;
+		Util::Timer<RAW> timer;
 		Util::PassThrough<NMEA> output;
 
-		BandwidthFilterType BandwidthFilter = BandwidthFilterType::CIC5;
-		int Bandwidth = 12500;
+		bool fixedpointDS = false;
 
 	public:
 
-		Model(Device::DeviceBase* ctrl, Connection<CFLOAT32>* in)
+		Model(Device::DeviceBase* ctrl)
 		{
 			control = ctrl;
-			input = in;
 		}
 
 		virtual void buildModel(int, bool) {}
@@ -65,8 +62,7 @@ namespace AIS
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
-		virtual void setBandwidthFilter(std::string);
-		virtual void setBandwidth(int);
+		virtual void setFixedPointDownsampling(bool b) { fixedpointDS = b; }
 	};
 
 
@@ -81,6 +77,9 @@ namespace AIS
 		DSP::Upsample US;
 		DSP::FilterCIC5 FCIC5_a, FCIC5_b;
 		DSP::FilterComplex FFIR_a, FFIR_b;
+		DSP::Downsample16Fixed DS16_Fixed;
+
+		Util::ConvertRAW convert;
 
 		void setBandwidthFilter(BandwidthFilterType, int);
 
@@ -90,7 +89,7 @@ namespace AIS
 		Util::PassThrough<CFLOAT32> C_a, C_b;
 		DSP::Rotate ROT;
 	public:
-		ModelFrontend(Device::DeviceBase* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		ModelFrontend(Device::DeviceBase* c) : Model(c) {}
 		void buildModel(int, bool);
 	};
 
@@ -104,7 +103,7 @@ namespace AIS
 		DSP::SamplerParallel S_a, S_b;
 
 	public:
-		ModelStandard(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		ModelStandard(Device::DeviceBase* c) : ModelFrontend(c) {}
 		void buildModel(int, bool);
 	};
 
@@ -119,7 +118,7 @@ namespace AIS
 
 	public:
 
-		ModelBase(Device::DeviceBase* c, Connection<CFLOAT32>* i) : ModelFrontend(c, i) {}
+		ModelBase(Device::DeviceBase* c) : ModelFrontend(c) {}
 		void buildModel(int, bool);
 	};
 
@@ -137,7 +136,7 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelCoherent(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 12, int d = 3) : ModelFrontend(c, i)
+		ModelCoherent(Device::DeviceBase* c, int h = 12, int d = 3) : ModelFrontend(c)
 		{
 			setName("AIS engine " VERSION);
 			nHistory = h; nDelay = d;
@@ -150,7 +149,7 @@ namespace AIS
 	class ModelChallenger : public ModelCoherent
 	{
 	public:
-		ModelChallenger(Device::DeviceBase* c, Connection<CFLOAT32>* i, int h = 8, int d = 0) : ModelCoherent(c, i, h, d) 
+		ModelChallenger(Device::DeviceBase* c, int h = 8, int d = 0) : ModelCoherent(c, h, d) 
 		{
 			setName("Challenger model");
 		}
@@ -167,8 +166,10 @@ namespace AIS
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::SamplerParallel S_a, S_b;
 
+		Util::ConvertRAW convert;
+
 	public:
-		ModelDiscriminator(Device::DeviceBase* c, Connection<CFLOAT32>* i) : Model(c, i) {}
+		ModelDiscriminator(Device::DeviceBase* c) : Model(c) {}
 		void buildModel(int,bool);
 	};
 }

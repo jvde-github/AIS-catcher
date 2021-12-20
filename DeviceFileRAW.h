@@ -45,7 +45,7 @@ namespace Device
 		void Set(std::string option, std::string arg);
 	};
 
-	class RAWFile : public DeviceBase, public StreamOut<CFLOAT32>
+	class RAWFile : public DeviceBase//, public StreamOut<RAW>
 	{
 		std::istream *file = NULL;
 		std::string filename;

@@ -67,6 +67,8 @@ public:
 	{
 		connections.push_back(s);
 	}
+
+	bool isConnected() { return connections.size() > 0; }
 };
 
 template <typename S>
