@@ -133,7 +133,7 @@ namespace DSP
 		}
 		return len / 2;
 	}
-	
+
 	void Decimate2::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 2 == 0);
@@ -181,7 +181,6 @@ namespace DSP
 		if (buffer.size() < len) buffer.resize(len + nTaps - 1,0.0f);
 
 		for (i = 0, j = nTaps - 1; i < len; i++, j++) buffer[j] = data[i];
-		//std::memcpy(buffer.data()+nTaps-1,data,len*sizeof(CFLOAT32));
 
 		while(idx_in < len)
 		{

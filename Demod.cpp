@@ -84,11 +84,11 @@ namespace DSP
 				bits[nPhases - 1 - j] <<= 1;
 
 				t = a + b;
-				bits[j] |= ((t) > 0) & 1;
+				bits[j] |= (t > 0) & 1;
 				memory[j][last] = std::abs(t);
 
 				t = a - b;
-				bits[nPhases - 1 - j] |= ((t) > 0) & 1;
+				bits[nPhases - 1 - j] |= (t > 0) & 1;
 				memory[nPhases - 1 - j][last] = std::abs(t);
 			}
 			last = (last + 1) % nHistory;
