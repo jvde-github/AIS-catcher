@@ -213,7 +213,7 @@ namespace Util
 
 			case Format::CS16:
 
-				size = raw->size / sizeof(CS16);				
+				size = raw->size / sizeof(CS16);
 				if (output.size() < size) output.resize(size);
 				Util::Convert::toFloat((CS16*)raw->data, output.data(), size);
 				break;
