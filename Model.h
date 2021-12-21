@@ -38,7 +38,7 @@ namespace AIS
 	protected:
 		std::string name = "";
 
-		Device::DeviceBase* control;
+		Device::DeviceBase* device;
 		Util::Timer<RAW> timer;
 		Util::PassThrough<NMEA> output;
 
@@ -46,10 +46,7 @@ namespace AIS
 
 	public:
 
-		Model(Device::DeviceBase* ctrl)
-		{
-			control = ctrl;
-		}
+		Model(Device::DeviceBase* d) { device = d; }
 
 		virtual void buildModel(int, bool) {}
 
@@ -81,7 +78,7 @@ namespace AIS
 	protected:
 		const int nSymbolsPerSample = 48000 / 9600;
 
-		Util::PassThrough<CFLOAT32> C_a, C_b;
+		Connection<CFLOAT32> *C_a = NULL, *C_b = NULL;
 		DSP::Rotate ROT;
 	public:
 		ModelFrontend(Device::DeviceBase* c) : Model(c) {}

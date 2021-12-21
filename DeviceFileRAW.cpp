@@ -111,39 +111,7 @@ namespace Device {
 		r.format = format;
 
 		Send(&r, 1);
-		/*
-		switch (format)
-		{
-		case Format::CU8:
 
-			len = buffer.size() / sizeof(CU8);
-			Util::Convert::toFloat((CU8*)buffer.data(), output.data(), len);
-			break;
-
-		case Format::CS16:
-
-			len = buffer.size() / sizeof(CS16);
-			Util::Convert::toFloat((CS16*)buffer.data(), output.data(), len);
-			break;
-
-		case Format::CS8:
-
-			len = buffer.size() / sizeof(CS8);
-			Util::Convert::toFloat((CS8*)buffer.data(), output.data(), len);
-			break;
-
-		case Format::CF32:
-
-			len = buffer.size() / sizeof(CFLOAT32);
-			std::memcpy(output.data(), (CFLOAT32*)buffer.data(), buffer.size());
-			break;
-
-		default:
-			throw "Internal error in DeviceFileRAW: unexpected format";
-		}
-
-		Send(output.data(), len);
-		*/
 		if (file->eof()) Stop();
 
 		return streaming;

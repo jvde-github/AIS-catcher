@@ -64,7 +64,7 @@ namespace Device{
 
 		// FIFO
 		std::vector<std::vector<CU8>> fifo;
-		static const int SIZE_FIFO = 8;
+		static const int SIZE_FIFO = 2;
 		int head = 0, tail = 0;
 		std::atomic<int> count;
 

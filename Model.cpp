@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include <cassert>
+
 #include "AIS-catcher.h"
 #include "Model.h"
 
@@ -29,7 +31,7 @@ namespace AIS
 	{
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
-		Connection<RAW>& physical = timerOn ? (*control >> timer).out : control->out;
+		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
 		switch (sample_rate)
 		{
@@ -116,11 +118,12 @@ namespace AIS
 			throw "Internal error: sample rate not supported in engine.";
 		}
 
-		ROT.up >> DS2_a;
-		ROT.down >> DS2_b;
+		ROT.up >> DS2_a >> FCIC5_a;
+		ROT.down >> DS2_b >> FCIC5_b;
 
-		DS2_a >> FCIC5_a >> C_a;
-		DS2_b >> FCIC5_b >> C_b;
+		// pick up point for downstream decoders
+		C_a = &FCIC5_a.out;
+		C_b = &FCIC5_b.out;
 
 		return;
 	}
@@ -130,14 +133,16 @@ namespace AIS
 		ModelFrontend::buildModel(sample_rate, timerOn);
 		setName("Base (non-coherent)");
 
+		assert(C_a != NULL && C_b != NULL);
+
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
 		DEC_a.setChannel('A');
 		DEC_b.setChannel('B');
 
-		C_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
-		C_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
+		*C_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
+		*C_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
 
 		DEC_a.DecoderMessage.Connect(sampler_a);
 		DEC_b.DecoderMessage.Connect(sampler_b);
@@ -150,6 +155,8 @@ namespace AIS
 		ModelFrontend::buildModel(sample_rate, timerOn);
 		setName("Standard (non-coherent)");
 
+		assert(C_a != NULL && C_b != NULL);
+
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
@@ -159,8 +166,8 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		C_a >> FM_a >> FR_a >> S_a;
-		C_b >> FM_b >> FR_b >> S_b;
+		*C_a >> FM_a >> FR_a >> S_a;
+		*C_b >> FM_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -187,6 +194,8 @@ namespace AIS
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn);
 
+		assert(C_a != NULL && C_b != NULL);
+
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
 
@@ -202,8 +211,8 @@ namespace AIS
 		CGF_a.setParams(512,187);
 		CGF_b.setParams(512,187);
 
-		C_a >> CGF_a >> FC_a >> S_a;
-		C_b >> CGF_b >> FC_b >> S_b;
+		*C_a >> CGF_a >> FC_a >> S_a;
+		*C_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++)
 		{
@@ -244,7 +253,7 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		Connection<RAW>& physical = timerOn ? (*control >> timer).out : control->out;
+		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
 		switch (sample_rate)
 		{
