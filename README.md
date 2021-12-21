@@ -12,7 +12,7 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-**Edge**: floating point downsampling now default for RTL-SDR at 1536K samples/second, fixed point downsampling is now less accurate but significantly faster and can be activated with the ```-F``` switch.. 
+**Edge**: floating point downsampling now default for RTL-SDR at 1536K samples/second, fixed point downsampling is now slightly less accurate but significantly faster than floating point downsampling and can be activated with the ```-F``` switch for slow embedded systems.
 
 Release version **0.31**: allow input from stdin and very minor speed and performance improvements
 
