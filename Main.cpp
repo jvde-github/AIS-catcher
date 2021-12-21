@@ -535,7 +535,7 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->setFixedPointDownsampling(fixedpoint_DS);			
+			liveModels[i]->setFixedPointDownsampling(fixedpoint_DS);
 			liveModels[i]->buildModel(sample_rate, timer_on);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
