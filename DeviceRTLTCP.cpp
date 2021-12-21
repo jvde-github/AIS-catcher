@@ -225,12 +225,9 @@ namespace Device {
 				if (++ptr == BUFFER_SIZE)
 				{
 					ptr = 0;
-					RAW raw;
-					raw.data = output.data();
-					raw.format = Format::CU8;
-					raw.len = BUFFER_SIZE * sizeof(CU8);					
 
-					Send(&raw, 1);
+					RAW r = { Format::CU8, output.data(), BUFFER_SIZE * sizeof(CU8) };
+					Send(&r, 1);
 				}
 			}
 

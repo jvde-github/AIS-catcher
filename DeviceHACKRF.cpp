@@ -136,12 +136,7 @@ namespace Device {
 			output[i].imag(((int8_t)data[2 * i + 1]) / 128.0f);
 		}
 
-		RAW r;
-
-		r.data = output.data();
-		r.len = output.size() * sizeof(CFLOAT32);
-		r.format = Format::CF32;
-
+		RAW r = { Format::CF32, output.data(), output.size() * sizeof(CFLOAT32) };
 		Send(&r, 1);
 	}
 
