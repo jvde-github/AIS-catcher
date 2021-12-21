@@ -99,17 +99,12 @@ namespace Device {
 		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
 		if (output.size() < buffer_size / sizeof(CU8)) output.resize(buffer_size / sizeof(CU8));
 
-		buffer.assign(buffer_size, 0.0f);
+		buffer.assign(buffer_size, 0);
 		file->read((char*)buffer.data(), buffer.size());
 
 		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
 
-		RAW r;
-
-		r.data = buffer.data();
-		r.len = buffer.size();
-		r.format = format;
-
+		RAW r = { format, buffer.data(), buffer.size() };
 		Send(&r, 1);
 
 		if (file->eof()) Stop();

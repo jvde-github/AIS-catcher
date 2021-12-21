@@ -71,16 +71,13 @@ namespace Device {
 	{
 		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
 
+		buffer.assign(buffer_size, 0);
 		file.read((char*)buffer.data(), buffer_size);
 
 		if (!file) Stop();
 		else
 		{
-			RAW r;
-			r.data = buffer.data();
-			r.len = file.gcount();
-			r.format = Format::CF32;
-
+			RAW r = { Format::CF32 , buffer.data(), buffer.size() };
 			Send(&r, 1);
 		}
 
