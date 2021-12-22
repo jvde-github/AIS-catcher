@@ -30,7 +30,6 @@ SOFTWARE.
 
 namespace Device {
 
-
 	class SettingsHACKRF : public DeviceSettings
 	{
 	private:
@@ -69,20 +68,13 @@ namespace Device {
 		void Play();
 		void Stop();
 
-		void setSampleRate(uint32_t);
-		void setFrequency(uint32_t);
-
-		std::vector<uint32_t> SupportedSampleRates();
-
 		bool isStreaming();
-
 		virtual bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
 		void Open(uint64_t h, SettingsHACKRF& s);
-		void Open(SettingsHACKRF& s);
 		void Close();
 
 		void applySettings(SettingsHACKRF& s);

@@ -51,6 +51,7 @@ namespace Device{
 #ifdef HASAIRSPYHF
 
 		struct airspyhf_device* dev = NULL;
+		std::vector<uint32_t> rates;
 
 		static int callback_static(airspyhf_transfer_t* tf);
 		void callback(CFLOAT32 *,int);
@@ -65,21 +66,13 @@ namespace Device{
 		void Play();
 		void Stop();
 
-		void setSampleRate(uint32_t);
-		void setFrequency(uint32_t);
-
-		std::vector<uint32_t> SupportedSampleRates();
-
 		bool isStreaming();
-
-		virtual bool isCallback() { return true; }
+		bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
 		void Open(uint64_t h,SettingsAIRSPYHF &s);
-		void Open(SettingsAIRSPYHF& s);
-
 		void applySettings(SettingsAIRSPYHF& s);
 
 #endif

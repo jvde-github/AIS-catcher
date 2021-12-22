@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 #include <cstring>
+#include <algorithm>
 
 #include "Device.h"
 #include "DeviceAIRSPYHF.h"
@@ -61,25 +62,14 @@ namespace Device {
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
 		applySettings(s);
-	}
 
-	void AIRSPYHF::Open(SettingsAIRSPYHF &s)
-	{
-		if (airspyhf_open(&dev) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
+		uint32_t nRates;
 
-		applySettings(s);
-	}
-
-	void AIRSPYHF::setSampleRate(uint32_t s)
-	{
-		if (airspyhf_set_samplerate(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
-		DeviceBase::setSampleRate(s);
-	}
-
-	void AIRSPYHF::setFrequency(uint32_t f)
-	{
-		if (airspyhf_set_freq(dev, f) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
-		DeviceBase::setFrequency(f);
+		airspyhf_get_samplerates(dev, &nRates, 0);
+		rates.resize(nRates);
+		airspyhf_get_samplerates(dev, rates.data(), nRates);
+		std::sort(rates.begin(), rates.end());
+		setSampleRate(rates[0]);
 	}
 
 	void AIRSPYHF::setAGC()
@@ -112,7 +102,8 @@ namespace Device {
 	void AIRSPYHF::Play()
 	{
 		DeviceBase::Play();
-
+		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
+		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
 		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
 
 		SleepSystem(10);
@@ -122,17 +113,6 @@ namespace Device {
 	{
 		airspyhf_stop(dev);
 		DeviceBase::Stop();
-	}
-
-	std::vector<uint32_t> AIRSPYHF::SupportedSampleRates()
-	{
-		uint32_t nRates;
-
-		airspyhf_get_samplerates(dev, &nRates, 0);
-		std::vector<uint32_t> rates(nRates);
-		airspyhf_get_samplerates(dev, rates.data(), nRates);
-
-		return rates;
 	}
 
 	void AIRSPYHF::pushDeviceList(std::vector<Description>& DeviceList)

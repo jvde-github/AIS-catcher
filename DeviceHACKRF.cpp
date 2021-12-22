@@ -73,13 +73,7 @@ namespace Device {
 		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device";
 
 		applySettings(s);
-	}
-
-	void HACKRF::Open(SettingsHACKRF& s)
-	{
-		if (hackrf_open(&device) != HACKRF_SUCCESS) throw "HACKRF: cannot open device";
-
-		applySettings(s);
+		setSampleRate(6000000);
 	}
 
 	void HACKRF::setLNA_Gain(int a)
@@ -97,24 +91,9 @@ namespace Device {
 		if (hackrf_set_amp_enable(device, a) != HACKRF_SUCCESS) throw "HACKRF: cannot set amp.";
 	}
 
-	void HACKRF::setSampleRate(uint32_t s)
-	{
-		if (hackrf_set_sample_rate(device, s) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
-		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(s)) != HACKRF_SUCCESS) throw "HACKRF: cannot set bandwidth filter to auto.";
-
-		DeviceBase::setSampleRate(s);
-	}
-
 	void HACKRF::Close()
 	{
 		hackrf_close(device);
-	}
-
-	void HACKRF::setFrequency(uint32_t f)
-	{
-		if (hackrf_set_freq(device, f) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
-
-		DeviceBase::setFrequency(f);
 	}
 
 	int HACKRF::callback_static(hackrf_transfer* tf)
@@ -144,6 +123,9 @@ namespace Device {
 	{
 		DeviceBase::Play();
 
+		if (hackrf_set_sample_rate(device, sample_rate) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
+		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(sample_rate)) != HACKRF_SUCCESS) throw "HACKRF: cannot set bandwidth filter to auto.";
+		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
 		if (hackrf_start_rx(device, HACKRF::callback_static, this)  != HACKRF_SUCCESS) throw "HACKRF: Cannot open device";
 
 		SleepSystem(10);
@@ -155,11 +137,6 @@ namespace Device {
 		streaming = false;
 
 		DeviceBase::Stop();
-	}
-
-	std::vector<uint32_t> HACKRF::SupportedSampleRates()
-	{
-		return { 6000000 };
 	}
 
 	void HACKRF::pushDeviceList(std::vector<Description>& DeviceList)

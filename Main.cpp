@@ -54,6 +54,14 @@ void consoleHandler(int signal)
 }
 #endif
 
+void printVersion()
+{
+	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION << std::endl;
+	std::cerr << "(C) Copyright 2021 " << COPYRIGHT << std::endl;
+	std::cerr << "This is free software; see the source for copying conditions.There is NO" << std::endl;
+	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
+}
+
 void Usage()
 {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
@@ -130,14 +138,6 @@ void printDevices(std::vector<Device::Description>& device_list)
 	}
 }
 
-void printVersion()
-{
-	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION <<std::endl ;
-	std::cerr << "(C) Copyright 2021 " << COPYRIGHT << std::endl;
-	std::cerr << "This is free software; see the source for copying conditions.There is NO"  << std::endl;
-	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
-}
-
 void printSupportedDevices(std::vector<Device::Description>& device_list)
 {
 	std::cerr << "Supported SDR(s): ";
@@ -195,24 +195,6 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 }
 
 // -------------------------------
-
-bool isRateDefined(uint32_t s, std::vector<uint32_t> rates)
-{
-	for (uint32_t r : rates) if (r == s) return true;
-	return false;
-}
-
-void setupRates(int& sample_rate, std::vector<AIS::Model*>& liveModels, Device::DeviceBase* control)
-{
-	std::vector<uint32_t> device_rates = control->SupportedSampleRates();
-
-	if (sample_rate != 0)
-	{
-		if (!isRateDefined(sample_rate, device_rates)) throw "Sampling rate not supported for this device.";
-	}
-	else 
-		sample_rate = device_rates[0];
-}
 
 void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int argc)
 {
@@ -523,14 +505,16 @@ int main(int argc, char* argv[])
 
 		SystemMessages.Connect(*device);
 
-		// Create demodulation models
-		liveModels = setupModels(liveModelsSelected, device);
+		// set and check the sampling rate				
+		if (sample_rate)
+			device->setSampleRate(sample_rate);
+		else
+			sample_rate = device->getSampleRate();
 
-		// set and check the sampling rate
-		setupRates(sample_rate, liveModels, device);
+		device->setFrequency((int)(162e6));
 
 		// Build model and attach output to main model
-
+		liveModels = setupModels(liveModelsSelected, device);
 		std::vector<IO::SampleCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
 
 		for (int i = 0; i < liveModels.size(); i++)
@@ -554,10 +538,6 @@ int main(int argc, char* argv[])
 			liveModels[0]->Output() >> nmea_screen;
 			nmea_screen.setDetail(NMEA_to_screen);
 		}
-
-		// Set up generic device parameters
-		device->setSampleRate(sample_rate);
-		device->setFrequency((int)(162e6));
 
 		if(verbose)
 		{

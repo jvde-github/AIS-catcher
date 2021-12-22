@@ -106,7 +106,7 @@ namespace Device {
 
 		if (!valid) throw "Eror: Not a supported WAV-file.";
 
-		sample_rate = header.dwSamplesPerSec;
+		DeviceBase::setSampleRate(header.dwSamplesPerSec);
 	}
 
 	void WAVFile::Play()
@@ -119,11 +119,5 @@ namespace Device {
 		file.close();
 		DeviceBase::Stop();
 	}
-
-	std::vector<uint32_t> WAVFile::SupportedSampleRates()
-	{
-		return { sample_rate };
-	}
-
 }
 

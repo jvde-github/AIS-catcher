@@ -133,6 +133,7 @@ namespace Device {
 			throw "RTLTCP: cannot connect to socket";
 
 		applySettings(s);
+		setSampleRate(288000);
 	}
 
 	void RTLTCP::setParameter(uint8_t c, uint32_t p)
@@ -142,18 +143,6 @@ namespace Device {
 		instruction[0] = c;
 		instruction[4] = p; instruction[3] = p >> 8; instruction[2] = p >> 16; instruction[1] = p >> 24;
 		send(sock, (const char *)instruction, 5, 0);
-	}
-
-	void RTLTCP::setSampleRate(uint32_t s)
-	{
-		DeviceBase::setSampleRate(s);
-		setParameter(2, s);
-	}
-
-	void RTLTCP::setFrequency(uint32_t f)
-	{
-		DeviceBase::setFrequency(f);
-		setParameter(1, f);
 	}
 
 	void RTLTCP::setTuner_GainMode(int a)
@@ -240,10 +229,12 @@ namespace Device {
 	{
 		// set up FIFO
 		fifo.resize(SIZE_FIFO);
-
 		count = 0; tail = 0; head = 0;
 
 		DeviceBase::Play();
+
+		setParameter(2, sample_rate);
+		setParameter(1, frequency);
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);
@@ -274,11 +265,6 @@ namespace Device {
 
 		host = s.host;
 		port = s.port;
-	}
-
-	std::vector<uint32_t> RTLTCP::SupportedSampleRates()
-	{
-		return { 1536000, 288000, 96000, 240000 };
 	}
 
 	void RTLTCP::pushDeviceList(std::vector<Description>& DeviceList)

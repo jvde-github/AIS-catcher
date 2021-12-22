@@ -54,9 +54,6 @@ namespace Device{
 		void Play();
 		void Stop();
 		void Open(SettingsWAVFile& s);
-
-		void setSampleRate(uint32_t s) { }
-
 		bool isCallback() { return false; }
 		bool isStreaming();
 
@@ -64,7 +61,5 @@ namespace Device{
 		{
 			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
 		}
-
-		std::vector<uint32_t> SupportedSampleRates();
 	};
 }

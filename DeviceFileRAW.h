@@ -61,7 +61,6 @@ namespace Device
 		void Close();
 		void Play();
 		void Stop();
-
 		bool isCallback() { return false; }
 		bool isStreaming();
 
@@ -69,8 +68,6 @@ namespace Device
 		{
 			DeviceList.push_back(Description("FILE", "RAW", "0", 0, Type::RAWFILE));
 		}
-
-		std::vector<uint32_t> SupportedSampleRates();
 
 		// Device specific
 		void setFormat(Format f) { format = f; }

@@ -92,11 +92,6 @@ namespace Device{
 		void Play();
 		void Stop();
 
-		void setSampleRate(uint32_t);
-		void setFrequency(uint32_t);
-
-		std::vector<uint32_t> SupportedSampleRates();
-
 		bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);

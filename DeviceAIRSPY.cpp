@@ -22,6 +22,7 @@ SOFTWARE.
 */
 
 #include <cstring>
+#include <algorithm>
 
 #include "Device.h"
 #include "DeviceAIRSPY.h"
@@ -109,25 +110,14 @@ namespace Device {
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
 
 		applySettings(s);
-	}
 
-	void AIRSPY::Open(SettingsAIRSPY &s)
-	{
-		if (airspy_open(&dev) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
+		uint32_t nRates;
 
-		applySettings(s);
-	}
-
-	void AIRSPY::setSampleRate(uint32_t s)
-	{
-		if (airspy_set_samplerate(dev, s) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
-		DeviceBase::setSampleRate(s);
-	}
-
-	void AIRSPY::setFrequency(uint32_t f)
-	{
-		if (airspy_set_freq(dev, f) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
-		DeviceBase::setFrequency(f);
+		airspy_get_samplerates(dev, &nRates, 0);
+		rates.resize(nRates);
+		airspy_get_samplerates(dev, rates.data(), nRates);
+		std::sort(rates.begin(), rates.end());
+		setSampleRate(rates[0]);
 	}
 
 	void AIRSPY::setLNA_AGC(int a)
@@ -185,8 +175,9 @@ namespace Device {
 	{
 		DeviceBase::Play(); 
 
-		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS)
-			throw "AIRSPY: Cannot open device";
+		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
+		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
+		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw "AIRSPY: Cannot open device";
 
 		SleepSystem(10);
 	}
@@ -199,19 +190,6 @@ namespace Device {
 		DeviceBase::Stop();
 	}
 
-	std::vector<uint32_t> AIRSPY::SupportedSampleRates()
-	{
-		uint32_t nRates; 
-		std::vector<uint32_t> rates;
-
-		airspy_get_samplerates(dev, &nRates, 0);
-		rates.resize(nRates);
-
-		airspy_get_samplerates(dev, rates.data(), nRates);
-
-		return rates;
-	}
-
 	void AIRSPY::pushDeviceList(std::vector<Description>& DeviceList)
 	{
 		std::vector<uint64_t> serials;
@@ -219,9 +197,9 @@ namespace Device {
 
 		serials.resize(device_count);
 
-		if (airspy_list_devices(serials.data(), device_count) > 0) 
+		if (airspy_list_devices(serials.data(), device_count) > 0)
 		{
-			for (int i = 0; i < device_count; i++) 
+			for (int i = 0; i < device_count; i++)
 			{
 				std::stringstream serial;
 				serial << std::uppercase << std::hex << serials[i];

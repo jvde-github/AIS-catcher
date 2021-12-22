@@ -80,7 +80,7 @@ namespace AIS
 		// 2^4
 		case 1536000:
 			physical >> convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			if(fixedpointDS) convert.outCU8 >> DS16_Fixed >> ROT;			
+			if(fixedpointDS) convert.outCU8 >> DS16_Fixed >> ROT;
 			break;
 
 		// 2^3
@@ -115,7 +115,9 @@ namespace AIS
 			physical >> convert >> ROT;
 			break;
 		default:
+			std::cerr << "Sample rate for decoding model set to " << sample_rate << std::endl;
 			throw "Internal error: sample rate not supported in engine.";
+		
 		}
 
 		ROT.up >> DS2_a >> FCIC5_a;

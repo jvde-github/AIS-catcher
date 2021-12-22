@@ -99,7 +99,7 @@ namespace Device {
 		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
 		if (output.size() < buffer_size / sizeof(CU8)) output.resize(buffer_size / sizeof(CU8));
 
-		buffer.assign(buffer_size, 0);
+		buffer.assign(buffer.size(), 0);
 		file->read((char*)buffer.data(), buffer.size());
 
 		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
@@ -135,7 +135,6 @@ namespace Device {
 		if (!file || file->fail()) throw "Error: Cannot read RAW input.";
 
 		DeviceBase::Play();
-
 	}
 
 	void RAWFile::Stop()
@@ -143,15 +142,12 @@ namespace Device {
 		DeviceBase::Stop();
 	}
 
-	std::vector<uint32_t> RAWFile::SupportedSampleRates()
-	{
-		return { 1536000, 48000, 96000, 192000, 240000, 250000, 288000, 384000, 768000, 1920000, 2000000, 2304000, 2500000, 3000000, 6144000, 6000000, 12288000, 10000000 };
-	}
-
 	void RAWFile::Open(SettingsRAWFile& s)
 	{
 		format = s.format;
 		filename = s.file;
 		layout = s.layout;
+
+		setSampleRate(1536000);
 	}
 }
