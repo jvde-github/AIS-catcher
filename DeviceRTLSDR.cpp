@@ -120,7 +120,7 @@ namespace Device {
 	{
 		if(count == SIZE_FIFO)
 		{
-			std::cerr << "RTLSDR: Buffer overrun!" << std::endl;
+			std::cerr << "RTLSDR: buffer overrun." << std::endl;
 		}
 		else
 		{
@@ -161,7 +161,7 @@ namespace Device {
 
 				if (count == 0)
 				{
-					std::cerr << "Device timeout." << std::endl;
+					std::cerr << "RTLSDR: device timeout." << std::endl;
 					continue;
 				}
 			}
