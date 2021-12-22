@@ -12,12 +12,10 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-**Edge**: Addition of support for the `Raspberry Pi Model B Rev 2`. The development in the main branche has been focusing recently on various performance improvements to run AIS-catcher 
-on a `Raspberry Pi Model B Rev 2`. I also discovered that the
-fixed point downsampling for the RTL-SDR at 1.536 MSPS was significantly slower on Windows x64 than on Win32 for some reason. 
-Now I implemented a trick to speed up the fixed point downsampling significantly 
-with only a very small impact on accuracy. This feauture can  be activated with the ```-F``` switch (only works for RTL-SDR at 1536K). 
-To get an idea on a Raspberry PI (700 MHz), I used the following command to decode from file on the aforementioned Raspberry Pi:
+**Edge**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements. 
+I implemented a trick to speed up fixed point downsampling significantly 
+with only a very small impact on accuracy. This new feauture can  be activated with the ```-F``` switch (only works for RTL-SDR at 1536K). 
+To give an idea of the performance improvement on a Raspberry PI (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 ```
 AIS-catcher -r posterholt.raw -s 1536000 -b -q -v
 ```
@@ -29,7 +27,7 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 [AIS engine v0.31]	: 11528.3 ms
 ```
-This and other performance updates seem to enable the full version of AIS-catcher to run on an early version of the Raspberry Pi with very limited drops and with the processor load reduced from 95% to 75%.
+This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops and with a processor load reduced from 95% to less than 75% making improving stability.
 
 Release version **0.31**: allow input from stdin and very minor speed and performance improvements
 
