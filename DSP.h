@@ -241,13 +241,13 @@ namespace DSP
 
 			for (int i = 0; i < len; i++)
 			{
-				output[i].real((float)(buffer[i] >> 16) / 0xFFFFU - 0.5f);
-				output[i].imag((float)(buffer[i] & 0xFFFFU) / 0xFFFFU - 0.5f);
+				output[i].real((float)(buffer[i] >> 16) / 32768 - 1.0f);
+				output[i].imag((float)(buffer[i] & 0xFFFFU) / 32768 - 1.0f);
 			}
 			out.Send(output.data(), len);
 		}
 	};
-	
+
 	class Rotate : public StreamIn<CFLOAT32>
 	{
 		std::vector <CFLOAT32> output_up, output_down;
