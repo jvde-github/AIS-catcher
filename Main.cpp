@@ -505,7 +505,7 @@ int main(int argc, char* argv[])
 
 		SystemMessages.Connect(*device);
 
-		// set and check the sampling rate				
+		// set and check the sampling rate
 		if (sample_rate)
 			device->setSampleRate(sample_rate);
 		else

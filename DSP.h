@@ -95,7 +95,7 @@ namespace DSP
 
 		int Run(uint32_t*, int, int);
 	};
-	
+
 	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
@@ -213,7 +213,7 @@ namespace DSP
 	public:
 		void Receive(const CFLOAT32* data, int len);
 	};
-	
+
 	class Downsample16Fixed : public SimpleStreamInOut<CU8, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
@@ -237,12 +237,12 @@ namespace DSP
 			len = DS1.Run(buffer.data(), len, 3);
 			len = DS2.Run(buffer.data(), len, 4);
 			len = DS3.Run(buffer.data(), len, 5);
-			len = DS4.Run(buffer.data(), len, 1);
-			
+			len = DS4.Run(buffer.data(), len, 0);
+
 			for (int i = 0; i < len; i++)
 			{
-				output[i].real((float)(buffer[i] >> 16) / (16 * 2048) - 1.0f);
-				output[i].imag((float)(buffer[i] & 0xFFFFU) / (16 * 2048) - 1.0f);
+				output[i].real((float)(buffer[i] >> 16) / 0xFFFFU - 0.5f);
+				output[i].imag((float)(buffer[i] & 0xFFFFU) / 0xFFFFU - 0.5f);
 			}
 			out.Send(output.data(), len);
 		}
