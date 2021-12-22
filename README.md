@@ -27,7 +27,7 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 [AIS engine v0.31]	: 11528.3 ms
 ```
-This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops and with a processor load reduced from 95% to less than 75% making improving stability.
+This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops and with a processor load reduced from 95% to less than 75%.
 
 Release version **0.31**: allow input from stdin and very minor speed and performance improvements
 
