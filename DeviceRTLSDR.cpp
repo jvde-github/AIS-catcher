@@ -74,18 +74,7 @@ namespace Device {
 		if (rtlsdr_open(&dev, h) != 0) throw "RTLSDR: cannot open device.";
 
 		applySettings(s);
-	}
-
-	void RTLSDR::setSampleRate(uint32_t s)
-	{
-		if (rtlsdr_set_sample_rate(dev, s) < 0) throw "RTLSDR: cannot set sample rate.";
-		DeviceBase::setSampleRate(s);
-	}
-
-	void RTLSDR::setFrequency(uint32_t f)
-	{
-		if (rtlsdr_set_center_freq(dev, f) < 0) throw "RTLSDR: cannot set frequency.";
-		DeviceBase::setFrequency(f);
+		setSampleRate(1536000);
 	}
 
 	void RTLSDR::setTuner_GainMode(int a)
@@ -197,6 +186,9 @@ namespace Device {
 
 		DeviceBase::Play();
 
+		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw "RTLSDR: cannot set sample rate.";
+		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw "RTLSDR: cannot set frequency.";
+
 		rtlsdr_reset_buffer(dev);
 		async_thread = std::thread(&RTLSDR::RunAsync, this);
 		run_thread = std::thread(&RTLSDR::Run, this);
@@ -234,11 +226,6 @@ namespace Device {
 		if (!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
 		if (s.RTL_AGC) setRTL_AGC(1);
 		if (s.bias_tee) setBiasTee(1);
-	}
-
-	std::vector<uint32_t> RTLSDR::SupportedSampleRates()
-	{
-		return { 1536000, 1920000, 2304000, 288000 };
 	}
 
 	void RTLSDR::pushDeviceList(std::vector<Description>& DeviceList)

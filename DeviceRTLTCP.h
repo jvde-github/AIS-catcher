@@ -90,8 +90,6 @@ namespace Device {
 		std::mutex fifo_mutex;
 		std::condition_variable fifo_cond;
 
-
-
 		void RunAsync();
 		void Run();
 
@@ -111,11 +109,6 @@ namespace Device {
 		void Close();
 		void Play();
 		void Stop();
-
-		void setSampleRate(uint32_t);
-		void setFrequency(uint32_t);
-
-		std::vector<uint32_t> SupportedSampleRates();
 
 		bool isCallback() { return true; }
 

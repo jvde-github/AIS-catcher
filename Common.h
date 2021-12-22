@@ -52,4 +52,4 @@ typedef struct { Format format; void *data; size_t size; } RAW;
 
 using namespace std::chrono;
 
-const FLOAT32 PI = 3.14159265358979323846;
+const FLOAT32 PI = 3.14159265358979323846f;

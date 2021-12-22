@@ -207,34 +207,12 @@ namespace Device {
 		chParams = deviceParams->rxChannelA;
 
 		applySettings(s);
+		setSampleRate(2304000);
 	}
 
 	void SDRPLAY::Open(SettingsSDRPLAY &s)
 	{
 		Open(0,s);
-	}
-
-	void SDRPLAY::setSampleRate(uint32_t s)
-	{
-
-		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
-
-		deviceParams->devParams->fsFreq.fsHz = s;
-		chParams->tunerParams.ifType = sdrplay_api_IF_Zero;
-		chParams->ctrlParams.decimation.enable = 0;
-		chParams->ctrlParams.decimation.decimationFactor = 1;
-		chParams->ctrlParams.decimation.wideBandSignal = 1;
-		chParams->tunerParams.bwType = sdrplay_api_BW_1_536;
-
-		DeviceBase::setSampleRate(s);
-	}
-
-	void SDRPLAY::setFrequency(uint32_t f)
-	{
-		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
-
-		chParams->tunerParams.rfFreq.rfHz = f;
-		DeviceBase::setFrequency(f);
 	}
 
 	void SDRPLAY::Play()
@@ -247,6 +225,15 @@ namespace Device {
 		head = 0;
 
 		// SDRPLAY
+
+		deviceParams->devParams->fsFreq.fsHz = sample_rate;
+		chParams->tunerParams.ifType = sdrplay_api_IF_Zero;
+		chParams->ctrlParams.decimation.enable = 0;
+		chParams->ctrlParams.decimation.decimationFactor = 1;
+		chParams->ctrlParams.decimation.wideBandSignal = 1;
+		chParams->tunerParams.bwType = sdrplay_api_BW_1_536;
+
+		chParams->tunerParams.rfFreq.rfHz = frequency;
 
 		sdrplay_api_CallbackFnsT cbFns;
 		cbFns.StreamACbFn = callback_static;
@@ -273,12 +260,6 @@ namespace Device {
 		}
 	}
 
-	std::vector<uint32_t> SDRPLAY::SupportedSampleRates()
-	{
-		// for now....
-		return { 2304000, 3072000, 3000000, 6000000, 6144000 };
-	}
-
 	void SDRPLAY::pushDeviceList(std::vector<Description>& DeviceList)
 	{
 		unsigned int DeviceCount;
@@ -300,12 +281,6 @@ namespace Device {
 		sdrplay_api_UnlockDeviceApi();
 	}
 
-	/*
-	int SDRPLAY::getDeviceCount()
-	{
-		return -1;
-	}
-	*/
 	bool SDRPLAY::isStreaming()
 	{
 		return streaming;

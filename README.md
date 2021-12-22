@@ -12,7 +12,23 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-**Edge**: floating point downsampling now default for RTL-SDR at 1536K samples/second, fixed point downsampling is now slightly less accurate but significantly faster than floating point downsampling and can be activated with the ```-F``` switch for slow embedded systems.
+**Edge**: the edge of the development branche has been focusing recently on various performance improvements to run more smoothly on a `Raspberry Pi Model B Rev 2`. I also had discovered that the
+fixed point downsampling for the RTL-SDR at 1.536 MSPS was significantly slower on Windows x64 than on Win32 for some reason. 
+I implemented a trick to speed up the fixed point downsampling significantly 
+with only a very small impact on accuracy. This feauture can  be activated with the ```-F``` switch (only works for RTL-SDR at 1536K). 
+To get an idea on a Raspberry PI 2 (700 MHz), I used the following command to decode from file:
+```
+AIS-catcher -r posterholt.raw -s 1536000 -b -q -v
+```
+Resulting in 38 messages and the ```-b``` switch prints the timing used for decoding:
+```
+[AIS engine v0.31]	: 17979.4 ms
+```
+Adding the ```-F``` switch yielded the same number of messages but timing is now:
+```
+[AIS engine v0.31]	: 11528.3 ms
+```
+This and other updates seem to enable the full version of AIS-catcher to run on a Raspberry Pi 2 with very limited drops and with the processor load reducing from 95% to 75%.
 
 Release version **0.31**: allow input from stdin and very minor speed and performance improvements
 
