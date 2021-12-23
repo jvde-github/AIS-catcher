@@ -72,9 +72,13 @@ namespace Device {
 		std::string port;
 		struct addrinfo* address = NULL;
 
+		struct {
+			uint32_t magic;
+			uint32_t tuner;
+			uint32_t gain;
+		} dongle;
+
 		// output vector
-		std::vector<CU8> output;
-		int ptr = 0;
 
 		static const int TRANSFER_SIZE = 1024;
 		static const int BUFFER_SIZE = 16 * 16384;
