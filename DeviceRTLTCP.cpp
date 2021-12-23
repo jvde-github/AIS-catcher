@@ -162,32 +162,36 @@ namespace Device {
 
 	void RTLTCP::RunAsync()
 	{
-		char buffer[TRANSFER_SIZE];
+		char data[TRANSFER_SIZE];
+		std::vector<char> buffer(BUFFER_SIZE);
+		
+		int ptr = 0;
 
 		while (isStreaming())
 		{
-			if (count != SIZE_FIFO)
+			int len = recv(sock, data, TRANSFER_SIZE, 0);
+
+			if (len == 0)
 			{
-				int len = recv(sock, buffer, TRANSFER_SIZE, 0);
+				DeviceBase::Stop();
+				continue;
+			}
 
-				if(len == 0)
+			int sz = BUFFER_SIZE - ptr < len ? BUFFER_SIZE - ptr : len;
+			std::memcpy(buffer.data() + ptr, data, sz);
+			ptr += sz;
+
+			if (ptr == BUFFER_SIZE)
+			{
+				if (fifo.Full()) std::cerr << "RTLTCP: buffer overrun." << std::endl;
+				else
 				{
-					DeviceBase::Stop();
-					continue;
+					std::memcpy(fifo.Back(), buffer.data(), BUFFER_SIZE);
+					fifo.Push();
+
+					ptr = len - sz;
+					std::memcpy(buffer.data(), data + sz, ptr);
 				}
-
-				// FIFO is CU8 so half the size of input
-				if (fifo[tail].size() != len / 2) fifo[tail].resize(len / 2);
-				std::memcpy(fifo[tail].data(), buffer, len);
-
-				tail = (tail + 1) % SIZE_FIFO;
-
-				{
-					std::lock_guard<std::mutex> lock(fifo_mutex);
-					count++;
-				}
-
-				fifo_cond.notify_one();
 			}
 		}
 	}
@@ -198,43 +202,29 @@ namespace Device {
 
 		while (isStreaming())
 		{
-			if (count == 0)
+			if (fifo.Wait())
 			{
-				std::unique_lock <std::mutex> lock(fifo_mutex);
-				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BUFFER_SIZE / (float)sample_rate * 1000.0f)), [this] {return count != 0; });
+				RAW r = { Format::CU8, fifo.Front(), BUFFER_SIZE };
+				Send(&r, 1);
 
-				if (count == 0) continue;
+				fifo.Pop();
 			}
-
-			// add latest additions in fifo to output vector and send when output-vector is buffer-size.
-			for (int i = 0; i < fifo[head].size(); i++)
+			else
 			{
-				output[ptr] = fifo[head][i];
-
-				if (++ptr == BUFFER_SIZE)
-				{
-					ptr = 0;
-
-					RAW r = { Format::CU8, output.data(), BUFFER_SIZE * sizeof(CU8) };
-					Send(&r, 1);
-				}
+				std::cerr << "RTLTCP: timeout." << std::endl;
 			}
-
-			head = (head + 1) % SIZE_FIFO;
-			count--;
 		}
 	}
 
 	void RTLTCP::Play()
 	{
 		// set up FIFO
-		fifo.resize(SIZE_FIFO);
-		count = 0; tail = 0; head = 0;
-
 		DeviceBase::Play();
 
 		setParameter(2, sample_rate);
 		setParameter(1, frequency);
+
+		fifo.Init(BUFFER_SIZE);
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);

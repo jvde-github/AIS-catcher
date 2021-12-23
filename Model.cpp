@@ -67,20 +67,25 @@ namespace AIS
 		// 2304K
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
+			physical >> convert;
+			if (fixedpointDS) convert.outCU8 >> DS8_Fixed >> US >> DSK >> ROT;
+			else convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 			break;
 		case 2000000:
 		case 1920000:
 			US.setParams(sample_rate, 2304000);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+			physical >> convert;
+			if (fixedpointDS) convert.outCU8 >> DS8_Fixed >> US >> DSK >> ROT;
+			else convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 			break;
 
 
 		// 2^4
 		case 1536000:
-			physical >> convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			physical >> convert;
 			if(fixedpointDS) convert.outCU8 >> DS16_Fixed >> ROT;
+			else convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
 		// 2^3
@@ -116,8 +121,8 @@ namespace AIS
 			break;
 		default:
 			std::cerr << "Sample rate for decoding model set to " << sample_rate << std::endl;
-			throw "Internal error: sample rate not supported in engine.";
-		
+			throw "Error: sample rate not supported in engine.";
+
 		}
 
 		ROT.up >> DS2_a >> FCIC5_a;
