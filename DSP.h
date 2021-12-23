@@ -87,15 +87,6 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-	class HelperDownsample2Fixed
-	{
-		uint32_t h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
-
-	public:
-
-		int Run(uint32_t*, int, int);
-	};
-
 	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
@@ -214,40 +205,6 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-	class Downsample16Fixed : public SimpleStreamInOut<CU8, CFLOAT32>
-	{
-		std::vector <CFLOAT32> output;
-		std::vector <uint32_t> buffer;
-
-		HelperDownsample2Fixed DS1, DS2, DS3, DS4;
-
-	public:
-		void Receive(const CU8* data, int len)
-		{
-			assert(len % 32 == 0);
-
-			if (output.size() < len / 16) output.resize(len / 16);
-			if (buffer.size() < len) buffer.resize(len);
-
-			for (int i = 0; i < len; i++)
-			{
-				buffer[i] = (((uint32_t)data[i].real()) << 16) | (uint32_t)data[i].imag();
-			}
-
-			len = DS1.Run(buffer.data(), len, 3);
-			len = DS2.Run(buffer.data(), len, 4);
-			len = DS3.Run(buffer.data(), len, 5);
-			len = DS4.Run(buffer.data(), len, 0);
-
-			for (int i = 0; i < len; i++)
-			{
-				output[i].real((float)(buffer[i] >> 16) / 32768 - 1.0f);
-				output[i].imag((float)(buffer[i] & 0xFFFFU) / 32768 - 1.0f);
-			}
-			out.Send(output.data(), len);
-		}
-	};
-
 	class Rotate : public StreamIn<CFLOAT32>
 	{
 		std::vector <CFLOAT32> output_up, output_down;
@@ -282,5 +239,39 @@ namespace DSP
 	public:
 		void setParams(int,int);
 		void Receive(const CFLOAT32* data, int len);
+	};
+
+	class DS_UINT16
+	{
+		uint32_t h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
+
+	public:
+
+		int Run(uint32_t*, int, int);
+		int Run(uint8_t*, uint32_t*, int, int);
+		int Run(uint32_t*, CFLOAT32*, int, int);
+
+	};
+
+	class Downsample16Fixed : public SimpleStreamInOut<CU8, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+		std::vector <uint32_t> buffer;
+
+		DS_UINT16 DS1, DS2, DS3, DS4;
+
+	public:
+		void Receive(const CU8* data, int len);
+	};
+
+	class Downsample8Fixed : public SimpleStreamInOut<CU8, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+		std::vector <uint32_t> buffer;
+
+		DS_UINT16 DS1, DS2, DS3;
+
+	public:
+		void Receive(const CU8* data, int len);
 	};
 }

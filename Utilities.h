@@ -226,7 +226,7 @@ namespace Util
 				break;
 
 			default:
-				throw "Internal error: nexpected format";
+				throw "Internal error: unexpected format";
 			}
 			out.Send(output.data(), size);
 

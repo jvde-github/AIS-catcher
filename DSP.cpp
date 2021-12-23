@@ -117,23 +117,6 @@ namespace DSP
 		sendOut(output.data(), len / 2);
 	}
 
-	// CIC5 downsample, fixed point helper
-	int HelperDownsample2Fixed::Run(uint32_t* data, int len, int shift)
-	{
-		uint32_t z, r0, r1, r2, r3, r4;
-		const uint32_t mask = (0xFFFFU >> shift) | ((0xFFFFU >> shift) << 16);
-
-		for (int i = 0, j = 0; i < len; i += 2)
-		{
-			z = data[i];
-			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
-			data[j++] = (z >> shift) & mask;
-			z = data[i + 1];
-			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
-		}
-		return len / 2;
-	}
-
 	void Decimate2::Receive(const CFLOAT32* data, int len)
 	{
 		assert(len % 2 == 0);
@@ -359,4 +342,98 @@ namespace DSP
 			}
 		}
 	}
+
+	// CIC5 downsampling optimized for Raspberry Pi 1
+	// Idea: I and Q signals can be downsampled in parallel and, if stored
+	// as int16, can be worked in parallel using int32.
+
+	int DS_UINT16::Run(uint32_t* data, int len, int shift)
+	{
+		uint32_t z, r0, r1, r2, r3, r4;
+		uint32_t mask = 0xFFFFU >> shift; mask |= mask << 16;
+		uint32_t* out = data;
+
+		len >>= 1;
+
+		for (int i = 0; i < len; i ++)
+		{
+			z = *data++;
+			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
+			// divide by 2^shift and clean up contamination from I to Q
+			*out++ = (z >> shift) & mask;
+			z = *data++;
+			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
+		}
+		return len;
+	}
+
+	// special version of the above but includes the initial conversion from CU8 to avoid extra loop
+	int DS_UINT16::Run(uint8_t* in, uint32_t* out, int len, int shift)
+	{
+		uint32_t z, r0, r1, r2, r3, r4;
+		uint32_t mask = 0xFFFFU >> shift; mask |= mask << 16;
+
+		len >>= 1;
+
+		for (int i = 0; i < len; i ++)
+		{
+			z = (uint32_t)*in++; z |= (uint32_t)*in++ << 16;
+			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
+			*out++ = (z >> shift) & mask;
+			z = (uint32_t)*in++; z |= (uint32_t)*in++ << 16;
+			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
+		}
+		return len;
+	}
+
+	// special version of the above but includes the last conversion to CFLOAT32
+	int DS_UINT16::Run(uint32_t* in, CFLOAT32* out, int len, int shift)
+	{
+		uint32_t z, r0, r1, r2, r3, r4;
+		uint32_t mask = 0xFFFFU >> shift; mask |= mask << 16;
+
+		len >>= 1;
+
+		for (int i = 0; i < len; i++)
+		{
+			z = *in++;
+			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
+			z = (z >> shift) & mask;
+			out[i].real((float)(z & 0xFFFFU) / 32768 - 1.0f);
+			out[i].imag((float)(z >> 16) / 32768 - 1.0f);
+			z = *in++;
+			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
+		}
+		return len;
+	}
+
+	void Downsample16Fixed::Receive(const CU8* data, int len)
+	{
+		assert(len % 16 == 0);
+
+		if (output.size() < len / 16) output.resize(len / 16);
+		if (buffer.size() < len / 2) buffer.resize(len / 2);
+
+		uint32_t* buf = buffer.data();
+
+		len = DS1.Run((uint8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
+		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, output.data(), len, 0);
+
+		out.Send(output.data(), len);
+	};
+
+	void Downsample8Fixed::Receive(const CU8* data, int len)
+	{
+		assert(len % 8 == 0);
+
+		if (output.size() < len / 8) output.resize(len / 8);
+		if (buffer.size() < len / 2) buffer.resize(len / 2);
+
+		uint32_t* buf = buffer.data();
+
+		len = DS1.Run((uint8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
+		len = DS3.Run(buf, output.data(), len, 0);
+
+		out.Send(output.data(), len);
+	};
 }

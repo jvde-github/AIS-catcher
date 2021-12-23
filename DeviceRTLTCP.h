@@ -23,6 +23,7 @@ SOFTWARE.
 #pragma once
 
 #include "Device.h"
+#include "FIFO.h"
 
 #ifdef HASRTLTCP
 
@@ -77,21 +78,14 @@ namespace Device {
 
 		static const int TRANSFER_SIZE = 1024;
 		static const int BUFFER_SIZE = 16 * 16384;
-		static const int SIZE_FIFO = 2 * BUFFER_SIZE / TRANSFER_SIZE;
 
 		std::thread async_thread;
 		std::thread run_thread;
 
-		std::vector<std::vector<CU8>> fifo;
-		int head = 0;
-		int tail = 0;
-		std::atomic<int> count;
-
-		std::mutex fifo_mutex;
-		std::condition_variable fifo_cond;
-
 		void RunAsync();
 		void Run();
+
+		FIFO fifo;
 
 		void setTuner_GainMode(int);
 		void setTuner_Gain(FLOAT32);
