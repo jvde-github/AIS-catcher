@@ -132,6 +132,10 @@ namespace Device {
 		if (connect(sock, address->ai_addr, (int)address->ai_addrlen) == -1)
 			throw "RTLTCP: cannot connect to socket";
 
+		// check for dongle information
+		int len = recv(sock, (char*) &dongle, 12, 0);
+		if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: unexpected or invalid response, likely not an rtl-tcp process.";
+
 		applySettings(s);
 		setSampleRate(288000);
 	}
@@ -162,23 +166,22 @@ namespace Device {
 
 	void RTLTCP::RunAsync()
 	{
-		char data[TRANSFER_SIZE];
+		std::vector<char> data(TRANSFER_SIZE);
 		std::vector<char> buffer(BUFFER_SIZE);
-		
 		int ptr = 0;
 
 		while (isStreaming())
 		{
-			int len = recv(sock, data, TRANSFER_SIZE, 0);
+			int len = recv(sock, data.data(), TRANSFER_SIZE, 0);
 
-			if (len == 0)
+			if (len <= 0)
 			{
 				DeviceBase::Stop();
 				continue;
 			}
 
 			int sz = BUFFER_SIZE - ptr < len ? BUFFER_SIZE - ptr : len;
-			std::memcpy(buffer.data() + ptr, data, sz);
+			std::memcpy(buffer.data() + ptr, data.data(), sz);
 			ptr += sz;
 
 			if (ptr == BUFFER_SIZE)
@@ -190,7 +193,7 @@ namespace Device {
 					fifo.Push();
 
 					ptr = len - sz;
-					std::memcpy(buffer.data(), data + sz, ptr);
+					std::memcpy(buffer.data(), data.data() + sz, ptr);
 				}
 			}
 		}
@@ -198,6 +201,7 @@ namespace Device {
 
 	void RTLTCP::Run()
 	{
+		std::vector<char> output(BUFFER_SIZE);
 		if (output.size() < BUFFER_SIZE) output.resize(BUFFER_SIZE);
 
 		while (isStreaming())
@@ -218,13 +222,12 @@ namespace Device {
 
 	void RTLTCP::Play()
 	{
-		// set up FIFO
+		fifo.Init(BUFFER_SIZE);
+
 		DeviceBase::Play();
 
 		setParameter(2, sample_rate);
 		setParameter(1, frequency);
-
-		fifo.Init(BUFFER_SIZE);
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);
