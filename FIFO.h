@@ -86,7 +86,7 @@ public:
 	bool Full()
 	{
 		// we need one block extra to cater for wraps
-		return count >= N_BLOCKS - 1;
+		return count >= N_BLOCKS;
 	}
 	T* Back()
 	{
@@ -98,27 +98,21 @@ public:
 		int _ptr = tail * BLOCK_SIZE + tail_ptr;
 
 		// fits within a block, simplified case
-		if (tail_ptr + sz <= BLOCK_SIZE) 
+		if (tail_ptr + sz <= BLOCK_SIZE)
 		{
-			if (count == N_BLOCKS) return false; 
-			std::memcpy(_data.data() + _ptr, data, sz); 
+			if (count == N_BLOCKS) return false;
+			std::memcpy(_data.data() + _ptr, data, sz);
 		}
 		else
 		{
 			// need two blocks available and copy can involve wrap
-			if (count + 2 > N_BLOCKS) return false;
+			if (count + 1 >= N_BLOCKS) return false;
 
-			int sz1 = sz, sz2 = 0;
+			int wrap = _ptr + sz - (int)_data.size();
+			if ( wrap > 0 ) wrap = 0;
 
-			if (_ptr + sz > (int)_data.size())
-			{
-				int wrap = _ptr + sz - (int)_data.size();
-				sz1 -= wrap; sz2 = wrap;
-			}
-
-			std::memcpy(_data.data() + _ptr, data, sz1);
-			std::memcpy(_data.data(), data + sz1, sz2);
-
+			std::memcpy(_data.data() + _ptr, data, sz - wrap);
+			std::memcpy(_data.data(), data + sz - wrap, wrap);
 		}
 
 		tail_ptr += sz;
