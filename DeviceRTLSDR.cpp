@@ -177,8 +177,7 @@ namespace Device {
 
 	void RTLSDR::setFrequencyCorrection(int ppm)
 	{
-		if (ppm != 0)
-			if (rtlsdr_set_freq_correction(dev, ppm) < 0) throw "RTLSDR: cannot set ppm error.";
+		if (ppm != 0 && rtlsdr_set_freq_correction(dev, ppm) < 0) throw "RTLSDR: cannot set ppm error.";
 	}
 
 	void RTLSDR::applySettings(SettingsRTLSDR &s)
