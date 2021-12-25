@@ -33,16 +33,20 @@ template<typename T>
 class FIFO
 {
 	std::vector<T> _data;
+
 	int head = 0;
 	int tail = 0;
-	std::atomic<int> count;
 	int tail_ptr = 0;
+
+	std::atomic<int> count;
 
 	std::mutex fifo_mutex;
 	std::condition_variable fifo_cond;
 
 	int BLOCK_SIZE = 16 * 16384;
-	int N_BLOCKS = 1;
+	int N_BLOCKS = 2;
+
+	const static int timeout = 2500;
 
 public:
 
@@ -63,7 +67,7 @@ public:
 		if (count == 0)
 		{
 			std::unique_lock <std::mutex> lock(fifo_mutex);
-			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(2000)), [this] {return count != 0; });
+			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this] {return count != 0; });
 
 			if (count == 0) return false;
 		}
@@ -89,25 +93,33 @@ public:
 		return _data.data() + tail * BLOCK_SIZE;
 	}
 
-	bool Push(T* data, int len)
+	bool Push(T* data, int sz)
 	{
-		int data_ptr = tail * BLOCK_SIZE + tail_ptr;
-		int sz1 = len, sz2 = 0, blocks = 1;
+		int _ptr = tail * BLOCK_SIZE + tail_ptr;
 
-		if (tail_ptr + len > BLOCK_SIZE) blocks = 2;
-		if (count + blocks > N_BLOCKS) return false; // return if FIFO is full
-
-		if (data_ptr + len > (int)_data.size())
+		if (tail_ptr + sz <= BLOCK_SIZE) // fits within a block
 		{
-			int wrap = data_ptr + len - (int)_data.size();
-			sz1 -= wrap;
-			sz2 = wrap;
+			if (count == N_BLOCKS) return false; // full
+			std::memcpy(_data.data() + _ptr, data, sz); // copy within block
 		}
+		else
+		{
+			if (count + 2 > N_BLOCKS) return false; // full with 2 blocks needed
 
-		std::memcpy(_data.data() + data_ptr, data, sz1);
-		std::memcpy(_data.data(), data + sz1, sz2);
+			int sz1 = sz, sz2 = 0;
 
-		tail_ptr += len;
+			if (_ptr + sz > (int)_data.size())
+			{
+				int wrap = _ptr + sz - (int)_data.size();
+				sz1 -= wrap;
+				sz2 = wrap;
+			}
+
+			std::memcpy(_data.data() + _ptr, data, sz1);
+			std::memcpy(_data.data(), data + sz1, sz2);
+
+		}
+		tail_ptr += sz;
 
 		if (tail_ptr >= BLOCK_SIZE)
 		{
