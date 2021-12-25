@@ -71,7 +71,7 @@ namespace Device {
 
 	void RTLSDR::Open(uint64_t h,SettingsRTLSDR &s)
 	{
-		if (rtlsdr_open(&dev, h) != 0) throw "RTLSDR: cannot open device.";
+		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw "RTLSDR: cannot open device.";
 
 		applySettings(s);
 		setSampleRate(1536000);
@@ -110,34 +110,14 @@ namespace Device {
 
 		int gain = gains[0];
 
-		for(auto h : gains) 
-			if(abs(h - g) < abs(g - gain)) gain = h;
+		for(auto h : gains) if(abs(h - g) < abs(g - gain)) gain = h;
 
 		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw "RTLSDR: cannot set tuner gain.";
 	}
 
 	void RTLSDR::callback(CU8* buf, int len)
 	{
-		if(count == SIZE_FIFO)
-		{
-			std::cerr << "RTLSDR: buffer overrun." << std::endl;
-		}
-		else
-		{
-			// FIFO is CU8 so half the size of the input
-			if (fifo[tail].size() != len / 2) fifo[tail].resize(len / 2);
-
-			std::memcpy(fifo[tail].data(), buf, len);
-
-			tail = (tail + 1) % SIZE_FIFO;
-
-			{
-				std::lock_guard<std::mutex> lock(fifo_mutex);
-				count ++;
-			}
-
-			fifo_cond.notify_one();
-		}
+		if (!fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
 	}
 
 	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx)
@@ -154,36 +134,19 @@ namespace Device {
 	{
 		while(isStreaming())
 		{
-			if (count == 0)
+			if (fifo.Wait())
 			{
-				std::unique_lock <std::mutex> lock(fifo_mutex);
-				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)BUFFER_SIZE / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
-
-				if (count == 0)
-				{
-					std::cerr << "RTLSDR: device timeout." << std::endl;
-					continue;
-				}
+				RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
+				Send(&r, 1);
+				fifo.Pop();
 			}
-
-			RAW r = { Format::CU8, fifo[head].data(), fifo[head].size() * sizeof(CU8) };
-			Send(&r, 1);
-
-			head = (head + 1) % SIZE_FIFO;
-			count--;
-
+			else std::cerr << "RTLSDR: timeout." << std::endl;
 		}
 	}
 
 	void RTLSDR::Play()
 	{
-		// set up FIFO
-		fifo.resize(SIZE_FIFO);
-
-		count = 0;
-		tail = 0;
-		head = 0;
-
+		fifo.Init(BUFFER_SIZE, 2);
 		DeviceBase::Play();
 
 		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw "RTLSDR: cannot set sample rate.";

@@ -54,7 +54,7 @@ public:
 	{
 		if(connections.size() == 0) return;
 
-		int sz1 = connections.size()-1;
+		int sz1 = (int)connections.size()-1;
 
 		for(int i = 0; i < sz1; i++)
 			connections[i]->Receive((const S*)data, len);

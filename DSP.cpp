@@ -158,7 +158,7 @@ namespace DSP
 	{
 		int i, j;
 
-		nTaps = taps.size();
+		nTaps = (int)taps.size();
 
 		if (output.size() < outputSize) output.resize(outputSize);
 		if (buffer.size() < len) buffer.resize(len + nTaps - 1,0.0f);
@@ -219,7 +219,7 @@ namespace DSP
 
 		if (output.size() < len) output.resize(len);
 
-		for (j = 0, ptr = taps.size() - 1; j < taps.size() - 1; ptr++, j++)
+		for (j = 0, ptr = (int)taps.size() - 1; j < taps.size() - 1; ptr++, j++)
 		{
 			buffer[ptr] = data[j];
 			output[j] = dot(&buffer[j]);
@@ -245,7 +245,7 @@ namespace DSP
 
 		if (output.size() < len) output.resize(len);
 
-		for (j = 0, ptr = taps.size() - 1; j < taps.size() - 1; ptr++, j++)
+		for (j = 0, ptr = (int)taps.size() - 1; j < taps.size() - 1; ptr++, j++)
 		{
 			buffer[ptr] = data[j];
 			output[j] = dot(&buffer[j]);
@@ -291,7 +291,7 @@ namespace DSP
 	void SquareFreqOffsetCorrection::correctFrequency()
 	{
 		FLOAT32 max_val = 0.0, fz = -1;
-		int delta = (int)9600.0 / 48000.0 * N;
+		int delta = (int)(9600.0 / 48000.0 * N);
 
 		FFT::fft(fft_data);
 
@@ -302,7 +302,7 @@ namespace DSP
 			if(h > max_val)
 			{
 				max_val = h;
-				fz = (N / 2 - (i + delta / 2.0));
+				fz = (N / 2 - (i + delta / 2.0f));
 			}
 		}
 

@@ -80,7 +80,7 @@ namespace AIS
  		uint16_t CRC = 0xFFFF;
 
  		for(int i = 0; i < len; i++)
- 			CRC = (getBit(i) ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
+ 			CRC = ((uint16_t)getBit(i) ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
 
 		return CRC == checksum;
 	}

@@ -89,7 +89,7 @@ namespace Device {
 		void RunAsync();
 		void Run();
 
-		FIFO fifo;
+		FIFO<char> fifo;
 
 		void setTuner_GainMode(int);
 		void setTuner_Gain(FLOAT32);

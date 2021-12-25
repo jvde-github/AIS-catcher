@@ -77,7 +77,7 @@ namespace Device {
 		if (!file) Stop();
 		else
 		{
-			RAW r = { Format::CF32 , buffer.data(), buffer.size() };
+			RAW r = { Format::CF32 , buffer.data(), (int)buffer.size() };
 			Send(&r, 1);
 		}
 

@@ -22,6 +22,7 @@ SOFTWARE.
 
 #pragma once
 
+#include "FIFO.h"
 #include "Device.h"
 
 #ifdef HASRTLSDR
@@ -63,19 +64,13 @@ namespace Device{
 		std::thread run_thread;
 
 		// FIFO
-		std::vector<std::vector<CU8>> fifo;
-		static const int SIZE_FIFO = 2;
-		int head = 0, tail = 0;
-		std::atomic<int> count;
-
-		std::mutex fifo_mutex;
-		std::condition_variable fifo_cond;
+		FIFO<char> fifo;
 
 		// callbacks
 		static void callback_static(CU8* buf, uint32_t len, void* ctx);
 		void callback(CU8* buf, int len);
 
-		void RunAsync();	
+		void RunAsync();
 		void Run();
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
