@@ -97,30 +97,33 @@ public:
 	{
 		int _ptr = tail * BLOCK_SIZE + tail_ptr;
 
-		if (tail_ptr + sz <= BLOCK_SIZE) // fits within a block
+		// fits within a block, simplified case
+		if (tail_ptr + sz <= BLOCK_SIZE) 
 		{
-			if (count == N_BLOCKS) return false; // full
-			std::memcpy(_data.data() + _ptr, data, sz); // copy within block
+			if (count == N_BLOCKS) return false; 
+			std::memcpy(_data.data() + _ptr, data, sz); 
 		}
 		else
 		{
-			if (count + 2 > N_BLOCKS) return false; // full with 2 blocks needed
+			// need two blocks available and copy can involve wrap
+			if (count + 2 > N_BLOCKS) return false;
 
 			int sz1 = sz, sz2 = 0;
 
 			if (_ptr + sz > (int)_data.size())
 			{
 				int wrap = _ptr + sz - (int)_data.size();
-				sz1 -= wrap;
-				sz2 = wrap;
+				sz1 -= wrap; sz2 = wrap;
 			}
 
 			std::memcpy(_data.data() + _ptr, data, sz1);
 			std::memcpy(_data.data(), data + sz1, sz2);
 
 		}
+
 		tail_ptr += sz;
 
+		// if we completed a full block, ship it off
 		if (tail_ptr >= BLOCK_SIZE)
 		{
 			SendBlock();

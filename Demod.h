@@ -32,12 +32,10 @@ namespace DSP
 	{
 		std::vector <FLOAT32> output;
 		CFLOAT32 prev = 0.0;
-		float DC_shift = 0.0;
 
 	public:
 
 		void Receive(const CFLOAT32* data, int len);
-		void setDCShift(float s) { DC_shift = s; }
 	};
 
 	class CoherentDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
