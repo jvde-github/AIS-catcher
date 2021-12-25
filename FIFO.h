@@ -109,7 +109,7 @@ public:
 			if (count + 1 >= N_BLOCKS) return false;
 
 			int wrap = _ptr + sz - (int)_data.size();
-			if ( wrap > 0 ) wrap = 0;
+			if ( wrap < 0 ) wrap = 0;
 
 			std::memcpy(_data.data() + _ptr, data, sz - wrap);
 			std::memcpy(_data.data(), data + sz - wrap, wrap);
