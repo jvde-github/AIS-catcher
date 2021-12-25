@@ -89,7 +89,7 @@ namespace Device {
 
 	void AIRSPYHF::callback(CFLOAT32* data, int len)
 	{
-		RAW r = { Format::CF32, data, len * sizeof(CFLOAT32) };
+		RAW r = { Format::CF32, data, (int)(len * sizeof(CFLOAT32)) };
 		Send(&r, 1);
 	}
 

@@ -128,7 +128,7 @@ namespace Util
 			{
 				number = std::stoi(str);
 			}
-			catch (const std::exception& e) { throw "Error: expected a number on command line"; }
+			catch (const std::exception& ) { throw "Error: expected a number on command line"; }
 
 			if (number < min || number > max) throw "Error: Number out of range on command line";
 
@@ -143,7 +143,7 @@ namespace Util
 			{
 				number = std::stof(str);
 			}
-			catch (const std::exception& e) { throw "Error: expected a number on command line"; }
+			catch (const std::exception& ) { throw "Error: expected a number on command line"; }
 
 			if (number < min || number > max) throw "Error: Number out of range on command line";
 
@@ -166,7 +166,7 @@ namespace Util
 			return false;
 		}
 
-		static bool AutoFloat(std::string arg, int min, int max, FLOAT32& val)
+		static bool AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32& val)
 		{
 			if (arg == "AUTO") return true;
 

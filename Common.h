@@ -47,7 +47,7 @@ typedef char BIT;
 enum class Format { CU8, CF32, CS16, CS8, UNKNOWN };
 
 typedef struct { std::vector<std::string> sentence; char channel; int msg; uint32_t mmsi; int repeat; } NMEA;
-typedef struct { Format format; void *data; size_t size; } RAW;
+typedef struct { Format format; void *data; int size; } RAW;
 
 
 using namespace std::chrono;

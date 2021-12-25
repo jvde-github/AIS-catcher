@@ -39,7 +39,7 @@ namespace FFT
 
 	static int rev(int x,int logN)
 	{
-		static const int rev4[] = { 0, 8,  4, 12,  2, 10, 6, 14, 1, 9,  5, 13, 3, 11, 7, 15 };
+		static const int rev4[] = { 0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15 };
 
 		int y = 0, j;
 
@@ -79,7 +79,7 @@ namespace FFT
 
 		if(N != x.size())
 		{
-			N = x.size();
+			N = (int)x.size();
 			logN = log2(N);
 			calcOmega(Omega,N);
 		}

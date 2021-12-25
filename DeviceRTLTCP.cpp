@@ -161,56 +161,32 @@ namespace Device {
 
 	void RTLTCP::setTuner_Gain(FLOAT32 a)
 	{
-		setParameter(4, a);
+		setParameter(4, (uint32_t)a);
 	}
 
 	void RTLTCP::RunAsync()
 	{
 		std::vector<char> data(TRANSFER_SIZE);
-		std::vector<char> buffer(BUFFER_SIZE);
-		int ptr = 0;
 
 		while (isStreaming())
 		{
 			int len = recv(sock, data.data(), TRANSFER_SIZE, 0);
 
-			if (len <= 0)
-			{
-				DeviceBase::Stop();
-				continue;
-			}
-
-			int sz = BUFFER_SIZE - ptr < len ? BUFFER_SIZE - ptr : len;
-			std::memcpy(buffer.data() + ptr, data.data(), sz);
-			ptr += sz;
-
-			if (ptr == BUFFER_SIZE)
-			{
-				if (fifo.Full()) std::cerr << "RTLTCP: buffer overrun." << std::endl;
-				else
-				{
-					std::memcpy(fifo.Back(), buffer.data(), BUFFER_SIZE);
-					fifo.Push();
-
-					ptr = len - sz;
-					std::memcpy(buffer.data(), data.data() + sz, ptr);
-				}
-			}
+			if (len < 0) DeviceBase::Stop();
+			else if (!fifo.Push(data.data(), len)) std::cerr << "RTLTCP: buffer overrun." << std::endl;
 		}
 	}
 
 	void RTLTCP::Run()
 	{
-		std::vector<char> output(BUFFER_SIZE);
-		if (output.size() < BUFFER_SIZE) output.resize(BUFFER_SIZE);
+		std::vector<char> output(fifo.BlockSize());
 
 		while (isStreaming())
 		{
 			if (fifo.Wait())
 			{
-				RAW r = { Format::CU8, fifo.Front(), BUFFER_SIZE };
+				RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
 				Send(&r, 1);
-
 				fifo.Pop();
 			}
 			else

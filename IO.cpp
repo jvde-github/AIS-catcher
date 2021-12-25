@@ -51,7 +51,7 @@ namespace IO
 	{
 		for(int i = 0; i < len; i++)
 			for(auto s : data[i].sentence)
-				sendto(sock, (s+"\r\n").c_str(), s.length()+2, 0, address->ai_addr, address->ai_addrlen);
+				sendto(sock, (s+"\r\n").c_str(), (int) s.length()+2, 0, address->ai_addr, (int) address->ai_addrlen);
 	}
 
 	void UDP::openConnection(std::string host, std::string portname)

@@ -35,7 +35,7 @@ namespace DSP
 		std::vector<BIT> output;
 		BIT prev = 0;
 
-		float PLL;
+		float PLL = 0.0f;
 		bool FastPLL = true;
 
 	public:
