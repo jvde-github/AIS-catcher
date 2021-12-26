@@ -118,7 +118,6 @@ namespace DSP
 		std::vector <CFLOAT32> buffer;
 		std::vector <FLOAT32> taps;
 
-
 		int idx_in = 0;
 		int idx_out = 0;
 
@@ -207,8 +206,7 @@ namespace DSP
 	class Rotate : public StreamIn<CFLOAT32>
 	{
 		std::vector <CFLOAT32> output_up, output_down;
-		CFLOAT32 rot = 1.0f;
-		CFLOAT32 mult = 1.0f;
+		CFLOAT32 rot = 1.0f, mult = 1.0f;
 
 	public:
 

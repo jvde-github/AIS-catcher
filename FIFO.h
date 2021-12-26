@@ -92,7 +92,7 @@ public:
 
 	bool Push(T* data, int sz)
 	{
-		// size of new tail block including overvlow (i.e. > BLOCK_SIZE)
+		// size of new tail block including overflow (i.e. > BLOCK_SIZE)
 		int  nbl = tail % BLOCK_SIZE + sz;
 
 		// fits within a block, simplified case
