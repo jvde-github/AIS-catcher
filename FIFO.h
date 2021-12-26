@@ -53,7 +53,7 @@ public:
 	{
 		BLOCK_SIZE = bs; N_BLOCKS = fs;
 		count = head = tail = 0;
-		_data.resize(N_BLOCKS * BLOCK_SIZE);
+		_data.resize((int)(N_BLOCKS * BLOCK_SIZE));
 	}
 
 	int BlockSize()
@@ -79,8 +79,11 @@ public:
 	}
 	void Pop()
 	{
-		head = (head + BLOCK_SIZE) % _data.size();
-		count--;
+		if (count > 0)
+		{
+			head = (head + BLOCK_SIZE) % (int) _data.size();
+			count--;
+		}
 	}
 	bool Full()
 	{
@@ -89,7 +92,7 @@ public:
 
 	bool Push(T* data, int sz)
 	{
-		// size of new tail block including overvlow (e.g. if > BLOCK_SIZE)
+		// size of new tail block including overvlow (i.e. > BLOCK_SIZE)
 		int  nbl = tail % BLOCK_SIZE + sz;
 
 		// fits within a block, simplified case
@@ -111,7 +114,7 @@ public:
 			std::memcpy(_data.data(), data + sz - wrap, wrap);
 		}
 
-		tail = (tail + sz) % _data.size();
+		tail = (tail + sz) % (int) _data.size();
 
 		// if we completed a full block, ship it off
 		if (nbl >= BLOCK_SIZE)

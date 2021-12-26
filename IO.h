@@ -30,6 +30,7 @@ SOFTWARE.
 #else
 #include <sys/socket.h>
 #include <netdb.h>
+#define SOCKET int
 #endif
 
 #include "Stream.h"
@@ -140,7 +141,7 @@ namespace IO
 
 	class UDP : public StreamIn<NMEA>
 	{
-		int sock;
+		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
 
 	public:

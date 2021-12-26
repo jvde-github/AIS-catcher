@@ -24,7 +24,6 @@ SOFTWARE.
 
 #include <vector>
 #include <complex>
-#include <iostream>
 
 #include "Common.h"
 

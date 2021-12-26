@@ -123,7 +123,6 @@ namespace DSP
 		int idx_out = 0;
 
 		int K = 1;
-		int nTaps;
 
 		static const int outputSize = 16384/2;
 

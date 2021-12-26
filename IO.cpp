@@ -65,8 +65,6 @@ namespace IO
 		h.ai_flags = AI_ADDRCONFIG;
 #endif
 
-		//startWSA();
-
 		int code = getaddrinfo(host.c_str(), portname.c_str(), &h, &address);
 
 		if(code != 0 || address == NULL)

@@ -60,8 +60,7 @@ namespace Device {
 		{
 			freq_offset = Util::Parse::Integer(arg,-150,150);
 		}
-		else
-			throw "Invalid setting for RTLSDR.";
+		else throw "Invalid setting for RTLSDR.";
 	}
 
 	//---------------------------------------

@@ -72,7 +72,6 @@ namespace AIS
 		DSP::FilterCIC5 FCIC5_a, FCIC5_b;
 		DSP::FilterComplex FFIR_a, FFIR_b;
 		DSP::Downsample16Fixed DS16_Fixed;
-		DSP::Downsample8Fixed DS8_Fixed;
 		Util::ConvertRAW convert;
 
 	protected:
