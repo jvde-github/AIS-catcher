@@ -36,7 +36,6 @@ class FIFO
 
 	int head = 0;
 	int tail = 0;
-	int tail_ptr = 0;
 
 	std::atomic<int> count;
 
@@ -53,7 +52,7 @@ public:
 	void Init(int bs = 16 * 16384, int fs = 2)
 	{
 		BLOCK_SIZE = bs; N_BLOCKS = fs;
-		count = 0;
+		count = head = tail = 0;
 		_data.resize(N_BLOCKS * BLOCK_SIZE);
 	}
 
@@ -76,65 +75,54 @@ public:
 
 	T* Front()
 	{
-		return _data.data() + head * BLOCK_SIZE;
+		return _data.data() + head;
 	}
 	void Pop()
 	{
-		head = (head + 1) % N_BLOCKS;
+		head = (head + BLOCK_SIZE) % _data.size();
 		count--;
 	}
 	bool Full()
 	{
-		// we need one block extra to cater for wraps
-		return count >= N_BLOCKS;
-	}
-	T* Back()
-	{
-		return _data.data() + tail * BLOCK_SIZE;
+		return count == N_BLOCKS;
 	}
 
 	bool Push(T* data, int sz)
 	{
-		int _ptr = tail * BLOCK_SIZE + tail_ptr;
+		// size of new tail block including overvlow (e.g. if > BLOCK_SIZE)
+		int  nbl = tail % BLOCK_SIZE + sz;
 
 		// fits within a block, simplified case
-		if (tail_ptr + sz <= BLOCK_SIZE)
+		if (nbl <= BLOCK_SIZE)
 		{
 			if (count == N_BLOCKS) return false;
-			std::memcpy(_data.data() + _ptr, data, sz);
+			std::memcpy(_data.data() + tail, data, sz);
 		}
 		else
 		{
-			// need two blocks available and copy can involve wrap
+			// need next block available for overflow
 			if (count + 1 >= N_BLOCKS) return false;
 
-			int wrap = _ptr + sz - (int)_data.size();
+			// copy can involve wrap
+			int wrap = tail + sz - (int)_data.size();
 			if ( wrap < 0 ) wrap = 0;
 
-			std::memcpy(_data.data() + _ptr, data, sz - wrap);
+			std::memcpy(_data.data() + tail, data, sz - wrap);
 			std::memcpy(_data.data(), data + sz - wrap, wrap);
 		}
 
-		tail_ptr += sz;
+		tail = (tail + sz) % _data.size();
 
 		// if we completed a full block, ship it off
-		if (tail_ptr >= BLOCK_SIZE)
+		if (nbl >= BLOCK_SIZE)
 		{
-			SendBlock();
-			tail_ptr -= BLOCK_SIZE;
+			{
+				std::lock_guard<std::mutex> lock(fifo_mutex);
+				count++;
+			}
+
+			fifo_cond.notify_one();
 		}
 		return true;
-	}
-
-	void SendBlock()
-	{
-		tail = (tail + 1) % N_BLOCKS;
-
-		{
-			std::lock_guard<std::mutex> lock(fifo_mutex);
-			count++;
-		}
-
-		fifo_cond.notify_one();
 	}
 };
