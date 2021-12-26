@@ -517,9 +517,10 @@ int main(int argc, char* argv[])
 		liveModels = setupModels(liveModelsSelected, device);
 		std::vector<IO::SampleCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
 
+		liveModels[0]->setFixedPointDownsampling(fixedpoint_DS);
+
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->setFixedPointDownsampling(fixedpoint_DS);
 			liveModels[i]->buildModel(sample_rate, timer_on);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
