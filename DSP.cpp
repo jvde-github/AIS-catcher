@@ -399,8 +399,8 @@ namespace DSP
 			z = *in++;
 			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
 			z = (z >> shift) & mask;
-			out[i].real((float)(z & 0xFFFFU) / 32768 - 1.0f);
-			out[i].imag((float)(z >> 16) / 32768 - 1.0f);
+			out[i].real(((int32_t)(z & 0xFFFFU) - 32768) / 32768.0f);
+			out[i].imag(((int32_t)(z >> 16) - 32768) / 32768.0f);
 			z = *in++;
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}
