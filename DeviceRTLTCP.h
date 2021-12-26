@@ -36,6 +36,7 @@ SOFTWARE.
 #else
 #include <sys/socket.h>
 #include <netdb.h>
+#define SOCKET int
 #endif
 
 #endif
@@ -66,16 +67,16 @@ namespace Device {
 	class RTLTCP : public DeviceBase
 	{
 #ifdef HASRTLTCP
-		int sock = -1;
+		SOCKET sock = -1;
 
 		std::string host;
 		std::string port;
 		struct addrinfo* address = NULL;
 
 		struct {
-			uint32_t magic;
-			uint32_t tuner;
-			uint32_t gain;
+			uint32_t magic = 0;
+			uint32_t tuner = 0;
+			uint32_t gain = 0;
 		} dongle;
 
 		// output vector

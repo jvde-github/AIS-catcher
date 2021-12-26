@@ -91,7 +91,7 @@ namespace AIS
 
 		// zero padding
 		uint8_t b0 = x < nBytes ? DataFCS[x] : 0;
-		uint8_t b1 = x + 1 < nBytes ? DataFCS[x + 1] : 0;
+		uint8_t b1 = x + 1 < nBytes ? DataFCS[(int)(x + 1)] : 0;
 		uint16_t w = (b0 << 8) | b1;
 
 		const int mask = (1 << 6) - 1;

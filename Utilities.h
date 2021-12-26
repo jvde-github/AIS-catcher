@@ -88,30 +88,37 @@ namespace Util
 			for (auto& c : s) c = toupper(c);
 		}
 
+		// not using the complex class functions to be independent of internal representation
 		static void toFloat(CU8* in, CFLOAT32* out, int len)
 		{
+			uint8_t* data = (uint8_t *) in;
+
 			for (int i = 0; i < len; i++)
 			{
-				out[i].real((float)in[i].real() / 128.0f - 1.0f);
-				out[i].imag((float)in[i].imag() / 128.0f - 1.0f);
+				out[i].real(((int)data[2 * i] - 128) / 128.0f);
+				out[i].imag(((int)data[2 * i + 1] - 128) / 128.0f);
 			}
 		}
 
 		static void toFloat(CS8* in, CFLOAT32* out, int len)
 		{
+			int8_t* data = (int8_t*)in;
+
 			for (int i = 0; i < len; i++)
 			{
-				out[i].real((float)in[i].real() / 128.0f);
-				out[i].imag((float)in[i].imag() / 128.0f);
+				out[i].real(data[2*i] / 128.0f);
+				out[i].imag(data[2 * i + 1] / 128.0f);
 			}
 		}
 
 		static void toFloat(CS16* in, CFLOAT32* out, int len)
 		{
+			int16_t* data = (int16_t*)in;
+
 			for (int i = 0; i < len; i++)
 			{
-				out[i].real((float)in[i].real() / 32768.0f);
-				out[i].imag((float)in[i].imag() / 32768.0f);
+				out[i].real(data[2*i] / 32768.0f);
+				out[i].imag(data[2*i+1] / 32768.0f);
 			}
 		}
 	};

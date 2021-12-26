@@ -158,12 +158,12 @@ namespace DSP
 	{
 		int i, j;
 
-		nTaps = (int)taps.size();
+		int nt = (int)taps.size();
 
 		if (output.size() < outputSize) output.resize(outputSize);
-		if (buffer.size() < len) buffer.resize(len + nTaps - 1,0.0f);
+		if (buffer.size() < len + nt) buffer.resize((int) (len + nt),0.0f);
 
-		for (i = 0, j = nTaps - 1; i < len; i++, j++) buffer[j] = data[i];
+		for (i = 0, j = nt - 1; i < len; i++, j++) buffer[j] = data[i];
 
 		while(idx_in < len)
 		{
@@ -181,7 +181,7 @@ namespace DSP
 		idx_in -= len;
 
 
-		for (j = 0, i = len - nTaps + 1; j < nTaps - 1; i++, j++)
+		for (j = 0, i = len - nt + 1; j < nt - 1; i++, j++)
 			buffer[j] = data[i];
 	}
 
