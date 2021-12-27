@@ -14,7 +14,7 @@ For testing, do not use the development version (edge) but instead download the 
 
 **Edge**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements. 
 with only a very small impact on accuracy. 
-This new feauture can  be activated with the ```-F``` switch (ust it when running a RTL-SDR at 1536K). 
+This new feauture can  be activated with the ```-F``` switch (use it when running a RTL-SDR at 1536K). 
 I implemented a trick to speed up fixed point downsampling significantly and phase determination has been sped up by switching to exponential moving averages.
 To give an idea of the performance improvement on a Raspberry PI (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 ```
