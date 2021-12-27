@@ -61,7 +61,7 @@ namespace AIS
 	};
 
 
-	// common downsampling model 
+	// common downsampling model
 	class ModelFrontend : public Model
 	{
 	private:
@@ -112,7 +112,7 @@ namespace AIS
 		void buildModel(int, bool);
 	};
 
-	// simple model embedding some elements of a coherent model with local phase estimation
+	// Simple model embedding some elements of a coherent model with local phase estimation
 	class ModelCoherent : public ModelFrontend
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
@@ -135,6 +135,7 @@ namespace AIS
 		void buildModel(int,bool);
 	};
 
+	// As the ModelCoherent but optimized for speed at the expense of accuracy
 	class ModelDefaultFast : public ModelFrontend
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
@@ -144,14 +145,13 @@ namespace AIS
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::SamplerParallelComplex S_a, S_b;
 
-		int nHistory = 8;
 		int nDelay = 0;
 
 	public:
-		ModelDefaultFast(Device::DeviceBase* c, int h = 12, int d = 3) : ModelFrontend(c)
+		ModelDefaultFast(Device::DeviceBase* c, int d = 3) : ModelFrontend(c)
 		{
 			setName("AIS engine (speed optimized) " VERSION);
-			nHistory = h; nDelay = d;
+			nDelay = d;
 
 		}
 		void buildModel(int,bool);
