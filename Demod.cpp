@@ -44,18 +44,6 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
-	void CoherentDemodulation::setPhases()
-	{
-		int np2 = nPhases / 2;
-		phase.resize(np2);
-
-		for (int i = 0; i < np2; i++)
-		{
-			float alpha = PI / 2.0f / np2 * i + PI / 2.0f / (2.0f * np2);
-			phase[i] = std::polar(1.0f, alpha);
-		}
-	}
-
 	void CoherentDemodulation::Receive(const CFLOAT32* data, int len)
 	{
 		for (int i = 0; i < len; i++)
@@ -109,6 +97,62 @@ namespace DSP
 				{
 					max_val = avg;
 					max_idx = j;
+				}
+			}
+
+			// determine the bit
+			bool b2 = (bits[max_idx] >> (nDelay + 1)) & 1;
+			bool b1 = (bits[max_idx] >> nDelay) & 1;
+
+			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
+
+			sendOut(&b, 1);
+		}
+	}
+
+	// Same version as default but instead relying on moving average
+	void DefaultFastDemodulation::Receive(const CFLOAT32* data, int len)
+	{
+		for (int i = 0; i < len; i++)
+		{
+			FLOAT32 re, im;
+
+			//  multiply samples with (1j) ** i, to get all points on the same line 
+			switch (rot)
+			{
+			case 0: re = data[i].real(); im = data[i].imag(); break;
+			case 1: im = data[i].real(); re = -data[i].imag(); break;
+			case 2: re = -data[i].real(); im = -data[i].imag(); break;
+			case 3: im = -data[i].real(); re = data[i].imag(); break;
+			}
+
+			rot = (rot + 1) & 3;
+
+			// Determining the phase is approached as a linear classification problem. 
+			for (int j = 0; j < nPhases / 2; j++)
+			{
+				FLOAT32 t, a = re * phase[j].real(), b = im * phase[j].imag();
+
+				t = a + b;
+				bits[j] = (bits[j] << 1) | ((t > 0) & 1);
+				ma[j] = weight * ma[j] + (1-weight) * std::abs(t);
+
+				t = a - b;
+				bits[nPhases - 1 - j] = (bits[nPhases - 1 -j] << 1) | ((t > 0) & 1);
+				ma[nPhases - 1 - j] = weight * ma[nPhases - 1 - j] + (1-weight) * std::abs(t);
+			}
+
+			FLOAT32 max_val = 0;
+			int prev_max = max_idx + nPhases;
+
+			for (int p = prev_max - nSearch; p <= prev_max + nSearch; p++)
+			{
+				int j = p % nPhases;
+				FLOAT32 avg = ma[j];
+
+				if (avg > max_val)
+				{
+					max_val = avg; max_idx = j;
 				}
 			}
 

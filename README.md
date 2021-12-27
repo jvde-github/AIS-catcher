@@ -13,8 +13,9 @@ The program provides the option to read and decode the raw discriminator output 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
 **Edge**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements. 
-I implemented a trick to speed up fixed point downsampling significantly 
-with only a very small impact on accuracy. This new feauture can  be activated with the ```-F``` switch (only works for RTL-SDR at 1536K). 
+with only a very small impact on accuracy. 
+This new feauture can  be activated with the ```-F``` switch (ust it when running a RTL-SDR at 1536K). 
+I implemented a trick to speed up fixed point downsampling significantly and phase determination has been sped up by switching to exponential moving averages.
 To give an idea of the performance improvement on a Raspberry PI (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 ```
 AIS-catcher -r posterholt.raw -s 1536000 -b -q -v
@@ -25,9 +26,9 @@ Resulting in 38 messages and the ```-b``` switch prints the timing used for deco
 ```
 Adding the ```-F``` switch yielded the same number of messages but timing is now:
 ```
-[AIS engine v0.31]      : 9747.94 ms
+[AIS engine (speed optimized) v0.31]	: 7785.66 ms
 ```
-This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops and with a processor load reduced from 97% to ~65%.
+This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
 
 Release version **0.31**: allow input from stdin and very minor speed and performance improvements
 
@@ -219,11 +220,11 @@ In this example the default model performs quite well in contrast to the standar
 
 ### Experimenting with recorded signals
 The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. The output of the various receivers was sent via UDP to AISdipatcher which removes any duplicates and counts messages. The results in terms of  number of messages/distinct vessels:
- | File | rtl-ais | AIS-catcher 0.31  | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
+ | File | rtl-ais | AIS-catcher Edge  | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
  | :--- | :--- | :---: | :---: | :---: | :---: |
- |Scheveningen |  17/16 | 42/36| 30/27 | 37/31 | recorded @ 1536K with `rtl-sdr` (auto gain) |
- |Moscow| 146/27 | 197/34 |  195/31 | 183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
- |Vlieland | 51/31| 93/54 | 72/44 | 80/52 | recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Scheveningen |  17/16 | 43/37| 30/27 | 37/31 | recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Moscow| 146/27 | 197/33 |  195/31 | 183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
+ |Vlieland | 51/31| 93/53 | 72/44 | 80/52 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  |Posterholt | 2/2 | 39/22  | 13/12 | 31/21 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  
  **Update 1:** AISrec recently had a version update of 2.208 (October 23, 2021) with improved stability and reception quality and the table above has been updated to include the results from this recent version. 
@@ -340,12 +341,10 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- DSP: improve filters (e.g. add droop compensation), performance enhancement, etc
-- Decoding: add new models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
-- IO: TCP IP
+- DSP: improve filters (e.g. add droop compensation, large rate reductions), etc
+- Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - Testing: more set ups, assess gap with commercial equipment
 - GUI: Windows, Android
-- Code clean up: default sampling rate from device rates and not model rates, generic circular buffer for devices
-- Multiple SDRs: validate location from signal, privacy filter
+- Multiple SDRs: validate location from signal (e.g. like MLAT), privacy filters
 - ....
 - ....
