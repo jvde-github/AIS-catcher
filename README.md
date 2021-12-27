@@ -70,7 +70,7 @@ use: AIS-catcher [options]
 	[-m xx run specific decoding model (default: 2)]
 	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discriminator output]
 	[-b benchmark demodulation models for time - for development purposes (default: off)]
-	[-F fast fixed point downsampling for RTLSDR at 1536K Hz sampling (default: off)]
+	[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]
 
 	Device specific settings:
 
