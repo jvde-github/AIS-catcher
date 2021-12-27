@@ -29,6 +29,8 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 
+// FIFO implementation: input (Push) can be any size, output (Pop) will be of size BLOCK_SIZE
+
 template<typename T>
 class FIFO
 {
@@ -92,32 +94,27 @@ public:
 
 	bool Push(T* data, int sz)
 	{
-		// size of new tail block including overflow (i.e. > BLOCK_SIZE)
-		int  nbl = tail % BLOCK_SIZE + sz;
+		if(sz <= 0) return true;
 
-		// fits within a block, simplified case
-		if (nbl <= BLOCK_SIZE)
+		// size of new tail block including overflow (i.e. > BLOCK_SIZE)
+		int block_ready = (tail % BLOCK_SIZE + sz) / BLOCK_SIZE;
+		int block_needed = (tail % BLOCK_SIZE + sz - 1) / BLOCK_SIZE + 1;
+		int wrap = tail + sz - (int)_data.size();
+
+		if(count + block_needed > N_BLOCKS) return false;
+
+		if (wrap <= 0)
 		{
-			if (count == N_BLOCKS) return false;
 			std::memcpy(_data.data() + tail, data, sz);
 		}
 		else
 		{
-			// need next block available for overflow
-			if (count + 1 >= N_BLOCKS) return false;
-
-			// copy can involve wrap
-			int wrap = tail + sz - (int)_data.size();
-			if ( wrap < 0 ) wrap = 0;
-
 			std::memcpy(_data.data() + tail, data, sz - wrap);
 			std::memcpy(_data.data(), data + sz - wrap, wrap);
 		}
 
-		tail = (tail + sz) % (int) _data.size();
-
 		// if we completed a full block, ship it off
-		if (nbl >= BLOCK_SIZE)
+		while(block_ready --)
 		{
 			{
 				std::lock_guard<std::mutex> lock(fifo_mutex);
@@ -126,6 +123,9 @@ public:
 
 			fifo_cond.notify_one();
 		}
+
+		tail = (tail + sz) % (int) _data.size();
+
 		return true;
 	}
 };

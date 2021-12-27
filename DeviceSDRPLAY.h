@@ -23,6 +23,7 @@ SOFTWARE.
 #pragma once
 
 #include "Device.h"
+#include "FIFO.h"
 
 #ifdef HASSDRPLAY
 #include <sdrplay_api.h>
@@ -55,20 +56,8 @@ namespace Device {
 		std::thread run_thread;
 		void Run();
 
-		// buffer for incoming data
-		std::vector<std::vector<CFLOAT32>> fifo;
-		static const int sizeFIFO = 256;
-		int head = 0;
-		int tail = 0;
-		std::atomic<int> count;
-
-		std::mutex fifo_mutex;
-		std::condition_variable fifo_cond;
-
-		// output vector
+		FIFO<char> fifo;
 		std::vector<CFLOAT32> output;
-		const int buffer_size = 16 * 16384;
-		int ptr = 0;
 
 		// SDRPLAY specific
 		sdrplay_api_DeviceT device;

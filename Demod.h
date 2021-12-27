@@ -22,12 +22,23 @@ SOFTWARE.
 
 #pragma once
 
+#include <cstring>
+
 #include "Stream.h"
 #include "Filters.h"
 #include "Signal.h"
 
 namespace DSP
 {
+	static const int nPhases = 16;
+
+	static const CFLOAT32 phase[nPhases/2] =
+	{
+		{ 9.9518472640441780e-01f, 9.8017143048367339e-02f }, { 9.5694033335306883e-01f, 2.9028468509743588e-01f }, { 8.8192125790916542e-01f, 4.7139674887287397e-01f },
+		{ 7.7301044123076901e-01f, 6.3439329894649099e-01f }, { 6.3439326515712957e-01f, 7.7301046896098113e-01f }, { 4.7139671032286945e-01f, 8.8192127851457169e-01f },
+		{ 2.9028464326824349e-01f, 9.5694034604181499e-01f }, { 9.8017099547459546e-02f, 9.9518473068888236e-01f }
+	};
+
 	class FMDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
 	{
 		std::vector <FLOAT32> output;
@@ -44,10 +55,8 @@ namespace DSP
 		int nDelay = 0;
 
 		static const int maxHistory = 14;
-		static const int nPhases = 16;
 		static const int nSearch = 2;
 
-		std::vector <CFLOAT32> phase;
 		FLOAT32 memory[nPhases][maxHistory];
 		char bits[nPhases];
 
@@ -55,14 +64,32 @@ namespace DSP
 		int rot = 0;
 		int last = 0;
 
-		void setPhases();
+	public:
+
+		void Receive(const CFLOAT32* data, int len);
+		void setParams(int h, int d) { assert(nHistory <= maxHistory); assert(nDelay <= nHistory); nHistory = h; nDelay = d; }
+	};
+
+	class DefaultFastDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	{
+		int nHistory = 8;
+		int nDelay = 0;
+
+		static const int maxHistory = 14;
+		static const int nSearch = 2;
+
+		const FLOAT32 weight = 0.875f;
+
+		FLOAT32 ma[nPhases];
+		char bits[nPhases];
+
+		int max_idx = 0;
+		int rot = 0;
 
 	public:
 
-		CoherentDemodulation() { setPhases(); }
-
+		DefaultFastDemodulation() { std::memset(ma, 0, nPhases * sizeof(FLOAT32)); }
 		void Receive(const CFLOAT32* data, int len);
-
-		void setParams(int h, int d) { assert(nHistory <= maxHistory); assert(nDelay <= nHistory); nHistory = h; nDelay = d; }
+		void setParams(int d) { assert(nDelay <= nHistory); nDelay = d; }
 	};
 }

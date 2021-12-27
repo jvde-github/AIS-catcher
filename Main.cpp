@@ -176,8 +176,6 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 {
 	std::vector<AIS::Model*> liveModels;
 
-	if (liveModelsSelected.size() == 0) liveModelsSelected.push_back(2);
-
 	for (auto mi : liveModelsSelected)
 	{
 		switch (mi)
@@ -187,6 +185,7 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 		case 2: liveModels.push_back(new AIS::ModelCoherent(dev)); break;
 		case 3: liveModels.push_back(new AIS::ModelDiscriminator(dev)); break;
 		case 4: liveModels.push_back(new AIS::ModelChallenger(dev)); break;
+		case 5: liveModels.push_back(new AIS::ModelDefaultFast(dev)); break;
 		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
 		}
 	}
@@ -228,7 +227,7 @@ int main(int argc, char* argv[])
 	bool timer_on = false;
 	int NMEA_to_screen = 2;
 	int verboseUpdateTime = 3000;
-	bool fixedpoint_DS = false;
+	bool OptimizeSpeed = false;
 
 	Device::SettingsRAWFile settingsRAW;
 	Device::SettingsWAVFile settingsWAV;
@@ -297,7 +296,7 @@ int main(int argc, char* argv[])
 				NMEA_to_screen = 1;
 				break;
 			case 'F':
-				fixedpoint_DS = true;
+				OptimizeSpeed = true;
 				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
@@ -514,10 +513,11 @@ int main(int argc, char* argv[])
 		device->setFrequency((int)(162e6));
 
 		// Build model and attach output to main model
+		if (liveModelsSelected.size() == 0) liveModelsSelected.push_back( OptimizeSpeed ? 5 : 2);
 		liveModels = setupModels(liveModelsSelected, device);
 		std::vector<IO::SampleCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
 
-		liveModels[0]->setFixedPointDownsampling(fixedpoint_DS);
+		liveModels[0]->setFixedPointDownsampling(OptimizeSpeed);
 
 		for (int i = 0; i < liveModels.size(); i++)
 		{
@@ -542,7 +542,7 @@ int main(int argc, char* argv[])
 
 		if(verbose)
 		{
-			std::cerr << "Generic settings: " << "sample rate -s " << device->getSampleRate() << "K" << std::endl;
+			std::cerr << "Generic settings: " << "sample rate -s " << device->getSampleRate()/1000 << "K" << std::endl;
 		}
 
 		// -----------------

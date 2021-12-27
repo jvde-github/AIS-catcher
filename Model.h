@@ -135,6 +135,28 @@ namespace AIS
 		void buildModel(int,bool);
 	};
 
+	class ModelDefaultFast : public ModelFrontend
+	{
+		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
+		std::vector<DSP::DefaultFastDemodulation> CD_a, CD_b;
+
+		DSP::FilterComplex FC_a, FC_b;
+		std::vector<AIS::Decoder> DEC_a, DEC_b;
+		DSP::SamplerParallelComplex S_a, S_b;
+
+		int nHistory = 8;
+		int nDelay = 0;
+
+	public:
+		ModelDefaultFast(Device::DeviceBase* c, int h = 12, int d = 3) : ModelFrontend(c)
+		{
+			setName("AIS engine (speed optimized) " VERSION);
+			nHistory = h; nDelay = d;
+
+		}
+		void buildModel(int,bool);
+	};
+
 	// Challenger model, some small improvements to test before moving into the default engine
 	class ModelChallenger : public ModelCoherent
 	{

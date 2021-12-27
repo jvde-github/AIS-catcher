@@ -116,72 +116,35 @@ namespace Device {
 
 	void SDRPLAY::callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int len, unsigned int reset)
 	{
-		if (count == sizeFIFO)
+		if (output.size() < len) output.resize(len);
+
+		for (int i = 0; i < len; i++)
 		{
-			std::cerr << "SDRPLAY: Buffer overrun!" << std::endl;
+			output[i].real(xi[i] / 32768.0f);
+			output[i].imag(xq[i] / 32768.0f);
 		}
-		else
-		{
-			if (fifo[tail].size() != len) fifo[tail].resize(len);
 
-			for (int i = 0; i < len; i++)
-			{
-				fifo[tail][i].real(xi[i] / 32768.0f);
-				fifo[tail][i].imag(xq[i] / 32768.0f);
-			}
+		if (!fifo.Push((char*)output.data(), len * sizeof(CFLOAT32))) std::cerr << "SDRPLAY: buffer overrun." << std::endl;
 
-			tail = (tail + 1) % sizeFIFO;
-
-			{
-				std::lock_guard<std::mutex> lock(fifo_mutex);
-				count++;
-			}
-
-			fifo_cond.notify_one();
-		}
 	}
 
 	void SDRPLAY::Run()
 	{
-		std::cerr << "SDRPLAY: Start demodulation thread." << std::endl;
-
-		if (output.size() < buffer_size) output.resize(buffer_size);
-
 		while (isStreaming())
 		{
-			if (count == 0)
+			if (fifo.Wait())
 			{
-				std::unique_lock <std::mutex> lock(fifo_mutex);
-				fifo_cond.wait_for(lock, std::chrono::milliseconds((int)((float)buffer_size / (float)sample_rate * 1000.0f * 1.05f)), [this] {return count != 0; });
-
-				if (count == 0) std::cerr << "SDRPLAY: timeout." << std::endl;
+				RAW r = { Format::CF32, fifo.Front(), fifo.BlockSize() };
+				Send(&r, 1);
+				fifo.Pop();
 			}
-
-			if (count != 0)
-			{
-				for (int i = 0; i < fifo[head].size(); i++)
-				{
-					output[ptr] = fifo[head][i];
-
-					if (++ptr == buffer_size)
-					{
-						ptr = 0;
-
-						RAW r = { Format::CF32, output.data(), buffer_size * sizeof(CFLOAT32) };
-						Send(&r,1);
-					}
-				}
-
-				head = (head + 1) % sizeFIFO;
-				count--;
-			}
+			else std::cerr << "SDRPLAY: timeout." << std::endl;
 		}
-
-		std::cerr << "SDRPLAY: Stop demodulation thread." << std::endl;
 	}
 
 	void SDRPLAY::Open(uint64_t h,SettingsSDRPLAY &s)
 	{
+		sdrplay_api_ErrT err;
 		unsigned int DeviceCount;
 
 		sdrplay_api_LockDeviceApi();
@@ -192,8 +155,10 @@ namespace Device {
 
 		device = devices[h];
 
-		if(sdrplay_api_SelectDevice(&device) != sdrplay_api_Success)
+		err = sdrplay_api_SelectDevice(&device);
+		if(err != sdrplay_api_Success)
 		{
+			std::cerr << sdrplay_api_GetErrorString(err) << std::endl;
 			sdrplay_api_UnlockDeviceApi();
 			throw "SDRPLAY: cannot open device";
 		}
@@ -217,14 +182,7 @@ namespace Device {
 
 	void SDRPLAY::Play()
 	{
-		// set up FIFO
-		fifo.resize(sizeFIFO);
-
-		count = 0;
-		tail = 0;
-		head = 0;
-
-		// SDRPLAY
+		fifo.Init(16 * 16384, 6);
 
 		deviceParams->devParams->fsFreq.fsHz = sample_rate;
 		chParams->tunerParams.ifType = sdrplay_api_IF_Zero;
