@@ -21,11 +21,11 @@ AIS-catcher -r posterholt.raw -s 1536000 -b -q -v
 ```
 Resulting in 38 messages and the ```-b``` switch prints the timing used for decoding:
 ```
-[AIS engine v0.31]      : 17844.9 ms
+[AIS engine v0.31]	: 17312.1 ms
 ```
 Adding the ```-F``` switch yielded the same number of messages but timing is now:
 ```
-[AIS engine (speed optimized) v0.31]	: 7785.66 ms
+[AIS engine (speed optimized) v0.31]	: 7722.32 ms
 ```
 This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
 

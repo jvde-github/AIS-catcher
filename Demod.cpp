@@ -79,6 +79,7 @@ namespace DSP
 				bits[nPhases - 1 - j] |= (t > 0) & 1;
 				memory[nPhases - 1 - j][last] = std::abs(t);
 			}
+
 			last = (last + 1) % nHistory;
 
 			FLOAT32 max_val = 0;
@@ -90,13 +91,11 @@ namespace DSP
 				int j = p % nPhases;
 				FLOAT32 avg = memory[j][0];
 
-				for (int l = 1; l < nHistory; l++)
-					avg += memory[j][l];
+				for (int l = 1; l < nHistory; l++) avg += memory[j][l];
 
 				if (avg > max_val)
 				{
-					max_val = avg;
-					max_idx = j;
+					max_val = avg; max_idx = j;
 				}
 			}
 
@@ -142,17 +141,19 @@ namespace DSP
 				ma[nPhases - 1 - j] = weight * ma[nPhases - 1 - j] + (1-weight) * std::abs(t);
 			}
 
-			FLOAT32 max_val = 0;
-			int prev_max = max_idx + nPhases;
+			// we look at previous [max_idx - nSearch, max_idx + nSearch]
+			int idx = (max_idx - nSearch + nPhases) & (nPhases-1);
 
-			for (int p = prev_max - nSearch; p <= prev_max + nSearch; p++)
+			max_idx = idx;
+			FLOAT32 max_val = ma[idx];
+
+			for (int p = 0; p < nSearch << 1; p++)
 			{
-				int j = p % nPhases;
-				FLOAT32 avg = ma[j];
+				idx = ( ++idx ) & ( nPhases -1 );
 
-				if (avg > max_val)
+				if (ma[idx] > max_val)
 				{
-					max_val = avg; max_idx = j;
+					max_val = ma[idx]; max_idx = idx;
 				}
 			}
 
