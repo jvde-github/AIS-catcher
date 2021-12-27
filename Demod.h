@@ -30,6 +30,7 @@ SOFTWARE.
 
 namespace DSP
 {
+	// needs to be a power of two for the Fast version
 	static const int nPhases = 16;
 
 	static const CFLOAT32 phase[nPhases/2] =
