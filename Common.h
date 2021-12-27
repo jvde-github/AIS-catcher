@@ -35,7 +35,6 @@ SOFTWARE.
 #endif
 
 typedef float FLOAT32;
-//#define FLOAT32 float
 typedef double FLOAT64;
 typedef std::complex <FLOAT32> CFLOAT32;
 typedef std::complex <FLOAT64> CFLOAT64;

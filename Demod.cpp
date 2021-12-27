@@ -50,7 +50,7 @@ namespace DSP
 		{
 			FLOAT32 re, im;
 
-			//  multiply samples with (1j) ** i, to get all points on the same line 
+			//  multiply samples with (1j) ** i, to get all points on the same line
 			switch (rot)
 			{
 			case 0: re = data[i].real(); im = data[i].imag(); break;
@@ -61,7 +61,7 @@ namespace DSP
 
 			rot = (rot + 1) & 3;
 
-			// Determining the phase is approached as a linear classification problem. 
+			// Determining the phase is approached as a linear classification problem.
 			for (int j = 0; j < nPhases / 2; j++)
 			{
 				FLOAT32 a = re * phase[j].real();
@@ -117,7 +117,7 @@ namespace DSP
 		{
 			FLOAT32 re, im;
 
-			//  multiply samples with (1j) ** i, to get all points on the same line 
+			//  multiply samples with (1j) ** i, to get all points on the same line
 			switch (rot)
 			{
 			case 0: re = data[i].real(); im = data[i].imag(); break;
@@ -128,7 +128,7 @@ namespace DSP
 
 			rot = (rot + 1) & 3;
 
-			// Determining the phase is approached as a linear classification problem. 
+			// Determining the phase is approached as a linear classification problem.
 			for (int j = 0; j < nPhases / 2; j++)
 			{
 				FLOAT32 t, a = re * phase[j].real(), b = im * phase[j].imag();
