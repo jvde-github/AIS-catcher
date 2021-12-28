@@ -27,10 +27,10 @@ SOFTWARE.
 #include "Demod.h"
 #include "DSP.h"
 
-namespace DSP
+namespace Demod
 {
 
-	void FMDemodulation::Receive(const CFLOAT32* data, int len)
+	void FM::Receive(const CFLOAT32* data, int len)
 	{
 		if (output.size() < len) output.resize(len);
 
@@ -44,7 +44,7 @@ namespace DSP
 		sendOut(output.data(), len);
 	}
 
-	void CoherentDemodulation::Receive(const CFLOAT32* data, int len)
+	void PhaseSearch::Receive(const CFLOAT32* data, int len)
 	{
 		for (int i = 0; i < len; i++)
 		{
@@ -68,15 +68,12 @@ namespace DSP
 				FLOAT32 b = im * phase[j].imag();
 				FLOAT32 t;
 
-				bits[j] <<= 1;
-				bits[nPhases - 1 - j] <<= 1;
-
 				t = a + b;
-				bits[j] |= (t > 0) & 1;
+				bits[j] = (bits[j] << 1) | (t > 0);
 				memory[j][last] = std::abs(t);
 
 				t = a - b;
-				bits[nPhases - 1 - j] |= (t > 0) & 1;
+				bits[nPhases - 1 - j] = (bits[nPhases - 1 - j] << 1) | (t > 0);
 				memory[nPhases - 1 - j][last] = std::abs(t);
 			}
 
@@ -109,8 +106,8 @@ namespace DSP
 		}
 	}
 
-	// Same version as default but instead relying on moving average
-	void DefaultFastDemodulation::Receive(const CFLOAT32* data, int len)
+	// Same version as above but instead relying on moving average to speed up
+	void PhaseSearchMA::Receive(const CFLOAT32* data, int len)
 	{
 		for (int i = 0; i < len; i++)
 		{
@@ -133,23 +130,21 @@ namespace DSP
 				FLOAT32 t, a = re * phase[j].real(), b = im * phase[j].imag();
 
 				t = a + b;
-				bits[j] = (bits[j] << 1) | ((t > 0) & 1);
-				ma[j] = weight * ma[j] + (1-weight) * std::abs(t);
+				bits[j] = (bits[j] << 1) | (t > 0);
+				ma[j] = weight * ma[j] + (1 - weight) * std::abs(t);
 
 				t = a - b;
-				bits[nPhases - 1 - j] = (bits[nPhases - 1 -j] << 1) | ((t > 0) & 1);
-				ma[nPhases - 1 - j] = weight * ma[nPhases - 1 - j] + (1-weight) * std::abs(t);
+				bits[nPhases - 1 - j] = (bits[nPhases - 1 - j] << 1) | (t > 0);
+				ma[nPhases - 1 - j] = weight * ma[nPhases - 1 - j] + (1 - weight) * std::abs(t);
 			}
 
 			// we look at previous [max_idx - nSearch, max_idx + nSearch]
 			int idx = (max_idx - nSearch + nPhases) & (nPhases-1);
-
-			max_idx = idx;
-			FLOAT32 max_val = ma[idx];
+			FLOAT32 max_val = ma[idx]; max_idx = idx;
 
 			for (int p = 0; p < nSearch << 1; p++)
 			{
-				idx = ( ++idx ) & ( nPhases -1 );
+				idx = (++idx) & (nPhases - 1);
 
 				if (ma[idx] > max_val)
 				{
