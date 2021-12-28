@@ -12,9 +12,9 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Release version **0,32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements with only a  small tradeoff on sensitivity. 
-I implemented a trick to speed up fixed point downsampling significantly. Furthermore a new model is introduced (```-m 5```) which uses exponential moving averages in the phase determination part instead of a standard moving average.
-Both features can be activated with the ```-F``` switch (ideally use it when running a RTL-SDR at 1536K). 
+Release version **0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
+I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
+Both features can be activated with the ```-F``` switch. 
 To give an idea of the performance improvement on a Raspberry PI (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 
 ```
