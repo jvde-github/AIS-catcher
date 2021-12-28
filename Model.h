@@ -61,7 +61,7 @@ namespace AIS
 	};
 
 
-	// common downsampling model
+	// Common front-end downsampling
 	class ModelFrontend : public Model
 	{
 	private:
@@ -84,10 +84,10 @@ namespace AIS
 		void buildModel(int, bool);
 	};
 
-	// Standard demodulation model
+	// Standard demodulation model, FM with brute-force timing recovery
 	class ModelStandard : public ModelFrontend
 	{
-		DSP::FMDemodulation FM_a, FM_b;
+		Demod::FM FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
@@ -102,7 +102,7 @@ namespace AIS
 	// Base model for development purposes, simplest and fastest
 	class ModelBase : public ModelFrontend
 	{
-		DSP::FMDemodulation FM_a, FM_b;
+		Demod::FM FM_a, FM_b;
 		DSP::Filter FR_a, FR_b;
 		DSP::SamplerPLL sampler_a, sampler_b;
 		AIS::Decoder DEC_a, DEC_b;
@@ -113,10 +113,10 @@ namespace AIS
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
-	class ModelCoherent : public ModelFrontend
+	class ModelPhaseSearch : public ModelFrontend
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		std::vector<DSP::CoherentDemodulation> CD_a, CD_b;
+		std::vector<Demod::PhaseSearch> CD_a, CD_b;
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
@@ -126,7 +126,7 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelCoherent(Device::DeviceBase* c, int h = 12, int d = 3) : ModelFrontend(c)
+		ModelPhaseSearch(Device::DeviceBase* c, int h = 12, int d = 3) : ModelFrontend(c)
 		{
 			setName("AIS engine " VERSION);
 			nHistory = h; nDelay = d;
@@ -135,11 +135,11 @@ namespace AIS
 		void buildModel(int,bool);
 	};
 
-	// As the ModelCoherent but optimized for speed at the expense of accuracy
-	class ModelDefaultFast : public ModelFrontend
+	// As the PhaseSearch model but optimized for speed at the expense of accuracy by using moving averages
+	class ModelPhaseSearchMA : public ModelFrontend
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		std::vector<DSP::DefaultFastDemodulation> CD_a, CD_b;
+		std::vector<Demod::PhaseSearchMA> CD_a, CD_b;
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
@@ -148,7 +148,7 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelDefaultFast(Device::DeviceBase* c, int d = 3) : ModelFrontend(c)
+		ModelPhaseSearchMA(Device::DeviceBase* c, int d = 3) : ModelFrontend(c)
 		{
 			setName("AIS engine (speed optimized) " VERSION);
 			nDelay = d;
@@ -157,18 +157,17 @@ namespace AIS
 		void buildModel(int,bool);
 	};
 
-	// Challenger model, some small improvements to test before moving into the default engine
-	class ModelChallenger : public ModelCoherent
+	// Challenger model
+	class ModelChallenger : public ModelPhaseSearch
 	{
 	public:
-		ModelChallenger(Device::DeviceBase* c, int h = 8, int d = 0) : ModelCoherent(c, h, d) 
+		ModelChallenger(Device::DeviceBase* c, int h = 8, int d = 0) : ModelPhaseSearch(c, h, d) 
 		{
 			setName("Challenger model");
 		}
 	};
 
-	// Standard demodulation model for FM demodulated files
-
+	// Standard demodulation model for FM discriminator input
 	class ModelDiscriminator : public Model
 	{
 		Util::RealPart RP;

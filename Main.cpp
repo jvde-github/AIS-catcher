@@ -182,10 +182,10 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 		{
 		case 0: liveModels.push_back(new AIS::ModelStandard(dev)); break;
 		case 1: liveModels.push_back(new AIS::ModelBase(dev)); break;
-		case 2: liveModels.push_back(new AIS::ModelCoherent(dev)); break;
+		case 2: liveModels.push_back(new AIS::ModelPhaseSearch(dev)); break;
 		case 3: liveModels.push_back(new AIS::ModelDiscriminator(dev)); break;
 		case 4: liveModels.push_back(new AIS::ModelChallenger(dev)); break;
-		case 5: liveModels.push_back(new AIS::ModelDefaultFast(dev)); break;
+		case 5: liveModels.push_back(new AIS::ModelPhaseSearchMA(dev)); break;
 		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
 		}
 	}
@@ -557,7 +557,10 @@ int main(int argc, char* argv[])
 
 				if (verbose)
 					for (int j = 0; j < liveModels.size(); j++)
-						std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+					{
+						std::string name = liveModels[j]->getName();
+						std::cerr << "[" << name << "]: " <<std::string(37-name.length(),' ') <<  statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+					}
 			}
 		}
 
@@ -569,13 +572,18 @@ int main(int argc, char* argv[])
 		{
 			std::cerr << "----------------------" << std::endl;
 			for (int j = 0; j < liveModels.size(); j++)
-				std::cerr << "[" << liveModels[j]->getName() << "]\t: " << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
-
+			{
+				std::string name = liveModels[j]->getName();
+				std::cerr << "[" << name << "]: " << std::string(37-name.length(),' ') << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+			}
 		}
 
 		if(timer_on)
 			for (auto m : liveModels)
-				std::cerr << "[" << m->getName() << "]\t: " << m->getTotalTiming() << " ms" << std::endl;
+			{
+				std::string name = m->getName();
+				std::cerr << "[" << m->getName() << "]: " <<std::string(37-name.length(),' ') << m->getTotalTiming() << " ms" << std::endl;
+			}
 
 		device->Close();
 

@@ -28,7 +28,7 @@ SOFTWARE.
 #include "Filters.h"
 #include "Signal.h"
 
-namespace DSP
+namespace Demod
 {
 	// needs to be a power of two for the Fast version
 	static const int nPhases = 16;
@@ -40,7 +40,7 @@ namespace DSP
 		{ 2.9028464326824349e-01f, 9.5694034604181499e-01f }, { 9.8017099547459546e-02f, 9.9518473068888236e-01f }
 	};
 
-	class FMDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	class FM : public SimpleStreamInOut<CFLOAT32, FLOAT32>
 	{
 		std::vector <FLOAT32> output;
 		CFLOAT32 prev = 0.0;
@@ -50,7 +50,7 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
-	class CoherentDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	class PhaseSearch : public SimpleStreamInOut<CFLOAT32, FLOAT32>
 	{
 		int nHistory = 8;
 		int nDelay = 0;
@@ -71,12 +71,10 @@ namespace DSP
 		void setParams(int h, int d) { assert(nHistory <= maxHistory); assert(nDelay <= nHistory); nHistory = h; nDelay = d; }
 	};
 
-	class DefaultFastDemodulation : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	class PhaseSearchMA : public SimpleStreamInOut<CFLOAT32, FLOAT32>
 	{
-		int nHistory = 8;
 		int nDelay = 0;
 
-		static const int maxHistory = 14;
 		static const int nSearch = 2;
 
 		const FLOAT32 weight = 0.875f;
@@ -84,13 +82,12 @@ namespace DSP
 		FLOAT32 ma[nPhases];
 		char bits[nPhases];
 
-		int max_idx = 0;
-		int rot = 0;
+		int max_idx = 0, rot = 0;
 
 	public:
 
-		DefaultFastDemodulation() { std::memset(ma, 0, nPhases * sizeof(FLOAT32)); }
+		PhaseSearchMA() { std::memset(ma, 0, nPhases * sizeof(FLOAT32)); }
 		void Receive(const CFLOAT32* data, int len);
-		void setParams(int d) { assert(nDelay <= nHistory); nDelay = d; }
+		void setParams(int d) { nDelay = d; }
 	};
 }
