@@ -31,7 +31,7 @@ namespace AIS
 {
 	Decoder::Decoder()
 	{
-		DataFCS.resize(MaxBits / 8, 0);
+		DataFCS.resize( (MaxBits + 7) / 8, 0);
 	}
 
 	char Decoder::NMEAchar(int i)
