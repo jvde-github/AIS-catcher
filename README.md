@@ -12,9 +12,9 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Release version **0,32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements with only a  small tradeoff on sensitivity. 
-I implemented a trick to speed up fixed point downsampling significantly. Furthermore a new model is introduced (```-m 5```) which uses exponential moving averages in the phase determination part instead of a standard moving average.
-Both features can be activated with the ```-F``` switch (ideally use it when running a RTL-SDR at 1536K). 
+Release version **0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
+I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
+Both features can be activated with the ```-F``` switch. 
 To give an idea of the performance improvement on a Raspberry PI (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 
 ```
@@ -40,7 +40,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 Compilation and installation instructions are provided below for Linux systems including Raspberry Pi and Mac OS X.
 
-A Windows binary version of **v0.31** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of **v0.32** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
 
