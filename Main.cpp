@@ -354,7 +354,7 @@ int main(int argc, char* argv[])
 			case 'u':
 			case 'U':
 				Assert(count == 2);
-				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2));
+				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, std::max(0, (int)liveModelsSelected.size()-1) ));
 				break;
 			case 'h':
 				Assert(count == 0);
@@ -531,7 +531,7 @@ int main(int argc, char* argv[])
 		for(int i = 0; i < UDPdestinations.size(); i++)
 		{
 			UDPconnections[i].openConnection(UDPdestinations[i]);
-			liveModels[0]->Output() >> UDPconnections[i];
+			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
 		}
 
 		if (NMEA_to_screen > 0)
