@@ -71,7 +71,7 @@ namespace Demod
 		void setParams(int h, int d) { assert(nHistory <= maxHistory); assert(nDelay <= nHistory); nHistory = h; nDelay = d; }
 	};
 
-	class PhaseSearchMA : public SimpleStreamInOut<CFLOAT32, FLOAT32>
+	class PhaseSearchEMA : public SimpleStreamInOut<CFLOAT32, FLOAT32>
 	{
 		int nDelay = 0;
 
@@ -86,7 +86,7 @@ namespace Demod
 
 	public:
 
-		PhaseSearchMA() { std::memset(ma, 0, nPhases * sizeof(FLOAT32)); }
+		PhaseSearchEMA() { std::memset(ma, 0, nPhases * sizeof(FLOAT32)); }
 		void Receive(const CFLOAT32* data, int len);
 		void setParams(int d) { nDelay = d; }
 	};

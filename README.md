@@ -64,8 +64,7 @@ use: AIS-catcher [options]
 	[-d:x select device based on index (default: 0)]
 	[-d xxxx select device based on serial number]
 
-	[-m xx run specific decoding model (default: 2)]
-	[	0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discriminator output]
+	[-m xx run specific decoding model (default: 2), see README for more details]
 	[-b benchmark demodulation models for time - for development purposes (default: off)]
 	[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]
 

@@ -135,11 +135,11 @@ namespace AIS
 		void buildModel(int,bool);
 	};
 
-	// As the PhaseSearch model but optimized for speed at the expense of accuracy by using moving averages
-	class ModelPhaseSearchMA : public ModelFrontend
+	// As the PhaseSearch model but optimized for speed using exponential moving averages
+	class ModelPhaseSearchEMA : public ModelFrontend
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		std::vector<Demod::PhaseSearchMA> CD_a, CD_b;
+		std::vector<Demod::PhaseSearchEMA> CD_a, CD_b;
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
@@ -148,7 +148,7 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelPhaseSearchMA(Device::DeviceBase* c, int d = 3) : ModelFrontend(c)
+		ModelPhaseSearchEMA(Device::DeviceBase* c, int d = 3) : ModelFrontend(c)
 		{
 			setName("AIS engine (speed optimized) " VERSION);
 			nDelay = d;
