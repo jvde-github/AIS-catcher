@@ -108,20 +108,23 @@ namespace IO
 
 	class DumpScreen : public StreamIn<NMEA>
 	{
-		int level = 2;
 	public:
-		void setDetail(int l) { level = l; }
+		enum class Level { NONE, SPARSE, FULL };
+	private:
+		Level level;
+	public:
+		void setDetail(Level l) { level = l; }
 
 		void Receive(const NMEA* data, int len)
 		{
-			if(level == 0) return;
+			if(level == Level::NONE) return;
 
 			for (int i = 0; i < len; i++)
 				for (auto s : data[i].sentence)
 				{
 					std::cout << s;
 
-					if (level >= 2) std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")";
+					if (level == Level::FULL) std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")";
 					std::cout << std::endl;
 				}
 		}

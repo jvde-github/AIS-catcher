@@ -196,7 +196,7 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 
 // -------------------------------
 
-typedef struct 
+typedef struct
 {
         Device::SettingsRAWFile RAW;
         Device::SettingsWAVFile WAV;
@@ -238,11 +238,9 @@ int main(int argc, char* argv[])
 	int sample_rate = 0, input_device = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	bool verbose = false;
-	bool timer_on = false;
-	int NMEA_to_screen = 2;
+	bool verbose = false,  timer_on = false, OptimizeSpeed = false;
+	IO::DumpScreen::Level NMEA_to_screen = IO::DumpScreen::Level::FULL;
 	int verboseUpdateTime = 3000;
-	bool OptimizeSpeed = false;
 
 	Settings settings;
 
@@ -298,11 +296,11 @@ int main(int argc, char* argv[])
 				break;
 			case 'q':
 				Assert(count == 0);
-				NMEA_to_screen = 0;
+				NMEA_to_screen = IO::DumpScreen::Level::NONE;
 				break;
 			case 'n':
 				Assert(count == 0);
-				NMEA_to_screen = 1;
+				NMEA_to_screen = IO::DumpScreen::Level::SPARSE;
 				break;
 			case 'F':
 				OptimizeSpeed = true;
@@ -396,7 +394,7 @@ int main(int argc, char* argv[])
 			ptr += count + 1;
 		}
 
-		if (verbose || list_devices || list_support || NMEA_to_screen == 2 || list_options) printVersion();
+		if (verbose || list_devices || list_support || NMEA_to_screen != IO::DumpScreen::Level::NONE || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
 		if (list_support) printSupportedDevices(device_list);
 		if (list_options) Usage();
@@ -543,7 +541,7 @@ int main(int argc, char* argv[])
 			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
 		}
 
-		if (NMEA_to_screen > 0)
+		if (NMEA_to_screen != IO::DumpScreen::Level::NONE)
 		{
 			liveModels[0]->Output() >> nmea_screen;
 			nmea_screen.setDetail(NMEA_to_screen);
