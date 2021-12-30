@@ -107,7 +107,7 @@ namespace Demod
 	}
 
 	// Same version as above but instead relying on moving average to speed up
-	void PhaseSearchMA::Receive(const CFLOAT32* data, int len)
+	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len)
 	{
 		for (int i = 0; i < len; i++)
 		{

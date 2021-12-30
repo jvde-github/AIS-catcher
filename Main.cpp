@@ -54,6 +54,8 @@ void consoleHandler(int signal)
 }
 #endif
 
+//----
+
 void printVersion()
 {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION << std::endl;
@@ -82,8 +84,7 @@ void Usage()
 	std::cerr << "\t[-d:x select device based on index (default: 0)]" << std::endl;
 	std::cerr << "\t[-d xxxx select device based on serial number]" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-m xx run specific decoding model (default: 2)]" << std::endl;
-	std::cerr << "\t[\t0: Standard (non-coherent), 1: Base (non-coherent), 2: Default, 3: FM discriminator output]" << std::endl;
+	std::cerr << "\t[-m xx run specific decoding model (default: 2), see README for more details]" << std::endl;
 	std::cerr << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]" << std::endl;
 	std::cerr << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]" << std::endl;
 	std::cerr << std::endl;
@@ -185,7 +186,7 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 		case 2: liveModels.push_back(new AIS::ModelPhaseSearch(dev)); break;
 		case 3: liveModels.push_back(new AIS::ModelDiscriminator(dev)); break;
 		case 4: liveModels.push_back(new AIS::ModelChallenger(dev)); break;
-		case 5: liveModels.push_back(new AIS::ModelPhaseSearchMA(dev)); break;
+		case 5: liveModels.push_back(new AIS::ModelPhaseSearchEMA(dev)); break;
 		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
 		}
 	}

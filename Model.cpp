@@ -241,7 +241,7 @@ namespace AIS
 		return;
 	}
 
-	void ModelPhaseSearchMA::buildModel(int sample_rate, bool timerOn)
+	void ModelPhaseSearchEMA::buildModel(int sample_rate, bool timerOn)
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn);
 
