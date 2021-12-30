@@ -132,11 +132,13 @@ namespace IO
 		std::string address;
 		std::string port;
 
+		int sourceID = -1;
 	public:
 
 		friend class UDP;
 
-		UDPEndPoint(std::string a, std::string p) { address = a, port = p; }
+		UDPEndPoint(std::string a, std::string p, int id = -1) { address = a, port = p; sourceID = id; }
+		int ID() { return sourceID; }
 	};
 
 	class UDP : public StreamIn<NMEA>
