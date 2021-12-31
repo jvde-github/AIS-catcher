@@ -53,3 +53,5 @@ typedef struct { Format format; void *data; int size; } RAW;
 using namespace std::chrono;
 
 const FLOAT32 PI = 3.14159265358979323846f;
+
+#define MAX(a,b) (a)>(b)?(a):(b)
