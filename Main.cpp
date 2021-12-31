@@ -196,7 +196,7 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 
 // -------------------------------
 
-typedef struct
+struct Settings
 {
         Device::SettingsRAWFile RAW;
         Device::SettingsWAVFile WAV;
@@ -207,7 +207,7 @@ typedef struct
         Device::SettingsSDRPLAY SDRPLAY;
         Device::SettingsHACKRF HACKRF;
 
-} Settings;
+};
 
 
 void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int argc)
@@ -361,7 +361,7 @@ int main(int argc, char* argv[])
 			case 'u':
 			case 'U':
 				Assert(count == 2);
-				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, std::max(0, (int)liveModelsSelected.size()-1) ));
+				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModelsSelected.size()-1) ));
 				break;
 			case 'h':
 				Assert(count == 0);
