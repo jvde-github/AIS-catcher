@@ -5,9 +5,9 @@ CC = gcc
 override CFLAGS += -Ofast -std=c++11
 override LFLAGS += -lstdc++ -lm -o AIS-catcher
 
-CFLAGS_RTL = -DHASRTLSDR
+CFLAGS_RTL = -DHASRTLSDR $(shell pkg-config --cflags librtlsdr)
 CFLAGS_AIRSPYHF = -DHASAIRSPYHF
-CFLAGS_AIRSPY = -DHASAIRSPY
+CFLAGS_AIRSPY = -DHASAIRSPY $(shell pkg-config --cflags libairspy)
 CFLAGS_SDRPLAY = -DHASSDRPLAY
 CFLAGS_RTLTCP = -DHASRTLTCP
 CFLAGS_HACKRF = -DHASHACKRF
