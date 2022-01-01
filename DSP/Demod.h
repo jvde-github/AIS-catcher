@@ -26,8 +26,8 @@ SOFTWARE.
 
 #include "Filters.h"
 
-#include "../Stream.h"
-#include "../Signal.h"
+#include "../Library/Stream.h"
+#include "../Library/Signal.h"
 
 namespace Demod
 {
