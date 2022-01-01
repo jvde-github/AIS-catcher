@@ -10,7 +10,7 @@ CFLAGS_AIRSPYHF = -DHASAIRSPYHF $(shell pkg-config --cflags libairspyhf)
 CFLAGS_AIRSPY = -DHASAIRSPY $(shell pkg-config --cflags libairspy)
 CFLAGS_SDRPLAY = -DHASSDRPLAY
 CFLAGS_RTLTCP = -DHASRTLTCP
-CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf)
+CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/include/libhackrf/
 
 LFLAGS_RTL = $(shell pkg-config --libs librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
