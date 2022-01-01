@@ -26,20 +26,20 @@ SOFTWARE.
 
 #include "AIS-catcher.h"
 
-#include "Library/Signal.h"
+#include "../Library/Signal.h"
 
-#include "DSP/Model.h"
+#include "../DSP/Model.h"
 
-#include "Device/FileRAW.h"
-#include "Device/FileWAV.h"
-#include "Device/RTLSDR.h"
-#include "Device/AIRSPYHF.h"
-#include "Device/HACKRF.h"
-#include "Device/RTLTCP.h"
-#include "Device/AIRSPY.h"
-#include "Device/SDRPLAY.h"
+#include "../Device/FileRAW.h"
+#include "../Device/FileWAV.h"
+#include "../Device/RTLSDR.h"
+#include "../Device/AIRSPYHF.h"
+#include "../Device/HACKRF.h"
+#include "../Device/RTLTCP.h"
+#include "../Device/AIRSPY.h"
+#include "../Device/SDRPLAY.h"
 
-#include "IO/IO.h"
+#include "../IO/IO.h"
 
 MessageHub<SystemMessage> SystemMessages;
 
