@@ -208,9 +208,19 @@ struct Settings
         Device::SettingsAIRSPY AIRSPY;
         Device::SettingsSDRPLAY SDRPLAY;
         Device::SettingsHACKRF HACKRF;
-
 };
 
+struct DeviceSet
+{
+        Device::RAWFile RAW;
+        Device::WAVFile WAV;
+        Device::RTLSDR RTLSDR;
+        Device::RTLTCP RTLTCP;
+        Device::AIRSPYHF AIRSPYHF;
+        Device::AIRSPY AIRSPY;
+        Device::SDRPLAY SDRPLAY;
+        Device::HACKRF HACKRF;
+};
 
 void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int argc)
 {
@@ -244,7 +254,11 @@ int main(int argc, char* argv[])
 	IO::DumpScreen::Level NMEA_to_screen = IO::DumpScreen::Level::FULL;
 	int verboseUpdateTime = 3000;
 
+	// Device and output stream of device;
+	Device::DeviceBase* device = NULL;
+
 	Settings settings;
+	DeviceSet devices;
 
 	uint64_t handle = 0;
 
@@ -414,15 +428,12 @@ int main(int argc, char* argv[])
 			std::cerr << "Device selected: " << getDeviceDescription(d) << std::endl;
 		}
 
-		// Device and output stream of device;
-		Device::DeviceBase* device = NULL;
-
 		switch (input_type)
 		{
 #ifdef HASAIRSPYHF
 		case Device::Type::AIRSPYHF:
 		{
-			Device::AIRSPYHF* dev = new Device::AIRSPYHF();
+			Device::AIRSPYHF* dev = &devices.AIRSPYHF;
 			dev->Open(handle,settings.AIRSPYHF);
 			device = dev;
 
@@ -433,7 +444,7 @@ int main(int argc, char* argv[])
 #ifdef HASAIRSPY
 		case Device::Type::AIRSPY:
 		{
-			Device::AIRSPY* dev = new Device::AIRSPY();
+			Device::AIRSPY* dev = &devices.AIRSPY;
 			dev->Open(handle,settings.AIRSPY);
 			device = dev;
 
@@ -445,7 +456,7 @@ int main(int argc, char* argv[])
 		case Device::Type::SDRPLAY:
 		{
 
-			Device::SDRPLAY* dev = new Device::SDRPLAY();
+			Device::SDRPLAY* dev = &devices.SDRPLAY;
 			dev->Open(handle,settings.SDRPLAY);
 			device = dev;
 
@@ -455,7 +466,7 @@ int main(int argc, char* argv[])
 #endif
 		case Device::Type::WAVFILE:
 		{
-			Device::WAVFile* dev = new Device::WAVFile();
+			Device::WAVFile* dev = &devices.WAV;
 			dev->Open(settings.WAV);
 			device = dev;
 
@@ -464,7 +475,7 @@ int main(int argc, char* argv[])
 		}
 		case Device::Type::RAWFILE:
 		{
-			Device::RAWFile* dev = new Device::RAWFile();
+			Device::RAWFile* dev = &devices.RAW;
 			dev->Open(settings.RAW);
 			device = dev;
 
@@ -474,7 +485,7 @@ int main(int argc, char* argv[])
 #ifdef HASRTLSDR
 		case Device::Type::RTLSDR:
 		{
-			Device::RTLSDR* dev = new Device::RTLSDR();
+			Device::RTLSDR* dev = &devices.RTLSDR;
 			dev->Open(handle,settings.RTLSDR);
 			device = dev;
 
@@ -486,7 +497,7 @@ int main(int argc, char* argv[])
 		case Device::Type::RTLTCP:
 		{
 
-			Device::RTLTCP* dev = new Device::RTLTCP();
+			Device::RTLTCP* dev = &devices.RTLTCP;
 			dev->Open(handle, settings.RTLTCP);
 			device = dev;
 
@@ -498,7 +509,7 @@ int main(int argc, char* argv[])
 #ifdef HASHACKRF
 		case Device::Type::HACKRF:
 		{
-			Device::HACKRF* dev = new Device::HACKRF();
+			Device::HACKRF* dev = &devices.HACKRF;
 			dev->Open(handle, settings.HACKRF);
 			device = dev;
 
