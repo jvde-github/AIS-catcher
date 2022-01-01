@@ -442,16 +442,10 @@ int main(int argc, char* argv[])
 
 		device->Open(handle);
 		if (verbose) device->Print();
-
-
 		SystemMessages.Connect(*device);
 
-		// set and check the sampling rate
-		if (sample_rate)
-			device->setSampleRate(sample_rate);
-		else
-			sample_rate = device->getSampleRate();
-
+		// override sample rate if defined by user
+		if (sample_rate) device->setSampleRate(sample_rate);
 		device->setFrequency((int)(162e6));
 
 		// Build model and attach output to main model
@@ -463,7 +457,7 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->buildModel(sample_rate, timer_on);
+			liveModels[i]->buildModel(device->getSampleRate(), timer_on);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
