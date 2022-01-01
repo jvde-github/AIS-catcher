@@ -3,21 +3,21 @@ OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceA
 
 CC = gcc
 override CFLAGS += -Ofast -std=c++11
-override LFLAGS += -lstdc++ -lm -o AIS-catcher
+override LFLAGS += -lstdc++ -lpthread -lm -o AIS-catcher
 
 CFLAGS_RTL = -DHASRTLSDR $(shell pkg-config --cflags librtlsdr)
-CFLAGS_AIRSPYHF = -DHASAIRSPYHF
+CFLAGS_AIRSPYHF = -DHASAIRSPYHF $(shell pkg-config --cflags libairspyhf)
 CFLAGS_AIRSPY = -DHASAIRSPY $(shell pkg-config --cflags libairspy)
 CFLAGS_SDRPLAY = -DHASSDRPLAY
 CFLAGS_RTLTCP = -DHASRTLTCP
-CFLAGS_HACKRF = -DHASHACKRF
+CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf)
 
-LFLAGS_RTL = -lrtlsdr -lpthread
-LFLAGS_AIRSPYHF = -lairspyhf -lpthread
-LFLAGS_AIRSPY = -lairspy -lpthread
-LFLAGS_SDRPLAY = -lsdrplay_api -lpthread
-LFLAGS_RTLTCP = -lpthread
-LFLAGS_HACKRF = -lpthread -lhackrf
+LFLAGS_RTL = $(shell pkg-config --libs librtlsdr)
+LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
+LFLAGS_AIRSPY = $(shell pkg-config --libs libairspy)
+LFLAGS_SDRPLAY = -lsdrplay_api 
+LFLAGS_RTLTCP = 
+LFLAGS_HACKRF = $(shell pkg-config --libs libhackrf)
 
 all: lib
 	$(CC) $(OBJ) $(LFLAGS_AIRSPYHF) $(LFLAGS_AIRSPY) $(LFLAGS_RTL) $(LFLAGS) $(LFLAGS_RTLTCP) $(LFLAGS_HACKRF)
