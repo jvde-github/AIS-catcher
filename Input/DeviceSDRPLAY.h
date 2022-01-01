@@ -22,79 +22,75 @@ SOFTWARE.
 
 #pragma once
 
-#include "FIFO.h"
 #include "Device.h"
 
-#ifdef HASRTLSDR
-#include <rtl-sdr.h>
+#ifdef HASSDRPLAY
+#include <sdrplay_api.h>
 #endif
 
-namespace Device{
+namespace Device {
 
-	enum class RTLSDRGainMode
-	{
-		Default
-	};
-
-	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
-	class SettingsRTLSDR : public DeviceSettings
+	class SettingsSDRPLAY : public DeviceSettings
 	{
 	private:
 
-		int freq_offset = 0;
-		bool tuner_AGC = true;
-		bool RTL_AGC = false;
-		FLOAT32 tuner_Gain = 33.0;
-		bool bias_tee = false;
+		int LNAstate = 5;
+		int gRdB = 40;
+		bool AGC = false;
 
 	public:
 
-		friend class RTLSDR;
+		friend class SDRPLAY;
 
 		void Print();
 		void Set(std::string option, std::string arg);
 	};
 
-	class RTLSDR : public DeviceBase
+	class SDRPLAY : public DeviceBase//, public StreamOut<RAW>
 	{
-#ifdef HASRTLSDR
 
-		rtlsdr_dev_t* dev = NULL;
-		std::thread async_thread;
+#ifdef HASSDRPLAY
+
+		// Data is processed in seperate thread
 		std::thread run_thread;
-
-		// FIFO
-		FIFO<char> fifo;
-
-		// callbacks
-		static void callback_static(CU8* buf, uint32_t len, void* ctx);
-		void callback(CU8* buf, int len);
-
-		void RunAsync();
 		void Run();
 
-		static const uint32_t BUFFER_SIZE = 16 * 16384;
+		FIFO<char> fifo;
+		std::vector<CFLOAT32> output;
 
-		void setTuner_GainMode(int);
-		void setTuner_Gain(FLOAT32);
-		void setRTL_AGC(int);
-		void setBiasTee(int);
-		void setFrequencyCorrection(int);
+		// SDRPLAY specific
+		sdrplay_api_DeviceT device;
+		sdrplay_api_DeviceParamsT* deviceParams = NULL;
+		sdrplay_api_RxChannelParamsT* chParams;
+
+		static void callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext);
+		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext);
+
+		void callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset);
+		void callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params);
 
 	public:
 
 		// Control
+
 		void Play();
 		void Stop();
 
-		bool isCallback() { return true; }
+		bool isStreaming();
+		virtual bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
+		void Open(uint64_t h,SettingsSDRPLAY &s);
+		void Open(SettingsSDRPLAY &s);
 
-		void Open(uint64_t h,SettingsRTLSDR &s);
-		void applySettings(SettingsRTLSDR &s);
+		void applySettings(SettingsSDRPLAY& s);
+
+		// static constructor and data
+		static struct _API { bool running = false; _API(); ~_API(); } _api;
+
+		~SDRPLAY() { sdrplay_api_ReleaseDevice(&device); }
 #endif
 	};
 }

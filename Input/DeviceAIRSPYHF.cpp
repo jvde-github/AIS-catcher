@@ -23,10 +23,7 @@ SOFTWARE.
 #include <cstring>
 #include <algorithm>
 
-#include "Device.h"
 #include "DeviceAIRSPYHF.h"
-#include "Common.h"
-#include "Utilities.h"
 
 namespace Device {
 

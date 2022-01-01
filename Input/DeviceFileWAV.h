@@ -23,7 +23,6 @@ SOFTWARE.
 #pragma once
 
 #include "Device.h"
-#include "Utilities.h"
 
 namespace Device{
 

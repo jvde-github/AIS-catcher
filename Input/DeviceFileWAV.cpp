@@ -22,10 +22,7 @@ SOFTWARE.
 
 #include <cstring>
 
-#include "Device.h"
 #include "DeviceFileWAV.h"
-#include "Common.h"
-
 
 namespace Device {
 

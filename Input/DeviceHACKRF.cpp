@@ -22,10 +22,7 @@ SOFTWARE.
 
 #include <cstring>
 
-#include "Device.h"
 #include "DeviceHACKRF.h"
-#include "Common.h"
-#include "Utilities.h"
 
 namespace Device {
 
