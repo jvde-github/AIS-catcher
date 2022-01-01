@@ -1,4 +1,4 @@
-SRC = Main.cpp IO.cpp DSP.cpp AIS.cpp Model.cpp Utilities.cpp Demod.cpp DeviceRTLSDR.cpp DeviceAIRSPYHF.cpp DeviceAIRSPY.cpp DeviceFileRAW.cpp DeviceFileWAV.cpp DeviceSDRPLAY.cpp DeviceRTLTCP.cpp DeviceHACKRF.cpp
+SRC = Main.cpp Output/IO.cpp DSP.cpp AIS.cpp Model.cpp Utilities.cpp Demod.cpp DeviceRTLSDR.cpp DeviceAIRSPYHF.cpp DeviceAIRSPY.cpp DeviceFileRAW.cpp DeviceFileWAV.cpp DeviceSDRPLAY.cpp DeviceRTLTCP.cpp DeviceHACKRF.cpp
 OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceAIRSPYHF.o DeviceAIRSPY.o DeviceFileRAW.o DeviceFileWAV.o DeviceSDRPLAY.o DeviceRTLTCP.o DeviceHACKRF.o
 
 CC = gcc
