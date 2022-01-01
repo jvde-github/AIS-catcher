@@ -28,12 +28,18 @@ namespace Device {
 
 // API described here: https://www.sdrplay.com/docs/SDRplay_API_Specification_v3.01.pdf
 
-	void SettingsSDRPLAY::Print()
+
+#ifdef HASSDRPLAY
+
+	//---------------------------------------
+	// Device SDRPLAY
+
+	void SDRPLAY::Print()
 	{
 		std::cerr << "SDRPLAY Settings: -gs agc " << (AGC?"ON":"OFF") << " lnastate " << LNAstate << " grdb " << gRdB << std::endl;
 	}
 
-	void SettingsSDRPLAY::Set(std::string option, std::string arg)
+	void SDRPLAY::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -53,11 +59,6 @@ namespace Device {
 		else
 			throw "Invalid setting for SDRPLAY.";
 	}
-
-	//---------------------------------------
-	// Device SDRPLAY
-
-#ifdef HASSDRPLAY
 
 	// static constructor and data
 
@@ -139,7 +140,7 @@ namespace Device {
 		}
 	}
 
-	void SDRPLAY::Open(uint64_t h,SettingsSDRPLAY &s)
+	void SDRPLAY::Open(uint64_t h)
 	{
 		sdrplay_api_ErrT err;
 		unsigned int DeviceCount;
@@ -241,13 +242,13 @@ namespace Device {
 		return streaming;
 	}
 
-	void SDRPLAY::applySettings(SettingsSDRPLAY &s)
+	void SDRPLAY::applySettings()
 	{
 		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
 
-		chParams->ctrlParams.agc.enable = s.AGC ? sdrplay_api_AGC_DISABLE : sdrplay_api_AGC_CTRL_EN;
-		chParams->tunerParams.gain.gRdB = s.gRdB;
-		chParams->tunerParams.gain.LNAstate = s.LNAstate;
+		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_DISABLE : sdrplay_api_AGC_CTRL_EN;
+		chParams->tunerParams.gain.gRdB = gRdB;
+		chParams->tunerParams.gain.LNAstate = LNAstate;
 	}
 
 #endif

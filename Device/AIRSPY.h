@@ -38,12 +38,14 @@ namespace Device {
 		Linearity
 	};
 
-	class SettingsAIRSPY : public DeviceSettings
+	class AIRSPY : public DeviceBase
 	{
-	private:
+#ifdef HASAIRSPY
+
+		struct airspy_device* dev = NULL;
+		std::vector<uint32_t> rates;
 
 		AIRSPYGainMode mode = AIRSPYGainMode::Linearity;
-
 		int gain = 17;
 
 		bool mixer_AGC = true;
@@ -54,21 +56,6 @@ namespace Device {
 		int VGA_Gain = 10;
 
 		bool bias_tee = false;
-
-	public:
-
-		friend class AIRSPY;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
-
-	class AIRSPY : public DeviceBase
-	{
-#ifdef HASAIRSPY
-
-		struct airspy_device* dev = NULL;
-		std::vector<uint32_t> rates;
 
 		static int callback_static(airspy_transfer_t* tf);
 		void callback(CFLOAT32 *,int);
@@ -96,8 +83,13 @@ namespace Device {
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h,SettingsAIRSPY &s);
-		void applySettings(SettingsAIRSPY& s);
+		void Open(uint64_t h);
+		void applySettings();
+
+		// Settings
+		void Print();
+		void Set(std::string option, std::string arg);
+
 #endif
 	};
 }

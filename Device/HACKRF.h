@@ -30,27 +30,15 @@ SOFTWARE.
 
 namespace Device {
 
-	class SettingsHACKRF : public DeviceSettings
-	{
-	private:
-
-		int LNA_Gain = 8;
-		int VGA_Gain = 20;
-		bool preamp = false;
-
-	public:
-
-		friend class HACKRF;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
-
 	class HACKRF : public DeviceBase
 	{
 #ifdef HASHACKRF
 
 		hackrf_device* device = NULL;
+
+		int LNA_Gain = 8;
+		int VGA_Gain = 20;
+		bool preamp = false;
 
 		void setLNA_Gain(int);
 		void setVGA_Gain(int);
@@ -74,10 +62,15 @@ namespace Device {
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h, SettingsHACKRF& s);
+		void Open(uint64_t h);
 		void Close();
 
-		void applySettings(SettingsHACKRF& s);
+		void applySettings();
+
+		// Settings
+		void Print();
+		void Set(std::string option, std::string arg);
+
 #endif
 	};
 }

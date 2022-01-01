@@ -26,7 +26,12 @@ SOFTWARE.
 
 namespace Device {
 
-	void SettingsRTLSDR::Print()
+	//---------------------------------------
+	// Device RTLSDR
+
+#ifdef HASRTLSDR
+
+	void RTLSDR::Print()
 	{
 		std::cerr << "RTLSDR settings: -gr tuner ";
 
@@ -36,7 +41,7 @@ namespace Device {
 		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << " -p " << freq_offset << std::endl;
 	}
 
-	void SettingsRTLSDR::Set(std::string option, std::string arg)
+	void RTLSDR::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -60,16 +65,11 @@ namespace Device {
 		else throw "Invalid setting for RTLSDR.";
 	}
 
-	//---------------------------------------
-	// Device RTLSDR
-
-#ifdef HASRTLSDR
-
-	void RTLSDR::Open(uint64_t h,SettingsRTLSDR &s)
+	void RTLSDR::Open(uint64_t h)
 	{
 		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw "RTLSDR: cannot open device.";
 
-		applySettings(s);
+		applySettings();
 		setSampleRate(1536000);
 	}
 
@@ -176,14 +176,14 @@ namespace Device {
 		if (ppm != 0 && rtlsdr_set_freq_correction(dev, ppm) < 0) throw "RTLSDR: cannot set ppm error.";
 	}
 
-	void RTLSDR::applySettings(SettingsRTLSDR &s)
+	void RTLSDR::applySettings()
 	{
-		setFrequencyCorrection(s.freq_offset);
-		setTuner_GainMode(s.tuner_AGC ? 0 : 1);
+		setFrequencyCorrection(freq_offset);
+		setTuner_GainMode(tuner_AGC ? 0 : 1);
 
-		if (!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
-		if (s.RTL_AGC) setRTL_AGC(1);
-		if (s.bias_tee) setBiasTee(1);
+		if (!tuner_AGC) setTuner_Gain(tuner_Gain);
+		if (RTL_AGC) setRTL_AGC(1);
+		if (bias_tee) setBiasTee(1);
 	}
 
 	void RTLSDR::pushDeviceList(std::vector<Description>& DeviceList)

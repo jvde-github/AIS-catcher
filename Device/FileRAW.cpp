@@ -26,41 +26,28 @@ SOFTWARE.
 
 namespace Device {
 
-	void SettingsRAWFile::Print()
+	void RAWFile::Print()
 	{
 		std::cerr << "RAW file Settings: -ga";
 
 		switch (format)
 		{
-		case Format::CF32:
-			std::cerr << " CF32";
-			break;
-
-		case Format::CS16:
-			std::cerr << " CS16";
-			break;
-
-		case Format::CU8:
-			std::cerr << " CU8";
-			break;
-
-		case Format::CS8:
-			std::cerr << " CS8";
-			break;
-
-		default:
-			break;
+		case Format::CF32: std::cerr << " CF32"; break;
+		case Format::CS16: std::cerr << " CS16"; break;
+		case Format::CU8:  std::cerr << " CU8"; break;
+		case Format::CS8:  std::cerr << " CS8"; break;
+		default: break;
 		}
-		std::cerr << " file " << file << std::endl;;
+		std::cerr << " file " << filename << std::endl;
 	}
 
-	void SettingsRAWFile::Set(std::string option, std::string arg)
+	void RAWFile::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 
 		if (option == "FILE")
 		{
-			file = arg;
+			filename = arg;
 			return;
 		}
 
@@ -68,14 +55,10 @@ namespace Device {
 
 		if (option == "FORMAT")
 		{
-			if (arg == "CU8")
-				format = Format::CU8;
-			else if (arg == "CF32")
-				format = Format::CF32;
-			else if (arg == "CS16")
-				format = Format::CS16;
-			else if (arg == "CS8")
-				format = Format::CS8;
+			if (arg == "CU8") format = Format::CU8;
+			else if (arg == "CF32") format = Format::CF32;
+			else if (arg == "CS16") format = Format::CS16;
+			else if (arg == "CS8") format = Format::CS8;
 			else throw "RAW FILE: Unknown file format specification.";
 		}
 		else if (option == "STEREO")
@@ -139,12 +122,8 @@ namespace Device {
 		DeviceBase::Stop();
 	}
 
-	void RAWFile::Open(SettingsRAWFile& s)
+	void RAWFile::Open(uint64_t h)
 	{
-		format = s.format;
-		filename = s.file;
-		layout = s.layout;
-
 		setSampleRate(1536000);
 	}
 }

@@ -42,34 +42,21 @@ SOFTWARE.
 
 namespace Device {
 
-	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
-	class SettingsRTLTCP : public DeviceSettings
+	class RTLTCP : public DeviceBase
 	{
-	private:
-
+#ifdef HASRTLTCP
 		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
-		std::string host = "127.0.0.1";
-		std::string port = "1234";
 
-	public:
 
-		friend class RTLTCP;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
-
-	class RTLTCP : public DeviceBase
-	{
-#ifdef HASRTLTCP
 		SOCKET sock = -1;
 
-		std::string host;
-		std::string port;
+		std::string host = "localhost";
+		std::string port = "1234";
+
 		struct addrinfo* address = NULL;
 
 		struct {
@@ -113,8 +100,13 @@ namespace Device {
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h, SettingsRTLTCP& s);
-		void applySettings(SettingsRTLTCP& s);
+		void Open(uint64_t h);
+		void applySettings();
+
+		// Settings
+		void Print();
+		void Set(std::string option, std::string arg);
+
 #endif
 	};
 }

@@ -30,28 +30,15 @@ SOFTWARE.
 
 namespace Device{
 
-
-	class SettingsAIRSPYHF : public DeviceSettings
-	{
-	private:
-
-		bool preamp = false;
-		bool treshold_high = false;
-
-	public:
-
-		friend class AIRSPYHF;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
-
 	class AIRSPYHF : public DeviceBase
 	{
 #ifdef HASAIRSPYHF
 
 		struct airspyhf_device* dev = NULL;
 		std::vector<uint32_t> rates;
+
+		bool preamp = false;
+		bool treshold_high = false;
 
 		static int callback_static(airspyhf_transfer_t* tf);
 		void callback(CFLOAT32 *,int);
@@ -72,9 +59,12 @@ namespace Device{
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h,SettingsAIRSPYHF &s);
-		void applySettings(SettingsAIRSPYHF& s);
+		void Open(uint64_t h);
+		void applySettings();
 
+		// Settings
+		void Print();
+		void Set(std::string option, std::string arg);
 #endif
 	};
 }

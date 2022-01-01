@@ -28,8 +28,13 @@ SOFTWARE.
 
 namespace Device {
 
+	//---------------------------------------
+	// Device AIRSPY
 
-	void SettingsAIRSPY::Print()
+#ifdef HASAIRSPY
+
+
+	void AIRSPY::Print()
 	{
 		std::cerr << "Airspy Settings: -gm";
 
@@ -59,7 +64,7 @@ namespace Device {
 		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << std::endl;;
 	}
 
-	void SettingsAIRSPY::Set(std::string option, std::string arg)
+	void AIRSPY::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -97,16 +102,11 @@ namespace Device {
 			throw " Invalid setting for AIRSPY.";
 	}
 
-	//---------------------------------------
-	// Device AIRSPY
-
-#ifdef HASAIRSPY
-
-	void AIRSPY::Open(uint64_t h,SettingsAIRSPY &s)
+	void AIRSPY::Open(uint64_t h)
 	{
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
 
-		applySettings(s);
+		applySettings();
 
 		uint32_t nRates;
 
@@ -210,30 +210,30 @@ namespace Device {
 		return airspy_is_streaming(dev) == 1;
 	}
 
-	void AIRSPY::applySettings(SettingsAIRSPY &s)
+	void AIRSPY::applySettings()
 	{
-		switch (s.mode)
+		switch (mode)
 		{
 		case Device::AIRSPYGainMode::Sensitivity:
-			setSensitivity_Gain(s.gain);
+			setSensitivity_Gain(gain);
 			break;
 
 		case Device::AIRSPYGainMode::Linearity:
-			setLinearity_Gain(s.gain);
+			setLinearity_Gain(gain);
 			break;
 
 		case Device::AIRSPYGainMode::Free:
-			setLNA_AGC( (int) s.LNA_AGC );
-			if (!s.LNA_AGC) setLNA_Gain(s.LNA_Gain);
+			setLNA_AGC( (int) LNA_AGC );
+			if (!LNA_AGC) setLNA_Gain(LNA_Gain);
 
-			setMixer_AGC((int)s.mixer_AGC);
-			if (!s.mixer_AGC) setMixer_Gain(s.mixer_Gain);
+			setMixer_AGC((int)mixer_AGC);
+			if (!mixer_AGC) setMixer_Gain(mixer_Gain);
 
-			setVGA_Gain(s.VGA_Gain);
+			setVGA_Gain(VGA_Gain);
 
 			break;
 		}
-		if(s.bias_tee) setBiasTee(true);
+		if(bias_tee) setBiasTee(true);
 	}
 
 #endif

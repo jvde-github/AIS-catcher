@@ -26,7 +26,12 @@ SOFTWARE.
 
 namespace Device {
 
-	void SettingsRTLTCP::Print()
+	//---------------------------------------
+	// Device RTLSDR
+
+#ifdef HASRTLTCP
+
+	void RTLTCP::Print()
 	{
 		std::cerr << "RTLTCP settings: -gt host " << host <<  " port " << port << " tuner ";
 		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
@@ -34,7 +39,7 @@ namespace Device {
 		std::cerr << " -p " << freq_offset << std::endl;
 	}
 
-	void SettingsRTLTCP::Set(std::string option, std::string arg)
+	void RTLTCP::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -62,11 +67,6 @@ namespace Device {
 		else
 			throw "Invalid setting for RTLTCP.";
 	}
-
-	//---------------------------------------
-	// Device RTLSDR
-
-#ifdef HASRTLTCP
 
 	RTLTCP::RTLTCP()
 	{
@@ -97,12 +97,9 @@ namespace Device {
 #endif
 	}
 
-	void RTLTCP::Open(uint64_t handle, SettingsRTLTCP& s)
+	void RTLTCP::Open(uint64_t handle)
 	{
 		struct addrinfo h;
-
-		host = s.host;
-		port = s.port;
 
 		std::memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
@@ -133,7 +130,7 @@ namespace Device {
 		int len = recv(sock, (char*) &dongle, 12, 0);
 		if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: unexpected or invalid response, likely not an rtl-tcp process.";
 
-		applySettings(s);
+		applySettings();
 		setSampleRate(288000);
 	}
 
@@ -221,16 +218,13 @@ namespace Device {
 		setParameter(5, ppm);
 	}
 
-	void RTLTCP::applySettings(SettingsRTLTCP& s)
+	void RTLTCP::applySettings()
 	{
-		setFrequencyCorrection(s.freq_offset);
-		setTuner_GainMode(s.tuner_AGC ? 0 : 1);
+		setFrequencyCorrection(freq_offset);
+		setTuner_GainMode(tuner_AGC ? 0 : 1);
 
-		if (!s.tuner_AGC) setTuner_Gain(s.tuner_Gain);
-		if (s.RTL_AGC) setRTL_AGC(1);
-
-		host = s.host;
-		port = s.port;
+		if (!tuner_AGC) setTuner_Gain(tuner_Gain);
+		if (RTL_AGC) setRTL_AGC(1);
 	}
 
 	void RTLTCP::pushDeviceList(std::vector<Description>& DeviceList)

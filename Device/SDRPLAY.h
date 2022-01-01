@@ -30,22 +30,6 @@ SOFTWARE.
 
 namespace Device {
 
-	class SettingsSDRPLAY : public DeviceSettings
-	{
-	private:
-
-		int LNAstate = 5;
-		int gRdB = 40;
-		bool AGC = false;
-
-	public:
-
-		friend class SDRPLAY;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
-
 	class SDRPLAY : public DeviceBase//, public StreamOut<RAW>
 	{
 
@@ -62,6 +46,10 @@ namespace Device {
 		sdrplay_api_DeviceT device;
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams;
+
+		int LNAstate = 5;
+		int gRdB = 40;
+		bool AGC = false;
 
 		static void callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext);
 		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext);
@@ -82,15 +70,18 @@ namespace Device {
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h,SettingsSDRPLAY &s);
-		void Open(SettingsSDRPLAY &s);
+		void Open(uint64_t h);
 
-		void applySettings(SettingsSDRPLAY& s);
+		void applySettings();
 
 		// static constructor and data
 		static struct _API { bool running = false; _API(); ~_API(); } _api;
 
 		~SDRPLAY() { sdrplay_api_ReleaseDevice(&device); }
+
+		// Settings
+		void Print();
+		void Set(std::string option, std::string arg);
 #endif
 	};
 }

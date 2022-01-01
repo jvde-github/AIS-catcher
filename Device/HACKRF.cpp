@@ -26,8 +26,12 @@ SOFTWARE.
 
 namespace Device {
 
+	//---------------------------------------
+	// Device HACKRF
 
-	void SettingsHACKRF::Print()
+#ifdef HASHACKRF
+
+	void HACKRF::Print()
 	{
 		std::cerr << "Hackrf Settings: -gf";
 		std::cerr << " preamp ";
@@ -37,7 +41,7 @@ namespace Device {
 		std::cerr << std::endl;
 	}
 
-	void SettingsHACKRF::Set(std::string option, std::string arg)
+	void HACKRF::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -59,17 +63,12 @@ namespace Device {
 
 	}
 
-	//---------------------------------------
-	// Device HACKRF
-
-#ifdef HASHACKRF
-
-	void HACKRF::Open(uint64_t h, SettingsHACKRF& s)
+	void HACKRF::Open(uint64_t h)
 	{
 		int result = hackrf_open(&device);
 		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device";
 
-		applySettings(s);
+		applySettings();
 		setSampleRate(6000000);
 	}
 
@@ -163,11 +162,11 @@ namespace Device {
 		return hackrf_is_streaming(device) == HACKRF_TRUE;
 	}
 
-	void HACKRF::applySettings(SettingsHACKRF& s)
+	void HACKRF::applySettings()
 	{
-		setPREAMP(s.preamp ? 1 : 0);
-		setLNA_Gain(s.LNA_Gain);
-		setVGA_Gain(s.VGA_Gain);
+		setPREAMP(preamp ? 1 : 0);
+		setLNA_Gain(LNA_Gain);
+		setVGA_Gain(VGA_Gain);
 	}
 
 #endif

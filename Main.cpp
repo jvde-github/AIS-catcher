@@ -198,19 +198,7 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 
 // -------------------------------
 
-struct Settings
-{
-        Device::SettingsRAWFile RAW;
-        Device::SettingsWAVFile WAV;
-        Device::SettingsRTLSDR RTLSDR;
-        Device::SettingsRTLTCP RTLTCP;
-        Device::SettingsAIRSPYHF AIRSPYHF;
-        Device::SettingsAIRSPY AIRSPY;
-        Device::SettingsSDRPLAY SDRPLAY;
-        Device::SettingsHACKRF HACKRF;
-};
-
-struct DeviceSet
+struct Devices
 {
         Device::RAWFile RAW;
         Device::WAVFile WAV;
@@ -222,7 +210,7 @@ struct DeviceSet
         Device::HACKRF HACKRF;
 };
 
-void parseDeviceSettings(Device::DeviceSettings& s, char* argv[], int ptr, int argc)
+void parseDeviceSettings(Device::DeviceBase& s, char* argv[], int ptr, int argc)
 {
 	ptr++;
 
@@ -256,9 +244,7 @@ int main(int argc, char* argv[])
 
 	// Device and output stream of device;
 	Device::DeviceBase* device = NULL;
-
-	Settings settings;
-	DeviceSet devices;
+	Devices devices;
 
 	uint64_t handle = 0;
 
@@ -324,8 +310,8 @@ int main(int argc, char* argv[])
 			case 't':
 				input_type = Device::Type::RTLTCP;
 				Assert(count <= 2);
-				if(count >= 1) settings.RTLTCP.Set("host",arg1);
-				if(count >= 2) settings.RTLTCP.Set("port",arg2);
+				if(count >= 1) devices.RTLTCP.Set("host",arg1);
+				if(count >= 2) devices.RTLTCP.Set("port",arg2);
 				break;
 			case 'b':
 				Assert(count == 0);
@@ -334,19 +320,19 @@ int main(int argc, char* argv[])
 			case 'w':
 				Assert(count <= 1);
 				input_type = Device::Type::WAVFILE;
-				if (count == 1) settings.WAV.Set("FILE", arg1);
+				if (count == 1) devices.WAV.Set("FILE", arg1);
 				break;
 			case 'r':
 				Assert(count <= 2);
 				input_type = Device::Type::RAWFILE;
 				if (count == 1)
 				{
-					settings.RAW.Set("FILE", arg1);
+					devices.RAW.Set("FILE", arg1);
 				}
 				else if (count == 2)
 				{
-					settings.RAW.Set("FORMAT", arg1);
-					settings.RAW.Set("FILE", arg2);
+					devices.RAW.Set("FORMAT", arg1);
+					devices.RAW.Set("FILE", arg2);
 				}
 				break;
 			case 'l':
@@ -385,20 +371,20 @@ int main(int argc, char* argv[])
 				break;
 			case 'p':
 				Assert(count == 1);
-				settings.RTLSDR.Set("FREQOFFSET", arg1);
+				devices.RTLSDR.Set("FREQOFFSET", arg1);
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3);
 				switch (param[2])
 				{
-				case 'm': parseDeviceSettings(settings.AIRSPY, argv, ptr, argc); break;
-				case 'r': parseDeviceSettings(settings.RTLSDR, argv, ptr, argc); break;
-				case 'h': parseDeviceSettings(settings.AIRSPYHF, argv, ptr, argc); break;
-				case 's': parseDeviceSettings(settings.SDRPLAY, argv, ptr, argc); break;
-				case 'a': parseDeviceSettings(settings.RAW, argv, ptr, argc); break;
-				case 'w': parseDeviceSettings(settings.WAV, argv, ptr, argc); break;
-				case 't': parseDeviceSettings(settings.RTLTCP, argv, ptr, argc); break;
-				case 'f': parseDeviceSettings(settings.HACKRF, argv, ptr, argc); break;
+				case 'm': parseDeviceSettings(devices.AIRSPY, argv, ptr, argc); break;
+				case 'r': parseDeviceSettings(devices.RTLSDR, argv, ptr, argc); break;
+				case 'h': parseDeviceSettings(devices.AIRSPYHF, argv, ptr, argc); break;
+				case 's': parseDeviceSettings(devices.SDRPLAY, argv, ptr, argc); break;
+				case 'a': parseDeviceSettings(devices.RAW, argv, ptr, argc); break;
+				case 'w': parseDeviceSettings(devices.WAV, argv, ptr, argc); break;
+				case 't': parseDeviceSettings(devices.RTLTCP, argv, ptr, argc); break;
+				case 'f': parseDeviceSettings(devices.HACKRF, argv, ptr, argc); break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
@@ -430,97 +416,33 @@ int main(int argc, char* argv[])
 
 		switch (input_type)
 		{
+		case Device::Type::WAVFILE: device = &devices.WAV; break;
+		case Device::Type::RAWFILE: device = &devices.RAW; break;
 #ifdef HASAIRSPYHF
-		case Device::Type::AIRSPYHF:
-		{
-			Device::AIRSPYHF* dev = &devices.AIRSPYHF;
-			dev->Open(handle,settings.AIRSPYHF);
-			device = dev;
-
-			if(verbose) settings.AIRSPYHF.Print();
-			break;
-		}
+		case Device::Type::AIRSPYHF: device = &devices.AIRSPYHF; break;
 #endif
 #ifdef HASAIRSPY
-		case Device::Type::AIRSPY:
-		{
-			Device::AIRSPY* dev = &devices.AIRSPY;
-			dev->Open(handle,settings.AIRSPY);
-			device = dev;
-
-			if(verbose) settings.AIRSPY.Print();
-			break;
-		}
+		case Device::Type::AIRSPY: device = &devices.AIRSPY; break;
 #endif
 #ifdef HASSDRPLAY
-		case Device::Type::SDRPLAY:
-		{
-
-			Device::SDRPLAY* dev = &devices.SDRPLAY;
-			dev->Open(handle,settings.SDRPLAY);
-			device = dev;
-
-			if(verbose) settings.SDRPLAY.Print();
-			break;
-		}
+		case Device::Type::SDRPLAY: device = &devices.SDRPLAY; break;
 #endif
-		case Device::Type::WAVFILE:
-		{
-			Device::WAVFile* dev = &devices.WAV;
-			dev->Open(settings.WAV);
-			device = dev;
-
-			if (verbose) settings.WAV.Print();
-			break;
-		}
-		case Device::Type::RAWFILE:
-		{
-			Device::RAWFile* dev = &devices.RAW;
-			dev->Open(settings.RAW);
-			device = dev;
-
-			if (verbose) settings.RAW.Print();
-			break;
-		}
 #ifdef HASRTLSDR
-		case Device::Type::RTLSDR:
-		{
-			Device::RTLSDR* dev = &devices.RTLSDR;
-			dev->Open(handle,settings.RTLSDR);
-			device = dev;
-
-			if(verbose) settings.RTLSDR.Print();
-			break;
-		}
+		case Device::Type::RTLSDR: device = &devices.RTLSDR; break;
 #endif
 #ifdef HASRTLTCP
-		case Device::Type::RTLTCP:
-		{
-
-			Device::RTLTCP* dev = &devices.RTLTCP;
-			dev->Open(handle, settings.RTLTCP);
-			device = dev;
-
-			if (verbose) settings.RTLTCP.Print();
-
-			break;
-		}
+		case Device::Type::RTLTCP: device = &devices.RTLTCP; break;
 #endif
 #ifdef HASHACKRF
-		case Device::Type::HACKRF:
-		{
-			Device::HACKRF* dev = &devices.HACKRF;
-			dev->Open(handle, settings.HACKRF);
-			device = dev;
-
-			if (verbose) settings.HACKRF.Print();
-			break;
-		}
+		case Device::Type::HACKRF: device = &devices.HACKRF; break;
 #endif
-		default:
-			throw "Error: invalid device selection";
+		default: throw "Error: invalid device selection";
 		}
 		if (device == 0) throw "Error: cannot set up device";
+
+		device->Open(handle);
+		if (verbose) device->Print();
+
 
 		SystemMessages.Connect(*device);
 
@@ -608,7 +530,6 @@ int main(int argc, char* argv[])
 		device->Close();
 
 		for(auto model : liveModels) delete model;
-		if(device) delete device;
 
 	}
 	catch (const char * msg)
