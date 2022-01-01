@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 jvde.github@gmail.com
+Copyright(c) 2021-2022 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,16 +30,16 @@ SOFTWARE.
 
 #include "DSP/Model.h"
 
-#include "Input/DeviceFileRAW.h"
-#include "Input/DeviceFileWAV.h"
-#include "Input/DeviceRTLSDR.h"
-#include "Input/DeviceAIRSPYHF.h"
-#include "Input/DeviceHACKRF.h"
-#include "Input/DeviceRTLTCP.h"
-#include "Input/DeviceAIRSPY.h"
-#include "Input/DeviceSDRPLAY.h"
+#include "Device/FileRAW.h"
+#include "Device/FileWAV.h"
+#include "Device/RTLSDR.h"
+#include "Device/AIRSPYHF.h"
+#include "Device/HACKRF.h"
+#include "Device/RTLTCP.h"
+#include "Device/AIRSPY.h"
+#include "Device/SDRPLAY.h"
 
-#include "Output/IO.h"
+#include "IO/IO.h"
 
 MessageHub<SystemMessage> SystemMessages;
 

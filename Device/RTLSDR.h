@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 jvde.github@gmail.com
+Copyright(c) 2021-2022 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,41 +24,61 @@ SOFTWARE.
 
 #include "Device.h"
 
-#ifdef HASAIRSPYHF
-#include <airspyhf.h>
+#ifdef HASRTLSDR
+#include <rtl-sdr.h>
 #endif
 
 namespace Device{
 
+	enum class RTLSDRGainMode
+	{
+		Default
+	};
 
-	class SettingsAIRSPYHF : public DeviceSettings
+	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
+	class SettingsRTLSDR : public DeviceSettings
 	{
 	private:
 
-		bool preamp = false;
-		bool treshold_high = false;
+		int freq_offset = 0;
+		bool tuner_AGC = true;
+		bool RTL_AGC = false;
+		FLOAT32 tuner_Gain = 33.0;
+		bool bias_tee = false;
 
 	public:
 
-		friend class AIRSPYHF;
+		friend class RTLSDR;
 
 		void Print();
 		void Set(std::string option, std::string arg);
 	};
 
-	class AIRSPYHF : public DeviceBase
+	class RTLSDR : public DeviceBase
 	{
-#ifdef HASAIRSPYHF
+#ifdef HASRTLSDR
 
-		struct airspyhf_device* dev = NULL;
-		std::vector<uint32_t> rates;
+		rtlsdr_dev_t* dev = NULL;
+		std::thread async_thread;
+		std::thread run_thread;
 
-		static int callback_static(airspyhf_transfer_t* tf);
-		void callback(CFLOAT32 *,int);
+		// FIFO
+		FIFO<char> fifo;
 
-		void setTreshold(int);
-		void setLNA(int);
-		void setAGC(void);
+		// callbacks
+		static void callback_static(CU8* buf, uint32_t len, void* ctx);
+		void callback(CU8* buf, int len);
+
+		void RunAsync();
+		void Run();
+
+		static const uint32_t BUFFER_SIZE = 16 * 16384;
+
+		void setTuner_GainMode(int);
+		void setTuner_Gain(FLOAT32);
+		void setRTL_AGC(int);
+		void setBiasTee(int);
+		void setFrequencyCorrection(int);
 
 	public:
 
@@ -66,15 +86,14 @@ namespace Device{
 		void Play();
 		void Stop();
 
-		bool isStreaming();
 		bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h,SettingsAIRSPYHF &s);
-		void applySettings(SettingsAIRSPYHF& s);
 
+		void Open(uint64_t h,SettingsRTLSDR &s);
+		void applySettings(SettingsRTLSDR &s);
 #endif
 	};
 }

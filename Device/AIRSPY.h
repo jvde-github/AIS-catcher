@@ -1,5 +1,6 @@
 /*
-Copyright(c) 2021 jvde.github@gmail.com
+Copyright(c) 2021-2022 gtlittlewing
+Copyright(c) 2021-2022 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,54 +25,79 @@ SOFTWARE.
 
 #include "Device.h"
 
-namespace Device
-{
+#ifdef HASAIRSPY
+#include <airspy.h>
+#endif
 
-	enum class FileLayout { Stereo, Mono, Left, Right };
+namespace Device {
 
-	class SettingsRAWFile : public DeviceSettings
+	enum class AIRSPYGainMode
+	{
+		Free,
+		Sensitivity,
+		Linearity
+	};
+
+	class SettingsAIRSPY : public DeviceSettings
 	{
 	private:
 
-		Format format = Format::CU8;
-		std::string file = "";
-		FileLayout layout = FileLayout::Stereo;
+		AIRSPYGainMode mode = AIRSPYGainMode::Linearity;
+
+		int gain = 17;
+
+		bool mixer_AGC = true;
+		bool LNA_AGC = true;
+
+		int mixer_Gain = 10;
+		int LNA_Gain = 10;
+		int VGA_Gain = 10;
+
+		bool bias_tee = false;
 
 	public:
 
-		friend class RAWFile;
+		friend class AIRSPY;
 
 		void Print();
 		void Set(std::string option, std::string arg);
 	};
 
-	class RAWFile : public DeviceBase
+	class AIRSPY : public DeviceBase
 	{
-		std::istream *file = NULL;
-		std::string filename;
-		std::vector<char> buffer;
-		std::vector<CFLOAT32> output;
-		const int buffer_size = 16 * 16384;
-		FileLayout layout = FileLayout::Stereo;
-		Format format = Format::CU8;
+#ifdef HASAIRSPY
+
+		struct airspy_device* dev = NULL;
+		std::vector<uint32_t> rates;
+
+		static int callback_static(airspy_transfer_t* tf);
+		void callback(CFLOAT32 *,int);
+
+		void setBiasTee(bool);
+		void setLNA_AGC(int);
+		void setMixer_AGC(int);
+
+		void setLNA_Gain(int);
+		void setVGA_Gain(int);
+		void setMixer_Gain(int);
+
+		void setSensitivity_Gain(int);
+		void setLinearity_Gain(int);
 
 	public:
 
 		// Control
-		void Close();
 		void Play();
 		void Stop();
-		bool isCallback() { return false; }
-		bool isStreaming();
 
-		static void pushDeviceList(std::vector<Description>& DeviceList)
-		{
-			DeviceList.push_back(Description("FILE", "RAW", "0", 0, Type::RAWFILE));
-		}
+		bool isStreaming();
+		bool isCallback() { return true;}
+
+		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void setFormat(Format f) { format = f; }
-		void Open(SettingsRAWFile& s);
-
+		void Open(uint64_t h,SettingsAIRSPY &s);
+		void applySettings(SettingsAIRSPY& s);
+#endif
 	};
 }
