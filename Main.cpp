@@ -243,17 +243,17 @@ int main(int argc, char* argv[])
 	int verboseUpdateTime = 3000;
 
 	// Device and output stream of device;
+	Device::Type input_type = Device::Type::NONE;
+	uint64_t handle = 0;
+
 	Device::DeviceBase* device = NULL;
 	Devices devices;
-
-	uint64_t handle = 0;
 
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
 
 	std::vector<AIS::Model*> liveModels;
 	std::vector<int> liveModelsSelected;
-	Device::Type input_type = Device::Type::NONE;
 
 	IO::DumpScreen nmea_screen;
 

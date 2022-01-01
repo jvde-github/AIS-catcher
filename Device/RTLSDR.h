@@ -42,9 +42,11 @@ namespace Device{
 #ifdef HASRTLSDR
 
 		rtlsdr_dev_t* dev = NULL;
+
 		std::thread async_thread;
 		std::thread run_thread;
 
+		// Device settings
 		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;

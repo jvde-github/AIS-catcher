@@ -29,7 +29,9 @@ namespace Device{
 	class WAVFile : public DeviceBase
 	{
 		std::ifstream file;
+
 		std::string filename;
+
 		std::vector<uint8_t> buffer;
 		const int buffer_size = 16 * 16384;
 
