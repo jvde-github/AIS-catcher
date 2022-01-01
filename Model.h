@@ -24,11 +24,11 @@ SOFTWARE.
 
 #include "Stream.h"
 #include "DSP.h"
-#include "Device.h"
 #include "AIS.h"
 #include "Demod.h"
 #include "Utilities.h"
 
+#include "Input/Device.h"
 #include "Output/IO.h"
 
 namespace AIS

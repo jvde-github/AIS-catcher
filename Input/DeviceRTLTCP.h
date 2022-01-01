@@ -23,7 +23,6 @@ SOFTWARE.
 #pragma once
 
 #include "Device.h"
-#include "FIFO.h"
 
 #ifdef HASRTLTCP
 

@@ -22,10 +22,7 @@ SOFTWARE.
 
 #include <cstring>
 
-#include "Device.h"
 #include "DeviceRTLSDR.h"
-#include "Common.h"
-#include "Utilities.h"
 
 namespace Device {
 
