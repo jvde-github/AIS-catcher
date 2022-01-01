@@ -64,14 +64,17 @@ namespace Device{
  		bool operator < (const Description& b) const { return (serial < b.serial); }
 	};
 
-	class DeviceSettings
+	// will be centralized in the future and used for other clases as well...
+	class Setting
 	{
 	public:
+		// Settings
 		virtual void Print(void) {}
-		virtual void Set(std::string option, std::string arg) {}
+		virtual void Set(std::string option, std::string arg) { }
 	};
 
-	class DeviceBase : public MessageIn<SystemMessage>, public StreamOut<RAW>
+
+	class DeviceBase : public MessageIn<SystemMessage>, public StreamOut<RAW>, public Setting
 	{
 	protected:
 
@@ -103,9 +106,6 @@ namespace Device{
 		// MessageIn
 		virtual void Message(const SystemMessage& msg) { Stop(); };
 
-		// Settings
-		virtual void Print(void) {}
-		virtual void Set(std::string option, std::string arg) { }
 
 	};
 }
