@@ -22,11 +22,12 @@ SOFTWARE.
 
 #pragma once
 
-#include "../Stream.h"
 #include "DSP.h"
-#include "../AIS.h"
 #include "Demod.h"
-#include "../Utilities.h"
+
+#include "../Library/Stream.h"
+#include "../Library/AIS.h"
+#include "../Library/Utilities.h"
 
 #include "../Input/Device.h"
 #include "../Output/IO.h"

@@ -25,7 +25,8 @@ SOFTWARE.
 #include <algorithm>
 
 #include "AIS-catcher.h"
-#include "Signal.h"
+
+#include "Library/Signal.h"
 
 #include "DSP/Model.h"
 
