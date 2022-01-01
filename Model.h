@@ -28,7 +28,8 @@ SOFTWARE.
 #include "AIS.h"
 #include "Demod.h"
 #include "Utilities.h"
-#include "IO.h"
+
+#include "Output/IO.h"
 
 namespace AIS
 {
