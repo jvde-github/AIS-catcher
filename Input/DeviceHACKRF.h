@@ -25,7 +25,7 @@ SOFTWARE.
 #include "Device.h"
 
 #ifdef HASHACKRF
-#include <libhackrf/hackrf.h>
+#include <hackrf.h>
 #endif
 
 namespace Device {
