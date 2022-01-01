@@ -29,22 +29,6 @@ namespace Device
 
 	enum class FileLayout { Stereo, Mono, Left, Right };
 
-	class SettingsRAWFile : public DeviceSettings
-	{
-	private:
-
-		Format format = Format::CU8;
-		std::string file = "";
-		FileLayout layout = FileLayout::Stereo;
-
-	public:
-
-		friend class RAWFile;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
-
 	class RAWFile : public DeviceBase
 	{
 		std::istream *file = NULL;
@@ -58,6 +42,7 @@ namespace Device
 	public:
 
 		// Control
+		void Open(uint64_t);
 		void Close();
 		void Play();
 		void Stop();
@@ -71,7 +56,9 @@ namespace Device
 
 		// Device specific
 		void setFormat(Format f) { format = f; }
-		void Open(SettingsRAWFile& s);
+
+		void Print();
+		void Set(std::string option, std::string arg);
 
 	};
 }

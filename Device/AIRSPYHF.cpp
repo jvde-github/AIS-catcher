@@ -30,12 +30,14 @@ namespace Device {
 	//---------------------------------------
 	// Device AIRSPYHF
 
-	void SettingsAIRSPYHF::Print()
+#ifdef HASAIRSPYHF
+
+	void AIRSPYHF::Print()
 	{
 		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;
 	}
 
-	void SettingsAIRSPYHF::Set(std::string option, std::string arg)
+	void AIRSPYHF::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -52,13 +54,11 @@ namespace Device {
 			throw "Command line: Invalid setting for AIRSPY HF+.";
 	}
 
-#ifdef HASAIRSPYHF
-
-	void AIRSPYHF::Open(uint64_t h,SettingsAIRSPYHF &s)
+	void AIRSPYHF::Open(uint64_t h)
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
-		applySettings(s);
+		applySettings();
 
 		uint32_t nRates;
 
@@ -135,11 +135,11 @@ namespace Device {
 		return airspyhf_is_streaming(dev) == 1;
 	}
 
-	void AIRSPYHF::applySettings(SettingsAIRSPYHF &s)
+	void AIRSPYHF::applySettings()
 	{
 		setAGC();
-		setTreshold(s.treshold_high ? 1: 0);
-		if(s.preamp) setLNA(1);
+		setTreshold(treshold_high ? 1: 0);
+		if(preamp) setLNA(1);
 	}
 #endif
 }

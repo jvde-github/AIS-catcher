@@ -36,23 +36,6 @@ namespace Device{
 	};
 
 	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
-	class SettingsRTLSDR : public DeviceSettings
-	{
-	private:
-
-		int freq_offset = 0;
-		bool tuner_AGC = true;
-		bool RTL_AGC = false;
-		FLOAT32 tuner_Gain = 33.0;
-		bool bias_tee = false;
-
-	public:
-
-		friend class RTLSDR;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
 
 	class RTLSDR : public DeviceBase
 	{
@@ -61,6 +44,12 @@ namespace Device{
 		rtlsdr_dev_t* dev = NULL;
 		std::thread async_thread;
 		std::thread run_thread;
+
+		int freq_offset = 0;
+		bool tuner_AGC = true;
+		bool RTL_AGC = false;
+		FLOAT32 tuner_Gain = 33.0;
+		bool bias_tee = false;
 
 		// FIFO
 		FIFO<char> fifo;
@@ -92,8 +81,12 @@ namespace Device{
 
 		// Device specific
 
-		void Open(uint64_t h,SettingsRTLSDR &s);
-		void applySettings(SettingsRTLSDR &s);
+		void Open(uint64_t h);
+		void applySettings();
+
+		// Settings
+		void Print();
+		void Set(std::string option, std::string arg);
 #endif
 	};
 }

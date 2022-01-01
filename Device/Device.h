@@ -82,6 +82,7 @@ namespace Device{
 	public:
 
 		// DeviceBase
+		virtual void Open(uint64_t) { }
 		virtual void Close() { }
 		virtual void Play() { streaming = true; }
 		virtual void Stop() { streaming = false; }
@@ -101,5 +102,10 @@ namespace Device{
 
 		// MessageIn
 		virtual void Message(const SystemMessage& msg) { Stop(); };
+
+		// Settings
+		virtual void Print(void) {}
+		virtual void Set(std::string option, std::string arg) { throw "Error: set applied on base class"; }
+
 	};
 }

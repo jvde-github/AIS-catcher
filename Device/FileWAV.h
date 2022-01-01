@@ -26,20 +26,6 @@ SOFTWARE.
 
 namespace Device{
 
-	class SettingsWAVFile : public DeviceSettings
-	{
-	private:
-
-		std::string file;
-
-	public:
-
-		friend class WAVFile;
-
-		void Print();
-		void Set(std::string option, std::string arg);
-	};
-
 	class WAVFile : public DeviceBase
 	{
 		std::ifstream file;
@@ -52,7 +38,7 @@ namespace Device{
 		// Control
 		void Play();
 		void Stop();
-		void Open(SettingsWAVFile& s);
+		void Open(uint64_t);
 		bool isCallback() { return false; }
 		bool isStreaming();
 
@@ -60,5 +46,9 @@ namespace Device{
 		{
 			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
 		}
+
+		// Settings
+		void Print();
+		void Set(std::string option, std::string arg);
 	};
 }

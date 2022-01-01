@@ -26,19 +26,19 @@ SOFTWARE.
 
 namespace Device {
 
-	void SettingsWAVFile::Print()
+	void WAVFile::Print()
 	{
 		std::cerr << "WAV file Settings: -gw";
-		std::cerr << " file " << file << std::endl;;
+		std::cerr << " file " << filename << std::endl;;
 	}
 
-	void SettingsWAVFile::Set(std::string option, std::string arg)
+	void WAVFile::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 
 		if (option == "FILE")
 		{
-			file = arg;
+			filename = arg;
 			return;
 		}
 		throw " Invalid setting for FILE WAV.";
@@ -81,10 +81,8 @@ namespace Device {
 		return streaming;
 	}
 
-	void WAVFile::Open(SettingsWAVFile& s)
+	void WAVFile::Open(uint64_t h)
 	{
-		filename = s.file;
-
 		struct WAVFileFormat header;
 
 		file.open(filename, std::ios::out | std::ios::binary);
