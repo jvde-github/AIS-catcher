@@ -30,11 +30,12 @@ SOFTWARE.
 #include <mutex>
 #include <condition_variable>
 
+#include "FIFO.h"
+
 #include "../Stream.h"
 #include "../Signal.h"
 #include "../Common.h"
 #include "../Utilities.h"
-#include "../FIFO.h"
 
 namespace Device{
 

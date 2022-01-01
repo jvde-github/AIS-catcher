@@ -24,9 +24,10 @@ SOFTWARE.
 
 #include <cstring>
 
-#include "Stream.h"
 #include "Filters.h"
-#include "Signal.h"
+
+#include "../Stream.h"
+#include "../Signal.h"
 
 namespace Demod
 {

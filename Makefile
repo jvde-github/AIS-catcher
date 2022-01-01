@@ -1,4 +1,4 @@
-SRC = Main.cpp Output/IO.cpp DSP.cpp AIS.cpp Model.cpp Utilities.cpp Demod.cpp Input/DeviceRTLSDR.cpp Input/DeviceAIRSPYHF.cpp Input/DeviceAIRSPY.cpp Input/DeviceFileRAW.cpp Input/DeviceFileWAV.cpp Input/DeviceSDRPLAY.cpp Input/DeviceRTLTCP.cpp Input/DeviceHACKRF.cpp
+SRC = Main.cpp Output/IO.cpp DSP/DSP.cpp AIS.cpp DSP/Model.cpp Utilities.cpp DSP/Demod.cpp Input/DeviceRTLSDR.cpp Input/DeviceAIRSPYHF.cpp Input/DeviceAIRSPY.cpp Input/DeviceFileRAW.cpp Input/DeviceFileWAV.cpp Input/DeviceSDRPLAY.cpp Input/DeviceRTLTCP.cpp Input/DeviceHACKRF.cpp
 OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceAIRSPYHF.o DeviceAIRSPY.o DeviceFileRAW.o DeviceFileWAV.o DeviceSDRPLAY.o DeviceRTLTCP.o DeviceHACKRF.o
 
 CC = gcc

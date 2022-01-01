@@ -25,7 +25,7 @@ SOFTWARE.
 #include <vector>
 #include <complex>
 
-#include "Common.h"
+#include "../Common.h"
 
 namespace FFT
 {

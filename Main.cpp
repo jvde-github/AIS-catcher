@@ -26,7 +26,8 @@ SOFTWARE.
 
 #include "AIS-catcher.h"
 #include "Signal.h"
-#include "Model.h"
+
+#include "DSP/Model.h"
 
 #include "Input/DeviceFileRAW.h"
 #include "Input/DeviceFileWAV.h"
