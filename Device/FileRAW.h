@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 jvde.github@gmail.com
+Copyright(c) 2021-2022 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,41 +24,54 @@ SOFTWARE.
 
 #include "Device.h"
 
-namespace Device{
+namespace Device
+{
 
-	class SettingsWAVFile : public DeviceSettings
+	enum class FileLayout { Stereo, Mono, Left, Right };
+
+	class SettingsRAWFile : public DeviceSettings
 	{
 	private:
 
-		std::string file;
+		Format format = Format::CU8;
+		std::string file = "";
+		FileLayout layout = FileLayout::Stereo;
 
 	public:
 
-		friend class WAVFile;
+		friend class RAWFile;
 
 		void Print();
 		void Set(std::string option, std::string arg);
 	};
 
-	class WAVFile : public DeviceBase
+	class RAWFile : public DeviceBase
 	{
-		std::ifstream file;
+		std::istream *file = NULL;
 		std::string filename;
-		std::vector<uint8_t> buffer;
+		std::vector<char> buffer;
+		std::vector<CFLOAT32> output;
 		const int buffer_size = 16 * 16384;
+		FileLayout layout = FileLayout::Stereo;
+		Format format = Format::CU8;
 
 	public:
 
 		// Control
+		void Close();
 		void Play();
 		void Stop();
-		void Open(SettingsWAVFile& s);
 		bool isCallback() { return false; }
 		bool isStreaming();
 
 		static void pushDeviceList(std::vector<Description>& DeviceList)
 		{
-			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
+			DeviceList.push_back(Description("FILE", "RAW", "0", 0, Type::RAWFILE));
 		}
+
+		// Device specific
+		void setFormat(Format f) { format = f; }
+		void Open(SettingsRAWFile& s);
+
 	};
 }

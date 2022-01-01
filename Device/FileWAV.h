@@ -1,6 +1,5 @@
 /*
-Copyright(c) 2021 gtlittlewing
-Copyright(c) 2021 jvde.github@gmail.com
+Copyright(c) 2021-2022 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,79 +24,41 @@ SOFTWARE.
 
 #include "Device.h"
 
-#ifdef HASAIRSPY
-#include <airspy.h>
-#endif
+namespace Device{
 
-namespace Device {
-
-	enum class AIRSPYGainMode
-	{
-		Free,
-		Sensitivity,
-		Linearity
-	};
-
-	class SettingsAIRSPY : public DeviceSettings
+	class SettingsWAVFile : public DeviceSettings
 	{
 	private:
 
-		AIRSPYGainMode mode = AIRSPYGainMode::Linearity;
-
-		int gain = 17;
-
-		bool mixer_AGC = true;
-		bool LNA_AGC = true;
-
-		int mixer_Gain = 10;
-		int LNA_Gain = 10;
-		int VGA_Gain = 10;
-
-		bool bias_tee = false;
+		std::string file;
 
 	public:
 
-		friend class AIRSPY;
+		friend class WAVFile;
 
 		void Print();
 		void Set(std::string option, std::string arg);
 	};
 
-	class AIRSPY : public DeviceBase
+	class WAVFile : public DeviceBase
 	{
-#ifdef HASAIRSPY
-
-		struct airspy_device* dev = NULL;
-		std::vector<uint32_t> rates;
-
-		static int callback_static(airspy_transfer_t* tf);
-		void callback(CFLOAT32 *,int);
-
-		void setBiasTee(bool);
-		void setLNA_AGC(int);
-		void setMixer_AGC(int);
-
-		void setLNA_Gain(int);
-		void setVGA_Gain(int);
-		void setMixer_Gain(int);
-
-		void setSensitivity_Gain(int);
-		void setLinearity_Gain(int);
+		std::ifstream file;
+		std::string filename;
+		std::vector<uint8_t> buffer;
+		const int buffer_size = 16 * 16384;
 
 	public:
 
 		// Control
 		void Play();
 		void Stop();
-
+		void Open(SettingsWAVFile& s);
+		bool isCallback() { return false; }
 		bool isStreaming();
-		bool isCallback() { return true;}
 
-		static void pushDeviceList(std::vector<Description>& DeviceList);
-
-		// Device specific
-		void Open(uint64_t h,SettingsAIRSPY &s);
-		void applySettings(SettingsAIRSPY& s);
-#endif
+		static void pushDeviceList(std::vector<Description>& DeviceList)
+		{
+			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
+		}
 	};
 }

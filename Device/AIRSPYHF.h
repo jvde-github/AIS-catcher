@@ -1,5 +1,5 @@
 /*
-Copyright(c) 2021 jvde.github@gmail.com
+Copyright(c) 2021-2022 jvde.github@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,97 +24,57 @@ SOFTWARE.
 
 #include "Device.h"
 
-#ifdef HASRTLTCP
-
-#include <fstream>
-#include <iostream>
-
-#ifdef WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <sys/socket.h>
-#include <netdb.h>
-#define SOCKET int
+#ifdef HASAIRSPYHF
+#include <airspyhf.h>
 #endif
 
-#endif
+namespace Device{
 
-namespace Device {
 
-	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
-	class SettingsRTLTCP : public DeviceSettings
+	class SettingsAIRSPYHF : public DeviceSettings
 	{
 	private:
 
-		int freq_offset = 0;
-		bool tuner_AGC = true;
-		bool RTL_AGC = false;
-		FLOAT32 tuner_Gain = 33.0;
-		bool bias_tee = false;
-		std::string host = "127.0.0.1";
-		std::string port = "1234";
+		bool preamp = false;
+		bool treshold_high = false;
 
 	public:
 
-		friend class RTLTCP;
+		friend class AIRSPYHF;
 
 		void Print();
 		void Set(std::string option, std::string arg);
 	};
 
-	class RTLTCP : public DeviceBase
+	class AIRSPYHF : public DeviceBase
 	{
-#ifdef HASRTLTCP
-		SOCKET sock = -1;
+#ifdef HASAIRSPYHF
 
-		std::string host;
-		std::string port;
-		struct addrinfo* address = NULL;
+		struct airspyhf_device* dev = NULL;
+		std::vector<uint32_t> rates;
 
-		struct {
-			uint32_t magic = 0;
-			uint32_t tuner = 0;
-			uint32_t gain = 0;
-		} dongle;
+		static int callback_static(airspyhf_transfer_t* tf);
+		void callback(CFLOAT32 *,int);
 
-		// output vector
-
-		static const int TRANSFER_SIZE = 1024;
-		static const int BUFFER_SIZE = 16 * 16384;
-
-		std::thread async_thread;
-		std::thread run_thread;
-
-		void RunAsync();
-		void Run();
-
-		FIFO<char> fifo;
-
-		void setTuner_GainMode(int);
-		void setTuner_Gain(FLOAT32);
-		void setRTL_AGC(int);
-		void setFrequencyCorrection(int);
-
-		void setParameter(uint8_t cmd, uint32_t param);
+		void setTreshold(int);
+		void setLNA(int);
+		void setAGC(void);
 
 	public:
 
-		RTLTCP();
-		~RTLTCP();
-
 		// Control
-		void Close();
 		void Play();
 		void Stop();
 
+		bool isStreaming();
 		bool isCallback() { return true; }
 
 		static void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
-		void Open(uint64_t h, SettingsRTLTCP& s);
-		void applySettings(SettingsRTLTCP& s);
+		void Open(uint64_t h,SettingsAIRSPYHF &s);
+		void applySettings(SettingsAIRSPYHF& s);
+
 #endif
 	};
 }

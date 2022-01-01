@@ -1,5 +1,5 @@
-SRC = Main.cpp Output/IO.cpp DSP/DSP.cpp Library/AIS.cpp DSP/Model.cpp Library/Utilities.cpp DSP/Demod.cpp Input/DeviceRTLSDR.cpp Input/DeviceAIRSPYHF.cpp Input/DeviceAIRSPY.cpp Input/DeviceFileRAW.cpp Input/DeviceFileWAV.cpp Input/DeviceSDRPLAY.cpp Input/DeviceRTLTCP.cpp Input/DeviceHACKRF.cpp
-OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o DeviceRTLSDR.o DeviceAIRSPYHF.o DeviceAIRSPY.o DeviceFileRAW.o DeviceFileWAV.o DeviceSDRPLAY.o DeviceRTLTCP.o DeviceHACKRF.o
+SRC = Main.cpp IO/IO.cpp DSP/DSP.cpp Library/AIS.cpp DSP/Model.cpp Library/Utilities.cpp DSP/Demod.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp
+OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o RTLSDR.o AIRSPYHF.o AIRSPY.o FileRAW.o FileWAV.o SDRPLAY.o RTLTCP.o HACKRF.o
 
 CC = gcc
 override CFLAGS += -Ofast -std=c++11
