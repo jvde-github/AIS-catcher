@@ -105,7 +105,7 @@ namespace Device{
 
 		// Settings
 		virtual void Print(void) {}
-		virtual void Set(std::string option, std::string arg) { throw "Error: set applied on base class"; }
+		virtual void Set(std::string option, std::string arg) { }
 
 	};
 }
