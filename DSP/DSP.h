@@ -24,9 +24,9 @@ SOFTWARE.
 
 #include <assert.h>
 
-#include "Stream.h"
+#include "../Stream.h"
 #include "Filters.h"
-#include "Signal.h"
+#include "../Signal.h"
 
 namespace DSP
 {
