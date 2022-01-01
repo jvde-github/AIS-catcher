@@ -22,7 +22,7 @@ SOFTWARE.
 
 #include <cassert>
 
-#include "../AIS-catcher.h"
+
 #include "Model.h"
 
 namespace AIS

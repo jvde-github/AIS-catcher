@@ -25,6 +25,8 @@ SOFTWARE.
 #include "DSP.h"
 #include "Demod.h"
 
+#include "../Application/AIS-catcher.h"
+
 #include "../Library/Stream.h"
 #include "../Library/AIS.h"
 #include "../Library/Utilities.h"
