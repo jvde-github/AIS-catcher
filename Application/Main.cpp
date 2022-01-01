@@ -27,6 +27,7 @@ SOFTWARE.
 #include "AIS-catcher.h"
 
 #include "../Library/Signal.h"
+#include "../Library/Common.h"
 
 #include "../DSP/Model.h"
 
@@ -210,7 +211,7 @@ struct Devices
         Device::HACKRF HACKRF;
 };
 
-void parseDeviceSettings(Device::DeviceBase& s, char* argv[], int ptr, int argc)
+void parseDeviceSettings(Device::Setting& s, char* argv[], int ptr, int argc)
 {
 	ptr++;
 
