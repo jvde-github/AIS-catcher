@@ -45,12 +45,13 @@ namespace Device {
 	class RTLTCP : public DeviceBase
 	{
 #ifdef HASRTLTCP
+
+		// Device settings
 		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
-
 
 		SOCKET sock = -1;
 

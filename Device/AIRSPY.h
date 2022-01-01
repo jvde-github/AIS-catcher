@@ -31,12 +31,6 @@ SOFTWARE.
 
 namespace Device {
 
-	enum class AIRSPYGainMode
-	{
-		Free,
-		Sensitivity,
-		Linearity
-	};
 
 	class AIRSPY : public DeviceBase
 	{
@@ -45,7 +39,7 @@ namespace Device {
 		struct airspy_device* dev = NULL;
 		std::vector<uint32_t> rates;
 
-		AIRSPYGainMode mode = AIRSPYGainMode::Linearity;
+		enum class AIRSPYGainMode { Free, Sensitivity, Linearity } mode = AIRSPYGainMode::Linearity;
 		int gain = 17;
 
 		bool mixer_AGC = true;

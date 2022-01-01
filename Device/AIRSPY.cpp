@@ -40,15 +40,15 @@ namespace Device {
 
 		switch (mode)
 		{
-		case Device::AIRSPYGainMode::Sensitivity:
+		case AIRSPYGainMode::Sensitivity:
 			std::cerr << " sensitivity " << gain;
 			break;
 
-		case Device::AIRSPYGainMode::Linearity:
+		case AIRSPYGainMode::Linearity:
 			std::cerr << " linearity " << gain;
 			break;
 
-		case Device::AIRSPYGainMode::Free:
+		case AIRSPYGainMode::Free:
 
 			std::cerr << " lna ";
 			if(LNA_AGC) std::cerr << "AUTO";
@@ -71,27 +71,27 @@ namespace Device {
 
 		if (option == "SENSITIVITY")
 		{
-			mode = Device::AIRSPYGainMode::Sensitivity;
+			mode = AIRSPYGainMode::Sensitivity;
 			gain = Util::Parse::Integer(arg, 0, 21);
 		}
 		else if (option == "LINEARITY")
 		{
-			mode = Device::AIRSPYGainMode::Linearity;
+			mode = AIRSPYGainMode::Linearity;
 			gain = Util::Parse::Integer(arg, 0, 21);
 		}
 		else if (option == "VGA")
 		{
-			mode = Device::AIRSPYGainMode::Free;
+			mode = AIRSPYGainMode::Free;
 			VGA_Gain = Util::Parse::Integer(arg, 0, 14);
 		}
 		else if (option == "MIXER")
 		{
-			mode = Device::AIRSPYGainMode::Free;
+			mode = AIRSPYGainMode::Free;
 			mixer_AGC = Util::Parse::AutoInteger(arg, 0, 14, mixer_Gain);
 		}
 		else if (option == "LNA")
 		{
-			mode = Device::AIRSPYGainMode::Free;
+			mode = AIRSPYGainMode::Free;
 			LNA_AGC = Util::Parse::AutoInteger(arg, 0, 14, LNA_Gain);;
 		}
 		else if (option == "BIASTEE")
@@ -214,15 +214,15 @@ namespace Device {
 	{
 		switch (mode)
 		{
-		case Device::AIRSPYGainMode::Sensitivity:
+		case AIRSPYGainMode::Sensitivity:
 			setSensitivity_Gain(gain);
 			break;
 
-		case Device::AIRSPYGainMode::Linearity:
+		case AIRSPYGainMode::Linearity:
 			setLinearity_Gain(gain);
 			break;
 
-		case Device::AIRSPYGainMode::Free:
+		case AIRSPYGainMode::Free:
 			setLNA_AGC( (int) LNA_AGC );
 			if (!LNA_AGC) setLNA_Gain(LNA_Gain);
 
