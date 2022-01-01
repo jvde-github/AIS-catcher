@@ -169,13 +169,8 @@ namespace Device {
 
 		chParams = deviceParams->rxChannelA;
 
-		applySettings(s);
+		applySettings();
 		setSampleRate(2304000);
-	}
-
-	void SDRPLAY::Open(SettingsSDRPLAY &s)
-	{
-		Open(0,s);
 	}
 
 	void SDRPLAY::Play()
