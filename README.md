@@ -12,6 +12,8 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
+The **edge** version: Some restructuring of the directory layout, Makefile now autodetects library locations, ```make all``` will only build for installed SDR libaries, some more simplifications of code, recalibration of decoding parameters resulting in a small improvement in sensitivity.
+
 Release version **0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
 Both features can be activated with the ```-F``` switch. 

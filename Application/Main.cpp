@@ -416,7 +416,7 @@ int main(int argc, char* argv[])
 		case Device::Type::AIRSPY: device = &drivers.AIRSPY; break;
 #endif
 #ifdef HASSDRPLAY
-		case Device::Type::SDRPLAY: device = &devices.SDRPLAY; break;
+		case Device::Type::SDRPLAY: device = &drivers.SDRPLAY; break;
 #endif
 #ifdef HASRTLSDR
 		case Device::Type::RTLSDR: device = &drivers.RTLSDR; break;
