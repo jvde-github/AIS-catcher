@@ -60,7 +60,7 @@ namespace Device {
 	public:
 
 		// Control
-
+		void Open(uint64_t h);
 		void Play();
 		void Stop();
 
@@ -69,12 +69,6 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		// Device specific
-		void Open(uint64_t h);
-
-		void applySettings();
-
-		// static constructor and data
 		static struct _API { bool running = false; _API(); ~_API(); } _api;
 
 		~SDRPLAY() { sdrplay_api_ReleaseDevice(&device); }

@@ -68,7 +68,10 @@ namespace Device {
 		int result = hackrf_open(&device);
 		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device";
 
-		applySettings();
+		setPREAMP(preamp ? 1 : 0);
+		setLNA_Gain(LNA_Gain);
+		setVGA_Gain(VGA_Gain);
+
 		setSampleRate(6000000);
 	}
 
@@ -160,13 +163,6 @@ namespace Device {
 	bool HACKRF::isStreaming()
 	{
 		return hackrf_is_streaming(device) == HACKRF_TRUE;
-	}
-
-	void HACKRF::applySettings()
-	{
-		setPREAMP(preamp ? 1 : 0);
-		setLNA_Gain(LNA_Gain);
-		setVGA_Gain(VGA_Gain);
 	}
 
 #endif

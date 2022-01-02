@@ -106,7 +106,7 @@ namespace Device {
 	{
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
 
-		applySettings();
+		applyGainSettings();
 
 		uint32_t nRates;
 
@@ -210,7 +210,7 @@ namespace Device {
 		return airspy_is_streaming(dev) == 1;
 	}
 
-	void AIRSPY::applySettings()
+	void AIRSPY::applyGainSettings()
 	{
 		switch (mode)
 		{

@@ -65,6 +65,8 @@ namespace Device {
 		void setSensitivity_Gain(int);
 		void setLinearity_Gain(int);
 
+		void applyGainSettings();
+
 	public:
 
 		// Control
@@ -78,7 +80,6 @@ namespace Device {
 
 		// Device specific
 		void Open(uint64_t h);
-		void applySettings();
 
 		// Settings
 		void Print();

@@ -169,7 +169,12 @@ namespace Device {
 
 		chParams = deviceParams->rxChannelA;
 
-		applySettings();
+		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
+
+		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_DISABLE : sdrplay_api_AGC_CTRL_EN;
+		chParams->tunerParams.gain.gRdB = gRdB;
+		chParams->tunerParams.gain.LNAstate = LNAstate;
+
 		setSampleRate(2304000);
 	}
 
@@ -236,15 +241,5 @@ namespace Device {
 	{
 		return streaming;
 	}
-
-	void SDRPLAY::applySettings()
-	{
-		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
-
-		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_DISABLE : sdrplay_api_AGC_CTRL_EN;
-		chParams->tunerParams.gain.gRdB = gRdB;
-		chParams->tunerParams.gain.LNAstate = LNAstate;
-	}
-
 #endif
 }
