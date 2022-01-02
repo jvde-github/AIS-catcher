@@ -60,7 +60,6 @@ namespace Device{
 
 		// Device specific
 		void Open(uint64_t h);
-		void applySettings();
 
 		// Settings
 		void Print();

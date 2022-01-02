@@ -52,7 +52,8 @@ namespace Device {
 	public:
 
 		// Control
-
+		void Open(uint64_t h);
+		void Close();
 		void Play();
 		void Stop();
 
@@ -60,12 +61,6 @@ namespace Device {
 		virtual bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);
-
-		// Device specific
-		void Open(uint64_t h);
-		void Close();
-
-		void applySettings();
 
 		// Settings
 		void Print();

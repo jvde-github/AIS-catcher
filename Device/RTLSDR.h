@@ -71,20 +71,18 @@ namespace Device{
 		void setBiasTee(int);
 		void setFrequencyCorrection(int);
 
+		void applySettings();
+
 	public:
 
 		// Control
+		void Open(uint64_t h);
 		void Play();
 		void Stop();
 
 		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);
-
-		// Device specific
-
-		void Open(uint64_t h);
-		void applySettings();
 
 		// Settings
 		void Print();

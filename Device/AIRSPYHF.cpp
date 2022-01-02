@@ -58,7 +58,9 @@ namespace Device {
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
-		applySettings();
+		setAGC();
+		setTreshold(treshold_high ? 1: 0);
+		if(preamp) setLNA(1);
 
 		uint32_t nRates;
 
@@ -133,13 +135,6 @@ namespace Device {
 	bool AIRSPYHF::isStreaming()
 	{
 		return airspyhf_is_streaming(dev) == 1;
-	}
-
-	void AIRSPYHF::applySettings()
-	{
-		setAGC();
-		setTreshold(treshold_high ? 1: 0);
-		if(preamp) setLNA(1);
 	}
 #endif
 }

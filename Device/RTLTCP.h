@@ -80,6 +80,7 @@ namespace Device {
 		void setFrequencyCorrection(int);
 
 		void setParameter(uint8_t cmd, uint32_t param);
+		void applySettings();
 
 	public:
 
@@ -87,6 +88,7 @@ namespace Device {
 		~RTLTCP();
 
 		// Control
+		void Open(uint64_t h);
 		void Close();
 		void Play();
 		void Stop();
@@ -94,10 +96,6 @@ namespace Device {
 		bool isCallback() { return true; }
 
 		void pushDeviceList(std::vector<Description>& DeviceList);
-
-		// Device specific
-		void Open(uint64_t h);
-		void applySettings();
 
 		// Settings
 		void Print();
