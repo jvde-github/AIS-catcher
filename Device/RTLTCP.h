@@ -27,7 +27,9 @@ SOFTWARE.
 #include <fstream>
 #include <iostream>
 
-#ifdef WIN32
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#pragma comment(lib, "ws2_32.lib")
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else

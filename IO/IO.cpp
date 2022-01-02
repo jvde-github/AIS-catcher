@@ -29,7 +29,7 @@ namespace IO
 
 	UDP::UDP()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		WSADATA wsaData;
 
 		if( WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -42,7 +42,7 @@ namespace IO
 
 	UDP::~UDP()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		WSACleanup();
 #endif
 	}
@@ -61,7 +61,7 @@ namespace IO
 		h.ai_family = AF_UNSPEC;
 		h.ai_socktype = SOCK_DGRAM;
 		h.ai_protocol = IPPROTO_UDP;
-#ifndef WIN32
+#ifndef _WIN32
 		h.ai_flags = AI_ADDRCONFIG;
 #endif
 
