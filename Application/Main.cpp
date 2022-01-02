@@ -59,7 +59,7 @@ void consoleHandler(int signal)
 
 //----
 
-struct Devices
+struct Drivers
 {
         Device::RAWFile RAW;
         Device::WAVFile WAV;
@@ -74,7 +74,7 @@ struct Devices
 void printVersion()
 {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION << std::endl;
-	std::cerr << "(C) Copyright 2021 " << COPYRIGHT << std::endl;
+	std::cerr << "(C) Copyright 2021-2022 " << COPYRIGHT << std::endl;
 	std::cerr << "This is free software; see the source for copying conditions.There is NO" << std::endl;
 	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
 }
@@ -116,15 +116,15 @@ void Usage()
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
 }
 
-std::vector<Device::Description> getDevices(Devices &devices)
+std::vector<Device::Description> getDevices(Drivers &drivers)
 {
 	std::vector<Device::Description> device_list;
 
-	devices.RTLSDR.getDeviceList(device_list);
-	devices.AIRSPYHF.getDeviceList(device_list);
-	devices.AIRSPY.getDeviceList(device_list);
-	devices.SDRPLAY.getDeviceList(device_list);
-	devices.HACKRF.getDeviceList(device_list);
+	drivers.RTLSDR.getDeviceList(device_list);
+	drivers.AIRSPYHF.getDeviceList(device_list);
+	drivers.AIRSPY.getDeviceList(device_list);
+	drivers.SDRPLAY.getDeviceList(device_list);
+	drivers.HACKRF.getDeviceList(device_list);
 
 	std::sort(device_list.begin(), device_list.end());
 
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 	uint64_t handle = 0;
 
 	Device::DeviceBase* device = NULL;
-	Devices devices;
+	Drivers drivers;
 
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
@@ -256,7 +256,7 @@ int main(int argc, char* argv[])
 		signal(SIGINT, consoleHandler);
 #endif
 
-		std::vector<Device::Description> device_list = getDevices(devices);
+		std::vector<Device::Description> device_list = getDevices(drivers);
 
 		int ptr = 1;
 
@@ -300,8 +300,8 @@ int main(int argc, char* argv[])
 			case 't':
 				input_type = Device::Type::RTLTCP;
 				Assert(count <= 2);
-				if(count >= 1) devices.RTLTCP.Set("host",arg1);
-				if(count >= 2) devices.RTLTCP.Set("port",arg2);
+				if(count >= 1) drivers.RTLTCP.Set("host",arg1);
+				if(count >= 2) drivers.RTLTCP.Set("port",arg2);
 				break;
 			case 'b':
 				Assert(count == 0);
@@ -310,19 +310,19 @@ int main(int argc, char* argv[])
 			case 'w':
 				Assert(count <= 1);
 				input_type = Device::Type::WAVFILE;
-				if (count == 1) devices.WAV.Set("FILE", arg1);
+				if (count == 1) drivers.WAV.Set("FILE", arg1);
 				break;
 			case 'r':
 				Assert(count <= 2);
 				input_type = Device::Type::RAWFILE;
 				if (count == 1)
 				{
-					devices.RAW.Set("FILE", arg1);
+					drivers.RAW.Set("FILE", arg1);
 				}
 				else if (count == 2)
 				{
-					devices.RAW.Set("FORMAT", arg1);
-					devices.RAW.Set("FILE", arg2);
+					drivers.RAW.Set("FORMAT", arg1);
+					drivers.RAW.Set("FILE", arg2);
 				}
 				break;
 			case 'l':
@@ -361,20 +361,20 @@ int main(int argc, char* argv[])
 				break;
 			case 'p':
 				Assert(count == 1);
-				devices.RTLSDR.Set("FREQOFFSET", arg1);
+				drivers.RTLSDR.Set("FREQOFFSET", arg1);
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3);
 				switch (param[2])
 				{
-				case 'm': parseDeviceSettings(devices.AIRSPY, argv, ptr, argc); break;
-				case 'r': parseDeviceSettings(devices.RTLSDR, argv, ptr, argc); break;
-				case 'h': parseDeviceSettings(devices.AIRSPYHF, argv, ptr, argc); break;
-				case 's': parseDeviceSettings(devices.SDRPLAY, argv, ptr, argc); break;
-				case 'a': parseDeviceSettings(devices.RAW, argv, ptr, argc); break;
-				case 'w': parseDeviceSettings(devices.WAV, argv, ptr, argc); break;
-				case 't': parseDeviceSettings(devices.RTLTCP, argv, ptr, argc); break;
-				case 'f': parseDeviceSettings(devices.HACKRF, argv, ptr, argc); break;
+				case 'm': parseDeviceSettings(drivers.AIRSPY, argv, ptr, argc); break;
+				case 'r': parseDeviceSettings(drivers.RTLSDR, argv, ptr, argc); break;
+				case 'h': parseDeviceSettings(drivers.AIRSPYHF, argv, ptr, argc); break;
+				case 's': parseDeviceSettings(drivers.SDRPLAY, argv, ptr, argc); break;
+				case 'a': parseDeviceSettings(drivers.RAW, argv, ptr, argc); break;
+				case 'w': parseDeviceSettings(drivers.WAV, argv, ptr, argc); break;
+				case 't': parseDeviceSettings(drivers.RTLTCP, argv, ptr, argc); break;
+				case 'f': parseDeviceSettings(drivers.HACKRF, argv, ptr, argc); break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
@@ -406,23 +406,23 @@ int main(int argc, char* argv[])
 
 		switch (input_type)
 		{
-		case Device::Type::WAVFILE: device = &devices.WAV; break;
-		case Device::Type::RAWFILE: device = &devices.RAW; break;
-		case Device::Type::RTLTCP: device = &devices.RTLTCP; break;
+		case Device::Type::WAVFILE: device = &drivers.WAV; break;
+		case Device::Type::RAWFILE: device = &drivers.RAW; break;
+		case Device::Type::RTLTCP: device = &drivers.RTLTCP; break;
 #ifdef HASAIRSPYHF
-		case Device::Type::AIRSPYHF: device = &devices.AIRSPYHF; break;
+		case Device::Type::AIRSPYHF: device = &drivers.AIRSPYHF; break;
 #endif
 #ifdef HASAIRSPY
-		case Device::Type::AIRSPY: device = &devices.AIRSPY; break;
+		case Device::Type::AIRSPY: device = &drivers.AIRSPY; break;
 #endif
 #ifdef HASSDRPLAY
 		case Device::Type::SDRPLAY: device = &devices.SDRPLAY; break;
 #endif
 #ifdef HASRTLSDR
-		case Device::Type::RTLSDR: device = &devices.RTLSDR; break;
+		case Device::Type::RTLSDR: device = &drivers.RTLSDR; break;
 #endif
 #ifdef HASHACKRF
-		case Device::Type::HACKRF: device = &devices.HACKRF; break;
+		case Device::Type::HACKRF: device = &drivers.HACKRF; break;
 #endif
 		default: throw "Error: invalid device selection";
 		}
