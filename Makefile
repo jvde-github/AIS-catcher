@@ -14,11 +14,39 @@ CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/inclu
 LFLAGS_RTL = $(shell pkg-config --libs librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
 LFLAGS_AIRSPY = $(shell pkg-config --libs libairspy)
-LFLAGS_SDRPLAY = -lsdrplay_api 
+LFLAGS_SDRPLAY = -lsdrplay_api
 LFLAGS_HACKRF = $(shell pkg-config --libs libhackrf)
 
+CFLAGS_ALL =
+LFLAGS_ALL =
+
+FOUND:=$(shell pkg-config --exists librtlsdr && echo 'T')
+ifneq ($(FOUND),)
+    CFLAGS_ALL += $(CFLAGS_RTL)
+    LFLAGS_ALL += $(LFLAGS_RTL)
+endif
+
+FOUND:=$(shell pkg-config --exists libhackrf && echo 'T')
+ifneq ($(FOUND),)
+    CFLAGS_ALL += $(CFLAGS_HACKRF)
+    LFLAGS_ALL += $(LFLAGS_HACKRF)
+endif
+
+FOUND:=$(shell pkg-config --exists libairspy && echo 'T')
+ifneq ($(FOUND),)
+    CFLAGS_ALL += $(CFLAGS_AIRSPY)
+    LFLAGS_ALL += $(LFLAGS_AIRSPY)
+endif
+
+FOUND:=$(shell pkg-config --exists libairspyhf && echo 'T')
+ifneq ($(FOUND),)
+    CFLAGS_ALL += $(CFLAGS_AIRSPYHF)
+    LFLAGS_ALL += $(LFLAGS_AIRSPYHF)
+endif
+
+
 all: lib
-	$(CC) $(OBJ) $(LFLAGS_AIRSPYHF) $(LFLAGS_AIRSPY) $(LFLAGS_RTL) $(LFLAGS) $(LFLAGS_RTLTCP) $(LFLAGS_HACKRF)
+	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_ALL)
 
 rtl-only: lib-rtl
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_RTL)
@@ -36,7 +64,7 @@ hackrf-only: lib-hackrf
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_HACKRF)
 
 lib:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPYHF) $(CFLAGS_AIRSPY) $(CFLAGS_RTL) $(CFLAGS_RTLTCP) $(CFLAGS_HACKRF)
+	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ALL)
 
 lib-rtl:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_RTL)
@@ -54,7 +82,7 @@ lib-hackrf:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_HACKRF)
 
 clean:
-	rm *.o 
+	rm *.o
 	rm AIS-catcher
 
 install:
