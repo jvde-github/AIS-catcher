@@ -135,7 +135,7 @@ namespace Device {
 		DeviceBase::Stop();
 	}
 
-	void HACKRF::pushDeviceList(std::vector<Description>& DeviceList)
+	void HACKRF::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		std::vector<uint64_t> serials;
 		hackrf_device_list_t* list;

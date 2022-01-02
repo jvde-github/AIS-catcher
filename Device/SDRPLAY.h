@@ -67,7 +67,7 @@ namespace Device {
 		bool isStreaming();
 		virtual bool isCallback() { return true; }
 
-		static void pushDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
 		void Open(uint64_t h);

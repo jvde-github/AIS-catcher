@@ -44,11 +44,6 @@ namespace Device{
 		bool isCallback() { return false; }
 		bool isStreaming();
 
-		static void pushDeviceList(std::vector<Description>& DeviceList)
-		{
-			DeviceList.push_back(Description("FILE", "WAV", "0", 0, Type::WAVFILE));
-		}
-
 		// Settings
 		void Print();
 		void Set(std::string option, std::string arg);

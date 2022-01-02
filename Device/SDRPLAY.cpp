@@ -211,7 +211,7 @@ namespace Device {
 		}
 	}
 
-	void SDRPLAY::pushDeviceList(std::vector<Description>& DeviceList)
+	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		unsigned int DeviceCount;
 		if(!_api.running) throw "SDRPLAY: API v3.x not running";

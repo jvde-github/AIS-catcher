@@ -52,11 +52,6 @@ namespace Device
 		bool isCallback() { return false; }
 		bool isStreaming();
 
-		static void pushDeviceList(std::vector<Description>& DeviceList)
-		{
-			DeviceList.push_back(Description("FILE", "RAW", "0", 0, Type::RAWFILE));
-		}
-
 		// Device specific
 		void setFormat(Format f) { format = f; }
 

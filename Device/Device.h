@@ -101,7 +101,7 @@ namespace Device{
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 
-		static void getDeviceList(std::vector<Description>& DeviceList) {}
+		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
 
 		// MessageIn
 		virtual void Message(const SystemMessage& msg) { Stop(); };
