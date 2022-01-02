@@ -24,8 +24,6 @@ SOFTWARE.
 
 #include "Device.h"
 
-#ifdef HASRTLTCP
-
 #include <fstream>
 #include <iostream>
 
@@ -38,13 +36,10 @@ SOFTWARE.
 #define SOCKET int
 #endif
 
-#endif
-
 namespace Device {
 
 	class RTLTCP : public DeviceBase
 	{
-#ifdef HASRTLTCP
 
 		// Device settings
 		int freq_offset = 0;
@@ -98,7 +93,7 @@ namespace Device {
 
 		bool isCallback() { return true; }
 
-		static void pushDeviceList(std::vector<Description>& DeviceList);
+		void pushDeviceList(std::vector<Description>& DeviceList);
 
 		// Device specific
 		void Open(uint64_t h);
@@ -108,6 +103,5 @@ namespace Device {
 		void Print();
 		void Set(std::string option, std::string arg);
 
-#endif
 	};
 }

@@ -59,6 +59,18 @@ void consoleHandler(int signal)
 
 //----
 
+struct Devices
+{
+        Device::RAWFile RAW;
+        Device::WAVFile WAV;
+        Device::RTLSDR RTLSDR;
+        Device::RTLTCP RTLTCP;
+        Device::AIRSPYHF AIRSPYHF;
+        Device::AIRSPY AIRSPY;
+        Device::SDRPLAY SDRPLAY;
+        Device::HACKRF HACKRF;
+};
+
 void printVersion()
 {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION << std::endl;
@@ -104,25 +116,16 @@ void Usage()
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
 }
 
-std::vector<Device::Description> getDevices()
+std::vector<Device::Description> getDevices(Devices &devices)
 {
 	std::vector<Device::Description> device_list;
 
-#ifdef HASRTLSDR
-	Device::RTLSDR::pushDeviceList(device_list);
-#endif
-#ifdef HASAIRSPYHF
-	Device::AIRSPYHF::pushDeviceList(device_list);
-#endif
-#ifdef HASAIRSPY
-	Device::AIRSPY::pushDeviceList(device_list);
-#endif
-#ifdef HASSDRPLAY
-	Device::SDRPLAY::pushDeviceList(device_list);
-#endif
-#ifdef HASHACKRF
-	Device::HACKRF::pushDeviceList(device_list);
-#endif
+	devices.RTLSDR.getDeviceList(device_list);
+	devices.AIRSPYHF.getDeviceList(device_list);
+	devices.AIRSPY.getDeviceList(device_list);
+	devices.SDRPLAY.getDeviceList(device_list);
+	devices.HACKRF.getDeviceList(device_list);
+
 	std::sort(device_list.begin(), device_list.end());
 
 	return device_list;
@@ -157,9 +160,7 @@ void printSupportedDevices(std::vector<Device::Description>& device_list)
 #ifdef HASSDRPLAY
 	std::cerr << "SDRPLAY ";
 #endif
-#ifdef HASRTLTCP
 	std::cerr << "RTLTCP ";
-#endif
 #ifdef HASHACKRF
 	std::cerr << "HACKRF ";
 #endif
@@ -198,18 +199,6 @@ std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Devic
 }
 
 // -------------------------------
-
-struct Devices
-{
-        Device::RAWFile RAW;
-        Device::WAVFile WAV;
-        Device::RTLSDR RTLSDR;
-        Device::RTLTCP RTLTCP;
-        Device::AIRSPYHF AIRSPYHF;
-        Device::AIRSPY AIRSPY;
-        Device::SDRPLAY SDRPLAY;
-        Device::HACKRF HACKRF;
-};
 
 void parseDeviceSettings(Device::Setting& s, char* argv[], int ptr, int argc)
 {
@@ -267,7 +256,7 @@ int main(int argc, char* argv[])
 		signal(SIGINT, consoleHandler);
 #endif
 
-		std::vector<Device::Description> device_list = getDevices();
+		std::vector<Device::Description> device_list = getDevices(devices);
 
 		int ptr = 1;
 
@@ -419,6 +408,7 @@ int main(int argc, char* argv[])
 		{
 		case Device::Type::WAVFILE: device = &devices.WAV; break;
 		case Device::Type::RAWFILE: device = &devices.RAW; break;
+		case Device::Type::RTLTCP: device = &devices.RTLTCP; break;
 #ifdef HASAIRSPYHF
 		case Device::Type::AIRSPYHF: device = &devices.AIRSPYHF; break;
 #endif
@@ -430,9 +420,6 @@ int main(int argc, char* argv[])
 #endif
 #ifdef HASRTLSDR
 		case Device::Type::RTLSDR: device = &devices.RTLSDR; break;
-#endif
-#ifdef HASRTLTCP
-		case Device::Type::RTLTCP: device = &devices.RTLTCP; break;
 #endif
 #ifdef HASHACKRF
 		case Device::Type::HACKRF: device = &devices.HACKRF; break;

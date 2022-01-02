@@ -186,7 +186,7 @@ namespace Device {
 		if (bias_tee) setBiasTee(1);
 	}
 
-	void RTLSDR::pushDeviceList(std::vector<Description>& DeviceList)
+	void RTLSDR::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		char vendor[256], product[256], serial[256];
 

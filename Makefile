@@ -9,14 +9,12 @@ CFLAGS_RTL = -DHASRTLSDR $(shell pkg-config --cflags librtlsdr)
 CFLAGS_AIRSPYHF = -DHASAIRSPYHF $(shell pkg-config --cflags libairspyhf)
 CFLAGS_AIRSPY = -DHASAIRSPY $(shell pkg-config --cflags libairspy)
 CFLAGS_SDRPLAY = -DHASSDRPLAY
-CFLAGS_RTLTCP = -DHASRTLTCP
 CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/include/libhackrf/
 
 LFLAGS_RTL = $(shell pkg-config --libs librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
 LFLAGS_AIRSPY = $(shell pkg-config --libs libairspy)
 LFLAGS_SDRPLAY = -lsdrplay_api 
-LFLAGS_RTLTCP = 
 LFLAGS_HACKRF = $(shell pkg-config --libs libhackrf)
 
 all: lib
@@ -34,13 +32,10 @@ airspy-only: lib-airspy
 sdrplay-only: lib-sdrplay
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_SDRPLAY)
 
-rtltcp-only: lib-rtltcp
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_RTLTCP)
-
 hackrf-only: lib-hackrf
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_HACKRF)
 
-lib: 
+lib:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPYHF) $(CFLAGS_AIRSPY) $(CFLAGS_RTL) $(CFLAGS_RTLTCP) $(CFLAGS_HACKRF)
 
 lib-rtl:
@@ -54,9 +49,6 @@ lib-airspy:
 
 lib-sdrplay:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_SDRPLAY)
-
-lib-rtltcp:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_RTLTCP)
 
 lib-hackrf:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_HACKRF)

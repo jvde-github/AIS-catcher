@@ -187,7 +187,7 @@ namespace Device {
 		DeviceBase::Stop();
 	}
 
-	void AIRSPY::pushDeviceList(std::vector<Description>& DeviceList)
+	void AIRSPY::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		std::vector<uint64_t> serials;
 		int device_count = airspy_list_devices(0, 0);

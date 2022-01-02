@@ -29,8 +29,6 @@ namespace Device {
 	//---------------------------------------
 	// Device RTLSDR
 
-#ifdef HASRTLTCP
-
 	void RTLTCP::Print()
 	{
 		std::cerr << "RTLTCP settings: -gt host " << host <<  " port " << port << " tuner ";
@@ -232,5 +230,4 @@ namespace Device {
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
 
-#endif
 }
