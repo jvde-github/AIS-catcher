@@ -44,7 +44,7 @@ SOFTWARE.
 
 MessageHub<SystemMessage> SystemMessages;
 
-#ifdef WIN32
+#ifdef _WIN32
 BOOL WINAPI consoleHandler(DWORD signal)
 {
 	if (signal == CTRL_C_EVENT) SystemMessages.Send(SystemMessage::Stop);
@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
 			throw "ERROR: Could not set control handler";
 #else

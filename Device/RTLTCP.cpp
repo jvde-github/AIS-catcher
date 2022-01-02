@@ -68,7 +68,7 @@ namespace Device {
 
 	RTLTCP::RTLTCP()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		WSADATA wsaData;
 
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -81,14 +81,14 @@ namespace Device {
 
 	RTLTCP::~RTLTCP()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		WSACleanup();
 #endif
 	}
 
 	void RTLTCP::Close()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		if (sock != -1) closesocket(sock);
 #else
 		if (sock != -1) close(sock);
@@ -104,7 +104,7 @@ namespace Device {
 		h.ai_socktype = SOCK_STREAM;
 		h.ai_protocol = IPPROTO_TCP;
 
-#ifndef WIN32
+#ifndef _WIN32
 		h.ai_flags = AI_ADDRCONFIG;
 #endif
 
