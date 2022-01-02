@@ -34,74 +34,6 @@ namespace Device {
 #ifdef HASAIRSPY
 
 
-	void AIRSPY::Print()
-	{
-		std::cerr << "Airspy Settings: -gm";
-
-		switch (mode)
-		{
-		case AIRSPYGainMode::Sensitivity:
-			std::cerr << " sensitivity " << gain;
-			break;
-
-		case AIRSPYGainMode::Linearity:
-			std::cerr << " linearity " << gain;
-			break;
-
-		case AIRSPYGainMode::Free:
-
-			std::cerr << " lna ";
-			if(LNA_AGC) std::cerr << "AUTO";
-			else std::cerr << LNA_Gain;
-
-			std::cerr << " mixer ";
-			if(mixer_AGC) std::cerr << "AUTO";
-			else std::cerr << mixer_Gain; 
-
-			std::cerr << " vga " << VGA_Gain;
-			break;
-		}
-		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << std::endl;;
-	}
-
-	void AIRSPY::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "SENSITIVITY")
-		{
-			mode = AIRSPYGainMode::Sensitivity;
-			gain = Util::Parse::Integer(arg, 0, 21);
-		}
-		else if (option == "LINEARITY")
-		{
-			mode = AIRSPYGainMode::Linearity;
-			gain = Util::Parse::Integer(arg, 0, 21);
-		}
-		else if (option == "VGA")
-		{
-			mode = AIRSPYGainMode::Free;
-			VGA_Gain = Util::Parse::Integer(arg, 0, 14);
-		}
-		else if (option == "MIXER")
-		{
-			mode = AIRSPYGainMode::Free;
-			mixer_AGC = Util::Parse::AutoInteger(arg, 0, 14, mixer_Gain);
-		}
-		else if (option == "LNA")
-		{
-			mode = AIRSPYGainMode::Free;
-			LNA_AGC = Util::Parse::AutoInteger(arg, 0, 14, LNA_Gain);;
-		}
-		else if (option == "BIASTEE")
-		{
-			bias_tee = Util::Parse::Switch(arg);
-		}
-		else
-			throw " Invalid setting for AIRSPY.";
-	}
-
 	void AIRSPY::Open(uint64_t h)
 	{
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
@@ -109,11 +41,11 @@ namespace Device {
 		applyGainSettings();
 
 		uint32_t nRates;
-
 		airspy_get_samplerates(dev, &nRates, 0);
 		rates.resize(nRates);
 		airspy_get_samplerates(dev, rates.data(), nRates);
 		std::sort(rates.begin(), rates.end());
+
 		setSampleRate(rates[0]);
 	}
 
@@ -236,5 +168,72 @@ namespace Device {
 		if(bias_tee) setBiasTee(true);
 	}
 
+	void AIRSPY::Print()
+	{
+		std::cerr << "Airspy Settings: -gm";
+
+		switch (mode)
+		{
+		case AIRSPYGainMode::Sensitivity:
+			std::cerr << " sensitivity " << gain;
+			break;
+
+		case AIRSPYGainMode::Linearity:
+			std::cerr << " linearity " << gain;
+			break;
+
+		case AIRSPYGainMode::Free:
+
+			std::cerr << " lna ";
+			if (LNA_AGC) std::cerr << "AUTO";
+			else std::cerr << LNA_Gain;
+
+			std::cerr << " mixer ";
+			if (mixer_AGC) std::cerr << "AUTO";
+			else std::cerr << mixer_Gain;
+
+			std::cerr << " vga " << VGA_Gain;
+			break;
+		}
+		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << std::endl;;
+	}
+
+	void AIRSPY::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "SENSITIVITY")
+		{
+			mode = AIRSPYGainMode::Sensitivity;
+			gain = Util::Parse::Integer(arg, 0, 21);
+		}
+		else if (option == "LINEARITY")
+		{
+			mode = AIRSPYGainMode::Linearity;
+			gain = Util::Parse::Integer(arg, 0, 21);
+		}
+		else if (option == "VGA")
+		{
+			mode = AIRSPYGainMode::Free;
+			VGA_Gain = Util::Parse::Integer(arg, 0, 14);
+		}
+		else if (option == "MIXER")
+		{
+			mode = AIRSPYGainMode::Free;
+			mixer_AGC = Util::Parse::AutoInteger(arg, 0, 14, mixer_Gain);
+		}
+		else if (option == "LNA")
+		{
+			mode = AIRSPYGainMode::Free;
+			LNA_AGC = Util::Parse::AutoInteger(arg, 0, 14, LNA_Gain);;
+		}
+		else if (option == "BIASTEE")
+		{
+			bias_tee = Util::Parse::Switch(arg);
+		}
+		else
+			throw " Invalid setting for AIRSPY.";
+	}
 #endif
 }

@@ -105,7 +105,5 @@ namespace Device{
 
 		// MessageIn
 		virtual void Message(const SystemMessage& msg) { Stop(); };
-
-
 	};
 }
