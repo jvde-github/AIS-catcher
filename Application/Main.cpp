@@ -145,7 +145,7 @@ void printDevices(std::vector<Device::Description>& device_list)
 	}
 }
 
-void printSupportedDevices(std::vector<Device::Description>& device_list)
+void printSupportedDevices()
 {
 	std::cerr << "Supported SDR(s): ";
 #ifdef HASRTLSDR
@@ -388,7 +388,7 @@ int main(int argc, char* argv[])
 
 		if (verbose || list_devices || list_support || NMEA_to_screen != IO::DumpScreen::Level::NONE || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
-		if (list_support) printSupportedDevices(device_list);
+		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
 		if (list_devices || list_support || list_options) return 0;
 

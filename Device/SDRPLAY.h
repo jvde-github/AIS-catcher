@@ -45,7 +45,7 @@ namespace Device {
 		// SDRPLAY specific
 		sdrplay_api_DeviceT device;
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
-		sdrplay_api_RxChannelParamsT* chParams;
+		sdrplay_api_RxChannelParamsT* chParams = NULL;;
 
 		int LNAstate = 5;
 		int gRdB = 40;
