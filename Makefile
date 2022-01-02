@@ -2,6 +2,7 @@ SRC = Application/Main.cpp IO/IO.cpp DSP/DSP.cpp Library/AIS.cpp DSP/Model.cpp L
 OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o RTLSDR.o AIRSPYHF.o AIRSPY.o FileRAW.o FileWAV.o SDRPLAY.o RTLTCP.o HACKRF.o
 
 CC = gcc
+
 override CFLAGS += -Ofast -std=c++11
 override LFLAGS += -lstdc++ -lpthread -lm -o AIS-catcher
 
@@ -20,30 +21,27 @@ LFLAGS_HACKRF = $(shell pkg-config --libs libhackrf)
 CFLAGS_ALL =
 LFLAGS_ALL =
 
-FOUND:=$(shell pkg-config --exists librtlsdr && echo 'T')
-ifneq ($(FOUND),)
+ifneq ($(shell pkg-config --exists librtlsdr && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_RTL)
     LFLAGS_ALL += $(LFLAGS_RTL)
 endif
 
-FOUND:=$(shell pkg-config --exists libhackrf && echo 'T')
-ifneq ($(FOUND),)
+ifneq ($(shell pkg-config --exists libhackrf && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_HACKRF)
     LFLAGS_ALL += $(LFLAGS_HACKRF)
 endif
 
-FOUND:=$(shell pkg-config --exists libairspy && echo 'T')
-ifneq ($(FOUND),)
+ifneq ($(shell pkg-config --exists libairspy && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_AIRSPY)
     LFLAGS_ALL += $(LFLAGS_AIRSPY)
 endif
 
-FOUND:=$(shell pkg-config --exists libairspyhf && echo 'T')
-ifneq ($(FOUND),)
+ifneq ($(shell pkg-config --exists libairspyhf && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_AIRSPYHF)
     LFLAGS_ALL += $(LFLAGS_AIRSPYHF)
 endif
 
+# Building AIS-Catcher
 
 all: lib
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_ALL)
@@ -63,6 +61,7 @@ sdrplay-only: lib-sdrplay
 hackrf-only: lib-hackrf
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_HACKRF)
 
+# Creating object-files
 lib:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ALL)
 
