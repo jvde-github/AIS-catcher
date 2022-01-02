@@ -215,12 +215,12 @@ In this example the default model performs quite well in contrast to the standar
 
 ### Experimenting with recorded signals
 The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. The output of the various receivers was sent via UDP to AISdipatcher which removes any duplicates and counts messages. The results in terms of  number of messages/distinct vessels:
- | File | rtl-ais | AIS-catcher v0.32  | AIS-catcher v0.32 (-F) | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
+ | File | AIS-catcher v0.32  | AIS-catcher EDGE | rtl-ais | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
  | :--- | :--- | :---: | :---: | :---: | :---: | :---: | 
- |Scheveningen |  17/16 | 43/37| 43/36  | 30/27 | 37/31 | recorded @ 1536K with `rtl-sdr` (auto gain) |
- |Moscow| 146/27 | 197/33 |198/35 |  195/31 | 183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
- |Vlieland | 51/31| 93/53 |94/55  | 72/44 | 80/52 | recorded @ 1536K with `rtl-sdr` (auto gain) |
- |Posterholt | 2/2 | 39/22  |40/22 | 13/12 | 31/21 | recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Scheveningen |   43/37| 43/37  | 17/16 | 30/27 | 37/31 | recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Moscow| 197/33 |210/32 |  195/31 | 146/27 |  183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
+ |Vlieland | 93/53 |93/53  | 51/31| 72/44 | 80/52 | recorded @ 1536K with `rtl-sdr` (auto gain) |
+ |Posterholt |  39/22  |39/22 |2/2 | 13/12 | 31/21 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  
  **Update 1:** AISrec recently had a version update of 2.208 (October 23, 2021) with improved stability and reception quality and the table above has been updated to include the results from this recent version. 
 
