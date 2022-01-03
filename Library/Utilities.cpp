@@ -33,7 +33,7 @@ namespace Util
 			output[i] = data[i].real();
 		}
 
-		sendOut(output.data(), len);
+		Send(output.data(), len);
 	}
 
 	void ImaginaryPart::Receive(const CFLOAT32* data, int len)
@@ -45,6 +45,6 @@ namespace Util
 			output[i] = data[i].imag();
 		}
 
-		sendOut(output.data(), len);
+		Send(output.data(), len);
 	}
 }

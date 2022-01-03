@@ -41,7 +41,7 @@ namespace Demod
 			prev = data[i];
 		}
 
-		sendOut(output.data(), len);
+		Send(output.data(), len);
 	}
 
 	void PhaseSearch::Receive(const CFLOAT32* data, int len)
@@ -102,7 +102,7 @@ namespace Demod
 
 			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
 
-			sendOut(&b, 1);
+			Send(&b, 1);
 		}
 	}
 
@@ -158,7 +158,7 @@ namespace Demod
 
 			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
 
-			sendOut(&b, 1);
+			Send(&b, 1);
 		}
 	}
 }

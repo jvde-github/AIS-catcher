@@ -28,43 +28,12 @@ namespace Device {
 
 // API described here: https://www.sdrplay.com/docs/SDRplay_API_Specification_v3.01.pdf
 
-
 #ifdef HASSDRPLAY
 
 	//---------------------------------------
 	// Device SDRPLAY
 
-	void SDRPLAY::Print()
-	{
-		std::cerr << "SDRPLAY Settings: -gs agc " << (AGC?"ON":"OFF") << " lnastate " << LNAstate << " grdb " << gRdB << std::endl;
-	}
-
-	void SDRPLAY::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "AGC")
-		{
-			AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "LNASTATE")
-		{
-			LNAstate = Util::Parse::Integer(arg,0,9);
-		}
-		else if (option == "GRDB")
-		{
-			gRdB = Util::Parse::Integer(arg,0,59);
-		}
-		else
-			throw "Invalid setting for SDRPLAY.";
-	}
-
-	// static constructor and data
-
-	SDRPLAY::_API SDRPLAY::_api;
-
-	SDRPLAY::_API::_API()
+	SDRPLAY::SDRPLAY()
 	{
 		float version = 0.0;
 
@@ -87,10 +56,9 @@ namespace Device {
 		running = true;
 	}
 
-	SDRPLAY::_API::~_API()
+	SDRPLAY::~SDRPLAY()
 	{
 		sdrplay_api_Close();
-		running = false;
 	}
 
 	void SDRPLAY::callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext)
@@ -116,14 +84,17 @@ namespace Device {
 	{
 		if (output.size() < len) output.resize(len);
 
-		for (int i = 0; i < len; i++)
+		if(streaming)
 		{
-			output[i].real(xi[i] / 32768.0f);
-			output[i].imag(xq[i] / 32768.0f);
+			for (int i = 0; i < len; i++)
+			{
+				output[i].real(xi[i] / 32768.0f);
+				output[i].imag(xq[i] / 32768.0f);
+			}
+
+			if (!fifo.Push((char*)output.data(), len * sizeof(CFLOAT32)))
+				std::cerr << "SDRPLAY: buffer overrun." << std::endl;
 		}
-
-		if (!fifo.Push((char*)output.data(), len * sizeof(CFLOAT32))) std::cerr << "SDRPLAY: buffer overrun." << std::endl;
-
 	}
 
 	void SDRPLAY::Run()
@@ -171,7 +142,7 @@ namespace Device {
 
 		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
 
-		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_DISABLE : sdrplay_api_AGC_CTRL_EN;
+		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_CTRL_EN : sdrplay_api_AGC_DISABLE;
 		chParams->tunerParams.gain.gRdB = gRdB;
 		chParams->tunerParams.gain.LNAstate = LNAstate;
 
@@ -180,7 +151,7 @@ namespace Device {
 
 	void SDRPLAY::Play()
 	{
-		fifo.Init(16 * 16384, 6);
+		fifo.Init(16 * 16384, 8);
 
 		deviceParams->devParams->fsFreq.fsHz = sample_rate;
 		chParams->tunerParams.ifType = sdrplay_api_IF_Zero;
@@ -205,13 +176,13 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void SDRPLAY::Stop()
+	void SDRPLAY::Close()
 	{
-		DeviceBase::Stop();
+		sdrplay_api_Uninit(device.dev);
+		sdrplay_api_ReleaseDevice(&device);
 
 		if (run_thread.joinable())
 		{
-			sdrplay_api_Uninit(device.dev);
 			run_thread.join();
 		}
 	}
@@ -219,7 +190,7 @@ namespace Device {
 	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		unsigned int DeviceCount;
-		if(!_api.running) throw "SDRPLAY: API v3.x not running";
+		if(!running) throw "SDRPLAY: API v3.x not running";
 
 		sdrplay_api_LockDeviceApi();
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
@@ -237,9 +208,30 @@ namespace Device {
 		sdrplay_api_UnlockDeviceApi();
 	}
 
-	bool SDRPLAY::isStreaming()
+	void SDRPLAY::Print()
 	{
-		return streaming;
+		std::cerr << "SDRPLAY Settings: -gs agc " << (AGC ? "ON" : "OFF") << " lnastate " << LNAstate << " grdb " << gRdB << std::endl;
+	}
+
+	void SDRPLAY::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "AGC")
+		{
+			AGC = Util::Parse::Switch(arg);
+		}
+		else if (option == "LNASTATE")
+		{
+			LNAstate = Util::Parse::Integer(arg, 0, 9);
+		}
+		else if (option == "GRDB")
+		{
+			gRdB = Util::Parse::Integer(arg, 0, 59);
+		}
+		else
+			throw "Invalid setting for SDRPLAY.";
 	}
 #endif
 }
