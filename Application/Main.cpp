@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
 	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false,  timer_on = false, OptimizeSpeed = false;
 	IO::DumpScreen::Level NMEA_to_screen = IO::DumpScreen::Level::FULL;
-	int verboseUpdateTime = 3000;
+	int verboseUpdateTime = 3;
 
 	// Device and output stream of device;
 	Device::Type input_type = Device::Type::NONE;
@@ -284,7 +284,7 @@ int main(int argc, char* argv[])
 			case 'v':
 				Assert(count <= 1);
 				verbose = true;
-				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600) * 1000;
+				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'q':
 				Assert(count == 0);
@@ -473,13 +473,16 @@ int main(int argc, char* argv[])
 		// Main loop
 		device->Play();
 
+		int secPassed = 0;
+
 		while(device->isStreaming())
 		{
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 			{
-				SleepSystem(verboseUpdateTime);
+				SleepSystem(1000);
+				secPassed = (secPassed + 1) % verboseUpdateTime;
 
-				if (verbose)
+				if (verbose && secPassed == 0)
 					for (int j = 0; j < liveModels.size(); j++)
 					{
 						std::string name = liveModels[j]->getName();
@@ -489,6 +492,7 @@ int main(int argc, char* argv[])
 		}
 
 		device->Stop();
+
 		// End Main loop
 		// -----------------
 

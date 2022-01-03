@@ -49,7 +49,7 @@ namespace Device {
 
 		int LNAstate = 5;
 		int gRdB = 40;
-		bool AGC = false;
+		bool AGC = true;
 
 		static void callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext);
 		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext);
@@ -57,21 +57,21 @@ namespace Device {
 		void callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset);
 		void callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params);
 
+		bool running = false;
+
 	public:
 
 		// Control
 		void Open(uint64_t h);
 		void Play();
-		void Stop();
+		void Close();
 
-		bool isStreaming();
 		virtual bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		static struct _API { bool running = false; _API(); ~_API(); } _api;
-
-		~SDRPLAY() { sdrplay_api_ReleaseDevice(&device); }
+		SDRPLAY();
+		~SDRPLAY();
 
 		// Settings
 		void Print();

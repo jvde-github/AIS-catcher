@@ -45,7 +45,7 @@ namespace DSP
 
 			if (PLL >= 1.0f)
 			{
-				sendOut(&data[i], 1);
+				Send(&data[i], 1);
 				PLL -= (int) PLL;
 			}
 			prev = bit;
@@ -114,7 +114,7 @@ namespace DSP
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}
 
-		sendOut(output.data(), len / 2);
+		Send(output.data(), len / 2);
 	}
 
 	void Decimate2::Receive(const CFLOAT32* data, int len)
@@ -128,7 +128,7 @@ namespace DSP
 			output[j] = data[i];
 		}
 
-		sendOut(output.data(), len / 2);
+		Send(output.data(), len / 2);
 	}
 
 	// FilterCIC5
@@ -150,7 +150,7 @@ namespace DSP
 			output[i + 1] = z * (FLOAT32)0.03125f;
 		}
 
-		sendOut(output.data(), len);
+		Send(output.data(), len);
 	}
 
 	// Work in progress - needs performance improvement
@@ -171,7 +171,7 @@ namespace DSP
 
 			if(++idx_out == outputSize)
 			{
-				sendOut(output.data(), outputSize);
+				Send(output.data(), outputSize);
 				idx_out = 0;
 			}
 
@@ -201,7 +201,7 @@ namespace DSP
 
 				if (idx_out == len)
 				{
-					sendOut(output.data(), len);
+					Send(output.data(), len);
 					idx_out = 0;
 				}
 
@@ -235,7 +235,7 @@ namespace DSP
 			buffer[ptr] = data[i];
 		}
 
-		sendOut(output.data(), len);
+		Send(output.data(), len);
 	}
 
 	// Filter Generic Real
@@ -261,7 +261,7 @@ namespace DSP
 			buffer[ptr] = data[i];
 		}
 
-		sendOut(output.data(), len);
+		Send(output.data(), len);
 	}
 
 	// Rotate +/- 25K Hz
@@ -337,7 +337,7 @@ namespace DSP
 			if(++count == N)
 			{
 				correctFrequency();
-				sendOut(output.data(), N);
+				Send(output.data(), N);
 				count = 0;
 			}
 		}

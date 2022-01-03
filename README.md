@@ -220,7 +220,7 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
  | File | AIS-catcher v0.32  | AIS-catcher EDGE | rtl-ais | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
  | :--- | :--- | :---: | :---: | :---: | :---: | :---: | 
  |Scheveningen |   43/37| 43/37  | 17/16 | 30/27 | 37/31 | recorded @ 1536K with `rtl-sdr` (auto gain) |
- |Moscow| 197/33 |210/32 |  195/31 | 146/27 |  183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
+ |Moscow| 197/33 |210/32 | 146/27 |  195/31 |  183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
  |Vlieland | 93/53 |93/53  | 51/31| 72/44 | 80/52 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  |Posterholt |  39/22  |39/22 |2/2 | 13/12 | 31/21 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  

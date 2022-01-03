@@ -133,7 +133,7 @@ namespace AIS
 		nmea.mmsi = (DataFCS[1]<<22)|(DataFCS[2]<<14)|(DataFCS[3]<<6)|(DataFCS[4]>>2);
 
 		//if(nmea.msg >= 0 and nmea.msg <= 27)
-		sendOut(&nmea, 1);
+		Send(&nmea, 1);
 
 		MessageID = (MessageID + 1) % 10;
 	}

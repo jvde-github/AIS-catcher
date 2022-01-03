@@ -51,8 +51,8 @@ namespace Util
 	{
 
 	public:
-		virtual void Receive(const T* data, int len) { SimpleStreamInOut<T, T>::sendOut(data, len); }
-		virtual void Receive(T* data, int len) { SimpleStreamInOut<T, T>::sendOut(data, len); }
+		virtual void Receive(const T* data, int len) { SimpleStreamInOut<T, T>::Send(data, len); }
+		virtual void Receive(T* data, int len) { SimpleStreamInOut<T, T>::Send(data, len); }
 
 	};
 
@@ -74,8 +74,8 @@ namespace Util
 		}
 
 	public:
-		virtual void Receive(const T* data, int len) { tic();  SimpleStreamInOut<T, T>::sendOut(data, len);  toc(); }
-		virtual void Receive(T* data, int len) { tic();  SimpleStreamInOut<T, T>::sendOut(data, len); toc(); }
+		virtual void Receive(const T* data, int len) { tic();  SimpleStreamInOut<T, T>::Send(data, len);  toc(); }
+		virtual void Receive(T* data, int len) { tic();  SimpleStreamInOut<T, T>::Send(data, len); toc(); }
 
 		float getTotalTiming() { return timing; }
 	};

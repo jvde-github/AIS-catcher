@@ -90,22 +90,7 @@ public:
 };
 
 template <typename T, typename S>
-class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T>
-{
-public:
-
-	void sendOut(const S* data, int len)
-	{
-		StreamOut<S>::Send(data, len);
-	}
-
-	void sendOut(S* data, int len)
-	{
-		StreamOut<S>::Send(data, len);
-	}
-};
-
-
+class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T> { };
 
 template <typename S>
 inline StreamIn<S>& operator>>(Connection<S>& a, StreamIn<S>& b) { a.Connect(&b); return b; }
