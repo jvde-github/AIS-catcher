@@ -238,24 +238,6 @@ The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward 
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git make gcc g++ librtlsdr-dev pkg-config -y
-
-```
-
-Next step is to download AIS-catcher source and install the program:
-
-```console
-git clone https://github.com/jvde-github/AIS-catcher.git
-cd AIS-catcher
-make rtl-only
-sudo make install
-```
-#### Full version 
-If you want to include HackRF, Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
-```console
-sudo apt-get update
-sudo apt-get upgrade
-
 sudo apt-get install git make gcc g++ librtlsdr-dev libairspyhf-dev libairspy-dev libhackrf-dev pkg-config -y
 ```
 The process to install AIS-catcher then becomes:
@@ -270,7 +252,7 @@ Standard installation will include support for the Airspy devices, HackRF and RT
 make sdrplay-only
 sudo make install
 ```
-At the moment only RSP1A is supported (as that is the only device I can test on).
+At the moment only RSP1A is supported (as that is the only device I can test on). 
 
 ### Mac OS X
 The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
