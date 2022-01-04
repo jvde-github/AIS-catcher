@@ -44,7 +44,7 @@ Compilation and installation instructions are provided below for Linux systems i
 
 A Windows binary version of **v0.32** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
-If you are looking for a Windows binary supporting SDRplay API 3.08, please get in contact with [me](mailto:jvde.github@gmail.com).
+If you are looking for a Windows binary supporting SDRplay API 3.09, please get in contact with [me](mailto:jvde.github@gmail.com).
 
 ## Usage
 ````
@@ -231,27 +231,8 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 ## Compilation process
 
 ### Ubuntu and Raspberry Pi
-#### RTL-SDR only 
 The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
 
-```console
-sudo apt-get update
-sudo apt-get upgrade
-
-sudo apt-get install git make gcc g++ librtlsdr-dev pkg-config -y
-
-```
-
-Next step is to download AIS-catcher source and install the program:
-
-```console
-git clone https://github.com/jvde-github/AIS-catcher.git
-cd AIS-catcher
-make rtl-only
-sudo make install
-```
-#### Full version 
-If you want to include HackRF, Airspy and Airspy HF+ functionality, ensure you install the required libraries as described on https://github.com/airspy/airspyhf and https://github.com/airspy/airspyone_host. If not installed yet, you might first want to try:
 ```console
 sudo apt-get update
 sudo apt-get upgrade
@@ -270,7 +251,7 @@ Standard installation will include support for the Airspy devices, HackRF and RT
 make sdrplay-only
 sudo make install
 ```
-At the moment only RSP1A is supported (as that is the only device I can test on).
+At the moment only RSP1A is supported (as that is the only device I can test on). 
 
 ### Mac OS X
 The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
