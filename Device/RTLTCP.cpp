@@ -88,6 +88,7 @@ namespace Device {
 
 	void RTLTCP::Close()
 	{
+		DeviceBase::Close();
 #ifdef _WIN32
 		if (sock != -1) closesocket(sock);
 #else
@@ -130,6 +131,8 @@ namespace Device {
 
 		applySettings();
 		setSampleRate(288000);
+
+		DeviceBase::Open(handle);
 	}
 
 	void RTLTCP::setParameter(uint8_t c, uint32_t p)
@@ -197,6 +200,8 @@ namespace Device {
 		setParameter(2, sample_rate);
 		setParameter(1, frequency);
 
+		DeviceBase::Play();
+
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);
 
@@ -205,10 +210,13 @@ namespace Device {
 
 	void RTLTCP::Stop()
 	{
-		DeviceBase::Stop();
+		if(DeviceBase::isStreaming())
+		{
+			DeviceBase::Stop();
 
-		if (async_thread.joinable()) async_thread.join();
-		if (run_thread.joinable()) run_thread.join();
+			if (async_thread.joinable()) async_thread.join();
+			if (run_thread.joinable()) run_thread.join();
+		}
 	}
 
 	void RTLTCP::setFrequencyCorrection(int ppm)

@@ -218,9 +218,15 @@ bool isoption(std::string s)
 	return s.length() >= 2 && s[0] == '-' && std::isalpha(s[1]);
 }
 
-void Assert(bool b)
+void Assert(bool b, std::string &context, std::string msg = "")
 {
-	if (!b) throw "Error on command line: syntax error.";
+	if (!b)
+	{
+		std::cerr << "Error on command line in processing setting \"" << context << "\". ";
+		if(msg != "") std::cerr << msg;
+		std::cerr  << std::endl;
+		throw "Terminating.";
+	}
 }
 
 int main(int argc, char* argv[])
@@ -263,7 +269,7 @@ int main(int argc, char* argv[])
 		while (ptr < argc)
 		{
 			std::string param = std::string(argv[ptr]);
-			Assert(param[0] == '-');
+			Assert(param[0] == '-', param, "Setting does not start with \"-\".");
 
 			int count = 0;
 			while (ptr + count + 1 < argc && !isoption(argv[ptr + 1 + count])) count++;
@@ -274,46 +280,47 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				Assert(count == 1);
+				Assert(count == 1, param, "No sample rate provided.");
 				sample_rate = Util::Parse::Integer(arg1, 48000, 12288000);
 				break;
 			case 'm':
-				Assert(count == 1);
+				Assert(count == 1, param, "No model number provided.");
 				liveModelsSelected.push_back(Util::Parse::Integer(arg1, 0, 5));
 				break;
 			case 'v':
-				Assert(count <= 1);
+				Assert(count <= 1, param);
 				verbose = true;
 				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'q':
-				Assert(count == 0);
+				Assert(count == 0, param, "Does not accept parameter.");
 				NMEA_to_screen = IO::DumpScreen::Level::NONE;
 				break;
 			case 'n':
-				Assert(count == 0);
+				Assert(count == 0, param, "Does not accept parameter.");
 				NMEA_to_screen = IO::DumpScreen::Level::SPARSE;
 				break;
 			case 'F':
+				Assert(count == 0, param, "Does not accept parameter.");
 				OptimizeSpeed = true;
 				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
-				Assert(count <= 2);
+				Assert(count <= 2, param, "Requires one or two paramters.");
 				if(count >= 1) drivers.RTLTCP.Set("host",arg1);
 				if(count >= 2) drivers.RTLTCP.Set("port",arg2);
 				break;
 			case 'b':
-				Assert(count == 0);
+				Assert(count == 0, param, "Does not accept paramters.");
 				timer_on = true;
 				break;
 			case 'w':
-				Assert(count <= 1);
+				Assert(count <= 1, param);
 				input_type = Device::Type::WAVFILE;
 				if (count == 1) drivers.WAV.Set("FILE", arg1);
 				break;
 			case 'r':
-				Assert(count <= 2);
+				Assert(count <= 2, param);
 				input_type = Device::Type::RAWFILE;
 				if (count == 1)
 				{
@@ -326,22 +333,22 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'l':
-				Assert(count == 0);
+				Assert(count == 0, param, "Does not accept paramters.");
 				list_devices = true;
 				break;
 			case 'L':
-				Assert(count == 0);
+				Assert(count == 0, param, "Does not accept paramters.");
 				list_support = true;
 				break;
 			case 'd':
 				if (param.length() == 4 && param[2] == ':')
 				{
-					Assert(count == 0);
+					Assert(count == 0, param, "Does not accept additional paramters.");
 					input_device = (param[3] - '0');
 				}
 				else
 				{
-					Assert(count == 1);
+					Assert(count == 1, param, "Requires one parameter.");
 					input_device = getDeviceFromSerial(device_list, arg1);
 				}
 				if (input_device < 0 || input_device >= device_list.size())
@@ -352,19 +359,19 @@ int main(int argc, char* argv[])
 				break;
 			case 'u':
 			case 'U':
-				Assert(count == 2);
+				Assert(count == 2, param, "Requires two paramters [address] [port].");
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModelsSelected.size()-1) ));
 				break;
 			case 'h':
-				Assert(count == 0);
+				Assert(count == 0, param, "Does not accept paramters.");
 				list_options = true;
 				break;
 			case 'p':
-				Assert(count == 1);
+				Assert(count == 1, param, "Requires one paramter [frequency offset].");
 				drivers.RTLSDR.Set("FREQOFFSET", arg1);
 				break;
 			case 'g':
-				Assert(count % 2 == 0 && param.length() == 3);
+				Assert(count % 2 == 0 && param.length() == 3, param);
 				switch (param[2])
 				{
 				case 'm': parseDeviceSettings(drivers.AIRSPY, argv, ptr, argc); break;
@@ -490,8 +497,6 @@ int main(int argc, char* argv[])
 					}
 			}
 		}
-
-		device->Stop();
 
 		// End Main loop
 		// -----------------

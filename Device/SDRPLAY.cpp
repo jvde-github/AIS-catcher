@@ -33,11 +33,13 @@ namespace Device {
 	//---------------------------------------
 	// Device SDRPLAY
 
+	int SDRPLAY::API_count = 0;
+
 	SDRPLAY::SDRPLAY()
 	{
 		float version = 0.0;
 
-		if(sdrplay_api_Open() != sdrplay_api_Success)
+		if(API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success)
 		{
 			running = false;
 			return;
@@ -58,57 +60,7 @@ namespace Device {
 
 	SDRPLAY::~SDRPLAY()
 	{
-		sdrplay_api_Close();
-	}
-
-	void SDRPLAY::callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext)
-	{
-		((SDRPLAY*)cbContext)->callback(xi, xq, params, numSamples, reset);
-	}
-
-	void SDRPLAY::callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext)
-	{
-		((SDRPLAY*)cbContext)->callback_event(eventId, tuner, params);
-	}
-
-	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params)
-	{
-		if (eventId == sdrplay_api_DeviceRemoved)
-		{
-			std::cerr << "SDRPLAY: device disconnected" << std::endl;
-			Stop();
-		}
-	}
-
-	void SDRPLAY::callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int len, unsigned int reset)
-	{
-		if (output.size() < len) output.resize(len);
-
-		if(streaming)
-		{
-			for (int i = 0; i < len; i++)
-			{
-				output[i].real(xi[i] / 32768.0f);
-				output[i].imag(xq[i] / 32768.0f);
-			}
-
-			if (!fifo.Push((char*)output.data(), len * sizeof(CFLOAT32)))
-				std::cerr << "SDRPLAY: buffer overrun." << std::endl;
-		}
-	}
-
-	void SDRPLAY::Run()
-	{
-		while (isStreaming())
-		{
-			if (fifo.Wait())
-			{
-				RAW r = { Format::CF32, fifo.Front(), fifo.BlockSize() };
-				Send(&r, 1);
-				fifo.Pop();
-			}
-			else std::cerr << "SDRPLAY: timeout." << std::endl;
-		}
+		if(--API_count) sdrplay_api_Close();
 	}
 
 	void SDRPLAY::Open(uint64_t h)
@@ -147,6 +99,8 @@ namespace Device {
 		chParams->tunerParams.gain.LNAstate = LNAstate;
 
 		setSampleRate(2304000);
+
+		DeviceBase::Open(h);
 	}
 
 	void SDRPLAY::Play()
@@ -159,31 +113,86 @@ namespace Device {
 		chParams->ctrlParams.decimation.decimationFactor = 1;
 		chParams->ctrlParams.decimation.wideBandSignal = 1;
 		chParams->tunerParams.bwType = sdrplay_api_BW_1_536;
-
 		chParams->tunerParams.rfFreq.rfHz = frequency;
 
 		sdrplay_api_CallbackFnsT cbFns;
 		cbFns.StreamACbFn = callback_static;
 		cbFns.EventCbFn = callback_event_static;
 
-		if(sdrplay_api_Init(device.dev, &cbFns, (void *)this) != sdrplay_api_Success)
-			throw "SDRPLAY: cannot start device";
-
-		run_thread = std::thread(&SDRPLAY::Run, this);
+		if(sdrplay_api_Init(device.dev, &cbFns, (void *)this) != sdrplay_api_Success) throw "SDRPLAY: cannot start device";
 
 		DeviceBase::Play();
+
+		run_thread = std::thread(&SDRPLAY::Run, this);
 
 		SleepSystem(10);
 	}
 
+	void SDRPLAY::Stop()
+	{
+		if(isStreaming())
+		{
+			DeviceBase::Stop();
+
+			sdrplay_api_Uninit(device.dev);
+			if (run_thread.joinable()) run_thread.join();
+		}
+	}
+
 	void SDRPLAY::Close()
 	{
-		sdrplay_api_Uninit(device.dev);
+		DeviceBase::Close();
 		sdrplay_api_ReleaseDevice(&device);
+	}
 
-		if (run_thread.joinable())
+
+	void SDRPLAY::callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext)
+	{
+		((SDRPLAY*)cbContext)->callback(xi, xq, params, numSamples, reset);
+	}
+
+	void SDRPLAY::callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext)
+	{
+		((SDRPLAY*)cbContext)->callback_event(eventId, tuner, params);
+	}
+
+	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params)
+	{
+		if (eventId == sdrplay_api_DeviceRemoved)
 		{
-			run_thread.join();
+			std::cerr << "SDRPLAY: device disconnected" << std::endl;
+			Stop();
+		}
+	}
+
+	void SDRPLAY::callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int len, unsigned int reset)
+	{
+		if (output.size() < len) output.resize(len);
+
+		if(isStreaming())
+		{
+			for (int i = 0; i < len; i++)
+			{
+				output[i].real(xi[i] / 32768.0f);
+				output[i].imag(xq[i] / 32768.0f);
+			}
+
+			if (!fifo.Push((char*)output.data(), len * sizeof(CFLOAT32)))
+				std::cerr << "SDRPLAY: buffer overrun." << std::endl;
+		}
+	}
+
+	void SDRPLAY::Run()
+	{
+		while (isStreaming())
+		{
+			if (fifo.Wait())
+			{
+				RAW r = { Format::CF32, fifo.Front(), fifo.BlockSize() };
+				Send(&r, 1);
+				fifo.Pop();
+			}
+			else if(isStreaming()) std::cerr << "SDRPLAY: timeout." << std::endl;
 		}
 	}
 

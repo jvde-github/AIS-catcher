@@ -32,28 +32,6 @@ namespace Device {
 
 #ifdef HASAIRSPYHF
 
-	void AIRSPYHF::Print()
-	{
-		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;
-	}
-
-	void AIRSPYHF::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "PREAMP")
-		{
-			preamp = Util::Parse::Switch(arg);
-		}
-		else if(option == "TRESHOLD")
-		{
-			treshold_high = Util::Parse::Switch(arg,"HIGH","LOW");
-		}
-		else
-			throw "Command line: Invalid setting for AIRSPY HF+.";
-	}
-
 	void AIRSPYHF::Open(uint64_t h)
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
@@ -69,6 +47,34 @@ namespace Device {
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
 		std::sort(rates.begin(), rates.end());
 		setSampleRate(rates[0]);
+
+		DeviceBase::Open(h);
+	}
+
+	void AIRSPYHF::Play()
+	{
+		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
+		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
+		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
+
+		DeviceBase::Play();
+
+		SleepSystem(10);
+	}
+
+	void AIRSPYHF::Stop()
+	{
+		if(DeviceBase::isStreaming())
+		{
+			DeviceBase::Stop();
+			airspyhf_stop(dev);
+		}
+	}
+
+	void AIRSPYHF::Close()
+	{
+		DeviceBase::Close();
+		if(!disconnected) airspyhf_close(dev);
 	}
 
 	void AIRSPYHF::setAGC()
@@ -98,22 +104,6 @@ namespace Device {
 		return 0;
 	}
 
-	void AIRSPYHF::Play()
-	{
-		DeviceBase::Play();
-		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
-		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
-		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
-
-		SleepSystem(10);
-	}
-
-	void AIRSPYHF::Stop()
-	{
-		airspyhf_stop(dev);
-		DeviceBase::Stop();
-	}
-
 	void AIRSPYHF::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		std::vector<uint64_t> serials;
@@ -134,7 +124,37 @@ namespace Device {
 
 	bool AIRSPYHF::isStreaming()
 	{
-		return airspyhf_is_streaming(dev) == 1;
+		if(DeviceBase::isStreaming() && airspyhf_is_streaming(dev) != 1)
+		{
+			Stop();
+			disconnected = true;
+		}
+
+		return DeviceBase::isStreaming();
 	}
+
+	void AIRSPYHF::Print()
+	{
+		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;
+	}
+
+	void AIRSPYHF::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "PREAMP")
+		{
+			preamp = Util::Parse::Switch(arg);
+		}
+		else if(option == "TRESHOLD")
+		{
+			treshold_high = Util::Parse::Switch(arg,"HIGH","LOW");
+		}
+		else
+			throw "Command line: Invalid setting for AIRSPY HF+.";
+	}
+
+
 #endif
 }

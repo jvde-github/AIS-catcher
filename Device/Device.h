@@ -85,10 +85,10 @@ namespace Device{
 	public:
 
 		// DeviceBase
-		virtual void Open(uint64_t) { }
-		virtual void Close() { }
-		virtual void Play() { streaming = true; }
-		virtual void Stop() { streaming = false; }
+		virtual void Open(uint64_t) { std::cerr << "OPEN" << std::endl; }
+		virtual void Close() { std::cerr << "CLOSE" << std::endl; }
+		virtual void Play() { std::cerr << "START" << std::endl; streaming = true; }
+		virtual void Stop() { std::cerr << "STOP"<<std::endl; streaming = false; }
 
 		virtual void setSampleRate(uint32_t s) { sample_rate = s; }
 		virtual void setFrequency(uint32_t f) { frequency = f; }

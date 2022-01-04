@@ -52,6 +52,7 @@ namespace Device{
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
+		bool auto_terminate = true;
 
 		// FIFO
 		FIFO<char> fifo;
@@ -79,6 +80,7 @@ namespace Device{
 		void Open(uint64_t h);
 		void Play();
 		void Stop();
+		void Close();
 
 		bool isCallback() { return true; }
 

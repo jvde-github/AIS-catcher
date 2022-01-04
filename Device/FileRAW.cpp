@@ -74,6 +74,8 @@ namespace Device {
 
 	bool RAWFile::isStreaming()
 	{
+		if(!DeviceBase::isStreaming()) return false;
+
 		int len = 0;
 
 		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
@@ -89,7 +91,7 @@ namespace Device {
 
 		if (file->eof()) Stop();
 
-		return streaming;
+		return true;
 	}
 
 	void RAWFile::Close()
@@ -101,8 +103,10 @@ namespace Device {
 		}
 	}
 
-	void RAWFile::Play()
+	void RAWFile::Open(uint64_t h)
 	{
+		DeviceBase::Open(h);
+
 		if(filename == "." || filename == "stdin")
 		{
 			file = &std::cin;
@@ -114,16 +118,7 @@ namespace Device {
 
 		if (!file || file->fail()) throw "Error: Cannot read RAW input.";
 
-		DeviceBase::Play();
-	}
 
-	void RAWFile::Stop()
-	{
-		DeviceBase::Stop();
-	}
-
-	void RAWFile::Open(uint64_t h)
-	{
 		setSampleRate(1536000);
 	}
 }

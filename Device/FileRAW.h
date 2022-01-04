@@ -47,8 +47,7 @@ namespace Device
 		// Control
 		void Open(uint64_t);
 		void Close();
-		void Play();
-		void Stop();
+
 		bool isCallback() { return false; }
 		bool isStreaming();
 
