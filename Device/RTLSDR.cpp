@@ -31,46 +31,50 @@ namespace Device {
 
 #ifdef HASRTLSDR
 
-	void RTLSDR::Print()
-	{
-		std::cerr << "RTLSDR settings: -gr tuner ";
-
-		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
-
-		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
-		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << " -p " << freq_offset << std::endl;
-	}
-
-	void RTLSDR::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "TUNER")
-		{
-			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);
-		}
-		else if (option == "RTLAGC")
-		{
-			RTL_AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "BIASTEE")
-		{
-			bias_tee = Util::Parse::Switch(arg);
-		}
-		else if (option == "FREQOFFSET")
-		{
-			freq_offset = Util::Parse::Integer(arg,-150,150);
-		}
-		else throw "Invalid setting for RTLSDR.";
-	}
-
 	void RTLSDR::Open(uint64_t h)
 	{
 		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw "RTLSDR: cannot open device.";
 
 		applySettings();
 		setSampleRate(1536000);
+
+		DeviceBase::Open(h);
+	}
+
+	void RTLSDR::Play()
+	{
+		fifo.Init(BUFFER_SIZE, 2);
+
+		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw "RTLSDR: cannot set sample rate.";
+		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw "RTLSDR: cannot set frequency.";
+
+		rtlsdr_reset_buffer(dev);
+
+		DeviceBase::Play();
+
+		async_thread = std::thread(&RTLSDR::RunAsync, this);
+		run_thread = std::thread(&RTLSDR::Run, this);
+
+		SleepSystem(10);
+	}
+
+	void RTLSDR::Stop()
+	{
+		if(DeviceBase::isStreaming())
+		{
+			DeviceBase::Stop();
+
+			rtlsdr_cancel_async(dev);
+
+			if (async_thread.joinable()) async_thread.join();
+			if (run_thread.joinable()) run_thread.join();
+		}
+	}
+
+	void RTLSDR::Close()
+	{
+		DeviceBase::Close();
+		//rtlsdr_close(dev);
 	}
 
 	void RTLSDR::setTuner_GainMode(int a)
@@ -136,38 +140,10 @@ namespace Device {
 				Send(&r, 1);
 				fifo.Pop();
 			}
-			else std::cerr << "RTLSDR: timeout." << std::endl;
-		}
-	}
-
-	void RTLSDR::Play()
-	{
-		fifo.Init(BUFFER_SIZE, 2);
-		DeviceBase::Play();
-
-		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw "RTLSDR: cannot set sample rate.";
-		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw "RTLSDR: cannot set frequency.";
-
-		rtlsdr_reset_buffer(dev);
-		async_thread = std::thread(&RTLSDR::RunAsync, this);
-		run_thread = std::thread(&RTLSDR::Run, this);
-
-		SleepSystem(10);
-	}
-
-	void RTLSDR::Stop()
-	{
-		DeviceBase::Stop();
-
-		if (async_thread.joinable())
-		{
-			rtlsdr_cancel_async(dev);
-			async_thread.join();
-		}
-
-		if (run_thread.joinable())
-		{
-			run_thread.join();
+			else
+			{
+				std::cerr << "RTLSDR: timeout." << std::endl;
+			}
 		}
 	}
 
@@ -198,6 +174,41 @@ namespace Device {
 			DeviceList.push_back(Description(vendor, product, serial, (uint64_t)i, Type::RTLSDR));
 		}
 	}
+
+	void RTLSDR::Print()
+	{
+		std::cerr << "RTLSDR settings: -gr tuner ";
+
+		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
+
+		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
+		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << " -p " << freq_offset << std::endl;
+	}
+
+	void RTLSDR::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "TUNER")
+		{
+			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);
+		}
+		else if (option == "RTLAGC")
+		{
+			RTL_AGC = Util::Parse::Switch(arg);
+		}
+		else if (option == "BIASTEE")
+		{
+			bias_tee = Util::Parse::Switch(arg);
+		}
+		else if (option == "FREQOFFSET")
+		{
+			freq_offset = Util::Parse::Integer(arg,-150,150);
+		}
+		else throw "Invalid setting for RTLSDR.";
+	}
+
 
 #endif
 }

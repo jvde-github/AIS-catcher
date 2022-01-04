@@ -37,6 +37,7 @@ namespace Device {
 #ifdef HASAIRSPY
 
 		struct airspy_device* dev = NULL;
+		bool disconnected = false;
 		std::vector<uint32_t> rates;
 
 		enum class AIRSPYGainMode { Free, Sensitivity, Linearity } mode = AIRSPYGainMode::Linearity;
@@ -70,16 +71,15 @@ namespace Device {
 	public:
 
 		// Control
+		void Open(uint64_t h);
 		void Play();
 		void Stop();
+		void Close();
 
 		bool isStreaming();
 		bool isCallback() { return true;}
 
 		void getDeviceList(std::vector<Description>& DeviceList);
-
-		// Device specific
-		void Open(uint64_t h);
 
 		// Settings
 		void Print();

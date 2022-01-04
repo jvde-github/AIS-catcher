@@ -66,19 +66,19 @@ namespace Device {
 
 	bool WAVFile::isStreaming()
 	{
+		if(!DeviceBase::isStreaming()) return false;
+
 		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
 
 		buffer.assign(buffer_size, 0);
 		file.read((char*)buffer.data(), buffer_size);
 
-		if (!file) Stop();
-		else
-		{
-			RAW r = { Format::CF32 , buffer.data(), (int)buffer.size() };
-			Send(&r, 1);
-		}
+		RAW r = { Format::CF32 , buffer.data(), (int)buffer.size() };
+		Send(&r, 1);
 
-		return streaming;
+		if (file.eof()) Stop();
+
+		return true;
 	}
 
 	void WAVFile::Open(uint64_t h)
@@ -104,15 +104,11 @@ namespace Device {
 		DeviceBase::setSampleRate(header.dwSamplesPerSec);
 	}
 
-	void WAVFile::Play()
+	void WAVFile::Close()
 	{
-		DeviceBase::Play();
-	}
+		DeviceBase::Close();
 
-	void WAVFile::Stop()
-	{
 		file.close();
-		DeviceBase::Stop();
 	}
 }
 

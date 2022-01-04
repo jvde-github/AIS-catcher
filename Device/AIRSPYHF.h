@@ -36,6 +36,7 @@ namespace Device{
 
 		struct airspyhf_device* dev = NULL;
 		std::vector<uint32_t> rates;
+		bool disconnected = false;
 
 		bool preamp = false;
 		bool treshold_high = false;
@@ -50,16 +51,15 @@ namespace Device{
 	public:
 
 		// Control
+		void Open(uint64_t h);
 		void Play();
 		void Stop();
+		void Close();
 
 		bool isStreaming();
 		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);
-
-		// Device specific
-		void Open(uint64_t h);
 
 		// Settings
 		void Print();

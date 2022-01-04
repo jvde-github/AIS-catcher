@@ -43,6 +43,8 @@ namespace Device {
 		std::vector<CFLOAT32> output;
 
 		// SDRPLAY specific
+		static int API_count;
+
 		sdrplay_api_DeviceT device;
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;;
@@ -64,6 +66,7 @@ namespace Device {
 		// Control
 		void Open(uint64_t h);
 		void Play();
+		void Stop();
 		void Close();
 
 		virtual bool isCallback() { return true; }

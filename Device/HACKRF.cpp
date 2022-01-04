@@ -73,6 +73,8 @@ namespace Device {
 		setVGA_Gain(VGA_Gain);
 
 		setSampleRate(6000000);
+
+		DeviceBase::Open(h);
 	}
 
 	void HACKRF::setLNA_Gain(int a)
@@ -92,7 +94,8 @@ namespace Device {
 
 	void HACKRF::Close()
 	{
-		hackrf_close(device);
+		DeviceBase::Close();
+		//hackrf_close(device);
 	}
 
 	int HACKRF::callback_static(hackrf_transfer* tf)
@@ -120,22 +123,23 @@ namespace Device {
 
 	void HACKRF::Play()
 	{
-		DeviceBase::Play();
-
 		if (hackrf_set_sample_rate(device, sample_rate) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
 		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(sample_rate)) != HACKRF_SUCCESS) throw "HACKRF: cannot set bandwidth filter to auto.";
 		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
 		if (hackrf_start_rx(device, HACKRF::callback_static, this)  != HACKRF_SUCCESS) throw "HACKRF: Cannot open device";
+
+		DeviceBase::Play();
 
 		SleepSystem(10);
 	}
 
 	void HACKRF::Stop()
 	{
-		hackrf_stop_rx(device);
-		streaming = false;
-
-		DeviceBase::Stop();
+		if(isStreaming())
+		{
+			DeviceBase::Stop();
+			hackrf_stop_rx(device);
+		}
 	}
 
 	void HACKRF::getDeviceList(std::vector<Description>& DeviceList)
@@ -162,7 +166,9 @@ namespace Device {
 
 	bool HACKRF::isStreaming()
 	{
-		return hackrf_is_streaming(device) == HACKRF_TRUE;
+		if(DeviceBase::isStreaming() && hackrf_is_streaming(device) != HACKRF_TRUE) Stop();
+
+		return DeviceBase::isStreaming();
 	}
 
 #endif

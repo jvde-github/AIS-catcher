@@ -33,7 +33,6 @@ namespace Device {
 
 #ifdef HASAIRSPY
 
-
 	void AIRSPY::Open(uint64_t h)
 	{
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
@@ -47,6 +46,34 @@ namespace Device {
 		std::sort(rates.begin(), rates.end());
 
 		setSampleRate(rates[0]);
+
+		DeviceBase::Open(h);
+	}
+
+	void AIRSPY::Play()
+	{
+		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
+		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
+		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw "AIRSPY: Cannot open device";
+
+		DeviceBase::Play();
+
+		SleepSystem(10);
+	}
+
+	void AIRSPY::Stop()
+	{
+		if(DeviceBase::isStreaming())
+		{
+			DeviceBase::Stop();
+			airspy_stop_rx(dev);
+		}
+	}
+
+	void AIRSPY::Close()
+	{
+		DeviceBase::Close();
+		if(!disconnected) airspy_close(dev);
 	}
 
 	void AIRSPY::setLNA_AGC(int a)
@@ -100,25 +127,6 @@ namespace Device {
 		return 0;
 	}
 
-	void AIRSPY::Play()
-	{
-		DeviceBase::Play(); 
-
-		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
-		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
-		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw "AIRSPY: Cannot open device";
-
-		SleepSystem(10);
-	}
-
-	void AIRSPY::Stop()
-	{
-		airspy_stop_rx(dev);
-		streaming = false;
-
-		DeviceBase::Stop();
-	}
-
 	void AIRSPY::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		std::vector<uint64_t> serials;
@@ -139,7 +147,13 @@ namespace Device {
 
 	bool AIRSPY::isStreaming()
 	{
-		return airspy_is_streaming(dev) == 1;
+		if(DeviceBase::isStreaming() && airspy_is_streaming(dev) != 1)
+		{
+			Stop();
+			disconnected = true;
+		}
+
+		return DeviceBase::isStreaming();
 	}
 
 	void AIRSPY::applyGainSettings()

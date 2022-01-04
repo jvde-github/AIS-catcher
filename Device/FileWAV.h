@@ -38,8 +38,7 @@ namespace Device{
 	public:
 
 		// Control
-		void Play();
-		void Stop();
+		void Close();
 		void Open(uint64_t);
 		bool isCallback() { return false; }
 		bool isStreaming();
