@@ -16,7 +16,7 @@ The **edge** version:
 - restructuring of the directory layout
 - Makefile now autodetects library locations: ```make``` will only build for installed SDR libraries
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
-- added instructions and solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
+- added (instructions)[https://github.com/jvde-github/AIS-catcher#microsoft-visual-studio-2019-rtl-sdr-only] and a solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
 
 **Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
@@ -44,7 +44,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 ## Installation and Windows Binary
 
-Compilation and installation instructions are provided below for most systems..
+Building instructions are provided below for most systems..
 
 A Windows binary version of **v0.32** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
@@ -272,7 +272,7 @@ The following shows the installation instructions for RTL-SDR dongles. First ens
 brew update
 brew install librtlsdr pkg-config
 ````
-Compiling and installing AIS-catcher is similar to Linux:
+Building AIS-catcher is similar to Linux:
 ```console
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
