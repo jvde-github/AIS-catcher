@@ -18,7 +18,7 @@ The **edge** version:
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
 - added instructions and solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
 
-Release version **0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
+**Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
 Both features can be activated with the ```-F``` switch. 
 To give an idea of the performance improvement on a Raspberry PI (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
@@ -260,11 +260,11 @@ At the moment only RSP1A is supported (as that is the only device I can test on)
 
 ### Microsoft Visual Studio 2019+ (RTL-SDR only)
 
-Ensure that you have ```vcpkg`` [installed](https://vcpkg.io/en/getting-started.html) and integrated into Visual Studio via ```vcpkg integrate install``` (as Administrator). Then install the rtl-sdr drivers as follows:
+Ensure that you have ```vcpkg``` [installed](https://vcpkg.io/en/getting-started.html) and integrated into Visual Studio via ```vcpkg integrate install``` (as Administrator). Then install the rtl-sdr drivers as follows:
 ```
 vcpkg install rtlsdr rtlsdr:x64-windows
 ```
-The included solution file should allow you to build AIS-catcher with RTL-SDR support.
+The included solution file in the mscv directory should allow you to build AIS-catcher with RTL-SDR support in the Visual Studio IDE.
 
 ### Mac OS X (RTL-SDR only)
 The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
