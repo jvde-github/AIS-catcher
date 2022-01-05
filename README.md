@@ -232,7 +232,7 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 
  **Update 2:** Feverlaysoft has kindly provided me with a license for version 2.208 of AISrec allowing access to additional decoding models. Some experimentation suggests that "Slow2" works best for these particular examples and has been included in the above overview.
  
-## Compilation process
+## Build process
 
 ### Ubuntu and Raspberry Pi
 The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed for your device(s). 
