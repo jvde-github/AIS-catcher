@@ -33,7 +33,7 @@ SOFTWARE.
 #define SOCKET int
 #endif
 
-#include "../Library/Stream.h"
+#include "Stream.h"
 
 namespace IO
 {

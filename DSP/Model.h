@@ -25,14 +25,14 @@ SOFTWARE.
 #include "DSP.h"
 #include "Demod.h"
 
-#include "../Application/AIS-catcher.h"
+#include "AIS-catcher.h"
 
-#include "../Library/Stream.h"
-#include "../Library/AIS.h"
-#include "../Library/Utilities.h"
+#include "Stream.h"
+#include "AIS.h"
+#include "Utilities.h"
 
-#include "../Device/Device.h"
-#include "../IO/IO.h"
+#include "Device/Device.h"
+#include "IO.h"
 
 namespace AIS
 {

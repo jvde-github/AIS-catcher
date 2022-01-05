@@ -74,7 +74,11 @@ namespace Device {
 	void RTLSDR::Close()
 	{
 		DeviceBase::Close();
-		//rtlsdr_close(dev);
+
+		// work around for potential crash, to be investigated....
+#ifndef _MSC_VER
+		rtlsdr_close(dev);
+#endif
 	}
 
 	void RTLSDR::setTuner_GainMode(int a)

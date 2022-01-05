@@ -23,7 +23,7 @@ SOFTWARE.
 #pragma once
 
 #include <vector>
-#include "../Library/Common.h"
+#include "Common.h"
 
 namespace Filters
 {

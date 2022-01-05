@@ -32,10 +32,10 @@ SOFTWARE.
 
 #include "FIFO.h"
 
-#include "../Library/Stream.h"
-#include "../Library/Signal.h"
-#include "../Library/Common.h"
-#include "../Library/Utilities.h"
+#include "Stream.h"
+#include "Signal.h"
+#include "Common.h"
+#include "Utilities.h"
 
 namespace Device{
 
