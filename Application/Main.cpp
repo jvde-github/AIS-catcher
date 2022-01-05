@@ -264,6 +264,7 @@ int main(int argc, char* argv[])
 
 		std::vector<Device::Description> device_list = getDevices(drivers);
 
+		const std::string MSG_NO_PARAMETER = "Does not allow additional parameter.";
 		int ptr = 1;
 
 		while (ptr < argc)
@@ -280,11 +281,11 @@ int main(int argc, char* argv[])
 			switch (param[1])
 			{
 			case 's':
-				Assert(count == 1, param, "No sample rate provided.");
+				Assert(count == 1, param, "Does require one parameter [sample rate].");
 				sample_rate = Util::Parse::Integer(arg1, 48000, 12288000);
 				break;
 			case 'm':
-				Assert(count == 1, param, "No model number provided.");
+				Assert(count == 1, param, "Requires one parameter [model number].");
 				liveModelsSelected.push_back(Util::Parse::Integer(arg1, 0, 5));
 				break;
 			case 'v':
@@ -293,25 +294,25 @@ int main(int argc, char* argv[])
 				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'q':
-				Assert(count == 0, param, "Does not accept parameter.");
+				Assert(count == 0, param, MSG_NO_PARAMETER);
 				NMEA_to_screen = IO::DumpScreen::Level::NONE;
 				break;
 			case 'n':
-				Assert(count == 0, param, "Does not accept parameter.");
+				Assert(count == 0, param, MSG_NO_PARAMETER);
 				NMEA_to_screen = IO::DumpScreen::Level::SPARSE;
 				break;
 			case 'F':
-				Assert(count == 0, param, "Does not accept parameter.");
+				Assert(count == 0, param, MSG_NO_PARAMETER);
 				OptimizeSpeed = true;
 				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
-				Assert(count <= 2, param, "Requires one or two parameters.");
+				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
 				if(count >= 1) drivers.RTLTCP.Set("host",arg1);
 				if(count >= 2) drivers.RTLTCP.Set("port",arg2);
 				break;
 			case 'b':
-				Assert(count == 0, param, "Does not accept parameters.");
+				Assert(count == 0, param, MSG_NO_PARAMETER);
 				timer_on = true;
 				break;
 			case 'w':
@@ -333,22 +334,22 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'l':
-				Assert(count == 0, param, "Does not accept parameters.");
+				Assert(count == 0, param, MSG_NO_PARAMETER);
 				list_devices = true;
 				break;
 			case 'L':
-				Assert(count == 0, param, "Does not accept parameters.");
+				Assert(count == 0, param, MSG_NO_PARAMETER);
 				list_support = true;
 				break;
 			case 'd':
 				if (param.length() == 4 && param[2] == ':')
 				{
-					Assert(count == 0, param, "Does not accept additional parameters.");
+					Assert(count == 0, param, MSG_NO_PARAMETER);
 					input_device = (param[3] - '0');
 				}
 				else
 				{
-					Assert(count == 1, param, "Requires one parameter.");
+					Assert(count == 1, param, "Requires one parameter [serial number].");
 					input_device = getDeviceFromSerial(device_list, arg1);
 				}
 				if (input_device < 0 || input_device >= device_list.size())
