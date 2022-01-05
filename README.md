@@ -14,7 +14,7 @@ For testing, do not use the development version (edge) but instead download the 
 
 The **edge** version:
 - restructuring of the directory layout
-- Makefile now autodetects library locations: ```make``` will only build for installed SDR libaries
+- Makefile now autodetects library locations: ```make``` will only build for installed SDR libraries
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
 - added instructions and solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
 
