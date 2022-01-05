@@ -23,6 +23,7 @@ SOFTWARE.
 #include <iostream>
 #include <string.h>
 #include <algorithm>
+#include <memory>
 
 #include "AIS-catcher.h"
 
@@ -177,20 +178,20 @@ int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::stri
 	return -1;
 }
 
-std::vector<AIS::Model*> setupModels(std::vector<int> &liveModelsSelected, Device::DeviceBase* dev)
+std::vector<std::shared_ptr<AIS::Model>> setupModels(std::vector<int> &liveModelsSelected, Device::DeviceBase* dev)
 {
-	std::vector<AIS::Model*> liveModels;
+	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	for (auto mi : liveModelsSelected)
 	{
 		switch (mi)
 		{
-		case 0: liveModels.push_back(new AIS::ModelStandard(dev)); break;
-		case 1: liveModels.push_back(new AIS::ModelBase(dev)); break;
-		case 2: liveModels.push_back(new AIS::ModelPhaseSearch(dev)); break;
-		case 3: liveModels.push_back(new AIS::ModelDiscriminator(dev)); break;
-		case 4: liveModels.push_back(new AIS::ModelChallenger(dev)); break;
-		case 5: liveModels.push_back(new AIS::ModelPhaseSearchEMA(dev)); break;
+		case 0: liveModels.push_back(std::make_shared<AIS::ModelStandard>(dev)); break;
+		case 1: liveModels.push_back(std::make_shared<AIS::ModelBase>(dev)); break;
+		case 2: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearch>(dev)); break;
+		case 3: liveModels.push_back(std::make_shared<AIS::ModelDiscriminator>(dev)); break;
+		case 4: liveModels.push_back(std::make_shared<AIS::ModelChallenger>(dev)); break;
+		case 5: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearchEMA>(dev)); break;
 		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
 		}
 	}
@@ -248,7 +249,7 @@ int main(int argc, char* argv[])
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
 
-	std::vector<AIS::Model*> liveModels;
+	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 	std::vector<int> liveModelsSelected;
 
 	IO::DumpScreen nmea_screen;
@@ -364,7 +365,7 @@ int main(int argc, char* argv[])
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModelsSelected.size()-1) ));
 				break;
 			case 'h':
-				Assert(count == 0, param, "Does not accept parameters.");
+				Assert(count == 0, param, MSG_NO_PARAMETER);
 				list_options = true;
 				break;
 			case 'p':
@@ -520,9 +521,6 @@ int main(int argc, char* argv[])
 			}
 
 		device->Close();
-
-		for(auto model : liveModels) delete model;
-
 	}
 	catch (const char * msg)
 	{
