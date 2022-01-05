@@ -13,8 +13,8 @@ The program provides the option to read and decode the raw discriminator output 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
 The **edge** version:
-- Some restructuring of the directory layout
-- Makefile now autodetects library locations: ```make all``` will only build for installed SDR libaries
+- restructuring of the directory layout
+- Makefile now autodetects library locations: ```make``` will only build for installed SDR libaries
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
 - added instructions and solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
 
