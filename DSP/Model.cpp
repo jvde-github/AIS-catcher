@@ -22,7 +22,6 @@ SOFTWARE.
 
 #include <cassert>
 
-
 #include "Model.h"
 
 namespace AIS
