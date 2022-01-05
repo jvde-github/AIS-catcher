@@ -264,7 +264,7 @@ Ensure that you have ```vcpkg``` [installed](https://vcpkg.io/en/getting-started
 ```
 vcpkg install rtlsdr rtlsdr:x64-windows
 ```
-The included solution file in ther mscv directory should allow you to build AIS-catcher with RTL-SDR support in the Visual Studio IDE.
+The included solution file in the mscv directory should allow you to build AIS-catcher with RTL-SDR support in the Visual Studio IDE.
 
 ### Mac OS X (RTL-SDR only)
 The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
