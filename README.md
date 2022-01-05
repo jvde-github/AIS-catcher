@@ -12,7 +12,11 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-The **edge** version: Some restructuring of the directory layout, Makefile now autodetects library locations, ```make all``` will only build for installed SDR libaries, some more simplifications of code, recalibration of decoding parameters resulting in a small improvement in sensitivity.
+The **edge** version:
+- Some restructuring of the directory layout
+- Makefile now autodetects library locations: ```make all``` will only build for installed SDR libaries
+- recalibration of decoding parameters resulting in a small improvement in sensitivity
+- added instructions and solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
 
 Release version **0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
@@ -40,7 +44,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 ## Installation and Windows Binary
 
-Compilation and installation instructions are provided below for Linux systems including Raspberry Pi and Mac OS X.
+Compilation and installation instructions are provided below for most systems..
 
 A Windows binary version of **v0.32** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
@@ -231,7 +235,8 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 ## Compilation process
 
 ### Ubuntu and Raspberry Pi
-The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed. If not, the following commands can be used:
+The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed for your device(s). 
+If not, the following commands can be used for most devices except for the SDRPLAY:
 
 ```console
 sudo apt-get update
@@ -251,9 +256,17 @@ Standard installation will include support for the Airspy devices, HackRF and RT
 make sdrplay-only
 sudo make install
 ```
-At the moment only RSP1A is supported (as that is the only device I can test on). 
+At the moment only RSP1A is supported (as that is the only device I can test on).
 
-### Mac OS X
+### Microsoft Visual Studio 2019+ (RTL-SDR only)
+
+Ensure that you have ```vcpkg`` [installed](https://vcpkg.io/en/getting-started.html) and integrated into Visual Studio via ```vcpkg integrate install``` (as Administrator). Then install the rtl-sdr drivers as follows:
+```
+vcpkg install rtlsdr rtlsdr:x64-windows
+```
+The included solution file should allow you to build AIS-catcher with RTL-SDR support.
+
+### Mac OS X (RTL-SDR only)
 The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
 ```console
 brew update
@@ -316,6 +329,11 @@ In case you observe a high number of lost data, the advice is to run AIS-catcher
 AIS-catcher -s 288000
 ```
 If your system allows for it you might opt to run ```AIS-catcher``` at a sample rate of ```2304000```. 
+
+## Known issues
+
+- call of ```rtlsdr_close```  in MS VC++ can result in a crash. Code will skip proper close in Visual C++. To be investigated further.
+- ...
 
 ## To do
 

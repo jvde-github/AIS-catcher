@@ -26,21 +26,21 @@ SOFTWARE.
 
 #include "AIS-catcher.h"
 
-#include "../Library/Signal.h"
-#include "../Library/Common.h"
+#include "Signal.h"
+#include "Common.h"
 
-#include "../DSP/Model.h"
+#include "Model.h"
 
-#include "../Device/FileRAW.h"
-#include "../Device/FileWAV.h"
-#include "../Device/RTLSDR.h"
-#include "../Device/AIRSPYHF.h"
-#include "../Device/HACKRF.h"
-#include "../Device/RTLTCP.h"
-#include "../Device/AIRSPY.h"
-#include "../Device/SDRPLAY.h"
+#include "Device/FileRAW.h"
+#include "Device/FileWAV.h"
+#include "Device/RTLSDR.h"
+#include "Device/AIRSPYHF.h"
+#include "Device/HACKRF.h"
+#include "Device/RTLTCP.h"
+#include "Device/AIRSPY.h"
+#include "Device/SDRPLAY.h"
 
-#include "../IO/IO.h"
+#include "IO.h"
 
 MessageHub<SystemMessage> SystemMessages;
 
@@ -306,12 +306,12 @@ int main(int argc, char* argv[])
 				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
-				Assert(count <= 2, param, "Requires one or two paramters.");
+				Assert(count <= 2, param, "Requires one or two parameters.");
 				if(count >= 1) drivers.RTLTCP.Set("host",arg1);
 				if(count >= 2) drivers.RTLTCP.Set("port",arg2);
 				break;
 			case 'b':
-				Assert(count == 0, param, "Does not accept paramters.");
+				Assert(count == 0, param, "Does not accept parameters.");
 				timer_on = true;
 				break;
 			case 'w':
@@ -333,17 +333,17 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'l':
-				Assert(count == 0, param, "Does not accept paramters.");
+				Assert(count == 0, param, "Does not accept parameters.");
 				list_devices = true;
 				break;
 			case 'L':
-				Assert(count == 0, param, "Does not accept paramters.");
+				Assert(count == 0, param, "Does not accept parameters.");
 				list_support = true;
 				break;
 			case 'd':
 				if (param.length() == 4 && param[2] == ':')
 				{
-					Assert(count == 0, param, "Does not accept additional paramters.");
+					Assert(count == 0, param, "Does not accept additional parameters.");
 					input_device = (param[3] - '0');
 				}
 				else
@@ -359,15 +359,15 @@ int main(int argc, char* argv[])
 				break;
 			case 'u':
 			case 'U':
-				Assert(count == 2, param, "Requires two paramters [address] [port].");
+				Assert(count == 2, param, "Requires two parameters [address] [port].");
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModelsSelected.size()-1) ));
 				break;
 			case 'h':
-				Assert(count == 0, param, "Does not accept paramters.");
+				Assert(count == 0, param, "Does not accept parameters.");
 				list_options = true;
 				break;
 			case 'p':
-				Assert(count == 1, param, "Requires one paramter [frequency offset].");
+				Assert(count == 1, param, "Requires one parameter [frequency offset].");
 				drivers.RTLSDR.Set("FREQOFFSET", arg1);
 				break;
 			case 'g':
