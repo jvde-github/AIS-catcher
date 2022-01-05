@@ -260,11 +260,11 @@ At the moment only RSP1A is supported (as that is the only device I can test on)
 
 ### Microsoft Visual Studio 2019+ (RTL-SDR only)
 
-Ensure that you have ```vcpkg`` [installed](https://vcpkg.io/en/getting-started.html) and integrated into Visual Studio via ```vcpkg integrate install``` (as Administrator). Then install the rtl-sdr drivers as follows:
+Ensure that you have ```vcpkg``` [installed](https://vcpkg.io/en/getting-started.html) and integrated into Visual Studio via ```vcpkg integrate install``` (as Administrator). Then install the rtl-sdr drivers as follows:
 ```
 vcpkg install rtlsdr rtlsdr:x64-windows
 ```
-The included solution file should allow you to build AIS-catcher with RTL-SDR support.
+The included solution file in ther mscv directory should allow you to build AIS-catcher with RTL-SDR support in the Visual Studio IDE.
 
 ### Mac OS X (RTL-SDR only)
 The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
