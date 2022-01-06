@@ -64,7 +64,7 @@ namespace Device {
 		{
 			DeviceBase::Stop();
 
-			rtlsdr_cancel_async(dev);
+			if(async) rtlsdr_cancel_async(dev);
 
 			if (async_thread.joinable()) async_thread.join();
 			if (run_thread.joinable()) run_thread.join();
@@ -131,7 +131,21 @@ namespace Device {
 
 	void RTLSDR::RunAsync()
 	{
-		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
+		if(async)
+		{
+			rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
+		}
+		else
+		{
+			std::vector<char> buffer(BUFFER_SIZE);
+			int n = 0;
+
+			while(isStreaming())
+			{
+				rtlsdr_read_sync(dev, buffer.data(), BUFFER_SIZE, &n);
+				if(n>0) if (!fifo.Push(buffer.data(), n)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
+			}
+		}
 	}
 
 	void RTLSDR::Run()
