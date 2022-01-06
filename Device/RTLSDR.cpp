@@ -137,6 +137,7 @@ namespace Device {
 		}
 		else
 		{
+			std::cerr << "RTLSDR: sync input switched on." << std::endl;
 			std::vector<char> buffer(BUFFER_SIZE);
 			int n = 0;
 
@@ -200,7 +201,9 @@ namespace Device {
 		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
 
 		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
-		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << " -p " << freq_offset << std::endl;
+		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF");
+		std::cerr << " async " << (async ? "ON" : "OFF");
+		std::cerr << " -p " << freq_offset << std::endl;
 	}
 
 	void RTLSDR::Set(std::string option, std::string arg)
@@ -215,6 +218,10 @@ namespace Device {
 		else if (option == "RTLAGC")
 		{
 			RTL_AGC = Util::Parse::Switch(arg);
+		}
+		else if (option == "ASYNC")
+		{
+			async = Util::Parse::Switch(arg);
 		}
 		else if (option == "BIASTEE")
 		{
