@@ -54,6 +54,8 @@ namespace Device{
 		bool bias_tee = false;
 		bool auto_terminate = true;
 
+		bool async = true;
+
 		// FIFO
 		FIFO<char> fifo;
 
