@@ -95,7 +95,7 @@ namespace AIS
 
 		DSP::Filter FR_a, FR_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::SamplerParallel S_a, S_b;
+		DSP::Deinterleave<FLOAT32> S_a, S_b;
 
 	public:
 		ModelStandard(Device::DeviceBase* c) : ModelFrontend(c) {}
@@ -108,7 +108,7 @@ namespace AIS
 	{
 		Demod::FM FM_a, FM_b;
 		DSP::Filter FR_a, FR_b;
-		DSP::SamplerPLL sampler_a, sampler_b;
+		DSP::SimplePLL sampler_a, sampler_b;
 		AIS::Decoder DEC_a, DEC_b;
 
 	public:
@@ -124,7 +124,7 @@ namespace AIS
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::SamplerParallelComplex S_a, S_b;
+		DSP::Deinterleave<CFLOAT32> S_a, S_b;
 
 		int nHistory = 8;
 		int nDelay = 0;
@@ -147,7 +147,7 @@ namespace AIS
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::SamplerParallelComplex S_a, S_b;
+		DSP::Deinterleave<CFLOAT32> S_a, S_b;
 
 		int nDelay = 0;
 
@@ -179,7 +179,7 @@ namespace AIS
 
 		DSP::Filter FR_a, FR_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::SamplerParallel S_a, S_b;
+		DSP::Deinterleave<FLOAT32> S_a, S_b;
 
 		Util::ConvertRAW convert;
 

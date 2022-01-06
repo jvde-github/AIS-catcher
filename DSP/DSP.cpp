@@ -30,7 +30,7 @@ SOFTWARE.
 
 namespace DSP
 {
-	void SamplerPLL::Receive(const FLOAT32* data, int len)
+	void SimplePLL::Receive(const FLOAT32* data, int len)
 	{
 		for (int i = 0; i < len; i++)
 		{
@@ -52,43 +52,13 @@ namespace DSP
 		}
 	}
 
-	void SamplerPLL::Message(const DecoderMessages& in)
+	void SimplePLL::Message(const DecoderMessages& in)
 	{
 		switch (in)
 		{
 		case DecoderMessages::StartTraining: FastPLL = true; break;
 		case DecoderMessages::StopTraining: FastPLL = false; break;
 		default: break;
-		}
-	}
-
-	void SamplerParallel::setBuckets(int n)
-	{
-		nBuckets = n;
-		out.resize(nBuckets);
-	}
-
-	void SamplerParallel::Receive(const FLOAT32* data, int len)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			out[lastSymbol].Send(&data[i], 1);
-			lastSymbol = (lastSymbol + 1) % nBuckets;
-		}
-	}
-
-	void SamplerParallelComplex::setBuckets(int n)
-	{
-		nBuckets = n;
-		out.resize(nBuckets);
-	}
-
-	void SamplerParallelComplex::Receive(const CFLOAT32* data, int len)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			out[lastSymbol].Send(&data[i], 1);
-			lastSymbol = (lastSymbol + 1) % nBuckets;
 		}
 	}
 

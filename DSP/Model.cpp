@@ -162,8 +162,8 @@ namespace AIS
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		S_a.setBuckets(nSymbolsPerSample);
-		S_b.setBuckets(nSymbolsPerSample);
+		S_a.setConnections(nSymbolsPerSample);
+		S_b.setConnections(nSymbolsPerSample);
 
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
@@ -201,8 +201,8 @@ namespace AIS
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
 
-		S_a.setBuckets(nSymbolsPerSample);
-		S_b.setBuckets(nSymbolsPerSample);
+		S_a.setConnections(nSymbolsPerSample);
+		S_b.setConnections(nSymbolsPerSample);
 
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
@@ -249,8 +249,8 @@ namespace AIS
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
 
-		S_a.setBuckets(nSymbolsPerSample);
-		S_b.setBuckets(nSymbolsPerSample);
+		S_a.setConnections(nSymbolsPerSample);
+		S_b.setConnections(nSymbolsPerSample);
 
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
@@ -297,8 +297,8 @@ namespace AIS
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		S_a.setBuckets(nSymbolsPerSample);
-		S_b.setBuckets(nSymbolsPerSample);
+		S_a.setConnections(nSymbolsPerSample);
+		S_b.setConnections(nSymbolsPerSample);
 
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
