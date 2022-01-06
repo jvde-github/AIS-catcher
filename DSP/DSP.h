@@ -31,7 +31,7 @@ SOFTWARE.
 
 namespace DSP
 {
-	class SamplerPLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public MessageIn<DecoderMessages>
+	class SimplePLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public MessageIn<DecoderMessages>
 	{
 		std::vector<BIT> output;
 		BIT prev = 0;
@@ -47,36 +47,27 @@ namespace DSP
 		virtual void Message(const DecoderMessages& in);
 	};
 
-	class SamplerParallel : public StreamIn<FLOAT32>
+	template <typename T>
+	class Deinterleave : public StreamIn<T>
 	{
-		std::vector <FLOAT32> output;
+		std::vector <T> output;
 		int lastSymbol = 0;
-		int nBuckets = 0;
 
 	public:
-		void setBuckets(int n);
+		void setConnections(int n) { out.resize(n); }
 
 		// Streams out
-		std::vector<Connection<FLOAT32>> out;
+		std::vector<Connection<T>> out;
 
 		// Streams in
-		void Receive(const FLOAT32* data, int len);
-	};
-
-	class SamplerParallelComplex : public StreamIn<CFLOAT32>
-	{
-		std::vector <CFLOAT32> output;
-		int lastSymbol = 0;
-		int nBuckets = 0;
-
-	public:
-		void setBuckets(int n);
-
-		// Streams out
-		std::vector<Connection<CFLOAT32>> out;
-
-		// Streams in
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const T* data, int len)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				out[lastSymbol].Send(&data[i], 1);
+				lastSymbol = (lastSymbol + 1) % out.size();
+			}
+		}
 	};
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
