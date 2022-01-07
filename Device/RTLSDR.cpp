@@ -64,9 +64,11 @@ namespace Device {
 		{
 			DeviceBase::Stop();
 
-			if(async) rtlsdr_cancel_async(dev);
-
-			if (async_thread.joinable()) async_thread.join();
+			if (async_thread.joinable())
+			{
+				if(async) rtlsdr_cancel_async(dev);
+				async_thread.join();
+			}
 			if (run_thread.joinable()) run_thread.join();
 		}
 	}
