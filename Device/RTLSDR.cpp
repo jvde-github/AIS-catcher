@@ -77,10 +77,10 @@ namespace Device {
 	{
 		DeviceBase::Close();
 
-		// work around for potential crash, to be investigated....
-#ifndef _MSC_VER
+		// can crash on Windows with vcpkg rtl-sdr version
+		// can be fixed with tweak in rtlsdr lib....
+		// see libusb, issue @1043
 		rtlsdr_close(dev);
-#endif
 	}
 
 	void RTLSDR::setTuner_GainMode(int a)

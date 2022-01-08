@@ -17,7 +17,7 @@ The **edge** version:
 - Makefile now autodetects library locations: ```make``` will only build for installed SDR libraries
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
 - added [instructions](https://github.com/jvde-github/AIS-catcher#microsoft-visual-studio-2019-rtl-sdr-only) and a solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
-- TBC: workaround for the occasional librtlsdr crash in Windows 10 in the vcpkg distribution and a workaround (see known issues). To be implemented.
+- proper call to close devices at the end of the program. TBC: workaround for the occasional librtlsdr crash in Windows 10 in the vcpkg distribution and a workaround (see known issues).
 
 **Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
@@ -333,7 +333,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## Known issues
 
-- call of ```rtlsdr_close```  in MS VC++ can result in a crash. Code will skip proper close in Visual C++. To be investigated further.
+- call of ```rtlsdr_close```  in MS VC++ can result in a crash. To be investigated further but looks simple tweak in librtlsdr can solve the problem, see issue  #1043 for libusb.
 - ...
 
 ## To do
