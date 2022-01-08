@@ -66,7 +66,7 @@ namespace Device {
 
 			if (async_thread.joinable())
 			{
-				if(async) rtlsdr_cancel_async(dev);
+				rtlsdr_cancel_async(dev);
 				async_thread.join();
 			}
 			if (run_thread.joinable()) run_thread.join();
@@ -133,22 +133,7 @@ namespace Device {
 
 	void RTLSDR::RunAsync()
 	{
-		if(async)
-		{
-			rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
-		}
-		else
-		{
-			std::cerr << "RTLSDR: sync input switched on." << std::endl;
-			std::vector<char> buffer(BUFFER_SIZE);
-			int n = 0;
-
-			while(isStreaming())
-			{
-				rtlsdr_read_sync(dev, buffer.data(), BUFFER_SIZE, &n);
-				if(n>0) if (!fifo.Push(buffer.data(), n)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
-			}
-		}
+		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
 	}
 
 	void RTLSDR::Run()
@@ -204,7 +189,6 @@ namespace Device {
 
 		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
 		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF");
-		std::cerr << " async " << (async ? "ON" : "OFF");
 		std::cerr << " -p " << freq_offset << std::endl;
 	}
 
@@ -220,10 +204,6 @@ namespace Device {
 		else if (option == "RTLAGC")
 		{
 			RTL_AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "ASYNC")
-		{
-			async = Util::Parse::Switch(arg);
 		}
 		else if (option == "BIASTEE")
 		{
