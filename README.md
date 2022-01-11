@@ -18,6 +18,7 @@ Upcoming (currently edge) **Release version 0.33**:
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
 - added [instructions](https://github.com/jvde-github/AIS-catcher#microsoft-visual-studio-2019-rtl-sdr-only) and a solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
 - proper call to close devices at the end of the program and automatic termination if device is disconnected. For Windows please use the latest version of the [rtl-sdr library](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8) with [this fix](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8).
+- ZMQ support: ability to easily transfer data from GnuRadio to AIS-catcher
 
 **Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
@@ -65,6 +66,7 @@ use: AIS-catcher [options]
 	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]
 	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
 	[-t [host [port]] - read IQ data from remote RTL-TCP instance]
+	[-z [endpoint] - read IQ data (CU8) via ZMQ]
 
 	[-l list available devices and terminate (default: off)]
 	[-L list supported SDR hardware and terminate (default: off)]
@@ -77,15 +79,16 @@ use: AIS-catcher [options]
 
 	Device specific settings:
 
-	[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
+	[-gr RTLSDRs: TUNER [auto/0.0-50.0] ASYNC [on/off] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
 	[-p xx equivalent to -gr FREQOFFSET xx]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off]
-	[-gt RTLTCPs: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]
+	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]
 	[-gw WAV file: FILE [filename]
+	[-gz ZMQ: ENDPOINT [endpoint]
 ````
 
 ## Examples

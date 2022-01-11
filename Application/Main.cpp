@@ -40,6 +40,7 @@ SOFTWARE.
 #include "Device/RTLTCP.h"
 #include "Device/AIRSPY.h"
 #include "Device/SDRPLAY.h"
+#include "Device/ZMQ.h"
 
 #include "IO.h"
 
@@ -70,6 +71,7 @@ struct Drivers
         Device::AIRSPY AIRSPY;
         Device::SDRPLAY SDRPLAY;
         Device::HACKRF HACKRF;
+        Device::ZMQ ZMQ;
 };
 
 void printVersion()
@@ -94,6 +96,7 @@ void Usage()
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
 	std::cerr << "\t[-t [host [port]] - read IQ data from remote RTL-TCP instance]" << std::endl;
+	std::cerr << "\t[-z [endpoint] - read IQ data (CU8) via ZMQ]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
@@ -112,9 +115,10 @@ void Usage()
 	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
 	std::cerr << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
 	std::cerr << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off]" << std::endl;
-	std::cerr << "\t[-gt RTLTCPs: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]" << std::endl;
+	std::cerr << "\t[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]" << std::endl;
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
+	std::cerr << "\t[-gz ZMQ: ENDPOINT [endpoint]" << std::endl;
 }
 
 std::vector<Device::Description> getDevices(Drivers &drivers)
@@ -162,6 +166,9 @@ void printSupportedDevices()
 	std::cerr << "SDRPLAY ";
 #endif
 	std::cerr << "RTLTCP ";
+#ifdef HASZMQ
+	std::cerr << "ZMQ ";
+#endif
 #ifdef HASHACKRF
 	std::cerr << "HACKRF ";
 #endif
@@ -312,6 +319,11 @@ int main(int argc, char* argv[])
 				if(count >= 1) drivers.RTLTCP.Set("host",arg1);
 				if(count >= 2) drivers.RTLTCP.Set("port",arg2);
 				break;
+			case 'z':
+				input_type = Device::Type::ZMQ;
+				Assert(count <= 1, param, "Requires zero or one parameter [endpoint].");
+				drivers.ZMQ.Set("endpoint",arg1);
+				break;
 			case 'b':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				timer_on = true;
@@ -384,6 +396,7 @@ int main(int argc, char* argv[])
 				case 'w': parseDeviceSettings(drivers.WAV, argv, ptr, argc); break;
 				case 't': parseDeviceSettings(drivers.RTLTCP, argv, ptr, argc); break;
 				case 'f': parseDeviceSettings(drivers.HACKRF, argv, ptr, argc); break;
+				case 'z': parseDeviceSettings(drivers.ZMQ, argv, ptr, argc); break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
@@ -418,6 +431,9 @@ int main(int argc, char* argv[])
 		case Device::Type::WAVFILE: device = &drivers.WAV; break;
 		case Device::Type::RAWFILE: device = &drivers.RAW; break;
 		case Device::Type::RTLTCP: device = &drivers.RTLTCP; break;
+#ifdef HASZMQ
+		case Device::Type::ZMQ: device = &drivers.ZMQ; break;
+#endif
 #ifdef HASAIRSPYHF
 		case Device::Type::AIRSPYHF: device = &drivers.AIRSPYHF; break;
 #endif
