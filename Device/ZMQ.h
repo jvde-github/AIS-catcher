@@ -39,7 +39,7 @@ namespace Device {
 
 		void* context = NULL;
 		void* subscriber = NULL;
-				
+
 		std::string endpoint;
 
 		// output vector
