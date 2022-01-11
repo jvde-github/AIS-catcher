@@ -128,6 +128,7 @@ namespace Device {
 		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
 		if (hackrf_start_rx(device, HACKRF::callback_static, this)  != HACKRF_SUCCESS) throw "HACKRF: Cannot open device";
 
+		cancel = false;
 		DeviceBase::Play();
 
 		SleepSystem(10);
@@ -166,7 +167,7 @@ namespace Device {
 
 	bool HACKRF::isStreaming()
 	{
-		if(DeviceBase::isStreaming() && hackrf_is_streaming(device) != HACKRF_TRUE) Stop();
+		if(DeviceBase::isStreaming() && (hackrf_is_streaming(device) != HACKRF_TRUE || cancel) ) Stop();
 
 		return DeviceBase::isStreaming();
 	}
