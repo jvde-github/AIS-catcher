@@ -241,7 +241,7 @@ If not, the following commands can be used for most devices except for the SDRPL
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git make gcc g++ librtlsdr-dev libairspyhf-dev libairspy-dev libhackrf-dev pkg-config -y
+sudo apt-get install git make gcc g++ librtlsdr-dev libairspyhf-dev libairspy-dev libhackrf-dev libzmq3-dev pkg-config -y
 ```
 The process to install AIS-catcher then becomes:
 ```console
