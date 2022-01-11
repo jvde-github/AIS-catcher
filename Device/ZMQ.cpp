@@ -27,7 +27,7 @@ SOFTWARE.
 namespace Device {
 
 	//---------------------------------------
-	// Device RTLSDR
+	// Device ZMQ
 
 #ifdef HASZMQ
 	void ZMQ::Print()
