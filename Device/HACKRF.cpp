@@ -95,7 +95,7 @@ namespace Device {
 	void HACKRF::Close()
 	{
 		DeviceBase::Close();
-		//hackrf_close(device);
+		hackrf_close(device);
 	}
 
 	int HACKRF::callback_static(hackrf_transfer* tf)
@@ -135,7 +135,7 @@ namespace Device {
 
 	void HACKRF::Stop()
 	{
-		if(isStreaming())
+		if(DeviceBase::isStreaming())
 		{
 			DeviceBase::Stop();
 			hackrf_stop_rx(device);
