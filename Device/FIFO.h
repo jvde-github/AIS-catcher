@@ -47,7 +47,7 @@ class FIFO
 	int BLOCK_SIZE = 16 * 16384;
 	int N_BLOCKS = 2;
 
-	const static int timeout = 2500;
+	const static int timeout = 1500;
 
 public:
 

@@ -79,6 +79,7 @@ namespace Device{
 	protected:
 
 		bool streaming = false;
+
 		uint32_t sample_rate = 0;
 		uint32_t frequency = 0;
 

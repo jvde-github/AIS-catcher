@@ -12,12 +12,12 @@ The program provides the option to read and decode the raw discriminator output 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-The **edge** version:
+Upcoming (currently edge) **Release version 0.33**:
 - restructuring of the directory layout
 - Makefile now autodetects library locations: ```make``` will only build for installed SDR libraries
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
 - added [instructions](https://github.com/jvde-github/AIS-catcher#microsoft-visual-studio-2019-rtl-sdr-only) and a solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
-- proper call to close devices at the end of the program. Unfortunately, on Windows 10 this can result in a crash. However, this is hopefully is fixed in the latest version of the [rtl-sdr library](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8). I will provide this version with the Windows binaries below.
+- proper call to close devices at the end of the program and automatic termination if device is disconnected. For Windows please use the latest version of the [rtl-sdr library](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8).
 
 **Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
@@ -210,19 +210,14 @@ The program will run and summarize the performance (count and timing) of three d
 [Standard (non-coherent)]	: 900.099 ms
 [Base (non-coherent)]		: 837.641 ms
 ```
-If we use the ```-F``` switch to enable fixed point downsampling, the results are the same but the timings become:
-```
-[AIS engine v0.31]		: 891.025 ms
-[Standard (non-coherent)]	: 638.765 ms
-[Base (non-coherent)]		: 586.179 ms
-```
-In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. This is typical when there are few messages with poor quality. However, it  doubles the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
+In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
+This is typical when there are few messages with poor quality. However, it increases the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
 ## Validation
 
 ### Experimenting with recorded signals
 The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. The output of the various receivers was sent via UDP to AISdipatcher which removes any duplicates and counts messages. The results in terms of  number of messages/distinct vessels:
- | File | AIS-catcher v0.32  | AIS-catcher EDGE | rtl-ais | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
+ | File | AIS-catcher v0.32  | AIS-catcher v0.33 | rtl-ais | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | Source |
  | :--- | :--- | :---: | :---: | :---: | :---: | :---: | 
  |Scheveningen |   43/37| 43/37  | 17/16 | 30/27 | 37/31 | recorded @ 1536K with `rtl-sdr` (auto gain) |
  |Moscow| 197/33 |210/32 | 146/27 |  195/31 |  183/34 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |

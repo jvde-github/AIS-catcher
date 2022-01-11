@@ -54,6 +54,8 @@ namespace Device{
 		bool bias_tee = false;
 		bool auto_terminate = true;
 
+		bool cancel = true;
+
 		// FIFO
 		FIFO<char> fifo;
 
@@ -82,6 +84,7 @@ namespace Device{
 		void Stop();
 		void Close();
 
+		bool isStreaming() { if(DeviceBase::isStreaming() && cancel) Stop(); return DeviceBase::isStreaming(); }
 		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);
@@ -89,6 +92,9 @@ namespace Device{
 		// Settings
 		void Print();
 		void Set(std::string option, std::string arg);
+
+		virtual void Message(const SystemMessage& msg) { cancel = true; };
+
 #endif
 	};
 }

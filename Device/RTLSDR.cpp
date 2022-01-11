@@ -51,6 +51,7 @@ namespace Device {
 		rtlsdr_reset_buffer(dev);
 
 		DeviceBase::Play();
+		cancel = false;
 
 		async_thread = std::thread(&RTLSDR::RunAsync, this);
 		run_thread = std::thread(&RTLSDR::Run, this);
@@ -76,10 +77,6 @@ namespace Device {
 	void RTLSDR::Close()
 	{
 		DeviceBase::Close();
-
-		// can crash on Windows with vcpkg rtl-sdr version
-		// can be fixed with tweak in rtlsdr lib....
-		// see libusb, issue @1043
 		rtlsdr_close(dev);
 	}
 
@@ -123,7 +120,7 @@ namespace Device {
 
 	void RTLSDR::callback(CU8* buf, int len)
 	{
-		if (!fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
+		if (DeviceBase::isStreaming() && !fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
 	}
 
 	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx)
@@ -134,11 +131,12 @@ namespace Device {
 	void RTLSDR::RunAsync()
 	{
 		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
+		cancel = true;
 	}
 
 	void RTLSDR::Run()
 	{
-		while(isStreaming())
+		while(!cancel)
 		{
 			if (fifo.Wait())
 			{
@@ -148,7 +146,7 @@ namespace Device {
 			}
 			else
 			{
-				std::cerr << "RTLSDR: timeout." << std::endl;
+				if(!cancel) std::cerr << "RTLSDR: timeout." << std::endl;
 			}
 		}
 	}
