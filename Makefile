@@ -68,6 +68,9 @@ sdrplay-only: lib-sdrplay
 hackrf-only: lib-hackrf
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_HACKRF)
 
+zmq-only: lib-zmq
+	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_ZMQ)
+
 # Creating object-files
 lib:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ALL)
@@ -86,6 +89,9 @@ lib-sdrplay:
 
 lib-hackrf:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_HACKRF)
+
+lib-zmq:
+	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ZMQ)
 
 clean:
 	rm *.o
