@@ -4,7 +4,7 @@
 FROM alpine:latest AS build
 
 RUN apk upgrade --no-cache
-RUN apk add --no-cache build-base librtlsdr-dev git make gcc g++ libusb-dev automake autoconf cmake util-linux musl-utils fftw-dev
+RUN apk add --no-cache build-base librtlsdr-dev git make gcc g++ libusb-dev automake autoconf cmake util-linux musl-utils fftw-dev zeromq-dev
 
 COPY . /root/AIS-catcher
 
@@ -19,7 +19,7 @@ RUN cd /root/AIS-catcher; make; make install
 FROM alpine:latest
 
 RUN apk upgrade --no-cache
-RUN apk add --no-cache libusb librtlsdr libstdc++ libgcc
+RUN apk add --no-cache libusb librtlsdr libstdc++ libgcc libzmq
 
 COPY --from=build /usr/local/lib/libairspyhf.so /usr/local/lib/libairspyhf.so
 COPY --from=build /usr/local/lib/libairspyhf.so.0 /usr/local/lib/libairspyhf.so.0
