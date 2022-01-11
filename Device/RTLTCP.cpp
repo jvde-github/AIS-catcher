@@ -88,12 +88,15 @@ namespace Device {
 
 	void RTLTCP::Close()
 	{
+
+
 		DeviceBase::Close();
 #ifdef _WIN32
 		if (sock != -1) closesocket(sock);
 #else
 		if (sock != -1) close(sock);
 #endif
+
 	}
 
 	void RTLTCP::Open(uint64_t handle)
@@ -163,11 +166,16 @@ namespace Device {
 	{
 		std::vector<char> data(TRANSFER_SIZE);
 
-		while (isStreaming())
+		while (!cancel)
 		{
 			int len = recv(sock, data.data(), TRANSFER_SIZE, 0);
 
-			if (len < 0) DeviceBase::Stop();
+			if (len < 0)
+			{
+				cancel = true;
+				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
+				break;
+			} 
 			else if (!fifo.Push(data.data(), len)) std::cerr << "RTLTCP: buffer overrun." << std::endl;
 		}
 	}
@@ -176,7 +184,7 @@ namespace Device {
 	{
 		std::vector<char> output(fifo.BlockSize());
 
-		while (isStreaming())
+		while (!cancel)
 		{
 			if (fifo.Wait())
 			{
@@ -201,6 +209,7 @@ namespace Device {
 		setParameter(1, frequency);
 
 		DeviceBase::Play();
+		cancel = false;
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);

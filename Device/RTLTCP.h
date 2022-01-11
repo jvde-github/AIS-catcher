@@ -66,6 +66,8 @@ namespace Device {
 		static const int TRANSFER_SIZE = 1024;
 		static const int BUFFER_SIZE = 16 * 16384;
 
+		bool cancel = false;
+
 		std::thread async_thread;
 		std::thread run_thread;
 
@@ -93,6 +95,7 @@ namespace Device {
 		void Play();
 		void Stop();
 
+		bool isStreaming() { if (DeviceBase::isStreaming() && cancel) Stop();  return DeviceBase::isStreaming(); }
 		bool isCallback() { return true; }
 
 		void pushDeviceList(std::vector<Description>& DeviceList);
@@ -100,6 +103,7 @@ namespace Device {
 		// Settings
 		void Print();
 		void Set(std::string option, std::string arg);
+		virtual void Message(const SystemMessage& msg) { cancel = true; };
 
 	};
 }

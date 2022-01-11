@@ -488,8 +488,8 @@ int main(int argc, char* argv[])
 		{
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 			{
-				SleepSystem(1000);
-				secPassed = (secPassed + 1) % verboseUpdateTime;
+				SleepSystem(50);
+				secPassed = (secPassed + 1) % (20*verboseUpdateTime);
 
 				if (verbose && secPassed == 0)
 					for (int j = 0; j < liveModels.size(); j++)
