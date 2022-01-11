@@ -39,13 +39,14 @@ namespace Device {
 
 		void* context = NULL;
 		void* subscriber = NULL;
-
+				
 		std::string endpoint;
 
 		// output vector
 
-		static const int TRANSFER_SIZE = 1024;
 		static const int BUFFER_SIZE = 16 * 16384;
+
+		Format format = Format::CU8;
 
 		bool cancel = false;
 
