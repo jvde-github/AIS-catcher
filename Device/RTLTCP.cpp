@@ -27,7 +27,7 @@ SOFTWARE.
 namespace Device {
 
 	//---------------------------------------
-	// Device RTLTCP
+	// Device RTLSDR
 
 	void RTLTCP::Print()
 	{

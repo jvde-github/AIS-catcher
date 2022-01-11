@@ -23,11 +23,12 @@ SOFTWARE.
 #include <cstring>
 
 #include "ZMQ.h"
+#include "Utilities.h"
 
 namespace Device {
 
 	//---------------------------------------
-	// Device ZMQ
+	// Device RTLSDR
 
 #ifdef HASZMQ
 	void ZMQ::Print()
@@ -48,7 +49,13 @@ namespace Device {
 
 		Util::Convert::toUpper(arg);
 
-		throw "Invalid setting for ZMQ.";
+		if (option == "FORMAT")
+		{
+			if(!Util::Parse::Format(arg, format))
+				throw "ZMQ: Unknown file format specification.";
+		}
+		else 
+			throw "Invalid setting for ZMQ.";
 	}
 
 	void ZMQ::Close()
@@ -99,7 +106,7 @@ namespace Device {
 		{
 			if (fifo.Wait())
 			{
-				RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
+				RAW r = { format, fifo.Front(), fifo.BlockSize() };
 				Send(&r, 1);
 				fifo.Pop();
 			}

@@ -27,6 +27,7 @@ SOFTWARE.
 #include <vector>
 
 #include "Stream.h"
+#include "Common.h"
 
 namespace Util
 {
@@ -155,6 +156,17 @@ namespace Util
 			if (number < min || number > max) throw "Error: Number out of range on command line";
 
 			return number;
+		}
+
+		static bool Format(std::string str, Format &format)
+		{
+			if (str == "CU8") format = Format::CU8;
+			else if (str == "CF32") format = Format::CF32;
+			else if (str == "CS16") format = Format::CS16;
+			else if (str == "CS8") format = Format::CS8;
+			else return false;
+
+			return true;
 		}
 
 		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF")

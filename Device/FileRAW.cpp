@@ -55,11 +55,8 @@ namespace Device {
 
 		if (option == "FORMAT")
 		{
-			if (arg == "CU8") format = Format::CU8;
-			else if (arg == "CF32") format = Format::CF32;
-			else if (arg == "CS16") format = Format::CS16;
-			else if (arg == "CS8") format = Format::CS8;
-			else throw "RAW FILE: Unknown file format specification.";
+			if (!Util::Parse::Format(arg, format))
+				throw "RAW: Unknown file format specification.";
 		}
 		else if (option == "STEREO")
 		{
