@@ -50,9 +50,7 @@ namespace AIS
 
 	public:
 
-		Model(Device::Device* d) { device = d; }
-
-		virtual void buildModel(int, bool) {}
+		virtual void buildModel(int, bool, Device::Device* d) { device = d;  }
 
 		StreamOut<NMEA>& Output() { return output; }
 
@@ -84,8 +82,7 @@ namespace AIS
 		Connection<CFLOAT32> *C_a = NULL, *C_b = NULL;
 		DSP::Rotate ROT;
 	public:
-		ModelFrontend(Device::Device* c) : Model(c) {}
-		void buildModel(int, bool);
+		void buildModel(int, bool, Device::Device*);
 	};
 
 	// Standard demodulation model, FM with brute-force timing recovery
@@ -98,8 +95,7 @@ namespace AIS
 		DSP::Deinterleave<FLOAT32> S_a, S_b;
 
 	public:
-		ModelStandard(Device::Device* c) : ModelFrontend(c) {}
-		void buildModel(int, bool);
+		void buildModel(int, bool, Device::Device*);
 	};
 
 
@@ -112,8 +108,7 @@ namespace AIS
 		AIS::Decoder DEC_a, DEC_b;
 
 	public:
-		ModelBase(Device::Device* c) : ModelFrontend(c) {}
-		void buildModel(int, bool);
+		void buildModel(int, bool, Device::Device*);
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
@@ -130,13 +125,13 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelPhaseSearch(Device::Device* c, int h = 12, int d = 3) : ModelFrontend(c)
+		ModelPhaseSearch(int h = 12, int d = 3)
 		{
 			setName("AIS engine " VERSION);
 			nHistory = h; nDelay = d;
 
 		}
-		void buildModel(int,bool);
+		void buildModel(int, bool, Device::Device*);
 	};
 
 	// As the PhaseSearch model but optimized for speed using exponential moving averages
@@ -152,20 +147,20 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelPhaseSearchEMA(Device::Device* c, int d = 3) : ModelFrontend(c)
+		ModelPhaseSearchEMA(int d = 3)
 		{
 			setName("AIS engine (speed optimized) " VERSION);
 			nDelay = d;
 
 		}
-		void buildModel(int,bool);
+		void buildModel(int, bool, Device::Device*);
 	};
 
 	// Challenger model
 	class ModelChallenger : public ModelPhaseSearch
 	{
 	public:
-		ModelChallenger(Device::Device* c, int h = 8, int d = 0) : ModelPhaseSearch(c, h, d) 
+		ModelChallenger(int h = 8, int d = 0)
 		{
 			setName("Challenger model");
 		}
@@ -184,7 +179,6 @@ namespace AIS
 		Util::ConvertRAW convert;
 
 	public:
-		ModelDiscriminator(Device::Device* c) : Model(c) {}
-		void buildModel(int,bool);
+		void buildModel(int, bool, Device::Device*);
 	};
 }

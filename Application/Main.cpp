@@ -193,12 +193,12 @@ std::vector<std::shared_ptr<AIS::Model>> setupModels(std::vector<int> &liveModel
 	{
 		switch (mi)
 		{
-		case 0: liveModels.push_back(std::make_shared<AIS::ModelStandard>(dev)); break;
-		case 1: liveModels.push_back(std::make_shared<AIS::ModelBase>(dev)); break;
-		case 2: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearch>(dev)); break;
-		case 3: liveModels.push_back(std::make_shared<AIS::ModelDiscriminator>(dev)); break;
-		case 4: liveModels.push_back(std::make_shared<AIS::ModelChallenger>(dev)); break;
-		case 5: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearchEMA>(dev)); break;
+		case 0: liveModels.push_back(std::make_shared<AIS::ModelStandard>()); break;
+		case 1: liveModels.push_back(std::make_shared<AIS::ModelBase>()); break;
+		case 2: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearch>()); break;
+		case 3: liveModels.push_back(std::make_shared<AIS::ModelDiscriminator>()); break;
+		case 4: liveModels.push_back(std::make_shared<AIS::ModelChallenger>()); break;
+		case 5: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearchEMA>()); break;
 		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
 		}
 	}
@@ -477,7 +477,7 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->buildModel(device->getSampleRate(), timer_on);
+			liveModels[i]->buildModel(device->getSampleRate(), timer_on, device);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
