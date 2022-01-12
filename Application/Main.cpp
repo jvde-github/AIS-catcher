@@ -185,25 +185,18 @@ int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::stri
 	return -1;
 }
 
-std::vector<std::shared_ptr<AIS::Model>> setupModels(std::vector<int> &liveModelsSelected, Device::Device* dev)
+std::shared_ptr<AIS::Model> createModel(int m)
 {
-	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
-	for (auto mi : liveModelsSelected)
+	switch (m)
 	{
-		switch (mi)
-		{
-		case 0: liveModels.push_back(std::make_shared<AIS::ModelStandard>()); break;
-		case 1: liveModels.push_back(std::make_shared<AIS::ModelBase>()); break;
-		case 2: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearch>()); break;
-		case 3: liveModels.push_back(std::make_shared<AIS::ModelDiscriminator>()); break;
-		case 4: liveModels.push_back(std::make_shared<AIS::ModelChallenger>()); break;
-		case 5: liveModels.push_back(std::make_shared<AIS::ModelPhaseSearchEMA>()); break;
-		default: throw "Internal error: Model not implemented in this version. Check in later."; break;
-		}
+	case 0: return std::make_shared<AIS::ModelStandard>(); break;
+	case 1: return std::make_shared<AIS::ModelBase>(); break;
+	case 2: return std::make_shared<AIS::ModelPhaseSearch>(); break;
+	case 3: return std::make_shared<AIS::ModelDiscriminator>(); break;
+	case 4: return std::make_shared<AIS::ModelChallenger>(); break;
+	default: throw "Internal error: Model not implemented in this version. Check in later."; break;
 	}
-
-	return liveModels;
 }
 
 // -------------------------------
@@ -242,7 +235,7 @@ int main(int argc, char* argv[])
 	int sample_rate = 0, input_device = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	bool verbose = false,  timer_on = false, OptimizeSpeed = false;
+	bool verbose = false,  timer_on = false;
 	IO::SinkScreen::Level NMEA_to_screen = IO::SinkScreen::Level::FULL;
 	int verboseUpdateTime = 3;
 
@@ -257,7 +250,6 @@ int main(int argc, char* argv[])
 	std::vector<IO::UDP> UDPconnections;
 
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
-	std::vector<int> liveModelsSelected;
 
 	IO::SinkScreen nmea_screen;
 
@@ -294,7 +286,7 @@ int main(int argc, char* argv[])
 				break;
 			case 'm':
 				Assert(count == 1, param, "Requires one parameter [model number].");
-				liveModelsSelected.push_back(Util::Parse::Integer(arg1, 0, 5));
+				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 4)));
 				break;
 			case 'v':
 				Assert(count <= 1, param);
@@ -311,7 +303,9 @@ int main(int argc, char* argv[])
 				break;
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				OptimizeSpeed = true;
+				liveModels.push_back(createModel(2));
+				liveModels[0]->Set("FP_DS","ON");
+				liveModels[0]->Set("PS_EMA", "ON");
 				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
@@ -380,9 +374,8 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case 'u':
-			case 'U':
 				Assert(count == 2, param, "Requires two parameters [address] [port].");
-				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModelsSelected.size()-1) ));
+				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size()-1) ));
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -405,6 +398,9 @@ int main(int argc, char* argv[])
 				case 't': parseSettings(drivers.RTLTCP, argv, ptr, argc); break;
 				case 'f': parseSettings(drivers.HACKRF, argv, ptr, argc); break;
 				case 'z': parseSettings(drivers.ZMQ, argv, ptr, argc); break;
+				case 'o': Assert(liveModels.size() != 0,param,"At least one model needs to be defined prior to setting."); 
+						  parseSettings(*(liveModels[MAX(0, (int)liveModels.size() - 1)]), argv, ptr, argc); break;
+					break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
@@ -468,13 +464,12 @@ int main(int argc, char* argv[])
 		if (sample_rate) device->setSampleRate(sample_rate);
 		device->setFrequency((int)(162e6));
 
-		// Build model and attach output to main model
-		if (liveModelsSelected.size() == 0) liveModelsSelected.push_back( OptimizeSpeed ? 5 : 2);
-		liveModels = setupModels(liveModelsSelected, device);
+		// Build model
+		if (!liveModels.size()) liveModels.push_back(createModel(2));
+		
 		std::vector<IO::StreamCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
 
-		liveModels[0]->setFixedPointDownsampling(OptimizeSpeed);
-
+		// Attach output
 		for (int i = 0; i < liveModels.size(); i++)
 		{
 			liveModels[i]->buildModel(device->getSampleRate(), timer_on, device);

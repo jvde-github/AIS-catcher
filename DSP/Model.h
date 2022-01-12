@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include "AIS-catcher.h"
 
+#include "Common.h"
 #include "Stream.h"
 #include "AIS.h"
 #include "Utilities.h"
@@ -37,7 +38,7 @@ SOFTWARE.
 namespace AIS
 {
 	// Abstract demodulation model
-	class Model
+	class Model: public Setting
 	{
 	protected:
 		std::string name = "";
@@ -45,8 +46,6 @@ namespace AIS
 		Device::Device* device;
 		Util::Timer<RAW> timer;
 		Util::PassThrough<NMEA> output;
-
-		bool fixedpointDS = false;
 
 	public:
 
@@ -58,8 +57,6 @@ namespace AIS
 		std::string getName() { return name; }
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
-
-		virtual void setFixedPointDownsampling(bool b) { fixedpointDS = b; }
 	};
 
 
@@ -76,6 +73,8 @@ namespace AIS
 		DSP::Downsample16Fixed DS16_Fixed;
 		Util::ConvertRAW convert;
 
+		bool fixedpointDS = false;
+
 	protected:
 		const int nSymbolsPerSample = 48000 / 9600;
 
@@ -83,6 +82,9 @@ namespace AIS
 		DSP::Rotate ROT;
 	public:
 		void buildModel(int, bool, Device::Device*);
+
+		virtual void Set(std::string option, std::string arg);
+
 	};
 
 	// Standard demodulation model, FM with brute-force timing recovery
@@ -116,44 +118,21 @@ namespace AIS
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		std::vector<Demod::PhaseSearch> CD_a, CD_b;
+		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::Deinterleave<CFLOAT32> S_a, S_b;
 
-		int nHistory = 8;
-		int nDelay = 0;
+		int nHistory = 12;
+		int nDelay = 3;
+
+		bool OptmizeSpeed = false;
 
 	public:
-		ModelPhaseSearch(int h = 12, int d = 3)
-		{
-			setName("AIS engine " VERSION);
-			nHistory = h; nDelay = d;
-
-		}
+		
 		void buildModel(int, bool, Device::Device*);
-	};
-
-	// As the PhaseSearch model but optimized for speed using exponential moving averages
-	class ModelPhaseSearchEMA : public ModelFrontend
-	{
-		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		std::vector<Demod::PhaseSearchEMA> CD_a, CD_b;
-
-		DSP::FilterComplex FC_a, FC_b;
-		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::Deinterleave<CFLOAT32> S_a, S_b;
-
-		int nDelay = 0;
-
-	public:
-		ModelPhaseSearchEMA(int d = 3)
-		{
-			setName("AIS engine (speed optimized) " VERSION);
-			nDelay = d;
-
-		}
-		void buildModel(int, bool, Device::Device*);
+		void Set(std::string option, std::string arg);
 	};
 
 	// Challenger model
