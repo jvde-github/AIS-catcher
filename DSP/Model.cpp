@@ -132,6 +132,18 @@ namespace AIS
 		return;
 	}
 
+	void ModelFrontend::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "FP_DS")
+		{
+			fixedpointDS = Util::Parse::Switch(arg);
+		}
+
+	}
+
 	void ModelBase::buildModel(int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn, dev);
@@ -198,6 +210,8 @@ namespace AIS
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 
+		setName("AIS engine " VERSION);
+
 		assert(C_a != NULL && C_b != NULL);
 
 		FC_a.setTaps(Filters::Coherent);
@@ -209,8 +223,16 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		CD_a.resize(nSymbolsPerSample);
-		CD_b.resize(nSymbolsPerSample);
+		if (!OptmizeSpeed)
+		{
+			CD_a.resize(nSymbolsPerSample);
+			CD_b.resize(nSymbolsPerSample);
+		}
+		else
+		{
+			CD_EMA_a.resize(nSymbolsPerSample);
+			CD_EMA_b.resize(nSymbolsPerSample);
+		}
 
 		CGF_a.setParams(512,187);
 		CGF_b.setParams(512,187);
@@ -223,12 +245,22 @@ namespace AIS
 			DEC_a[i].setChannel('A');
 			DEC_b[i].setChannel('B');
 
-			CD_a[i].setParams(nHistory, nDelay);
-			CD_b[i].setParams(nHistory, nDelay);
+			if (!OptmizeSpeed)
+			{
+				CD_a[i].setParams(nHistory, nDelay);
+				CD_b[i].setParams(nHistory, nDelay);
 
-			S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
-			S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
+				S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
+				S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
+			}
+			else
+			{
+				CD_EMA_a[i].setParams(nDelay);
+				CD_EMA_b[i].setParams(nDelay);
 
+				S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
+				S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
+			}
 			for (int j = 0; j < nSymbolsPerSample; j++)
 			{
 				if (i != j)
@@ -242,52 +274,17 @@ namespace AIS
 		return;
 	}
 
-	void ModelPhaseSearchEMA::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
+	void ModelPhaseSearch::Set(std::string option, std::string arg)
 	{
-		ModelFrontend::buildModel(sample_rate, timerOn, dev);
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
 
-		assert(C_a != NULL && C_b != NULL);
-
-		FC_a.setTaps(Filters::Coherent);
-		FC_b.setTaps(Filters::Coherent);
-
-		S_a.setConnections(nSymbolsPerSample);
-		S_b.setConnections(nSymbolsPerSample);
-
-		DEC_a.resize(nSymbolsPerSample);
-		DEC_b.resize(nSymbolsPerSample);
-
-		CD_a.resize(nSymbolsPerSample);
-		CD_b.resize(nSymbolsPerSample);
-
-		CGF_a.setParams(512,187);
-		CGF_b.setParams(512,187);
-
-		*C_a >> CGF_a >> FC_a >> S_a;
-		*C_b >> CGF_b >> FC_b >> S_b;
-
-		for (int i = 0; i < nSymbolsPerSample; i++)
+		if (option == "PS_EMA")
 		{
-			DEC_a[i].setChannel('A');
-			DEC_b[i].setChannel('B');
-
-			CD_a[i].setParams(nDelay);
-			CD_b[i].setParams(nDelay);
-
-			S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
-			S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
-
-			for (int j = 0; j < nSymbolsPerSample; j++)
-			{
-				if (i != j)
-				{
-					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
-					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
-				}
-			}
+			OptmizeSpeed = Util::Parse::Switch(arg);
 		}
-
-		return;
+		else
+			ModelFrontend::Set(option, arg);
 	}
 
 	void ModelDiscriminator::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
