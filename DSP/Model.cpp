@@ -206,7 +206,7 @@ namespace AIS
 		return;
 	}
 
-	void ModelPhaseSearch::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
+	void ModelDefault::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 
@@ -274,7 +274,7 @@ namespace AIS
 		return;
 	}
 
-	void ModelPhaseSearch::Set(std::string option, std::string arg)
+	void ModelDefault::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);

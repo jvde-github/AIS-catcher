@@ -73,7 +73,7 @@ namespace Device {
 	void AIRSPY::Close()
 	{
 		Device::Close();
-		airspy_close(dev);
+		if(!lost) airspy_close(dev);
 	}
 
 	void AIRSPY::setLNA_AGC(int a)
