@@ -44,18 +44,18 @@ SOFTWARE.
 
 #include "IO.h"
 
-MessageHub<SystemMessage> SystemMessages;
+std::atomic<bool> stop;
 
 #ifdef _WIN32
 BOOL WINAPI consoleHandler(DWORD signal)
 {
-	if (signal == CTRL_C_EVENT) SystemMessages.Send(SystemMessage::Stop);
+	if (signal == CTRL_C_EVENT) stop = true;
 	return TRUE;
 }
 #else
 void consoleHandler(int signal)
 {
-	SystemMessages.Send(SystemMessage::Stop);
+	stop = true;
 }
 #endif
 
@@ -96,7 +96,7 @@ void Usage()
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
 	std::cerr << "\t[-t [host [port]] - read IQ data from remote RTL-TCP instance]" << std::endl;
-	std::cerr << "\t[-z [endpoint] - read IQ data (CU8) via ZMQ]" << std::endl;
+	std::cerr << "\t[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
@@ -118,7 +118,7 @@ void Usage()
 	std::cerr << "\t[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]" << std::endl;
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
-	std::cerr << "\t[-gz ZMQ: ENDPOINT [endpoint]" << std::endl;
+	std::cerr << "\t[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
 }
 
 std::vector<Device::Description> getDevices(Drivers &drivers)
@@ -185,7 +185,7 @@ int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::stri
 	return -1;
 }
 
-std::vector<std::shared_ptr<AIS::Model>> setupModels(std::vector<int> &liveModelsSelected, Device::DeviceBase* dev)
+std::vector<std::shared_ptr<AIS::Model>> setupModels(std::vector<int> &liveModelsSelected, Device::Device* dev)
 {
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
@@ -208,7 +208,7 @@ std::vector<std::shared_ptr<AIS::Model>> setupModels(std::vector<int> &liveModel
 
 // -------------------------------
 
-void parseDeviceSettings(Device::Setting& s, char* argv[], int ptr, int argc)
+void parseSettings(Setting& s, char* argv[], int ptr, int argc)
 {
 	ptr++;
 
@@ -221,7 +221,7 @@ void parseDeviceSettings(Device::Setting& s, char* argv[], int ptr, int argc)
 	}
 }
 
-bool isoption(std::string s)
+bool isOption(std::string s)
 {
 	return s.length() >= 2 && s[0] == '-' && std::isalpha(s[1]);
 }
@@ -243,14 +243,14 @@ int main(int argc, char* argv[])
 
 	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false,  timer_on = false, OptimizeSpeed = false;
-	IO::DumpScreen::Level NMEA_to_screen = IO::DumpScreen::Level::FULL;
+	IO::SinkScreen::Level NMEA_to_screen = IO::SinkScreen::Level::FULL;
 	int verboseUpdateTime = 3;
 
 	// Device and output stream of device;
 	Device::Type input_type = Device::Type::NONE;
 	uint64_t handle = 0;
 
-	Device::DeviceBase* device = NULL;
+	Device::Device* device = NULL;
 	Drivers drivers;
 
 	std::vector<IO::UDPEndPoint> UDPdestinations;
@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 	std::vector<int> liveModelsSelected;
 
-	IO::DumpScreen nmea_screen;
+	IO::SinkScreen nmea_screen;
 
 	try
 	{
@@ -281,7 +281,7 @@ int main(int argc, char* argv[])
 			Assert(param[0] == '-', param, "Setting does not start with \"-\".");
 
 			int count = 0;
-			while (ptr + count + 1 < argc && !isoption(argv[ptr + 1 + count])) count++;
+			while (ptr + count + 1 < argc && !isOption(argv[ptr + 1 + count])) count++;
 
 			std::string arg1 = count >= 1 ? std::string(argv[ptr + 1]) : "";
 			std::string arg2 = count >= 2 ? std::string(argv[ptr + 2]) : "";
@@ -303,11 +303,11 @@ int main(int argc, char* argv[])
 				break;
 			case 'q':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				NMEA_to_screen = IO::DumpScreen::Level::NONE;
+				NMEA_to_screen = IO::SinkScreen::Level::NONE;
 				break;
 			case 'n':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				NMEA_to_screen = IO::DumpScreen::Level::SPARSE;
+				NMEA_to_screen = IO::SinkScreen::Level::SPARSE;
 				break;
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -321,8 +321,16 @@ int main(int argc, char* argv[])
 				break;
 			case 'z':
 				input_type = Device::Type::ZMQ;
-				Assert(count <= 1, param, "Requires zero or one parameter [endpoint].");
-				drivers.ZMQ.Set("endpoint",arg1);
+				Assert(count <= 2, param, "Requires at most two parameters [[format]] [endpoint].");
+				if (count == 1)
+				{
+					drivers.ZMQ.Set("ENDPOINT", arg1);
+				}
+				else if (count == 2)
+				{
+					drivers.ZMQ.Set("FORMAT", arg1);
+					drivers.ZMQ.Set("ENDPOINT", arg2);
+				}
 				break;
 			case 'b':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -334,7 +342,7 @@ int main(int argc, char* argv[])
 				if (count == 1) drivers.WAV.Set("FILE", arg1);
 				break;
 			case 'r':
-				Assert(count <= 2, param);
+				Assert(count <= 2, param, "Requires at most two parameters [[format]] [filename].");
 				input_type = Device::Type::RAWFILE;
 				if (count == 1)
 				{
@@ -388,15 +396,15 @@ int main(int argc, char* argv[])
 				Assert(count % 2 == 0 && param.length() == 3, param);
 				switch (param[2])
 				{
-				case 'm': parseDeviceSettings(drivers.AIRSPY, argv, ptr, argc); break;
-				case 'r': parseDeviceSettings(drivers.RTLSDR, argv, ptr, argc); break;
-				case 'h': parseDeviceSettings(drivers.AIRSPYHF, argv, ptr, argc); break;
-				case 's': parseDeviceSettings(drivers.SDRPLAY, argv, ptr, argc); break;
-				case 'a': parseDeviceSettings(drivers.RAW, argv, ptr, argc); break;
-				case 'w': parseDeviceSettings(drivers.WAV, argv, ptr, argc); break;
-				case 't': parseDeviceSettings(drivers.RTLTCP, argv, ptr, argc); break;
-				case 'f': parseDeviceSettings(drivers.HACKRF, argv, ptr, argc); break;
-				case 'z': parseDeviceSettings(drivers.ZMQ, argv, ptr, argc); break;
+				case 'm': parseSettings(drivers.AIRSPY, argv, ptr, argc); break;
+				case 'r': parseSettings(drivers.RTLSDR, argv, ptr, argc); break;
+				case 'h': parseSettings(drivers.AIRSPYHF, argv, ptr, argc); break;
+				case 's': parseSettings(drivers.SDRPLAY, argv, ptr, argc); break;
+				case 'a': parseSettings(drivers.RAW, argv, ptr, argc); break;
+				case 'w': parseSettings(drivers.WAV, argv, ptr, argc); break;
+				case 't': parseSettings(drivers.RTLTCP, argv, ptr, argc); break;
+				case 'f': parseSettings(drivers.HACKRF, argv, ptr, argc); break;
+				case 'z': parseSettings(drivers.ZMQ, argv, ptr, argc); break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
@@ -408,7 +416,7 @@ int main(int argc, char* argv[])
 			ptr += count + 1;
 		}
 
-		if (verbose || list_devices || list_support || NMEA_to_screen != IO::DumpScreen::Level::NONE || list_options) printVersion();
+		if (verbose || list_devices || list_support || NMEA_to_screen != IO::SinkScreen::Level::NONE || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
@@ -455,7 +463,6 @@ int main(int argc, char* argv[])
 
 		device->Open(handle);
 		if (verbose) device->Print();
-		SystemMessages.Connect(*device);
 
 		// override sample rate if defined by user
 		if (sample_rate) device->setSampleRate(sample_rate);
@@ -464,7 +471,7 @@ int main(int argc, char* argv[])
 		// Build model and attach output to main model
 		if (liveModelsSelected.size() == 0) liveModelsSelected.push_back( OptimizeSpeed ? 5 : 2);
 		liveModels = setupModels(liveModelsSelected, device);
-		std::vector<IO::SampleCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
+		std::vector<IO::StreamCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
 
 		liveModels[0]->setFixedPointDownsampling(OptimizeSpeed);
 
@@ -483,7 +490,7 @@ int main(int argc, char* argv[])
 			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
 		}
 
-		if (NMEA_to_screen != IO::DumpScreen::Level::NONE)
+		if (NMEA_to_screen != IO::SinkScreen::Level::NONE)
 		{
 			liveModels[0]->Output() >> nmea_screen;
 			nmea_screen.setDetail(NMEA_to_screen);
@@ -496,16 +503,19 @@ int main(int argc, char* argv[])
 
 		// -----------------
 		// Main loop
+		stop = false;
+
 		device->Play();
 
 		int secPassed = 0;
 
-		while(device->isStreaming())
+		while(device->isStreaming() && !stop)
 		{
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 			{
-				SleepSystem(50);
-				secPassed = (secPassed + 1) % (20*verboseUpdateTime);
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+				secPassed = (secPassed + 1) % (20 * verboseUpdateTime);
 
 				if (verbose && secPassed == 0)
 					for (int j = 0; j < liveModels.size(); j++)
@@ -515,6 +525,8 @@ int main(int argc, char* argv[])
 					}
 			}
 		}
+
+		device->Stop();
 
 		// End Main loop
 		// -----------------

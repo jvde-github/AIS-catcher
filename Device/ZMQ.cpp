@@ -33,7 +33,7 @@ namespace Device {
 #ifdef HASZMQ
 	void ZMQ::Print()
 	{
-		std::cerr << "ZMQ settings: -gt endpoint " << endpoint;
+		std::cerr << "ZMQ settings: -gz endpoint " << endpoint;
 		std::cerr  << std::endl;
 	}
 
@@ -60,7 +60,7 @@ namespace Device {
 
 	void ZMQ::Close()
 	{
-		DeviceBase::Close();
+		Device::Close();
 
 		zmq_close(subscriber);
 		zmq_ctx_destroy(context);
@@ -84,14 +84,14 @@ namespace Device {
 
 		setSampleRate(288000);
 
-		DeviceBase::Open(handle);
+		Device::Open(handle);
 	}
 
 	void ZMQ::RunAsync()
 	{
 		std::vector<char> data(BUFFER_SIZE);
 
-		while (!cancel)
+		while (isStreaming())
 		{
 			int len = zmq_recv(subscriber, data.data(), BUFFER_SIZE, 0);
 			if (len > 0 && !fifo.Push(data.data(), len)) std::cerr << "ZMQ: buffer overrun." << std::endl;
@@ -102,7 +102,7 @@ namespace Device {
 	{
 		std::vector<char> output(fifo.BlockSize());
 
-		while (!cancel)
+		while (isStreaming())
 		{
 			if (fifo.Wait())
 			{
@@ -121,13 +121,12 @@ namespace Device {
 	{
 		fifo.Init(BUFFER_SIZE);
 
-		DeviceBase::Play();
+		Device::Play();
 
 		//set sample_rate;
 		//set frequency;
 
-		DeviceBase::Play();
-		cancel = false;
+		Device::Play();
 
 		async_thread = std::thread(&ZMQ::RunAsync, this);
 		run_thread = std::thread(&ZMQ::Run, this);
@@ -137,10 +136,9 @@ namespace Device {
 
 	void ZMQ::Stop()
 	{
-		if(DeviceBase::isStreaming())
+		if(Device::isStreaming())
 		{
-			DeviceBase::Stop();
-			cancel = true;
+			Device::Stop();
 
 			if (async_thread.joinable()) async_thread.join();
 			if (run_thread.joinable()) run_thread.join();

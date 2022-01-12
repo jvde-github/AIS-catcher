@@ -66,7 +66,7 @@ use: AIS-catcher [options]
 	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]
 	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
 	[-t [host [port]] - read IQ data from remote RTL-TCP instance]
-	[-z [endpoint] - read IQ data (CU8) via ZMQ]
+	[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]
 
 	[-l list available devices and terminate (default: off)]
 	[-L list supported SDR hardware and terminate (default: off)]
@@ -88,7 +88,7 @@ use: AIS-catcher [options]
 	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]
 	[-gw WAV file: FILE [filename]
-	[-gz ZMQ: ENDPOINT [endpoint]
+	[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]
 ````
 
 ## Examples

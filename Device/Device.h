@@ -25,6 +25,7 @@ SOFTWARE.
 #include <vector>
 #include <thread>
 #include <fstream>
+#include <iostream>
 
 #include <atomic>
 #include <mutex>
@@ -33,7 +34,6 @@ SOFTWARE.
 #include "FIFO.h"
 
 #include "Stream.h"
-#include "Signal.h"
 #include "Common.h"
 #include "Utilities.h"
 
@@ -43,8 +43,8 @@ namespace Device{
 
 	class Description
 	{
-		uint64_t handle;
 		Type type;
+		uint64_t handle;
 
 		std::string vendor;
 		std::string product;
@@ -64,17 +64,7 @@ namespace Device{
  		bool operator < (const Description& b) const { return (serial < b.serial); }
 	};
 
-	// will be centralized in the future and used for other clases as well...
-	class Setting
-	{
-	public:
-		// Settings
-		virtual void Print(void) {}
-		virtual void Set(std::string option, std::string arg) { }
-	};
-
-
-	class DeviceBase : public MessageIn<SystemMessage>, public StreamOut<RAW>, public Setting
+	class Device : public StreamOut<RAW>, public Setting
 	{
 	protected:
 
@@ -104,7 +94,5 @@ namespace Device{
 
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
 
-		// MessageIn
-		virtual void Message(const SystemMessage& msg) { Stop(); };
 	};
 }

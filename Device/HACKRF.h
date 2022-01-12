@@ -30,7 +30,7 @@ SOFTWARE.
 
 namespace Device {
 
-	class HACKRF : public DeviceBase
+	class HACKRF : public Device
 	{
 #ifdef HASHACKRF
 
@@ -48,7 +48,6 @@ namespace Device {
 		void callback(uint8_t*, int);
 
 		std::vector<CFLOAT32> output;
-		bool cancel = false;
 
 	public:
 
@@ -66,8 +65,6 @@ namespace Device {
 		// Settings
 		void Print();
 		void Set(std::string option, std::string arg);
-
-		virtual void Message(const SystemMessage& msg) { cancel = true; };
 
 #endif
 	};

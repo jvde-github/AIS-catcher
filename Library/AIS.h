@@ -37,7 +37,7 @@ namespace AIS
 		std::vector<uint8_t> DataFCS;
 
 		const int MaxBits = 512;
-		const int MIN_TRAINING_BITS = 4;
+		const int MIN_TRAINING_BITS = 5;
 
 		State state = State::TRAINING;
 

@@ -32,12 +32,12 @@ SOFTWARE.
 namespace Device {
 
 
-	class AIRSPY : public DeviceBase
+	class AIRSPY : public Device
 	{
 #ifdef HASAIRSPY
 
 		struct airspy_device* dev = NULL;
-		bool disconnected = false;
+		bool lost = false;
 		std::vector<uint32_t> rates;
 
 		enum class AIRSPYGainMode { Free, Sensitivity, Linearity } mode = AIRSPYGainMode::Linearity;

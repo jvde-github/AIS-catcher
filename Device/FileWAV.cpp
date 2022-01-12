@@ -66,7 +66,7 @@ namespace Device {
 
 	bool WAVFile::isStreaming()
 	{
-		if(!DeviceBase::isStreaming()) return false;
+		if(!Device::isStreaming()) return false;
 
 		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
 
@@ -101,12 +101,12 @@ namespace Device {
 
 		if (!valid) throw "Eror: Not a supported WAV-file.";
 
-		DeviceBase::setSampleRate(header.dwSamplesPerSec);
+		Device::setSampleRate(header.dwSamplesPerSec);
 	}
 
 	void WAVFile::Close()
 	{
-		DeviceBase::Close();
+		Device::Close();
 
 		file.close();
 	}

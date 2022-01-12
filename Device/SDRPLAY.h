@@ -30,7 +30,7 @@ SOFTWARE.
 
 namespace Device {
 
-	class SDRPLAY : public DeviceBase//, public StreamOut<RAW>
+	class SDRPLAY : public Device//, public StreamOut<RAW>
 	{
 
 #ifdef HASSDRPLAY

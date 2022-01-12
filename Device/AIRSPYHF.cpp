@@ -48,7 +48,7 @@ namespace Device {
 		std::sort(rates.begin(), rates.end());
 		setSampleRate(rates[0]);
 
-		DeviceBase::Open(h);
+		Device::Open(h);
 	}
 
 	void AIRSPYHF::Play()
@@ -57,24 +57,24 @@ namespace Device {
 		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
 		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
 
-		DeviceBase::Play();
+		Device::Play();
 
 		SleepSystem(10);
 	}
 
 	void AIRSPYHF::Stop()
 	{
-		if(DeviceBase::isStreaming())
+		if(Device::isStreaming())
 		{
-			DeviceBase::Stop();
+			Device::Stop();
 			airspyhf_stop(dev);
 		}
 	}
 
 	void AIRSPYHF::Close()
 	{
-		DeviceBase::Close();
-		if(!disconnected) airspyhf_close(dev);
+		Device::Close();
+		airspyhf_close(dev);
 	}
 
 	void AIRSPYHF::setAGC()
@@ -124,13 +124,12 @@ namespace Device {
 
 	bool AIRSPYHF::isStreaming()
 	{
-		if(DeviceBase::isStreaming() && airspyhf_is_streaming(dev) != 1)
+		if(Device::isStreaming() && airspyhf_is_streaming(dev) != 1)
 		{
-			Stop();
-			disconnected = true;
+			lost = true;
 		}
 
-		return DeviceBase::isStreaming();
+		return Device::isStreaming() && airspyhf_is_streaming(dev) == 1;
 	}
 
 	void AIRSPYHF::Print()
@@ -154,7 +153,5 @@ namespace Device {
 		else
 			throw "Command line: Invalid setting for AIRSPY HF+.";
 	}
-
-
 #endif
 }
