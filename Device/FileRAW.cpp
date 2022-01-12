@@ -71,7 +71,7 @@ namespace Device {
 
 	bool RAWFile::isStreaming()
 	{
-		if(!DeviceBase::isStreaming()) return false;
+		if(!Device::isStreaming()) return false;
 
 		int len = 0;
 
@@ -102,7 +102,7 @@ namespace Device {
 
 	void RAWFile::Open(uint64_t h)
 	{
-		DeviceBase::Open(h);
+		Device::Open(h);
 
 		if(filename == "." || filename == "stdin")
 		{

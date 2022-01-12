@@ -30,13 +30,13 @@ SOFTWARE.
 
 namespace Device{
 
-	class AIRSPYHF : public DeviceBase
+	class AIRSPYHF : public Device
 	{
 #ifdef HASAIRSPYHF
 
 		struct airspyhf_device* dev = NULL;
 		std::vector<uint32_t> rates;
-		bool disconnected = false;
+		bool lost = false;
 
 		bool preamp = false;
 		bool treshold_high = false;

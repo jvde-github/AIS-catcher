@@ -38,7 +38,7 @@ namespace Device {
 		applySettings();
 		setSampleRate(1536000);
 
-		DeviceBase::Open(h);
+		Device::Open(h);
 	}
 
 	void RTLSDR::Play()
@@ -50,8 +50,8 @@ namespace Device {
 
 		rtlsdr_reset_buffer(dev);
 
-		DeviceBase::Play();
-		cancel = false;
+		Device::Play();
+		lost = false;
 
 		async_thread = std::thread(&RTLSDR::RunAsync, this);
 		run_thread = std::thread(&RTLSDR::Run, this);
@@ -61,9 +61,9 @@ namespace Device {
 
 	void RTLSDR::Stop()
 	{
-		if(DeviceBase::isStreaming())
+		if(Device::isStreaming())
 		{
-			DeviceBase::Stop();
+			Device::Stop();
 
 			if (async_thread.joinable())
 			{
@@ -76,7 +76,7 @@ namespace Device {
 
 	void RTLSDR::Close()
 	{
-		DeviceBase::Close();
+		Device::Close();
 		rtlsdr_close(dev);
 	}
 
@@ -120,7 +120,7 @@ namespace Device {
 
 	void RTLSDR::callback(CU8* buf, int len)
 	{
-		if (DeviceBase::isStreaming() && !fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
+		if (isStreaming() && !fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
 	}
 
 	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx)
@@ -131,12 +131,14 @@ namespace Device {
 	void RTLSDR::RunAsync()
 	{
 		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
-		cancel = true;
+
+		// did we terminate too early?
+		if(isStreaming()) lost = true;
 	}
 
 	void RTLSDR::Run()
 	{
-		while(!cancel)
+		while(isStreaming())
 		{
 			if (fifo.Wait())
 			{
@@ -146,7 +148,7 @@ namespace Device {
 			}
 			else
 			{
-				if(!cancel) std::cerr << "RTLSDR: timeout." << std::endl;
+				if(!lost) std::cerr << "RTLSDR: timeout." << std::endl;
 			}
 		}
 	}

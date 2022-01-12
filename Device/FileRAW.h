@@ -29,7 +29,7 @@ namespace Device
 
 	enum class FileLayout { Stereo, Mono, Left, Right };
 
-	class RAWFile : public DeviceBase
+	class RAWFile : public Device
 	{
 		std::istream *file = NULL;
 

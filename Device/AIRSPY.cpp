@@ -47,7 +47,7 @@ namespace Device {
 
 		setSampleRate(rates[0]);
 
-		DeviceBase::Open(h);
+		Device::Open(h);
 	}
 
 	void AIRSPY::Play()
@@ -56,24 +56,24 @@ namespace Device {
 		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
 		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw "AIRSPY: Cannot open device";
 
-		DeviceBase::Play();
+		Device::Play();
 
 		SleepSystem(10);
 	}
 
 	void AIRSPY::Stop()
 	{
-		if(DeviceBase::isStreaming())
+		if(Device::isStreaming())
 		{
-			DeviceBase::Stop();
+			Device::Stop();
 			airspy_stop_rx(dev);
 		}
 	}
 
 	void AIRSPY::Close()
 	{
-		DeviceBase::Close();
-		if(!disconnected) airspy_close(dev);
+		Device::Close();
+		airspy_close(dev);
 	}
 
 	void AIRSPY::setLNA_AGC(int a)
@@ -147,13 +147,12 @@ namespace Device {
 
 	bool AIRSPY::isStreaming()
 	{
-		if(DeviceBase::isStreaming() && airspy_is_streaming(dev) != 1)
+		if(Device::isStreaming() && airspy_is_streaming(dev) != 1)
 		{
-			Stop();
-			disconnected = true;
+			lost = true;
 		}
 
-		return DeviceBase::isStreaming();
+		return Device::isStreaming() && airspy_is_streaming(dev) == 1;
 	}
 
 	void AIRSPY::applyGainSettings()

@@ -90,7 +90,7 @@ namespace Device {
 	{
 
 
-		DeviceBase::Close();
+		Device::Close();
 #ifdef _WIN32
 		if (sock != -1) closesocket(sock);
 #else
@@ -135,7 +135,7 @@ namespace Device {
 		applySettings();
 		setSampleRate(288000);
 
-		DeviceBase::Open(handle);
+		Device::Open(handle);
 	}
 
 	void RTLTCP::setParameter(uint8_t c, uint32_t p)
@@ -166,13 +166,13 @@ namespace Device {
 	{
 		std::vector<char> data(TRANSFER_SIZE);
 
-		while (!cancel)
+		while (!lost)
 		{
 			int len = recv(sock, data.data(), TRANSFER_SIZE, 0);
 
 			if (len < 0)
 			{
-				cancel = true;
+				lost = true;
 				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
 				break;
 			} 
@@ -184,7 +184,7 @@ namespace Device {
 	{
 		std::vector<char> output(fifo.BlockSize());
 
-		while (!cancel)
+		while (!lost)
 		{
 			if (fifo.Wait())
 			{
@@ -203,13 +203,13 @@ namespace Device {
 	{
 		fifo.Init(BUFFER_SIZE);
 
-		DeviceBase::Play();
+		Device::Play();
 
 		setParameter(2, sample_rate);
 		setParameter(1, frequency);
 
-		DeviceBase::Play();
-		cancel = false;
+		Device::Play();
+		lost = false;
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);
@@ -219,9 +219,9 @@ namespace Device {
 
 	void RTLTCP::Stop()
 	{
-		if(DeviceBase::isStreaming())
+		if(Device::isStreaming())
 		{
-			DeviceBase::Stop();
+			Device::Stop();
 
 			if (async_thread.joinable()) async_thread.join();
 			if (run_thread.joinable()) run_thread.join();

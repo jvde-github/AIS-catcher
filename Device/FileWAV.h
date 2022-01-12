@@ -26,7 +26,7 @@ SOFTWARE.
 
 namespace Device{
 
-	class WAVFile : public DeviceBase
+	class WAVFile : public Device
 	{
 		std::ifstream file;
 

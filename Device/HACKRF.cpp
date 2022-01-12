@@ -74,7 +74,7 @@ namespace Device {
 
 		setSampleRate(6000000);
 
-		DeviceBase::Open(h);
+		Device::Open(h);
 	}
 
 	void HACKRF::setLNA_Gain(int a)
@@ -94,7 +94,7 @@ namespace Device {
 
 	void HACKRF::Close()
 	{
-		DeviceBase::Close();
+		Device::Close();
 		hackrf_close(device);
 	}
 
@@ -128,17 +128,16 @@ namespace Device {
 		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
 		if (hackrf_start_rx(device, HACKRF::callback_static, this)  != HACKRF_SUCCESS) throw "HACKRF: Cannot open device";
 
-		cancel = false;
-		DeviceBase::Play();
+		Device::Play();
 
 		SleepSystem(10);
 	}
 
 	void HACKRF::Stop()
 	{
-		if(DeviceBase::isStreaming())
+		if(Device::isStreaming())
 		{
-			DeviceBase::Stop();
+			Device::Stop();
 			hackrf_stop_rx(device);
 		}
 	}
@@ -167,9 +166,7 @@ namespace Device {
 
 	bool HACKRF::isStreaming()
 	{
-		if(DeviceBase::isStreaming() && (hackrf_is_streaming(device) != HACKRF_TRUE || cancel) ) Stop();
-
-		return DeviceBase::isStreaming();
+		return Device::isStreaming() && hackrf_is_streaming(device) == HACKRF_TRUE;
 	}
 
 #endif

@@ -42,7 +42,7 @@ namespace AIS
 	protected:
 		std::string name = "";
 
-		Device::DeviceBase* device;
+		Device::Device* device;
 		Util::Timer<RAW> timer;
 		Util::PassThrough<NMEA> output;
 
@@ -50,7 +50,7 @@ namespace AIS
 
 	public:
 
-		Model(Device::DeviceBase* d) { device = d; }
+		Model(Device::Device* d) { device = d; }
 
 		virtual void buildModel(int, bool) {}
 
@@ -84,7 +84,7 @@ namespace AIS
 		Connection<CFLOAT32> *C_a = NULL, *C_b = NULL;
 		DSP::Rotate ROT;
 	public:
-		ModelFrontend(Device::DeviceBase* c) : Model(c) {}
+		ModelFrontend(Device::Device* c) : Model(c) {}
 		void buildModel(int, bool);
 	};
 
@@ -98,7 +98,7 @@ namespace AIS
 		DSP::Deinterleave<FLOAT32> S_a, S_b;
 
 	public:
-		ModelStandard(Device::DeviceBase* c) : ModelFrontend(c) {}
+		ModelStandard(Device::Device* c) : ModelFrontend(c) {}
 		void buildModel(int, bool);
 	};
 
@@ -112,7 +112,7 @@ namespace AIS
 		AIS::Decoder DEC_a, DEC_b;
 
 	public:
-		ModelBase(Device::DeviceBase* c) : ModelFrontend(c) {}
+		ModelBase(Device::Device* c) : ModelFrontend(c) {}
 		void buildModel(int, bool);
 	};
 
@@ -130,7 +130,7 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelPhaseSearch(Device::DeviceBase* c, int h = 12, int d = 3) : ModelFrontend(c)
+		ModelPhaseSearch(Device::Device* c, int h = 12, int d = 3) : ModelFrontend(c)
 		{
 			setName("AIS engine " VERSION);
 			nHistory = h; nDelay = d;
@@ -152,7 +152,7 @@ namespace AIS
 		int nDelay = 0;
 
 	public:
-		ModelPhaseSearchEMA(Device::DeviceBase* c, int d = 3) : ModelFrontend(c)
+		ModelPhaseSearchEMA(Device::Device* c, int d = 3) : ModelFrontend(c)
 		{
 			setName("AIS engine (speed optimized) " VERSION);
 			nDelay = d;
@@ -165,7 +165,7 @@ namespace AIS
 	class ModelChallenger : public ModelPhaseSearch
 	{
 	public:
-		ModelChallenger(Device::DeviceBase* c, int h = 8, int d = 0) : ModelPhaseSearch(c, h, d) 
+		ModelChallenger(Device::Device* c, int h = 8, int d = 0) : ModelPhaseSearch(c, h, d) 
 		{
 			setName("Challenger model");
 		}
@@ -184,7 +184,7 @@ namespace AIS
 		Util::ConvertRAW convert;
 
 	public:
-		ModelDiscriminator(Device::DeviceBase* c) : Model(c) {}
+		ModelDiscriminator(Device::Device* c) : Model(c) {}
 		void buildModel(int,bool);
 	};
 }

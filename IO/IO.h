@@ -38,7 +38,7 @@ SOFTWARE.
 namespace IO
 {
 	template<typename T>
-	class SampleCounter : public StreamIn<T>
+	class StreamCounter : public StreamIn<T>
 	{
 		uint64_t count = 0;
 		uint64_t lastcount = 0;
@@ -48,7 +48,7 @@ namespace IO
 
 	public:
 
-		SampleCounter() : StreamIn<T>()
+		StreamCounter() : StreamIn<T>()
 		{
 			resetStatistic();
 		}
@@ -81,14 +81,14 @@ namespace IO
 	};
 
 	template <typename T>
-	class DumpFile : public StreamIn<T>
+	class SinkFile : public StreamIn<T>
 	{
 		std::ofstream file;
 		std::string filename;
 
 	public:
 
-		~DumpFile()
+		~SinkFile()
 		{
 			if (file.is_open())
 				file.close();
@@ -106,7 +106,7 @@ namespace IO
 	};
 
 
-	class DumpScreen : public StreamIn<NMEA>
+	class SinkScreen : public StreamIn<NMEA>
 	{
 	public:
 		enum class Level { NONE, SPARSE, FULL };
