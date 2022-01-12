@@ -26,8 +26,10 @@ SOFTWARE.
 
 namespace AIS
 {
-	void ModelFrontend::buildModel(int sample_rate, bool timerOn)
+	void ModelFrontend::buildModel(int sample_rate, bool timerOn, Device::Device *dev)
 	{
+		device = dev;
+
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
@@ -130,9 +132,9 @@ namespace AIS
 		return;
 	}
 
-	void ModelBase::buildModel(int sample_rate, bool timerOn)
+	void ModelBase::buildModel(int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		ModelFrontend::buildModel(sample_rate, timerOn);
+		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 		setName("Base (non-coherent)");
 
 		assert(C_a != NULL && C_b != NULL);
@@ -152,9 +154,9 @@ namespace AIS
 		return;
 	}
 
-	void ModelStandard::buildModel(int sample_rate, bool timerOn)
+	void ModelStandard::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
 	{
-		ModelFrontend::buildModel(sample_rate, timerOn);
+		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 		setName("Standard (non-coherent)");
 
 		assert(C_a != NULL && C_b != NULL);
@@ -192,9 +194,9 @@ namespace AIS
 		return;
 	}
 
-	void ModelPhaseSearch::buildModel(int sample_rate, bool timerOn)
+	void ModelPhaseSearch::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
 	{
-		ModelFrontend::buildModel(sample_rate, timerOn);
+		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -240,9 +242,9 @@ namespace AIS
 		return;
 	}
 
-	void ModelPhaseSearchEMA::buildModel(int sample_rate, bool timerOn)
+	void ModelPhaseSearchEMA::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
 	{
-		ModelFrontend::buildModel(sample_rate, timerOn);
+		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -288,10 +290,11 @@ namespace AIS
 		return;
 	}
 
-	void ModelDiscriminator::buildModel(int sample_rate, bool timerOn)
+	void ModelDiscriminator::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
 	{
 		setName("FM discriminator output model");
 
+		device = dev;
 		const int nSymbolsPerSample = 48000/9600;
 
 		FR_a.setTaps(Filters::Receiver);
