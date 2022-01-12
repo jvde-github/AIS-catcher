@@ -2,7 +2,11 @@
 This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
-![Image](https://1.bp.blogspot.com/-YUzJiP0K_38/YE352lEPPjI/AAAAAAAAAA0/7DRYSu18NJAb9U6mLDTvqxOftAR_zyKaQCLcBGAsYHQ/s2689/containership.jpg)
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
+
+## Purpose
+
+The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was created in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
 
 ### Disclaimer
 
@@ -18,7 +22,19 @@ Upcoming (currently edge) **Release version 0.33**:
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
 - added [instructions](https://github.com/jvde-github/AIS-catcher#microsoft-visual-studio-2019-rtl-sdr-only) and a solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
 - proper call to close devices at the end of the program and automatic termination if device is disconnected. For Windows please use the latest version of the [rtl-sdr library](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8) with [this fix](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8).
-- ZMQ support: ability to easily transfer data from GnuRadio to AIS-catcher
+- ZMQ support: ability to easily transfer data from GNU Radio to AIS-catcher
+
+**Example:** The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5K SMPS is not supported in our program. We can however perform some decoding with some help from GNU Radio. First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
+```
+AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
+```
+Next we can build a simple GRC model that performs all the necessary steps and has a ZMQ Pub Sink with the chosen endpoint:
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20GRC.png)
+Running this model, will allow us to succesfully decode the messages in the file:
+
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20example.png)
+
+The ZMQ interface is useful if a datastream from a SDR needs to be shared and processed by multiple decoders or for experimentation with different decoder models with support from GNU Radio.
 
 **Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
@@ -39,10 +55,6 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
 
 Release version **0.31**: allow input from stdin and very minor speed and performance improvements
-
-## Purpose
-
-The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! The algorithm behind the default receiver model was created in this way by investigating signals and trying different ways to get a coherent model running whilst keeping it simple at the same time. If I have some more free time I will try to expand the documentation and implement some improvement ideas.
 
 ## Installation and Windows Binary
 
@@ -189,11 +201,11 @@ AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 
 ## Multiple receiver models
 
-The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
+The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 5 different receiver models are embedded:
 
 - **Default model** (``-m 2``): the default demodulation engine
-- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL and main receiver filter (taken from [here](https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-designing.html) and [here](https://jaspersnotebook.blogspot.com/2021/03/ais-vessel-tracking-improving-gnuais.html) ).
-- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery, described [here](https://jaspersnotebook.blogspot.com/2021/07/ais-catcher-dual-channel-ais-receiver.html).
+- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL (different speeds at different stages) and main receiver filter (computed with a stochastic search algorithm).
+- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery.
 - **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
 
 The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
@@ -342,5 +354,5 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - GUI: Windows, Android
 - Multiple SDRs: validate location from signal (e.g. like MLAT), privacy filters
 - Output: ZeroMQ, APRS, ...
-- Input: ZeroMQ, ...
+- Input: ZeroMQ interfaces, ...
 - ....
