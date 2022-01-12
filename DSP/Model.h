@@ -114,7 +114,7 @@ namespace AIS
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
-	class ModelPhaseSearch : public ModelFrontend
+	class ModelDefault : public ModelFrontend
 	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		std::vector<Demod::PhaseSearch> CD_a, CD_b;
@@ -136,7 +136,7 @@ namespace AIS
 	};
 
 	// Challenger model
-	class ModelChallenger : public ModelPhaseSearch
+	class ModelChallenger : public ModelDefault
 	{
 	public:
 		ModelChallenger(int h = 8, int d = 0)

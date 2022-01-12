@@ -163,11 +163,5 @@ namespace Device {
 		}
 		hackrf_device_list_free(list);
 	}
-
-	bool HACKRF::isStreaming()
-	{
-		return Device::isStreaming() && hackrf_is_streaming(device) == HACKRF_TRUE;
-	}
-
 #endif
 }

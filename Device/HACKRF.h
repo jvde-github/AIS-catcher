@@ -57,7 +57,7 @@ namespace Device {
 		void Play();
 		void Stop();
 
-		bool isStreaming();
+		bool isStreaming() { return Device::isStreaming() && hackrf_is_streaming(device) == HACKRF_TRUE; }
 		virtual bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);

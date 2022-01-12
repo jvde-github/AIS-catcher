@@ -192,7 +192,7 @@ std::shared_ptr<AIS::Model> createModel(int m)
 	{
 	case 0: return std::make_shared<AIS::ModelStandard>(); break;
 	case 1: return std::make_shared<AIS::ModelBase>(); break;
-	case 2: return std::make_shared<AIS::ModelPhaseSearch>(); break;
+	case 2: return std::make_shared<AIS::ModelDefault>(); break;
 	case 3: return std::make_shared<AIS::ModelDiscriminator>(); break;
 	case 4: return std::make_shared<AIS::ModelChallenger>(); break;
 	default: throw "Internal error: Model not implemented in this version. Check in later."; break;
@@ -398,14 +398,15 @@ int main(int argc, char* argv[])
 				case 't': parseSettings(drivers.RTLTCP, argv, ptr, argc); break;
 				case 'f': parseSettings(drivers.HACKRF, argv, ptr, argc); break;
 				case 'z': parseSettings(drivers.ZMQ, argv, ptr, argc); break;
-				case 'o': Assert(liveModels.size() != 0,param,"At least one model needs to be defined prior to setting."); 
-						  parseSettings(*(liveModels[MAX(0, (int)liveModels.size() - 1)]), argv, ptr, argc); break;
+				case 'o': 
+					Assert(liveModels.size() != 0, param, "At least one model needs to be defined prior to setting.");
+					parseSettings(*(liveModels[MAX(0, (int)liveModels.size() - 1)]), argv, ptr, argc); break;
 					break;
 				default: throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
 			default:
-				std::cerr << "Unknown option on command line ignored (" << param[1] << ")." << std::endl;
+				std::cerr << "Unknown option on command line (" << param[1] << ")." << std::endl;
 				return 0;
 			}
 
@@ -418,7 +419,9 @@ int main(int argc, char* argv[])
 		if (list_options) Usage();
 		if (list_devices || list_support || list_options) return 0;
 
+		// -------------
 		// Select device
+
 		if (input_type == Device::Type::NONE)
 		{
 			if (device_list.size() == 0) throw "No input device available.";
@@ -457,6 +460,9 @@ int main(int argc, char* argv[])
 		}
 		if (device == 0) throw "Error: cannot set up device";
 
+		// ----------------------
+		// Open and set up device
+
 		device->Open(handle);
 		if (verbose) device->Print();
 
@@ -464,7 +470,9 @@ int main(int argc, char* argv[])
 		if (sample_rate) device->setSampleRate(sample_rate);
 		device->setFrequency((int)(162e6));
 
-		// Build model
+		// ------------
+		// Setup models
+
 		if (!liveModels.size()) liveModels.push_back(createModel(2));
 		
 		std::vector<IO::StreamCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
