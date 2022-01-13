@@ -57,8 +57,6 @@ void consoleHandler(int signal)
 }
 #endif
 
-//----
-
 struct Drivers
 {
         Device::RAWFile RAW;
