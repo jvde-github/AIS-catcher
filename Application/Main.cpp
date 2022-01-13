@@ -29,8 +29,8 @@ SOFTWARE.
 
 #include "Signal.h"
 #include "Common.h"
-
 #include "Model.h"
+#include "IO.h"
 
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
@@ -41,8 +41,6 @@ SOFTWARE.
 #include "Device/AIRSPY.h"
 #include "Device/SDRPLAY.h"
 #include "Device/ZMQ.h"
-
-#include "IO.h"
 
 std::atomic<bool> stop;
 
