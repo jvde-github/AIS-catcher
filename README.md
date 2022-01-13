@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over ZMQ and RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
@@ -11,6 +11,15 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 ### Disclaimer
 
 ```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently and in line with local regulations and laws. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
+
+
+## Installation and Windows Binary
+
+Building instructions are provided below for many systems.
+
+A Windows binary version of **v0.32** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+
+If you are looking for a Windows binary supporting SDRplay API 3.09, please get in contact with [me](mailto:jvde.github@gmail.com).
 
 ## Recent Developments
 
@@ -24,45 +33,7 @@ Upcoming (currently edge) **Release version 0.33**:
 - proper call to close devices at the end of the program and automatic termination if device is disconnected. For Windows please use the latest version of the [rtl-sdr library](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8) with [this fix](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8).
 - ZMQ support: ability to easily transfer data from GNU Radio to AIS-catcher
 
-**Example:** The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5K SMPS is not supported in our program. We can however perform some decoding with some help from GNU Radio. First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
-```
-AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
-```
-Next we can build a simple GRC model that performs all the necessary steps and has a ZMQ Pub Sink with the chosen endpoint:
-![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20GRC.png)
-Running this model, will allow us to succesfully decode the messages in the file:
-
-![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20example.png)
-
-The ZMQ interface is useful if a datastream from a SDR needs to be shared and processed by multiple decoders or for experimentation with different decoder models with support from GNU Radio.
-
 **Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
-I implemented a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) is introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
-Both features can be activated with the ```-F``` switch. 
-To give an idea of the performance improvement on a Raspberry PI (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
-
-```
-AIS-catcher -r posterholt.raw -s 1536000 -b -q -v
-```
-Resulting in 38 messages and the ```-b``` switch prints the timing used for decoding:
-```
-[AIS engine v0.31]	: 17312.1 ms
-```
-Adding the ```-F``` switch yielded the same number of messages but timing is now:
-```
-[AIS engine (speed optimized) v0.31]	: 7722.32 ms
-```
-This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
-
-Release version **0.31**: allow input from stdin and very minor speed and performance improvements
-
-## Installation and Windows Binary
-
-Building instructions are provided below for most systems..
-
-A Windows binary version of **v0.32** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
-
-If you are looking for a Windows binary supporting SDRplay API 3.09, please get in contact with [me](mailto:jvde.github@gmail.com).
 
 ## Usage
 ````
@@ -103,7 +74,7 @@ use: AIS-catcher [options]
 	[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]
 ````
 
-## Examples
+### Basic usage
 
 
 To test a proper installation and/or compilation (see below) we can list the devices available for AIS reception:
@@ -135,6 +106,44 @@ An example of using sox for downsampling the signal and then sending the result 
 sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96000 -r CS16 . -v
 ```
 
+## Special topics
+
+### Connecting to GNU Radio via ZMQ
+
+The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5K SMPS is not supported in our program. We can however perform some decoding with some help from GNU Radio. First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
+```
+AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
+```
+Next we can build a simple GRC model that performs all the necessary steps and has a ZMQ Pub Sink with the chosen endpoint:
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20GRC.png)
+Running this model, will allow us to succesfully decode the messages in the file:
+
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20example.png)
+
+The ZMQ interface is useful if a datastream from a SDR needs to be shared and processed by multiple decoders or for experimentation with different decoder models with support from GNU Radio.
+
+### Running on hardware with performance limitations
+
+AIS-catcher implements a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) was introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
+
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/raspberry.jpg)
+
+Both features can be activated with the ```-F``` switch. 
+To give an idea of the performance improvement on a Raspberry Pi Model B Rev 2 (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
+
+```
+AIS-catcher -r posterholt.raw -s 1536000 -b -q -v
+```
+Resulting in 38 messages and the ```-b``` switch prints the timing used for decoding:
+```
+[AIS engine v0.31]	: 17312.1 ms
+```
+Adding the ```-F``` switch yielded the same number of messages but timing is now:
+```
+[AIS engine (speed optimized) v0.31]	: 7722.32 ms
+```
+This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
+
 ### Input from FM discriminator
 We can run AIS-catcher on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
@@ -151,7 +160,7 @@ INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 p
 INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
 
-## Device specific settings
+## Examples of device specific settings
 
 The command line allows you to set some device specific parameters. AIS-catcher follows the settings and naming conventions for the devices as much as possible so that parameters and settings determined by SDR software for signal analysis (e.g. SDR#, SDR++, SDRangel) can be directly copied. Below some examples.
 
