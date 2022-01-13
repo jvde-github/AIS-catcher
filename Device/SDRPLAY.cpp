@@ -100,7 +100,7 @@ namespace Device {
 
 		setSampleRate(2304000);
 
-		DeviceBase::Open(h);
+		Device::Open(h);
 	}
 
 	void SDRPLAY::Play()
@@ -121,7 +121,7 @@ namespace Device {
 
 		if(sdrplay_api_Init(device.dev, &cbFns, (void *)this) != sdrplay_api_Success) throw "SDRPLAY: cannot start device";
 
-		DeviceBase::Play();
+		Device::Play();
 
 		run_thread = std::thread(&SDRPLAY::Run, this);
 
@@ -132,7 +132,7 @@ namespace Device {
 	{
 		if(isStreaming())
 		{
-			DeviceBase::Stop();
+			Device::Stop();
 
 			sdrplay_api_Uninit(device.dev);
 			if (run_thread.joinable()) run_thread.join();
@@ -141,7 +141,7 @@ namespace Device {
 
 	void SDRPLAY::Close()
 	{
-		DeviceBase::Close();
+		Device::Close();
 		sdrplay_api_ReleaseDevice(&device);
 	}
 
