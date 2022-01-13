@@ -124,7 +124,7 @@ The ZMQ interface is useful if a datastream from a SDR needs to be shared and pr
 
 ### Running on hardware with performance limitations
 
-AIS-catcher implements a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model (```-m 5```) was introduced  which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
+AIS-catcher implements a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model was introduced which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/raspberry.jpg)
 
@@ -210,7 +210,7 @@ AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 
 ## Multiple receiver models
 
-The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 5 different receiver models are embedded:
+The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
 
 - **Default model** (``-m 2``): the default demodulation engine
 - **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL (different speeds at different stages) and main receiver filter (computed with a stochastic search algorithm).
