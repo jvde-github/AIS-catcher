@@ -74,7 +74,7 @@ use: AIS-catcher [options]
 	[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]
 ````
 
-### Basics
+### Basic usage
 
 
 To test a proper installation and/or compilation (see below) we can list the devices available for AIS reception:
@@ -108,7 +108,7 @@ sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signe
 
 ## Special topics
 
-## Connecting to GNU Radio via ZMQ
+### Connecting to GNU Radio via ZMQ
 
 The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5K SMPS is not supported in our program. We can however perform some decoding with some help from GNU Radio. First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
 ```
@@ -160,7 +160,7 @@ INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 p
 INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
 
-## Device specific settings
+## Examples of device specific settings
 
 The command line allows you to set some device specific parameters. AIS-catcher follows the settings and naming conventions for the devices as much as possible so that parameters and settings determined by SDR software for signal analysis (e.g. SDR#, SDR++, SDRangel) can be directly copied. Below some examples.
 
