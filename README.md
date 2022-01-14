@@ -25,7 +25,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09, please get 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Upcoming (currently edge) **Release version 0.33**:
+**Release version 0.33**:
 - restructuring of the directory layout
 - Makefile now autodetects library locations: ```make``` will only build for installed SDR libraries
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
