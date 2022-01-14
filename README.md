@@ -19,7 +19,7 @@ Building instructions are provided below for many systems.
 
 A Windows binary version of **v0.33** (ex SDRplay support) is available for [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
-If you are looking for a Windows binary supporting SDRplay API 3.09, please get in contact with [me](mailto:jvde.github@gmail.com).
+If you are looking for a Windows binary supporting SDRplay API 3.09, please get in contact with [me](mailto:jvde.github@gmail.com). Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
 ## Recent Developments
 
