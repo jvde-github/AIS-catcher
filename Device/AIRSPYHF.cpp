@@ -74,7 +74,7 @@ namespace Device {
 	void AIRSPYHF::Close()
 	{
 		Device::Close();
-		if(!lost) airspyhf_close(dev);
+		airspyhf_close(dev);
 	}
 
 	void AIRSPYHF::setAGC()

@@ -13,7 +13,7 @@ CFLAGS_SDRPLAY = -DHASSDRPLAY
 CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/include/libhackrf/
 CFLAGS_ZMQ = -DHASZMQ $(shell pkg-config --cflags libzmq) 
 
-LFLAGS_RTL = $(shell pkg-config --libs librtlsdr)
+LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
 LFLAGS_AIRSPY = $(shell pkg-config --libs libairspy)
 LFLAGS_SDRPLAY = -lsdrplay_api

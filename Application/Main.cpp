@@ -132,17 +132,12 @@ std::vector<Device::Description> getDevices(Drivers &drivers)
 	return device_list;
 }
 
-std::string getDeviceDescription(Device::Description& d)
-{
-	return d.getVendor() + ", " + d.getProduct() + ", SN: " + d.getSerial();
-}
-
 void printDevices(std::vector<Device::Description>& device_list)
 {
 	std::cerr << "Found " << device_list.size() << " device(s):" << std::endl;
 	for (int i = 0; i < device_list.size(); i++)
 	{
-		std::cerr << i << ": " << getDeviceDescription(device_list[i]) << std::endl;
+		std::cerr << i << ": " << device_list[i].toString() << std::endl;
 	}
 }
 
@@ -426,7 +421,7 @@ int main(int argc, char* argv[])
 			input_type = d.getType();
 			handle = d.getHandle();
 
-			std::cerr << "Device selected: " << getDeviceDescription(d) << std::endl;
+			std::cerr << "Device selected: " << d.toString() << std::endl;
 		}
 
 		switch (input_type)

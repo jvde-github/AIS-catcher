@@ -158,7 +158,7 @@ namespace Util
 			return number;
 		}
 
-		static bool Format(std::string str, Format &format)
+		static bool StreamFormat(std::string str, Format &format)
 		{
 			if (str == "CU8") format = Format::CU8;
 			else if (str == "CF32") format = Format::CF32;

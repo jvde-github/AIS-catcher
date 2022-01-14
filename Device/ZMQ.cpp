@@ -51,7 +51,7 @@ namespace Device {
 
 		if (option == "FORMAT")
 		{
-			if(!Util::Parse::Format(arg, format))
+			if(!Util::Parse::StreamFormat(arg, format))
 				throw "ZMQ: Unknown file format specification.";
 		}
 		else 
