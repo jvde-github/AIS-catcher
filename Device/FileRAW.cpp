@@ -55,7 +55,7 @@ namespace Device {
 
 		if (option == "FORMAT")
 		{
-			if (!Util::Parse::Format(arg, format))
+			if (!Util::Parse::StreamFormat(arg, format))
 				throw "RAW: Unknown file format specification.";
 		}
 		else if (option == "STEREO")
