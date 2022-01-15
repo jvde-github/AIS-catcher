@@ -357,6 +357,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
+- CMake
 - DSP: improve filters (e.g. add droop compensation, large rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - Testing: more set ups, assess gap with commercial equipment
