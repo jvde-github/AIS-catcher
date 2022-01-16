@@ -352,7 +352,8 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## Known issues
 
-- call of ```rtlsdr_close```  in MS VC++ can result in a crash. To be investigated further but looks simple tweak in librtlsdr can solve the problem, see [rtlsdr](https://github.com/osmocom/rtl-sdr/pull/18).
+- call of ```rtlsdr_close```  in MS VC++ can result in a crash. Solution: ensure you have the latest version of the library with this patch [rtlsdr](https://github.com/osmocom/rtl-sdr/pull/18).
+- pkg-congif on Raspberry Pi results ```-L``` as library path. Temporarily fixed by assuming lib is in standard location, long term fix: cmake
 - ...
 
 ## To do

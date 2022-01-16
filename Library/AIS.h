@@ -63,6 +63,12 @@ namespace AIS
 		char getLetter(int pos);
 		bool processData(int len);
 
+		bool isValid(int);
+
+		unsigned Message() { return  DataFCS[0] >> 2; }
+		unsigned Repeat() { return  DataFCS[0] & 3;  }
+		unsigned MMSI() { return (DataFCS[1] << 22) | (DataFCS[2] << 14) | (DataFCS[3] << 6) | (DataFCS[4] >> 2);  }
+
 	public:
 
 		Decoder();
