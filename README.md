@@ -17,15 +17,15 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 Building instructions are provided below for many systems.
 
-A Windows binary version of **v0.32** (ex SDRplay support) is available for [32-BIT](https://drive.google.com/file/d/1nMftfB1XsRBXHRTQ3kS8e3TTIN-fm12a/view?usp=sharing) and [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of **v0.33** (ex SDRplay support) is available for [64-BIT](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) from my Google Drive. If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
-If you are looking for a Windows binary supporting SDRplay API 3.09, please get in contact with [me](mailto:jvde.github@gmail.com).
+If you are looking for a Windows binary supporting SDRplay API 3.09, please get in contact with [me](mailto:jvde.github@gmail.com). Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
 ## Recent Developments
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Upcoming (currently edge) **Release version 0.33**:
+**Release version 0.33**:
 - restructuring of the directory layout
 - Makefile now autodetects library locations: ```make``` will only build for installed SDR libraries
 - recalibration of decoding parameters resulting in a small improvement in sensitivity
@@ -357,11 +357,12 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
+- CMake
 - DSP: improve filters (e.g. add droop compensation, large rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - Testing: more set ups, assess gap with commercial equipment
 - GUI: Windows, Android
 - Multiple SDRs: validate location from signal (e.g. like MLAT), privacy filters
 - Output: ZeroMQ, APRS, ...
-- Input: ZeroMQ interfaces, ...
+- Input: ZeroMQ/TCP-IP protocols, SoapySDR, LimeSDR mini, ...
 - ....
