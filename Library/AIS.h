@@ -36,9 +36,10 @@ namespace AIS
 
 		std::vector<uint8_t> DataFCS;
 
-		const int MaxBits = 512;
+		const int MaxBits = 456;
 		const int MIN_TRAINING_BITS = 4;
 
+		bool QuickReset = true;
 		State state = State::TRAINING;
 
 		BIT lastBit = 0;
@@ -63,11 +64,11 @@ namespace AIS
 		char getLetter(int pos);
 		bool processData(int len);
 
-		bool isValid(int);
+		bool canStop(int);
 
-		unsigned Message() { return  DataFCS[0] >> 2; }
-		unsigned Repeat() { return  DataFCS[0] & 3;  }
-		unsigned MMSI() { return (DataFCS[1] << 22) | (DataFCS[2] << 14) | (DataFCS[3] << 6) | (DataFCS[4] >> 2);  }
+		unsigned type() { return  DataFCS[0] >> 2; }
+		unsigned repeat() { return  DataFCS[0] & 3;  }
+		unsigned mmsi() { return (DataFCS[1] << 22) | (DataFCS[2] << 14) | (DataFCS[3] << 6) | (DataFCS[4] >> 2);  }
 
 	public:
 
@@ -77,7 +78,7 @@ namespace AIS
 		void Receive(const FLOAT32* data, int len);
 
 		// MessageIn
-		virtual void Message(const DecoderMessages& in);
+		virtual void type(const DecoderMessages& in);
 		// MessageOut
 		MessageHub<DecoderMessages> DecoderMessage;
 	};

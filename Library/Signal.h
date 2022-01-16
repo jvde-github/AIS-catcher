@@ -33,7 +33,7 @@ class MessageIn
 {
 public:
 
-	virtual void Message(const T& in) {};
+	virtual void type(const T& in) {};
 };
 
 template <typename T>
@@ -46,7 +46,7 @@ public:
 	void Send(const T& m)
 	{
 		for (auto d : destinations)
-			d->Message(m);
+			d->type(m);
 	}
 	void Connect(MessageIn<T> &s)
 	{
