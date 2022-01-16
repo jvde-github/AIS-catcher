@@ -162,25 +162,21 @@ namespace AIS
 		}
 	}
 
-	// returns true if we data so far does not guarantee anymore a valid message
+	// returns true if data so far cannot result anymore in a valid message
 	bool Decoder::canStop(int len)
 	{
-		const int END = 24; // CRC (16) + stop bits (8)
+		const int END = 24;
 		int msg = type();
 
 		switch (len)
 		{
-		// valid message type
 		case 8: return msg > 27 || msg == 0;
-		// valid mmsi
 		case 38: return mmsi() > 999999999;
 
-		// message longer than theoretical length
 		case 72 + END: return msg == 10;
-		case 96 + END: return msg == 27;
 		case 144 + END: return msg == 16;
 		case 160 + END: return msg == 15 || msg == 20 || msg == 23;
-		case 168 + END: return msg == 1 || msg == 2 || msg == 3 || msg == 4 || msg == 7 || msg == 11 || msg == 18 || msg == 22 || msg == 24;
+		case 168 + END: return msg == 1 || msg == 2 || msg == 3 || msg == 4 || msg == 7 || msg == 9 || msg == 11  || msg == 18 || msg == 22 || msg == 24 || msg == 25 || msg == 27;
 		case 312 + END: return msg == 19;
 		case 361 + END: return msg == 21;
 		case 424 + END: return msg == 5;
