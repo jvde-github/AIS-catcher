@@ -172,7 +172,7 @@ AIS-catcher -gr tuner 33.3 rtlagc ON
 Please note that these settings are not case sensitive.
 
 ### Airspy HF+
-Gain settings specific for the Airspy HF+ can be set on the command line with the ```-gh``` switch. For example, the following command switches on the preamp:
+Gain settings specific for the Airspy HF+ can be set on the command line with the ```-gh``` switch. For example, the following command switches off the preamp:
 ```console
 AIS-catcher -gh preamp OFF
 ```
@@ -353,7 +353,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 ## Known issues
 
 - call of ```rtlsdr_close```  in MS VC++ can result in a crash. Solution: ensure you have the latest version of the library with this patch [rtlsdr](https://github.com/osmocom/rtl-sdr/pull/18).
-- pkg-congif on Raspberry Pi results ```-L``` as library path. Temporarily fixed by assuming lib is in standard location, long term fix: cmake
+- pkg-config on Raspberry Pi returns ```-L``` as library path which results in a build error. Temporarily fixed by assuming lib is in standard location, long term fix: switch to cmake
 - ...
 
 ## To do
