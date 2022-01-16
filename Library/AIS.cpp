@@ -128,9 +128,9 @@ namespace AIS
 		}
 
 		nmea.channel = channel;
-		nmea.msg = Message();
-		nmea.repeat = Repeat();
-		nmea.mmsi = MMSI();
+		nmea.msg = type();
+		nmea.repeat = repeat();
+		nmea.mmsi = mmsi();
 
 		//if(nmea.msg >= 0 and nmea.msg <= 27)
 		Send(&nmea, 1);
@@ -153,7 +153,7 @@ namespace AIS
 		return false;
 	}
 
-	void Decoder::Message(const DecoderMessages& in)
+	void Decoder::type(const DecoderMessages& in)
 	{
 		switch (in)
 		{
@@ -162,19 +162,30 @@ namespace AIS
 		}
 	}
 
-	// incrementally assesses validity of message received so far (len)
-	// messagge is guaranteed to be invalid if function returns false for
-	// any call with between 0 and len
-	bool Decoder::isValid(int len)
+	// returns true if we data so far does not guarantee anymore a valid message
+	bool Decoder::canStop(int len)
 	{
-		int msg = Message();
+		const int END = 24; // CRC (16) + stop bits (8)
+		int msg = type();
 
 		switch (len)
 		{
-		case 8: return msg <= 27;
-		case 168 + 24: return !(msg == 1 || msg == 2 || msg == 3 || msg == 4);
+		// valid message type
+		case 8: return msg > 27 || msg == 0;
+		// valid mmsi
+		case 38: return mmsi() > 999999999;
+
+		// message longer than theoretical length
+		case 72 + END: return msg == 10;
+		case 96 + END: return msg == 27;
+		case 144 + END: return msg == 16;
+		case 160 + END: return msg == 15 || msg == 20 || msg == 23;
+		case 168 + END: return msg == 1 || msg == 2 || msg == 3 || msg == 4 || msg == 7 || msg == 11 || msg == 18 || msg == 22 || msg == 24;
+		case 312 + END: return msg == 19;
+		case 361 + END: return msg == 21;
+		case 424 + END: return msg == 5;
 		}
-		return true;
+		return false;
 	}
 
 	void Decoder::Receive(const FLOAT32* data, int len)
@@ -235,7 +246,7 @@ namespace AIS
 					one_seq_count = 0;
 				}
 
-				if (position == MaxBits || !isValid(position)) NextState(State::TRAINING, 0);
+				if (position == MaxBits || (QuickReset && canStop(position))) NextState(State::TRAINING, 0);
 				break;
 
 			default:
