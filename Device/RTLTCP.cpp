@@ -166,7 +166,7 @@ namespace Device {
 	{
 		std::vector<char> data(TRANSFER_SIZE);
 
-		while (!lost)
+		while (isStreaming())
 		{
 			int len = recv(sock, data.data(), TRANSFER_SIZE, 0);
 
@@ -175,7 +175,7 @@ namespace Device {
 				lost = true;
 				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
 				break;
-			} 
+			}
 			else if (!fifo.Push(data.data(), len)) std::cerr << "RTLTCP: buffer overrun." << std::endl;
 		}
 	}
@@ -184,7 +184,7 @@ namespace Device {
 	{
 		std::vector<char> output(fifo.BlockSize());
 
-		while (!lost)
+		while (isStreaming())
 		{
 			if (fifo.Wait())
 			{
@@ -194,7 +194,7 @@ namespace Device {
 			}
 			else
 			{
-				std::cerr << "RTLTCP: timeout." << std::endl;
+				if(isStreaming()) std::cerr << "RTLTCP: timeout." << std::endl;
 			}
 		}
 	}

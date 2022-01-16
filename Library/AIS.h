@@ -36,7 +36,7 @@ namespace AIS
 
 		std::vector<uint8_t> DataFCS;
 
-		const int MaxBits = 456;
+		const int MaxBits = 512;
 		const int MIN_TRAINING_BITS = 4;
 
 		bool QuickReset = true;
