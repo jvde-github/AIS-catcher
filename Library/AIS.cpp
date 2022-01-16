@@ -35,7 +35,7 @@ namespace AIS
 {
 	Decoder::Decoder()
 	{
-		DataFCS.resize( (MaxBits + 7) / 8, 0);
+		DataFCS.resize((MaxBits + 7) / 8, 0);
 	}
 
 	char Decoder::NMEAchar(int i)
@@ -45,10 +45,10 @@ namespace AIS
 
 	void Decoder::setBit(int i, bool b)
 	{
-		if(b)
-			DataFCS[i >> 3] |=  (1 << (i & 7));
+		if (b)
+			DataFCS[i >> 3] |= (1 << (i & 7));
 		else
-			DataFCS[i >> 3] &= ~ (1 << (i & 7));
+			DataFCS[i >> 3] &= ~(1 << (i & 7));
 	}
 
 	bool Decoder::getBit(int i)
@@ -59,7 +59,7 @@ namespace AIS
 	int Decoder::NMEAchecksum(std::string s)
 	{
 		int check = 0;
-		for(char c : s) check ^= c;
+		for (char c : s) check ^= c;
 		return check;
 	}
 
@@ -81,10 +81,10 @@ namespace AIS
 	bool Decoder::CRC16(int len)
 	{
 		const uint16_t checksum = ~0x0F47, poly = 0x8408;
- 		uint16_t CRC = 0xFFFF;
+		uint16_t CRC = 0xFFFF;
 
- 		for(int i = 0; i < len; i++)
- 			CRC = ((uint16_t)getBit(i) ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
+		for (int i = 0; i < len; i++)
+			CRC = ((uint16_t)getBit(i) ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
 
 		return CRC == checksum;
 	}
@@ -119,7 +119,7 @@ namespace AIS
 			for (int i = 0; l < nAISletters && i < 56; i++, l++)
 				sentence += NMEAchar(getLetter(l));
 
-			sentence += comma + std::to_string( (nSentences > 1 && s == nSentences - 1) ? nAISletters * 6 - nBits : 0);
+			sentence += comma + std::to_string((nSentences > 1 && s == nSentences - 1) ? nAISletters * 6 - nBits : 0);
 
 			char hex[3]; sprintf(hex, "%02X", NMEAchecksum(sentence));
 			sentence += std::string("*") + hex;
@@ -128,9 +128,9 @@ namespace AIS
 		}
 
 		nmea.channel = channel;
-		nmea.msg = DataFCS[0] >> 2;
-		nmea.repeat = DataFCS[0] & 3;
-		nmea.mmsi = (DataFCS[1]<<22)|(DataFCS[2]<<14)|(DataFCS[3]<<6)|(DataFCS[4]>>2);
+		nmea.msg = Message();
+		nmea.repeat = Repeat();
+		nmea.mmsi = MMSI();
 
 		//if(nmea.msg >= 0 and nmea.msg <= 27)
 		Send(&nmea, 1);
@@ -140,10 +140,10 @@ namespace AIS
 
 	bool Decoder::processData(int len)
 	{
-		if(len > 16 && CRC16(len))
+		if (len > 16 && CRC16(len))
 		{
 			nBits = len - 16;
-			nBytes = (nBits + 7)/8;
+			nBytes = (nBits + 7) / 8;
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			sendNMEA();
@@ -160,6 +160,21 @@ namespace AIS
 		case DecoderMessages::Reset: NextState(State::TRAINING, 0);  break;
 		default: break;
 		}
+	}
+
+	// incrementally assesses validity of message received so far (len)
+	// messagge is guaranteed to be invalid if function returns false for
+	// any call with between 0 and len
+	bool Decoder::isValid(int len)
+	{
+		int msg = Message();
+
+		switch (len)
+		{
+		case 8: return msg <= 27;
+		case 168 + 24: return !(msg == 1 || msg == 2 || msg == 3 || msg == 4);
+		}
+		return true;
 	}
 
 	void Decoder::Receive(const FLOAT32* data, int len)
@@ -220,7 +235,7 @@ namespace AIS
 					one_seq_count = 0;
 				}
 
-				if (position == MaxBits) NextState(State::TRAINING, 0);
+				if (position == MaxBits || !isValid(position)) NextState(State::TRAINING, 0);
 				break;
 
 			default:
