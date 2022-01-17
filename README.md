@@ -25,7 +25,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09, please get 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Edge version: experimental support for building with ```cmake```. The steps are:
+**Edge version**: experimental support for building with ```cmake```. The steps are:
 ```
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
@@ -42,10 +42,6 @@ And for Windows (with vcpkg installation of dependencies)
 cmake .. "-DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake"
 cmake --build . --config Release
 ```
-
-**Release version 0.33**: ZMQ support.
-
-**Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 
 ## Usage
 ````
