@@ -25,21 +25,20 @@ If you are looking for a Windows binary supporting SDRplay API 3.09, please get 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Edge version: early cmake support, for Linux, macos, Raspberry Pi:
+Edge version: experimental support for building with ```cmake```. The steps are:
 ```
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
 mkdir build
 cd build
+```
+For Linux/macos/Raspberry then use:
+```
 cmake ..
 make
 ```
-For Windows (install rtlsdr using vcpkg, i.e. ```./vcpkg install rtlsdr rtlsdr:x64-windows```)
+And for Windows (with vcpkg installation of dependencies)
 ```
-git clone https://github.com/jvde-github/AIS-catcher.git
-cd AIS-catcher
-mkdir build
-cd build
 cmake .. "-DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake"
 cmake --build . --config Release
 ```
