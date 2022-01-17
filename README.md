@@ -25,13 +25,26 @@ If you are looking for a Windows binary supporting SDRplay API 3.09, please get 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-**Release version 0.33**:
-- restructuring of the directory layout
-- Makefile now autodetects library locations: ```make``` will only build for installed SDR libraries
-- recalibration of decoding parameters resulting in a small improvement in sensitivity
-- added [instructions](https://github.com/jvde-github/AIS-catcher#microsoft-visual-studio-2019-rtl-sdr-only) and a solution file for building AIS-catcher with RTL-SDR support on Windows using Visual Studio 2019 and above (at a few requests) 
-- proper call to close devices at the end of the program and automatic termination if device is disconnected. For Windows please use the latest version of the [rtl-sdr library](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8) with [this fix](https://github.com/osmocom/rtl-sdr/commit/2659e2df31e592d74d6dd264a4f5ce242c6369c8).
-- ZMQ support: ability to easily transfer data from GNU Radio to AIS-catcher
+Edge version: early cmake support, for Linux, macos, Raspberry Pi:
+```
+git clone https://github.com/jvde-github/AIS-catcher.git
+cd AIS-catcher
+mkdir build
+cd build
+cmake ..
+make
+```
+For Windows (install rtlsdr using vcpkg, i.e. ```./vcpkg install rtlsdr rtlsdr:x64-windows```)
+```
+git clone https://github.com/jvde-github/AIS-catcher.git
+cd AIS-catcher
+mkdir build
+cd build
+cmake .. "-DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake"
+cmake --build . --config Release
+```
+
+**Release version 0.33**: ZMQ support.
 
 **Release version 0.32**: Support for the **Raspberry Pi Model B Rev 2** via performance enhancements at the cost of a  small tradeoff in sensitivity. 
 
