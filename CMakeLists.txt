@@ -17,6 +17,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "CLANG")
 	set(OPTIMIZATION_FLAGS "-Ofast")
 endif()
 
+if(MSVC)
+	set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN  /EHsc ")
+endif()
+
 set(CMAKE_CXX_FLAGS "${OPTIMIZATION_FLAGS}")
 
 # Use pkg-config
@@ -24,7 +28,11 @@ include(FindPkgConfig)
 find_package(Threads)
 
 # Define the libraries for inclusion
-set(ADDITIONAL_LIBRARIES stdc++ m)
+if(NOT MSVC)
+	set(ADDITIONAL_LIBRARIES stdc++ m)
+else()
+	set(ADDITIONAL_LIBRARIES ws2_32.lib)
+endif()
 
 # Find libusb
 pkg_check_modules(PKG_LIBUSB libusb-1.0)
