@@ -25,27 +25,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09, please get 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-<<<<<<< HEAD
 Edge version: early cmake support which should automatically switch off the bias-tee for older versions of rtlsdr (e.g. on Ubuntu 16), automatically link in SDRplay support and help to build on Windows (via installing PothosSDR) for those interested in that. Binaries are still provided below. 
-=======
-**Edge version**: experimental support for building with ```cmake```. The steps are:
-```
-git clone https://github.com/jvde-github/AIS-catcher.git
-cd AIS-catcher
-mkdir build
-cd build
-```
-For Linux/macos/Raspberry then use:
-```
-cmake ..
-make
-```
-And for Windows (with vcpkg installation of dependencies)
-```
-cmake .. "-DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake"
-cmake --build . --config Release
-```
->>>>>>> 13227dd0679f16d10a587df3036f14bd052357d6
 
 ## Usage
 ````
