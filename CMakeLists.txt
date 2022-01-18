@@ -11,17 +11,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	set(OPTIMIZATION_FLAGS "-Ofast")
 	add_compile_options("-Wno-psabi")
-endif()
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL "CLANG")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "CLANG")
 	set(OPTIMIZATION_FLAGS "-Ofast")
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
 	set(OPTIMIZATION_FLAGS "-Ofast")
-endif()
-
-if(MSVC)
+elseif(MSVC)
 	set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN /EHsc /Oi /Ot /fp:fast")
 endif()
 
@@ -77,7 +71,7 @@ if(NOT MSVC)
 		endif()
 
 	else()
-		Message("RTLSDR: not found.")
+		Message(STATUS "RTLSDR: not found.")
 	endif()
 
 else()
@@ -100,7 +94,21 @@ endif()
 
 
 # Find SDRplay library.
-if(MSVC)
+if(NOT MSVC)
+
+	find_path(SDRPLAY_INCLUDE_DIR sdrplay_api.h)
+	find_library(SDRPLAY_LIBRARY sdrplay_api)
+
+	if(SDRPLAY_INCLUDE_DIR AND SDRPLAY_LIBRARY)
+		message(STATUS "SDRPLAY: found - ${SDRPLAY_INCLUDE_DIR}, ${SDRPLAY_LIBRARY}")
+		add_definitions(-DHASSDRPLAY)
+		set(SDRPLAY_INCLUDE_DIRS ${SDRPLAY_INCLUDE_DIR})
+		set(SDRPLAY_LIBRARIES ${SDRPLAY_LIBRARY})
+	else()
+		message(STATUS "No SDRPLAY support included.")
+	endif()
+
+else()
 
 	set(SDRPLAY_API_DIR $ENV{PROGRAMFILES}\\SDRplay\\API)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -117,20 +125,6 @@ if(MSVC)
 		message(STATUS "SDRPLAY: found - ${SDRPLAY_INCLUDE_DIR}, ${SDRPLAY_LIBRARY}, ${SDRPLAY_DLL}")
 		add_definitions(-DHASSDRPLAY)
 		set(COPY_SDRPLAY_DLL TRUE)
-		set(SDRPLAY_INCLUDE_DIRS ${SDRPLAY_INCLUDE_DIR})
-		set(SDRPLAY_LIBRARIES ${SDRPLAY_LIBRARY})
-	else()
-		message(STATUS "No SDRPLAY support included.")
-	endif()
-
-else()
-
-	find_path(SDRPLAY_INCLUDE_DIR sdrplay_api.h)
-	find_library(SDRPLAY_LIBRARY sdrplay_api)
-
-	if(SDRPLAY_INCLUDE_DIR AND SDRPLAY_LIBRARY)
-		message(STATUS "SDRPLAY: found - ${SDRPLAY_INCLUDE_DIR}, ${SDRPLAY_LIBRARY}")
-		add_definitions(-DHASSDRPLAY)
 		set(SDRPLAY_INCLUDE_DIRS ${SDRPLAY_INCLUDE_DIR})
 		set(SDRPLAY_LIBRARIES ${SDRPLAY_LIBRARY})
 	else()
@@ -155,7 +149,7 @@ if(NOT MSVC)
 		set(AIRSPY_LIBRARIES ${AIRSPY_LIBRARY} ${LIBUSB_LIBRARY})
 
 	else()
-		Message("AIRSPY: not found.")
+		Message(STATUS "AIRSPY: not found.")
 	endif()
 
 else()
@@ -172,7 +166,7 @@ else()
 		set(AIRSPY_INCLUDE_DIRS ${AIRSPY_INCLUDE_DIR})
 		set(AIRSPY_LIBRARIES ${AIRSPY_LIBRARY})
 	else()
-		Message("AIRSPY: not found.")
+		Message(STATUS "AIRSPY: not found.")
 	endif()
 endif()
 
@@ -192,7 +186,7 @@ if(NOT MSVC)
 		set(AIRSPYHF_LIBRARIES ${AIRSPYHF_LIBRARY} ${LIBUSB_LIBRARY})
 
 	else()
-		Message("AIRSPYHF: not found.")
+		Message(STATUS "AIRSPYHF: not found.")
 	endif()
 
 else()
@@ -209,7 +203,7 @@ else()
 		set(AIRSPYHF_INCLUDE_DIRS ${AIRSPYHF_INCLUDE_DIR})
 		set(AIRSPYHF_LIBRARIES ${AIRSPYHF_LIBRARY})
 	else()
-		Message("AIRSPYHF: not found.")
+		Message(STATUS "AIRSPYHF: not found.")
 	endif()
 
 endif()
@@ -230,7 +224,7 @@ if(NOT MSVC)
 		set(HACKRF_LIBRARIES ${HACKRF_LIBRARY} ${LIBUSB_LIBRARY})
 
 	else()
-		Message("HACKRF: not found.")
+		Message(STATUS "HACKRF: not found.")
 	endif()
 
 else()
@@ -247,7 +241,7 @@ else()
 		set(HACKRF_INCLUDE_DIRS ${HACKRF_INCLUDE_DIR})
 		set(HACKRF_LIBRARIES ${HACKRF_LIBRARY})
 	else()
-		Message("HACKRF: not found.")
+		Message(STATUS "HACKRF: not found.")
 	endif()
 
 endif()
@@ -264,7 +258,7 @@ if(NOT MSVC)
 		set(ZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_DIR})
 		set(ZMQ_LIBRARIES ${LIBZMQ_LIBRARY})
 	else()
-		message(WARNING "No ZMQ support included.")
+		message(STATUS ZMQ: not found.")
 	endif()
 
 else()
@@ -280,7 +274,7 @@ else()
 		set(ZMQ_INCLUDE_DIRS ${ZMQ_INCLUDE_DIR})
 		set(ZMQ_LIBRARIES ${ZMQ_LIBRARY})
 	else()
-		Message("ZMQ: not found.")
+		Message(STATUS "ZMQ: not found.")
 	endif()
 endif()
 
@@ -307,19 +301,17 @@ target_link_libraries(AIS-catcher
 	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}
 	${ADDITIONAL_LIBRARIES} Threads::Threads)
 
+# Copying DLLs to final location if needed
 if(COPY_SDRPLAY_DLL)
-	add_custom_command(TARGET AIS-catcher POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy ${SDRPLAY_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SDRPLAY_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_RTLSDR_DLL)
-	add_custom_command(TARGET AIS-catcher POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy ${RTLSDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${RTLSDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_AIRSPY_DLL)
-	add_custom_command(TARGET AIS-catcher POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy ${AIRSPY_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${AIRSPY_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_AIRSPYHF_DLL)
@@ -333,12 +325,12 @@ endif()
 if(COPY_ZMQ_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ZMQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
+
 if(COPY_LIBUSB_DLL)
-	add_custom_command(TARGET AIS-catcher POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy ${LIBUSB_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-	add_custom_command(TARGET AIS-catcher POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy ${PTHREAD_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${LIBUSB_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PTHREAD_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
+
 # Installation
 install(TARGETS AIS-catcher DESTINATION bin)
 
