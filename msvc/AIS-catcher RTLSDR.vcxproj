@@ -57,7 +57,7 @@
     <ClInclude Include="..\IO\IO.h" />
     <ClInclude Include="..\Library\AIS.h" />
     <ClInclude Include="..\Library\Common.h" />
-    <ClInclude Include="..\Library\Signal.h" />
+    <ClInclude Include="..\Library\Signals.h" />
     <ClInclude Include="..\Library\Stream.h" />
     <ClInclude Include="..\Library\Utilities.h" />
   </ItemGroup>

@@ -24,7 +24,7 @@ SOFTWARE.
 
 #include "Stream.h"
 #include "AIS.h"
-#include "Signal.h"
+#include "Signals.h"
 
 namespace AIS
 {

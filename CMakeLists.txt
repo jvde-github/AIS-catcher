@@ -5,16 +5,16 @@ project(AIS-catcher)
 
 # Common compiler flags and options.
 
+option(MSVC_VCPKG "For MSVC use VCPKG libraries." OFF)
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	set(OPTIMIZATION_FLAGS "-Ofast")
 	add_compile_options("-Wno-psabi")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "CLANG")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "CLANG")
 	set(OPTIMIZATION_FLAGS "-Ofast")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
-	set(OPTIMIZATION_FLAGS "-Ofast -Wno-nonportable-include-path")
 elseif(MSVC)
 	set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN /EHsc /Oi /Ot /fp:fast")
 endif()
@@ -44,9 +44,12 @@ if(NOT MSVC)
 	pkg_check_modules(PKG_LIBUSB libusb-1.0)
 	find_path(LIBUSB_INCLUDE_DIR libusb.h HINT ${PKG_LIBUSB_INCLUDE_DIRS} PATH_SUFFIXES libusb-1.0)
 	find_library(LIBUSB_LIBRARY usb-1.0 HINT ${PKG_LIBUSB_LIBRARY_DIRS})
-else()
+elseif(NOT MSVC_VCPKG)
 	find_file(LIBUSB_DLL libusb-1.0.dll HINTS ${POTHOSSDR_BINARY_DIR})
 	find_file(PTHREAD_DLL pthreadVC2.dll HINTS ${POTHOSSDR_BINARY_DIR})
+else()
+	set(LIBUSB_INCLUDE_DIR "")
+	set(LIBUSB_LIBRARY "")
 endif()
 
 # Find RTL-SDR library.
@@ -59,7 +62,7 @@ if(NOT MSVC)
 
 	if(RTLSDR_INCLUDE_DIR AND RTLSDR_LIBRARY)
 
-		message(STATUS "RTLSDR found: ${RTLSDR_INCLUDE_DIR}, ${RTLSDR_LIBRARY}")
+		message(STATUS "RTLSDR: found - ${RTLSDR_INCLUDE_DIR}, ${RTLSDR_LIBRARY}")
 		add_definitions(-DHASRTLSDR)
 
 		set(RTLSDR_INCLUDE_DIRS ${RTLSDR_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIR})
@@ -74,6 +77,16 @@ if(NOT MSVC)
 		Message(STATUS "RTLSDR: not found.")
 	endif()
 
+elseif(MSVC_VCPKG)
+
+	find_package(rtlsdr)
+	if(rtlsdr_FOUND)
+		set(RTLSDR_LIBRARIES rtlsdr::rtlsdr)
+		Message(STATUS "RTLSDR: found (VCPKG) - " ${RTLSDR_LIBRARIES})
+	else()
+		Message(STATUS "RTLSDR: not found (VCPKG).")
+	endif()
+
 else()
 
 	find_path(RTLSDR_INCLUDE_DIR rtl-sdr.h HINTS ${POTHOSSDR_INCLUDE_DIR})
@@ -81,14 +94,14 @@ else()
 	find_file(RTLSDR_DLL rtlsdr.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
 	if(RTLSDR_INCLUDE_DIR AND RTLSDR_LIBRARY AND RTLSDR_DLL)
-		Message(STATUS "RTLSDR: found via PothosSDR - " ${RTLSDR_INCLUDE_DIR}, ${RTLSDR_LIBRARY}, ${RTLSDR_DLL})
+		Message(STATUS "RTLSDR: found (PothosSDR) - " ${RTLSDR_INCLUDE_DIR}, ${RTLSDR_LIBRARY}, ${RTLSDR_DLL})
 		set(COPY_RTLSDR_DLL TRUE)
 		set(COPY_LIBUSB_DLL TRUE)
 		add_definitions(-DHASRTLSDR)
 		set(RTLSDR_INCLUDE_DIRS ${RTLSDR_INCLUDE_DIR})
 		set(RTLSDR_LIBRARIES ${RTLSDR_LIBRARY})
 	else()
-		Message(STATUS "RTLSDR: not found.")
+		Message(STATUS "RTLSDR: not found (PothosSDR).")
 	endif()
 endif()
 
@@ -105,7 +118,7 @@ if(NOT MSVC)
 		set(SDRPLAY_INCLUDE_DIRS ${SDRPLAY_INCLUDE_DIR})
 		set(SDRPLAY_LIBRARIES ${SDRPLAY_LIBRARY})
 	else()
-		message(STATUS "No SDRPLAY support included.")
+		message(STATUS "SDRPLAY: not found.")
 	endif()
 
 else()
@@ -128,7 +141,7 @@ else()
 		set(SDRPLAY_INCLUDE_DIRS ${SDRPLAY_INCLUDE_DIR})
 		set(SDRPLAY_LIBRARIES ${SDRPLAY_LIBRARY})
 	else()
-		message(STATUS "No SDRPLAY support included.")
+		message(STATUS "SDRPLAY: not found. Assumed directory ${SDRPLAY_API_LIB_DIR}")
 	endif()
 
 endif()
@@ -152,6 +165,10 @@ if(NOT MSVC)
 		Message(STATUS "AIRSPY: not found.")
 	endif()
 
+elseif(MSVC_VCPKG)
+
+	Message("AIRSPY: not found (VCPKG)")
+
 else()
 
 	find_path(AIRSPY_INCLUDE_DIR airspy.h HINTS ${POTHOSSDR_INCLUDE_DIR}\\libairspy)
@@ -159,7 +176,7 @@ else()
 	find_file(AIRSPY_DLL airspy.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
 	if(AIRSPY_INCLUDE_DIR AND AIRSPY_LIBRARY AND AIRSPY_DLL)
-		Message(STATUS "AIRSPYHF: found via PothosSDR - " ${AIRSPY_INCLUDE_DIR}, ${AIRSPY_LIBRARY}, ${AIRSPY_DLL})
+		Message(STATUS "AIRSPYHF: found (PothosSDR) - " ${AIRSPY_INCLUDE_DIR}, ${AIRSPY_LIBRARY}, ${AIRSPY_DLL})
 		set(COPY_AIRSPY_DLL TRUE)
 		set(COPY_LIBUSB_DLL TRUE)
 		add_definitions(-DHASAIRSPY)
@@ -189,6 +206,10 @@ if(NOT MSVC)
 		Message(STATUS "AIRSPYHF: not found.")
 	endif()
 
+elseif(MSVC_VCPKG)
+
+	Message("AIRSPYHF: not found (VCPKG)")
+
 else()
 
 	find_path(AIRSPYHF_INCLUDE_DIR AIRSPYHF.h HINTS ${POTHOSSDR_INCLUDE_DIR}\\libairspyhf)
@@ -196,14 +217,14 @@ else()
 	find_file(AIRSPYHF_DLL AIRSPYHF.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
 	if(AIRSPYHF_INCLUDE_DIR AND AIRSPYHF_LIBRARY AND AIRSPYHF_DLL)
-		Message(STATUS "AIRSPYHF: found via PothosSDR - " ${AIRSPYHF_INCLUDE_DIR}, ${AIRSPYHF_LIBRARY}, ${AIRSPYHF_DLL})
+		Message(STATUS "AIRSPYHF: found (PothosSDR) - " ${AIRSPYHF_INCLUDE_DIR}, ${AIRSPYHF_LIBRARY}, ${AIRSPYHF_DLL})
 		set(COPY_AIRSPYHF_DLL TRUE)
 		set(COPY_LIBUSB_DLL TRUE)
 		add_definitions(-DHASAIRSPYHF)
 		set(AIRSPYHF_INCLUDE_DIRS ${AIRSPYHF_INCLUDE_DIR})
 		set(AIRSPYHF_LIBRARIES ${AIRSPYHF_LIBRARY})
 	else()
-		Message(STATUS "AIRSPYHF: not found.")
+		Message(STATUS "AIRSPYHF: not found (PothosSDR).")
 	endif()
 
 endif()
@@ -227,6 +248,10 @@ if(NOT MSVC)
 		Message(STATUS "HACKRF: not found.")
 	endif()
 
+elseif(MSVC_VCPKG)
+
+	Message("HACKRF: not found (VCPKG)")
+
 else()
 
 	find_path(HACKRF_INCLUDE_DIR hackrf.h HINTS ${POTHOSSDR_INCLUDE_DIR}\\libhackrf)
@@ -234,14 +259,14 @@ else()
 	find_file(HACKRF_DLL hackrf.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
 	if(HACKRF_INCLUDE_DIR AND HACKRF_LIBRARY AND HACKRF_DLL)
-		Message(STATUS "HACKRF: found via PothosSDR - " ${HACKRF_INCLUDE_DIR}, ${HACKRF_LIBRARY}, ${HACKRF_DLL})
+		Message(STATUS "HACKRF: found (PothosSDR) - " ${HACKRF_INCLUDE_DIR}, ${HACKRF_LIBRARY}, ${HACKRF_DLL})
 		set(COPY_HACKRF_DLL TRUE)
 		set(COPY_LIBUSB_DLL TRUE)
 		add_definitions(-DHASHACKRF)
 		set(HACKRF_INCLUDE_DIRS ${HACKRF_INCLUDE_DIR})
 		set(HACKRF_LIBRARIES ${HACKRF_LIBRARY})
 	else()
-		Message(STATUS "HACKRF: not found.")
+		Message(STATUS "HACKRF: not found (PothosSDR)")
 	endif()
 
 endif()
@@ -261,20 +286,31 @@ if(NOT MSVC)
 		message(STATUS "ZMQ: not found.")
 	endif()
 
+elseif(MSVC_VCPKG)
+
+	find_package(ZeroMQ)
+
+	if(ZeroMQ_FOUND)
+		set(ZMQ_LIBRARIES libzmq)
+		Message(STATUS "ZMQ: found (VCPKG) - " ${ZMQ_LIBRARIES})
+	else()
+		Message(STATUS "ZMQ: not found (VCPKG).")
+	endif()
+
 else()
 	find_path(ZMQ_INCLUDE_DIR zmq.h HINTS ${POTHOSSDR_INCLUDE_DIR})
 	find_library(ZMQ_LIBRARY libzmq-v142-mt-4_1_8.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
 	find_file(ZMQ_DLL libzmq-v142-mt-4_1_8.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
 	if(ZMQ_INCLUDE_DIR AND ZMQ_LIBRARY AND ZMQ_DLL)
-		Message(STATUS "ZMQ: found via PothosSDR - " ${ZMQ_INCLUDE_DIR}, ${ZMQ_LIBRARY}, ${ZMQ_DLL})
+		Message(STATUS "ZMQ: found (PothosSDR) - " ${ZMQ_INCLUDE_DIR}, ${ZMQ_LIBRARY}, ${ZMQ_DLL})
 		set(COPY_ZMQ_DLL TRUE)
 		set(COPY_LIBUSB_DLL TRUE)
 		add_definitions(-DHASZMQ)
 		set(ZMQ_INCLUDE_DIRS ${ZMQ_INCLUDE_DIR})
 		set(ZMQ_LIBRARIES ${ZMQ_LIBRARY})
 	else()
-		Message(STATUS "ZMQ: not found.")
+		Message(STATUS "ZMQ: not found (PothosSDR)")
 	endif()
 endif()
 
@@ -287,11 +323,17 @@ set(CPP
 	DSP/DSP.cpp
 	IO/IO.cpp)
 
+set(HEADER
+	Application/AIS-catcher.h
+	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Signals.h
+	Device/AIRSPY.h Device/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h
+	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h Library/Utilities.h)
+
 set(APP_INCLUDES . ./Library ./DSP ./Application ./IO)
 
 # Executable
 
-add_executable(AIS-catcher ${CPP} )
+add_executable(AIS-catcher ${CPP} ${HEADER})
 
 include_directories(
 	${AIRSPYHF_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${LIBZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS}
