@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include <signal.h> 
+
 #include <iostream>
 #include <string.h>
 #include <algorithm>
@@ -27,7 +29,7 @@ SOFTWARE.
 
 #include "AIS-catcher.h"
 
-#include "Signal.h"
+#include "Signals.h"
 #include "Common.h"
 #include "Model.h"
 #include "IO.h"
