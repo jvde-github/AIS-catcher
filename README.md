@@ -261,12 +261,12 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 
   System              | Linux/RPI/apt         | MSVC/vcpkg            | macOS/brew  | MSVC/PothosSDR |
  :--            | :--			| :--				| :--  | :--: | 
-***Command***       | ***sudo apt install ...***  | ***vcpkg install ...***             | ***brew install ...***    | [install](https://downloads.myriadrf.org/builds/PothosSDR/) |
+***Command***       | ***sudo apt install ...***  | ***vcpkg install ...***             | ***brew install ...***    | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
 rtlsdr          | librtlsdr-dev         | rtlsdr rtlsdr:x64-windows     | librtlsdr           | included |
 airspy          | libairspy-dev         |                               | airspy              | included |
 airspyhf        | libairspyhf-dev       |                               | airspyhf            | included |
 hackrf          | libhackrf-dev         |                               | hackrf              | included |
-sdrplay         | [install](https://www.sdrplay.com/downloads/) | [install](https://www.sdrplay.com/downloads/)  |   | [install](https://www.sdrplay.com/downloads/)  |
+sdrplay         | [API 3.x](https://www.sdrplay.com/downloads/) | [API 3.x](https://www.sdrplay.com/downloads/)  |   | [API 3.x](https://www.sdrplay.com/downloads/)  |
 zmq             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | included |
 
 Once the dependencies are in place, the process to install AIS-catcher then becomes:
