@@ -246,63 +246,45 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
  
 ## Build process
 
-### Ubuntu and Raspberry Pi
-The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on a Raspberry Pi 4B and Ubuntu systems. First ensure you have the necessary dependencies installed for your device(s). 
-If not, the following commands can be used for most devices except for the SDRPLAY:
-
+### Ubuntu, Raspberry Pi, macOS
+The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on most systems. First ensure you have the necessary dependencies and build tools installed for your device(s). 
+For example, the following installs the build tools for Ubuntu and Raspberry Pi:
 ```console
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git make gcc g++ librtlsdr-dev libairspyhf-dev libairspy-dev libhackrf-dev libzmq3-dev pkg-config -y
+sudo apt-get install git make gcc g++ cmake -y
 ```
+AIS-catcher requires libraries for the particular hardware, summarized in the following table:
+
+                | Linux/RPI/apt          | MSVC/vcpkg                         | macos/brew               | MSVC/PothosSDR |
+ :-- | :--			| :--				| :--  | :--: | 
+Command         | sudo apt install ...  | vcpkg install ...             | brew install ...    | auto |
+ :-- | :--			| :--				| :--  | :--: | 
+rtlsdr          | librtlsdr-dev         | rtlsdr rtlsdr:x64-windows     | librtlsdr           | |
+airspy          | libairspy-dev         |                               | airspy              | auto |
+airspyhf        | libairspyhf-dev       |                               | airspyhf            | auto |
+hackrf          | libhackrf-dev         |                               | hackrf              | auto |
+sdrplay         |                       |                               |                     | auto |
+zmq             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | auto |
+
 The process to install AIS-catcher then becomes:
 ```console
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
+mkdir build
+cd build
+cmake ..
 make
-sudo make install
 ```
-Standard installation will include support for the Airspy devices, HackRF and RTLSDR dongles but not SDRplay. To build an executable with SDRplay API 3.x (only) support use:
-```console
-make sdrplay-only
-sudo make install
-```
-At the moment only RSP1A is supported (as that is the only device I can test on).
 
-### Microsoft Visual Studio 2019+ (RTL-SDR only)
+### Microsoft Visual Studio 2019+ via Visual Studio (RTL-SDR only)
 
 Ensure that you have ```vcpkg``` [installed](https://vcpkg.io/en/getting-started.html) and integrated into Visual Studio via ```vcpkg integrate install``` (as Administrator). Then install the rtl-sdr drivers as follows:
 ```
 vcpkg install rtlsdr rtlsdr:x64-windows
 ```
 The included solution file in the mscv directory should allow you to build AIS-catcher with RTL-SDR support in the Visual Studio IDE.
-
-### Mac OS X (RTL-SDR only)
-The following shows the installation instructions for RTL-SDR dongles. First ensure you install the necessary dependencies:
-```console
-brew update
-brew install librtlsdr pkg-config
-````
-Building AIS-catcher is similar to Linux:
-```console
-git clone https://github.com/jvde-github/AIS-catcher.git
-cd AIS-catcher
-make rtl-only
-sudo make install
-```
-
-### Additional compilation options
-The make process allows for additional compilation options to be set at the command line via defining CFLAGS, e.g.: 
-```
-make CFLAGS='-DLIBRTLSDR_LEGACY' rtl-only
-```
-Some useful options are: 
-
- | Description | CFLAGS | Impact |
- | :--- | :--- | :--- |
- |use librtlsdr version 5.x | -DLIBRTLSDR_LEGACY | Allows compilation with librtlsdr v5.x |
- |Linux x64 performance turning  | -D-march=native | ~ 5% < decoding time |
 
 ## Container images
 
