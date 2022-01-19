@@ -25,7 +25,9 @@ If you are looking for a Windows binary supporting SDRplay API 3.09, please get 
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Edge version: early cmake support which should automatically switch off the bias-tee for older versions of rtlsdr (e.g. on Ubuntu 16), automatically link in SDRplay support and help to build on Windows (via installing PothosSDR) for those interested in that. Binaries are still provided below. 
+**Edge version**:
+- cmake support to resolve some earlier build annoyances. Binaries are still provided below.
+- enhancement of reset conditions of decoder to improve reception 
 
 ## Usage
 ````
