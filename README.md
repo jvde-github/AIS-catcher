@@ -26,7 +26,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09, please get 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
 **Edge version**:
-- cmake support to resolve some earlier build annoyances. Binaries are still provided below.
+- cmake support to resolve some earlier build annoyances. 
 - enhancement of reset conditions of decoder to improve reception 
 
 ## Usage
