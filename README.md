@@ -246,7 +246,7 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
  
 ## Build process
 
-### Ubuntu, Raspberry Pi, macOS
+### Ubuntu, Raspberry Pi, macOS, MSVC
 The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on most systems. There is a simple Makefile, a ```solution``` file for MSVC discussed in the next section and you can use ```cmake```, as we are detailing now.
 
 First step is to ensure you have the necessary dependencies and build tools installed for your device(s). 
@@ -278,7 +278,7 @@ cd build
 cmake ..
 make
 ```
-For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. For Windows, cmake provides two options as library source. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/). Simply open the directory with the AIS-catcher files in Visual Studio then the cmake file will locate the installation directory and link against these libraries. The alternative is to use VCPKG which currently only has the libraries for the RTL-SDR and ZMQ (see next section as well). Simplest of course remains to download the Windows binaries from above.
+For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. For Windows, cmake provides two options as library source. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/). After that open the directory with the AIS-catcher files in Visual Studio. The cmake file will locate the installation directory and link against these libraries. The alternative is to use ```vcpkg``` which currently only has the libraries for RTL-SDR and ZMQ (see next section as well). Of course, you can save yourself the hassle and download the Windows binaries from above.
 
 ### Microsoft Visual Studio 2019+ via solution file (RTL-SDR/ZMQ only)
 
@@ -286,7 +286,7 @@ Ensure that you have ```vcpkg``` [installed](https://vcpkg.io/en/getting-started
 ```
 vcpkg install rtlsdr rtlsdr:x64-windows ZeroMQ ZeroMQ:x64-windows
 ```
-The included solution file in the mscv directory should allow you to build AIS-catcher with RTL-SDR/ZMQ support in the Visual Studio IDE.
+The included solution file in the mscv directory allows you to build AIS-catcher with RTL-SDR/ZMQ support in the Visual Studio IDE.
 
 ## Container images
 
