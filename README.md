@@ -179,7 +179,7 @@ On this file we should extract roughly ``360`` AIVDM lines. Notice that with swi
 gnuais -l helsinki-210-messages.raw
 ```
 which produces:
-```console
+```
 INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
 INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
@@ -264,13 +264,13 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 
   System              | Linux/RPI/apt         | MSVC/vcpkg            | macOS/brew  | MSVC/PothosSDR |
  :--            | :--			| :--				| :--  | :--: | 
-***Command***       | ***sudo apt install ...***  | ***vcpkg install ...***             | ***brew install ...***    | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
-rtlsdr          | librtlsdr-dev         | rtlsdr rtlsdr:x64-windows     | librtlsdr           | included |
-airspy          | libairspy-dev         |                               | airspy              | included |
-airspyhf        | libairspyhf-dev       |                               | airspyhf            | included |
-hackrf          | libhackrf-dev         |                               | hackrf              | included |
-sdrplay         | [API 3.x](https://www.sdrplay.com/downloads/) | [API 3.x](https://www.sdrplay.com/downloads/)  |   | [API 3.x](https://www.sdrplay.com/downloads/)  |
-zmq             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | included |
+**Command**      | **sudo apt install ...**  | **vcpkg install ...**             | **brew install ...**    | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
+***RTL-SDR***          | librtlsdr-dev         | rtlsdr rtlsdr:x64-windows     | librtlsdr           | X |
+***Airspy***          | libairspy-dev         |    -                           | airspy              | X |
+***Airspy HF+***        | libairspyhf-dev       |    -                           | airspyhf            | X |
+***HackRF***          | libhackrf-dev         |    -                           | hackrf              | X |
+***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | [API 3.x](https://www.sdrplay.com/downloads/)  |   | [API 3.x](https://www.sdrplay.com/downloads/)  |
+***ZeroMQ***             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | X |
 
 Once the dependencies are in place, the process to install AIS-catcher then becomes:
 ```console
