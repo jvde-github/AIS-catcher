@@ -262,17 +262,17 @@ sudo apt-get install git make gcc g++ cmake pkg-config -y
 ```
 AIS-catcher requires libraries for the particular hardware you want to use. The following table summarizes the installation instructions for all supported hardware:
 
-  System              | Linux/RPI/apt         | MSVC/vcpkg            | macOS/brew  | MSVC/PothosSDR |
+  System              | Linux/RPI/apt              | macOS/brew  |  MSVC/vcpkg   |     MSVC/PothosSDR |
  :--            | :--			| :--				| :--  | :--: | 
-      | **sudo apt install ...**  | **vcpkg install ...**             | **brew install ...**    | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
-***RTL-SDR***          | librtlsdr-dev         | rtlsdr rtlsdr:x64-windows     | librtlsdr           | X |
-***Airspy***          | libairspy-dev         |    -                           | airspy              | X |
-***Airspy HF+***        | libairspyhf-dev       |    -                           | airspyhf            | X |
-***HackRF***          | libhackrf-dev         |    -                           | hackrf              | X |
+ Device    | **sudo apt install ...**      | **brew install ...** | **vcpkg install ...**            | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
+***RTL-SDR***          | librtlsdr-dev          | librtlsdr  | rtlsdr rtlsdr:x64-windows             | X |
+***Airspy***          | libairspy-dev                             | airspy |    -                    | X |
+***Airspy HF+***        | libairspyhf-dev                            | airspyhf  |    -                | X |
+***HackRF***          | libhackrf-dev                             | hackrf    |    -                 | X |
 ***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | [API 3.x](https://www.sdrplay.com/downloads/)  |   | [API 3.x](https://www.sdrplay.com/downloads/)  |
 ***ZeroMQ***             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | X |
 
-Once the dependencies are in place, the process to install AIS-catcher then becomes:
+Once the dependencies are in place, the process to install AIS-catcher then on Linux based systems becomes:
 ```console
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
@@ -280,8 +280,11 @@ mkdir build
 cd build
 cmake ..
 make
+sudo make install
 ```
-For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. For Windows, cmake provides two options as library source. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/). After that open the directory with the AIS-catcher files in Visual Studio. The cmake file will locate the installation directory and link against these libraries. The alternative is to use ```vcpkg``` which currently only has the libraries for RTL-SDR and ZMQ (see next section as well). Of course, you can save yourself the hassle and download the Windows binaries from above.
+For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. 
+
+For Windows, clone the project and open the directory with AIS-catcher. The ```cmake``` file provides two options as source for the libaries. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/).  The cmake file will locate the installation directory and link against these libraries. The alternative is to use ```vcpkg``` which currently only offers the libraries for RTL-SDR and ZeroMQ (see next section as well). Of course, you can save yourself the hassle and download the Windows binaries from above.
 
 ### Microsoft Visual Studio 2019+ via solution file (RTL-SDR/ZMQ only)
 
