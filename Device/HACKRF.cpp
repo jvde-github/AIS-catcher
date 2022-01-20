@@ -147,8 +147,6 @@ namespace Device {
 
 	void HACKRF::getDeviceList(std::vector<Description>& DeviceList)
 	{
-		if (hackrf_init() != HACKRF_SUCCESS) throw "Cannot open hackrf library";
-
 		list = hackrf_device_list();
 
 		for (int i = 0; i < list->devicecount; i++)
