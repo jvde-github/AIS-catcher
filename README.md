@@ -138,6 +138,36 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
 
+### Multiple receiver models
+
+The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
+
+- **Default model** (``-m 2``): the default demodulation engine
+- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL (different speeds at different stages) and main receiver filter (computed with a stochastic search algorithm).
+- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery.
+- **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
+
+The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
+
+ Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
+```console
+AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
+```
+The program will run and summarize the performance (count and timing) of three decoding models (on a Raspberry Pi 4B):
+```
+[AIS engine v0.31]		: 38 msgs at 6.2 msg/s
+[Standard (non-coherent)]	: 4 msgs at 0.7 msg/s
+[Base (non-coherent)]		: 3 msgs at 0.5 msg/s
+```
+```
+[AIS engine v0.31]		: 1139.2 ms
+[Standard (non-coherent)]	: 900.099 ms
+[Base (non-coherent)]		: 837.641 ms
+```
+In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
+This is typical when there are few messages with poor quality. However, it increases the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
+
+
 ### Input from FM discriminator
 We can run AIS-catcher on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
@@ -201,35 +231,6 @@ AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org
 ```console
 AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
-
-## Multiple receiver models
-
-The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
-
-- **Default model** (``-m 2``): the default demodulation engine
-- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL (different speeds at different stages) and main receiver filter (computed with a stochastic search algorithm).
-- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery.
-- **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
-
-The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
-
- Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
-```console
-AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
-```
-The program will run and summarize the performance (count and timing) of three decoding models (on a Raspberry Pi 4B):
-```
-[AIS engine v0.31]		: 38 msgs at 6.2 msg/s
-[Standard (non-coherent)]	: 4 msgs at 0.7 msg/s
-[Base (non-coherent)]		: 3 msgs at 0.5 msg/s
-```
-```
-[AIS engine v0.31]		: 1139.2 ms
-[Standard (non-coherent)]	: 900.099 ms
-[Base (non-coherent)]		: 837.641 ms
-```
-In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
-This is typical when there are few messages with poor quality. However, it increases the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
 ## Validation
 
