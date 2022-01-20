@@ -35,6 +35,7 @@ namespace Device {
 #ifdef HASHACKRF
 
 		hackrf_device* device = NULL;
+		hackrf_device_list_t* list = NULL;
 
 		int LNA_Gain = 8;
 		int VGA_Gain = 20;
@@ -50,6 +51,8 @@ namespace Device {
 		std::vector<CFLOAT32> output;
 
 	public:
+
+		~HACKRF() { if(list) hackrf_device_list_free(list); }
 
 		// Control
 		void Open(uint64_t h);

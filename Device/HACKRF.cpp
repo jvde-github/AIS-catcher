@@ -65,8 +65,11 @@ namespace Device {
 
 	void HACKRF::Open(uint64_t h)
 	{
-		int result = hackrf_open(&device);
-		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device";
+		if(!list) throw "HACKRF: cannot open device, internal error.";
+		if (h > list->devicecount) throw "HACKRF: cannot open device.";
+
+		int result = hackrf_open_by_serial(list->serial_numbers[h],&device);
+		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device.";
 
 		setPREAMP(preamp ? 1 : 0);
 		setLNA_Gain(LNA_Gain);
@@ -144,13 +147,9 @@ namespace Device {
 
 	void HACKRF::getDeviceList(std::vector<Description>& DeviceList)
 	{
-		std::vector<uint64_t> serials;
-		hackrf_device_list_t* list;
-
 		if (hackrf_init() != HACKRF_SUCCESS) throw "Cannot open hackrf library";
 
 		list = hackrf_device_list();
-		serials.resize(list->devicecount);
 
 		for (int i = 0; i < list->devicecount; i++)
 		{
@@ -161,7 +160,6 @@ namespace Device {
 				DeviceList.push_back(Description("HACKRF", "HACKRF", serial.str(), (uint64_t)i, Type::HACKRF));
 			}
 		}
-		hackrf_device_list_free(list);
 	}
 #endif
 }
