@@ -139,6 +139,7 @@ namespace Device {
 		if(Device::isStreaming())
 		{
 			Device::Stop();
+			fifo.Reset();
 
 			if (async_thread.joinable()) async_thread.join();
 			if (run_thread.joinable()) run_thread.join();
