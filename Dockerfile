@@ -22,7 +22,7 @@ RUN apk upgrade --no-cache
 RUN apk add --no-cache libusb librtlsdr libstdc++ libgcc libzmq
 
 COPY --from=build /usr/local/lib/libairspyhf.so /usr/local/lib/libairspyhf.so
-COPY --from=build /usr/local/lib/libairspyhf.so.0 /usr/local/lib/libairspyhf.so.0
+#COPY --from=build /usr/local/lib/libairspyhf.so.0 /usr/local/lib/libairspyhf.so.0
 
 COPY --from=build /usr/local/lib/libairspy.so /usr/local/lib/libairspy.so
 COPY --from=build /usr/local/lib/libairspy.so.0 /usr/local/lib/libairspy.so.0
