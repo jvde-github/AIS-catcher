@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, AirSpy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1A for now) and input from file and over ZMQ and RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, Airspy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1A for now), input from file and over ZMQ and RTL TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
@@ -138,6 +138,36 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
 
+### Multiple receiver models
+
+The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
+
+- **Default model** (``-m 2``): the default demodulation engine
+- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL (different speeds at different stages) and main receiver filter (computed with a stochastic search algorithm).
+- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery.
+- **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
+
+The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
+
+ Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
+```console
+AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
+```
+The program will run and summarize the performance (count and timing) of three decoding models (on a Raspberry Pi 4B):
+```
+[AIS engine v0.31]		: 38 msgs at 6.2 msg/s
+[Standard (non-coherent)]	: 4 msgs at 0.7 msg/s
+[Base (non-coherent)]		: 3 msgs at 0.5 msg/s
+```
+```
+[AIS engine v0.31]		: 1139.2 ms
+[Standard (non-coherent)]	: 900.099 ms
+[Base (non-coherent)]		: 837.641 ms
+```
+In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
+This is typical when there are few messages with poor quality. However, it increases the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
+
+
 ### Input from FM discriminator
 We can run AIS-catcher on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
@@ -149,7 +179,7 @@ On this file we should extract roughly ``360`` AIVDM lines. Notice that with swi
 gnuais -l helsinki-210-messages.raw
 ```
 which produces:
-```console
+```
 INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
 INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
@@ -202,35 +232,6 @@ AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org
 AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
 
-## Multiple receiver models
-
-The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
-
-- **Default model** (``-m 2``): the default demodulation engine
-- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL (different speeds at different stages) and main receiver filter (computed with a stochastic search algorithm).
-- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery.
-- **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
-
-The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
-
- Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed and forwarded. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
-```console
-AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
-```
-The program will run and summarize the performance (count and timing) of three decoding models (on a Raspberry Pi 4B):
-```
-[AIS engine v0.31]		: 38 msgs at 6.2 msg/s
-[Standard (non-coherent)]	: 4 msgs at 0.7 msg/s
-[Base (non-coherent)]		: 3 msgs at 0.5 msg/s
-```
-```
-[AIS engine v0.31]		: 1139.2 ms
-[Standard (non-coherent)]	: 900.099 ms
-[Base (non-coherent)]		: 837.641 ms
-```
-In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
-This is typical when there are few messages with poor quality. However, it increases the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
-
 ## Validation
 
 ### Experimenting with recorded signals
@@ -261,17 +262,17 @@ sudo apt-get install git make gcc g++ cmake pkg-config -y
 ```
 AIS-catcher requires libraries for the particular hardware you want to use. The following table summarizes the installation instructions for all supported hardware:
 
-  System              | Linux/RPI/apt         | MSVC/vcpkg            | macOS/brew  | MSVC/PothosSDR |
+  System              | Linux/RPI/apt              | macOS/brew  |  MSVC/vcpkg   |     MSVC/PothosSDR |
  :--            | :--			| :--				| :--  | :--: | 
-***Command***       | ***sudo apt install ...***  | ***vcpkg install ...***             | ***brew install ...***    | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
-rtlsdr          | librtlsdr-dev         | rtlsdr rtlsdr:x64-windows     | librtlsdr           | included |
-airspy          | libairspy-dev         |                               | airspy              | included |
-airspyhf        | libairspyhf-dev       |                               | airspyhf            | included |
-hackrf          | libhackrf-dev         |                               | hackrf              | included |
-sdrplay         | [API 3.x](https://www.sdrplay.com/downloads/) | [API 3.x](https://www.sdrplay.com/downloads/)  |   | [API 3.x](https://www.sdrplay.com/downloads/)  |
-zmq             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | included |
+ Device    | **sudo apt install ...**      | **brew install ...** | **vcpkg install ...**            | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
+***RTL-SDR***          | librtlsdr-dev          | librtlsdr  | rtlsdr rtlsdr:x64-windows             | X |
+***Airspy***          | libairspy-dev                             | airspy |    -                    | X |
+***Airspy HF+***        | libairspyhf-dev                            | airspyhf  |    -                | X |
+***HackRF***          | libhackrf-dev                             | hackrf    |    -                 | X |
+***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | [API 3.x](https://www.sdrplay.com/downloads/)  |   | [API 3.x](https://www.sdrplay.com/downloads/)  |
+***ZeroMQ***             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | X |
 
-Once the dependencies are in place, the process to install AIS-catcher then becomes:
+Once the dependencies are in place, the process to install AIS-catcher then on Linux based systems becomes:
 ```console
 git clone https://github.com/jvde-github/AIS-catcher.git
 cd AIS-catcher
@@ -279,8 +280,11 @@ mkdir build
 cd build
 cmake ..
 make
+sudo make install
 ```
-For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. For Windows, cmake provides two options as library source. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/). After that open the directory with the AIS-catcher files in Visual Studio. The cmake file will locate the installation directory and link against these libraries. The alternative is to use ```vcpkg``` which currently only has the libraries for RTL-SDR and ZMQ (see next section as well). Of course, you can save yourself the hassle and download the Windows binaries from above.
+For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. 
+
+For Windows, clone the project and open the directory with AIS-catcher in Visual Studio 2019 or above. The ```cmake``` file provides two options as source for the libaries. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/).  The cmake file will locate the installation directory and link against these libraries. The alternative is to use ```vcpkg``` which currently only offers the libraries for RTL-SDR and ZeroMQ (see next section as well). Of course, you can save yourself the hassle and download the Windows binaries from above.
 
 ### Microsoft Visual Studio 2019+ via solution file (RTL-SDR/ZMQ only)
 
@@ -336,7 +340,6 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- CMake
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, large rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
