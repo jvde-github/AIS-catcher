@@ -64,6 +64,7 @@ namespace Device {
 		if(Device::isStreaming())
 		{
 			Device::Stop();
+			fifo.Reset();
 
 			if (async_thread.joinable())
 			{
@@ -148,7 +149,7 @@ namespace Device {
 			}
 			else
 			{
-				if(!lost) std::cerr << "RTLSDR: timeout." << std::endl;
+				if(isStreaming()) std::cerr << "RTLSDR: timeout." << std::endl;
 			}
 		}
 	}

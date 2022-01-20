@@ -63,16 +63,23 @@ public:
 		return BLOCK_SIZE;
 	}
 
+	void Reset()
+	{
+		{
+			std::lock_guard<std::mutex> lock(fifo_mutex);
+			count = -1;
+		}
+		fifo_cond.notify_one();
+	}
+
 	bool Wait()
 	{
 		if (count == 0)
 		{
 			std::unique_lock <std::mutex> lock(fifo_mutex);
 			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this] {return count != 0; });
-
-			if (count == 0) return false;
 		}
-		return true;
+		return (count > 0);
 	}
 
 	T* Front()
@@ -94,6 +101,7 @@ public:
 
 	bool Push(T* data, int sz)
 	{
+		if (count == -1) return false;
 		if(sz <= 0) return true;
 
 		// size of new tail block including overflow (i.e. > BLOCK_SIZE)
