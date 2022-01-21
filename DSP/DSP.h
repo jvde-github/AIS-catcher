@@ -44,7 +44,7 @@ namespace DSP
 		virtual void Receive(const FLOAT32* data, int len);
 
 		// MessageIn
-		virtual void type(const DecoderMessages& in);
+		virtual void Message(const DecoderMessages& in);
 	};
 
 	template <typename T>

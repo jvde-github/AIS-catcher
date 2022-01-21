@@ -52,7 +52,7 @@ namespace DSP
 		}
 	}
 
-	void SimplePLL::type(const DecoderMessages& in)
+	void SimplePLL::Message(const DecoderMessages& in)
 	{
 		switch (in)
 		{

@@ -153,11 +153,11 @@ namespace AIS
 		return false;
 	}
 
-	void Decoder::type(const DecoderMessages& in)
+	void Decoder::Message(const DecoderMessages& in)
 	{
 		switch (in)
 		{
-		case DecoderMessages::Reset: NextState(State::TRAINING, 0);  break;
+		case DecoderMessages::Reset: NextState(State::TRAINING, 0); break;
 		default: break;
 		}
 	}

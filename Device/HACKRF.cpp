@@ -109,18 +109,7 @@ namespace Device {
 
 	void HACKRF::callback(uint8_t* data, int len)
 	{
-		int len2 = len / 2;
-
-		if (output.size() < len2) output.resize(len2);
-
-		// clean up to move conversion to conversion block
-		for (int i = 0; i < len2; i++)
-		{
-			output[i].real(((int8_t)data[2 * i]) / 128.0f);
-			output[i].imag(((int8_t)data[2 * i + 1]) / 128.0f);
-		}
-
-		RAW r = { Format::CF32, output.data(), (int)(output.size() * sizeof(CFLOAT32)) };
+		RAW r = { Format::CS8, data, len };
 		Send(&r, 1);
 	}
 

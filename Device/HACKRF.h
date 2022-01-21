@@ -48,8 +48,6 @@ namespace Device {
 		static int callback_static(hackrf_transfer* tf);
 		void callback(uint8_t*, int);
 
-		std::vector<CFLOAT32> output;
-
 	public:
 
 		HACKRF() {if (hackrf_init() != HACKRF_SUCCESS) throw "HACKRF: Cannot open hackrf library"; }
