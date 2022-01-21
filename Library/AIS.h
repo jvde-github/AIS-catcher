@@ -78,7 +78,7 @@ namespace AIS
 		void Receive(const FLOAT32* data, int len);
 
 		// MessageIn
-		virtual void type(const DecoderMessages& in);
+		virtual void Message(const DecoderMessages& in);
 		// MessageOut
 		MessageHub<DecoderMessages> DecoderMessage;
 	};

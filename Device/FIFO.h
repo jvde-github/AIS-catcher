@@ -63,7 +63,7 @@ public:
 		return BLOCK_SIZE;
 	}
 
-	void Reset()
+	void Halt()
 	{
 		{
 			std::lock_guard<std::mutex> lock(fifo_mutex);

@@ -133,7 +133,7 @@ namespace Device {
 		if(isStreaming())
 		{
 			Device::Stop();
-			fifo.Reset();
+			fifo.Halt();
 
 			sdrplay_api_Uninit(device.dev);
 			if (run_thread.joinable()) run_thread.join();
