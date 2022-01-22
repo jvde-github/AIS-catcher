@@ -71,7 +71,7 @@ namespace Device {
 
 	bool RAWFile::isStreaming()
 	{
-		if(!Device::isStreaming()) return false;
+		if(!file || file->eof() || !Device::isStreaming()) return false;
 
 		int len = 0;
 
@@ -85,8 +85,6 @@ namespace Device {
 
 		RAW r = { format, buffer.data(), (int)buffer.size() };
 		Send(&r, 1);
-
-		if (file->eof()) Stop();
 
 		return true;
 	}

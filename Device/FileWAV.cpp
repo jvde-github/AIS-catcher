@@ -66,7 +66,7 @@ namespace Device {
 
 	bool WAVFile::isStreaming()
 	{
-		if(!Device::isStreaming()) return false;
+		if(file.eof() || !Device::isStreaming()) return false;
 
 		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
 
@@ -75,8 +75,6 @@ namespace Device {
 
 		RAW r = { Format::CF32 , buffer.data(), (int)buffer.size() };
 		Send(&r, 1);
-
-		if (file.eof()) Stop();
 
 		return true;
 	}
