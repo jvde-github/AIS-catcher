@@ -29,7 +29,6 @@ namespace Device{
 	class WAVFile : public Device
 	{
 		std::ifstream file;
-
 		std::string filename;
 
 		std::vector<uint8_t> buffer;
