@@ -36,7 +36,6 @@ namespace Device
 		std::string filename;
 		std::vector<char> buffer;
 
-		std::vector<CFLOAT32> output;
 		const int buffer_size = 16 * 16384;
 
 		FileLayout layout = FileLayout::Stereo;

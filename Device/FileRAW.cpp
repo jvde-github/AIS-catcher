@@ -73,11 +73,7 @@ namespace Device {
 	{
 		if(!file || file->eof() || !Device::isStreaming()) return false;
 
-		int len = 0;
-
 		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
-		if (output.size() < buffer_size / sizeof(CU8)) output.resize(buffer_size / sizeof(CU8));
-
 		buffer.assign(buffer.size(), 0);
 		file->read((char*)buffer.data(), buffer.size());
 
