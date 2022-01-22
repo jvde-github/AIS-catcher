@@ -269,7 +269,7 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 ***Airspy***          | libairspy-dev                             | airspy |    -                    | X |
 ***Airspy HF+***        | libairspyhf-dev                            | airspyhf  |    -                | X |
 ***HackRF***          | libhackrf-dev                             | hackrf    |    -                 | X |
-***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | [API 3.x](https://www.sdrplay.com/downloads/)  |   | [API 3.x](https://www.sdrplay.com/downloads/)  |
+***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | | [API 3.x](https://www.sdrplay.com/downloads/)     | [API 3.x](https://www.sdrplay.com/downloads/)  |
 ***ZeroMQ***             | libzmq3-dev           | ZeroMQ ZeroMQ:x64-windows     | zeromq              | X |
 
 Once the dependencies are in place, the process to install AIS-catcher then on Linux based systems becomes:
