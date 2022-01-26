@@ -102,20 +102,6 @@ sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signe
 
 ## Special topics
 
-### Connecting to GNU Radio via ZMQ
-
-The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5K SMPS is not supported in our program. We can however perform some decoding with some help from GNU Radio. First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
-```
-AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
-```
-Next we can build a simple GRC model that performs all the necessary steps and has a ZMQ Pub Sink with the chosen endpoint:
-![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20GRC.png)
-Running this model, will allow us to succesfully decode the messages in the file:
-
-![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20example.png)
-
-The ZMQ interface is useful if a datastream from a SDR needs to be shared and processed by multiple decoders or for experimentation with different decoder models with support from GNU Radio.
-
 ### Running on hardware with performance limitations
 
 AIS-catcher implements a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model was introduced which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
@@ -137,6 +123,20 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 [AIS engine (speed optimized) v0.31]	: 7722.32 ms
 ```
 This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
+
+### Connecting to GNU Radio via ZMQ
+
+The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5K SMPS is not supported in our program. We can however perform some decoding with some help from GNU Radio. First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
+```
+AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
+```
+Next we can build a simple GRC model that performs all the necessary steps and has a ZMQ Pub Sink with the chosen endpoint:
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20GRC.png)
+Running this model, will allow us to succesfully decode the messages in the file:
+
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20example.png)
+
+The ZMQ interface is useful if a datastream from a SDR needs to be shared and processed by multiple decoders or for experimentation with different decoder models with support from GNU Radio.
 
 ### Multiple receiver models
 
