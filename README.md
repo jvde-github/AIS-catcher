@@ -70,7 +70,7 @@ use: AIS-catcher [options]
 
 	Model specific settings:
 
-	[-go Model: FP_DS [on/off] PS_EMA [on/off] (requires specification of model via -m)
+	[-go Model: FP_DS [on/off] PS_EMA [on/off] (requires specification of model via -m)]
 ````
 
 ### Basic usage
