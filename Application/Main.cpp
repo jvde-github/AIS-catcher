@@ -117,6 +117,10 @@ void Usage()
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
 	std::cerr << "\t[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
+	std::cerr << std::endl;
+	std::cerr << "\tModel specific settings:" << std::endl;
+	std::cerr << std::endl;
+	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] (requires specification of model via -m)" << std::endl;
 }
 
 std::vector<Device::Description> getDevices(Drivers &drivers)
