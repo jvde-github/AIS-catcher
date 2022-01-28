@@ -48,6 +48,8 @@ namespace Device{
 		void setLNA(int);
 		void setAGC(void);
 
+		void applySettings();
+
 	public:
 
 		// Control

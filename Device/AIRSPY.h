@@ -66,7 +66,7 @@ namespace Device {
 		void setSensitivity_Gain(int);
 		void setLinearity_Gain(int);
 
-		void applyGainSettings();
+		void applySettings();
 
 	public:
 

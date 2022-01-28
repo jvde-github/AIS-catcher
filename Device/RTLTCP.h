@@ -41,7 +41,8 @@ namespace Device {
 	class RTLTCP : public Device
 	{
 
-		// Device settings
+		enum class PROTOCOL { NONE, RTLTCP } Protocol = PROTOCOL::RTLTCP;
+		// Device settings, RTL_TCP
 		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
@@ -54,12 +55,6 @@ namespace Device {
 		std::string port = "1234";
 
 		struct addrinfo* address = NULL;
-
-		struct {
-			uint32_t magic = 0;
-			uint32_t tuner = 0;
-			uint32_t gain = 0;
-		} dongle;
 
 		// output vector
 
@@ -76,12 +71,7 @@ namespace Device {
 
 		FIFO<char> fifo;
 
-		void setTuner_GainMode(int);
-		void setTuner_Gain(FLOAT32);
-		void setRTL_AGC(int);
-		void setFrequencyCorrection(int);
-
-		void setParameter(uint8_t cmd, uint32_t param);
+		void setParameterRTLTCP(uint8_t cmd, uint32_t param);
 		void applySettings();
 
 	public:
@@ -98,7 +88,7 @@ namespace Device {
 		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 
-		void pushDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Settings
 		void Print();

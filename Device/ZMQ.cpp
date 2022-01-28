@@ -31,40 +31,6 @@ namespace Device {
 	// Device RTLSDR
 
 #ifdef HASZMQ
-	void ZMQ::Print()
-	{
-		std::cerr << "ZMQ settings: -gz endpoint " << endpoint;
-		std::cerr  << std::endl;
-	}
-
-	void ZMQ::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-
-		if (option == "ENDPOINT")
-		{
-			endpoint = arg;
-			return;
-		}
-
-		Util::Convert::toUpper(arg);
-
-		if (option == "FORMAT")
-		{
-			if(!Util::Parse::StreamFormat(arg, format))
-				throw "ZMQ: Unknown file format specification.";
-		}
-		else 
-			throw "Invalid setting for ZMQ.";
-	}
-
-	void ZMQ::Close()
-	{
-		Device::Close();
-
-		zmq_close(subscriber);
-		zmq_ctx_destroy(context);
-	}
 
 	void ZMQ::Open(uint64_t handle)
 	{
@@ -85,6 +51,42 @@ namespace Device {
 		setSampleRate(288000);
 
 		Device::Open(handle);
+	}
+
+	void ZMQ::Close()
+	{
+		Device::Close();
+
+		zmq_close(subscriber);
+		zmq_ctx_destroy(context);
+	}
+
+	void ZMQ::Play()
+	{
+		fifo.Init(BUFFER_SIZE);
+
+		Device::Play();
+
+		// apply settings
+
+		Device::Play();
+
+		async_thread = std::thread(&ZMQ::RunAsync, this);
+		run_thread = std::thread(&ZMQ::Run, this);
+
+		SleepSystem(10);
+	}
+
+	void ZMQ::Stop()
+	{
+		if (Device::isStreaming())
+		{
+			Device::Stop();
+			fifo.Halt();
+
+			if (async_thread.joinable()) async_thread.join();
+			if (run_thread.joinable()) run_thread.join();
+		}
 	}
 
 	void ZMQ::RunAsync()
@@ -117,38 +119,36 @@ namespace Device {
 		}
 	}
 
-	void ZMQ::Play()
-	{
-		fifo.Init(BUFFER_SIZE);
-
-		Device::Play();
-
-		//set sample_rate;
-		//set frequency;
-
-		Device::Play();
-
-		async_thread = std::thread(&ZMQ::RunAsync, this);
-		run_thread = std::thread(&ZMQ::Run, this);
-
-		SleepSystem(10);
-	}
-
-	void ZMQ::Stop()
-	{
-		if(Device::isStreaming())
-		{
-			Device::Stop();
-			fifo.Halt();
-
-			if (async_thread.joinable()) async_thread.join();
-			if (run_thread.joinable()) run_thread.join();
-		}
-	}
-
-	void ZMQ::pushDeviceList(std::vector<Description>& DeviceList)
+	void ZMQ::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		DeviceList.push_back(Description("ZMQ", "ZMQ", "ZMQ", (uint64_t)0, Type::ZMQ));
+	}
+
+	void ZMQ::Print()
+	{
+		std::cerr << "ZMQ settings: -gz endpoint " << endpoint;
+		std::cerr << std::endl;
+	}
+
+	void ZMQ::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		if (option == "ENDPOINT")
+		{
+			endpoint = arg;
+			return;
+		}
+
+		Util::Convert::toUpper(arg);
+
+		if (option == "FORMAT")
+		{
+			if (!Util::Parse::StreamFormat(arg, format))
+				throw "ZMQ: Unknown file format specification.";
+		}
+		else
+			throw "Invalid setting for ZMQ.";
 	}
 #endif
 }

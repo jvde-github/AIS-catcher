@@ -26,6 +26,53 @@ SOFTWARE.
 
 namespace Device {
 
+
+	//---------------------------------------
+	// RAW CU8 file
+
+	void RAWFile::Open(uint64_t h)
+	{
+		Device::Open(h);
+
+		if (filename == "." || filename == "stdin")
+		{
+			file = &std::cin;
+		}
+		else
+		{
+			file = new std::ifstream(filename, std::ios::out | std::ios::binary);
+		}
+
+		if (!file || file->fail()) throw "Error: Cannot read RAW input.";
+
+		setSampleRate(1536000);
+	}
+
+	void RAWFile::Close()
+	{
+		if (file && file != &std::cin)
+		{
+			delete file;
+			file = NULL;
+		}
+	}
+
+	bool RAWFile::isStreaming()
+	{
+		if(!file || file->eof() || !Device::isStreaming()) return false;
+
+		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
+		buffer.assign(buffer.size(), 0);
+		file->read((char*)buffer.data(), buffer.size());
+
+		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
+
+		RAW r = { format, buffer.data(), (int)buffer.size() };
+		Send(&r, 1);
+
+		return true;
+	}
+
 	void RAWFile::Print()
 	{
 		std::cerr << "RAW file Settings: -ga";
@@ -60,56 +107,9 @@ namespace Device {
 		}
 		else if (option == "STEREO")
 		{
-			layout = Util::Parse::Switch(arg)?FileLayout::Stereo:FileLayout::Mono;
+			layout = Util::Parse::Switch(arg) ? FileLayout::Stereo : FileLayout::Mono;
 		}
 		else
 			throw " Invalid setting for FILE RAW.";
-	}
-
-	//---------------------------------------
-	// RAW CU8 file
-
-	bool RAWFile::isStreaming()
-	{
-		if(!file || file->eof() || !Device::isStreaming()) return false;
-
-		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
-		buffer.assign(buffer.size(), 0);
-		file->read((char*)buffer.data(), buffer.size());
-
-		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
-
-		RAW r = { format, buffer.data(), (int)buffer.size() };
-		Send(&r, 1);
-
-		return true;
-	}
-
-	void RAWFile::Close()
-	{
-		if(file && file != &std::cin) 
-		{
-			delete file;
-			file = NULL;
-		}
-	}
-
-	void RAWFile::Open(uint64_t h)
-	{
-		Device::Open(h);
-
-		if(filename == "." || filename == "stdin")
-		{
-			file = &std::cin;
-		}
-		else
-		{
-			file = new std::ifstream(filename, std::ios::out | std::ios::binary);
-		}
-
-		if (!file || file->fail()) throw "Error: Cannot read RAW input.";
-
-
-		setSampleRate(1536000);
 	}
 }
