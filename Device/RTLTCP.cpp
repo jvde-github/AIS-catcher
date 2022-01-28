@@ -27,7 +27,7 @@ SOFTWARE.
 namespace Device {
 
 	//---------------------------------------
-	// Device RTLSDR
+	// Device RTLTCP
 
 	RTLTCP::RTLTCP()
 	{
@@ -36,7 +36,7 @@ namespace Device {
 
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		{
-			throw "Cannot initialize Winsocket.";
+			throw "RTLTCP: Cannot initialize Winsocket.";
 			return;
 		}
 #endif
@@ -51,11 +51,8 @@ namespace Device {
 
 	void RTLTCP::Open(uint64_t handle)
 	{
-                struct {
-                        uint32_t magic = 0;
-                        uint32_t tuner = 0;
-                        uint32_t gain = 0;
-                } dongle;
+		// RTLTCP protocol
+		struct { uint32_t magic = 0, tuner = 0, gain = 0; } dongle;
 
 		struct addrinfo h;
 
@@ -72,21 +69,21 @@ namespace Device {
 
 		if (code != 0 || address == NULL)
 		{
-			throw "TCP network address and/or port not valid.";
+			throw "RTLTCP: network address and/or port not valid.";
 			return;
 		}
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 		if (sock == -1)
-			throw "Error creating socket for TCP.";
+			throw "RTLTCP: Error creating socket.";
 
 		if (connect(sock, address->ai_addr, (int)address->ai_addrlen) == -1)
 			throw "RTLTCP: cannot connect to socket";
 
 		if(Protocol == PROTOCOL::RTLTCP)
 		{
-			// check for dongle information
+			// RTLTCP protocol, check for dongle information
 			int len = recv(sock, (char*) &dongle, 12, 0);
 			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: unexpected or invalid response, likely not an rtl-tcp process.";
 		}
@@ -98,10 +95,12 @@ namespace Device {
 	void RTLTCP::Close()
 	{
 		Device::Close();
+
+		if (sock != -1)
 #ifdef _WIN32
-		if (sock != -1) closesocket(sock);
+			closesocket(sock);
 #else
-		if (sock != -1) close(sock);
+			close(sock);
 #endif
 
 	}
@@ -186,7 +185,7 @@ namespace Device {
 			setParameterRTLTCP(5, freq_offset);
 			setParameterRTLTCP(3, tuner_AGC ? 0 : 1);
 
-			if (!tuner_AGC) setParameterRTLTCP(4, (uint32_t) tuner_Gain);
+			if (!tuner_AGC) setParameterRTLTCP(4, tuner_Gain);
 			if (RTL_AGC) setParameterRTLTCP(8, 1);
 
 			setParameterRTLTCP(2, sample_rate);
@@ -239,6 +238,6 @@ namespace Device {
 			else throw "RTLTCP: unknown protocol";
 		}
 		else
-			throw "Invalid setting for RTLTCP.";
+			throw "RTLTCP: Invalid setting.";
 	}
 }
