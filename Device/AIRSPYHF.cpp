@@ -36,27 +36,28 @@ namespace Device {
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
-		setAGC();
-		setTreshold(treshold_high ? 1: 0);
-		if(preamp) setLNA(1);
-
 		uint32_t nRates;
-
 		airspyhf_get_samplerates(dev, &nRates, 0);
+		if (nRates == 0) throw "AIRSPYHF: cannot get allowed sample rates.";
+
 		rates.resize(nRates);
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
-		std::sort(rates.begin(), rates.end());
-		setSampleRate(rates[0]);
+		setSampleRate(*std::max_element(rates.begin(), rates.end()));
 
 		Device::Open(h);
 	}
 
+	void AIRSPYHF::Close()
+	{
+		Device::Close();
+		airspyhf_close(dev);
+	}
+
 	void AIRSPYHF::Play()
 	{
-		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
-		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
-		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
+		applySettings();
 
+		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
 		Device::Play();
 
 		SleepSystem(10);
@@ -71,10 +72,16 @@ namespace Device {
 		}
 	}
 
-	void AIRSPYHF::Close()
+	void AIRSPYHF::callback(CFLOAT32* data, int len)
 	{
-		Device::Close();
-		airspyhf_close(dev);
+		RAW r = { Format::CF32, data, (int) (len * sizeof(CFLOAT32)) };
+		Send(&r, 1);
+	}
+
+	int AIRSPYHF::callback_static(airspyhf_transfer_t* tf)
+	{
+		((AIRSPYHF*)tf->ctx)->callback((CFLOAT32*)tf->samples, tf->sample_count);
+		return 0;
 	}
 
 	void AIRSPYHF::setAGC()
@@ -90,18 +97,6 @@ namespace Device {
 	void AIRSPYHF::setLNA(int s)
 	{
 		if (airspyhf_set_hf_lna(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set LNA";
-	}
-
-	void AIRSPYHF::callback(CFLOAT32* data, int len)
-	{
-		RAW r = { Format::CF32, data, (int)(len * sizeof(CFLOAT32)) };
-		Send(&r, 1);
-	}
-
-	int AIRSPYHF::callback_static(airspyhf_transfer_t* tf)
-	{
-		((AIRSPYHF*)tf->ctx)->callback((CFLOAT32 *)tf->samples, tf->sample_count);
-		return 0;
 	}
 
 	void AIRSPYHF::getDeviceList(std::vector<Description>& DeviceList)
@@ -130,6 +125,16 @@ namespace Device {
 		}
 
 		return Device::isStreaming() && airspyhf_is_streaming(dev) == 1;
+	}
+
+	void AIRSPYHF::applySettings()
+	{
+		setAGC();
+		setTreshold(treshold_high ? 1 : 0);
+		if (preamp) setLNA(1);
+
+		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
+		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
 	}
 
 	void AIRSPYHF::Print()

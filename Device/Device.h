@@ -54,11 +54,9 @@ namespace Device{
 
 		Description(std::string v, std::string p, std::string s, uint64_t h, Type t) : vendor(v), product(p), serial(s), handle(h), type(t) {}
 
-		std::string getVendor() { return vendor; }
-		std::string getProduct() { return product; }
-		std::string getSerial() { return serial; }
+		std::string toString() { return vendor + ", " + product + ", SN: " + serial; }
 
-		std::string toString() { return getVendor() + ", " + getProduct() + ", SN: " + getSerial(); }
+		std::string getSerial() { return serial; }
 		Type getType() { return type; }
 		uint64_t getHandle() { return handle; }
 

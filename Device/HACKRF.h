@@ -41,12 +41,10 @@ namespace Device {
 		int VGA_Gain = 20;
 		bool preamp = false;
 
-		void setLNA_Gain(int);
-		void setVGA_Gain(int);
-		void setPREAMP(int);
-
 		static int callback_static(hackrf_transfer* tf);
 		void callback(uint8_t*, int);
+
+		void applySettings();
 
 	public:
 

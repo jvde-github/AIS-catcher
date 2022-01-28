@@ -65,7 +65,7 @@ namespace Device {
 
 		bool isCallback() { return true; }
 
-		void pushDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Settings
 		void Print();

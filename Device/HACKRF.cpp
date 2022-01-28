@@ -31,11 +31,87 @@ namespace Device {
 
 #ifdef HASHACKRF
 
+	void HACKRF::Open(uint64_t h)
+	{
+		if(!list) throw "HACKRF: cannot open device, internal error.";
+		if (h > list->devicecount) throw "HACKRF: cannot open device.";
+
+		int result = hackrf_open_by_serial(list->serial_numbers[h],&device);
+		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device.";
+
+		setSampleRate(6000000);
+
+		Device::Open(h);
+	}
+
+	void HACKRF::Close()
+	{
+		Device::Close();
+		hackrf_close(device);
+	}
+
+	void HACKRF::Play()
+	{
+		applySettings();
+
+		if (hackrf_start_rx(device, HACKRF::callback_static, this) != HACKRF_SUCCESS) throw "HACKRF: Cannot open device";
+		Device::Play();
+
+		SleepSystem(10);
+	}
+
+	void HACKRF::Stop()
+	{
+		if (Device::isStreaming())
+		{
+			Device::Stop();
+			hackrf_stop_rx(device);
+		}
+	}
+
+	int HACKRF::callback_static(hackrf_transfer* tf)
+	{
+		((HACKRF*)tf->rx_ctx)->callback(tf->buffer, tf->valid_length);
+		return 0;
+	}
+
+	void HACKRF::callback(uint8_t* data, int len)
+	{
+		RAW r = { Format::CS8, data, len };
+		Send(&r, 1);
+	}
+
+	void HACKRF::applySettings()
+	{
+		if (hackrf_set_amp_enable(device, preamp ? 1 : 0) != HACKRF_SUCCESS) throw "HACKRF: cannot set amp.";
+		if (hackrf_set_lna_gain(device, LNA_Gain) != HACKRF_SUCCESS) throw "HACKRF: cannot set LNA gain.";
+		if (hackrf_set_vga_gain(device, VGA_Gain) != HACKRF_SUCCESS) throw "HACKRF: cannot set VGA gain.";
+
+		if (hackrf_set_sample_rate(device, sample_rate) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
+		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(sample_rate)) != HACKRF_SUCCESS) throw "HACKRF: cannot set bandwidth filter to auto.";
+		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
+	}
+
+	void HACKRF::getDeviceList(std::vector<Description>& DeviceList)
+	{
+		list = hackrf_device_list();
+
+		for (int i = 0; i < list->devicecount; i++)
+		{
+			if (list->serial_numbers[i])
+			{
+				std::stringstream serial;
+				serial << std::uppercase << list->serial_numbers[i];
+				DeviceList.push_back(Description("HACKRF", "HACKRF", serial.str(), (uint64_t)i, Type::HACKRF));
+			}
+		}
+	}
+
 	void HACKRF::Print()
 	{
 		std::cerr << "Hackrf Settings: -gf";
 		std::cerr << " preamp ";
-		if(preamp) std::cerr << "ON"; else std::cerr << "OFF";
+		if (preamp) std::cerr << "ON"; else std::cerr << "OFF";
 		std::cerr << " lna " << LNA_Gain;
 		std::cerr << " vga " << VGA_Gain;
 		std::cerr << std::endl;
@@ -60,93 +136,6 @@ namespace Device {
 		}
 		else
 			throw "Invalid setting for HACKRF.";
-
-	}
-
-	void HACKRF::Open(uint64_t h)
-	{
-		if(!list) throw "HACKRF: cannot open device, internal error.";
-		if (h > list->devicecount) throw "HACKRF: cannot open device.";
-
-		int result = hackrf_open_by_serial(list->serial_numbers[h],&device);
-		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device.";
-
-		setPREAMP(preamp ? 1 : 0);
-		setLNA_Gain(LNA_Gain);
-		setVGA_Gain(VGA_Gain);
-
-		setSampleRate(6000000);
-
-		Device::Open(h);
-	}
-
-	void HACKRF::setLNA_Gain(int a)
-	{
-		if (hackrf_set_lna_gain(device, a) != HACKRF_SUCCESS) throw "HACKRF: cannot set LNA gain.";
-	}
-
-	void HACKRF::setVGA_Gain(int a)
-	{
-		if (hackrf_set_vga_gain(device, a) != HACKRF_SUCCESS) throw "HACKRF: cannot set VGA gain.";
-	}
-
-	void HACKRF::setPREAMP(int a)
-	{
-		if (hackrf_set_amp_enable(device, a) != HACKRF_SUCCESS) throw "HACKRF: cannot set amp.";
-	}
-
-	void HACKRF::Close()
-	{
-		Device::Close();
-		hackrf_close(device);
-	}
-
-	int HACKRF::callback_static(hackrf_transfer* tf)
-	{
-		((HACKRF*)tf->rx_ctx)->callback(tf->buffer, tf->valid_length);
-		return 0;
-	}
-
-	void HACKRF::callback(uint8_t* data, int len)
-	{
-		RAW r = { Format::CS8, data, len };
-		Send(&r, 1);
-	}
-
-	void HACKRF::Play()
-	{
-		if (hackrf_set_sample_rate(device, sample_rate) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
-		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(sample_rate)) != HACKRF_SUCCESS) throw "HACKRF: cannot set bandwidth filter to auto.";
-		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
-		if (hackrf_start_rx(device, HACKRF::callback_static, this)  != HACKRF_SUCCESS) throw "HACKRF: Cannot open device";
-
-		Device::Play();
-
-		SleepSystem(10);
-	}
-
-	void HACKRF::Stop()
-	{
-		if(Device::isStreaming())
-		{
-			Device::Stop();
-			hackrf_stop_rx(device);
-		}
-	}
-
-	void HACKRF::getDeviceList(std::vector<Description>& DeviceList)
-	{
-		list = hackrf_device_list();
-
-		for (int i = 0; i < list->devicecount; i++)
-		{
-			if (list->serial_numbers[i])
-			{
-				std::stringstream serial;
-				serial << std::uppercase << list->serial_numbers[i];
-				DeviceList.push_back(Description("HACKRF", "HACKRF", serial.str(), (uint64_t)i, Type::HACKRF));
-			}
-		}
 	}
 #endif
 }

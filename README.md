@@ -29,6 +29,9 @@ For testing, do not use the development version (edge) but instead download the 
 - cmake support to resolve some earlier build annoyances. 
 - enhancement of reset conditions of decoder to improve reception 
 - slightly faster close of program for RTL-SDR
+- Airspy and Airspy HF+ now default to highest supported sample rate by device
+- Model support for a sample rate of 912K samples/second
+- RTLTCP: protocol settings 
 
 ## Usage
 ````
@@ -63,7 +66,7 @@ use: AIS-catcher [options]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off]
-	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150]
+	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]
 	[-gw WAV file: FILE [filename]
 	[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]

@@ -35,23 +35,26 @@ namespace Device {
 	{
 		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw "RTLSDR: cannot open device.";
 
-		applySettings();
 		setSampleRate(1536000);
-
 		Device::Open(h);
+	}
+
+	void RTLSDR::Close()
+	{
+		Device::Close();
+		rtlsdr_close(dev);
 	}
 
 	void RTLSDR::Play()
 	{
 		fifo.Init(BUFFER_SIZE, 2);
 
-		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw "RTLSDR: cannot set sample rate.";
-		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw "RTLSDR: cannot set frequency.";
-
-		rtlsdr_reset_buffer(dev);
+		applySettings();
 
 		Device::Play();
 		lost = false;
+
+		rtlsdr_reset_buffer(dev);
 
 		async_thread = std::thread(&RTLSDR::RunAsync, this);
 		run_thread = std::thread(&RTLSDR::Run, this);
@@ -75,10 +78,39 @@ namespace Device {
 		}
 	}
 
-	void RTLSDR::Close()
+	void RTLSDR::RunAsync()
 	{
-		Device::Close();
-		rtlsdr_close(dev);
+		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
+
+		// did we terminate too early?
+		if (isStreaming()) lost = true;
+	}
+
+	void RTLSDR::Run()
+	{
+		while (isStreaming())
+		{
+			if (fifo.Wait())
+			{
+				RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
+				Send(&r, 1);
+				fifo.Pop();
+			}
+			else
+			{
+				if (isStreaming()) std::cerr << "RTLSDR: timeout." << std::endl;
+			}
+		}
+	}
+
+	void RTLSDR::callback(CU8* buf, int len)
+	{
+		if (isStreaming() && !fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
+	}
+
+	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx)
+	{
+		((RTLSDR*)ctx)->callback(buf, len);
 	}
 
 	void RTLSDR::setTuner_GainMode(int a)
@@ -119,41 +151,6 @@ namespace Device {
 		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw "RTLSDR: cannot set tuner gain.";
 	}
 
-	void RTLSDR::callback(CU8* buf, int len)
-	{
-		if (isStreaming() && !fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
-	}
-
-	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx)
-	{
-		((RTLSDR*)ctx)->callback(buf, len);
-	}
-
-	void RTLSDR::RunAsync()
-	{
-		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
-
-		// did we terminate too early?
-		if(isStreaming()) lost = true;
-	}
-
-	void RTLSDR::Run()
-	{
-		while(isStreaming())
-		{
-			if (fifo.Wait())
-			{
-				RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
-				Send(&r, 1);
-				fifo.Pop();
-			}
-			else
-			{
-				if(isStreaming()) std::cerr << "RTLSDR: timeout." << std::endl;
-			}
-		}
-	}
-
 	void RTLSDR::setFrequencyCorrection(int ppm)
 	{
 		if (ppm != 0 && rtlsdr_set_freq_correction(dev, ppm) < 0) throw "RTLSDR: cannot set ppm error.";
@@ -167,6 +164,10 @@ namespace Device {
 		if (!tuner_AGC) setTuner_Gain(tuner_Gain);
 		if (RTL_AGC) setRTL_AGC(1);
 		if (bias_tee) setBiasTee(1);
+
+
+		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw "RTLSDR: cannot set sample rate.";
+		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw "RTLSDR: cannot set frequency.";
 	}
 
 	void RTLSDR::getDeviceList(std::vector<Description>& DeviceList)
@@ -216,7 +217,5 @@ namespace Device {
 		}
 		else throw "Invalid setting for RTLSDR.";
 	}
-
-
 #endif
 }

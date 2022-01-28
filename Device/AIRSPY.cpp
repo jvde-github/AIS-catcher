@@ -35,27 +35,30 @@ namespace Device {
 
 	void AIRSPY::Open(uint64_t h)
 	{
-		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device";
-
-		applyGainSettings();
+		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device.";
 
 		uint32_t nRates;
 		airspy_get_samplerates(dev, &nRates, 0);
+		if (nRates == 0) throw "AIRSPY: cannot get allowed sample rates.";
+
 		rates.resize(nRates);
 		airspy_get_samplerates(dev, rates.data(), nRates);
-		std::sort(rates.begin(), rates.end());
-
-		setSampleRate(rates[0]);
+		setSampleRate(*std::max_element(rates.begin(), rates.end()));
 
 		Device::Open(h);
 	}
 
+	void AIRSPY::Close()
+	{
+		Device::Close();
+		airspy_close(dev);
+	}
+
 	void AIRSPY::Play()
 	{
-		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
-		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
-		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw "AIRSPY: Cannot open device";
+		applySettings();
 
+		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw "AIRSPY: Cannot open device";
 		Device::Play();
 
 		SleepSystem(10);
@@ -70,10 +73,16 @@ namespace Device {
 		}
 	}
 
-	void AIRSPY::Close()
+	void AIRSPY::callback(CFLOAT32* data, int len)
 	{
-		Device::Close();
-		airspy_close(dev);
+		RAW r = { Format::CF32 , data, (int) (len * sizeof(CFLOAT32)) };
+		Send(&r, 1);
+	}
+
+	int AIRSPY::callback_static(airspy_transfer_t* tf)
+	{
+		((AIRSPY*)tf->ctx)->callback((CFLOAT32*)tf->samples, tf->sample_count);
+		return 0;
 	}
 
 	void AIRSPY::setLNA_AGC(int a)
@@ -115,18 +124,6 @@ namespace Device {
 		if (airspy_set_linearity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Linearity gain.";
 	}
 
-	void AIRSPY::callback(CFLOAT32* data, int len)
-	{
-		RAW r = { Format::CF32 , data, (int)(len * sizeof(CFLOAT32)) };
-		Send(&r, 1 );
-	}
-
-	int AIRSPY::callback_static(airspy_transfer_t* tf)
-	{
-		((AIRSPY*)tf->ctx)->callback((CFLOAT32 *)tf->samples, tf->sample_count);
-		return 0;
-	}
-
 	void AIRSPY::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		std::vector<uint64_t> serials;
@@ -155,7 +152,7 @@ namespace Device {
 		return Device::isStreaming() && airspy_is_streaming(dev) == 1;
 	}
 
-	void AIRSPY::applyGainSettings()
+	void AIRSPY::applySettings()
 	{
 		switch (mode)
 		{
@@ -179,6 +176,9 @@ namespace Device {
 			break;
 		}
 		if(bias_tee) setBiasTee(true);
+
+		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
+		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
 	}
 
 	void AIRSPY::Print()

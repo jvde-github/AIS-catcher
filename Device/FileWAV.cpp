@@ -26,24 +26,6 @@ SOFTWARE.
 
 namespace Device {
 
-	void WAVFile::Print()
-	{
-		std::cerr << "WAV file Settings: -gw";
-		std::cerr << " file " << filename << std::endl;;
-	}
-
-	void WAVFile::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-
-		if (option == "FILE")
-		{
-			filename = arg;
-			return;
-		}
-		throw " Invalid setting for FILE WAV.";
-	}
-
 	//---------------------------------------
 	// WAV file, FLOAT only
 
@@ -63,21 +45,6 @@ namespace Device {
 		uint32_t dataID;
 		uint32_t dataSize;
 	};
-
-	bool WAVFile::isStreaming()
-	{
-		if(file.eof() || !Device::isStreaming()) return false;
-
-		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
-
-		buffer.assign(buffer_size, 0);
-		file.read((char*)buffer.data(), buffer_size);
-
-		RAW r = { Format::CF32 , buffer.data(), (int)buffer.size() };
-		Send(&r, 1);
-
-		return true;
-	}
 
 	void WAVFile::Open(uint64_t h)
 	{
@@ -108,5 +75,39 @@ namespace Device {
 
 		file.close();
 	}
+
+	bool WAVFile::isStreaming()
+	{
+		if(file.eof() || !Device::isStreaming()) return false;
+
+		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
+
+		buffer.assign(buffer_size, 0);
+		file.read((char*)buffer.data(), buffer_size);
+
+		RAW r = { Format::CF32 , buffer.data(), (int)buffer.size() };
+		Send(&r, 1);
+
+		return true;
+	}
+
+	void WAVFile::Print()
+	{
+		std::cerr << "WAV file Settings: -gw";
+		std::cerr << " file " << filename << std::endl;;
+	}
+
+	void WAVFile::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		if (option == "FILE")
+		{
+			filename = arg;
+			return;
+		}
+		throw " Invalid setting for FILE WAV.";
+	}
+
 }
 
