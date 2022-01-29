@@ -42,7 +42,7 @@ namespace Device {
 
 		rates.resize(nRates);
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
-		setSampleRate(*std::max_element(rates.begin(), rates.end()));
+		setSampleRate(*std::min_element(rates.begin(), rates.end()));
 
 		Device::Open(h);
 	}
