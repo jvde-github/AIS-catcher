@@ -42,12 +42,16 @@ namespace Device {
 	{
 
 		enum class PROTOCOL { NONE, RTLTCP } Protocol = PROTOCOL::RTLTCP;
-		// Device settings, RTL_TCP
+
+		// Protocol: RTL_TCP
 		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
+
+		// Protocol: NONE
+		Format format = Format::CF32;
 
 		SOCKET sock = -1;
 
