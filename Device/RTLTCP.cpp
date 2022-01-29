@@ -146,19 +146,20 @@ namespace Device {
 				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
 				break;
 			}
-			else if (!fifo.Push(data.data(), len)) std::cerr << "RTLTCP: buffer overrun." << std::endl; 
+			else if (isStreaming() && !fifo.Push(data.data(), len)) std::cerr << "RTLTCP: buffer overrun." << std::endl;
 		}
 	}
 
 	void RTLTCP::Run()
 	{
 		std::vector<char> output(fifo.BlockSize());
+		RAW r = { format, NULL, fifo.BlockSize() };
 
 		while (isStreaming())
 		{
 			if (fifo.Wait())
 			{
-				RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
+				r.data = fifo.Front();
 				Send(&r, 1);
 				fifo.Pop();
 			}
@@ -190,6 +191,8 @@ namespace Device {
 
 			setParameterRTLTCP(2, sample_rate);
 			setParameterRTLTCP(1, frequency);
+
+			format = Format::CU8;
 		}
 	}
 
