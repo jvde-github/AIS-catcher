@@ -26,12 +26,15 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for ***RSP1A
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
 **Edge version**:
+
+- ...
+
+Version **0.34**:
 - cmake support to resolve some earlier build annoyances. 
 - enhancement of reset conditions of decoder to improve reception 
 - slightly faster close of program for RTL-SDR
-- Airspy and Airspy HF+ now default to highest supported sample rate by device
 - Model support for a sample rate of 912K samples/second
-- RTLTCP: protocol settings 
+- RTLTCP: protocol setting (option RTLTCP and NONE for connection to GnuRadio TCP sink).
 
 ## Usage
 ````
