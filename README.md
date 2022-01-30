@@ -22,9 +22,8 @@ A Windows binary version of **v0.34** (ex SDRplay support) is available for [64-
 Recent releases:
  | Version | Win32  | x64 |
  | :--- | :--- | :---: | 
+  |v0.34| [ZIP](https://drive.google.com/file/d/1ivz0Pk1KsGfnq5k0E723nXUGfz79ya-d/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1yfjEnY9fqS6ifmqaatl3EzISdhliIk-j/view?usp=sharing) | 
  |v0.33 |  [ZIP](https://drive.google.com/file/d/1KFvvWQi47QquOl-jDPRK8mpmUnfQaM91/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1oE0rTMU7DF9pFzw2Pt1SAMDm-UWILJrT/view?usp=sharing)  | 
- |v0.34| [ZIP](https://drive.google.com/file/d/1ivz0Pk1KsGfnq5k0E723nXUGfz79ya-d/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1yfjEnY9fqS6ifmqaatl3EzISdhliIk-j/view?usp=sharing) | 
- 
  
 If you are looking for a Windows binary supporting SDRplay API 3.09 for ***RSP1A only***, please get in contact with [me](mailto:jvde.github@gmail.com). Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
