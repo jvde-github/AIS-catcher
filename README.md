@@ -121,7 +121,9 @@ sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signe
 
 ### Running on hardware with performance limitations
 
-AIS-catcher implements a trick to speed up fixed point downsampling for RTLSDR input at 1536K samples/second. Furthermore a new model was introduced which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model.
+AIS-catcher implements a trick to speed up downsampling for RTLSDR input at 1536K samples/second by using fixed point calculations (```-m 2 -go FP_DS on```). In essence the downsampling is done 
+in 16 bit integers performed in parallel for the I and Q channel using only 32 bit integers.
+Furthermore a new model was introduced which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model (```-m 2 -go PS_EMA on```).
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/raspberry.jpg)
 
@@ -357,6 +359,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
+- Marine VHF audio and DSC decoding from SDR input signal
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, large rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
