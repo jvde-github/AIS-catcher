@@ -68,21 +68,25 @@ namespace AIS
 		// 2304K
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
+			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK;
+			if(fixedpointDS) convert.outCU8 >> DS8_Fixed >> DSK;
+			DSK >> ROT;
 			break;
 		case 2000000:
 		case 1920000:
 			US.setParams(sample_rate, 2304000);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> US;
+			if(fixedpointDS) convert.outCU8 >> DS8_Fixed >> US;
+			US >> DSK >> ROT;
 			break;
 
 
 		// 2^4
 		case 1536000:
 			physical >> convert;
+			convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			if(fixedpointDS) convert.outCU8 >> DS16_Fixed >> ROT;
-			else convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
 		// 1152K

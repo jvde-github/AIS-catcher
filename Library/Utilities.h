@@ -213,11 +213,13 @@ namespace Util
 				return;
 			}
 
-			if (raw->format == Format::CF32)
+			if (raw->format == Format::CF32 && out.isConnected())
 			{
 				out.Send((CFLOAT32*)raw->data, raw->size / sizeof(CFLOAT32) );
 				return;
 			}
+
+			if(!out.isConnected()) return;
 
 			int size = 0;
 
