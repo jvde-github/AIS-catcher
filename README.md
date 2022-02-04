@@ -10,8 +10,13 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 ### Disclaimer
 
-```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project and not tested and designed for reliability and correctness. You can play with the software but it is the user's responsibility to use it prudently and in line with local regulations and laws. So, in summary, DO NOT rely upon this software in any way including for navigation and/or safety of life or property purposes.
-
+```AIS-catcher```  is created for research and educational purposes under the MIT license. It is a hobby project and not tested and designed for reliability and correctness. 
+You can play with the software but it is the user's responsibility to use it prudently. So,  DO NOT rely upon this software in any way including for navigation 
+and/or safety of life or property purposes.
+There are variations in the legislation concerning radio reception in the different administrations around the world. 
+It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
+It is specifically forbidden to use this software for any illegal purpose whatsoever. 
+This is hobby and research software for use only in those regions where such use is permitted.
 
 ## Installation and Windows Binary
 
@@ -69,7 +74,7 @@ use: AIS-catcher [options]
 
 	Device specific settings:
 
-	[-gr RTLSDRs: TUNER [auto/0.0-50.0] ASYNC [on/off] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
+	[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
 	[-p xx equivalent to -gr FREQOFFSET xx]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]

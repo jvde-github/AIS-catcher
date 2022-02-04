@@ -107,7 +107,7 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\tDevice specific settings:" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-gr RTLSDRs: TUNER [auto/0.0-50.0] ASYNC [on/off] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
+	std::cerr << "\t[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]" << std::endl;
 	std::cerr << "\t[-p xx equivalent to -gr FREQOFFSET xx]" << std::endl;
 	std::cerr << "\t[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
 	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
