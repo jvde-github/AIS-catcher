@@ -38,6 +38,7 @@ For testing, do not use the development version (edge) but instead download the 
 
 **Edge version**:
 
+- Fast fixed point downsampling for RTL-SDR dongles extended to 1920K and 2304K
 - ...
 
 Version **0.34**:
