@@ -78,7 +78,7 @@ namespace Demod
 
 		static const int nSearch = 2;
 
-		const FLOAT32 weight = 0.875f;
+		const FLOAT32 weight = 0.88f;
 
 		FLOAT32 ma[nPhases];
 		char bits[nPhases];
