@@ -239,7 +239,7 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		if (!OptmizeSpeed)
+		if (!PS_EMA)
 		{
 			CD_a.resize(nSymbolsPerSample);
 			CD_b.resize(nSymbolsPerSample);
@@ -261,7 +261,7 @@ namespace AIS
 			DEC_a[i].setChannel('A');
 			DEC_b[i].setChannel('B');
 
-			if (!OptmizeSpeed)
+			if (!PS_EMA)
 			{
 				CD_a[i].setParams(nHistory, nDelay);
 				CD_b[i].setParams(nHistory, nDelay);
@@ -297,7 +297,7 @@ namespace AIS
 
 		if (option == "PS_EMA")
 		{
-			OptmizeSpeed = Util::Parse::Switch(arg);
+			PS_EMA = Util::Parse::Switch(arg);
 		}
 		else
 			ModelFrontend::Set(option, arg);

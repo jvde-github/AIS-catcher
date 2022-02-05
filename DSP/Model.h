@@ -130,10 +130,10 @@ namespace AIS
 		int nHistory = 12;
 		int nDelay = 3;
 
-		bool OptmizeSpeed = false;
+		bool PS_EMA = true;
 
 	public:
-		
+
 		void buildModel(int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
 	};
