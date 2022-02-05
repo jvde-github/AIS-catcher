@@ -76,9 +76,9 @@ namespace Demod
 	{
 		int nDelay = 0;
 
-		static const int nSearch = 2;
+		static const int nSearch = 1;
 
-		const FLOAT32 weight = 0.88f;
+		const FLOAT32 weight = 0.85f;
 
 		FLOAT32 ma[nPhases];
 		char bits[nPhases];
