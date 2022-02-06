@@ -69,7 +69,6 @@ namespace AIS
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::Upsample US;
 		DSP::FilterCIC5 FCIC5_a, FCIC5_b;
-		DSP::FilterComplex FFIR_a, FFIR_b;
 
 		DSP::Downsample16Fixed DS16_Fixed;
 		DSP::Downsample8Fixed DS8_Fixed;
