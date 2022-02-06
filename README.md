@@ -39,7 +39,7 @@ For testing, do not use the development version (edge) but instead download the 
 **Edge version**:
 
 - Fast fixed point downsampling for RTL-SDR dongles extended to 1920K and 2304K
-- Fine tuning of EMA model, EMA model performs now at least as good and is faster (see validation section), now default model
+- Fine tuning of EMA model, EMA model seems to perform now at least as good and is faster (see validation section) -> EMA model is now default
 - ....
 
 Version **0.34**:
