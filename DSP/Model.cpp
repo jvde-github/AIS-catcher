@@ -40,24 +40,49 @@ namespace AIS
 		// 2^7
 		case 12288000:
 			physical >> convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS32_CU8 >> DS2_2;
+				convert.outCS8 >> DS32_CS8 >> DS2_2;
+			}
 			break;
 		case 10000000:
 			US.setParams(sample_rate, 12288000);
 			physical >> convert >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS32_CU8 >> US;
+				convert.outCS8 >> DS32_CS8 >> US;
+			}
 			break;
 
 		// 2^6
 		case 6144000:
 			physical >> convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS32_CU8 >> DS2_1;
+				convert.outCS8 >> DS32_CS8 >> DS2_1;
+			}
 			break;
 		case 6000000:
 			US.setParams(sample_rate, 6144000);
 			physical >> convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS32_CU8 >> US;
+				convert.outCS8 >> DS32_CS8 >> US;
+			}
 			break;
 
 		// 2^5
 		case 3072000:
 			physical >> convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS16_CU8 >> DS2_1;
+				convert.outCS8 >> DS16_CS8 >> DS2_1;
+			}
 			break;
 		case 2500000:
 		case 3000000:
@@ -69,14 +94,22 @@ namespace AIS
 		case 2304000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
-			if(fixedpointDS) convert.outCU8 >> DS8_Fixed >> DSK;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS8_CU8 >> DSK;
+				convert.outCS8 >> DS8_CS8 >> DSK;
+			}
 			break;
 		case 2000000:
 		case 1920000:
 			US.setParams(sample_rate, 2304000);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
-			if(fixedpointDS) convert.outCU8 >> DS8_Fixed >> US;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS8_CU8 >> US;
+				convert.outCS8 >> DS8_CS8 >> US;
+			}
 			break;
 
 
@@ -84,7 +117,11 @@ namespace AIS
 		case 1536000:
 			physical >> convert;
 			convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			if(fixedpointDS) convert.outCU8 >> DS16_Fixed >> ROT;
+			if (fixedpointDS)
+			{
+				convert.outCU8 >> DS16_CU8 >> ROT;
+				convert.outCS8 >> DS16_CS8 >> ROT;
+			}
 			break;
 
 		// 1152K
