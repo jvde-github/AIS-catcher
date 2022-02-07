@@ -38,8 +38,8 @@ For testing, do not use the development version (edge) but instead download the 
 
 **Edge version**:
 
-- Fast fixed point downsampling for RTL-SDR dongles extended to 1920K and 2304K
-- Fine tuning of EMA model, EMA model seems to perform now at least as good and is faster (see validation section) -> EMA model is now default
+- Fast fixed point downsampling for RTL-SDR dongles extended to CS8 and more sample rates (i.e. support for HackRF).
+- Fine tuning of EMA model, EMA model seems to perform now at least as good and is faster (see validation section) -> EMA model is now default model.
 - ....
 
 Version **0.34**:
@@ -148,7 +148,7 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 [AIS engine (speed optimized) v0.31]	: 7722.32 ms
 ```
-This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with very limited drops.
+This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with reasonable processor load.
 
 ### Connecting to GNU Radio via ZMQ
 
@@ -200,7 +200,7 @@ We can run AIS-catcher on a RAW audio file as in this [tutorial](https://github.
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
 AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
 ```
-On this file we should extract roughly ``360`` AIVDM lines. Notice that with switch ```-m 3``` on the command line AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
+On this file we should extract roughly ``362`` AIVDM lines. Notice that with switch ```-m 3``` on the command line AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
 ```console
 gnuais -l helsinki-210-messages.raw
 ```
