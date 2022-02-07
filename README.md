@@ -38,7 +38,7 @@ For testing, do not use the development version (edge) but instead download the 
 
 **Edge version**:
 
-- Fast fixed point downsampling for RTL-SDR dongles extended to CS8 and more sample rates (i.e. support for HackRF).
+- Fast fixed point downsampling extended to CS8 datatype (signed bytes) and more sample rates (i.e. support for HackRF).
 - Fine tuning of EMA model, EMA model seems to perform now at least as good and is faster (see validation section) -> EMA model is now default model.
 - ....
 
