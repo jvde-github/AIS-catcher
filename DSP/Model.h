@@ -70,8 +70,13 @@ namespace AIS
 		DSP::Upsample US;
 		DSP::FilterCIC5 FCIC5_a, FCIC5_b;
 
-		DSP::Downsample16Fixed DS16_Fixed;
-		DSP::Downsample8Fixed DS8_Fixed;
+		// fixed point downsamplers
+		DSP::Downsample32_CU8 DS32_CU8;
+		DSP::Downsample16_CU8 DS16_CU8;
+		DSP::Downsample8_CU8 DS8_CU8;
+		DSP::Downsample32_CS8 DS32_CS8;
+		DSP::Downsample16_CS8 DS16_CS8;
+		DSP::Downsample8_CS8 DS8_CS8;
 
 		Util::ConvertRAW convert;
 

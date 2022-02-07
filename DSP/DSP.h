@@ -238,11 +238,34 @@ namespace DSP
 
 		int Run(uint32_t*, int, int);
 		int Run(uint8_t*, uint32_t*, int, int);
+		int Run(int8_t*, uint32_t*, int, int);
 		int Run(uint32_t*, CFLOAT32*, int, int);
 
 	};
 
-	class Downsample16Fixed : public SimpleStreamInOut<CU8, CFLOAT32>
+	class Downsample32_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+		std::vector <uint32_t> buffer;
+
+		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
+
+	public:
+		void Receive(const CU8* data, int len);
+	};
+
+	class Downsample32_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+		std::vector <uint32_t> buffer;
+
+		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
+
+	public:
+		void Receive(const CS8* data, int len);
+	};
+
+	class Downsample16_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
 		std::vector <uint32_t> buffer;
@@ -253,7 +276,18 @@ namespace DSP
 		void Receive(const CU8* data, int len);
 	};
 
-	class Downsample8Fixed : public SimpleStreamInOut<CU8, CFLOAT32>
+	class Downsample16_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+		std::vector <uint32_t> buffer;
+
+		DS_UINT16 DS1, DS2, DS3, DS4;
+
+	public:
+		void Receive(const CS8* data, int len);
+	};
+
+	class Downsample8_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
 	{
 		std::vector <CFLOAT32> output;
 		std::vector <uint32_t> buffer;
@@ -262,5 +296,16 @@ namespace DSP
 
 	public:
 		void Receive(const CU8* data, int len);
+	};
+
+	class Downsample8_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+		std::vector <uint32_t> buffer;
+
+		DS_UINT16 DS1, DS2, DS3;
+
+	public:
+		void Receive(const CS8* data, int len);
 	};
 }

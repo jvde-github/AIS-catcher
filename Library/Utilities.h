@@ -201,6 +201,7 @@ namespace Util
 	public:
 
 		Connection<CU8> outCU8;
+		Connection<CS8> outCS8;
 
 		void Receive(const RAW* raw, int len)
 		{
@@ -210,6 +211,12 @@ namespace Util
 			if (raw->format == Format::CU8 && outCU8.isConnected())
 			{
 				outCU8.Send((CU8*)raw->data, raw->size/2);
+				return;
+			}
+
+			if (raw->format == Format::CS8 && outCS8.isConnected())
+			{
+				outCS8.Send((CS8*)raw->data, raw->size / 2);
 				return;
 			}
 

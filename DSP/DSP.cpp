@@ -313,9 +313,11 @@ namespace DSP
 		}
 	}
 
+	// ----------------------------------------------------------------------------
 	// CIC5 downsampling optimized for Raspberry Pi 1
 	// Idea: I and Q signals can be downsampled in parallel and, if stored
 	// as int16, can be worked in parallel using int32.
+	// ----------------------------------------------------------------------------
 
 	int DS_UINT16::Run(uint32_t* data, int len, int shift)
 	{
@@ -356,6 +358,28 @@ namespace DSP
 		return len;
 	}
 
+	// special version of the above but includes the initial conversion from CS8 to avoid extra loop
+	int DS_UINT16::Run(int8_t* in, uint32_t* out, int len, int shift)
+	{
+		uint32_t z, r0, r1, r2, r3, r4;
+		uint32_t mask = 0xFFFFU >> shift; mask |= mask << 16;
+		uint32_t mask_uint = (1 << 7) | (1 << 23);
+
+		len >>= 1;
+
+		for (int i = 0; i < len; i++)
+		{
+			z = (uint8_t)*in++; z |= (uint32_t)((uint8_t)*in++) << 16;
+			z ^= mask_uint;
+			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
+			*out++ = (z >> shift) & mask;
+			z = (uint8_t)*in++; z |= (uint32_t)((uint8_t)*in++) << 16;
+			z ^= mask_uint;
+			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
+		}
+		return len;
+	}
+
 	// special version of the above but includes the last conversion to CFLOAT32
 	int DS_UINT16::Run(uint32_t* in, CFLOAT32* out, int len, int shift)
 	{
@@ -377,7 +401,40 @@ namespace DSP
 		return len;
 	}
 
-	void Downsample16Fixed::Receive(const CU8* data, int len)
+	// Aggregators
+	void Downsample32_CU8::Receive(const CU8* data, int len)
+	{
+		assert(len % 32 == 0);
+
+		if (output.size() < len / 32) output.resize(len / 32);
+		if (buffer.size() < len / 2) buffer.resize(len / 2);
+
+		uint32_t* buf = buffer.data();
+
+		len = DS1.Run((uint8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
+		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, len, 5);
+		len = DS5.Run(buf, output.data(), len, 0);
+
+		out.Send(output.data(), len);
+	};
+
+	void Downsample32_CS8::Receive(const CS8* data, int len)
+	{
+		assert(len % 32 == 0);
+
+		if (output.size() < len / 32) output.resize(len / 32);
+		if (buffer.size() < len / 2) buffer.resize(len / 2);
+
+		uint32_t* buf = buffer.data();
+
+		len = DS1.Run((int8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
+		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, len, 5);
+		len = DS5.Run(buf, output.data(), len, 0);
+
+		out.Send(output.data(), len);
+	};
+
+	void Downsample16_CU8::Receive(const CU8* data, int len)
 	{
 		assert(len % 16 == 0);
 
@@ -392,7 +449,22 @@ namespace DSP
 		out.Send(output.data(), len);
 	};
 
-	void Downsample8Fixed::Receive(const CU8* data, int len)
+	void Downsample16_CS8::Receive(const CS8* data, int len)
+	{
+		assert(len % 16 == 0);
+
+		if (output.size() < len / 16) output.resize(len / 16);
+		if (buffer.size() < len / 2) buffer.resize(len / 2);
+
+		uint32_t* buf = buffer.data();
+
+		len = DS1.Run((int8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
+		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, output.data(), len, 0);
+
+		out.Send(output.data(), len);
+	};
+
+	void Downsample8_CU8::Receive(const CU8* data, int len)
 	{
 		assert(len % 8 == 0);
 
@@ -402,6 +474,21 @@ namespace DSP
 		uint32_t* buf = buffer.data();
 
 		len = DS1.Run((uint8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
+		len = DS3.Run(buf, output.data(), len, 0);
+
+		out.Send(output.data(), len);
+	};
+
+	void Downsample8_CS8::Receive(const CS8* data, int len)
+	{
+		assert(len % 8 == 0);
+
+		if (output.size() < len / 8) output.resize(len / 8);
+		if (buffer.size() < len / 2) buffer.resize(len / 2);
+
+		uint32_t* buf = buffer.data();
+
+		len = DS1.Run((int8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
 		len = DS3.Run(buf, output.data(), len, 0);
 
 		out.Send(output.data(), len);
