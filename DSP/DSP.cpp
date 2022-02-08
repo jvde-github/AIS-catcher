@@ -363,7 +363,7 @@ namespace DSP
 	{
 		uint32_t z, r0, r1, r2, r3, r4;
 		uint32_t mask = 0xFFFFU >> shift; mask |= mask << 16;
-		uint32_t mask_uint = (1 << 7) | (1 << 23);
+		const uint32_t mask_uint = (1 << 7) | (1 << 23);
 
 		len >>= 1;
 
@@ -385,7 +385,7 @@ namespace DSP
 	{
 		uint32_t z, r0, r1, r2, r3, r4;
 		uint32_t mask = 0xFFFFU >> shift; mask |= mask << 16;
-
+		const uint32_t mask_uint = (1 << 15) | (1<<31);
 		len >>= 1;
 
 		for (int i = 0; i < len; i++)
@@ -393,8 +393,11 @@ namespace DSP
 			z = *in++;
 			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
 			z = (z >> shift) & mask;
-			out[i].real(((int32_t)(z & 0xFFFFU) - 32768) / 32768.0f);
-			out[i].imag(((int32_t)(z >> 16) - 32768) / 32768.0f);
+
+			z ^= mask_uint; // uint to int in parallel
+			out[i].real( ( (int16_t)(z & 0xFFFFU)) / 32768.0f);
+			out[i].imag( ( (int16_t)(z >> 16))  / 32768.0f);
+
 			z = *in++;
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}
