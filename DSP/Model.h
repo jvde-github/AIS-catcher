@@ -134,7 +134,7 @@ namespace AIS
 		int nHistory = 12;
 		int nDelay = 3;
 
-		bool PS_EMA = true;
+		bool PS_EMA = false;
 
 	public:
 
