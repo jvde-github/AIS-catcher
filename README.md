@@ -38,7 +38,21 @@ For testing, do not use the development version (edge) but instead download the 
 
 **Edge version**:
 
-- Fast fixed point downsampling extended to CS8 datatype (signed bytes) and more sample rates (i.e. support for HackRF).
+- Fast fixed point downsampling extended to CS8 datatype (signed bytes) and more sample rates (i.e. support for HackRF). We illustrate on an Ubuntu laptop with an IQ sampled file at a rate of 12.288 MHz in 8-bit signed integers. The results without fixed point downsampling:
+```
+AIS-catcher -r CS8 moscow-12.288M.raw -s 12288000 -b -v -q 
+...
+[AIS engine v0.34]:                      212 msgs at 16.8 msg/s
+[AIS engine v0.34]:                      6001.74 ms
+```
+Hence, AIS-catcher identifies 212 messages with a decoding time of 6 seconds. Using the ```-F``` switch reduces the computation time to 3.1 seconds without an impact to the number of found messages in this case:
+```
+AIS-catcher -r CS8 moscow-12.288M.raw -s 12288000 -b -v -q -F
+...
+[AIS engine v0.34]:                      212 msgs at 31.2 msg/s
+[AIS engine v0.34]:                      3131.34 ms
+
+```
 - Fine tuning of EMA model, EMA model seems to perform now at least as good and is faster (see validation section) -> EMA model is now default model.
 - ....
 
