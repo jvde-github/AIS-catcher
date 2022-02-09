@@ -316,7 +316,8 @@ namespace DSP
 	// ----------------------------------------------------------------------------
 	// CIC5 downsampling optimized for Raspberry Pi 1
 	// Idea: I and Q signals can be downsampled in parallel and, if stored
-	// as int16, can be worked in parallel using int32.
+	// as int16, can be worked in parallel with int32 operations.
+	// Self invented so might be more clever approaches
 	// ----------------------------------------------------------------------------
 
 	int DS_UINT16::Run(uint32_t* data, int len, int shift)
@@ -370,7 +371,7 @@ namespace DSP
 		for (int i = 0; i < len; i++)
 		{
 			z = (uint8_t)*in++; z |= (uint32_t)((uint8_t)*in++) << 16;
-			z ^= mask_uint;
+			z ^= mask_uint; // from int to uint in parallel by flipping sign bits
 			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
 			*out++ = (z >> shift) & mask;
 			z = (uint8_t)*in++; z |= (uint32_t)((uint8_t)*in++) << 16;
@@ -394,9 +395,9 @@ namespace DSP
 			MA1(0); MA1(1); MA1(2); MA1(3); MA1(4);
 			z = (z >> shift) & mask;
 
-			z ^= mask_uint; // uint to int in parallel
-			out[i].real( ( (int16_t)(z & 0xFFFFU)) / 32768.0f);
-			out[i].imag( ( (int16_t)(z >> 16))  / 32768.0f);
+			z ^= mask_uint; // uint to int in parallel by flipping sign bit
+			out[i].real( ((int16_t)(z & 0xFFFFU)) / 32768.0f);
+			out[i].imag( ((int16_t)(z >> 16))  / 32768.0f);
 
 			z = *in++;
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
@@ -404,7 +405,7 @@ namespace DSP
 		return len;
 	}
 
-	// Aggregators
+	// Multi-pass aggregators
 	void Downsample32_CU8::Receive(const CU8* data, int len)
 	{
 		assert(len % 32 == 0);
