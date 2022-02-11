@@ -233,7 +233,7 @@ endif()
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_HACKRF libhackrf)
-	find_path(HACKRF_INCLUDE_DIR hackrf.h HINT ${PKG_HACKRF_INCLUDE_DIRS})
+	find_path(HACKRF_INCLUDE_DIR hackrf.h HINT ${PKG_HACKRF_INCLUDE_DIRS} /usr/include/libhackrf)
 	find_library(HACKRF_LIBRARY hackrf HINT ${PKG_HACKRF_LIBRARY_DIRS})
 
 	if(HACKRF_INCLUDE_DIR AND HACKRF_LIBRARY)
