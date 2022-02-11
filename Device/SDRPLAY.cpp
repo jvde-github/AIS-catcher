@@ -213,6 +213,10 @@ namespace Device {
 			{
 				DeviceList.push_back(Description("SDRPLAY", "RSP1A", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
 			}
+			if(devices[i].hwVer == SDRPLAY_RSPdx_ID)
+			{
+				DeviceList.push_back(Description("SDRPLAY", "RSPDX", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
+			}
 		}
 
 		sdrplay_api_UnlockDeviceApi();
