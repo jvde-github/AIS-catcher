@@ -206,9 +206,13 @@ namespace Device {
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
 		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
 
-		for (int i = 0; i < DeviceCount; i++) 
+		for (int i = 0; i < DeviceCount; i++)
 		{
 			// for now ....
+			if(devices[i].hwVer == SDRPLAY_RSP1_ID)
+			{
+				DeviceList.push_back(Description("SDRPLAY", "RSP1", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
+			}
 			if(devices[i].hwVer == SDRPLAY_RSP1A_ID)
 			{
 				DeviceList.push_back(Description("SDRPLAY", "RSP1A", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
