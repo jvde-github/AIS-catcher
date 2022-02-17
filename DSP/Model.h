@@ -131,6 +131,8 @@ namespace AIS
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::Deinterleave<CFLOAT32> S_a, S_b;
 
+	protected:
+
 		int nHistory = 12;
 		int nDelay = 3;
 
@@ -146,9 +148,12 @@ namespace AIS
 	class ModelChallenger : public ModelDefault
 	{
 	public:
-		ModelChallenger(int h = 8, int d = 0)
+		ModelChallenger(int h = 4, int d = 2)
 		{
+			nDelay = d;
+			nHistory = h;
 			setName("Challenger model");
+			PS_EMA = false;
 		}
 	};
 
