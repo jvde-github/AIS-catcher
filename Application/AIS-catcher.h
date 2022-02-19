@@ -22,5 +22,5 @@ SOFTWARE.
 
 #pragma once
 
-#define VERSION     "v0.34"
+#define VERSION     "v0.35"
 #define COPYRIGHT   "jvde-github and other contributors"
