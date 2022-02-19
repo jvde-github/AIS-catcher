@@ -37,35 +37,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for ***RSP1A
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-Version **0.35**:
-
-- Fast fixed point downsampling extended to CS8 datatype (signed bytes) and more sample rates (i.e. support for HackRF). We illustrate on an Ubuntu laptop with an IQ sampled file at a rate of 12.288 MHz in 8-bit signed integers. The results without fixed point downsampling:
-```
-AIS-catcher -r CS8 moscow-12.288M.raw -s 12288000 -b -v -q 
-...
-[AIS engine v0.34]:                      212 msgs at 16.8 msg/s
-[AIS engine v0.34]:                      6001.74 ms
-```
-Hence, AIS-catcher identifies 212 messages with a decoding time of 6 seconds. Using the ```-F``` switch reduces the computation time to 3.1 seconds without an impact to the number of found messages in this case:
-```
-AIS-catcher -r CS8 moscow-12.288M.raw -s 12288000 -b -v -q -F
-...
-[AIS engine v0.34]:                      212 msgs at 31.2 msg/s
-[AIS engine v0.34]:                      3131.34 ms
-```
-- Fine tuning of EMA model, EMA model seems to perform now at least as good and is faster.
-- Fix CMAKE file for hackrf support on Raspberry Pi
-- Fix CMAKE file for issue with compilation including ZeroMQ support on MacOS.
-- Exponential moving average model is now defaullt (e.g. ```-m 2 -go PS_EMA on```)
-- SDRPlay RSP1 and SDRPlay RSPDX support (only DX tested on Antenna A)
-- ....
-
-Version **0.34**:
-- cmake support to resolve some earlier build annoyances. 
-- enhancement of reset conditions of decoder to improve reception 
-- slightly faster close of program for RTL-SDR
-- Model support for a sample rate of 912K samples/second
-- RTLTCP: protocol setting (option RTLTCP and NONE for connection to GnuRadio TCP sink).
+Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
 ## Usage
 ````
