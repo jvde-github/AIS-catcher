@@ -36,7 +36,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for ***RSP1A
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
-**Edge version**:
+Version **0.35**:
 
 - Fast fixed point downsampling extended to CS8 datatype (signed bytes) and more sample rates (i.e. support for HackRF). We illustrate on an Ubuntu laptop with an IQ sampled file at a rate of 12.288 MHz in 8-bit signed integers. The results without fixed point downsampling:
 ```
