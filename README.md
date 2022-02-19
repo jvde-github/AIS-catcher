@@ -171,17 +171,17 @@ AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of three decoding models (on a Raspberry Pi 4B):
 ```
-[AIS engine v0.31]		: 38 msgs at 6.2 msg/s
-[Standard (non-coherent)]	: 4 msgs at 0.7 msg/s
-[Base (non-coherent)]		: 3 msgs at 0.5 msg/s
+[AIS engine v0.35]:                      38 msgs at 6.3 msg/s
+[Standard (non-coherent)]:               4 msgs at 0.7 msg/s
+[Base (non-coherent)]:                   3 msgs at 0.5 msg/s
 ```
 ```
-[AIS engine v0.31]		: 1139.2 ms
-[Standard (non-coherent)]	: 900.099 ms
-[Base (non-coherent)]		: 837.641 ms
+[AIS engine v0.35]:                      1036.54 ms
+[Standard (non-coherent)]:               932.47 ms
+[Base (non-coherent)]:                   859.065 ms
 ```
 In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
-This is typical when there are few messages with poor quality. However, it increases the decoding time and has a higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
+This is typical when there are few messages with poor quality. However, it increases the decoding time a bit and has a slightly higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
 
 ### Input from FM discriminator
