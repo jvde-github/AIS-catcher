@@ -27,6 +27,7 @@ A Windows binary version of **v0.34** (ex SDRplay support) is available for 64-B
 Recent releases:
  | Version | Win32  | x64 |
  | :--- | :--- | :---: | 
+   |v0.35| [ZIP](https://drive.google.com/file/d/1fvH7ez_jUx6d_pmMcuX0kMgUU92Wwizw/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1DDjjbNBlQdgaxfJiL-tjLubSGFtn2THI/view?usp=sharing) | 
   |v0.34| [ZIP](https://drive.google.com/file/d/1ivz0Pk1KsGfnq5k0E723nXUGfz79ya-d/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1yfjEnY9fqS6ifmqaatl3EzISdhliIk-j/view?usp=sharing) | 
  |v0.33 |  [ZIP](https://drive.google.com/file/d/1KFvvWQi47QquOl-jDPRK8mpmUnfQaM91/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1oE0rTMU7DF9pFzw2Pt1SAMDm-UWILJrT/view?usp=sharing)  | 
  
