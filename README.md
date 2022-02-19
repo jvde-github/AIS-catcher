@@ -53,6 +53,7 @@ AIS-catcher -r CS8 moscow-12.288M.raw -s 12288000 -b -v -q -F
 [AIS engine v0.34]:                      3131.34 ms
 ```
 - Fine tuning of EMA model, EMA model seems to perform now at least as good and is faster.
+- Fix CMAKE file for hackrf support on Raspberry Pi
 - Fix CMAKE file for issue with compilation including ZeroMQ support on MacOS.
 - Exponential moving average model is now defaullt (e.g. ```-m 2 -go PS_EMA on```)
 - SDRPlay RSP1 and SDRPlay RSPDX support (only DX tested on Antenna A)
