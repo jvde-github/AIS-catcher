@@ -113,7 +113,7 @@ An example of using sox for downsampling the signal and then sending the result 
 ```console
 sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
 ```
-
+### A note on device sample rates
 AIS-catcher automatically sets an approriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
 ```
 12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2000K (*), 1920K (*), 1536K
