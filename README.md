@@ -107,7 +107,7 @@ These console messages can be suppressed with the option ```-q```.
 
 The following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
 ```console
-rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288000 -v
+rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
 ```
 An example of using sox for downsampling the signal and then sending the result to AIS-catcher:
 ```console
@@ -136,7 +136,7 @@ Both features can be activated with the ```-F``` switch.
 To give an idea of the performance improvement on a Raspberry Pi Model B Rev 2 (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 
 ```
-AIS-catcher -r posterholt.raw -s 1536000 -b -q -v
+AIS-catcher -r posterholt.raw -s 1536K -b -q -v
 ```
 Resulting in 38 messages and the ```-b``` switch prints the timing used for decoding:
 ```
@@ -175,7 +175,7 @@ The default model is the most time and memory consuming but experiments suggest 
 
  Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
 ```console
-AIS-catcher -s 1536000 -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
+AIS-catcher -s 1536K -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
 ```
 The program will run and summarize the performance (count and timing) of three decoding models (on a Raspberry Pi 4B):
 ```
@@ -196,7 +196,7 @@ This is typical when there are few messages with poor quality. However, it incre
 We can run AIS-catcher on a RAW audio file as in this [tutorial](https://github.com/freerange/ais-on-sdr/wiki/Testing-GNU-AIS):
 ```console
 wget "https://github.com/freerange/ais-on-sdr/wiki/example-data/helsinki-210-messages.raw"
-AIS-catcher  -m 3 -v -s 48000 -r cs16 helsinki-210-messages.raw
+AIS-catcher  -m 3 -v -s 48K -r cs16 helsinki-210-messages.raw
 ```
 On this file we should extract roughly ``362`` AIVDM lines. Notice that with switch ```-m 3``` on the command line AIS-catcher runs a decoding model that assumes the input is the output of an FM discriminator. In this case the program is similar to the following usage of GNUAIS:
 ```console
