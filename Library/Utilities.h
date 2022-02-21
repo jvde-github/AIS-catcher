@@ -131,12 +131,16 @@ namespace Util
 		static int Integer(std::string str, int min, int max)
 		{
 			int number = 0;
+			std::string::size_type sz;
 
 			try
 			{
-				number = std::stoi(str);
+				number = std::stoi(str, &sz);
 			}
 			catch (const std::exception& ) { throw "Error: expected a number on command line"; }
+
+			if (str.length() > sz && (str[sz] == 'K' || str[sz] == 'k'))
+				number *= 1000;
 
 			if (number < min || number > max) throw "Error: Number out of range on command line";
 
