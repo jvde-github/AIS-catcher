@@ -170,7 +170,12 @@ namespace AIS
 			physical >> convert >> ROT;
 			break;
 		default:
-			std::cerr << "Sample rate for decoding model set to " << sample_rate << std::endl;
+			std::cerr << "Sample rate for decoding model set to unsupported rate of " << sample_rate << std::endl;
+			std::cerr << "Supported model rates:" << std::endl;
+			std::cerr << "  12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2000K (*), 1920K (*), 1536K" << std::endl;
+			std::cerr << "  1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 288K, 250K (*), 240K (*), 192K, 96K" << std::endl;
+			std::cerr << "(*) denotes a derived rate" <<std::endl;
+
 			throw "Error: sample rate not supported in engine.";
 
 		}
