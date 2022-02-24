@@ -53,6 +53,7 @@ namespace Device{
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
 		bool auto_terminate = true;
+		int tuner_bandwidth = 0;
 
 		bool lost = true;
 
@@ -72,6 +73,7 @@ namespace Device{
 		void setTuner_Gain(FLOAT32);
 		void setRTL_AGC(int);
 		void setBiasTee(int);
+		void setBandwidth(int);
 		void setFrequencyCorrection(int);
 
 		void applySettings();
