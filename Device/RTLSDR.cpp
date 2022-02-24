@@ -132,6 +132,15 @@ namespace Device {
 #endif
 	}
 
+	void RTLSDR::setBandwidth(int a)
+	{
+#ifdef LIBRTLSDR_LEGACY
+		throw "RTLSDR: setting of bandwidth not supported in this version of librtlsdr.";
+#else
+		if (rtlsdr_set_tuner_bandwidth(dev, a) != 0) throw "RTLSDR: cannot set bandwidth.";
+#endif
+	}
+
 	void RTLSDR::setTuner_Gain(FLOAT32 a)
 	{
 		int g = (int) a * 10;
@@ -164,7 +173,7 @@ namespace Device {
 		if (!tuner_AGC) setTuner_Gain(tuner_Gain);
 		if (RTL_AGC) setRTL_AGC(1);
 		if (bias_tee) setBiasTee(1);
-
+		if (tuner_bandwidth) setBandwidth(tuner_bandwidth);
 
 		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw "RTLSDR: cannot set sample rate.";
 		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw "RTLSDR: cannot set frequency.";
@@ -189,6 +198,7 @@ namespace Device {
 
 		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
 
+		if(tuner_bandwidth) std::cerr << " bw " << tuner_bandwidth/1000 << "K";
 		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
 		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF");
 		std::cerr << " -p " << freq_offset << std::endl;
@@ -206,6 +216,10 @@ namespace Device {
 		else if (option == "RTLAGC")
 		{
 			RTL_AGC = Util::Parse::Switch(arg);
+		}
+		else if (option == "BW")
+		{
+			tuner_bandwidth = Util::Parse::Integer(arg,1,1000000);
 		}
 		else if (option == "BIASTEE")
 		{
