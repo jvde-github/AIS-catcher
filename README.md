@@ -22,7 +22,7 @@ This is hobby and research software for use only in those regions where such use
 
 Building instructions are provided below for many systems.
 
-A Windows binary version of **v0.35** (ex SDRplay support) is available from my Google Drive (see below table). If you did not access these files before I might have to give you access. Furthermore, note that for the RTLSDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+A Windows binary version of **v0.35** (ex SDRplay support) is available from my Google Drive (see below table). If you did not access these files before I might have to give you access. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 Recent releases:
  | Version | Win32  | x64 | x64 SDRplay-only |
