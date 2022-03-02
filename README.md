@@ -25,7 +25,7 @@ Building instructions are provided below for many systems.
 A Windows binary version of **v0.35** (ex SDRplay support) is available for 64-BIT from my [Google Drive](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing). If you did not access these files before I might have to give you access. Furthermore, note that you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
 
 Recent releases:
- | Version | Win32  | x64 | x64 SDRPLAY only |
+ | Version | Win32  | x64 | x64 SDRplay-only |
  | :--- | :--- | :---: |   :---: | 
    |Latest|  | [ZIP](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) | |
    |v0.35| [ZIP](https://drive.google.com/file/d/1fvH7ez_jUx6d_pmMcuX0kMgUU92Wwizw/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1DDjjbNBlQdgaxfJiL-tjLubSGFtn2THI/view?usp=sharing) | |
