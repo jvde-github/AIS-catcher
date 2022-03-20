@@ -44,10 +44,6 @@ Version **0.35**: smaller fixes and improvements and unlocking support for SDRPl
 
 ## Usage
 ````
-AIS-catcher (build Mar 20 2022) v0.35
-(C) Copyright 2021-2022 jvde-github and other contributors
-This is free software; see the source for copying conditions.There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 use: AIS-catcher [options]
 
 	[-h display this message and terminate (default: false)]
