@@ -38,10 +38,16 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 
 For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
 
+Edge: added new switch for RTL-SDR ```-gr BW``` which unlocks the bandwidth functionality on some RTL dongles. Early experimentation did not show improved reception with this setting. 
+
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
 ## Usage
 ````
+AIS-catcher (build Mar 20 2022) v0.35
+(C) Copyright 2021-2022 jvde-github and other contributors
+This is free software; see the source for copying conditions.There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 use: AIS-catcher [options]
 
 	[-h display this message and terminate (default: false)]
@@ -67,7 +73,7 @@ use: AIS-catcher [options]
 
 	Device specific settings:
 
-	[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150]
+	[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] FREQOFFSET [-150-150] BW [0+]
 	[-p xx equivalent to -gr FREQOFFSET xx]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
