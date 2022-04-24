@@ -125,6 +125,16 @@ Please note that these are rates supported by the decoding model and might not b
 
 ## Special topics
 
+### AIS-catcher and OpenCPN
+
+In this example we have AIS-catcher running on a Raspberry PI and want to receive the messages in OpenCPN running on a Windows computer with IP address ``192.168.1.239```. We have chosen to use port ``10101``. On the Raspberry we start AIS-catcher with the following command to send the NMEA messages to the Windows machine:
+```
+ AIS-catcher -u 192.168.1.239 10101
+ ```
+In OpenCPN machine we need to create a Connection with the following settings:
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg)
+That's all.
+
 ### Running on hardware with performance limitations
 
 AIS-catcher implements a trick to speed up downsampling for RTLSDR input at 1536K samples/second by using fixed point calculations (```-m 2 -go FP_DS on```). In essence the downsampling is done 
