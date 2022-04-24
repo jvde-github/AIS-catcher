@@ -275,7 +275,7 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 ## Build process
 
 ### Ubuntu, Raspberry Pi, macOS, MSVC
-The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on most systems. There are various options include a Makefile, a ```solution``` file for MSVC (see next section) and you can use ```cmake```, as we will detail now.
+The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on most systems. There are various options including a standard Makefile, a ```solution``` file for MSVC (see next section) and you can use ```cmake```, as we will detail now.
 
 First step is to ensure you have the necessary dependencies and build tools installed for your device(s). 
 For example, the following installs the minimum build tools for Ubuntu and Raspberry Pi:
