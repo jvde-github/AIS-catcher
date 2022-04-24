@@ -36,9 +36,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 
 ## Recent Developments
 
-For testing, do not use the development version (edge) but instead download the latest release. The development version might not work. 
-
-Edge: added new switch for RTL-SDR ```-gr BW``` which unlocks the bandwidth functionality on some RTL dongles. Early experimentation did not show improved reception with this setting. 
+**Edge**: added new switch for RTL-SDR ```-gr BW``` which unlocks the bandwidth functionality on some RTL dongles. Early experimentation did not show improved reception with this setting. 
 
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
@@ -88,7 +86,7 @@ use: AIS-catcher [options]
 ### Basic usage
 
 
-To test a proper installation and/or compilation (see below) we can list the devices available for AIS reception:
+To test a proper installation and/or compilation (see below for instructions), the following command lists the devices available for AIS reception:
 ```console
 AIS-catcher -l
 ```
@@ -105,14 +103,14 @@ To start AIS demodulation, print some occasional statistics (every 10 seconds) a
 AIS-catcher -v 10 -u 127.0.0.1 12345 -u 127.0.0.1 23456
 ```
 If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345` and port `23456`. 
-These console messages can be suppressed with the option ```-q```. 
+The screen messages can be suppressed with the option ```-q```. That's all there is.
 
 
-The following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
+As a slightly more advanced example, the following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
 ```console
 rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
 ```
-An example of using sox for downsampling the signal and then sending the result to AIS-catcher:
+We can also use ``sox`` for downsampling a signal and then send the result to AIS-catcher for decoding:
 ```console
 sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
 ```
@@ -153,7 +151,7 @@ This and other performance updates make the full version of AIS-catcher run on a
 
 ### Connecting to GNU Radio via ZMQ
 
-The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5K SMPS is not supported in our program. We can however perform some decoding with some help from GNU Radio. First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
+The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5 KHz is not supported in our program. We can however perform decoding with some help from [``GNU Radio``](https://www.gnuradio.org/). First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
 ```
 AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
 ```
@@ -169,14 +167,14 @@ The ZMQ interface is useful if a datastream from a SDR needs to be shared and pr
 
 The command line provides  the ```-m``` option which allows for the selection of the specific receiver models.  In the current version 4 different receiver models are embedded:
 
-- **Default model** (``-m 2``): the default demodulation engine
-- **Base model (non-coherent)** (``-m 1``): similar to RTL-AIS (and GNUAIS/Aisdecoder) with some modifications to PLL (different speeds at different stages) and main receiver filter (computed with a stochastic search algorithm).
-- **Standard model (non-coherent)** (``-m 0``): as the base model with brute force timing recovery.
-- **FM discriminator model**: (``-m 3``) as  the 'standard' model but assumes input is output of a FM discriminator, hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
+- **Default Model** (``-m 2``): the default demodulation engine.
+- **Base Model (non-coherent)** (``-m 1``): using FM discriminator model, similar to RTL-AIS (and GNUAIS/Aisdecoder) with tweaks to the Phase Locked Loop  and main receiver filter (computed with a stochastic search algorithm).
+- **Standard Model (non-coherent)** (``-m 0``): as the Base Model with brute force timing recovery.
+- **FM Discriminator model**: (``-m 3``) as  the Standard Model but with the input already assumed to be the output of a FM discriminator. Hence no FM demodulation takes place which allows ```AIS-catcher``` to be used as GNUAIS and AISdecoder.
 
-The default model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the `standard` model over the `base` model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the default model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
+The Default Model is the most time and memory consuming but experiments suggest it to be the most effective. In my home station it improves message count by a factor 2 - 3. The reception quality of the Standard Model over the Base Model is more modest at the expense of roughly a 20% increase in computation time. Advice is to start with the Default Model, which should run fine on most modern hardware including a Raspberry 4B and then scale down to ```-m 0```or even ```-m 1```, if needed.
 
- Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
+Notice that you can execute multiple models in one run for benchmarking purposes but only the messages from the first model specified are displayed on screen. To benchmark different models specify ```-b``` for timing and/or ```-v``` to compare message count, e.g.
 ```console
 AIS-catcher -s 1536K -r posterholt.raw -m 2 -m 0 -m 1 -q -b -v
 ```
@@ -191,8 +189,8 @@ The program will run and summarize the performance (count and timing) of three d
 [Standard (non-coherent)]:               932.47 ms
 [Base (non-coherent)]:                   859.065 ms
 ```
-In this example the default model performs quite well in contrast to the standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
-This is typical when there are few messages with poor quality. However, it increases the decoding time a bit and has a slightly higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
+In this example the Default Model performs quite well in contrast to the Standard non-coherent engine with 38 messages identified versus 4 for the standard engine. 
+This is typical when there are messages of poor quality. However, it increases the decoding time a bit and has a slightly higher memory usage so needs more powerful hardware. Please note that the improvements seen for this particular file are an exception.
 
 
 ### Input from FM discriminator
@@ -239,7 +237,7 @@ Finally, gains at different stages can be set as follows:
 ```console
 AIS-catcher -gm lna AUTO vga 12 mixer 12
 ```
-More guidance on setting the gain model and levels can be obtained in the mentioned reference.
+More guidance on setting the gain model and levels can be obtained in the mentioned link.
 
 ### SDRplay RSP1/RSP1A/RSPDX (API 3.x)
 Settings specific for the SDRplay  can be set on the command line with the ```-gs``` switch, e.g.:
@@ -277,7 +275,7 @@ The functionality to receive radio input from `rtl_tcp` provides a route to comp
 ## Build process
 
 ### Ubuntu, Raspberry Pi, macOS, MSVC
-The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on most systems. There is a simple Makefile, a ```solution``` file for MSVC discussed in the next section and you can use ```cmake```, as we are detailing now.
+The steps to compile AIS-catcher for RTL-SDR dongles are fairly straightforward on most systems. There are various options include a Makefile, a ```solution``` file for MSVC (see next section) and you can use ```cmake```, as we will detail now.
 
 First step is to ensure you have the necessary dependencies and build tools installed for your device(s). 
 For example, the following installs the minimum build tools for Ubuntu and Raspberry Pi:
@@ -361,7 +359,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## Known issues
 
-- call of ```rtlsdr_close```  in MS VC++ can result in a crash. Solution: ensure you have the latest version of the library with this patch [rtlsdr](https://github.com/osmocom/rtl-sdr/pull/18).
+- call of ```rtlsdr_close```  in MS VC++ can result in a crash. This is a problem with the rtlsdr library and not AIS-catcher. Solution: ensure you have the latest version of the library with this patch [rtlsdr](https://github.com/osmocom/rtl-sdr/pull/18). For the shared Windows binaries I have included [this version](https://github.com/jvde-github/rtl-sdr) of the library I [patched](https://lists.osmocom.org/hyperkitty/list/osmocom-sdr@lists.osmocom.org/thread/WPL5MZIX7CGVDF2NECPSTZYDLACAEXRI/) to fix this issue.
 - pkg-config on Raspberry Pi returns ```-L``` as library path which results in a build error. Temporarily fixed by assuming lib is in standard location, long term fix: switch to cmake
 - ...
 
@@ -369,11 +367,11 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 - Marine VHF audio and DSC decoding from SDR input signal
 - Optional filter for invalid messages
-- DSP: improve filters (e.g. add droop compensation, large rate reductions), etc
+- DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - Testing: more set ups, assess gap with commercial equipment
-- GUI: Windows, Android
-- Multiple SDRs: validate location from signal (e.g. like MLAT), privacy filters
+- System support and GUI: Windows, Android
+-Multi-channel SDRs: validate location from signal (e.g. like MLAT), privacy filters
 - Output: ZeroMQ, APRS, ...
 - Input: ZeroMQ/TCP-IP protocols, SoapySDR, LimeSDR mini, ...
 - ....
