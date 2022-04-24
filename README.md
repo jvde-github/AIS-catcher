@@ -131,9 +131,10 @@ In this example we have AIS-catcher running on a Raspberry PI and want to receiv
 ```
  AIS-catcher -u 192.168.1.239 10101
  ```
-In OpenCPN machine we need to create a Connection with the following settings:
+ 
+In OpenCPN the only thing we need to do is create a Connection with the following settings:
+
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg)
-That's all.
 
 ### Running on hardware with performance limitations
 
