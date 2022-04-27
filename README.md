@@ -134,7 +134,9 @@ In this example we have AIS-catcher running on a Raspberry PI and want to receiv
  
 In OpenCPN the only thing we need to do is create a Connection with the following settings:
 
-![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg)
+<p align="center">
+<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg" width=40% height=40%>
+</p>
 
 ### Running on hardware with performance limitations
 
@@ -142,7 +144,9 @@ AIS-catcher implements a trick to speed up downsampling for RTLSDR input at 1536
 in 16 bit integers performed in parallel for the I and Q channel using only 32 bit integers.
 Furthermore a new model was introduced which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model (```-m 2 -go PS_EMA on```).
 
-![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/raspberry.jpg)
+<p align="center">
+<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/raspberry.jpg" width=40% height=40%>
+</p>
 
 Both features can be activated with the ```-F``` switch. 
 To give an idea of the performance improvement on a Raspberry Pi Model B Rev 2 (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
