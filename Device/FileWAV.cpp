@@ -28,12 +28,17 @@ namespace Device {
 
 	//---------------------------------------
 	// WAV file, FLOAT only
+	//
+	// Source: https://www.recordingblogs.com/wiki/wave-file-format
 
-	struct WAVFileFormat
+	struct WAVHeader
 	{
+		
 		uint32_t groupID;
 		uint32_t size;
-		uint32_t riffType;
+		uint32_t RIFFtype;
+
+		// Format chunk
 		uint32_t chunkID;
 		uint32_t chunkSize;
 		uint16_t wFormatTag;
@@ -42,29 +47,49 @@ namespace Device {
 		uint32_t dwAvgBytesPerSec;
 		uint16_t wBlockAlign;
 		uint16_t wBitsPerSample;
-		uint32_t dataID;
-		uint32_t dataSize;
+	};
+
+	struct WaveChunk
+	{
+		uint32_t ID;
+		uint32_t size;
 	};
 
 	void WAVFile::Open(uint64_t h)
 	{
-		struct WAVFileFormat header;
+		struct WAVHeader header;
+		struct WaveChunk chunk = { 0, 0 };
 
 		file.open(filename, std::ios::out | std::ios::binary);
-		file.read((char*)&header, sizeof(struct WAVFileFormat));
+		file.read((char*)&header, sizeof(struct WAVHeader));
 
 		if (!file) throw "Error: Cannot read from WAV file.";
 
+		// process header and format chunk
 		bool valid = true;
 
 		valid &= header.wChannels == 2;
 		valid &= header.wFormatTag == 3; // FLOAT
+		valid &= header.chunkSize >= 16;
 
 		valid &= header.groupID == 0x46464952;
-		valid &= header.riffType == 0x45564157;
-		valid &= header.dataID == 0x61746164;
+		valid &= header.RIFFtype == 0x45564157;
 
 		if (!valid) throw "Eror: Not a supported WAV-file.";
+		file.ignore(header.chunkSize - 16);
+
+		// process wave chunks until start of data
+		while(!file.eof())
+		{
+			file.read((char*)&chunk, sizeof(struct WaveChunk));
+			if (chunk.ID == 0x74636166)
+				file.ignore(chunk.size);
+			else if (chunk.ID == 0x61746164) break;
+			else throw "Error: unrecognized chunk in WAV-file.";
+
+		};
+		
+		if (chunk.ID != 0x61746164) throw "Error: no Data in WAV-file.";
 
 		Device::setSampleRate(header.dwSamplesPerSec);
 	}
