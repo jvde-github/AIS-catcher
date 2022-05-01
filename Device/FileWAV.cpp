@@ -68,14 +68,23 @@ namespace Device {
 		// process header and format chunk
 		bool valid = true;
 
-		valid &= header.wChannels == 2;
-		valid &= header.wFormatTag == 3; // FLOAT
+		valid &= header.wChannels == 2;		
 		valid &= header.chunkSize >= 16;
 
 		valid &= header.groupID == 0x46464952;
 		valid &= header.RIFFtype == 0x45564157;
 
 		if (!valid) throw "Eror: Not a supported WAV-file.";
+
+		if (header.wFormatTag == 3 && header.wBitsPerSample == 32)
+			format = Format::CF32;
+		else if (header.wFormatTag == 1 && header.wBitsPerSample == 8)
+			format = Format::CU8;
+		else if (header.wFormatTag == 1 && header.wBitsPerSample == 16)
+			format = Format::CS16;
+		else throw "Error: not supported format.";
+
+
 		file.ignore(header.chunkSize - 16);
 
 		// process wave chunks until start of data
@@ -110,7 +119,7 @@ namespace Device {
 		buffer.assign(buffer_size, 0);
 		file.read((char*)buffer.data(), buffer_size);
 
-		RAW r = { Format::CF32 , buffer.data(), (int)buffer.size() };
+		RAW r = { format, buffer.data(), (int)buffer.size() };
 		Send(&r, 1);
 
 		return true;
