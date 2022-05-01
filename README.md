@@ -36,7 +36,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 
 ## Recent Developments
 
-**Edge**: 
+**Edge** (development version, will be part of **0.36**): 
 - added new switch for RTL-SDR ```-gr BW``` which unlocks the bandwidth functionality on some RTL dongles. Early experimentation did not show improved reception with this setting. 
 - extension of functionality to read WAV-files with more data types (8 and 16 bit PCM) and increasing flexibility on data layout (FACT chunk recognized).
 
