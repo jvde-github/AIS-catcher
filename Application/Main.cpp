@@ -120,7 +120,7 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\tModel specific settings:" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] (requires specification of model via -m)]" << std::endl;
+	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] (requires specification of model via -m)]" << std::endl;
 }
 
 std::vector<Device::Description> getDevices(Drivers &drivers)
