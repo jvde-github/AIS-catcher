@@ -339,7 +339,7 @@ For Windows, clone the project and open the directory with AIS-catcher in Visual
 
 Ensure that you have ```vcpkg``` [installed](https://vcpkg.io/en/getting-started.html) and integrated into Visual Studio via ```vcpkg integrate install``` (as Administrator). Then install the rtl-sdr drivers as follows:
 ```
-vcpkg install rtlsdr rtlsdr:x64-windows ZeroMQ ZeroMQ:x64-windows
+vcpkg install rtlsdr rtlsdr:x64-windows ZeroMQ ZeroMQ:x64-windows soxr soxr:x64-windows
 ```
 The included solution file in the mscv directory allows you to build AIS-catcher with RTL-SDR/ZMQ support in the Visual Studio IDE.
 
