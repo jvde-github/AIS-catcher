@@ -12,6 +12,7 @@ CFLAGS_AIRSPY = -DHASAIRSPY $(shell pkg-config --cflags libairspy)
 CFLAGS_SDRPLAY = -DHASSDRPLAY
 CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/include/libhackrf/
 CFLAGS_ZMQ = -DHASZMQ $(shell pkg-config --cflags libzmq)
+CFLAGS_SOXR = -DHASSOXR $(shell pkg-config --cflags soxr)
 
 LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
@@ -19,9 +20,15 @@ LFLAGS_AIRSPY = $(shell pkg-config --libs libairspy)
 LFLAGS_SDRPLAY = -lsdrplay_api
 LFLAGS_HACKRF = $(shell pkg-config --libs libhackrf)
 LFLAGS_ZMQ = $(shell pkg-config --libs libzmq)
+LFLAGS_SOXR = $(shell pkg-config --libs soxr)
 
 CFLAGS_ALL =
 LFLAGS_ALL =
+
+ifneq ($(shell pkg-config --exists soxr && echo 'T'),)
+    CFLAGS_ALL += $(CFLAGS_SOXR)
+    LFLAGS_ALL += $(LFLAGS_SOXR)
+endif
 
 ifneq ($(shell pkg-config --exists librtlsdr && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_RTL)

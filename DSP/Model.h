@@ -64,6 +64,7 @@ namespace AIS
 	class ModelFrontend : public Model
 	{
 	private:
+		DSP::SOXR sox;
 		DSP::DownsampleKFilter DSK;
 		DSP::Downsample2CIC5 DS2_1, DS2_2, DS2_3, DS2_4, DS2_5, DS2_6, DS2_7;
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
@@ -81,6 +82,7 @@ namespace AIS
 		Util::ConvertRAW convert;
 
 		bool fixedpointDS = false;
+		bool SOXR_DS = false;
 
 	protected:
 		const int nSymbolsPerSample = 48000 / 9600;
