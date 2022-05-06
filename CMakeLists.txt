@@ -50,6 +50,44 @@ else()
 	set(LIBUSB_LIBRARY "")
 endif()
 
+
+# Find libsoxr, pthread
+if(NOT MSVC)
+
+	pkg_check_modules(PKG_SOXR soxr)
+	find_path(SOXR_INCLUDE_DIR soxr.h HINT ${PKG_SOXR_INCLUDE_DIRS})
+	find_library(SOXR_LIBRARY libsoxr.so HINT ${PKG_SOXR_LIBRARY_DIRS})
+
+	if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
+
+		message(STATUS "SOXR: found - ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}")
+		add_definitions(-DHASSOXR)
+
+		set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
+		set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
+
+	else()
+		Message(STATUS "SOXR: not found.")
+	endif()
+else()
+
+	pkg_check_modules(PKG_SOXR libsoxr)
+	find_path(SOXR_INCLUDE_DIR soxr.h HINT ${PKG_SOXR_INCLUDE_DIRS})
+	find_library(SOXR_LIBRARY soxr HINT ${PKG_SOXR_LIBRARY_DIRS})
+
+	if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
+
+		message(STATUS "SOXR: found - ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}")
+		add_definitions(-DHASSOXR)
+
+		set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
+		set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
+
+	else()
+		Message(STATUS "SOXR: not found.")
+	endif()
+
+endif()
 # Find RTL-SDR library.
 
 if(NOT MSVC)
@@ -336,11 +374,11 @@ set(APP_INCLUDES . ./Library ./DSP ./Application ./IO)
 add_executable(AIS-catcher ${CPP} ${HEADER})
 
 include_directories(
-	${AIRSPYHF_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS}
+	${AIRSPYHF_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS}
 	${APP_INCLUDES})
 
 target_link_libraries(AIS-catcher
-	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}
+	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES}
 	${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 # Copying DLLs to final location if needed
