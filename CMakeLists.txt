@@ -52,44 +52,25 @@ endif()
 
 
 # Find libsoxr, pthread
-if(NOT MSVC)
+pkg_check_modules(PKG_SOXR soxr)
+find_path(SOXR_INCLUDE_DIR soxr.h HINT ${PKG_SOXR_INCLUDE_DIRS})
+find_library(SOXR_LIBRARY libsoxr.so HINT ${PKG_SOXR_LIBRARY_DIRS})
+find_library(SOXR_LIBRARY libsoxr.dylib HINT ${PKG_SOXR_LIBRARY_DIRS})
+find_library(SOXR_LIBRARY soxr HINT ${PKG_SOXR_LIBRARY_DIRS})
 
-	pkg_check_modules(PKG_SOXR soxr)
-	find_path(SOXR_INCLUDE_DIR soxr.h HINT ${PKG_SOXR_INCLUDE_DIRS})
-	find_library(SOXR_LIBRARY libsoxr.so HINT ${PKG_SOXR_LIBRARY_DIRS})
+if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
 
-	if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
+	message(STATUS "SOXR: found - ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}")
+	add_definitions(-DHASSOXR)
 
-		message(STATUS "SOXR: found - ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}")
-		add_definitions(-DHASSOXR)
+	set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
+	set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
 
-		set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
-		set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
-
-	else()
-		Message(STATUS "SOXR: not found.")
-	endif()
 else()
-
-	pkg_check_modules(PKG_SOXR libsoxr)
-	find_path(SOXR_INCLUDE_DIR soxr.h HINT ${PKG_SOXR_INCLUDE_DIRS})
-	find_library(SOXR_LIBRARY soxr HINT ${PKG_SOXR_LIBRARY_DIRS})
-
-	if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
-
-		message(STATUS "SOXR: found - ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}")
-		add_definitions(-DHASSOXR)
-
-		set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
-		set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
-
-	else()
-		Message(STATUS "SOXR: not found.")
-	endif()
-
+	Message(STATUS "SOXR: not found.")
 endif()
-# Find RTL-SDR library.
 
+# Find RTL-SDR library.
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_RTLSDR librtlsdr)
