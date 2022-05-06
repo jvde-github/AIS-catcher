@@ -23,6 +23,9 @@ SOFTWARE.
 #pragma once
 
 #include <assert.h>
+#ifdef HASSOXR
+#include <soxr.h>
+#endif
 
 #include "Filters.h"
 
@@ -210,6 +213,23 @@ namespace DSP
 
 		// Streams in
 		void Receive(const CFLOAT32* data, int len);
+	};
+
+	class SOXR : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
+#ifdef HASSOXR
+		soxr_t m_soxr;
+
+		std::vector<CFLOAT32> output;
+		std::vector<CFLOAT32> out_soxr;
+
+		int count = 0;
+		const int N = 16384;
+#endif
+	public:
+
+		void setParams(int sample_rate,int out_rate);
+		virtual void Receive(const CFLOAT32* data, int len);
 	};
 
 	class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32>

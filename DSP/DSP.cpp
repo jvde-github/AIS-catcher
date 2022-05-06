@@ -257,6 +257,59 @@ namespace DSP
 		rot /= std::abs(rot);
 	}
 
+	void SOXR::setParams(int sample_rate,int out_rate)
+	{
+#ifdef HASSOXR
+		soxr_error_t error;
+
+		soxr_io_spec_t io_spec = soxr_io_spec(SOXR_FLOAT32_I, SOXR_FLOAT32_I);
+		soxr_quality_spec_t quality_spec = soxr_quality_spec((SOXR_VHQ | SOXR_LINEAR_PHASE), 0);
+		soxr_runtime_spec_t runtime_spec = soxr_runtime_spec(1);
+
+		m_soxr = soxr_create(sample_rate, out_rate, 2, &error, &io_spec, &quality_spec, &runtime_spec);
+
+ 		if (error)
+ 		{
+ 			soxr_delete(m_soxr);
+       			throw "Model: error opening SOX";
+		}
+
+		output.resize(N);
+#endif
+	}
+
+
+	void SOXR::Receive(const CFLOAT32* data, int len)
+	{
+#ifndef HASSOXR
+		throw "Error: SOXR not included in this distribution. Please recompile with SOXR support.";
+#else
+ 		if (out_soxr.size() < len)
+		{
+			out_soxr.resize(len);
+
+		}
+
+		size_t sz = 0;
+		soxr_error_t error = soxr_process(m_soxr, static_cast<soxr_in_t>(data), len, nullptr, static_cast<soxr_out_t>(out_soxr.data()), out_soxr.size(), &sz);
+
+		if(error)
+		{
+			soxr_delete(m_soxr);
+			throw "Error: SOX processing returns error.";
+		}
+
+		for (int i = 0; i < sz; i++) {
+ 			output[count++] = out_soxr[i];
+			if (count == N)
+			{
+				Send(output.data(), N);
+				count = 0;
+			}
+		}
+#endif
+	}
+
 	// square the signal, find the mid-point between two peaks
 	void SquareFreqOffsetCorrection::correctFrequency()
 	{

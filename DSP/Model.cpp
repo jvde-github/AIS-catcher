@@ -34,7 +34,18 @@ namespace AIS
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
-		switch (sample_rate)
+		if(SOXR_DS)
+		{
+#ifndef HASSOXR
+			throw "Error: Executable not build with SOXR support.";
+#endif
+			if(sample_rate < 96000)
+				throw "Error: sample rate below 96K.";
+
+			sox.setParams(sample_rate, 96000);
+			physical >> convert >> sox >> ROT;
+		}
+		else switch (sample_rate)
 		{
 
 		// 2^7
@@ -198,6 +209,10 @@ namespace AIS
 		if (option == "FP_DS")
 		{
 			fixedpointDS = Util::Parse::Switch(arg);
+		}
+		else if (option == "SOXR")
+		{
+			SOXR_DS = Util::Parse::Switch(arg);
 		}
 
 	}
