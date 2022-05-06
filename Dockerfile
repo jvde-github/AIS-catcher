@@ -1,4 +1,4 @@
-\# -------------------
+# -------------------
 # The build container
 # -------------------
 FROM alpine:latest AS build
