@@ -278,20 +278,16 @@ namespace DSP
 #endif
 	}
 
-
+	// Downsample using libsoxr
 	void SOXR::Receive(const CFLOAT32* data, int len)
 	{
 #ifndef HASSOXR
 		throw "Error: SOXR not included in this distribution. Please recompile with SOXR support.";
 #else
- 		if (out_soxr.size() < len)
-		{
-			out_soxr.resize(len);
-
-		}
+ 		if (out_soxr.size() < len) out_soxr.resize(len);
 
 		size_t sz = 0;
-		soxr_error_t error = soxr_process(m_soxr, static_cast<soxr_in_t>(data), len, nullptr, static_cast<soxr_out_t>(out_soxr.data()), out_soxr.size(), &sz);
+		soxr_error_t error = soxr_process(m_soxr, data, len, nullptr, out_soxr.data(), out_soxr.size(), &sz);
 
 		if(error)
 		{
@@ -299,7 +295,8 @@ namespace DSP
 			throw "Error: SOX processing returns error.";
 		}
 
-		for (int i = 0; i < sz; i++) {
+		for (int i = 0; i < sz; i++) 
+		{
  			output[count++] = out_soxr[i];
 			if (count == N)
 			{
