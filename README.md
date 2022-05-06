@@ -43,6 +43,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ``
 AIS-catcher -v -m 2 -go SOXR on
 ``
+
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
 ## Usage
