@@ -22,13 +22,12 @@ This is hobby and research software for use only in those regions where such use
 
 Building instructions are provided below for many systems.
 
-A Windows binary version of **v0.35** (ex SDRplay support) is available from my Google Drive (see below table). If you did not access these files before I might have to give you access. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters. 
+A Windows binary version of **v0.35** (ex SDRplay support) is available (see below table). For some older versions, if you did not access these files before I might have to give you access. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters. 
 
 Recent releases:
  | Version | Win32  | x64 | x64 SDRplay-only |
  | :--- | :--- | :---: |   :---: | 
-   |Latest|  | [ZIP](https://drive.google.com/file/d/1-lBCfFejeZEl1-wXi_-_S6nBMNqIeQjA/view?usp=sharing) | |
-   |v0.35| [ZIP](https://drive.google.com/file/d/1fvH7ez_jUx6d_pmMcuX0kMgUU92Wwizw/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1DDjjbNBlQdgaxfJiL-tjLubSGFtn2THI/view?usp=sharing) | |
+   |v0.35| [ZIP](https://github.com/jvde-github/AIS-catcher/raw/media/AIS-catcher%20v0.35%20Win32.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/raw/media/AIS-catcher%20v0.35%20x64.zip) | |  
   |v0.34| [ZIP](https://drive.google.com/file/d/1ivz0Pk1KsGfnq5k0E723nXUGfz79ya-d/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1yfjEnY9fqS6ifmqaatl3EzISdhliIk-j/view?usp=sharing) | |
  |v0.33 |  [ZIP](https://drive.google.com/file/d/1KFvvWQi47QquOl-jDPRK8mpmUnfQaM91/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1oE0rTMU7DF9pFzw2Pt1SAMDm-UWILJrT/view?usp=sharing)  | |
  
