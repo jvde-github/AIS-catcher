@@ -36,6 +36,10 @@ SOFTWARE.
 #define SOCKET int
 #endif
 
+#ifdef __ANDROID__
+#include <netinet/in.h>
+#endif
+
 namespace Device {
 
 	class RTLTCP : public Device

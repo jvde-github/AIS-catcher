@@ -33,6 +33,10 @@ SOFTWARE.
 #define SOCKET int
 #endif
 
+#ifdef __ANDROID__
+#include <netinet/in.h>
+#endif
+
 #include "Stream.h"
 
 namespace IO
