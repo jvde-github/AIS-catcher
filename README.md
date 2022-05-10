@@ -2,7 +2,10 @@
 This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, Airspy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1, RSP1A and RSPDX for now), input from file and over ZMQ and (RTL) TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
+**Latest development: prototype of AIS-catcher running on Android, [see YouTube](https://www.youtube.com/shorts/Sn-3c-qCxu4). Hopefully in the App store by end of this Summer**
+
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
+
 
 ## Purpose
 
