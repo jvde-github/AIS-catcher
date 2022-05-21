@@ -88,7 +88,7 @@ namespace Device {
 		~RTLTCP();
 
 		// Control
-		void Open(uint64_t h);
+
 		void Close();
 		void Play();
 		void Stop();

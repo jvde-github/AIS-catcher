@@ -31,13 +31,26 @@ namespace Device {
 
 #ifdef HASRTLSDR
 
+	RTLSDR::RTLSDR()
+	{
+		setSampleRate(1536000);
+	}
+
 	void RTLSDR::Open(uint64_t h)
 	{
 		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw "RTLSDR: cannot open device.";
 
-		setSampleRate(1536000);
 		Device::Open(h);
 	}
+
+#ifdef HASRTL_ANDROID
+	void RTLSDR::OpenWithFileDescriptor(int f)
+	{
+		if (rtlsdr_open_filedescriptor(&dev, f) != 0) throw "RTLSDR: cannot open device.";
+
+		Device::Open(f);
+	}
+#endif
 
 	void RTLSDR::Close()
 	{
@@ -229,7 +242,7 @@ namespace Device {
 		{
 			freq_offset = Util::Parse::Integer(arg,-150,150);
 		}
-		else throw "Invalid setting for RTLSDR.";
+		else Device::Set(option,arg);
 	}
 #endif
 }

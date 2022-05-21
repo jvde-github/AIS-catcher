@@ -80,8 +80,13 @@ namespace Device{
 
 	public:
 
+		RTLSDR();
+
 		// Control
 		void Open(uint64_t h);
+#ifdef HASRTL_ANDROID
+		void OpenWithFileDescriptor(int);
+#endif
 		void Play();
 		void Stop();
 		void Close();

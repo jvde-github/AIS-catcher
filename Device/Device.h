@@ -76,6 +76,8 @@ namespace Device{
 
 		// DeviceBase
 		virtual void Open(uint64_t) { }
+		virtual void OpenWithFileDescriptor(int) { throw "Not supported for this device."; }
+
 		virtual void Close() { }
 		virtual void Play() { streaming = true; }
 		virtual void Stop() { streaming = false; }
@@ -93,5 +95,16 @@ namespace Device{
 
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
 
+		virtual void Set(std::string option, std::string arg)
+		{
+			Util::Convert::toUpper(option);
+			Util::Convert::toUpper(arg);
+
+			if (option == "RATE")
+			{
+				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
+			}
+			else throw "Invalid Device setting.";
+		}
 	};
 }
