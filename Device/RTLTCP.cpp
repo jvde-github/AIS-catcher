@@ -31,6 +31,8 @@ namespace Device {
 
 	RTLTCP::RTLTCP()
 	{
+		setSampleRate(288000);
+
 #ifdef _WIN32
 		WSADATA wsaData;
 
@@ -49,7 +51,20 @@ namespace Device {
 #endif
 	}
 
-	void RTLTCP::Open(uint64_t handle)
+	void RTLTCP::Close()
+	{
+		Device::Close();
+
+		if (sock != -1)
+#ifdef _WIN32
+			closesocket(sock);
+#else
+			close(sock);
+#endif
+
+	}
+
+	void RTLTCP::Play()
 	{
 		// RTLTCP protocol
 		struct { uint32_t magic = 0, tuner = 0, gain = 0; } dongle;
@@ -81,34 +96,14 @@ namespace Device {
 		if (connect(sock, address->ai_addr, (int)address->ai_addrlen) == -1)
 			throw "RTLTCP: cannot connect to socket";
 
-		if(Protocol == PROTOCOL::RTLTCP)
+		if (Protocol == PROTOCOL::RTLTCP)
 		{
 			// RTLTCP protocol, check for dongle information
-			int len = recv(sock, (char*) &dongle, 12, 0);
+			int len = recv(sock, (char*)&dongle, 12, 0);
 			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: unexpected or invalid response, likely not an rtl-tcp process.";
 		}
 
-		setSampleRate(288000);
-		Device::Open(handle);
-	}
-
-	void RTLTCP::Close()
-	{
-		Device::Close();
-
-		if (sock != -1)
-#ifdef _WIN32
-			closesocket(sock);
-#else
-			close(sock);
-#endif
-
-	}
-
-	void RTLTCP::Play()
-	{
 		fifo.Init(BUFFER_SIZE);
-
 		applySettings();
 
 		Device::Play();
@@ -236,11 +231,10 @@ namespace Device {
 		}
 		else if (option == "PROTOCOL")
 		{
-			if(arg == "NONE") Protocol = PROTOCOL::NONE;
-			else if(arg == "RTLTCP") Protocol = PROTOCOL::RTLTCP;
+			if (arg == "NONE") Protocol = PROTOCOL::NONE;
+			else if (arg == "RTLTCP") Protocol = PROTOCOL::RTLTCP;
 			else throw "RTLTCP: unknown protocol";
 		}
-		else
-			throw "RTLTCP: Invalid setting.";
+		else Device::Set(option, arg);
 	}
 }

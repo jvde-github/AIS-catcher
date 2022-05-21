@@ -60,7 +60,6 @@ public:
 			connections[i]->Receive((const S*)data, len);
 
 		connections[sz1]->Receive(data, len);
-
 	}
 
 	void Connect(StreamIn<S>* s)
@@ -69,6 +68,7 @@ public:
 	}
 
 	bool isConnected() { return connections.size() > 0; }
+	void Clear() { connections.resize(0); }
 };
 
 template <typename S>
