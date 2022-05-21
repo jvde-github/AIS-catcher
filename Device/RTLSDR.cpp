@@ -46,7 +46,7 @@ namespace Device {
 #ifdef HASRTL_ANDROID
 	void RTLSDR::OpenWithFileDescriptor(int f)
 	{
-		if (rtlsdr_open_filedescriptor(&dev, f) != 0) throw "RTLSDR: cannot open device.";
+		if (rtlsdr_open_file_descriptor(&dev, f) != 0) throw "RTLSDR: cannot open device.";
 
 		Device::Open(f);
 	}
