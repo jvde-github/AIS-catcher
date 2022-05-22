@@ -2,8 +2,6 @@
 This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, Airspy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1, RSP1A and RSPDX for now), input from file and over ZMQ and (RTL) TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
-**Latest development: prototype of AIS-catcher running on Android, [see YouTube](https://www.youtube.com/watch?v=Sn-3c-qCxu4). Hopefully in the App store by end of this Summer**
-
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
 
 
@@ -20,6 +18,16 @@ There are variations in the legislation concerning radio reception in the differ
 It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
 This is hobby and research software for use only in those regions where such use is permitted.
+
+## Android version
+
+An Android version of AIS-catcher is available for download and testing here. Please notice that it is still in beta-stage and is provided for testing purposes.
+<p align="center">
+<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%201.png" width=20% height=20%>
+<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%202.png" width=20% height=20%>
+</p>
+
+For a video of a field test of an early version [see YouTube](https://www.youtube.com/watch?v=Sn-3c-qCxu4). Hopefully in the App store by the end of this Summer.
 
 ## Installation and Windows Binary
 
