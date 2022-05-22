@@ -470,7 +470,7 @@ namespace DSP
 		len = DS5.Run(buf, output.data(), len, 0);
 
 		out.Send(output.data(), len);
-	};
+	}
 
 	void Downsample32_CS8::Receive(const CS8* data, int len)
 	{
@@ -486,7 +486,7 @@ namespace DSP
 		len = DS5.Run(buf, output.data(), len, 0);
 
 		out.Send(output.data(), len);
-	};
+	}
 
 	void Downsample16_CU8::Receive(const CU8* data, int len)
 	{
@@ -501,7 +501,7 @@ namespace DSP
 		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, output.data(), len, 0);
 
 		out.Send(output.data(), len);
-	};
+	}
 
 	void Downsample16_CS8::Receive(const CS8* data, int len)
 	{
@@ -516,7 +516,7 @@ namespace DSP
 		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, output.data(), len, 0);
 
 		out.Send(output.data(), len);
-	};
+	}
 
 	void Downsample8_CU8::Receive(const CU8* data, int len)
 	{
@@ -531,7 +531,7 @@ namespace DSP
 		len = DS3.Run(buf, output.data(), len, 0);
 
 		out.Send(output.data(), len);
-	};
+	}
 
 	void Downsample8_CS8::Receive(const CS8* data, int len)
 	{
@@ -546,5 +546,5 @@ namespace DSP
 		len = DS3.Run(buf, output.data(), len, 0);
 
 		out.Send(output.data(), len);
-	};
+	}
 }

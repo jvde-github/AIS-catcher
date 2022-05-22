@@ -87,6 +87,7 @@ namespace Device {
 		RTLTCP();
 		~RTLTCP();
 
+		void OpenWithFileDescriptor(int) { Open(0); } 
 		// Control
 
 		void Close();
