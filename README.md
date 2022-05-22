@@ -19,9 +19,9 @@ It is your responsibility to determine whether or not your local administration 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
 This is hobby and research software for use only in those regions where such use is permitted.
 
-## Android version
+## Latest news: Android version available for testing
 
-An Android version of AIS-catcher is available for download and testing here. Please notice that it is still in beta-stage and is provided for testing purposes.
+An Android version of AIS-catcher is available for download and testing [here](https://github.com/jvde-github/AIS-catcher-for-Android). Please notice that it is still in beta-stage and is provided for testing purposes.
 <p align="center">
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%201.png" width=20% height=20%>
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%202.png" width=20% height=20%>
