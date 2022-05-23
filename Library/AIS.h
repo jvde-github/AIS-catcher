@@ -56,8 +56,8 @@ namespace AIS
 		bool getBit(int i);
 
 		void NextState(State s, int pos);
-		char NMEAchar(int i);
-		int NMEAchecksum(std::string);
+		static char NMEAchar(int i);
+		int NMEAchecksum(const std::string&);
 
 		void sendNMEA();
 		bool CRC16(int len);
