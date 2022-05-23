@@ -56,7 +56,7 @@ namespace AIS
 		return DataFCS[i >> 3] & (1 << (i & 7));
 	}
 
-	int Decoder::NMEAchecksum(std::string s)
+	int Decoder::NMEAchecksum(const std::string& s)
 	{
 		int check = 0;
 		for (char c : s) check ^= c;
