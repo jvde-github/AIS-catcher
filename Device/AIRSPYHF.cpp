@@ -60,7 +60,7 @@ namespace Device {
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
 		setSampleRate(*std::min_element(rates.begin(), rates.end()));
 
-		Device::Open(h);
+		Device::Open(0);
 	}
 #endif
 	void AIRSPYHF::Close()
