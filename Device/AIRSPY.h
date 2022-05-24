@@ -72,6 +72,11 @@ namespace Device {
 
 		// Control
 		void Open(uint64_t h);
+
+#ifdef HASAIRSPY_ANDROID
+		void OpenWithFileDescriptor(int);
+#endif
+
 		void Play();
 		void Stop();
 		void Close();
