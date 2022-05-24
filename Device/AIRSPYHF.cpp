@@ -47,6 +47,22 @@ namespace Device {
 		Device::Open(h);
 	}
 
+#ifdef HASAIRSPYHF_ANDROID
+	void AIRSPYHF::OpenWithFileDescriptor(int fd)
+	{
+		if (airspyhf_open_file_descriptor(&dev, fd) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
+
+		uint32_t nRates;
+		airspyhf_get_samplerates(dev, &nRates, 0);
+		if (nRates == 0) throw "AIRSPYHF: cannot get allowed sample rates.";
+
+		rates.resize(nRates);
+		airspyhf_get_samplerates(dev, rates.data(), nRates);
+		setSampleRate(*std::min_element(rates.begin(), rates.end()));
+
+		Device::Open(h);
+	}
+#endif
 	void AIRSPYHF::Close()
 	{
 		Device::Close();
