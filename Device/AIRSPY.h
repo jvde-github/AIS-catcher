@@ -68,6 +68,7 @@ namespace Device {
 
 		void applySettings();
 
+		void setDefaultRate();
 	public:
 
 		// Control
