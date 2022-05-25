@@ -269,8 +269,7 @@ namespace Device {
 		{
 			bias_tee = Util::Parse::Switch(arg);
 		}
-		else
-			throw " Invalid setting for AIRSPY.";
+		else Device::Set(option, arg);
 	}
 #endif
 }

@@ -179,8 +179,7 @@ namespace Device {
 		{
 			treshold_high = Util::Parse::Switch(arg,"HIGH","LOW");
 		}
-		else
-			throw "Command line: Invalid setting for AIRSPY HF+.";
+		else Device::Set(option, arg);
 	}
 #endif
 }
