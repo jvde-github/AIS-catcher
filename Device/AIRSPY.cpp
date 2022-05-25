@@ -28,7 +28,7 @@ SOFTWARE.
 
 namespace Device {
 
-	//---------------------------------------
+	//----------------------------------------
 	// Device AIRSPY
 
 #ifdef HASAIRSPY
