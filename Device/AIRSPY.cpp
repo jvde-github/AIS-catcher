@@ -45,7 +45,7 @@ namespace Device {
 	{
 		if (airspy_open_file_descriptor(&dev, fd) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device.";
 		setDefaultRate();
-		Device::Open(h);
+		Device::Open(0);
 	}
 #endif
 
