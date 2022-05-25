@@ -35,15 +35,7 @@ namespace Device {
 	void AIRSPYHF::Open(uint64_t h)
 	{
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
-
-		uint32_t nRates;
-		airspyhf_get_samplerates(dev, &nRates, 0);
-		if (nRates == 0) throw "AIRSPYHF: cannot get allowed sample rates.";
-
-		rates.resize(nRates);
-		airspyhf_get_samplerates(dev, rates.data(), nRates);
-		setSampleRate(*std::min_element(rates.begin(), rates.end()));
-
+		setDefaultRate();
 		Device::Open(h);
 	}
 
@@ -51,18 +43,34 @@ namespace Device {
 	void AIRSPYHF::OpenWithFileDescriptor(int fd)
 	{
 		if (airspyhf_open_file_descriptor(&dev, fd) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
+		setDefaultRate();
+		Device::Open(h);
+	}
+#endif
 
+	void AIRSPYHF::setDefaultRate()
+	{
 		uint32_t nRates;
 		airspyhf_get_samplerates(dev, &nRates, 0);
-		if (nRates == 0) throw "AIRSPYHF: cannot get allowed sample rates.";
+		if (nRates == 0) throw "AIRSPY: cannot get allowed sample rates.";
 
 		rates.resize(nRates);
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
-		setSampleRate(*std::min_element(rates.begin(), rates.end()));
 
-		Device::Open(0);
+		int rate = rates[0];
+		int mindelta = rates[0];
+		for (auto r : rates)
+		{
+			int delta = abs((int)r - (int)getSampleRate());
+			if (delta < mindelta)
+			{
+				rate = r;
+				mindelta = delta;
+			}
+		}
+		setSampleRate(rate);
 	}
-#endif
+
 	void AIRSPYHF::Close()
 	{
 		Device::Close();
