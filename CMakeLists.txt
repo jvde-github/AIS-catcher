@@ -40,8 +40,8 @@ endif()
 # Find libusb, pthread
 if(NOT MSVC)
 	pkg_check_modules(PKG_LIBUSB libusb-1.0)
-	find_path(LIBUSB_INCLUDE_DIR libusb.h HINT ${PKG_LIBUSB_INCLUDE_DIRS} PATH_SUFFIXES libusb-1.0)
-	find_library(LIBUSB_LIBRARY usb-1.0 HINT ${PKG_LIBUSB_LIBRARY_DIRS})
+	find_path(LIBUSB_INCLUDE_DIR libusb.h HINTS ${PKG_LIBUSB_INCLUDE_DIRS} PATH_SUFFIXES libusb-1.0)
+	find_library(LIBUSB_LIBRARY usb-1.0 HINTS ${PKG_LIBUSB_LIBRARY_DIRS})
 elseif(NOT MSVC_VCPKG)
 	find_file(LIBUSB_DLL libusb-1.0.dll HINTS ${POTHOSSDR_BINARY_DIR})
 	find_file(PTHREAD_DLL pthreadVC2.dll HINTS ${POTHOSSDR_BINARY_DIR})
@@ -53,10 +53,10 @@ endif()
 
 # Find libsoxr, pthread
 pkg_check_modules(PKG_SOXR soxr)
-find_path(SOXR_INCLUDE_DIR soxr.h HINT ${PKG_SOXR_INCLUDE_DIRS})
-find_library(SOXR_LIBRARY libsoxr.so HINT ${PKG_SOXR_LIBRARY_DIRS})
-find_library(SOXR_LIBRARY libsoxr.dylib HINT ${PKG_SOXR_LIBRARY_DIRS})
-find_library(SOXR_LIBRARY soxr HINT ${PKG_SOXR_LIBRARY_DIRS})
+find_path(SOXR_INCLUDE_DIR soxr.h HINTS ${PKG_SOXR_INCLUDE_DIRS})
+find_library(SOXR_LIBRARY libsoxr.so HINTS ${PKG_SOXR_LIBRARY_DIRS})
+find_library(SOXR_LIBRARY libsoxr.dylib HINTS ${PKG_SOXR_LIBRARY_DIRS})
+find_library(SOXR_LIBRARY soxr HINTS ${PKG_SOXR_LIBRARY_DIRS})
 
 if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
 
@@ -74,8 +74,8 @@ endif()
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_RTLSDR librtlsdr)
-	find_path(RTLSDR_INCLUDE_DIR rtl-sdr.h HINT ${PKG_RTLSDR_INCLUDE_DIRS})
-	find_library(RTLSDR_LIBRARY rtlsdr HINT ${PKG_RTLSDR_LIBRARY_DIRS})
+	find_path(RTLSDR_INCLUDE_DIR rtl-sdr.h HINTS ${PKG_RTLSDR_INCLUDE_DIRS} $ENV{RTLSDR_DIR}/include PATHS /usr/local/include /usr/include /opt/include /opt/local/include)
+	find_library(RTLSDR_LIBRARY rtlsdr HINTS ${PKG_RTLSDR_LIBRARY_DIRS} $ENV{RTLSDR_DIR}/include PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
 
 	if(RTLSDR_INCLUDE_DIR AND RTLSDR_LIBRARY)
 
@@ -169,8 +169,8 @@ endif()
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_AIRSPY libairspy)
-	find_path(AIRSPY_INCLUDE_DIR airspy.h HINT ${PKG_AIRSPY_INCLUDE_DIRS})
-	find_library(AIRSPY_LIBRARY airspy HINT ${PKG_AIRSPY_LIBRARY_DIRS})
+	find_path(AIRSPY_INCLUDE_DIR airspy.h HINTS ${PKG_AIRSPY_INCLUDE_DIRS})
+	find_library(AIRSPY_LIBRARY airspy HINTS ${PKG_AIRSPY_LIBRARY_DIRS})
 
 	if(AIRSPY_INCLUDE_DIR AND AIRSPY_LIBRARY)
 
@@ -210,8 +210,8 @@ endif()
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_AIRSPYHF libairspyhf)
-	find_path(AIRSPYHF_INCLUDE_DIR airspyhf.h HINT ${PKG_AIRSPYHF_INCLUDE_DIRS})
-	find_library(AIRSPYHF_LIBRARY airspyhf HINT ${PKG_AIRSPYHF_LIBRARY_DIRS})
+	find_path(AIRSPYHF_INCLUDE_DIR airspyhf.h HINTS ${PKG_AIRSPYHF_INCLUDE_DIRS})
+	find_library(AIRSPYHF_LIBRARY airspyhf HINTS ${PKG_AIRSPYHF_LIBRARY_DIRS})
 
 	if(AIRSPYHF_INCLUDE_DIR AND AIRSPYHF_LIBRARY)
 
@@ -252,8 +252,8 @@ endif()
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_HACKRF libhackrf)
-	find_path(HACKRF_INCLUDE_DIR hackrf.h HINT ${PKG_HACKRF_INCLUDE_DIRS} /usr/include/libhackrf)
-	find_library(HACKRF_LIBRARY hackrf HINT ${PKG_HACKRF_LIBRARY_DIRS})
+	find_path(HACKRF_INCLUDE_DIR hackrf.h HINTS ${PKG_HACKRF_INCLUDE_DIRS} /usr/include/libhackrf)
+	find_library(HACKRF_LIBRARY hackrf HINTS ${PKG_HACKRF_LIBRARY_DIRS})
 
 	if(HACKRF_INCLUDE_DIR AND HACKRF_LIBRARY)
 
@@ -292,8 +292,8 @@ endif()
 # Find libzmq
 if(NOT MSVC)
 	pkg_check_modules(PKG_LIBZMQ libzmq)
-	find_path(LIBZMQ_INCLUDE_DIR zmq.h HINT ${PKG_LIBZMQ_INCLUDE_DIRS})
-	find_library(LIBZMQ_LIBRARY zmq HINT ${PKG_LIBZMQ_LIBRARY_DIRS})
+	find_path(LIBZMQ_INCLUDE_DIR zmq.h HINTS ${PKG_LIBZMQ_INCLUDE_DIRS})
+	find_library(LIBZMQ_LIBRARY zmq HINTS ${PKG_LIBZMQ_LIBRARY_DIRS})
 
 	if(LIBZMQ_INCLUDE_DIR AND LIBZMQ_LIBRARY)
 		message(STATUS "ZMQ: found - ${LIBZMQ_INCLUDE_DIR}, ${LIBZMQ_LIBRARY}")
