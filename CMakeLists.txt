@@ -74,8 +74,13 @@ endif()
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_RTLSDR librtlsdr)
-	find_path(RTLSDR_INCLUDE_DIR rtl-sdr.h HINTS ${PKG_RTLSDR_INCLUDE_DIRS} $ENV{RTLSDR_DIR}/include PATHS /usr/local/include /usr/include /opt/include /opt/local/include)
-	find_library(RTLSDR_LIBRARY rtlsdr HINTS ${PKG_RTLSDR_LIBRARY_DIRS} $ENV{RTLSDR_DIR}/include PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
+	find_path(RTLSDR_INCLUDE_DIR rtl-sdr.h 
+		HINTS ${PKG_RTLSDR_INCLUDE_DIRS} $ENV{RTLSDR_DIR}/include 
+		PATHS /usr/local/include /usr/include /opt/include /opt/local/include)
+
+	find_library(RTLSDR_LIBRARY rtlsdr 
+		HINTS ${PKG_RTLSDR_LIBRARY_DIRS} $ENV{RTLSDR_DIR}/lib
+		PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
 
 	if(RTLSDR_INCLUDE_DIR AND RTLSDR_LIBRARY)
 
@@ -169,8 +174,12 @@ endif()
 if(NOT MSVC)
 
 	pkg_check_modules(PKG_AIRSPY libairspy)
-	find_path(AIRSPY_INCLUDE_DIR airspy.h HINTS ${PKG_AIRSPY_INCLUDE_DIRS})
-	find_library(AIRSPY_LIBRARY airspy HINTS ${PKG_AIRSPY_LIBRARY_DIRS})
+	find_path(AIRSPY_INCLUDE_DIR airspy.h
+		HINTS ${PKG_AIRSPY_INCLUDE_DIRS} $ENV{LIBAIRSPY_DIR}/include
+		PATHS usr/local/include /usr/include)
+	find_library(AIRSPY_LIBRARY airspy
+			HINTS ${PKG_AIRSPY_LIBRARY_DIRS} $ENV{LIBAIRSPY_DIR}/lib
+			PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
 
 	if(AIRSPY_INCLUDE_DIR AND AIRSPY_LIBRARY)
 
