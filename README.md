@@ -27,7 +27,7 @@ An Android version of AIS-catcher is available for download and testing [here](h
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%202.png" width=20% height=20%>
 </p>
 
-For a video of a field test of an early version [see YouTube](https://www.youtube.com/watch?v=Sn-3c-qCxu4). Hopefully in the App store by the end of this Summer.
+For a video of a field test of an early version [see YouTube](https://www.youtube.com/shorts/1ArB7GL_yV8). Hopefully in the App store by the end of this Summer.
 
 ## Installation and Windows Binary
 
