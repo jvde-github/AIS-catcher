@@ -40,7 +40,7 @@ namespace Device {
 		}
 		else
 		{
-			file = new std::ifstream(filename, std::ios::out | std::ios::binary);
+			file = new std::ifstream(filename, std::ios::in | std::ios::binary);
 		}
 
 		if (!file || file->fail()) throw "Error: Cannot read RAW input.";
