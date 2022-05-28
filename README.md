@@ -399,7 +399,10 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- Marine VHF audio and DSC decoding from SDR input signal
+- On going: testing and improving reveiver, seems to be some room for certain Class broadcast
+- Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.
+- RTL-TCP setting for timeout on connection (system default takes way too long)
+- Simulataneous receive Marine VHF audio and DSC decoding from SDR input signal
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
