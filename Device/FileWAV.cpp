@@ -33,7 +33,7 @@ namespace Device {
 
 	struct WAVHeader
 	{
-		
+
 		uint32_t groupID;
 		uint32_t size;
 		uint32_t RIFFtype;
@@ -60,7 +60,7 @@ namespace Device {
 		struct WAVHeader header;
 		struct WaveChunk chunk = { 0, 0 };
 
-		file.open(filename, std::ios::out | std::ios::binary);
+		file.open(filename, std::ios::in | std::ios::binary);
 		file.read((char*)&header, sizeof(struct WAVHeader));
 
 		if (!file) throw "Error: Cannot read from WAV file.";
@@ -68,7 +68,7 @@ namespace Device {
 		// process header and format chunk
 		bool valid = true;
 
-		valid &= header.wChannels == 2;		
+		valid &= header.wChannels == 2;
 		valid &= header.chunkSize >= 16;
 
 		valid &= header.groupID == 0x46464952;
