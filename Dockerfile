@@ -19,7 +19,7 @@ RUN cd /root/AIS-catcher; mkdir build; cd build; cmake ..; make; make install
 FROM alpine:latest
 
 RUN apk upgrade --no-cache
-RUN apk add --no-cache libusb libzmq librtlsdr #libstdc++ libgcc 
+RUN apk add --no-cache libusb libzmq librtlsdr libstdc++ libgcc 
 
 COPY --from=build /usr/local/lib/libairspyhf.so /usr/local/lib/libairspyhf.so
 COPY --from=build /usr/local/lib/libairspyhf.so.0 /usr/local/lib/libairspyhf.so.0
