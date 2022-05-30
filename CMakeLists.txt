@@ -92,7 +92,7 @@ if(NOT MSVC)
 
 		if(PKG_RTLSDR_VERSION GREATER "0.5.4")
 			Message(STATUS "RTLSDR: support for biastee")
-		elseif()
+		else()
 			Message(STATUS "RTLSDR: no support for biastee")
 			add_definitions(-DLIBRTLSDR_LEGACY)
 		endif()
