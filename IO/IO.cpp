@@ -27,9 +27,9 @@ SOFTWARE.
 namespace IO
 {
 
-#ifdef _WIN32
 	UDP::UDP()
 	{
+#ifdef _WIN32
 		WSADATA wsaData;
 
 		if( WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -37,23 +37,35 @@ namespace IO
 			throw "Cannot initialize Winsocket.";
 			return;
 		}
+#endif
 	}
 
 	UDP::~UDP()
 	{
+        closeConnection();
+
+#ifdef _WIN32
 		WSACleanup();
-	}
 #endif
+	}
 
 	void UDP::Receive(const NMEA* data, int len)
 	{
-		for(int i = 0; i < len; i++)
-			for(const auto& s : data[i].sentence)
-				sendto(sock, (s+"\r\n").c_str(), (int) s.length()+2, 0, address->ai_addr, (int) address->ai_addrlen);
+        if (sock != -1)
+            for (int i = 0; i < len; i++)
+                for (const auto &s: data[i].sentence)
+                    sendto(sock, (s + "\r\n").c_str(), (int) s.length() + 2, 0, address->ai_addr,
+                           (int) address->ai_addrlen);
 	}
 
-	void UDP::openConnection(const std::string& host, const std::string& portname)
+	void UDP::openConnection(const std::string& host, const std::string& port)
 	{
+        if(sock != -1)
+        {
+            throw "UDP: internal error, socket already defined.";
+            return;
+        }
+
 		struct addrinfo h;
 		memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
@@ -63,7 +75,7 @@ namespace IO
 		h.ai_flags = AI_ADDRCONFIG;
 #endif
 
-		int code = getaddrinfo(host.c_str(), portname.c_str(), &h, &address);
+		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
 
 		if(code != 0 || address == NULL)
 		{
@@ -71,6 +83,7 @@ namespace IO
 			return;
 		}
 
+        // to be updated with timeout
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 		if (sock == -1)
@@ -78,4 +91,13 @@ namespace IO
 			throw "Error creating socket for UDP.";
 		}
 	}
+
+    void UDP::closeConnection()
+    {
+        if (sock != -1)
+        {
+            close(sock);
+            sock = -1;
+        }
+    }
 }
