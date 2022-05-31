@@ -154,12 +154,12 @@ namespace IO
 		struct addrinfo* address = NULL;
 
 	public:
-#ifdef _WIN32
 		~UDP();
 		UDP();
-#endif
+
 		void Receive(const NMEA* data, int len);
-		void openConnection(const std::string& host, const std::string& portname);
+		void openConnection(const std::string& host, const std::string& port);
 		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
+        void closeConnection();
 	};
 }
