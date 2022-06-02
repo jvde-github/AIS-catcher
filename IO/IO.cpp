@@ -52,19 +52,19 @@ namespace IO
 	void UDP::Receive(const NMEA* data, int len)
 	{
 		if (sock != -1)
-            for (int i = 0; i < len; i++)
-                for (const auto &s: data[i].sentence)
-                    sendto(sock, (s + "\r\n").c_str(), (int) s.length() + 2, 0, address->ai_addr,
-                           (int) address->ai_addrlen);
+			for (int i = 0; i < len; i++)
+				for (const auto &s: data[i].sentence)
+					sendto(sock, (s + "\r\n").c_str(), (int) s.length() + 2, 0, address->ai_addr,
+						(int) address->ai_addrlen);
 	}
 
 	void UDP::openConnection(const std::string& host, const std::string& port)
 	{
-        if(sock != -1)
-        {
-            throw "UDP: internal error, socket already defined.";
-            return;
-        }
+		if(sock != -1)
+		{
+			throw "UDP: internal error, socket already defined.";
+			return;
+		}
 
 		struct addrinfo h;
 		memset(&h, 0, sizeof(h));
@@ -83,7 +83,6 @@ namespace IO
 			return;
 		}
 
-        // to be updated with timeout
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 		if (sock == -1)
@@ -92,12 +91,12 @@ namespace IO
 		}
 	}
 
-    void UDP::closeConnection()
-    {
-        if (sock != -1)
-        {
-            closesocket(sock);
-            sock = -1;
-        }
-    }
+	void UDP::closeConnection()
+	{
+		if (sock != -1)
+		{
+			closesocket(sock);
+			sock = -1;
+		}
+	}
 }
