@@ -112,7 +112,7 @@ namespace Device {
 			}
 #endif
 			timeval tv;
-			tv.tv_sec = 5;
+			tv.tv_sec = 2;
 			tv.tv_usec = 0;
 
 			if(select(sock+1, &fd, NULL, NULL, &tv) == 1)
@@ -126,7 +126,7 @@ namespace Device {
 					throw "RTLTCP: cannot open socket.";
 			}
 			else
-				throw "RTLTCP: cannot open connection, select() failed.";
+				throw "RTLTCP: cannot open connection.";
 		}
 
 		if (Protocol == PROTOCOL::RTLTCP)
