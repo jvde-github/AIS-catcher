@@ -42,7 +42,7 @@ namespace IO
 
 	UDP::~UDP()
 	{
-        closeConnection();
+		closeConnection();
 
 #ifdef _WIN32
 		WSACleanup();
@@ -51,7 +51,7 @@ namespace IO
 
 	void UDP::Receive(const NMEA* data, int len)
 	{
-        if (sock != -1)
+		if (sock != -1)
             for (int i = 0; i < len; i++)
                 for (const auto &s: data[i].sentence)
                     sendto(sock, (s + "\r\n").c_str(), (int) s.length() + 2, 0, address->ai_addr,
@@ -96,7 +96,7 @@ namespace IO
     {
         if (sock != -1)
         {
-            close(sock);
+            closesocket(sock);
             sock = -1;
         }
     }
