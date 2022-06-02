@@ -31,6 +31,7 @@ SOFTWARE.
 #include <sys/socket.h>
 #include <netdb.h>
 #define SOCKET int
+#define closesocket close
 #endif
 
 #ifdef __ANDROID__

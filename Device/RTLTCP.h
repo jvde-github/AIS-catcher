@@ -28,12 +28,23 @@ SOFTWARE.
 #include <iostream>
 
 #ifdef _WIN32
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
 #else
-#include <sys/socket.h>
+
+#include <fcntl.h>
+#include <unistd.h>
 #include <netdb.h>
+#include <sys/socket.h>
+
 #define SOCKET int
+#define SOCKADDR struct sockaddr
+#define SOCKET_ERROR -1
+
+#define closesocket close
+
 #endif
 
 #ifdef __ANDROID__
@@ -62,8 +73,7 @@ namespace Device {
 		std::string host = "localhost";
 		std::string port = "1234";
 
-		struct addrinfo* address = NULL;
-
+		struct addrinfo* address;
 		// output vector
 
 		static const int TRANSFER_SIZE = 1024;
@@ -71,6 +81,7 @@ namespace Device {
 
 		bool lost = false;
 
+		int Read(void *data,int length,int timeout);
 		std::thread async_thread;
 		std::thread run_thread;
 

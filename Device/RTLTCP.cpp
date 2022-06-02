@@ -56,16 +56,14 @@ namespace Device {
 		Device::Close();
 
 		if (sock != -1)
-#ifdef _WIN32
 			closesocket(sock);
-#else
-			close(sock);
-#endif
-
 	}
 
 	void RTLTCP::Play()
 	{
+		int r;
+		fd_set fd;
+
 		// RTLTCP protocol
 		struct { uint32_t magic = 0, tuner = 0, gain = 0; } dongle;
 
@@ -89,17 +87,52 @@ namespace Device {
 		}
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+		if (sock == -1) throw "RTLTCP: Error creating socket.";
+#ifndef _WIN32
+		r = fcntl(sock, F_GETFL, 0);
+		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+		if (r == -1) throw "RTLTCP: cannot set NON BLOCKING flag.";
+#else
+		u_long mode = 1;  // 1 to enable non-blocking socket
+		ioctlsocket(sock, FIONBIO, &mode);
+#endif
 
-		if (sock == -1)
-			throw "RTLTCP: Error creating socket.";
+		FD_ZERO(&fd);
+		FD_SET(sock, &fd);
 
-		if (connect(sock, address->ai_addr, (int)address->ai_addrlen) == -1)
-			throw "RTLTCP: cannot connect to socket";
+		r = connect(sock, address->ai_addr, (int)address->ai_addrlen);
+
+		if(r == -1)
+		{
+#ifndef _WIN32
+			if(errno != EINPROGRESS)
+			{
+				throw "RTLTCP: cannot connect to socket";
+				closesocket(sock);
+			}
+#endif
+			timeval tv;
+			tv.tv_sec = 5;
+			tv.tv_usec = 0;
+
+			if(select(sock+1, &fd, NULL, NULL, &tv) == 1)
+			{
+				int so_error;
+				socklen_t len = sizeof so_error;
+
+				getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&so_error, &len);
+
+				if (so_error != 0)
+					throw "RTLTCP: cannot open socket.";
+			}
+			else
+				throw "RTLTCP: cannot open connection, select() failed.";
+		}
 
 		if (Protocol == PROTOCOL::RTLTCP)
 		{
 			// RTLTCP protocol, check for dongle information
-			int len = recv(sock, (char*)&dongle, 12, 0);
+			int len = Read((char*)&dongle, 12, 1);
 			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: unexpected or invalid response, likely not an rtl-tcp process.";
 		}
 
@@ -127,13 +160,38 @@ namespace Device {
 		}
 	}
 
+	int RTLTCP::Read(void *data,int length,int timeout)
+	{
+		fd_set fd;
+		FD_ZERO(&fd);
+		FD_SET(sock, &fd);
+
+		timeval tv;
+		tv.tv_sec = timeout;
+		tv.tv_usec = 0;
+
+		int r = select(sock + 1, &fd, NULL, NULL, &tv);
+
+		if (r < 0)
+		{
+			return -1;
+		}
+
+		if (FD_ISSET(sock, &fd)) 
+		{
+			r = recv(sock,(char*)data,length, 0);
+			return r;
+		}
+		return 0;
+	}
+
 	void RTLTCP::RunAsync()
 	{
 		std::vector<char> data(TRANSFER_SIZE);
 
 		while (isStreaming())
 		{
-			int len = recv(sock, data.data(), TRANSFER_SIZE, 0);
+			int len = Read(data.data(), TRANSFER_SIZE, 1);
 
 			if (len < 0)
 			{
