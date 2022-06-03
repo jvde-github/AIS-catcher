@@ -91,14 +91,14 @@ use: AIS-catcher [options]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off]
-	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp]
+	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-120]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]
 	[-gw WAV file: FILE [filename]
 	[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]
 
 	Model specific settings:
 
-	[-go Model: FP_DS [on/off] PS_EMA [on/off] (requires specification of model via -m)]
+	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] (requires specification of model via -m)]
 ````
 
 ### Basic usage
