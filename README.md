@@ -410,7 +410,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - Testing: more set ups, assess gap with commercial equipment
-- System support and GUI: Windows, Android
+- System support and GUI: Windows, <del>Android</del>
 - Multi-channel SDRs: validate location from signal (e.g. like MLAT)
 - Output: ZeroMQ, APRS, ...
 - Input: ZeroMQ/TCP-IP protocols, SoapySDR, LimeSDR mini, ...
