@@ -1,34 +1,27 @@
 # -------------------
 # The build container
 # -------------------
-FROM alpine:latest AS build
+FROM debian:stretch-slim AS build
 
-RUN apk upgrade --no-cache
-RUN apk add --no-cache build-base librtlsdr-dev git make gcc g++ libusb-dev automake autoconf cmake util-linux musl-utils fftw-dev zeromq-dev 
+RUN apt-get update
+RUN apt-get upgrade
+
+RUN apt-get install git make gcc g++ cmake pkg-config -y
+RUN apt-get install librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev
 
 COPY . /root/AIS-catcher
 
-RUN git clone https://github.com/airspy/airspyhf; cd airspyhf; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON; make; make install; ldconfig /etc/ld.so.conf.d
-RUN git clone https://github.com/airspy/airspyone_host; cd airspyone_host; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON; make; make install; ldconfig /etc/ld.so.conf.d
-RUN git clone https://github.com/greatscottgadgets/hackrf.git; cd hackrf/host; mkdir build; cd build; cmake ..; make; make install; ldconfig /etc/ld.so.conf.d
 RUN cd /root/AIS-catcher; mkdir build; cd build; cmake ..; make; make install
 
 # -------------------------
 # The application container
 # -------------------------
-FROM alpine:latest
+FROM debian:stretch-slim AS build
 
-RUN apk upgrade --no-cache
-RUN apk add --no-cache libusb librtlsdr libstdc++ libgcc libzmq
+RUN apt-get update
+RUN apt-get upgrade
 
-COPY --from=build /usr/local/lib/libairspyhf.so /usr/local/lib/libairspyhf.so
-COPY --from=build /usr/local/lib/libairspyhf.so.0 /usr/local/lib/libairspyhf.so.0
-
-COPY --from=build /usr/local/lib/libairspy.so /usr/local/lib/libairspy.so
-COPY --from=build /usr/local/lib/libairspy.so.0 /usr/local/lib/libairspy.so.0
-
-COPY --from=build /usr/local/lib/libhackrf.so /usr/local/lib/libhackrf.so
-COPY --from=build /usr/local/lib/libhackrf.so.0 /usr/local/lib/libhackrf.so.0
+RUN apt-get install librtlsdr0 libairspy0 libairspyhf1 libhackrf0 libzmq5
 
 COPY --from=build /usr/local/bin/AIS-catcher /usr/local/bin/AIS-catcher
 
