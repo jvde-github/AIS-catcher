@@ -111,18 +111,16 @@ namespace Device {
 				closesocket(sock);
 			}
 #endif
-			timeval tv;
-			tv.tv_sec = 2;
-			tv.tv_usec = 0;
+			timeval to = {timeout, 0};
 
-			if(select(sock+1, &fd, NULL, NULL, &tv) == 1)
+			if(select(sock+1, &fd, NULL, NULL, &to) == 1)
 			{
-				int so_error;
-				socklen_t len = sizeof so_error;
+				int se;
+				socklen_t len = sizeof(se);
 
-				getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&so_error, &len);
+				getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&se, &len);
 
-				if (so_error != 0)
+				if (se != 0)
 					throw "RTLTCP: cannot open socket.";
 			}
 			else
@@ -160,27 +158,23 @@ namespace Device {
 		}
 	}
 
-	int RTLTCP::Read(void *data,int length,int timeout)
+	int RTLTCP::Read(void *data,int length,int time)
 	{
 		fd_set fd;
+
 		FD_ZERO(&fd);
 		FD_SET(sock, &fd);
 
-		timeval tv;
-		tv.tv_sec = timeout;
-		tv.tv_usec = 0;
+		timeval to = {time, 0};
 
-		int r = select(sock + 1, &fd, NULL, NULL, &tv);
-
-		if (r < 0)
+		if(select(sock + 1, &fd, NULL, NULL, &to) < 0)
 		{
 			return -1;
 		}
 
-		if (FD_ISSET(sock, &fd)) 
+		if (FD_ISSET(sock, &fd))
 		{
-			r = recv(sock,(char*)data,length, 0);
-			return r;
+			return recv(sock,(char*)data,length, 0);
 		}
 		return 0;
 	}
@@ -191,9 +185,9 @@ namespace Device {
 
 		while (isStreaming())
 		{
-			int len = Read(data.data(), TRANSFER_SIZE, 1);
+			int len = Read(data.data(), TRANSFER_SIZE, 2);
 
-			if (len < 0)
+			if (len <= 0)
 			{
 				lost = true;
 				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
@@ -278,6 +272,10 @@ namespace Device {
 		else if (option == "FREQOFFSET")
 		{
 			freq_offset = Util::Parse::Integer(arg, -150, 150);
+		}
+		else if (option == "TIMEOUT")
+		{
+			timeout = Util::Parse::Integer(arg, 1, 60);
 		}
 		else if (option == "HOST")
 		{
