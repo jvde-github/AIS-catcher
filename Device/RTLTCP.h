@@ -69,6 +69,7 @@ namespace Device {
 		Format format = Format::CF32;
 
 		SOCKET sock = -1;
+		int timeout = 2;
 
 		std::string host = "localhost";
 		std::string port = "1234";
