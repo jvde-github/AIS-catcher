@@ -53,7 +53,8 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ``
 AIS-catcher -v -m 2 -go SOXR on
 ``
-- Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable).
+- Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMREOUT``` option.
+- Several improvements and fixes to cmake-file
 
 
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
@@ -402,8 +403,8 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 ## To do
 
 - On going: testing and improving reveiver, seems to be some room for certain Class broadcast
-- Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.
-- RTL-TCP setting for timeout on connection (system default takes way too long)
+- <del>Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.</del> Use latest airspyhf lib.
+- <del>RTL-TCP setting for timeout on connection (system default takes way too long)</del>
 - Simulataneous receive Marine VHF audio and DSC decoding from SDR input signal
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
