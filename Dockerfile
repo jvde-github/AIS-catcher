@@ -1,13 +1,13 @@
 # -------------------
 # The build container
 # -------------------
-FROM debian:stretch-slim AS build
+FROM debian:bullseye-slim AS build
 
 RUN apt-get update
 RUN apt-get upgrade
 
 RUN apt-get install git make gcc g++ cmake pkg-config -y
-RUN apt-get install librtlsdr-dev libairspy-dev libhackrf-dev -y
+RUN apt-get install librtlsdr-dev libairspy-dev libhackrf-dev libairspyhf-dev libzmq3-dev libsoxr-dev -y
 
 COPY . /root/AIS-catcher
 
@@ -21,7 +21,7 @@ FROM debian:stretch-slim
 RUN apt-get update
 RUN apt-get upgrade
 
-RUN apt-get install librtlsdr0 libairspy0 libhackrf0 -y
+RUN apt-get install librtlsdr0 libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 -y
 
 COPY --from=build /usr/local/bin/AIS-catcher /usr/local/bin/AIS-catcher
 
