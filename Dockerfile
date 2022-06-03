@@ -16,7 +16,7 @@ RUN cd /root/AIS-catcher; mkdir build; cd build; cmake ..; make; make install
 # -------------------------
 # The application container
 # -------------------------
-FROM debian:stretch-slim
+FROM debian:bullseye-slim
 
 RUN apt-get update
 RUN apt-get upgrade
