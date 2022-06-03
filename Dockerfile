@@ -7,7 +7,7 @@ RUN apt-get update
 RUN apt-get upgrade
 
 RUN apt-get install git make gcc g++ cmake pkg-config -y
-RUN apt-get install librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev
+RUN apt-get install librtlsdr-dev libairspy-dev libhackrf-dev libzmq3-dev
 
 COPY . /root/AIS-catcher
 
@@ -21,7 +21,7 @@ FROM debian:stretch-slim
 RUN apt-get update
 RUN apt-get upgrade
 
-RUN apt-get install librtlsdr0 libairspy0 libairspyhf1 libhackrf0 libzmq5
+RUN apt-get install librtlsdr0 libairspy0  libhackrf0 libzmq5
 
 COPY --from=build /usr/local/bin/AIS-catcher /usr/local/bin/AIS-catcher
 
