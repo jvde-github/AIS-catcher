@@ -134,8 +134,8 @@ The same mechanism can be used to apply other transformations on the signal, e.g
 sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
 ```
 For reference, as per version 0.36, AIS-catcher has the option to use the internal sox library directly if included in your build:
-```
-AIS-catcher -s 1536K -r posterholt.raw -v -go SOXR 
+```console
+AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
 ### A note on device sample rates
 AIS-catcher automatically sets an approriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
