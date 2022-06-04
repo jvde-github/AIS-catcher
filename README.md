@@ -53,9 +53,9 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ``
 AIS-catcher -v -go SOXR on
 ``
-- Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMREOUT``` option.
-- Several improvements and fixes to cmake-file
-- Dockerfile moved to Debian slim from Alipne to resolve workflow and compatibility issues
+- Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMEOUT``` option.
+- Several fixes to cmake-file
+- Dockerfile moved to Debian-slim from Alpine to resolve workflow and compatibility issues
 
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
