@@ -214,6 +214,7 @@ namespace AIS
 		{
 			SOXR_DS = Util::Parse::Switch(arg);
 		}
+		else Model::Set(option, arg);
 
 	}
 

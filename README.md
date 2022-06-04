@@ -51,7 +51,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 - extension of functionality to read WAV-files with more data types (8 and 16 bit PCM) and increasing flexibility on data layout (FACT chunk recognized).
 - experimental option to downsample using the ``libsoxr`` library if available. Early experiments do not show an improvement in reception and system load but it allows for more flexibility on input sample rates. E.g.:
 ``
-AIS-catcher -v -m 2 -go SOXR on
+AIS-catcher -v -go SOXR on
 ``
 - Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMREOUT``` option.
 - Several improvements and fixes to cmake-file
@@ -99,7 +99,7 @@ use: AIS-catcher [options]
 
 	Model specific settings:
 
-	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] (requires specification of model via -m)]
+	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off]
 ````
 
 ### Basic usage
@@ -125,13 +125,17 @@ If successful, NMEA messages will start to come in, appear on the screen and sen
 The screen messages can be suppressed with the option ```-q```. That's all there is.
 
 
-As a slightly more advanced example, the following commands record a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
+AIS-catcher can read from stdin using ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
 ```console
 rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
 ```
-We can also use ``sox`` for downsampling a signal and then send the result to AIS-catcher for decoding:
+The same mechanism can be used to apply other transformations on the signal, e.g. downsampling with ``sox``:
 ```console
 sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
+```
+For reference, as per version 0.36, AIS-catcher has the option to use the internal sox library directly if included in your build:
+```
+AIS-catcher -s 1536K -r posterholt.raw -v -go SOXR 
 ```
 ### A note on device sample rates
 AIS-catcher automatically sets an approriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
@@ -140,7 +144,8 @@ AIS-catcher automatically sets an approriate sample rate depending on your devic
 1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 288K, 250K (*), 240K (*), 192K, 96K
 ```
 Before splitting the signal in two seperate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. The sample rates denoted with a (```*```) in the above are upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these derived rates.
-Please note that these are rates supported by the decoding model and might not be necesarily supported by the SDR hardware.
+Please note that these are rates supported by the decoding model and might not be necesarily supported by the SDR hardware. 
+In recent versions of AIS-catcher you can use the SOX library for downsampling which does not impose restrictions on the sampling rate, as long as it is above 96K.
 
 ## Special topics
 
