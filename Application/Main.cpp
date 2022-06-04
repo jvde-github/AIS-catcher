@@ -120,7 +120,7 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\tModel specific settings:" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] (requires specification of model via -m)]" << std::endl;
+	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off]" << std::endl;
 }
 
 std::vector<Device::Description> getDevices(Drivers &drivers)
@@ -149,7 +149,7 @@ void printDevices(std::vector<Device::Description>& device_list)
 
 void printSupportedDevices()
 {
-	std::cerr << "Supported SDR(s): ";
+	std::cerr << "SDR support: ";
 #ifdef HASRTLSDR
 	std::cerr << "RTLSDR ";
 #endif
@@ -170,6 +170,9 @@ void printSupportedDevices()
 	std::cerr << "HACKRF ";
 #endif
 	std::cerr << std::endl;
+#ifdef HASSOXR
+	std::cerr << "Model support: SOXR" << std::endl;
+#endif
 }
 
 int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial)
@@ -395,8 +398,9 @@ int main(int argc, char* argv[])
 				case 't': parseSettings(drivers.RTLTCP, argv, ptr, argc); break;
 				case 'f': parseSettings(drivers.HACKRF, argv, ptr, argc); break;
 				case 'z': parseSettings(drivers.ZMQ, argv, ptr, argc); break;
-				case 'o': 
-					Assert(liveModels.size() != 0, param, "At least one model needs to be defined prior to setting.");
+				case 'o':
+					if(liveModels.size() == 0)
+						liveModels.push_back(createModel(2));
 					parseSettings(*(liveModels[MAX(0, (int)liveModels.size() - 1)]), argv, ptr, argc); break;
 					break;
 				default: throw "Error on command line: invalid -g switch on command line";
