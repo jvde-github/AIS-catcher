@@ -42,6 +42,7 @@ SOFTWARE.
 #include "Device/RTLTCP.h"
 #include "Device/AIRSPY.h"
 #include "Device/SDRPLAY.h"
+#include "Device/SoapySDR.h"
 #include "Device/ZMQ.h"
 
 std::atomic<bool> stop;
@@ -69,6 +70,7 @@ struct Drivers
         Device::AIRSPY AIRSPY;
         Device::SDRPLAY SDRPLAY;
         Device::HACKRF HACKRF;
+        Device::SOAPYSDR SOAPYSDR;
         Device::ZMQ ZMQ;
 };
 
@@ -132,6 +134,7 @@ std::vector<Device::Description> getDevices(Drivers &drivers)
 	drivers.AIRSPY.getDeviceList(device_list);
 	drivers.SDRPLAY.getDeviceList(device_list);
 	drivers.HACKRF.getDeviceList(device_list);
+	drivers.SOAPYSDR.getDeviceList(device_list);
 
 	std::sort(device_list.begin(), device_list.end());
 
@@ -168,6 +171,9 @@ void printSupportedDevices()
 #endif
 #ifdef HASHACKRF
 	std::cerr << "HACKRF ";
+#endif
+#ifdef HASSOAPYSDR
+	std::cerr << "SOAPYSDR ";
 #endif
 	std::cerr << std::endl;
 #ifdef HASSOXR
@@ -397,6 +403,7 @@ int main(int argc, char* argv[])
 				case 'w': parseSettings(drivers.WAV, argv, ptr, argc); break;
 				case 't': parseSettings(drivers.RTLTCP, argv, ptr, argc); break;
 				case 'f': parseSettings(drivers.HACKRF, argv, ptr, argc); break;
+				case 'u': parseSettings(drivers.SOAPYSDR, argv, ptr, argc); break;
 				case 'z': parseSettings(drivers.ZMQ, argv, ptr, argc); break;
 				case 'o':
 					if(liveModels.size() == 0)
@@ -456,6 +463,9 @@ int main(int argc, char* argv[])
 #endif
 #ifdef HASHACKRF
 		case Device::Type::HACKRF: device = &drivers.HACKRF; break;
+#endif
+#ifdef HASSOAPYSDR
+		case Device::Type::SOAPYSDR: device = &drivers.SOAPYSDR; break;
 #endif
 		default: throw "Error: invalid device selection";
 		}
