@@ -1,5 +1,5 @@
-SRC = Application/Main.cpp IO/IO.cpp DSP/DSP.cpp Library/AIS.cpp DSP/Model.cpp Library/Utilities.cpp DSP/Demod.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp
-OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o RTLSDR.o AIRSPYHF.o AIRSPY.o FileRAW.o FileWAV.o SDRPLAY.o RTLTCP.o HACKRF.o ZMQ.o
+SRC = Application/Main.cpp IO/IO.cpp DSP/DSP.cpp Library/AIS.cpp DSP/Model.cpp Library/Utilities.cpp DSP/Demod.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp
+OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o RTLSDR.o AIRSPYHF.o AIRSPY.o FileRAW.o FileWAV.o SDRPLAY.o RTLTCP.o HACKRF.o ZMQ.o SoapySDR.o
 INCLUDE = -I. -ILibrary/ -IDSP/ -IApplication/ -IIO/
 CC = gcc
 
@@ -13,6 +13,7 @@ CFLAGS_SDRPLAY = -DHASSDRPLAY
 CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/include/libhackrf/
 CFLAGS_ZMQ = -DHASZMQ $(shell pkg-config --cflags libzmq)
 CFLAGS_SOXR = -DHASSOXR $(shell pkg-config --cflags soxr)
+CFLAGS_SOAPYSDR = -DHASSOAPYSDR
 
 LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
@@ -21,6 +22,7 @@ LFLAGS_SDRPLAY = -lsdrplay_api
 LFLAGS_HACKRF = $(shell pkg-config --libs libhackrf)
 LFLAGS_ZMQ = $(shell pkg-config --libs libzmq)
 LFLAGS_SOXR = $(shell pkg-config --libs soxr)
+LFLAGS_SOAPYSDR = -lSoapySDR
 
 CFLAGS_ALL =
 LFLAGS_ALL =
@@ -78,6 +80,9 @@ hackrf-only: lib-hackrf
 zmq-only: lib-zmq
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_ZMQ)
 
+soapysdr-only: lib-soapysdr
+	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_SOAPYSDR)
+
 # Creating object-files
 lib:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ALL)
@@ -99,6 +104,9 @@ lib-hackrf:
 
 lib-zmq:
 	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ZMQ)
+
+lib-soapysdr:
+	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_SOAPYSDR)
 
 clean:
 	rm *.o
