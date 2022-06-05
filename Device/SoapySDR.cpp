@@ -56,7 +56,7 @@ namespace Device {
 		fifo.Init(BUFFER_SIZE, 8);
 
     		try {
-        		dev = SoapySDR::Device::make(args);
+        		dev = SoapySDR::Device::make(device_args);
     		}
     		catch (std::exception& e) {
 			throw "SOAPYSDR: cannot open device.";
@@ -90,21 +90,20 @@ namespace Device {
 		std::vector<size_t> channels;
 		channels.push_back(0);
 
-		auto kwargs = SoapySDR::KwargsFromString(args);
-		auto stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, kwargs);
+		auto stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, device_args);
 
         	const int BUFFER_SIZE = dev->getStreamMTU(stream);
 
         	std::vector<CFLOAT32> input(BUFFER_SIZE);
 		void *buffers[] = { input.data() };
-		long long timeNs = 0;
-		int flags = 0;
+		long long timeNs;
+		int flags;
 
 		dev->activateStream(stream);
     		try {
 			while(isStreaming())
 			{
-				flags = 0; timeNs = 1;
+				flags = 0; timeNs = 0;
         			int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
 
 				if(ret < 0)
@@ -117,7 +116,8 @@ namespace Device {
 		{
 			lost = true;
     		}
-
+		flags = 0; timeNs = 0;
+		dev->deactivateStream(stream,flags,timeNs);
     		dev->closeStream(stream);
 
 		// did we terminate too early?
@@ -146,6 +146,19 @@ namespace Device {
 	{
 		dev->setSampleRate(SOAPY_SDR_RX, 0, sample_rate);
 		dev->setFrequency(SOAPY_SDR_RX, 0, frequency);
+		if(freq_offset != 0.0)
+			dev->setFrequencyCorrection(SOAPY_SDR_RX,channel,freq_offset);
+		if(antenna != "")
+			dev->setAntenna(SOAPY_SDR_RX,channel,antenna);
+		dev->setGainMode(SOAPY_SDR_RX,channel,AGC);
+		if(!AGC)
+		{
+			if(gains_args.size())
+	                	for (auto const&g : gains_args)
+					dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
+			else
+				dev->setGain(SOAPY_SDR_RX,channel,gaindb);
+		}
 	}
 
 	void SOAPYSDR::getDeviceList(std::vector<Description>& DeviceList)
@@ -161,22 +174,60 @@ namespace Device {
 
 	void SOAPYSDR::Print()
 	{
-		std::cerr << "SOAPYSDR settings: -gu ARG " << args << std::endl;
+		int i;
+
+		std::cerr << "SOAPYSDR settings: -gu DEVICE \"";
+		i = 0;
+		for (auto const&x : device_args)
+		{
+			std::cerr << x.first << "=" << x.second;
+			if(++i != device_args.size()) std::cerr << ", ";
+		}
+		std::cerr << "\" GAINS \"";
+		i = 0;
+		for (auto const&x : gains_args)
+		{
+			std::cerr << x.first << "=" << x.second;
+			if(++i != gains_args.size()) std::cerr << ", ";
+		}
 	}
 
 	void SOAPYSDR::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 
-		if (option == "ARG")
+		if (option == "DEVICE")
 		{
-			args = arg;
+			device_args = SoapySDR::KwargsFromString(arg);
+			return;
+		}
+		else if(option == "GAINS")
+		{
+			gains_args = SoapySDR::KwargsFromString(arg);
+			return;
+		}
+		else if(option == "ANTENNA")
+		{
+			antenna = arg;
 			return;
 		}
 
 		Util::Convert::toUpper(arg);
 
-		Device::Set(option,arg);
+		if (option == "AGC")
+                {
+                        AGC = Util::Parse::Switch(arg);
+                }
+                else if (option == "GAINDB")
+                {
+                        gaindb = Util::Parse::Float(arg,0,100);;
+                }
+                else if (option == "FREQOFFSET")
+                {
+                        freq_offset = Util::Parse::Float(arg,-150,150);
+                }
+		else
+			Device::Set(option,arg);
 	}
 #endif
 }
