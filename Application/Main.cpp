@@ -170,9 +170,18 @@ void printSupportedDevices()
 	std::cerr << "HACKRF ";
 #endif
 	std::cerr << std::endl;
+
+	std::cerr << "Other support: ";
 #ifdef HASSOXR
-	std::cerr << "Model support: SOXR" << std::endl;
+	std::cerr << "SOXR ";
 #endif
+#ifndef HASRTLSDR_BIASTEE
+	std::cerr << "RTLSDR-BIASTEE ";
+#endif
+#ifndef HASRTLSDR_TUNERBW
+	std::cerr << "RTLSDR-TUNERBW ";
+#endif
+	std::cerr << std::endl;
 }
 
 int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial)

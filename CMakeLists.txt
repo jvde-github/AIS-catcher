@@ -1,6 +1,6 @@
 # CMake definitions for AIS-catcher
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.02)
 project(AIS-catcher)
 
 # Common compiler flags and options.
@@ -90,12 +90,25 @@ if(NOT MSVC)
 		set(RTLSDR_INCLUDE_DIRS ${RTLSDR_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIR})
 		set(RTLSDR_LIBRARIES ${RTLSDR_LIBRARY} ${LIBUSB_LIBRARY})
 
-		if(PKG_RTLSDR_VERSION GREATER "0.5.4")
-			Message(STATUS "RTLSDR: support for biastee")
+		include(CheckFunctionExists)
+		set(CMAKE_REQUIRED_LIBRARIES ${RTLSDR_LIBRARIES})
+		check_function_exists(rtlsdr_set_bias_tee HASRTLSDR_BIASTEE)
+		if (HASRTLSDR_BIASTEE)
+    			add_definitions(-DHASRTLSDR_BIASTEE)
+			Message(STATUS "RTLSDR: bias-tee support included.")
 		else()
-			Message(STATUS "RTLSDR: no support for biastee")
-			add_definitions(-DLIBRTLSDR_LEGACY)
+			Message(STATUS "RTLSDR: NO bias-tee support included.")
 		endif()
+
+                check_function_exists(rtlsdr_set_tuner_bandwidth HASRTLSDR_TUNERBW)
+                if (HASRTLSDR_TUNERBW)
+                        add_definitions(-DHASRTLSDR_TUNERBW)
+                        Message(STATUS "RTLSDR: tuner badwidth support included.")
+                else()
+                        Message(STATUS "RTLSDR: NO tuner bandwidth support included.")
+                endif()
+
+		unset(CMAKE_REQUIRED_LIBRARIES)
 
 	else()
 		Message(STATUS "RTLSDR: not found.")
