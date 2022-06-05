@@ -53,7 +53,7 @@ namespace Device {
 
 	void SOAPYSDR::Play()
 	{
-		fifo.Init(BUFFER_SIZE, 2);
+		fifo.Init(BUFFER_SIZE, 8);
 
     		try {
         		dev = SoapySDR::Device::make(args);
@@ -93,27 +93,28 @@ namespace Device {
 		auto kwargs = SoapySDR::KwargsFromString(args);
 		auto stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, kwargs);
 
-        	const size_t N = dev->getStreamMTU(stream);
-        	std::vector<CFLOAT32> buf(N);
+        	const int BUFFER_SIZE = dev->getStreamMTU(stream);
+
+        	std::vector<CFLOAT32> input(BUFFER_SIZE);
+		void *buffers[] = { input.data() };
+		long long timeNs = 0;
+		int flags = 0;
 
 		dev->activateStream(stream);
     		try {
 			while(isStreaming())
 			{
+				flags = 0; timeNs = 1;
+        			int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
 
-        			void *buffs[1];
-        			buffs[0] = buf.data();
-
-        			int flags = 0;
-        			long long timeNs = 0;
-
-        			int ret = dev->readStream(stream, buffs, N, flags, timeNs);
-
-				if(ret < 0) lost = true;
-				else if (isStreaming() && !fifo.Push((char*)buffs[0], ret)) std::cerr << "SOAPYSDR: buffer overrun." << std::endl;
+				if(ret < 0)
+					lost = true;
+				else if (isStreaming() && !fifo.Push((char*)buffers[0], ret * sizeof(CFLOAT32) ))
+					std::cerr << "SOAPYSDR: buffer overrun." << std::endl;
 			}
 		}
-		catch (std::exception& e) {
+		catch (std::exception& e)
+		{
 			lost = true;
     		}
 
@@ -154,7 +155,7 @@ namespace Device {
 
 		for(auto d: foundDevices)
 		{
-			DeviceList.push_back(Description("SOAPYSDR", d.at("driver"), d.at("label"), (uint64_t)i++, Type::SOAPYSDR));
+			DeviceList.push_back(Description("SOAPYSDR", d.at("driver"), d.at("serial"), (uint64_t)i++, Type::SOAPYSDR));
 		}
 	}
 
