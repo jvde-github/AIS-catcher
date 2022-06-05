@@ -175,10 +175,10 @@ void printSupportedDevices()
 #ifdef HASSOXR
 	std::cerr << "SOXR ";
 #endif
-#ifndef HASRTLSDR_BIASTEE
+#ifdef HASRTLSDR_BIASTEE
 	std::cerr << "RTLSDR-BIASTEE ";
 #endif
-#ifndef HASRTLSDR_TUNERBW
+#ifdef HASRTLSDR_TUNERBW
 	std::cerr << "RTLSDR-TUNERBW ";
 #endif
 	std::cerr << std::endl;
