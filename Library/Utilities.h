@@ -147,7 +147,7 @@ namespace Util
 			return number;
 		}
 
-		static FLOAT32 Float(std::string str, FLOAT32 min, FLOAT32 max)
+		static FLOAT32 Float(std::string str, FLOAT32 min=-1e6, FLOAT32 max=+1e6)
 		{
 			FLOAT32 number = 0;
 
