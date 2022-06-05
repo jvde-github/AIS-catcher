@@ -138,7 +138,7 @@ namespace Device {
 
 	void RTLSDR::setBiasTee(int a)
 	{
-#ifdef LIBRTLSDR_LEGACY
+#ifndef HASRTLSDR_BIASTEE
 		throw "RTLSDR: bias tee not supported in this version of librtlsdr.";
 #else
 		if (rtlsdr_set_bias_tee(dev, a) != 0) throw "RTLSDR: cannot set bias tee.";
@@ -147,7 +147,7 @@ namespace Device {
 
 	void RTLSDR::setBandwidth(int a)
 	{
-#ifdef LIBRTLSDR_LEGACY
+#ifndef HASRTLSDR_TUNERBW
 		throw "RTLSDR: setting of bandwidth not supported in this version of librtlsdr.";
 #else
 		if (rtlsdr_set_tuner_bandwidth(dev, a) != 0) throw "RTLSDR: cannot set bandwidth.";
