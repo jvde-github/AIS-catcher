@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver 
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, Airspy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1, RSP1A and RSPDX for now), input from file and over ZMQ and (RTL) TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, Airspy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1, RSP1A and RSPDX for now), SoapySDR, input from file and over ZMQ and (RTL) TCP. Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
@@ -56,7 +56,8 @@ AIS-catcher -v -go SOXR on
 - Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMEOUT``` option.
 - Several fixes to cmake-file
 - Dockerfile moved to Debian-slim from Alpine to resolve workflow and compatibility issues
-
+- Initial SoapySDR support (remains to be further tested and refined).
+- 
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
 ## Usage
