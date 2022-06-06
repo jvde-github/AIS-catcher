@@ -47,13 +47,15 @@ namespace Device{
 
 		std::string antenna = "";
 		FLOAT32 freq_offset = 0.0;
-		FLOAT32 gaindb;
+		FLOAT32 gaindb = 0.0;
 		int channel = 0;
 		bool AGC = true;
+		bool print = true;
 
 		std::thread async_thread;
 		std::thread run_thread;
 
+		void PrintActuals(void);
 
 		bool lost = true;
 
