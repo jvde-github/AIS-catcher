@@ -41,7 +41,10 @@ namespace Device{
 		SoapySDR::Device *dev = NULL;
 
 		SoapySDR::Kwargs device_args;
+		SoapySDR::Kwargs stream_args;
+		SoapySDR::Kwargs setting_args;
 		SoapySDR::Kwargs gains_args;
+
 		std::string antenna = "";
 		FLOAT32 freq_offset = 0.0;
 		FLOAT32 gaindb;
