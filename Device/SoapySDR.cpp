@@ -44,11 +44,6 @@ namespace Device {
 	void SOAPYSDR::Close()
 	{
 		Device::Close();
-
-		if(dev != NULL)
-		{
-			SoapySDR::Device::unmake(dev);
-		}
 	}
 
 	void SOAPYSDR::Play()
@@ -83,6 +78,11 @@ namespace Device {
 			if (async_thread.joinable()) async_thread.join();
 			if (run_thread.joinable()) run_thread.join();
 		}
+
+		if(dev != NULL)
+		{
+			SoapySDR::Device::unmake(dev);
+		}
 	}
 
 	void SOAPYSDR::RunAsync()
@@ -90,21 +90,22 @@ namespace Device {
 		std::vector<size_t> channels;
 		channels.push_back(0);
 
-		auto stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, device_args);
+		auto stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, stream_args);
 
-        	const int BUFFER_SIZE = dev->getStreamMTU(stream);
+		const int BUFFER_SIZE = dev->getStreamMTU(stream);
 
-        	std::vector<CFLOAT32> input(BUFFER_SIZE);
+		std::vector<CFLOAT32> input(BUFFER_SIZE);
 		void *buffers[] = { input.data() };
 		long long timeNs;
 		int flags;
 
 		dev->activateStream(stream);
-    		try {
+		try
+		{
 			while(isStreaming())
 			{
 				flags = 0; timeNs = 0;
-        			int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
+				int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
 
 				if(ret < 0)
 					lost = true;
@@ -115,10 +116,10 @@ namespace Device {
 		catch (std::exception& e)
 		{
 			lost = true;
-    		}
+		}
 		flags = 0; timeNs = 0;
 		dev->deactivateStream(stream,flags,timeNs);
-    		dev->closeStream(stream);
+		dev->closeStream(stream);
 
 		// did we terminate too early?
 		if (isStreaming()) lost = true;
@@ -148,14 +149,21 @@ namespace Device {
 		dev->setFrequency(SOAPY_SDR_RX, 0, frequency);
 		if(freq_offset != 0.0)
 			dev->setFrequencyCorrection(SOAPY_SDR_RX,channel,freq_offset);
+
 		if(antenna != "")
 			dev->setAntenna(SOAPY_SDR_RX,channel,antenna);
+
+		for (auto const&x : setting_args)
+		{
+			dev->writeSetting(x.first,x.second);
+		}
+
 		dev->setGainMode(SOAPY_SDR_RX,channel,AGC);
 		if(!AGC)
 		{
 			if(gains_args.size())
-	                	for (auto const&g : gains_args)
-					dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
+			for (auto const&g : gains_args)
+				dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
 			else
 				dev->setGain(SOAPY_SDR_RX,channel,gaindb);
 		}
@@ -204,6 +212,16 @@ namespace Device {
 		else if(option == "GAINS")
 		{
 			gains_args = SoapySDR::KwargsFromString(arg);
+			return;
+		}
+		else if(option == "STREAMS")
+		{
+			stream_args = SoapySDR::KwargsFromString(arg);
+			return;
+		}
+		else if(option == "SETTINGS")
+		{
+			setting_args = SoapySDR::KwargsFromString(arg);
 			return;
 		}
 		else if(option == "ANTENNA")
