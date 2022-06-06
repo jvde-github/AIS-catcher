@@ -96,7 +96,7 @@ use: AIS-catcher [options]
 	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]
 	[-gw WAV file: FILE [filename]
-	[-gu SOAPYSDR: DEVICE [string] GAINS [string] ANTENNA [string] AGC [on/off] GAINDB [0+] FREQOFFSET [-150,150]
+	[-gu SOAPYSDR: DEVICE [string] GAINS [string] STREAM [string] SETTING [string] CHANNEL [0+] PRINT [on/off] ANTENNA [string] AGC [on/off] GAINDB [0+] FREQOFFSET [-150,150]
 	[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]
 
 	Model specific settings:

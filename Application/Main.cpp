@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <signal.h> 
+#include <signal.h>
 
 #include <iostream>
 #include <string.h>
@@ -118,7 +118,7 @@ void Usage()
 	std::cerr << "\t[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60]" << std::endl;
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename]" << std::endl;
-	std::cerr << "\t[-gu SOAPYSDR: DEVICE [string] GAINS [string] STREAM [string] SETTING [string] ANTENNA [string] AGC [on/off] GAINDB [0+] FREQOFFSET [-150,150]" << std::endl;
+	std::cerr << "\t[-gu SOAPYSDR: DEVICE [string] GAINS [string] STREAM [string] SETTING [string] CHANNEL [0+] PRINT [on/off] ANTENNA [string] AGC [on/off] GAINDB [0+] FREQOFFSET [-150,150]" << std::endl;
 	std::cerr << "\t[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\tModel specific settings:" << std::endl;
@@ -495,7 +495,7 @@ int main(int argc, char* argv[])
 		// Setup models
 
 		if (!liveModels.size()) liveModels.push_back(createModel(2));
-		
+
 		std::vector<IO::StreamCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
 
 		// Attach output
