@@ -299,11 +299,11 @@ AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
 ### SoapySDR
 
-In general we recommend to use the built-in drivers for supported SDR supported devices. However, AIS-catcher also supports a wide variety of other devices via the [SoapySDR library](https://github.com/pothosware/SoapySDR/wiki) which is an independent SDR support library. SoapySDR is not included by default in the standard build. To enable SoapySDR support follow the build instructions as per below but replace the ```cmake``` call with:
+In general we recommend to use the built-in drivers for supported SDR  devices. However, AIS-catcher also supports a wide variety of other devices via the [SoapySDR library](https://github.com/pothosware/SoapySDR/wiki) which is an independent SDR support library. SoapySDR is not included by default in the standard build. To enable SoapySDR support follow the build instructions as per below but replace the ```cmake``` call with:
 ```console
 cmake .. -DSOAPYSDR=ON
 ```
-The result is that AIS-catcher adds a few additional "devices" to the device list (```-l```) - a generic SOAPYSDR device and one device for each receiving channel for each device, e.g. with one RTL-SDR dongle connected this would look like:
+The result is that AIS-catcher adds a few additional "devices" to the device list (```-l```) - a generic SOAPYSDR device and one device for all receiving channels for each device, e.g. with one RTL-SDR dongle connected this would look like:
 ```
 Found 3 device(s):
 0: Realtek, RTL2838UHIDIR, SN: 00000001
@@ -318,11 +318,11 @@ Note that the serial number has a prefix of ```SCH0``` (short for SoapySDR Chann
 ```
 AIS-catcher -d SOAPYSDR -gu device "serial=00000001,driver=rtlsdr"  -s 1536K
 ```
-Stream argumentss and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAINS``` followed by a argument string. Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` swhitch which displays the actual settings used, e.g.
+Stream arguments and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAINS``` followed by a argument string. Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` swhitch which displays the actual settings used, e.g.
 ```
 AIS-catcher -d SOAPYSDR -s 1536K -gu FREQOFFSET 5 GAINS "TUNER=37.3" PROBE on SETTINGS "biastee=true"
 ```
-This also sets the tuner gain for the RTL-SDR to 37.3, the bias-tee on and the frequency correction to 5 ppm.
+To complete the example, this also sets the tuner gain for the RTL-SDR to 37.3, the bias-tee on and the frequency correction to 5 ppm.
 
 ## Validation
 
