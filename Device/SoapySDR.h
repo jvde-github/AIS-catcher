@@ -34,13 +34,27 @@ SOFTWARE.
 
 namespace Device{
 
+	class SoapyDevice
+	{
+		std::string device;
+		int channel = 0;
+		int sample_rate = 0;
+	public:
+		SoapyDevice(std::string d,int c,int s) : device(d), channel(c), sample_rate(s) { }
+
+		std::string getDeviceString() { return device; }
+		int getChannel() { return channel; }
+		int getDefaultSampleRate() { return sample_rate; }
+	};
+
 	class SOAPYSDR : public Device
 	{
 #ifdef HASSOAPYSDR
 
+		std::vector<SoapyDevice> dev_list;
 		SoapySDR::Device *dev = NULL;
 
-		SoapySDR::Kwargs device_args;
+		std::string device_args;
 		SoapySDR::Kwargs stream_args;
 		SoapySDR::Kwargs setting_args;
 		SoapySDR::Kwargs gains_args;
@@ -50,7 +64,7 @@ namespace Device{
 		FLOAT32 gaindb = 0.0;
 		int channel = 0;
 		bool AGC = true;
-		bool print = true;
+		bool print = false;
 
 		std::thread async_thread;
 		std::thread run_thread;
@@ -68,7 +82,7 @@ namespace Device{
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 
 		void applySettings();
-
+		int findRate(const std::vector<double>&);
 	public:
 
 		SOAPYSDR();
