@@ -184,13 +184,10 @@ namespace Device {
 			}
 
 			dev->setGainMode(SOAPY_SDR_RX,channel,AGC);
-			if(true || !AGC)
+			for (auto const&g : gains_args)
 			{
-				if(gains_args.size())
-				for (auto const&g : gains_args)
-					dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
-				//else
-				//	dev->setGain(SOAPY_SDR_RX,channel,gaindb);
+				std::cerr << g.first << " " << g.second << std::endl;
+				dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
 			}
 		}
                 catch (std::exception& e)
@@ -199,24 +196,17 @@ namespace Device {
                 }
 	}
 
-	int SOAPYSDR::findRate(const std::vector<double>& rates)
-	{
-		int rate = 0;
-					for(double r : rates)
-					{
-						if(r = 1536000) 
-						{
-							rate = r;
-							break;
-						}
-					}
-		return rate;
-	}
-
 	void SOAPYSDR::getDeviceList(std::vector<Description>& DeviceList)
 	{
 		const auto devs = SoapySDR::Device::enumerate("");
 		dev_list.clear();
+
+		if(devs.size())
+		{
+			dev_list.push_back(SoapyDevice("",0,0));
+			DeviceList.push_back(Description("SOAPYSDR", std::to_string(devs.size()) + " device(s)", "SOAPYSDR", (uint64_t)0, Type::SOAPYSDR));
+		}
+		int cnt = 1;
 
 		for(int i = 0; i < devs.size(); i++)
 		{
@@ -228,16 +218,13 @@ namespace Device {
 			{
 				auto device = SoapySDR::Device::make(dev_str);
 				int nChannels = device->getNumChannels(SOAPY_SDR_RX);
-				for(int j = 0; j < nChannels; j++)
+				for(int c = 0; c < nChannels; c++)
 				{
-					std::string serial_str = "SOAPY-" + (nChannels>0?("Ch"+std::to_string(j)+"-"):"") + d["serial"];
-
-					std::vector<double> rates = device->listSampleRates(SOAPY_SDR_RX,j);
-					int rate = findRate(rates);
-
-
-					dev_list.push_back(SoapyDevice(dev_str,j,rate));
-					DeviceList.push_back(Description("SOAPYSDR", dev_str, serial_str, (uint64_t)i, Type::SOAPYSDR));
+					std::string serial_str = "SCH" + std::to_string(c)+ "-" + d["serial"];
+					int rate = device->getSampleRate(SOAPY_SDR_RX,c);
+					dev_list.push_back(SoapyDevice(dev_str,c,rate));
+					DeviceList.push_back(Description("SOAPYSDR", dev_str, serial_str, (uint64_t)cnt, Type::SOAPYSDR));
+					cnt++;
 				}
 				SoapySDR::Device::unmake(device);
 			}
@@ -298,10 +285,6 @@ namespace Device {
 		if (option == "AGC")
                 {
                         AGC = Util::Parse::Switch(arg);
-                }
-                else if (option == "GAINDB")
-                {
-                        gaindb = Util::Parse::Float(arg,0,100);
                 }
                 else if (option == "PROBE")
                 {

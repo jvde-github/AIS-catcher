@@ -3,6 +3,13 @@
 cmake_minimum_required(VERSION 3.02)
 project(AIS-catcher)
 
+option(SOAPYSDR "Include Soapy SDR support" OFF)
+option(RTLSDR "Include RTLSDR support" ON)
+option(AIRSPY "Include Airspy support" ON)
+option(AIRSPY "Include Airspy HF+ support" ON)
+option(HACKRF "Include HackRF support" ON)
+option(SOXR "Include SOXR support" ON)
+
 # Common compiler flags and options.
 
 option(MSVC_VCPKG "For MSVC use VCPKG libraries." OFF)
@@ -70,6 +77,14 @@ else()
 	Message(STATUS "SOXR: not found.")
 endif()
 
+if(SOAPYSDR)
+	pkg_check_modules(SOAPYSDR SoapySDR)
+
+	if(SOAPYSDR_INCLUDE_DIRS AND SOAPYSDR_LIBRARY_DIRS)
+		message(STATUS "SOAPYSDR: found - ${SOAPYSDR_INCLUDE_DIRS}, ${SOAPYSDR_LIBRARIES}")
+		add_definitions(-DHASSOAPYSDR)
+	endif()
+endif()
 # Find RTL-SDR library.
 if(NOT MSVC)
 
@@ -359,7 +374,7 @@ endif()
 set(CPP
 	Application/Main.cpp
 	Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp
-	Device/FileRAW.cpp Device/HACKRF.cpp Device/RTLTCP.cpp Device/ZMQ.cpp
+	Device/FileRAW.cpp Device/HACKRF.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp
 	Library/Utilities.cpp
 	Device/AIRSPY.cpp
 	DSP/DSP.cpp
@@ -367,7 +382,7 @@ set(CPP
 
 set(HEADER
 	Application/AIS-catcher.h
-	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Signals.h
+	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Signals.h Device/SoapySDR.h
 	Device/AIRSPY.h Device/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h
 	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h Library/Utilities.h)
 

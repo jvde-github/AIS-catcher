@@ -59,8 +59,6 @@ namespace Device{
 		std::string getSerial() { return serial; }
 		Type getType() { return type; }
 		uint64_t getHandle() { return handle; }
-
- 		bool operator < (const Description& b) const { return (serial < b.serial); }
 	};
 
 	class Device : public StreamOut<RAW>, public Setting
