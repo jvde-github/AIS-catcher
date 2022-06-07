@@ -53,7 +53,8 @@ namespace Device {
     		try {
         		dev = SoapySDR::Device::make(device_args);
     		}
-    		catch (std::exception& e) {
+    		catch (std::exception& e)
+		{
 			throw "SOAPYSDR: cannot open device.";
 		}
 
@@ -92,7 +93,17 @@ namespace Device {
 		std::vector<size_t> channels;
 		channels.push_back(channel);
 
-		auto stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, stream_args);
+		SoapySDR::Stream *stream;
+		try
+		{
+			stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, stream_args);
+		}
+		catch (std::exception& e)
+		{
+			std::cerr << "SOAPYSDR: " << e.what() << std::endl;
+			lost = true;
+			return;
+		}
 
 		const int BUFFER_SIZE = dev->getStreamMTU(stream);
 
@@ -101,9 +112,10 @@ namespace Device {
 		long long timeNs;
 		int flags;
 
-		dev->activateStream(stream);
 		try
 		{
+			dev->activateStream(stream);
+
 			while(isStreaming())
 			{
 				flags = 0; timeNs = 0;
@@ -148,27 +160,34 @@ namespace Device {
 
 	void SOAPYSDR::applySettings()
 	{
-		dev->setSampleRate(SOAPY_SDR_RX, 0, sample_rate);
-		dev->setFrequency(SOAPY_SDR_RX, 0, frequency);
-		dev->setFrequencyCorrection(SOAPY_SDR_RX,channel,freq_offset);
-
-		if(antenna != "")
-			dev->setAntenna(SOAPY_SDR_RX,channel,antenna);
-
-		for (auto const&x : setting_args)
+		try
 		{
-			dev->writeSetting(x.first,x.second);
-		}
+			dev->setSampleRate(SOAPY_SDR_RX, 0, sample_rate);
+			dev->setFrequency(SOAPY_SDR_RX, 0, frequency);
+			dev->setFrequencyCorrection(SOAPY_SDR_RX,channel,freq_offset);
 
-		dev->setGainMode(SOAPY_SDR_RX,channel,AGC);
-		if(!AGC)
-		{
-			if(gains_args.size())
-			for (auto const&g : gains_args)
-				dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
-			else
-				dev->setGain(SOAPY_SDR_RX,channel,gaindb);
+			if(antenna != "")
+				dev->setAntenna(SOAPY_SDR_RX,channel,antenna);
+
+			for (auto const&x : setting_args)
+			{
+				dev->writeSetting(x.first,x.second);
+			}
+
+			dev->setGainMode(SOAPY_SDR_RX,channel,AGC);
+			if(!AGC)
+			{
+				if(gains_args.size())
+				for (auto const&g : gains_args)
+					dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
+				else
+					dev->setGain(SOAPY_SDR_RX,channel,gaindb);
+			}
 		}
+                catch (std::exception& e)
+		{
+                        throw "SOAPYSDR: cannot set SoapySDR parameters.";
+                }
 	}
 
 	void SOAPYSDR::getDeviceList(std::vector<Description>& DeviceList)
@@ -243,7 +262,7 @@ namespace Device {
                 {
                         gaindb = Util::Parse::Float(arg,0,100);
                 }
-                else if (option == "PRINT")
+                else if (option == "PROBE")
                 {
                         print = Util::Parse::Switch(arg);
                 }
