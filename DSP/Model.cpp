@@ -111,6 +111,7 @@ namespace AIS
 				convert.outCS8 >> DS8_CS8 >> DSK;
 			}
 			break;
+		case 2048000:
 		case 2000000:
 		case 1920000:
 			US.setParams(sample_rate, 2304000);

@@ -24,7 +24,7 @@ SOFTWARE.
 
 #include <iostream>
 #include <string.h>
-#include <algorithm>
+//#include <algorithm>
 #include <memory>
 
 #include "AIS-catcher.h"
@@ -136,8 +136,6 @@ std::vector<Device::Description> getDevices(Drivers &drivers)
 	drivers.SDRPLAY.getDeviceList(device_list);
 	drivers.HACKRF.getDeviceList(device_list);
 	drivers.SOAPYSDR.getDeviceList(device_list);
-
-	std::sort(device_list.begin(), device_list.end());
 
 	return device_list;
 }

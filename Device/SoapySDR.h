@@ -61,7 +61,6 @@ namespace Device{
 
 		std::string antenna = "";
 		FLOAT32 freq_offset = 0.0;
-		FLOAT32 gaindb = 0.0;
 		int channel = 0;
 		bool AGC = true;
 		bool print = false;
