@@ -39,6 +39,15 @@ namespace Device {
 	void SOAPYSDR::Open(uint64_t h)
 	{
 		Device::Open(h);
+
+		if(h < dev_list.size())
+		{
+			device_args = dev_list[h].getDeviceString();
+			setSampleRate(dev_list[h].getDefaultSampleRate());
+			channel = dev_list[h].getChannel();
+		}
+		else
+			throw "SOAPYSDR: invalid handle to open device.";
 	}
 
 	void SOAPYSDR::Close()
@@ -63,7 +72,7 @@ namespace Device {
 		Device::Play();
 		lost = false;
 
-		PrintActuals();
+		if(print) PrintActuals();
 
 		async_thread = std::thread(&SOAPYSDR::RunAsync, this);
 		run_thread = std::thread(&SOAPYSDR::Run, this);
@@ -175,13 +184,13 @@ namespace Device {
 			}
 
 			dev->setGainMode(SOAPY_SDR_RX,channel,AGC);
-			if(!AGC)
+			if(true || !AGC)
 			{
 				if(gains_args.size())
 				for (auto const&g : gains_args)
 					dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
-				else
-					dev->setGain(SOAPY_SDR_RX,channel,gaindb);
+				//else
+				//	dev->setGain(SOAPY_SDR_RX,channel,gaindb);
 			}
 		}
                 catch (std::exception& e)
@@ -190,14 +199,52 @@ namespace Device {
                 }
 	}
 
+	int SOAPYSDR::findRate(const std::vector<double>& rates)
+	{
+		int rate = 0;
+					for(double r : rates)
+					{
+						if(r = 1536000) 
+						{
+							rate = r;
+							break;
+						}
+					}
+		return rate;
+	}
+
 	void SOAPYSDR::getDeviceList(std::vector<Description>& DeviceList)
 	{
-		int i = 0;
-		const auto foundDevices = SoapySDR::Device::enumerate("");
+		const auto devs = SoapySDR::Device::enumerate("");
+		dev_list.clear();
 
-		for(auto d: foundDevices)
+		for(int i = 0; i < devs.size(); i++)
 		{
-			DeviceList.push_back(Description("SOAPYSDR", d.at("driver"), d.at("serial"), (uint64_t)i++, Type::SOAPYSDR));
+			auto d = devs[i];
+
+			std::string dev_str = "driver=" + d["driver"] + ",serial="+d["serial"];
+
+			try
+			{
+				auto device = SoapySDR::Device::make(dev_str);
+				int nChannels = device->getNumChannels(SOAPY_SDR_RX);
+				for(int j = 0; j < nChannels; j++)
+				{
+					std::string serial_str = "SOAPY-" + (nChannels>0?("Ch"+std::to_string(j)+"-"):"") + d["serial"];
+
+					std::vector<double> rates = device->listSampleRates(SOAPY_SDR_RX,j);
+					int rate = findRate(rates);
+
+
+					dev_list.push_back(SoapyDevice(dev_str,j,rate));
+					DeviceList.push_back(Description("SOAPYSDR", dev_str, serial_str, (uint64_t)i, Type::SOAPYSDR));
+				}
+				SoapySDR::Device::unmake(device);
+			}
+			catch (const std::exception &ex)
+			{
+			}
+
 		}
 	}
 
@@ -205,13 +252,7 @@ namespace Device {
 	{
 		int i;
 
-		std::cerr << "SOAPYSDR settings: -gu DEVICE \"";
-		i = 0;
-		for (auto const&x : device_args)
-		{
-			std::cerr << x.first << "=" << x.second;
-			if(++i != device_args.size()) std::cerr << ", ";
-		}
+		std::cerr << "SOAPYSDR settings: -gu DEVICE \"" << device_args;
 		std::cerr << "\" GAINS \"";
 		i = 0;
 		for (auto const&x : gains_args)
@@ -228,7 +269,7 @@ namespace Device {
 
 		if (option == "DEVICE")
 		{
-			device_args = SoapySDR::KwargsFromString(arg);
+			device_args = arg;
 			return;
 		}
 		else if(option == "GAINS")
