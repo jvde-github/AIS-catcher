@@ -142,7 +142,7 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 ### A note on device sample rates
 AIS-catcher automatically sets an approriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
 ```
-12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2000K (*), 1920K (*), 1536K
+12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2048K (*), 2000K (*), 1920K (*), 1536K
 1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 288K, 250K (*), 240K (*), 192K, 96K
 ```
 Before splitting the signal in two seperate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. The sample rates denoted with a (```*```) in the above are upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these derived rates.
@@ -297,6 +297,32 @@ AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org
 ```console
 AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
 ```
+### SoapySDR
+
+In general we recommend to use the built-in drivers for supported SDR supported devices. However, AIS-catcher also supports a wide variety of other devices via the [SoapySDR library](https://github.com/pothosware/SoapySDR/wiki) which is an independent SDR support library. SoapySDR is not included by default in the standard build. To enable SoapySDR support follow the build instructions as per below but replace the ```cmake``` call with:
+```console
+cmake .. -DSOAPYSDR=ON
+```
+The result is that AIS-catcher adds a few additional "devices" to the device list (```-l```) - a generic SOAPYSDR device and one device for each receiving channel for each device, e.g. with one RTL-SDR dongle connected this would look like:
+```
+Found 3 device(s):
+0: Realtek, RTL2838UHIDIR, SN: 00000001
+1: SOAPYSDR, 1 device(s), SN: SOAPYSDR
+2: SOAPYSDR, driver=rtlsdr,serial=00000001, SN: SCH0-00000001
+```
+To start streaming via Soapy we can use:
+```
+AIS-catcher -d SCH0-00000001
+```
+Note that the serial number has a prefix of ```SCH0``` (short for SoapySDR Channel 0) to distinguish it from the device accessed via the native SDR libary. Alternative, we can use a device-string to select the device: 
+```
+AIS-catcher -d SOAPYSDR -gu device "serial=00000001,driver=rtlsdr"  -s 1536K
+```
+Stream argumentss and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAINS``` followed by a argument string. Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` swhitch which displays the actual settings used, e.g.
+```
+AIS-catcher -d SOAPYSDR -s 1536K -gu FREQOFFSET 5 GAINS "TUNER=37.3" PROBE on SETTINGS "biastee=true"
+```
+This also sets the tuner gain for the RTL-SDR to 37.3, the bias-tee on and the frequency correction to 5 ppm.
 
 ## Validation
 
@@ -339,6 +365,7 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 ***Airspy HF+***        | libairspyhf-dev                            | airspyhf  |    -                | X |
 ***HackRF***          | libhackrf-dev                             | hackrf    |    -                 | X |
 ***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | - | [API 3.x](https://www.sdrplay.com/downloads/)     | [API 3.x](https://www.sdrplay.com/downloads/)  |
+***SoapySDR***             | libsoapysdr-dev     |       |                  |  |
 ***ZeroMQ***             | libzmq3-dev     | zeromq      | ZeroMQ ZeroMQ:x64-windows                  | X |
 
 Once the dependencies are in place, the process to install AIS-catcher then on Linux based systems becomes:
