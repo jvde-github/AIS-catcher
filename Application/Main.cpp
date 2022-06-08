@@ -88,6 +88,8 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
+	std::cerr << "\t[-p xxx set frequency correction for device in PPM (default: zero)]" << std::endl;
+	std::cerr << "\t[-s xxx set tuner bandwidth in Hz (default: off)]" << std::endl;
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
@@ -246,7 +248,7 @@ void Assert(bool b, std::string &context, std::string msg = "")
 
 int main(int argc, char* argv[])
 {
-	int sample_rate = 0, input_device = 0;
+	int sample_rate = 0, input_device = 0,  bandwidth = 0, ppm = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false,  timer_on = false;
@@ -397,7 +399,11 @@ int main(int argc, char* argv[])
 				break;
 			case 'p':
 				Assert(count == 1, param, "Requires one parameter [frequency offset].");
-				drivers.RTLSDR.Set("FREQOFFSET", arg1);
+				ppm = Util::Parse::Integer(arg1, -150, 150);
+				break;
+			case 'f':
+				Assert(count == 1, param, "Requires one parameter [bandwidth].");
+				bandwidth = Util::Parse::Integer(arg1, 0, 20000000);
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3, param);
@@ -483,11 +489,18 @@ int main(int argc, char* argv[])
 		// Open and set up device
 
 		device->Open(handle);
-		if (verbose) device->Print();
 
 		// override sample rate if defined by user
 		if (sample_rate) device->setSampleRate(sample_rate);
 		device->setFrequency((int)(162e6));
+
+		if(ppm)
+			device->Set("FREQOFFSET",std::to_string(ppm));
+
+		if(bandwidth)
+			device->Set("BW",std::to_string(bandwidth));
+
+		if (verbose) device->Print();
 
 		// ------------
 		// Setup models
@@ -520,7 +533,8 @@ int main(int argc, char* argv[])
 
 		if(verbose)
 		{
-			std::cerr << "Generic settings: " << "sample rate -s " << device->getSampleRate()/1000 << "K" << std::endl;
+			std::cerr << "Generic settings: " << "sample rate -s " << device->getSampleRate()/1000 << "K " << (ppm?("-p "+std::to_string(ppm)):"") << " ";
+			std::cerr << (bandwidth?("-f "+std::to_string(bandwidth)):"") << std::endl;
 		}
 
 		// -----------------

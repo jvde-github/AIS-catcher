@@ -230,17 +230,9 @@ namespace Device {
 		{
 			RTL_AGC = Util::Parse::Switch(arg);
 		}
-		else if (option == "BW")
-		{
-			tuner_bandwidth = Util::Parse::Integer(arg,1,1000000);
-		}
 		else if (option == "BIASTEE")
 		{
 			bias_tee = Util::Parse::Switch(arg);
-		}
-		else if (option == "FREQOFFSET")
-		{
-			freq_offset = Util::Parse::Integer(arg,-150,150);
 		}
 		else Device::Set(option,arg);
 	}
