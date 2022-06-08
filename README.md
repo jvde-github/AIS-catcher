@@ -66,6 +66,8 @@ use: AIS-catcher [options]
 
 	[-h display this message and terminate (default: false)]
 	[-s xxx sample rate in Hz (default: based on SDR device)]
+	[-p xxx set frequency correction for device in PPM (default: zero)]
+	[-s xxx set tuner bandwidth in Hz (default: off)]
 	[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]
 	[-q suppress NMEA messages to screen (default: false)]
 	[-n show NMEA messages on screen without detail]

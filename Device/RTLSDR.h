@@ -47,13 +47,14 @@ namespace Device{
 		std::thread run_thread;
 
 		// Device settings
-		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
 		bool auto_terminate = true;
-		int tuner_bandwidth = 0;
+
+		//int tuner_bandwidth = 0;
+		//int freq_offset = 0;
 
 		bool lost = true;
 

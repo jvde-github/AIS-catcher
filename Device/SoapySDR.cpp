@@ -189,6 +189,10 @@ namespace Device {
 				std::cerr << g.first << " " << g.second << std::endl;
 				dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
 			}
+			if(freq_offset)
+				dev->setFrequencyCorrection(SOAPY_SDR_RX,channel,freq_offset);
+			if(tuner_bandwidth)
+				dev->setBandwidth(SOAPY_SDR_RX,channel,tuner_bandwidth);
 		}
                 catch (std::exception& e)
 		{
@@ -247,7 +251,21 @@ namespace Device {
 			std::cerr << x.first << "=" << x.second;
 			if(++i != gains_args.size()) std::cerr << ", ";
 		}
-		std::cerr << "\"" << std::endl;
+		std::cerr << "\" STREAM \"";
+		i = 0;
+		for (auto const&x : stream_args)
+		{
+			std::cerr << x.first << "=" << x.second;
+			if(++i != gains_args.size()) std::cerr << ", ";
+		}
+		std::cerr << "\" SETTING \"";
+		i = 0;
+		for (auto const&x : setting_args)
+		{
+			std::cerr << x.first << "=" << x.second;
+			if(++i != gains_args.size()) std::cerr << ", ";
+		}
+		std::cerr << "\" CHANNEL " << channel << " AGC " << (AGC?"on":"off") << (antenna==""?"":(" ANTENNA "+antenna)) << antenna << std::endl;
 	}
 
 	void SOAPYSDR::Set(std::string option, std::string arg)

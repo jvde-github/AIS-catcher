@@ -69,6 +69,8 @@ namespace Device{
 
 		uint32_t sample_rate = 0;
 		uint32_t frequency = 0;
+		int freq_offset = 0;
+		int tuner_bandwidth = 0;
 
 	public:
 
@@ -101,6 +103,14 @@ namespace Device{
 			if (option == "RATE")
 			{
 				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
+			}
+			else if (option == "BW")
+	                {
+                	        tuner_bandwidth = Util::Parse::Integer(arg,1,1000000);
+        	        }
+			else if (option == "FREQOFFSET")
+			{
+				freq_offset = Util::Parse::Integer(arg,-150,150);
 			}
 			else throw "Invalid Device setting.";
 		}

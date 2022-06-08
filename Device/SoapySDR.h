@@ -60,7 +60,6 @@ namespace Device{
 		SoapySDR::Kwargs gains_args;
 
 		std::string antenna = "";
-		FLOAT32 freq_offset = 0.0;
 		int channel = 0;
 		bool AGC = true;
 		bool print = false;
