@@ -131,6 +131,8 @@ namespace AIS
 		nmea.msg = type();
 		nmea.repeat = repeat();
 		nmea.mmsi = mmsi();
+		nmea.data = DataFCS.data();
+		nmea.length = nBits;
 
 		//if(nmea.msg >= 0 and nmea.msg <= 27)
 		Send(&nmea, 1);

@@ -59,10 +59,11 @@ namespace Device {
 	{
 		fifo.Init(BUFFER_SIZE, 8);
 
-    		try {
-        		dev = SoapySDR::Device::make(device_args);
-    		}
-    		catch (std::exception& e)
+		try 
+		{
+			dev = SoapySDR::Device::make(device_args);
+		}
+		catch (std::exception& e)
 		{
 			throw "SOAPYSDR: cannot open device.";
 		}
