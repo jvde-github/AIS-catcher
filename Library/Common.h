@@ -46,7 +46,7 @@ typedef std::complex <int8_t> CS8;
 typedef char BIT;
 enum class Format { CU8, CF32, CS16, CS8, UNKNOWN };
 
-typedef struct { std::vector<std::string> sentence; char channel; unsigned msg; unsigned mmsi; unsigned repeat; } NMEA;
+typedef struct { std::vector<std::string> sentence; char channel; unsigned msg; unsigned mmsi; unsigned repeat; uint8_t *data; int length; } NMEA;
 typedef struct { Format format; void *data; int size; } RAW;
 
 using namespace std::chrono;
