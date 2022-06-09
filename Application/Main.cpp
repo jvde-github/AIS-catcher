@@ -89,7 +89,7 @@ void Usage()
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
 	std::cerr << "\t[-p xxx set frequency correction for device in PPM (default: zero)]" << std::endl;
-	std::cerr << "\t[-s xxx set tuner bandwidth in Hz (default: off)]" << std::endl;
+	std::cerr << "\t[-a xxx set tuner bandwidth in Hz (default: off)]" << std::endl;
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
@@ -116,7 +116,7 @@ void Usage()
 	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
 	std::cerr << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
 	std::cerr << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]" << std::endl;
-	std::cerr << "\t[-gu SOAPYSDR: DEVICE [string] GAINS [string] STREAMS [string] SETTINGS [string] CHANNEL [0+] PROBE [on/off] ANTENNA [string] AGC [on/off] ]" << std::endl;
+	std::cerr << "\t[-gu SOAPYSDR: DEVICE [string] GAIN [string] AGC [on/off] STREAM [string] SETTING [string] CH [0+] PROBE [on/off] ANTENNA [string] ]" << std::endl;
 	std::cerr << "\t[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60] ]" << std::endl;
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename] ]" << std::endl;
@@ -400,7 +400,7 @@ int main(int argc, char* argv[])
 				Assert(count == 1, param, "Requires one parameter [frequency offset].");
 				ppm = Util::Parse::Integer(arg1, -150, 150);
 				break;
-			case 'f':
+			case 'a':
 				Assert(count == 1, param, "Requires one parameter [bandwidth].");
 				bandwidth = Util::Parse::Integer(arg1, 0, 20000000);
 				break;

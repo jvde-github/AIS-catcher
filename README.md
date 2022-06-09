@@ -67,7 +67,7 @@ use: AIS-catcher [options]
 	[-h display this message and terminate (default: false)]
 	[-s xxx sample rate in Hz (default: based on SDR device)]
 	[-p xxx set frequency correction for device in PPM (default: zero)]
-	[-s xxx set tuner bandwidth in Hz (default: off)]
+	[-a xxx set tuner bandwidth in Hz (default: off)]
 	[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]
 	[-q suppress NMEA messages to screen (default: false)]
 	[-n show NMEA messages on screen without detail]
@@ -94,7 +94,7 @@ use: AIS-catcher [options]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]
-	[-gu SOAPYSDR: DEVICE [string] GAINS [string] STREAMS [string] SETTINGS [string] CHANNEL [0+] PROBE [on/off] ANTENNA [string] AGC [on/off] ]
+	[-gu SOAPYSDR: DEVICE [string] GAIN [string] AGC [on/off] STREAM [string] SETTING [string] CH [0+] PROBE [on/off] ANTENNA [string] ]
 	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60] ]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]
 	[-gw WAV file: FILE [filename] ]
@@ -117,7 +117,7 @@ The output depends on the available devices but will look something like:
 Found 1 device(s):
 0: Realtek, RTL2838UHIDIR, SN: 00000001
 ```
-A specific device can be selected with the ``d``-switch like ``-d:0`` or ``-d 00000001``.
+A specific device can be selected with the ``d``-switch using the device number ``-d:0`` or the serial number ``-d 00000001``.
 
 
 To start AIS demodulation, print some occasional statistics (every 10 seconds) and broadcast AIS messages via UDP, we can use the following command:
@@ -304,7 +304,7 @@ In general we recommend to use the built-in drivers for supported SDR  devices. 
 ```console
 cmake .. -DSOAPYSDR=ON
 ```
-The result is that AIS-catcher adds a few additional "devices" to the device list (```-l```) - a generic SoapySDR device and one device for each receiving channel for each device, e.g. with one RTL-SDR dongle connected this would look like:
+The result is that AIS-catcher adds a few additional "devices" to the device list (```-l```): a generic SoapySDR device and one device for each receiving channel for each device, e.g. with one RTL-SDR dongle connected this would look like:
 ```
 Found 3 device(s):
 0: Realtek, RTL2838UHIDIR, SN: 00000001
@@ -319,11 +319,11 @@ Note that the serial number has a prefix of ```SCH0``` (short for SoapySDR Chann
 ```
 AIS-catcher -d SOAPYSDR -gu device "serial=00000001,driver=rtlsdr"  -s 1536K
 ```
-Stream arguments and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAINS``` followed by an argument string. Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` swhitch which displays the actual settings used, e.g.
+Stream arguments and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAIN``` followed by an argument string (if it contains spaces use ""). Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` swhitch which displays the actual settings used, e.g.
 ```
-AIS-catcher -d SOAPYSDR -s 1536K -gu FREQOFFSET 5 GAINS "TUNER=37.3" PROBE on SETTINGS "biastee=true"
+AIS-catcher -d SOAPYSDR -s 1536K -gu GAIN "TUNER=37.3" PROBE on SETTINGS "biastee=true"
 ```
-To complete the example, this example also sets the tuner gain for the RTL-SDR to 37.3, the bias-tee on and the frequency correction to 5 ppm.
+To complete the example, this example also sets the tuner gain for the RTL-SDR to 37.3, the bias-tee on as the SETTING switch gives access to the device's extra settings.
 
 If the sample rates for a device are not supported by AIS-catcher, the SOXR functionality could be conisdered (e.g. ```-go SOXR on```). Again, we advice to use the built-in drivers and included resampling functionality where possible.  
 
