@@ -2,9 +2,9 @@ name: MSBuild
 
 on:
   push:
-    branches: [ "man" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "man" ]
+    branches: [ "main" ]
 
 env:
 
