@@ -94,7 +94,7 @@ jobs:
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} AIS-catcher.sln
 
     - name: Prepare output
-      run: mkdir output; cp build\*.dll output; cp build\Release\*.exe output
+      run: mkdir output; cp build\*.dll output; cp build\Release\*.exe output; cp README.md output; cp LICENSE output
       
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
