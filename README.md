@@ -47,7 +47,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ## Recent Developments
 
 **Edge** (development version, will be part of **0.36**): 
-- added new switch for RTL-SDR ```-gr BW``` which unlocks the bandwidth functionality on some RTL dongles. Early experimentation did not show improved reception with this setting. 
+- added new switch ```-a``` which unlocks the bandwidth functionality on some devicces including the RTL dongles. Early experimentation did not show improved reception with this setting. 
 - extension of functionality to read WAV-files with more data types (8 and 16 bit PCM) and increasing flexibility on data layout (FACT chunk recognized).
 - experimental option to downsample using the ``libsoxr`` library if available. Early experiments do not show an improvement in reception and system load but it allows for more flexibility on input sample rates. E.g.:
 ``
@@ -56,7 +56,7 @@ AIS-catcher -v -go SOXR on
 - Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMEOUT``` option.
 - Several fixes to cmake-file
 - Dockerfile moved to Debian-slim from Alpine to resolve workflow and compatibility issues
-- Initial SoapySDR support (remains to be further tested and refined). Only available for now when build with ```make soapysdr-only``` or with ```cmake .. -DSOAPYSDR=ON```.
+- Initial SoapySDR support (remains to be further tested and refined). Only available when build with ```make soapysdr-only``` or with ```cmake .. -DSOAPYSDR=ON```.
 
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
