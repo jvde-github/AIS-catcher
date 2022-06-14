@@ -68,22 +68,40 @@ endif()
 
 # Find libsoxr, pthread
 if(SOXR)
-	pkg_check_modules(PKG_SOXR soxr)
-	find_path(SOXR_INCLUDE_DIR soxr.h HINTS ${PKG_SOXR_INCLUDE_DIRS})
-	find_library(SOXR_LIBRARY libsoxr.so HINTS ${PKG_SOXR_LIBRARY_DIRS})
-	find_library(SOXR_LIBRARY libsoxr.dylib HINTS ${PKG_SOXR_LIBRARY_DIRS})
-	find_library(SOXR_LIBRARY soxr HINTS ${PKG_SOXR_LIBRARY_DIRS})
+	if(MSVC AND NOT MSVC_VCPKG)
+		find_path(SOXR_INCLUDE_DIR soxr.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+		find_library(SOXR_LIBRARY soxr.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+		find_file(SOXR_DLL soxr.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
-	if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
+		if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY AND SOXR_DLL)
+			Message(STATUS "SOXR: found (PothosSDR) - " ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}, ${SOXR_DLL})
+			set(COPY_SOXR_DLL TRUE)
+			add_definitions(-DHASSOXR)
 
-		message(STATUS "SOXR: found - ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}")
-		add_definitions(-DHASSOXR)
+			set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
+			set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
 
-		set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
-		set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
-
+		else()
+			Message(STATUS "SOXR: NOT found (PothosSDR) - " ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}, ${SOXR_DLL})
+		endif()	
 	else()
-		Message(STATUS "SOXR: not found.")
+		pkg_check_modules(PKG_SOXR soxr)
+		find_path(SOXR_INCLUDE_DIR soxr.h HINTS ${PKG_SOXR_INCLUDE_DIRS})
+		find_library(SOXR_LIBRARY libsoxr.so HINTS ${PKG_SOXR_LIBRARY_DIRS})
+		find_library(SOXR_LIBRARY libsoxr.dylib HINTS ${PKG_SOXR_LIBRARY_DIRS})
+		find_library(SOXR_LIBRARY soxr HINTS ${PKG_SOXR_LIBRARY_DIRS})
+
+		if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY)
+
+			message(STATUS "SOXR: found - ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}")
+			add_definitions(-DHASSOXR)
+
+			set(SOXR_INCLUDE_DIRS ${SOXR_INCLUDE_DIR})
+			set(SOXR_LIBRARIES ${SOXR_LIBRARY} )
+
+		else()
+			Message(STATUS "SOXR: not found.")
+		endif()
 	endif()
 endif()
 
@@ -379,8 +397,8 @@ if(ZMQ)
 
 	else()
 		find_path(ZMQ_INCLUDE_DIR zmq.h HINTS ${POTHOSSDR_INCLUDE_DIR})
-		find_library(ZMQ_LIBRARY libzmq-v142-mt-4_1_8.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
-		find_file(ZMQ_DLL libzmq-v142-mt-4_1_8.dll HINTS ${POTHOSSDR_BINARY_DIR})
+		find_library(ZMQ_LIBRARY libzmq-mt-4_3_4.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+		find_file(ZMQ_DLL libzmq-mt-4_3_4.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
 		if(ZMQ_INCLUDE_DIR AND ZMQ_LIBRARY AND ZMQ_DLL)
 			Message(STATUS "ZMQ: found (PothosSDR) - " ${ZMQ_INCLUDE_DIR}, ${ZMQ_LIBRARY}, ${ZMQ_DLL})
@@ -390,7 +408,7 @@ if(ZMQ)
 			set(ZMQ_INCLUDE_DIRS ${ZMQ_INCLUDE_DIR})
 			set(ZMQ_LIBRARIES ${ZMQ_LIBRARY})
 		else()
-			Message(STATUS "ZMQ: not found (PothosSDR)")
+			Message(STATUS "ZMQ: NOT found (PothosSDR) - " ${ZMQ_INCLUDE_DIR}, ${ZMQ_LIBRARY}, ${ZMQ_DLL})
 		endif()
 	endif()
 endif()
@@ -447,6 +465,10 @@ endif()
 
 if(COPY_ZMQ_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ZMQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_SOXR_DLL)
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SOXR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_PTHREAD_LIBUSB_DLL)
