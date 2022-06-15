@@ -52,8 +52,8 @@ jobs:
         cd rtl-sdr; mkdir build; cd build
         echo "x64" > x64-a; echo "Win32" > x86-a
         $msplatform = $(cat "${{matrix.platform}}-a")
-        cmake .. -A $(cat "${{matrix.platform}}-a") -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$(cat "${{matrix.platform}}-a") rtlsdr.sln
+        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$(cat "$msplatform rtlsdr.sln
         cd ..; cd ..
         cp rtl-sdr\build\src\Release\*.dll release\${{matrix.platform}}
         cp rtl-sdr\build\src\Release\*.lib lib\${{matrix.platform}}
@@ -65,8 +65,8 @@ jobs:
         git clone https://github.com/airspy/airspyhf.git
         git reset --hard b93deddfd05f8350b0adf75d671072e7fa7bec35
         cd airspyhf; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform airspyhf_all.sln
+        cmake .. -A Win32 -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=Win32 airspyhf_all.sln
         cd ..; cd ..
         cp airspyhf\build\libairspyhf\src\Release\*.dll release\${{matrix.platform}}
         cp airspyhf\build\libairspyhf\src\Release\*.lib lib\${{matrix.platform}}
