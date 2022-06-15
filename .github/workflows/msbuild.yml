@@ -48,12 +48,12 @@ jobs:
 
     - name: SDR libraries
       run: |
-        echo "x64" > x64-a; echo "Win32" > x86-a
-        $msplatform = $(cat "${{matrix.platform}}-a")
+        echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
+        $libusb_inc = C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 
         echo "RTLSDR"
         git clone https://github.com/jvde-github/rtl-sdr.git
         cd rtl-sdr; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
+        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=$libusb_inc
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform rtlsdr.sln
         cd ..; cd ..
         cp rtl-sdr\build\src\Release\*.dll release\${{matrix.platform}}
@@ -64,7 +64,7 @@ jobs:
         git clone https://github.com/airspy/airspyhf.git
         git reset --hard b93deddfd05f8350b0adf75d671072e7fa7bec35
         cd airspyhf; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
+        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=libusb_inc -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform airspyhf_all.sln
         cd ..; cd ..
         cp airspyhf\build\libairspyhf\src\Release\*.dll release\${{matrix.platform}}
