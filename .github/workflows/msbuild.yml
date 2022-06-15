@@ -34,24 +34,25 @@ jobs:
 
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: vcpkg install fftw3:x64-windows libusb:x64-windows pthread:x64-windows soxr:x64-windows zeromq:x64-windows
-    
+      run: |
+        vcpkg install fftw3:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
+
     - name: Setup Directories
       run: |
-        mkdir output; cd output; mkdir Licenses; cd ..; mkdir include; mkdir release; mkdir lib; cd release; mkdir ${{env.BUILD_PLATFORM}}; cd ..; cd lib; mkdir ${{env.BUILD_PLATFORM}}; cd ..
-        cp C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include\*.h include
-        cp C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\*.lib lib\${{env.BUILD_PLATFORM}}
-        cp C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\bin\*.dll release\${{env.BUILD_PLATFORM}}
+        mkdir output; cd output; mkdir Licenses; cd ..; mkdir include; mkdir release; mkdir lib; cd release; mkdir ${{matrix.platform}}; cd ..; cd lib; mkdir ${{matrix.platform}}; cd ..
+        cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\*.h include
+        cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib\${{matrix.platform}}
+        cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release\${{matrix.platform}}
 
     - name: RTLSDR
       run: |
         git clone https://github.com/jvde-github/rtl-sdr.git
         cd rtl-sdr; mkdir build; cd build
-        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include\libusb-1.0
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} rtlsdr.sln
+        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} rtlsdr.sln
         cd ..; cd ..
-        cp rtl-sdr\build\src\Release\*.dll release\${{env.BUILD_PLATFORM}}
-        cp rtl-sdr\build\src\Release\*.lib lib\${{env.BUILD_PLATFORM}}
+        cp rtl-sdr\build\src\Release\*.dll release\${{matrix.platform}}
+        cp rtl-sdr\build\src\Release\*.lib lib\${{matrix.platform}}
         cp rtl-sdr\include\*.h include
         cp rtl-sdr\COPYING output\Licenses\RTLSDR
         
@@ -60,11 +61,11 @@ jobs:
         git clone https://github.com/airspy/airspyhf.git
         git reset --hard b93deddfd05f8350b0adf75d671072e7fa7bec35
         cd airspyhf; mkdir build; cd build
-        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} airspyhf_all.sln
+        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} airspyhf_all.sln
         cd ..; cd ..
-        cp airspyhf\build\libairspyhf\src\Release\*.dll release\${{env.BUILD_PLATFORM}}
-        cp airspyhf\build\libairspyhf\src\Release\*.lib lib\${{env.BUILD_PLATFORM}}
+        cp airspyhf\build\libairspyhf\src\Release\*.dll release\${{matrix.platform}}
+        cp airspyhf\build\libairspyhf\src\Release\*.lib lib\${{matrix.platform}}
         cp airspyhf\libairspyhf\src\airspyhf.h include
         cp airspyhf\LICENSE output\Licenses\AIRSPYHF
         
@@ -73,11 +74,11 @@ jobs:
         git clone https://github.com/airspy/airspyone_host.git
         git reset --hard b97309a6a24db161de990d6e4f0432fc94f72cd9
         cd airspyone_host; mkdir build; cd build
-        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} airspy_all.sln
+        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} airspy_all.sln
         cd ..; cd .. 
-        cp airspyone_host\build\airspy-tools\src\*.dll release\${{env.BUILD_PLATFORM}}
-        cp airspyone_host\build\libairspy\src\Release\*.lib lib\${{env.BUILD_PLATFORM}}
+        cp airspyone_host\build\airspy-tools\src\*.dll release\${{matrix.platform}}
+        cp airspyone_host\build\libairspy\src\Release\*.lib lib\${{matrix.platform}}
         cp airspyone_host\libairspy\src\*.h include
         cp airspyone_host\airspy-tools\LICENSE.md output\Licenses\AIRSPY
         
@@ -86,11 +87,11 @@ jobs:
         git clone https://github.com/greatscottgadgets/hackrf.git
         git reset --hard 34cbbe7330d1e11e7967f84da39d04a61bfdf4f1
         cd hackrf; cd host; mkdir build; cd build
-        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include -DFFTW_LIBRARIES=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\lib\fftw3.lib -DFFTW_INCLUDES=C:\vcpkg\installed\${{env.BUILD_PLATFORM}}-windows\include
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} HackRF.sln
+        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include -DFFTW_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\fftw3.lib -DFFTW_INCLUDES=C:\vcpkg\installed\${{matrix.platform}}-windows\include
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} HackRF.sln
         cd ..; cd ..; cd ..
-        cp hackrf\host\build\libhackrf\src\Release\*.dll release\${{env.BUILD_PLATFORM}}
-        cp hackrf\host\build\libhackrf\src\Release\*.lib lib\${{env.BUILD_PLATFORM}}
+        cp hackrf\host\build\libhackrf\src\Release\*.dll release\${{matrix.platform}}
+        cp hackrf\host\build\libhackrf\src\Release\*.lib lib\${{matrix.platform}}
         cp hackrf\host\libhackrf\src\*.h include
         cp hackrf\COPYING output\Licenses\HACKRF
         
@@ -98,8 +99,8 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         mkdir build; cd build
-        cmake .. -G "Visual Studio 16 2019" -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib\${{env.BUILD_PLATFORM}} -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release\${{env.BUILD_PLATFORM}}
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} AIS-catcher.sln
+        cmake .. -G "Visual Studio 16 2019" -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib\${{matrix.platform}} -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release\${{matrix.platform}}
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} AIS-catcher.sln
 
     - name: Prepare output
       run: cp build\*.dll output; cp build\Release\*.exe output; cp README.md output; cp LICENSE output
