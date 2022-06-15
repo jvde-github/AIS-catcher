@@ -54,7 +54,7 @@ jobs:
         $pthread_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib"
         $pthread_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include"
         $fftw3_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\fftw3.lib"
-        $fftw_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include"
+        $fftw3_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include"
         
         echo "RTLSDR"
         git clone https://github.com/jvde-github/rtl-sdr.git
