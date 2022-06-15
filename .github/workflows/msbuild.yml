@@ -72,7 +72,7 @@ jobs:
         git clone https://github.com/airspy/airspyhf.git
         git reset --hard b93deddfd05f8350b0adf75d671072e7fa7bec35
         cd airspyhf; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=$libusb_lib -DLIBUSB_INCLUDE_DIR=$libusb_inc -DTHREADS_PTHREADS_WIN32_LIBRARY=pthread_lib -DTHREADS_PTHREADS_INCLUDE_DIR=$pthread_inc
+        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform airspyhf_all.sln
         cd ..; cd ..
         cp airspyhf\build\libairspyhf\src\Release\*.dll release
@@ -84,7 +84,7 @@ jobs:
         git clone https://github.com/airspy/airspyone_host.git
         git reset --hard b97309a6a24db161de990d6e4f0432fc94f72cd9
         cd airspyone_host; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=$libusb_lib -DLIBUSB_INCLUDE_DIR=$libusb_inc -DTHREADS_PTHREADS_WIN32_LIBRARY=$pthread_lib -DTHREADS_PTHREADS_INCLUDE_DIR=$pthread_inc
+        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform airspy_all.sln
         cd ..; cd .. 
         cp airspyone_host\build\airspy-tools\src\*.dll release
@@ -96,7 +96,7 @@ jobs:
         git clone https://github.com/greatscottgadgets/hackrf.git
         git reset --hard 34cbbe7330d1e11e7967f84da39d04a61bfdf4f1
         cd hackrf; cd host; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=$libusb_lib -DLIBUSB_INCLUDE_DIR=$libusb_inc -DTHREADS_PTHREADS_WIN32_LIBRARY=$pthread_lib -DTHREADS_PTHREADS_INCLUDE_DIR=$pthread_inc -DFFTW_LIBRARIES=$fftw3_lib -DFFTW_INCLUDES=$fftw3_inc
+        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc" -DFFTW_LIBRARIES="$fftw3_lib" -DFFTW_INCLUDES="$fftw3_inc"
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform HackRF.sln
         cd ..; cd ..; cd ..
         cp hackrf\host\build\libhackrf\src\Release\*.dll release
