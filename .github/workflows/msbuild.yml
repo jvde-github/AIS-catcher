@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        platform: [x64, x86]
+        platform: [x86]
 
     steps:
     - uses: actions/checkout@v3
@@ -58,14 +58,15 @@ jobs:
         cp rtl-sdr\build\src\Release\*.lib lib\${{matrix.platform}}
         cp rtl-sdr\include\*.h include
         cp rtl-sdr\COPYING output\Licenses\RTLSDR
+        $msplatform = $(cat "${{matrix.platform}}-a")
         
     - name: AirSpy HF+
       run: |
         git clone https://github.com/airspy/airspyhf.git
         git reset --hard b93deddfd05f8350b0adf75d671072e7fa7bec35
         cd airspyhf; mkdir build; cd build
-        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} airspyhf_all.sln
+        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\${{matrix.platform}}-windows\include
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform airspyhf_all.sln
         cd ..; cd ..
         cp airspyhf\build\libairspyhf\src\Release\*.dll release\${{matrix.platform}}
         cp airspyhf\build\libairspyhf\src\Release\*.lib lib\${{matrix.platform}}
