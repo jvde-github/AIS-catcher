@@ -51,7 +51,7 @@ jobs:
       run: |
         git clone https://github.com/jvde-github/rtl-sdr.git
         cd rtl-sdr; mkdir build; cd build
-        echo "x64" > x64; cat "Win32" > x86
+        echo "x64" > x64; echo "Win32" > x86
         cmake .. -A $(cat ${{matrix.platform}}) -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} rtlsdr.sln
         cd ..; cd ..
