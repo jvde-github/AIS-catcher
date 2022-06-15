@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        platform: [x64, x86]
+        platform: [x64, Win32]
 
     steps:
     - uses: actions/checkout@v3
@@ -37,7 +37,8 @@ jobs:
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        vcpkg install fftw3:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
+        vcpkg install fftw3:x64-windows libusb:x64-windows pthread:x64-windows soxr:x64-windows zeromq:x64-windows
+        vcpkg install fftw3 libusb pthread soxr zeromq
 
     - name: Setup Directories
       run: |
