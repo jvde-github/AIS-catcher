@@ -53,7 +53,7 @@ jobs:
         echo "x64" > x64-a; echo "Win32" > x86-a
         $msplatform = $(cat "${{matrix.platform}}-a")
         cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$(cat "$msplatform rtlsdr.sln
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform rtlsdr.sln
         cd ..; cd ..
         cp rtl-sdr\build\src\Release\*.dll release\${{matrix.platform}}
         cp rtl-sdr\build\src\Release\*.lib lib\${{matrix.platform}}
