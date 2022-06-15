@@ -18,6 +18,10 @@ jobs:
   build:
     runs-on: windows-2019
 
+    strategy:
+      matrix:
+        platform: [x64, x86]
+
     steps:
     - uses: actions/checkout@v3
 
@@ -103,6 +107,6 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: "AIS-catcher ${{env.BUILD_PLATFORM}}"
+        name: "AIS-catcher ${{matrix.platform}}"
         path: |
           output
