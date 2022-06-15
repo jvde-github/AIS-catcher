@@ -1,4 +1,4 @@
-name: MSBuild
+name: MSBuild 
 
 on:
   push:
@@ -46,7 +46,7 @@ jobs:
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
 
-    - name: SDR libraries
+    - name: Direct build libraries
       run: |
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
         $libusb_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0"
