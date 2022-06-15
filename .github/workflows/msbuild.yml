@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        platform: [x64, Win32]
+        platform: [x64, x86]
 
     steps:
     - uses: actions/checkout@v3
@@ -51,7 +51,7 @@ jobs:
       run: |
         git clone https://github.com/jvde-github/rtl-sdr.git
         cd rtl-sdr; mkdir build; cd build
-        cmake .. -A ${{matrix.platform}} -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
+        cmake .. -A ${{ fromJson('{ "x64": "x64", "x86": "Win32" }')[matrix.platform] } -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} rtlsdr.sln
         cd ..; cd ..
         cp rtl-sdr\build\src\Release\*.dll release\${{matrix.platform}}
