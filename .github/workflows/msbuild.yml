@@ -75,7 +75,7 @@ jobs:
         cp airspyone_host\build\airspy-tools\src\*.dll release\x64
         cp airspyone_host\build\libairspy\src\Release\*.lib lib\x64
         cp airspyone_host\libairspy\src\*.h include
-        cp airspyone_host\airspy-tools\LICENSE output\Licenses\AIRSPY
+        cp airspyone_host\airspy-tools\LICENSE.md output\Licenses\AIRSPY
         
     - name: HackRF
       run: |
