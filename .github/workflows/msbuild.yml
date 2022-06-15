@@ -49,7 +49,7 @@ jobs:
     - name: SDR libraries
       run: |
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
-        $libusb_inc = C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0 
+        $libusb_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0"
         echo "RTLSDR"
         git clone https://github.com/jvde-github/rtl-sdr.git
         cd rtl-sdr; mkdir build; cd build
