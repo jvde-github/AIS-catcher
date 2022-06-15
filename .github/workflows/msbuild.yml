@@ -37,8 +37,7 @@ jobs:
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        vcpkg install fftw3:x64-windows libusb:x64-windows pthread:x64-windows soxr:x64-windows zeromq:x64-windows
-        vcpkg install fftw3 libusb pthread soxr zeromq
+        vcpkg install fftw3:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
 
     - name: Setup Directories
       run: |
@@ -53,7 +52,7 @@ jobs:
         cd rtl-sdr; mkdir build; cd build
         echo "x64" > x64; echo "Win32" > x86
         cmake .. -A $(cat ${{matrix.platform}}) -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} rtlsdr.sln
+        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$(cat ${{matrix.platform}}) rtlsdr.sln
         cd ..; cd ..
         cp rtl-sdr\build\src\Release\*.dll release\${{matrix.platform}}
         cp rtl-sdr\build\src\Release\*.lib lib\${{matrix.platform}}
