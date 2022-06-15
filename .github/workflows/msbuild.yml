@@ -79,7 +79,7 @@ jobs:
         git clone https://github.com/greatscottgadgets/hackrf.git
         git reset --hard 34cbbe7330d1e11e7967f84da39d04a61bfdf4f1
         cd hackrf; cd host; mkdir build; cd build
-        cmake .. -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES=C:\vcpkg\installed\x64-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\x64-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include -DFFTW_LIBRARIES=C:\vcpkg\installed\x64-windows\lib\fftw3.lib -DFFTW_INCLUDES=C:\vcpkg\installed\x64-windows\include
+        cmake .. -G "Visual Studio 16 2019" #-DLIBUSB_LIBRARIES=C:\vcpkg\installed\x64-windows\lib\libusb-1.0.lib -DLIBUSB_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include\libusb-1.0 -DTHREADS_PTHREADS_WIN32_LIBRARY=C:\vcpkg\installed\x64-windows\lib\pthreadVC3.lib -DTHREADS_PTHREADS_INCLUDE_DIR=C:\vcpkg\installed\x64-windows\include -DFFTW_LIBRARIES=C:\vcpkg\installed\x64-windows\lib\fftw3.lib -DFFTW_INCLUDES=C:\vcpkg\installed\x64-windows\include
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} HackRF.sln
         cd ..; cd ..; cd ..
         cp hackrf\host\build\libhackrf\src\Release\*.dll release\x64
