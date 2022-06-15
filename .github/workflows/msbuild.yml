@@ -51,6 +51,7 @@ jobs:
         git clone https://github.com/jvde-github/rtl-sdr.git
         cd rtl-sdr; mkdir build; cd build
         echo "x64" > x64-a; echo "Win32" > x86-a
+        $msplatform = $(cat "${{matrix.platform}}-a")
         cmake .. -A $(cat "${{matrix.platform}}-a") -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS=C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0
         msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$(cat "${{matrix.platform}}-a") rtlsdr.sln
         cd ..; cd ..
@@ -58,7 +59,6 @@ jobs:
         cp rtl-sdr\build\src\Release\*.lib lib\${{matrix.platform}}
         cp rtl-sdr\include\*.h include
         cp rtl-sdr\COPYING output\Licenses\RTLSDR
-        $msplatform = $(cat "${{matrix.platform}}-a")
         
     - name: AirSpy HF+
       run: |
