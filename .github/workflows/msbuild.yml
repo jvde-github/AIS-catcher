@@ -8,7 +8,7 @@ on:
 
 env:
 
-  BUILD_PLATFORM: ${{env.BUILD_PLATFORM}}
+  BUILD_PLATFORM: x64
   BUILD_CONFIGURATION: Release
 
 permissions:
