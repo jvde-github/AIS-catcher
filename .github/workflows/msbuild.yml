@@ -28,6 +28,9 @@ jobs:
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
+        git config --global user.name jvde-github
+        git config --global user.email "jvde.github@gmail.com"
+
         git checkout media
         git add LICENSE
         git commit -m "add license"
