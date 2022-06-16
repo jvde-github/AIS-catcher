@@ -48,6 +48,7 @@ jobs:
 
     - name: Building
       run: |
+        echo $VCPKG_INSTALLATION_ROOT
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
         $gen = "Visual Studio 16 2019"
         $config = "Release"
