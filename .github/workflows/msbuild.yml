@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-2019 
 
     strategy:
       matrix:
@@ -32,7 +32,12 @@ jobs:
 
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: vcpkg integrate install
+      run: |
+        vcpkg integrate install
+        echo "$VCPKG_INSTALLATION_ROOT"
+        echo "${{VCPKG_INSTALLATION_ROOT}}"
+        echo "${{env.VCPKG_INSTALLATION_ROOT}}"
+        echo ${{env.VCPKG_INSTALLATION_ROOT}}
 
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -48,10 +53,6 @@ jobs:
 
     - name: Building
       run: |
-        echo "$VCPKG_INSTALLATION_ROOT"
-        echo "${{VCPKG_INSTALLATION_ROOT}}"
-        echo "${{env.VCPKG_INSTALLATION_ROOT}}"
-        echo "${{env.VCPKG_INSTALLATION_ROOT}}"
         
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
         $gen = "Visual Studio 16 2019"
