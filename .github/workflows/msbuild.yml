@@ -35,6 +35,7 @@ jobs:
       run: |
         vcpkg integrate install
         echo "${{env.VCPKG_INSTALLATION_ROOT}}"
+        echo "Hallo"
 
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
