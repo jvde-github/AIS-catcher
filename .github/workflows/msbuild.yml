@@ -19,12 +19,27 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-
+      with:
+        ref: media
+      
+    - run: |
+          date > generated.txt
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "generated"
+          git push
+      
+      
+    - uses: actions/checkout@v3
+      with:
+        ref: main
+        
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
       with:
         msbuild-architecture: ${{matrix.platform}}
-
+    
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
