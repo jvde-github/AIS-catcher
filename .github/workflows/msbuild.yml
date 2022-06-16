@@ -118,3 +118,6 @@ jobs:
         name: "AIS-catcher ${{matrix.platform}}"
         path: |
           output
+
+    - name: Upload artifacts
+      run: git checkout media
