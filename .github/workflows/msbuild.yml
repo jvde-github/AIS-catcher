@@ -28,7 +28,7 @@ jobs:
           git config --global user.name "jvde.github@gmail.com"
           git add generated.txt
           git commit -m "generated"
-          git push
+          git push origin media
       
       
     - uses: actions/checkout@v3
