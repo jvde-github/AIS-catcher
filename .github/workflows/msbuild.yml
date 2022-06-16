@@ -29,14 +29,6 @@ jobs:
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        git config --global user.name jvde-github
-        git config --global user.email "jvde.github@gmail.com"
-
-        git checkout media
-        git add LICENSE
-        git commit -m "add license"
-        git push origin media
-        git checkout main
         vcpkg integrate install
 
     - name: Install vcpkg packages
@@ -112,6 +104,7 @@ jobs:
         cp hackrf\host\libhackrf\src\*.h include
         cp hackrf\COPYING output\Licenses\HACKRF
         
+        echo "AIS-catcher"
         mkdir build; cd build
         cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release
         msbuild /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
@@ -124,9 +117,7 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: "AIS-catcher ${{matrix.platform}}"
+        name: "AIS-catcher Edge ${{matrix.platform}}"
         path: |
           output
 
-    - name: Upload artifacts
-      run: git checkout media
