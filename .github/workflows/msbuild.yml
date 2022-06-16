@@ -35,6 +35,8 @@ jobs:
       run: |
         vcpkg integrate install
         echo "${{env.VCPKG_INSTALLATION_ROOT}}"
+        echo "$VCPKG_INSTALLATION_ROOT"
+        echo $VCPKG_INSTALLATION_ROOT
         echo "Hallo"
 
     - name: Install vcpkg packages
