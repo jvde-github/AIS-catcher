@@ -18,23 +18,9 @@ jobs:
         platform: [x86, x64]
 
     steps:
+  
     - uses: actions/checkout@v3
-      with:
-        ref: media
-      
-    - run: |
-          date > generated.txt
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add generated.txt
-          git commit -m "generated"
-          git push origin media
-      
-      
-    - uses: actions/checkout@v3
-      with:
-        ref: main
-        
+
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
       with:
