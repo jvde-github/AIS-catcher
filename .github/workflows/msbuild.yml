@@ -49,6 +49,9 @@ jobs:
     - name: Direct build libraries
       run: |
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
+        $gen = "Visual Studio 16 2019"
+        $config = "Release"
+        
         $libusb_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0"
         $libusb_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib"
         $pthread_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib"
@@ -60,8 +63,8 @@ jobs:
         echo "RTLSDR"
         git clone https://github.com/jvde-github/rtl-sdr.git
         cd rtl-sdr; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS="$libusb_inc"
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform rtlsdr.sln
+        cmake .. -A $msplatform -G "$gen -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS="$libusb_inc"
+        msbuild /m /p:Configuration=$config /p:Platform=$msplatform rtlsdr.sln
         cd ..; cd ..
         cp rtl-sdr\build\src\Release\*.dll release
         cp rtl-sdr\build\src\Release\*.lib lib
@@ -72,8 +75,8 @@ jobs:
         git clone https://github.com/airspy/airspyhf.git
         git reset --hard b93deddfd05f8350b0adf75d671072e7fa7bec35
         cd airspyhf; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform airspyhf_all.sln
+        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
+        msbuild /m /p:Configuration=$config /p:Platform=$msplatform airspyhf_all.sln
         cd ..; cd ..
         cp airspyhf\build\libairspyhf\src\Release\*.dll release
         cp airspyhf\build\libairspyhf\src\Release\*.lib lib
@@ -84,8 +87,8 @@ jobs:
         git clone https://github.com/airspy/airspyone_host.git
         git reset --hard b97309a6a24db161de990d6e4f0432fc94f72cd9
         cd airspyone_host; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform airspy_all.sln
+        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
+        msbuild /m /p:Configuration=$config /p:Platform=$msplatform airspy_all.sln
         cd ..; cd .. 
         cp airspyone_host\build\airspy-tools\src\*.dll release
         cp airspyone_host\build\libairspy\src\Release\*.lib lib
@@ -96,8 +99,8 @@ jobs:
         git clone https://github.com/greatscottgadgets/hackrf.git
         git reset --hard 34cbbe7330d1e11e7967f84da39d04a61bfdf4f1
         cd hackrf; cd host; mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc" -DFFTW_LIBRARIES="$fftw3_lib" -DFFTW_INCLUDES="$fftw3_inc"
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform HackRF.sln
+        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc" -DFFTW_LIBRARIES="$fftw3_lib" -DFFTW_INCLUDES="$fftw3_inc"
+        msbuild /m /p:Configuration=$config /p:Platform=$msplatform HackRF.sln
         cd ..; cd ..; cd ..
         cp hackrf\host\build\libhackrf\src\Release\*.dll release
         cp hackrf\host\build\libhackrf\src\Release\*.lib lib
@@ -106,11 +109,13 @@ jobs:
         
         echo "AIS-catcher"
         mkdir build; cd build
-        cmake .. -A $msplatform -G "Visual Studio 16 2019" -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release
-        msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=$msplatform AIS-catcher.sln
+        cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release
+        msbuild /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
+        cd ..
+        cp LICENSE output\Licenses\AIS-catcher
 
     - name: Prepare output
-      run: cp build\*.dll output; cp build\Release\*.exe output; cp README.md output; cp LICENSE output
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp README.md output; 
       
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
