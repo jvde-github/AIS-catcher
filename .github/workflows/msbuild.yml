@@ -24,9 +24,9 @@ jobs:
       
     - run: |
           date > generated.txt
-          git config user.name "jvde-github"
-          git config user.email "${{ secrets.MY_EMAIL }}"
-          git add .
+          git config --global user.email "jvde-github"
+          git config --global user.name "jvde.github@gmail.com"
+          git add generated.txt
           git commit -m "generated"
           git push
       
