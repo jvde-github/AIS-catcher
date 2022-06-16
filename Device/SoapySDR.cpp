@@ -37,9 +37,9 @@ namespace Device {
 
 		if(h < dev_list.size())
 		{
-			device_args = dev_list[h].getDeviceString();
-			setSampleRate(dev_list[h].getDefaultSampleRate());
-			channel = dev_list[h].getChannel();
+			if(device_args == "") device_args = dev_list[h].getDeviceString();
+			if(sample_rate == 0) setSampleRate(dev_list[h].getDefaultSampleRate());
+			if(device_args == "") channel = dev_list[h].getChannel();
 		}
 		else
 			throw "SOAPYSDR: invalid handle to open device.";
