@@ -28,6 +28,11 @@ jobs:
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
+        git checkout media
+        git add LICENSE
+        git commit -m "add license"
+        git push origin media
+        git checkout main
         vcpkg integrate install
 
     - name: Install vcpkg packages
