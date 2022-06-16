@@ -6,11 +6,6 @@ on:
   pull_request:
     branches: [ "main" ]
 
-env:
-
-  BUILD_PLATFORM: x64
-  BUILD_CONFIGURATION: Release
-
 permissions:
   contents: read
 
@@ -34,10 +29,6 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         vcpkg integrate install
-        echo "${{env.VCPKG_INSTALLATION_ROOT}}"
-        echo "$VCPKG_INSTALLATION_ROOT"
-        echo $VCPKG_INSTALLATION_ROOT
-        echo "Hallo"
 
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
