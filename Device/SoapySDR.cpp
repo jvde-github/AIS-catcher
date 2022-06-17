@@ -37,9 +37,13 @@ namespace Device {
 
 		if(h < dev_list.size())
 		{
-			if(device_args == "") device_args = dev_list[h].getDeviceString();
+			if(device_args == "")
+			{
+				device_args = dev_list[h].getDeviceString();
+				channel = dev_list[h].getChannel();
+			}
+
 			if(sample_rate == 0) setSampleRate(dev_list[h].getDefaultSampleRate());
-			if(device_args == "") channel = dev_list[h].getChannel();
 		}
 		else
 			throw "SOAPYSDR: invalid handle to open device.";
@@ -54,7 +58,7 @@ namespace Device {
 	{
 		fifo.Init(BUFFER_SIZE, 8);
 
-		try 
+		try
 		{
 			dev = SoapySDR::Device::make(device_args);
 		}
@@ -126,8 +130,11 @@ namespace Device {
 				flags = 0; timeNs = 0;
 				int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
 
-				if(ret < 0)
+				if(ret < -1)
+				{
+					std::cerr << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret) << std::endl;
 					lost = true;
+				}
 				else if (isStreaming() && !fifo.Push((char*)buffers[0], ret * sizeof(CFLOAT32) ))
 					std::cerr << "SOAPYSDR: buffer overrun." << std::endl;
 			}
@@ -167,9 +174,8 @@ namespace Device {
 	{
 		try
 		{
-			dev->setSampleRate(SOAPY_SDR_RX, 0, sample_rate);
-			dev->setFrequency(SOAPY_SDR_RX, 0, frequency);
-			dev->setFrequencyCorrection(SOAPY_SDR_RX,channel,freq_offset);
+			dev->setSampleRate(SOAPY_SDR_RX, channel, sample_rate);
+			dev->setFrequency(SOAPY_SDR_RX, channel, frequency);
 
 			if(antenna != "")
 				dev->setAntenna(SOAPY_SDR_RX,channel,antenna);
