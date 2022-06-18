@@ -118,8 +118,8 @@ namespace Device {
 
 		std::vector<CFLOAT32> input(BUFFER_SIZE);
 		void *buffers[] = { input.data() };
-		long long timeNs;
-		int flags;
+		long long timeNs = 0;
+		int flags = 0;
 
 		try
 		{
@@ -127,7 +127,6 @@ namespace Device {
 
 			while(isStreaming())
 			{
-				flags = 0; timeNs = 0;
 				int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
 
 				if(ret < -1)
@@ -135,7 +134,7 @@ namespace Device {
 					std::cerr << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret) << std::endl;
 					lost = true;
 				}
-				else if (isStreaming() && !fifo.Push((char*)buffers[0], ret * sizeof(CFLOAT32) ))
+				if(ret > 0 && isStreaming() && !fifo.Push((char*)input.data(), ret * sizeof(CFLOAT32) ))
 					std::cerr << "SOAPYSDR: buffer overrun." << std::endl;
 			}
 		}
@@ -181,25 +180,23 @@ namespace Device {
 				dev->setAntenna(SOAPY_SDR_RX,channel,antenna);
 
 			for (auto const&x : setting_args)
-			{
 				dev->writeSetting(x.first,x.second);
-			}
 
 			dev->setGainMode(SOAPY_SDR_RX,channel,AGC);
+
 			for (auto const&g : gains_args)
-			{
-				std::cerr << g.first << " " << g.second << std::endl;
 				dev->setGain(SOAPY_SDR_RX,channel,g.first,(double)Util::Parse::Float(g.second));
-			}
+
 			if(freq_offset)
 				dev->setFrequencyCorrection(SOAPY_SDR_RX,channel,freq_offset);
+
 			if(tuner_bandwidth)
 				dev->setBandwidth(SOAPY_SDR_RX,channel,tuner_bandwidth);
 		}
-                catch (std::exception& e)
+		catch (std::exception& e)
 		{
-                        throw "SOAPYSDR: cannot set SoapySDR parameters.";
-                }
+			throw "SOAPYSDR: cannot set SoapySDR parameters.";
+		}
 	}
 
 	void SOAPYSDR::getDeviceList(std::vector<Description>& DeviceList)
@@ -245,28 +242,11 @@ namespace Device {
 	{
 		int i;
 
-		std::cerr << "SOAPYSDR settings: -gu DEVICE \"" << device_args;
-		std::cerr << "\" GAINS \"";
-		i = 0;
-		for (auto const&x : gains_args)
-		{
-			std::cerr << x.first << "=" << x.second;
-			if(++i != gains_args.size()) std::cerr << ", ";
-		}
-		std::cerr << "\" STREAM \"";
-		i = 0;
-		for (auto const&x : stream_args)
-		{
-			std::cerr << x.first << "=" << x.second;
-			if(++i != gains_args.size()) std::cerr << ", ";
-		}
-		std::cerr << "\" SETTING \"";
-		i = 0;
-		for (auto const&x : setting_args)
-		{
-			std::cerr << x.first << "=" << x.second;
-			if(++i != gains_args.size()) std::cerr << ", ";
-		}
+		std::cerr << "SOAPYSDR settings: -gu DEVICE \"" << device_args
+		          << "\" GAIN \"" << SoapySDR::KwargsToString(gains_args)
+		          << "\" STREAM \"" << SoapySDR::KwargsToString(stream_args)
+		          << "\" SETTING \"" << SoapySDR::KwargsToString(setting_args);
+
 		std::cerr << "\" CHANNEL " << channel << " AGC " << (AGC?"on":"off") << (antenna==""?"":(" ANTENNA "+antenna)) << antenna << std::endl;
 	}
 
@@ -320,35 +300,35 @@ namespace Device {
 
 	void SOAPYSDR::PrintActuals()
 	{
-		std::cerr << std::endl << "Actual device settings:\n" << "======================\n";
-		std::cerr << " DRIVER      : " << dev->getDriverKey() << std::endl;
-		std::cerr << " HARDWARE    : " << dev->getHardwareKey() << std::endl;
-		std::cerr << " CHANNEL     : " << channel << std::endl;
-		std::cerr << " ANTENNA     : " << dev->getAntenna(SOAPY_SDR_RX,channel) << std::endl;
-		std::cerr << " SAMPLE RATE : " << dev->getSampleRate(SOAPY_SDR_RX,channel) << std::endl;;
-		std::cerr << " FREQUENCY   : ";
+		std::cerr << std::endl;
+		std::cerr << "Actual device settings:\n" << "======================\n"
+		          << " DRIVER      : " << dev->getDriverKey() << std::endl
+		          << " HARDWARE    : " << dev->getHardwareKey() << std::endl
+		          << " CHANNEL     : " << channel << std::endl
+		          << " ANTENNA     : " << dev->getAntenna(SOAPY_SDR_RX,channel) << std::endl
+		          << " SAMPLE RATE : " << dev->getSampleRate(SOAPY_SDR_RX,channel) << std::endl
+		          << " FREQUENCY   : ";
+
 		for(const auto& f : dev->listFrequencies(SOAPY_SDR_RX,channel))
 			std::cerr << f << "=" << dev->getFrequency(SOAPY_SDR_RX,channel,f) << " ";
-		std::cerr << "\n HARDWARE    : ";
+
+		std::cerr << std::endl;
+		std::cerr << " HARDWARE    : ";
 		for (const auto &it : dev->getHardwareInfo())
-		{
 			std::cerr << it.first << "=" << it.second << " ";
-		}
 
 		std::cerr << std::endl << " SETTING     : ";
 		for(const auto& s :dev->getSettingInfo())
-		{
 			std::cerr << s.key << "=" << dev->readSetting(s.key) << " ";
-		}
-		std::cerr << std::endl;
-		std::cerr << " GAIN MODE   : " << (dev->getGainMode(SOAPY_SDR_RX,channel)?"AGC":"MANUAL") << std::endl;
-		std::cerr << " GAIN LEVELS : ";
+
+		std::cerr << std::endl
+		          << " GAIN MODE   : " << (dev->getGainMode(SOAPY_SDR_RX,channel)?"AGC":"MANUAL") << std::endl
+		          << " GAIN LEVELS : ";
+
 		for(const auto&g : dev->listGains(SOAPY_SDR_RX,channel))
-		{
 			std::cerr << g <<"=" << dev->getGain(SOAPY_SDR_RX,channel,g) << " ";
-		}
-		std::cerr << std::endl;
-		std::cerr << std::endl;
+
+		std::cerr << std::endl << std::endl;
 	}
 
 #endif
