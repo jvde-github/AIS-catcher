@@ -204,11 +204,9 @@ namespace Device {
 		const auto devs = SoapySDR::Device::enumerate("");
 		dev_list.clear();
 
-		if(devs.size() | 1)
-		{
-			dev_list.push_back(SoapyDevice("",0,0));
-			DeviceList.push_back(Description("SOAPYSDR", std::to_string(devs.size()) + " device(s)", "SOAPYSDR", (uint64_t)0, Type::SOAPYSDR));
-		}
+		dev_list.push_back(SoapyDevice("",0,0));
+		DeviceList.push_back(Description("SOAPYSDR", std::to_string(devs.size()) + " device(s)", "SOAPYSDR", (uint64_t)0, Type::SOAPYSDR));
+
 		int cnt = 1;
 
 		for(int i = 0; i < devs.size(); i++)
