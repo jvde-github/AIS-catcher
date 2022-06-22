@@ -64,6 +64,7 @@ public:
 	bool connect(std::string host, std::string port);
 	void disconnect();
 
+	void setTimeout(int t) { timeout = t; }
 	int read(void *data,int length);
 	int send(const char *msg, int len) { return ::send(sock, msg, len, 0);}
 };

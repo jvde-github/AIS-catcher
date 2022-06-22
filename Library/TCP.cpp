@@ -26,7 +26,7 @@ TCPclient::TCPclient()
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
-		throw "RTLTCP: Cannot initialize Winsocket.";
+		throw "TCP: Cannot initialize Winsocket.";
 		return;
 	}
 #endif
@@ -49,10 +49,6 @@ bool TCPclient::connect(std::string host,std::string port)
 {
 	int r;
 	fd_set fd;
-
-	// RTLTCP protocol
-	struct { uint32_t magic = 0, tuner = 0, gain = 0; } dongle;
-
 	struct addrinfo h;
 
 	std::memset(&h, 0, sizeof(h));
@@ -66,27 +62,15 @@ bool TCPclient::connect(std::string host,std::string port)
 
 	int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
 
-	if (code != 0 || address == NULL)
-	{
-		std::cerr << "TCP: network address and/or port not valid." << std::endl;
-		return false;
-	}
+	if (code != 0 || address == NULL) return false;
 
 	sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-	if (sock == -1)
-	{
-		std::cerr << "TCP: Error creating socket." << std::endl;
-		return false;
-	}
+	if (sock == -1) return false;
 
 #ifndef _WIN32
 	r = fcntl(sock, F_GETFL, 0);
 	r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
-	if (r == -1)
-	{
-		std::cerr << "RTLTCP: cannot set NON BLOCKING flag.";
-		return false;
-	}
+	if (r == -1) return false;
 #else
 	u_long mode = 1;  // 1 to enable non-blocking socket
 	ioctlsocket(sock, FIONBIO, &mode);
@@ -115,15 +99,9 @@ bool TCPclient::connect(std::string host,std::string port)
 
 			getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&se, &len);
 
-			if (se != 0)
-			{
-				return false;
-			}
+			if (se != 0) return false;
 		}
-		else
-		{
-			return false;
-		}
+		else return false;
 	}
 	return true;
 }
