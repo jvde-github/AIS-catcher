@@ -49,6 +49,7 @@ class TCPclient
 
 	SOCKET sock = -1;
 	int timeout = 2;
+	bool nonblocking = true;
 
 	std::string host = "localhost";
 	std::string port = "1234";
@@ -61,7 +62,7 @@ public:
 	TCPclient();
 	~TCPclient();
 
-	bool connect(std::string host, std::string port, bool nonblocking = true);
+	bool connect(std::string host, std::string port, bool nb = true);
 	void disconnect();
 
 	void setTimeout(int t) { timeout = t; }

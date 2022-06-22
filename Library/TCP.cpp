@@ -45,11 +45,13 @@ void TCPclient::disconnect()
 		closesocket(sock);
 }
 
-bool TCPclient::connect(std::string host,std::string port, bool nonblocking)
+bool TCPclient::connect(std::string host,std::string port, bool nb)
 {
 	int r;
 	fd_set fd;
 	struct addrinfo h;
+
+	nonblocking = nb; 
 
 	std::memset(&h, 0, sizeof(h));
 	h.ai_family = AF_UNSPEC;
@@ -65,6 +67,8 @@ bool TCPclient::connect(std::string host,std::string port, bool nonblocking)
 
 	sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 	if (sock == -1) return false;
+
+
 #ifndef _WIN32
 	r = fcntl(sock, F_GETFL, 0);
 	if(nonblocking)
@@ -81,7 +85,7 @@ bool TCPclient::connect(std::string host,std::string port, bool nonblocking)
 
 	r = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
 
-	if(r == -1)
+	if(r == -1 && nonblocking)
 	{
 #ifndef _WIN32
 		if(errno != EINPROGRESS)
@@ -115,12 +119,12 @@ int TCPclient::read(void *data,int length)
 
 	timeval to = {timeout, 0};
 
-	if(select(sock + 1, &fd, NULL, NULL, &to) < 0)
+	if(nonblocking && select(sock + 1, &fd, NULL, NULL, &to) < 0)
 	{
 		return -1;
 	}
 
-	if (FD_ISSET(sock, &fd))
+	if (!nonblocking || FD_ISSET(sock, &fd))
 	{
 		return recv(sock,(char*)data,length, 0);
 	}
