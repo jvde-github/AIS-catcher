@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2019 
+    runs-on: windows-2022 
 
     strategy:
       matrix:
@@ -47,7 +47,7 @@ jobs:
       run: |
         
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
-        $gen = "Visual Studio 16 2019"
+        $gen = "Visual Studio 17 2022"
         $config = "Release"
         
         $libusb_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0"
