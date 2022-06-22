@@ -22,29 +22,7 @@
 #include <fstream>
 #include <iostream>
 
-#ifdef _WIN32
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#else
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <sys/socket.h>
-
-#define SOCKET int
-#define SOCKADDR struct sockaddr
-#define SOCKET_ERROR -1
-
-#define closesocket close
-
-#endif
-
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
+#include "TCP.h"
 
 namespace Device {
 
@@ -63,21 +41,19 @@ namespace Device {
 		// Protocol: NONE
 		Format format = Format::CF32;
 
-		SOCKET sock = -1;
-		int timeout = 2;
+		TCPclient client;
 
 		std::string host = "localhost";
 		std::string port = "1234";
 
 		struct addrinfo* address;
-		// output vector
 
 		static const int TRANSFER_SIZE = 1024;
 		static const int BUFFER_SIZE = 16 * 16384;
 
+		int timeout = 2;
 		bool lost = false;
 
-		int Read(void *data,int length,int timeout);
 		std::thread async_thread;
 		std::thread run_thread;
 

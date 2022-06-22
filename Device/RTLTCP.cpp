@@ -27,105 +27,28 @@ namespace Device {
 	RTLTCP::RTLTCP()
 	{
 		setSampleRate(288000);
-
-#ifdef _WIN32
-		WSADATA wsaData;
-
-		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-		{
-			throw "RTLTCP: Cannot initialize Winsocket.";
-			return;
-		}
-#endif
 	}
 
 	RTLTCP::~RTLTCP()
 	{
-#ifdef _WIN32
-		WSACleanup();
-#endif
 	}
 
 	void RTLTCP::Close()
 	{
+		client.disconnect();
 		Device::Close();
-
-		if (sock != -1)
-			closesocket(sock);
 	}
 
 	void RTLTCP::Play()
 	{
-		int r;
-		fd_set fd;
-
-		// RTLTCP protocol
-		struct { uint32_t magic = 0, tuner = 0, gain = 0; } dongle;
-
-		struct addrinfo h;
-
-		std::memset(&h, 0, sizeof(h));
-		h.ai_family = AF_UNSPEC;
-		h.ai_socktype = SOCK_STREAM;
-		h.ai_protocol = IPPROTO_TCP;
-
-#ifndef _WIN32
-		h.ai_flags = AI_ADDRCONFIG;
-#endif
-
-		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
-
-		if (code != 0 || address == NULL)
-		{
-			throw "RTLTCP: network address and/or port not valid.";
-			return;
-		}
-
-		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-		if (sock == -1) throw "RTLTCP: Error creating socket.";
-#ifndef _WIN32
-		r = fcntl(sock, F_GETFL, 0);
-		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
-		if (r == -1) throw "RTLTCP: cannot set NON BLOCKING flag.";
-#else
-		u_long mode = 1;  // 1 to enable non-blocking socket
-		ioctlsocket(sock, FIONBIO, &mode);
-#endif
-
-		FD_ZERO(&fd);
-		FD_SET(sock, &fd);
-
-		r = connect(sock, address->ai_addr, (int)address->ai_addrlen);
-
-		if(r == -1)
-		{
-#ifndef _WIN32
-			if(errno != EINPROGRESS)
-			{
-				throw "RTLTCP: cannot connect to socket";
-				closesocket(sock);
-			}
-#endif
-			timeval to = {timeout, 0};
-
-			if(select(sock+1, &fd, NULL, NULL, &to) == 1)
-			{
-				int se;
-				socklen_t len = sizeof(se);
-
-				getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&se, &len);
-
-				if (se != 0)
-					throw "RTLTCP: cannot open socket.";
-			}
-			else
-				throw "RTLTCP: cannot open connection.";
-		}
+		if(!client.connect(host, port))
+			throw "RTLTCP: cannot open socket.";
 
 		if (Protocol == PROTOCOL::RTLTCP)
 		{
+			struct { uint32_t magic = 0, tuner = 0, gain = 0; } dongle;
 			// RTLTCP protocol, check for dongle information
-			int len = Read((char*)&dongle, 12, 1);
+			int len = client.read((char*)&dongle, 12);
 			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: unexpected or invalid response, likely not an rtl-tcp process.";
 		}
 
@@ -153,34 +76,13 @@ namespace Device {
 		}
 	}
 
-	int RTLTCP::Read(void *data,int length,int time)
-	{
-		fd_set fd;
-
-		FD_ZERO(&fd);
-		FD_SET(sock, &fd);
-
-		timeval to = {time, 0};
-
-		if(select(sock + 1, &fd, NULL, NULL, &to) < 0)
-		{
-			return -1;
-		}
-
-		if (FD_ISSET(sock, &fd))
-		{
-			return recv(sock,(char*)data,length, 0);
-		}
-		return 0;
-	}
-
 	void RTLTCP::RunAsync()
 	{
 		std::vector<char> data(TRANSFER_SIZE);
 
 		while (isStreaming())
 		{
-			int len = Read(data.data(), TRANSFER_SIZE, 2);
+			int len = client.read(data.data(), TRANSFER_SIZE);
 
 			if (len <= 0)
 			{
@@ -218,7 +120,7 @@ namespace Device {
 
 		instruction[0] = c;
 		instruction[4] = p; instruction[3] = p >> 8; instruction[2] = p >> 16; instruction[1] = p >> 24;
-		send(sock, (const char *)instruction, 5, 0);
+		client.send((const char *)instruction, 5);
 	}
 
 	void RTLTCP::applySettings()
