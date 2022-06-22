@@ -49,7 +49,7 @@ namespace Device {
 			struct { uint32_t magic = 0, tuner = 0, gain = 0; } dongle;
 			// RTLTCP protocol, check for dongle information
 			int len = client.read((char*)&dongle, 12);
-			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: unexpected or invalid response, likely not an rtl-tcp process.";
+			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
 		}
 
 		fifo.Init(BUFFER_SIZE);
