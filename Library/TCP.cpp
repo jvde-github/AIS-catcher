@@ -45,7 +45,7 @@ void TCPclient::disconnect()
 		closesocket(sock);
 }
 
-bool TCPclient::connect(std::string host,std::string port)
+bool TCPclient::connect(std::string host,std::string port, bool nonblocking)
 {
 	int r;
 	fd_set fd;
@@ -61,15 +61,15 @@ bool TCPclient::connect(std::string host,std::string port)
 #endif
 
 	int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
-
 	if (code != 0 || address == NULL) return false;
 
 	sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 	if (sock == -1) return false;
-
 #ifndef _WIN32
 	r = fcntl(sock, F_GETFL, 0);
-	r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+	if(nonblocking)
+		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+
 	if (r == -1) return false;
 #else
 	u_long mode = 1;  // 1 to enable non-blocking socket

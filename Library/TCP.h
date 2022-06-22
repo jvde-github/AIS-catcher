@@ -61,7 +61,7 @@ public:
 	TCPclient();
 	~TCPclient();
 
-	bool connect(std::string host, std::string port);
+	bool connect(std::string host, std::string port, bool nonblocking = true);
 	void disconnect();
 
 	void setTimeout(int t) { timeout = t; }
