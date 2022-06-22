@@ -125,6 +125,8 @@ namespace Device {
 
 	void RTLTCP::applySettings()
 	{
+		client.setTimeout(timeout);
+
 		if(Protocol == PROTOCOL::RTLTCP)
 		{
 			setParameterRTLTCP(5, freq_offset);
@@ -149,7 +151,7 @@ namespace Device {
 	{
 		std::cerr << "RTLTCP settings: -gt host " << host << " port " << port << " tuner ";
 		if (tuner_AGC) std::cerr << "AUTO"; else std::cerr << tuner_Gain;
-		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
+		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF") << " timeout " << timeout;
 		std::cerr << " -p " << freq_offset << std::endl;
 	}
 
