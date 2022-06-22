@@ -55,13 +55,14 @@ namespace Device {
 		fifo.Init(BUFFER_SIZE);
 		applySettings();
 
-		Device::Play();
 		lost = false;
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);
 
 		SleepSystem(10);
+		Device::Play();
+
 	}
 
 	void RTLTCP::Stop()
