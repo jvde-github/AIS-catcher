@@ -47,7 +47,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ## Recent Developments
 
 **Edge** (development version, will be part of **0.36**): 
-- added new switch ```-a``` which unlocks the bandwidth functionality on some devicces including the RTL dongles. Early experimentation did not show improved reception with this setting. 
+- added new switch ```-a``` which unlocks the bandwidth functionality on some devices including the RTL dongles. Early experimentation did not show improved reception with this setting. 
 - extension of functionality to read WAV-files with more data types (8 and 16 bit PCM) and increasing flexibility on data layout (FACT chunk recognized).
 - experimental option to downsample using the ``libsoxr`` library if available. Early experiments do not show an improvement in reception and system load but it allows for more flexibility on input sample rates. E.g.:
 ``
@@ -142,13 +142,13 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
 ### A note on device sample rates
-AIS-catcher automatically sets an approriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
+AIS-catcher automatically sets an appropriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
 ```
 12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2048K (*), 2000K (*), 1920K (*), 1536K
 1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 288K, 250K (*), 240K (*), 192K, 96K
 ```
-Before splitting the signal in two seperate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. The sample rates denoted with a (```*```) in the above are upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these derived rates.
-Please note that these are rates supported by the decoding model and might not be necesarily supported by the SDR hardware. 
+Before splitting the signal in two separate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. The sample rates denoted with a (```*```) in the above are upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these derived rates.
+Please note that these are rates supported by the decoding model and might not be necessarily supported by the SDR hardware. 
 In recent versions of AIS-catcher you can use the SOX library for downsampling which does not impose restrictions on the sampling rate, as long as it is above 96K.
 
 ## Special topics
@@ -200,7 +200,7 @@ AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
 ```
 Next we can build a simple GRC model that performs all the necessary steps and has a ZMQ Pub Sink with the chosen endpoint:
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20GRC.png)
-Running this model, will allow us to succesfully decode the messages in the file:
+Running this model, will allow us to successfully decode the messages in the file:
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/SDRuno%20example.png)
 
@@ -316,17 +316,17 @@ To start streaming via Soapy we can use:
 ```
 AIS-catcher -d SCH0-00000001
 ```
-Note that the serial number has a prefix of ```SCH0``` (short for SoapySDR Channel 0) to distinguish it from the device accessed via the native SDR libary. Alternative, we can use a device-string to select the device: 
+Note that the serial number has a prefix of ```SCH0``` (short for SoapySDR Channel 0) to distinguish it from the device accessed via the native SDR library. Alternative, we can use a device-string to select the device: 
 ```
 AIS-catcher -d SOAPYSDR -gu device "serial=00000001,driver=rtlsdr"  -s 1536K
 ```
-Stream arguments and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAIN``` followed by an argument string (if it contains spaces use ""). Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` swhitch which displays the actual settings used, e.g.
+Stream arguments and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAIN``` followed by an argument string (if it contains spaces use ""). Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` switch which displays the actual settings used, e.g.
 ```
 AIS-catcher -d SOAPYSDR -s 1536K -gu GAIN "TUNER=37.3" PROBE on SETTINGS "biastee=true"
 ```
 To complete the example, this example also sets the tuner gain for the RTL-SDR to 37.3, the bias-tee on as the SETTING switch gives access to the device's extra settings.
 
-If the sample rates for a device are not supported by AIS-catcher, the SOXR functionality could be conisdered (e.g. ```-go SOXR on```). Again, we advice to use the built-in drivers and included resampling functionality where possible.  
+If the sample rates for a device are not supported by AIS-catcher, the SOXR functionality could be considered (e.g. ```-go SOXR on```). Again, we advice to use the built-in drivers and included resampling functionality where possible.  
 
 ## Validation
 
@@ -384,7 +384,7 @@ sudo make install
 ```
 For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. 
 
-For Windows, clone the project and open the directory with AIS-catcher in Visual Studio 2019 or above. The ```cmake``` file provides two options as source for the libaries. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/).  The cmake file will locate the installation directory and link against these libraries. The alternative is to use ```vcpkg``` which currently only offers the libraries for RTL-SDR and ZeroMQ (see next section as well). Of course, you can save yourself the hassle and download the Windows binaries from above.
+For Windows, clone the project and open the directory with AIS-catcher in Visual Studio 2019 or above. The ```cmake``` file provides two options as source for the libraries. The first is to install all the drivers via PothosSDR from [here](https://downloads.myriadrf.org/builds/PothosSDR/).  The cmake file will locate the installation directory and link against these libraries. The alternative is to use ```vcpkg``` which currently only offers the libraries for RTL-SDR and ZeroMQ (see next section as well). Of course, you can save yourself the hassle and download the Windows binaries from above.
 
 ### Microsoft Visual Studio 2019+ via solution file (RTL-SDR/ZMQ only)
 
@@ -440,10 +440,10 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- On going: testing and improving reveiver, seems to be some room for certain Class broadcast
+- On going: testing and improving receiver, seems to be some room for certain Class broadcast
 - <del>Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.</del> Use latest airspyhf lib.
 - <del>RTL-TCP setting for timeout on connection (system default takes way too long)</del>
-- Simulataneous receive Marine VHF audio and DSC decoding from SDR input signal
+- Simultaneous receive Marine VHF audio and DSC decoding from SDR input signal
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
