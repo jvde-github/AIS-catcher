@@ -156,6 +156,7 @@ namespace AIS
 			break;
 
 		// 300K
+		case 375000:
 		case 300000:
 			US.setParams(sample_rate, 384000);
 			physical >> convert >> US >> DS2_2 >> DS2_1 >> ROT;
