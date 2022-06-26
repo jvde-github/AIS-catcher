@@ -446,12 +446,10 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-<<<<<<< HEAD
 - On going: testing and improving receiver, seems to be some room for certain Class broadcast
 =======
 - On going: testing and improving reveiver, seems to be some room for certain Class broadcast
 - SpyServer support
->>>>>>> 9f250c2ea54743c5b8255e43f8e3197742bbebc9
 - <del>Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.</del> Use latest airspyhf lib.
 - <del>RTL-TCP setting for timeout on connection (system default takes way too long)</del>
 - Simultaneous receive Marine VHF audio and DSC decoding from SDR input signal
