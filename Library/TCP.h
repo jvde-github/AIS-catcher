@@ -66,7 +66,7 @@ public:
 	void disconnect();
 
 	void setTimeout(int t) { timeout = t; }
-	int read(void *data,int length);
+	int read(void *data,int length, bool wait = false);
 	int send(const char *msg, int len) { return ::send(sock, msg, len, 0);}
 };
 

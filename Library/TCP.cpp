@@ -76,8 +76,11 @@ bool TCPclient::connect(std::string host,std::string port, bool nb)
 
 	if (r == -1) return false;
 #else
-	u_long mode = 1;  // 1 to enable non-blocking socket
-	ioctlsocket(sock, FIONBIO, &mode);
+	if (nonblocking)
+	{
+		u_long mode = 1;  // 1 to enable non-blocking socket
+		ioctlsocket(sock, FIONBIO, &mode);
+	}
 #endif
 
 	FD_ZERO(&fd);
@@ -110,23 +113,26 @@ bool TCPclient::connect(std::string host,std::string port, bool nb)
 	return true;
 }
 
-int TCPclient::read(void *data,int length)
+int TCPclient::read(void *data,int length, bool wait)
 {
 	fd_set fd;
 
-	FD_ZERO(&fd);
-	FD_SET(sock, &fd);
-
-	timeval to = {timeout, 0};
-
-	if(nonblocking && select(sock + 1, &fd, NULL, NULL, &to) < 0)
+	if (nonblocking)
 	{
-		return -1;
+		FD_ZERO(&fd);
+		FD_SET(sock, &fd);
+
+		timeval to = { timeout, 0 };
+
+		if (select(sock + 1, &fd, NULL, NULL, &to) < 0)
+		{
+			return -1;
+		}
 	}
 
 	if (!nonblocking || FD_ISSET(sock, &fd))
 	{
-		return recv(sock,(char*)data,length, 0);
+		return recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
 	}
 	return 0;
 }

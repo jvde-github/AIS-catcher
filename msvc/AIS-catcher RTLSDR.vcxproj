@@ -30,6 +30,7 @@
     <ClCompile Include="..\Device\ZMQ.cpp" />
     <ClCompile Include="..\Device\SDRPLAY.cpp" />
     <ClCompile Include="..\Device\SoapySDR.cpp" />
+    <ClCompile Include="..\Device\SpyServer.cpp" />
     <ClCompile Include="..\DSP\Demod.cpp" />
     <ClCompile Include="..\DSP\DSP.cpp" />
     <ClCompile Include="..\DSP\Model.cpp" />
@@ -52,6 +53,7 @@
     <ClInclude Include="..\Device\ZMQ.h" />
     <ClInclude Include="..\Device\SDRPLAY.h" />
     <ClInclude Include="..\Device\SoapySDR.h" />
+    <ClInclude Include="..\Device\SpyServer.h" />
     <ClInclude Include="..\DSP\Demod.h" />
     <ClInclude Include="..\DSP\DSP.h" />
     <ClInclude Include="..\DSP\FFT.h" />
