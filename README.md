@@ -58,6 +58,10 @@ AIS-catcher -v -go SOXR on
 - Dockerfile moved to Debian-slim from Alpine to resolve workflow and compatibility issues
 - Initial SoapySDR support (remains to be further tested and refined). Only available when build with ```make soapysdr-only``` or with ```cmake .. -DSOAPYSDR=ON```.
 - We have set up a Github workflow to automatically build windows binaries for AIS-catcher (with full functionality), see the Actions menu. The built includes recent versions of the SDR libraries which contain improvement in stability for Windows systems (instead of relying on VCPKG builds), see also [these commits](https://github.com/jvde-github/rtl-sdr).
+- Initial SpyServer support is now included. Example command:
+```
+AIS-catcher -y 127.0.0.1 5555 -gy GAIN 14 -v
+```
  
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
