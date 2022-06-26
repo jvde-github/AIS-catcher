@@ -95,20 +95,10 @@ namespace Device {
    bool SpyServer::processHeader()
    {
         // read header
-
         if (!read((char*)&header, sizeof(MessageHeader))) return false;
 
         // check header
-        const uint8_t client_major = (SPYSERVER_PROTOCOL_VERSION >> 24) & 0xFF;
-        const uint8_t client_minor = (SPYSERVER_PROTOCOL_VERSION >> 16) & 0xFF;
-
-        uint8_t server_major = (header.ProtocolID >> 24) & 0xFF;
-        uint8_t server_minor = (header.ProtocolID >> 16) & 0xFF;
-
-        if (client_major != server_major || client_minor != server_minor)
-            return false;
-
-        if (header.BodySize > SPYSERVER_MAX_MESSAGE_BODY_SIZE)
+        if (header.ProtocolID != SPYSERVER_PROTOCOL_VERSION || header.BodySize > SPYSERVER_MAX_MESSAGE_BODY_SIZE)
             return false;
 
         // action
@@ -361,8 +351,8 @@ namespace Device {
       sendSetting(SETTING_IQ_FREQUENCY, { f } );
       sendStreamFormat();
 
-      return true;
- }
+		return true;
+ 	}
 
 	void SpyServer::getDeviceList(std::vector<Description>& DeviceList)
 	{
