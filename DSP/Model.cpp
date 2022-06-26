@@ -155,6 +155,13 @@ namespace AIS
 			physical >> convert >> DS2_2 >> DS2_1 >> ROT;
 			break;
 
+		// 300K
+		case 300000:
+			US.setParams(sample_rate, 384000);
+			physical >> convert >> US >> DS2_2 >> DS2_1 >> ROT;
+			break;
+
+
 		// 288K
 		case 288000:
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);

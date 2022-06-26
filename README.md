@@ -77,6 +77,7 @@ use: AIS-catcher [options]
 	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]
 	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
 	[-t [host [port]] - read IQ data from remote RTL-TCP instance]
+	[-y [host [port]] - read IQ data from remote SpyServer]
 	[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]
 
 	[-l list available devices and terminate (default: off)]
@@ -97,6 +98,7 @@ use: AIS-catcher [options]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]
 	[-gu SOAPYSDR: DEVICE [string] GAIN [string] AGC [on/off] STREAM [string] SETTING [string] CH [0+] PROBE [on/off] ANTENNA [string] ]
 	[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60] ]
+	[-gy SPYSERVER: HOST [address] PORT [port] GAIN [0-50] ]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]
 	[-gw WAV file: FILE [filename] ]
 	[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8] ]
@@ -145,7 +147,7 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 AIS-catcher automatically sets an appropriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
 ```
 12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2048K (*), 2000K (*), 1920K (*), 1536K
-1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 288K, 250K (*), 240K (*), 192K, 96K
+1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 300K (*), 288K, 250K (*), 240K (*), 192K, 96K
 ```
 Before splitting the signal in two separate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. The sample rates denoted with a (```*```) in the above are upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these derived rates.
 Please note that these are rates supported by the decoding model and might not be necessarily supported by the SDR hardware. 

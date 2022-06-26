@@ -36,6 +36,7 @@
 #include "Device/RTLTCP.h"
 #include "Device/AIRSPY.h"
 #include "Device/SDRPLAY.h"
+#include "Device/SpyServer.h"
 #include "Device/SoapySDR.h"
 #include "Device/ZMQ.h"
 
@@ -60,6 +61,7 @@ struct Drivers
         Device::WAVFile WAV;
         Device::RTLSDR RTLSDR;
         Device::RTLTCP RTLTCP;
+	Device::SpyServer SpyServer;
         Device::AIRSPYHF AIRSPYHF;
         Device::AIRSPY AIRSPY;
         Device::SDRPLAY SDRPLAY;
@@ -92,6 +94,7 @@ void Usage()
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
 	std::cerr << "\t[-t [host [port]] - read IQ data from remote RTL-TCP instance]" << std::endl;
+	std::cerr << "\t[-y [host [port]] - read IQ data from remote SpyServer]" << std::endl;
 	std::cerr << "\t[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
@@ -112,6 +115,7 @@ void Usage()
 	std::cerr << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]" << std::endl;
 	std::cerr << "\t[-gu SOAPYSDR: DEVICE [string] GAIN [string] AGC [on/off] STREAM [string] SETTING [string] CH [0+] PROBE [on/off] ANTENNA [string] ]" << std::endl;
 	std::cerr << "\t[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60] ]" << std::endl;
+	std::cerr << "\t[-gy SPYSERVER: HOST [address] PORT [port] GAIN [0-50] ]" << std::endl;
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]" << std::endl;
 	std::cerr << "\t[-gw WAV file: FILE [filename] ]" << std::endl;
 	std::cerr << "\t[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8] ]" << std::endl;
@@ -322,6 +326,12 @@ int main(int argc, char* argv[])
 				if(count >= 1) drivers.RTLTCP.Set("host",arg1);
 				if(count >= 2) drivers.RTLTCP.Set("port",arg2);
 				break;
+			case 'y':
+				input_type = Device::Type::SPYSERVER;
+				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
+				if(count >= 1) drivers.SpyServer.Set("host",arg1);
+				if(count >= 2) drivers.SpyServer.Set("port",arg2);
+				break;
 			case 'z':
 				input_type = Device::Type::ZMQ;
 				Assert(count <= 2, param, "Requires at most two parameters [[format]] [endpoint].");
@@ -409,6 +419,7 @@ int main(int argc, char* argv[])
 				case 'a': parseSettings(drivers.RAW, argv, ptr, argc); break;
 				case 'w': parseSettings(drivers.WAV, argv, ptr, argc); break;
 				case 't': parseSettings(drivers.RTLTCP, argv, ptr, argc); break;
+				case 'y': parseSettings(drivers.SpyServer, argv, ptr, argc); break;
 				case 'f': parseSettings(drivers.HACKRF, argv, ptr, argc); break;
 				case 'u': parseSettings(drivers.SOAPYSDR, argv, ptr, argc); break;
 				case 'z': parseSettings(drivers.ZMQ, argv, ptr, argc); break;
@@ -453,6 +464,7 @@ int main(int argc, char* argv[])
 		case Device::Type::WAVFILE: device = &drivers.WAV; break;
 		case Device::Type::RAWFILE: device = &drivers.RAW; break;
 		case Device::Type::RTLTCP: device = &drivers.RTLTCP; break;
+		case Device::Type::SPYSERVER: device = &drivers.SpyServer; break;
 #ifdef HASZMQ
 		case Device::Type::ZMQ: device = &drivers.ZMQ; break;
 #endif
