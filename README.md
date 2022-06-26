@@ -147,7 +147,7 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 AIS-catcher automatically sets an appropriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports the following rates:
 ```
 12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2048K (*), 2000K (*), 1920K (*), 1536K
-1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 300K (*), 288K, 250K (*), 240K (*), 192K, 96K
+1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 375K (*), 300K (*), 288K, 250K (*), 240K (*), 192K, 96K
 ```
 Before splitting the signal in two separate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. The sample rates denoted with a (```*```) in the above are upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these derived rates.
 Please note that these are rates supported by the decoding model and might not be necessarily supported by the SDR hardware. 
