@@ -308,15 +308,6 @@ namespace Device {
 
     void SpyServer::printSync()
     {
-        uint32_t CanControl;
-        uint32_t Gain;
-        uint32_t DeviceCenterFrequency;
-        uint32_t IQCenterFrequency;
-        uint32_t FFTCenterFrequency;
-        uint32_t MinimumIQCenterFrequency;
-        uint32_t MaximumIQCenterFrequency;
-        uint32_t MinimumFFTCenterFrequency;
-        uint32_t MaximumFFTCenterFrequency;
         std::cerr << "Client:" << std::endl;
         std::cerr << "  CanControl: " << client_sync.CanControl << " Gain : " << client_sync.Gain << " DeviceCenterFrequency : " << client_sync.DeviceCenterFrequency << std::endl;
         std::cerr << "  IQCenterFrequency: " << client_sync.IQCenterFrequency << "  Minimum/Maximum Frequency: " << client_sync.MinimumIQCenterFrequency << "/" << client_sync.MaximumIQCenterFrequency << " resolution: " << device_info.Resolution << std::endl;
@@ -334,7 +325,7 @@ namespace Device {
             break;
             }
         }
-   
+
         if(idx == -1)
         {
             std::cerr << "SPYSERVER: sample rate not supported by server. Supported rates:" << std::endl;
@@ -369,9 +360,9 @@ namespace Device {
 
       sendSetting(SETTING_IQ_FREQUENCY, { f } );
       sendStreamFormat();
-      
+
       return true;
-   }
+ }
 
 	void SpyServer::getDeviceList(std::vector<Description>& DeviceList)
 	{
