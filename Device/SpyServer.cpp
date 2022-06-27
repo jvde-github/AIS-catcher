@@ -69,8 +69,6 @@ namespace Device {
 			{
 				new_rate = rate; distance = abs((int)rate-(int)sample_rate);
 			}
-			if (sample_rate == 0 && _sample_rates.size())
-				setSampleRate(_sample_rates[0].first);
 		}
 		sample_rate = new_rate;
 	}
