@@ -35,7 +35,8 @@ namespace Device {
 
 	SpyServer::SpyServer()
 	{
-		setSampleRate(240000);
+		setSampleRate(288000);
+		// at open we set the rate closest to 288K
 	}
 
 	void SpyServer::Open(uint64_t h)
@@ -69,7 +70,7 @@ namespace Device {
 				new_rate = rate; distance = abs((int)rate-(int)sample_rate);
 			}
 			if (sample_rate == 0 && _sample_rates.size())
-		setSampleRate(_sample_rates[0].first);
+				setSampleRate(_sample_rates[0].first);
 		}
 		sample_rate = new_rate;
 	}
@@ -173,10 +174,10 @@ namespace Device {
 
 	void SpyServer::setGain(FLOAT32 gain)
 	{
-	if (client_sync.CanControl)
-		sendSetting(SETTING_GAIN, {(uint32_t)gain});
-	else
-		std::cerr << "SPYSERVER: server does not give gain control." << std::endl;
+		if (client_sync.CanControl)
+			sendSetting(SETTING_GAIN, {(uint32_t)gain});
+		else
+			std::cerr << "SPYSERVER: server does not give gain control." << std::endl;
 	}
 
 	bool SpyServer::sendSetting(uint32_t type, const std::vector<uint32_t> &params)
