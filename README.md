@@ -58,10 +58,8 @@ AIS-catcher -v -go SOXR on
 - Dockerfile moved to Debian-slim from Alpine to resolve workflow and compatibility issues
 - Initial SoapySDR support (remains to be further tested and refined). Only available when build with ```make soapysdr-only``` or with ```cmake .. -DSOAPYSDR=ON```.
 - We have set up a Github workflow to automatically build windows binaries for AIS-catcher (with full functionality), see the Actions menu. The built includes recent versions of the SDR libraries which contain improvement in stability for Windows systems (instead of relying on VCPKG builds), see also [these commits](https://github.com/jvde-github/rtl-sdr).
-- Initial SpyServer support is now included. Example command:
-```
-AIS-catcher -y 127.0.0.1 5555 -gy GAIN 14 -v
-```
+- Initial SpyServer support is now included. For an example, see below.
+
  
 Version **0.35**: smaller fixes and improvements and unlocking support for SDRPlay RSP1 and RSPDX. For details see [Releases](https://github.com/jvde-github/AIS-catcher/releases).
 
@@ -115,7 +113,7 @@ use: AIS-catcher [options]
 ### Basic usage
 
 
-To test a proper installation and/or compilation (see below for instructions), the following command lists the devices available for AIS reception:
+To test that the installation and/or compilation was succesful (see below for instructions), a good start is the following command which lists the devices available for AIS reception:
 ```console
 AIS-catcher -l
 ```
@@ -124,8 +122,11 @@ The output depends on the available devices but will look something like:
 Found 1 device(s):
 0: Realtek, RTL2838UHIDIR, SN: 00000001
 ```
-A specific device can be selected with the ``d``-switch using the device number ``-d:0`` or the serial number ``-d 00000001``.
-
+A specific device can be selected with the ``d``-switch using the device number ``-d:0`` or the serial number ``-d 00000001``. If you were expecting a particular device that is missing, you might want to try:
+```console
+AIS-catcher -L
+```
+which lists all supported devices and confirms that the executable was correctly build for your hardware.
 
 To start AIS demodulation, print some occasional statistics (every 10 seconds) and broadcast AIS messages via UDP, we can use the following command:
 ```console
@@ -300,10 +301,14 @@ Settings specific for the HackRF can be set on the command line with the ```-gf`
 AIS-catcher -gf lna 16 vga 16 preamp OFF
 ```
 
-### RTL TCP
+### RTL TCP and SpyServer
 AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org/projects/rtl-sdr/wiki/Rtl-sdr#rtl_tcp) process running remotely, e.g. if the server is on `192.168.1.235` port `1234` with a sampling rate of `240K` samples/sec:
 ```console
-AIS-catcher -t 192.168.1.235 1234 -s 240000 -v
+AIS-catcher -t 192.168.1.235 1234 -gt TUNER auto
+```
+For SpyServer use the ''-y'' switch like:
+```console
+AIS-catcher -u 192.168.1.235 5555 -gy GAIN 14
 ```
 ### SoapySDR
 
@@ -449,10 +454,11 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - On going: testing and improving receiver, seems to be some room for certain Class broadcast
 =======
 - On going: testing and improving reveiver, seems to be some room for certain Class broadcast
-- SpyServer support
+- <del>SpyServer support</del>
 - <del>Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.</del> Use latest airspyhf lib.
 - <del>RTL-TCP setting for timeout on connection (system default takes way too long)</del>
 - Simultaneous receive Marine VHF audio and DSC decoding from SDR input signal
+- Reporting signal strength and estimated frequency correction (e.g. to facilitate auto calibration ppm for rtl sdr dongles)
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
