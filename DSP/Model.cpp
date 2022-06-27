@@ -241,7 +241,7 @@ namespace AIS
 		}
 		else
 		{
-			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
+			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
 			if (sample_rate < 96000 || sample_rate > 12288000)
 				throw "Model: sample rate must be between 96K and 12288K (inclusive).";
@@ -342,6 +342,14 @@ namespace AIS
 				break;
 			case 768000-1:
 				convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				break;
+
+				// 2 * 3
+			case 576000:
+				convert >> DS2_1 >> DSK >> ROT;
+				break;
+			case 576000-1:
+				convert >> DS2_1 >> US >> DSK >> ROT;
 				break;
 
 				// 2^2
