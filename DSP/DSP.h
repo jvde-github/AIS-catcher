@@ -96,7 +96,7 @@ namespace DSP
 
 	public:
 
-		void setParams(int n, int m) { assert(n < m); increment = (FLOAT32) n / (FLOAT32) m; }
+		void setParams(int n, int m) { assert(n <= m); increment = (FLOAT32) n / (FLOAT32) m; }
 		// StreamIn
 		void Receive(const CFLOAT32* data, int len);
 	};
