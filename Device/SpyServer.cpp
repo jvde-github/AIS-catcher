@@ -290,7 +290,7 @@ namespace Device {
     void SpyServer::printDevice()
     {
         std::cerr << "Device info:" << std::endl;
-        std::cerr << "  Serial: " << device_info.DeviceSerial << " MaximumSampleRate : " << device_info.MaximumSampleRate << " MaximumBandwidth : " << device_info.MaximumBandwidth << std::endl;
+        std::cerr << "  Serial: " << device_info.DeviceSerial << " DeviceType: " <<  device_info.DeviceType << " MaximumSampleRate: " << device_info.MaximumSampleRate << " MaximumBandwidth: " << device_info.MaximumBandwidth << std::endl;
         std::cerr << "  DecimationStageCount: " << device_info.DecimationStageCount << " GainStageCount: " << device_info.GainStageCount << " MaximumGainIndex: " << device_info.MaximumGainIndex << std::endl;
         std::cerr << "  Minimum/Maximum Frequency: " << device_info.MinimumFrequency << "/" << device_info.MaximumFrequency << " resolution: " << device_info.Resolution << std::endl;
         std::cerr << "  MinimumIQDecimation: " << device_info.MinimumIQDecimation << " ForcedIQFormat: " << device_info.ForcedIQFormat << std::endl;

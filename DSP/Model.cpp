@@ -220,6 +220,193 @@ namespace AIS
 
 	}
 
+	void ModelFrontendNew::buildModel(int sample_rate, bool timerOn, Device::Device *dev)
+	{
+		device = dev;
+
+		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
+
+		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
+
+		if(SOXR_DS)
+		{
+#ifndef HASSOXR
+			throw "Error: Executable not build with SOXR support.";
+#endif
+			if(sample_rate < 96000)
+				throw "Error: sample rate below 96K.";
+
+			sox.setParams(sample_rate, 96000);
+			physical >> convert >> sox >> ROT;
+		}
+		else
+		{
+			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
+
+			if (sample_rate < 96000 || sample_rate > 12288000)
+				throw "Model: sample rate must be between 96K and 12288K (inclusive).";
+
+			uint32_t bucket = 0xFFFF;
+			bool interpolated = false;
+
+			for(uint32_t r : definedRates)
+				if (r >= sample_rate)
+				{
+					bucket = r;
+					if (r != sample_rate) interpolated = true;
+					break;
+				}
+
+			if(interpolated)
+				std::cerr << "sample rate : " << sample_rate/1000 << "K upsampled to : " << bucket/1000 << "K." << std::endl;
+
+			US.setParams(sample_rate, bucket);
+			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
+
+			physical >> convert;
+
+			switch (bucket - (interpolated ? 1 : 0))
+			{
+				// 2^7
+			case 12288000:
+				if(!fixedpointDS)
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				else
+				{
+					convert.outCU8 >> DS32_CU8 >> DS2_2;
+					convert.outCS8 >> DS32_CS8 >> DS2_2;
+					DS2_2 >> DS2_1 >> ROT;
+				}
+				break;
+			case 12288000-1:
+				if (!fixedpointDS)
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				else
+				{
+					convert.outCU8 >> DS32_CU8 >> DS2_2;
+					convert.outCS8 >> DS32_CS8 >> DS2_2;
+					DS2_2 >> US >> DS2_1 >> ROT;
+				}
+				break;
+
+				// 2^6
+			case 6144000:
+				convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				break;
+			case 6144000 - 1:
+				convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+				break;
+
+				// 2^5
+			case 3072000:
+				convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				break;
+			case 3072000-1:
+				convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				break;
+
+				// 2^3 * 3
+			case 2304000:
+				convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
+				break;
+			case 2304000-1:
+				convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+				break;
+
+
+				// 2^4
+			case 1536000:
+				if (!fixedpointDS)
+					convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				else
+				{
+					convert.outCU8 >> DS16_CU8 >> ROT;
+					convert.outCS8 >> DS16_CS8 >> ROT;
+				}
+				break;
+			case 1536000-1:
+				convert >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+				break;
+
+				// 2^2 * 3
+			case 1152000:
+				convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
+				break;
+			case 1152000-1:
+				convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+				break;
+
+				// 2^3
+			case 768000:
+				convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				break;
+			case 768000-1:
+				convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				break;
+
+				// 2^2
+			case 384000:
+				convert >> DS2_2 >> DS2_1 >> ROT;
+				break;
+			case 384000-1:
+				convert >> US >> DS2_2 >> DS2_1 >> ROT;
+				break;
+
+
+				// 3
+			case 288000:
+				convert >> DSK >> ROT;
+				break;
+			case 288000-1:
+				convert >> US >> DSK >> ROT;
+				break;
+
+				// 2^1
+			case 192000:
+				convert >> DS2_1 >> ROT;
+				break;
+			case 192000-1:
+				convert >> US >> DS2_1 >> ROT;
+				break;
+
+				// 2^0
+			case 96000:
+				convert >> ROT;
+				break;
+
+			default:
+				throw "Model: internal error. Sample rate should be supported.";
+
+			}
+		}
+
+		ROT.up >> DS2_a >> FCIC5_a;
+		ROT.down >> DS2_b >> FCIC5_b;
+
+		// pick up point for downstream decoders
+		C_a = &FCIC5_a.out;
+		C_b = &FCIC5_b.out;
+
+		return;
+	}
+
+	void ModelFrontendNew::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "FP_DS")
+		{
+			fixedpointDS = Util::Parse::Switch(arg);
+		}
+		else if (option == "SOXR")
+		{
+			SOXR_DS = Util::Parse::Switch(arg);
+		}
+		else Model::Set(option, arg);
+
+	}
+
 	void ModelBase::buildModel(int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn, dev);
@@ -361,6 +548,87 @@ namespace AIS
 		}
 		else
 			ModelFrontend::Set(option, arg);
+	}
+
+	void ModelChallenger::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
+	{
+		ModelFrontendNew::buildModel(sample_rate, timerOn, dev);
+
+		setName("AIS engine " VERSION);
+
+		assert(C_a != NULL && C_b != NULL);
+
+		FC_a.setTaps(Filters::Coherent);
+		FC_b.setTaps(Filters::Coherent);
+
+		S_a.setConnections(nSymbolsPerSample);
+		S_b.setConnections(nSymbolsPerSample);
+
+		DEC_a.resize(nSymbolsPerSample);
+		DEC_b.resize(nSymbolsPerSample);
+
+		if (!PS_EMA)
+		{
+			CD_a.resize(nSymbolsPerSample);
+			CD_b.resize(nSymbolsPerSample);
+		}
+		else
+		{
+			CD_EMA_a.resize(nSymbolsPerSample);
+			CD_EMA_b.resize(nSymbolsPerSample);
+		}
+
+		CGF_a.setParams(512,187);
+		CGF_b.setParams(512,187);
+
+		*C_a >> CGF_a >> FC_a >> S_a;
+		*C_b >> CGF_b >> FC_b >> S_b;
+
+		for (int i = 0; i < nSymbolsPerSample; i++)
+		{
+			DEC_a[i].setChannel('A');
+			DEC_b[i].setChannel('B');
+
+			if (!PS_EMA)
+			{
+				CD_a[i].setParams(nHistory, nDelay);
+				CD_b[i].setParams(nHistory, nDelay);
+
+				S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
+				S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
+			}
+			else
+			{
+				CD_EMA_a[i].setParams(nDelay);
+				CD_EMA_b[i].setParams(nDelay);
+
+				S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
+				S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
+			}
+			for (int j = 0; j < nSymbolsPerSample; j++)
+			{
+				if (i != j)
+				{
+					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
+					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+				}
+			}
+		}
+
+		return;
+	}
+
+	void ModelChallenger::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "PS_EMA")
+		{
+			PS_EMA = Util::Parse::Switch(arg);
+		}
+		else
+			ModelFrontendNew::Set(option, arg);
 	}
 
 	void ModelDiscriminator::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
