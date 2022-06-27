@@ -233,6 +233,7 @@ namespace Device {
 		void printDevice();
 
 	public:
+		SpyServer();
 
 		void OpenWithFileDescriptor(int) { Open(0); } 
 
