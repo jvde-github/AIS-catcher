@@ -58,7 +58,7 @@ namespace Device {
 			throw "SPYSERVER: error receiving messages from server to start stream.";
  		}
 
-		uint32_t distance = 0xFFFF;
+		uint32_t distance = device_info.MaximumSampleRate;
 		uint32_t new_rate = 0;
 
 		for (int i = device_info.MinimumIQDecimation; i<=device_info.DecimationStageCount; i++)
@@ -84,7 +84,7 @@ namespace Device {
 	void SpyServer::Play()
 	{
  		Device::Play();
-		fifo.Init();
+		fifo.Init(16 * 16384, 8);
  		lost = false;
 		applySettings();
 
