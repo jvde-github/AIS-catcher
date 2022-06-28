@@ -52,6 +52,8 @@ namespace Device {
 			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
 		}
 
+		Device::Play();
+
 		fifo.Init(BUFFER_SIZE);
 		applySettings();
 
@@ -61,7 +63,6 @@ namespace Device {
 		run_thread = std::thread(&RTLTCP::Run, this);
 
 		SleepSystem(10);
-		Device::Play();
 
 	}
 
