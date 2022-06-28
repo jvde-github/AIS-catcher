@@ -17,7 +17,7 @@ and/or safety of life or property purposes.
 There are variations in the legislation concerning radio reception in the different administrations around the world. 
 It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
-This is hobby and research software for use only in those regions where such use is permitted.
+Only use this software in regions where such use is permitted.
 
 ## Latest news: Android version available for testing
 
