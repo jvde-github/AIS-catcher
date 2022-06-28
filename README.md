@@ -428,23 +428,25 @@ AIS-catcher automatically sets an appropriate sample rate depending on your devi
 ```
 Before splitting the signal in two separate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. 
 Input on all other sample rates is upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these other rates.
-In recent versions of AIS-catcher you can use the ``SOXR`` or ``libsamplerate`` library for downsampling. In fact, you can compare the three different downsampling approaches with a command like:
+In recent versions of AIS-catcher you can use the ``SOXR`` or ``libsamplerate`` library for downsampling. In fact, you can compare the four different downsampling approaches with a command like:
 ```
-AIS-catcher -r posterholt.raw -m 2 -m 2 -go SOXR on -m 2 -go SAMPLERATE on -v -b -q
+AIS-catcher -r posterholt.raw -m 2 -m 2 -go FP_DS on  -m 2 -go SOXR on -m 2 -go SAMPLERATE on -b -q -v
 ```
 which produces:
 ```
-[AIS engine v0.35 ]:                     41 msgs at 4.4 msg/s
-[AIS engine v0.35 SOXR ]:                41 msgs at 4.4 msg/s
-[AIS engine v0.35 SRC]:                  41 msgs at 4.4 msg/s
+[AIS engine v0.35 ]:                     41 msgs at 4.1 msg/s
+[AIS engine v0.35 FP-DS ]:               41 msgs at 4.1 msg/s
+[AIS engine v0.35 SOXR ]:                41 msgs at 4.1 msg/s
+[AIS engine v0.35 SRC]:                  41 msgs at 4.1 msg/s
 ```
 with the following timings:
 ```
-[AIS engine v0.35 ]:                     309.002 ms
-[AIS engine v0.35 SOXR ]:                641.265 ms
-[AIS engine v0.35 SRC]:                  3692.79 ms
+[AIS engine v0.35 ]:                     320.624 ms
+[AIS engine v0.35 FP-DS ]:               254.341 ms
+[AIS engine v0.35 SOXR ]:                653.716 ms
+[AIS engine v0.35 SRC]:                  3762.6 ms
 ```
-
+Note that some libraries will require significant hardware resources. The advice is to use the native build-in downsampling functionality.
 
 ### Frequency offset
 AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide as input via the ```-p``` switch on the command line.
