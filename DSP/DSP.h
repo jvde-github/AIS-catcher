@@ -231,7 +231,7 @@ namespace DSP
 
 	class SRC : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
-#ifdef HASSOXR
+#ifdef HASSAMPLERATE
 		std::vector<CFLOAT32> output;
 		std::vector<CFLOAT32> out_src;
 
@@ -243,7 +243,9 @@ namespace DSP
 #endif
 	public:
 
+#ifdef HASSAMPLERATE
 		~SRC() { if(state) src_delete(state); }
+#endif
 		void setParams(int sample_rate,int out_rate);
 		virtual void Receive(const CFLOAT32* data, int len);
 	};
