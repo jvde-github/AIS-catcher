@@ -49,7 +49,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 **Edge** (development version, will be part of **0.36**): 
 - added new switch ```-a``` which unlocks the bandwidth functionality on some devices including the RTL dongles. Early experimentation did not show improved reception with this setting. 
 - extension of functionality to read WAV-files with more data types (8 and 16 bit PCM) and increasing flexibility on data layout (FACT chunk recognized).
-- experimental option to downsample using the ``libsoxr`` library if available. Early experiments do not show an improvement in reception and system load but it allows for more flexibility on input sample rates. E.g.:
+- removal of sampling rate restriction, experimental option to downsample using the ``libsoxr`` library if available (and ``libsamplerate``). Early experiments do not show an improvement in reception and system load but it allows for more flexibility on input sample rates. E.g.:
 ``
 AIS-catcher -v -go SOXR on
 ``
