@@ -122,7 +122,7 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\tModel specific settings:" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] ]" << std::endl;
+	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SAMPLERATE [on/off] ]" << std::endl;
 }
 
 std::vector<Device::Description> getDevices(Drivers &drivers)
@@ -178,6 +178,9 @@ void printSupportedDevices()
 	std::cerr << "Other support: ";
 #ifdef HASSOXR
 	std::cerr << "SOXR ";
+#endif
+#ifdef HASSAMPLERATE
+	std::cerr << "LIBSAMPLERATE ";
 #endif
 #ifdef HASRTLSDR_BIASTEE
 	std::cerr << "RTLSDR-BIASTEE ";

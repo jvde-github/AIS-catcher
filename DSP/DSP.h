@@ -21,7 +21,9 @@
 #ifdef HASSOXR
 #include <soxr.h>
 #endif
-
+#ifdef HASSAMPLERATE
+#include <samplerate.h>
+#endif
 #include "Filters.h"
 
 #include "Stream.h"
@@ -223,6 +225,25 @@ namespace DSP
 #endif
 	public:
 
+		void setParams(int sample_rate,int out_rate);
+		virtual void Receive(const CFLOAT32* data, int len);
+	};
+
+	class SRC : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
+#ifdef HASSOXR
+		std::vector<CFLOAT32> output;
+		std::vector<CFLOAT32> out_src;
+
+		SRC_STATE* state = NULL;
+		int count = 0;
+		const int N = 16384;
+		double ratio = 0.0;
+		int src_error = 0;
+#endif
+	public:
+
+		~SRC() { if(state) src_delete(state); }
 		void setParams(int sample_rate,int out_rate);
 		virtual void Receive(const CFLOAT32* data, int len);
 	};

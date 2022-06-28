@@ -21,208 +21,13 @@
 
 namespace AIS
 {
+
 	void ModelFrontend::buildModel(int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		device = dev;
 
-		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
-
-		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
-
-		if(SOXR_DS)
-		{
-#ifndef HASSOXR
-			throw "Error: Executable not build with SOXR support.";
-#endif
-			if(sample_rate < 96000)
-				throw "Error: sample rate below 96K.";
-
-			sox.setParams(sample_rate, 96000);
-			physical >> convert >> sox >> ROT;
-		}
-		else switch (sample_rate)
-		{
-
-		// 2^7
-		case 12288000:
-			physical >> convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS32_CU8 >> DS2_2;
-				convert.outCS8 >> DS32_CS8 >> DS2_2;
-			}
-			break;
-		case 10000000:
-			US.setParams(sample_rate, 12288000);
-			physical >> convert >> DS2_7 >>  DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS32_CU8 >> US;
-				convert.outCS8 >> DS32_CS8 >> US;
-			}
-			break;
-
-		// 2^6
-		case 6144000:
-			physical >> convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS32_CU8 >> DS2_1;
-				convert.outCS8 >> DS32_CS8 >> DS2_1;
-			}
-			break;
-		case 6000000:
-			US.setParams(sample_rate, 6144000);
-			physical >> convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS32_CU8 >> US;
-				convert.outCS8 >> DS32_CS8 >> US;
-			}
-			break;
-
-		// 2^5
-		case 3072000:
-			physical >> convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS16_CU8 >> DS2_1;
-				convert.outCS8 >> DS16_CS8 >> DS2_1;
-			}
-			break;
-		case 2500000:
-		case 3000000:
-			US.setParams(sample_rate, 3072000);
-			physical >> convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
-			break;
-
-		// 2304K
-		case 2304000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS8_CU8 >> DSK;
-				convert.outCS8 >> DS8_CS8 >> DSK;
-			}
-			break;
-		case 2048000:
-		case 2000000:
-		case 1920000:
-			US.setParams(sample_rate, 2304000);
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS8_CU8 >> US;
-				convert.outCS8 >> DS8_CS8 >> US;
-			}
-			break;
-
-
-		// 2^4
-		case 1536000:
-			physical >> convert;
-			convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			if (fixedpointDS)
-			{
-				convert.outCU8 >> DS16_CU8 >> ROT;
-				convert.outCS8 >> DS16_CS8 >> ROT;
-			}
-			break;
-
-		// 1152K
-		case 1152000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
-			break;
-		case 1100000:
-		case 1000000:
-		case 912000:
-		case 900000:
-			US.setParams(sample_rate, 1152000);
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
-			break;
-
-		// 2^3
-		case 768000:
-			physical >> convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-			break;
-
-		// 2^2
-		case 384000:
-			physical >> convert >> DS2_2 >> DS2_1 >> ROT;
-			break;
-		case 375000:
-		case 300000:
-			US.setParams(sample_rate, 384000);
-			physical >> convert >> US >> DS2_2 >> DS2_1 >> ROT;
-			break;
-
-
-		// 288K
-		case 288000:
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> DSK >> ROT;
-			break;
-		case 240000:
-		case 250000:
-			US.setParams(sample_rate, 288000);
-			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
-			physical >> convert >> US >> DSK >> ROT;
-			break;
-
-		// 2^1
-		case 192000:
-			physical >> convert >> DS2_1 >> ROT;
-			break;
-
-		// 2^0
-		case 96000:
-			physical >> convert >> ROT;
-			break;
-		default:
-			std::cerr << "Sample rate for decoding model set to unsupported rate of " << sample_rate << std::endl;
-			std::cerr << "Supported model rates:" << std::endl;
-			std::cerr << "  12288K, 10000K (*), 6144K, 6000K (*), 3072K, 3000K (*), 2500K (*), 2340K, 2000K (*), 1920K (*), 1536K" << std::endl;
-			std::cerr << "  1152K, 1100K (*), 1000K (*), 912K (*), 900K (*), 768K, 384K, 288K, 250K (*), 240K (*), 192K, 96K" << std::endl;
-			std::cerr << "(*) denotes a derived rate" <<std::endl;
-
-			throw "Error: sample rate not supported in engine.";
-
-		}
-
-		ROT.up >> DS2_a >> FCIC5_a;
-		ROT.down >> DS2_b >> FCIC5_b;
-
-		// pick up point for downstream decoders
-		C_a = &FCIC5_a.out;
-		C_b = &FCIC5_b.out;
-
-		return;
-	}
-
-	void ModelFrontend::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "FP_DS")
-		{
-			fixedpointDS = Util::Parse::Switch(arg);
-		}
-		else if (option == "SOXR")
-		{
-			SOXR_DS = Util::Parse::Switch(arg);
-		}
-		else Model::Set(option, arg);
-
-	}
-
-	void ModelFrontendNew::buildModel(int sample_rate, bool timerOn, Device::Device *dev)
-	{
-		device = dev;
+		if (sample_rate < 96000 || sample_rate > 12288000)
+			throw "Model: sample rate must be between 96K and 12288K (inclusive).";
 
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
@@ -233,18 +38,21 @@ namespace AIS
 #ifndef HASSOXR
 			throw "Error: Executable not build with SOXR support.";
 #endif
-			if(sample_rate < 96000)
-				throw "Error: sample rate below 96K.";
-
 			sox.setParams(sample_rate, 96000);
 			physical >> convert >> sox >> ROT;
+		}
+		else if(SAMPLERATE_DS)
+		{
+#ifndef HASSAMPLERATE
+			throw "Error: Executable not build with libsamplerate support.";
+#endif
+			src.setParams(sample_rate, 96000);
+			physical >> convert >> src >> ROT;
 		}
 		else
 		{
 			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
-			if (sample_rate < 96000 || sample_rate > 12288000)
-				throw "Model: sample rate must be between 96K and 12288K (inclusive).";
 
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
@@ -398,7 +206,7 @@ namespace AIS
 		return;
 	}
 
-	void ModelFrontendNew::Set(std::string option, std::string arg)
+	void ModelFrontend::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -410,6 +218,12 @@ namespace AIS
 		else if (option == "SOXR")
 		{
 			SOXR_DS = Util::Parse::Switch(arg);
+			SAMPLERATE_DS = false;
+		}
+		else if (option == "SAMPLERATE")
+		{
+			SAMPLERATE_DS = Util::Parse::Switch(arg);
+			SOXR_DS = false;
 		}
 		else Model::Set(option, arg);
 
@@ -481,7 +295,10 @@ namespace AIS
 	{
 		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 
-		setName("AIS engine " VERSION);
+		std::string setting = (fixedpointDS?"FP-DS ":"");
+		setting +=  (SOXR_DS?"SOXR ":"");
+		setting +=  (SAMPLERATE_DS?"SRC":"");
+		setName("AIS engine " VERSION  " " + setting);
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -560,7 +377,7 @@ namespace AIS
 
 	void ModelChallenger::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
 	{
-		ModelFrontendNew::buildModel(sample_rate, timerOn, dev);
+		ModelFrontend::buildModel(sample_rate, timerOn, dev);
 
 		setName("AIS engine " VERSION);
 
@@ -636,7 +453,7 @@ namespace AIS
 			PS_EMA = Util::Parse::Switch(arg);
 		}
 		else
-			ModelFrontendNew::Set(option, arg);
+			ModelFrontend::Set(option, arg);
 	}
 
 	void ModelDiscriminator::buildModel(int sample_rate, bool timerOn, Device::Device* dev)
