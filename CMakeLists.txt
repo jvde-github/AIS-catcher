@@ -10,6 +10,7 @@ option(SDRPLAY "Include SDRPLAY support" ON)
 option(AIRSPYHF "Include Airspy HF+ support" ON)
 option(HACKRF "Include HackRF support" ON)
 option(SOXR "Include SOXR support" ON)
+option(SAMPLERATE "Include SAMPLERATE support" ON)
 option(ZMQ "Include ZMQ support" ON)
 
 # Common compiler flags and options.
@@ -66,7 +67,7 @@ else()
 endif()
 
 
-# Find libsoxr, pthread
+# Find libsoxr
 if(SOXR)
 	if(MSVC AND NOT MSVC_VCPKG)
 		find_path(SOXR_INCLUDE_DIR soxr.h HINTS ${POTHOSSDR_INCLUDE_DIR})
@@ -101,6 +102,45 @@ if(SOXR)
 
 		else()
 			Message(STATUS "SOXR: not found.")
+		endif()
+	endif()
+endif()
+
+# Find libsoxr
+if(SAMPLERATE)
+	if(MSVC AND NOT MSVC_VCPKG)
+		find_path(SAMPLERATE_INCLUDE_DIR soxr.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+		find_library(SAMPLERATE_LIBRARY soxr.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+		find_file(SAMPLERATE_DLL soxr.dll HINTS ${POTHOSSDR_BINARY_DIR})
+
+		if(SAMPLERATE_INCLUDE_DIR AND SAMPLERATE_LIBRARY AND SOXR_DLL)
+			Message(STATUS "SAMPLERATE: found (PothosSDR) - " ${SAMPLERATE_INCLUDE_DIR}, ${SAMPLERATE_LIBRARY}, ${SAMPLERATE_DLL})
+			set(COPY_SAMPLERATE_DLL TRUE)
+			add_definitions(-DHASSAMPLERATE)
+
+			set(SAMPLERATE_INCLUDE_DIRS ${SAMPLERATE_INCLUDE_DIR})
+			set(SAMPLERATE_LIBRARIES ${SAMPLERATE_LIBRARY} )
+
+		else()
+			Message(STATUS "libsamplerate: NOT found (PothosSDR) - " ${SAMPLERATE_INCLUDE_DIR}, ${SAMPLERATE_LIBRARY}, ${SAMPLERATE_DLL})
+		endif()
+	else()
+		pkg_check_modules(PKG_SOXR samplerate)
+		find_path(SAMPLERATE_INCLUDE_DIR samplerate.h HINTS ${PKG_SAMPLERATE_INCLUDE_DIRS})
+		find_library(SAMPLERATE_LIBRARY libsamplerate.so HINTS ${PKG_SAMPLERATE_LIBRARY_DIRS})
+		find_library(SAMPLERATE_LIBRARY libsamplerate.dylib HINTS ${PKG_SAMPLERATE_LIBRARY_DIRS})
+		find_library(SAMPLERATE_LIBRARY samplerate HINTS ${PKG_SAMPLERATE_LIBRARY_DIRS})
+
+		if(SAMPLERATE_INCLUDE_DIR AND SAMPLERATE_LIBRARY)
+
+			message(STATUS "libsamplerate: found - ${SAMPLERATE_INCLUDE_DIR}, ${SAMPLERATE_LIBRARY}")
+			add_definitions(-DHASSAMPLERATE)
+
+			set(SAMPLERATE_INCLUDE_DIRS ${SAMPLERATE_INCLUDE_DIR})
+			set(SAMPLERATE_LIBRARIES ${SAMPLERATE_LIBRARY} )
+
+		else()
+			Message(STATUS "libsamplerate: not found.")
 		endif()
 	endif()
 endif()
@@ -439,7 +479,7 @@ include_directories(
 	${APP_INCLUDES})
 
 target_link_libraries(AIS-catcher
-	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES}
+	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES}
 	${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 # Copying DLLs to final location if needed
@@ -469,6 +509,10 @@ endif()
 
 if(COPY_SOXR_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SOXR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_SAMPLERATE_DLL)
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SAMPLERATE_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_PTHREAD_LIBUSB_DLL)
