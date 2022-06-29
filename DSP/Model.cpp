@@ -35,24 +35,17 @@ namespace AIS
 
 		if(SOXR_DS)
 		{
-#ifndef HASSOXR
-			throw "Error: Executable not build with SOXR support.";
-#endif
 			sox.setParams(sample_rate, 96000);
 			physical >> convert >> sox >> ROT;
 		}
 		else if(SAMPLERATE_DS)
 		{
-#ifndef HASSAMPLERATE
-			throw "Error: Executable not build with libsamplerate support.";
-#endif
 			src.setParams(sample_rate, 96000);
 			physical >> convert >> src >> ROT;
 		}
 		else
 		{
 			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
-
 
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
@@ -297,8 +290,8 @@ namespace AIS
 
 		std::string setting = (fixedpointDS?"FP-DS ":"");
 		setting +=  (SOXR_DS?"SOXR ":"");
-		setting +=  (SAMPLERATE_DS?"SRC":"");
-		setName("AIS engine " VERSION  " " + setting);
+		setting +=  (SAMPLERATE_DS?"SRC ":"");
+		setName("AIS engine " VERSION " " + setting);
 
 		assert(C_a != NULL && C_b != NULL);
 

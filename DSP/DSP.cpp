@@ -270,15 +270,15 @@ namespace DSP
 		}
 
 		output.resize(N);
+#else
+		throw "Error: SOXR not included in this distribution. Please recompile with SOXR support.";
 #endif
 	}
 
 	// Downsample using libsoxr
 	void SOXR::Receive(const CFLOAT32* data, int len)
 	{
-#ifndef HASSOXR
-		throw "Error: SOXR not included in this distribution. Please recompile with SOXR support.";
-#else
+#ifdef HASSOXR
  		if (out_soxr.size() < len) out_soxr.resize(len);
 
 		size_t sz = 0;
@@ -287,7 +287,7 @@ namespace DSP
 		if(error)
 		{
 			soxr_delete(m_soxr);
-			throw "Error: SOX processing returns error.";
+			std::cerr << "Error: SOX processing returns error." << std::endl;
 		}
 
 		for (int i = 0; i < sz; i++)
@@ -310,7 +310,7 @@ namespace DSP
 
  		if (!state)
  		{
-       			std::cerr << "Model: error opening libsamplerate";
+       			throw "Model: error opening libsamplerate";
 		}
 
 		ratio = (double)out_rate/(double)sample_rate;
@@ -323,10 +323,8 @@ namespace DSP
 	// Downsample using libsoxr
 	void SRC::Receive(const CFLOAT32* data, int len)
 	{
-#ifndef HASSAMPLERATE
-		std::cerr <<  "Error: libsamplerate support not included in this distribution. Please recompile with libsamplerate support." << std::endl;
-		throw "Terminating...";
-#else
+#ifdef HASSAMPLERATE
+
  		if (out_src.size() < len) out_src.resize(len);
 
 		SRC_DATA sd;
@@ -343,16 +341,17 @@ namespace DSP
 		if(ret)
 		{
 			std::cerr << "Error: libsamplerate processing returns error: " << src_strerror(ret) << std::endl;
-			throw "Terminating....";
 		}
-
-		for (int i = 0; i < sd.output_frames_gen; i++)
+		else
 		{
- 			output[count++] = out_src[i];
-			if (count == N)
+			for (int i = 0; i < sd.output_frames_gen; i++)
 			{
-				Send(output.data(), N);
-				count = 0;
+ 				output[count++] = out_src[i];
+				if (count == N)
+				{
+					Send(output.data(), N);
+					count = 0;
+				}
 			}
 		}
 #endif
