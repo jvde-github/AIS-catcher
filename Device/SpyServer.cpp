@@ -31,7 +31,8 @@ namespace Device {
 	//---------------------------------------
 	// Device SPYSERVER
 
-	// To do: implement formats, channels and recovery in case we get off sync with headers
+	// TO DO: implement formats (currently sets CS16 as output but accepts most return types),
+	//        channels, digital gain and recovery in case we get off sync with headers if needed
 
 	SpyServer::SpyServer()
 	{
@@ -64,10 +65,12 @@ namespace Device {
 		for (int i = device_info.MinimumIQDecimation; i<=device_info.DecimationStageCount; i++)
  		{
  			int rate = device_info.MaximumSampleRate >> i;
+			int d = abs((int)rate-(int)sample_rate);
+
 			if (rate >= 96000) _sample_rates.push_back(std::pair<uint32_t, uint32_t>(rate, i));
-			if (abs((int)rate-(int)sample_rate) < distance)
+			if (d < distance)
 			{
-				new_rate = rate; distance = abs((int)rate-(int)sample_rate);
+				new_rate = rate; distance = d;
 			}
 		}
 		sample_rate = new_rate;
@@ -82,8 +85,10 @@ namespace Device {
 	void SpyServer::Play()
 	{
  		Device::Play();
+
 		fifo.Init(16 * 16384, 8);
  		lost = false;
+
 		applySettings();
 
 		async_thread = std::thread(&SpyServer::RunAsync, this);
@@ -316,7 +321,7 @@ namespace Device {
 	void SpyServer::printSync()
 	{
 		std::cerr << "Client:" << std::endl;
-		std::cerr << "  CanControl: " << client_sync.CanControl << " Gain : " << client_sync.Gain << " DeviceCenterFrequency : " << client_sync.DeviceCenterFrequency << std::endl;
+		std::cerr << "  CanControl: " << client_sync.CanControl << " Gain: " << client_sync.Gain << " DeviceCenterFrequency: " << client_sync.DeviceCenterFrequency << std::endl;
 		std::cerr << "  IQCenterFrequency: " << client_sync.IQCenterFrequency << "  Minimum/Maximum Frequency: " << client_sync.MinimumIQCenterFrequency << "/" << client_sync.MaximumIQCenterFrequency << " resolution: " << device_info.Resolution << std::endl;
 	}
 

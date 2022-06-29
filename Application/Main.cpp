@@ -163,7 +163,7 @@ void printSupportedDevices()
 #ifdef HASSDRPLAY
 	std::cerr << "SDRPLAY ";
 #endif
-	std::cerr << "RTLTCP ";
+	std::cerr << "RTLTCP SPYSERVER ";
 #ifdef HASZMQ
 	std::cerr << "ZMQ ";
 #endif

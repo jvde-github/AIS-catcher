@@ -34,7 +34,7 @@ namespace Device {
 		int result = hackrf_open_by_serial(list->serial_numbers[h],&device);
 		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device.";
 
-		setSampleRate(6000000);
+		setSampleRate(6144000);
 
 		Device::Open(h);
 	}
