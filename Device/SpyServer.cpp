@@ -117,11 +117,18 @@ namespace Device {
 	bool SpyServer::processHeader()
 	{
 		// read header
-		if (!read((char*)&header, sizeof(MessageHeader))) return false;
-
-		// check header
-		if (header.ProtocolID != SPYSERVER_PROTOCOL_VERSION || header.BodySize > SPYSERVER_MAX_MESSAGE_BODY_SIZE)
+		if (!read((char*)&header, sizeof(MessageHeader)))
+		{
+			std::cerr << "SPYSERVER: no data received." << std::endl;
 			return false;
+		}
+
+		// check header		
+		if ((header.ProtocolID & 0xFFFF0000) != (SPYSERVER_PROTOCOL_VERSION & 0xFFFF0000) || header.BodySize > SPYSERVER_MAX_MESSAGE_BODY_SIZE)
+		{
+			std::cerr << "SPYSERVER: protocol ID not supported (" << (header.ProtocolID >> 24 & 0xFF) << "." << (header.ProtocolID >> 16 & 0xFF) << ")" << std::endl;
+			return false;
+		}
 
 		// action
 		switch(header.MessageType)
