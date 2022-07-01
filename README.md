@@ -38,7 +38,7 @@ A Windows binary version of **v0.36** (ex SDRplay support) is available (see bel
 Recent releases:
  | Version | Win32  | x64 | 
  | :--- | :--- | :---: |   
- |v0.36| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.36/AIS-catcher.v0.36.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.36/AIS-catcher.v0.36.x64.zip) | 
+ |v0.36| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.36a/AIS-catcher.v0.36a.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.36a/AIS-catcher.v0.36a.x64.zip) | 
    |v0.35| [ZIP](https://github.com/jvde-github/AIS-catcher/raw/media/AIS-catcher%20v0.35%20Win32.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/raw/media/AIS-catcher%20v0.35%20x64.zip) | 
   |v0.34| [ZIP](https://drive.google.com/file/d/1ivz0Pk1KsGfnq5k0E723nXUGfz79ya-d/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1yfjEnY9fqS6ifmqaatl3EzISdhliIk-j/view?usp=sharing) | 
  |v0.33 |  [ZIP](https://drive.google.com/file/d/1KFvvWQi47QquOl-jDPRK8mpmUnfQaM91/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1oE0rTMU7DF9pFzw2Pt1SAMDm-UWILJrT/view?usp=sharing)  | 
