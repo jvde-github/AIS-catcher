@@ -47,20 +47,12 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 
 ## Recent Developments
 
-Version **0.36**: 
-- added new switch ```-a``` which unlocks the bandwidth functionality on some devices including the RTL dongles. Early experimentation did not show improved reception with this setting. 
-- extension of functionality to read WAV-files with more data types (8 and 16 bit PCM) and increasing flexibility on data layout (FACT chunk recognized).
-- removal of sampling rate restriction, experimental option to downsample using the ``libsoxr`` library if available (and ``libsamplerate``). Early experiments do not show an improvement in reception and system load but it allows for more flexibility on input sample rates. E.g.:
-``
-AIS-catcher -v -go SOXR on
-``
-- Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMEOUT``` option.
-- Several fixes to cmake-file
-- Dockerfile moved to Debian-slim from Alpine to resolve workflow and compatibility issues
-- Initial SoapySDR support (remains to be further tested and refined). Only available when build with ```make soapysdr-only``` or with ```cmake .. -DSOAPYSDR=ON```.
-- We have set up a Github workflow to automatically build windows binaries for AIS-catcher (with full functionality), see the Actions menu. The built includes recent versions of the SDR libraries which contain improvement in stability for Windows systems (instead of relying on VCPKG builds), see also [these commits](https://github.com/jvde-github/rtl-sdr).
-- Initial [SpyServer](https://airspy.com/) support is now included. For an example, see below.
+Recent development branch:
+- Switch to turn off DSP processing for airspyhf (```-gh DSP off```). Test hypothesis to see how this influences reception. Build with ``` make CFLAGS=-DAIRSPYHF_LIB_DS```. 
 
+Version **0.36**:
+- added SpyServer, SoapySDR, SOXR downsampling support. 
+- several bug fixes and improvements
  
 ## Usage
 ````
