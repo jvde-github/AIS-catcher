@@ -35,6 +35,7 @@ namespace Device{
 
 		bool preamp = false;
 		bool treshold_high = false;
+		bool use_lib_DSP = true;
 
 		static int callback_static(airspyhf_transfer_t* tf);
 		void callback(CFLOAT32 *,int);
