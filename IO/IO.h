@@ -88,6 +88,26 @@ namespace IO
 
 	public:
 
+		SinkFile() = default;
+		SinkFile(std::string fn)
+		{
+			openFile(fn);
+		}
+
+		SinkFile(const SinkFile&) = delete;
+		SinkFile& operator=(const SinkFile&) = delete;
+		SinkFile(SinkFile&& other)
+			: file(std::move(other.file))
+			, filename(std::move(other.filename))
+		{
+		}
+		SinkFile& operator=(SinkFile&& other)
+		{
+			file = std::move(other.file);
+			filename = std::move(other.filename);
+			return *this;
+		}
+
 		~SinkFile()
 		{
 			if (file.is_open())
@@ -104,6 +124,7 @@ namespace IO
 			file.write((char*)data, len * sizeof(T));
 		}
 	};
+
 
 
 	class SinkScreen : public StreamIn<NMEA>

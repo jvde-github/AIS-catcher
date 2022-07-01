@@ -54,6 +54,12 @@ namespace Device {
 
 	bool RAWFile::isStreaming()
 	{
+		if(!file || file->eof()) {
+			// if EOF, flush the buffer
+			buffer.assign(buffer.size(), 0);
+			RAW r = { format, buffer.data(), (int)buffer.size() };
+			Send(&r, 1);
+		}
 		if(!file || file->eof() || !Device::isStreaming()) return false;
 
 		if (buffer.size() < buffer_size) buffer.resize(buffer_size);

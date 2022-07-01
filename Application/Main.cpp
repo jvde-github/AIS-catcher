@@ -90,6 +90,7 @@ void Usage()
 	std::cerr << "\t[-q suppress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
 	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
+	std::cerr << "\t[-e write NMEA messages to file]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
@@ -264,6 +265,8 @@ int main(int argc, char* argv[])
 
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
+	std::vector<IO::SinkFile<NMEA>> outputFiles;
+	std::vector<std::string> outputFilenames;
 
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
@@ -398,6 +401,10 @@ int main(int argc, char* argv[])
 			case 'u':
 				Assert(count == 2, param, "Requires two parameters [address] [port].");
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size()-1) ));
+				break;
+			case 'e':
+				Assert(count == 1, param, "Requires one parameters [filename].");
+				outputFilenames.push_back(arg1);
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -537,6 +544,13 @@ int main(int argc, char* argv[])
 		{
 			liveModels[0]->Output() >> nmea_screen;
 			nmea_screen.setDetail(NMEA_to_screen);
+		}
+
+		for(int i = 0; i < outputFilenames.size(); i++)
+		{
+			outputFiles.emplace_back();
+			outputFiles[i].openFile(outputFilenames[i]);
+			liveModels[0]->Output() >> outputFiles[i];
 		}
 
 		if(verbose)

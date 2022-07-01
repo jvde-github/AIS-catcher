@@ -22,6 +22,20 @@
 namespace IO
 {
 
+	template<>
+	void SinkFile<NMEA>::Receive(const NMEA* data, int len)
+	{
+		char newline = '\n';
+		for (int i = 0; i < len; i++)
+		{
+			for (int s = 0; s < data[i].sentence.size(); s++)
+			{
+				file.write(data->sentence[s].data(), data->sentence[s].size());
+				file.write(&newline, 1);
+			}
+		}
+	}
+
 	UDP::UDP()
 	{
 #ifdef _WIN32
