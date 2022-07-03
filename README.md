@@ -19,16 +19,6 @@ It is your responsibility to determine whether or not your local administration 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
 Only use this software in regions where such use is permitted.
 
-## Latest news: Android version available for testing
-
-An Android version of AIS-catcher is available for download and testing [here](https://github.com/jvde-github/AIS-catcher-for-Android). Please notice that it is still in beta-stage and is provided for testing purposes.
-<p align="center">
-<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%201.png" width=20% height=20%>
-<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%202.png" width=20% height=20%>
-</p>
-
-For a video of a field test of an early version [see YouTube](https://www.youtube.com/shorts/1ArB7GL_yV8). Hopefully in the App store by the end of this Summer.
-
 ## Installation and Windows Binary
 
 Building instructions are provided below for many systems. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
@@ -45,22 +35,25 @@ Recent releases:
  
 If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP1A/RSPDX, please get in contact with [me](mailto:jvde.github@gmail.com). If you are looking for a Windows x64 version for the latest development version, it is automatically produced by the ``msbuild`` workflow (see Actions).
 
+## Latest news: Android version available for testing [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+
 ## Recent Developments
 
-Version **0.36**: 
-- added new switch ```-a``` which unlocks the bandwidth functionality on some devices including the RTL dongles. Early experimentation did not show improved reception with this setting. 
-- extension of functionality to read WAV-files with more data types (8 and 16 bit PCM) and increasing flexibility on data layout (FACT chunk recognized).
-- removal of sampling rate restriction, experimental option to downsample using the ``libsoxr`` library if available (and ``libsamplerate``). Early experiments do not show an improvement in reception and system load but it allows for more flexibility on input sample rates. E.g.:
-``
-AIS-catcher -v -go SOXR on
-``
-- Non-blocking implementation for the RTL-TCP client (shorter timeout when port not reachable). Added ```-gt TIMEOUT``` option.
-- Several fixes to cmake-file
-- Dockerfile moved to Debian-slim from Alpine to resolve workflow and compatibility issues
-- Initial SoapySDR support (remains to be further tested and refined). Only available when build with ```make soapysdr-only``` or with ```cmake .. -DSOAPYSDR=ON```.
-- We have set up a Github workflow to automatically build windows binaries for AIS-catcher (with full functionality), see the Actions menu. The built includes recent versions of the SDR libraries which contain improvement in stability for Windows systems (instead of relying on VCPKG builds), see also [these commits](https://github.com/jvde-github/rtl-sdr).
-- Initial [SpyServer](https://airspy.com/) support is now included. For an example, see below.
+### Development branch
 
+- Switch to turn off DSP processing for airspyhf (```-gh DSP off```). To facilitate a test to see how this influences reception (factory setting is on). Build with ``` make CFLAGS=-DAIRSPYHF_LIB_DS```. 
+
+### Version 0.36
+- added SpyServer, SoapySDR, SOXR downsampling support. 
+- several bug fixes and improvements
+
+### Roadmap
+
+- version 0.37: explore improvements to airspy mini/HF+ reception via driver settings + SDRplay support standard in binary
+- version 0.38: JSON output, UDP and NMEA networking running in seperate thread
+- Release Android version on Play Store
+- version 0.39: audio input to connect to discriminator output, mono/stereo reception, 44.1 KHz input for FM model
+- version 0.4+: reporting signal strength, multiple SDR input (signal direction validation), GUI
  
 ## Usage
 ````
