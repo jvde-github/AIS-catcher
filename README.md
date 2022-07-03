@@ -19,16 +19,6 @@ It is your responsibility to determine whether or not your local administration 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
 Only use this software in regions where such use is permitted.
 
-## Latest news: Android version available for testing
-
-An Android version of AIS-catcher is available for download and testing [here](https://github.com/jvde-github/AIS-catcher-for-Android). Please notice that it is still in beta-stage and is provided for testing purposes.
-<p align="center">
-<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%201.png" width=20% height=20%>
-<img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/AIScatcher%20for%20Android%20screenshot%202.png" width=20% height=20%>
-</p>
-
-For a video of a field test of an early version [see YouTube](https://www.youtube.com/shorts/1ArB7GL_yV8). Hopefully in the App store by the end of this Summer.
-
 ## Installation and Windows Binary
 
 Building instructions are provided below for many systems. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
@@ -45,14 +35,25 @@ Recent releases:
  
 If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP1A/RSPDX, please get in contact with [me](mailto:jvde.github@gmail.com). If you are looking for a Windows x64 version for the latest development version, it is automatically produced by the ``msbuild`` workflow (see Actions).
 
+## Latest news: Android version available for testing [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+
 ## Recent Developments
 
-Recent development branch:
+### Development branch
+
 - Switch to turn off DSP processing for airspyhf (```-gh DSP off```). To facilitate a test to see how this influences reception (factory setting is on). Build with ``` make CFLAGS=-DAIRSPYHF_LIB_DS```. 
 
-Version **0.36**:
+### Version 0.36
 - added SpyServer, SoapySDR, SOXR downsampling support. 
 - several bug fixes and improvements
+
+### Roadmap
+
+- version 0.37: explore improvements to airspy mini/HF+ reception via driver settings
+- version 0.38: JSON output, UDP and NMEA networking running in seperate thread
+- Release Android version on Play Store
+- version 0.39: audio input to connect to discriminator output, mono/stereo reception, 44.1 KHz input for FM model
+- version 0.4+: reporting signal strength, multiple SDR input (signal direction validation), GUI
  
 ## Usage
 ````
