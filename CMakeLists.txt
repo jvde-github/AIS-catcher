@@ -225,6 +225,12 @@ if(RTLSDR)
 			add_definitions(-DHASRTLSDR_TUNERBW)
 			set(RTLSDR_INCLUDE_DIRS ${RTLSDR_INCLUDE_DIR})
 			set(RTLSDR_LIBRARIES ${RTLSDR_LIBRARY})
+
+			add_definitions(-DHASRTLSDR_BIASTEE)
+			Message(STATUS "RTLSDR: bias-tee support included (assumed available).")
+			add_definitions(-DHASRTLSDR_TUNERBW)
+			Message(STATUS "RTLSDR: tuner badwidth support included (assumed available).")
+
 		else()
 			Message(STATUS "RTLSDR: not found (PothosSDR) - " ${RTLSDR_INCLUDE_DIR}, ${RTLSDR_LIBRARY}, ${RTLSDR_DLL})
 		endif()
