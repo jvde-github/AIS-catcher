@@ -49,7 +49,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 
 ### Roadmap
 
-- version 0.37: explore improvements to airspy mini/HF+ reception via driver settings
+- version 0.37: explore improvements to airspy mini/HF+ reception via driver settings + SDRplay support standard in binary
 - version 0.38: JSON output, UDP and NMEA networking running in seperate thread
 - Release Android version on Play Store
 - version 0.39: audio input to connect to discriminator output, mono/stereo reception, 44.1 KHz input for FM model
