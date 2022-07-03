@@ -95,7 +95,7 @@ namespace AIS
 				convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				break;
 			case 6144000 - 1:
-				convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+				convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> ROT;
 				break;
 
 				// 2^5
