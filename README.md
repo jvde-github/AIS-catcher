@@ -41,7 +41,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 
 ### Development branch
 
-- Switch to turn off DSP processing for airspyhf (```-gh DSP off```). To facilitate a test to see how this influences reception (factory setting is on). Build with ``` make CFLAGS=-DAIRSPYHF_LIB_DS```. 
+- Enable RTLSDR biastee switch in pre-build Windows binaries
 
 ### Version 0.36
 - added SpyServer, SoapySDR, SOXR downsampling support. 

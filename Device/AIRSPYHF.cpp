@@ -154,17 +154,11 @@ namespace Device {
 
 		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
 		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
-
-#ifdef AIRSPYHF_LIB_DSP
-		airspyhf_set_lib_dsp(dev, use_lib_DSP);
-#else
-		if(!use_lib_DSP) throw "AIRSPYHF: cannot set library DSP setting.";
-#endif
 	}
 
 	void AIRSPYHF::Print()
 	{
-		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << " DSP " << (use_lib_DSP ? "ON" : "OFF") << std::endl;
+		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;
 	}
 
 	void AIRSPYHF::Set(std::string option, std::string arg)
@@ -179,10 +173,6 @@ namespace Device {
 		else if(option == "TRESHOLD")
 		{
 			treshold_high = Util::Parse::Switch(arg,"HIGH","LOW");
-		}
-		else if(option == "DSP")
-		{
-			use_lib_DSP = Util::Parse::Switch(arg);
 		}
 		else Device::Set(option, arg);
 	}
