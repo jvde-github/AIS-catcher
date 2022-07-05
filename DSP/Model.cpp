@@ -214,7 +214,6 @@ namespace AIS
 					convert >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 
-
 				// 3
 			case 288000:
 				convert >> DSK >> ROT;
@@ -354,6 +353,7 @@ namespace AIS
 		std::string setting = (fixedpointDS?"FP-DS ":"");
 		setting +=  (SOXR_DS?"SOXR ":"");
 		setting +=  (SAMPLERATE_DS?"SRC ":"");
+		setting +=  (droop_compensation?"DROOP ":"");
 		setName("AIS engine " VERSION " " + setting);
 
 		assert(C_a != NULL && C_b != NULL);
