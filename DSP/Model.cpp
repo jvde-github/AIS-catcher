@@ -47,6 +47,8 @@ namespace AIS
 		{
 			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
+			Fdc.setTaps(Filters::DroopCompensation);
+
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
 
@@ -70,41 +72,70 @@ namespace AIS
 			{
 				// 2^7
 			case 12288000:
-				convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 			case 12288000-1:
-				convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 
 				// 2^6
 			case 6144000:
-				convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 			case 6144000 - 1:
-				convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 
 				// 2^5
 			case 3072000:
-				convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 			case 3072000-1:
-				convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 
 				// 2^3 * 3
 			case 2304000:
-				convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
+				else
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> DSK >> ROT;
 				break;
 			case 2304000-1:
-				convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+				else
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> Fdc >> DSK >> ROT;
 				break;
 
 
 				// 2^4
 			case 1536000:
 				if (!fixedpointDS)
-					convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				{
+					if(!droop_compensation)
+						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+					else
+						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >>  ROT;
+				}
 				else
 				{
 					convert.outCU8 >> DS16_CU8 >> ROT;
@@ -112,39 +143,66 @@ namespace AIS
 				}
 				break;
 			case 1536000-1:
-				convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 
 				// 2^2 * 3
 			case 1152000:
-				convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
+				else
+					convert >> DS2_2 >> DS2_1 >> Fdc >> DSK >> ROT;
 				break;
 			case 1152000-1:
-				convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
+				else
+					convert >> DS2_2 >> DS2_1 >> Fdc >> US >> DSK >> ROT;
 				break;
 
 				// 2^3
 			case 768000:
-				convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 			case 768000-1:
-				convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 
 				// 2 * 3
 			case 576000:
-				convert >> DS2_1 >> DSK >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_1 >> DSK >> ROT;
+				else
+					convert >> DS2_1 >> Fdc >> DSK >> ROT;
 				break;
 			case 576000-1:
-				convert >> DS2_1 >> US >> DSK >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_1 >> US >> DSK >> ROT;
+				else
+					convert >> DS2_1 >> Fdc >> US >> DSK >> ROT;
 				break;
 
 				// 2^2
 			case 384000:
-				convert >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 			case 384000-1:
-				convert >> US >> DS2_2 >> DS2_1 >> ROT;
+				if(!droop_compensation)
+					convert >> US >> DS2_2 >> DS2_1 >> ROT;
+				else
+					convert >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
 				break;
 
 
@@ -158,10 +216,16 @@ namespace AIS
 
 				// 2^1
 			case 192000:
-				convert >> DS2_1 >> ROT;
+				if(!droop_compensation || true)
+					convert >> DS2_1 >> ROT;
+				else
+					convert >> DS2_1 >> Fdc >> ROT;
 				break;
 			case 192000-1:
-				convert >> US >> DS2_1 >> ROT;
+				if(!droop_compensation || true)
+					convert >> US >> DS2_1 >> ROT;
+				else
+					convert >> US >> DS2_1 >> Fdc >> ROT;
 				break;
 
 				// 2^0
@@ -203,6 +267,10 @@ namespace AIS
 		{
 			SAMPLERATE_DS = Util::Parse::Switch(arg);
 			SOXR_DS = false;
+		}
+		else if (option == "DROOP_COMPENSATION")
+		{
+			droop_compensation = Util::Parse::Switch(arg);
 		}
 		else Model::Set(option, arg);
 
