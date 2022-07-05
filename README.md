@@ -42,7 +42,7 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ### Development branch
 
 - Enable RTLSDR biastee switch in pre-build Windows binaries
-- Experimental feature to add a simple droop compensation filter for downsampling, activated with ``-go DROOP_COMPENSATION on``. Let me know how this works for you. The filters are empirical but idea is to further refine them and use in the base case.  Comparison of various downsamplers in one run can be done with the command:
+- Experimental feature to add a simple droop compensation filter for downsampling, activated with ``-go DROOP_COMPENSATION on``. Let me know how this works for you. The filters are empirical but idea is to further refine them and use in the base case. Biggest positive impact I see with AirSpy mini at 10Mhz. Less so if a decimation with a factor 3 is part of the downsampler. Comparison of various downsamplers in one run can be done with the command:
 ```console
 AIS-catcher -v -b -q -m 2 -m 2 -go SOXR on -m 2 -go DROOP_COMPENSATION on
 ```
