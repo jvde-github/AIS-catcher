@@ -69,6 +69,7 @@ namespace AIS
 		DSP::Downsample2CIC5 DS2_a, DS2_b;
 		DSP::Upsample US;
 		DSP::FilterCIC5 FCIC5_a, FCIC5_b;
+		DSP::FilterComplex Fdc;
 
 		// fixed point downsamplers
 		DSP::Downsample32_CU8 DS32_CU8;
@@ -82,6 +83,7 @@ namespace AIS
 
 	protected:
 		bool fixedpointDS = false;
+		bool droop_compensation = false;
 		bool SOXR_DS = false;
 		bool SAMPLERATE_DS = false;
 

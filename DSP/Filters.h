@@ -68,5 +68,11 @@ namespace Filters
 		-8.11999274e-03f, -1.92265407e-03f,  1.12710642e-03f,  1.60068516e-03f,
 		9.52682178e-04f,  2.98382002e-04f,  2.54561241e-05f
 	};
+
+	// Experimental simple droop compensation filter
+	static const std::vector <FLOAT32>  DroopCompensation
+	{
+		-1.0307f, 3.0614f, -1.0307f
+	};
 }
 
