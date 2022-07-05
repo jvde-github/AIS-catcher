@@ -254,6 +254,7 @@ int main(int argc, char* argv[])
 	bool verbose = false,  timer_on = false;
 	IO::SinkScreen::Level NMEA_to_screen = IO::SinkScreen::Level::FULL;
 	int verboseUpdateTime = 3;
+	AIS::Mode mode = AIS::Mode::AB;
 
 	// Device and output stream of device;
 	Device::Type input_type = Device::Type::NONE;
@@ -303,6 +304,12 @@ int main(int argc, char* argv[])
 			case 'm':
 				Assert(count == 1, param, "Requires one parameter [model number].");
 				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 4)));
+				break;
+			case 'o':
+				Assert(count == 1, param, "Requires one parameter [AB/CD]].");
+				if(arg1 == "AB") mode = AIS::Mode::AB;
+				else if(arg1 == "CD") mode = AIS::Mode::CD;
+				else throw "Error: parameter needs to be AB or CD (-o)";
 				break;
 			case 'v':
 				Assert(count <= 1, param);
@@ -500,7 +507,11 @@ int main(int argc, char* argv[])
 
 		// override sample rate if defined by user
 		if (sample_rate) device->setSampleRate(sample_rate);
-		device->setFrequency((int)(162e6));
+
+		if(mode == AIS::Mode::AB)
+			device->setFrequency((int)(162000000));
+		else
+			device->setFrequency((int)(156800000));
 
 		if(ppm)
 			device->Set("FREQOFFSET",std::to_string(ppm));
@@ -520,7 +531,7 @@ int main(int argc, char* argv[])
 		// Attach output
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->buildModel(device->getSampleRate(), timer_on, device);
+			liveModels[i]->buildModel(mode, device->getSampleRate(), timer_on, device);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
