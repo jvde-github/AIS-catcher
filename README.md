@@ -42,6 +42,10 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ### Development branch
 
 - Enable RTLSDR biastee switch in pre-build Windows binaries
+- Experimental feature to add a simple droop compensation filter for downsampling, activated with ``-go DROOP_COMPENSATION on``. Let me know how this works for you. comparison of various downsamplers in one run can be done with the command:
+```console
+AIS-catcher -v -b -q -m 2 -m 2 -go SOXR on -m 2 -go DROOP_COMPENSATION on
+```
 
 ### Version 0.36
 - added SpyServer, SoapySDR, SOXR downsampling support. 
