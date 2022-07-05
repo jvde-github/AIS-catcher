@@ -126,7 +126,6 @@ namespace AIS
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> Fdc >> DSK >> ROT;
 				break;
 
-
 				// 2^4
 			case 1536000:
 				if (!fixedpointDS)
@@ -139,7 +138,6 @@ namespace AIS
 				else
 				{
 					convert.outCU8 >> DS16_CU8 >> ROT;
-					convert.outCS8 >> DS16_CS8 >> ROT;
 				}
 				break;
 			case 1536000-1:
@@ -216,13 +214,13 @@ namespace AIS
 
 				// 2^1
 			case 192000:
-				if(!droop_compensation || true)
+				if(!droop_compensation)
 					convert >> DS2_1 >> ROT;
 				else
 					convert >> DS2_1 >> Fdc >> ROT;
 				break;
 			case 192000-1:
-				if(!droop_compensation || true)
+				if(!droop_compensation)
 					convert >> US >> DS2_1 >> ROT;
 				else
 					convert >> US >> DS2_1 >> Fdc >> ROT;
