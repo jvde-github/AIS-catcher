@@ -70,24 +70,10 @@ namespace AIS
 			{
 				// 2^7
 			case 12288000:
-				if(!fixedpointDS)
-					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
-				else
-				{
-					convert.outCU8 >> DS32_CU8 >> DS2_2;
-					convert.outCS8 >> DS32_CS8 >> DS2_2;
-					DS2_2 >> DS2_1 >> ROT;
-				}
+				convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				break;
 			case 12288000-1:
-				if (!fixedpointDS)
-					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
-				else
-				{
-					convert.outCU8 >> DS32_CU8 >> DS2_2;
-					convert.outCS8 >> DS32_CS8 >> DS2_2;
-					DS2_2 >> US >> DS2_1 >> ROT;
-				}
+				convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				break;
 
 				// 2^6
@@ -126,7 +112,7 @@ namespace AIS
 				}
 				break;
 			case 1536000-1:
-				convert >> DS2_4 >> DS2_3 >> DS2_2 >> US >> DS2_1 >> ROT;
+				convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				break;
 
 				// 2^2 * 3
