@@ -145,7 +145,7 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 ### AIS-catcher and OpenCPN
 
 In this example we have AIS-catcher running on a Raspberry PI and want to receive the messages in OpenCPN running on a Windows computer with IP address ``192.168.1.239``. We have chosen to use port ``10101``. On the Raspberry we start AIS-catcher with the following command to send the NMEA messages to the Windows machine:
-```
+```console
  AIS-catcher -u 192.168.1.239 10101
  ```
  
@@ -168,7 +168,7 @@ Furthermore a new model was introduced which uses exponential moving averages in
 Both features can be activated with the ```-F``` switch. 
 To give an idea of the performance improvement on a Raspberry Pi Model B Rev 2 (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 
-```
+```console
 AIS-catcher -r posterholt.raw -s 1536K -b -q -v
 ```
 Resulting in 38 messages and the ```-b``` switch prints the timing used for decoding:
@@ -184,7 +184,7 @@ This and other performance updates make the full version of AIS-catcher run on a
 ### Connecting to GNU Radio via ZMQ
 
 The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5 KHz is not supported in our program. We can however perform decoding with some help from [``GNU Radio``](https://www.gnuradio.org/). First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
-```
+```console
 AIS-catcher -z CF32 tcp://127.0.0.1:5555 -s 96000
 ```
 Next we can build a simple GRC model that performs all the necessary steps and has a ZMQ Pub Sink with the chosen endpoint:
@@ -288,9 +288,9 @@ AIS-catcher can process the data from a [`rtl_tcp`](https://projects.osmocom.org
 ```console
 AIS-catcher -t 192.168.1.235 1234 -gt TUNER auto
 ```
-For [SpyServer](https://airspy.com/)  use the ''-y'' switch like:
+For [SpyServer](https://airspy.com/)  use the ``-y`` switch like:
 ```console
-AIS-catcher -u 192.168.1.235 5555 -gy GAIN 14
+AIS-catcher -y 192.168.1.235 5555 -gy GAIN 14
 ```
 ### SoapySDR
 
@@ -306,18 +306,18 @@ Found 3 device(s):
 2: SOAPYSDR, driver=rtlsdr,serial=00000001, SN: SCH0-00000001
 ```
 To start streaming via Soapy we can use:
-```
+```console
 AIS-catcher -d SCH0-00000001
 ```
 Note that the serial number has a prefix of ```SCH0``` (short for SoapySDR Channel 0) to distinguish it from the device accessed via the native SDR library. Alternative, we can use a device-string to select the device: 
-```
-AIS-catcher -d SOAPYSDR -gu device "serial=00000001,driver=rtlsdr"  -s 1536K
+```console
+AIS-catcher -d SOAPYSDR -gu device "serial=00000001,driver=rtlsdr" -s 1536K
 ```
 Stream arguments and gain arguments can be set similarly via ```-gu STREAM``` and ```-gu GAIN``` followed by an argument string (if it contains spaces use ""). Please note that SoapySDR does not signal if the input parameters for the device are not set properly. We therefore added the ```-gu PROBE on``` switch which displays the actual settings used, e.g.
-```
+```console
 AIS-catcher -d SOAPYSDR -s 1536K -gu GAIN "TUNER=37.3" PROBE on SETTINGS "biastee=true"
 ```
-To complete the example, this example also sets the tuner gain for the RTL-SDR to 37.3, the bias-tee on as the SETTING switch gives access to the device's extra settings.
+To complete the example, this command also sets the tuner gain for the RTL-SDR to 37.3 and switches on the bias-tee via the SETTING command gives access to the device's extra settings.
 
 If the sample rates for a device are not supported by AIS-catcher, the SOXR functionality could be considered (e.g. ```-go SOXR on```). Again, we advice to use the built-in drivers and included resampling functionality where possible.  
 
