@@ -42,10 +42,13 @@ If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP
 ### Development branch
 
 - Enable RTLSDR biastee switch in pre-build Windows binaries
-- Experimental feature to add a simple droop compensation filter for downsampling, activated with ``-go DROOP_COMPENSATION on``. Let me know how this works for you. The filters are empirical but idea is to further refine them and use in the base case. Biggest positive impact I see with AirSpy mini at 10Mhz. Less so if a decimation with a factor 3 is part of the downsampler. Comparison of various downsamplers in one run can be done with the command:
+- Experimental feature to compensate some of the droop when using CIC5 for downsampling, activated with ``-go DROOP_COMPENSATION on``. 
 ```console
 AIS-catcher -v -b -q -m 2 -m 2 -go SOXR on -m 2 -go DROOP_COMPENSATION on
 ```
+- Experimental feature to point the decoder to 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-o CD```. This following the approach skectched on
+the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) at request of a user. Traditional decoder is available with the switch ```-o AB``` (default). Planning to add a ```-o ABCD``` mode
+for Airspy/HackRF and other devices that cater for sufficient sample rates.
 
 ### Version 0.36
 - added SpyServer, SoapySDR, SOXR downsampling support. 
