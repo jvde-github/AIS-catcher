@@ -43,14 +43,10 @@ namespace AIS
 		Device::Device* device;
 		Util::Timer<RAW> timer;
 		Util::PassThrough<NMEA> output;
-		Mode mode = Mode::AB;
-		
-		char CH1 = 'A';
-		char CH2 = 'B';
 
 	public:
 
-		virtual void buildModel(Mode, int, bool, Device::Device* d) { device = d;  }
+		virtual void buildModel(char, char, int, bool, Device::Device* d) { device = d;  }
 
 		StreamOut<NMEA>& Output() { return output; }
 
@@ -78,12 +74,12 @@ namespace AIS
 		DSP::FilterComplex Fdc;
 
 		// fixed point downsamplers
-		DSP::Downsample32_CU8 DS32_CU8;
+		//DSP::Downsample32_CU8 DS32_CU8;
 		DSP::Downsample16_CU8 DS16_CU8;
-		DSP::Downsample8_CU8 DS8_CU8;
-		DSP::Downsample32_CS8 DS32_CS8;
-		DSP::Downsample16_CS8 DS16_CS8;
-		DSP::Downsample8_CS8 DS8_CS8;
+		//DSP::Downsample8_CU8 DS8_CU8;
+		//DSP::Downsample32_CS8 DS32_CS8;
+		//DSP::Downsample16_CS8 DS16_CS8;
+		//DSP::Downsample8_CS8 DS8_CS8;
 
 		Util::ConvertRAW convert;
 
@@ -98,7 +94,7 @@ namespace AIS
 		Connection<CFLOAT32> *C_a = NULL, *C_b = NULL;
 		DSP::Rotate ROT;
 	public:
-		void buildModel(Mode, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device*);
 
 		virtual void Set(std::string option, std::string arg);
 
@@ -114,7 +110,7 @@ namespace AIS
 		DSP::Deinterleave<FLOAT32> S_a, S_b;
 
 	public:
-		void buildModel(Mode, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device*);
 	};
 
 
@@ -127,7 +123,7 @@ namespace AIS
 		AIS::Decoder DEC_a, DEC_b;
 
 	public:
-		void buildModel(Mode, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device*);
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
@@ -150,7 +146,7 @@ namespace AIS
 
 	public:
 
-		void buildModel(Mode, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
 	};
 
@@ -174,7 +170,7 @@ namespace AIS
 
 	public:
 
-		void buildModel(Mode, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
 	};
 
@@ -192,6 +188,6 @@ namespace AIS
 		Util::ConvertRAW convert;
 
 	public:
-		void buildModel(Mode, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device*);
 	};
 }

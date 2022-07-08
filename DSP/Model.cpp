@@ -22,20 +22,9 @@
 namespace AIS
 {
 
-	void ModelFrontend::buildModel(Mode mode, int sample_rate, bool timerOn, Device::Device *dev)
+	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		device = dev;
-
-		switch(mode)
-		{
-		case Mode::AB:
-			CH1 = 'A'; CH2 = 'B'; break;
-		case Mode::CD:
-			CH1 = 'C'; CH2 = 'D'; break;
-		default:
-			throw "Error: mode not supported by model.";
-
-		}
 
 		if (sample_rate < 96000 || sample_rate > 12288000)
 			throw "Model: sample rate must be between 96K and 12288K (inclusive).";
@@ -284,9 +273,9 @@ namespace AIS
 
 	}
 
-	void ModelBase::buildModel(Mode mode, int sample_rate, bool timerOn, Device::Device *dev)
+	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		ModelFrontend::buildModel(mode, sample_rate, timerOn, dev);
+		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 		setName("Base (non-coherent)");
 
 		assert(C_a != NULL && C_b != NULL);
@@ -306,9 +295,9 @@ namespace AIS
 		return;
 	}
 
-	void ModelStandard::buildModel(Mode mode, int sample_rate, bool timerOn, Device::Device* dev)
+	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
 	{
-		ModelFrontend::buildModel(mode, sample_rate, timerOn, dev);
+		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 		setName("Standard (non-coherent)");
 
 		assert(C_a != NULL && C_b != NULL);
@@ -346,9 +335,9 @@ namespace AIS
 		return;
 	}
 
-	void ModelDefault::buildModel(Mode mode, int sample_rate, bool timerOn, Device::Device* dev)
+	void ModelDefault::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
 	{
-		ModelFrontend::buildModel(mode, sample_rate, timerOn, dev);
+		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
 		std::string setting = (fixedpointDS?"FP-DS ":"");
 		setting +=  (SOXR_DS?"SOXR ":"");
@@ -431,9 +420,9 @@ namespace AIS
 			ModelFrontend::Set(option, arg);
 	}
 
-	void ModelChallenger::buildModel(Mode mode, int sample_rate, bool timerOn, Device::Device* dev)
+	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
 	{
-		ModelFrontend::buildModel(mode, sample_rate, timerOn, dev);
+		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
 		setName("AIS engine " VERSION);
 
@@ -512,7 +501,7 @@ namespace AIS
 			ModelFrontend::Set(option, arg);
 	}
 
-	void ModelDiscriminator::buildModel(Mode mode, int sample_rate, bool timerOn, Device::Device* dev)
+	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
 	{
 		setName("FM discriminator output model");
 

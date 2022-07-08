@@ -255,6 +255,7 @@ int main(int argc, char* argv[])
 	IO::SinkScreen::Level NMEA_to_screen = IO::SinkScreen::Level::FULL;
 	int verboseUpdateTime = 3;
 	AIS::Mode mode = AIS::Mode::AB;
+	std::string NMEAchannels = "AB";
 
 	// Device and output stream of device;
 	Device::Type input_type = Device::Type::NONE;
@@ -306,10 +307,23 @@ int main(int argc, char* argv[])
 				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 4)));
 				break;
 			case 'o':
-				Assert(count == 1, param, "Requires one parameter [AB/CD]].");
-				if(arg1 == "AB") mode = AIS::Mode::AB;
-				else if(arg1 == "CD") mode = AIS::Mode::CD;
+				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
+				if(arg1 == "AB")
+				{
+					mode = AIS::Mode::AB;
+					NMEAchannels = "AB";
+				}
+				else if(arg1 == "CD")
+				{
+					mode = AIS::Mode::CD;
+					NMEAchannels = "CD";
+				}
 				else throw "Error: parameter needs to be AB or CD (-o)";
+				if(count == 2)
+				{
+					Assert(NMEAchannels.length() == 2 && std::isalpha(NMEAchannels[0]) && std::isalpha(NMEAchannels[1]), param, "NMEA channels need to be two characters.");
+					NMEAchannels = arg2;
+				}
 				break;
 			case 'v':
 				Assert(count <= 1, param);
@@ -531,7 +545,7 @@ int main(int argc, char* argv[])
 		// Attach output
 		for (int i = 0; i < liveModels.size(); i++)
 		{
-			liveModels[i]->buildModel(mode, device->getSampleRate(), timer_on, device);
+			liveModels[i]->buildModel(NMEAchannels[0], NMEAchannels[1], device->getSampleRate(), timer_on, device);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
