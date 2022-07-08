@@ -48,7 +48,8 @@ AIS-catcher -v -b -q -m 2 -m 2 -go SOXR on -m 2 -go DROOP_COMPENSATION on
 ```
 - Experimental feature to point the decoder to 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-o CD```. This follows ideas from a post on
 the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at request of a user. The conventional decoder is available with the switch ```-o AB``` which is also the default if nothing is specified. Plan is to add a ```-o ABCD``` mode
-for Airspy/HackRF and other devices that cater for sufficiently high sample rates.
+for Airspy/HackRF and other devices that cater for sufficiently high sample rates. I noticed that gpsdecode cannot handle channel designations in NMEA lines of C and D. You can provide an option 
+argument to use different channel codings in the NMEA linea like ```-o CD AB``.
 
 ### Version 0.36
 - added SpyServer, SoapySDR, SOXR downsampling support. 
