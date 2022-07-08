@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
 				else throw "Error: parameter needs to be AB or CD (-o)";
 				if(count == 2)
 				{
-					Assert(NMEAchannels.length() == 2 && std::isalpha(NMEAchannels[0]) && std::isalpha(NMEAchannels[1]), param, "NMEA channels need to be two characters.");
+					Assert(arg2 == "AB", param, "NMEA channels need to be two characters AB.");
 					NMEAchannels = arg2;
 				}
 				break;
