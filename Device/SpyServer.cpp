@@ -67,10 +67,13 @@ namespace Device {
  			int rate = device_info.MaximumSampleRate >> i;
 			int d = abs((int)rate-(int)sample_rate);
 
-			if (rate >= 96000) _sample_rates.push_back(std::pair<uint32_t, uint32_t>(rate, i));
-			if (d < distance)
+			if (rate >= 96000)
 			{
-				new_rate = rate; distance = d;
+				_sample_rates.push_back(std::pair<uint32_t, uint32_t>(rate, i));
+				if (d < distance)
+				{
+					new_rate = rate; distance = d;
+				}
 			}
 		}
 		sample_rate = new_rate;
