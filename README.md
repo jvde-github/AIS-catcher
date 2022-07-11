@@ -35,7 +35,8 @@ Recent releases:
  
 If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP1A/RSPDX, please get in contact with [me](mailto:jvde.github@gmail.com). If you are looking for a Windows x64 version for the latest development version, it is automatically produced by the ``msbuild`` workflow (see Actions).
 
-## Latest news: Android version available for testing [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+## Latest news: Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+For now I have decided not to share AIS-catcher-for-Android via the Play Store as there is too much overhead for such a simple program. You can download the APK from the mentioned project page.
 
 ## Recent Developments
 
