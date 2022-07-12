@@ -47,7 +47,7 @@ namespace AIS
 		{
 			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
-			Fdc.setTaps(Filters::DroopCompensation);
+			FDC.setTaps(-1.0f);
 
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
@@ -75,13 +75,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 12288000-1:
 				if(!droop_compensation)
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 2^6
@@ -89,13 +89,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 6144000 - 1:
 				if(!droop_compensation)
 					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 2^5
@@ -103,13 +103,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 3072000-1:
 				if(!droop_compensation)
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 2^3 * 3
@@ -117,13 +117,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				else
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> DSK >> ROT;
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> DSK >> ROT;
 				break;
 			case 2304000-1:
 				if(!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				else
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> Fdc >> DSK >> ROT;
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> FDC >> DSK >> ROT;
 				break;
 
 				// 2^4
@@ -133,7 +133,7 @@ namespace AIS
 					if(!droop_compensation)
 						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 					else
-						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >>  ROT;
+						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >>  ROT;
 				}
 				else
 				{
@@ -144,7 +144,7 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 2^2 * 3
@@ -152,13 +152,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				else
-					convert >> DS2_2 >> DS2_1 >> Fdc >> DSK >> ROT;
+					convert >> DS2_2 >> DS2_1 >> FDC >> DSK >> ROT;
 				break;
 			case 1152000-1:
 				if(!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				else
-					convert >> DS2_2 >> DS2_1 >> Fdc >> US >> DSK >> ROT;
+					convert >> DS2_2 >> DS2_1 >> FDC >> US >> DSK >> ROT;
 				break;
 
 				// 2^3
@@ -166,13 +166,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 768000-1:
 				if(!droop_compensation)
 					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 2 * 3
@@ -180,13 +180,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_1 >> DSK >> ROT;
 				else
-					convert >> DS2_1 >> Fdc >> DSK >> ROT;
+					convert >> DS2_1 >> FDC >> DSK >> ROT;
 				break;
 			case 576000-1:
 				if(!droop_compensation)
 					convert >> DS2_1 >> US >> DSK >> ROT;
 				else
-					convert >> DS2_1 >> Fdc >> US >> DSK >> ROT;
+					convert >> DS2_1 >> FDC >> US >> DSK >> ROT;
 				break;
 
 				// 2^2
@@ -194,13 +194,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 384000-1:
 				if(!droop_compensation)
 					convert >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> US >> DS2_2 >> DS2_1 >> Fdc >> ROT;
+					convert >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 3
@@ -216,13 +216,13 @@ namespace AIS
 				if(!droop_compensation)
 					convert >> DS2_1 >> ROT;
 				else
-					convert >> DS2_1 >> Fdc >> ROT;
+					convert >> DS2_1 >> FDC >> ROT;
 				break;
 			case 192000-1:
 				if(!droop_compensation)
 					convert >> US >> DS2_1 >> ROT;
 				else
-					convert >> US >> DS2_1 >> Fdc >> ROT;
+					convert >> US >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 2^0

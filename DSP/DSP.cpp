@@ -229,6 +229,21 @@ namespace DSP
 		Send(output.data(), len);
 	}
 
+	// Filter Generic complex 3 Taps
+	void FilterComplex3Tap::Receive(const CFLOAT32* data, int len)
+	{
+		if (output.size() < len) output.resize(len);
+
+		for (int i = 0; i < len; i++)
+		{
+			output[i] = alpha * (h1 + data[i]) + h2 * beta;
+			h2 = data[i];
+			h1 = h2;
+		}
+
+		Send(output.data(), len);
+	}
+
 	// Rotate +/- 25K Hz
 	void Rotate::Receive(const CFLOAT32* data, int len)
 	{
