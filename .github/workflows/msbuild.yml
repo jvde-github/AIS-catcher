@@ -53,7 +53,7 @@ jobs:
     - name: Install SDRPlay API
       run: |
         7z x ${{runner.workspace}}/SDRPlay.zip -o"C:/Program Files/"
-        cp C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.07.pdf output\Licenses\SDRPLAY.pdf
+        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.07.pdf" output\Licenses\SDRPLAY.pdf
          
          
     - name: Building
