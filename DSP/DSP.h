@@ -195,6 +195,28 @@ namespace DSP
 		void Receive(const CFLOAT32* data, int len);
 	};
 
+	class FilterComplex3Tap : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
+		std::vector <CFLOAT32> output;
+
+		FLOAT32 alpha = 0.0f;
+		FLOAT32 beta = 1.0f;
+		CFLOAT32 h1 = 0.0f, h2 = 0.0f;
+
+	public:
+
+		FilterComplex3Tap() { }
+
+		void setTaps(FLOAT32 a)
+		{
+			alpha = a;
+			beta = 1 - 2 * a;
+		}
+
+		// StreamIn
+		void Receive(const CFLOAT32* data, int len);
+	};
+
 	class Rotate : public StreamIn<CFLOAT32>
 	{
 		std::vector <CFLOAT32> output_up, output_down;
