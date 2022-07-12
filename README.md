@@ -43,29 +43,22 @@ For now I have decided not to share AIS-catcher-for-Android via the Play Store a
 
 ### Development branch
 
+- ...
+
+### Version 0.37
+
 - Enable RTLSDR biastee switch in pre-build Windows binaries
-- Experimental feature to compensate some of the droop when using CIC5 for downsampling, activated with ``-go DROOP_COMPENSATION on``. 
-```console
-AIS-catcher -v -b -q -m 2 -m 2 -go SOXR on -m 2 -go DROOP_COMPENSATION on
-```
-- Experimental feature to point the decoder to 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-o CD```. This follows ideas from a post on
-the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at request of a user. The conventional decoder is available with the switch ```-o AB``` which is also the default if nothing is specified. Plan is to add a ```-o ABCD``` mode
-for Airspy/HackRF and other devices that cater for sufficiently high sample rates. I noticed that gpsdecode cannot handle channel designations in NMEA lines of C and D. You can provide an optional 
-argument to use channel A and B again in the NMEA line with the command ```-o CD AB```.
 - SDRplay support included in Windows pre-build binaries
+- Experimental feature to compensate some of the droop when using CIC5 for downsampling, activated with ``-go DROOP_COMPENSATION on``. 
+- Point the decoder to 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-o CD```. This follows ideas from a post on
+the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at request of a user. The conventional decoder is available with the switch ```-o AB``` which is also the default if nothing is specified. Plan is to add a ```-o ABCD``` mode
+for Airspy/HackRF and other devices that cater for sufficiently high sample rates. Notice that gpsdecode cannot handle channel designations C and D in NMEA. You can provide an optional 
+argument to use channel A and B  in the NMEA line with the command ```-o CD AB```.
 
 ### Version 0.36
 - added SpyServer, SoapySDR, SOXR downsampling support. 
 - several bug fixes and improvements
 
-### Roadmap
-
-- version 0.37: explore improvements to airspy mini/HF+ reception via driver settings + SDRplay support standard in binary
-- version 0.38: JSON output, UDP and NMEA networking running in seperate thread
-- Release Android version on Play Store
-- version 0.39: audio input to connect to discriminator output, mono/stereo reception, 44.1 KHz input for FM model
-- version 0.4+: reporting signal strength, multiple SDR input (signal direction validation), GUI
- 
 ## Usage
 ````
 use: AIS-catcher [options]
