@@ -22,7 +22,7 @@ Only use this software in regions where such use is permitted.
 
 Building instructions are provided below for many systems. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
-A Windows binary version of **v0.37** is available (see below table). For some older versions (some ex SDRPLAY support), if you did not access these files before I might have to give you access. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters. 
+A Windows binary version of **v0.37** is available (see below table). For some older versions, if you did not access these files before I might have to give you access. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters. 
 
 Recent releases:
  | Version | Win32  | x64 | 
