@@ -28,7 +28,7 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
       with:
         msbuild-architecture: ${{matrix.platform}}
-    
+ 
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
@@ -46,6 +46,16 @@ jobs:
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
 
+    
+    - name: Download SDRPlay API from SDRPP build
+      run: Invoke-WebRequest -Uri "https://drive.google.com/uc?id=12UHPMwkfa67A11QZDmpCT4iwHnyJHWuu" -OutFile ${{runner.workspace}}/SDRPlay.zip          
+      
+    - name: Install SDRPlay API
+      run: |
+        7z x ${{runner.workspace}}/SDRPlay.zip -o"C:/Program Files/"
+        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.07.pdf" output\Licenses\SDRPLAY.pdf
+         
+         
     - name: Building
       run: |
         
