@@ -35,7 +35,8 @@ Recent releases:
  
 If you are looking for a Windows binary supporting SDRplay API 3.09 for RSP1/RSP1A/RSPDX, please get in contact with [me](mailto:jvde.github@gmail.com). If you are looking for a Windows x64 version for the latest development version, it is automatically produced by the ``msbuild`` workflow (see Actions).
 
-## Latest news: Android version available for testing [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+## Latest news: Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+For now I have decided not to share AIS-catcher-for-Android via the Play Store as there is too much overhead for such a simple program. You can download the APK from the mentioned project page.
 
 ## Recent Developments
 
@@ -50,6 +51,7 @@ AIS-catcher -v -b -q -m 2 -m 2 -go SOXR on -m 2 -go DROOP_COMPENSATION on
 the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at request of a user. The conventional decoder is available with the switch ```-o AB``` which is also the default if nothing is specified. Plan is to add a ```-o ABCD``` mode
 for Airspy/HackRF and other devices that cater for sufficiently high sample rates. I noticed that gpsdecode cannot handle channel designations in NMEA lines of C and D. You can provide an optional 
 argument to use channel A and B again in the NMEA line with the command ```-o CD AB```.
+- SDRplay support included in Windows pre-build binaries
 
 ### Version 0.36
 - added SpyServer, SoapySDR, SOXR downsampling support. 
