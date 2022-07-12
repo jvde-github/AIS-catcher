@@ -30,8 +30,8 @@ jobs:
         msbuild-architecture: ${{matrix.platform}}
     
     - name: Download SDRPlay API
-      run: Invoke-WebRequest -Uri "https://drive.google.com/file/d/1mgqNERmm5U8purzCGMbEMjcpVq19E27M/view?usp=sharing" -OutFile ${{runner.workspace}}/SDRPlay.zip
-          
+      run: Invoke-WebRequest -Uri "https://drive.google.com/uc?id=12UHPMwkfa67A11QZDmpCT4iwHnyJHWuu" -OutFile ${{runner.workspace}}/SDRPlay.zip          
+      
     - name: Install SDRPlay API
       run: 7z x ${{runner.workspace}}/SDRPlay.zip -o"C:/Program Files/"
           
