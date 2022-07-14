@@ -44,38 +44,6 @@ jobs:
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
     
-   
-
-  build:
-    runs-on: windows-2022 
-
-    strategy:
-      matrix:
-        platform: [x86, x64]
-
-    steps:
-  
-    - uses: actions/checkout@v3
-
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1.1
-      with:
-        msbuild-architecture: ${{matrix.platform}}
- 
-    - name: Restore vcpkg packages
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        vcpkg integrate install
-    - name: Install vcpkg packages
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        vcpkg install fftw3:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
-    - name: Setting up directories
-      run: |
-        mkdir output; cd output; mkdir Licenses; cd ..; mkdir include; mkdir release; mkdir lib; 
-        cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\*.h include
-        cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
-        cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
     - name: Building
       run: |
         
@@ -162,9 +130,13 @@ jobs:
         7z x ${{runner.workspace}}/SDRPlay.zip -o"C:/Program Files/"
         cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.07.pdf" output\Licenses\SDRPLAY.pdf
                
-    - name: Building
+    - name: Building with SDRPlay support
       run: |
-
+      
+        echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
+        $gen = "Visual Studio 17 2022"
+        $config = "Release"
+        
         echo "AIS-catcher"
         mkdir build; cd build
         cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release
