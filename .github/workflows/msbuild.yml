@@ -137,9 +137,9 @@ jobs:
         $gen = "Visual Studio 17 2022"
         $config = "Release"
         
-        Remove-Item build -Recurse
-        
         echo "AIS-catcher"
+        
+        Remove-Item build -Recurse        
         mkdir build; cd build
         cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release
         msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
@@ -149,7 +149,7 @@ jobs:
     - name: Prepare output SDRPLAY
       run: cp build\*.dll output; cp build\Release\*.exe output; cp README.md output; 
       
-    - name: Upload Artifacts
+    - name: Upload Artifacts SDRPLAY
       uses: actions/upload-artifact@v3
       with:
         name: "AIS-catcher Edge SDRPLAY ${{matrix.platform}}"
