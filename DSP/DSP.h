@@ -33,7 +33,6 @@ namespace DSP
 {
 	class SimplePLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public MessageIn<DecoderMessages>
 	{
-		std::vector<BIT> output;
 		BIT prev = 0;
 
 		float PLL = 0.0f;
@@ -50,7 +49,6 @@ namespace DSP
 	template <typename T>
 	class Deinterleave : public StreamIn<T>
 	{
-		std::vector <T> output;
 		int lastSymbol = 0;
 
 	public:
