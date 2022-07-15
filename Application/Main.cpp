@@ -322,10 +322,10 @@ int main(int argc, char* argv[])
 					mode = AIS::Mode::CD;
 					NMEAchannels = "CD";
 				}
-				else throw "Error: parameter needs to be AB or CD (-o)";
+				else throw "Error: parameter needs to be AB or CD (-c)";
 				if(count == 2)
 				{
-					Assert(arg2 == "AB", param, "NMEA channels need to be two characters AB.");
+					Assert(arg2 == "AB", param, "NMEA channel designation needs to be: AB.");
 					NMEAchannels = arg2;
 				}
 				break;
