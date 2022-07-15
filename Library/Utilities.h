@@ -31,7 +31,7 @@ namespace Util
 		std::vector <FLOAT32> output;
 
 	public:
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class ImaginaryPart : public SimpleStreamInOut<CFLOAT32, FLOAT32>
@@ -39,7 +39,7 @@ namespace Util
 		std::vector <FLOAT32> output;
 
 	public:
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	template <typename T>
@@ -47,8 +47,8 @@ namespace Util
 	{
 
 	public:
-		virtual void Receive(const T* data, int len) { SimpleStreamInOut<T, T>::Send(data, len); }
-		virtual void Receive(T* data, int len) { SimpleStreamInOut<T, T>::Send(data, len); }
+		virtual void Receive(const T* data, int len, TAG& tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
+		virtual void Receive(T* data, int len, TAG& tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
 
 	};
 
@@ -70,8 +70,8 @@ namespace Util
 		}
 
 	public:
-		virtual void Receive(const T* data, int len) { tic();  SimpleStreamInOut<T, T>::Send(data, len);  toc(); }
-		virtual void Receive(T* data, int len) { tic();  SimpleStreamInOut<T, T>::Send(data, len); toc(); }
+		virtual void Receive(const T* data, int len, TAG& tag) { tic();  SimpleStreamInOut<T, T>::Send(data, len, tag);  toc(); }
+		virtual void Receive(T* data, int len, TAG& tag) { tic();  SimpleStreamInOut<T, T>::Send(data, len, tag); toc(); }
 
 		float getTotalTiming() { return timing; }
 	};
@@ -202,26 +202,26 @@ namespace Util
 		Connection<CU8> outCU8;
 		Connection<CS8> outCS8;
 
-		void Receive(const RAW* raw, int len)
+		void Receive(const RAW* raw, int len, TAG& tag)
 		{
 			assert(len == 1);
 
 			// if CU8 connected, silence on CFLOAT32 output
 			if (raw->format == Format::CU8 && outCU8.isConnected())
 			{
-				outCU8.Send((CU8*)raw->data, raw->size/2);
+				outCU8.Send((CU8*)raw->data, raw->size/2, tag);
 				return;
 			}
 
 			if (raw->format == Format::CS8 && outCS8.isConnected())
 			{
-				outCS8.Send((CS8*)raw->data, raw->size / 2);
+				outCS8.Send((CS8*)raw->data, raw->size / 2, tag);
 				return;
 			}
 
 			if (raw->format == Format::CF32 && out.isConnected())
 			{
-				out.Send((CFLOAT32*)raw->data, raw->size / sizeof(CFLOAT32) );
+				out.Send((CFLOAT32*)raw->data, raw->size / sizeof(CFLOAT32), tag );
 				return;
 			}
 
@@ -255,7 +255,7 @@ namespace Util
 			default:
 				throw "Internal error: unexpected format";
 			}
-			out.Send(output.data(), size);
+			out.Send(output.data(), size, tag);
 
 		}
 	};

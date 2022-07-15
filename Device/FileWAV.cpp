@@ -115,7 +115,7 @@ namespace Device {
 		file.read((char*)buffer.data(), buffer_size);
 
 		RAW r = { format, buffer.data(), (int)buffer.size() };
-		Send(&r, 1);
+		Send(&r, 1, tag);
 
 		return true;
 	}

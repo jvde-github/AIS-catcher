@@ -56,7 +56,7 @@ namespace Device{
 		uint64_t getHandle() { return handle; }
 	};
 
-	class Device : public StreamOut<RAW>, public Setting
+	class Device : public SimpleStreamOut<RAW>, public Setting
 	{
 	protected:
 

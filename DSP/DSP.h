@@ -40,7 +40,7 @@ namespace DSP
 
 	public:
 		// StreamIn
-		virtual void Receive(const FLOAT32* data, int len);
+		virtual void Receive(const FLOAT32* data, int len, TAG& tag);
 
 		// MessageIn
 		virtual void Message(const DecoderMessages& in);
@@ -58,12 +58,49 @@ namespace DSP
 		std::vector<Connection<T>> out;
 
 		// Streams in
-		void Receive(const T* data, int len)
+		void Receive(const T* data, int len, TAG& tag)
 		{
 			for (int i = 0; i < len; i++)
 			{
-				out[lastSymbol].Send(&data[i], 1);
+				out[lastSymbol].Send(&data[i], 1, tag);
 				lastSymbol = (lastSymbol + 1) % out.size();
+			}
+		}
+	};
+
+	class ScatterPLL : public StreamIn<CFLOAT32>
+	{
+		int lastSymbol = 0;
+		std::vector <CFLOAT32> sample;
+		FLOAT32 level = 0.0f;
+
+	public:
+		void setConnections(int n) { out.resize(n); sample.resize(n); }
+
+		// Streams out
+		std::vector<Connection<CFLOAT32>> out;
+
+		// Streams in
+		void Receive(const CFLOAT32* data, int len, TAG& tag)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				sample[lastSymbol] = data[i];
+				level += std::norm(data[i]);
+
+				if (++lastSymbol == out.size())
+				{
+					tag.sample_lvl = level/out.size();
+
+					for (int j = 0; j < out.size(); j++)
+					{
+						out[j].Send(&sample[j], 1, tag);
+					}
+					level = 0.0f;
+					lastSymbol = 0;
+				}
+
+
 			}
 		}
 	};
@@ -74,7 +111,7 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -82,7 +119,7 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class Upsample : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -98,7 +135,7 @@ namespace DSP
 
 		void setParams(int n, int m) { assert(n <= m); increment = (FLOAT32) n / (FLOAT32) m; }
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class DownsampleKFilter : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -129,7 +166,7 @@ namespace DSP
 		void setK(int k) { K = k; }
 
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class FilterComplex : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -156,7 +193,7 @@ namespace DSP
 		}
 
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class Filter : public SimpleStreamInOut<FLOAT32, FLOAT32>
@@ -181,7 +218,7 @@ namespace DSP
 		}
 
 		// StreamIn
-		void Receive(const FLOAT32* data, int len);
+		void Receive(const FLOAT32* data, int len, TAG& tag);
 	};
 
 	class FilterCIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -190,7 +227,7 @@ namespace DSP
 		std::vector <CFLOAT32> output;
 
 	public:
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class FilterComplex3Tap : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -212,7 +249,7 @@ namespace DSP
 		}
 
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class Rotate : public StreamIn<CFLOAT32>
@@ -229,7 +266,7 @@ namespace DSP
 		Connection<CFLOAT32> down;
 
 		// Streams in
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class SOXR : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -246,7 +283,7 @@ namespace DSP
 	public:
 
 		void setParams(int sample_rate,int out_rate);
-		virtual void Receive(const CFLOAT32* data, int len);
+		virtual void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class SRC : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -267,7 +304,7 @@ namespace DSP
 		~SRC() { if(state) src_delete(state); }
 #endif
 		void setParams(int sample_rate,int out_rate);
-		virtual void Receive(const CFLOAT32* data, int len);
+		virtual void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
@@ -281,11 +318,11 @@ namespace DSP
 		int count = 0;
 		int window = 750;
 
-		void correctFrequency();
+		FLOAT32 correctFrequency();
 
 	public:
 		void setParams(int,int);
-		void Receive(const CFLOAT32* data, int len);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	class DS_UINT16
@@ -309,7 +346,7 @@ namespace DSP
 		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
 
 	public:
-		void Receive(const CU8* data, int len);
+		void Receive(const CU8* data, int len, TAG& tag);
 	};
 
 	class Downsample32_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
@@ -320,7 +357,7 @@ namespace DSP
 		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
 
 	public:
-		void Receive(const CS8* data, int len);
+		void Receive(const CS8* data, int len, TAG& tag);
 	};
 
 	class Downsample16_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
@@ -331,7 +368,7 @@ namespace DSP
 		DS_UINT16 DS1, DS2, DS3, DS4;
 
 	public:
-		void Receive(const CU8* data, int len);
+		void Receive(const CU8* data, int len, TAG& tag);
 	};
 
 	class Downsample16_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
@@ -342,7 +379,7 @@ namespace DSP
 		DS_UINT16 DS1, DS2, DS3, DS4;
 
 	public:
-		void Receive(const CS8* data, int len);
+		void Receive(const CS8* data, int len, TAG& tag);
 	};
 
 	class Downsample8_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
@@ -353,7 +390,7 @@ namespace DSP
 		DS_UINT16 DS1, DS2, DS3;
 
 	public:
-		void Receive(const CU8* data, int len);
+		void Receive(const CU8* data, int len, TAG& tag);
 	};
 
 	class Downsample8_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
@@ -364,6 +401,6 @@ namespace DSP
 		DS_UINT16 DS1, DS2, DS3;
 
 	public:
-		void Receive(const CS8* data, int len);
+		void Receive(const CS8* data, int len, TAG& tag);
 	};
 }

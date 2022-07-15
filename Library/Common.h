@@ -44,6 +44,15 @@ enum class Format { CU8, CF32, CS16, CS8, UNKNOWN };
 typedef struct { std::vector<std::string> sentence; char channel; unsigned msg; unsigned mmsi; unsigned repeat; uint8_t *data; int length; } NMEA;
 typedef struct { Format format; void *data; int size; } RAW;
 
+class TAG  {
+public:
+    unsigned mode = 0;  
+    FLOAT32 sample_lvl = 0.0f; 
+    FLOAT32 level = 0.0f; 
+    FLOAT32 ppm = 0.0f; 
+    std::time_t timestamp;
+};
+
 using namespace std::chrono;
 
 const FLOAT32 PI = 3.14159265358979323846f;

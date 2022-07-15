@@ -53,7 +53,7 @@ namespace IO
 			resetStatistic();
 		}
 
-		void Receive(const T* data, int len)
+		void Receive(const T* data, int len, TAG& tag)
 		{
 			count += len;
 		}
@@ -99,7 +99,7 @@ namespace IO
 			file.open(filename, std::ios::out | std::ios::binary);
 		}
 
-		void Receive(const T* data, int len)
+		void Receive(const T* data, int len, TAG& tag)
 		{
 			file.write((char*)data, len * sizeof(T));
 		}
@@ -115,7 +115,7 @@ namespace IO
 	public:
 		void setDetail(Level l) { level = l; }
 
-		void Receive(const NMEA* data, int len)
+		void Receive(const NMEA* data, int len, TAG& tag)
 		{
 			if(level == Level::NONE) return;
 
@@ -124,7 +124,10 @@ namespace IO
 				{
 					std::cout << s;
 
-					if (level == Level::FULL) std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi << ")";
+					if (level == Level::FULL) 
+						std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi 
+						          << ", lvl: " << tag.level << ", ppm: " << tag.ppm 
+						          << ")";
 					std::cout << std::endl;
 				}
 		}
@@ -153,7 +156,7 @@ namespace IO
 		~UDP();
 		UDP();
 
-		void Receive(const NMEA* data, int len);
+		void Receive(const NMEA* data, int len, TAG& tag);
 		void openConnection(const std::string& host, const std::string& port);
 		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
         void closeConnection();

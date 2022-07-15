@@ -106,7 +106,7 @@ namespace Device {
 			if (fifo.Wait())
 			{
 				r.data = fifo.Front();
-				Send(&r, 1);
+				Send(&r, 1, tag);
 				fifo.Pop();
 			}
 			else

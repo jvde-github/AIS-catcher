@@ -25,7 +25,7 @@
 namespace Demod
 {
 
-	void FM::Receive(const CFLOAT32* data, int len)
+	void FM::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		if (output.size() < len) output.resize(len);
 
@@ -36,10 +36,10 @@ namespace Demod
 			prev = data[i];
 		}
 
-		Send(output.data(), len);
+		Send(output.data(), len, tag);
 	}
 
-	void PhaseSearch::Receive(const CFLOAT32* data, int len)
+	void PhaseSearch::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		for (int i = 0; i < len; i++)
 		{
@@ -97,12 +97,12 @@ namespace Demod
 
 			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
 
-			Send(&b, 1);
+			Send(&b, 1, tag);
 		}
 	}
 
 	// Same version as above but instead relying on moving average to speed up
-	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len)
+	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		for (int i = 0; i < len; i++)
 		{
@@ -153,7 +153,7 @@ namespace Demod
 
 			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
 
-			Send(&b, 1);
+			Send(&b, 1, tag);
 		}
 	}
 }
