@@ -25,7 +25,7 @@
 
 namespace DSP
 {
-	void SimplePLL::Receive(const FLOAT32* data, int len)
+	void SimplePLL::Receive(const FLOAT32* data, int len, TAG &tag)
 	{
 		for (int i = 0; i < len; i++)
 		{
@@ -40,7 +40,7 @@ namespace DSP
 
 			if (PLL >= 1.0f)
 			{
-				Send(&data[i], 1);
+				Send(&data[i], 1, tag);
 				PLL -= (int) PLL;
 			}
 			prev = bit;
@@ -62,7 +62,7 @@ namespace DSP
 #define MA2(idx)	h##idx = z; z += r##idx;
 
 	// CIC5 downsample
-	void Downsample2CIC5::Receive(const CFLOAT32* data, int len)
+	void Downsample2CIC5::Receive(const CFLOAT32* data, int len, TAG &tag)
 	{
 		assert(len % 2 == 0);
 
@@ -79,10 +79,10 @@ namespace DSP
 			MA2(0); MA2(1); MA2(2); MA2(3); MA2(4);
 		}
 
-		Send(output.data(), len / 2);
+		Send(output.data(), len / 2, tag);
 	}
 
-	void Decimate2::Receive(const CFLOAT32* data, int len)
+	void Decimate2::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		assert(len % 2 == 0);
 
@@ -93,11 +93,11 @@ namespace DSP
 			output[j] = data[i];
 		}
 
-		Send(output.data(), len / 2);
+		Send(output.data(), len / 2, tag);
 	}
 
 	// FilterCIC5
-	void FilterCIC5::Receive(const CFLOAT32* data, int len)
+	void FilterCIC5::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		CFLOAT32 z, r0, r1, r2, r3, r4;
 
@@ -115,11 +115,11 @@ namespace DSP
 			output[i + 1] = z * (FLOAT32)0.03125f;
 		}
 
-		Send(output.data(), len);
+		Send(output.data(), len, tag);
 	}
 
 	// Work in progress - needs performance improvement
-	void DownsampleKFilter::Receive(const CFLOAT32* data, int len)
+	void DownsampleKFilter::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		int i, j;
 
@@ -136,7 +136,7 @@ namespace DSP
 
 			if(++idx_out == outputSize)
 			{
-				Send(output.data(), outputSize);
+				Send(output.data(), outputSize, tag);
 				idx_out = 0;
 			}
 
@@ -151,7 +151,7 @@ namespace DSP
 	}
 
 	// Upsample with linear interpolation
-	void Upsample::Receive(const CFLOAT32* data, int len)
+	void Upsample::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		if(output.size() < len) output.resize(len);
 
@@ -166,7 +166,7 @@ namespace DSP
 
 				if (idx_out == len)
 				{
-					Send(output.data(), len);
+					Send(output.data(), len, tag);
 					idx_out = 0;
 				}
 
@@ -178,7 +178,7 @@ namespace DSP
 	}
 
 	// Filter Generic complex
-	void FilterComplex::Receive(const CFLOAT32* data, int len)
+	void FilterComplex::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		int ptr, i, j;
 
@@ -200,11 +200,11 @@ namespace DSP
 			buffer[ptr] = data[i];
 		}
 
-		Send(output.data(), len);
+		Send(output.data(), len, tag);
 	}
 
 	// Filter Generic Real
-	void Filter::Receive(const FLOAT32* data, int len)
+	void Filter::Receive(const FLOAT32* data, int len, TAG& tag)
 	{
 		int ptr, i, j;
 
@@ -226,11 +226,11 @@ namespace DSP
 			buffer[ptr] = data[i];
 		}
 
-		Send(output.data(), len);
+		Send(output.data(), len, tag);
 	}
 
 	// Filter Generic complex 3 Taps
-	void FilterComplex3Tap::Receive(const CFLOAT32* data, int len)
+	void FilterComplex3Tap::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		if (output.size() < len) output.resize(len);
 
@@ -241,11 +241,11 @@ namespace DSP
 			h1 = h2;
 		}
 
-		Send(output.data(), len);
+		Send(output.data(), len, tag);
 	}
 
 	// Rotate +/- 25K Hz
-	void Rotate::Receive(const CFLOAT32* data, int len)
+	void Rotate::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		if (output_up.size() < len) output_up.resize(len);
 		if (output_down.size() < len) output_down.resize(len);
@@ -261,8 +261,8 @@ namespace DSP
 			rot *= mult;
 		}
 
-		up.Send(output_up.data(), len);
-		down.Send(output_down.data(), len);
+		up.Send(output_up.data(), len, tag);
+		down.Send(output_down.data(), len, tag);
 
 		rot /= std::abs(rot);
 	}
@@ -291,7 +291,7 @@ namespace DSP
 	}
 
 	// Downsample using libsoxr
-	void SOXR::Receive(const CFLOAT32* data, int len)
+	void SOXR::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 #ifdef HASSOXR
  		if (out_soxr.size() < len) out_soxr.resize(len);
@@ -310,7 +310,7 @@ namespace DSP
  			output[count++] = out_soxr[i];
 			if (count == N)
 			{
-				Send(output.data(), N);
+				Send(output.data(), N, tag);
 				count = 0;
 			}
 		}
@@ -336,7 +336,7 @@ namespace DSP
 	}
 
 	// Downsample using libsoxr
-	void SRC::Receive(const CFLOAT32* data, int len)
+	void SRC::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 #ifdef HASSAMPLERATE
 
@@ -364,7 +364,7 @@ namespace DSP
  				output[count++] = out_src[i];
 				if (count == N)
 				{
-					Send(output.data(), N);
+					Send(output.data(), N, tag);
 					count = 0;
 				}
 			}
@@ -373,7 +373,7 @@ namespace DSP
 	}
 
 	// square the signal, find the mid-point between two peaks
-	void SquareFreqOffsetCorrection::correctFrequency()
+	FLOAT32 SquareFreqOffsetCorrection::correctFrequency()
 	{
 		FLOAT32 max_val = 0.0, fz = -1;
 		int delta = (int)(9600.0 / 48000.0 * N);
@@ -391,7 +391,8 @@ namespace DSP
 			}
 		}
 
-		CFLOAT32 rot_step = std::polar(1.0f, (float)(fz / 2.0 / N * 2 * PI));
+		FLOAT32 f = fz / 2.0 / N;
+		CFLOAT32 rot_step = std::polar(1.0f, (float)(f * 2 * PI));
 
 		for(int i = 0; i<N; i++)
 		{
@@ -399,8 +400,8 @@ namespace DSP
 			output[i] *= rot;
 		}
 
-
 		rot /= std::abs(rot);
+		return f * 48000.0/162.0f;
 	}
 
 	void SquareFreqOffsetCorrection::setParams(int n,int w)
@@ -410,7 +411,7 @@ namespace DSP
 		window = w;
 	}
 
-	void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len)
+	void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		if(fft_data.size() < N) fft_data.resize(N);
 		if(output.size() < N) output.resize(N);
@@ -422,8 +423,8 @@ namespace DSP
 
 			if(++count == N)
 			{
-				correctFrequency();
-				Send(output.data(), N);
+				tag.ppm = correctFrequency();
+				Send(output.data(), N, tag);
 				count = 0;
 			}
 		}
@@ -522,7 +523,7 @@ namespace DSP
 	}
 
 	// Multi-pass aggregators
-	void Downsample32_CU8::Receive(const CU8* data, int len)
+	void Downsample32_CU8::Receive(const CU8* data, int len, TAG& tag)
 	{
 		assert(len % 32 == 0);
 
@@ -535,10 +536,10 @@ namespace DSP
 		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, len, 5);
 		len = DS5.Run(buf, output.data(), len, 0);
 
-		out.Send(output.data(), len);
+		out.Send(output.data(), len, tag);
 	}
 
-	void Downsample32_CS8::Receive(const CS8* data, int len)
+	void Downsample32_CS8::Receive(const CS8* data, int len, TAG& tag)
 	{
 		assert(len % 32 == 0);
 
@@ -551,10 +552,10 @@ namespace DSP
 		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, len, 5);
 		len = DS5.Run(buf, output.data(), len, 0);
 
-		out.Send(output.data(), len);
+		out.Send(output.data(), len, tag);
 	}
 
-	void Downsample16_CU8::Receive(const CU8* data, int len)
+	void Downsample16_CU8::Receive(const CU8* data, int len, TAG& tag)
 	{
 		assert(len % 16 == 0);
 
@@ -566,10 +567,10 @@ namespace DSP
 		len = DS1.Run((uint8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
 		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, output.data(), len, 0);
 
-		out.Send(output.data(), len);
+		out.Send(output.data(), len, tag);
 	}
 
-	void Downsample16_CS8::Receive(const CS8* data, int len)
+	void Downsample16_CS8::Receive(const CS8* data, int len, TAG& tag)
 	{
 		assert(len % 16 == 0);
 
@@ -581,10 +582,10 @@ namespace DSP
 		len = DS1.Run((int8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
 		len = DS3.Run(buf, len, 5); len = DS4.Run(buf, output.data(), len, 0);
 
-		out.Send(output.data(), len);
+		out.Send(output.data(), len, tag);
 	}
 
-	void Downsample8_CU8::Receive(const CU8* data, int len)
+	void Downsample8_CU8::Receive(const CU8* data, int len, TAG& tag)
 	{
 		assert(len % 8 == 0);
 
@@ -596,10 +597,10 @@ namespace DSP
 		len = DS1.Run((uint8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
 		len = DS3.Run(buf, output.data(), len, 0);
 
-		out.Send(output.data(), len);
+		out.Send(output.data(), len, tag);
 	}
 
-	void Downsample8_CS8::Receive(const CS8* data, int len)
+	void Downsample8_CS8::Receive(const CS8* data, int len, TAG& tag)
 	{
 		assert(len % 8 == 0);
 
@@ -611,6 +612,6 @@ namespace DSP
 		len = DS1.Run((int8_t*)data, buf, len, 3); len = DS2.Run(buf, len, 4);
 		len = DS3.Run(buf, output.data(), len, 0);
 
-		out.Send(output.data(), len);
+		out.Send(output.data(), len, tag);
 	}
 }

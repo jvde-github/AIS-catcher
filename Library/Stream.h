@@ -26,10 +26,10 @@ class StreamIn
 {
 public:
 
-	virtual void Receive(const T* data, int len) {}
-	virtual void Receive(T* data, int len)
+	virtual void Receive(const T* data, int len, TAG &tag) {}
+	virtual void Receive(T* data, int len, TAG &tag)
 	{
-		Receive( (const T *) data, len);
+		Receive( (const T *) data, len, tag);
 	}
 };
 
@@ -40,21 +40,21 @@ class Connection
 
 public:
 
-	void Send(const S* data, int len)
+	void Send(const S* data, int len, TAG &tag)
 	{
-		for (auto c : connections) c->Receive(data, len);
+		for (auto c : connections) c->Receive(data, len, tag);
 	}
 
-	void Send(S* data, int len)
+	void Send(S* data, int len, TAG &tag)
 	{
 		if(connections.size() == 0) return;
 
 		int sz1 = (int)connections.size()-1;
 
 		for(int i = 0; i < sz1; i++)
-			connections[i]->Receive((const S*)data, len);
+			connections[i]->Receive((const S*)data, len, tag);
 
-		connections[sz1]->Receive(data, len);
+		connections[sz1]->Receive(data, len, tag);
 	}
 
 	void Connect(StreamIn<S>* s)
@@ -73,19 +73,28 @@ public:
 
 	Connection<S> out;
 
-	void Send(const S* data, int len)
+	void Send(const S* data, int len, TAG &tag)
 	{
-		out.Send(data, len);
+		out.Send(data, len, tag);
 	}
 
-	void Send(S* data, int len)
+	void Send(S* data, int len, TAG &tag)
 	{
-		out.Send(data, len);
+		out.Send(data, len, tag);
 	}
 };
 
 template <typename T, typename S>
 class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T> { };
+
+template <typename S>
+class SimpleStreamOut : public StreamOut<S> 
+{ 
+protected:
+	TAG tag;
+public:
+	void setTag(const TAG &t) { tag = t; }
+};
 
 template <typename S>
 inline StreamIn<S>& operator>>(Connection<S>& a, StreamIn<S>& b) { a.Connect(&b); return b; }

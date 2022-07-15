@@ -46,6 +46,7 @@ namespace AIS
 
 		int position = 0;
 		int one_seq_count = 0;
+		FLOAT32 level = 0.0f;
 
 		void setBit(int i, bool b);
 		bool getBit(int i);
@@ -54,10 +55,10 @@ namespace AIS
 		static char NMEAchar(int i);
 		int NMEAchecksum(const std::string&);
 
-		void sendNMEA();
+		void sendNMEA(TAG &tag);
 		bool CRC16(int len);
 		char getLetter(int pos);
-		bool processData(int len);
+		bool processData(int len, TAG &tag);
 
 		bool canStop(int);
 
@@ -70,7 +71,7 @@ namespace AIS
 		Decoder();
 
 		virtual void setChannel(char c) { channel = c; }
-		void Receive(const FLOAT32* data, int len);
+		void Receive(const FLOAT32* data, int len, TAG& tag);
 
 		// MessageIn
 		virtual void Message(const DecoderMessages& in);

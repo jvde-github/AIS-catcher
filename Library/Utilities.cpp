@@ -19,7 +19,7 @@
 
 namespace Util
 {
-	void RealPart::Receive(const CFLOAT32* data, int len)
+	void RealPart::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		if (output.size() < len) output.resize(len);
 
@@ -28,10 +28,10 @@ namespace Util
 			output[i] = data[i].real();
 		}
 
-		Send(output.data(), len);
+		Send(output.data(), len, tag);
 	}
 
-	void ImaginaryPart::Receive(const CFLOAT32* data, int len)
+	void ImaginaryPart::Receive(const CFLOAT32* data, int len, TAG& tag)
 	{
 		if (output.size() < len) output.resize(len);
 
@@ -40,6 +40,6 @@ namespace Util
 			output[i] = data[i].imag();
 		}
 
-		Send(output.data(), len);
+		Send(output.data(), len, tag);
 	}
 }

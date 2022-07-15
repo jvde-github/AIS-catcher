@@ -63,7 +63,7 @@ namespace Device {
 		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
 
 		RAW r = { format, buffer.data(), (int)buffer.size() };
-		Send(&r, 1);
+		Send(&r, 1, tag);
 
 		return true;
 	}

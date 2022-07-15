@@ -130,7 +130,7 @@ namespace AIS
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::Deinterleave<CFLOAT32> S_a, S_b;
+		DSP::ScatterPLL S_a, S_b;
 
 	protected:
 
@@ -154,7 +154,7 @@ namespace AIS
 
 		DSP::FilterComplex FC_a, FC_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::Deinterleave<CFLOAT32> S_a, S_b;
+		DSP::ScatterPLL S_a, S_b;
 
 	protected:
 

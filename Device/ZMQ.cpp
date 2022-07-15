@@ -104,7 +104,7 @@ namespace Device {
 			if (fifo.Wait())
 			{
 				RAW r = { format, fifo.Front(), fifo.BlockSize() };
-				Send(&r, 1);
+				Send(&r, 1, tag);
 				fifo.Pop();
 			}
 			else

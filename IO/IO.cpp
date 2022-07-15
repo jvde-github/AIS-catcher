@@ -44,7 +44,7 @@ namespace IO
 #endif
 	}
 
-	void UDP::Receive(const NMEA* data, int len)
+	void UDP::Receive(const NMEA* data, int len, TAG& tag)
 	{
 		if (sock != -1)
 			for (int i = 0; i < len; i++)

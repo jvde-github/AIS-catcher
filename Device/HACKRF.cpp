@@ -73,7 +73,7 @@ namespace Device {
 	void HACKRF::callback(uint8_t* data, int len)
 	{
 		RAW r = { Format::CS8, data, len };
-		Send(&r, 1);
+		Send(&r, 1, tag);
 	}
 
 	void HACKRF::applySettings()

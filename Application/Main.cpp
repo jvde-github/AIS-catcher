@@ -61,7 +61,7 @@ struct Drivers
         Device::WAVFile WAV;
         Device::RTLSDR RTLSDR;
         Device::RTLTCP RTLTCP;
-	Device::SpyServer SpyServer;
+		Device::SpyServer SpyServer;
         Device::AIRSPYHF AIRSPYHF;
         Device::AIRSPY AIRSPY;
         Device::SDRPLAY SDRPLAY;
@@ -84,9 +84,11 @@ void Usage()
 	std::cerr << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
+	std::cerr << "\t[-c [AB/CD] [optional: AB] select AIS channels and NMEA channel designations (default: AB)]" << std::endl;
 	std::cerr << "\t[-p xxx set frequency correction for device in PPM (default: zero)]" << std::endl;
 	std::cerr << "\t[-a xxx set tuner bandwidth in Hz (default: off)]" << std::endl;
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
+	std::cerr << "\t[-T xx auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (default: false)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
 	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
@@ -249,6 +251,7 @@ void Assert(bool b, std::string &context, std::string msg = "")
 int main(int argc, char* argv[])
 {
 	int sample_rate = 0, input_device = 0,  bandwidth = 0, ppm = 0;
+	int timeout = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false,  timer_on = false;
@@ -256,6 +259,7 @@ int main(int argc, char* argv[])
 	int verboseUpdateTime = 3;
 	AIS::Mode mode = AIS::Mode::AB;
 	std::string NMEAchannels = "AB";
+	TAG tag;
 
 	// Device and output stream of device;
 	Device::Type input_type = Device::Type::NONE;
@@ -306,7 +310,7 @@ int main(int argc, char* argv[])
 				Assert(count == 1, param, "Requires one parameter [model number].");
 				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 4)));
 				break;
-			case 'o':
+			case 'c':
 				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
 				if(arg1 == "AB")
 				{
@@ -329,6 +333,10 @@ int main(int argc, char* argv[])
 				Assert(count <= 1, param);
 				verbose = true;
 				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
+				break;
+			case 'T':
+				Assert(count == 1, param,"Timeout parameter required.");
+				timeout = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'q':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -516,7 +524,7 @@ int main(int argc, char* argv[])
 
 		// ----------------------
 		// Open and set up device
-
+		device->setTag(tag);
 		device->Open(handle);
 
 		// override sample rate if defined by user
@@ -572,26 +580,39 @@ int main(int argc, char* argv[])
 
 		// -----------------
 		// Main loop
-		stop = false;
 
 		device->Play();
 
-		int secPassed = 0;
+		stop = false;
+		unsigned passed = 0;
 
 		while(device->isStreaming() && !stop)
 		{
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-				secPassed = (secPassed + 1) % (20 * verboseUpdateTime);
+				const int SLEEP = 50;
+				const int SLEEP_PER_SEC = 1000 / 50;
 
-				if (verbose && secPassed == 0)
+				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
+				passed++;
+				unsigned passed_sec = passed / SLEEP_PER_SEC;
+
+				if (verbose && passed % SLEEP_PER_SEC == 0 && passed_sec % verboseUpdateTime == 0)
+				{
 					for (int j = 0; j < liveModels.size(); j++)
 					{
 						std::string name = liveModels[j]->getName();
-						std::cerr << "[" << name << "]: " <<std::string(37-name.length(),' ') <<  statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+						std::cerr << "[" << name << "]: " << std::string(37 - name.length(), ' ') << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
 					}
+				}
+
+				if (timeout && passed_sec >= timeout)
+				{
+					stop = true;
+					if (verbose)
+						std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
+				}
 			}
 		}
 

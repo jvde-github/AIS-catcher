@@ -42,7 +42,10 @@ For now I have decided not to share AIS-catcher-for-Android via the Play Store a
 
 ### Development branch
 
+- Renamed option ``-o`` to ``-c`` (option to select AIS channels). ``-o`` will be used for setting the output format in due course
+- Signal and ppm level reported
 - ...
+
 
 ### Version 0.37
 
@@ -64,9 +67,11 @@ use: AIS-catcher [options]
 
 	[-h display this message and terminate (default: false)]
 	[-s xxx sample rate in Hz (default: based on SDR device)]
+	[-c [AB/CD] [optional: AB] select AIS channels and NMEA channel designations (default: AB)]
 	[-p xxx set frequency correction for device in PPM (default: zero)]
 	[-a xxx set tuner bandwidth in Hz (default: off)]
 	[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]
+	[-T xx auto terminate run with SDR after xxx seconds (default: off)]
 	[-q suppress NMEA messages to screen (default: false)]
 	[-n show NMEA messages on screen without detail]
 	[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
@@ -102,7 +107,7 @@ use: AIS-catcher [options]
 
 	Model specific settings:
 
-	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] ]
+	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SAMPLERATE [on/off] ]
 ````
 
 ### Basic usage

@@ -97,7 +97,7 @@ namespace AIS
 		return (w >> (16 - 6 - y)) & mask;
 	}
 
-	void Decoder::sendNMEA()
+	void Decoder::sendNMEA(TAG& tag)
 	{
 		std::string sentence;
 		const std::string comma = ",";
@@ -130,20 +130,22 @@ namespace AIS
 		nmea.length = nBits;
 
 		//if(nmea.msg >= 0 and nmea.msg <= 27)
-		Send(&nmea, 1);
+		Send(&nmea, 1, tag);
 
 		MessageID = (MessageID + 1) % 10;
 	}
 
-	bool Decoder::processData(int len)
+	bool Decoder::processData(int len, TAG& tag)
 	{
 		if (len > 16 && CRC16(len))
 		{
 			nBits = len - 16;
 			nBytes = (nBits + 7) / 8;
 
+			tag.level = 0.5f * 10.0f * log10(tag.level);
+
 			// Populate Byte array and send msg, exclude 16 FCS bits
-			sendNMEA();
+			sendNMEA(tag);
 
 			return true;
 		}
@@ -181,7 +183,7 @@ namespace AIS
 		return false;
 	}
 
-	void Decoder::Receive(const FLOAT32* data, int len)
+	void Decoder::Receive(const FLOAT32* data, int len, TAG &tag)
 	{
 		for (int i = 0; i < len; i++)
 		{
@@ -209,7 +211,11 @@ namespace AIS
 
 				if (position == 7)
 				{
-					if (Bit == 0) NextState(State::DATAFCS, 0); // 0111111*0....
+					if (Bit == 0)
+					{
+						NextState(State::DATAFCS, 0); // 0111111*0....
+						level = 0.0f;
+					}
 					else NextState(State::TRAINING, 0);
 				}
 				else
@@ -221,12 +227,15 @@ namespace AIS
 			case State::DATAFCS:
 
 				setBit(position++,Bit);
+				
+				level += tag.sample_lvl;
 
 				if (Bit == 1)
 				{
 					if (one_seq_count == 5)
 					{
-						if( processData(position - 7))
+						tag.level = level/position;
+						if( processData(position - 7, tag))
 							NextState(State::FOUNDMESSAGE, 0);
 						NextState(State::TRAINING, 0);
 					}

@@ -185,7 +185,7 @@ namespace Device {
 			if (fifo.Wait())
 			{
 				RAW r = { Format::CF32, fifo.Front(), fifo.BlockSize() };
-				Send(&r, 1);
+				Send(&r, 1, tag);
 				fifo.Pop();
 			}
 			else if(isStreaming()) std::cerr << "SDRPLAY: timeout." << std::endl;
