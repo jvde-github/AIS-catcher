@@ -44,6 +44,7 @@ For now I have decided not to share AIS-catcher-for-Android via the Play Store a
 
 - Renamed option ``-o`` to ``-c`` (option to select AIS channels). ``-o`` will be used for setting the output format in due course
 - Signal and ppm level reported
+- ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ...
 
 
