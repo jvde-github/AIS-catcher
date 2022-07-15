@@ -354,7 +354,7 @@ The output of the various receivers was sent via UDP to AISdipatcher which remov
 A list of some stations mentioning using AIS-catcher:
 [Naha, Okinawa - Station #1664](https://www.marinetraffic.com/en/ais/details/stations/1664),
 [La Linea de la Concepcion - migumi - Station #3231](https://www.marinetraffic.com/en/ais/details/stations/3231),
-[Asendorf - Station #686](https://www.marinetraffic.com/en/ais/details/stations/686), [Edinburgh - Station #1588](https://www.marinetraffic.com/en/ais/details/stations/1588), [Chaos Consulting, Germany](https://www.marinetraffic.com/en/ais/details/stations/1588),
+[Asendorf - Station #686](https://www.marinetraffic.com/en/ais/details/stations/686), [Edinburgh - Station #1588](https://www.marinetraffic.com/en/ais/details/stations/1588), [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/),
 [Seattle Capitol Hill - Station #623](https://www.marinetraffic.com/en/ais/details/stations/623), [Oranjeplaat Arnemuiden - Station #6677](https://www.marinetraffic.com/en/ais/details/stations/6677/).
 
 ## Build process
