@@ -37,7 +37,7 @@ If you are looking for a Windows x64 version for the latest development version,
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
-If you are travelling and looking for a portable system that can be used on an Android phone, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a beach near The Hague. Ship positions are plotted with the BoatBeacon app.
+If you are travelling and looking for a portable system that can be used on an Android phone, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
 
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/blob/152e5460fd938fb701d988f01deccdfa6192443d/media/Screenshot_BoatBeacon%5B1%5D.jpg" width=40% height=40%>
