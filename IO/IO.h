@@ -109,7 +109,7 @@ namespace IO
 	class SinkScreen : public StreamIn<NMEA>
 	{
 	public:
-		enum class Level { NONE, SPARSE, FULL };
+		enum class Level { NONE, SPARSE, FULL, JSON_NMEA };
 	private:
 		Level level;
 	public:
@@ -120,16 +120,27 @@ namespace IO
 			if(level == Level::NONE) return;
 
 			for (int i = 0; i < len; i++)
-				for (auto s : data[i].sentence)
-				{
-					std::cout << s;
+			{
+				if(level == Level::FULL || level == Level::SPARSE)
+					for (auto s : data[i].sentence)
+					{
+						std::cout << s;
 
-					if (level == Level::FULL) 
-						std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi 
-						          << ", lvl: " << tag.level << ", ppm: " << tag.ppm 
-						          << ")";
-					std::cout << std::endl;
+						if (level == Level::FULL)
+							std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi
+							          << ", lvl: " << tag.level << ", ppm: " << tag.ppm
+							          << ")";
+						std::cout << std::endl;
+					}
+				else if(level == Level::JSON_NMEA)
+				{
+					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"type\":" << data[i].msg << ",\"repeat\":"<<data[i].repeat
+					          << ",\"mmsi\":" << data[i].mmsi << ",\"power\":" << tag.level << ",\"ppm\":" << tag.ppm << ",\"NMEA\":[\"" << data[i].sentence[0] << "\"";
+					for(int j = 1; j < data[i].sentence.size(); j++)
+						std::cout << ",\"" << data[i].sentence[j] << "\"";
+					std::cout << "]}" << std::endl;
 				}
+			}
 		}
 	};
 
