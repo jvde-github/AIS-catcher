@@ -50,8 +50,9 @@ For now I have decided not to share AIS-catcher-for-Android via the Play Store a
 
 ### Development branch
 
-- Renamed option ``-o`` to ``-c`` (option to select AIS channels). ``-o`` will be used for setting the output format in due course
+- Renamed option ``-o`` to ``-c`` (option to select AIS channels)
 - Signal level and applied frequency correction (in ppm) reported
+- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software, e.g. with Python
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ...
 
