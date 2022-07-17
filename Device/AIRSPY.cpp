@@ -17,7 +17,7 @@
 */
 
 #include <cstring>
-#include <algorithm>
+#include <iomanip>
 
 #include "AIRSPY.h"
 
@@ -155,7 +155,7 @@ namespace Device {
 			for (int i = 0; i < device_count; i++)
 			{
 				std::stringstream serial;
-				serial << std::uppercase << std::hex << serials[i];
+				serial << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << serials[i];
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY", serial.str(), (uint64_t)i, Type::AIRSPY));
 			}
 		}

@@ -16,7 +16,7 @@
 */
 
 #include <cstring>
-#include <algorithm>
+#include <iomanip>
 
 #include "AIRSPYHF.h"
 
@@ -125,12 +125,12 @@ namespace Device {
 
 		serials.resize(device_count);
 
-		if (airspyhf_list_devices(serials.data(), device_count) > 0) 
+		if (airspyhf_list_devices(serials.data(), device_count) > 0)
 		{
-			for (int i = 0; i < device_count; i++) 
+			for (int i = 0; i < device_count; i++)
 			{
 				std::stringstream serial;
-				serial << std::uppercase << std::hex << serials[i];
+				serial << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << serials[i];
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF));
 			}
 		}
