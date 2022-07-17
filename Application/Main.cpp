@@ -346,6 +346,19 @@ int main(int argc, char* argv[])
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				NMEA_to_screen = IO::SinkScreen::Level::SPARSE;
 				break;
+			case 'o':
+				Assert(count == 1, param, "Requires one parameter.");
+				{
+					switch(Util::Parse::Integer(arg1, 0, 3))
+					{
+					case 0: NMEA_to_screen = IO::SinkScreen::Level::NONE; break;
+					case 1: NMEA_to_screen = IO::SinkScreen::Level::SPARSE; break;
+					case 2: NMEA_to_screen = IO::SinkScreen::Level::FULL; break;
+					case 3: NMEA_to_screen = IO::SinkScreen::Level::JSON_NMEA; break;
+					default: throw "Error: unknown option 'o'";
+					}
+				}
+				break;
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				liveModels.push_back(createModel(2));

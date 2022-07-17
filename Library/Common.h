@@ -46,10 +46,10 @@ typedef struct { Format format; void *data; int size; } RAW;
 
 class TAG  {
 public:
-    unsigned mode = 0;  
-    FLOAT32 sample_lvl = 0.0f; 
-    FLOAT32 level = 0.0f; 
-    FLOAT32 ppm = 0.0f; 
+    unsigned mode = 0;
+    FLOAT32 sample_lvl = 0.0f;
+    FLOAT32 level = 0.0f;
+    FLOAT32 ppm = 0.0f;
     std::time_t timestamp;
 };
 
