@@ -111,7 +111,7 @@ namespace Device {
 
 	void AIRSPY::setMixer_AGC(int a)
 	{
-		if (airspy_set_mixer_agc(dev, 1) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set MIXER AGC.";
+		if (airspy_set_mixer_agc(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set MIXER AGC.";
 	}
 
 	void AIRSPY::setLNA_Gain(int a)
@@ -138,6 +138,7 @@ namespace Device {
 	{
 		if (airspy_set_sensitivity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Sensitivity gain.";
 	}
+
 	void AIRSPY::setLinearity_Gain(int a)
 	{
 		if (airspy_set_linearity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Linearity gain.";
@@ -184,13 +185,12 @@ namespace Device {
 			break;
 
 		case AIRSPYGainMode::Free:
-			setLNA_AGC( (int) LNA_AGC );
-			if (!LNA_AGC) setLNA_Gain(LNA_Gain);
-
-			setMixer_AGC((int)mixer_AGC);
-			if (!mixer_AGC) setMixer_Gain(mixer_Gain);
-
+			setLNA_Gain(LNA_Gain);
+			setMixer_Gain(mixer_Gain);
 			setVGA_Gain(VGA_Gain);
+
+			setLNA_AGC( (int) LNA_AGC );
+			setMixer_AGC( (int) mixer_AGC );
 
 			break;
 		}
