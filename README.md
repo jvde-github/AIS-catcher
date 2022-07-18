@@ -49,7 +49,7 @@ If you are looking for a Windows-version for the latest development version, it 
 </p>
 
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
-- ``start.bat`` added to Windows binaries to make it easier to set up parameters.
+- ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
 - ...
 
 
