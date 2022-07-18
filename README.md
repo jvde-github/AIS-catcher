@@ -58,7 +58,7 @@ For now I have decided not to share AIS-catcher-for-Android via the Play Store a
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/blob/96946f16b4c26e8093cb5255247b731cc93174c5/media/power-location-plot.png" width=40% height=40%>
 </p>
-- ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
+- ``T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters.
 - ...
 
