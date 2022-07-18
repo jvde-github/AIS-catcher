@@ -44,7 +44,13 @@ jobs:
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
     
-    - name: Building
+    - name: Create start.bat
+      run: |
+        cd output
+        echo "AIS-catcher -v 10 -u 127.0.0.1 10110`nPAUSE" |Out-File -FilePath start.bat -Encoding ascii
+        cd ..
+    
+    - name: Building Libraries and AIS-catcher
       run: |
         
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
