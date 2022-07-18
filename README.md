@@ -35,7 +35,7 @@ Recent releases:
   |v0.34| [ZIP](https://drive.google.com/file/d/1ivz0Pk1KsGfnq5k0E723nXUGfz79ya-d/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1yfjEnY9fqS6ifmqaatl3EzISdhliIk-j/view?usp=sharing) | | |
  |v0.33 |  [ZIP](https://drive.google.com/file/d/1KFvvWQi47QquOl-jDPRK8mpmUnfQaM91/view?usp=sharing) | [ZIP](https://drive.google.com/file/d/1oE0rTMU7DF9pFzw2Pt1SAMDm-UWILJrT/view?usp=sharing)  |  | |
  
-If you are looking for a Windows x64 version for the latest development version, it is automatically produced by the ``msbuild`` workflow (see Actions).
+If you are looking for a Windows-version for the latest development version, it is automatically produced by the ``msbuild`` workflow (see Actions).
 
 ## Recent Developments
 
