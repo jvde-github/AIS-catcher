@@ -54,11 +54,12 @@ For now I have decided not to share AIS-catcher-for-Android via the Play Store a
 
 - Renamed option ``-o`` to ``-c`` (option to select AIS channels)
 - Signal level and applied frequency correction (in ppm) reported
-- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software, e.g. with Python This allows to easily build applications that take the JSON as input and plot the location of ships as a circle with the diameter linked to the power of the received signal. E.g. with a few lines of Python and Javascript:
+- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as as a circle with the diameter linked to the power of the received signal. E.g. with a few lines of Python and Javascript:
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/blob/96946f16b4c26e8093cb5255247b731cc93174c5/media/power-location-plot.png" width=40% height=40%>
 </p>
-- ``T`` switch that stops the program after a specified number of seconds to facilitate experiments.
+
+- ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters.
 - ...
 
