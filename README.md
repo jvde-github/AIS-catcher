@@ -22,7 +22,9 @@ Only use this software in regions where such use is permitted.
 
 Building instructions are provided below for many systems. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
-A Windows binary version of **v0.37** is available (see below table). If you have the SDRPlay API installed and want SDRPlay support, a seperate executable is provided. For the older versions, if you did not access these files before I might have to give you access as they are on my Google Drive. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters. 
+A Windows binary version of **v0.37** is available (see below table). If you have the SDRPlay API installed and want SDRPlay support, a seperate executable is provided. For the older versions, if you did not access these files before I might have to give you access as they are on my Google Drive. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
+For those for which this is outside the comfort zone, the latest packages contain a file ``start.bat`` which will start AIS-catcher with a few standard arguments. 
+You can open this file with Notepad and set alternative parameters (as per below).
 
 Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
@@ -140,9 +142,9 @@ which lists all supported devices and confirms that the executable was correctly
 
 To start AIS demodulation, print some occasional statistics (every 10 seconds) and broadcast AIS messages via UDP, we can use the following command:
 ```console
-AIS-catcher -v 10 -u 127.0.0.1 12345 -u 127.0.0.1 23456
+AIS-catcher -v 10 -u 127.0.0.1 10110 -u 127.0.0.1 10111
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `12345` and port `23456`. 
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. 
 The screen messages can be suppressed with the option ```-q```. That's all there is.
 
 
@@ -261,7 +263,9 @@ INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 p
 
 ## Examples of device specific settings
 
-The command line allows you to set some device specific parameters. AIS-catcher follows the settings and naming conventions for the devices as much as possible so that parameters and settings determined by SDR software for signal analysis (e.g. SDR#, SDR++, SDRangel) can be directly copied. Below some examples.
+The command line allows you to set some device specific parameters. AIS-catcher follows the settings and naming conventions for the devices as much as possible so that parameters and 
+settings determined by SDR software for signal analysis (e.g. SDR#, SDR++, SDRangel) can be directly copied. Below some examples. Note that a device is selected with the ``-d`` switch. The 
+below examples are just to specify additional parameters for a particular device. If the device is not connected, this has no effect.
 
 ### RTL SDR
 Gain and other settings specific for the RTL SDR can be set on the command line with the ```-gr``` switch. For example, the following command sets the tuner gain to +33.3 and the RTL AGC on:
@@ -361,10 +365,13 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 ### Some stations mentioning the use of AIS-catcher
 
 A list of some stations mentioning using AIS-catcher:
-[Naha, Okinawa - Station #1664](https://www.marinetraffic.com/en/ais/details/stations/1664),
-[La Linea de la Concepcion - migumi - Station #3231](https://www.marinetraffic.com/en/ais/details/stations/3231),
-[Asendorf - Station #686](https://www.marinetraffic.com/en/ais/details/stations/686), [Edinburgh - Station #1588](https://www.marinetraffic.com/en/ais/details/stations/1588), [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/),
-[Seattle Capitol Hill - Station #623](https://www.marinetraffic.com/en/ais/details/stations/623), [Oranjeplaat Arnemuiden - Station #6677](https://www.marinetraffic.com/en/ais/details/stations/6677/).
+- [Naha, Okinawa - Station #1664](https://www.marinetraffic.com/en/ais/details/stations/1664)
+- [La Linea de la Concepcion - migumi - Station #3231](https://www.marinetraffic.com/en/ais/details/stations/3231),
+- [Asendorf - Station #686](https://www.marinetraffic.com/en/ais/details/stations/686)
+- [Edinburgh - Station #1588](https://www.marinetraffic.com/en/ais/details/stations/1588)
+- [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/),
+- [Seattle Capitol Hill - Station #623](https://www.marinetraffic.com/en/ais/details/stations/623)
+- [Oranjeplaat Arnemuiden - Station #6677](https://www.marinetraffic.com/en/ais/details/stations/6677/).
 
 ## Build process
 
