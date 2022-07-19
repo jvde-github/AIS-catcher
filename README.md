@@ -502,17 +502,19 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 ## To do
 
 - On going: testing and improving receiver, seems to be some room for certain Class broadcast
-- <del>SpyServer support</del>
-- <del>Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.</del> Use latest airspyhf lib.
-- <del>RTL-TCP setting for timeout on connection (system default takes way too long)</del>
+
 - Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
-- Reporting signal strength per message and estimated frequency correction (e.g. to facilitate auto calibration ppm for rtl sdr dongles)
+- Implement websocket interface
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - Testing: more set ups, assess gap with commercial equipment
-- System support and GUI: Windows, <del>Android</del>
+- System support and GUI: Windows, <del>Android</del>, Web interface
 - Multi-channel SDRs: validate location from signal (e.g. like MLAT)
 - Output: ZeroMQ, APRS, ...
+- <del>SpyServer support</del>
+- <del>Reporting signal strength per message and estimated frequency correction (e.g. to facilitate auto calibration ppm for rtl sdr dongles)</del>
+- <del>Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.</del> Use latest airspyhf lib.
+- <del>RTL-TCP setting for timeout on connection (system default takes way too long)</del>
 - Input: <del>ZeroMQ/TCP-IP protocols, SoapySDR, SpyServer</del>, LimeSDR mini, ...
 - ....
