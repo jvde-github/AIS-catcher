@@ -504,7 +504,8 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - On going: testing and improving receiver, seems to be some room for certain Class broadcast
 
 - Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
-- Implement websocket interface
+- Implement websocket interface, store/write configuration files (JSON)
+- Channel AB+CD for high sample rates
 - Optional filter for invalid messages
 - DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
