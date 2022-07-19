@@ -142,7 +142,7 @@ namespace AIS
 			nBits = len - 16;
 			nBytes = (nBits + 7) / 8;
 
-			tag.level = 0.5f * 10.0f * log10(tag.level);
+			tag.level = 10.0f * log10(tag.level);
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			sendNMEA(tag);
@@ -227,7 +227,7 @@ namespace AIS
 			case State::DATAFCS:
 
 				setBit(position++,Bit);
-				
+
 				level += tag.sample_lvl;
 
 				if (Bit == 1)
