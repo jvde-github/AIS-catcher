@@ -18,13 +18,11 @@ It is your responsibility to determine whether or not your local administration 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
 Only use this software in regions where such use is permitted.
 
-## Installation and Windows Binary
+## Installation and Windows Binaries
 
 Building instructions are provided below for many systems. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
-A Windows binary version of **v0.37** is available (see below table). If you have the SDRPlay API installed and want SDRPlay support, a seperate executable is provided. For the older versions, if you did not access these files before I might have to give you access as they are on my Google Drive. Furthermore, note that for the RTL-SDR you will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). After that, simply unpack the ZIP file in one directory and start the executable on the command line with the required parameters.
-For those for which this is outside the comfort zone, the latest packages contain a file ``start.bat`` which will start AIS-catcher with a few standard arguments. 
-You can open this file with Notepad and set alternative parameters (as per below).
+A Windows binary version of **v0.37** is available (see below table) with and without SDRPlay support (which requires a running SDRPlay API). First time RTL-SDR users on Windows will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
 
 Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
@@ -45,7 +43,7 @@ If you are looking for a Windows-version for the latest development version, it 
 - Signal level and applied frequency correction (in ppm) reported
 - ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as as a circle with the diameter linked to the power of the received signal. E.g. with a few lines of Python and Javascript:
 <p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/8292e21a0f7212e691a06781993b208237cc3878/media/power-location-plot.png" width=60% height=60%>
+<img src="https://github.com/jvde-github/AIS-catcher/blob/f3bd829889fb39dc02c59c41c8b650bf5a1d85d7/media/power-location-plot3.png" width=60% height=60%>
 </p>
 
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
