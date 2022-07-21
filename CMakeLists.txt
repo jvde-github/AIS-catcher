@@ -471,7 +471,7 @@ set(CPP
 set(HEADER
 	Application/AIS-catcher.h
 	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Signals.h Device/SoapySDR.h
-	Device/AIRSPY.h Device/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h Device/SpyServer.h
+	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h Device/SpyServer.h
 	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h Library/Utilities.h Library/TCP.h)
 
 set(APP_INCLUDES . ./Library ./DSP ./Application ./IO)
