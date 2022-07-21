@@ -44,7 +44,7 @@
     <ClInclude Include="..\Device\AIRSPY.h" />
     <ClInclude Include="..\Device\AIRSPYHF.h" />
     <ClInclude Include="..\Device\Device.h" />
-    <ClInclude Include="..\Device\FIFO.h" />
+    <ClInclude Include="..\Library\FIFO.h" />
     <ClInclude Include="..\Device\FileRAW.h" />
     <ClInclude Include="..\Device\FileWAV.h" />
     <ClInclude Include="..\Device\HACKRF.h" />
