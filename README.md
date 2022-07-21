@@ -368,13 +368,13 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 ### Some stations mentioning the use of AIS-catcher
 
 A list of some stations mentioning using AIS-catcher:
-- [Naha, Okinawa - Station #1664](https://www.marinetraffic.com/en/ais/details/stations/1664)
-- [La Linea de la Concepcion - migumi - Station #3231](https://www.marinetraffic.com/en/ais/details/stations/3231),
-- [Asendorf - Station #686](https://www.marinetraffic.com/en/ais/details/stations/686)
-- [Edinburgh - Station #1588](https://www.marinetraffic.com/en/ais/details/stations/1588)
+- [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
+- [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854),
+- [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
+- [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
 - [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/),
-- [Seattle Capitol Hill - Station #623](https://www.marinetraffic.com/en/ais/details/stations/623)
-- [Oranjeplaat Arnemuiden - Station #6677](https://www.marinetraffic.com/en/ais/details/stations/6677/).
+- [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
+- [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 
 ## Build process
 
