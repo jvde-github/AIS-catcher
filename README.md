@@ -41,7 +41,7 @@ If you are looking for a Windows-version for the latest development version, it 
 
 - Renamed option ``-o`` to ``-c`` (option to select AIS channels)
 - Signal level and applied frequency correction (in ppm) reported
-- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as  a circle with the initial diameter linked to the measured strength of the received signal. E.g. with a [few lines of Python and Javascript](https://github.com/jvde-github/visual-AIS-reception) we can create a simple HTML-page recorded on this short [YouTube video](https://www.youtube.com/watch?v=fQ9C8R0XuaU):
+- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as  a circle with the initial diameter linked to the measured strength of the received signal. E.g. with a [few lines](https://github.com/jvde-github/visual-AIS-reception) of Python and JavaScript we can create a HTML-page recorded on this short [YouTube](https://www.youtube.com/watch?v=fQ9C8R0XuaU) video:
 
 
 [![name](https://github.com/jvde-github/AIS-catcher/blob/7cf8d57942f608ef017b68dc53f0f58997a6cf2a/media/youtube-signal.png)](https://www.youtube.com/watch?v=fQ9C8R0XuaU)
