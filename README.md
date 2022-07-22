@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver 
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, Airspy Mini, Airspy R2, Airspy HF+, HackRF, SDRplay (RSP1, RSP1A and RSPDX for now), SoapySDR, input from file and over ZMQ and TCP servers (RTL-TCP and SpyServer). Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles, Airspy (Mini/R2/HF+), HackRF, SDRplay (RSP1/RSP1A/RSPDX for now), SoapySDR, as well as input from file and over ZMQ and TCP servers (RTL-TCP and SpyServer). Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
@@ -41,10 +41,10 @@ If you are looking for a Windows-version for the latest development version, it 
 
 - Renamed option ``-o`` to ``-c`` (option to select AIS channels)
 - Signal level and applied frequency correction (in ppm) reported
-- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as as a circle with the diameter linked to the power of the received signal. E.g. with a few lines of Python and Javascript:
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/f3bd829889fb39dc02c59c41c8b650bf5a1d85d7/media/power-location-plot3.png" width=60% height=60%>
-</p>
+- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as  a circle with the initial diameter linked to the measured strength of the received signal. E.g. with a [few lines](https://github.com/jvde-github/visual-AIS-reception) of Python and JavaScript we can create a HTML-page recorded on this short [YouTube](https://www.youtube.com/watch?v=fQ9C8R0XuaU) video:
+
+
+[![name](https://github.com/jvde-github/AIS-catcher/blob/7cf8d57942f608ef017b68dc53f0f58997a6cf2a/media/youtube-signal.png)](https://www.youtube.com/watch?v=fQ9C8R0XuaU)
 
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
@@ -368,13 +368,13 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 ### Some stations mentioning the use of AIS-catcher
 
 A list of some stations mentioning using AIS-catcher:
-- [Naha, Okinawa - Station #1664](https://www.marinetraffic.com/en/ais/details/stations/1664)
-- [La Linea de la Concepcion - migumi - Station #3231](https://www.marinetraffic.com/en/ais/details/stations/3231),
-- [Asendorf - Station #686](https://www.marinetraffic.com/en/ais/details/stations/686)
-- [Edinburgh - Station #1588](https://www.marinetraffic.com/en/ais/details/stations/1588)
+- [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
+- [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854),
+- [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
+- [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
 - [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/),
-- [Seattle Capitol Hill - Station #623](https://www.marinetraffic.com/en/ais/details/stations/623)
-- [Oranjeplaat Arnemuiden - Station #6677](https://www.marinetraffic.com/en/ais/details/stations/6677/).
+- [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
+- [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 
 ## Build process
 
