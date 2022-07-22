@@ -41,11 +41,12 @@ If you are looking for a Windows-version for the latest development version, it 
 
 - Renamed option ``-o`` to ``-c`` (option to select AIS channels)
 - Signal level and applied frequency correction (in ppm) reported
-- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as as a circle with the diameter linked to the power of the received signal. E.g. with a few lines of Python and Javascript we created this [VIDEO](https://www.youtube.com/watch?v=fQ9C8R0XuaU).
+- ``-o 3`` shows NMEA lines and additional information (e.g. signal level) in JSON format so it can be easily processed in 3rd party software. As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as as a circle with the diameter linked to the power of the received signal. E.g. with a few lines of Python and Javascript we can create a simple HTLM page demonstrated on this YouTube video:
 
 <p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/f3bd829889fb39dc02c59c41c8b650bf5a1d85d7/media/power-location-plot3.png" width=60% height=60%>
-</p>
+<a hlink="https://www.youtube.com/watch?v=fQ9C8R0XuaU">
+<img src="https://github.com/jvde-github/AIS-catcher/blob/7cf8d57942f608ef017b68dc53f0f58997a6cf2a/media/youtube-signal.png" width=60% height=60%>
+</a></p>
 
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
