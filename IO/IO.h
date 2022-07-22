@@ -134,8 +134,11 @@ namespace IO
 					}
 				else if(level == Level::JSON_NMEA)
 				{
-					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"type\":" << data[i].msg << ",\"repeat\":"<<data[i].repeat
-					          << ",\"mmsi\":" << data[i].mmsi << ",\"power\":" << tag.level << ",\"ppm\":" << tag.ppm << ",\"NMEA\":[\"" << data[i].sentence[0] << "\"";
+					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].channel << "\""
+					          << ",\"power\":" << tag.level << ",\"ppm\":" << tag.ppm
+					          << ",\"mmsi\":" << data[i].mmsi << ",\"type\":" << data[i].msg  << ",\"repeat\":"<<data[i].repeat
+					          << ",\"NMEA\":[\"" << data[i].sentence[0] << "\"";
+
 					for(int j = 1; j < data[i].sentence.size(); j++)
 						std::cout << ",\"" << data[i].sentence[j] << "\"";
 					std::cout << "]}" << std::endl;
