@@ -43,10 +43,13 @@ If you are looking for a Windows-version for the latest development version, it 
 - Signal power (in dB) and applied frequency correction (in ppm) calculated with option ``-M D``
 - NMEA messages are timestamped with option ``-M T``. To activate both calculations use ``-M DT`` or ``-M TD``. I will do some benchmarking and this might become the default if little overhead on the RPi.
 - ``-o 3`` shows NMEA lines and additional information including signal power and timestamp (with ``-M DT``) in JSON format so it can be easily processed in 3rd party software. 
-As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as  a circle with the initial diameter linked to the measured strength of the received signal. E.g. with a [few lines](https://github.com/jvde-github/visual-AIS-reception) of Python and JavaScript we can create a HTML-page recorded on this short [YouTube](https://www.youtube.com/watch?v=fQ9C8R0XuaU) video:
+As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as a circle (Channel A/B corresponds to Blue/Red) and the radius is proportional to the measured power of the received signal ([code](https://github.com/jvde-github/visual-AIS-reception) and [video](https://www.youtube.com/watch?v=fQ9C8R0XuaU)):
 
+<p align="center">
+<img src="https://github.com/jvde-github/AIS-catcher/blob/0c722323233834cc3af333068bf127897b11768b/media/Signal%20Strength.png" width=60% height=60%>
+</p>
 
-[![name](https://github.com/jvde-github/AIS-catcher/blob/7cf8d57942f608ef017b68dc53f0f58997a6cf2a/media/youtube-signal.png)](https://www.youtube.com/watch?v=fQ9C8R0XuaU)
+Here 
 
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
@@ -70,7 +73,7 @@ argument to use channel A and B  in the NMEA line with the command ```-o CD AB``
 If you are travelling and looking for a portable system that can be used on an Android phone, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
 
 <p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/152e5460fd938fb701d988f01deccdfa6192443d/media/Screenshot_BoatBeacon%5B1%5D.jpg" width=40% height=40%>
+<img src="https://github.com/jvde-github/AIS-catcher/blob/152e5460fd938fb701d988f01deccdfa6192443d/media/Screenshot_BoatBeacon%5B1%5D.jpg" width=60% height=60%>
 </p>
 
 For now I have decided not to share AIS-catcher-for-Android via the Play Store as there is too much overhead for such a simple program. You can download the APK from the mentioned project page.
