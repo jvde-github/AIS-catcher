@@ -61,7 +61,7 @@ struct Drivers
         Device::WAVFile WAV;
         Device::RTLSDR RTLSDR;
         Device::RTLTCP RTLTCP;
-		Device::SpyServer SpyServer;
+	Device::SpyServer SpyServer;
         Device::AIRSPYHF AIRSPYHF;
         Device::AIRSPY AIRSPY;
         Device::SDRPLAY SDRPLAY;
@@ -88,9 +88,11 @@ void Usage()
 	std::cerr << "\t[-p xxx set frequency correction for device in PPM (default: zero)]" << std::endl;
 	std::cerr << "\t[-a xxx set tuner bandwidth in Hz (default: off)]" << std::endl;
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
+	std::cerr << "\t[-M xxx set additional data generation: T = NMEA timestamp, D = decoder related (signal power, ppmn) (default: none)]" << std::endl;
 	std::cerr << "\t[-T xx auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
-	std::cerr << "\t[-q suppress NMEA messages to screen (default: false)]" << std::endl;
-	std::cerr << "\t[-n show NMEA messages on screen without detail]" << std::endl;
+	std::cerr << "\t[-0 set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON  (default: 2)]" << std::endl;
+	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;
+	std::cerr << "\t[-q suppress NMEA messages to screen (-o 0)]" << std::endl;
 	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]" << std::endl;
@@ -219,6 +221,19 @@ std::shared_ptr<AIS::Model> createModel(int m)
 
 // -------------------------------
 
+void parseTags(int &mode, std::string &s)
+{
+	for(char c : s)
+	{
+		switch(toupper(c))
+		{
+		case 'T': mode |= 2; break;
+		case 'D': mode |= 1; break;
+	 	default: throw "Error: illegal tag defined on command line [D/T]";
+		}
+	}
+}
+
 void parseSettings(Setting& s, char* argv[], int ptr, int argc)
 {
 	ptr++;
@@ -313,9 +328,7 @@ int main(int argc, char* argv[])
 				break;
 			case 'M':
 				Assert(count <= 1, param, "Requires zero or one parameter [DT].");
-				TAG_mode = 0;
-				if(arg1.find('T') != std::string::npos) TAG_mode |= 2;
-				if(arg1.find('D') != std::string::npos) TAG_mode |= 1;
+				parseTags(TAG_mode, arg1);
 				break;
 			case 'c':
 				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
