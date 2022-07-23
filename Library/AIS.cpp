@@ -143,7 +143,8 @@ namespace AIS
 			nBits = len - 16;
 			nBytes = (nBits + 7) / 8;
 
-			tag.level = 10.0f * log10(tag.level);
+			// calculate the power of the signal in dB, if requested
+			if(tag.mode |= 1) tag.level = 10.0f * log10(tag.level);
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			sendNMEA(tag);
@@ -229,14 +230,15 @@ namespace AIS
 
 				setBit(position++,Bit);
 
-				level += tag.sample_lvl;
+				// add power of signal of bit length
+				if(tag.mode |= 1) level += tag.sample_lvl;
 
 				if (Bit == 1)
 				{
 					if (one_seq_count == 5)
 					{
-						tag.level = level/position;
-						if( processData(position - 7, tag))
+						if(tag.mode |= 1) tag.level = level/position;
+						if(processData(position - 7, tag))
 							NextState(State::FOUNDMESSAGE, 0);
 						NextState(State::TRAINING, 0);
 					}
