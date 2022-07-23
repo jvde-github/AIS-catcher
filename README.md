@@ -41,7 +41,7 @@ If you are looking for a Windows-version for the latest development version, it 
 
 - Renamed option ``-o`` to ``-c`` (option to select AIS channels)
 - Signal power (in dB) and applied frequency correction (in ppm) calculated with option ``-M D``
-- NMEA messages are timestamped with option ``-M T``. To activate both calculations use ``-M DT`` or ``-M TD``. I will do some benchmarking at some time and in future this might become the default if little overhead.
+- NMEA messages are timestamped with option ``-M T``. To activate both calculations use ``-M DT`` or ``-M TD``. I will do some benchmarking and this might become the default if little overhead on the RPi.
 - ``-o 3`` shows NMEA lines and additional information including signal power and timestamp (with ``-M DT``) in JSON format so it can be easily processed in 3rd party software. 
 As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as  a circle with the initial diameter linked to the measured strength of the received signal. E.g. with a [few lines](https://github.com/jvde-github/visual-AIS-reception) of Python and JavaScript we can create a HTML-page recorded on this short [YouTube](https://www.youtube.com/watch?v=fQ9C8R0XuaU) video:
 
