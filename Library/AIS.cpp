@@ -129,6 +129,7 @@ namespace AIS
 		nmea.data = DataFCS.data();
 		nmea.length = nBits;
 
+		if(tag.mode & 2) std::time(&tag.timestamp);
 		//if(nmea.msg >= 0 and nmea.msg <= 27)
 		Send(&nmea, 1, tag);
 

@@ -86,7 +86,7 @@ namespace DSP
 			for (int i = 0; i < len; i++)
 			{
 				sample[lastSymbol] = data[i];
-				level += std::norm(data[i]);
+				if(tag.mode & 1) level += std::norm(data[i]);
 
 				if (++lastSymbol == out.size())
 				{
