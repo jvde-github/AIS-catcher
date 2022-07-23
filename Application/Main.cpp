@@ -316,7 +316,6 @@ int main(int argc, char* argv[])
 				TAG_mode = 0;
 				if(arg1.find('T') != std::string::npos) TAG_mode |= 2;
 				if(arg1.find('D') != std::string::npos) TAG_mode |= 1;
-				std::cout << "TAG_mode " << TAG_mode << std::endl;
 				break;
 			case 'c':
 				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
