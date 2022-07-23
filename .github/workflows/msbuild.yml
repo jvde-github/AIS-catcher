@@ -1,11 +1,11 @@
-name: MSBuild 
+name: MSBuild
 
 on:
   push:
-    branches: [ "main" ] 
+    branches: [ "main" ]
     tags:
       - '*'
-      
+
   pull_request:
     branches: [ "main" ]
 
@@ -14,21 +14,21 @@ permissions:
 
 jobs:
   buildfull:
-    runs-on: windows-2022 
+    runs-on: windows-2022
 
     strategy:
       matrix:
         platform: [x86, x64]
 
     steps:
-  
+
     - uses: actions/checkout@v3
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
       with:
         msbuild-architecture: ${{matrix.platform}}
- 
+
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
@@ -43,7 +43,7 @@ jobs:
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\*.h include
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
-    
+
     - name: Create start.bat
       run: |
         cd output
