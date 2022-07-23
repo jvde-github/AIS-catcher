@@ -252,6 +252,7 @@ int main(int argc, char* argv[])
 {
 	int sample_rate = 0, input_device = 0,  bandwidth = 0, ppm = 0;
 	int timeout = 0;
+	int TAG_mode = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false,  timer_on = false;
@@ -309,6 +310,13 @@ int main(int argc, char* argv[])
 			case 'm':
 				Assert(count == 1, param, "Requires one parameter [model number].");
 				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 4)));
+				break;
+			case 'M':
+				Assert(count <= 1, param, "Requires zero or one parameter [DT].");
+				TAG_mode = 0;
+				if(arg1.find('T') != std::string::npos) TAG_mode |= 2;
+				if(arg1.find('D') != std::string::npos) TAG_mode |= 1;
+				std::cout << "TAG_mode " << TAG_mode << std::endl;
 				break;
 			case 'c':
 				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
@@ -535,8 +543,13 @@ int main(int argc, char* argv[])
 		}
 		if (device == 0) throw "Error: cannot set up device";
 
+		// Derive TAG_mode which is a summary of the additional parameters
+		// that will be calculated through the chain.
+
+		tag.mode = TAG_mode;
 		// ----------------------
 		// Open and set up device
+
 		device->setTag(tag);
 		device->Open(handle);
 
