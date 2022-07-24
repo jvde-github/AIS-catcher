@@ -42,13 +42,13 @@ namespace AIS
 
 		Device::Device* device;
 		Util::Timer<RAW> timer;
-		Util::PassThrough<NMEA> output;
+		Util::PassThrough<Message> output;
 
 	public:
 
 		virtual void buildModel(char, char, int, bool, Device::Device* d) { device = d;  }
 
-		StreamOut<NMEA>& Output() { return output; }
+		StreamOut<Message>& Output() { return output; }
 
 		void setName(std::string s) { name = s; }
 		std::string getName() { return name; }

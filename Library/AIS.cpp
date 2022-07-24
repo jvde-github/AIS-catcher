@@ -16,6 +16,7 @@
 */
 
 #include "AIS.h"
+#include "Property.h"
 
 // Sources:
 //	https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.1371-0-199811-S!!PDF-E.pdf
@@ -30,25 +31,11 @@ namespace AIS
 {
 	Decoder::Decoder()
 	{
-		DataFCS.resize((MaxBits + 7) / 8, 0);
 	}
 
 	char Decoder::NMEAchar(int i)
 	{
 		return i < 40 ? (char)(i + 48) : (char)(i + 56);
-	}
-
-	void Decoder::setBit(int i, bool b)
-	{
-		if (b)
-			DataFCS[i >> 3] |= (1 << (i & 7));
-		else
-			DataFCS[i >> 3] &= ~(1 << (i & 7));
-	}
-
-	bool Decoder::getBit(int i)
-	{
-		return DataFCS[i >> 3] & (1 << (i & 7));
 	}
 
 	int Decoder::NMEAchecksum(const std::string& s)
@@ -66,9 +53,9 @@ namespace AIS
 
 		switch (s)
 		{
-		case State::TRAINING: DecoderMessage.Send(DecoderMessages::StartTraining); break;
-		case State::STARTFLAG: DecoderMessage.Send(DecoderMessages::StopTraining); break;
-		case State::FOUNDMESSAGE: DecoderMessage.Send(DecoderMessages::Reset); break;
+		case State::TRAINING: DecoderMessage.Send(DecoderSignals::StartTraining); break;
+		case State::STARTFLAG: DecoderMessage.Send(DecoderSignals::StopTraining); break;
+		case State::FOUNDMESSAGE: DecoderMessage.Send(DecoderSignals::Reset); break;
 		default: break;
 		}
 	}
@@ -79,30 +66,17 @@ namespace AIS
 		uint16_t CRC = 0xFFFF;
 
 		for (int i = 0; i < len; i++)
-			CRC = ((uint16_t)getBit(i) ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
+			CRC = ((uint16_t)msg.getBit(i) ^ CRC) & 1 ? (CRC >> 1) ^ poly : CRC >> 1;
 
 		return CRC == checksum;
-	}
-
-	char Decoder::getLetter(int pos)
-	{
-		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
-
-		// zero padding
-		uint8_t b0 = x < nBytes ? DataFCS[x] : 0;
-		uint8_t b1 = x + 1 < nBytes ? DataFCS[(int)(x + 1)] : 0;
-		uint16_t w = (b0 << 8) | b1;
-
-		const int mask = (1 << 6) - 1;
-		return (w >> (16 - 6 - y)) & mask;
 	}
 
 	void Decoder::sendNMEA(TAG& tag)
 	{
 		std::string sentence;
 		const std::string comma = ",";
-		NMEA nmea;
 
+		msg.sentence.resize(0);
 		int nAISletters = (nBits + 6 - 1) / 6;
 		int nSentences = (nAISletters + 56 - 1) / 56;
 
@@ -112,26 +86,34 @@ namespace AIS
 			sentence += (nSentences > 1 ? std::to_string(MessageID) : "") + comma + channel + comma;
 
 			for (int i = 0; l < nAISletters && i < 56; i++, l++)
-				sentence += NMEAchar(getLetter(l));
+				sentence += NMEAchar(msg.getLetter(l, nBytes));
 
 			sentence += comma + std::to_string((nSentences > 1 && s == nSentences - 1) ? nAISletters * 6 - nBits : 0);
 
 			char hex[3]; sprintf(hex, "%02X", NMEAchecksum(sentence));
 			sentence += std::string("*") + hex;
 
-			nmea.sentence.push_back("!" + sentence);
+			msg.sentence.push_back("!" + sentence);
 		}
 
-		nmea.channel = channel;
-		nmea.msg = type();
-		nmea.repeat = repeat();
-		nmea.mmsi = mmsi();
-		nmea.data = DataFCS.data();
-		nmea.length = nBits;
+		msg.channel = channel;
+		msg.length = nBits;
 
-		if(tag.mode & 2) std::time(&tag.timestamp);
-		//if(nmea.msg >= 0 and nmea.msg <= 27)
-		Send(&nmea, 1, tag);
+		if (tag.mode & 2) std::time(&tag.timestamp);
+		Send(&msg, 1, tag);
+
+		if (msg.type() == 0)
+		{
+			std::cerr << "type     : " << msg.getUint(0, 6) << std::endl;
+			std::cerr << "repeat   : " << msg.getUint(6, 2) << std::endl;
+			std::cerr << "mmsi     : " << msg.getUint(8, 30) << std::endl;
+			std::cerr << "lon      : " << msg.getInt(61, 28) / 600000.0f << std::endl;
+			std::cerr << "lat      : " << msg.getInt(89, 27) / 600000.0f << std::endl;
+
+			//std::cerr << "IMO      : " << msg.getUint(40, 30) << std::endl;
+			//std::cerr << "Name     : " << msg.getText(112, 120) << std::endl;
+
+		}
 
 		MessageID = (MessageID + 1) % 10;
 	}
@@ -154,11 +136,11 @@ namespace AIS
 		return false;
 	}
 
-	void Decoder::Message(const DecoderMessages& in)
+	void Decoder::Signal(const DecoderSignals& in)
 	{
 		switch (in)
 		{
-		case DecoderMessages::Reset: NextState(State::TRAINING, 0); break;
+		case DecoderSignals::Reset: NextState(State::TRAINING, 0); break;
 		default: break;
 		}
 	}
@@ -167,20 +149,20 @@ namespace AIS
 	bool Decoder::canStop(int len)
 	{
 		const int END = 24;
-		int msg = type();
+		int t = msg.type();
 
 		switch (len)
 		{
-		case 8: return msg > 27 || msg == 0;
-		case 38: return mmsi() > 999999999;
+		case 8: return t > 27 || t == 0;
+		case 38: return msg.mmsi() > 999999999;
 
-		case 72 + END: return msg == 10;
-		case 144 + END: return msg == 16;
-		case 160 + END: return msg == 15 || msg == 20 || msg == 23;
-		case 168 + END: return msg == 1 || msg == 2 || msg == 3 || msg == 4 || msg == 7 || msg == 9 || msg == 11  || msg == 18 || msg == 22 || msg == 24 || msg == 25 || msg == 27;
-		case 312 + END: return msg == 19;
-		case 361 + END: return msg == 21;
-		case 424 + END: return msg == 5;
+		case 72 + END: return t == 10;
+		case 144 + END: return t == 16;
+		case 160 + END: return t == 15 || t == 20 || t == 23;
+		case 168 + END: return t == 1 || t == 2 || t == 3 || t == 4 || t == 7 || t == 9 || t == 11  || t == 18 || t == 22 || t == 24 || t == 25 || t == 27;
+		case 312 + END: return t == 19;
+		case 361 + END: return t == 21;
+		case 424 + END: return t == 5;
 		}
 		return false;
 	}
@@ -228,7 +210,7 @@ namespace AIS
 				break;
 			case State::DATAFCS:
 
-				setBit(position++,Bit);
+				msg.setBit(position++,Bit);
 
 				// add power of signal of bit length
 				if(tag.mode |= 1) level += tag.sample_lvl;

@@ -47,12 +47,12 @@ namespace DSP
 		}
 	}
 
-	void SimplePLL::Message(const DecoderMessages& in)
+	void SimplePLL::Signal(const DecoderSignals& in)
 	{
 		switch (in)
 		{
-		case DecoderMessages::StartTraining: FastPLL = true; break;
-		case DecoderMessages::StopTraining: FastPLL = false; break;
+		case DecoderSignals::StartTraining: FastPLL = true; break;
+		case DecoderSignals::StopTraining: FastPLL = false; break;
 		default: break;
 		}
 	}

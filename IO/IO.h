@@ -35,6 +35,7 @@
 #endif
 
 #include "Stream.h"
+#include "AIS.h"
 
 namespace IO
 {
@@ -107,12 +108,10 @@ namespace IO
 	};
 
 
-	class SinkScreen : public StreamIn<NMEA>
+	class SinkScreen : public StreamIn<AIS::Message>
 	{
-	public:
-		enum class Level { NONE, SPARSE, FULL, JSON_NMEA };
 	private:
-		Level level;
+		OutputLevel level;
 
 		void printTime(std::time_t &t)
 		{
@@ -126,22 +125,22 @@ namespace IO
 			          << std::setw(2) << lt->tm_sec;
 		}
 	public:
-		void setDetail(Level l) { level = l; }
+		void setDetail(OutputLevel l) { level = l; }
 
-		void Receive(const NMEA* data, int len, TAG& tag)
+		void Receive(const AIS::Message* data, int len, TAG& tag)
 		{
-			if(level == Level::NONE) return;
+			if(level == OutputLevel::NONE) return;
 
 			for (int i = 0; i < len; i++)
 			{
-				if(level == Level::FULL || level == Level::SPARSE)
+				if(level == OutputLevel::FULL || level == OutputLevel::SPARSE)
 					for (auto s : data[i].sentence)
 					{
 						std::cout << s;
 
-						if (level == Level::FULL)
+						if (level == OutputLevel::FULL)
 						{
-							std::cout << " ( MSG: " << data[i].msg << ", REPEAT: " << data[i].repeat << ", MMSI: " << data[i].mmsi;
+							std::cout << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
 							if(tag.mode & 1) std::cout << ", power: " << tag.level << ", ppm: " << tag.ppm;
 							if(tag.mode & 2) 
 							{
@@ -152,7 +151,7 @@ namespace IO
 						}
 						std::cout << std::endl;
 					}
-				else if(level == Level::JSON_NMEA)
+				else if(level == OutputLevel::JSON_NMEA)
 				{
 					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].channel << "\"";
 					if(tag.mode & 2)
@@ -162,7 +161,7 @@ namespace IO
 						std::cout << "\"";
 					}
 					if(tag.mode & 1) std::cout << ",\"power\":" << tag.level << ",\"ppm\":" << tag.ppm;
-					std::cout << ",\"mmsi\":" << data[i].mmsi << ",\"type\":" << data[i].msg  << ",\"repeat\":"<<data[i].repeat
+					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()  << ",\"repeat\":"<<data[i].repeat()
 					          << ",\"NMEA\":[\"" << data[i].sentence[0] << "\"";
 
 					for(int j = 1; j < data[i].sentence.size(); j++)
@@ -187,7 +186,7 @@ namespace IO
 		int ID() { return sourceID; }
 	};
 
-	class UDP : public StreamIn<NMEA>
+	class UDP : public StreamIn<AIS::Message>
 	{
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
@@ -196,7 +195,7 @@ namespace IO
 		~UDP();
 		UDP();
 
-		void Receive(const NMEA* data, int len, TAG& tag);
+		void Receive(const AIS::Message* data, int len, TAG& tag);
 		void openConnection(const std::string& host, const std::string& port);
 		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
         void closeConnection();

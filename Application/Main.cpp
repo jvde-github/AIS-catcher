@@ -27,6 +27,8 @@
 #include "Common.h"
 #include "Model.h"
 #include "IO.h"
+#include "AIS.h"
+#include "AISMessageDecoder.h"
 
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
@@ -57,17 +59,17 @@ void consoleHandler(int signal)
 
 struct Drivers
 {
-        Device::RAWFile RAW;
-        Device::WAVFile WAV;
-        Device::RTLSDR RTLSDR;
-        Device::RTLTCP RTLTCP;
+	Device::RAWFile RAW;
+	Device::WAVFile WAV;
+	Device::RTLSDR RTLSDR;
+	Device::RTLTCP RTLTCP;
 	Device::SpyServer SpyServer;
-        Device::AIRSPYHF AIRSPYHF;
-        Device::AIRSPY AIRSPY;
-        Device::SDRPLAY SDRPLAY;
-        Device::HACKRF HACKRF;
-        Device::SOAPYSDR SOAPYSDR;
-        Device::ZMQ ZMQ;
+	Device::AIRSPYHF AIRSPYHF;
+	Device::AIRSPY AIRSPY;
+	Device::SDRPLAY SDRPLAY;
+	Device::HACKRF HACKRF;
+	Device::SOAPYSDR SOAPYSDR;
+	Device::ZMQ ZMQ;
 };
 
 void printVersion()
@@ -271,9 +273,9 @@ int main(int argc, char* argv[])
 
 	bool list_devices = false, list_support = false, list_options = false;
 	bool verbose = false,  timer_on = false;
-	IO::SinkScreen::Level NMEA_to_screen = IO::SinkScreen::Level::FULL;
+	OutputLevel NMEA_to_screen = OutputLevel::FULL;
 	int verboseUpdateTime = 3;
-	AIS::Mode mode = AIS::Mode::AB;
+	AIS::Mode ChannelMode = AIS::Mode::AB;
 	std::string NMEAchannels = "AB";
 	TAG tag;
 
@@ -290,6 +292,8 @@ int main(int argc, char* argv[])
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	IO::SinkScreen nmea_screen;
+	AIS::AISMessageDecoder ais_decoder;
+	AIS::JSONscreen JSON_screen;
 
 	try
 	{
@@ -334,12 +338,12 @@ int main(int argc, char* argv[])
 				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
 				if(arg1 == "AB")
 				{
-					mode = AIS::Mode::AB;
+					ChannelMode = AIS::Mode::AB;
 					NMEAchannels = "AB";
 				}
 				else if(arg1 == "CD")
 				{
-					mode = AIS::Mode::CD;
+					ChannelMode = AIS::Mode::CD;
 					NMEAchannels = "CD";
 				}
 				else throw "Error: parameter needs to be AB or CD (-c)";
@@ -360,21 +364,23 @@ int main(int argc, char* argv[])
 				break;
 			case 'q':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				NMEA_to_screen = IO::SinkScreen::Level::NONE;
+				NMEA_to_screen = OutputLevel::NONE;
 				break;
 			case 'n':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				NMEA_to_screen = IO::SinkScreen::Level::SPARSE;
+				NMEA_to_screen = OutputLevel::SPARSE;
 				break;
 			case 'o':
 				Assert(count == 1, param, "Requires one parameter.");
 				{
-					switch(Util::Parse::Integer(arg1, 0, 3))
+					switch(Util::Parse::Integer(arg1, 0, 5))
 					{
-					case 0: NMEA_to_screen = IO::SinkScreen::Level::NONE; break;
-					case 1: NMEA_to_screen = IO::SinkScreen::Level::SPARSE; break;
-					case 2: NMEA_to_screen = IO::SinkScreen::Level::FULL; break;
-					case 3: NMEA_to_screen = IO::SinkScreen::Level::JSON_NMEA; break;
+					case 0: NMEA_to_screen = OutputLevel::NONE; break;
+					case 1: NMEA_to_screen = OutputLevel::SPARSE; break;
+					case 2: NMEA_to_screen = OutputLevel::FULL; break;
+					case 3: NMEA_to_screen = OutputLevel::JSON_NMEA; break;
+					case 4: NMEA_to_screen = OutputLevel::JSON_SPARSE; break;
+					case 5: NMEA_to_screen = OutputLevel::JSON_FULL; break;
 					default: throw "Error: unknown option 'o'";
 					}
 				}
@@ -504,7 +510,7 @@ int main(int argc, char* argv[])
 			ptr += count + 1;
 		}
 
-		if (verbose || list_devices || list_support || NMEA_to_screen != IO::SinkScreen::Level::NONE || list_options) printVersion();
+		if (verbose || list_devices || list_support || NMEA_to_screen != OutputLevel::NONE || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
@@ -568,7 +574,7 @@ int main(int argc, char* argv[])
 		// override sample rate if defined by user
 		if (sample_rate) device->setSampleRate(sample_rate);
 
-		if(mode == AIS::Mode::AB)
+		if(ChannelMode == AIS::Mode::AB)
 			device->setFrequency((int)(162000000));
 		else
 			device->setFrequency((int)(156800000));
@@ -586,7 +592,7 @@ int main(int argc, char* argv[])
 
 		if (!liveModels.size()) liveModels.push_back(createModel(2));
 
-		std::vector<IO::StreamCounter<NMEA>> statistics(verbose ? liveModels.size() : 0);
+		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? liveModels.size() : 0);
 
 		// Attach output
 		for (int i = 0; i < liveModels.size(); i++)
@@ -604,10 +610,15 @@ int main(int argc, char* argv[])
 			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
 		}
 
-		if (NMEA_to_screen != IO::SinkScreen::Level::NONE)
+		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL)
 		{
 			liveModels[0]->Output() >> nmea_screen;
 			nmea_screen.setDetail(NMEA_to_screen);
+		}
+		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE)
+		{
+			liveModels[0]->Output() >> ais_decoder;
+			ais_decoder >> JSON_screen;
 		}
 
 		if(verbose)
