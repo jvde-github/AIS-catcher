@@ -31,7 +31,7 @@
 
 namespace DSP
 {
-	class SimplePLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public MessageIn<DecoderMessages>
+	class SimplePLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public SignalIn<DecoderSignals>
 	{
 		BIT prev = 0;
 
@@ -43,7 +43,7 @@ namespace DSP
 		virtual void Receive(const FLOAT32* data, int len, TAG& tag);
 
 		// MessageIn
-		virtual void Message(const DecoderMessages& in);
+		virtual void Signal(const DecoderSignals& in);
 	};
 
 	template <typename T>

@@ -461,16 +461,16 @@ endif()
 
 set(CPP
 	Application/Main.cpp
-	Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp
+	Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/AISMessageDecoder.cpp
 	Device/FileRAW.cpp Device/HACKRF.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp
-	Library/Utilities.cpp Library/TCP.cpp
+	Library/Utilities.cpp Library/TCP.cpp Library/Property.cpp
 	Device/AIRSPY.cpp
 	DSP/DSP.cpp
 	IO/IO.cpp)
 
 set(HEADER
 	Application/AIS-catcher.h
-	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Signals.h Device/SoapySDR.h
+	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Signals.h Device/SoapySDR.h Library/AISMessageDecoder.h Library/Property.h
 	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h Device/SpyServer.h
 	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h Library/Utilities.h Library/TCP.h)
 

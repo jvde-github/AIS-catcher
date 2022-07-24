@@ -35,7 +35,9 @@
     <ClCompile Include="..\DSP\DSP.cpp" />
     <ClCompile Include="..\DSP\Model.cpp" />
     <ClCompile Include="..\IO\IO.cpp" />
+    <ClCompile Include="..\Library\Property.cpp" />
     <ClCompile Include="..\Library\AIS.cpp" />
+    <ClCompile Include="..\Library\AISMessageDecoder.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
   </ItemGroup>
@@ -45,6 +47,8 @@
     <ClInclude Include="..\Device\AIRSPYHF.h" />
     <ClInclude Include="..\Device\Device.h" />
     <ClInclude Include="..\Library\FIFO.h" />
+    <ClInclude Include="..\Library\AISMessageDecoder.h" />
+    <ClInclude Include="..\Library\Property.h" />
     <ClInclude Include="..\Device\FileRAW.h" />
     <ClInclude Include="..\Device\FileWAV.h" />
     <ClInclude Include="..\Device\HACKRF.h" />

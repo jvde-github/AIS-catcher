@@ -20,30 +20,30 @@
 #include <iostream>
 #include <vector>
 
-enum class DecoderMessages { StopTraining, StartTraining, Reset };
-enum class SystemMessage { Stop };
+enum class DecoderSignals { StopTraining, StartTraining, Reset };
+enum class SystemSignal { Stop };
 
 template<typename T>
-class MessageIn
+class SignalIn
 {
 public:
 
-	virtual void Message(const T& in) {};
+	virtual void Signal(const T& in) {};
 };
 
 template <typename T>
-class MessageHub
+class SignalHub
 {
 
 public:
 
-	std::vector<MessageIn<T> *> destinations;
+	std::vector<SignalIn<T> *> destinations;
 	void Send(const T& m)
 	{
 		for (auto d : destinations)
-			d->Message(m);
+			d->Signal(m);
 	}
-	void Connect(MessageIn<T> &s)
+	void Connect(SignalIn<T> &s)
 	{
 		destinations.push_back(&s);
 	}
