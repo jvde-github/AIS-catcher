@@ -64,7 +64,7 @@ namespace AIS
             POS(msg, PROPERTY_LON, 61, 28);
             POS(msg, PROPERTY_LAT, 89, 27);
             U1(msg, PROPERTY_COURSE, 116, 12);
-            U(msg, PROPERTY_HEADING, 128, 9, 511);
+            U(msg, PROPERTY_HEADING, 128, 9);
             U(msg, PROPERTY_SECOND, 137, 6);
             E(msg, PROPERTY_MANEUVER, 143, 2);
             X(msg, PROPERTY_SPARE, 145, 3);
@@ -209,8 +209,9 @@ namespace AIS
             U(msg, PROPERTY_TYPE, 0, 6);
             U(msg, PROPERTY_REPEAT, 6, 2);
             U(msg, PROPERTY_MMSI, 8, 30);
-            U(msg, PROPERTY_PARTNO, 38, 2);
-            T(msg, PROPERTY_SHIPNAME, 40, 120);
+            //U(msg, PROPERTY_PARTNO, 38, 2);
+            //T(msg, PROPERTY_SHIPNAME, 40, 120);
+/*
             X(msg, PROPERTY_0, 160, 8);
             E(msg, PROPERTY_SHIPTYPE, 40, 8);
             T(msg, PROPERTY_VENDORID, 48, 18);
@@ -223,6 +224,7 @@ namespace AIS
             U(msg, PROPERTY_TO_STARBOARD, 156, 6);
             U(msg, PROPERTY_MOTHERSHIP_MMSI, 132, 30);
             X(msg, PROPERTY_0, 162, 6);
+*/
             break;
         default:
             U(msg, PROPERTY_TYPE, 0, 6);
