@@ -48,13 +48,10 @@ As an example, we can easily build applications that take the JSON input and plo
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/blob/0c722323233834cc3af333068bf127897b11768b/media/Signal%20Strength.png" width=60% height=60%>
 </p>
-
-Here 
-
+- More extensive JSON output is under development with the switch ``-o 4``
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
 - ...
-
 
 ### Version 0.37
 
