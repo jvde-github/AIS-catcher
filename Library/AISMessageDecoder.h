@@ -43,11 +43,15 @@ namespace AIS
         {
             int u = msg.getInt(start, len);
 
-            if (u == -128) Submit(p, "n/a");
-            if (u == -127) Submit(p, "fastleft");
-            if (u == 127) Submit(p, "fastright");
-                
-            Submit(p,u * u / 4.733f / 4.733f);
+            if (u == -128) Submit(p, std::string("nan") );
+            else if (u == -127) Submit(p, std::string("fastleft") );
+            else if (u == 127) Submit(p, std::string("fastright") );
+            else
+            {
+		float rot = u / 4.733f;
+		rot = (u<0) ? -rot * rot : rot * rot;
+            	Submit(p,(int)rot);
+            }
         }
 
         void U1(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
@@ -94,7 +98,7 @@ namespace AIS
         }
     public:
 
-        virtual void Set(int p, int v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + "\"" + std::to_string(v) + "\""; }
+        virtual void Set(int p, int v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
         virtual void Set(int p, unsigned v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
         virtual void Set(int p, float v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
         virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
