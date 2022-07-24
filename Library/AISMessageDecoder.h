@@ -48,7 +48,7 @@ namespace AIS
             else if (u == 127) Submit(p, std::string("fastright") );
             else
             {
-		float rot = u / 4.733f;
+		double rot = u / 4.733;
 		rot = (u<0) ? -rot * rot : rot * rot;
             	Submit(p,(int)rot);
             }
@@ -58,13 +58,13 @@ namespace AIS
         {
             unsigned u = msg.getUint(start, len);
             if (u != undefined)
-                Submit(p, u / 10.0f);
+                Submit(p, (float) (u / 10.0) );
         }
         void POS(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
         {
             int u = msg.getInt(start, len);
             if (u != undefined)
-                Submit(p, u / 600000.0f);
+                Submit(p, (float)(u / 600000.0) );
         }
         void B(const AIS::Message& msg, int p, int start, int len)
         {
@@ -76,7 +76,9 @@ namespace AIS
         }
         void T(const AIS::Message& msg, int p, int start, int len)
         {
-            Submit(p, msg.getText(start, len));
+            std::string text = msg.getText(start, len);
+            while(text[text.length()-1]==' ') text.resize(text.length()-1);
+            Submit(p, text);
         }
     public:
         void Receive(const AIS::Message* data, int len, TAG& tag);
