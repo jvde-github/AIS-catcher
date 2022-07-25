@@ -141,7 +141,7 @@ namespace IO
 						if (level == OutputLevel::FULL)
 						{
 							std::cout << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-							if(tag.mode & 1) std::cout << ", powersignal: " << tag.level << ", ppm: " << tag.ppm;
+							if(tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
 							if(tag.mode & 2) 
 							{
 								std::cout << ", timestamp: ";
@@ -160,7 +160,7 @@ namespace IO
 						printTime(tag.timestamp);
 						std::cout << "\"";
 					}
-					if(tag.mode & 1) std::cout << ",\"power\":" << tag.level << ",\"ppm\":" << tag.ppm;
+					if(tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
 					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()  << ",\"repeat\":"<<data[i].repeat()
 					          << ",\"NMEA\":[\"" << data[i].sentence[0] << "\"";
 
