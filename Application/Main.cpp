@@ -92,7 +92,7 @@ void Usage()
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-M xxx set additional data generation: T = NMEA timestamp, D = decoder related (signal power, ppmn) (default: none)]" << std::endl;
 	std::cerr << "\t[-T xx auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
-	std::cerr << "\t[-0 set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON  (default: 2)]" << std::endl;
+	std::cerr << "\t[-0 set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON  (default: 2)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (-o 0)]" << std::endl;
 	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
