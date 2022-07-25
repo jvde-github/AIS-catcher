@@ -352,8 +352,8 @@ namespace AIS
             U(msg,PROPERTY_ACCURACY,38,1);
             U(msg,PROPERTY_RAIM,39,1);
             U(msg,PROPERTY_STATUS,40,4);
-            POS(msg,PROPERTY_LON,44,18,181000);
-            POS(msg,PROPERTY_LAT,62,17,91000);
+            POS1(msg,PROPERTY_LON,44,18,181000);
+            POS1(msg,PROPERTY_LAT,62,17,91000);
             U(msg,PROPERTY_SPEED,79,6);
             U(msg,PROPERTY_COURSE,85,9);
             U(msg,PROPERTY_GNSS,94,1);
