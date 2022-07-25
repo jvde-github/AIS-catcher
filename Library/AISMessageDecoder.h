@@ -33,11 +33,11 @@ namespace AIS
             if (u != undefined)
                 Submit(p, u);
         }
-        void E(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
+        void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::string *map = NULL)
         {
             unsigned u = msg.getUint(start, len);
-            if (u != undefined)
-                Submit(p, u);
+	    Submit(p,u);
+            if(map) Submit(pmap, map[u]);
         }
         void TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
@@ -155,4 +155,8 @@ namespace AIS
 		json += "]";
         }
     };
+
+    extern const std::string PROPERTY_MAP_STATUS[];
+    extern const std::string PROPERTY_MAP_EPFD[];
+    extern const std::string PROPERTY_MAP_SHIPTYPE[];
 }

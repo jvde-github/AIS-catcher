@@ -29,6 +29,8 @@
 #pragma warning(disable : 4996)
 #endif
 
+// Below is a direct translation (more or less) of https://gpsd.gitlab.io/gpsd/AIVDM.html
+
 namespace AIS
 {
 
@@ -60,9 +62,9 @@ namespace AIS
             U(msg, PROPERTY_TYPE, 0, 6);
             U(msg, PROPERTY_REPEAT, 6, 2);
             U(msg, PROPERTY_MMSI, 8, 30);
-            E(msg, PROPERTY_STATUS, 38, 4);
+            E(msg, PROPERTY_STATUS, 38, 4, PROPERTY_STATUS_TEXT, PROPERTY_MAP_STATUS);
             TURN(msg, PROPERTY_TURN, 42, 8);
-            U1(msg, PROPERTY_SPEED, 50, 10, 1023);
+            U1(msg, PROPERTY_SPEED, 50, 10);
             B(msg, PROPERTY_ACCURACY, 60, 1);
             POS(msg, PROPERTY_LON, 61, 28);
             POS(msg, PROPERTY_LAT, 89, 27);
@@ -88,7 +90,7 @@ namespace AIS
             B(msg, PROPERTY_ACCURACY, 78, 1);
             POS(msg, PROPERTY_LON, 79, 28);
             POS(msg, PROPERTY_LAT, 107, 27);
-            E(msg, PROPERTY_EPFD, 134, 4);
+            E(msg, PROPERTY_EPFD, 134, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
             X(msg, PROPERTY_SPARE, 138, 10);
             B(msg, PROPERTY_RAIM, 148, 1);
             U(msg, PROPERTY_RADIO, 149, 19);
@@ -101,12 +103,12 @@ namespace AIS
             U(msg, PROPERTY_IMO, 40, 30);
             T(msg, PROPERTY_CALLSIGN, 70, 42);
             T(msg, PROPERTY_SHIPNAME, 112, 120);
-            E(msg, PROPERTY_SHIPTYPE, 232, 8);
+            E(msg, PROPERTY_SHIPTYPE, 232, 8, PROPERTY_SHIPTYPE_TEXT, PROPERTY_MAP_SHIPTYPE);
             U(msg, PROPERTY_TO_BOW, 240, 9);
             U(msg, PROPERTY_TO_STERN, 249, 9);
             U(msg, PROPERTY_TO_PORT, 258, 6);
             U(msg, PROPERTY_TO_STARBOARD, 264, 6);
-            E(msg, PROPERTY_EPFD, 270, 4);
+            E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
             U(msg, PROPERTY_MONTH, 274, 4, 0);
             U(msg, PROPERTY_DAY, 278, 5, 0);
             U(msg, PROPERTY_HOUR, 283, 5, 0);
@@ -245,12 +247,12 @@ namespace AIS
             U(msg, PROPERTY_SECOND, 133, 6);
             U(msg, PROPERTY_REGIONAL, 139, 4);
             T(msg, PROPERTY_SHIPNAME, 143, 120);
-            U(msg, PROPERTY_SHIPTYPE, 263, 8);
+            E(msg, PROPERTY_SHIPTYPE, 263, 8, PROPERTY_SHIPTYPE_TEXT, PROPERTY_MAP_SHIPTYPE);
             U(msg, PROPERTY_TO_BOW, 271, 9);
             U(msg, PROPERTY_TO_STERN, 280, 9);
             U(msg, PROPERTY_TO_PORT, 289, 6);
             U(msg, PROPERTY_TO_STARBOARD, 295, 6);
-            E(msg, PROPERTY_EPFD, 301, 4);
+            E(msg, PROPERTY_EPFD, 301, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
             B(msg, PROPERTY_RAIM, 305, 1);
             B(msg, PROPERTY_DTE, 306, 1);
             U(msg, PROPERTY_ASSIGNED, 307, 1);
@@ -278,7 +280,7 @@ namespace AIS
             U(msg, PROPERTY_TO_STERN, 228, 9);
             U(msg, PROPERTY_TO_PORT, 237, 6);
             U(msg, PROPERTY_TO_STARBOARD, 243, 6);
-            E(msg, PROPERTY_EPFD, 249, 4);
+            E(msg, PROPERTY_EPFD, 249, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
             U(msg, PROPERTY_SECOND, 253, 6);
             B(msg, PROPERTY_OFF_POSITION, 259, 1);
             U(msg, PROPERTY_REGIONAL, 260, 8);
@@ -331,7 +333,7 @@ namespace AIS
 		    }
 		    else
 	    	{
-                E(msg, PROPERTY_SHIPTYPE, 40, 8);
+                E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, PROPERTY_MAP_SHIPTYPE);
                 T(msg, PROPERTY_VENDORID, 48, 18);
                 U(msg, PROPERTY_MODEL, 66, 4);
                 U(msg, PROPERTY_SERIAL, 70, 20);
@@ -364,4 +366,302 @@ namespace AIS
         }
         Submit(PROPERTY_LAST, std::string(""));
     }
+
+// Below is a direct translation (more or less) of https://gpsd.gitlab.io/gpsd/AIVDM.html
+
+    const std::string PROPERTY_MAP_STATUS[] = {
+        "Under way using engine",
+        "At anchor",
+        "Not under command",
+        "Restricted manoeuverability",
+        "Constrained by her draught",
+        "Moored",
+        "Aground",
+        "Engaged in Fishing",
+        "Under way sailing",
+        "Reserved for future amendment of Navigational Status for HSC",
+        "Reserved for future amendment of Navigational Status for WIG",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "AIS-SART is active",
+        "Not defined (default)"
+    };
+
+    const std::string PROPERTY_MAP_EPFD[] = {
+        "Undefined (default)",
+        "GPS",
+        "GLONASS",
+        "Combined GPS/GLONASS",
+        "Loran-C",
+        "Chayka",
+        "Integrated navigation system",
+        "Surveyed",
+        "Galileo",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused",
+    };
+    const std::string PROPERTY_MAP_SHIPTYPE[] = {
+        "Not available",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Reserved for future use",
+        "Wing in ground (WIG), all ships of this type",
+        "Wing in ground (WIG), Hazardous category A",
+        "Wing in ground (WIG), Hazardous category B",
+        "Wing in ground (WIG), Hazardous category C",
+        "Wing in ground (WIG), Hazardous category D",
+        "Wing in ground (WIG), Reserved for future use",
+        "Wing in ground (WIG), Reserved for future use",
+        "Wing in ground (WIG), Reserved for future use",
+        "Wing in ground (WIG), Reserved for future use",
+        "Wing in ground (WIG), Reserved for future use",
+        "Fishing",
+        "Towing",
+        "Towing: length exceeds 200m or breadth exceeds 25m",
+        "Dredging or underwater ops",
+        "Diving ops",
+        "Military ops",
+        "Sailing",
+        "Pleasure Craft",
+        "Reserved",
+        "Reserved",
+        "High speed craft (HSC), all ships of this type",
+        "High speed craft (HSC), Hazardous category A",
+        "High speed craft (HSC), Hazardous category B",
+        "High speed craft (HSC), Hazardous category C",
+        "High speed craft (HSC), Hazardous category D",
+        "High speed craft (HSC), Reserved for future use",
+        "High speed craft (HSC), Reserved for future use",
+        "High speed craft (HSC), Reserved for future use",
+        "High speed craft (HSC), Reserved for future use",
+        "High speed craft (HSC), No additional information",
+        "Pilot Vessel",
+        "Search and Rescue vessel",
+        "Tug",
+        "Port Tender",
+        "Anti-pollution equipment",
+        "Law Enforcement",
+        "Spare - Local Vessel",
+        "Spare - Local Vessel",
+        "Medical Transport",
+        "Noncombatant ship according to RR Resolution No. 18",
+        "Passenger, all ships of this type",
+        "Passenger, Hazardous category A",
+        "Passenger, Hazardous category B",
+        "Passenger, Hazardous category C",
+        "Passenger, Hazardous category D",
+        "Passenger, Reserved for future use",
+        "Passenger, Reserved for future use",
+        "Passenger, Reserved for future use",
+        "Passenger, Reserved for future use",
+        "Passenger, No additional information",
+        "Cargo, all ships of this type",
+        "Cargo, Hazardous category A",
+        "Cargo, Hazardous category B",
+        "Cargo, Hazardous category C",
+        "Cargo, Hazardous category D",
+        "Cargo, Reserved for future use",
+        "Cargo, Reserved for future use",
+        "Cargo, Reserved for future use",
+        "Cargo, Reserved for future use",
+        "Cargo, No additional information",
+        "Tanker, all ships of this type",
+        "Tanker, Hazardous category A",
+        "Tanker, Hazardous category B",
+        "Tanker, Hazardous category C",
+        "Tanker, Hazardous category D",
+        "Tanker, Reserved for future use",
+        "Tanker, Reserved for future use",
+        "Tanker, Reserved for future use",
+        "Tanker, Reserved for future use",
+        "Tanker, No additional information",
+        "Other Type, all ships of this type",
+        "Other Type, Hazardous category A",
+        "Other Type, Hazardous category B",
+        "Other Type, Hazardous category C",
+        "Other Type, Hazardous category D",
+        "Other Type, Reserved for future use",
+        "Other Type, Reserved for future use",
+        "Other Type, Reserved for future use",
+        "Other Type, Reserved for future use",
+        "Other Type, no additional information",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+        "Unknown"
+	};
 }
