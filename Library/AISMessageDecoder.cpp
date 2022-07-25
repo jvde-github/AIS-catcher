@@ -42,7 +42,7 @@ namespace AIS
         Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
         Submit(PROPERTY_SCALED, true);
         Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
-        Submit(PROPERTY_NMEA, msg.sentence[0]);
+        Submit(PROPERTY_NMEA, msg.sentence);
 
 	//if(msg.type() != 24) return;
 

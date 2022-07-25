@@ -33,6 +33,7 @@ public:
 	virtual void Set(int p, float v) {}
 	virtual void Set(int p, bool v) {}
 	virtual void Set(int p, const std::string& v) {}
+	virtual void Set(int p, const std::vector<std::string>& v) {}
 };
 
 class PropertyStreamOut
@@ -46,6 +47,7 @@ public:
 	void Submit(int p, bool v) { for (auto c : connections) c->Set(p, v); }
 	void Submit(int p, float v) { for (auto c : connections) c->Set(p, v); }
 	void Submit(int p, const std::string& v) { for (auto c : connections) c->Set(p, v); }
+	void Submit(int p, const std::vector<std::string>& v) { for (auto c : connections) c->Set(p, v); }
 
 	void Connect(PropertyStreamIn* s) { connections.push_back(s); }
 	bool isConnected() { return connections.size() > 0; }

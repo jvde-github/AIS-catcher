@@ -145,7 +145,14 @@ namespace AIS
             else if (p == PROPERTY_LAST)
                 std::cout << json << "}" << std::endl;
             else
-                json = json + delim() + "\"" + jsonify(PropertyDict[p]) + "\"" + ":" + "\"" + v + "\"";
+                json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
+        }
+        virtual void Set(int p, const std::vector<std::string>& v)
+        {
+		json += delim() + "\"" + PropertyDict[p] + "\":[\"" + jsonify(v[0])+"\"";
+		for(int i = 1; i < v.size(); i++)
+			json += ",\"" + jsonify(v[i]) + "\"";
+		json += "]";
         }
     };
 }
