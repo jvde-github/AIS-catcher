@@ -98,7 +98,7 @@ namespace AIS
 
             int end = start + len;
             std::string text = "";
-            text.reserve((len + 5) / 6);
+            text.reserve((len + 5) / 6 + 2); // reserrve 2 extra for special characters
 
             while (start < end)
             {
@@ -110,6 +110,7 @@ namespace AIS
 
                 if (!c) break;
                 if (!(c & 32)) c |= 64;
+
                 text += (char)c;
                 start += 6;
             }
