@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <iomanip>
+
 #include "Stream.h"
 #include "AIS.h"
 #include "Signals.h"
@@ -29,11 +31,25 @@ namespace AIS
     class Message
     {
     public:
-
+	std::time_t rxtime;
         std::vector<std::string> sentence;
         char channel;
         uint8_t data[128];
         int length;
+
+	void Stamp()
+	{
+		std::time(&rxtime);
+	}
+
+	std::string getRxTime() const
+	{
+		std::stringstream s;
+		struct tm *lt = std::gmtime(&rxtime);
+		s << std::setfill('0') << std::setw(4) << lt->tm_year + 1900 << std::setw(2) << lt->tm_mon + 1 << std::setw(2) << lt->tm_mday
+		<< std::setw(2) << lt->tm_hour << std::setw(2) << lt->tm_min << std::setw(2) << lt->tm_sec;
+		return s.str();
+	}
 
         unsigned type() const
         {

@@ -90,7 +90,7 @@ namespace DSP
 
 				if (++lastSymbol == out.size())
 				{
-					tag.sample_lvl = level/out.size();
+					if(tag.mode & 1) tag.sample_lvl = level/out.size();
 
 					for (int j = 0; j < out.size(); j++)
 					{

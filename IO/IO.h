@@ -113,17 +113,6 @@ namespace IO
 	private:
 		OutputLevel level;
 
-		void printTime(std::time_t &t)
-		{
-			struct tm *lt = std::gmtime(&t);
-			std::cout << std::setfill('0');
-			std::cout << std::setw(4) << lt->tm_year + 1900
-			          << std::setw(2) << lt->tm_mon + 1
-			          << std::setw(2) << lt->tm_mday
-			          << std::setw(2) << lt->tm_hour
-			          << std::setw(2) << lt->tm_min
-			          << std::setw(2) << lt->tm_sec;
-		}
 	public:
 		void setDetail(OutputLevel l) { level = l; }
 
@@ -144,8 +133,7 @@ namespace IO
 							if(tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
 							if(tag.mode & 2) 
 							{
-								std::cout << ", timestamp: ";
-								printTime(tag.timestamp);
+								std::cout << ", timestamp: " << data[i].getRxTime();
 							}
 							std::cout << ")";
 						}
@@ -156,12 +144,10 @@ namespace IO
 					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].channel << "\"";
 					if(tag.mode & 2)
 					{
-						std::cout << ",\"rxtime\":\"";
-						printTime(tag.timestamp);
-						std::cout << "\"";
+						std::cout << ",\"rxtime\":\"" << data[i].getRxTime() <<  "\"";
 					}
 					if(tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
-					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()  << ",\"repeat\":"<<data[i].repeat()
+					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()
 					          << ",\"NMEA\":[\"" << data[i].sentence[0] << "\"";
 
 					for(int j = 1; j < data[i].sentence.size(); j++)

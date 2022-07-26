@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <iomanip>
+
 #include "Stream.h"
 #include "Property.h"
 #include "AIS.h"
@@ -53,6 +55,26 @@ namespace AIS
             	Submit(p,(int)(rot+0.5));
             }
         }
+
+        void TIMESTAMP(const AIS::Message& msg, int p, int start, int len)
+	{
+		if(len != 40) return;
+
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(4) << msg.getUint(start,14) << "-" << std::setw(2) << msg.getUint(start+14,4) << "-" << std::setw(2) << msg.getUint(start+18,5) << "T"
+		  << std::setw(2) <<  msg.getUint(start+23,5) << ":" << std::setw(2) << msg.getUint(start+28,6) << ":" << std::setw(2) << msg.getUint(start+34,6) << "Z";
+		Submit(p, std::string(s.str())) ;
+	}
+
+        void ETA(const AIS::Message& msg, int p, int start, int len)
+	{
+		if(len != 20) return;
+
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(2) << msg.getUint(start,4) << "-" << std::setw(2) << msg.getUint(start+4,5) << "T"
+		  << std::setw(2) <<  msg.getUint(start+9,5) << ":" << std::setw(2) << msg.getUint(start+14,6) << "Z";
+		Submit(p, std::string(s.str())) ;
+	}
 
         void U1(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
