@@ -99,7 +99,7 @@ namespace AIS
 		msg.channel = channel;
 		msg.length = nBits;
 
-		if (tag.mode & 2) std::time(&tag.timestamp);
+		if (tag.mode & 2) msg.Stamp();
 		Send(&msg, 1, tag);
 
 		if (msg.type() == 0)
@@ -126,7 +126,7 @@ namespace AIS
 			nBytes = (nBits + 7) / 8;
 
 			// calculate the power of the signal in dB, if requested
-			if(tag.mode |= 1) tag.level = 10.0f * log10(tag.level);
+			if(tag.mode & 1) tag.level = 10.0f * log10(tag.level);
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			sendNMEA(tag);
@@ -213,13 +213,13 @@ namespace AIS
 				msg.setBit(position++,Bit);
 
 				// add power of signal of bit length
-				if(tag.mode |= 1) level += tag.sample_lvl;
+				if(tag.mode & 1) level += tag.sample_lvl;
 
 				if (Bit == 1)
 				{
 					if (one_seq_count == 5)
 					{
-						if(tag.mode |= 1) tag.level = level/position;
+						if(tag.mode & 1) tag.level = level/position;
 						if(processData(position - 7, tag))
 							NextState(State::FOUNDMESSAGE, 0);
 						NextState(State::TRAINING, 0);

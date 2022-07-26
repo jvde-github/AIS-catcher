@@ -51,7 +51,6 @@ public:
     FLOAT32 sample_lvl = 0.0f;
     FLOAT32 level = 0.0f;
     FLOAT32 ppm = 0.0f;
-    std::time_t timestamp;
 };
 
 using namespace std::chrono;

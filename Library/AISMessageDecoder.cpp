@@ -42,6 +42,7 @@ namespace AIS
 
         Submit(PROPERTY_CLASS, std::string("AIS"));
         Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
+        Submit(PROPERTY_RXTIME, msg.getRxTime() );
         Submit(PROPERTY_SCALED, true);
         Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
         Submit(PROPERTY_NMEA, msg.sentence);
@@ -64,7 +65,7 @@ namespace AIS
             U(msg, PROPERTY_MMSI, 8, 30);
             E(msg, PROPERTY_STATUS, 38, 4, PROPERTY_STATUS_TEXT, PROPERTY_MAP_STATUS);
             TURN(msg, PROPERTY_TURN, 42, 8);
-            U1(msg, PROPERTY_SPEED, 50, 10);
+            U1(msg, PROPERTY_SPEED, 50, 10, 1023);
             B(msg, PROPERTY_ACCURACY, 60, 1);
             POS(msg, PROPERTY_LON, 61, 28);
             POS(msg, PROPERTY_LAT, 89, 27);
@@ -81,6 +82,7 @@ namespace AIS
             U(msg, PROPERTY_TYPE, 0, 6);
             U(msg, PROPERTY_REPEAT, 6, 2);
             U(msg, PROPERTY_MMSI, 8, 30);
+            TIMESTAMP(msg, PROPERTY_TIMESTAMP, 38, 40);
             U(msg, PROPERTY_YEAR, 38, 14, 0);
             U(msg, PROPERTY_MONTH, 52, 4, 0);
             U(msg, PROPERTY_DAY, 56, 5, 0);
@@ -109,6 +111,7 @@ namespace AIS
             U(msg, PROPERTY_TO_PORT, 258, 6);
             U(msg, PROPERTY_TO_STARBOARD, 264, 6);
             E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
+            ETA(msg, PROPERTY_ETA, 274, 20);
             U(msg, PROPERTY_MONTH, 274, 4, 0);
             U(msg, PROPERTY_DAY, 278, 5, 0);
             U(msg, PROPERTY_HOUR, 283, 5, 0);
@@ -389,7 +392,7 @@ namespace AIS
     };
 
     const std::string PROPERTY_MAP_EPFD[] = {
-        "Undefined (default)",
+        "Undefined",
         "GPS",
         "GLONASS",
         "Combined GPS/GLONASS",
