@@ -42,12 +42,15 @@ namespace AIS
 
         Submit(PROPERTY_CLASS, std::string("AIS"));
         Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
-        Submit(PROPERTY_RXTIME, msg.getRxTime() );
+
+        if(tag.mode & 2)
+	{
+		Submit(PROPERTY_RXTIME, msg.getRxTime() );
+	}
+
         Submit(PROPERTY_SCALED, true);
         Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
         Submit(PROPERTY_NMEA, msg.sentence);
-
-	//if(msg.type() != 24) return;
 
         if(tag.mode & 1)
 	{
