@@ -72,6 +72,7 @@ enum Properties
 	PROPERTY_ACCURACY,
 	PROPERTY_ADDRESSED,
 	PROPERTY_AID_TYPE,
+	PROPERTY_AID_TYPE_TEXT,
 	PROPERTY_AIS_VERSION,
 	PROPERTY_ALT,
 	PROPERTY_ASSIGNED,
@@ -184,4 +185,4 @@ enum Properties
 	PROPERTY_ZONESIZE
 };
 
-extern const std::string PropertyDict[];
+extern const std::vector<std::string> PropertyDict;

@@ -20,7 +20,7 @@
 #include "Property.h"
 
 // Copy from ODS spreadsheet
-const std::string PropertyDict[] = {
+const std::vector<std::string> PropertyDict = {
 	"",
 	"",
 	"class",
@@ -35,6 +35,7 @@ const std::string PropertyDict[] = {
 	"accuracy",
 	"addressed",
 	"aid_type",
+	"aid_type_text",
 	"ais_version",
 	"alt",
 	"assigned",

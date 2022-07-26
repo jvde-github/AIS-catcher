@@ -66,7 +66,7 @@ namespace AIS
             U(msg, PROPERTY_TYPE, 0, 6);
             U(msg, PROPERTY_REPEAT, 6, 2);
             U(msg, PROPERTY_MMSI, 8, 30);
-            E(msg, PROPERTY_STATUS, 38, 4, PROPERTY_STATUS_TEXT, PROPERTY_MAP_STATUS);
+            E(msg, PROPERTY_STATUS, 38, 4, PROPERTY_STATUS_TEXT, &PROPERTY_MAP_STATUS);
             TURN(msg, PROPERTY_TURN, 42, 8);
             U1(msg, PROPERTY_SPEED, 50, 10, 1023);
             B(msg, PROPERTY_ACCURACY, 60, 1);
@@ -95,7 +95,7 @@ namespace AIS
             B(msg, PROPERTY_ACCURACY, 78, 1);
             POS(msg, PROPERTY_LON, 79, 28);
             POS(msg, PROPERTY_LAT, 107, 27);
-            E(msg, PROPERTY_EPFD, 134, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
+            E(msg, PROPERTY_EPFD, 134, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
             X(msg, PROPERTY_SPARE, 138, 10);
             B(msg, PROPERTY_RAIM, 148, 1);
             U(msg, PROPERTY_RADIO, 149, 19);
@@ -108,12 +108,12 @@ namespace AIS
             U(msg, PROPERTY_IMO, 40, 30);
             T(msg, PROPERTY_CALLSIGN, 70, 42);
             T(msg, PROPERTY_SHIPNAME, 112, 120);
-            E(msg, PROPERTY_SHIPTYPE, 232, 8, PROPERTY_SHIPTYPE_TEXT, PROPERTY_MAP_SHIPTYPE);
+            E(msg, PROPERTY_SHIPTYPE, 232, 8, PROPERTY_SHIPTYPE_TEXT, &PROPERTY_MAP_SHIPTYPE);
             U(msg, PROPERTY_TO_BOW, 240, 9);
             U(msg, PROPERTY_TO_STERN, 249, 9);
             U(msg, PROPERTY_TO_PORT, 258, 6);
             U(msg, PROPERTY_TO_STARBOARD, 264, 6);
-            E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
+            E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
             ETA(msg, PROPERTY_ETA, 274, 20);
             U(msg, PROPERTY_MONTH, 274, 4, 0);
             U(msg, PROPERTY_DAY, 278, 5, 0);
@@ -253,12 +253,12 @@ namespace AIS
             U(msg, PROPERTY_SECOND, 133, 6);
             U(msg, PROPERTY_REGIONAL, 139, 4);
             T(msg, PROPERTY_SHIPNAME, 143, 120);
-            E(msg, PROPERTY_SHIPTYPE, 263, 8, PROPERTY_SHIPTYPE_TEXT, PROPERTY_MAP_SHIPTYPE);
+            E(msg, PROPERTY_SHIPTYPE, 263, 8, PROPERTY_SHIPTYPE_TEXT, &PROPERTY_MAP_SHIPTYPE);
             U(msg, PROPERTY_TO_BOW, 271, 9);
             U(msg, PROPERTY_TO_STERN, 280, 9);
             U(msg, PROPERTY_TO_PORT, 289, 6);
             U(msg, PROPERTY_TO_STARBOARD, 295, 6);
-            E(msg, PROPERTY_EPFD, 301, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
+            E(msg, PROPERTY_EPFD, 301, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
             B(msg, PROPERTY_RAIM, 305, 1);
             B(msg, PROPERTY_DTE, 306, 1);
             U(msg, PROPERTY_ASSIGNED, 307, 1);
@@ -277,7 +277,7 @@ namespace AIS
             U(msg, PROPERTY_TYPE, 0, 6);
             U(msg, PROPERTY_REPEAT, 6, 2);
             U(msg, PROPERTY_MMSI, 8, 30);
-            E(msg, PROPERTY_AID_TYPE, 38, 5);
+            E(msg, PROPERTY_AID_TYPE, 38, 5, PROPERTY_AID_TYPE_TEXT, &PROPERTY_MAP_AID_TYPE);
             T(msg, PROPERTY_NAME, 43, 120);
             B(msg, PROPERTY_ACCURACY, 163, 1);
             POS(msg, PROPERTY_LON, 164, 28);
@@ -286,7 +286,7 @@ namespace AIS
             U(msg, PROPERTY_TO_STERN, 228, 9);
             U(msg, PROPERTY_TO_PORT, 237, 6);
             U(msg, PROPERTY_TO_STARBOARD, 243, 6);
-            E(msg, PROPERTY_EPFD, 249, 4, PROPERTY_EPFD_TEXT, PROPERTY_MAP_EPFD);
+            E(msg, PROPERTY_EPFD, 249, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
             U(msg, PROPERTY_SECOND, 253, 6);
             B(msg, PROPERTY_OFF_POSITION, 259, 1);
             U(msg, PROPERTY_REGIONAL, 260, 8);
@@ -339,7 +339,7 @@ namespace AIS
 		    }
 		    else
 	    	{
-                E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, PROPERTY_MAP_SHIPTYPE);
+                E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, &PROPERTY_MAP_SHIPTYPE);
                 T(msg, PROPERTY_VENDORID, 48, 18);
                 U(msg, PROPERTY_MODEL, 66, 4);
                 U(msg, PROPERTY_SERIAL, 70, 20);
@@ -375,7 +375,7 @@ namespace AIS
 
 // Below is a direct translation (more or less) of https://gpsd.gitlab.io/gpsd/AIVDM.html
 
-    const std::string PROPERTY_MAP_STATUS[] = {
+    const std::vector<std::string> PROPERTY_MAP_STATUS = {
         "Under way using engine",
         "At anchor",
         "Not under command",
@@ -394,7 +394,7 @@ namespace AIS
         "Not defined (default)"
     };
 
-    const std::string PROPERTY_MAP_EPFD[] = {
+    const std::vector<std::string> PROPERTY_MAP_EPFD = {
         "Undefined",
         "GPS",
         "GLONASS",
@@ -403,16 +403,10 @@ namespace AIS
         "Chayka",
         "Integrated navigation system",
         "Surveyed",
-        "Galileo",
-        "Unused",
-        "Unused",
-        "Unused",
-        "Unused",
-        "Unused",
-        "Unused",
-        "Unused",
+        "Galileo"
     };
-    const std::string PROPERTY_MAP_SHIPTYPE[] = {
+
+    const std::vector<std::string> PROPERTY_MAP_SHIPTYPE = {
         "Not available",
         "Reserved for future use",
         "Reserved for future use",
@@ -512,162 +506,41 @@ namespace AIS
         "Other Type, Reserved for future use",
         "Other Type, Reserved for future use",
         "Other Type, Reserved for future use",
-        "Other Type, no additional information",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Unknown"
+        "Other Type, no additional information"
 	};
+
+    const std::vector<std::string> PROPERTY_MAP_AID_TYPE = {
+        "Default, Type of Aid to Navigation not specified",
+        "Reference point",
+        "RACON (radar transponder marking a navigation hazard)",
+        "Fixed structure off shore, such as oil platforms, wind farms, rigs.",
+        "Spare, Reserved for future use.",
+        "Light, without sectors",
+        "Light, with sectors",
+        "Leading Light Front",
+        "Leading Light Rear",
+        "Beacon, Cardinal N",
+        "Beacon, Cardinal E",
+        "Beacon, Cardinal S",
+        "Beacon, Cardinal W",
+        "Beacon, Port hand",
+        "Beacon, Starboard hand",
+        "Beacon, Preferred Channel port hand",
+        "Beacon, Preferred Channel starboard hand",
+        "Beacon, Isolated danger",
+        "Beacon, Safe water",
+        "Beacon, Special mark",
+        "Cardinal Mark N",
+        "Cardinal Mark E",
+        "Cardinal Mark S",
+        "Cardinal Mark W",
+        "Port hand Mark",
+        "Starboard hand Mark",
+        "Preferred Channel Port hand",
+        "Preferred Channel Starboard hand",
+        "Isolated danger",
+        "Safe Water",
+        "Special Mark",
+        "Light Vessel / LANBY / Rigs"
+    };
 }
