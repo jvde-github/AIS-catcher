@@ -28,6 +28,7 @@ namespace AIS
 {
     class AISMessageDecoder : public StreamIn<Message>, public PropertyStreamOut
     {
+	void ProcessMsg8Data(const AIS::Message &msg, int len);
     protected:
         void U(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
