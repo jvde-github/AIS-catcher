@@ -34,6 +34,26 @@
 namespace AIS
 {
 
+    void AISMessageDecoder::ProcessMsg8Data(const AIS::Message &msg, int len)
+    {
+        int dac = msg.getUint(40,10);
+        int fid = msg.getUint(50,6);
+
+	    if(dac == 200 && fid == 10)
+	    {
+            T(msg,PROPERTY_VIN,56,48);
+            U(msg,PROPERTY_LENGTH,104,13);
+            U(msg,PROPERTY_BEAM,117,10);
+            E(msg,PROPERTY_SHIPTYPE,127,14);
+            E(msg,PROPERTY_HAZARD,141,3);
+            U(msg,PROPERTY_DRAUGHT,144,11);
+            E(msg,PROPERTY_LOADED,155,2);
+            B(msg,PROPERTY_SPEED_Q,157,1);
+            B(msg,PROPERTY_COURSE_Q,158,1);
+            B(msg,PROPERTY_HEADING_Q,159,1);
+	    }
+    }
+
     void AISMessageDecoder::Receive(const AIS::Message* data, int len, TAG& tag)
     {
         Submit(PROPERTY_FIRST, std::string(""));
@@ -44,19 +64,19 @@ namespace AIS
         Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
 
         if(tag.mode & 2)
-	{
-		Submit(PROPERTY_RXTIME, msg.getRxTime() );
-	}
+        {
+           Submit(PROPERTY_RXTIME, msg.getRxTime() );
+        }
 
         Submit(PROPERTY_SCALED, true);
         Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
         Submit(PROPERTY_NMEA, msg.sentence);
 
         if(tag.mode & 1)
-	{
-		Submit(PROPERTY_SIGNAL_POWER, tag.level);
-        	Submit(PROPERTY_PPM, tag.ppm);
-	}
+        {
+            Submit(PROPERTY_SIGNAL_POWER, tag.level);
+            Submit(PROPERTY_PPM, tag.ppm);
+        }
 
         switch (msg.type())
         {
@@ -150,6 +170,14 @@ namespace AIS
             U(msg, PROPERTY_MMSI4, 136, 30);
             U(msg, PROPERTY_MMSISEQ4, 166, 2);
             break;
+        case 8:
+            U(msg,PROPERTY_TYPE,0,6);
+            U(msg,PROPERTY_REPEAT,6,2);
+            U(msg,PROPERTY_MMSI,8,30);
+            U(msg,PROPERTY_DAC,40,10);
+            U(msg,PROPERTY_FID,50,6);
+            ProcessMsg8Data(msg,len);
+	    break;
         case 9:
             U(msg,PROPERTY_TYPE,0,6);
             U(msg,PROPERTY_REPEAT,6,2);
@@ -221,7 +249,7 @@ namespace AIS
             U(msg, PROPERTY_TYPE, 0, 6);
             U(msg, PROPERTY_REPEAT, 6, 2);
             U(msg, PROPERTY_MMSI, 8, 30);
-            X(msg, PROPERTY_RESERVED, 38, 8);
+            U(msg, PROPERTY_RESERVED, 38, 8);
             U1(msg, PROPERTY_SPEED, 46, 10);
             B(msg, PROPERTY_ACCURACY, 56, 1);
             POS(msg, PROPERTY_LON, 57, 28);
@@ -272,6 +300,21 @@ namespace AIS
             U(msg,PROPERTY_NUMBER1,52,4);
             U(msg,PROPERTY_TIMEOUT1,56,3);
             U(msg,PROPERTY_INCREMENT1,59,11);
+            if(msg.length < 100) break;
+            U(msg,PROPERTY_OFFSET2,70,12);
+            U(msg,PROPERTY_NUMBER2,82,4);
+            U(msg,PROPERTY_TIMEOUT2,86,3);
+            U(msg,PROPERTY_INCREMENT2,89,11);
+            if(msg.length < 130) break;
+            U(msg,PROPERTY_OFFSET3,100,12);
+            U(msg,PROPERTY_NUMBER3,112,4);
+            U(msg,PROPERTY_TIMEOUT3,116,3);
+            U(msg,PROPERTY_INCREMENT3,119,11);
+            if(msg.length < 160) break;
+            U(msg,PROPERTY_OFFSET4,130,12);
+            U(msg,PROPERTY_NUMBER4,142,4);
+            U(msg,PROPERTY_TIMEOUT4,146,3);
+            U(msg,PROPERTY_INCREMENT4,149,11);
             break;
         case 21:
             U(msg, PROPERTY_TYPE, 0, 6);
@@ -333,12 +376,12 @@ namespace AIS
             U(msg, PROPERTY_MMSI, 8, 30);
             U(msg, PROPERTY_PARTNO, 38, 2);
 
-    		if(msg.getUint(38,2) == 0)
-	    	{
+            if(msg.getUint(38,2) == 0)
+	    {
                 T(msg, PROPERTY_SHIPNAME, 40, 120);
-		    }
-		    else
-	    	{
+	    }
+	    else
+	    {
                 E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, &PROPERTY_MAP_SHIPTYPE);
                 T(msg, PROPERTY_VENDORID, 48, 18);
                 U(msg, PROPERTY_MODEL, 66, 4);
