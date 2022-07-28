@@ -56,7 +56,7 @@ namespace AIS
 
     void AISMessageDecoder::Receive(const AIS::Message* data, int len, TAG& tag)
     {
-        Submit(PROPERTY_FIRST, std::string(""));
+        Submit(PROPERTY_OBJECT_START, std::string(""));
 
         const AIS::Message& msg = data[0];
 
@@ -377,11 +377,11 @@ namespace AIS
             U(msg, PROPERTY_PARTNO, 38, 2);
 
             if(msg.getUint(38,2) == 0)
-	    {
+	        {
                 T(msg, PROPERTY_SHIPNAME, 40, 120);
-	    }
-	    else
-	    {
+	        }
+	        else
+	        {
                 E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, &PROPERTY_MAP_SHIPTYPE);
                 T(msg, PROPERTY_VENDORID, 48, 18);
                 U(msg, PROPERTY_MODEL, 66, 4);
@@ -413,7 +413,7 @@ namespace AIS
             U(msg, PROPERTY_MMSI, 8, 30);
             break;
         }
-        Submit(PROPERTY_LAST, std::string(""));
+        Submit(PROPERTY_OBJECT_END, std::string(""));
     }
 
 // Below is a direct translation (more or less) of https://gpsd.gitlab.io/gpsd/AIVDM.html

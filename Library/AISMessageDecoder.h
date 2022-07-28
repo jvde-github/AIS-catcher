@@ -166,12 +166,12 @@ namespace AIS
         virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
         virtual void Set(int p, const std::string& v)
         {
-            if (p == PROPERTY_FIRST)
+            if (p == PROPERTY_OBJECT_START)
             {
                 first = true;
                 json = "{";
             }
-            else if (p == PROPERTY_LAST)
+            else if (p == PROPERTY_OBJECT_END)
                 std::cout << json << "}" << std::endl;
             else
                 json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
