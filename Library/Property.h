@@ -58,8 +58,8 @@ inline PropertyStreamIn& operator>>(PropertyStreamOut& a, PropertyStreamIn& b) {
 
 enum Properties
 {
-	PROPERTY_FIRST = 0,
-	PROPERTY_LAST,
+	PROPERTY_OBJECT_START = 0,
+	PROPERTY_OBJECT_END,
 	PROPERTY_CLASS,
 	PROPERTY_DEVICE,
 	PROPERTY_SCALED,
