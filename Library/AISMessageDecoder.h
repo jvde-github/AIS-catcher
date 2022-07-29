@@ -131,60 +131,6 @@ namespace AIS
         void Receive(const AIS::Message* data, int len, TAG& tag);
     };
 
-    class JSONscreen : public PropertyStreamIn
-    {
-    protected:
-        std::string json;
-        bool first = true;
-
-        std::string delim()
-        {
-            bool f = first;
-            first = false;
-
-            if (f) return "";
-            return ",";
-        }
-
-	std::string jsonify(const std::string &str)
-	{
-		std::string out;
-		for(int i = 0; i < str.length(); i++)
-		{
-			char c = str[i];
-			if(c == '\"') out += "\\";
-			out += c;
-		}
-		return out;
-	}
-
-    public:
-
-        virtual void Set(int p, int v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-        virtual void Set(int p, unsigned v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-        virtual void Set(int p, float v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-        virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
-        virtual void Set(int p, const std::string& v)
-        {
-            if (p == PROPERTY_OBJECT_START)
-            {
-                first = true;
-                json = "{";
-            }
-            else if (p == PROPERTY_OBJECT_END)
-                std::cout << json << "}" << std::endl;
-            else
-                json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
-        }
-        virtual void Set(int p, const std::vector<std::string>& v)
-        {
-		json += delim() + "\"" + PropertyDict[p] + "\":[\"" + jsonify(v[0])+"\"";
-		for(int i = 1; i < v.size(); i++)
-			json += ",\"" + jsonify(v[i]) + "\"";
-		json += "]";
-        }
-    };
-
     extern const std::vector<std::string> PROPERTY_MAP_STATUS;
     extern const std::vector<std::string> PROPERTY_MAP_EPFD;
     extern const std::vector<std::string> PROPERTY_MAP_SHIPTYPE;

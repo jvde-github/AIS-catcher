@@ -292,8 +292,9 @@ int main(int argc, char* argv[])
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	IO::SinkScreen nmea_screen;
+	IO::JSONscreen JSON_screen;
+
 	AIS::AISMessageDecoder ais_decoder;
-	AIS::JSONscreen JSON_screen;
 
 	try
 	{
