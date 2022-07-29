@@ -22,7 +22,11 @@ Only use this software in regions where such use is permitted.
 
 Building instructions are provided below for many systems. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
-A Windows binary version of **v0.37** is available (see below table) with and without SDRPlay support (which requires a running SDRPlay API). First time RTL-SDR users on Windows will have to install drivers using Zadig (https://www.rtl-sdr.com/tag/zadig/). Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
+Links to fully build Windows binaries of version **v0.38** and older are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
+Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
+It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to try first:
+-  check whether RTL-SDR drivers are installed via [Zadig](https://www.rtl-sdr.com/tag/zadig/). 
+- on new Windows systems it might be that you have to install the Visual Studio runtime [libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
 
 Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
@@ -37,19 +41,13 @@ If you are looking for a Windows-version for the latest development version, it 
 
 ## Recent Developments
 
-### Development branch
+### Version 0.38
 
 - Renamed option ``-o`` to ``-c`` (option to select AIS channels)
 - Signal power (in dB) and applied frequency correction (in ppm) calculated with option ``-M D``
-- NMEA messages are timestamped with option ``-M T``. To activate both calculations use ``-M DT`` or ``-M TD``. I will do some benchmarking and this might become the default if little overhead on the RPi.
+- NMEA messages are timestamped with option ``-M T``. To activate both additional calculations use ``-M DT`` or ``-M TD``. 
 - ``-o 3`` shows NMEA lines and additional information including signal power and timestamp (with ``-M DT``) in JSON format so it can be easily processed in 3rd party software. 
-As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as a circle (Channel A/B corresponds to Blue/Red) and the radius is proportional to the measured power of the received signal ([code](https://github.com/jvde-github/visual-AIS-reception) and [video](https://www.youtube.com/watch?v=fQ9C8R0XuaU)):
-
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/0c722323233834cc3af333068bf127897b11768b/media/Signal%20Strength.png" width=60% height=60%>
-</p>
-
-- More extensive JSON output is under development with the switch ``-o 4``
+- More extensive JSON output is provided with the switch ``-o 4``
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
 - ...
@@ -62,9 +60,6 @@ for Airspy/HackRF and other devices that cater for sufficiently high sample rate
 argument to use channel A and B  in the NMEA line with the command ```-o CD AB```.
 - ...
 
-### Version 0.36
-- added SpyServer, SoapySDR, SOXR downsampling support. 
-- ...
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
@@ -86,9 +81,11 @@ use: AIS-catcher [options]
 	[-p xxx set frequency correction for device in PPM (default: zero)]
 	[-a xxx set tuner bandwidth in Hz (default: off)]
 	[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]
+	[-M xxx set additional data generation: T = NMEA timestamp, D = decoder related (signal power, ppmn) (default: none)]
 	[-T xx auto terminate run with SDR after xxx seconds (default: off)]
-	[-q suppress NMEA messages to screen (default: false)]
-	[-n show NMEA messages on screen without detail]
+	[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON  (default: 2)]
+	[-n show NMEA messages on screen without detail (-o 1)]
+	[-q suppress NMEA messages to screen (-o 0)]
 	[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
 
 	[-r [optional: yy] filename - read IQ data from file, short for -r -ga FORMAT yy FILE filename, for stdin input use filename equals stdin or .]
@@ -165,6 +162,36 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 ```
 ## Special topics
 
+### Screen output
+
+The output to screen can be regulated with the ``-o`` switch. To surpress any messages to screen use ``-o 0`` or ``-q``. To only show only NMEA lines, we can use the switch ``-o 1`` or ``-n``. Example output looks as follows:
+```
+!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03
+```
+By default and using the command ``-o 2`` AIS-catcher displays NMEA messages with some additional information:
+```
+!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03 ( MSG: 3, REPEAT: 0, MMSI: 230907000, signalpower: -44.0, ppm: 0, timestamp: 20220729191340)
+```
+The same information wrapped in a JSON packages is provided with the switch ```-o 3```. The main advantage is that we can use this output as input for further processing:
+```
+{"class":"AIS","device":"AIS-catcher","channel":"B","rxtime":"20220729191502","signalpower":-44.0,"ppm":0,"mmsi":230907000,"type":3,"NMEA":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"]}
+```
+And for additional decoding of the NMEA line we can use ``-o 4``:
+```
+{"class":"AIS","device":"AIS-catcher","rxtime":"20220729191610","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"],"signalpower":-44.0,"ppm":0.000000,"type":3,"repeat":0,"mmsi":230907000,"status":0,"status_text":"Under way using engine","turn":18,"speed":8.800000,"accuracy":true,"lon":24.915239,"lat":60.148106,"course":231.000000,"heading":230,"second":52,"maneuver":0,"raim":false,"radio":0}
+```
+There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favourite library (libais, gpsdecode, pyais, etc). There does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great piece of work by the open source community.
+
+### Further processing the messages 
+
+As an example, we can easily build applications that take the JSON input and plot the location of ships on a map as a circle (Channel A/B corresponds to Blue/Red) 
+and the radius is proportional to the measured power of the received signal ([code](https://github.com/jvde-github/visual-AIS-reception) and [video](https://www.youtube.com/watch?v=fQ9C8R0XuaU)):
+
+<p align="center">
+<img src="https://github.com/jvde-github/AIS-catcher/blob/0c722323233834cc3af333068bf127897b11768b/media/Signal%20Strength.png" width=60% height=60%>
+</p>
+
+ 
 ### AIS-catcher and OpenCPN
 
 In this example we have AIS-catcher running on a Raspberry PI and want to receive the messages in OpenCPN running on a Windows computer with IP address ``192.168.1.239``. We have chosen to use port ``10101``. On the Raspberry we start AIS-catcher with the following command to send the NMEA messages to the Windows machine:
