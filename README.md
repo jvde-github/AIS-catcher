@@ -52,15 +52,6 @@ If you are looking for a Windows-version for the latest development version, it 
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
 - ...
 
-### Version 0.37
-
-- Point the decoder to 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-o CD```. This follows ideas from a post on
-the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at request of a user. The conventional decoder is available with the switch ```-o AB``` which is also the default if nothing is specified. Plan is to add a ```-o ABCD``` mode
-for Airspy/HackRF and other devices that cater for sufficiently high sample rates. Notice that gpsdecode cannot handle channel designations C and D in NMEA. You can provide an optional 
-argument to use channel A and B  in the NMEA line with the command ```-o CD AB```.
-- ...
-
-
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
@@ -168,11 +159,11 @@ The output to screen can be regulated with the ``-o`` switch. To surpress any me
 ```
 !AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03
 ```
-By default, and using the command ``-o 2`,` AIS-catcher displays NMEA messages with some additional information:
+By default, and using the command ``-o 2``, AIS-catcher displays NMEA messages with some additional information:
 ```
 !AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03 ( MSG: 3, REPEAT: 0, MMSI: 230907000, signalpower: -44.0, ppm: 0, timestamp: 20220729191340)
 ```
-This same information but wrapped in a JSON packages is provided with the switch ```-o 3``` to facilitate further processing downstream, for example in Python:
+This same information but wrapped in a JSON packages is provided with the switch ```-o 3``` to facilitate further processing downstream for example in Python:
 ```
 {"class":"AIS","device":"AIS-catcher","channel":"B","rxtime":"20220729191502","signalpower":-44.0,"ppm":0,"mmsi":230907000,"type":3,"NMEA":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"]}
 ```
