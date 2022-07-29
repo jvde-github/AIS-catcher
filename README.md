@@ -151,7 +151,7 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 ```console
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
-## Special topics
+## Deep dives
 
 ### Screen output
 
