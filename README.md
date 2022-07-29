@@ -69,7 +69,7 @@ If you are travelling and looking for a portable system that can be used on an A
 <img src="https://github.com/jvde-github/AIS-catcher/blob/152e5460fd938fb701d988f01deccdfa6192443d/media/Screenshot_BoatBeacon%5B1%5D.jpg" width=60% height=60%>
 </p>
 
-For now I have decided not to share AIS-catcher-for-Android via the Play Store as there is too much overhead for such a simple program. You can download the APK from the mentioned project page.
+You can download the APK from the mentioned project page.
 
 ## Usage
 ````
@@ -164,7 +164,7 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 
 ### Screen output
 
-The output to screen can be regulated with the ``-o`` switch. To surpress any messages to screen use ``-o 0`` or ``-q``. To show only simple NMEA lines, we can use the switch ``-o 1`` or ``-n``. Example output looks as follows:
+The output to screen can be regulated with the ``-o`` switch. To surpress any messages to screen use ``-o 0`` or ``-q``. To show only simple NMEA lines, we can use the switch ``-o 1`` or ``-n``. Example output:
 ```
 !AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03
 ```
