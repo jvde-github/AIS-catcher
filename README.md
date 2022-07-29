@@ -164,23 +164,23 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 
 ### Screen output
 
-The output to screen can be regulated with the ``-o`` switch. To surpress any messages to screen use ``-o 0`` or ``-q``. To only show only NMEA lines, we can use the switch ``-o 1`` or ``-n``. Example output looks as follows:
+The output to screen can be regulated with the ``-o`` switch. To surpress any messages to screen use ``-o 0`` or ``-q``. To show only simple NMEA lines, we can use the switch ``-o 1`` or ``-n``. Example output looks as follows:
 ```
 !AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03
 ```
-By default and using the command ``-o 2`` AIS-catcher displays NMEA messages with some additional information:
+By default, and using the command ``-o 2`,` AIS-catcher displays NMEA messages with some additional information:
 ```
 !AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03 ( MSG: 3, REPEAT: 0, MMSI: 230907000, signalpower: -44.0, ppm: 0, timestamp: 20220729191340)
 ```
-The same information wrapped in a JSON packages is provided with the switch ```-o 3```. The main advantage is that we can use this output as input for further processing:
+This same information but wrapped in a JSON packages is provided with the switch ```-o 3``` to facilitate further processing downstream, for example in Python:
 ```
 {"class":"AIS","device":"AIS-catcher","channel":"B","rxtime":"20220729191502","signalpower":-44.0,"ppm":0,"mmsi":230907000,"type":3,"NMEA":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"]}
 ```
-And for additional decoding of the NMEA line we can use ``-o 4``:
+Full decoding of the NMEA line is provided with the command ``-o 4``:
 ```
 {"class":"AIS","device":"AIS-catcher","rxtime":"20220729191610","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"],"signalpower":-44.0,"ppm":0.000000,"type":3,"repeat":0,"mmsi":230907000,"status":0,"status_text":"Under way using engine","turn":18,"speed":8.800000,"accuracy":true,"lon":24.915239,"lat":60.148106,"course":231.000000,"heading":230,"second":52,"maneuver":0,"raim":false,"radio":0}
 ```
-There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favourite library (libais, gpsdecode, pyais, etc). There does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great piece of work by the open source community.
+There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favourite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, rhere does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great piece of work by the open source community.
 
 ### Further processing the messages 
 
