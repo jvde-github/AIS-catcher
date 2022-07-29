@@ -17,5 +17,5 @@
 
 #pragma once
 
-#define VERSION     "v0.37"
+#define VERSION     "v0.38"
 #define COPYRIGHT   "jvde-github and other contributors"
