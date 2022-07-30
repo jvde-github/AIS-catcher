@@ -22,7 +22,7 @@ Only use this software in regions where such use is permitted.
 
 Building instructions are provided below for many systems. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
-Links to fully build Windows binaries of version **v0.38** and older are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
+Links to fully built Windows binaries of version **v0.38** and older are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
 Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
 It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to try first:
 -  check whether RTL-SDR drivers are installed via [Zadig](https://www.rtl-sdr.com/tag/zadig/). 
