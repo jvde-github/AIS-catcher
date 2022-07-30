@@ -412,7 +412,7 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 
   System              | Linux/RPI/apt              | macOS/brew  |  MSVC/vcpkg   |     MSVC/PothosSDR |
  :--            | :--			| :--				| :--  | :--: | 
- Command  | **sudo apt install ...**      | **brew install ...** | **vcpkg install ...**            | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
+ Command  | *sudo apt install ...*      | *brew install ...* | *vcpkg install ...*            | [*Download*](https://downloads.myriadrf.org/builds/PothosSDR/) |
 ***RTL-SDR***          | librtlsdr-dev          | librtlsdr  | rtlsdr rtlsdr:x64-windows             | included |
 ***Airspy***          | libairspy-dev                             | airspy |    -                    | included |
 ***Airspy HF+***        | libairspyhf-dev                            | airspyhf  |    -                | included |
