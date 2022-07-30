@@ -412,14 +412,14 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 
   System              | Linux/RPI/apt              | macOS/brew  |  MSVC/vcpkg   |     MSVC/PothosSDR |
  :--            | :--			| :--				| :--  | :--: | 
- Device    | **sudo apt install ...**      | **brew install ...** | **vcpkg install ...**            | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
-***RTL-SDR***          | librtlsdr-dev          | librtlsdr  | rtlsdr rtlsdr:x64-windows             | X |
-***Airspy***          | libairspy-dev                             | airspy |    -                    | X |
-***Airspy HF+***        | libairspyhf-dev                            | airspyhf  |    -                | X |
-***HackRF***          | libhackrf-dev                             | hackrf    |    -                 | X |
+     | **sudo apt install ...**      | **brew install ...** | **vcpkg install ...**            | [Download](https://downloads.myriadrf.org/builds/PothosSDR/) |
+***RTL-SDR***          | librtlsdr-dev          | librtlsdr  | rtlsdr rtlsdr:x64-windows             | included |
+***Airspy***          | libairspy-dev                             | airspy |    -                    | included |
+***Airspy HF+***        | libairspyhf-dev                            | airspyhf  |    -                | included |
+***HackRF***          | libhackrf-dev                             | hackrf    |    -                 | included |
 ***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | - | [API 3.x](https://www.sdrplay.com/downloads/)     | [API 3.x](https://www.sdrplay.com/downloads/)  |
-***SoapySDR***             | libsoapysdr-dev     |       |                  |  |
-***ZeroMQ***             | libzmq3-dev     | zeromq      | ZeroMQ ZeroMQ:x64-windows                  | X |
+***SoapySDR***             | libsoapysdr-dev     |       |                  | X |
+***ZeroMQ***             | libzmq3-dev     | zeromq      | ZeroMQ ZeroMQ:x64-windows                  | included |
 
 Once the dependencies are in place, the process to install AIS-catcher then on Linux based systems becomes:
 ```console
