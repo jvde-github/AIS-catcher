@@ -40,11 +40,11 @@ Recent releases:
  
 If you are looking for a Windows-version for the latest development version, it is automatically produced by the standard workflow (see Actions).
 
-## Recent Developments
+## What's new?
 
 ### Version 0.38
 
-- Renamed option ``-o`` to ``-c`` (option to select AIS channels)
+- Option ``-o`` renamed to ``-c`` (switch to select AIS channels)
 - Signal power (in dB) and applied frequency correction (in ppm) calculated with option ``-M D``
 - NMEA messages are timestamped with option ``-M T``. To activate both additional calculations use ``-M DT`` or ``-M TD``. 
 - ``-o 3`` shows NMEA lines and additional information including signal power and timestamp (with ``-M DT``) in JSON format so it can be easily processed in 3rd party software. 
