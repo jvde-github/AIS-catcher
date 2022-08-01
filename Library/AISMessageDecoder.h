@@ -29,13 +29,16 @@ namespace AIS
     class AISMessageDecoder : public StreamIn<Message>, public PropertyStreamOut
     {
 	void ProcessMsg8Data(const AIS::Message &msg, int len);
+
     protected:
+
         void U(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
             unsigned u = msg.getUint(start, len);
             if (u != undefined)
                 Submit(p, u);
         }
+
         void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::vector<std::string> *map = NULL)
         {
             unsigned u = msg.getUint(start, len);
@@ -48,6 +51,7 @@ namespace AIS
 			Submit(pmap, std::string("Undefined") );
 	    }
         }
+
         void TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
             int u = msg.getInt(start, len);
@@ -89,45 +93,54 @@ namespace AIS
             if (u != undefined)
                 Submit(p, (float) (u / 10.0) );
         }
+
         void I1(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
             int u = msg.getInt(start, len);
             if (u != undefined)
                 Submit(p, (float) (u / 10.0) );
         }
+
         void POS(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
         {
             int u = msg.getInt(start, len);
             if (u != undefined)
                 Submit(p, (float)(u / 600000.0) );
         }
+
         void POS1(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
         {
             int u = msg.getInt(start, len);
             if (u != undefined)
                 Submit(p, (float)(u / 600.0) );
         }
+
         void B(const AIS::Message& msg, int p, int start, int len)
         {
             unsigned u = msg.getUint(start, len);
             Submit(p, (bool)u);
         }
+
         void X(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
         }
+
         void T(const AIS::Message& msg, int p, int start, int len)
         {
             std::string text = msg.getText(start, len);
             while(text[text.length()-1]==' ') text.resize(text.length()-1);
             Submit(p, text);
         }
+
         void D(const AIS::Message& msg, int p, int start, int len)
         {
             std::string text = msg.getText(start, len);
             while(text[text.length()-1]==' ') text.resize(text.length()-1);
             Submit(p, text);
         }
+
     public:
+
         void Receive(const AIS::Message* data, int len, TAG& tag);
     };
 
