@@ -39,9 +39,9 @@ namespace AIS
         int dac = msg.getUint(40,10);
         int fid = msg.getUint(50,6);
 
-	    if(dac == 200 && fid == 10)
-	    {
-            T(msg,PROPERTY_VIN,56,48);
+	if(dac == 200 && fid == 10)
+	{
+	    T(msg,PROPERTY_VIN,56,48);
             U(msg,PROPERTY_LENGTH,104,13);
             U(msg,PROPERTY_BEAM,117,10);
             E(msg,PROPERTY_SHIPTYPE,127,14);
@@ -51,7 +51,7 @@ namespace AIS
             B(msg,PROPERTY_SPEED_Q,157,1);
             B(msg,PROPERTY_COURSE_Q,158,1);
             B(msg,PROPERTY_HEADING_Q,159,1);
-	    }
+	}
     }
 
     void AISMessageDecoder::Receive(const AIS::Message* data, int len, TAG& tag)
