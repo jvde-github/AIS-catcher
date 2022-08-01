@@ -183,7 +183,7 @@ whereby the radius is proportional to the measured power of the received signal 
 <img src="https://github.com/jvde-github/AIS-catcher/blob/0c722323233834cc3af333068bf127897b11768b/media/Signal%20Strength.png" width=60% height=60%>
 </p>
 
-Please notice that the NMEA lines in the JSON output do not include the required *<CR><LF>* as per standard so need to be added downstream if messages are forwarded downstream to a AIS service like Marinetraffic or AISHub. 
+Please notice that the NMEA lines in the JSON output do not include the required \<CR\>\<LF\> as per standard so need to be added downstream if you write code that forwards messages to a AIS service like MarineTraffic or AISHub. 
  
 ### Setting up OpenCPN
 
