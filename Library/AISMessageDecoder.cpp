@@ -39,19 +39,61 @@ namespace AIS
         int dac = msg.getUint(40,10);
         int fid = msg.getUint(50,6);
 
-	if(dac == 200 && fid == 10)
-	{
-	    T(msg,PROPERTY_VIN,56,48);
-            U(msg,PROPERTY_LENGTH,104,13);
-            U(msg,PROPERTY_BEAM,117,10);
-            E(msg,PROPERTY_SHIPTYPE,127,14);
-            E(msg,PROPERTY_HAZARD,141,3);
-            U(msg,PROPERTY_DRAUGHT,144,11);
-            E(msg,PROPERTY_LOADED,155,2);
-            B(msg,PROPERTY_SPEED_Q,157,1);
-            B(msg,PROPERTY_COURSE_Q,158,1);
-            B(msg,PROPERTY_HEADING_Q,159,1);
-	}
+        if(dac == 200 && fid == 10)
+        {
+            T(msg,PROPERTY_VIN,56,48);
+                U(msg,PROPERTY_LENGTH,104,13);
+                U(msg,PROPERTY_BEAM,117,10);
+                E(msg,PROPERTY_SHIPTYPE,127,14);
+                E(msg,PROPERTY_HAZARD,141,3);
+                U(msg,PROPERTY_DRAUGHT,144,11);
+                E(msg,PROPERTY_LOADED,155,2);
+                B(msg,PROPERTY_SPEED_Q,157,1);
+                B(msg,PROPERTY_COURSE_Q,158,1);
+                B(msg,PROPERTY_HEADING_Q,159,1);
+        }
+        else if(dac == 1 && fid == 31)
+        {
+            // http://vislab-ccom.unh.edu/~schwehr/papers/2010-IMO-SN.1-Circ.289.pdf
+            POS2(msg,PROPERTY_LON,56, 25);
+            POS2(msg,PROPERTY_LAT,81, 24);
+            B(msg,PROPERTY_ACCURACY, 105, 1);
+            U(msg,PROPERTY_DAY,106, 5, 0);
+            U(msg,PROPERTY_HOUR,111, 5, 24);
+            U(msg,PROPERTY_MINUTE,116, 6, 60);
+            U(msg,PROPERTY_WSPEED,122, 7, 127);
+            U(msg,PROPERTY_WGUST,129, 7, 127);
+            U(msg,PROPERTY_WDIR,136, 9, 360);
+            U(msg,PROPERTY_WGUSTDIR,145, 9, 360);
+            S1(msg,PROPERTY_AIRTEMP,154, 11, -1024);
+            U(msg,PROPERTY_HUMIDITY,165, 7, 101);
+            S1(msg,PROPERTY_DEWPOINT,172, 10, 501);
+            P(msg,PROPERTY_PRESSURE,182, 9, 511);
+            U(msg,PROPERTY_PRESSURETEND,191, 2, 3);
+            U(msg,PROPERTY_VISGREATER,193, 1);
+            U1(msg,PROPERTY_VISIBILITY,194, 7);
+            W(msg,PROPERTY_WATERLEVEL,201, 12, 4002);
+            U(msg,PROPERTY_LEVELTREND,213, 2, 3);
+            U1(msg,PROPERTY_CSPEED,215, 8, 255);
+            U(msg,PROPERTY_CDIR,223, 9, 360);
+            U1(msg,PROPERTY_CSPEED2,232, 8);
+            U(msg,PROPERTY_CDIR2,240, 9);
+            U(msg,PROPERTY_CDEPTH2,249, 5);
+            U1(msg,PROPERTY_CSPEED3,254, 8);
+            U(msg,PROPERTY_CDIR3,262, 9);
+            U(msg,PROPERTY_CDEPTH3,271, 5);
+            U1(msg,PROPERTY_WAVEHEIGHT,276, 8);
+            U(msg,PROPERTY_WAVEPERIOD,284, 6);
+            U(msg,PROPERTY_WAVEDIR,290, 9);
+            U1(msg,PROPERTY_SWELLHEIGHT,299, 8);
+            U(msg,PROPERTY_SWELLPERIOD,307, 6);
+            U(msg,PROPERTY_SWELLDIR,313, 9);
+            U(msg,PROPERTY_SEASTATE,322, 4);
+            S1(msg,PROPERTY_WATERTEMP,326, 10);
+            U(msg,PROPERTY_PRECIPTYPE,336, 3, 7);
+            U(msg,PROPERTY_SALINITY,339, 9, 510);
+            U(msg,PROPERTY_ICE,348, 2, 3);
+        }
     }
 
     void AISMessageDecoder::Receive(const AIS::Message* data, int len, TAG& tag)
@@ -163,10 +205,13 @@ namespace AIS
             X(msg, PROPERTY_SPARE, 38, 2);
             U(msg, PROPERTY_MMSI1, 40, 30);
             U(msg, PROPERTY_MMSISEQ1, 70, 2);
+            if(msg.length <= 72) break;
             U(msg, PROPERTY_MMSI2, 72, 30);
             U(msg, PROPERTY_MMSISEQ2, 102, 2);
+            if(msg.length <= 104) break;
             U(msg, PROPERTY_MMSI3, 104, 30);
             U(msg, PROPERTY_MMSISEQ3, 134, 2);
+            if(msg.length <= 136) break;
             U(msg, PROPERTY_MMSI4, 136, 30);
             U(msg, PROPERTY_MMSISEQ4, 166, 2);
             break;
@@ -223,8 +268,10 @@ namespace AIS
             U(msg,PROPERTY_MMSI1,40,30);
             U(msg,PROPERTY_TYPE1_1,70,6);
             U(msg,PROPERTY_OFFSET1_1,76,12);
+            if(msg.length <= 90) break;
             U(msg,PROPERTY_TYPE1_2,90,6);
             U(msg,PROPERTY_OFFSET1_2,96,12);
+            if(msg.length <= 110) break;
             U(msg,PROPERTY_MMSI2,110,30);
             U(msg,PROPERTY_TYPE2_1,140,6);
             U(msg,PROPERTY_OFFSET2_1,146,12);
@@ -300,17 +347,17 @@ namespace AIS
             U(msg,PROPERTY_NUMBER1,52,4);
             U(msg,PROPERTY_TIMEOUT1,56,3);
             U(msg,PROPERTY_INCREMENT1,59,11);
-            if(msg.length < 100) break;
+            if(msg.length <= 100) break;
             U(msg,PROPERTY_OFFSET2,70,12);
             U(msg,PROPERTY_NUMBER2,82,4);
             U(msg,PROPERTY_TIMEOUT2,86,3);
             U(msg,PROPERTY_INCREMENT2,89,11);
-            if(msg.length < 130) break;
+            if(msg.length <= 130) break;
             U(msg,PROPERTY_OFFSET3,100,12);
             U(msg,PROPERTY_NUMBER3,112,4);
             U(msg,PROPERTY_TIMEOUT3,116,3);
             U(msg,PROPERTY_INCREMENT3,119,11);
-            if(msg.length < 160) break;
+            if(msg.length <= 160) break;
             U(msg,PROPERTY_OFFSET4,130,12);
             U(msg,PROPERTY_NUMBER4,142,4);
             U(msg,PROPERTY_TIMEOUT4,146,3);
