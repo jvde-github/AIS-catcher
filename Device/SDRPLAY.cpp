@@ -1,18 +1,18 @@
 /*
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <cstring>
@@ -21,7 +21,7 @@
 
 namespace Device {
 
-// API described here: https://www.sdrplay.com/docs/SDRplay_API_Specification_v3.01.pdf
+	// API described here: https://www.sdrplay.com/docs/SDRplay_API_Specification_v3.01.pdf
 
 #ifdef HASSDRPLAY
 
@@ -30,22 +30,18 @@ namespace Device {
 
 	int SDRPLAY::API_count = 0;
 
-	SDRPLAY::SDRPLAY()
-	{
+	SDRPLAY::SDRPLAY() {
 		float version = 0.0;
 
-		if(API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success)
-		{
+		if (API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success) {
 			running = false;
 			return;
 		}
-		if(sdrplay_api_ApiVersion(&version) != sdrplay_api_Success)
-		{
+		if (sdrplay_api_ApiVersion(&version) != sdrplay_api_Success) {
 			running = false;
 			return;
 		}
-		if((int)version != 3)
-		{
+		if ((int)version != 3) {
 			running = false;
 			return;
 		}
@@ -53,13 +49,11 @@ namespace Device {
 		running = true;
 	}
 
-	SDRPLAY::~SDRPLAY()
-	{
-		if(--API_count) sdrplay_api_Close();
+	SDRPLAY::~SDRPLAY() {
+		if (--API_count) sdrplay_api_Close();
 	}
 
-	void SDRPLAY::Open(uint64_t h)
-	{
+	void SDRPLAY::Open(uint64_t h) {
 		sdrplay_api_ErrT err;
 		unsigned int DeviceCount;
 
@@ -67,27 +61,25 @@ namespace Device {
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
 		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
 
-		if(DeviceCount < h) throw "SDRPLAY: cannot open device, handle not available.";
+		if (DeviceCount < h) throw "SDRPLAY: cannot open device, handle not available.";
 
 		device = devices[h];
 
 		err = sdrplay_api_SelectDevice(&device);
-		if(err != sdrplay_api_Success)
-		{
+		if (err != sdrplay_api_Success) {
 			std::cerr << sdrplay_api_GetErrorString(err) << std::endl;
 			sdrplay_api_UnlockDeviceApi();
 			throw "SDRPLAY: cannot open device";
 		}
 		sdrplay_api_UnlockDeviceApi();
 
-		if (sdrplay_api_GetDeviceParams(device.dev, &deviceParams) != sdrplay_api_Success)
-		{
+		if (sdrplay_api_GetDeviceParams(device.dev, &deviceParams) != sdrplay_api_Success) {
 			throw "SDRPLAY: cannot get device parameters.";
 		}
 
 		chParams = deviceParams->rxChannelA;
 
-		if(streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
+		if (streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
 
 		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_CTRL_EN : sdrplay_api_AGC_DISABLE;
 		chParams->tunerParams.gain.gRdB = gRdB;
@@ -98,8 +90,7 @@ namespace Device {
 		Device::Open(h);
 	}
 
-	void SDRPLAY::Play()
-	{
+	void SDRPLAY::Play() {
 		fifo.Init(16 * 16384, 8);
 
 		deviceParams->devParams->fsFreq.fsHz = sample_rate;
@@ -114,7 +105,7 @@ namespace Device {
 		cbFns.StreamACbFn = callback_static;
 		cbFns.EventCbFn = callback_event_static;
 
-		if(sdrplay_api_Init(device.dev, &cbFns, (void *)this) != sdrplay_api_Success) throw "SDRPLAY: cannot start device";
+		if (sdrplay_api_Init(device.dev, &cbFns, (void*)this) != sdrplay_api_Success) throw "SDRPLAY: cannot start device";
 
 		Device::Play();
 
@@ -123,10 +114,8 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void SDRPLAY::Stop()
-	{
-		if(isStreaming())
-		{
+	void SDRPLAY::Stop() {
+		if (isStreaming()) {
 			Device::Stop();
 			fifo.Halt();
 
@@ -135,40 +124,32 @@ namespace Device {
 		}
 	}
 
-	void SDRPLAY::Close()
-	{
+	void SDRPLAY::Close() {
 		Device::Close();
 		sdrplay_api_ReleaseDevice(&device);
 	}
 
 
-	void SDRPLAY::callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int numSamples, unsigned int reset, void *cbContext)
-	{
+	void SDRPLAY::callback_static(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int numSamples, unsigned int reset, void* cbContext) {
 		((SDRPLAY*)cbContext)->callback(xi, xq, params, numSamples, reset);
 	}
 
-	void SDRPLAY::callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext)
-	{
+	void SDRPLAY::callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params, void* cbContext) {
 		((SDRPLAY*)cbContext)->callback_event(eventId, tuner, params);
 	}
 
-	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params)
-	{
-		if (eventId == sdrplay_api_DeviceRemoved)
-		{
+	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params) {
+		if (eventId == sdrplay_api_DeviceRemoved) {
 			std::cerr << "SDRPLAY: device disconnected" << std::endl;
 			Stop();
 		}
 	}
 
-	void SDRPLAY::callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,unsigned int len, unsigned int reset)
-	{
+	void SDRPLAY::callback(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int len, unsigned int reset) {
 		if (output.size() < len) output.resize(len);
 
-		if(isStreaming())
-		{
-			for (int i = 0; i < len; i++)
-			{
+		if (isStreaming()) {
+			for (int i = 0; i < len; i++) {
 				output[i].real(xi[i] / 32768.0f);
 				output[i].imag(xq[i] / 32768.0f);
 			}
@@ -178,42 +159,35 @@ namespace Device {
 		}
 	}
 
-	void SDRPLAY::Run()
-	{
-		while (isStreaming())
-		{
-			if (fifo.Wait())
-			{
+	void SDRPLAY::Run() {
+		while (isStreaming()) {
+			if (fifo.Wait()) {
 				RAW r = { Format::CF32, fifo.Front(), fifo.BlockSize() };
 				Send(&r, 1, tag);
 				fifo.Pop();
 			}
-			else if(isStreaming()) std::cerr << "SDRPLAY: timeout." << std::endl;
+			else if (isStreaming())
+				std::cerr << "SDRPLAY: timeout." << std::endl;
 		}
 	}
 
-	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList)
-	{
+	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList) {
 		unsigned int DeviceCount;
-		if(!running) throw "SDRPLAY: API v3.x not running";
+		if (!running) throw "SDRPLAY: API v3.x not running";
 
 		sdrplay_api_LockDeviceApi();
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
 		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
 
-		for (int i = 0; i < DeviceCount; i++)
-		{
+		for (int i = 0; i < DeviceCount; i++) {
 			// for now ....
-			if(devices[i].hwVer == SDRPLAY_RSP1_ID)
-			{
+			if (devices[i].hwVer == SDRPLAY_RSP1_ID) {
 				DeviceList.push_back(Description("SDRPLAY", "RSP1", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
 			}
-			if(devices[i].hwVer == SDRPLAY_RSP1A_ID)
-			{
+			if (devices[i].hwVer == SDRPLAY_RSP1A_ID) {
 				DeviceList.push_back(Description("SDRPLAY", "RSP1A", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
 			}
-			if(devices[i].hwVer == SDRPLAY_RSPdx_ID)
-			{
+			if (devices[i].hwVer == SDRPLAY_RSPdx_ID) {
 				DeviceList.push_back(Description("SDRPLAY", "RSPDX", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
 			}
 		}
@@ -221,26 +195,21 @@ namespace Device {
 		sdrplay_api_UnlockDeviceApi();
 	}
 
-	void SDRPLAY::Print()
-	{
+	void SDRPLAY::Print() {
 		std::cerr << "SDRPLAY Settings: -gs agc " << (AGC ? "ON" : "OFF") << " lnastate " << LNAstate << " grdb " << gRdB << std::endl;
 	}
 
-	void SDRPLAY::Set(std::string option, std::string arg)
-	{
+	void SDRPLAY::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
-		if (option == "AGC")
-		{
+		if (option == "AGC") {
 			AGC = Util::Parse::Switch(arg);
 		}
-		else if (option == "LNASTATE")
-		{
+		else if (option == "LNASTATE") {
 			LNAstate = Util::Parse::Integer(arg, 0, 9);
 		}
-		else if (option == "GRDB")
-		{
+		else if (option == "GRDB") {
 			gRdB = Util::Parse::Integer(arg, 0, 59);
 		}
 		else

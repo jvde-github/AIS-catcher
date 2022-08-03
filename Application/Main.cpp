@@ -1,18 +1,18 @@
 /*
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <signal.h>
@@ -45,20 +45,17 @@
 std::atomic<bool> stop;
 
 #ifdef _WIN32
-BOOL WINAPI consoleHandler(DWORD signal)
-{
+BOOL WINAPI consoleHandler(DWORD signal) {
 	if (signal == CTRL_C_EVENT) stop = true;
 	return TRUE;
 }
 #else
-void consoleHandler(int signal)
-{
+void consoleHandler(int signal) {
 	stop = true;
 }
 #endif
 
-struct Drivers
-{
+struct Drivers {
 	Device::RAWFile RAW;
 	Device::WAVFile WAV;
 	Device::RTLSDR RTLSDR;
@@ -72,16 +69,14 @@ struct Drivers
 	Device::ZMQ ZMQ;
 };
 
-void printVersion()
-{
+void printVersion() {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION << std::endl;
 	std::cerr << "(C) Copyright 2021-2022 " << COPYRIGHT << std::endl;
 	std::cerr << "This is free software; see the source for copying conditions.There is NO" << std::endl;
 	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
 }
 
-void Usage()
-{
+void Usage() {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
@@ -131,8 +126,7 @@ void Usage()
 	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SAMPLERATE [on/off] ]" << std::endl;
 }
 
-std::vector<Device::Description> getDevices(Drivers &drivers)
-{
+std::vector<Device::Description> getDevices(Drivers& drivers) {
 	std::vector<Device::Description> device_list;
 
 	drivers.RTLSDR.getDeviceList(device_list);
@@ -145,17 +139,14 @@ std::vector<Device::Description> getDevices(Drivers &drivers)
 	return device_list;
 }
 
-void printDevices(std::vector<Device::Description>& device_list)
-{
+void printDevices(std::vector<Device::Description>& device_list) {
 	std::cerr << "Found " << device_list.size() << " device(s):" << std::endl;
-	for (int i = 0; i < device_list.size(); i++)
-	{
+	for (int i = 0; i < device_list.size(); i++) {
 		std::cerr << i << ": " << device_list[i].toString() << std::endl;
 	}
 }
 
-void printSupportedDevices()
-{
+void printSupportedDevices() {
 	std::cerr << "SDR support: ";
 #ifdef HASRTLSDR
 	std::cerr << "RTLSDR ";
@@ -197,51 +188,59 @@ void printSupportedDevices()
 	std::cerr << std::endl;
 }
 
-int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial)
-{
-	for (int i = 0; i < device_list.size(); i++)
-	{
+int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial) {
+	for (int i = 0; i < device_list.size(); i++) {
 		if (device_list[i].getSerial() == serial) return i;
 	}
 	std::cerr << "Searching for device with SN " << serial << "." << std::endl;
 	return -1;
 }
 
-std::shared_ptr<AIS::Model> createModel(int m)
-{
+std::shared_ptr<AIS::Model> createModel(int m) {
 
-	switch (m)
-	{
-	case 0: return std::make_shared<AIS::ModelStandard>(); break;
-	case 1: return std::make_shared<AIS::ModelBase>(); break;
-	case 2: return std::make_shared<AIS::ModelDefault>(); break;
-	case 3: return std::make_shared<AIS::ModelDiscriminator>(); break;
-	case 4: return std::make_shared<AIS::ModelChallenger>(); break;
-	default: throw "Internal error: Model not implemented in this version. Check in later."; break;
+	switch (m) {
+	case 0:
+		return std::make_shared<AIS::ModelStandard>();
+		break;
+	case 1:
+		return std::make_shared<AIS::ModelBase>();
+		break;
+	case 2:
+		return std::make_shared<AIS::ModelDefault>();
+		break;
+	case 3:
+		return std::make_shared<AIS::ModelDiscriminator>();
+		break;
+	case 4:
+		return std::make_shared<AIS::ModelChallenger>();
+		break;
+	default:
+		throw "Internal error: Model not implemented in this version. Check in later.";
+		break;
 	}
 }
 
 // -------------------------------
 
-void parseTags(int &mode, std::string &s)
-{
-	for(char c : s)
-	{
-		switch(toupper(c))
-		{
-		case 'T': mode |= 2; break;
-		case 'D': mode |= 1; break;
-	 	default: throw "Error: illegal tag defined on command line [D/T]";
+void parseTags(int& mode, std::string& s) {
+	for (char c : s) {
+		switch (toupper(c)) {
+		case 'T':
+			mode |= 2;
+			break;
+		case 'D':
+			mode |= 1;
+			break;
+		default:
+			throw "Error: illegal tag defined on command line [D/T]";
 		}
 	}
 }
 
-void parseSettings(Setting& s, char* argv[], int ptr, int argc)
-{
+void parseSettings(Setting& s, char* argv[], int ptr, int argc) {
 	ptr++;
 
-	while (ptr < argc - 1 && argv[ptr][0] != '-')
-	{
+	while (ptr < argc - 1 && argv[ptr][0] != '-') {
 		std::string option = argv[ptr++];
 		std::string arg = argv[ptr++];
 
@@ -249,30 +248,26 @@ void parseSettings(Setting& s, char* argv[], int ptr, int argc)
 	}
 }
 
-bool isOption(std::string s)
-{
+bool isOption(std::string s) {
 	return s.length() >= 2 && s[0] == '-' && std::isalpha(s[1]);
 }
 
-void Assert(bool b, std::string &context, std::string msg = "")
-{
-	if (!b)
-	{
+void Assert(bool b, std::string& context, std::string msg = "") {
+	if (!b) {
 		std::cerr << "Error on command line in processing setting \"" << context << "\". ";
-		if(msg != "") std::cerr << msg;
-		std::cerr  << std::endl;
+		if (msg != "") std::cerr << msg;
+		std::cerr << std::endl;
 		throw "Terminating.";
 	}
 }
 
-int main(int argc, char* argv[])
-{
-	int sample_rate = 0, input_device = 0,  bandwidth = 0, ppm = 0;
+int main(int argc, char* argv[]) {
+	int sample_rate = 0, input_device = 0, bandwidth = 0, ppm = 0;
 	int timeout = 0;
 	int TAG_mode = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	bool verbose = false,  timer_on = false;
+	bool verbose = false, timer_on = false;
 	OutputLevel NMEA_to_screen = OutputLevel::FULL;
 	int verboseUpdateTime = 3;
 	AIS::Mode ChannelMode = AIS::Mode::AB;
@@ -296,8 +291,7 @@ int main(int argc, char* argv[])
 
 	AIS::AISMessageDecoder ais_decoder;
 
-	try
-	{
+	try {
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
 			throw "ERROR: Could not set control handler";
@@ -310,8 +304,7 @@ int main(int argc, char* argv[])
 		const std::string MSG_NO_PARAMETER = "Does not allow additional parameter.";
 		int ptr = 1;
 
-		while (ptr < argc)
-		{
+		while (ptr < argc) {
 			std::string param = std::string(argv[ptr]);
 			Assert(param[0] == '-', param, "Setting does not start with \"-\".");
 
@@ -321,8 +314,7 @@ int main(int argc, char* argv[])
 			std::string arg1 = count >= 1 ? std::string(argv[ptr + 1]) : "";
 			std::string arg2 = count >= 2 ? std::string(argv[ptr + 2]) : "";
 
-			switch (param[1])
-			{
+			switch (param[1]) {
 			case 's':
 				Assert(count == 1, param, "Does require one parameter [sample rate].");
 				sample_rate = Util::Parse::Integer(arg1, 48000, 12288000);
@@ -337,19 +329,17 @@ int main(int argc, char* argv[])
 				break;
 			case 'c':
 				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
-				if(arg1 == "AB")
-				{
+				if (arg1 == "AB") {
 					ChannelMode = AIS::Mode::AB;
 					NMEAchannels = "AB";
 				}
-				else if(arg1 == "CD")
-				{
+				else if (arg1 == "CD") {
 					ChannelMode = AIS::Mode::CD;
 					NMEAchannels = "CD";
 				}
-				else throw "Error: parameter needs to be AB or CD (-c)";
-				if(count == 2)
-				{
+				else
+					throw "Error: parameter needs to be AB or CD (-c)";
+				if (count == 2) {
 					Assert(arg2 == "AB", param, "NMEA channel designation needs to be: AB.");
 					NMEAchannels = arg2;
 				}
@@ -360,7 +350,7 @@ int main(int argc, char* argv[])
 				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'T':
-				Assert(count == 1, param,"Timeout parameter required.");
+				Assert(count == 1, param, "Timeout parameter required.");
 				timeout = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'q':
@@ -374,45 +364,55 @@ int main(int argc, char* argv[])
 			case 'o':
 				Assert(count == 1, param, "Requires one parameter.");
 				{
-					switch(Util::Parse::Integer(arg1, 0, 5))
-					{
-					case 0: NMEA_to_screen = OutputLevel::NONE; break;
-					case 1: NMEA_to_screen = OutputLevel::SPARSE; break;
-					case 2: NMEA_to_screen = OutputLevel::FULL; break;
-					case 3: NMEA_to_screen = OutputLevel::JSON_NMEA; break;
-					case 4: NMEA_to_screen = OutputLevel::JSON_SPARSE; break;
-					case 5: NMEA_to_screen = OutputLevel::JSON_FULL; break;
-					default: throw "Error: unknown option 'o'";
+					switch (Util::Parse::Integer(arg1, 0, 5)) {
+					case 0:
+						NMEA_to_screen = OutputLevel::NONE;
+						break;
+					case 1:
+						NMEA_to_screen = OutputLevel::SPARSE;
+						break;
+					case 2:
+						NMEA_to_screen = OutputLevel::FULL;
+						break;
+					case 3:
+						NMEA_to_screen = OutputLevel::JSON_NMEA;
+						break;
+					case 4:
+						NMEA_to_screen = OutputLevel::JSON_SPARSE;
+						break;
+					case 5:
+						NMEA_to_screen = OutputLevel::JSON_FULL;
+						break;
+					default:
+						throw "Error: unknown option 'o'";
 					}
 				}
 				break;
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				liveModels.push_back(createModel(2));
-				liveModels[0]->Set("FP_DS","ON");
+				liveModels[0]->Set("FP_DS", "ON");
 				liveModels[0]->Set("PS_EMA", "ON");
 				break;
 			case 't':
 				input_type = Device::Type::RTLTCP;
 				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
-				if(count >= 1) drivers.RTLTCP.Set("host",arg1);
-				if(count >= 2) drivers.RTLTCP.Set("port",arg2);
+				if (count >= 1) drivers.RTLTCP.Set("host", arg1);
+				if (count >= 2) drivers.RTLTCP.Set("port", arg2);
 				break;
 			case 'y':
 				input_type = Device::Type::SPYSERVER;
 				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
-				if(count >= 1) drivers.SpyServer.Set("host",arg1);
-				if(count >= 2) drivers.SpyServer.Set("port",arg2);
+				if (count >= 1) drivers.SpyServer.Set("host", arg1);
+				if (count >= 2) drivers.SpyServer.Set("port", arg2);
 				break;
 			case 'z':
 				input_type = Device::Type::ZMQ;
 				Assert(count <= 2, param, "Requires at most two parameters [[format]] [endpoint].");
-				if (count == 1)
-				{
+				if (count == 1) {
 					drivers.ZMQ.Set("ENDPOINT", arg1);
 				}
-				else if (count == 2)
-				{
+				else if (count == 2) {
 					drivers.ZMQ.Set("FORMAT", arg1);
 					drivers.ZMQ.Set("ENDPOINT", arg2);
 				}
@@ -429,12 +429,10 @@ int main(int argc, char* argv[])
 			case 'r':
 				Assert(count <= 2, param, "Requires at most two parameters [[format]] [filename].");
 				input_type = Device::Type::RAWFILE;
-				if (count == 1)
-				{
+				if (count == 1) {
 					drivers.RAW.Set("FILE", arg1);
 				}
-				else if (count == 2)
-				{
+				else if (count == 2) {
 					drivers.RAW.Set("FORMAT", arg1);
 					drivers.RAW.Set("FILE", arg2);
 				}
@@ -448,25 +446,22 @@ int main(int argc, char* argv[])
 				list_support = true;
 				break;
 			case 'd':
-				if (param.length() == 4 && param[2] == ':')
-				{
+				if (param.length() == 4 && param[2] == ':') {
 					Assert(count == 0, param, MSG_NO_PARAMETER);
 					input_device = (param[3] - '0');
 				}
-				else
-				{
+				else {
 					Assert(count == 1, param, "Requires one parameter [serial number].");
 					input_device = getDeviceFromSerial(device_list, arg1);
 				}
-				if (input_device < 0 || input_device >= device_list.size())
-				{
+				if (input_device < 0 || input_device >= device_list.size()) {
 					std::cerr << "Device does not exist." << std::endl;
 					return 0;
 				}
 				break;
 			case 'u':
 				Assert(count == 2, param, "Requires two parameters [address] [port].");
-				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size()-1) ));
+				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -482,25 +477,48 @@ int main(int argc, char* argv[])
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3, param);
-				switch (param[2])
-				{
-				case 'm': parseSettings(drivers.AIRSPY, argv, ptr, argc); break;
-				case 'r': parseSettings(drivers.RTLSDR, argv, ptr, argc); break;
-				case 'h': parseSettings(drivers.AIRSPYHF, argv, ptr, argc); break;
-				case 's': parseSettings(drivers.SDRPLAY, argv, ptr, argc); break;
-				case 'a': parseSettings(drivers.RAW, argv, ptr, argc); break;
-				case 'w': parseSettings(drivers.WAV, argv, ptr, argc); break;
-				case 't': parseSettings(drivers.RTLTCP, argv, ptr, argc); break;
-				case 'y': parseSettings(drivers.SpyServer, argv, ptr, argc); break;
-				case 'f': parseSettings(drivers.HACKRF, argv, ptr, argc); break;
-				case 'u': parseSettings(drivers.SOAPYSDR, argv, ptr, argc); break;
-				case 'z': parseSettings(drivers.ZMQ, argv, ptr, argc); break;
-				case 'o':
-					if(liveModels.size() == 0)
-						liveModels.push_back(createModel(2));
-					parseSettings(*(liveModels[MAX(0, (int)liveModels.size() - 1)]), argv, ptr, argc); break;
+				switch (param[2]) {
+				case 'm':
+					parseSettings(drivers.AIRSPY, argv, ptr, argc);
 					break;
-				default: throw "Error on command line: invalid -g switch on command line";
+				case 'r':
+					parseSettings(drivers.RTLSDR, argv, ptr, argc);
+					break;
+				case 'h':
+					parseSettings(drivers.AIRSPYHF, argv, ptr, argc);
+					break;
+				case 's':
+					parseSettings(drivers.SDRPLAY, argv, ptr, argc);
+					break;
+				case 'a':
+					parseSettings(drivers.RAW, argv, ptr, argc);
+					break;
+				case 'w':
+					parseSettings(drivers.WAV, argv, ptr, argc);
+					break;
+				case 't':
+					parseSettings(drivers.RTLTCP, argv, ptr, argc);
+					break;
+				case 'y':
+					parseSettings(drivers.SpyServer, argv, ptr, argc);
+					break;
+				case 'f':
+					parseSettings(drivers.HACKRF, argv, ptr, argc);
+					break;
+				case 'u':
+					parseSettings(drivers.SOAPYSDR, argv, ptr, argc);
+					break;
+				case 'z':
+					parseSettings(drivers.ZMQ, argv, ptr, argc);
+					break;
+				case 'o':
+					if (liveModels.size() == 0)
+						liveModels.push_back(createModel(2));
+					parseSettings(*(liveModels[MAX(0, (int)liveModels.size() - 1)]), argv, ptr, argc);
+					break;
+					break;
+				default:
+					throw "Error on command line: invalid -g switch on command line";
 				}
 				break;
 			default:
@@ -519,8 +537,7 @@ int main(int argc, char* argv[])
 		// -------------
 		// Select device
 
-		if (input_type == Device::Type::NONE)
-		{
+		if (input_type == Device::Type::NONE) {
 			if (device_list.size() == 0) throw "No input device available.";
 
 			Device::Description d = device_list[input_device];
@@ -530,34 +547,56 @@ int main(int argc, char* argv[])
 			std::cerr << "Device selected: " << d.toString() << std::endl;
 		}
 
-		switch (input_type)
-		{
-		case Device::Type::WAVFILE: device = &drivers.WAV; break;
-		case Device::Type::RAWFILE: device = &drivers.RAW; break;
-		case Device::Type::RTLTCP: device = &drivers.RTLTCP; break;
-		case Device::Type::SPYSERVER: device = &drivers.SpyServer; break;
+		switch (input_type) {
+		case Device::Type::WAVFILE:
+			device = &drivers.WAV;
+			break;
+		case Device::Type::RAWFILE:
+			device = &drivers.RAW;
+			break;
+		case Device::Type::RTLTCP:
+			device = &drivers.RTLTCP;
+			break;
+		case Device::Type::SPYSERVER:
+			device = &drivers.SpyServer;
+			break;
 #ifdef HASZMQ
-		case Device::Type::ZMQ: device = &drivers.ZMQ; break;
+		case Device::Type::ZMQ:
+			device = &drivers.ZMQ;
+			break;
 #endif
 #ifdef HASAIRSPYHF
-		case Device::Type::AIRSPYHF: device = &drivers.AIRSPYHF; break;
+		case Device::Type::AIRSPYHF:
+			device = &drivers.AIRSPYHF;
+			break;
 #endif
 #ifdef HASAIRSPY
-		case Device::Type::AIRSPY: device = &drivers.AIRSPY; break;
+		case Device::Type::AIRSPY:
+			device = &drivers.AIRSPY;
+			break;
 #endif
 #ifdef HASSDRPLAY
-		case Device::Type::SDRPLAY: device = &drivers.SDRPLAY; break;
+		case Device::Type::SDRPLAY:
+			device = &drivers.SDRPLAY;
+			break;
 #endif
 #ifdef HASRTLSDR
-		case Device::Type::RTLSDR: device = &drivers.RTLSDR; break;
+		case Device::Type::RTLSDR:
+			device = &drivers.RTLSDR;
+			break;
 #endif
 #ifdef HASHACKRF
-		case Device::Type::HACKRF: device = &drivers.HACKRF; break;
+		case Device::Type::HACKRF:
+			device = &drivers.HACKRF;
+			break;
 #endif
 #ifdef HASSOAPYSDR
-		case Device::Type::SOAPYSDR: device = &drivers.SOAPYSDR; break;
+		case Device::Type::SOAPYSDR:
+			device = &drivers.SOAPYSDR;
+			break;
 #endif
-		default: throw "Error: invalid device selection";
+		default:
+			throw "Error: invalid device selection";
 		}
 		if (device == 0) throw "Error: cannot set up device";
 
@@ -574,16 +613,16 @@ int main(int argc, char* argv[])
 		// override sample rate if defined by user
 		if (sample_rate) device->setSampleRate(sample_rate);
 
-		if(ChannelMode == AIS::Mode::AB)
+		if (ChannelMode == AIS::Mode::AB)
 			device->setFrequency((int)(162000000));
 		else
 			device->setFrequency((int)(156800000));
 
-		if(ppm)
-			device->Set("FREQOFFSET",std::to_string(ppm));
+		if (ppm)
+			device->Set("FREQOFFSET", std::to_string(ppm));
 
-		if(bandwidth)
-			device->Set("BW",std::to_string(bandwidth));
+		if (bandwidth)
+			device->Set("BW", std::to_string(bandwidth));
 
 		if (verbose) device->Print();
 
@@ -595,8 +634,7 @@ int main(int argc, char* argv[])
 		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? liveModels.size() : 0);
 
 		// Attach output
-		for (int i = 0; i < liveModels.size(); i++)
-		{
+		for (int i = 0; i < liveModels.size(); i++) {
 			liveModels[i]->buildModel(NMEAchannels[0], NMEAchannels[1], device->getSampleRate(), timer_on, device);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
@@ -604,27 +642,24 @@ int main(int argc, char* argv[])
 		// Connect output to UDP stream
 		UDPconnections.resize(UDPdestinations.size());
 
-		for(int i = 0; i < UDPdestinations.size(); i++)
-		{
+		for (int i = 0; i < UDPdestinations.size(); i++) {
 			UDPconnections[i].openConnection(UDPdestinations[i]);
 			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
 		}
 
-		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL)
-		{
+		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {
 			liveModels[0]->Output() >> nmea_screen;
 			nmea_screen.setDetail(NMEA_to_screen);
 		}
-		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE)
-		{
+		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE) {
 			liveModels[0]->Output() >> ais_decoder;
 			ais_decoder >> JSON_screen;
 		}
 
-		if(verbose)
-		{
-			std::cerr << "Generic settings: " << "sample rate -s " << device->getSampleRate()/1000 << "K " << (ppm?("-p "+std::to_string(ppm)):"") << " ";
-			std::cerr << (bandwidth?("-f "+std::to_string(bandwidth)):"") << std::endl;
+		if (verbose) {
+			std::cerr << "Generic settings: "
+					  << "sample rate -s " << device->getSampleRate() / 1000 << "K " << (ppm ? ("-p " + std::to_string(ppm)) : "") << " ";
+			std::cerr << (bandwidth ? ("-f " + std::to_string(bandwidth)) : "") << std::endl;
 		}
 
 		// -----------------
@@ -635,8 +670,7 @@ int main(int argc, char* argv[])
 		stop = false;
 		unsigned passed = 0;
 
-		while(device->isStreaming() && !stop)
-		{
+		while (device->isStreaming() && !stop) {
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 			{
 
@@ -647,17 +681,14 @@ int main(int argc, char* argv[])
 				passed++;
 				unsigned passed_sec = passed / SLEEP_PER_SEC;
 
-				if (verbose && passed % SLEEP_PER_SEC == 0 && passed_sec % verboseUpdateTime == 0)
-				{
-					for (int j = 0; j < liveModels.size(); j++)
-					{
+				if (verbose && passed % SLEEP_PER_SEC == 0 && passed_sec % verboseUpdateTime == 0) {
+					for (int j = 0; j < liveModels.size(); j++) {
 						std::string name = liveModels[j]->getName();
 						std::cerr << "[" << name << "]: " << std::string(37 - name.length(), ' ') << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
 					}
 				}
 
-				if (timeout && passed_sec >= timeout)
-				{
+				if (timeout && passed_sec >= timeout) {
 					stop = true;
 					if (verbose)
 						std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
@@ -670,27 +701,23 @@ int main(int argc, char* argv[])
 		// End Main loop
 		// -----------------
 
-		if (verbose)
-		{
+		if (verbose) {
 			std::cerr << "----------------------" << std::endl;
-			for (int j = 0; j < liveModels.size(); j++)
-			{
+			for (int j = 0; j < liveModels.size(); j++) {
 				std::string name = liveModels[j]->getName();
-				std::cerr << "[" << name << "]: " << std::string(37-name.length(),' ') << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+				std::cerr << "[" << name << "]: " << std::string(37 - name.length(), ' ') << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
 			}
 		}
 
-		if(timer_on)
-			for (auto m : liveModels)
-			{
+		if (timer_on)
+			for (auto m : liveModels) {
 				std::string name = m->getName();
-				std::cerr << "[" << m->getName() << "]: " <<std::string(37-name.length(),' ') << m->getTotalTiming() << " ms" << std::endl;
+				std::cerr << "[" << m->getName() << "]: " << std::string(37 - name.length(), ' ') << m->getTotalTiming() << " ms" << std::endl;
 			}
 
 		device->Close();
 	}
-	catch (const char * msg)
-	{
+	catch (const char* msg) {
 		std::cerr << msg << std::endl;
 		return -1;
 	}

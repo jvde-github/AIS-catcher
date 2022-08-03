@@ -1,18 +1,18 @@
 /*
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -22,44 +22,36 @@
 
 #include "Common.h"
 
-template<typename T>
-class StreamIn
-{
+template <typename T>
+class StreamIn {
 public:
-
-	virtual void Receive(const T* data, int len, TAG &tag) {}
-	virtual void Receive(T* data, int len, TAG &tag)
-	{
-		Receive( (const T *) data, len, tag);
+	virtual void Receive(const T* data, int len, TAG& tag) {}
+	virtual void Receive(T* data, int len, TAG& tag) {
+		Receive((const T*)data, len, tag);
 	}
 };
 
 template <typename S>
-class Connection
-{
+class Connection {
 	std::vector<StreamIn<S>*> connections;
 
 public:
-
-	void Send(const S* data, int len, TAG &tag)
-	{
+	void Send(const S* data, int len, TAG& tag) {
 		for (auto c : connections) c->Receive(data, len, tag);
 	}
 
-	void Send(S* data, int len, TAG &tag)
-	{
-		if(connections.size() == 0) return;
+	void Send(S* data, int len, TAG& tag) {
+		if (connections.size() == 0) return;
 
-		int sz1 = (int)connections.size()-1;
+		int sz1 = (int)connections.size() - 1;
 
-		for(int i = 0; i < sz1; i++)
+		for (int i = 0; i < sz1; i++)
 			connections[i]->Receive((const S*)data, len, tag);
 
 		connections[sz1]->Receive(data, len, tag);
 	}
 
-	void Connect(StreamIn<S>* s)
-	{
+	void Connect(StreamIn<S>* s) {
 		connections.push_back(s);
 	}
 
@@ -68,46 +60,60 @@ public:
 };
 
 template <typename S>
-class StreamOut
-{
+class StreamOut {
 public:
-
 	Connection<S> out;
 
-	void Send(const S* data, int len, TAG &tag)
-	{
+	void Send(const S* data, int len, TAG& tag) {
 		out.Send(data, len, tag);
 	}
 
-	void Send(S* data, int len, TAG &tag)
-	{
+	void Send(S* data, int len, TAG& tag) {
 		out.Send(data, len, tag);
 	}
 };
 
 template <typename T, typename S>
-class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T> { };
+class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T> {};
 
 template <typename S>
-class SimpleStreamOut : public StreamOut<S> 
-{ 
+class SimpleStreamOut : public StreamOut<S> {
 protected:
 	TAG tag;
+
 public:
-	void setTag(const TAG &t) { tag = t; }
+	void setTag(const TAG& t) { tag = t; }
 };
 
 template <typename S>
-inline StreamIn<S>& operator>>(Connection<S>& a, StreamIn<S>& b) { a.Connect(&b); return b; }
+inline StreamIn<S>& operator>>(Connection<S>& a, StreamIn<S>& b) {
+	a.Connect(&b);
+	return b;
+}
 template <typename T, typename S>
-inline SimpleStreamInOut<S,T>& operator>>(Connection<S>& a, SimpleStreamInOut<S,T>& b) { a.Connect(&b); return b; }
+inline SimpleStreamInOut<S, T>& operator>>(Connection<S>& a, SimpleStreamInOut<S, T>& b) {
+	a.Connect(&b);
+	return b;
+}
 
 template <typename S>
-inline StreamIn<S>& operator>>(StreamOut<S>& a, StreamIn<S>& b) { a.out.Connect(&b); return b; }
+inline StreamIn<S>& operator>>(StreamOut<S>& a, StreamIn<S>& b) {
+	a.out.Connect(&b);
+	return b;
+}
 template <typename S, typename U>
-inline SimpleStreamInOut<S, U>& operator>>(StreamOut<S>& a, SimpleStreamInOut<S, U>& b) { a.out.Connect(&b); return b; }
+inline SimpleStreamInOut<S, U>& operator>>(StreamOut<S>& a, SimpleStreamInOut<S, U>& b) {
+	a.out.Connect(&b);
+	return b;
+}
 
 template <typename T, typename S>
-inline StreamIn<S>& operator>>(SimpleStreamInOut<T,S>& a, StreamIn<S>& b) { a.out.Connect(&b); return b; }
+inline StreamIn<S>& operator>>(SimpleStreamInOut<T, S>& a, StreamIn<S>& b) {
+	a.out.Connect(&b);
+	return b;
+}
 template <typename T, typename S, typename U>
-inline SimpleStreamInOut<S,U>& operator>>(SimpleStreamInOut<T,S>& a, SimpleStreamInOut<S,U>& b) { a.out.Connect(&b); return b; }
+inline SimpleStreamInOut<S, U>& operator>>(SimpleStreamInOut<T, S>& a, SimpleStreamInOut<S, U>& b) {
+	a.out.Connect(&b);
+	return b;
+}

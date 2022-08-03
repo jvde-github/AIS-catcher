@@ -1,19 +1,19 @@
 /*
-    Copyright(c) 2021-2022 gtlittlewing
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 gtlittlewing
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -27,15 +27,16 @@
 namespace Device {
 
 
-	class AIRSPY : public Device
-	{
+	class AIRSPY : public Device {
 #ifdef HASAIRSPY
 
 		struct airspy_device* dev = NULL;
 		bool lost = false;
 		std::vector<uint32_t> rates;
 
-		enum class AIRSPYGainMode { Free, Sensitivity, Linearity } mode = AIRSPYGainMode::Linearity;
+		enum class AIRSPYGainMode { Free,
+									Sensitivity,
+									Linearity } mode = AIRSPYGainMode::Linearity;
 		int gain = 17;
 
 		bool mixer_AGC = true;
@@ -48,7 +49,7 @@ namespace Device {
 		bool bias_tee = false;
 
 		static int callback_static(airspy_transfer_t* tf);
-		void callback(CFLOAT32 *,int);
+		void callback(CFLOAT32*, int);
 
 		void setBiasTee(bool);
 		void setLNA_AGC(int);
@@ -64,8 +65,8 @@ namespace Device {
 		void applySettings();
 
 		void setDefaultRate();
-	public:
 
+	public:
 		// Control
 		void Open(uint64_t h);
 
@@ -78,7 +79,7 @@ namespace Device {
 		void Close();
 
 		bool isStreaming();
-		bool isCallback() { return true;}
+		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
