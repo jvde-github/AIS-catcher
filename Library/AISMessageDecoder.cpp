@@ -54,7 +54,7 @@ namespace AIS
         }
         else if(dac == 1 && fid == 31)
         {
-            // http://vislab-ccom.unh.edu/~schwehr/papers/2010-IMO-SN.1-Circ.289.pdf
+            // Sources: http://vislab-ccom.unh.edu/~schwehr/papers/2010-IMO-SN.1-Circ.289.pdf, GPSDECODE
             POS2(msg,PROPERTY_LON,56, 25);
             POS2(msg,PROPERTY_LAT,81, 24);
             B(msg,PROPERTY_ACCURACY, 105, 1);
