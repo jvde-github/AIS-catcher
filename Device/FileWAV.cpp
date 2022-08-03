@@ -1,18 +1,18 @@
 /*
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <cstring>
@@ -26,8 +26,7 @@ namespace Device {
 	//
 	// Source: https://www.recordingblogs.com/wiki/wave-file-format
 
-	struct WAVHeader
-	{
+	struct WAVHeader {
 
 		uint32_t groupID;
 		uint32_t size;
@@ -44,14 +43,12 @@ namespace Device {
 		uint16_t wBitsPerSample;
 	};
 
-	struct WaveChunk
-	{
+	struct WaveChunk {
 		uint32_t ID;
 		uint32_t size;
 	};
 
-	void WAVFile::Open(uint64_t h)
-	{
+	void WAVFile::Open(uint64_t h) {
 		struct WAVHeader header;
 		struct WaveChunk chunk = { 0, 0 };
 
@@ -77,37 +74,36 @@ namespace Device {
 			format = Format::CU8;
 		else if (header.wFormatTag == 1 && header.wBitsPerSample == 16)
 			format = Format::CS16;
-		else throw "Error: not supported format.";
+		else
+			throw "Error: not supported format.";
 
 
 		file.ignore(header.chunkSize - 16);
 
 		// process wave chunks until start of data
-		while(!file.eof())
-		{
+		while (!file.eof()) {
 			file.read((char*)&chunk, sizeof(struct WaveChunk));
 			if (chunk.ID == 0x74636166)
 				file.ignore(chunk.size);
-			else if (chunk.ID == 0x61746164) break;
-			else throw "Error: unrecognized chunk in WAV-file.";
-
+			else if (chunk.ID == 0x61746164)
+				break;
+			else
+				throw "Error: unrecognized chunk in WAV-file.";
 		};
-		
+
 		if (chunk.ID != 0x61746164) throw "Error: no Data in WAV-file.";
 
 		Device::setSampleRate(header.dwSamplesPerSec);
 	}
 
-	void WAVFile::Close()
-	{
+	void WAVFile::Close() {
 		Device::Close();
 
 		file.close();
 	}
 
-	bool WAVFile::isStreaming()
-	{
-		if(file.eof() || !Device::isStreaming()) return false;
+	bool WAVFile::isStreaming() {
+		if (file.eof() || !Device::isStreaming()) return false;
 
 		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
 
@@ -120,18 +116,16 @@ namespace Device {
 		return true;
 	}
 
-	void WAVFile::Print()
-	{
+	void WAVFile::Print() {
 		std::cerr << "WAV file Settings: -gw";
-		std::cerr << " file " << filename << std::endl;;
+		std::cerr << " file " << filename << std::endl;
+		;
 	}
 
-	void WAVFile::Set(std::string option, std::string arg)
-	{
+	void WAVFile::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
-		if (option == "FILE")
-		{
+		if (option == "FILE") {
 			filename = arg;
 			return;
 		}
@@ -139,4 +133,3 @@ namespace Device {
 	}
 
 }
-

@@ -1,18 +1,18 @@
 /*
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -26,7 +26,7 @@
 #else
 #include <sys/socket.h>
 #include <netdb.h>
-#define SOCKET int
+#define SOCKET		int
 #define closesocket close
 #endif
 
@@ -38,11 +38,9 @@
 #include "AIS.h"
 #include "Property.h"
 
-namespace IO
-{
-	template<typename T>
-	class StreamCounter : public StreamIn<T>
-	{
+namespace IO {
+	template <typename T>
+	class StreamCounter : public StreamIn<T> {
 		uint64_t count = 0;
 		uint64_t lastcount = 0;
 		float rate = 0.0f;
@@ -50,21 +48,17 @@ namespace IO
 		high_resolution_clock::time_point time_lastupdate;
 
 	public:
-
-		StreamCounter() : StreamIn<T>()
-		{
+		StreamCounter() : StreamIn<T>() {
 			resetStatistic();
 		}
 
-		void Receive(const T* data, int len, TAG& tag)
-		{
+		void Receive(const T* data, int len, TAG& tag) {
 			count += len;
 		}
 
 		uint64_t getCount() { return count; }
 
-		float getRate()
-		{
+		float getRate() {
 			auto timeNow = high_resolution_clock::now();
 			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
 
@@ -76,82 +70,68 @@ namespace IO
 			return ((int)(10 * rate + 0.5f)) / 10.0f;
 		}
 
-		void resetStatistic()
-		{
+		void resetStatistic() {
 			count = 0;
 			time_lastupdate = high_resolution_clock::now();
 		}
 	};
 
 	template <typename T>
-	class SinkFile : public StreamIn<T>
-	{
+	class SinkFile : public StreamIn<T> {
 		std::ofstream file;
 		std::string filename;
 
 	public:
-
-		~SinkFile()
-		{
+		~SinkFile() {
 			if (file.is_open())
 				file.close();
 		}
-		void openFile(std::string fn)
-		{
+		void openFile(std::string fn) {
 			filename = fn;
 			file.open(filename, std::ios::out | std::ios::binary);
 		}
 
-		void Receive(const T* data, int len, TAG& tag)
-		{
+		void Receive(const T* data, int len, TAG& tag) {
 			file.write((char*)data, len * sizeof(T));
 		}
 	};
 
 
-	class SinkScreen : public StreamIn<AIS::Message>
-	{
+	class SinkScreen : public StreamIn<AIS::Message> {
 	private:
 		OutputLevel level;
 
 	public:
 		void setDetail(OutputLevel l) { level = l; }
 
-		void Receive(const AIS::Message* data, int len, TAG& tag)
-		{
-			if(level == OutputLevel::NONE) return;
+		void Receive(const AIS::Message* data, int len, TAG& tag) {
+			if (level == OutputLevel::NONE) return;
 
-			for (int i = 0; i < len; i++)
-			{
-				if(level == OutputLevel::FULL || level == OutputLevel::SPARSE)
-					for (auto s : data[i].sentence)
-					{
+			for (int i = 0; i < len; i++) {
+				if (level == OutputLevel::FULL || level == OutputLevel::SPARSE)
+					for (auto s : data[i].sentence) {
 						std::cout << s;
 
-						if (level == OutputLevel::FULL)
-						{
+						if (level == OutputLevel::FULL) {
 							std::cout << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-							if(tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
-							if(tag.mode & 2) 
-							{
+							if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
+							if (tag.mode & 2) {
 								std::cout << ", timestamp: " << data[i].getRxTime();
 							}
 							std::cout << ")";
 						}
 						std::cout << std::endl;
 					}
-				else if(level == OutputLevel::JSON_NMEA)
-				{
+				else if (level == OutputLevel::JSON_NMEA) {
 					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].channel << "\"";
-					if(tag.mode & 2)
-					{
-						std::cout << ",\"rxtime\":\"" << data[i].getRxTime() <<  "\"";
+					if (tag.mode & 2) {
+						std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
 					}
-					if(tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
+					if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
 					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()
-					          << ",\"nmea\":[\"" << data[i].sentence[0] << "\"";
+							  << ",\"nmea\":[\"" << data[i].sentence[0] << "\"";
 
-					for(int j = 1; j < data[i].sentence.size(); j++)
+					for (int j = 1; j < data[i].sentence.size(); j++)
 						std::cout << ",\"" << data[i].sentence[j] << "\"";
 					std::cout << "]}" << std::endl;
 				}
@@ -159,22 +139,23 @@ namespace IO
 		}
 	};
 
-	class UDPEndPoint
-	{
+	class UDPEndPoint {
 		std::string address;
 		std::string port;
 
 		int sourceID = -1;
-	public:
 
+	public:
 		friend class UDP;
 
-		UDPEndPoint(std::string a, std::string p, int id = -1) { address = a, port = p; sourceID = id; }
+		UDPEndPoint(std::string a, std::string p, int id = -1) {
+			address = a, port = p;
+			sourceID = id;
+		}
 		int ID() { return sourceID; }
 	};
 
-	class UDP : public StreamIn<AIS::Message>
-	{
+	class UDP : public StreamIn<AIS::Message> {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
 
@@ -185,60 +166,53 @@ namespace IO
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 		void openConnection(const std::string& host, const std::string& port);
 		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-        void closeConnection();
+		void closeConnection();
 	};
 
-	class JSONscreen : public PropertyStreamIn
-    {
-    protected:
-        std::string json;
-        bool first = true;
+	class JSONscreen : public PropertyStreamIn {
+	protected:
+		std::string json;
+		bool first = true;
 
-        std::string delim()
-        {
-            bool f = first;
-            first = false;
+		std::string delim() {
+			bool f = first;
+			first = false;
 
-            if (f) return "";
-            return ",";
-        }
-
-	std::string jsonify(const std::string &str)
-	{
-		std::string out;
-		for(int i = 0; i < str.length(); i++)
-		{
-			char c = str[i];
-			if(c == '\"') out += "\\";
-			out += c;
+			if (f) return "";
+			return ",";
 		}
-		return out;
-	}
 
-    public:
+		std::string jsonify(const std::string& str) {
+			std::string out;
+			for (int i = 0; i < str.length(); i++) {
+				char c = str[i];
+				if (c == '\"') out += "\\";
+				out += c;
+			}
+			return out;
+		}
 
-        virtual void Set(int p, int v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-        virtual void Set(int p, unsigned v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-        virtual void Set(int p, float v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-        virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
-        virtual void Set(int p, const std::string& v)
-        {
-            if (p == PROPERTY_OBJECT_START)
-            {
-                first = true;
-                json = "{";
-            }
-            else if (p == PROPERTY_OBJECT_END)
-                std::cout << json << "}" << std::endl;
-            else
-                json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
-        }
-        virtual void Set(int p, const std::vector<std::string>& v)
-        {
-		json += delim() + "\"" + PropertyDict[p] + "\":[\"" + jsonify(v[0])+"\"";
-		for(int i = 1; i < v.size(); i++)
-			json += ",\"" + jsonify(v[i]) + "\"";
-		json += "]";
-        }
-    };
+	public:
+		virtual void Set(int p, int v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
+		virtual void Set(int p, unsigned v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
+		virtual void Set(int p, float v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
+		virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
+		virtual void Set(int p, const std::string& v) {
+			if (p == PROPERTY_OBJECT_START) {
+				first = true;
+				json = "{";
+				json.reserve(2048);
+			}
+			else if (p == PROPERTY_OBJECT_END)
+				std::cout << json << "}" << std::endl;
+			else
+				json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
+		}
+		virtual void Set(int p, const std::vector<std::string>& v) {
+			json += delim() + "\"" + PropertyDict[p] + "\":[\"" + jsonify(v[0]) + "\"";
+			for (int i = 1; i < v.size(); i++)
+				json += ",\"" + jsonify(v[i]) + "\"";
+			json += "]";
+		}
+	};
 }

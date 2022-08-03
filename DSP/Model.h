@@ -1,18 +1,18 @@
 /*
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -30,13 +30,13 @@
 #include "Device/Device.h"
 #include "IO.h"
 
-namespace AIS
-{
-	enum class Mode { AB, CD, ABCD };
+namespace AIS {
+	enum class Mode { AB,
+					  CD,
+					  ABCD };
 
 	// Abstract demodulation model
-	class Model: public Setting
-	{
+	class Model : public Setting {
 	protected:
 		std::string name = "";
 
@@ -45,8 +45,7 @@ namespace AIS
 		Util::PassThrough<Message> output;
 
 	public:
-
-		virtual void buildModel(char, char, int, bool, Device::Device* d) { device = d;  }
+		virtual void buildModel(char, char, int, bool, Device::Device* d) { device = d; }
 
 		StreamOut<Message>& Output() { return output; }
 
@@ -56,13 +55,11 @@ namespace AIS
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
 		virtual void Set(std::string option, std::string arg) { throw "Model: unknown setting."; }
-
 	};
 
 
 	// Common front-end downsampling
-	class ModelFrontend : public Model
-	{
+	class ModelFrontend : public Model {
 	private:
 		DSP::SOXR sox;
 		DSP::SRC src;
@@ -86,18 +83,17 @@ namespace AIS
 
 		const int nSymbolsPerSample = 48000 / 9600;
 
-		Connection<CFLOAT32> *C_a = NULL, *C_b = NULL;
+		Connection<CFLOAT32>*C_a = NULL, *C_b = NULL;
 		DSP::Rotate ROT;
+
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
 
 		virtual void Set(std::string option, std::string arg);
-
 	};
 
 	// Standard demodulation model, FM with brute-force timing recovery
-	class ModelStandard : public ModelFrontend
-	{
+	class ModelStandard : public ModelFrontend {
 		Demod::FM FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
@@ -110,8 +106,7 @@ namespace AIS
 
 
 	// Base model for development purposes, simplest and fastest
-	class ModelBase : public ModelFrontend
-	{
+	class ModelBase : public ModelFrontend {
 		Demod::FM FM_a, FM_b;
 		DSP::Filter FR_a, FR_b;
 		DSP::SimplePLL sampler_a, sampler_b;
@@ -122,8 +117,7 @@ namespace AIS
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
-	class ModelDefault : public ModelFrontend
-	{
+	class ModelDefault : public ModelFrontend {
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		std::vector<Demod::PhaseSearch> CD_a, CD_b;
 		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
@@ -133,21 +127,18 @@ namespace AIS
 		DSP::ScatterPLL S_a, S_b;
 
 	protected:
-
 		int nHistory = 12;
 		int nDelay = 3;
 
 		bool PS_EMA = true;
 
 	public:
-
 		void buildModel(char, char, int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
-	class ModelChallenger : public ModelFrontend
-	{
+	class ModelChallenger : public ModelFrontend {
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		std::vector<Demod::PhaseSearch> CD_a, CD_b;
 		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
@@ -157,22 +148,19 @@ namespace AIS
 		DSP::ScatterPLL S_a, S_b;
 
 	protected:
-
 		int nHistory = 12;
 		int nDelay = 3;
 
 		bool PS_EMA = true;
 
 	public:
-
 		void buildModel(char, char, int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
 	};
 
 
 	// Standard demodulation model for FM discriminator input
-	class ModelDiscriminator : public Model
-	{
+	class ModelDiscriminator : public Model {
 		Util::RealPart RP;
 		Util::ImaginaryPart IP;
 

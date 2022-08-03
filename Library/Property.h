@@ -24,10 +24,8 @@
 
 // PropertyStream
 
-class PropertyStreamIn
-{
+class PropertyStreamIn {
 public:
-
 	virtual void Set(int p, int v) {}
 	virtual void Set(int p, unsigned v) {}
 	virtual void Set(int p, float v) {}
@@ -36,28 +34,40 @@ public:
 	virtual void Set(int p, const std::vector<std::string>& v) {}
 };
 
-class PropertyStreamOut
-{
+class PropertyStreamOut {
 public:
-
 	std::vector<PropertyStreamIn*> connections;
 
-	void Submit(int p, int v) { for (auto c : connections) c->Set(p, v); }
-	void Submit(int p, unsigned v) { for (auto c : connections) c->Set(p, v); }
-	void Submit(int p, bool v) { for (auto c : connections) c->Set(p, v); }
-	void Submit(int p, float v) { for (auto c : connections) c->Set(p, v); }
-	void Submit(int p, const std::string& v) { for (auto c : connections) c->Set(p, v); }
-	void Submit(int p, const std::vector<std::string>& v) { for (auto c : connections) c->Set(p, v); }
+	void Submit(int p, int v) {
+		for (auto c : connections) c->Set(p, v);
+	}
+	void Submit(int p, unsigned v) {
+		for (auto c : connections) c->Set(p, v);
+	}
+	void Submit(int p, bool v) {
+		for (auto c : connections) c->Set(p, v);
+	}
+	void Submit(int p, float v) {
+		for (auto c : connections) c->Set(p, v);
+	}
+	void Submit(int p, const std::string& v) {
+		for (auto c : connections) c->Set(p, v);
+	}
+	void Submit(int p, const std::vector<std::string>& v) {
+		for (auto c : connections) c->Set(p, v);
+	}
 
 	void Connect(PropertyStreamIn* s) { connections.push_back(s); }
 	bool isConnected() { return connections.size() > 0; }
 	void Clear() { connections.resize(0); }
 };
 
-inline PropertyStreamIn& operator>>(PropertyStreamOut& a, PropertyStreamIn& b) { a.Connect(&b); return b; }
+inline PropertyStreamIn& operator>>(PropertyStreamOut& a, PropertyStreamIn& b) {
+	a.Connect(&b);
+	return b;
+}
 
-enum Properties
-{
+enum Properties {
 	PROPERTY_OBJECT_START = 0,
 	PROPERTY_OBJECT_END,
 	PROPERTY_CLASS,

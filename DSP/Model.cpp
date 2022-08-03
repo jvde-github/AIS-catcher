@@ -1,29 +1,27 @@
 /*
-    Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2022 jvde.github@gmail.com
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <cassert>
 
 #include "Model.h"
 
-namespace AIS
-{
+namespace AIS {
 
-	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
-	{
+	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		device = dev;
 
 		if (sample_rate < 96000 || sample_rate > 12288000)
@@ -33,18 +31,15 @@ namespace AIS
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
-		if(SOXR_DS)
-		{
+		if (SOXR_DS) {
 			sox.setParams(sample_rate, 96000);
 			physical >> convert >> sox >> ROT;
 		}
-		else if(SAMPLERATE_DS)
-		{
+		else if (SAMPLERATE_DS) {
 			src.setParams(sample_rate, 96000);
 			physical >> convert >> src >> ROT;
 		}
-		else
-		{
+		else {
 			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
 			FDC.setTaps(-1.0f);
@@ -52,33 +47,31 @@ namespace AIS
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
 
-			for(uint32_t r : definedRates)
-				if (r >= sample_rate)
-				{
+			for (uint32_t r : definedRates)
+				if (r >= sample_rate) {
 					bucket = r;
 					if (r != sample_rate) interpolated = true;
 					break;
 				}
 
-			if(interpolated)
-				std::cerr << "Warning: sample rate " << sample_rate/1000 << "K upsampled to " << bucket/1000 << "K." << std::endl;
+			if (interpolated)
+				std::cerr << "Warning: sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." << std::endl;
 
 			US.setParams(sample_rate, bucket);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
 
 			physical >> convert;
 
-			switch (bucket - (interpolated ? 1 : 0))
-			{
+			switch (bucket - (interpolated ? 1 : 0)) {
 				// 2^7
 			case 12288000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
-			case 12288000-1:
-				if(!droop_compensation)
+			case 12288000 - 1:
+				if (!droop_compensation)
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
@@ -86,27 +79,27 @@ namespace AIS
 
 				// 2^6
 			case 6144000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 6144000 - 1:
-				if(!droop_compensation)
-					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> ROT;
+				if (!droop_compensation)
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
-					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >>  DS2_2 >> DS2_1 >> FDC >> ROT;
+					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 
 				// 2^5
 			case 3072000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
-			case 3072000-1:
-				if(!droop_compensation)
+			case 3072000 - 1:
+				if (!droop_compensation)
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
@@ -114,13 +107,13 @@ namespace AIS
 
 				// 2^3 * 3
 			case 2304000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				else
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> DSK >> ROT;
 				break;
-			case 2304000-1:
-				if(!droop_compensation)
+			case 2304000 - 1:
+				if (!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				else
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> FDC >> DSK >> ROT;
@@ -128,20 +121,18 @@ namespace AIS
 
 				// 2^4
 			case 1536000:
-				if (!fixedpointDS)
-				{
-					if(!droop_compensation)
+				if (!fixedpointDS) {
+					if (!droop_compensation)
 						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 					else
-						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >>  ROT;
+						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				}
-				else
-				{
+				else {
 					convert.outCU8 >> DS16_CU8 >> ROT;
 				}
 				break;
-			case 1536000-1:
-				if(!droop_compensation)
+			case 1536000 - 1:
+				if (!droop_compensation)
 					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
@@ -149,13 +140,13 @@ namespace AIS
 
 				// 2^2 * 3
 			case 1152000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				else
 					convert >> DS2_2 >> DS2_1 >> FDC >> DSK >> ROT;
 				break;
-			case 1152000-1:
-				if(!droop_compensation)
+			case 1152000 - 1:
+				if (!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				else
 					convert >> DS2_2 >> DS2_1 >> FDC >> US >> DSK >> ROT;
@@ -163,13 +154,13 @@ namespace AIS
 
 				// 2^3
 			case 768000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
-			case 768000-1:
-				if(!droop_compensation)
+			case 768000 - 1:
+				if (!droop_compensation)
 					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
@@ -177,13 +168,13 @@ namespace AIS
 
 				// 2 * 3
 			case 576000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_1 >> DSK >> ROT;
 				else
 					convert >> DS2_1 >> FDC >> DSK >> ROT;
 				break;
-			case 576000-1:
-				if(!droop_compensation)
+			case 576000 - 1:
+				if (!droop_compensation)
 					convert >> DS2_1 >> US >> DSK >> ROT;
 				else
 					convert >> DS2_1 >> FDC >> US >> DSK >> ROT;
@@ -191,13 +182,13 @@ namespace AIS
 
 				// 2^2
 			case 384000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
-			case 384000-1:
-				if(!droop_compensation)
+			case 384000 - 1:
+				if (!droop_compensation)
 					convert >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> US >> DS2_2 >> DS2_1 >> FDC >> ROT;
@@ -207,19 +198,19 @@ namespace AIS
 			case 288000:
 				convert >> DSK >> ROT;
 				break;
-			case 288000-1:
+			case 288000 - 1:
 				convert >> US >> DSK >> ROT;
 				break;
 
 				// 2^1
 			case 192000:
-				if(!droop_compensation)
+				if (!droop_compensation)
 					convert >> DS2_1 >> ROT;
 				else
 					convert >> DS2_1 >> FDC >> ROT;
 				break;
-			case 192000-1:
-				if(!droop_compensation)
+			case 192000 - 1:
+				if (!droop_compensation)
 					convert >> US >> DS2_1 >> ROT;
 				else
 					convert >> US >> DS2_1 >> FDC >> ROT;
@@ -232,7 +223,6 @@ namespace AIS
 
 			default:
 				throw "Model: internal error. Sample rate should be supported.";
-
 			}
 		}
 
@@ -246,35 +236,29 @@ namespace AIS
 		return;
 	}
 
-	void ModelFrontend::Set(std::string option, std::string arg)
-	{
+	void ModelFrontend::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
-		if (option == "FP_DS")
-		{
+		if (option == "FP_DS") {
 			fixedpointDS = Util::Parse::Switch(arg);
 		}
-		else if (option == "SOXR")
-		{
+		else if (option == "SOXR") {
 			SOXR_DS = Util::Parse::Switch(arg);
 			SAMPLERATE_DS = false;
 		}
-		else if (option == "SAMPLERATE")
-		{
+		else if (option == "SAMPLERATE") {
 			SAMPLERATE_DS = Util::Parse::Switch(arg);
 			SOXR_DS = false;
 		}
-		else if (option == "DROOP_COMPENSATION")
-		{
+		else if (option == "DROOP_COMPENSATION") {
 			droop_compensation = Util::Parse::Switch(arg);
 		}
-		else Model::Set(option, arg);
-
+		else
+			Model::Set(option, arg);
 	}
 
-	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
-	{
+	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 		setName("Base (non-coherent)");
 
@@ -295,8 +279,7 @@ namespace AIS
 		return;
 	}
 
-	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
-	{
+	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 		setName("Standard (non-coherent)");
 
@@ -314,18 +297,15 @@ namespace AIS
 		*C_a >> FM_a >> FR_a >> S_a;
 		*C_b >> FM_b >> FR_b >> S_b;
 
-		for (int i = 0; i < nSymbolsPerSample; i++)
-		{
+		for (int i = 0; i < nSymbolsPerSample; i++) {
 			DEC_a[i].setChannel(CH1);
 			DEC_b[i].setChannel(CH2);
 
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
 
-			for (int j = 0; j < nSymbolsPerSample; j++)
-			{
-				if (i != j)
-				{
+			for (int j = 0; j < nSymbolsPerSample; j++) {
+				if (i != j) {
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
@@ -335,14 +315,13 @@ namespace AIS
 		return;
 	}
 
-	void ModelDefault::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
-	{
+	void ModelDefault::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		std::string setting = (fixedpointDS?"FP-DS ":"");
-		setting +=  (SOXR_DS?"SOXR ":"");
-		setting +=  (SAMPLERATE_DS?"SRC ":"");
-		setting +=  (droop_compensation?"DROOP ":"");
+		std::string setting = (fixedpointDS ? "FP-DS " : "");
+		setting += (SOXR_DS ? "SOXR " : "");
+		setting += (SAMPLERATE_DS ? "SRC " : "");
+		setting += (droop_compensation ? "DROOP " : "");
 		setName("AIS engine " VERSION " " + setting);
 
 		assert(C_a != NULL && C_b != NULL);
@@ -356,48 +335,41 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		if (!PS_EMA)
-		{
+		if (!PS_EMA) {
 			CD_a.resize(nSymbolsPerSample);
 			CD_b.resize(nSymbolsPerSample);
 		}
-		else
-		{
+		else {
 			CD_EMA_a.resize(nSymbolsPerSample);
 			CD_EMA_b.resize(nSymbolsPerSample);
 		}
 
-		CGF_a.setParams(512,187);
-		CGF_b.setParams(512,187);
+		CGF_a.setParams(512, 187);
+		CGF_b.setParams(512, 187);
 
 		*C_a >> CGF_a >> FC_a >> S_a;
 		*C_b >> CGF_b >> FC_b >> S_b;
 
-		for (int i = 0; i < nSymbolsPerSample; i++)
-		{
+		for (int i = 0; i < nSymbolsPerSample; i++) {
 			DEC_a[i].setChannel(CH1);
 			DEC_b[i].setChannel(CH2);
 
-			if (!PS_EMA)
-			{
+			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
 				CD_b[i].setParams(nHistory, nDelay);
 
 				S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
 				S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
 			}
-			else
-			{
+			else {
 				CD_EMA_a[i].setParams(nDelay);
 				CD_EMA_b[i].setParams(nDelay);
 
 				S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
 				S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
 			}
-			for (int j = 0; j < nSymbolsPerSample; j++)
-			{
-				if (i != j)
-				{
+			for (int j = 0; j < nSymbolsPerSample; j++) {
+				if (i != j) {
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
@@ -407,21 +379,18 @@ namespace AIS
 		return;
 	}
 
-	void ModelDefault::Set(std::string option, std::string arg)
-	{
+	void ModelDefault::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
-		if (option == "PS_EMA")
-		{
+		if (option == "PS_EMA") {
 			PS_EMA = Util::Parse::Switch(arg);
 		}
 		else
 			ModelFrontend::Set(option, arg);
 	}
 
-	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
-	{
+	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
 		setName("AIS engine " VERSION);
@@ -437,48 +406,41 @@ namespace AIS
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		if (!PS_EMA)
-		{
+		if (!PS_EMA) {
 			CD_a.resize(nSymbolsPerSample);
 			CD_b.resize(nSymbolsPerSample);
 		}
-		else
-		{
+		else {
 			CD_EMA_a.resize(nSymbolsPerSample);
 			CD_EMA_b.resize(nSymbolsPerSample);
 		}
 
-		CGF_a.setParams(512,187);
-		CGF_b.setParams(512,187);
+		CGF_a.setParams(512, 187);
+		CGF_b.setParams(512, 187);
 
 		*C_a >> CGF_a >> FC_a >> S_a;
 		*C_b >> CGF_b >> FC_b >> S_b;
 
-		for (int i = 0; i < nSymbolsPerSample; i++)
-		{
+		for (int i = 0; i < nSymbolsPerSample; i++) {
 			DEC_a[i].setChannel(CH1);
 			DEC_b[i].setChannel(CH2);
 
-			if (!PS_EMA)
-			{
+			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
 				CD_b[i].setParams(nHistory, nDelay);
 
 				S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
 				S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
 			}
-			else
-			{
+			else {
 				CD_EMA_a[i].setParams(nDelay);
 				CD_EMA_b[i].setParams(nDelay);
 
 				S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
 				S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
 			}
-			for (int j = 0; j < nSymbolsPerSample; j++)
-			{
-				if (i != j)
-				{
+			for (int j = 0; j < nSymbolsPerSample; j++) {
+				if (i != j) {
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
@@ -488,25 +450,22 @@ namespace AIS
 		return;
 	}
 
-	void ModelChallenger::Set(std::string option, std::string arg)
-	{
+	void ModelChallenger::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
-		if (option == "PS_EMA")
-		{
+		if (option == "PS_EMA") {
 			PS_EMA = Util::Parse::Switch(arg);
 		}
 		else
 			ModelFrontend::Set(option, arg);
 	}
 
-	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev)
-	{
+	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		setName("FM discriminator output model");
 
 		device = dev;
-		const int nSymbolsPerSample = 48000/9600;
+		const int nSymbolsPerSample = 48000 / 9600;
 
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
@@ -519,8 +478,7 @@ namespace AIS
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
-		switch (sample_rate)
-		{
+		switch (sample_rate) {
 		case 48000:
 			physical >> convert;
 			convert >> RP >> FR_a;
@@ -533,18 +491,15 @@ namespace AIS
 		FR_a >> S_a;
 		FR_b >> S_b;
 
-		for (int i = 0; i < nSymbolsPerSample; i++)
-		{
+		for (int i = 0; i < nSymbolsPerSample; i++) {
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
 
 			DEC_a[i].setChannel(CH1);
 			DEC_b[i].setChannel(CH2);
 
-			for (int j = 0; j < nSymbolsPerSample; j++)
-			{
-				if (i != j)
-				{
+			for (int j = 0; j < nSymbolsPerSample; j++) {
+				if (i != j) {
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
