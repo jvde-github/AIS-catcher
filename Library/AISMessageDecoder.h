@@ -39,6 +39,13 @@ namespace AIS
                 Submit(p, u);
         }
 
+        void S(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
+        {
+            int u = msg.getInt(start, len);
+            if (u != undefined)
+                Submit(p, u);
+        }
+
         void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::vector<std::string> *map = NULL)
         {
             unsigned u = msg.getUint(start, len);
@@ -94,6 +101,21 @@ namespace AIS
                 Submit(p, (float) (u / 10.0) );
         }
 
+        void S1(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
+        {
+            int u = msg.getInt(start, len);
+            if (u != undefined)
+                Submit(p, (float) (u / 10.0) );
+        }
+
+
+        void S2(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
+        {
+            int u = msg.getInt(start, len);
+            if (u != undefined)
+                Submit(p, (float) (u / 100.0) );
+        }
+
         void I1(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
             int u = msg.getInt(start, len);
@@ -113,6 +135,27 @@ namespace AIS
             int u = msg.getInt(start, len);
             if (u != undefined)
                 Submit(p, (float)(u / 600.0) );
+        }
+
+        void POS2(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
+        {
+            int u = msg.getInt(start, len);
+            if (u != undefined)
+                Submit(p, (float)(u / 60000.0) );
+        }
+
+        void W(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
+        {
+            int u = msg.getUint(start, len);
+            if (u != undefined)
+                Submit(p, (float)(u / 100.0 - 10.0) );
+        }
+
+        void P(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
+        {
+            int u = msg.getUint(start, len);
+            if (u != undefined)
+                Submit(p, u+799);
         }
 
         void B(const AIS::Message& msg, int p, int start, int len)
