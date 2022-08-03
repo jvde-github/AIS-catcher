@@ -39,6 +39,13 @@ namespace AIS
                 Submit(p, u);
         }
 
+        void UL(const AIS::Message& msg, int p, int start, int len, float a, float b, unsigned undefined = ~0)
+        {
+            unsigned u = msg.getUint(start, len);
+            if (u != undefined)
+                Submit(p, u * a + b);
+        }
+
         void S(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
         {
             int u = msg.getInt(start, len);
@@ -46,17 +53,24 @@ namespace AIS
                 Submit(p, u);
         }
 
+        void SL(const AIS::Message& msg, int p, int start, int len, float a, float b, int undefined = ~0)
+        {
+            int s = msg.getInt(start, len);
+            if (s != undefined)
+                Submit(p, s * a + b);
+        }
+
         void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::vector<std::string> *map = NULL)
         {
             unsigned u = msg.getUint(start, len);
-	    Submit(p,u);
+            Submit(p,u);
             if(map)
-	    {
-		if(u < map->size()) 
-			Submit(pmap, (*map)[u]);
-		else
-			Submit(pmap, std::string("Undefined") );
-	    }
+            {
+                if(u < map->size()) 
+                    Submit(pmap, (*map)[u]);
+                else
+                    Submit(pmap, std::string("Undefined") );
+            }
         }
 
         void TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
@@ -68,94 +82,30 @@ namespace AIS
             else if (u == 127) Submit(p, std::string("fastright") );
             else
             {
-		double rot = u / 4.733;
-		rot = (u<0) ? -rot * rot : rot * rot;
+		        double rot = u / 4.733;
+		        rot = (u<0) ? -rot * rot : rot * rot;
             	Submit(p,(int)(rot+0.5));
             }
         }
 
         void TIMESTAMP(const AIS::Message& msg, int p, int start, int len)
-	{
-		if(len != 40) return;
+        {
+            if(len != 40) return;
 
-		std::stringstream s;
-		s << std::setfill('0') << std::setw(4) << msg.getUint(start,14) << "-" << std::setw(2) << msg.getUint(start+14,4) << "-" << std::setw(2) << msg.getUint(start+18,5) << "T"
-		  << std::setw(2) <<  msg.getUint(start+23,5) << ":" << std::setw(2) << msg.getUint(start+28,6) << ":" << std::setw(2) << msg.getUint(start+34,6) << "Z";
-		Submit(p, std::string(s.str())) ;
-	}
+            std::stringstream s;
+            s << std::setfill('0') << std::setw(4) << msg.getUint(start,14) << "-" << std::setw(2) << msg.getUint(start+14,4) << "-" << std::setw(2) << msg.getUint(start+18,5) << "T"
+            << std::setw(2) <<  msg.getUint(start+23,5) << ":" << std::setw(2) << msg.getUint(start+28,6) << ":" << std::setw(2) << msg.getUint(start+34,6) << "Z";
+            Submit(p, std::string(s.str())) ;
+        }
 
         void ETA(const AIS::Message& msg, int p, int start, int len)
-	{
-		if(len != 20) return;
-
-		std::stringstream s;
-		s << std::setfill('0') << std::setw(2) << msg.getUint(start,4) << "-" << std::setw(2) << msg.getUint(start+4,5) << "T"
-		  << std::setw(2) <<  msg.getUint(start+9,5) << ":" << std::setw(2) << msg.getUint(start+14,6) << "Z";
-		Submit(p, std::string(s.str())) ;
-	}
-
-        void U1(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
         {
-            unsigned u = msg.getUint(start, len);
-            if (u != undefined)
-                Submit(p, (float) (u / 10.0) );
-        }
+            if(len != 20) return;
 
-        void S1(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
-        {
-            int u = msg.getInt(start, len);
-            if (u != undefined)
-                Submit(p, (float) (u / 10.0) );
-        }
-
-
-        void S2(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
-        {
-            int u = msg.getInt(start, len);
-            if (u != undefined)
-                Submit(p, (float) (u / 100.0) );
-        }
-
-        void I1(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
-        {
-            int u = msg.getInt(start, len);
-            if (u != undefined)
-                Submit(p, (float) (u / 10.0) );
-        }
-
-        void POS(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
-        {
-            int u = msg.getInt(start, len);
-            if (u != undefined)
-                Submit(p, (float)(u / 600000.0) );
-        }
-
-        void POS1(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
-        {
-            int u = msg.getInt(start, len);
-            if (u != undefined)
-                Submit(p, (float)(u / 600.0) );
-        }
-
-        void POS2(const AIS::Message& msg, int p, int start, int len, int undefined = ~0)
-        {
-            int u = msg.getInt(start, len);
-            if (u != undefined)
-                Submit(p, (float)(u / 60000.0) );
-        }
-
-        void W(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
-        {
-            int u = msg.getUint(start, len);
-            if (u != undefined)
-                Submit(p, (float)(u / 100.0 - 10.0) );
-        }
-
-        void P(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0)
-        {
-            int u = msg.getUint(start, len);
-            if (u != undefined)
-                Submit(p, u+799);
+            std::stringstream s;
+            s << std::setfill('0') << std::setw(2) << msg.getUint(start,4) << "-" << std::setw(2) << msg.getUint(start+4,5) << "T"
+            << std::setw(2) <<  msg.getUint(start+9,5) << ":" << std::setw(2) << msg.getUint(start+14,6) << "Z";
+            Submit(p, std::string(s.str())) ;
         }
 
         void B(const AIS::Message& msg, int p, int start, int len)
