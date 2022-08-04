@@ -388,10 +388,11 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 
 A list of some stations mentioning using AIS-catcher:
 - [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
-- [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854),
+- [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
 - [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
 - [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
-- [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/),
+- [Wren Road Rab 2](https://www.marinetraffic.com/cs/ais/details/stations/9615)
+- [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
 - [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 
