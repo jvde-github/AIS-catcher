@@ -96,8 +96,15 @@ namespace IO {
 		}
 	};
 
+	class SinkScreenString : public StreamIn<std::string> {
+	public:
+		void Receive(const std::string* data, int len, TAG& tag) {
+			for (int i = 0; i < len; i++)
+				std::cout << data[i] << std::endl;
+		}
+	};
 
-	class SinkScreen : public StreamIn<AIS::Message> {
+	class SinkScreenMessage : public StreamIn<AIS::Message> {
 	private:
 		OutputLevel level;
 
@@ -169,7 +176,7 @@ namespace IO {
 		void closeConnection();
 	};
 
-	class JSONscreen : public PropertyStreamIn {
+	class PropertyToJSON : public PropertyStreamIn, public StreamOut<std::string> {
 	protected:
 		std::string json;
 		bool first = true;
@@ -203,8 +210,10 @@ namespace IO {
 				json = "{";
 				json.reserve(2048);
 			}
-			else if (p == PROPERTY_OBJECT_END)
-				std::cout << json << "}" << std::endl;
+			else if (p == PROPERTY_OBJECT_END) {
+				TAG tag;
+				Send(&json, 1, tag);
+			}
 			else
 				json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
 		}

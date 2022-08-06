@@ -97,16 +97,16 @@ namespace AIS {
 
 		const AIS::Message& msg = data[0];
 
-		Submit(PROPERTY_CLASS, std::string("AIS"));
-		Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
+		if (!sparse) Submit(PROPERTY_CLASS, std::string("AIS"));
+		if (!sparse) Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
 
 		if (tag.mode & 2) {
 			Submit(PROPERTY_RXTIME, msg.getRxTime());
 		}
 
-		Submit(PROPERTY_SCALED, true);
-		Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
-		Submit(PROPERTY_NMEA, msg.sentence);
+		if (!sparse) Submit(PROPERTY_SCALED, true);
+		if (!sparse) Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
+		if (!sparse) Submit(PROPERTY_NMEA, msg.sentence);
 
 		if (tag.mode & 1) {
 			Submit(PROPERTY_SIGNAL_POWER, tag.level);
@@ -118,7 +118,6 @@ namespace AIS {
 		case 2:
 		case 3:
 			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
 			E(msg, PROPERTY_STATUS, 38, 4, PROPERTY_STATUS_TEXT, &PROPERTY_MAP_STATUS);
 			TURN(msg, PROPERTY_TURN, 42, 8);
@@ -127,7 +126,9 @@ namespace AIS {
 			SL(msg, PROPERTY_LON, 61, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
-			U(msg, PROPERTY_HEADING, 128, 9);
+			U(msg, PROPERTY_HEADING, 128, 9, 511);
+			if (sparse) break;
+			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_SECOND, 137, 6);
 			E(msg, PROPERTY_MANEUVER, 143, 2);
 			X(msg, PROPERTY_SPARE, 145, 3);
@@ -137,8 +138,12 @@ namespace AIS {
 		case 4:
 		case 11:
 			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
+			SL(msg, PROPERTY_LON, 79, 28, 1 / 600000.0, 0);
+			SL(msg, PROPERTY_LAT, 107, 27, 1 / 600000.0, 0);
+			E(msg, PROPERTY_EPFD, 134, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
+			if (sparse) break;
+			U(msg, PROPERTY_REPEAT, 6, 2);
 			TIMESTAMP(msg, PROPERTY_TIMESTAMP, 38, 40);
 			U(msg, PROPERTY_YEAR, 38, 14, 0);
 			U(msg, PROPERTY_MONTH, 52, 4, 0);
@@ -147,16 +152,12 @@ namespace AIS {
 			U(msg, PROPERTY_MINUTE, 66, 6, 60);
 			U(msg, PROPERTY_SECOND, 72, 6, 60);
 			B(msg, PROPERTY_ACCURACY, 78, 1);
-			SL(msg, PROPERTY_LON, 79, 28, 1 / 600000.0, 0);
-			SL(msg, PROPERTY_LAT, 107, 27, 1 / 600000.0, 0);
-			E(msg, PROPERTY_EPFD, 134, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
 			X(msg, PROPERTY_SPARE, 138, 10);
 			B(msg, PROPERTY_RAIM, 148, 1);
 			U(msg, PROPERTY_RADIO, 149, 19);
 			break;
 		case 5:
 			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_AIS_VERSION, 38, 2);
 			U(msg, PROPERTY_IMO, 40, 30);
@@ -169,16 +170,19 @@ namespace AIS {
 			U(msg, PROPERTY_TO_STARBOARD, 264, 6);
 			E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
 			ETA(msg, PROPERTY_ETA, 274, 20);
+			T(msg, PROPERTY_DESTINATION, 302, 120);
+			UL(msg, PROPERTY_DRAUGHT, 294, 8, 0.1, 0);
+			if (sparse) break;
+			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MONTH, 274, 4, 0);
 			U(msg, PROPERTY_DAY, 278, 5, 0);
 			U(msg, PROPERTY_HOUR, 283, 5, 0);
 			U(msg, PROPERTY_MINUTE, 288, 6, 0);
-			UL(msg, PROPERTY_DRAUGHT, 294, 8, 0.1, 0);
-			T(msg, PROPERTY_DESTINATION, 302, 120);
 			B(msg, PROPERTY_DTE, 422, 1);
 			X(msg, PROPERTY_SPARE, 423, 1);
 			break;
 		case 6:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -191,6 +195,7 @@ namespace AIS {
 			break;
 		case 7:
 		case 13:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -208,6 +213,7 @@ namespace AIS {
 			U(msg, PROPERTY_MMSISEQ4, 166, 2);
 			break;
 		case 8:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -217,13 +223,14 @@ namespace AIS {
 			break;
 		case 9:
 			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_ALT, 38, 12);
 			U(msg, PROPERTY_SPEED, 50, 10);
 			B(msg, PROPERTY_ACCURACY, 60, 1);
 			SL(msg, PROPERTY_LON, 61, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
+			if (sparse) break;
+			U(msg, PROPERTY_REPEAT, 6, 2);
 			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
 			U(msg, PROPERTY_SECOND, 128, 6);
 			X(msg, PROPERTY_REGIONAL, 134, 8);
@@ -233,12 +240,14 @@ namespace AIS {
 			U(msg, PROPERTY_RADIO, 148, 20);
 			break;
 		case 10:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_DEST_MMSI, 40, 30);
 			break;
 		case 12:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -248,12 +257,14 @@ namespace AIS {
 			T(msg, PROPERTY_TEXT, 72, 936);
 			break;
 		case 14:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
 			T(msg, PROPERTY_TEXT, 40, 968);
 			break;
 		case 15:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -269,6 +280,7 @@ namespace AIS {
 			U(msg, PROPERTY_OFFSET2_1, 146, 12);
 			break;
 		case 16:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -277,6 +289,7 @@ namespace AIS {
 			U(msg, PROPERTY_INCREMENT1, 82, 10);
 			break;
 		case 17:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -286,15 +299,16 @@ namespace AIS {
 			break;
 		case 18:
 			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
-			U(msg, PROPERTY_RESERVED, 38, 8);
 			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
 			B(msg, PROPERTY_ACCURACY, 56, 1);
 			SL(msg, PROPERTY_LON, 57, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 112, 12, 0.1, 0);
 			U(msg, PROPERTY_HEADING, 124, 9);
+			if (sparse) break;
+			U(msg, PROPERTY_REPEAT, 6, 2);
+			U(msg, PROPERTY_RESERVED, 38, 8);
 			U(msg, PROPERTY_SECOND, 133, 6);
 			U(msg, PROPERTY_REGIONAL, 139, 2);
 			B(msg, PROPERTY_CS, 141, 1);
@@ -308,17 +322,12 @@ namespace AIS {
 			break;
 		case 19:
 			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
-			U(msg, PROPERTY_RESERVED, 38, 8);
 			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
-			B(msg, PROPERTY_ACCURACY, 56, 1);
 			SL(msg, PROPERTY_LON, 57, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 112, 12, 0.1, 0);
 			U(msg, PROPERTY_HEADING, 124, 9);
-			U(msg, PROPERTY_SECOND, 133, 6);
-			U(msg, PROPERTY_REGIONAL, 139, 4);
 			T(msg, PROPERTY_SHIPNAME, 143, 120);
 			E(msg, PROPERTY_SHIPTYPE, 263, 8, PROPERTY_SHIPTYPE_TEXT, &PROPERTY_MAP_SHIPTYPE);
 			U(msg, PROPERTY_TO_BOW, 271, 9);
@@ -326,12 +335,19 @@ namespace AIS {
 			U(msg, PROPERTY_TO_PORT, 289, 6);
 			U(msg, PROPERTY_TO_STARBOARD, 295, 6);
 			E(msg, PROPERTY_EPFD, 301, 4, PROPERTY_EPFD_TEXT, &PROPERTY_MAP_EPFD);
+			if (sparse) break;
+			U(msg, PROPERTY_REPEAT, 6, 2);
+			B(msg, PROPERTY_ACCURACY, 56, 1);
+			U(msg, PROPERTY_RESERVED, 38, 8);
+			U(msg, PROPERTY_SECOND, 133, 6);
+			U(msg, PROPERTY_REGIONAL, 139, 4);
 			B(msg, PROPERTY_RAIM, 305, 1);
 			B(msg, PROPERTY_DTE, 306, 1);
 			U(msg, PROPERTY_ASSIGNED, 307, 1);
 			X(msg, PROPERTY_SPARE, 308, 4);
 			break;
 		case 20:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -356,6 +372,7 @@ namespace AIS {
 			U(msg, PROPERTY_INCREMENT4, 149, 11);
 			break;
 		case 21:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -377,6 +394,7 @@ namespace AIS {
 			B(msg, PROPERTY_ASSIGNED, 270, 1);
 			break;
 		case 22:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -396,6 +414,7 @@ namespace AIS {
 			U(msg, PROPERTY_ZONESIZE, 142, 3);
 			break;
 		case 23:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -410,6 +429,7 @@ namespace AIS {
 			U(msg, PROPERTY_QUIET, 150, 4);
 			break;
 		case 24:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -432,6 +452,7 @@ namespace AIS {
 			}
 			break;
 		case 27:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);
@@ -445,6 +466,7 @@ namespace AIS {
 			U(msg, PROPERTY_GNSS, 94, 1);
 			break;
 		default:
+			if (sparse) break;
 			U(msg, PROPERTY_TYPE, 0, 6);
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MMSI, 8, 30);

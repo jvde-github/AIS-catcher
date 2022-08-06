@@ -26,6 +26,8 @@
 
 namespace AIS {
 	class AISMessageDecoder : public StreamIn<Message>, public PropertyStreamOut {
+		bool sparse = false;
+
 		void ProcessMsg8Data(const AIS::Message& msg, int len);
 
 	protected:
@@ -68,7 +70,7 @@ namespace AIS {
 			int u = msg.getInt(start, len);
 
 			if (u == -128)
-				Submit(p, std::string("nan"));
+				; // Submit(p, std::string("nan"));
 			else if (u == -127)
 				Submit(p, std::string("fastleft"));
 			else if (u == 127)
@@ -120,6 +122,8 @@ namespace AIS {
 
 	public:
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+
+		void setSparse(bool b) { sparse = b; }
 	};
 
 	extern const std::vector<std::string> PROPERTY_MAP_STATUS;
