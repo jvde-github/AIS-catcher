@@ -87,7 +87,7 @@ void Usage() {
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
 	std::cerr << "\t[-M xxx set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppmn) (default: none)]" << std::endl;
 	std::cerr << "\t[-T xx auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
-	std::cerr << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON  (default: 2)]" << std::endl;
+	std::cerr << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (-o 0)]" << std::endl;
 	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
@@ -286,8 +286,9 @@ int main(int argc, char* argv[]) {
 
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
-	IO::SinkScreen nmea_screen;
-	IO::JSONscreen JSON_screen;
+	IO::SinkScreenMessage nmea_screen;
+	IO::PropertyToJSON JSONstream;
+	IO::SinkScreenString dump_screen;
 
 	AIS::AISMessageDecoder ais_decoder;
 
@@ -651,9 +652,12 @@ int main(int argc, char* argv[]) {
 			liveModels[0]->Output() >> nmea_screen;
 			nmea_screen.setDetail(NMEA_to_screen);
 		}
-		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE) {
+		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
 			liveModels[0]->Output() >> ais_decoder;
-			ais_decoder >> JSON_screen;
+			ais_decoder >> JSONstream;
+			JSONstream >> dump_screen;
+
+			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) ais_decoder.setSparse(true);
 		}
 
 		if (verbose) {
