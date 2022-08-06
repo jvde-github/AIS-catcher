@@ -204,6 +204,7 @@ namespace IO {
 		virtual void Set(int p, unsigned v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
 		virtual void Set(int p, float v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
 		virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
+
 		virtual void Set(int p, const std::string& v) {
 			if (p == PROPERTY_OBJECT_START) {
 				first = true;
@@ -211,9 +212,11 @@ namespace IO {
 				json.reserve(2048);
 			}
 			else if (p == PROPERTY_OBJECT_END) {
-				TAG tag;
-				json += "}";
-				Send(&json, 1, tag);
+				if (json != "{") {
+					TAG tag;
+					json += "}";
+					Send(&json, 1, tag);
+				}
 			}
 			else
 				json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
