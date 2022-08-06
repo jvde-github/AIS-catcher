@@ -105,7 +105,7 @@ namespace AIS {
 		}
 
 		if (!sparse) Submit(PROPERTY_SCALED, true);
-		if (!sparse) Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
+		Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
 		if (!sparse) Submit(PROPERTY_NMEA, msg.sentence);
 
 		if (tag.mode & 1) {
