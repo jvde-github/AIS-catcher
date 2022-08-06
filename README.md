@@ -42,13 +42,16 @@ If you are looking for a Windows-version for the latest development version, it 
 
 ## What's new?
 
+### Development version
+
+- ``-o 4``now ``-o 5``, ``-o 4`` shows a subset of the AIS message data relevant for map plotting.
+
 ### Version 0.38
 
 - Option ``-o`` renamed to ``-c`` (switch to select AIS channels)
 - Signal power (in dB) and applied frequency correction (in ppm) calculated with option ``-M D``
 - NMEA messages are timestamped with option ``-M T``. To activate both additional calculations use ``-M DT`` or ``-M TD``. 
-- ``-o 3`` shows NMEA lines and additional information including signal power and timestamp (with ``-M DT``) in JSON format so it can be easily processed in 3rd party software. 
-- More extensive JSON output is provided with the switch ``-o 4``
+- Screen output can now be defined with ``-o`` switch, see below. 
 - ``-T`` switch that stops the program after a specified number of seconds to facilitate experiments.
 - ``start.bat`` added to Windows binaries to make it easier to set up parameters for less experienced command-line users..
 - ...
