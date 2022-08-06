@@ -212,6 +212,7 @@ namespace IO {
 			}
 			else if (p == PROPERTY_OBJECT_END) {
 				TAG tag;
+				json += "}";
 				Send(&json, 1, tag);
 			}
 			else
