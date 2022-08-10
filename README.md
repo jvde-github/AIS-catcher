@@ -51,7 +51,7 @@ I tested AIS-catcher with the ShipXplorer AIS dongle and it worked remarkably we
 Dongle              | Run 1              | Run 2 |
  :--            | :--			| :--				|
  RTL-SDR Blog v3 | 61 | 80 |
- ShipXplorer | 268 | 287 |
+ ShipXplorer(R) AIS dongle | 268 | 287 |
 
 ### Version 0.38
 
