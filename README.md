@@ -50,8 +50,8 @@ If you are looking for a Windows-version for the latest development version, it 
 
 Dongle              | 1A              | 1B | 2A | 2B | 2C |
  :--            | :--			| :--	| :-- | :-- | :-- |
- RTL-SDR Blog v3 | 61 | 80 | 25 | 70 | 34| 
- ShipXplorer(R) AIS dongle | 268 | 287 | 28 | 15 | 7 |
+ RTL-SDR Blog v3 | 61 | 80 | 28 | 15 | 7 |  
+ ShipXplorer(R) AIS dongle | 268 | 287 | 25 | 70 | 34|
 
 ### Version 0.38
 
