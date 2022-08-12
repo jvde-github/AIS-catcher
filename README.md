@@ -48,7 +48,7 @@ If you are looking for a Windows-version for the latest development version, it 
 - I tested AIS-catcher with the ShipXplorer AIS dongle, which is essentially a RTL-SDR dongle, and it worked well for two test set ups 
 (urban area close to radio tower so likely lots of interference). Number of messages in 60 seconds with the ShipXplorer antenna:
 
-Dongle              | Run 1A              | Run 1B | 2A | 2B | 2C |
+Dongle              | 1A              | 1B | 2A | 2B | 2C |
  :--            | :--			| :--	| :-- | :-- | :-- |
  RTL-SDR Blog v3 | 61 | 80 | 25 | 70 | 34| 
  ShipXplorer(R) AIS dongle | 268 | 287 | 28 | 15 | 7 |
