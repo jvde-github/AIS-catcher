@@ -44,11 +44,12 @@ If you are looking for a Windows-version for the latest development version, it 
 
 ### Development version
 
-- ``-o 4``now ``-o 5``, ``-o 4`` shows a subset of the AIS message data relevant for map plotting.
-- I tested AIS-catcher with the ShipXplorer AIS dongle and it worked remarkably well for my set up (urban area so likely lot of interference). Number of messages in 60 seconds with the ShipXplorer antenna:
+- ``-o 4`` is now ``-o 5``, ``-o 4`` shows a subset of the AIS message data relevant for map plotting.
+- I tested AIS-catcher with the ShipXplorer AIS dongle, which is essentially a RTL-SDR dongle, and it worked well for one test set up 
+(urban area so likely lots of interference). Number of messages in 60 seconds with the ShipXplorer antenna:
 
 Dongle              | Run 1              | Run 2 |
- :--            | :--			| :--				|
+ :--            | :--			| :--	|
  RTL-SDR Blog v3 | 61 | 80 |
  ShipXplorer(R) AIS dongle | 268 | 287 |
 
