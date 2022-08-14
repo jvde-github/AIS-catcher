@@ -121,6 +121,7 @@ namespace AIS {
 
 				// 2^4
 			case 1536000:
+				FDC.setTaps(-0.75f);
 				if (!fixedpointDS) {
 					if (!droop_compensation)
 						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -132,6 +133,7 @@ namespace AIS {
 				}
 				break;
 			case 1536000 - 1:
+				FDC.setTaps(-0.75f);
 				if (!droop_compensation)
 					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
@@ -154,12 +156,14 @@ namespace AIS {
 
 				// 2^3
 			case 768000:
+				FDC.setTaps(-0.4f);
 				if (!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 768000 - 1:
+				FDC.setTaps(-0.4f);
 				if (!droop_compensation)
 					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
