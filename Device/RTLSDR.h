@@ -52,7 +52,7 @@ namespace Device {
 		bool lost = true;
 
 		// FIFO
-		FIFO<char> fifo;
+		FIFO fifo;
 
 		// callbacks
 		static void callback_static(CU8* buf, uint32_t len, void* ctx);

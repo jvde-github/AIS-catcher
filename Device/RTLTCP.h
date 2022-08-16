@@ -60,7 +60,7 @@ namespace Device {
 		void RunAsync();
 		void Run();
 
-		FIFO<char> fifo;
+		FIFO fifo;
 
 		void setParameterRTLTCP(uint8_t cmd, uint32_t param);
 		void applySettings();

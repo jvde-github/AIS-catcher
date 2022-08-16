@@ -192,7 +192,7 @@ namespace Device {
 		void RunAsync();
 		void Run();
 
-		FIFO<char> fifo;
+		FIFO fifo;
 
 		bool read(char* data, int len);
 
