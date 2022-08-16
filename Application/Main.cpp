@@ -81,11 +81,11 @@ void Usage() {
 	std::cerr << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-s xxx sample rate in Hz (default: based on SDR device)]" << std::endl;
-	std::cerr << "\t[-c [AB/CD] [optional: AB] select AIS channels and NMEA channel designations (default: AB)]" << std::endl;
+	std::cerr << "\t[-c [AB/CD] [optional: AB] select AIS channels and optionally the NMEA channel designations]" << std::endl;
 	std::cerr << "\t[-p xxx set frequency correction for device in PPM (default: zero)]" << std::endl;
 	std::cerr << "\t[-a xxx set tuner bandwidth in Hz (default: off)]" << std::endl;
 	std::cerr << "\t[-v [option: 1+] enable verbose mode, optional to provide update frequency in seconds (default: false)]" << std::endl;
-	std::cerr << "\t[-M xxx set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppmn) (default: none)]" << std::endl;
+	std::cerr << "\t[-M xxx set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]" << std::endl;
 	std::cerr << "\t[-T xx auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
 	std::cerr << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;
