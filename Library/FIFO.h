@@ -26,9 +26,8 @@
 
 // FIFO implementation: input (Push) can be any size, output (Pop) will be of size BLOCK_SIZE
 
-template <typename T>
 class FIFO {
-	std::vector<T> _data;
+	std::vector<char> _data;
 
 	int head = 0;
 	int tail = 0;
@@ -71,7 +70,7 @@ public:
 		return (count > 0);
 	}
 
-	T* Front() {
+	char* Front() {
 		return _data.data() + head;
 	}
 	void Pop() {
@@ -84,7 +83,7 @@ public:
 		return count == N_BLOCKS;
 	}
 
-	bool Push(T* data, int sz) {
+	bool Push(char* data, int sz) {
 		if (count == -1) return false;
 		if (sz <= 0) return true;
 

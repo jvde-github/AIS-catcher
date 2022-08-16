@@ -46,7 +46,7 @@ namespace Device {
 		void RunAsync();
 		void Run();
 
-		FIFO<char> fifo;
+		FIFO fifo;
 		int timeout = 100;
 
 	public:
