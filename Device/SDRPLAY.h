@@ -34,7 +34,7 @@ namespace Device {
 		std::thread run_thread;
 		void Run();
 
-		FIFO<char> fifo;
+		FIFO fifo;
 		std::vector<CFLOAT32> output;
 
 		// SDRPLAY specific
