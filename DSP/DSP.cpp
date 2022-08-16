@@ -232,8 +232,8 @@ namespace DSP {
 
 		for (int i = 0; i < len; i++) {
 			output[i] = alpha * (h1 + data[i]) + h2 * beta;
-			h2 = data[i];
 			h1 = h2;
+			h2 = data[i];
 		}
 
 		Send(output.data(), len, tag);
