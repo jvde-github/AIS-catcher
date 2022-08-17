@@ -166,11 +166,11 @@ jobs:
     - name: Download SDRPlay API
       run: |
         cd "C:/Program Files/"
-        Invoke-WebRequest -Uri " https://www.sdrplay.com/software/SDRplay_RSP_API-Windows-3.07.exe" -OutFile sdrplay.exe        
+        Invoke-WebRequest -Uri " https://www.sdrplay.com/software/SDRplay_RSP_API-Windows-3.09.exe" -OutFile sdrplay.exe        
         choco install innoextract 
         innoextract sdrplay.exe
         ren app SDRplay
-        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.07.pdf" output\Licenses\SDRPLAY.pdf
+        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.09.pdf" output\Licenses\SDRPLAY.pdf
 
     - name: Building with SDRPlay support
       run: |
