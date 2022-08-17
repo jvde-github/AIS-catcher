@@ -170,10 +170,11 @@ jobs:
         choco install innoextract 
         innoextract sdrplay.exe
         ren app SDRplay
-        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.09.pdf" output\Licenses\SDRPLAY.pdf
 
     - name: Building with SDRPlay support
       run: |
+      
+        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.09.pdf" output\Licenses\SDRPLAY.pdf
 
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
         $gen = "Visual Studio 17 2022"
