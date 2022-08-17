@@ -163,12 +163,13 @@ jobs:
         path: |
           output
 
-    - name: Download SDRPlay API from SDRPP build
-      run: Invoke-WebRequest -Uri "https://drive.google.com/uc?id=12UHPMwkfa67A11QZDmpCT4iwHnyJHWuu" -OutFile ${{runner.workspace}}/SDRPlay.zip
-
-    - name: Install SDRPlay API
+    - name: Download SDRPlay API
       run: |
-        7z x ${{runner.workspace}}/SDRPlay.zip -o"C:/Program Files/"
+        cd "C:/Program Files/"
+        mkdir SDRplay; cd SDRplay
+        Invoke-WebRequest -Uri " https://www.sdrplay.com/software/SDRplay_RSP_API-Windows-3.07.exe" -OutFile sdrplay.exe        
+        choco install innoextract 
+        innoextract sdrplay.exe
         cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.07.pdf" output\Licenses\SDRPLAY.pdf
 
     - name: Building with SDRPlay support
