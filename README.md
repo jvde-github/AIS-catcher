@@ -52,7 +52,7 @@ Dongle              | 1A              | 1B | 2A | 2B | 2C |
  :--            | :--			| :--	| :-- | :-- | :-- |
  RTL-SDR Blog v3 | 61 | 80 | 28 | 15 | 7 |  
  ShipXplorer(R) AIS dongle | 268 | 287 | 25 | 70 | 34|
-- I also started to experiment with improving the performance of my Raspberry + RTL-SDR set up which seems to perform worse than when decoding on my laptop or a mini PC. Using a powered USB hub for the dongle and a cable to that hub with a ferrite choke seems to help:
+- I also started to experiment with improving the performance of my Raspberry + RTL-SDR set up which seems to perform worse than when decoding on my laptop or a mini PC. Using a powered USB hub for the dongle and a cable to that hub with a ferrite choke seems to help. Again, number of messages of a 60 second period:
 
 System              | 1              | 2 | 
  :--            | :--			| :--	|
