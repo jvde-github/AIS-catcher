@@ -373,7 +373,7 @@ If the sample rates for a device are not supported by AIS-catcher, the SOXR func
 
 On August 25, 2022 I was given the opportunity to connect AIS-catcher for a few minutes to the antenna system at the [Meteotoren](https://www.meteotoren.nl/index.php?id=ais) which has a consistent high message rate and availability on [MarineTraffic](https://www.marinetraffic.com/en/ais/details/stations/15981). 
 
-We ran AIS-catcher on a laptop for 60 seconds and counted the number of messages for two RTL-SDR dongles: 
+We ran AIS-catcher on a laptop for 60 seconds and counted the number of messages for two RTL-SDR dongles (```-gr rtlagc on -T -v 60```): 
 
 | SDR | Run 1 | Run 2 |
 | :--- | :--- | :---: |
