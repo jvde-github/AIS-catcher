@@ -380,9 +380,9 @@ We ran AIS-catcher on a laptop for 60 seconds and counted the number of messages
 | RTL-SDR blog v3 | 1061 | 1255 |
 | ShipXplorer AIS dongle |  1372 | 1315 |
 
-The ShipXplorer AIS dongle is a RTL-SDR with an additional filter (TA395). These two runs suggest some advantage of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over a FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed Yagi antenna. An experiment where we reran the experiment with a standard antenna slightly lower reduced the message count to below 800. 
+The ShipXplorer AIS dongle is a RTL-SDR with an additional filter (TA395). These two runs suggest some advantage of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over a FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed Yagi antenna. An experiment where we reran with a standard antenna slightly lower reduced the message count to below 800 messages per second. 
 
-Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and after the experiment was in the area of 1350 messages/minute. In this short run we did not observe a difference in range yet.
+Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and after the experiment was in the area of 1350 messages/minute. In this short run we did not observe a difference in range to draw conclusions.
 This initial results are promising and it would be interesting to compare in a more scientific manner open source decoders with a generic RTL-SDR and dedicated AIS receiver hardware. Thank you Meteotoren for facilitating!
 
 ### Experimenting with recorded signals
