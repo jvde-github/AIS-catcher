@@ -369,6 +369,21 @@ To complete the example, this command also sets the tuner gain for the RTL-SDR t
 If the sample rates for a device are not supported by AIS-catcher, the SOXR functionality could be considered (e.g. ```-go SOXR on```). Again, we advice to use the built-in drivers and included resampling functionality where possible.  
 
 ## Validation
+### Experiment at the Meteotoren in Scheveningen 
+
+On August 25, 2022 I was given the opportunity to connect AIS-catcher for a few minutes to the antenna system at the [Meteotoren](https://www.meteotoren.nl/index.php?id=ais) which has a consistent high message rate and availability on [MarineTraffic](https://www.marinetraffic.com/en/ais/details/stations/15981). 
+
+We ran AIS-catcher on a laptop for 60 seconds and counted the number of messages for two RTL-SDR dongles: 
+
+| SDR | Run 1 | Run 2 |
+| :--- | :--- | :---: |
+| RTL-SDR blog v3 | 1061 | 1255 |
+| ShipXplorer AIS dongle |  1372 | 1315 |
+
+The ShipXplorer AIS dongle is a RTL-SDR with an additional filter (TA395). These two runs suggest some advantage of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over a FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed yagi antenna. An experiment where we reran the experiment with a standard antenna slightly lower reduced the message count to below 800. 
+
+Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and after the experiment was in the area of 1350 messages/minute. In this short run we did not observe a difference in range yet.
+This initial results are promising but inconclusive until repeated in a more scientific manner. Thank you Meteotoren for facilitating!
 
 ### Experimenting with recorded signals
 The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. 
