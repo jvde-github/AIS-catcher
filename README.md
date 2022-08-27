@@ -380,9 +380,15 @@ We ran AIS-catcher on a laptop for 60 seconds and counted the number of messages
 | RTL-SDR blog v3 | 1061 | 1255 |
 | ShipXplorer AIS dongle |  1372 | 1315 |
 
-The ShipXplorer AIS dongle is a RTL-SDR with an additional filter (TA395). The two set of runs suggest some advantage of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over a FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed Yagi antenna. An experiment where we reran with a standard antenna placed at a slightly lower height reduced the message count to below 800 messages per second. 
+The ShipXplorer AIS dongle is a RTL-SDR with an additional filter (TA395). The two sets of runs suggest some advantage of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over a FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed Yagi antenna. An experiment where we reran with a standard antenna placed at a slightly lower height reduced the message count to below 800 messages per second. 
 
-Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and just after the experiment was in the area of 1350 messages/minute. We did not observe a difference in range with the MarineTraffic statistics to draw a conclusion.
+
+<p align="center">
+<img src="https://github.com/jvde-github/AIS-catcher/blob/9d164c39aebea5015cb82c4debf16a459f2f43a8/media/map%20AIS%20dispatcher.png" width=30% height=30%>
+<img src="https://github.com/jvde-github/AIS-catcher/blob/638535b62fd1ccf4b90fa66378b735f2e28b34f3/media/map%20MarineTraffic.png" width=30% height=30%>
+</p>
+
+Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and just after the experiment was in the area of 1350 messages/minute. We did not observe a difference in range with the MarineTraffic statistics to draw a conclusion (see pcxtures, AIS-catcher only ran for a few minutes).
 These initial results are promising and it would be interesting to compare, in a more scientific manner, how open source decoders with a generic RTL-SDR and dedicated AIS receiver hardware compare. Thank you Meteotoren for facilitating!
 
 ### Experimenting with recorded signals
