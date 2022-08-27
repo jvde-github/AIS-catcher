@@ -24,9 +24,9 @@ Building instructions are provided below for many systems. Pre-built container i
 
 Links to fully built Windows binaries of version **v0.38** and older are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
 Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
-It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to try first:
--  check whether RTL-SDR drivers are installed via [Zadig](https://www.rtl-sdr.com/tag/zadig/). 
-- on new Windows systems it might be that you have to install the Visual Studio runtime [libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
+It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to check:
+-  installation of RTL-SDR drivers is done via [Zadig](https://www.rtl-sdr.com/tag/zadig/)
+- installation of the Visual Studio runtime [libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
 
 Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
@@ -58,7 +58,7 @@ If you are looking for a Windows-version for the latest development version, it 
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
-If you are travelling and looking for a portable system that can be used on an Android phone, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
+If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
 
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/blob/152e5460fd938fb701d988f01deccdfa6192443d/media/Screenshot_BoatBeacon%5B1%5D.jpg" width=60% height=60%>
