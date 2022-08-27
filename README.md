@@ -369,7 +369,7 @@ To complete the example, this command also sets the tuner gain for the RTL-SDR t
 If the sample rates for a device are not supported by AIS-catcher, the SOXR functionality could be considered (e.g. ```-go SOXR on```). Again, we advice to use the built-in drivers and included resampling functionality where possible.  
 
 ## Validation
-### Experiment at the Meteotoren in Scheveningen 
+### Experiment at the [Meteotoren in Scheveningen](https://www.meteotoren.nl/index.php?id=index) 
 
 On August 25, 2022 I was given the opportunity to connect AIS-catcher for a few minutes to the antenna system at the [Meteotoren](https://www.meteotoren.nl/index.php?id=ais) which has a consistent high message rate and availability on [MarineTraffic](https://www.marinetraffic.com/en/ais/details/stations/15981). 
 
