@@ -388,7 +388,7 @@ The ShipXplorer AIS dongle is a RTL-SDR with an additional filter (TA395). The t
 <img src="https://github.com/jvde-github/AIS-catcher/blob/638535b62fd1ccf4b90fa66378b735f2e28b34f3/media/map%20MarineTraffic.png" width=30% height=30%>
 </p>
 
-Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and just after the experiment was in the area of 1350 messages/minute. We did not observe a difference in range with the MarineTraffic statistics to draw a conclusion (see pictures - AIS-catcher plot only ran for a few minutes).
+Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and just after the experiment was in the area of 1350 messages/minute. We did not observe a difference in range with the MarineTraffic statistics to draw a conclusion (see pictures - left is AIS-catcher reception for few minutes visualized with AISdispatcher, right is a screenshot from MarineTraffic).
 These initial results are promising and it would be interesting to compare, in a more scientific manner, how open source decoders with a generic RTL-SDR and dedicated AIS receiver hardware compare. Thank you Meteotoren for facilitating!
 
 ### Experimenting with recorded signals
