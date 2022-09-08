@@ -380,7 +380,7 @@ We ran AIS-catcher on a laptop for 60 seconds and counted the number of messages
 | RTL-SDR blog v3 | 1061 | 1255 |
 | ShipXplorer AIS dongle |  1372 | 1315 |
 
-The ShipXplorer AIS dongle is a RTL-SDR with an additional filter (TA395). The two sets of runs suggest some advantage of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over a FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed Yagi antenna. An experiment where we reran with a standard antenna placed at a slightly lower height reduced the message count to below 800 messages per second. 
+The ShipXplorer AIS dongle, as far as I can see, is a RTL-SDR with an additional SAW filter (TA0395A). The two sets of runs suggest some advantage of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over a FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed Yagi antenna. An experiment where we reran with a standard antenna placed at a slightly lower height reduced the message count to below 800 messages per second. 
 
 
 <p align="center">
