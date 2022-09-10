@@ -348,8 +348,8 @@ namespace AIS {
 			CD_EMA_b.resize(nSymbolsPerSample);
 		}
 
-		CGF_a.setParams(512, 187);
-		CGF_b.setParams(512, 187);
+		CGF_a.setParams(512, CGF_wide ? 87 : 187);
+		CGF_b.setParams(512, CGF_wide ? 87 : 187);
 
 		*C_a >> CGF_a >> FC_a >> S_a;
 		*C_b >> CGF_b >> FC_b >> S_b;
@@ -389,6 +389,9 @@ namespace AIS {
 
 		if (option == "PS_EMA") {
 			PS_EMA = Util::Parse::Switch(arg);
+		}
+		if (option == "CGF_WIDE") {
+			CGF_wide = Util::Parse::Switch(arg);
 		}
 		else
 			ModelFrontend::Set(option, arg);
