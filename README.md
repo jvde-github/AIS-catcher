@@ -25,7 +25,7 @@ Building instructions are provided below for many systems. Pre-built container i
 Links to fully built Windows binaries of version **v0.38** and older are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
 Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
 It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to check:
--  installation of RTL-SDR drivers is done via [Zadig](https://www.rtl-sdr.com/tag/zadig/)
+- installation of RTL-SDR drivers is done via [Zadig](https://www.rtl-sdr.com/tag/zadig/)
 - installation of the Visual Studio runtime [libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
 
 Recent releases:
@@ -45,7 +45,7 @@ If you are looking for a Windows-version for the latest development version, it 
 ### Development version
 
 - ``-o 4`` is now ``-o 5`` and ``-o 4`` now shows a subset of the AIS message data relevant for map plotting.
-- Experimental switch ``-go CGF_WIDE on`` to make the decoder more robust for thermal drift in dongles. Will come at a cost of sensitivity. Experiments suggest 50% improvement in message rate of the default decoder over FM-based decoder, which reduces to 30% with this switch activated. However, the decoder then corrects for frequency offsets of up to +/- 30 ppm. I never been too happy with this part of the decoder so might look at alternatives at some point. 
+- Experimental switch ``-go CGF_WIDE on`` to make the decoder more robust for thermal drift in dongles. Will come at a cost of sensitivity. My test database suggests 50% improvement in message rate of the default decoder over FM-based decoder, which reduces to 30% with this switch activated. However, the decoder then corrects for frequency offsets of up to +/- 30 ppm. I never been too happy with this part of the decoder so might look at alternatives at some point (e.g. tracking ppm corrections or a different frequency correction method). 
 - ...
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
