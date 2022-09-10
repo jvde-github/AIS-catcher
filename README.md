@@ -45,7 +45,7 @@ If you are looking for a Windows-version for the latest development version, it 
 ### Development version
 
 - ``-o 4`` is now ``-o 5`` and ``-o 4`` now shows a subset of the AIS message data relevant for map plotting.
-- Experimental switch ``-go CGF_WIDE on`` to make the decoder more robust for thermal drift in dongles. Will come at a cost of sensitivity. My test database suggests 50% improvement in message rate of the default decoder over FM-based decoder, which reduces to 30% with this switch activated. However, the decoder then corrects for frequency offsets of up to +/- 30 ppm. I never been too happy with this part of the decoder so might look at alternatives at some point (e.g. tracking ppm corrections or a different frequency correction method). 
+- Experimental switch ``-go CGF_WIDE on`` to make the decoder more robust for thermal drift in dongles. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. However, the decoder then corrects for frequency offsets of up to +/- 30 ppm. I never been too happy with this part of the decoder so might look at alternatives at some point (e.g. tracking ppm corrections or a different frequency correction method, perhaps in combination with auto-tuning ppm corrections). 
 - ...
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
