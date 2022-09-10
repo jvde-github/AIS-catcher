@@ -131,6 +131,7 @@ namespace AIS {
 		int nDelay = 3;
 
 		bool PS_EMA = true;
+		bool CGF_wide = false;
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
