@@ -519,6 +519,8 @@ Note that some libraries will require significant hardware resources. The advice
 ### Frequency offset
 AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide as input via the ```-p``` switch on the command line.
 
+If you are using a dongle that suffers from thermal drift (i.e. the required PPM corrections drifts if the dongle is getting warmer), you could consider to use the option ``-o CGF_WIDE on`` or switch to a FM decoding model which is less sensitive for frequency offsets (``-m 0``).
+
 ### System USB performance
 On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is worthwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
 ```console
