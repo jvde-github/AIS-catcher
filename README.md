@@ -48,7 +48,7 @@ If you are looking for a Windows-version for the latest development version, it 
 - Experimental switch ``-go CGF_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
 - ...
 
-For the next version would like to get ```-go DROOP_COMPENSATIOn on`` as default option and ideally look at some frequency correction algorithms.
+For the next version would like to get ``-go DROOP_COMPENSATION on`` as default option and ideally look at some frequency correction algorithms.
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
