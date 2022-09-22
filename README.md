@@ -46,6 +46,18 @@ If you are looking for a Windows-version for the latest development version, it 
 
 - ``-o 4`` is now ``-o 5`` and ``-o 4`` now shows a subset of the AIS message data relevant for map plotting.
 - Experimental switch ``-go CGF_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
+- Did an experiment with various downsamplering methods for a RTL-SDR dongle running at 1536K samples/second. The default downsampler uses CIC5. A simple 3 tap filter to compensate for droop can increase the message rate:
+
+| Downsampler | Message Count  | Delta | 
+| :--- | :--- | :---: | 
+|Default	| 185210 | |
+| Droop compensation	| 192568 |	+3.97% |
+| SOX	| 192352 |	+3.86% |
+
+For reference, this was tested with the following command line instruction:
+```
+AIS-catcher  -v 10 -gr rtlagc on -m 2 -m 2 -go droop_compensation on -m 2 -go soxr on
+```
 - ...
 
 For the next version would like to get ``-go DROOP_COMPENSATION on`` as default option and ideally look at some frequency correction algorithms.
