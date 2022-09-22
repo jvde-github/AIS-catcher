@@ -55,7 +55,7 @@ If you are looking for a Windows-version for the latest development version, it 
 | SOX	| 192352 |	+3.86% |
 
 For reference, this was tested with the following command line instruction:
-```
+```console
 AIS-catcher  -v 10 -gr rtlagc on -m 2 -m 2 -go droop_compensation on -m 2 -go soxr on
 ```
 - ...
