@@ -44,23 +44,24 @@ If you are looking for a Windows-version for the latest development version, it 
 
 ### Development version
 
-- ``-o 4`` is now ``-o 5`` and ``-o 4`` now shows a subset of the AIS message data relevant for map plotting.
-- Experimental switch ``-go CGF_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
-- Did an experiment with various downsampling methods on a RTL-SDR dongle running at 1536K samples/second. The default downsampler uses a simple but efficient CIC5 filter. An additional simple 3 tap filter to compensate for droop can increase the message rate. The following results are from my home station running for a few hours with the various methods running in parallel:
+- ``-o 4`` is now ``-o 5`` and ``-o 4`` is a new intermediate level that shows a subset of the AIS message fields that are relevant for map plotting.
+- Experimental switch ``-go AFC_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
+- The downsampler uses by default now a simple droop compensation filter in the form of a 3 tap filter (can be switched off by ``-go DROOP off``). 
+Did an experiment with various downsampling methods on a RTL-SDR dongle running at 1536K samples/second. The default downsampler uses a simple but efficient CIC5 filter.
+The following results are from my home station running for a few hours with the various methods running in parallel:
 
 | Downsampler | Message Count  | Delta | 
 | :--- | :--- | :---: | 
-|Default	| 185210 | |
-| Droop compensation	| 192568 |	+3.97% |
+|``-go DROOP off``	| 185210 | |
+|``-go DROOP on``| 192568 |	+3.97% |
 | SOX	| 192352 |	+3.86% |
 
 For reference, this was tested with the following command line instruction:
 ```console
-AIS-catcher  -v 10 -gr rtlagc on -m 2 -m 2 -go droop_compensation on -m 2 -go soxr on
+AIS-catcher  -v 10 -gr rtlagc on -m 2 -go droop off -m 2 -m 2 -go soxr on
 ```
 - ...
 
-For the next version would like to get ``-go DROOP_COMPENSATION on`` as default option and ideally look at some frequency correction algorithms.
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
@@ -533,7 +534,7 @@ Note that some libraries will require significant hardware resources. The advice
 ### Frequency offset
 AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide as input via the ```-p``` switch on the command line.
 
-If you are using a cheap RTL-SDR dongle that suffers from thermal drift (i.e. the required PPM correction drifts when the dongle is getting warmer), you could consider to use the option ``-o CGF_WIDE on`` or switch to a FM decoding model which is less sensitive for frequency offsets (``-m 0``). The frequency correction applied by the default decoding model can be made visible with the switch ``-M D`` so you can inspect.
+If you are using a cheap RTL-SDR dongle that suffers from thermal drift (i.e. the required PPM correction drifts when the dongle is getting warmer), you could consider to use the option ``-o AFC_WIDE on`` or switch to a FM decoding model which is less sensitive for frequency offsets (``-m 0``). The frequency correction applied by the default decoding model can be made visible with the switch ``-M D`` so you can inspect.
 
 ### System USB performance
 On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is worthwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:

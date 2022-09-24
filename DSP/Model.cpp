@@ -42,8 +42,6 @@ namespace AIS {
 		else {
 			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
-			FDC.setTaps(-1.0f);
-
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
 
@@ -62,15 +60,20 @@ namespace AIS {
 
 			physical >> convert;
 
+			// FDC is a 3-tap filter to compensate for droop in the CIC5 downsampling filters
+			// Filter coefficients currently set on empirical basis, and ignored for downsampling including decimation by 3
+
 			switch (bucket - (interpolated ? 1 : 0)) {
 				// 2^7
 			case 12288000:
+				FDC.setTaps(-2.0f);
 				if (!droop_compensation)
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 12288000 - 1:
+				FDC.setTaps(-2.0f);
 				if (!droop_compensation)
 					convert >> DS2_7 >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
@@ -79,12 +82,14 @@ namespace AIS {
 
 				// 2^6
 			case 6144000:
+				FDC.setTaps(-2.0f);
 				if (!droop_compensation)
 					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 6144000 - 1:
+				FDC.setTaps(-2.0f);
 				if (!droop_compensation)
 					convert >> DS2_6 >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
@@ -93,12 +98,14 @@ namespace AIS {
 
 				// 2^5
 			case 3072000:
+				FDC.setTaps(-1.5f);
 				if (!droop_compensation)
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 3072000 - 1:
+				FDC.setTaps(-1.5f);
 				if (!droop_compensation)
 					convert >> DS2_5 >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
@@ -110,18 +117,18 @@ namespace AIS {
 				if (!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				else
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> DSK >> ROT;
+					convert >> DS2_3 >> DS2_2 >> DS2_1 /* >> FDC */ >> DSK >> ROT;
 				break;
 			case 2304000 - 1:
 				if (!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				else
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> FDC >> DSK >> ROT;
+					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US /* >> FDC */ >> DSK >> ROT;
 				break;
 
 				// 2^4
 			case 1536000:
-				FDC.setTaps(-0.75f);
+				FDC.setTaps(-1.2f);
 				if (!fixedpointDS) {
 					if (!droop_compensation)
 						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
@@ -133,7 +140,7 @@ namespace AIS {
 				}
 				break;
 			case 1536000 - 1:
-				FDC.setTaps(-0.75f);
+				FDC.setTaps(-1.2f);
 				if (!droop_compensation)
 					convert >> DS2_4 >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
@@ -145,25 +152,25 @@ namespace AIS {
 				if (!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				else
-					convert >> DS2_2 >> DS2_1 >> FDC >> DSK >> ROT;
+					convert >> DS2_2 >> DS2_1 /* >> FDC */ >> DSK >> ROT;
 				break;
 			case 1152000 - 1:
 				if (!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				else
-					convert >> DS2_2 >> DS2_1 >> FDC >> US >> DSK >> ROT;
+					convert >> DS2_2 >> DS2_1 /* >> FDC */ >> US >> DSK >> ROT;
 				break;
 
 				// 2^3
 			case 768000:
-				FDC.setTaps(-0.4f);
+				FDC.setTaps(-1.2f);
 				if (!droop_compensation)
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 768000 - 1:
-				FDC.setTaps(-0.4f);
+				FDC.setTaps(-1.2f);
 				if (!droop_compensation)
 					convert >> DS2_3 >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
@@ -175,23 +182,25 @@ namespace AIS {
 				if (!droop_compensation)
 					convert >> DS2_1 >> DSK >> ROT;
 				else
-					convert >> DS2_1 >> FDC >> DSK >> ROT;
+					convert >> DS2_1 /* >> FDC */ >> DSK >> ROT;
 				break;
 			case 576000 - 1:
 				if (!droop_compensation)
 					convert >> DS2_1 >> US >> DSK >> ROT;
 				else
-					convert >> DS2_1 >> FDC >> US >> DSK >> ROT;
+					convert >> DS2_1 /* >> FDC */ >> US >> DSK >> ROT;
 				break;
 
 				// 2^2
 			case 384000:
+				FDC.setTaps(-1.1f);
 				if (!droop_compensation)
 					convert >> DS2_2 >> DS2_1 >> ROT;
 				else
 					convert >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				break;
 			case 384000 - 1:
+				FDC.setTaps(-1.1f);
 				if (!droop_compensation)
 					convert >> US >> DS2_2 >> DS2_1 >> ROT;
 				else
@@ -208,12 +217,14 @@ namespace AIS {
 
 				// 2^1
 			case 192000:
+				FDC.setTaps(-0.8f);
 				if (!droop_compensation)
 					convert >> DS2_1 >> ROT;
 				else
 					convert >> DS2_1 >> FDC >> ROT;
 				break;
 			case 192000 - 1:
+				FDC.setTaps(-0.8f);
 				if (!droop_compensation)
 					convert >> US >> DS2_1 >> ROT;
 				else
@@ -255,7 +266,7 @@ namespace AIS {
 			SAMPLERATE_DS = Util::Parse::Switch(arg);
 			SOXR_DS = false;
 		}
-		else if (option == "DROOP_COMPENSATION") {
+		else if (option == "DROOP") {
 			droop_compensation = Util::Parse::Switch(arg);
 		}
 		else
@@ -390,7 +401,7 @@ namespace AIS {
 		if (option == "PS_EMA") {
 			PS_EMA = Util::Parse::Switch(arg);
 		}
-		if (option == "CGF_WIDE") {
+		if (option == "AFC_WIDE") {
 			CGF_wide = Util::Parse::Switch(arg);
 		}
 		else
