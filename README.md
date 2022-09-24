@@ -53,7 +53,7 @@ The following results are from my home station running for a few hours with the 
 | Downsampler | Message Count  | Delta | 
 | :--- | :--- | :---: | 
 |``-go DROOP off``	| 185210 | |
-|``-go DROOP on``| 192568 |	+3.97% |
+|``-go DROOP on`` (default) | 192568 |	+3.97% |
 | SOX	| 192352 |	+3.86% |
 
 For reference, this was tested with the following command line instruction:
