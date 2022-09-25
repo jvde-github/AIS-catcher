@@ -123,7 +123,7 @@ void Usage() {
 	std::cerr << std::endl;
 	std::cerr << "\tModel specific settings:" << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "\t[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]" << std::endl;
+	std::cerr << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]" << std::endl;
 }
 
 std::vector<Device::Description> getDevices(Drivers& drivers) {

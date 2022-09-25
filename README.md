@@ -119,7 +119,7 @@ use: AIS-catcher [options]
 
 	Model specific settings:
 
-	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]
+	[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]
 ````
 
 ### Basic usage
