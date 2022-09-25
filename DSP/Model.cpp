@@ -262,7 +262,7 @@ namespace AIS {
 			SOXR_DS = Util::Parse::Switch(arg);
 			SAMPLERATE_DS = false;
 		}
-		else if (option == "SAMPLERATE") {
+		else if (option == "SRC") {
 			SAMPLERATE_DS = Util::Parse::Switch(arg);
 			SOXR_DS = false;
 		}
