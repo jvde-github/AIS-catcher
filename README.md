@@ -176,12 +176,12 @@ This same information but wrapped in JSON to facilitate further processing downs
 {"class":"AIS","device":"AIS-catcher","channel":"B","rxtime":"20220729191502","signalpower":-44.0,"ppm":0,"mmsi":230907000,"type":3,"nmea":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"]}
 ```
 Some examples on how this meta-data can be processed you can find below in the next section.
-And finally, full decoding of the AIS message is activated via ``-o 4``:
+And finally, full decoding of the AIS message is activated via ``-o 5`` (or ``-o 4`` for version 0.38 and below):
 ```
 {"class":"AIS","device":"AIS-catcher","rxtime":"20220729191610","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"],"signalpower":-44.0,"ppm":0.000000,"type":3,"repeat":0,"mmsi":230907000,"status":0,"status_text":"Under way using engine","turn":18,"speed":8.800000,"accuracy":true,"lon":24.915239,"lat":60.148106,"course":231.000000,"heading":230,"second":52,"maneuver":0,"raim":false,"radio":0}
 ```
 
-Some meta data is not calculated by default (to keep it light for running on mini computers as server) but can be activated with the ```-M``` switch. WE have signal power (in dB) and applied frequency correction (in ppm) activated with option ``-M D``. NMEA messages are timestamped with option ``-M T``. The examples above assume that these calculations are activated. 
+Meta data is not calculated by default to keep the program as light as possible when running as a server on low spec devices but can be activated with the ```-M``` switch. The calculation of signal power (in dB) and applied frequency correction (in ppm) are activated with  ``-M D``. NMEA messages are timestamped with  ``-M T``. Hence, for the examples above this had been activiated (``-M DT``). 
 
 There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favourite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, there does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great piece of work by the open source community.
 
