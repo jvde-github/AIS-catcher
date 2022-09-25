@@ -46,7 +46,7 @@ If you are looking for a Windows-version for the latest development version, it 
 
 - ``-o 4`` is now ``-o 5`` and ``-o 4`` is a new intermediate level that shows a subset of the AIS message fields that are relevant for map plotting.
 - Experimental switch ``-go AFC_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
-- The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest development version now uses by default  a simple droom compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. 
+- The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest development version now uses by default  a simple droop compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. 
 I did an experiment with various downsampling methods on a RTL-SDR dongle running at 1536K samples/second. 
 The following results are from my home station running for a few hours with the various methods running in parallel:
 
