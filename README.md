@@ -46,22 +46,20 @@ If you are looking for a Windows-version for the latest development version, it 
 
 - ``-o 4`` is now ``-o 5`` and ``-o 4`` is a new intermediate level that shows a subset of the AIS message fields that are relevant for map plotting.
 - Experimental switch ``-go AFC_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
-- The downsampler uses by default now a simple droop compensation filter in the form of a 3 tap filter (can be switched off by ``-go DROOP off``). 
-Did an experiment with various downsampling methods on a RTL-SDR dongle running at 1536K samples/second. The default downsampler uses a simple but efficient CIC5 filter.
+- The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest development version now uses by default  a simple droom compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. 
+I did an experiment with various downsampling methods on a RTL-SDR dongle running at 1536K samples/second. 
 The following results are from my home station running for a few hours with the various methods running in parallel:
 
 | Downsampler | Message Count  | Delta | 
 | :--- | :--- | :---: | 
 |``-go DROOP off``	| 185210 | |
 |``-go DROOP on`` (default) | 192568 |	+3.97% |
-| SOX	| 192352 |	+3.86% |
+|``-go SOXR on`` SOX downsampling	| 192352 |	+3.86% |
 
-For reference, this was tested with the following command line instruction:
+For reference, the command line instruction to test is:
 ```console
 AIS-catcher  -v 10 -gr rtlagc on -m 2 -go droop off -m 2 -m 2 -go soxr on
 ```
-- ...
-
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
@@ -121,7 +119,7 @@ use: AIS-catcher [options]
 
 	Model specific settings:
 
-	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SAMPLERATE [on/off] ]
+	[-go Model: FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]
 ````
 
 ### Basic usage
@@ -511,9 +509,9 @@ AIS-catcher automatically sets an appropriate sample rate depending on your devi
 ```
 Before splitting the signal in two separate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. 
 Input on all other sample rates is upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these other rates.
-In recent versions of AIS-catcher you can use the ``SOXR`` or ``libsamplerate`` library for downsampling. In fact, you can compare the four different downsampling approaches with a command like:
+In recent versions of AIS-catcher you can use the ``SOXR`` or ``libsamplerate`` (SRC) library for downsampling. In fact, you can compare the four different downsampling approaches with a command like:
 ```
-AIS-catcher -r posterholt.raw -m 2 -m 2 -go FP_DS on  -m 2 -go SOXR on -m 2 -go SAMPLERATE on -b -q -v
+AIS-catcher -r posterholt.raw -m 2 -m 2 -go FP_DS on  -m 2 -go SOXR on -m 2 -go SRC on -b -q -v
 ```
 which produces:
 ```
