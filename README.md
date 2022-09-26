@@ -52,9 +52,9 @@ The following results are from my home station running for a few hours with the 
 
 | Downsampler | Message Count  | Delta | 
 | :--- | :--- | :---: | 
-|``-go DROOP off``	| 185210 | |
-|``-go DROOP on`` (default) | 192568 |	+3.97% |
-|``-go SOXR on`` SOX downsampling	| 192352 |	+3.86% |
+|``-go DROOP off``	| 94219 | |
+|``-go DROOP on`` (default) | 98176 |	+4.20% |
+|``-go SOXR on`` SOX downsampling	| 97652 |	+3.64% |
 
 For reference, the command line instruction to test is:
 ```console
