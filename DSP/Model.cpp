@@ -338,7 +338,7 @@ namespace AIS {
 		if(SOXR_DS)  setting = "SOXR ";
 		else if(SAMPLERATE_DS) setting = "SRC ";
 		else {
-			setting = (fixedpointDS ? "FP-DS " : "");
+			setting = (fixedpointDS ? "FP_DS " : "");
 			setting += (droop_compensation ? "" : "DROOP off ");
 		}
 
