@@ -52,7 +52,7 @@ The following results are from my home station running for a few hours with the 
 | Downsampler | RTL-SDR @ 1536K  | AirSpy HF+ @ 192K  | 
 | :--- | :--- | :--- | 
 |``-go DROOP off``	| 94219 |16022 |
-|``-go DROOP on`` (default) | 98176 (+4.20%) | 16265 (1.52%) |
+|``-go DROOP on`` (default) | 98176 (+4.20%) | 16265 (+1.52%) |
 |``-go SOXR on`` SOX downsampling	| 97652 (+3.64%) | 16209 (+1.17%) |
 
 For reference, the command line instruction to test is:
