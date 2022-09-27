@@ -333,10 +333,15 @@ namespace AIS {
 	void ModelDefault::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		std::string setting = (fixedpointDS ? "FP-DS " : "");
-		setting += (SOXR_DS ? "SOXR " : "");
-		setting += (SAMPLERATE_DS ? "SRC " : "");
-		setting += (droop_compensation ? "DROOP " : "");
+		std::string setting;
+
+		if(SOXR_DS)  setting = "SOXR ";
+		else if(SAMPLERATE_DS) setting = "SRC ";
+		else {
+			setting = (fixedpointDS ? "FP-DS " : "");
+			setting += (droop_compensation ? "" : "DROOP off ");
+		}
+
 		setName("AIS engine " VERSION " " + setting);
 
 		assert(C_a != NULL && C_b != NULL);
