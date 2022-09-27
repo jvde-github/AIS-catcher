@@ -136,7 +136,10 @@ namespace AIS {
 						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				}
 				else {
-					convert.outCU8 >> DS16_CU8 >> ROT;
+					if (!droop_compensation)
+						convert.outCU8 >> DS16_CU8 >> ROT;
+					else
+						convert.outCU8 >> DS16_CU8 >> FDC >> ROT;
 				}
 				break;
 			case 1536000 - 1:
