@@ -49,7 +49,7 @@ If you are looking for a Windows-version for the latest development version, it 
 - The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest development version now uses by default  a simple droop compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. 
 The following results are from my home station running for a few hours with the various methods running in parallel and counting number of messages:
 
-| Downsampler | RTL-SDR @ 1536K  | AirSpy HF+ @ 192K  | SDRPlay RSDdx @ 3072K | 
+| Downsampler | RTL-SDR @ 1536K  | AirSpy HF+ @ 192K  | SDRPlay RSPdx @ 3072K | 
 | :--- | :--- | :--- | :-- | 
 |``-go DROOP off``	| 94219 |16022 | 16530 |
 |``-go DROOP on`` (default) | 98176 (+4.20%) | 16265 (+1.52%) | 17190 (+3.99%) |
