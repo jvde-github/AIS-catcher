@@ -663,7 +663,7 @@ int main(int argc, char* argv[]) {
 		if (verbose) {
 			std::cerr << "Generic settings: "
 					  << "sample rate -s " << device->getSampleRate() / 1000 << "K " << (ppm ? ("-p " + std::to_string(ppm)) : "") << " ";
-			std::cerr << (bandwidth ? ("-f " + std::to_string(bandwidth)) : "") << std::endl;
+			std::cerr << (bandwidth ? ("-a " + std::to_string(bandwidth)) : "") << std::endl;
 		}
 
 		// -----------------
