@@ -556,7 +556,9 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 - Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
 - Unit testing of the JSON decoder
-- Adding additional messages to the JSON decoder (Message 8, 6, etc).
+- Record raw input signal periodically to allow for debugging of performance
+- Allow for verbose updates even if running from stdin
+- <del>Adding additional messages to the JSON decoder (Message 8, 6, etc).</del>
 - Implement websocket interface, store/write configuration files (JSON)
 - Channel AB+CD for high sample rates
 - Optional filter for invalid messages
