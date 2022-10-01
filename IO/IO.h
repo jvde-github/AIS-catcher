@@ -46,6 +46,8 @@ namespace IO {
 		float rate = 0.0f;
 
 		high_resolution_clock::time_point time_lastupdate;
+		float seconds = 0;
+		int msg_count = 0;
 
 	public:
 		StreamCounter() : StreamIn<T>() {
@@ -58,17 +60,20 @@ namespace IO {
 
 		uint64_t getCount() { return count; }
 
-		float getRate() {
+		void Stamp() {
 			auto timeNow = high_resolution_clock::now();
 			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
 
-			rate += 0.5f * ((count - lastcount) / seconds - rate);
+			msg_count = count - lastcount;
+			rate += 1.0f * (msg_count / seconds - rate);
 
 			time_lastupdate = timeNow;
 			lastcount = count;
-
-			return ((int)(10 * rate + 0.5f)) / 10.0f;
 		}
+
+		float getRate() { return rate; }
+
+		int getDeltaCount() { return msg_count; }
 
 		void resetStatistic() {
 			count = 0;
