@@ -557,7 +557,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
 - Unit testing of the JSON decoder
 - Record raw input signal periodically to allow for debugging of performance
-- Allow for verbose updates even if running from stdin
+- <del>Allow for verbose updates even if running from stdin</del>
 - <del>Adding additional messages to the JSON decoder (Message 8, 6, etc).</del>
 - Implement websocket interface, store/write configuration files (JSON)
 - Channel AB+CD for high sample rates
@@ -568,7 +568,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - System support and GUI: Windows, <del>Android</del>, Web interface
 - Multi-channel SDRs: validate location from signal (e.g. like MLAT)
 - Output: ZeroMQ, APRS, ...
-- Show incremental message count between verbose updates 
+- <del>Show incremental message count between verbose updates</del> 
 - <del>SpyServer support</del>
 - <del>Reporting signal strength per message and estimated frequency correction (e.g. to facilitate auto calibration ppm for rtl sdr dongles)</del>
 - <del>Resolving crash when Airspy HF+ is disconnected, does not seem to be a specific AIS-catcher issue.</del> Use latest airspyhf lib.
