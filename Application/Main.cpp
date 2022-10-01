@@ -696,7 +696,7 @@ int main(int argc, char* argv[]) {
 				for (int j = 0; j < liveModels.size(); j++) {
 					statistics[j].Stamp();
 					std::string name = liveModels[j]->getName();
-					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << statistics[j].getDeltaCount() << " total: " << statistics[j].getCount() << " rate: " << statistics[j].getRate() << " msg/s" << std::endl;
+					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << statistics[j].getDeltaCount() << " msgs, total: " << statistics[j].getCount() << " msgs, rate: " << statistics[j].getRate() << " msg/s" << std::endl;
 				}
 			}
 
@@ -717,7 +717,7 @@ int main(int argc, char* argv[]) {
 			for (int j = 0; j < liveModels.size(); j++) {
 				std::string name = liveModels[j]->getName();
 				statistics[j].Stamp();
-				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << statistics[j].getCount() << std::endl;
+				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << statistics[j].getCount() << " msgs" << std::endl;
 			}
 		}
 
