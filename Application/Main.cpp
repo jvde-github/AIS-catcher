@@ -672,31 +672,38 @@ int main(int argc, char* argv[]) {
 		device->Play();
 
 		stop = false;
-		unsigned passed = 0;
+
+		const int SLEEP = 50;
+
+		auto time_start = high_resolution_clock::now();
+		auto time_last = time_start;
+
+		int verboseUpdateTimeMS = verboseUpdateTime * 1000;
+		int timeoutMS = timeout * 1000;
 
 		while (device->isStreaming() && !stop) {
+
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
-			{
-
-				const int SLEEP = 50;
-				const int SLEEP_PER_SEC = 1000 / 50;
-
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
-				passed++;
-				unsigned passed_sec = passed / SLEEP_PER_SEC;
 
-				if (verbose && passed % SLEEP_PER_SEC == 0 && passed_sec % verboseUpdateTime == 0) {
-					for (int j = 0; j < liveModels.size(); j++) {
-						std::string name = liveModels[j]->getName();
-						std::cerr << "[" << name << "]: " << std::string(37 - name.length(), ' ') << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
-					}
-				}
+			auto time_now = high_resolution_clock::now();
+			auto time_passed_update = duration_cast<milliseconds>(time_now - time_last).count();
+			auto time_passed_total = duration_cast<milliseconds>(time_now - time_start).count();
 
-				if (timeout && passed_sec >= timeout) {
-					stop = true;
-					if (verbose)
-						std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
+			if (verbose && time_passed_update >= verboseUpdateTimeMS) {
+				time_last = time_now;
+
+				for (int j = 0; j < liveModels.size(); j++) {
+					statistics[j].Stamp();
+					std::string name = liveModels[j]->getName();
+					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << statistics[j].getDeltaCount() << " total: " << statistics[j].getCount() << " rate: " << statistics[j].getRate() << " msg/s" << std::endl;
 				}
+			}
+
+			if (timeout && time_passed_total >= timeoutMS) {
+				stop = true;
+				if (verbose)
+					std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
 			}
 		}
 
@@ -709,7 +716,8 @@ int main(int argc, char* argv[]) {
 			std::cerr << "----------------------" << std::endl;
 			for (int j = 0; j < liveModels.size(); j++) {
 				std::string name = liveModels[j]->getName();
-				std::cerr << "[" << name << "]: " << std::string(37 - name.length(), ' ') << statistics[j].getCount() << " msgs at " << statistics[j].getRate() << " msg/s" << std::endl;
+				statistics[j].Stamp();
+				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << statistics[j].getCount() << " rate: " << statistics[j].getRate() << " msg/s" << std::endl;
 			}
 		}
 
