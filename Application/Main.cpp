@@ -678,19 +678,16 @@ int main(int argc, char* argv[]) {
 		auto time_start = high_resolution_clock::now();
 		auto time_last = time_start;
 
-		int verboseUpdateTimeMS = verboseUpdateTime * 1000;
-		int timeoutMS = timeout * 1000;
-
 		while (device->isStreaming() && !stop) {
 
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
 
-			auto time_now = high_resolution_clock::now();
-			auto time_passed_update = duration_cast<milliseconds>(time_now - time_last).count();
-			auto time_passed_total = duration_cast<milliseconds>(time_now - time_start).count();
+			if(!verbose && !timeout) continue;
 
-			if (verbose && time_passed_update >= verboseUpdateTimeMS) {
+			auto time_now = high_resolution_clock::now();
+
+			if (verbose && duration_cast<seconds>(time_now - time_last).count() >= verboseUpdateTime) {
 				time_last = time_now;
 
 				for (int j = 0; j < liveModels.size(); j++) {
@@ -700,7 +697,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 
-			if (timeout && time_passed_total >= timeoutMS) {
+			if (timeout && duration_cast<seconds>(time_now - time_start).count() >= timeout) {
 				stop = true;
 				if (verbose)
 					std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
