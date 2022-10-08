@@ -158,6 +158,14 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 ```console
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
+
+For RTL-SDR devices in some setups performance is highly dependent on the parameters. This could be an advantage of a SDR solution over dedicated hardware as more control over the hardware is available. A general good starting point are following settings:
+```console
+AIS-catcher -gr RTLAGC on TUNER auto
+```
+It also has been reported that adding a  bandwith setting of ``-a 192K`` can be beneficial in certain cases.
+To find the best settings requires systematic experimentation changing one parameter at the time: RTLAGC on or off and fixed tuner settings between 0 and 50. Examples on how to set device settings for other SDR hardware is provided below.
+
 ## Deep dives
 
 ### Screen output
