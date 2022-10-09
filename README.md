@@ -163,8 +163,8 @@ For RTL-SDR devices in some setups performance is highly dependent on the parame
 ```console
 AIS-catcher -gr RTLAGC on TUNER auto
 ```
-It also has been reported that adding a  bandwith setting of ``-a 192K`` can be beneficial in certain cases.
-To find the best settings requires systematic experimentation changing one parameter at the time: RTLAGC on or off and fixed tuner settings between 0 and 50. Examples on how to set device settings for other SDR hardware is provided below.
+It has been reported that adding a  bandwith setting of ``-a 192K`` can be beneficial in certain cases so is worthwhile to try.
+To find the best settings requires systematic experimentation changing one parameter at the time: RTLAGC on or off and besides setting TUNER to auto try a fixed tuner gain between 0 and 50. Examples on how to set device settings for other SDR hardware are provided below.
 
 ## Deep dives
 
