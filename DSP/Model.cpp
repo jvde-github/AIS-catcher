@@ -338,8 +338,10 @@ namespace AIS {
 
 		std::string setting;
 
-		if(SOXR_DS)  setting = "SOXR ";
-		else if(SAMPLERATE_DS) setting = "SRC ";
+		if (SOXR_DS)
+			setting = "SOXR ";
+		else if (SAMPLERATE_DS)
+			setting = "SRC ";
 		else {
 			setting = (fixedpointDS ? "FP_DS " : "");
 			setting += (droop_compensation ? "" : "DROOP off ");
