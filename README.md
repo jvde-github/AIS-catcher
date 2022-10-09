@@ -1,5 +1,5 @@
 # AIS-catcher - A multi-platform AIS receiver 
-This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles (including the ShipXplorer AIS dongle), Airspy (Mini/R2/HF+), HackRF, SDRplay (RSP1/RSP1A/RSPDX for now), SoapySDR, input from file as well as from ZMQ and TCP servers (RTL-TCP/SpyServer). Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
+This package will add the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles (including the ShipXplorer AIS dongle), AirSpy (Mini/R2/HF+), HackRF, SDRPlay (RSP1/RSP1A/RSPDX for now), SoapySDR, input from file as well as from ZMQ and TCP servers (RTL-TCP/SpyServer). Output is send in the form of NMEA messages to either screen or broadcasted over UDP. 
 The program provides the option to read and decode the raw discriminator output of a VHF receiver as well. 
 
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
@@ -124,7 +124,7 @@ use: AIS-catcher [options]
 ### Basic usage
 
 
-To test that the installation and/or compilation was succesful (see below for instructions), a good start is the following command which lists the devices available for AIS reception:
+To test that the installation and/or compilation was successful (see below for instructions), a good start is the following command which lists the devices available for AIS reception:
 ```console
 AIS-catcher -l
 ```
@@ -163,14 +163,14 @@ For RTL-SDR devices in some setups performance is highly dependent on the parame
 ```console
 AIS-catcher -gr RTLAGC on TUNER auto
 ```
-It has been reported that adding a  bandwith setting of ``-a 192K`` can be beneficial in certain cases so is worthwhile to try.
+It has been reported that adding a  bandwidth setting of ``-a 192K`` can be beneficial in certain cases so is worthwhile to try.
 To find the best settings requires systematic experimentation changing one parameter at the time: RTLAGC on or off and besides setting TUNER to auto try a fixed tuner gain between 0 and 50. Examples on how to set device settings for other SDR hardware are provided below.
 
 ## Deep dives
 
 ### Screen output
 
-The output to screen can be regulated with the ``-o`` switch. To surpress any messages to screen use ``-o 0`` or ``-q``. This can be useful if you run AIS-catcher as a background process. To show only simple and pure NMEA lines, use the switch ``-o 1`` or ``-n``. Example output:
+The output to screen can be regulated with the ``-o`` switch. To suppress any messages to screen use ``-o 0`` or ``-q``. This can be useful if you run AIS-catcher as a background process. To show only simple and pure NMEA lines, use the switch ``-o 1`` or ``-n``. Example output:
 ```
 !AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03
 ```
@@ -188,9 +188,9 @@ And finally, full decoding of the AIS message is activated via ``-o 5`` (or ``-o
 {"class":"AIS","device":"AIS-catcher","rxtime":"20220729191610","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"],"signalpower":-44.0,"ppm":0.000000,"type":3,"repeat":0,"mmsi":230907000,"status":0,"status_text":"Under way using engine","turn":18,"speed":8.800000,"accuracy":true,"lon":24.915239,"lat":60.148106,"course":231.000000,"heading":230,"second":52,"maneuver":0,"raim":false,"radio":0}
 ```
 
-Meta data is not calculated by default to keep the program as light as possible when running as a server on low spec devices but can be activated with the ```-M``` switch. The calculation of signal power (in dB) and applied frequency correction (in ppm) are activated with  ``-M D``. NMEA messages are timestamped with  ``-M T``. Hence, for the examples above this had been activiated (``-M DT``). 
+Meta data is not calculated by default to keep the program as light as possible when running as a server on low spec devices but can be activated with the ```-M``` switch. The calculation of signal power (in dB) and applied frequency correction (in ppm) are activated with  ``-M D``. NMEA messages are timestamped with  ``-M T``. Hence, for the examples above this had been activated (``-M DT``). 
 
-There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favourite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, there does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great piece of work by the open source community.
+There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, there does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great piece of work by the open source community.
 
 ### Further downstream handling of messages 
 
@@ -314,16 +314,16 @@ AIS-catcher -gr tuner 33.3 rtlagc ON
 ```
 Settings are not case sensitive.
 
-### Airspy HF+
-Gain settings specific for the Airspy HF+ can be set on the command line with the ```-gh``` switch. The following command switches off the preamp:
+### AirSpy HF+
+Gain settings specific for the AirSpy HF+ can be set on the command line with the ```-gh``` switch. The following command switches off the preamp:
 ```console
 AIS-catcher -gh preamp OFF
 ```
 Please note that only AGC mode is supported so there are limited options.
 
-### Airspy Mini/R2
+### AirSpy Mini/R2
 
-The Airspy Mini/R2 requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the Airspy. We can activate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
+The AirSpy Mini/R2 requires careful gain configuration as described [here](https://airspy.com/quickstart/). As outlined in that reference there are three different gain modes: linearity, sensitivity and so-called free. These can be set via the ```-gm```switch when using the AirSpy. We can activate 'linearity' mode with gain ```10```using the following ```AIS-catcher``` command line:
 ```console
 AIS-catcher -gm linearity 10
 ```
@@ -333,8 +333,8 @@ AIS-catcher -gm lna AUTO vga 12 mixer 12
 ```
 More guidance on setting the gain model and levels can be obtained in the mentioned link.
 
-### SDRplay RSP1/RSP1A/RSPDX (API 3.x)
-Settings specific for the SDRplay  can be set on the command line with the ```-gs``` switch, e.g.:
+### SDRPlay RSP1/RSP1A/RSPDX (API 3.x)
+Settings specific for the SDRPlay  can be set on the command line with the ```-gs``` switch, e.g.:
 ```console
 AIS-catcher -gs lnastate 5
 ```
