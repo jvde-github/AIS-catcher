@@ -683,7 +683,7 @@ int main(int argc, char* argv[]) {
 			if (device->isCallback()) // don't go to sleep in case we are reading from a file
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
 
-			if(!verbose && !timeout) continue;
+			if (!verbose && !timeout) continue;
 
 			auto time_now = high_resolution_clock::now();
 
