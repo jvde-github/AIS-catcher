@@ -575,7 +575,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - Testing: more set ups, assess gap with commercial equipment
 - System support and GUI: Windows, <del>Android</del>, Web interface
 - Multi-channel SDRs: validate location from signal (e.g. like MLAT)
-- Output: ZeroMQ, APRS, ...
+- Output: ZeroMQ, APRS, JSON to HTML, TCP, ...
 - <del>Show incremental message count between verbose updates</del> 
 - <del>SpyServer support</del>
 - <del>Reporting signal strength per message and estimated frequency correction (e.g. to facilitate auto calibration ppm for rtl sdr dongles)</del>
