@@ -143,7 +143,7 @@ To start AIS demodulation, print some occasional statistics (every 10 seconds) a
 ```console
 AIS-catcher -v 10 -u 127.0.0.1 10110 -u 127.0.0.1 10111
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key tool to use the output of AIS-catcher and visualize that in OpenCPN. See below for more pointers on how this can be set up.
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to MarineTraffic. See below for more pointers on how this can be set up.
 The screen messages can be suppressed with the option ```-q```. That's all there is.
 
 AIS-catcher can read from stdin using ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
