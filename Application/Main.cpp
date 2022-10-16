@@ -284,6 +284,9 @@ int main(int argc, char* argv[]) {
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
 
+	std::vector<IO::UDPEndPoint> TCPdestinations;
+	std::vector<IO::TCP> TCPconnections;
+
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	IO::SinkScreenMessage nmea_screen;
@@ -463,6 +466,10 @@ int main(int argc, char* argv[]) {
 			case 'u':
 				Assert(count == 2, param, "Requires two parameters [address] [port].");
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
+				break;
+			case 'i':
+				Assert(count == 2, param, "Requires two parameters [address] [port].");
+				TCPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -646,6 +653,14 @@ int main(int argc, char* argv[]) {
 		for (int i = 0; i < UDPdestinations.size(); i++) {
 			UDPconnections[i].openConnection(UDPdestinations[i]);
 			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
+		}
+
+		// Connect output to TCP stream
+		TCPconnections.resize(TCPdestinations.size());
+
+		for (int i = 0; i < TCPdestinations.size(); i++) {
+			TCPconnections[i].openConnection(TCPdestinations[i]);
+			liveModels[TCPdestinations[i].ID()]->Output() >> TCPconnections[i];
 		}
 
 		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {

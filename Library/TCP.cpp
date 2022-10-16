@@ -102,6 +102,9 @@ bool TCPclient::connect(std::string host, std::string port, bool nb) {
 		else
 			return false;
 	}
+	else
+		return r == 0;
+
 	return true;
 }
 
