@@ -41,7 +41,7 @@ namespace Device {
 
 		// Device settings
 		bool tuner_AGC = true;
-		bool RTL_AGC = false;
+		bool RTL_AGC = true;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
 		bool auto_terminate = true;
