@@ -83,4 +83,26 @@ namespace IO {
 			sock = -1;
 		}
 	}
+
+	TCP::TCP() {
+	}
+
+	TCP::~TCP() {
+	}
+
+	void TCP::Receive(const AIS::Message* data, int len, TAG& tag) {
+
+		for (int i = 0; i < len; i++)
+			for (const auto& s : data[i].sentence)
+				con.send((s + "\r\n").c_str(), (int)s.length() + 2);
+	}
+
+	void TCP::openConnection(const std::string& host, const std::string& port) {
+		if (!con.connect(host, port, false))
+			throw "TCP: cannot connect to server.";
+	}
+
+	void TCP::closeConnection() {
+		con.disconnect();
+	}
 }
