@@ -43,7 +43,7 @@ void TCPclient::disconnect() {
 
 bool TCPclient::connect(std::string host, std::string port, bool nb) {
 	int r;
-	fd_set fd;
+	fd_set fdr, fdw;
 	struct addrinfo h;
 
 	nonblocking = nb;
@@ -77,8 +77,11 @@ bool TCPclient::connect(std::string host, std::string port, bool nb) {
 	}
 #endif
 
-	FD_ZERO(&fd);
-	FD_SET(sock, &fd);
+	FD_ZERO(&fdr);
+	FD_SET(sock, &fdr);
+
+	FD_ZERO(&fdw);
+	FD_SET(sock, &fdw);
 
 	r = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
 
@@ -91,7 +94,7 @@ bool TCPclient::connect(std::string host, std::string port, bool nb) {
 #endif
 		timeval to = { timeout, 0 };
 
-		if (select(sock + 1, &fd, NULL, NULL, &to) == 1) {
+		if (select(sock + 1, &fdr, &fdw, NULL, &to) > 0) {
 			int se;
 			socklen_t len = sizeof(se);
 
