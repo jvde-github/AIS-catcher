@@ -41,7 +41,7 @@ namespace Device {
 
 	void SpyServer::Open(uint64_t h) {
 		std::cerr << "Connecting to SpyServer..." << std::endl;
-		if (!client.connect(host, port, false))
+		if (!client.connect(host, port, true))
 			throw "SPYSERVER: cannot open connection.";
 
 		if (!sendHandshake()) {
