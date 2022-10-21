@@ -68,10 +68,8 @@ namespace TCP {
 
 		if (r == -1) return false;
 #else
-		if (nonblocking) {
-			u_long mode = 1; // 1 to enable non-blocking socket
-			ioctlsocket(sock, FIONBIO, &mode);
-		}
+		u_long mode = 1; // 1 to enable non-blocking socket
+		ioctlsocket(sock, FIONBIO, &mode);
 #endif
 
 		if (::connect(sock, address->ai_addr, (int)address->ai_addrlen) != -1)
