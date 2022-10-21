@@ -41,7 +41,7 @@ namespace Device {
 		// Protocol: NONE
 		Format format = Format::CF32;
 
-		TCPclient client;
+		::TCP::Client client;
 
 		std::string host = "localhost";
 		std::string port = "1234";

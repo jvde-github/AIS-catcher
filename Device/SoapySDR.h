@@ -66,7 +66,7 @@ namespace Device {
 		bool lost = true;
 
 		// FIFO
-		FIFO<char> fifo;
+		FIFO fifo;
 
 		void RunAsync();
 		void Run();
