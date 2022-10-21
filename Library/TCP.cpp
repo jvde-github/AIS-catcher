@@ -18,103 +18,96 @@
 #include <cstring>
 #include "TCP.h"
 
-TCPclient::TCPclient() {
+namespace TCP {
+	Client::Client() {
 
 #ifdef _WIN32
-	WSADATA wsaData;
+		WSADATA wsaData;
 
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		throw "TCP: Cannot initialize Winsocket.";
-		return;
+		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+			throw "TCP: Cannot initialize Winsocket.";
+			return;
+		}
+#endif
 	}
-#endif
-}
 
-TCPclient::~TCPclient() {
+	Client::~Client() {
 #ifdef _WIN32
-	WSACleanup();
+		WSACleanup();
 #endif
-}
+	}
 
-void TCPclient::disconnect() {
-	if (sock != -1)
-		closesocket(sock);
-}
+	void Client::disconnect() {
+		if (sock != -1)
+			closesocket(sock);
+	}
 
-bool TCPclient::connect(std::string host, std::string port, bool nb) {
-	int r;
-	fd_set fdr, fdw;
-	struct addrinfo h;
+	bool Client::connect(std::string host, std::string port) {
+		int r;
+		struct addrinfo h;
+		fd_set fdr, fdw;
 
-	nonblocking = nb;
-
-	std::memset(&h, 0, sizeof(h));
-	h.ai_family = AF_UNSPEC;
-	h.ai_socktype = SOCK_STREAM;
-	h.ai_protocol = IPPROTO_TCP;
+		std::memset(&h, 0, sizeof(h));
+		h.ai_family = AF_UNSPEC;
+		h.ai_socktype = SOCK_STREAM;
+		h.ai_protocol = IPPROTO_TCP;
 
 #ifndef _WIN32
-	h.ai_flags = AI_ADDRCONFIG;
+		h.ai_flags = AI_ADDRCONFIG;
 #endif
 
-	int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
-	if (code != 0 || address == NULL) return false;
+		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
+		if (code != 0 || address == NULL) return false;
 
-	sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-	if (sock == -1) return false;
-
+		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+		if (sock == -1) return false;
 
 #ifndef _WIN32
-	r = fcntl(sock, F_GETFL, 0);
-	if (nonblocking)
+		r = fcntl(sock, F_GETFL, 0);
 		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
 
-	if (r == -1) return false;
+		if (r == -1) return false;
 #else
-	if (nonblocking) {
-		u_long mode = 1; // 1 to enable non-blocking socket
-		ioctlsocket(sock, FIONBIO, &mode);
-	}
+		if (nonblocking) {
+			u_long mode = 1; // 1 to enable non-blocking socket
+			ioctlsocket(sock, FIONBIO, &mode);
+		}
 #endif
 
-	FD_ZERO(&fdr);
-	FD_SET(sock, &fdr);
+		if (::connect(sock, address->ai_addr, (int)address->ai_addrlen) != -1)
+			return true;
 
-	FD_ZERO(&fdw);
-	FD_SET(sock, &fdw);
-
-	r = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
-
-	if (r == -1 && nonblocking) {
 #ifndef _WIN32
 		if (errno != EINPROGRESS) {
 			closesocket(sock);
+			sock = -1;
 			return false;
 		}
 #endif
+
+		FD_ZERO(&fdr);
+		FD_SET(sock, &fdr);
+
+		FD_ZERO(&fdw);
+		FD_SET(sock, &fdw);
+
 		timeval to = { timeout, 0 };
 
 		if (select(sock + 1, &fdr, &fdw, NULL, &to) > 0) {
-			int se;
-			socklen_t len = sizeof(se);
+			int error;
+			socklen_t len = sizeof(error);
 
-			getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&se, &len);
+			getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len);
+			if (error != 0) return false;
 
-			if (se != 0) return false;
+			return true;
 		}
-		else
-			return false;
+		return false;
 	}
-	else
-		return r == 0;
 
-	return true;
-}
+	int Client::read(void* data, int length, bool wait) {
+		fd_set fd;
 
-int TCPclient::read(void* data, int length, bool wait) {
-	fd_set fd;
-
-	if (nonblocking) {
 		FD_ZERO(&fd);
 		FD_SET(sock, &fd);
 
@@ -123,10 +116,10 @@ int TCPclient::read(void* data, int length, bool wait) {
 		if (select(sock + 1, &fd, NULL, NULL, &to) < 0) {
 			return -1;
 		}
-	}
 
-	if (!nonblocking || FD_ISSET(sock, &fd)) {
-		return recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
+		if (FD_ISSET(sock, &fd)) {
+			return recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
+		}
+		return 0;
 	}
-	return 0;
 }

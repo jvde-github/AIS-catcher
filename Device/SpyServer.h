@@ -177,7 +177,7 @@ namespace Device {
 		FLOAT32 tuner_gain = 0.0;
 		Format format = Format::UNKNOWN;
 
-		TCPclient client;
+		::TCP::Client client;
 
 		std::string host = "localhost";
 		std::string port = "1234";

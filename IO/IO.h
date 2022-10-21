@@ -184,7 +184,7 @@ namespace IO {
 	};
 
 	class TCP : public StreamIn<AIS::Message> {
-		TCPclient con;
+		::TCP::Client con;
 
 	public:
 		~TCP();

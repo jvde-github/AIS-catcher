@@ -44,26 +44,23 @@
 #include <netinet/in.h>
 #endif
 
-class TCPclient {
+namespace TCP {
+	class Client {
 
-	SOCKET sock = -1;
-	int timeout = 2;
-	bool nonblocking = true;
+		SOCKET sock = -1;
+		int timeout = 2;
 
-	std::string host = "localhost";
-	std::string port = "1234";
+		struct addrinfo* address;
 
-	struct addrinfo* address;
+	public:
+		Client();
+		~Client();
 
+		bool connect(std::string host, std::string port);
+		void disconnect();
 
-public:
-	TCPclient();
-	~TCPclient();
-
-	bool connect(std::string host, std::string port, bool nb = true);
-	void disconnect();
-
-	void setTimeout(int t) { timeout = t; }
-	int read(void* data, int length, bool wait = false);
-	int send(const char* msg, int len) { return ::send(sock, msg, len, 0); }
-};
+		void setTimeout(int t) { timeout = t; }
+		int read(void* data, int length, bool wait = false);
+		int send(const char* msg, int len) { return ::send(sock, msg, len, 0); }
+	};
+}

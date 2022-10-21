@@ -98,7 +98,7 @@ namespace IO {
 	}
 
 	void TCP::openConnection(const std::string& host, const std::string& port) {
-		if (!con.connect(host, port, true))
+		if (!con.connect(host, port))
 			throw "TCP: cannot connect to server.";
 	}
 
