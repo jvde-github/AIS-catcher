@@ -416,6 +416,7 @@ A list of some stations mentioning using AIS-catcher:
 - [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
 - [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
+- [Blackfield01](https://www.marinetraffic.com/en/ais/details/stations/22665)
 
 ## Build process
 
