@@ -417,6 +417,7 @@ A list of some stations mentioning using AIS-catcher:
 - [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 - [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
+- [Troguarat, France](https://www.marinetraffic.com/cs/ais/details/stations/21360)
 
 ## Build process
 
