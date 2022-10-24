@@ -104,7 +104,7 @@ namespace Device {
 				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
 			}
 			else if (option == "BW") {
-				tuner_bandwidth = Util::Parse::Integer(arg, 1, 1000000);
+				tuner_bandwidth = Util::Parse::Integer(arg, 0, 1000000);
 			}
 			else if (option == "FREQOFFSET") {
 				freq_offset = Util::Parse::Integer(arg, -150, 150);
