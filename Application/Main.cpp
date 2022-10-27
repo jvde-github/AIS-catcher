@@ -177,6 +177,9 @@ void printSupportedDevices() {
 #ifdef HASSOXR
 	std::cerr << "SOXR ";
 #endif
+#ifdef HASCURL
+	std::cerr << "CURL ";
+#endif
 #ifdef HASSAMPLERATE
 	std::cerr << "LIBSAMPLERATE ";
 #endif
