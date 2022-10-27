@@ -132,7 +132,7 @@ namespace IO {
 
 		while (!terminate) {
 			SleepSystem(50);
-			if (++i == 5000 / 50) {
+			if (++i == 30000 / 50) {
 				if (active) post();
 				i = 0;
 			}
