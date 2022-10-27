@@ -43,7 +43,7 @@ AIS-catcher  -v 10 -gr rtlagc on -m 2 -go droop off -m 2 -m 2 -go soxr on
 ```
 Please note that the runs are performed on different days over different time spans so this does not represent a comparison of devices.
 - The development version now includes a first implementation that allows received messages to be posted using the HTTP protocol every 30 seconds. The syntax is:
-```
+```console
 AIS-catcher -v -q -H http://localhost:8000
 ```
 The idea is to extend this in due course to send data directly to APRS.
