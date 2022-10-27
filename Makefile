@@ -1,5 +1,5 @@
-SRC = Application/Main.cpp IO/IO.cpp DSP/DSP.cpp Library/AISMessageDecoder.cpp Library/AIS.cpp DSP/Model.cpp Library/Utilities.cpp DSP/Demod.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Library/TCP.cpp Device/SpyServer.cpp Library/Property.cpp
-OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Demod.o RTLSDR.o AIRSPYHF.o AIRSPY.o FileRAW.o FileWAV.o SDRPLAY.o RTLTCP.o HACKRF.o ZMQ.o SoapySDR.o TCP.o SpyServer.o Property.o AISMessageDecoder.o
+SRC = Application/Main.cpp IO/IO.cpp DSP/DSP.cpp Library/AISMessageDecoder.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/Utilities.cpp DSP/Demod.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Library/TCP.cpp Device/SpyServer.cpp Library/Property.cpp
+OBJ = Main.o IO.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o RTLSDR.o AIRSPYHF.o AIRSPY.o FileRAW.o FileWAV.o SDRPLAY.o RTLTCP.o HACKRF.o ZMQ.o SoapySDR.o TCP.o SpyServer.o Property.o AISMessageDecoder.o
 INCLUDE = -I. -ILibrary/ -IDSP/ -IApplication/ -IIO/
 CC = gcc
 
@@ -14,6 +14,7 @@ CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/inclu
 CFLAGS_ZMQ = -DHASZMQ $(shell pkg-config --cflags libzmq)
 CFLAGS_SOXR = -DHASSOXR $(shell pkg-config --cflags soxr)
 CFLAGS_SAMPLERATE = -DHASSAMPLERATE $(shell pkg-config --cflags samplerate)
+CFLAGS_CURL = -DHASCURL $(shell pkg-config --cflags libcurl)
 CFLAGS_SOAPYSDR = -DHASSOAPYSDR
 
 LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
@@ -25,6 +26,8 @@ LFLAGS_ZMQ = $(shell pkg-config --libs libzmq)
 LFLAGS_SOXR = $(shell pkg-config --libs soxr)
 LFLAGS_SAMPLERATE = $(shell pkg-config --libs samplerate)
 LFLAGS_SOAPYSDR = -lSoapySDR
+LFLAGS_CURL =$(shell pkg-config --libs libcurl)
+
 
 CFLAGS_ALL =
 LFLAGS_ALL =
@@ -62,6 +65,11 @@ endif
 ifneq ($(shell pkg-config --exists libzmq && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_ZMQ)
     LFLAGS_ALL += $(LFLAGS_ZMQ)
+endif
+
+ifneq ($(shell pkg-config --exists libcurl && echo 'T'),)
+    CFLAGS_ALL += $(CFLAGS_CURL)
+    LFLAGS_ALL += $(LFLAGS_CURL)
 endif
 
 # Building AIS-Catcher
