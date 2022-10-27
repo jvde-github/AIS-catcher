@@ -97,6 +97,7 @@ namespace IO {
 			if (!running) {
 				run_thread = std::thread(&HTTP::process, this);
 				running = true;
+				std::cerr << "HTTP: start server." << std::endl;
 			}
 #endif
 		}
@@ -107,6 +108,7 @@ namespace IO {
 				running = false;
 				terminate = true;
 				run_thread.join();
+				std::cerr << "HTTP: stop server." << std::endl;
 			}
 #endif
 		}
