@@ -50,7 +50,7 @@ namespace IO {
 #ifdef HASCURL
 
 		std::thread run_thread;
-		bool terminate = false;
+		bool terminate = false, running = false;
 		std::mutex queue_mutex;
 		std::string url = "";
 		int INTERVAL = 30;
@@ -67,12 +67,8 @@ namespace IO {
 		std::list<std::string> queue;
 
 	public:
-		HTTP() {
-			run_thread = std::thread(&HTTP::process, this);
-		}
 		~HTTP() {
-			terminate = true;
-			run_thread.join();
+			stopServer();
 		}
 
 		void Receive(const std::string* data, int len, TAG& tag) {
@@ -93,6 +89,25 @@ namespace IO {
 		void setInterval(int i) {
 #ifdef HASCURL
 			INTERVAL = i;
+#endif
+		}
+
+		void startServer() {
+#ifdef HASCURL
+			if (!running) {
+				run_thread = std::thread(&HTTP::process, this);
+				running = true;
+			}
+#endif
+		}
+
+		void stopServer() {
+#ifdef HASCURL
+			if (running) {
+				running = false;
+				terminate = true;
+				run_thread.join();
+			}
 #endif
 		}
 	};

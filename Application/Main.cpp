@@ -649,10 +649,12 @@ int main(int argc, char* argv[]) {
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
+		// set up client thread to periodically submit msgs over HTTP
 		if (HTTP_out) {
 			liveModels[0]->Output() >> ais_decoder_http;
 			ais_decoder_http >> JSONstream_http;
 			JSONstream_http >> http;
+			http.startServer();
 		}
 
 		// Connect output to UDP stream
