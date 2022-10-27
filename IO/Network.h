@@ -49,19 +49,20 @@
 namespace IO {
 
 	class HTTP : public StreamIn<std::string> {
+
 #ifdef HASCURL
+
 		std::thread run_thread;
-		bool terminate = false, active = false;
-		;
+		bool terminate = false;
 		std::mutex queue_mutex;
 		std::string url = "";
+		const int INTERVAL = 30;
 
 		static size_t curl_wdata(void* ptr, size_t size, size_t nmemb, void* stream) {
 			return size * nmemb;
 		}
 
-
-		int send(struct curl_httppost* post);
+		int send(const std::string&);
 		void post();
 		void process();
 
@@ -87,7 +88,6 @@ namespace IO {
 		void setURL(const std::string& u) {
 #ifdef HASCURL
 			url = u;
-			active = true;
 #else
 			throw "HTTP: functionality not implemented, recompile with libcurl support";
 #endif
