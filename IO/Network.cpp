@@ -45,6 +45,7 @@ namespace IO {
 				std::cerr << "HTTP: append for expect header failed" << std::endl;
 			else {
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) throw r;
+				//if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDS, ""))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, &curl_wdata))) throw r;

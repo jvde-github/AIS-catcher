@@ -56,7 +56,7 @@ namespace IO {
 		bool terminate = false;
 		std::mutex queue_mutex;
 		std::string url = "";
-		const int INTERVAL = 30;
+		int INTERVAL = 30;
 
 		static size_t curl_wdata(void* ptr, size_t size, size_t nmemb, void* stream) {
 			return size * nmemb;
@@ -92,6 +92,12 @@ namespace IO {
 			throw "HTTP: functionality not implemented, recompile with libcurl support";
 #endif
 		}
+
+		void setInterval(int i) {
+			INTERVAL = i;
+		}
+
+		
 	};
 
 	class UDPEndPoint {

@@ -42,6 +42,12 @@ For reference, the command line instruction to test is:
 AIS-catcher  -v 10 -gr rtlagc on -m 2 -go droop off -m 2 -m 2 -go soxr on
 ```
 Please note that the runs are performed on different days over different time spans so this does not represent a comparison of devices.
+- The development version now includes a first implementation that allows received messages to be posted using the HTTP protocol every 30 seconds. The syntax is:
+```
+AIS-catcher -v -q -H http://localhost:8000
+```
+The idea is to extend this in due course to send data directly to APRS.
+
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
