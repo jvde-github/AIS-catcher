@@ -26,84 +26,53 @@ namespace IO {
 	int HTTP::send(const std::string& msg) {
 
 		CURL* ch;
-		CURLcode r;
 		struct curl_slist* headers = NULL;
+		CURLcode r;
+
 		long retcode = 200;
 
 		struct curl_httppost *post = NULL, *last = NULL;
 
 		curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonais", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
 
-		// based on function "jsonout_post_single" in gnuais
-
 		if (!(ch = curl_easy_init())) {
 			std::cerr << "HTTP: curl_easy_init() returned NULL" << std::endl;
 			return 1;
 		}
 
-		do {
+		try {
+
 			headers = curl_slist_append(NULL, "Expect:");
 			if (!headers) {
 				std::cerr << "HTTP: curl_slist_append for Expect header failed" << std::endl;
-				break;
 			}
+			else {
+				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
 
-			if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) {
-				std::cerr << "HTTP: CURLOPT_HTTPPOST failed: " << curl_easy_strerror(r) << std::endl;
-				break;
+				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, &curl_wdata))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, 2L))) throw r;
+				if ((r = curl_easy_perform(ch))) throw r;
+				if ((r = curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &retcode))) throw r;
 			}
-
-			if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) {
-				std::cerr << "HTTP: CURLOPT_URL failed: " << curl_easy_strerror(r) << " (" << url << ")" << std::endl;
-				break;
-			}
-
-			if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) {
-				std::cerr << "HTTP: URLOPT_HEADER failed: " << curl_easy_strerror(r) << " (" << url << ")" << std::endl;
-				break;
-			}
-
-			if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, &curl_wdata))) {
-				std::cerr << "HTTP: CURLOPT_WRITEFUNCTION failed: " << curl_easy_strerror(r) << std::endl;
-				break;
-			}
-
-			if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) {
-				std::cerr << "HTTP: CURLOPT_NOPROGRESS failed: " << curl_easy_strerror(r) << std::endl;
-				break;
-			}
-			if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0))) {
-				std::cerr << "HTTP: CURLOPT_VERBOSE failed: " << curl_easy_strerror(r) << std::endl;
-				break;
-			}
-
-			if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, 2L))) {
-				std::cerr << "HTTP: CURLOPT_TIMEOUT failed: " << curl_easy_strerror(r) << std::endl;
-				break;
-			}
-
-			if ((r = curl_easy_perform(ch))) {
-				std::cerr << "HTTP: perform failed: " << curl_easy_strerror(r) << " (" << url << ")" << std::endl;
-				break;
-			}
-
-			if ((r = curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &retcode))) {
-				std::cerr << "HTTP: CURLINFO_RESPONSE_CODE failed: " << curl_easy_strerror(r) << " (" << url << ")" << std::endl;
-				break;
-			}
-		} while (0);
+		}
+		catch (CURLcode cc) {
+			std::cerr << "HTTP: error - " << curl_easy_strerror(r) << " (" << url << ")" << std::endl;
+		}
 
 		curl_easy_cleanup(ch);
 
-		if (headers)
-			curl_slist_free_all(headers);
+		if (headers) curl_slist_free_all(headers);
 
 		if (retcode != 200) {
-			std::cerr << "HTTP: server for " << url << " returned " << retcode << std::endl;
-			r = (CURLcode)-1;
+			std::cerr << "HTTP: server " << url << " returned " << retcode << std::endl;
+			r = (CURLcode) -1;
 		}
 
-		return (r);
+		return r;
 	}
 
 
