@@ -21,6 +21,7 @@
 
 namespace IO {
 
+#ifdef HASCURL
 	int HTTP::send(struct curl_httppost* post) {
 
 		// based on function "jsonout_post_single" in gnuais
@@ -138,6 +139,7 @@ namespace IO {
 		}
 		if (active) post();
 	}
+#endif
 
 	UDP::UDP() {
 #ifdef _WIN32
