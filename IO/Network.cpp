@@ -27,29 +27,25 @@ namespace IO {
 
 		CURL* ch;
 		struct curl_slist* headers = NULL;
-		CURLcode r;
-
 		long retcode = 200;
-
+		CURLcode r;
 		struct curl_httppost *post = NULL, *last = NULL;
 
-		curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonais", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
+		curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonaiscatcher", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
 
 		if (!(ch = curl_easy_init())) {
-			std::cerr << "HTTP: curl_easy_init() returned NULL" << std::endl;
+			std::cerr << "HTTP: cannot initialize curl." << std::endl;
 			return 1;
 		}
 
 		try {
 
 			headers = curl_slist_append(NULL, "Expect:");
-			if (!headers) {
-				std::cerr << "HTTP: curl_slist_append for Expect header failed" << std::endl;
-			}
+			if (!headers)
+				std::cerr << "HTTP: append for expect header failed" << std::endl;
 			else {
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
-
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, &curl_wdata))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) throw r;
@@ -60,7 +56,7 @@ namespace IO {
 			}
 		}
 		catch (CURLcode cc) {
-			std::cerr << "HTTP: error - " << curl_easy_strerror(r) << " (" << url << ")" << std::endl;
+			std::cerr << "HTTP: error - " << curl_easy_strerror(cc) << " (" << url << ")" << std::endl;
 		}
 
 		curl_easy_cleanup(ch);
@@ -69,7 +65,7 @@ namespace IO {
 
 		if (retcode != 200) {
 			std::cerr << "HTTP: server " << url << " returned " << retcode << std::endl;
-			r = (CURLcode) -1;
+			r = (CURLcode)-1;
 		}
 
 		return r;
