@@ -16,9 +16,6 @@
 */
 
 #pragma once
-#include <fstream>
-#include <iostream>
-#include <iomanip>
 #include <list>
 #include <thread>
 #include <mutex>
@@ -94,10 +91,10 @@ namespace IO {
 		}
 
 		void setInterval(int i) {
+#ifdef HASCURL
 			INTERVAL = i;
+#endif
 		}
-
-		
 	};
 
 	class UDPEndPoint {

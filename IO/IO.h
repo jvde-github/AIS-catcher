@@ -19,32 +19,10 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <list>
-#include <thread>
-#include <mutex>
-
-#ifdef HAS_CURL
-#include <curl/curl.h>
-#endif
-
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <sys/socket.h>
-#include <netdb.h>
-#define SOCKET		int
-#define closesocket close
-#endif
-
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
 
 #include "Stream.h"
 #include "AIS.h"
 #include "Property.h"
-#include "TCP.h"
 
 namespace IO {
 	template <typename T>
@@ -80,7 +58,6 @@ namespace IO {
 		}
 
 		float getRate() { return rate; }
-
 		int getDeltaCount() { return msg_count; }
 
 		void resetStatistic() {
@@ -123,40 +100,7 @@ namespace IO {
 
 	public:
 		void setDetail(OutputLevel l) { level = l; }
-
-		void Receive(const AIS::Message* data, int len, TAG& tag) {
-			if (level == OutputLevel::NONE) return;
-
-			for (int i = 0; i < len; i++) {
-				if (level == OutputLevel::FULL || level == OutputLevel::SPARSE)
-					for (auto s : data[i].sentence) {
-						std::cout << s;
-
-						if (level == OutputLevel::FULL) {
-							std::cout << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-							if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
-							if (tag.mode & 2) {
-								std::cout << ", timestamp: " << data[i].getRxTime();
-							}
-							std::cout << ")";
-						}
-						std::cout << std::endl;
-					}
-				else if (level == OutputLevel::JSON_NMEA) {
-					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].channel << "\"";
-					if (tag.mode & 2) {
-						std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
-					}
-					if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
-					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()
-							  << ",\"nmea\":[\"" << data[i].sentence[0] << "\"";
-
-					for (int j = 1; j < data[i].sentence.size(); j++)
-						std::cout << ",\"" << data[i].sentence[j] << "\"";
-					std::cout << "]}" << std::endl;
-				}
-			}
-		}
+		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
 
 	class PropertyToJSON : public PropertyStreamIn, public StreamOut<std::string> {
@@ -172,15 +116,7 @@ namespace IO {
 			return ",";
 		}
 
-		std::string jsonify(const std::string& str) {
-			std::string out;
-			for (int i = 0; i < str.length(); i++) {
-				char c = str[i];
-				if (c == '\"') out += "\\";
-				out += c;
-			}
-			return out;
-		}
+		std::string jsonify(const std::string& str);
 
 	public:
 		virtual void Set(int p, int v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
@@ -188,27 +124,7 @@ namespace IO {
 		virtual void Set(int p, float v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
 		virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
 
-		virtual void Set(int p, const std::string& v) {
-			if (p == PROPERTY_OBJECT_START) {
-				first = true;
-				json = "{";
-				json.reserve(2048);
-			}
-			else if (p == PROPERTY_OBJECT_END) {
-				if (json != "{") {
-					TAG tag;
-					json += "}";
-					Send(&json, 1, tag);
-				}
-			}
-			else
-				json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
-		}
-		virtual void Set(int p, const std::vector<std::string>& v) {
-			json += delim() + "\"" + PropertyDict[p] + "\":[\"" + jsonify(v[0]) + "\"";
-			for (int i = 1; i < v.size(); i++)
-				json += ",\"" + jsonify(v[i]) + "\"";
-			json += "]";
-		}
+		virtual void Set(int p, const std::string& v);
+		virtual void Set(int p, const std::vector<std::string>& v);
 	};
 }
