@@ -19,6 +19,13 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <list>
+#include <thread>
+#include <mutex>
+
+#ifdef HAS_CURL
+#include <curl/curl.h>
+#endif
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -150,50 +157,6 @@ namespace IO {
 				}
 			}
 		}
-	};
-
-	class UDPEndPoint {
-		std::string address;
-		std::string port;
-
-		int sourceID = -1;
-
-	public:
-		friend class UDP;
-		friend class TCP;
-
-		UDPEndPoint(std::string a, std::string p, int id = -1) {
-			address = a, port = p;
-			sourceID = id;
-		}
-		int ID() { return sourceID; }
-	};
-
-	class UDP : public StreamIn<AIS::Message> {
-		SOCKET sock = -1;
-		struct addrinfo* address = NULL;
-
-	public:
-		~UDP();
-		UDP();
-
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void openConnection(const std::string& host, const std::string& port);
-		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-		void closeConnection();
-	};
-
-	class TCP : public StreamIn<AIS::Message> {
-		::TCP::Client con;
-
-	public:
-		~TCP();
-		TCP();
-
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void openConnection(const std::string& host, const std::string& port);
-		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-		void closeConnection();
 	};
 
 	class PropertyToJSON : public PropertyStreamIn, public StreamOut<std::string> {

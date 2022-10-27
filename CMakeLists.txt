@@ -10,6 +10,7 @@ option(SDRPLAY "Include SDRPLAY support" ON)
 option(AIRSPYHF "Include Airspy HF+ support" ON)
 option(HACKRF "Include HackRF support" ON)
 option(SOXR "Include SOXR support" ON)
+option(CURL "Include CURL support" ON)
 option(SAMPLERATE "Include SAMPLERATE support" ON)
 option(ZMQ "Include ZMQ support" ON)
 
@@ -66,6 +67,32 @@ else()
 	set(LIBUSB_LIBRARY "")
 endif()
 
+
+# Find libcurl
+if(CURL)
+	if(MSVC AND NOT MSVC_VCPKG)
+		Message(STATUS "CURL: NOT found (PothosSDR) - " ${CURL_INCLUDE_DIR}, ${CURL_LIBRARY}, ${CURL_DLL})
+
+	else()
+		pkg_check_modules(PKG_CURL libcurl)
+		find_path(CURL_INCLUDE_DIR curl/curl.h HINTS ${PKG_CURL_INCLUDE_DIRS})
+		find_library(CURL_LIBRARY libcurl.so HINTS ${PKG_CURL_LIBRARY_DIRS})
+		find_library(CURL_LIBRARY libcurl.dylib HINTS ${PKG_CURL_LIBRARY_DIRS})
+		find_library(CURL_LIBRARY curl HINTS ${PKG_CURL_LIBRARY_DIRS})
+
+		if(CURL_INCLUDE_DIR AND CURL_LIBRARY)
+
+			message(STATUS "CURL: found - ${CURL_INCLUDE_DIR}, ${CURL_LIBRARY}")
+			add_definitions(-DHASCURL)
+
+			set(CURL_INCLUDE_DIRS ${CURL_INCLUDE_DIR})
+			set(CURL_LIBRARIES ${CURL_LIBRARY} )
+
+		else()
+		message(STATUS "CURL: not found - ${CURL_INCLUDE_DIR}, ${CURL_LIBRARY}")
+		endif()
+	endif()
+endif()
 
 # Find libsoxr
 if(SOXR)
@@ -463,7 +490,7 @@ set(CPP
 	Application/Main.cpp
 	Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/AISMessageDecoder.cpp
 	Device/FileRAW.cpp Device/HACKRF.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp
-	Library/Utilities.cpp Library/TCP.cpp Library/Property.cpp
+	Library/Utilities.cpp Library/TCP.cpp Library/Property.cpp IO/Network.cpp
 	Device/AIRSPY.cpp
 	DSP/DSP.cpp
 	IO/IO.cpp)
@@ -472,7 +499,7 @@ set(HEADER
 	Application/AIS-catcher.h
 	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Signals.h Device/SoapySDR.h Library/AISMessageDecoder.h Library/Property.h
 	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h Device/SpyServer.h
-	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h Library/Utilities.h Library/TCP.h)
+	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h IO/Network.h Library/Utilities.h Library/TCP.h)
 
 set(APP_INCLUDES . ./Library ./DSP ./Application ./IO)
 
@@ -481,11 +508,11 @@ set(APP_INCLUDES . ./Library ./DSP ./Application ./IO)
 add_executable(AIS-catcher ${CPP} ${HEADER})
 
 include_directories(
-	${AIRSPYHF_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS}
+	${AIRSPYHF_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS}
 	${APP_INCLUDES})
 
 target_link_libraries(AIS-catcher
-	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES}
+	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES}
 	${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 # Copying DLLs to final location if needed

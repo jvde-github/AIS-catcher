@@ -27,6 +27,7 @@
 #include "Common.h"
 #include "Model.h"
 #include "IO.h"
+#include "Network.h"
 #include "AIS.h"
 #include "AISMessageDecoder.h"
 
@@ -267,7 +268,7 @@ int main(int argc, char* argv[]) {
 	int TAG_mode = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	bool verbose = false, timer_on = false;
+	bool verbose = false, timer_on = false, HTTP_out = false;
 	OutputLevel NMEA_to_screen = OutputLevel::FULL;
 	int verboseUpdateTime = 3;
 	AIS::Mode ChannelMode = AIS::Mode::AB;
@@ -285,15 +286,15 @@ int main(int argc, char* argv[]) {
 	std::vector<IO::UDP> UDPconnections;
 
 	std::vector<IO::UDPEndPoint> TCPdestinations;
-	std::vector<IO::TCP> TCPconnections;
 
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	IO::SinkScreenMessage nmea_screen;
-	IO::PropertyToJSON JSONstream;
+	IO::PropertyToJSON JSONstream, JSONstream_http;
 	IO::SinkScreenString dump_screen;
+	IO::HTTP http;
 
-	AIS::AISMessageDecoder ais_decoder;
+	AIS::AISMessageDecoder ais_decoder, ais_decoder_http;
 
 	try {
 #ifdef _WIN32
@@ -467,9 +468,10 @@ int main(int argc, char* argv[]) {
 				Assert(count == 2, param, "Requires two parameters [address] [port].");
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
 				break;
-			case 'i':
-				Assert(count == 2, param, "Requires two parameters [address] [port].");
-				TCPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
+			case 'H':
+				Assert(count == 1, param, "Requires one parameter [url].");
+				HTTP_out = true;
+				http.setURL(arg1);
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -647,20 +649,18 @@ int main(int argc, char* argv[]) {
 			if (verbose) liveModels[i]->Output() >> statistics[i];
 		}
 
+		if (HTTP_out) {
+			liveModels[0]->Output() >> ais_decoder_http;
+			ais_decoder_http >> JSONstream_http;
+			JSONstream_http >> http;
+		}
+
 		// Connect output to UDP stream
 		UDPconnections.resize(UDPdestinations.size());
 
 		for (int i = 0; i < UDPdestinations.size(); i++) {
 			UDPconnections[i].openConnection(UDPdestinations[i]);
 			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
-		}
-
-		// Connect output to TCP stream
-		TCPconnections.resize(TCPdestinations.size());
-
-		for (int i = 0; i < TCPdestinations.size(); i++) {
-			TCPconnections[i].openConnection(TCPdestinations[i]);
-			liveModels[TCPdestinations[i].ID()]->Output() >> TCPconnections[i];
 		}
 
 		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {

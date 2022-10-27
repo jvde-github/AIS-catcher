@@ -35,6 +35,7 @@
     <ClCompile Include="..\DSP\DSP.cpp" />
     <ClCompile Include="..\DSP\Model.cpp" />
     <ClCompile Include="..\IO\IO.cpp" />
+    <ClCompile Include="..\IO\Network.cpp" />
     <ClCompile Include="..\Library\Property.cpp" />
     <ClCompile Include="..\Library\AIS.cpp" />
     <ClCompile Include="..\Library\AISMessageDecoder.cpp" />
@@ -64,6 +65,7 @@
     <ClInclude Include="..\DSP\Filters.h" />
     <ClInclude Include="..\DSP\Model.h" />
     <ClInclude Include="..\IO\IO.h" />
+    <ClInclude Include="..\IO\Network.h" />
     <ClInclude Include="..\Library\AIS.h" />
     <ClInclude Include="..\Library\Common.h" />
     <ClInclude Include="..\Library\Signals.h" />
