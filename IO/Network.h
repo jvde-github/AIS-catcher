@@ -83,6 +83,7 @@ namespace IO {
 			for (int i = 0; i < len; i++) queue.push_back(data[i]);
 		}
 #endif
+	public:
 		void setURL(const std::string& u) {
 #ifdef HASCURL
 			url = u;
