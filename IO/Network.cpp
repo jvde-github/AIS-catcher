@@ -22,13 +22,19 @@
 namespace IO {
 
 #ifdef HASCURL
-	int HTTP::send(struct curl_httppost* post) {
 
-		// based on function "jsonout_post_single" in gnuais
+	int HTTP::send(const std::string& msg) {
+
 		CURL* ch;
 		CURLcode r;
 		struct curl_slist* headers = NULL;
 		long retcode = 200;
+
+		struct curl_httppost *post = NULL, *last = NULL;
+
+		curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonais", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
+
+		// based on function "jsonout_post_single" in gnuais
 
 		if (!(ch = curl_easy_init())) {
 			std::cerr << "HTTP: curl_easy_init() returned NULL" << std::endl;
@@ -43,7 +49,7 @@ namespace IO {
 			}
 
 			if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) {
-				std::cerr << "HTTP: CURLOPT_HTTPPOST failed: %s" << curl_easy_strerror(r) << std::endl;
+				std::cerr << "HTTP: CURLOPT_HTTPPOST failed: " << curl_easy_strerror(r) << std::endl;
 				break;
 			}
 
@@ -119,11 +125,10 @@ namespace IO {
 			post = post + delim + "\n\t\t" + *it;
 			delim = ',';
 		}
+
 		post = post + "\n\t]\n}\n";
 
-		struct curl_httppost *cpost = NULL, *last = NULL;
-		curl_formadd(&cpost, &last, CURLFORM_COPYNAME, "jsonais", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, post.c_str(), CURLFORM_END);
-		send(cpost);
+		send(post);
 	}
 
 	void HTTP::process() {
@@ -131,13 +136,15 @@ namespace IO {
 		int i = 0;
 
 		while (!terminate) {
+
 			SleepSystem(50);
-			if (++i == 30000 / 50) {
-				if (active) post();
+
+			if (++i == INTERVAL * 1000 / 50) {
+				if (!url.empty()) post();
 				i = 0;
 			}
 		}
-		if (active) post();
+		if (!url.empty()) post();
 	}
 #endif
 
