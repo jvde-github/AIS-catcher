@@ -127,7 +127,7 @@ namespace Util {
 			if (str.length() > sz && (str[sz] == 'K' || str[sz] == 'k'))
 				number *= 1000;
 
-			if (number < min || number > max) throw "Error: Number out of range on command line";
+			if (number < min || number > max) throw "Error: input parameter out of range.";
 
 			return number;
 		}
@@ -139,10 +139,10 @@ namespace Util {
 				number = std::stof(str);
 			}
 			catch (const std::exception&) {
-				throw "Error: expected a number on command line";
+				throw "Error: expected a number as input.";
 			}
 
-			if (number < min || number > max) throw "Error: Number out of range on command line";
+			if (number < min || number > max) throw "Error: input parameter out of range.";
 
 			return number;
 		}
@@ -164,7 +164,7 @@ namespace Util {
 
 		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF") {
 			if (arg == FalseString) return false;
-			if (arg != TrueString) throw "Error on command line: unknown switch";
+			if (arg != TrueString) throw "Error on input: unknown switch";
 
 			return true;
 		}
