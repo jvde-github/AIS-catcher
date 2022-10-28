@@ -67,12 +67,12 @@ namespace IO {
 	};
 
 	template <typename T>
-	class SinkFile : public StreamIn<T> {
+	class StreamToFile : public StreamIn<T> {
 		std::ofstream file;
 		std::string filename;
 
 	public:
-		~SinkFile() {
+		~StreamToFile() {
 			if (file.is_open())
 				file.close();
 		}
@@ -86,7 +86,7 @@ namespace IO {
 		}
 	};
 
-	class SinkScreenString : public StreamIn<std::string> {
+	class StringToScreen : public StreamIn<std::string> {
 	public:
 		void Receive(const std::string* data, int len, TAG& tag) {
 			for (int i = 0; i < len; i++)
@@ -94,7 +94,7 @@ namespace IO {
 		}
 	};
 
-	class SinkScreenMessage : public StreamIn<AIS::Message> {
+	class MessageToScreen : public StreamIn<AIS::Message> {
 	private:
 		OutputLevel level;
 

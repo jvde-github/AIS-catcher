@@ -21,7 +21,7 @@
 
 namespace IO {
 
-	void SinkScreenMessage::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void MessageToScreen::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if (level == OutputLevel::NONE) return;
 
 		for (int i = 0; i < len; i++) {
