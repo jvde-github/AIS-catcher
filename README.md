@@ -46,7 +46,10 @@ Please note that the runs are performed on different days over different time sp
 ```console
 AIS-catcher -v -q -H http://localhost:8000
 ```
-The idea is to extend this in due course to send data directly to APRS.
+The idea is to extend this in due course to send data directly to APRS. Please note that this requires the ``libcurl`` library to be installed, e.g. via:
+```console
+sudo apt install libcurl4-openssl-dev 
+```
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
