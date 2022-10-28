@@ -42,10 +42,11 @@
 #include "AIS.h"
 #include "Property.h"
 #include "TCP.h"
+#include "Utilities.h"
 
 namespace IO {
 
-	class HTTP : public StreamIn<std::string> {
+	class HTTP : public StreamIn<std::string>, public Setting {
 
 #ifdef HASCURL
 
@@ -54,6 +55,10 @@ namespace IO {
 		std::mutex queue_mutex;
 		std::string url = "";
 		int INTERVAL = 30;
+		std::string stationid;
+		std::string model;
+		std::string receiver;
+		bool gzip = false;
 
 		static size_t curl_wdata(void* ptr, size_t size, size_t nmemb, void* stream) {
 			return size * nmemb;
@@ -78,17 +83,36 @@ namespace IO {
 		}
 #endif
 	public:
-		void setURL(const std::string& u) {
-#ifdef HASCURL
-			url = u;
-#else
-			throw "HTTP: functionality not implemented, recompile with libcurl support";
-#endif
-		}
+		virtual void Set(std::string option, std::string arg) {
 
-		void setInterval(int i) {
 #ifdef HASCURL
-			INTERVAL = i;
+			Util::Convert::toUpper(option);
+
+			if (option == "URL") {
+				url = arg;
+			}
+			else if (option == "STATIONID") {
+				stationid = arg;
+			}
+			else if (option == "INTERVAL") {
+				INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24);
+			}
+			else if (option == "MODEL") {
+				model = arg;
+			}
+			else if (option == "RECEIVER") {
+				receiver = arg;
+			}
+			/*
+			else if (option == "GZIP") {
+				Util::Convert::toUpper(arg);
+				gzip = Util::Parse::Switch(arg);
+			}
+			*/
+			else
+				throw "HTTP: Invalid setting.";
+#else
+			throw "HTTP: not implemented, please recompile with libcurl support.";
 #endif
 		}
 
@@ -99,6 +123,8 @@ namespace IO {
 				running = true;
 				std::cerr << "HTTP: start server." << std::endl;
 			}
+#else
+			throw "HTTP: not implemented, please recompile with libcurl support.";
 #endif
 		}
 

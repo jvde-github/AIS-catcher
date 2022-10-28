@@ -34,18 +34,6 @@
 
 namespace Device {
 
-	enum class Type { NONE,
-					  RTLSDR,
-					  AIRSPYHF,
-					  AIRSPY,
-					  SDRPLAY,
-					  WAVFILE,
-					  RAWFILE,
-					  RTLTCP,
-					  HACKRF,
-					  SOAPYSDR,
-					  ZMQ,
-					  SPYSERVER };
 
 	class Description {
 		Type type;

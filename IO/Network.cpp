@@ -85,7 +85,11 @@ namespace IO {
 
 		char delim = ' ';
 
-		post = "{\n\t\"protocol\": \"jsonaiscatcher\",\n\t\"msgs\": [";
+		post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
+		post = post + "\n\t\"stationid\": \"" + stationid + "\",";
+		post = post + "\n\t\"decoder\": \"" + model + "\",";
+		post = post + "\n\t\"version\": \"" + receiver + "\",";
+		post = post + "\n\t\"msgs\": [";
 
 		for (auto it = send_list.begin(); it != send_list.end(); ++it) {
 			post = post + delim + "\n\t\t" + *it;

@@ -279,7 +279,7 @@ int main(int argc, char* argv[]) {
 	TAG tag;
 
 	// Device and output stream of device;
-	Device::Type input_type = Device::Type::NONE;
+	Type input_type = Type::NONE;
 	uint64_t handle = 0;
 
 	Device::Device* device = NULL;
@@ -288,16 +288,14 @@ int main(int argc, char* argv[]) {
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
 
-	std::vector<IO::UDPEndPoint> TCPdestinations;
-
+	IO::HTTP http;
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
-	IO::SinkScreenMessage nmea_screen;
-	IO::PropertyToJSON JSONstream, JSONstream_http;
-	IO::SinkScreenString dump_screen;
-	IO::HTTP http;
+	IO::MessageToScreen msg2screen;
+	IO::PropertyToJSON prop2json, prop2json_http;
+	IO::StringToScreen str2screen;
 
-	AIS::AISMessageDecoder ais_decoder, ais_decoder_http;
+	AIS::AISMessageDecoder msg2prop, msg2prop_http;
 
 	try {
 #ifdef _WIN32
@@ -403,19 +401,19 @@ int main(int argc, char* argv[]) {
 				liveModels[0]->Set("PS_EMA", "ON");
 				break;
 			case 't':
-				input_type = Device::Type::RTLTCP;
+				input_type = Type::RTLTCP;
 				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
 				if (count >= 1) drivers.RTLTCP.Set("host", arg1);
 				if (count >= 2) drivers.RTLTCP.Set("port", arg2);
 				break;
 			case 'y':
-				input_type = Device::Type::SPYSERVER;
+				input_type = Type::SPYSERVER;
 				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
 				if (count >= 1) drivers.SpyServer.Set("host", arg1);
 				if (count >= 2) drivers.SpyServer.Set("port", arg2);
 				break;
 			case 'z':
-				input_type = Device::Type::ZMQ;
+				input_type = Type::ZMQ;
 				Assert(count <= 2, param, "Requires at most two parameters [[format]] [endpoint].");
 				if (count == 1) {
 					drivers.ZMQ.Set("ENDPOINT", arg1);
@@ -431,12 +429,12 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'w':
 				Assert(count <= 1, param);
-				input_type = Device::Type::WAVFILE;
+				input_type = Type::WAVFILE;
 				if (count == 1) drivers.WAV.Set("FILE", arg1);
 				break;
 			case 'r':
 				Assert(count <= 2, param, "Requires at most two parameters [[format]] [filename].");
-				input_type = Device::Type::RAWFILE;
+				input_type = Type::RAWFILE;
 				if (count == 1) {
 					drivers.RAW.Set("FILE", arg1);
 				}
@@ -472,9 +470,10 @@ int main(int argc, char* argv[]) {
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
 				break;
 			case 'H':
-				Assert(count == 1, param, "Requires one parameter [url].");
 				HTTP_out = true;
-				http.setURL(arg1);
+				Assert(count > 0, param);
+				if (count % 2) http.Set("URL", arg1);
+				parseSettings(http, argv, ptr + (count % 2), argc);
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -550,7 +549,7 @@ int main(int argc, char* argv[]) {
 		// -------------
 		// Select device
 
-		if (input_type == Device::Type::NONE) {
+		if (input_type == Type::NONE) {
 			if (device_list.size() == 0) throw "No input device available.";
 
 			Device::Description d = device_list[input_device];
@@ -561,50 +560,50 @@ int main(int argc, char* argv[]) {
 		}
 
 		switch (input_type) {
-		case Device::Type::WAVFILE:
+		case Type::WAVFILE:
 			device = &drivers.WAV;
 			break;
-		case Device::Type::RAWFILE:
+		case Type::RAWFILE:
 			device = &drivers.RAW;
 			break;
-		case Device::Type::RTLTCP:
+		case Type::RTLTCP:
 			device = &drivers.RTLTCP;
 			break;
-		case Device::Type::SPYSERVER:
+		case Type::SPYSERVER:
 			device = &drivers.SpyServer;
 			break;
 #ifdef HASZMQ
-		case Device::Type::ZMQ:
+		case Type::ZMQ:
 			device = &drivers.ZMQ;
 			break;
 #endif
 #ifdef HASAIRSPYHF
-		case Device::Type::AIRSPYHF:
+		case Type::AIRSPYHF:
 			device = &drivers.AIRSPYHF;
 			break;
 #endif
 #ifdef HASAIRSPY
-		case Device::Type::AIRSPY:
+		case Type::AIRSPY:
 			device = &drivers.AIRSPY;
 			break;
 #endif
 #ifdef HASSDRPLAY
-		case Device::Type::SDRPLAY:
+		case Type::SDRPLAY:
 			device = &drivers.SDRPLAY;
 			break;
 #endif
 #ifdef HASRTLSDR
-		case Device::Type::RTLSDR:
+		case Type::RTLSDR:
 			device = &drivers.RTLSDR;
 			break;
 #endif
 #ifdef HASHACKRF
-		case Device::Type::HACKRF:
+		case Type::HACKRF:
 			device = &drivers.HACKRF;
 			break;
 #endif
 #ifdef HASSOAPYSDR
-		case Device::Type::SOAPYSDR:
+		case Type::SOAPYSDR:
 			device = &drivers.SOAPYSDR;
 			break;
 #endif
@@ -654,9 +653,11 @@ int main(int argc, char* argv[]) {
 
 		// set up client thread to periodically submit msgs over HTTP
 		if (HTTP_out) {
-			liveModels[0]->Output() >> ais_decoder_http;
-			ais_decoder_http >> JSONstream_http;
-			JSONstream_http >> http;
+			http.Set("MODEL", liveModels[0]->getName());
+			http.Set("RECEIVER", VERSION);
+			liveModels[0]->Output() >> msg2prop_http;
+			msg2prop_http >> prop2json_http;
+			prop2json_http >> http;
 			http.startServer();
 		}
 
@@ -669,15 +670,15 @@ int main(int argc, char* argv[]) {
 		}
 
 		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {
-			liveModels[0]->Output() >> nmea_screen;
-			nmea_screen.setDetail(NMEA_to_screen);
+			liveModels[0]->Output() >> msg2screen;
+			msg2screen.setDetail(NMEA_to_screen);
 		}
 		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
-			liveModels[0]->Output() >> ais_decoder;
-			ais_decoder >> JSONstream;
-			JSONstream >> dump_screen;
+			liveModels[0]->Output() >> msg2prop;
+			msg2prop >> prop2json;
+			prop2json >> str2screen;
 
-			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) ais_decoder.setSparse(true);
+			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) msg2prop.setSparse(true);
 		}
 
 		if (verbose) {

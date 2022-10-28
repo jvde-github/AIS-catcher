@@ -39,11 +39,25 @@ typedef std::complex<int16_t> CS16;
 typedef std::complex<uint8_t> CU8;
 typedef std::complex<int8_t> CS8;
 typedef char BIT;
+
 enum class Format { CU8,
 					CF32,
 					CS16,
 					CS8,
 					UNKNOWN };
+
+enum class Type { NONE,
+				  RTLSDR,
+				  AIRSPYHF,
+				  AIRSPY,
+				  SDRPLAY,
+				  WAVFILE,
+				  RAWFILE,
+				  RTLTCP,
+				  HACKRF,
+				  SOAPYSDR,
+				  ZMQ,
+				  SPYSERVER };
 
 typedef struct {
 	Format format;
@@ -64,6 +78,8 @@ public:
 	FLOAT32 sample_lvl = 0.0f;
 	FLOAT32 level = 0.0f;
 	FLOAT32 ppm = 0.0f;
+	Type device_type = Type::NONE;
+	int station_id = -1;
 };
 
 using namespace std::chrono;
