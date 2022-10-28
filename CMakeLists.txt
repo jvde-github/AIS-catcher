@@ -71,7 +71,7 @@ endif()
 # Find libcurl
 if(CURL)
 	if(MSVC AND NOT MSVC_VCPKG)
-		find_path(CURL_INCLUDE_DIR curl/curl.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+		find_path(CURL_INCLUDE_DIR curl.h HINTS ${POTHOSSDR_INCLUDE_DIR})
 		find_library(CURL_LIBRARY libcurl.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
 		find_file(CURL_DLL libcurl.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
