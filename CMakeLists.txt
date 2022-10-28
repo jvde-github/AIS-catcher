@@ -71,8 +71,20 @@ endif()
 # Find libcurl
 if(CURL)
 	if(MSVC AND NOT MSVC_VCPKG)
-		Message(STATUS "CURL: NOT found (PothosSDR) - " ${CURL_INCLUDE_DIR}, ${CURL_LIBRARY}, ${CURL_DLL})
+		find_path(CURL_INCLUDE_DIR curl.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+		find_library(CURL_LIBRARY curl.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+		find_file(CURL_DLL curl.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
+		if(CURL_INCLUDE_DIR AND CURL_LIBRARY AND CURL_DLL)
+			Message(STATUS "CURL: found (PothosSDR) - " ${CURL_INCLUDE_DIR}, ${CURL_LIBRARY}, ${CURL_DLL})
+			set(COPY_CURL_DLL TRUE)
+			add_definitions(-DHASCURL)
+
+			set(CURL_INCLUDE_DIRS ${CURL_INCLUDE_DIR})
+			set(CURL_LIBRARIES ${CURL_LIBRARY} )
+		else()
+			Message(STATUS "SOXR: NOT found (PothosSDR) - " ${CURL_INCLUDE_DIR}, ${CURL_LIBRARY}, ${CURL_DLL})
+		endif()	
 	else()
 		pkg_check_modules(PKG_CURL libcurl)
 		find_path(CURL_INCLUDE_DIR curl/curl.h HINTS ${PKG_CURL_INCLUDE_DIRS})
@@ -542,6 +554,10 @@ endif()
 
 if(COPY_SOXR_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SOXR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_CURL_DLL)
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CURL_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_SAMPLERATE_DLL)
