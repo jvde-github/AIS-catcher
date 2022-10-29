@@ -88,4 +88,5 @@ using namespace std::chrono;
 
 const FLOAT32 PI = 3.14159265358979323846f;
 
-#define MAX(a, b) (a) > (b) ? (a) : (b)
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))

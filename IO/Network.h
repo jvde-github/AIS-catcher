@@ -39,6 +39,7 @@
 #endif
 
 #include "Stream.h"
+#include "Common.h"
 #include "AIS.h"
 #include "Property.h"
 #include "TCP.h"
@@ -60,20 +61,16 @@ namespace IO {
 		std::string model;
 		std::string receiver;
 		bool gzip = false;
+		bool show_response = true;
 
-		std::string response;
+		char response[1024];
 
 		enum class PROTOCOL{ DEFAULT, APRS } protocol = PROTOCOL::DEFAULT;
 
-
-		static size_t curl_cb(void* contents, size_t size, size_t nmemb, std::string* s) {
+		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
 			size_t len = size * nmemb;
-			try {
-				s->append((char*)contents, len);
-			}
-			catch (std::bad_alloc& e) {
-				return 0;
-			}
+			std::memcpy(s, contents, MIN(len, 1023));
+			s[len] = '\0';
 			return len;
 		}
 
@@ -114,6 +111,10 @@ namespace IO {
 			}
 			else if (option == "MODEL") {
 				model = arg;
+			}
+			else if (option == "RESPONSE") {
+				Util::Convert::toUpper(arg);
+				show_response = Util::Parse::Switch(arg);
 			}
 			else if (option == "RECEIVER") {
 				receiver = arg;
