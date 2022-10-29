@@ -38,27 +38,25 @@ namespace IO {
 			return 1;
 		}
 
-		try {
+		headers = curl_slist_append(NULL, "Expect:");
+		if (!headers)
+			std::cerr << "HTTP: append for expect header failed" << std::endl;
+		else
+			try {
 
-			headers = curl_slist_append(NULL, "Expect:");
-			if (!headers)
-				std::cerr << "HTTP: append for expect header failed" << std::endl;
-			else {
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) throw r;
-				// if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDS, ""))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, &curl_wdata))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, 2L))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)TIMEOUT))) throw r;
 				if ((r = curl_easy_perform(ch))) throw r;
 				if ((r = curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &retcode))) throw r;
 			}
-		}
-		catch (CURLcode cc) {
-			std::cerr << "HTTP: error - " << curl_easy_strerror(cc) << " (" << url << ")" << std::endl;
-		}
+			catch (CURLcode cc) {
+				std::cerr << "HTTP: error - " << curl_easy_strerror(cc) << " (" << url << ")" << std::endl;
+			}
 
 		curl_easy_cleanup(ch);
 
@@ -83,12 +81,18 @@ namespace IO {
 			send_list.splice(send_list.begin(), queue);
 		}
 
+		std::time_t now = std::time(0);
+		std::tm* now_tm = std::gmtime(&now);
+		char datestring[15];
+		std::strftime(datestring, 15, "%Y%m%d%H%M%S", now_tm);
+
 		char delim = ' ';
 
 		post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
+		post = post + "\n\t\"encodetime\": \"" + datestring + "\",";
 		post = post + "\n\t\"stationid\": \"" + stationid + "\",";
 		post = post + "\n\t\"decoder\": \"" + model + "\",";
-		post = post + "\n\t\"version\": \"" + receiver + "\",";
+		post = post + "\n\t\"receiver\": \"" + receiver + "\",";
 		post = post + "\n\t\"msgs\": [";
 
 		for (auto it = send_list.begin(); it != send_list.end(); ++it) {

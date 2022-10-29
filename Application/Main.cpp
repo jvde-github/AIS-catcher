@@ -654,7 +654,7 @@ int main(int argc, char* argv[]) {
 		// set up client thread to periodically submit msgs over HTTP
 		if (HTTP_out) {
 			http.Set("MODEL", liveModels[0]->getName());
-			http.Set("RECEIVER", VERSION);
+			http.Set("RECEIVER", "AIS-catcher " VERSION);
 			liveModels[0]->Output() >> msg2prop_http;
 			msg2prop_http >> prop2json_http;
 			prop2json_http >> http;
