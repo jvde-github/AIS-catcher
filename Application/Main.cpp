@@ -474,6 +474,7 @@ int main(int argc, char* argv[]) {
 				Assert(count > 0, param);
 				if (count % 2) http.Set("URL", arg1);
 				parseSettings(http, argv, ptr + (count % 2), argc);
+				TAG_mode |= 2;
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -657,6 +658,7 @@ int main(int argc, char* argv[]) {
 			http.Set("RECEIVER", "AIS-catcher " VERSION);
 			liveModels[0]->Output() >> msg2prop_http;
 			msg2prop_http >> http;
+
 			http.startServer();
 		}
 
