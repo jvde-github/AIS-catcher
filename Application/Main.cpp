@@ -271,7 +271,7 @@ int main(int argc, char* argv[]) {
 	int TAG_mode = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	bool verbose = false, timer_on = false, HTTP_out = false;
+	bool verbose = false, timer_on = false, HTTP_active = false;
 	OutputLevel NMEA_to_screen = OutputLevel::FULL;
 	int verboseUpdateTime = 3;
 	AIS::Mode ChannelMode = AIS::Mode::AB;
@@ -287,15 +287,15 @@ int main(int argc, char* argv[]) {
 
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
+	std::vector<std::shared_ptr<AIS::Model>> liveModels;
+
+	AIS::AISMessageDecoder msg2prop;
 
 	IO::HTTP http;
-	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	IO::MessageToScreen msg2screen;
 	IO::PropertyToString prop2json;
-	IO::StringToScreen str2screen;
-
-	AIS::AISMessageDecoder msg2prop, msg2prop_http;
+	IO::StringToScreen json2screen;
 
 	try {
 #ifdef _WIN32
@@ -470,7 +470,7 @@ int main(int argc, char* argv[]) {
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
 				break;
 			case 'H':
-				HTTP_out = true;
+				HTTP_active = true;
 				Assert(count > 0, param);
 				if (count % 2) http.Set("URL", arg1);
 				parseSettings(http, argv, ptr + (count % 2), argc);
@@ -653,12 +653,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		// set up client thread to periodically submit msgs over HTTP
-		if (HTTP_out) {
+		if (HTTP_active) {
+
 			http.Set("MODEL", liveModels[0]->getName());
 			http.Set("RECEIVER", "AIS-catcher " VERSION);
-			liveModels[0]->Output() >> msg2prop_http;
-			msg2prop_http >> http;
 
+			msg2prop >> http;
 			http.startServer();
 		}
 
@@ -675,13 +675,20 @@ int main(int argc, char* argv[]) {
 			msg2screen.setDetail(NMEA_to_screen);
 		}
 		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
-			liveModels[0]->Output() >> msg2prop;
 			msg2prop >> prop2json;
-			prop2json >> str2screen;
+			prop2json >> json2screen;
 
-			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) msg2prop.setSparse(true);
+			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) prop2json.setMap(JSON_DICT_SPARSE);
 		}
 
+		// connect property calculation to model if it is needed (e.g. connected)
+		// connection to either http or json screen output
+		if(msg2prop.isConnected())
+		{
+			std::cerr << "JSON decoder connected";
+			liveModels[0]->Output() >> msg2prop;
+
+		}
 		if (verbose) {
 			std::cerr << "Generic settings: "
 					  << "sample rate -s " << device->getSampleRate() / 1000 << "K " << (ppm ? ("-p " + std::to_string(ppm)) : "") << " ";

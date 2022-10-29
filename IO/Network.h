@@ -54,13 +54,13 @@ namespace IO {
 		std::thread run_thread;
 		bool terminate = false, running = false;
 		std::mutex queue_mutex;
+
 		std::string url = "";
 		int INTERVAL = 30;
 		int TIMEOUT = 10;
 		std::string stationid;
 		std::string model;
 		std::string receiver;
-		bool gzip = false;
 		bool show_response = true;
 
 		char response[1024];
@@ -100,7 +100,7 @@ namespace IO {
 			if (option == "URL") {
 				url = arg;
 			}
-			else if (option == "STATIONID" || option == "ID") {
+			else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN") {
 				stationid = arg;
 			}
 			else if (option == "INTERVAL") {
@@ -121,7 +121,7 @@ namespace IO {
 			}
 			else if (option == "PROTOCOL") {
 				Util::Convert::toUpper(arg);
-				if (arg == "DEFAULT") {
+				if (arg == "HTTP") {
 					setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::DEFAULT;
 				}
@@ -132,12 +132,6 @@ namespace IO {
 				else
 					throw "HTTP: error - unknown protocol";
 			}
-			/*
-			else if (option == "GZIP") {
-				Util::Convert::toUpper(arg);
-				gzip = Util::Parse::Switch(arg);
-			}
-			*/
 			else
 				throw "HTTP: Invalid setting.";
 #else
@@ -148,8 +142,11 @@ namespace IO {
 		void startServer() {
 #ifdef HASCURL
 			if (!running) {
-				run_thread = std::thread(&HTTP::process, this);
+
 				running = true;
+				terminate = false;
+
+				run_thread = std::thread(&HTTP::process, this);
 				std::cerr << "HTTP: start server." << std::endl;
 			}
 #else
@@ -160,9 +157,11 @@ namespace IO {
 		void stopServer() {
 #ifdef HASCURL
 			if (running) {
+
 				running = false;
 				terminate = true;
 				run_thread.join();
+
 				std::cerr << "HTTP: stop server." << std::endl;
 			}
 #endif

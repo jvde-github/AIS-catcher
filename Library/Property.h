@@ -27,7 +27,6 @@
 #define JSON_DICT_SPARSE  2
 #define JSON_DICT_APRS	  3
 
-extern const std::vector<std::string> PropertyDict;
 extern const std::vector<std::vector<std::string>> PropertyMap;
 
 // PropertyStream
@@ -86,10 +85,12 @@ private:
 	bool first = true;
 
 	std::string delim() {
-		bool f = first;
-		first = false;
 
-		if (f) return "";
+		if (first) {
+			first = false;
+			return "";
+		}
+
 		return ",";
 	}
 
