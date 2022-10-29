@@ -59,37 +59,9 @@ namespace IO {
 		}
 	}
 
-	std::string PropertyToJSON::jsonify(const std::string& str) {
-		std::string out;
-		for (int i = 0; i < str.length(); i++) {
-			char c = str[i];
-			if (c == '\"') out += "\\";
-			out += c;
-		}
-		return out;
+	void PropertyToString::Ready() {
+		TAG tag;
+		StreamOut<std::string>::Send(&json, 1, tag);
 	}
 
-	void PropertyToJSON::Set(int p, const std::string& v) {
-		if (p == PROPERTY_OBJECT_START) {
-			first = true;
-			json.reserve(2048);
-			json = "{";
-		}
-		else if (p == PROPERTY_OBJECT_END) {
-			if (json != "{") {
-				TAG tag;
-				json += "}";
-				Send(&json, 1, tag);
-			}
-		}
-		else
-			json = json + delim() + "\"" + PropertyDict[p] + "\":\"" + jsonify(v) + "\"";
-	}
-
-	void PropertyToJSON::Set(int p, const std::vector<std::string>& v) {
-		json += delim() + "\"" + PropertyDict[p] + "\":[\"" + jsonify(v[0]) + "\"";
-		for (int i = 1; i < v.size(); i++)
-			json += ",\"" + jsonify(v[i]) + "\"";
-		json += "]";
-	}
 }

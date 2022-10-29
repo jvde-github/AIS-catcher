@@ -22,6 +22,14 @@
 
 #include "Common.h"
 
+#define JSON_DICT_FULL	  0
+#define JSON_DICT_MINIMAL 1
+#define JSON_DICT_SPARSE  2
+#define JSON_DICT_APRS	  3
+
+extern const std::vector<std::string> PropertyDict;
+extern const std::vector<std::vector<std::string>> PropertyMap;
+
 // PropertyStream
 
 class PropertyStreamIn {
@@ -66,6 +74,38 @@ inline PropertyStreamIn& operator>>(PropertyStreamOut& a, PropertyStreamIn& b) {
 	a.Connect(&b);
 	return b;
 }
+
+class PropertyToJSON : public PropertyStreamIn {
+protected:
+	std::string json;
+
+	virtual void Ready() {}
+
+private:
+	int map = JSON_DICT_FULL;
+	bool first = true;
+
+	std::string delim() {
+		bool f = first;
+		first = false;
+
+		if (f) return "";
+		return ",";
+	}
+
+	std::string jsonify(const std::string& str);
+
+public:
+	void setMap(int m) { map = m; }
+
+	virtual void Set(int p, int v);
+	virtual void Set(int p, unsigned v);
+	virtual void Set(int p, float v);
+	virtual void Set(int p, bool v);
+	virtual void Set(int p, const std::string& v);
+	virtual void Set(int p, const std::vector<std::string>& v);
+};
+
 
 enum Properties {
 	PROPERTY_OBJECT_START = 0,
@@ -234,5 +274,3 @@ enum Properties {
 	PROPERTY_YEAR,
 	PROPERTY_ZONESIZE
 };
-
-extern const std::vector<std::string> PropertyDict;

@@ -31,7 +31,10 @@ namespace IO {
 		CURLcode r;
 		struct curl_httppost *post = NULL, *last = NULL;
 
-		curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonaiscatcher", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
+		if (protocol == PROTOCOL::APRS)
+			curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonais", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
+		else
+			curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonaiscatcher", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
 
 		if (!(ch = curl_easy_init())) {
 			std::cerr << "HTTP: cannot initialize curl." << std::endl;
@@ -47,7 +50,8 @@ namespace IO {
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, &curl_wdata))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, curl_cb))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEDATA, &response))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)TIMEOUT))) throw r;
@@ -67,6 +71,10 @@ namespace IO {
 			r = (CURLcode)-1;
 		}
 
+		if(protocol == PROTOCOL::APRS)
+			std::cerr << "APRS response: : " << response << std::endl;
+		response = "";
+		
 		return r;
 	}
 
@@ -82,21 +90,40 @@ namespace IO {
 		}
 
 		std::time_t now = std::time(0);
-		char delim = ' ';
 
-		post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
-		post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-		post = post + "\n\t\"stationid\": \"" + stationid + "\",";
-		post = post + "\n\t\"decoder\": \"" + model + "\",";
-		post = post + "\n\t\"receiver\": \"" + receiver + "\",";
-		post = post + "\n\t\"msgs\": [";
+		if (protocol == PROTOCOL::DEFAULT) {
+			post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
+			post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
+			post = post + "\n\t\"stationid\": \"" + stationid + "\",";
+			post = post + "\n\t\"decoder\": \"" + model + "\",";
+			post = post + "\n\t\"receiver\": \"" + receiver + "\",";
+			post = post + "\n\t\"msgs\": [";
+			char delim = ' ';
 
-		for (auto it = send_list.begin(); it != send_list.end(); ++it) {
-			post = post + delim + "\n\t\t" + *it;
-			delim = ',';
+			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
+				post = post + delim + "\n\t\t" + *it;
+				delim = ',';
+			}
+
+			post = post + "\n\t]\n}\n";
+		}
+		else {
+			post = "{\n\t\"protocol\": \"jsonais\",";
+			post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
+			post = post + "\n\t\"groups\": [";
+			post = post + "\n\t{";
+			post = post + "\n\t\t\"path\": [{ \"name\": \"" + stationid + "\", \"url\" : \"" + url + "\" }],";
+			post = post + "\n\t\t\"msgs\": [";
+			char delim = ' ';
+
+			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
+				post = post + delim + "\n\t\t\t" + *it;
+				delim = ',';
+			}
+
+			post = post + "\n\t\t]\n\t}]\n}";
 		}
 
-		post = post + "\n\t]\n}\n";
 
 		send(post);
 	}
