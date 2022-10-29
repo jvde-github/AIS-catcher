@@ -51,7 +51,7 @@ namespace IO {
 				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, curl_cb))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEDATA, &response))) throw r;
+				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEDATA, response))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)TIMEOUT))) throw r;
@@ -71,10 +71,9 @@ namespace IO {
 			r = (CURLcode)-1;
 		}
 
-		if(protocol == PROTOCOL::APRS)
-			std::cerr << "APRS response: : " << response << std::endl;
-		response = "";
-		
+		if (show_response)
+			std::cerr << "HTTP: server response - " << response << std::endl;
+
 		return r;
 	}
 
