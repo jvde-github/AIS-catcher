@@ -22,35 +22,38 @@
 namespace IO {
 
 	void MessageToScreen::Receive(const AIS::Message* data, int len, TAG& tag) {
+
 		if (level == OutputLevel::NONE) return;
 
 		for (int i = 0; i < len; i++) {
 
 			if (level == OutputLevel::FULL || level == OutputLevel::SPARSE)
 				for (auto s : data[i].sentence) {
+
 					std::cout << s;
 
 					if (level == OutputLevel::FULL) {
 						std::cout << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
 						if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
-						if (tag.mode & 2) {
-							std::cout << ", timestamp: " << data[i].getRxTime();
-						}
+						if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();
+
 						std::cout << ")";
 					}
 					std::cout << std::endl;
 				}
 			else if (level == OutputLevel::JSON_NMEA) {
+
 				std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].channel << "\"";
-				if (tag.mode & 2) {
-					std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
-				}
+
+				if (tag.mode & 2) std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
 				if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
+
 				std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()
 						  << ",\"nmea\":[\"" << data[i].sentence[0] << "\"";
 
 				for (int j = 1; j < data[i].sentence.size(); j++)
 					std::cout << ",\"" << data[i].sentence[j] << "\"";
+
 				std::cout << "]}" << std::endl;
 			}
 		}

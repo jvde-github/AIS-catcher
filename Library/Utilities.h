@@ -20,11 +20,13 @@
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <time.h>
 
 #include "Stream.h"
 #include "Common.h"
 
 namespace Util {
+
 	class RealPart : public SimpleStreamInOut<CFLOAT32, FLOAT32> {
 		std::vector<FLOAT32> output;
 
@@ -78,6 +80,13 @@ namespace Util {
 
 	class Convert {
 	public:
+		static std::string toTimeStr(const std::time_t& t) {
+			std::tm* now_tm = std::gmtime(&t);
+			char str[16];
+			std::strftime((char*)str, 16, "%Y%m%d%H%M%S", now_tm);
+			return std::string(str);
+		}
+
 		static void toUpper(std::string& s) {
 			for (auto& c : s) c = toupper(c);
 		}

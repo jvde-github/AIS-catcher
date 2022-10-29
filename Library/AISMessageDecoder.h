@@ -23,6 +23,7 @@
 #include "Property.h"
 #include "AIS.h"
 #include "Signals.h"
+#include "Utilities.h"
 
 namespace AIS {
 	class AISMessageDecoder : public StreamIn<Message>, public PropertyStreamOut {

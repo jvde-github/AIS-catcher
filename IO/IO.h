@@ -23,6 +23,7 @@
 #include "Stream.h"
 #include "AIS.h"
 #include "Property.h"
+#include "Utilities.h"
 
 namespace IO {
 	template <typename T>

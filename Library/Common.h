@@ -59,12 +59,6 @@ enum class Type { NONE,
 				  ZMQ,
 				  SPYSERVER };
 
-typedef struct {
-	Format format;
-	void* data;
-	int size;
-} RAW;
-
 enum class OutputLevel { NONE,
 						 SPARSE,
 						 FULL,
@@ -81,6 +75,12 @@ public:
 	Type device_type = Type::NONE;
 	int station_id = -1;
 };
+
+typedef struct {
+	Format format;
+	void* data;
+	int size;
+} RAW;
 
 using namespace std::chrono;
 
