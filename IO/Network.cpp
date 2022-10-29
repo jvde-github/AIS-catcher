@@ -82,7 +82,6 @@ namespace IO {
 		}
 
 		std::time_t now = std::time(0);
-		
 		char delim = ' ';
 
 		post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
@@ -108,14 +107,12 @@ namespace IO {
 
 		while (!terminate) {
 
-			SleepSystem(50);
-
-			if (++i == INTERVAL * 1000 / 50) {
-				if (!url.empty()) post();
-				i = 0;
+			for (int i = 0; i < INTERVAL; i++) {
+				SleepSystem(1000);
+				if (terminate) break;
 			}
+			if (!url.empty()) post();
 		}
-		if (!url.empty()) post();
 	}
 #endif
 

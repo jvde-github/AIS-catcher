@@ -72,8 +72,8 @@ namespace IO {
 	void PropertyToJSON::Set(int p, const std::string& v) {
 		if (p == PROPERTY_OBJECT_START) {
 			first = true;
-			json = "{";
 			json.reserve(2048);
+			json = "{";
 		}
 		else if (p == PROPERTY_OBJECT_END) {
 			if (json != "{") {

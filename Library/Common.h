@@ -66,31 +66,26 @@ enum class OutputLevel { NONE,
 						 JSON_SPARSE,
 						 JSON_FULL };
 
-class TAG {
-public:
+struct TAG {
 	unsigned mode = 0;
 	FLOAT32 sample_lvl = 0.0f;
 	FLOAT32 level = 0.0f;
 	FLOAT32 ppm = 0.0f;
-	Type device_type = Type::NONE;
-	int station_id = -1;
 };
 
-typedef struct {
+struct RAW {
 	Format format;
 	void* data;
 	int size;
-} RAW;
+};
+
+struct Setting {
+	virtual void Print(void) {}
+	virtual void Set(std::string option, std::string arg) {}
+};
 
 using namespace std::chrono;
 
 const FLOAT32 PI = 3.14159265358979323846f;
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
-
-class Setting {
-public:
-	// Settings
-	virtual void Print(void) {}
-	virtual void Set(std::string option, std::string arg) {}
-};
