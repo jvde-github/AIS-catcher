@@ -21,8 +21,8 @@
 
 std::string PropertyToJSON::jsonify(const std::string& str) {
 	std::string out;
-	for (int i = 0; i < str.length(); i++) {
-		char c = str[i];
+	out.reserve(str.size());
+	for (char c : str) {
 		if (c == '\"') out += "\\";
 		out += c;
 	}
@@ -53,7 +53,7 @@ void PropertyToJSON::Set(int p, const std::string& v) {
 		json = "{";
 	}
 	else if (p == PROPERTY_OBJECT_END) {
-		if (json != "{") {
+		if (json.size() > 1) {
 			json += "}";
 			Ready();
 		}
@@ -69,8 +69,10 @@ void PropertyToJSON::Set(int p, const std::vector<std::string>& v) {
 	if (PropertyMap[p][map].empty()) return;
 
 	json += delim() + "\"" + PropertyMap[p][map] + "\":[\"" + jsonify(v[0]) + "\"";
+
 	for (int i = 1; i < v.size(); i++)
 		json += ",\"" + jsonify(v[i]) + "\"";
+
 	json += "]";
 }
 
@@ -127,9 +129,9 @@ const std::vector<std::vector<std::string>> PropertyMap = {
 	{ "dte", "", "", "" },
 	{ "epfd", "", "epfd", "" },
 	{ "epfd_text", "", "epfd_text", "" },
-	{ "fid", "", "fid", "" },
-	{ "gnss", "", "gnss", "" },
-	{ "hazard", "", "hazard", "" },
+	{ "fid", "", "", "" },
+	{ "gnss", "", "", "" },
+	{ "hazard", "", "", "" },
 	{ "heading", "", "heading", "heading" },
 	{ "heading_q", "", "", "" },
 	{ "hour", "", "", "" },
@@ -146,7 +148,7 @@ const std::vector<std::vector<std::string>> PropertyMap = {
 	{ "leveltrend", "", "", "" },
 	{ "loaded", "", "", "" },
 	{ "lon", "", "lon", "lon" },
-	{ "maneuver", "", "maneuver", "" },
+	{ "maneuver", "", "", "" },
 	{ "minute", "", "", "" },
 	{ "mmsi", "mmsi", "mmsi", "mmsi" },
 	{ "mmsi1", "", "", "" },
@@ -176,16 +178,16 @@ const std::vector<std::vector<std::string>> PropertyMap = {
 	{ "offset2_1", "", "", "" },
 	{ "offset3", "", "", "" },
 	{ "offset4", "", "", "" },
-	{ "partno", "", "partno", "partno" },
+	{ "partno", "", "", "partno" },
 	{ "power", "", "", "" },
 	{ "preciptype", "", "", "" },
 	{ "pressure", "", "", "" },
 	{ "pressuretend", "", "", "" },
 	{ "quiet", "", "", "" },
-	{ "radio", "", "radio", "" },
-	{ "raim", "", "raim", "" },
+	{ "radio", "", "", "" },
+	{ "raim", "", "", "" },
 	{ "regional", "", "", "" },
-	{ "repeat", "", "repeat", "" },
+	{ "repeat", "", "", "" },
 	{ "reserved", "", "", "" },
 	{ "retransmit", "", "", "" },
 	{ "salinity", "", "", "" },

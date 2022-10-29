@@ -63,5 +63,4 @@ namespace IO {
 		TAG tag;
 		StreamOut<std::string>::Send(&json, 1, tag);
 	}
-
 }
