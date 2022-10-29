@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	IO::MessageToScreen msg2screen;
-	IO::PropertyToJSON prop2json, prop2json_http;
+	IO::PropertyToString prop2json;
 	IO::StringToScreen str2screen;
 
 	AIS::AISMessageDecoder msg2prop, msg2prop_http;
@@ -656,8 +656,7 @@ int main(int argc, char* argv[]) {
 			http.Set("MODEL", liveModels[0]->getName());
 			http.Set("RECEIVER", "AIS-catcher " VERSION);
 			liveModels[0]->Output() >> msg2prop_http;
-			msg2prop_http >> prop2json_http;
-			prop2json_http >> http;
+			msg2prop_http >> http;
 			http.startServer();
 		}
 

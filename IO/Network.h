@@ -46,7 +46,7 @@
 
 namespace IO {
 
-	class HTTP : public StreamIn<std::string>, public Setting {
+	class HTTP : public PropertyToJSON, public Setting {
 
 #ifdef HASCURL
 
@@ -61,8 +61,20 @@ namespace IO {
 		std::string receiver;
 		bool gzip = false;
 
-		static size_t curl_wdata(void* ptr, size_t size, size_t nmemb, void* stream) {
-			return size * nmemb;
+		std::string response;
+
+		enum class PROTOCOL{ DEFAULT, APRS } protocol = PROTOCOL::DEFAULT;
+
+
+		static size_t curl_cb(void* contents, size_t size, size_t nmemb, std::string* s) {
+			size_t len = size * nmemb;
+			try {
+				s->append((char*)contents, len);
+			}
+			catch (std::bad_alloc& e) {
+				return 0;
+			}
+			return len;
 		}
 
 		int send(const std::string&);
@@ -76,14 +88,13 @@ namespace IO {
 		~HTTP() {
 			stopServer();
 		}
-
-		void Receive(const std::string* data, int len, TAG& tag) {
-			const std::lock_guard<std::mutex> lock(queue_mutex);
-
-			for (int i = 0; i < len; i++) queue.push_back(data[i]);
-		}
 #endif
 	public:
+		void Ready() {
+			const std::lock_guard<std::mutex> lock(queue_mutex);
+			queue.push_back(json);
+		}
+
 		virtual void Set(std::string option, std::string arg) {
 
 #ifdef HASCURL
@@ -106,6 +117,19 @@ namespace IO {
 			}
 			else if (option == "RECEIVER") {
 				receiver = arg;
+			}
+			else if (option == "PROTOCOL") {
+				Util::Convert::toUpper(arg);
+				if (arg == "DEFAULT") {
+					setMap(JSON_DICT_FULL);
+					protocol = PROTOCOL::DEFAULT;
+				}
+				else if (arg == "APRS") {
+					setMap(JSON_DICT_APRS);
+					protocol = PROTOCOL::APRS;
+				}
+				else
+					throw "HTTP: error - unknown protocol";
 			}
 			/*
 			else if (option == "GZIP") {

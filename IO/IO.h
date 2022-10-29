@@ -104,28 +104,9 @@ namespace IO {
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
 
-	class PropertyToJSON : public PropertyStreamIn, public StreamOut<std::string> {
-	protected:
-		std::string json;
-		bool first = true;
-
-		std::string delim() {
-			bool f = first;
-			first = false;
-
-			if (f) return "";
-			return ",";
-		}
-
-		std::string jsonify(const std::string& str);
+	class PropertyToString : public PropertyToJSON, public StreamOut<std::string> {
 
 	public:
-		virtual void Set(int p, int v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-		virtual void Set(int p, unsigned v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-		virtual void Set(int p, float v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + std::to_string(v); }
-		virtual void Set(int p, bool v) { json = json + delim() + "\"" + PropertyDict[p] + "\"" + ":" + (v ? "true" : "false"); }
-
-		virtual void Set(int p, const std::string& v);
-		virtual void Set(int p, const std::vector<std::string>& v);
+		void Ready();
 	};
 }
