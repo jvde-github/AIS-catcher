@@ -138,7 +138,7 @@ namespace Device {
 		while (isStreaming()) {
 			if (fifo.Wait()) {
 				RAW r = { Format::CF32, fifo.Front(), fifo.BlockSize() };
-				Send(&r, 1);
+				Send(&r, 1, tag);
 				fifo.Pop();
 			}
 			else {
