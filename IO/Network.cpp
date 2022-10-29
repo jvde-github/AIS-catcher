@@ -82,14 +82,11 @@ namespace IO {
 		}
 
 		std::time_t now = std::time(0);
-		std::tm* now_tm = std::gmtime(&now);
-		char datestring[15];
-		std::strftime(datestring, 15, "%Y%m%d%H%M%S", now_tm);
-
+		
 		char delim = ' ';
 
 		post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
-		post = post + "\n\t\"encodetime\": \"" + datestring + "\",";
+		post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 		post = post + "\n\t\"stationid\": \"" + stationid + "\",";
 		post = post + "\n\t\"decoder\": \"" + model + "\",";
 		post = post + "\n\t\"receiver\": \"" + receiver + "\",";

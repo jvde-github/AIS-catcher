@@ -22,6 +22,7 @@
 #include "Stream.h"
 #include "AIS.h"
 #include "Signals.h"
+#include "Utilities.h"
 
 namespace AIS {
 
@@ -40,12 +41,7 @@ namespace AIS {
 		}
 
 		std::string getRxTime() const {
-			
-			std::stringstream s;
-			struct tm* lt = std::gmtime(&rxtime);
-			s << std::setfill('0') << std::setw(4) << lt->tm_year + 1900 << std::setw(2) << lt->tm_mon + 1 << std::setw(2) << lt->tm_mday
-			  << std::setw(2) << lt->tm_hour << std::setw(2) << lt->tm_min << std::setw(2) << lt->tm_sec;
-			return s.str();
+			return Util::Convert::toTimeStr(rxtime);
 		}
 
 		unsigned type() const {

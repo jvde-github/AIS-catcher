@@ -347,7 +347,7 @@ namespace AIS {
 			setting += (droop_compensation ? "" : "DROOP off ");
 		}
 
-		setName("AIS engine " VERSION " " + setting);
+		setName("AIS engine " VERSION + (setting.empty()?"":(" " + setting)));
 
 		assert(C_a != NULL && C_b != NULL);
 
