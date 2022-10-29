@@ -55,6 +55,7 @@ namespace IO {
 		std::mutex queue_mutex;
 		std::string url = "";
 		int INTERVAL = 30;
+		int TIMEOUT = 10;
 		std::string stationid;
 		std::string model;
 		std::string receiver;
@@ -91,11 +92,14 @@ namespace IO {
 			if (option == "URL") {
 				url = arg;
 			}
-			else if (option == "STATIONID") {
+			else if (option == "STATIONID" || option == "ID") {
 				stationid = arg;
 			}
 			else if (option == "INTERVAL") {
 				INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24);
+			}
+			else if (option == "TIMEOUT") {
+				TIMEOUT = Util::Parse::Integer(arg, 1, 30);
 			}
 			else if (option == "MODEL") {
 				model = arg;

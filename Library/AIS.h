@@ -40,6 +40,7 @@ namespace AIS {
 		}
 
 		std::string getRxTime() const {
+			
 			std::stringstream s;
 			struct tm* lt = std::gmtime(&rxtime);
 			s << std::setfill('0') << std::setw(4) << lt->tm_year + 1900 << std::setw(2) << lt->tm_mon + 1 << std::setw(2) << lt->tm_mday
