@@ -31,6 +31,8 @@ namespace IO {
 		CURLcode r;
 		struct curl_httppost *post = NULL, *last = NULL;
 
+		response[0] = '\0';
+
 		if (protocol == PROTOCOL::APRS)
 			curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonais", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
 		else
