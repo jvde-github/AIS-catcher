@@ -68,8 +68,8 @@ namespace IO {
 		enum class PROTOCOL{ DEFAULT, APRS } protocol = PROTOCOL::DEFAULT;
 
 		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
-			size_t len = size * nmemb;
-			std::memcpy(s, contents, MIN(len, 1023));
+			int len = MIN(size * nmemb, 1023);
+			std::memcpy(s, contents, len);
 			s[len] = '\0';
 			return len;
 		}
