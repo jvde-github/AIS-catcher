@@ -681,11 +681,10 @@ int main(int argc, char* argv[]) {
 			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) prop2json.setMap(JSON_DICT_SPARSE);
 		}
 
-		// connect property calculation to model if it is needed (e.g. connected)
+		// connect property calculation to model only if it is needed (e.g. connected)
 		// connection to either http or json screen output
 		if(msg2prop.isConnected())
 		{
-			std::cerr << "JSON decoder connected";
 			liveModels[0]->Output() >> msg2prop;
 
 		}
