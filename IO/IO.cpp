@@ -60,6 +60,6 @@ namespace IO {
 	}
 
 	void JSONtoScreen::Ready() {
-		std::cerr << json << std::endl;
+		std::cout << json << std::endl;
 	}
 }
