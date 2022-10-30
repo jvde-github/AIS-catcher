@@ -195,10 +195,6 @@ namespace Device {
 		sdrplay_api_UnlockDeviceApi();
 	}
 
-	void SDRPLAY::Print() {
-		std::cerr << "SDRPLAY Settings: -gs agc " << (AGC ? "ON" : "OFF") << " lnastate " << LNAstate << " grdb " << gRdB << std::endl;
-	}
-
 	void SDRPLAY::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -215,5 +211,12 @@ namespace Device {
 		else
 			throw "Invalid setting for SDRPLAY.";
 	}
+
+	std::string SDRPLAY::Get() {
+		std::string str;
+		str = "agc " + (AGC ? std::string("ON") : std::string("OFF")) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ";
+		return str + Device::Get();
+	}
+
 #endif
 }

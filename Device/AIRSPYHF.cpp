@@ -136,10 +136,6 @@ namespace Device {
 		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
 	}
 
-	void AIRSPYHF::Print() {
-		std::cerr << "Airspy HF + Settings: -gh agc ON treshold " << (treshold_high ? "HIGH" : "LOW") << " preamp " << (preamp ? "ON" : "OFF") << std::endl;
-	}
-
 	void AIRSPYHF::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -152,6 +148,11 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+	}
+
+	std::string AIRSPYHF::Get() {
+		std::string str = "preamp " + (preamp ? std::string("ON") : std::string("OFF")) + " treshold " + (treshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
+		return str + Device::Get();
 	}
 #endif
 }

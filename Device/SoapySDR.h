@@ -91,8 +91,10 @@ namespace Device {
 		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Settings
-		void Print();
 		void Set(std::string option, std::string arg);
+		std::string Get();
+
+		std::string getProduct() { return "SOAPYSDR"; }
 #endif
 	};
 }

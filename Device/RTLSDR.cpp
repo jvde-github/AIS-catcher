@@ -34,6 +34,12 @@ namespace Device {
 		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw "RTLSDR: cannot open device.";
 
 		Device::Open(h);
+
+		char v[256], p[256], s[256];
+		rtlsdr_get_usb_strings(dev, v, p, s);
+		product = std::string(p);
+		serial = std::string(s);
+		vendor = std::string(v);
 	}
 
 #ifdef HASRTL_ANDROID
@@ -178,20 +184,6 @@ namespace Device {
 		}
 	}
 
-	void RTLSDR::Print() {
-		std::cerr << "RTLSDR settings: -gr tuner ";
-
-		if (tuner_AGC)
-			std::cerr << "AUTO";
-		else
-			std::cerr << tuner_Gain;
-
-		if (tuner_bandwidth) std::cerr << " bw " << tuner_bandwidth / 1000 << "K";
-		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF");
-		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF");
-		std::cerr << " -p " << freq_offset << std::endl;
-	}
-
 	void RTLSDR::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -207,6 +199,16 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+	}
+
+	std::string RTLSDR::Get() {
+
+		std::string str = "tuner " + (tuner_AGC ? std::string("AUTO") : std::to_string(tuner_Gain));
+		if (tuner_bandwidth) str += " bw " + std::to_string(tuner_bandwidth / 1000) + "K";
+		str += " rtlagc " + (RTL_AGC ? std::string("ON") : std::string("OFF"));
+		str += " biastee " + (bias_tee ? std::string("ON") : std::string("OFF"));
+
+		return Device::Get() + str;
 	}
 #endif
 }

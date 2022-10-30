@@ -58,10 +58,12 @@ namespace IO {
 		std::string url = "";
 		int INTERVAL = 30;
 		int TIMEOUT = 10;
+
 		std::string stationid;
-		std::string model;
-		std::string receiver;
-		std::string device;
+
+		std::string model, model_setting;
+		std::string product, vendor, serial, device_setting;
+
 		bool show_response = true;
 
 		char response[1024];
@@ -115,15 +117,18 @@ namespace IO {
 			else if (option == "MODEL") {
 				model = arg;
 			}
-			else if (option == "DEVICE") {
-				device = arg;
+			else if (option == "MODEL_SETTING") {
+				model_setting = arg;
+			}
+			else if (option == "PRODUCT") {
+				product = arg;
+			}
+			else if (option == "DEVICE_SETTING") {
+				device_setting = arg;
 			}
 			else if (option == "RESPONSE") {
 				Util::Convert::toUpper(arg);
 				show_response = Util::Parse::Switch(arg);
-			}
-			else if (option == "RECEIVER") {
-				receiver = arg;
 			}
 			else if (option == "PROTOCOL") {
 				Util::Convert::toUpper(arg);

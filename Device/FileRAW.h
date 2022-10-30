@@ -48,7 +48,9 @@ namespace Device {
 		// Device specific
 		void setFormat(Format f) { format = f; }
 
-		void Print();
 		void Set(std::string option, std::string arg);
+		std::string Get();
+
+		std::string getProduct() { return "FILE-RAW"; }
 	};
 }

@@ -136,16 +136,6 @@ namespace Device {
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
 
-	void RTLTCP::Print() {
-		std::cerr << "RTLTCP settings: -gt host " << host << " port " << port << " tuner ";
-		if (tuner_AGC)
-			std::cerr << "AUTO";
-		else
-			std::cerr << tuner_Gain;
-		std::cerr << " rtlagc " << (RTL_AGC ? "ON" : "OFF") << " timeout " << timeout;
-		std::cerr << " -p " << freq_offset << std::endl;
-	}
-
 	void RTLTCP::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -155,9 +145,6 @@ namespace Device {
 		}
 		else if (option == "RTLAGC") {
 			RTL_AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "FREQOFFSET") {
-			freq_offset = Util::Parse::Integer(arg, -150, 150);
 		}
 		else if (option == "TIMEOUT") {
 			timeout = Util::Parse::Integer(arg, 1, 60);
@@ -178,5 +165,16 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+	}
+
+	std::string RTLTCP::Get() {
+
+		std::string str = "host " + host + " port " + port + " timeout " + std::to_string(timeout);
+
+		str += " tuner " + (tuner_AGC ? std::string("AUTO") : std::to_string(tuner_Gain));
+		str += " rtlagc " + (RTL_AGC ? std::string("ON") : std::string("OFF"));
+		str += " protocol " + (Protocol == PROTOCOL::NONE ? std::string("NONE") : std::string("RTLTCP"));
+
+		return str + " " + Device::Get();
 	}
 }

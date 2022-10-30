@@ -36,6 +36,8 @@ namespace Device {
 
 		rtlsdr_dev_t* dev = NULL;
 
+		std::string vendor, product, serial;
+
 		std::thread async_thread;
 		std::thread run_thread;
 
@@ -90,8 +92,11 @@ namespace Device {
 		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Settings
-		void Print();
 		void Set(std::string option, std::string arg);
+		std::string Get();
+
+		std::string getProduct() { return product; };
+
 #endif
 	};
 }
