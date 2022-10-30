@@ -55,7 +55,7 @@ namespace IO {
 		bool terminate = false, running = false;
 		std::mutex queue_mutex;
 
-		std::string url = "";
+		std::string url, userpwd;
 		int INTERVAL = 30;
 		int TIMEOUT = 10;
 

@@ -56,6 +56,7 @@ namespace IO {
 				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, curl_cb))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEDATA, response))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) throw r;
+				if (!userpwd.empty() && (r = curl_easy_setopt(ch, CURLOPT_USERPWD, userpwd.c_str()))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)TIMEOUT))) throw r;
 
@@ -165,6 +166,9 @@ namespace IO {
 
 		if (option == "URL") {
 			url = arg;
+		}
+		else if (option == "USERPWD") {
+			userpwd = arg;
 		}
 		else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN") {
 			stationid = arg;
