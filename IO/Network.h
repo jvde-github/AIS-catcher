@@ -89,8 +89,10 @@ namespace IO {
 #endif
 	public:
 		void Ready() {
+#ifdef HASCURL
 			const std::lock_guard<std::mutex> lock(queue_mutex);
 			queue.push_back(json);
+#endif
 		}
 
 		virtual void Set(std::string option, std::string arg) {
