@@ -61,6 +61,7 @@ namespace IO {
 		std::string stationid;
 		std::string model;
 		std::string receiver;
+		std::string device;
 		bool show_response = true;
 
 		char response[1024];
@@ -111,6 +112,9 @@ namespace IO {
 			}
 			else if (option == "MODEL") {
 				model = arg;
+			}
+			else if (option == "DEVICE") {
+				device = arg;
 			}
 			else if (option == "RESPONSE") {
 				Util::Convert::toUpper(arg);
