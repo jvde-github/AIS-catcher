@@ -95,45 +95,46 @@ namespace IO {
 
 		if (protocol == PROTOCOL::AISCATCHER) {
 			post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
-			post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			post = post + "\n\t\"stationid\": \"" + stationid + "\",";
-			post = post + "\n\t\"receiver\":\n\t\t{";
-			post = post + "\n\t\t\"description\": \"AIS-catcher " + VERSION + "\",";
-			post = post + "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
-			post = post + "\n\t\t\"engine\": \"" + model + "\",";
-			post = post + "\n\t\t\"setting\": \"" + model_setting + "\"";
-			post = post + "\n\t\t},";
-						post = post + "\n\t\"device\":\n\t\t{";
+			post += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
+			post += "\n\t\"stationid\": \"" + stationid + "\",";
+			post += "\n\t\"receiver\":\n\t\t{";
+			post += "\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
+			post += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
+			post += "\n\t\t\"engine\": \"" + model + "\",";
+			post += "\n\t\t\"setting\": \"" + model_setting + "\"";
+			post += "\n\t\t},";
+			post += "\n\t\"device\":\n\t\t{";
 
-			post = post + "\n\t\t\"product\": \"" + product + "\",";
-			post = post + "\n\t\t\"settting\": \"" + device_setting + "\"";
-						post = post + "\n\t\t},";
+			post += "\n\t\t\"product\": \"" + product + "\",";
+			post += "\n\t\t\"settting\": \"" + device_setting + "\"";
+			post += "\n\t\t},";
 
-			post = post + "\n\t\"msgs\": [";
+			post += "\n\t\"msgs\": [";
+
 			char delim = ' ';
-
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
 				post = post + delim + "\n\t\t" + *it;
 				delim = ',';
 			}
 
-			post = post + "\n\t]\n}\n";
+			post += "\n\t]\n}\n";
 		}
 		else {
 			post = "{\n\t\"protocol\": \"jsonais\",";
-			post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			post = post + "\n\t\"groups\": [";
-			post = post + "\n\t{";
-			post = post + "\n\t\t\"path\": [{ \"name\": \"" + stationid + "\", \"url\" : \"" + url + "\" }],";
-			post = post + "\n\t\t\"msgs\": [";
-			char delim = ' ';
+			post += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
+			post += "\n\t\"groups\": [";
+			post += "\n\t{";
+			post += "\n\t\t\"path\": [{ \"name\": \"" + stationid + "\", \"url\" : \"" + url + "\" }],";
+			
+			post += "\n\t\t\"msgs\": [";
 
+			char delim = ' ';
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
 				post = post + delim + "\n\t\t\t" + *it;
 				delim = ',';
 			}
 
-			post = post + "\n\t\t]\n\t}]\n}";
+			post += "\n\t\t]\n\t}]\n}";
 		}
 
 
