@@ -663,7 +663,8 @@ int main(int argc, char* argv[]) {
 			h->Set("MODEL_SETTING", liveModels[0]->Get());
 			h->Set("DEVICE_SETTING", device->Get());
 			h->Set("PRODUCT", device->getProduct());
-
+			h->Set("VENDOR", device->getVendor());
+			h->Set("SERIAL", device->getSerial());
 
 			msg2json >> *h;
 			h->startServer();

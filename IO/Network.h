@@ -97,58 +97,7 @@ namespace IO {
 #endif
 		}
 
-		virtual void Set(std::string option, std::string arg) {
-
-#ifdef HASCURL
-			Util::Convert::toUpper(option);
-
-			if (option == "URL") {
-				url = arg;
-			}
-			else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN") {
-				stationid = arg;
-			}
-			else if (option == "INTERVAL") {
-				INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24);
-			}
-			else if (option == "TIMEOUT") {
-				TIMEOUT = Util::Parse::Integer(arg, 1, 30);
-			}
-			else if (option == "MODEL") {
-				model = arg;
-			}
-			else if (option == "MODEL_SETTING") {
-				model_setting = arg;
-			}
-			else if (option == "PRODUCT") {
-				product = arg;
-			}
-			else if (option == "DEVICE_SETTING") {
-				device_setting = arg;
-			}
-			else if (option == "RESPONSE") {
-				Util::Convert::toUpper(arg);
-				show_response = Util::Parse::Switch(arg);
-			}
-			else if (option == "PROTOCOL") {
-				Util::Convert::toUpper(arg);
-				if (arg == "HTTP") {
-					setMap(JSON_DICT_FULL);
-					protocol = PROTOCOL::AISCATCHER;
-				}
-				else if (arg == "APRS") {
-					setMap(JSON_DICT_APRS);
-					protocol = PROTOCOL::APRS;
-				}
-				else
-					throw "HTTP: error - unknown protocol";
-			}
-			else
-				throw "HTTP: Invalid setting.";
-#else
-			throw "HTTP: not implemented, please recompile with libcurl support.";
-#endif
-		}
+		virtual void Set(std::string option, std::string arg);
 
 		void startServer() {
 #ifdef HASCURL

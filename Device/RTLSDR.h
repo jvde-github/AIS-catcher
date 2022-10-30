@@ -96,7 +96,8 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return product; };
-
+		std::string getVendor() { return vendor; };
+		std::string getSerial() { return serial; };
 #endif
 	};
 }

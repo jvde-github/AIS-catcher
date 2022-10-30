@@ -114,5 +114,11 @@ namespace Device {
 		virtual std::string getProduct() {
 			return "";
 		}
+		virtual std::string getVendor() {
+			return "";
+		}
+		virtual std::string getSerial() {
+			return "";
+		}
 	};
 }
