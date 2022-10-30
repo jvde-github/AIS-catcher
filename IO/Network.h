@@ -65,7 +65,7 @@ namespace IO {
 
 		char response[1024];
 
-		enum class PROTOCOL{ DEFAULT, APRS } protocol = PROTOCOL::DEFAULT;
+		enum class PROTOCOL{ AISCATCHER, APRS } protocol = PROTOCOL::AISCATCHER;
 
 		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
 			int len = MIN(size * nmemb, 1023);
@@ -74,7 +74,7 @@ namespace IO {
 			return len;
 		}
 
-		int send(const std::string&);
+		void send(const std::string&);
 		void post();
 		void process();
 
@@ -123,7 +123,7 @@ namespace IO {
 				Util::Convert::toUpper(arg);
 				if (arg == "HTTP") {
 					setMap(JSON_DICT_FULL);
-					protocol = PROTOCOL::DEFAULT;
+					protocol = PROTOCOL::AISCATCHER;
 				}
 				else if (arg == "APRS") {
 					setMap(JSON_DICT_APRS);
@@ -147,7 +147,7 @@ namespace IO {
 				terminate = false;
 
 				run_thread = std::thread(&HTTP::process, this);
-				std::cerr << "HTTP: start server." << std::endl;
+				std::cerr << "HTTP: start server (" << url << ")." << std::endl;
 			}
 #else
 			throw "HTTP: not implemented, please recompile with libcurl support.";
@@ -162,7 +162,7 @@ namespace IO {
 				terminate = true;
 				run_thread.join();
 
-				std::cerr << "HTTP: stop server." << std::endl;
+				std::cerr << "HTTP: stop server (" << url << ")." << std::endl;
 			}
 #endif
 		}

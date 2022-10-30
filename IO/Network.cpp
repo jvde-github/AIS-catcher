@@ -23,7 +23,7 @@ namespace IO {
 
 #ifdef HASCURL
 
-	int HTTP::send(const std::string& msg) {
+	void HTTP::send(const std::string& msg) {
 
 		CURL* ch;
 		struct curl_slist* headers = NULL;
@@ -40,7 +40,7 @@ namespace IO {
 
 		if (!(ch = curl_easy_init())) {
 			std::cerr << "HTTP: cannot initialize curl." << std::endl;
-			return 1;
+			return;
 		}
 
 		headers = curl_slist_append(NULL, "Expect:");
@@ -57,6 +57,7 @@ namespace IO {
 				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)TIMEOUT))) throw r;
+
 				if ((r = curl_easy_perform(ch))) throw r;
 				if ((r = curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &retcode))) throw r;
 			}
@@ -70,13 +71,12 @@ namespace IO {
 
 		if (retcode != 200) {
 			std::cerr << "HTTP: server " << url << " returned " << retcode << std::endl;
-			r = (CURLcode)-1;
 		}
 
 		if (show_response)
 			std::cerr << "HTTP: server response - " << response << std::endl;
 
-		return r;
+		return;
 	}
 
 
@@ -92,7 +92,7 @@ namespace IO {
 
 		std::time_t now = std::time(0);
 
-		if (protocol == PROTOCOL::DEFAULT) {
+		if (protocol == PROTOCOL::AISCATCHER) {
 			post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
 			post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			post = post + "\n\t\"stationid\": \"" + stationid + "\",";
