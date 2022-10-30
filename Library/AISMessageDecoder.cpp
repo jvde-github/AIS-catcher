@@ -22,7 +22,6 @@
 //	https://fidus.com/wp-content/uploads/2016/03/Guide_to_System_Development_March_2009.pdf
 // 	https://gpsd.gitlab.io/gpsd/AIVDM.html
 
-#include "Property.h"
 #include "AISMessageDecoder.h"
 
 #ifdef _WIN32

@@ -27,11 +27,11 @@
 #define JSON_DICT_SPARSE  2
 #define JSON_DICT_APRS	  3
 
-extern const std::vector<std::vector<std::string>> PropertyMap;
+extern const std::vector<std::vector<std::string>> JSONmap;
 
 // PropertyStream
 
-class PropertyStreamIn {
+class JSONStreamIn {
 public:
 	virtual void Set(int p, int v) {}
 	virtual void Set(int p, unsigned v) {}
@@ -41,9 +41,9 @@ public:
 	virtual void Set(int p, const std::vector<std::string>& v) {}
 };
 
-class PropertyStreamOut {
+class JSONStreamOut {
 public:
-	std::vector<PropertyStreamIn*> connections;
+	std::vector<JSONStreamIn*> connections;
 
 	void Submit(int p, int v) {
 		for (auto c : connections) c->Set(p, v);
@@ -64,17 +64,17 @@ public:
 		for (auto c : connections) c->Set(p, v);
 	}
 
-	void Connect(PropertyStreamIn* s) { connections.push_back(s); }
+	void Connect(JSONStreamIn* s) { connections.push_back(s); }
 	bool isConnected() { return connections.size() > 0; }
 	void Clear() { connections.resize(0); }
 };
 
-inline PropertyStreamIn& operator>>(PropertyStreamOut& a, PropertyStreamIn& b) {
+inline JSONStreamIn& operator>>(JSONStreamOut& a, JSONStreamIn& b) {
 	a.Connect(&b);
 	return b;
 }
 
-class PropertyToJSON : public PropertyStreamIn {
+class JSONbuildString : public JSONStreamIn {
 protected:
 	std::string json;
 

@@ -17,9 +17,9 @@
 
 #include <string>
 
-#include "Property.h"
+#include "JSON.h"
 
-std::string PropertyToJSON::jsonify(const std::string& str) {
+std::string JSONbuildString::jsonify(const std::string& str) {
 	std::string out;
 	out.reserve(str.size());
 	for (char c : str) {
@@ -29,24 +29,24 @@ std::string PropertyToJSON::jsonify(const std::string& str) {
 	return out;
 }
 
-void PropertyToJSON::Set(int p, int v) {
-	if (PropertyMap[p][map].empty()) return;
-	json = json + delim() + "\"" + PropertyMap[p][map] + "\"" + ":" + std::to_string(v);
+void JSONbuildString::Set(int p, int v) {
+	if (JSONmap[p][map].empty()) return;
+	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
 }
-void PropertyToJSON::Set(int p, unsigned v) {
-	if (PropertyMap[p][map].empty()) return;
-	json = json + delim() + "\"" + PropertyMap[p][map] + "\"" + ":" + std::to_string(v);
+void JSONbuildString::Set(int p, unsigned v) {
+	if (JSONmap[p][map].empty()) return;
+	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
 }
-void PropertyToJSON::Set(int p, float v) {
-	if (PropertyMap[p][map].empty()) return;
-	json = json + delim() + "\"" + PropertyMap[p][map] + "\"" + ":" + std::to_string(v);
+void JSONbuildString::Set(int p, float v) {
+	if (JSONmap[p][map].empty()) return;
+	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
 }
-void PropertyToJSON::Set(int p, bool v) {
-	if (PropertyMap[p][map].empty()) return;
-	json = json + delim() + "\"" + PropertyMap[p][map] + "\"" + ":" + (v ? "true" : "false");
+void JSONbuildString::Set(int p, bool v) {
+	if (JSONmap[p][map].empty()) return;
+	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + (v ? "true" : "false");
 }
 
-void PropertyToJSON::Set(int p, const std::string& v) {
+void JSONbuildString::Set(int p, const std::string& v) {
 	if (p == PROPERTY_OBJECT_START) {
 		first = true;
 		json.reserve(2048);
@@ -59,16 +59,16 @@ void PropertyToJSON::Set(int p, const std::string& v) {
 		}
 	}
 	else {
-		if (PropertyMap[p][map].empty()) return;
-		json = json + delim() + "\"" + PropertyMap[p][map] + "\":\"" + jsonify(v) + "\"";
+		if (JSONmap[p][map].empty()) return;
+		json = json + delim() + "\"" + JSONmap[p][map] + "\":\"" + jsonify(v) + "\"";
 	}
 }
 
-void PropertyToJSON::Set(int p, const std::vector<std::string>& v) {
+void JSONbuildString::Set(int p, const std::vector<std::string>& v) {
 
-	if (PropertyMap[p][map].empty()) return;
+	if (JSONmap[p][map].empty()) return;
 
-	json += delim() + "\"" + PropertyMap[p][map] + "\":[\"" + jsonify(v[0]) + "\"";
+	json += delim() + "\"" + JSONmap[p][map] + "\":[\"" + jsonify(v[0]) + "\"";
 
 	for (int i = 1; i < v.size(); i++)
 		json += ",\"" + jsonify(v[i]) + "\"";
@@ -76,7 +76,7 @@ void PropertyToJSON::Set(int p, const std::vector<std::string>& v) {
 	json += "]";
 }
 
-const std::vector<std::vector<std::string>> PropertyMap = {
+const std::vector<std::vector<std::string>> JSONmap = {
 	{ "", "", "", "" },
 	{ "", "", "", "" },
 	{ "class", "class", "class", "" },

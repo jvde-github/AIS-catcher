@@ -271,9 +271,11 @@ int main(int argc, char* argv[]) {
 	int TAG_mode = 0;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	bool verbose = false, timer_on = false, HTTP_active = false;
+	bool verbose = false, timer_on = false;
+
 	OutputLevel NMEA_to_screen = OutputLevel::FULL;
 	int verboseUpdateTime = 3;
+
 	AIS::Mode ChannelMode = AIS::Mode::AB;
 	std::string NMEAchannels = "AB";
 	TAG tag;
@@ -295,8 +297,7 @@ int main(int argc, char* argv[]) {
 
 	IO::MessageToScreen msg2screen;
 
-	IO::PropertyToString prop2json;
-	IO::StringToScreen json2screen;
+	IO::JSONtoScreen json2screen;
 
 	try {
 #ifdef _WIN32
@@ -471,7 +472,6 @@ int main(int argc, char* argv[]) {
 				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
 				break;
 			case 'H':
-				HTTP_active = true;
 				Assert(count > 0, param);
 				http.push_back(std::make_shared<IO::HTTP>());
 				if (count % 2) http.back()->Set("URL", arg1);
@@ -664,7 +664,7 @@ int main(int argc, char* argv[]) {
 			h->startServer();
 		}
 
-		// Connect output to UDP stream
+		// Create and connect output to UDP stream
 		UDPconnections.resize(UDPdestinations.size());
 
 		for (int i = 0; i < UDPdestinations.size(); i++) {
@@ -678,13 +678,12 @@ int main(int argc, char* argv[]) {
 			msg2screen.setDetail(NMEA_to_screen);
 		}
 		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
-			msg2prop >> prop2json;
-			prop2json >> json2screen;
+			msg2prop >> json2screen;
 
-			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) prop2json.setMap(JSON_DICT_SPARSE);
+			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
 		}
 
-		// connect property calculation to model only if it is needed (e.g. connected)
+		// connect property calculation to model only if it is needed (e.g. we connected it to a http server or screen output)
 		// connection to either http or json screen output
 		if (msg2prop.isConnected()) {
 			liveModels[0]->Output() >> msg2prop;

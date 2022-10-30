@@ -59,8 +59,7 @@ namespace IO {
 		}
 	}
 
-	void PropertyToString::Ready() {
-		TAG tag;
-		StreamOut<std::string>::Send(&json, 1, tag);
+	void JSONtoScreen::Ready() {
+		std::cerr << json << std::endl;
 	}
 }
