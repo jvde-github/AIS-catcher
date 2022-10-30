@@ -638,7 +638,10 @@ int main(int argc, char* argv[]) {
 		if (bandwidth)
 			device->Set("BW", std::to_string(bandwidth));
 
-		if (verbose) device->Print();
+		if (verbose) {
+			std::cerr << "Device: " << device->getProduct() << std::endl;
+			std::cerr << "Settings: " << device->Get() << std::endl;
+		}
 
 		// ------------
 		// Setup models
@@ -657,7 +660,10 @@ int main(int argc, char* argv[]) {
 		for (auto& h : http) {
 
 			h->Set("MODEL", liveModels[0]->getName());
-			h->Set("RECEIVER", "AIS-catcher " VERSION);
+			h->Set("MODEL_SETTING", liveModels[0]->Get());
+			h->Set("DEVICE_SETTING", device->Get());
+			h->Set("PRODUCT", device->getProduct());
+
 
 			msg2json >> *h;
 			h->startServer();
@@ -686,12 +692,6 @@ int main(int argc, char* argv[]) {
 		// connection to either http or json screen output
 		if (msg2json.isConnected()) {
 			liveModels[0]->Output() >> msg2json;
-		}
-
-		if (verbose) {
-			std::cerr << "Generic settings: "
-					  << "sample rate -s " << device->getSampleRate() / 1000 << "K " << (ppm ? ("-p " + std::to_string(ppm)) : "") << " ";
-			std::cerr << (bandwidth ? ("-a " + std::to_string(bandwidth)) : "") << std::endl;
 		}
 
 		// -----------------

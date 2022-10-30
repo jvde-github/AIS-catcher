@@ -91,18 +91,6 @@ namespace Device {
 		}
 	}
 
-	void HACKRF::Print() {
-		std::cerr << "Hackrf Settings: -gf";
-		std::cerr << " preamp ";
-		if (preamp)
-			std::cerr << "ON";
-		else
-			std::cerr << "OFF";
-		std::cerr << " lna " << LNA_Gain;
-		std::cerr << " vga " << VGA_Gain;
-		std::cerr << std::endl;
-	}
-
 	void HACKRF::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -118,6 +106,12 @@ namespace Device {
 		}
 		else
 			throw "Invalid setting for HACKRF.";
+	}
+
+	std::string HACKRF::Get() {
+
+		std::string str = "lna " + std::to_string(LNA_Gain) + " vga " + std::to_string(VGA_Gain) + " preamp " + (preamp ? std::string("ON ") : std::string("OFF "));
+		return str + Device::Get();
 	}
 #endif
 }

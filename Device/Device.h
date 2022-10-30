@@ -84,6 +84,7 @@ namespace Device {
 
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
 
+
 		virtual void Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);
 			Util::Convert::toUpper(arg);
@@ -99,6 +100,19 @@ namespace Device {
 			}
 			else
 				throw "Invalid Device setting.";
+		}
+
+		virtual std::string Get() {
+
+			std::string str = "rate " + std::to_string(getSampleRate() / 1000) + "K ";
+			if (tuner_bandwidth) str += "bw " + std::to_string(tuner_bandwidth / 1000) + "K ";
+			if (freq_offset) str += "freqoffset " + std::to_string(freq_offset) + " ";
+
+			return str;
+		}
+
+		virtual std::string getProduct() {
+			return "";
 		}
 	};
 }

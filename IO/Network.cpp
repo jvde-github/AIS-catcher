@@ -17,6 +17,7 @@
 
 #include <cstring>
 
+#include "AIS-catcher.h"
 #include "Network.h"
 
 namespace IO {
@@ -96,9 +97,18 @@ namespace IO {
 			post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
 			post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			post = post + "\n\t\"stationid\": \"" + stationid + "\",";
-			// post = post + "\n\t\"device\": \"" + device + "\",";
-			post = post + "\n\t\"decoder\": \"" + model + "\",";
-			post = post + "\n\t\"receiver\": \"" + receiver + "\",";
+			post = post + "\n\t\"receiver\":\n\t\t{";
+			post = post + "\n\t\t\"description\": \"AIS-catcher " + VERSION + "\",";
+			post = post + "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
+			post = post + "\n\t\t\"engine\": \"" + model + "\",";
+			post = post + "\n\t\t\"setting\": \"" + model_setting + "\"";
+			post = post + "\n\t\t},";
+						post = post + "\n\t\"device\":\n\t\t{";
+
+			post = post + "\n\t\t\"product\": \"" + product + "\",";
+			post = post + "\n\t\t\"settting\": \"" + device_setting + "\"";
+						post = post + "\n\t\t},";
+
 			post = post + "\n\t\"msgs\": [";
 			char delim = ' ';
 

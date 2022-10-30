@@ -55,6 +55,7 @@ namespace AIS {
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
 		virtual void Set(std::string option, std::string arg) { throw "Model: unknown setting."; }
+		virtual std::string Get() { return ""; }
 	};
 
 
@@ -89,7 +90,8 @@ namespace AIS {
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
 
-		virtual void Set(std::string option, std::string arg);
+		void Set(std::string option, std::string arg);
+		std::string Get();
 	};
 
 	// Standard demodulation model, FM with brute-force timing recovery
@@ -136,6 +138,7 @@ namespace AIS {
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
+		std::string Get();
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
@@ -157,6 +160,7 @@ namespace AIS {
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
+		std::string Get();
 	};
 
 

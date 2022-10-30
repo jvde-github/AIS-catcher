@@ -116,12 +116,6 @@ namespace Device {
 		return true;
 	}
 
-	void WAVFile::Print() {
-		std::cerr << "WAV file Settings: -gw";
-		std::cerr << " file " << filename << std::endl;
-		;
-	}
-
 	void WAVFile::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
@@ -132,4 +126,7 @@ namespace Device {
 		throw " Invalid setting for FILE WAV.";
 	}
 
+	std::string WAVFile::Get() {
+		return "file " + filename + " " + Device::Get();
+	}
 }

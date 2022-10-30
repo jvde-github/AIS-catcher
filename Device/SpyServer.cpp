@@ -347,10 +347,6 @@ namespace Device {
 		DeviceList.push_back(Description("SPYSERVER", "SPYSERVER", "SPYSERVER", (uint64_t)0, Type::SPYSERVER));
 	}
 
-	void SpyServer::Print() {
-		std::cerr << "SPYSERVER settings: -gy host " << host << " port " << port << " gain " << tuner_gain << std::endl;
-	}
-
 	void SpyServer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -366,5 +362,9 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+	}
+
+	std::string SpyServer::Get() {
+		return "host " + host + " port " + port + " gain " + std::to_string(tuner_gain) + " " + Device::Get();
 	}
 }

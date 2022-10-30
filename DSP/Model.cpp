@@ -276,6 +276,20 @@ namespace AIS {
 			Model::Set(option, arg);
 	}
 
+	std::string ModelFrontend::Get() {
+		const std::string ON = "ON", OFF = "OFF";
+		std::string str;
+
+		if (SOXR_DS)
+			str = "soxr ON ";
+		else if (SAMPLERATE_DS)
+			str = "src ON ";
+		else
+			str = "droop " + (droop_compensation ? ON : OFF) + " fp_ds " + (fixedpointDS ? ON : OFF) + " ";
+
+		return str + Model::Get();
+	}
+
 	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 		setName("Base (non-coherent)");
@@ -336,18 +350,7 @@ namespace AIS {
 	void ModelDefault::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		std::string setting;
-
-		if (SOXR_DS)
-			setting = "SOXR ";
-		else if (SAMPLERATE_DS)
-			setting = "SRC ";
-		else {
-			setting = (fixedpointDS ? "FP_DS " : "");
-			setting += (droop_compensation ? "" : "DROOP off ");
-		}
-
-		setName("AIS engine " VERSION + (setting.empty() ? "" : (" " + setting)));
+		setName("AIS engine " VERSION);
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -416,6 +419,11 @@ namespace AIS {
 		}
 		else
 			ModelFrontend::Set(option, arg);
+	}
+
+	std::string ModelDefault::Get() {
+		const std::string ON = "ON", OFF = "OFF";
+		return "ps_ema " + (PS_EMA ? ON : OFF) + " afc_wide " + (CGF_wide ? ON : OFF) + " " + ModelFrontend::Get();
 	}
 
 	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
@@ -487,6 +495,11 @@ namespace AIS {
 		}
 		else
 			ModelFrontend::Set(option, arg);
+	}
+
+	std::string ModelChallenger::Get() {
+		const std::string ON = "ON", OFF = "OFF";
+		return "ps_ema " + (PS_EMA ? ON : OFF) + " afc_wide " + ModelFrontend::Get();
 	}
 
 	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {

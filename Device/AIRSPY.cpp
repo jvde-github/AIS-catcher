@@ -174,39 +174,6 @@ namespace Device {
 		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
 	}
 
-	void AIRSPY::Print() {
-		std::cerr << "Airspy Settings: -gm";
-
-		switch (mode) {
-		case AIRSPYGainMode::Sensitivity:
-			std::cerr << " sensitivity " << gain;
-			break;
-
-		case AIRSPYGainMode::Linearity:
-			std::cerr << " linearity " << gain;
-			break;
-
-		case AIRSPYGainMode::Free:
-
-			std::cerr << " lna ";
-			if (LNA_AGC)
-				std::cerr << "AUTO";
-			else
-				std::cerr << LNA_Gain;
-
-			std::cerr << " mixer ";
-			if (mixer_AGC)
-				std::cerr << "AUTO";
-			else
-				std::cerr << mixer_Gain;
-
-			std::cerr << " vga " << VGA_Gain;
-			break;
-		}
-		std::cerr << " biastee " << (bias_tee ? "ON" : "OFF") << std::endl;
-		;
-	}
-
 	void AIRSPY::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
@@ -237,6 +204,28 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+	}
+
+	std::string AIRSPY::Get() {
+		std::string str;
+
+		switch (mode) {
+		case AIRSPYGainMode::Sensitivity:
+			str = "sensitivity " + std::to_string(gain);
+			break;
+		case AIRSPYGainMode::Linearity:
+			str = "linearity " + std::to_string(gain);
+			break;
+		case AIRSPYGainMode::Free:
+			str = "mixer " + (mixer_AGC ? std::string("AUTO") : std::to_string(mixer_Gain)) + " ";
+			str += "lna " + (LNA_AGC ? std::string("AUTO") : std::to_string(LNA_Gain)) + " vga " + std::to_string(VGA_Gain);
+			break;
+		default:
+			break;
+		}
+
+		str += " biastee " + (bias_tee ? std::string("ON") : std::string("OFF")) + " ";
+		return str + Device::Get();
 	}
 #endif
 }

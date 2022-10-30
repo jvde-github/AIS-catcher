@@ -80,8 +80,8 @@ struct RAW {
 };
 
 struct Setting {
-	virtual void Print(void) {}
 	virtual void Set(std::string option, std::string arg) {}
+	virtual std::string Get() { return ""; }
 };
 
 using namespace std::chrono;
