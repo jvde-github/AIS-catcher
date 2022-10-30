@@ -290,13 +290,12 @@ int main(int argc, char* argv[]) {
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
+
 	// AIS message to properties
-	AIS::AISMessageDecoder msg2prop;
+	AIS::AISMessageDecoder msg2json;
 
 	std::vector<std::shared_ptr<IO::HTTP>> http;
-
 	IO::MessageToScreen msg2screen;
-
 	IO::JSONtoScreen json2screen;
 
 	try {
@@ -660,7 +659,7 @@ int main(int argc, char* argv[]) {
 			h->Set("MODEL", liveModels[0]->getName());
 			h->Set("RECEIVER", "AIS-catcher " VERSION);
 
-			msg2prop >> *h;
+			msg2json >> *h;
 			h->startServer();
 		}
 
@@ -678,15 +677,15 @@ int main(int argc, char* argv[]) {
 			msg2screen.setDetail(NMEA_to_screen);
 		}
 		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
-			msg2prop >> json2screen;
+			msg2json >> json2screen;
 
 			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
 		}
 
 		// connect property calculation to model only if it is needed (e.g. we connected it to a http server or screen output)
 		// connection to either http or json screen output
-		if (msg2prop.isConnected()) {
-			liveModels[0]->Output() >> msg2prop;
+		if (msg2json.isConnected()) {
+			liveModels[0]->Output() >> msg2json;
 		}
 
 		if (verbose) {

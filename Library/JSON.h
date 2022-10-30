@@ -74,6 +74,7 @@ inline JSONStreamIn& operator>>(JSONStreamOut& a, JSONStreamIn& b) {
 	return b;
 }
 
+// takes JSON stream as input, builds a string and calls Ready() if string is available
 class JSONbuildString : public JSONStreamIn {
 protected:
 	std::string json;
@@ -97,8 +98,10 @@ private:
 	std::string jsonify(const std::string& str);
 
 public:
+	// dictionary to use
 	void setMap(int m) { map = m; }
 
+	// inherited from JSON stream
 	virtual void Set(int p, int v);
 	virtual void Set(int p, unsigned v);
 	virtual void Set(int p, float v);
@@ -107,7 +110,7 @@ public:
 	virtual void Set(int p, const std::vector<std::string>& v);
 };
 
-
+// JSON tags
 enum Properties {
 	PROPERTY_OBJECT_START = 0,
 	PROPERTY_OBJECT_END,
