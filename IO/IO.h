@@ -22,7 +22,7 @@
 
 #include "Stream.h"
 #include "AIS.h"
-#include "Property.h"
+#include "JSON.h"
 #include "Utilities.h"
 
 namespace IO {
@@ -104,8 +104,7 @@ namespace IO {
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
 
-	class PropertyToString : public PropertyToJSON, public StreamOut<std::string> {
-
+	class JSONtoScreen : public JSONbuildString {
 	public:
 		void Ready();
 	};

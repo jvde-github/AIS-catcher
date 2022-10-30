@@ -41,13 +41,13 @@
 #include "Stream.h"
 #include "Common.h"
 #include "AIS.h"
-#include "Property.h"
+#include "JSON.h"
 #include "TCP.h"
 #include "Utilities.h"
 
 namespace IO {
 
-	class HTTP : public PropertyToJSON, public Setting {
+	class HTTP : public JSONbuildString, public Setting {
 
 #ifdef HASCURL
 

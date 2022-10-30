@@ -20,13 +20,13 @@
 #include <iomanip>
 
 #include "Stream.h"
-#include "Property.h"
+#include "JSON.h"
 #include "AIS.h"
 #include "Signals.h"
 #include "Utilities.h"
 
 namespace AIS {
-	class AISMessageDecoder : public StreamIn<Message>, public PropertyStreamOut {
+	class AISMessageDecoder : public StreamIn<Message>, public JSONStreamOut {
 		bool sparse = false;
 
 		void ProcessMsg8Data(const AIS::Message& msg, int len);
