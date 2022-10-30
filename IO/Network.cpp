@@ -185,10 +185,10 @@ namespace IO {
 			product = arg;
 		}
 		else if (option == "VENDOR") {
-			product = arg;
+			vendor = arg;
 		}
 		else if (option == "SERIAL") {
-			product = arg;
+			serial = arg;
 		}
 		else if (option == "DEVICE_SETTING") {
 			device_setting = arg;
