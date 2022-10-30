@@ -38,7 +38,7 @@
     <ClCompile Include="..\IO\Network.cpp" />
     <ClCompile Include="..\Library\JSON.cpp" />
     <ClCompile Include="..\Library\AIS.cpp" />
-    <ClCompile Include="..\Library\AISMessageDecoder.cpp" />
+    <ClCompile Include="..\Library\JSONAIS.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
   </ItemGroup>
@@ -48,7 +48,7 @@
     <ClInclude Include="..\Device\AIRSPYHF.h" />
     <ClInclude Include="..\Device\Device.h" />
     <ClInclude Include="..\Library\FIFO.h" />
-    <ClInclude Include="..\Library\AISMessageDecoder.h" />
+    <ClInclude Include="..\Library\JSONAIS.h" />
     <ClInclude Include="..\Library\JSON.h" />
     <ClInclude Include="..\Device\FileRAW.h" />
     <ClInclude Include="..\Device\FileWAV.h" />
