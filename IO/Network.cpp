@@ -96,7 +96,7 @@ namespace IO {
 			post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
 			post = post + "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			post = post + "\n\t\"stationid\": \"" + stationid + "\",";
-			//post = post + "\n\t\"device\": \"" + device + "\",";
+			// post = post + "\n\t\"device\": \"" + device + "\",";
 			post = post + "\n\t\"decoder\": \"" + model + "\",";
 			post = post + "\n\t\"receiver\": \"" + receiver + "\",";
 			post = post + "\n\t\"msgs\": [";
@@ -206,12 +206,6 @@ namespace IO {
 			closesocket(sock);
 			sock = -1;
 		}
-	}
-
-	TCP::TCP() {
-	}
-
-	TCP::~TCP() {
 	}
 
 	void TCP::Receive(const AIS::Message* data, int len, TAG& tag) {

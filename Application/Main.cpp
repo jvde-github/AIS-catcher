@@ -29,7 +29,7 @@
 #include "IO.h"
 #include "Network.h"
 #include "AIS.h"
-#include "AISMessageDecoder.h"
+#include "JSONAIS.h"
 
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	// AIS message to properties
-	AIS::AISMessageDecoder msg2json;
+	AIS::AIStoJSON msg2json;
 
 	std::vector<std::shared_ptr<IO::HTTP>> http;
 	IO::MessageToScreen msg2screen;
