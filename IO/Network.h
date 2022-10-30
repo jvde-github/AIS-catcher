@@ -207,9 +207,6 @@ namespace IO {
 		::TCP::Client con;
 
 	public:
-		~TCP();
-		TCP();
-
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 		void openConnection(const std::string& host, const std::string& port);
 		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }

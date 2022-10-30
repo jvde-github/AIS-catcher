@@ -26,7 +26,7 @@
 #include "Utilities.h"
 
 namespace AIS {
-	class AISMessageDecoder : public StreamIn<Message>, public JSONStreamOut {
+	class AIStoJSON : public StreamIn<Message>, public JSONStreamOut {
 		bool sparse = false;
 
 		void ProcessMsg8Data(const AIS::Message& msg, int len);

@@ -22,7 +22,7 @@
 //	https://fidus.com/wp-content/uploads/2016/03/Guide_to_System_Development_March_2009.pdf
 // 	https://gpsd.gitlab.io/gpsd/AIVDM.html
 
-#include "AISMessageDecoder.h"
+#include "JSONAIS.h"
 
 #ifdef _WIN32
 #pragma warning(disable : 4996)
@@ -32,7 +32,7 @@
 
 namespace AIS {
 
-	void AISMessageDecoder::ProcessMsg8Data(const AIS::Message& msg, int len) {
+	void AIStoJSON::ProcessMsg8Data(const AIS::Message& msg, int len) {
 		int dac = msg.getUint(40, 10);
 		int fid = msg.getUint(50, 6);
 
@@ -91,7 +91,7 @@ namespace AIS {
 		}
 	}
 
-	void AISMessageDecoder::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void AIStoJSON::Receive(const AIS::Message* data, int len, TAG& tag) {
 		Submit(PROPERTY_OBJECT_START, std::string(""));
 
 		const AIS::Message& msg = data[0];
