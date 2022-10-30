@@ -288,12 +288,13 @@ int main(int argc, char* argv[]) {
 	std::vector<IO::UDPEndPoint> UDPdestinations;
 	std::vector<IO::UDP> UDPconnections;
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
-
+	// AIS message to properties
 	AIS::AISMessageDecoder msg2prop;
 
-	IO::HTTP http;
+	std::vector<std::shared_ptr<IO::HTTP>> http;
 
 	IO::MessageToScreen msg2screen;
+
 	IO::PropertyToString prop2json;
 	IO::StringToScreen json2screen;
 
@@ -472,9 +473,10 @@ int main(int argc, char* argv[]) {
 			case 'H':
 				HTTP_active = true;
 				Assert(count > 0, param);
-				if (count % 2) http.Set("URL", arg1);
-				parseSettings(http, argv, ptr + (count % 2), argc);
-				TAG_mode |= 2;
+				http.push_back(std::make_shared<IO::HTTP>());
+				if (count % 2) http.back()->Set("URL", arg1);
+				parseSettings(*http.back(), argv, ptr + (count % 2), argc);
+				TAG_mode |= 3;
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -525,9 +527,8 @@ int main(int argc, char* argv[]) {
 					parseSettings(drivers.ZMQ, argv, ptr, argc);
 					break;
 				case 'o':
-					if (liveModels.size() == 0)
-						liveModels.push_back(createModel(2));
-					parseSettings(*(liveModels[MAX(0, (int)liveModels.size() - 1)]), argv, ptr, argc);
+					if (liveModels.size() == 0) liveModels.push_back(createModel(2));
+					parseSettings(*liveModels.back(), argv, ptr, argc);
 					break;
 					break;
 				default:
@@ -541,6 +542,7 @@ int main(int argc, char* argv[]) {
 
 			ptr += count + 1;
 		}
+
 		if (verbose || list_devices || list_support || NMEA_to_screen != OutputLevel::NONE || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
 		if (list_support) printSupportedDevices();
@@ -653,13 +655,13 @@ int main(int argc, char* argv[]) {
 		}
 
 		// set up client thread to periodically submit msgs over HTTP
-		if (HTTP_active) {
+		for (auto& h : http) {
 
-			http.Set("MODEL", liveModels[0]->getName());
-			http.Set("RECEIVER", "AIS-catcher " VERSION);
+			h->Set("MODEL", liveModels[0]->getName());
+			h->Set("RECEIVER", "AIS-catcher " VERSION);
 
-			msg2prop >> http;
-			http.startServer();
+			msg2prop >> *h;
+			h->startServer();
 		}
 
 		// Connect output to UDP stream
@@ -670,6 +672,7 @@ int main(int argc, char* argv[]) {
 			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
 		}
 
+		// Output
 		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {
 			liveModels[0]->Output() >> msg2screen;
 			msg2screen.setDetail(NMEA_to_screen);
@@ -683,11 +686,10 @@ int main(int argc, char* argv[]) {
 
 		// connect property calculation to model only if it is needed (e.g. connected)
 		// connection to either http or json screen output
-		if(msg2prop.isConnected())
-		{
+		if (msg2prop.isConnected()) {
 			liveModels[0]->Output() >> msg2prop;
-
 		}
+
 		if (verbose) {
 			std::cerr << "Generic settings: "
 					  << "sample rate -s " << device->getSampleRate() / 1000 << "K " << (ppm ? ("-p " + std::to_string(ppm)) : "") << " ";
