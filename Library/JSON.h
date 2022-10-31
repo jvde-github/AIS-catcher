@@ -110,8 +110,8 @@ public:
 	virtual void Set(int p, const std::vector<std::string>& v);
 };
 
-// JSON tags
-enum Properties {
+// JSON keys
+enum JSONkeys {
 	PROPERTY_OBJECT_START = 0,
 	PROPERTY_OBJECT_END,
 	PROPERTY_CLASS,
