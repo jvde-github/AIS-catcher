@@ -214,7 +214,7 @@ namespace Device {
 
 	std::string SDRPLAY::Get() {
 		std::string str;
-		str = "agc " + (AGC ? std::string("ON") : std::string("OFF")) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ";
+		str = "agc " + Util::Convert::toString(AGC) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ";
 		return str + Device::Get();
 	}
 

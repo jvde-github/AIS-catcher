@@ -285,7 +285,7 @@ namespace Device {
 
 		str += "device \"" + device_args + "\" gain \"" + SoapySDR::KwargsToString(gains_args) + "\" ";
 		str += "stream \"" + SoapySDR::KwargsToString(stream_args) + "\" setting \"" + SoapySDR::KwargsToString(setting_args) + "\" ";
-		str += "channel \"" + std::to_string(channel) + "\" agc " + (AGC ? std::string("ON") : std::string("OFF")) + " antenna \"" + antenna + "\" ";
+		str += "channel \"" + std::to_string(channel) + "\" agc " + Util::Convert::toString(AGC) + " antenna \"" + antenna + "\" ";
 
 		return str + Device::Get();
 	}

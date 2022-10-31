@@ -172,7 +172,7 @@ namespace Device {
 		std::string str = "host " + host + " port " + port + " timeout " + std::to_string(timeout);
 
 		str += " tuner " + (tuner_AGC ? std::string("AUTO") : std::to_string(tuner_Gain));
-		str += " rtlagc " + (RTL_AGC ? std::string("ON") : std::string("OFF"));
+		str += " rtlagc " + Util::Convert::toString(RTL_AGC);
 		str += " protocol " + (Protocol == PROTOCOL::NONE ? std::string("NONE") : std::string("RTLTCP"));
 
 		return str + " " + Device::Get();

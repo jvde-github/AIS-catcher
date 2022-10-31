@@ -115,6 +115,27 @@ namespace Util {
 		return std::string(str);
 	}
 
+	std::string Convert::toString(Format format) {
+		switch (format) {
+		case Format::CF32:
+			return "CF32";
+		case Format::CS16:
+			return "CS16";
+		case Format::CU8:
+			return "CU8";
+		case Format::CS8:
+			return "CS8";
+		default:
+			break;
+		}
+		return "UNKNOWN";
+	}
+
+	std::string Convert::toString(bool b) {
+		if (b) return "ON";
+		return "OFF";
+	}
+
 	void Convert::toUpper(std::string& s) {
 		for (auto& c : s) c = toupper(c);
 	}
