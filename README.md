@@ -46,7 +46,7 @@ Please note that the runs are performed on different days over different time sp
 ```console
 AIS-catcher -v -q -H http://localhost:8000
 ```
-There is an option to GZIP the content (``GZIP on``), to prove a username/password (``USERPWD username:password``) and set the update interval in second (``INTERVAL 30``) and switch off the display of the server response (``RESPONSE off``). 
+There is an option to GZIP the content (``GZIP on``), to provide a authenitcation username/password (``USERPWD username:password``), set the update interval in seconds (``INTERVAL 30``) and to switch off the display of the server response (``RESPONSE off``). 
 Please note that this requires the ``libcurl`` library to be installed, e.g. via:
 ```console
 sudo apt install libcurl4-openssl-dev zlib1g-dev
