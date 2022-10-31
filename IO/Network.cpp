@@ -207,6 +207,8 @@ namespace IO {
 
 			if (option == "GZIP") {
 				gzip = Util::Parse::Switch(arg);
+				if (gzip && !zip.installed())
+					throw "HTTP: ZLIB not installed";
 			}
 			else if (option == "RESPONSE") {
 				show_response = Util::Parse::Switch(arg);
