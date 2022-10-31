@@ -51,34 +51,31 @@ public:
 #endif
 	const std::vector<unsigned char>& zip(const std::string& input) {
 #ifdef HASZLIB
-		if (output.size() < CHUNKSIZE) output.resize(CHUNKSIZE);
+
+		int idx = 0;
+		bool done = false;
 
 		init();
 
 		strm.next_in = (unsigned char*)input.c_str();
 		strm.avail_in = input.length();
 
-		int idx = 0;
-		bool done = false;
-
 		while (!done) {
+
+			if (output.size() < idx + CHUNKSIZE) output.resize(idx + CHUNKSIZE);
+
 			strm.avail_out = CHUNKSIZE;
 			strm.next_out = (unsigned char*)(output.data() + idx);
 			if (deflate(&strm, Z_FINISH) < 0)
 				throw "ZLIB: unexpected problem with ZLIB";
-			;
-			done = strm.avail_out != 0;
 
-			if (!done) {
-				output.resize(CHUNKSIZE + output.size());
-				idx += CHUNKSIZE;
-			}
+			done = strm.avail_out != 0;
+			idx += CHUNKSIZE;
 		}
 
 		end();
 
 		output.resize(strm.total_out);
-
 		return output;
 #else
 		throw "ZLIB: ZIP functionality not supported. Please rebuild with ZLIB installed.";
