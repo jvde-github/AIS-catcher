@@ -24,7 +24,7 @@ namespace IO {
 
 #ifdef HASCURL
 
-	void HTTP::send(const std::string& msg) {
+	void HTTP::send(const std::string& msg, const std::string& copyname) {
 
 		CURL* ch;
 		struct curl_slist* headers = NULL;
@@ -34,10 +34,12 @@ namespace IO {
 
 		response[0] = '\0';
 
-		if (protocol == PROTOCOL::APRS)
-			curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonais", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
+		if (gzip) {
+			const std::vector<unsigned char>& output = zip.zip(msg);
+			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, output.data(), CURLFORM_CONTENTSLENGTH, output.size(), CURLFORM_END);
+		}
 		else
-			curl_formadd(&post, &last, CURLFORM_COPYNAME, "jsonaiscatcher", CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
+			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_CONTENTSLENGTH, msg.length(), CURLFORM_END);
 
 		if (!(ch = curl_easy_init())) {
 			std::cerr << "HTTP: cannot initialize curl." << std::endl;
@@ -45,6 +47,8 @@ namespace IO {
 		}
 
 		headers = curl_slist_append(NULL, "Expect:");
+		if (gzip) headers = curl_slist_append(headers, "Content-encoding: gzip");
+
 		if (!headers)
 			std::cerr << "HTTP: append for expect header failed" << std::endl;
 		else
@@ -84,7 +88,6 @@ namespace IO {
 
 	void HTTP::post() {
 
-		std::string post;
 		std::list<std::string> send_list;
 
 		{
@@ -92,56 +95,58 @@ namespace IO {
 			send_list.splice(send_list.begin(), queue);
 		}
 
+		msg.clear();
 		std::time_t now = std::time(0);
 
 		if (protocol == PROTOCOL::AISCATCHER) {
-			post = "{\n\t\"protocol\": \"jsonaiscatcher\",";
-			post += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			post += "\n\t\"stationid\": \"" + stationid + "\",";
-			post += "\n\t\"receiver\":\n\t\t{";
-			post += "\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
-			post += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
-			post += "\n\t\t\"engine\": \"" + model + "\",";
-			post += "\n\t\t\"setting\": \"" + model_setting + "\"";
-			post += "\n\t\t},";
-			post += "\n\t\"device\":\n\t\t{";
+			msg += "{\n\t\"protocol\": \"jsonaiscatcher\",";
+			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
+			msg += "\n\t\"stationid\": \"" + stationid + "\",";
+			msg += "\n\t\"receiver\":\n\t\t{";
+			msg += "\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
+			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
+			msg += "\n\t\t\"engine\": \"" + model + "\",";
+			msg += "\n\t\t\"setting\": \"" + model_setting + "\"";
+			msg += "\n\t\t},";
+			msg += "\n\t\"device\":\n\t\t{";
 
-			post += "\n\t\t\"product\": \"" + product + "\",";
-			post += "\n\t\t\"vendor\": \"" + vendor + "\",";
-			post += "\n\t\t\"serial\": \"" + serial + "\",";
-			post += "\n\t\t\"settting\": \"" + device_setting + "\"";
-			post += "\n\t\t},";
+			msg += "\n\t\t\"product\": \"" + product + "\",";
+			msg += "\n\t\t\"vendor\": \"" + vendor + "\",";
+			msg += "\n\t\t\"serial\": \"" + serial + "\",";
+			msg += "\n\t\t\"settting\": \"" + device_setting + "\"";
+			msg += "\n\t\t},";
 
-			post += "\n\t\"msgs\": [";
+			msg += "\n\t\"msgs\": [";
 
 			char delim = ' ';
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
-				post = post + delim + "\n\t\t" + *it;
+				msg = msg + delim + "\n\t\t" + *it;
 				delim = ',';
 			}
 
-			post += "\n\t]\n}\n";
+			msg += "\n\t]\n}\n";
+
+			send(msg, "jsonaiscatcher");
 		}
 		else {
-			post = "{\n\t\"protocol\": \"jsonais\",";
-			post += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			post += "\n\t\"groups\": [";
-			post += "\n\t{";
-			post += "\n\t\t\"path\": [{ \"name\": \"" + stationid + "\", \"url\" : \"" + url + "\" }],";
+			msg += "{\n\t\"protocol\": \"jsonais\",";
+			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
+			msg += "\n\t\"groups\": [";
+			msg += "\n\t{";
+			msg += "\n\t\t\"path\": [{ \"name\": \"" + stationid + "\", \"url\" : \"" + url + "\" }],";
 
-			post += "\n\t\t\"msgs\": [";
+			msg += "\n\t\t\"msgs\": [";
 
 			char delim = ' ';
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
-				post = post + delim + "\n\t\t\t" + *it;
+				msg = msg + delim + "\n\t\t\t" + *it;
 				delim = ',';
 			}
 
-			post += "\n\t\t]\n\t}]\n}";
+			msg += "\n\t\t]\n\t}]\n}";
+
+			send(msg, "jsonais");
 		}
-
-
-		send(post);
 	}
 
 	void HTTP::process() {
@@ -197,25 +202,31 @@ namespace IO {
 		else if (option == "DEVICE_SETTING") {
 			device_setting = arg;
 		}
-		else if (option == "RESPONSE") {
+		else {
 			Util::Convert::toUpper(arg);
-			show_response = Util::Parse::Switch(arg);
-		}
-		else if (option == "PROTOCOL") {
-			Util::Convert::toUpper(arg);
-			if (arg == "HTTP") {
-				setMap(JSON_DICT_FULL);
-				protocol = PROTOCOL::AISCATCHER;
+
+			if (option == "GZIP") {
+				gzip = Util::Parse::Switch(arg);
 			}
-			else if (arg == "APRS") {
-				setMap(JSON_DICT_APRS);
-				protocol = PROTOCOL::APRS;
+			else if (option == "RESPONSE") {
+				show_response = Util::Parse::Switch(arg);
+			}
+			else if (option == "PROTOCOL") {
+
+				if (arg == "HTTP") {
+					setMap(JSON_DICT_FULL);
+					protocol = PROTOCOL::AISCATCHER;
+				}
+				else if (arg == "APRS") {
+					setMap(JSON_DICT_APRS);
+					protocol = PROTOCOL::APRS;
+				}
+				else
+					throw "HTTP: error - unknown protocol";
 			}
 			else
-				throw "HTTP: error - unknown protocol";
+				throw "HTTP: Invalid setting.";
 		}
-		else
-			throw "HTTP: Invalid setting.";
 #else
 		throw "HTTP: not implemented, please recompile with libcurl support.";
 #endif

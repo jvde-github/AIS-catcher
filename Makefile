@@ -16,6 +16,7 @@ CFLAGS_SOXR = -DHASSOXR $(shell pkg-config --cflags soxr)
 CFLAGS_SAMPLERATE = -DHASSAMPLERATE $(shell pkg-config --cflags samplerate)
 CFLAGS_CURL = -DHASCURL $(shell pkg-config --cflags libcurl)
 CFLAGS_SOAPYSDR = -DHASSOAPYSDR
+CFLAGS_ZLIB = -DHASZLIB ${hell pkg-config --cflags zlib}
 
 LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
@@ -27,6 +28,7 @@ LFLAGS_SOXR = $(shell pkg-config --libs soxr)
 LFLAGS_SAMPLERATE = $(shell pkg-config --libs samplerate)
 LFLAGS_SOAPYSDR = -lSoapySDR
 LFLAGS_CURL =$(shell pkg-config --libs libcurl)
+LFLAGS_ZLIB =$(shell pkg-config --libs zlib)
 
 
 CFLAGS_ALL =
@@ -70,6 +72,11 @@ endif
 ifneq ($(shell pkg-config --exists libcurl && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_CURL)
     LFLAGS_ALL += $(LFLAGS_CURL)
+endif
+
+ifneq ($(shell pkg-config --exists zlib && echo 'T'),)
+    CFLAGS_ALL += $(CFLAGS_ZLIB)
+    LFLAGS_ALL += $(LFLAGS_ZLIB)
 endif
 
 # Building AIS-Catcher

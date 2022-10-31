@@ -44,6 +44,7 @@
 #include "JSON.h"
 #include "TCP.h"
 #include "Utilities.h"
+#include "ZIP.h"
 
 namespace IO {
 
@@ -54,6 +55,10 @@ namespace IO {
 		std::thread run_thread;
 		bool terminate = false, running = false;
 		std::mutex queue_mutex;
+
+		ZIP zip;
+		std::string msg;
+		bool gzip = false;
 
 		std::string url, userpwd;
 		int INTERVAL = 30;
@@ -77,7 +82,7 @@ namespace IO {
 			return len;
 		}
 
-		void send(const std::string&);
+		void send(const std::string&, const std::string&);
 		void post();
 		void process();
 
