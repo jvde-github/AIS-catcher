@@ -217,14 +217,14 @@ namespace Device {
 			str = "linearity " + std::to_string(gain);
 			break;
 		case AIRSPYGainMode::Free:
-			str = "mixer " + (mixer_AGC ? std::string("AUTO") : std::to_string(mixer_Gain)) + " ";
-			str += "lna " + (LNA_AGC ? std::string("AUTO") : std::to_string(LNA_Gain)) + " vga " + std::to_string(VGA_Gain);
+			str = "mixer " + Util::Convert::toString(mixer_AGC, mixer_Gain);
+			str += " lna " + Util::Convert::toString(LNA_AGC, LNA_Gain) + " vga " + std::to_string(VGA_Gain);
 			break;
 		default:
 			break;
 		}
 
-		str += " biastee " + (bias_tee ? std::string("ON") : std::string("OFF")) + " ";
+		str += " biastee " + Util::Convert::toString(bias_tee) + " ";
 		return str + Device::Get();
 	}
 #endif

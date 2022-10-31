@@ -131,11 +131,6 @@ namespace Util {
 		return "UNKNOWN";
 	}
 
-	std::string Convert::toString(bool b) {
-		if (b) return "ON";
-		return "OFF";
-	}
-
 	void Convert::toUpper(std::string& s) {
 		for (auto& c : s) c = toupper(c);
 	}
