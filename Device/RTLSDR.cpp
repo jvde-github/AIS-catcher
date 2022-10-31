@@ -205,8 +205,7 @@ namespace Device {
 
 		std::string str = "tuner " + (tuner_AGC ? std::string("AUTO") : std::to_string(tuner_Gain));
 		if (tuner_bandwidth) str += " bw " + std::to_string(tuner_bandwidth / 1000) + "K";
-		str += " rtlagc " + (RTL_AGC ? std::string("ON") : std::string("OFF"));
-		str += " biastee " + (bias_tee ? std::string("ON") : std::string("OFF"));
+		str += " rtlagc " + Util::Convert::toString(RTL_AGC) + " biastee " + Util::Convert::toString(bias_tee);
 
 		return Device::Get() + str;
 	}

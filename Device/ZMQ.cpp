@@ -125,24 +125,7 @@ namespace Device {
 	}
 
 	std::string ZMQ::Get() {
-		std::string str = "endpoint " + endpoint + " format ";
-		switch (format) {
-		case Format::CF32:
-			str += "CF32";
-			break;
-		case Format::CS16:
-			str += "CS16";
-			break;
-		case Format::CU8:
-			str += "CU8";
-			break;
-		case Format::CS8:
-			str += "CS8";
-			break;
-		default:
-			break;
-		}
-		return str + " " + Device::Get();
+		return "endpoint " + endpoint + " format " + Util::Convert::toString(format) + " " + Device::Get();
 	}
 #endif
 }
