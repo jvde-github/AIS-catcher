@@ -46,13 +46,14 @@ Please note that the runs are performed on different days over different time sp
 ```console
 AIS-catcher -v -q -H http://localhost:8000
 ```
+There is an option to GZIP the content (``GZIP on``), to prove a username/password (``USERPWD username:password``) and set the update interval in second (``INTERVAL 30``) and switch off the display of the server response (``RESPONSE off``). 
 Please note that this requires the ``libcurl`` library to be installed, e.g. via:
 ```console
-sudo apt install libcurl4-openssl-dev 
+sudo apt install libcurl4-openssl-dev zlib1g-dev
 ```
 The latest development version now also includes support to use this functionality to submit data to [APRS.fi](https://aprs.fi):
 ```console
-AIS-catcher -H http://aprs.fi/jsonais/post/secret-key ID callsign PROTOCOL aprs INTERVAL 30 -q -M DT
+AIS-catcher -H http://aprs.fi/jsonais/post/secret-key ID callsign PROTOCOL aprs INTERVAL 30 -q
 ```
 Where ``secret-key`` should be your password and ``callsign`` your callsign. Feedback welcome.
 
