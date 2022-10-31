@@ -26,13 +26,23 @@
 #endif
 
 class ZIP {
+
 #ifdef HASZLIB
 	const int CHUNKSIZE = 0x1000;
 	z_stream strm;
 #endif
+
 	std::vector<unsigned char> output;
 
 public:
+	bool installed() {
+#ifdef HASZLIB
+		return true;
+#else
+		return false;
+#endif
+	}
+
 #ifdef HASZLIB
 	void init() {
 
@@ -77,8 +87,6 @@ public:
 
 		output.resize(strm.total_out);
 		return output;
-#else
-		throw "ZLIB: ZIP functionality not supported. Please rebuild with ZLIB installed.";
 #endif
 	}
 };
