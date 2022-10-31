@@ -203,8 +203,7 @@ namespace Device {
 
 	std::string RTLSDR::Get() {
 
-		std::string str = "tuner " + (tuner_AGC ? std::string("AUTO") : std::to_string(tuner_Gain));
-		if (tuner_bandwidth) str += " bw " + std::to_string(tuner_bandwidth / 1000) + "K";
+		std::string str = "tuner " + Util::Convert::toString(tuner_AGC, tuner_Gain);
 		str += " rtlagc " + Util::Convert::toString(RTL_AGC) + " biastee " + Util::Convert::toString(bias_tee);
 
 		return Device::Get() + str;

@@ -82,7 +82,8 @@ namespace Util {
 	public:
 		static std::string toTimeStr(const std::time_t& t);
 		static std::string toString(Format format);
-		static std::string toString(bool s);
+		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); };
+		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
 
 		static void toUpper(std::string& s);
 		static void toFloat(CU8* in, CFLOAT32* out, int len);
