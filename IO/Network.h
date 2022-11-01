@@ -57,30 +57,20 @@ namespace IO {
 		std::mutex queue_mutex;
 
 		ZIP zip;
-		std::string msg;
-		bool gzip = false;
+		std::string msg, url, userpwd, stationid;
+		bool gzip = false, show_response = true;
 
-		std::string url, userpwd;
-		int INTERVAL = 30;
+		int INTERVAL = 60;
 		int TIMEOUT = 10;
-
-		std::string stationid;
 
 		std::string model, model_setting;
 		std::string product, vendor, serial, device_setting;
-
-		bool show_response = true;
 
 		char response[1024];
 
 		enum class PROTOCOL{ AISCATCHER, APRS, LIST } protocol = PROTOCOL::AISCATCHER;
 
-		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
-			int len = MIN(size * nmemb, 1023);
-			std::memcpy(s, contents, len);
-			s[len] = '\0';
-			return len;
-		}
+		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s);
 
 		void send(const std::string&, const std::string&);
 		void post();
@@ -104,33 +94,8 @@ namespace IO {
 
 		virtual void Set(std::string option, std::string arg);
 
-		void startServer() {
-#ifdef HASCURL
-			if (!running) {
-
-				running = true;
-				terminate = false;
-
-				run_thread = std::thread(&HTTP::process, this);
-				std::cerr << "HTTP: start server (" << url << ")." << std::endl;
-			}
-#else
-			throw "HTTP: not implemented, please recompile with libcurl support.";
-#endif
-		}
-
-		void stopServer() {
-#ifdef HASCURL
-			if (running) {
-
-				running = false;
-				terminate = true;
-				run_thread.join();
-
-				std::cerr << "HTTP: stop server (" << url << ")." << std::endl;
-			}
-#endif
-		}
+		void startServer();
+		void stopServer();
 	};
 
 	class UDPEndPoint {

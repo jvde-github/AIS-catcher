@@ -22,7 +22,46 @@
 
 namespace IO {
 
+
+	void HTTP::startServer() {
 #ifdef HASCURL
+		if (!running) {
+
+			running = true;
+			terminate = false;
+
+			run_thread = std::thread(&HTTP::process, this);
+			std::cerr << "HTTP: start server (" << url << ")." << std::endl;
+		}
+#else
+		throw "HTTP: not implemented, please recompile with libcurl support.";
+#endif
+	}
+
+	void HTTP::stopServer() {
+#ifdef HASCURL
+		if (running) {
+
+			running = false;
+			terminate = true;
+			run_thread.join();
+
+			std::cerr << "HTTP: stop server (" << url << ")." << std::endl;
+		}
+#endif
+	}
+
+#ifdef HASCURL
+
+	// curl callback
+	size_t HTTP::curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
+
+		int len = MIN(size * nmemb, 1023);
+
+		std::memcpy(s, contents, len);
+		s[len] = '\0';
+		return len;
+	}
 
 	void HTTP::send(const std::string& msg, const std::string& copyname) {
 
@@ -99,11 +138,10 @@ namespace IO {
 		return;
 	}
 
-
 	void HTTP::post() {
 
-		if(!queue.size()) return;
-		
+		if (!queue.size()) return;
+
 		std::list<std::string> send_list;
 
 		{

@@ -181,6 +181,9 @@ void printSupportedDevices() {
 #ifdef HASCURL
 	std::cerr << "CURL ";
 #endif
+#ifdef HASZLIB
+	std::cerr << "ZLIB ";
+#endif
 #ifdef HASSAMPLERATE
 	std::cerr << "LIBSAMPLERATE ";
 #endif
