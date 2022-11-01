@@ -421,7 +421,6 @@ namespace AIS {
 	}
 
 	std::string ModelDefault::Get() {
-		const std::string ON = "ON", OFF = "OFF";
 		return "ps_ema " + Util::Convert::toString(PS_EMA) + " afc_wide " + Util::Convert::toString(CGF_wide) + " " + ModelFrontend::Get();
 	}
 
