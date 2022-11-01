@@ -84,6 +84,6 @@ namespace Device {
 	}
 
 	std::string RAWFile::Get() {
-		return "file " + filename + " format " + Util::Convert::toString(format) + " " + Device::Get();
+		return Device::Get() + " file " + filename + " format " + Util::Convert::toString(format);
 	}
 }

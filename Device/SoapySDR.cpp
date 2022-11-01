@@ -283,11 +283,11 @@ namespace Device {
 	std::string SOAPYSDR::Get() {
 		std::string str;
 
-		str += "device \"" + device_args + "\" gain \"" + SoapySDR::KwargsToString(gains_args) + "\" ";
-		str += "stream \"" + SoapySDR::KwargsToString(stream_args) + "\" setting \"" + SoapySDR::KwargsToString(setting_args) + "\" ";
-		str += "channel \"" + std::to_string(channel) + "\" agc " + Util::Convert::toString(AGC) + " antenna \"" + antenna + "\" ";
+		str += " device \"" + device_args + "\" gain \"" + SoapySDR::KwargsToString(gains_args) + "\"";
+		str += " stream \"" + SoapySDR::KwargsToString(stream_args) + "\" setting \"" + SoapySDR::KwargsToString(setting_args) + "\"";
+		str += " channel \"" + std::to_string(channel) + "\" agc " + Util::Convert::toString(AGC) + " antenna \"" + antenna + "\"";
 
-		return str + Device::Get();
+		return Device::Get() + str;
 	}
 
 #endif

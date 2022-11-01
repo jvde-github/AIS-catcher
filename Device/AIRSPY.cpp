@@ -211,21 +211,20 @@ namespace Device {
 
 		switch (mode) {
 		case AIRSPYGainMode::Sensitivity:
-			str = "sensitivity " + std::to_string(gain);
+			str = " sensitivity " + std::to_string(gain);
 			break;
 		case AIRSPYGainMode::Linearity:
-			str = "linearity " + std::to_string(gain);
+			str = " linearity " + std::to_string(gain);
 			break;
 		case AIRSPYGainMode::Free:
-			str = "mixer " + Util::Convert::toString(mixer_AGC, mixer_Gain);
+			str += " mixer " + Util::Convert::toString(mixer_AGC, mixer_Gain);
 			str += " lna " + Util::Convert::toString(LNA_AGC, LNA_Gain) + " vga " + std::to_string(VGA_Gain);
 			break;
 		default:
 			break;
 		}
 
-		str += " biastee " + Util::Convert::toString(bias_tee) + " ";
-		return str + Device::Get();
+		return Device::Get() + str + " biastee " + Util::Convert::toString(bias_tee) + " ";
 	}
 #endif
 }

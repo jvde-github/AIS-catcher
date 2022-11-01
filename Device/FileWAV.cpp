@@ -127,6 +127,6 @@ namespace Device {
 	}
 
 	std::string WAVFile::Get() {
-		return "file " + filename + " " + Device::Get();
+		return Device::Get() + " file " + filename;
 	}
 }

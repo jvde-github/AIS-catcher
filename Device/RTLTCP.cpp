@@ -169,12 +169,11 @@ namespace Device {
 
 	std::string RTLTCP::Get() {
 
-		std::string str = "host " + host + " port " + port + " timeout " + std::to_string(timeout);
-
+		std::string str = " host " + host + " port " + port + " timeout " + std::to_string(timeout);
 		str += " tuner " + Util::Convert::toString(tuner_AGC, tuner_Gain);
 		str += " rtlagc " + Util::Convert::toString(RTL_AGC);
 		str += " protocol " + (Protocol == PROTOCOL::NONE ? std::string("NONE") : std::string("RTLTCP"));
 
-		return str + " " + Device::Get();
+		return Device::Get() + str;
 	}
 }

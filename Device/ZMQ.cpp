@@ -125,7 +125,7 @@ namespace Device {
 	}
 
 	std::string ZMQ::Get() {
-		return "endpoint " + endpoint + " format " + Util::Convert::toString(format) + " " + Device::Get();
+		return Device::Get() + " endpoint " + endpoint + " format " + Util::Convert::toString(format);
 	}
 #endif
 }

@@ -151,8 +151,7 @@ namespace Device {
 	}
 
 	std::string AIRSPYHF::Get() {
-		std::string str = "preamp " + Util::Convert::toString(preamp) + " treshold " + (treshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
-		return str + Device::Get();
+		return Device::Get() + " preamp " + Util::Convert::toString(preamp) + " treshold " + (treshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
 	}
 #endif
 }

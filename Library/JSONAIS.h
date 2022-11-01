@@ -127,8 +127,8 @@ namespace AIS {
 		void setSparse(bool b) { sparse = b; }
 	};
 
-	extern const std::vector<std::string> PROPERTY_MAP_STATUS;
-	extern const std::vector<std::string> PROPERTY_MAP_EPFD;
-	extern const std::vector<std::string> PROPERTY_MAP_SHIPTYPE;
-	extern const std::vector<std::string> PROPERTY_MAP_AID_TYPE;
+	extern const std::vector<std::string> JSON_MAP_STATUS;
+	extern const std::vector<std::string> JSON_MAP_EPFD;
+	extern const std::vector<std::string> JSON_MAP_SHIPTYPE;
+	extern const std::vector<std::string> JSON_MAP_AID_TYPE;
 }
