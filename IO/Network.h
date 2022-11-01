@@ -73,7 +73,7 @@ namespace IO {
 
 		char response[1024];
 
-		enum class PROTOCOL{ AISCATCHER, APRS } protocol = PROTOCOL::AISCATCHER;
+		enum class PROTOCOL{ AISCATCHER, APRS, LIST } protocol = PROTOCOL::AISCATCHER;
 
 		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
 			int len = MIN(size * nmemb, 1023);

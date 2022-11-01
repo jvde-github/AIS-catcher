@@ -365,6 +365,6 @@ namespace Device {
 	}
 
 	std::string SpyServer::Get() {
-		return "host " + host + " port " + port + " gain " + std::to_string(tuner_gain) + " " + Device::Get();
+		return Device::Get() + " host " + host + " port " + port + " gain " + std::to_string(tuner_gain);
 	}
 }

@@ -110,8 +110,7 @@ namespace Device {
 
 	std::string HACKRF::Get() {
 
-		std::string str = "lna " + std::to_string(LNA_Gain) + " vga " + std::to_string(VGA_Gain) + " preamp " + Util::Convert::toString(preamp);
-		return str + Device::Get();
+		return Device::Get() + " lna " + std::to_string(LNA_Gain) + " vga " + std::to_string(VGA_Gain) + " preamp " + Util::Convert::toString(preamp);
 	}
 #endif
 }

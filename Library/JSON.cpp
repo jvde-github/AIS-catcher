@@ -49,7 +49,7 @@ void JSONbuildString::Set(int p, bool v) {
 void JSONbuildString::Set(int p, const std::string& v) {
 	if (p == PROPERTY_OBJECT_START) {
 		first = true;
-		json.empty();
+		json = "{";
 	}
 	else if (p == PROPERTY_OBJECT_END) {
 		if (json.size() > 1) {

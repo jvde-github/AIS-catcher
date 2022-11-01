@@ -27,34 +27,48 @@ namespace IO {
 	void HTTP::send(const std::string& msg, const std::string& copyname) {
 
 		CURL* ch;
+		CURLcode r;
+
 		struct curl_slist* headers = NULL;
 		long retcode = 200;
-		CURLcode r;
 		struct curl_httppost *post = NULL, *last = NULL;
+
+		bool multipart = PROTOCOL::APRS == protocol;
 
 		response[0] = '\0';
 
+		headers = curl_slist_append(NULL, "Expect:");
 		if (gzip) {
-			const std::vector<unsigned char>& output = zip.zip(msg);
-			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, output.data(), CURLFORM_CONTENTSLENGTH, output.size(), CURLFORM_END);
+			zip.zip(msg);
+			headers = curl_slist_append(headers, "Content-encoding: gzip");
 		}
-		else
-			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_CONTENTSLENGTH, msg.length(), CURLFORM_END);
+
+		const void* ptr = gzip ? zip.getOutputPtr() : msg.c_str();
+		const int len = gzip ? zip.getOutputLength() : msg.length();
+
+		if (multipart)
+			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, ptr, CURLFORM_CONTENTSLENGTH, len, CURLFORM_END);
+		else {
+			headers = curl_slist_append(headers, "Content-Type: appllication/json");
+		}
 
 		if (!(ch = curl_easy_init())) {
 			std::cerr << "HTTP: cannot initialize curl." << std::endl;
 			return;
 		}
 
-		headers = curl_slist_append(NULL, "Expect:");
-		if (gzip) headers = curl_slist_append(headers, "Content-encoding: gzip");
-
 		if (!headers)
 			std::cerr << "HTTP: append for expect header failed" << std::endl;
 		else
 			try {
 
-				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post))) throw r;
+				if (!multipart) {
+					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDS, ptr))) throw r;
+					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, len))) throw r;
+				}
+				else if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post)))
+					throw r;
+
 				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
 				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, curl_cb))) throw r;
@@ -126,9 +140,9 @@ namespace IO {
 
 			msg += "\n\t]\n}\n";
 
-			send(msg, "jsonaiscatcher");
+			send(msg, "");
 		}
-		else {
+		else if (PROTOCOL::AISCATCHER == protocol) {
 			msg += "{\n\t\"protocol\": \"jsonais\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"groups\": [";
@@ -146,6 +160,13 @@ namespace IO {
 			msg += "\n\t\t]\n\t}]\n}";
 
 			send(msg, "jsonais");
+		}
+		else if (PROTOCOL::LIST == protocol) {
+
+			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
+				msg += std::string(*it) + "\n";
+			}
+			send(msg, "");
 		}
 	}
 
@@ -215,9 +236,13 @@ namespace IO {
 			}
 			else if (option == "PROTOCOL") {
 
-				if (arg == "HTTP") {
+				if (arg == "AISCATCHER") {
 					setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::AISCATCHER;
+				}
+				else if (arg == "LIST") {
+					setMap(JSON_DICT_FULL);
+					protocol = PROTOCOL::LIST;
 				}
 				else if (arg == "APRS") {
 					setMap(JSON_DICT_APRS);

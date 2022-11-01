@@ -43,6 +43,9 @@ public:
 #endif
 	}
 
+	int getOutputLength() { return output.size(); }
+	void* getOutputPtr() { return output.data(); }
+
 #ifdef HASZLIB
 	void init() {
 
@@ -59,7 +62,7 @@ public:
 		deflateEnd(&strm);
 	}
 #endif
-	const std::vector<unsigned char>& zip(const std::string& input) {
+	void zip(const std::string& input) {
 #ifdef HASZLIB
 
 		int idx = 0;
@@ -86,7 +89,6 @@ public:
 		end();
 
 		output.resize(strm.total_out);
-		return output;
 #endif
 	}
 };

@@ -18,6 +18,7 @@
 #include <cassert>
 
 #include "Model.h"
+#include "Utilities.h"
 
 namespace AIS {
 
@@ -277,17 +278,15 @@ namespace AIS {
 	}
 
 	std::string ModelFrontend::Get() {
-		const std::string ON = "ON", OFF = "OFF";
+
 		std::string str;
 
 		if (SOXR_DS)
-			str = "soxr ON ";
+			return "soxr ON " + Model::Get();
 		else if (SAMPLERATE_DS)
-			str = "src ON ";
-		else
-			str = "droop " + (droop_compensation ? ON : OFF) + " fp_ds " + (fixedpointDS ? ON : OFF) + " ";
+			return "src ON " + Model::Get();
 
-		return str + Model::Get();
+		return "droop " + Util::Convert::toString(droop_compensation) + " fp_ds " + Util::Convert::toString(fixedpointDS) + " " + Model::Get();
 	}
 
 	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
@@ -423,7 +422,7 @@ namespace AIS {
 
 	std::string ModelDefault::Get() {
 		const std::string ON = "ON", OFF = "OFF";
-		return "ps_ema " + (PS_EMA ? ON : OFF) + " afc_wide " + (CGF_wide ? ON : OFF) + " " + ModelFrontend::Get();
+		return "ps_ema " + Util::Convert::toString(PS_EMA) + " afc_wide " + Util::Convert::toString(CGF_wide) + " " + ModelFrontend::Get();
 	}
 
 	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
@@ -498,8 +497,7 @@ namespace AIS {
 	}
 
 	std::string ModelChallenger::Get() {
-		const std::string ON = "ON", OFF = "OFF";
-		return "ps_ema " + (PS_EMA ? ON : OFF) + " afc_wide " + ModelFrontend::Get();
+		return "ps_ema " + Util::Convert::toString(PS_EMA) + " " + ModelFrontend::Get();
 	}
 
 	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
