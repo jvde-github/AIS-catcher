@@ -130,15 +130,6 @@ namespace IO {
 			msg += "\n\t\t\"serial\": \"" + serial + "\",";
 			msg += "\n\t\t\"setting\": \"" + device_setting + "\"";
 			msg += "\n\t\t},";
-			msg += "\n\t\"antenna\":\n\t\t{";
-			msg += "\n\t\t\"description\": \"" + antenna_description + "\",";
-			msg += "\n\t\t\"lat\": " + std::to_string(antenna_lat) + ",";
-			msg += "\n\t\t\"lon\": " + std::to_string(antenna_lon) + ",";
-			msg += "\n\t\t\"height\": " + std::to_string(antenna_height);
-			msg += "\n\t\t},";
-			msg += "\n\t\"computer\":\n\t\t{";
-			msg += "\n\t\t\"description\": \"" + computer + "\"";
-			msg += "\n\t\t},";
 			msg += "\n\t\"msgs\": [";
 
 			char delim = ' ';
@@ -231,21 +222,6 @@ namespace IO {
 		}
 		else if (option == "DEVICE_SETTING") {
 			device_setting = arg;
-		}
-		else if (option == "COMPUTER") {
-			computer = arg;
-		}
-		else if (option == "ANT_DESC") {
-			antenna_description = arg;
-		}
-		else if (option == "ANT_HEIGHT") {
-			antenna_height = Util::Parse::Float(arg);
-		}
-		else if (option == "ANT_LAT") {
-			antenna_lat = Util::Parse::Float(arg);
-		}
-		else if (option == "ANT_LON") {
-			antenna_lon = Util::Parse::Float(arg);
 		}
 		else {
 			Util::Convert::toUpper(arg);
