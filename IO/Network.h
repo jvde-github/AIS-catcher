@@ -68,9 +68,6 @@ namespace IO {
 
 		std::string model, model_setting;
 		std::string product, vendor, serial, device_setting;
-		std::string antenna_description;
-		FLOAT32 antenna_height, antenna_lat, antenna_lon;
-		std::string computer;
 
 		bool show_response = true;
 
