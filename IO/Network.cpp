@@ -49,7 +49,7 @@ namespace IO {
 		if (multipart)
 			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, ptr, CURLFORM_CONTENTSLENGTH, len, CURLFORM_END);
 		else {
-			headers = curl_slist_append(headers, "Content-Type: appllication/json");
+			headers = curl_slist_append(headers, "Content-Type: application/json");
 		}
 
 		if (!(ch = curl_easy_init())) {
@@ -102,6 +102,8 @@ namespace IO {
 
 	void HTTP::post() {
 
+		if(!queue.size()) return;
+		
 		std::list<std::string> send_list;
 
 		{
@@ -123,13 +125,20 @@ namespace IO {
 			msg += "\n\t\t\"setting\": \"" + model_setting + "\"";
 			msg += "\n\t\t},";
 			msg += "\n\t\"device\":\n\t\t{";
-
 			msg += "\n\t\t\"product\": \"" + product + "\",";
 			msg += "\n\t\t\"vendor\": \"" + vendor + "\",";
 			msg += "\n\t\t\"serial\": \"" + serial + "\",";
-			msg += "\n\t\t\"settting\": \"" + device_setting + "\"";
+			msg += "\n\t\t\"setting\": \"" + device_setting + "\"";
 			msg += "\n\t\t},";
-
+			msg += "\n\t\"antenna\":\n\t\t{";
+			msg += "\n\t\t\"description\": \"" + antenna_description + "\",";
+			msg += "\n\t\t\"lat\": " + std::to_string(antenna_lat) + ",";
+			msg += "\n\t\t\"lon\": " + std::to_string(antenna_lon) + ",";
+			msg += "\n\t\t\"height\": " + std::to_string(antenna_height);
+			msg += "\n\t\t},";
+			msg += "\n\t\"computer\":\n\t\t{";
+			msg += "\n\t\t\"description\": \"" + computer + "\"";
+			msg += "\n\t\t},";
 			msg += "\n\t\"msgs\": [";
 
 			char delim = ' ';
@@ -222,6 +231,21 @@ namespace IO {
 		}
 		else if (option == "DEVICE_SETTING") {
 			device_setting = arg;
+		}
+		else if (option == "COMPUTER") {
+			computer = arg;
+		}
+		else if (option == "ANT_DESC") {
+			antenna_description = arg;
+		}
+		else if (option == "ANT_HEIGHT") {
+			antenna_height = Util::Parse::Float(arg);
+		}
+		else if (option == "ANT_LAT") {
+			antenna_lat = Util::Parse::Float(arg);
+		}
+		else if (option == "ANT_LON") {
+			antenna_lon = Util::Parse::Float(arg);
 		}
 		else {
 			Util::Convert::toUpper(arg);
