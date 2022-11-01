@@ -142,7 +142,7 @@ namespace IO {
 
 			send(msg, "");
 		}
-		else if (PROTOCOL::AISCATCHER == protocol) {
+		else if (PROTOCOL::APRS == protocol) {
 			msg += "{\n\t\"protocol\": \"jsonais\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"groups\": [";
