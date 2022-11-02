@@ -135,7 +135,7 @@ namespace Device {
 
 		if (airspy_list_devices(serials.data(), device_count) > 0)
 			for (int i = 0; i < device_count; i++)
-				DeviceList.push_back(Description("AIRSPY", "AIRSPY", Util::Convert::toHexString(serials[i]),serials[i], Type::AIRSPY));
+				DeviceList.push_back(Description("AIRSPY", "AIRSPY", Util::Convert::toHexString(serials[i]), serials[i], Type::AIRSPY));
 	}
 
 	bool AIRSPY::isStreaming() {

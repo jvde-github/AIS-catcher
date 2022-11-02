@@ -86,7 +86,6 @@ namespace Device {
 		chParams->tunerParams.gain.LNAstate = LNAstate;
 
 		setSampleRate(2304000);
-
 		Device::Open(h);
 	}
 
@@ -179,20 +178,25 @@ namespace Device {
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
 		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
 
-		for (int i = 0; i < DeviceCount; i++) {
-			// for now ....
-			if (devices[i].hwVer == SDRPLAY_RSP1_ID) {
-				DeviceList.push_back(Description("SDRPLAY", "RSP1", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
-			}
-			if (devices[i].hwVer == SDRPLAY_RSP1A_ID) {
-				DeviceList.push_back(Description("SDRPLAY", "RSP1A", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
-			}
-			if (devices[i].hwVer == SDRPLAY_RSPdx_ID) {
-				DeviceList.push_back(Description("SDRPLAY", "RSPDX", devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
-			}
-		}
+		for (int i = 0; i < DeviceCount; i++)
+			DeviceList.push_back(Description("SDRPLAY", getHardwareDescription(devices[i].hwVer), devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
+
 
 		sdrplay_api_UnlockDeviceApi();
+	}
+
+	std::string SDRPLAY::getHardwareDescription(unsigned char hwver) {
+		switch (hwver) {
+		case SDRPLAY_RSP1_ID:
+			return "RSP1";
+		case SDRPLAY_RSP1A_ID:
+			return "RSP1A";
+		case SDRPLAY_RSPdx_ID:
+			return "RSPDX";
+		default:
+			break;
+		}
+		return "UNKNOWN";
 	}
 
 	void SDRPLAY::Set(std::string option, std::string arg) {
