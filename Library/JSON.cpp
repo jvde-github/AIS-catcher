@@ -38,7 +38,7 @@ void JSONbuildString::Set(int p, unsigned v) {
 	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
 }
 void JSONbuildString::Set(int p, float v) {
-	if (JSONmap[p][map].empty()) return;
+	if (isnanf(v) || isinff(v) || JSONmap[p][map].empty()) return;
 	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
 }
 void JSONbuildString::Set(int p, bool v) {
