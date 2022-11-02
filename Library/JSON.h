@@ -81,7 +81,6 @@ protected:
 	std::string json;
 
 private:
-
 	int map = JSON_DICT_FULL;
 	bool first = true;
 

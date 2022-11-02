@@ -105,7 +105,7 @@ namespace IO {
 	};
 
 	class JSONtoScreen : public JSONbuildString {
-protected:
+	protected:
 		void Ready();
 	};
 }

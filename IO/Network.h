@@ -82,7 +82,7 @@ namespace IO {
 			queue.push_back(json);
 #endif
 		}
-		
+
 		std::list<std::string> queue;
 
 	public:
@@ -91,7 +91,6 @@ namespace IO {
 		}
 #endif
 	public:
-
 		virtual void Set(std::string option, std::string arg);
 
 		void startServer();
