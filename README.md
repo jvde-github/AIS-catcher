@@ -179,7 +179,7 @@ There are many libraries for decoding AIS messages to JSON format. I encourage y
 
 ### Posting messages over HTTP
 
-Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example [APRS.fi](https://aprs.fi). As per version v0.29 AIS-catcher can do this directly
+Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example [APRS.fi](https://aprs.fi). As per version 0.29 AIS-catcher can do this directly
 via the ``-H`` switch. For example:
 ```console
 AIS-catcher -r posterholt.raw -v 60 -H http://localhost:8000 INTERVAL 10 ID MyStation
