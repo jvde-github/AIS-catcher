@@ -15,6 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <iomanip>
+
 #include "Utilities.h"
 
 namespace Util {
@@ -113,6 +115,12 @@ namespace Util {
 		char str[16];
 		std::strftime((char*)str, 16, "%Y%m%d%H%M%S", now_tm);
 		return std::string(str);
+	}
+
+	std::string Convert::toHexString(uint64_t l) {
+		std::stringstream s;
+		s << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << l;
+		return s.str();
 	}
 
 	std::string Convert::toString(Format format) {

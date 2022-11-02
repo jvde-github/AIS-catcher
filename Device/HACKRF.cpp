@@ -34,8 +34,8 @@ namespace Device {
 		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device.";
 
 		setSampleRate(6144000);
-
 		Device::Open(h);
+		serial = list->serial_numbers[h];
 	}
 
 	void HACKRF::Close() {
@@ -86,7 +86,7 @@ namespace Device {
 			if (list->serial_numbers[i]) {
 				std::stringstream serial;
 				serial << std::uppercase << list->serial_numbers[i];
-				DeviceList.push_back(Description("HACKRF", "HACKRF", serial.str(), (uint64_t)i, Type::HACKRF));
+				DeviceList.push_back(Description("HACKRF", "Great Scott Gadgets", serial.str(), (uint64_t)i, Type::HACKRF));
 			}
 		}
 	}

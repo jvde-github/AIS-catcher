@@ -31,6 +31,7 @@ namespace Device {
 		struct airspyhf_device* dev = NULL;
 		std::vector<uint32_t> rates;
 		bool lost = false;
+		uint64_t serial;
 
 		bool preamp = false;
 		bool treshold_high = false;
@@ -66,6 +67,8 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "AIRSPYHF"; }
+		std::string getVendor() { return "AIRSPY"; }
+		std::string getSerial() { return Util::Convert::toHexString(serial); }
 #endif
 	};
 }

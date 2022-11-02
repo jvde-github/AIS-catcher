@@ -16,6 +16,7 @@
 */
 
 #include <string>
+#include <cmath>
 
 #include "JSON.h"
 

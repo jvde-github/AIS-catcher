@@ -29,9 +29,11 @@ namespace Device {
 #ifdef HASAIRSPY
 
 	void AIRSPY::Open(uint64_t h) {
+
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device.";
 		setDefaultRate();
 		Device::Open(h);
+		serial = h;
 	}
 
 #ifdef HASAIRSPY_ANDROID
@@ -131,13 +133,9 @@ namespace Device {
 
 		serials.resize(device_count);
 
-		if (airspy_list_devices(serials.data(), device_count) > 0) {
-			for (int i = 0; i < device_count; i++) {
-				std::stringstream serial;
-				serial << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << serials[i];
-				DeviceList.push_back(Description("AIRSPY", "AIRSPY", serial.str(), (uint64_t)i, Type::AIRSPY));
-			}
-		}
+		if (airspy_list_devices(serials.data(), device_count) > 0)
+			for (int i = 0; i < device_count; i++)
+				DeviceList.push_back(Description("AIRSPY", "AIRSPY", Util::Convert::toHexString(serials[i]),serials[i], Type::AIRSPY));
 	}
 
 	bool AIRSPY::isStreaming() {

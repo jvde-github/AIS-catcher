@@ -19,6 +19,7 @@
 #pragma once
 
 #include "Device.h"
+#include "Utilities.h"
 
 #ifdef HASAIRSPY
 #include <airspy.h>
@@ -33,6 +34,7 @@ namespace Device {
 		struct airspy_device* dev = NULL;
 		bool lost = false;
 		std::vector<uint32_t> rates;
+		uint64_t serial;
 
 		enum class AIRSPYGainMode { Free,
 									Sensitivity,
@@ -88,6 +90,8 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "AIRSPY"; }
+		std::string getVendor() { return "AIRSPY"; }
+		std::string getSerial() { return Util::Convert::toHexString(serial); }
 #endif
 	};
 }

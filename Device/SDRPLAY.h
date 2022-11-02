@@ -43,6 +43,7 @@ namespace Device {
 		sdrplay_api_DeviceT device;
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;
+		std::string serial;
 
 		int LNAstate = 5;
 		int gRdB = 40;
@@ -75,6 +76,9 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "SDRPLAY"; }
+		std::string getVendor() { return "SDRPLAY"; }
+		std::string getSerial() { return serial; }
+
 #endif
 	};
 }
