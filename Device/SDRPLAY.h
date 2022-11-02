@@ -27,7 +27,6 @@ namespace Device {
 
 	class SDRPLAY : public Device //, public StreamOut<RAW>
 	{
-
 #ifdef HASSDRPLAY
 
 		// Data is processed in seperate thread
@@ -43,7 +42,6 @@ namespace Device {
 		sdrplay_api_DeviceT device;
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;
-		std::string serial;
 
 		int LNAstate = 5;
 		int gRdB = 40;
@@ -56,6 +54,8 @@ namespace Device {
 		void callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params);
 
 		bool running = false;
+
+		std::string getHardwareDescription(unsigned char);
 
 	public:
 		// Control
@@ -75,9 +75,9 @@ namespace Device {
 		void Set(std::string option, std::string arg);
 		std::string Get();
 
-		std::string getProduct() { return "SDRPLAY"; }
+		std::string getProduct() { return getHardwareDescription(device.hwVer); }
 		std::string getVendor() { return "SDRPLAY"; }
-		std::string getSerial() { return serial; }
+		std::string getSerial() { return device.SerNo; }
 
 #endif
 	};
