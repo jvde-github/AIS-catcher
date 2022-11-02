@@ -179,12 +179,12 @@ There are many libraries for decoding AIS messages to JSON format. I encourage y
 
 ### Posting messages over HTTP
 
-Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example [APRS.fi](https://aprs.fi). As per version v0.29 AIS-catcher can do this directly
+Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example [APRS.fi](https://aprs.fi). As per version 0.29 AIS-catcher can do this directly
 via the ``-H`` switch. For example:
 ```console
 AIS-catcher -r posterholt.raw -v 60 -H http://localhost:8000 INTERVAL 10 ID MyStation
 ```
-will post the following JSON every 10 seconds:
+will post JSON with the following layout every 10 seconds:
 
 ```json
 {
@@ -214,11 +214,11 @@ We can use this functionality to submit data to [APRS.fi](https://aprs.fi) direc
 ```console
 AIS-catcher -H http://aprs.fi/jsonais/post/secret-key ID callsign PROTOCOL aprs INTERVAL 30 -q
 ```
-Where ``secret-key`` should be your password and ``callsign`` your callsign.  The protocol setting instructs AIS-catcher to submit JSON in a form that is accepted by APRS.fi and posts a multi-part message. As another example, this functionality can feed the map of [Chaos Consulting](https://adsb.chaos-consulting.de/map/) without the need to install any additional scripts. Chaos Consulting can handle AIS-catcher JSON output as per above:
+Where ``secret-key`` should be your password and ``callsign`` your callsign.  The ``PROTOCOL`` setting instructs AIS-catcher to submit JSON in a form that is accepted by APRS.fi and posts a multi-part message. As another example, this functionality can feed the map of [Chaos Consulting](https://adsb.chaos-consulting.de/map/) without the need to install any additional scripts. The Chaos Consulting server has been set up so that it can read the AIS-catcher JSON format as per above:
 ```console
 AIS-catcher -H https://ais.chaos-consulting.de/shipin/index.php USERPWD "Station:Password" GZIP on INTERVAL 5
 ```
-Notice that this server requires authentication with a station name and password and accepts JSON with gzip encoding which significantly reduced bandwidth.
+Notice that this server requires authentication with a station name and password and accepts JSON with gzip encoding which significantly reduces bandwidth.
 
 As a final comment, to build AIS-catcher with HTTP support, please install the following libraries before running cmake:
 ```console
