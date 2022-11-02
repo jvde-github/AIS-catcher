@@ -119,11 +119,10 @@ namespace Device {
 	void WAVFile::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
-		if (option == "FILE") {
+		if (option == "FILE")
 			filename = arg;
-			return;
-		}
-		throw "Invalid setting for FILE WAV.";
+		else
+			throw "Invalid setting for FILE WAV.";
 	}
 
 	std::string WAVFile::Get() {
