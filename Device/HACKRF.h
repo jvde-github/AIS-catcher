@@ -30,6 +30,7 @@ namespace Device {
 
 		hackrf_device* device = NULL;
 		hackrf_device_list_t* list = NULL;
+		std::string serial;
 
 		int LNA_Gain = 8;
 		int VGA_Gain = 20;
@@ -64,7 +65,8 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "HACKRF"; }
-
+		std::string getVendor() { return "Great Scott Gadgets"; }
+		std::string getSerial() { return serial; }
 #endif
 	};
 }

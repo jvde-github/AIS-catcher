@@ -28,9 +28,12 @@ namespace Device {
 #ifdef HASAIRSPYHF
 
 	void AIRSPYHF::Open(uint64_t h) {
+
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
+
 		setDefaultRate();
 		Device::Open(h);
+		serial = h;
 	}
 
 #ifdef HASAIRSPYHF_ANDROID
@@ -111,19 +114,15 @@ namespace Device {
 		serials.resize(device_count);
 
 		if (airspyhf_list_devices(serials.data(), device_count) > 0) {
-			for (int i = 0; i < device_count; i++) {
-				std::stringstream serial;
-				serial << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << serials[i];
-				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", serial.str(), (uint64_t)i, Type::AIRSPYHF));
-			}
+			for (int i = 0; i < device_count; i++)
+				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", Util::Convert::toHexString(serials[i]), serials[i], Type::AIRSPYHF));
 		}
 	}
 
 	bool AIRSPYHF::isStreaming() {
-		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1) {
-			lost = true;
-		}
 
+		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1) lost = true;
+		
 		return Device::isStreaming() && airspyhf_is_streaming(dev) == 1;
 	}
 
