@@ -39,7 +39,7 @@ void JSONbuildString::Set(int p, unsigned v) {
 	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
 }
 void JSONbuildString::Set(int p, float v) {
-	if (std::isnan(v) || JSONmap[p][map].empty()) return;
+	if (std::isinf(v) || std::isnan(v) || JSONmap[p][map].empty()) return;
 	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
 }
 void JSONbuildString::Set(int p, bool v) {
