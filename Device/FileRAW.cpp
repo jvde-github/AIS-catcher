@@ -80,7 +80,7 @@ namespace Device {
 			layout = Util::Parse::Switch(arg) ? FileLayout::Stereo : FileLayout::Mono;
 		}
 		else
-			throw " Invalid setting for FILE RAW.";
+			throw "Invalid setting for FILE RAW.";
 	}
 
 	std::string RAWFile::Get() {

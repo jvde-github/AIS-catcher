@@ -76,12 +76,12 @@ inline JSONStreamIn& operator>>(JSONStreamOut& a, JSONStreamIn& b) {
 
 // takes JSON stream as input, builds a string and calls Ready() if string is available
 class JSONbuildString : public JSONStreamIn {
+
 protected:
 	std::string json;
 
-	virtual void Ready() {}
-
 private:
+
 	int map = JSON_DICT_FULL;
 	bool first = true;
 
@@ -96,6 +96,7 @@ private:
 	}
 
 	std::string jsonify(const std::string& str);
+	virtual void Ready() {}
 
 public:
 	// dictionary to use

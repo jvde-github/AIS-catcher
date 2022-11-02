@@ -123,7 +123,7 @@ namespace Device {
 			filename = arg;
 			return;
 		}
-		throw " Invalid setting for FILE WAV.";
+		throw "Invalid setting for FILE WAV.";
 	}
 
 	std::string WAVFile::Get() {
