@@ -42,7 +42,7 @@ For reference, the command line instruction to test is:
 AIS-catcher  -v 10 -gr rtlagc on -m 2 -go droop off -m 2 -m 2 -go soxr on
 ```
 Please note that the runs are performed on different days over different time spans so this does not represent a comparison of devices.
-- The development version now includes a first implementation that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/edit/main/README.md#posting-messages-over-http) secion.
+- The development version now includes a first implementation that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details.
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
