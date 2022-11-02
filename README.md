@@ -220,7 +220,7 @@ AIS-catcher -H https://ais.chaos-consulting.de/shipin/index.php USERPWD "Station
 ```
 Notice that this server requires authentication with a user name and password provided by Chaos Consulting and accepts JSON with gzip encoding which significantly reduced bandwidth.
 
-As a final note, to build AIS-catcher with HTTP support, please install the following libraries before building.
+As a final note, to build AIS-catcher with HTTP support, please install the following libraries before running cmake:
 ```console
 sudo apt install libcurl4-openssl-dev zlib1g-dev
 ```
