@@ -99,7 +99,7 @@ namespace Demod {
 			Send(&b, 1, tag);
 		}
 	}
-	
+
 	void PhaseSearch::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
 			FLOAT32 re, im;

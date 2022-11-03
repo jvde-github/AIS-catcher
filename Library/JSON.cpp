@@ -109,6 +109,7 @@ const std::vector<std::vector<std::string>> JSONmap = {
 	{ "cdir3", "", "", "" },
 	{ "channel_a", "", "", "" },
 	{ "channel_b", "", "", "" },
+	{ "country", "", "", "" },
 	{ "course", "", "", "course" },
 	{ "course_q", "", "", "" },
 	{ "cs", "", "", "" },

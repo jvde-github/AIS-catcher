@@ -296,7 +296,7 @@ int main(int argc, char* argv[]) {
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	// AIS message to properties
-	AIS::AIStoJSON msg2json;
+	AIS::JSONAIS msg2json;
 
 	std::vector<std::shared_ptr<IO::HTTP>> http;
 	IO::MessageToScreen msg2screen;
