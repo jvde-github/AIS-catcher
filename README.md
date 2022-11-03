@@ -443,6 +443,7 @@ A list of some stations mentioning using AIS-catcher:
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 - [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
 - [Troguarat, France](https://www.marinetraffic.com/cs/ais/details/stations/21360)
+- [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
 
 ## Build process
 
@@ -506,7 +507,7 @@ For Windows, clone the project and open the directory with AIS-catcher in Visual
 
 ### Running as a service on Ubuntu and Raspberry Pi
 
-Github user abcd567a has developed a nice [script](https://github.com/abcd567a/install-aiscatcher) and manual to automatically build AIS-catcher and set it up as a backrgound service. I tested it on Ubuntu and advice to first systematically identify the optimal settings as described above starting with ``-s 1536K -gr tuner auto rtlagc on -a 192K``. It is paramount that the settings are edited:
+Github user abcd567a has developed a nice [script](https://github.com/abcd567a/install-aiscatcher) and manual to automatically build AIS-catcher and set it up as a background service. I tested it on Ubuntu and advice to first systematically identify the optimal settings as described above starting with ``-s 1536K -gr tuner auto rtlagc on -a 192K``. It is paramount that the settings are edited:
 ```
 sudo nano /usr/share/aiscatcher/aiscatcher.conf 
 ```
