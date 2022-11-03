@@ -32,7 +32,116 @@
 
 namespace AIS {
 
-	void AIStoJSON::ProcessMsg8Data(const AIS::Message& msg, int len) {
+	struct COUNTRY {
+		uint32_t code;
+		std::string country;
+	};
+
+	extern const std::vector<std::string> JSON_MAP_STATUS;
+	extern const std::vector<std::string> JSON_MAP_EPFD;
+	extern const std::vector<std::string> JSON_MAP_SHIPTYPE;
+	extern const std::vector<std::string> JSON_MAP_AID_TYPE;
+	extern const std::vector<COUNTRY> JSON_MAP_COUNTRY;
+
+	void JSONAIS::U(const AIS::Message& msg, int p, int start, int len, unsigned undefined) {
+		unsigned u = msg.getUint(start, len);
+		if (u != undefined)
+			Submit(p, u);
+	}
+
+	void JSONAIS::UL(const AIS::Message& msg, int p, int start, int len, float a, float b, unsigned undefined) {
+		unsigned u = msg.getUint(start, len);
+		if (u != undefined)
+			Submit(p, u * a + b);
+	}
+
+	void JSONAIS::S(const AIS::Message& msg, int p, int start, int len, int undefined) {
+		int u = msg.getInt(start, len);
+		if (u != undefined)
+			Submit(p, u);
+	}
+
+	void JSONAIS::SL(const AIS::Message& msg, int p, int start, int len, float a, float b, int undefined) {
+		int s = msg.getInt(start, len);
+		if (s != undefined)
+			Submit(p, s * a + b);
+	}
+
+	void JSONAIS::E(const AIS::Message& msg, int p, int start, int len, int pmap, const std::vector<std::string>* map) {
+		unsigned u = msg.getUint(start, len);
+		Submit(p, u);
+		if (map) {
+			if (u < map->size())
+				Submit(pmap, (*map)[u]);
+			else
+				Submit(pmap, std::string("Undefined"));
+		}
+	}
+
+	void JSONAIS::TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined) {
+		int u = msg.getInt(start, len);
+
+		if (u == -128)
+			; // Submit(p, std::string("nan"));
+		else if (u == -127)
+			Submit(p, std::string("fastleft"));
+		else if (u == 127)
+			Submit(p, std::string("fastright"));
+		else {
+			double rot = u / 4.733;
+			rot = (u < 0) ? -rot * rot : rot * rot;
+			Submit(p, (int)(rot + 0.5));
+		}
+	}
+
+	void JSONAIS::TIMESTAMP(const AIS::Message& msg, int p, int start, int len) {
+		if (len != 40) return;
+
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(4) << msg.getUint(start, 14) << "-" << std::setw(2) << msg.getUint(start + 14, 4) << "-" << std::setw(2) << msg.getUint(start + 18, 5) << "T"
+		  << std::setw(2) << msg.getUint(start + 23, 5) << ":" << std::setw(2) << msg.getUint(start + 28, 6) << ":" << std::setw(2) << msg.getUint(start + 34, 6) << "Z";
+		Submit(p, std::string(s.str()));
+	}
+
+	void JSONAIS::ETA(const AIS::Message& msg, int p, int start, int len) {
+		if (len != 20) return;
+
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(2) << msg.getUint(start, 4) << "-" << std::setw(2) << msg.getUint(start + 4, 5) << "T"
+		  << std::setw(2) << msg.getUint(start + 9, 5) << ":" << std::setw(2) << msg.getUint(start + 14, 6) << "Z";
+		Submit(p, std::string(s.str()));
+	}
+
+	void JSONAIS::B(const AIS::Message& msg, int p, int start, int len) {
+		unsigned u = msg.getUint(start, len);
+		Submit(p, (bool)u);
+	}
+
+	void JSONAIS::T(const AIS::Message& msg, int p, int start, int len) {
+		std::string text = msg.getText(start, len);
+		while (text[text.length() - 1] == ' ') text.resize(text.length() - 1);
+		Submit(p, text);
+	}
+
+	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len) {
+		std::string text = msg.getText(start, len);
+		while (text[text.length() - 1] == ' ') text.resize(text.length() - 1);
+		Submit(p, text);
+	}
+
+	void JSONAIS::COUNTRY(const AIS::Message& msg) {
+		uint32_t cc = msg.mmsi();
+		while (cc > 999) cc /= 10;
+		if (cc > 100) {
+			for (int i = 0; i < JSON_MAP_COUNTRY.size(); i++)
+				if (JSON_MAP_COUNTRY[i].code == cc) {
+					Submit(PROPERTY_COUNTRY, JSON_MAP_COUNTRY[i].country);
+					break;
+				}
+		}
+	}
+
+	void JSONAIS::ProcessMsg8Data(const AIS::Message& msg, int len) {
 		int dac = msg.getUint(40, 10);
 		int fid = msg.getUint(50, 6);
 
@@ -91,33 +200,36 @@ namespace AIS {
 		}
 	}
 
-	void AIStoJSON::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void JSONAIS::Receive(const AIS::Message* data, int len, TAG& tag) {
 		Submit(PROPERTY_OBJECT_START, std::string(""));
 
 		const AIS::Message& msg = data[0];
 
-		if (!sparse) Submit(PROPERTY_CLASS, std::string("AIS"));
-		if (!sparse) Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
+		Submit(PROPERTY_CLASS, std::string("AIS"));
+		Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
 
 		if (tag.mode & 2) {
 			Submit(PROPERTY_RXTIME, msg.getRxTime());
 		}
 
-		if (!sparse) Submit(PROPERTY_SCALED, true);
+		Submit(PROPERTY_SCALED, true);
 		Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
-		if (!sparse) Submit(PROPERTY_NMEA, msg.sentence);
+		Submit(PROPERTY_NMEA, msg.sentence);
 
 		if (tag.mode & 1) {
 			Submit(PROPERTY_SIGNAL_POWER, tag.level);
 			Submit(PROPERTY_PPM, tag.ppm);
 		}
 
+		U(msg, PROPERTY_TYPE, 0, 6);
+		U(msg, PROPERTY_REPEAT, 6, 2);
+		U(msg, PROPERTY_MMSI, 8, 30);
+		COUNTRY(msg);
+
 		switch (msg.type()) {
 		case 1:
 		case 2:
 		case 3:
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			E(msg, PROPERTY_STATUS, 38, 4, PROPERTY_STATUS_TEXT, &JSON_MAP_STATUS);
 			TURN(msg, PROPERTY_TURN, 42, 8);
 			UL(msg, PROPERTY_SPEED, 50, 10, 0.1, 0, 1023);
@@ -126,7 +238,6 @@ namespace AIS {
 			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
 			U(msg, PROPERTY_HEADING, 128, 9, 511);
-			if (sparse) break;
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_SECOND, 137, 6);
 			E(msg, PROPERTY_MANEUVER, 143, 2);
@@ -136,12 +247,9 @@ namespace AIS {
 			break;
 		case 4:
 		case 11:
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			SL(msg, PROPERTY_LON, 79, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 107, 27, 1 / 600000.0, 0);
 			E(msg, PROPERTY_EPFD, 134, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			if (sparse) break;
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			TIMESTAMP(msg, PROPERTY_TIMESTAMP, 38, 40);
 			U(msg, PROPERTY_YEAR, 38, 14, 0);
@@ -156,8 +264,6 @@ namespace AIS {
 			U(msg, PROPERTY_RADIO, 149, 19);
 			break;
 		case 5:
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_AIS_VERSION, 38, 2);
 			U(msg, PROPERTY_IMO, 40, 30);
 			T(msg, PROPERTY_CALLSIGN, 70, 42);
@@ -171,7 +277,6 @@ namespace AIS {
 			ETA(msg, PROPERTY_ETA, 274, 20);
 			T(msg, PROPERTY_DESTINATION, 302, 120);
 			UL(msg, PROPERTY_DRAUGHT, 294, 8, 0.1, 0);
-			if (sparse) break;
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_MONTH, 274, 4, 0);
 			U(msg, PROPERTY_DAY, 278, 5, 0);
@@ -181,10 +286,6 @@ namespace AIS {
 			X(msg, PROPERTY_SPARE, 423, 1);
 			break;
 		case 6:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_SEQNO, 38, 2);
 			U(msg, PROPERTY_DEST_MMSI, 40, 30);
 			B(msg, PROPERTY_RETRANSMIT, 70, 1);
@@ -194,10 +295,6 @@ namespace AIS {
 			break;
 		case 7:
 		case 13:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			X(msg, PROPERTY_SPARE, 38, 2);
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_MMSISEQ1, 70, 2);
@@ -212,23 +309,16 @@ namespace AIS {
 			U(msg, PROPERTY_MMSISEQ4, 166, 2);
 			break;
 		case 8:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_DAC, 40, 10);
 			U(msg, PROPERTY_FID, 50, 6);
 			ProcessMsg8Data(msg, len);
 			break;
 		case 9:
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_ALT, 38, 12);
 			U(msg, PROPERTY_SPEED, 50, 10);
 			B(msg, PROPERTY_ACCURACY, 60, 1);
 			SL(msg, PROPERTY_LON, 61, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
-			if (sparse) break;
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
 			U(msg, PROPERTY_SECOND, 128, 6);
@@ -239,34 +329,18 @@ namespace AIS {
 			U(msg, PROPERTY_RADIO, 148, 20);
 			break;
 		case 10:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_DEST_MMSI, 40, 30);
 			break;
 		case 12:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_SEQNO, 38, 2);
 			U(msg, PROPERTY_DEST_MMSI, 40, 30);
 			B(msg, PROPERTY_RETRANSMIT, 70, 1);
 			T(msg, PROPERTY_TEXT, 72, 936);
 			break;
 		case 14:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			T(msg, PROPERTY_TEXT, 40, 968);
 			break;
 		case 15:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_TYPE1_1, 70, 6);
 			U(msg, PROPERTY_OFFSET1_1, 76, 12);
@@ -279,33 +353,22 @@ namespace AIS {
 			U(msg, PROPERTY_OFFSET2_1, 146, 12);
 			break;
 		case 16:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_OFFSET1, 70, 12);
 			U(msg, PROPERTY_INCREMENT1, 82, 10);
 			break;
 		case 17:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			SL(msg, PROPERTY_LON, 40, 18, 1 / 600.0, 0);
 			SL(msg, PROPERTY_LAT, 58, 17, 1 / 600.0, 0);
 			D(msg, PROPERTY_DATA, 80, 736);
 			break;
 		case 18:
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
 			B(msg, PROPERTY_ACCURACY, 56, 1);
 			SL(msg, PROPERTY_LON, 57, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 112, 12, 0.1, 0);
 			U(msg, PROPERTY_HEADING, 124, 9);
-			if (sparse) break;
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			U(msg, PROPERTY_RESERVED, 38, 8);
 			U(msg, PROPERTY_SECOND, 133, 6);
@@ -320,8 +383,6 @@ namespace AIS {
 			U(msg, PROPERTY_RADIO, 148, 20);
 			break;
 		case 19:
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
 			SL(msg, PROPERTY_LON, 57, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
@@ -334,7 +395,6 @@ namespace AIS {
 			U(msg, PROPERTY_TO_PORT, 289, 6);
 			U(msg, PROPERTY_TO_STARBOARD, 295, 6);
 			E(msg, PROPERTY_EPFD, 301, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			if (sparse) break;
 			U(msg, PROPERTY_REPEAT, 6, 2);
 			B(msg, PROPERTY_ACCURACY, 56, 1);
 			U(msg, PROPERTY_RESERVED, 38, 8);
@@ -346,10 +406,6 @@ namespace AIS {
 			X(msg, PROPERTY_SPARE, 308, 4);
 			break;
 		case 20:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_OFFSET1, 40, 12);
 			U(msg, PROPERTY_NUMBER1, 52, 4);
 			U(msg, PROPERTY_TIMEOUT1, 56, 3);
@@ -371,10 +427,6 @@ namespace AIS {
 			U(msg, PROPERTY_INCREMENT4, 149, 11);
 			break;
 		case 21:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			E(msg, PROPERTY_AID_TYPE, 38, 5, PROPERTY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
 			T(msg, PROPERTY_NAME, 43, 120);
 			B(msg, PROPERTY_ACCURACY, 163, 1);
@@ -393,10 +445,6 @@ namespace AIS {
 			B(msg, PROPERTY_ASSIGNED, 270, 1);
 			break;
 		case 22:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_CHANNEL_A, 40, 12);
 			U(msg, PROPERTY_CHANNEL_B, 52, 12);
 			U(msg, PROPERTY_TXRX, 64, 4);
@@ -413,10 +461,6 @@ namespace AIS {
 			U(msg, PROPERTY_ZONESIZE, 142, 3);
 			break;
 		case 23:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_NE_LON, 40, 18);
 			U(msg, PROPERTY_NE_LAT, 58, 17);
 			U(msg, PROPERTY_SW_LON, 75, 18);
@@ -428,10 +472,6 @@ namespace AIS {
 			U(msg, PROPERTY_QUIET, 150, 4);
 			break;
 		case 24:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_PARTNO, 38, 2);
 
 			if (msg.getUint(38, 2) == 0) {
@@ -451,10 +491,6 @@ namespace AIS {
 			}
 			break;
 		case 27:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			U(msg, PROPERTY_ACCURACY, 38, 1);
 			U(msg, PROPERTY_RAIM, 39, 1);
 			U(msg, PROPERTY_STATUS, 40, 4);
@@ -465,10 +501,6 @@ namespace AIS {
 			U(msg, PROPERTY_GNSS, 94, 1);
 			break;
 		default:
-			if (sparse) break;
-			U(msg, PROPERTY_TYPE, 0, 6);
-			U(msg, PROPERTY_REPEAT, 6, 2);
-			U(msg, PROPERTY_MMSI, 8, 30);
 			break;
 		}
 		Submit(PROPERTY_OBJECT_END, std::string(""));
@@ -643,5 +675,297 @@ namespace AIS {
 		"Safe Water",
 		"Special Mark",
 		"Light Vessel / LANBY / Rigs"
+	};
+
+	const std::vector<COUNTRY> JSON_MAP_COUNTRY = {
+		{ 201, "Albania" },
+		{ 202, "Andorra" },
+		{ 203, "Austria" },
+		{ 204, "Azores" },
+		{ 205, "Belgium" },
+		{ 206, "Belarus" },
+		{ 207, "Bulgaria" },
+		{ 208, "Vatican City" },
+		{ 209, "Cyprus" },
+		{ 210, "Cyprus" },
+		{ 211, "Germany" },
+		{ 212, "Cyprus" },
+		{ 213, "Georgia" },
+		{ 214, "Moldova" },
+		{ 215, "Malta" },
+		{ 216, "Armenia" },
+		{ 218, "Germany" },
+		{ 219, "Denmark" },
+		{ 220, "Denmark" },
+		{ 224, "Spain" },
+		{ 225, "Spain" },
+		{ 226, "France" },
+		{ 227, "France" },
+		{ 228, "France" },
+		{ 229, "Malta" },
+		{ 230, "Finland" },
+		{ 231, "Faroe Islands" },
+		{ 232, "United Kingdom" },
+		{ 233, "United Kingdom" },
+		{ 234, "United Kingdom" },
+		{ 235, "United Kingdom" },
+		{ 236, "Gibraltar" },
+		{ 237, "Greece" },
+		{ 238, "Croatia" },
+		{ 239, "Greece" },
+		{ 240, "Greece" },
+		{ 241, "Greece" },
+		{ 242, "Morocco" },
+		{ 243, "Hungary" },
+		{ 244, "Netherlands" },
+		{ 245, "Netherlands" },
+		{ 246, "Netherlands" },
+		{ 247, "Italy" },
+		{ 248, "Malta" },
+		{ 249, "Malta" },
+		{ 250, "Ireland" },
+		{ 251, "Iceland" },
+		{ 252, "Liechtenstein" },
+		{ 253, "Luxembourg" },
+		{ 254, "Monaco" },
+		{ 255, "Madeira" },
+		{ 256, "Malta" },
+		{ 257, "Norway" },
+		{ 258, "Norway" },
+		{ 259, "Norway" },
+		{ 261, "Poland" },
+		{ 262, "Montenegro" },
+		{ 263, "Portugal" },
+		{ 264, "Romania" },
+		{ 265, "Sweden" },
+		{ 266, "Sweden" },
+		{ 267, "Slovakia" },
+		{ 268, "San Marino" },
+		{ 269, "Switzerland" },
+		{ 270, "Czech Republic" },
+		{ 271, "Turkey" },
+		{ 272, "Ukraine" },
+		{ 273, "Russian Federation" },
+		{ 274, "Makedonia" },
+		{ 275, "Latvia" },
+		{ 276, "Estonia" },
+		{ 277, "Lithuania" },
+		{ 278, "Slovenia" },
+		{ 279, "Serbia" },
+		{ 301, "Anguilla" },
+		{ 303, "Alaska" },
+		{ 304, "Antigua and Barbuda" },
+		{ 305, "Antigua and Barbuda" },
+		{ 306, "Netherlands Antilles" },
+		{ 307, "Aruba" },
+		{ 308, "Bahamas" },
+		{ 309, "Bahamas" },
+		{ 310, "Bermuda" },
+		{ 311, "Bahamas" },
+		{ 312, "Belize" },
+		{ 314, "Barbados" },
+		{ 316, "Canada" },
+		{ 319, "Cayman Islands" },
+		{ 321, "Costa Rica" },
+		{ 323, "Cuba" },
+		{ 325, "Dominica" },
+		{ 327, "Dominican Republic" },
+		{ 329, "Guadeloupe" },
+		{ 330, "Grenada" },
+		{ 331, "Greenland" },
+		{ 332, "Guatemala" },
+		{ 334, "Honduras" },
+		{ 336, "Haiti" },
+		{ 338, "USA" },
+		{ 339, "Jamaica" },
+		{ 341, "Saint Kitts and Nevis" },
+		{ 343, "Saint Lucia" },
+		{ 345, "Mexico" },
+		{ 347, "Martinique" },
+		{ 348, "Montserrat" },
+		{ 350, "Nicaragua" },
+		{ 351, "Panama" },
+		{ 352, "Panama" },
+		{ 353, "Panama" },
+		{ 354, "Panama" },
+		{ 355, "Panama" },
+		{ 356, "Panama" },
+		{ 357, "Panama" },
+		{ 358, "Puerto Rico" },
+		{ 359, "El Salvador" },
+		{ 361, "Saint Pierre and Miquelon" },
+		{ 362, "Trinidad and Tobago" },
+		{ 364, "Turks and Caicos Islands" },
+		{ 366, "USA" },
+		{ 367, "USA" },
+		{ 368, "USA" },
+		{ 369, "USA" },
+		{ 370, "Panama" },
+		{ 371, "Panama" },
+		{ 372, "Panama" },
+		{ 373, "Panama" },
+		{ 375, "St Vincent and the Grenadines" },
+		{ 376, "St Vincent and the Grenadines" },
+		{ 377, "St Vincent and the Grenadines" },
+		{ 378, "British Virgin Islands" },
+		{ 379, "US Virgin Islands" },
+		{ 401, "Afghanistan" },
+		{ 403, "Saudi Arabia" },
+		{ 405, "Bangladesh" },
+		{ 408, "Bahrain" },
+		{ 410, "Bhutan" },
+		{ 412, "China" },
+		{ 413, "China" },
+		{ 414, "China" },
+		{ 416, "Taiwan" },
+		{ 417, "Sri Lanka" },
+		{ 419, "India" },
+		{ 422, "Iran" },
+		{ 423, "Azerbaijan" },
+		{ 425, "Iraq" },
+		{ 428, "Israel" },
+		{ 431, "Japan" },
+		{ 432, "Japan" },
+		{ 434, "Turkmenistan" },
+		{ 436, "Kazakhstan" },
+		{ 437, "Uzbekistan" },
+		{ 438, "Jordan" },
+		{ 440, "South Korea" },
+		{ 441, "South Korea" },
+		{ 443, "Palestine" },
+		{ 445, "North Korea" },
+		{ 447, "Kuwait" },
+		{ 450, "Lebanon" },
+		{ 451, "Kyrgyzstan" },
+		{ 453, "Macao" },
+		{ 455, "Maldives" },
+		{ 457, "Mongolia" },
+		{ 459, "Nepal" },
+		{ 461, "Oman" },
+		{ 463, "Pakistan" },
+		{ 466, "Qatar" },
+		{ 468, "Syria" },
+		{ 470, "United Arab Emirates" },
+		{ 472, "Tajikistan" },
+		{ 473, "Yemen" },
+		{ 475, "Yemen" },
+		{ 477, "Hong Kong" },
+		{ 478, "Bosnia and Herzegovina" },
+		{ 501, "Adelie Land" },
+		{ 503, "Australia" },
+		{ 506, "Myanmar" },
+		{ 508, "Brunei Darussalam" },
+		{ 510, "Micronesia" },
+		{ 511, "Palau" },
+		{ 512, "New Zealand" },
+		{ 514, "Cambodia" },
+		{ 515, "Cambodia" },
+		{ 516, "Christmas Island" },
+		{ 518, "Cook Islands" },
+		{ 520, "Fiji" },
+		{ 523, "Cocos Islands" },
+		{ 525, "Indonesia" },
+		{ 529, "Kiribati" },
+		{ 531, "Lao" },
+		{ 533, "Malaysia" },
+		{ 536, "Northern Mariana Islands" },
+		{ 538, "Marshall Islands" },
+		{ 540, "New Caledonia" },
+		{ 542, "Niue" },
+		{ 544, "Nauru" },
+		{ 546, "French Polynesia" },
+		{ 548, "Philippines" },
+		{ 553, "Papua New Guinea" },
+		{ 555, "Pitcairn Island" },
+		{ 557, "Solomon Islands" },
+		{ 559, "American Samoa" },
+		{ 561, "Samoa" },
+		{ 563, "Singapore" },
+		{ 564, "Singapore" },
+		{ 565, "Singapore" },
+		{ 566, "Singapore" },
+		{ 567, "Thailand" },
+		{ 570, "Tonga" },
+		{ 572, "Tuvalu" },
+		{ 574, "Vietnam" },
+		{ 576, "Vanuatu" },
+		{ 577, "Vanuatu" },
+		{ 578, "Wallis and Futuna Islands" },
+		{ 601, "South Africa" },
+		{ 603, "Angola" },
+		{ 605, "Algeria" },
+		{ 607, "Saint Paul and Amsterdam Islands" },
+		{ 608, "Ascension Island" },
+		{ 609, "Burundi" },
+		{ 610, "Benin" },
+		{ 611, "Botswana" },
+		{ 612, "Central African Republic" },
+		{ 613, "Cameroon" },
+		{ 615, "Congo" },
+		{ 616, "Comoros" },
+		{ 617, "Cape Verde" },
+		{ 618, "Crozet Archipelago" },
+		{ 619, "Côte d'Ivoire" },
+		{ 620, "Comoros" },
+		{ 621, "Djibouti" },
+		{ 622, "Egypt" },
+		{ 624, "Ethiopia" },
+		{ 625, "Eritrea" },
+		{ 626, "Gabonese Republic" },
+		{ 627, "Ghana" },
+		{ 629, "Gambia" },
+		{ 630, "Guinea-Bissau" },
+		{ 631, "Equatorial Guinea" },
+		{ 632, "Guinea" },
+		{ 633, "Burkina Faso" },
+		{ 634, "Kenya" },
+		{ 635, "Kerguelen Islands" },
+		{ 636, "Liberia" },
+		{ 637, "Liberia" },
+		{ 638, "South Sudan" },
+		{ 642, "Libya" },
+		{ 644, "Lesotho" },
+		{ 645, "Mauritius" },
+		{ 647, "Madagascar" },
+		{ 649, "Mali" },
+		{ 650, "Mozambique" },
+		{ 654, "Mauritania" },
+		{ 655, "Malawi" },
+		{ 656, "Niger" },
+		{ 657, "Nigeria" },
+		{ 659, "Namibia" },
+		{ 660, "Reunion" },
+		{ 661, "Rwanda" },
+		{ 662, "Sudan" },
+		{ 663, "Senegal" },
+		{ 664, "Seychelles" },
+		{ 665, "Saint Helena" },
+		{ 666, "Somalia" },
+		{ 667, "Sierra Leone" },
+		{ 668, "Sao Tome and Principe" },
+		{ 669, "Swaziland" },
+		{ 670, "Chad" },
+		{ 671, "Togolese" },
+		{ 672, "Tunisia" },
+		{ 674, "Tanzania" },
+		{ 675, "Uganda" },
+		{ 676, "DR Congo" },
+		{ 677, "Tanzania" },
+		{ 678, "Zambia" },
+		{ 679, "Zimbabwe" },
+		{ 701, "Argentina" },
+		{ 710, "Brazil" },
+		{ 720, "Bolivia" },
+		{ 725, "Chile" },
+		{ 730, "Colombia" },
+		{ 735, "Ecuador" },
+		{ 740, "Falkland Islands" },
+		{ 745, "Guiana" },
+		{ 750, "Guyana" },
+		{ 755, "Paraguay" },
+		{ 760, "Peru" },
+		{ 765, "Suriname" },
+		{ 770, "Uruguay" },
+		{ 775, "Venezuela" }
 	};
 }
