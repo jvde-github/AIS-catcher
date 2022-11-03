@@ -133,6 +133,7 @@ namespace AIS {
 		uint32_t cc = msg.mmsi();
 		while (cc > 999) cc /= 10;
 		if (cc > 100) {
+			// binary search would be better....
 			for (int i = 0; i < JSON_MAP_COUNTRY.size(); i++)
 				if (JSON_MAP_COUNTRY[i].code == cc) {
 					Submit(PROPERTY_COUNTRY, JSON_MAP_COUNTRY[i].country);
@@ -677,6 +678,7 @@ namespace AIS {
 		"Light Vessel / LANBY / Rigs"
 	};
 
+	// Source: https://www.marinevesseltraffic.com/2013/11/mmsi-mid-codes.html
 	const std::vector<COUNTRY> JSON_MAP_COUNTRY = {
 		{ 201, "Albania" },
 		{ 202, "Andorra" },
