@@ -29,6 +29,9 @@ Windows Binaries and Building instructions for many systems are provided below. 
 - The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest version now uses by default  a simple droop compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. More information can be found [here](https://github.com/jvde-github/AIS-catcher#a-note-on-device-sample-rates)
 - The latest version includes a first implementation that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 
+## What's new in development version
+- Addition of country field to JSON output (mapped from MMSI code).
+
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
