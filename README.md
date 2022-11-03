@@ -22,14 +22,12 @@ Only use this software in regions where such use is permitted.
 
 Windows Binaries and Building instructions for many systems are provided below. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
-## What's new?
-
-### Development version
+## What's new in version 0.29?
 
 - ``-o 4`` is now ``-o 5`` and ``-o 4`` is a new intermediate level that shows a subset of the AIS message fields that are relevant for map plotting.
 - Experimental switch ``-go AFC_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
-- The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest development version now uses by default  a simple droop compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. More information can be found [here](https://github.com/jvde-github/AIS-catcher#a-note-on-device-sample-rates)
-- The development version now includes a first implementation that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
+- The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest version now uses by default  a simple droop compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. More information can be found [here](https://github.com/jvde-github/AIS-catcher#a-note-on-device-sample-rates)
+- The latest version includes a first implementation that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
@@ -445,6 +443,7 @@ A list of some stations mentioning using AIS-catcher:
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 - [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
 - [Troguarat, France](https://www.marinetraffic.com/cs/ais/details/stations/21360)
+- [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
 
 ## Build process
 
@@ -508,7 +507,7 @@ For Windows, clone the project and open the directory with AIS-catcher in Visual
 
 ### Running as a service on Ubuntu and Raspberry Pi
 
-Github user abcd567a has developed a nice [script](https://github.com/abcd567a/install-aiscatcher) and manual to automatically build AIS-catcher and set it up as a backrgound service. I tested it on Ubuntu and advice to first systematically identify the optimal settings as described above starting with ``-s 1536K -gr tuner auto rtlagc on -a 192K``. It is paramount that the settings are edited:
+Github user abcd567a has developed a nice [script](https://github.com/abcd567a/install-aiscatcher) and manual to automatically build AIS-catcher and set it up as a background service. I tested it on Ubuntu and advice to first systematically identify the optimal settings as described above starting with ``-s 1536K -gr tuner auto rtlagc on -a 192K``. It is paramount that the settings are edited:
 ```
 sudo nano /usr/share/aiscatcher/aiscatcher.conf 
 ```
