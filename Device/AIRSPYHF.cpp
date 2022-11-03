@@ -28,7 +28,6 @@ namespace Device {
 #ifdef HASAIRSPYHF
 
 	void AIRSPYHF::Open(uint64_t h) {
-
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
 
 		setDefaultRate();
@@ -120,7 +119,6 @@ namespace Device {
 	}
 
 	bool AIRSPYHF::isStreaming() {
-
 		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1) lost = true;
 
 		return Device::isStreaming() && airspyhf_is_streaming(dev) == 1;

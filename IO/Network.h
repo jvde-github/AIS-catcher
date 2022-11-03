@@ -137,5 +137,4 @@ namespace IO {
 		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
 		void closeConnection();
 	};
-
 }

@@ -29,7 +29,6 @@ namespace Device {
 #ifdef HASAIRSPY
 
 	void AIRSPY::Open(uint64_t h) {
-
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device.";
 		setDefaultRate();
 		Device::Open(h);
@@ -163,7 +162,6 @@ namespace Device {
 
 			setLNA_AGC((int)LNA_AGC);
 			setMixer_AGC((int)mixer_AGC);
-
 			break;
 		}
 		if (bias_tee) setBiasTee(true);
@@ -195,7 +193,6 @@ namespace Device {
 		else if (option == "LNA") {
 			mode = AIRSPYGainMode::Free;
 			LNA_AGC = Util::Parse::AutoInteger(arg, 0, 14, LNA_Gain);
-			;
 		}
 		else if (option == "BIASTEE") {
 			bias_tee = Util::Parse::Switch(arg);

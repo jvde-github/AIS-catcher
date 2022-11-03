@@ -36,6 +36,70 @@ namespace Demod {
 		Send(output.data(), len, tag);
 	}
 
+	// Same version as above but instead relying on moving average to speed up
+	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len, TAG& tag) {
+		for (int i = 0; i < len; i++) {
+			FLOAT32 re, im;
+
+			//  multiply samples with (1j) ** i, to get all points on the same line
+			switch (rot) {
+			case 0:
+				re = data[i].real();
+				im = data[i].imag();
+				break;
+			case 1:
+				im = data[i].real();
+				re = -data[i].imag();
+				break;
+			case 2:
+				re = -data[i].real();
+				im = -data[i].imag();
+				break;
+			case 3:
+				im = -data[i].real();
+				re = data[i].imag();
+				break;
+			}
+
+			rot = (rot + 1) & 3;
+
+			// Determining the phase is approached as a linear classification problem.
+			for (int j = 0; j < nPhases / 2; j++) {
+				FLOAT32 t, a = re * phase[j].real(), b = im * phase[j].imag();
+
+				t = a + b;
+				bits[j] = (bits[j] << 1) | (t > 0);
+				ma[j] = weight * ma[j] + (1 - weight) * std::abs(t);
+
+				t = a - b;
+				bits[nPhases - 1 - j] = (bits[nPhases - 1 - j] << 1) | (t > 0);
+				ma[nPhases - 1 - j] = weight * ma[nPhases - 1 - j] + (1 - weight) * std::abs(t);
+			}
+
+			// we look at previous [max_idx - nSearch, max_idx + nSearch]
+			int idx = (max_idx - nSearch + nPhases) & (nPhases - 1);
+			FLOAT32 max_val = ma[idx];
+			max_idx = idx;
+
+			for (int p = 0; p < nSearch << 1; p++) {
+				idx = (++idx) & (nPhases - 1);
+
+				if (ma[idx] > max_val) {
+					max_val = ma[idx];
+					max_idx = idx;
+				}
+			}
+
+			// determine the bit
+			bool b2 = (bits[max_idx] >> (nDelay + 1)) & 1;
+			bool b1 = (bits[max_idx] >> nDelay) & 1;
+
+			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
+
+			Send(&b, 1, tag);
+		}
+	}
+	
 	void PhaseSearch::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
 			FLOAT32 re, im;
@@ -92,70 +156,6 @@ namespace Demod {
 				if (avg > max_val) {
 					max_val = avg;
 					max_idx = j;
-				}
-			}
-
-			// determine the bit
-			bool b2 = (bits[max_idx] >> (nDelay + 1)) & 1;
-			bool b1 = (bits[max_idx] >> nDelay) & 1;
-
-			FLOAT32 b = b1 ^ b2 ? 1.0f : -1.0f;
-
-			Send(&b, 1, tag);
-		}
-	}
-
-	// Same version as above but instead relying on moving average to speed up
-	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len, TAG& tag) {
-		for (int i = 0; i < len; i++) {
-			FLOAT32 re, im;
-
-			//  multiply samples with (1j) ** i, to get all points on the same line
-			switch (rot) {
-			case 0:
-				re = data[i].real();
-				im = data[i].imag();
-				break;
-			case 1:
-				im = data[i].real();
-				re = -data[i].imag();
-				break;
-			case 2:
-				re = -data[i].real();
-				im = -data[i].imag();
-				break;
-			case 3:
-				im = -data[i].real();
-				re = data[i].imag();
-				break;
-			}
-
-			rot = (rot + 1) & 3;
-
-			// Determining the phase is approached as a linear classification problem.
-			for (int j = 0; j < nPhases / 2; j++) {
-				FLOAT32 t, a = re * phase[j].real(), b = im * phase[j].imag();
-
-				t = a + b;
-				bits[j] = (bits[j] << 1) | (t > 0);
-				ma[j] = weight * ma[j] + (1 - weight) * std::abs(t);
-
-				t = a - b;
-				bits[nPhases - 1 - j] = (bits[nPhases - 1 - j] << 1) | (t > 0);
-				ma[nPhases - 1 - j] = weight * ma[nPhases - 1 - j] + (1 - weight) * std::abs(t);
-			}
-
-			// we look at previous [max_idx - nSearch, max_idx + nSearch]
-			int idx = (max_idx - nSearch + nPhases) & (nPhases - 1);
-			FLOAT32 max_val = ma[idx];
-			max_idx = idx;
-
-			for (int p = 0; p < nSearch << 1; p++) {
-				idx = (++idx) & (nPhases - 1);
-
-				if (ma[idx] > max_val) {
-					max_val = ma[idx];
-					max_idx = idx;
 				}
 			}
 
