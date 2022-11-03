@@ -168,7 +168,6 @@ namespace Device {
 	}
 
 	std::string RTLTCP::Get() {
-
 		std::string str = " host " + host + " port " + port + " timeout " + std::to_string(timeout);
 		str += " tuner " + Util::Convert::toString(tuner_AGC, tuner_Gain);
 		str += " rtlagc " + Util::Convert::toString(RTL_AGC);

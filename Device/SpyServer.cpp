@@ -326,7 +326,6 @@ namespace Device {
 
 
 	bool SpyServer::setFreq(uint32_t f) {
-
 		if (f < device_info.MinimumFrequency || f > device_info.MaximumFrequency) {
 			throw "SPYSERVER: server does not support required frequency.";
 		}

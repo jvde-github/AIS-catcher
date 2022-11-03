@@ -55,7 +55,6 @@ namespace IO {
 
 	// curl callback
 	size_t HTTP::curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
-
 		int len = MIN(size * nmemb, 1023);
 
 		std::memcpy(s, contents, len);
@@ -64,7 +63,6 @@ namespace IO {
 	}
 
 	void HTTP::send(const std::string& msg, const std::string& copyname) {
-
 		CURL* ch;
 		CURLcode r;
 
@@ -139,7 +137,6 @@ namespace IO {
 	}
 
 	void HTTP::post() {
-
 		if (!queue.size()) return;
 
 		std::list<std::string> send_list;
@@ -209,7 +206,6 @@ namespace IO {
 	}
 
 	void HTTP::process() {
-
 		int i = 0;
 
 		while (!terminate) {
@@ -224,7 +220,6 @@ namespace IO {
 #endif
 
 	void HTTP::Set(std::string option, std::string arg) {
-
 #ifdef HASCURL
 		Util::Convert::toUpper(option);
 
