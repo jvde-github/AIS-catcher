@@ -44,6 +44,12 @@ namespace AIS {
 			return Util::Convert::toTimeStr(rxtime);
 		}
 
+		void clear() {
+			length = 0;
+			sentence.resize(0);
+			std::memset(data, 0, 128);
+		}
+
 		unsigned type() const {
 			return data[0] >> 2;
 		}
@@ -98,7 +104,7 @@ namespace AIS {
 
 			int end = start + len;
 			std::string text = "";
-			text.reserve((len + 5) / 6 + 2); // reserrve 2 extra for special characters
+			text.reserve((len + 5) / 6 + 2); // reserve 2 extra for special characters
 
 			while (start < end) {
 				int c = getUint(start, 6);
@@ -137,6 +143,31 @@ namespace AIS {
 
 			const int mask = (1 << 6) - 1;
 			return (w >> (16 - 6 - y)) & mask;
+		}
+
+		void setLetter(int pos, char c) {
+			int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+
+			if (length < (pos + 1) * 6) length = (pos + 1) * 6;
+
+			switch (y) {
+			case 0:
+				data[x] = (data[x] & 0x00000011) | (c << 2);
+				break;
+			case 2:
+				data[x] = (data[x] & 0x11000000) | c;
+				break;
+			case 4:
+				data[x] = (data[x] & 0x11110000) | (c >> 2);
+				data[x + 1] = (data[x + 1] & 0x00111111) | ((c & 3) << 6);
+				break;
+			case 6:
+				data[x] = (data[x] & 0x11111100) | (x >> 4);
+				data[x + 1] = (data[x + 1] & 0x00001111) | ((c & 15) << 4);
+				break;
+			default:
+				break;
+			}
 		}
 	};
 
