@@ -99,18 +99,6 @@ namespace AIS {
 
 		if (tag.mode & 2) msg.Stamp();
 		Send(&msg, 1, tag);
-
-		if (msg.type() == 0) {
-			std::cerr << "type     : " << msg.getUint(0, 6) << std::endl;
-			std::cerr << "repeat   : " << msg.getUint(6, 2) << std::endl;
-			std::cerr << "mmsi     : " << msg.getUint(8, 30) << std::endl;
-			std::cerr << "lon      : " << msg.getInt(61, 28) / 600000.0f << std::endl;
-			std::cerr << "lat      : " << msg.getInt(89, 27) / 600000.0f << std::endl;
-
-			// std::cerr << "IMO      : " << msg.getUint(40, 30) << std::endl;
-			// std::cerr << "Name     : " << msg.getText(112, 120) << std::endl;
-		}
-
 		MessageID = (MessageID + 1) % 10;
 	}
 
