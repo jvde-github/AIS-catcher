@@ -42,7 +42,7 @@ namespace AIS {
 		void X(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0){};
 		void T(const AIS::Message& msg, int p, int start, int len);
 		void D(const AIS::Message& msg, int p, int start, int len);
-		void COUNTRY(const AIS::Message& msg);
+		void MMSI(const AIS::Message& msg);
 
 	public:
 		void Receive(const AIS::Message* data, int len, TAG& tag);

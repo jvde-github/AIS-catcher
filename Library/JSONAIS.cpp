@@ -129,18 +129,21 @@ namespace AIS {
 		Submit(p, text);
 	}
 
-	void JSONAIS::COUNTRY(const AIS::Message& msg) {
-		uint32_t cc = msg.mmsi() / 1000000;
-		if (cc > 100) {
+	// Refernce: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
+	void JSONAIS::MMSI(const AIS::Message& msg) {
+
+		uint32_t mid = msg.mmsi();
+		while (mid > 1000) mid /= 10;
+		if (mid > 100) {
 			int l = 0, r = JSON_MAP_MID.size() - 1;
 			while (l != r) {
 				int m = (l + r + 1) / 2;
-				if (JSON_MAP_MID[m].code > cc)
+				if (JSON_MAP_MID[m].code > mid)
 					r = m - 1;
 				else
 					l = m;
 			}
-			if (JSON_MAP_MID[l].code == cc)
+			if (JSON_MAP_MID[l].code == mid)
 				Submit(PROPERTY_COUNTRY, JSON_MAP_MID[l].country);
 		}
 	}
@@ -228,7 +231,7 @@ namespace AIS {
 		U(msg, PROPERTY_TYPE, 0, 6);
 		U(msg, PROPERTY_REPEAT, 6, 2);
 		U(msg, PROPERTY_MMSI, 8, 30);
-		COUNTRY(msg);
+		MMSI(msg);
 
 		switch (msg.type()) {
 		case 1:
