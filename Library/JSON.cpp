@@ -160,6 +160,7 @@ const std::vector<std::vector<std::string>> JSONmap = {
 	{ "mmsiseq2", "", "", "" },
 	{ "mmsiseq3", "", "", "" },
 	{ "mmsiseq4", "", "", "" },
+	{ "mmsi_text", "", "", "" },
 	{ "model", "", "", "" },
 	{ "month", "", "", "" },
 	{ "mothership_mmsi", "", "", "" },
