@@ -233,6 +233,9 @@ std::shared_ptr<AIS::Model> createModel(int m) {
 void parseTags(int& mode, std::string& s) {
 	for (char c : s) {
 		switch (toupper(c)) {
+		case 'M':
+			mode |= 4;
+			break;
 		case 'T':
 			mode |= 2;
 			break;

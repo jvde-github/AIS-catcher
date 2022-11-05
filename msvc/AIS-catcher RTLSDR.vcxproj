@@ -38,6 +38,7 @@
     <ClCompile Include="..\IO\Network.cpp" />
     <ClCompile Include="..\Library\JSON.cpp" />
     <ClCompile Include="..\Library\AIS.cpp" />
+    <ClCompile Include="..\Library\Message.cpp" />
     <ClCompile Include="..\Library\JSONAIS.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
@@ -67,6 +68,7 @@
     <ClInclude Include="..\IO\IO.h" />
     <ClInclude Include="..\IO\Network.h" />
     <ClInclude Include="..\Library\AIS.h" />
+    <ClInclude Include="..\Library\Message.h" />
     <ClInclude Include="..\Library\Common.h" />
     <ClInclude Include="..\Library\Signals.h" />
     <ClInclude Include="..\Library\Stream.h" />

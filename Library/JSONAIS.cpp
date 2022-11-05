@@ -231,7 +231,10 @@ namespace AIS {
 		U(msg, PROPERTY_TYPE, 0, 6);
 		U(msg, PROPERTY_REPEAT, 6, 2);
 		U(msg, PROPERTY_MMSI, 8, 30);
-		MMSI(msg);
+
+		if (tag.mode & 4) {
+			MMSI(msg);
+		}
 
 		switch (msg.type()) {
 		case 1:
