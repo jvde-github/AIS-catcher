@@ -46,16 +46,17 @@ namespace AIS {
 		msg.Stamp();
 
 		for (int i = 0, l = commas[4]; l < commas[5] - 1; i++, l++) {
-			msg.setLetter(i, sentence[l] >= 96 ? sentence[l] - 56 : sentence[l] - 48);
+			msg.setLetter(i, sentence[l]);
 		}
 
 		Send(&msg, 1, tag);
 	}
 
-	// continue collect full NMEA line in `sentence` and store location of commas 'locs'
+	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
 		for (int j = 0; j < len; j++) {
 			for (int i = 0; i < data[j].size; i++) {
+
 				char c = ((char*)data[j].data)[i];
 
 				if (index >= header.size()) {

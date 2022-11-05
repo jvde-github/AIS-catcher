@@ -29,14 +29,17 @@ namespace AIS {
 		uint16_t w = (b0 << 8) | b1;
 
 		const int mask = (1 << 6) - 1;
-		return (w >> (16 - 6 - y)) & mask;
+		int l = (w >> (16 - 6 - y)) & mask;
+
+		return l < 40 ? (char)(l + 48) : (char)(l + 56);
+
 	}
 
 	void Message::setLetter(int pos, char c) {
 		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
 
 		if (length < (pos + 1) * 6) length = (pos + 1) * 6;
-		c &= 0b00111111;
+		c = (c >= 96 ? c - 56 : c - 48) & 0b00111111;
 
 		switch (y) {
 		case 0:
