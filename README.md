@@ -31,7 +31,7 @@ Windows Binaries and Building instructions for many systems are provided below. 
 
 ## What's new in development version
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
-- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to unit test the decoder. Use the model ``-m 5``, e.g.:
+- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to unit test the JSON decoder which is work in progress. Use the model ``-m 5``, e.g.:
 ```console
 echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
 ```
