@@ -30,8 +30,24 @@ Windows Binaries and Building instructions for many systems are provided below. 
 - The latest version includes a first implementation that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 
 ## What's new in development version
-- Addition of country field to JSON output (mapped from MMSI code).
-
+- Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
+- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to unit test the decoder. Use the model ``-m 5``, e.g.:
+```console
+echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
+```
+which produces
+```json
+{"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
+```
+Which can be compared for example against the output of ``gpsdecode``:
+```console
+echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78' | gpsdecode
+```
+which produces:
+```json
+{"class":"AIS","device":"stdin","type":3,"repeat":0,"mmsi":477213600,"scaled":true,"status":5,"status_text":"Moored","turn":0,"speed":0.0,"accuracy":true,"lon":126.605467,"lat":37.460617,"course":39.0,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
+```
+Multiple line NMEA messages are not implemented yet.
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
