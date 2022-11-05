@@ -17,4 +17,44 @@
 
 #include "Message.h"
 
-namespace AIS {}
+namespace AIS {
+
+	// dealing with 6 bit letters
+	char Message::getLetter(int pos, int nBytes) const {
+		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+
+		// zero padding
+		uint8_t b0 = x < nBytes ? data[x] : 0;
+		uint8_t b1 = x + 1 < nBytes ? data[(int)(x + 1)] : 0;
+		uint16_t w = (b0 << 8) | b1;
+
+		const int mask = (1 << 6) - 1;
+		return (w >> (16 - 6 - y)) & mask;
+	}
+
+	void Message::setLetter(int pos, char c) {
+		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+
+		if (length < (pos + 1) * 6) length = (pos + 1) * 6;
+		c &= 0b00111111;
+
+		switch (y) {
+		case 0:
+			data[x] = (data[x] & 0b00000011) | (c << 2);
+			break;
+		case 2:
+			data[x] = (data[x] & 0b11000000) | c;
+			break;
+		case 4:
+			data[x] = (data[x] & 0b11110000) | (c >> 2);
+			data[x + 1] = (data[x + 1] & 0b00111111) | ((c & 3) << 6);
+			break;
+		case 6:
+			data[x] = (data[x] & 0b11111100) | (c >> 4);
+			data[x + 1] = (data[x + 1] & 0b00001111) | ((c & 15) << 4);
+			break;
+		default:
+			break;
+		}
+	}
+}

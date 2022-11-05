@@ -25,6 +25,7 @@
 #include "Common.h"
 #include "Stream.h"
 #include "AIS.h"
+#include "NMEA.h"
 #include "Utilities.h"
 
 #include "Device/Device.h"
@@ -174,6 +175,14 @@ namespace AIS {
 		DSP::Deinterleave<FLOAT32> S_a, S_b;
 
 		Util::ConvertRAW convert;
+
+	public:
+		void buildModel(char, char, int, bool, Device::Device*);
+	};
+
+	// Standard demodulation model for FM discriminator input
+	class ModelNMEA : public Model {
+		NMEA nmea;
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);

@@ -119,13 +119,12 @@ namespace AIS {
 
 	void JSONAIS::T(const AIS::Message& msg, int p, int start, int len) {
 		std::string text = msg.getText(start, len);
-		while (text[text.length() - 1] == ' ') text.resize(text.length() - 1);
+		while (!text.empty() && text[text.length() - 1] == ' ') text.resize(text.length() - 1);
 		Submit(p, text);
 	}
 
 	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len) {
 		std::string text = msg.getText(start, len);
-		while (text[text.length() - 1] == ' ') text.resize(text.length() - 1);
 		Submit(p, text);
 	}
 
