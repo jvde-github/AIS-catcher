@@ -17,39 +17,79 @@
 
 #include "NMEA.h"
 
-#ifdef _WIN32
-#pragma warning(disable : 4996)
-#endif
-
 namespace AIS {
 
 	void NMEA::reset() {
-		sentence.clear();
+		aivdm.reset();
 		index = 0;
-		commas.resize(0);
 	}
 
-	void NMEA::parse(TAG& tag) {
-		if (commas.size() != 6) {
-			std::cerr << "NMEA: Header ok but message has invalid structure: " << sentence << std::endl;
+	void NMEA::clean(char c) {
+		// TO DO: clear only lines for channel 'c'
+		multiline.resize(0);
+	}
+
+	void NMEA::process(TAG& tag) {
+		if (aivdm.commas.size() != 6) {
+			std::cerr << "NMEA: Header ok but message has invalid structure (commas): " << aivdm.sentence << std::endl;
 			return;
 		}
 
-		if (sentence[commas[0]] != '1') {
-			// std::cerr << "NMEA: not implemented: " << sentence << std::endl;
+		if (aivdm.nSentences() == 1) {
+			msg.clear();
+			msg.Stamp();
+			processline(aivdm);
+			Send(&msg, 1, tag);
 			return;
 		}
 
+		// multiline message, firsly check whether we can find previous lines with the same code, channel and number of sentences
+		// we run backwards to find the last addition
+		int prevSeq = 0;
+		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
+			const AIVDM& p = *it;
+			if (p.channel() == aivdm.channel()) {
+				if (p.nSentences() != aivdm.nSentences() || aivdm.nCode() != p.nCode()) {
+					std::cerr << "NMEA: multiline NMEA message not correct, mismatch in code and/or number of sentences [" << aivdm.sentence << " vs " << p.sentence << "]." << std::endl;
+					clean(aivdm.channel());
+					return;
+				}
+				else { // found and we store the previous sequence number
+					prevSeq = p.nSequence();
+					break;
+				}
+			}
+		}
+
+		if (aivdm.nSequence() != prevSeq + 1) {
+			std::cerr << "NMEA: missing previous line in multiline message [" << aivdm.sentence << "]." << std::endl;
+			clean(aivdm.channel());
+			return;
+		}
+
+		multiline.push_back(aivdm);
+
+		if (aivdm.nSequence() != aivdm.nSentences()) return;
+
+		// multiline and we are complete by now and in the right order
 		msg.clear();
-		msg.sentence.push_back(sentence);
-		msg.channel = sentence[commas[3]];
 		msg.Stamp();
-
-		for (int i = 0, l = commas[4]; l < commas[5] - 1; i++, l++) {
-			msg.setLetter(i, sentence[l]);
-		}
+		for (auto it = multiline.begin(); it != multiline.end(); it++)
+			if (it->channel() == aivdm.channel())
+				processline(*it);
 
 		Send(&msg, 1, tag);
+		clean(aivdm.channel());
+	}
+
+	void NMEA::processline(const AIVDM& a) {
+
+		msg.sentence.push_back(a.sentence);
+		msg.channel = a.sentence[a.commas[3]];
+
+		for (int l = a.commas[4]; l < a.commas[5] - 1; l++) {
+			msg.appendLetter(a.sentence[l]);
+		}
 	}
 
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
@@ -61,18 +101,18 @@ namespace AIS {
 
 				if (index >= header.size()) {
 					if (c != '\n' && c != '\r') {
-						sentence += c;
+						aivdm.sentence += c;
 						index++;
-						if (c == ',') commas.push_back(index);
+						if (c == ',') aivdm.commas.push_back(index);
 					}
 					else {
-						parse(tag);
+						process(tag);
 						reset();
 					}
 				}
 				else { // we are in process of detecting "!AIVDM" header
 					if (header[index] == c) {
-						sentence += c;
+						aivdm.sentence += c;
 						index++;
 					}
 					else
