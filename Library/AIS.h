@@ -52,7 +52,6 @@ namespace AIS {
 		FLOAT32 level = 0.0f;
 
 		void NextState(State s, int pos);
-		static char NMEAchar(int i);
 		int NMEAchecksum(const std::string&);
 
 		void sendNMEA(TAG& tag);
@@ -64,8 +63,6 @@ namespace AIS {
 		Message msg;
 
 	public:
-		Decoder();
-
 		virtual void setChannel(char c) { channel = c; }
 		void Receive(const FLOAT32* data, int len, TAG& tag);
 

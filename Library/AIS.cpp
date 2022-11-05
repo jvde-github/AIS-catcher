@@ -27,12 +27,6 @@
 #endif
 
 namespace AIS {
-	Decoder::Decoder() {
-	}
-
-	char Decoder::NMEAchar(int i) {
-		return i < 40 ? (char)(i + 48) : (char)(i + 56);
-	}
 
 	int Decoder::NMEAchecksum(const std::string& s) {
 		int check = 0;
@@ -83,7 +77,7 @@ namespace AIS {
 			sentence += (nSentences > 1 ? std::to_string(MessageID) : "") + comma + channel + comma;
 
 			for (int i = 0; l < nAISletters && i < 56; i++, l++)
-				sentence += NMEAchar(msg.getLetter(l, nBytes));
+				sentence += msg.getLetter(l, nBytes);
 
 			sentence += comma + std::to_string((nSentences > 1 && s == nSentences - 1) ? nAISletters * 6 - nBits : 0);
 

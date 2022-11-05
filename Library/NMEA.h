@@ -28,14 +28,11 @@ namespace AIS {
 	class NMEA : public SimpleStreamInOut<RAW, Message>, public SignalIn<DecoderSignals> {
 
 		Message msg;
-		char channel = '?';
 
 		const std::string header = "!AIVDM";
 		std::string sentence;
 		std::vector<int> commas;
 		int index = 0;
-
-		char NMEAchar(int i) { return i < 40 ? (char)(i + 48) : (char)(i + 56); }
 
 		void parse(TAG& tag);
 		void reset();
