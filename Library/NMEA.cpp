@@ -23,61 +23,60 @@
 
 namespace AIS {
 
-	void NMEA::split(std::string str, std::vector<std::string>& tokens) {
-		int at;
-		while (((at = str.find(',')) != std::string::npos)) {
-			tokens.push_back(str.substr(0, at));
-			str = str.substr(at + 1, str.size() - (at + 1));
-		}
-		tokens.push_back(str);
+	void NMEA::reset() {
+		sentence.clear();
+		index = 0;
+		commas.resize(0);
 	}
 
 	void NMEA::parse(TAG& tag) {
-		std::vector<std::string> tokens;
-		split(sentence, tokens);
-
-		if (tokens.size() != 7) {
+		if (commas.size() != 6) {
 			std::cerr << "NMEA: Header ok but message has invalid structure: " << sentence << std::endl;
 			return;
 		}
 
-		if (tokens[1] != "1") {
+		if (sentence[commas[0]] != '1') {
 			// std::cerr << "NMEA: not implemented: " << sentence << std::endl;
 			return;
 		}
 
 		msg.clear();
 		msg.sentence.push_back(sentence);
-		msg.channel = tokens[4][0];
+		msg.channel = sentence[commas[3]];
 		msg.Stamp();
 
-		const std::string& data = tokens[5];
-		for (int i = 0; i < data.size(); i++)
-			msg.setLetter(i, data[i] >= 96 ? data[i] - 56 : data[i] - 48);
+		for (int i = 0, l = commas[4]; l < commas[5] - 1; i++, l++) {
+			msg.setLetter(i, sentence[l] >= 96 ? sentence[l] - 56 : sentence[l] - 48);
+		}
 
 		Send(&msg, 1, tag);
 	}
 
+	// continue collect full NMEA line in `sentence` and store location of commas 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
-		for (int i = 0; i < data->size; i++) {
-			char c = ((char*)data->data)[i];
+		for (int j = 0; j < len; j++) {
+			for (int i = 0; i < data[j].size; i++) {
+				char c = ((char*)data[j].data)[i];
 
-			if (index == header.size() - 1) {
-				if (c != '\n' && c != '\r')
-					sentence += c;
-				else {
-					parse(tag);
-					sentence.clear();
-					index = 0;
+				if (index >= header.size()) {
+					if (c != '\n' && c != '\r') {
+						sentence += c;
+						index++;
+						if (c == ',') commas.push_back(index);
+					}
+					else {
+						parse(tag);
+						reset();
+					}
 				}
-			}
-			else {
-				if (header[index] == c) {
-					sentence += c;
-					index++;
+				else { // we are in process of detecting "!AIVDM" header
+					if (header[index] == c) {
+						sentence += c;
+						index++;
+					}
+					else
+						reset();
 				}
-				else
-					sentence.clear();
 			}
 		}
 	}

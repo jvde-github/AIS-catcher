@@ -32,12 +32,13 @@ namespace AIS {
 
 		const std::string header = "!AIVDM";
 		std::string sentence;
+		std::vector<int> commas;
+		int index = 0;
 
 		char NMEAchar(int i) { return i < 40 ? (char)(i + 48) : (char)(i + 56); }
 
-		int index = 0;
 		void parse(TAG& tag);
-		void split(std::string str, std::vector<std::string>& tokens);
+		void reset();
 
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);
