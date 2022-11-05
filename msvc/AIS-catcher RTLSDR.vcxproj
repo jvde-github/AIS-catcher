@@ -40,6 +40,7 @@
     <ClCompile Include="..\Library\AIS.cpp" />
     <ClCompile Include="..\Library\Message.cpp" />
     <ClCompile Include="..\Library\JSONAIS.cpp" />
+    <ClCompile Include="..\Library\NMEA.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
   </ItemGroup>
@@ -72,6 +73,7 @@
     <ClInclude Include="..\Library\Common.h" />
     <ClInclude Include="..\Library\Signals.h" />
     <ClInclude Include="..\Library\Stream.h" />
+    <ClInclude Include="..\Library\NMEA.h" />
     <ClInclude Include="..\Library\TCP.h" />
     <ClInclude Include="..\Library\Utilities.h" />
   </ItemGroup>

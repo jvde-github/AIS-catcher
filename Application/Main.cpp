@@ -222,6 +222,9 @@ std::shared_ptr<AIS::Model> createModel(int m) {
 	case 4:
 		return std::make_shared<AIS::ModelChallenger>();
 		break;
+	case 5:
+		return std::make_shared<AIS::ModelNMEA>();
+		break;
 	default:
 		throw "Internal error: Model not implemented in this version. Check in later.";
 		break;
@@ -335,7 +338,7 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'm':
 				Assert(count == 1, param, "Requires one parameter [model number].");
-				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 4)));
+				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 5)));
 				break;
 			case 'M':
 				Assert(count <= 1, param, "Requires zero or one parameter [DT].");

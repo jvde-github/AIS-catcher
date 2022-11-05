@@ -546,4 +546,11 @@ namespace AIS {
 
 		return;
 	}
+
+	void ModelNMEA::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+		setName("NMEA input");
+		device = dev;
+		*device >> nmea >> output;
+	}
+
 }
