@@ -47,7 +47,6 @@ which produces:
 ```json
 {"class":"AIS","device":"stdin","type":3,"repeat":0,"mmsi":477213600,"scaled":true,"status":5,"status_text":"Moored","turn":0,"speed":0.0,"accuracy":true,"lon":126.605467,"lat":37.460617,"course":39.0,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-NMEA messages stretching over multiple AIVDM lines are not implemented yet.
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
