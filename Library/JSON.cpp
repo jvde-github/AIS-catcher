@@ -24,8 +24,16 @@ std::string JSONbuildString::jsonify(const std::string& str) {
 	std::string out;
 	out.reserve(str.size());
 	for (char c : str) {
-		if (c == '\"') out += "\\";
-		out += c;
+		switch (c) {
+		case '\"':
+			out += "\\\"";
+			break;
+		case '\\':
+			out += "\\\\";
+			break;
+		default:
+			out += c;
+		}
 	}
 	return out;
 }
