@@ -25,31 +25,31 @@
 
 namespace AIS {
 
-	struct AIVDM {
-		std::string sentence;
-		std::vector<int> commas;
-
-		void reset() {
-			sentence.clear();
-			commas.resize(0);
-		}
-		char channel() const { return sentence[commas[3]]; }
-		int nSentences() const { return sentence[commas[0]] - '0'; }
-		int nSequence() const { return sentence[commas[1]] - '0'; };
-		int nCode() const { return sentence[commas[2]] - '0'; };
-	};
 
 	class NMEA : public SimpleStreamInOut<RAW, Message>, public SignalIn<DecoderSignals> {
 		Message msg;
 
+		struct AIVDM {
+			std::string sentence;
+			std::vector<int> commas;
+
+			void reset() {
+				sentence.clear();
+				commas.resize(0);
+			}
+			char channel() const { return sentence[commas[3]]; }
+			int count() const { return sentence[commas[0]] - '0'; }
+			int number() const { return sentence[commas[1]] - '0'; };
+			int ID() const { return sentence[commas[2]] - '0'; };
+		} aivdm;
+
 		std::vector<AIVDM> multiline;
 
 		const std::string header = "!AIVDM";
-		AIVDM aivdm;
 		int index = 0;
 
 		void process(TAG& tag);
-		void processline(const AIVDM& a);
+		void addline(const AIVDM& a);
 		void reset();
 		void clean(char);
 
