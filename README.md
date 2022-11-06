@@ -215,7 +215,7 @@ Where ``secret-key`` should be your password and ``callsign`` your callsign.  Th
 ```console
 AIS-catcher -H https://ais.chaos-consulting.de/shipin/index.php USERPWD "Station:Password" GZIP on INTERVAL 5
 ```
-Notice that this server requires authentication with a station name and password and accepts JSON with gzip encoding which significantly reduces bandwidth.
+Notice that this server requires authentication with a station name and password and accepts JSON with gzip encoding which significantly reduces bandwidth. The supported protocol switches are ``AISCATCHER`` (default), ``MINIMAL`` (NMEA lines and meta data), ``LINES`` (one JSON message per line), ``APRS`` (to submit to APRS.fi).
 
 As a final comment, to build AIS-catcher with HTTP support, please install the following libraries before running cmake:
 ```console
