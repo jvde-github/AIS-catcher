@@ -457,10 +457,10 @@ namespace AIS {
 				U(msg, PROPERTY_DEST2, 104, 30); // check
 			}
 			else {
-				SL(msg, PROPERTY_NE_LON, 69, 18, 1.0/600.0, 0);
-				SL(msg, PROPERTY_NE_LAT, 87, 17, 1.0/600.0, 0);
-				SL(msg, PROPERTY_SW_LON, 104, 18, 1.0/600.0, 0);
-				SL(msg, PROPERTY_SW_LAT, 122, 17, 1.0/600.0, 0);
+				SL(msg, PROPERTY_NE_LON, 69, 18, 1.0 / 600.0, 0);
+				SL(msg, PROPERTY_NE_LAT, 87, 17, 1.0 / 600.0, 0);
+				SL(msg, PROPERTY_SW_LON, 104, 18, 1.0 / 600.0, 0);
+				SL(msg, PROPERTY_SW_LAT, 122, 17, 1.0 / 600.0, 0);
 			}
 			B(msg, PROPERTY_ADDRESSED, 139, 1);
 			B(msg, PROPERTY_BAND_A, 140, 1);
