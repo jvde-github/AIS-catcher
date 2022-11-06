@@ -22,14 +22,8 @@ Only use this software in regions where such use is permitted.
 
 Windows Binaries and Building instructions for many systems are provided below. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
-## What's new in version 0.29?
-
-- ``-o 4`` is now ``-o 5`` and ``-o 4`` is a new intermediate level that shows a subset of the AIS message fields that are relevant for map plotting.
-- Experimental switch ``-go AFC_WIDE on`` to make the decoder more robust for thermal drift in cheaper RTL-SDR dongles following [this](https://github.com/jvde-github/AIS-catcher-for-Android/issues/6) discussion. Don't use this unless you have to because of a dongle suffering from thermal drift hampering reception. It will come at a cost of sensitivity. My test database shows 50% improvement in message rate of the default decoder over a standard FM-based decoder, which reduces to 30% with this switch activated. See also the section on [Frequency Correction](https://github.com/jvde-github/AIS-catcher#frequency-offset) for RTL-SDR dongles.
-- The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, the latest version now uses by default  a simple droop compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. More information can be found [here](https://github.com/jvde-github/AIS-catcher#a-note-on-device-sample-rates)
-- The latest version includes a first implementation that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
-
-## What's new in development version
+## What's new?
+- As per version 0.29 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - AIS-catcher can decode NMEA lines. Not very useful but it provides a way to unit test the JSON decoder which is work in progress. Use the model ``-m 5``, e.g.:
 ```console
