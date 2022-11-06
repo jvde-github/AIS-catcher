@@ -273,6 +273,10 @@ namespace IO {
 					setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::AISCATCHER;
 				}
+				else if (arg == "MINIMAL") {
+					setMap(JSON_DICT_MINIMAL);
+					protocol = PROTOCOL::AISCATCHER;
+				}
 				else if (arg == "LIST") {
 					setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::LIST;

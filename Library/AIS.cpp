@@ -102,7 +102,7 @@ namespace AIS {
 			nBytes = (nBits + 7) / 8;
 
 			// calculate the power of the signal in dB, if requested
-			if (tag.mode & 1) tag.level = 10.0f * log10(tag.level);
+			if (tag.mode & 1 && tag.level != 0.0) tag.level = 10.0f * log10(tag.level);
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			sendNMEA(tag);
