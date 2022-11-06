@@ -43,9 +43,9 @@ namespace AIS {
 			return;
 		}
 
-		// multiline message, firstly check whether we can find previous lines with the same code, channel and number of sentences
+		// multiline message, firstly check whether we can find previous lines with the same ID, channel and line count
 		// we run backwards to find the last addition
-		int prevSeq = 0;
+		int lastNumber = 0;
 		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
 			const AIVDM& p = *it;
 			if (p.channel() == aivdm.channel()) {
@@ -55,13 +55,13 @@ namespace AIS {
 					return;
 				}
 				else { // found and we store the previous sequence number
-					prevSeq = p.number();
+					lastNumber = p.number();
 					break;
 				}
 			}
 		}
 
-		if (aivdm.number() != prevSeq + 1) {
+		if (aivdm.number() != lastNumber + 1) {
 			std::cerr << "NMEA: missing previous line in multiline message [" << aivdm.sentence << "]." << std::endl;
 			clean(aivdm.channel());
 			return;
