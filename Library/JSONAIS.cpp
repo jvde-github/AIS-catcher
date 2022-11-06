@@ -457,10 +457,10 @@ namespace AIS {
 				U(msg, PROPERTY_DEST2, 104, 30); // check
 			}
 			else {
-				SL(msg, PROPERTY_NE_LON, 69, 18, 0.1, 0);
-				SL(msg, PROPERTY_NE_LAT, 87, 17, 0.1, 0);
-				SL(msg, PROPERTY_SW_LON, 104, 18, 0.1, 0);
-				SL(msg, PROPERTY_SW_LAT, 122, 17, 0.1, 0);
+				SL(msg, PROPERTY_NE_LON, 69, 18, 1.0/600.0, 0);
+				SL(msg, PROPERTY_NE_LAT, 87, 17, 1.0/600.0, 0);
+				SL(msg, PROPERTY_SW_LON, 104, 18, 1.0/600.0, 0);
+				SL(msg, PROPERTY_SW_LAT, 122, 17, 1.0/600.0, 0);
 			}
 			B(msg, PROPERTY_ADDRESSED, 139, 1);
 			B(msg, PROPERTY_BAND_A, 140, 1);
@@ -535,7 +535,7 @@ namespace AIS {
 		"Reserved for future use",
 		"Reserved for future use",
 		"AIS-SART is active",
-		"Not defined (default)"
+		"Not defined"
 	};
 
 	const std::vector<std::string> JSON_MAP_EPFD = {
@@ -657,7 +657,7 @@ namespace AIS {
 		"Default, Type of Aid to Navigation not specified",
 		"Reference point",
 		"RACON (radar transponder marking a navigation hazard)",
-		"Fixed structure off shore, such as oil platforms, wind farms, rigs.",
+		"Fixed offshore structure",
 		"Spare, Reserved for future use.",
 		"Light, without sectors",
 		"Light, with sectors",
