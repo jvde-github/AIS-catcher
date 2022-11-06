@@ -35,33 +35,33 @@ namespace AIS {
 			return;
 		}
 
-		if (aivdm.nSentences() == 1) {
+		if (aivdm.count() == 1) {
 			msg.clear();
 			msg.Stamp();
-			processline(aivdm);
+			addline(aivdm);
 			Send(&msg, 1, tag);
 			return;
 		}
 
-		// multiline message, firsly check whether we can find previous lines with the same code, channel and number of sentences
+		// multiline message, firstly check whether we can find previous lines with the same code, channel and number of sentences
 		// we run backwards to find the last addition
 		int prevSeq = 0;
 		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
 			const AIVDM& p = *it;
 			if (p.channel() == aivdm.channel()) {
-				if (p.nSentences() != aivdm.nSentences() || aivdm.nCode() != p.nCode()) {
+				if (p.count() != aivdm.count() || aivdm.ID() != p.ID()) {
 					std::cerr << "NMEA: multiline NMEA message not correct, mismatch in code and/or number of sentences [" << aivdm.sentence << " vs " << p.sentence << "]." << std::endl;
 					clean(aivdm.channel());
 					return;
 				}
 				else { // found and we store the previous sequence number
-					prevSeq = p.nSequence();
+					prevSeq = p.number();
 					break;
 				}
 			}
 		}
 
-		if (aivdm.nSequence() != prevSeq + 1) {
+		if (aivdm.number() != prevSeq + 1) {
 			std::cerr << "NMEA: missing previous line in multiline message [" << aivdm.sentence << "]." << std::endl;
 			clean(aivdm.channel());
 			return;
@@ -69,20 +69,21 @@ namespace AIS {
 
 		multiline.push_back(aivdm);
 
-		if (aivdm.nSequence() != aivdm.nSentences()) return;
+		if (aivdm.number() != aivdm.count()) return;
 
-		// multiline and we are complete by now and in the right order
+		// multiline messages are now complete and in the right order
+		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp();
 		for (auto it = multiline.begin(); it != multiline.end(); it++)
 			if (it->channel() == aivdm.channel())
-				processline(*it);
+				addline(*it);
 
 		Send(&msg, 1, tag);
 		clean(aivdm.channel());
 	}
 
-	void NMEA::processline(const AIVDM& a) {
+	void NMEA::addline(const AIVDM& a) {
 
 		msg.sentence.push_back(a.sentence);
 		msg.channel = a.sentence[a.commas[3]];
