@@ -25,7 +25,7 @@ Windows Binaries and Building instructions for many systems are provided below. 
 ## What's new?
 - As per version 0.29 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
-- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to unit test the JSON decoder which is work in progress. Use the model ``-m 5``, e.g.:
+- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to move the JSON analysis to the server side (send over NMEA and minimal meta data) or unit test the JSON decoder which is the prime reason for the feature. Use the model ``-m 5``, e.g.:
 ```console
 echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
 ```
