@@ -625,12 +625,12 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 ## To do
 
 - On going: testing and improving receiver, seems to be some room for certain Class broadcast
-
-- Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
+- CMake issue with zlib on MACOS
 - Unit testing of the JSON decoder
 - Record raw input signal periodically to allow for debugging of performance
 - <del>Allow for verbose updates even if running from stdin</del>
 - <del>Adding additional messages to the JSON decoder (Message 8, 6, etc).</del>
+- Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
 - Implement websocket interface, store/write configuration files (JSON)
 - Channel AB+CD for high sample rates
 - Optional filter for invalid messages
