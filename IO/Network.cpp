@@ -152,18 +152,18 @@ namespace IO {
 		if (protocol == PROTOCOL::AISCATCHER) {
 			msg += "{\n\t\"protocol\": \"jsonaiscatcher\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			msg += "\n\t\"stationid\": \"" + stationid + "\",";
+			msg += "\n\t\"stationid\": \"" + jsonify(stationid) + "\",";
 			msg += "\n\t\"receiver\":\n\t\t{";
 			msg += "\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
 			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
-			msg += "\n\t\t\"engine\": \"" + model + "\",";
-			msg += "\n\t\t\"setting\": \"" + model_setting + "\"";
+			msg += "\n\t\t\"engine\": \"" + jsonify(model) + "\",";
+			msg += "\n\t\t\"setting\": \"" + jsonify(model_setting) + "\"";
 			msg += "\n\t\t},";
 			msg += "\n\t\"device\":\n\t\t{";
-			msg += "\n\t\t\"product\": \"" + product + "\",";
-			msg += "\n\t\t\"vendor\": \"" + vendor + "\",";
-			msg += "\n\t\t\"serial\": \"" + serial + "\",";
-			msg += "\n\t\t\"setting\": \"" + device_setting + "\"";
+			msg += "\n\t\t\"product\": \"" + jsonify(product) + "\",";
+			msg += "\n\t\t\"vendor\": \"" + jsonify(vendor) + "\",";
+			msg += "\n\t\t\"serial\": \"" + jsonify(serial) + "\",";
+			msg += "\n\t\t\"setting\": \"" + jsonify(device_setting) + "\"";
 			msg += "\n\t\t},";
 			msg += "\n\t\"msgs\": [";
 
@@ -182,7 +182,7 @@ namespace IO {
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"groups\": [";
 			msg += "\n\t{";
-			msg += "\n\t\t\"path\": [{ \"name\": \"" + stationid + "\", \"url\" : \"" + url + "\" }],";
+			msg += "\n\t\t\"path\": [{ \"name\": \"" + jsonify(stationid) + "\", \"url\" : \"" + jsonify(url) + "\" }],";
 
 			msg += "\n\t\t\"msgs\": [";
 
