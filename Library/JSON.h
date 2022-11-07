@@ -94,6 +94,7 @@ private:
 		return ",";
 	}
 
+protected:
 	std::string jsonify(const std::string& str);
 	virtual void Ready() {}
 
