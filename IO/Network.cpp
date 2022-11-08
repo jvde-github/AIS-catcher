@@ -80,11 +80,9 @@ namespace IO {
 			headers = curl_slist_append(headers, "Content-encoding: gzip");
 		}
 
-		const void* ptr = gzip ? zip.getOutputPtr() : msg.c_str();
-		const int len = gzip ? zip.getOutputLength() : msg.length();
 
 		if (multipart)
-			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, ptr, CURLFORM_CONTENTSLENGTH, len, CURLFORM_END);
+			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
 		else {
 			headers = curl_slist_append(headers, "Content-Type: application/json");
 		}
@@ -100,8 +98,8 @@ namespace IO {
 			try {
 
 				if (!multipart) {
-					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDS, ptr))) throw r;
-					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, len))) throw r;
+					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDS, gzip ? zip.getOutputPtr() : msg.c_str()))) throw r;
+					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, gzip ? zip.getOutputLength() : msg.length()))) throw r;
 				}
 				else if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post)))
 					throw r;
@@ -125,6 +123,7 @@ namespace IO {
 		curl_easy_cleanup(ch);
 
 		if (headers) curl_slist_free_all(headers);
+		if (multipart) curl_formfree(post);
 
 		if (retcode != 200) {
 			std::cerr << "HTTP: server " << url << " returned " << retcode << std::endl;
@@ -137,7 +136,7 @@ namespace IO {
 	}
 
 	void HTTP::post() {
-		if (!queue.size()) return;
+		// if (!queue.size()) return;
 
 		std::list<std::string> send_list;
 
