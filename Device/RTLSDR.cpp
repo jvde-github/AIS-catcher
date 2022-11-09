@@ -56,7 +56,7 @@ namespace Device {
 	}
 
 	void RTLSDR::Play() {
-		fifo.Init(BUFFER_SIZE, 2);
+		fifo.Init(BUFFER_SIZE, BUFFER_COUNT);
 
 		applySettings();
 
@@ -190,6 +190,9 @@ namespace Device {
 
 		if (option == "TUNER") {
 			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);
+		}
+		else if (option == "BUFFER_COUNT") {
+			BUFFER_COUNT = Util::Parse::Integer(arg, 1, 100);
 		}
 		else if (option == "RTLAGC") {
 			RTL_AGC = Util::Parse::Switch(arg);
