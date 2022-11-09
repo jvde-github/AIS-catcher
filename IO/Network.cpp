@@ -136,7 +136,7 @@ namespace IO {
 	}
 
 	void HTTP::post() {
-		// if (!queue.size()) return;
+		if (!queue.size()) return;
 
 		std::list<std::string> send_list;
 

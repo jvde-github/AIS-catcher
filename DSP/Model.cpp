@@ -413,7 +413,7 @@ namespace AIS {
 		if (option == "PS_EMA") {
 			PS_EMA = Util::Parse::Switch(arg);
 		}
-		if (option == "AFC_WIDE") {
+		else if (option == "AFC_WIDE") {
 			CGF_wide = Util::Parse::Switch(arg);
 		}
 		else
