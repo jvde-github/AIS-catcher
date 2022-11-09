@@ -405,7 +405,7 @@ namespace AIS {
 			U(msg, PROPERTY_REGIONAL, 139, 4);
 			B(msg, PROPERTY_RAIM, 305, 1);
 			B(msg, PROPERTY_DTE, 306, 1);
-			U(msg, PROPERTY_ASSIGNED, 307, 1);
+			B(msg, PROPERTY_ASSIGNED, 307, 1);
 			X(msg, PROPERTY_SPARE, 308, 4);
 			break;
 		case 20:
