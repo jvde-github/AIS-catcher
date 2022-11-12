@@ -25,8 +25,12 @@ namespace AIS {
 	}
 
 	void NMEA::clean(char c) {
-		// TO DO: clear only lines for channel 'c'
-		multiline.resize(0);
+		for (auto i = multiline.begin(); i != multiline.end(); ++i) {
+			if (i->channel() == c) {
+				multiline.erase(i);
+				i--;
+			}
+		}
 	}
 
 	void NMEA::process(TAG& tag) {
@@ -101,7 +105,7 @@ namespace AIS {
 				char c = ((char*)data[j].data)[i];
 
 				if (index >= header.size()) {
-					if (c != '\n' && c != '\r') {
+					if (c != '\n' && c != '\r' && !(c == ',' && aivdm.commas.size() == 6)) {
 						aivdm.sentence += c;
 						index++;
 						if (c == ',') aivdm.commas.push_back(index);
