@@ -174,7 +174,7 @@ And finally, full decoding of the AIS message is activated via ``-o 5`` (or ``-o
 
 Meta data is not calculated by default to keep the program as light as possible when running as a server on low spec devices but can be activated with the ```-M``` switch. The calculation of signal power (in dB) and applied frequency correction (in ppm) are activated with  ``-M D``. NMEA messages are timestamped with  ``-M T`` and additional country information from the station derived from the MMSI is included in JSON output with ``-M M``. 
 
-There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, there does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great document by Eric S. Raymond.
+There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, there does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html).
 
 ### Posting messages over HTTP
 
