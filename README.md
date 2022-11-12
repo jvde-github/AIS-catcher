@@ -23,7 +23,7 @@ Only use this software in regions where such use is permitted.
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
 ## What's new?
-- As per version 0.29 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
+- As per version 0.39 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
 - AIS-catcher can decode NMEA lines. Not very useful but it provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which is the prime reason for the feature. Use the model ``-m 5``, e.g.:
@@ -118,11 +118,11 @@ The output depends on the available devices but will look something like:
 Found 1 device(s):
 0: Realtek, RTL2838UHIDIR, SN: 00000001
 ```
-A specific device can be selected with the ``d``-switch using the device number ``-d:0`` or the serial number ``-d 00000001``. If you were expecting a particular devices that are missing, you might want to try:
+A specific device can be selected with the ``d``-switch using the device number ``-d:0`` or the serial number ``-d 00000001``. If you were expecting  particular devices that are missing, you might want to try:
 ```console
 AIS-catcher -L
 ```
-which lists all devices that are supported by your software build. If particular hardware is not listed here it might be needed to rebuild AIS-catcher after installing the required supporting libraries.
+This lists all devices for which support is included. If particular hardware is not listed here, you might have to install the necessary libraries and rebuild AIS-catcher.
 
 To start AIS demodulation, print some occasional statistics (every 10 seconds) and broadcast AIS messages via UDP, we can use the following command:
 ```console
@@ -144,7 +144,7 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
 
-For RTL-SDR devices in some setups performance is sensitive to the device settings. In general a good starting point is the following:
+For RTL-SDR devices performance can be sensitive to the device settings. In general a good starting point is the following:
 ```console
 AIS-catcher -gr RTLAGC on TUNER auto
 ```
