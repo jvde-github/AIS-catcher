@@ -20,12 +20,13 @@ Only use this software in regions where such use is permitted.
 
 ## Installation
 
-Windows Binaries and Building instructions for many systems are provided below. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
+Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are available from the GitHub Container Registry.
 
 ## What's new?
 - As per version 0.29 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
-- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to move the JSON analysis to the server side (send over NMEA and minimal meta data) or unit test the JSON decoder which is the prime reason for the feature. Use the model ``-m 5``, e.g.:
+- Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
+- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which is the prime reason for the feature. Use the model ``-m 5``, e.g.:
 ```console
 echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
 ```
@@ -41,6 +42,8 @@ which produces:
 ```json
 {"class":"AIS","device":"stdin","type":3,"repeat":0,"mmsi":477213600,"scaled":true,"status":5,"status_text":"Moored","turn":0,"speed":0.0,"accuracy":true,"lon":126.605467,"lat":37.460617,"course":39.0,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
+This new function has been used to validate AIS-catcher JSON output on a file with 80K lines from [here](https://www.aishub.net/ais-dispatcher) against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html).
+
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
@@ -115,11 +118,11 @@ The output depends on the available devices but will look something like:
 Found 1 device(s):
 0: Realtek, RTL2838UHIDIR, SN: 00000001
 ```
-A specific device can be selected with the ``d``-switch using the device number ``-d:0`` or the serial number ``-d 00000001``. If you were expecting a particular device that is missing, you might want to try:
+A specific device can be selected with the ``d``-switch using the device number ``-d:0`` or the serial number ``-d 00000001``. If you were expecting a particular devices that are missing, you might want to try:
 ```console
 AIS-catcher -L
 ```
-which lists all supported devices and confirms that the executable was correctly build for your hardware.
+which lists all devices that are supported by your software build. If particular hardware is not listed here it might be needed to rebuild AIS-catcher after installing the required supporting libraries.
 
 To start AIS demodulation, print some occasional statistics (every 10 seconds) and broadcast AIS messages via UDP, we can use the following command:
 ```console
@@ -141,18 +144,18 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
 
-For RTL-SDR devices in some setups performance is highly dependent on the parameters. This could be an advantage of a SDR solution over dedicated hardware as more control over the hardware is available. A general good starting point are following settings:
+For RTL-SDR devices in some setups performance is sensitive to the device settings. In general a good starting point is the following:
 ```console
 AIS-catcher -gr RTLAGC on TUNER auto
 ```
-It has been reported that adding a  bandwidth setting of ``-a 192K`` can be beneficial in certain cases so is worthwhile to try.
-To find the best settings requires systematic experimentation changing one parameter at the time: RTLAGC on or off and besides setting TUNER to auto try a fixed tuner gain between 0 and 50. Examples on how to set device settings for other SDR hardware are provided below.
+It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try.
+To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
 ## Deep dives
 
-### Screen output
+### Message screen output
 
-The output to screen can be regulated with the ``-o`` switch. To suppress any messages to screen use ``-o 0`` or ``-q``. This can be useful if you run AIS-catcher as a background process. To show only simple and pure NMEA lines, use the switch ``-o 1`` or ``-n``. Example output:
+The output of messages to screen can be regulated with the ``-o`` switch. To suppress any messages to screen use ``-o 0`` or ``-q``. This can be useful if you run AIS-catcher as a background process. To show only simple and pure NMEA lines, use the switch ``-o 1`` or ``-n``. Example output:
 ```
 !AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03
 ```
@@ -164,20 +167,18 @@ This same information but wrapped in JSON to facilitate further processing downs
 ```json
 {"class":"AIS","device":"AIS-catcher","channel":"B","rxtime":"20220729191502","signalpower":-44.0,"ppm":0,"mmsi":230907000,"type":3,"nmea":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"]}
 ```
-Some examples on how this meta-data can be processed you can find below in the next section.
 And finally, full decoding of the AIS message is activated via ``-o 5`` (or ``-o 4`` for version 0.38 and below):
 ```json
 {"class":"AIS","device":"AIS-catcher","rxtime":"20220729191610","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,33L=LN051HQj3HhRJd7q1W=`0000,0*03"],"signalpower":-44.0,"ppm":0.000000,"type":3,"repeat":0,"mmsi":230907000,"status":0,"status_text":"Under way using engine","turn":18,"speed":8.800000,"accuracy":true,"lon":24.915239,"lat":60.148106,"course":231.000000,"heading":230,"second":52,"maneuver":0,"raim":false,"radio":0}
 ```
 
-Meta data is not calculated by default to keep the program as light as possible when running as a server on low spec devices but can be activated with the ```-M``` switch. The calculation of signal power (in dB) and applied frequency correction (in ppm) are activated with  ``-M D``. NMEA messages are timestamped with  ``-M T`` and additional country information from the station derived from the MMSI is included with ``-M M``. Hence, for the examples above this had been activated (``-M DT``). 
+Meta data is not calculated by default to keep the program as light as possible when running as a server on low spec devices but can be activated with the ```-M``` switch. The calculation of signal power (in dB) and applied frequency correction (in ppm) are activated with  ``-M D``. NMEA messages are timestamped with  ``-M T`` and additional country information from the station derived from the MMSI is included in JSON output with ``-M M``. 
 
-There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, there does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great piece of work by the open source community.
+There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc). However, there does not seem to be clear consensus yet on the format. We have tried as much as possible to align the implementation and the output with the proposal [here](https://gpsd.gitlab.io/gpsd/AIVDM.html) which is a great document by Eric S. Raymond.
 
 ### Posting messages over HTTP
 
-Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example [APRS.fi](https://aprs.fi). As per version 0.29 AIS-catcher can do this directly
-via the ``-H`` switch. For example:
+Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example [APRS.fi](https://aprs.fi). As per version 0.29 AIS-catcher can do this directly via the ``-H`` switch. For example:
 ```console
 AIS-catcher -r posterholt.raw -v 60 -H http://localhost:8000 INTERVAL 10 ID MyStation
 ```
@@ -627,22 +628,25 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- On going: testing and improving receiver, seems to be some room for certain Class broadcast
+- Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
+- Add tool to compare different receivers (more statistics than looking at message count only)
+- NMEA input: check checksum, use fillbits to set length and more tight initial parser
+- On going: testing and improving receiver, seems to be some room for certain messages
 - CMake issue with zlib on MACOS
-- Unit testing of the JSON decoder
-- Record raw input signal periodically to allow for debugging of performance
-- <del>Allow for verbose updates even if running from stdin</del>
-- <del>Adding additional messages to the JSON decoder (Message 8, 6, etc).</del>
+- RSSI refinement (measure base noise level), general more diagnostics to assess performance issues
+- Option to record raw input signal periodically to allow for debugging of performance
 - Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
 - Implement websocket interface, store/write configuration files (JSON)
 - Channel AB+CD for high sample rates
-- Optional filter for invalid messages
-- DSP: improve filters (e.g. add droop compensation, larger rate reductions), etc
-- Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
-- Testing: more set ups, assess gap with commercial equipment
+- Testing: more set ups, assess gap with commercial equipment (partially done at Meteotoren)
+- Optional filter for invalid messages, optional downsampling messages for HTTP postings
+- DSP: improve filters (e.g. add <del>droop compensation</del>, larger rate reductions), etc
 - System support and GUI: Windows, <del>Android</del>, Web interface
-- Multi-channel SDRs: validate location from signal (e.g. like MLAT)
-- Output: ZeroMQ, APRS, JSON to HTML, TCP, ...
+- Multi-channel SDRs: validate location from signal (e.g. like MLAT or using passive radar)
+- Output: ZeroMQ, <del>APRS, JSON over HTTP,</del> TCP, ...
+- <del>Allow for verbose updates even if running from stdin</del>
+- <del>Adding additional messages to the JSON decoder (Message 8, 6, etc).</del>
+- <del>(Unit) testing of the JSON decoder</del>
 - <del>Show incremental message count between verbose updates</del> 
 - <del>SpyServer support</del>
 - <del>Reporting signal strength per message and estimated frequency correction (e.g. to facilitate auto calibration ppm for rtl sdr dongles)</del>
