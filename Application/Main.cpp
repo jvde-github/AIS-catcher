@@ -658,9 +658,9 @@ int main(int argc, char* argv[]) {
 
 		if (!liveModels.size()) liveModels.push_back(createModel(2));
 
+		// Attach output
 		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? liveModels.size() : 0);
 
-		// Attach output
 		for (int i = 0; i < liveModels.size(); i++) {
 			liveModels[i]->buildModel(NMEAchannels[0], NMEAchannels[1], device->getSampleRate(), timer_on, device);
 			if (verbose) liveModels[i]->Output() >> statistics[i];
