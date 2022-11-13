@@ -41,10 +41,10 @@ namespace AIS {
 	}
 
 	void NMEA::process(TAG& tag) {
-
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
 			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "]." << std::endl;
 		}
+
 		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp();
@@ -57,22 +57,20 @@ namespace AIS {
 		// we run backwards to find the last addition
 		int lastNumber = 0;
 		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
-			const AIVDM& p = *it;
-			if (p.channel == aivdm.channel) {
-				if (p.count != aivdm.count || aivdm.ID != p.ID) {
-					std::cerr << "NMEA: multiline NMEA message not correct, mismatch in code and/or number of sentences [" << aivdm.sentence << " vs " << p.sentence << "]." << std::endl;
-					clean(aivdm.channel);
-					return;
+			if (it->channel == aivdm.channel) {
+				if (it->count != aivdm.count || aivdm.ID != it->ID) {
+					lastNumber = -1;
+					break;
 				}
 				else { // found and we store the previous sequence number
-					lastNumber = p.number;
+					lastNumber = it->number;
 					break;
 				}
 			}
 		}
 
 		if (aivdm.number != lastNumber + 1) {
-			std::cerr << "NMEA: missing previous line in multiline message [" << aivdm.sentence << "]." << std::endl;
+			std::cerr << "NMEA: incorrect multiline messages [" << aivdm.sentence << "]." << std::endl;
 			clean(aivdm.channel);
 			if (aivdm.number != 1) return;
 		}
@@ -154,7 +152,7 @@ namespace AIS {
 				case IDX_CHANNEL:
 					if (c == ',') {
 						match = true;
-						aivdm.channel = ',';
+						aivdm.channel = 'A';
 						index++;
 						break;
 					}
@@ -197,5 +195,4 @@ namespace AIS {
 			}
 		}
 	}
-
 }
