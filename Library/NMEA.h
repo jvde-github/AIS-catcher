@@ -46,8 +46,8 @@ namespace AIS {
 		} aivdm;
 
 		std::vector<AIVDM> multiline;
-
 		int index = 0;
+		char last = '\n';
 
 		void process(TAG& tag);
 		void addline(const AIVDM& a);

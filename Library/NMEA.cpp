@@ -98,22 +98,24 @@ namespace AIS {
 		msg.channel = a.channel;
 
 		for (char d : a.data) msg.appendLetter(d);
-		// if(a.count==a.number) msg.reduceLength(a.fillbits);
+		if (a.count == a.number) msg.reduceLength(a.fillbits);
 	}
-
-	const std::string r = "!AIVDM,?,?,?,?,?,?*??";
-
-	const int IDX_COUNT = 7;
-	const int IDX_NUMBER = 9;
-	const int IDX_ID = 11;
-	const int IDX_CHANNEL = 13;
-	const int IDX_DATA = 15;
-	const int IDX_FILLBITS = 17;
-	const int IDX_CRC1 = 19;
-	const int IDX_CRC2 = 20;
 
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
+		const std::string pattern = "!??VDM,?,?,?,?,?,?*??";
+
+		const int IDX_TALKER1 = 1;
+		const int IDX_TALKER2 = 2;
+		const int IDX_COUNT = 7;
+		const int IDX_NUMBER = 9;
+		const int IDX_ID = 11;
+		const int IDX_CHANNEL = 13;
+		const int IDX_DATA = 15;
+		const int IDX_FILLBITS = 17;
+		const int IDX_CRC1 = 19;
+		const int IDX_CRC2 = 20;
+
 		for (int j = 0; j < len; j++) {
 			for (int i = 0; i < data[j].size; i++) {
 
@@ -123,6 +125,13 @@ namespace AIS {
 				bool match = false;
 
 				switch (index) {
+				case IDX_TALKER1:
+					match = c == 'A' || c == 'B' || c == 'S';
+					break;
+				case IDX_TALKER2:
+					match = last == 'A' && (c == 'B' || c == 'D' || c == 'I' || c == 'N' || c == 'R' || c == 'S' || c == 'T' || c == 'X');
+					match = match || (c == 'S' && last == 'B') || (c == 'A' && last == 'S');
+					break;
 				case IDX_COUNT:
 					match = std::isdigit(c);
 					if (match) { aivdm.count = c - '0'; }
@@ -145,7 +154,7 @@ namespace AIS {
 				case IDX_CHANNEL:
 					if (c == ',') {
 						match = true;
-						aivdm.channel = '?';
+						aivdm.channel = ',';
 						index++;
 						break;
 					}
@@ -178,12 +187,13 @@ namespace AIS {
 					}
 					break;
 				default:
-					match = c == r[index];
+					match = c == pattern[index];
 					break;
 				}
 
 				index++;
-				if (!match || index >= r.size()) { reset(); }
+				if (!match || index >= pattern.size()) { reset(); }
+				last = c;
 			}
 		}
 	}
