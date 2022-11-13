@@ -251,7 +251,7 @@ namespace AIS {
 			E(msg, PROPERTY_MANEUVER, 143, 2);
 			X(msg, PROPERTY_SPARE, 145, 3);
 			B(msg, PROPERTY_RAIM, 148, 1);
-			U(msg, PROPERTY_RADIO, 149, 19);
+			U(msg, PROPERTY_RADIO, 149, MIN(19, MAX(msg.length - 149, 0)));
 			break;
 		case 4:
 		case 11:
@@ -413,17 +413,17 @@ namespace AIS {
 			U(msg, PROPERTY_NUMBER1, 52, 4);
 			U(msg, PROPERTY_TIMEOUT1, 56, 3);
 			U(msg, PROPERTY_INCREMENT1, 59, 11);
-			if (msg.length <= 100) break;
+			if (msg.length <= 99) break;
 			U(msg, PROPERTY_OFFSET2, 70, 12);
 			U(msg, PROPERTY_NUMBER2, 82, 4);
 			U(msg, PROPERTY_TIMEOUT2, 86, 3);
 			U(msg, PROPERTY_INCREMENT2, 89, 11);
-			if (msg.length <= 130) break;
+			if (msg.length <= 129) break;
 			U(msg, PROPERTY_OFFSET3, 100, 12);
 			U(msg, PROPERTY_NUMBER3, 112, 4);
 			U(msg, PROPERTY_TIMEOUT3, 116, 3);
 			U(msg, PROPERTY_INCREMENT3, 119, 11);
-			if (msg.length <= 160) break;
+			if (msg.length <= 159) break;
 			U(msg, PROPERTY_OFFSET4, 130, 12);
 			U(msg, PROPERTY_NUMBER4, 142, 4);
 			U(msg, PROPERTY_TIMEOUT4, 146, 3);
