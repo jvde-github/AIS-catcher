@@ -82,7 +82,7 @@ namespace AIS {
 		int u = msg.getInt(start, len);
 
 		if (u == -128)
-			; // Submit(p, std::string("nan"));
+			Submit(p, std::string("nan"));
 		else if (u == -127)
 			Submit(p, std::string("fastleft"));
 		else if (u == 127)
@@ -246,7 +246,7 @@ namespace AIS {
 			SL(msg, PROPERTY_LON, 61, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
-			U(msg, PROPERTY_HEADING, 128, 9, 511);
+			U(msg, PROPERTY_HEADING, 128, 9 /*, 511*/);
 			U(msg, PROPERTY_SECOND, 137, 6);
 			E(msg, PROPERTY_MANEUVER, 143, 2);
 			X(msg, PROPERTY_SPARE, 145, 3);
