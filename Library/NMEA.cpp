@@ -86,8 +86,7 @@ namespace AIS {
 		msg.clear();
 		msg.Stamp();
 		for (auto it = multiline.begin(); it != multiline.end(); it++)
-			if (it->channel == aivdm.channel)
-				addline(*it);
+			if (it->channel == aivdm.channel) addline(*it);
 
 		Send(&msg, 1, tag);
 		clean(aivdm.channel);
@@ -99,7 +98,7 @@ namespace AIS {
 		msg.channel = a.channel;
 
 		for (char d : a.data) msg.appendLetter(d);
-		//if(a.count==a.number) msg.reduceLength(a.fillbits);
+		// if(a.count==a.number) msg.reduceLength(a.fillbits);
 	}
 
 	const std::string r = "!AIVDM,?,?,?,?,?,?*??";
@@ -145,9 +144,9 @@ namespace AIS {
 
 				case IDX_CHANNEL:
 					if (c == ',') {
-						index++;
 						match = true;
-						aivdm.channel = ',';
+						aivdm.channel = '?';
+						index++;
 						break;
 					}
 					match = true;
