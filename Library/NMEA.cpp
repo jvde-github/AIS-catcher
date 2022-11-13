@@ -58,25 +58,21 @@ namespace AIS {
 		int lastNumber = 0;
 		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
 			if (it->channel == aivdm.channel) {
-				if (it->count != aivdm.count || aivdm.ID != it->ID) {
+				if (it->count != aivdm.count || it->ID != aivdm.ID)
 					lastNumber = -1;
-					break;
-				}
-				else { // found and we store the previous sequence number
+				else
 					lastNumber = it->number;
-					break;
-				}
+				break;
 			}
 		}
 
-		if (aivdm.number != lastNumber + 1) {
+		if (aivdm.number != lastNumber + 1 || lastNumber == -1) {
 			std::cerr << "NMEA: incorrect multiline messages [" << aivdm.sentence << "]." << std::endl;
 			clean(aivdm.channel);
 			if (aivdm.number != 1) return;
 		}
 
 		multiline.push_back(aivdm);
-
 		if (aivdm.number != aivdm.count) return;
 
 		// multiline messages are now complete and in the right order
