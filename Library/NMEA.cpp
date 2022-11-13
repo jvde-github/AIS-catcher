@@ -26,20 +26,26 @@ namespace AIS {
 
 	void NMEA::clean(char c) {
 		for (auto i = multiline.begin(); i != multiline.end(); ++i) {
-			if (i->channel() == c) {
+			if (i->channel == c) {
 				multiline.erase(i);
 				i--;
 			}
 		}
 	}
 
-	void NMEA::process(TAG& tag) {
-		if (aivdm.commas.size() != 6) {
-			std::cerr << "NMEA: Header ok but message has invalid structure (commas): " << aivdm.sentence << std::endl;
-			return;
-		}
+	int NMEA::NMEAchecksum(std::string s) {
+		int c = 0;
+		for (int i = 1; i < s.length() - 3; i++)
+			c ^= s[i];
+		return c;
+	}
 
-		if (aivdm.count() == 1) {
+	void NMEA::process(TAG& tag) {
+
+		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
+			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "]." << std::endl;
+		}
+		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp();
 			addline(aivdm);
@@ -52,77 +58,133 @@ namespace AIS {
 		int lastNumber = 0;
 		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
 			const AIVDM& p = *it;
-			if (p.channel() == aivdm.channel()) {
-				if (p.count() != aivdm.count() || aivdm.ID() != p.ID()) {
+			if (p.channel == aivdm.channel) {
+				if (p.count != aivdm.count || aivdm.ID != p.ID) {
 					std::cerr << "NMEA: multiline NMEA message not correct, mismatch in code and/or number of sentences [" << aivdm.sentence << " vs " << p.sentence << "]." << std::endl;
-					clean(aivdm.channel());
+					clean(aivdm.channel);
 					return;
 				}
 				else { // found and we store the previous sequence number
-					lastNumber = p.number();
+					lastNumber = p.number;
 					break;
 				}
 			}
 		}
 
-		if (aivdm.number() != lastNumber + 1) {
+		if (aivdm.number != lastNumber + 1) {
 			std::cerr << "NMEA: missing previous line in multiline message [" << aivdm.sentence << "]." << std::endl;
-			clean(aivdm.channel());
-			return;
+			clean(aivdm.channel);
+			if (aivdm.number != 1) return;
 		}
 
 		multiline.push_back(aivdm);
 
-		if (aivdm.number() != aivdm.count()) return;
+		if (aivdm.number != aivdm.count) return;
 
 		// multiline messages are now complete and in the right order
 		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp();
 		for (auto it = multiline.begin(); it != multiline.end(); it++)
-			if (it->channel() == aivdm.channel())
+			if (it->channel == aivdm.channel)
 				addline(*it);
 
 		Send(&msg, 1, tag);
-		clean(aivdm.channel());
+		clean(aivdm.channel);
 	}
 
 	void NMEA::addline(const AIVDM& a) {
 
 		msg.sentence.push_back(a.sentence);
-		msg.channel = a.sentence[a.commas[3]];
+		msg.channel = a.channel;
 
-		for (int l = a.commas[4]; l < a.commas[5] - 1; l++) {
-			msg.appendLetter(a.sentence[l]);
-		}
+		for (char d : a.data) msg.appendLetter(d);
+		//if(a.count==a.number) msg.reduceLength(a.fillbits);
 	}
+
+	const std::string r = "!AIVDM,?,?,?,?,?,?*??";
+
+	const int IDX_COUNT = 7;
+	const int IDX_NUMBER = 9;
+	const int IDX_ID = 11;
+	const int IDX_CHANNEL = 13;
+	const int IDX_DATA = 15;
+	const int IDX_FILLBITS = 17;
+	const int IDX_CRC1 = 19;
+	const int IDX_CRC2 = 20;
 
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
 		for (int j = 0; j < len; j++) {
 			for (int i = 0; i < data[j].size; i++) {
 
-				char c = ((char*)data[j].data)[i];
+				char c = ((char*)(data[j].data))[i];
+				aivdm.sentence += c;
 
-				if (index >= header.size()) {
-					if (c != '\n' && c != '\r' && !(c == ',' && aivdm.commas.size() == 6)) {
-						aivdm.sentence += c;
+				bool match = false;
+
+				switch (index) {
+				case IDX_COUNT:
+					match = std::isdigit(c);
+					if (match) { aivdm.count = c - '0'; }
+					break;
+				case IDX_NUMBER:
+					match = std::isdigit(c);
+					if (match) { aivdm.number = c - '0'; }
+					break;
+				case IDX_ID:
+					if (c == ',') {
 						index++;
-						if (c == ',') aivdm.commas.push_back(index);
+						match = true;
+						aivdm.ID = 0;
+						break;
 					}
-					else {
-						process(tag);
-						reset();
-					}
-				}
-				else { // we are in process of detecting "!AIVDM" header
-					if (header[index] == c) {
-						aivdm.sentence += c;
+					match = std::isdigit(c);
+					if (match) { aivdm.ID = c - '0'; }
+					break;
+
+				case IDX_CHANNEL:
+					if (c == ',') {
 						index++;
+						match = true;
+						aivdm.channel = ',';
+						break;
+					}
+					match = true;
+					aivdm.channel = c;
+					break;
+				case IDX_DATA:
+					match = true;
+					if (c != ',') {
+						aivdm.data += c;
+						index--;
+						break;
 					}
 					else
-						reset();
+						index++;
+					break;
+				case IDX_FILLBITS:
+					match = std::isdigit(c);
+					if (match) { aivdm.fillbits = c - '0'; }
+					break;
+				case IDX_CRC1:
+					match = isHEX(c);
+					if (match) aivdm.checksum = fromHEX(c) << 4;
+					break;
+				case IDX_CRC2:
+					match = isHEX(c);
+					if (match) {
+						aivdm.checksum |= fromHEX(c);
+						process(tag);
+					}
+					break;
+				default:
+					match = c == r[index];
+					break;
 				}
+
+				index++;
+				if (!match || index >= r.size()) { reset(); }
 			}
 		}
 	}

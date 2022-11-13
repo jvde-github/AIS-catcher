@@ -31,27 +31,33 @@ namespace AIS {
 
 		struct AIVDM {
 			std::string sentence;
-			std::vector<int> commas;
+			std::string data;
 
 			void reset() {
 				sentence.clear();
-				commas.resize(0);
+				data.clear();
 			}
-			char channel() const { return sentence[commas[3]]; }
-			int count() const { return sentence[commas[0]] - '0'; }
-			int number() const { return sentence[commas[1]] - '0'; };
-			int ID() const { return sentence[commas[2]] - '0'; };
+			char channel;
+			int count;
+			int number;
+			int ID;
+			int checksum;
+			int fillbits;
 		} aivdm;
 
 		std::vector<AIVDM> multiline;
 
-		const std::string header = "!AIVDM";
 		int index = 0;
 
 		void process(TAG& tag);
 		void addline(const AIVDM& a);
 		void reset();
 		void clean(char);
+
+		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }
+		int fromHEX(char c) { return (c >= '0' && c <= '9') ? (c - '0') : (c - 'A' + 10); }
+
+		int NMEAchecksum(std::string s);
 
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);

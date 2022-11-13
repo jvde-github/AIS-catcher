@@ -136,5 +136,6 @@ namespace AIS {
 		char getLetter(int pos, int nBytes) const;
 		void setLetter(int pos, char c);
 		void appendLetter(char c) { setLetter(length / 6, c); }
+		void reduceLength(int l) { length -= l; }
 	};
 }
