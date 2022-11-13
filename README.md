@@ -630,8 +630,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 - Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
 - Add tool to compare different receivers (more statistics than looking at message count only)
-- NMEA input: check checksum, use fillbits to set length and more tight initial parser
-- On going: testing and improving receiver, seems to be some room for certain messages
+- Ongoing: testing and improving receiver, seems to be some room for certain messages
 - CMake issue with zlib on MACOS
 - RSSI refinement (measure base noise level), general more diagnostics to assess performance issues
 - Option to record raw input signal periodically to allow for debugging of performance
@@ -644,6 +643,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - System support and GUI: Windows, <del>Android</del>, Web interface
 - Multi-channel SDRs: validate location from signal (e.g. like MLAT or using passive radar)
 - Output: ZeroMQ, <del>APRS, JSON over HTTP,</del> TCP, ...
+- <del>NMEA input: check checksum, use fillbits to set length and more tight initial parser</del>
 - <del>Allow for verbose updates even if running from stdin</del>
 - <del>Adding additional messages to the JSON decoder (Message 8, 6, etc).</del>
 - <del>(Unit) testing of the JSON decoder</del>
