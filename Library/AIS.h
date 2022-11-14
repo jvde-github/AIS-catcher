@@ -52,9 +52,7 @@ namespace AIS {
 		FLOAT32 level = 0.0f;
 
 		void NextState(State s, int pos);
-		int NMEAchecksum(const std::string&);
 
-		void sendNMEA(TAG& tag);
 		bool CRC16(int len);
 		bool processData(int len, TAG& tag);
 

@@ -28,12 +28,6 @@
 
 namespace AIS {
 
-	int Decoder::NMEAchecksum(const std::string& s) {
-		int check = 0;
-		for (char c : s) check ^= c;
-		return check;
-	}
-
 	void Decoder::NextState(State s, int pos) {
 		state = s;
 		position = pos;
@@ -64,38 +58,6 @@ namespace AIS {
 		return CRC == checksum;
 	}
 
-	void Decoder::sendNMEA(TAG& tag) {
-		std::string sentence;
-		const std::string comma = ",";
-
-		msg.sentence.resize(0);
-		int nAISletters = (nBits + 6 - 1) / 6;
-		int nSentences = (nAISletters + 56 - 1) / 56;
-
-		for (int s = 0, l = 0; s < nSentences; s++) {
-			sentence = std::string("AIVDM,") + std::to_string(nSentences) + comma + std::to_string(s + 1) + comma;
-			sentence += (nSentences > 1 ? std::to_string(MessageID) : "") + comma + channel + comma;
-
-			for (int i = 0; l < nAISletters && i < 56; i++, l++)
-				sentence += msg.getLetter(l, nBytes);
-
-			sentence += comma + std::to_string((nSentences > 1 && s == nSentences - 1) ? nAISletters * 6 - nBits : 0);
-
-			char hex[3];
-			sprintf(hex, "%02X", NMEAchecksum(sentence));
-			sentence += std::string("*") + hex;
-
-			msg.sentence.push_back("!" + sentence);
-		}
-
-		msg.channel = channel;
-		msg.length = nBits;
-
-		if (tag.mode & 2) msg.Stamp();
-		Send(&msg, 1, tag);
-		MessageID = (MessageID + 1) % 10;
-	}
-
 	bool Decoder::processData(int len, TAG& tag) {
 		if (len > 16 && CRC16(len)) {
 			nBits = len - 16;
@@ -105,8 +67,10 @@ namespace AIS {
 			if (tag.mode & 1 && tag.level != 0.0) tag.level = 10.0f * log10(tag.level);
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
-			sendNMEA(tag);
-
+			msg.channel = channel;
+			msg.length = nBits;
+			msg.buildNMEA(tag);
+			Send(&msg, 1, tag);
 			return true;
 		}
 		return false;
