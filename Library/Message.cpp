@@ -22,14 +22,10 @@ namespace AIS {
 	int Message::ID = 0;
 
 	unsigned Message::getUint(int start, int len) const {
-		// max unsigned integers are 30 bits in AIS standard
-		const uint8_t ones = 0xFF;
-		const uint8_t start_mask[] = { ones, ones >> 1, ones >> 2, ones >> 3, ones >> 4, ones >> 5, ones >> 6, ones >> 7 };
-
 		// we start 2nd part of first byte and stop first part of last byte
-		int i = start >> 3;
-		unsigned u = data[i] & start_mask[start & 7];
-		int remaining = len - 8 + (start & 7);
+		int x = start >> 3, y = start & 7;
+		unsigned u = data[x] & (0xFF >> y);
+		int remaining = len - 8 + y;
 
 		// first byte is last byte
 		if (remaining <= 0) {
@@ -38,13 +34,13 @@ namespace AIS {
 		// add full bytes
 		while (remaining >= 8) {
 			u <<= 8;
-			u |= data[++i];
+			u |= data[++x];
 			remaining -= 8;
 		}
 		// make room for last bits if needed
 		if (remaining > 0) {
 			u <<= remaining;
-			u |= data[++i] >> (8 - remaining);
+			u |= data[++x] >> (8 - remaining);
 		}
 
 		return u;
