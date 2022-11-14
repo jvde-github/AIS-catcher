@@ -31,6 +31,9 @@ std::string JSONbuildString::jsonify(const std::string& str) {
 		case '\\':
 			out += "\\\\";
 			break;
+		case '\r':
+		case '\n':
+			break;
 		default:
 			out += c;
 		}
