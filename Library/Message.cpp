@@ -79,13 +79,17 @@ namespace AIS {
 
 	void Message::buildNMEA(TAG& tag) {
 		const char comma = ',';
+
+		const int IDX_COUNT = 7;
+		const int IDX_NUMBER = 9;
+
 		int nAISletters = (length + 6 - 1) / 6;
-		int nSentences = (nAISletters + 56 - 1) / 56;
+		int nSentences = (nAISletters + MAX_NMEA_CHARS - 1) / MAX_NMEA_CHARS;
 
 		line.resize(11);
 
-		line[7] = (char)(nSentences + '0');
-		line[9] = '0';
+		line[IDX_COUNT] = (char)(nSentences + '0');
+		line[IDX_NUMBER] = '0';
 
 		if (nSentences > 1) {
 			line += (char)(ID + '0');
@@ -102,9 +106,9 @@ namespace AIS {
 		for (int s = 0, l = 0; s < nSentences; s++) {
 
 			line.resize(header);
-			line[9]++;
+			line[IDX_NUMBER]++;
 
-			for (int i = 0; l < nAISletters && i < 56; i++, l++)
+			for (int i = 0; l < nAISletters && i < MAX_NMEA_CHARS; i++, l++)
 				line += getLetter(l);
 
 			line += comma;

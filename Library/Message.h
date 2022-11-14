@@ -29,8 +29,9 @@ namespace AIS {
 
 	class Message {
 	protected:
+		const int MAX_NMEA_CHARS = 56;
 		static int ID;
-		std::string line = "!AIVDM,X,X,";
+		std::string line = "!AIVDM,X,X,X,X,"+std::string(MAX_NMEA_CHARS,'.')+",X*XX\n\r"; // longest line
 
 		int NMEAchecksum(const std::string& s) {
 			int check = 0;
