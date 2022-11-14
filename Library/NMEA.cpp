@@ -25,10 +25,17 @@ namespace AIS {
 	}
 
 	void NMEA::clean(char c) {
-		for (auto i = multiline.begin(); i != multiline.end(); ++i) {
-			if (i->channel == c) {
-				multiline.erase(i);
-				i--;
+		bool found = true;
+
+		// for now...to avoid crash on Windows if only one element in multiline
+		while (found) {
+			found = false;
+			for (auto i = multiline.begin(); i != multiline.end(); ++i) {
+				if (i->channel == c) {
+					multiline.erase(i);
+					found = true;
+					break;
+				}
 			}
 		}
 	}
