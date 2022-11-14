@@ -29,6 +29,14 @@ namespace AIS {
 
 	class Message {
 	protected:
+		static int ID;
+
+		int NMEAchecksum(const std::string& s) {
+			int check = 0;
+			for (char c : s) check ^= c;
+			return check;
+		}
+
 	public:
 		std::time_t rxtime;
 		std::vector<std::string> sentence;
@@ -62,65 +70,9 @@ namespace AIS {
 			return (data[1] << 22) | (data[2] << 14) | (data[3] << 6) | (data[4] >> 2);
 		}
 
-		unsigned getUint(int start, int len) const {
-			// max unsigned integers are 30 bits in AIS standard
-			const uint8_t ones = 0xFF;
-			const uint8_t start_mask[] = { ones, ones >> 1, ones >> 2, ones >> 3, ones >> 4, ones >> 5, ones >> 6, ones >> 7 };
-
-			// we start 2nd part of first byte and stop first part of last byte
-			int i = start >> 3;
-			unsigned u = data[i] & start_mask[start & 7];
-			int remaining = len - 8 + (start & 7);
-
-			// first byte is last byte
-			if (remaining <= 0) {
-				return u >> (-remaining);
-			}
-			// add full bytes
-			while (remaining >= 8) {
-				u <<= 8;
-				u |= data[++i];
-				remaining -= 8;
-			}
-			// make room for last bits if needed
-			if (remaining > 0) {
-				u <<= remaining;
-				u |= data[++i] >> (8 - remaining);
-			}
-
-			return u;
-		}
-
-		int getInt(int start, int len) const {
-			const unsigned ones = ~0;
-			unsigned u = getUint(start, len);
-
-			// extend sign bit for the full bit
-			if (u & (1 << (len - 1))) u |= ones << len;
-			return (int)u;
-		}
-
-		std::string getText(int start, int len) const {
-
-			int end = start + len;
-			std::string text = "";
-			text.reserve((len + 5) / 6 + 2); // reserve 2 extra for special characters
-
-			while (start < end) {
-				int c = getUint(start, 6);
-
-				// 0       ->   @ and ends the string
-				// 1 - 31  ->   65+ ( i.e. setting bit 6 )
-				// 32 - 63 ->   32+ ( i.e. doing nothing )
-
-				if (!c) break;
-				if (!(c & 32)) c |= 64;
-
-				text += (char)c;
-				start += 6;
-			}
-			return text;
-		}
+		unsigned getUint(int start, int len) const;
+		int getInt(int start, int len) const;
+		std::string getText(int start, int len) const;
 
 		void setBit(int i, bool b) {
 			if (b)
@@ -137,5 +89,8 @@ namespace AIS {
 		void setLetter(int pos, char c);
 		void appendLetter(char c) { setLetter(length / 6, c); }
 		void reduceLength(int l) { length -= l; }
+		void setID(int i) { ID = i; }
+
+		void buildNMEA(TAG& tag);
 	};
 }
