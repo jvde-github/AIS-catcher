@@ -82,44 +82,57 @@ namespace AIS {
 	}
 
 	void Message::buildNMEA(TAG& tag) {
-		std::string line;
-		const std::string comma = ",";
-
-		sentence.resize(0);
+		const char comma = ',';
 		int nAISletters = (length + 6 - 1) / 6;
 		int nSentences = (nAISletters + 56 - 1) / 56;
 
-		for (int s = 0, l = 0; s < nSentences; s++) {
-			line = std::string("AIVDM,") + std::to_string(nSentences) + comma + std::to_string(s + 1) + comma;
-			line += (nSentences > 1 ? std::to_string(ID) : "") + comma + channel + comma;
+		line.resize(11);
 
-			for (int i = 0; l < nAISletters && i < 56; i++, l++)
-				line += getLetter(l, length);
+		line[7] = (char)(nSentences + '0');
+		line[9] = '0';
 
-			line += comma + std::to_string((s == nSentences - 1) ? nAISletters * 6 - length : 0);
-
-			char hex[3];
-			sprintf(hex, "%02X", NMEAchecksum(line));
-			line += std::string("*") + hex;
-
-			sentence.push_back("!" + line);
+		if (nSentences > 1) {
+			line += (char)(ID + '0');
+			ID = (ID + 1) % 10;
 		}
 
-		if (tag.mode & 2) Stamp();
-		ID = (ID + 1) % 10;
-	}
-	// dealing with 6 bit letters
-	char Message::getLetter(int pos, int nBytes) const {
-		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+		line += comma;
+		line += channel;
+		line += comma;
 
-		// zero padding
-		uint8_t b0 = x < nBytes ? data[x] : 0;
-		uint8_t b1 = x + 1 < nBytes ? data[(int)(x + 1)] : 0;
-		uint16_t w = (b0 << 8) | b1;
+		int header = line.length();
+		sentence.clear();
+
+		for (int s = 0, l = 0; s < nSentences; s++) {
+
+			line.resize(header);
+			line[9]++;
+
+			for (int i = 0; l < nAISletters && i < 56; i++, l++)
+				line += getLetter(l);
+
+			line += comma;
+			line += (char)(((s == nSentences - 1) ? nAISletters * 6 - length : 0) + '0');
+
+			int c = NMEAchecksum(line);
+			line += '*';
+			line += (c >> 4) < 10 ? (c >> 4) + '0' : (c >> 4) + 'A' - 10;
+			line += (c & 0xF) < 10 ? (c & 0xF) + '0' : (c & 0xF) + 'A' - 10;
+
+			sentence.push_back(line);
+		}
+	}
+
+	char Message::getLetter(int pos) const {
+		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+		uint16_t w = (data[x] << 8) | data[x + 1];
 
 		const int mask = (1 << 6) - 1;
 		int l = (w >> (16 - 6 - y)) & mask;
 
+		// zero for bits not formally set
+		int overrun = pos * 6 + 6 - length;
+		if (overrun > 0) l &= 0xFF << overrun;
 		return l < 40 ? (char)(l + 48) : (char)(l + 56);
 	}
 

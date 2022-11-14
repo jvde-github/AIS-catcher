@@ -96,7 +96,6 @@ namespace AIS {
 			return t > 27 || t == 0;
 		case 38:
 			return msg.mmsi() > 999999999;
-
 		case 72 + END:
 			return t == 10;
 		case 144 + END:

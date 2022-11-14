@@ -30,10 +30,11 @@ namespace AIS {
 	class Message {
 	protected:
 		static int ID;
+		std::string line = "!AIVDM,X,X,";
 
 		int NMEAchecksum(const std::string& s) {
 			int check = 0;
-			for (char c : s) check ^= c;
+			for (int i = 1; i < s.length(); i++) check ^= s[i];
 			return check;
 		}
 
@@ -85,7 +86,7 @@ namespace AIS {
 			return data[i >> 3] & (1 << (i & 7));
 		}
 
-		char getLetter(int pos, int nBytes) const;
+		char getLetter(int pos) const;
 		void setLetter(int pos, char c);
 		void appendLetter(char c) { setLetter(length / 6, c); }
 		void reduceLength(int l) { length -= l; }
