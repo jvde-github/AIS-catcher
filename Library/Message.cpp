@@ -87,13 +87,13 @@ namespace AIS {
 
 		sentence.resize(0);
 		int nAISletters = (length + 6 - 1) / 6;
-		int nSentences = (nAISletters + 60 - 1) / 60;
+		int nSentences = (nAISletters + 56 - 1) / 56;
 
 		for (int s = 0, l = 0; s < nSentences; s++) {
 			line = std::string("AIVDM,") + std::to_string(nSentences) + comma + std::to_string(s + 1) + comma;
 			line += (nSentences > 1 ? std::to_string(ID) : "") + comma + channel + comma;
 
-			for (int i = 0; l < nAISletters && i < 60; i++, l++)
+			for (int i = 0; l < nAISletters && i < 56; i++, l++)
 				line += getLetter(l, length);
 
 			line += comma + std::to_string((s == nSentences - 1) ? nAISletters * 6 - length : 0);

@@ -56,7 +56,7 @@ namespace AIS {
 			msg.clear();
 			msg.Stamp();
 			addline(aivdm);
-			msg.buildNMEA(tag);
+			//msg.buildNMEA(tag);
 			Send(&msg, 1, tag);
 			return;
 		}
@@ -90,8 +90,8 @@ namespace AIS {
 		for (auto it = multiline.begin(); it != multiline.end(); it++)
 			if (it->channel == aivdm.channel) addline(*it);
 
-		msg.setID(aivdm.ID);
-		msg.buildNMEA(tag);
+		//msg.setID(aivdm.ID);
+		//msg.buildNMEA(tag);
 		Send(&msg, 1, tag);
 		clean(aivdm.channel);
 	}
