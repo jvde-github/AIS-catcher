@@ -26,7 +26,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - As per version 0.39 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
-- AIS-catcher can decode NMEA lines. Not very useful but it provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which is the prime reason for the feature. Use the model ``-m 5``, e.g.:
+- AIS-catcher can decode NMEA lines. Not very extremely useful but it provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which is the prime reason for the feature. Use the model ``-m 5``, e.g.:
 ```console
 echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
 ```
@@ -42,7 +42,7 @@ which produces:
 ```json
 {"class":"AIS","device":"stdin","type":3,"repeat":0,"mmsi":477213600,"scaled":true,"status":5,"status_text":"Moored","turn":0,"speed":0.0,"accuracy":true,"lon":126.605467,"lat":37.460617,"course":39.0,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html).
+This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only option is ``-go NMEA_REFRESH on/off`` which forces AIS_catcher to recalculate the NMEA lines. 
 
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
