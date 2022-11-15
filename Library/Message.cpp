@@ -97,7 +97,7 @@ namespace AIS {
 		}
 
 		line += comma;
-		line += channel;
+		if (channel != '?') line += channel;
 		line += comma;
 
 		int header = line.length();
