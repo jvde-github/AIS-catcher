@@ -46,7 +46,7 @@ This new function has been used to validate AIS-catcher JSON output on a [file](
 ```
 echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r . -m 5 -n -go nmea_refresh on crc_check oFF
 ```
-returns a warnin on the incorrect CRC and:
+returns a warning on the incorrect CRC and:
 ```
 !AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*3A
 ```
