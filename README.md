@@ -42,7 +42,7 @@ which produces:
 ```json
 {"class":"AIS","device":"stdin","type":3,"repeat":0,"mmsi":477213600,"scaled":true,"status":5,"status_text":"Moored","turn":0,"speed":0.0,"accuracy":true,"lon":126.605467,"lat":37.460617,"course":39.0,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only switches are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS_catcher to recalculate the NMEA lines if on and ignore messages with incorrect CRC in on. Example: 
+This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only switches are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
 ```
 echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r . -m 5 -n -go nmea_refresh on crc_check oFF
 ```
