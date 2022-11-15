@@ -186,5 +186,7 @@ namespace AIS {
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
+		void Set(std::string option, std::string arg);
+		std::string Get();
 	};
 }

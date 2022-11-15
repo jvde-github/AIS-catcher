@@ -553,4 +553,18 @@ namespace AIS {
 		*device >> nmea >> output;
 	}
 
+	void ModelNMEA::Set(std::string option, std::string arg) {
+		Util::Convert::toUpper(option);
+		Util::Convert::toUpper(arg);
+
+		if (option == "NMEA_REFRESH") {
+			nmea.setRegenerate(Util::Parse::Switch(arg));
+		}
+		else
+			Model::Set(option, arg);
+	}
+
+	std::string ModelNMEA::Get() {
+		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " " + Model::Get();
+	}
 }

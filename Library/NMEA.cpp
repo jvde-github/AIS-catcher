@@ -25,20 +25,15 @@ namespace AIS {
 	}
 
 	void NMEA::clean(char c) {
-		bool found = true;
-
-		// for now...to avoid crash on Windows if only one element in multiline
-		while (found) {
-			found = false;
-			for (auto i = multiline.begin(); i != multiline.end(); ++i) {
-				if (i->channel == c) {
-					multiline.erase(i);
-					found = true;
-					break;
-				}
-			}
+		auto i = multiline.begin();
+		while (i != multiline.end()) {
+			if (i->channel == c)
+				i = multiline.erase(i);
+			else
+				i++;
 		}
 	}
+
 
 	int NMEA::NMEAchecksum(std::string s) {
 		int c = 0;
@@ -55,8 +50,13 @@ namespace AIS {
 		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp();
+			msg.channel = aivdm.channel;
+
 			addline(aivdm);
-			// msg.buildNMEA(tag);
+			if (regenerate)
+				msg.buildNMEA(tag);
+			else
+				msg.sentence.push_back(aivdm.sentence);
 			Send(&msg, 1, tag);
 			return;
 		}
@@ -87,8 +87,14 @@ namespace AIS {
 		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp();
-		for (auto it = multiline.begin(); it != multiline.end(); it++)
-			if (it->channel == aivdm.channel) addline(*it);
+		msg.channel = aivdm.channel;
+
+		for (auto it = multiline.begin(); it != multiline.end(); it++) {
+			if (it->channel == aivdm.channel) {
+				addline(*it);
+				msg.sentence.push_back(it->sentence);
+			}
+		}
 
 		// msg.setID(aivdm.ID);
 		// msg.buildNMEA(tag);
@@ -97,10 +103,6 @@ namespace AIS {
 	}
 
 	void NMEA::addline(const AIVDM& a) {
-
-		msg.sentence.push_back(a.sentence);
-		msg.channel = a.channel;
-
 		for (char d : a.data) msg.appendLetter(d);
 		if (a.count == a.number) msg.reduceLength(a.fillbits);
 	}
@@ -158,7 +160,7 @@ namespace AIS {
 				case IDX_CHANNEL:
 					if (c == ',') {
 						match = true;
-						aivdm.channel = 'A';
+						aivdm.channel = '?';
 						index++;
 						break;
 					}
