@@ -560,11 +560,14 @@ namespace AIS {
 		if (option == "NMEA_REFRESH") {
 			nmea.setRegenerate(Util::Parse::Switch(arg));
 		}
+		else if (option == "CRC_CHECK") {
+			nmea.setCRCcheck(Util::Parse::Switch(arg));
+		}
 		else
 			Model::Set(option, arg);
 	}
 
 	std::string ModelNMEA::Get() {
-		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " " + Model::Get();
+		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + Model::Get();
 	}
 }

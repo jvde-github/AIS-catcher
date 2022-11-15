@@ -60,11 +60,15 @@ namespace AIS {
 		int NMEAchecksum(std::string s);
 
 		bool regenerate = false;
+		bool crc_check = false;
 
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);
 
 		void setRegenerate(bool b) { regenerate = b; }
 		bool getRegenerate() { return regenerate; }
+
+		void setCRCcheck(bool b) { crc_check = b; }
+		bool getCRCcheck() { return crc_check; }
 	};
 }

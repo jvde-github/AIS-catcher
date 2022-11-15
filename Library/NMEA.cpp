@@ -45,6 +45,7 @@ namespace AIS {
 	void NMEA::process(TAG& tag) {
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
 			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "]." << std::endl;
+			if (crc_check) return;
 		}
 
 		if (aivdm.count == 1) {
@@ -109,8 +110,9 @@ namespace AIS {
 
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
-		const std::string pattern = "!??VDM,?,?,?,?,?,?*??";
+		const std::string pattern = "sttVDM,c,n,i,c,d,f*cc";
 
+		const int IDX_START = 0;
 		const int IDX_TALKER1 = 1;
 		const int IDX_TALKER2 = 2;
 		const int IDX_COUNT = 7;
@@ -131,6 +133,9 @@ namespace AIS {
 				bool match = false;
 
 				switch (index) {
+				case IDX_START:
+					match = c == '!' || c == '$';
+					break;
 				case IDX_TALKER1:
 					match = c == 'A' || c == 'B' || c == 'S';
 					break;
