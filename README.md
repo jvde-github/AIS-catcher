@@ -26,30 +26,8 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - As per version 0.39 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
-- AIS-catcher can decode NMEA lines. Not very extremely useful but it provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which is the prime reason for the feature. Use the model ``-m 5``, e.g.:
-```console
-echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
-```
-which produces
-```json
-{"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
-```
-Which can be compared for example against the output of ``gpsdecode``:
-```console
-echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78' | gpsdecode
-```
-which produces:
-```json
-{"class":"AIS","device":"stdin","type":3,"repeat":0,"mmsi":477213600,"scaled":true,"status":5,"status_text":"Moored","turn":0,"speed":0.0,"accuracy":true,"lon":126.605467,"lat":37.460617,"course":39.0,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
-```
-This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only switches are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
-```
-echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r . -m 5 -n -go nmea_refresh on crc_check oFF
-```
-returns a warning on the incorrect CRC and:
-```
-!AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*3A
-```
+- AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder).
+
 ## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
@@ -241,6 +219,33 @@ In OpenCPN the only thing we need to do is create a Connection with the followin
 <p align="center">
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg" width=40% height=40%>
 </p>
+
+### AIS-catcher as a command line NMEA decoder
+
+AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5``, e.g.:
+```console
+echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
+```
+which produces
+```json
+{"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
+```
+Which can be compared for example against the output of ``gpsdecode``:
+```console
+echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78' | gpsdecode
+```
+which produces:
+```json
+{"class":"AIS","device":"stdin","type":3,"repeat":0,"mmsi":477213600,"scaled":true,"status":5,"status_text":"Moored","turn":0,"speed":0.0,"accuracy":true,"lon":126.605467,"lat":37.460617,"course":39.0,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
+```
+This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only switches are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
+```
+echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r . -m 5 -n -go nmea_refresh on crc_check off
+```
+returns a warning on the incorrect CRC and:
+```
+!AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*3A
+```
 
 ### Running on hardware with performance limitations
 
