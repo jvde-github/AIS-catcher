@@ -77,11 +77,13 @@ namespace AIS {
 		return text;
 	}
 
-	void Message::buildNMEA(TAG& tag) {
+	void Message::buildNMEA(TAG& tag, int id) {
 		const char comma = ',';
 
 		const int IDX_COUNT = 7;
 		const int IDX_NUMBER = 9;
+
+		if (id >= 0 && id < 10) ID = id;
 
 		int nAISletters = (length + 6 - 1) / 6;
 		int nSentences = (nAISletters + MAX_NMEA_CHARS - 1) / MAX_NMEA_CHARS;
@@ -101,7 +103,7 @@ namespace AIS {
 		line += comma;
 
 		int header = line.length();
-		sentence.clear();
+		NMEA.clear();
 
 		for (int s = 0, l = 0; s < nSentences; s++) {
 
@@ -118,8 +120,7 @@ namespace AIS {
 			line += '*';
 			line += (c >> 4) < 10 ? (c >> 4) + '0' : (c >> 4) + 'A' - 10;
 			line += (c & 0xF) < 10 ? (c & 0xF) + '0' : (c & 0xF) + 'A' - 10;
-
-			sentence.push_back(line);
+			NMEA.push_back(line);
 		}
 	}
 

@@ -28,7 +28,7 @@ namespace IO {
 		for (int i = 0; i < len; i++) {
 
 			if (level == OutputLevel::FULL || level == OutputLevel::SPARSE)
-				for (auto s : data[i].sentence) {
+				for (auto s : data[i].NMEA) {
 
 					std::cout << s;
 
@@ -43,16 +43,16 @@ namespace IO {
 				}
 			else if (level == OutputLevel::JSON_NMEA) {
 
-				std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].channel << "\"";
+				std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].getChannel() << "\"";
 
 				if (tag.mode & 2) std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
 				if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
 
 				std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()
-						  << ",\"nmea\":[\"" << data[i].sentence[0] << "\"";
+						  << ",\"nmea\":[\"" << data[i].NMEA[0] << "\"";
 
-				for (int j = 1; j < data[i].sentence.size(); j++)
-					std::cout << ",\"" << data[i].sentence[j] << "\"";
+				for (int j = 1; j < data[i].NMEA.size(); j++)
+					std::cout << ",\"" << data[i].NMEA[j] << "\"";
 
 				std::cout << "]}" << std::endl;
 			}
