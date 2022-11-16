@@ -45,7 +45,7 @@ namespace AIS {
 			int fillbits;
 		} aivdm;
 
-		std::vector<AIVDM> multiline;
+		std::vector<AIVDM> queue;
 		int index = 0;
 		char last = '\n';
 
@@ -53,6 +53,7 @@ namespace AIS {
 		void addline(const AIVDM& a);
 		void reset();
 		void clean(char);
+		int search(const AIVDM& a);
 
 		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }
 		int fromHEX(char c) { return (c >= '0' && c <= '9') ? (c - '0') : (c - 'A' + 10); }

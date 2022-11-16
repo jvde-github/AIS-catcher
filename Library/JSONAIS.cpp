@@ -124,12 +124,16 @@ namespace AIS {
 	}
 
 	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len) {
-		std::string text = msg.getText(start, len);
+		std::string text = std::to_string(len) + ":";
+		for (int i = start; i < start + len; i += 4) {
+			char c = msg.getUint(i, 4);
+			text += (char)(c < 10 ? c + '0' : c + 'a' - 10);
+		}
 		Submit(p, text);
 	}
 
 	// Refernce: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
-	void JSONAIS::MMSI(const AIS::Message& msg) {
+	void JSONAIS::COUNTRY(const AIS::Message& msg) {
 
 		uint32_t mid = msg.mmsi();
 		while (mid > 1000) mid /= 10;
@@ -219,8 +223,8 @@ namespace AIS {
 		}
 
 		Submit(PROPERTY_SCALED, true);
-		Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
-		Submit(PROPERTY_NMEA, msg.sentence);
+		Submit(PROPERTY_CHANNEL, std::string(1, msg.getChannel()));
+		Submit(PROPERTY_NMEA, msg.NMEA);
 
 		if (tag.mode & 1) {
 			Submit(PROPERTY_SIGNAL_POWER, tag.level);
@@ -232,7 +236,7 @@ namespace AIS {
 		U(msg, PROPERTY_MMSI, 8, 30);
 
 		if (tag.mode & 4) {
-			MMSI(msg);
+			COUNTRY(msg);
 		}
 
 		switch (msg.type()) {
@@ -251,7 +255,7 @@ namespace AIS {
 			E(msg, PROPERTY_MANEUVER, 143, 2);
 			X(msg, PROPERTY_SPARE, 145, 3);
 			B(msg, PROPERTY_RAIM, 148, 1);
-			U(msg, PROPERTY_RADIO, 149, MIN(19, MAX(msg.length - 149, 0)));
+			U(msg, PROPERTY_RADIO, 149, MIN(19, MAX(msg.getLength() - 149, 0)));
 			break;
 		case 4:
 		case 11:
@@ -298,19 +302,20 @@ namespace AIS {
 			X(msg, PROPERTY_SPARE, 71, 1);
 			U(msg, PROPERTY_DAC, 72, 10);
 			U(msg, PROPERTY_FID, 82, 6);
+			D(msg, PROPERTY_DATA, 88, MIN(920, msg.getLength() - 88));
 			break;
 		case 7:
 		case 13:
 			X(msg, PROPERTY_SPARE, 38, 2);
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_MMSISEQ1, 70, 2);
-			if (msg.length <= 72) break;
+			if (msg.getLength() <= 72) break;
 			U(msg, PROPERTY_MMSI2, 72, 30);
 			U(msg, PROPERTY_MMSISEQ2, 102, 2);
-			if (msg.length <= 104) break;
+			if (msg.getLength() <= 104) break;
 			U(msg, PROPERTY_MMSI3, 104, 30);
 			U(msg, PROPERTY_MMSISEQ3, 134, 2);
-			if (msg.length <= 136) break;
+			if (msg.getLength() <= 136) break;
 			U(msg, PROPERTY_MMSI4, 136, 30);
 			U(msg, PROPERTY_MMSISEQ4, 166, 2);
 			break;
@@ -327,7 +332,7 @@ namespace AIS {
 			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
 			U(msg, PROPERTY_SECOND, 128, 6);
-			X(msg, PROPERTY_REGIONAL, 134, 8);
+			U(msg, PROPERTY_REGIONAL, 134, 8);
 			B(msg, PROPERTY_DTE, 142, 1);
 			B(msg, PROPERTY_ASSIGNED, 146, 1);
 			B(msg, PROPERTY_RAIM, 147, 1);
@@ -349,10 +354,10 @@ namespace AIS {
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_TYPE1_1, 70, 6);
 			U(msg, PROPERTY_OFFSET1_1, 76, 12);
-			if (msg.length <= 90) break;
+			if (msg.getLength() <= 90) break;
 			U(msg, PROPERTY_TYPE1_2, 90, 6);
 			U(msg, PROPERTY_OFFSET1_2, 96, 12);
-			if (msg.length <= 110) break;
+			if (msg.getLength() <= 110) break;
 			U(msg, PROPERTY_MMSI2, 110, 30);
 			U(msg, PROPERTY_TYPE2_1, 140, 6);
 			U(msg, PROPERTY_OFFSET2_1, 146, 12);
@@ -361,11 +366,15 @@ namespace AIS {
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_OFFSET1, 70, 12);
 			U(msg, PROPERTY_INCREMENT1, 82, 10);
+			if (msg.getLength() == 92) break;
+			U(msg, PROPERTY_MMSI2, 92, 30);
+			U(msg, PROPERTY_OFFSET2, 122, 12);
+			U(msg, PROPERTY_INCREMENT2, 134, 10);
 			break;
 		case 17:
 			SL(msg, PROPERTY_LON, 40, 18, 1 / 600.0, 0);
 			SL(msg, PROPERTY_LAT, 58, 17, 1 / 600.0, 0);
-			D(msg, PROPERTY_DATA, 80, 736);
+			D(msg, PROPERTY_DATA, 80, MIN(736, msg.getLength() - 80));
 			break;
 		case 18:
 			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
@@ -413,17 +422,17 @@ namespace AIS {
 			U(msg, PROPERTY_NUMBER1, 52, 4);
 			U(msg, PROPERTY_TIMEOUT1, 56, 3);
 			U(msg, PROPERTY_INCREMENT1, 59, 11);
-			if (msg.length <= 99) break;
+			if (msg.getLength() <= 99) break;
 			U(msg, PROPERTY_OFFSET2, 70, 12);
 			U(msg, PROPERTY_NUMBER2, 82, 4);
 			U(msg, PROPERTY_TIMEOUT2, 86, 3);
 			U(msg, PROPERTY_INCREMENT2, 89, 11);
-			if (msg.length <= 129) break;
+			if (msg.getLength() <= 129) break;
 			U(msg, PROPERTY_OFFSET3, 100, 12);
 			U(msg, PROPERTY_NUMBER3, 112, 4);
 			U(msg, PROPERTY_TIMEOUT3, 116, 3);
 			U(msg, PROPERTY_INCREMENT3, 119, 11);
-			if (msg.length <= 159) break;
+			if (msg.getLength() <= 159) break;
 			U(msg, PROPERTY_OFFSET4, 130, 12);
 			U(msg, PROPERTY_NUMBER4, 142, 4);
 			U(msg, PROPERTY_TIMEOUT4, 146, 3);

@@ -67,8 +67,8 @@ namespace AIS {
 			if (tag.mode & 1 && tag.level != 0.0) tag.level = 10.0f * log10(tag.level);
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
-			msg.channel = channel;
-			msg.length = nBits;
+			msg.setChannel(channel);
+			msg.setLength(nBits);
 			msg.buildNMEA(tag);
 			Send(&msg, 1, tag);
 			return true;

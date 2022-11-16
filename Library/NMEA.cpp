@@ -25,15 +25,31 @@ namespace AIS {
 	}
 
 	void NMEA::clean(char c) {
-		auto i = multiline.begin();
-		while (i != multiline.end()) {
+		auto i = queue.begin();
+		while (i != queue.end()) {
 			if (i->channel == c)
-				i = multiline.erase(i);
+				i = queue.erase(i);
 			else
 				i++;
 		}
 	}
 
+	int NMEA::search(const AIVDM& a) {
+		// multiline message, firstly check whether we can find previous lines with the same ID, channel and line count
+		// we run backwards to find the previous addition
+		// return: 0 = Not Found, -1: Found but inconsistent with input, >0: number of previous message
+		int lastNumber = 0;
+		for (auto it = queue.rbegin(); it != queue.rend(); it++) {
+			if (it->channel == aivdm.channel) {
+				if (it->count != aivdm.count || it->ID != aivdm.ID)
+					lastNumber = -1;
+				else
+					lastNumber = it->number;
+				break;
+			}
+		}
+		return lastNumber;
+	}
 
 	int NMEA::NMEAchecksum(std::string s) {
 		int c = 0;
@@ -51,54 +67,44 @@ namespace AIS {
 		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp();
-			msg.channel = aivdm.channel;
+			msg.setChannel(aivdm.channel);
 
 			addline(aivdm);
 			if (regenerate)
 				msg.buildNMEA(tag);
 			else
-				msg.sentence.push_back(aivdm.sentence);
+				msg.NMEA.push_back(aivdm.sentence);
 			Send(&msg, 1, tag);
 			return;
 		}
 
-		// multiline message, firstly check whether we can find previous lines with the same ID, channel and line count
-		// we run backwards to find the last addition
-		int lastNumber = 0;
-		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
-			if (it->channel == aivdm.channel) {
-				if (it->count != aivdm.count || it->ID != aivdm.ID)
-					lastNumber = -1;
-				else
-					lastNumber = it->number;
-				break;
-			}
-		}
+		int result = search(aivdm);
 
-		if (aivdm.number != lastNumber + 1 || lastNumber == -1) {
-			std::cerr << "NMEA: incorrect multiline messages [" << aivdm.sentence << "]." << std::endl;
+		if (aivdm.number != result + 1 || result == -1) {
+			std::cerr << "NMEA: incorrect multiline messages @ [" << aivdm.sentence << "]." << std::endl;
 			clean(aivdm.channel);
 			if (aivdm.number != 1) return;
 		}
 
-		multiline.push_back(aivdm);
+		queue.push_back(aivdm);
 		if (aivdm.number != aivdm.count) return;
 
 		// multiline messages are now complete and in the right order
 		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp();
-		msg.channel = aivdm.channel;
+		msg.setChannel(aivdm.channel);
 
-		for (auto it = multiline.begin(); it != multiline.end(); it++) {
+		for (auto it = queue.begin(); it != queue.end(); it++) {
 			if (it->channel == aivdm.channel) {
 				addline(*it);
-				msg.sentence.push_back(it->sentence);
+				if (!regenerate) msg.NMEA.push_back(it->sentence);
 			}
 		}
 
-		// msg.setID(aivdm.ID);
-		// msg.buildNMEA(tag);
+		if (regenerate)
+			msg.buildNMEA(tag, aivdm.ID);
+
 		Send(&msg, 1, tag);
 		clean(aivdm.channel);
 	}

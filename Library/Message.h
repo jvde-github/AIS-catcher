@@ -39,12 +39,13 @@ namespace AIS {
 			return check;
 		}
 
-	public:
-		std::time_t rxtime;
-		std::vector<std::string> sentence;
-		char channel;
 		uint8_t data[128];
+		std::time_t rxtime;
 		int length;
+		char channel;
+
+	public:
+		std::vector<std::string> NMEA;
 
 		void Stamp() {
 			std::time(&rxtime);
@@ -56,7 +57,7 @@ namespace AIS {
 
 		void clear() {
 			length = 0;
-			sentence.resize(0);
+			NMEA.resize(0);
 			std::memset(data, 0, 128);
 		}
 
@@ -91,8 +92,13 @@ namespace AIS {
 		void setLetter(int pos, char c);
 		void appendLetter(char c) { setLetter(length / 6, c); }
 		void reduceLength(int l) { length -= l; }
-		void setID(int i) { ID = i; }
 
-		void buildNMEA(TAG& tag);
+		void setLength(int l) { length = l; }
+		int getLength() const { return length; }
+
+		void setChannel(char c) { channel = c; }
+		char getChannel() const { return channel; }
+
+		void buildNMEA(TAG& tag, int id = -1);
 	};
 }

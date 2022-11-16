@@ -316,7 +316,7 @@ namespace IO {
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if (sock != -1)
 			for (int i = 0; i < len; i++)
-				for (const auto& s : data[i].sentence)
+				for (const auto& s : data[i].NMEA)
 					sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr,
 						   (int)address->ai_addrlen);
 	}
@@ -360,7 +360,7 @@ namespace IO {
 	void TCP::Receive(const AIS::Message* data, int len, TAG& tag) {
 
 		for (int i = 0; i < len; i++)
-			for (const auto& s : data[i].sentence)
+			for (const auto& s : data[i].NMEA)
 				con.send((s + "\r\n").c_str(), (int)s.length() + 2);
 	}
 
