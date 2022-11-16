@@ -43,6 +43,7 @@ namespace AIS {
 			int ID;
 			int checksum;
 			int fillbits;
+			int talkerID;
 		} aivdm;
 
 		std::vector<AIVDM> queue;
@@ -52,9 +53,10 @@ namespace AIS {
 		void process(TAG& tag);
 		void addline(const AIVDM& a);
 		void reset();
-		void clean(char);
+		void clean(char, int);
 		int search(const AIVDM& a);
 
+		bool isNMEAchar(char c) { return (c >= 40 && c < 88) || (c >= 96 && c <= 56 + 0x111111); }
 		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }
 		int fromHEX(char c) { return (c >= '0' && c <= '9') ? (c - '0') : (c - 'A' + 10); }
 

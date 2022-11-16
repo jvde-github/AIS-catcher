@@ -24,10 +24,10 @@ namespace AIS {
 		index = 0;
 	}
 
-	void NMEA::clean(char c) {
+	void NMEA::clean(char c, int t) {
 		auto i = queue.begin();
 		while (i != queue.end()) {
-			if (i->channel == c)
+			if (i->channel == c && i->talkerID == t)
 				i = queue.erase(i);
 			else
 				i++;
@@ -40,7 +40,7 @@ namespace AIS {
 		// return: 0 = Not Found, -1: Found but inconsistent with input, >0: number of previous message
 		int lastNumber = 0;
 		for (auto it = queue.rbegin(); it != queue.rend(); it++) {
-			if (it->channel == aivdm.channel) {
+			if (it->channel == aivdm.channel && it->talkerID == aivdm.talkerID) {
 				if (it->count != aivdm.count || it->ID != aivdm.ID)
 					lastNumber = -1;
 				else
@@ -82,7 +82,7 @@ namespace AIS {
 
 		if (aivdm.number != result + 1 || result == -1) {
 			std::cerr << "NMEA: incorrect multiline messages @ [" << aivdm.sentence << "]." << std::endl;
-			clean(aivdm.channel);
+			clean(aivdm.channel, aivdm.talkerID);
 			if (aivdm.number != 1) return;
 		}
 
@@ -106,7 +106,7 @@ namespace AIS {
 			msg.buildNMEA(tag, aivdm.ID);
 
 		Send(&msg, 1, tag);
-		clean(aivdm.channel);
+		clean(aivdm.channel, aivdm.talkerID);
 	}
 
 	void NMEA::addline(const AIVDM& a) {
@@ -144,10 +144,12 @@ namespace AIS {
 					break;
 				case IDX_TALKER1:
 					match = c == 'A' || c == 'B' || c == 'S';
+					aivdm.talkerID = c << 8;
 					break;
 				case IDX_TALKER2:
 					match = last == 'A' && (c == 'B' || c == 'D' || c == 'I' || c == 'N' || c == 'R' || c == 'S' || c == 'T' || c == 'X');
 					match = match || (c == 'S' && last == 'B') || (c == 'A' && last == 'S');
+					aivdm.talkerID |= c;
 					break;
 				case IDX_COUNT:
 					match = std::isdigit(c);
@@ -179,14 +181,17 @@ namespace AIS {
 					aivdm.channel = c;
 					break;
 				case IDX_DATA:
-					match = true;
-					if (c != ',') {
-						aivdm.data += c;
-						index--;
-						break;
-					}
-					else
+					if (c == ',') {
 						index++;
+						match = true;
+					}
+					else {
+						match = isNMEAchar(c);
+						if (match) {
+							aivdm.data += c;
+							index--;
+						}
+					}
 					break;
 				case IDX_FILLBITS:
 					match = std::isdigit(c);
