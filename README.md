@@ -273,6 +273,14 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with reasonable processor load.
 
+### Long Range AIS messages
+
+AIS-catcher can be instructed to listen for long range AIS messages (message type 27) at frequency 156.8 MHz, with the command -c CD:
+```
+AIS-catcher -c CD
+```  
+This will detect any AIS messages of type 27. The channel designations in the NMEA output will be C and D which might give problems downstream. Use the switch ``-c CD AB`` to change these channel designations to A and B.
+
 ### Connecting to GNU Radio via ZMQ
 
 The latest code base of AIS-catcher can take streaming data via ZeroMQ (ZMQ) as input. This allows for an easy interface with packages like GNU Radio. The steps are simple and will be demonstrated by decoding the messages in the AIS example file from [here](https://www.sdrplay.com/iq-demo-files/). AIS-catcher cannot directly decode this file as the file contains only one channel, the frequency is shifted away from the center at 162Mhz and the sample rate of 62.5 KHz is not supported in our program. We can however perform decoding with some help from [``GNU Radio``](https://www.gnuradio.org/). First start AIS-catcher to receive a stream (data format is complex float and sample rate is 96K) at a defined ZMQ endpoint:
