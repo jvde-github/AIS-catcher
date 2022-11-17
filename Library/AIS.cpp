@@ -63,8 +63,9 @@ namespace AIS {
 			nBits = len - 16;
 			nBytes = (nBits + 7) / 8;
 
-			// calculate the power of the signal in dB, if requested
+			// calculate the power of the signal in dB, if requested and timestamp
 			if (tag.mode & 1 && tag.level != 0.0) tag.level = 10.0f * log10(tag.level);
+			if (tag.mode & 2) msg.Stamp();
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			msg.setChannel(channel);
