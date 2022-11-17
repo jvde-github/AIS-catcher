@@ -122,22 +122,6 @@ AIS-catcher -gr RTLAGC on TUNER auto
 It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try.
 To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
-### Input from file and stdin
-
-AIS-catcher can read from stdin using ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
-```console
-rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
-```
-The same mechanism can be used to apply other transformations on the signal, e.g. downsampling with ``sox``:
-```console
-sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
-```
-For reference, as per version 0.36, AIS-catcher has the option to use the internal sox library directly if included in your build:
-```console
-AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
-```
-
-
 ## Deep dives
 
 ### Message screen output
@@ -222,6 +206,21 @@ In OpenCPN the only thing we need to do is create a Connection with the followin
 <p align="center">
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg" width=40% height=40%>
 </p>
+
+### Input from file and stdin
+
+AIS-catcher can read from file with the switch ``-r`` followed by the filename and with a ``.`` or ``stdin`` it reads from stdin, e.g. ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
+```console
+rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
+```
+The same mechanism can be used to apply other transformations on the signal, e.g. downsampling with ``sox``:
+```console
+sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
+```
+For reference, as per version 0.36, AIS-catcher has the option to use the internal sox library directly if included in your build:
+```console
+AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
+```
 
 ### AIS-catcher as a command line NMEA decoder
 
