@@ -115,6 +115,15 @@ AIS-catcher -v 10 -u 127.0.0.1 10110 -u 127.0.0.1 10111
 If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to AIS aggregrators like MarineTraffic, Fleetmon, Vesselfinder, Shipxplorer and others. See below for more pointers on how this can be set up.
 The screen messages can be suppressed with the option ```-q```. That's all there is.
 
+For RTL-SDR devices performance can be sensitive to the device settings. In general a good starting point is the following:
+```console
+AIS-catcher -gr RTLAGC on TUNER auto
+```
+It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try.
+To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
+
+### Input from file and stdin
+
 AIS-catcher can read from stdin using ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
 ```console
 rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
@@ -128,12 +137,6 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
 
-For RTL-SDR devices performance can be sensitive to the device settings. In general a good starting point is the following:
-```console
-AIS-catcher -gr RTLAGC on TUNER auto
-```
-It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try.
-To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
 ## Deep dives
 
