@@ -466,6 +466,7 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 A list of some stations mentioning using AIS-catcher:
 - [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
 - [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
+- [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
 - [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
 - [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
 - [Wren Road Rab 2](https://www.marinetraffic.com/cs/ais/details/stations/9615)
