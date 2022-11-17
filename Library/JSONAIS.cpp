@@ -513,9 +513,9 @@ namespace AIS {
 		case 27:
 			U(msg, PROPERTY_ACCURACY, 38, 1);
 			U(msg, PROPERTY_RAIM, 39, 1);
-			U(msg, PROPERTY_STATUS, 40, 4);
-			SL(msg, PROPERTY_LON, 44, 18, 181000, 1 / 600.0, 0);
-			SL(msg, PROPERTY_LAT, 62, 17, 91000, 1 / 600.0, 0);
+			E(msg, PROPERTY_STATUS, 40, 4, PROPERTY_STATUS_TEXT, &JSON_MAP_STATUS);
+			SL(msg, PROPERTY_LON, 44, 18, 1 / 600.0, 0);
+			SL(msg, PROPERTY_LAT, 62, 17, 1 / 600.0, 0);
 			U(msg, PROPERTY_SPEED, 79, 6);
 			U(msg, PROPERTY_COURSE, 85, 9);
 			U(msg, PROPERTY_GNSS, 94, 1);
