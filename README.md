@@ -112,7 +112,7 @@ To start AIS demodulation, print some occasional statistics (every 10 seconds) a
 ```console
 AIS-catcher -v 10 -u 127.0.0.1 10110 -u 127.0.0.1 10111
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to MarineTraffic. See below for more pointers on how this can be set up.
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to AIS aggregrators like MarineTraffic, Fleetmon, Vesselfinder, Shipxplorer and others. See below for more pointers on how this can be set up.
 The screen messages can be suppressed with the option ```-q```. That's all there is.
 
 AIS-catcher can read from stdin using ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
@@ -275,11 +275,7 @@ This and other performance updates make the full version of AIS-catcher run on a
 
 ### Long Range AIS messages
 
-AIS-catcher can be instructed to listen for long range AIS messages (message type 27) at frequency 156.8 MHz, with the command -c CD:
-```
-AIS-catcher -c CD
-```  
-This will detect any AIS messages of type 27. The channel designations in the NMEA output will be C and D which might give problems downstream. Use the switch ``-c CD AB`` to change these channel designations to A and B.
+AIS-catcher can be instructed to listen at frequency 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-o CD```. This follows ideas from a post on the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at request of a user. The conventional decoder is available with the switch ```-o AB``` which is also the default if nothing is specified. Note that ``gpsdecode`` cannot handle channel designations C and D in NMEA lines. You can provide an optional argument to use channel A and B in the NMEA line with the command ```-o CD AB```.
 
 ### Connecting to GNU Radio via ZMQ
 
