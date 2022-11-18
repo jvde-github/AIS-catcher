@@ -35,7 +35,7 @@ namespace AIS {
 	struct COUNTRY {
 		uint32_t MID;
 		std::string country;
-		char code[3];
+		std::string code;
 	};
 
 	extern const std::vector<std::string> JSON_MAP_STATUS;
