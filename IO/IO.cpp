@@ -26,35 +26,32 @@ namespace IO {
 		if (level == OutputLevel::NONE) return;
 
 		for (int i = 0; i < len; i++) {
-
-			if (level == OutputLevel::FULL || level == OutputLevel::SPARSE)
+			switch (level) {
+			case OutputLevel::NMEA:
+			case OutputLevel::NMEA_TAG:
+				for (auto s : data[i].NMEA) std::cout << s << std::endl;
+				break;
+			case OutputLevel::FULL:
 				for (auto s : data[i].NMEA) {
-
-					std::cout << s;
-
-					if (level == OutputLevel::FULL) {
-						std::cout << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-						if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
-						if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();
-
-						std::cout << ")";
-					}
-					std::cout << std::endl;
+					std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
+					if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
+					if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();
+					std::cout << ")" << std::endl;
 				}
-			else if (level == OutputLevel::JSON_NMEA) {
-
+				break;
+			case OutputLevel::JSON_NMEA:
 				std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].getChannel() << "\"";
 
 				if (tag.mode & 2) std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
 				if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
 
-				std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type()
-						  << ",\"nmea\":[\"" << data[i].NMEA[0] << "\"";
+				std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type() << ",\"nmea\":[\"" << data[i].NMEA[0] << "\"";
 
 				for (int j = 1; j < data[i].NMEA.size(); j++)
 					std::cout << ",\"" << data[i].NMEA[j] << "\"";
 
 				std::cout << "]}" << std::endl;
+				break;
 			}
 		}
 	}
