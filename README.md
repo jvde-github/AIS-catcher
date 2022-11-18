@@ -112,21 +112,8 @@ To start AIS demodulation, print some occasional statistics (every 10 seconds) a
 ```console
 AIS-catcher -v 10 -u 127.0.0.1 10110 -u 127.0.0.1 10111
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to MarineTraffic. See below for more pointers on how this can be set up.
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to AIS aggregators like MarineTraffic, Fleetmon, Vesselfinder, Shipxplorer and others. See below for more pointers on how this can be set up.
 The screen messages can be suppressed with the option ```-q```. That's all there is.
-
-AIS-catcher can read from stdin using ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
-```console
-rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
-```
-The same mechanism can be used to apply other transformations on the signal, e.g. downsampling with ``sox``:
-```console
-sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
-```
-For reference, as per version 0.36, AIS-catcher has the option to use the internal sox library directly if included in your build:
-```console
-AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
-```
 
 For RTL-SDR devices performance can be sensitive to the device settings. In general a good starting point is the following:
 ```console
@@ -220,6 +207,21 @@ In OpenCPN the only thing we need to do is create a Connection with the followin
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg" width=40% height=40%>
 </p>
 
+### Input from file and stdin
+
+AIS-catcher can read from file with the switch ``-r`` followed by the filename and with a ``.`` or ``stdin`` it reads from stdin, e.g. ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
+```console
+rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
+```
+The same mechanism can be used to apply other transformations on the signal, e.g. downsampling with ``sox``:
+```console
+sox -c 2 -r 1536000 -b 8 -e unsigned -t raw posterholt.raw -t raw -b 16 -e signed -r 96000 - |AIS-catcher -s 96K -r CS16 . -v
+```
+For reference, as per version 0.36, AIS-catcher has the option to use the internal sox library directly if included in your build:
+```console
+AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
+```
+
 ### AIS-catcher as a command line NMEA decoder
 
 AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5``, e.g.:
@@ -275,11 +277,7 @@ This and other performance updates make the full version of AIS-catcher run on a
 
 ### Long Range AIS messages
 
-AIS-catcher can be instructed to listen for long range AIS messages (message type 27) at frequency 156.8 MHz, with the command -c CD:
-```
-AIS-catcher -c CD
-```  
-This will detect any AIS messages of type 27. The channel designations in the NMEA output will be C and D which might give problems downstream. Use the switch ``-c CD AB`` to change these channel designations to A and B.
+AIS-catcher can be instructed to listen at frequency 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-c CD```. This follows ideas from a post on the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at the request of a user. The conventional decoder is available with the switch ```-c AB``` which is also the default if nothing is specified. Note that ``gpsdecode`` cannot handle channel designations C and D in NMEA lines. You can provide an optional argument to use channel A and B in the NMEA line with the command ```-c CD AB```.
 
 ### Connecting to GNU Radio via ZMQ
 
@@ -467,6 +465,7 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 A list of some stations mentioning using AIS-catcher:
 - [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
 - [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
+- [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
 - [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
 - [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
 - [Wren Road Rab 2](https://www.marinetraffic.com/cs/ais/details/stations/9615)
@@ -481,7 +480,7 @@ A list of some stations mentioning using AIS-catcher:
 
 ### Windows Binaries
 
-Links to fully built Windows binaries of version **v0.38** and older are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
+Links to fully built Windows binaries of recent releases are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
 Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
 It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to check:
 - installation of RTL-SDR drivers is done via [Zadig](https://www.rtl-sdr.com/tag/zadig/)
