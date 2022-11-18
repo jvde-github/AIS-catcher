@@ -28,7 +28,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
 - AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder).
 
-## Android version available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
 
@@ -112,7 +112,7 @@ To start AIS demodulation, print some occasional statistics (every 10 seconds) a
 ```console
 AIS-catcher -v 10 -u 127.0.0.1 10110 -u 127.0.0.1 10111
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to AIS aggregators like MarineTraffic, Fleetmon, Vesselfinder, Shipxplorer and others. See below for more pointers on how this can be set up.
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the key method to use the output of AIS-catcher and visualize that in OpenCPN or directly send to AIS aggregator websites like MarineTraffic, FleetMon, VesselFinder, ShipXplorer and others. See below for more pointers on how this can be set up.
 The screen messages can be suppressed with the option ```-q```. That's all there is.
 
 For RTL-SDR devices performance can be sensitive to the device settings. In general a good starting point is the following:
@@ -523,7 +523,7 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 ***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | - | [API 3.x](https://www.sdrplay.com/downloads/)     | [API 3.x](https://www.sdrplay.com/downloads/)  |
 ***SoapySDR***             | libsoapysdr-dev     |       |                  | X |
 ***ZeroMQ***             | libzmq3-dev     | zeromq      | ZeroMQ ZeroMQ:x64-windows                  | included |
-***HTTP post***             | libcurl4-openssl-dev zlib1g-dev | | | X |
+***HTTP post***             | libcurl4-openssl-dev zlib1g-dev | | curl curl:x64-windows | X |
 
 Once the dependencies are in place, the process to install AIS-catcher then on Linux based systems becomes:
 ```console
@@ -646,20 +646,19 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- Decoding: add new improved models (e.g. using matched filters, alternative freq correction models), software gain control, document current model
-- Add tool to compare different receivers (more statistics than looking at message count only)
-- Ongoing: testing and improving receiver, seems to be some room for certain messages
-- CMake issue with zlib on MACOS
-- RSSI refinement (measure base noise level), general more diagnostics to assess performance issues
+- Decoding: further model improvements e.g. using other filters, alternative freq correction models, software gain control
+- Add tool to compare different receivers (more statistics than just looking at message count)
+- Testing: assess gap with commercial equipment (partially done at Meteotoren)
+- Support NMEA tag blocks for timestamp
+- Solve CMake issue with zlib on MACOS
+- RSSI refinement (measure base noise level), in general add more diagnostics to assess performance issues, e.g. auto ppm calibration
 - Option to record raw input signal periodically to allow for debugging of performance
 - Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
 - Implement websocket interface, store/write configuration files (JSON)
-- Channel AB+CD for high sample rates
-- Testing: more set ups, assess gap with commercial equipment (partially done at Meteotoren)
+- Channel AB+CD for devices with high sample rates like the Airspy
 - Optional filter for invalid messages, optional downsampling messages for HTTP postings
-- DSP: improve filters (e.g. add <del>droop compensation</del>, larger rate reductions), etc
 - System support and GUI: Windows, <del>Android</del>, Web interface
-- Multi-channel SDRs: validate location from signal (e.g. like MLAT or using passive radar)
+- Multi-channel SDRs: validate location from signal (e.g. like MLAT or using passive radar with krakensdr)
 - Output: ZeroMQ, <del>APRS, JSON over HTTP,</del> TCP, ...
 - <del>NMEA input: check checksum, use fillbits to set length and more tight initial parser</del>
 - <del>Allow for verbose updates even if running from stdin</del>
