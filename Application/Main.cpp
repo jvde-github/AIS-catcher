@@ -376,7 +376,7 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'n':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				NMEA_to_screen = OutputLevel::SPARSE;
+				NMEA_to_screen = OutputLevel::NMEA;
 				break;
 			case 'o':
 				Assert(count == 1, param, "Requires one parameter.");
@@ -386,7 +386,7 @@ int main(int argc, char* argv[]) {
 						NMEA_to_screen = OutputLevel::NONE;
 						break;
 					case 1:
-						NMEA_to_screen = OutputLevel::SPARSE;
+						NMEA_to_screen = OutputLevel::NMEA;
 						break;
 					case 2:
 						NMEA_to_screen = OutputLevel::FULL;
@@ -689,7 +689,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Output
-		if (NMEA_to_screen == OutputLevel::SPARSE || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {
+		if (NMEA_to_screen == OutputLevel::NMEA || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {
 			liveModels[0]->Output() >> msg2screen;
 			msg2screen.setDetail(NMEA_to_screen);
 		}

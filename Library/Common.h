@@ -60,7 +60,8 @@ enum class Type { NONE,
 				  SPYSERVER };
 
 enum class OutputLevel { NONE,
-						 SPARSE,
+						 NMEA,
+						 NMEA_TAG,
 						 FULL,
 						 JSON_NMEA,
 						 JSON_SPARSE,
