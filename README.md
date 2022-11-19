@@ -27,6 +27,15 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
 - AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder).
+- Experimental ability to filter UDP outout on message type, e.g. send only messages of type 1,2,3,4,5,18,19:
+```
+AIS-catcher -u 127.0.0.1 10110 FILTER on ALLOW_TYPE 1,2,3,4,5,18,19
+```
+or remove message type 6 and 8:
+```
+AIS-catcher -u 127.0.0.1 10110 FILTER on BLOCK_TYPE 6,8
+```
+Do not use spaces between the message types.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
