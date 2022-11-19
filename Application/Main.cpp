@@ -356,7 +356,9 @@ int main(int argc, char* argv[]) {
 				else
 					throw "Error: parameter needs to be AB or CD (-c)";
 				if (count == 2) {
-					Assert(arg2 == "AB", param, "NMEA channel designation needs to be: AB.");
+					Assert(arg2.length() == 2, param, "NMEA channel designation needs to be: XX.");
+					Assert(std::isupper(arg2[0]) || std::isdigit(arg2[0]) || arg2[0] == '?', param, "NMEA channel designation invalid.");
+					Assert(std::isupper(arg2[1]) || std::isdigit(arg2[1]) || arg2[1] == '?', param, "NMEA channel designation invalid.");
 					NMEAchannels = arg2;
 				}
 				break;
