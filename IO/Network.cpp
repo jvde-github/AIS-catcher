@@ -19,6 +19,7 @@
 
 #include "AIS-catcher.h"
 #include "Network.h"
+#include "Utilities.h"
 
 namespace IO {
 
@@ -323,7 +324,9 @@ namespace IO {
 	}
 
 	void UDP::Start() {
-		std::cerr << "UDP: open socket for " << host << " " << port << "." << std::endl;
+		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter_on);
+		if(filter_on) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+		std::cerr << std::endl;
 
 		if (sock != -1) {
 			throw "UDP: internal error, socket already defined.";
