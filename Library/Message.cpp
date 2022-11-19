@@ -164,4 +164,32 @@ namespace AIS {
 			break;
 		}
 	}
+
+	void Filter::Set(std::string option, std::string arg) {
+		Util::Convert::toUpper(option);
+
+		if (option == "ALLOW_TYPE") {
+
+			std::stringstream ss(arg);
+			std::string type_str;
+			allow = 0;
+			while (ss.good()) {
+				getline(ss, type_str, ',');
+				unsigned type = Util::Parse::Integer(type_str, 1, 27);
+				allow |= 1U << type;
+			}
+		}
+		else if (option == "BLOCK_TYPE") {
+
+			std::stringstream ss(arg);
+			std::string type_str;
+			unsigned block = 0;
+			while (ss.good()) {
+				getline(ss, type_str, ',');
+				unsigned type = Util::Parse::Integer(type_str, 1, 27);
+				block |= 1U << type;
+			}
+			allow = ~block & all_msg;
+		}
+	}
 }
