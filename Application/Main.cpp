@@ -298,7 +298,7 @@ int main(int argc, char* argv[]) {
 	Drivers drivers;
 
 	std::vector<IO::UDP> UDP;
-	std::vector<std::shared_ptr<AIS::Model>> liveModels;
+	std::vector<std::shared_ptr<AIS::Model>> models;
 
 	// AIS message to properties
 	AIS::JSONAIS msg2json;
@@ -337,7 +337,7 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'm':
 				Assert(count == 1, param, "Requires one parameter [model number].");
-				liveModels.push_back(createModel(Util::Parse::Integer(arg1, 0, 5)));
+				models.push_back(createModel(Util::Parse::Integer(arg1, 0, 5)));
 				break;
 			case 'M':
 				Assert(count <= 1, param, "Requires zero or one parameter [DT].");
@@ -406,9 +406,9 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				liveModels.push_back(createModel(2));
-				liveModels[0]->Set("FP_DS", "ON");
-				liveModels[0]->Set("PS_EMA", "ON");
+				models.push_back(createModel(2));
+				models.back()->Set("FP_DS", "ON");
+				models.back()->Set("PS_EMA", "ON");
 				break;
 			case 't':
 				input_type = Type::RTLTCP;
@@ -480,8 +480,8 @@ int main(int argc, char* argv[]) {
 				UDP.push_back(IO::UDP());
 				UDP.back().Set("HOST", arg1);
 				UDP.back().Set("PORT", arg2);
-				if(count > 2) parseSettings(UDP.back(), argv, ptr + 2, argc);
-				UDP.back().setSource(MAX(0, (int)liveModels.size() - 1));
+				if (count > 2) parseSettings(UDP.back(), argv, ptr + 2, argc);
+				UDP.back().setSource(MAX(0, (int)models.size() - 1));
 				break;
 			case 'H':
 				Assert(count > 0, param);
@@ -539,8 +539,8 @@ int main(int argc, char* argv[]) {
 					parseSettings(drivers.ZMQ, argv, ptr, argc);
 					break;
 				case 'o':
-					if (liveModels.size() == 0) liveModels.push_back(createModel(2));
-					parseSettings(*liveModels.back(), argv, ptr, argc);
+					if (models.size() == 0) models.push_back(createModel(2));
+					parseSettings(*models.back(), argv, ptr, argc);
 					break;
 					break;
 				default:
@@ -659,21 +659,21 @@ int main(int argc, char* argv[]) {
 		// ------------
 		// Setup models
 
-		if (!liveModels.size()) liveModels.push_back(createModel(2));
+		if (!models.size()) models.push_back(createModel(2));
 
 		// Attach output
-		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? liveModels.size() : 0);
+		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? models.size() : 0);
 
-		for (int i = 0; i < liveModels.size(); i++) {
-			liveModels[i]->buildModel(NMEAchannels[0], NMEAchannels[1], device->getSampleRate(), timer_on, device);
-			if (verbose) liveModels[i]->Output() >> statistics[i];
+		for (int i = 0; i < models.size(); i++) {
+			models[i]->buildModel(NMEAchannels[0], NMEAchannels[1], device->getSampleRate(), timer_on, device);
+			if (verbose) models[i]->Output() >> statistics[i];
 		}
 
 		// set up client thread to periodically submit msgs over HTTP
 		for (auto& h : http) {
 
-			h->Set("MODEL", liveModels[0]->getName());
-			h->Set("MODEL_SETTING", liveModels[0]->Get());
+			h->Set("MODEL", models[0]->getName());
+			h->Set("MODEL_SETTING", models[0]->Get());
 			h->Set("DEVICE_SETTING", device->Get());
 			h->Set("PRODUCT", device->getProduct());
 			h->Set("VENDOR", device->getVendor());
@@ -686,13 +686,13 @@ int main(int argc, char* argv[]) {
 		// Create and connect output to UDP stream
 
 		for (int i = 0; i < UDP.size(); i++) {
-			liveModels[UDP[i].getSource()]->Output() >> UDP[i];
+			models[UDP[i].getSource()]->Output() >> UDP[i];
 			UDP[i].Start();
 		}
 
 		// Output
 		if (NMEA_to_screen == OutputLevel::NMEA || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {
-			liveModels[0]->Output() >> msg2screen;
+			models[0]->Output() >> msg2screen;
 			msg2screen.setDetail(NMEA_to_screen);
 		}
 		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
@@ -704,7 +704,7 @@ int main(int argc, char* argv[]) {
 		// connect property calculation to model only if it is needed (e.g. we connected it to a http server or screen output)
 		// connection to either http or json screen output
 		if (msg2json.isConnected()) {
-			liveModels[0]->Output() >> msg2json;
+			models[0]->Output() >> msg2json;
 		}
 
 		// -----------------
@@ -731,9 +731,9 @@ int main(int argc, char* argv[]) {
 			if (verbose && duration_cast<seconds>(time_now - time_last).count() >= verboseUpdateTime) {
 				time_last = time_now;
 
-				for (int j = 0; j < liveModels.size(); j++) {
+				for (int j = 0; j < models.size(); j++) {
 					statistics[j].Stamp();
-					std::string name = liveModels[j]->getName();
+					std::string name = models[j]->getName();
 					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << statistics[j].getDeltaCount() << " msgs, total: " << statistics[j].getCount() << " msgs, rate: " << statistics[j].getRate() << " msg/s" << std::endl;
 				}
 			}
@@ -752,15 +752,15 @@ int main(int argc, char* argv[]) {
 
 		if (verbose) {
 			std::cerr << "----------------------" << std::endl;
-			for (int j = 0; j < liveModels.size(); j++) {
-				std::string name = liveModels[j]->getName();
+			for (int j = 0; j < models.size(); j++) {
+				std::string name = models[j]->getName();
 				statistics[j].Stamp();
 				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << statistics[j].getCount() << " msgs" << std::endl;
 			}
 		}
 
 		if (timer_on)
-			for (auto m : liveModels) {
+			for (auto m : models) {
 				std::string name = m->getName();
 				std::cerr << "[" << m->getName() << "]: " << std::string(37 - name.length(), ' ') << m->getTotalTiming() << " ms" << std::endl;
 			}
