@@ -108,6 +108,7 @@ namespace AIS {
 
 	public:
 		void Set(std::string option, std::string arg);
+		std::string getAllowed();
 		bool include(const Message& msg) {
 			unsigned type = msg.type() & 31;
 			return ((1U << type) & allow) != 0;
