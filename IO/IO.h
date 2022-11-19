@@ -98,6 +98,8 @@ namespace IO {
 	class MessageToScreen : public StreamIn<AIS::Message> {
 	private:
 		OutputLevel level;
+		AIS::Filter filter;
+		bool filter_on = false;
 
 	public:
 		void setDetail(OutputLevel l) { level = l; }

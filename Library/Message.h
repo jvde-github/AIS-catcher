@@ -101,4 +101,16 @@ namespace AIS {
 
 		void buildNMEA(TAG& tag, int id = -1);
 	};
+
+	class Filter : public Setting {
+		const uint32_t all_msg = 0b1111111111111111111111111110;
+		uint32_t allow = all_msg;
+
+	public:
+		void Set(std::string option, std::string arg);
+		bool include(const Message& msg) {
+			unsigned type = msg.type() & 31;
+			return ((1U << type) & allow) != 0;
+		}
+	};
 }

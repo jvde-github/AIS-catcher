@@ -315,10 +315,11 @@ namespace IO {
 
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if (sock != -1)
-			for (int i = 0; i < len; i++)
-				for (const auto& s : data[i].NMEA)
-					sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr,
-						   (int)address->ai_addrlen);
+			for (int i = 0; i < len; i++) {
+				if (!filter_on || filter.include(data[i]))
+					for (const auto& s : data[i].NMEA)
+						sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
+			}
 	}
 
 	void UDP::Start() {
@@ -368,21 +369,11 @@ namespace IO {
 		else if (option == "PORT") {
 			port = arg;
 		}
-	}
-
-	void TCP::Receive(const AIS::Message* data, int len, TAG& tag) {
-
-		for (int i = 0; i < len; i++)
-			for (const auto& s : data[i].NMEA)
-				con.send((s + "\r\n").c_str(), (int)s.length() + 2);
-	}
-
-	void TCP::openConnection(const std::string& host, const std::string& port) {
-		if (!con.connect(host, port))
-			throw "TCP: cannot connect to server.";
-	}
-
-	void TCP::closeConnection() {
-		con.disconnect();
+		else if (option == "FILTER") {
+			Util::Convert::toUpper(arg);
+			filter_on = Util::Parse::Switch(arg);
+		}
+		else
+			filter.Set(option, arg);
 	}
 }

@@ -124,6 +124,9 @@ namespace IO {
 		int source = -1;
 		std::string host, port;
 
+		AIS::Filter filter;
+		bool filter_on = false;
+
 	public:
 		~UDP();
 		UDP();
@@ -142,15 +145,5 @@ namespace IO {
 
 		void setSource(int s) { source = s; }
 		int getSource() { return source; }
-	};
-
-	class TCP : public StreamIn<AIS::Message> {
-		::TCP::Client con;
-
-	public:
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void openConnection(const std::string& host, const std::string& port);
-		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-		void closeConnection();
 	};
 }
