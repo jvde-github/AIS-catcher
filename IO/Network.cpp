@@ -325,7 +325,7 @@ namespace IO {
 
 	void UDP::Start() {
 		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter_on);
-		if(filter_on) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+		if (filter_on) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << std::endl;
 
 		if (sock != -1) {

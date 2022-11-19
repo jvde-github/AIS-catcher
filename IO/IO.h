@@ -98,6 +98,7 @@ namespace IO {
 	class MessageToScreen : public StreamIn<AIS::Message> {
 	private:
 		OutputLevel level;
+
 	public:
 		void setDetail(OutputLevel l) { level = l; }
 		void Receive(const AIS::Message* data, int len, TAG& tag);
