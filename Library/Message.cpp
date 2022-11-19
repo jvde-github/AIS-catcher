@@ -195,9 +195,9 @@ namespace AIS {
 
 	std::string Filter::getAllowed() {
 		std::string ret;
-		for(unsigned i = 1; i <= 27; i++) {
-			if((allow & (1U << i))>0 )
-				ret += (!ret.empty()?std::string(","):std::string("")) + std::to_string(i);
+		for (unsigned i = 1; i <= 27; i++) {
+			if ((allow & (1U << i)) > 0)
+				ret += (!ret.empty() ? std::string(",") : std::string("")) + std::to_string(i);
 		}
 		return ret;
 	}
