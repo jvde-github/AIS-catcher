@@ -297,8 +297,7 @@ int main(int argc, char* argv[]) {
 	Device::Device* device = NULL;
 	Drivers drivers;
 
-	std::vector<IO::UDPEndPoint> UDPdestinations;
-	std::vector<IO::UDP> UDPconnections;
+	std::vector<IO::UDP> UDP;
 	std::vector<std::shared_ptr<AIS::Model>> liveModels;
 
 	// AIS message to properties
@@ -477,8 +476,12 @@ int main(int argc, char* argv[]) {
 				}
 				break;
 			case 'u':
-				Assert(count == 2, param, "Requires two parameters [address] [port].");
-				UDPdestinations.push_back(IO::UDPEndPoint(arg1, arg2, MAX(0, (int)liveModels.size() - 1)));
+				Assert(count >= 2 && count % 2 == 0, param, "Requires at least two parameters [address] [port].");
+				UDP.push_back(IO::UDP());
+				UDP.back().Set("HOST", arg1);
+				UDP.back().Set("PORT", arg2);
+				if(count > 2) parseSettings(UDP.back(), argv, ptr + 2, argc);
+				UDP.back().setSource(MAX(0, (int)liveModels.size() - 1));
 				break;
 			case 'H':
 				Assert(count > 0, param);
@@ -677,15 +680,14 @@ int main(int argc, char* argv[]) {
 			h->Set("SERIAL", device->getSerial());
 
 			msg2json >> *h;
-			h->startServer();
+			h->Start();
 		}
 
 		// Create and connect output to UDP stream
-		UDPconnections.resize(UDPdestinations.size());
 
-		for (int i = 0; i < UDPdestinations.size(); i++) {
-			UDPconnections[i].openConnection(UDPdestinations[i]);
-			liveModels[UDPdestinations[i].ID()]->Output() >> UDPconnections[i];
+		for (int i = 0; i < UDP.size(); i++) {
+			liveModels[UDP[i].getSource()]->Output() >> UDP[i];
+			UDP[i].Start();
 		}
 
 		// Output

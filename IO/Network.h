@@ -59,6 +59,7 @@ namespace IO {
 		ZIP zip;
 		std::string msg, url, userpwd, stationid;
 		bool gzip = false, show_response = true;
+		int source = -1;
 
 		int INTERVAL = 60;
 		int TIMEOUT = 10;
@@ -87,14 +88,17 @@ namespace IO {
 
 	public:
 		~HTTP() {
-			stopServer();
+			Stop();
 		}
 #endif
 	public:
 		virtual void Set(std::string option, std::string arg);
 
-		void startServer();
-		void stopServer();
+		void Start();
+		void Stop();
+
+		void setSource(int s) { source = s; }
+		int getSource() { return source; }
 	};
 
 	class UDPEndPoint {
@@ -114,18 +118,30 @@ namespace IO {
 		int ID() { return sourceID; }
 	};
 
-	class UDP : public StreamIn<AIS::Message> {
+	class UDP : public StreamIn<AIS::Message>, public Setting {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
+		int source = -1;
+		std::string host, port;
 
 	public:
 		~UDP();
 		UDP();
 
+		virtual void Set(std::string option, std::string arg);
+
 		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void openConnection(const std::string& host, const std::string& port);
-		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-		void closeConnection();
+
+		void Start();
+		void Start(UDPEndPoint& u) {
+			host = u.address;
+			port = u.port;
+			Start();
+		}
+		void Stop();
+
+		void setSource(int s) { source = s; }
+		int getSource() { return source; }
 	};
 
 	class TCP : public StreamIn<AIS::Message> {

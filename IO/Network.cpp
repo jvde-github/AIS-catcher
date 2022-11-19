@@ -23,7 +23,7 @@
 namespace IO {
 
 
-	void HTTP::startServer() {
+	void HTTP::Start() {
 #ifdef HASCURL
 		if (!running) {
 
@@ -31,14 +31,14 @@ namespace IO {
 			terminate = false;
 
 			run_thread = std::thread(&HTTP::process, this);
-			std::cerr << "HTTP: start server (" << url << ")." << std::endl;
+			std::cerr << "HTTP: start thread (" << url << ")." << std::endl;
 		}
 #else
 		throw "HTTP: not implemented, please recompile with libcurl support.";
 #endif
 	}
 
-	void HTTP::stopServer() {
+	void HTTP::Stop() {
 #ifdef HASCURL
 		if (running) {
 
@@ -46,7 +46,7 @@ namespace IO {
 			terminate = true;
 			run_thread.join();
 
-			std::cerr << "HTTP: stop server (" << url << ")." << std::endl;
+			std::cerr << "HTTP: stop thread (" << url << ")." << std::endl;
 		}
 #endif
 	}
@@ -306,7 +306,7 @@ namespace IO {
 	}
 
 	UDP::~UDP() {
-		closeConnection();
+		Stop();
 
 #ifdef _WIN32
 		WSACleanup();
@@ -321,7 +321,9 @@ namespace IO {
 						   (int)address->ai_addrlen);
 	}
 
-	void UDP::openConnection(const std::string& host, const std::string& port) {
+	void UDP::Start() {
+		std::cerr << "UDP: open socket for " << host << " " << port << "." << std::endl;
+
 		if (sock != -1) {
 			throw "UDP: internal error, socket already defined.";
 			return;
@@ -350,10 +352,21 @@ namespace IO {
 		}
 	}
 
-	void UDP::closeConnection() {
+	void UDP::Stop() {
 		if (sock != -1) {
 			closesocket(sock);
 			sock = -1;
+		}
+	}
+
+	void UDP::Set(std::string option, std::string arg) {
+		Util::Convert::toUpper(option);
+
+		if (option == "HOST") {
+			host = arg;
+		}
+		else if (option == "PORT") {
+			port = arg;
 		}
 	}
 
