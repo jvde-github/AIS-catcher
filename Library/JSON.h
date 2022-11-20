@@ -29,87 +29,99 @@
 
 extern const std::vector<std::vector<std::string>> JSONmap;
 
-// PropertyStream
+namespace JSON {
 
-class JSONStreamIn {
-public:
-	virtual void Set(int p, int v) {}
-	virtual void Set(int p, unsigned v) {}
-	virtual void Set(int p, float v) {}
-	virtual void Set(int p, bool v) {}
-	virtual void Set(int p, const std::string& v) {}
-	virtual void Set(int p, const std::vector<std::string>& v) {}
-};
+	class Member {
+	public:
+		enum class Type {
+			BOOL,
+			INT,
+			FLOAT,
+			UINT,
+			STRING,
+			STRINGARRAY
+		};
+		union Value {
+			bool b;
+			int i;
+			unsigned u;
+			float f;
+			std::string* s;
+			std::vector<std::string>* a;
+		};
 
-class JSONStreamOut {
-public:
-	std::vector<JSONStreamIn*> connections;
+	protected:
+		int key;
+		Type type;
+		Value value;
 
-	void Submit(int p, int v) {
-		for (auto c : connections) c->Set(p, v);
-	}
-	void Submit(int p, unsigned v) {
-		for (auto c : connections) c->Set(p, v);
-	}
-	void Submit(int p, bool v) {
-		for (auto c : connections) c->Set(p, v);
-	}
-	void Submit(int p, float v) {
-		for (auto c : connections) c->Set(p, v);
-	}
-	void Submit(int p, const std::string& v) {
-		for (auto c : connections) c->Set(p, v);
-	}
-	void Submit(int p, const std::vector<std::string>& v) {
-		for (auto c : connections) c->Set(p, v);
-	}
-
-	void Connect(JSONStreamIn* s) { connections.push_back(s); }
-	bool isConnected() { return connections.size() > 0; }
-	void Clear() { connections.resize(0); }
-};
-
-inline JSONStreamIn& operator>>(JSONStreamOut& a, JSONStreamIn& b) {
-	a.Connect(&b);
-	return b;
-}
-
-// takes JSON stream as input, builds a string and calls Ready() if string is available
-class JSONbuildString : public JSONStreamIn {
-
-protected:
-	std::string json;
-
-private:
-	int map = JSON_DICT_FULL;
-	bool first = true;
-
-	std::string delim() {
-
-		if (first) {
-			first = false;
-			return "";
+	public:
+		void Set(int p, int v) {
+			key = p;
+			value.i = v;
+			type = Type::INT;
+		}
+		void Set(int p, unsigned v) {
+			key = p;
+			value.u = v;
+			type = Type::UINT;
+		}
+		void Set(int p, float v) {
+			key = p;
+			value.f = v;
+			type = Type::FLOAT;
+		}
+		void Set(int p, bool v) {
+			key = p;
+			value.b = v;
+			type = Type::BOOL;
+		}
+		void Set(int p, std::string* v) {
+			key = p;
+			value.s = v;
+			type = Type::STRING;
+		}
+		void Set(int p, std::vector<std::string>* v) {
+			key = p;
+			value.a = v;
+			type = Type::STRINGARRAY;
 		}
 
-		return ",";
-	}
+		Type getType() const { return type; }
+		int getKey() const { return key; }
+		Value Get() const { return value; }
+	};
 
-protected:
-	std::string jsonify(const std::string& str);
-	virtual void Ready() {}
+	class JSON {
+	public:
+		std::vector<Member> object;
+	};
 
-public:
-	// dictionary to use
-	void setMap(int m) { map = m; }
+	class StringBuilder {
+	protected:
+	private:
+		int map = JSON_DICT_FULL;
+		bool first = true;
 
-	// inherited from JSON stream
-	virtual void Set(int p, int v);
-	virtual void Set(int p, unsigned v);
-	virtual void Set(int p, float v);
-	virtual void Set(int p, bool v);
-	virtual void Set(int p, const std::string& v);
-	virtual void Set(int p, const std::vector<std::string>& v);
-};
+		std::string delim() {
+
+			if (first) {
+				first = false;
+				return "";
+			}
+
+			return ",";
+		}
+
+	protected:
+	public:
+		// dictionary to use
+		void jsonify(const std::string& str, std::string& json);
+		void setMap(int m) { map = m; }
+
+		void build(const JSON& object, std::string& json);
+	};
+}
 
 // JSON keys
 enum JSONkeys {

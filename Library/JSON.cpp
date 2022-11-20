@@ -20,71 +20,75 @@
 
 #include "JSON.h"
 
-std::string JSONbuildString::jsonify(const std::string& str) {
-	std::string out;
-	out.reserve(str.size());
-	for (char c : str) {
-		switch (c) {
-		case '\"':
-			out += "\\\"";
-			break;
-		case '\\':
-			out += "\\\\";
-			break;
-		case '\r':
-		case '\n':
-			break;
-		default:
-			out += c;
+namespace JSON {
+	void StringBuilder::jsonify(const std::string& str, std::string& json) {
+		json += '\"';
+		for (char c : str) {
+			switch (c) {
+			case '\"':
+				json += "\\\"";
+				break;
+			case '\\':
+				json += "\\\\";
+				break;
+			case '\r':
+			case '\n':
+				break;
+			default:
+				json += c;
+			}
 		}
+		json += '\"';
 	}
-	return out;
-}
 
-void JSONbuildString::Set(int p, int v) {
-	if (JSONmap[p][map].empty()) return;
-	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
-}
-void JSONbuildString::Set(int p, unsigned v) {
-	if (JSONmap[p][map].empty()) return;
-	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
-}
-void JSONbuildString::Set(int p, float v) {
-	if (JSONmap[p][map].empty()) return;
-	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + std::to_string(v);
-}
-void JSONbuildString::Set(int p, bool v) {
-	if (JSONmap[p][map].empty()) return;
-	json = json + delim() + "\"" + JSONmap[p][map] + "\"" + ":" + (v ? "true" : "false");
-}
-
-void JSONbuildString::Set(int p, const std::string& v) {
-	if (p == PROPERTY_OBJECT_START) {
+	void StringBuilder::build(const JSON& object, std::string& json) {
 		first = true;
-		json = "{";
-	}
-	else if (p == PROPERTY_OBJECT_END) {
-		if (json.size() > 1) {
-			json += "}";
-			Ready();
+		json += '{';
+		for (const Member& m : object.object) {
+			int k = m.getKey();
+			const std::string& key = JSONmap[k][map];
+
+			if (!key.empty()) {
+
+				json += delim() + "\"" + key + "\"" + ':';
+				first = false;
+
+				switch (m.getType()) {
+				case Member::Type::STRING:
+					jsonify(*(m.Get().s), json);
+					break;
+				case Member::Type::BOOL:
+					json += (m.Get().b ? "true" : "false");
+					break;
+				case Member::Type::INT:
+					json += std::to_string(m.Get().i);
+					break;
+				case Member::Type::UINT:
+					json += std::to_string(m.Get().u);
+					break;
+				case Member::Type::FLOAT:
+					json += std::to_string(m.Get().f);
+					break;
+				case Member::Type::STRINGARRAY: {
+					const std::vector<std::string>& v = *(m.Get().a);
+
+					json += '[';
+					jsonify(v[0], json);
+
+					for (int i = 1; i < v.size(); i++) {
+						json += ',';
+						jsonify(v[i], json);
+					}
+
+					json += ']';
+				} break;
+				default:
+					std::cerr << "JSON: not implemented!" << std::endl;
+				}
+			}
 		}
+		json += '}';
 	}
-	else {
-		if (JSONmap[p][map].empty()) return;
-		json = json + delim() + "\"" + JSONmap[p][map] + "\":\"" + jsonify(v) + "\"";
-	}
-}
-
-void JSONbuildString::Set(int p, const std::vector<std::string>& v) {
-
-	if (JSONmap[p][map].empty()) return;
-
-	json += delim() + "\"" + JSONmap[p][map] + "\":[\"" + jsonify(v[0]) + "\"";
-
-	for (int i = 1; i < v.size(); i++)
-		json += ",\"" + jsonify(v[i]) + "\"";
-
-	json += "]";
 }
 
 const std::vector<std::vector<std::string>> JSONmap = {

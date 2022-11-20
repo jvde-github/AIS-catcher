@@ -56,7 +56,9 @@ namespace IO {
 		}
 	}
 
-	void JSONtoScreen::Ready() {
+	void JSONtoScreen::Receive(const JSON::JSON* data, int len, TAG& tag) {
+		json.clear();
+		builder.build(data[0], json);
 		std::cout << json << std::endl;
 	}
 }

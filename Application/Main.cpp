@@ -705,7 +705,8 @@ int main(int argc, char* argv[]) {
 
 		// connect property calculation to model only if it is needed (e.g. we connected it to a http server or screen output)
 		// connection to either http or json screen output
-		if (msg2json.isConnected()) {
+
+		if (msg2json.out.isConnected()) {
 			models[0]->Output() >> msg2json;
 		}
 
