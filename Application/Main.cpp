@@ -301,7 +301,7 @@ int main(int argc, char* argv[]) {
 	std::vector<std::shared_ptr<AIS::Model>> models;
 
 	// AIS message to properties
-	AIS::JSONAIS msg2json;
+	std::vector<AIS::JSONAIS> jsonais;
 
 	std::vector<std::shared_ptr<IO::HTTP>> http;
 	IO::MessageToScreen msg2screen;
@@ -490,6 +490,7 @@ int main(int argc, char* argv[]) {
 				http.push_back(std::make_shared<IO::HTTP>());
 				if (count % 2) http.back()->Set("URL", arg1);
 				parseSettings(*http.back(), argv, ptr + (count % 2), argc);
+				http.back()->setSource(MAX(0, (int)models.size() - 1));
 				TAG_mode |= 3;
 				break;
 			case 'h':
@@ -660,7 +661,6 @@ int main(int argc, char* argv[]) {
 
 		// ------------
 		// Setup models
-
 		if (!models.size()) models.push_back(createModel(2));
 
 		// Attach output
@@ -672,21 +672,22 @@ int main(int argc, char* argv[]) {
 		}
 
 		// set up client thread to periodically submit msgs over HTTP
+		// we will have a json decoder for every model
+		jsonais.resize(models.size());
 		for (auto& h : http) {
 
-			h->Set("MODEL", models[0]->getName());
-			h->Set("MODEL_SETTING", models[0]->Get());
+			h->Set("MODEL", models[h->getSource()]->getName());
+			h->Set("MODEL_SETTING", models[h->getSource()]->Get());
 			h->Set("DEVICE_SETTING", device->Get());
 			h->Set("PRODUCT", device->getProduct());
 			h->Set("VENDOR", device->getVendor());
 			h->Set("SERIAL", device->getSerial());
 
-			msg2json >> *h;
+			jsonais[h->getSource()] >> *h;
 			h->Start();
 		}
 
 		// Create and connect output to UDP stream
-
 		for (int i = 0; i < UDP.size(); i++) {
 			models[UDP[i].getSource()]->Output() >> UDP[i];
 			UDP[i].Start();
@@ -698,16 +699,17 @@ int main(int argc, char* argv[]) {
 			msg2screen.setDetail(NMEA_to_screen);
 		}
 		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
-			msg2json >> json2screen;
+			jsonais[0] >> json2screen;
 
 			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
 		}
 
 		// connect property calculation to model only if it is needed (e.g. we connected it to a http server or screen output)
 		// connection to either http or json screen output
-
-		if (msg2json.out.isConnected()) {
-			models[0]->Output() >> msg2json;
+		for (int i = 0; i < jsonais.size(); i++) {
+			if (jsonais[i].out.isConnected()) {
+				models[i]->Output() >> jsonais[i];
+			}
 		}
 
 		// -----------------

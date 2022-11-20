@@ -227,7 +227,7 @@ namespace AIS {
 	void JSONAIS::ProcessMsg(const AIS::Message& msg, TAG& tag) {
 
 		rxtime = msg.getRxTime();
-		channel = std::string(1,msg.getChannel());
+		channel = std::string(1, msg.getChannel());
 
 		Submit(JSON::KEY_CLASS, class_str);
 		Submit(JSON::KEY_DEVICE, device);
