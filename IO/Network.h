@@ -50,6 +50,8 @@ namespace IO {
 
 	class HTTP : public JSONbuildString, public Setting {
 
+		int source = -1;
+
 #ifdef HASCURL
 
 		std::thread run_thread;
@@ -59,7 +61,6 @@ namespace IO {
 		ZIP zip;
 		std::string msg, url, userpwd, stationid;
 		bool gzip = false, show_response = true;
-		int source = -1;
 
 		int INTERVAL = 60;
 		int TIMEOUT = 10;
