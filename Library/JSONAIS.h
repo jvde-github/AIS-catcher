@@ -26,8 +26,21 @@
 #include "Utilities.h"
 
 namespace AIS {
-	class JSONAIS : public StreamIn<Message>, public JSONStreamOut {
-		void ProcessMsg8Data(const AIS::Message& msg, int len);
+	class JSONAIS : public SimpleStreamInOut<Message, JSON::JSON> {
+		JSON::JSON json;
+
+		void ProcessMsg8Data(const AIS::Message& msg);
+		void ProcessMsg(const AIS::Message& msg, TAG& tag);
+
+		const std::string class_str = "AIS";
+		const std::string device = "AIS-catcher";
+		const std::string nan = "nan";
+		const std::string fastleft = "fastleft";
+		const std::string fastright = "fastright";
+		const std::string undefined = "Undefined";
+
+		std::string channel, timestamp, datastring, rxtime;
+		std::string eta, text, callsign, shipname, destination, name, vendorid;
 
 	protected:
 		void U(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0);
@@ -36,16 +49,42 @@ namespace AIS {
 		void SL(const AIS::Message& msg, int p, int start, int len, float a, float b, int undefined = ~0);
 		void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::vector<std::string>* map = NULL);
 		void TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0);
-		void TIMESTAMP(const AIS::Message& msg, int p, int start, int len);
-		void ETA(const AIS::Message& msg, int p, int start, int len);
 		void B(const AIS::Message& msg, int p, int start, int len);
 		void X(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0){};
-		void T(const AIS::Message& msg, int p, int start, int len);
-		void D(const AIS::Message& msg, int p, int start, int len);
+
 		void COUNTRY(const AIS::Message& msg);
+
+		void D(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void T(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void TIMESTAMP(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void ETA(const AIS::Message& msg, int p, int start, int len, std::string& str);
+
+		void Submit(int p, int v) {
+			json.object.push_back(JSON::Member());
+			json.object.back().Set(p, v);
+		}
+		void Submit(int p, unsigned v) {
+			json.object.push_back(JSON::Member());
+			json.object.back().Set(p, v);
+		}
+		void Submit(int p, float v) {
+			json.object.push_back(JSON::Member());
+			json.object.back().Set(p, v);
+		}
+		void Submit(int p, bool v) {
+			json.object.push_back(JSON::Member());
+			json.object.back().Set(p, v);
+		}
+		void Submit(int p, const std::string& v) {
+			json.object.push_back(JSON::Member());
+			json.object.back().Set(p, (std::string*)&v);
+		}
+		void Submit(int p, const std::vector<std::string>& v) {
+			json.object.push_back(JSON::Member());
+			json.object.back().Set(p, (std::vector<std::string>*)&v);
+		}
 
 	public:
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
-
 }

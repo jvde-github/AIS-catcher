@@ -23,7 +23,6 @@
 
 namespace IO {
 
-
 	void HTTP::Start() {
 #ifdef HASCURL
 		if (!running) {
@@ -80,7 +79,6 @@ namespace IO {
 			zip.zip(msg);
 			headers = curl_slist_append(headers, "Content-encoding: gzip");
 		}
-
 
 		if (multipart)
 			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
@@ -152,20 +150,23 @@ namespace IO {
 		if (protocol == PROTOCOL::AISCATCHER) {
 			msg += "{\n\t\"protocol\": \"jsonaiscatcher\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			msg += "\n\t\"stationid\": \"" + jsonify(stationid) + "\",";
-			msg += "\n\t\"receiver\":\n\t\t{";
-			msg += "\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
-			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
-			msg += "\n\t\t\"engine\": \"" + jsonify(model) + "\",";
-			msg += "\n\t\t\"setting\": \"" + jsonify(model_setting) + "\"";
-			msg += "\n\t\t},";
-			msg += "\n\t\"device\":\n\t\t{";
-			msg += "\n\t\t\"product\": \"" + jsonify(product) + "\",";
-			msg += "\n\t\t\"vendor\": \"" + jsonify(vendor) + "\",";
-			msg += "\n\t\t\"serial\": \"" + jsonify(serial) + "\",";
-			msg += "\n\t\t\"setting\": \"" + jsonify(device_setting) + "\"";
-			msg += "\n\t\t},";
-			msg += "\n\t\"msgs\": [";
+			msg += "\n\t\"stationid\": ";
+			builder.jsonify(stationid, msg);
+			msg += ",";
+			msg += "\n\t\"receiver\":\n\t\t{\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
+			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",\n\t\t\"engine\": ";
+			builder.jsonify(model, msg);
+			msg += ",\n\t\t\"setting\": ";
+			builder.jsonify(model_setting, msg);
+			msg += "\n\t\t},\n\t\"device\":\n\t\t{\n\t\t\"product\": ";
+			builder.jsonify(product, msg);
+			msg += ",\n\t\t\"vendor\": ";
+			builder.jsonify(vendor, msg);
+			msg += ",\n\t\t\"serial\": ";
+			builder.jsonify(serial, msg);
+			msg += ",\n\t\t\"setting\": ";
+			builder.jsonify(device_setting, msg);
+			msg += "\n\t\t},\n\t\"msgs\": [";
 
 			char delim = ' ';
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
@@ -180,11 +181,11 @@ namespace IO {
 		else if (PROTOCOL::APRS == protocol) {
 			msg += "{\n\t\"protocol\": \"jsonais\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			msg += "\n\t\"groups\": [";
-			msg += "\n\t{";
-			msg += "\n\t\t\"path\": [{ \"name\": \"" + jsonify(stationid) + "\", \"url\" : \"" + jsonify(url) + "\" }],";
-
-			msg += "\n\t\t\"msgs\": [";
+			msg += "\n\t\"groups\": [\n\t{\n\t\t\"path\": [{ \"name\": ";
+			builder.jsonify(stationid, msg);
+			msg += ", \"url\" : ";
+			builder.jsonify(url, msg);
+			msg += " }],\n\t\t\"msgs\": [";
 
 			char delim = ' ';
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
@@ -270,19 +271,19 @@ namespace IO {
 			else if (option == "PROTOCOL") {
 
 				if (arg == "AISCATCHER") {
-					setMap(JSON_DICT_FULL);
+					builder.setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::AISCATCHER;
 				}
 				else if (arg == "MINIMAL") {
-					setMap(JSON_DICT_MINIMAL);
+					builder.setMap(JSON_DICT_MINIMAL);
 					protocol = PROTOCOL::AISCATCHER;
 				}
 				else if (arg == "LIST") {
-					setMap(JSON_DICT_FULL);
+					builder.setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::LIST;
 				}
 				else if (arg == "APRS") {
-					setMap(JSON_DICT_APRS);
+					builder.setMap(JSON_DICT_APRS);
 					protocol = PROTOCOL::APRS;
 				}
 				else

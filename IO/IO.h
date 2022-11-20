@@ -104,8 +104,12 @@ namespace IO {
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
 
-	class JSONtoScreen : public JSONbuildString {
-	protected:
-		void Ready();
+	class JSONtoScreen : public StreamIn<JSON::JSON> {
+		JSON::StringBuilder builder;
+		std::string json;
+
+	public:
+		void Receive(const JSON::JSON* data, int len, TAG& tag);
+		void setMap(int m) { builder.setMap(m); }
 	};
 }
