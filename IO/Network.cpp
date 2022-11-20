@@ -31,7 +31,9 @@ namespace IO {
 			terminate = false;
 
 			run_thread = std::thread(&HTTP::process, this);
-			std::cerr << "HTTP: start thread (" << url << ")." << std::endl;
+			std::cerr << "HTTP: start thread (" << url << "), filter: " << Util::Convert::toString(filter.isOn());
+			if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed() << ".";
+			std::cerr << std::endl;
 		}
 #else
 		throw "HTTP: not implemented, please recompile with libcurl support.";
@@ -286,11 +288,12 @@ namespace IO {
 					builder.setMap(JSON_DICT_APRS);
 					protocol = PROTOCOL::APRS;
 				}
+
 				else
 					throw "HTTP: error - unknown protocol";
 			}
 			else
-				throw "HTTP: Invalid setting.";
+				filter.Set(option, arg);
 		}
 #else
 		throw "HTTP: not implemented, please recompile with libcurl support.";
@@ -318,14 +321,14 @@ namespace IO {
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if (sock != -1)
 			for (int i = 0; i < len; i++) {
-				if (!filter_on || filter.include(data[i]))
+				if (filter.include(data[i]))
 					for (const auto& s : data[i].NMEA)
 						sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
 			}
 	}
 
 	void UDP::Start() {
-		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter_on);
+		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter_on) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << std::endl;
 
@@ -372,10 +375,6 @@ namespace IO {
 		}
 		else if (option == "PORT") {
 			port = arg;
-		}
-		else if (option == "FILTER") {
-			Util::Convert::toUpper(arg);
-			filter_on = Util::Parse::Switch(arg);
 		}
 		else
 			filter.Set(option, arg);

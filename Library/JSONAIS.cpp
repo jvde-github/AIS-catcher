@@ -161,6 +161,7 @@ namespace AIS {
 		for (int i = 0; i < len; i++) {
 			json.object.clear();
 			ProcessMsg(data[i], tag);
+			json.meta = (void*)&data[i];
 			Send(&json, 1, tag);
 		}
 	}

@@ -26,41 +26,45 @@ namespace IO {
 		if (level == OutputLevel::NONE) return;
 
 		for (int i = 0; i < len; i++) {
-			switch (level) {
-			case OutputLevel::NMEA:
-			case OutputLevel::NMEA_TAG:
-				for (auto s : data[i].NMEA) std::cout << s << std::endl;
-				break;
-			case OutputLevel::FULL:
-				for (auto s : data[i].NMEA) {
-					std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-					if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
-					if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();
-					std::cout << ")" << std::endl;
+			if (filter.include(data[i])) {
+				switch (level) {
+				case OutputLevel::NMEA:
+				case OutputLevel::NMEA_TAG:
+					for (auto s : data[i].NMEA) std::cout << s << std::endl;
+					break;
+				case OutputLevel::FULL:
+					for (auto s : data[i].NMEA) {
+						std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
+						if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
+						if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();
+						std::cout << ")" << std::endl;
+					}
+					break;
+				case OutputLevel::JSON_NMEA:
+					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].getChannel() << "\"";
+
+					if (tag.mode & 2) std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
+					if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
+
+					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type() << ",\"nmea\":[\"" << data[i].NMEA[0] << "\"";
+
+					for (int j = 1; j < data[i].NMEA.size(); j++)
+						std::cout << ",\"" << data[i].NMEA[j] << "\"";
+
+					std::cout << "]}" << std::endl;
+					break;
 				}
-				break;
-			case OutputLevel::JSON_NMEA:
-				std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].getChannel() << "\"";
-
-				if (tag.mode & 2) std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
-				if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
-
-				std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type() << ",\"nmea\":[\"" << data[i].NMEA[0] << "\"";
-
-				for (int j = 1; j < data[i].NMEA.size(); j++)
-					std::cout << ",\"" << data[i].NMEA[j] << "\"";
-
-				std::cout << "]}" << std::endl;
-				break;
 			}
 		}
 	}
 
 	void JSONtoScreen::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
-			json.clear();
-			builder.build(data[i], json);
-			std::cout << json << std::endl;
+			if (filter.include(*(AIS::Message*)data[i].meta)) {
+				json.clear();
+				builder.build(data[i], json);
+				std::cout << json << std::endl;
+			}
 		}
 	}
 }

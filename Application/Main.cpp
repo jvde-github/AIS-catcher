@@ -380,7 +380,7 @@ int main(int argc, char* argv[]) {
 				NMEA_to_screen = OutputLevel::NMEA;
 				break;
 			case 'o':
-				Assert(count == 1, param, "Requires one parameter.");
+				Assert(count >= 1 && count % 2 == 1, param, "Requires at least one parameter.");
 				{
 					switch (Util::Parse::Integer(arg1, 0, 5)) {
 					case 0:
@@ -403,6 +403,10 @@ int main(int argc, char* argv[]) {
 						break;
 					default:
 						throw "Error: unknown option 'o'";
+					}
+					if (count > 1) {
+						parseSettings(msg2screen, argv, ptr + 1, argc);
+						parseSettings(json2screen, argv, ptr + 1, argc);
 					}
 				}
 				break;

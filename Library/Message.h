@@ -105,11 +105,14 @@ namespace AIS {
 	class Filter : public Setting {
 		const uint32_t all_msg = 0b1111111111111111111111111110;
 		uint32_t allow = all_msg;
+		bool on = false;
 
 	public:
 		void Set(std::string option, std::string arg);
+		bool isOn() { return on; }
 		std::string getAllowed();
 		bool include(const Message& msg) {
+			if (!on) return true;
 			unsigned type = msg.type() & 31;
 			return ((1U << type) & allow) != 0;
 		}
