@@ -32,16 +32,20 @@
 
 namespace AIS {
 
-	struct MID {
-		uint32_t code;
+	struct COUNTRY {
+		uint32_t MID;
 		std::string country;
+		std::string code;
 	};
 
 	extern const std::vector<std::string> JSON_MAP_STATUS;
 	extern const std::vector<std::string> JSON_MAP_EPFD;
 	extern const std::vector<std::string> JSON_MAP_SHIPTYPE;
 	extern const std::vector<std::string> JSON_MAP_AID_TYPE;
-	extern const std::vector<MID> JSON_MAP_MID;
+	extern const std::vector<COUNTRY> JSON_MAP_MID;
+
+	const std::string JSONAIS::sClass = "AIS";
+	const std::string JSONAIS::sDevice = "AIS-catcher";
 
 	void JSONAIS::U(const AIS::Message& msg, int p, int start, int len, unsigned undefined) {
 		unsigned u = msg.getUint(start, len);
@@ -69,24 +73,29 @@ namespace AIS {
 
 	void JSONAIS::E(const AIS::Message& msg, int p, int start, int len, int pmap, const std::vector<std::string>* map) {
 		unsigned u = msg.getUint(start, len);
+		static const std::string sUndefined = "Undefined";
 		Submit(p, u);
 		if (map) {
 			if (u < map->size())
 				Submit(pmap, (*map)[u]);
 			else
-				Submit(pmap, std::string("Undefined"));
+				Submit(pmap, sUndefined);
 		}
 	}
 
 	void JSONAIS::TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined) {
+		static const std::string sNAN = "nan";
+		static const std::string sFastleft = "fastleft";
+		static const std::string sFastright = "fastright";
+
 		int u = msg.getInt(start, len);
 
 		if (u == -128)
-			Submit(p, std::string("nan"));
+			Submit(p, sNAN);
 		else if (u == -127)
-			Submit(p, std::string("fastleft"));
+			Submit(p, sFastleft);
 		else if (u == 127)
-			Submit(p, std::string("fastright"));
+			Submit(p, sFastright);
 		else {
 			double rot = u / 4.733;
 			rot = (u < 0) ? -rot * rot : rot * rot;
@@ -94,22 +103,24 @@ namespace AIS {
 		}
 	}
 
-	void JSONAIS::TIMESTAMP(const AIS::Message& msg, int p, int start, int len) {
-		if (len != 40) return;
+	std::string JSONAIS::TIMESTAMP(const AIS::Message& msg, int start, int len) {
+		static const std::string sNA = "";
+		if (len != 40) return sNA;
 
 		std::stringstream s;
 		s << std::setfill('0') << std::setw(4) << msg.getUint(start, 14) << "-" << std::setw(2) << msg.getUint(start + 14, 4) << "-" << std::setw(2) << msg.getUint(start + 18, 5) << "T"
 		  << std::setw(2) << msg.getUint(start + 23, 5) << ":" << std::setw(2) << msg.getUint(start + 28, 6) << ":" << std::setw(2) << msg.getUint(start + 34, 6) << "Z";
-		Submit(p, std::string(s.str()));
+		return std::string(s.str());
 	}
 
-	void JSONAIS::ETA(const AIS::Message& msg, int p, int start, int len) {
-		if (len != 20) return;
+	std::string JSONAIS::ETA(const AIS::Message& msg, int start, int len) {
+		static const std::string sNA = "";
+		if (len != 20) sNA;
 
 		std::stringstream s;
 		s << std::setfill('0') << std::setw(2) << msg.getUint(start, 4) << "-" << std::setw(2) << msg.getUint(start + 4, 5) << "T"
 		  << std::setw(2) << msg.getUint(start + 9, 5) << ":" << std::setw(2) << msg.getUint(start + 14, 6) << "Z";
-		Submit(p, std::string(s.str()));
+		return std::string(s.str());
 	}
 
 	void JSONAIS::B(const AIS::Message& msg, int p, int start, int len) {
@@ -117,19 +128,23 @@ namespace AIS {
 		Submit(p, (bool)u);
 	}
 
-	void JSONAIS::T(const AIS::Message& msg, int p, int start, int len) {
+	std::string JSONAIS::T(const AIS::Message& msg, int start, int len) {
 		std::string text = msg.getText(start, len);
 		while (!text.empty() && text[text.length() - 1] == ' ') text.resize(text.length() - 1);
-		Submit(p, text);
+		return text;
 	}
 
-	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len) {
-		std::string text = msg.getText(start, len);
-		Submit(p, text);
+	std::string JSONAIS::D(const AIS::Message& msg, int start, int len) {
+		std::string text = std::to_string(len) + ":";
+		for (int i = start; i < start + len; i += 4) {
+			char c = msg.getUint(i, 4);
+			text += (char)(c < 10 ? c + '0' : c + 'a' - 10);
+		}
+		return text;
 	}
 
 	// Refernce: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
-	void JSONAIS::MMSI(const AIS::Message& msg) {
+	void JSONAIS::COUNTRY(const AIS::Message& msg) {
 
 		uint32_t mid = msg.mmsi();
 		while (mid > 1000) mid /= 10;
@@ -137,13 +152,15 @@ namespace AIS {
 			int l = 0, r = JSON_MAP_MID.size() - 1;
 			while (l != r) {
 				int m = (l + r + 1) / 2;
-				if (JSON_MAP_MID[m].code > mid)
+				if (JSON_MAP_MID[m].MID > mid)
 					r = m - 1;
 				else
 					l = m;
 			}
-			if (JSON_MAP_MID[l].code == mid)
+			if (JSON_MAP_MID[l].MID == mid) {
 				Submit(PROPERTY_COUNTRY, JSON_MAP_MID[l].country);
+				Submit(PROPERTY_COUNTRY_CODE, JSON_MAP_MID[l].code);
+			}
 		}
 	}
 
@@ -152,7 +169,9 @@ namespace AIS {
 		int fid = msg.getUint(50, 6);
 
 		if (dac == 200 && fid == 10) {
-			T(msg, PROPERTY_VIN, 56, 48);
+			text = T(msg, 56, 48);
+			Submit(PROPERTY_VIN, text);
+
 			U(msg, PROPERTY_LENGTH, 104, 13);
 			U(msg, PROPERTY_BEAM, 117, 10);
 			E(msg, PROPERTY_SHIPTYPE, 127, 14);
@@ -207,20 +226,24 @@ namespace AIS {
 	}
 
 	void JSONAIS::Receive(const AIS::Message* data, int len, TAG& tag) {
-		Submit(PROPERTY_OBJECT_START, std::string(""));
-
 		const AIS::Message& msg = data[0];
+		json.object.clear();
 
-		Submit(PROPERTY_CLASS, std::string("AIS"));
-		Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
+		static const std::string sClass = "AIS";
+		static const std::string sDevice = "AIS-catcher";
 
-		if (tag.mode & 2) {
-			Submit(PROPERTY_RXTIME, msg.getRxTime());
-		}
+		rxtime = msg.getRxTime();
+		channel = std::string(1, msg.getChannel());
+
+		Submit(PROPERTY_CLASS, sClass);
+		Submit(PROPERTY_DEVICE, sDevice);
+
+		if (tag.mode & 2)
+			Submit(PROPERTY_RXTIME, rxtime);
 
 		Submit(PROPERTY_SCALED, true);
-		Submit(PROPERTY_CHANNEL, std::string(1, msg.channel));
-		Submit(PROPERTY_NMEA, msg.sentence);
+		Submit(PROPERTY_CHANNEL, channel);
+		Submit(PROPERTY_NMEA, msg.NMEA);
 
 		if (tag.mode & 1) {
 			Submit(PROPERTY_SIGNAL_POWER, tag.level);
@@ -232,7 +255,7 @@ namespace AIS {
 		U(msg, PROPERTY_MMSI, 8, 30);
 
 		if (tag.mode & 4) {
-			MMSI(msg);
+			COUNTRY(msg);
 		}
 
 		switch (msg.type()) {
@@ -251,11 +274,12 @@ namespace AIS {
 			E(msg, PROPERTY_MANEUVER, 143, 2);
 			X(msg, PROPERTY_SPARE, 145, 3);
 			B(msg, PROPERTY_RAIM, 148, 1);
-			U(msg, PROPERTY_RADIO, 149, MIN(19, MAX(msg.length - 149, 0)));
+			U(msg, PROPERTY_RADIO, 149, MIN(19, MAX(msg.getLength() - 149, 0)));
 			break;
 		case 4:
 		case 11:
-			TIMESTAMP(msg, PROPERTY_TIMESTAMP, 38, 40);
+			timestamp = TIMESTAMP(msg, 38, 40);
+			Submit(PROPERTY_TIMESTAMP, timestamp);
 			U(msg, PROPERTY_YEAR, 38, 14, 0);
 			U(msg, PROPERTY_MONTH, 52, 4, 0);
 			U(msg, PROPERTY_DAY, 56, 5, 0);
@@ -273,21 +297,25 @@ namespace AIS {
 		case 5:
 			U(msg, PROPERTY_AIS_VERSION, 38, 2);
 			U(msg, PROPERTY_IMO, 40, 30);
-			T(msg, PROPERTY_CALLSIGN, 70, 42);
-			T(msg, PROPERTY_SHIPNAME, 112, 120);
+			callsign = T(msg, 70, 42);
+			Submit(PROPERTY_CALLSIGN, callsign);
+			shipname = T(msg, 112, 120);
+			Submit(PROPERTY_SHIPNAME, shipname);
 			E(msg, PROPERTY_SHIPTYPE, 232, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
 			U(msg, PROPERTY_TO_BOW, 240, 9);
 			U(msg, PROPERTY_TO_STERN, 249, 9);
 			U(msg, PROPERTY_TO_PORT, 258, 6);
 			U(msg, PROPERTY_TO_STARBOARD, 264, 6);
 			E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			ETA(msg, PROPERTY_ETA, 274, 20);
+			eta = ETA(msg, 274, 20);
+			Submit(PROPERTY_ETA, eta);
 			U(msg, PROPERTY_MONTH, 274, 4, 0);
 			U(msg, PROPERTY_DAY, 278, 5, 0);
 			U(msg, PROPERTY_HOUR, 283, 5, 0);
 			U(msg, PROPERTY_MINUTE, 288, 6, 0);
 			UL(msg, PROPERTY_DRAUGHT, 294, 8, 0.1, 0);
-			T(msg, PROPERTY_DESTINATION, 302, 120);
+			destination = T(msg, 302, 120);
+			Submit(PROPERTY_DESTINATION, destination);
 			B(msg, PROPERTY_DTE, 422, 1);
 			X(msg, PROPERTY_SPARE, 423, 1);
 			break;
@@ -298,19 +326,21 @@ namespace AIS {
 			X(msg, PROPERTY_SPARE, 71, 1);
 			U(msg, PROPERTY_DAC, 72, 10);
 			U(msg, PROPERTY_FID, 82, 6);
+			datastring = D(msg, 88, MIN(920, msg.getLength() - 88));
+			Submit(PROPERTY_DATA, datastring);
 			break;
 		case 7:
 		case 13:
 			X(msg, PROPERTY_SPARE, 38, 2);
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_MMSISEQ1, 70, 2);
-			if (msg.length <= 72) break;
+			if (msg.getLength() <= 72) break;
 			U(msg, PROPERTY_MMSI2, 72, 30);
 			U(msg, PROPERTY_MMSISEQ2, 102, 2);
-			if (msg.length <= 104) break;
+			if (msg.getLength() <= 104) break;
 			U(msg, PROPERTY_MMSI3, 104, 30);
 			U(msg, PROPERTY_MMSISEQ3, 134, 2);
-			if (msg.length <= 136) break;
+			if (msg.getLength() <= 136) break;
 			U(msg, PROPERTY_MMSI4, 136, 30);
 			U(msg, PROPERTY_MMSISEQ4, 166, 2);
 			break;
@@ -327,7 +357,7 @@ namespace AIS {
 			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
 			U(msg, PROPERTY_SECOND, 128, 6);
-			X(msg, PROPERTY_REGIONAL, 134, 8);
+			U(msg, PROPERTY_REGIONAL, 134, 8);
 			B(msg, PROPERTY_DTE, 142, 1);
 			B(msg, PROPERTY_ASSIGNED, 146, 1);
 			B(msg, PROPERTY_RAIM, 147, 1);
@@ -340,19 +370,21 @@ namespace AIS {
 			U(msg, PROPERTY_SEQNO, 38, 2);
 			U(msg, PROPERTY_DEST_MMSI, 40, 30);
 			B(msg, PROPERTY_RETRANSMIT, 70, 1);
-			T(msg, PROPERTY_TEXT, 72, 936);
+			text = T(msg, 72, 936);
+			Submit(PROPERTY_TEXT, text);
 			break;
 		case 14:
-			T(msg, PROPERTY_TEXT, 40, 968);
+			text = T(msg, 40, 968);
+			Submit(PROPERTY_TEXT, text);
 			break;
 		case 15:
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_TYPE1_1, 70, 6);
 			U(msg, PROPERTY_OFFSET1_1, 76, 12);
-			if (msg.length <= 90) break;
+			if (msg.getLength() <= 90) break;
 			U(msg, PROPERTY_TYPE1_2, 90, 6);
 			U(msg, PROPERTY_OFFSET1_2, 96, 12);
-			if (msg.length <= 110) break;
+			if (msg.getLength() <= 110) break;
 			U(msg, PROPERTY_MMSI2, 110, 30);
 			U(msg, PROPERTY_TYPE2_1, 140, 6);
 			U(msg, PROPERTY_OFFSET2_1, 146, 12);
@@ -361,11 +393,16 @@ namespace AIS {
 			U(msg, PROPERTY_MMSI1, 40, 30);
 			U(msg, PROPERTY_OFFSET1, 70, 12);
 			U(msg, PROPERTY_INCREMENT1, 82, 10);
+			if (msg.getLength() == 92) break;
+			U(msg, PROPERTY_MMSI2, 92, 30);
+			U(msg, PROPERTY_OFFSET2, 122, 12);
+			U(msg, PROPERTY_INCREMENT2, 134, 10);
 			break;
 		case 17:
 			SL(msg, PROPERTY_LON, 40, 18, 1 / 600.0, 0);
 			SL(msg, PROPERTY_LAT, 58, 17, 1 / 600.0, 0);
-			D(msg, PROPERTY_DATA, 80, 736);
+			datastring = D(msg, 80, MIN(736, msg.getLength() - 80));
+			Submit(PROPERTY_DATA, datastring);
 			break;
 		case 18:
 			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
@@ -392,7 +429,8 @@ namespace AIS {
 			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 112, 12, 0.1, 0);
 			U(msg, PROPERTY_HEADING, 124, 9);
-			T(msg, PROPERTY_SHIPNAME, 143, 120);
+			shipname = T(msg, 143, 120);
+			Submit(PROPERTY_SHIPNAME, shipname);
 			E(msg, PROPERTY_SHIPTYPE, 263, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
 			U(msg, PROPERTY_TO_BOW, 271, 9);
 			U(msg, PROPERTY_TO_STERN, 280, 9);
@@ -413,17 +451,17 @@ namespace AIS {
 			U(msg, PROPERTY_NUMBER1, 52, 4);
 			U(msg, PROPERTY_TIMEOUT1, 56, 3);
 			U(msg, PROPERTY_INCREMENT1, 59, 11);
-			if (msg.length <= 99) break;
+			if (msg.getLength() <= 99) break;
 			U(msg, PROPERTY_OFFSET2, 70, 12);
 			U(msg, PROPERTY_NUMBER2, 82, 4);
 			U(msg, PROPERTY_TIMEOUT2, 86, 3);
 			U(msg, PROPERTY_INCREMENT2, 89, 11);
-			if (msg.length <= 129) break;
+			if (msg.getLength() <= 129) break;
 			U(msg, PROPERTY_OFFSET3, 100, 12);
 			U(msg, PROPERTY_NUMBER3, 112, 4);
 			U(msg, PROPERTY_TIMEOUT3, 116, 3);
 			U(msg, PROPERTY_INCREMENT3, 119, 11);
-			if (msg.length <= 159) break;
+			if (msg.getLength() <= 159) break;
 			U(msg, PROPERTY_OFFSET4, 130, 12);
 			U(msg, PROPERTY_NUMBER4, 142, 4);
 			U(msg, PROPERTY_TIMEOUT4, 146, 3);
@@ -431,7 +469,8 @@ namespace AIS {
 			break;
 		case 21:
 			E(msg, PROPERTY_AID_TYPE, 38, 5, PROPERTY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
-			T(msg, PROPERTY_NAME, 43, 120);
+			name = T(msg, 43, 120);
+			Submit(PROPERTY_NAME, name);
 			B(msg, PROPERTY_ACCURACY, 163, 1);
 			SL(msg, PROPERTY_LON, 164, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 192, 27, 1 / 600000.0, 0);
@@ -482,14 +521,17 @@ namespace AIS {
 			U(msg, PROPERTY_PARTNO, 38, 2);
 
 			if (msg.getUint(38, 2) == 0) {
-				T(msg, PROPERTY_SHIPNAME, 40, 120);
+				shipname = T(msg, 40, 120);
+				Submit(PROPERTY_SHIPNAME, shipname);
 			}
 			else {
 				E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-				T(msg, PROPERTY_VENDORID, 48, 18);
+				vendorid = T(msg, 48, 18);
+				Submit(PROPERTY_VENDORID, vendorid);
 				U(msg, PROPERTY_MODEL, 66, 4);
 				U(msg, PROPERTY_SERIAL, 70, 20);
-				T(msg, PROPERTY_CALLSIGN, 90, 42);
+				callsign = T(msg, 90, 42);
+				Submit(PROPERTY_CALLSIGN, callsign);
 				if (msg.mmsi() / 10000000 == 98) {
 					U(msg, PROPERTY_MOTHERSHIP_MMSI, 132, 30);
 				}
@@ -504,9 +546,9 @@ namespace AIS {
 		case 27:
 			U(msg, PROPERTY_ACCURACY, 38, 1);
 			U(msg, PROPERTY_RAIM, 39, 1);
-			U(msg, PROPERTY_STATUS, 40, 4);
-			SL(msg, PROPERTY_LON, 44, 18, 181000, 1 / 600.0, 0);
-			SL(msg, PROPERTY_LAT, 62, 17, 91000, 1 / 600.0, 0);
+			E(msg, PROPERTY_STATUS, 40, 4, PROPERTY_STATUS_TEXT, &JSON_MAP_STATUS);
+			SL(msg, PROPERTY_LON, 44, 18, 1 / 600.0, 0);
+			SL(msg, PROPERTY_LAT, 62, 17, 1 / 600.0, 0);
 			U(msg, PROPERTY_SPEED, 79, 6);
 			U(msg, PROPERTY_COURSE, 85, 9);
 			U(msg, PROPERTY_GNSS, 94, 1);
@@ -514,7 +556,8 @@ namespace AIS {
 		default:
 			break;
 		}
-		Submit(PROPERTY_OBJECT_END, std::string(""));
+
+		Send(&json, 1, tag);
 	}
 
 	// Below is a direct translation (more or less) of https://gpsd.gitlab.io/gpsd/AIVDM.html
@@ -688,301 +731,297 @@ namespace AIS {
 		"Light Vessel / LANBY / Rigs"
 	};
 
-	// Source: https://www.itu.int/en/ITU-R/terrestrial/fmd/Pages/mid.aspx
-	const std::vector<MID> JSON_MAP_MID = {
-		{ 201, "Albania (Republic of)" },
-		{ 202, "Andorra (Principality of)" },
-		{ 203, "Austria" },
-		{ 204, "Portugal - Azores" },
-		{ 205, "Belgium" },
-		{ 206, "Belarus (Republic of)" },
-		{ 207, "Bulgaria (Republic of)" },
-		{ 208, "Vatican City State" },
-		{ 209, "Cyprus (Republic of)" },
-		{ 210, "Cyprus (Republic of)" },
-		{ 211, "Germany (Federal Republic of)" },
-		{ 212, "Cyprus (Republic of)" },
-		{ 213, "Georgia" },
-		{ 214, "Moldova (Republic of)" },
-		{ 215, "Malta" },
-		{ 216, "Armenia (Republic of)" },
-		{ 218, "Germany (Federal Republic of)" },
-		{ 219, "Denmark" },
-		{ 220, "Denmark" },
-		{ 224, "Spain" },
-		{ 225, "Spain" },
-		{ 226, "France" },
-		{ 227, "France" },
-		{ 228, "France" },
-		{ 229, "Malta" },
-		{ 230, "Finland" },
-		{ 231, "Denmark - Faroe Islands" },
-		{ 232, "United Kingdom of Great Britain and Northern Ireland" },
-		{ 233, "United Kingdom of Great Britain and Northern Ireland" },
-		{ 234, "United Kingdom of Great Britain and Northern Ireland" },
-		{ 235, "United Kingdom of Great Britain and Northern Ireland" },
-		{ 236, "United Kingdom of Great Britain and Northern Ireland - Gibraltar" },
-		{ 237, "Greece" },
-		{ 238, "Croatia (Republic of)" },
-		{ 239, "Greece" },
-		{ 240, "Greece" },
-		{ 241, "Greece" },
-		{ 242, "Morocco (Kingdom of)" },
-		{ 243, "Hungary" },
-		{ 244, "Netherlands (Kingdom of the)" },
-		{ 245, "Netherlands (Kingdom of the)" },
-		{ 246, "Netherlands (Kingdom of the)" },
-		{ 247, "Italy" },
-		{ 248, "Malta" },
-		{ 249, "Malta" },
-		{ 250, "Ireland" },
-		{ 251, "Iceland" },
-		{ 252, "Liechtenstein (Principality of)" },
-		{ 253, "Luxembourg" },
-		{ 254, "Monaco (Principality of)" },
-		{ 255, "Portugal - Madeira" },
-		{ 256, "Malta" },
-		{ 257, "Norway" },
-		{ 258, "Norway" },
-		{ 259, "Norway" },
-		{ 261, "Poland (Republic of)" },
-		{ 262, "Montenegro" },
-		{ 263, "Portugal" },
-		{ 264, "Romania" },
-		{ 265, "Sweden" },
-		{ 266, "Sweden" },
-		{ 267, "Slovak Republic" },
-		{ 268, "San Marino (Republic of)" },
-		{ 269, "Switzerland (Confederation of)" },
-		{ 270, "Czech Republic" },
-		{ 271, "Republic of Türkiye" },
-		{ 272, "Ukraine" },
-		{ 273, "Russian Federation" },
-		{ 274, "North Macedonia (Republic of)" },
-		{ 275, "Latvia (Republic of)" },
-		{ 276, "Estonia (Republic of)" },
-		{ 277, "Lithuania (Republic of)" },
-		{ 278, "Slovenia (Republic of)" },
-		{ 279, "Serbia (Republic of)" },
-		{ 301, "United Kingdom of Great Britain and Northern Ireland - Anguilla" },
-		{ 303, "United States of America - Alaska (State of)" },
-		{ 304, "Antigua and Barbuda" },
-		{ 305, "Antigua and Barbuda" },
-		{ 306, "Netherlands (Kingdom of the) - Bonaire, Sint Eustatius and Saba" },
-		{ 306, "Netherlands (Kingdom of the) - Curaçao" },
-		{ 306, "Netherlands (Kingdom of the) - Sint Maarten (Dutch part)" },
-		{ 307, "Netherlands (Kingdom of the) - Aruba" },
-		{ 308, "Bahamas (Commonwealth of the)" },
-		{ 309, "Bahamas (Commonwealth of the)" },
-		{ 310, "United Kingdom of Great Britain and Northern Ireland - Bermuda" },
-		{ 311, "Bahamas (Commonwealth of the)" },
-		{ 312, "Belize" },
-		{ 314, "Barbados" },
-		{ 316, "Canada" },
-		{ 319, "United Kingdom of Great Britain and Northern Ireland - Cayman Islands" },
-		{ 321, "Costa Rica" },
-		{ 323, "Cuba" },
-		{ 325, "Dominica (Commonwealth of)" },
-		{ 327, "Dominican Republic" },
-		{ 329, "France - Guadeloupe (French Department of)" },
-		{ 330, "Grenada" },
-		{ 331, "Denmark - Greenland" },
-		{ 332, "Guatemala (Republic of)" },
-		{ 334, "Honduras (Republic of)" },
-		{ 336, "Haiti (Republic of)" },
-		{ 338, "United States of America" },
-		{ 339, "Jamaica" },
-		{ 341, "Saint Kitts and Nevis (Federation of)" },
-		{ 343, "Saint Lucia" },
-		{ 345, "Mexico" },
-		{ 347, "France - Martinique (French Department of)" },
-		{ 348, "United Kingdom of Great Britain and Northern Ireland - Montserrat" },
-		{ 350, "Nicaragua" },
-		{ 351, "Panama (Republic of)" },
-		{ 352, "Panama (Republic of)" },
-		{ 353, "Panama (Republic of)" },
-		{ 354, "Panama (Republic of)" },
-		{ 355, "Panama (Republic of)" },
-		{ 356, "Panama (Republic of)" },
-		{ 357, "Panama (Republic of)" },
-		{ 358, "United States of America - Puerto Rico" },
-		{ 359, "El Salvador (Republic of)" },
-		{ 361, "France - Saint Pierre and Miquelon (Territorial Collectivity of)" },
-		{ 362, "Trinidad and Tobago" },
-		{ 364, "United Kingdom of Great Britain and Northern Ireland - Turks and Caicos Islands" },
-		{ 366, "United States of America" },
-		{ 367, "United States of America" },
-		{ 368, "United States of America" },
-		{ 369, "United States of America" },
-		{ 370, "Panama (Republic of)" },
-		{ 371, "Panama (Republic of)" },
-		{ 372, "Panama (Republic of)" },
-		{ 373, "Panama (Republic of)" },
-		{ 374, "Panama (Republic of)" },
-		{ 375, "Saint Vincent and the Grenadines" },
-		{ 376, "Saint Vincent and the Grenadines" },
-		{ 377, "Saint Vincent and the Grenadines" },
-		{ 378, "United Kingdom of Great Britain and Northern Ireland - British Virgin Islands" },
-		{ 379, "United States of America - United States Virgin Islands" },
-		{ 401, "Afghanistan" },
-		{ 403, "Saudi Arabia (Kingdom of)" },
-		{ 405, "Bangladesh (People's Republic of)" },
-		{ 408, "Bahrain (Kingdom of)" },
-		{ 410, "Bhutan (Kingdom of)" },
-		{ 412, "China (People's Republic of)" },
-		{ 413, "China (People's Republic of)" },
-		{ 414, "China (People's Republic of)" },
-		{ 416, "China (People's Republic of) - Taiwan (Province of China)" },
-		{ 417, "Sri Lanka (Democratic Socialist Republic of)" },
-		{ 419, "India (Republic of)" },
-		{ 422, "Iran (Islamic Republic of)" },
-		{ 423, "Azerbaijan (Republic of)" },
-		{ 425, "Iraq (Republic of)" },
-		{ 428, "Israel (State of)" },
-		{ 431, "Japan" },
-		{ 432, "Japan" },
-		{ 434, "Turkmenistan" },
-		{ 436, "Kazakhstan (Republic of)" },
-		{ 437, "Uzbekistan (Republic of)" },
-		{ 438, "Jordan (Hashemite Kingdom of)" },
-		{ 440, "Korea (Republic of)" },
-		{ 441, "Korea (Republic of)" },
-		{ 443, "State of Palestine (In accordance with Resolution 99 Rev. Dubai, 2018)" },
-		{ 445, "Democratic People's Republic of Korea" },
-		{ 447, "Kuwait (State of)" },
-		{ 450, "Lebanon" },
-		{ 451, "Kyrgyz Republic" },
-		{ 453, "China (People's Republic of) - Macao (Special Administrative Region of China)" },
-		{ 455, "Maldives (Republic of)" },
-		{ 457, "Mongolia" },
-		{ 459, "Nepal (Federal Democratic Republic of)" },
-		{ 461, "Oman (Sultanate of)" },
-		{ 463, "Pakistan (Islamic Republic of)" },
-		{ 466, "Qatar (State of)" },
-		{ 468, "Syrian Arab Republic" },
-		{ 470, "United Arab Emirates" },
-		{ 471, "United Arab Emirates" },
-		{ 472, "Tajikistan (Republic of)" },
-		{ 473, "Yemen (Republic of)" },
-		{ 475, "Yemen (Republic of)" },
-		{ 477, "China (People's Republic of) - Hong Kong (Special Administrative Region of China)" },
-		{ 478, "Bosnia and Herzegovina" },
-		{ 501, "France - Adelie Land" },
-		{ 503, "Australia" },
-		{ 506, "Myanmar (Union of)" },
-		{ 508, "Brunei Darussalam" },
-		{ 510, "Micronesia (Federated States of)" },
-		{ 511, "Palau (Republic of)" },
-		{ 512, "New Zealand" },
-		{ 514, "Cambodia (Kingdom of)" },
-		{ 515, "Cambodia (Kingdom of)" },
-		{ 516, "Australia - Christmas Island (Indian Ocean)" },
-		{ 518, "New Zealand - Cook Islands" },
-		{ 520, "Fiji (Republic of)" },
-		{ 523, "Australia - Cocos (Keeling) Islands" },
-		{ 525, "Indonesia (Republic of)" },
-		{ 529, "Kiribati (Republic of)" },
-		{ 531, "Lao People's Democratic Republic" },
-		{ 533, "Malaysia" },
-		{ 536, "United States of America - Northern Mariana Islands (Commonwealth of the)" },
-		{ 538, "Marshall Islands (Republic of the)" },
-		{ 540, "France - New Caledonia" },
-		{ 542, "New Zealand - Niue" },
-		{ 544, "Nauru (Republic of)" },
-		{ 546, "France - French Polynesia" },
-		{ 548, "Philippines (Republic of the)" },
-		{ 550, "Timor-Leste (Democratic Republic of)" },
-		{ 553, "Papua New Guinea" },
-		{ 555, "United Kingdom of Great Britain and Northern Ireland - Pitcairn Island" },
-		{ 557, "Solomon Islands" },
-		{ 559, "United States of America - American Samoa" },
-		{ 561, "Samoa (Independent State of)" },
-		{ 563, "Singapore (Republic of)" },
-		{ 564, "Singapore (Republic of)" },
-		{ 565, "Singapore (Republic of)" },
-		{ 566, "Singapore (Republic of)" },
-		{ 567, "Thailand" },
-		{ 570, "Tonga (Kingdom of)" },
-		{ 572, "Tuvalu" },
-		{ 574, "Viet Nam (Socialist Republic of)" },
-		{ 576, "Vanuatu (Republic of)" },
-		{ 577, "Vanuatu (Republic of)" },
-		{ 578, "France - Wallis and Futuna Islands" },
-		{ 601, "South Africa (Republic of)" },
-		{ 603, "Angola (Republic of)" },
-		{ 605, "Algeria (People's Democratic Republic of)" },
-		{ 607, "France - Saint Paul and Amsterdam Islands" },
-		{ 608, "United Kingdom of Great Britain and Northern Ireland - Ascension Island" },
-		{ 609, "Burundi (Republic of)" },
-		{ 610, "Benin (Republic of)" },
-		{ 611, "Botswana (Republic of)" },
-		{ 612, "Central African Republic" },
-		{ 613, "Cameroon (Republic of)" },
-		{ 615, "Congo (Republic of the)" },
-		{ 616, "Comoros (Union of the)" },
-		{ 617, "Cabo Verde (Republic of)" },
-		{ 618, "France - Crozet Archipelago" },
-		{ 619, "Côte d'Ivoire (Republic of)" },
-		{ 620, "Comoros (Union of the)" },
-		{ 621, "Djibouti (Republic of)" },
-		{ 622, "Egypt (Arab Republic of)" },
-		{ 624, "Ethiopia (Federal Democratic Republic of)" },
-		{ 625, "Eritrea" },
-		{ 626, "Gabonese Republic" },
-		{ 627, "Ghana" },
-		{ 629, "Gambia (Republic of the)" },
-		{ 630, "Guinea-Bissau (Republic of)" },
-		{ 631, "Equatorial Guinea (Republic of)" },
-		{ 632, "Guinea (Republic of)" },
-		{ 633, "Burkina Faso" },
-		{ 634, "Kenya (Republic of)" },
-		{ 635, "France - Kerguelen Islands" },
-		{ 636, "Liberia (Republic of)" },
-		{ 637, "Liberia (Republic of)" },
-		{ 638, "South Sudan (Republic of)" },
-		{ 642, "Libya (State of)" },
-		{ 644, "Lesotho (Kingdom of)" },
-		{ 645, "Mauritius (Republic of)" },
-		{ 647, "Madagascar (Republic of)" },
-		{ 649, "Mali (Republic of)" },
-		{ 650, "Mozambique (Republic of)" },
-		{ 654, "Mauritania (Islamic Republic of)" },
-		{ 655, "Malawi" },
-		{ 656, "Niger (Republic of the)" },
-		{ 657, "Nigeria (Federal Republic of)" },
-		{ 659, "Namibia (Republic of)" },
-		{ 660, "France - Reunion (French Department of)" },
-		{ 661, "Rwanda (Republic of)" },
-		{ 662, "Sudan (Republic of the)" },
-		{ 663, "Senegal (Republic of)" },
-		{ 664, "Seychelles (Republic of)" },
-		{ 665, "United Kingdom of Great Britain and Northern Ireland - Saint Helena" },
-		{ 666, "Somalia (Federal Republic of)" },
-		{ 667, "Sierra Leone" },
-		{ 668, "Sao Tome and Principe (Democratic Republic of)" },
-		{ 669, "Eswatini (Kingdom of)" },
-		{ 670, "Chad (Republic of)" },
-		{ 671, "Togolese Republic" },
-		{ 672, "Tunisia" },
-		{ 674, "Tanzania (United Republic of)" },
-		{ 675, "Uganda (Republic of)" },
-		{ 676, "Democratic Republic of the Congo" },
-		{ 677, "Tanzania (United Republic of)" },
-		{ 678, "Zambia (Republic of)" },
-		{ 679, "Zimbabwe (Republic of)" },
-		{ 701, "Argentine Republic" },
-		{ 710, "Brazil (Federative Republic of)" },
-		{ 720, "Bolivia (Plurinational State of)" },
-		{ 725, "Chile" },
-		{ 730, "Colombia (Republic of)" },
-		{ 735, "Ecuador" },
-		{ 740, "United Kingdom of Great Britain and Northern Ireland - Falkland Islands (Malvinas)" },
-		{ 745, "France - Guiana (French Department of)" },
-		{ 750, "Guyana" },
-		{ 755, "Paraguay (Republic of)" },
-		{ 760, "Peru" },
-		{ 765, "Suriname (Republic of)" },
-		{ 770, "Uruguay (Eastern Republic of)" },
-		{ 775, "Venezuela (Bolivarian Republic of)" }
+	// Source: https://help.marinetraffic.com/hc/en-us/articles/360018392858-How-does-MarineTraffic-identify-a-vessel-s-country-and-flag-
+	const std::vector<COUNTRY> JSON_MAP_MID = {
+		{ 201, "Albania", "AL" },
+		{ 202, "Andorra", "AD" },
+		{ 203, "Austria", "AT" },
+		{ 204, "Portugal", "PT" },
+		{ 205, "Belgium", "BE" },
+		{ 206, "Belarus", "BY" },
+		{ 207, "Bulgaria", "BG" },
+		{ 208, "Vatican", "VA" },
+		{ 209, "Cyprus", "CY" },
+		{ 210, "Cyprus", "CY" },
+		{ 211, "Germany", "DE" },
+		{ 212, "Cyprus", "CY" },
+		{ 213, "Georgia", "GE" },
+		{ 214, "Moldova", "MD" },
+		{ 215, "Malta", "MT" },
+		{ 216, "Armenia", "AM" },
+		{ 218, "Germany", "DE" },
+		{ 219, "Denmark", "DK" },
+		{ 220, "Denmark", "DK" },
+		{ 224, "Spain", "ES" },
+		{ 225, "Spain", "ES" },
+		{ 226, "France", "FR" },
+		{ 227, "France", "FR" },
+		{ 228, "France", "FR" },
+		{ 229, "Malta", "MT" },
+		{ 230, "Finland", "FI" },
+		{ 231, "Faroe Is", "FO" },
+		{ 232, "United Kingdom", "GB" },
+		{ 233, "United Kingdom", "GB" },
+		{ 234, "United Kingdom", "GB" },
+		{ 235, "United Kingdom", "GB" },
+		{ 236, "Gibraltar", "GI" },
+		{ 237, "Greece", "GR" },
+		{ 238, "Croatia", "HR" },
+		{ 239, "Greece", "GR" },
+		{ 240, "Greece", "GR" },
+		{ 241, "Greece", "GR" },
+		{ 242, "Morocco", "MA" },
+		{ 243, "Hungary", "HU" },
+		{ 244, "Netherlands", "NL" },
+		{ 245, "Netherlands", "NL" },
+		{ 246, "Netherlands", "NL" },
+		{ 247, "Italy", "IT" },
+		{ 248, "Malta", "MT" },
+		{ 249, "Malta", "MT" },
+		{ 250, "Ireland", "IE" },
+		{ 251, "Iceland", "IS" },
+		{ 252, "Liechtenstein", "LI" },
+		{ 253, "Luxembourg", "LU" },
+		{ 254, "Monaco", "MC" },
+		{ 255, "Portugal", "PT" },
+		{ 256, "Malta", "MT" },
+		{ 257, "Norway", "NO" },
+		{ 258, "Norway", "NO" },
+		{ 259, "Norway", "NO" },
+		{ 261, "Poland", "PL" },
+		{ 262, "Montenegro", "ME" },
+		{ 263, "Portugal", "PT" },
+		{ 264, "Romania", "RO" },
+		{ 265, "Sweden", "SE" },
+		{ 266, "Sweden", "SE" },
+		{ 267, "Slovakia", "SK" },
+		{ 268, "San Marino", "SM" },
+		{ 269, "Switzerland", "CH" },
+		{ 270, "Czech Republic", "CZ" },
+		{ 271, "Turkey", "TR" },
+		{ 272, "Ukraine", "UA" },
+		{ 273, "Russia", "RU" },
+		{ 274, "FYR Macedonia", "MK" },
+		{ 275, "Latvia", "LV" },
+		{ 276, "Estonia", "EE" },
+		{ 277, "Lithuania", "LT" },
+		{ 278, "Slovenia", "SI" },
+		{ 279, "Serbia", "RS" },
+		{ 301, "Anguilla", "AI" },
+		{ 303, "USA", "US" },
+		{ 304, "Antigua Barbuda", "AG" },
+		{ 305, "Antigua Barbuda", "AG" },
+		{ 306, "Curacao", "CW" },
+		{ 307, "Aruba", "AW" },
+		{ 308, "Bahamas", "BS" },
+		{ 309, "Bahamas", "BS" },
+		{ 310, "Bermuda", "BM" },
+		{ 311, "Bahamas", "BS" },
+		{ 312, "Belize", "BZ" },
+		{ 314, "Barbados", "BB" },
+		{ 316, "Canada", "CA" },
+		{ 319, "Cayman Is", "KY" },
+		{ 321, "Costa Rica", "CR" },
+		{ 323, "Cuba", "CU" },
+		{ 325, "Dominica", "DM" },
+		{ 327, "Dominican Rep", "DO" },
+		{ 329, "Guadeloupe", "GP" },
+		{ 330, "Grenada", "GD" },
+		{ 331, "Greenland", "GL" },
+		{ 332, "Guatemala", "GT" },
+		{ 334, "Honduras", "HN" },
+		{ 336, "Haiti", "HT" },
+		{ 338, "USA", "US" },
+		{ 339, "Jamaica", "JM" },
+		{ 341, "St Kitts Nevis", "KN" },
+		{ 343, "St Lucia", "LC" },
+		{ 345, "Mexico", "MX" },
+		{ 347, "Martinique", "MQ" },
+		{ 348, "Montserrat", "MS" },
+		{ 350, "Nicaragua", "NI" },
+		{ 351, "Panama", "PA" },
+		{ 352, "Panama", "PA" },
+		{ 353, "Panama", "PA" },
+		{ 354, "Panama", "PA" },
+		{ 355, "Panama", "PA" },
+		{ 356, "Panama", "PA" },
+		{ 357, "Panama", "PA" },
+		{ 358, "Puerto Rico", "PR" },
+		{ 359, "El Salvador", "SV" },
+		{ 361, "St Pierre Miquelon", "PM" },
+		{ 362, "Trinidad Tobago", "TT" },
+		{ 364, "Turks Caicos Is", "TC" },
+		{ 366, "USA", "US" },
+		{ 367, "USA", "US" },
+		{ 368, "USA", "US" },
+		{ 369, "USA", "US" },
+		{ 370, "Panama", "PA" },
+		{ 371, "Panama", "PA" },
+		{ 372, "Panama", "PA" },
+		{ 373, "Panama", "PA" },
+		{ 374, "Panama", "PA" },
+		{ 375, "St Vincent Grenadines", "VC" },
+		{ 376, "St Vincent Grenadines", "VC" },
+		{ 377, "St Vincent Grenadines", "VC" },
+		{ 378, "British Virgin Is", "VG" },
+		{ 379, "US Virgin Is", "VI" },
+		{ 401, "Afghanistan", "AF" },
+		{ 403, "Saudi Arabia", "SA" },
+		{ 405, "Bangladesh", "BD" },
+		{ 408, "Bahrain", "BH" },
+		{ 410, "Bhutan", "BT" },
+		{ 412, "China", "CN" },
+		{ 413, "China", "CN" },
+		{ 414, "China", "CN" },
+		{ 416, "Taiwan", "TW" },
+		{ 417, "Sri Lanka", "LK" },
+		{ 419, "India", "IN" },
+		{ 422, "Iran", "IR" },
+		{ 423, "Azerbaijan", "AZ" },
+		{ 425, "Iraq", "IQ" },
+		{ 428, "Israel", "IL" },
+		{ 431, "Japan", "JP" },
+		{ 432, "Japan", "JP" },
+		{ 434, "Turkmenistan", "TM" },
+		{ 436, "Kazakhstan", "KZ" },
+		{ 437, "Uzbekistan", "UZ" },
+		{ 438, "Jordan", "JO" },
+		{ 440, "Korea", "KR" },
+		{ 441, "Korea", "KR" },
+		{ 443, "Palestine", "PS" },
+		{ 445, "DPR Korea", "KP" },
+		{ 447, "Kuwait", "KW" },
+		{ 450, "Lebanon", "LB" },
+		{ 451, "Kyrgyz Republic", "KG" },
+		{ 453, "Macao", "MO" },
+		{ 455, "Maldives", "MV" },
+		{ 457, "Mongolia", "MN" },
+		{ 459, "Nepal", "NP" },
+		{ 461, "Oman", "OM" },
+		{ 463, "Pakistan", "PK" },
+		{ 466, "Qatar", "QA" },
+		{ 468, "Syria", "SY" },
+		{ 470, "UAE", "AE" },
+		{ 471, "UAE", "AE" },
+		{ 472, "Tajikistan", "TJ" },
+		{ 473, "Yemen", "YE" },
+		{ 475, "Yemen", "YE" },
+		{ 477, "Hong Kong", "HK" },
+		{ 478, "Bosnia and Herzegovina", "BA" },
+		{ 501, "Antarctica", "AQ" },
+		{ 503, "Australia", "AU" },
+		{ 506, "Myanmar", "MM" },
+		{ 508, "Brunei", "BN" },
+		{ 510, "Micronesia", "FM" },
+		{ 511, "Palau", "PW" },
+		{ 512, "New Zealand", "NZ" },
+		{ 514, "Cambodia", "KH" },
+		{ 515, "Cambodia", "KH" },
+		{ 516, "Christmas Is", "CX" },
+		{ 518, "Cook Is", "CK" },
+		{ 520, "Fiji", "FJ" },
+		{ 523, "Cocos Is", "CC" },
+		{ 525, "Indonesia", "ID" },
+		{ 529, "Kiribati", "KI" },
+		{ 531, "Laos", "LA" },
+		{ 533, "Malaysia", "MY" },
+		{ 536, "N Mariana Is", "MP" },
+		{ 538, "Marshall Is", "MH" },
+		{ 540, "New Caledonia", "NC" },
+		{ 542, "Niue", "NU" },
+		{ 544, "Nauru", "NR" },
+		{ 546, "French Polynesia", "PF" },
+		{ 548, "Philippines", "PH" },
+		{ 553, "Papua New Guinea", "PG" },
+		{ 555, "Pitcairn Is", "PN" },
+		{ 557, "Solomon Is", "SB" },
+		{ 559, "American Samoa", "AS" },
+		{ 561, "Samoa", "WS" },
+		{ 563, "Singapore", "SG" },
+		{ 564, "Singapore", "SG" },
+		{ 565, "Singapore", "SG" },
+		{ 566, "Singapore", "SG" },
+		{ 567, "Thailand", "TH" },
+		{ 570, "Tonga", "TO" },
+		{ 572, "Tuvalu", "TV" },
+		{ 574, "Vietnam", "VN" },
+		{ 576, "Vanuatu", "VU" },
+		{ 577, "Vanuatu", "VU" },
+		{ 578, "Wallis Futuna Is", "WF" },
+		{ 601, "South Africa", "ZA" },
+		{ 603, "Angola", "AO" },
+		{ 605, "Algeria", "DZ" },
+		{ 607, "St Paul Amsterdam Is", "TF" },
+		{ 608, "Ascension Is", "IO" },
+		{ 609, "Burundi", "BI" },
+		{ 610, "Benin", "BJ" },
+		{ 611, "Botswana", "BW" },
+		{ 612, "Cen Afr Rep", "CF" },
+		{ 613, "Cameroon", "CM" },
+		{ 615, "Congo", "CG" },
+		{ 616, "Comoros", "KM" },
+		{ 617, "Cape Verde", "CV" },
+		{ 618, "Antarctica", "AQ" },
+		{ 619, "Ivory Coast", "CI" },
+		{ 620, "Comoros", "KM" },
+		{ 621, "Djibouti", "DJ" },
+		{ 622, "Egypt", "EG" },
+		{ 624, "Ethiopia", "ET" },
+		{ 625, "Eritrea", "ER" },
+		{ 626, "Gabon", "GA" },
+		{ 627, "Ghana", "GH" },
+		{ 629, "Gambia", "GM" },
+		{ 630, "Guinea-Bissau", "GW" },
+		{ 631, "Equ. Guinea", "GQ" },
+		{ 632, "Guinea", "GN" },
+		{ 633, "Burkina Faso", "BF" },
+		{ 634, "Kenya", "KE" },
+		{ 635, "Antarctica", "AQ" },
+		{ 636, "Liberia", "LR" },
+		{ 637, "Liberia", "LR" },
+		{ 642, "Libya", "LY" },
+		{ 644, "Lesotho", "LS" },
+		{ 645, "Mauritius", "MU" },
+		{ 647, "Madagascar", "MG" },
+		{ 649, "Mali", "ML" },
+		{ 650, "Mozambique", "MZ" },
+		{ 654, "Mauritania", "MR" },
+		{ 655, "Malawi", "MW" },
+		{ 656, "Niger", "NE" },
+		{ 657, "Nigeria", "NG" },
+		{ 659, "Namibia", "NA" },
+		{ 660, "Reunion", "RE" },
+		{ 661, "Rwanda", "RW" },
+		{ 662, "Sudan", "SD" },
+		{ 663, "Senegal", "SN" },
+		{ 664, "Seychelles", "SC" },
+		{ 665, "St Helena", "SH" },
+		{ 666, "Somalia", "SO" },
+		{ 667, "Sierra Leone", "SL" },
+		{ 668, "Sao Tome Principe", "ST" },
+		{ 669, "Swaziland", "SZ" },
+		{ 670, "Chad", "TD" },
+		{ 671, "Togo", "TG" },
+		{ 672, "Tunisia", "TN" },
+		{ 674, "Tanzania", "TZ" },
+		{ 675, "Uganda", "UG" },
+		{ 676, "DR Congo", "CD" },
+		{ 677, "Tanzania", "TZ" },
+		{ 678, "Zambia", "ZM" },
+		{ 679, "Zimbabwe", "ZW" },
+		{ 701, "Argentina", "AR" },
+		{ 710, "Brazil", "BR" },
+		{ 720, "Bolivia", "BO" },
+		{ 725, "Chile", "CL" },
+		{ 730, "Colombia", "CO" },
+		{ 735, "Ecuador", "EC" },
+		{ 740, "UK", "UK" },
+		{ 745, "Guiana", "GF" },
+		{ 750, "Guyana", "GY" },
+		{ 755, "Paraguay", "PY" },
+		{ 760, "Peru", "PE" },
+		{ 765, "Suriname", "SR" },
+		{ 770, "Uruguay", "UY" },
+		{ 775, "Venezuela", "VE" }
 	};
 }

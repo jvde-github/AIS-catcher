@@ -48,9 +48,14 @@
 
 namespace IO {
 
-	class HTTP : public JSONbuildString, public Setting {
+	class HTTP : public StreamIn<JSON::JSON>, public Setting {
+
+		int source = -1;
 
 #ifdef HASCURL
+
+		JSON::StringBuilder builder;
+		std::string json;
 
 		std::thread run_thread;
 		bool terminate = false, running = false;
@@ -76,25 +81,32 @@ namespace IO {
 		void post();
 		void process();
 
-		void Ready() {
-#ifdef HASCURL
-			const std::lock_guard<std::mutex> lock(queue_mutex);
-			queue.push_back(json);
-#endif
+		void Receive(const JSON::JSON* data, int len, TAG& tag) {
+			for (int i = 0; i < len; i++) {
+				json.clear();
+				builder.build(data[i], json);
+				{
+					const std::lock_guard<std::mutex> lock(queue_mutex);
+					queue.push_back(json);
+				}
+			}
 		}
 
 		std::list<std::string> queue;
 
 	public:
 		~HTTP() {
-			stopServer();
+			Stop();
 		}
 #endif
 	public:
 		virtual void Set(std::string option, std::string arg);
 
-		void startServer();
-		void stopServer();
+		void Start();
+		void Stop();
+
+		void setSource(int s) { source = s; }
+		int getSource() { return source; }
 	};
 
 	class UDPEndPoint {
@@ -114,27 +126,32 @@ namespace IO {
 		int ID() { return sourceID; }
 	};
 
-	class UDP : public StreamIn<AIS::Message> {
+	class UDP : public StreamIn<AIS::Message>, public Setting {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
+		int source = -1;
+		std::string host, port;
+
+		AIS::Filter filter;
+		bool filter_on = false;
 
 	public:
 		~UDP();
 		UDP();
 
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void openConnection(const std::string& host, const std::string& port);
-		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-		void closeConnection();
-	};
+		virtual void Set(std::string option, std::string arg);
 
-	class TCP : public StreamIn<AIS::Message> {
-		::TCP::Client con;
-
-	public:
 		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void openConnection(const std::string& host, const std::string& port);
-		void openConnection(UDPEndPoint& u) { openConnection(u.address, u.port); }
-		void closeConnection();
+
+		void Start();
+		void Start(UDPEndPoint& u) {
+			host = u.address;
+			port = u.port;
+			Start();
+		}
+		void Stop();
+
+		void setSource(int s) { source = s; }
+		int getSource() { return source; }
 	};
 }

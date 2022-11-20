@@ -24,13 +24,31 @@ namespace AIS {
 		index = 0;
 	}
 
-	void NMEA::clean(char c) {
-		for (auto i = multiline.begin(); i != multiline.end(); ++i) {
-			if (i->channel == c) {
-				multiline.erase(i);
-				i--;
+	void NMEA::clean(char c, int t) {
+		auto i = queue.begin();
+		while (i != queue.end()) {
+			if (i->channel == c && i->talkerID == t)
+				i = queue.erase(i);
+			else
+				i++;
+		}
+	}
+
+	int NMEA::search(const AIVDM& a) {
+		// multiline message, firstly check whether we can find previous lines with the same ID, channel and line count
+		// we run backwards to find the previous addition
+		// return: 0 = Not Found, -1: Found but inconsistent with input, >0: number of previous message
+		int lastNumber = 0;
+		for (auto it = queue.rbegin(); it != queue.rend(); it++) {
+			if (it->channel == aivdm.channel && it->talkerID == aivdm.talkerID) {
+				if (it->count != aivdm.count || it->ID != aivdm.ID)
+					lastNumber = -1;
+				else
+					lastNumber = it->number;
+				break;
 			}
 		}
+		return lastNumber;
 	}
 
 	int NMEA::NMEAchecksum(std::string s) {
@@ -43,65 +61,64 @@ namespace AIS {
 	void NMEA::process(TAG& tag) {
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
 			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "]." << std::endl;
+			if (crc_check) return;
 		}
 
 		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp();
+			msg.setChannel(aivdm.channel);
+
 			addline(aivdm);
-			msg.buildNMEA(tag);
+			if (regenerate)
+				msg.buildNMEA(tag);
+			else
+				msg.NMEA.push_back(aivdm.sentence);
 			Send(&msg, 1, tag);
 			return;
 		}
 
-		// multiline message, firstly check whether we can find previous lines with the same ID, channel and line count
-		// we run backwards to find the last addition
-		int lastNumber = 0;
-		for (auto it = multiline.rbegin(); it != multiline.rend(); it++) {
-			if (it->channel == aivdm.channel) {
-				if (it->count != aivdm.count || it->ID != aivdm.ID)
-					lastNumber = -1;
-				else
-					lastNumber = it->number;
-				break;
-			}
-		}
+		int result = search(aivdm);
 
-		if (aivdm.number != lastNumber + 1 || lastNumber == -1) {
-			std::cerr << "NMEA: incorrect multiline messages [" << aivdm.sentence << "]." << std::endl;
-			clean(aivdm.channel);
+		if (aivdm.number != result + 1 || result == -1) {
+			std::cerr << "NMEA: incorrect multiline messages @ [" << aivdm.sentence << "]." << std::endl;
+			clean(aivdm.channel, aivdm.talkerID);
 			if (aivdm.number != 1) return;
 		}
 
-		multiline.push_back(aivdm);
+		queue.push_back(aivdm);
 		if (aivdm.number != aivdm.count) return;
 
 		// multiline messages are now complete and in the right order
 		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp();
-		for (auto it = multiline.begin(); it != multiline.end(); it++)
-			if (it->channel == aivdm.channel) addline(*it);
+		msg.setChannel(aivdm.channel);
 
-		msg.setID(aivdm.ID);
-		msg.buildNMEA(tag);
+		for (auto it = queue.begin(); it != queue.end(); it++) {
+			if (it->channel == aivdm.channel) {
+				addline(*it);
+				if (!regenerate) msg.NMEA.push_back(it->sentence);
+			}
+		}
+
+		if (regenerate)
+			msg.buildNMEA(tag, aivdm.ID);
+
 		Send(&msg, 1, tag);
-		clean(aivdm.channel);
+		clean(aivdm.channel, aivdm.talkerID);
 	}
 
 	void NMEA::addline(const AIVDM& a) {
-
-		msg.sentence.push_back(a.sentence);
-		msg.channel = a.channel;
-
 		for (char d : a.data) msg.appendLetter(d);
 		if (a.count == a.number) msg.reduceLength(a.fillbits);
 	}
 
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
-		const std::string pattern = "!??VDM,?,?,?,?,?,?*??";
+		const std::string pattern = "sttVDM,c,n,i,c,d,f*cc";
 
+		const int IDX_START = 0;
 		const int IDX_TALKER1 = 1;
 		const int IDX_TALKER2 = 2;
 		const int IDX_COUNT = 7;
@@ -122,12 +139,17 @@ namespace AIS {
 				bool match = false;
 
 				switch (index) {
+				case IDX_START:
+					match = c == '!' || c == '$';
+					break;
 				case IDX_TALKER1:
 					match = c == 'A' || c == 'B' || c == 'S';
+					aivdm.talkerID = c << 8;
 					break;
 				case IDX_TALKER2:
 					match = last == 'A' && (c == 'B' || c == 'D' || c == 'I' || c == 'N' || c == 'R' || c == 'S' || c == 'T' || c == 'X');
 					match = match || (c == 'S' && last == 'B') || (c == 'A' && last == 'S');
+					aivdm.talkerID |= c;
 					break;
 				case IDX_COUNT:
 					match = std::isdigit(c);
@@ -151,7 +173,7 @@ namespace AIS {
 				case IDX_CHANNEL:
 					if (c == ',') {
 						match = true;
-						aivdm.channel = 'A';
+						aivdm.channel = '?';
 						index++;
 						break;
 					}
@@ -159,14 +181,17 @@ namespace AIS {
 					aivdm.channel = c;
 					break;
 				case IDX_DATA:
-					match = true;
-					if (c != ',') {
-						aivdm.data += c;
-						index--;
-						break;
-					}
-					else
+					if (c == ',') {
 						index++;
+						match = true;
+					}
+					else {
+						match = isNMEAchar(c);
+						if (match) {
+							aivdm.data += c;
+							index--;
+						}
+					}
 					break;
 				case IDX_FILLBITS:
 					match = std::isdigit(c);

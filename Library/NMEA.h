@@ -43,23 +43,35 @@ namespace AIS {
 			int ID;
 			int checksum;
 			int fillbits;
+			int talkerID;
 		} aivdm;
 
-		std::vector<AIVDM> multiline;
+		std::vector<AIVDM> queue;
 		int index = 0;
 		char last = '\n';
 
 		void process(TAG& tag);
 		void addline(const AIVDM& a);
 		void reset();
-		void clean(char);
+		void clean(char, int);
+		int search(const AIVDM& a);
 
+		bool isNMEAchar(char c) { return (c >= 40 && c < 88) || (c >= 96 && c <= 56 + 0b111111); }
 		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }
 		int fromHEX(char c) { return (c >= '0' && c <= '9') ? (c - '0') : (c - 'A' + 10); }
 
 		int NMEAchecksum(std::string s);
 
+		bool regenerate = false;
+		bool crc_check = false;
+
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);
+
+		void setRegenerate(bool b) { regenerate = b; }
+		bool getRegenerate() { return regenerate; }
+
+		void setCRCcheck(bool b) { crc_check = b; }
+		bool getCRCcheck() { return crc_check; }
 	};
 }

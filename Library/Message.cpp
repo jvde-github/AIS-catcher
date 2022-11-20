@@ -22,14 +22,10 @@ namespace AIS {
 	int Message::ID = 0;
 
 	unsigned Message::getUint(int start, int len) const {
-		// max unsigned integers are 30 bits in AIS standard
-		const uint8_t ones = 0xFF;
-		const uint8_t start_mask[] = { ones, ones >> 1, ones >> 2, ones >> 3, ones >> 4, ones >> 5, ones >> 6, ones >> 7 };
-
 		// we start 2nd part of first byte and stop first part of last byte
-		int i = start >> 3;
-		unsigned u = data[i] & start_mask[start & 7];
-		int remaining = len - 8 + (start & 7);
+		int x = start >> 3, y = start & 7;
+		unsigned u = data[x] & (0xFF >> y);
+		int remaining = len - 8 + y;
 
 		// first byte is last byte
 		if (remaining <= 0) {
@@ -38,13 +34,13 @@ namespace AIS {
 		// add full bytes
 		while (remaining >= 8) {
 			u <<= 8;
-			u |= data[++i];
+			u |= data[++x];
 			remaining -= 8;
 		}
 		// make room for last bits if needed
 		if (remaining > 0) {
 			u <<= remaining;
-			u |= data[++i] >> (8 - remaining);
+			u |= data[++x] >> (8 - remaining);
 		}
 
 		return u;
@@ -81,45 +77,63 @@ namespace AIS {
 		return text;
 	}
 
-	void Message::buildNMEA(TAG& tag) {
-		std::string line;
-		const std::string comma = ",";
+	void Message::buildNMEA(TAG& tag, int id) {
+		const char comma = ',';
 
-		sentence.resize(0);
+		const int IDX_COUNT = 7;
+		const int IDX_NUMBER = 9;
+
+		if (id >= 0 && id < 10) ID = id;
+
 		int nAISletters = (length + 6 - 1) / 6;
-		int nSentences = (nAISletters + 60 - 1) / 60;
+		int nSentences = (nAISletters + MAX_NMEA_CHARS - 1) / MAX_NMEA_CHARS;
 
-		for (int s = 0, l = 0; s < nSentences; s++) {
-			line = std::string("AIVDM,") + std::to_string(nSentences) + comma + std::to_string(s + 1) + comma;
-			line += (nSentences > 1 ? std::to_string(ID) : "") + comma + channel + comma;
+		line.resize(11);
 
-			for (int i = 0; l < nAISletters && i < 60; i++, l++)
-				line += getLetter(l, length);
+		line[IDX_COUNT] = (char)(nSentences + '0');
+		line[IDX_NUMBER] = '0';
 
-			line += comma + std::to_string((s == nSentences - 1) ? nAISletters * 6 - length : 0);
-
-			char hex[3];
-			sprintf(hex, "%02X", NMEAchecksum(line));
-			line += std::string("*") + hex;
-
-			sentence.push_back("!" + line);
+		if (nSentences > 1) {
+			line += (char)(ID + '0');
+			ID = (ID + 1) % 10;
 		}
 
-		if (tag.mode & 2) Stamp();
-		ID = (ID + 1) % 10;
-	}
-	// dealing with 6 bit letters
-	char Message::getLetter(int pos, int nBytes) const {
-		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+		line += comma;
+		if (channel != '?') line += channel;
+		line += comma;
 
-		// zero padding
-		uint8_t b0 = x < nBytes ? data[x] : 0;
-		uint8_t b1 = x + 1 < nBytes ? data[(int)(x + 1)] : 0;
-		uint16_t w = (b0 << 8) | b1;
+		int header = line.length();
+		NMEA.clear();
+
+		for (int s = 0, l = 0; s < nSentences; s++) {
+
+			line.resize(header);
+			line[IDX_NUMBER]++;
+
+			for (int i = 0; l < nAISletters && i < MAX_NMEA_CHARS; i++, l++)
+				line += getLetter(l);
+
+			line += comma;
+			line += (char)(((s == nSentences - 1) ? nAISletters * 6 - length : 0) + '0');
+
+			int c = NMEAchecksum(line);
+			line += '*';
+			line += (c >> 4) < 10 ? (c >> 4) + '0' : (c >> 4) + 'A' - 10;
+			line += (c & 0xF) < 10 ? (c & 0xF) + '0' : (c & 0xF) + 'A' - 10;
+			NMEA.push_back(line);
+		}
+	}
+
+	char Message::getLetter(int pos) const {
+		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+		uint16_t w = (data[x] << 8) | data[x + 1];
 
 		const int mask = (1 << 6) - 1;
 		int l = (w >> (16 - 6 - y)) & mask;
 
+		// zero for bits not formally set
+		int overrun = pos * 6 + 6 - length;
+		if (overrun > 0) l &= 0xFF << overrun;
 		return l < 40 ? (char)(l + 48) : (char)(l + 56);
 	}
 
@@ -149,5 +163,42 @@ namespace AIS {
 		default:
 			break;
 		}
+	}
+
+	void Filter::Set(std::string option, std::string arg) {
+		Util::Convert::toUpper(option);
+
+		if (option == "ALLOW_TYPE") {
+
+			std::stringstream ss(arg);
+			std::string type_str;
+			allow = 0;
+			while (ss.good()) {
+				getline(ss, type_str, ',');
+				unsigned type = Util::Parse::Integer(type_str, 1, 27);
+				allow |= 1U << type;
+			}
+		}
+		else if (option == "BLOCK_TYPE") {
+
+			std::stringstream ss(arg);
+			std::string type_str;
+			unsigned block = 0;
+			while (ss.good()) {
+				getline(ss, type_str, ',');
+				unsigned type = Util::Parse::Integer(type_str, 1, 27);
+				block |= 1U << type;
+			}
+			allow = ~block & all_msg;
+		}
+	}
+
+	std::string Filter::getAllowed() {
+		std::string ret;
+		for (unsigned i = 1; i <= 27; i++) {
+			if ((allow & (1U << i)) > 0)
+				ret += (!ret.empty() ? std::string(",") : std::string("")) + std::to_string(i);
+		}
+		return ret;
 	}
 }

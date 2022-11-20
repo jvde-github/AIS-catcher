@@ -19,11 +19,12 @@
 
 #include "AIS-catcher.h"
 #include "Network.h"
+#include "Utilities.h"
 
 namespace IO {
 
 
-	void HTTP::startServer() {
+	void HTTP::Start() {
 #ifdef HASCURL
 		if (!running) {
 
@@ -31,14 +32,14 @@ namespace IO {
 			terminate = false;
 
 			run_thread = std::thread(&HTTP::process, this);
-			std::cerr << "HTTP: start server (" << url << ")." << std::endl;
+			std::cerr << "HTTP: start thread (" << url << ")." << std::endl;
 		}
 #else
 		throw "HTTP: not implemented, please recompile with libcurl support.";
 #endif
 	}
 
-	void HTTP::stopServer() {
+	void HTTP::Stop() {
 #ifdef HASCURL
 		if (running) {
 
@@ -46,7 +47,7 @@ namespace IO {
 			terminate = true;
 			run_thread.join();
 
-			std::cerr << "HTTP: stop server (" << url << ")." << std::endl;
+			std::cerr << "HTTP: stop thread (" << url << ")." << std::endl;
 		}
 #endif
 	}
@@ -151,18 +152,32 @@ namespace IO {
 		if (protocol == PROTOCOL::AISCATCHER) {
 			msg += "{\n\t\"protocol\": \"jsonaiscatcher\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			msg += "\n\t\"stationid\": \"" + jsonify(stationid) + "\",";
+			msg += "\n\t\"stationid\": \"";
+			builder.jsonify(stationid, msg);
+			msg += "\",";
 			msg += "\n\t\"receiver\":\n\t\t{";
 			msg += "\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
 			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",";
-			msg += "\n\t\t\"engine\": \"" + jsonify(model) + "\",";
-			msg += "\n\t\t\"setting\": \"" + jsonify(model_setting) + "\"";
+			msg += "\n\t\t\"engine\": \"";
+			builder.jsonify(model, msg);
+			msg += "\",";
+			msg += "\n\t\t\"setting\": \"";
+			builder.jsonify(model_setting, msg);
+			msg += "\"";
 			msg += "\n\t\t},";
 			msg += "\n\t\"device\":\n\t\t{";
-			msg += "\n\t\t\"product\": \"" + jsonify(product) + "\",";
-			msg += "\n\t\t\"vendor\": \"" + jsonify(vendor) + "\",";
-			msg += "\n\t\t\"serial\": \"" + jsonify(serial) + "\",";
-			msg += "\n\t\t\"setting\": \"" + jsonify(device_setting) + "\"";
+			msg += "\n\t\t\"product\": \"";
+			builder.jsonify(product, msg);
+			msg += "\",";
+			msg += "\n\t\t\"vendor\": \"";
+			builder.jsonify(vendor, msg);
+			msg += "\",";
+			msg += "\n\t\t\"serial\": \"";
+			builder.jsonify(serial, msg);
+			msg += "\",";
+			msg += "\n\t\t\"setting\": \"";
+			builder.jsonify(device_setting, msg);
+			msg += "\"";
 			msg += "\n\t\t},";
 			msg += "\n\t\"msgs\": [";
 
@@ -181,7 +196,12 @@ namespace IO {
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"groups\": [";
 			msg += "\n\t{";
-			msg += "\n\t\t\"path\": [{ \"name\": \"" + jsonify(stationid) + "\", \"url\" : \"" + jsonify(url) + "\" }],";
+			msg += "\n\t\t\"path\": [{ \"name\": \"";
+			builder.jsonify(stationid, msg);
+			msg += "\", \"url\" : \"";
+			builder.jsonify(url, msg);
+
+			msg += "\" }],";
 
 			msg += "\n\t\t\"msgs\": [";
 
@@ -269,19 +289,19 @@ namespace IO {
 			else if (option == "PROTOCOL") {
 
 				if (arg == "AISCATCHER") {
-					setMap(JSON_DICT_FULL);
+					builder.setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::AISCATCHER;
 				}
 				else if (arg == "MINIMAL") {
-					setMap(JSON_DICT_MINIMAL);
+					builder.setMap(JSON_DICT_MINIMAL);
 					protocol = PROTOCOL::AISCATCHER;
 				}
 				else if (arg == "LIST") {
-					setMap(JSON_DICT_FULL);
+					builder.setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::LIST;
 				}
 				else if (arg == "APRS") {
-					setMap(JSON_DICT_APRS);
+					builder.setMap(JSON_DICT_APRS);
 					protocol = PROTOCOL::APRS;
 				}
 				else
@@ -306,7 +326,7 @@ namespace IO {
 	}
 
 	UDP::~UDP() {
-		closeConnection();
+		Stop();
 
 #ifdef _WIN32
 		WSACleanup();
@@ -315,13 +335,18 @@ namespace IO {
 
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if (sock != -1)
-			for (int i = 0; i < len; i++)
-				for (const auto& s : data[i].sentence)
-					sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr,
-						   (int)address->ai_addrlen);
+			for (int i = 0; i < len; i++) {
+				if (!filter_on || filter.include(data[i]))
+					for (const auto& s : data[i].NMEA)
+						sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
+			}
 	}
 
-	void UDP::openConnection(const std::string& host, const std::string& port) {
+	void UDP::Start() {
+		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter_on);
+		if (filter_on) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+		std::cerr << std::endl;
+
 		if (sock != -1) {
 			throw "UDP: internal error, socket already defined.";
 			return;
@@ -350,26 +375,27 @@ namespace IO {
 		}
 	}
 
-	void UDP::closeConnection() {
+	void UDP::Stop() {
 		if (sock != -1) {
 			closesocket(sock);
 			sock = -1;
 		}
 	}
 
-	void TCP::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void UDP::Set(std::string option, std::string arg) {
+		Util::Convert::toUpper(option);
 
-		for (int i = 0; i < len; i++)
-			for (const auto& s : data[i].sentence)
-				con.send((s + "\r\n").c_str(), (int)s.length() + 2);
-	}
-
-	void TCP::openConnection(const std::string& host, const std::string& port) {
-		if (!con.connect(host, port))
-			throw "TCP: cannot connect to server.";
-	}
-
-	void TCP::closeConnection() {
-		con.disconnect();
+		if (option == "HOST") {
+			host = arg;
+		}
+		else if (option == "PORT") {
+			port = arg;
+		}
+		else if (option == "FILTER") {
+			Util::Convert::toUpper(arg);
+			filter_on = Util::Parse::Switch(arg);
+		}
+		else
+			filter.Set(option, arg);
 	}
 }

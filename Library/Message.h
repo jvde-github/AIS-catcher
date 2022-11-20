@@ -29,20 +29,23 @@ namespace AIS {
 
 	class Message {
 	protected:
+		const int MAX_NMEA_CHARS = 56;
 		static int ID;
+		std::string line = "!AIVDM,X,X,X,X," + std::string(MAX_NMEA_CHARS, '.') + ",X*XX\n\r"; // longest line
 
 		int NMEAchecksum(const std::string& s) {
 			int check = 0;
-			for (char c : s) check ^= c;
+			for (int i = 1; i < s.length(); i++) check ^= s[i];
 			return check;
 		}
 
-	public:
-		std::time_t rxtime;
-		std::vector<std::string> sentence;
-		char channel;
 		uint8_t data[128];
+		std::time_t rxtime;
 		int length;
+		char channel;
+
+	public:
+		std::vector<std::string> NMEA;
 
 		void Stamp() {
 			std::time(&rxtime);
@@ -54,7 +57,7 @@ namespace AIS {
 
 		void clear() {
 			length = 0;
-			sentence.resize(0);
+			NMEA.resize(0);
 			std::memset(data, 0, 128);
 		}
 
@@ -85,12 +88,30 @@ namespace AIS {
 			return data[i >> 3] & (1 << (i & 7));
 		}
 
-		char getLetter(int pos, int nBytes) const;
+		char getLetter(int pos) const;
 		void setLetter(int pos, char c);
 		void appendLetter(char c) { setLetter(length / 6, c); }
 		void reduceLength(int l) { length -= l; }
-		void setID(int i) { ID = i; }
 
-		void buildNMEA(TAG& tag);
+		void setLength(int l) { length = l; }
+		int getLength() const { return length; }
+
+		void setChannel(char c) { channel = c; }
+		char getChannel() const { return channel; }
+
+		void buildNMEA(TAG& tag, int id = -1);
+	};
+
+	class Filter : public Setting {
+		const uint32_t all_msg = 0b1111111111111111111111111110;
+		uint32_t allow = all_msg;
+
+	public:
+		void Set(std::string option, std::string arg);
+		std::string getAllowed();
+		bool include(const Message& msg) {
+			unsigned type = msg.type() & 31;
+			return ((1U << type) & allow) != 0;
+		}
 	};
 }
