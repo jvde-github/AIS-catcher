@@ -73,29 +73,24 @@ namespace AIS {
 
 	void JSONAIS::E(const AIS::Message& msg, int p, int start, int len, int pmap, const std::vector<std::string>* map) {
 		unsigned u = msg.getUint(start, len);
-		static const std::string sUndefined = "Undefined";
 		Submit(p, u);
 		if (map) {
 			if (u < map->size())
 				Submit(pmap, (*map)[u]);
 			else
-				Submit(pmap, sUndefined);
+				Submit(pmap, undefined);
 		}
 	}
 
 	void JSONAIS::TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined) {
-		static const std::string sNAN = "nan";
-		static const std::string sFastleft = "fastleft";
-		static const std::string sFastright = "fastright";
-
 		int u = msg.getInt(start, len);
 
 		if (u == -128)
-			Submit(p, sNAN);
+			Submit(p, nan);
 		else if (u == -127)
-			Submit(p, sFastleft);
+			Submit(p, fastleft);
 		else if (u == 127)
-			Submit(p, sFastright);
+			Submit(p, fastright);
 		else {
 			double rot = u / 4.733;
 			rot = (u < 0) ? -rot * rot : rot * rot;
@@ -103,44 +98,46 @@ namespace AIS {
 		}
 	}
 
-	std::string JSONAIS::TIMESTAMP(const AIS::Message& msg, int start, int len) {
-		static const std::string sNA = "";
-		if (len != 40) return sNA;
+	void JSONAIS::B(const AIS::Message& msg, int p, int start, int len) {
+		unsigned u = msg.getUint(start, len);
+		Submit(p, (bool)u);
+	}
+
+	void JSONAIS::TIMESTAMP(const AIS::Message& msg, int p, int start, int len, std::string& str) {
+		if (len != 40) return;
 
 		std::stringstream s;
 		s << std::setfill('0') << std::setw(4) << msg.getUint(start, 14) << "-" << std::setw(2) << msg.getUint(start + 14, 4) << "-" << std::setw(2) << msg.getUint(start + 18, 5) << "T"
 		  << std::setw(2) << msg.getUint(start + 23, 5) << ":" << std::setw(2) << msg.getUint(start + 28, 6) << ":" << std::setw(2) << msg.getUint(start + 34, 6) << "Z";
-		return std::string(s.str());
+		str = std::string(s.str());
+		Submit(p, str);
 	}
 
-	std::string JSONAIS::ETA(const AIS::Message& msg, int start, int len) {
+	void JSONAIS::ETA(const AIS::Message& msg, int p, int start, int len, std::string& str) {
 		static const std::string sNA = "";
 		if (len != 20) sNA;
 
 		std::stringstream s;
 		s << std::setfill('0') << std::setw(2) << msg.getUint(start, 4) << "-" << std::setw(2) << msg.getUint(start + 4, 5) << "T"
 		  << std::setw(2) << msg.getUint(start + 9, 5) << ":" << std::setw(2) << msg.getUint(start + 14, 6) << "Z";
-		return std::string(s.str());
+		str = std::string(s.str());
+		Submit(p, str);
 	}
 
-	void JSONAIS::B(const AIS::Message& msg, int p, int start, int len) {
-		unsigned u = msg.getUint(start, len);
-		Submit(p, (bool)u);
+
+	void JSONAIS::T(const AIS::Message& msg, int p, int start, int len, std::string& str) {
+		str = msg.getText(start, len);
+		while (!str.empty() && str[str.length() - 1] == ' ') str.resize(str.length() - 1);
+		Submit(p, str);
 	}
 
-	std::string JSONAIS::T(const AIS::Message& msg, int start, int len) {
-		std::string text = msg.getText(start, len);
-		while (!text.empty() && text[text.length() - 1] == ' ') text.resize(text.length() - 1);
-		return text;
-	}
-
-	std::string JSONAIS::D(const AIS::Message& msg, int start, int len) {
-		std::string text = std::to_string(len) + ":";
+	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len, std::string& str) {
+		str = std::to_string(len) + ":";
 		for (int i = start; i < start + len; i += 4) {
 			char c = msg.getUint(i, 4);
-			text += (char)(c < 10 ? c + '0' : c + 'a' - 10);
+			str += (char)(c < 10 ? c + '0' : c + 'a' - 10);
 		}
-		return text;
+		Submit(p, str);
 	}
 
 	// Refernce: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
@@ -169,9 +166,7 @@ namespace AIS {
 		int fid = msg.getUint(50, 6);
 
 		if (dac == 200 && fid == 10) {
-			text = T(msg, 56, 48);
-			Submit(PROPERTY_VIN, text);
-
+			T(msg, PROPERTY_VIN, 56, 48, text);
 			U(msg, PROPERTY_LENGTH, 104, 13);
 			U(msg, PROPERTY_BEAM, 117, 10);
 			E(msg, PROPERTY_SHIPTYPE, 127, 14);
@@ -278,8 +273,7 @@ namespace AIS {
 			break;
 		case 4:
 		case 11:
-			timestamp = TIMESTAMP(msg, 38, 40);
-			Submit(PROPERTY_TIMESTAMP, timestamp);
+			TIMESTAMP(msg, PROPERTY_TIMESTAMP, 38, 40, timestamp);
 			U(msg, PROPERTY_YEAR, 38, 14, 0);
 			U(msg, PROPERTY_MONTH, 52, 4, 0);
 			U(msg, PROPERTY_DAY, 56, 5, 0);
@@ -297,25 +291,21 @@ namespace AIS {
 		case 5:
 			U(msg, PROPERTY_AIS_VERSION, 38, 2);
 			U(msg, PROPERTY_IMO, 40, 30);
-			callsign = T(msg, 70, 42);
-			Submit(PROPERTY_CALLSIGN, callsign);
-			shipname = T(msg, 112, 120);
-			Submit(PROPERTY_SHIPNAME, shipname);
+			T(msg, PROPERTY_CALLSIGN, 70, 42, callsign);
+			T(msg, PROPERTY_SHIPNAME, 112, 120, shipname);
 			E(msg, PROPERTY_SHIPTYPE, 232, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
 			U(msg, PROPERTY_TO_BOW, 240, 9);
 			U(msg, PROPERTY_TO_STERN, 249, 9);
 			U(msg, PROPERTY_TO_PORT, 258, 6);
 			U(msg, PROPERTY_TO_STARBOARD, 264, 6);
 			E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			eta = ETA(msg, 274, 20);
-			Submit(PROPERTY_ETA, eta);
+			ETA(msg, PROPERTY_ETA, 274, 20, eta);
 			U(msg, PROPERTY_MONTH, 274, 4, 0);
 			U(msg, PROPERTY_DAY, 278, 5, 0);
 			U(msg, PROPERTY_HOUR, 283, 5, 0);
 			U(msg, PROPERTY_MINUTE, 288, 6, 0);
 			UL(msg, PROPERTY_DRAUGHT, 294, 8, 0.1, 0);
-			destination = T(msg, 302, 120);
-			Submit(PROPERTY_DESTINATION, destination);
+			T(msg, PROPERTY_DESTINATION, 302, 120, destination);
 			B(msg, PROPERTY_DTE, 422, 1);
 			X(msg, PROPERTY_SPARE, 423, 1);
 			break;
@@ -326,8 +316,7 @@ namespace AIS {
 			X(msg, PROPERTY_SPARE, 71, 1);
 			U(msg, PROPERTY_DAC, 72, 10);
 			U(msg, PROPERTY_FID, 82, 6);
-			datastring = D(msg, 88, MIN(920, msg.getLength() - 88));
-			Submit(PROPERTY_DATA, datastring);
+			D(msg, PROPERTY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
 			break;
 		case 7:
 		case 13:
@@ -370,12 +359,10 @@ namespace AIS {
 			U(msg, PROPERTY_SEQNO, 38, 2);
 			U(msg, PROPERTY_DEST_MMSI, 40, 30);
 			B(msg, PROPERTY_RETRANSMIT, 70, 1);
-			text = T(msg, 72, 936);
-			Submit(PROPERTY_TEXT, text);
+			T(msg, PROPERTY_TEXT, 72, 936, text);
 			break;
 		case 14:
-			text = T(msg, 40, 968);
-			Submit(PROPERTY_TEXT, text);
+			T(msg, PROPERTY_TEXT, 40, 968, text);
 			break;
 		case 15:
 			U(msg, PROPERTY_MMSI1, 40, 30);
@@ -401,8 +388,7 @@ namespace AIS {
 		case 17:
 			SL(msg, PROPERTY_LON, 40, 18, 1 / 600.0, 0);
 			SL(msg, PROPERTY_LAT, 58, 17, 1 / 600.0, 0);
-			datastring = D(msg, 80, MIN(736, msg.getLength() - 80));
-			Submit(PROPERTY_DATA, datastring);
+			D(msg, PROPERTY_DATA, 80, MIN(736, msg.getLength() - 80), datastring);
 			break;
 		case 18:
 			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
@@ -429,8 +415,7 @@ namespace AIS {
 			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
 			UL(msg, PROPERTY_COURSE, 112, 12, 0.1, 0);
 			U(msg, PROPERTY_HEADING, 124, 9);
-			shipname = T(msg, 143, 120);
-			Submit(PROPERTY_SHIPNAME, shipname);
+			T(msg, PROPERTY_SHIPNAME, 143, 120, shipname);
 			E(msg, PROPERTY_SHIPTYPE, 263, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
 			U(msg, PROPERTY_TO_BOW, 271, 9);
 			U(msg, PROPERTY_TO_STERN, 280, 9);
@@ -469,8 +454,7 @@ namespace AIS {
 			break;
 		case 21:
 			E(msg, PROPERTY_AID_TYPE, 38, 5, PROPERTY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
-			name = T(msg, 43, 120);
-			Submit(PROPERTY_NAME, name);
+			T(msg, PROPERTY_NAME, 43, 120, name);
 			B(msg, PROPERTY_ACCURACY, 163, 1);
 			SL(msg, PROPERTY_LON, 164, 28, 1 / 600000.0, 0);
 			SL(msg, PROPERTY_LAT, 192, 27, 1 / 600000.0, 0);
@@ -521,17 +505,14 @@ namespace AIS {
 			U(msg, PROPERTY_PARTNO, 38, 2);
 
 			if (msg.getUint(38, 2) == 0) {
-				shipname = T(msg, 40, 120);
-				Submit(PROPERTY_SHIPNAME, shipname);
+				T(msg, PROPERTY_SHIPNAME, 40, 120, shipname);
 			}
 			else {
 				E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-				vendorid = T(msg, 48, 18);
-				Submit(PROPERTY_VENDORID, vendorid);
+				T(msg, PROPERTY_VENDORID, 48, 18, vendorid);
 				U(msg, PROPERTY_MODEL, 66, 4);
 				U(msg, PROPERTY_SERIAL, 70, 20);
-				callsign = T(msg, 90, 42);
-				Submit(PROPERTY_CALLSIGN, callsign);
+				T(msg, PROPERTY_CALLSIGN, 90, 42, callsign);
 				if (msg.mmsi() / 10000000 == 98) {
 					U(msg, PROPERTY_MOTHERSHIP_MMSI, 132, 30);
 				}

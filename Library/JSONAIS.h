@@ -34,6 +34,11 @@ namespace AIS {
 		static const std::string sClass;
 		static const std::string sDevice;
 
+		const std::string nan = "nan";
+		const std::string fastleft = "fastleft";
+		const std::string fastright = "fastright";
+		const std::string undefined = "Undefined";
+
 		std::string channel, timestamp, datastring, rxtime;
 		std::string eta, text, callsign, shipname, destination, name, vendorid;
 
@@ -48,10 +53,10 @@ namespace AIS {
 		void X(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0){};
 		void COUNTRY(const AIS::Message& msg);
 
-		std::string D(const AIS::Message& msg, int start, int len);
-		std::string T(const AIS::Message& msg, int start, int len);
-		std::string TIMESTAMP(const AIS::Message& msg, int start, int len);
-		std::string ETA(const AIS::Message& msg, int start, int len);
+		void D(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void T(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void TIMESTAMP(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void ETA(const AIS::Message& msg, int p, int start, int len, std::string& str);
 
 		void Submit(int p, int v) {
 			json.object.push_back(JSON::Member());
