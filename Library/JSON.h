@@ -95,7 +95,7 @@ namespace JSON {
 	class JSON {
 	public:
 		std::vector<Member> object;
-		void* meta = NULL;
+		void* binary = NULL;
 	};
 
 	class StringBuilder {
