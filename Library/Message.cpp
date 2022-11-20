@@ -190,6 +190,10 @@ namespace AIS {
 			}
 			allow = ~block & all_msg;
 		}
+		else if (option == "FILTER") {
+			Util::Convert::toUpper(arg);
+			on = Util::Parse::Switch(arg);
+		}
 	}
 
 	std::string Filter::getAllowed() {

@@ -95,21 +95,27 @@ namespace IO {
 		}
 	};
 
-	class MessageToScreen : public StreamIn<AIS::Message> {
+	class MessageToScreen : public StreamIn<AIS::Message>, public Setting {
 	private:
 		OutputLevel level;
+		AIS::Filter filter;
 
 	public:
 		void setDetail(OutputLevel l) { level = l; }
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+
+		void Set(std::string option, std::string arg) { filter.Set(option, arg); }
 	};
 
-	class JSONtoScreen : public StreamIn<JSON::JSON> {
+	class JSONtoScreen : public StreamIn<JSON::JSON>, public Setting {
 		JSON::StringBuilder builder;
 		std::string json;
+		AIS::Filter filter;
 
 	public:
 		void Receive(const JSON::JSON* data, int len, TAG& tag);
 		void setMap(int m) { builder.setMap(m); }
+
+		void Set(std::string option, std::string arg) { filter.Set(option, arg); }
 	};
 }

@@ -53,7 +53,7 @@ namespace IO {
 		int source = -1;
 
 #ifdef HASCURL
-
+		AIS::Filter filter;
 		JSON::StringBuilder builder;
 		std::string json;
 
@@ -83,11 +83,13 @@ namespace IO {
 
 		void Receive(const JSON::JSON* data, int len, TAG& tag) {
 			for (int i = 0; i < len; i++) {
-				json.clear();
-				builder.build(data[i], json);
-				{
-					const std::lock_guard<std::mutex> lock(queue_mutex);
-					queue.push_back(json);
+				if (filter.include(*(AIS::Message*)data[i].meta)) {
+					json.clear();
+					builder.build(data[i], json);
+					{
+						const std::lock_guard<std::mutex> lock(queue_mutex);
+						queue.push_back(json);
+					}
 				}
 			}
 		}
