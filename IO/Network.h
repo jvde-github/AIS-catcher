@@ -52,8 +52,6 @@ namespace IO {
 
 		int source = -1;
 
-		int source = -1;
-
 #ifdef HASCURL
 
 		JSON::StringBuilder builder;
