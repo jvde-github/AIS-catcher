@@ -35,7 +35,7 @@ or remove message type 6 and 8:
 ```
 AIS-catcher -u 127.0.0.1 10110 FILTER on BLOCK_TYPE 6,8
 ```
-Do not use spaces in the comma seperated message type list. This only works with the filter switched to ``ON`` (default ``OFF``) and the filter needs to be defined per ``-u`` switch (or ``-H`` and ``-o``).
+Do not use spaces in the comma separated message type list. Filtering will only take effect with the filter switched to ``ON`` (default ``OFF``) and the filter needs to be defined per ``-u`` switch (or ``-H`` and ``-o``).
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
