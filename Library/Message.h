@@ -75,7 +75,7 @@ namespace AIS {
 
 		unsigned getUint(int start, int len) const;
 		int getInt(int start, int len) const;
-		std::string getText(int start, int len) const;
+		void getText(int start, int len, std::string& str) const;
 
 		void setBit(int i, bool b) {
 			if (b)

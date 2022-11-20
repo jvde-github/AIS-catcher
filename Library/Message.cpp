@@ -55,11 +55,10 @@ namespace AIS {
 		return (int)u;
 	}
 
-	std::string Message::getText(int start, int len) const {
+	void Message::getText(int start, int len, std::string& str) const {
 
 		int end = start + len;
-		std::string text = "";
-		text.reserve((len + 5) / 6 + 2); // reserve 2 extra for special characters
+		str.clear();
 
 		while (start < end) {
 			int c = getUint(start, 6);
@@ -71,10 +70,10 @@ namespace AIS {
 			if (!c) break;
 			if (!(c & 32)) c |= 64;
 
-			text += (char)c;
+			str += (char)c;
 			start += 6;
 		}
-		return text;
+		return;
 	}
 
 	void Message::buildNMEA(TAG& tag, int id) {

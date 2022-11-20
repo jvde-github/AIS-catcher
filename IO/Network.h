@@ -48,11 +48,14 @@
 
 namespace IO {
 
-	class HTTP : public JSONbuildString, public Setting {
+	class HTTP : public StreamIn<JSON::JSON>, public Setting {
 
 		int source = -1;
 
 #ifdef HASCURL
+
+		JSON::StringBuilder builder;
+		std::string json;
 
 		std::thread run_thread;
 		bool terminate = false, running = false;
@@ -78,11 +81,15 @@ namespace IO {
 		void post();
 		void process();
 
-		void Ready() {
-#ifdef HASCURL
-			const std::lock_guard<std::mutex> lock(queue_mutex);
-			queue.push_back(json);
-#endif
+		void Receive(const JSON::JSON* data, int len, TAG& tag) {
+			for (int i = 0; i < len; i++) {
+				json.clear();
+				builder.build(data[i], json);
+				{
+					const std::lock_guard<std::mutex> lock(queue_mutex);
+					queue.push_back(json);
+				}
+			}
 		}
 
 		std::list<std::string> queue;

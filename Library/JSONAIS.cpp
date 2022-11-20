@@ -75,7 +75,7 @@ namespace AIS {
 			if (u < map->size())
 				Submit(pmap, (*map)[u]);
 			else
-				Submit(pmap, std::string("Undefined"));
+				Submit(pmap, undefined);
 		}
 	}
 
@@ -83,11 +83,11 @@ namespace AIS {
 		int u = msg.getInt(start, len);
 
 		if (u == -128)
-			Submit(p, std::string("nan"));
+			Submit(p, nan);
 		else if (u == -127)
-			Submit(p, std::string("fastleft"));
+			Submit(p, fastleft);
 		else if (u == 127)
-			Submit(p, std::string("fastright"));
+			Submit(p, fastright);
 		else {
 			double rot = u / 4.733;
 			rot = (u < 0) ? -rot * rot : rot * rot;
@@ -95,42 +95,45 @@ namespace AIS {
 		}
 	}
 
-	void JSONAIS::TIMESTAMP(const AIS::Message& msg, int p, int start, int len) {
-		if (len != 40) return;
-
-		std::stringstream s;
-		s << std::setfill('0') << std::setw(4) << msg.getUint(start, 14) << "-" << std::setw(2) << msg.getUint(start + 14, 4) << "-" << std::setw(2) << msg.getUint(start + 18, 5) << "T"
-		  << std::setw(2) << msg.getUint(start + 23, 5) << ":" << std::setw(2) << msg.getUint(start + 28, 6) << ":" << std::setw(2) << msg.getUint(start + 34, 6) << "Z";
-		Submit(p, std::string(s.str()));
-	}
-
-	void JSONAIS::ETA(const AIS::Message& msg, int p, int start, int len) {
-		if (len != 20) return;
-
-		std::stringstream s;
-		s << std::setfill('0') << std::setw(2) << msg.getUint(start, 4) << "-" << std::setw(2) << msg.getUint(start + 4, 5) << "T"
-		  << std::setw(2) << msg.getUint(start + 9, 5) << ":" << std::setw(2) << msg.getUint(start + 14, 6) << "Z";
-		Submit(p, std::string(s.str()));
-	}
-
 	void JSONAIS::B(const AIS::Message& msg, int p, int start, int len) {
 		unsigned u = msg.getUint(start, len);
 		Submit(p, (bool)u);
 	}
 
-	void JSONAIS::T(const AIS::Message& msg, int p, int start, int len) {
-		std::string text = msg.getText(start, len);
-		while (!text.empty() && text[text.length() - 1] == ' ') text.resize(text.length() - 1);
-		Submit(p, text);
+	void JSONAIS::TIMESTAMP(const AIS::Message& msg, int p, int start, int len, std::string& str) {
+		if (len != 40) return;
+
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(4) << msg.getUint(start, 14) << "-" << std::setw(2) << msg.getUint(start + 14, 4) << "-" << std::setw(2) << msg.getUint(start + 18, 5) << "T"
+		  << std::setw(2) << msg.getUint(start + 23, 5) << ":" << std::setw(2) << msg.getUint(start + 28, 6) << ":" << std::setw(2) << msg.getUint(start + 34, 6) << "Z";
+		str = std::string(s.str());
+		Submit(p, str);
 	}
 
-	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len) {
-		std::string text = std::to_string(len) + ":";
+	void JSONAIS::ETA(const AIS::Message& msg, int p, int start, int len, std::string& str) {
+		if (len != 20) return;
+
+		std::stringstream s;
+		s << std::setfill('0') << std::setw(2) << msg.getUint(start, 4) << "-" << std::setw(2) << msg.getUint(start + 4, 5) << "T"
+		  << std::setw(2) << msg.getUint(start + 9, 5) << ":" << std::setw(2) << msg.getUint(start + 14, 6) << "Z";
+		str = std::string(s.str());
+		Submit(p, str);
+	}
+
+
+	void JSONAIS::T(const AIS::Message& msg, int p, int start, int len, std::string& str) {
+		msg.getText(start, len, str);
+		while (!str.empty() && str[str.length() - 1] == ' ') str.resize(str.length() - 1);
+		Submit(p, str);
+	}
+
+	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len, std::string& str) {
+		str = std::to_string(len) + ':';
 		for (int i = start; i < start + len; i += 4) {
 			char c = msg.getUint(i, 4);
-			text += (char)(c < 10 ? c + '0' : c + 'a' - 10);
+			str += (char)(c < 10 ? c + '0' : c + 'a' - 10);
 		}
-		Submit(p, text);
+		Submit(p, str);
 	}
 
 	// Refernce: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
@@ -148,95 +151,102 @@ namespace AIS {
 					l = m;
 			}
 			if (JSON_MAP_MID[l].MID == mid) {
-				Submit(PROPERTY_COUNTRY, JSON_MAP_MID[l].country);
-				Submit(PROPERTY_COUNTRY_CODE, std::string(JSON_MAP_MID[l].code));
+				Submit(JSON::KEY_COUNTRY, JSON_MAP_MID[l].country);
+				Submit(JSON::KEY_COUNTRY_CODE, JSON_MAP_MID[l].code);
 			}
 		}
 	}
 
-	void JSONAIS::ProcessMsg8Data(const AIS::Message& msg, int len) {
+	void JSONAIS::Receive(const AIS::Message* data, int len, TAG& tag) {
+		for (int i = 0; i < len; i++) {
+			json.object.clear();
+			ProcessMsg(data[i], tag);
+			Send(&json, 1, tag);
+		}
+	}
+
+	void JSONAIS::ProcessMsg8Data(const AIS::Message& msg) {
 		int dac = msg.getUint(40, 10);
 		int fid = msg.getUint(50, 6);
 
 		if (dac == 200 && fid == 10) {
-			T(msg, PROPERTY_VIN, 56, 48);
-			U(msg, PROPERTY_LENGTH, 104, 13);
-			U(msg, PROPERTY_BEAM, 117, 10);
-			E(msg, PROPERTY_SHIPTYPE, 127, 14);
-			E(msg, PROPERTY_HAZARD, 141, 3);
-			U(msg, PROPERTY_DRAUGHT, 144, 11);
-			E(msg, PROPERTY_LOADED, 155, 2);
-			B(msg, PROPERTY_SPEED_Q, 157, 1);
-			B(msg, PROPERTY_COURSE_Q, 158, 1);
-			B(msg, PROPERTY_HEADING_Q, 159, 1);
+			T(msg, JSON::KEY_VIN, 56, 48, text);
+			U(msg, JSON::KEY_LENGTH, 104, 13);
+			U(msg, JSON::KEY_BEAM, 117, 10);
+			E(msg, JSON::KEY_SHIPTYPE, 127, 14);
+			E(msg, JSON::KEY_HAZARD, 141, 3);
+			U(msg, JSON::KEY_DRAUGHT, 144, 11);
+			E(msg, JSON::KEY_LOADED, 155, 2);
+			B(msg, JSON::KEY_SPEED_Q, 157, 1);
+			B(msg, JSON::KEY_COURSE_Q, 158, 1);
+			B(msg, JSON::KEY_HEADING_Q, 159, 1);
 		}
 		else if (dac == 1 && fid == 31) {
 			// Sources: http://vislab-ccom.unh.edu/~schwehr/papers/2010-IMO-SN.1-Circ.289.pdf, GPSDECODE
-			SL(msg, PROPERTY_LON, 56, 25, 1 / 60000.0, 0);
-			SL(msg, PROPERTY_LAT, 81, 24, 1 / 60000.0, 0);
-			B(msg, PROPERTY_ACCURACY, 105, 1);
-			U(msg, PROPERTY_DAY, 106, 5, 0);
-			U(msg, PROPERTY_HOUR, 111, 5, 24);
-			U(msg, PROPERTY_MINUTE, 116, 6, 60);
-			U(msg, PROPERTY_WSPEED, 122, 7, 127);
-			U(msg, PROPERTY_WGUST, 129, 7, 127);
-			U(msg, PROPERTY_WDIR, 136, 9, 360);
-			U(msg, PROPERTY_WGUSTDIR, 145, 9, 360);
-			SL(msg, PROPERTY_AIRTEMP, 154, 11, 0.1, 0, -1024);
-			U(msg, PROPERTY_HUMIDITY, 165, 7, 101);
-			SL(msg, PROPERTY_DEWPOINT, 172, 10, 0.1, 0, 501);
-			UL(msg, PROPERTY_PRESSURE, 182, 9, 1, 799, 511);
-			U(msg, PROPERTY_PRESSURETEND, 191, 2, 3);
-			U(msg, PROPERTY_VISGREATER, 193, 1);
-			UL(msg, PROPERTY_VISIBILITY, 194, 7, 0.1, 0);
-			UL(msg, PROPERTY_WATERLEVEL, 201, 12, 0.01, -10, 4002);
-			U(msg, PROPERTY_LEVELTREND, 213, 2, 3);
-			UL(msg, PROPERTY_CSPEED, 215, 8, 0.1, 0, 255);
-			U(msg, PROPERTY_CDIR, 223, 9, 360);
-			UL(msg, PROPERTY_CSPEED2, 232, 8, 0.1, 0);
-			U(msg, PROPERTY_CDIR2, 240, 9);
-			U(msg, PROPERTY_CDEPTH2, 249, 5);
-			UL(msg, PROPERTY_CSPEED3, 254, 8, 0.1, 0);
-			U(msg, PROPERTY_CDIR3, 262, 9);
-			U(msg, PROPERTY_CDEPTH3, 271, 5);
-			UL(msg, PROPERTY_WAVEHEIGHT, 276, 8, 0.1, 0);
-			U(msg, PROPERTY_WAVEPERIOD, 284, 6);
-			U(msg, PROPERTY_WAVEDIR, 290, 9);
-			UL(msg, PROPERTY_SWELLHEIGHT, 299, 8, 0.1, 0);
-			U(msg, PROPERTY_SWELLPERIOD, 307, 6);
-			U(msg, PROPERTY_SWELLDIR, 313, 9);
-			U(msg, PROPERTY_SEASTATE, 322, 4);
-			SL(msg, PROPERTY_WATERTEMP, 326, 10, 0.1, 0);
-			U(msg, PROPERTY_PRECIPTYPE, 336, 3, 7);
-			U(msg, PROPERTY_SALINITY, 339, 9, 510);
-			U(msg, PROPERTY_ICE, 348, 2, 3);
+			SL(msg, JSON::KEY_LON, 56, 25, 1 / 60000.0, 0);
+			SL(msg, JSON::KEY_LAT, 81, 24, 1 / 60000.0, 0);
+			B(msg, JSON::KEY_ACCURACY, 105, 1);
+			U(msg, JSON::KEY_DAY, 106, 5, 0);
+			U(msg, JSON::KEY_HOUR, 111, 5, 24);
+			U(msg, JSON::KEY_MINUTE, 116, 6, 60);
+			U(msg, JSON::KEY_WSPEED, 122, 7, 127);
+			U(msg, JSON::KEY_WGUST, 129, 7, 127);
+			U(msg, JSON::KEY_WDIR, 136, 9, 360);
+			U(msg, JSON::KEY_WGUSTDIR, 145, 9, 360);
+			SL(msg, JSON::KEY_AIRTEMP, 154, 11, 0.1, 0, -1024);
+			U(msg, JSON::KEY_HUMIDITY, 165, 7, 101);
+			SL(msg, JSON::KEY_DEWPOINT, 172, 10, 0.1, 0, 501);
+			UL(msg, JSON::KEY_PRESSURE, 182, 9, 1, 799, 511);
+			U(msg, JSON::KEY_PRESSURETEND, 191, 2, 3);
+			U(msg, JSON::KEY_VISGREATER, 193, 1);
+			UL(msg, JSON::KEY_VISIBILITY, 194, 7, 0.1, 0);
+			UL(msg, JSON::KEY_WATERLEVEL, 201, 12, 0.01, -10, 4002);
+			U(msg, JSON::KEY_LEVELTREND, 213, 2, 3);
+			UL(msg, JSON::KEY_CSPEED, 215, 8, 0.1, 0, 255);
+			U(msg, JSON::KEY_CDIR, 223, 9, 360);
+			UL(msg, JSON::KEY_CSPEED2, 232, 8, 0.1, 0);
+			U(msg, JSON::KEY_CDIR2, 240, 9);
+			U(msg, JSON::KEY_CDEPTH2, 249, 5);
+			UL(msg, JSON::KEY_CSPEED3, 254, 8, 0.1, 0);
+			U(msg, JSON::KEY_CDIR3, 262, 9);
+			U(msg, JSON::KEY_CDEPTH3, 271, 5);
+			UL(msg, JSON::KEY_WAVEHEIGHT, 276, 8, 0.1, 0);
+			U(msg, JSON::KEY_WAVEPERIOD, 284, 6);
+			U(msg, JSON::KEY_WAVEDIR, 290, 9);
+			UL(msg, JSON::KEY_SWELLHEIGHT, 299, 8, 0.1, 0);
+			U(msg, JSON::KEY_SWELLPERIOD, 307, 6);
+			U(msg, JSON::KEY_SWELLDIR, 313, 9);
+			U(msg, JSON::KEY_SEASTATE, 322, 4);
+			SL(msg, JSON::KEY_WATERTEMP, 326, 10, 0.1, 0);
+			U(msg, JSON::KEY_PRECIPTYPE, 336, 3, 7);
+			U(msg, JSON::KEY_SALINITY, 339, 9, 510);
+			U(msg, JSON::KEY_ICE, 348, 2, 3);
 		}
 	}
 
-	void JSONAIS::Receive(const AIS::Message* data, int len, TAG& tag) {
-		Submit(PROPERTY_OBJECT_START, std::string(""));
+	void JSONAIS::ProcessMsg(const AIS::Message& msg, TAG& tag) {
 
-		const AIS::Message& msg = data[0];
+		rxtime = msg.getRxTime();
+		channel = std::string(1,msg.getChannel());
 
-		Submit(PROPERTY_CLASS, std::string("AIS"));
-		Submit(PROPERTY_DEVICE, std::string("AIS-catcher"));
+		Submit(JSON::KEY_CLASS, class_str);
+		Submit(JSON::KEY_DEVICE, device);
 
-		if (tag.mode & 2) {
-			Submit(PROPERTY_RXTIME, msg.getRxTime());
-		}
+		if (tag.mode & 2)
+			Submit(JSON::KEY_RXTIME, rxtime);
 
-		Submit(PROPERTY_SCALED, true);
-		Submit(PROPERTY_CHANNEL, std::string(1, msg.getChannel()));
-		Submit(PROPERTY_NMEA, msg.NMEA);
+		Submit(JSON::KEY_SCALED, true);
+		Submit(JSON::KEY_CHANNEL, channel);
+		Submit(JSON::KEY_NMEA, msg.NMEA);
 
 		if (tag.mode & 1) {
-			Submit(PROPERTY_SIGNAL_POWER, tag.level);
-			Submit(PROPERTY_PPM, tag.ppm);
+			Submit(JSON::KEY_SIGNAL_POWER, tag.level);
+			Submit(JSON::KEY_PPM, tag.ppm);
 		}
 
-		U(msg, PROPERTY_TYPE, 0, 6);
-		U(msg, PROPERTY_REPEAT, 6, 2);
-		U(msg, PROPERTY_MMSI, 8, 30);
+		U(msg, JSON::KEY_TYPE, 0, 6);
+		U(msg, JSON::KEY_REPEAT, 6, 2);
+		U(msg, JSON::KEY_MMSI, 8, 30);
 
 		if (tag.mode & 4) {
 			COUNTRY(msg);
@@ -246,287 +256,286 @@ namespace AIS {
 		case 1:
 		case 2:
 		case 3:
-			E(msg, PROPERTY_STATUS, 38, 4, PROPERTY_STATUS_TEXT, &JSON_MAP_STATUS);
-			TURN(msg, PROPERTY_TURN, 42, 8);
-			UL(msg, PROPERTY_SPEED, 50, 10, 0.1, 0, 1023);
-			B(msg, PROPERTY_ACCURACY, 60, 1);
-			SL(msg, PROPERTY_LON, 61, 28, 1 / 600000.0, 0);
-			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
-			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
-			U(msg, PROPERTY_HEADING, 128, 9 /*, 511*/);
-			U(msg, PROPERTY_SECOND, 137, 6);
-			E(msg, PROPERTY_MANEUVER, 143, 2);
-			X(msg, PROPERTY_SPARE, 145, 3);
-			B(msg, PROPERTY_RAIM, 148, 1);
-			U(msg, PROPERTY_RADIO, 149, MIN(19, MAX(msg.getLength() - 149, 0)));
+			E(msg, JSON::KEY_STATUS, 38, 4, JSON::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
+			TURN(msg, JSON::KEY_TURN, 42, 8);
+			UL(msg, JSON::KEY_SPEED, 50, 10, 0.1, 0, 1023);
+			B(msg, JSON::KEY_ACCURACY, 60, 1);
+			SL(msg, JSON::KEY_LON, 61, 28, 1 / 600000.0, 0);
+			SL(msg, JSON::KEY_LAT, 89, 27, 1 / 600000.0, 0);
+			UL(msg, JSON::KEY_COURSE, 116, 12, 0.1, 0);
+			U(msg, JSON::KEY_HEADING, 128, 9 /*, 511*/);
+			U(msg, JSON::KEY_SECOND, 137, 6);
+			E(msg, JSON::KEY_MANEUVER, 143, 2);
+			X(msg, JSON::KEY_SPARE, 145, 3);
+			B(msg, JSON::KEY_RAIM, 148, 1);
+			U(msg, JSON::KEY_RADIO, 149, MIN(19, MAX(msg.getLength() - 149, 0)));
 			break;
 		case 4:
 		case 11:
-			TIMESTAMP(msg, PROPERTY_TIMESTAMP, 38, 40);
-			U(msg, PROPERTY_YEAR, 38, 14, 0);
-			U(msg, PROPERTY_MONTH, 52, 4, 0);
-			U(msg, PROPERTY_DAY, 56, 5, 0);
-			U(msg, PROPERTY_HOUR, 61, 5, 24);
-			U(msg, PROPERTY_MINUTE, 66, 6, 60);
-			U(msg, PROPERTY_SECOND, 72, 6, 60);
-			B(msg, PROPERTY_ACCURACY, 78, 1);
-			SL(msg, PROPERTY_LON, 79, 28, 1 / 600000.0, 0);
-			SL(msg, PROPERTY_LAT, 107, 27, 1 / 600000.0, 0);
-			E(msg, PROPERTY_EPFD, 134, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			X(msg, PROPERTY_SPARE, 138, 10);
-			B(msg, PROPERTY_RAIM, 148, 1);
-			U(msg, PROPERTY_RADIO, 149, 19);
+			TIMESTAMP(msg, JSON::KEY_TIMESTAMP, 38, 40, timestamp);
+			U(msg, JSON::KEY_YEAR, 38, 14, 0);
+			U(msg, JSON::KEY_MONTH, 52, 4, 0);
+			U(msg, JSON::KEY_DAY, 56, 5, 0);
+			U(msg, JSON::KEY_HOUR, 61, 5, 24);
+			U(msg, JSON::KEY_MINUTE, 66, 6, 60);
+			U(msg, JSON::KEY_SECOND, 72, 6, 60);
+			B(msg, JSON::KEY_ACCURACY, 78, 1);
+			SL(msg, JSON::KEY_LON, 79, 28, 1 / 600000.0, 0);
+			SL(msg, JSON::KEY_LAT, 107, 27, 1 / 600000.0, 0);
+			E(msg, JSON::KEY_EPFD, 134, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			X(msg, JSON::KEY_SPARE, 138, 10);
+			B(msg, JSON::KEY_RAIM, 148, 1);
+			U(msg, JSON::KEY_RADIO, 149, 19);
 			break;
 		case 5:
-			U(msg, PROPERTY_AIS_VERSION, 38, 2);
-			U(msg, PROPERTY_IMO, 40, 30);
-			T(msg, PROPERTY_CALLSIGN, 70, 42);
-			T(msg, PROPERTY_SHIPNAME, 112, 120);
-			E(msg, PROPERTY_SHIPTYPE, 232, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-			U(msg, PROPERTY_TO_BOW, 240, 9);
-			U(msg, PROPERTY_TO_STERN, 249, 9);
-			U(msg, PROPERTY_TO_PORT, 258, 6);
-			U(msg, PROPERTY_TO_STARBOARD, 264, 6);
-			E(msg, PROPERTY_EPFD, 270, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			ETA(msg, PROPERTY_ETA, 274, 20);
-			U(msg, PROPERTY_MONTH, 274, 4, 0);
-			U(msg, PROPERTY_DAY, 278, 5, 0);
-			U(msg, PROPERTY_HOUR, 283, 5, 0);
-			U(msg, PROPERTY_MINUTE, 288, 6, 0);
-			UL(msg, PROPERTY_DRAUGHT, 294, 8, 0.1, 0);
-			T(msg, PROPERTY_DESTINATION, 302, 120);
-			B(msg, PROPERTY_DTE, 422, 1);
-			X(msg, PROPERTY_SPARE, 423, 1);
+			U(msg, JSON::KEY_AIS_VERSION, 38, 2);
+			U(msg, JSON::KEY_IMO, 40, 30);
+			T(msg, JSON::KEY_CALLSIGN, 70, 42, callsign);
+			T(msg, JSON::KEY_SHIPNAME, 112, 120, shipname);
+			E(msg, JSON::KEY_SHIPTYPE, 232, 8, JSON::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
+			U(msg, JSON::KEY_TO_BOW, 240, 9);
+			U(msg, JSON::KEY_TO_STERN, 249, 9);
+			U(msg, JSON::KEY_TO_PORT, 258, 6);
+			U(msg, JSON::KEY_TO_STARBOARD, 264, 6);
+			E(msg, JSON::KEY_EPFD, 270, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			ETA(msg, JSON::KEY_ETA, 274, 20, eta);
+			U(msg, JSON::KEY_MONTH, 274, 4, 0);
+			U(msg, JSON::KEY_DAY, 278, 5, 0);
+			U(msg, JSON::KEY_HOUR, 283, 5, 0);
+			U(msg, JSON::KEY_MINUTE, 288, 6, 0);
+			UL(msg, JSON::KEY_DRAUGHT, 294, 8, 0.1, 0);
+			T(msg, JSON::KEY_DESTINATION, 302, 120, destination);
+			B(msg, JSON::KEY_DTE, 422, 1);
+			X(msg, JSON::KEY_SPARE, 423, 1);
 			break;
 		case 6:
-			U(msg, PROPERTY_SEQNO, 38, 2);
-			U(msg, PROPERTY_DEST_MMSI, 40, 30);
-			B(msg, PROPERTY_RETRANSMIT, 70, 1);
-			X(msg, PROPERTY_SPARE, 71, 1);
-			U(msg, PROPERTY_DAC, 72, 10);
-			U(msg, PROPERTY_FID, 82, 6);
-			D(msg, PROPERTY_DATA, 88, MIN(920, msg.getLength() - 88));
+			U(msg, JSON::KEY_SEQNO, 38, 2);
+			U(msg, JSON::KEY_DEST_MMSI, 40, 30);
+			B(msg, JSON::KEY_RETRANSMIT, 70, 1);
+			X(msg, JSON::KEY_SPARE, 71, 1);
+			U(msg, JSON::KEY_DAC, 72, 10);
+			U(msg, JSON::KEY_FID, 82, 6);
+			D(msg, JSON::KEY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
 			break;
 		case 7:
 		case 13:
-			X(msg, PROPERTY_SPARE, 38, 2);
-			U(msg, PROPERTY_MMSI1, 40, 30);
-			U(msg, PROPERTY_MMSISEQ1, 70, 2);
+			X(msg, JSON::KEY_SPARE, 38, 2);
+			U(msg, JSON::KEY_MMSI1, 40, 30);
+			U(msg, JSON::KEY_MMSISEQ1, 70, 2);
 			if (msg.getLength() <= 72) break;
-			U(msg, PROPERTY_MMSI2, 72, 30);
-			U(msg, PROPERTY_MMSISEQ2, 102, 2);
+			U(msg, JSON::KEY_MMSI2, 72, 30);
+			U(msg, JSON::KEY_MMSISEQ2, 102, 2);
 			if (msg.getLength() <= 104) break;
-			U(msg, PROPERTY_MMSI3, 104, 30);
-			U(msg, PROPERTY_MMSISEQ3, 134, 2);
+			U(msg, JSON::KEY_MMSI3, 104, 30);
+			U(msg, JSON::KEY_MMSISEQ3, 134, 2);
 			if (msg.getLength() <= 136) break;
-			U(msg, PROPERTY_MMSI4, 136, 30);
-			U(msg, PROPERTY_MMSISEQ4, 166, 2);
+			U(msg, JSON::KEY_MMSI4, 136, 30);
+			U(msg, JSON::KEY_MMSISEQ4, 166, 2);
 			break;
 		case 8:
-			U(msg, PROPERTY_DAC, 40, 10);
-			U(msg, PROPERTY_FID, 50, 6);
-			ProcessMsg8Data(msg, len);
+			U(msg, JSON::KEY_DAC, 40, 10);
+			U(msg, JSON::KEY_FID, 50, 6);
+			ProcessMsg8Data(msg);
 			break;
 		case 9:
-			U(msg, PROPERTY_ALT, 38, 12);
-			U(msg, PROPERTY_SPEED, 50, 10);
-			B(msg, PROPERTY_ACCURACY, 60, 1);
-			SL(msg, PROPERTY_LON, 61, 28, 1 / 600000.0, 0);
-			SL(msg, PROPERTY_LAT, 89, 27, 1 / 600000.0, 0);
-			UL(msg, PROPERTY_COURSE, 116, 12, 0.1, 0);
-			U(msg, PROPERTY_SECOND, 128, 6);
-			U(msg, PROPERTY_REGIONAL, 134, 8);
-			B(msg, PROPERTY_DTE, 142, 1);
-			B(msg, PROPERTY_ASSIGNED, 146, 1);
-			B(msg, PROPERTY_RAIM, 147, 1);
-			U(msg, PROPERTY_RADIO, 148, 20);
+			U(msg, JSON::KEY_ALT, 38, 12);
+			U(msg, JSON::KEY_SPEED, 50, 10);
+			B(msg, JSON::KEY_ACCURACY, 60, 1);
+			SL(msg, JSON::KEY_LON, 61, 28, 1 / 600000.0, 0);
+			SL(msg, JSON::KEY_LAT, 89, 27, 1 / 600000.0, 0);
+			UL(msg, JSON::KEY_COURSE, 116, 12, 0.1, 0);
+			U(msg, JSON::KEY_SECOND, 128, 6);
+			U(msg, JSON::KEY_REGIONAL, 134, 8);
+			B(msg, JSON::KEY_DTE, 142, 1);
+			B(msg, JSON::KEY_ASSIGNED, 146, 1);
+			B(msg, JSON::KEY_RAIM, 147, 1);
+			U(msg, JSON::KEY_RADIO, 148, 20);
 			break;
 		case 10:
-			U(msg, PROPERTY_DEST_MMSI, 40, 30);
+			U(msg, JSON::KEY_DEST_MMSI, 40, 30);
 			break;
 		case 12:
-			U(msg, PROPERTY_SEQNO, 38, 2);
-			U(msg, PROPERTY_DEST_MMSI, 40, 30);
-			B(msg, PROPERTY_RETRANSMIT, 70, 1);
-			T(msg, PROPERTY_TEXT, 72, 936);
+			U(msg, JSON::KEY_SEQNO, 38, 2);
+			U(msg, JSON::KEY_DEST_MMSI, 40, 30);
+			B(msg, JSON::KEY_RETRANSMIT, 70, 1);
+			T(msg, JSON::KEY_TEXT, 72, 936, text);
 			break;
 		case 14:
-			T(msg, PROPERTY_TEXT, 40, 968);
+			T(msg, JSON::KEY_TEXT, 40, 968, text);
 			break;
 		case 15:
-			U(msg, PROPERTY_MMSI1, 40, 30);
-			U(msg, PROPERTY_TYPE1_1, 70, 6);
-			U(msg, PROPERTY_OFFSET1_1, 76, 12);
+			U(msg, JSON::KEY_MMSI1, 40, 30);
+			U(msg, JSON::KEY_TYPE1_1, 70, 6);
+			U(msg, JSON::KEY_OFFSET1_1, 76, 12);
 			if (msg.getLength() <= 90) break;
-			U(msg, PROPERTY_TYPE1_2, 90, 6);
-			U(msg, PROPERTY_OFFSET1_2, 96, 12);
+			U(msg, JSON::KEY_TYPE1_2, 90, 6);
+			U(msg, JSON::KEY_OFFSET1_2, 96, 12);
 			if (msg.getLength() <= 110) break;
-			U(msg, PROPERTY_MMSI2, 110, 30);
-			U(msg, PROPERTY_TYPE2_1, 140, 6);
-			U(msg, PROPERTY_OFFSET2_1, 146, 12);
+			U(msg, JSON::KEY_MMSI2, 110, 30);
+			U(msg, JSON::KEY_TYPE2_1, 140, 6);
+			U(msg, JSON::KEY_OFFSET2_1, 146, 12);
 			break;
 		case 16:
-			U(msg, PROPERTY_MMSI1, 40, 30);
-			U(msg, PROPERTY_OFFSET1, 70, 12);
-			U(msg, PROPERTY_INCREMENT1, 82, 10);
+			U(msg, JSON::KEY_MMSI1, 40, 30);
+			U(msg, JSON::KEY_OFFSET1, 70, 12);
+			U(msg, JSON::KEY_INCREMENT1, 82, 10);
 			if (msg.getLength() == 92) break;
-			U(msg, PROPERTY_MMSI2, 92, 30);
-			U(msg, PROPERTY_OFFSET2, 122, 12);
-			U(msg, PROPERTY_INCREMENT2, 134, 10);
+			U(msg, JSON::KEY_MMSI2, 92, 30);
+			U(msg, JSON::KEY_OFFSET2, 122, 12);
+			U(msg, JSON::KEY_INCREMENT2, 134, 10);
 			break;
 		case 17:
-			SL(msg, PROPERTY_LON, 40, 18, 1 / 600.0, 0);
-			SL(msg, PROPERTY_LAT, 58, 17, 1 / 600.0, 0);
-			D(msg, PROPERTY_DATA, 80, MIN(736, msg.getLength() - 80));
+			SL(msg, JSON::KEY_LON, 40, 18, 1 / 600.0, 0);
+			SL(msg, JSON::KEY_LAT, 58, 17, 1 / 600.0, 0);
+			D(msg, JSON::KEY_DATA, 80, MIN(736, msg.getLength() - 80), datastring);
 			break;
 		case 18:
-			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
-			B(msg, PROPERTY_ACCURACY, 56, 1);
-			SL(msg, PROPERTY_LON, 57, 28, 1 / 600000.0, 0);
-			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
-			UL(msg, PROPERTY_COURSE, 112, 12, 0.1, 0);
-			U(msg, PROPERTY_HEADING, 124, 9);
-			U(msg, PROPERTY_RESERVED, 38, 8);
-			U(msg, PROPERTY_SECOND, 133, 6);
-			U(msg, PROPERTY_REGIONAL, 139, 2);
-			B(msg, PROPERTY_CS, 141, 1);
-			B(msg, PROPERTY_DISPLAY, 142, 1);
-			B(msg, PROPERTY_DSC, 143, 1);
-			B(msg, PROPERTY_BAND, 144, 1);
-			B(msg, PROPERTY_MSG22, 145, 1);
-			B(msg, PROPERTY_ASSIGNED, 146, 1);
-			B(msg, PROPERTY_RAIM, 147, 1);
-			U(msg, PROPERTY_RADIO, 148, 20);
+			UL(msg, JSON::KEY_SPEED, 46, 10, 0.1, 0);
+			B(msg, JSON::KEY_ACCURACY, 56, 1);
+			SL(msg, JSON::KEY_LON, 57, 28, 1 / 600000.0, 0);
+			SL(msg, JSON::KEY_LAT, 85, 27, 1 / 600000.0, 0);
+			UL(msg, JSON::KEY_COURSE, 112, 12, 0.1, 0);
+			U(msg, JSON::KEY_HEADING, 124, 9);
+			U(msg, JSON::KEY_RESERVED, 38, 8);
+			U(msg, JSON::KEY_SECOND, 133, 6);
+			U(msg, JSON::KEY_REGIONAL, 139, 2);
+			B(msg, JSON::KEY_CS, 141, 1);
+			B(msg, JSON::KEY_DISPLAY, 142, 1);
+			B(msg, JSON::KEY_DSC, 143, 1);
+			B(msg, JSON::KEY_BAND, 144, 1);
+			B(msg, JSON::KEY_MSG22, 145, 1);
+			B(msg, JSON::KEY_ASSIGNED, 146, 1);
+			B(msg, JSON::KEY_RAIM, 147, 1);
+			U(msg, JSON::KEY_RADIO, 148, 20);
 			break;
 		case 19:
-			UL(msg, PROPERTY_SPEED, 46, 10, 0.1, 0);
-			SL(msg, PROPERTY_LON, 57, 28, 1 / 600000.0, 0);
-			SL(msg, PROPERTY_LAT, 85, 27, 1 / 600000.0, 0);
-			UL(msg, PROPERTY_COURSE, 112, 12, 0.1, 0);
-			U(msg, PROPERTY_HEADING, 124, 9);
-			T(msg, PROPERTY_SHIPNAME, 143, 120);
-			E(msg, PROPERTY_SHIPTYPE, 263, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-			U(msg, PROPERTY_TO_BOW, 271, 9);
-			U(msg, PROPERTY_TO_STERN, 280, 9);
-			U(msg, PROPERTY_TO_PORT, 289, 6);
-			U(msg, PROPERTY_TO_STARBOARD, 295, 6);
-			E(msg, PROPERTY_EPFD, 301, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			B(msg, PROPERTY_ACCURACY, 56, 1);
-			U(msg, PROPERTY_RESERVED, 38, 8);
-			U(msg, PROPERTY_SECOND, 133, 6);
-			U(msg, PROPERTY_REGIONAL, 139, 4);
-			B(msg, PROPERTY_RAIM, 305, 1);
-			B(msg, PROPERTY_DTE, 306, 1);
-			B(msg, PROPERTY_ASSIGNED, 307, 1);
-			X(msg, PROPERTY_SPARE, 308, 4);
+			UL(msg, JSON::KEY_SPEED, 46, 10, 0.1, 0);
+			SL(msg, JSON::KEY_LON, 57, 28, 1 / 600000.0, 0);
+			SL(msg, JSON::KEY_LAT, 85, 27, 1 / 600000.0, 0);
+			UL(msg, JSON::KEY_COURSE, 112, 12, 0.1, 0);
+			U(msg, JSON::KEY_HEADING, 124, 9);
+			T(msg, JSON::KEY_SHIPNAME, 143, 120, shipname);
+			E(msg, JSON::KEY_SHIPTYPE, 263, 8, JSON::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
+			U(msg, JSON::KEY_TO_BOW, 271, 9);
+			U(msg, JSON::KEY_TO_STERN, 280, 9);
+			U(msg, JSON::KEY_TO_PORT, 289, 6);
+			U(msg, JSON::KEY_TO_STARBOARD, 295, 6);
+			E(msg, JSON::KEY_EPFD, 301, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			B(msg, JSON::KEY_ACCURACY, 56, 1);
+			U(msg, JSON::KEY_RESERVED, 38, 8);
+			U(msg, JSON::KEY_SECOND, 133, 6);
+			U(msg, JSON::KEY_REGIONAL, 139, 4);
+			B(msg, JSON::KEY_RAIM, 305, 1);
+			B(msg, JSON::KEY_DTE, 306, 1);
+			B(msg, JSON::KEY_ASSIGNED, 307, 1);
+			X(msg, JSON::KEY_SPARE, 308, 4);
 			break;
 		case 20:
-			U(msg, PROPERTY_OFFSET1, 40, 12);
-			U(msg, PROPERTY_NUMBER1, 52, 4);
-			U(msg, PROPERTY_TIMEOUT1, 56, 3);
-			U(msg, PROPERTY_INCREMENT1, 59, 11);
+			U(msg, JSON::KEY_OFFSET1, 40, 12);
+			U(msg, JSON::KEY_NUMBER1, 52, 4);
+			U(msg, JSON::KEY_TIMEOUT1, 56, 3);
+			U(msg, JSON::KEY_INCREMENT1, 59, 11);
 			if (msg.getLength() <= 99) break;
-			U(msg, PROPERTY_OFFSET2, 70, 12);
-			U(msg, PROPERTY_NUMBER2, 82, 4);
-			U(msg, PROPERTY_TIMEOUT2, 86, 3);
-			U(msg, PROPERTY_INCREMENT2, 89, 11);
+			U(msg, JSON::KEY_OFFSET2, 70, 12);
+			U(msg, JSON::KEY_NUMBER2, 82, 4);
+			U(msg, JSON::KEY_TIMEOUT2, 86, 3);
+			U(msg, JSON::KEY_INCREMENT2, 89, 11);
 			if (msg.getLength() <= 129) break;
-			U(msg, PROPERTY_OFFSET3, 100, 12);
-			U(msg, PROPERTY_NUMBER3, 112, 4);
-			U(msg, PROPERTY_TIMEOUT3, 116, 3);
-			U(msg, PROPERTY_INCREMENT3, 119, 11);
+			U(msg, JSON::KEY_OFFSET3, 100, 12);
+			U(msg, JSON::KEY_NUMBER3, 112, 4);
+			U(msg, JSON::KEY_TIMEOUT3, 116, 3);
+			U(msg, JSON::KEY_INCREMENT3, 119, 11);
 			if (msg.getLength() <= 159) break;
-			U(msg, PROPERTY_OFFSET4, 130, 12);
-			U(msg, PROPERTY_NUMBER4, 142, 4);
-			U(msg, PROPERTY_TIMEOUT4, 146, 3);
-			U(msg, PROPERTY_INCREMENT4, 149, 11);
+			U(msg, JSON::KEY_OFFSET4, 130, 12);
+			U(msg, JSON::KEY_NUMBER4, 142, 4);
+			U(msg, JSON::KEY_TIMEOUT4, 146, 3);
+			U(msg, JSON::KEY_INCREMENT4, 149, 11);
 			break;
 		case 21:
-			E(msg, PROPERTY_AID_TYPE, 38, 5, PROPERTY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
-			T(msg, PROPERTY_NAME, 43, 120);
-			B(msg, PROPERTY_ACCURACY, 163, 1);
-			SL(msg, PROPERTY_LON, 164, 28, 1 / 600000.0, 0);
-			SL(msg, PROPERTY_LAT, 192, 27, 1 / 600000.0, 0);
-			U(msg, PROPERTY_TO_BOW, 219, 9);
-			U(msg, PROPERTY_TO_STERN, 228, 9);
-			U(msg, PROPERTY_TO_PORT, 237, 6);
-			U(msg, PROPERTY_TO_STARBOARD, 243, 6);
-			E(msg, PROPERTY_EPFD, 249, 4, PROPERTY_EPFD_TEXT, &JSON_MAP_EPFD);
-			U(msg, PROPERTY_SECOND, 253, 6);
-			B(msg, PROPERTY_OFF_POSITION, 259, 1);
-			U(msg, PROPERTY_REGIONAL, 260, 8);
-			B(msg, PROPERTY_RAIM, 268, 1);
-			B(msg, PROPERTY_VIRTUAL_AID, 269, 1);
-			B(msg, PROPERTY_ASSIGNED, 270, 1);
+			E(msg, JSON::KEY_AID_TYPE, 38, 5, JSON::KEY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
+			T(msg, JSON::KEY_NAME, 43, 120, name);
+			B(msg, JSON::KEY_ACCURACY, 163, 1);
+			SL(msg, JSON::KEY_LON, 164, 28, 1 / 600000.0, 0);
+			SL(msg, JSON::KEY_LAT, 192, 27, 1 / 600000.0, 0);
+			U(msg, JSON::KEY_TO_BOW, 219, 9);
+			U(msg, JSON::KEY_TO_STERN, 228, 9);
+			U(msg, JSON::KEY_TO_PORT, 237, 6);
+			U(msg, JSON::KEY_TO_STARBOARD, 243, 6);
+			E(msg, JSON::KEY_EPFD, 249, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			U(msg, JSON::KEY_SECOND, 253, 6);
+			B(msg, JSON::KEY_OFF_POSITION, 259, 1);
+			U(msg, JSON::KEY_REGIONAL, 260, 8);
+			B(msg, JSON::KEY_RAIM, 268, 1);
+			B(msg, JSON::KEY_VIRTUAL_AID, 269, 1);
+			B(msg, JSON::KEY_ASSIGNED, 270, 1);
 			break;
 		case 22:
-			U(msg, PROPERTY_CHANNEL_A, 40, 12);
-			U(msg, PROPERTY_CHANNEL_B, 52, 12);
-			U(msg, PROPERTY_TXRX, 64, 4);
-			B(msg, PROPERTY_POWER, 68, 1);
+			U(msg, JSON::KEY_CHANNEL_A, 40, 12);
+			U(msg, JSON::KEY_CHANNEL_B, 52, 12);
+			U(msg, JSON::KEY_TXRX, 64, 4);
+			B(msg, JSON::KEY_POWER, 68, 1);
 			if (msg.getUint(139, 1)) {
-				U(msg, PROPERTY_DEST1, 69, 30);	 // check // if addressed is 1
-				U(msg, PROPERTY_DEST2, 104, 30); // check
+				U(msg, JSON::KEY_DEST1, 69, 30);  // check // if addressed is 1
+				U(msg, JSON::KEY_DEST2, 104, 30); // check
 			}
 			else {
-				SL(msg, PROPERTY_NE_LON, 69, 18, 1.0 / 600.0, 0);
-				SL(msg, PROPERTY_NE_LAT, 87, 17, 1.0 / 600.0, 0);
-				SL(msg, PROPERTY_SW_LON, 104, 18, 1.0 / 600.0, 0);
-				SL(msg, PROPERTY_SW_LAT, 122, 17, 1.0 / 600.0, 0);
+				SL(msg, JSON::KEY_NE_LON, 69, 18, 1.0 / 600.0, 0);
+				SL(msg, JSON::KEY_NE_LAT, 87, 17, 1.0 / 600.0, 0);
+				SL(msg, JSON::KEY_SW_LON, 104, 18, 1.0 / 600.0, 0);
+				SL(msg, JSON::KEY_SW_LAT, 122, 17, 1.0 / 600.0, 0);
 			}
-			B(msg, PROPERTY_ADDRESSED, 139, 1);
-			B(msg, PROPERTY_BAND_A, 140, 1);
-			B(msg, PROPERTY_BAND_B, 141, 1);
-			U(msg, PROPERTY_ZONESIZE, 142, 3);
+			B(msg, JSON::KEY_ADDRESSED, 139, 1);
+			B(msg, JSON::KEY_BAND_A, 140, 1);
+			B(msg, JSON::KEY_BAND_B, 141, 1);
+			U(msg, JSON::KEY_ZONESIZE, 142, 3);
 			break;
 		case 23:
-			U(msg, PROPERTY_NE_LON, 40, 18);
-			U(msg, PROPERTY_NE_LAT, 58, 17);
-			U(msg, PROPERTY_SW_LON, 75, 18);
-			U(msg, PROPERTY_SW_LAT, 93, 17);
-			E(msg, PROPERTY_STATION_TYPE, 110, 4);
-			E(msg, PROPERTY_SHIP_TYPE, 114, 8);
-			U(msg, PROPERTY_TXRX, 144, 2);
-			E(msg, PROPERTY_INTERVAL, 146, 4);
-			U(msg, PROPERTY_QUIET, 150, 4);
+			U(msg, JSON::KEY_NE_LON, 40, 18);
+			U(msg, JSON::KEY_NE_LAT, 58, 17);
+			U(msg, JSON::KEY_SW_LON, 75, 18);
+			U(msg, JSON::KEY_SW_LAT, 93, 17);
+			E(msg, JSON::KEY_STATION_TYPE, 110, 4);
+			E(msg, JSON::KEY_SHIP_TYPE, 114, 8);
+			U(msg, JSON::KEY_TXRX, 144, 2);
+			E(msg, JSON::KEY_INTERVAL, 146, 4);
+			U(msg, JSON::KEY_QUIET, 150, 4);
 			break;
 		case 24:
-			U(msg, PROPERTY_PARTNO, 38, 2);
+			U(msg, JSON::KEY_PARTNO, 38, 2);
 
 			if (msg.getUint(38, 2) == 0) {
-				T(msg, PROPERTY_SHIPNAME, 40, 120);
+				T(msg, JSON::KEY_SHIPNAME, 40, 120, shipname);
 			}
 			else {
-				E(msg, PROPERTY_SHIPTYPE, 40, 8, PROPERTY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-				T(msg, PROPERTY_VENDORID, 48, 18);
-				U(msg, PROPERTY_MODEL, 66, 4);
-				U(msg, PROPERTY_SERIAL, 70, 20);
-				T(msg, PROPERTY_CALLSIGN, 90, 42);
+				E(msg, JSON::KEY_SHIPTYPE, 40, 8, JSON::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
+				T(msg, JSON::KEY_VENDORID, 48, 18, vendorid);
+				U(msg, JSON::KEY_MODEL, 66, 4);
+				U(msg, JSON::KEY_SERIAL, 70, 20);
+				T(msg, JSON::KEY_CALLSIGN, 90, 42, callsign);
 				if (msg.mmsi() / 10000000 == 98) {
-					U(msg, PROPERTY_MOTHERSHIP_MMSI, 132, 30);
+					U(msg, JSON::KEY_MOTHERSHIP_MMSI, 132, 30);
 				}
 				else {
-					U(msg, PROPERTY_TO_BOW, 132, 9);
-					U(msg, PROPERTY_TO_STERN, 141, 9);
-					U(msg, PROPERTY_TO_PORT, 150, 6);
-					U(msg, PROPERTY_TO_STARBOARD, 156, 6);
+					U(msg, JSON::KEY_TO_BOW, 132, 9);
+					U(msg, JSON::KEY_TO_STERN, 141, 9);
+					U(msg, JSON::KEY_TO_PORT, 150, 6);
+					U(msg, JSON::KEY_TO_STARBOARD, 156, 6);
 				}
 			}
 			break;
 		case 27:
-			U(msg, PROPERTY_ACCURACY, 38, 1);
-			U(msg, PROPERTY_RAIM, 39, 1);
-			E(msg, PROPERTY_STATUS, 40, 4, PROPERTY_STATUS_TEXT, &JSON_MAP_STATUS);
-			SL(msg, PROPERTY_LON, 44, 18, 1 / 600.0, 0);
-			SL(msg, PROPERTY_LAT, 62, 17, 1 / 600.0, 0);
-			U(msg, PROPERTY_SPEED, 79, 6);
-			U(msg, PROPERTY_COURSE, 85, 9);
-			U(msg, PROPERTY_GNSS, 94, 1);
+			U(msg, JSON::KEY_ACCURACY, 38, 1);
+			U(msg, JSON::KEY_RAIM, 39, 1);
+			E(msg, JSON::KEY_STATUS, 40, 4, JSON::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
+			SL(msg, JSON::KEY_LON, 44, 18, 1 / 600.0, 0);
+			SL(msg, JSON::KEY_LAT, 62, 17, 1 / 600.0, 0);
+			U(msg, JSON::KEY_SPEED, 79, 6);
+			U(msg, JSON::KEY_COURSE, 85, 9);
+			U(msg, JSON::KEY_GNSS, 94, 1);
 			break;
 		default:
 			break;
 		}
-		Submit(PROPERTY_OBJECT_END, std::string(""));
 	}
 
 	// Below is a direct translation (more or less) of https://gpsd.gitlab.io/gpsd/AIVDM.html
