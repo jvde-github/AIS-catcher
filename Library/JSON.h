@@ -27,9 +27,9 @@
 #define JSON_DICT_SPARSE  2
 #define JSON_DICT_APRS	  3
 
-extern const std::vector<std::vector<std::string>> JSONmap;
-
 namespace JSON {
+
+	extern const std::vector<std::vector<std::string>> KeyMap;
 
 	class Member {
 	public:
