@@ -83,6 +83,8 @@ namespace Util {
 			format = Format::CS16;
 		else if (str == "CS8")
 			format = Format::CS8;
+		else if (str == "TXT")
+			format = Format::TXT;
 		else
 			return false;
 
@@ -133,6 +135,8 @@ namespace Util {
 			return "CU8";
 		case Format::CS8:
 			return "CS8";
+		case Format::TXT:
+			return "TXT";
 		default:
 			break;
 		}
