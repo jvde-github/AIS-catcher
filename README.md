@@ -26,7 +26,11 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - As per version 0.39 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
-- AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder).
+- AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder). When piping NMEA lines into AIS-catcher, the program waits until a very large buffer is filled before processing which is unacceptable for text input. To ensure that incoming lines are processed immediately we introduced a new input format ``TXT`` as well. This is useful when you want to use AIS-catcher to process data from the DaisyHat (/dev/serial0) or the Kystverket AIS service:
+```
+netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
+```
+TO DO: move reading into a seperate thread.
 - Experimental functionality to filter UDP, HTTP and screen output on message type, e.g. send only messages of type 1, 2, 3, 5, 18, 19, 24 and 27 over UDP:
 ```
 AIS-catcher -u 127.0.0.1 10110 FILTER on ALLOW_TYPE 1,2,3,5,18,19,24,27
@@ -36,11 +40,7 @@ or remove message type 6 and 8:
 AIS-catcher -u 127.0.0.1 10110 FILTER on BLOCK_TYPE 6,8
 ```
 Do not use spaces in the comma separated message type list. Filtering will only take effect with the filter switched to ``ON`` (default ``OFF``) and the filter needs to be defined per ``-u`` switch (or ``-H`` and ``-o``).
-- When piping NMEA lines into AIS-catcher, the program waits until the very large buffer is filled before processing which is unacceptable for text input. To ensure that incoming lines are processed immediately we introduced a new input format ``TXT``. This can be used to process and forward real time data from the Kystverket AIS service or a DaisyHat (with input on /dev/serial0):
-```
-netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
-```
-TO DO: move reading into a seperate thread.
+
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
