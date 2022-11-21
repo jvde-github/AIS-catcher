@@ -36,6 +36,11 @@ or remove message type 6 and 8:
 AIS-catcher -u 127.0.0.1 10110 FILTER on BLOCK_TYPE 6,8
 ```
 Do not use spaces in the comma separated message type list. Filtering will only take effect with the filter switched to ``ON`` (default ``OFF``) and the filter needs to be defined per ``-u`` switch (or ``-H`` and ``-o``).
+- When piping NMEA lines into AIS-catcher, the program waits until the very large buffer is filled before processing which is unacceptable for text input. To ensure that incoming lines are processed immediately we introduced a new input format ``TXT``. This can be used to process and forward real time data from the Kystverket AIS service or a DaisyHat (with input on /dev/serial0):
+```
+netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
+```
+TO DO: move reading into a seperate thread.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 

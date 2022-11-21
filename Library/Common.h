@@ -44,6 +44,7 @@ enum class Format { CU8,
 					CF32,
 					CS16,
 					CS8,
+					TXT,
 					UNKNOWN };
 
 enum class Type { NONE,

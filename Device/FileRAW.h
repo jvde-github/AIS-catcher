@@ -21,11 +21,6 @@
 
 namespace Device {
 
-	enum class FileLayout { Stereo,
-							Mono,
-							Left,
-							Right };
-
 	class RAWFile : public Device {
 		std::istream* file = NULL;
 
@@ -34,7 +29,6 @@ namespace Device {
 
 		const int buffer_size = 16 * 16384;
 
-		FileLayout layout = FileLayout::Stereo;
 		Format format = Format::CU8;
 
 	public:

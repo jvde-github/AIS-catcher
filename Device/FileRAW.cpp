@@ -30,6 +30,7 @@ namespace Device {
 
 		if (filename == "." || filename == "stdin") {
 			file = &std::cin;
+			std::cin.sync_with_stdio(false);
 		}
 		else {
 			file = new std::ifstream(filename, std::ios::in | std::ios::binary);
@@ -52,11 +53,14 @@ namespace Device {
 
 		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
 		buffer.assign(buffer.size(), 0);
-		file->read((char*)buffer.data(), buffer.size());
 
-		if (layout != FileLayout::Stereo) throw "FILE RAW: layout not implemented.";
+		int sz = buffer.size();
+		if (format == Format::TXT) 
+			sz = MIN(sz, file->rdbuf()->in_avail());
 
-		RAW r = { format, buffer.data(), (int)buffer.size() };
+		file->read((char*)buffer.data(), sz);
+
+		RAW r = { format, buffer.data(), (int)sz };
 		Send(&r, 1, tag);
 
 		return true;
@@ -75,9 +79,6 @@ namespace Device {
 		if (option == "FORMAT") {
 			if (!Util::Parse::StreamFormat(arg, format))
 				throw "RAW: Unknown file format specification.";
-		}
-		else if (option == "STEREO") {
-			layout = Util::Parse::Switch(arg) ? FileLayout::Stereo : FileLayout::Mono;
 		}
 		else
 			throw "Invalid setting for FILE RAW.";
