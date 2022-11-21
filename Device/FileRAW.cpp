@@ -55,7 +55,7 @@ namespace Device {
 		buffer.assign(buffer.size(), 0);
 
 		int sz = buffer.size();
-		if (format == Format::TXT) 
+		if (format == Format::TXT)
 			sz = MIN(sz, file->rdbuf()->in_avail());
 
 		file->read((char*)buffer.data(), sz);
