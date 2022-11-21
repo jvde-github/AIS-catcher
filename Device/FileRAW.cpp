@@ -30,7 +30,7 @@ namespace Device {
 
 		if (filename == "." || filename == "stdin") {
 			file = &std::cin;
-			std::cin.sync_with_stdio(false);
+			if (format == Format::TXT) std::cin.sync_with_stdio(false);
 		}
 		else {
 			file = new std::ifstream(filename, std::ios::in | std::ios::binary);
