@@ -135,7 +135,6 @@ namespace IO {
 		std::string host, port;
 
 		AIS::Filter filter;
-		bool filter_on = false;
 
 	public:
 		~UDP();
