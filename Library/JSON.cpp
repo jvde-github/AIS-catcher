@@ -44,7 +44,7 @@ namespace JSON {
 	void StringBuilder::build(const JSON& object, std::string& json) {
 		bool first = true;
 		json += '{';
-		for (const Member& m : object.object) {
+		for (const Member& m : object.objects) {
 			int k = m.getKey();
 			const std::string& key = KeyMap[k][map];
 
@@ -63,9 +63,6 @@ namespace JSON {
 					break;
 				case Member::Type::INT:
 					json += std::to_string(m.Get().i);
-					break;
-				case Member::Type::UINT:
-					json += std::to_string(m.Get().u);
 					break;
 				case Member::Type::FLOAT:
 					json += std::to_string(m.Get().f);

@@ -30,6 +30,7 @@
 namespace JSON {
 
 	extern const std::vector<std::vector<std::string>> KeyMap;
+	class JSON;
 
 	class Member {
 	public:
@@ -37,17 +38,17 @@ namespace JSON {
 			BOOL,
 			INT,
 			FLOAT,
-			UINT,
 			STRING,
+			OBJECT,
 			ARRAY_STRING
 		};
 		union Value {
 			bool b;
 			int i;
-			unsigned u;
 			float f;
 			std::string* s;
 			std::vector<std::string>* a;
+			JSON* o;
 		};
 
 	protected:
@@ -56,46 +57,80 @@ namespace JSON {
 		Value value;
 
 	public:
-		void Set(int p, int v) {
+		Member(int p, int v) {
 			key = p;
 			value.i = v;
 			type = Type::INT;
 		}
-		void Set(int p, unsigned v) {
-			key = p;
-			value.u = v;
-			type = Type::UINT;
-		}
-		void Set(int p, float v) {
+		Member(int p, float v) {
 			key = p;
 			value.f = v;
 			type = Type::FLOAT;
 		}
-		void Set(int p, bool v) {
+		Member(int p, bool v) {
 			key = p;
 			value.b = v;
 			type = Type::BOOL;
 		}
-		void Set(int p, std::string* v) {
+		Member(int p, std::string* v) {
 			key = p;
 			value.s = v;
 			type = Type::STRING;
 		}
-		void Set(int p, std::vector<std::string>* v) {
+		Member(int p, std::vector<std::string>* v) {
 			key = p;
 			value.a = v;
 			type = Type::ARRAY_STRING;
 		}
-
+		Member(int p, JSON* v) {
+			key = p;
+			value.o = v;
+			type = Type::OBJECT;
+		}
 		Type getType() const { return type; }
 		int getKey() const { return key; }
 		Value Get() const { return value; }
 	};
 
 	class JSON {
+	protected:
+		std::vector<Member> objects;
+		std::vector<std::string> storage;
+		friend class StringBuilder;
+		friend class Parser;
+
 	public:
-		std::vector<Member> object;
 		void* binary = NULL;
+
+		void Clear() {
+			objects.clear();
+			storage.clear();
+		}
+
+		void Submit(int p, int v) {
+			objects.push_back(Member(p, v));
+		}
+		void Submit(int p, float v) {
+			objects.push_back(Member(p, v));
+		}
+		void Submit(int p, bool v) {
+			objects.push_back(Member(p, v));
+		}
+		void Submit(int p, JSON* v) {
+			objects.push_back(Member(p, (JSON*)v));
+		}
+		void Submit(int p, const std::string* v) {
+			objects.push_back(Member(p, (std::string*)v));
+		}
+		/*
+		void Submit(int p, const std::string& v) {
+			storage.push_back(v);
+			objects.push_back(Member(p, (std::string*)&storage.back()));
+		}
+		*/
+		void Submit(int p, const std::vector<std::string>* v) {
+			objects.push_back(Member(p, (std::vector<std::string>*)v));
+		}
 	};
 
 	class StringBuilder {
@@ -104,7 +139,7 @@ namespace JSON {
 		int map = JSON_DICT_FULL;
 
 	public:
-		void build(const JSON& object, std::string& json);
+		void build(const JSON& objects, std::string& json);
 		void jsonify(const std::string& str, std::string& json);
 
 		// dictionary to use

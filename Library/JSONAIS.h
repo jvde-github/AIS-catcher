@@ -59,31 +59,6 @@ namespace AIS {
 		void TIMESTAMP(const AIS::Message& msg, int p, int start, int len, std::string& str);
 		void ETA(const AIS::Message& msg, int p, int start, int len, std::string& str);
 
-		void Submit(int p, int v) {
-			json.object.push_back(JSON::Member());
-			json.object.back().Set(p, v);
-		}
-		void Submit(int p, unsigned v) {
-			json.object.push_back(JSON::Member());
-			json.object.back().Set(p, v);
-		}
-		void Submit(int p, float v) {
-			json.object.push_back(JSON::Member());
-			json.object.back().Set(p, v);
-		}
-		void Submit(int p, bool v) {
-			json.object.push_back(JSON::Member());
-			json.object.back().Set(p, v);
-		}
-		void Submit(int p, const std::string& v) {
-			json.object.push_back(JSON::Member());
-			json.object.back().Set(p, (std::string*)&v);
-		}
-		void Submit(int p, const std::vector<std::string>& v) {
-			json.object.push_back(JSON::Member());
-			json.object.back().Set(p, (std::vector<std::string>*)&v);
-		}
-
 	public:
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
