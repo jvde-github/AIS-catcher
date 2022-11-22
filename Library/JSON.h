@@ -102,6 +102,13 @@ namespace JSON {
 	public:
 		void* binary = NULL;
 
+		~JSON() {
+			for (auto o : objects) {
+				if (o.getType() == Member::Type::OBJECT)
+					delete o.Get().o;
+			}
+		}
+
 		void Clear() {
 			objects.clear();
 			storage.clear();
