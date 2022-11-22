@@ -159,7 +159,7 @@ namespace AIS {
 
 	void JSONAIS::Receive(const AIS::Message* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
-			json.Clear() ;
+			json.Clear();
 			ProcessMsg(data[i], tag);
 			json.binary = (void*)&data[i];
 			Send(&json, 1, tag);
