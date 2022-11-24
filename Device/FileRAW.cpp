@@ -25,20 +25,76 @@ namespace Device {
 	//---------------------------------------
 	// RAW CU8 file
 
+	void RAWFile::ReadAsync() {
+
+		while (file && !file->eof() && Device::isStreaming()) {
+
+			buffer.assign(buffer.size(), 0);
+			file->read((char*)buffer.data(), buffer.size());
+			while (isStreaming() && !fifo.Push(buffer.data(), buffer.size())) SleepSystem(1);
+		}
+		eoi = true;
+	}
+
+	void RAWFile::Run() {
+		while (isStreaming()) {
+			if (fifo.Wait()) {
+
+				RAW r = { format, fifo.Front(), fifo.BlockSize() };
+				Send(&r, 1, tag);
+				fifo.Pop();
+			}
+			else {
+				if (eoi && isStreaming())
+					done = true;
+				else if (isStreaming() && format != Format::TXT)
+					std::cerr << "FILE: timeout." << std::endl;
+			}
+		}
+	}
+
 	void RAWFile::Open(uint64_t h) {
 		Device::Open(h);
+		setSampleRate(1536000);
+	}
+
+	void RAWFile::Play() {
+		Device::Play();
+
+		if (format != Format::TXT) {
+			fifo.Init(BUFFER_SIZE, BUFFER_COUNT);
+			buffer.resize(BUFFER_SIZE);
+		}
+		else {
+			fifo.Init(1, BUFFER_SIZE);
+			buffer.resize(1);
+		}
 
 		if (filename == "." || filename == "stdin") {
 			file = &std::cin;
-			if (format == Format::TXT) std::cin.sync_with_stdio(false);
 		}
 		else {
 			file = new std::ifstream(filename, std::ios::in | std::ios::binary);
 		}
 
-		if (!file || file->fail()) throw "Error: Cannot read RAW input.";
+		if (!file || file->fail()) throw "FILE: Cannot open input.";
+
+		done = false;
+
+		read_thread = std::thread(&RAWFile::ReadAsync, this);
+		run_thread = std::thread(&RAWFile::Run, this);
 
 		setSampleRate(1536000);
+	}
+
+	void RAWFile::Stop() {
+		if (Device::isStreaming()) {
+			Device::Stop();
+			fifo.Halt();
+
+			if (read_thread.joinable()) read_thread.join();
+			if (run_thread.joinable()) run_thread.join();
+		}
 	}
 
 	void RAWFile::Close() {
@@ -46,24 +102,6 @@ namespace Device {
 			delete file;
 			file = NULL;
 		}
-	}
-
-	bool RAWFile::isStreaming() {
-		if (!file || file->eof() || !Device::isStreaming()) return false;
-
-		if (buffer.size() < buffer_size) buffer.resize(buffer_size);
-		buffer.assign(buffer.size(), 0);
-
-		int sz = buffer.size();
-		if (format == Format::TXT)
-			sz = MIN(sz, file->rdbuf()->in_avail());
-
-		file->read((char*)buffer.data(), sz);
-
-		RAW r = { format, buffer.data(), (int)sz };
-		Send(&r, 1, tag);
-
-		return true;
 	}
 
 	void RAWFile::Set(std::string option, std::string arg) {
