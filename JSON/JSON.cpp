@@ -86,7 +86,7 @@ namespace JSON {
 			v.to_string(json);
 			break;
 		case Value::Type::STRING:
-			jsonify(v.getString(),json);
+			jsonify(v.getString(), json);
 			break;
 		case Value::Type::OBJECT:
 			build(*v.getObject(), json);
