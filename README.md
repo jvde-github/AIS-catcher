@@ -26,11 +26,12 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - As per version 0.39 there is a function that allows received messages to be posted using the HTTP protocol periodically. Please see [this](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#posting-messages-over-http) section for more details. This could be an interesting option if you want to submit data to [APRS.fi](https://aprs.fi) or develop a cloud service for collecting data. 
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
-- AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder). When piping NMEA lines into AIS-catcher, the program waits until a very large buffer is filled before processing which is unacceptable for text input. To ensure that incoming lines are processed immediately we introduced a new input format ``TXT`` as well. This is useful when you want to use AIS-catcher to process data from the DaisyHat (/dev/serial0) or the Kystverket AIS service:
+- AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder). 
+When piping NMEA text lines into AIS-catcher, use the format ``TXT`` to ensure the proram immediately processes the incoming characters and are not buffered in
+the programs large buffer (which can fit ~3000 NMEA lines). Wit this function you can use AIS-catcher to forward messages from a DaisyHat (``/cat/serial0``) or Norwegian coastal traffic:  
 ```
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
 ```
-TO DO: move reading into a seperate thread.
 - Experimental functionality to filter UDP, HTTP and screen output on message type, e.g. send only messages of type 1, 2, 3, 5, 18, 19, 24 and 27 over UDP:
 ```
 AIS-catcher -u 127.0.0.1 10110 FILTER on ALLOW_TYPE 1,2,3,5,18,19,24,27

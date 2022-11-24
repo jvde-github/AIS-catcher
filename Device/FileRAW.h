@@ -27,24 +27,38 @@ namespace Device {
 		std::string filename;
 		std::vector<char> buffer;
 
-		const int buffer_size = 16 * 16384;
+		std::thread read_thread;
+		std::thread run_thread;
 
+		bool eoi = false;
+		bool done = false;
+
+		FIFO fifo;
+
+		static const uint32_t BUFFER_SIZE = 16 * 16384;
+		uint32_t BUFFER_COUNT = 2;
 		Format format = Format::CU8;
+
+		void ReadAsync();
+		void Run();
 
 	public:
 		// Control
 		void Open(uint64_t);
 		void Close();
+		void Play();
+		void Stop();
 
-		bool isCallback() { return false; }
-		bool isStreaming();
+		bool isCallback() { return true; }
+		bool isStreaming() { return Device::isStreaming() && !done; }
 
 		// Device specific
 		void setFormat(Format f) { format = f; }
+		Format getFormat() { return format; }
 
+		// Settings
 		void Set(std::string option, std::string arg);
 		std::string Get();
-
 		std::string getProduct() { return "FILE-RAW"; }
 	};
 }
