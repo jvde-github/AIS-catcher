@@ -29,6 +29,7 @@
 #include "IO.h"
 #include "Network.h"
 #include "AIS.h"
+#include "JSON/JSON.h"
 #include "JSONAIS.h"
 
 #include "Device/FileRAW.h"
@@ -275,6 +276,41 @@ void Assert(bool b, std::string& context, std::string msg = "") {
 	}
 }
 
+
+// EXPERIMENTAL
+
+void json_test(std::string &file_config) {
+		JSON::JSON* json = nullptr;
+
+		if (!file_config.empty()) {
+			std::ifstream file(file_config);
+			if (file.fail()) {
+				std::cerr << "Config: cannot open config file: " << file_config << std::endl;
+			}
+			else {
+				std::string j, line;
+				while (std::getline(file, line)) j += line + '\n';
+
+				JSON::Parser parser;
+				json = parser.parse(j);
+				j = "";
+				// temporary check
+				JSON::StringBuilder builder;
+				builder.setMap(JSON_DICT_SETTING);
+				builder.build(*json, j);
+				std::cerr << j << std::endl;
+				j = "";
+				if (json->getString(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_SERIAL, j)) {
+
+					std::cerr << "serial : " << j << std::endl;
+				}
+				int i = 0;
+				if (json->getInt(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_FREQ_OFFSET, i))
+					std::cerr << "ppm " << i  << std::endl;
+			}
+		}
+}
+
 int main(int argc, char* argv[]) {
 	int sample_rate = 0, input_device = 0, bandwidth = 0, ppm = 0;
 	int timeout = 0;
@@ -289,6 +325,8 @@ int main(int argc, char* argv[]) {
 	AIS::Mode ChannelMode = AIS::Mode::AB;
 	std::string NMEAchannels = "AB";
 	TAG tag;
+
+	std::string file_config;
 
 	// Device and output stream of device;
 	Type input_type = Type::NONE;
@@ -361,6 +399,10 @@ int main(int argc, char* argv[]) {
 					Assert(std::isupper(arg2[1]) || std::isdigit(arg2[1]) || arg2[1] == '?', param, "NMEA channel designation invalid.");
 					NMEAchannels = arg2;
 				}
+				break;
+			case 'C':
+				Assert(count == 1, param, "one parameter required: filename");
+				file_config = arg1;
 				break;
 			case 'v':
 				Assert(count <= 1, param);
@@ -567,6 +609,10 @@ int main(int argc, char* argv[]) {
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
 		if (list_devices || list_support || list_options) return 0;
+
+		// -------------
+		// Read config file
+		// json_test(file_config);
 
 		// -------------
 		// Select device
