@@ -27,8 +27,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
 - Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
 - AIS-catcher can be used as a command line utility to decode NMEA lines, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder). 
-When piping NMEA text lines into AIS-catcher, use the format ``TXT`` to ensure the proram immediately processes the incoming characters and are not buffered in
-the programs large buffer (which can fit ~3000 NMEA lines). Wit this function you can use AIS-catcher to forward messages from a DaisyHat (``/cat/serial0``) or Norwegian coastal traffic:  
+When piping NMEA text lines into AIS-catcher, use the format ``TXT`` to ensure the program immediately processes the incoming characters and are not buffered. With this function you can use AIS-catcher to forward messages from a DaisyHat (from file ``/cat/serial0``) or Norwegian coastal traffic:  
 ```
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
 ```
