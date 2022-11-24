@@ -25,16 +25,16 @@ namespace JSON {
 	void Value::to_string(std::string& str) const {
 		switch (type) {
 		case Value::Type::STRING:
-			str += *d.s;
+			str += *data.s;
 			break;
 		case Value::Type::BOOL:
-			str += d.b ? "true" : "false";
+			str += data.b ? "true" : "false";
 			break;
 		case Value::Type::INT:
-			str += std::to_string(d.i);
+			str += std::to_string(data.i);
 			break;
 		case Value::Type::FLOAT:
-			str += std::to_string(d.f);
+			str += std::to_string(data.f);
 			break;
 		case Value::Type::EMPTY:
 			str += "null";
@@ -383,7 +383,6 @@ namespace JSON {
 		tokenizer();
 		return parse_core();
 	}
-
 
 	const std::vector<std::vector<std::string>> KeyMap = {
 		{ "class", "class", "class", "" },

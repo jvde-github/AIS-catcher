@@ -58,48 +58,48 @@ namespace JSON {
 			std::vector<std::string>* as;
 			std::vector<Value>* a;
 			JSON* o;
-		} d;
+		} data;
 
 	public:
 		Type getType() const { return type; }
 
-		float getFloat() const { return d.f; }
-		int getInt() const { return d.i; }
-		bool getBool() const { return d.b; }
+		float getFloat() const { return data.f; }
+		int getInt() const { return data.i; }
+		bool getBool() const { return data.b; }
 
-		std::vector<std::string>& getStringArray() const { return *d.as; }
-		std::vector<Value>& getArray() const { return *d.a; }
-		std::string& getString() const { return *d.s; }
-		JSON* getObject() const { return d.o; }
+		std::vector<std::string>& getStringArray() const { return *data.as; }
+		std::vector<Value>& getArray() const { return *data.a; }
+		std::string& getString() const { return *data.s; }
+		JSON* getObject() const { return data.o; }
 
 		void setFloat(float v) {
-			d.f = v;
+			data.f = v;
 			type = Type::FLOAT;
 		}
 		void setInt(int v) {
-			d.i = v;
+			data.i = v;
 			type = Type::INT;
 		}
 		void setBool(bool v) {
-			d.b = v;
+			data.b = v;
 			type = Type::BOOL;
 		}
 		void setNull() { type = Type::EMPTY; }
 
 		void setArray(std::vector<Value>* v) {
-			d.a = v;
+			data.a = v;
 			type = Type::ARRAY;
 		}
 		void setStringArray(std::vector<std::string>* v) {
-			d.as = v;
+			data.as = v;
 			type = Type::ARRAY_STRING;
 		}
 		void setString(std::string* v) {
-			d.s = v;
+			data.s = v;
 			type = Type::STRING;
 		}
 		void setObject(JSON* v) {
-			d.o = v;
+			data.o = v;
 			type = Type::OBJECT;
 		}
 
