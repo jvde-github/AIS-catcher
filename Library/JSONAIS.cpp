@@ -47,35 +47,35 @@ namespace AIS {
 	void JSONAIS::U(const AIS::Message& msg, int p, int start, int len, unsigned undefined) {
 		unsigned u = msg.getUint(start, len);
 		if (u != undefined)
-			json.Submit(p, (int)u);
+			json.Add(p, (int)u);
 	}
 
 	void JSONAIS::UL(const AIS::Message& msg, int p, int start, int len, float a, float b, unsigned undefined) {
 		unsigned u = msg.getUint(start, len);
 		if (u != undefined)
-			json.Submit(p, u * a + b);
+			json.Add(p, u * a + b);
 	}
 
 	void JSONAIS::S(const AIS::Message& msg, int p, int start, int len, int undefined) {
 		int u = msg.getInt(start, len);
 		if (u != undefined)
-			json.Submit(p, u);
+			json.Add(p, u);
 	}
 
 	void JSONAIS::SL(const AIS::Message& msg, int p, int start, int len, float a, float b, int undefined) {
 		int s = msg.getInt(start, len);
 		if (s != undefined)
-			json.Submit(p, s * a + b);
+			json.Add(p, s * a + b);
 	}
 
 	void JSONAIS::E(const AIS::Message& msg, int p, int start, int len, int pmap, const std::vector<std::string>* map) {
 		unsigned u = msg.getUint(start, len);
-		json.Submit(p, (int)u);
+		json.Add(p, (int)u);
 		if (map) {
 			if (u < map->size())
-				json.Submit(pmap, &(*map)[u]);
+				json.Add(pmap, &(*map)[u]);
 			else
-				json.Submit(pmap, &undefined);
+				json.Add(pmap, &undefined);
 		}
 	}
 
@@ -83,21 +83,21 @@ namespace AIS {
 		int u = msg.getInt(start, len);
 
 		if (u == -128)
-			json.Submit(p, &nan);
+			json.Add(p, &nan);
 		else if (u == -127)
-			json.Submit(p, &fastleft);
+			json.Add(p, &fastleft);
 		else if (u == 127)
-			json.Submit(p, &fastright);
+			json.Add(p, &fastright);
 		else {
 			double rot = u / 4.733;
 			rot = (u < 0) ? -rot * rot : rot * rot;
-			json.Submit(p, (int)(rot + 0.5));
+			json.Add(p, (int)(rot + 0.5));
 		}
 	}
 
 	void JSONAIS::B(const AIS::Message& msg, int p, int start, int len) {
 		unsigned u = msg.getUint(start, len);
-		json.Submit(p, (bool)u);
+		json.Add(p, (bool)u);
 	}
 
 	void JSONAIS::TIMESTAMP(const AIS::Message& msg, int p, int start, int len, std::string& str) {
@@ -107,7 +107,7 @@ namespace AIS {
 		s << std::setfill('0') << std::setw(4) << msg.getUint(start, 14) << "-" << std::setw(2) << msg.getUint(start + 14, 4) << "-" << std::setw(2) << msg.getUint(start + 18, 5) << "T"
 		  << std::setw(2) << msg.getUint(start + 23, 5) << ":" << std::setw(2) << msg.getUint(start + 28, 6) << ":" << std::setw(2) << msg.getUint(start + 34, 6) << "Z";
 		str = std::string(s.str());
-		json.Submit(p, &str);
+		json.Add(p, &str);
 	}
 
 	void JSONAIS::ETA(const AIS::Message& msg, int p, int start, int len, std::string& str) {
@@ -117,14 +117,14 @@ namespace AIS {
 		s << std::setfill('0') << std::setw(2) << msg.getUint(start, 4) << "-" << std::setw(2) << msg.getUint(start + 4, 5) << "T"
 		  << std::setw(2) << msg.getUint(start + 9, 5) << ":" << std::setw(2) << msg.getUint(start + 14, 6) << "Z";
 		str = std::string(s.str());
-		json.Submit(p, &str);
+		json.Add(p, &str);
 	}
 
 
 	void JSONAIS::T(const AIS::Message& msg, int p, int start, int len, std::string& str) {
 		msg.getText(start, len, str);
 		while (!str.empty() && str[str.length() - 1] == ' ') str.resize(str.length() - 1);
-		json.Submit(p, &str);
+		json.Add(p, &str);
 	}
 
 	void JSONAIS::D(const AIS::Message& msg, int p, int start, int len, std::string& str) {
@@ -133,7 +133,7 @@ namespace AIS {
 			char c = msg.getUint(i, 4);
 			str += (char)(c < 10 ? c + '0' : c + 'a' - 10);
 		}
-		json.Submit(p, &str);
+		json.Add(p, &str);
 	}
 
 	// Refernce: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
@@ -151,8 +151,8 @@ namespace AIS {
 					l = m;
 			}
 			if (JSON_MAP_MID[l].MID == mid) {
-				json.Submit(JSON::KEY_COUNTRY, &JSON_MAP_MID[l].country);
-				json.Submit(JSON::KEY_COUNTRY_CODE, &JSON_MAP_MID[l].code);
+				json.Add(JSON::KEY_COUNTRY, &JSON_MAP_MID[l].country);
+				json.Add(JSON::KEY_COUNTRY_CODE, &JSON_MAP_MID[l].code);
 			}
 		}
 	}
@@ -230,19 +230,19 @@ namespace AIS {
 		rxtime = msg.getRxTime();
 		channel = std::string(1, msg.getChannel());
 
-		json.Submit(JSON::KEY_CLASS, &class_str);
-		json.Submit(JSON::KEY_DEVICE, &device);
+		json.Add(JSON::KEY_CLASS, &class_str);
+		json.Add(JSON::KEY_DEVICE, &device);
 
 		if (tag.mode & 2)
-			json.Submit(JSON::KEY_RXTIME, &rxtime);
+			json.Add(JSON::KEY_RXTIME, &rxtime);
 
-		json.Submit(JSON::KEY_SCALED, true);
-		json.Submit(JSON::KEY_CHANNEL, &channel);
-		json.Submit(JSON::KEY_NMEA, &msg.NMEA);
+		json.Add(JSON::KEY_SCALED, true);
+		json.Add(JSON::KEY_CHANNEL, &channel);
+		json.Add(JSON::KEY_NMEA, &msg.NMEA);
 
 		if (tag.mode & 1) {
-			json.Submit(JSON::KEY_SIGNAL_POWER, tag.level);
-			json.Submit(JSON::KEY_PPM, tag.ppm);
+			json.Add(JSON::KEY_SIGNAL_POWER, tag.level);
+			json.Add(JSON::KEY_PPM, tag.ppm);
 		}
 
 		U(msg, JSON::KEY_TYPE, 0, 6);
