@@ -20,82 +20,99 @@
 #include <vector>
 #include <iostream>
 
+#include "Utilities.h"
 #include "Common.h"
 
 #define JSON_DICT_FULL	  0
 #define JSON_DICT_MINIMAL 1
 #define JSON_DICT_SPARSE  2
 #define JSON_DICT_APRS	  3
+#define JSON_DICT_SETTING 4
 
 namespace JSON {
 
 	extern const std::vector<std::vector<std::string>> KeyMap;
 	class JSON;
+	class Property;
 
-	class Member {
-	public:
+	struct Value {
 		enum class Type {
 			BOOL,
 			INT,
 			FLOAT,
 			STRING,
 			OBJECT,
-			ARRAY_STRING
-		};
-		union Value {
+			ARRAY_STRING,
+			ARRAY,
+			EMPTY
+		} type;
+		union Data {
 			bool b;
 			int i;
 			float f;
 			std::string* s;
-			std::vector<std::string>* a;
+			std::vector<std::string>* as;
+			std::vector<Value>* a;
 			JSON* o;
-		};
+		} d;
+	};
 
+	class Property {
+	public:
 	protected:
 		int key;
-		Type type;
 		Value value;
 
 	public:
-		Member(int p, int v) {
+		Property(int p, Value v) {
 			key = p;
-			value.i = v;
-			type = Type::INT;
+			value = v;
 		}
-		Member(int p, float v) {
+		Property(int p, int v) {
 			key = p;
-			value.f = v;
-			type = Type::FLOAT;
+			value.d.i = v;
+			value.type = Value::Type::INT;
 		}
-		Member(int p, bool v) {
+		Property(int p, float v) {
 			key = p;
-			value.b = v;
-			type = Type::BOOL;
+			value.d.f = v;
+			value.type = Value::Type::FLOAT;
 		}
-		Member(int p, std::string* v) {
+		Property(int p, bool v) {
 			key = p;
-			value.s = v;
-			type = Type::STRING;
+			value.d.b = v;
+			value.type = Value::Type::BOOL;
 		}
-		Member(int p, std::vector<std::string>* v) {
+		Property(int p, std::string* v) {
 			key = p;
-			value.a = v;
-			type = Type::ARRAY_STRING;
+			value.d.s = v;
+			value.type = Value::Type::STRING;
 		}
-		Member(int p, JSON* v) {
+		Property(int p, std::vector<std::string>* v) {
 			key = p;
-			value.o = v;
-			type = Type::OBJECT;
+			value.d.as = v;
+			value.type = Value::Type::ARRAY_STRING;
 		}
-		Type getType() const { return type; }
+		Property(int p, JSON* v) {
+			key = p;
+			value.d.o = v;
+			value.type = Value::Type::OBJECT;
+		}
+		Property(int p) {
+			key = p;
+			value.type = Value::Type::EMPTY;
+		}
+		Value::Type getType() const { return value.type; }
 		int getKey() const { return key; }
 		Value Get() const { return value; }
 	};
 
 	class JSON {
 	protected:
-		std::vector<Member> objects;
-		std::vector<std::string> storage;
+		std::vector<Property> objects;
+		std::vector<std::string*> strings;
+		std::vector<std::vector<Value>*> arrays;
+
 		friend class StringBuilder;
 		friend class Parser;
 
@@ -103,40 +120,96 @@ namespace JSON {
 		void* binary = NULL;
 
 		~JSON() {
-			for (auto o : objects) {
-				if (o.getType() == Member::Type::OBJECT)
-					delete o.Get().o;
-			}
+			Clear();
 		}
 
 		void Clear() {
+			for (const auto& o : objects) {
+				if (o.getType() == Value::Type::OBJECT) {
+					delete o.Get().d.o;
+				}
+			}
+
+			for (const auto& s : strings) {
+				delete s;
+			}
+
+			for (const auto& a : arrays) {
+				for (const auto& v : *a)
+					if (v.type == Value::Type::OBJECT) {
+						delete v.d.o;
+					}
+			}
 			objects.clear();
-			storage.clear();
+			strings.clear();
+			arrays.clear();
+		}
+
+		JSON* Get(int p1) {
+			for (auto& o : objects) {
+				if (o.getKey() == p1 && o.getType() == Value::Type::OBJECT)
+					return o.Get().d.o;
+			}
+			return nullptr;
+		}
+
+		bool getValue(int p1, Value& v) {
+			for (auto& o : objects) {
+				if (o.getKey() == p1) {
+					v = o.Get();
+					return true;
+				}
+			}
+			return false;
+		}
+
+		bool getString(int p1, int p2, std::string& str) {
+			JSON* json = Get(p1);
+			if (json == nullptr) return false;
+			Value v;
+			if (!json->getValue(p2, v)) return false;
+			if (v.type != Value::Type::STRING) return false;
+			str = *v.d.s;
+			return true;
+		}
+
+		bool getInt(int p1, int p2, int& i) {
+			JSON* json = Get(p1);
+			if (json == nullptr) return false;
+			Value v;
+			if (!json->getValue(p2, v)) return false;
+			if (v.type != Value::Type::INT) return false;
+			i = v.d.i;
+			return true;
 		}
 
 		void Submit(int p, int v) {
-			objects.push_back(Member(p, v));
+			objects.push_back(Property(p, v));
 		}
 		void Submit(int p, float v) {
-			objects.push_back(Member(p, v));
+			objects.push_back(Property(p, v));
 		}
 		void Submit(int p, bool v) {
-			objects.push_back(Member(p, v));
+			objects.push_back(Property(p, v));
 		}
 		void Submit(int p, JSON* v) {
-			objects.push_back(Member(p, (JSON*)v));
+			objects.push_back(Property(p, (JSON*)v));
 		}
 		void Submit(int p, const std::string* v) {
-			objects.push_back(Member(p, (std::string*)v));
+			objects.push_back(Property(p, (std::string*)v));
 		}
-		/*
 		void Submit(int p, const std::string& v) {
-			storage.push_back(v);
-			objects.push_back(Member(p, (std::string*)&storage.back()));
+			strings.push_back(new std::string(v));
+			objects.push_back(Property(p, (std::string*)&strings.back()));
 		}
-		*/
 		void Submit(int p, const std::vector<std::string>* v) {
-			objects.push_back(Member(p, (std::vector<std::string>*)v));
+			objects.push_back(Property(p, (std::vector<std::string>*)v));
+		}
+		void Submit(int p) {
+			objects.push_back(Property(p));
+		}
+		void Submit(int p, Value v) {
+			objects.push_back(Property(p, v));
 		}
 	};
 
@@ -144,6 +217,7 @@ namespace JSON {
 	protected:
 	private:
 		int map = JSON_DICT_FULL;
+		void to_string(std::string& json, const Value& v, int& idx);
 
 	public:
 		void build(const JSON& objects, std::string& json);
@@ -153,10 +227,69 @@ namespace JSON {
 		void setMap(int m) { map = m; }
 	};
 
+	class Parser {
+	protected:
+	private:
+		class Token;
+
+		int map = JSON_DICT_SETTING;
+		std::string json;
+		std::vector<Token> tokens;
+
+		enum class TokenType {
+			LeftBrace,
+			RightBrace,
+			LeftBracket,
+			RightBracket,
+			Integer,
+			FloatingPoint,
+			Colon,
+			Comma,
+			True,
+			False,
+			Null,
+			String,
+			End
+		};
+
+		struct Token {
+			int pos = 0;
+			TokenType type;
+			std::string text;
+
+			Token(TokenType t, const std::string& x, int p) {
+				pos = p;
+				type = t;
+				text = x;
+			}
+		};
+
+		void error(const std::string& err, int pos);
+
+		// tokenizer
+		void skip_whitespace(int&);
+		void tokenizer();
+
+		// parser
+		int idx = 0;
+
+		void error_parser(const std::string& err);
+		bool is_match(TokenType t);
+		void must_match(TokenType t, const std::string& err);
+		int search(const std::string& s);
+		void next();
+		JSON* parse_core();
+		Value parse_value(JSON* o);
+
+	public:
+		JSON* parse(const std::string& j);
+
+		// dictionary to use
+		void setMap(int m) { map = m; }
+	};
+
 	// JSON keys
 	enum Keys {
-		KEY_OBJECT_START = 0,
-		KEY_OBJECT_END,
 		KEY_CLASS,
 		KEY_DEVICE,
 		KEY_SCALED,
@@ -168,6 +301,34 @@ namespace JSON {
 		KEY_ETA,
 		KEY_SHIPTYPE_TEXT,
 		KEY_AID_TYPE_TEXT,
+		// Settings
+		KEY_SETTING_BANDWIDTH,
+		KEY_SETTING_BIAS_TEE,
+		KEY_SETTING_BUFFER_COUNT,
+		KEY_SETTING_CALLSIGN,
+		KEY_SETTING_CHANNEL,
+		KEY_SETTING_DEVICE,
+		KEY_SETTING_FILTER,
+		KEY_SETTING_FREQ_OFFSET,
+		KEY_SETTING_GZIP,
+		KEY_SETTING_HOST,
+		KEY_SETTING_HTTP,
+		KEY_SETTING_INTERVAL,
+		KEY_SETTING_MSG_OUTPUT,
+		KEY_SETTING_OUTPUT,
+		KEY_SETTING_PORT,
+		KEY_SETTING_PROTOCOL,
+		KEY_SETTING_RTLAGC,
+		KEY_SETTING_RTLSDR,
+		KEY_SETTING_SAMPLE_RATE,
+		KEY_SETTING_SERIAL,
+		KEY_SETTING_TIMEOUT,
+		KEY_SETTING_TUNER,
+		KEY_SETTING_UDP,
+		KEY_SETTING_URL,
+		KEY_SETTING_USERPWD,
+		KEY_SETTING_VERBOSE,
+		KEY_SETTING_VERBOSE_TIME,
 		// Copy from ODS spreadsheet
 		KEY_ACCURACY,
 		KEY_ADDRESSED,
