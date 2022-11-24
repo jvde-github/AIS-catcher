@@ -79,12 +79,14 @@ namespace JSON {
 		bool first;
 
 		switch (v.getType()) {
-		case Value::Type::STRING:
 		case Value::Type::BOOL:
 		case Value::Type::INT:
 		case Value::Type::FLOAT:
 		case Value::Type::EMPTY:
 			v.to_string(json);
+			break;
+		case Value::Type::STRING:
+			jsonify(v.getString(),json);
 			break;
 		case Value::Type::OBJECT:
 			build(*v.getObject(), json);
@@ -407,6 +409,7 @@ namespace JSON {
 		{ "", "", "", "", "gzip" },
 		{ "", "", "", "", "host" },
 		{ "", "", "", "", "http" },
+		{ "", "", "", "", "id" },
 		{ "", "", "", "", "interval" },
 		{ "", "", "", "", "msg_output" },
 		{ "", "", "", "", "output" },
