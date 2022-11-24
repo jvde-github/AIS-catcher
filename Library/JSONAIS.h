@@ -20,7 +20,7 @@
 #include <iomanip>
 
 #include "Stream.h"
-#include "JSON.h"
+#include "JSON/JSON.h"
 #include "AIS.h"
 #include "Signals.h"
 #include "Utilities.h"

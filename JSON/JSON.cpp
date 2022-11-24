@@ -22,6 +22,36 @@
 
 namespace JSON {
 
+	void Value::to_string(std::string& str) const {
+		switch (type) {
+		case Value::Type::STRING:
+			str += *d.s;
+			break;
+		case Value::Type::BOOL:
+			str += d.b ? "true" : "false";
+			break;
+		case Value::Type::INT:
+			str += std::to_string(d.i);
+			break;
+		case Value::Type::FLOAT:
+			str += std::to_string(d.f);
+			break;
+		case Value::Type::EMPTY:
+			str += "null";
+			break;
+		case Value::Type::OBJECT:
+			str += "object";
+			break;
+		case Value::Type::ARRAY_STRING:
+		case Value::Type::ARRAY:
+			str += "array";
+			break;
+		default:
+			str += "error";
+			break;
+		}
+	}
+
 	// StringBuilder - Build string from JSON object
 
 	void StringBuilder::jsonify(const std::string& str, std::string& json) {
@@ -48,48 +78,50 @@ namespace JSON {
 
 		bool first;
 
-		switch (v.type) {
+		switch (v.getType()) {
 		case Value::Type::STRING:
-			jsonify(*(v.d.s), json);
-			break;
 		case Value::Type::BOOL:
-			json += (v.d.b ? "true" : "false");
-			break;
 		case Value::Type::INT:
-			json += std::to_string(v.d.i);
-			break;
 		case Value::Type::FLOAT:
-			json += std::to_string(v.d.f);
-			break;
 		case Value::Type::EMPTY:
-			json += "null";
+			v.to_string(json);
 			break;
 		case Value::Type::OBJECT:
-			build(*v.d.o, json);
+			build(*v.getObject(), json);
 			break;
 		case Value::Type::ARRAY_STRING: {
-			json += '[';
-			if (v.d.as->size()) {
-				jsonify((*v.d.as)[0], json);
 
-				for (int i = 1; i < v.d.as->size(); i++) {
+			const std::vector<std::string>& as = v.getStringArray();
+			json += '[';
+
+			if (as.size()) {
+				jsonify(as[0], json);
+
+				for (int i = 1; i < as.size(); i++) {
 					json += ',';
-					jsonify((*(v.d.as))[i], json);
+					jsonify(as[i], json);
 				}
 			}
-			json += ']';
-		} break;
-		case Value::Type::ARRAY:
 
+			json += ']';
+
+		} break;
+		case Value::Type::ARRAY: {
+
+			const std::vector<Value>& a = v.getArray();
 			json += '[';
+
 			first = true;
-			for (const auto val : *(v.d.a)) {
+			for (const auto val : a) {
+
 				if (!first) json += ',';
 				first = false;
+
 				to_string(json, val, idx);
 			}
+
 			json += ']';
-			break;
+		} break;
 		default:
 			std::cerr << "JSON: not implemented!" << std::endl;
 		}
@@ -99,16 +131,17 @@ namespace JSON {
 		bool first = true;
 		json += '{';
 		int idx = 0;
-		for (const Property& m : object.objects) {
-			int k = m.getKey();
-			const std::string& key = KeyMap[k][map];
+		for (const Property& p : object.objects) {
+
+			const std::string& key = KeyMap[p.getKey()][map];
 
 			if (!key.empty()) {
 
 				if (!first) json += ',';
-				json += "\"" + key + "\"" + ':';
 				first = false;
-				to_string(json, m.Get(), idx);
+
+				json += "\"" + key + "\":";
+				to_string(json, p.Get(), idx);
 			}
 		}
 		json += '}';
@@ -239,6 +272,7 @@ namespace JSON {
 	void Parser::error_parser(const std::string& err) {
 		error(err, tokens[MIN(tokens.size() - 1, idx)].pos);
 	}
+
 	bool Parser::is_match(TokenType t) {
 		if (idx >= tokens.size() || tokens[idx].type == TokenType::End) error_parser("unexpected end in input");
 		return tokens[idx].type == t;
@@ -253,6 +287,7 @@ namespace JSON {
 		if (idx >= tokens.size() || tokens[idx].type == TokenType::End) error_parser("unexpected end in input");
 	}
 
+	// search for keyword in "map", returns index in map or -1 if not found
 	int Parser::search(const std::string& s) {
 		int p = -1;
 		for (int i = 0; i < KeyMap.size(); i++)
@@ -265,55 +300,50 @@ namespace JSON {
 
 	Value Parser::parse_value(JSON* o) {
 		Value v = Value();
-		v.type = Value::Type::EMPTY;
+		v.setNull();
 		switch (tokens[idx].type) {
 		case TokenType::Integer:
-			v.d.i = Util::Parse::Integer(tokens[idx].text);
-			v.type = Value::Type::INT;
+			v.setInt(Util::Parse::Integer(tokens[idx].text));
 			break;
 		case TokenType::FloatingPoint:
-			v.d.f = Util::Parse::Float(tokens[idx].text);
-			v.type = Value::Type::FLOAT;
+			v.setFloat(Util::Parse::Float(tokens[idx].text));
 			break;
 		case TokenType::True:
-			v.d.b = true;
-			v.type = Value::Type::BOOL;
+			v.setBool(true);
 			break;
 		case TokenType::LeftBrace:
-			v.d.o = parse_core();
-			v.type = Value::Type::OBJECT;
+			v.setObject(parse_core());
 			break;
 		case TokenType::False:
-			v.d.b = false;
-			v.type = Value::Type::BOOL;
+			v.setBool(false);
 			break;
 		case TokenType::Null:
-			v.type = Value::Type::EMPTY;
+			v.setNull();
 			break;
 		case TokenType::String:
+
 			o->strings.push_back(new std::string(tokens[idx].text));
-			v.d.s = o->strings.back();
-			v.type = Value::Type::STRING;
+			v.setString(o->strings.back());
+
 			break;
 		case TokenType::LeftBracket:
-			v.type = Value::Type::ARRAY;
-			v.d.a = new std::vector<Value>();
-			o->arrays.push_back(v.d.a);
+			o->arrays.push_back(new std::vector<Value>());
 
 			next();
 
 			while (!is_match(TokenType::RightBracket)) {
-				v.d.a->push_back(parse_value(o));
+				o->arrays.back()->push_back(parse_value(o));
 				next();
 				if (!is_match(TokenType::Comma)) break;
 				next();
 			}
+
 			must_match(TokenType::RightBracket, "expected ']'");
+			v.setArray(o->arrays.back());
 
 			break;
 		default:
 			error_parser("value parse not implemented");
-
 			break;
 		}
 		return v;

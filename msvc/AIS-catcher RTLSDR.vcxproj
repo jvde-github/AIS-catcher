@@ -36,7 +36,7 @@
     <ClCompile Include="..\DSP\Model.cpp" />
     <ClCompile Include="..\IO\IO.cpp" />
     <ClCompile Include="..\IO\Network.cpp" />
-    <ClCompile Include="..\Library\JSON.cpp" />
+    <ClCompile Include="..\JSON\JSON.cpp" />
     <ClCompile Include="..\Library\AIS.cpp" />
     <ClCompile Include="..\Library\Message.cpp" />
     <ClCompile Include="..\Library\JSONAIS.cpp" />
@@ -51,7 +51,7 @@
     <ClInclude Include="..\Device\Device.h" />
     <ClInclude Include="..\Library\FIFO.h" />
     <ClInclude Include="..\Library\JSONAIS.h" />
-    <ClInclude Include="..\Library\JSON.h" />
+    <ClInclude Include="..\JSON\JSON.h" />
     <ClInclude Include="..\Device\FileRAW.h" />
     <ClInclude Include="..\Device\FileWAV.h" />
     <ClInclude Include="..\Device\HACKRF.h" />

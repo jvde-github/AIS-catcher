@@ -533,14 +533,14 @@ set(CPP
 	Application/Main.cpp
 	Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/JSONAIS.cpp
 	Device/FileRAW.cpp Device/HACKRF.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
-	Library/Utilities.cpp Library/TCP.cpp Library/JSON.cpp IO/Network.cpp
+	Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp
 	Device/AIRSPY.cpp
 	DSP/DSP.cpp
 	IO/IO.cpp)
 
 set(HEADER
 	Application/AIS-catcher.h
-	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h Library/JSON.h
+	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h
 	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h Device/SpyServer.h
 	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h IO/Network.h Library/Utilities.h Library/TCP.h)
 
