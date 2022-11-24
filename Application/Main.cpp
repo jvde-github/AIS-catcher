@@ -279,36 +279,36 @@ void Assert(bool b, std::string& context, std::string msg = "") {
 
 // EXPERIMENTAL
 
-void json_test(std::string &file_config) {
-		JSON::JSON* json = nullptr;
+void json_test(std::string& file_config) {
+	JSON::JSON* json = nullptr;
 
-		if (!file_config.empty()) {
-			std::ifstream file(file_config);
-			if (file.fail()) {
-				std::cerr << "Config: cannot open config file: " << file_config << std::endl;
-			}
-			else {
-				std::string j, line;
-				while (std::getline(file, line)) j += line + '\n';
-
-				JSON::Parser parser;
-				json = parser.parse(j);
-				j = "";
-				// temporary check
-				JSON::StringBuilder builder;
-				builder.setMap(JSON_DICT_SETTING);
-				builder.build(*json, j);
-				std::cerr << j << std::endl;
-				j = "";
-				if (json->getString(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_SERIAL, j)) {
-
-					std::cerr << "serial : " << j << std::endl;
-				}
-				int i = 0;
-				if (json->getInt(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_FREQ_OFFSET, i))
-					std::cerr << "ppm " << i  << std::endl;
-			}
+	if (!file_config.empty()) {
+		std::ifstream file(file_config);
+		if (file.fail()) {
+			std::cerr << "Config: cannot open config file: " << file_config << std::endl;
 		}
+		else {
+			std::string j, line;
+			while (std::getline(file, line)) j += line + '\n';
+
+			JSON::Parser parser;
+			json = parser.parse(j);
+			j = "";
+			// temporary check
+			JSON::StringBuilder builder;
+			builder.setMap(JSON_DICT_SETTING);
+			builder.build(*json, j);
+			std::cerr << j << std::endl;
+			j = "";
+			if (json->getString(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_SERIAL, j)) {
+
+				std::cerr << "serial : " << j << std::endl;
+			}
+			int i = 0;
+			if (json->getInt(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_FREQ_OFFSET, i))
+				std::cerr << "ppm " << i << std::endl;
+		}
+	}
 }
 
 int main(int argc, char* argv[]) {

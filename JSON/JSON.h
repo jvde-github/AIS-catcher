@@ -233,32 +233,32 @@ namespace JSON {
 		}
 
 		void Add(int p, int v) {
-			objects.push_back(Property(p, v));
+			objects.push_back(Property(p, (int)v));
 		}
 		void Add(int p, float v) {
-			objects.push_back(Property(p, v));
+			objects.push_back(Property(p, (float)v));
 		}
 		void Add(int p, bool v) {
-			objects.push_back(Property(p, v));
+			objects.push_back(Property(p, (bool)v));
 		}
 		void Add(int p, JSON* v) {
-			objects.push_back(Property(p, v));
+			objects.push_back(Property(p, (JSON*)v));
 		}
 		void Add(int p, const std::string* v) {
-			objects.push_back(Property(p, v));
+			objects.push_back(Property(p, (std::string*)v));
 		}
 		void Add(int p, const std::string& v) {
 			strings.push_back(new std::string(v));
-			objects.push_back(Property(p, &strings.back()));
+			objects.push_back(Property(p, (std::string*)&strings.back()));
 		}
 		void Add(int p, const std::vector<std::string>* v) {
-			objects.push_back(Property(p, v));
+			objects.push_back(Property(p, (std::vector<std::string>*)v));
 		}
 		void Add(int p) {
 			objects.push_back(Property(p));
 		}
 		void Add(int p, Value v) {
-			objects.push_back(Property(p, v));
+			objects.push_back(Property(p, (Value)v));
 		}
 	};
 
@@ -361,6 +361,7 @@ namespace JSON {
 		KEY_SETTING_GZIP,
 		KEY_SETTING_HOST,
 		KEY_SETTING_HTTP,
+		KEY_SETTING_ID,
 		KEY_SETTING_INTERVAL,
 		KEY_SETTING_MSG_OUTPUT,
 		KEY_SETTING_OUTPUT,
