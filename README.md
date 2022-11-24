@@ -32,7 +32,7 @@ the programs large buffer (which can fit ~3000 NMEA lines). Wit this function yo
 ```
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
 ```
-- My home station feeds, amongst others, data to FleetMon and I noticed a decent portion of the messages was reported as #error#. My hypothesis was that this is just certain mesages types bein classified as such. 
+- My home station feeds, amongst others, data to FleetMon and I noticed a decent portion of my messages  reported as error. My hypothesis is (and I think I am right) that this is just certain message types being classified as such. 
 I created an experimental functionality to filter UDP, HTTP and screen output on message type, e.g. send only messages of type 1, 2, 3, 5, 18, 19, 24 and 27 over UDP:
 ```
 AIS-catcher -u 127.0.0.1 10110 FILTER on ALLOW_TYPE 1,2,3,5,18,19,24,27
