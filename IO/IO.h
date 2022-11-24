@@ -22,7 +22,7 @@
 
 #include "Stream.h"
 #include "AIS.h"
-#include "JSON.h"
+#include "JSON/JSON.h"
 #include "Utilities.h"
 
 namespace IO {

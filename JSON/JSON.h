@@ -35,7 +35,8 @@ namespace JSON {
 	class JSON;
 	class Property;
 
-	struct Value {
+	class Value {
+	public:
 		enum class Type {
 			BOOL,
 			INT,
@@ -45,7 +46,10 @@ namespace JSON {
 			ARRAY_STRING,
 			ARRAY,
 			EMPTY
-		} type;
+		};
+
+	protected:
+		Type type;
 		union Data {
 			bool b;
 			int i;
@@ -55,6 +59,51 @@ namespace JSON {
 			std::vector<Value>* a;
 			JSON* o;
 		} d;
+
+	public:
+		Type getType() const { return type; }
+
+		float getFloat() const { return d.f; }
+		int getInt() const { return d.i; }
+		bool getBool() const { return d.b; }
+
+		std::vector<std::string>& getStringArray() const { return *d.as; }
+		std::vector<Value>& getArray() const { return *d.a; }
+		std::string& getString() const { return *d.s; }
+		JSON* getObject() const { return d.o; }
+
+		void setFloat(float v) {
+			d.f = v;
+			type = Type::FLOAT;
+		}
+		void setInt(int v) {
+			d.i = v;
+			type = Type::INT;
+		}
+		void setBool(bool v) {
+			d.b = v;
+			type = Type::BOOL;
+		}
+		void setNull() { type = Type::EMPTY; }
+
+		void setArray(std::vector<Value>* v) {
+			d.a = v;
+			type = Type::ARRAY;
+		}
+		void setStringArray(std::vector<std::string>* v) {
+			d.as = v;
+			type = Type::ARRAY_STRING;
+		}
+		void setString(std::string* v) {
+			d.s = v;
+			type = Type::STRING;
+		}
+		void setObject(JSON* v) {
+			d.o = v;
+			type = Type::OBJECT;
+		}
+
+		void to_string(std::string&) const;
 	};
 
 	class Property {
@@ -70,39 +119,34 @@ namespace JSON {
 		}
 		Property(int p, int v) {
 			key = p;
-			value.d.i = v;
-			value.type = Value::Type::INT;
+			value.setInt(v);
 		}
 		Property(int p, float v) {
 			key = p;
-			value.d.f = v;
-			value.type = Value::Type::FLOAT;
+			value.setFloat(v);
 		}
 		Property(int p, bool v) {
 			key = p;
-			value.d.b = v;
-			value.type = Value::Type::BOOL;
+			value.setBool(v);
 		}
 		Property(int p, std::string* v) {
 			key = p;
-			value.d.s = v;
-			value.type = Value::Type::STRING;
+			value.setString(v);
 		}
 		Property(int p, std::vector<std::string>* v) {
 			key = p;
-			value.d.as = v;
-			value.type = Value::Type::ARRAY_STRING;
+			value.setStringArray(v);
 		}
 		Property(int p, JSON* v) {
 			key = p;
-			value.d.o = v;
-			value.type = Value::Type::OBJECT;
+			value.setObject(v);
 		}
 		Property(int p) {
 			key = p;
-			value.type = Value::Type::EMPTY;
+			value.setNull();
 		}
-		Value::Type getType() const { return value.type; }
+
+		Value::Type getType() const { return value.getType(); }
 		int getKey() const { return key; }
 		Value Get() const { return value; }
 	};
@@ -126,7 +170,7 @@ namespace JSON {
 		void Clear() {
 			for (const auto& o : objects) {
 				if (o.getType() == Value::Type::OBJECT) {
-					delete o.Get().d.o;
+					delete o.Get().getObject();
 				}
 			}
 
@@ -136,10 +180,11 @@ namespace JSON {
 
 			for (const auto& a : arrays) {
 				for (const auto& v : *a)
-					if (v.type == Value::Type::OBJECT) {
-						delete v.d.o;
+					if (v.getType() == Value::Type::OBJECT) {
+						delete v.getObject();
 					}
 			}
+
 			objects.clear();
 			strings.clear();
 			arrays.clear();
@@ -148,7 +193,7 @@ namespace JSON {
 		JSON* Get(int p1) {
 			for (auto& o : objects) {
 				if (o.getKey() == p1 && o.getType() == Value::Type::OBJECT)
-					return o.Get().d.o;
+					return o.Get().getObject();
 			}
 			return nullptr;
 		}
@@ -165,21 +210,25 @@ namespace JSON {
 
 		bool getString(int p1, int p2, std::string& str) {
 			JSON* json = Get(p1);
-			if (json == nullptr) return false;
 			Value v;
+
+			if (json == nullptr) return false;
+
 			if (!json->getValue(p2, v)) return false;
-			if (v.type != Value::Type::STRING) return false;
-			str = *v.d.s;
+			if (v.getType() != Value::Type::STRING) return false;
+
+			str = v.getString();
 			return true;
 		}
 
 		bool getInt(int p1, int p2, int& i) {
 			JSON* json = Get(p1);
-			if (json == nullptr) return false;
 			Value v;
+
+			if (json == nullptr) return false;
 			if (!json->getValue(p2, v)) return false;
-			if (v.type != Value::Type::INT) return false;
-			i = v.d.i;
+			if (v.getType() != Value::Type::INT) return false;
+			i = v.getInt();
 			return true;
 		}
 
@@ -228,9 +277,8 @@ namespace JSON {
 	};
 
 	class Parser {
-	protected:
 	private:
-		class Token;
+		struct Token;
 
 		int map = JSON_DICT_SETTING;
 		std::string json;

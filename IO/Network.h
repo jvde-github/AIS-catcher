@@ -41,7 +41,7 @@
 #include "Stream.h"
 #include "Common.h"
 #include "AIS.h"
-#include "JSON.h"
+#include "JSON/JSON.h"
 #include "TCP.h"
 #include "Utilities.h"
 #include "ZIP.h"
