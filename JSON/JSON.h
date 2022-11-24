@@ -232,32 +232,32 @@ namespace JSON {
 			return true;
 		}
 
-		void Submit(int p, int v) {
+		void Add(int p, int v) {
 			objects.push_back(Property(p, v));
 		}
-		void Submit(int p, float v) {
+		void Add(int p, float v) {
 			objects.push_back(Property(p, v));
 		}
-		void Submit(int p, bool v) {
+		void Add(int p, bool v) {
 			objects.push_back(Property(p, v));
 		}
-		void Submit(int p, JSON* v) {
-			objects.push_back(Property(p, (JSON*)v));
+		void Add(int p, JSON* v) {
+			objects.push_back(Property(p, v));
 		}
-		void Submit(int p, const std::string* v) {
-			objects.push_back(Property(p, (std::string*)v));
+		void Add(int p, const std::string* v) {
+			objects.push_back(Property(p, v));
 		}
-		void Submit(int p, const std::string& v) {
+		void Add(int p, const std::string& v) {
 			strings.push_back(new std::string(v));
-			objects.push_back(Property(p, (std::string*)&strings.back()));
+			objects.push_back(Property(p, &strings.back()));
 		}
-		void Submit(int p, const std::vector<std::string>* v) {
-			objects.push_back(Property(p, (std::vector<std::string>*)v));
+		void Add(int p, const std::vector<std::string>* v) {
+			objects.push_back(Property(p, v));
 		}
-		void Submit(int p) {
+		void Add(int p) {
 			objects.push_back(Property(p));
 		}
-		void Submit(int p, Value v) {
+		void Add(int p, Value v) {
 			objects.push_back(Property(p, v));
 		}
 	};

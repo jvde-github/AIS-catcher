@@ -364,7 +364,7 @@ namespace JSON {
 			must_match(TokenType::Colon, "expected \':\'");
 			next();
 
-			o->Submit(p, parse_value(o));
+			o->Add(p, parse_value(o));
 			next();
 
 			if (!is_match(TokenType::Comma)) break;
