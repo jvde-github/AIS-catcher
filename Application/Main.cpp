@@ -29,8 +29,11 @@
 #include "IO.h"
 #include "Network.h"
 #include "AIS.h"
-#include "JSON/JSON.h"
 #include "JSONAIS.h"
+
+#include "JSON/JSON.h"
+#include "JSON/Parser.h"
+#include "JSON/StringBuilder.h"
 
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
@@ -70,6 +73,41 @@ struct Drivers {
 	Device::SOAPYSDR SOAPYSDR;
 	Device::ZMQ ZMQ;
 };
+
+int sample_rate = 0, input_device = 0, bandwidth = 0, ppm = 0;
+int timeout = 0;
+int TAG_mode = 0;
+
+bool list_devices = false, list_support = false, list_options = false;
+bool verbose = false, timer_on = false;
+
+std::vector<Device::Description> device_list;
+
+OutputLevel NMEA_to_screen = OutputLevel::FULL;
+int verboseUpdateTime = 3;
+
+AIS::Mode ChannelMode = AIS::Mode::AB;
+std::string NMEAchannels = "AB";
+TAG tag;
+
+std::string file_config;
+
+// Device and output stream of device;
+Type input_type = Type::NONE;
+uint64_t handle = 0;
+
+Device::Device* device = NULL;
+Drivers drivers;
+
+std::vector<IO::UDP> UDP;
+std::vector<std::unique_ptr<AIS::Model>> models;
+
+// AIS message to properties
+std::vector<AIS::JSONAIS> jsonais;
+
+std::vector<std::unique_ptr<IO::HTTP>> http;
+IO::MessageToScreen msg2screen;
+IO::JSONtoScreen json2screen(&AIS::KeyMap, JSON_DICT_FULL);
 
 void printVersion() {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION << std::endl;
@@ -205,26 +243,26 @@ int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::stri
 	return -1;
 }
 
-std::shared_ptr<AIS::Model> createModel(int m) {
+std::unique_ptr<AIS::Model> createModel(int m) {
 
 	switch (m) {
 	case 0:
-		return std::make_shared<AIS::ModelStandard>();
+		return std::unique_ptr<AIS::Model>(new AIS::ModelStandard());
 		break;
 	case 1:
-		return std::make_shared<AIS::ModelBase>();
+		return std::unique_ptr<AIS::Model>(new AIS::ModelBase());
 		break;
 	case 2:
-		return std::make_shared<AIS::ModelDefault>();
+		return std::unique_ptr<AIS::Model>(new AIS::ModelDefault());
 		break;
 	case 3:
-		return std::make_shared<AIS::ModelDiscriminator>();
+		return std::unique_ptr<AIS::Model>(new AIS::ModelDiscriminator());
 		break;
 	case 4:
-		return std::make_shared<AIS::ModelChallenger>();
+		return std::unique_ptr<AIS::Model>(new AIS::ModelChallenger());
 		break;
 	case 5:
-		return std::make_shared<AIS::ModelNMEA>();
+		return std::unique_ptr<AIS::Model>(new AIS::ModelNMEA());
 		break;
 	default:
 		throw "Internal error: Model not implemented in this version. Check in later.";
@@ -276,11 +314,79 @@ void Assert(bool b, std::string& context, std::string msg = "") {
 	}
 }
 
+void setScreen(const std::string& str) {
+	switch (Util::Parse::Integer(str, 0, 5)) {
+	case 0:
+		NMEA_to_screen = OutputLevel::NONE;
+		break;
+	case 1:
+		NMEA_to_screen = OutputLevel::NMEA;
+		break;
+	case 2:
+		NMEA_to_screen = OutputLevel::FULL;
+		break;
+	case 3:
+		NMEA_to_screen = OutputLevel::JSON_NMEA;
+		break;
+	case 4:
+		NMEA_to_screen = OutputLevel::JSON_SPARSE;
+		break;
+	case 5:
+		NMEA_to_screen = OutputLevel::JSON_FULL;
+		break;
+	default:
+		throw "Error: unknown option  for screen output.";
+	}
+}
+// Config file processing
 
-// EXPERIMENTAL
 
-void json_test(std::string& file_config) {
-	JSON::JSON* json = nullptr;
+void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
+
+	if (pd.getType() != JSON::Value::Type::OBJECT)
+		throw "Config: device specific settings need to be of \"object\" type in JSON.";
+
+	const std::vector<JSON::Property>& props = pd.getObject()->getProperties();
+
+	for (const auto& p : props) {
+		s.Set(AIS::KeyMap[p.getKey()][JSON_DICT_SETTING], p.Get().to_string());
+	}
+}
+
+void setHTTPfromJSON(const JSON::Property& pd) {
+
+	if (pd.getType() != JSON::Value::Type::ARRAY)
+		throw "Config: UDP settings need to be of \"array\" type \"object\" in JSON.";
+
+	const std::vector<JSON::Value>& vals = pd.Get().getArray();
+
+	for (const auto& v : vals) {
+		http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
+		http.back()->setSource(0);
+		setSettingsFromJSON(v, *http.back());
+	}
+}
+
+void setUDPfromJSON(const JSON::Property& pd) {
+
+	if (pd.getType() != JSON::Value::Type::ARRAY)
+		throw "Config: UDP settings need to be of \"array\" type \"object\" in JSON.";
+
+	const std::vector<JSON::Value>& vals = pd.Get().getArray();
+
+	for (const auto& v : vals) {
+		UDP.push_back(IO::UDP());
+		UDP.back().setSource(0);
+		setSettingsFromJSON(v, UDP.back());
+	}
+}
+
+void setScreenFromJSON(const JSON::Property& pd) {
+	const JSON::Value& v = pd.Get();
+	setScreen(v.to_string());
+}
+
+void parseConfigFile(std::string& file_config) {
 
 	if (!file_config.empty()) {
 		std::ifstream file(file_config);
@@ -291,59 +397,60 @@ void json_test(std::string& file_config) {
 			std::string j, line;
 			while (std::getline(file, line)) j += line + '\n';
 
-			JSON::Parser parser;
-			json = parser.parse(j);
-			j = "";
-			// temporary check
-			JSON::StringBuilder builder;
-			builder.setMap(JSON_DICT_SETTING);
-			builder.build(*json, j);
-			std::cerr << j << std::endl;
-			j = "";
-			if (json->getString(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_SERIAL, j)) {
+			std::string str = j;
+			// while(1)
+			{
+				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
+				std::shared_ptr<JSON::JSON> json = parser.parse(str);
+				j = "";
+				// temporary check
+				JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_SETTING);
+				builder.build(*json, j);
 
-				std::cerr << "serial : " << j << std::endl;
+				std::cerr << j << std::endl;
+
+				const std::vector<JSON::Property>& props = json->getProperties();
+
+				for (const auto& p : props) {
+					switch (p.getKey()) {
+					case AIS::KEY_SETTING_RTLSDR:
+						setSettingsFromJSON(p.Get(), drivers.RTLSDR);
+						break;
+					case AIS::KEY_SETTING_RTLTCP:
+						setSettingsFromJSON(p.Get(), drivers.RTLTCP);
+						break;
+					case AIS::KEY_SETTING_UDP:
+						setUDPfromJSON(p);
+						break;
+					case AIS::KEY_SETTING_HTTP:
+						setHTTPfromJSON(p);
+						break;
+					case AIS::KEY_SETTING_SCREEN:
+						setScreenFromJSON(p);
+						break;
+					default:
+						break;
+					}
+				}
+				/*
+				const JSON::Value* device = json->getValue(AIS::KEY_SETTING_DEVICE);
+				if (device && device->getType() == JSON::Value::Type::OBJECT) {
+					std::cerr << "Device section" << std::endl;
+
+					const JSON::JSON* dev = device->getObject();
+					const JSON::Value* serial = dev->getValue(AIS::KEY_SETTING_SERIAL);
+					const JSON::Value* bandwidth = dev->getValue(AIS::KEY_SETTING_BANDWIDTH);
+
+					if (serial) std::cerr << "serial : " << serial->to_string() << std::endl;
+					if (bandwidth) std::cerr << "bandwidth : " << bandwidth->to_string() << std::endl;
+				}
+				*/
 			}
-			int i = 0;
-			if (json->getInt(JSON::KEY_SETTING_DEVICE, JSON::KEY_SETTING_FREQ_OFFSET, i))
-				std::cerr << "ppm " << i << std::endl;
 		}
 	}
 }
 
 int main(int argc, char* argv[]) {
-	int sample_rate = 0, input_device = 0, bandwidth = 0, ppm = 0;
-	int timeout = 0;
-	int TAG_mode = 0;
-
-	bool list_devices = false, list_support = false, list_options = false;
-	bool verbose = false, timer_on = false;
-
-	OutputLevel NMEA_to_screen = OutputLevel::FULL;
-	int verboseUpdateTime = 3;
-
-	AIS::Mode ChannelMode = AIS::Mode::AB;
-	std::string NMEAchannels = "AB";
-	TAG tag;
-
-	std::string file_config;
-
-	// Device and output stream of device;
-	Type input_type = Type::NONE;
-	uint64_t handle = 0;
-
-	Device::Device* device = NULL;
-	Drivers drivers;
-
-	std::vector<IO::UDP> UDP;
-	std::vector<std::shared_ptr<AIS::Model>> models;
-
-	// AIS message to properties
-	std::vector<AIS::JSONAIS> jsonais;
-
-	std::vector<std::shared_ptr<IO::HTTP>> http;
-	IO::MessageToScreen msg2screen;
-	IO::JSONtoScreen json2screen;
 
 	try {
 #ifdef _WIN32
@@ -353,7 +460,7 @@ int main(int argc, char* argv[]) {
 		signal(SIGINT, consoleHandler);
 #endif
 
-		std::vector<Device::Description> device_list = getDevices(drivers);
+		device_list = getDevices(drivers);
 
 		const std::string MSG_NO_PARAMETER = "Does not allow additional parameter.";
 		int ptr = 1;
@@ -424,28 +531,7 @@ int main(int argc, char* argv[]) {
 			case 'o':
 				Assert(count >= 1 && count % 2 == 1, param, "Requires at least one parameter.");
 				{
-					switch (Util::Parse::Integer(arg1, 0, 5)) {
-					case 0:
-						NMEA_to_screen = OutputLevel::NONE;
-						break;
-					case 1:
-						NMEA_to_screen = OutputLevel::NMEA;
-						break;
-					case 2:
-						NMEA_to_screen = OutputLevel::FULL;
-						break;
-					case 3:
-						NMEA_to_screen = OutputLevel::JSON_NMEA;
-						break;
-					case 4:
-						NMEA_to_screen = OutputLevel::JSON_SPARSE;
-						break;
-					case 5:
-						NMEA_to_screen = OutputLevel::JSON_FULL;
-						break;
-					default:
-						throw "Error: unknown option 'o'";
-					}
+					setScreen(arg1);
 					if (count > 1) {
 						parseSettings(msg2screen, argv, ptr + 1, argc);
 						parseSettings(json2screen, argv, ptr + 1, argc);
@@ -533,7 +619,7 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'H':
 				Assert(count > 0, param);
-				http.push_back(std::make_shared<IO::HTTP>());
+				http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
 				if (count % 2) http.back()->Set("URL", arg1);
 				parseSettings(*http.back(), argv, ptr + (count % 2), argc);
 				http.back()->setSource(MAX(0, (int)models.size() - 1));
@@ -612,7 +698,7 @@ int main(int argc, char* argv[]) {
 
 		// -------------
 		// Read config file
-		// json_test(file_config);
+		parseConfigFile(file_config);
 
 		// -------------
 		// Select device
@@ -815,7 +901,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		if (timer_on)
-			for (auto m : models) {
+			for (auto& m : models) {
 				std::string name = m->getName();
 				std::cerr << "[" << m->getName() << "]: " << std::string(37 - name.length(), ' ') << m->getTotalTiming() << " ms" << std::endl;
 			}

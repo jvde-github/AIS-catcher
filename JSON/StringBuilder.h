@@ -15,40 +15,33 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <string>
-#include <cmath>
+#pragma once
 
+#include <vector>
+#include <iostream>
+#include <memory>
+
+#include "Utilities.h"
+#include "Common.h"
 #include "JSON.h"
 
 namespace JSON {
 
-	void Value::to_string(std::string& str) const {
-		switch (type) {
-		case Value::Type::STRING:
-			str += *data.s;
-			break;
-		case Value::Type::BOOL:
-			str += data.b ? "true" : "false";
-			break;
-		case Value::Type::INT:
-			str += std::to_string(data.i);
-			break;
-		case Value::Type::FLOAT:
-			str += std::to_string(data.f);
-			break;
-		case Value::Type::EMPTY:
-			str += "null";
-			break;
-		case Value::Type::OBJECT:
-			str += "object";
-			break;
-		case Value::Type::ARRAY_STRING:
-		case Value::Type::ARRAY:
-			str += "array";
-			break;
-		default:
-			str += "error";
-			break;
-		}
-	}
+	class StringBuilder {
+	private:
+		const std::vector<std::vector<std::string>>* keymap = nullptr;
+		int dict = 0;
+
+		void to_string(std::string& json, const Value& v, int& idx);
+
+	public:
+		StringBuilder(const std::vector<std::vector<std::string>>* map, int d) : keymap(map), dict(d) {}
+		StringBuilder(const std::vector<std::vector<std::string>>* map) : keymap(map) {}
+
+		void build(const JSON& properties, std::string& json);
+		void jsonify(const std::string& str, std::string& json);
+
+		// dictionary to use
+		void setMap(int d) { dict = d; }
+	};
 }

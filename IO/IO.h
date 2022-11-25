@@ -22,8 +22,10 @@
 
 #include "Stream.h"
 #include "AIS.h"
-#include "JSON/JSON.h"
 #include "Utilities.h"
+
+#include "JSON/JSON.h"
+#include "JSON/StringBuilder.h"
 
 namespace IO {
 	template <typename T>
@@ -113,6 +115,8 @@ namespace IO {
 		AIS::Filter filter;
 
 	public:
+		JSONtoScreen(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
+
 		void Receive(const JSON::JSON* data, int len, TAG& tag);
 		void setMap(int m) { builder.setMap(m); }
 

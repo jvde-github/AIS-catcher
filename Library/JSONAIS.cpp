@@ -151,15 +151,15 @@ namespace AIS {
 					l = m;
 			}
 			if (JSON_MAP_MID[l].MID == mid) {
-				json.Add(JSON::KEY_COUNTRY, &JSON_MAP_MID[l].country);
-				json.Add(JSON::KEY_COUNTRY_CODE, &JSON_MAP_MID[l].code);
+				json.Add(AIS::KEY_COUNTRY, &JSON_MAP_MID[l].country);
+				json.Add(AIS::KEY_COUNTRY_CODE, &JSON_MAP_MID[l].code);
 			}
 		}
 	}
 
 	void JSONAIS::Receive(const AIS::Message* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
-			json.Clear();
+			json.clear();
 			ProcessMsg(data[i], tag);
 			json.binary = (void*)&data[i];
 			Send(&json, 1, tag);
@@ -171,57 +171,57 @@ namespace AIS {
 		int fid = msg.getUint(50, 6);
 
 		if (dac == 200 && fid == 10) {
-			T(msg, JSON::KEY_VIN, 56, 48, text);
-			U(msg, JSON::KEY_LENGTH, 104, 13);
-			U(msg, JSON::KEY_BEAM, 117, 10);
-			E(msg, JSON::KEY_SHIPTYPE, 127, 14);
-			E(msg, JSON::KEY_HAZARD, 141, 3);
-			U(msg, JSON::KEY_DRAUGHT, 144, 11);
-			E(msg, JSON::KEY_LOADED, 155, 2);
-			B(msg, JSON::KEY_SPEED_Q, 157, 1);
-			B(msg, JSON::KEY_COURSE_Q, 158, 1);
-			B(msg, JSON::KEY_HEADING_Q, 159, 1);
+			T(msg, AIS::KEY_VIN, 56, 48, text);
+			U(msg, AIS::KEY_LENGTH, 104, 13);
+			U(msg, AIS::KEY_BEAM, 117, 10);
+			E(msg, AIS::KEY_SHIPTYPE, 127, 14);
+			E(msg, AIS::KEY_HAZARD, 141, 3);
+			U(msg, AIS::KEY_DRAUGHT, 144, 11);
+			E(msg, AIS::KEY_LOADED, 155, 2);
+			B(msg, AIS::KEY_SPEED_Q, 157, 1);
+			B(msg, AIS::KEY_COURSE_Q, 158, 1);
+			B(msg, AIS::KEY_HEADING_Q, 159, 1);
 		}
 		else if (dac == 1 && fid == 31) {
 			// Sources: http://vislab-ccom.unh.edu/~schwehr/papers/2010-IMO-SN.1-Circ.289.pdf, GPSDECODE
-			SL(msg, JSON::KEY_LON, 56, 25, 1 / 60000.0, 0);
-			SL(msg, JSON::KEY_LAT, 81, 24, 1 / 60000.0, 0);
-			B(msg, JSON::KEY_ACCURACY, 105, 1);
-			U(msg, JSON::KEY_DAY, 106, 5, 0);
-			U(msg, JSON::KEY_HOUR, 111, 5, 24);
-			U(msg, JSON::KEY_MINUTE, 116, 6, 60);
-			U(msg, JSON::KEY_WSPEED, 122, 7, 127);
-			U(msg, JSON::KEY_WGUST, 129, 7, 127);
-			U(msg, JSON::KEY_WDIR, 136, 9, 360);
-			U(msg, JSON::KEY_WGUSTDIR, 145, 9, 360);
-			SL(msg, JSON::KEY_AIRTEMP, 154, 11, 0.1, 0, -1024);
-			U(msg, JSON::KEY_HUMIDITY, 165, 7, 101);
-			SL(msg, JSON::KEY_DEWPOINT, 172, 10, 0.1, 0, 501);
-			UL(msg, JSON::KEY_PRESSURE, 182, 9, 1, 799, 511);
-			U(msg, JSON::KEY_PRESSURETEND, 191, 2, 3);
-			U(msg, JSON::KEY_VISGREATER, 193, 1);
-			UL(msg, JSON::KEY_VISIBILITY, 194, 7, 0.1, 0);
-			UL(msg, JSON::KEY_WATERLEVEL, 201, 12, 0.01, -10, 4002);
-			U(msg, JSON::KEY_LEVELTREND, 213, 2, 3);
-			UL(msg, JSON::KEY_CSPEED, 215, 8, 0.1, 0, 255);
-			U(msg, JSON::KEY_CDIR, 223, 9, 360);
-			UL(msg, JSON::KEY_CSPEED2, 232, 8, 0.1, 0);
-			U(msg, JSON::KEY_CDIR2, 240, 9);
-			U(msg, JSON::KEY_CDEPTH2, 249, 5);
-			UL(msg, JSON::KEY_CSPEED3, 254, 8, 0.1, 0);
-			U(msg, JSON::KEY_CDIR3, 262, 9);
-			U(msg, JSON::KEY_CDEPTH3, 271, 5);
-			UL(msg, JSON::KEY_WAVEHEIGHT, 276, 8, 0.1, 0);
-			U(msg, JSON::KEY_WAVEPERIOD, 284, 6);
-			U(msg, JSON::KEY_WAVEDIR, 290, 9);
-			UL(msg, JSON::KEY_SWELLHEIGHT, 299, 8, 0.1, 0);
-			U(msg, JSON::KEY_SWELLPERIOD, 307, 6);
-			U(msg, JSON::KEY_SWELLDIR, 313, 9);
-			U(msg, JSON::KEY_SEASTATE, 322, 4);
-			SL(msg, JSON::KEY_WATERTEMP, 326, 10, 0.1, 0);
-			U(msg, JSON::KEY_PRECIPTYPE, 336, 3, 7);
-			U(msg, JSON::KEY_SALINITY, 339, 9, 510);
-			U(msg, JSON::KEY_ICE, 348, 2, 3);
+			SL(msg, AIS::KEY_LON, 56, 25, 1 / 60000.0, 0);
+			SL(msg, AIS::KEY_LAT, 81, 24, 1 / 60000.0, 0);
+			B(msg, AIS::KEY_ACCURACY, 105, 1);
+			U(msg, AIS::KEY_DAY, 106, 5, 0);
+			U(msg, AIS::KEY_HOUR, 111, 5, 24);
+			U(msg, AIS::KEY_MINUTE, 116, 6, 60);
+			U(msg, AIS::KEY_WSPEED, 122, 7, 127);
+			U(msg, AIS::KEY_WGUST, 129, 7, 127);
+			U(msg, AIS::KEY_WDIR, 136, 9, 360);
+			U(msg, AIS::KEY_WGUSTDIR, 145, 9, 360);
+			SL(msg, AIS::KEY_AIRTEMP, 154, 11, 0.1, 0, -1024);
+			U(msg, AIS::KEY_HUMIDITY, 165, 7, 101);
+			SL(msg, AIS::KEY_DEWPOINT, 172, 10, 0.1, 0, 501);
+			UL(msg, AIS::KEY_PRESSURE, 182, 9, 1, 799, 511);
+			U(msg, AIS::KEY_PRESSURETEND, 191, 2, 3);
+			U(msg, AIS::KEY_VISGREATER, 193, 1);
+			UL(msg, AIS::KEY_VISIBILITY, 194, 7, 0.1, 0);
+			UL(msg, AIS::KEY_WATERLEVEL, 201, 12, 0.01, -10, 4002);
+			U(msg, AIS::KEY_LEVELTREND, 213, 2, 3);
+			UL(msg, AIS::KEY_CSPEED, 215, 8, 0.1, 0, 255);
+			U(msg, AIS::KEY_CDIR, 223, 9, 360);
+			UL(msg, AIS::KEY_CSPEED2, 232, 8, 0.1, 0);
+			U(msg, AIS::KEY_CDIR2, 240, 9);
+			U(msg, AIS::KEY_CDEPTH2, 249, 5);
+			UL(msg, AIS::KEY_CSPEED3, 254, 8, 0.1, 0);
+			U(msg, AIS::KEY_CDIR3, 262, 9);
+			U(msg, AIS::KEY_CDEPTH3, 271, 5);
+			UL(msg, AIS::KEY_WAVEHEIGHT, 276, 8, 0.1, 0);
+			U(msg, AIS::KEY_WAVEPERIOD, 284, 6);
+			U(msg, AIS::KEY_WAVEDIR, 290, 9);
+			UL(msg, AIS::KEY_SWELLHEIGHT, 299, 8, 0.1, 0);
+			U(msg, AIS::KEY_SWELLPERIOD, 307, 6);
+			U(msg, AIS::KEY_SWELLDIR, 313, 9);
+			U(msg, AIS::KEY_SEASTATE, 322, 4);
+			SL(msg, AIS::KEY_WATERTEMP, 326, 10, 0.1, 0);
+			U(msg, AIS::KEY_PRECIPTYPE, 336, 3, 7);
+			U(msg, AIS::KEY_SALINITY, 339, 9, 510);
+			U(msg, AIS::KEY_ICE, 348, 2, 3);
 		}
 	}
 
@@ -230,24 +230,24 @@ namespace AIS {
 		rxtime = msg.getRxTime();
 		channel = std::string(1, msg.getChannel());
 
-		json.Add(JSON::KEY_CLASS, &class_str);
-		json.Add(JSON::KEY_DEVICE, &device);
+		json.Add(AIS::KEY_CLASS, &class_str);
+		json.Add(AIS::KEY_DEVICE, &device);
 
 		if (tag.mode & 2)
-			json.Add(JSON::KEY_RXTIME, &rxtime);
+			json.Add(AIS::KEY_RXTIME, &rxtime);
 
-		json.Add(JSON::KEY_SCALED, true);
-		json.Add(JSON::KEY_CHANNEL, &channel);
-		json.Add(JSON::KEY_NMEA, &msg.NMEA);
+		json.Add(AIS::KEY_SCALED, true);
+		json.Add(AIS::KEY_CHANNEL, &channel);
+		json.Add(AIS::KEY_NMEA, &msg.NMEA);
 
 		if (tag.mode & 1) {
-			json.Add(JSON::KEY_SIGNAL_POWER, tag.level);
-			json.Add(JSON::KEY_PPM, tag.ppm);
+			json.Add(AIS::KEY_SIGNAL_POWER, tag.level);
+			json.Add(AIS::KEY_PPM, tag.ppm);
 		}
 
-		U(msg, JSON::KEY_TYPE, 0, 6);
-		U(msg, JSON::KEY_REPEAT, 6, 2);
-		U(msg, JSON::KEY_MMSI, 8, 30);
+		U(msg, AIS::KEY_TYPE, 0, 6);
+		U(msg, AIS::KEY_REPEAT, 6, 2);
+		U(msg, AIS::KEY_MMSI, 8, 30);
 
 		if (tag.mode & 4) {
 			COUNTRY(msg);
@@ -257,282 +257,282 @@ namespace AIS {
 		case 1:
 		case 2:
 		case 3:
-			E(msg, JSON::KEY_STATUS, 38, 4, JSON::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
-			TURN(msg, JSON::KEY_TURN, 42, 8);
-			UL(msg, JSON::KEY_SPEED, 50, 10, 0.1, 0, 1023);
-			B(msg, JSON::KEY_ACCURACY, 60, 1);
-			SL(msg, JSON::KEY_LON, 61, 28, 1 / 600000.0, 0);
-			SL(msg, JSON::KEY_LAT, 89, 27, 1 / 600000.0, 0);
-			UL(msg, JSON::KEY_COURSE, 116, 12, 0.1, 0);
-			U(msg, JSON::KEY_HEADING, 128, 9 /*, 511*/);
-			U(msg, JSON::KEY_SECOND, 137, 6);
-			E(msg, JSON::KEY_MANEUVER, 143, 2);
-			X(msg, JSON::KEY_SPARE, 145, 3);
-			B(msg, JSON::KEY_RAIM, 148, 1);
-			U(msg, JSON::KEY_RADIO, 149, MIN(19, MAX(msg.getLength() - 149, 0)));
+			E(msg, AIS::KEY_STATUS, 38, 4, AIS::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
+			TURN(msg, AIS::KEY_TURN, 42, 8);
+			UL(msg, AIS::KEY_SPEED, 50, 10, 0.1, 0, 1023);
+			B(msg, AIS::KEY_ACCURACY, 60, 1);
+			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0, 0);
+			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1, 0);
+			U(msg, AIS::KEY_HEADING, 128, 9 /*, 511*/);
+			U(msg, AIS::KEY_SECOND, 137, 6);
+			E(msg, AIS::KEY_MANEUVER, 143, 2);
+			X(msg, AIS::KEY_SPARE, 145, 3);
+			B(msg, AIS::KEY_RAIM, 148, 1);
+			U(msg, AIS::KEY_RADIO, 149, MIN(19, MAX(msg.getLength() - 149, 0)));
 			break;
 		case 4:
 		case 11:
-			TIMESTAMP(msg, JSON::KEY_TIMESTAMP, 38, 40, timestamp);
-			U(msg, JSON::KEY_YEAR, 38, 14, 0);
-			U(msg, JSON::KEY_MONTH, 52, 4, 0);
-			U(msg, JSON::KEY_DAY, 56, 5, 0);
-			U(msg, JSON::KEY_HOUR, 61, 5, 24);
-			U(msg, JSON::KEY_MINUTE, 66, 6, 60);
-			U(msg, JSON::KEY_SECOND, 72, 6, 60);
-			B(msg, JSON::KEY_ACCURACY, 78, 1);
-			SL(msg, JSON::KEY_LON, 79, 28, 1 / 600000.0, 0);
-			SL(msg, JSON::KEY_LAT, 107, 27, 1 / 600000.0, 0);
-			E(msg, JSON::KEY_EPFD, 134, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
-			X(msg, JSON::KEY_SPARE, 138, 10);
-			B(msg, JSON::KEY_RAIM, 148, 1);
-			U(msg, JSON::KEY_RADIO, 149, 19);
+			TIMESTAMP(msg, AIS::KEY_TIMESTAMP, 38, 40, timestamp);
+			U(msg, AIS::KEY_YEAR, 38, 14, 0);
+			U(msg, AIS::KEY_MONTH, 52, 4, 0);
+			U(msg, AIS::KEY_DAY, 56, 5, 0);
+			U(msg, AIS::KEY_HOUR, 61, 5, 24);
+			U(msg, AIS::KEY_MINUTE, 66, 6, 60);
+			U(msg, AIS::KEY_SECOND, 72, 6, 60);
+			B(msg, AIS::KEY_ACCURACY, 78, 1);
+			SL(msg, AIS::KEY_LON, 79, 28, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LAT, 107, 27, 1 / 600000.0, 0);
+			E(msg, AIS::KEY_EPFD, 134, 4, AIS::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			X(msg, AIS::KEY_SPARE, 138, 10);
+			B(msg, AIS::KEY_RAIM, 148, 1);
+			U(msg, AIS::KEY_RADIO, 149, 19);
 			break;
 		case 5:
-			U(msg, JSON::KEY_AIS_VERSION, 38, 2);
-			U(msg, JSON::KEY_IMO, 40, 30);
-			T(msg, JSON::KEY_CALLSIGN, 70, 42, callsign);
-			T(msg, JSON::KEY_SHIPNAME, 112, 120, shipname);
-			E(msg, JSON::KEY_SHIPTYPE, 232, 8, JSON::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-			U(msg, JSON::KEY_TO_BOW, 240, 9);
-			U(msg, JSON::KEY_TO_STERN, 249, 9);
-			U(msg, JSON::KEY_TO_PORT, 258, 6);
-			U(msg, JSON::KEY_TO_STARBOARD, 264, 6);
-			E(msg, JSON::KEY_EPFD, 270, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
-			ETA(msg, JSON::KEY_ETA, 274, 20, eta);
-			U(msg, JSON::KEY_MONTH, 274, 4, 0);
-			U(msg, JSON::KEY_DAY, 278, 5, 0);
-			U(msg, JSON::KEY_HOUR, 283, 5, 0);
-			U(msg, JSON::KEY_MINUTE, 288, 6, 0);
-			UL(msg, JSON::KEY_DRAUGHT, 294, 8, 0.1, 0);
-			T(msg, JSON::KEY_DESTINATION, 302, 120, destination);
-			B(msg, JSON::KEY_DTE, 422, 1);
-			X(msg, JSON::KEY_SPARE, 423, 1);
+			U(msg, AIS::KEY_AIS_VERSION, 38, 2);
+			U(msg, AIS::KEY_IMO, 40, 30);
+			T(msg, AIS::KEY_CALLSIGN, 70, 42, callsign);
+			T(msg, AIS::KEY_SHIPNAME, 112, 120, shipname);
+			E(msg, AIS::KEY_SHIPTYPE, 232, 8, AIS::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
+			U(msg, AIS::KEY_TO_BOW, 240, 9);
+			U(msg, AIS::KEY_TO_STERN, 249, 9);
+			U(msg, AIS::KEY_TO_PORT, 258, 6);
+			U(msg, AIS::KEY_TO_STARBOARD, 264, 6);
+			E(msg, AIS::KEY_EPFD, 270, 4, AIS::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			ETA(msg, AIS::KEY_ETA, 274, 20, eta);
+			U(msg, AIS::KEY_MONTH, 274, 4, 0);
+			U(msg, AIS::KEY_DAY, 278, 5, 0);
+			U(msg, AIS::KEY_HOUR, 283, 5, 0);
+			U(msg, AIS::KEY_MINUTE, 288, 6, 0);
+			UL(msg, AIS::KEY_DRAUGHT, 294, 8, 0.1, 0);
+			T(msg, AIS::KEY_DESTINATION, 302, 120, destination);
+			B(msg, AIS::KEY_DTE, 422, 1);
+			X(msg, AIS::KEY_SPARE, 423, 1);
 			break;
 		case 6:
-			U(msg, JSON::KEY_SEQNO, 38, 2);
-			U(msg, JSON::KEY_DEST_MMSI, 40, 30);
-			B(msg, JSON::KEY_RETRANSMIT, 70, 1);
-			X(msg, JSON::KEY_SPARE, 71, 1);
-			U(msg, JSON::KEY_DAC, 72, 10);
-			U(msg, JSON::KEY_FID, 82, 6);
-			D(msg, JSON::KEY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
+			U(msg, AIS::KEY_SEQNO, 38, 2);
+			U(msg, AIS::KEY_DEST_MMSI, 40, 30);
+			B(msg, AIS::KEY_RETRANSMIT, 70, 1);
+			X(msg, AIS::KEY_SPARE, 71, 1);
+			U(msg, AIS::KEY_DAC, 72, 10);
+			U(msg, AIS::KEY_FID, 82, 6);
+			D(msg, AIS::KEY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
 			break;
 		case 7:
 		case 13:
-			X(msg, JSON::KEY_SPARE, 38, 2);
-			U(msg, JSON::KEY_MMSI1, 40, 30);
-			U(msg, JSON::KEY_MMSISEQ1, 70, 2);
+			X(msg, AIS::KEY_SPARE, 38, 2);
+			U(msg, AIS::KEY_MMSI1, 40, 30);
+			U(msg, AIS::KEY_MMSISEQ1, 70, 2);
 			if (msg.getLength() <= 72) break;
-			U(msg, JSON::KEY_MMSI2, 72, 30);
-			U(msg, JSON::KEY_MMSISEQ2, 102, 2);
+			U(msg, AIS::KEY_MMSI2, 72, 30);
+			U(msg, AIS::KEY_MMSISEQ2, 102, 2);
 			if (msg.getLength() <= 104) break;
-			U(msg, JSON::KEY_MMSI3, 104, 30);
-			U(msg, JSON::KEY_MMSISEQ3, 134, 2);
+			U(msg, AIS::KEY_MMSI3, 104, 30);
+			U(msg, AIS::KEY_MMSISEQ3, 134, 2);
 			if (msg.getLength() <= 136) break;
-			U(msg, JSON::KEY_MMSI4, 136, 30);
-			U(msg, JSON::KEY_MMSISEQ4, 166, 2);
+			U(msg, AIS::KEY_MMSI4, 136, 30);
+			U(msg, AIS::KEY_MMSISEQ4, 166, 2);
 			break;
 		case 8:
-			U(msg, JSON::KEY_DAC, 40, 10);
-			U(msg, JSON::KEY_FID, 50, 6);
+			U(msg, AIS::KEY_DAC, 40, 10);
+			U(msg, AIS::KEY_FID, 50, 6);
 			ProcessMsg8Data(msg);
 			break;
 		case 9:
-			U(msg, JSON::KEY_ALT, 38, 12);
-			U(msg, JSON::KEY_SPEED, 50, 10);
-			B(msg, JSON::KEY_ACCURACY, 60, 1);
-			SL(msg, JSON::KEY_LON, 61, 28, 1 / 600000.0, 0);
-			SL(msg, JSON::KEY_LAT, 89, 27, 1 / 600000.0, 0);
-			UL(msg, JSON::KEY_COURSE, 116, 12, 0.1, 0);
-			U(msg, JSON::KEY_SECOND, 128, 6);
-			U(msg, JSON::KEY_REGIONAL, 134, 8);
-			B(msg, JSON::KEY_DTE, 142, 1);
-			B(msg, JSON::KEY_ASSIGNED, 146, 1);
-			B(msg, JSON::KEY_RAIM, 147, 1);
-			U(msg, JSON::KEY_RADIO, 148, 20);
+			U(msg, AIS::KEY_ALT, 38, 12);
+			U(msg, AIS::KEY_SPEED, 50, 10);
+			B(msg, AIS::KEY_ACCURACY, 60, 1);
+			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0, 0);
+			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1, 0);
+			U(msg, AIS::KEY_SECOND, 128, 6);
+			U(msg, AIS::KEY_REGIONAL, 134, 8);
+			B(msg, AIS::KEY_DTE, 142, 1);
+			B(msg, AIS::KEY_ASSIGNED, 146, 1);
+			B(msg, AIS::KEY_RAIM, 147, 1);
+			U(msg, AIS::KEY_RADIO, 148, 20);
 			break;
 		case 10:
-			U(msg, JSON::KEY_DEST_MMSI, 40, 30);
+			U(msg, AIS::KEY_DEST_MMSI, 40, 30);
 			break;
 		case 12:
-			U(msg, JSON::KEY_SEQNO, 38, 2);
-			U(msg, JSON::KEY_DEST_MMSI, 40, 30);
-			B(msg, JSON::KEY_RETRANSMIT, 70, 1);
-			T(msg, JSON::KEY_TEXT, 72, 936, text);
+			U(msg, AIS::KEY_SEQNO, 38, 2);
+			U(msg, AIS::KEY_DEST_MMSI, 40, 30);
+			B(msg, AIS::KEY_RETRANSMIT, 70, 1);
+			T(msg, AIS::KEY_TEXT, 72, 936, text);
 			break;
 		case 14:
-			T(msg, JSON::KEY_TEXT, 40, 968, text);
+			T(msg, AIS::KEY_TEXT, 40, 968, text);
 			break;
 		case 15:
-			U(msg, JSON::KEY_MMSI1, 40, 30);
-			U(msg, JSON::KEY_TYPE1_1, 70, 6);
-			U(msg, JSON::KEY_OFFSET1_1, 76, 12);
+			U(msg, AIS::KEY_MMSI1, 40, 30);
+			U(msg, AIS::KEY_TYPE1_1, 70, 6);
+			U(msg, AIS::KEY_OFFSET1_1, 76, 12);
 			if (msg.getLength() <= 90) break;
-			U(msg, JSON::KEY_TYPE1_2, 90, 6);
-			U(msg, JSON::KEY_OFFSET1_2, 96, 12);
+			U(msg, AIS::KEY_TYPE1_2, 90, 6);
+			U(msg, AIS::KEY_OFFSET1_2, 96, 12);
 			if (msg.getLength() <= 110) break;
-			U(msg, JSON::KEY_MMSI2, 110, 30);
-			U(msg, JSON::KEY_TYPE2_1, 140, 6);
-			U(msg, JSON::KEY_OFFSET2_1, 146, 12);
+			U(msg, AIS::KEY_MMSI2, 110, 30);
+			U(msg, AIS::KEY_TYPE2_1, 140, 6);
+			U(msg, AIS::KEY_OFFSET2_1, 146, 12);
 			break;
 		case 16:
-			U(msg, JSON::KEY_MMSI1, 40, 30);
-			U(msg, JSON::KEY_OFFSET1, 70, 12);
-			U(msg, JSON::KEY_INCREMENT1, 82, 10);
+			U(msg, AIS::KEY_MMSI1, 40, 30);
+			U(msg, AIS::KEY_OFFSET1, 70, 12);
+			U(msg, AIS::KEY_INCREMENT1, 82, 10);
 			if (msg.getLength() == 92) break;
-			U(msg, JSON::KEY_MMSI2, 92, 30);
-			U(msg, JSON::KEY_OFFSET2, 122, 12);
-			U(msg, JSON::KEY_INCREMENT2, 134, 10);
+			U(msg, AIS::KEY_MMSI2, 92, 30);
+			U(msg, AIS::KEY_OFFSET2, 122, 12);
+			U(msg, AIS::KEY_INCREMENT2, 134, 10);
 			break;
 		case 17:
-			SL(msg, JSON::KEY_LON, 40, 18, 1 / 600.0, 0);
-			SL(msg, JSON::KEY_LAT, 58, 17, 1 / 600.0, 0);
-			D(msg, JSON::KEY_DATA, 80, MIN(736, msg.getLength() - 80), datastring);
+			SL(msg, AIS::KEY_LON, 40, 18, 1 / 600.0, 0);
+			SL(msg, AIS::KEY_LAT, 58, 17, 1 / 600.0, 0);
+			D(msg, AIS::KEY_DATA, 80, MIN(736, msg.getLength() - 80), datastring);
 			break;
 		case 18:
-			UL(msg, JSON::KEY_SPEED, 46, 10, 0.1, 0);
-			B(msg, JSON::KEY_ACCURACY, 56, 1);
-			SL(msg, JSON::KEY_LON, 57, 28, 1 / 600000.0, 0);
-			SL(msg, JSON::KEY_LAT, 85, 27, 1 / 600000.0, 0);
-			UL(msg, JSON::KEY_COURSE, 112, 12, 0.1, 0);
-			U(msg, JSON::KEY_HEADING, 124, 9);
-			U(msg, JSON::KEY_RESERVED, 38, 8);
-			U(msg, JSON::KEY_SECOND, 133, 6);
-			U(msg, JSON::KEY_REGIONAL, 139, 2);
-			B(msg, JSON::KEY_CS, 141, 1);
-			B(msg, JSON::KEY_DISPLAY, 142, 1);
-			B(msg, JSON::KEY_DSC, 143, 1);
-			B(msg, JSON::KEY_BAND, 144, 1);
-			B(msg, JSON::KEY_MSG22, 145, 1);
-			B(msg, JSON::KEY_ASSIGNED, 146, 1);
-			B(msg, JSON::KEY_RAIM, 147, 1);
-			U(msg, JSON::KEY_RADIO, 148, 20);
+			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1, 0);
+			B(msg, AIS::KEY_ACCURACY, 56, 1);
+			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0, 0);
+			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1, 0);
+			U(msg, AIS::KEY_HEADING, 124, 9);
+			U(msg, AIS::KEY_RESERVED, 38, 8);
+			U(msg, AIS::KEY_SECOND, 133, 6);
+			U(msg, AIS::KEY_REGIONAL, 139, 2);
+			B(msg, AIS::KEY_CS, 141, 1);
+			B(msg, AIS::KEY_DISPLAY, 142, 1);
+			B(msg, AIS::KEY_DSC, 143, 1);
+			B(msg, AIS::KEY_BAND, 144, 1);
+			B(msg, AIS::KEY_MSG22, 145, 1);
+			B(msg, AIS::KEY_ASSIGNED, 146, 1);
+			B(msg, AIS::KEY_RAIM, 147, 1);
+			U(msg, AIS::KEY_RADIO, 148, 20);
 			break;
 		case 19:
-			UL(msg, JSON::KEY_SPEED, 46, 10, 0.1, 0);
-			SL(msg, JSON::KEY_LON, 57, 28, 1 / 600000.0, 0);
-			SL(msg, JSON::KEY_LAT, 85, 27, 1 / 600000.0, 0);
-			UL(msg, JSON::KEY_COURSE, 112, 12, 0.1, 0);
-			U(msg, JSON::KEY_HEADING, 124, 9);
-			T(msg, JSON::KEY_SHIPNAME, 143, 120, shipname);
-			E(msg, JSON::KEY_SHIPTYPE, 263, 8, JSON::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-			U(msg, JSON::KEY_TO_BOW, 271, 9);
-			U(msg, JSON::KEY_TO_STERN, 280, 9);
-			U(msg, JSON::KEY_TO_PORT, 289, 6);
-			U(msg, JSON::KEY_TO_STARBOARD, 295, 6);
-			E(msg, JSON::KEY_EPFD, 301, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
-			B(msg, JSON::KEY_ACCURACY, 56, 1);
-			U(msg, JSON::KEY_RESERVED, 38, 8);
-			U(msg, JSON::KEY_SECOND, 133, 6);
-			U(msg, JSON::KEY_REGIONAL, 139, 4);
-			B(msg, JSON::KEY_RAIM, 305, 1);
-			B(msg, JSON::KEY_DTE, 306, 1);
-			B(msg, JSON::KEY_ASSIGNED, 307, 1);
-			X(msg, JSON::KEY_SPARE, 308, 4);
+			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1, 0);
+			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0, 0);
+			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1, 0);
+			U(msg, AIS::KEY_HEADING, 124, 9);
+			T(msg, AIS::KEY_SHIPNAME, 143, 120, shipname);
+			E(msg, AIS::KEY_SHIPTYPE, 263, 8, AIS::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
+			U(msg, AIS::KEY_TO_BOW, 271, 9);
+			U(msg, AIS::KEY_TO_STERN, 280, 9);
+			U(msg, AIS::KEY_TO_PORT, 289, 6);
+			U(msg, AIS::KEY_TO_STARBOARD, 295, 6);
+			E(msg, AIS::KEY_EPFD, 301, 4, AIS::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			B(msg, AIS::KEY_ACCURACY, 56, 1);
+			U(msg, AIS::KEY_RESERVED, 38, 8);
+			U(msg, AIS::KEY_SECOND, 133, 6);
+			U(msg, AIS::KEY_REGIONAL, 139, 4);
+			B(msg, AIS::KEY_RAIM, 305, 1);
+			B(msg, AIS::KEY_DTE, 306, 1);
+			B(msg, AIS::KEY_ASSIGNED, 307, 1);
+			X(msg, AIS::KEY_SPARE, 308, 4);
 			break;
 		case 20:
-			U(msg, JSON::KEY_OFFSET1, 40, 12);
-			U(msg, JSON::KEY_NUMBER1, 52, 4);
-			U(msg, JSON::KEY_TIMEOUT1, 56, 3);
-			U(msg, JSON::KEY_INCREMENT1, 59, 11);
+			U(msg, AIS::KEY_OFFSET1, 40, 12);
+			U(msg, AIS::KEY_NUMBER1, 52, 4);
+			U(msg, AIS::KEY_TIMEOUT1, 56, 3);
+			U(msg, AIS::KEY_INCREMENT1, 59, 11);
 			if (msg.getLength() <= 99) break;
-			U(msg, JSON::KEY_OFFSET2, 70, 12);
-			U(msg, JSON::KEY_NUMBER2, 82, 4);
-			U(msg, JSON::KEY_TIMEOUT2, 86, 3);
-			U(msg, JSON::KEY_INCREMENT2, 89, 11);
+			U(msg, AIS::KEY_OFFSET2, 70, 12);
+			U(msg, AIS::KEY_NUMBER2, 82, 4);
+			U(msg, AIS::KEY_TIMEOUT2, 86, 3);
+			U(msg, AIS::KEY_INCREMENT2, 89, 11);
 			if (msg.getLength() <= 129) break;
-			U(msg, JSON::KEY_OFFSET3, 100, 12);
-			U(msg, JSON::KEY_NUMBER3, 112, 4);
-			U(msg, JSON::KEY_TIMEOUT3, 116, 3);
-			U(msg, JSON::KEY_INCREMENT3, 119, 11);
+			U(msg, AIS::KEY_OFFSET3, 100, 12);
+			U(msg, AIS::KEY_NUMBER3, 112, 4);
+			U(msg, AIS::KEY_TIMEOUT3, 116, 3);
+			U(msg, AIS::KEY_INCREMENT3, 119, 11);
 			if (msg.getLength() <= 159) break;
-			U(msg, JSON::KEY_OFFSET4, 130, 12);
-			U(msg, JSON::KEY_NUMBER4, 142, 4);
-			U(msg, JSON::KEY_TIMEOUT4, 146, 3);
-			U(msg, JSON::KEY_INCREMENT4, 149, 11);
+			U(msg, AIS::KEY_OFFSET4, 130, 12);
+			U(msg, AIS::KEY_NUMBER4, 142, 4);
+			U(msg, AIS::KEY_TIMEOUT4, 146, 3);
+			U(msg, AIS::KEY_INCREMENT4, 149, 11);
 			break;
 		case 21:
-			E(msg, JSON::KEY_AID_TYPE, 38, 5, JSON::KEY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
-			T(msg, JSON::KEY_NAME, 43, 120, name);
-			B(msg, JSON::KEY_ACCURACY, 163, 1);
-			SL(msg, JSON::KEY_LON, 164, 28, 1 / 600000.0, 0);
-			SL(msg, JSON::KEY_LAT, 192, 27, 1 / 600000.0, 0);
-			U(msg, JSON::KEY_TO_BOW, 219, 9);
-			U(msg, JSON::KEY_TO_STERN, 228, 9);
-			U(msg, JSON::KEY_TO_PORT, 237, 6);
-			U(msg, JSON::KEY_TO_STARBOARD, 243, 6);
-			E(msg, JSON::KEY_EPFD, 249, 4, JSON::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
-			U(msg, JSON::KEY_SECOND, 253, 6);
-			B(msg, JSON::KEY_OFF_POSITION, 259, 1);
-			U(msg, JSON::KEY_REGIONAL, 260, 8);
-			B(msg, JSON::KEY_RAIM, 268, 1);
-			B(msg, JSON::KEY_VIRTUAL_AID, 269, 1);
-			B(msg, JSON::KEY_ASSIGNED, 270, 1);
+			E(msg, AIS::KEY_AID_TYPE, 38, 5, AIS::KEY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
+			T(msg, AIS::KEY_NAME, 43, 120, name);
+			B(msg, AIS::KEY_ACCURACY, 163, 1);
+			SL(msg, AIS::KEY_LON, 164, 28, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LAT, 192, 27, 1 / 600000.0, 0);
+			U(msg, AIS::KEY_TO_BOW, 219, 9);
+			U(msg, AIS::KEY_TO_STERN, 228, 9);
+			U(msg, AIS::KEY_TO_PORT, 237, 6);
+			U(msg, AIS::KEY_TO_STARBOARD, 243, 6);
+			E(msg, AIS::KEY_EPFD, 249, 4, AIS::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
+			U(msg, AIS::KEY_SECOND, 253, 6);
+			B(msg, AIS::KEY_OFF_POSITION, 259, 1);
+			U(msg, AIS::KEY_REGIONAL, 260, 8);
+			B(msg, AIS::KEY_RAIM, 268, 1);
+			B(msg, AIS::KEY_VIRTUAL_AID, 269, 1);
+			B(msg, AIS::KEY_ASSIGNED, 270, 1);
 			break;
 		case 22:
-			U(msg, JSON::KEY_CHANNEL_A, 40, 12);
-			U(msg, JSON::KEY_CHANNEL_B, 52, 12);
-			U(msg, JSON::KEY_TXRX, 64, 4);
-			B(msg, JSON::KEY_POWER, 68, 1);
+			U(msg, AIS::KEY_CHANNEL_A, 40, 12);
+			U(msg, AIS::KEY_CHANNEL_B, 52, 12);
+			U(msg, AIS::KEY_TXRX, 64, 4);
+			B(msg, AIS::KEY_POWER, 68, 1);
 			if (msg.getUint(139, 1)) {
-				U(msg, JSON::KEY_DEST1, 69, 30);  // check // if addressed is 1
-				U(msg, JSON::KEY_DEST2, 104, 30); // check
+				U(msg, AIS::KEY_DEST1, 69, 30);	 // check // if addressed is 1
+				U(msg, AIS::KEY_DEST2, 104, 30); // check
 			}
 			else {
-				SL(msg, JSON::KEY_NE_LON, 69, 18, 1.0 / 600.0, 0);
-				SL(msg, JSON::KEY_NE_LAT, 87, 17, 1.0 / 600.0, 0);
-				SL(msg, JSON::KEY_SW_LON, 104, 18, 1.0 / 600.0, 0);
-				SL(msg, JSON::KEY_SW_LAT, 122, 17, 1.0 / 600.0, 0);
+				SL(msg, AIS::KEY_NE_LON, 69, 18, 1.0 / 600.0, 0);
+				SL(msg, AIS::KEY_NE_LAT, 87, 17, 1.0 / 600.0, 0);
+				SL(msg, AIS::KEY_SW_LON, 104, 18, 1.0 / 600.0, 0);
+				SL(msg, AIS::KEY_SW_LAT, 122, 17, 1.0 / 600.0, 0);
 			}
-			B(msg, JSON::KEY_ADDRESSED, 139, 1);
-			B(msg, JSON::KEY_BAND_A, 140, 1);
-			B(msg, JSON::KEY_BAND_B, 141, 1);
-			U(msg, JSON::KEY_ZONESIZE, 142, 3);
+			B(msg, AIS::KEY_ADDRESSED, 139, 1);
+			B(msg, AIS::KEY_BAND_A, 140, 1);
+			B(msg, AIS::KEY_BAND_B, 141, 1);
+			U(msg, AIS::KEY_ZONESIZE, 142, 3);
 			break;
 		case 23:
-			U(msg, JSON::KEY_NE_LON, 40, 18);
-			U(msg, JSON::KEY_NE_LAT, 58, 17);
-			U(msg, JSON::KEY_SW_LON, 75, 18);
-			U(msg, JSON::KEY_SW_LAT, 93, 17);
-			E(msg, JSON::KEY_STATION_TYPE, 110, 4);
-			E(msg, JSON::KEY_SHIP_TYPE, 114, 8);
-			U(msg, JSON::KEY_TXRX, 144, 2);
-			E(msg, JSON::KEY_INTERVAL, 146, 4);
-			U(msg, JSON::KEY_QUIET, 150, 4);
+			U(msg, AIS::KEY_NE_LON, 40, 18);
+			U(msg, AIS::KEY_NE_LAT, 58, 17);
+			U(msg, AIS::KEY_SW_LON, 75, 18);
+			U(msg, AIS::KEY_SW_LAT, 93, 17);
+			E(msg, AIS::KEY_STATION_TYPE, 110, 4);
+			E(msg, AIS::KEY_SHIP_TYPE, 114, 8);
+			U(msg, AIS::KEY_TXRX, 144, 2);
+			E(msg, AIS::KEY_INTERVAL, 146, 4);
+			U(msg, AIS::KEY_QUIET, 150, 4);
 			break;
 		case 24:
-			U(msg, JSON::KEY_PARTNO, 38, 2);
+			U(msg, AIS::KEY_PARTNO, 38, 2);
 
 			if (msg.getUint(38, 2) == 0) {
-				T(msg, JSON::KEY_SHIPNAME, 40, 120, shipname);
+				T(msg, AIS::KEY_SHIPNAME, 40, 120, shipname);
 			}
 			else {
-				E(msg, JSON::KEY_SHIPTYPE, 40, 8, JSON::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
-				T(msg, JSON::KEY_VENDORID, 48, 18, vendorid);
-				U(msg, JSON::KEY_MODEL, 66, 4);
-				U(msg, JSON::KEY_SERIAL, 70, 20);
-				T(msg, JSON::KEY_CALLSIGN, 90, 42, callsign);
+				E(msg, AIS::KEY_SHIPTYPE, 40, 8, AIS::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
+				T(msg, AIS::KEY_VENDORID, 48, 18, vendorid);
+				U(msg, AIS::KEY_MODEL, 66, 4);
+				U(msg, AIS::KEY_SERIAL, 70, 20);
+				T(msg, AIS::KEY_CALLSIGN, 90, 42, callsign);
 				if (msg.mmsi() / 10000000 == 98) {
-					U(msg, JSON::KEY_MOTHERSHIP_MMSI, 132, 30);
+					U(msg, AIS::KEY_MOTHERSHIP_MMSI, 132, 30);
 				}
 				else {
-					U(msg, JSON::KEY_TO_BOW, 132, 9);
-					U(msg, JSON::KEY_TO_STERN, 141, 9);
-					U(msg, JSON::KEY_TO_PORT, 150, 6);
-					U(msg, JSON::KEY_TO_STARBOARD, 156, 6);
+					U(msg, AIS::KEY_TO_BOW, 132, 9);
+					U(msg, AIS::KEY_TO_STERN, 141, 9);
+					U(msg, AIS::KEY_TO_PORT, 150, 6);
+					U(msg, AIS::KEY_TO_STARBOARD, 156, 6);
 				}
 			}
 			break;
 		case 27:
-			U(msg, JSON::KEY_ACCURACY, 38, 1);
-			U(msg, JSON::KEY_RAIM, 39, 1);
-			E(msg, JSON::KEY_STATUS, 40, 4, JSON::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
-			SL(msg, JSON::KEY_LON, 44, 18, 1 / 600.0, 0);
-			SL(msg, JSON::KEY_LAT, 62, 17, 1 / 600.0, 0);
-			U(msg, JSON::KEY_SPEED, 79, 6);
-			U(msg, JSON::KEY_COURSE, 85, 9);
-			U(msg, JSON::KEY_GNSS, 94, 1);
+			U(msg, AIS::KEY_ACCURACY, 38, 1);
+			U(msg, AIS::KEY_RAIM, 39, 1);
+			E(msg, AIS::KEY_STATUS, 40, 4, AIS::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
+			SL(msg, AIS::KEY_LON, 44, 18, 1 / 600.0, 0);
+			SL(msg, AIS::KEY_LAT, 62, 17, 1 / 600.0, 0);
+			U(msg, AIS::KEY_SPEED, 79, 6);
+			U(msg, AIS::KEY_COURSE, 85, 9);
+			U(msg, AIS::KEY_GNSS, 94, 1);
 			break;
 		default:
 			break;

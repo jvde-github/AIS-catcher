@@ -41,20 +41,23 @@
 #include "Stream.h"
 #include "Common.h"
 #include "AIS.h"
-#include "JSON/JSON.h"
+#include "Keys.h"
 #include "TCP.h"
 #include "Utilities.h"
 #include "ZIP.h"
+
+#include "JSON/JSON.h"
+#include "JSON/StringBuilder.h"
 
 namespace IO {
 
 	class HTTP : public StreamIn<JSON::JSON>, public Setting {
 
 		int source = -1;
+		JSON::StringBuilder builder;
 
 #ifdef HASCURL
 		AIS::Filter filter;
-		JSON::StringBuilder builder;
 		std::string json;
 
 		std::thread run_thread;
@@ -102,6 +105,8 @@ namespace IO {
 		}
 #endif
 	public:
+		HTTP(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
+
 		virtual void Set(std::string option, std::string arg);
 
 		void Start();
