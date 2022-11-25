@@ -314,6 +314,15 @@ void Assert(bool b, std::string& context, std::string msg = "") {
 	}
 }
 
+void setSerial(const std::string& str) {
+	input_device = getDeviceFromSerial(device_list, str);
+
+	if (input_device < 0 || input_device >= device_list.size()) {
+		std::cerr << "Device with serial \"" + str + "\" does not exist" << std::endl;
+		throw "Terminating program.";
+	}
+}
+
 void setScreen(const std::string& str) {
 	switch (Util::Parse::Integer(str, 0, 5)) {
 	case 0:
@@ -381,11 +390,6 @@ void setUDPfromJSON(const JSON::Property& pd) {
 	}
 }
 
-void setScreenFromJSON(const JSON::Property& pd) {
-	const JSON::Value& v = pd.Get();
-	setScreen(v.to_string());
-}
-
 void parseConfigFile(std::string& file_config) {
 
 	if (!file_config.empty()) {
@@ -394,43 +398,50 @@ void parseConfigFile(std::string& file_config) {
 			std::cerr << "Config: cannot open config file: " << file_config << std::endl;
 		}
 		else {
-			std::string j, line;
-			while (std::getline(file, line)) j += line + '\n';
+			std::string str, line;
+			while (std::getline(file, line)) str += line + '\n';
 
-			std::string str = j;
-			// while(1)
-			{
-				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
-				std::shared_ptr<JSON::JSON> json = parser.parse(str);
-				j = "";
-				// temporary check
-				JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_SETTING);
-				builder.build(*json, j);
+			JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
+			std::shared_ptr<JSON::JSON> json = parser.parse(str);
 
-				std::cerr << j << std::endl;
+			// temporary check
+			std::string j;
+			JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_SETTING);
+			builder.build(*json, j);
+			std::cerr << j << std::endl;
 
-				const std::vector<JSON::Property>& props = json->getProperties();
+			// loop over all provided properties
+			const std::vector<JSON::Property>& props = json->getProperties();
 
-				for (const auto& p : props) {
-					switch (p.getKey()) {
-					case AIS::KEY_SETTING_RTLSDR:
-						setSettingsFromJSON(p.Get(), drivers.RTLSDR);
-						break;
-					case AIS::KEY_SETTING_RTLTCP:
-						setSettingsFromJSON(p.Get(), drivers.RTLTCP);
-						break;
-					case AIS::KEY_SETTING_UDP:
-						setUDPfromJSON(p);
-						break;
-					case AIS::KEY_SETTING_HTTP:
-						setHTTPfromJSON(p);
-						break;
-					case AIS::KEY_SETTING_SCREEN:
-						setScreenFromJSON(p);
-						break;
-					default:
-						break;
-					}
+			for (const auto& p : props) {
+				switch (p.getKey()) {
+				case AIS::KEY_SETTING_RTLSDR:
+					setSettingsFromJSON(p.Get(), drivers.RTLSDR);
+					break;
+				case AIS::KEY_SETTING_RTLTCP:
+					setSettingsFromJSON(p.Get(), drivers.RTLTCP);
+					break;
+				case AIS::KEY_SETTING_UDP:
+					setUDPfromJSON(p);
+					break;
+				case AIS::KEY_SETTING_HTTP:
+					setHTTPfromJSON(p);
+					break;
+				case AIS::KEY_SETTING_SCREEN:
+					setScreen(p.Get().to_string());
+					break;
+				case AIS::KEY_SETTING_SERIAL:
+					setSerial(p.Get().to_string());
+					break;
+				case AIS::KEY_SETTING_VERBOSE:
+				std::cerr << p.Get().to_string() << std::endl;
+					verbose = Util::Parse::Switch(p.Get().to_string());
+					break;
+				case AIS::KEY_SETTING_VERBOSE_TIME:
+					verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
+					break;
+				default:
+					break;
 				}
 				/*
 				const JSON::Value* device = json->getValue(AIS::KEY_SETTING_DEVICE);
@@ -690,15 +701,15 @@ int main(int argc, char* argv[]) {
 			ptr += count + 1;
 		}
 
+		// -------------
+		// Read config file
+		parseConfigFile(file_config);
+
 		if (verbose || list_devices || list_support || NMEA_to_screen != OutputLevel::NONE || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
 		if (list_devices || list_support || list_options) return 0;
-
-		// -------------
-		// Read config file
-		parseConfigFile(file_config);
 
 		// -------------
 		// Select device

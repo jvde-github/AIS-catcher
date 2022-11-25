@@ -92,6 +92,7 @@ namespace Util {
 	}
 
 	bool Parse::Switch(std::string arg, const std::string& TrueString, const std::string& FalseString) {
+		Util::Convert::toUpper(arg);
 		if (arg == FalseString || arg == "FALSE") return false;
 		if (arg != TrueString && arg != "TRUE") throw "Error on input: unknown switch";
 
