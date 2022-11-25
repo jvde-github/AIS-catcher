@@ -89,10 +89,10 @@ namespace Device {
 			Util::Convert::toUpper(option);
 			Util::Convert::toUpper(arg);
 
-			if (option == "RATE") {
+			if (option == "RATE" || option == "SAMPLE_RATE") {
 				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
 			}
-			else if (option == "BW") {
+			else if (option == "BW" || option == "BANDWIDTH") {
 				tuner_bandwidth = Util::Parse::Integer(arg, 0, 1000000);
 			}
 			else if (option == "FREQOFFSET") {

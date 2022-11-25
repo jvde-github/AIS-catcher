@@ -56,7 +56,7 @@ public:
 	}
 
 	bool isConnected() { return connections.size() > 0; }
-	void Clear() { connections.resize(0); }
+	void clear() { connections.resize(0); }
 };
 
 template <typename S>

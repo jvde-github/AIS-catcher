@@ -21,6 +21,7 @@
 
 #include "Stream.h"
 #include "JSON/JSON.h"
+#include "Keys.h"
 #include "AIS.h"
 #include "Signals.h"
 #include "Utilities.h"
@@ -60,6 +61,8 @@ namespace AIS {
 		void ETA(const AIS::Message& msg, int p, int start, int len, std::string& str);
 
 	public:
+		JSONAIS() : json(&AIS::KeyMap) {}
+
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
 }

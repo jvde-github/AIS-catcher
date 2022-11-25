@@ -92,8 +92,8 @@ namespace Util {
 	}
 
 	bool Parse::Switch(std::string arg, const std::string& TrueString, const std::string& FalseString) {
-		if (arg == FalseString) return false;
-		if (arg != TrueString) throw "Error on input: unknown switch";
+		if (arg == FalseString || arg == "FALSE") return false;
+		if (arg != TrueString && arg != "TRUE") throw "Error on input: unknown switch";
 
 		return true;
 	}
