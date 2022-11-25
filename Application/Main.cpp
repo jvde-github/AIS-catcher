@@ -356,7 +356,7 @@ void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 void setHTTPfromJSON(const JSON::Property& pd) {
 
 	if (pd.getType() != JSON::Value::Type::ARRAY)
-		throw "Config: UDP settings need to be of \"array\" type \"object\" in JSON.";
+		throw "Config: HTTP settings need to be an \"array\" of \"objects\".";
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
 
@@ -370,7 +370,7 @@ void setHTTPfromJSON(const JSON::Property& pd) {
 void setUDPfromJSON(const JSON::Property& pd) {
 
 	if (pd.getType() != JSON::Value::Type::ARRAY)
-		throw "Config: UDP settings need to be of \"array\" type \"object\" in JSON.";
+		throw "Config: UDP settings need to be an \"array\" of \"objects\".";
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
 
