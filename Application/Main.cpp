@@ -272,7 +272,7 @@ std::unique_ptr<AIS::Model> createModel(int m) {
 
 // -------------------------------
 
-void parseTags(int& mode, std::string& s) {
+void parseTags(int& mode, const std::string& s) {
 	for (char c : s) {
 		switch (toupper(c)) {
 		case 'M':
@@ -391,6 +391,8 @@ void setUDPfromJSON(const JSON::Property& pd) {
 }
 
 void parseConfigFile(std::string& file_config) {
+	std::string config;
+	int version = 0;
 
 	if (!file_config.empty()) {
 		std::ifstream file(file_config);
@@ -413,8 +415,30 @@ void parseConfigFile(std::string& file_config) {
 			// loop over all provided properties
 			const std::vector<JSON::Property>& props = json->getProperties();
 
+			// pass 1
+
 			for (const auto& p : props) {
 				switch (p.getKey()) {
+				case AIS::KEY_SETTING_CONFIG:
+					config = p.Get().to_string();
+					break;
+				case AIS::KEY_SETTING_VERSION:
+					version = Util::Parse::Integer(p.Get().to_string());
+					break;
+				}
+			}
+
+			if (version < 1 || version > 1 || config != "aiscatcher") {
+				std::cerr << "Config: version and/or format of config file not supported (required version 1)." << std::endl;
+				throw "Terminating";
+			}
+
+			// pass 2
+			for (const auto& p : props) {
+				switch (p.getKey()) {
+				case AIS::KEY_SETTING_META:
+					parseTags(TAG_mode, p.Get().to_string());
+					break;
 				case AIS::KEY_SETTING_RTLSDR:
 					setSettingsFromJSON(p.Get(), drivers.RTLSDR);
 					break;
@@ -433,8 +457,13 @@ void parseConfigFile(std::string& file_config) {
 				case AIS::KEY_SETTING_SERIAL:
 					setSerial(p.Get().to_string());
 					break;
+				case AIS::KEY_SETTING_CONFIG:
+					config = p.Get().to_string();
+					break;
+				case AIS::KEY_SETTING_VERSION:
+					version = Util::Parse::Integer(p.Get().to_string());
+					break;
 				case AIS::KEY_SETTING_VERBOSE:
-					std::cerr << p.Get().to_string() << std::endl;
 					verbose = Util::Parse::Switch(p.Get().to_string());
 					break;
 				case AIS::KEY_SETTING_VERBOSE_TIME:
