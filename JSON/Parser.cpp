@@ -149,7 +149,7 @@ namespace JSON {
 	}
 
 	bool Parser::is_match(TokenType t) {
-		if (idx >= tokens.size() || tokens[idx].type == TokenType::End) error_parser("unexpected end in input");
+		if (idx >= tokens.size()) error_parser("unexpected end in input");
 		return tokens[idx].type == t;
 	}
 
@@ -159,7 +159,7 @@ namespace JSON {
 
 	void Parser::next() {
 		idx++;
-		if (idx >= tokens.size() || tokens[idx].type == TokenType::End) error_parser("unexpected end in input");
+		if (idx >= tokens.size()) error_parser("unexpected end in input");
 	}
 
 	// search for keyword in "map", returns index in map or -1 if not found
@@ -220,6 +220,9 @@ namespace JSON {
 			v.setArray(o->arrays.back().get());
 
 			break;
+		case TokenType::End:
+			error_parser("unexpected end of file");
+
 		default:
 			error_parser("value parse not implemented");
 			break;
@@ -259,6 +262,9 @@ namespace JSON {
 		idx = 0;
 		tokenizer();
 		auto result = parse_core();
+		next();
+		must_match(TokenType::End, "expected END");
+
 		return result;
 	}
 }
