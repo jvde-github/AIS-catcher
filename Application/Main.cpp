@@ -415,6 +415,14 @@ void setUDPfromJSON(const JSON::Property& pd) {
 	}
 }
 
+void setModelfromJSON(const JSON::Property& p) {
+
+	if (!isActiveObject(p.Get())) return;
+
+	models.push_back(createModel(2));
+	setSettingsFromJSON(p.Get(), *models.back());
+}
+
 void parseConfigFile(std::string& file_config) {
 	std::string config, serial, input;
 	int version = 0;
@@ -468,6 +476,9 @@ void parseConfigFile(std::string& file_config) {
 			// pass 2
 			for (const auto& p : props) {
 				switch (p.getKey()) {
+				case AIS::KEY_SETTING_MODEL:
+					setModelfromJSON(p);
+					break;
 				case AIS::KEY_SETTING_META:
 					parseTags(TAG_mode, p.Get().to_string());
 					break;
@@ -887,11 +898,6 @@ int main(int argc, char* argv[]) {
 		if (bandwidth)
 			device->Set("BW", std::to_string(bandwidth));
 
-		if (verbose) {
-			std::cerr << "Device: " << device->getProduct() << std::endl;
-			std::cerr << "Settings: " << device->Get() << std::endl;
-		}
-
 		// ------------
 		// Setup models
 		if (!models.size()) models.push_back(createModel(2));
@@ -943,6 +949,13 @@ int main(int argc, char* argv[]) {
 			if (jsonais[i].out.isConnected()) {
 				models[i]->Output() >> jsonais[i];
 			}
+		}
+
+		if (verbose) {
+			std::cerr << "Device    : " << device->getProduct() << std::endl;
+			std::cerr << "Settings  : " << device->Get() << std::endl;
+			for (const auto& m : models)
+				std::cerr << "Model     : " << m->Get() << std::endl;
 		}
 
 		// -----------------
