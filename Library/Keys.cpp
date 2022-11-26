@@ -37,6 +37,7 @@ namespace AIS {
 		{ "", "", "", "", "buffer_count" },
 		{ "", "", "", "", "callsign" },
 		{ "", "", "", "", "channel" },
+		{ "", "", "", "", "config" },
 		{ "", "", "", "", "response" },
 		{ "", "", "", "", "device" },
 		{ "", "", "", "", "filter" },
@@ -47,6 +48,7 @@ namespace AIS {
 		{ "", "", "", "", "id" },
 		{ "", "", "", "", "input" },
 		{ "", "", "", "", "interval" },
+		{ "", "", "", "", "meta" },
 		{ "", "", "", "", "mode" },
 		{ "", "", "", "", "msg_output" },
 		{ "", "", "", "", "output" },
@@ -66,6 +68,7 @@ namespace AIS {
 		{ "", "", "", "", "userpwd" },
 		{ "", "", "", "", "verbose" },
 		{ "", "", "", "", "verbose_time" },
+		{ "", "", "", "", "version" },
 		// from ODS
 		{ "accuracy", "", "accuracy", "" },
 		{ "addressed", "", "", "" },
