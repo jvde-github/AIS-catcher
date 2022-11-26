@@ -75,6 +75,7 @@ namespace Util {
 	}
 
 	bool Parse::StreamFormat(std::string str, Format& format) {
+		Convert::toUpper(str);
 		if (str == "CU8")
 			format = Format::CU8;
 		else if (str == "CF32")
@@ -85,6 +86,38 @@ namespace Util {
 			format = Format::CS8;
 		else if (str == "TXT")
 			format = Format::TXT;
+		else
+			return false;
+
+		return true;
+	}
+
+	bool Parse::DeviceType(std::string str, Type& type) {
+		Convert::toUpper(str);
+		if (str == "NONE")
+			type = Type::NONE;
+		else if (str == "RTLSDR")
+			type = Type::RTLSDR;
+		else if (str == "AIRSPY")
+			type = Type::AIRSPY;
+		else if (str == "AIRSPYHF")
+			type = Type::AIRSPYHF;
+		else if (str == "SDRPLAY")
+			type = Type::SDRPLAY;
+		else if (str == "WAVFILE")
+			type = Type::WAVFILE;
+		else if (str == "RAWFILE")
+			type = Type::RAWFILE;
+		else if (str == "RTLTCP")
+			type = Type::RTLTCP;
+		else if (str == "HACKRF")
+			type = Type::HACKRF;
+		else if (str == "SOAPYSDR")
+			type = Type::SOAPYSDR;
+		else if (str == "ZMQ")
+			type = Type::ZMQ;
+		else if (str == "SPYSERVER")
+			type = Type::SPYSERVER;
 		else
 			return false;
 

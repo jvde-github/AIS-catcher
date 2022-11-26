@@ -314,12 +314,22 @@ void Assert(bool b, std::string& context, std::string msg = "") {
 	}
 }
 
-void setSerial(const std::string& str) {
-	input_device = getDeviceFromSerial(device_list, str);
+void setSerial(const std::string& serial, const std::string& input) {
 
-	if (input_device < 0 || input_device >= device_list.size()) {
-		std::cerr << "Device with serial \"" + str + "\" does not exist" << std::endl;
-		throw "Terminating program.";
+	if (!input.empty()) {
+		if (!Util::Parse::DeviceType(input, input_type)) {
+			throw "Config file: \"input\" type unknown.";
+		}
+	}
+	if (!serial.empty()) {
+		input_device = getDeviceFromSerial(device_list, serial);
+		if (input_device < 0 || input_device >= device_list.size()) {
+			throw "Config file: cannot find hardware with serial number.";
+		}
+		if (device_list[input_device].getType() != input_type) {
+			throw "Config file: inconsistent input type and device corresponding to specified serial number";
+		}
+		input_type = Type::NONE;
 	}
 }
 
@@ -369,6 +379,8 @@ void setHTTPfromJSON(const JSON::Property& pd) {
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
 
+	if (vals.size()) TAG_mode |= 0x3;
+
 	for (const auto& v : vals) {
 		http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
 		http.back()->setSource(0);
@@ -391,7 +403,7 @@ void setUDPfromJSON(const JSON::Property& pd) {
 }
 
 void parseConfigFile(std::string& file_config) {
-	std::string config;
+	std::string config, serial, input;
 	int version = 0;
 
 	if (!file_config.empty()) {
@@ -410,13 +422,12 @@ void parseConfigFile(std::string& file_config) {
 			std::string j;
 			JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_SETTING);
 			builder.build(*json, j);
-			std::cerr << j << std::endl;
+			std::cerr << "Config input : " << j << std::endl;
 
 			// loop over all provided properties
 			const std::vector<JSON::Property>& props = json->getProperties();
 
 			// pass 1
-
 			for (const auto& p : props) {
 				switch (p.getKey()) {
 				case AIS::KEY_SETTING_CONFIG:
@@ -425,6 +436,12 @@ void parseConfigFile(std::string& file_config) {
 				case AIS::KEY_SETTING_VERSION:
 					version = Util::Parse::Integer(p.Get().to_string());
 					break;
+				case AIS::KEY_SETTING_SERIAL:
+					serial = p.Get().to_string();
+					break;
+				case AIS::KEY_SETTING_INPUT:
+					input = p.Get().to_string();
+					break;
 				}
 			}
 
@@ -432,6 +449,8 @@ void parseConfigFile(std::string& file_config) {
 				std::cerr << "Config: version and/or format of config file not supported (required version 1)." << std::endl;
 				throw "Terminating";
 			}
+
+			setSerial(serial, input);
 
 			// pass 2
 			for (const auto& p : props) {
@@ -453,9 +472,6 @@ void parseConfigFile(std::string& file_config) {
 					break;
 				case AIS::KEY_SETTING_SCREEN:
 					setScreen(p.Get().to_string());
-					break;
-				case AIS::KEY_SETTING_SERIAL:
-					setSerial(p.Get().to_string());
 					break;
 				case AIS::KEY_SETTING_CONFIG:
 					config = p.Get().to_string();
@@ -499,6 +515,8 @@ int main(int argc, char* argv[]) {
 #else
 		signal(SIGINT, consoleHandler);
 #endif
+
+		printVersion();
 
 		device_list = getDevices(drivers);
 
@@ -734,7 +752,6 @@ int main(int argc, char* argv[]) {
 		// Read config file
 		parseConfigFile(file_config);
 
-		if (verbose || list_devices || list_support || NMEA_to_screen != OutputLevel::NONE || list_options) printVersion();
 		if (list_devices) printDevices(device_list);
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
