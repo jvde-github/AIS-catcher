@@ -245,7 +245,7 @@ The idea behind this feature is to simplify the set up of feeding multiple onlin
 ```
 This will provide a sanity check and helps AIS-catcher to be backward compatible with early versions of the configuration files but not the other way around (i.e., AIS-catcher v0.41 cannot read version 2 config files).
 
-To set the some default parameters for a RTL-SDR dongle, send to two UDP and HTTP channels, we can use:
+To set  some  parameters for a RTL-SDR dongle and setup two UDP and HTTP channels, we can use:
 ```json
 {
 	"config": "aiscatcher",
@@ -282,7 +282,7 @@ To set the some default parameters for a RTL-SDR dongle, send to two UDP and HTT
 	}]
 }
 ```
-The udp and http outward connections are reflected as an array (surrounded by `[` and `]`) with one JSON object for each channel. In each object we can include the boolean field ``active`` which will cause the program to ignore the settings if set to `false`. This option therefore provides an easy way to switch on and off particular channels or dongle configurations. The active device is select via the ``input`` or ``serial`` field. If both are included the program will check that they are consistent, i.e. the hardware with the specified serial number is of the type included in ``input``. So to include both, as in this example, would be unusual.
+The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with one  "object" for each channel. In each object we can include the boolean field ``active`` (see the second UDP definition) which will cause the program to ignore the settings if set to `false`. This option  provides an easy way to switch on and off particular channels or dongle configurations. The active device is select via the ``input`` or ``serial`` field. If both are included the program will check that they are consistent, i.e. the hardware with the specified serial number is of the type included in ``input``. So usually it is sufficient to include one of these fields and not both.
 
 ### AIS-catcher as a command line NMEA decoder
 
