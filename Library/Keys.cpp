@@ -32,6 +32,7 @@ namespace AIS {
 		{ "shiptype_text", "", "shiptype_text", "" },
 		{ "aid_type_text", "", "aid_type_text", "" },
 		// setting
+		{ "", "", "", "", "active" },
 		{ "", "", "", "", "bandwidth" },
 		{ "", "", "", "", "biastee" },
 		{ "", "", "", "", "buffer_count" },

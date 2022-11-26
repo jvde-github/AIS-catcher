@@ -314,7 +314,7 @@ void Assert(bool b, std::string& context, std::string msg = "") {
 	}
 }
 
-void setSerial(const std::string& serial, const std::string& input) {
+void setDevice(const std::string& serial, const std::string& input) {
 
 	if (!input.empty()) {
 		if (!Util::Parse::DeviceType(input, input_type)) {
@@ -359,17 +359,28 @@ void setScreen(const std::string& str) {
 }
 // Config file processing
 
+bool isActiveObject(const JSON::Value& p) {
 
+	if (p.getType() != JSON::Value::Type::OBJECT)
+		throw "Config: expected JSON \"object\"";
+
+	const std::vector<JSON::Property>& props = p.getObject()->getProperties();
+
+	for (const auto& p : props) {
+		if (p.getKey() == AIS::KEY_SETTING_ACTIVE) {
+			return Util::Parse::Switch(p.Get().to_string());
+		}
+	}
+	return true;
+}
 void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
-
-	if (pd.getType() != JSON::Value::Type::OBJECT)
-		throw "Config: device specific settings need to be of \"object\" type in JSON.";
 
 	const std::vector<JSON::Property>& props = pd.getObject()->getProperties();
 
-	for (const auto& p : props) {
-		s.Set(AIS::KeyMap[p.getKey()][JSON_DICT_SETTING], p.Get().to_string());
-	}
+	for (const auto& p : props)
+		if (p.getKey() != AIS::KEY_SETTING_ACTIVE) {
+			s.Set(AIS::KeyMap[p.getKey()][JSON_DICT_SETTING], p.Get().to_string());
+		}
 }
 
 void setHTTPfromJSON(const JSON::Property& pd) {
@@ -382,6 +393,7 @@ void setHTTPfromJSON(const JSON::Property& pd) {
 	if (vals.size()) TAG_mode |= 0x3;
 
 	for (const auto& v : vals) {
+		if (!isActiveObject(v)) continue;
 		http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
 		http.back()->setSource(0);
 		setSettingsFromJSON(v, *http.back());
@@ -396,6 +408,7 @@ void setUDPfromJSON(const JSON::Property& pd) {
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
 
 	for (const auto& v : vals) {
+		if (!isActiveObject(v)) continue;
 		UDP.push_back(IO::UDP());
 		UDP.back().setSource(0);
 		setSettingsFromJSON(v, UDP.back());
@@ -450,7 +463,7 @@ void parseConfigFile(std::string& file_config) {
 				throw "Terminating";
 			}
 
-			setSerial(serial, input);
+			setDevice(serial, input);
 
 			// pass 2
 			for (const auto& p : props) {
@@ -459,9 +472,11 @@ void parseConfigFile(std::string& file_config) {
 					parseTags(TAG_mode, p.Get().to_string());
 					break;
 				case AIS::KEY_SETTING_RTLSDR:
+					if (!isActiveObject(p.Get())) continue;
 					setSettingsFromJSON(p.Get(), drivers.RTLSDR);
 					break;
 				case AIS::KEY_SETTING_RTLTCP:
+					if (!isActiveObject(p.Get())) continue;
 					setSettingsFromJSON(p.Get(), drivers.RTLTCP);
 					break;
 				case AIS::KEY_SETTING_UDP:
@@ -472,12 +487,6 @@ void parseConfigFile(std::string& file_config) {
 					break;
 				case AIS::KEY_SETTING_SCREEN:
 					setScreen(p.Get().to_string());
-					break;
-				case AIS::KEY_SETTING_CONFIG:
-					config = p.Get().to_string();
-					break;
-				case AIS::KEY_SETTING_VERSION:
-					version = Util::Parse::Integer(p.Get().to_string());
 					break;
 				case AIS::KEY_SETTING_VERBOSE:
 					verbose = Util::Parse::Switch(p.Get().to_string());
