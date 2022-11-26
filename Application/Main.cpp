@@ -479,6 +479,42 @@ void parseConfigFile(std::string& file_config) {
 					if (!isActiveObject(p.Get())) continue;
 					setSettingsFromJSON(p.Get(), drivers.RTLTCP);
 					break;
+				case AIS::KEY_SETTING_AIRSPY:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.AIRSPY);
+					break;
+				case AIS::KEY_SETTING_AIRSPYHF:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.AIRSPYHF);
+					break;
+				case AIS::KEY_SETTING_SDRPLAY:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.SDRPLAY);
+					break;
+				case AIS::KEY_SETTING_WAVFILE:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.WAV);
+					break;
+				case AIS::KEY_SETTING_HACKRF:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.HACKRF);
+					break;
+				case AIS::KEY_SETTING_SOAPYSDR:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.SOAPYSDR);
+					break;
+				case AIS::KEY_SETTING_FILE:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.RAW);
+					break;
+				case AIS::KEY_SETTING_ZMQ:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.ZMQ);
+					break;
+				case AIS::KEY_SETTING_SPYSERVER:
+					if (!isActiveObject(p.Get())) continue;
+					setSettingsFromJSON(p.Get(), drivers.SpyServer);
+					break;
 				case AIS::KEY_SETTING_UDP:
 					setUDPfromJSON(p);
 					break;
@@ -494,7 +530,15 @@ void parseConfigFile(std::string& file_config) {
 				case AIS::KEY_SETTING_VERBOSE_TIME:
 					verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
 					break;
+				// fields that are already processed for completeness
+				case AIS::KEY_SETTING_CONFIG:
+				case AIS::KEY_SETTING_VERSION:
+				case AIS::KEY_SETTING_SERIAL:
+				case AIS::KEY_SETTING_INPUT:
+					break;
 				default:
+					std::cerr << "Config file: field \"" + AIS::KeyMap[p.getKey()][JSON_DICT_SETTING] + "\" in main section is not allowed." << std::endl;
+					throw "Config file: terminating.";
 					break;
 				}
 			}
