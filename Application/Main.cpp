@@ -460,9 +460,9 @@ void parseConfigFile(std::string& file_config) {
 				}
 			}
 
-			if (version < 1 || version > 1 || config != "aiscatcher") 
+			if (version < 1 || version > 1 || config != "aiscatcher")
 				throw "Config file: version and/or format of config file not supported (required version <=1)";
-			
+
 			setDevice(serial, input);
 
 			// pass 2
