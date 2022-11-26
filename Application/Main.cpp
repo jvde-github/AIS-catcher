@@ -321,13 +321,14 @@ void setDevice(const std::string& serial, const std::string& input) {
 			throw "Config file: \"input\" type unknown.";
 		}
 	}
+
 	if (!serial.empty()) {
 		input_device = getDeviceFromSerial(device_list, serial);
 		if (input_device < 0 || input_device >= device_list.size()) {
 			throw "Config file: cannot find hardware with serial number.";
 		}
-		if (device_list[input_device].getType() != input_type) {
-			throw "Config file: inconsistent input type and device corresponding to specified serial number";
+		if (input_type != Type::NONE && device_list[input_device].getType() != input_type) {
+			throw "Config file: inconsistent input type and serial number";
 		}
 		input_type = Type::NONE;
 	}
@@ -354,11 +355,10 @@ void setScreen(const std::string& str) {
 		NMEA_to_screen = OutputLevel::JSON_FULL;
 		break;
 	default:
-		throw "Error: unknown option  for screen output.";
+		throw "Error: unknown option for screen output.";
 	}
 }
 // Config file processing
-
 bool isActiveObject(const JSON::Value& p) {
 
 	if (p.getType() != JSON::Value::Type::OBJECT)
@@ -373,6 +373,7 @@ bool isActiveObject(const JSON::Value& p) {
 	}
 	return true;
 }
+
 void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 
 	const std::vector<JSON::Property>& props = pd.getObject()->getProperties();
@@ -386,24 +387,23 @@ void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 void setHTTPfromJSON(const JSON::Property& pd) {
 
 	if (pd.getType() != JSON::Value::Type::ARRAY)
-		throw "Config: HTTP settings need to be an \"array\" of \"objects\".";
+		throw "Config file: HTTP settings need to be an \"array\" of \"objects\".";
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
-
-	if (vals.size()) TAG_mode |= 0x3;
 
 	for (const auto& v : vals) {
 		if (!isActiveObject(v)) continue;
 		http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
 		http.back()->setSource(0);
 		setSettingsFromJSON(v, *http.back());
+		TAG_mode |= 0x3;
 	}
 }
 
 void setUDPfromJSON(const JSON::Property& pd) {
 
 	if (pd.getType() != JSON::Value::Type::ARRAY)
-		throw "Config: UDP settings need to be an \"array\" of \"objects\".";
+		throw "Config file: UDP settings need to be an \"array\" of \"objects\".";
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
 
@@ -432,12 +432,14 @@ void parseConfigFile(std::string& file_config) {
 			std::shared_ptr<JSON::JSON> json = parser.parse(str);
 
 			// temporary check
+			/*
 			std::string j;
 			JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_SETTING);
 			builder.build(*json, j);
 			std::cerr << "Config input : " << j << std::endl;
+			*/
 
-			// loop over all provided properties
+			// loop over all properties
 			const std::vector<JSON::Property>& props = json->getProperties();
 
 			// pass 1
@@ -458,11 +460,9 @@ void parseConfigFile(std::string& file_config) {
 				}
 			}
 
-			if (version < 1 || version > 1 || config != "aiscatcher") {
-				std::cerr << "Config: version and/or format of config file not supported (required version 1)." << std::endl;
-				throw "Terminating";
-			}
-
+			if (version < 1 || version > 1 || config != "aiscatcher") 
+				throw "Config file: version and/or format of config file not supported (required version <=1)";
+			
 			setDevice(serial, input);
 
 			// pass 2
@@ -497,19 +497,6 @@ void parseConfigFile(std::string& file_config) {
 				default:
 					break;
 				}
-				/*
-				const JSON::Value* device = json->getValue(AIS::KEY_SETTING_DEVICE);
-				if (device && device->getType() == JSON::Value::Type::OBJECT) {
-					std::cerr << "Device section" << std::endl;
-
-					const JSON::JSON* dev = device->getObject();
-					const JSON::Value* serial = dev->getValue(AIS::KEY_SETTING_SERIAL);
-					const JSON::Value* bandwidth = dev->getValue(AIS::KEY_SETTING_BANDWIDTH);
-
-					if (serial) std::cerr << "serial : " << serial->to_string() << std::endl;
-					if (bandwidth) std::cerr << "bandwidth : " << bandwidth->to_string() << std::endl;
-				}
-				*/
 			}
 		}
 	}
