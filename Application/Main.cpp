@@ -434,7 +434,7 @@ void parseConfigFile(std::string& file_config) {
 					setSerial(p.Get().to_string());
 					break;
 				case AIS::KEY_SETTING_VERBOSE:
-				std::cerr << p.Get().to_string() << std::endl;
+					std::cerr << p.Get().to_string() << std::endl;
 					verbose = Util::Parse::Switch(p.Get().to_string());
 					break;
 				case AIS::KEY_SETTING_VERBOSE_TIME:

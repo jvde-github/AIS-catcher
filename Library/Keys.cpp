@@ -37,6 +37,7 @@ namespace AIS {
 		{ "", "", "", "", "buffer_count" },
 		{ "", "", "", "", "callsign" },
 		{ "", "", "", "", "channel" },
+		{ "", "", "", "", "response" },
 		{ "", "", "", "", "device" },
 		{ "", "", "", "", "filter" },
 		{ "", "", "", "", "freqoffset" },
