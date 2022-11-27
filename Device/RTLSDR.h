@@ -99,6 +99,8 @@ namespace Device {
 		std::string getProduct() { return product; };
 		std::string getVendor() { return vendor; };
 		std::string getSerial() { return serial; };
+
+		void setFormat(Format f) {}
 #endif
 	};
 }

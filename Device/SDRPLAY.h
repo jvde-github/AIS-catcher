@@ -79,6 +79,7 @@ namespace Device {
 		std::string getVendor() { return "SDRPLAY"; }
 		std::string getSerial() { return device.SerNo; }
 
+		void setFormat(Format f) {}
 #endif
 	};
 }

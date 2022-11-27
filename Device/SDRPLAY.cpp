@@ -86,6 +86,7 @@ namespace Device {
 		chParams->tunerParams.gain.LNAstate = LNAstate;
 
 		setSampleRate(2304000);
+		Device::setFormat(Format::CF32);
 		Device::Open(h);
 	}
 
@@ -201,7 +202,6 @@ namespace Device {
 
 	void SDRPLAY::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
 
 		if (option == "AGC") {
 			AGC = Util::Parse::Switch(arg);
@@ -213,7 +213,7 @@ namespace Device {
 			gRdB = Util::Parse::Integer(arg, 0, 59);
 		}
 		else
-			throw std::runtime_error("Invalid setting for SDRPLAY.");
+			Device::Set(option, arg);
 	}
 
 	std::string SDRPLAY::Get() {

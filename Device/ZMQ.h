@@ -35,7 +35,6 @@ namespace Device {
 		void* subscriber = NULL;
 
 		std::string endpoint;
-		Format format = Format::CU8;
 
 		// output vector
 		static const int BUFFER_SIZE = 16 * 16384;

@@ -35,6 +35,7 @@ namespace Device {
 
 		Device::Open(h);
 
+		Device::setFormat(Format::CU8);
 		char v[256], p[256], s[256];
 		rtlsdr_get_usb_strings(dev, v, p, s);
 		product = std::string(p);
@@ -186,7 +187,6 @@ namespace Device {
 
 	void RTLSDR::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
 
 		if (option == "TUNER") {
 			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);

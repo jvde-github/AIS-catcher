@@ -895,7 +895,11 @@ int main(int argc, char* argv[]) {
 
 		// ------------
 		// Setup models
-		if (!models.size()) models.push_back(createModel(2));
+		if (!models.size())
+			if (device->getFormat() == Format::TXT)
+				models.push_back(createModel(5));
+			else
+				models.push_back(createModel(2));
 
 		// Attach output
 		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? models.size() : 0);
@@ -946,17 +950,17 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
+		// -----------------
+		// Main loop
+
+		device->Play();
+
 		if (verbose) {
 			std::cerr << "Device    : " << device->getProduct() << std::endl;
 			std::cerr << "Settings  : " << device->Get() << std::endl;
 			for (int i = 0; i < models.size(); i++)
 				std::cerr << "Model #" + std::to_string(i) + "  : [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
 		}
-
-		// -----------------
-		// Main loop
-
-		device->Play();
 
 		stop = false;
 

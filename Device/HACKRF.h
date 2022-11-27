@@ -67,6 +67,8 @@ namespace Device {
 		std::string getProduct() { return "HACKRF"; }
 		std::string getVendor() { return "Great Scott Gadgets"; }
 		std::string getSerial() { return serial; }
+
+		void setFormat(Format f) {}
 #endif
 	};
 }

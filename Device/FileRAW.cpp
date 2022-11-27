@@ -40,14 +40,14 @@ namespace Device {
 		while (isStreaming()) {
 			if (fifo.Wait()) {
 
-				RAW r = { format, fifo.Front(), fifo.BlockSize() };
+				RAW r = { getFormat(), fifo.Front(), fifo.BlockSize() };
 				Send(&r, 1, tag);
 				fifo.Pop();
 			}
 			else {
 				if (eoi && isStreaming())
 					done = true;
-				else if (isStreaming() && format != Format::TXT)
+				else if (isStreaming() && getFormat() != Format::TXT)
 					std::cerr << "FILE: timeout." << std::endl;
 			}
 		}
@@ -55,13 +55,14 @@ namespace Device {
 
 	void RAWFile::Open(uint64_t h) {
 		Device::Open(h);
+		if (getFormat() == Format::UNKNOWN) setFormat(Format::CU8);
 		setSampleRate(1536000);
 	}
 
 	void RAWFile::Play() {
 		Device::Play();
 
-		if (format != Format::TXT) {
+		if (getFormat() != Format::TXT) {
 			fifo.Init(BUFFER_SIZE, BUFFER_COUNT);
 			buffer.resize(BUFFER_SIZE);
 		}
@@ -106,23 +107,15 @@ namespace Device {
 
 	void RAWFile::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-
+		
 		if (option == "FILE") {
 			filename = arg;
-			return;
-		}
-
-		Util::Convert::toUpper(arg);
-
-		if (option == "FORMAT") {
-			if (!Util::Parse::StreamFormat(arg, format))
-				throw std::runtime_error("RAW: Unknown file format specification.");
 		}
 		else
-			throw std::runtime_error("Invalid setting for FILE RAW.");
+			Device::Set(option, arg);
 	}
 
 	std::string RAWFile::Get() {
-		return Device::Get() + " file " + filename + " format " + Util::Convert::toString(format);
+		return Device::Get() + " file " + filename;
 	}
 }

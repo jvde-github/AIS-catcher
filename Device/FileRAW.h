@@ -37,7 +37,6 @@ namespace Device {
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 		uint32_t BUFFER_COUNT = 2;
-		Format format = Format::CU8;
 
 		void ReadAsync();
 		void Run();
@@ -51,10 +50,6 @@ namespace Device {
 
 		bool isCallback() { return true; }
 		bool isStreaming() { return Device::isStreaming() && !done; }
-
-		// Device specific
-		void setFormat(Format f) { format = f; }
-		Format getFormat() { return format; }
 
 		// Settings
 		void Set(std::string option, std::string arg);

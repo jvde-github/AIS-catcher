@@ -56,11 +56,11 @@ namespace Device {
 	class Device : public SimpleStreamOut<RAW>, public Setting {
 	protected:
 		bool streaming = false;
-
-		uint32_t sample_rate = 0;
-		uint32_t frequency = 0;
 		int freq_offset = 0;
 		int tuner_bandwidth = 0;
+		uint32_t sample_rate = 0;
+		uint32_t frequency = 0;
+		Format format = Format::UNKNOWN;
 
 	public:
 		// DeviceBase
@@ -87,7 +87,6 @@ namespace Device {
 
 		virtual void Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);
-			Util::Convert::toUpper(arg);
 
 			if (option == "RATE" || option == "SAMPLE_RATE") {
 				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
@@ -98,8 +97,15 @@ namespace Device {
 			else if (option == "FREQOFFSET") {
 				freq_offset = Util::Parse::Integer(arg, -150, 150);
 			}
+			else if (option == "FORMAT") {
+				Format f;
+				if (!Util::Parse::StreamFormat(arg, f))
+					throw std::runtime_error("Unknown file format specification.");
+				else
+					setFormat(f);
+			}
 			else
-				throw std::runtime_error("Invalid Device setting.");
+				throw std::runtime_error("Invalid Device setting: \"" + option + "\"");
 		}
 
 		virtual std::string Get() {
@@ -107,6 +113,7 @@ namespace Device {
 			std::string str = "rate " + std::to_string(getSampleRate() / 1000) + "K";
 			if (tuner_bandwidth) str += " bw " + std::to_string(tuner_bandwidth / 1000) + "K";
 			if (freq_offset) str += " freqoffset " + std::to_string(freq_offset);
+			str += " format " + Util::Convert::toString(format);
 
 			return str;
 		}
@@ -120,5 +127,8 @@ namespace Device {
 		virtual std::string getSerial() {
 			return "";
 		}
+
+		virtual void setFormat(Format f) { format = f; }
+		virtual Format getFormat() { return format; }
 	};
 }

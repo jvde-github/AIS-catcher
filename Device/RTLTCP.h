@@ -39,7 +39,6 @@ namespace Device {
 		bool bias_tee = false;
 
 		// Protocol: NONE
-		Format format = Format::CF32;
 
 		::TCP::Client client;
 

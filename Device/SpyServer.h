@@ -175,7 +175,6 @@ namespace Device {
 
 	class SpyServer : public Device {
 		FLOAT32 tuner_gain = 0.0;
-		Format format = Format::UNKNOWN;
 
 		::TCP::Client client;
 
@@ -239,5 +238,6 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "SPYSERVER"; }
+		void setFormat(Format f) {}
 	};
 }
