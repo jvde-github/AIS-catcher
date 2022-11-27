@@ -36,7 +36,7 @@ namespace JSON {
 		}
 		std::cerr << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl
-				  << std::string(MIN(char_limit, pos), ' ') << "|" << std::endl;
+				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl;
 		throw std::runtime_error("syntax error in config file: " + err);
 	}
 
@@ -95,11 +95,11 @@ namespace JSON {
 				ptr++;
 			}
 			// keyword
-			else if (c == 't' || c == 'f' || c == 'n') {
+			else if (isalpha(c)) {
 
 				s.clear();
 
-				while (ptr != json.size() && islower(json[ptr])) s += json[ptr++];
+				while (ptr != json.size() && isalpha(json[ptr])) s += json[ptr++];
 
 				if (s == "true")
 					tokens.push_back(Token(TokenType::True, "", ptr));
