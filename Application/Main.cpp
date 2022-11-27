@@ -315,7 +315,7 @@ void setDevice(const std::string& serial, const std::string& input) {
 
 	if (!input.empty()) {
 		if (!Util::Parse::DeviceType(input, input_type)) {
-			throw std::runtime_error("\""+input+"\" is unknown input type in config file");
+			throw std::runtime_error("\"" + input + "\" is unknown input type in config file");
 		}
 	}
 
@@ -949,8 +949,8 @@ int main(int argc, char* argv[]) {
 		if (verbose) {
 			std::cerr << "Device    : " << device->getProduct() << std::endl;
 			std::cerr << "Settings  : " << device->Get() << std::endl;
-			for (const auto& m : models)
-				std::cerr << "Model     : " << m->Get() << std::endl;
+			for (int i = 0; i < models.size(); i++)
+				std::cerr << "Model #" + std::to_string(i) + "  : [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
 		}
 
 		// -----------------
@@ -979,7 +979,7 @@ int main(int argc, char* argv[]) {
 
 				for (int j = 0; j < models.size(); j++) {
 					statistics[j].Stamp();
-					std::string name = models[j]->getName();
+					std::string name = models[j]->getName() + " #" + std::to_string(j);
 					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << statistics[j].getDeltaCount() << " msgs, total: " << statistics[j].getCount() << " msgs, rate: " << statistics[j].getRate() << " msg/s" << std::endl;
 				}
 			}
@@ -999,7 +999,7 @@ int main(int argc, char* argv[]) {
 		if (verbose) {
 			std::cerr << "----------------------" << std::endl;
 			for (int j = 0; j < models.size(); j++) {
-				std::string name = models[j]->getName();
+				std::string name = models[j]->getName() + " #" + std::to_string(j);
 				statistics[j].Stamp();
 				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << statistics[j].getCount() << " msgs" << std::endl;
 			}
