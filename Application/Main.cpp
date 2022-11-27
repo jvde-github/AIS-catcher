@@ -361,10 +361,8 @@ bool isActiveObject(const JSON::Value& p) {
 	if (!p.isObject())
 		throw std::runtime_error("expected JSON \"object\"");
 
-	const std::vector<JSON::Property>& props = p.getObject()->getProperties();
-
-	for (const auto& p : props) {
-		if (p.getKey() == AIS::KEY_SETTING_ACTIVE) {
+	for (const auto& p : p.getObject().getProperties()) {
+		if (p.Key() == AIS::KEY_SETTING_ACTIVE) {
 			return Util::Parse::Switch(p.Get().to_string());
 		}
 	}
@@ -373,11 +371,9 @@ bool isActiveObject(const JSON::Value& p) {
 
 void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 
-	const std::vector<JSON::Property>& props = pd.getObject()->getProperties();
-
-	for (const auto& p : props)
-		if (p.getKey() != AIS::KEY_SETTING_ACTIVE) {
-			s.Set(AIS::KeyMap[p.getKey()][JSON_DICT_SETTING], p.Get().to_string());
+	for (const auto& p : pd.getObject().getProperties())
+		if (p.Key() != AIS::KEY_SETTING_ACTIVE) {
+			s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], p.Get().to_string());
 		}
 }
 
@@ -386,9 +382,7 @@ void setHTTPfromJSON(const JSON::Property& pd) {
 	if (!pd.Get().isArray())
 		throw std::runtime_error("HTTP settings need to be an \"array\" of \"objects\". in config file");
 
-	const std::vector<JSON::Value>& vals = pd.Get().getArray();
-
-	for (const auto& v : vals) {
+	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 		http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
 		http.back()->setSource(0);
@@ -402,9 +396,7 @@ void setUDPfromJSON(const JSON::Property& pd) {
 	if (!pd.Get().isArray())
 		throw std::runtime_error("UDP settings need to be an \"array\" of \"objects\" in config file.");
 
-	const std::vector<JSON::Value>& vals = pd.Get().getArray();
-
-	for (const auto& v : vals) {
+	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 		UDP.push_back(IO::UDP());
 		UDP.back().setSource(0);
@@ -449,7 +441,7 @@ void parseConfigFile(std::string& file_config) {
 
 			// pass 1
 			for (const auto& p : props) {
-				switch (p.getKey()) {
+				switch (p.Key()) {
 				case AIS::KEY_SETTING_CONFIG:
 					config = p.Get().to_string();
 					break;
@@ -472,7 +464,7 @@ void parseConfigFile(std::string& file_config) {
 
 			// pass 2
 			for (const auto& p : props) {
-				switch (p.getKey()) {
+				switch (p.Key()) {
 				case AIS::KEY_SETTING_MODEL:
 					setModelfromJSON(p);
 					break;
@@ -545,7 +537,7 @@ void parseConfigFile(std::string& file_config) {
 				case AIS::KEY_SETTING_INPUT:
 					break;
 				default:
-					std::cerr << "Config file: field \"" + AIS::KeyMap[p.getKey()][JSON_DICT_SETTING] + "\" in main section is not allowed." << std::endl;
+					std::cerr << "Config file: field \"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed." << std::endl;
 					throw std::runtime_error("Config file: terminating.");
 					break;
 				}
