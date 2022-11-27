@@ -32,7 +32,7 @@ namespace Device {
 
 	void SOAPYSDR::Open(uint64_t h) {
 		Device::Open(h);
-
+		Device::setFormat(Format::CF32);
 		if (h < dev_list.size()) {
 			if (device_args == "") {
 				device_args = dev_list[h].getDeviceString();
@@ -229,8 +229,6 @@ namespace Device {
 			antenna = arg;
 			return;
 		}
-
-		Util::Convert::toUpper(arg);
 
 		if (option == "AGC") {
 			AGC = Util::Parse::Switch(arg);

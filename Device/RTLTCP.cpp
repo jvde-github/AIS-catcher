@@ -26,6 +26,7 @@ namespace Device {
 
 	RTLTCP::RTLTCP() {
 		setSampleRate(288000);
+		setFormat(Format::CF32);
 	}
 
 	RTLTCP::~RTLTCP() {
@@ -90,7 +91,7 @@ namespace Device {
 
 	void RTLTCP::Run() {
 		std::vector<char> output(fifo.BlockSize());
-		RAW r = { format, NULL, fifo.BlockSize() };
+		RAW r = { getFormat(), NULL, fifo.BlockSize() };
 
 		while (isStreaming()) {
 			if (fifo.Wait()) {
@@ -128,7 +129,7 @@ namespace Device {
 			setParameterRTLTCP(2, sample_rate);
 			setParameterRTLTCP(1, frequency);
 
-			format = Format::CU8;
+			setFormat(Format::CU8);
 		}
 	}
 
@@ -138,7 +139,6 @@ namespace Device {
 
 	void RTLTCP::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
 
 		if (option == "TUNER") {
 			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);
@@ -156,6 +156,7 @@ namespace Device {
 			port = arg;
 		}
 		else if (option == "PROTOCOL") {
+			Util::Convert::toUpper(arg);
 			if (arg == "NONE")
 				Protocol = PROTOCOL::NONE;
 			else if (arg == "RTLTCP")

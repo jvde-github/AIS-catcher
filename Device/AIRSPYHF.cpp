@@ -31,6 +31,7 @@ namespace Device {
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot open device");
 
 		setDefaultRate();
+		Device::setFormat(Format::CF32);
 		Device::Open(h);
 		serial = h;
 	}
@@ -135,7 +136,6 @@ namespace Device {
 
 	void AIRSPYHF::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
 
 		if (option == "PREAMP") {
 			preamp = Util::Parse::Switch(arg);

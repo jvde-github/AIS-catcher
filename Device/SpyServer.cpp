@@ -139,17 +139,17 @@ namespace Device {
 			return true;
 
 		case MSG_TYPE_UINT8_IQ:
-			format = Format::CU8;
+			Device::setFormat(Format::CU8);
 			remainingBytes = header.BodySize;
 			return true;
 
 		case MSG_TYPE_INT16_IQ:
-			format = Format::CS16;
+			Device::setFormat(Format::CS16);
 			remainingBytes = header.BodySize;
 			return true;
 
 		case MSG_TYPE_FLOAT_IQ:
-			format = Format::CF32;
+			Device::setFormat(Format::CF32);
 			remainingBytes = header.BodySize;
 			return true;
 
@@ -163,7 +163,7 @@ namespace Device {
 	void SpyServer::applySettings() {
 		sendSetting(SETTING_STREAMING_MODE, { STREAM_MODE_IQ_ONLY });
 		sendSetting(SETTING_IQ_DIGITAL_GAIN, { 0x0 });
-		format = Format::CS16;
+		Device::setFormat(Format::CS16);
 		sendStreamFormat();
 		setFreq(frequency);
 		setRate(sample_rate);
@@ -256,7 +256,7 @@ namespace Device {
 	}
 
 	void SpyServer::sendStreamFormat() {
-		switch (format) {
+		switch (getFormat()) {
 		case Format::CS16:
 			sendSetting(SETTING_IQ_FORMAT, { STREAM_FORMAT_INT16 });
 			break;
@@ -275,7 +275,7 @@ namespace Device {
 	void SpyServer::Run() {
 		while (isStreaming()) {
 			if (fifo.Wait()) {
-				RAW r = { format, fifo.Front(), fifo.BlockSize() };
+				RAW r = { getFormat(), fifo.Front(), fifo.BlockSize() };
 				Send(&r, 1, tag);
 				fifo.Pop();
 			}
@@ -348,7 +348,6 @@ namespace Device {
 
 	void SpyServer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
 
 		if (option == "GAIN") {
 			tuner_gain = Util::Parse::Float(arg, 0, 50);

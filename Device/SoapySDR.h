@@ -95,6 +95,7 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "SOAPYSDR"; }
+		void setFormat(Format f) {}
 #endif
 	};
 }

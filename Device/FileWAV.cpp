@@ -52,6 +52,8 @@ namespace Device {
 		struct WAVHeader header;
 		struct WaveChunk chunk = { 0, 0 };
 
+		Device::setFormat(Format::CF32);
+
 		file.open(filename, std::ios::in | std::ios::binary);
 		file.read((char*)&header, sizeof(struct WAVHeader));
 
@@ -69,11 +71,11 @@ namespace Device {
 		if (!valid) throw std::runtime_error("Eror: Not a supported WAV-file.");
 
 		if (header.wFormatTag == 3 && header.wBitsPerSample == 32)
-			format = Format::CF32;
+			Device::setFormat(Format::CF32);
 		else if (header.wFormatTag == 1 && header.wBitsPerSample == 8)
-			format = Format::CU8;
+			Device::setFormat(Format::CU8);
 		else if (header.wFormatTag == 1 && header.wBitsPerSample == 16)
-			format = Format::CS16;
+			Device::setFormat(Format::CS16);
 		else
 			throw std::runtime_error("format not supported");
 
@@ -110,7 +112,7 @@ namespace Device {
 		buffer.assign(buffer_size, 0);
 		file.read((char*)buffer.data(), buffer_size);
 
-		RAW r = { format, buffer.data(), (int)buffer.size() };
+		RAW r = { getFormat(), buffer.data(), (int)buffer.size() };
 		Send(&r, 1, tag);
 
 		return true;
@@ -122,7 +124,7 @@ namespace Device {
 		if (option == "FILE")
 			filename = arg;
 		else
-			throw std::runtime_error("Invalid setting for FILE WAV.");
+			Device::Set(option, arg);
 	}
 
 	std::string WAVFile::Get() {

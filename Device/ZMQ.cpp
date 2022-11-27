@@ -42,7 +42,7 @@ namespace Device {
 		if (rc != 0) throw std::runtime_error("ZMQ: cannot set socket option ZMQ_RCVTIMEO.");
 
 		setSampleRate(288000);
-
+		if (getFormat() == Format::UNKNOWN) setFormat(Format::CU8);
 		Device::Open(handle);
 	}
 
@@ -92,7 +92,7 @@ namespace Device {
 
 		while (isStreaming()) {
 			if (fifo.Wait()) {
-				RAW r = { format, fifo.Front(), fifo.BlockSize() };
+				RAW r = { getFormat(), fifo.Front(), fifo.BlockSize() };
 				Send(&r, 1, tag);
 				fifo.Pop();
 			}
@@ -114,18 +114,11 @@ namespace Device {
 			return;
 		}
 
-		Util::Convert::toUpper(arg);
-
-		if (option == "FORMAT") {
-			if (!Util::Parse::StreamFormat(arg, format))
-				throw std::runtime_error("ZMQ: Unknown file format specification.");
-		}
-		else
-			throw std::runtime_error("Invalid setting for ZMQ.");
+		Device::Set(option, arg);
 	}
 
 	std::string ZMQ::Get() {
-		return Device::Get() + " endpoint " + endpoint + " format " + Util::Convert::toString(format);
+		return Device::Get() + " endpoint " + endpoint;
 	}
 #endif
 }

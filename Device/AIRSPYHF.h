@@ -69,6 +69,8 @@ namespace Device {
 		std::string getProduct() { return "AIRSPYHF"; }
 		std::string getVendor() { return "AIRSPY"; }
 		std::string getSerial() { return Util::Convert::toHexString(serial); }
+
+		void setFormat(Format f) {}
 #endif
 	};
 }

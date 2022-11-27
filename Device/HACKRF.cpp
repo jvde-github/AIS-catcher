@@ -34,6 +34,7 @@ namespace Device {
 		if (result != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot open device.");
 
 		setSampleRate(6144000);
+		Device::setFormat(Format::CS8);
 		Device::Open(h);
 		serial = list->serial_numbers[h];
 	}
@@ -93,7 +94,6 @@ namespace Device {
 
 	void HACKRF::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
 
 		if (option == "LNA") {
 			LNA_Gain = ((Util::Parse::Integer(arg, 0, 40) + 4) / 8) * 8;
@@ -105,7 +105,7 @@ namespace Device {
 			preamp = Util::Parse::Switch(arg);
 		}
 		else
-			throw std::runtime_error("Invalid setting for HACKRF.");
+			Device::Set(option, arg);
 	}
 
 	std::string HACKRF::Get() {

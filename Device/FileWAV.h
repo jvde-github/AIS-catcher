@@ -28,8 +28,6 @@ namespace Device {
 		std::vector<uint8_t> buffer;
 		const int buffer_size = 16 * 16384;
 
-		Format format = Format::CF32;
-
 	public:
 		// Control
 		void Close();
@@ -42,5 +40,7 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "FILE-WAV"; }
+
+		void setFormat(Format f) {}
 	};
 }

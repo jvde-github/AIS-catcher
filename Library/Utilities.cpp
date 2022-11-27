@@ -133,6 +133,7 @@ namespace Util {
 	}
 
 	bool Parse::AutoInteger(std::string arg, int min, int max, int& val) {
+		Util::Convert::toUpper(arg);
 		if (arg == "AUTO") return true;
 
 		val = Integer(arg, min, max);
@@ -140,6 +141,7 @@ namespace Util {
 	}
 
 	bool Parse::AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32& val) {
+		Util::Convert::toUpper(arg);
 		if (arg == "AUTO") return true;
 
 		val = Float(arg, min, max);
