@@ -52,7 +52,7 @@ namespace JSON {
 			jsonify(v.getString(), json);
 		}
 		else if (v.isObject()) {
-			build(*v.getObject(), json);
+			build(v.getObject(), json);
 		}
 		else if (v.isArrayString()) {
 
@@ -98,7 +98,7 @@ namespace JSON {
 		int idx = 0;
 		for (const Property& p : object.getProperties()) {
 
-			const std::string& key = (*keymap)[p.getKey()][dict];
+			const std::string& key = (*keymap)[p.Key()][dict];
 
 			if (!key.empty()) {
 

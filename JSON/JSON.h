@@ -62,7 +62,7 @@ namespace JSON {
 		const std::vector<std::string>& getStringArray() const { return *data.as; }
 		const std::vector<Value>& getArray() const { return *data.a; }
 		const std::string& getString() const { return *data.s; }
-		const JSON* getObject() const { return data.o; }
+		const JSON& getObject() const { return *data.o; }
 
 		const bool isObject() const { return type == Type::OBJECT; }
 		const bool isArray() const { return type == Type::ARRAY; }
@@ -147,7 +147,7 @@ namespace JSON {
 			value.setNull();
 		}
 
-		int getKey() const { return key; }
+		int Key() const { return key; }
 		const Value& Get() const { return value; }
 	};
 
@@ -183,7 +183,7 @@ namespace JSON {
 
 		const Value* getValue(int p) const {
 			for (auto& o : properties)
-				if (o.getKey() == p) return &o.Get();
+				if (o.Key() == p) return &o.Get();
 
 			return nullptr;
 		}

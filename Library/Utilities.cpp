@@ -257,7 +257,8 @@ namespace Util {
 			break;
 
 		default:
-			throw std::runtime_error("Internal error: unexpected format");
+			std::cerr << "Error: data format not consistent with chosen model.";
+			return;
 		}
 		out.Send(output.data(), size, tag);
 	}
