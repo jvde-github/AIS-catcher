@@ -274,12 +274,12 @@ namespace DSP {
 
 		if (error) {
 			soxr_delete(m_soxr);
-			throw "Model: error opening SOX";
+			throw std::runtime_error("Model: error opening SOX");
 		}
 
 		output.resize(N);
 #else
-		throw "Error: SOXR not included in this distribution. Please recompile with SOXR support.";
+		throw std::runtime_error("SOXR not included in this distribution. Please recompile with SOXR support.");
 #endif
 	}
 
@@ -312,13 +312,13 @@ namespace DSP {
 		state = src_new(SRC_SINC_FASTEST, 2, &src_error);
 
 		if (!state) {
-			throw "Model: error opening libsamplerate";
+			throw std::runtime_error("Model: cannot open libsamplerate");
 		}
 
 		ratio = (double)out_rate / (double)sample_rate;
 		output.resize(N);
 #else
-		throw "Error: libsamplerate support not included in this distribution. Please recompile with libsamplerate support.";
+		throw std::runtime_error("libsamplerate support not included in this distribution. Please recompile with libsamplerate support.");
 #endif
 	}
 

@@ -29,7 +29,7 @@ namespace Device {
 #ifdef HASAIRSPY
 
 	void AIRSPY::Open(uint64_t h) {
-		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device.";
+		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot open device.");
 		setDefaultRate();
 		Device::Open(h);
 		serial = h;
@@ -37,7 +37,7 @@ namespace Device {
 
 #ifdef HASAIRSPY_ANDROID
 	void AIRSPY::OpenWithFileDescriptor(int fd) {
-		if (airspy_open_file_descriptor(&dev, fd) != AIRSPY_SUCCESS) throw "AIRSPY: cannot open device.";
+		if (airspy_open_file_descriptor(&dev, fd) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot open device.");
 		setDefaultRate();
 		Device::Open(0);
 	}
@@ -46,7 +46,7 @@ namespace Device {
 	void AIRSPY::setDefaultRate() {
 		uint32_t nRates;
 		airspy_get_samplerates(dev, &nRates, 0);
-		if (nRates == 0) throw "AIRSPY: cannot get allowed sample rates.";
+		if (nRates == 0) throw std::runtime_error("AIRSPY: cannot get allowed sample rates.");
 
 		rates.resize(nRates);
 		airspy_get_samplerates(dev, rates.data(), nRates);
@@ -71,7 +71,7 @@ namespace Device {
 	void AIRSPY::Play() {
 		applySettings();
 
-		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw "AIRSPY: Cannot open device";
+		if (airspy_start_rx(dev, AIRSPY::callback_static, this) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: Cannot open device");
 		Device::Play();
 
 		SleepSystem(10);
@@ -95,35 +95,35 @@ namespace Device {
 	}
 
 	void AIRSPY::setLNA_AGC(int a) {
-		if (airspy_set_lna_agc(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA AGC.";
+		if (airspy_set_lna_agc(dev, a) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set LNA AGC.");
 	}
 
 	void AIRSPY::setMixer_AGC(int a) {
-		if (airspy_set_mixer_agc(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set MIXER AGC.";
+		if (airspy_set_mixer_agc(dev, a) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set MIXER AGC.");
 	}
 
 	void AIRSPY::setLNA_Gain(int a) {
-		if (airspy_set_lna_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set LNA gain.";
+		if (airspy_set_lna_gain(dev, a) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set LNA gain.");
 	}
 
 	void AIRSPY::setMixer_Gain(int a) {
-		if (airspy_set_mixer_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Mixer gain.";
+		if (airspy_set_mixer_gain(dev, a) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set Mixer gain.");
 	}
 
 	void AIRSPY::setBiasTee(bool b) {
-		if (airspy_set_rf_bias(dev, b) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Bias Tee.";
+		if (airspy_set_rf_bias(dev, b) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set Bias Tee.");
 	}
 
 	void AIRSPY::setVGA_Gain(int a) {
-		if (airspy_set_vga_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set VGA gain.";
+		if (airspy_set_vga_gain(dev, a) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set VGA gain.");
 	}
 
 	void AIRSPY::setSensitivity_Gain(int a) {
-		if (airspy_set_sensitivity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Sensitivity gain.";
+		if (airspy_set_sensitivity_gain(dev, a) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set Sensitivity gain.");
 	}
 
 	void AIRSPY::setLinearity_Gain(int a) {
-		if (airspy_set_linearity_gain(dev, a) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set Linearity gain.";
+		if (airspy_set_linearity_gain(dev, a) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set Linearity gain.");
 	}
 
 	void AIRSPY::getDeviceList(std::vector<Description>& DeviceList) {
@@ -166,8 +166,8 @@ namespace Device {
 		}
 		if (bias_tee) setBiasTee(true);
 
-		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set sample rate.";
-		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw "AIRSPY: cannot set frequency.";
+		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set sample rate.");
+		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set frequency.");
 	}
 
 	void AIRSPY::Set(std::string option, std::string arg) {

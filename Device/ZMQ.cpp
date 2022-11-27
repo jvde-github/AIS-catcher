@@ -34,12 +34,12 @@ namespace Device {
 
 		if (rc != 0) {
 			std::cerr << "ZMQ: subscribing to " << endpoint << std::endl;
-			throw "ZMQ: cannot connect subscriber.";
+			throw std::runtime_error("ZMQ: cannot connect subscriber.");
 		}
 		rc = zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
-		if (rc != 0) throw "ZMQ: cannot set socket option ZMQ_SUBSCRIBE.";
+		if (rc != 0) throw std::runtime_error("ZMQ: cannot set socket option ZMQ_SUBSCRIBE.");
 		rc = zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
-		if (rc != 0) throw "ZMQ: cannot set socket option ZMQ_RCVTIMEO.";
+		if (rc != 0) throw std::runtime_error("ZMQ: cannot set socket option ZMQ_RCVTIMEO.");
 
 		setSampleRate(288000);
 
@@ -118,10 +118,10 @@ namespace Device {
 
 		if (option == "FORMAT") {
 			if (!Util::Parse::StreamFormat(arg, format))
-				throw "ZMQ: Unknown file format specification.";
+				throw std::runtime_error("ZMQ: Unknown file format specification.");
 		}
 		else
-			throw "Invalid setting for ZMQ.";
+			throw std::runtime_error("Invalid setting for ZMQ.");
 	}
 
 	std::string ZMQ::Get() {

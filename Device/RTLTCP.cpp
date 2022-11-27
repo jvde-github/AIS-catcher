@@ -38,7 +38,7 @@ namespace Device {
 
 	void RTLTCP::Play() {
 		if (!client.connect(host, port))
-			throw "RTLTCP: cannot open socket.";
+			throw std::runtime_error("RTLTCP: cannot open socket.");
 
 		if (Protocol == PROTOCOL::RTLTCP) {
 			struct {
@@ -46,7 +46,7 @@ namespace Device {
 			} dongle;
 			// RTLTCP protocol, check for dongle information
 			int len = client.read((char*)&dongle, 12);
-			if (len != 12 || dongle.magic != 0x304C5452) throw "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
+			if (len != 12 || dongle.magic != 0x304C5452) throw std::runtime_error("RTLTCP: no or invalid response, likely not an rtl-tcp server.");
 		}
 
 		Device::Play();
@@ -161,7 +161,7 @@ namespace Device {
 			else if (arg == "RTLTCP")
 				Protocol = PROTOCOL::RTLTCP;
 			else
-				throw "RTLTCP: unknown protocol";
+				throw std::runtime_error("RTLTCP: unknown protocol");
 		}
 		else
 			Device::Set(option, arg);

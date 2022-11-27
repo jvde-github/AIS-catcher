@@ -28,7 +28,7 @@ namespace Device {
 #ifdef HASAIRSPYHF
 
 	void AIRSPYHF::Open(uint64_t h) {
-		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
+		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot open device");
 
 		setDefaultRate();
 		Device::Open(h);
@@ -37,7 +37,7 @@ namespace Device {
 
 #ifdef HASAIRSPYHF_ANDROID
 	void AIRSPYHF::OpenWithFileDescriptor(int fd) {
-		if (airspyhf_open_file_descriptor(&dev, fd) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot open device";
+		if (airspyhf_open_file_descriptor(&dev, fd) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot open device");
 		setDefaultRate();
 		Device::Open(0);
 	}
@@ -46,7 +46,7 @@ namespace Device {
 	void AIRSPYHF::setDefaultRate() {
 		uint32_t nRates;
 		airspyhf_get_samplerates(dev, &nRates, 0);
-		if (nRates == 0) throw "AIRSPY: cannot get allowed sample rates.";
+		if (nRates == 0) throw std::runtime_error("AIRSPY: cannot get allowed sample rates.");
 
 		rates.resize(nRates);
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
@@ -71,7 +71,7 @@ namespace Device {
 	void AIRSPYHF::Play() {
 		applySettings();
 
-		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: Cannot start device";
+		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: Cannot start device");
 		Device::Play();
 
 		SleepSystem(10);
@@ -95,15 +95,15 @@ namespace Device {
 	}
 
 	void AIRSPYHF::setAGC() {
-		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC to auto.";
+		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set AGC to auto.");
 	}
 
 	void AIRSPYHF::setTreshold(int s) {
-		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set AGC treshold";
+		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set AGC treshold");
 	}
 
 	void AIRSPYHF::setLNA(int s) {
-		if (airspyhf_set_hf_lna(dev, s) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set LNA";
+		if (airspyhf_set_hf_lna(dev, s) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set LNA");
 	}
 
 	void AIRSPYHF::getDeviceList(std::vector<Description>& DeviceList) {
@@ -129,8 +129,8 @@ namespace Device {
 		setTreshold(treshold_high ? 1 : 0);
 		if (preamp) setLNA(1);
 
-		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set sample rate.";
-		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw "AIRSPYHF: cannot set frequency.";
+		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set sample rate.");
+		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set frequency.");
 	}
 
 	void AIRSPYHF::Set(std::string option, std::string arg) {

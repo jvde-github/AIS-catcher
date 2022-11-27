@@ -25,7 +25,7 @@ namespace TCP {
 		WSADATA wsaData;
 
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-			throw "TCP: Cannot initialize Winsocket.";
+			throw std::runtime_error("TCP: Cannot initialize Winsocket.");
 			return;
 		}
 #endif
