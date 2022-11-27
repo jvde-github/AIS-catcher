@@ -106,7 +106,7 @@ namespace Util {
 			type = Type::SDRPLAY;
 		else if (str == "WAVFILE")
 			type = Type::WAVFILE;
-		else if (str == "RAWFILE")
+		else if (str == "RAWFILE" || str == "FILE")
 			type = Type::RAWFILE;
 		else if (str == "RTLTCP")
 			type = Type::RTLTCP;
