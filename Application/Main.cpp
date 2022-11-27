@@ -358,7 +358,7 @@ void setScreen(const std::string& str) {
 // Config file processing
 bool isActiveObject(const JSON::Value& p) {
 
-	if (p.getType() != JSON::Value::Type::OBJECT)
+	if (!p.isObject())
 		throw std::runtime_error("expected JSON \"object\"");
 
 	const std::vector<JSON::Property>& props = p.getObject()->getProperties();
@@ -383,7 +383,7 @@ void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 
 void setHTTPfromJSON(const JSON::Property& pd) {
 
-	if (pd.getType() != JSON::Value::Type::ARRAY)
+	if (!pd.Get().isArray())
 		throw std::runtime_error("HTTP settings need to be an \"array\" of \"objects\". in config file");
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
@@ -399,7 +399,7 @@ void setHTTPfromJSON(const JSON::Property& pd) {
 
 void setUDPfromJSON(const JSON::Property& pd) {
 
-	if (pd.getType() != JSON::Value::Type::ARRAY)
+	if (!pd.Get().isArray())
 		throw std::runtime_error("UDP settings need to be an \"array\" of \"objects\" in config file.");
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();

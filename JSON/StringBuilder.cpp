@@ -48,22 +48,16 @@ namespace JSON {
 
 		bool first;
 
-		switch (v.getType()) {
-		case Value::Type::BOOL:
-		case Value::Type::INT:
-		case Value::Type::FLOAT:
-		case Value::Type::EMPTY:
-			v.to_string(json);
-			break;
-		case Value::Type::STRING:
+		if (v.isString()) {
 			jsonify(v.getString(), json);
-			break;
-		case Value::Type::OBJECT:
+		}
+		else if (v.isObject()) {
 			build(*v.getObject(), json);
-			break;
-		case Value::Type::ARRAY_STRING: {
+		}
+		else if (v.isArrayString()) {
 
 			const std::vector<std::string>& as = v.getStringArray();
+
 			json += '[';
 
 			if (as.size()) {
@@ -76,11 +70,11 @@ namespace JSON {
 			}
 
 			json += ']';
-
-		} break;
-		case Value::Type::ARRAY: {
+		}
+		else if (v.isArray()) {
 
 			const std::vector<Value>& a = v.getArray();
+
 			json += '[';
 
 			first = true;
@@ -93,17 +87,16 @@ namespace JSON {
 			}
 
 			json += ']';
-		} break;
-		default:
-			std::cerr << "JSON: not implemented!" << std::endl;
 		}
+		else
+			v.to_string(json);
 	}
 
 	void StringBuilder::build(const JSON& object, std::string& json) {
 		bool first = true;
 		json += '{';
 		int idx = 0;
-		for (const Property& p : object.properties) {
+		for (const Property& p : object.getProperties()) {
 
 			const std::string& key = (*keymap)[p.getKey()][dict];
 
