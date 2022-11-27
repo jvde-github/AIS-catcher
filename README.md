@@ -27,11 +27,11 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 - Addition of a new decoder that allows to use the program as a command line utility to decode NMEA lines. There is also a new data format ``TXT``, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder) which should make it easy to use AIS-catcher to process and forward data from a DaisyHat.
 - My home station feeds data to FleetMon, amongst others, and I noticed that in the FleetMon dashboard a decent portion of my messages were reported as error. My hypothesis is (and I think I am right) that this is just certain message types being classified as such. 
 I created an experimental functionality to filter UDP, HTTP and screen output on message type, e.g. send only messages of type 1, 2, 3, 5, 18, 19, 24 and 27 over UDP:
-```
+```console
 AIS-catcher -u 127.0.0.1 10110 FILTER on ALLOW_TYPE 1,2,3,5,18,19,24,27
 ```
 or remove message type 6 and 8:
-```
+```console
 AIS-catcher -u 127.0.0.1 10110 FILTER on BLOCK_TYPE 6,8
 ```
 Do not use spaces in the comma separated message type list. Filtering will only take effect with the filter switched to ``ON`` (default ``OFF``) and the filter needs to be defined per ``-u`` switch (or ``-H`` and ``-o``).
@@ -236,7 +236,7 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 ### Configuration file
 
 As per version 0.41 AIS-catcher can be partially configured via a configuration file in JSON format:
-```
+```console
 AIS-catcher -C config.json
 ```
 The idea behind this feature is to simplify the set up of feeding multiple online sources. The minimal configuration file should have the following:
@@ -295,11 +295,11 @@ which produces
 {"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
 When piping NMEA text lines into AIS-catcher, use the format ``TXT`` to ensure the program immediately processes the incoming characters and are not buffered. With this function you can use AIS-catcher to forward messages from a DaisyHat (from file ``/cat/serial0``) or Norwegian coastal traffic:  
-```
+```console
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
 ```
 This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only switches are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
-```
+```console
 echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r . -m 5 -n -go nmea_refresh on crc_check off
 ```
 returns a warning on the incorrect CRC and:
