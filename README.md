@@ -282,7 +282,7 @@ To set  some  parameters for a RTL-SDR dongle and setup two UDP and HTTP channel
 	}]
 }
 ```
-The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with one  "object" for each channel. In each object we can include the boolean field ``active`` (see the second UDP definition) which will cause the program to ignore the settings if set to `false`. This option  provides an easy way to switch on and off particular channels or dongle configurations. The active device is select via the ``input`` or ``serial`` field. If both are included the program will check that they are consistent, i.e. the hardware with the specified serial number is of the type included in ``input``. So usually it is sufficient to include one of these fields and not both.
+The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with an  "object" for each seperate channel. In each object we can include the boolean field ``active`` (see the second UDP definition) which will cause the program to ignore the settings if set to `false`. This option  provides an easy way to switch on and off particular channels or dongle configurations. The active device is selected via the ``input`` or ``serial`` field. If both are included the program will check that they are consistent, i.e. the hardware with the specified serial number must be of type ``input``. Normally it is sufficient to include one of these fields and not both. The fields and values in the configuration file are consistent with the command line settings. JSON is however case sensitive so field names shows be entered in lower case.
 
 ### AIS-catcher as a command line NMEA decoder
 
