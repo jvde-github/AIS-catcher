@@ -152,6 +152,8 @@ namespace JSON {
 	};
 
 	class JSON {
+		friend class Parser;
+
 	private:
 		std::vector<Property> properties;
 
@@ -163,8 +165,6 @@ namespace JSON {
 
 		// key map and used dictionary
 		const std::vector<std::vector<std::string>>* keymap = nullptr;
-
-		friend class Parser;
 
 	public:
 		void* binary = NULL;

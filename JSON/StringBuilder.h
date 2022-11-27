@@ -32,7 +32,7 @@ namespace JSON {
 		const std::vector<std::vector<std::string>>* keymap = nullptr;
 		int dict = 0;
 
-		void to_string(std::string& json, const Value& v, int& idx);
+		void to_string(std::string& json, const Value& v);
 
 	public:
 		StringBuilder(const std::vector<std::vector<std::string>>* map, int d) : keymap(map), dict(d) {}
