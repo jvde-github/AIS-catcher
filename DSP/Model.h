@@ -55,7 +55,7 @@ namespace AIS {
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
-		virtual void Set(std::string option, std::string arg) { throw "Model: unknown setting."; }
+		virtual void Set(std::string option, std::string arg) { throw std::runtime_error("Model: unknown setting."); }
 		virtual std::string Get() { return ""; }
 	};
 

@@ -61,7 +61,7 @@ namespace Device {
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
 		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
 
-		if (DeviceCount < h) throw "SDRPLAY: cannot open device, handle not available.";
+		if (DeviceCount < h) throw std::runtime_error("SDRPLAY: cannot open device, handle not available.");
 
 		device = devices[h];
 
@@ -69,17 +69,17 @@ namespace Device {
 		if (err != sdrplay_api_Success) {
 			std::cerr << sdrplay_api_GetErrorString(err) << std::endl;
 			sdrplay_api_UnlockDeviceApi();
-			throw "SDRPLAY: cannot open device";
+			throw std::runtime_error("SDRPLAY: cannot open device");
 		}
 		sdrplay_api_UnlockDeviceApi();
 
 		if (sdrplay_api_GetDeviceParams(device.dev, &deviceParams) != sdrplay_api_Success) {
-			throw "SDRPLAY: cannot get device parameters.";
+			throw std::runtime_error("SDRPLAY: cannot get device parameters.");
 		}
 
 		chParams = deviceParams->rxChannelA;
 
-		if (streaming) throw "SDRPLAY: internal error, settings modified while streaming.";
+		if (streaming) throw std::runtime_error("SDRPLAY: internal error, settings modified while streaming.");
 
 		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_CTRL_EN : sdrplay_api_AGC_DISABLE;
 		chParams->tunerParams.gain.gRdB = gRdB;
@@ -104,7 +104,7 @@ namespace Device {
 		cbFns.StreamACbFn = callback_static;
 		cbFns.EventCbFn = callback_event_static;
 
-		if (sdrplay_api_Init(device.dev, &cbFns, (void*)this) != sdrplay_api_Success) throw "SDRPLAY: cannot start device";
+		if (sdrplay_api_Init(device.dev, &cbFns, (void*)this) != sdrplay_api_Success) throw std::runtime_error("SDRPLAY: cannot start device");
 
 		Device::Play();
 
@@ -172,7 +172,7 @@ namespace Device {
 
 	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList) {
 		unsigned int DeviceCount;
-		if (!running) throw "SDRPLAY: API v3.x not running";
+		if (!running) throw std::runtime_error("SDRPLAY: API v3.x not running");
 
 		sdrplay_api_LockDeviceApi();
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
@@ -213,7 +213,7 @@ namespace Device {
 			gRdB = Util::Parse::Integer(arg, 0, 59);
 		}
 		else
-			throw "Invalid setting for SDRPLAY.";
+			throw std::runtime_error("Invalid setting for SDRPLAY.");
 	}
 
 	std::string SDRPLAY::Get() {

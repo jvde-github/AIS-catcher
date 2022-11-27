@@ -48,13 +48,13 @@ namespace Util {
 			number = std::stoi(str, &sz);
 		}
 		catch (const std::exception&) {
-			throw "Error: expected a number on command line";
+			throw std::runtime_error("expected a number");
 		}
 
 		if (str.length() > sz && (str[sz] == 'K' || str[sz] == 'k'))
 			number *= 1000;
 
-		if (number < min || number > max) throw "Error: input parameter out of range.";
+		if (number < min || number > max) throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "]");
 
 		return number;
 	}
@@ -66,10 +66,10 @@ namespace Util {
 			number = std::stof(str);
 		}
 		catch (const std::exception&) {
-			throw "Error: expected a number as input.";
+			throw std::runtime_error("expected a number as input.");
 		}
 
-		if (number < min || number > max) throw "Error: input parameter out of range.";
+		if (number < min || number > max) throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "]");
 
 		return number;
 	}
@@ -127,7 +127,7 @@ namespace Util {
 	bool Parse::Switch(std::string arg, const std::string& TrueString, const std::string& FalseString) {
 		Util::Convert::toUpper(arg);
 		if (arg == FalseString || arg == "FALSE") return false;
-		if (arg != TrueString && arg != "TRUE") throw "Error on input: unknown switch";
+		if (arg != TrueString && arg != "TRUE") throw std::runtime_error("unknown switch \"" + arg + "\"");
 
 		return true;
 	}
@@ -255,7 +255,7 @@ namespace Util {
 			break;
 
 		default:
-			throw "Internal error: unexpected format";
+			throw std::runtime_error("Internal error: unexpected format");
 		}
 		out.Send(output.data(), size, tag);
 	}

@@ -77,7 +77,7 @@ namespace Device {
 			file = new std::ifstream(filename, std::ios::in | std::ios::binary);
 		}
 
-		if (!file || file->fail()) throw "FILE: Cannot open input.";
+		if (!file || file->fail()) throw std::runtime_error("FILE: Cannot open input.");
 
 		done = false;
 
@@ -116,10 +116,10 @@ namespace Device {
 
 		if (option == "FORMAT") {
 			if (!Util::Parse::StreamFormat(arg, format))
-				throw "RAW: Unknown file format specification.";
+				throw std::runtime_error("RAW: Unknown file format specification.");
 		}
 		else
-			throw "Invalid setting for FILE RAW.";
+			throw std::runtime_error("Invalid setting for FILE RAW.");
 	}
 
 	std::string RAWFile::Get() {

@@ -65,7 +65,7 @@ namespace Device {
 	public:
 		// DeviceBase
 		virtual void Open(uint64_t) {}
-		virtual void OpenWithFileDescriptor(int) { throw "Not supported for this device."; }
+		virtual void OpenWithFileDescriptor(int) { throw std::runtime_error("Not supported for this device."); }
 
 		virtual void Close() {}
 		virtual void Play() { streaming = true; }
@@ -99,7 +99,7 @@ namespace Device {
 				freq_offset = Util::Parse::Integer(arg, -150, 150);
 			}
 			else
-				throw "Invalid Device setting.";
+				throw std::runtime_error("Invalid Device setting.");
 		}
 
 		virtual std::string Get() {

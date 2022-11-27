@@ -26,7 +26,7 @@ namespace AIS {
 		device = dev;
 
 		if (sample_rate < 96000 || sample_rate > 12288000)
-			throw "Model: sample rate must be between 96K and 12288K (inclusive).";
+			throw std::runtime_error("Model: sample rate must be between 96K and 12288K (inclusive).");
 
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
@@ -241,7 +241,7 @@ namespace AIS {
 				break;
 
 			default:
-				throw "Model: internal error. Sample rate should be supported.";
+				throw std::runtime_error("Model: internal error. Sample rate should be supported.");
 			}
 		}
 
@@ -523,7 +523,7 @@ namespace AIS {
 			convert >> IP >> FR_b;
 			break;
 		default:
-			throw "Internal error: sample rate not supported in FM discriminator model.";
+			throw std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
 		}
 
 		FR_a >> S_a;

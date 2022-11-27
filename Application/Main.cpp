@@ -265,7 +265,7 @@ std::unique_ptr<AIS::Model> createModel(int m) {
 		return std::unique_ptr<AIS::Model>(new AIS::ModelNMEA());
 		break;
 	default:
-		throw "Internal error: Model not implemented in this version. Check in later.";
+		throw std::runtime_error("Model not implemented in this version. Check in later.");
 		break;
 	}
 }
@@ -285,7 +285,7 @@ void parseTags(int& mode, const std::string& s) {
 			mode |= 1;
 			break;
 		default:
-			throw "Error: illegal tag defined on command line [D/T]";
+			throw std::runtime_error("illegal tag '" + std::string(1, c) + "' defined on command line [D / T / M]");
 		}
 	}
 }
@@ -307,10 +307,7 @@ bool isOption(std::string s) {
 
 void Assert(bool b, std::string& context, std::string msg = "") {
 	if (!b) {
-		std::cerr << "Error on command line in processing setting \"" << context << "\". ";
-		if (msg != "") std::cerr << msg;
-		std::cerr << std::endl;
-		throw "Terminating.";
+		throw std::runtime_error("syntax error on command line with setting \"" + context + "\". " + msg + "\n");
 	}
 }
 
@@ -318,17 +315,17 @@ void setDevice(const std::string& serial, const std::string& input) {
 
 	if (!input.empty()) {
 		if (!Util::Parse::DeviceType(input, input_type)) {
-			throw "Config file: \"input\" type unknown.";
+			throw std::runtime_error("\""+input+"\" is unknown input type in config file");
 		}
 	}
 
 	if (!serial.empty()) {
 		input_device = getDeviceFromSerial(device_list, serial);
 		if (input_device < 0 || input_device >= device_list.size()) {
-			throw "Config file: cannot find hardware with serial number.";
+			throw std::runtime_error("cannot find hardware with serial number: \"" + serial + "\"");
 		}
 		if (input_type != Type::NONE && device_list[input_device].getType() != input_type) {
-			throw "Config file: inconsistent input type and serial number";
+			throw std::runtime_error("inconsistent input type and serial number in config file");
 		}
 		input_type = Type::NONE;
 	}
@@ -355,14 +352,14 @@ void setScreen(const std::string& str) {
 		NMEA_to_screen = OutputLevel::JSON_FULL;
 		break;
 	default:
-		throw "Error: unknown option for screen output.";
+		throw std::runtime_error("unknown option for screen output: " + str);
 	}
 }
 // Config file processing
 bool isActiveObject(const JSON::Value& p) {
 
 	if (p.getType() != JSON::Value::Type::OBJECT)
-		throw "Config: expected JSON \"object\"";
+		throw std::runtime_error("expected JSON \"object\"");
 
 	const std::vector<JSON::Property>& props = p.getObject()->getProperties();
 
@@ -387,7 +384,7 @@ void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 void setHTTPfromJSON(const JSON::Property& pd) {
 
 	if (pd.getType() != JSON::Value::Type::ARRAY)
-		throw "Config file: HTTP settings need to be an \"array\" of \"objects\".";
+		throw std::runtime_error("HTTP settings need to be an \"array\" of \"objects\". in config file");
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
 
@@ -403,7 +400,7 @@ void setHTTPfromJSON(const JSON::Property& pd) {
 void setUDPfromJSON(const JSON::Property& pd) {
 
 	if (pd.getType() != JSON::Value::Type::ARRAY)
-		throw "Config file: UDP settings need to be an \"array\" of \"objects\".";
+		throw std::runtime_error("UDP settings need to be an \"array\" of \"objects\" in config file.");
 
 	const std::vector<JSON::Value>& vals = pd.Get().getArray();
 
@@ -430,7 +427,7 @@ void parseConfigFile(std::string& file_config) {
 	if (!file_config.empty()) {
 		std::ifstream file(file_config);
 		if (file.fail()) {
-			std::cerr << "Config: cannot open config file: " << file_config << std::endl;
+			std::cerr << "Warning: cannot open config file: " << file_config << std::endl;
 		}
 		else {
 			std::string str, line;
@@ -469,7 +466,7 @@ void parseConfigFile(std::string& file_config) {
 			}
 
 			if (version < 1 || version > 1 || config != "aiscatcher")
-				throw "Config file: version and/or format of config file not supported (required version <=1)";
+				throw std::runtime_error("version and/or format of config file not supported (required version <=1)");
 
 			setDevice(serial, input);
 
@@ -549,7 +546,7 @@ void parseConfigFile(std::string& file_config) {
 					break;
 				default:
 					std::cerr << "Config file: field \"" + AIS::KeyMap[p.getKey()][JSON_DICT_SETTING] + "\" in main section is not allowed." << std::endl;
-					throw "Config file: terminating.";
+					throw std::runtime_error("Config file: terminating.");
 					break;
 				}
 			}
@@ -562,7 +559,7 @@ int main(int argc, char* argv[]) {
 	try {
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
-			throw "ERROR: Could not set control handler";
+			throw std::runtime_error("could not set control handler");
 #else
 		signal(SIGINT, consoleHandler);
 #endif
@@ -608,7 +605,7 @@ int main(int argc, char* argv[]) {
 					NMEAchannels = "CD";
 				}
 				else
-					throw "Error: parameter needs to be AB or CD (-c)";
+					throw std::runtime_error("syntax error on command line, -c parameter needs to be AB or CD");
 				if (count == 2) {
 					Assert(arg2.length() == 2, param, "NMEA channel designation needs to be: XX.");
 					Assert(std::isupper(arg2[0]) || std::isdigit(arg2[0]) || arg2[0] == '?', param, "NMEA channel designation invalid.");
@@ -714,8 +711,7 @@ int main(int argc, char* argv[]) {
 					input_device = getDeviceFromSerial(device_list, arg1);
 				}
 				if (input_device < 0 || input_device >= device_list.size()) {
-					std::cerr << "Device does not exist." << std::endl;
-					return 0;
+					throw std::runtime_error("Device does not exist.");
 				}
 				break;
 			case 'u':
@@ -788,12 +784,11 @@ int main(int argc, char* argv[]) {
 					break;
 					break;
 				default:
-					throw "Error on command line: invalid -g switch on command line";
+					throw std::runtime_error(" invalid -g switch on command line");
 				}
 				break;
 			default:
-				std::cerr << "Unknown option on command line (" << param[1] << ")." << std::endl;
-				return 0;
+				throw std::runtime_error("unknown option on command line (" + std::string(1, param[1]) + ").");
 			}
 
 			ptr += count + 1;
@@ -812,7 +807,7 @@ int main(int argc, char* argv[]) {
 		// Select device
 
 		if (input_type == Type::NONE) {
-			if (device_list.size() == 0) throw "No input device available.";
+			if (device_list.size() == 0) throw std::runtime_error("No input device available.");
 
 			Device::Description d = device_list[input_device];
 			input_type = d.getType();
@@ -870,9 +865,9 @@ int main(int argc, char* argv[]) {
 			break;
 #endif
 		default:
-			throw "Error: invalid device selection";
+			throw std::runtime_error("invalid device selection");
 		}
-		if (device == 0) throw "Error: cannot set up device";
+		if (device == 0) throw std::runtime_error("cannot set up device");
 
 		// Derive TAG_mode which is a summary of the additional parameters
 		// that will be calculated through the chain.
@@ -1022,6 +1017,8 @@ int main(int argc, char* argv[]) {
 		std::cerr << msg << std::endl;
 		return -1;
 	}
-
+	catch (std::exception const& e) {
+		std::cout << "Error: " << e.what() << std::endl;
+	}
 	return 0;
 }

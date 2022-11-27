@@ -27,11 +27,11 @@ namespace Device {
 #ifdef HASHACKRF
 
 	void HACKRF::Open(uint64_t h) {
-		if (!list) throw "HACKRF: cannot open device, internal error.";
-		if (h > list->devicecount) throw "HACKRF: cannot open device.";
+		if (!list) throw std::runtime_error("HACKRF: cannot open device, internal error.");
+		if (h > list->devicecount) throw std::runtime_error("HACKRF: cannot open device.");
 
 		int result = hackrf_open_by_serial(list->serial_numbers[h], &device);
-		if (result != HACKRF_SUCCESS) throw "HACKRF: cannot open device.";
+		if (result != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot open device.");
 
 		setSampleRate(6144000);
 		Device::Open(h);
@@ -46,7 +46,7 @@ namespace Device {
 	void HACKRF::Play() {
 		applySettings();
 
-		if (hackrf_start_rx(device, HACKRF::callback_static, this) != HACKRF_SUCCESS) throw "HACKRF: Cannot open device";
+		if (hackrf_start_rx(device, HACKRF::callback_static, this) != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: Cannot open device");
 		Device::Play();
 
 		SleepSystem(10);
@@ -70,13 +70,13 @@ namespace Device {
 	}
 
 	void HACKRF::applySettings() {
-		if (hackrf_set_amp_enable(device, preamp ? 1 : 0) != HACKRF_SUCCESS) throw "HACKRF: cannot set amp.";
-		if (hackrf_set_lna_gain(device, LNA_Gain) != HACKRF_SUCCESS) throw "HACKRF: cannot set LNA gain.";
-		if (hackrf_set_vga_gain(device, VGA_Gain) != HACKRF_SUCCESS) throw "HACKRF: cannot set VGA gain.";
+		if (hackrf_set_amp_enable(device, preamp ? 1 : 0) != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot set amp.");
+		if (hackrf_set_lna_gain(device, LNA_Gain) != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot set LNA gain.");
+		if (hackrf_set_vga_gain(device, VGA_Gain) != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot set VGA gain.");
 
-		if (hackrf_set_sample_rate(device, sample_rate) != HACKRF_SUCCESS) throw "HACKRF: cannot set sample rate.";
-		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(sample_rate)) != HACKRF_SUCCESS) throw "HACKRF: cannot set bandwidth filter to auto.";
-		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw "HACKRF: cannot set frequency.";
+		if (hackrf_set_sample_rate(device, sample_rate) != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot set sample rate.");
+		if (hackrf_set_baseband_filter_bandwidth(device, hackrf_compute_baseband_filter_bw(sample_rate)) != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot set bandwidth filter to auto.");
+		if (hackrf_set_freq(device, frequency) != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot set frequency.");
 	}
 
 	void HACKRF::getDeviceList(std::vector<Description>& DeviceList) {
@@ -105,7 +105,7 @@ namespace Device {
 			preamp = Util::Parse::Switch(arg);
 		}
 		else
-			throw "Invalid setting for HACKRF.";
+			throw std::runtime_error("Invalid setting for HACKRF.");
 	}
 
 	std::string HACKRF::Get() {

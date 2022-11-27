@@ -42,7 +42,7 @@ namespace Device {
 			if (sample_rate == 0) setSampleRate(dev_list[h].getDefaultSampleRate());
 		}
 		else
-			throw "SOAPYSDR: invalid handle to open device.";
+			throw std::runtime_error("SOAPYSDR: invalid handle to open device.");
 	}
 
 	void SOAPYSDR::Close() {
@@ -56,7 +56,7 @@ namespace Device {
 			dev = SoapySDR::Device::make(device_args);
 		}
 		catch (std::exception& e) {
-			throw "SOAPYSDR: cannot open device.";
+			throw std::runtime_error("SOAPYSDR: cannot open device.");
 		}
 
 		applySettings();
@@ -171,7 +171,7 @@ namespace Device {
 				dev->setBandwidth(SOAPY_SDR_RX, channel, tuner_bandwidth);
 		}
 		catch (std::exception& e) {
-			throw "SOAPYSDR: cannot set SoapySDR parameters.";
+			throw std::runtime_error("SOAPYSDR: cannot set SoapySDR parameters.");
 		}
 	}
 

@@ -36,7 +36,7 @@ namespace IO {
 			std::cerr << std::endl;
 		}
 #else
-		throw "HTTP: not implemented, please recompile with libcurl support.";
+		throw std::runtime_error("HTTP: not implemented, please recompile with libcurl support.");
 #endif
 	}
 
@@ -265,7 +265,7 @@ namespace IO {
 			if (option == "GZIP") {
 				gzip = Util::Parse::Switch(arg);
 				if (gzip && !zip.installed())
-					throw "HTTP: ZLIB not installed";
+					throw std::runtime_error("HTTP: ZLIB not installed");
 			}
 			else if (option == "RESPONSE") {
 				show_response = Util::Parse::Switch(arg);
@@ -290,13 +290,13 @@ namespace IO {
 				}
 
 				else
-					throw "HTTP: error - unknown protocol";
+					throw std::runtime_error("HTTP: error - unknown protocol");
 			}
 			else
 				filter.Set(option, arg);
 		}
 #else
-		throw "HTTP: not implemented, please recompile with libcurl support.";
+		throw std::runtime_error("HTTP: not implemented, please recompile with libcurl support.");
 #endif
 	}
 	UDP::UDP() {
@@ -304,7 +304,7 @@ namespace IO {
 		WSADATA wsaData;
 
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-			throw "Cannot initialize Winsocket.";
+			throw std::runtime_error("Cannot initialize Winsocket.");
 			return;
 		}
 #endif
@@ -333,7 +333,7 @@ namespace IO {
 		std::cerr << std::endl;
 
 		if (sock != -1) {
-			throw "UDP: internal error, socket already defined.";
+			throw std::runtime_error("UDP: internal error, socket already defined.");
 			return;
 		}
 
@@ -349,14 +349,14 @@ namespace IO {
 		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
 
 		if (code != 0 || address == NULL) {
-			throw "UDP network address and/or port not valid.";
+			throw std::runtime_error("UDP network address and/or port not valid.");
 			return;
 		}
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 		if (sock == -1) {
-			throw "Error creating socket for UDP.";
+			throw std::runtime_error("cannot create socket for UDP " + host + " port " + port);
 		}
 	}
 

@@ -37,8 +37,7 @@ namespace JSON {
 		std::cerr << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "|" << std::endl;
-		std::cerr << "JSON parser: " << err << std::endl;
-		throw "JSON parser: terminating";
+		throw std::runtime_error("syntax error in config file: " + err);
 	}
 
 	// Lex analysis

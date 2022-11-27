@@ -42,17 +42,17 @@ namespace Device {
 	void SpyServer::Open(uint64_t h) {
 		std::cerr << "Connecting to SpyServer..." << std::endl;
 		if (!client.connect(host, port))
-			throw "SPYSERVER: cannot open connection.";
+			throw std::runtime_error("SPYSERVER: cannot open connection.");
 
 		if (!sendHandshake()) {
 			client.disconnect();
-			throw "SPYSERVER: cannot send handshake";
+			throw std::runtime_error("SPYSERVER: cannot send handshake");
 		}
 
 		// read two messages and check if device and sync info
 		if (!(processHeader() && processHeader() && ((status & 3) == 3))) {
 			client.disconnect();
-			throw "SPYSERVER: error receiving messages from server to start stream.";
+			throw std::runtime_error("SPYSERVER: error receiving messages from server to start stream.");
 		}
 
 		uint32_t distance = device_info.MaximumSampleRate;
@@ -267,7 +267,7 @@ namespace Device {
 			sendSetting(SETTING_IQ_FORMAT, { STREAM_FORMAT_FLOAT });
 			break;
 		default:
-			throw "SPYSERVER: format not supported.";
+			throw std::runtime_error("SPYSERVER: format not supported.");
 		}
 	}
 
@@ -315,7 +315,7 @@ namespace Device {
 				std::cerr << " " << r.first;
 			}
 			std::cerr << std::endl;
-			throw "SPYSERVER: rate not supported.";
+			throw std::runtime_error("SPYSERVER: rate not supported.");
 		}
 
 		sendSetting(SETTING_IQ_DECIMATION, { _sample_rates[idx].second });
@@ -327,12 +327,12 @@ namespace Device {
 
 	bool SpyServer::setFreq(uint32_t f) {
 		if (f < device_info.MinimumFrequency || f > device_info.MaximumFrequency) {
-			throw "SPYSERVER: server does not support required frequency.";
+			throw std::runtime_error("SPYSERVER: server does not support required frequency.");
 		}
 
 		if (client_sync.CanControl == 0) {
 			if ((f < client_sync.MinimumIQCenterFrequency || f > client_sync.MaximumIQCenterFrequency)) {
-				throw "SPYSERVER: cannot set frequency (outside of band).";
+				throw std::runtime_error("SPYSERVER: cannot set frequency (outside of band).");
 			}
 		}
 

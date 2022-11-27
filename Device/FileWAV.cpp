@@ -55,7 +55,7 @@ namespace Device {
 		file.open(filename, std::ios::in | std::ios::binary);
 		file.read((char*)&header, sizeof(struct WAVHeader));
 
-		if (!file) throw "Error: Cannot read from WAV file.";
+		if (!file) throw std::runtime_error("cannot read from WAV file.");
 
 		// process header and format chunk
 		bool valid = true;
@@ -66,7 +66,7 @@ namespace Device {
 		valid &= header.groupID == 0x46464952;
 		valid &= header.RIFFtype == 0x45564157;
 
-		if (!valid) throw "Eror: Not a supported WAV-file.";
+		if (!valid) throw std::runtime_error("Eror: Not a supported WAV-file.");
 
 		if (header.wFormatTag == 3 && header.wBitsPerSample == 32)
 			format = Format::CF32;
@@ -75,7 +75,7 @@ namespace Device {
 		else if (header.wFormatTag == 1 && header.wBitsPerSample == 16)
 			format = Format::CS16;
 		else
-			throw "Error: not supported format.";
+			throw std::runtime_error("format not supported");
 
 
 		file.ignore(header.chunkSize - 16);
@@ -88,10 +88,10 @@ namespace Device {
 			else if (chunk.ID == 0x61746164)
 				break;
 			else
-				throw "Error: unrecognized chunk in WAV-file.";
+				throw std::runtime_error("unrecognized chunk in WAV-file.");
 		};
 
-		if (chunk.ID != 0x61746164) throw "Error: no Data in WAV-file.";
+		if (chunk.ID != 0x61746164) throw std::runtime_error("no Data in WAV-file.");
 
 		Device::setSampleRate(header.dwSamplesPerSec);
 	}
@@ -122,7 +122,7 @@ namespace Device {
 		if (option == "FILE")
 			filename = arg;
 		else
-			throw "Invalid setting for FILE WAV.";
+			throw std::runtime_error("Invalid setting for FILE WAV.");
 	}
 
 	std::string WAVFile::Get() {
