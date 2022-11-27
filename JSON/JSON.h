@@ -31,7 +31,7 @@ namespace JSON {
 
 	// JSON value item, 8 bytes (32 bits), 16 bytes (64 bits)
 	class Value {
-	public:
+
 		enum class Type {
 			BOOL,
 			INT,
@@ -41,10 +41,8 @@ namespace JSON {
 			ARRAY_STRING,
 			ARRAY,
 			EMPTY
-		};
+		} type;
 
-	protected:
-		Type type;
 		union Data {
 			bool b;
 			int i;
@@ -57,8 +55,6 @@ namespace JSON {
 		} data;
 
 	public:
-		Type getType() const { return type; }
-
 		float getFloat() const { return data.f; }
 		int getInt() const { return data.i; }
 		bool getBool() const { return data.b; }
@@ -67,6 +63,11 @@ namespace JSON {
 		const std::vector<Value>& getArray() const { return *data.a; }
 		const std::string& getString() const { return *data.s; }
 		const JSON* getObject() const { return data.o; }
+
+		const bool isObject() const { return type == Type::OBJECT; }
+		const bool isArray() const { return type == Type::ARRAY; }
+		const bool isArrayString() const { return type == Type::ARRAY_STRING; }
+		const bool isString() const { return type == Type::STRING; }
 
 		void setFloat(float v) {
 			data.f = v;
@@ -108,8 +109,7 @@ namespace JSON {
 	};
 
 	class Property {
-	public:
-	protected:
+
 		int key;
 		Value value;
 
@@ -147,8 +147,6 @@ namespace JSON {
 			value.setNull();
 		}
 
-
-		Value::Type getType() const { return value.getType(); }
 		int getKey() const { return key; }
 		const Value& Get() const { return value; }
 	};
@@ -165,9 +163,7 @@ namespace JSON {
 
 		// key map and used dictionary
 		const std::vector<std::vector<std::string>>* keymap = nullptr;
-		// int dict = 0;
 
-		friend class StringBuilder;
 		friend class Parser;
 
 	public:
