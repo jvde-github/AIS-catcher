@@ -44,9 +44,7 @@ namespace JSON {
 		json += '\"';
 	}
 
-	void StringBuilder::to_string(std::string& json, const Value& v, int& idx) {
-
-		bool first;
+	void StringBuilder::to_string(std::string& json, const Value& v) {
 
 		if (v.isString()) {
 			jsonify(v.getString(), json);
@@ -77,13 +75,13 @@ namespace JSON {
 
 			json += '[';
 
-			first = true;
+			bool first = true;
 			for (const auto val : a) {
 
 				if (!first) json += ',';
 				first = false;
 
-				to_string(json, val, idx);
+				to_string(json, val);
 			}
 
 			json += ']';
@@ -95,7 +93,6 @@ namespace JSON {
 	void StringBuilder::build(const JSON& object, std::string& json) {
 		bool first = true;
 		json += '{';
-		int idx = 0;
 		for (const Property& p : object.getProperties()) {
 
 			const std::string& key = (*keymap)[p.Key()][dict];
@@ -106,7 +103,7 @@ namespace JSON {
 				first = false;
 
 				json += "\"" + key + "\":";
-				to_string(json, p.Get(), idx);
+				to_string(json, p.Get());
 			}
 		}
 		json += '}';
