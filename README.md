@@ -291,21 +291,21 @@ in this document. JSON is however case sensitive so field names must be entered 
 
 ### AIS-catcher as a command line NMEA decoder
 
-AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5``, e.g.:
+AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5`` which will automatically selected if the input format is set to `TXT`, e.g.:
 ```console
-echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -m 5 -r . -o 5
+echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher-r txt . -o 5
 ```
 which produces
 ```json
 {"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-When piping NMEA text lines into AIS-catcher, use the format ``TXT`` to ensure the program immediately processes the incoming characters and are not buffered. With this function you can use AIS-catcher to forward messages from a DaisyHat (from file ``/cat/serial0``) or Norwegian coastal traffic:  
+When piping NMEA text lines into AIS-catcher, use the format ``TXT`` this will also ensure that the program immediately processes the incoming characters and will not buffer them first. With this function you can use AIS-catcher to forward messages from a DaisyHat (from file ``/cat/serial0``) or Norwegian coastal traffic, like this:  
 ```console
-netcat  153.44.253.27  5631 | AIS-catcher -r txt . -m 5 -o 5
+netcat  153.44.253.27  5631 | AIS-catcher -r txt . -o 5
 ```
-This new function has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only switches are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
+This new function json decoding functionality from text files has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only available switches for this decoder are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to, respectively, recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
 ```console
-echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r . -m 5 -n -go nmea_refresh on crc_check off
+echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r txt . -n -go nmea_refresh on crc_check off
 ```
 returns a warning on the incorrect CRC and:
 ```
@@ -526,18 +526,19 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 ### Some stations mentioning the use of AIS-catcher
 
 A list of some stations mentioning using AIS-catcher:
-- [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
-- [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
-- [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
 - [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
-- [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
-- [Wren Road Rab 2](https://www.marinetraffic.com/cs/ais/details/stations/9615)
-- [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
-- [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
-- [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 - [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
+- [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
+- [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
+- [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
+- [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
+- [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
+- [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
 - [Troguarat, France](https://www.marinetraffic.com/cs/ais/details/stations/21360)
 - [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
+- [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
+- [Vasa, Finland](https://www.marinetraffic.com/en/ais/details/stations/14994)
+- [Wren Road Rab 2](https://www.marinetraffic.com/cs/ais/details/stations/9615)
 
 ## Build process
 
