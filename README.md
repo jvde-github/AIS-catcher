@@ -533,7 +533,7 @@ A list of some stations mentioning using AIS-catcher:
 - [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
 - [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
-- [SeaRange AIS receiver] (https://www.shipxplorer.com/searange-ais-receiver)
+- [SeaRange AIS receiver](https://www.shipxplorer.com/searange-ais-receiver)
 - [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
 - [Troguarat, France](https://www.marinetraffic.com/cs/ais/details/stations/21360)
 - [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
