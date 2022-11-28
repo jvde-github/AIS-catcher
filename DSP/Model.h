@@ -32,13 +32,19 @@
 #include "IO.h"
 
 namespace AIS {
-	enum class Mode { AB,
-					  CD,
-					  ABCD };
+	enum class Mode
+	{
+		AB,
+		CD,
+		ABCD
+	};
 
-	enum class ModelClass { IQ,
-							FM,
-							TXT };
+	enum class ModelClass
+	{
+		IQ,
+		FM,
+		TXT
+	};
 
 
 	// Abstract demodulation model

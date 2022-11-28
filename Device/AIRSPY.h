@@ -36,9 +36,12 @@ namespace Device {
 		std::vector<uint32_t> rates;
 		uint64_t serial;
 
-		enum class AIRSPYGainMode { Free,
-									Sensitivity,
-									Linearity } mode = AIRSPYGainMode::Linearity;
+		enum class AIRSPYGainMode
+		{
+			Free,
+			Sensitivity,
+			Linearity
+		} mode = AIRSPYGainMode::Linearity;
 		int gain = 17;
 
 		bool mixer_AGC = true;

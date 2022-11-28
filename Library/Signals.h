@@ -20,10 +20,16 @@
 #include <iostream>
 #include <vector>
 
-enum class DecoderSignals { StopTraining,
-							StartTraining,
-							Reset };
-enum class SystemSignal { Stop };
+enum class DecoderSignals
+{
+	StopTraining,
+	StartTraining,
+	Reset
+};
+enum class SystemSignal
+{
+	Stop
+};
 
 template <typename T>
 class SignalIn {
