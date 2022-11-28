@@ -356,12 +356,12 @@ void setScreen(const std::string& str) {
 	}
 }
 // Config file processing
-bool isActiveObject(const JSON::Value& p) {
+bool isActiveObject(const JSON::Value& pd) {
 
-	if (!p.isObject())
+	if (!pd.isObject())
 		throw std::runtime_error("expected JSON \"object\"");
 
-	for (const JSON::Property& p : p.getObject().getProperties()) {
+	for (const JSON::Property& p : pd.getObject().getProperties()) {
 		if (p.Key() == AIS::KEY_SETTING_ACTIVE) {
 			return Util::Parse::Switch(p.Get().to_string());
 		}
