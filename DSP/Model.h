@@ -36,6 +36,11 @@ namespace AIS {
 					  CD,
 					  ABCD };
 
+	enum class ModelClass { IQ,
+							FM,
+							TXT };
+
+
 	// Abstract demodulation model
 	class Model : public Setting {
 	protected:
@@ -57,6 +62,7 @@ namespace AIS {
 
 		virtual void Set(std::string option, std::string arg) { throw std::runtime_error("Model: unknown setting."); }
 		virtual std::string Get() { return ""; }
+		virtual ModelClass getClass() { return ModelClass::IQ; }
 	};
 
 
@@ -178,6 +184,7 @@ namespace AIS {
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
+		ModelClass getClass() { return ModelClass::FM; }
 	};
 
 	// Standard demodulation model for FM discriminator input
@@ -188,5 +195,6 @@ namespace AIS {
 		void buildModel(char, char, int, bool, Device::Device*);
 		void Set(std::string option, std::string arg);
 		std::string Get();
+		ModelClass getClass() { return ModelClass::TXT; }
 	};
 }

@@ -17,6 +17,6 @@
 
 #pragma once
 
-#define VERSION_NUMBER 40
-#define VERSION		   "v0.40"
+#define VERSION_NUMBER 41
+#define VERSION		   "v0.41"
 #define COPYRIGHT	   "jvde-github and other contributors"
