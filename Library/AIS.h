@@ -25,11 +25,14 @@
 
 namespace AIS {
 
-	enum class State { TRAINING,
-					   STARTFLAG,
-					   STOPFLAG,
-					   DATAFCS,
-					   FOUNDMESSAGE };
+	enum class State
+	{
+		TRAINING,
+		STARTFLAG,
+		STOPFLAG,
+		DATAFCS,
+		FOUNDMESSAGE
+	};
 
 	class Decoder : public SimpleStreamInOut<FLOAT32, Message>, public SignalIn<DecoderSignals> {
 		char channel = '?';

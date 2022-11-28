@@ -35,7 +35,8 @@ namespace JSON {
 		std::string json;
 		std::vector<Token> tokens;
 
-		enum class TokenType {
+		enum class TokenType
+		{
 			LeftBrace,
 			RightBrace,
 			LeftBracket,

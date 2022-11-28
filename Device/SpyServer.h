@@ -43,21 +43,24 @@ namespace Device {
 #define SPYSERVER_MIN_FFT_DB_RANGE		(10)
 #define SPYSERVER_MAX_FFT_DB_OFFSET		(100)
 
-	enum DeviceType {
+	enum DeviceType
+	{
 		DEVICE_INVALID = 0,
 		DEVICE_AIRSPY_ONE = 1,
 		DEVICE_AIRSPY_HF = 2,
 		DEVICE_RTLSDR = 3,
 	};
 
-	enum CommandType {
+	enum CommandType
+	{
 		CMD_HELLO = 0,
 		CMD_GET_SETTING = 1,
 		CMD_SET_SETTING = 2,
 		CMD_PING = 3,
 	};
 
-	enum SettingType {
+	enum SettingType
+	{
 		SETTING_STREAMING_MODE = 0,
 		SETTING_STREAMING_ENABLED = 1,
 		SETTING_GAIN = 2,
@@ -75,7 +78,8 @@ namespace Device {
 		SETTING_FFT_DISPLAY_PIXELS = 205, // 0xcd
 	};
 
-	enum StreamType {
+	enum StreamType
+	{
 		STREAM_TYPE_STATUS = 0,
 		STREAM_TYPE_IQ = 1,
 		STREAM_TYPE_AF = 2,
@@ -83,7 +87,8 @@ namespace Device {
 	};
 
 
-	enum StreamingMode {
+	enum StreamingMode
+	{
 		STREAM_MODE_IQ_ONLY = STREAM_TYPE_IQ,				   // 0x01
 		STREAM_MODE_AF_ONLY = STREAM_TYPE_AF,				   // 0x02
 		STREAM_MODE_FFT_ONLY = STREAM_TYPE_FFT,				   // 0x04
@@ -91,7 +96,8 @@ namespace Device {
 		STREAM_MODE_FFT_AF = STREAM_TYPE_FFT | STREAM_TYPE_AF, // 0x06
 	};
 
-	enum StreamFormat {
+	enum StreamFormat
+	{
 		STREAM_FORMAT_INVALID = 0,
 		STREAM_FORMAT_UINT8 = 1,
 		STREAM_FORMAT_INT16 = 2,
@@ -100,7 +106,8 @@ namespace Device {
 		STREAM_FORMAT_DINT4 = 5,
 	};
 
-	enum MessageType {
+	enum MessageType
+	{
 		MSG_TYPE_DEVICE_INFO = 0,
 		MSG_TYPE_CLIENT_SYNC = 1,
 		MSG_TYPE_PONG = 2,

@@ -28,8 +28,11 @@ namespace Device {
 
 	class RTLTCP : public Device {
 
-		enum class PROTOCOL { NONE,
-							  RTLTCP } Protocol = PROTOCOL::RTLTCP;
+		enum class PROTOCOL
+		{
+			NONE,
+			RTLTCP
+		} Protocol = PROTOCOL::RTLTCP;
 
 		// Protocol: RTL_TCP
 		int freq_offset = 0;

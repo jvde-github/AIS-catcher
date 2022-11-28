@@ -40,33 +40,42 @@ typedef std::complex<uint8_t> CU8;
 typedef std::complex<int8_t> CS8;
 typedef char BIT;
 
-enum class Format { CU8,
-					CF32,
-					CS16,
-					CS8,
-					TXT,
-					UNKNOWN };
+enum class Format
+{
+	CU8,
+	CF32,
+	CS16,
+	CS8,
+	TXT,
+	UNKNOWN
+};
 
-enum class Type { NONE,
-				  RTLSDR,
-				  AIRSPYHF,
-				  AIRSPY,
-				  SDRPLAY,
-				  WAVFILE,
-				  RAWFILE,
-				  RTLTCP,
-				  HACKRF,
-				  SOAPYSDR,
-				  ZMQ,
-				  SPYSERVER };
+enum class Type
+{
+	NONE,
+	RTLSDR,
+	AIRSPYHF,
+	AIRSPY,
+	SDRPLAY,
+	WAVFILE,
+	RAWFILE,
+	RTLTCP,
+	HACKRF,
+	SOAPYSDR,
+	ZMQ,
+	SPYSERVER
+};
 
-enum class OutputLevel { NONE,
-						 NMEA,
-						 NMEA_TAG,
-						 FULL,
-						 JSON_NMEA,
-						 JSON_SPARSE,
-						 JSON_FULL };
+enum class OutputLevel
+{
+	NONE,
+	NMEA,
+	NMEA_TAG,
+	FULL,
+	JSON_NMEA,
+	JSON_SPARSE,
+	JSON_FULL
+};
 
 struct TAG {
 	unsigned mode = 0;
