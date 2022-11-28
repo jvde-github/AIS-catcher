@@ -64,6 +64,9 @@ namespace Device {
 
 	public:
 		// DeviceBase
+		Device() {}
+		Device(Format f, uint32_t s) : format(f), sample_rate(s) {}
+
 		virtual void Open(uint64_t) {}
 		virtual void OpenWithFileDescriptor(int) { throw std::runtime_error("Not supported for this device."); }
 
@@ -81,9 +84,7 @@ namespace Device {
 		virtual bool isStreaming() { return streaming; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
-
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
-
 
 		virtual void Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);

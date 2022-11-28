@@ -53,12 +53,6 @@ namespace Device {
 		}
 	}
 
-	void RAWFile::Open(uint64_t h) {
-		Device::Open(h);
-		if (getFormat() == Format::UNKNOWN) setFormat(Format::CU8);
-		setSampleRate(1536000);
-	}
-
 	void RAWFile::Play() {
 		Device::Play();
 
@@ -84,8 +78,6 @@ namespace Device {
 
 		read_thread = std::thread(&RAWFile::ReadAsync, this);
 		run_thread = std::thread(&RAWFile::Run, this);
-
-		setSampleRate(1536000);
 	}
 
 	void RAWFile::Stop() {

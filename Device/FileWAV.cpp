@@ -52,8 +52,6 @@ namespace Device {
 		struct WAVHeader header;
 		struct WaveChunk chunk = { 0, 0 };
 
-		Device::setFormat(Format::CF32);
-
 		file.open(filename, std::ios::in | std::ios::binary);
 		file.read((char*)&header, sizeof(struct WAVHeader));
 

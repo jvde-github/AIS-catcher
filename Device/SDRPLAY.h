@@ -25,8 +25,7 @@
 
 namespace Device {
 
-	class SDRPLAY : public Device //, public StreamOut<RAW>
-	{
+	class SDRPLAY : public Device {
 #ifdef HASSDRPLAY
 
 		// Data is processed in seperate thread

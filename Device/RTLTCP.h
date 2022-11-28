@@ -65,8 +65,7 @@ namespace Device {
 		void applySettings();
 
 	public:
-		RTLTCP();
-		~RTLTCP();
+		RTLTCP() : Device(Format::CF32, 288000) {}
 
 		void OpenWithFileDescriptor(int) { Open(0); }
 		// Control

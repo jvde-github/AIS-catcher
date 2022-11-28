@@ -24,14 +24,6 @@ namespace Device {
 	//---------------------------------------
 	// Device RTLTCP
 
-	RTLTCP::RTLTCP() {
-		setSampleRate(288000);
-		setFormat(Format::CF32);
-	}
-
-	RTLTCP::~RTLTCP() {
-	}
-
 	void RTLTCP::Close() {
 		client.disconnect();
 		Device::Close();

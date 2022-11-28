@@ -33,8 +33,6 @@ namespace Device {
 		int result = hackrf_open_by_serial(list->serial_numbers[h], &device);
 		if (result != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: cannot open device.");
 
-		setSampleRate(6144000);
-		Device::setFormat(Format::CS8);
 		Device::Open(h);
 		serial = list->serial_numbers[h];
 	}

@@ -30,7 +30,7 @@ namespace Device {
 
 	int SDRPLAY::API_count = 0;
 
-	SDRPLAY::SDRPLAY() {
+	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000) {
 		float version = 0.0;
 
 		if (API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success) {
@@ -85,8 +85,6 @@ namespace Device {
 		chParams->tunerParams.gain.gRdB = gRdB;
 		chParams->tunerParams.gain.LNAstate = LNAstate;
 
-		setSampleRate(2304000);
-		Device::setFormat(Format::CF32);
 		Device::Open(h);
 	}
 

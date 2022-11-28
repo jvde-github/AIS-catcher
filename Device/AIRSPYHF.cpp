@@ -31,7 +31,6 @@ namespace Device {
 		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot open device");
 
 		setDefaultRate();
-		Device::setFormat(Format::CF32);
 		Device::Open(h);
 		serial = h;
 	}

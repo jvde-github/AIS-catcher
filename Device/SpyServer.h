@@ -218,7 +218,7 @@ namespace Device {
 		void printDevice();
 
 	public:
-		SpyServer();
+		SpyServer() : Device(Format::UNKNOWN, 288000) {}
 
 		void OpenWithFileDescriptor(int) { Open(0); }
 

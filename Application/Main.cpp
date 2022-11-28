@@ -361,7 +361,7 @@ bool isActiveObject(const JSON::Value& p) {
 	if (!p.isObject())
 		throw std::runtime_error("expected JSON \"object\"");
 
-	for (const auto& p : p.getObject().getProperties()) {
+	for (const JSON::Property& p : p.getObject().getProperties()) {
 		if (p.Key() == AIS::KEY_SETTING_ACTIVE) {
 			return Util::Parse::Switch(p.Get().to_string());
 		}
@@ -371,7 +371,7 @@ bool isActiveObject(const JSON::Value& p) {
 
 void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 
-	for (const auto& p : pd.getObject().getProperties())
+	for (const JSON::Property& p : pd.getObject().getProperties())
 		if (p.Key() != AIS::KEY_SETTING_ACTIVE) {
 			s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], p.Get().to_string());
 		}
