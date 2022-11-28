@@ -129,9 +129,9 @@ The screen messages can be suppressed with the option ```-q```. That's all there
 
 For RTL-SDR devices performance can be sensitive to the device settings. In general a good starting point is the following:
 ```console
-AIS-catcher -gr RTLAGC on TUNER auto
+AIS-catcher -gr RTLAGC on TUNER auto -a 192K
 ```
-It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try.
+It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try with and without this filter.
 To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
 ## Deep dives
