@@ -235,9 +235,9 @@ void printSupportedDevices() {
 	std::cerr << std::endl;
 }
 
-int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial) {
+int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial, Type type = Type::NONE) {
 	for (int i = 0; i < device_list.size(); i++) {
-		if (device_list[i].getSerial() == serial) return i;
+		if (device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType())) return i;
 	}
 	std::cerr << "Searching for device with SN " << serial << "." << std::endl;
 	return -1;
@@ -320,7 +320,7 @@ void setDevice(const std::string& serial, const std::string& input) {
 	}
 
 	if (!serial.empty()) {
-		input_device = getDeviceFromSerial(device_list, serial);
+		input_device = getDeviceFromSerial(device_list, serial, input_type);
 		if (input_device < 0 || input_device >= device_list.size()) {
 			throw std::runtime_error("cannot find hardware with serial number: \"" + serial + "\"");
 		}
@@ -893,6 +893,11 @@ int main(int argc, char* argv[]) {
 			else
 				models.push_back(createModel(2));
 
+		for (const auto& m : models) {
+			if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
+				(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT))
+				throw std::runtime_error("Decoding model and input format not consistent.");
+		}
 		// Attach output
 		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? models.size() : 0);
 
