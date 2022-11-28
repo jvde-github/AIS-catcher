@@ -22,7 +22,7 @@ Only use this software in regions where such use is permitted.
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
 
-## What's new?
+## What's new in version 0.41?
 - AIS-catcher can now partially be configured from a configuration file in JSON format, see [here](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Configuration-file).
 - Addition of a new decoder that allows to use the program as a command line utility to decode NMEA lines. There is also a new data format ``TXT``, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder) which should make it easy to use AIS-catcher to process and forward data from a DaisyHat.
 - My home station feeds data to FleetMon, amongst others, and I noticed that in the FleetMon dashboard a decent portion of my messages were reported as error. My hypothesis is (and I think I am right) that this is just certain message types being classified as such. 
