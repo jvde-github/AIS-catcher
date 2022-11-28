@@ -42,8 +42,8 @@ namespace Device {
 		void Run();
 
 	public:
+		RAWFile() : Device(Format::CU8, 1536000) {}
 		// Control
-		void Open(uint64_t);
 		void Close();
 		void Play();
 		void Stop();

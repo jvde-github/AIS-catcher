@@ -69,6 +69,8 @@ namespace Device {
 		void setDefaultRate();
 
 	public:
+		AIRSPY() : Device(Format::CF32, 0) {}
+
 		// Control
 		void Open(uint64_t h);
 

@@ -31,7 +31,6 @@ namespace Device {
 	void AIRSPY::Open(uint64_t h) {
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot open device.");
 		setDefaultRate();
-		Device::setFormat(Format::CF32);
 		Device::Open(h);
 		serial = h;
 	}

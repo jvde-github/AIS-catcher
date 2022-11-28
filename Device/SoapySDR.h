@@ -77,7 +77,7 @@ namespace Device {
 		int findRate(const std::vector<double>&);
 
 	public:
-		SOAPYSDR();
+		SOAPYSDR() : Device(Format::CF32, 0) {}
 
 		// Control
 		void Open(uint64_t h);

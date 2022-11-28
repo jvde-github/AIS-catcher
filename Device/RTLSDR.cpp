@@ -26,18 +26,14 @@ namespace Device {
 
 #ifdef HASRTLSDR
 
-	RTLSDR::RTLSDR() {
-		setSampleRate(1536000);
-	}
-
 	void RTLSDR::Open(uint64_t h) {
 		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw std::runtime_error("RTLSDR: cannot open device.");
 
 		Device::Open(h);
 
-		Device::setFormat(Format::CU8);
 		char v[256], p[256], s[256];
 		rtlsdr_get_usb_strings(dev, v, p, s);
+
 		product = std::string(p);
 		serial = std::string(s);
 		vendor = std::string(v);

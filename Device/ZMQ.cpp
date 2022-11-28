@@ -41,8 +41,6 @@ namespace Device {
 		rc = zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
 		if (rc != 0) throw std::runtime_error("ZMQ: cannot set socket option ZMQ_RCVTIMEO.");
 
-		setSampleRate(288000);
-		if (getFormat() == Format::UNKNOWN) setFormat(Format::CU8);
 		Device::Open(handle);
 	}
 

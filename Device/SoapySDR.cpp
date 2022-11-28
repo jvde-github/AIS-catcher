@@ -26,13 +26,8 @@ namespace Device {
 
 #ifdef HASSOAPYSDR
 
-	SOAPYSDR::SOAPYSDR() {
-		setSampleRate(0);
-	}
-
 	void SOAPYSDR::Open(uint64_t h) {
 		Device::Open(h);
-		Device::setFormat(Format::CF32);
 		if (h < dev_list.size()) {
 			if (device_args == "") {
 				device_args = dev_list[h].getDeviceString();

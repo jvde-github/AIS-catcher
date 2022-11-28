@@ -34,11 +34,6 @@ namespace Device {
 	// TO DO: implement formats (currently sets CS16 as output but accepts most return types),
 	//        channels, digital gain and recovery in case we get off sync with headers if needed
 
-	SpyServer::SpyServer() {
-		setSampleRate(288000);
-		// at open we set the rate closest to 288K
-	}
-
 	void SpyServer::Open(uint64_t h) {
 		std::cerr << "Connecting to SpyServer..." << std::endl;
 		if (!client.connect(host, port))
