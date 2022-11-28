@@ -523,7 +523,7 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
  
  **Update 3:** AISrec  had a version update to 2.301 (April 17, 2022) with reduced runtime and the table above has been updated to include the results from this recent version. 
  
-### Some stations mentioning the use of AIS-catcher
+### Some stations with AIS-catcher
 
 A list of some stations mentioning using AIS-catcher:
 - [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
@@ -533,6 +533,7 @@ A list of some stations mentioning using AIS-catcher:
 - [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
 - [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
+- [SeaRange AIS receiver] (https://www.shipxplorer.com/searange-ais-receiver)
 - [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
 - [Troguarat, France](https://www.marinetraffic.com/cs/ais/details/stations/21360)
 - [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
