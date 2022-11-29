@@ -24,7 +24,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 - AIS-catcher can now partially be configured from a configuration file in JSON format, see [here](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Configuration-file).
-- Addition of a new decoder that allows to use the program as a command line utility to decode NMEA lines. There is also a new data format ``TXT``, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder) which should make it easy to use AIS-catcher to process and forward data from a DaisyHat.
+- Addition of a new decoder that allows to use the program as a command line utility to decode NMEA lines. There is also a new data format ``TXT``, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder) which should make it easy to use AIS-catcher to process and forward data from a dAISy Hat.
 - My home station feeds data to FleetMon, amongst others, and I noticed that in the FleetMon dashboard a decent portion of my messages were reported as error. My hypothesis is (and I think I am right) that this is just certain message types being classified as such. 
 I created an experimental functionality to filter UDP, HTTP and screen output on message type, e.g. send only messages of type 1, 2, 3, 5, 18, 19, 24 and 27 over UDP:
 ```console
@@ -57,6 +57,7 @@ use: AIS-catcher [options]
 	[-a xxx - set tuner bandwidth in Hz (default: off)]
 	[-b benchmark demodulation models for time - for development purposes (default: off)]
 	[-c [AB/CD] - [optional: AB] select AIS channels and optionally the NMEA channel designations]
+	[-C [filename] - read configuration settings from file]
 	[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-H [optional: url] - send messages via HTTP, for options see documentation]
@@ -235,11 +236,11 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 ```
 ### Configuration file
 
-As per version 0.41 AIS-catcher can be partially configured via a configuration file in JSON format:
+As per version 0.41 AIS-catcher can be partially configured via a configuration file in JSON format,
 ```console
 AIS-catcher -C config.json
 ```
-The idea behind this feature is to simplify the set up of feeding multiple online sources. The minimal configuration file should have the following:
+where `config.json` is the name of any configuration file. The idea behind this feature is to simplify the set up of feeding multiple online sources. The minimal configuration file should have the following:
 ```json
 { "config": "aiscatcher", "version": 1 }
 ```
@@ -282,7 +283,7 @@ To set  some  parameters for a RTL-SDR dongle and setup two UDP and HTTP channel
 	}]
 }
 ```
-The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with an  "object" for each seperate channel. In each object we can include the 
+The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with an  "object" for each separate channel. In each object we can include the 
 boolean field ``active`` (see the second UDP definition) which will cause the program to ignore the settings if set to `false`. 
 This option  provides an easy way to switch on and off particular channels or dongle configurations. The active device is selected via the ``input`` or ``serial`` field. 
 If both are included the program will check that they are consistent, i.e. the hardware with the specified serial number must be of type ``input``. 
@@ -299,7 +300,7 @@ which produces
 ```json
 {"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-When piping NMEA text lines into AIS-catcher, use the format ``TXT`` this will also ensure that the program immediately processes the incoming characters and will not buffer them first. With this function you can use AIS-catcher to forward messages from a DaisyHat (from file ``/cat/serial0``) or Norwegian coastal traffic, like this:  
+When piping NMEA text lines into AIS-catcher, use the format ``TXT`` this will also ensure that the program immediately processes the incoming characters and will not buffer them first. With this function you can use AIS-catcher to forward messages from a dAISy Hat (from file ``/cat/serial0``) or Norwegian coastal traffic, like this:  
 ```console
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -o 5
 ```
