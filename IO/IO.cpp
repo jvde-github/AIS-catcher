@@ -53,6 +53,8 @@ namespace IO {
 
 					std::cout << "]}" << std::endl;
 					break;
+				default:
+					break;
 				}
 			}
 		}

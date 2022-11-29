@@ -888,11 +888,12 @@ int main(int argc, char* argv[]) {
 
 		// ------------
 		// Setup models
-		if (!models.size())
+		if (!models.size()) {
 			if (device->getFormat() == Format::TXT)
 				models.push_back(createModel(5));
 			else
 				models.push_back(createModel(2));
+		}
 
 		for (const auto& m : models) {
 			if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
