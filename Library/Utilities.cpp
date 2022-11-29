@@ -257,10 +257,6 @@ namespace Util {
 			break;
 
 		default:
-			if (!error) {
-				std::cerr << "Error: data format not consistent with chosen model.\n";
-				error = true;
-			}
 			return;
 		}
 		out.Send(output.data(), size, tag);

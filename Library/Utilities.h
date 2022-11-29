@@ -106,8 +106,6 @@ namespace Util {
 
 	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {
 		std::vector<CFLOAT32> output;
-		bool error = false;
-
 	public:
 		Connection<CU8> outCU8;
 		Connection<CS8> outCS8;
