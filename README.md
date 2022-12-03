@@ -22,33 +22,26 @@ Only use this software in regions where such use is permitted.
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
 
-## What's new in version 0.41?
-- AIS-catcher can now partially be configured from a configuration file in JSON format, see [here](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Configuration-file).
-- Addition of a new decoder that allows to use the program as a command line utility to decode NMEA lines. There is also a new data format ``TXT``, see this [section](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#AIS-catcher-as-a-command-line-NMEA-decoder) which should make it easy to use AIS-catcher to process and forward data from a dAISy Hat.
-- My home station feeds data to FleetMon, amongst others, and I noticed that in the FleetMon dashboard a decent portion of my messages were reported as error. My hypothesis is (and I think I am right) that this is just certain message types being classified as such. 
-I created an experimental functionality to filter UDP, HTTP and screen output on message type, e.g. send only messages of type 1, 2, 3, 5, 18, 19, 24 and 27 over UDP:
+## What's new?
+For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.41). 
+There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and in the future change some of the settings. To run the latest development branche, follow the installation instructions below but clone the project as follows:
 ```console
-AIS-catcher -u 127.0.0.1 10110 FILTER on ALLOW_TYPE 1,2,3,5,18,19,24,27
+git clone https://github.com/jvde-github/AIS-catcher.git -b develop
 ```
-or remove message type 6 and 8:
+Now to start with the webserver use:
 ```console
-AIS-catcher -u 127.0.0.1 10110 FILTER on BLOCK_TYPE 6,8
+AIS-catcher -N 8100
 ```
-Do not use spaces in the comma separated message type list. Filtering will only take effect with the filter switched to ``ON`` (default ``OFF``) and the filter needs to be defined per ``-u`` switch (or ``-H`` and ``-o``).
-
-And some smaller updates:
-- Addition of country field to JSON output (mapped from MMSI code), switch on with ``-M M``.
-- Addition of option ``-gr BLOCK_COUNT`` for RTL-SDR to increase size of buffer.
+where `8100` is the port number, you can also use `-N 8100 8200` which will cause the software to find a free port in this range.
+You can look up the statistics with your browser at the IP address of the computer running the software and the assigned port.
+<p align="center">
+<img src="https://github.com/jvde-github/AIS-catcher/blob/d7b020831e0f69fe0fe166a4d2ddaa0bd8f708fb/media/webserver.jpg" width=40% height=40%>
+</p>
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
-If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. The following screenshot was taken in July 2022 with AIS-catcher receiving signals for a few minutes on a Samsung Galaxy S6 on a beach near The Hague with a simple antenna. Ship positions are plotted with the BoatBeacon app.
-
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/152e5460fd938fb701d988f01deccdfa6192443d/media/Screenshot_BoatBeacon%5B1%5D.jpg" width=60% height=60%>
-</p>
-
-You can download the APK from the mentioned project page.
+If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. 
+You can download the APK from the mentioned project page or the Google Play store.
 
 ## Usage
 ````
