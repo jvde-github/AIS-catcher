@@ -24,7 +24,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.41). 
-There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and in the future change some of the settings. To run the latest development branche, follow the installation instructions below but clone the project as follows:
+There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and, in the future, change the settings. To run the latest development branche, follow the installation instructions below but clone the project as follows:
 ```console
 git clone https://github.com/jvde-github/AIS-catcher.git -b develop
 ```
@@ -32,11 +32,12 @@ Now to start with the webserver use:
 ```console
 AIS-catcher -N 8100
 ```
-where `8100` is the port number, you can also use `-N 8100 8200` which will cause the software to find a free port in this range.
-You can look up the statistics with your browser at the IP address of the computer running the software and the assigned port.
+where `8100` is the port number, you can also use `-N 8100 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200.
+You can look up the statistics with your browser by entering the IP address of the computer running AIS-catcher followed by a colon and the assigned port. This will look something like:
 <p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/d7b020831e0f69fe0fe166a4d2ddaa0bd8f708fb/media/webserver.jpg" width=40% height=40%>
+<img src="https://github.com/jvde-github/AIS-catcher/blob/989b43fe8283a2e066bd85761045fe1d189fefb9/media/webserver2.jpg" width=40% height=40%>
 </p>
+In this case AIS-catcher runs on a RPi with address '192.168.1.113' and the internal server is set up at port '8100'.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
