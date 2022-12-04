@@ -32,12 +32,12 @@ Now to start with the webserver use:
 ```console
 AIS-catcher -N 8100
 ```
-where `8100` is the port number, you can also use `-N 8100 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200.
+where ``8100`` is the port number, you can also use `-N 8100 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200.
 You can look up the statistics with your browser by entering the IP address of the computer running AIS-catcher followed by a colon and the assigned port. This will look something like:
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/blob/989b43fe8283a2e066bd85761045fe1d189fefb9/media/webserver2.jpg" width=40% height=40%>
 </p>
-In this case AIS-catcher runs on a RPi with address `192.168.1.113` and the internal server is set up at port `8100`.
+In this case AIS-catcher runs on a RPi with address ``192.168.1.113`` and the internal server is set up at port ``8100``.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
