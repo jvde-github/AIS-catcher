@@ -33,7 +33,7 @@ Now to start with the webserver use:
 AIS-catcher -N 8100
 ```
 where ``8100`` is the port number, you can also use `-N PORT_MIN 8100 PORT_MAX 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200. An additional option is to provide the station name and a link to an external website which will be mentioned on the Statistics page:
-```
+```console
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
 You can look up the statistics with your browser by entering the IP address of the computer running AIS-catcher followed by a colon and the assigned port. This will look something like:
