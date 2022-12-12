@@ -255,7 +255,7 @@ namespace AIS {
 		return;
 	}
 
-	void ModelFrontend::Set(std::string option, std::string arg) {
+	Setting& ModelFrontend::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
@@ -275,6 +275,8 @@ namespace AIS {
 		}
 		else
 			Model::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string ModelFrontend::Get() {
@@ -406,7 +408,7 @@ namespace AIS {
 		return;
 	}
 
-	void ModelDefault::Set(std::string option, std::string arg) {
+	Setting& ModelDefault::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
@@ -418,6 +420,8 @@ namespace AIS {
 		}
 		else
 			ModelFrontend::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string ModelDefault::Get() {
@@ -484,7 +488,7 @@ namespace AIS {
 		return;
 	}
 
-	void ModelChallenger::Set(std::string option, std::string arg) {
+	Setting& ModelChallenger::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
@@ -493,6 +497,8 @@ namespace AIS {
 		}
 		else
 			ModelFrontend::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string ModelChallenger::Get() {
@@ -553,7 +559,7 @@ namespace AIS {
 		*device >> nmea >> output;
 	}
 
-	void ModelNMEA::Set(std::string option, std::string arg) {
+	Setting& ModelNMEA::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
@@ -565,6 +571,8 @@ namespace AIS {
 		}
 		else
 			Model::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string ModelNMEA::Get() {

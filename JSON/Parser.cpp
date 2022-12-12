@@ -81,11 +81,14 @@ namespace JSON {
 			}
 			// string
 			else if (c == '\"') {
-
 				s.clear();
 				ptr++;
 
 				while (ptr != json.size() && json[ptr] != '\"' && json[ptr] != '\n' && json[ptr] != '\r') {
+					if (json[ptr] == '\\') {
+						if (++ptr == json.size()) error("line ends in string literal escape sequence", ptr);
+						if (json[ptr] != '\"') error("escape sequence not supported\\allowed", ptr);
+					}
 					s += json[ptr++];
 				};
 

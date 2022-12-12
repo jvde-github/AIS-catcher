@@ -133,7 +133,7 @@ namespace Device {
 		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set frequency.");
 	}
 
-	void AIRSPYHF::Set(std::string option, std::string arg) {
+	Setting& AIRSPYHF::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "PREAMP") {
@@ -144,6 +144,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string AIRSPYHF::Get() {

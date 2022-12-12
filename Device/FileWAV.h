@@ -36,7 +36,7 @@ namespace Device {
 		bool isStreaming();
 
 		// Settings
-		void Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 
 		std::string getProduct() { return "FILE-WAV"; }

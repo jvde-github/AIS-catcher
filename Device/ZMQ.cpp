@@ -104,15 +104,17 @@ namespace Device {
 		DeviceList.push_back(Description("ZMQ", "ZMQ", "ZMQ", (uint64_t)0, Type::ZMQ));
 	}
 
-	void ZMQ::Set(std::string option, std::string arg) {
+	Setting& ZMQ::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "ENDPOINT") {
 			endpoint = arg;
-			return;
+			return *this;
 		}
 
 		Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string ZMQ::Get() {

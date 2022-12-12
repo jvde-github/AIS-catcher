@@ -341,7 +341,7 @@ namespace Device {
 		DeviceList.push_back(Description("SPYSERVER", "SPYSERVER", "SPYSERVER", (uint64_t)0, Type::SPYSERVER));
 	}
 
-	void SpyServer::Set(std::string option, std::string arg) {
+	Setting& SpyServer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "GAIN") {
@@ -355,6 +355,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string SpyServer::Get() {

@@ -49,9 +49,6 @@ namespace Device {
 		bool bias_tee = false;
 		bool auto_terminate = true;
 
-		// int tuner_bandwidth = 0;
-		// int freq_offset = 0;
-
 		bool lost = true;
 
 		// FIFO
@@ -94,7 +91,7 @@ namespace Device {
 		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Settings
-		void Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 
 		std::string getProduct() { return product; };

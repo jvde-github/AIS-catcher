@@ -86,7 +86,7 @@ namespace Device {
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
 
-		virtual void Set(std::string option, std::string arg) {
+		virtual Setting& Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);
 
 			if (option == "RATE" || option == "SAMPLE_RATE") {
@@ -107,6 +107,8 @@ namespace Device {
 			}
 			else
 				throw std::runtime_error("Invalid Device setting: \"" + option + "\"");
+
+			return *this;
 		}
 
 		virtual std::string Get() {

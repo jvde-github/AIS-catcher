@@ -64,7 +64,7 @@ namespace IO {
 		for (int i = 0; i < len; i++) {
 			if (filter.include(*(AIS::Message*)data[i].binary)) {
 				json.clear();
-				builder.build(data[i], json);
+				builder.stringify(data[i], json);
 				std::cout << json << std::endl;
 			}
 		}

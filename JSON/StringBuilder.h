@@ -38,8 +38,13 @@ namespace JSON {
 		StringBuilder(const std::vector<std::vector<std::string>>* map, int d) : keymap(map), dict(d) {}
 		StringBuilder(const std::vector<std::vector<std::string>>* map) : keymap(map) {}
 
-		void build(const JSON& properties, std::string& json);
-		void jsonify(const std::string& str, std::string& json);
+		void stringify(const JSON& properties, std::string& json);
+		static void stringify(const std::string& str, std::string& json);
+		std::string stringify(const JSON& properties) {
+			std::string j;
+			stringify(properties, j);
+			return j;
+		}
 
 		// dictionary to use
 		void setMap(int d) { dict = d; }

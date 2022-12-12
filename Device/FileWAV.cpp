@@ -116,13 +116,15 @@ namespace Device {
 		return true;
 	}
 
-	void WAVFile::Set(std::string option, std::string arg) {
+	Setting& WAVFile::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "FILE")
 			filename = arg;
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string WAVFile::Get() {

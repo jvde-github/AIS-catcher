@@ -23,30 +23,14 @@
 
 #include "AIS-catcher.h"
 
-#include "Signals.h"
-#include "Common.h"
-#include "Model.h"
-#include "IO.h"
-#include "Network.h"
-#include "AIS.h"
-#include "JSONAIS.h"
+#include "Receiver.h"
+#include "Config.h"
 
 #include "JSON/JSON.h"
 #include "JSON/Parser.h"
 #include "JSON/StringBuilder.h"
 
-#include "Device/FileRAW.h"
-#include "Device/FileWAV.h"
-#include "Device/RTLSDR.h"
-#include "Device/AIRSPYHF.h"
-#include "Device/HACKRF.h"
-#include "Device/RTLTCP.h"
-#include "Device/AIRSPY.h"
-#include "Device/SDRPLAY.h"
-#include "Device/SpyServer.h"
-#include "Device/SoapySDR.h"
-#include "Device/ZMQ.h"
-
+#include "TCP.h"
 std::atomic<bool> stop;
 
 #ifdef _WIN32
@@ -59,55 +43,6 @@ void consoleHandler(int signal) {
 	stop = true;
 }
 #endif
-
-struct Drivers {
-	Device::RAWFile RAW;
-	Device::WAVFile WAV;
-	Device::RTLSDR RTLSDR;
-	Device::RTLTCP RTLTCP;
-	Device::SpyServer SpyServer;
-	Device::AIRSPYHF AIRSPYHF;
-	Device::AIRSPY AIRSPY;
-	Device::SDRPLAY SDRPLAY;
-	Device::HACKRF HACKRF;
-	Device::SOAPYSDR SOAPYSDR;
-	Device::ZMQ ZMQ;
-};
-
-int sample_rate = 0, input_device = 0, bandwidth = 0, ppm = 0;
-int timeout = 0;
-int TAG_mode = 0;
-
-bool list_devices = false, list_support = false, list_options = false;
-bool verbose = false, timer_on = false;
-
-std::vector<Device::Description> device_list;
-
-OutputLevel NMEA_to_screen = OutputLevel::FULL;
-int verboseUpdateTime = 3;
-
-AIS::Mode ChannelMode = AIS::Mode::AB;
-std::string NMEAchannels = "AB";
-TAG tag;
-
-std::string file_config;
-
-// Device and output stream of device;
-Type input_type = Type::NONE;
-uint64_t handle = 0;
-
-Device::Device* device = NULL;
-Drivers drivers;
-
-std::vector<IO::UDP> UDP;
-std::vector<std::unique_ptr<AIS::Model>> models;
-
-// AIS message to properties
-std::vector<AIS::JSONAIS> jsonais;
-
-std::vector<std::unique_ptr<IO::HTTP>> http;
-IO::MessageToScreen msg2screen;
-IO::JSONtoScreen json2screen(&AIS::KeyMap, JSON_DICT_FULL);
 
 void printVersion() {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION << std::endl;
@@ -129,6 +64,7 @@ void Usage() {
 	std::cerr << "\t[-m xx - run specific decoding model (default: 2), see README for more details]" << std::endl;
 	std::cerr << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;
+	std::cerr << "\t[-N [optional: port][optional settings] - start http server at port, see README for details]" << std::endl;
 	std::cerr << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]" << std::endl;
 	std::cerr << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (-o 0)]" << std::endl;
@@ -168,23 +104,10 @@ void Usage() {
 	std::cerr << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]" << std::endl;
 }
 
-std::vector<Device::Description> getDevices(Drivers& drivers) {
-	std::vector<Device::Description> device_list;
-
-	drivers.RTLSDR.getDeviceList(device_list);
-	drivers.AIRSPYHF.getDeviceList(device_list);
-	drivers.AIRSPY.getDeviceList(device_list);
-	drivers.SDRPLAY.getDeviceList(device_list);
-	drivers.HACKRF.getDeviceList(device_list);
-	drivers.SOAPYSDR.getDeviceList(device_list);
-
-	return device_list;
-}
-
-void printDevices(std::vector<Device::Description>& device_list) {
-	std::cerr << "Found " << device_list.size() << " device(s):" << std::endl;
-	for (int i = 0; i < device_list.size(); i++) {
-		std::cerr << i << ": " << device_list[i].toString() << std::endl;
+void printDevices(Receiver& r) {
+	std::cerr << "Found " << r.device_list.size() << " device(s):" << std::endl;
+	for (int i = 0; i < r.device_list.size(); i++) {
+		std::cerr << i << ": " << r.device_list[i].toString() << std::endl;
 	}
 }
 
@@ -236,60 +159,8 @@ void printSupportedDevices() {
 	std::cerr << std::endl;
 }
 
-int getDeviceFromSerial(std::vector<Device::Description>& device_list, std::string serial, Type type = Type::NONE) {
-	for (int i = 0; i < device_list.size(); i++) {
-		if (device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType())) return i;
-	}
-	std::cerr << "Searching for device with SN " << serial << "." << std::endl;
-	return -1;
-}
-
-std::unique_ptr<AIS::Model> createModel(int m) {
-
-	switch (m) {
-	case 0:
-		return std::unique_ptr<AIS::Model>(new AIS::ModelStandard());
-		break;
-	case 1:
-		return std::unique_ptr<AIS::Model>(new AIS::ModelBase());
-		break;
-	case 2:
-		return std::unique_ptr<AIS::Model>(new AIS::ModelDefault());
-		break;
-	case 3:
-		return std::unique_ptr<AIS::Model>(new AIS::ModelDiscriminator());
-		break;
-	case 4:
-		return std::unique_ptr<AIS::Model>(new AIS::ModelChallenger());
-		break;
-	case 5:
-		return std::unique_ptr<AIS::Model>(new AIS::ModelNMEA());
-		break;
-	default:
-		throw std::runtime_error("Model not implemented in this version. Check in later.");
-		break;
-	}
-}
-
 // -------------------------------
-
-void parseTags(int& mode, const std::string& s) {
-	for (char c : s) {
-		switch (toupper(c)) {
-		case 'M':
-			mode |= 4;
-			break;
-		case 'T':
-			mode |= 2;
-			break;
-		case 'D':
-			mode |= 1;
-			break;
-		default:
-			throw std::runtime_error("illegal tag '" + std::string(1, c) + "' defined on command line [D / T / M]");
-		}
-	}
-}
+// Command line support functions
 
 void parseSettings(Setting& s, char* argv[], int ptr, int argc) {
 	ptr++;
@@ -312,242 +183,19 @@ void Assert(bool b, std::string& context, std::string msg = "") {
 	}
 }
 
-void setDevice(const std::string& serial, const std::string& input) {
-
-	if (!input.empty()) {
-		if (!Util::Parse::DeviceType(input, input_type)) {
-			throw std::runtime_error("\"" + input + "\" is unknown input type in config file");
-		}
-	}
-
-	if (!serial.empty()) {
-		input_device = getDeviceFromSerial(device_list, serial, input_type);
-		if (input_device < 0 || input_device >= device_list.size()) {
-			throw std::runtime_error("cannot find hardware with serial number: \"" + serial + "\"");
-		}
-		if (input_type != Type::NONE && device_list[input_device].getType() != input_type) {
-			throw std::runtime_error("inconsistent input type and serial number in config file");
-		}
-		input_type = Type::NONE;
-	}
-}
-
-void setScreen(const std::string& str) {
-	switch (Util::Parse::Integer(str, 0, 5)) {
-	case 0:
-		NMEA_to_screen = OutputLevel::NONE;
-		break;
-	case 1:
-		NMEA_to_screen = OutputLevel::NMEA;
-		break;
-	case 2:
-		NMEA_to_screen = OutputLevel::FULL;
-		break;
-	case 3:
-		NMEA_to_screen = OutputLevel::JSON_NMEA;
-		break;
-	case 4:
-		NMEA_to_screen = OutputLevel::JSON_SPARSE;
-		break;
-	case 5:
-		NMEA_to_screen = OutputLevel::JSON_FULL;
-		break;
-	default:
-		throw std::runtime_error("unknown option for screen output: " + str);
-	}
-}
-// Config file processing
-bool isActiveObject(const JSON::Value& pd) {
-
-	if (!pd.isObject())
-		throw std::runtime_error("expected JSON \"object\"");
-
-	for (const JSON::Property& p : pd.getObject().getProperties()) {
-		if (p.Key() == AIS::KEY_SETTING_ACTIVE) {
-			return Util::Parse::Switch(p.Get().to_string());
-		}
-	}
-	return true;
-}
-
-void setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
-
-	for (const JSON::Property& p : pd.getObject().getProperties())
-		if (p.Key() != AIS::KEY_SETTING_ACTIVE) {
-			s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], p.Get().to_string());
-		}
-}
-
-void setHTTPfromJSON(const JSON::Property& pd) {
-
-	if (!pd.Get().isArray())
-		throw std::runtime_error("HTTP settings need to be an \"array\" of \"objects\". in config file");
-
-	for (const auto& v : pd.Get().getArray()) {
-		if (!isActiveObject(v)) continue;
-		http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
-		http.back()->setSource(0);
-		setSettingsFromJSON(v, *http.back());
-		TAG_mode |= 0x3;
-	}
-}
-
-void setUDPfromJSON(const JSON::Property& pd) {
-
-	if (!pd.Get().isArray())
-		throw std::runtime_error("UDP settings need to be an \"array\" of \"objects\" in config file.");
-
-	for (const auto& v : pd.Get().getArray()) {
-		if (!isActiveObject(v)) continue;
-		UDP.push_back(IO::UDP());
-		UDP.back().setSource(0);
-		setSettingsFromJSON(v, UDP.back());
-	}
-}
-
-void setModelfromJSON(const JSON::Property& p) {
-
-	if (!isActiveObject(p.Get())) return;
-
-	models.push_back(createModel(2));
-	setSettingsFromJSON(p.Get(), *models.back());
-}
-
-void parseConfigFile(std::string& file_config) {
-	std::string config, serial, input;
-	int version = 0;
-
-	if (!file_config.empty()) {
-		std::ifstream file(file_config);
-		if (file.fail()) {
-			std::cerr << "Warning: cannot open config file: " << file_config << std::endl;
-		}
-		else {
-			std::string str, line;
-			while (std::getline(file, line)) str += line + '\n';
-
-			JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
-			std::shared_ptr<JSON::JSON> json = parser.parse(str);
-
-			// temporary check
-			/*
-			std::string j;
-			JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_SETTING);
-			builder.build(*json, j);
-			std::cerr << "Config input : " << j << std::endl;
-			*/
-
-			// loop over all properties
-			const std::vector<JSON::Property>& props = json->getProperties();
-
-			// pass 1
-			for (const auto& p : props) {
-				switch (p.Key()) {
-				case AIS::KEY_SETTING_CONFIG:
-					config = p.Get().to_string();
-					break;
-				case AIS::KEY_SETTING_VERSION:
-					version = Util::Parse::Integer(p.Get().to_string());
-					break;
-				case AIS::KEY_SETTING_SERIAL:
-					serial = p.Get().to_string();
-					break;
-				case AIS::KEY_SETTING_INPUT:
-					input = p.Get().to_string();
-					break;
-				}
-			}
-
-			if (version < 1 || version > 1 || config != "aiscatcher")
-				throw std::runtime_error("version and/or format of config file not supported (required version <=1)");
-
-			setDevice(serial, input);
-
-			// pass 2
-			for (const auto& p : props) {
-				switch (p.Key()) {
-				case AIS::KEY_SETTING_MODEL:
-					setModelfromJSON(p);
-					break;
-				case AIS::KEY_SETTING_META:
-					parseTags(TAG_mode, p.Get().to_string());
-					break;
-				case AIS::KEY_SETTING_RTLSDR:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.RTLSDR);
-					break;
-				case AIS::KEY_SETTING_RTLTCP:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.RTLTCP);
-					break;
-				case AIS::KEY_SETTING_AIRSPY:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.AIRSPY);
-					break;
-				case AIS::KEY_SETTING_AIRSPYHF:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.AIRSPYHF);
-					break;
-				case AIS::KEY_SETTING_SDRPLAY:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.SDRPLAY);
-					break;
-				case AIS::KEY_SETTING_WAVFILE:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.WAV);
-					break;
-				case AIS::KEY_SETTING_HACKRF:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.HACKRF);
-					break;
-				case AIS::KEY_SETTING_SOAPYSDR:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.SOAPYSDR);
-					break;
-				case AIS::KEY_SETTING_FILE:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.RAW);
-					break;
-				case AIS::KEY_SETTING_ZMQ:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.ZMQ);
-					break;
-				case AIS::KEY_SETTING_SPYSERVER:
-					if (!isActiveObject(p.Get())) continue;
-					setSettingsFromJSON(p.Get(), drivers.SpyServer);
-					break;
-				case AIS::KEY_SETTING_UDP:
-					setUDPfromJSON(p);
-					break;
-				case AIS::KEY_SETTING_HTTP:
-					setHTTPfromJSON(p);
-					break;
-				case AIS::KEY_SETTING_SCREEN:
-					setScreen(p.Get().to_string());
-					break;
-				case AIS::KEY_SETTING_VERBOSE:
-					verbose = Util::Parse::Switch(p.Get().to_string());
-					break;
-				case AIS::KEY_SETTING_VERBOSE_TIME:
-					verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
-					break;
-				// fields that are already processed for completeness
-				case AIS::KEY_SETTING_CONFIG:
-				case AIS::KEY_SETTING_VERSION:
-				case AIS::KEY_SETTING_SERIAL:
-				case AIS::KEY_SETTING_INPUT:
-					break;
-				default:
-					std::cerr << "Config file: field \"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed." << std::endl;
-					throw std::runtime_error("Config file: terminating.");
-					break;
-				}
-			}
-		}
-	}
-}
-
 int main(int argc, char* argv[]) {
+
+	std::string file_config;
+
+	Receiver receiver;
+	OutputScreen screen;
+	OutputHTTP http;
+	OutputUDP udp;
+	OutputStatistics stat;
+	OutputServer server;
+
+	bool list_devices = false, list_support = false, list_options = false;
+	int timeout = 0, sample_rate = 0, bandwidth = 0, ppm = 0;
 
 	try {
 #ifdef _WIN32
@@ -558,15 +206,14 @@ int main(int argc, char* argv[]) {
 #endif
 
 		printVersion();
+		receiver.refreshDevices();
 
-		device_list = getDevices(drivers);
-
-		const std::string MSG_NO_PARAMETER = "Does not allow additional parameter.";
+		const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
 		int ptr = 1;
 
 		while (ptr < argc) {
 			std::string param = std::string(argv[ptr]);
-			Assert(param[0] == '-', param, "Setting does not start with \"-\".");
+			Assert(param[0] == '-', param, "setting does not start with \"-\".");
 
 			int count = 0;
 			while (ptr + count + 1 < argc && !isOption(argv[ptr + 1 + count])) count++;
@@ -576,115 +223,94 @@ int main(int argc, char* argv[]) {
 
 			switch (param[1]) {
 			case 's':
-				Assert(count == 1, param, "Does require one parameter [sample rate].");
+				Assert(count == 1, param, "does require one parameter [sample rate].");
 				sample_rate = Util::Parse::Integer(arg1, 48000, 12288000);
 				break;
 			case 'm':
-				Assert(count == 1, param, "Requires one parameter [model number].");
-				models.push_back(createModel(Util::Parse::Integer(arg1, 0, 5)));
+				Assert(count == 1, param, "requires one parameter [model number].");
+				receiver.addModel(Util::Parse::Integer(arg1, 0, 5));
 				break;
 			case 'M':
-				Assert(count <= 1, param, "Requires zero or one parameter [DT].");
-				parseTags(TAG_mode, arg1);
+				Assert(count <= 1, param, "requires zero or one parameter [DT].");
+				receiver.setTags(arg1);
 				break;
 			case 'c':
-				Assert(count <= 2, param, "Requires one or two parameter [AB/CD]].");
-				if (arg1 == "AB") {
-					ChannelMode = AIS::Mode::AB;
-					NMEAchannels = "AB";
-				}
-				else if (arg1 == "CD") {
-					ChannelMode = AIS::Mode::CD;
-					NMEAchannels = "CD";
-				}
-				else
-					throw std::runtime_error("syntax error on command line, -c parameter needs to be AB or CD");
-				if (count == 2) {
-					Assert(arg2.length() == 2, param, "NMEA channel designation needs to be: XX.");
-					Assert(std::isupper(arg2[0]) || std::isdigit(arg2[0]) || arg2[0] == '?', param, "NMEA channel designation invalid.");
-					Assert(std::isupper(arg2[1]) || std::isdigit(arg2[1]) || arg2[1] == '?', param, "NMEA channel designation invalid.");
-					NMEAchannels = arg2;
-				}
+				Assert(count <= 2 && count >= 1, param, "requires one or two parameter [AB/CD]].");
+				if (count == 1) receiver.setChannel(arg1);
+				if (count == 2) receiver.setChannel(arg1, arg2);
 				break;
 			case 'C':
 				Assert(count == 1, param, "one parameter required: filename");
 				file_config = arg1;
 				break;
+			case 'N':
+				Assert(count > 0, param, "requires at least one parameter");
+				if (count % 2 == 1) server.Set("PORT", arg1);
+				parseSettings(server, argv, ptr + (count % 2), argc);
+				receiver.setTags("DT");
+				server.active() = true;
+				break;
 			case 'v':
 				Assert(count <= 1, param);
-				verbose = true;
-				if (count == 1) verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
+				receiver.verbose = true;
+				if (count == 1) screen.verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'T':
-				Assert(count == 1, param, "Timeout parameter required.");
+				Assert(count == 1, param, "timeout parameter required.");
 				timeout = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'q':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				NMEA_to_screen = OutputLevel::NONE;
+				screen.setScreen(OutputLevel::NONE);
 				break;
 			case 'n':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				NMEA_to_screen = OutputLevel::NMEA;
+				screen.setScreen(OutputLevel::NMEA);
 				break;
 			case 'o':
-				Assert(count >= 1 && count % 2 == 1, param, "Requires at least one parameter.");
-				{
-					setScreen(arg1);
-					if (count > 1) {
-						parseSettings(msg2screen, argv, ptr + 1, argc);
-						parseSettings(json2screen, argv, ptr + 1, argc);
-					}
+				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter.");
+				screen.setScreen(arg1);
+				if (count > 1) {
+					parseSettings(screen.msg2screen, argv, ptr + 1, argc);
+					parseSettings(screen.json2screen, argv, ptr + 1, argc);
 				}
 				break;
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				models.push_back(createModel(2));
-				models.back()->Set("FP_DS", "ON");
-				models.back()->Set("PS_EMA", "ON");
+				receiver.addModel(2)->Set("FP_DS", "ON").Set("PS_EMA", "ON");
 				break;
 			case 't':
-				input_type = Type::RTLTCP;
-				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
-				if (count >= 1) drivers.RTLTCP.Set("host", arg1);
-				if (count >= 2) drivers.RTLTCP.Set("port", arg2);
+				receiver.InputType() = Type::RTLTCP;
+				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");
+				if (count == 1) receiver.RTLTCP().Set("host", arg1);
+				if (count == 2) receiver.RTLTCP().Set("port", arg2).Set("host", arg1);
 				break;
 			case 'y':
-				input_type = Type::SPYSERVER;
-				Assert(count <= 2, param, "Requires one or two parameters [host] [[port]].");
-				if (count >= 1) drivers.SpyServer.Set("host", arg1);
-				if (count >= 2) drivers.SpyServer.Set("port", arg2);
+				receiver.InputType() = Type::SPYSERVER;
+				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");
+				if (count == 1) receiver.SpyServer().Set("host", arg1);
+				if (count == 2) receiver.SpyServer().Set("port", arg2).Set("host", arg1);
 				break;
 			case 'z':
-				input_type = Type::ZMQ;
-				Assert(count <= 2, param, "Requires at most two parameters [[format]] [endpoint].");
-				if (count == 1) {
-					drivers.ZMQ.Set("ENDPOINT", arg1);
-				}
-				else if (count == 2) {
-					drivers.ZMQ.Set("FORMAT", arg1);
-					drivers.ZMQ.Set("ENDPOINT", arg2);
-				}
+				receiver.InputType() = Type::ZMQ;
+				Assert(count <= 2, param, "requires at most two parameters [[format]] [endpoint].");
+				if (count == 1) receiver.ZMQ().Set("ENDPOINT", arg1);
+				if (count == 2) receiver.ZMQ().Set("FORMAT", arg1).Set("ENDPOINT", arg2);
 				break;
 			case 'b':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				timer_on = true;
+				receiver.Timing() = true;
 				break;
 			case 'w':
 				Assert(count <= 1, param);
-				input_type = Type::WAVFILE;
-				if (count == 1) drivers.WAV.Set("FILE", arg1);
+				receiver.InputType() = Type::WAVFILE;
+				if (count == 1) receiver.WAV().Set("FILE", arg1);
 				break;
 			case 'r':
-				Assert(count <= 2, param, "Requires at most two parameters [[format]] [filename].");
-				input_type = Type::RAWFILE;
-				if (count == 1) {
-					drivers.RAW.Set("FILE", arg1);
-				}
-				else if (count == 2) {
-					drivers.RAW.Set("FORMAT", arg1);
-					drivers.RAW.Set("FILE", arg2);
-				}
+				Assert(count <= 2, param, "requires at most two parameters [[format]] [filename].");
+				receiver.InputType() = Type::RAWFILE;
+				if (count == 1) receiver.RAW().Set("FILE", arg1);
+				if (count == 2) receiver.RAW().Set("FORMAT", arg1).Set("FILE", arg2);
 				break;
 			case 'l':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -697,87 +323,89 @@ int main(int argc, char* argv[]) {
 			case 'd':
 				if (param.length() == 4 && param[2] == ':') {
 					Assert(count == 0, param, MSG_NO_PARAMETER);
-					input_device = (param[3] - '0');
+					int n = param[3] - '0';
+					Assert(n >= 0 && n < receiver.device_list.size(), param, "device does not exist");
+					receiver.Serial() = receiver.device_list[n].getSerial();
 				}
 				else {
-					Assert(count == 1, param, "Requires one parameter [serial number].");
-					input_device = getDeviceFromSerial(device_list, arg1);
-				}
-				if (input_device < 0 || input_device >= device_list.size()) {
-					throw std::runtime_error("Device does not exist.");
+					Assert(param.length() == 2, param, "syntax error in device setting");
+					Assert(count == 1, param, "device setting requires one parameter [serial number]");
+					receiver.Serial() = arg1;
 				}
 				break;
 			case 'u':
-				Assert(count >= 2 && count % 2 == 0, param, "Requires at least two parameters [address] [port].");
-				UDP.push_back(IO::UDP());
-				UDP.back().Set("HOST", arg1);
-				UDP.back().Set("PORT", arg2);
-				if (count > 2) parseSettings(UDP.back(), argv, ptr + 2, argc);
-				UDP.back().setSource(MAX(0, (int)models.size() - 1));
+				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
+				{
+					IO::UDP& u = udp.add(arg1, arg2);
+					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
+					u.setSource(MAX(0, (int)receiver.Count() - 1));
+				}
 				break;
 			case 'H':
 				Assert(count > 0, param);
-				http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&AIS::KeyMap, JSON_DICT_FULL)));
-				if (count % 2) http.back()->Set("URL", arg1);
-				parseSettings(*http.back(), argv, ptr + (count % 2), argc);
-				http.back()->setSource(MAX(0, (int)models.size() - 1));
-				TAG_mode |= 3;
+				{
+					auto& h = http.add(AIS::KeyMap, JSON_DICT_FULL);
+					if (count % 2) h->Set("URL", arg1);
+					parseSettings(*h, argv, ptr + (count % 2), argc);
+					h->setSource(MAX(0, (int)receiver.Count() - 1));
+					receiver.setTags("DT");
+				}
 				break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				list_options = true;
 				break;
 			case 'p':
-				Assert(count == 1, param, "Requires one parameter [frequency offset].");
+				Assert(count == 1, param, "requires one parameter [frequency offset].");
 				ppm = Util::Parse::Integer(arg1, -150, 150);
 				break;
 			case 'a':
-				Assert(count == 1, param, "Requires one parameter [bandwidth].");
+				Assert(count == 1, param, "requires one parameter [bandwidth].");
 				bandwidth = Util::Parse::Integer(arg1, 0, 20000000);
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3, param);
 				switch (param[2]) {
 				case 'm':
-					parseSettings(drivers.AIRSPY, argv, ptr, argc);
+					parseSettings(receiver.AIRSPY(), argv, ptr, argc);
 					break;
 				case 'r':
-					parseSettings(drivers.RTLSDR, argv, ptr, argc);
+					parseSettings(receiver.RTLSDR(), argv, ptr, argc);
 					break;
 				case 'h':
-					parseSettings(drivers.AIRSPYHF, argv, ptr, argc);
+					parseSettings(receiver.AIRSPYHF(), argv, ptr, argc);
 					break;
 				case 's':
-					parseSettings(drivers.SDRPLAY, argv, ptr, argc);
+					parseSettings(receiver.SDRPLAY(), argv, ptr, argc);
 					break;
 				case 'a':
-					parseSettings(drivers.RAW, argv, ptr, argc);
+					parseSettings(receiver.RAW(), argv, ptr, argc);
 					break;
 				case 'w':
-					parseSettings(drivers.WAV, argv, ptr, argc);
+					parseSettings(receiver.WAV(), argv, ptr, argc);
 					break;
 				case 't':
-					parseSettings(drivers.RTLTCP, argv, ptr, argc);
+					parseSettings(receiver.RTLTCP(), argv, ptr, argc);
 					break;
 				case 'y':
-					parseSettings(drivers.SpyServer, argv, ptr, argc);
+					parseSettings(receiver.SpyServer(), argv, ptr, argc);
 					break;
 				case 'f':
-					parseSettings(drivers.HACKRF, argv, ptr, argc);
+					parseSettings(receiver.HACKRF(), argv, ptr, argc);
 					break;
 				case 'u':
-					parseSettings(drivers.SOAPYSDR, argv, ptr, argc);
+					parseSettings(receiver.SOAPYSDR(), argv, ptr, argc);
 					break;
 				case 'z':
-					parseSettings(drivers.ZMQ, argv, ptr, argc);
+					parseSettings(receiver.ZMQ(), argv, ptr, argc);
 					break;
 				case 'o':
-					if (models.size() == 0) models.push_back(createModel(2));
-					parseSettings(*models.back(), argv, ptr, argc);
+					if (receiver.Count() == 0) receiver.addModel(2);
+					parseSettings(*receiver.Model(receiver.Count() - 1), argv, ptr, argc);
 					break;
 					break;
 				default:
-					throw std::runtime_error(" invalid -g switch on command line");
+					throw std::runtime_error("invalid -g switch on command line");
 				}
 				break;
 			default:
@@ -789,239 +417,95 @@ int main(int argc, char* argv[]) {
 
 		// -------------
 		// Read config file
-		parseConfigFile(file_config);
 
-		if (list_devices) printDevices(device_list);
+		if (!file_config.empty()) {
+			Config c(receiver, screen, http, udp, server);
+			c.read(file_config);
+		}
+
+		if (list_devices) printDevices(receiver);
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
 		if (list_devices || list_support || list_options) return 0;
 
 		// -------------
-		// Select device
+		// set up the receiver and open the device
+		receiver.setupDevice();
 
-		if (input_type == Type::NONE) {
-			if (device_list.size() == 0) throw std::runtime_error("No input device available.");
+		// override sample rate if defined by user, needs to be after setup so device is open and sample rates known
+		if (sample_rate) receiver.setDeviceSampleRate(sample_rate);
+		if (ppm) receiver.setDeviceFreqCorrection(ppm);
+		if (bandwidth) receiver.setDeviceBandwidth(bandwidth);
 
-			Device::Description d = device_list[input_device];
-			input_type = d.getType();
-			handle = d.getHandle();
+		// set up the decoding model(s)
+		receiver.setupModel();
 
-			std::cerr << "Device selected: " << d.toString() << std::endl;
-		}
+		// set up all the output and connect to the receiver outputs
+		udp.setup(receiver);
+		http.setup(receiver);
+		screen.setup(receiver);
 
-		switch (input_type) {
-		case Type::WAVFILE:
-			device = &drivers.WAV;
-			break;
-		case Type::RAWFILE:
-			device = &drivers.RAW;
-			break;
-		case Type::RTLTCP:
-			device = &drivers.RTLTCP;
-			break;
-		case Type::SPYSERVER:
-			device = &drivers.SpyServer;
-			break;
-#ifdef HASZMQ
-		case Type::ZMQ:
-			device = &drivers.ZMQ;
-			break;
-#endif
-#ifdef HASAIRSPYHF
-		case Type::AIRSPYHF:
-			device = &drivers.AIRSPYHF;
-			break;
-#endif
-#ifdef HASAIRSPY
-		case Type::AIRSPY:
-			device = &drivers.AIRSPY;
-			break;
-#endif
-#ifdef HASSDRPLAY
-		case Type::SDRPLAY:
-			device = &drivers.SDRPLAY;
-			break;
-#endif
-#ifdef HASRTLSDR
-		case Type::RTLSDR:
-			device = &drivers.RTLSDR;
-			break;
-#endif
-#ifdef HASHACKRF
-		case Type::HACKRF:
-			device = &drivers.HACKRF;
-			break;
-#endif
-#ifdef HASSOAPYSDR
-		case Type::SOAPYSDR:
-			device = &drivers.SOAPYSDR;
-			break;
-#endif
-		default:
-			throw std::runtime_error("invalid device selection");
-		}
-		if (device == 0) throw std::runtime_error("cannot set up device");
-
-		// Derive TAG_mode which is a summary of the additional parameters
-		// that will be calculated through the chain.
-
-		tag.mode = TAG_mode;
-		// ----------------------
-		// Open and set up device
-
-		device->setTag(tag);
-		device->Open(handle);
-
-		// override sample rate if defined by user
-		if (sample_rate) device->setSampleRate(sample_rate);
-
-		if (ChannelMode == AIS::Mode::AB)
-			device->setFrequency((int)(162000000));
-		else
-			device->setFrequency((int)(156800000));
-
-		if (ppm)
-			device->Set("FREQOFFSET", std::to_string(ppm));
-
-		if (bandwidth)
-			device->Set("BW", std::to_string(bandwidth));
-
-		// ------------
-		// Setup models
-		if (!models.size()) {
-			if (device->getFormat() == Format::TXT)
-				models.push_back(createModel(5));
-			else
-				models.push_back(createModel(2));
-		}
-
-		for (const auto& m : models) {
-			if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
-				(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT))
-				throw std::runtime_error("Decoding model and input format not consistent.");
-		}
-		// Attach output
-		std::vector<IO::StreamCounter<AIS::Message>> statistics(verbose ? models.size() : 0);
-
-		for (int i = 0; i < models.size(); i++) {
-			models[i]->buildModel(NMEAchannels[0], NMEAchannels[1], device->getSampleRate(), timer_on, device);
-			if (verbose) models[i]->Output() >> statistics[i];
-		}
-
-		// set up client thread to periodically submit msgs over HTTP
-		// we will have a json decoder for every model
-		jsonais.resize(models.size());
-		for (auto& h : http) {
-
-			h->Set("MODEL", models[h->getSource()]->getName());
-			h->Set("MODEL_SETTING", models[h->getSource()]->Get());
-			h->Set("DEVICE_SETTING", device->Get());
-			h->Set("PRODUCT", device->getProduct());
-			h->Set("VENDOR", device->getVendor());
-			h->Set("SERIAL", device->getSerial());
-
-			jsonais[h->getSource()] >> *h;
-			h->Start();
-		}
-
-		// Create and connect output to UDP stream
-		for (int i = 0; i < UDP.size(); i++) {
-			models[UDP[i].getSource()]->Output() >> UDP[i];
-			UDP[i].Start();
-		}
-
-		// Output
-		if (NMEA_to_screen == OutputLevel::NMEA || NMEA_to_screen == OutputLevel::JSON_NMEA || NMEA_to_screen == OutputLevel::FULL) {
-			models[0]->Output() >> msg2screen;
-			msg2screen.setDetail(NMEA_to_screen);
-		}
-		else if (NMEA_to_screen == OutputLevel::JSON_SPARSE || NMEA_to_screen == OutputLevel::JSON_FULL) {
-			jsonais[0] >> json2screen;
-
-			if (NMEA_to_screen == OutputLevel::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
-		}
-
-		// connect property calculation to model only if it is needed (e.g. we connected it to a http server or screen output)
-		// connection to either http or json screen output
-		for (int i = 0; i < jsonais.size(); i++) {
-			if (jsonais[i].out.isConnected()) {
-				models[i]->Output() >> jsonais[i];
-			}
-		}
-
-		// -----------------
-		// Main loop
-
-		device->Play();
-
-		if (verbose) {
-			std::cerr << "Device    : " << device->getProduct() << std::endl;
-			std::cerr << "Settings  : " << device->Get() << std::endl;
-			for (int i = 0; i < models.size(); i++)
-				std::cerr << "Model #" + std::to_string(i) + "  : [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
-		}
+		if (server.active()) server.setup(receiver);
+		if (receiver.verbose) stat.setup(receiver);
 
 		stop = false;
-
 		const int SLEEP = 50;
-
 		auto time_start = high_resolution_clock::now();
 		auto time_last = time_start;
 
-		while (device->isStreaming() && !stop) {
+		receiver.play();
 
-			if (device->isCallback()) // don't go to sleep in case we are reading from a file
+		while (receiver.device->isStreaming() && !stop) {
+
+			if (receiver.device->isCallback()) // don't go to sleep in case we are reading from a file
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
 
-			if (!verbose && !timeout) continue;
+			if (!receiver.verbose && !timeout) continue;
 
 			auto time_now = high_resolution_clock::now();
 
-			if (verbose && duration_cast<seconds>(time_now - time_last).count() >= verboseUpdateTime) {
+			if (receiver.verbose && duration_cast<seconds>(time_now - time_last).count() >= screen.verboseUpdateTime) {
 				time_last = time_now;
 
-				for (int j = 0; j < models.size(); j++) {
-					statistics[j].Stamp();
-					std::string name = models[j]->getName() + " #" + std::to_string(j);
-					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << statistics[j].getDeltaCount() << " msgs, total: " << statistics[j].getCount() << " msgs, rate: " << statistics[j].getRate() << " msg/s" << std::endl;
+				for (int j = 0; j < receiver.Count(); j++) {
+					stat.statistics[j].Stamp();
+					std::string name = receiver.Model(j)->getName() + " #" + std::to_string(j);
+					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << stat.statistics[j].getDeltaCount() << " msgs, total: "
+							  << stat.statistics[j].getCount() << " msgs, rate: " << stat.statistics[j].getRate() << " msg/s" << std::endl;
 				}
 			}
 
 			if (timeout && duration_cast<seconds>(time_now - time_start).count() >= timeout) {
 				stop = true;
-				if (verbose)
+				if (receiver.verbose)
 					std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
 			}
 		}
 
-		device->Stop();
+		receiver.stop();
 
 		// End Main loop
 		// -----------------
 
-		if (verbose) {
+		if (receiver.verbose) {
 			std::cerr << "----------------------" << std::endl;
-			for (int j = 0; j < models.size(); j++) {
-				std::string name = models[j]->getName() + " #" + std::to_string(j);
-				statistics[j].Stamp();
-				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << statistics[j].getCount() << " msgs" << std::endl;
+			for (int j = 0; j < receiver.Count(); j++) {
+				std::string name = receiver.Model(j)->getName() + " #" + std::to_string(j);
+				stat.statistics[j].Stamp();
+				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat.statistics[j].getCount() << " msgs" << std::endl;
 			}
 		}
 
-		if (timer_on)
-			for (auto& m : models) {
-				std::string name = m->getName();
-				std::cerr << "[" << m->getName() << "]: " << std::string(37 - name.length(), ' ') << m->getTotalTiming() << " ms" << std::endl;
+		if (receiver.Timing())
+			for (int j = 0; j < receiver.Count(); j++) {
+				std::string name = receiver.Model(j)->getName();
+				std::cerr << "[" << receiver.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ')
+						  << receiver.Model(j)->getTotalTiming() << " ms" << std::endl;
 			}
-
-		device->Close();
-	}
-	catch (const char* msg) {
-		std::cerr << msg << std::endl;
-		return -1;
 	}
 	catch (std::exception const& e) {
 		std::cout << "Error: " << e.what() << std::endl;
+		return -1;
 	}
 	return 0;
 }

@@ -97,7 +97,7 @@ namespace Device {
 		}
 	}
 
-	void RAWFile::Set(std::string option, std::string arg) {
+	Setting& RAWFile::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "FILE") {
@@ -105,6 +105,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string RAWFile::Get() {

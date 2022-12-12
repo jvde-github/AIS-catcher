@@ -90,7 +90,7 @@ namespace Device {
 		}
 	}
 
-	void HACKRF::Set(std::string option, std::string arg) {
+	Setting& HACKRF::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "LNA") {
@@ -104,6 +104,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string HACKRF::Get() {

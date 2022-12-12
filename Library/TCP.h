@@ -19,6 +19,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <thread>
 
 #ifdef _WIN32
 
@@ -63,4 +64,5 @@ namespace TCP {
 		int read(void* data, int length, bool wait = false);
 		int send(const char* msg, int len) { return ::send(sock, msg, len, 0); }
 	};
+
 }

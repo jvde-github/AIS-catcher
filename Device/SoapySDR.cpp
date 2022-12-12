@@ -201,28 +201,28 @@ namespace Device {
 		}
 	}
 
-	void SOAPYSDR::Set(std::string option, std::string arg) {
+	Setting& SOAPYSDR::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "DEVICE") {
 			device_args = arg;
-			return;
+			return *this;
 		}
 		else if (option == "GAIN") {
 			gains_args = SoapySDR::KwargsFromString(arg);
-			return;
+			return *this;
 		}
 		else if (option == "STREAM") {
 			stream_args = SoapySDR::KwargsFromString(arg);
-			return;
+			return *this;
 		}
 		else if (option == "SETTING") {
 			setting_args = SoapySDR::KwargsFromString(arg);
-			return;
+			return *this;
 		}
 		else if (option == "ANTENNA") {
 			antenna = arg;
-			return;
+			return *this;
 		}
 
 		if (option == "AGC") {
@@ -236,6 +236,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	void SOAPYSDR::PrintActuals() {

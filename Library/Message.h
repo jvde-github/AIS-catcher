@@ -55,6 +55,10 @@ namespace AIS {
 			return Util::Convert::toTimeStr(rxtime);
 		}
 
+		std::time_t getRxTimeUnix() const {
+			return rxtime;
+		}
+
 		void clear() {
 			length = 0;
 			NMEA.resize(0);
@@ -108,7 +112,7 @@ namespace AIS {
 		bool on = false;
 
 	public:
-		void Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 		bool isOn() { return on; }
 		std::string getAllowed();
 		bool include(const Message& msg) {

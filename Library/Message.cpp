@@ -164,7 +164,7 @@ namespace AIS {
 		}
 	}
 
-	void Filter::Set(std::string option, std::string arg) {
+	Setting& Filter::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "ALLOW_TYPE") {
@@ -194,6 +194,7 @@ namespace AIS {
 			Util::Convert::toUpper(arg);
 			on = Util::Parse::Switch(arg);
 		}
+		return *this;
 	}
 
 	std::string Filter::getAllowed() {
