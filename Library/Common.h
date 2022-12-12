@@ -91,7 +91,7 @@ struct RAW {
 };
 
 struct Setting {
-	virtual void Set(std::string option, std::string arg) {}
+	virtual Setting& Set(std::string option, std::string arg) { return *this; }
 	virtual std::string Get() { return ""; }
 };
 

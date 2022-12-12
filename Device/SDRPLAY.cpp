@@ -198,7 +198,7 @@ namespace Device {
 		return "UNKNOWN";
 	}
 
-	void SDRPLAY::Set(std::string option, std::string arg) {
+	Setting& SDRPLAY::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "AGC") {
@@ -212,6 +212,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string SDRPLAY::Get() {

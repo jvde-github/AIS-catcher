@@ -181,7 +181,7 @@ namespace Device {
 		}
 	}
 
-	void RTLSDR::Set(std::string option, std::string arg) {
+	Setting& RTLSDR::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "TUNER") {
@@ -198,6 +198,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string RTLSDR::Get() {

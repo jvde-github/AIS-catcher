@@ -155,6 +155,18 @@ namespace Util {
 		return std::string(str);
 	}
 
+	std::string Convert::toDeltaTimeStr(long int delta_time) {
+
+		if (delta_time < 60)
+			return std::to_string(delta_time) + "s";
+		else if (delta_time < 60 * 60)
+			return std::to_string(delta_time / 60) + "m";
+		else if (delta_time < 100 * 60 * 60)
+			return std::to_string(delta_time / 3600) + "h";
+
+		return std::to_string(delta_time / (24 * 3600)) + "d";
+	}
+
 	std::string Convert::toHexString(uint64_t l) {
 		std::stringstream s;
 		s << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << l;

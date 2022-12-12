@@ -21,6 +21,8 @@
 #include <cassert>
 #include <vector>
 #include <time.h>
+#include <iostream>
+#include <fstream>
 
 #include "Stream.h"
 #include "Common.h"
@@ -85,6 +87,7 @@ namespace Util {
 		static std::string toString(Format format);
 		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); };
 		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
+		static std::string toDeltaTimeStr(long int);
 
 		static void toUpper(std::string& s);
 		static void toFloat(CU8* in, CFLOAT32* out, int len);
@@ -95,13 +98,25 @@ namespace Util {
 	class Parse {
 	public:
 		static int Integer(std::string str, int min = (-((1 << 30) - 1)), int max = ((1 << 30) - 1));
-
 		static FLOAT32 Float(std::string str, FLOAT32 min = -1e6, FLOAT32 max = +1e6);
 		static bool StreamFormat(std::string str, Format& format);
 		static bool DeviceType(std::string str, Type& type);
 		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF");
 		static bool AutoInteger(std::string arg, int min, int max, int& val);
 		static bool AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32& val);
+	};
+
+	class Helper {
+	public:
+		static std::string readFile(const std::string& filename) {
+			std::ifstream file(filename);
+
+			if (file.fail()) throw std::runtime_error("cannot open and read file: " + filename);
+
+			std::string str, line;
+			while (std::getline(file, line)) str += line + '\n';
+			return str;
+		}
 	};
 
 	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {

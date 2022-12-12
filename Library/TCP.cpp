@@ -16,6 +16,7 @@
 */
 
 #include <cstring>
+#include <string>
 #include "TCP.h"
 
 namespace TCP {

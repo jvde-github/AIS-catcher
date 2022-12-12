@@ -20,6 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Application\Main.cpp" />
+    <ClCompile Include="..\Application\Config.cpp" />
+    <ClCompile Include="..\Application\Receiver.cpp" />
     <ClCompile Include="..\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Device\AIRSPYHF.cpp" />
     <ClCompile Include="..\Device\FileRAW.cpp" />
@@ -38,6 +40,7 @@
     <ClCompile Include="..\JSON\Parser.cpp" />
     <ClCompile Include="..\JSON\StringBuilder.cpp" />
     <ClCompile Include="..\IO\Network.cpp" />
+    <ClCompile Include="..\IO\Server.cpp" />
     <ClCompile Include="..\JSON\JSON.cpp" />
     <ClCompile Include="..\Library\Keys.cpp" />
     <ClCompile Include="..\Library\AIS.cpp" />
@@ -49,6 +52,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Application\AIS-catcher.h" />
+    <ClInclude Include="..\Application\Receiver.h" />
+    <ClInclude Include="..\Application\Config.h" />
     <ClInclude Include="..\Device\AIRSPY.h" />
     <ClInclude Include="..\Device\AIRSPYHF.h" />
     <ClInclude Include="..\Device\Device.h" />
@@ -74,6 +79,7 @@
     <ClInclude Include="..\Library\Keys.h" />
     <ClInclude Include="..\IO\IO.h" />
     <ClInclude Include="..\IO\Network.h" />
+    <ClInclude Include="..\IO\Server.h" />
     <ClInclude Include="..\Library\AIS.h" />
     <ClInclude Include="..\Library\Message.h" />
     <ClInclude Include="..\Library\Common.h" />

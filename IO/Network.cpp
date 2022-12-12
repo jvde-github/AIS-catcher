@@ -153,21 +153,21 @@ namespace IO {
 			msg += "{\n\t\"protocol\": \"jsonaiscatcher\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"stationid\": ";
-			builder.jsonify(stationid, msg);
+			builder.stringify(stationid, msg);
 			msg += ",";
 			msg += "\n\t\"receiver\":\n\t\t{\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
 			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",\n\t\t\"engine\": ";
-			builder.jsonify(model, msg);
+			builder.stringify(model, msg);
 			msg += ",\n\t\t\"setting\": ";
-			builder.jsonify(model_setting, msg);
+			builder.stringify(model_setting, msg);
 			msg += "\n\t\t},\n\t\"device\":\n\t\t{\n\t\t\"product\": ";
-			builder.jsonify(product, msg);
+			builder.stringify(product, msg);
 			msg += ",\n\t\t\"vendor\": ";
-			builder.jsonify(vendor, msg);
+			builder.stringify(vendor, msg);
 			msg += ",\n\t\t\"serial\": ";
-			builder.jsonify(serial, msg);
+			builder.stringify(serial, msg);
 			msg += ",\n\t\t\"setting\": ";
-			builder.jsonify(device_setting, msg);
+			builder.stringify(device_setting, msg);
 			msg += "\n\t\t},\n\t\"msgs\": [";
 
 			char delim = ' ';
@@ -184,9 +184,9 @@ namespace IO {
 			msg += "{\n\t\"protocol\": \"jsonais\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"groups\": [\n\t{\n\t\t\"path\": [{ \"name\": ";
-			builder.jsonify(stationid, msg);
+			builder.stringify(stationid, msg);
 			msg += ", \"url\" : ";
-			builder.jsonify(url, msg);
+			builder.stringify(url, msg);
 			msg += " }],\n\t\t\"msgs\": [";
 
 			char delim = ' ';
@@ -222,7 +222,7 @@ namespace IO {
 	}
 #endif
 
-	void HTTP::Set(std::string option, std::string arg) {
+	Setting& HTTP::Set(std::string option, std::string arg) {
 #ifdef HASCURL
 		Util::Convert::toUpper(option);
 
@@ -298,7 +298,9 @@ namespace IO {
 #else
 		throw std::runtime_error("HTTP: not implemented, please recompile with libcurl support.");
 #endif
+		return *this;
 	}
+
 	UDP::UDP() {
 #ifdef _WIN32
 		WSADATA wsaData;
@@ -349,8 +351,8 @@ namespace IO {
 		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
 
 		if (code != 0 || address == NULL) {
-			throw std::runtime_error("UDP network address and/or port not valid.");
-			return;
+			std::string error = (const char*)gai_strerror(code);
+			throw std::runtime_error("UDP network address and/or port not valid: " + host + " port " + port + " code: " + error);
 		}
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
@@ -367,7 +369,7 @@ namespace IO {
 		}
 	}
 
-	void UDP::Set(std::string option, std::string arg) {
+	Setting& UDP::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "HOST") {
@@ -377,6 +379,8 @@ namespace IO {
 			port = arg;
 		}
 		else
-			filter.Set(option, arg);
+			return filter.Set(option, arg);
+
+		return *this;
 	}
 }

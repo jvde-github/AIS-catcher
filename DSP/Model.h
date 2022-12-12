@@ -66,7 +66,7 @@ namespace AIS {
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
-		virtual void Set(std::string option, std::string arg) { throw std::runtime_error("Model: unknown setting."); }
+		virtual Setting& Set(std::string option, std::string arg) { throw std::runtime_error("Model: unknown setting."); }
 		virtual std::string Get() { return ""; }
 		virtual ModelClass getClass() { return ModelClass::IQ; }
 	};
@@ -103,7 +103,7 @@ namespace AIS {
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
 
-		void Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 	};
 
@@ -150,7 +150,7 @@ namespace AIS {
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
-		void Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 	};
 
@@ -172,7 +172,7 @@ namespace AIS {
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
-		void Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 	};
 
@@ -199,7 +199,7 @@ namespace AIS {
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device*);
-		void Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::TXT; }
 	};

@@ -129,7 +129,7 @@ namespace Device {
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
 
-	void RTLTCP::Set(std::string option, std::string arg) {
+	Setting& RTLTCP::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "TUNER") {
@@ -158,6 +158,8 @@ namespace Device {
 		}
 		else
 			Device::Set(option, arg);
+
+		return *this;
 	}
 
 	std::string RTLTCP::Get() {

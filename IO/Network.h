@@ -43,7 +43,6 @@
 #include "AIS.h"
 #include "Keys.h"
 #include "TCP.h"
-#include "Utilities.h"
 #include "ZIP.h"
 
 #include "JSON/JSON.h"
@@ -88,7 +87,7 @@ namespace IO {
 			for (int i = 0; i < len; i++) {
 				if (filter.include(*(AIS::Message*)data[i].binary)) {
 					json.clear();
-					builder.build(data[i], json);
+					builder.stringify(data[i], json);
 					{
 						const std::lock_guard<std::mutex> lock(queue_mutex);
 						queue.push_back(json);
@@ -100,14 +99,12 @@ namespace IO {
 		std::list<std::string> queue;
 
 	public:
-		~HTTP() {
-			Stop();
-		}
+		~HTTP() { Stop(); }
 #endif
 	public:
 		HTTP(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
 
-		virtual void Set(std::string option, std::string arg);
+		virtual Setting& Set(std::string option, std::string arg);
 
 		void Start();
 		void Stop();
@@ -145,7 +142,7 @@ namespace IO {
 		~UDP();
 		UDP();
 
-		virtual void Set(std::string option, std::string arg);
+		virtual Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 

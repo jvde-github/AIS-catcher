@@ -24,7 +24,7 @@ namespace JSON {
 
 	// StringBuilder - Build string from JSON object
 
-	void StringBuilder::jsonify(const std::string& str, std::string& json) {
+	void StringBuilder::stringify(const std::string& str, std::string& json) {
 		json += '\"';
 		for (char c : str) {
 			switch (c) {
@@ -47,10 +47,10 @@ namespace JSON {
 	void StringBuilder::to_string(std::string& json, const Value& v) {
 
 		if (v.isString()) {
-			jsonify(v.getString(), json);
+			stringify(v.getString(), json);
 		}
 		else if (v.isObject()) {
-			build(v.getObject(), json);
+			stringify(v.getObject(), json);
 		}
 		else if (v.isArrayString()) {
 
@@ -59,11 +59,11 @@ namespace JSON {
 			json += '[';
 
 			if (as.size()) {
-				jsonify(as[0], json);
+				stringify(as[0], json);
 
 				for (int i = 1; i < as.size(); i++) {
 					json += ',';
-					jsonify(as[i], json);
+					stringify(as[i], json);
 				}
 			}
 
@@ -90,7 +90,7 @@ namespace JSON {
 			v.to_string(json);
 	}
 
-	void StringBuilder::build(const JSON& object, std::string& json) {
+	void StringBuilder::stringify(const JSON& object, std::string& json) {
 		bool first = true;
 		json += '{';
 		for (const Property& p : object.getProperties()) {

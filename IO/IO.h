@@ -106,7 +106,10 @@ namespace IO {
 		void setDetail(OutputLevel l) { level = l; }
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 
-		void Set(std::string option, std::string arg) { filter.Set(option, arg); }
+		Setting& Set(std::string option, std::string arg) {
+			filter.Set(option, arg);
+			return *this;
+		}
 	};
 
 	class JSONtoScreen : public StreamIn<JSON::JSON>, public Setting {
@@ -120,6 +123,9 @@ namespace IO {
 		void Receive(const JSON::JSON* data, int len, TAG& tag);
 		void setMap(int m) { builder.setMap(m); }
 
-		void Set(std::string option, std::string arg) { filter.Set(option, arg); }
+		Setting& Set(std::string option, std::string arg) {
+			filter.Set(option, arg);
+			return *this;
+		}
 	};
 }
