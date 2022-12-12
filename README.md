@@ -24,11 +24,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.41). 
-There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and, in the future, change the settings. To run the latest development branche, follow the installation instructions below but clone the project as follows:
-```console
-git clone https://github.com/jvde-github/AIS-catcher.git -b develop
-```
-Now to start with the webserver use:
+There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and, in the future, change the settings. Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
 ```
