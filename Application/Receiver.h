@@ -279,6 +279,7 @@ class Ships : public StreamIn<JSON::JSON> {
 		uint32_t mmsi;
 		float lat, lon, ppm, level;
 		int count;
+		int type;
 		std::time_t last_signal;
 		char shipname[21];
 		char callsign[8];
