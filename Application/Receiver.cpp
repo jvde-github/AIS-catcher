@@ -413,6 +413,7 @@ std::string Ships::getJSON() {
 				}
 			}
 
+			content += "\"type\":" + std::to_string(ships[ptr].ship.type) + ",";
 			content += "\"level\":" + std::to_string(ships[ptr].ship.level) + ",";
 			content += "\"count\":" + std::to_string(ships[ptr].ship.count) + ",";
 			content += "\"ppm\":" + std::to_string(ships[ptr].ship.ppm) + ",";
@@ -425,7 +426,7 @@ std::string Ships::getJSON() {
 			str = std::string(ships[ptr].ship.shipname);
 			JSON::StringBuilder::stringify(str, content);
 
-			content += ",\"last_signal\":\"" + Util::Convert::toDeltaTimeStr(delta_time) + "\"}";
+			content += ",\"last_signal\":" + std::to_string(delta_time) + "}";
 			delim = ",";
 		}
 		ptr = ships[ptr].next;
@@ -472,6 +473,30 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	ships[ptr].ship.last_signal = msg->getRxTimeUnix();
 	ships[ptr].ship.ppm = tag.ppm;
 	ships[ptr].ship.level = tag.level;
+
+	/*		123456789
+			MIDnnnnnn 	Schip
+			0MIDnnnnn 	Groep van schepen
+			00MIDnnnn 	Walstation
+			111MIDnnn 	Reddingsvliegtuig of -helikopter
+			8MIDnnnnn 	VHF-Portofoon met DSC en satelliet-plaatsbepaling
+			970nnnnnn 	AIS-SART
+			972nnnnnn 	AIS en/of DSC man-overboord device
+			974nnnnnn 	AIS-EPIRB
+			98MIDnnnn 	Vaartuigen behorende bij een moederschip
+			99MIDnnnn 	Vast navigatiehulpmiddel
+	*/
+
+	if (mmsi >= 20000000 && mmsi < 800000000)
+		ships[ptr].ship.type = (msg->type() == 18 || msg->type() == 19 || msg->type() == 24) ? 2 : 1;
+	else if (mmsi < 8000000)
+		ships[ptr].ship.type = 3;
+	else if (mmsi > 111000000 && mmsi < 111999999)
+		ships[ptr].ship.type = 4;
+	else if (mmsi > 990000000)
+		ships[ptr].ship.type = 5;
+	else
+		ships[ptr].ship.type = 6;
 
 	for (const auto& p : data[0].getProperties()) {
 		switch (p.Key()) {
