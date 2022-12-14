@@ -584,7 +584,7 @@ void OutputServer::Request(SOCKET s, const std::string& r) {
 		content += "\"sample_rate\":\"" + sample_rate + "\",";
 		content += "\"msg_rate\":" + std::to_string(hist_second.average()) + ",";
 		content += "\"last_minute\":" + std::to_string(hist_minute.last()) + ",";
-		content += "\"last_hour\":" + std::to_string(hist_hour.average()) + ",";
+		content += "\"last_hour\":" + std::to_string(hist_hour.last()) + ",";
 		content += "\"vessel_count\":" + std::to_string(ships.getCount()) + ",";
 		content += "\"vessel_max\":" + std::to_string(ships.getMaxCount()) + ",";
 		content += "\"product\":\"" + product + "\",";
