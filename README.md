@@ -24,7 +24,9 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.41). 
-There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and, in the future, change the settings. Make sure you use the latest version and start the webserver as follows:
+There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and, in the future, change the settings. For a live demo for an actual running station in East Boston US, see [here](https://kx1t.com/ais/). Thank you KX1T for making this available. 
+
+Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
 ```
