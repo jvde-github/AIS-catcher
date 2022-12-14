@@ -240,6 +240,11 @@ struct History : public StreamIn<AIS::Message> {
 		return avg / delta_time;
 	}
 
+	float last() {
+		if (start == end) return 0.0f;
+		return history[(end + N - 1) % N].count;
+	}
+
 	void addJSONarray(std::string& content) {
 		std::string delim = "";
 		content += "[";
