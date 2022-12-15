@@ -279,15 +279,36 @@ class Ships : public StreamIn<JSON::JSON> {
 	int TIME_HISTORY = 30 * 60;
 
 	const int N = 4096; // recalibrate
+
+	const float LAT_UNDEFINED = 91;
+	const float LON_UNDEFINED = 181;
+	const float COG_UNDEFINED = 360;
+	const float SPEED_UNDEFINED = 102.3;
+	const float HEADING_UNDEFINED = 511;
+	const int STATUS_UNDEFINED = 15;
+
+	const int MSG_TYPE_OTHER = 0;
+	const int MSG_TYPE_CLASSA = 1;
+	const int MSG_TYPE_CLASSB = 2;
+	const int MSG_TYPE_BASESTATION = 3;
+	const int MSG_TYPE_ATON = 4;
+	const int MSG_TYPE_SAR = 5;
+
+	const int MMSI_TYPE_OTHER = 0;
+	const int MMSI_TYPE_CLASS_A = 1;
+	const int MMSI_TYPE_CLASS_B = 2;
+	const int MMSI_TYPE_BASESTATION = 3;
+	const int MMSI_TYPE_SAR = 4;
+	const int MMSI_TYPE_SARTEPIRB = 5;
+	const int MMSI_TYPE_ATON = 6;
+
 	struct Detail {
 
 		uint32_t mmsi;
-		float lat, lon, ppm, level;
-		int count;
-		int type;
+		int count, mmsi_type, msg_type, shiptype, heading, status;
+		float lat, lon, ppm, level, speed, cog;
 		std::time_t last_signal;
-		char shipname[21];
-		char callsign[8];
+		char shipname[21], destination[21], callsign[8];
 	};
 
 	struct List {

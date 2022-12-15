@@ -413,18 +413,30 @@ std::string Ships::getJSON() {
 				}
 			}
 
-			content += "\"type\":" + std::to_string(ships[ptr].ship.type) + ",";
+			content += "\"mmsi_type\":" + std::to_string(ships[ptr].ship.mmsi_type) + ",";
 			content += "\"level\":" + std::to_string(ships[ptr].ship.level) + ",";
 			content += "\"count\":" + std::to_string(ships[ptr].ship.count) + ",";
 			content += "\"ppm\":" + std::to_string(ships[ptr].ship.ppm) + ",";
 
-			str = std::string(ships[ptr].ship.callsign);
+			content += "\"heading\":" + std::to_string(ships[ptr].ship.heading) + ",";
+			content += "\"cog\":" + std::to_string(ships[ptr].ship.cog) + ",";
+			content += "\"speed\":" + std::to_string(ships[ptr].ship.speed) + ",";
+			content += "\"shipttype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
+			content += "\"msg_type\":" + std::to_string(ships[ptr].ship.msg_type) + ",";
+			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
+
 			content += "\"callsign\":";
+			str = std::string(ships[ptr].ship.callsign);
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"shipname\":";
 			str = std::string(ships[ptr].ship.shipname);
 			JSON::StringBuilder::stringify(str, content);
+
+			content += ",\"destination\":";
+			str = std::string(ships[ptr].ship.destination);
+			JSON::StringBuilder::stringify(str, content);
+
 
 			content += ",\"last_signal\":" + std::to_string(delta_time) + "}";
 			delim = ",";
@@ -450,6 +462,11 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ptr = last;
 		count = MIN(count + 1, N);
 		std::memset(&ships[ptr].ship, 0, sizeof(Detail));
+		ships[ptr].ship.lat = LAT_UNDEFINED;
+		ships[ptr].ship.lon = LON_UNDEFINED;
+		ships[ptr].ship.heading = HEADING_UNDEFINED;
+		ships[ptr].ship.cog = COG_UNDEFINED;
+		ships[ptr].ship.status = STATUS_UNDEFINED;
 	}
 
 	if (ptr != first) {
@@ -487,16 +504,19 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			99MIDnnnn 	Vast navigatiehulpmiddel
 	*/
 
-	if (mmsi >= 20000000 && mmsi < 800000000)
-		ships[ptr].ship.type = (msg->type() == 18 || msg->type() == 19 || msg->type() == 24) ? 2 : 1;
-	else if (mmsi < 8000000)
-		ships[ptr].ship.type = 3;
-	else if (mmsi > 111000000 && mmsi < 111999999)
-		ships[ptr].ship.type = 4;
-	else if (mmsi > 990000000)
-		ships[ptr].ship.type = 5;
+	// type derived from MMSI
+	if ((mmsi >= 200000000 && mmsi < 800000000) || (mmsi >= 20000000 && mmsi < 80000000) || ((mmsi >= 982000000 && mmsi < 988000000)))
+		ships[ptr].ship.mmsi_type = (msg->type() == 18 || msg->type() == 19 || msg->type() == 24) ? MMSI_TYPE_CLASS_B : MMSI_TYPE_CLASS_A; // Class A & Class B
+	else if ((mmsi >= 2000000 && mmsi < 8000000))
+		ships[ptr].ship.mmsi_type = MMSI_TYPE_BASESTATION; // Base Station
+	else if ((mmsi >= 111000000 && mmsi < 111999999) || (mmsi >= 11100000 && mmsi < 11199999))
+		ships[ptr].ship.mmsi_type = MMSI_TYPE_SAR; // helicopter
+	else if (mmsi >= 97000000 && mmsi < 98000000)
+		ships[ptr].ship.mmsi_type = MMSI_TYPE_SARTEPIRB; //  AIS SART/EPIRB/man-overboard
+	else if (mmsi >= 992000000 && mmsi < 998000000)
+		ships[ptr].ship.mmsi_type = MMSI_TYPE_ATON; //  AtoN
 	else
-		ships[ptr].ship.type = 6;
+		ships[ptr].ship.mmsi_type = MMSI_TYPE_OTHER; // anything else
 
 	for (const auto& p : data[0].getProperties()) {
 		switch (p.Key()) {
@@ -506,12 +526,30 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		case AIS::KEY_LON:
 			ships[ptr].ship.lon = p.Get().getFloat();
 			break;
+		case AIS::KEY_SHIPTYPE:
+			ships[ptr].ship.shiptype = p.Get().getInt();
+			break;
+		case AIS::KEY_HEADING:
+			ships[ptr].ship.heading = p.Get().getInt();
+			break;
+		case AIS::KEY_COURSE:
+			ships[ptr].ship.cog = p.Get().getFloat();
+			break;
+		case AIS::KEY_SPEED:
+			ships[ptr].ship.speed = p.Get().isFloat() ? p.Get().getFloat() : p.Get().getInt();
+			break;
+		case AIS::KEY_STATUS:
+			ships[ptr].ship.status = p.Get().getInt();
+			break;
 		case AIS::KEY_NAME:
 		case AIS::KEY_SHIPNAME:
 			std::strncpy(ships[ptr].ship.shipname, p.Get().getString().c_str(), 20);
 			break;
 		case AIS::KEY_CALLSIGN:
 			std::strncpy(ships[ptr].ship.callsign, p.Get().getString().c_str(), 7);
+			break;
+		case AIS::KEY_DESTINATION:
+			std::strncpy(ships[ptr].ship.destination, p.Get().getString().c_str(), 20);
 			break;
 		}
 	}
