@@ -421,7 +421,7 @@ std::string Ships::getJSON() {
 			content += "\"heading\":" + std::to_string(ships[ptr].ship.heading) + ",";
 			content += "\"cog\":" + std::to_string(ships[ptr].ship.cog) + ",";
 			content += "\"speed\":" + std::to_string(ships[ptr].ship.speed) + ",";
-			content += "\"shipttype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
+			content += "\"shiptype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
 			content += "\"msg_type\":" + std::to_string(ships[ptr].ship.msg_type) + ",";
 			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
 
