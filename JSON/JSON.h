@@ -69,6 +69,8 @@ namespace JSON {
 		const bool isArray() const { return type == Type::ARRAY; }
 		const bool isArrayString() const { return type == Type::ARRAY_STRING; }
 		const bool isString() const { return type == Type::STRING; }
+		const bool isFloat() const { return type == Type::FLOAT; }
+		const bool isInt() const { return type == Type::INT; }
 
 		void setFloat(float v) {
 			data.f = v;
