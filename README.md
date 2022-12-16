@@ -30,16 +30,23 @@ Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
 ```
-where ``8100`` is the port number, you can also use `-N PORT_MIN 8100 PORT_MAX 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200. An additional option is to provide the station name and a link to an external website which will be mentioned on the Statistics page:
+where ``8100`` is the port number. If you go in your browser to the IP address and port you will see a few tabs providing insights into the reception of your station, including signal levels, ships received and message rate.  
+<p float="left">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20STAT.png" width="22%" />
+   <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20PLOTS.png" width="22%" />
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20SHIPS.png" width="22%" /> 
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20MAP.png" width="22%" />
+</p>
+
+There are a few additional options. For example, you can  use `-N PORT_MIN 8100 PORT_MAX 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200. A further option is to provide the station name and a link to an external website which will be displayed on the Statistics page and :
 ```
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
-You can look up the statistics with your browser by entering the IP address of the computer running AIS-catcher followed by a colon and the assigned port. This will look something like:
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/blob/989b43fe8283a2e066bd85761045fe1d189fefb9/media/webserver2.jpg" width=40% height=40%>
-</p>
-
-In this case AIS-catcher runs on a RPi with address ``192.168.1.113`` and the internal server is set up at port ``8100``. An alternative is to configure the server via the configuration file (in a section with name ``server``).
+To display the distance to your station you need to provide the coordinates as follows:
+```
+AIS-catcher -N LAT 50 LON 3.141592
+```
+All these options can be captured in the configuration file (in a section with name ``server``).
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
