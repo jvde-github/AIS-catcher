@@ -42,7 +42,10 @@ There are a few additional options. For example, you can also use `-N PORT_MIN 8
 ```
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
-An alternative is to configure the server via the configuration file (in a section with name ``server``).
+An alternative is to configure the server via the configuration file (in a section with name ``server``). To display the distance to your station you need to provide the coordinates as follows:
+```
+AIS-catcher -N LAT 50 LON 3.141592
+```
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
