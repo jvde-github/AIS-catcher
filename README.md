@@ -38,14 +38,15 @@ where ``8100`` is the port number. If you go in your browser to the IP address a
   <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20MAP.png" width="22%" />
 </p>
 
-There are a few additional options. For example, you can also use `-N PORT_MIN 8100 PORT_MAX 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200. An additional option is to provide the station name and a link to an external website which will be mentioned on the Statistics page:
+There are a few additional options. For example, you can  use `-N PORT_MIN 8100 PORT_MAX 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200. A further option is to provide the station name and a link to an external website which will be displayed on the Statistics page and :
 ```
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
-An alternative is to configure the server via the configuration file (in a section with name ``server``). To display the distance to your station you need to provide the coordinates as follows:
+To display the distance to your station you need to provide the coordinates as follows:
 ```
 AIS-catcher -N LAT 50 LON 3.141592
 ```
+All these options can be captured in the configuration file (in a section with name ``server``).
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
