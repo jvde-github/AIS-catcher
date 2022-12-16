@@ -30,7 +30,7 @@ Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
 ```
-where ``8100`` is the port number. If you go in your browser to the IP address and port you will see a few tabs providing insights into the reception of your station, including signal levels, ships received and message rate.  
+where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a few tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
 <p float="left">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20STAT.png" width="22%" />
    <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20PLOTS.png" width="22%" />
