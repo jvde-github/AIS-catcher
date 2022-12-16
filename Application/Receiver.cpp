@@ -388,6 +388,7 @@ bool Ships::isValidCoord(float lat, float lon) {
 }
 
 std::string Ships::getJSON() {
+	const std::string null_str = "null";
 	std::string str;
 
 	content = "{\"count\":" + std::to_string(count);
@@ -411,6 +412,13 @@ std::string Ships::getJSON() {
 					float d = distance(ships[ptr].ship.lat, ships[ptr].ship.lon, lat, lon);
 					content += "\"distance\":" + std::to_string(d) + ",";
 				}
+				else
+					content += "\"distance\": null,";
+			}
+			else {
+				content += "\"lat\":" + null_str + ",";
+				content += "\"lon\":" + null_str + ",";
+				content += "\"distance\": null,";
 			}
 
 			content += "\"mmsi_type\":" + std::to_string(ships[ptr].ship.mmsi_type) + ",";
@@ -418,9 +426,9 @@ std::string Ships::getJSON() {
 			content += "\"count\":" + std::to_string(ships[ptr].ship.count) + ",";
 			content += "\"ppm\":" + std::to_string(ships[ptr].ship.ppm) + ",";
 
-			content += "\"heading\":" + std::to_string(ships[ptr].ship.heading) + ",";
-			content += "\"cog\":" + std::to_string(ships[ptr].ship.cog) + ",";
-			content += "\"speed\":" + std::to_string(ships[ptr].ship.speed) + ",";
+			content += "\"heading\":" + ((ships[ptr].ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.heading)) + ",";
+			content += "\"cog\":" + ((ships[ptr].ship.cog == COG_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.cog)) + ",";
+			content += "\"speed\":" + ((ships[ptr].ship.speed == SPEED_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.speed)) + ",";
 			content += "\"shiptype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
 			content += "\"msg_type\":" + std::to_string(ships[ptr].ship.msg_type) + ",";
 			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
@@ -462,11 +470,13 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ptr = last;
 		count = MIN(count + 1, N);
 		std::memset(&ships[ptr].ship, 0, sizeof(Detail));
+		ships[ptr].ship.lat = -1;
 		ships[ptr].ship.lat = LAT_UNDEFINED;
 		ships[ptr].ship.lon = LON_UNDEFINED;
 		ships[ptr].ship.heading = HEADING_UNDEFINED;
 		ships[ptr].ship.cog = COG_UNDEFINED;
 		ships[ptr].ship.status = STATUS_UNDEFINED;
+		ships[ptr].ship.speed = SPEED_UNDEFINED;
 	}
 
 	if (ptr != first) {
@@ -536,7 +546,10 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			ships[ptr].ship.cog = p.Get().getFloat();
 			break;
 		case AIS::KEY_SPEED:
-			ships[ptr].ship.speed = p.Get().isFloat() ? p.Get().getFloat() : p.Get().getInt();
+			if (msg->type() == 9 && p.Get().getInt() != 1023)
+				ships[ptr].ship.speed = p.Get().getInt();
+			else if (p.Get().getFloat() != 102.3)
+				ships[ptr].ship.speed = p.Get().getFloat();
 			break;
 		case AIS::KEY_STATUS:
 			ships[ptr].ship.status = p.Get().getInt();
