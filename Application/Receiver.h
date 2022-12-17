@@ -251,81 +251,46 @@ struct History : public StreamIn<AIS::Message> {
 	}
 
 	void addJSONarray(std::string& content) {
-		long int tm;
-		bool done;
+		long int tm, tm_now = ((long int)time(nullptr)) / INTERVAL;
 		int idx;
 
-		std::string delim = "";
-		content += "{";
+		content += "{\"count\":[";
+		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
+			bool new_tm = history[idx].time >= tm;
 
-		content += "\"count\":[";
-		tm = ((long int)time(nullptr)) / INTERVAL;
-		done = false;
-		idx = end;
-
-		for (int i = N; i > 0 && !done; i--) {
-			int v = 0;
-			if (!done && history[idx].time >= tm) {
-				v = history[idx].count;
-				if (idx == start)
-					done = true;
-				else
-					idx = (idx + N - 1) % N;
+			content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(new_tm ? history[idx].count : 0) + "},";
+			if (new_tm) {
+				if (idx == start) break;
+				idx = (idx + N - 1) % N;
 			}
-
-			content += delim + "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(v) + "}";
-			delim = ",";
 			tm--;
 		}
-		content += "]";
+		content[content.size() - 1] = ']';
 
 		content += ",\"ppm\":[";
-		tm = ((long int)time(nullptr)) / INTERVAL;
-		done = false;
-		idx = end;
-		delim = "";
-
-		for (int i = N; i > 0 && !done; i--) {
-			int v = 0;
-			if (!done && history[idx].time >= tm) {
-				if (idx == start)
-					done = true;
-				else
-					idx = (idx + N - 1) % N;
-
-				if (history[idx].count > 0) {
-					content += delim + "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].ppm / history[idx].count) + "}";
-					delim = ",";
-				}
+		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
+			if (history[idx].time >= tm) {
+				if (history[idx].count > 0)
+					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].ppm / history[idx].count) + "},";
+				if (idx == start) break;
+				idx = (idx + N - 1) % N;
 			}
 			tm--;
 		}
-		content += "]";
+		content[content.size() - 1] = ']';
 
 		content += ",\"level\":[";
-		tm = ((long int)time(nullptr)) / INTERVAL;
-		done = false;
-		idx = end;
-		delim = "";
-
-		for (int i = N; i > 0 && !done; i--) {
-			int v = 0;
-			if (!done && history[idx].time >= tm) {
-				if (idx == start)
-					done = true;
-				else
-					idx = (idx + N - 1) % N;
-
-				if (history[idx].count > 0) {
-					content += delim + "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].level / history[idx].count) + "}";
-					delim = ",";
-				}
+		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
+			if (history[idx].time >= tm) {
+				if (history[idx].count > 0)
+					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].level / history[idx].count) + "},";
+				if (idx == start) break;
+				idx = (idx + N - 1) % N;
 			}
 			tm--;
 		}
-		content += "]";
-
-		content += "}";
+		content[content.size() - 1] = ']';
+		content += '}';
 	}
 };
 
