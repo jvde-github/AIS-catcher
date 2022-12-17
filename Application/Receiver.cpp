@@ -501,19 +501,6 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	ships[ptr].ship.ppm = tag.ppm;
 	ships[ptr].ship.level = tag.level;
 
-	/*		123456789
-			MIDnnnnnn 	Schip
-			0MIDnnnnn 	Groep van schepen
-			00MIDnnnn 	Walstation
-			111MIDnnn 	Reddingsvliegtuig of -helikopter
-			8MIDnnnnn 	VHF-Portofoon met DSC en satelliet-plaatsbepaling
-			970nnnnnn 	AIS-SART
-			972nnnnnn 	AIS en/of DSC man-overboord device
-			974nnnnnn 	AIS-EPIRB
-			98MIDnnnn 	Vaartuigen behorende bij een moederschip
-			99MIDnnnn 	Vast navigatiehulpmiddel
-	*/
-
 	// type derived from MMSI
 	if ((mmsi >= 200000000 && mmsi < 800000000) || (mmsi >= 20000000 && mmsi < 80000000) || ((mmsi >= 982000000 && mmsi < 988000000)))
 		ships[ptr].ship.mmsi_type = (msg->type() == 18 || msg->type() == 19 || msg->type() == 24) ? MMSI_TYPE_CLASS_B : MMSI_TYPE_CLASS_A; // Class A & Class B
