@@ -209,6 +209,8 @@ struct History : public StreamIn<AIS::Message> {
 	struct {
 		long int time;
 		int count;
+		float ppm;
+		float level;
 	} history[N];
 
 	int start, end;
@@ -222,10 +224,13 @@ struct History : public StreamIn<AIS::Message> {
 			if (history[end].time != tm) {
 				end = (end + 1) % N;
 				if (start == end) start = (start + 1) % N;
-				history[end] = { tm, 1 };
+				history[end] = { tm, 1, tag.ppm, tag.level };
 			}
-			else
+			else {
 				history[end].count++;
+				history[end].ppm += tag.ppm;
+				history[end].level += tag.level;
+			}
 		}
 	}
 
@@ -246,12 +251,17 @@ struct History : public StreamIn<AIS::Message> {
 	}
 
 	void addJSONarray(std::string& content) {
-		std::string delim = "";
-		content += "[";
+		long int tm;
+		bool done;
+		int idx;
 
-		long int tm = ((long int)time(nullptr)) / INTERVAL;
-		bool done = false;
-		int idx = end;
+		std::string delim = "";
+		content += "{";
+
+		content += "\"count\":[";
+		tm = ((long int)time(nullptr)) / INTERVAL;
+		done = false;
+		idx = end;
 
 		for (int i = N; i > 0 && !done; i--) {
 			int v = 0;
@@ -267,8 +277,55 @@ struct History : public StreamIn<AIS::Message> {
 			delim = ",";
 			tm--;
 		}
-
 		content += "]";
+
+		content += ",\"ppm\":[";
+		tm = ((long int)time(nullptr)) / INTERVAL;
+		done = false;
+		idx = end;
+		delim = "";
+
+		for (int i = N; i > 0 && !done; i--) {
+			int v = 0;
+			if (!done && history[idx].time >= tm) {
+				if (idx == start)
+					done = true;
+				else
+					idx = (idx + N - 1) % N;
+
+				if (history[idx].count > 0) {
+					content += delim + "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].ppm / history[idx].count) + "}";
+					delim = ",";
+				}
+			}
+			tm--;
+		}
+		content += "]";
+
+		content += ",\"level\":[";
+		tm = ((long int)time(nullptr)) / INTERVAL;
+		done = false;
+		idx = end;
+		delim = "";
+
+		for (int i = N; i > 0 && !done; i--) {
+			int v = 0;
+			if (!done && history[idx].time >= tm) {
+				if (idx == start)
+					done = true;
+				else
+					idx = (idx + N - 1) % N;
+
+				if (history[idx].count > 0) {
+					content += delim + "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].level / history[idx].count) + "}";
+					delim = ",";
+				}
+			}
+			tm--;
+		}
+		content += "]";
+
+		content += "}";
 	}
 };
 
