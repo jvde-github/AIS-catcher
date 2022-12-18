@@ -434,11 +434,11 @@ std::string Ships::getJSON() {
 			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
 
 			content += "\"callsign\":";
-			str = std::string(ships[ptr].ship.callsign) + (ships[ptr].ship.virtual_aid ? std::string(" [V]") : std::string(""));
+			str = std::string(ships[ptr].ship.callsign);
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"shipname\":";
-			str = std::string(ships[ptr].ship.shipname);
+			str = std::string(ships[ptr].ship.shipname)  + (ships[ptr].ship.virtual_aid ? std::string(" [V]") : std::string(""));
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"destination\":";
