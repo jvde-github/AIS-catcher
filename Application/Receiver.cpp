@@ -434,7 +434,7 @@ std::string Ships::getJSON() {
 			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
 
 			content += "\"callsign\":";
-			str = std::string(ships[ptr].ship.callsign);
+			str = std::string(ships[ptr].ship.callsign) + (ships[ptr].ship.virtual_aid ? std::string(" [V]") : std::string(""));
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"shipname\":";
@@ -540,6 +540,9 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			break;
 		case AIS::KEY_STATUS:
 			ships[ptr].ship.status = p.Get().getInt();
+			break;
+		case AIS::KEY_VIRTUAL_AID:
+			ships[ptr].ship.virtual_aid = p.Get().getBool();
 			break;
 		case AIS::KEY_NAME:
 		case AIS::KEY_SHIPNAME:

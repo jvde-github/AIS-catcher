@@ -327,7 +327,7 @@ class Ships : public StreamIn<JSON::JSON> {
 	struct Detail {
 
 		uint32_t mmsi;
-		int count, mmsi_type, msg_type, shiptype, heading, status;
+		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid;
 		float lat, lon, ppm, level, speed, cog;
 		std::time_t last_signal;
 		char shipname[21], destination[21], callsign[8];
