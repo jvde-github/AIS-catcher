@@ -535,6 +535,7 @@ A list of some stations mentioning using AIS-catcher:
 - [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
 - [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
 - [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
+- [Haiphong, Vietnam](https://www.marinetraffic.com/en/ais/details/stations/23016)
 - [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
 - [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
