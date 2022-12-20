@@ -531,8 +531,10 @@ The output of the various receivers was sent via UDP to AISdispatcher which remo
 ### Some stations with AIS-catcher
 
 A list of some stations mentioning using AIS-catcher:
+- [A caruna, Spain](https://www.marinetraffic.com/en/ais/details/stations/23439)
 - [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
 - [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
+- [Boston, US](https://www.marinetraffic.com/ais/details/stations/22977)
 - [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
 - [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
 - [Haiphong, Vietnam](https://www.marinetraffic.com/en/ais/details/stations/23016)
