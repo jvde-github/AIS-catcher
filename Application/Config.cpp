@@ -42,7 +42,7 @@ void Config::setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 void Config::setServerfromJSON(const JSON::Value& pd) {
 
 	setSettingsFromJSON(pd, _server);
-	_receiver.setTags("DT");
+	_receiver.setTags("DTM");
 	_server.active() = true;
 }
 

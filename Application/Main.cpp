@@ -247,7 +247,7 @@ int main(int argc, char* argv[]) {
 				Assert(count > 0, param, "requires at least one parameter");
 				if (count % 2 == 1) server.Set("PORT", arg1);
 				parseSettings(server, argv, ptr + (count % 2), argc);
-				receiver.setTags("DT");
+				receiver.setTags("DTM");
 				server.active() = true;
 				break;
 			case 'v':
