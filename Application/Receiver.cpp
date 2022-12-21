@@ -431,6 +431,7 @@ std::string Ships::getJSON() {
 			content += "\"speed\":" + ((ships[ptr].ship.speed == SPEED_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.speed)) + ",";
 			content += "\"shiptype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
 			content += "\"msg_type\":" + std::to_string(ships[ptr].ship.msg_type) + ",";
+			content += "\"country\":\"" + std::string(ships[ptr].ship.country_code) + "\",";
 			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
 
 			content += "\"callsign\":";
@@ -550,6 +551,9 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			break;
 		case AIS::KEY_CALLSIGN:
 			std::strncpy(ships[ptr].ship.callsign, p.Get().getString().c_str(), 7);
+			break;
+		case AIS::KEY_COUNTRY_CODE:
+			std::strncpy(ships[ptr].ship.country_code, p.Get().getString().c_str(), 2);
 			break;
 		case AIS::KEY_DESTINATION:
 			std::strncpy(ships[ptr].ship.destination, p.Get().getString().c_str(), 20);

@@ -330,7 +330,7 @@ class Ships : public StreamIn<JSON::JSON> {
 		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid;
 		float lat, lon, ppm, level, speed, cog;
 		std::time_t last_signal;
-		char shipname[21], destination[21], callsign[8];
+		char shipname[21], destination[21], callsign[8], country_code[3];
 	};
 
 	struct List {
