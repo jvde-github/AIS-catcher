@@ -346,7 +346,7 @@ public:
 	void setup(float lat = 0.0f, float lon = 0.0f);
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
-	std::string getJSON();
+	std::string getJSON(bool full = false);
 
 	int getCount() { return count; }
 	int getMaxCount() { return N; }
