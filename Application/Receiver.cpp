@@ -401,7 +401,7 @@ std::string Ships::getJSON(bool full) {
 	while (ptr != -1) {
 		if (ships[ptr].ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ships[ptr].ship.last_signal;
-			if (full || delta_time > TIME_HISTORY) break;
+			if (!full && delta_time > TIME_HISTORY) break;
 
 			content += delim + "{\"mmsi\":" + std::to_string(ships[ptr].ship.mmsi) + ",";
 			if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon)) {
