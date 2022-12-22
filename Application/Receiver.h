@@ -308,6 +308,7 @@ class Ships : public StreamIn<JSON::JSON> {
 	const float SPEED_UNDEFINED = -1;
 	const float HEADING_UNDEFINED = 511;
 	const int STATUS_UNDEFINED = 15;
+	const int DIMENSION_UNDEFINED = -1;
 
 	const int MSG_TYPE_OTHER = 0;
 	const int MSG_TYPE_CLASSA = 1;
@@ -328,6 +329,7 @@ class Ships : public StreamIn<JSON::JSON> {
 
 		uint32_t mmsi;
 		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid;
+		int to_port, to_bow, to_starboard, to_stern;
 		float lat, lon, ppm, level, speed, cog;
 		std::time_t last_signal;
 		char shipname[21], destination[21], callsign[8], country_code[3];

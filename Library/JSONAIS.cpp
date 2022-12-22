@@ -141,6 +141,18 @@ namespace AIS {
 
 		uint32_t mid = msg.mmsi();
 		while (mid > 1000) mid /= 10;
+
+		if (mid == 111) {
+			mid = msg.mmsi();
+			while (mid > 1000000) mid /= 10;
+			mid %= 1000;
+		}
+		else if (mid / 10 == 99) {
+			mid = msg.mmsi();
+			while (mid > 100000) mid /= 10;
+			mid %= 100;
+		}
+
 		if (mid > 100) {
 			int l = 0, r = JSON_MAP_MID.size() - 1;
 			while (l != r) {

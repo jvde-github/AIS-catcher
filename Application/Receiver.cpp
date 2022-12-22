@@ -429,6 +429,12 @@ std::string Ships::getJSON(bool full) {
 			content += "\"heading\":" + ((ships[ptr].ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.heading)) + ",";
 			content += "\"cog\":" + ((ships[ptr].ship.cog == COG_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.cog)) + ",";
 			content += "\"speed\":" + ((ships[ptr].ship.speed == SPEED_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.speed)) + ",";
+
+			content += "\"to_bow\":" + ((ships[ptr].ship.to_bow == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_bow)) + ",";
+			content += "\"to_stern\":" + ((ships[ptr].ship.to_stern == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_stern)) + ",";
+			content += "\"to_starboard\":" + ((ships[ptr].ship.to_starboard == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_starboard)) + ",";
+			content += "\"to_port\":" + ((ships[ptr].ship.to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_port)) + ",";
+
 			content += "\"shiptype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
 			content += "\"msg_type\":" + std::to_string(ships[ptr].ship.msg_type) + ",";
 			content += "\"country\":\"" + std::string(ships[ptr].ship.country_code) + "\",";
@@ -439,7 +445,7 @@ std::string Ships::getJSON(bool full) {
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"shipname\":";
-			str = std::string(ships[ptr].ship.shipname)  + (ships[ptr].ship.virtual_aid ? std::string(" [V]") : std::string(""));
+			str = std::string(ships[ptr].ship.shipname) + (ships[ptr].ship.virtual_aid ? std::string(" [V]") : std::string(""));
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"destination\":";
@@ -478,6 +484,10 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ships[ptr].ship.cog = COG_UNDEFINED;
 		ships[ptr].ship.status = STATUS_UNDEFINED;
 		ships[ptr].ship.speed = SPEED_UNDEFINED;
+		ships[ptr].ship.to_port = DIMENSION_UNDEFINED;
+		ships[ptr].ship.to_bow = DIMENSION_UNDEFINED;
+		ships[ptr].ship.to_starboard = DIMENSION_UNDEFINED;
+		ships[ptr].ship.to_stern = DIMENSION_UNDEFINED;
 	}
 
 	if (ptr != first) {
@@ -541,6 +551,18 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			break;
 		case AIS::KEY_STATUS:
 			ships[ptr].ship.status = p.Get().getInt();
+			break;
+		case AIS::KEY_TO_BOW:
+			ships[ptr].ship.to_bow = p.Get().getInt();
+			break;
+		case AIS::KEY_TO_STERN:
+			ships[ptr].ship.to_stern = p.Get().getInt();
+			break;
+		case AIS::KEY_TO_PORT:
+			ships[ptr].ship.to_port = p.Get().getInt();
+			break;
+		case AIS::KEY_TO_STARBOARD:
+			ships[ptr].ship.to_starboard = p.Get().getInt();
 			break;
 		case AIS::KEY_VIRTUAL_AID:
 			ships[ptr].ship.virtual_aid = p.Get().getBool();
