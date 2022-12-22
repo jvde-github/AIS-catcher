@@ -387,7 +387,7 @@ bool Ships::isValidCoord(float lat, float lon) {
 	return !(lat == 0 && lon == 0) && lat != 91 && lon != 181;
 }
 
-std::string Ships::getJSON() {
+std::string Ships::getJSON(bool full) {
 	const std::string null_str = "null";
 	std::string str;
 
@@ -401,7 +401,7 @@ std::string Ships::getJSON() {
 	while (ptr != -1) {
 		if (ships[ptr].ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ships[ptr].ship.last_signal;
-			if (delta_time > TIME_HISTORY) break;
+			if (full || delta_time > TIME_HISTORY) break;
 
 			content += delim + "{\"mmsi\":" + std::to_string(ships[ptr].ship.mmsi) + ",";
 			if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon)) {
@@ -663,6 +663,11 @@ void OutputServer::Request(SOCKET s, const std::string& r) {
 	else if (r == "/ships.json") {
 
 		std::string content = ships.getJSON();
+		Response(s, "application/json", content);
+	}
+	else if (r == "/ships_full.json") {
+
+		std::string content = ships.getJSON(true);
 		Response(s, "application/json", content);
 	}
 	else if (r == "/history_full.json") {
