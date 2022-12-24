@@ -658,7 +658,7 @@ void OutputServer::Request(SOCKET s, const std::string& r) {
 		content += "\"vendor\":\"" + vendor + "\",";
 		content += "\"serial\":\"" + serial + "\",";
 		content += "\"model\":\"" + model + "\",";
-		content += "\"run_time\":\"" + Util::Convert::toDeltaTimeStr((long int)time(0) - (long int)time_start) + "\",";
+		content += "\"run_time\":\"" + std::to_string((long int)time(0) - (long int)time_start) + "\",";
 
 		std::string unit;
 		const uint64_t GB = 1000000000;
