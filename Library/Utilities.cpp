@@ -155,6 +155,7 @@ namespace Util {
 		return std::string(str);
 	}
 
+	/*
 	std::string Convert::toDeltaTimeStr(long int delta_time) {
 
 		if (delta_time < 60)
@@ -166,6 +167,7 @@ namespace Util {
 
 		return std::to_string(delta_time / (24 * 3600)) + "d";
 	}
+	*/
 
 	std::string Convert::toHexString(uint64_t l) {
 		std::stringstream s;
