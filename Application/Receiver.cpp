@@ -477,7 +477,7 @@ std::string Ships::getPathJSON(uint32_t mmsi) {
 	content = "[";
 
 	int ptr = ships[idx].ship.path_ptr;
-	long int t0 = (long int)ships[idx].ship.last_signal;
+	long int t0 = time(nullptr);;
 	long int t = t0;
 
 	while (ptr != -1 && (long int)paths[ptr].signal_time <= t) {
