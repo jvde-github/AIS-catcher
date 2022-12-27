@@ -485,11 +485,11 @@ std::string Ships::getPathJSON(uint32_t mmsi) {
 
 		content += "{\"lat\":";
 		content += std::to_string(paths[ptr].lat);
-		content += "\"lon\":";
+		content += ",\"lon\":";
 		content += std::to_string(paths[ptr].lon);
-		content += "\"received\":";
+		content += ",\"received\":";
 		content += std::to_string(t0 - t);
-		content += "},";
+		content += ",},";
 
 		ptr = paths[ptr].next;
 	}
