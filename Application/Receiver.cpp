@@ -352,7 +352,9 @@ void OutputHTTP::setup(Receiver& r) {
 void Ships::setup(float lt, float ln) {
 
 	ships.resize(N);
-	std::memset(ships.data(), 0, N * sizeof(List));
+	std::memset(ships.data(), 0, N * sizeof(ShipList));
+	paths.resize(M);
+	std::memset(paths.data(), 0, M * sizeof(PathList));
 
 	lat = lt;
 	lon = ln;
@@ -462,6 +464,40 @@ std::string Ships::getJSON(bool full) {
 	return content;
 }
 
+std::string Ships::getPathJSON(uint32_t mmsi) {
+	const std::string null_str = "null";
+	std::string str;
+
+	int idx = -1;
+	for (int i = 0; i < N && idx == -1; i++)
+		if (ships[i].ship.mmsi == mmsi) idx = i;
+
+	if (idx == -1) return "[]";
+
+	content = "[";
+
+	int ptr = ships[idx].ship.path_ptr;
+	long int t0 = (long int)ships[idx].ship.last_signal;
+	long int t = t0;
+
+	while (ptr != -1 && (long int)paths[ptr].signal_time <= t) {
+		t = (long int)paths[ptr].signal_time;
+
+		content += "{\"lat\":";
+		content += std::to_string(paths[ptr].lat);
+		content += "\"lon\":";
+		content += std::to_string(paths[ptr].lon);
+		content += "\"received\":";
+		content += std::to_string(t0 - t);
+		content += "},";
+
+		ptr = paths[ptr].next;
+	}
+	if (content != "[") content.pop_back();
+	content += "]";
+	return content;
+}
+
 void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 
 	const AIS::Message* msg = (AIS::Message*)data[0].binary;
@@ -476,7 +512,7 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	if (ptr == -1 || cnt < 0) {
 		ptr = last;
 		count = MIN(count + 1, N);
-		std::memset(&ships[ptr].ship, 0, sizeof(Detail));
+		std::memset(&ships[ptr].ship, 0, sizeof(VesselDetail));
 		ships[ptr].ship.lat = -1;
 		ships[ptr].ship.lat = LAT_UNDEFINED;
 		ships[ptr].ship.lon = LON_UNDEFINED;
@@ -488,6 +524,7 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ships[ptr].ship.to_bow = DIMENSION_UNDEFINED;
 		ships[ptr].ship.to_starboard = DIMENSION_UNDEFINED;
 		ships[ptr].ship.to_stern = DIMENSION_UNDEFINED;
+		ships[ptr].ship.path_ptr = -1;
 	}
 
 	if (ptr != first) {
@@ -582,6 +619,17 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			break;
 		}
 	}
+
+	if (msg->type() == 1 || msg->type() == 2 || msg->type() == 3 || msg->type() == 18 || msg->type() == 19 || msg->type() == 9) {
+		paths[path_idx].next = ships[ptr].ship.path_ptr;
+		paths[path_idx].lat = ships[ptr].ship.lat;
+		paths[path_idx].lon = ships[ptr].ship.lon;
+		paths[path_idx].mmsi = msg->mmsi();
+		paths[path_idx].signal_time = ships[ptr].ship.last_signal;
+
+		ships[ptr].ship.path_ptr = path_idx;
+		path_idx = (path_idx + 1) % M;
+	}
 }
 
 void OutputServer::Counter::Receive(const AIS::Message* msg, int len, TAG& tag) {
@@ -631,7 +679,19 @@ void OutputServer::setup(Receiver& r) {
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 
-void OutputServer::Request(SOCKET s, const std::string& r) {
+void OutputServer::Request(SOCKET s, const std::string& response) {
+
+	std::string r;
+	std::string a;
+
+	std::string::size_type pos = response.find('?');
+	if (pos != std::string::npos) {
+		r = response.substr(0, pos);
+		a = response.substr(pos + 1, response.length());
+	}
+	else {
+		r = response;
+	}
 
 	if (r == "/") {
 		Response(s, "text/html", (char*)index_html_gz, index_html_gz_len, true);
@@ -691,6 +751,17 @@ void OutputServer::Request(SOCKET s, const std::string& r) {
 
 		std::string content = ships.getJSON(true);
 		Response(s, "application/json", content);
+	}
+	else if (r == "/path.json") {
+		int mmsi = -1;
+		std::stringstream ss(a);
+		ss >> mmsi;
+		if (mmsi >= 1000000 && mmsi <= 999999999) {
+			std::string content = ships.getPathJSON(mmsi);
+			Response(s, "application/json", content);
+		}
+		else
+			Response(s, "application/json", "[]");
 	}
 	else if (r == "/history_full.json") {
 

@@ -295,12 +295,14 @@ struct History : public StreamIn<AIS::Message> {
 };
 
 class Ships : public StreamIn<JSON::JSON> {
-	int first, last, count;
+	int first, last, count, path_idx = 0;
 	std::string content, delim;
 	float lat, lon;
 	int TIME_HISTORY = 30 * 60;
 
-	const int N = 4096; // recalibrate
+	const int N = 4096;
+	const int M = 4096;
+
 
 	const float LAT_UNDEFINED = 91;
 	const float LON_UNDEFINED = 181;
@@ -325,21 +327,30 @@ class Ships : public StreamIn<JSON::JSON> {
 	const int MMSI_TYPE_SARTEPIRB = 5;
 	const int MMSI_TYPE_ATON = 6;
 
-	struct Detail {
+	struct VesselDetail {
 
 		uint32_t mmsi;
-		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid;
+		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid, path_ptr;
 		int to_port, to_bow, to_starboard, to_stern;
 		float lat, lon, ppm, level, speed, cog;
 		std::time_t last_signal;
 		char shipname[21], destination[21], callsign[8], country_code[3];
 	};
 
-	struct List {
-		int prev, next;
-		Detail ship;
+	struct PathList {
+		float lat, lon;
+		uint32_t mmsi;
+		std::time_t signal_time;
+		int next;
 	};
-	std::vector<List> ships;
+
+	struct ShipList {
+		int prev, next;
+		VesselDetail ship;
+	};
+
+	std::vector<ShipList> ships;
+	std::vector<PathList> paths;
 
 	bool isValidCoord(float lat, float lon);
 	float distance(float lat_a, float lon_a, float lat_b, float lon_b);
@@ -349,6 +360,7 @@ public:
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
 	std::string getJSON(bool full = false);
+	std::string getPathJSON(uint32_t);
 
 	int getCount() { return count; }
 	int getMaxCount() { return N; }
