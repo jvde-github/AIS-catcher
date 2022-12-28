@@ -480,7 +480,7 @@ std::string Ships::getPathJSON(uint32_t mmsi) {
 	long int t0 = time(nullptr);;
 	long int t = t0;
 
-	while (ptr != -1 && (long int)paths[ptr].signal_time <= t) {
+	while (ptr != -1 && paths[ptr].mmsi == mmsi && (long int)paths[ptr].signal_time <= t) {
 		t = (long int)paths[ptr].signal_time;
 
 		if(isValidCoord(paths[ptr].lat, paths[ptr].lon)) {
@@ -621,7 +621,9 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		}
 	}
 
+	// needs work
 	if (msg->type() == 1 || msg->type() == 2 || msg->type() == 3 || msg->type() == 18 || msg->type() == 19 || msg->type() == 9) {
+
 		paths[path_idx].next = ships[ptr].ship.path_ptr;
 		paths[path_idx].lat = ships[ptr].ship.lat;
 		paths[path_idx].lon = ships[ptr].ship.lon;

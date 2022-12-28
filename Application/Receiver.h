@@ -341,7 +341,7 @@ class Ships : public StreamIn<JSON::JSON> {
 		float lat, lon;
 		uint32_t mmsi;
 		std::time_t signal_time;
-		int next;
+		int prev, next;
 	};
 
 	struct ShipList {
