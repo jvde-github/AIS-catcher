@@ -477,13 +477,14 @@ std::string Ships::getPathJSON(uint32_t mmsi) {
 	content = "[";
 
 	int ptr = ships[idx].ship.path_ptr;
-	long int t0 = time(nullptr);;
+	long int t0 = time(nullptr);
+	;
 	long int t = t0;
 
 	while (ptr != -1 && paths[ptr].mmsi == mmsi && (long int)paths[ptr].signal_time <= t) {
 		t = (long int)paths[ptr].signal_time;
 
-		if(isValidCoord(paths[ptr].lat, paths[ptr].lon)) {
+		if (isValidCoord(paths[ptr].lat, paths[ptr].lon)) {
 			content += "{\"lat\":";
 			content += std::to_string(paths[ptr].lat);
 			content += ",\"lon\":";
@@ -491,7 +492,7 @@ std::string Ships::getPathJSON(uint32_t mmsi) {
 			content += ",\"received\":";
 			content += std::to_string(t0 - t);
 			content += "},";
-			}
+		}
 		ptr = paths[ptr].next;
 	}
 	if (content != "[") content.pop_back();

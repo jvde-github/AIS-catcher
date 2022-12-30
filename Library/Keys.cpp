@@ -247,6 +247,7 @@ namespace AIS {
 		{ "to_starboard", "", "to_starboard", "" },
 		{ "to_stern", "", "to_stern", "" },
 		{ "turn", "", "turn", "" },
+		{ "turn_unscaled", "", "turn_unscaled", "" },
 		{ "txrx", "", "", "" },
 		{ "type", "", "", "msgtype" },
 		{ "type1_1", "", "", "" },
