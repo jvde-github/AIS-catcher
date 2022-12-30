@@ -81,6 +81,7 @@ namespace AIS {
 
 	void JSONAIS::TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined) {
 		int u = msg.getInt(start, len);
+		json.Add(AIS::KEY_TURN_UNSCALED, u);
 
 		if (u == -128)
 			json.Add(p, &nan);
