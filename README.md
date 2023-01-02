@@ -34,7 +34,7 @@ where ``8100`` is the port number. If you go in your browser to the IP address o
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
 </p>
-Current development aimes at making this webinterface easily accessible on a mobile device (see screenshot). 
+Current development amongst others aims making this webinterface easily accessible on a mobile device (see screenshot).
 
 There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
 ```
