@@ -30,19 +30,17 @@ Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
 ```
-where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a few tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
-<p float="left">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20STAT.png" width="22%" />
-   <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20PLOTS.png" width="22%" />
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20SHIPS.png" width="22%" /> 
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/0468e261996fa00a11da338fc86165cc836f09ba/media/Screenshot%20MAP.png" width="22%" />
+where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a menu which gives access to tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
 </p>
+Current development aimes at making this webinterface easily accessible on a mobile device (see screenshot). 
 
-There are a few additional options. For example, you can  use `-N PORT_MIN 8100 PORT_MAX 8200` which will cause AIS-catcher to find an available port in the range 8100 to 8200. A further option is to provide the station name and a link to an external website which will be displayed on the Statistics page and :
+There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
 ```
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
-To display the distance to your station you need to provide the coordinates as follows:
+This could be a useful option if you want to offer the interface externally.To display the distance of received messages to your station you need to provide the coordinates as follows:
 ```
 AIS-catcher -N LAT 50 LON 3.141592
 ```
