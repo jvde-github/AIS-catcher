@@ -24,7 +24,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.42). 
-There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics and, in the future, change the settings which has been first included in v0.42. For a live demo for an actual running station in East Boston US, see [here](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available. 
+There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics which has been first included in full release v0.42. For a live demo for an actual running station in East Boston US, see [here](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available. 
 
 Make sure you use the latest version and start the webserver as follows:
 ```console
@@ -34,7 +34,7 @@ where ``8100`` is the port number. If you go in your browser to the IP address o
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
 </p>
-Current development amongst others aims making this webinterface easily accessible on a mobile device (see screenshot).
+Current development amongst others aims at making this webinterface easily accessible on mobile devices as well (see screenshot). In the future we plan to add functionality to optionally include functionality to change the settings via the interface. Obviously with approriate security measures. 
 
 There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
 ```
