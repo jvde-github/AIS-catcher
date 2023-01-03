@@ -34,7 +34,10 @@ where ``8100`` is the port number. If you go in your browser to the IP address o
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
 </p>
-Current development amongst others aims at making this webinterface easily accessible on mobile devices as well (see screenshot). In the future we plan to add functionality to optionally include ability to change the settings via the interface. Obviously with approriate security measures. 
+Current development aims at making this webinterface easily accessible on mobile devices as well (see screenshot) and enriching the experience, for example by adding the contours of a vessel where available: 
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe5413ffb16cc01530b17950f982d1b8685dabd0/media/Screenshot%20ship%20shape.jpg" width="30%"/>
+</p>
 
 There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
 ```
