@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2023 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -167,7 +167,7 @@ public:
 
 //--------------------------------------------
 class OutputUDP {
-	std::vector<IO::UDP> _UDP;
+	std::vector<std::unique_ptr<IO::UDP>> _UDP;
 
 public:
 	void setup(Receiver& r);

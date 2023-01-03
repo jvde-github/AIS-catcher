@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2022 jvde.github@gmail.com
+	Copyright(c) 2021-2023 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -305,24 +305,24 @@ void OutputStatistics::setup(Receiver& r) {
 void OutputUDP::setup(Receiver& r) {
 	// Create and connect output to UDP stream
 	for (int i = 0; i < _UDP.size(); i++) {
-		r.Output(_UDP[i].getSource()) >> _UDP[i];
-		_UDP[i].Start();
+		r.Output(_UDP[i]->getSource()) >> *_UDP[i];
+		_UDP[i]->Start();
 	}
 }
 
 IO::UDP& OutputUDP::add() {
 
-	_UDP.push_back(IO::UDP());
-	return _UDP.back();
+	_UDP.push_back(std::unique_ptr<IO::UDP>(new IO::UDP()));
+	return *_UDP.back();
 }
 
 IO::UDP& OutputUDP::add(const std::string& host, const std::string& port) {
-	_UDP.push_back(IO::UDP());
+	_UDP.push_back(std::unique_ptr<IO::UDP>(new IO::UDP()));
 
-	_UDP.back().Set("HOST", host).Set("PORT", port);
-	_UDP.back().setSource(0);
+	_UDP.back()->Set("HOST", host).Set("PORT", port);
+	_UDP.back()->setSource(0);
 
-	return _UDP.back();
+	return *_UDP.back();
 }
 
 std::unique_ptr<IO::HTTP>& OutputHTTP::add(const std::vector<std::vector<std::string>>& km, int dict) {
