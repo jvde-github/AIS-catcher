@@ -1,3 +1,0 @@
-minify index.html | gzip > index_html_gz
-xxd -i index_html_gz > HTML.cpp
-
