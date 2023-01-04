@@ -442,6 +442,17 @@ std::string Ships::getJSON(bool full) {
 			content += "\"country\":\"" + std::string(ships[ptr].ship.country_code) + "\",";
 			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
 
+			content += "\"draught\":" + std::to_string(ships[ptr].ship.draught) + ",";
+
+
+			content += "\"eta_month\":" + ((ships[ptr].ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.month)) + ",";
+			content += "\"eta_day\":" + ((ships[ptr].ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.day)) + ",";
+			content += "\"eta_hour\":" + ((ships[ptr].ship.hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.hour)) + ",";
+			content += "\"eta_minute\":" + ((ships[ptr].ship.minute == ETA_MINUTE_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.minute)) + ",";
+
+			content += "\"imo\":" + ((ships[ptr].ship.IMO == IMO_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.IMO)) + ",";
+
+
 			content += "\"callsign\":";
 			str = std::string(ships[ptr].ship.callsign);
 			JSON::StringBuilder::stringify(str, content);
@@ -515,7 +526,6 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ptr = last;
 		count = MIN(count + 1, N);
 		std::memset(&ships[ptr].ship, 0, sizeof(VesselDetail));
-		ships[ptr].ship.lat = -1;
 		ships[ptr].ship.lat = LAT_UNDEFINED;
 		ships[ptr].ship.lon = LON_UNDEFINED;
 		ships[ptr].ship.heading = HEADING_UNDEFINED;
@@ -526,6 +536,12 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ships[ptr].ship.to_bow = DIMENSION_UNDEFINED;
 		ships[ptr].ship.to_starboard = DIMENSION_UNDEFINED;
 		ships[ptr].ship.to_stern = DIMENSION_UNDEFINED;
+		ships[ptr].ship.day = ETA_DAY_UNDEFINED;
+		ships[ptr].ship.month = ETA_MONTH_UNDEFINED;
+		ships[ptr].ship.hour = ETA_HOUR_UNDEFINED;
+		ships[ptr].ship.minute = ETA_MINUTE_UNDEFINED;
+		ships[ptr].ship.IMO = IMO_UNDEFINED;
+
 		ships[ptr].ship.path_ptr = -1;
 	}
 
@@ -576,8 +592,30 @@ void Ships::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		case AIS::KEY_SHIPTYPE:
 			ships[ptr].ship.shiptype = p.Get().getInt();
 			break;
+		case AIS::KEY_IMO:
+			ships[ptr].ship.IMO = p.Get().getInt();
+			break;
+		case AIS::KEY_MONTH:
+			if (msg->type() != 5) break;
+			ships[ptr].ship.month = p.Get().getInt();
+			break;
+		case AIS::KEY_DAY:
+			if (msg->type() != 5) break;
+			ships[ptr].ship.day = p.Get().getInt();
+			break;
+		case AIS::KEY_MINUTE:
+			if (msg->type() != 5) break;
+			ships[ptr].ship.minute = p.Get().getInt();
+			break;
+		case AIS::KEY_HOUR:
+			if (msg->type() != 5) break;
+			ships[ptr].ship.hour = p.Get().getInt();
+			break;
 		case AIS::KEY_HEADING:
 			ships[ptr].ship.heading = p.Get().getInt();
+			break;
+		case AIS::KEY_DRAUGHT:
+			ships[ptr].ship.draught = p.Get().getFloat();
 			break;
 		case AIS::KEY_COURSE:
 			ships[ptr].ship.cog = p.Get().getFloat();
@@ -659,6 +697,7 @@ void OutputServer::setup(Receiver& r) {
 	// connect all the statistical counters
 	r.Output(0) >> counter;
 	r.OutputJSON(0) >> ships;
+	r.Output(0) >> hist_day;
 	r.Output(0) >> hist_hour;
 	r.Output(0) >> hist_minute;
 	r.Output(0) >> hist_second;
@@ -714,6 +753,7 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		content += "\"station_link\":" + station_link + ",";
 		content += "\"sample_rate\":\"" + sample_rate + "\",";
 		content += "\"msg_rate\":" + std::to_string(hist_second.average()) + ",";
+		content += "\"last_day\":" + std::to_string(hist_day.last()) + ",";
 		content += "\"last_minute\":" + std::to_string(hist_minute.last()) + ",";
 		content += "\"last_hour\":" + std::to_string(hist_hour.last()) + ",";
 		content += "\"vessel_count\":" + std::to_string(ships.getCount()) + ",";
@@ -776,6 +816,8 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		hist_minute.addJSONarray(content);
 		content += ",\"hour\":";
 		hist_hour.addJSONarray(content);
+		content += ",\"day\":";
+		hist_day.addJSONarray(content);
 		content += "}";
 		Response(s, "application/json", content);
 	}

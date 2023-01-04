@@ -208,26 +208,28 @@ struct History : public StreamIn<AIS::Message> {
 
 	struct {
 		long int time;
-		int count;
-		float ppm;
-		float level;
+		int count[28];
+		float ppm, level, distance;
 	} history[N];
 
 	int start, end;
 
-	History() : start(0), end(0) { history[end] = { ((long int)time(nullptr)) / INTERVAL, 0 }; }
+	History() : start(0), end(0) { history[end] = { ((long int)time(nullptr)) / (long int)INTERVAL, 0 }; }
 
 	void Receive(const AIS::Message* msg, int len, TAG& tag) {
+
 		for (int i = 0; i < len; i++) {
-			long int tm = ((long int)msg[i].getRxTimeUnix()) / INTERVAL;
+			long int tm = ((long int)msg[i].getRxTimeUnix()) / (long int)INTERVAL;
 
 			if (history[end].time != tm) {
 				end = (end + 1) % N;
 				if (start == end) start = (start + 1) % N;
-				history[end] = { tm, 1, tag.ppm, tag.level };
+				history[end] = { tm, { 0 }, 0.0f, 0.0f, 0.0f };
 			}
-			else {
-				history[end].count++;
+
+			if (msg[i].type() <= 27) {
+				history[end].count[0]++;
+				history[end].count[msg->type()]++;
 				history[end].ppm += tag.ppm;
 				history[end].level += tag.level;
 			}
@@ -238,7 +240,7 @@ struct History : public StreamIn<AIS::Message> {
 		float avg = 0.0f;
 
 		for (int idx = start; idx != end; idx = (idx + 1) % N) {
-			avg += history[idx].count;
+			avg += history[idx].count[0];
 		}
 
 		int delta_time = 1 + (int)((long int)history[end].time - (long int)history[start].time);
@@ -247,49 +249,72 @@ struct History : public StreamIn<AIS::Message> {
 
 	float last() {
 		if (start == end) return 0.0f;
-		return history[(end + N - 1) % N].count;
+		return history[(end + N - 1) % N].count[0];
+	}
+
+	void getCountArray(std::string& content, int idx, bool new_tm) {
+		content += "[";
+		for (int i = 0; i <= 27; i++) {
+			content += std::to_string(new_tm ? history[idx].count[i] : 0) + ",";
+		}
+		content[content.size() - 1] = ']';
 	}
 
 	void addJSONarray(std::string& content) {
-		long int tm, tm_now = ((long int)time(nullptr)) / INTERVAL;
+		long int tm, tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
 		int idx;
 
-		content += "{\"count\":[";
+		content += "{\"time\":[";
 		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
 			bool new_tm = history[idx].time >= tm;
 
-			content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(new_tm ? history[idx].count : 0) + "},";
+			content += std::to_string(i - N) + ",";
+
 			if (new_tm) {
 				if (idx == start) break;
 				idx = (idx + N - 1) % N;
 			}
 			tm--;
 		}
-		content[content.size() - 1] = ']';
+		content.pop_back();
+		content += "],\"count\":[";
 
-		content += ",\"ppm\":[";
 		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
-			if (history[idx].time >= tm) {
-				if (history[idx].count > 0)
-					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].ppm / history[idx].count) + "},";
+			bool new_tm = history[idx].time >= tm;
+
+			getCountArray(content, idx, new_tm);
+			content += ',';
+			if (new_tm) {
 				if (idx == start) break;
 				idx = (idx + N - 1) % N;
 			}
 			tm--;
 		}
-		content[content.size() - 1] = ']';
+
+		content.pop_back();
+		content += "],\"ppm\":[";
+		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
+			if (history[idx].time >= tm) {
+				if (history[idx].count[0] > 0)
+					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].ppm / history[idx].count[0]) + "},";
+				if (idx == start) break;
+				idx = (idx + N - 1) % N;
+			}
+			tm--;
+		}
+		if (content[content.size() - 1] != '[') content[content.size() - 1] = ']';
 
 		content += ",\"level\":[";
 		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
 			if (history[idx].time >= tm) {
-				if (history[idx].count > 0)
-					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].level / history[idx].count) + "},";
+				if (history[idx].count[0] > 0)
+					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].level / history[idx].count[0]) + "},";
 				if (idx == start) break;
 				idx = (idx + N - 1) % N;
 			}
 			tm--;
 		}
-		content[content.size() - 1] = ']';
+		if (content[content.size() - 1] != '[') content[content.size() - 1] = ']';
 		content += '}';
 	}
 };
@@ -311,6 +336,11 @@ class Ships : public StreamIn<JSON::JSON> {
 	const float HEADING_UNDEFINED = 511;
 	const int STATUS_UNDEFINED = 15;
 	const int DIMENSION_UNDEFINED = -1;
+	const int ETA_DAY_UNDEFINED = 0;
+	const int ETA_MONTH_UNDEFINED = 0;
+	const int ETA_HOUR_UNDEFINED = 24;
+	const int ETA_MINUTE_UNDEFINED = 60;
+	const int IMO_UNDEFINED = 0;
 
 	const int MSG_TYPE_OTHER = 0;
 	const int MSG_TYPE_CLASSA = 1;
@@ -331,8 +361,9 @@ class Ships : public StreamIn<JSON::JSON> {
 
 		uint32_t mmsi;
 		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid, path_ptr;
-		int to_port, to_bow, to_starboard, to_stern;
-		float lat, lon, ppm, level, speed, cog;
+		int to_port, to_bow, to_starboard, to_stern, IMO;
+		char month, day, hour, minute;
+		float lat, lon, ppm, level, speed, cog, draught;
 		std::time_t last_signal;
 		char shipname[21], destination[21], callsign[8], country_code[3];
 	};
@@ -374,10 +405,10 @@ class OutputServer : public IO::Server, public Setting {
 	float lat = 0, lon = 0;
 
 	// history of 180 minutes and 180 seconds
-	History<180, 60> hist_minute;
-	History<180, 1> hist_second;
-	History<168, 3600> hist_hour;
-
+	History<60, 60> hist_minute;
+	History<60, 1> hist_second;
+	History<24, 3600> hist_hour;
+	History<90, 86400> hist_day;
 
 	std::time_t time_start;
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
