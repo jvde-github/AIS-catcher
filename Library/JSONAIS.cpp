@@ -315,8 +315,8 @@ namespace AIS {
 			ETA(msg, AIS::KEY_ETA, 274, 20, eta);
 			U(msg, AIS::KEY_MONTH, 274, 4, 0);
 			U(msg, AIS::KEY_DAY, 278, 5, 0);
-			U(msg, AIS::KEY_HOUR, 283, 5, 0);
-			U(msg, AIS::KEY_MINUTE, 288, 6, 0);
+			U(msg, AIS::KEY_HOUR, 283, 5, 24);
+			U(msg, AIS::KEY_MINUTE, 288, 6, 60);
 			UL(msg, AIS::KEY_DRAUGHT, 294, 8, 0.1, 0);
 			T(msg, AIS::KEY_DESTINATION, 302, 120, destination);
 			B(msg, AIS::KEY_DTE, 422, 1);
