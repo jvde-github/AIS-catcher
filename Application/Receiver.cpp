@@ -368,7 +368,7 @@ void OutputServer::setup(Receiver& r) {
 			fail |= !hist_day.Load(infile);
 
 			if (fail) {
-				std::cerr << "Server: reading saved stats unsuccesful" << std::endl;
+				std::cerr << "Server: read failed, incorrect format or cannot find file." << std::endl;
 			}
 
 			infile.close();
@@ -421,7 +421,7 @@ void OutputServer::setup(Receiver& r) {
 
 void OutputServer::close() {
 	if (!filename.empty()) {
-		std::cerr << "Server: writing statistics to file " << filename;
+		std::cerr << "Server: writing statistics to file " << filename << std::endl;
 		try {
 			std::ofstream infile(filename, std::ios::binary);
 			counter.Save(infile);
