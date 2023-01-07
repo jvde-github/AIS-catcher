@@ -355,6 +355,38 @@ void OutputServer::setup(Receiver& r) {
 
 	ships.setup(lat, lon);
 
+	bool fail = false;
+
+	if (!filename.empty()) {
+		std::cerr << "Server: reading statistics from " << filename << std::endl;
+		try {
+			std::ifstream infile(filename, std::ios::binary);
+			fail |= !counter.Load(infile);
+			fail |= !hist_second.Load(infile);
+			fail |= !hist_minute.Load(infile);
+			fail |= !hist_hour.Load(infile);
+			fail |= !hist_day.Load(infile);
+
+			if (fail) {
+				std::cerr << "Server: reading saved stats unsuccesful" << std::endl;
+			}
+
+			infile.close();
+		}
+		catch (const std::exception& e) {
+			// An exception occurred
+			std::cerr << "Error: " << e.what() << std::endl;
+		}
+	}
+
+	if (fail || filename.empty()) {
+		counter.Clear();
+		hist_second.Clear();
+		hist_minute.Clear();
+		hist_hour.Clear();
+		hist_day.Clear();
+	}
+
 	sample_rate = std::to_string(r.device->getSampleRate() / 1000) + "K/S";
 	product = r.device->getProduct();
 	vendor = r.device->getVendor();
@@ -387,6 +419,24 @@ void OutputServer::setup(Receiver& r) {
 	time_start = time(nullptr);
 }
 
+void OutputServer::close() {
+	if (!filename.empty()) {
+		std::cerr << "Server: writing statistics to file " << filename;
+		try {
+			std::ofstream infile(filename, std::ios::binary);
+			counter.Save(infile);
+			hist_second.Save(infile);
+			hist_minute.Save(infile);
+			hist_hour.Save(infile);
+			hist_day.Save(infile);
+			infile.close();
+		}
+		catch (const std::exception& e) {
+			// An exception occurred
+			std::cerr << "Error: " << e.what() << std::endl;
+		}
+	}
+}
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 
@@ -519,6 +569,9 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 	}
 	else if (option == "HISTORY") {
 		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600));
+	}
+	else if (option == "FILE") {
+		filename = arg;
 	}
 	else
 		throw std::runtime_error("unrecognized setting for HTML service: " + option + " " + arg);

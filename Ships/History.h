@@ -17,6 +17,7 @@
 
 #pragma once
 #include <iostream>
+#include <fstream>
 #include <string.h>
 #include <memory>
 
@@ -34,10 +35,15 @@ struct History : public StreamIn<JSON::JSON> {
 
 	void create(long int t) {
 		history[end].time = t;
-		history[end].stat.clear();
+		history[end].stat.Clear();
 	}
 
-	History() : start(0), end(0) {
+	History() {
+		Clear();
+	}
+
+	void Clear() {
+		start = end = 0;
 		create((long int)time(NULL) / (long int)INTERVAL);
 	}
 
@@ -57,6 +63,48 @@ struct History : public StreamIn<JSON::JSON> {
 
 			history[end].stat.Add(*msg, tag);
 		}
+	}
+
+	bool Save(std::ofstream& file) {
+		int magic = 0x4f80b;
+		int version = 1;
+		int i = INTERVAL;
+		int n = N;
+		int s = sizeof(history);
+
+		file.write((const char*)&magic, sizeof(int));
+		file.write((const char*)&version, sizeof(int));
+		file.write((const char*)&s, sizeof(int));
+		file.write((const char*)&i, sizeof(int));
+		file.write((const char*)&n, sizeof(int));
+		file.write((const char*)&start, sizeof(int));
+		file.write((const char*)&end, sizeof(int));
+		file.write((const char*)history, sizeof(history));
+
+		return true;
+	}
+
+	bool ReadInteger(std::ifstream& file, int& dest, int check = -1) {
+		file.read((char*)&dest, sizeof(int));
+		if (check != -1 && dest != check) return false;
+		return true;
+	}
+
+	bool Load(std::ifstream& file) {
+		int tmp;
+
+		if (!ReadInteger(file, tmp, 0x4f80b)) return false;
+		if (!ReadInteger(file, tmp, 1)) return false;
+		if (!ReadInteger(file, tmp, sizeof(history))) return false;
+		if (!ReadInteger(file, tmp, INTERVAL)) return false;
+		if (!ReadInteger(file, tmp, N)) return false;
+
+		ReadInteger(file, start, -1);
+		ReadInteger(file, end, -1);
+
+		file.read((char*)history, sizeof(history));
+
+		return true;
 	}
 
 	float getAverage() {
