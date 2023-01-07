@@ -530,7 +530,7 @@ if(ZMQ)
 endif()
 
 set(CPP
-	Application/Main.cpp Application/Receiver.cpp Application/Config.cpp
+	Application/Main.cpp Application/Receiver.cpp Application/Config.cpp Ships/DB.cpp
 	Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/JSONAIS.cpp Library/Keys.cpp
 	Device/FileRAW.cpp Device/HACKRF.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
 	Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/Server.cpp JSON/StringBuilder.cpp JSON/Parser.cpp
@@ -539,12 +539,12 @@ set(CPP
 	IO/IO.cpp)
 
 set(HEADER
-	Application/AIS-catcher.h Application/Config.h Application/Receiver.h
+	Application/AIS-catcher.h Application/Config.h Application/Receiver.h Ships/DB.h
 	Device/Device.h Device/FileWAV.h Device/RTLTCP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h
-	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h
+	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Ships/History.h Ships/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h
 	Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h IO/Network.h IO/Server.h Library/Utilities.h Library/TCP.h)
 
-set(APP_INCLUDES . ./Library ./DSP ./Application ./IO)
+set(APP_INCLUDES . ./Ships ./Library ./DSP ./Application ./IO)
 
 # Executable
 

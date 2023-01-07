@@ -1,6 +1,6 @@
-SRC = Application/Main.cpp Application/Config.cpp Application/Receiver.cpp IO/IO.cpp IO/Server.cpp DSP/DSP.cpp Library/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp Library/Keys.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/NMEA.cpp Library/Utilities.cpp DSP/Demod.cpp Library/Message.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp
-OBJ = Main.o Receiver.o Config.o IO.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o RTLSDR.o Server.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o
-INCLUDE = -I. -ILibrary/ -IDSP/ -IApplication/ -IIO/
+SRC = Application/Main.cpp Ships/DB.cpp Application/Config.cpp Application/Receiver.cpp IO/IO.cpp IO/Server.cpp DSP/DSP.cpp Library/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp Library/Keys.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/NMEA.cpp Library/Utilities.cpp DSP/Demod.cpp Library/Message.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp
+OBJ = Main.o Receiver.o Config.o DB.o IO.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o RTLSDR.o Server.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o
+INCLUDE = -I. -IShips/ -ILibrary/ -IDSP/ -IApplication/ -IIO/
 CC = gcc
 
 override CFLAGS += -Ofast -std=c++11 $(INCLUDE)

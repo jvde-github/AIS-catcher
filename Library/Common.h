@@ -79,9 +79,12 @@ enum class OutputLevel
 
 struct TAG {
 	unsigned mode = 0;
-	float sample_lvl = 0.0f;
-	float level = 0.0f;
-	float ppm = 0.0f;
+	float sample_lvl = 0;
+	float level = 0;
+	float ppm = 0;
+	int angle = -1;
+	float distance = -1;
+	bool validated = false;
 };
 
 struct RAW {
