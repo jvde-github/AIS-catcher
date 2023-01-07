@@ -502,6 +502,8 @@ int main(int argc, char* argv[]) {
 				std::cerr << "[" << receiver.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ')
 						  << receiver.Model(j)->getTotalTiming() << " ms" << std::endl;
 			}
+
+		server.close();
 	}
 	catch (std::exception const& e) {
 		std::cout << "Error: " << e.what() << std::endl;

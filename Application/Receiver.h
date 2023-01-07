@@ -219,13 +219,19 @@ class OutputServer : public IO::Server, public Setting {
 
 	std::time_t time_start;
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
+	std::string filename = "";
 
 	class Counter : public StreamIn<AIS::Message> {
 		Statistics stat;
 
 	public:
-		Counter() { stat.clear(); }
+		void Clear() { stat.Clear(); }
+
+		bool Load(std::ifstream& file) { return stat.Load(file); }
+		bool Save(std::ofstream& file) { return stat.Save(file); }
+
 		void Receive(const AIS::Message* msg, int len, TAG& tag);
+
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
 	} counter;
 
@@ -241,6 +247,7 @@ class OutputServer : public IO::Server, public Setting {
 public:
 	bool& active() { return run; }
 	void setup(Receiver& r);
+	void close();
 
 	// HTTP callbacks
 	void Request(SOCKET s, const std::string& r);
