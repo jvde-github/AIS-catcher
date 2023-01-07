@@ -30,6 +30,8 @@
 #include "AIS.h"
 #include "JSONAIS.h"
 #include "Server.h"
+#include "DB.h"
+#include "History.h"
 
 #include "Keys.h"
 #include "JSON/JSON.h"
@@ -204,7 +206,7 @@ public:
 // ----------------------------
 // Class to log historic message count
 template <int N, int INTERVAL>
-struct History : public StreamIn<AIS::Message> {
+struct HistoryOld : public StreamIn<AIS::Message> {
 
 	struct {
 		long int time;
@@ -214,7 +216,7 @@ struct History : public StreamIn<AIS::Message> {
 
 	int start, end;
 
-	History() : start(0), end(0) { history[end] = { ((long int)time(nullptr)) / (long int)INTERVAL, 0 }; }
+	HistoryOld() : start(0), end(0) { history[end] = { ((long int)time(nullptr)) / (long int)INTERVAL, 0 }; }
 
 	void Receive(const AIS::Message* msg, int len, TAG& tag) {
 
@@ -319,84 +321,6 @@ struct History : public StreamIn<AIS::Message> {
 	}
 };
 
-class Ships : public StreamIn<JSON::JSON> {
-	int first, last, count, path_idx = 0;
-	std::string content, delim;
-	float lat, lon;
-	int TIME_HISTORY = 30 * 60;
-
-	const int N = 4096;
-	const int M = 4096;
-
-
-	const float LAT_UNDEFINED = 91;
-	const float LON_UNDEFINED = 181;
-	const float COG_UNDEFINED = 360;
-	const float SPEED_UNDEFINED = -1;
-	const float HEADING_UNDEFINED = 511;
-	const int STATUS_UNDEFINED = 15;
-	const int DIMENSION_UNDEFINED = -1;
-	const int ETA_DAY_UNDEFINED = 0;
-	const int ETA_MONTH_UNDEFINED = 0;
-	const int ETA_HOUR_UNDEFINED = 24;
-	const int ETA_MINUTE_UNDEFINED = 60;
-	const int IMO_UNDEFINED = 0;
-
-	const int MSG_TYPE_OTHER = 0;
-	const int MSG_TYPE_CLASSA = 1;
-	const int MSG_TYPE_CLASSB = 2;
-	const int MSG_TYPE_BASESTATION = 3;
-	const int MSG_TYPE_ATON = 4;
-	const int MSG_TYPE_SAR = 5;
-
-	const int MMSI_TYPE_OTHER = 0;
-	const int MMSI_TYPE_CLASS_A = 1;
-	const int MMSI_TYPE_CLASS_B = 2;
-	const int MMSI_TYPE_BASESTATION = 3;
-	const int MMSI_TYPE_SAR = 4;
-	const int MMSI_TYPE_SARTEPIRB = 5;
-	const int MMSI_TYPE_ATON = 6;
-
-	struct VesselDetail {
-
-		uint32_t mmsi;
-		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid, path_ptr;
-		int to_port, to_bow, to_starboard, to_stern, IMO;
-		char month, day, hour, minute;
-		float lat, lon, ppm, level, speed, cog, draught;
-		std::time_t last_signal;
-		char shipname[21], destination[21], callsign[8], country_code[3];
-	};
-
-	struct PathList {
-		float lat, lon;
-		uint32_t mmsi;
-		std::time_t signal_time;
-		int prev, next;
-	};
-
-	struct ShipList {
-		int prev, next;
-		VesselDetail ship;
-	};
-
-	std::vector<ShipList> ships;
-	std::vector<PathList> paths;
-
-	bool isValidCoord(float lat, float lon);
-	float distance(float lat_a, float lon_a, float lat_b, float lon_b);
-
-public:
-	void setup(float lat = 0.0f, float lon = 0.0f);
-	void setTimeHistory(int t) { TIME_HISTORY = t; }
-	void Receive(const JSON::JSON* data, int len, TAG& tag);
-	std::string getJSON(bool full = false);
-	std::string getPathJSON(uint32_t);
-
-	int getCount() { return count; }
-	int getMaxCount() { return N; }
-};
-
 class OutputServer : public IO::Server, public Setting {
 	int port = 0;
 	int firstport = 0;
@@ -414,8 +338,9 @@ class OutputServer : public IO::Server, public Setting {
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
 
 	struct Counter : public StreamIn<AIS::Message> {
-		int count[28] = { 0 };
-		int ChA = 0, ChB = 0;
+		Statistics stat;
+
+		Counter() { stat.clear(); }
 		void Receive(const AIS::Message* msg, int len, TAG& tag);
 	} counter;
 
@@ -426,7 +351,7 @@ class OutputServer : public IO::Server, public Setting {
 		}
 	} raw_counter;
 
-	Ships ships;
+	DB ships;
 
 public:
 	bool& active() { return run; }
