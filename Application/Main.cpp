@@ -203,6 +203,8 @@ int main(int argc, char* argv[]) {
 			throw std::runtime_error("could not set control handler");
 #else
 		signal(SIGINT, consoleHandler);
+		signal(SIGTERM, consoleHandler);
+
 #endif
 
 		printVersion();
