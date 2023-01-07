@@ -203,124 +203,7 @@ public:
 	void setup(Receiver& r);
 };
 
-// ----------------------------
-// Class to log historic message count
-template <int N, int INTERVAL>
-struct HistoryOld : public StreamIn<AIS::Message> {
-
-	struct {
-		long int time;
-		int count[28];
-		float ppm, level, distance;
-	} history[N];
-
-	int start, end;
-
-	HistoryOld() : start(0), end(0) { history[end] = { ((long int)time(nullptr)) / (long int)INTERVAL, 0 }; }
-
-	void Receive(const AIS::Message* msg, int len, TAG& tag) {
-
-		for (int i = 0; i < len; i++) {
-			long int tm = ((long int)msg[i].getRxTimeUnix()) / (long int)INTERVAL;
-
-			if (history[end].time != tm) {
-				end = (end + 1) % N;
-				if (start == end) start = (start + 1) % N;
-				history[end] = { tm, { 0 }, 0.0f, 0.0f, 0.0f };
-			}
-
-			if (msg[i].type() <= 27) {
-				history[end].count[0]++;
-				history[end].count[msg->type()]++;
-				history[end].ppm += tag.ppm;
-				history[end].level += tag.level;
-			}
-		}
-	}
-
-	float average() {
-		float avg = 0.0f;
-
-		for (int idx = start; idx != end; idx = (idx + 1) % N) {
-			avg += history[idx].count[0];
-		}
-
-		int delta_time = 1 + (int)((long int)history[end].time - (long int)history[start].time);
-		return avg / delta_time;
-	}
-
-	float last() {
-		if (start == end) return 0.0f;
-		return history[(end + N - 1) % N].count[0];
-	}
-
-	void getCountArray(std::string& content, int idx, bool new_tm) {
-		content += "[";
-		for (int i = 0; i <= 27; i++) {
-			content += std::to_string(new_tm ? history[idx].count[i] : 0) + ",";
-		}
-		content[content.size() - 1] = ']';
-	}
-
-	void addJSONarray(std::string& content) {
-		long int tm, tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
-		int idx;
-
-		content += "{\"time\":[";
-		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
-			bool new_tm = history[idx].time >= tm;
-
-			content += std::to_string(i - N) + ",";
-
-			if (new_tm) {
-				if (idx == start) break;
-				idx = (idx + N - 1) % N;
-			}
-			tm--;
-		}
-		content.pop_back();
-		content += "],\"count\":[";
-
-		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
-			bool new_tm = history[idx].time >= tm;
-
-			getCountArray(content, idx, new_tm);
-			content += ',';
-			if (new_tm) {
-				if (idx == start) break;
-				idx = (idx + N - 1) % N;
-			}
-			tm--;
-		}
-
-		content.pop_back();
-		content += "],\"ppm\":[";
-		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
-			if (history[idx].time >= tm) {
-				if (history[idx].count[0] > 0)
-					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].ppm / history[idx].count[0]) + "},";
-				if (idx == start) break;
-				idx = (idx + N - 1) % N;
-			}
-			tm--;
-		}
-		if (content[content.size() - 1] != '[') content[content.size() - 1] = ']';
-
-		content += ",\"level\":[";
-		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
-			if (history[idx].time >= tm) {
-				if (history[idx].count[0] > 0)
-					content += "{\"x\":" + std::to_string(i - N) + ",\"y\":" + std::to_string(history[idx].level / history[idx].count[0]) + "},";
-				if (idx == start) break;
-				idx = (idx + N - 1) % N;
-			}
-			tm--;
-		}
-		if (content[content.size() - 1] != '[') content[content.size() - 1] = ']';
-		content += '}';
-	}
-};
-
+//--------------------------------------------
 class OutputServer : public IO::Server, public Setting {
 	int port = 0;
 	int firstport = 0;
@@ -337,11 +220,13 @@ class OutputServer : public IO::Server, public Setting {
 	std::time_t time_start;
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
 
-	struct Counter : public StreamIn<AIS::Message> {
+	class Counter : public StreamIn<AIS::Message> {
 		Statistics stat;
 
+	public:
 		Counter() { stat.clear(); }
 		void Receive(const AIS::Message* msg, int len, TAG& tag);
+		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
 	} counter;
 
 	struct RAWcounter : public StreamIn<RAW> {

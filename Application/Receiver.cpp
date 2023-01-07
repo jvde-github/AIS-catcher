@@ -412,10 +412,10 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 	}
 	else if (r == "/stat.json") {
 
-		std::string content = "{\"stat\":" + counter.stat.toJSON() + ",";
-		content += "\"last_day\":" + (hist_day.last() ? hist_day.last()->toJSON() : counter.stat.toJSON(true)) + ",";
-		content += "\"last_hour\":" + (hist_hour.last() ? hist_hour.last()->toJSON() : counter.stat.toJSON(true)) + ",";
-		content += "\"last_minute\":" + (hist_minute.last() ? hist_minute.last()->toJSON() : counter.stat.toJSON(true)) + ",";
+		std::string content = "{\"stat\":" + counter.toJSON() + ",";
+		content += "\"last_day\":" + (hist_day.last() ? hist_day.last()->toJSON() : counter.toJSON(true)) + ",";
+		content += "\"last_hour\":" + (hist_hour.last() ? hist_hour.last()->toJSON() : counter.toJSON(true)) + ",";
+		content += "\"last_minute\":" + (hist_minute.last() ? hist_minute.last()->toJSON() : counter.toJSON(true)) + ",";
 
 		content += "\"station\":" + station + ",";
 		content += "\"station_link\":" + station_link + ",";
