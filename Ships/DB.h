@@ -108,24 +108,7 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 		return (int)(360 + rad * 180 / PI) % 360;
 	}
 
-	void getDistanceAndAngle(float lat1, float lon1, float lat2, float lon2,
-							 float& distance, int& bearing) {
-		// Convert the latitudes and longitudes from degrees to radians
-		lat1 = deg2rad(lat1);
-		lon1 = deg2rad(lon1);
-		lat2 = deg2rad(lat2);
-		lon2 = deg2rad(lon2);
-
-		// Compute the distance using the haversine formula
-		float dlat = lat2 - lat1, dlon = lon2 - lon1;
-		float a = sin(dlat / 2) * sin(dlat / 2) +
-				  cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
-		distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));
-
-		float y = sin(dlon) * cos(lat2);
-		float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon);
-		bearing = rad2deg(atan2(y, x));
-	}
+	void getDistanceAndAngle(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
 
 public:
 	void setup(float lat = 0.0f, float lon = 0.0f);

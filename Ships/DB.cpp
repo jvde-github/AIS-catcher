@@ -45,6 +45,24 @@ bool DB::isValidCoord(float lat, float lon) {
 	return !(lat == 0 && lon == 0) && lat != 91 && lon != 181;
 }
 
+// https://www.movable-type.co.uk/scripts/latlong.html
+void DB::getDistanceAndAngle(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing) {
+	// Convert the latitudes and longitudes from degrees to radians
+	lat1 = deg2rad(lat1);
+	lon1 = deg2rad(lon1);
+	lat2 = deg2rad(lat2);
+	lon2 = deg2rad(lon2);
+
+	// Compute the distance using the haversine formula
+	float dlat = lat2 - lat1, dlon = lon2 - lon1;
+	float a = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
+	distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));
+
+	float y = sin(dlon) * cos(lat2);
+	float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon);
+	bearing = rad2deg(atan2(y, x));
+}
+
 std::string DB::getJSON(bool full) {
 	const std::string null_str = "null";
 	std::string str;
@@ -333,13 +351,12 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	}
 
 	// add check to update only when new lat/lon
-
 	if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon) && isValidCoord(lat, lon)) {
-		getDistanceAndAngle(ships[ptr].ship.lat, ships[ptr].ship.lon, lat, lon, ships[ptr].ship.distance, ships[ptr].ship.angle);
+		getDistanceAndAngle(lat, lon, ships[ptr].ship.lat, ships[ptr].ship.lon, ships[ptr].ship.distance, ships[ptr].ship.angle);
 
 		tag.distance = ships[ptr].ship.distance;
 		tag.angle = ships[ptr].ship.angle;
-		tag.validated = true;
+		tag.validated = ships[ptr].ship.count > 1;
 	}
 	else {
 		tag.distance = DISTANCE_UNDEFINED;

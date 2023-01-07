@@ -69,9 +69,10 @@ struct History : public StreamIn<JSON::JSON> {
 		return avg / delta_time;
 	}
 
-	Statistics* last() {
-		if (start == end) return nullptr;
-		return &history[(end + N - 1) % N].stat;
+	std::string lastStatToJSON() {
+		// needs change, now it returns last interval in which we received messages
+		if (start == end) return history[0].stat.toJSON(true);
+		return history[(end + N - 1) % N].stat.toJSON(false);
 	}
 
 	std::string toJSON() {
