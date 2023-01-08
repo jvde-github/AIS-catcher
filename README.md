@@ -724,6 +724,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
+- Improve the documentation listing all options (command line and JSON)
 - Decoding: further model improvements e.g. using other filters, alternative freq correction models, software gain control
 - Add tool to compare different receivers (more statistics than just looking at message count)
 - Testing: assess gap with commercial equipment (partially done at Meteotoren)
