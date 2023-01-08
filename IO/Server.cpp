@@ -40,6 +40,8 @@ namespace IO {
 #ifdef _WIN32
 		WSACleanup();
 #endif
+		if(sock != -1) closesocket(sock);
+
 	}
 
 	int Server::readLine(SOCKET s, std::string& str) {
@@ -128,6 +130,7 @@ namespace IO {
 		int r = bind(sock, (SOCKADDR*)&service, sizeof(service));
 		if (r == SOCKET_ERROR) {
 			closesocket(sock);
+			sock = -1;
 			return false;
 		}
 
