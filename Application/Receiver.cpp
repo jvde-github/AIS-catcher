@@ -351,40 +351,86 @@ void OutputServer::Counter::Receive(const AIS::Message* msg, int len, TAG& tag) 
 	stat.Add(msg[0], tag);
 }
 
+bool OutputServer::Save() {
+	std::cerr << "Server: writing statistics to file " << filename << std::endl;
+	try {
+		std::ofstream infile(filename, std::ios::binary);
+		if (!counter.Save(infile)) return false;
+		if (!hist_second.Save(infile)) return false;
+		if (!hist_minute.Save(infile)) return false;
+		if (!hist_hour.Save(infile)) return false;
+		if (!hist_day.Save(infile)) return false;
+		infile.close();
+	}
+	catch (const std::exception& e) {
+		// An exception occurred
+		std::cerr << "Error: " << e.what() << std::endl;
+		return false;
+	}
+	return true;
+}
+
+void OutputServer::Clear() {
+	counter.Clear();
+
+	hist_second.Clear();
+	hist_minute.Clear();
+	hist_hour.Clear();
+	hist_day.Clear();
+}
+
+bool OutputServer::Load() {
+
+	if (filename.empty()) return false;
+
+	std::cerr << "Server: reading statistics from " << filename << std::endl;
+	try {
+		std::ifstream infile(filename, std::ios::binary);
+
+		if (!counter.Load(infile)) return false;
+		if (!hist_second.Load(infile)) return false;
+		if (!hist_minute.Load(infile)) return false;
+		if (!hist_hour.Load(infile)) return false;
+		if (!hist_day.Load(infile)) return false;
+
+		infile.close();
+	}
+	catch (const std::exception& e) {
+		// An exception occurred
+		std::cerr << "Error: " << e.what() << std::endl;
+		return false;
+	}
+
+	return true;
+}
+
+void OutputServer::BackupService() {
+
+	std::cerr << "Server: starting backup service every " << backup_interval << " minutes." << std::endl;
+	while (true) {
+		std::unique_lock<std::mutex> lock(m);
+
+		if (cv.wait_for(lock, std::chrono::minutes(backup_interval), [&] { return !run; })) {
+			break;
+		}
+
+		std::cerr << "Server: initiate backup." << std::endl;
+		if (!Save())
+			std::cerr << "Server: failed to write backup." << std::endl;
+	}
+
+	std::cerr << "Server: stopping backup service." << std::endl;
+}
+
 void OutputServer::setup(Receiver& r) {
 
 	ships.setup(lat, lon);
 
-	bool fail = false;
-
-	if (!filename.empty()) {
-		std::cerr << "Server: reading statistics from " << filename << std::endl;
-		try {
-			std::ifstream infile(filename, std::ios::binary);
-			fail |= !counter.Load(infile);
-			fail |= !hist_second.Load(infile);
-			fail |= !hist_minute.Load(infile);
-			fail |= !hist_hour.Load(infile);
-			fail |= !hist_day.Load(infile);
-
-			if (fail) {
-				std::cerr << "Server: read failed, incorrect format or cannot find file." << std::endl;
-			}
-
-			infile.close();
-		}
-		catch (const std::exception& e) {
-			// An exception occurred
-			std::cerr << "Error: " << e.what() << std::endl;
-		}
-	}
-
-	if (fail || filename.empty()) {
-		counter.Clear();
-		hist_second.Clear();
-		hist_minute.Clear();
-		hist_hour.Clear();
-		hist_day.Clear();
+	if (filename.empty())
+		Clear();
+	else if (!Load()) {
+		std::cerr << "Statistics: cannor read file." << std::endl;
+		Clear();
 	}
 
 	sample_rate = std::to_string(r.device->getSampleRate() / 1000) + "K/S";
@@ -417,24 +463,29 @@ void OutputServer::setup(Receiver& r) {
 		throw std::runtime_error("HTML server ports not specified");
 
 	time_start = time(nullptr);
+
+	run = true;
+
+	if (backup_interval > 0) {
+		if (filename.empty())
+			throw std::runtime_error("Server: backup of statistics requested without providing filename.");
+
+		backup_thread = std::thread(&OutputServer::BackupService, this);
+		backup_thread.detach();
+	}
 }
 
 void OutputServer::close() {
-	if (!filename.empty()) {
-		std::cerr << "Server: writing statistics to file " << filename << std::endl;
-		try {
-			std::ofstream infile(filename, std::ios::binary);
-			counter.Save(infile);
-			hist_second.Save(infile);
-			hist_minute.Save(infile);
-			hist_hour.Save(infile);
-			hist_day.Save(infile);
-			infile.close();
-		}
-		catch (const std::exception& e) {
-			// An exception occurred
-			std::cerr << "Error: " << e.what() << std::endl;
-		}
+
+	if (backup_interval > 0) {
+		std::unique_lock<std::mutex> lock(m);
+
+		run = false;
+		cv.notify_all();
+	}
+
+	if (!filename.empty() && !Save()) {
+		std::cerr << "Statistics: cannot write file." << std::endl;
 	}
 }
 #include "HTML/HTML.cpp"
@@ -572,6 +623,9 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 	}
 	else if (option == "FILE") {
 		filename = arg;
+	}
+	else if (option == "BACKUP") {
+		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60);
 	}
 	else
 		throw std::runtime_error("unrecognized setting for HTML service: " + option + " " + arg);

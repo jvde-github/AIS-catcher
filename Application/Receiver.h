@@ -19,6 +19,9 @@
 #include <iostream>
 #include <string.h>
 #include <memory>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 
 #include "AIS-catcher.h"
 
@@ -210,6 +213,7 @@ class OutputServer : public IO::Server, public Setting {
 	int lastport = 0;
 	bool run = false;
 	float lat = 0, lon = 0;
+	int backup_interval = -1;
 
 	// history of 180 minutes and 180 seconds
 	History<60, 60> hist_minute;
@@ -221,6 +225,11 @@ class OutputServer : public IO::Server, public Setting {
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
 	std::string filename = "";
 
+	std::mutex m;
+	std::condition_variable cv;
+	std::thread backup_thread;
+
+	void BackupService();
 	class Counter : public StreamIn<AIS::Message> {
 		Statistics stat;
 
@@ -243,6 +252,10 @@ class OutputServer : public IO::Server, public Setting {
 	} raw_counter;
 
 	DB ships;
+
+	bool Load();
+	bool Save();
+	void Clear();
 
 public:
 	bool& active() { return run; }
