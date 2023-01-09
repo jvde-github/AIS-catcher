@@ -258,13 +258,18 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	else
 		ships[ptr].ship.mmsi_type = MMSI_TYPE_OTHER; // anything else
 
+	bool latlon_updated = false;
+	float distance_old = ships[ptr].ship.distance;
+
 	for (const auto& p : data[0].getProperties()) {
 		switch (p.Key()) {
 		case AIS::KEY_LAT:
 			ships[ptr].ship.lat = p.Get().getFloat();
+			latlon_updated = true;
 			break;
 		case AIS::KEY_LON:
 			ships[ptr].ship.lon = p.Get().getFloat();
+			latlon_updated = true;
 			break;
 		case AIS::KEY_SHIPTYPE:
 			ships[ptr].ship.shiptype = p.Get().getInt();
@@ -350,18 +355,21 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		path_idx = (path_idx + 1) % M;
 	}
 
+	tag.validated = false;
+
 	// add check to update only when new lat/lon
 	if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon) && isValidCoord(lat, lon)) {
 		getDistanceAndAngle(lat, lon, ships[ptr].ship.lat, ships[ptr].ship.lon, ships[ptr].ship.distance, ships[ptr].ship.angle);
 
 		tag.distance = ships[ptr].ship.distance;
 		tag.angle = ships[ptr].ship.angle;
-		tag.validated = ships[ptr].ship.count > 1;
+
+		if (latlon_updated && std::abs(distance_old - tag.distance) < 5)
+			tag.validated = ships[ptr].ship.count > 1;
 	}
 	else {
 		tag.distance = DISTANCE_UNDEFINED;
 		tag.angle = ANGLE_UNDEFINED;
-		tag.validated = false;
 	}
 
 	Send(data, len, tag);
