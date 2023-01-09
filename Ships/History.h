@@ -79,7 +79,11 @@ struct History : public StreamIn<JSON::JSON> {
 		file.write((const char*)&n, sizeof(int));
 		file.write((const char*)&start, sizeof(int));
 		file.write((const char*)&end, sizeof(int));
-		file.write((const char*)history, sizeof(history));
+
+		for (int i = 0; i < N; i++) {
+			file.write((const char*)&history[i].time, sizeof(history[i].time));
+			history[i].stat.Save(file);
+		}
 
 		return true;
 	}
@@ -102,8 +106,10 @@ struct History : public StreamIn<JSON::JSON> {
 		ReadInteger(file, start, -1);
 		ReadInteger(file, end, -1);
 
-		file.read((char*)history, sizeof(history));
-
+		for (int i = 0; i < N; i++) {
+			if (!file.read((char*)&history[i].time, sizeof(history[i].time))) return false;
+			if (!history[i].stat.Load(file)) return false;
+		}
 		return true;
 	}
 
