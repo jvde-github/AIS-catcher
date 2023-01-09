@@ -548,6 +548,7 @@ A list of some stations mentioning using AIS-catcher:
 - [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
 - [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
 - [Vasa, Finland](https://www.marinetraffic.com/en/ais/details/stations/14994)
+- [Vernouillet, France](https://www.marinetraffic.com/en/ais/details/stations/10668)
 - [Vlissingen, NL](https://www.marinetraffic.com/nl/ais/details/stations/17133)
 - [Wren Road Rab 2](https://www.marinetraffic.com/en/ais/details/stations/9615)
 
