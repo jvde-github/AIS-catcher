@@ -429,7 +429,7 @@ void OutputServer::setup(Receiver& r) {
 	if (filename.empty())
 		Clear();
 	else if (!Load()) {
-		std::cerr << "Statistics: cannor read file." << std::endl;
+		std::cerr << "Statistics: cannot read file." << std::endl;
 		Clear();
 	}
 

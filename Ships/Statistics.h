@@ -144,13 +144,14 @@ public:
 
 		if (magic != _MAGIC || version != _VERSION) return false;
 
+		/*
 		sum = 0;
 		for (int i = 0; i < 27; i++) sum += _msg[i];
 		if (_count != sum) {
 			std::cerr << "Statistics: error with consistency [sum of msg count != total msg count]." << std::endl;
 			return false;
 		}
-
+		*/
 		return true;
 	}
 };
