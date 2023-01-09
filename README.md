@@ -535,7 +535,7 @@ A list of some stations mentioning using AIS-catcher:
 - [A caruna, Spain](https://www.marinetraffic.com/en/ais/details/stations/23439)
 - [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
 - [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
-- [Boston, US](https://www.marinetraffic.com/ais/details/stations/22977)
+- [Boston, US](https://www.marinetraffic.com/en/ais/details/stations/22977)
 - [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
 - [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
 - [Haiphong, Vietnam](https://www.marinetraffic.com/en/ais/details/stations/23016)
@@ -544,12 +544,12 @@ A list of some stations mentioning using AIS-catcher:
 - [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
 - [SeaRange AIS receiver](https://www.shipxplorer.com/searange-ais-receiver)
 - [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
-- [Troguarat, France](https://www.marinetraffic.com/cs/ais/details/stations/21360)
+- [Troguarat, France](https://www.marinetraffic.com/en/ais/details/stations/21360)
 - [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
 - [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
 - [Vasa, Finland](https://www.marinetraffic.com/en/ais/details/stations/14994)
 - [Vlissingen, NL](https://www.marinetraffic.com/nl/ais/details/stations/17133)
-- [Wren Road Rab 2](https://www.marinetraffic.com/cs/ais/details/stations/9615)
+- [Wren Road Rab 2](https://www.marinetraffic.com/en/ais/details/stations/9615)
 
 ## Build process
 
