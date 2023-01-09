@@ -56,6 +56,7 @@ namespace IO {
 		SOCKET sock = -1;
 		int timeout = 2;
 		int port = 8089;
+		bool reuse_port = false;
 
 		struct addrinfo* address;
 		std::thread run_thread;
@@ -91,5 +92,6 @@ namespace IO {
 		void Response(SOCKET s, std::string type, const char* data, int len, bool gzip = false);
 
 		bool start(int port);
+		void setReusePort(bool b) { reuse_port = b; }
 	};
 }

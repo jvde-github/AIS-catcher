@@ -627,6 +627,9 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 	else if (option == "BACKUP") {
 		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60);
 	}
+	else if (option == "REUSE_PORT") {
+		setReusePort(Util::Parse::Switch(arg));
+	}
 	else
 		throw std::runtime_error("unrecognized setting for HTML service: " + option + " " + arg);
 
