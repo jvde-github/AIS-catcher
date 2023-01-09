@@ -40,8 +40,7 @@ namespace IO {
 #ifdef _WIN32
 		WSACleanup();
 #endif
-		if(sock != -1) closesocket(sock);
-
+		if (sock != -1) closesocket(sock);
 	}
 
 	int Server::readLine(SOCKET s, std::string& str) {
@@ -120,6 +119,12 @@ namespace IO {
 			return false;
 		}
 
+#ifndef _WIN32
+		if (reuse_port) {
+			int optval = 1;
+			setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+		}
+#endif
 		memset(&service, 0, sizeof(service));
 		service.sin_family = AF_INET;
 		service.sin_addr.s_addr = htonl(INADDR_ANY);
