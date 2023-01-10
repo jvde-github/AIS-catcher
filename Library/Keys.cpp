@@ -41,7 +41,7 @@ namespace AIS {
 		{ "", "", "", "", "antenna" },
 		{ "", "", "", "", "backup" },
 		{ "", "", "", "", "bandwidth" },
-		{ "", "", "", "", "bias_tee" },
+		{ "", "", "", "", "biastee" },
 		{ "", "", "", "", "block_type" },
 		{ "", "", "", "", "buffer_count" },
 		{ "", "", "", "", "callsign" },
