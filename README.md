@@ -65,6 +65,7 @@ Furthermore, the plot tab contains several plots to assess the performance of th
   <img src="https://github.com/jvde-github/AIS-catcher/blob/8096b8bfa3caca6c73023ce1e708ca421292f27f/media/ScreenshotPlot.jpg" width="50%"/>
 </p>
 Upon restarting AIS-catcher, the history displayed in the graphs is typically lost. To preserve the state of the plots, a useful option is to save the content to a file, such as "stat.bin," at closure and to create a backup every 10 minutes. This can be accomplished with the following options:
+
 ```
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
