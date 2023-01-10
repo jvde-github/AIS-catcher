@@ -62,7 +62,7 @@ The "tag control" (above the zoom controls) will add labels to the map:
   <img src="https://github.com/jvde-github/AIS-catcher/blob/4114ed895f610a13598a61a10b077aeda8565ee3/media/Screenshot%20Moored.jpg" width="50%"/>
 </p>
 
-The summary window with details on a vessel, as received, is called the **ship card** and will be shown when a ship is selected on the map by the user. For smaller screens it can be minimized in the top bar (via minus symbols) and in fact the ship card will be opened in minimized mode on mobile devices. In the max form, as shown, the user can toggle rows that will be visible in the minimized state. These rows are shown with light grey background. Finally, in minimzed mode some options are accessible via icons in the top bar, including showing the vessel track and centering the map at the location of the current vessel.
+The summary window with details on a vessel, as received, is called the **ship card** and will be shown when a ship is selected on the map by the user. For smaller screens it can be minimized in the top bar (via minus symbols) and in fact the ship card will be opened in minimized mode on mobile devices as in the picture with the USS Constitution. In the max form, as shown in the last picture, the user can toggle rows that will be visible in this minimized state. These rows are shown with light grey background. Finally, in minimzed mode some options are accessible via icons in the top bar, including showing the vessel track and centering the map at the location of the current vessel.
 
 Furthermore, the plot tab contains several plots to assess the performance of the receiver:
 <p align="center">
