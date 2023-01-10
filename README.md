@@ -55,7 +55,7 @@ This commonly happens with Class B ships and if a reasonable approximation for h
   <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
 </p>
 
-Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T.
+Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T. The summary window with details on a vessel, as received, is called the ship card. For smaller screens it can be minimized in the top bar (via plus/minus symbols). In the max form as displayed the user can toggle rows that will be visible in the minimized state. 
 
 The "tag control" (above the zoom controls) will add labels to the map:
 <p align="center">
