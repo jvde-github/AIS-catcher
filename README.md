@@ -43,7 +43,7 @@ There is an option to provide the station name and a link to an external website
 ```
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
-This could be a useful option if you want to offer the interface externally.To display the distance of received messages to your station you need to provide the coordinates as follows:
+This could be a useful option if you want to offer the interface externally. To display the distance of received messages to your station you need to provide the coordinates as follows:
 ```
 AIS-catcher -N LAT 50 LON 3.141592
 ```
