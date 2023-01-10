@@ -54,6 +54,7 @@ This commonly happens with Class B ships and if a reasonable approximation for h
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
 </p>
+Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081).
 
 The "tag control" (above the zoom controls) will add labels to the map:
 <p align="center">
