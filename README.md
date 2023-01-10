@@ -251,48 +251,90 @@ where `config.json` is the name of any configuration file. The idea behind this 
 ```
 This will provide a sanity check and helps AIS-catcher to be backward compatible with early versions of the configuration files but not the other way around (i.e., AIS-catcher v0.41 cannot read version 2 config files).
 
-To set  some  parameters for a RTL-SDR dongle and setup two UDP and HTTP channels, we can use:
+An example config file looks as follows:
 ```json
 {
-	"config": "aiscatcher",
-	"version": "1",
-	"serial": "00000001",
-	"input": "rtlsdr",
-	"rtlsdr": {
-		"active" : true,
-		"rtlagc": true,
-		"tuner": "auto",
-		"bandwidth": "192K",
-		"sample_rate": "1536K"
-	},
-	"udp": [{
-		"host": "ais.fleetmon.com",
-		"port": 0
-	}, {
-		"active": true,
-		"host": "hub.shipxplorer.com",
-		"port": 0
-	}],
-	"http": [{
-		"url": "https://ais.chaos-consulting.de/shipin/index.php",
-		"userpwd": "user:pwd",
-		"interval": 30,
-		"gzip": false,
-		"response": false
-	}, {
-		"url": "http://aprs.fi/jsonais/post/secret_key",
-		"id": "myid",
-		"interval": 60,
-		"protocol": "aprs",
-		"response": false
-	}]
+   "config":"aiscatcher",
+   "version":"1",
+   "serial": "00000001",
+   "input": "rtlsdr",
+   "rtlsdr":{
+      "active":true,
+      "rtlagc":true,
+      "tuner":"auto",
+      "bandwidth":"192K",
+      "sample_rate":"1536K",
+      "biastee":false,
+      "buffer_count":2
+   },
+   "airspy":{
+      "sample_rate":"3000K",
+      "linearity":17,
+      "biastee":false
+   },
+   "airspyhf":{
+      "sample_rate":"192k",
+      "treshold":"low",
+      "preamp":false
+   },
+   "hackrf":{
+      "sample_rate":"6144k",
+      "lna":8,
+      "vga":20,
+      "preamp":false
+   },
+   "sdrplay":{
+      "sample_rate":"2304K",
+      "agc":true,
+      "lnastate":5,
+      "grdb":40
+   },
+   "server":{
+      "file":"stat.bin",
+      "backup":10,
+      "active":true,
+      "port":8100,
+      "station":"My Station",
+      "station_link":"http://example.com/",
+      "lat":52.0,
+      "lon":4.3
+   },
+   "udp":[
+      {
+         "host":"ais.fleetmon.com",
+         "port":0
+      },
+      {
+         "active":true,
+         "host":"hub.shipxplorer.com",
+         "port":0
+      }
+   ],
+   "http":[
+      {
+         "url":"https://ais.chaos-consulting.de/shipin/index.php",
+         "userpwd":"user:pwd",
+         "interval":30,
+         "gzip":false,
+         "response":false
+      },
+      {
+         "url":"http://aprs.fi/jsonais/post/secret_key",
+         "id":"myid",
+         "interval":60,
+         "protocol":"aprs",
+         "response":false
+      }
+   ]
 }
 ```
 The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with an  "object" for each separate channel. In each object we can include the 
 boolean field ``active`` (see the second UDP definition) which will cause the program to ignore the settings if set to `false`. 
 This option  provides an easy way to switch on and off particular channels or dongle configurations. The active device is selected via the ``input`` or ``serial`` field. 
 If both are included the program will check that they are consistent, i.e. the hardware with the specified serial number must be of type ``input``. 
-Normally it is sufficient to include one of these fields and not both. The fields and values in the configuration file can be specified  consistent with the command line settings as described 
+Normally it is sufficient to include one of these fields and not both. 
+
+The fields and values in the configuration file can be specified  consistent with the command line settings as described 
 in this document. JSON is however case sensitive so field names must be entered in lower case.
 
 ### AIS-catcher as a command line NMEA decoder
