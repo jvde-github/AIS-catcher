@@ -49,13 +49,11 @@ AIS-catcher -N LAT 50 LON 3.141592
 ```
 All these options can be captured in the configuration file (in a section with name ``server``), see below. 
 
-If AIS-catcher has received the dimensions of the vessel but does not know the heading it will plot a circle that contains the dimensions. This frequently happens for Class B ships. If Course-over-ground is expected to be a reasonable approximation for heading, this will be used as a proxy. To indicate that information is not complete any shaped are drawn with a dashed border. This is an example of the USS Constitution in the port of Boston:
+When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle to represent it that will enclose the ship regardless of the direction.
+This commonly happens with Class B ships, if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the USS Constitution, which is shown docked in the port of Boston. 
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
 </p>
-
-
-
 
 The "tag control" (above the zoom controls) will add labels to the map:
 <p align="center">
@@ -66,12 +64,11 @@ Furthermore, the plot tab contains several plots to assess the performance of th
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/8096b8bfa3caca6c73023ce1e708ca421292f27f/media/ScreenshotPlot.jpg" width="50%"/>
 </p>
-When restarting AIS-catcher, you in general will loose the history in these graphs. To save the state of the plots to file, e.g. ``stat.bin``, the following option can be of use which will save the content at close to file and makes a backup every 10 minutes:
-
+Upon restarting AIS-catcher, the history displayed in the graphs is typically lost. To preserve the state of the plots, a useful option is to save the content to a file, such as "stat.bin," at closure and to create a backup every 10 minutes. This can be accomplished with the following options:
 ```
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
-These are new experimental feautures so reporting of issues is appreciated.
+These are new experimental feautures so reporting of any issues encounterd is appreciated.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
