@@ -49,6 +49,14 @@ AIS-catcher -N LAT 50 LON 3.141592
 ```
 All these options can be captured in the configuration file (in a section with name ``server``), see below. 
 
+If AIS-catcher has received the dimensions of the vessel but does not know the heading it will plot a circle that contains the dimensions. This frequently happens for Class B ships. If Course-over-ground is expected to be a reasonable approximation for heading, this will be used as a proxy. To indicate that information is not complete any shaped are drawn with a dashed border. This is an example of the USS Constitution in the port of Boston:
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
+</p>
+
+
+
+
 The "tag control" (above the zoom controls) will add labels to the map:
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/4114ed895f610a13598a61a10b077aeda8565ee3/media/Screenshot%20Moored.jpg" width="50%"/>
