@@ -49,7 +49,7 @@ AIS-catcher -N LAT 50 LON 3.141592
 ```
 All these options can be captured in the configuration file (in a section with name ``server``), see below. 
 
-When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle to represent it that will enclose the ship regardless of the direction.
+When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle that will enclose the ships dimensions regardless of the direction it is pointing.
 This commonly happens with Class B ships, if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the USS Constitution, which is shown docked in the port of Boston. 
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
