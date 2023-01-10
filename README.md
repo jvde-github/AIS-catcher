@@ -47,7 +47,23 @@ This could be a useful option if you want to offer the interface externally.To d
 ```
 AIS-catcher -N LAT 50 LON 3.141592
 ```
-All these options can be captured in the configuration file (in a section with name ``server``).
+All these options can be captured in the configuration file (in a section with name ``server``), see below. 
+
+The "tag control" (above the zoom controls) will add labels to the map:
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/4114ed895f610a13598a61a10b077aeda8565ee3/media/Screenshot%20Moored.jpg" width="50%"/>
+</p>
+
+Furthermore, the plot tab contains several plots to assess the performance of the receiver:
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/8096b8bfa3caca6c73023ce1e708ca421292f27f/media/ScreenshotPlot.jpg" width="50%"/>
+</p>
+When restarting AIS-catcher, you in general will loose the history in these graphs. To save the state of the plots to file, e.g. ``stat.bin``, the following option can be of use which will save the content at close to file and makes a backup every 10 minutes:
+
+```
+AIS-catcher -N 8100 FILE stat.bin BACKUP 10
+```
+These are new experimental feautures so reporting of issues is appreciated.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
