@@ -55,12 +55,13 @@ This commonly happens with Class B ships and if a reasonable approximation for h
   <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
 </p>
 
-Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T. The summary window with details on a vessel, as received, is called the ship card. For smaller screens it can be minimized in the top bar (via plus/minus symbols). In the max form as displayed the user can toggle rows that will be visible in the minimized state. 
+Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T. 
 
 The "tag control" (above the zoom controls) will add labels to the map:
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/4114ed895f610a13598a61a10b077aeda8565ee3/media/Screenshot%20Moored.jpg" width="50%"/>
 </p>
+The summary window with details on a vessel, as received, is called the ship card and will be visible when a ship is selected in the map. For smaller screens it can be minimized in the top bar (via plus/minus symbols) and in fact it will be opened in minimized mode on mobile devices. In the max form as displayed the user can toggle rows that will be visible in the minimized state and are light grey. 
 
 Furthermore, the plot tab contains several plots to assess the performance of the receiver:
 <p align="center">
