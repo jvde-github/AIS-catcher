@@ -238,11 +238,14 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		first = ptr;
 	}
 
+	if (msg->type() < 1 || msg->type() > 27) return;
+
 	ships[ptr].ship.mmsi = msg->mmsi();
 	ships[ptr].ship.count++;
 	ships[ptr].ship.last_signal = msg->getRxTimeUnix();
 	ships[ptr].ship.ppm = tag.ppm;
 	ships[ptr].ship.level = tag.level;
+	ships[ptr].ship.msg_type |= 1 << msg->type();
 
 	// type derived from MMSI
 	if ((mmsi >= 200000000 && mmsi < 800000000) || (mmsi >= 20000000 && mmsi < 80000000) || ((mmsi >= 982000000 && mmsi < 988000000)))
