@@ -28,17 +28,18 @@ class Statistics {
 
 	std::mutex m;
 
-	static const int _MAGIC = 0x4f81b;
+	static const int _MAGIC = 0x4f82b;
 	static const int _VERSION = 1;
-	static const int _RADAR_BUCKETS = 36;
+	static const int _RADAR_BUCKETS = 18;
 	static const int _LONG_RANGE_CUTOFF = 50;
 
 	int _count;
 	int _msg[27];
 	int _channel[4];
 
-	float _level, _ppm, _distance;
-	float _radar[_RADAR_BUCKETS];
+	float _level_min, _level_max, _ppm, _distance;
+	float _radarA[_RADAR_BUCKETS];
+	float _radarB[_RADAR_BUCKETS];
 
 public:
 	int getCount() { return _count; }
@@ -47,10 +48,13 @@ public:
 
 		std::memset(_msg, 0, sizeof(_msg));
 		std::memset(_channel, 0, sizeof(_channel));
-		std::memset(_radar, 0, sizeof(_radar));
+		std::memset(_radarA, 0, sizeof(_radarA));
+		std::memset(_radarB, 0, sizeof(_radarB));
 
 		_count = 0;
-		_distance = _level = _ppm = 0;
+		_distance = _ppm = 0;
+		_level_min = 1e6;
+		_level_max = -1e6;
 	}
 
 	void Add(const AIS::Message& m, const TAG& tag) {
@@ -63,7 +67,8 @@ public:
 		_msg[m.type() - 1]++;
 		if (m.getChannel() >= 'A' || m.getChannel() <= 'D') _channel[m.getChannel() - 'A']++;
 
-		_level += tag.level;
+		_level_min = MIN(_level_min, tag.level);
+		_level_max = MAX(_level_max, tag.level);
 		_ppm += tag.ppm;
 
 		// for range we ignore atons for now
@@ -73,10 +78,19 @@ public:
 			_distance = tag.distance;
 		}
 
-		if (tag.angle >= 0 && tag.angle < 360) {
-			int bucket = tag.angle / (360 / _RADAR_BUCKETS);
-			if (tag.distance > _radar[bucket] && (tag.distance < _LONG_RANGE_CUTOFF || tag.validated))
-				_radar[bucket] = tag.distance;
+		if (m.type() == 18 || m.type() == 19 || m.type() == 24) {
+			if (tag.angle >= 0 && tag.angle < 360) {
+				int bucket = tag.angle / (360 / _RADAR_BUCKETS);
+				if (tag.distance > _radarB[bucket] && (tag.distance < _LONG_RANGE_CUTOFF || tag.validated))
+					_radarB[bucket] = tag.distance;
+			}
+		}
+		else if (m.type() <= 3 || m.type() == 5) {
+			if (tag.angle >= 0 && tag.angle < 360) {
+				int bucket = tag.angle / (360 / _RADAR_BUCKETS);
+				if (tag.distance > _radarA[bucket] && (tag.distance < _LONG_RANGE_CUTOFF || tag.validated))
+					_radarA[bucket] = tag.distance;
+			}
 		}
 	}
 
@@ -86,15 +100,19 @@ public:
 		std::string element;
 
 		element += "{\"count\":" + std::to_string(empty ? 0 : _count) +
-				   ",\"level\":" + std::to_string(empty || !_count ? 0 : _level / _count) +
+				   ",\"level_min\":" + std::to_string(empty || !_count ? 0 : _level_min) +
+				   ",\"level_max\":" + std::to_string(empty || !_count ? 0 : _level_max) +
 				   ",\"ppm\":" + std::to_string(empty || !_count ? 0 : _ppm / _count) +
 				   ",\"dist\":" + std::to_string(empty ? 0 : _distance) +
 				   ",\"channel\":[";
 
 		for (int i = 0; i < 4; i++) element += std::to_string(empty ? 0 : _channel[i]) + ",";
 		element.pop_back();
-		element += "],\"radar\":[";
-		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radar[i]) + ",";
+		element += "],\"radar_a\":[";
+		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarA[i]) + ",";
+		element.pop_back();
+		element += "],\"radar_b\":[";
+		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarB[i]) + ",";
 		element.pop_back();
 		element += "],\"msg\":[";
 		for (int i = 0; i < 27; i++) element += std::to_string(empty ? 0 : _msg[i]) + ",";
@@ -109,15 +127,17 @@ public:
 		int magic = _MAGIC;
 		int version = _VERSION;
 
-		if (!file.write((const char*)&magic, sizeof(int))) return false;		   // Check magic number
-		if (!file.write((const char*)&version, sizeof(int))) return false;		   // Check version number
-		if (!file.write((const char*)&_count, sizeof(int))) return false;		   // Check count
-		if (!file.write((const char*)&_msg, sizeof(_msg))) return false;		   // Check msg array
-		if (!file.write((const char*)&_channel, sizeof(_channel))) return false;   // Check channel array
-		if (!file.write((const char*)&_level, sizeof(_level))) return false;	   // Check level
-		if (!file.write((const char*)&_ppm, sizeof(_ppm))) return false;		   // Check ppm
-		if (!file.write((const char*)&_distance, sizeof(_distance))) return false; // Check distance
-		if (!file.write((const char*)&_radar, sizeof(_radar))) return false;	   // Check radar array
+		if (!file.write((const char*)&magic, sizeof(int))) return false;			 // Check magic number
+		if (!file.write((const char*)&version, sizeof(int))) return false;			 // Check version number
+		if (!file.write((const char*)&_count, sizeof(int))) return false;			 // Check count
+		if (!file.write((const char*)&_msg, sizeof(_msg))) return false;			 // Check msg array
+		if (!file.write((const char*)&_channel, sizeof(_channel))) return false;	 // Check channel array
+		if (!file.write((const char*)&_level_min, sizeof(_level_min))) return false; // Check level
+		if (!file.write((const char*)&_level_max, sizeof(_level_max))) return false; // Check level
+		if (!file.write((const char*)&_ppm, sizeof(_ppm))) return false;			 // Check ppm
+		if (!file.write((const char*)&_distance, sizeof(_distance))) return false;	 // Check distance
+		if (!file.write((const char*)&_radarA, sizeof(_radarA))) return false;		 // Check radar array
+		if (!file.write((const char*)&_radarB, sizeof(_radarB))) return false;		 // Check radar array
 
 		return true;
 	}
@@ -127,15 +147,17 @@ public:
 
 		int magic = 0, version = 0, sum = 0;
 
-		if (!file.read((char*)&magic, sizeof(int))) return false;			// Check count
-		if (!file.read((char*)&version, sizeof(int))) return false;			// Check count
-		if (!file.read((char*)&_count, sizeof(int))) return false;			// Check count
-		if (!file.read((char*)&_msg, sizeof(_msg))) return false;			// Check msg array
-		if (!file.read((char*)&_channel, sizeof(_channel))) return false;	// Check channel array
-		if (!file.read((char*)&_level, sizeof(_level))) return false;		// Check level
-		if (!file.read((char*)&_ppm, sizeof(_ppm))) return false;			// Check ppm
-		if (!file.read((char*)&_distance, sizeof(_distance))) return false; // Check distance
-		if (!file.read((char*)&_radar, sizeof(_radar))) return false;		// Check radar array
+		if (!file.read((char*)&magic, sizeof(int))) return false;			  // Check count
+		if (!file.read((char*)&version, sizeof(int))) return false;			  // Check count
+		if (!file.read((char*)&_count, sizeof(int))) return false;			  // Check count
+		if (!file.read((char*)&_msg, sizeof(_msg))) return false;			  // Check msg array
+		if (!file.read((char*)&_channel, sizeof(_channel))) return false;	  // Check channel array
+		if (!file.read((char*)&_level_min, sizeof(_level_min))) return false; // Check level
+		if (!file.read((char*)&_level_max, sizeof(_level_max))) return false; // Check level
+		if (!file.read((char*)&_ppm, sizeof(_ppm))) return false;			  // Check ppm
+		if (!file.read((char*)&_distance, sizeof(_distance))) return false;	  // Check distance
+		if (!file.read((char*)&_radarA, sizeof(_radarA))) return false;		  // Check radar array
+		if (!file.read((char*)&_radarB, sizeof(_radarB))) return false;		  // Check radar array
 
 		if (false && !file.eof()) {
 			std::cerr << "Statistics: error with incorrect file size." << std::endl;
