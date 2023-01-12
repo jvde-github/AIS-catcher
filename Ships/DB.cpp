@@ -86,7 +86,6 @@ std::string DB::getJSON(bool full) {
 
 				if (isValidCoord(lat, lon)) {
 					content += "\"distance\":" + std::to_string(ships[ptr].ship.distance) + ",";
-					content += "\"angle\":" + std::to_string(ships[ptr].ship.angle) + ",";
 				}
 				else
 					content += "\"distance\": null,";
