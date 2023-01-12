@@ -112,6 +112,7 @@ std::string DB::getJSON(bool full) {
 			content += "\"to_port\":" + ((ships[ptr].ship.to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_port)) + ",";
 
 			content += "\"shiptype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
+			content += "\"validated\":" + std::to_string(ships[ptr].ship.validated) + ",";
 			content += "\"msg_type\":" + std::to_string(ships[ptr].ship.msg_type) + ",";
 			content += "\"country\":\"" + std::string(ships[ptr].ship.country_code) + "\",";
 			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
@@ -218,7 +219,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ships[ptr].ship.hour = ETA_HOUR_UNDEFINED;
 		ships[ptr].ship.minute = ETA_MINUTE_UNDEFINED;
 		ships[ptr].ship.IMO = IMO_UNDEFINED;
-
+		ships[ptr].ship.validated = false;
 		ships[ptr].ship.path_ptr = -1;
 	}
 
@@ -358,7 +359,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		path_idx = (path_idx + 1) % M;
 	}
 
-	tag.validated = false;
+	ships[ptr].ship.validated  = tag.validated = false;
 
 	// add check to update only when new lat/lon
 	if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon) && isValidCoord(lat, lon)) {
@@ -368,7 +369,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		tag.angle = ships[ptr].ship.angle;
 
 		if (latlon_updated && std::abs(distance_old - tag.distance) < 5)
-			tag.validated = ships[ptr].ship.count > 1;
+			ships[ptr].ship.validated = tag.validated = ships[ptr].ship.count > 1;
 	}
 	else {
 		tag.distance = DISTANCE_UNDEFINED;
