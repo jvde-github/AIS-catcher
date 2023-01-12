@@ -358,7 +358,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		path_idx = (path_idx + 1) % M;
 	}
 
-	ships[ptr].ship.validated  = tag.validated = false;
+	tag.validated = false;
 
 	// add check to update only when new lat/lon
 	if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon) && isValidCoord(lat, lon)) {
