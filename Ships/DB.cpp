@@ -367,7 +367,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		tag.distance = ships[ptr].ship.distance;
 		tag.angle = ships[ptr].ship.angle;
 
-		if (latlon_updated && std::abs(distance_old - tag.distance) < 5)
+		if (latlon_updated && std::abs(distance_old - tag.distance) < 10)
 			ships[ptr].ship.validated = tag.validated = ships[ptr].ship.count > 1;
 	}
 	else {
