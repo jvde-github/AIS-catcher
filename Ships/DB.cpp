@@ -262,7 +262,8 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ships[ptr].ship.mmsi_type = MMSI_TYPE_OTHER; // anything else
 
 	bool latlon_updated = false;
-	float distance_old = ships[ptr].ship.distance;
+	float lat_old = ships[ptr].ship.lat;
+	float lon_old = ships[ptr].ship.lon;
 
 	for (const auto& p : data[0].getProperties()) {
 		switch (p.Key()) {
@@ -367,8 +368,10 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		tag.distance = ships[ptr].ship.distance;
 		tag.angle = ships[ptr].ship.angle;
 
-		if (latlon_updated && std::abs(distance_old - tag.distance) < 10)
-			ships[ptr].ship.validated = tag.validated = ships[ptr].ship.count > 1;
+		if (latlon_updated) {
+			float d = (lat - lat_old) * (lat - lat_old) + (lon - lon_old) * (lon - lon_old);
+			ships[ptr].ship.validated = tag.validated = d < (1.852 * 10) * (1.852 * 10);
+		}
 	}
 	else {
 		tag.distance = DISTANCE_UNDEFINED;
