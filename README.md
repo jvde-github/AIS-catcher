@@ -799,7 +799,6 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - Add tool to compare different receivers (more statistics than just looking at message count)
 - Testing: assess gap with commercial equipment (partially done at Meteotoren)
 - Support NMEA tag blocks for timestamp
-- Solve CMake issue with zlib on MACOS
 - RSSI refinement (measure base noise level), in general add more diagnostics to assess performance issues, e.g. auto ppm calibration
 - Option to record raw input signal periodically to allow for debugging of performance
 - Simultaneously receive Marine VHF audio and DSC signals from SDR input signal
@@ -809,6 +808,7 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - System support and GUI: Windows, <del>Android</del>, Web interface
 - Multi-channel SDRs: validate location from signal (e.g. like MLAT or using passive radar with krakensdr)
 - Output: ZeroMQ, <del>APRS, JSON over HTTP,</del> TCP, ...
+- <del>Solve CMake issue with zlib on MACOS</del>
 - <del>NMEA input: check checksum, use fillbits to set length and more tight initial parser</del>
 - <del>Allow for verbose updates even if running from stdin</del>
 - <del>Adding additional messages to the JSON decoder (Message 8, 6, etc).</del>
