@@ -370,7 +370,8 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 
 		if (latlon_updated) {
 			float d = (lat - lat_old) * (lat - lat_old) + (lon - lon_old) * (lon - lon_old);
-			ships[ptr].ship.validated = tag.validated = d < (1.852 * 10) * (1.852 * 10);
+			// flat earth approximation, roughly 10 nmi
+			ships[ptr].ship.validated = tag.validated = d < 0.1675;
 		}
 	}
 	else {
