@@ -92,7 +92,7 @@ These are new experimental feautures so reporting of any issues encountered is a
 ### What is next? Custom plugins and styles...
 
 To give the user the option to tweak the look-and-feel and functionality of the webserver and/or modify for example the color scheme, the program
-will provide the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
+provides the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
 ```console
 AIS-catcher -N PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
 ```
