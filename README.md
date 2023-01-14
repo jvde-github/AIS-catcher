@@ -27,6 +27,8 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.42). 
 There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics which has been first included in full release v0.42. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.sytes.net/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
 
+A proper credit section needs to be added but the web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/) and [flag-icons](https://github.com/lipis/flag-icons). 
+
 Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
@@ -73,7 +75,7 @@ Recent updates of the web-interface show a "validation" indication at the left b
   <img src="https://user-images.githubusercontent.com/52420030/212470486-8987fa96-5324-41d8-a782-dbcbdc18aca0.png" width="25%"/>
 </p>
 
-AIS-catcher analyzes an enormous stream of bits   per day for both AIS channels (2 to the power 33 to be precise). To avoid erroneous messages, the AIS system employs a 16 bit CRC and various other bit patterns that need to be matched. Unfortunately, based on pure statistics this cannot prevent that there will be an occasional technically correct but nonsense message. These are typically easy to recognize (e.g. looking at signal level, location on map) and the aggregator sites like MarineTraffic will filter these out. To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, evolving, "validation function" that checks the location of the vessel for consistency between messages and flags if this is consistent. Practially, if we received two positions from the same MMSI that are relatively close, the "validation" indicator will be green and the distance to the station will be used to determine range. Messages within 50 NMi from the receiving station will be always included for range setting. The indicator will be grey if validation for the location could not be performed or was not succesful. 
+AIS-catcher analyzes an enormous stream of bits   per day for both AIS channels (2 to the power 33 to be precise). To avoid erroneous messages, the AIS system employs a 16 bit CRC and various other bit patterns that need to be matched. Unfortunately, based on pure statistics this cannot prevent that there will be an occasional technically correct but nonsense message. These are typically easy to recognize (e.g. looking at signal level, location on map) and the aggregator sites like MarineTraffic will filter these out. To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, evolving, "validation function" that checks the location of the vessel for consistency between messages and flags if this is consistent. Practically, if we receive a position from a MMSI which is relatively close to the last received position, the "validation" indicator will be green and the distance to the station will be used to determine range. Messages within 50 NMi from the receiving station will be always included for range setting. The indicator will be grey if validation for the location could not be performed and red if it was not succesful. 
 
 ### Plots
 The plot tab contains several plots to assess the performance of the receiver:
@@ -85,7 +87,7 @@ Upon restarting AIS-catcher, the history displayed in the graphs is typically lo
 ```
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
-These are new experimental feautures so reporting of any issues encounterd is appreciated.
+These are new experimental feautures so reporting of any issues encountered is appreciated.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
@@ -420,6 +422,7 @@ returns a warning on the incorrect CRC and:
 ```
 !AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*3A
 ```
+Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This 16 bit checksum/CRC is not included in the NMEA message.
 
 ### Running on hardware with performance limitations
 
