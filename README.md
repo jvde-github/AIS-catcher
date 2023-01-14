@@ -252,6 +252,24 @@ In OpenCPN the only thing we need to do is create a Connection with the followin
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/eb6ac606933f1793ad04f56fa58c92ae49171f0c/media/OpenCPN%20settings.jpg" width=40% height=40%>
 </p>
 
+### Filtering Messages by Type
+
+AIS-catcher has functionality to filter UDP, HTTP and screen output on message type, e.g. send only messages of type 1, 2, 3, 5, 18, 19, 24 and 27 over UDP:
+```console
+AIS-catcher -u 127.0.0.1 10110 FILTER on ALLOW_TYPE 1,2,3,5,18,19,24,27
+```
+or remove message type 6 and 8:
+```console
+AIS-catcher -u 127.0.0.1 10110 FILTER on BLOCK_TYPE 6,8
+```
+Do not use spaces in the comma separated message type list. Filtering will only take effect with the filter switched to ``ON`` (default ``OFF``) and the filter needs to be defined per ``-u`` switch (or ``-H`` and ``-o``).
+
+In my home station I am using this to control the size of the log file but still capture messages for inspection later. I am running with the command line parameter:
+```console
+AIS-catcher -o 5 filter on block_type 1,2,3,4,5,9,18,19,21,24
+```
+Message type 8 is region specific. If you encounter any messages in the wild that might be interesting for AIS-catcher to parse, please share in the Issue section and we can see if it is worthwhile to extend the JSON generator. 
+
 ### Input from file and stdin
 
 AIS-catcher can read from file with the switch ``-r`` followed by the filename and with a ``.`` or ``stdin`` it reads from stdin, e.g. ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
