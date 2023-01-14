@@ -270,6 +270,8 @@ AIS-catcher -o 5 filter on block_type 1,2,3,4,5,9,18,19,21,24
 ```
 Message type 8 is region specific. If you encounter any messages in the wild that might be interesting for AIS-catcher to parse, please share in the Issue section and we can see if it is worthwhile to extend the JSON generator. 
 
+**Note**: filtering for stdout can only be set on the command line and not in the JSON configuration file at this stage. UDP filtering is available in the JSON configuration file.
+
 ### Input from file and stdin
 
 AIS-catcher can read from file with the switch ``-r`` followed by the filename and with a ``.`` or ``stdin`` it reads from stdin, e.g. ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
