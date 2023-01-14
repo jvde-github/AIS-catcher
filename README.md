@@ -25,7 +25,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.42). 
-There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics which has been first included in full release v0.42. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available. There is also a version of the Comar R400 running via AIS-catcher [here](https://hpradar.sytes.net/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
+There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics which has been first included in full release v0.42. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.sytes.net/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
 
 Make sure you use the latest version and start the webserver as follows:
 ```console
