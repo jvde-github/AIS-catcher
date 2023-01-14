@@ -635,11 +635,14 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 	}
 	else if (option == "PLUGIN") {
 		plugins += "console.log('plugin:" + arg + "');";
+		plugins += "plugins += 'JS: " + arg + "\\n';";
 		plugins += "\n\n//=============\n//" + arg + "\n\n";
 		plugins += Util::Helper::readFile(arg);
 	}
 	else if (option == "STYLE") {
 		plugins += "console.log('css:" + arg + "');";
+		plugins += "plugins += 'CSS: " + arg + "\\n';";
+
 		stylesheets += "/* ================ */\r\n";
 		stylesheets += "/* CSS plugin: " + arg + "*/\r\n";
 		stylesheets += Util::Helper::readFile(arg) + "\r\n";
