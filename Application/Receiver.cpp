@@ -561,6 +561,12 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		std::string content = ships.getJSON(true);
 		Response(s, "application/json", content);
 	}
+	else if (r == "/config.js") {
+		Response(s, "application/javascript", plugins);
+	}
+	else if (r == "/config.css") {
+		Response(s, "text/css", stylesheets);
+	}
 	else if (r == "/path.json") {
 		int mmsi = -1;
 		std::stringstream ss(a);
@@ -626,6 +632,17 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 	}
 	else if (option == "BACKUP") {
 		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60);
+	}
+	else if (option == "PLUGIN") {
+		plugins += "console.log('plugin:" + arg + "');";
+		plugins += "\n\n//=============\n//" + arg + "\n\n";
+		plugins += Util::Helper::readFile(arg);
+	}
+	else if (option == "STYLE") {
+		plugins += "console.log('css:" + arg + "');";
+		stylesheets += "/* ================ */\r\n";
+		stylesheets += "/* CSS plugin: " + arg + "*/\r\n";
+		stylesheets += Util::Helper::readFile(arg) + "\r\n";
 	}
 	else if (option == "REUSE_PORT") {
 		setReusePort(Util::Parse::Switch(arg));

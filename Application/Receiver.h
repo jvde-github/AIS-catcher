@@ -215,6 +215,9 @@ class OutputServer : public IO::Server, public Setting {
 	float lat = 0, lon = 0;
 	int backup_interval = -1;
 
+	std::string plugins;
+	std::string stylesheets;
+
 	// history of 180 minutes and 180 seconds
 	History<60, 60> hist_minute;
 	History<60, 1> hist_second;
