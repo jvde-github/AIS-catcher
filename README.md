@@ -85,7 +85,7 @@ Upon restarting AIS-catcher, the history displayed in the graphs is typically lo
 ```
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
-These are new experimental feautures so reporting of any issues encounterd is appreciated.
+These are new experimental feautures so reporting of any issues encountered is appreciated.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
