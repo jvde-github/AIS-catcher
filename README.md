@@ -422,6 +422,7 @@ returns a warning on the incorrect CRC and:
 ```
 !AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*3A
 ```
+Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This 16 bit checksum/CRC is not included in the NMEA message.
 
 ### Running on hardware with performance limitations
 
