@@ -183,13 +183,14 @@ namespace AIS {
 		int dac = msg.getUint(40, 10);
 		int fid = msg.getUint(50, 6);
 
+		// ECE/TRANS/SC.3/176
 		if (dac == 200 && fid == 10) {
 			T(msg, AIS::KEY_VIN, 56, 48, text);
-			U(msg, AIS::KEY_LENGTH, 104, 13);
-			U(msg, AIS::KEY_BEAM, 117, 10);
+			UL(msg, AIS::KEY_LENGTH, 104, 13, 0.1, 0);
+			UL(msg, AIS::KEY_BEAM, 117, 10, 0.1, 0);
 			E(msg, AIS::KEY_SHIPTYPE, 127, 14);
 			E(msg, AIS::KEY_HAZARD, 141, 3);
-			U(msg, AIS::KEY_DRAUGHT, 144, 11);
+			UL(msg, AIS::KEY_DRAUGHT, 144, 11, 0.01, 0);
 			E(msg, AIS::KEY_LOADED, 155, 2);
 			B(msg, AIS::KEY_SPEED_Q, 157, 1);
 			B(msg, AIS::KEY_COURSE_Q, 158, 1);
