@@ -89,6 +89,15 @@ AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
 These are new experimental feautures so reporting of any issues encountered is appreciated.
 
+### What is next? Custom plugins and styles...
+
+To give the user the option to tweak the look-and-feel and functionality of the webserver and/or modify for example the color scheme, the program
+will provide the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
+```console
+AIS-catcher -N PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
+```
+This already works but to be really useful requires a clean up and refactoring of the core HTML source file and publication in this repository. So more to come in the coming period. 
+
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. 
