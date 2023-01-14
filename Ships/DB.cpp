@@ -301,7 +301,8 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			ships[ptr].ship.heading = p.Get().getInt();
 			break;
 		case AIS::KEY_DRAUGHT:
-			ships[ptr].ship.draught = p.Get().getFloat();
+			if(p.Get().getFloat()!=0.0)
+				ships[ptr].ship.draught = p.Get().getFloat();
 			break;
 		case AIS::KEY_COURSE:
 			ships[ptr].ship.cog = p.Get().getFloat();
