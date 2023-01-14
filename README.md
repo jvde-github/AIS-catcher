@@ -354,7 +354,9 @@ An example config file looks as follows:
       {
          "active":true,
          "host":"hub.shipxplorer.com",
-         "port":0
+         "port":0,                 
+         "filter": false,
+         "allow_type": "1,2,3,5,18,19,24"
       }
    ],
    "http":[
@@ -363,7 +365,8 @@ An example config file looks as follows:
          "userpwd":"user:pwd",
          "interval":30,
          "gzip":false,
-         "response":false
+         "response":false,
+         "filter": false	 
       },
       {
          "url":"http://aprs.fi/jsonais/post/secret_key",
