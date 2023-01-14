@@ -71,8 +71,7 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 
 		uint32_t mmsi;
 		int count, mmsi_type, msg_type, shiptype, heading, status, virtual_aid, path_ptr;
-		int to_port, to_bow, to_starboard, to_stern, IMO, angle;
-		bool validated;
+		int to_port, to_bow, to_starboard, to_stern, IMO, angle, validated;
 		char month, day, hour, minute;
 		float lat, lon, ppm, level, speed, cog, draught, distance;
 		std::time_t last_signal;

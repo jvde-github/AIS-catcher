@@ -218,7 +218,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ships[ptr].ship.hour = ETA_HOUR_UNDEFINED;
 		ships[ptr].ship.minute = ETA_MINUTE_UNDEFINED;
 		ships[ptr].ship.IMO = IMO_UNDEFINED;
-		ships[ptr].ship.validated = false;
+		ships[ptr].ship.validated = 0;
 		ships[ptr].ship.path_ptr = -1;
 	}
 
@@ -301,7 +301,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			ships[ptr].ship.heading = p.Get().getInt();
 			break;
 		case AIS::KEY_DRAUGHT:
-			if(p.Get().getFloat()!=0.0)
+			if (p.Get().getFloat() != 0.0)
 				ships[ptr].ship.draught = p.Get().getFloat();
 			break;
 		case AIS::KEY_COURSE:
@@ -372,15 +372,10 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		if (latlon_updated && isValidCoord(lat_old, lon_old)) {
 			float d = (ships[ptr].ship.lat - lat_old) * (ships[ptr].ship.lat - lat_old) +
 					  (ships[ptr].ship.lon - lon_old) * (ships[ptr].ship.lon - lon_old);
+
 			// flat earth approximation, roughly 10 nmi
-			ships[ptr].ship.validated = tag.validated = d < 0.1675;
-			/*
-			if(!tag.validated) {
-				std::cerr << "lat: " << ships[ptr].ship.lat << " lon: " << ships[ptr].ship.lon << std::endl;
-				std::cerr << "lat_old: " << lat_old << " lon_old: " << lon_old << std::endl;
-				std::cerr << "d: " << d << " mmsi " << msg->mmsi() << std::endl;
-			}
-			*/
+			tag.validated = d < 0.1675;
+			ships[ptr].ship.validated = tag.validated ? 1 : -1;
 		}
 	}
 	else {
