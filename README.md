@@ -50,6 +50,8 @@ AIS-catcher -N LAT 50 LON 3.141592
 ```
 All these options can be captured in the configuration file (in a section with name ``server``), see below. 
 
+### User interface and visualization
+
 When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle that will enclose the ships dimensions regardless of the direction it is pointing.
 This commonly happens with Class B ships and if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the historical frigate the USS Constitution, which is docked in the port of Boston. 
 <p align="center">
@@ -65,12 +67,15 @@ The "tag control" (above the zoom controls) will add labels to the map:
 
 The summary window with details on a vessel, as received, is called the **ship card** and will be shown when a ship is selected on the map by the user. For smaller screens it can be minimized in the top bar (via minus symbols) and in fact the ship card will be opened in minimized mode on mobile devices as in the picture with the USS Constitution. In the max form the user can toggle rows that will be visible in this minimized state. These rows are shown with a light grey background. Finally, in minimized mode some options are accessible via icons in the top bar, including showing the vessel track and centering the map at the location of the current vessel which are otherwise provided in the bottom bar of the vessel card. Other options in the bottom bar give access to more ship details via some of the well-known aggregator sites.
 
+### Validation
 Recent updates of the web-interface show a "validation" indication at the left border in the header of the ship card.
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/212470486-8987fa96-5324-41d8-a782-dbcbdc18aca0.png" width="25%"/>
 </p>
-AIS-catcher analyzes an enourmous stream of 2 to the power 33 bits per day for  two channels. To avoid erroneous messages, the AIS system employs a 16 bit CRC and various other bit patterns that need to be matched. Unfortunately, based on pure statistics this cannot prevent that there will be an occasional technically correct but nonsense message. These are typically easy to recognize (e.g. looking at signal level, location on map) and the aggregator sites like MarineTraffic will filter these out. To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, evolving, Validation function that checks the location of the vessel for consistency with previous messages and flags if this is the case. If we received two positions from the same MMSI that are relatively close, the "validation" indicator will be green and the distance to the station will be used to determine range. Otherwise the indicator will be grey until further evidence has been gathered.
 
+AIS-catcher analyzes an enormous stream of bits   per day for both AIS channels (2 to the power 33 to be precise). To avoid erroneous messages, the AIS system employs a 16 bit CRC and various other bit patterns that need to be matched. Unfortunately, based on pure statistics this cannot prevent that there will be an occasional technically correct but nonsense message. These are typically easy to recognize (e.g. looking at signal level, location on map) and the aggregator sites like MarineTraffic will filter these out. To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, evolving, "validation function" that checks the location of the vessel for consistency between messages and flags if this is consistent. Practially, if we received two positions from the same MMSI that are relatively close, the "validation" indicator will be green and the distance to the station will be used to determine range. Messages within 50 NMi from the receiving station will be always included for range setting. The indicator will be grey if validation for the location could not be performed or was not succesful. 
+
+### Plots
 The plot tab contains several plots to assess the performance of the receiver:
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/8096b8bfa3caca6c73023ce1e708ca421292f27f/media/ScreenshotPlot.jpg" width="50%"/>
