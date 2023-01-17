@@ -16,6 +16,7 @@
 */
 
 #include "Receiver.h"
+#include "Utilities.h"
 #include "JSON/StringBuilder.h"
 
 #include "Statistics.h"
@@ -634,18 +635,29 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60);
 	}
 	else if (option == "PLUGIN") {
+		std::cerr << "Server: adding plugin (JS): " << arg << std::endl;
 		plugins += "console.log('plugin:" + arg + "');";
 		plugins += "plugins += 'JS: " + arg + "\\n';";
 		plugins += "\n\n//=============\n//" + arg + "\n\n";
 		plugins += Util::Helper::readFile(arg);
 	}
 	else if (option == "STYLE") {
+		std::cerr << "Server: adding plugin (CSS): " << arg << std::endl;
 		plugins += "console.log('css:" + arg + "');";
 		plugins += "plugins += 'CSS: " + arg + "\\n';";
 
 		stylesheets += "/* ================ */\r\n";
 		stylesheets += "/* CSS plugin: " + arg + "*/\r\n";
 		stylesheets += Util::Helper::readFile(arg) + "\r\n";
+	}
+	else if (option == "PLUGIN_DIR") {
+		const std::vector<std::string>& files_js = Util::Helper::getFilesWithExtension(arg, ".pjs");
+		for (auto f : files_js) Set("PLUGIN", f);
+
+		const std::vector<std::string>& files_ss = Util::Helper::getFilesWithExtension(arg, ".pss");
+		for (auto f : files_ss) Set("STYLE", f);
+
+		if (!files_ss.size() && !files_js.size()) std::cerr << "Server: no plugin files found in directory." << std::endl;
 	}
 	else if (option == "REUSE_PORT") {
 		setReusePort(Util::Parse::Switch(arg));
