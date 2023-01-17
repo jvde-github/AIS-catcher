@@ -102,7 +102,7 @@ You can also include all plugin files from a directory using the command:
 ```console
 AIS-catcher -N PLUGIN_DIR /usr/share/aiscatcher/plugins
 ```
-Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and style plugins. The repository provides a few examples to add additional maps and present ship data in a different format (e.g. feet instead of meters). 
+Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and style plugins. The repository includes a few example plugins that demonstrate how to add additional maps, create new menu items and present some of the ship data in a different unit (e.g. dimension of the vessel in feet instead of meters). 
 
 In principle the implementation already works but to be really useful requires a clean up and refactoring of the core HTML source file and publication in this repository. So more to come in the coming period. 
 
