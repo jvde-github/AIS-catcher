@@ -17,6 +17,12 @@
 
 #include <iomanip>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <dirent.h>
+#endif
+
 #include "Utilities.h"
 
 namespace Util {
@@ -260,5 +266,39 @@ namespace Util {
 			return;
 		}
 		out.Send(output.data(), size, tag);
+	}
+
+	std::vector<std::string> Helper::getFilesWithExtension(const std::string& directory, const std::string& extension) {
+		std::vector<std::string> files;
+
+#ifdef _WIN32
+		WIN32_FIND_DATAA ffd;
+		HANDLE hFind = INVALID_HANDLE_VALUE;
+		const std::string search_path = directory + "\\*" + extension;
+		hFind = FindFirstFileA((LPCSTR)search_path.c_str(), &ffd);
+		if (hFind == INVALID_HANDLE_VALUE) return files;
+
+		do {
+			std::string full_path = directory + "\\" + std::string((char*)ffd.cFileName);
+			files.push_back(full_path);
+		} while (FindNextFileA(hFind, &ffd) != 0);
+		FindClose(hFind);
+
+#else
+		DIR* dir;
+		struct dirent* ent;
+		if ((dir = opendir(directory.c_str())) != NULL) {
+			while ((ent = readdir(dir)) != NULL) {
+				std::string file_name = ent->d_name;
+				if (file_name.length() >= extension.length() &&
+					file_name.compare(file_name.length() - extension.length(), extension.length(), extension) == 0) {
+					std::string full_path = directory + "/" + file_name;
+					files.push_back(full_path);
+				}
+			}
+			closedir(dir);
+		}
+#endif
+		return files;
 	}
 }

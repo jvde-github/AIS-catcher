@@ -116,6 +116,7 @@ namespace Util {
 			while (std::getline(file, line)) str += line + '\n';
 			return str;
 		}
+		static std::vector<std::string> getFilesWithExtension(const std::string& directory, const std::string& extension);
 	};
 
 	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {
