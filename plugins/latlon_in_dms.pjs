@@ -1,0 +1,14 @@
+// {"author":"jvde-github","description":"displays lat/lon in dms"}
+
+
+    function decimalToDMS(latitude) {
+        var absoluteLatitude = Math.abs(latitude);
+        var degrees = Math.floor(absoluteLatitude);
+        var minutesNotTruncated = (absoluteLatitude - degrees) * 60;
+        var minutes = Math.floor(minutesNotTruncated);
+        var seconds = Math.floor((minutesNotTruncated - minutes) * 60);
+
+        return degrees + "° " + minutes + "' " + seconds + "\" " + (latitude < 0 ? "S" : "N");
+    }
+
+getLatVal = getLonVal = c => decimalToDMS(c);
