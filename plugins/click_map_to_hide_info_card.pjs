@@ -1,0 +1,5 @@
+// {"author":"johnex","description":"click anywhere on the map to hide the ship info card"}
+
+map.on('click', function(a) {
+    showShipcard(null)
+});
