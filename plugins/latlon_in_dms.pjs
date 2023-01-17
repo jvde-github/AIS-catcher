@@ -3,7 +3,7 @@
 function decimalToDMS(l) {
     var al = Math.abs(l);
     var degrees = Math.floor(al);
-    var minutesNotTruncated = (absoluteLatitude - degrees) * 60;
+    var minutesNotTruncated = (al - degrees) * 60;
     var minutes = Math.floor(minutesNotTruncated);
     var seconds = Math.floor((minutesNotTruncated - minutes) * 60);
 
