@@ -98,7 +98,13 @@ provides the option to inject custom plugins (JavaScript) and CSS in the website
 ```console
 AIS-catcher -N PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
 ```
-This already works but to be really useful requires a clean up and refactoring of the core HTML source file and publication in this repository. So more to come in the coming period. 
+You can also include all plugin files from a directory using the command:
+```console
+AIS-catcher -N PLUGIN_DIR /usr/share/aiscatcher/plugins
+```
+Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and style plugins. The repository provides a few examples to add additional maps and present ship data in a different format (e.g. feet instead of meters). 
+
+In principle the implementation already works but to be really useful requires a clean up and refactoring of the core HTML source file and publication in this repository. So more to come in the coming period. 
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
