@@ -86,7 +86,7 @@ The plot tab contains several plots to assess the performance of the receiver:
 </p>
 Upon restarting AIS-catcher, the history displayed in the graphs is typically lost. To preserve the state of the plots, a useful option is to save the content to a file, such as "stat.bin," at closure and to create a backup every 10 minutes. This can be accomplished with the following options:
 
-```
+```console
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
 These are new experimental feautures so reporting of any issues encountered is appreciated.
