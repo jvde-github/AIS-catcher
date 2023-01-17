@@ -1,0 +1,19 @@
+// {"author":"johnex","description":"always show trails when clicking a ship"}
+
+function plot_ship(a) {
+    a.mmsi in markers ? (a.mmsi != hover_mmsi && markers[a.mmsi].setIcon(getIcon(a)), markers[a.mmsi].setLatLng([a.lat, a.lon]), markers[a.mmsi].getTooltip().setContent(ship_tooltip_content(a))) : (markers[a.mmsi] = L.marker([a.lat, a.lon], {
+        icon: getIcon(a)
+    }).addTo(map), markers[a.mmsi].on('click', function(b) {
+        showShipcard(a.mmsi);
+        showTrack();
+    }), markers[a.mmsi].on('mouseover', function(b) {
+        startHover(a.mmsi)
+    }), markers[a.mmsi].on('mouseout', function(b) {
+        endHover(a.mmsi)
+    }), markers[a.mmsi].bindTooltip(ship_tooltip_content(a), {
+        opacity: .85,
+        permanent: !0,
+        offset: [15, 0],
+        direction: 'right'
+    }), markers[a.mmsi].getTooltip().toggle()), updateShipShape(a), hover_mmsi == a.mmsi && setHoverMarker([a.lat, a.lon])
+}
