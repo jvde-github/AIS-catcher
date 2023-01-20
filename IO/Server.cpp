@@ -16,6 +16,7 @@
 */
 
 #include <cstring>
+#include <algorithm>
 
 #include "Server.h"
 
@@ -56,10 +57,23 @@ namespace IO {
 		return r;
 	}
 
-	void Server::Run() {
-		char c;
-		std::string ret, header;
+	void Server::Process(SOCKET s) {
 		int r = 0;
+
+		header.clear();
+		do {
+			r = readLine(s, ret);
+			header += ret + '\n';
+		} while (r > 0 && !ret.empty());
+
+		if (r >= 0) {
+			std::string request = parse(header);
+			if (!request.empty()) Request(s, request);
+		}
+	}
+
+	void Server::Run() {
+		std::vector<SOCKET> conn_sockets;
 
 		while (!stop) {
 			int addrlen = sizeof(service);
@@ -67,29 +81,32 @@ namespace IO {
 
 			FD_ZERO(&fdr);
 			FD_SET(sock, &fdr);
+			for (auto s : conn_sockets) FD_SET(s, &fdr);
 
 			struct timeval tv = { 0, 50000 };
-			int nready = select(sock + 1, &fdr, 0, 0, &tv);
+			int nready = select(sock + conn_sockets.size() + 1, &fdr, 0, 0, &tv);
 
 			if (FD_ISSET(sock, &fdr)) {
 				if ((conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen)) < 0) {
-					std::cerr << "Error accepting incoming connection";
+					std::cerr << "Server: error accepting incoming connection.";
 					continue;
 				}
-
-				header.clear();
-				do {
-					r = readLine(conn_socket, ret);
-					header += ret + '\n';
-				} while (r > 0 && !ret.empty());
-
-				if (r >= 0) {
-					std::string request = parse(header);
-					if (!request.empty()) Request(conn_socket, request);
+				else {
+					conn_sockets.push_back(conn_socket);
 				}
-				closesocket(conn_socket);
+			}
+
+			for (auto s : conn_sockets) {
+				if (FD_ISSET(s, &fdr)) {
+					Process(s);
+					closesocket(s);
+					conn_sockets.erase(std::remove(conn_sockets.begin(), conn_sockets.end(), s), conn_sockets.end());
+				}
 			}
 		}
+
+		for (auto s : conn_sockets) closesocket(s);
+		conn_sockets.clear();
 	}
 
 	void Server::Request(SOCKET s, const std::string& r) {
@@ -111,7 +128,6 @@ namespace IO {
 		::send(s, data, len, 0);
 	}
 
-
 	bool Server::start(int port) {
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -130,8 +146,6 @@ namespace IO {
 		service.sin_addr.s_addr = htonl(INADDR_ANY);
 		service.sin_port = htons(port);
 
-		//----------------------
-		// Bind the socket.
 		int r = bind(sock, (SOCKADDR*)&service, sizeof(service));
 		if (r == SOCKET_ERROR) {
 			closesocket(sock);
@@ -139,9 +153,7 @@ namespace IO {
 			return false;
 		}
 
-		if (listen(sock, 32) < 0) {
-			return false;
-		}
+		if (listen(sock, 32) < 0) return false;
 
 		stop = false;
 		run_thread = std::thread(&Server::Run, this);

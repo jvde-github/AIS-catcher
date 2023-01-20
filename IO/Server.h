@@ -52,16 +52,29 @@
 namespace IO {
 
 	class Server {
+	public:
+		Server();
+		~Server();
 
+		virtual void Request(SOCKET s, const std::string& msg);
+
+		void Response(SOCKET s, std::string type, const std::string& content);
+		void Response(SOCKET s, std::string type, const char* data, int len, bool gzip = false);
+
+		bool start(int port);
+		void setReusePort(bool b) { reuse_port = b; }
+
+	private:
 		SOCKET sock = -1;
 		int timeout = 2;
-		int port = 8089;
+		int port = 8100;
 		bool reuse_port = true;
 
 		struct addrinfo* address;
 		std::thread run_thread;
 
 		bool stop = false;
+		std::string ret, header;
 
 		void Run();
 
@@ -80,18 +93,8 @@ namespace IO {
 			return "";
 		}
 		int readLine(SOCKET s, std::string& str);
+		void Process(SOCKET s);
 
 		fd_set fdr, fdw;
-
-	public:
-		Server();
-		~Server();
-
-		virtual void Request(SOCKET s, const std::string& msg);
-		void Response(SOCKET s, std::string type, const std::string& content);
-		void Response(SOCKET s, std::string type, const char* data, int len, bool gzip = false);
-
-		bool start(int port);
-		void setReusePort(bool b) { reuse_port = b; }
 	};
 }
