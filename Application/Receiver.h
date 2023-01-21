@@ -215,6 +215,7 @@ class OutputServer : public IO::Server, public Setting {
 	float lat = 0, lon = 0;
 	int backup_interval = -1;
 
+	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "'\n\n";
 	std::string plugins;
 	std::string stylesheets;
 
