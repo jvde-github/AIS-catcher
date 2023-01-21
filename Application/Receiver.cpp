@@ -529,10 +529,10 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		content += "\"vendor\":\"" + vendor + "\",";
 		content += "\"serial\":\"" + serial + "\",";
 		content += "\"model\":\"" + model + "\",";
-		content += "\"build_date\":\"" + std::string(__DATE__) + "\",",
-			content += "\"build_version\":\"" + std::string(VERSION) + "\",",
-			content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",",
-			content += "\"run_time\":\"" + std::to_string((long int)time(0) - (long int)time_start) + "\",";
+		content += "\"build_date\":\"" + std::string(__DATE__) + "\",";
+		content += "\"build_version\":\"" + std::string(VERSION) + "\",";
+		content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",";
+		content += "\"run_time\":\"" + std::to_string((long int)time(0) - (long int)time_start) + "\",";
 
 		std::string unit;
 		const uint64_t GB = 1000000000;
