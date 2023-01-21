@@ -566,7 +566,7 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		Response(s, "application/json", content);
 	}
 	else if (r == "/config.js") {
-		Response(s, "application/javascript", plugins);
+		Response(s, "application/javascript", params + plugins);
 	}
 	else if (r == "/config.css") {
 		Response(s, "text/css", stylesheets);
