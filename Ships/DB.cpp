@@ -86,14 +86,18 @@ std::string DB::getJSON(bool full) {
 
 				if (isValidCoord(lat, lon)) {
 					content += "\"distance\":" + std::to_string(ships[ptr].ship.distance) + ",";
+					content += "\"bearing\":" + std::to_string(ships[ptr].ship.angle) + ",";
 				}
-				else
-					content += "\"distance\": null,";
+				else {
+					content += "\"distance\":null,";
+					content += "\"bearing\":null,";
+				}
 			}
 			else {
 				content += "\"lat\":" + null_str + ",";
 				content += "\"lon\":" + null_str + ",";
-				content += "\"distance\": null,";
+				content += "\"distance\":null,";
+				content += "\"bearing\":null,";
 			}
 
 			content += "\"mmsi_type\":" + std::to_string(ships[ptr].ship.mmsi_type) + ",";
