@@ -530,7 +530,7 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		content += "\"serial\":\"" + serial + "\",";
 		content += "\"model\":\"" + model + "\",";
 		content += "\"build_date\":\"" + std::string(__DATE__) + "\",",
-			content += "\"build_version\":\"" + std::string(__VERSION__) + "\",",
+			content += "\"build_version\":\"" + std::string(VERSION) + "\",",
 			content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",",
 			content += "\"run_time\":\"" + std::to_string((long int)time(0) - (long int)time_start) + "\",";
 
