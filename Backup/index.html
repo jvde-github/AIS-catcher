@@ -2584,6 +2584,8 @@
     addOverlayLayer("OpenSeaMap",L.tileLayer('http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors', maxZoom: 18 }));
     
     console.log("Starting plugin code")
+
+    // TO DO: load plugins via <SCRIPT SRC ..>, however, seems to create issues for our simple webserver on iOS so for now implemented via Fetch until this is sorted
     loadPlugins().then((result) => {
 
         init_preSettings();
