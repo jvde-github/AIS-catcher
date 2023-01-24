@@ -237,7 +237,7 @@
         }
     }
 
-    .graph_panel {
+    .graph-panel {
         padding: 10px;
         overflow: auto;
         background-color: var(--panel-color);
@@ -245,7 +245,7 @@
     }
     
 
-    .graph_panel > header {
+    .graph-panel > header {
         margin: 20px auto 30px auto;
         padding: 5px 0px;
         border-radius: 10px;
@@ -264,7 +264,7 @@
         font-size: 1.0em;
     }
 
-    .graph_panel > canvas {
+    .graph-panel > canvas {
         width: 100%;
         height: 100%;
     }
@@ -849,48 +849,48 @@
 
         <div class="tabcontent" id="plots">
             <div class="graphtab">
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Messages per Second</header>
                     <canvas id="chart-seconds"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Messages per Minute</header>
                     <canvas id="chart-minutes"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Messages per Hour</header>
                     <canvas id="chart-hours"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Messages per Day</header>
                     <canvas id="chart-days"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Frequency Shift (avg PPM per hour)</header>
                     <canvas id="chart-ppm"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Frequency Shift (avg PPM per minute)</header>
                     <canvas id="chart-ppm-minute"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Signal Level (Min/Max dB per minute)</header>
                     <canvas id="chart-level"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Distance (Max NMi per Hour)</header>
                     <canvas id="chart-distance-hour"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Distance (Max NMi per Day)</header>
                     <canvas id="chart-distance-day"></canvas>
                 </div>
                 <br />
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Max Distance Last Hour (NMi)</header>
                     <canvas id="chart-radar-hour"></canvas>
                 </div>
-                <div class="graph_panel">
+                <div class="graph-panel">
                     <header>Max Distance Last Day (NMi)</header>
                     <canvas id="chart-radar-day"></canvas>
                 </div>
@@ -1001,7 +1001,7 @@
 <div class="bottombar"></div>
 
 <script>
-    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, shipsDB = {};
+    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, shipsDB = {}, singleClickTimeout = null;
 
     var plugins = "";
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
@@ -1035,7 +1035,56 @@
     getDeltaTimeVal = s =>  s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
     getShipName = ship => (ship.shipname || ship.mmsi);
     
-    var singleClickTimeout = null;
+    function getStatusVal(ship) {
+        const StringFromStatus = ["Under way using engine",
+            "At anchor",
+            "Not under command",
+            "Restricted manoeuverability",
+            "Constrained",
+            "Moored",
+            "Aground",
+            "Engaged in Fishing",
+            "Under way sailing",
+            "Reserved for HSC",
+            "Reserved for WIG",
+            "Reserved",
+            "Reserved",
+            "Reserved",
+            "AIS-SART is active",
+            "Not available"
+        ];
+
+        return StringFromStatus[Math.min(ship.status, 15)];
+    }
+
+    function getShipTypeVal(s) {
+        if (s < 20) return "Not available";
+        if (s <= 29) return "WIG";
+        if (s <= 30) return "Fishing";
+        if (s <= 32) return "Towing";
+        if (s <= 34) return "Dredging/Diving ops";
+        if (s <= 35) return "Military";
+        if (s <= 36) return "Sailing";
+        if (s <= 37) return "Pleasure Craft";
+        if (s <= 39) return "Reserved";
+        if (s <= 49) return "High Speed Craft";
+        if (s <= 50) return "Pilot";
+        if (s <= 51) return "Search And Rescue";
+        if (s <= 52) return "Tug";
+        if (s <= 53) return "Port tender";
+        if (s <= 54) return "Anti-pollution equipment";
+        if (s <= 55) return "Law Enforcement";
+        if (s <= 57) return "Local Vessel";
+        if (s <= 58) return "Medical Transport";
+        if (s <= 59) return "Noncombatant ship";
+        if (s <= 69) return "Passenger";
+        if (s <= 79) return "Cargo";
+        if (s <= 89) return "Tanker";
+        if (s <= 99) return "Other";
+
+        return "Not available";
+    }
+
 
     function headerClick() {
         window.open('https://github.com/jvde-github/AIS-catcher');
@@ -1679,56 +1728,6 @@
                     e[i].classList.toggle('shipcard-row-selected');
             }
         }
-    }
-
-    function getStatusVal(ship) {
-        const StringFromStatus = ["Under way using engine",
-            "At anchor",
-            "Not under command",
-            "Restricted manoeuverability",
-            "Constrained",
-            "Moored",
-            "Aground",
-            "Engaged in Fishing",
-            "Under way sailing",
-            "Reserved for HSC",
-            "Reserved for WIG",
-            "Reserved",
-            "Reserved",
-            "Reserved",
-            "AIS-SART is active",
-            "Not available"
-        ];
-
-        return StringFromStatus[Math.min(ship.status, 15)];
-    }
-
-    function getShipTypeVal(s) {
-        if (s < 20) return "Not available";
-        if (s <= 29) return "WIG";
-        if (s <= 30) return "Fishing";
-        if (s <= 32) return "Towing";
-        if (s <= 34) return "Dredging/Diving ops";
-        if (s <= 35) return "Military";
-        if (s <= 36) return "Sailing";
-        if (s <= 37) return "Pleasure Craft";
-        if (s <= 39) return "Reserved";
-        if (s <= 49) return "High Speed Craft";
-        if (s <= 50) return "Pilot";
-        if (s <= 51) return "Search And Rescue";
-        if (s <= 52) return "Tug";
-        if (s <= 53) return "Port tender";
-        if (s <= 54) return "Anti-pollution equipment";
-        if (s <= 55) return "Law Enforcement";
-        if (s <= 57) return "Local Vessel";
-        if (s <= 58) return "Medical Transport";
-        if (s <= 59) return "Noncombatant ship";
-        if (s <= 69) return "Passenger";
-        if (s <= 79) return "Cargo";
-        if (s <= 89) return "Tanker";
-        if (s <= 99) return "Other";
-
-        return "Not available";
     }
 
     function setPulseOk() {
