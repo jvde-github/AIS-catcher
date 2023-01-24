@@ -1,0 +1,2618 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0, user-scalable=no" />
+<title>AIS-catcher</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="favicon.ico">
+
+<script src="https://kit.fontawesome.com/296bfd8db6.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@6.6.6/css/flag-icons.min.css" />
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+
+<style>
+
+    :root {
+        --primary-color: #0857b1;
+        --secondary-color: #12a5ed;
+        --tertiary-color: #0b1033;
+        --panel-color: #f2f8ff;
+        --ok-color: rgb(129, 244, 129);
+        --error-color: red;
+        --header-color: var(--primary-color);
+        --header-title-color:  #0e6cd8;
+        --selection-color: orange;
+        --mainspace-color: white;
+        --backdrop-color: #f5f7fa;
+        --focus-color: red;
+        --light-gray: lightgray;
+        --header-font-color: white;
+        --menu-background-color: white;
+        --menu-background-hover-color: #daebfe;
+        --menu-font-color: dimgrey;
+        --mainspace-container-color: lightgrey;
+        --shipcard-footer-background-color: var(--tertiary-color);
+        --shipcard-footer-hover-color: var(--primary-color);
+        --chart1-color: rgba(93, 169, 213, 0.9);
+        --chart2-color: rgba(157, 93, 213,0.9);
+        --chart3-color: rgba(93, 213, 97,0.9);
+        --chart4-color: rgba(213, 157, 93,0.9);
+        --chart5-color: rgba(93, 213, 154,0.9);
+        --hover-transform: scale(0.93);
+        --hover-transition: transform ease-out 0.2s, background 0.4s;
+        --hover-background: rgba(255, 255, 255, 0.5);
+    }
+
+    body,
+    html {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        font-family: Arial;
+        display: flex;
+        flex-direction: column;
+        justify-content: stretch;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none
+    }
+
+    .header {
+        background: var(--header-color); 
+        flex: 0 0 40px;
+        font-size: 20px;
+        display: flex;
+        justify-content: stretch;
+        color: white; 
+    }
+
+    .header-title {
+        flex: 1;
+        padding: 15px;
+        line-height: 20px;
+        background-color: var(--header-title-color);
+        border-top-right-radius: 25% 50%;
+        border-bottom-right-radius: 25% 50%;    
+    }
+
+    .header-icon, .header-pulse-ok, .header-pulse-error {
+        width: 50px;
+        border-radius: 50%;
+        margin: 10px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var( --hover-transition);
+    }
+
+    .header-pulse-ok {
+        color: var(--ok-color);
+    }
+
+    .header-pulse-error {
+        color:  var(--error-color);
+    }
+
+    .header-icon:hover {
+        cursor: pointer;
+        background: var(--hover-background);
+        transform: var(--hover-transform);
+    }
+
+    .fs-icon-normal:before {
+        content: "\f424";
+        font-family: "FontAwesome";
+    }
+
+    .fs-icon-full:before {
+        content: "\f066";
+        font-family: "FontAwesome";
+    }
+
+    .header-menubutton {
+        padding: 15px;
+        background:var(--menu-background-color);
+        color: black;
+        display: none;
+        transition: var( --hover-transition);
+    }
+
+    .header-menubutton:hover {
+        cursor: pointer;
+    }
+
+    .bottombar {
+        flex: 0 0 15px;
+        background: var(--tertiary-color)
+    }
+
+    #menubar {
+        flex: 0 0 45px;
+        justify-content: center;
+        background: var(--menu-background-color);
+        color: var(--menu-font-color);
+        text-align: center;
+        align-items: stretch;
+        display: flex;
+        flex-direction: row;
+        visibility: visible;
+    }
+
+    #menubar div 
+    {
+        flex: 0 1 200px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: var( --hover-transition);
+    }
+
+    #menubar div:hover {
+        background: var(--menu-background-hover-color);
+        transform: var(--hover-transform);
+    }
+
+    #menubar div.active {
+        border-bottom: 4px solid var(--secondary-color);
+        color: var(--secondary-color);
+    }
+
+    .mainspace-container {
+        flex: 1 0 0;
+        overflow: auto;
+        background: var(--backdrop-color);
+        border-top: solid;
+        border-color: var(--mainspace-container-color);
+        border-width: 4px;
+        display: flex;
+        flex-direction: column;
+        justify-content: stretch;
+    }
+
+    .mainspace {
+        background: var(--mainspace-color);
+        margin: 20px;
+        flex: 1;
+        border: 1px;
+    }
+
+
+    @media only screen and (max-height : 1000px) {
+        .menubar {
+            display: flex;
+        }
+
+        .header-menubutton {
+            display: block;
+        }
+
+        .bottombar {
+            display: none;
+        }
+
+        #menubar.visible {
+            display: none;
+        }
+
+        .mainspace {
+            margin: 5px;
+        }
+    }
+
+    /* Plot styling */
+    .graphtab {
+        padding: 15px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        column-gap: 15px;
+        row-gap: 15px;
+    }
+    
+    @media only screen and (max-width:2250px) {
+        .graphtab {
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 5px;
+        }
+    }
+
+    @media only screen and (max-width:1500px) {
+        .graphtab {
+            grid-template-columns: 1fr 1fr;
+            padding: 5px;
+        }
+    }
+
+    @media only screen and (max-width:800px) {
+        .graphtab {
+            grid-template-columns: 1fr;
+            padding: 0px;
+        }
+    }
+
+    .graph_panel {
+        padding: 10px;
+        overflow: auto;
+        background-color: var(--panel-color);
+        border-radius: 15px;
+    }
+    
+
+    .graph_panel > header {
+        margin: 20px auto 30px auto;
+        padding: 5px 0px;
+        border-radius: 10px;
+
+        max-width: 400px;
+        width: calc(100% - 30px);
+        
+        align-items: center;
+        border-left: 10px solid lightgray;
+        border-right: 10px solid lightgray;
+
+        background-color: var(--secondary-color);
+        color: white;
+        
+        text-align: center;
+        font-size: 1.0em;
+    }
+
+    .graph_panel > canvas {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Table styling */
+
+    .tablesection {
+        font-size: .8em;
+        display: flex;
+        height: 100%;
+        margin: 10px auto;
+        background-color: white;
+        width: fit-content;
+
+    }
+
+    table {
+        height: 100%;
+        min-width: 1300px;
+        overflow: auto;
+        border-collapse: collapse;
+    }
+
+    table thead tr th:nth-child(1),
+    table tbody tr td:nth-child(1) {
+        text-align: left;
+        width: 220px;
+    }
+
+    table thead tr th:nth-child(3),
+    table tbody tr td:nth-child(3) {
+        text-align: left;
+        width: 65px;
+    }
+
+    table thead tr th:nth-child(10),
+    table thead tr th:nth-child(11),    
+    table tbody tr td:nth-child(10),
+    table tbody tr td:nth-child(11) 
+    {
+        text-align:right;
+        width: 90px;        
+    }
+
+    table thead tr th:nth-child(2),
+    table thead tr th:nth-child(4),
+    table thead tr th:nth-child(5),
+    table thead tr th:nth-child(6),
+    table thead tr th:nth-child(7),
+    table thead tr th:nth-child(8),
+    table thead tr th:nth-child(9),
+    table thead tr th:nth-child(12),
+    table tbody tr td:nth-child(2),
+    table tbody tr td:nth-child(4),
+    table tbody tr td:nth-child(5),
+    table tbody tr td:nth-child(6),
+    table tbody tr td:nth-child(7),
+    table tbody tr td:nth-child(8),
+    table tbody tr td:nth-child(9),
+    table tbody tr td:nth-child(12)
+    {
+        text-align:right;
+        width: 45px;
+    }
+
+        table thead {
+            background-color: var(--primary-color);
+            font-size: 1em;
+            color: white;
+        }
+
+            table thead > tr > th {
+                padding: 25px 15px;
+                border-collapse: collapse;
+                transition: var(--hover-transition);
+            }
+
+            table > thead > tr > th:after {
+                content: " \f0dc "; 
+                font-family: "Font Awesome 5 Free"; 
+                font-weight: 900;
+                color: lightgray;
+            }
+
+            table > thead > tr > th:hover {
+                background: var(--hover-background);
+                transform: var(--hover-transform);
+                cursor: pointer;
+            }
+
+        table tbody th,
+        td {
+            -webkit-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+            border: dashed thin;
+            border-color: lightgrey;
+            padding: 10px 15px;            
+        }
+
+        table > tbody > tr > td[valid="Pending"],
+        table > tbody > tr > td[valid="No"] 
+        {           
+            color: red;
+        }
+
+        table > tbody > tr > td[valid="Yes"] {
+            color: green;
+        }
+
+        table > tbody >tr:nth-child(even) {
+                background: var(--panel-color);
+            }
+
+        table > tbody >tr:hover {
+            background: #daebfe;
+        }
+
+    .table-aligned-center {
+        text-align: center
+    }
+
+    .selectable {
+        color: var(--selection-color);
+    }
+
+    /* Map styling */ 
+
+    #map {
+        height: 100%;
+        width: 100%;
+    }
+
+    .maptab {
+        height: 100%;
+    }
+
+    .shiptable-map {
+        width: 10px;
+    }
+
+    .shipicon {
+        background: url("data:image/png;base64,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");
+        width: 20px;
+        height: 20px;
+        opacity: 1;
+        display: inline-block;
+    }
+
+    .staticon {
+        background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAAUCAYAAADRA14pAAACXUlEQVRYhe3Ru47aQABG4UMWKSGJUJRqW9JlN+yKJim59duQBwD2kShyqXBtkheghJ4KF0gICewCISxRMgg7BYYYe2ZtME0uI42EMDr6Pwz/j/S8A1L/Su9+MGCmaXy5UPQeBjPQLtYbwEzjMvvuDAPTdXGFYKNpfE0YvQPDBNcFsQEtcc8A0wVXwEYj2b68YWC5Lu7+JkTnwbB22P1NhM4bYPliidAfglgJ+tkpvTA2hD6pF8RK0LF7SmwA/S1m9AnsETp2T4UNoGP1bqOwfnS7HRm9jcb60e3IXhTWj25HoG9k2NGIZb9PazhkokB/V0Rv5NjREvotGE4UaGVPhh3Bsg+tIUwUaGnvvQy73SIKBR6833xarRAStPDQV/6eHLsVUDj0YCUkaOGhj3oy7BZEAd8+EBK08NBX7OW1GtfZLC8k/6qby/Ha+/wmlcIN/iCdhkyGt8Dz/XcpateQlfYgd+hBKtSDNJA56n2G6yyKffj2IdkHZDjeB0C9TtU0sYNv0LKwez264zGL4DPHQeg6P4GX4S31Kph2+A1aNvS6MF6EnzkCdGmvDlUT7OAbtMDuQXcMi+AzB4SOah/QaFCRoWXXw/5QxnbFihwtu44A/cleAyoytOx62Ih9MdHxsKego7GnoGNj96fZpKxCe9hO7NiuWFajHQH6Sb0mlFVoD3vivh26FEQ7DutO54zYrlgKo501dM7qNaEURDuw7pyDPUR9aA+rA6/Oiu2Kpd9oZw2dRD0/2sMm3Ac8PlKcTpknxx6KRZjOk2IPNShOYX4RrO98vGTsD+j9PecXIj9PVcetObkAAAAASUVORK5CYII=");
+        width: 20px;
+        height: 20px;
+        opacity: 1;
+        display: inline-block;
+    }
+
+    .planeicon {
+        background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAACt0lEQVRIx7XVT2hcVRTH8c9MJ5kwo5kEkv5Bilpr20j8E62xCyHZuHGhIM1CaXfWTUGoglpQF+rGZRE3BRVpEaSC1V2oGxcVsVhEIYZYK60UkyZmZpJmMs1k3nXhDQzTRidt8oPL475zzv3ec96959G6XkHYLl1FwKs2QD/t1zlf9uTkfp3z+Hm9Ae1YHNVfDobDGf0lVJFrJTjdImQ7Ou6Tq0F8ZnHPekKy0Ks9A1tlM2spQ3otzlnp8G9QyoZBblWtQB7Cx6vYTuCx29lAG97GEmof2TlZN1QNhkPdUPWE+yexHO3vRP81aQDnEZ7TWbxgcDIYDs3jd4N/HdA9Fy/n+Rh3g1I3uQ9v4nVkTto1PWJroV26Y7XdLEmqp0yWD5jojZm9j/dihjdA9uJTPPCCrrl37arukNvcauoXVa6+ZaLjM6VOjOEQvluBtEXyEaRO2VN81pZ8m1QOSdly+aJKeyKkd8qHgkxuzvLCbxbSaalkh9xSQaaAdE2ofGVqYcR4VzxUH+Ao/IpwUHfxkiemaoYq4x6f+cKe4vO6SrHeAeGcgcVgOJwzsNj4fkSh9Lnds2P2TtcMVa7YN/uSntlo/wXqL9s8dlrflaO2Xc1LrXTZ6/g2fqNHMNEEmcLDeC36LSLkpapv2DZzWt/lw3rHUYekYVcX8CGeQWdT2cdG9U8Hw+EbD87Eujfqzhh3LK6zsmaSiRftB5zBpQi9mUo1SQ9U1RNca7LP4+s4juBuPIXBDF5s8QCVm+Z//4dvgj9wHMfX1LtKlvNQUc9uVIMsBiEN1yXt8ae1rpAM7m16txs96wXZhE+w7w6ZGmyRXUAfRtHVygL/p2M49LT8nwfdJaFekNmUVb981rV+PIovUbvVdn+44bzXELqlluK82mA7eTvlamzdY/ixKLThe5yNADGbVfUPx0b/bFzy3uUAAAAASUVORK5CYII=");
+        width: 25px;
+        height: 25px;
+        opacity: 1;
+        display: inline-block;
+    }
+
+    .helicoptericon {
+        background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAADxUlEQVRIx61VXWgcVRg9d+7Mnd3Zmd1N405oE5KakLbYgDTFH5BUEFo1WJuUNkiLEkVFxSb4UEVsUCutbWPAH1y10qAP2tJa6kMJltKU+CDqKmxQMNZV2ZikSkKSNTP7Mz97fcnCMuxuNq3n8Z7vO+fe7565A6wOr3wSDM5up/RL3AS2UuAogJoSXPiYovwV13V+OhRaAnBvGY37KPAmAFJYEDwFzW+r6r49ongRQJ2H69zq96sAsFGW6TrgwRIGe48oyqdPMdZVyeTcAcOIdvh8Db2S9BWAhgJRA2yIUBpcbvL3+nxtnt7HBwOBwWnHSX1oWT0A8uVMAOBEv2Gc2MyY9jRjlwC0AMB+xjYW10cobS/a7fNDgcDAhGWlopbVBeCnYkGhzFzfP2iabzSJotQny5cAtNWLYlNxwS2iuGb57l5+V1UP/pjLzZ6y7YcAJLxitEIIxkdte+ZhWd7VLgjddaJY3yhJSoHMcb54JZttf0vT9n6dzSbPOE4XgJlSQnSFtP0yats/389Y13ZVrSNFJw8IArmbMe28aV674Lq7AMyVExFWMFkPoHHOdVPEsyGREH8mn1cuuu73ABqL0+QFKeO8+5Dff6iVsfVNkiQHBUEpJ5DjPDdt2/nfLOvvkWz2s7F8fsBbI5ZqfEKStu3WtC3VfL0yIXIzY2hm7FZFELrHDKM6k89t+1pbOp3QKQ01SVIgUOEkNufmjOPwSdv+N5bLjVc9riJsALDvPVXt71CUcIlRzW2bnU3mgD4AMQD2jVy8uV8UOzmQOT4/H8sD2QJxfmkpNriw8PuQqq7VgZ0AnBt5LFselaTYUCCQBHAAwCNXa2sX47rO47rOd1IaBaB1Uno5qml/rAPeKTf+critj7GJo4ryK4Dewui+CIdTcV3nP0QiBoD+5XXfPYJw4aSmJbcQMlytUfsLspw4oihTAHqK1tWPNG0xrut8tLZ2EcCe4pDdQcjpU8HgP3cKwjkAcsX/yYs+X+J1v38SQKeXPKYo38V1nZ8Nh1MAWr1JvZ2Q4Y81bXIHpSOVnvqWaceZfzWTeQzAiNfkuutOAsC860oAkh7aGef8ycOGcSZMSH0VoSqNTYS8Ftf1/HFF+WY1fatym+B8Lsu5Ne26U6vpqyYJzwIgD1DasFkUO1zOxRpB2PQcYx9ELetPAD4AhysJkBUdGBvuDYW6ZUJC3nqHc/OKaV5/KZ1uvamTcCD/bSZjraHU0CmlEVGUFlzXnHddOmXbbppzEf8DegCMAVgLYMddgpAA8AyAZgADAE6uJPAfk1U+b+R6xyUAAAAASUVORK5CYII=");
+        width: 25px;
+        height: 25px;
+        opacity: 1;
+        display: inline-block;
+    }
+
+    /* Shipcard styling */
+    #shipcard {
+        top: 10px;
+        left: 10px;
+        width: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-content: stretch;
+        z-index: 10000;
+        position: absolute;
+        visibility: hidden;
+        background: #fff;
+        cursor: auto;
+        border-radius: 15px;
+    }
+
+    #shipcard.visible {
+        visibility: visible
+    }
+    
+    #shipcard_content {
+        flex: 1;
+        overflow: auto
+    }
+
+    #shipcard_header {
+        flex: 0 0 35px;
+        padding: 10px;
+        margin: 5px;
+        margin-top: 10px;
+        border-radius: 10px;
+        line-height: inherit;
+        align-items: center;
+        font-size: 18px;
+        color: white;
+        background-color: var(--secondary-color);
+        display: flex;
+        flex-direction: row;
+        justify-content: stretch;
+    }
+
+    .shipcard-validated {
+        border-left: 10px solid #7CFC00;
+    }
+    .shipcard-not-validated {
+        border-left: 10px solid lightgrey;
+    }
+    .shipcard-dubious {
+        border-left: 10px solid red;
+    }
+    .shipcard-not-validated-transparant {
+        border-left: 10px solid transparent;
+    }
+   
+    .shipcard-footer   {
+        background-color: var(--tertiary-color);
+        border-bottom: 1px solid rgb(217, 218, 218);
+        flex: 0 0 50px;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: row;       
+        margin: 5px; 
+        margin-bottom: 10px;
+        justify-content: center;        
+    }
+
+    .shipcard-footer  > div  {
+            flex: 0 1 100px;
+            display: flex;
+            flex-direction: column;
+            border-radius: 10px;
+            transition: var( --hover-transition);
+        }
+
+        .shipcard-footer  > div:hover  {
+            cursor: pointer;
+            background: var(--hover-background);
+            transform: var(--hover-transform);        
+        }
+        
+        .shipcard-footer > div > i {
+            color: white;
+            font-size: 17px;
+            line-height: 17px;
+            margin:  auto;
+            padding: 10px;
+        }
+
+        .shipcard-footer  > div > span {
+            flex: 1;
+            font-size: 9px;
+            line-height: 3px;
+            color: white;
+            text-align: center;
+        }
+
+    #shipcard header > span:first-child {
+        flex: 1 0 0;
+    }
+
+    .shipcard-header-icon {
+        flex: 0 1 0;
+        padding: 5px;
+        border-radius: 10px;
+        line-height: 10px;
+        transition: var( --hover-transition);
+    }
+
+    .shipcard-header-icon:hover {
+        cursor: pointer;
+        background: var(--hover-background);
+        transform: var(--hover-transform);        
+    }
+
+    #shipcard_content  {
+        display: flex;
+        flex-direction: column; 
+    }
+
+    .shipcard-content-row {
+        display: flex;
+        flex-direction: row;
+        justify-content: stretch;
+        padding: 10px;
+
+        border-bottom: 1px solid rgb(217, 218, 218);        
+        transition: var( --hover-transition);
+    }
+
+    .shipcard-content-row:hover {
+        cursor: pointer;
+    }
+
+    .shipcard-content-row > div {
+        overflow: hidden;
+        flex: 1; 
+        display: flex;
+        justify-content: stretch;
+        flex-direction: column;
+    }
+    .shipcard-content-row > div > span:first-child {
+        color: rgb(111, 128, 124);
+        text-transform: uppercase;
+        font-size: 10px;
+        line-height: 14px;
+    }
+
+    .shipcard-content-row  > div > span:last-child {
+        line-height: 20px;
+        font-size: 14px;
+        text-transform: initial;
+    }
+
+    .shipcard-content-row  > div > span:last-child:empty:after {
+        content:"-";
+    }
+
+    .shipcard-min-only {
+        display: none;
+    }
+
+    .shipcard-min-only.visible {
+        display: inherit;       
+    }
+
+    .shipcard-max-only.hide {
+
+        display: none;
+    }
+
+    .shipcard-row-selected {
+        background-color: rgb(240, 241, 248);
+        display: flex;
+        flex-direction: row;
+    }
+
+    @media only screen and (max-width:500px) {
+        #shipcard {
+            width: 100%;
+            left: 0;
+            top: 0;
+            border-radius: 0px;
+        }
+        #shipcard header {            
+            font-size: 14px;
+        }
+    }
+
+    @media only screen and (max-height:800px) {
+        .shipcard-ismax {
+            height: 100%
+        }
+        #shipcard {
+            left: 0;
+            top: 0;
+            border-radius: 0px;
+        }
+        #shipcard header {            
+            font-size: 14px;
+        }
+    }
+
+    .pulse {
+        animation: pulsate 1s ease-out;
+        animation-iteration-count: infinite;
+        -webkit-animation: pulsate 1s ease-out;
+        -webkit-animation-iteration-count: infinite;
+        opacity: 0.25;
+    }
+
+    @keyframes pulsate {
+        0% {
+            transform: opacity 0.25;
+        }
+
+        50% {
+            opacity: 1.0;
+        }
+
+        100% {
+            transform: opacity 0.25;
+        }
+    }
+
+    .leaflet-control-layers-toggle,
+    .leaflet-control-label-toggle,
+    .leaflet-control-zoom-in,
+    .leaflet-control-zoom-out,
+    .label-toggle-control {
+        font-size: 18px;
+        background-color: white;
+        min-width: 30px;
+        min-height: 30px;
+        max-width: 30px;
+        max-height: 30px;
+    }
+
+    .leaflet-control-label-toggle {
+        text-align: center;
+        color: grey;
+        transform: translate(200px 0)
+    }
+
+    /* Summary tab */
+
+    #summary_stat {
+        max-width: 700px;
+        margin: 15px auto ;        
+        border-radius: 15px;
+        background-color: var(--panel-color);
+    }
+    #summary_stat section {
+        margin-bottom: 10px;
+        padding: 10px;
+        margin: 0 auto ;
+    }
+    #summary_stat section div {
+        display: flex;
+    }
+    
+    #summary_stat section div span:first-child {
+        flex: 1 1 150px;
+        text-align: right;
+        color: var(--tertiary-color);
+        padding: 5px 20px 5px 20px;
+        display: flex;
+        flex-direction: column
+    }
+    #summary_stat section div span:last-child {
+        flex: 1 0 150px;
+        text-align: left;
+        color: var(--primary-color);
+        padding: 5px 20px 5px 20px;
+        font-weight: 550;
+        overflow-x: auto;
+        border-left: solid 1px lightgray;
+    }
+
+    #summary_stat section div span:last-child:empty:after {
+        content:"-";
+    }
+</style>
+
+<link rel="stylesheet" href="config.css">
+
+</head>
+<body>
+
+<div class="header">
+    <div onclick="toggleMenu()" class="header-menubutton"><i class="fa-solid fa-bars"></i></div>
+    <div onclick="headerClick()" class="header-title">AIS-catcher</div>
+    <div title="List installed plugins" onclick="showPlugins()" class="header-icon"><i class="fas  fa-wrench fa-sm"></i></div>
+    <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
+    <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
+
+</div>
+<nav  id="menubar">
+    <div title="Summary statistics for receiver" onclick="activateTab(event,'stat')" id="stat_tab">STAT</div>
+    <div title="Plots for reception"  onclick="activateTab(event,'plots')" id="plots_tab">PLOTS</div>
+    <div title="Show list of recently seen vessels"  onclick="activateTab(event,'ships')" id="ships_tab">SHIPS</div>
+    <div title="Show map with recently seen vessels"  onclick="activateTab(event,'map')" id="map_tab">MAP</div>
+</nav>
+<div class="mainspace-container">
+    <div class="mainspace">
+        <div class="tabcontent" id="stat">
+            <div id="summary_stat">
+                <section>
+                    <div>
+                        <span>Station</span><span id="stat_station"></span>
+                    </div>
+                </section>            
+                <section>
+                    <div>
+                        <span>Device</span><span id="stat_product"></span>
+                    </div>
+                    <div>
+                        <span>Vendor</span><span id="stat_vendor"></span>
+                    </div>
+                    <div>
+                        <span>Serial</span><span id="stat_serial"></span>
+                    </div>
+                </section>        
+                <section>
+                    <div>
+                        <span>Version</span><span id="stat_build_describe"></span>
+                    </div>
+                    <div>
+                        <span>Build date</span><span id="stat_build_date"></span>
+                    </div>
+                    <div>
+                        <span>Engine</span><span id="stat_model"></span>
+                    </div>
+                </section>    
+                <section>
+                    <div>
+                        <span>Sampling rate</span><span id="stat_sample_rate"></span>
+                    </div>
+                    <div>
+                        <span>Data processed</span><span id="stat_received"></span>
+                    </div>
+                    <div>
+                        <span>Running time</span><span id="stat_run_time"></span>
+                    </div>
+                </section>            
+                <section>
+                    <div>
+                        <span>Total messages</span><span id="stat_stat_count"></span>
+                    </div>
+                    <div>
+                        <span>Last day</span><span id="stat_last_day_count"></span>
+                    </div>
+                    <div>
+                        <span>Last hour</span><span id="stat_last_hour_count"></span>
+                    </div>
+                    <div>
+                        <span>last minute</span><span id="stat_last_minute_count"></span>
+                    </div>
+                    <div>
+                        <span>Rate</span><span id="stat_msg_rate"></span>
+                    </div>
+                    <div>
+                        <span>Vessels seen</span><span id="stat_vessel_count"></span>
+                    </div>
+                </section>            
+                <section>
+                    <div>
+                        <span>Channel A</span><span id="stat_stat_channel0"></span>
+                    </div>
+                    <div>
+                        <span>Channel B</span><span id="stat_stat_channel1"></span>
+                    </div>
+                    <div>
+                        <span>Channel C</span><span id="stat_stat_channel2"></span>
+                    </div>
+                    <div>
+                        <span>Channel D</span><span id="stat_stat_channel3"></span>
+                    </div>
+                </section>
+                <section>
+                    <div>
+                        <span>Class A position</span><span id="stat_stat_msg123"></span>
+                    </div>
+                    <div>
+                        <span>Class A static</span><span id="stat_stat_msg5"></span>
+                    </div>
+                    <div>
+                        <span>Class B position</span><span id="stat_stat_msg1819"></span>
+                    </div>
+                    <div>
+                        <span>Class B static</span><span id="stat_stat_msg24"></span>
+                    </div>
+                </section>
+                <section>
+                    <div>
+                        <span>Base station</span><span id="stat_stat_msg4"></span>
+                    </div>
+                    <div>
+                        <span>SAR aircraft</span><span id="stat_stat_msg9"></span>
+                    </div>
+                    <div>
+                        <span>Aid-to-Navigation</span><span id="stat_stat_msg21"></span>
+                    </div>
+                    <div>
+                        <span>Other</span><span id="stat_stat_msgother"></span>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="tabcontent" id="plots">
+            <div class="graphtab">
+                <div class="graph_panel">
+                    <header>Messages per Second</header>
+                    <canvas id="chart-seconds"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Messages per Minute</header>
+                    <canvas id="chart-minutes"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Messages per Hour</header>
+                    <canvas id="chart-hours"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Messages per Day</header>
+                    <canvas id="chart-days"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Frequency Shift (avg PPM per hour)</header>
+                    <canvas id="chart-ppm"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Frequency Shift (avg PPM per minute)</header>
+                    <canvas id="chart-ppm-minute"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Signal Level (Min/Max dB per minute)</header>
+                    <canvas id="chart-level"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Distance (Max NMi per Hour)</header>
+                    <canvas id="chart-distance-hour"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Distance (Max NMi per Day)</header>
+                    <canvas id="chart-distance-day"></canvas>
+                </div>
+                <br />
+                <div class="graph_panel">
+                    <header>Max Distance Last Hour (NMi)</header>
+                    <canvas id="chart-radar-hour"></canvas>
+                </div>
+                <div class="graph_panel">
+                    <header>Max Distance Last Day (NMi)</header>
+                    <canvas id="chart-radar-day"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabcontent" id="ships">
+            <div class="tablesection">
+                <table id="shipTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(this)" field="shipname">Shipname</th>
+                            <th onclick="sortTable(this)" field="mmsi">MMSI</th>
+                            <th onclick="sortTable(this)" field="callsign">Callsign</th>
+                            <th onclick="sortTable(this)" field="last_signal">Last</th>
+                            <th onclick="sortTable(this)" field="count">Msgs</th>
+                            <th onclick="sortTable(this)" field="ppm">PPM</th>
+                            <th onclick="sortTable(this)" field="level">RSSI</th>
+                            <th onclick="sortTable(this)" field="distance">Dist</th>
+                            <th onclick="sortTable(this)" field="bearing">Brg</th>
+                            <th onclick="sortTable(this)" field="lat">Lat</th>
+                            <th onclick="sortTable(this)" field="lon">Lon</th>
+                            <th onclick="sortTable(this)" field="validated">Valid</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shipTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tabcontent" id="map">
+                <aside id="shipcard" class="shipcard-ismax">
+                    <header id="shipcard_header">                        
+                        <span id="shipcard_header_title"></span>
+                        <span><i title="Center map on current vessel" onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
+                        <span><i title="Show track of current vessel" onclick="showTrack()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
+                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-plus"></i></span>
+                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-minus"></i></span>
+                        <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
+                    </header>
+
+                    <div id="shipcard_content">
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>Status</span><span id="shipcard_status"></span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>Sender</span><span id="shipcard_type"></span></div>
+                            <div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
+                            <div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
+                            <div><span>IMO</span><span id="shipcard_imo">-</span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-row-selected">
+                            <div><span>Course</span><span id="shipcard_cog">-</span></div>
+                            <div><span>Speed</span><span id="shipcard_speed">-</span></div>
+                            <div><span>Heading</span><span id="shipcard_heading">-</span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only ">
+                            <div><span>Latitude</span><span id="shipcard_lat">-</span></div>
+                            <div><span>Longitude</span><span id="shipcard_lon">-</span></div>
+                            <div><span>Distance</span><span id="shipcard_distance">-</span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>Destination</span><span id="shipcard_destination"></span></div>
+                            <div><span>ETA</span><span id="shipcard_eta"></span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>last signal</span><span id="shipcard_last_signal"></span></div>
+                            <div><span>Count</span><span id="shipcard_count">-</span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>RSSI</span><span id="shipcard_level">-</span></div>
+                            <div><span>Drift</span><span id="shipcard_ppm">-</span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
+                            <div><span>Draught</span><span id="shipcard_draught">-</span></div>
+                        </div>
+
+                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
+                        </div>
+
+                    </div>
+                    <footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">              
+                        <div title="Center map on current vessel" onclick="mapResetView(13)"><i class="fa-solid fa-bullseye fa-xl"></i><span>Focus</span></div>
+                        <div title="Show track of current vessel"  onclick="showTrack()"><i class="fa-solid fa-route fa-xl"></i><span>Track</span></div>
+                    </footer>
+            </aside>
+
+            <div class="maptab">
+                <div id="leaflet_map"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<div class="bottombar"></div>
+
+<script>
+    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, shipsDB = {};
+
+    var plugins = "";
+    var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
+
+    var marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
+
+    var ships_json = '{"count":179,"ships":[{"mmsi":205580000,"lat":51.966949,"lon":4.108083,"distance":10.947309,"mmsi_type":1,"level":-15.659001,"count":183,"ppm":-2.025463,"heading":117,"cog":308.000000,"speed":0.000000,"to_bow":251,"to_stern":41,"to_starboard":20,"to_port":25,"shiptype":70,"validated":1,"msg_type":40,"country":"BE","status":5,"draught":17.900000,"eta_month":1,"eta_day":11,"eta_hour":1,"eta_minute":30,"imo":9519779,"callsign":"ONGR","shipname":"MINERAL STONEHENGE 12[V]","destination":"ESLPA>NLRTM","last_signal":1},{"mmsi":2442006,"lat":52.104149,"lon":4.268283,"distance":2.918323,"mmsi_type":3,"level":-9.667519,"count":14090,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":16,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1},{"mmsi":244770607,"lat":52.097713,"lon":4.267714,"distance":2.780770,"mmsi_type":1,"level":-14.477099,"count":378,"ppm":0.000000,"heading":null,"cog":0.000000,"speed":0.000000,"to_bow":22,"to_stern":8,"to_starboard":3,"to_port":2,"shiptype":8020,"validated":1,"msg_type":298,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"PE3984","shipname":"GEO II","destination":"","last_signal":3},{"mmsi":246003000,"lat":52.099342,"lon":4.263957,"distance":2.944958,"mmsi_type":1,"level":-14.629873,"count":4640,"ppm":4.050926,"heading":null,"cog":null,"speed":0.000000,"to_bow":7,"to_stern":12,"to_starboard":3,"to_port":3,"shiptype":52,"validated":1,"msg_type":42,"country":"NL","status":0,"draught":2.200000,"eta_month":10,"eta_day":12,"eta_hour":14,"eta_minute":0,"imo":9110406,"callsign":"PGLK","shipname":"OCEAAN 2","destination":"SCHEVENINGEN","last_signal":7},{"mmsi":244034000,"lat":52.099277,"lon":4.263847,"distance":2.947333,"mmsi_type":1,"level":-16.784826,"count":2217,"ppm":0.000000,"heading":null,"cog":null,"speed":0.000000,"to_bow":4,"to_stern":14,"to_starboard":3,"to_port":3,"shiptype":52,"validated":1,"msg_type":42,"country":"NL","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":8873805,"callsign":"PGLN","shipname":"OCEAAN","destination":"SCHEVENINGEN","last_signal":9},{"mmsi":304068000,"lat":51.963844,"lon":4.095710,"distance":11.421037,"mmsi_type":1,"level":-18.146137,"count":305,"ppm":0.289352,"heading":295,"cog":51.900002,"speed":0.000000,"to_bow":10,"to_stern":26,"to_starboard":7,"to_port":5,"shiptype":52,"validated":1,"msg_type":42,"country":"AG","status":0,"draught":5.100000,"eta_month":1,"eta_day":4,"eta_hour":22,"eta_minute":0,"imo":9520572,"callsign":"V2GS3","shipname":"FAIRPLAY-27","destination":"NL RTM","last_signal":11},{"mmsi":352274000,"lat":51.983768,"lon":4.081062,"distance":11.176155,"mmsi_type":1,"level":-15.347596,"count":11,"ppm":-0.289352,"heading":105,"cog":104.300003,"speed":8.800000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":2,"country":"PA","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":18},{"mmsi":354084000,"lat":51.967365,"lon":4.118866,"distance":10.624391,"mmsi_type":1,"level":-16.468098,"count":248,"ppm":-0.289352,"heading":292,"cog":288.399994,"speed":7.000000,"to_bow":171,"to_stern":28,"to_starboard":11,"to_port":21,"shiptype":70,"validated":1,"msg_type":42,"country":"PA","status":0,"draught":6.500000,"eta_month":1,"eta_day":4,"eta_hour":11,"eta_minute":0,"imo":9573842,"callsign":"H9TX","shipname":"VAN STAR","destination":"ROTTERDAM","last_signal":19},{"mmsi":538005894,"lat":51.908730,"lon":4.255678,"distance":10.823780,"mmsi_type":1,"level":-17.697489,"count":91,"ppm":-1.157407,"heading":122,"cog":121.300003,"speed":6.600000,"to_bow":151,"to_stern":34,"to_starboard":7,"to_port":20,"shiptype":80,"validated":1,"msg_type":42,"country":"MH","status":0,"draught":8.200000,"eta_month":1,"eta_day":6,"eta_hour":22,"eta_minute":30,"imo":9725598,"callsign":"V7HX4","shipname":"ECO REVOLUTION","destination":"BEANR","last_signal":25},{"mmsi":245088000,"lat":52.132046,"lon":3.912738,"distance":15.986322,"mmsi_type":1,"level":-19.542130,"count":50,"ppm":-0.289352,"heading":349,"cog":349.399994,"speed":15.000000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":10,"country":"NL","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":29},{"mmsi":374887000,"lat":51.926010,"lon":4.208877,"distance":10.500255,"mmsi_type":1,"level":-17.089981,"count":141,"ppm":0.000000,"heading":128,"cog":94.900002,"speed":0.000000,"to_bow":153,"to_stern":67,"to_starboard":39,"to_port":63,"shiptype":99,"validated":1,"msg_type":134217768,"country":"PA","status":5,"draught":18.000000,"eta_month":10,"eta_day":17,"eta_hour":3,"eta_minute":0,"imo":9781425,"callsign":"3FER4","shipname":"SLEIPNIR","destination":"ROTTERDAM","last_signal":30},{"mmsi":210008000,"lat":51.958275,"lon":4.047884,"distance":13.042564,"mmsi_type":1,"level":-17.865208,"count":10,"ppm":-0.289352,"heading":82,"cog":153.800003,"speed":0.000000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":2,"country":"CY","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":32},{"mmsi":244758000,"lat":51.972160,"lon":4.133600,"distance":10.023464,"mmsi_type":1,"level":-15.507601,"count":148,"ppm":0.289352,"heading":130,"cog":114.700005,"speed":0.000000,"to_bow":27,"to_stern":213,"to_starboard":16,"to_port":16,"shiptype":61,"validated":1,"msg_type":42,"country":"NL","status":5,"draught":6.500000,"eta_month":1,"eta_day":13,"eta_hour":7,"eta_minute":0,"imo":9419163,"callsign":"PBMM","shipname":"STENA HOLLANDICA","destination":"NL HVH / GB HARW VV","last_signal":38},{"mmsi":244719315,"lat":52.074032,"lon":4.317735,"distance":0.889873,"mmsi_type":1,"level":-4.350971,"count":394,"ppm":1.157407,"heading":null,"cog":null,"speed":0.000000,"to_bow":20,"to_stern":4,"to_starboard":4,"to_port":1,"shiptype":8000,"validated":1,"msg_type":296,"country":"NL","status":5,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":0,"eta_minute":0,"imo":null,"callsign":"PG6249","shipname":"ST.RAFAEL","destination":"","last_signal":43},{"mmsi":305612000,"lat":51.962032,"lon":4.122672,"distance":10.729518,"mmsi_type":1,"level":-16.922184,"count":27,"ppm":0.868056,"heading":205,"cog":216.100006,"speed":0.000000,"to_bow":83,"to_stern":6,"to_starboard":5,"to_port":8,"shiptype":79,"validated":1,"msg_type":40,"country":"AG","status":5,"draught":3.600000,"eta_month":12,"eta_day":12,"eta_hour":2,"eta_minute":0,"imo":9536521,"callsign":"V2QE2","shipname":"HEINZ G","destination":"NLRTM","last_signal":60},{"mmsi":248952000,"lat":52.212780,"lon":4.262678,"distance":8.352562,"mmsi_type":1,"level":-9.614746,"count":438,"ppm":-2.604167,"heading":271,"cog":96.800003,"speed":0.400000,"to_bow":192,"to_stern":36,"to_starboard":16,"to_port":16,"shiptype":89,"validated":1,"msg_type":42,"country":"MT","status":1,"draught":8.400001,"eta_month":1,"eta_day":13,"eta_hour":8,"eta_minute":0,"imo":9332640,"callsign":"9HA4882","shipname":"HAFNIA ARCTIC","destination":"NL SCE","last_signal":64},{"mmsi":352001918,"lat":51.959633,"lon":4.125560,"distance":10.748231,"mmsi_type":1,"level":-18.255293,"count":433,"ppm":2.314815,"heading":333,"cog":291.800018,"speed":0.000000,"to_bow":198,"to_stern":31,"to_starboard":4,"to_port":28,"shiptype":70,"validated":1,"msg_type":32810,"country":"PA","status":5,"draught":12.900001,"eta_month":1,"eta_day":12,"eta_hour":20,"eta_minute":45,"imo":9952414,"callsign":"3E3731","shipname":"MOUDROS","destination":"NLRTM","last_signal":69},{"mmsi":244110640,"lat":51.913868,"lon":4.243597,"distance":10.666390,"mmsi_type":1,"level":-18.574974,"count":204,"ppm":3.182870,"heading":123,"cog":123.800003,"speed":8.200000,"to_bow":110,"to_stern":24,"to_starboard":11,"to_port":10,"shiptype":33,"validated":1,"msg_type":42,"country":"NL","status":0,"draught":4.000000,"eta_month":8,"eta_day":16,"eta_hour":1,"eta_minute":0,"imo":9822619,"callsign":"PDEO","shipname":"ECODELTA","destination":"NLDRTM","last_signal":74},{"mmsi":244170512,"lat":52.095482,"lon":4.265893,"distance":2.801349,"mmsi_type":2,"level":-18.478254,"count":349,"ppm":-0.868056,"heading":316,"cog":201.699997,"speed":0.100000,"to_bow":6,"to_stern":7,"to_starboard":1,"to_port":3,"shiptype":36,"validated":1,"msg_type":17039360,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"PD9708","shipname":"SEA SPRAY","destination":"","last_signal":76},{"mmsi":244710519,"lat":52.064312,"lon":4.344040,"distance":1.061890,"mmsi_type":1,"level":-6.144476,"count":505,"ppm":1.157407,"heading":null,"cog":null,"speed":0.000000,"to_bow":50,"to_stern":12,"to_starboard":3,"to_port":2,"shiptype":8010,"validated":1,"msg_type":298,"country":"NL","status":5,"draught":0.000000,"eta_month":1,"eta_day":8,"eta_hour":18,"eta_minute":7,"imo":null,"callsign":"PE5681","shipname":"HORIZON","destination":"DUIVENDRECHTSCHE VAA","last_signal":105},{"mmsi":244100994,"lat":52.095146,"lon":4.264258,"distance":2.853197,"mmsi_type":2,"level":-15.704232,"count":438,"ppm":-2.314815,"heading":null,"cog":null,"speed":0.000000,"to_bow":12,"to_stern":5,"to_starboard":1,"to_port":4,"shiptype":36,"validated":1,"msg_type":17563648,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"PG5302","shipname":"ROXANNE","destination":"","last_signal":109},{"mmsi":992446042,"lat":52.183750,"lon":4.105300,"distance":10.554059,"mmsi_type":6,"level":-9.711247,"count":128,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":2,"to_stern":2,"to_starboard":2,"to_port":2,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"OFFSHORE TEST SITE -","destination":"","last_signal":113},{"mmsi":992456978,"lat":52.385208,"lon":3.949677,"distance":23.162500,"mmsi_type":6,"level":-9.612137,"count":131,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG E4 HZ","destination":"","last_signal":113},{"mmsi":992456979,"lat":52.384068,"lon":4.044291,"distance":21.134174,"mmsi_type":6,"level":-9.657292,"count":131,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG D6 HZ","destination":"","last_signal":113},{"mmsi":992456975,"lat":52.257668,"lon":4.084667,"distance":14.106409,"mmsi_type":6,"level":-9.650939,"count":127,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":40,"to_stern":40,"to_starboard":40,"to_port":40,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"OHVS HZB","destination":"","last_signal":113},{"mmsi":992446044,"lat":52.155315,"lon":4.102433,"distance":9.759516,"mmsi_type":6,"level":-8.917455,"count":128,"ppm":0.289352,"heading":null,"cog":null,"speed":null,"to_bow":2,"to_stern":2,"to_starboard":2,"to_port":2,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"OFFSHORE TEST SITE -","destination":"","last_signal":114},{"mmsi":992456980,"lat":52.347366,"lon":4.019804,"distance":19.796211,"mmsi_type":6,"level":-8.909649,"count":128,"ppm":0.289352,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG D1 HZ","destination":"","last_signal":114},{"mmsi":992446043,"lat":52.174767,"lon":4.128083,"distance":9.557960,"mmsi_type":6,"level":-8.905173,"count":128,"ppm":0.289352,"heading":null,"cog":null,"speed":null,"to_bow":2,"to_stern":2,"to_starboard":2,"to_port":2,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"OFFSHORE TEST SITE -","destination":"","last_signal":114},{"mmsi":992456985,"lat":52.256535,"lon":3.943923,"distance":17.924408,"mmsi_type":6,"level":-9.474796,"count":130,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG K6 HZ","destination":"","last_signal":114},{"mmsi":992456984,"lat":52.270466,"lon":4.043877,"distance":15.688128,"mmsi_type":6,"level":-9.495337,"count":130,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG M5 HZ","destination":"","last_signal":114},{"mmsi":992456982,"lat":52.320374,"lon":3.926603,"distance":20.858374,"mmsi_type":6,"level":-8.868176,"count":129,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG G6 HZ","destination":"","last_signal":114},{"mmsi":992456983,"lat":52.318867,"lon":4.030958,"distance":18.189386,"mmsi_type":6,"level":-8.897358,"count":129,"ppm":0.289352,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG G1 HZ","destination":"","last_signal":114},{"mmsi":992456981,"lat":52.346073,"lon":3.934937,"distance":21.733711,"mmsi_type":6,"level":-8.941657,"count":129,"ppm":-0.868056,"heading":null,"cog":null,"speed":null,"to_bow":12,"to_stern":12,"to_starboard":12,"to_port":12,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"WTG F4 HZ","destination":"","last_signal":114},{"mmsi":992446045,"lat":52.165031,"lon":4.078050,"distance":10.824848,"mmsi_type":6,"level":-8.933381,"count":126,"ppm":0.289352,"heading":null,"cog":null,"speed":null,"to_bow":2,"to_stern":2,"to_starboard":2,"to_port":2,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"OFFSHORE TEST SITE -","destination":"","last_signal":115},{"mmsi":992456974,"lat":52.191116,"lon":4.136183,"distance":9.936526,"mmsi_type":6,"level":-9.002634,"count":128,"ppm":0.289352,"heading":null,"cog":null,"speed":null,"to_bow":50,"to_stern":50,"to_starboard":50,"to_port":50,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"Q13A-A PLATFORM","destination":"","last_signal":115},{"mmsi":992456972,"lat":52.319500,"lon":4.043167,"distance":17.943523,"mmsi_type":6,"level":-9.610701,"count":129,"ppm":0.578704,"heading":null,"cog":null,"speed":null,"to_bow":40,"to_stern":40,"to_starboard":40,"to_port":40,"shiptype":0,"validated":1,"msg_type":2097152,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"OHVS HZA","destination":"","last_signal":115},{"mmsi":244850097,"lat":52.209099,"lon":4.231150,"distance":8.612212,"mmsi_type":1,"level":-18.601147,"count":184,"ppm":0.000000,"heading":296,"cog":299.500000,"speed":0.200000,"to_bow":25,"to_stern":148,"to_starboard":21,"to_port":21,"shiptype":70,"validated":1,"msg_type":40,"country":"NL","status":1,"draught":5.800000,"eta_month":12,"eta_day":1,"eta_hour":21,"eta_minute":0,"imo":9766841,"callsign":"P.C.Z.S","shipname":"BIGROLL BEAUFORT","destination":"SCHEVENINGEN","last_signal":125},{"mmsi":305576000,"lat":51.959141,"lon":4.077555,"distance":12.124591,"mmsi_type":1,"level":-18.020466,"count":122,"ppm":4.050926,"heading":166,"cog":14.700000,"speed":1.700000,"to_bow":147,"to_stern":11,"to_starboard":21,"to_port":2,"shiptype":79,"validated":1,"msg_type":42,"country":"AG","status":0,"draught":5.700000,"eta_month":1,"eta_day":13,"eta_hour":0,"eta_minute":0,"imo":9412531,"callsign":"V2EV8","shipname":"ELBSKY","destination":"NLRTM","last_signal":153},{"mmsi":309924000,"lat":52.170254,"lon":4.225070,"distance":6.764058,"mmsi_type":1,"level":-12.803170,"count":366,"ppm":1.157407,"heading":277,"cog":229.100006,"speed":0.100000,"to_bow":210,"to_stern":45,"to_starboard":20,"to_port":24,"shiptype":80,"validated":1,"msg_type":40,"country":"BS","status":1,"draught":11.600000,"eta_month":12,"eta_day":31,"eta_hour":20,"eta_minute":0,"imo":9325908,"callsign":"C6VD8","shipname":"PENELOP","destination":"SCHEVENINGEN","last_signal":158},{"mmsi":249119000,"lat":51.933609,"lon":4.052063,"distance":13.820786,"mmsi_type":1,"level":-17.429010,"count":86,"ppm":-2.604167,"heading":249,"cog":143.000000,"speed":0.000000,"to_bow":102,"to_stern":125,"to_starboard":10,"to_port":14,"shiptype":90,"validated":1,"msg_type":40,"country":"MT","status":5,"draught":8.300000,"eta_month":11,"eta_day":27,"eta_hour":7,"eta_minute":0,"imo":7349807,"callsign":"9HA4115","shipname":"LORELAY","destination":"NL RTM","last_signal":166},{"mmsi":538006106,"lat":51.959835,"lon":4.126455,"distance":10.715784,"mmsi_type":1,"level":-13.239824,"count":126,"ppm":-0.578704,"heading":333,"cog":6.000000,"speed":0.000000,"to_bow":201,"to_stern":36,"to_starboard":13,"to_port":27,"shiptype":70,"validated":1,"msg_type":40,"country":"MH","status":5,"draught":11.900001,"eta_month":1,"eta_day":11,"eta_hour":16,"eta_minute":0,"imo":9643881,"callsign":"V7JU5","shipname":"HARVEST TIME","destination":"NL RTM","last_signal":175},{"mmsi":246046000,"lat":51.900581,"lon":4.277328,"distance":11.103957,"mmsi_type":1,"level":-19.502117,"count":22,"ppm":1.446759,"heading":113,"cog":112.500000,"speed":10.900001,"to_bow":88,"to_stern":10,"to_starboard":8,"to_port":9,"shiptype":70,"validated":1,"msg_type":42,"country":"NL","status":0,"draught":4.000000,"eta_month":1,"eta_day":13,"eta_hour":14,"eta_minute":0,"imo":9143415,"callsign":"PHIA","shipname":"ORION","destination":"NL RTM","last_signal":217},{"mmsi":249525000,"lat":51.961033,"lon":4.128383,"distance":10.614655,"mmsi_type":1,"level":-19.952370,"count":21,"ppm":0.000000,"heading":86,"cog":117.000000,"speed":4.000000,"to_bow":12,"to_stern":16,"to_starboard":5,"to_port":5,"shiptype":52,"validated":1,"msg_type":42,"country":"MT","status":0,"draught":4.500000,"eta_month":7,"eta_day":4,"eta_hour":20,"eta_minute":0,"imo":9402421,"callsign":"9HB4828","shipname":"VB HUDSON","destination":"ROTTERDAM","last_signal":266},{"mmsi":244041027,"lat":52.095272,"lon":4.264966,"distance":2.830337,"mmsi_type":2,"level":-15.427669,"count":78,"ppm":-1.736111,"heading":313,"cog":183.900009,"speed":0.000000,"to_bow":16,"to_stern":0,"to_starboard":1,"to_port":4,"shiptype":36,"validated":1,"msg_type":17563648,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"PF8846","shipname":"XAOS","destination":"","last_signal":300},{"mmsi":636014720,"lat":52.184238,"lon":4.197140,"distance":8.065014,"mmsi_type":1,"level":-13.110882,"count":217,"ppm":2.314815,"heading":256,"cog":39.299999,"speed":0.100000,"to_bow":196,"to_stern":33,"to_starboard":20,"to_port":18,"shiptype":70,"validated":1,"msg_type":42,"country":"LR","status":1,"draught":9.200000,"eta_month":1,"eta_day":13,"eta_hour":6,"eta_minute":0,"imo":9453509,"callsign":"A8WD7","shipname":"PROTEAS","destination":"SCHEUENINGEN/ANCHOR","last_signal":321},{"mmsi":205703000,"lat":52.186817,"lon":4.239648,"distance":7.288004,"mmsi_type":1,"level":-16.063761,"count":80,"ppm":-0.289352,"heading":266,"cog":64.099998,"speed":0.200000,"to_bow":78,"to_stern":30,"to_starboard":17,"to_port":1,"shiptype":84,"validated":1,"msg_type":40,"country":"BE","status":1,"draught":4.300000,"eta_month":12,"eta_day":16,"eta_hour":18,"eta_minute":0,"imo":9750024,"callsign":"ONIT","shipname":"GREEN ZEEBRUGGE","destination":" NLSCE","last_signal":341},{"mmsi":244033000,"lat":52.101364,"lon":4.267993,"distance":2.854657,"mmsi_type":1,"level":-16.416296,"count":51,"ppm":2.893518,"heading":313,"cog":13.200000,"speed":0.000000,"to_bow":38,"to_stern":36,"to_starboard":6,"to_port":6,"shiptype":90,"validated":1,"msg_type":40,"country":"NL","status":5,"draught":5.000000,"eta_month":1,"eta_day":12,"eta_hour":10,"eta_minute":0,"imo":8821852,"callsign":"PBV0","shipname":"TRIDENS","destination":"SCHEVENINGEN","last_signal":348},{"mmsi":245427000,"lat":51.961140,"lon":4.132242,"distance":10.506355,"mmsi_type":1,"level":-16.216335,"count":18,"ppm":-0.868056,"heading":122,"cog":122.200005,"speed":7.300000,"to_bow":20,"to_stern":12,"to_starboard":6,"to_port":6,"shiptype":52,"validated":1,"msg_type":42,"country":"NL","status":8,"draught":6.100000,"eta_month":3,"eta_day":31,"eta_hour":16,"eta_minute":0,"imo":9448176,"callsign":"PDIP","shipname":"SD STINGRAY","destination":"ROTTERDAM","last_signal":353},{"mmsi":431808000,"lat":51.947868,"lon":4.052492,"distance":13.272326,"mmsi_type":1,"level":-17.231539,"count":9,"ppm":0.000000,"heading":259,"cog":289.000000,"speed":0.000000,"to_bow":143,"to_stern":257,"to_starboard":34,"to_port":25,"shiptype":72,"validated":1,"msg_type":40,"country":"JP","status":5,"draught":12.700000,"eta_month":1,"eta_day":10,"eta_hour":19,"eta_minute":45,"imo":9769300,"callsign":"7KML","shipname":"ONE TRADITION","destination":"NLRTM","last_signal":411},{"mmsi":219234000,"lat":51.906818,"lon":4.361868,"distance":10.532962,"mmsi_type":1,"level":-17.787388,"count":98,"ppm":-0.289352,"heading":165,"cog":255.199997,"speed":0.000000,"to_bow":162,"to_stern":76,"to_starboard":17,"to_port":17,"shiptype":70,"validated":1,"msg_type":42,"country":"DK","status":5,"draught":6.600000,"eta_month":1,"eta_day":14,"eta_hour":6,"eta_minute":45,"imo":9832585,"callsign":"OXUD2","shipname":"HOLLANDIA SEAWAYS","destination":"VLA-IMM-VLAA","last_signal":449},{"mmsi":477900400,"lat":51.910606,"lon":4.412575,"distance":10.629433,"mmsi_type":1,"level":-17.527676,"count":35,"ppm":-0.289352,"heading":155,"cog":0.200000,"speed":0.100000,"to_bow":170,"to_stern":29,"to_starboard":22,"to_port":10,"shiptype":70,"validated":1,"msg_type":40,"country":"HK","status":5,"draught":7.300000,"eta_month":1,"eta_day":8,"eta_hour":1,"eta_minute":0,"imo":9740079,"callsign":"VRPG4","shipname":"OCEAN AMBITIOUS","destination":"ROTTERDAM","last_signal":501},{"mmsi":636018831,"lat":51.933453,"lon":4.187585,"distance":10.500217,"mmsi_type":1,"level":-15.836201,"count":47,"ppm":-0.289352,"heading":306,"cog":6.400000,"speed":0.000000,"to_bow":202,"to_stern":27,"to_starboard":11,"to_port":21,"shiptype":70,"validated":1,"msg_type":40,"country":"LR","status":5,"draught":12.600000,"eta_month":12,"eta_day":30,"eta_hour":20,"eta_minute":0,"imo":9706774,"callsign":"D5RO9","shipname":"IOANNIS K","destination":"NL RTM","last_signal":514},{"mmsi":311027400,"lat":51.939304,"lon":4.180200,"distance":10.355505,"mmsi_type":1,"level":-19.634989,"count":10,"ppm":1.446759,"heading":305,"cog":309.300018,"speed":5.300000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":2,"country":"BS","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":576},{"mmsi":244567000,"lat":52.100883,"lon":4.265830,"distance":2.915918,"mmsi_type":1,"level":-21.118235,"count":78,"ppm":0.868056,"heading":39,"cog":224.400009,"speed":0.000000,"to_bow":32,"to_stern":10,"to_starboard":7,"to_port":2,"shiptype":30,"validated":1,"msg_type":42,"country":"NL","status":7,"draught":4.000000,"eta_month":10,"eta_day":16,"eta_hour":13,"eta_minute":0,"imo":9065455,"callsign":"PIFT","shipname":"TX68 VERTROUWEN","destination":"INFO CAL CH16","last_signal":581},{"mmsi":477634900,"lat":51.955799,"lon":3.995617,"distance":14.748958,"mmsi_type":1,"level":-16.841793,"count":32,"ppm":0.000000,"heading":213,"cog":136.000000,"speed":0.000000,"to_bow":167,"to_stern":43,"to_starboard":18,"to_port":12,"shiptype":71,"validated":1,"msg_type":42,"country":"HK","status":5,"draught":10.500000,"eta_month":1,"eta_day":12,"eta_hour":20,"eta_minute":15,"imo":9434943,"callsign":"VRFW5","shipname":"PUERTO LIMON EXPRESS","destination":"NLRTM","last_signal":581},{"mmsi":636019638,"lat":51.920506,"lon":4.234290,"distance":10.413045,"mmsi_type":1,"level":-17.278439,"count":2,"ppm":-0.868056,"heading":315,"cog":316.899994,"speed":6.000000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":2,"country":"LR","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":585},{"mmsi":246975000,"lat":52.100834,"lon":4.268333,"distance":2.830183,"mmsi_type":1,"level":-20.848383,"count":2,"ppm":0.868056,"heading":39,"cog":278.000000,"speed":0.000000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":2,"country":"NL","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":730},{"mmsi":244670396,"lat":51.954922,"lon":4.078027,"distance":12.266559,"mmsi_type":1,"level":-17.630785,"count":1,"ppm":-4.050926,"heading":null,"cog":159.199997,"speed":5.800000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":0,"msg_type":2,"country":"NL","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":741},{"mmsi":212905000,"lat":51.961613,"lon":4.051530,"distance":12.817876,"mmsi_type":1,"level":-18.833227,"count":32,"ppm":-1.446759,"heading":82,"cog":290.500000,"speed":0.000000,"to_bow":40,"to_stern":143,"to_starboard":25,"to_port":22,"shiptype":90,"validated":1,"msg_type":40,"country":"CY","status":5,"draught":11.500000,"eta_month":1,"eta_day":20,"eta_hour":0,"eta_minute":0,"imo":9452701,"callsign":"5BNL2","shipname":"SEAWAY STRASHNOV","destination":"","last_signal":768},{"mmsi":538009326,"lat":51.964153,"lon":4.117655,"distance":10.784055,"mmsi_type":1,"level":-20.414284,"count":18,"ppm":-1.157407,"heading":113,"cog":113.500000,"speed":0.000000,"to_bow":193,"to_stern":36,"to_starboard":9,"to_port":29,"shiptype":70,"validated":1,"msg_type":40,"country":"MH","status":5,"draught":14.300000,"eta_month":1,"eta_day":4,"eta_hour":22,"eta_minute":0,"imo":9884966,"callsign":"V7A4600","shipname":"NORDIC NULUUJAAK","destination":"US MOB>NL RTM","last_signal":846},{"mmsi":538008798,"lat":52.198799,"lon":4.261132,"distance":7.588097,"mmsi_type":1,"level":-16.871964,"count":61,"ppm":-1.157407,"heading":231,"cog":186.000000,"speed":0.800000,"to_bow":221,"to_stern":24,"to_starboard":11,"to_port":31,"shiptype":80,"validated":1,"msg_type":16777256,"country":"MH","status":1,"draught":8.500000,"eta_month":12,"eta_day":30,"eta_hour":11,"eta_minute":0,"imo":9308950,"callsign":"V7A2771","shipname":"SEA SENOR","destination":"ROTTERDAM FOR ORDERS","last_signal":968},{"mmsi":244140645,"lat":52.095051,"lon":4.264370,"distance":2.847626,"mmsi_type":2,"level":-17.402576,"count":7,"ppm":-0.289352,"heading":null,"cog":null,"speed":0.000000,"to_bow":7,"to_stern":2,"to_starboard":2,"to_port":1,"shiptype":36,"validated":1,"msg_type":17039360,"country":"NL","status":15,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"PB3362","shipname":"","destination":"","last_signal":1035},{"mmsi":244070846,"lat":51.953594,"lon":4.077820,"distance":12.322281,"mmsi_type":1,"level":-18.403696,"count":1,"ppm":4.918982,"heading":null,"cog":155.000000,"speed":2.300000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":0,"msg_type":8,"country":"NL","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1053},{"mmsi":244780869,"lat":52.140926,"lon":4.485250,"distance":6.478874,"mmsi_type":1,"level":-21.268400,"count":5,"ppm":1.446759,"heading":null,"cog":210.000000,"speed":0.000000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":2,"country":"NL","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1072},{"mmsi":246854000,"lat":51.957535,"lon":4.125477,"distance":10.836937,"mmsi_type":1,"level":-17.437490,"count":7,"ppm":-1.157407,"heading":300,"cog":144.100006,"speed":0.000000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":8,"country":"NL","status":5,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1210},{"mmsi":311000904,"lat":52.114166,"lon":4.130367,"distance":7.918043,"mmsi_type":1,"level":-18.842760,"count":190,"ppm":-0.578704,"heading":262,"cog":253.900009,"speed":2.300000,"to_bow":28,"to_stern":37,"to_starboard":9,"to_port":5,"shiptype":98,"validated":1,"msg_type":42,"country":"BS","status":0,"draught":5.400000,"eta_month":1,"eta_day":7,"eta_hour":10,"eta_minute":0,"imo":9504011,"callsign":"C6EI5","shipname":"FUGRO SEARCHER","destination":"SURVEY AREA","last_signal":1224},{"mmsi":636092680,"lat":51.947212,"lon":4.046275,"distance":13.479514,"mmsi_type":1,"level":-18.853022,"count":27,"ppm":-0.868056,"heading":258,"cog":121.400002,"speed":0.000000,"to_bow":228,"to_stern":72,"to_starboard":17,"to_port":29,"shiptype":70,"validated":1,"msg_type":40,"country":"LR","status":5,"draught":9.800000,"eta_month":1,"eta_day":10,"eta_hour":9,"eta_minute":0,"imo":9612882,"callsign":"D5AD8","shipname":"TIRUA","destination":"NLRTM","last_signal":1229},{"mmsi":224259000,"lat":51.930828,"lon":4.196580,"distance":10.463632,"mmsi_type":1,"level":-17.286369,"count":2,"ppm":0.289352,"heading":114,"cog":319.100006,"speed":3.300000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":10,"country":"ES","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1268},{"mmsi":245385000,"lat":51.968918,"lon":4.041978,"distance":12.874552,"mmsi_type":1,"level":-18.274860,"count":1,"ppm":-1.446759,"heading":322,"cog":323.500000,"speed":7.400000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":0,"msg_type":2,"country":"NL","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1295},{"mmsi":245569000,"lat":51.947826,"lon":4.059688,"distance":13.063270,"mmsi_type":1,"level":-18.904068,"count":6,"ppm":0.868056,"heading":null,"cog":18.000000,"speed":1.100000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":10,"country":"NL","status":3,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1296},{"mmsi":563483000,"lat":51.984982,"lon":4.082543,"distance":11.091270,"mmsi_type":1,"level":-18.073769,"count":98,"ppm":-0.289352,"heading":286,"cog":290.200012,"speed":9.700000,"to_bow":149,"to_stern":37,"to_starboard":21,"to_port":11,"shiptype":80,"validated":1,"msg_type":42,"country":"SG","status":0,"draught":8.100000,"eta_month":1,"eta_day":6,"eta_hour":4,"eta_minute":0,"imo":9776250,"callsign":"9V5042","shipname":"PICO BASILE","destination":"ROTTERDAM","last_signal":1421},{"mmsi":245872000,"lat":51.957592,"lon":3.995955,"distance":14.683104,"mmsi_type":1,"level":-16.983618,"count":134,"ppm":0.289352,"heading":354,"cog":232.600006,"speed":0.000000,"to_bow":130,"to_stern":12,"to_starboard":10,"to_port":11,"shiptype":70,"validated":1,"msg_type":42,"country":"NL","status":0,"draught":6.100000,"eta_month":1,"eta_day":13,"eta_hour":11,"eta_minute":0,"imo":9349227,"callsign":"PDHA","shipname":"NJORD","destination":"NLRTM","last_signal":1439},{"mmsi":211630370,"lat":52.311447,"lon":4.261970,"distance":14.080714,"mmsi_type":1,"level":-19.567245,"count":3,"ppm":-0.289352,"heading":226,"cog":205.400009,"speed":2.800000,"to_bow":null,"to_stern":null,"to_starboard":null,"to_port":null,"shiptype":0,"validated":1,"msg_type":10,"country":"DE","status":0,"draught":0.000000,"eta_month":null,"eta_day":null,"eta_hour":null,"eta_minute":null,"imo":null,"callsign":"","shipname":"","destination":"","last_signal":1487}],"error":false}';
+       
+    // default settings
+    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false};
+
+    // some functions useful in plugins
+    function addTileLayer(title,layer) { basemaps[title] = layer; }
+    function removeTileLayer(title) { delete basemaps[title]; }
+    function removeTileLayerAll() { basemaps = {}; }
+    function addOverlayLayer(title,layer) { overlapmaps[title] = layer; }
+    function removeOverlayLayer(title) { delete overlapmaps[title]; }
+    function removeOverlayLayerAll() { overlapmaps = {}; }
+    function addControlToMap(c) { c.addTo(map); }
+
+    // transformations - for overwrite
+    getDimensionVal = c => Number(c).toFixed(0);
+    getDimensionUnit = c => "m";
+    getDistanceVal = c => Number(c).toFixed(1);
+    getDistanceUnit = c => "nmi";
+    getSpeedVal = c => Number(c).toFixed(1);
+    getSpeedUnit = c => "kts";
+    getLatVal = c => Number(c).toFixed(5);
+    getLonVal = c => Number(c).toFixed(5);
+    getEtaVal = ship => (("0" + ship.eta_month).slice(-2)) + "-" + (("0" + ship.eta_day).slice(-2)) + " " + (("0" + ship.eta_hour).slice(-2)) + ":" + (("0" + ship.eta_minute).slice(-2));
+    getDeltaTimeVal = s =>  s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
+    getShipName = ship => (ship.shipname || ship.mmsi);
+    
+    var singleClickTimeout = null;
+
+    function headerClick() {
+        window.open('https://github.com/jvde-github/AIS-catcher');
+    }
+
+    function initMap() {
+
+        map = L.map('map', { zoomControl: false, zoomSnap: 0.01 }).setView([settings.lat, settings.lon], settings.zoom);
+        var control = L.control.layers(basemaps, overlapmaps, { title: 'Select map and overlays', position: 'bottomright' }).addTo(map);
+        map.on('baselayerchange', function (event) { settings.map = event.name; saveSettings(); });
+        map.on('mousemove', function (evt) { saveSettings(); updateTooltips(); });
+        map.on('zoomend', function (evt) { saveSettings(); updateTooltips(); });
+        map.on('click', function () { 
+            if(singleClickTimeout==null) {
+                singleClickTimeout = setTimeout(()=>{showShipcard(null); hideMenu(); singleClickTimeout = null; },400); 
+            }
+        });
+        map.on('dblclick dragstart zoomstart', function () { if(singleClickTimeout!=null) {clearTimeout(singleClickTimeout); singleClickTimeout = null;} });
+
+
+        map.addControl(new L.Control.Zoom({ position: 'bottomright' }));
+        L.control.scale().addTo(map);
+
+        ((settings.map in basemaps) ? basemaps[settings.map]: basemaps[Object.keys(basemaps)[0]]).addTo(map);
+
+        map.createPane("locationMarker");
+        map.getPane("locationMarker").style.zIndex = 999;
+
+        L.DomEvent.disableClickPropagation(document.getElementById('shipcard'));
+    }
+
+    function addLabelControl() {
+        // ------------
+        var labelToggleControl = L.control({ position: 'bottomright' });
+
+        labelToggleControl.onAdd = function (map) {
+
+            var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
+            controlDiv.title="Toggle labels on screen";
+            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-label-toggle', controlDiv);
+            var iconSpan = L.DomUtil.create('span', 'fas fa-location-dot', controlBoundary);
+
+            controlDiv.addEventListener('click', function () {
+
+                settings.labels = !settings.labels;
+                if (!settings.labels) {
+                    for (let [key, m] of Object.entries(markers)) {
+
+                        if (m.isTooltipOpen()) m.getTooltip().toggle();
+                    }
+                }
+                else
+                    updateTooltips();
+            });
+            return controlDiv;
+        };
+        addControlToMap(labelToggleControl);
+    }
+
+    function showPlugins() {
+        alert("Loaded plugins:\n" + plugins);
+    }
+
+   async function fetchStatistics() {
+        try {
+            response = await fetch('stat.json');
+        } catch (error) {
+            setPulseError();
+            return;
+        }
+        statistics = await response.json();
+        setPulseOk();
+        return statistics;
+    }
+
+    async function fetchShips() {
+        let ships = {};
+        if(false) {
+            try {
+                response = await fetch('ships.json');
+            } catch (error) {
+                setPulseError();
+                console.log("failed loading ships: " + error);
+                return;                
+            }
+            ships = await response.json();
+        }
+        else {
+            ships = JSON.parse(ships_json);
+        }
+        setPulseOk();        
+
+        shipsDB = {};
+        ships.ships.forEach(s => {let entry = {}; entry.raw = s; shipsDB[s.mmsi] = entry; });
+        return ships.ships.length;
+    }
+
+    function toggleScreenSize() {
+        var doc = window.document;
+        var docEl = doc.documentElement;
+
+        var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen || docEl.webkitEnterFullscreen;
+        var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen || doc.webkitExitFullscreen;
+
+        if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+            requestFullScreen.call(docEl);
+        }
+        else {
+            cancelFullScreen.call(doc);
+        }
+    }
+
+    document.addEventListener("fullscreenchange", handleFullScreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullScreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullScreenChange);
+    document.addEventListener("msfullscreenchange", handleFullScreenChange);
+
+    function addShipcardItem(icon,txt,title, onclick) {
+    
+        const div = document.createElement('div');
+
+        div.title = title;
+        div.innerHTML = '<i class="'+icon+' fa-xl"></i><span>'+txt+'</span>';
+        div.setAttribute("onclick",onclick);
+
+       document.getElementById('shipcard_footer').appendChild(div);
+    }
+
+    function hideMenu() {
+        if (!document.getElementById("menubar").classList.contains('visible')) {
+            document.getElementById("menubar").classList.toggle('visible');
+        }
+    }
+
+    function toggleMenu() {
+        document.getElementById("menubar").classList.toggle('visible');
+    }
+
+    
+    function handleFullScreenChange() {
+        var icon = document.getElementById("screentoggle-id");
+        if (document.fullscreenElement) {
+            icon.classList.remove("fs-icon-normal");
+            icon.classList.add("fs-icon-full");
+
+        } else {
+            icon.classList.remove("fs-icon-full");
+            icon.classList.add("fs-icon-normal");
+        }
+    }
+    
+    // we calculate the lat/lon for 1m move in direction of heading
+    // underlying calculation uses an offset of 100m and then scales down to 1.
+
+    const cos100R = 0.9999999998770914;     // cos(100m / R);
+    const sin100R = 1.567855942823164e-05;  // sin(100m / R)
+    const rad = Math.PI / 180;
+    const radInv = 180 / Math.PI;
+
+    function calcOffset1M(latlng, heading) {
+        
+        const lat = latlng.lat * rad;
+        
+        const rheading = ((heading + 360) % 360) * rad;
+        const sinLat = Math.sin(lat);
+        const cosLat = Math.cos(lat);
+
+        let sinLat2 = sinLat * cos100R + cosLat * sin100R * Math.cos(rheading);
+        let lat2 = Math.asin(sinLat2);
+        let deltaLon = Math.atan2(Math.sin(rheading) * sin100R * cosLat, cos100R - sinLat * sinLat2);
+
+        // normalize to 1 meter (from 100m)
+        return [(lat2 * radInv - latlng.lat)/100, (deltaLon * radInv)/100];
+    }
+
+    function calcMove(latlng,delta,distance) {
+        return L.latLng([latlng.lat + delta[0]  * distance, latlng.lng + delta[1] * distance]);
+    }
+
+    function drawShipOutline(ship) {
+
+        if (ship == null) return;
+
+        let style = {};
+
+        const latlng = L.latLng(ship.lat, ship.lon);
+        const to_bow = ship.to_bow, to_stern = ship.to_stern, to_port = ship.to_port, to_starboard = ship.to_starboard;
+        let heading = ship.heading;
+
+        if (to_bow == null || to_stern == null || to_port == null || to_starboard == null) return;
+        
+        if (heading == null) {
+            style.dashArray = '5, 5';
+            style.dashOffset = '0';
+
+            if (ship.cog != null && ship.speed > 1) heading = ship.cog;
+        }
+
+        clr = 'grey';
+        if(ship.mmsi == hover_mmsi) clr = 'orange';
+        else if (ship.mmsi == card_mmsi) clr = '#943b3e';
+
+        if (heading != null) {
+            const deltaBow = calcOffset1M(latlng, (heading) % 360);
+            const deltaStarboard = calcOffset1M(latlng,  (heading + 90) % 360);
+
+            const bow = calcMove(latlng, deltaBow, to_bow);
+            const stern = calcMove(latlng, deltaBow, -to_stern);
+
+            const A = calcMove(stern,deltaStarboard,to_starboard);
+            const B = calcMove(stern,deltaStarboard,-to_port);
+            const C = calcMove(B, deltaBow, 0.8 * (to_bow + to_stern));
+            const Dmid = calcMove(C, deltaStarboard, 0.5 * (to_starboard + to_port));
+            const D = calcMove(Dmid, deltaBow, 0.2 * (to_bow + to_stern));
+            const E = calcMove(C, deltaStarboard, to_starboard + to_port);
+
+            const ship_outline = [];
+
+            ship_outline.push(A);
+            ship_outline.push(B);
+            ship_outline.push(C);
+            ship_outline.push(D);
+            ship_outline.push(E);
+
+            if (ship.mmsi == card_mmsi)
+                return L.polygon(ship_outline, { color: clr, fillColor: clr, fillOpacity: 0.2, ...style }).addTo(map);
+            else
+                return L.polygon(ship_outline, { color: clr, fillColor: clr, fillOpacity: 0.2, ...style }).addTo(map);
+        }
+        else {
+
+            const a = Math.max(to_bow, to_stern), b = Math.max(to_starboard, to_port);
+            const r = Math.sqrt(a * a + b * b);
+
+            if (r < 2 || r > 300) return null;
+
+            if (ship.mmsi == card_mmsi)
+                return L.circle(latlng, { radius: r, color: clr, fillColor: clr, fillOpacity: 0.2, ...style }).addTo(map);
+            else
+                return L.circle(latlng, { radius: r, color: clr, fillColor: clr, fillOpacity: 0.2, ...style }).addTo(map);
+        }
+
+        return null;
+    }
+
+    function average(d) {
+        const b = d.chart.data.datasets[0].data;
+        if (b.length == 1) return b[0].y;
+
+        var c = 0;
+        for (a = 0; a < b.length; a++) {
+            if (b[a].x != 0) {
+                for (i = 0; i < d.chart.data.datasets.length; i++) {
+                    c += d.chart.data.datasets[i].data[a].y;
+                }
+            }
+        }
+        return c / (b.length - 1);
+    }
+
+    const graph_annotation = {
+        type: 'line',
+        borderColor: 'rgba(12,118,170)',
+        borderDash: [6, 6],
+        borderDashOffset: 0,
+        borderWidth: 3,
+        scaleID: 'y',
+        value: a => average(a)
+    };
+
+    const graph_options_count = {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: true,
+            },
+            annotation: {
+                annotations: {
+                    graph_annotation
+                }
+            }
+        },
+        elements: {
+            point: {
+                radius: 1
+            }
+        },
+        animation: false,
+        tooltips: {
+            mode: 'index',
+            intersect: false
+        },
+        hover: {
+            mode: 'index',
+            intersect: false
+        },
+        scales: {
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                    display: true
+                }
+            },
+            x: {
+                ticks: {
+                    display: true
+                }
+            }
+        }
+    };
+
+
+    const graph_options_single = {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            annotation: {
+                annotations: {
+                    graph_annotation
+                }
+            }
+        },
+        elements: {
+            point: {
+                radius: 1
+            }
+        },
+        animation: false,
+        tooltips: {
+            mode: 'index',
+            intersect: false
+        },
+        hover: {
+            mode: 'index',
+            intersect: false
+        },
+        scales: {
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                    display: true
+                }
+            },
+            x: {
+                ticks: {
+                    display: true
+                }
+            }
+        }
+    };
+
+
+    const graph_options_level = {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        elements: {
+            point: {
+                radius: 1
+            }
+        },
+        animation: false,
+        tooltips: {
+            mode: 'index',
+            intersect: false
+        },
+        hover: {
+            mode: 'index',
+            intersect: false
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    display: true
+                }
+            },
+            x: {
+                ticks: {
+                    display: true
+                }
+            }
+        }
+    };
+
+    const graph_options_distance = {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: true,
+            }
+        },
+        elements: {
+            point: {
+                radius: 1
+            }
+        },
+        animation: false,
+        tooltips: {
+            mode: 'index',
+            intersect: false
+        },
+        hover: {
+            mode: 'index',
+            intersect: false
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    display: true
+                }
+            },
+            x: {
+                ticks: {
+                    display: true
+                }
+            }
+        }
+    };
+
+    plot_count = {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Class A',
+                data: [],
+                showLine: true,
+                fill: true,
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart1-color'),
+                borderColor: getComputedStyle(document.body).getPropertyValue('--chart1-color'),
+                borderWidth: 2,
+                pointStyle: false
+            },
+            {
+                label: 'Class B',
+                data: [],
+                showLine: true,
+                fill: '-1',
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart2-color'),
+                borderColor: getComputedStyle(document.body).getPropertyValue('--chart2-color'),
+                borderWidth: 2,
+                pointStyle: false
+            },
+            {
+                label: 'Base Station',
+                data: [],
+                showLine: true,
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart5-color'),
+                borderColor: getComputedStyle(document.body).getPropertyValue('--chart5-color'),
+                fill: '-1',
+                borderWidth: 2,
+                pointStyle: false
+            },
+            {
+                label: 'Other',
+                data: [],
+                showLine: true,
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
+                borderColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
+                fill: '-1',
+                borderWidth: 2,
+                pointStyle: false
+            }]
+        },
+        options: graph_options_count
+    };
+
+
+    plot_distance = {
+        type: 'scatter',
+        data: {
+            datasets: [
+                {
+                    label: 'NE',
+                    data: [],
+                    showLine: true,
+                    backgroundColor:  getComputedStyle(document.body).getPropertyValue('--chart1-color'),
+                    borderColor:  getComputedStyle(document.body).getPropertyValue('--chart1-color'),
+                    pointStyle: false,
+                    borderWidth: 2
+                },
+                {
+                    label: 'SE',
+                    data: [],
+                    showLine: true,
+                    backgroundColor:  getComputedStyle(document.body).getPropertyValue('--chart2-color'),
+                    borderColor:  getComputedStyle(document.body).getPropertyValue('--chart2-color'),
+                    pointStyle: false,
+                    borderWidth: 2
+                }, {
+                    label: 'SW',
+                    data: [],
+                    showLine: true,
+                    backgroundColor:  getComputedStyle(document.body).getPropertyValue('--chart3-color'),
+                    borderColor:  getComputedStyle(document.body).getPropertyValue('--chart3-color'),
+                    pointStyle: false,
+                    borderWidth: 2
+                },
+                {
+                    label: 'NW',
+                    data: [],
+                    showLine: true,
+                    backgroundColor:  getComputedStyle(document.body).getPropertyValue('--chart4-color'),
+                    borderColor:  getComputedStyle(document.body).getPropertyValue('--chart4-color'),
+                    pointStyle: false,
+                    borderWidth: 2
+                },
+                {
+                    label: 'Max',
+                    data: [],
+                    showLine: true,
+                    backgroundColor: 'rgb(211,211,211,0.9)',
+                    fill: true,
+                    pointStyle: false,
+                    borderWidth: 0
+                }
+            ]
+        },
+        options: graph_options_distance
+    };
+
+    plot_single = {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Data',
+                data: [],
+                showLine: true,
+                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
+                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
+                    pointStyle: false,
+                    borderWidth: 2
+            }]
+        },
+        options: graph_options_single
+    };
+
+    plot_level = {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Max',
+                data: [],
+                showLine: true,
+                pointStyle: false,
+                borderWidth: 1
+            },{
+                label: 'Min',
+                data: [],
+                backgroundColor:  getComputedStyle(document.body).getPropertyValue('--chart1-color'),
+                showLine: true,
+                pointStyle: false,
+                borderWidth: 1,
+                fill: '-1'
+            }]
+        },
+        options: graph_options_level
+    };
+
+    
+    var plot_radar = {
+        type: "polarArea",
+        animation: false,
+        responsive: true,
+        plugins: {
+            legend: {
+                display: true }
+            },
+        data: {
+            datasets: [{
+                label: 'Class B',
+                backgroundColor:  getComputedStyle(document.body).getPropertyValue('--chart2-color'),
+                borderWidth: 1
+            },{
+                label: 'Class A',
+                backgroundColor:  getComputedStyle(document.body).getPropertyValue('--chart4-color'),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            legend: {
+                display: false
+            },
+            scale: {
+                ticks: {
+                    min: 0,
+                }
+            }
+        }
+    };
+
+    chart_radar_hour = new Chart(document.getElementById('chart-radar-hour').getContext("2d"), plot_radar);
+    chart_radar_day = new Chart(document.getElementById('chart-radar-day').getContext("2d"), plot_radar);
+    chart_seconds = new Chart(document.getElementById('chart-seconds'), plot_count);
+    chart_minutes = new Chart(document.getElementById('chart-minutes'), plot_count);
+    chart_hours = new Chart(document.getElementById('chart-hours'), plot_count);
+    chart_days = new Chart(document.getElementById('chart-days'), plot_count);
+    chart_ppm = new Chart(document.getElementById('chart-ppm'), plot_single);
+    chart_ppm_minute = new Chart(document.getElementById('chart-ppm-minute'), plot_single);
+    chart_level = new Chart(document.getElementById('chart-level'), plot_level);
+    chart_distance_hour = new Chart(document.getElementById('chart-distance-hour'), plot_distance);
+    chart_distance_day = new Chart(document.getElementById('chart-distance-day'), plot_distance);
+
+    function shipcardismax() {
+        return document.getElementById('shipcard').classList.contains('shipcard-ismax');
+    }
+    function shipcardselect(e) {
+        if (shipcardismax()) {
+            e.classList.toggle('shipcard-max-only');
+            e.classList.toggle('shipcard-row-selected');
+        }
+    }
+
+    function toggleShipcardSize() {
+
+        Array.from(document.getElementsByClassName('shipcard-min-only')).forEach(e => e.classList.toggle("visible"));
+        Array.from(document.getElementsByClassName('shipcard-max-only')).forEach(e => e.classList.toggle("hide"));
+
+        document.getElementById('shipcard').classList.toggle('shipcard-ismax');
+
+        var e = document.getElementById('shipcard_content').children;
+
+        if (shipcardismax()) {
+            for (let i = 0; i < e.length; i++) {
+                if (e[i].classList.contains('shipcard-max-only') && e[i].classList.contains('shipcard-row-selected') ||
+                    !e[i].classList.contains('shipcard-max-only') && !e[i].classList.contains('shipcard-row-selected'))
+                    e[i].classList.toggle('shipcard-row-selected');
+            }
+        }
+        else {
+            for (let i = 0; i < e.length; i++) {
+                if (e[i].classList.contains('shipcard-row-selected'))
+                    e[i].classList.toggle('shipcard-row-selected');
+            }
+        }
+    }
+
+    function getStatusVal(ship) {
+        const StringFromStatus = ["Under way using engine",
+            "At anchor",
+            "Not under command",
+            "Restricted manoeuverability",
+            "Constrained",
+            "Moored",
+            "Aground",
+            "Engaged in Fishing",
+            "Under way sailing",
+            "Reserved for HSC",
+            "Reserved for WIG",
+            "Reserved",
+            "Reserved",
+            "Reserved",
+            "AIS-SART is active",
+            "Not available"
+        ];
+
+        return StringFromStatus[Math.min(ship.status, 15)];
+    }
+
+    function getShipTypeVal(s) {
+        if (s < 20) return "Not available";
+        if (s <= 29) return "WIG";
+        if (s <= 30) return "Fishing";
+        if (s <= 32) return "Towing";
+        if (s <= 34) return "Dredging/Diving ops";
+        if (s <= 35) return "Military";
+        if (s <= 36) return "Sailing";
+        if (s <= 37) return "Pleasure Craft";
+        if (s <= 39) return "Reserved";
+        if (s <= 49) return "High Speed Craft";
+        if (s <= 50) return "Pilot";
+        if (s <= 51) return "Search And Rescue";
+        if (s <= 52) return "Tug";
+        if (s <= 53) return "Port tender";
+        if (s <= 54) return "Anti-pollution equipment";
+        if (s <= 55) return "Law Enforcement";
+        if (s <= 57) return "Local Vessel";
+        if (s <= 58) return "Medical Transport";
+        if (s <= 59) return "Noncombatant ship";
+        if (s <= 69) return "Passenger";
+        if (s <= 79) return "Cargo";
+        if (s <= 89) return "Tanker";
+        if (s <= 99) return "Other";
+
+        return "Not available";
+    }
+
+    function setPulseOk() {
+        document.getElementById("pulse-id").className = "header-pulse-ok";
+    }
+
+    function setPulseError() {
+        document.getElementById("pulse-id").className = "header-pulse-error";
+    }
+
+    function getFlag(country) {
+        return country ? `<span style="padding-right: 10px" title="`+country+`" class="fi fi-${country.toLowerCase()}"></span> ` : "";
+
+    }
+
+    // fetches main statistics from the server
+    async function fetchStatistics() {
+        try {
+            response = await fetch('stat.json');
+        } catch (error) {
+            setPulseError();
+            return;
+        }
+        statistics = await response.json();
+        setPulseOk();
+        return statistics;
+    }
+
+    async function displayStatistics() {
+        var stat = await fetchStatistics();            
+
+        if(stat) {
+            // in bulk....
+            ['build_describe','build_date','station','product','vendor','serial','model','sample_rate','received', 'vessel_count'].forEach(e =>  document.getElementById('stat_'+e).innerHTML = stat[e]);
+            ['stat','last_minute','last_day','last_hour'].forEach(e =>  document.getElementById('stat_'+e+'_count').innerHTML = stat[e].count);
+            [0,1,2,3].forEach(e =>  document.getElementById('stat_stat_channel'+e).innerHTML = stat.stat.channel[e]);
+
+            // special formatting
+            document.getElementById("stat_msg_rate").innerHTML = Number(stat.msg_rate).toFixed(1) + " msg/s";
+            document.getElementById("stat_run_time").innerHTML = getDeltaTimeVal(stat.run_time);
+
+            document.getElementById("stat_stat_msg123").innerHTML =stat.stat.msg[0] + stat.stat.msg[1] + stat.stat.msg[2];
+            document.getElementById("stat_stat_msg5").innerHTML = stat.stat.msg[4];
+            document.getElementById("stat_stat_msg1819").innerHTML = stat.stat.msg[17] + stat.stat.msg[18];
+            document.getElementById("stat_stat_msg24").innerHTML = stat.stat.msg[23];
+            document.getElementById("stat_stat_msg4").innerHTML = stat.stat.msg[3];
+            document.getElementById("stat_stat_msg9").innerHTML = stat.stat.msg[8];
+            document.getElementById("stat_stat_msg21").innerHTML = stat.stat.msg[20];
+
+            var count_other = 0;
+            [6,7,8,10,11,12,13,14,15,16,17,20,22,23,25,26,27].forEach(i => count_other += stat.stat.msg[i-1]);
+            document.getElementById("stat_stat_msgother").innerHTML =count_other;
+
+            if (stat.station_link != "") 
+                document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
+        
+            var title = document.getElementById("stat_station").textContent;
+            if (title != "" && title != null) document.title = "AIS-catcher " + title;
+        }
+    }
+    
+    function updateChartMulti(b, f, c) {
+        if (b.hasOwnProperty(f)) {
+            var hA = [];
+            var hB = [];
+            var hT = [];
+            var hS = [];
+
+            const source = b[f];
+            for (let i = 0; i < source.time.length; i++) {
+                let cA = source.stat[i].msg[0] + source.stat[i].msg[1] + source.stat[i].msg[2] + source.stat[i].msg[4];
+                hA.push({ x: source.time[i], y: cA });
+                let cB = source.stat[i].msg[17] + source.stat[i].msg[18] + source.stat[i].msg[23];
+                hB.push({ x: source.time[i], y: cB });
+                let cS = source.stat[i].msg[3];
+                hS.push({ x: source.time[i], y: cS });
+                let cT = source.stat[i].count - cA - cB - cS;
+                hT.push({ x: source.time[i], y: cT });
+            }
+            c.data.datasets[0].data = hA;
+            c.data.datasets[1].data = hB;
+            c.data.datasets[2].data = hS;
+            c.data.datasets[3].data = hT;
+
+            c.update();
+        }
+    }
+
+    function updateChartDistance(b, f, c) {
+        if (b.hasOwnProperty(f)) {
+            var hNE = [];
+            var hSE = [];
+            var hSW = [];
+            var hNW = [];
+            var hM = [];
+
+            let source = b[f];
+
+            if (source.stat[0].radar_a.length == 0) return;
+            let N = source.stat[0].radar_a.length;
+            let N4 = N / 4;
+            for (let i = 0; i < source.time.length; i++) {
+                let count = [0, 0, 0, 0];
+                for (let j = 0; j < N; j++)
+                    count[Math.floor(j / N4)] = Math.max(count[Math.floor(j / N4)], source.stat[i].radar_a[j]);
+
+                hNE.push({ x: source.time[i], y: count[0] }); // source.stat[i].radar[0]
+                hSE.push({ x: source.time[i], y: count[1] });
+                hSW.push({ x: source.time[i], y: count[2] });
+                hNW.push({ x: source.time[i], y: count[3] });
+                hM.push({ x: source.time[i], y: source.stat[i].dist });
+            }
+            c.data.datasets[0].data = hNE;
+            c.data.datasets[1].data = hSE;
+            c.data.datasets[2].data = hSW;
+            c.data.datasets[3].data = hNW;
+            c.data.datasets[4].data = hM;
+
+            c.update();
+        }
+    }
+
+    function updateChartSingle(b, f1, f2, c) {
+        if (b.hasOwnProperty(f1)) {
+            var h = [];
+
+            const source = b[f1];
+            for (let i = 0; i < source.time.length; i++) {
+                h.push({ x: source.time[i], y: source.stat[i][f2] });
+            }
+            c.data.datasets[0].data = h;
+            c.update();
+        }
+    }
+
+    function updateChartLevel(b, f1, f2, c) {
+        if (b.hasOwnProperty(f1)) {
+            const source = b[f1];
+
+            var h = [];
+
+            for (let i = 0; i < source.time.length; i++) {
+                h.push({ x: source.time[i], y: source.stat[i].level_min == 0 ? null : source.stat[i].level_min });
+            }
+            c.data.datasets[1].data = h;
+
+            var h = [];
+            for (let i = 0; i < source.time.length; i++) {
+                h.push({ x: source.time[i], y: source.stat[i].level_max == 0 ? null : source.stat[i].level_max });
+            }
+            c.data.datasets[0].data = h;
+
+            c.update();
+        }
+    }
+
+    function updateRadar(b, f, c) {
+        if (b.hasOwnProperty(f)) {
+            var data_a = [], data_b = [];
+            let idx = 0;
+            if (b[f].stat.length > 1) idx = 1;
+            let N = b[f].stat[idx].radar_a.length;
+            for (var i = 0; i < N; i++) {
+                data_a.push({
+                    r: b[f].stat[idx].radar_a[i],
+                    theta: i * 360/N
+                });
+                data_b.push({
+                    r: b[f].stat[idx].radar_b[i],
+                    theta: i * 360/N
+                });
+            }
+            c.data.datasets[0].data = data_b;
+            c.data.datasets[1].data = data_a;
+            c.update();
+        }
+
+    }
+
+    async function displayPlots() {
+
+        try {
+            response = await fetch('history_full.json');
+        } catch (error) {
+            setPulseError();
+        }
+        b = await response.json();
+
+        setPulseOk();
+
+        updateChartMulti(b, 'second', chart_seconds);
+        updateChartMulti(b, 'minute', chart_minutes);
+        updateChartMulti(b, 'hour', chart_hours);
+        updateChartMulti(b, 'day', chart_days);
+
+        updateChartSingle(b, 'minute', 'ppm', chart_ppm_minute);
+        updateChartSingle(b, 'hour', 'ppm', chart_ppm);
+        updateChartLevel(b, 'minute', 'level', chart_level);
+
+        //plot_radar.options.ticks.scale.max = 200;
+        updateChartDistance(b, 'hour', chart_distance_hour);
+        updateChartDistance(b, 'day', chart_distance_day);
+
+        updateRadar(b, 'hour', chart_radar_hour);
+        updateRadar(b, 'day', chart_radar_day);
+    }
+
+    function tableRowClick(m) {
+        ship = shipsDB[m].raw;
+        if(ship.lat == null || ship.lon == null) return;
+
+        selectMapTab(m);
+    }
+
+    function sortTable(e) {
+
+        settings.sort = e.getAttribute('field');
+        settings.sort_dir = settings.sort_dir == "asc" ? "dec" : "asc";
+
+        saveSettings();
+        updateShipTable()
+    }
+
+    async function updateShipTable() {
+
+        await fetchShips();
+
+        const mmsi_sorted =  Object.keys(shipsDB).sort(function (a_mmsi, b_mmsi) {            
+
+            const d1 = shipsDB[a_mmsi].raw[settings.sort];
+            const d2 = shipsDB[b_mmsi].raw[settings.sort];
+
+            dm = a_mmsi - b_mmsi;
+            if (d1 == null || d1 === "") {
+                if (d1 === d2) return dm;
+                return 1;
+            }
+            if (d2 === null || d2 === "") return -1;
+
+            if (settings.sort_dir == "asc")
+                return d1 < d2 ? -1 : d1 > d2 ? 1 : dm;
+            else
+                return d1 > d2 ? -1 : d1 < d2 ? 1 : dm;
+        });
+
+        c = document.getElementById("shipTableBody"), c.innerHTML = "";
+
+        for (b = 0; b < mmsi_sorted.length; b++) {
+
+            const ship = shipsDB[mmsi_sorted[b]].raw;
+            const row = c.insertRow();
+
+            row.setAttribute("mmsi", ship.mmsi);
+            row.setAttribute("onclick", "tableRowClick(" + ship.mmsi + ");");
+
+            let nameCell = row.insertCell(0); nameCell.innerHTML = getFlag(ship.country) +  ship.shipname;
+
+            let valid = "";
+            switch(ship.validated) {
+                case 1: valid = "Yes"; nameCell.className = "shipcard-validated"; break;
+                case -1: valid= "No"; nameCell.className = "shipcard-dubious"; break;
+                default: valid = "Pending"; nameCell.className = "shipcard-not-validated-transparant"; break;
+            }
+
+            row.insertCell(1).innerHTML = ship.mmsi;
+            row.insertCell(2).innerHTML = ship.callsign
+            row.insertCell(3).innerHTML = getDeltaTimeVal(ship.last_signal);
+            row.insertCell(4).innerHTML = ship.count;
+            row.insertCell(5).innerHTML = Number(ship.ppm).toFixed(1);
+            row.insertCell(6).innerHTML = Number(ship.level).toFixed(1);
+
+            if (ship.distance != null && ship.bearing != null) {
+                row.insertCell(7).innerHTML = Number(ship.distance).toFixed(1);
+                row.insertCell(8).innerHTML = Number(ship.bearing).toFixed(0) +'°';
+            } else {
+                row.insertCell(7).innerHTML = row.insertCell(8).innerHTML = "";
+            }
+
+            if (ship.lat != null && ship.lon != null) {
+                cell = row.insertCell(9); cell.innerHTML = getLatVal(ship.lat); cell.setAttribute("valid",valid);
+                cell = row.insertCell(10); cell.innerHTML = getLonVal(ship.lon); cell.setAttribute("valid",valid);
+            } else {
+                row.insertCell(9).innerHTML = "";
+                row.insertCell(10).innerHTML = "";
+            }
+
+            row.insertCell(11).innerHTML = valid;
+        }
+    }
+
+    function getTooltipContent(ship) {
+        return  getFlag(ship.country) + `<b>${ship.shipname || "MMSI: " + ship.mmsi}</b><br>${getDeltaTimeVal(ship.last_signal)} ago`;
+    }
+
+    function StringFromType(ship) {
+        switch (ship.mmsi_type) {
+            case 1:
+                return "Ship (Class A)";
+            case 2:
+                return "Ship (Class B)";
+            case 3:
+                return "Base Station";
+            case 4:
+                return "SAR aircraft"
+            case 5:
+                return "AIS SART/EPIRB";
+            case 6:
+                return "Aid-to-Navigation";
+        }
+        return "Unknown";
+    }
+
+    function getIcon(ship) {
+
+        /*
+        const int MMSI_TYPE_OTHER = 0;
+        const int MMSI_TYPE_CLASS_A = 1;
+        const int MMSI_TYPE_CLASS_B = 2;
+        const int MMSI_TYPE_BASESTATION = 3;
+        const int MMSI_TYPE_SAR = 4;
+        const int MMSI_TYPE_SARTEPIRB = 5;
+        const int MMSI_TYPE_ATON = 6;
+        */
+
+        shipicon = 1; c = 120;
+        switch (ship.mmsi_type) {
+            case 1:
+                if(ship.msg_type & (1<<9)) shipicon = 3;
+                else if(ship.msg_type & (1<<21)) shipicon = 0;
+
+                else if (ship.shiptype >= 80 && ship.shiptype < 90) c = 80; // tanker
+                else if (ship.shiptype >= 70 && ship.shiptype < 80) c = 0; // cargo
+                else if (ship.shiptype >= 60 && ship.shiptype < 70) c = 40; // passenger
+                else if (ship.shiptype >= 40 && ship.shiptype < 50) c = 100; // high speed
+                else if (ship.shiptype >= 50 && ship.shiptype < 60) c = 60; // special vessel
+                else if (ship.shiptype == 30) c = 140; // fishing
+                break;
+            case 2:
+                c = 20;
+                break;
+            case 3:
+                c = 20;
+                shipicon = 0;
+                break;
+            case 4:
+                shipicon = 2;
+                if (ship.mmsi > 111000000 && ship.mmsi < 111999999) {
+                    if (Math.floor((ship.mmsi / 100) % 10, 0) == 5) shipicon = 3;
+                    break;
+                }
+                if (ship.mmsi > 11100000 && ship.mmsi < 11199999) {
+                    if (Math.floor((ship.mmsi / 10) % 10, 0) == 5) shipicon = 3;
+                    break;
+                }
+                break;
+            case 5:
+                c = 60;
+                shipicon = 0;
+                break;
+            case 6:
+                c = 0;
+                shipicon = 0;
+                break;
+            default:
+                c = 120;
+                break;
+        }
+
+        if (shipicon == 1) {
+            if (ship.speed != null && ship.speed > 0.5 && ship.cog != null) {
+                h = '<DIV CLASS="shipicon" style="background-position: -' + c + 'px 0; transform: translate(-3px,-3px) rotate(' +  ship.cog + 'deg);"></DIV>';
+            } else
+                h = '<DIV CLASS="shipicon" style="background-position: -' + c + 'px -20px; transform: translate(-4px,-4px);"></DIV>';
+        }
+        else if (shipicon == 0) {
+            h = '<DIV CLASS="staticon" style="background-position: -' + c + 'px -20px; transform: translate(-4px,-4px);"></DIV>';
+        }
+        else if (shipicon == 2) {
+            h = '<DIV CLASS="planeicon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(' + ship.cog + 'deg);"></DIV>';
+        }
+        else {
+            h = '<DIV CLASS="helicoptericon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(' +  ship.cog + 'deg);"></DIV>';
+        }
+        var icon = L.divIcon({
+            html: h,
+            className: 'undefined'
+        });
+        return icon;
+    }
+
+    // stackoverflow reference
+    function overlap(r1, r2) {
+        return (!(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom));
+    }
+
+    function updateTooltips() {
+        if (!settings.labels) return;
+
+        let tt = [];
+
+        if (hover_mmsi != null && hover_mmsi > 0 && markers[hover_mmsi] != undefined) {
+            if (!markers[hover_mmsi].isTooltipOpen()) markers[hover_mmsi].getTooltip().toggle();
+            tt.push(markers[hover_mmsi].getTooltip()._container.getBoundingClientRect());
+        }
+
+        if (card_mmsi != null && card_mmsi > 0 && markers[card_mmsi] != undefined) {
+            if (!markers[card_mmsi].isTooltipOpen()) markers[card_mmsi].getTooltip().toggle();
+            tt.push(markers[card_mmsi].getTooltip()._container.getBoundingClientRect());
+        }
+
+        for (let [key, m] of Object.entries(markers)) {
+            if (key == card_mmsi || key == hover_mmsi) continue;
+            if (!m.isTooltipOpen()) m.getTooltip().toggle();
+            r = m.getTooltip()._container.getBoundingClientRect();
+            for (var i = 0; i < tt.length; i++) {
+                if (overlap(r, tt[i])) {
+                    m.getTooltip().toggle();
+                    break;
+                }
+            }
+            if (m.isTooltipOpen()) tt.push(r);
+        }
+    }
+
+    function startHover(m) {
+
+        if(hover_mmsi != null) endHover(hover_mmsi);
+
+        hover_mmsi = m;
+
+        if(!settings.labels) {
+            if(hover_mmsi != null  && hover_mmsi in markers) {
+                if (!markers[hover_mmsi].isTooltipOpen()) markers[hover_mmsi].getTooltip().toggle();
+            }
+        }
+        else {
+            updateTooltips();
+        }
+
+        let ship = shipsDB[hover_mmsi].raw;
+        plot_ship(ship);
+    }
+
+    function endHover(m) {
+        let ship = shipsDB[hover_mmsi].raw;        
+        m = hover_mmsi;
+        hover_mmsi = null;
+
+        if(!settings.labels) {
+            if(m != null  && m in markers) {
+                if (markers[m].isTooltipOpen()) markers[m].getTooltip().toggle();
+            }        }
+        else {
+            updateTooltips();
+        }
+        if(ship) plot_ship(ship);
+        clearHoverMarker();
+
+    }
+
+    function saveSettings() {
+
+        settings.lat = map.getCenter().lat;
+        settings.lon = map.getCenter().lng;
+        settings.zoom = map.getZoom();
+        
+        localStorage.settings = JSON.stringify(settings); 
+    }
+
+    function loadSettings() {
+            try {
+                ls = JSON.parse(localStorage.settings);
+            } catch(error) {
+                console.log(error);
+                return;
+            }
+            settings = {...settings, ...ls};
+    }
+
+    function loadSettingsFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        for (const [key, value] of urlParams.entries()) 
+            if(settings.hasOwnProperty(key)) {
+                    settings = {...settings, [key]: value};
+                }        
+    }
+
+    function updateShipShape(ship) {
+        if (ship.mmsi in ship_shape) {
+            if (ship_shape[ship.mmsi] != null)
+                map.removeLayer(ship_shape[ship.mmsi]);
+        }
+
+        ship_shape[ship.mmsi] = drawShipOutline(ship);
+    }
+
+    function plot_ship(ship) {
+
+        if (ship.mmsi in markers) {
+            // bug in leaflet??
+            if(ship.mmsi != hover_mmsi) markers[ship.mmsi].setIcon(getIcon(ship));
+            markers[ship.mmsi].setLatLng([ship.lat, ship.lon]);
+            markers[ship.mmsi].getTooltip().setContent(getTooltipContent(ship));
+
+        } else {
+            markers[ship.mmsi] = L.marker([ship.lat, ship.lon], { icon: getIcon(ship) }).addTo(map);
+            markers[ship.mmsi].on('click', function (e) { showShipcard(ship.mmsi); });
+            markers[ship.mmsi].on('mouseover', function (e) { startHover(ship.mmsi); });
+            markers[ship.mmsi].on('mouseout', function (e) { endHover(ship.mmsi); });
+
+            markers[ship.mmsi].bindTooltip(getTooltipContent(ship), { opacity: 0.85, permanent: true, offset: [15, 0], direction: 'right' });
+            markers[ship.mmsi].getTooltip().toggle();
+        }
+
+        updateShipShape(ship);
+        if(hover_mmsi == ship.mmsi)
+            setHoverMarker([ship.lat, ship.lon]);
+    }
+
+    function mapResetView(z) { map.setView(marker_focus.getLatLng(), Math.max(z,map.getZoom())); shipcardMinIfMaxonMobile(); }
+
+    function shipcardVisible() {
+        return document.getElementById('shipcard').classList.contains('visible');
+    }
+
+    async function showTrack() {
+
+        marker_showtrack = true;
+        updateTrack();
+        shipcardMinIfMaxonMobile();
+    }
+
+    function removeTrack() {
+        marker_showtrack = false;
+        if (marker_track != null) map.removeLayer(marker_track);
+        marker_track = null;
+
+    }
+    async function updateTrack() {
+
+        if (card_mmsi in markers)
+            if (marker_showtrack) {
+
+                a = await fetch("path.json?" + card_mmsi);
+                path = await a.json()
+                //path = JSON.parse(path_json);
+
+                removeTrack();
+
+                marker_track = L.featureGroup().addTo(map);
+                for (var i = 0; i < Math.min(path.length, 250); i++) {
+                    if (i > 0) {
+                        var o = Math.max(0.25, 1 - path[i].received / (30 * 60));
+                        if (true || path[i].received - path[i - 1].received > 300 || i == path.length - 1 || i == 249) {
+                            var m = L.circleMarker([path[i].lat, path[i].lon], { opacity: o, color: '#12a5ed', radius: 1 }).addTo(map);
+                            m.bindTooltip(getDeltaTimeVal(path[i].received) + " ago", { opacity: 0.85, permanent: false, offset: [15, 0], direction: 'right' });
+                            marker_track.addLayer(m);
+                        }
+
+                        var l = new L.polyline([[path[i].lat, path[i].lon], [path[i - 1].lat, path[i - 1].lon]], { color: '#12a5ed', opacity: o });
+                        marker_track.addLayer(l);
+                    }
+                }
+
+                if (path.length > 0) markers[card_mmsi].setLatLng([path[0].lat, path[0].lon]);
+                marker_showtrack = true;
+            }
+    }
+
+    function isShipcardMax() {
+
+        var e = document.getElementById('shipcard').classList;
+        return e.contains('shipcard-ismax');
+    }
+
+    function clearFocusMarker() {
+        if (marker_focus != null) {
+            map.removeLayer(marker_focus);
+            marker_focus = null;
+        }
+    }
+
+    function setFocusMarker(latlon) {
+        if (marker_focus == null) {
+            marker_focus = L.circleMarker(latlon, { interactive: false, color: 'red', radius: 20, weight: 4, fillOpacity: 0, pane: "locationMarker", className: "pulse" });
+            marker_focus.addTo(map);
+        }
+        else
+            marker_focus.setLatLng(latlon);
+    }
+
+    function clearHoverMarker() {
+        
+        if (marker_hover != null) {
+            map.removeLayer(marker_hover);
+            marker_hover = null;
+        }
+        
+    }
+
+    function setHoverMarker(latlon) { 
+        
+        if (marker_hover == null) {
+            marker_hover = L.circleMarker(latlon, { interactive: false, color: 'orange', radius: 16, weight: 4, fillOpacity: 0, pane: "locationMarker" });
+            marker_hover.addTo(map);
+        }
+        else
+        marker_hover.setLatLng(latlon);        
+    }
+
+    function getStringfromMsgType(m) {
+        let s = "";
+        let delim = "";
+        for(i = 1; i <= 27; i++)
+            if((m & (1 << i))!=0) {
+                s +=  delim  + Number(i).toFixed(0);
+                delim = ", ";
+            }
+        return s;
+    }
+
+    function setShipcardValidation(v) {
+
+        document.getElementById('shipcard_header').classList.remove("shipcard-validated","shipcard-not-validated","shipcard-dubious");
+
+        switch(v) {
+            case 1:document.getElementById('shipcard_header').classList.add("shipcard-validated"); break;
+            case -1: document.getElementById('shipcard_header').classList.add("shipcard-dubious"); break;
+            default: document.getElementById('shipcard_header').classList.add("shipcard-not-validated");
+        }            
+    }
+
+    function populateShipcard() {
+
+
+        if (! (card_mmsi in shipsDB)) {
+
+            document.getElementById('shipcard_content').querySelectorAll('span:nth-child(2)').forEach(e => e.innerHTML=null);
+            document.getElementById('shipcard_header_title').innerHTML = "<b style='color:red;'>Out of range</b>";
+            document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
+
+            clearFocusMarker();
+            removeTrack();
+
+            return;
+        }
+
+        let ship = shipsDB[card_mmsi].raw;
+
+        document.getElementById('shipcard_header_title').innerHTML = getFlag(ship.country)+getShipName(ship);        
+
+        setShipcardValidation(ship.validated);
+
+        // verbatim copies
+        ['destination','mmsi','callsign','count','imo'].forEach(e => document.getElementById('shipcard_'+e).innerHTML = ship[e]);
+
+        // round and add units
+        [   { id: "cog", u: "°", d: 0 },
+            { id: "heading", u: "°", d: 0 },
+            { id: "level", u: "dB", d: 1 },
+            { id: "ppm", u: "ppm", d: 1 }
+        ].forEach(el => document.getElementById("shipcard_"+el.id).innerHTML = ship[el.id]?Number(ship[el.id]).toFixed(el.d)+" "+el.u:null);
+
+        
+        document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
+        document.getElementById('shipcard_type').innerHTML = StringFromType(ship);
+        document.getElementById('shipcard_shiptype').innerHTML = getShipTypeVal(ship.shiptype);
+        document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
+        document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(ship.last_signal);
+        document.getElementById("shipcard_eta").innerHTML =  (ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null )  ? getEtaVal(ship) : null;
+        document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatVal(ship.lat) : null;
+        document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonVal(ship.lon) : null;
+
+        document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
+        document.getElementById("shipcard_distance").innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
+        document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimensionVal(ship.draught) + " " + getDimensionUnit() : null;
+        document.getElementById("shipcard_dimension").innerHTML = (ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null)?getDimensionVal(ship.to_bow + ship.to_stern)+ " " + getDimensionUnit() + " x " + getDimensionVal(ship.to_port + ship.to_starboard) + " "+ getDimensionUnit() :null;
+    }
+
+    function shipcardMinIfMaxonMobile() {
+        if (shipcardVisible() && window.matchMedia("(max-height: 1000px) and (max-width: 500px)").matches && isShipcardMax()) {
+            toggleShipcardSize();
+        }
+    }
+
+    function showShipcard(m) {
+
+        const aside = document.getElementById('shipcard');
+        const visible = shipcardVisible();
+
+        ship = m?shipsDB[m].raw:null;
+        ship_old = card_mmsi?shipsDB[card_mmsi].raw:null;
+
+        if (m != null && !visible) {
+            aside.classList.toggle('visible');
+        }
+        else if (visible && m == null) {
+            aside.classList.toggle('visible');
+            clearFocusMarker();
+        }
+
+        if (m != card_mmsi || !shipcardVisible()) removeTrack();
+        if (shipcardVisible()) setFocusMarker([ship.lat, ship.lon]);
+
+        card_mmsi = m;
+
+        if (ship != null) updateShipShape(ship);
+        if (ship_old != null) updateShipShape(ship_old);
+
+        if (shipcardVisible()) {
+            populateShipcard();
+            if (!map.getBounds().contains(marker_focus.getLatLng())) {
+                map.setView(marker_focus.getLatLng());
+            }
+
+            if (!visible) shipcardMinIfMaxonMobile();
+        }
+
+        updateTooltips();
+    }
+
+    async function updateMap() {
+
+        const n = await fetchShips();
+
+        if (n == 0) return;
+
+        if (shipcardVisible()) populateShipcard();
+
+        for (let [mmsi, entry] of Object.entries(shipsDB)) {
+            let ship = entry.raw;
+            if (ship.lat != null && ship.lon != null && ship.lat != 0 && ship.lon != 0 && ship.lat < 90 && ship.lon < 180) {
+                if (settings.setcoord) {
+                    map.panTo(new L.LatLng(ship.lat, ship.lon));
+                    settings.setcoord = false;
+                }
+                plot_ship(ship)
+            }
+        }
+
+        for (let [key, m] of Object.entries(markers)) {
+            if (!shipsDB.hasOwnProperty(parseInt(key))) {
+                if (m != null) map.removeLayer(m);
+                delete markers[parseInt(key)];
+            }
+        }
+
+        for (let [key, m] of Object.entries(ship_shape)) {
+            if (!shipsDB.hasOwnProperty(parseInt(key))) {
+                if (m != null) map.removeLayer(m);
+                delete ship_shape[parseInt(key)];
+            }
+        }
+
+        updateTooltips();
+
+        if (card_mmsi != null && card_mmsi > 0 && markers[card_mmsi] != undefined) {
+            setFocusMarker(markers[card_mmsi].getLatLng());
+            updateTrack();
+        }
+    }
+
+    function refresh_data() {
+        if(!document.hidden) {
+            if (settings.tab == "map") {
+                updateMap();
+                map.invalidateSize();
+            }
+            else if (settings.tab == "stat") displayStatistics();
+            else if (settings.tab == "plots") displayPlots();
+            else if (settings.tab == "ships") updateShipTable();
+        }
+    }
+
+    async function openFocus(m, z) {
+        try {
+            a = await fetch('ships.json');
+        } catch (error) {
+            setPulseError();
+        }
+        ships = await a.json();
+        setPulseOk();
+
+        selectMapTab(m);
+        if (z) mapResetView(z);
+        else mapResetView(13);
+
+        showTrack();
+
+    }
+
+    function activateTab(b, a) {
+
+        hideMenu();
+
+        Array.from(document.getElementById("menubar").children).forEach(e  => e.className = e.className.replace(" active", ""))
+
+        tabcontent = document.getElementsByClassName("tabcontent");
+
+        for (i = 0; i < tabcontent.length; i++)
+            tabcontent[i].style.display = "none";
+
+        document.getElementById(a).style.display = "block";
+        b.currentTarget.className += " active";
+        settings.tab = a;
+        saveSettings();
+
+        clearInterval(interval);
+        refresh_data();
+        interval = setInterval(refresh_data, 2500)
+    }
+
+    function selectMapTab(m) {
+
+        document.getElementById('map_tab').click();
+        showShipcard(m)
+    }
+
+
+    function selectTab() {
+        if(settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat") {
+            settings.tab = "stat";
+            alert("Invalid tab specified");
+        }
+        document.getElementById(settings.tab+"_tab").click();
+    }
+
+    async function loadPlugins() {
+        try {
+            const response = await fetch('config.js');
+            const config = await response.text();
+            window.eval(config);
+        
+        } catch (error) {
+            console.error(error);
+            alert("Error loading plugins: " + error);
+        }
+    }
+
+    // for overwrite and insert code where needed
+    function main() {}
+    function init_preSettings() {}
+    function init_postSettings() {}
+    function init_postMapInit() {}
+
+    // add the default tile layers and overlay
+    addTileLayer("OpenStreetMap",L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }));    
+    addTileLayer("Positron",L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }));
+    addTileLayer("Dark Matter", L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }));
+    addTileLayer("Voyager", L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }))
+    addTileLayer("Satellite", L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community' }));
+
+    addOverlayLayer("OpenSeaMap",L.tileLayer('http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors', maxZoom: 18 }));
+    
+    console.log("Starting plugin code")
+    loadPlugins().then((result) => {
+
+        init_preSettings();
+
+        console.log("Load settings")
+        loadSettings();
+
+        console.log("Load settings from URL parameters")
+        loadSettingsFromURL();
+
+        init_postSettings();
+
+        console.log("Setup map");
+        initMap();            
+        addLabelControl(); 
+
+        init_postMapInit();
+
+        console.log("Switch to active tab");
+        selectTab();
+
+        let urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mmsi')) {
+            openFocus(urlParams.get('mmsi'), urlParams.get('zoom'));
+        }
+
+        main();
+    });
+    
+</script>
+</body>
+</html>
