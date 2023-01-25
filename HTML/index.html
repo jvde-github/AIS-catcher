@@ -2218,7 +2218,7 @@
 
             if (ship.distance != null && ship.bearing != null) {
                 row.insertCell(7).innerHTML = Number(ship.distance).toFixed(1);
-                row.insertCell(8).innerHTML = Number(ship.bearing).toFixed(0) +'°';
+                row.insertCell(8).innerHTML = Number(ship.bearing).toFixed(0) +'&deg';
             } else {
                 row.insertCell(7).innerHTML = row.insertCell(8).innerHTML = "";
             }
@@ -2579,8 +2579,8 @@
         ['destination','mmsi','callsign','count','imo'].forEach(e => document.getElementById('shipcard_'+e).innerHTML = ship[e]);
 
         // round and add units
-        [   { id: "cog", u: "°", d: 0 },
-            { id: "heading", u: "°", d: 0 },
+        [   { id: "cog", u: "&deg", d: 0 },
+            { id: "heading", u: "&deg", d: 0 },
             { id: "level", u: "dB", d: 1 },
             { id: "ppm", u: "ppm", d: 1 }
         ].forEach(el => document.getElementById("shipcard_"+el.id).innerHTML = ship[el.id]?Number(ship[el.id]).toFixed(el.d)+" "+el.u:null);
