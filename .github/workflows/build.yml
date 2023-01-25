@@ -24,10 +24,20 @@ jobs:
       run: |
         minify HTML/index.html | gzip > HTML/index_html_gz
         xxd -i HTML/index_html_gz > HTML/HTML.cpp
+    - name: Add HTML.cpp
+      run: git add HTML/HTML.cpp
     - name: Commit changes
-      uses: EndBug/add-and-commit@v9
-      with:
-        add: 'HTML/HTML.cpp'
+      run: |
+        if [[ -z $(git diff) ]]; then
+          echo "Nothing to commit, working tree clean"
+            exit 0
+          else
+            echo "There are changes to be committed"
+        fi
+        git config --local user.email "action@github.com"
+        git config --local user.name "Github Action"
+        git commit -m "Update HTML.cpp"
+        git push origin main
 
 Docker:
     runs-on: ubuntu-latest
