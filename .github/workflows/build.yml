@@ -14,13 +14,12 @@ jobs:
   bakeHTML:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
     - name: Install gzip, xxd, minify
       run: |
         sudo apt-get update
-        sudo apt-get install gzip xxd minify git -y
-    - name: Checkout Repository
-      run: |
-         git clone https://github.com/jvde-github/AIS-catcher.git
+        sudo apt-get install gzip xxd minify -y
     - name: Minify and compress index.html
       run: |
         minify HTML/index.html | gzip > HTML/index_html_gz
