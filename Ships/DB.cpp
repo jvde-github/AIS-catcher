@@ -280,7 +280,8 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			latlon_updated = true;
 			break;
 		case AIS::KEY_SHIPTYPE:
-			ships[ptr].ship.shiptype = p.Get().getInt();
+			if(p.Get().getInt())
+				ships[ptr].ship.shiptype = p.Get().getInt();
 			break;
 		case AIS::KEY_IMO:
 			ships[ptr].ship.IMO = p.Get().getInt();
