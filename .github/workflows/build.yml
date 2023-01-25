@@ -25,13 +25,13 @@ jobs:
         rm HTML/HTML.cpp
         minify HTML/index.html | gzip > HTML/index_html_gz
         xxd -i HTML/index_html_gz > HTML/HTML.cpp
-        git add HTML/HTML.cpp
         if [[ -z $(git diff) ]]; then
           echo "Nothing to commit, working tree clean"
             exit 0
           else
             echo "There are changes to be committed"
         fi
+        git add HTML/HTML.cpp
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
         git commit -m "Update HTML.cpp"
