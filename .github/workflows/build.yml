@@ -28,10 +28,11 @@ jobs:
       run: git add HTML/HTML.cpp
     - name: Commit changes
       run: |
-        CHANGES=$(git diff --name-only)
-        echo "$CHANGES"
-        if [ -z "$CHANGES" ]; then
-          echo "No changes to commit"
+        if [[ -z $(git diff) ]]; then
+          echo "Nothing to commit, working tree clean"
+            exit 0
+          else
+            echo "There are changes to be committed"
         fi
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
