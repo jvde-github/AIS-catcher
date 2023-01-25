@@ -15,7 +15,7 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
-    - name: Install gzip, xxd, and minify
+    - name: Install gzip, xxd, minify
       run: |
         apt-get update
         apt-get install gzip xxd minify -y
