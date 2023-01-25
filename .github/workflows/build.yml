@@ -25,10 +25,7 @@ jobs:
         rm HTML/HTML.cpp
         minify HTML/index.html | gzip > HTML/index_html_gz
         xxd -i HTML/index_html_gz > HTML/HTML.cpp
-    - name: Add HTML.cpp
-      run: git add HTML/HTML.cpp
-    - name: Commit changes
-      run: |
+        git add HTML/HTML.cpp
         if [[ -z $(git diff) ]]; then
           echo "Nothing to commit, working tree clean"
             exit 0
