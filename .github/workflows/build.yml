@@ -22,6 +22,7 @@ jobs:
         sudo apt-get install gzip xxd minify -y
     - name: Minify and compress index.html
       run: |
+        rm HTML/HTML.cpp
         minify HTML/index.html | gzip > HTML/index_html_gz
         xxd -i HTML/index_html_gz > HTML/HTML.cpp
     - name: Add HTML.cpp
