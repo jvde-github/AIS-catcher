@@ -28,11 +28,15 @@ jobs:
       run: git add HTML/HTML_test.cpp
     - name: Commit changes
       run: |
+        CHANGES=$(git diff --name-only)
+        if [ -z "$CHANGES" ]; then
+          echo "No changes to commit"
+          exit 0
+        fi
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
         git commit -m "Update HTML.cpp"
-    - name: Push changes
-      run: git push origin main
+        git push origin main
       
   Docker:
     runs-on: ubuntu-latest
