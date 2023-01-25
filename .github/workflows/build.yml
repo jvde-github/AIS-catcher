@@ -6,8 +6,11 @@ on:
       - 'main'
     tags:
       - '*'
+    paths-ignore:
+      - 'HTML/index.html'
   pull_request:
   workflow_dispatch:
+
 
 jobs:
   Docker:
