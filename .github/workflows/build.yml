@@ -32,7 +32,6 @@ jobs:
         echo "$CHANGES"
         if [ -z "$CHANGES" ]; then
           echo "No changes to commit"
-          exit 0
         fi
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
