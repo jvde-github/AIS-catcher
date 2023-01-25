@@ -29,6 +29,7 @@ jobs:
     - name: Commit changes
       run: |
         CHANGES=$(git diff --name-only)
+        git diff --name-only
         if [ -z "$CHANGES" ]; then
           echo "No changes to commit"
           exit 0
