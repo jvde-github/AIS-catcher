@@ -22,9 +22,11 @@ jobs:
         sudo apt-get install gzip xxd minify -y
     - name: Minify and compress index.html
       run: |
-        rm HTML/HTML.cpp
-        minify HTML/index.html | gzip > HTML/index_html_gz
-        xxd -i HTML/index_html_gz > HTML/HTML.cpp
+        cd HTML
+        rm HTML.cpp
+        minify index.html | gzip > index_html_gz
+        xxd -i index_html_gz > HTML.cpp
+        cd ..
         if [[ -z $(git diff) ]]; then
           echo "Nothing to commit, working tree clean"
             exit 0
