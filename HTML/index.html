@@ -1,7 +1,7 @@
 ﻿<!doctype html>
 <html>
 <head>
-<title>AIS- catcher</title>
+<title>AIS-catcher</title>
 
 <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1972,7 +1972,7 @@
         return statistics;
     }
 
-    async function displayStatistics() {
+    async function updateStatistics() {
         var stat = await fetchStatistics();            
 
         if(stat) {
@@ -2123,7 +2123,7 @@
 
     }
 
-    async function displayPlots() {
+    async function updatePlots() {
 
         try {
             response = await fetch('history_full.json');
@@ -2689,8 +2689,8 @@
                 updateMap();
                 map.invalidateSize();
             }
-            else if (settings.tab == "stat") displayStatistics();
-            else if (settings.tab == "plots") displayPlots();
+            else if (settings.tab == "stat") updateStatistics();
+            else if (settings.tab == "plots") updatePlots();
             else if (settings.tab == "ships") updateShipTable();
         }
     }
