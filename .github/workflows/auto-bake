@@ -1,0 +1,25 @@
+on:
+  push:
+    paths:
+      - 'HTML/index.html'
+  pull_request:
+
+jobs:
+  minify_and_commit:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    - name: Minify and compress index.html
+      run: |
+        minify HTML/index.html | gzip > HTML/index_html_gz
+        xxd -i HTML/index_html_gz > HTML/HTML_test.cpp
+    - name: Add HTML.cpp
+      run: git add HTML/HTML_test.cpp
+    - name: Commit changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "Github Action"
+        git commit -m "Update HTML.cpp"
+    - name: Push changes
+      run: git push origin main
