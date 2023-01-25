@@ -20,6 +20,12 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install gzip xxd minify -y
+    - name: Stamp version number
+      run: |
+       git fetch --prune --unshallow
+       TAG=$(git describe --tags)
+       sed -i '/VERSION_DESCRIBE/d' Application/AIS-catcher.h
+       echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/AIS-catcher.h
     - name: Minify and compress index.html
       run: |
         cd HTML
@@ -34,6 +40,7 @@ jobs:
             echo "There are changes to be committed"
         fi
         git add HTML/HTML.cpp
+        git add Application/AIS-catcher.h
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
         git commit -m "Update HTML.cpp"
