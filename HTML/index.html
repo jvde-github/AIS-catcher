@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html>
 <head>
 <title>AIS-catcher</title>
@@ -1009,7 +1009,7 @@
     var marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
-    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true};
+    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
 
     // some functions useful in plugins
     function addTileLayer(title,layer) { basemaps[title] = layer; }
@@ -2786,7 +2786,9 @@
         loadSettings();
 
         console.log("Load settings from URL parameters")
-        loadSettingsFromURL();
+
+        if(settings.loadURL)
+            loadSettingsFromURL();
 
         init_postSettings();
 
