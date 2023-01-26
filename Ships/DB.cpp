@@ -46,7 +46,7 @@ bool DB::isValidCoord(float lat, float lon) {
 }
 
 // https://www.movable-type.co.uk/scripts/latlong.html
-void DB::getDistanceAndAngle(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing) {
+void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing) {
 	// Convert the latitudes and longitudes from degrees to radians
 	lat1 = deg2rad(lat1);
 	lon1 = deg2rad(lon1);
@@ -189,60 +189,75 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 	return content;
 }
 
-void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
-
-	const AIS::Message* msg = (AIS::Message*)data[0].binary;
-	uint32_t mmsi = msg->mmsi();
-
+int DB::findShip(uint32_t mmsi) {
 	int ptr = first, cnt = count;
 	while (ptr != -1 && --cnt >= 0) {
-		if (ships[ptr].ship.mmsi == mmsi) break;
+		if (ships[ptr].ship.mmsi == mmsi) return ptr;
 		ptr = ships[ptr].next;
 	}
+	return -1;
+}
 
-	if (ptr == -1 || cnt < 0) {
-		ptr = last;
-		count = MIN(count + 1, N);
-		std::memset(&ships[ptr].ship, 0, sizeof(VesselDetail));
+int DB::createShip() {
+	int ptr = last;
+	count = MIN(count + 1, N);
+	std::memset(&ships[ptr].ship, 0, sizeof(VesselDetail));
 
-		ships[ptr].ship.distance = DISTANCE_UNDEFINED;
-		ships[ptr].ship.angle = ANGLE_UNDEFINED;
-		ships[ptr].ship.lat = LAT_UNDEFINED;
-		ships[ptr].ship.lon = LON_UNDEFINED;
-		ships[ptr].ship.heading = HEADING_UNDEFINED;
-		ships[ptr].ship.cog = COG_UNDEFINED;
-		ships[ptr].ship.status = STATUS_UNDEFINED;
-		ships[ptr].ship.speed = SPEED_UNDEFINED;
-		ships[ptr].ship.to_port = DIMENSION_UNDEFINED;
-		ships[ptr].ship.to_bow = DIMENSION_UNDEFINED;
-		ships[ptr].ship.to_starboard = DIMENSION_UNDEFINED;
-		ships[ptr].ship.to_stern = DIMENSION_UNDEFINED;
-		ships[ptr].ship.day = ETA_DAY_UNDEFINED;
-		ships[ptr].ship.month = ETA_MONTH_UNDEFINED;
-		ships[ptr].ship.hour = ETA_HOUR_UNDEFINED;
-		ships[ptr].ship.minute = ETA_MINUTE_UNDEFINED;
-		ships[ptr].ship.IMO = IMO_UNDEFINED;
-		ships[ptr].ship.validated = 0;
-		ships[ptr].ship.path_ptr = -1;
-	}
+	ships[ptr].ship.distance = DISTANCE_UNDEFINED;
+	ships[ptr].ship.angle = ANGLE_UNDEFINED;
+	ships[ptr].ship.lat = LAT_UNDEFINED;
+	ships[ptr].ship.lon = LON_UNDEFINED;
+	ships[ptr].ship.heading = HEADING_UNDEFINED;
+	ships[ptr].ship.cog = COG_UNDEFINED;
+	ships[ptr].ship.status = STATUS_UNDEFINED;
+	ships[ptr].ship.speed = SPEED_UNDEFINED;
+	ships[ptr].ship.to_port = DIMENSION_UNDEFINED;
+	ships[ptr].ship.to_bow = DIMENSION_UNDEFINED;
+	ships[ptr].ship.to_starboard = DIMENSION_UNDEFINED;
+	ships[ptr].ship.to_stern = DIMENSION_UNDEFINED;
+	ships[ptr].ship.day = ETA_DAY_UNDEFINED;
+	ships[ptr].ship.month = ETA_MONTH_UNDEFINED;
+	ships[ptr].ship.hour = ETA_HOUR_UNDEFINED;
+	ships[ptr].ship.minute = ETA_MINUTE_UNDEFINED;
+	ships[ptr].ship.IMO = IMO_UNDEFINED;
+	ships[ptr].ship.validated = 0;
+	ships[ptr].ship.path_ptr = -1;
 
-	if (ptr != first) {
-		// remove ptr out of the linked list
-		if (ships[ptr].next != -1)
-			ships[ships[ptr].next].prev = ships[ptr].prev;
-		else
-			last = ships[ptr].prev;
-		ships[ships[ptr].prev].next = ships[ptr].next;
+	return ptr;
+}
 
-		// new ship is first in list
-		ships[ptr].next = first;
-		ships[ptr].prev = -1;
+void DB::moveShipToFront(int ptr) {
+	if (ptr == first) return;
 
-		ships[first].prev = ptr;
-		first = ptr;
-	}
+	// remove ptr out of the linked list
+	if (ships[ptr].next != -1)
+		ships[ships[ptr].next].prev = ships[ptr].prev;
+	else
+		last = ships[ptr].prev;
+	ships[ships[ptr].prev].next = ships[ptr].next;
 
-	if (msg->type() < 1 || msg->type() > 27) return;
+	// new ship is first in list
+	ships[ptr].next = first;
+	ships[ptr].prev = -1;
+
+	ships[first].prev = ptr;
+	first = ptr;
+}
+
+void DB::addToPath(int ptr) {
+	paths[path_idx].next = ships[ptr].ship.path_ptr;
+	paths[path_idx].lat = ships[ptr].ship.lat;
+	paths[path_idx].lon = ships[ptr].ship.lon;
+	paths[path_idx].mmsi = ships[ptr].ship.mmsi;
+	paths[path_idx].signal_time = ships[ptr].ship.last_signal;
+
+	ships[ptr].ship.path_ptr = path_idx;
+	path_idx = (path_idx + 1) % M;
+}
+
+bool DB::updateShip(const JSON::JSON& data, TAG& tag, int ptr) {
+	const AIS::Message* msg = (AIS::Message*)data.binary;
+	int mmsi = msg->mmsi();
 
 	ships[ptr].ship.mmsi = msg->mmsi();
 	ships[ptr].ship.count++;
@@ -266,10 +281,8 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		ships[ptr].ship.mmsi_type = MMSI_TYPE_OTHER; // anything else
 
 	bool latlon_updated = false;
-	float lat_old = ships[ptr].ship.lat;
-	float lon_old = ships[ptr].ship.lon;
 
-	for (const auto& p : data[0].getProperties()) {
+	for (const auto& p : data.getProperties()) {
 		switch (p.Key()) {
 		case AIS::KEY_LAT:
 			ships[ptr].ship.lat = p.Get().getFloat();
@@ -351,25 +364,41 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 			break;
 		}
 	}
+	return latlon_updated;
+}
+
+void DB::addValidation(int ptr, TAG& tag, float lat, float lon) {
+}
+
+void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
+
+	const AIS::Message* msg = (AIS::Message*)data[0].binary;
+	uint32_t mmsi = msg->mmsi();
+
+	if (msg->type() < 1 || msg->type() > 27) return;
+
+	int ptr = findShip(mmsi);
+
+	if (ptr == -1)
+		ptr = createShip();
+
+	moveShipToFront(ptr);
+
+	float lat_old = ships[ptr].ship.lat;
+	float lon_old = ships[ptr].ship.lon;
+
+	bool latlon_updated = updateShip(data[0], tag, ptr);
 
 	// needs work
 	if (msg->type() == 1 || msg->type() == 2 || msg->type() == 3 || msg->type() == 18 || msg->type() == 19 || msg->type() == 9) {
-
-		paths[path_idx].next = ships[ptr].ship.path_ptr;
-		paths[path_idx].lat = ships[ptr].ship.lat;
-		paths[path_idx].lon = ships[ptr].ship.lon;
-		paths[path_idx].mmsi = msg->mmsi();
-		paths[path_idx].signal_time = ships[ptr].ship.last_signal;
-
-		ships[ptr].ship.path_ptr = path_idx;
-		path_idx = (path_idx + 1) % M;
+		addToPath(ptr);
 	}
 
 	tag.validated = false;
 
 	// add check to update only when new lat/lon
 	if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon) && isValidCoord(lat, lon)) {
-		getDistanceAndAngle(lat, lon, ships[ptr].ship.lat, ships[ptr].ship.lon, ships[ptr].ship.distance, ships[ptr].ship.angle);
+		getDistanceAndBearing(lat, lon, ships[ptr].ship.lat, ships[ptr].ship.lon, ships[ptr].ship.distance, ships[ptr].ship.angle);
 
 		tag.distance = ships[ptr].ship.distance;
 		tag.angle = ships[ptr].ship.angle;
