@@ -3,7 +3,7 @@
 
 function openGoogle() {
 	if(card_mmsi in shipsDB) {
-                let ship = shipsDB[card_mmsi];
+                let ship = shipsDB[card_mmsi].raw;
                 window.open("https://www.google.com/maps/search/?api=1&query=" + ship.lat + "," + ship.lon);
         }
 }
