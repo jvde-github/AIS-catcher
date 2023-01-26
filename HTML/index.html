@@ -2330,17 +2330,14 @@
     function updateTooltips() {
         if (!settings.labels) return;
 
-        let tt = [];
+        let rects = [];
 
-        if (hover_mmsi != null && hover_mmsi > 0 && markers[hover_mmsi] != undefined)
-            addTooltip(markers[hover_mmsi]);
+        if (hover_mmsi in markers) addTooltip(rects,markers[hover_mmsi]);
+        if (card_mmsi in markers) addTooltip(rects,markers[card_mmsi]);
 
-        if (card_mmsi != null && card_mmsi > 0 && markers[card_mmsi] != undefined) 
-            addTooltip(markers[card_mmsi]);
-
-        for (let [key, m] of Object.entries(markers)) {
-            if (key == card_mmsi || key == hover_mmsi) continue;
-            addTooltip(tt,m);
+        for (let [mmsi, m] of Object.entries(markers)) {
+            if (mmsi == card_mmsi || mmsi == hover_mmsi) continue;
+            addTooltip(rects,m);
         }
     }
 
