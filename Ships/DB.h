@@ -108,7 +108,14 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 		return (int)(360 + rad * 180 / PI) % 360;
 	}
 
-	void getDistanceAndAngle(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
+	int findShip(uint32_t mmsi);
+	int createShip();
+	void moveShipToFront(int);
+	bool updateShip(const JSON::JSON& , TAG& , int );
+	void addToPath(int ptr);
+	void addValidation(int , TAG& , float , float );
+
+	void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
 
 public:
 	void setup(float lat = 0.0f, float lon = 0.0f);
