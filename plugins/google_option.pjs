@@ -2,9 +2,10 @@
 
 
 function openGoogle() {
-	ship = ships.ships.find(element => element.mmsi == card_mmsi);
-        if (ship == null) return;
-        window.open("https://www.google.com/maps/search/?api=1&query=" + ship.lat + "," + ship.lon);
+	if(card_mmsi in shipsDB) {
+                let ship = shipsDB[card_mmsi];
+                window.open("https://www.google.com/maps/search/?api=1&query=" + ship.lat + "," + ship.lon);
+        }
 }
 
 addShipcardItem('fa brands fa-google','Google','Lookup vessel coordinates on Google maps','openGoogle()');
