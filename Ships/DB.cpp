@@ -167,7 +167,7 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 
 	int ptr = ships[idx].ship.path_ptr;
 	long int t0 = time(nullptr);
-	;
+
 	long int t = t0;
 
 	while (ptr != -1 && paths[ptr].mmsi == mmsi && (long int)paths[ptr].signal_time <= t) {
