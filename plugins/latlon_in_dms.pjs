@@ -5,7 +5,7 @@ function decimalToDMS(l, isLatitude) {
     var minutes = Math.floor((Math.abs(l) - degrees) * 60);
     var seconds = Number((((Math.abs(l) - degrees) * 60) - minutes) * 60).toFixed(1);
     var direction = (isLatitude ? (l > 0 ? "N" : "S") : (l > 0 ? "E" : "W"));
-    return degrees + "°" + minutes + "'" + seconds + "\"" + direction;
+    return degrees + "&deg" + minutes + "'" + seconds + "\"" + direction;
 }
 
 getLatVal = c => decimalToDMS(c, true);
