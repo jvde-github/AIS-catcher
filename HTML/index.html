@@ -2780,38 +2780,40 @@
     console.log("Starting plugin code")
 
     // TO DO: load plugins via <SCRIPT SRC ..>, however, seems to create issues for our simple webserver on iOS so for now implemented via Fetch until this is sorted
-    loadPlugins().then((result) => {
+    // loadPlugins().then((result) => {
+</script>
+<script src="config.js"></script>
+<script>
+    init_preSettings();
 
-        init_preSettings();
+    console.log("Load settings")
+    loadSettings();
 
-        console.log("Load settings")
-        loadSettings();
+    console.log("Load settings from URL parameters")
 
-        console.log("Load settings from URL parameters")
+    if(settings.loadURL)
+        loadSettingsFromURL();
 
-        if(settings.loadURL)
-            loadSettingsFromURL();
+    init_postSettings();
 
-        init_postSettings();
+    console.log("Setup tabs");
+    initFullScreen();
+    initPlots();
+    initMap();            
+    addLabelControl(); 
 
-        console.log("Setup tabs");
-        initFullScreen();
-        initPlots();
-        initMap();            
-        addLabelControl(); 
+    init_postTabsInit();
 
-        init_postTabsInit();
+    console.log("Switch to active tab");
+    selectTab();
 
-        console.log("Switch to active tab");
-        selectTab();
+    let urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mmsi'))
+        openFocus(urlParams.get('mmsi'), urlParams.get('zoom'));
 
-        let urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('mmsi'))
-            openFocus(urlParams.get('mmsi'), urlParams.get('zoom'));
-
-        saveSettings();
-        main();
-    });
+    saveSettings();
+    main();
+    //});
     
 </script>
 </body>

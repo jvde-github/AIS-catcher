@@ -86,7 +86,7 @@ namespace IO {
 			struct timeval tv = { 0, 50000 };
 			int nready = select(sock + conn_sockets.size() + 1, &fdr, 0, 0, &tv);
 
-			if (FD_ISSET(sock, &fdr)) {
+			if (conn_sockets.size() == 0 && FD_ISSET(sock, &fdr)) {
 				if ((conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen)) < 0) {
 					std::cerr << "Server: error accepting incoming connection.";
 					continue;
