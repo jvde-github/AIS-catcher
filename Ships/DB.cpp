@@ -201,27 +201,7 @@ int DB::findShip(uint32_t mmsi) {
 int DB::createShip() {
 	int ptr = last;
 	count = MIN(count + 1, N);
-	std::memset(&ships[ptr].ship, 0, sizeof(VesselDetail));
-
-	ships[ptr].ship.distance = DISTANCE_UNDEFINED;
-	ships[ptr].ship.angle = ANGLE_UNDEFINED;
-	ships[ptr].ship.lat = LAT_UNDEFINED;
-	ships[ptr].ship.lon = LON_UNDEFINED;
-	ships[ptr].ship.heading = HEADING_UNDEFINED;
-	ships[ptr].ship.cog = COG_UNDEFINED;
-	ships[ptr].ship.status = STATUS_UNDEFINED;
-	ships[ptr].ship.speed = SPEED_UNDEFINED;
-	ships[ptr].ship.to_port = DIMENSION_UNDEFINED;
-	ships[ptr].ship.to_bow = DIMENSION_UNDEFINED;
-	ships[ptr].ship.to_starboard = DIMENSION_UNDEFINED;
-	ships[ptr].ship.to_stern = DIMENSION_UNDEFINED;
-	ships[ptr].ship.day = ETA_DAY_UNDEFINED;
-	ships[ptr].ship.month = ETA_MONTH_UNDEFINED;
-	ships[ptr].ship.hour = ETA_HOUR_UNDEFINED;
-	ships[ptr].ship.minute = ETA_MINUTE_UNDEFINED;
-	ships[ptr].ship.IMO = IMO_UNDEFINED;
-	ships[ptr].ship.validated = 0;
-	ships[ptr].ship.path_ptr = -1;
+	ships[ptr].ship = VesselDetail();
 
 	return ptr;
 }
@@ -255,116 +235,126 @@ void DB::addToPath(int ptr) {
 	path_idx = (path_idx + 1) % M;
 }
 
-bool DB::updateShip(const JSON::JSON& data, TAG& tag, int ptr) {
-	const AIS::Message* msg = (AIS::Message*)data.binary;
-	int mmsi = msg->mmsi();
-
-	ships[ptr].ship.mmsi = msg->mmsi();
-	ships[ptr].ship.count++;
-	ships[ptr].ship.last_signal = msg->getRxTimeUnix();
-	ships[ptr].ship.ppm = tag.ppm;
-	ships[ptr].ship.level = tag.level;
-	ships[ptr].ship.msg_type |= 1 << msg->type();
+int DB::setMmsiType(int mmsi, int type) {
 
 	// type derived from MMSI
 	if ((mmsi >= 200000000 && mmsi < 800000000) || (mmsi >= 20000000 && mmsi < 80000000) || ((mmsi >= 982000000 && mmsi < 988000000)))
-		ships[ptr].ship.mmsi_type = (msg->type() == 18 || msg->type() == 19 || msg->type() == 24) ? MMSI_TYPE_CLASS_B : MMSI_TYPE_CLASS_A; // Class A & Class B
+		return (type == 18 || type == 19 || type == 24) ? MMSI_TYPE_CLASS_B : MMSI_TYPE_CLASS_A; // Class A & Class B
 	else if ((mmsi >= 2000000 && mmsi < 8000000))
-		ships[ptr].ship.mmsi_type = MMSI_TYPE_BASESTATION; // Base Station
+		return MMSI_TYPE_BASESTATION; // Base Station
 	else if ((mmsi >= 111000000 && mmsi < 111999999) || (mmsi >= 11100000 && mmsi < 11199999))
-		ships[ptr].ship.mmsi_type = MMSI_TYPE_SAR; // helicopter
+		return MMSI_TYPE_SAR; // helicopter
 	else if (mmsi >= 97000000 && mmsi < 98000000)
-		ships[ptr].ship.mmsi_type = MMSI_TYPE_SARTEPIRB; //  AIS SART/EPIRB/man-overboard
+		return MMSI_TYPE_SARTEPIRB; //  AIS SART/EPIRB/man-overboard
 	else if (mmsi >= 992000000 && mmsi < 998000000)
-		ships[ptr].ship.mmsi_type = MMSI_TYPE_ATON; //  AtoN
+		return MMSI_TYPE_ATON; //  AtoN
 	else
-		ships[ptr].ship.mmsi_type = MMSI_TYPE_OTHER; // anything else
+		return MMSI_TYPE_OTHER; // anything else
+}
 
-	bool latlon_updated = false;
-
-	for (const auto& p : data.getProperties()) {
-		switch (p.Key()) {
-		case AIS::KEY_LAT:
-			ships[ptr].ship.lat = p.Get().getFloat();
-			latlon_updated = true;
-			break;
-		case AIS::KEY_LON:
-			ships[ptr].ship.lon = p.Get().getFloat();
-			latlon_updated = true;
-			break;
-		case AIS::KEY_SHIPTYPE:
-			if (p.Get().getInt())
-				ships[ptr].ship.shiptype = p.Get().getInt();
-			break;
-		case AIS::KEY_IMO:
-			ships[ptr].ship.IMO = p.Get().getInt();
-			break;
-		case AIS::KEY_MONTH:
-			if (msg->type() != 5) break;
-			ships[ptr].ship.month = p.Get().getInt();
-			break;
-		case AIS::KEY_DAY:
-			if (msg->type() != 5) break;
-			ships[ptr].ship.day = p.Get().getInt();
-			break;
-		case AIS::KEY_MINUTE:
-			if (msg->type() != 5) break;
-			ships[ptr].ship.minute = p.Get().getInt();
-			break;
-		case AIS::KEY_HOUR:
-			if (msg->type() != 5) break;
-			ships[ptr].ship.hour = p.Get().getInt();
-			break;
-		case AIS::KEY_HEADING:
-			ships[ptr].ship.heading = p.Get().getInt();
-			break;
-		case AIS::KEY_DRAUGHT:
-			if (p.Get().getFloat() != 0.0)
-				ships[ptr].ship.draught = p.Get().getFloat();
-			break;
-		case AIS::KEY_COURSE:
-			ships[ptr].ship.cog = p.Get().getFloat();
-			break;
-		case AIS::KEY_SPEED:
-			if (msg->type() == 9 && p.Get().getInt() != 1023)
-				ships[ptr].ship.speed = p.Get().getInt();
-			else if (p.Get().getFloat() != 102.3)
-				ships[ptr].ship.speed = p.Get().getFloat();
-			break;
-		case AIS::KEY_STATUS:
-			ships[ptr].ship.status = p.Get().getInt();
-			break;
-		case AIS::KEY_TO_BOW:
-			ships[ptr].ship.to_bow = p.Get().getInt();
-			break;
-		case AIS::KEY_TO_STERN:
-			ships[ptr].ship.to_stern = p.Get().getInt();
-			break;
-		case AIS::KEY_TO_PORT:
-			ships[ptr].ship.to_port = p.Get().getInt();
-			break;
-		case AIS::KEY_TO_STARBOARD:
-			ships[ptr].ship.to_starboard = p.Get().getInt();
-			break;
-		case AIS::KEY_VIRTUAL_AID:
-			ships[ptr].ship.virtual_aid = p.Get().getBool();
-			break;
-		case AIS::KEY_NAME:
-		case AIS::KEY_SHIPNAME:
-			std::strncpy(ships[ptr].ship.shipname, p.Get().getString().c_str(), 20);
-			break;
-		case AIS::KEY_CALLSIGN:
-			std::strncpy(ships[ptr].ship.callsign, p.Get().getString().c_str(), 7);
-			break;
-		case AIS::KEY_COUNTRY_CODE:
-			std::strncpy(ships[ptr].ship.country_code, p.Get().getString().c_str(), 2);
-			break;
-		case AIS::KEY_DESTINATION:
-			std::strncpy(ships[ptr].ship.destination, p.Get().getString().c_str(), 20);
-			break;
-		}
+bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDetail& v) {
+	bool position_updated = false;
+	switch (p.Key()) {
+	case AIS::KEY_LAT:
+		v.lat = p.Get().getFloat();
+		position_updated = true;
+		break;
+	case AIS::KEY_LON:
+		v.lon = p.Get().getFloat();
+		position_updated = true;
+		break;
+	case AIS::KEY_SHIPTYPE:
+		if (p.Get().getInt())
+			v.shiptype = p.Get().getInt();
+		break;
+	case AIS::KEY_IMO:
+		v.IMO = p.Get().getInt();
+		break;
+	case AIS::KEY_MONTH:
+		if (msg->type() != 5) break;
+		v.month = p.Get().getInt();
+		break;
+	case AIS::KEY_DAY:
+		if (msg->type() != 5) break;
+		v.day = p.Get().getInt();
+		break;
+	case AIS::KEY_MINUTE:
+		if (msg->type() != 5) break;
+		v.minute = p.Get().getInt();
+		break;
+	case AIS::KEY_HOUR:
+		if (msg->type() != 5) break;
+		v.hour = p.Get().getInt();
+		break;
+	case AIS::KEY_HEADING:
+		v.heading = p.Get().getInt();
+		break;
+	case AIS::KEY_DRAUGHT:
+		if (p.Get().getFloat() != 0.0)
+			v.draught = p.Get().getFloat();
+		break;
+	case AIS::KEY_COURSE:
+		v.cog = p.Get().getFloat();
+		break;
+	case AIS::KEY_SPEED:
+		if (msg->type() == 9 && p.Get().getInt() != 1023)
+			v.speed = p.Get().getInt();
+		else if (p.Get().getFloat() != 102.3)
+			v.speed = p.Get().getFloat();
+		break;
+	case AIS::KEY_STATUS:
+		v.status = p.Get().getInt();
+		break;
+	case AIS::KEY_TO_BOW:
+		v.to_bow = p.Get().getInt();
+		break;
+	case AIS::KEY_TO_STERN:
+		v.to_stern = p.Get().getInt();
+		break;
+	case AIS::KEY_TO_PORT:
+		v.to_port = p.Get().getInt();
+		break;
+	case AIS::KEY_TO_STARBOARD:
+		v.to_starboard = p.Get().getInt();
+		break;
+	case AIS::KEY_VIRTUAL_AID:
+		v.virtual_aid = p.Get().getBool();
+		break;
+	case AIS::KEY_NAME:
+	case AIS::KEY_SHIPNAME:
+		std::strncpy(v.shipname, p.Get().getString().c_str(), 20);
+		break;
+	case AIS::KEY_CALLSIGN:
+		std::strncpy(v.callsign, p.Get().getString().c_str(), 7);
+		break;
+	case AIS::KEY_COUNTRY_CODE:
+		std::strncpy(v.country_code, p.Get().getString().c_str(), 2);
+		break;
+	case AIS::KEY_DESTINATION:
+		std::strncpy(v.destination, p.Get().getString().c_str(), 20);
+		break;
 	}
-	return latlon_updated;
+	return position_updated;
+}
+
+
+bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
+	const AIS::Message* msg = (AIS::Message*)data.binary;
+
+	ship.mmsi = msg->mmsi();
+	ship.count++;
+	ship.last_signal = msg->getRxTimeUnix();
+	ship.ppm = tag.ppm;
+	ship.level = tag.level;
+	ship.msg_type |= 1 << msg->type();
+	ship.mmsi_type = setMmsiType(msg->mmsi(), msg->type());
+
+	bool position_updated = false;
+
+	for (const auto& p : data.getProperties())
+		position_updated |= updateFields(p, msg, ship);
+
+	return position_updated;
 }
 
 void DB::addValidation(int ptr, TAG& tag, float lat, float lon) {
@@ -373,48 +363,45 @@ void DB::addValidation(int ptr, TAG& tag, float lat, float lon) {
 void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 
 	const AIS::Message* msg = (AIS::Message*)data[0].binary;
-	uint32_t mmsi = msg->mmsi();
+	int type = msg->type();
+	if (type < 1 || type > 27) return;
 
-	if (msg->type() < 1 || msg->type() > 27) return;
-
-	int ptr = findShip(mmsi);
+	int ptr = findShip(msg->mmsi());
 
 	if (ptr == -1)
 		ptr = createShip();
 
 	moveShipToFront(ptr);
 
-	float lat_old = ships[ptr].ship.lat;
-	float lon_old = ships[ptr].ship.lon;
+	VesselDetail& ship = ships[ptr].ship;
+	float lat_old = ship.lat, lon_old = ship.lon;
 
-	bool latlon_updated = updateShip(data[0], tag, ptr);
+	bool position_updated = updateShip(data[0], tag, ship);
+	position_updated &= isValidCoord(ship.lat, ship.lon);
 
-	// needs work
-	if (msg->type() == 1 || msg->type() == 2 || msg->type() == 3 || msg->type() == 18 || msg->type() == 19 || msg->type() == 9) {
+	if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 || type == 9)
 		addToPath(ptr);
-	}
 
 	tag.validated = false;
 
 	// add check to update only when new lat/lon
-	if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon) && isValidCoord(lat, lon)) {
-		getDistanceAndBearing(lat, lon, ships[ptr].ship.lat, ships[ptr].ship.lon, ships[ptr].ship.distance, ships[ptr].ship.angle);
+	if (position_updated) {
+		getDistanceAndBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
 
-		tag.distance = ships[ptr].ship.distance;
-		tag.angle = ships[ptr].ship.angle;
-
-		if (latlon_updated && isValidCoord(lat_old, lon_old)) {
-			float d = (ships[ptr].ship.lat - lat_old) * (ships[ptr].ship.lat - lat_old) +
-					  (ships[ptr].ship.lon - lon_old) * (ships[ptr].ship.lon - lon_old);
-
-			// flat earth approximation, roughly 10 nmi
-			tag.validated = d < 0.1675;
-			ships[ptr].ship.validated = tag.validated ? 1 : -1;
-		}
+		tag.distance = ship.distance;
+		tag.angle = ship.angle;
 	}
 	else {
 		tag.distance = DISTANCE_UNDEFINED;
 		tag.angle = ANGLE_UNDEFINED;
+	}
+
+	if (position_updated && isValidCoord(lat_old, lon_old)) {
+
+		// flat earth approximation, roughly 10 nmi
+		float d = (ship.lat - lat_old) * (ship.lat - lat_old) + (ship.lon - lon_old) * (ship.lon - lon_old);
+		tag.validated = d < 0.1675;
+		ships[ptr].ship.validated = tag.validated ? 1 : -1;
 	}
 
 	Send(data, len, tag);
