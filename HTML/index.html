@@ -2700,6 +2700,8 @@
     }
 
     async function openFocus(m, z) {
+        await fetchShips();
+
         selectMapTab(m);
         if (z) mapResetView(z);
         else mapResetView(13);
