@@ -337,7 +337,6 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDe
 	return position_updated;
 }
 
-
 bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	const AIS::Message* msg = (AIS::Message*)data.binary;
 
@@ -364,6 +363,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 
 	const AIS::Message* msg = (AIS::Message*)data[0].binary;
 	int type = msg->type();
+
 	if (type < 1 || type > 27) return;
 
 	int ptr = findShip(msg->mmsi());
@@ -374,7 +374,8 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	moveShipToFront(ptr);
 
 	VesselDetail& ship = ships[ptr].ship;
-	float lat_old = ship.lat, lon_old = ship.lon;
+	float lat_old = ship.lat;
+	float lon_old = ship.lon;
 
 	bool position_updated = updateShip(data[0], tag, ship);
 	position_updated &= isValidCoord(ship.lat, ship.lon);
@@ -382,10 +383,8 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 || type == 9)
 		addToPath(ptr);
 
-	tag.validated = false;
-
 	// add check to update only when new lat/lon
-	if (position_updated) {
+	if (position_updated && isValidCoord(lat, lon)) {
 		getDistanceAndBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
 
 		tag.distance = ship.distance;
@@ -397,12 +396,14 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	}
 
 	if (position_updated && isValidCoord(lat_old, lon_old)) {
-
 		// flat earth approximation, roughly 10 nmi
 		float d = (ship.lat - lat_old) * (ship.lat - lat_old) + (ship.lon - lon_old) * (ship.lon - lon_old);
 		tag.validated = d < 0.1675;
 		ships[ptr].ship.validated = tag.validated ? 1 : -1;
 	}
+	else
+		tag.validated = false;
+
 
 	Send(data, len, tag);
 }

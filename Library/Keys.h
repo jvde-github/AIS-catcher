@@ -31,8 +31,7 @@ namespace AIS {
 	extern const std::vector<std::vector<std::string>> KeyMap;
 
 	// JSON keys
-	enum Keys
-	{
+	enum Keys {
 		KEY_CLASS = 0,
 		KEY_DEVICE,
 		KEY_SCALED,

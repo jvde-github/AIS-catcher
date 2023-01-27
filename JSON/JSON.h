@@ -32,8 +32,7 @@ namespace JSON {
 	// JSON value item, 8 bytes (32 bits), 16 bytes (64 bits)
 	class Value {
 
-		enum class Type
-		{
+		enum class Type {
 			BOOL,
 			INT,
 			FLOAT,

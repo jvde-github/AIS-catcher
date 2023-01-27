@@ -25,8 +25,7 @@
 
 namespace Device {
 
-	enum class RTLSDRGainMode
-	{
+	enum class RTLSDRGainMode {
 		Default
 	};
 

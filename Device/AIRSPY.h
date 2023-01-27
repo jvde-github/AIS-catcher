@@ -36,8 +36,7 @@ namespace Device {
 		std::vector<uint32_t> rates;
 		uint64_t serial;
 
-		enum class AIRSPYGainMode
-		{
+		enum class AIRSPYGainMode {
 			Free,
 			Sensitivity,
 			Linearity

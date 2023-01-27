@@ -32,15 +32,13 @@
 #include "IO.h"
 
 namespace AIS {
-	enum class Mode
-	{
+	enum class Mode {
 		AB,
 		CD,
 		ABCD
 	};
 
-	enum class ModelClass
-	{
+	enum class ModelClass {
 		IQ,
 		FM,
 		TXT
