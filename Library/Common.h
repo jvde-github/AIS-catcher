@@ -40,8 +40,7 @@ typedef std::complex<uint8_t> CU8;
 typedef std::complex<int8_t> CS8;
 typedef char BIT;
 
-enum class Format
-{
+enum class Format {
 	CU8,
 	CF32,
 	CS16,
@@ -50,8 +49,7 @@ enum class Format
 	UNKNOWN
 };
 
-enum class Type
-{
+enum class Type {
 	NONE,
 	RTLSDR,
 	AIRSPYHF,
@@ -66,8 +64,7 @@ enum class Type
 	SPYSERVER
 };
 
-enum class OutputLevel
-{
+enum class OutputLevel {
 	NONE,
 	NMEA,
 	NMEA_TAG,

@@ -28,8 +28,7 @@ namespace Device {
 
 	class RTLTCP : public Device {
 
-		enum class PROTOCOL
-		{
+		enum class PROTOCOL {
 			NONE,
 			RTLTCP
 		} Protocol = PROTOCOL::RTLTCP;

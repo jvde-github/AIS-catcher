@@ -25,8 +25,7 @@
 
 namespace AIS {
 
-	enum class State
-	{
+	enum class State {
 		TRAINING,
 		STARTFLAG,
 		STOPFLAG,

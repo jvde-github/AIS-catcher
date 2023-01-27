@@ -20,14 +20,12 @@
 #include <iostream>
 #include <vector>
 
-enum class DecoderSignals
-{
+enum class DecoderSignals {
 	StopTraining,
 	StartTraining,
 	Reset
 };
-enum class SystemSignal
-{
+enum class SystemSignal {
 	Stop
 };
 
