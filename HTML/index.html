@@ -2165,8 +2165,12 @@
 
         const mmsi_sorted =  Object.keys(shipsDB).sort(function (a_mmsi, b_mmsi) {            
 
-            const d1 = shipsDB[a_mmsi].raw[settings.sort];
-            const d2 = shipsDB[b_mmsi].raw[settings.sort];
+            let d1 = shipsDB[a_mmsi].raw[settings.sort];
+            let d2 = shipsDB[b_mmsi].raw[settings.sort];
+
+            // Some vessel names start with space, to avoid they end up at the bottom or start of the table
+            //if(typeof d1 === "string") d1 = d1.trim();
+            //if(typeof d2 === "string") d2 = d2.trim();
 
             dm = a_mmsi - b_mmsi;
             if (d1 == null || d1 === "") {
