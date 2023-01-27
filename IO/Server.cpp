@@ -81,11 +81,12 @@ namespace IO {
 
 			FD_ZERO(&fdr);
 			FD_SET(sock, &fdr);
+			for (auto s : conn_sockets) FD_SET(s, &fdr);
 
 			struct timeval tv = { 0, 50000 };
 			int nready = select(sock + conn_sockets.size() + 1, &fdr, 0, 0, &tv);
 
-			if (conn_sockets.size() == 0 && FD_ISSET(sock, &fdr)) {
+			if (FD_ISSET(sock, &fdr)) {
 				if ((conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen)) < 0) {
 					std::cerr << "Server: error accepting incoming connection.";
 					continue;
@@ -94,10 +95,6 @@ namespace IO {
 					conn_sockets.push_back(conn_socket);
 				}
 			}
-
-			FD_ZERO(&fdr);
-			for (auto s : conn_sockets) FD_SET(s, &fdr);
-			nready = select(sock + conn_sockets.size() + 1, &fdr, 0, 0, &tv);
 
 			for (auto s : conn_sockets) {
 				if (FD_ISSET(s, &fdr)) {
