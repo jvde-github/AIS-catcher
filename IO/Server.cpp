@@ -81,7 +81,7 @@ namespace IO {
 
 			FD_ZERO(&fdr);
 			FD_SET(sock, &fdr);
-			for (auto s : conn_sockets) FD_SET(s, &fdr);
+			//for (auto s : conn_sockets) FD_SET(s, &fdr);
 
 			struct timeval tv = { 0, 50000 };
 			int nready = select(sock + conn_sockets.size() + 1, &fdr, 0, 0, &tv);
@@ -95,6 +95,11 @@ namespace IO {
 					conn_sockets.push_back(conn_socket);
 				}
 			}
+
+			FD_ZERO(&fdr);
+			//FD_SET(sock, &fdr);
+			for (auto s : conn_sockets) FD_SET(s, &fdr);
+			int nready = select(sock + conn_sockets.size() + 1, &fdr, 0, 0, &tv);
 
 			for (auto s : conn_sockets) {
 				if (FD_ISSET(s, &fdr)) {
