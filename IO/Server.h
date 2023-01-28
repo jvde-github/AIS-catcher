@@ -62,7 +62,6 @@ namespace IO {
 			if (sock != -1) closesocket(sock);
 			sock = -1;
 			msg.clear();
-			std::cerr << "Closing socket" << std::endl;
 		}
 
 		void Start(SOCKET s) {
@@ -74,6 +73,9 @@ namespace IO {
 		int Inactive(std::time_t now) {
 			return (int)((long int)now - (long int)stamp);
 		}
+
+		bool isConnected() { return sock != -1; }
+
 		void Read() {
 			char buffer[1024];
 
@@ -82,10 +84,14 @@ namespace IO {
 				int nread = recv(sock, buffer, sizeof(buffer), 0);
 #ifdef _WIN32
 				if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK)) {
+					int e = WSAGetLastError();
 #else
 				if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN)) {
+					int e = errno;
 #endif
-					std::cerr << "Server: connection closed by client or error: " << sock << std::endl;
+					if (nread != 0)
+						std::cerr << "Server: connection closed by error: " << strerror(e) << ", sock = " << sock << std::endl;
+
 					Close();
 				}
 				else if (nread > 0) {
@@ -152,14 +158,11 @@ namespace IO {
 			}
 			return "";
 		}
-		int readLine(SOCKET s, std::string& str);
-		void Process(SOCKET s);
+
 		void acceptClients();
 		void readClients();
 		void processClients();
 		void cleanUp();
 		void Sleep();
-
-		fd_set fdr, fdw;
 	};
 }
