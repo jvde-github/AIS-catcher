@@ -267,7 +267,7 @@ public:
 	void close();
 
 	// HTTP callbacks
-	void Request(SOCKET s, const std::string& r);
+	void Request(IO::Client& c, const std::string& r);
 
 	Setting& Set(std::string option, std::string arg);
 	std::string Get() { return ""; };
