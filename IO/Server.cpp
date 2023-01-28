@@ -172,8 +172,27 @@ namespace IO {
 		if (gzip) header += "\r\nContent-Encoding: gzip";
 		header += "\r\nConnection: keep-alive\r\nContent-Length: " + std::to_string(len) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
 
-		::send(s, header.c_str(), header.length(), 0);
-		::send(s, data, len, 0);
+		int sent = 0;
+		int bytes = 0;
+
+		while (sent < header.length()) {
+			bytes = ::send(s, header.c_str() + sent, header.length() - sent, 0);
+			if (bytes == SOCKET_ERROR) {
+				std::cerr << "Server: error sending response" << std::endl;
+				return;
+			}
+			sent += bytes;
+		}
+
+		sent = 0;
+		while (sent < len) {
+			bytes = ::send(s, data + sent, len - sent, 0);
+			if (bytes == SOCKET_ERROR) {
+				std::cerr << "Server: error sending response" << std::endl;
+				return;
+			}
+			sent += bytes;
+		}
 	}
 
 	bool Server::start(int port) {
