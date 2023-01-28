@@ -70,12 +70,12 @@ namespace IO {
 			// std::cerr << "Connection made on socket: " << conn_socket << std::endl;
 			int ptr = -1;
 			for (int i = 0; i < MAX_CONN; i++)
-				if (client[i].isConnected()) {
+				if (!client[i].isConnected()) {
 					ptr = i;
 					break;
 				}
 			if (ptr == -1) {
-				std::cerr << "Server: max connections of " << MAX_CONN << " reached, closing socker" << std::endl;
+				std::cerr << "Server: max connections of " << MAX_CONN << " reached, closing socket" << std::endl;
 				closesocket(conn_socket);
 			}
 			else {
