@@ -26,6 +26,7 @@
 
 #include "Keys.h"
 #include "JSON/JSON.h"
+#include "JSON/StringBuilder.h"
 
 const float DISTANCE_UNDEFINED = -1;
 const float LAT_UNDEFINED = 91;

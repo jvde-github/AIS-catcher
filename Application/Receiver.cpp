@@ -492,7 +492,7 @@ void OutputServer::close() {
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 
-void OutputServer::Request(SOCKET s, const std::string& response) {
+void OutputServer::Request(IO::Client& c, const std::string& response) {
 
 	std::string r;
 	std::string a;
@@ -507,10 +507,10 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 	}
 
 	if (r == "/") {
-		Response(s, "text/html", (char*)index_html_gz, index_html_gz_len, true);
+		Response(c, "text/html", (char*)index_html_gz, index_html_gz_len, true);
 	}
 	if (r == "/favicon.ico") {
-		Response(s, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
+		Response(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
 	else if (r == "/stat.json") {
 
@@ -553,23 +553,23 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 
 		content += "\"received\":\"" + std::to_string(d1) + "." + std::to_string(d2) + unit + "\"}";
 
-		Response(s, "application/json", content);
+		Response(c, "application/json", content);
 	}
 	else if (r == "/ships.json") {
 
 		std::string content = ships.getJSON();
-		Response(s, "application/json", content);
+		Response(c, "application/json", content);
 	}
 	else if (r == "/ships_full.json") {
 
 		std::string content = ships.getJSON(true);
-		Response(s, "application/json", content);
+		Response(c, "application/json", content);
 	}
 	else if (r == "/config.js") {
-		Response(s, "application/javascript", params + plugins);
+		Response(c, "application/javascript", params + plugins);
 	}
 	else if (r == "/config.css") {
-		Response(s, "text/css", stylesheets);
+		Response(c, "text/css", stylesheets);
 	}
 	else if (r == "/path.json") {
 		int mmsi = -1;
@@ -577,10 +577,10 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		ss >> mmsi;
 		if (mmsi >= 1000000 && mmsi <= 999999999) {
 			std::string content = ships.getPathJSON(mmsi);
-			Response(s, "application/json", content);
+			Response(c, "application/json", content);
 		}
 		else
-			Response(s, "application/json", "[]");
+			Response(c, "application/json", "[]");
 	}
 	else if (r == "/history_full.json") {
 
@@ -594,10 +594,10 @@ void OutputServer::Request(SOCKET s, const std::string& response) {
 		content += ",\"day\":";
 		content += hist_day.toJSON();
 		content += "}";
-		Response(s, "application/json", content);
+		Response(c, "application/json", content);
 	}
 	else
-		Server::Request(s, r);
+		Server::Request(c, r);
 }
 
 Setting& OutputServer::Set(std::string option, std::string arg) {

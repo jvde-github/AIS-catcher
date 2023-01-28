@@ -16,12 +16,51 @@
 */
 
 #include <cstring>
-#include <algorithm>
 
-#include "Common.h"
 #include "Server.h"
 
 namespace IO {
+
+	void Client::Close() {
+		if (sock != -1) closesocket(sock);
+		sock = -1;
+		msg.clear();
+	}
+
+	void Client::Start(SOCKET s) {
+		msg.clear();
+		stamp = std::time(0);
+		sock = s;
+	}
+
+	int Client::Inactive(std::time_t now) {
+		return (int)((long int)now - (long int)stamp);
+	}
+
+	void Client::Read() {
+		char buffer[1024];
+
+		if (isConnected()) {
+
+			int nread = recv(sock, buffer, sizeof(buffer), 0);
+#ifdef _WIN32
+			if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK)) {
+				int e = WSAGetLastError();
+#else
+			if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN)) {
+				int e = errno;
+#endif
+				if (nread != 0)
+					std::cerr << "Server: connection closed by error: " << strerror(e) << ", sock = " << sock << std::endl;
+
+				Close();
+			}
+			else if (nread > 0) {
+				msg += std::string(buffer, nread);
+				stamp = std::time(0);
+			}
+		}
+	}
 
 	Server::Server() {
 #ifdef _WIN32
@@ -45,6 +84,13 @@ namespace IO {
 		if (sock != -1) closesocket(sock);
 	}
 
+	int Server::findFreeClient() {
+
+		for (int i = 0; i < MAX_CONN; i++)
+			if (!client[i].isConnected()) return i;
+		return -1;
+	}
+
 	void Server::acceptClients() {
 		int addrlen = sizeof(service);
 		SOCKET conn_socket;
@@ -65,24 +111,16 @@ namespace IO {
 			}
 		}
 #endif
-
-
 		else {
-			// std::cerr << "Connection made on socket: " << conn_socket << std::endl;
-			int ptr = -1;
-			for (int i = 0; i < MAX_CONN; i++)
-				if (!client[i].isConnected()) {
-					ptr = i;
-					break;
-				}
+			int ptr = findFreeClient();
 			if (ptr == -1) {
-				std::cerr << "Server: max connections of " << MAX_CONN << " reached, closing socket" << std::endl;
+				std::cerr << "Server: max connections reached (" << MAX_CONN << ", closing socket." << std::endl;
 				closesocket(conn_socket);
 			}
 			else {
 				client[ptr].Start(conn_socket);
 				if (!setNonBlock(conn_socket)) {
-					std::cerr << "Server: cannot make client socket non-blocking" << std::endl;
+					std::cerr << "Server: cannot make client socket non-blocking." << std::endl;
 					client[ptr].Close();
 				}
 			}
@@ -94,7 +132,7 @@ namespace IO {
 		for (auto& c : client)
 			if (c.isConnected()) {
 				if (c.Inactive(time(0)) > 30) {
-					std::cerr << "Server: closing inactive client socket (" << c.sock << ") for" << c.Inactive(time(0)) << "s" << std::endl;
+					std::cerr << "Server: closing inactive socket (" << c.sock << ") for " << c.Inactive(time(0)) << "s" << std::endl;
 					c.Close();
 				}
 			}
@@ -108,14 +146,14 @@ namespace IO {
 	void Server::processClients() {
 		for (auto& c : client) {
 			if (c.isConnected()) {
-				std::size_t pos = c.msg.find("\r\n\r\n");
 
+				std::size_t pos = c.msg.find("\r\n\r\n");
 				if (pos != std::string::npos) {
-					std::string request = parse(c.msg);
+
+					std::string request = Parse(c.msg);
 					if (!request.empty())
-						Request(c.sock, request);
-					else
-						std::cerr << c.msg << std::endl;
+						Request(c, request);
+
 					c.msg.erase(0, pos + 4);
 				}
 				else if (c.msg.size() > 4096) {
@@ -127,8 +165,9 @@ namespace IO {
 	}
 
 	void Server::Run() {
-		std::vector<SOCKET> conn_sockets;
-		std::cerr << "Server: starting server thread.\n";
+
+		std::cerr << "Server: starting thread.\n";
+
 		while (!stop) {
 			acceptClients();
 			readClients();
@@ -136,9 +175,11 @@ namespace IO {
 			cleanUp();
 			SleepAndWait();
 		}
+
+		std::cerr << "Server: ending thread.\n";
 	}
 
-	void Server::Request(SOCKET s, const std::string& r) {
+	void Server::Request(Client& c, const std::string& r) {
 		// TO DO: return 404 by default
 	}
 
@@ -152,7 +193,7 @@ namespace IO {
 		int maxfds = sock;
 
 		for (auto& c : client) {
-			if (c.sock != -1) {
+			if (c.isConnected()) {
 				FD_SET(c.sock, &fds);
 				if (c.sock > maxfds) maxfds = c.sock;
 			}
@@ -176,7 +217,7 @@ namespace IO {
 					SleepSystem(100);
 				}
 				else {
-					std::cerr << "Server: error sending response" << std::endl;
+					std::cerr << "Server: error sending response: " << strerror(errno) << std::endl;
 					return false;
 				}
 			}
@@ -186,7 +227,7 @@ namespace IO {
 					SleepSystem(100);
 				}
 				else {
-					std::cerr << "Server: error sending response" << std::endl;
+					std::cerr << "Server: error sending response: " << strerror(WSAGetLastError()) << std::endl;
 					return false;
 				}
 			}
@@ -196,7 +237,7 @@ namespace IO {
 		return true;
 	}
 
-	std::string Server::parse(const std::string& s) {
+	std::string Server::Parse(const std::string& s) {
 		int max = 10;
 		bool found_get = false;
 
@@ -209,29 +250,24 @@ namespace IO {
 		return "";
 	}
 
-	void Server::Response(SOCKET s, std::string type, const std::string& content) {
-		Response(s, type, (char*)content.c_str(), content.size());
+	void Server::Response(Client& c, std::string type, const std::string& content) {
+		Response(c, type, (char*)content.c_str(), content.size());
 	}
 
-	void Server::Response(SOCKET s, std::string type, char* data, int len, bool gzip) {
+	void Server::Response(Client& c, std::string type, char* data, int len, bool gzip) {
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
 		if (gzip) header += "\r\nContent-Encoding: gzip";
 		header += "\r\nConnection: keep-alive\r\nContent-Length: " + std::to_string(len) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
 
-		int sent = 0;
-		int bytes = 0;
-
-		Send(s, header.c_str(), header.length());
-		Send(s, data, len);
+		Send(c.sock, header.c_str(), header.length());
+		Send(c.sock, data, len);
 	}
 
 	bool Server::start(int port) {
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);
-		if (sock < 0) {
-			return false;
-		}
+		if (sock < 0) return false;
 
 #ifndef _WIN32
 		if (reuse_port) {

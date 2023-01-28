@@ -75,18 +75,19 @@ std::string DB::getJSON(bool full) {
 
 	delim = "";
 	while (ptr != -1) {
-		if (ships[ptr].ship.mmsi != 0) {
-			long int delta_time = (long int)tm - (long int)ships[ptr].ship.last_signal;
+		const VesselDetail ship = ships[ptr].ship;
+		if (ship.mmsi != 0) {
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (!full && delta_time > TIME_HISTORY) break;
 
-			content += delim + "{\"mmsi\":" + std::to_string(ships[ptr].ship.mmsi) + ",";
-			if (isValidCoord(ships[ptr].ship.lat, ships[ptr].ship.lon)) {
-				content += "\"lat\":" + std::to_string(ships[ptr].ship.lat) + ",";
-				content += "\"lon\":" + std::to_string(ships[ptr].ship.lon) + ",";
+			content += delim + "{\"mmsi\":" + std::to_string(ship.mmsi) + ",";
+			if (isValidCoord(ship.lat, ship.lon)) {
+				content += "\"lat\":" + std::to_string(ship.lat) + ",";
+				content += "\"lon\":" + std::to_string(ship.lon) + ",";
 
 				if (isValidCoord(lat, lon)) {
-					content += "\"distance\":" + std::to_string(ships[ptr].ship.distance) + ",";
-					content += "\"bearing\":" + std::to_string(ships[ptr].ship.angle) + ",";
+					content += "\"distance\":" + std::to_string(ship.distance) + ",";
+					content += "\"bearing\":" + std::to_string(ship.angle) + ",";
 				}
 				else {
 					content += "\"distance\":null,";
@@ -94,55 +95,54 @@ std::string DB::getJSON(bool full) {
 				}
 			}
 			else {
-				content += "\"lat\":" + null_str + ",";
-				content += "\"lon\":" + null_str + ",";
+				content += "\"lat\":null,";
+				content += "\"lon\":null,";
 				content += "\"distance\":null,";
 				content += "\"bearing\":null,";
 			}
 
-			content += "\"mmsi_type\":" + std::to_string(ships[ptr].ship.mmsi_type) + ",";
-			content += "\"level\":" + std::to_string(ships[ptr].ship.level) + ",";
-			content += "\"count\":" + std::to_string(ships[ptr].ship.count) + ",";
-			content += "\"ppm\":" + std::to_string(ships[ptr].ship.ppm) + ",";
+			content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
+			content += "\"level\":" + std::to_string(ship.level) + ",";
+			content += "\"count\":" + std::to_string(ship.count) + ",";
+			content += "\"ppm\":" + std::to_string(ship.ppm) + ",";
 
-			content += "\"heading\":" + ((ships[ptr].ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.heading)) + ",";
-			content += "\"cog\":" + ((ships[ptr].ship.cog == COG_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.cog)) + ",";
-			content += "\"speed\":" + ((ships[ptr].ship.speed == SPEED_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.speed)) + ",";
+			content += "\"heading\":" + ((ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ship.heading)) + ",";
+			content += "\"cog\":" + ((ship.cog == COG_UNDEFINED) ? null_str : std::to_string(ship.cog)) + ",";
+			content += "\"speed\":" + ((ship.speed == SPEED_UNDEFINED) ? null_str : std::to_string(ship.speed)) + ",";
 
-			content += "\"to_bow\":" + ((ships[ptr].ship.to_bow == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_bow)) + ",";
-			content += "\"to_stern\":" + ((ships[ptr].ship.to_stern == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_stern)) + ",";
-			content += "\"to_starboard\":" + ((ships[ptr].ship.to_starboard == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_starboard)) + ",";
-			content += "\"to_port\":" + ((ships[ptr].ship.to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.to_port)) + ",";
+			content += "\"to_bow\":" + ((ship.to_bow == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_bow)) + ",";
+			content += "\"to_stern\":" + ((ship.to_stern == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_stern)) + ",";
+			content += "\"to_starboard\":" + ((ship.to_starboard == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_starboard)) + ",";
+			content += "\"to_port\":" + ((ship.to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_port)) + ",";
 
-			content += "\"shiptype\":" + std::to_string(ships[ptr].ship.shiptype) + ",";
-			content += "\"validated\":" + std::to_string(ships[ptr].ship.validated) + ",";
-			content += "\"msg_type\":" + std::to_string(ships[ptr].ship.msg_type) + ",";
-			content += "\"country\":\"" + std::string(ships[ptr].ship.country_code) + "\",";
-			content += "\"status\":" + std::to_string(ships[ptr].ship.status) + ",";
+			content += "\"shiptype\":" + std::to_string(ship.shiptype) + ",";
+			content += "\"validated\":" + std::to_string(ship.validated) + ",";
+			content += "\"msg_type\":" + std::to_string(ship.msg_type) + ",";
+			content += "\"country\":\"" + std::string(ship.country_code) + "\",";
+			content += "\"status\":" + std::to_string(ship.status) + ",";
 
-			content += "\"draught\":" + std::to_string(ships[ptr].ship.draught) + ",";
+			content += "\"draught\":" + std::to_string(ship.draught) + ",";
 
 
-			content += "\"eta_month\":" + ((ships[ptr].ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.month)) + ",";
-			content += "\"eta_day\":" + ((ships[ptr].ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.day)) + ",";
-			content += "\"eta_hour\":" + ((ships[ptr].ship.hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.hour)) + ",";
-			content += "\"eta_minute\":" + ((ships[ptr].ship.minute == ETA_MINUTE_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.minute)) + ",";
+			content += "\"eta_month\":" + ((ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ship.month)) + ",";
+			content += "\"eta_day\":" + ((ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ship.day)) + ",";
+			content += "\"eta_hour\":" + ((ship.hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(ship.hour)) + ",";
+			content += "\"eta_minute\":" + ((ship.minute == ETA_MINUTE_UNDEFINED) ? null_str : std::to_string(ship.minute)) + ",";
 
-			content += "\"imo\":" + ((ships[ptr].ship.IMO == IMO_UNDEFINED) ? null_str : std::to_string(ships[ptr].ship.IMO)) + ",";
+			content += "\"imo\":" + ((ship.IMO == IMO_UNDEFINED) ? null_str : std::to_string(ship.IMO)) + ",";
 
 
 			content += "\"callsign\":";
-			str = std::string(ships[ptr].ship.callsign);
+			str = std::string(ship.callsign);
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"shipname\":";
-			str = std::string(ships[ptr].ship.shipname) + (ships[ptr].ship.virtual_aid ? std::string(" [V]") : std::string(""));
+			str = std::string(ship.shipname) + (ship.virtual_aid ? std::string(" [V]") : std::string(""));
 			JSON::StringBuilder::stringify(str, content);
 
 			content += ",\"destination\":";
-			str = std::string(ships[ptr].ship.destination);
+			str = std::string(ship.destination);
 			JSON::StringBuilder::stringify(str, content);
-
 
 			content += ",\"last_signal\":" + std::to_string(delta_time) + "}";
 			delim = ",";
@@ -403,7 +403,6 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	}
 	else
 		tag.validated = false;
-
 
 	Send(data, len, tag);
 }

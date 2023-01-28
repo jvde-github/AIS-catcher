@@ -21,7 +21,6 @@
 #include <mutex>
 #include <time.h>
 
-
 #ifdef HASCURL
 #include <curl/curl.h>
 #endif
@@ -46,10 +45,6 @@
 #include "Keys.h"
 #include "TCP.h"
 #include "Utilities.h"
-#include "ZIP.h"
-
-#include "JSON/JSON.h"
-#include "JSON/StringBuilder.h"
 
 namespace IO {
 
@@ -58,48 +53,12 @@ namespace IO {
 		std::string msg;
 		std::time_t stamp;
 
-		void Close() {
-			if (sock != -1) closesocket(sock);
-			sock = -1;
-			msg.clear();
-		}
-
-		void Start(SOCKET s) {
-			msg.clear();
-			stamp = std::time(0);
-			sock = s;
-		}
-
-		int Inactive(std::time_t now) {
-			return (int)((long int)now - (long int)stamp);
-		}
-
+		void Close();
+		void Start(SOCKET s);
+		int Inactive(std::time_t now);
 		bool isConnected() { return sock != -1; }
 
-		void Read() {
-			char buffer[1024];
-
-			if (sock != -1) {
-
-				int nread = recv(sock, buffer, sizeof(buffer), 0);
-#ifdef _WIN32
-				if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK)) {
-					int e = WSAGetLastError();
-#else
-				if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN)) {
-					int e = errno;
-#endif
-					if (nread != 0)
-						std::cerr << "Server: connection closed by error: " << strerror(e) << ", sock = " << sock << std::endl;
-
-					Close();
-				}
-				else if (nread > 0) {
-					msg += std::string(buffer, nread);
-					stamp = std::time(0);
-				}
-			}
-		}
+		void Read();
 	};
 
 	class Server {
@@ -107,10 +66,10 @@ namespace IO {
 		Server();
 		~Server();
 
-		virtual void Request(SOCKET s, const std::string& msg);
+		virtual void Request(Client& c, const std::string& msg);
 
-		void Response(SOCKET s, std::string type, const std::string& content);
-		void Response(SOCKET s, std::string type, char* data, int len, bool gzip = false);
+		void Response(Client& c, std::string type, const std::string& content);
+		void Response(Client& c, std::string type, char* data, int len, bool gzip = false);
 
 		bool start(int port);
 		void setReusePort(bool b) { reuse_port = b; }
@@ -147,8 +106,9 @@ namespace IO {
 		sockaddr_in service;
 
 		bool Send(SOCKET s, const char* data, int len);
+		std::string Parse(const std::string& s);
+		int findFreeClient();
 
-		std::string parse(const std::string& s);
 		void acceptClients();
 		void readClients();
 		void processClients();
