@@ -44,34 +44,6 @@ namespace IO {
 		if (sock != -1) closesocket(sock);
 	}
 
-	int Server::readLine(SOCKET s, std::string& str) {
-		int r = 0;
-		char c;
-		str.clear();
-
-		while (true) {
-			r = recv(s, &c, 1, 0);
-			if (r == -1 || r == 0 || c == '\n') return r;
-			if (c != '\r') str += c;
-		}
-		return r;
-	}
-
-	void Server::Process(SOCKET s) {
-		int r = 0;
-
-		header.clear();
-		do {
-			r = readLine(s, ret);
-			header += ret + '\n';
-		} while (r > 0 && !ret.empty());
-
-		if (r >= 0) {
-			std::string request = parse(header);
-			if (!request.empty()) Request(s, request);
-		}
-	}
-
 	void Server::acceptClients() {
 		int addrlen = sizeof(service);
 		SOCKET conn_socket;
@@ -95,10 +67,10 @@ namespace IO {
 
 
 		else {
-			std::cerr << "Connection made on socket: " << conn_socket << std::endl;
+			// std::cerr << "Connection made on socket: " << conn_socket << std::endl;
 			int ptr = -1;
 			for (int i = 0; i < MAX_CONN; i++)
-				if (client[i].sock == -1) {
+				if (client[i].isConnected()) {
 					ptr = i;
 					break;
 				}
@@ -109,7 +81,7 @@ namespace IO {
 			else {
 				client[ptr].Start(conn_socket);
 				if (!setNonBlock(conn_socket)) {
-					std::cerr << "cannot make client socket non-blocking" << std::endl;
+					std::cerr << "Server: cannot make client socket non-blocking" << std::endl;
 					client[ptr].Close();
 				}
 			}
@@ -117,40 +89,38 @@ namespace IO {
 	}
 
 	void Server::cleanUp() {
-		for (int i = 0; i < MAX_CONN; i++)
-			if (client[i].sock != -1) {
-				if (client[i].Inactive(time(0)) > 30) {
-					std::cerr << "Inactive (" << client[i].sock << "):" << client[i].Inactive(time(0)) << std::endl;
-					client[i].Close();
+
+		for (auto& c : client)
+			if (c.isConnected()) {
+				if (c.Inactive(time(0)) > 30) {
+					std::cerr << "Server: closing inactive client socket (" << c.sock << ") for" << c.Inactive(time(0)) << "s" << std::endl;
+					c.Close();
 				}
 			}
 	}
 
 	void Server::readClients() {
-		char buffer[1024];
 
-		for (int i = 0; i < MAX_CONN; i++) {
-			client[i].Read();
-		}
+		for (auto& c : client) c.Read();
 	}
 
 	void Server::processClients() {
-		for (int i = 0; i < MAX_CONN; i++) {
-			if (client[i].sock != -1) {
-				std::size_t pos = client[i].msg.find("\r\n\r\n");
+		for (auto& c : client) {
+			if (c.isConnected()) {
+				std::size_t pos = c.msg.find("\r\n\r\n");
 
 				if (pos != std::string::npos) {
-					std::string request = parse(client[i].msg);
-					std::cerr << "Request (" << client[i].sock << "): " << request << std::endl;
+					std::string request = parse(c.msg);
+					std::cerr << "Request (" << c.sock << "): " << request << std::endl;
 					if (!request.empty())
-						Request(client[i].sock, request);
+						Request(c.sock, request);
 					else
-						std::cerr << client[i].msg << std::endl;
-					client[i].msg.erase(0, pos + 4);
+						std::cerr << c.msg << std::endl;
+					c.msg.erase(0, pos + 4);
 				}
-				else if (client[i].msg.size() > 4096) {
-					std::cerr << "Server: client flooding server: " << client[i].sock << std::endl;
-					client[i].Close();
+				else if (c.msg.size() > 4096) {
+					std::cerr << "Server: closing connection, client flooding server: " << c.sock << std::endl;
+					c.Close();
 				}
 			}
 		}
@@ -181,10 +151,10 @@ namespace IO {
 
 		int maxfds = sock;
 
-		for (int i = 0; i < MAX_CONN; i++) {
-			if (client[i].sock != -1) {
-				FD_SET(client[i].sock, &fds);
-				if (client[i].sock > maxfds) maxfds = client[i].sock;
+		for (auto& c : client) {
+			if (c.sock != -1) {
+				FD_SET(c.sock, &fds);
+				if (c.sock > maxfds) maxfds = c.sock;
 			}
 		}
 
