@@ -44,75 +44,123 @@ namespace IO {
 		if (sock != -1) closesocket(sock);
 	}
 
-	int Server::readLine(SOCKET s, std::string& str) {
-		int r = 0;
-		char c;
-		str.clear();
+	void Server::acceptClients() {
+		int addrlen = sizeof(service);
+		SOCKET conn_socket;
 
-		while (true) {
-			r = recv(s, &c, 1, 0);
-			if (r == -1 || r == 0 || c == '\n') return r;
-			if (c != '\r') str += c;
+		conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen);
+#ifdef _WIN32
+		if (conn_socket == SOCKET_ERROR) {
+			if (WSAGetLastError() != WSAEWOULDBLOCK) {
+				std::cerr << "Server: error accepting connection. " << strerror(WSAGetLastError()) << std::endl;
+				return;
+			}
 		}
-		return r;
+#else
+		if (conn_socket == -1) {
+			if (errno != EWOULDBLOCK && errno != EAGAIN) {
+				std::cerr << "Server: error accepting connection. " << strerror(errno) << std::endl;
+				return;
+			}
+		}
+#endif
+
+
+		else {
+			// std::cerr << "Connection made on socket: " << conn_socket << std::endl;
+			int ptr = -1;
+			for (int i = 0; i < MAX_CONN; i++)
+				if (!client[i].isConnected()) {
+					ptr = i;
+					break;
+				}
+			if (ptr == -1) {
+				std::cerr << "Server: max connections of " << MAX_CONN << " reached, closing socket" << std::endl;
+				closesocket(conn_socket);
+			}
+			else {
+				client[ptr].Start(conn_socket);
+				if (!setNonBlock(conn_socket)) {
+					std::cerr << "Server: cannot make client socket non-blocking" << std::endl;
+					client[ptr].Close();
+				}
+			}
+		}
 	}
 
-	void Server::Process(SOCKET s) {
-		int r = 0;
+	void Server::cleanUp() {
 
-		header.clear();
-		do {
-			r = readLine(s, ret);
-			header += ret + '\n';
-		} while (r > 0 && !ret.empty());
+		for (auto& c : client)
+			if (c.isConnected()) {
+				if (c.Inactive(time(0)) > 30) {
+					std::cerr << "Server: closing inactive client socket (" << c.sock << ") for" << c.Inactive(time(0)) << "s" << std::endl;
+					c.Close();
+				}
+			}
+	}
 
-		if (r >= 0) {
-			std::string request = parse(header);
-			if (!request.empty()) Request(s, request);
+	void Server::readClients() {
+
+		for (auto& c : client) c.Read();
+	}
+
+	void Server::processClients() {
+		for (auto& c : client) {
+			if (c.isConnected()) {
+				std::size_t pos = c.msg.find("\r\n\r\n");
+
+				if (pos != std::string::npos) {
+					std::string request = parse(c.msg);
+					std::cerr << "Request (" << c.sock << "): " << request << std::endl;
+					if (!request.empty())
+						Request(c.sock, request);
+					else
+						std::cerr << c.msg << std::endl;
+					c.msg.erase(0, pos + 4);
+				}
+				else if (c.msg.size() > 4096) {
+					std::cerr << "Server: closing connection, client flooding server: " << c.sock << std::endl;
+					c.Close();
+				}
+			}
 		}
 	}
 
 	void Server::Run() {
 		std::vector<SOCKET> conn_sockets;
-
+		std::cerr << "Server: starting server thread.\n";
 		while (!stop) {
-			int addrlen = sizeof(service);
-			SOCKET conn_socket;
-
-			FD_ZERO(&fdr);
-			FD_SET(sock, &fdr);
-			for (auto s : conn_sockets) FD_SET(s, &fdr);
-
-			struct timeval tv = { 0, 50000 };
-			int nready = select(sock + conn_sockets.size() + 1, &fdr, 0, 0, &tv);
-
-			if (FD_ISSET(sock, &fdr)) {
-				if ((conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen)) < 0) {
-					std::cerr << "Server: error accepting incoming connection.";
-					continue;
-				}
-				else {
-					conn_sockets.push_back(conn_socket);
-				}
-			}
-
-			for (auto s : conn_sockets) {
-				if (FD_ISSET(s, &fdr)) {
-					Process(s);
-					closesocket(s);
-					conn_sockets.erase(std::remove(conn_sockets.begin(), conn_sockets.end(), s), conn_sockets.end());
-				}
-			}
+			acceptClients();
+			readClients();
+			processClients();
+			cleanUp();
+			Sleep();
 		}
-
-		for (auto s : conn_sockets) closesocket(s);
-		conn_sockets.clear();
 	}
 
 	void Server::Request(SOCKET s, const std::string& r) {
 		// TO DO: return 404 by default
 	}
 
+	void Server::Sleep() {
+		struct timeval tv;
+		fd_set fds;
+
+		FD_ZERO(&fds);
+		FD_SET(sock, &fds);
+
+		int maxfds = sock;
+
+		for (auto& c : client) {
+			if (c.sock != -1) {
+				FD_SET(c.sock, &fds);
+				if (c.sock > maxfds) maxfds = c.sock;
+			}
+		}
+
+		tv = { 0, 250 };
+		select(maxfds + 1, &fds, NULL, NULL, &tv);
+	}
 
 	void Server::Response(SOCKET s, std::string type, const std::string& content) {
 		Response(s, type, (const char*)content.c_str(), content.size());
@@ -122,7 +170,7 @@ namespace IO {
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
 		if (gzip) header += "\r\nContent-Encoding: gzip";
-		header += "\r\nConnection: close\r\nContent-Length: " + std::to_string(len) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
+		header += "\r\nConnection: keep-alive\r\nContent-Length: " + std::to_string(len) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
 
 		::send(s, header.c_str(), header.length(), 0);
 		::send(s, data, len, 0);
@@ -153,8 +201,14 @@ namespace IO {
 			return false;
 		}
 
-		if (listen(sock, 32) < 0) return false;
+		if (listen(sock, 511) < 0) return false;
 
+		client.clear();
+		client.resize(MAX_CONN);
+
+		if (!setNonBlock(sock)) {
+			std::cerr << "Server: cannot set socket to non-blocking\n";
+		}
 		stop = false;
 		run_thread = std::thread(&Server::Run, this);
 

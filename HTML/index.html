@@ -2779,39 +2779,42 @@
     
     console.log("Starting plugin code")
 
-    // TO DO: load plugins via <SCRIPT SRC ..>, however, seems to create issues for our simple webserver on iOS so for now implemented via Fetch until this is sorted
-    loadPlugins().then((result) => {
+</script>
 
-        init_preSettings();
+<script src="config.js"></script>
 
-        console.log("Load settings")
-        loadSettings();
+<script>
+    console.log("Plugin loading completed, build string: " + build_string);
 
-        console.log("Load settings from URL parameters")
+    init_preSettings();
 
-        if(settings.loadURL)
-            loadSettingsFromURL();
+    console.log("Load settings")
+    loadSettings();
 
-        init_postSettings();
+    console.log("Load settings from URL parameters")
 
-        console.log("Setup tabs");
-        initFullScreen();
-        initPlots();
-        initMap();            
-        addLabelControl(); 
+    if(settings.loadURL)
+        loadSettingsFromURL();
 
-        init_postTabsInit();
+    init_postSettings();
 
-        console.log("Switch to active tab");
-        selectTab();
+    console.log("Setup tabs");
+    initFullScreen();
+    initPlots();
+    initMap();            
+    addLabelControl(); 
 
-        let urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('mmsi'))
-            openFocus(urlParams.get('mmsi'), urlParams.get('zoom'));
+    init_postTabsInit();
 
-        saveSettings();
-        main();
-    });
+    console.log("Switch to active tab");
+    selectTab();
+
+    let urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mmsi'))
+        openFocus(urlParams.get('mmsi'), urlParams.get('zoom'));
+
+    saveSettings();
+    main();
     
 </script>
 </body>
