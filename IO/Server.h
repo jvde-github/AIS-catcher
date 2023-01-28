@@ -107,24 +107,22 @@ namespace IO {
 		Server();
 		~Server();
 
-		const int MAX_CONN = 64;
-		std::vector<Client> client;
-
 		virtual void Request(SOCKET s, const std::string& msg);
 
 		void Response(SOCKET s, std::string type, const std::string& content);
-		void Response(SOCKET s, std::string type, const char* data, int len, bool gzip = false);
+		void Response(SOCKET s, std::string type, char* data, int len, bool gzip = false);
 
 		bool start(int port);
 		void setReusePort(bool b) { reuse_port = b; }
 		bool setNonBlock(SOCKET sock) {
+
 #ifndef _WIN32
 			int r = fcntl(sock, F_GETFL, 0);
 			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
 
 			if (r == -1) return false;
 #else
-			u_long mode = 1; // 1 to enable non-blocking socket
+			u_long mode = 1;
 			ioctlsocket(sock, FIONBIO, &mode);
 #endif
 			return true;
@@ -136,6 +134,9 @@ namespace IO {
 		int port = 8100;
 		bool reuse_port = true;
 
+		const int MAX_CONN = 64;
+		std::vector<Client> client;
+
 		struct addrinfo* address;
 		std::thread run_thread;
 
@@ -143,26 +144,15 @@ namespace IO {
 		std::string ret, header;
 
 		void Run();
-
 		sockaddr_in service;
 
-		std::string parse(const std::string& s) {
-			int max = 10;
-			bool found_get = false;
+		bool Send(SOCKET s, const char* data, int len);
 
-			std::istringstream iss(s);
-			std::string item;
-			while (std::getline(iss, item, ' ') && --max) {
-				if (found_get) return item;
-				if (item == "GET") found_get = true;
-			}
-			return "";
-		}
-
+		std::string parse(const std::string& s);
 		void acceptClients();
 		void readClients();
 		void processClients();
 		void cleanUp();
-		void Sleep();
+		void SleepAndWait();
 	};
 }

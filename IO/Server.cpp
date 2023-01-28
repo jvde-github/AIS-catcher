@@ -18,6 +18,7 @@
 #include <cstring>
 #include <algorithm>
 
+#include "Common.h"
 #include "Server.h"
 
 namespace IO {
@@ -111,7 +112,6 @@ namespace IO {
 
 				if (pos != std::string::npos) {
 					std::string request = parse(c.msg);
-					std::cerr << "Request (" << c.sock << "): " << request << std::endl;
 					if (!request.empty())
 						Request(c.sock, request);
 					else
@@ -134,7 +134,7 @@ namespace IO {
 			readClients();
 			processClients();
 			cleanUp();
-			Sleep();
+			SleepAndWait();
 		}
 	}
 
@@ -142,7 +142,7 @@ namespace IO {
 		// TO DO: return 404 by default
 	}
 
-	void Server::Sleep() {
+	void Server::SleepAndWait() {
 		struct timeval tv;
 		fd_set fds;
 
@@ -162,11 +162,58 @@ namespace IO {
 		select(maxfds + 1, &fds, NULL, NULL, &tv);
 	}
 
-	void Server::Response(SOCKET s, std::string type, const std::string& content) {
-		Response(s, type, (const char*)content.c_str(), content.size());
+	bool Server::Send(SOCKET s, const char* data, int len) {
+		int sent = 0;
+		int bytes = 0;
+
+		while (sent < len) {
+			int remaining = len - sent;
+			bytes = ::send(s, data + sent, remaining, 0);
+
+#ifndef _WIN32
+			if (bytes != remaining) {
+				if (errno == EWOULDBLOCK || errno == EAGAIN) {
+					SleepSystem(100);
+				}
+				else {
+					std::cerr << "Server: error sending response" << std::endl;
+					return false;
+				}
+			}
+#else
+			if (bytes != remaining) {
+				if (WSAGetLastError() == WSAEWOULDBLOCK) {
+					SleepSystem(100);
+				}
+				else {
+					std::cerr << "Server: error sending response" << std::endl;
+					return false;
+				}
+			}
+#endif
+			sent += bytes;
+		}
+		return true;
 	}
 
-	void Server::Response(SOCKET s, std::string type, const char* data, int len, bool gzip) {
+	std::string Server::parse(const std::string& s) {
+		int max = 10;
+		bool found_get = false;
+
+		std::istringstream iss(s);
+		std::string item;
+		while (std::getline(iss, item, ' ') && --max) {
+			if (found_get) return item;
+			if (item == "GET") found_get = true;
+		}
+		return "";
+	}
+
+	void Server::Response(SOCKET s, std::string type, const std::string& content) {
+		Response(s, type, (char*)content.c_str(), content.size());
+	}
+
+	void Server::Response(SOCKET s, std::string type, char* data, int len, bool gzip) {
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
 		if (gzip) header += "\r\nContent-Encoding: gzip";
@@ -175,40 +222,8 @@ namespace IO {
 		int sent = 0;
 		int bytes = 0;
 
-		while (sent < header.length()) {
-			int remaining = header.length() - sent;
-			bytes = ::send(s, header.c_str() + sent, remaining, 0);
-#ifndef _WIN32
-			if (bytes != remaining) {
-				if(errno == EWOULDBLOCK || errno == EAGAIN) {
-					SleepSystem(100);
-				}
-				else {
-					std::cerr << "Server: error sending response" << std::endl;
-					return;
-				}
-			}
-#endif
-			sent += bytes;
-		}
-
-		sent = 0;
-		while (sent < len) {
-			int remaining = len - sent;
-			bytes = ::send(s, data + sent, remaining, 0);
-#ifndef _WIN32
-			if (bytes != remaining) {
-				if(errno == EWOULDBLOCK || errno == EAGAIN) {
-					SleepSystem(100);
-				}
-				else {
-					std::cerr << "Server: error sending response" << std::endl;
-					return;
-				}
-			}
-#endif
-			sent += bytes;
-		}
+		Send(s, header.c_str(), header.length());
+		Send(s, data, len);
 	}
 
 	bool Server::start(int port) {
