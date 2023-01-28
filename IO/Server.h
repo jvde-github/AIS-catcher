@@ -19,6 +19,8 @@
 #include <list>
 #include <thread>
 #include <mutex>
+#include <time.h>
+
 
 #ifdef HASCURL
 #include <curl/curl.h>
@@ -51,10 +53,56 @@
 
 namespace IO {
 
+	struct Client {
+		SOCKET sock = -1;
+		std::string msg;
+		std::time_t stamp;
+
+		void Close() {
+			if (sock != -1) closesocket(sock);
+			sock = -1;
+			msg.clear();
+			std::cerr << "Closing socket" << std::endl;
+		}
+
+		void Start(SOCKET s) {
+			msg.clear();
+			stamp = std::time(0);
+			sock = s;
+		}
+
+		int Inactive(std::time_t now) {
+			return (int)((long int)now - (long int)stamp);
+		}
+		void Read() {
+			char buffer[1024];
+
+			if (sock != -1) {
+
+				int nread = recv(sock, buffer, sizeof(buffer), 0);
+#ifdef _WIN32
+				if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK)) {
+#else
+				if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN)) {
+#endif
+					std::cerr << "Server: connection closed by client or error: " << sock << std::endl;
+					Close();
+				}
+				else if (nread > 0) {
+					msg += std::string(buffer, nread);
+					stamp = std::time(0);
+				}
+			}
+		}
+	};
+
 	class Server {
 	public:
 		Server();
 		~Server();
+
+		const int MAX_CONN = 64;
+		std::vector<Client> client;
 
 		virtual void Request(SOCKET s, const std::string& msg);
 
@@ -63,6 +111,18 @@ namespace IO {
 
 		bool start(int port);
 		void setReusePort(bool b) { reuse_port = b; }
+		bool setNonBlock(SOCKET sock) {
+#ifndef _WIN32
+			int r = fcntl(sock, F_GETFL, 0);
+			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+
+			if (r == -1) return false;
+#else
+			u_long mode = 1; // 1 to enable non-blocking socket
+			ioctlsocket(sock, FIONBIO, &mode);
+#endif
+			return true;
+		}
 
 	private:
 		SOCKET sock = -1;
@@ -94,6 +154,11 @@ namespace IO {
 		}
 		int readLine(SOCKET s, std::string& str);
 		void Process(SOCKET s);
+		void acceptClients();
+		void readClients();
+		void processClients();
+		void cleanUp();
+		void Sleep();
 
 		fd_set fdr, fdw;
 	};
