@@ -82,6 +82,7 @@ void Usage() {
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file or stdin (.), short for -r -ga FORMAT yy FILE filename" << std::endl;
 	std::cerr << "\t[-t [host [port]] - read IQ data from remote RTL-TCP instance]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
+	std::cerr << "\t[-x [server][port] - UDP input of NMEA messages at port on server" << std::endl;
 	std::cerr << "\t[-y [host [port]] - read IQ data from remote SpyServer]" << std::endl;
 	std::cerr << "\t[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]" << std::endl;
 	std::cerr << std::endl;
