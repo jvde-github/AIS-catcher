@@ -52,6 +52,7 @@
 #include "Device/SpyServer.h"
 #include "Device/SoapySDR.h"
 #include "Device/ZMQ.h"
+#include "Device/UDP.h"
 
 //--------------------------------------------
 
@@ -86,6 +87,7 @@ class Receiver {
 	Device::HACKRF _HACKRF;
 	Device::SOAPYSDR _SOAPYSDR;
 	Device::ZMQ _ZMQ;
+	Device::UDP _UDP;
 
 	TAG tag;
 
@@ -108,6 +110,7 @@ public:
 	Device::HACKRF& HACKRF() { return _HACKRF; };
 	Device::SOAPYSDR& SOAPYSDR() { return _SOAPYSDR; };
 	Device::ZMQ& ZMQ() { return _ZMQ; };
+	Device::UDP& UDP() { return _UDP; };
 
 	// available devices
 	std::vector<Device::Description> device_list;
