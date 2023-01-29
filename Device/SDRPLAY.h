@@ -42,7 +42,7 @@ namespace Device {
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;
 
-		int LNAstate = 5;
+		int LNAstate = 0;
 		int gRdB = 40;
 		bool AGC = true;
 
