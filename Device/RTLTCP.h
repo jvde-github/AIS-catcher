@@ -49,7 +49,7 @@ namespace Device {
 
 		struct addrinfo* address;
 
-		static const int TRANSFER_SIZE = 1024;
+		int TRANSFER_SIZE = 1024;
 		static const int BUFFER_SIZE = 16 * 16384;
 
 		int timeout = 2;
