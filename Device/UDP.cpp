@@ -124,7 +124,7 @@ namespace Device {
 		RAW r = { getFormat(), buffer, 0 };
 
 		while (isStreaming()) {
-			int nread = recv(sock, &buffer, sizeof(buffer), 0);
+			int nread = recv(sock, buffer, sizeof(buffer), 0);
 
 			if (nread > 0) {
 				r.size = nread;
