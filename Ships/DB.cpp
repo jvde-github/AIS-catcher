@@ -364,7 +364,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	const AIS::Message* msg = (AIS::Message*)data[0].binary;
 	int type = msg->type();
 
-	if (type < 1 || type > 27) return;
+	if (type < 1 || type > 27 || msg->mmsi() == 0) return;
 
 	int ptr = findShip(msg->mmsi());
 
