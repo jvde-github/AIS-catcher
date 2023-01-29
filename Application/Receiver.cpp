@@ -88,6 +88,8 @@ Device::Device* Receiver::getDeviceByType(Type type) {
 		return &_RTLTCP;
 	case Type::SPYSERVER:
 		return &_SpyServer;
+	case Type::UDP:
+		return &_UDP;
 #ifdef HASZMQ
 	case Type::ZMQ:
 		return &_ZMQ;

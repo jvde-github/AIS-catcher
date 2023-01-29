@@ -287,6 +287,11 @@ int main(int argc, char* argv[]) {
 				if (count == 1) receiver.RTLTCP().Set("host", arg1);
 				if (count == 2) receiver.RTLTCP().Set("port", arg2).Set("host", arg1);
 				break;
+			case 'x':
+				receiver.InputType() = Type::UDP;
+				Assert(count == 2, param, "requires two parameters [server] [port].");
+				receiver.UDP().Set("port", arg2).Set("server",arg1);
+				break;
 			case 'y':
 				receiver.InputType() = Type::SPYSERVER;
 				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");

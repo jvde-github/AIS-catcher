@@ -29,6 +29,7 @@
     <ClCompile Include="..\Device\HACKRF.cpp" />
     <ClCompile Include="..\Device\RTLSDR.cpp" />
     <ClCompile Include="..\Device\RTLTCP.cpp" />
+    <ClCompile Include="..\Device\UDP.cpp" />
     <ClCompile Include="..\Device\ZMQ.cpp" />
     <ClCompile Include="..\Device\SDRPLAY.cpp" />
     <ClCompile Include="..\Device\SoapySDR.cpp" />
@@ -68,6 +69,7 @@
     <ClInclude Include="..\Device\HACKRF.h" />
     <ClInclude Include="..\Device\RTLSDR.h" />
     <ClInclude Include="..\Device\RTLTCP.h" />
+    <ClInclude Include="..\Device\UDP.h" />
     <ClInclude Include="..\Device\ZMQ.h" />
     <ClInclude Include="..\Device\SDRPLAY.h" />
     <ClInclude Include="..\Device\SoapySDR.h" />

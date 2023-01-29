@@ -58,6 +58,7 @@ enum class Type {
 	WAVFILE,
 	RAWFILE,
 	RTLTCP,
+	UDP,
 	HACKRF,
 	SOAPYSDR,
 	ZMQ,
