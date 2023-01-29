@@ -44,7 +44,15 @@ namespace Device {
 
 		Device::Play();
 
-		fifo.Init(BUFFER_SIZE);
+		if (getFormat() != Format::TXT) {
+			fifo.Init(BUFFER_SIZE);
+			TRANSFER_SIZE = 1024;
+		}
+		else {
+			fifo.Init(1, BUFFER_SIZE);
+			TRANSFER_SIZE = 1;
+		}
+
 		applySettings();
 
 		lost = false;
