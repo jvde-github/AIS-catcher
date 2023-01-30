@@ -24,98 +24,13 @@ Only use this software in regions where such use is permitted.
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
 
 ## What's new?
-For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.42). 
-### NMEA input over TCP and UDP
-AIS-catcher can now receive NMEA lines over UDP:
-```console
-AIS-catcher -x 192.168.1.235 4002
-```
-and as TCP client:
-```console
-AIS-catcher -t 153.44.253.27 5631 -gt FORMAT txt PROTOCOL none
-```
+For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.43). 
+The main recent development is the addition of a web interface for which a few example are available online: for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available.
+More information in [this](https://github.com/jvde-github/AIS-catcher#Web-interface) section. 
 
-### Web interface
-There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics which has been first included in full release v0.42. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.sytes.net/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
-
-A proper credit section needs to be added but the web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/) and [flag-icons](https://github.com/lipis/flag-icons). 
-
-Make sure you use the latest version and start the webserver as follows:
-```console
-AIS-catcher -N 8100
-```
-where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a menu which gives access to tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
 </p>
-Current development aims at making this webinterface easily accessible on mobile devices as well (see screenshot) and enriching the experience, for example by adding the contours of a vessel where available: 
-<p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe5413ffb16cc01530b17950f982d1b8685dabd0/media/Screenshot%20ship%20shape.jpg" width="30%"/>
-</p>
-
-There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
-```
-AIS-catcher -N STATION Southwood STATION_LINK http://example.com
-```
-This could be a useful option if you want to offer the interface externally. To display the distance of received messages to your station you need to provide the coordinates as follows:
-```
-AIS-catcher -N LAT 50 LON 3.141592
-```
-All these options can be captured in the configuration file (in a section with name ``server``), see below. 
-
-### User interface and visualization
-
-When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle that will enclose the ships dimensions regardless of the direction it is pointing.
-This commonly happens with Class B ships and if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the historical frigate the USS Constitution, which is docked in the port of Boston. 
-<p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
-</p>
-
-Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T. 
-
-The "tag control" (above the zoom controls) will add labels to the map:
-<p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/4114ed895f610a13598a61a10b077aeda8565ee3/media/Screenshot%20Moored.jpg" width="50%"/>
-</p>
-
-The summary window with details on a vessel, as received, is called the **ship card** and will be shown when a ship is selected on the map by the user. For smaller screens it can be minimized in the top bar (via minus symbols) and in fact the ship card will be opened in minimized mode on mobile devices as in the picture with the USS Constitution. In the max form the user can toggle rows that will be visible in this minimized state. These rows are shown with a light grey background. Finally, in minimized mode some options are accessible via icons in the top bar, including showing the vessel track and centering the map at the location of the current vessel which are otherwise provided in the bottom bar of the vessel card. Other options in the bottom bar give access to more ship details via some of the well-known aggregator sites.
-
-### Validation
-Recent updates of the web-interface show a "validation" indication at the left border in the header of the ship card.
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/52420030/212470486-8987fa96-5324-41d8-a782-dbcbdc18aca0.png" width="25%"/>
-</p>
-
-AIS-catcher analyzes an enormous stream of bits   per day for both AIS channels (2 to the power 33 to be precise). To avoid erroneous messages, the AIS system employs a 16 bit CRC and various other bit patterns that need to be matched. Unfortunately, based on pure statistics this cannot prevent that there will be an occasional technically correct but nonsense message. These are typically easy to recognize (e.g. looking at signal level, location on map) and the aggregator sites like MarineTraffic will filter these out. 
-
-To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, evolving, "validation function" that checks the location of the vessel for consistency between messages and flags if this is consistent. Practically, if we receive a position from a MMSI which is relatively close to the last received position, the "validation" indicator will be green and the distance to the station will be used to determine range. Messages within 50 NMi from the receiving station will be always included for range setting. The indicator will be grey if validation for the location could not be performed and red if it was not succesful. 
-
-### Plots
-The plot tab contains several plots to assess the performance of the receiver:
-<p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/8096b8bfa3caca6c73023ce1e708ca421292f27f/media/ScreenshotPlot.jpg" width="50%"/>
-</p>
-Upon restarting AIS-catcher, the history displayed in the graphs is typically lost. To preserve the state of the plots, a useful option is to save the content to a file, such as "stat.bin," at closure and to create a backup every 10 minutes. This can be accomplished with the following options:
-
-```console
-AIS-catcher -N 8100 FILE stat.bin BACKUP 10
-```
-These are new experimental feautures so reporting of any issues encountered is appreciated.
-
-### What is next? Custom plugins and styles...
-
-To give the user the option to tweak the look-and-feel and functionality of the webserver and/or modify for example the color scheme, the program
-provides the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
-```console
-AIS-catcher -N PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
-```
-You can also include all plugin files from a directory using the command:
-```console
-AIS-catcher -N PLUGIN_DIR /usr/share/aiscatcher/plugins
-```
-Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and style plugins. The repository includes a few example plugins that demonstrate how to add additional maps, create new menu items and present some of the ship data in a different unit (e.g. dimension of the vessel in feet instead of meters). 
-
-In principle the implementation already works but to be really useful requires a clean up and refactoring of the core HTML source file and publication in this repository. So more to come in the coming period. 
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
@@ -233,6 +148,81 @@ And finally, full decoding of the AIS message is activated via ``-o 5`` (or ``-o
 Meta data is not calculated by default to keep the program as light as possible when running as a server on low spec devices but can be activated with the ```-M``` switch. The calculation of signal power (in dB) and applied frequency correction (in ppm) are activated with  ``-M D``. NMEA messages are timestamped with  ``-M T`` and additional country information from the station derived from the MMSI is included in JSON output with ``-M M``. 
 
 There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc).
+
+### Web interface
+As per full release v0.42 AIS-catcher includes a simple web interface. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.sytes.net/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
+
+The web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/) and [flag-icons](https://github.com/lipis/flag-icons). 
+
+Make sure you use the latest version and start the webserver as follows:
+```console
+AIS-catcher -N 8100
+```
+where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a menu which gives access to tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
+Some development has been done to make this webinterface easily accessible on mobile devices as well (see screenshot) and enriching the experience, for example by adding the contours of a vessel where available: 
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe5413ffb16cc01530b17950f982d1b8685dabd0/media/Screenshot%20ship%20shape.jpg" width="30%"/>
+</p>
+
+There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
+```
+AIS-catcher -N STATION Southwood STATION_LINK http://example.com
+```
+This could be a useful option if you want to offer the interface externally. To display the distance of received messages to your station you need to provide the coordinates as follows:
+```
+AIS-catcher -N LAT 50 LON 3.141592
+```
+All these options can be captured in the configuration file (in a section with name ``server``), see below. 
+
+### User interface and visualization
+
+When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle that will enclose the ships dimensions regardless of the direction it is pointing.
+This commonly happens with Class B ships and if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the historical frigate the USS Constitution, which is docked in the port of Boston. 
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
+</p>
+
+Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T. 
+
+The "tag control" (above the zoom controls) will add labels to the map:
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/4114ed895f610a13598a61a10b077aeda8565ee3/media/Screenshot%20Moored.jpg" width="50%"/>
+</p>
+
+The summary window with details on a vessel, as received, is called the **ship card** and will be shown when a ship is selected on the map by the user. For smaller screens it can be minimized in the top bar (via minus symbols or by clicking on the header bar) and in fact the ship card will be opened in minimized mode on mobile devices as in the picture with the USS Constitution. In the max form the user can toggle rows that will be visible in this minimized state. These rows are shown with a light grey background. Finally, in minimized mode some options are accessible via icons in the top bar, including showing the vessel track and centering the map at the location of the current vessel which are otherwise provided in the bottom bar of the vessel card. Other options in the bottom bar give access to more ship details via some of the well-known aggregator sites.
+
+### Validation
+The web-interface shows a "validation" indication at the left border in the header of the ship card (and in the ship table).
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/52420030/212470486-8987fa96-5324-41d8-a782-dbcbdc18aca0.png" width="25%"/>
+</p>
+
+AIS-catcher analyzes an enormous stream of bits  per day for both AIS channels (2 to the power 33 to be precise). To avoid erroneous messages, the AIS system employs a 16 bit CRC and various other bit patterns that need to be matched. Unfortunately, based on pure statistics this cannot prevent that there will be an occasional technically correct but nonsense message. These are typically easy to recognize (e.g. looking at signal level, location on map) and the aggregator sites like MarineTraffic will filter these out. 
+
+To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, evolving, "validation function" that checks the location of the vessel for consistency between messages and flags if this is inconsistent. Practically, if we receive a position from a MMSI which is relatively close to the last received position, the "validation" indicator will be green and the distance to the station will be used to determine range. Please note that messages within 50 NMi from the receiving station will be always included for range setting. The indicator will be grey if validation for the location could not be performed and red if it was not succesful. 
+
+### Plots
+The plot tab contains several plots to assess the performance of the receiver:
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/8096b8bfa3caca6c73023ce1e708ca421292f27f/media/ScreenshotPlot.jpg" width="50%"/>
+</p>
+Upon restarting AIS-catcher, the history displayed in the graphs is typically lost. To preserve the state of the plots, a useful option is to save the content to a file, such as "stat.bin," at closure and to create a backup every 10 minutes. This can be accomplished with the following options:
+
+```console
+AIS-catcher -N 8100 FILE stat.bin BACKUP 10
+```
+
+### Custom plugins and styles...
+
+To give the user the option to tweak the look-and-feel and functionality of the webserver and/or modify for example the color scheme or regional preferences, the program provides the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
+```console
+AIS-catcher -N PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
+```
+You can also include all plugin files from a directory using the command:
+```console
+AIS-catcher -N PLUGIN_DIR /usr/share/aiscatcher/plugins
+```
+Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and style plugins. The repository includes a few example plugins that demonstrate how to add additional maps, create new menu items and present some of the ship data in a different unit (e.g. dimension of the vessel in feet instead of meters). 
 
 ### Posting messages over HTTP
 
@@ -429,7 +419,7 @@ Normally it is sufficient to include one of these fields and not both.
 The fields and values in the configuration file can be specified  consistent with the command line settings as described 
 in this document. JSON is however case sensitive so field names must be entered in lower case.
 
-### AIS-catcher as a command line NMEA decoder
+### AIS-catcher as  NMEA decoder
 
 AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5`` which will automatically selected if the input format is set to `TXT`, e.g.:
 ```console
@@ -439,10 +429,18 @@ which produces
 ```json
 {"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-When piping NMEA text lines into AIS-catcher, use the format ``TXT`` this will also ensure that the program immediately processes the incoming characters and will not buffer them first. With this function you can use AIS-catcher to forward messages from a dAISy Hat (from file ``/cat/serial0``) or Norwegian coastal traffic, like this:  
-```console
+When piping NMEA text lines into AIS-catcher, use the format ``TXT`` this will also ensure that the program immediately processes the incoming characters and will not buffer them first. With this function you can use AIS-catcher to forward messages from a dAISy Hat (from file ``/cat/serial0``) or Norwegian coastal traffic, like this:  ```console
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -o 5
 ```
+or use the internal TCP client as follows:
+```console
+AIS-catcher -t 153.44.253.27 5631 -gt FORMAT txt PROTOCOL none
+```
+You can also read NMEA input via a built-in UDP server:
+```console
+AIS-catcher -x 192.168.1.235 4002
+```
+
 This new function json decoding functionality from text files has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only available switches for this decoder are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to, respectively, recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
 ```console
 echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r txt . -n -go nmea_refresh on crc_check off
