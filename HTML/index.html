@@ -1279,8 +1279,9 @@
                 break;
             case SAR:
                 c = ShippingClass.PLANE;
-                if (ship.mmsi > 111000000 && ship.mmsi < 111999999)
+                if (ship.mmsi > 111000000 && ship.mmsi < 111999999) {
                     if (Math.floor((ship.mmsi / 100) % 10, 0) == 5) c = ShippingClass.HELICOPTER;
+                }
                 else if (ship.mmsi > 11100000 && ship.mmsi < 11199999)
                     if (Math.floor((ship.mmsi / 10) % 10, 0) == 5) c = ShippingClass.HELICOPTER;
                 break;
