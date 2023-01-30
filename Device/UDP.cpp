@@ -67,12 +67,12 @@ namespace Device {
 			throw std::runtime_error("UDP: cannot create socket.");
 		}
 
+#ifndef _WIN32
 		int optval = 1;
 		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
 			throw std::runtime_error("UDP: cannot set socket option.");
 		}
 
-#ifndef _WIN32
 		r = fcntl(sock, F_GETFL, 0);
 		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
 
