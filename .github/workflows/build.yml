@@ -112,10 +112,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         vcpkg integrate install
-        git pull
-        vcpkg update
-        vcpkg upgrade --no-dry-run
-        
+       
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
