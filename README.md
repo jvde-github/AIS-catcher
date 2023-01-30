@@ -25,6 +25,17 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.42). 
+### NMEA input over TCP and UDP
+AIS-catcher can now receive NMEA lines over UDP:
+```console
+AIS-catcher -x 192.168.1.235 4002
+```
+and as TCP client:
+```console
+AIS-catcher -t 153.44.253.27 5631 -gt FORMAT txt PROTOCOL none
+```
+
+### Web interface
 There are currently a few things under development, key one is the inclusion of a simple webserver to view the station statistics which has been first included in full release v0.42. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.sytes.net/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
 
 A proper credit section needs to be added but the web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/) and [flag-icons](https://github.com/lipis/flag-icons). 
