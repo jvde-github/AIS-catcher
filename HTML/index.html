@@ -1410,11 +1410,11 @@
         shipsDB = {};
         ships.ships.forEach(s => {
             let entry = {}; 
-            entry.raw = s; 
             if(getMMSItype(s) != s.mmsi_type)
                 console.log(s.mmsi + ": " + s.mmsi_type + ' ' + getMMSItype(s));
 
-            entry.raw.mmsi_type = getMMSItype(s);
+            s.mmsi_type = getMMSItype(s);
+            entry.raw = s; 
             shipsDB[s.mmsi] = entry;
         });
     
