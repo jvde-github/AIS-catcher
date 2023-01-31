@@ -1181,6 +1181,25 @@
     const SARTEPIRB = 5;
     const ATON  = 6;
 
+    const CLASS_A_MASK = 1 << 1 | 1 << 2 | 1 << 3 | 1 << 5;
+    const CLASS_B_MASK = 1 << 18 | 1 << 19 | 1 << 24;
+    const BASESTATION_MASK = 1 << 4;
+    const SAR_MASK = 1 << 9;
+    const ATON_MASK = 1 << 21;
+
+    function getMMSItype(ship) {
+        if(ship.msg_type & CLASS_A_MASK) return CLASS_A;
+        if(ship.msg_type & CLASS_B_MASK) return CLASS_B;
+        if(ship.msg_type & BASESTATION_MASK) return BASESTATION;
+        if(ship.msg_type & SAR_MASK) return SAR;
+        if(ship.msg_type & ATON_MASK) return ATON;
+
+        if(ship.mmsi >= 97000000 && ship.mmsi <= 98000000)
+            return SARTEPIRB;
+        
+        return OTHER;
+    }
+
     function getShipTypeClassEri(ship) {
         switch(ship.shiptype) {
                 case 8030: 
@@ -1390,6 +1409,8 @@
 
         shipsDB = {};
         ships.ships.forEach(s => {let entry = {}; entry.raw = s; shipsDB[s.mmsi] = entry; });
+        ships.ships.forEach(s => {if(s.mmsi_type != getMMSItype(s) ) console.log(s.mmsi + ": " + s.mmsi_type + ' ' + getMMSItype(s))  });
+        
         return ships.ships.length;
     }
 
