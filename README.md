@@ -691,7 +691,7 @@ A list of some stations mentioning using AIS-catcher:
 
 Links to fully built Windows binaries of recent releases are provided in below table, with and without SDRPlay support (which requires a running SDRPlay API). 
 Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in one directory and start the executable on the command line with the required parameters or by clicking ``start.bat`` which you can edit with Notepad to set desired parameters.
-**There was an issue with v0.42 on Windows for UDP communication. To avoid this problem use an earlier version or the Bleeding Edge**.
+
 It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to check:
 - installation of RTL-SDR drivers is done via [Zadig](https://www.rtl-sdr.com/tag/zadig/)
 - installation of the Visual Studio runtime [libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
@@ -699,7 +699,7 @@ It will likely run out of the box in case you have already RTL-SDR software runn
 Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
  | :--- | :--- | :---: |   :--- | :---: |     
- |Edge| [ZIP](https://github.com/jvde-github/AIS-catcher/blob/462671222a668b312d5b5e17787d6b24fcd72d14/Edge/AIS-catcher%20x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/blob/462671222a668b312d5b5e17787d6b24fcd72d14/Edge/AIS-catcher%20x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/blob/462671222a668b312d5b5e17787d6b24fcd72d14/Edge/AIS-catcher%20SDRPLAY%20x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/blob/462671222a668b312d5b5e17787d6b24fcd72d14/Edge/AIS-catcher%20SDRPLAY%20x64.zip) |
+ |v0.44| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.SDRPLAY.x64.zip) |
  |v0.41| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.SDRPLAY.x64.zip) |
  |v0.40| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.SDRPLAY.x64.zip) | 
  |v0.39| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.SDRPLAY.x64.zip) | 
