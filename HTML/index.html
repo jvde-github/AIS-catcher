@@ -1995,6 +1995,10 @@
         
             var title = document.getElementById("stat_station").textContent;
             if (title != "" && title != null) document.title = "AIS-catcher " + title;
+
+            if(stat.build_describe != build_string) {
+                alert("Application has been updated on the server. Please reload page.");
+            }
         }
     }
     
