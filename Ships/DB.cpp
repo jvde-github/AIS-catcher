@@ -101,7 +101,7 @@ std::string DB::getJSON(bool full) {
 				content += "\"bearing\":null,";
 			}
 
-			content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
+			//content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
 			content += "\"level\":" + std::to_string(ship.level) + ",";
 			content += "\"count\":" + std::to_string(ship.count) + ",";
 			content += "\"ppm\":" + std::to_string(ship.ppm) + ",";
@@ -234,7 +234,7 @@ void DB::addToPath(int ptr) {
 	ships[ptr].ship.path_ptr = path_idx;
 	path_idx = (path_idx + 1) % M;
 }
-
+/*
 int DB::setMmsiType(int mmsi, int type) {
 
 	// type derived from MMSI
@@ -251,6 +251,7 @@ int DB::setMmsiType(int mmsi, int type) {
 	else
 		return MMSI_TYPE_OTHER; // anything else
 }
+*/
 
 bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDetail& v) {
 	bool position_updated = false;
@@ -346,7 +347,7 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
 	ship.msg_type |= 1 << msg->type();
-	ship.mmsi_type = setMmsiType(msg->mmsi(), msg->type());
+	//ship.mmsi_type = setMmsiType(msg->mmsi(), msg->type());
 
 	bool position_updated = false;
 
