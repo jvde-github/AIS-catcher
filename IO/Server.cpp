@@ -199,7 +199,7 @@ namespace IO {
 			}
 		}
 
-		tv = { 0, 250 };
+		tv = { 1, 0 };
 		select(maxfds + 1, &fds, NULL, NULL, &tv);
 	}
 
