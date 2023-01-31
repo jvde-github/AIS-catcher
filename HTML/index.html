@@ -1167,7 +1167,7 @@
         HELICOPTER: 7,
         STATION: 8,
         ATON: 9,
-        SAETEPIRB: 10,      
+        SARTEPIRB: 10,      
         FISHING: 12,
         OTHER: 13
     };
@@ -1305,7 +1305,7 @@
                     if (Math.floor((ship.mmsi / 10) % 10, 0) == 5) c = ShippingClass.HELICOPTER;
                 break;
             case SARTEPIRB:
-                c = ShippingClass.SAETEPIRB;
+                c = ShippingClass.SARTEPIRB;
                 break;
             case ATON:
                 c = ShippingClass.ATON;
@@ -1408,9 +1408,16 @@
         setPulseOk();        
 
         shipsDB = {};
-        ships.ships.forEach(s => {let entry = {}; entry.raw = s; shipsDB[s.mmsi] = entry; });
-        ships.ships.forEach(s => {if(s.mmsi_type != getMMSItype(s) ) console.log(s.mmsi + ": " + s.mmsi_type + ' ' + getMMSItype(s))  });
-        
+        ships.ships.forEach(s => {
+            let entry = {}; 
+            entry.raw = s; 
+            if(getMMSItype(s) != s.mmsi_type)
+                console.log(s.mmsi + ": " + s.mmsi_type + ' ' + getMMSItype(s));
+
+            entry.raw.mmsi_type = getMMSItype(s);
+            shipsDB[s.mmsi] = entry;
+        });
+    
         return ships.ships.length;
     }
 
@@ -2305,7 +2312,7 @@
                 shipicon = SHIPICON; c = 20; break;                                
             case ShippingClass.STATION:
                 shipicon = STATICON; c = 20; break;        
-            case ShippingClass.SAETEPIRB:
+            case ShippingClass.SARTEPIRB:
                 c = 60; shipicon = STATICON; break;
         }
 
