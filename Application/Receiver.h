@@ -218,7 +218,7 @@ class OutputServer : public IO::Server, public Setting {
 	float lat = 0, lon = 0;
 	int backup_interval = -1;
 
-	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "'\n\n";
+	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\naboutMDpresent=false;\n\n";
 	std::string plugins;
 	std::string stylesheets;
 	std::string about = "This content can be set by the station owner";
