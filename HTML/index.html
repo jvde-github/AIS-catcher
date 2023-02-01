@@ -1004,7 +1004,7 @@
 <script>
     var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, shipsDB = {}, singleClickTimeout = null;
 
-    var plugins = "";
+    var plugins = "", plugins_main = [];
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
 
     var marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
@@ -2644,8 +2644,8 @@
         const aside = document.getElementById('shipcard');
         const visible = shipcardVisible();
 
-        ship = m?shipsDB[m].raw:null;
-        ship_old = card_mmsi?shipsDB[card_mmsi].raw:null;
+        ship = m in shipsDB ? shipsDB[m].raw : null;
+        ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
 
         if (m != null && !visible) {
             aside.classList.toggle('visible');
@@ -2788,7 +2788,10 @@
     }
 
     // for overwrite and insert code where needed
-    function main() {}
+    function main() {
+        plugins_main.forEach(function(p){p();});
+    }
+
     function init_preSettings() {}
     function init_postSettings() {}
     function init_postTabsInit() {}
