@@ -2879,7 +2879,13 @@
 
     fetchAbout().then(s=>{
         document.getElementById("about_content").innerHTML = marked.parse(s);
+    }).catch(error => {
+        alert("Error loading about.md: " + error);
+        aboutMDpresent = false;
     });
+    if(aboutMDpresent != true) {
+        document.getElementById("about_tab").style.display = "none";    
+    }
     main();
     
 </script>
