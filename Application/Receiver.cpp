@@ -573,6 +573,9 @@ void OutputServer::Request(IO::Client& c, const std::string& response) {
 	else if (r == "/config.css") {
 		Response(c, "text/css", stylesheets);
 	}
+	else if (r == "/about.md") {
+		Response(c, "text/markdown", about);
+	}
 	else if (r == "/path.json") {
 		int mmsi = -1;
 		std::stringstream ss(a);
@@ -663,6 +666,11 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 		for (auto f : files_ss) Set("STYLE", f);
 
 		if (!files_ss.size() && !files_js.size()) std::cerr << "Server: no plugin files found in directory." << std::endl;
+	}
+	else if (option == "ABOUT") {
+		std::cerr << "Server: about context from " << arg << std::endl;
+		plugins += "aboutMDpresent = true;";
+		about = Util::Helper::readFile(arg);
 	}
 	else if (option == "REUSE_PORT") {
 		setReusePort(Util::Parse::Switch(arg));
