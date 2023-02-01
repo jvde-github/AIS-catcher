@@ -11,6 +11,7 @@
 <script src="https://kit.fontawesome.com/296bfd8db6.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@6.6.6/css/flag-icons.min.css" />
@@ -762,7 +763,7 @@
 <div class="mainspace-container">
     <div class="mainspace">
         <div class="tabcontent" id="about">
-            This content can be set by the station owner.
+            <div id="about_content"></div>
         </div>
         <div class="tabcontent" id="stat">
             <div id="summary_stat">
@@ -1409,6 +1410,16 @@
         statistics = await response.json();
         setPulseOk();
         return statistics;
+    }
+
+    async function fetchAbout() {
+        try {
+            response = await fetch('about.md');
+        } catch (error) {
+            return;
+        }
+        aboutmd = await response.text();
+        return aboutmd;
     }
 
     async function fetchShips() {
@@ -2826,6 +2837,8 @@
 
     addOverlayLayer("OpenSeaMap",L.tileLayer('http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors', maxZoom: 18 }));
     
+    let mdabout = "This content can be defined by the owner of the station";
+
     console.log("Starting plugin code")
 
 </script>
@@ -2863,6 +2876,11 @@
         openFocus(urlParams.get('mmsi'), urlParams.get('zoom'));
 
     saveSettings();
+
+    fetchAbout().then(s=>{
+        alert(s);
+        document.getElementById("about_content").innerHTML = marked.parse(s);
+    });
     main();
     
 </script>

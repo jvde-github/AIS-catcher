@@ -221,7 +221,7 @@ class OutputServer : public IO::Server, public Setting {
 	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "'\n\n";
 	std::string plugins;
 	std::string stylesheets;
-	std::string about;
+	std::string about = "This content can be set by the station owner";
 
 	// history of 180 minutes and 180 seconds
 	History<60, 60> hist_minute;
