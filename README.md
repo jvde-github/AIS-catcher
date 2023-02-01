@@ -170,11 +170,11 @@ Some development has been done to make this webinterface easily accessible on mo
 </p>
 
 There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
-```
+```console
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
 This could be a useful option if you want to offer the interface externally. To display the distance of received messages to your station you need to provide the coordinates as follows:
-```
+```console
 AIS-catcher -N LAT 50 LON 3.141592
 ```
 All these options can be captured in the configuration file (in a section with name ``server``), see below. 
