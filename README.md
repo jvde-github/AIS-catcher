@@ -28,14 +28,14 @@ For new features in the latest version please have a look at the [release page](
 The main recent development is the addition of a web interface for which a few example are available online: for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.com/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.com/) for making this available.
 More information in [this](https://github.com/jvde-github/AIS-catcher#Web-interface) section. 
 
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
+</p>
+
 We have added new functionality that allows the user to set some bespoke information about the station and hardware in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab and is read in from a file, say `readme.md` as follows:
 ```console
 AIS-catcher -N 8100 ABOUT about.md
 ```
-
-<p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
-</p>
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
