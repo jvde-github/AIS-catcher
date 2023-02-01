@@ -32,7 +32,7 @@ More information in [this](https://github.com/jvde-github/AIS-catcher#Web-interf
   <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
 </p>
 
-We have added new functionality that allows the user to set some bespoke information about the station and hardware in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab and is read in from a file, say `readme.md` as follows:
+We have added new functionality that allows the user to set some bespoke information about the station and hardware in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab and is read in from a file, say `about.md` as follows:
 ```console
 AIS-catcher -N 8100 ABOUT about.md
 ```
@@ -155,7 +155,7 @@ Meta data is not calculated by default to keep the program as light as possible 
 There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc).
 
 ### Web interface
-As per full release v0.42 AIS-catcher includes a simple web interface. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.sytes.net/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.sytes.net/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.sytes.net/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
+As per full release v0.42 AIS-catcher includes a simple web interface. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.com/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.com/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.com/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
 
 The web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/) and [flag-icons](https://github.com/lipis/flag-icons). 
 
