@@ -146,13 +146,30 @@
 
     #menubar div 
     {
-        flex: 0 1 200px;
+        flex: 0 1 150px;
         border: none;
         cursor: pointer;
         display: flex;
         justify-content: center;
         align-items: center;
         transition: var( --hover-transition);
+        display: flex;
+        flex-direction: column;
+    }
+
+    #menubar div i
+    {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-size: 20px;
+        line-height: 20px;
+    }
+
+    #menubar div span
+    {
+        padding-bottom: 10px;    
+        font-size: 10px;
+        line-height: 10px; 
     }
 
     #menubar div:hover {
@@ -736,13 +753,17 @@
 
 </div>
 <nav  id="menubar">
-    <div title="Summary statistics for receiver" onclick="activateTab(event,'stat')" id="stat_tab">STAT</div>
-    <div title="Plots for reception"  onclick="activateTab(event,'plots')" id="plots_tab">PLOTS</div>
-    <div title="Show list of recently seen vessels"  onclick="activateTab(event,'ships')" id="ships_tab">SHIPS</div>
-    <div title="Show map with recently seen vessels"  onclick="activateTab(event,'map')" id="map_tab">MAP</div>
+    <div onclick="activateTab(event,'about')" id="about_tab"><i class="fa-solid fa-circle-info"></i><span>About</span></div>
+    <div onclick="activateTab(event,'stat')" id="stat_tab"><i class="fa-solid fa-briefcase"></i><span>Summary</span></div>
+    <div onclick="activateTab(event,'plots')" id="plots_tab"><i class="fa-solid fa-chart-simple"></i><span>Plots</span></div>
+    <div onclick="activateTab(event,'ships')" id="ships_tab"><i class="fa-solid fa-table"></i><span>Ships</span></div>
+    <div onclick="activateTab(event,'map')" id="map_tab"><i class="fa-solid fa-map"></i><span>Map</span></div>
 </nav>
 <div class="mainspace-container">
     <div class="mainspace">
+        <div class="tabcontent" id="about">
+            This content can be set by the station owner.
+        </div>
         <div class="tabcontent" id="stat">
             <div id="summary_stat">
                 <section>
@@ -2768,7 +2789,7 @@
     }
 
     function selectTab() {
-        if(settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat") {
+        if(settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat") {
             settings.tab = "stat";
             alert("Invalid tab specified");
         }
