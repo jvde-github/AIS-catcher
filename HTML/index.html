@@ -2878,7 +2878,6 @@
     saveSettings();
 
     fetchAbout().then(s=>{
-        alert(s);
         document.getElementById("about_content").innerHTML = marked.parse(s);
     });
     main();
