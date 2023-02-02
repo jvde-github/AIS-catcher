@@ -73,23 +73,66 @@
         color: white; 
     }
 
+
     .header-title {
         flex: 1;
-        padding: 15px;
-        line-height: 20px;
         background-color: var(--header-title-color);
         border-top-right-radius: 25% 50%;
-        border-bottom-right-radius: 25% 50%;    
+        border-bottom-right-radius: 25% 50%;     
+        display: flex;
+        flex-direction: row;
+    }
+
+    .header-title span {
+        padding: 15px;
+        line-height: 20px;
+        padding-right:50px;
+    }
+
+    .header-title div {
+        padding: 15px;
+        background: var(--header-color); 
+        margin: auto 0;
+        border-radius: 20px;
+        font-size: 15px;
+        line-height: 15px;     
+        padding: 10px 15px;
+    }
+        
+    @media only screen and (max-width:750px) {
+        .header-title div
+         {
+            display: none;
+        }
+    }
+
+    .header-title div.show {
+        display: none;
+    }
+
+    .header-title div i {
+        padding: 0px 20px;
+        transition: var( --hover-transition);
+    }
+
+    .header-title div i:hover {
+        cursor: pointer;
+        transform: var(--hover-transform);
+    }
+
+    .header-title div i.active {
+        color: var(--secondary-color);
     }
 
     .header-icon, .header-pulse-ok, .header-pulse-error {
         width: 50px;
         border-radius: 50%;
-        margin: 10px 0;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: var( --hover-transition);
+        font-size: 15px;
+        line-height: 15px;     
     }
 
     .header-pulse-ok {
@@ -102,7 +145,6 @@
 
     .header-icon:hover {
         cursor: pointer;
-        background: var(--hover-background);
         transform: var(--hover-transform);
     }
 
@@ -120,8 +162,10 @@
         padding: 15px;
         background:var(--menu-background-color);
         color: black;
-        display: none;
+        display: block;
         transition: var( --hover-transition);
+        font-size: 18px;
+        
     }
 
     .header-menubutton:hover {
@@ -140,7 +184,7 @@
         color: var(--menu-font-color);
         text-align: center;
         align-items: stretch;
-        display: flex;
+        display: none;
         flex-direction: row;
         visibility: visible;
     }
@@ -183,6 +227,10 @@
         color: var(--secondary-color);
     }
 
+    #menubar.visible {
+            display: flex;
+    }
+
     .mainspace-container {
         flex: 1 0 0;
         overflow: auto;
@@ -213,10 +261,6 @@
         }
 
         .bottombar {
-            display: none;
-        }
-
-        #menubar.visible {
             display: none;
         }
 
@@ -747,7 +791,18 @@
 
 <div class="header">
     <div onclick="toggleMenu()" class="header-menubutton"><i class="fa-solid fa-bars"></i></div>
-    <div onclick="headerClick()" class="header-title">AIS-catcher</div>
+    <div class="header-title"><span onclick="headerClick()" >AIS-catcher</span>
+
+        <div id="menubar_mini">
+            <i id="about_tab_mini" onclick="activateTab(event,'about')" class="fa-solid fa-circle-info"></i>
+            <i id="stat_tab_mini" onclick="activateTab(event,'stat')"  class="fa-solid fa-briefcase"></i>
+            <i  id="plots_tab_mini" onclick="activateTab(event,'plots')" class="fa-solid fa-chart-simple"></i>
+            <i  id="ships_tab_mini" onclick="activateTab(event,'ships')" class="fa-solid fa-table"></i>
+            <i id="map_tab_mini" onclick="activateTab(event,'map')" class="fa-solid fa-map"></i>
+        </div>
+                
+    </div>
+    
     <div title="List installed plugins" onclick="showPlugins()" class="header-icon"><i class="fas  fa-wrench fa-sm"></i></div>
     <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
     <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
@@ -1351,7 +1406,7 @@
         map.on('zoomend', function (evt) { saveSettings(); updateTooltips(); });
         map.on('click', function () { 
             if(singleClickTimeout==null) {
-                singleClickTimeout = setTimeout(()=>{showShipcard(null); hideMenu(); singleClickTimeout = null; },400); 
+                singleClickTimeout = setTimeout(()=>{showShipcard(null); hideMenuifSmall(); singleClickTimeout = null; },400); 
             }
         });
         map.on('dblclick dragstart zoomstart', function () { if(singleClickTimeout!=null) {clearTimeout(singleClickTimeout); singleClickTimeout = null;} });
@@ -1477,13 +1532,21 @@
     }
 
     function hideMenu() {
-        if (!document.getElementById("menubar").classList.contains('visible')) {
-            document.getElementById("menubar").classList.toggle('visible');
+        if (document.getElementById("menubar").classList.contains('visible')) 
+        {
+           document.getElementById("menubar").classList.toggle('visible');
+           document.getElementById("menubar_mini").classList.toggle('show');
         }
+    }
+
+    function hideMenuifSmall() {
+        if(window.matchMedia("(max-height: 1000px)").matches)
+            hideMenu();
     }
 
     function toggleMenu() {
         document.getElementById("menubar").classList.toggle('visible');
+        document.getElementById("menubar_mini").classList.toggle('show');
     }
 
     
@@ -2773,9 +2836,10 @@
 
     function activateTab(b, a) {
 
-        hideMenu();
+        hideMenuifSmall();
 
         Array.from(document.getElementById("menubar").children).forEach(e  => e.className = e.className.replace(" active", ""))
+        Array.from(document.getElementById("menubar_mini").children).forEach(e  => e.className = e.className.replace(" active", ""))
 
         tabcontent = document.getElementsByClassName("tabcontent");
 
@@ -2783,7 +2847,10 @@
             tabcontent[i].style.display = "none";
 
         document.getElementById(a).style.display = "block";
-        b.currentTarget.className += " active";
+
+        document.getElementById(a+"_tab").className += " active";
+        document.getElementById(a+"_tab_mini").className += " active";
+
         settings.tab = a;
         saveSettings();
 
@@ -2883,8 +2950,10 @@
         alert("Error loading about.md: " + error);
         aboutMDpresent = false;
     });
-    if(aboutMDpresent != true) {
+    if(aboutMDpresent == false) 
+    {
         document.getElementById("about_tab").style.display = "none";    
+        document.getElementById("about_tab_mini").style.display = "none";    
     }
     main();
     
