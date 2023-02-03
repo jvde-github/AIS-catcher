@@ -159,13 +159,14 @@
     }
 
     .header-menubutton {
-        padding: 15px;
-        background:var(--menu-background-color);
+        background: var(--menu-background-color);
         color: black;
         display: block;
         transition: var( --hover-transition);
         font-size: 18px;
-        
+        padding-top: 15px;
+        width: 40px;
+        text-align: center;
     }
 
     .header-menubutton:hover {
@@ -1547,8 +1548,10 @@
     function toggleMenu() {
         document.getElementById("menubar").classList.toggle('visible');
         document.getElementById("menubar_mini").classList.toggle('show');
-    }
 
+        document.getElementById("header_menu_button").classList.toggle("fa-bars");
+        document.getElementById("header_menu_button").classList.toggle("fa-xmark");
+    }
     
     function initFullScreen() {
         document.addEventListener("fullscreenchange", handleFullScreenChange);
