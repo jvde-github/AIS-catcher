@@ -1534,10 +1534,7 @@
 
     function hideMenu() {
         if (document.getElementById("menubar").classList.contains('visible')) 
-        {
-           document.getElementById("menubar").classList.toggle('visible');
-           document.getElementById("menubar_mini").classList.toggle('show');
-        }
+            toggleMenu();
     }
 
     function hideMenuifSmall() {
