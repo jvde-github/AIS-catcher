@@ -863,9 +863,9 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
-- Polish up HTML, add it to the repository and auto build
-- Improve the documentation listing all options (command line and JSON)
 - Decoding: further model improvements e.g. using other filters, alternative freq correction models, software gain control
+- Improve the documentation listing all options and integrate JSON codes in all parts of the design
+- Make more settings optionally available in webclient
 - Add tool to compare different receivers (more statistics than just looking at message count)
 - Testing: assess gap with commercial equipment (partially done at Meteotoren)
 - Support NMEA tag blocks for timestamp
@@ -875,8 +875,9 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - Implement websocket interface, store/write configuration files (JSON)
 - Channel AB+CD for devices with high sample rates like the Airspy
 - Optional filter for invalid messages, optional downsampling messages for HTTP postings
-- System support and GUI: Windows, <del>Android</del>, Web interface
 - Multi-channel SDRs: validate location from signal (e.g. like MLAT or using passive radar with krakensdr)
+- System support and GUI: Windows, <del>Android, Web interface</del>
+- <del>Polish up HTML, add it to the repository and auto build</del>
 - Output: ZeroMQ, <del>APRS, JSON over HTTP,</del> TCP, ...
 - <del>Solve CMake issue with zlib on MACOS</del>
 - <del>NMEA input: check checksum, use fillbits to set length and more tight initial parser</del>
