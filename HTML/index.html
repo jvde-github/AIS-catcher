@@ -166,7 +166,7 @@
         font-size: 18px;
         padding-top: 15px;
         width: 40px;
-        text-align: center;
+        text-align: center;        
     }
 
     .header-menubutton:hover {
@@ -179,8 +179,7 @@
     }
 
     #menubar {
-        flex: 0 0 45px;
-        justify-content: center;
+        z-index: 9999; 
         background: var(--menu-background-color);
         color: var(--menu-font-color);
         text-align: center;
@@ -190,9 +189,23 @@
         visibility: visible;
     }
 
-    #menubar div 
+    @media only screen and (min-width : 750px) {
+        #menubar {        
+            position: fixed; 
+            top: 60px; 
+            left: 10px; 
+            right: 0;
+            width: 500px;
+            border: solid;
+            border-color: lightgrey;
+            border-radius: 20px;
+        }
+    }    
+
+    #menubar div
     {
         flex: 0 1 150px;
+        margin: 0 10px;
         border: none;
         cursor: pointer;
         display: flex;
@@ -1534,7 +1547,9 @@
 
     function hideMenu() {
         if (document.getElementById("menubar").classList.contains('visible')) 
+        {
             toggleMenu();
+        }
     }
 
     function hideMenuifSmall() {
