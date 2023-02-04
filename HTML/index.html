@@ -522,7 +522,7 @@
         display: flex;
         flex-direction: column;
         justify-content: stretch;
-        z-index: 10000;
+        z-index: 9998;
         position: absolute;
         visibility: hidden;
         background: #fff;
@@ -1553,8 +1553,9 @@
     }
 
     function hideMenuifSmall() {
-        if(window.matchMedia("(max-height: 1000px)").matches)
-            hideMenu();
+        //if(window.matchMedia("(max-height: 1000px)").matches)
+        // always hide
+        hideMenu();
     }
 
     function toggleMenu() {
