@@ -1279,7 +1279,6 @@
     const ATON_MASK = 1 << 21;
 
     function getMMSItype(ship) {
-        if(ship.msg_type & CLASS_B_MASK) return CLASS_B;
         if(ship.msg_type & BASESTATION_MASK) return BASESTATION;
         if(ship.msg_type & SAR_MASK) return SAR;
         if(ship.msg_type & ATON_MASK) return ATON;
@@ -1288,6 +1287,7 @@
             return SARTEPIRB;
 
         if(ship.msg_type & CLASS_A_MASK) return CLASS_A;
+        if(ship.msg_type & CLASS_B_MASK) return CLASS_B;
 
         return OTHER;
     }
