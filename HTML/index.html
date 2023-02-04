@@ -1279,7 +1279,6 @@
     const ATON_MASK = 1 << 21;
 
     function getMMSItype(ship) {
-        if(ship.msg_type & CLASS_A_MASK) return CLASS_A;
         if(ship.msg_type & CLASS_B_MASK) return CLASS_B;
         if(ship.msg_type & BASESTATION_MASK) return BASESTATION;
         if(ship.msg_type & SAR_MASK) return SAR;
@@ -1287,7 +1286,9 @@
 
         if(ship.mmsi >= 97000000 && ship.mmsi <= 98000000)
             return SARTEPIRB;
-        
+
+        if(ship.msg_type & CLASS_A_MASK) return CLASS_A;
+
         return OTHER;
     }
 
@@ -1367,12 +1368,7 @@
 
         switch (ship.mmsi_type) {
             case CLASS_A:
-
-                // overwrite on the basis of message profile
-                if(ship.msg_type & (1<<9)) c = ShippingClass.PLANE;
-                else if(ship.msg_type & (1<<21)) c = ShippingClass.ATON;
-
-                else if (ship.shiptype >= 80 && ship.shiptype < 90) c = ShippingClass.TANKER;
+                if (ship.shiptype >= 80 && ship.shiptype < 90) c = ShippingClass.TANKER;
                 else if (ship.shiptype >= 70 && ship.shiptype < 80) c = ShippingClass.CARGO;
                 else if (ship.shiptype >= 60 && ship.shiptype < 70) c = ShippingClass.PASSENGER
                 else if (ship.shiptype >= 40 && ship.shiptype < 50) c = ShippingClass.HIGHSPEED;
