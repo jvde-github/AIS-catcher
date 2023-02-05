@@ -434,19 +434,25 @@ which produces
 ```json
 {"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-When piping NMEA text lines into AIS-catcher, use the format ``TXT`` this will also ensure that the program immediately processes the incoming characters and will not buffer them first. With this function you can use AIS-catcher to forward messages from a dAISy Hat (from file ``/cat/serial0``) or Norwegian coastal traffic, like this:  ```console
+When piping NMEA text lines into AIS-catcher, use  format ``TXT`` this will also ensure that the program immediately processes the incoming characters and it will not buffer them first. The NMEA decoder can be activated with the switch `-m 5` but setting the input format to TXT will automatically activate this decoder. 
+
+This functionality opens a few doors. For example you can use AIS-catcher to read and forward messages from a dAISy Hat (simply read from the file ``/cat/serial0`` on Linux) or process the data from Norwegian coastal traffic offered via a TCP server, like this:  
+```console
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -o 5
 ```
-or use the internal TCP client as follows:
+
+For input via TCP you can skip the `netcat` command and directly read the input into the program as follows:
 ```console
 AIS-catcher -t 153.44.253.27 5631 -gt FORMAT txt PROTOCOL none
 ```
-You can also read NMEA input via a built-in UDP server:
+Again, the `FORMAT txt` option switches of the buffering and automatically selects the NMEA decoder.
+
+Finally, you can also receive NMEA input via a built-in UDP server:
 ```console
 AIS-catcher -x 192.168.1.235 4002
 ```
 
-This new function json decoding functionality from text files has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only available switches for this decoder are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to, respectively, recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
+The functionality to read NMEA lines from text files has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only available switches for this decoder are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which forces AIS-catcher to, respectively, recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
 ```console
 echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | ./AIS-catcher -r txt . -n -go nmea_refresh on crc_check off
 ```
@@ -454,7 +460,7 @@ returns a warning on the incorrect CRC and:
 ```
 !AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*3A
 ```
-Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This 16 bit checksum/CRC is not included in the NMEA message.
+Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This latter 16 bit checksum/CRC is not included in the NMEA message.
 
 ### Running on hardware with performance limitations
 
