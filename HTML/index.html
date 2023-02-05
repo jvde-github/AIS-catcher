@@ -1279,6 +1279,11 @@
     const ATON_MASK = 1 << 21;
 
     function getMMSItype(ship) {
+
+        if ( (ship.mmsi > 111000000 && ship.mmsi < 111999999) || 
+                (ship.mmsi > 11100000 && ship.mmsi < 11199999))
+            return SAR;
+            
         if(ship.msg_type & BASESTATION_MASK) return BASESTATION;
         if(ship.msg_type & SAR_MASK) return SAR;
         if(ship.msg_type & ATON_MASK) return ATON;
