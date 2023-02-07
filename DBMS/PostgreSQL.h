@@ -104,10 +104,12 @@ namespace IO {
 
 
 				// TO DO: remove, can be selected from JSON properties
+				/*
 				for (auto s : msg->NMEA) {
 					sql += "INSERT INTO ais_nmea (id, nmea) VALUES ((SELECT id FROM _id),\'" + s + "\');\n";
 				}
-
+				*/
+			
 				// TO DO: types, etc
 				for (const auto& p : data[0].getProperties()) {
 					if (db_keys[p.Key()] != -1) {
