@@ -38,7 +38,7 @@ AIS-catcher -N 8100 ABOUT about.md
 ```
 ### DBMS support
 
-Currently we are experimenting with a simple database that allows to write messages to a database (PostgreSQL for now with expected support for mysql and sqlite). The database stores messages and specific key/value pairs (from JSON) as defined by the user. Idea is that there is quite some (partial) replication in data send by vessels so we only have to store changes in data elements (e.g. change in reported destination). This requires some further experimentation and finetuning so no documentation for now. 
+Currently we are experimenting with a simple feature that writes messages to a database (PostgreSQL for now with expected support for mysql and sqlite). The database stores messages and specific key/value pairs (from JSON) as per a user defined list. Idea is that there is quite some (partial) replication in data send by vessels so we only have to store changes in data elements (e.g. change in reported destination). This requires some further experimentation and finetuning so no documentation for now. 
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
