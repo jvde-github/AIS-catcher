@@ -35,6 +35,7 @@
 #include "Server.h"
 #include "DB.h"
 #include "History.h"
+#include "PostgreSQL.h"
 
 #include "Keys.h"
 #include "JSON/JSON.h"
@@ -181,6 +182,15 @@ public:
 	void setup(Receiver& r);
 	IO::UDP& add();
 	IO::UDP& add(const std::string& host, const std::string& port);
+};
+
+//--------------------------------------------
+class OutputDBMS {
+	std::vector<std::unique_ptr<IO::PostgreSQL>> _PSQL;
+
+public:
+	void setup(Receiver& r);
+	IO::PostgreSQL& add();
 };
 
 //--------------------------------------------

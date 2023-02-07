@@ -101,7 +101,7 @@ std::string DB::getJSON(bool full) {
 				content += "\"bearing\":null,";
 			}
 
-			//content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
+			// content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
 			content += "\"level\":" + std::to_string(ship.level) + ",";
 			content += "\"count\":" + std::to_string(ship.count) + ",";
 			content += "\"ppm\":" + std::to_string(ship.ppm) + ",";
@@ -347,7 +347,7 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
 	ship.msg_type |= 1 << msg->type();
-	//ship.mmsi_type = setMmsiType(msg->mmsi(), msg->type());
+	// ship.mmsi_type = setMmsiType(msg->mmsi(), msg->type());
 
 	bool position_updated = false;
 
