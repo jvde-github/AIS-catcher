@@ -122,6 +122,7 @@ namespace IO {
 				pqxx::work txn(*con);
 				txn.exec(sql);
 				txn.commit();
+			}
 			catch (const std::exception& e) {
 				std::cerr << "DBMS: Error writing PostgreSQL: " << e.what() << std::endl;
 			}
