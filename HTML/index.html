@@ -1389,12 +1389,12 @@
                 c = ShippingClass.STATION;
                 break;
             case SAR:
-                c = ShippingClass.PLANE;
+                c = ShippingClass.HELICOPTER;
                 if (ship.mmsi > 111000000 && ship.mmsi < 111999999) {
-                    if (Math.floor((ship.mmsi / 100) % 10, 0) == 5) c = ShippingClass.HELICOPTER;
+                    if (Math.floor((ship.mmsi / 100) % 10, 0) == 1) c = ShippingClass.PLANE;
                 }
                 else if (ship.mmsi > 11100000 && ship.mmsi < 11199999)
-                    if (Math.floor((ship.mmsi / 10) % 10, 0) == 5) c = ShippingClass.HELICOPTER;
+                    if (Math.floor((ship.mmsi / 10) % 10, 0) == 1) c = ShippingClass.PLANE;
                 break;
             case SARTEPIRB:
                 c = ShippingClass.SARTEPIRB;
