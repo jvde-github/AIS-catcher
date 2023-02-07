@@ -57,11 +57,11 @@ namespace Device {
 		hints.ai_socktype = SOCK_DGRAM;
 		hints.ai_protocol = IPPROTO_UDP;
 
-		int r = getaddrinfo(server.c_str(),port.c_str(), &hints, &address);
+		int r = getaddrinfo(server.c_str(), port.c_str(), &hints, &address);
 		if (r != 0 || address == NULL) {
 			throw std::runtime_error("UDP: cannot create socket.");
 		}
-		
+
 		sock = socket(address->ai_family, SOCK_DGRAM, 0);
 		if (sock == -1) {
 			throw std::runtime_error("UDP: cannot create socket.");

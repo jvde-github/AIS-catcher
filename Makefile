@@ -1,6 +1,6 @@
-SRC = Application/Main.cpp Ships/DB.cpp Application/Config.cpp Application/Receiver.cpp IO/IO.cpp IO/Server.cpp DSP/DSP.cpp Library/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp Library/Keys.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/NMEA.cpp Library/Utilities.cpp DSP/Demod.cpp Library/Message.cpp Device/UDP.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp
-OBJ = Main.o Receiver.o Config.o DB.o IO.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o RTLSDR.o Server.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o UDP.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o
-INCLUDE = -I. -IShips/ -ILibrary/ -IDSP/ -IApplication/ -IIO/
+SRC = Application/Main.cpp DBMS/PostgreSQL.cpp Ships/DB.cpp Application/Config.cpp Application/Receiver.cpp IO/IO.cpp IO/Server.cpp DSP/DSP.cpp Library/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp Library/Keys.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/NMEA.cpp Library/Utilities.cpp DSP/Demod.cpp Library/Message.cpp Device/UDP.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp
+OBJ = Main.o Receiver.o Config.o PostgreSQL.o DB.o IO.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o RTLSDR.o Server.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o UDP.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o
+INCLUDE = -I. -IDBMS/ -IShips/ -ILibrary/ -IDSP/ -IApplication/ -IIO/
 CC = gcc
 
 override CFLAGS += -Ofast -std=c++11 $(INCLUDE)
@@ -17,6 +17,7 @@ CFLAGS_SAMPLERATE = -DHASSAMPLERATE $(shell pkg-config --cflags samplerate)
 CFLAGS_CURL = -DHASCURL $(shell pkg-config --cflags libcurl)
 CFLAGS_SOAPYSDR = -DHASSOAPYSDR
 CFLAGS_ZLIB = -DHASZLIB ${hell pkg-config --cflags zlib}
+CFLAGS_PSQL  = -DHASPSQL ${hell pkg-config --cflags libpq} ${hell pkg-config --cflags libpqxx}
 
 LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
@@ -29,6 +30,7 @@ LFLAGS_SAMPLERATE = $(shell pkg-config --libs samplerate)
 LFLAGS_SOAPYSDR = -lSoapySDR
 LFLAGS_CURL =$(shell pkg-config --libs libcurl)
 LFLAGS_ZLIB =$(shell pkg-config --libs zlib)
+LFLAGS_PSQL =$(shell pkg-config --libs libpq) $(shell pkg-config --libs libpqxx)
 
 
 CFLAGS_ALL =
@@ -77,6 +79,11 @@ endif
 ifneq ($(shell pkg-config --exists zlib && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_ZLIB)
     LFLAGS_ALL += $(LFLAGS_ZLIB)
+endif
+
+ifneq ($(shell pkg-config --exists libpqxx && echo 'T'),)
+    CFLAGS_ALL += $(CFLAGS_PSQL)
+    LFLAGS_ALL += $(LFLAGS_PSQL)
 endif
 
 # Building AIS-Catcher

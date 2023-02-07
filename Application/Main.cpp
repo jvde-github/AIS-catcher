@@ -192,6 +192,7 @@ int main(int argc, char* argv[]) {
 	OutputScreen screen;
 	OutputHTTP http;
 	OutputUDP udp;
+	OutputDBMS db;
 	OutputStatistics stat;
 	OutputServer server;
 
@@ -291,7 +292,10 @@ int main(int argc, char* argv[]) {
 			case 'x':
 				receiver.InputType() = Type::UDP;
 				Assert(count == 2, param, "requires two parameters [server] [port].");
-				receiver.UDP().Set("port", arg2).Set("server",arg1);
+				receiver.UDP().Set("port", arg2).Set("server", arg1);
+				break;
+			case 'D':
+				db.add();
 				break;
 			case 'y':
 				receiver.InputType() = Type::SPYSERVER;
@@ -452,6 +456,7 @@ int main(int argc, char* argv[]) {
 		udp.setup(receiver);
 		http.setup(receiver);
 		screen.setup(receiver);
+		db.setup(receiver);
 
 		if (server.active()) server.setup(receiver);
 		if (receiver.verbose) stat.setup(receiver);

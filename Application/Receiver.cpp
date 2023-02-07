@@ -329,6 +329,25 @@ IO::UDP& OutputUDP::add(const std::string& host, const std::string& port) {
 	return *_UDP.back();
 }
 
+
+//-----------------------------------
+// set up UDP
+
+void OutputDBMS::setup(Receiver& r) {
+	// Create and connect output to UDP stream
+	for (int i = 0; i < _PSQL.size(); i++) {
+		r.OutputJSON(0) >> *_PSQL[i];
+		_PSQL[i]->setup();
+	}
+}
+
+IO::PostgreSQL& OutputDBMS::add() {
+
+	_PSQL.push_back(std::unique_ptr<IO::PostgreSQL>(new IO::PostgreSQL()));
+	return *_PSQL.back();
+}
+
+
 std::unique_ptr<IO::HTTP>& OutputHTTP::add(const std::vector<std::vector<std::string>>& km, int dict) {
 	_http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&km, dict)));
 	return _http.back();

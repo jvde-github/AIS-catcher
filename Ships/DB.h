@@ -60,15 +60,15 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 	const int MSG_TYPE_ATON = 4;
 	const int MSG_TYPE_SAR = 5;
 
-/*
-	const int MMSI_TYPE_OTHER = 0;
-	const int MMSI_TYPE_CLASS_A = 1;
-	const int MMSI_TYPE_CLASS_B = 2;
-	const int MMSI_TYPE_BASESTATION = 3;
-	const int MMSI_TYPE_SAR = 4;
-	const int MMSI_TYPE_SARTEPIRB = 5;
-	const int MMSI_TYPE_ATON = 6;
-*/
+	/*
+		const int MMSI_TYPE_OTHER = 0;
+		const int MMSI_TYPE_CLASS_A = 1;
+		const int MMSI_TYPE_CLASS_B = 2;
+		const int MMSI_TYPE_BASESTATION = 3;
+		const int MMSI_TYPE_SAR = 4;
+		const int MMSI_TYPE_SARTEPIRB = 5;
+		const int MMSI_TYPE_ATON = 6;
+	*/
 
 	struct VesselDetail {
 
@@ -114,7 +114,7 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 		return (int)(360 + rad * 180 / PI) % 360;
 	}
 
-	//int setMmsiType(int, int);
+	// int setMmsiType(int, int);
 	int findShip(uint32_t mmsi);
 	int createShip();
 	void moveShipToFront(int);
