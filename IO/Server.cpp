@@ -132,7 +132,7 @@ namespace IO {
 		for (auto& c : client)
 			if (c.isConnected()) {
 				if (c.Inactive(time(0)) > 30) {
-					std::cerr << "Server: closing inactive socket (" << c.sock << ") for " << c.Inactive(time(0)) << "s" << std::endl;
+					//std::cerr << "Server: closing inactive socket (" << c.sock << ") for " << c.Inactive(time(0)) << "s" << std::endl;
 					c.Close();
 				}
 			}
