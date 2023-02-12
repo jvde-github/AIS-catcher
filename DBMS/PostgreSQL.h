@@ -105,7 +105,7 @@ namespace IO {
 #ifdef HASPSQL
 			try {
 				db_keys.resize(AIS::KeyMap.size(), -1);
-				std::cerr << "Starting ProgreSQL database  \"ais\n";
+				std::cerr << "Starting ProgreSQL database  \""+conn_string+"\"\n";
 				con = new pqxx::connection(conn_string);
 
 				pqxx::work txn(*con);
@@ -174,10 +174,15 @@ namespace IO {
 			// TO DO: types, etc
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
-					std::string temp;
-					builder.to_string(temp, p.Get());
-					temp = temp.substr(0, 20);
-					sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + temp + "\');\n";
+					if(p.Get().isString()) {
+						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + pqxx::to_string(p.Get().getString()) + "\');\n";
+					}
+					else {
+						std::string temp;
+						builder.to_string(temp, p.Get());
+						temp = temp.substr(0, 20);
+						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + temp + "\');\n";
+					}
 				}
 			}
 
