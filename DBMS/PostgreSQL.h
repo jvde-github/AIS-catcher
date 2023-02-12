@@ -48,6 +48,7 @@ namespace IO {
 		std::thread run_thread;
 		bool terminate = false, running = false;
 		std::mutex queue_mutex;
+		uint32_t msg_id = 0;
 
 		int INTERVAL = 10;
 #ifdef HASPSQL
@@ -56,7 +57,7 @@ namespace IO {
 			{
 				const std::lock_guard<std::mutex> lock(queue_mutex);
 				sql_trans = sql;
-				sql.clear();
+							sql.clear();
 			}
 
 			try {
@@ -108,7 +109,7 @@ namespace IO {
 #ifdef HASPSQL
 			try {
 				db_keys.resize(AIS::KeyMap.size(), -1);
-				std::cerr << "Connecting to ProgreSQL database:\"" + conn_string + "\"\n";
+				std::cerr << "Connecting to ProgreSQL database: \""+conn_string+"\"\n";
 				con = new pqxx::connection(conn_string);
 
 				pqxx::work txn(*con);
@@ -177,8 +178,8 @@ namespace IO {
 			// TO DO: types, etc
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
-					if (p.Get().isString()) {
-						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + con->esc(p.Get().getString()) + "\');\n";
+					if(p.Get().isString()) {
+						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" +  con->esc(p.Get().getString()) + "\');\n";
 					}
 					else {
 						std::string temp;

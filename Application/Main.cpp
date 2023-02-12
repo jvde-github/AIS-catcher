@@ -145,6 +145,9 @@ void printSupportedDevices() {
 #ifdef HASCURL
 	std::cerr << "CURL ";
 #endif
+#ifdef HASPSQL
+	std::cerr << "PostgreSQL ";
+#endif
 #ifdef HASZLIB
 	std::cerr << "ZLIB ";
 #endif
