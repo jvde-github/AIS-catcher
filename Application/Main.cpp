@@ -295,7 +295,11 @@ int main(int argc, char* argv[]) {
 				receiver.UDP().Set("port", arg2).Set("server", arg1);
 				break;
 			case 'D':
-				db.add();
+				Assert(count <=1, param, "requires one parameter at most [connection string].");
+			 	{
+					IO::PostgreSQL &d = db.add();
+					if(count  == 1) d.Set("CONN_STR",arg1);
+				}
 				break;
 			case 'y':
 				receiver.InputType() = Type::SPYSERVER;

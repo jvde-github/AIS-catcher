@@ -44,7 +44,7 @@ namespace IO {
 		std::vector<int> db_keys;
 #endif
 
-
+		std::string conn_string = "dbname=ais";
 		std::thread run_thread;
 		bool terminate = false, running = false;
 		std::mutex queue_mutex;
@@ -106,7 +106,7 @@ namespace IO {
 			try {
 				db_keys.resize(AIS::KeyMap.size(), -1);
 				std::cerr << "Starting ProgreSQL database  \"ais\n";
-				con = new pqxx::connection("dbname=ais");
+				con = new pqxx::connection(conn_string);
 
 				pqxx::work txn(*con);
 
@@ -177,7 +177,7 @@ namespace IO {
 					std::string temp;
 					builder.to_string(temp, p.Get());
 					temp = temp.substr(0, 20);
-					sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + AIS::KeyMap[p.Key()][JSON_DICT_FULL] + "\',\'" + temp + "\');\n";
+					sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + temp + "\');\n";
 				}
 			}
 
@@ -187,7 +187,15 @@ namespace IO {
 		void setMap(int m) { builder.setMap(m); }
 
 		Setting& Set(std::string option, std::string arg) {
-			filter.Set(option, arg);
+
+			Util::Convert::toUpper(option);
+
+			if (option == "CONN_STR") {
+				conn_string = arg;
+			}
+			else {
+				filter.Set(option, arg);
+			}
 			return *this;
 		}
 	};

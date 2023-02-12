@@ -14,6 +14,8 @@ option(CURL "Include CURL support" ON)
 option(ZLIB "Include ZLIB support" ON)
 option(SAMPLERATE "Include SAMPLERATE support" ON)
 option(ZMQ "Include ZMQ support" ON)
+option(PSQL "Include PSQL support" ON)
+
 
 # Common compiler flags and options.
 
@@ -134,6 +136,52 @@ if(ZLIB)
 		else()
 		message(STATUS "ZLIB: not found - ${ZLIB_INCLUDE_DIR}, ${ZLIB_LIBRARY}")
 		endif()
+	endif()
+endif()
+
+
+# Find libpq
+if(PSQL)
+	if(MSVC AND NOT MSVC_VCPKG)
+	else()
+		pkg_check_modules(PKG_PQ libpq)
+		find_path(PQ_INCLUDE_DIR libpq-fe.h HINTS ${PKG_PQ_INCLUDE_DIRS})
+		find_library(PQ_LIBRARY libpq.so HINTS ${PKG_PQ_LIBRARY_DIRS})
+		find_library(PQ_LIBRARY libpq.dylib HINTS ${PKG_PQ_LIBRARY_DIRS})
+		find_library(PQ_LIBRARY pq HINTS ${PKG_PQ_LIBRARY_DIRS})
+
+		if(PQ_INCLUDE_DIR AND PQ_LIBRARY)
+
+			message(STATUS "PQ: found - ${PQ_INCLUDE_DIR}, ${PQ_LIBRARY}")
+
+			set(PQ_INCLUDE_DIRS ${PQ_INCLUDE_DIR})
+			set(PQ_LIBRARIES ${PQ_LIBRARY} )
+		else()
+			message(STATUS "PQ: not found - ${PQ_INCLUDE_DIR}, ${PQ_LIBRARY}")
+		endif()
+
+		pkg_check_modules(PKG_PQXX libpqxx)
+		find_path(PQXX_INCLUDE_DIR pqxx/pqxx.h HINTS ${PKG_PQXX_INCLUDE_DIRS} /usr/include)
+		find_path(PQXX_INCLUDE_DIR pqxx/pqxx HINTS /usr/include)
+		find_library(PQXX_LIBRARY libpqxx.so HINTS ${PKG_PQXX_LIBRARY_DIRS})
+		find_library(PQXX_LIBRARY libpqxx.dylib HINTS ${PKG_PQ_LIBRARY_DIRS})
+		find_library(PQXX_LIBRARY pqxx HINTS ${PKG_PQ_LIBRARY_DIRS})
+
+		if(PQXX_INCLUDE_DIR AND PQXX_LIBRARY)
+
+			message(STATUS "PQXX: found - ${PQXX_INCLUDE_DIR}, ${PQXX_LIBRARY}")
+
+			set(PQXX_INCLUDE_DIRS ${PQXX_INCLUDE_DIR})
+			set(PQXX_LIBRARIES ${PQXX_LIBRARY} )
+		else()
+			message(STATUS "PQXX: not found -  ${PKG_PQXX_INCLUDE_DIRS}  ${PQXX_INCLUDE_DIR}, ${PQXX_LIBRARY}")
+		endif()
+
+		if(PQ_INCLUDE_DIR AND PQ_LIBRARY AND PQXX_INCLUDE_DIR AND PQXX_LIBRARY)
+			add_definitions(-DHASPSQL)
+			message(STATUS "PSQL: spport included")
+		endif()
+
 	endif()
 endif()
 
@@ -552,11 +600,11 @@ set(APP_INCLUDES . ./Ships ./DBMS ./Library ./DSP ./Application ./IO)
 add_executable(AIS-catcher ${CPP} ${HEADER})
 
 include_directories(
-	${AIRSPYHF_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
+	${AIRSPYHF_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
 	${APP_INCLUDES})
 
 target_link_libraries(AIS-catcher
-	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
+	${AIRSPY_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES}  ${PQXX_LIBRARIES}  ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
 	${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 # Copying DLLs to final location if needed
