@@ -36,7 +36,7 @@ namespace IO {
 
 	class PostgreSQL : public StreamIn<JSON::JSON>, public Setting {
 		JSON::StringBuilder builder;
-		std::string sql;
+		std::string sql, sql_trans;
 		AIS::Filter filter;
 
 #ifdef HASPSQL
@@ -52,20 +52,23 @@ namespace IO {
 		int INTERVAL = 10;
 #ifdef HASPSQL
 		void post() {
-			const std::lock_guard<std::mutex> lock(queue_mutex);
+
+			{
+				const std::lock_guard<std::mutex> lock(queue_mutex);
+				sql_trans = sql;
+				sql.clear();
+			}
 
 			try {
 				// std::cerr << sql << std::endl;
 				pqxx::work txn(*con);
-				txn.exec(sql);
+				txn.exec(sql_trans);
 				txn.commit();
-				std::cerr << "DMBS: write completed (" << sql.size() << " bytes)." << std::endl;
+				std::cerr << "DMBS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
 			}
 			catch (const std::exception& e) {
-				std::cerr << "DBMS: Error writing PostgreSQL: " << e.what() << std::endl;
+				std::cerr << "DBMS: Error writing PostgreSQL: " << e.what() << sql_trans << std::endl;
 			}
-
-			sql.clear();
 		}
 #endif
 	public:
@@ -105,7 +108,7 @@ namespace IO {
 #ifdef HASPSQL
 			try {
 				db_keys.resize(AIS::KeyMap.size(), -1);
-				std::cerr << "Starting ProgreSQL database  \""+conn_string+"\"\n";
+				std::cerr << "Connecting to ProgreSQL database:\"" + conn_string + "\"\n";
 				con = new pqxx::connection(conn_string);
 
 				pqxx::work txn(*con);
@@ -174,8 +177,8 @@ namespace IO {
 			// TO DO: types, etc
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
-					if(p.Get().isString()) {
-						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + pqxx::to_string(p.Get().getString()) + "\');\n";
+					if (p.Get().isString()) {
+						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + con->esc(p.Get().getString()) + "\');\n";
 					}
 					else {
 						std::string temp;

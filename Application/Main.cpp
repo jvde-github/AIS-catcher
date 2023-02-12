@@ -295,10 +295,10 @@ int main(int argc, char* argv[]) {
 				receiver.UDP().Set("port", arg2).Set("server", arg1);
 				break;
 			case 'D':
-				Assert(count <=1, param, "requires one parameter at most [connection string].");
-			 	{
-					IO::PostgreSQL &d = db.add();
-					if(count  == 1) d.Set("CONN_STR",arg1);
+				Assert(count <= 1, param, "requires one parameter at most [connection string].");
+				{
+					IO::PostgreSQL& d = db.add();
+					if (count == 1) d.Set("CONN_STR", arg1);
 				}
 				break;
 			case 'y':
