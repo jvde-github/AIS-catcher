@@ -1124,6 +1124,8 @@
     getEtaVal = ship => (("0" + ship.eta_month).slice(-2)) + "-" + (("0" + ship.eta_day).slice(-2)) + " " + (("0" + ship.eta_hour).slice(-2)) + ":" + (("0" + ship.eta_minute).slice(-2));
     getDeltaTimeVal = s =>  s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
     getShipName = ship => ship.shipname;
+    getCallSign = ship => ship.callsign;
+
     
     function getStatusVal(ship) {
         const StringFromStatus = ["Under way using engine",
@@ -2342,7 +2344,7 @@
             }
 
             row.insertCell(1).innerHTML = ship.mmsi;
-            row.insertCell(2).innerHTML = ship.callsign
+            row.insertCell(2).innerHTML = getCallSign(ship);
             row.insertCell(3).innerHTML = getDeltaTimeVal(ship.last_signal);
             row.insertCell(4).innerHTML = ship.count;
             row.insertCell(5).innerHTML = Number(ship.ppm).toFixed(1);
@@ -2720,7 +2722,7 @@
         setShipcardValidation(ship.validated);
 
         // verbatim copies
-        ['destination','mmsi','callsign','count','imo'].forEach(e => document.getElementById('shipcard_'+e).innerHTML = ship[e]);
+        ['destination','mmsi','count','imo'].forEach(e => document.getElementById('shipcard_'+e).innerHTML = ship[e]);
 
         // round and add units
         [   { id: "cog", u: "&deg", d: 0 },
@@ -2729,7 +2731,7 @@
             { id: "ppm", u: "ppm", d: 1 }
         ].forEach(el => document.getElementById("shipcard_"+el.id).innerHTML = ship[el.id]?Number(ship[el.id]).toFixed(el.d)+" "+el.u:null);
 
-        
+        document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
         document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
         document.getElementById('shipcard_type').innerHTML = getTypeVal(ship);
         document.getElementById('shipcard_shiptype').innerHTML = getShipTypeVal(ship.shiptype);
