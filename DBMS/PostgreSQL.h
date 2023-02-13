@@ -44,6 +44,7 @@ namespace IO {
 		std::vector<int> db_keys;
 #endif
 
+		bool write_nmea = false;
 		std::string conn_string = "dbname=ais";
 		std::thread run_thread;
 		bool terminate = false, running = false;
@@ -57,7 +58,7 @@ namespace IO {
 			{
 				const std::lock_guard<std::mutex> lock(queue_mutex);
 				sql_trans = sql;
-							sql.clear();
+				sql.clear();
 			}
 
 			try {
@@ -109,7 +110,7 @@ namespace IO {
 #ifdef HASPSQL
 			try {
 				db_keys.resize(AIS::KeyMap.size(), -1);
-				std::cerr << "Connecting to ProgreSQL database: \""+conn_string+"\"\n";
+				std::cerr << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
 				con = new pqxx::connection(conn_string);
 
 				pqxx::work txn(*con);
@@ -169,17 +170,16 @@ namespace IO {
 
 
 			// TO DO: remove, can be selected from JSON properties
-			/*
-			for (auto s : msg->NMEA) {
-				sql += "INSERT INTO ais_nmea (id, nmea) VALUES ((SELECT id FROM _id),\'" + s + "\');\n";
-			}
-			*/
+			if (write_nmea)
+				for (auto s : msg->NMEA) {
+					sql += "INSERT INTO ais_nmea (id, nmea) VALUES ((SELECT id FROM _id),\'" + s + "\');\n";
+				}
 
 			// TO DO: types, etc
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
-					if(p.Get().isString()) {
-						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" +  con->esc(p.Get().getString()) + "\');\n";
+					if (p.Get().isString()) {
+						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + con->esc(p.Get().getString()) + "\');\n";
 					}
 					else {
 						std::string temp;
@@ -201,6 +201,9 @@ namespace IO {
 
 			if (option == "CONN_STR") {
 				conn_string = arg;
+			}
+			else if (option == "WRITE_NMEA") {
+				write_nmea = Util::Parse::Switch(arg);
 			}
 			else {
 				filter.Set(option, arg);
