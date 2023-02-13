@@ -297,13 +297,18 @@ int main(int argc, char* argv[]) {
 				Assert(count == 2, param, "requires two parameters [server] [port].");
 				receiver.UDP().Set("port", arg2).Set("server", arg1);
 				break;
-			case 'D':
-				Assert(count <= 1, param, "requires one parameter at most [connection string].");
-				{
-					IO::PostgreSQL& d = db.add();
-					if (count == 1) d.Set("CONN_STR", arg1);
+			case 'D': {
+				IO::PostgreSQL& d = db.add();
+				if (count % 2 == 1) {
+					d.Set("CONN_STR", arg1);
+					if (count > 1)
+						parseSettings(d, argv, ptr + 1, argc);
 				}
-				break;
+				else {
+					if (count >= 2)
+						parseSettings(d, argv, ptr, argc);
+				}
+			} break;
 			case 'y':
 				receiver.InputType() = Type::SPYSERVER;
 				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");
