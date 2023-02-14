@@ -16,8 +16,8 @@ CFLAGS_SOXR = -DHASSOXR $(shell pkg-config --cflags soxr)
 CFLAGS_SAMPLERATE = -DHASSAMPLERATE $(shell pkg-config --cflags samplerate)
 CFLAGS_CURL = -DHASCURL $(shell pkg-config --cflags libcurl)
 CFLAGS_SOAPYSDR = -DHASSOAPYSDR
-CFLAGS_ZLIB = -DHASZLIB ${hell pkg-config --cflags zlib}
-CFLAGS_PSQL  = -DHASPSQL ${hell pkg-config --cflags libpq} ${hell pkg-config --cflags libpqxx}
+CFLAGS_ZLIB = -DHASZLIB ${shell pkg-config --cflags zlib}
+CFLAGS_PSQL  = -DHASPSQL ${shell pkg-config --cflags libpq}
 
 LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
@@ -30,7 +30,7 @@ LFLAGS_SAMPLERATE = $(shell pkg-config --libs samplerate)
 LFLAGS_SOAPYSDR = -lSoapySDR
 LFLAGS_CURL =$(shell pkg-config --libs libcurl)
 LFLAGS_ZLIB =$(shell pkg-config --libs zlib)
-LFLAGS_PSQL =$(shell pkg-config --libs libpq) $(shell pkg-config --libs libpqxx)
+LFLAGS_PSQL =$(shell pkg-config --libs libpq)
 
 
 CFLAGS_ALL =
@@ -81,7 +81,7 @@ ifneq ($(shell pkg-config --exists zlib && echo 'T'),)
     LFLAGS_ALL += $(LFLAGS_ZLIB)
 endif
 
-ifneq ($(shell pkg-config --exists libpqxx && echo 'T'),)
+ifneq ($(shell pkg-config --exists libpq && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_PSQL)
     LFLAGS_ALL += $(LFLAGS_PSQL)
 endif
