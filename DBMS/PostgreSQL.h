@@ -38,6 +38,16 @@ namespace IO {
 		std::string sql, sql_trans;
 		AIS::Filter filter;
 
+		std::string escape(const std::string& input) {
+			std::string output;
+			for (const char c : input) {
+				if (c == '\'') output += c;
+
+				output += c;
+			}
+			return output;
+		}
+
 #ifdef HASPSQL
 		PGconn* con = NULL;
 		std::vector<int> db_keys;
@@ -175,7 +185,7 @@ namespace IO {
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
 					if (p.Get().isString()) {
-						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + p.Get().getString() + "\');\n";
+						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + escape(p.Get().getString()) + "\');\n";
 					}
 					else {
 						std::string temp;
