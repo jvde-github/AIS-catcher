@@ -21,16 +21,15 @@
 #include <iomanip>
 
 #ifdef HASPSQL
-#include <pqxx/pqxx>
+#include <libpq-fe.h>
 #endif
 
 #include "Stream.h"
 #include "AIS.h"
 #include "Utilities.h"
-
-
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
+
 
 namespace IO {
 
@@ -40,7 +39,7 @@ namespace IO {
 		AIS::Filter filter;
 
 #ifdef HASPSQL
-		pqxx::connection* con = NULL;
+		PGconn* con = NULL;
 		std::vector<int> db_keys;
 #endif
 
@@ -61,16 +60,17 @@ namespace IO {
 				sql.clear();
 			}
 
-			try {
-				// std::cerr << sql << std::endl;
-				pqxx::work txn(*con);
-				txn.exec(sql_trans);
-				txn.commit();
+			PGresult* res;
+			res = PQexec(con, sql_trans.c_str());
+
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				std::cerr << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con) << sql_trans << std::endl;
+			}
+			else {
 				std::cerr << "DMBS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
 			}
-			catch (const std::exception& e) {
-				std::cerr << "DBMS: Error writing PostgreSQL: " << e.what() << sql_trans << std::endl;
-			}
+
+			PQclear(res);
 		}
 #endif
 	public:
@@ -84,10 +84,9 @@ namespace IO {
 				terminate = true;
 				run_thread.join();
 
-				std::cerr << "DBMS: stop thread." << std::endl;
+				std::cerr << "DBMS: stop thread and database closed." << std::endl;
 			}
-
-			delete con;
+			if (con != NULL) PQfinish(con);
 #endif
 		}
 
@@ -106,38 +105,34 @@ namespace IO {
 			}
 		}
 #endif
+
 		void setup() {
 #ifdef HASPSQL
-			try {
-				db_keys.resize(AIS::KeyMap.size(), -1);
-				std::cerr << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
-				con = new pqxx::connection(conn_string);
+			db_keys.resize(AIS::KeyMap.size(), -1);
+			std::cerr << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
+			con = PQconnectdb(conn_string.c_str());
 
-				pqxx::work txn(*con);
+			if (PQstatus(con) != CONNECTION_OK)
+				throw std::runtime_error("DBMS: cannot open database :" + std::string(PQerrorMessage(con)));
 
-				// figure out which properties we are asked to file
-				// TO DO: save key as reference id not string
-				// TO DO: populate additional tables collecting the status of a vessel
-				// TO DO: staging
-
-				pqxx::result r = txn.exec("SELECT key_id, key_str FROM ais_keys");
-
-				for (pqxx::result::const_iterator row = r.begin(); row != r.end(); ++row) {
-					int id = row[0].as<int>();
-					std::string name = row[1].as<std::string>();
-					bool found = false;
-					for (int i = 0; i < db_keys.size(); i++) {
-						if (AIS::KeyMap[i][JSON_DICT_FULL] == name) {
-							db_keys[i] = id;
-							found = true;
-						}
-					}
-					if (!found)
-						throw std::runtime_error("DBMS: The key \"" + name + "\" defined in ais_keys not availble.");
-				}
+			PGresult* res = PQexec(con, "SELECT key_id, key_str FROM ais_keys");
+			if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+				throw std::runtime_error("DBMS: error fetching ais_keys table: " + std::string(PQerrorMessage(con)));
 			}
-			catch (const std::exception& e) {
-				throw std::runtime_error("DBMS: cannot open database :" + std::string(e.what()));
+
+			for (int row = 0; row < PQntuples(res); row++) {
+				int id = atoi(PQgetvalue(res, row, 0));
+				std::string name = PQgetvalue(res, row, 1);
+				bool found = false;
+				for (int i = 0; i < db_keys.size(); i++) {
+					if (AIS::KeyMap[i][JSON_DICT_FULL] == name) {
+						db_keys[i] = id;
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+					throw std::runtime_error("DBMS: The requested key \"" + name + "\" in ais_keys is not defined.");
 			}
 
 			if (!running) {
@@ -154,6 +149,7 @@ namespace IO {
 			throw std::runtime_error("DBMS: no support for PostgeSQL build in.");
 #endif
 		}
+
 		void Start(){};
 		void Receive(const JSON::JSON* data, int len, TAG& tag) {
 #ifdef HASPSQL
@@ -179,7 +175,7 @@ namespace IO {
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
 					if (p.Get().isString()) {
-						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + con->esc(p.Get().getString()) + "\');\n";
+						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + p.Get().getString() + "\');\n";
 					}
 					else {
 						std::string temp;

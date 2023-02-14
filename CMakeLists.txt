@@ -156,32 +156,10 @@ if(PSQL)
 
 			set(PQ_INCLUDE_DIRS ${PQ_INCLUDE_DIR})
 			set(PQ_LIBRARIES ${PQ_LIBRARY} )
+			add_definitions(-DHASPSQL)
 		else()
 			message(STATUS "PQ: not found - ${PQ_INCLUDE_DIR}, ${PQ_LIBRARY}")
 		endif()
-
-		pkg_check_modules(PKG_PQXX libpqxx)
-		find_path(PQXX_INCLUDE_DIR pqxx/pqxx.h HINTS ${PKG_PQXX_INCLUDE_DIRS} /usr/include)
-		find_path(PQXX_INCLUDE_DIR pqxx/pqxx HINTS /usr/include)
-		find_library(PQXX_LIBRARY libpqxx.so HINTS ${PKG_PQXX_LIBRARY_DIRS})
-		find_library(PQXX_LIBRARY libpqxx.dylib HINTS ${PKG_PQ_LIBRARY_DIRS})
-		find_library(PQXX_LIBRARY pqxx HINTS ${PKG_PQ_LIBRARY_DIRS})
-
-		if(PQXX_INCLUDE_DIR AND PQXX_LIBRARY)
-
-			message(STATUS "PQXX: found - ${PQXX_INCLUDE_DIR}, ${PQXX_LIBRARY}")
-
-			set(PQXX_INCLUDE_DIRS ${PQXX_INCLUDE_DIR})
-			set(PQXX_LIBRARIES ${PQXX_LIBRARY} )
-		else()
-			message(STATUS "PQXX: not found -  ${PKG_PQXX_INCLUDE_DIRS}  ${PQXX_INCLUDE_DIR}, ${PQXX_LIBRARY}")
-		endif()
-
-		if(PQ_INCLUDE_DIR AND PQ_LIBRARY AND PQXX_INCLUDE_DIR AND PQXX_LIBRARY)
-			add_definitions(-DHASPSQL)
-			message(STATUS "PSQL: spport included")
-		endif()
-
 	endif()
 endif()
 
