@@ -165,6 +165,11 @@ namespace IO {
 #ifdef HASPSQL
 			const std::lock_guard<std::mutex> lock(queue_mutex);
 
+			if (sql.size() > 32768 * 24) {
+				std::cerr << "DBMS: writing to database too slow, data lost." << std::endl;
+				sql.clear();
+			}
+
 			const AIS::Message* msg = (AIS::Message*)data[0].binary;
 
 			sql += std::string("DROP TABLE IF EXISTS _id;\nWITH cte AS (INSERT INTO ais_message (mmsi, type, timestamp, sender, channel, signal_level, ppm) "
