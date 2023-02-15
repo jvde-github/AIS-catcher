@@ -73,7 +73,7 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 	struct VesselDetail {
 
 		uint32_t mmsi = 0;
-		int count = 0, /*mmsi_type = 0,*/ msg_type = 0, shiptype = 0, heading = HEADING_UNDEFINED;
+		int count = 0, msg_type = 0, shiptype = 0, heading = HEADING_UNDEFINED;
 		int status = STATUS_UNDEFINED, virtual_aid = 0, path_ptr = -1;
 		int to_port = DIMENSION_UNDEFINED, to_bow = DIMENSION_UNDEFINED, to_starboard = DIMENSION_UNDEFINED, to_stern = DIMENSION_UNDEFINED;
 		int IMO = IMO_UNDEFINED, angle = ANGLE_UNDEFINED, validated = 0;
@@ -81,6 +81,7 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 		float lat = LAT_UNDEFINED, lon = LON_UNDEFINED, ppm = 0, level = 0, speed = SPEED_UNDEFINED;
 		float cog = COG_UNDEFINED, draught = 0, distance = DISTANCE_UNDEFINED;
 		std::time_t last_signal;
+		bool approximate = false;
 		char shipname[21] = { 0 }, destination[21] = { 0 }, callsign[8] = { 0 }, country_code[3] = { 0 };
 	};
 
@@ -118,7 +119,7 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 	int findShip(uint32_t mmsi);
 	int createShip();
 	void moveShipToFront(int);
-	bool updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDetail& v);
+	bool updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDetail& v, bool allowApproximate);
 
 	bool updateShip(const JSON::JSON&, TAG&, VesselDetail&);
 	void addToPath(int ptr);

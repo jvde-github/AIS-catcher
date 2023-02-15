@@ -1119,8 +1119,8 @@
     getDistanceUnit = c => "nmi";
     getSpeedVal = c => Number(c).toFixed(1);
     getSpeedUnit = c => "kts";
-    getLatVal = c => Number(c).toFixed(5);
-    getLonVal = c => Number(c).toFixed(5);
+    getLatVal = ship =>  (ship.approx?"<i>":"") + Number(ship.lat).toFixed(5) + (ship.approx?"</i>":"") ;
+    getLonVal = ship =>  (ship.approx?"<i>":"") + Number(ship.lat).toFixed(5) + (ship.approx?"</i>":"");
     getEtaVal = ship => (("0" + ship.eta_month).slice(-2)) + "-" + (("0" + ship.eta_day).slice(-2)) + " " + (("0" + ship.eta_hour).slice(-2)) + ":" + (("0" + ship.eta_minute).slice(-2));
     getDeltaTimeVal = s =>  s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
     getShipName = ship => ship.shipname;
@@ -2358,8 +2358,8 @@
             }
 
             if (ship.lat != null && ship.lon != null) {
-                cell = row.insertCell(9); cell.innerHTML = getLatVal(ship.lat); cell.setAttribute("valid",valid);
-                cell = row.insertCell(10); cell.innerHTML = getLonVal(ship.lon); cell.setAttribute("valid",valid);
+                cell = row.insertCell(9); cell.innerHTML = getLatVal(ship); cell.setAttribute("valid",valid);
+                cell = row.insertCell(10); cell.innerHTML = getLonVal(ship); cell.setAttribute("valid",valid);
             } else {
                 row.insertCell(9).innerHTML = "";
                 row.insertCell(10).innerHTML = "";
@@ -2738,8 +2738,8 @@
         document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
         document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(ship.last_signal);
         document.getElementById("shipcard_eta").innerHTML =  (ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null )  ? getEtaVal(ship) : null;
-        document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatVal(ship.lat) : null;
-        document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonVal(ship.lon) : null;
+        document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatVal(ship) : null;
+        document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonVal(ship) : null;
 
         document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
         document.getElementById("shipcard_distance").innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;

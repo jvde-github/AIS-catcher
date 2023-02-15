@@ -105,6 +105,7 @@ std::string DB::getJSON(bool full) {
 			content += "\"level\":" + std::to_string(ship.level) + ",";
 			content += "\"count\":" + std::to_string(ship.count) + ",";
 			content += "\"ppm\":" + std::to_string(ship.ppm) + ",";
+			content += "\"approx\":" + std::string(ship.approximate ? "true" : "false") + ",";
 
 			content += "\"heading\":" + ((ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ship.heading)) + ",";
 			content += "\"cog\":" + ((ship.cog == COG_UNDEFINED) ? null_str : std::to_string(ship.cog)) + ",";
@@ -123,14 +124,12 @@ std::string DB::getJSON(bool full) {
 
 			content += "\"draught\":" + std::to_string(ship.draught) + ",";
 
-
 			content += "\"eta_month\":" + ((ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ship.month)) + ",";
 			content += "\"eta_day\":" + ((ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ship.day)) + ",";
 			content += "\"eta_hour\":" + ((ship.hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(ship.hour)) + ",";
 			content += "\"eta_minute\":" + ((ship.minute == ETA_MINUTE_UNDEFINED) ? null_str : std::to_string(ship.minute)) + ",";
 
 			content += "\"imo\":" + ((ship.IMO == IMO_UNDEFINED) ? null_str : std::to_string(ship.IMO)) + ",";
-
 
 			content += "\"callsign\":";
 			str = std::string(ship.callsign);
@@ -234,35 +233,21 @@ void DB::addToPath(int ptr) {
 	ships[ptr].ship.path_ptr = path_idx;
 	path_idx = (path_idx + 1) % M;
 }
-/*
-int DB::setMmsiType(int mmsi, int type) {
 
-	// type derived from MMSI
-	if ((mmsi >= 200000000 && mmsi < 800000000) || (mmsi >= 20000000 && mmsi < 80000000) || ((mmsi >= 982000000 && mmsi < 988000000)))
-		return (type == 18 || type == 19 || type == 24) ? MMSI_TYPE_CLASS_B : MMSI_TYPE_CLASS_A; // Class A & Class B
-	else if ((mmsi >= 2000000 && mmsi < 8000000))
-		return MMSI_TYPE_BASESTATION; // Base Station
-	else if ((mmsi >= 111000000 && mmsi < 111999999) || (mmsi >= 11100000 && mmsi < 11199999))
-		return MMSI_TYPE_SAR; // helicopter
-	else if (mmsi >= 97000000 && mmsi < 98000000)
-		return MMSI_TYPE_SARTEPIRB; //  AIS SART/EPIRB/man-overboard
-	else if (mmsi >= 992000000 && mmsi < 998000000)
-		return MMSI_TYPE_ATON; //  AtoN
-	else
-		return MMSI_TYPE_OTHER; // anything else
-}
-*/
-
-bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDetail& v) {
+bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDetail& v, bool allowApproximate) {
 	bool position_updated = false;
 	switch (p.Key()) {
 	case AIS::KEY_LAT:
-		v.lat = p.Get().getFloat();
-		position_updated = true;
+		if (msg->type() != 27 || allowApproximate || v.approximate) {
+			v.lat = p.Get().getFloat();
+			position_updated = true;
+		}
 		break;
 	case AIS::KEY_LON:
-		v.lon = p.Get().getFloat();
-		position_updated = true;
+		if (msg->type() != 27 || allowApproximate || v.approximate) {
+			v.lon = p.Get().getFloat();
+			position_updated = true;
+		}
 		break;
 	case AIS::KEY_SHIPTYPE:
 		if (p.Get().getInt())
@@ -341,20 +326,33 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDe
 bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	const AIS::Message* msg = (AIS::Message*)data.binary;
 
+	// determine whether we accept msg 27 to update lat/lon
+	bool allowApproxLatLon = false, positionUpdated = false;
+
+	if (msg->type() == 27) {
+		int timeout = 10 * 60;
+
+		if (ship.speed != SPEED_UNDEFINED && ship.speed != 0)
+			timeout = MAX(10, MIN(timeout, (int)(0.25f / ship.speed * 3600.0f)));
+
+		if (msg->getRxTimeUnix() - ship.last_signal > timeout)
+			allowApproxLatLon = true;
+	}
+
 	ship.mmsi = msg->mmsi();
 	ship.count++;
 	ship.last_signal = msg->getRxTimeUnix();
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
 	ship.msg_type |= 1 << msg->type();
-	// ship.mmsi_type = setMmsiType(msg->mmsi(), msg->type());
-
-	bool position_updated = false;
 
 	for (const auto& p : data.getProperties())
-		position_updated |= updateFields(p, msg, ship);
+		positionUpdated |= updateFields(p, msg, ship, allowApproxLatLon);
 
-	return position_updated;
+	if (positionUpdated)
+		ship.approximate = msg->type() == 27;
+
+	return positionUpdated;
 }
 
 void DB::addValidation(int ptr, TAG& tag, float lat, float lon) {

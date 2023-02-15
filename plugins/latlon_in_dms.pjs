@@ -8,5 +8,6 @@ function decimalToDMS(l, isLatitude) {
     return degrees + "&deg" + minutes + "'" + seconds + "\"" + direction;
 }
 
-getLatVal = c => decimalToDMS(c, true);
-getLonVal = c => decimalToDMS(c, false);
+function getLatVal(c) { return (c.approx?"<i>":"") + decimalToDMS(c.lat, true) + (c.approx?"</i>":""); }
+function getLonVal(c) { return (c.approx?"<i>":"") + decimalToDMS(c.lon, false) + (c.approx?"</i>":""); }
+
