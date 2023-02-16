@@ -84,11 +84,14 @@ namespace AIS {
 		json.Add(AIS::KEY_TURN_UNSCALED, u);
 
 		if (u == -128)
-			json.Add(p, &nan);
+			// json.Add(p, &nan);
+			json.Add(p, (int)-128);
 		else if (u == -127)
-			json.Add(p, &fastleft);
+			// json.Add(p, &fastleft);
+			json.Add(p, (int)-127);
 		else if (u == 127)
-			json.Add(p, &fastright);
+			// json.Add(p, &fastright);
+			json.Add(p, (int)127);
 		else {
 			double rot = u / 4.733;
 			rot = (u < 0) ? -rot * rot : rot * rot;
