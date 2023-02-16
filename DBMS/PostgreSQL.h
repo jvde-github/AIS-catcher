@@ -28,6 +28,7 @@
 #include "AIS.h"
 #include "Utilities.h"
 #include "JSON/JSON.h"
+#include "Keys.h"
 #include "JSON/StringBuilder.h"
 
 
@@ -53,7 +54,7 @@ namespace IO {
 		std::vector<int> db_keys;
 #endif
 
-		bool write_nmea = false;
+		bool NMEA = false, VP = true, VS = true, BS = false, ATON = true, SAR = true;
 		std::string conn_string = "dbname=ais";
 		std::thread run_thread;
 		bool terminate = false, running = false;
@@ -65,6 +66,7 @@ namespace IO {
 		void post() {
 
 			{
+				// std::cerr << sql << std::endl;
 				const std::lock_guard<std::mutex> lock(queue_mutex);
 				sql_trans = sql;
 				sql.clear();
@@ -160,8 +162,159 @@ namespace IO {
 #endif
 		}
 
+		std::string addVesselPosition(const JSON::JSON* data, const AIS::Message* msg) {
+			if (!VP) return "";
+
+			std::string keys = "";
+			std::string values = "";
+
+			for (const auto& p : data[0].getProperties()) {
+				switch (p.Key()) {
+				case AIS::KEY_LAT:
+				case AIS::KEY_LON:
+				case AIS::KEY_MMSI:
+				case AIS::KEY_STATUS:
+				case AIS::KEY_TURN:
+				case AIS::KEY_HEADING:
+				case AIS::KEY_COURSE:
+				case AIS::KEY_SPEED:
+					keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+					builder.to_string(values, p.Get());
+					values += ",";
+					break;
+				}
+			}
+			keys += "timestamp";
+			values += std::to_string(msg->getRxTimeUnix());
+
+			std::string ret;
+			return "INSERT INTO ais_vessel_pos (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+		}
+		std::string addVesselStatic(const JSON::JSON* data, const AIS::Message* msg) {
+			if (!VS) return "";
+
+			std::string keys = "";
+			std::string values = "";
+
+			for (const auto& p : data[0].getProperties()) {
+				switch (p.Key()) {
+				case AIS::KEY_MMSI:
+				case AIS::KEY_IMO:
+				case AIS::KEY_SHIPNAME:
+				case AIS::KEY_CALLSIGN:
+				case AIS::KEY_TO_BOW:
+				case AIS::KEY_TO_STERN:
+				case AIS::KEY_TO_STARBOARD:
+				case AIS::KEY_TO_PORT:
+				case AIS::KEY_DRAUGHT:
+				case AIS::KEY_SHIPTYPE:
+				case AIS::KEY_DESTINATION:
+				case AIS::KEY_ETA:
+					keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+					if (p.Get().isString()) {
+						values += "\'" + escape(p.Get().getString()) + "\'";
+					}
+					else
+						builder.to_string(values, p.Get());
+					values += ",";
+					break;
+				}
+			}
+			keys += "timestamp";
+			values += std::to_string(msg->getRxTimeUnix());
+
+			std::string ret;
+			return "INSERT INTO ais_vessel_static (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+		}
+
+
+		std::string addBasestation(const JSON::JSON* data, const AIS::Message* msg) {
+			if (!BS) return "";
+
+			std::string keys = "";
+			std::string values = "";
+
+			for (const auto& p : data[0].getProperties()) {
+				switch (p.Key()) {
+				case AIS::KEY_LAT:
+				case AIS::KEY_LON:
+				case AIS::KEY_MMSI:
+					keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+					builder.to_string(values, p.Get());
+					values += ",";
+					break;
+				}
+			}
+			keys += "timestamp";
+			values += std::to_string(msg->getRxTimeUnix());
+
+			std::string ret;
+			return "INSERT INTO ais_basestation (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+		}
+
+		std::string addSARposition(const JSON::JSON* data, const AIS::Message* msg) {
+			if (!SAR) return "";
+
+			std::string keys = "";
+			std::string values = "";
+
+			for (const auto& p : data[0].getProperties()) {
+				switch (p.Key()) {
+				case AIS::KEY_LAT:
+				case AIS::KEY_LON:
+				case AIS::KEY_ALT:
+				case AIS::KEY_COURSE:
+				case AIS::KEY_MMSI:
+					keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+					builder.to_string(values, p.Get());
+					values += ",";
+					break;
+				}
+			}
+			keys += "timestamp";
+			values += std::to_string(msg->getRxTimeUnix());
+
+			std::string ret;
+			return "INSERT INTO ais_sar_position (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+		}
+
+		std::string addATON(const JSON::JSON* data, const AIS::Message* msg) {
+			if (!ATON) return "";
+
+			std::string keys = "";
+			std::string values = "";
+
+			for (const auto& p : data[0].getProperties()) {
+				switch (p.Key()) {
+				case AIS::KEY_LAT:
+				case AIS::KEY_LON:
+				case AIS::KEY_NAME:
+				case AIS::KEY_TO_BOW:
+				case AIS::KEY_TO_STERN:
+				case AIS::KEY_TO_STARBOARD:
+				case AIS::KEY_TO_PORT:
+				case AIS::KEY_AID_TYPE:
+				case AIS::KEY_MMSI:
+					keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+					if (p.Get().isString()) {
+						values += "\'" + escape(p.Get().getString()) + "\'";
+					}
+					else
+						builder.to_string(values, p.Get());
+					values += ",";
+					break;
+				}
+			}
+			keys += "timestamp";
+			values += std::to_string(msg->getRxTimeUnix());
+
+			std::string ret;
+			return "INSERT INTO ais_aton (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+		}
+
 		void Start(){};
 		void Receive(const JSON::JSON* data, int len, TAG& tag) {
+
 #ifdef HASPSQL
 			const std::lock_guard<std::mutex> lock(queue_mutex);
 
@@ -172,6 +325,8 @@ namespace IO {
 
 			const AIS::Message* msg = (AIS::Message*)data[0].binary;
 
+			if (!filter.include(*msg)) return;
+
 			sql += std::string("DROP TABLE IF EXISTS _id;\nWITH cte AS (INSERT INTO ais_message (mmsi, type, timestamp, sender, channel, signal_level, ppm) "
 							   "VALUES (") +
 				   std::to_string(msg->mmsi()) + ',' + std::to_string(msg->type()) + ',' + std::to_string(msg->getRxTimeUnix()) + ',' +
@@ -180,12 +335,42 @@ namespace IO {
 				   ") RETURNING id)\nSELECT id INTO _id FROM cte;";
 
 
-			// TO DO: remove, can be selected from JSON properties
-			if (write_nmea)
+			if (NMEA)
 				for (auto s : msg->NMEA) {
 					sql += "INSERT INTO ais_nmea (id, nmea) VALUES ((SELECT id FROM _id),\'" + s + "\');\n";
 				}
 
+			switch (msg->type()) {
+			case 1:
+			case 2:
+			case 3:
+				sql += addVesselPosition(data, msg);
+				break;
+			case 4:
+				sql += addBasestation(data, msg);
+				break;
+			case 5:
+				sql += addVesselStatic(data, msg);
+				break;
+			case 9:
+				sql += addSARposition(data, msg);
+				break;
+			case 18:
+				sql += addVesselPosition(data, msg);
+				break;
+			case 19:
+				sql += addVesselPosition(data, msg);
+				sql += addVesselStatic(data, msg);
+				break;
+			case 21:
+				sql += addATON(data, msg);
+				break;
+			case 24:
+				sql += addVesselStatic(data, msg);
+				break;
+			default:
+				break;
+			}
 			// TO DO: types, etc
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
@@ -213,9 +398,19 @@ namespace IO {
 			if (option == "CONN_STR") {
 				conn_string = arg;
 			}
-			else if (option == "WRITE_NMEA") {
-				write_nmea = Util::Parse::Switch(arg);
-			}
+
+			else if (option == "NMEA")
+				NMEA = Util::Parse::Switch(arg);
+			else if (option == "VP")
+				VP = Util::Parse::Switch(arg);
+			else if (option == "VS")
+				VS = Util::Parse::Switch(arg);
+			else if (option == "BS")
+				BS = Util::Parse::Switch(arg);
+			else if (option == "ATON")
+				ATON = Util::Parse::Switch(arg);
+			else if (option == "SAR")
+				SAR = Util::Parse::Switch(arg);
 			else {
 				filter.Set(option, arg);
 			}
