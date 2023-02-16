@@ -79,7 +79,7 @@ namespace IO {
 				std::cerr << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con) << sql_trans << std::endl;
 			}
 			else {
-				std::cerr << "DMBS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
+				std::cerr << "DBMS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
 			}
 
 			PQclear(res);
@@ -154,7 +154,13 @@ namespace IO {
 
 				run_thread = std::thread(&PostgreSQL::process, this);
 				std::cerr << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
-				if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed() << ".";
+				if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed();
+				std::cerr << ", VP " << Util::Convert::toString(VP);
+				std::cerr << ", VS " << Util::Convert::toString(VS);
+				std::cerr << ", BS " << Util::Convert::toString(BS);
+				std::cerr << ", SAR " << Util::Convert::toString(SAR);
+				std::cerr << ", ATON " << Util::Convert::toString(ATON);
+				std::cerr << ", NMEA " << Util::Convert::toString(NMEA);
 				std::cerr << std::endl;
 			}
 #else
@@ -344,6 +350,7 @@ namespace IO {
 			case 1:
 			case 2:
 			case 3:
+			case 27:
 				sql += addVesselPosition(data, msg);
 				break;
 			case 4:
