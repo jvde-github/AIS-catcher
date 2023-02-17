@@ -59,7 +59,7 @@ Set up the necessary tables:
 ```console
 psql ais <DBMS/create.sql 
 ```
-Now make sure you build the latest version of AIS-catcher with this dependency:
+Make sure you build the latest version of AIS-catcher with this dependency:
 ```console
 sudo apt install libpq-dev
 ```
