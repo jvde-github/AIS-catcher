@@ -51,7 +51,7 @@ Most external programs will not be able to accept this JSON packaged NMEA string
 
 ### DBMS support
 
-Currently we are experimenting with a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
+We have added a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
 ```console
 sudo -u postgres createdb ais
 ```
@@ -59,14 +59,18 @@ Set up the necessary tables:
 ```console
 psql ais <DBMS/create.sql 
 ```
-Now you can simply let AIS-catcher populate the database:
+Now make sure you build the latest version of AIS-catcher with this dependency:
+```console
+sudo apt install libpq-dev
+```
+Now AIS-catcher can write the received messages to the database:
 ```console
 AIS-catcher -D dbname=ais
 ```
-There are a few settings for the new `-D` swich that will determine how the tables will be populated. The first is the connection string and other settings define can be added to fill other tables:
+There are a few settings for the new `-D` swich of which the first is the connection string that specifies the database. If you want to use a space in the string use quotation marks aroundf the string. There are other settings that define how tables will be populated:
 
-| table | description | settings |
-| :--- | :--- | :---: |
+| Table | Description | Settings |
+| :--- | :--- | :--- |
 | ais_message | received messages with meta data  |  |
 | ais_nmea | nmea sentences | NMEA on/off |
 | ais_basestation | basestation messsages from type 4 | BS on/off |
@@ -76,7 +80,7 @@ There are a few settings for the new `-D` swich that will determine how the tabl
 | ais_vessel_static | vessel static data from type 5, 19 | VS on/off |
 | ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys |
 
-Hope this is sufficient to get you experimenting.
+I hope this is sufficient to get you experimenting!
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
