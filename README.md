@@ -36,9 +36,47 @@ We have added new functionality that allows the user to set some bespoke informa
 ```console
 AIS-catcher -N 8100 ABOUT about.md
 ```
+
+### UDP output in JSON format
+
+The program now provides the functionality to send NMEA messages packaged in a JSON object:
+```console
+AIS-catcher -u 192.168.1.235 4002 JSON on
+```
+Similary, AIS-catcher accepts and parses this input when running as a UDP server
+```console
+AIS-catcher -x 192.168.1.235 4002
+```
+Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings.
+
 ### DBMS support
 
-Currently we are experimenting with a simple feature that writes messages to a database (PostgreSQL for now with expected support for mysql and sqlite). The database stores messages and specific key/value pairs (from JSON) as per a user defined list. Idea is that there is quite some (partial) replication in data send by vessels so we only have to store changes in data elements (e.g. change in reported destination). This requires some further experimentation and finetuning so no documentation for now. For experimentation use the Makefile and install PostgreSQL and libpqxx.
+Currently we are experimenting with a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
+```console
+sudo -u postgres createdb ais
+```
+Set up the necessary tables:
+```console
+psql ais <DBMS/create.sql 
+```
+Now you can simply let AIS-catcher populate the database:
+```console
+AIS-catcher -D dbname=ais
+```
+There are a few settings for the new `-D` swich that will populate how the tables will be populated. The first is the connection string and subsequent settings define how we will various tables:
+
+| table | description | settings |
+| :--- | :--- | :---: |
+| ais_message | received messages with meta data  |  |
+| ais_nmea | nmea sentences | NMEA on/off |
+| ais_basestation | basestation messsages from type 4 | BS on/off |
+| ais_sar_position | sar positions from type 9 | SAR on/off |
+| ais_aton | aton messages from type 21 | ATON on/off |
+| ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off |
+| ais_vessel_static | vessel static data from type 5, 19 | VS on/off |
+| ais_property | specific key/value pairs with link to message  | for keys specified in table ais_keys |
+
+Hope this is sufficient to get you experimenting.
 
 ## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
 
