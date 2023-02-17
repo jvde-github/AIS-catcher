@@ -23,8 +23,12 @@
 #include "Stream.h"
 #include "Signals.h"
 
-namespace AIS {
+#include "JSON/JSON.h"
+#include "JSON/Parser.h"
+#include "JSON/StringBuilder.h"
+#include "Keys.h"
 
+namespace AIS {
 
 	class NMEA : public SimpleStreamInOut<RAW, Message>, public SignalIn<DecoderSignals> {
 		Message msg;
@@ -50,7 +54,7 @@ namespace AIS {
 		int index = 0;
 		char last = '\n';
 
-		void process(TAG& tag);
+		void process(TAG& tag, long int t);
 		void addline(const AIVDM& a);
 		void reset();
 		void clean(char, int);
@@ -64,6 +68,11 @@ namespace AIS {
 
 		bool regenerate = false;
 		bool crc_check = false;
+		bool JSON_input = false;
+
+		std::string json;
+
+		void processNMEAchar(char c, TAG& tag, long int t);
 
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);
@@ -73,5 +82,6 @@ namespace AIS {
 
 		void setCRCcheck(bool b) { crc_check = b; }
 		bool getCRCcheck() { return crc_check; }
+		void setJSON(bool b) { JSON_input = b; }
 	};
 }

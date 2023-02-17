@@ -137,6 +137,7 @@ namespace IO {
 		std::string host, port;
 
 		AIS::Filter filter;
+		bool JSON = false;
 
 	public:
 		~UDP();
@@ -156,5 +157,6 @@ namespace IO {
 
 		void setSource(int s) { source = s; }
 		int getSource() { return source; }
+		void setJSON(bool b) { JSON = b; }
 	};
 }

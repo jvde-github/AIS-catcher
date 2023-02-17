@@ -46,7 +46,7 @@ namespace Util {
 		Send(output.data(), len, tag);
 	}
 
-	int Parse::Integer(std::string str, int min, int max) {
+	long Parse::Integer(std::string str, long min, long max) {
 		int number = 0;
 		std::string::size_type sz;
 
@@ -60,7 +60,8 @@ namespace Util {
 		if (str.length() > sz && (str[sz] == 'K' || str[sz] == 'k'))
 			number *= 1000;
 
-		if (number < min || number > max) throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "]");
+		if (min != 0 || max != 0)
+			if (number < min || number > max) throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "]");
 
 		return number;
 	}
