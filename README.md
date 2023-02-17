@@ -49,7 +49,7 @@ AIS-catcher -x 192.168.1.235 4002
 ```
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings.
 
-### DBMS support
+### Writing AIS messages to a Database
 
 We have added a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
 ```console
