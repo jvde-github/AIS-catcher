@@ -1120,7 +1120,7 @@
     getSpeedVal = c => Number(c).toFixed(1);
     getSpeedUnit = c => "kts";
     getLatVal = ship =>  (ship.approx?"<i>":"") + Number(ship.lat).toFixed(5) + (ship.approx?"</i>":"") ;
-    getLonVal = ship =>  (ship.approx?"<i>":"") + Number(ship.lat).toFixed(5) + (ship.approx?"</i>":"");
+    getLonVal = ship =>  (ship.approx?"<i>":"") + Number(ship.lon).toFixed(5) + (ship.approx?"</i>":"");
     getEtaVal = ship => (("0" + ship.eta_month).slice(-2)) + "-" + (("0" + ship.eta_day).slice(-2)) + " " + (("0" + ship.eta_hour).slice(-2)) + ":" + (("0" + ship.eta_minute).slice(-2));
     getDeltaTimeVal = s =>  s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
     getShipName = ship => ship.shipname;
