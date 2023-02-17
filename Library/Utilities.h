@@ -96,7 +96,7 @@ namespace Util {
 
 	class Parse {
 	public:
-		static int Integer(std::string str, int min = (-((1 << 30) - 1)), int max = ((1 << 30) - 1));
+		static long Integer(std::string str, long min = 0, long max = 0);
 		static FLOAT32 Float(std::string str, FLOAT32 min = -1e6, FLOAT32 max = +1e6);
 		static bool StreamFormat(std::string str, Format& format);
 		static bool DeviceType(std::string str, Type& type);

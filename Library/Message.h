@@ -47,8 +47,11 @@ namespace AIS {
 	public:
 		std::vector<std::string> NMEA;
 
-		void Stamp() {
-			std::time(&rxtime);
+		void Stamp(std::time_t t = (std::time_t)0L) {
+			if ((long int)t == 0)
+				std::time(&rxtime);
+			else
+				setRxTimeUnix(t);
 		}
 
 		std::string getRxTime() const {
@@ -57,6 +60,10 @@ namespace AIS {
 
 		std::time_t getRxTimeUnix() const {
 			return rxtime;
+		}
+
+		void setRxTimeUnix(std::time_t t) {
+			rxtime = t;
 		}
 
 		void clear() {

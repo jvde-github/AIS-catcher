@@ -58,7 +58,7 @@ namespace AIS {
 		return c;
 	}
 
-	void NMEA::process(TAG& tag) {
+	void NMEA::process(TAG& tag, long t) {
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
 			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "]." << std::endl;
 			if (crc_check) return;
@@ -66,7 +66,7 @@ namespace AIS {
 
 		if (aivdm.count == 1) {
 			msg.clear();
-			msg.Stamp();
+			msg.Stamp(t);
 			msg.setChannel(aivdm.channel);
 
 			addline(aivdm);
@@ -92,7 +92,7 @@ namespace AIS {
 		// multiline messages are now complete and in the right order
 		// we create a message and add the payloads to it
 		msg.clear();
-		msg.Stamp();
+		msg.Stamp(t);
 		msg.setChannel(aivdm.channel);
 
 		for (auto it = queue.begin(); it != queue.end(); it++) {
@@ -114,8 +114,7 @@ namespace AIS {
 		if (a.count == a.number) msg.reduceLength(a.fillbits);
 	}
 
-	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
-	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
+	void NMEA::processNMEAchar(char c, TAG& tag, long t) {
 		const std::string pattern = "sttVDM,c,n,i,c,d,f*cc";
 
 		const int IDX_START = 0;
@@ -130,92 +129,145 @@ namespace AIS {
 		const int IDX_CRC1 = 19;
 		const int IDX_CRC2 = 20;
 
+		aivdm.sentence += c;
+
+		bool match = false;
+
+		switch (index) {
+		case IDX_START:
+			match = c == '!' || c == '$';
+			break;
+		case IDX_TALKER1:
+			match = c == 'A' || c == 'B' || c == 'S';
+			aivdm.talkerID = c << 8;
+			break;
+		case IDX_TALKER2:
+			match = last == 'A' && (c == 'B' || c == 'D' || c == 'I' || c == 'N' || c == 'R' || c == 'S' || c == 'T' || c == 'X');
+			match = match || (c == 'S' && last == 'B') || (c == 'A' && last == 'S');
+			aivdm.talkerID |= c;
+			break;
+		case IDX_COUNT:
+			match = std::isdigit(c);
+			if (match) { aivdm.count = c - '0'; }
+			break;
+		case IDX_NUMBER:
+			match = std::isdigit(c);
+			if (match) { aivdm.number = c - '0'; }
+			break;
+		case IDX_ID:
+			if (c == ',') {
+				index++;
+				match = true;
+				aivdm.ID = 0;
+				break;
+			}
+			match = std::isdigit(c);
+			if (match) { aivdm.ID = c - '0'; }
+			break;
+
+		case IDX_CHANNEL:
+			if (c == ',') {
+				match = true;
+				aivdm.channel = '?';
+				index++;
+				break;
+			}
+			match = true;
+			aivdm.channel = c;
+			break;
+		case IDX_DATA:
+			if (c == ',') {
+				index++;
+				match = true;
+			}
+			else {
+				match = isNMEAchar(c);
+				if (match) {
+					aivdm.data += c;
+					index--;
+				}
+			}
+			break;
+		case IDX_FILLBITS:
+			match = std::isdigit(c);
+			if (match) { aivdm.fillbits = c - '0'; }
+			break;
+		case IDX_CRC1:
+			match = isHEX(c);
+			if (match) aivdm.checksum = fromHEX(c) << 4;
+			break;
+		case IDX_CRC2:
+			match = isHEX(c);
+			if (match) {
+				aivdm.checksum |= fromHEX(c);
+				process(tag, t);
+			}
+			break;
+		default:
+			match = c == pattern[index];
+			break;
+		}
+
+		index++;
+		if (!match || index >= pattern.size()) { reset(); }
+		last = c;
+	}
+
+	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
+	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
+
+		long t = 0;
+
 		for (int j = 0; j < len; j++) {
 			for (int i = 0; i < data[j].size; i++) {
 
 				char c = ((char*)(data[j].data))[i];
-				aivdm.sentence += c;
+				json += c;
+				if (c == '\n') {
+					if (json[0] == '{' || JSON_input) {
+						try {
+							JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
+							std::shared_ptr<JSON::JSON> j = parser.parse(json);
 
-				bool match = false;
+							tag.ppm = 0;
+							tag.sample_lvl = 0;
+							t = 0;
 
-				switch (index) {
-				case IDX_START:
-					match = c == '!' || c == '$';
-					break;
-				case IDX_TALKER1:
-					match = c == 'A' || c == 'B' || c == 'S';
-					aivdm.talkerID = c << 8;
-					break;
-				case IDX_TALKER2:
-					match = last == 'A' && (c == 'B' || c == 'D' || c == 'I' || c == 'N' || c == 'R' || c == 'S' || c == 'T' || c == 'X');
-					match = match || (c == 'S' && last == 'B') || (c == 'A' && last == 'S');
-					aivdm.talkerID |= c;
-					break;
-				case IDX_COUNT:
-					match = std::isdigit(c);
-					if (match) { aivdm.count = c - '0'; }
-					break;
-				case IDX_NUMBER:
-					match = std::isdigit(c);
-					if (match) { aivdm.number = c - '0'; }
-					break;
-				case IDX_ID:
-					if (c == ',') {
-						index++;
-						match = true;
-						aivdm.ID = 0;
-						break;
-					}
-					match = std::isdigit(c);
-					if (match) { aivdm.ID = c - '0'; }
-					break;
+							// phase 1, get the meta data in place
+							for (const auto& p : j->getProperties()) {
+								switch (p.Key()) {
+								case AIS::KEY_SIGNAL_POWER:
+									tag.level = p.Get().getFloat();
+									break;
+								case AIS::KEY_PPM:
+									tag.ppm = p.Get().getFloat();
+									break;
+								case AIS::KEY_RXUXTIME:
+									t = p.Get().getInt();
+									break;
+								}
+							}
 
-				case IDX_CHANNEL:
-					if (c == ',') {
-						match = true;
-						aivdm.channel = '?';
-						index++;
-						break;
-					}
-					match = true;
-					aivdm.channel = c;
-					break;
-				case IDX_DATA:
-					if (c == ',') {
-						index++;
-						match = true;
-					}
-					else {
-						match = isNMEAchar(c);
-						if (match) {
-							aivdm.data += c;
-							index--;
+							for (const auto& p : j->getProperties()) {
+								if (p.Key() == AIS::KEY_NMEA) {
+
+									for (const auto& v : p.Get().getArray()) {
+										for (char d : v.getString()) processNMEAchar(d, tag, t);
+										reset();
+									}
+								}
+							}
+						}
+						catch (std::exception const& e) {
+							std::cout << "UDP server: " << e.what() << std::endl;
 						}
 					}
-					break;
-				case IDX_FILLBITS:
-					match = std::isdigit(c);
-					if (match) { aivdm.fillbits = c - '0'; }
-					break;
-				case IDX_CRC1:
-					match = isHEX(c);
-					if (match) aivdm.checksum = fromHEX(c) << 4;
-					break;
-				case IDX_CRC2:
-					match = isHEX(c);
-					if (match) {
-						aivdm.checksum |= fromHEX(c);
-						process(tag);
+					else {
+						for (char d : json) processNMEAchar(d, tag, 0);
+						reset();
 					}
-					break;
-				default:
-					match = c == pattern[index];
-					break;
+					json.clear();
 				}
-
-				index++;
-				if (!match || index >= pattern.size()) { reset(); }
-				last = c;
 			}
 		}
 	}

@@ -27,6 +27,7 @@ namespace AIS {
 		{ "signalpower", "signalpower", "signalpower", "" },
 		{ "ppm", "ppm", "ppm", "" },
 		{ "rxtime", "rxtime", "rxtime", "rxtime" },
+		{ "rxuxtime", "rxuxtime", "rxuxtime", "rxuxtime" },
 		{ "nmea", "nmea", "nmea", "" },
 		{ "eta", "", "eta", "" },
 		{ "shiptype_text", "", "shiptype_text", "" },

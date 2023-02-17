@@ -45,7 +45,7 @@ namespace JSON {
 
 		union Data {
 			bool b;
-			int i;
+			long int i;
 			float f;
 
 			std::string* s;
@@ -56,7 +56,7 @@ namespace JSON {
 
 	public:
 		float getFloat() const { return data.f; }
-		int getInt() const { return data.i; }
+		long int getInt() const { return data.i; }
 		bool getBool() const { return data.b; }
 
 		const std::vector<std::string>& getStringArray() const { return *data.as; }
@@ -75,7 +75,7 @@ namespace JSON {
 			data.f = v;
 			type = Type::FLOAT;
 		}
-		void setInt(int v) {
+		void setInt(long int v) {
 			data.i = v;
 			type = Type::INT;
 		}
@@ -120,7 +120,7 @@ namespace JSON {
 			key = p;
 			value = v;
 		}
-		Property(int p, int v) {
+		Property(int p, long int v) {
 			key = p;
 			value.setInt(v);
 		}
@@ -193,7 +193,7 @@ namespace JSON {
 		const Value* operator[](int p) { return getValue(p); }
 
 		void Add(int p, int v) {
-			properties.push_back(Property(p, (int)v));
+			properties.push_back(Property(p, (long int)v));
 		}
 
 		void Add(int p, float v) {

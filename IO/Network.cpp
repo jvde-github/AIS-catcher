@@ -321,18 +321,42 @@ namespace IO {
 	}
 
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
-		if (sock != -1)
-			for (int i = 0; i < len; i++) {
-				if (filter.include(data[i]))
-					for (const auto& s : data[i].NMEA)
-						sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
+		if (sock != -1) {
+			if (!JSON) {
+				for (int i = 0; i < len; i++) {
+					if (filter.include(data[i]))
+						for (const auto& s : data[i].NMEA)
+							sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
+				}
 			}
+			else {
+				for (int i = 0; i < len; i++) {
+
+					std::string str = "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"";
+					str += ((char)data[i].getChannel());
+					str += std::string("\"");
+
+					if (tag.mode & 2) {
+						// str += ",\"rxtime\":\"" + data[i].getRxTime() + "\"";
+						str += ",\"rxuxtime\":" + std::to_string(data[i].getRxTimeUnix());
+					}
+					if (tag.mode & 1) str += ",\"signalpower\":" + std::to_string(tag.level) + ",\"ppm\":" + std::to_string(tag.ppm);
+
+					str += ",\"mmsi\":" + std::to_string(data[i].mmsi()) + ",\"type\":" + std::to_string(data[i].type());
+					str += ",\"nmea\":[\"" + data[i].NMEA[0] + std::string("\"");
+
+					for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
+					str += "]}\r\n";
+					sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
+				}
+			}
+		}
 	}
 
 	void UDP::Start() {
 		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
-		std::cerr << std::endl;
+		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << std::endl;
 
 		if (sock != -1) {
 			throw std::runtime_error("UDP: internal error, socket already defined.");
@@ -377,6 +401,9 @@ namespace IO {
 		}
 		else if (option == "PORT") {
 			port = arg;
+		}
+		else if (option == "JSON") {
+			JSON = Util::Parse::Switch(arg);
 		}
 		else
 			return filter.Set(option, arg);
