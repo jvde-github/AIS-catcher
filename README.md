@@ -63,7 +63,7 @@ Now you can simply let AIS-catcher populate the database:
 ```console
 AIS-catcher -D dbname=ais
 ```
-There are a few settings for the new `-D` swich that will populate how the tables will be populated. The first is the connection string and subsequent settings define how we will various tables:
+There are a few settings for the new `-D` swich that will determine how the tables will be populated. The first is the connection string and other settings define can be added to fill other tables:
 
 | table | description | settings |
 | :--- | :--- | :---: |
@@ -74,7 +74,7 @@ There are a few settings for the new `-D` swich that will populate how the table
 | ais_aton | aton messages from type 21 | ATON on/off |
 | ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off |
 | ais_vessel_static | vessel static data from type 5, 19 | VS on/off |
-| ais_property | specific key/value pairs with link to message  | for keys specified in table ais_keys |
+| ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys |
 
 Hope this is sufficient to get you experimenting.
 
