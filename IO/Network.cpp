@@ -324,13 +324,15 @@ namespace IO {
 		if (sock != -1) {
 			if (!JSON) {
 				for (int i = 0; i < len; i++) {
-					if (filter.include(data[i]))
-						for (const auto& s : data[i].NMEA)
-							sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
+					if (!filter.include(data[i])) continue;
+
+					for (const auto& s : data[i].NMEA)
+						sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
 				}
 			}
 			else {
 				for (int i = 0; i < len; i++) {
+					if (!filter.include(data[i])) continue;
 
 					std::string str = "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"";
 					str += ((char)data[i].getChannel());
