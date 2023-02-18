@@ -29,7 +29,7 @@ The main recent development is the addition of a web interface for which a few e
 More information in [this](https://github.com/jvde-github/AIS-catcher#Web-interface) section. 
 
 <p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/2df653169243a18da589c95ecb576f88cae7d521/media/Webservice%20in%20Action%20Jan%202,%202022.jpg" width="30%"/>
+  <img src="https://user-images.githubusercontent.com/52420030/219856752-b3a09051-b913-49bd-8af3-bca2e7a25130.png" width="30%"/>
 </p>
 
 We have added new functionality that allows the user to set some bespoke information about the station and hardware in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab and is read in from a file, say `about.md` as follows:
@@ -51,41 +51,7 @@ Most external programs will not be able to accept this JSON packaged NMEA string
 
 ### Writing AIS messages to a Database
 
-We have added a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
-```console
-sudo -u postgres createdb ais
-```
-Set up the necessary tables:
-```console
-psql ais <DBMS/create.sql 
-```
-Make sure you build the latest version of AIS-catcher with this dependency:
-```console
-sudo apt install libpq-dev
-```
-Now AIS-catcher can write the received messages to the database:
-```console
-AIS-catcher -D dbname=ais
-```
-There are a few settings for the new `-D` swich of which the first is the connection string that specifies the database. If you want to use a space in the string use quotation marks aroundf the string. There are other settings that define how tables will be populated:
-
-| Table | Description | Settings |
-| :--- | :--- | :--- |
-| ais_message | received messages with meta data  |  |
-| ais_nmea | nmea sentences | NMEA on/off |
-| ais_basestation | basestation messsages from type 4 | BS on/off |
-| ais_sar_position | sar positions from type 9 | SAR on/off |
-| ais_aton | aton messages from type 21 | ATON on/off |
-| ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off |
-| ais_vessel_static | vessel static data from type 5, 19 | VS on/off |
-| ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys |
-
-I hope this is sufficient to get you experimenting!
-
-## Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
-
-If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. 
-You can download the APK from the mentioned project page or the Google Play store.
+We have added a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs.  See below for more details. 
 
 ## Usage
 ````
@@ -210,8 +176,9 @@ AIS-catcher -N 8100
 ```
 where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a menu which gives access to tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
 Some development has been done to make this webinterface easily accessible on mobile devices as well (see screenshot) and enriching the experience, for example by adding the contours of a vessel where available: 
+
 <p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe5413ffb16cc01530b17950f982d1b8685dabd0/media/Screenshot%20ship%20shape.jpg" width="30%"/>
+  <img src="https://user-images.githubusercontent.com/52420030/219856813-36a8a220-dc8a-4cf5-9390-0ce523454c55.png" width="30%"/>
 </p>
 
 There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
@@ -228,15 +195,17 @@ All these options can be captured in the configuration file (in a section with n
 
 When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle that will enclose the ships dimensions regardless of the direction it is pointing.
 This commonly happens with Class B ships and if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the historical frigate the USS Constitution, which is docked in the port of Boston. 
+
 <p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/fe2e40b932c1ae456c2f8513b87386de27e255fe/media/Screenshot%20USS%20contitution.jpg" width="50%"/>
+  <img src="https://user-images.githubusercontent.com/52420030/219856857-e0965190-1468-47b6-88ad-423b77c455ff.png" width="50%"/>
 </p>
 
 Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T. 
 
 The "tag control" (above the zoom controls) will add labels to the map:
+
 <p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/4114ed895f610a13598a61a10b077aeda8565ee3/media/Screenshot%20Moored.jpg" width="50%"/>
+  <img src="https://user-images.githubusercontent.com/52420030/219856962-634baf0c-b584-483d-bb2d-c3a984a1cb9d.png" width="50%"/>
 </p>
 
 The summary window with details on a vessel, as received, is called the **ship card** and will be shown when a ship is selected on the map by the user. For smaller screens it can be minimized in the top bar (via minus symbols or by clicking on the header bar) and in fact the ship card will be opened in minimized mode on mobile devices as in the picture with the USS Constitution. In the max form the user can toggle rows that will be visible in this minimized state. These rows are shown with a light grey background. Finally, in minimized mode some options are accessible via icons in the top bar, including showing the vessel track and centering the map at the location of the current vessel which are otherwise provided in the bottom bar of the vessel card. Other options in the bottom bar give access to more ship details via some of the well-known aggregator sites.
@@ -253,8 +222,9 @@ To reliably measure the reception range for the station in the web interface, AI
 
 ### Plots
 The plot tab contains several plots to assess the performance of the receiver:
+
 <p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/blob/8096b8bfa3caca6c73023ce1e708ca421292f27f/media/ScreenshotPlot.jpg" width="50%"/>
+  <img src="https://user-images.githubusercontent.com/52420030/219856922-33404fe8-dc54-4bc2-a1a6-84f4ce5dd72a.png" width="50%"/>
 </p>
 Upon restarting AIS-catcher, the history displayed in the graphs is typically lost. To preserve the state of the plots, a useful option is to save the content to a file, such as "stat.bin," at closure and to create a backup every 10 minutes. This can be accomplished with the following options:
 
@@ -507,6 +477,42 @@ returns a warning on the incorrect CRC and:
 ```
 Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This latter 16 bit checksum/CRC is not included in the NMEA message.
 
+### Writing AIS messages to a Database
+
+As per full release `v0.45` there is functionality to write messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
+```console
+sudo -u postgres createdb ais
+```
+Set up the necessary tables:
+```console
+psql ais <DBMS/create.sql 
+```
+Make sure you build the latest version of AIS-catcher with this dependency:
+```console
+sudo apt install libpq-dev
+```
+Now AIS-catcher can write the received messages to the database:
+```console
+AIS-catcher -D dbname=ais
+```
+There are a few settings for the new `-D` swich of which the first is the connection string that specifies the database. If you want to use a space in the string use quotation marks aroundf the string. There are other settings that define how tables will be populated:
+
+| Table | Description | Settings |
+| :--- | :--- | :--- |
+| ais_message | received messages with meta data  |  |
+| ais_nmea | nmea sentences | NMEA on/off |
+| ais_basestation | basestation messsages from type 4 | BS on/off |
+| ais_sar_position | sar positions from type 9 | SAR on/off |
+| ais_aton | aton messages from type 21 | ATON on/off |
+| ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off |
+| ais_vessel_static | vessel static data from type 5, 19 | VS on/off |
+| ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys |
+
+From thereon it is fairly straightforward to pick up this data and start analysis, e.g. in Excel:
+<img width="958" alt="image" src="https://user-images.githubusercontent.com/52420030/219857250-6c1a48a5-e0a6-426c-8e9a-b3740cc58e21.png">
+
+I hope this is sufficient to get you experimenting!
+
 ### Running on hardware with performance limitations
 
 AIS-catcher implements a trick to speed up downsampling for RTLSDR input at 1536K samples/second by using fixed point calculations (```-m 2 -go FP_DS on```). In essence the downsampling is done 
@@ -596,6 +602,13 @@ which produces:
 INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
 INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
+
+### Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
+
+If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. 
+You can download the APK from the mentioned project page or the Google Play store.
+
+
 
 ## Device specific settings
 
