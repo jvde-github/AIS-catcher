@@ -37,6 +37,12 @@ We have added new functionality that allows the user to set some bespoke informa
 AIS-catcher -N 8100 ABOUT about.md
 ```
 
+### AIS2ADSB
+
+I am playing around with a simple script to pass on AIS NMEA messages to ADS-B software. If works well and deemed useful will be included in AIS-catcher as option.
+
+[https://github.com/jvde-github/ais2adsb](https://github.com/jvde-github/ais2adsb)
+
 ### UDP output in JSON format
 
 The program now provides the functionality to send NMEA messages packaged in a JSON object:
