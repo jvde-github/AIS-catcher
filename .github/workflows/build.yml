@@ -116,7 +116,7 @@ jobs:
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        vcpkg install fftw3:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows curl:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
+        vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows curl:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
     - name: Setting up directories
       run: |
         mkdir output; cd output; mkdir Licenses; cd ..; mkdir include; cd include; mkdir curl; cd ..; mkdir release; mkdir lib;         
