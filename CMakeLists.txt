@@ -143,16 +143,22 @@ endif()
 # Find libpq
 if(PSQL)
 
-	if(MSVC)
-		find_package(PostgreSQL)
-		if(PostgreSQL_FOUND)
-			message(STATUS "PQ: found - ${PostgreSQL_LIBRARIES}, ${PostgreSQL_INCLUDE_DIRS}")
+	if(MSVC AND NOT MSVC_VCPKG)
+		find_path(PQ_INCLUDE_DIR libpq-fe.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+		find_library(PQ_LIBRARY libpq.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+		find_file(PQ_DLL libpq.dll HINTS ${POTHOSSDR_BINARY_DIR})
+
+		if(PQ_INCLUDE_DIR AND PQ_LIBRARY AND PQ_DLL)
+			Message(STATUS "LIBPQ: found (PothosSDR) - " ${PQ_INCLUDE_DIR}, ${PQ_LIBRARY}, ${PQ_DLL})
+			set(COPY_PQ_DLL TRUE)
 			add_definitions(-DHASPSQL)
-			set(PQ_INCLUDE_DIRS ${PostgreSQL_INCLUDE_DIRS})
-			set(PQ_LIBRARIES ${PostgreSQL_LIBRARIES} )
-		else() 
-			message(STATUS "PQ: NOT found - ${PostgreSQL_LIBRARIES}, ${PostgreSQL_INCLUDE_DIRS}")
-		endif() 
+
+			set(PQ_INCLUDE_DIRS ${PQ_INCLUDE_DIR})
+			set(PQ_LIBRARIES ${PQ_LIBRARY} )
+
+		else()
+			Message(STATUS "LIBPQ: NOT found (PothosSDR) - " ${PQ_LIBRARY}, ${SOXR_LIBRARY}, ${PQ_DLL})
+		endif()	
 	else()
 		pkg_check_modules(PKG_PQ libpq)
 		find_path(PQ_INCLUDE_DIR libpq-fe.h HINTS ${PKG_PQ_INCLUDE_DIRS})
@@ -622,6 +628,10 @@ endif()
 
 if(COPY_SOXR_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SOXR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_PQ_DLL)
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_CURL_DLL)
