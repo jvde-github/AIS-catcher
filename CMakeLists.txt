@@ -113,16 +113,10 @@ endif()
 
 # Find zibl
 if(ZLIB)
-	if(MSVC)
-		find_package(ZLIB)
-		if(ZLIB_FOUND)
-			message(STATUS "ZLIB: found - ${ZLIB_INCLUDE_DIRS}, ${ZLIB_LIBRARIES}")
-			set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS})
-			set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} )
-			add_definitions(-DHASZLIB)
-		else()
-			message(STATUS "ZLIB: not found - ${ZLIB_INCLUDE_DIRS}, ${ZLIB_LIBRARIES}")
-		endif()
+	if(MSVC AND CURL_INCLUDE_DIR AND CURL_LIBRARY)
+
+		add_definitions(-DHASZLIB)
+
 	else()
 		pkg_check_modules(PKG_ZLIB zlib)
 		find_path(ZLIB_INCLUDE_DIR zlib.h HINTS ${PKG_ZLIB_INCLUDE_DIRS})
