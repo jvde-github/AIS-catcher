@@ -142,7 +142,17 @@ endif()
 
 # Find libpq
 if(PSQL)
-	if(MSVC AND NOT MSVC_VCPKG)
+
+	if(MSVC)
+		find_package(PostgreSQL)
+		if(PostgreSQL_FOUND)
+			message(STATUS "PQ: found - ${PostgreSQL_LIBRARIES}, ${PostgreSQL_INCLUDE_DIRS}")
+			#add_definitions(-DHASPSQL)
+			#set(PQ_INCLUDE_DIRS ${PostgreSQL_INCLUDE_DIRS})
+			#set(PQ_LIBRARIES ${PostgreSQL_LIBRARIES} )
+		else() 
+			message(STATUS "PQ: NOT found - ${PostgreSQL_LIBRARIES}, ${PostgreSQL_INCLUDE_DIRS}")
+		endif() 
 	else()
 		pkg_check_modules(PKG_PQ libpq)
 		find_path(PQ_INCLUDE_DIR libpq-fe.h HINTS ${PKG_PQ_INCLUDE_DIRS})
