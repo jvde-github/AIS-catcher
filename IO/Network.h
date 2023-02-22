@@ -159,8 +159,7 @@ namespace IO {
 			int sent = sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 
 			if (reconnect && sent < 0) {
-				closesocket(sock);
-				sock = -1;
+				Stop();
 				Start();
 				sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 			}
