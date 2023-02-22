@@ -327,7 +327,7 @@ namespace IO {
 					if (!filter.include(data[i])) continue;
 
 					for (const auto& s : data[i].NMEA)
-						sendto(sock, (s + "\r\n").c_str(), (int)s.length() + 2, 0, address->ai_addr, (int)address->ai_addrlen);
+						SendTo((s + "\r\n").c_str());
 				}
 			}
 			else {
@@ -349,7 +349,7 @@ namespace IO {
 
 					for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
 					str += "]}\r\n";
-					sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
+					SendTo(str);
 				}
 			}
 		}
@@ -362,7 +362,6 @@ namespace IO {
 
 		if (sock != -1) {
 			throw std::runtime_error("UDP: internal error, socket already defined.");
-			return;
 		}
 
 		struct addrinfo h;
@@ -406,6 +405,9 @@ namespace IO {
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
+		}
+		else if (option == "RECONNECT") {
+			reconnect = Util::Parse::Switch(arg);
 		}
 		else
 			return filter.Set(option, arg);

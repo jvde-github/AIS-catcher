@@ -135,7 +135,7 @@ namespace IO {
 		struct addrinfo* address = NULL;
 		int source = -1;
 		std::string host, port;
-
+		bool reconnect = false;
 		AIS::Filter filter;
 		bool JSON = false;
 
@@ -154,7 +154,17 @@ namespace IO {
 			Start();
 		}
 		void Stop();
+		void SendTo(std::string str) {
 
+			int sent = sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
+
+			if (reconnect && sent < 0) {
+				closesocket(sock);
+				sock = -1;
+				Start();
+				sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
+			}
+		}
 		void setSource(int s) { source = s; }
 		int getSource() { return source; }
 		void setJSON(bool b) { JSON = b; }
