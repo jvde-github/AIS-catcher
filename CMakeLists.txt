@@ -147,7 +147,8 @@ if(PSQL)
 		find_path(PQ_INCLUDE_DIR libpq-fe.h HINTS ${POTHOSSDR_INCLUDE_DIR})
 		find_library(PQ_LIBRARY libpq.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
 		find_file(PQ_DLL libpq.dll HINTS ${POTHOSSDR_BINARY_DIR})
-		find_path(PQDIR_DLL libpq.dll HINTS ${POTHOSSDR_BINARY_DIR})
+		find_file(PQDIR_DLL libssl-3.dll HINTS ${POTHOSSDR_BINARY_DIR})
+		find_file(PQDIR_DLL libssl-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
 		if(PQ_INCLUDE_DIR AND PQ_LIBRARY AND PQ_DLL)
 			Message(STATUS "LIBPQ: found (PothosSDR) - " ${PQ_INCLUDE_DIR}, ${PQ_LIBRARY}, ${PQ_DLL}, ${PQDIR_DLL})
@@ -633,8 +634,7 @@ endif()
 
 if(COPY_PQ_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy '${PQDIR_DLL}/libssl*.dll' ${CMAKE_CURRENT_BINARY_DIR})
-	
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PQDIR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_CURL_DLL)
