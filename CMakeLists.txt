@@ -633,7 +633,7 @@ endif()
 
 if(COPY_PQ_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PQDIR_DLL}/libssl*.dll ${CMAKE_CURRENT_BINARY_DIR})
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${PQDIR_DLL}/libssl*.dll" ${CMAKE_CURRENT_BINARY_DIR})
 	
 endif()
 
