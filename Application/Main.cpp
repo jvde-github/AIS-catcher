@@ -40,6 +40,8 @@ BOOL WINAPI consoleHandler(DWORD signal) {
 }
 #else
 void consoleHandler(int signal) {
+	if (signal != SIGINT)
+		std::cerr << "Termination request: " << signal << std::endl;
 	stop = true;
 }
 #endif
@@ -209,7 +211,8 @@ int main(int argc, char* argv[]) {
 #else
 		signal(SIGINT, consoleHandler);
 		signal(SIGTERM, consoleHandler);
-
+		signal(SIGHUP, consoleHandler);
+		signal(SIGPIPE, consoleHandler);
 #endif
 
 		printVersion();
