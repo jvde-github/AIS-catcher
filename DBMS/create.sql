@@ -12,11 +12,11 @@ CREATE TABLE ais_message (
     id serial primary key,
     mmsi integer,
     timestamp integer,
-    type integer,
-    sender integer,
+    type smallint,
+    sender smallint,
     channel character(1),
-    signal_level float,
-    ppm float
+    signal_level real,
+    ppm real
 );
 
 CREATE TABLE ais_nmea (
@@ -28,46 +28,46 @@ CREATE TABLE ais_basestation (
     id integer references ais_message(id),
     mmsi integer,
     timestamp integer,
-    lat float,
-    lon float
+    lat real,
+    lon real
 );
 
 CREATE TABLE ais_sar_position (
     id integer references ais_message(id),
     mmsi integer,
     timestamp integer,
-    alt integer,
-    speed integer,
-    lat float,
-    lon float,
-    course integer
+    alt smallint,
+    speed smallint,
+    lat real,
+    lon real,
+    course smallint
 );
 
 CREATE TABLE ais_aton (
     id integer references ais_message(id),
     mmsi integer,
     timestamp integer,
-    aid_type integer,
+    aid_type smallint,
     name varchar(20),
-    lon float,
-    lat float,
-    to_bow integer,
-    to_stern integer,
-    to_port integer,
-    to_starboard integer
+    lon real,
+    lat real,
+    to_bow smallint,
+    to_stern smallint,
+    to_port smallint,
+    to_starboard smallint
 );
 
 CREATE TABLE ais_vessel_pos (
     id integer references ais_message(id),
     mmsi integer,
     timestamp integer,
-    status integer,
-    turn float,
-    speed float,
-    lat float,
-    lon float,
-    course float,
-    heading float
+    status smallint,
+    turn real,
+    speed real,
+    lat real,
+    lon real,
+    course real,
+    heading real
 );
 
 CREATE TABLE ais_vessel_static (
@@ -77,13 +77,13 @@ CREATE TABLE ais_vessel_static (
     imo integer,
     callsign varchar(7),
     shipname varchar(20),
-    shiptype integer,
-    to_port integer,
-    to_bow integer,
-    to_stern integer,
-    to_starboard integer,
+    shiptype smallint,
+    to_port smallint,
+    to_bow smallint,
+    to_stern smallint,
+    to_starboard smallint,
     eta varchar(12),
-    draught float,
+    draught real,
     destination varchar(20)
 );
 
@@ -99,7 +99,6 @@ CREATE TABLE ais_property (
 );
 
 
-INSERT INTO ais_keys (key_str) VALUES ('lat'),('lon'),('destination'),('heading'),('course'),('speed'),('shiptype'),('to_bow'),('to_stern'),('to_starboard'),('to_port');
-INSERT INTO ais_keys (key_str) VALUES ('status'),('draught'),('callsign'),('shipname'),('alt');
+INSERT INTO ais_keys (key_str) VALUES ('destination');
 
 CREATE INDEX ais_property_id_key_idx ON ais_property (id, key);
