@@ -505,7 +505,7 @@ There are a few settings for the new `-D` swich of which the first is the connec
 
 | Table | Description | Settings |
 | :--- | :--- | :--- |
-| ais_message | received messages with meta data  |  |
+| ais_message | received messages with meta data  | MSGS on/off |
 | ais_nmea | nmea sentences | NMEA on/off |
 | ais_basestation | basestation messsages from type 4 | BS on/off |
 | ais_sar_position | sar positions from type 9 | SAR on/off |

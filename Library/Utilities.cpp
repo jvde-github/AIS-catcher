@@ -162,6 +162,13 @@ namespace Util {
 		return std::string(str);
 	}
 
+	std::string Convert::toTimestampStr(const std::time_t& t) {
+		std::tm* now_tm = std::gmtime(&t);
+		char str[22];
+		std::strftime((char*)str, 22, "%Y/%m/%d %H:%M:%S", now_tm);
+		return std::string(str);
+	}
+
 	std::string Convert::toHexString(uint64_t l) {
 		std::stringstream s;
 		s << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << l;

@@ -11,31 +11,37 @@ DROP TABLE IF EXISTS ais_message;
 CREATE TABLE ais_message (
     id serial primary key,
     mmsi integer,
-    timestamp integer,
+    received_at timestamp,
+    published_at timestamp,
+    station_id smallint,
     type smallint,
-    sender smallint,
     channel character(1),
     signal_level real,
     ppm real
 );
 
 CREATE TABLE ais_nmea (
-    id integer references ais_message(id),
+    mmsi integer,
+    received_at timestamp,
+    station_id smallint,
+    msg_id integer references ais_message(id) ON DELETE SET NULL,
     nmea varchar(80)
 );
 
 CREATE TABLE ais_basestation (
-    id integer references ais_message(id),
     mmsi integer,
-    timestamp integer,
+    received_at timestamp,
+    station_id smallint,
+    msg_id integer references ais_message(id) ON DELETE SET NULL,
     lat real,
     lon real
 );
 
 CREATE TABLE ais_sar_position (
-    id integer references ais_message(id),
     mmsi integer,
-    timestamp integer,
+    received_at timestamp,
+    station_id smallint,
+    msg_id integer references ais_message(id) ON DELETE SET NULL,
     alt smallint,
     speed smallint,
     lat real,
@@ -44,9 +50,10 @@ CREATE TABLE ais_sar_position (
 );
 
 CREATE TABLE ais_aton (
-    id integer references ais_message(id),
     mmsi integer,
-    timestamp integer,
+    received_at timestamp,
+    station_id smallint,
+    msg_id integer references ais_message(id) ON DELETE SET NULL,
     aid_type smallint,
     name varchar(20),
     lon real,
@@ -58,9 +65,10 @@ CREATE TABLE ais_aton (
 );
 
 CREATE TABLE ais_vessel_pos (
-    id integer references ais_message(id),
     mmsi integer,
-    timestamp integer,
+    received_at timestamp,
+    station_id smallint,
+    msg_id integer references ais_message(id) ON DELETE SET NULL,
     status smallint,
     turn real,
     speed real,
@@ -71,9 +79,10 @@ CREATE TABLE ais_vessel_pos (
 );
 
 CREATE TABLE ais_vessel_static (
-    id integer references ais_message(id),
     mmsi integer,
-    timestamp integer,
+    received_at timestamp,
+    station_id smallint,
+    msg_id integer references ais_message(id) ON DELETE SET NULL,
     imo integer,
     callsign varchar(7),
     shipname varchar(20),
@@ -93,12 +102,12 @@ CREATE TABLE ais_keys (
 );
 
 CREATE TABLE ais_property (
-    id integer references ais_message(id),
+    msg_id integer references ais_message(id),
     key integer references ais_keys(key_id),
     value varchar(20)
 );
 
 
+/* 
 INSERT INTO ais_keys (key_str) VALUES ('destination');
-
-CREATE INDEX ais_property_id_key_idx ON ais_property (id, key);
+*/
