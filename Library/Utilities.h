@@ -83,6 +83,7 @@ namespace Util {
 	class Convert {
 	public:
 		static std::string toTimeStr(const std::time_t& t);
+		static std::string toTimestampStr(const std::time_t& t);
 		static std::string toHexString(uint64_t l);
 		static std::string toString(Format format);
 		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); };

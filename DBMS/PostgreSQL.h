@@ -31,6 +31,7 @@
 #include "Keys.h"
 #include "JSON/StringBuilder.h"
 
+// Needs major clean up and simplification
 
 namespace IO {
 
@@ -38,6 +39,7 @@ namespace IO {
 		JSON::StringBuilder builder;
 		std::string sql, sql_trans;
 		AIS::Filter filter;
+		int station_id = 0;
 
 		std::string escape(const std::string& input) {
 			std::string output;
@@ -54,7 +56,7 @@ namespace IO {
 		std::vector<int> db_keys;
 #endif
 
-		bool NMEA = false, VP = true, VS = true, BS = false, ATON = true, SAR = true;
+		bool MSGS = true, NMEA = false, VP = true, VS = true, BS = false, ATON = true, SAR = true;
 		std::string conn_string = "dbname=ais";
 		std::thread run_thread;
 		bool terminate = false, running = false;
@@ -120,6 +122,7 @@ namespace IO {
 
 		void setup() {
 #ifdef HASPSQL
+
 			db_keys.resize(AIS::KeyMap.size(), -1);
 			std::cerr << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
 			con = PQconnectdb(conn_string.c_str());
@@ -132,6 +135,7 @@ namespace IO {
 				throw std::runtime_error("DBMS: error fetching ais_keys table: " + std::string(PQerrorMessage(con)));
 			}
 
+			int key_count = 0;
 			for (int row = 0; row < PQntuples(res); row++) {
 				int id = atoi(PQgetvalue(res, row, 0));
 				std::string name = PQgetvalue(res, row, 1);
@@ -140,11 +144,17 @@ namespace IO {
 					if (AIS::KeyMap[i][JSON_DICT_FULL] == name) {
 						db_keys[i] = id;
 						found = true;
+						key_count++;
 						break;
 					}
 				}
 				if (!found)
 					throw std::runtime_error("DBMS: The requested key \"" + name + "\" in ais_keys is not defined.");
+			}
+
+			if (key_count > 0 && !MSGS) {
+				std::cerr << "DBMS: no messages logged in combination with property logging. MSGS ON auto activated." << std::endl;
+				MSGS = true;
 			}
 
 			if (!running) {
@@ -156,6 +166,7 @@ namespace IO {
 				std::cerr << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
 				if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed();
 				std::cerr << ", VP " << Util::Convert::toString(VP);
+				std::cerr << ", MSGS " << Util::Convert::toString(MSGS);
 				std::cerr << ", VS " << Util::Convert::toString(VS);
 				std::cerr << ", BS " << Util::Convert::toString(BS);
 				std::cerr << ", SAR " << Util::Convert::toString(SAR);
@@ -190,12 +201,13 @@ namespace IO {
 					break;
 				}
 			}
-			keys += "timestamp";
-			values += std::to_string(msg->getRxTimeUnix());
+			keys += "msg_id,station_id,received_at";
+			values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+			values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-			std::string ret;
-			return "INSERT INTO ais_vessel_pos (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+			return "INSERT INTO ais_vessel_pos (" + keys + ") VALUES (" + values + ");\n";
 		}
+
 		std::string addVesselStatic(const JSON::JSON* data, const AIS::Message* msg) {
 			if (!VS) return "";
 
@@ -226,11 +238,11 @@ namespace IO {
 					break;
 				}
 			}
-			keys += "timestamp";
-			values += std::to_string(msg->getRxTimeUnix());
+			keys += "msg_id,station_id,received_at";
+			values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+			values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-			std::string ret;
-			return "INSERT INTO ais_vessel_static (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+			return "INSERT INTO ais_vessel_static (" + keys + ") VALUES (" + values + ");\n";
 		}
 
 
@@ -251,11 +263,11 @@ namespace IO {
 					break;
 				}
 			}
-			keys += "timestamp";
-			values += std::to_string(msg->getRxTimeUnix());
+			keys += "msg_id,station_id,received_at";
+			values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+			values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-			std::string ret;
-			return "INSERT INTO ais_basestation (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+			return "INSERT INTO ais_basestation (" + keys + ") VALUES (" + values + ");\n";
 		}
 
 		std::string addSARposition(const JSON::JSON* data, const AIS::Message* msg) {
@@ -277,11 +289,11 @@ namespace IO {
 					break;
 				}
 			}
-			keys += "timestamp";
-			values += std::to_string(msg->getRxTimeUnix());
+			keys += "msg_id,station_id,received_at";
+			values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+			values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-			std::string ret;
-			return "INSERT INTO ais_sar_position (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+			return "INSERT INTO ais_sar_position (" + keys + ") VALUES (" + values + ");\n";
 		}
 
 		std::string addATON(const JSON::JSON* data, const AIS::Message* msg) {
@@ -311,11 +323,11 @@ namespace IO {
 					break;
 				}
 			}
-			keys += "timestamp";
-			values += std::to_string(msg->getRxTimeUnix());
+			keys += "msg_id,station_id,received_at";
+			values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+			values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-			std::string ret;
-			return "INSERT INTO ais_aton (id," + keys + ") VALUES ((SELECT id FROM _id)," + values + ");\n";
+			return "INSERT INTO ais_aton (" + keys + ") VALUES (" + values + ");\n";
 		}
 
 		void Start(){};
@@ -333,18 +345,24 @@ namespace IO {
 
 			if (!filter.include(*msg)) return;
 
-			sql += std::string("DROP TABLE IF EXISTS _id;\nWITH cte AS (INSERT INTO ais_message (mmsi, type, timestamp, sender, channel, signal_level, ppm) "
-							   "VALUES (") +
-				   std::to_string(msg->mmsi()) + ',' + std::to_string(msg->type()) + ',' + std::to_string(msg->getRxTimeUnix()) + ',' +
-				   std::to_string(0) + ",\'" + (char)msg->getChannel() + "\'," +
-				   std::to_string(tag.level) + ',' + std::to_string(tag.ppm) +
-				   ") RETURNING id)\nSELECT id INTO _id FROM cte;";
+			if (MSGS) {
+				sql += std::string("DROP TABLE IF EXISTS _id;\nWITH cte AS (INSERT INTO ais_message (mmsi, station_id, type, received_at, published_at, channel, signal_level, ppm) "
+								   "VALUES (") +
+					   std::to_string(msg->mmsi()) + ',' + std::to_string(station_id) + ',' + std::to_string(msg->type()) + ",\'" + std::string(Util::Convert::toTimestampStr(msg->getRxTimeUnix())) + "\', current_timestamp,\'" +
+					   (char)msg->getChannel() + "\'," +
+					   std::to_string(tag.level) + ',' + std::to_string(tag.ppm) +
+					   ") RETURNING id)\nSELECT id INTO _id FROM cte;";
+			}
 
-
-			if (NMEA)
+			if (NMEA) {
+				std::string keys = "msg_id,station_id,received_at";
+				std::string values = (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+				values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 				for (auto s : msg->NMEA) {
-					sql += "INSERT INTO ais_nmea (id, nmea) VALUES ((SELECT id FROM _id),\'" + s + "\');\n";
+
+					sql += "INSERT INTO ais_nmea (" + keys + ", nmea) VALUES (" + values + ",\'" + s + "\');\n";
 				}
+			}
 
 			switch (msg->type()) {
 			case 1:
@@ -382,13 +400,13 @@ namespace IO {
 			for (const auto& p : data[0].getProperties()) {
 				if (db_keys[p.Key()] != -1) {
 					if (p.Get().isString()) {
-						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + escape(p.Get().getString()) + "\');\n";
+						sql += "INSERT INTO ais_property (msg_id, key, value) VALUES (" + (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + "\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + escape(p.Get().getString()) + "\');\n";
 					}
 					else {
 						std::string temp;
 						builder.to_string(temp, p.Get());
 						temp = temp.substr(0, 20);
-						sql += "INSERT INTO ais_property (id, key, value) VALUES ((SELECT id FROM _id),\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + temp + "\');\n";
+						sql += "INSERT INTO ais_property (msg_id, key, value) VALUES  (" + (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + "\',\'" + temp + "\');\n";
 					}
 				}
 			}
@@ -402,16 +420,18 @@ namespace IO {
 
 			Util::Convert::toUpper(option);
 
-			if (option == "CONN_STR") {
+			if (option == "CONN_STR")
 				conn_string = arg;
-			}
-
+			else if (option == "STATION_ID")
+				station_id = Util::Parse::Integer(arg);
 			else if (option == "NMEA")
 				NMEA = Util::Parse::Switch(arg);
 			else if (option == "VP")
 				VP = Util::Parse::Switch(arg);
 			else if (option == "VS")
 				VS = Util::Parse::Switch(arg);
+			else if (option == "MSGS")
+				MSGS = Util::Parse::Switch(arg);
 			else if (option == "BS")
 				BS = Util::Parse::Switch(arg);
 			else if (option == "ATON")
