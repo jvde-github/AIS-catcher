@@ -283,7 +283,7 @@ namespace IO {
 				case AIS::KEY_ALT:
 				case AIS::KEY_COURSE:
 				case AIS::KEY_MMSI:
-				case AIS::KEY_SPEED:						
+				case AIS::KEY_SPEED:
 					keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
 					builder.to_string(values, p.Get());
 					values += ",";
