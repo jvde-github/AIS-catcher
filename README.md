@@ -394,6 +394,10 @@ An example config file looks as follows:
       "lnastate":5,
       "grdb":40
    },
+   "udpserver":{
+      "server":"192.168.1.235",
+      "port":4002
+   },
    "server":{
       "file":"stat.bin",
       "backup":10,
