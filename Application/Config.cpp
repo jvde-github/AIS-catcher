@@ -172,6 +172,10 @@ void Config::set(const std::string& str) {
 			if (!isActiveObject(p.Get())) continue;
 			setSettingsFromJSON(p.Get(), _receiver.HACKRF());
 			break;
+		case AIS::KEY_SETTING_UDPSERVER:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receiver.UDP());
+			break;
 		case AIS::KEY_SETTING_SOAPYSDR:
 			if (!isActiveObject(p.Get())) continue;
 			setSettingsFromJSON(p.Get(), _receiver.SOAPYSDR());
