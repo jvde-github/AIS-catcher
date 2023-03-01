@@ -119,7 +119,7 @@ jobs:
         vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows curl:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
     - name: Setting up directories
       run: |
-        mkdir output; cd output; mkdir Licenses; cd ..; mkdir include; cd include; mkdir curl; cd ..; mkdir release; mkdir lib;         
+        mkdir output; cd output; mkdir plugins; mkdir Licenses; cd ..; mkdir include; cd include; mkdir curl; cd ..; mkdir release; mkdir lib;         
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\*.h include
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\curl\*.h include\curl
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
@@ -128,7 +128,7 @@ jobs:
     - name: Create start.bat
       run: |
         cd output
-        echo "AIS-catcher -v 10 -u 127.0.0.1 10110 -M DT`nPAUSE" |Out-File -FilePath start.bat -Encoding ascii
+        echo "AIS-catcher -v 10 -u 127.0.0.1 10110 -N 8100 PLUGIN_DIR plugins`nPAUSE" |Out-File -FilePath start.bat -Encoding ascii
         cd ..
 
     - name: Building Libraries and AIS-catcher
@@ -200,7 +200,7 @@ jobs:
         cp LICENSE output\Licenses\AIS-catcher
 
     - name: Prepare output
-      run: cp build\*.dll output; cp build\Release\*.exe output; cp README.md output; 
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output; 
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
@@ -236,7 +236,7 @@ jobs:
         cp LICENSE output\Licenses\AIS-catcher
 
     - name: Prepare output SDRPLAY
-      run: cp build\*.dll output; cp build\Release\*.exe output; cp README.md output; 
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output; 
 
     - name: Upload Artifacts SDRPLAY
       uses: actions/upload-artifact@v3
