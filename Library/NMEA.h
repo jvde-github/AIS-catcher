@@ -70,8 +70,11 @@ namespace AIS {
 		bool crc_check = false;
 		bool JSON_input = false;
 
+		bool newline = true;
+		bool JSON = false;
 		std::string json;
 
+		void processJSONsentence(TAG& tag, long t);
 		void processNMEAchar(char c, TAG& tag, long int t);
 
 	public:
