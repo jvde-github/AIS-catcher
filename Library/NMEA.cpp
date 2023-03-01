@@ -181,7 +181,7 @@ namespace AIS {
 				match = true;
 			}
 			else {
-				match = isNMEAchar(c);
+				match = isNMEAchar(c) && aivdm.data.size() < 128;
 				if (match) {
 					aivdm.data += c;
 					index--;
@@ -213,6 +213,46 @@ namespace AIS {
 		last = c;
 	}
 
+	void NMEA::processJSONsentence(TAG& tag, long t) {
+		if (json[0] == '{') {
+			try {
+				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
+				std::shared_ptr<JSON::JSON> j = parser.parse(json);
+
+				tag.ppm = 0;
+				tag.sample_lvl = 0;
+				t = 0;
+
+				// phase 1, get the meta data in place
+				for (const auto& p : j->getProperties()) {
+					switch (p.Key()) {
+					case AIS::KEY_SIGNAL_POWER:
+						tag.level = p.Get().getFloat();
+						break;
+					case AIS::KEY_PPM:
+						tag.ppm = p.Get().getFloat();
+						break;
+					case AIS::KEY_RXUXTIME:
+						t = p.Get().getInt();
+						break;
+					}
+				}
+
+				for (const auto& p : j->getProperties()) {
+					if (p.Key() == AIS::KEY_NMEA) {
+
+						for (const auto& v : p.Get().getArray()) {
+							for (char d : v.getString()) processNMEAchar(d, tag, t);
+							reset();
+						}
+					}
+				}
+			}
+			catch (std::exception const& e) {
+				std::cout << "UDP server: " << e.what() << std::endl;
+			}
+		}
+	}
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
 
@@ -222,51 +262,31 @@ namespace AIS {
 			for (int i = 0; i < data[j].size; i++) {
 
 				char c = ((char*)(data[j].data))[i];
-				json += c;
-				if (c == '\n') {
-					if (json[0] == '{' || JSON_input) {
-						try {
-							JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
-							std::shared_ptr<JSON::JSON> j = parser.parse(json);
 
-							tag.ppm = 0;
-							tag.sample_lvl = 0;
-							t = 0;
-
-							// phase 1, get the meta data in place
-							for (const auto& p : j->getProperties()) {
-								switch (p.Key()) {
-								case AIS::KEY_SIGNAL_POWER:
-									tag.level = p.Get().getFloat();
-									break;
-								case AIS::KEY_PPM:
-									tag.ppm = p.Get().getFloat();
-									break;
-								case AIS::KEY_RXUXTIME:
-									t = p.Get().getInt();
-									break;
-								}
-							}
-
-							for (const auto& p : j->getProperties()) {
-								if (p.Key() == AIS::KEY_NMEA) {
-
-									for (const auto& v : p.Get().getArray()) {
-										for (char d : v.getString()) processNMEAchar(d, tag, t);
-										reset();
-									}
-								}
-							}
-						}
-						catch (std::exception const& e) {
-							std::cout << "UDP server: " << e.what() << std::endl;
-						}
+				if (c == '\r' || c == '\n') {
+					if (json.size() > 0 && JSON) {
+						// newline and we build up JSON string -> decode
+						processJSONsentence(tag, t);
+						json.clear();
 					}
-					else {
-						for (char d : json) processNMEAchar(d, tag, 0);
-						reset();
-					}
+					newline = true;
+					JSON = false;
+				}
+				else if (newline) {
+					// first non-return character
+					reset();
+					newline = false;
 					json.clear();
+					if (c == '{') JSON = true;
+				}
+
+				if (!newline) {
+					if (JSON) {
+						json += c;
+						if (json.size() > 2048) json.clear();
+					}
+					else
+						processNMEAchar(c, tag, 0);
 				}
 			}
 		}

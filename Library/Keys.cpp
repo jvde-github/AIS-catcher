@@ -32,6 +32,7 @@ namespace AIS {
 		{ "eta", "", "eta", "" },
 		{ "shiptype_text", "", "shiptype_text", "" },
 		{ "aid_type_text", "", "aid_type_text", "" },
+		{ "station_id", "", "station_id", "" },
 		// setting
 		{ "", "", "", "", "active" },
 		{ "", "", "", "", "afc_wide" },
