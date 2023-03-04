@@ -40,6 +40,8 @@ BOOL WINAPI consoleHandler(DWORD signal) {
 }
 #else
 void consoleHandler(int signal) {
+	if(signal == SIGPIPE) return;
+	
 	if (signal != SIGINT)
 		std::cerr << "Termination request: " << signal << std::endl;
 	stop = true;
@@ -197,6 +199,7 @@ int main(int argc, char* argv[]) {
 	OutputScreen screen;
 	OutputHTTP http;
 	OutputUDP udp;
+	OutputTCP tcp;
 	OutputDBMS db;
 	OutputStatistics stat;
 	OutputServer server;
@@ -368,6 +371,14 @@ int main(int argc, char* argv[]) {
 					u.setSource(MAX(0, (int)receiver.Count() - 1));
 				}
 				break;
+			case 'P':
+				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
+				{
+					IO::TCP& u = tcp.add(arg1, arg2);
+					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
+					u.setSource(MAX(0, (int)receiver.Count() - 1));
+				}
+				break;
 			case 'H':
 				Assert(count > 0, param);
 				{
@@ -469,6 +480,7 @@ int main(int argc, char* argv[]) {
 
 		// set up all the output and connect to the receiver outputs
 		udp.setup(receiver);
+		tcp.setup(receiver);
 		http.setup(receiver);
 		screen.setup(receiver);
 		db.setup(receiver);

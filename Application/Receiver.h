@@ -185,6 +185,16 @@ public:
 };
 
 //--------------------------------------------
+class OutputTCP {
+	std::vector<std::unique_ptr<IO::TCP>> _TCP;
+
+public:
+	void setup(Receiver& r);
+	IO::TCP& add();
+	IO::TCP& add(const std::string& host, const std::string& port);
+};
+
+//--------------------------------------------
 class OutputDBMS {
 	std::vector<std::unique_ptr<IO::PostgreSQL>> _PSQL;
 

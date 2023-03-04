@@ -20,24 +20,6 @@
 #include "TCP.h"
 
 namespace TCP {
-	Client::Client() {
-
-#ifdef _WIN32
-		WSADATA wsaData;
-
-		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-			throw std::runtime_error("TCP: Cannot initialize Winsocket.");
-			return;
-		}
-#endif
-	}
-
-	Client::~Client() {
-#ifdef _WIN32
-		WSACleanup();
-#endif
-	}
-
 	void Client::disconnect() {
 		if (sock != -1)
 			closesocket(sock);
@@ -113,6 +95,91 @@ namespace TCP {
 		timeval to = { timeout, 0 };
 
 		if (select(sock + 1, &fd, NULL, NULL, &to) < 0) {
+			return -1;
+		}
+
+		if (FD_ISSET(sock, &fd)) {
+			return recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
+		}
+		return 0;
+	}
+
+	// Client 2 - experimental
+
+	void Client2::disconnect() {
+		if (sock != -1)
+			closesocket(sock);
+		sock = -1;
+	}
+
+	bool Client2::connect(std::string hst, std::string prt) {
+
+		int r;
+		struct addrinfo h;
+		fd_set fdr, fdw;
+
+		host = hst;
+		port = prt;
+
+		std::memset(&h, 0, sizeof(h));
+		h.ai_family = AF_UNSPEC;
+		h.ai_socktype = SOCK_STREAM;
+		h.ai_protocol = IPPROTO_TCP;
+
+#ifndef _WIN32
+		h.ai_flags = AI_ADDRCONFIG;
+#endif
+
+		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
+		if (code != 0 || address == NULL) return false;
+
+		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+		if (sock == -1) return false;
+
+#ifndef _WIN32
+		r = fcntl(sock, F_GETFL, 0);
+		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+
+		if (r == -1) return false;
+#else
+		u_long mode = 1; // 1 to enable non-blocking socket
+		ioctlsocket(sock, FIONBIO, &mode);
+#endif
+		std::cerr << "TCP: attempting to connect to server " << host << " on port " << port << ".\n";
+
+		stamp = std::time(0);
+		state = CONNECTING;
+		
+		int n = ::connect(sock, address->ai_addr, (int)address->ai_addrlen); 
+		if (n != -1) {
+			std::cerr << "TCP: server " << host << " ready on port " << port << ". without delay\n";
+			state = READY;
+			return true;
+		}
+
+		std::cerr << "Output connect " << strerror(errno) << std::endl;
+
+
+		return true;
+	}
+
+	void Client2::reconnect() {
+		state = CONNECTING;
+		if (((long)std::time(0) - (long)stamp) > 30) {
+			disconnect();
+			connect(host, port);
+		}
+	}
+
+	int Client2::read(void* data, int length, bool wait) {
+		fd_set fd;
+
+		FD_ZERO(&fd);
+		FD_SET(sock, &fd);
+
+		timeval to = { 0, 0 };
+
+		if (select(sock + 1, NULL, &fd, NULL, &to) < 0) {
 			return -1;
 		}
 

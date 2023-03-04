@@ -329,9 +329,34 @@ IO::UDP& OutputUDP::add(const std::string& host, const std::string& port) {
 	return *_UDP.back();
 }
 
-
 //-----------------------------------
 // set up UDP
+
+void OutputTCP::setup(Receiver& r) {
+	// Create and connect output to UDP stream
+	for (int i = 0; i < _TCP.size(); i++) {
+		r.Output(_TCP[i]->getSource()) >> *_TCP[i];
+		_TCP[i]->Start();
+	}
+}
+
+IO::TCP& OutputTCP::add() {
+
+	_TCP.push_back(std::unique_ptr<IO::TCP>(new IO::TCP()));
+	return *_TCP.back();
+}
+
+IO::TCP& OutputTCP::add(const std::string& host, const std::string& port) {
+	_TCP.push_back(std::unique_ptr<IO::TCP>(new IO::TCP()));
+
+	_TCP.back()->Set("HOST", host).Set("PORT", port);
+	_TCP.back()->setSource(0);
+
+	return *_TCP.back();
+}
+
+//-----------------------------------
+// set up DBMS
 
 void OutputDBMS::setup(Receiver& r) {
 	// Create and connect output to UDP stream
