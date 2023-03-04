@@ -62,25 +62,12 @@ namespace IO {
 		}
 	}
 
-	Server::Server() {
-#ifdef _WIN32
-		WSADATA wsaData;
-
-		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-			throw std::runtime_error("TCP: Cannot initialize Winsocket.");
-			return;
-		}
-#endif
-	}
+	Server::Server() {}
 
 	Server::~Server() {
 
 		stop = true;
 		if (run_thread.joinable()) run_thread.join();
-
-#ifdef _WIN32
-		WSACleanup();
-#endif
 		if (sock != -1) closesocket(sock);
 	}
 

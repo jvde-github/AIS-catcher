@@ -44,6 +44,7 @@
 #include "Keys.h"
 #include "TCP.h"
 #include "ZIP.h"
+#include "Network.h"
 
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
@@ -163,6 +164,30 @@ namespace IO {
 				Start();
 				sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 			}
+		}
+		void setSource(int s) { source = s; }
+		int getSource() { return source; }
+		void setJSON(bool b) { JSON = b; }
+	};
+
+	class TCP : public StreamIn<AIS::Message>, public Setting {
+		::TCP::Client2 tcp;
+		AIS::Filter filter;
+		bool JSON = false;
+		int source = -1;
+		std::string host, port;
+
+	public:
+		virtual Setting& Set(std::string option, std::string arg);
+
+		void Receive(const AIS::Message* data, int len, TAG& tag);
+
+		void Start();
+
+		void Stop();
+		void SendTo(std::string str) {
+
+			tcp.send(str.c_str(), (int)str.length());
 		}
 		void setSource(int s) { source = s; }
 		int getSource() { return source; }

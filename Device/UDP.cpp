@@ -23,23 +23,9 @@
 
 namespace Device {
 
-	UDP::UDP() : Device(Format::TXT, 288000) {
+	UDP::UDP() : Device(Format::TXT, 288000) {}
 
-#ifdef _WIN32
-		WSADATA wsaData;
-
-		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-			throw std::runtime_error("TCP: Cannot initialize Winsocket.");
-			return;
-		}
-#endif
-	}
-
-	UDP::~UDP() {
-#ifdef _WIN32
-		WSACleanup();
-#endif
-	}
+	UDP::~UDP() {}
 
 	void UDP::StopServer() {
 		if (sock != -1) {

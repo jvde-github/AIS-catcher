@@ -23,6 +23,18 @@
 
 namespace IO {
 
+#ifdef _WIN32
+	static class WSA {
+	public:
+		WSA() {
+			WSADATA wsaData;
+			WSAStartup(MAKEWORD(2, 2), &wsaData);
+		}
+
+		~WSA() { WSACleanup(); }
+	} _wsa;
+#endif
+
 	void HTTP::Start() {
 #ifdef HASCURL
 		if (!running) {
@@ -301,23 +313,10 @@ namespace IO {
 		return *this;
 	}
 
-	UDP::UDP() {
-#ifdef _WIN32
-		WSADATA wsaData;
-
-		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-			throw std::runtime_error("Cannot initialize Winsocket.");
-			return;
-		}
-#endif
-	}
+	UDP::UDP() {}
 
 	UDP::~UDP() {
 		Stop();
-
-#ifdef _WIN32
-		WSACleanup();
-#endif
 	}
 
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
@@ -408,6 +407,74 @@ namespace IO {
 		}
 		else if (option == "RECONNECT") {
 			reconnect = Util::Parse::Switch(arg);
+		}
+		else
+			return filter.Set(option, arg);
+
+		return *this;
+	}
+
+
+	// TCP output to server
+
+	void TCP::Receive(const AIS::Message* data, int len, TAG& tag) {
+		if (!JSON) {
+			for (int i = 0; i < len; i++) {
+				if (!filter.include(data[i])) continue;
+
+				for (const auto& s : data[i].NMEA)
+					SendTo((s + "\r\n").c_str());
+			}
+		}
+		else {
+			for (int i = 0; i < len; i++) {
+				if (!filter.include(data[i])) continue;
+
+				std::string str = "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"";
+				str += ((char)data[i].getChannel());
+				str += std::string("\"");
+
+				if (tag.mode & 2) {
+					// str += ",\"rxtime\":\"" + data[i].getRxTime() + "\"";
+					str += ",\"rxuxtime\":" + std::to_string(data[i].getRxTimeUnix());
+				}
+				if (tag.mode & 1) str += ",\"signalpower\":" + std::to_string(tag.level) + ",\"ppm\":" + std::to_string(tag.ppm);
+
+				str += ",\"mmsi\":" + std::to_string(data[i].mmsi()) + ",\"type\":" + std::to_string(data[i].type());
+				str += ",\"nmea\":[\"" + data[i].NMEA[0] + std::string("\"");
+
+				for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
+				str += "]}\r\n";
+				SendTo(str);
+			}
+		}
+	}
+
+	void TCP::Start() {
+		std::cerr << "TCP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
+		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << std::endl;
+
+		if (!tcp.connect(host, port)) {
+			std::cerr << "Cannot set up initial connect to TCP server" << std::endl;
+		}
+	}
+
+	void TCP::Stop() {
+		tcp.disconnect();
+	}
+
+	Setting& TCP::Set(std::string option, std::string arg) {
+		Util::Convert::toUpper(option);
+
+		if (option == "HOST") {
+			host = arg;
+		}
+		else if (option == "PORT") {
+			port = arg;
+		}
+		else if (option == "JSON") {
+			JSON = Util::Parse::Switch(arg);
 		}
 		else
 			return filter.Set(option, arg);
