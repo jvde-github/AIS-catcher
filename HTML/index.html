@@ -2365,7 +2365,7 @@
             row.insertCell(6).innerHTML = Number(ship.level).toFixed(1);
 
             if (ship.distance != null && ship.bearing != null) {
-                row.insertCell(7).innerHTML = Number(ship.distance).toFixed(1);
+                row.insertCell(7).innerHTML = getDistanceVal(ship.distance);
                 row.insertCell(8).innerHTML = Number(ship.bearing).toFixed(0) +'&deg';
             } else {
                 row.insertCell(7).innerHTML = row.insertCell(8).innerHTML = "";
