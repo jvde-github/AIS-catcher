@@ -149,8 +149,8 @@ namespace TCP {
 
 		stamp = std::time(0);
 		state = CONNECTING;
-		
-		int n = ::connect(sock, address->ai_addr, (int)address->ai_addrlen); 
+
+		int n = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
 		if (n != -1) {
 			std::cerr << "TCP: server " << host << " ready on port " << port << ". without delay\n";
 			state = READY;

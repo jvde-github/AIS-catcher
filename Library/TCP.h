@@ -84,17 +84,17 @@ namespace TCP {
 		int send(const char* msg, int len) {
 
 			if (state != READY) reconnect();
-			if(sock == -1) return 0;
+			if (sock == -1) return 0;
 
 			int n = ::send(sock, msg, len, 0);
 
 			if (n <= 0) {
-				if(state == READY) 
+				if (state == READY)
 					std::cerr << "TCP: failed to write to server, resetting connection.\n";
 				reconnect();
 			}
 			if (n > 0) {
-				if(state == CONNECTING)
+				if (state == CONNECTING)
 					std::cerr << "TCP: connected to server.\n";
 
 				state = READY;
