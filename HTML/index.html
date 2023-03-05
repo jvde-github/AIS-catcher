@@ -1108,7 +1108,7 @@
     var marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
-    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
+    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, metric: 0, setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
 
     // some functions useful in plugins
     function addTileLayer(title,layer) { basemaps[title] = layer; }
@@ -1120,12 +1120,19 @@
     function addControlToMap(c) { c.addTo(map); }
 
     // transformations - for overwrite
-    getDimensionVal = c => Number(c).toFixed(0);
-    getDimensionUnit = c => "m";
-    getDistanceVal = c => Number(c).toFixed(1);
-    getDistanceUnit = c => "nmi";
-    getSpeedVal = c => Number(c).toFixed(1);
-    getSpeedUnit = c => "kts";
+    //getDimensionVal = c => Number(c).toFixed(0);
+    //getDimensionUnit = c => "m";
+    //getDistanceVal = c => Number(c).toFixed(1);
+    //getDistanceUnit = c => "nmi";
+    //getSpeedVal = c => Number(c).toFixed(1);
+    //getSpeedUnit = c => "kts";
+    getDimensionVal = c => settings.metric === 0 ? Number(c).toFixed(0) : settings.metric === 1 ? (Number(c).toFixed(0)) : (Number(c * 3.2808399).toFixed(0));
+    getDimensionUnit = () => settings.metric === 0 ? "m" : settings.metric === 1 ? "m" : "ft";
+    getDistanceVal = c => settings.metric === 0 ? Number(c).toFixed(1) : settings.metric === 1 ? (Number(c) * 1.852).toFixed(1) : (Number(c) * 1.15078).toFixed(1);
+    getDistanceUnit = () => settings.metric === 0 ? "nmi" : settings.metric === 1 ? "km" : "mi";
+    getSpeedVal = c => settings.metric === 0 ? Number(c).toFixed(1) : settings.metric === 1 ? (Number(c * 1.852).toFixed(1)) : (Number(c * 1.151).toFixed(1));
+    getSpeedUnit = () => settings.metric === 0 ? "kts" : settings.metric === 1 ? "km/h" : "mph";
+
     getLatVal = ship =>  (ship.approx?"<i>":"") + Number(ship.lat).toFixed(5) + (ship.approx?"</i>":"") ;
     getLonVal = ship =>  (ship.approx?"<i>":"") + Number(ship.lon).toFixed(5) + (ship.approx?"</i>":"");
     getEtaVal = ship => (("0" + ship.eta_month).slice(-2)) + "-" + (("0" + ship.eta_day).slice(-2)) + " " + (("0" + ship.eta_hour).slice(-2)) + ":" + (("0" + ship.eta_minute).slice(-2));
