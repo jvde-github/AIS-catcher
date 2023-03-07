@@ -44,11 +44,12 @@ const int ETA_MINUTE_UNDEFINED = 60;
 const int IMO_UNDEFINED = 0;
 const int ANGLE_UNDEFINED = -1;
 
-class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
+class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public StreamOut<JSON::JSON> {
 	int first, last, count, path_idx = 0;
 	std::string content, delim;
 	float lat, lon;
 	int TIME_HISTORY = 30 * 60;
+	bool latlon_share = false;
 
 	const int N = 4096;
 	const int M = 4096;
@@ -130,7 +131,14 @@ class DB : public SimpleStreamInOut<JSON::JSON, JSON::JSON> {
 public:
 	void setup(float lat = 0.0f, float lon = 0.0f);
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
+	void setShareLatLon(bool b) { latlon_share = b; }
+
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
+	void Receive(const AIS::GPS* data, int len, TAG& tag) {
+		lat = data[0].lat;
+		lon = data[0].lon;
+	}
+
 	std::string getJSON(bool full = false);
 	std::string getPathJSON(uint32_t);
 

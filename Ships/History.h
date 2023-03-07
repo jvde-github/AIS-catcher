@@ -132,7 +132,6 @@ struct History : public StreamIn<JSON::JSON> {
 	std::string toJSON() {
 		std::string content;
 		long int tm, tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
-		int idx;
 
 		content += "{\"time\":[";
 		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {

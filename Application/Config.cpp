@@ -55,7 +55,6 @@ void Config::setHTTPfromJSON(const JSON::Property& pd) {
 		if (!isActiveObject(v)) continue;
 
 		auto& h = _http.add(AIS::KeyMap, JSON_DICT_FULL);
-		h->setSource(0);
 		setSettingsFromJSON(v, *h);
 		_receiver.setTags("DT");
 	}
@@ -70,7 +69,6 @@ void Config::setUDPfromJSON(const JSON::Property& pd) {
 		if (!isActiveObject(v)) continue;
 
 		IO::UDP& udp = _udp.add();
-		udp.setSource(0);
 		setSettingsFromJSON(v, udp);
 	}
 }

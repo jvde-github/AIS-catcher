@@ -23,6 +23,7 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
+#include <mutex>
 
 #include "Stream.h"
 #include "Common.h"
