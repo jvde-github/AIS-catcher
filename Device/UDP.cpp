@@ -106,17 +106,30 @@ namespace Device {
 
 	void UDP::Run() {
 		std::cerr << "UDP: starting thread.\n";
-		char buffer[1024];
+		char buffer[16384];
 		RAW r = { getFormat(), buffer, 0 };
+		int nread;
 
 		while (isStreaming()) {
-			int nread = recv(sock, buffer, sizeof(buffer), 0);
+			do {
+				nread = recv(sock, buffer, sizeof(buffer), 0);
 
-			if (nread > 0) {
-				r.size = nread;
-				Send(&r, 1, tag);
-			}
-			SleepSystem(100);
+				if (nread > 0) {
+					r.size = nread;
+					Send(&r, 1, tag);
+				}
+			} while (nread > 0);
+
+			struct timeval tv;
+			fd_set fds;
+
+			FD_ZERO(&fds);
+			FD_SET(sock, &fds);
+
+			tv = { 1, 0 };
+			select(sock + 1, &fds, NULL, NULL, &tv);
+
+			// SleepSystem(100);
 		}
 
 		std::cerr << "UDP: ending thread.\n";
