@@ -86,5 +86,7 @@ namespace AIS {
 		void setCRCcheck(bool b) { crc_check = b; }
 		bool getCRCcheck() { return crc_check; }
 		void setJSON(bool b) { JSON_input = b; }
+
+		Connection<GPS> outGPS;
 	};
 }

@@ -198,17 +198,19 @@ int main(int argc, char* argv[]) {
 
 	std::string file_config;
 
-	Receiver receiver;
+	std::vector<std::unique_ptr<Receiver>> _receivers;
+	_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+
 	OutputScreen screen;
 	OutputHTTP http;
 	OutputUDP udp;
 	OutputTCP tcp;
 	OutputDBMS db;
-	OutputStatistics stat;
-	OutputServer server;
+	std::vector<OutputStatistics> stat;
+	WebClient server;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	int timeout = 0, sample_rate = 0, bandwidth = 0, ppm = 0;
+	int timeout = 0, nrec = 0;
 
 	try {
 #ifdef _WIN32
@@ -222,12 +224,14 @@ int main(int argc, char* argv[]) {
 #endif
 
 		printVersion();
-		receiver.refreshDevices();
+		_receivers.back()->refreshDevices();
 
 		const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
 		int ptr = 1;
 
 		while (ptr < argc) {
+			Receiver& receiver = *_receivers.back();
+
 			std::string param = std::string(argv[ptr]);
 			Assert(param[0] == '-', param, "setting does not start with \"-\".");
 
@@ -240,7 +244,7 @@ int main(int argc, char* argv[]) {
 			switch (param[1]) {
 			case 's':
 				Assert(count == 1, param, "does require one parameter [sample rate].");
-				sample_rate = Util::Parse::Integer(arg1, 48000, 12288000);
+				receiver.setSampleRate(Util::Parse::Integer(arg1, 48000, 12288000));
 				break;
 			case 'm':
 				Assert(count == 1, param, "requires one parameter [model number].");
@@ -263,7 +267,6 @@ int main(int argc, char* argv[]) {
 				Assert(count > 0, param, "requires at least one parameter");
 				if (count % 2 == 1) server.Set("PORT", arg1);
 				parseSettings(server, argv, ptr + (count % 2), argc);
-				receiver.setTags("DTM");
 				server.active() = true;
 				break;
 			case 'v':
@@ -296,15 +299,21 @@ int main(int argc, char* argv[]) {
 				receiver.addModel(2)->Set("FP_DS", "ON").Set("PS_EMA", "ON");
 				break;
 			case 't':
-				receiver.InputType() = Type::RTLTCP;
 				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");
-				if (count == 1) receiver.RTLTCP().Set("host", arg1);
-				if (count == 2) receiver.RTLTCP().Set("port", arg2).Set("host", arg1);
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::RTLTCP;
+				if (count == 1) _receivers.back()->RTLTCP().Set("host", arg1);
+				if (count == 2) _receivers.back()->RTLTCP().Set("port", arg2).Set("host", arg1);
 				break;
 			case 'x':
-				receiver.InputType() = Type::UDP;
 				Assert(count == 2, param, "requires two parameters [server] [port].");
-				receiver.UDP().Set("port", arg2).Set("server", arg1);
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::UDP;
+				_receivers.back()->UDP().Set("port", arg2).Set("server", arg1);
 				break;
 			case 'D': {
 				IO::PostgreSQL& d = db.add();
@@ -319,16 +328,22 @@ int main(int argc, char* argv[]) {
 				}
 			} break;
 			case 'y':
-				receiver.InputType() = Type::SPYSERVER;
 				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");
-				if (count == 1) receiver.SpyServer().Set("host", arg1);
-				if (count == 2) receiver.SpyServer().Set("port", arg2).Set("host", arg1);
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::SPYSERVER;
+				if (count == 1) _receivers.back()->SpyServer().Set("host", arg1);
+				if (count == 2) _receivers.back()->SpyServer().Set("port", arg2).Set("host", arg1);
 				break;
 			case 'z':
-				receiver.InputType() = Type::ZMQ;
 				Assert(count <= 2, param, "requires at most two parameters [[format]] [endpoint].");
-				if (count == 1) receiver.ZMQ().Set("ENDPOINT", arg1);
-				if (count == 2) receiver.ZMQ().Set("FORMAT", arg1).Set("ENDPOINT", arg2);
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::ZMQ;
+				if (count == 1) _receivers.back()->ZMQ().Set("ENDPOINT", arg1);
+				if (count == 2) _receivers.back()->ZMQ().Set("FORMAT", arg1).Set("ENDPOINT", arg2);
 				break;
 			case 'b':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -336,14 +351,20 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'w':
 				Assert(count <= 1, param);
-				receiver.InputType() = Type::WAVFILE;
-				if (count == 1) receiver.WAV().Set("FILE", arg1);
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::WAVFILE;
+				if (count == 1) _receivers.back()->WAV().Set("FILE", arg1);
 				break;
 			case 'r':
 				Assert(count <= 2, param, "requires at most two parameters [[format]] [filename].");
-				receiver.InputType() = Type::RAWFILE;
-				if (count == 1) receiver.RAW().Set("FILE", arg1);
-				if (count == 2) receiver.RAW().Set("FORMAT", arg1).Set("FILE", arg2);
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::RAWFILE;
+				if (count == 1) _receivers.back()->RAW().Set("FILE", arg1);
+				if (count == 2) _receivers.back()->RAW().Set("FORMAT", arg1).Set("FILE", arg2);
 				break;
 			case 'l':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -354,16 +375,20 @@ int main(int argc, char* argv[]) {
 				list_support = true;
 				break;
 			case 'd':
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+
 				if (param.length() == 4 && param[2] == ':') {
 					Assert(count == 0, param, MSG_NO_PARAMETER);
 					int n = param[3] - '0';
 					Assert(n >= 0 && n < receiver.device_list.size(), param, "device does not exist");
-					receiver.Serial() = receiver.device_list[n].getSerial();
+					_receivers.back()->Serial() = receiver.device_list[n].getSerial();
 				}
 				else {
 					Assert(param.length() == 2, param, "syntax error in device setting");
 					Assert(count == 1, param, "device setting requires one parameter [serial number]");
-					receiver.Serial() = arg1;
+					_receivers.back()->Serial() = arg1;
 				}
 				break;
 			case 'u':
@@ -371,7 +396,6 @@ int main(int argc, char* argv[]) {
 				{
 					IO::UDP& u = udp.add(arg1, arg2);
 					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
-					u.setSource(MAX(0, (int)receiver.Count() - 1));
 				}
 				break;
 			case 'P':
@@ -379,7 +403,6 @@ int main(int argc, char* argv[]) {
 				{
 					IO::TCP& u = tcp.add(arg1, arg2);
 					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
-					u.setSource(MAX(0, (int)receiver.Count() - 1));
 				}
 				break;
 			case 'H':
@@ -388,7 +411,6 @@ int main(int argc, char* argv[]) {
 					auto& h = http.add(AIS::KeyMap, JSON_DICT_FULL);
 					if (count % 2) h->Set("URL", arg1);
 					parseSettings(*h, argv, ptr + (count % 2), argc);
-					h->setSource(MAX(0, (int)receiver.Count() - 1));
 					receiver.setTags("DT");
 				}
 				break;
@@ -398,11 +420,11 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'p':
 				Assert(count == 1, param, "requires one parameter [frequency offset].");
-				ppm = Util::Parse::Integer(arg1, -150, 150);
+				receiver.setPPM(Util::Parse::Integer(arg1, -150, 150));
 				break;
 			case 'a':
 				Assert(count == 1, param, "requires one parameter [bandwidth].");
-				bandwidth = Util::Parse::Integer(arg1, 0, 20000000);
+				receiver.setBandwidth(Util::Parse::Integer(arg1, 0, 20000000));
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3, param);
@@ -460,96 +482,128 @@ int main(int argc, char* argv[]) {
 		// Read config file
 
 		if (!file_config.empty()) {
-			Config c(receiver, screen, http, udp, server);
+			Config c(*_receivers.back(), screen, http, udp, server);
 			c.read(file_config);
 		}
 
-		if (list_devices) printDevices(receiver);
+		if (list_devices) printDevices(*_receivers.back());
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
 		if (list_devices || list_support || list_options) return 0;
 
 		// -------------
 		// set up the receiver and open the device
-		receiver.setupDevice();
 
-		// override sample rate if defined by user, needs to be after setup so device is open and sample rates known
-		if (sample_rate) receiver.setDeviceSampleRate(sample_rate);
-		if (ppm) receiver.setDeviceFreqCorrection(ppm);
-		if (bandwidth) receiver.setDeviceBandwidth(bandwidth);
+		stat.resize(_receivers.size());
 
-		// set up the decoding model(s)
-		receiver.setupModel();
+		for (int i = 0; i < _receivers.size(); i++) {
+			Receiver& r = *_receivers[i];
+			r.setupDevice();
+			// set up the decoding model(s)
+			r.setupModel();
 
-		// set up all the output and connect to the receiver outputs
-		udp.setup(receiver);
-		tcp.setup(receiver);
-		http.setup(receiver);
-		screen.setup(receiver);
-		db.setup(receiver);
+			// set up all the output and connect to the receiver outputs
+			udp.connect(r);
+			tcp.connect(r);
+			http.connect(r);
+			screen.connect(r);
+			db.connect(r);
 
-		if (server.active()) server.setup(receiver);
-		if (receiver.verbose) stat.setup(receiver);
+			if (server.active()) server.connect(r);
+			if (r.verbose) stat[i].connect(r);
+		}
+
+		udp.start();
+		tcp.start();
+		http.start();
+		screen.start();
+		db.start();
+
+		if (server.active()) {
+			for (auto& r : _receivers) r->setTags("DTM");
+			server.start();
+		}
+
+		for (auto& s : stat) s.start();
+		for (auto& r : _receivers) r->play();
 
 		stop = false;
 		const int SLEEP = 50;
 		auto time_start = high_resolution_clock::now();
 		auto time_last = time_start;
+		bool oneverbose = false, iscallback = true;
 
-		receiver.play();
+		for (auto& r : _receivers) {
+			oneverbose |= r->verbose;
+			iscallback &= r->device->isCallback();
+		}
 
-		while (receiver.device->isStreaming() && !stop) {
+		while (!stop) {
 
-			if (receiver.device->isCallback()) // don't go to sleep in case we are reading from a file
+			bool onerunning = false;
+			for (auto& r : _receivers) onerunning |= r->device->isStreaming();
+			if (!onerunning) {
+				stop = true;
+				continue;
+			}
+
+			if (iscallback) // don't go to sleep in case we are reading from a file
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
 
-			if (!receiver.verbose && !timeout) continue;
+			if (!oneverbose && !timeout) continue;
 
 			auto time_now = high_resolution_clock::now();
 
-			if (receiver.verbose && duration_cast<seconds>(time_now - time_last).count() >= screen.verboseUpdateTime) {
+			if (oneverbose && duration_cast<seconds>(time_now - time_last).count() >= screen.verboseUpdateTime) {
 				time_last = time_now;
 
-				for (int j = 0; j < receiver.Count(); j++) {
-					stat.statistics[j].Stamp();
-					std::string name = receiver.Model(j)->getName() + " #" + std::to_string(j);
-					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << stat.statistics[j].getDeltaCount() << " msgs, total: "
-							  << stat.statistics[j].getCount() << " msgs, rate: " << stat.statistics[j].getRate() << " msg/s" << std::endl;
+				for (int i = 0; i < _receivers.size(); i++) {
+					Receiver& r = *_receivers[i];
+					if (r.verbose) {
+						for (int j = 0; j < r.Count(); j++) {
+							stat[i].statistics[j].Stamp();
+							std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
+							std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << stat[i].statistics[j].getDeltaCount() << " msgs, total: "
+									  << stat[i].statistics[j].getCount() << " msgs, rate: " << stat[i].statistics[j].getRate() << " msg/s" << std::endl;
+						}
+					}
 				}
 			}
 
 			if (timeout && duration_cast<seconds>(time_now - time_start).count() >= timeout) {
 				stop = true;
-				if (receiver.verbose)
-					std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
+				std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
 			}
 		}
 
-		receiver.stop();
+		for (int i = 0; i < _receivers.size(); i++) {
+			Receiver& r = *_receivers[i];
+			r.stop();
 
-		// End Main loop
-		// -----------------
+			// End Main loop
+			// -----------------
 
-		if (receiver.verbose) {
-			std::cerr << "----------------------" << std::endl;
-			for (int j = 0; j < receiver.Count(); j++) {
-				std::string name = receiver.Model(j)->getName() + " #" + std::to_string(j);
-				stat.statistics[j].Stamp();
-				std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat.statistics[j].getCount() << " msgs" << std::endl;
+			if (r.verbose) {
+				std::cerr << "----------------------" << std::endl;
+				for (int j = 0; j < r.Count(); j++) {
+					std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
+					stat[i].statistics[j].Stamp();
+					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat[i].statistics[j].getCount() << " msgs" << std::endl;
+				}
 			}
+
+			if (r.Timing())
+				for (int j = 0; j < r.Count(); j++) {
+					std::string name = r.Model(j)->getName();
+					std::cerr << "[" << r.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ')
+							  << r.Model(j)->getTotalTiming() << " ms" << std::endl;
+				}
 		}
-
-		if (receiver.Timing())
-			for (int j = 0; j < receiver.Count(); j++) {
-				std::string name = receiver.Model(j)->getName();
-				std::cerr << "[" << receiver.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ')
-						  << receiver.Model(j)->getTotalTiming() << " ms" << std::endl;
-			}
-
 		server.close();
 	}
 	catch (std::exception const& e) {
 		std::cout << "Error: " << e.what() << std::endl;
+		for (auto& r : _receivers) r->stop();
 		return -1;
 	}
 	return 0;

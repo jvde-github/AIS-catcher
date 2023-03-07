@@ -27,6 +27,11 @@ namespace AIS {
 
 #define MAX_AIS_LENGTH (128 * 8)
 
+	class GPS {
+	public:
+		float lat, lon, heading, speed;
+	};
+
 	class Message {
 	protected:
 		const int MAX_NMEA_CHARS = 56;

@@ -22,6 +22,9 @@
 #include "Statistics.h"
 //--------------------------------------------
 
+std::vector<Device::Description> Receiver::device_list;
+
+
 void Receiver::refreshDevices(void) {
 	device_list.clear();
 
@@ -170,6 +173,10 @@ void Receiver::setupDevice() {
 	else
 		device->setFrequency((int)(156800000));
 
+	if (sample_rate) device->setSampleRate(sample_rate);
+	if (ppm) device->Set("FREQOFFSET", std::to_string(ppm));
+	if (bandwidth) device->Set("BW", std::to_string(bandwidth));
+
 	device->setTag(tag);
 }
 
@@ -277,7 +284,7 @@ void OutputScreen::setScreen(OutputLevel o) {
 	level = o;
 }
 
-void OutputScreen::setup(Receiver& r) {
+void OutputScreen::connect(Receiver& r) {
 
 	if (level == OutputLevel::NMEA || level == OutputLevel::JSON_NMEA || level == OutputLevel::FULL) {
 		r.Output(0) >> msg2screen;
@@ -290,10 +297,11 @@ void OutputScreen::setup(Receiver& r) {
 	}
 }
 
+void OutputScreen::start() {}
 //-----------------------------------
 // set up screen counters
 
-void OutputStatistics::setup(Receiver& r) {
+void OutputStatistics::connect(Receiver& r) {
 
 	if (r.verbose) {
 		statistics.resize(r.Count());
@@ -303,13 +311,23 @@ void OutputStatistics::setup(Receiver& r) {
 	}
 }
 
+void OutputStatistics::start() {}
+
 //-----------------------------------
 // set up UDP
 
-void OutputUDP::setup(Receiver& r) {
+void OutputUDP::connect(Receiver& r) {
 	// Create and connect output to UDP stream
 	for (int i = 0; i < _UDP.size(); i++) {
-		r.Output(_UDP[i]->getSource()) >> *_UDP[i];
+		for (int j = 0; j < r.Count(); j++)
+			if (r.Output(j).canConnect(_UDP[i]->getGroupsIn()))
+				r.Output(j) >> *_UDP[i];
+	}
+}
+
+void OutputUDP::start() {
+	// Create and connect output to UDP stream
+	for (int i = 0; i < _UDP.size(); i++) {
 		_UDP[i]->Start();
 	}
 }
@@ -324,7 +342,6 @@ IO::UDP& OutputUDP::add(const std::string& host, const std::string& port) {
 	_UDP.push_back(std::unique_ptr<IO::UDP>(new IO::UDP()));
 
 	_UDP.back()->Set("HOST", host).Set("PORT", port);
-	_UDP.back()->setSource(0);
 
 	return *_UDP.back();
 }
@@ -332,10 +349,16 @@ IO::UDP& OutputUDP::add(const std::string& host, const std::string& port) {
 //-----------------------------------
 // set up UDP
 
-void OutputTCP::setup(Receiver& r) {
-	// Create and connect output to UDP stream
+void OutputTCP::connect(Receiver& r) {
 	for (int i = 0; i < _TCP.size(); i++) {
-		r.Output(_TCP[i]->getSource()) >> *_TCP[i];
+		for (int j = 0; j < r.Count(); j++)
+			if (r.Output(j).canConnect(_TCP[i]->getGroupsIn()))
+				r.Output(j) >> *_TCP[i];
+	}
+}
+
+void OutputTCP::start() {
+	for (int i = 0; i < _TCP.size(); i++) {
 		_TCP[i]->Start();
 	}
 }
@@ -350,7 +373,6 @@ IO::TCP& OutputTCP::add(const std::string& host, const std::string& port) {
 	_TCP.push_back(std::unique_ptr<IO::TCP>(new IO::TCP()));
 
 	_TCP.back()->Set("HOST", host).Set("PORT", port);
-	_TCP.back()->setSource(0);
 
 	return *_TCP.back();
 }
@@ -358,10 +380,14 @@ IO::TCP& OutputTCP::add(const std::string& host, const std::string& port) {
 //-----------------------------------
 // set up DBMS
 
-void OutputDBMS::setup(Receiver& r) {
-	// Create and connect output to UDP stream
+void OutputDBMS::connect(Receiver& r) {
 	for (int i = 0; i < _PSQL.size(); i++) {
 		r.OutputJSON(0) >> *_PSQL[i];
+	}
+}
+
+void OutputDBMS::start() {
+	for (int i = 0; i < _PSQL.size(); i++) {
 		_PSQL[i]->setup();
 	}
 }
@@ -381,24 +407,31 @@ std::unique_ptr<IO::HTTP>& OutputHTTP::add(const std::vector<std::vector<std::st
 // set up client thread to periodically submit msgs over HTTP
 // we will have a json decoder for every model
 
-void OutputHTTP::setup(Receiver& r) {
+void OutputHTTP::connect(Receiver& r) {
 
 	for (auto& h : _http) {
+		h->Set("MODEL", "N/A").Set("MODEL_SETTING", "N/A");
+		h->Set("DEVICE_SETTING", "N/A").Set("PRODUCT", "N/A");
+		h->Set("VENDOR", "N/A").Set("SERIAL", "N/A");
 
-		h->Set("MODEL", r.Model(h->getSource())->getName()).Set("MODEL_SETTING", r.Model(h->getSource())->Get());
-		h->Set("DEVICE_SETTING", r.device->Get()).Set("PRODUCT", r.device->getProduct());
-		h->Set("VENDOR", r.device->getVendor()).Set("SERIAL", r.device->getSerial());
+		for (int i = 0; i < r.Count(); i++)
+			if (r.Output(i).canConnect(h->getGroupsIn()))
+				r.OutputJSON(i) >> *h;
+	}
+}
 
-		r.OutputJSON(h->getSource()) >> *h;
+void OutputHTTP::start() {
+
+	for (auto& h : _http) {
 		h->Start();
 	}
 }
 
-void OutputServer::Counter::Receive(const AIS::Message* msg, int len, TAG& tag) {
+void WebClient::Counter::Receive(const AIS::Message* msg, int len, TAG& tag) {
 	stat.Add(msg[0], tag);
 }
 
-bool OutputServer::Save() {
+bool WebClient::Save() {
 	std::cerr << "Server: writing statistics to file " << filename << std::endl;
 	try {
 		std::ofstream infile(filename, std::ios::binary);
@@ -417,7 +450,7 @@ bool OutputServer::Save() {
 	return true;
 }
 
-void OutputServer::Clear() {
+void WebClient::Clear() {
 	counter.Clear();
 
 	hist_second.Clear();
@@ -426,7 +459,7 @@ void OutputServer::Clear() {
 	hist_day.Clear();
 }
 
-bool OutputServer::Load() {
+bool WebClient::Load() {
 
 	if (filename.empty()) return false;
 
@@ -451,7 +484,7 @@ bool OutputServer::Load() {
 	return true;
 }
 
-void OutputServer::BackupService() {
+void WebClient::BackupService() {
 
 	std::cerr << "Server: starting backup service every " << backup_interval << " minutes." << std::endl;
 	while (true) {
@@ -469,16 +502,7 @@ void OutputServer::BackupService() {
 	std::cerr << "Server: stopping backup service." << std::endl;
 }
 
-void OutputServer::setup(Receiver& r) {
-
-	ships.setup(lat, lon);
-
-	if (filename.empty())
-		Clear();
-	else if (!Load()) {
-		std::cerr << "Statistics: cannot read file." << std::endl;
-		Clear();
-	}
+void WebClient::connect(Receiver& r) {
 
 	sample_rate = std::to_string(r.device->getSampleRate() / 1000) + "K/S";
 	product = r.device->getProduct();
@@ -488,18 +512,31 @@ void OutputServer::setup(Receiver& r) {
 
 	// connect all the statistical counters
 	r.Output(0) >> counter;
-	r.OutputJSON(0) >> ships;
+
+	r.OutputJSON(0).Connect((StreamIn<JSON::JSON>*)&ships);
+	r.OutputGPS(0).Connect((StreamIn<AIS::GPS>*)&ships);
+
+	*r.device >> raw_counter;
+}
+
+void WebClient::start() {
+	ships.setup(lat, lon);
+
+	if (filename.empty())
+		Clear();
+	else if (!Load()) {
+		std::cerr << "Statistics: cannot read file." << std::endl;
+		Clear();
+	}
 
 	ships >> hist_day;
 	ships >> hist_hour;
 	ships >> hist_minute;
 	ships >> hist_second;
 
-	*r.device >> raw_counter;
-
 	if (firstport && lastport) {
 		for (port = firstport; port <= lastport; port++)
-			if (start(port)) break;
+			if (Server::start(port)) break;
 
 		if (port > lastport)
 			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
@@ -517,12 +554,12 @@ void OutputServer::setup(Receiver& r) {
 		if (filename.empty())
 			throw std::runtime_error("Server: backup of statistics requested without providing filename.");
 
-		backup_thread = std::thread(&OutputServer::BackupService, this);
+		backup_thread = std::thread(&WebClient::BackupService, this);
 		backup_thread.detach();
 	}
 }
 
-void OutputServer::close() {
+void WebClient::close() {
 
 	if (backup_interval > 0) {
 		std::unique_lock<std::mutex> lock(m);
@@ -538,7 +575,7 @@ void OutputServer::close() {
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 
-void OutputServer::Request(IO::Client& c, const std::string& response) {
+void WebClient::Request(IO::Client& c, const std::string& response) {
 
 	std::string r;
 	std::string a;
@@ -649,7 +686,7 @@ void OutputServer::Request(IO::Client& c, const std::string& response) {
 		Server::Request(c, r);
 }
 
-Setting& OutputServer::Set(std::string option, std::string arg) {
+Setting& WebClient::Set(std::string option, std::string arg) {
 	Util::Convert::toUpper(option);
 
 	if (option == "PORT") {
@@ -673,6 +710,9 @@ Setting& OutputServer::Set(std::string option, std::string arg) {
 	}
 	else if (option == "LAT") {
 		lat = Util::Parse::Float(arg);
+	}
+	else if (option == "SHARE_LOC") {
+		ships.setShareLatLon(Util::Parse::Switch(arg));
 	}
 	else if (option == "LON") {
 		lon = Util::Parse::Float(arg);
