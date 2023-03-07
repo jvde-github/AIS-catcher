@@ -498,6 +498,9 @@ int main(int argc, char* argv[]) {
 
 		for (int i = 0; i < _receivers.size(); i++) {
 			Receiver& r = *_receivers[i];
+
+			if (server.active()) r.setTags("DTM");
+
 			r.setupDevice();
 			// set up the decoding model(s)
 			r.setupModel();
@@ -519,10 +522,7 @@ int main(int argc, char* argv[]) {
 		screen.start();
 		db.start();
 
-		if (server.active()) {
-			for (auto& r : _receivers) r->setTags("DTM");
-			server.start();
-		}
+		if (server.active()) server.start();
 
 		for (auto& s : stat) s.start();
 		for (auto& r : _receivers) r->play();
