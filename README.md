@@ -59,6 +59,18 @@ Most external programs will not be able to accept this JSON packaged NMEA string
 
 We have added a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs.  See below for more details. 
 
+### Multiple receivers in parallel
+
+There is an experimental branch that allows to run with multiple receivers. For example, one dongle for channel A+B and one dongle for channel C+D. To use, follow the normal build instructions but clone with:
+```
+git clone https://github.com/jvde-github/AIS-catcher.git -b multiple
+```
+Then you can use a command like:
+```
+AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
+```
+This functionality will be extended to accept commands and GPS input over, e.g., UDP. 
+
 ## Usage
 ````
 use: AIS-catcher [options]
