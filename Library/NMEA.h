@@ -30,7 +30,7 @@
 
 namespace AIS {
 
-	class NMEA : public SimpleStreamInOut<RAW, Message>, public SignalIn<DecoderSignals> {
+	class NMEA : public SimpleStreamInOut<RAW, Message>{
 		Message msg;
 
 		struct AIVDM {
