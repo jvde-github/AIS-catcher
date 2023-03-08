@@ -740,6 +740,7 @@
 
     .leaflet-control-layers-toggle,
     .leaflet-control-label-toggle,
+    .leaflet-control-station-toggle,
     .leaflet-control-zoom-in,
     .leaflet-control-zoom-out,
     .label-toggle-control {
@@ -751,7 +752,8 @@
         max-height: 30px;
     }
 
-    .leaflet-control-label-toggle {
+    .leaflet-control-label-toggle,
+    .leaflet-control-station-toggle {
         text-align: center;
         color: grey;
         transform: translate(200px 0)
@@ -1483,6 +1485,28 @@
         addControlToMap(labelToggleControl);
     }
 
+    function addStationTrack() {
+        // ------------
+        var stationToggleControl = L.control({ position: 'bottomright' });
+
+        stationToggleControl.onAdd = function (map) {
+
+            var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
+            controlDiv.title = "Track station position at center";
+            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-station-toggle', controlDiv);
+            var iconSpan = L.DomUtil.create('span', 'fas fa-bullseye', controlBoundary);
+
+            controlDiv.addEventListener('click', function () {
+
+                settings.track_station = !settings.track_station;
+                saveSettings();
+                plotStation();
+            });
+            return controlDiv;
+        };
+        addControlToMap(stationToggleControl);
+    }
+    
     function showPlugins() {
         alert("Loaded plugins:\n" + plugins);
     }
@@ -2999,6 +3023,7 @@
     initPlots();
     initMap();            
     addLabelControl(); 
+    addStationTrack();
 
     init_postTabsInit();
 
