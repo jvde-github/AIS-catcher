@@ -441,7 +441,7 @@ int main(int argc, char* argv[]) {
 					parseSettings(receiver.ZMQ(), argv, ptr, argc);
 					break;
 				case 'o':
-					if (receiver.Count() == 0) receiver.addModel(2);
+					if (receiver.Count() == 0) receiver.addModel(receiver.isTXTformatSet() ? 5 : 2);
 					parseSettings(*receiver.Model(receiver.Count() - 1), argv, ptr, argc);
 					break;
 					break;
