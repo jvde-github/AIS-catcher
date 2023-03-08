@@ -1100,15 +1100,15 @@
 <div class="bottombar"></div>
 
 <script>
-    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, shipsDB = {}, singleClickTimeout = null;
+    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
 
     var plugins = "", plugins_main = [];
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
 
-    var marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
+    var marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
-    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
+    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, track_station: false, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
 
     // some functions useful in plugins
     function addTileLayer(title,layer) { basemaps[title] = layer; }
@@ -1525,6 +1525,10 @@
             ships = JSON.parse(ships_json);
         }
         setPulseOk();        
+
+        if(ships.hasOwnProperty("station")) {
+            station = ships.station;
+        }
 
         shipsDB = {};
         ships.ships.forEach(s => {
@@ -2686,8 +2690,7 @@
         if (marker_hover != null) {
             map.removeLayer(marker_hover);
             marker_hover = null;
-        }
-        
+        }   
     }
 
     function setHoverMarker(latlon) { 
@@ -2775,6 +2778,25 @@
         }
     }
 
+    function plotStation() {
+
+        if (station == null) return;
+
+        if (marker_station == null) {
+            marker_station = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
+            marker_station.addTo(map);
+        }
+        else
+            marker_station.setLatLng([station.lat, station.lon]);
+
+        if(settings.track_station) 
+        {
+            map.panTo([station.lat, station.lon]);
+            settings.lat = station.lat;
+            settings.lon = station.lon;
+        }
+    }
+
     function showShipcard(m) {
 
         const aside = document.getElementById('shipcard');
@@ -2814,6 +2836,10 @@
     async function updateMap() {
 
         const n = await fetchShips();
+
+        if(station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && station.lat != null) {
+            plotStation(station);
+        }
 
         if (n == 0) return;
 

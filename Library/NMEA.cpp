@@ -75,11 +75,11 @@ namespace AIS {
 			else
 				msg.NMEA.push_back(aivdm.sentence);
 			Send(&msg, 1, tag);
-			/*
-			static GPS gps = { 0,0 };
-			gps.lat += 0.01; gps.lon += 0.01;
-			outGPS.Send(&gps, 1, tag);
-			*/
+
+			// static GPS gps = { 52,4 };
+			// gps.lat += 0.01; gps.lon += 0.01;
+			// outGPS.Send(&gps, 1, tag);
+
 			return;
 		}
 
