@@ -118,6 +118,7 @@ public:
 	Device::Device* device = NULL;
 
 	void refreshDevices(void);
+	bool isTXTformatSet() { return getDeviceByType(type) ? (getDeviceByType(type)->getFormat() == Format::TXT) : false; }
 
 	// Model
 	void setChannel(std::string mode) { setChannel(mode, ""); }
