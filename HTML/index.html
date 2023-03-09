@@ -804,7 +804,27 @@
             padding: 3px;
         }
     }
-    
+   
+    .blue {
+        color: #12a5ed;
+    }
+
+    .green {
+        color: green;
+    }
+
+    .red {
+        color: red;
+    }
+
+    .grey {
+        color: dimgray;
+    }
+
+    .lightgrey {
+        color: lightgrey;
+    }
+
 </style>
 
 <link rel="stylesheet" href="config.css">
@@ -1103,6 +1123,7 @@
 
 <script>
     var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
+    var iconLabelSpan = null, iconStationSpan = null;
 
     var plugins = "", plugins_main = [];
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
@@ -1445,7 +1466,6 @@
         });
         map.on('dblclick dragstart zoomstart', function () { if(singleClickTimeout!=null) {clearTimeout(singleClickTimeout); singleClickTimeout = null;} });
 
-
         map.addControl(new L.Control.Zoom({ position: 'bottomright' }));
         L.control.scale().addTo(map);
 
@@ -1457,6 +1477,38 @@
         L.DomEvent.disableClickPropagation(document.getElementById('shipcard'));
     }
 
+    function updateLabelControl() {
+        iconLabelSpan.classList.remove('blue');
+        iconLabelSpan.classList.remove('red');
+        iconLabelSpan.classList.remove('grey');
+
+        if (settings.labels) {
+            iconLabelSpan.classList.add('blue');
+        }
+        else {
+            iconLabelSpan.classList.add('grey');
+        }
+    }
+
+    function updateStationlControl() {
+        iconStationSpan.classList.remove('blue');
+        iconStationSpan.classList.remove('red');
+        iconStationSpan.classList.remove('grey');
+
+        if(!station.hasOwnProperty('lat') || !station.hasOwnProperty('lon')) {
+            iconStationSpan.classList.add('red');
+            map.dragging.enable();
+        }
+        else if (settings.track_station) {
+            iconStationSpan.classList.add('blue');
+            map.dragging.disable();
+        }
+        else {
+            iconStationSpan.classList.add('grey');
+            map.dragging.enable();
+        }   
+    }
+
     function addLabelControl() {
         // ------------
         var labelToggleControl = L.control({ position: 'bottomright' });
@@ -1464,15 +1516,17 @@
         labelToggleControl.onAdd = function (map) {
 
             var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-            controlDiv.title="Toggle labels on screen";
+            controlDiv.title="Show labels on screen";
             var controlBoundary = L.DomUtil.create('div', 'leaflet-control-label-toggle', controlDiv);
-            var iconSpan = L.DomUtil.create('span', 'fas fa-location-dot', controlBoundary);
+            iconLabelSpan = L.DomUtil.create('span', 'fas fa-tag', controlBoundary);
+            updateLabelControl();
 
             controlDiv.addEventListener('click', function () {
 
                 settings.labels = !settings.labels;
+                updateLabelControl();
                 saveSettings();
-
+                
                 if (!settings.labels) {
                     for (let [key, m] of Object.entries(markers))
                         if (m.isTooltipOpen()) m.getTooltip().toggle();
@@ -1485,20 +1539,22 @@
         addControlToMap(labelToggleControl);
     }
 
-    function addStationTrack() {
+    function addStationControl() {
         // ------------
         var stationToggleControl = L.control({ position: 'bottomright' });
 
         stationToggleControl.onAdd = function (map) {
 
             var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-            controlDiv.title = "Track station position at center";
+            controlDiv.title = "Fix map center at Receiver Station position";
             var controlBoundary = L.DomUtil.create('div', 'leaflet-control-station-toggle', controlDiv);
-            var iconSpan = L.DomUtil.create('span', 'fas fa-bullseye', controlBoundary);
+            iconStationSpan = L.DomUtil.create('span', 'fas fa-bullseye', controlBoundary);
+            updateStationlControl();
 
             controlDiv.addEventListener('click', function () {
 
                 settings.track_station = !settings.track_station;
+                updateStationlControl();
                 saveSettings();
                 plotStation();
             });
@@ -1506,7 +1562,9 @@
         };
         addControlToMap(stationToggleControl);
     }
-    
+
+
+
     function showPlugins() {
         alert("Loaded plugins:\n" + plugins);
     }
@@ -2861,6 +2919,7 @@
 
         const n = await fetchShips();
 
+        updateStationlControl();
         if(station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && station.lat != null) {
             plotStation(station);
         }
@@ -2922,7 +2981,6 @@
         else mapResetView(13);
 
         showTrack();
-
     }
 
     function activateTab(b, a) {
@@ -3023,7 +3081,7 @@
     initPlots();
     initMap();            
     addLabelControl(); 
-    addStationTrack();
+    addStationControl();
 
     init_postTabsInit();
 
