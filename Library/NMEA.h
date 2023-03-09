@@ -35,6 +35,7 @@ namespace AIS {
 
 		struct AIVDM {
 			std::string sentence;
+			std::string line;
 			std::string data;
 
 			void reset() {
@@ -50,11 +51,17 @@ namespace AIS {
 			int talkerID;
 		} aivdm;
 
+
+		std::vector<std::string> parts;
+
+		char prev = '\n';
+		int state = 0;
+		std::string line;
+
 		std::vector<AIVDM> queue;
 		int index = 0;
-		char last = '\n';
 
-		void process(TAG& tag, long int t);
+		void submitAIS(TAG& tag, long int t);
 		void addline(const AIVDM& a);
 		void reset();
 		void clean(char, int);
@@ -66,16 +73,17 @@ namespace AIS {
 
 		int NMEAchecksum(std::string s);
 
+		float GpsToDecimal(const char*, char, bool& error);
+
 		bool regenerate = false;
 		bool crc_check = false;
 		bool JSON_input = false;
 
-		bool newline = true;
-		bool JSON = false;
-		std::string json;
+		void split(const std::string&);
 
-		void processJSONsentence(TAG& tag, long t);
-		void processNMEAchar(char c, TAG& tag, long int t);
+		void processJSONsentence(std::string s, TAG& tag, long t);
+		bool processAIS(const std::string& s, TAG& tag, long t);
+		bool processGGA(const std::string& s, TAG& tag, long t);
 
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);
