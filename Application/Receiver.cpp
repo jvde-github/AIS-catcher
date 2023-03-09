@@ -249,7 +249,8 @@ void Receiver::play() {
 }
 
 void Receiver::stop() {
-	device->Stop();
+	if(device)
+		device->Stop();
 }
 
 //-----------------------------------
