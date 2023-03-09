@@ -624,7 +624,7 @@ void OutputServer::Request(IO::Client& c, const std::string& response) {
 		int mmsi = -1;
 		std::stringstream ss(a);
 		ss >> mmsi;
-		if (mmsi >= 1000000 && mmsi <= 999999999) {
+		if (mmsi >= 1 && mmsi <= 999999999) {
 			std::string content = ships.getPathJSON(mmsi);
 			Response(c, "application/json", content);
 		}
