@@ -740,6 +740,7 @@
 
     .leaflet-control-layers-toggle,
     .leaflet-control-label-toggle,
+    .leaflet-control-station-toggle,
     .leaflet-control-zoom-in,
     .leaflet-control-zoom-out,
     .label-toggle-control {
@@ -751,7 +752,8 @@
         max-height: 30px;
     }
 
-    .leaflet-control-label-toggle {
+    .leaflet-control-label-toggle,
+    .leaflet-control-station-toggle {
         text-align: center;
         color: grey;
         transform: translate(200px 0)
@@ -802,7 +804,27 @@
             padding: 3px;
         }
     }
-    
+   
+    .blue {
+        color: #12a5ed;
+    }
+
+    .green {
+        color: green;
+    }
+
+    .red {
+        color: red;
+    }
+
+    .grey {
+        color: dimgray;
+    }
+
+    .lightgrey {
+        color: lightgrey;
+    }
+
 </style>
 
 <link rel="stylesheet" href="config.css">
@@ -1100,15 +1122,16 @@
 <div class="bottombar"></div>
 
 <script>
-    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, shipsDB = {}, singleClickTimeout = null;
+    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
+    var iconLabelSpan = null, iconStationSpan = null;
 
     var plugins = "", plugins_main = [];
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
 
-    var marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
+    var marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
-    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
+    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
 
     // some functions useful in plugins
     function addTileLayer(title,layer) { basemaps[title] = layer; }
@@ -1443,7 +1466,6 @@
         });
         map.on('dblclick dragstart zoomstart', function () { if(singleClickTimeout!=null) {clearTimeout(singleClickTimeout); singleClickTimeout = null;} });
 
-
         map.addControl(new L.Control.Zoom({ position: 'bottomright' }));
         L.control.scale().addTo(map);
 
@@ -1455,6 +1477,38 @@
         L.DomEvent.disableClickPropagation(document.getElementById('shipcard'));
     }
 
+    function updateLabelControl() {
+        iconLabelSpan.classList.remove('blue');
+        iconLabelSpan.classList.remove('red');
+        iconLabelSpan.classList.remove('grey');
+
+        if (settings.labels) {
+            iconLabelSpan.classList.add('blue');
+        }
+        else {
+            iconLabelSpan.classList.add('grey');
+        }
+    }
+
+    function updateStationlControl() {
+        iconStationSpan.classList.remove('blue');
+        iconStationSpan.classList.remove('red');
+        iconStationSpan.classList.remove('grey');
+
+        if(!station.hasOwnProperty('lat') || !station.hasOwnProperty('lon')) {
+            iconStationSpan.classList.add('red');
+            map.dragging.enable();
+        }
+        else if (settings.fix_center) {
+            iconStationSpan.classList.add('blue');
+            map.dragging.disable();
+        }
+        else {
+            iconStationSpan.classList.add('grey');
+            map.dragging.enable();
+        }   
+    }
+
     function addLabelControl() {
         // ------------
         var labelToggleControl = L.control({ position: 'bottomright' });
@@ -1462,15 +1516,17 @@
         labelToggleControl.onAdd = function (map) {
 
             var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-            controlDiv.title="Toggle labels on screen";
+            controlDiv.title="Show labels on screen";
             var controlBoundary = L.DomUtil.create('div', 'leaflet-control-label-toggle', controlDiv);
-            var iconSpan = L.DomUtil.create('span', 'fas fa-location-dot', controlBoundary);
+            iconLabelSpan = L.DomUtil.create('span', 'fas fa-tag', controlBoundary);
+            updateLabelControl();
 
             controlDiv.addEventListener('click', function () {
 
                 settings.labels = !settings.labels;
+                updateLabelControl();
                 saveSettings();
-
+                
                 if (!settings.labels) {
                     for (let [key, m] of Object.entries(markers))
                         if (m.isTooltipOpen()) m.getTooltip().toggle();
@@ -1482,6 +1538,32 @@
         };
         addControlToMap(labelToggleControl);
     }
+
+    function addStationControl() {
+        // ------------
+        var stationToggleControl = L.control({ position: 'bottomright' });
+
+        stationToggleControl.onAdd = function (map) {
+
+            var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
+            controlDiv.title = "Fix map center at Receiver Station position";
+            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-station-toggle', controlDiv);
+            iconStationSpan = L.DomUtil.create('span', 'fas fa-bullseye', controlBoundary);
+            updateStationlControl();
+
+            controlDiv.addEventListener('click', function () {
+
+                settings.fix_center = !settings.fix_center;
+                updateStationlControl();
+                saveSettings();
+                plotStation();
+            });
+            return controlDiv;
+        };
+        addControlToMap(stationToggleControl);
+    }
+
+
 
     function showPlugins() {
         alert("Loaded plugins:\n" + plugins);
@@ -1511,6 +1593,8 @@
 
     async function fetchShips() {
         let ships = {};
+        station = {};
+        
         if(true) {
             try {
                 response = await fetch('ships.json');
@@ -1528,12 +1612,22 @@
 
         shipsDB = {};
         ships.ships.forEach(s => {
-            let entry = {}; 
+            const entry = {}; 
             s.mmsi_type = getMMSItype(s);
             entry.raw = s; 
             shipsDB[s.mmsi] = entry;
         });
-    
+
+        if(settings.center_point.toUpperCase() === "STATION") {    
+            if(ships.hasOwnProperty("station")) 
+                station = ships.station;
+        } else {
+            if (settings.center_point && settings.center_point in shipsDB) {
+                const ship = shipsDB[settings.center_point].raw;
+                station = {lat: ship.lat, lon: ship.lon};
+            }
+        }
+
         return ships.ships.length;
     }
 
@@ -2686,8 +2780,7 @@
         if (marker_hover != null) {
             map.removeLayer(marker_hover);
             marker_hover = null;
-        }
-        
+        }   
     }
 
     function setHoverMarker(latlon) { 
@@ -2775,6 +2868,35 @@
         }
     }
 
+    function plotStation() {
+
+        if (station == null) return;
+
+        if (marker_station == null) {
+	    marker_station = {};
+            marker_station.base = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
+            marker_station.base.addTo(map);
+
+	    let r = parseInt(settings.center_radius);
+            if(!isNaN(r) && r > 0) {
+            	marker_station.rad = L.circle([station.lat,station.lon], { radius: r, fillOpacity: 0, color: 'black'});
+	        marker_station.rad.addTo(map);
+	    }
+        }
+        else {
+            marker_station.base.setLatLng([station.lat, station.lon]);
+	    if(marker_station.hasOwnProperty("rad"))
+            	marker_station.rad.setLatLng([station.lat, station.lon]);
+	}
+
+        if(settings.fix_center) 
+        {
+            map.panTo([station.lat, station.lon]);
+            settings.lat = station.lat;
+            settings.lon = station.lon;
+        }
+    }
+
     function showShipcard(m) {
 
         const aside = document.getElementById('shipcard');
@@ -2814,6 +2936,11 @@
     async function updateMap() {
 
         const n = await fetchShips();
+
+        updateStationlControl();
+        if(station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && station.lat != null) {
+            plotStation(station);
+        }
 
         if (n == 0) return;
 
@@ -2872,7 +2999,6 @@
         else mapResetView(13);
 
         showTrack();
-
     }
 
     function activateTab(b, a) {
@@ -2973,6 +3099,7 @@
     initPlots();
     initMap();            
     addLabelControl(); 
+    addStationControl();
 
     init_postTabsInit();
 
