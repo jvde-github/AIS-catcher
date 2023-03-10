@@ -1048,6 +1048,7 @@
                         <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
                         <span><i title="Center map on current vessel" onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
                         <span><i title="Show track of current vessel" onclick="showTrack()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
+                        <span><i onclick="setStation()" class="shipcard-header-icon fa-solid  fa-thumbtack"></i></span>
                         <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-plus"></i></span>
                         <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-minus"></i></span>
                         <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
@@ -1122,13 +1123,13 @@
 <div class="bottombar"></div>
 
 <script>
-    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
+    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, center = {}, shipsDB = {}, singleClickTimeout = null;
     var iconLabelSpan = null, iconStationSpan = null;
 
     var plugins = "", plugins_main = [];
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
 
-    var marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
+    var marker_center = null, marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
     var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
@@ -1495,7 +1496,7 @@
         iconStationSpan.classList.remove('red');
         iconStationSpan.classList.remove('grey');
 
-        if(!station.hasOwnProperty('lat') || !station.hasOwnProperty('lon')) {
+        if(!center.hasOwnProperty('lat') || !center.hasOwnProperty('lon')) {
             iconStationSpan.classList.add('red');
             map.dragging.enable();
         }
@@ -1618,16 +1619,18 @@
             shipsDB[s.mmsi] = entry;
         });
 
-        if(settings.center_point.toUpperCase() === "STATION") {    
-            if(ships.hasOwnProperty("station")) 
-                station = ships.station;
-        } else {
-            if (settings.center_point && settings.center_point in shipsDB) {
-                const ship = shipsDB[settings.center_point].raw;
-                station = {lat: ship.lat, lon: ship.lon};
-            }
-        }
+        if(ships.hasOwnProperty("station")) 
+            station = ships.station;
 
+        center = {};
+        if(String(settings.center_point).toUpperCase() == "STATION") {
+            center = station;
+        }
+        else if(settings.center_point in shipsDB) {
+            let ship = shipsDB[settings.center_point].raw;
+            center = {lat: ship.lat, lon: ship.lon};
+        }
+        
         return ships.ships.length;
     }
 
@@ -2679,6 +2682,7 @@
 
         } else {
             markers[ship.mmsi] = L.marker([ship.lat, ship.lon], { icon: getIcon(ship) }).addTo(map);
+
             markers[ship.mmsi].on('click', function (e) { showShipcard(ship.mmsi); });
             markers[ship.mmsi].on('mouseover', function (e) { startHover(ship.mmsi); });
             markers[ship.mmsi].on('mouseout', function (e) { endHover(ship.mmsi); });
@@ -2703,6 +2707,28 @@
         marker_showtrack = true;
         updateTrack();
         shipcardMinIfMaxonMobile();
+    }
+
+    async function setStation() {
+
+        if(card_mmsi == settings.center_point) {
+            settings.center_point = "STATION";
+            center = station;
+        }
+        else {
+            settings.center_point = card_mmsi;
+            center = {};
+            if(card_mmsi in shipsDB) {
+                let ship = shipsDB[card_mmsi].raw;
+                if(ship.lat != null && ship.lon != null) {
+                    center = {lat: ship.lat, lon: ship.lon};
+                }
+            }
+        }
+
+        saveSettings();
+        updateStationlControl();
+        plotStation();
     }
 
     function removeTrack() {
@@ -2869,31 +2895,44 @@
     }
 
     function plotStation() {
-
-        if (station == null) return;
+        if (station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon")) {
+            if(marker_station) {
+                map.removeLayer(marker_station);
+                marker_station = null;
+            }
+            return;
+        }
 
         if (marker_station == null) {
-	    marker_station = {};
-            marker_station.base = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
-            marker_station.base.addTo(map);
-
-	    let r = parseInt(settings.center_radius);
-            if(!isNaN(r) && r > 0) {
-            	marker_station.rad = L.circle([station.lat,station.lon], { radius: r, fillOpacity: 0, color: 'black'});
-	        marker_station.rad.addTo(map);
-	    }
+            marker_station = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'blue', radius: 12, weight: 4, fillOpacity: 1, fillColor:'darkblue', pane: "locationMarker" })
+            marker_station.addTo(map);
         }
         else {
-            marker_station.base.setLatLng([station.lat, station.lon]);
-	    if(marker_station.hasOwnProperty("rad"))
-            	marker_station.rad.setLatLng([station.lat, station.lon]);
-	}
+            marker_station.setLatLng([station.lat, station.lon]);
+	    }
+
+        if (center == null || !center.hasOwnProperty("lat") || !center.hasOwnProperty("lon")) {
+            if(marker_center) {
+                map.removeLayer(marker_center);
+                marker_center = null;
+            }
+            return;
+        }
+
+        if (marker_center == null) {
+            marker_center = L.circleMarker([center.lat, center.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
+            marker_center.addTo(map);
+        }
+        else {
+            marker_center.setLatLng([center.lat, center.lon]);
+	    }
 
         if(settings.fix_center) 
         {
-            map.panTo([station.lat, station.lon]);
-            settings.lat = station.lat;
-            settings.lon = station.lon;
+            map.panTo([center.lat, center.lon]);
+            settings.lat = center.lat;
+            settings.lon = center.lon;
+            saveSettings();
         }
     }
 
