@@ -1131,7 +1131,7 @@
     var marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
-    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, track_station: false, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
+    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
 
     // some functions useful in plugins
     function addTileLayer(title,layer) { basemaps[title] = layer; }
@@ -1499,7 +1499,7 @@
             iconStationSpan.classList.add('red');
             map.dragging.enable();
         }
-        else if (settings.track_station) {
+        else if (settings.fix_center) {
             iconStationSpan.classList.add('blue');
             map.dragging.disable();
         }
@@ -1553,7 +1553,7 @@
 
             controlDiv.addEventListener('click', function () {
 
-                settings.track_station = !settings.track_station;
+                settings.fix_center = !settings.fix_center;
                 updateStationlControl();
                 saveSettings();
                 plotStation();
@@ -1593,6 +1593,8 @@
 
     async function fetchShips() {
         let ships = {};
+        station = {};
+        
         if(true) {
             try {
                 response = await fetch('ships.json');
@@ -1608,18 +1610,24 @@
         }
         setPulseOk();        
 
-        if(ships.hasOwnProperty("station")) {
-            station = ships.station;
-        }
-
         shipsDB = {};
         ships.ships.forEach(s => {
-            let entry = {}; 
+            const entry = {}; 
             s.mmsi_type = getMMSItype(s);
             entry.raw = s; 
             shipsDB[s.mmsi] = entry;
         });
-    
+
+        if(settings.center_point.toUpperCase() === "STATION") {    
+            if(ships.hasOwnProperty("station")) 
+                station = ships.station;
+        } else {
+            if (settings.center_point && settings.center_point in shipsDB) {
+                const ship = shipsDB[settings.center_point].raw;
+                station = {lat: ship.lat, lon: ship.lon};
+            }
+        }
+
         return ships.ships.length;
     }
 
@@ -2865,13 +2873,23 @@
         if (station == null) return;
 
         if (marker_station == null) {
-            marker_station = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
-            marker_station.addTo(map);
-        }
-        else
-            marker_station.setLatLng([station.lat, station.lon]);
+	    marker_station = {};
+            marker_station.base = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
+            marker_station.base.addTo(map);
 
-        if(settings.track_station) 
+	    let r = parseInt(settings.center_radius);
+            if(!isNaN(r) && r > 0) {
+            	marker_station.rad = L.circle([station.lat,station.lon], { radius: r, fillOpacity: 0, color: 'black'});
+	        marker_station.rad.addTo(map);
+	    }
+        }
+        else {
+            marker_station.base.setLatLng([station.lat, station.lon]);
+	    if(marker_station.hasOwnProperty("rad"))
+            	marker_station.rad.setLatLng([station.lat, station.lon]);
+	}
+
+        if(settings.fix_center) 
         {
             map.panTo([station.lat, station.lon]);
             settings.lat = station.lat;
