@@ -1123,7 +1123,7 @@
 <div class="bottombar"></div>
 
 <script>
-    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, center = {}, shipsDB = {}, singleClickTimeout = null;
+    var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
     var iconLabelSpan = null, iconStationSpan = null;
 
     var StationControlDiv = null;
@@ -2909,7 +2909,7 @@
         else {
             center = {};
             if(settings.center_point && settings.center_point in shipsDB) {
-                let ship = shipsDB[card_mmsi].raw;
+                let ship = shipsDB[settings.center_point].raw;
                 if(ship.lat != null && ship.lon != null) {
                     center = {lat: ship.lat, lon: ship.lon};
                 }
