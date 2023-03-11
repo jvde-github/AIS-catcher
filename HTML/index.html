@@ -2886,15 +2886,18 @@
     }
 
     function plotStation() {
+        const hasStation = station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
+        const hasMMSIcenter = settings.center_point && settings.center_point != "STATION" && settings.center_point in shipsDB;
+
         // plot station on map
-        if (station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon")) {
+        if (hasStation) {
             if(marker_station) {
                 map.removeLayer(marker_station);
                 marker_station = null;
             }
         } else { 
             if (marker_station == null) {
-                marker_station = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'blue', radius: 12, weight: 4, fillOpacity: 1, fillColor:'lightblue', pane: "locationMarker" })
+                marker_station = L.circleMarker([station.lat, station.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
                 marker_station.addTo(map);
             }
             else {
@@ -2902,13 +2905,18 @@
             }
         }
 
-        // recalc the center of the map
+        // MMSI is driving center but does not exist    
+        if(!hasMMSIcenter && settings.center_point != "STATION") {
+            settings.center_point = "STATION";
+            settngs.fix_center = false;
+        }
+
         if(settings.center_point == "STATION") {
             center = station;
         }
         else {
             center = {};
-            if(settings.center_point && settings.center_point in shipsDB) {
+            if(hasMMSIcenter) {
                 let ship = shipsDB[settings.center_point].raw;
                 if(ship.lat != null && ship.lon != null) {
                     center = {lat: ship.lat, lon: ship.lon};
@@ -2925,7 +2933,7 @@
         }
         else {
             if (marker_center == null) {
-                marker_center = L.circleMarker([center.lat, center.lon], { interactive: false, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor:'red', pane: "locationMarker" })
+                marker_center = L.circleMarker([center.lat, center.lon], { interactive: false, color: 'black', radius: 12, weight: 4, fillOpacity: 0,  pane: "locationMarker" })
                 marker_center.addTo(map);
             }
             else {
