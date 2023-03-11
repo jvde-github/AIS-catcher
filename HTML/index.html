@@ -1126,6 +1126,7 @@
     var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, center = {}, shipsDB = {}, singleClickTimeout = null;
     var iconLabelSpan = null, iconStationSpan = null;
 
+    var StationControlDiv = null;
     var plugins = "", plugins_main = [];
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
 
@@ -1491,7 +1492,7 @@
         }
     }
 
-    function updateStationlControl() {
+    function updateStationControl(center) {
         iconStationSpan.classList.remove('blue');
         iconStationSpan.classList.remove('red');
         iconStationSpan.classList.remove('grey');
@@ -1507,7 +1508,7 @@
         else {
             iconStationSpan.classList.add('grey');
             map.dragging.enable();
-        }   
+        } 
     }
 
     function addLabelControl() {
@@ -1546,20 +1547,19 @@
 
         stationToggleControl.onAdd = function (map) {
 
-            var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-            controlDiv.title = "Fix map center at Receiver Station position";
-            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-station-toggle', controlDiv);
+            StationControlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
+            StationControlDiv.title = "Fix map center at center point";
+            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-station-toggle', StationControlDiv);
             iconStationSpan = L.DomUtil.create('span', 'fas fa-bullseye', controlBoundary);
-            updateStationlControl();
+            updateStationControl({});
 
-            controlDiv.addEventListener('click', function () {
+            StationControlDiv.addEventListener('click', function () {
 
                 settings.fix_center = !settings.fix_center;
-                updateStationlControl();
                 saveSettings();
                 plotStation();
             });
-            return controlDiv;
+            return StationControlDiv;
         };
         addControlToMap(stationToggleControl);
     }
@@ -2713,21 +2713,12 @@
 
         if(card_mmsi == settings.center_point) {
             settings.center_point = "STATION";
-            center = station;
         }
         else {
             settings.center_point = card_mmsi;
-            center = {};
-            if(card_mmsi in shipsDB) {
-                let ship = shipsDB[card_mmsi].raw;
-                if(ship.lat != null && ship.lon != null) {
-                    center = {lat: ship.lat, lon: ship.lon};
-                }
-            }
         }
 
         saveSettings();
-        updateStationlControl();
         plotStation();
     }
 
@@ -2895,6 +2886,7 @@
     }
 
     function plotStation() {
+        // plot station on map
         if (station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon")) {
             if(marker_station) {
                 map.removeLayer(marker_station);
@@ -2910,6 +2902,21 @@
             }
         }
 
+        // recalc the center of the map
+        if(settings.center_point == "STATION") {
+            center = station;
+        }
+        else {
+            center = {};
+            if(settings.center_point && settings.center_point in shipsDB) {
+                let ship = shipsDB[card_mmsi].raw;
+                if(ship.lat != null && ship.lon != null) {
+                    center = {lat: ship.lat, lon: ship.lon};
+                }
+            }
+        }
+
+        // plot the center on the map
         if (center == null || !center.hasOwnProperty("lat") || !center.hasOwnProperty("lon")) {
             if(marker_center) {
                 map.removeLayer(marker_center);
@@ -2933,6 +2940,9 @@
             settings.lon = center.lon;
             saveSettings();
         }
+
+        // update the menus with the latest center
+        updateStationControl(center);
     }
 
     function showShipcard(m) {
@@ -2975,11 +2985,6 @@
 
         const n = await fetchShips();
 
-        updateStationlControl();
-        if(station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && station.lat != null) {
-            plotStation(station);
-        }
-
         if (n == 0) return;
 
         if (shipcardVisible()) populateShipcard();
@@ -3015,6 +3020,7 @@
             setFocusMarker(markers[card_mmsi].getLatLng());
             updateTrack();
         }
+        plotStation(station);
     }
 
     function refresh_data() {
