@@ -65,9 +65,10 @@ And secondly The NMEA decoder accepts NMEA lines from a GPS device (NMEA lines G
 ```
 echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
 ```
-These GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move.
+These GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move. This is useful if you 
+use AIS-catcher to read from a hardware AIS receiver that has a built-in GPS.
 
-All this now allows the following command:
+All these new functions combined enables a command line like this:
 ```
 AIS-catcher -r txt /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 -x 192.168.1.235 4002 -N 8100 share_loc on
 ```
