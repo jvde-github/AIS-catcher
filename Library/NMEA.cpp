@@ -197,6 +197,33 @@ namespace AIS {
 		return true;
 	}
 
+	bool NMEA::processRMC(const std::string& s, TAG& tag, long t) {
+		bool error = false;
+
+		split(s);
+
+		if (parts.size() != 13) return false;
+
+		const std::string& crc = parts[12];
+		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+
+		if (checksum != NMEAchecksum(line)) {
+			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (crc_check) return false;
+		}
+
+		GPS gps;
+		gps.lat = GpsToDecimal(trim(parts[3]).c_str(), trim(parts[4])[0], error);
+		gps.lon = GpsToDecimal(trim(parts[5]).c_str(), trim(parts[6])[0], error);
+
+		if (error) return false;
+
+		outGPS.Send(&gps, 1, tag);
+		std::cerr << "RMC: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+
+		return true;
+	}
+
 	bool NMEA::processGLL(const std::string& s, TAG& tag, long t) {
 		bool error = false;
 
@@ -357,6 +384,7 @@ namespace AIS {
 						bool noerror = true;
 						if (type == "VDM") noerror &= processAIS(line, tag, t);
 						if (type == "GGA") noerror &= processGGA(line, tag, t);
+						if (type == "RMC") noerror &= processRMC(line, tag, t);
 						if (type == "GLL") noerror &= processGLL(line, tag, t);
 
 						if (!noerror) {

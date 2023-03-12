@@ -84,6 +84,7 @@ namespace AIS {
 		bool processAIS(const std::string& s, TAG& tag, long t);
 		bool processGGA(const std::string& s, TAG& tag, long t);
 		bool processGLL(const std::string& s, TAG& tag, long t);
+		bool processRMC(const std::string& s, TAG& tag, long t);
 
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);
