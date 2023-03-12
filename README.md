@@ -1,9 +1,10 @@
 # AIS-catcher - A multi-platform AIS receiver 
-This package adds the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles (including the ShipXplorer AIS dongle), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, input from file and from ZMQ and TCP servers (RTL-TCP/SpyServer). Output is send in the form of NMEA messages to either screen or broadcast over UDP. 
-The program provides the option to read and decode the raw discriminator output of a VHF receiver and NMEA text as well. It has a built-in simple webclient.
-
-![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
-
+This package adds the ```AIS-catcher``` command - a dual channel AIS receiver for RTL-SDR dongles (including the ShipXplorer AIS dongle), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, input from file and from ZMQ and TCP servers (RTL-TCP/SpyServer). Output is send in the form of NMEA messages to either screen or broadcast over UDP
+The program provides the option to read and decode the raw discriminator output of a VHF receiver and NMEA text as well. It has a built-in simple webserver.
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/52420030/219856752-b3a09051-b913-49bd-8af3-bca2e7a25130.png" width="30%"/>
+</p>
+ A few examples of live statiobns are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available.
 
 ## Purpose
 
@@ -25,41 +26,24 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## What's new?
 For new features in the latest version please have a look at the [release page](https://github.com/jvde-github/AIS-catcher/releases/tag/v0.44). 
-The main recent development is the addition of a web interface for which a few example are available online: for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.com/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.com/) for making this available.
-More information in [this](https://github.com/jvde-github/AIS-catcher#Web-interface) section. 
 
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/52420030/219856752-b3a09051-b913-49bd-8af3-bca2e7a25130.png" width="30%"/>
-</p>
-
-We have added new functionality that allows the user to set some bespoke information about the station and hardware in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab and is read in from a file, say `about.md` as follows:
+ - **About page**: the user can make a page in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab of the webserver:
 ```console
 AIS-catcher -N 8100 ABOUT about.md
 ```
-
-### AIS2ADSB
-
-I am playing around with a simple script to pass on AIS NMEA messages to ADS-B software. If works well and deemed useful will be included in AIS-catcher as option.
-
-[https://github.com/jvde-github/ais2adsb](https://github.com/jvde-github/ais2adsb)
-
-### UDP output in JSON format
-
-The program now provides the functionality to send NMEA messages packaged in a JSON object:
+- **AIS2ADSB**: A simple script to export AIS messages to ADS-B format so SAR aircraft (and ships if needed) can be visualized in Virtual Radar Server. See [here](https://github.com/jvde-github/ais2adsb)
+- **JSON over UDP output**: functionality to send NMEA messages packaged in a JSON object, e.g.:
 ```console
 AIS-catcher -u 192.168.1.235 4002 JSON on
 ```
-Similary, AIS-catcher accepts and parses this input when running as a UDP server
+- **JSON over UDP input**: AIS-catcher accepts and parses this input when running as a UDP server, e.g.:
 ```console
 AIS-catcher -x 192.168.1.235 4002
 ```
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings.
+- **Writing AIS to PostgreSQL**: The setup is fairly flexible and can be tailored to the particular needs.  See below for more details. 
 
-### Writing AIS messages to a Database
-
-We have added a simple feature that writes messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs.  See below for more details. 
-
-### Multiple receivers in parallel
+### Experimental Branche
 
 There is an experimental branch that allows to run with multiple receivers. For example, one dongle for channel A+B and one dongle for channel C+D. To use, follow the normal build instructions but clone with:
 ```
@@ -70,6 +54,22 @@ Then you can use a command like:
 AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
 ```
 This functionality will be extended to accept commands and GPS input over, e.g., UDP. 
+
+The webserver can share the location of the station with the front end so it will be displayed on the map:
+```
+AIS-catcher -N 8100 share_loc on
+```
+The NMEA decoder accepts NMEA lines from a GPS device (GPGLL and GPGGA):
+```
+echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
+```
+GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move.
+All this allows the following command:
+```
+AIS-catcher -r txt /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 -x 192.168.1.235 4002 -N 8100 share_loc on
+```
+The first receiver reads from a GPS device connected, the second receiver reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
+by the GPS coordinates. The web-page has the ability to fix the center of the map on the location of the receiving station.
 
 ## Usage
 ````
@@ -159,6 +159,7 @@ It has been reported by several users that adding a bandwidth setting of ``-a 19
 To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
 ## Deep dives
+![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
 
 ### Message screen output
 
