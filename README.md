@@ -53,23 +53,29 @@ Then you can use a command like:
 ```
 AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
 ```
-This functionality will be extended to accept commands and GPS input over, e.g., UDP. 
 
-The webserver can share the location of the station with the front end so it will be displayed on the map:
+Furthermore, the webserver can share the location of the station with the front end so it will be displayed on the map:
 ```
 AIS-catcher -N 8100 share_loc on
 ```
+This is switched off by default for privacy reasons in case the webclient is shared externally.
 The NMEA decoder accepts NMEA lines from a GPS device (GPGLL and GPGGA):
 ```
 echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
 ```
 GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move.
-All this allows the following command:
+All this now allows the following command:
 ```
 AIS-catcher -r txt /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 -x 192.168.1.235 4002 -N 8100 share_loc on
 ```
 The first receiver reads from a GPS device connected, the second receiver reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
 by the GPS coordinates. The web-page has the ability to fix the center of the map on the location of the receiving station.
+
+This functionality is new so reporting of bugs is appreciated. You can check whether you are running the experimental version by 
+```
+AIS-catcher -h
+```
+and the first line should be `AIS-catcher (build Mar 12 2023) v0.44-multiple-branche`.
 
 ## Usage
 ````
