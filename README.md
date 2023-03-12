@@ -49,9 +49,9 @@ There is an experimental branch that allows to run with multiple receivers. For 
 ```
 git clone https://github.com/jvde-github/AIS-catcher.git -b multiple
 ```
-To build follow the instruction as per normal below.
+Now build by following the instruction as per normal below.
 
-Two run with two receivers you can use a command like:
+To run with two receivers in parallel you can use a command like:
 ```
 AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
 ```
