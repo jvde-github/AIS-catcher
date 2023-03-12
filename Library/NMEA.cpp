@@ -19,9 +19,10 @@
 
 namespace AIS {
 
-	void NMEA::reset() {
-		aivdm.reset();
-		index = 0;
+	void NMEA::reset(char c) {
+		state = 0;
+		line.clear();
+		prev = c;
 	}
 
 	void NMEA::clean(char c, int t) {
@@ -126,6 +127,13 @@ namespace AIS {
 		}
 	}
 
+	std::string NMEA::trim(const std::string& s) {
+		std::string r;
+		for (char c : s)
+			if (c != ' ') r += c;
+		return r;
+	}
+
 	// stackoverflow variant (need to find the reference)
 	float NMEA::GpsToDecimal(const char* nmeaPos, char quadrant, bool& error) {
 		float v = 0;
@@ -156,17 +164,62 @@ namespace AIS {
 	}
 
 	bool NMEA::processGGA(const std::string& s, TAG& tag, long t) {
+		bool error = false;
 
 		split(s);
 
+		if (parts.size() != 15) return false;
+
+		const std::string& crc = parts[14];
+		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+
+		if (checksum != NMEAchecksum(line)) {
+			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (crc_check) return false;
+		}
+
+		// no proper fix
+		int fix = atoi(parts[6].c_str());
+		if (fix != 1 && fix != 2) {
+			std::cerr << "NMEA: no fix in GPGGA NMEA:" << parts[6] << std::endl;
+			return false;
+		}
+
 		GPS gps;
-		bool error = false;
-		gps.lat = GpsToDecimal(parts[2].c_str(), parts[3][0], error);
-		gps.lon = GpsToDecimal(parts[4].c_str(), parts[5][0], error);
+		gps.lat = GpsToDecimal(trim(parts[2]).c_str(), trim(parts[3])[0], error);
+		gps.lon = GpsToDecimal(trim(parts[4]).c_str(), trim(parts[5])[0], error);
 
 		if (error) return false;
+
 		outGPS.Send(&gps, 1, tag);
-		std::cerr << "GPS: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+		std::cerr << "GGA: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+
+		return true;
+	}
+
+	bool NMEA::processGLL(const std::string& s, TAG& tag, long t) {
+		bool error = false;
+
+		split(s);
+
+		if (parts.size() != 8) return false;
+
+		const std::string& crc = parts[7];
+		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+
+		if (checksum != NMEAchecksum(line)) {
+			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (crc_check) return false;
+		}
+
+		GPS gps;
+		gps.lat = GpsToDecimal(parts[1].c_str(), parts[2][0], error);
+		gps.lon = GpsToDecimal(parts[3].c_str(), parts[4][0], error);
+
+		if (error) return false;
+
+		outGPS.Send(&gps, 1, tag);
+		std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -174,6 +227,7 @@ namespace AIS {
 	bool NMEA::processAIS(const std::string& s, TAG& tag, long t) {
 
 		split(s);
+		aivdm.reset();
 
 		if (parts.size() != 7) return false;
 
@@ -243,7 +297,6 @@ namespace AIS {
 
 						for (const auto& v : p.Get().getArray()) {
 							processAIS(v.getString(), tag, t);
-							reset();
 						}
 					}
 				}
@@ -261,8 +314,10 @@ namespace AIS {
 		for (int j = 0; j < len; j++) {
 			for (int i = 0; i < data[j].size; i++) {
 				char c = ((char*)(data[j].data))[i];
+
+				// state = 0, we are looking for the start of JSON or NMEA
 				if (state == 0) {
-					if (c == '{' && (prev == '\0' || prev == '\n' || prev == '\r')) {
+					if (c == '{' && (prev == '\n' || prev == '\r')) {
 						line = c;
 						state = 1;
 					}
@@ -274,38 +329,44 @@ namespace AIS {
 					continue;
 				}
 
-				if (line.size() > 1024 || c == '\n' || c == '\r') {
-					state = 0;
-					line.clear();
-					prev = c;
-					continue;
-				}
+				bool newline = c == '\r' || c == '\n' || c == '\t' || c == '\0';
 
-				line += c;
+				if (!newline) line += c;
+				prev = c;
 
-				if (state == 1 && c == '}') {
-					processJSONsentence(line, tag, t);
-					state = 0;
-					line.clear();
-					prev = c;
-				}
-				else if (state == 2 && line.size() > 5 && isHEX(line[line.size() - 1]) && isHEX(line[line.size() - 2]) && line[line.size() - 3] == '*' &&
-						 ((isdigit(line[line.size() - 4]) && line[line.size() - 5] == ',') ||
-						  (line[line.size() - 4] == ','))) {
-					reset();
-
-					if (line.size() > 6) {
-						std::string type = line.substr(3, 3);
-
-						if (type == "VDM") processAIS(line, tag, t);
-						if (type == "GGA") processGGA(line, tag, t);
-
-
-						state = 0;
-						line.clear();
+				// state = 1 (JSON) or state = 2 (NMEA)
+				if (state == 1) {
+					// we do not allow nested JSON, so processing until newline character or '}'
+					if (c == '}') {
+						processJSONsentence(line, tag, t);
+						reset(c);
+					}
+					else if (newline) {
+						std::cerr << "NMEA: newline in uncompleted JSON input not allowed";
+						reset(c);
 					}
 				}
-				prev = c;
+				else if (state == 2) {
+					// end of line if we find a checksum or a newline character
+					bool isNMEA = line.size() > 10 && (line[3] == 'V' && line[4] == 'D' && line[5] == 'M');
+					bool checksum = isNMEA && (isHEX(line[line.size() - 1]) && isHEX(line[line.size() - 2]) && line[line.size() - 3] == '*' &&
+											   ((isdigit(line[line.size() - 4]) && line[line.size() - 5] == ',') || (line[line.size() - 4] == ',')));
+
+					if (((isNMEA && checksum) || newline) && line.size() > 6) {
+						std::string type = line.substr(3, 3);
+						bool noerror = true;
+						if (type == "VDM") noerror &= processAIS(line, tag, t);
+						if (type == "GGA") noerror &= processGGA(line, tag, t);
+						if (type == "GLL") noerror &= processGLL(line, tag, t);
+
+						if (!noerror) {
+							std::cerr << "NMEA: error processing NMEA line " << line << std::endl;
+						}
+						reset(c);
+					}
+				}
+
+				if (line.size() > 1024) reset(c);
 			}
 		}
 	}

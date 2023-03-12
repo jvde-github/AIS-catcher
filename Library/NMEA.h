@@ -59,11 +59,10 @@ namespace AIS {
 		std::string line;
 
 		std::vector<AIVDM> queue;
-		int index = 0;
 
 		void submitAIS(TAG& tag, long int t);
 		void addline(const AIVDM& a);
-		void reset();
+		void reset(char);
 		void clean(char, int);
 		int search(const AIVDM& a);
 
@@ -80,10 +79,11 @@ namespace AIS {
 		bool JSON_input = false;
 
 		void split(const std::string&);
-
+		std::string trim(const std::string&);
 		void processJSONsentence(std::string s, TAG& tag, long t);
 		bool processAIS(const std::string& s, TAG& tag, long t);
 		bool processGGA(const std::string& s, TAG& tag, long t);
+		bool processGLL(const std::string& s, TAG& tag, long t);
 
 	public:
 		void Receive(const RAW* data, int len, TAG& tag);
