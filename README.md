@@ -61,7 +61,7 @@ There are a few other options that together can provide some interesting new fun
 AIS-catcher -N 8100 share_loc on
 ```
 This option is switched off by default for privacy reasons in case the webclient is shared externally.
-And secondly The NMEA decoder accepts NMEA lines from a GPS device (NMEA lines GPRMC, GPGLL and GPGGA):
+And secondly, the NMEA decoder accepts NMEA lines from a GPS device (NMEA lines GPRMC, GPGLL and GPGGA):
 ```
 echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
 ```
