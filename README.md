@@ -43,39 +43,42 @@ AIS-catcher -x 192.168.1.235 4002
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings.
 - **Writing AIS to PostgreSQL**: The setup is fairly flexible and can be tailored to the particular needs.  See below for more details. 
 
-### Experimental Branche
+### Experimental Branche: GPS, multiple receivers and plot station location on map
 
 There is an experimental branch that allows to run with multiple receivers. For example, one dongle for channel A+B and one dongle for channel C+D. To use, follow the normal build instructions but clone with:
 ```
 git clone https://github.com/jvde-github/AIS-catcher.git -b multiple
 ```
-Then you can use a command like:
+To build follow the instruction as per normal below.
+
+Two run with two receivers you can use a command like:
 ```
 AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
 ```
 
-Furthermore, the webserver can share the location of the station with the front end so it will be displayed on the map:
+There are a few other options that together can provide some interesting new functionality. Firstly, the webserver can share the location of the station with the front-end so it will be displayed on the map:
 ```
 AIS-catcher -N 8100 share_loc on
 ```
-This is switched off by default for privacy reasons in case the webclient is shared externally.
-The NMEA decoder accepts NMEA lines from a GPS device (GPGLL and GPGGA):
+This option is switched off by default for privacy reasons in case the webclient is shared externally.
+And secondly The NMEA decoder accepts NMEA lines from a GPS device (NMEA lines GPRMC, GPGLL and GPGGA):
 ```
 echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
 ```
-GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move.
+These GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move.
+
 All this now allows the following command:
 ```
 AIS-catcher -r txt /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 -x 192.168.1.235 4002 -N 8100 share_loc on
 ```
-The first receiver reads from a GPS device connected, the second receiver reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
+The first receiver (`-r txt ...`) reads from a GPS device that is connected and emits NMEA lines. The second receiver (`-x`) reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
 by the GPS coordinates. The web-page has the ability to fix the center of the map on the location of the receiving station.
 
-This functionality is new so reporting of bugs is appreciated. You can check whether you are running the experimental version by 
+This functionality is new so reporting of bugs is appreciated. You can check whether you are running the experimental version by entering:
 ```
 AIS-catcher -h
 ```
-and the first line should be `AIS-catcher (build Mar 12 2023) v0.44-multiple-branche`.
+and checking that the first line reads `AIS-catcher (build Mar 12 2023) v0.44-multiple-branche`.
 
 ## Usage
 ````
