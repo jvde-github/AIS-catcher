@@ -46,7 +46,7 @@ Most external programs will not be able to accept this JSON packaged NMEA string
 
 ### Experimental Branche: GPS, multiple receivers and plot station location on map
 
-There is an experimental branch that allows to run with multiple receivers. For example, one dongle for channel A+B and one dongle for channel C+D. To use, follow the normal build instructions but clone with:
+There is an experimental branche that can run with multiple receivers in parallel. For example, one dongle for channel A+B and one dongle for channel C+D. To use, follow the normal build instructions but clone with:
 ```
 git clone https://github.com/jvde-github/AIS-catcher.git -b multiple
 ```
