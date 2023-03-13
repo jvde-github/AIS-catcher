@@ -1165,6 +1165,7 @@
     getDeltaTimeVal = s =>  s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
     getShipName = ship => ship.shipname;
     getCallSign = ship => ship.callsign;
+    includeShip = ship => true;
 
     
     function getStatusVal(ship) {
@@ -1613,10 +1614,12 @@
 
         shipsDB = {};
         ships.ships.forEach(s => {
-            const entry = {}; 
-            s.mmsi_type = getMMSItype(s);
-            entry.raw = s; 
-            shipsDB[s.mmsi] = entry;
+            if(includeShip(s)) {
+                const entry = {}; 
+                s.mmsi_type = getMMSItype(s);
+                entry.raw = s; 
+                shipsDB[s.mmsi] = entry;
+            }
         });
 
         if(ships.hasOwnProperty("station")) 
