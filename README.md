@@ -44,15 +44,9 @@ AIS-catcher -x 192.168.1.235 4002
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings.
 - **Writing AIS to PostgreSQL**: The setup is fairly flexible and can be tailored to the particular needs.  See below for more details. 
 
-### Experimental Branche: GPS, multiple receivers and plot station location on map
+### GPS, multiple receivers and plot station location on map
 
-There is an experimental branche that can run with multiple receivers in parallel. For example, one dongle for channel A+B and one dongle for channel C+D. To use, follow the normal build instructions but clone with:
-```
-git clone https://github.com/jvde-github/AIS-catcher.git -b multiple
-```
-Now build by following the instruction as per normal below.
-
-To run with two receivers in parallel you can use a command like:
+The latest version can run with multiple receivers in parallel. For example, one dongle for channel A+B and one dongle for channel C+D. To run with two receivers in parallel you can use a command like:
 ```
 AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
 ```
