@@ -70,11 +70,7 @@ AIS-catcher -r txt /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_G
 The first receiver (`-r txt ...`) reads from a GPS device that is connected and emits NMEA lines. The second receiver (`-x`) reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
 by the GPS coordinates. The web-page has the ability to fix the center of the map on the location of the receiving station.
 
-This functionality is new so reporting of bugs is appreciated. You can check whether you are running the experimental version by entering:
-```
-AIS-catcher -h
-```
-and checking that the first line reads `AIS-catcher (build Mar 12 2023) v0.44-multiple-branche`.
+This functionality is new so reporting of bugs is appreciated. 
 
 ## Usage
 ````
