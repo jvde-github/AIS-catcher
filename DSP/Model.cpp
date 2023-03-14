@@ -21,6 +21,7 @@
 #include "Utilities.h"
 
 namespace AIS {
+	std::mutex MessageMutex::mtx;
 
 	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		device = dev;
@@ -557,6 +558,7 @@ namespace AIS {
 		setName("NMEA input");
 		device = dev;
 		*device >> nmea >> output;
+		nmea.outGPS >> output_gps;
 	}
 
 	Setting& ModelNMEA::Set(std::string option, std::string arg) {

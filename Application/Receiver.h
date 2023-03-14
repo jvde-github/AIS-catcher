@@ -64,7 +64,7 @@ class Receiver {
 
 	Type type = Type::NONE;
 	std::string serial;
-
+	int sample_rate = 0, bandwidth = 0, ppm = 0;
 	Device::Device* getDeviceByType(Type type);
 
 	//  Models
@@ -114,7 +114,7 @@ public:
 	Device::UDP& UDP() { return _UDP; };
 
 	// available devices
-	std::vector<Device::Description> device_list;
+	static std::vector<Device::Description> device_list;
 	Device::Device* device = NULL;
 
 	void refreshDevices(void);
@@ -129,19 +129,12 @@ public:
 
 	// Receiver output are Messages or JSON
 	Connection<AIS::Message>& Output(int i) { return models[i]->Output().out; }
+	Connection<AIS::GPS>& OutputGPS(int i) { return models[i]->OutputGPS().out; }
 	Connection<JSON::JSON>& OutputJSON(int i) { return jsonais[i].out; }
 
-	void setDeviceSampleRate(uint32_t rate) {
-		if (rate && device) device->setSampleRate(rate);
-	}
-
-	void setDeviceFreqCorrection(int ppm) {
-		if (ppm && device) device->Set("FREQOFFSET", std::to_string(ppm));
-	}
-
-	void setDeviceBandwidth(int bandwidth) {
-		if (bandwidth && device) device->Set("BW", std::to_string(bandwidth));
-	}
+	void setSampleRate(int s) { sample_rate = s; }
+	void setBandwidth(int b) { bandwidth = b; }
+	void setPPM(int p) { ppm = p; }
 
 	Type& InputType() {
 		return type;
@@ -172,7 +165,8 @@ class OutputHTTP {
 
 public:
 	std::unique_ptr<IO::HTTP>& add(const std::vector<std::vector<std::string>>& km, int dict);
-	void setup(Receiver& r);
+	void connect(Receiver& r);
+	void start();
 };
 
 //--------------------------------------------
@@ -180,7 +174,8 @@ class OutputUDP {
 	std::vector<std::unique_ptr<IO::UDP>> _UDP;
 
 public:
-	void setup(Receiver& r);
+	void connect(Receiver& r);
+	void start();
 	IO::UDP& add();
 	IO::UDP& add(const std::string& host, const std::string& port);
 };
@@ -190,7 +185,8 @@ class OutputTCP {
 	std::vector<std::unique_ptr<IO::TCP>> _TCP;
 
 public:
-	void setup(Receiver& r);
+	void connect(Receiver& r);
+	void start();
 	IO::TCP& add();
 	IO::TCP& add(const std::string& host, const std::string& port);
 };
@@ -200,7 +196,8 @@ class OutputDBMS {
 	std::vector<std::unique_ptr<IO::PostgreSQL>> _PSQL;
 
 public:
-	void setup(Receiver& r);
+	void connect(Receiver& r);
+	void start();
 	IO::PostgreSQL& add();
 };
 
@@ -218,7 +215,8 @@ public:
 
 	void setScreen(const std::string& str);
 	void setScreen(OutputLevel o);
-	void setup(Receiver& r);
+	void connect(Receiver& r);
+	void start();
 };
 
 //--------------------------------------------
@@ -227,11 +225,12 @@ class OutputStatistics {
 public:
 	std::vector<IO::StreamCounter<AIS::Message>> statistics;
 
-	void setup(Receiver& r);
+	void connect(Receiver& r);
+	void start();
 };
 
 //--------------------------------------------
-class OutputServer : public IO::Server, public Setting {
+class WebClient : public IO::Server, public Setting {
 	int port = 0;
 	int firstport = 0;
 	int lastport = 0;
@@ -288,7 +287,8 @@ class OutputServer : public IO::Server, public Setting {
 
 public:
 	bool& active() { return run; }
-	void setup(Receiver& r);
+	void connect(Receiver& r);
+	void start();
 	void close();
 
 	// HTTP callbacks
