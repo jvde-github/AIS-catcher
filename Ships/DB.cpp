@@ -68,6 +68,8 @@ std::string DB::getJSON(bool full) {
 	std::string str;
 
 	content = "{\"count\":" + std::to_string(count);
+	if (latlon_share)
+		content += ",\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "}";
 	content += ",\"ships\":[";
 
 	std::time_t tm = time(nullptr);

@@ -44,6 +44,21 @@ namespace AIS {
 		TXT
 	};
 
+	// idea is to avoid that message threads from different devices cause issues downstream (e.g. with sending UDP or updating the database).
+	// can also be done further downstream
+	class MessageMutex : public SimpleStreamInOut<AIS::Message, AIS::Message> {
+		static std::mutex mtx;
+
+	public:
+		virtual void Receive(const AIS::Message* data, int len, TAG& tag) {
+			std::lock_guard<std::mutex> lock(mtx);
+			Send(data, len, tag);
+		}
+		virtual void Receive(AIS::Message* data, int len, TAG& tag) {
+			std::lock_guard<std::mutex> lock(mtx);
+			Send(data, len, tag);
+		}
+	};
 
 	// Abstract demodulation model
 	class Model : public Setting {
@@ -52,12 +67,14 @@ namespace AIS {
 
 		Device::Device* device;
 		Util::Timer<RAW> timer;
-		Util::PassThrough<Message> output;
+		MessageMutex output;
+		Util::PassThrough<GPS> output_gps;
 
 	public:
 		virtual void buildModel(char, char, int, bool, Device::Device* d) { device = d; }
 
 		StreamOut<Message>& Output() { return output; }
+		StreamOut<GPS>& OutputGPS() { return output_gps; }
 
 		void setName(std::string s) { name = s; }
 		std::string getName() { return name; }

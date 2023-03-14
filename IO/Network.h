@@ -109,9 +109,6 @@ namespace IO {
 
 		void Start();
 		void Stop();
-
-		void setSource(int s) { source = s; }
-		int getSource() { return source; }
 	};
 
 	class UDPEndPoint {
@@ -165,8 +162,6 @@ namespace IO {
 				sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 			}
 		}
-		void setSource(int s) { source = s; }
-		int getSource() { return source; }
 		void setJSON(bool b) { JSON = b; }
 	};
 
@@ -189,8 +184,6 @@ namespace IO {
 
 			tcp.send(str.c_str(), (int)str.length());
 		}
-		void setSource(int s) { source = s; }
-		int getSource() { return source; }
 		void setJSON(bool b) { JSON = b; }
 	};
 }

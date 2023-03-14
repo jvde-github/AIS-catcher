@@ -19,9 +19,10 @@
 
 namespace AIS {
 
-	void NMEA::reset() {
-		aivdm.reset();
-		index = 0;
+	void NMEA::reset(char c) {
+		state = 0;
+		line.clear();
+		prev = c;
 	}
 
 	void NMEA::clean(char c, int t) {
@@ -58,7 +59,7 @@ namespace AIS {
 		return c;
 	}
 
-	void NMEA::process(TAG& tag, long t) {
+	void NMEA::submitAIS(TAG& tag, long t) {
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
 			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "]." << std::endl;
 			if (crc_check) return;
@@ -75,6 +76,7 @@ namespace AIS {
 			else
 				msg.NMEA.push_back(aivdm.sentence);
 			Send(&msg, 1, tag);
+
 			return;
 		}
 
@@ -114,110 +116,189 @@ namespace AIS {
 		if (a.count == a.number) msg.reduceLength(a.fillbits);
 	}
 
-	void NMEA::processNMEAchar(char c, TAG& tag, long t) {
-		const std::string pattern = "sttVDM,c,n,i,c,d,f*cc";
 
-		const int IDX_START = 0;
-		const int IDX_TALKER1 = 1;
-		const int IDX_TALKER2 = 2;
-		const int IDX_COUNT = 7;
-		const int IDX_NUMBER = 9;
-		const int IDX_ID = 11;
-		const int IDX_CHANNEL = 13;
-		const int IDX_DATA = 15;
-		const int IDX_FILLBITS = 17;
-		const int IDX_CRC1 = 19;
-		const int IDX_CRC2 = 20;
-
-		aivdm.sentence += c;
-
-		bool match = false;
-
-		switch (index) {
-		case IDX_START:
-			match = c == '!' || c == '$';
-			break;
-		case IDX_TALKER1:
-			match = c == 'A' || c == 'B' || c == 'S';
-			aivdm.talkerID = c << 8;
-			break;
-		case IDX_TALKER2:
-			match = last == 'A' && (c == 'B' || c == 'D' || c == 'I' || c == 'N' || c == 'R' || c == 'S' || c == 'T' || c == 'X');
-			match = match || (c == 'S' && last == 'B') || (c == 'A' && last == 'S');
-			aivdm.talkerID |= c;
-			break;
-		case IDX_COUNT:
-			match = std::isdigit(c);
-			if (match) { aivdm.count = c - '0'; }
-			break;
-		case IDX_NUMBER:
-			match = std::isdigit(c);
-			if (match) { aivdm.number = c - '0'; }
-			break;
-		case IDX_ID:
-			if (c == ',') {
-				index++;
-				match = true;
-				aivdm.ID = 0;
-				break;
-			}
-			match = std::isdigit(c);
-			if (match) { aivdm.ID = c - '0'; }
-			break;
-
-		case IDX_CHANNEL:
-			if (c == ',') {
-				match = true;
-				aivdm.channel = '?';
-				index++;
-				break;
-			}
-			match = true;
-			aivdm.channel = c;
-			break;
-		case IDX_DATA:
-			if (c == ',') {
-				index++;
-				match = true;
-			}
-			else {
-				match = isNMEAchar(c) && aivdm.data.size() < 128;
-				if (match) {
-					aivdm.data += c;
-					index--;
-				}
-			}
-			break;
-		case IDX_FILLBITS:
-			match = std::isdigit(c);
-			if (match) { aivdm.fillbits = c - '0'; }
-			break;
-		case IDX_CRC1:
-			match = isHEX(c);
-			if (match) aivdm.checksum = fromHEX(c) << 4;
-			break;
-		case IDX_CRC2:
-			match = isHEX(c);
-			if (match) {
-				aivdm.checksum |= fromHEX(c);
-				process(tag, t);
-			}
-			break;
-		default:
-			match = c == pattern[index];
-			break;
+	void NMEA::split(const std::string& s) {
+		parts.clear();
+		std::stringstream ss(s);
+		std::string p;
+		while (ss.good()) {
+			getline(ss, p, ',');
+			parts.push_back(p);
 		}
-
-		index++;
-		if (!match || index >= pattern.size()) { reset(); }
-		last = c;
 	}
 
-	void NMEA::processJSONsentence(TAG& tag, long t) {
-		if (json[0] == '{') {
+	std::string NMEA::trim(const std::string& s) {
+		std::string r;
+		for (char c : s)
+			if (c != ' ') r += c;
+		return r;
+	}
+
+	// stackoverflow variant (need to find the reference)
+	float NMEA::GpsToDecimal(const char* nmeaPos, char quadrant, bool& error) {
+		float v = 0;
+		if (strlen(nmeaPos) > 5) {
+			char integerPart[3 + 1];
+			int digitCount = (nmeaPos[4] == '.' ? 2 : 3);
+			memcpy(integerPart, nmeaPos, digitCount);
+			integerPart[digitCount] = 0;
+			nmeaPos += digitCount;
+
+			int degrees = atoi(integerPart);
+			if (degrees == 0 && integerPart[0] != '0') {
+				error |= true;
+				return 0;
+			}
+
+			float minutes = atof(nmeaPos);
+			if (minutes == 0 && nmeaPos[0] != '0') {
+				error |= true;
+				return 0;
+			}
+
+			v = degrees + minutes / 60.0;
+			if (quadrant == 'W' || quadrant == 'S')
+				v = -v;
+		}
+		return v;
+	}
+
+	bool NMEA::processGGA(const std::string& s, TAG& tag, long t) {
+		bool error = false;
+
+		split(s);
+
+		if (parts.size() != 15) return false;
+
+		const std::string& crc = parts[14];
+		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+
+		if (checksum != NMEAchecksum(line)) {
+			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (crc_check) return false;
+		}
+
+		// no proper fix
+		int fix = atoi(parts[6].c_str());
+		if (fix != 1 && fix != 2) {
+			std::cerr << "NMEA: no fix in GPGGA NMEA:" << parts[6] << std::endl;
+			return false;
+		}
+
+		GPS gps;
+		gps.lat = GpsToDecimal(trim(parts[2]).c_str(), trim(parts[3])[0], error);
+		gps.lon = GpsToDecimal(trim(parts[4]).c_str(), trim(parts[5])[0], error);
+
+		if (error) return false;
+
+		outGPS.Send(&gps, 1, tag);
+		std::cerr << "GGA: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+
+		return true;
+	}
+
+	bool NMEA::processRMC(const std::string& s, TAG& tag, long t) {
+		bool error = false;
+
+		split(s);
+
+		if (parts.size() != 13) return false;
+
+		const std::string& crc = parts[12];
+		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+
+		if (checksum != NMEAchecksum(line)) {
+			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (crc_check) return false;
+		}
+
+		GPS gps;
+		gps.lat = GpsToDecimal(trim(parts[3]).c_str(), trim(parts[4])[0], error);
+		gps.lon = GpsToDecimal(trim(parts[5]).c_str(), trim(parts[6])[0], error);
+
+		if (error) return false;
+
+		outGPS.Send(&gps, 1, tag);
+		std::cerr << "RMC: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+
+		return true;
+	}
+
+	bool NMEA::processGLL(const std::string& s, TAG& tag, long t) {
+		bool error = false;
+
+		split(s);
+
+		if (parts.size() != 8) return false;
+
+		const std::string& crc = parts[7];
+		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+
+		if (checksum != NMEAchecksum(line)) {
+			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (crc_check) return false;
+		}
+
+		GPS gps;
+		gps.lat = GpsToDecimal(parts[1].c_str(), parts[2][0], error);
+		gps.lon = GpsToDecimal(parts[3].c_str(), parts[4][0], error);
+
+		if (error) return false;
+
+		outGPS.Send(&gps, 1, tag);
+		std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+
+		return true;
+	}
+
+	bool NMEA::processAIS(const std::string& s, TAG& tag, long t) {
+
+		split(s);
+		aivdm.reset();
+
+		if (parts.size() != 7) return false;
+
+		if (parts[0].size() != 6) return false;
+		if (parts[0][0] != '$' && parts[0][0] != '!') return false;
+
+		char last = parts[0][1];
+		char c = parts[0][2];
+
+		aivdm.talkerID = ((parts[0][1] << 8) | parts[0][2]);
+		if (parts[1].size() != 1) return false;
+
+		aivdm.count = parts[1][0] - '0';
+		if (parts[2].size() != 1) return false;
+
+		aivdm.number = parts[2][0] - '0';
+		if (parts[3].size() > 1) return false;
+
+		aivdm.ID = parts[3].size() > 0 ? parts[3][0] - '0' : 0;
+		if (parts[4].size() > 1) return false;
+
+		aivdm.channel = parts[4].size() > 0 ? parts[4][0] : '?';
+
+		for (auto c : parts[5])
+			if (!isNMEAchar(c)) return false;
+		aivdm.data = parts[5];
+
+		if (parts[6].size() != 4) return false;
+		aivdm.fillbits = parts[6][0] - '0';
+		if (!isHEX(parts[6][2]) || !isHEX(parts[6][3])) return false;
+		aivdm.checksum = (fromHEX(parts[6][2]) << 4) | fromHEX(parts[6][3]);
+
+		aivdm.sentence = s;
+
+		submitAIS(tag, t);
+
+		return true;
+	}
+
+	void NMEA::processJSONsentence(std::string s, TAG& tag, long t) {
+		if (s[0] == '{') {
 			try {
 				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
-				std::shared_ptr<JSON::JSON> j = parser.parse(json);
+				std::shared_ptr<JSON::JSON> j = parser.parse(s);
 
 				tag.ppm = 0;
 				tag.sample_lvl = 0;
@@ -242,8 +323,7 @@ namespace AIS {
 					if (p.Key() == AIS::KEY_NMEA) {
 
 						for (const auto& v : p.Get().getArray()) {
-							for (char d : v.getString()) processNMEAchar(d, tag, t);
-							reset();
+							processAIS(v.getString(), tag, t);
 						}
 					}
 				}
@@ -260,34 +340,61 @@ namespace AIS {
 
 		for (int j = 0; j < len; j++) {
 			for (int i = 0; i < data[j].size; i++) {
-
 				char c = ((char*)(data[j].data))[i];
 
-				if (c == '\r' || c == '\n') {
-					if (json.size() > 0 && JSON) {
-						// newline and we build up JSON string -> decode
-						processJSONsentence(tag, t);
-						json.clear();
+				// state = 0, we are looking for the start of JSON or NMEA
+				if (state == 0) {
+					if (c == '{' && (prev == '\n' || prev == '\r')) {
+						line = c;
+						state = 1;
 					}
-					newline = true;
-					JSON = false;
-				}
-				else if (newline) {
-					// first non-return character
-					reset();
-					newline = false;
-					json.clear();
-					if (c == '{') JSON = true;
+					else if (c == '$' || c == '!') {
+						line = c;
+						state = 2;
+					}
+					prev = c;
+					continue;
 				}
 
-				if (!newline) {
-					if (JSON) {
-						json += c;
-						if (json.size() > 2048) json.clear();
+				bool newline = c == '\r' || c == '\n' || c == '\t' || c == '\0';
+
+				if (!newline) line += c;
+				prev = c;
+
+				// state = 1 (JSON) or state = 2 (NMEA)
+				if (state == 1) {
+					// we do not allow nested JSON, so processing until newline character or '}'
+					if (c == '}') {
+						processJSONsentence(line, tag, t);
+						reset(c);
 					}
-					else
-						processNMEAchar(c, tag, 0);
+					else if (newline) {
+						std::cerr << "NMEA: newline in uncompleted JSON input not allowed";
+						reset(c);
+					}
 				}
+				else if (state == 2) {
+					// end of line if we find a checksum or a newline character
+					bool isNMEA = line.size() > 10 && (line[3] == 'V' && line[4] == 'D' && line[5] == 'M');
+					bool checksum = isNMEA && (isHEX(line[line.size() - 1]) && isHEX(line[line.size() - 2]) && line[line.size() - 3] == '*' &&
+											   ((isdigit(line[line.size() - 4]) && line[line.size() - 5] == ',') || (line[line.size() - 4] == ',')));
+
+					if (((isNMEA && checksum) || newline) && line.size() > 6) {
+						std::string type = line.substr(3, 3);
+						bool noerror = true;
+						if (type == "VDM") noerror &= processAIS(line, tag, t);
+						if (type == "GGA") noerror &= processGGA(line, tag, t);
+						if (type == "RMC") noerror &= processRMC(line, tag, t);
+						if (type == "GLL") noerror &= processGLL(line, tag, t);
+
+						if (!noerror) {
+							std::cerr << "NMEA: error processing NMEA line " << line << std::endl;
+						}
+						reset(c);
+					}
+				}
+
+				if (line.size() > 1024) reset(c);
 			}
 		}
 	}

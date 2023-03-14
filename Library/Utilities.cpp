@@ -26,6 +26,7 @@
 #include "Utilities.h"
 
 namespace Util {
+
 	void RealPart::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		if (output.size() < len) output.resize(len);
 
