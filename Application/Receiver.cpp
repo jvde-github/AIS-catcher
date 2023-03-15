@@ -680,7 +680,7 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 		content += hist_hour.toJSON();
 		content += ",\"day\":";
 		content += hist_day.toJSON();
-		content += "}";
+		content += "}\n\n";
 		Response(c, "application/json", content);
 	}
 	else

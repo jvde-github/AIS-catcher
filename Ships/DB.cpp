@@ -150,7 +150,7 @@ std::string DB::getJSON(bool full) {
 		}
 		ptr = ships[ptr].next;
 	}
-	content += "],\"error\":false}";
+	content += "],\"error\":false}\n\n";
 	return content;
 }
 
