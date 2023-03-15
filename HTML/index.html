@@ -1134,6 +1134,7 @@
 
     // default settings
     var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
+    let isFetchingShips = false;
 
     // some functions useful in plugins
     function addTileLayer(title,layer) { basemaps[title] = layer; }
@@ -1594,16 +1595,25 @@
     }
 
     async function fetchShips() {
+        if (isFetchingShips) {
+            console.log("A fetch operation is already running.");
+            return;
+        } 
+
         let ships = {};
         station = {};
         
         if(true) {
+            isFetchingShips = true;
             try {
                 response = await fetch('ships.json');
             } catch (error) {
                 setPulseError();
                 console.log("failed loading ships: " + error);
                 return;                
+            }
+            finally {
+                isFetchingShips = false;
             }
             ships = await response.json();
         }
