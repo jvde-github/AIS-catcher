@@ -90,7 +90,6 @@ namespace IO {
 	private:
 		SOCKET sock = -1;
 		int timeout = 2;
-		int port = 8100;
 		bool reuse_port = true;
 
 		const int MAX_CONN = 64;

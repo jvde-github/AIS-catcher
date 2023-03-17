@@ -207,7 +207,7 @@ int main(int argc, char* argv[]) {
 	OutputTCP tcp;
 	OutputDBMS db;
 	std::vector<OutputStatistics> stat;
-	WebClient server;
+	std::vector<std::unique_ptr<WebClient>> servers;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	int timeout = 0, nrec = 0;
@@ -265,9 +265,15 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'N':
 				Assert(count > 0, param, "requires at least one parameter");
-				if (count % 2 == 1) server.Set("PORT", arg1);
-				parseSettings(server, argv, ptr + (count % 2), argc);
-				server.active() = true;
+				if (count % 2 == 1) {
+					servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
+					servers.back()->Set("PORT", arg1);
+				}
+				if (servers.size() == 0)
+					servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
+
+				servers.back()->active() = true;
+				parseSettings(*servers.back(), argv, ptr + (count % 2), argc);
 				break;
 			case 'v':
 				Assert(count <= 1, param);
@@ -485,8 +491,10 @@ int main(int argc, char* argv[]) {
 			if (++nrec > 1) {
 				_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
+			if (!servers.size())
+				servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
 
-			Config c(*_receivers.back(), screen, http, udp, server);
+			Config c(*_receivers.back(), screen, http, udp, *servers.back());
 			c.read(file_config);
 		}
 
@@ -503,7 +511,7 @@ int main(int argc, char* argv[]) {
 		for (int i = 0; i < _receivers.size(); i++) {
 			Receiver& r = *_receivers[i];
 
-			if (server.active()) r.setTags("DTM");
+			if (servers.size() > 0 && servers[0]->active()) r.setTags("DTM");
 
 			r.setupDevice();
 			// set up the decoding model(s)
@@ -516,7 +524,9 @@ int main(int argc, char* argv[]) {
 			screen.connect(r);
 			db.connect(r);
 
-			if (server.active()) server.connect(r);
+			for (auto& s : servers)
+				if (s->active()) s->connect(r);
+
 			if (r.verbose) stat[i].connect(r);
 		}
 
@@ -526,7 +536,8 @@ int main(int argc, char* argv[]) {
 		screen.start();
 		db.start();
 
-		if (server.active()) server.start();
+		for (auto& s : servers)
+			if (s->active()) s->start();
 
 		for (auto& s : stat) s.start();
 		for (auto& r : _receivers) r->play();
@@ -603,7 +614,9 @@ int main(int argc, char* argv[]) {
 							  << r.Model(j)->getTotalTiming() << " ms" << std::endl;
 				}
 		}
-		server.close();
+
+		for (auto& s : servers)
+			s->close();
 	}
 	catch (std::exception const& e) {
 		std::cout << "Error: " << e.what() << std::endl;
