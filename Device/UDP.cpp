@@ -72,7 +72,7 @@ namespace Device {
 
 
 		if (bind(sock, address->ai_addr, address->ai_addrlen) != 0) {
-			std::cerr << "UDP: binding to " << server << " port " << port << ": " << strerror(errno) << "\n"; 
+			std::cerr << "UDP: binding to " << server << " port " << port << ": " << strerror(errno) << "\n";
 			throw std::runtime_error("UDP: cannot bind to port.");
 		}
 
