@@ -153,8 +153,6 @@ namespace IO {
 
 	void Server::Run() {
 
-		std::cerr << "Server: starting thread.\n";
-
 		while (!stop) {
 			acceptClients();
 			readClients();
