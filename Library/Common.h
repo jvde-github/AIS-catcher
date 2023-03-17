@@ -83,6 +83,12 @@ struct TAG {
 	int angle = -1;
 	float distance = -1;
 	bool validated = false;
+
+	void clear() {
+		sample_lvl = 0;
+		level = 0;
+		ppm = 0;
+	};
 };
 
 struct RAW {

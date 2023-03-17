@@ -365,6 +365,8 @@ namespace AIS {
 				if (state == 1) {
 					// we do not allow nested JSON, so processing until newline character or '}'
 					if (c == '}') {
+						t = 0;
+						tag.clear();
 						processJSONsentence(line, tag, t);
 						reset(c);
 					}
@@ -382,6 +384,9 @@ namespace AIS {
 					if (((isNMEA && checksum) || newline) && line.size() > 6) {
 						std::string type = line.substr(3, 3);
 						bool noerror = true;
+						tag.clear();
+						t = 0;
+
 						if (type == "VDM") noerror &= processAIS(line, tag, t);
 						if (type == "GGA") noerror &= processGGA(line, tag, t);
 						if (type == "RMC") noerror &= processRMC(line, tag, t);
