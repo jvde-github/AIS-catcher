@@ -47,24 +47,24 @@ Most external programs will not be able to accept this JSON packaged NMEA string
 ### GPS, multiple receivers and plot station location on map
 
 The latest version can run with multiple receivers in parallel. For example, one dongle for channel A+B and one dongle for channel C+D. To run with two receivers in parallel you can use a command like:
-```
+```console
 AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
 ```
 
 There are a few other options that together can provide some interesting new functionality. Firstly, the webserver can share the location of the station with the front-end so it will be displayed on the map:
-```
+```console
 AIS-catcher -N 8100 share_loc on
 ```
 This option is switched off by default for privacy reasons in case the webclient is shared externally.
 And secondly, the NMEA decoder accepts NMEA lines from a GPS device (NMEA lines GPRMC, GPGLL and GPGGA):
-```
+```console
 echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
 ```
 These GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move. This is useful if you 
 use AIS-catcher to read from a hardware AIS receiver that has a built-in GPS.
 
 All these new functions combined enables a command line like this:
-```
+```console
 AIS-catcher -r txt /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 -x 192.168.1.235 4002 -N 8100 share_loc on
 ```
 The first receiver (`-r txt ...`) reads from a GPS device that is connected and emits NMEA lines. The second receiver (`-x`) reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
