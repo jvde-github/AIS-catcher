@@ -506,10 +506,10 @@ void WebClient::BackupService() {
 void WebClient::connect(Receiver& r) {
 
 	sample_rate = std::to_string(r.device->getSampleRate() / 1000) + "K/S";
-	product = r.device->getProduct();
-	vendor = r.device->getVendor();
-	serial = r.device->getSerial();
-	model = r.Model(0)->getName();
+	product += r.device->getProduct() + "<br>";
+	vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor()) + "<br>";
+	serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) + "<br>";
+	model += r.Model(0)->getName() + "<br>";
 
 	// connect all the statistical counters
 	r.Output(0) >> counter;
