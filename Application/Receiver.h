@@ -237,6 +237,7 @@ class WebClient : public IO::Server, public Setting {
 	bool run = false;
 	float lat = 0, lon = 0;
 	int backup_interval = -1;
+	bool port_set = false;
 
 	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\naboutMDpresent=false;\n\n";
 	std::string plugins;
@@ -291,6 +292,7 @@ public:
 	void start();
 	void close();
 
+	bool isPortSet() { return port_set; }
 	// HTTP callbacks
 	void Request(IO::Client& c, const std::string& r);
 
