@@ -393,6 +393,7 @@
     table thead tr th:nth-child(8),
     table thead tr th:nth-child(9),
     table thead tr th:nth-child(12),
+    table thead tr th:nth-child(13),
     table tbody tr td:nth-child(2),
     table tbody tr td:nth-child(4),
     table tbody tr td:nth-child(5),
@@ -400,7 +401,8 @@
     table tbody tr td:nth-child(7),
     table tbody tr td:nth-child(8),
     table tbody tr td:nth-child(9),
-    table tbody tr td:nth-child(12)
+    table tbody tr td:nth-child(12),
+    table tbody tr td:nth-child(13),
     {
         text-align:right;
         width: 45px;
@@ -1035,6 +1037,7 @@
                             <th onclick="sortTable(this)" field="lat">Lat</th>
                             <th onclick="sortTable(this)" field="lon">Lon</th>
                             <th onclick="sortTable(this)" field="validated">Valid</th>
+                            <th onclick="sortTable(this)" field="channels">Channels</th>
                         </tr>
                     </thead>
                     <tbody id="shipTableBody"></tbody>
@@ -2500,6 +2503,7 @@
             }
 
             row.insertCell(11).innerHTML = valid;
+            row.insertCell(12).innerHTML = getStringfromChannels(ship.channels);
         }
     }
 
