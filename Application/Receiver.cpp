@@ -505,7 +505,7 @@ void WebClient::BackupService() {
 
 void WebClient::connect(Receiver& r) {
 
-	sample_rate = std::to_string(r.device->getSampleRate() / 1000) + "K/S";
+	sample_rate += std::to_string(r.device->getSampleRate() / 1000) + "K/S" + "<br>";
 	product += r.device->getProduct() + "<br>";
 	vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor()) + "<br>";
 	serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) + "<br>";
