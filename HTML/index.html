@@ -1129,6 +1129,7 @@
     var StationControlDiv = null;
     var plugins = "", plugins_main = [];
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
+    var refreshIntervalMs = 2500;
 
     var marker_center = null, marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
@@ -3088,7 +3089,7 @@
 
         clearInterval(interval);
         refresh_data();
-        interval = setInterval(refresh_data, 2500)
+        interval = setInterval(refresh_data, refreshIntervalMs)
     }
 
     function selectMapTab(m) {
