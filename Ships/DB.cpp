@@ -121,6 +121,7 @@ std::string DB::getJSON(bool full) {
 			content += "\"shiptype\":" + std::to_string(ship.shiptype) + ",";
 			content += "\"validated\":" + std::to_string(ship.validated) + ",";
 			content += "\"msg_type\":" + std::to_string(ship.msg_type) + ",";
+			content += "\"channels\":" + std::to_string(ship.channels) + ",";
 			content += "\"country\":\"" + std::string(ship.country_code) + "\",";
 			content += "\"status\":" + std::to_string(ship.status) + ",";
 
@@ -347,6 +348,9 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
 	ship.msg_type |= 1 << msg->type();
+
+	if (msg->getChannel() >= 'A' && msg->getChannel() <= 'D')
+		ship.channels |= 1 << (msg->getChannel() - 'A');
 
 	for (const auto& p : data.getProperties())
 		positionUpdated |= updateFields(p, msg, ship, allowApproxLatLon);
