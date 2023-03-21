@@ -1104,6 +1104,7 @@
 
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
                             <div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
+                            <div><span>Channels</span><span id="shipcard_channels">-</span></div>
                         </div>
 
                     </div>
@@ -2835,6 +2836,17 @@
         return s;
     }
 
+    function getStringfromChannels(m) {
+        let s = "";
+        let delim = "";
+        for(i = 0; i <= 3; i++)
+            if((m & (1 << i))!=0) {
+                s +=  delim  + String.fromCharCode(65+i);
+                delim = ", ";
+            }
+        return s;
+    }
+
     function setShipcardValidation(v) {
 
         document.getElementById('shipcard_header').classList.remove("shipcard-validated","shipcard-not-validated","shipcard-dubious");
@@ -2879,6 +2891,7 @@
 
         document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
         document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
+        document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
         document.getElementById('shipcard_type').innerHTML = getTypeVal(ship);
         document.getElementById('shipcard_shiptype').innerHTML = getShipTypeVal(ship.shiptype);
         document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);

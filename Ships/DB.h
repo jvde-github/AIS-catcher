@@ -74,7 +74,7 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	struct VesselDetail {
 
 		uint32_t mmsi = 0;
-		int count = 0, msg_type = 0, shiptype = 0, heading = HEADING_UNDEFINED;
+		int count = 0, msg_type = 0, channels = 0, shiptype = 0, heading = HEADING_UNDEFINED;
 		int status = STATUS_UNDEFINED, virtual_aid = 0, path_ptr = -1;
 		int to_port = DIMENSION_UNDEFINED, to_bow = DIMENSION_UNDEFINED, to_starboard = DIMENSION_UNDEFINED, to_stern = DIMENSION_UNDEFINED;
 		int IMO = IMO_UNDEFINED, angle = ANGLE_UNDEFINED, validated = 0;
