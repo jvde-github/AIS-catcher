@@ -265,13 +265,15 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'N':
 				Assert(count > 0, param, "requires at least one parameter");
-				if (count % 2 == 1) {
-					servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
-					servers.back()->Set("PORT", arg1);
-				}
 				if (servers.size() == 0)
 					servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
 
+				if (count % 2 == 1) {
+					// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
+					if (servers.back()->isPortSet())
+						servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
+					servers.back()->Set("PORT", arg1);
+				}
 				servers.back()->active() = true;
 				parseSettings(*servers.back(), argv, ptr + (count % 2), argc);
 				break;

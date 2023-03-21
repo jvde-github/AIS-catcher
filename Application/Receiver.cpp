@@ -691,13 +691,16 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	Util::Convert::toUpper(option);
 
 	if (option == "PORT") {
+		port_set = true;
 		firstport = lastport = Util::Parse::Integer(arg, 1, 65535);
 	}
 	else if (option == "PORT_MIN") {
+		port_set = true;
 		firstport = Util::Parse::Integer(arg, 1, 65535);
 		lastport = MAX(firstport, lastport);
 	}
 	else if (option == "PORT_MAX") {
+		port_set = true;
 		lastport = Util::Parse::Integer(arg, 1, 65535);
 		firstport = MIN(firstport, lastport);
 	}
