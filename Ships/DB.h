@@ -50,9 +50,10 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	float lat, lon;
 	int TIME_HISTORY = 30 * 60;
 	bool latlon_share = false;
+	bool server_mode = false;
 
-	const int N = 4096;
-	const int M = 4096;
+	int N = 4096;
+	int M = 4096;
 
 	const int MSG_TYPE_OTHER = 0;
 	const int MSG_TYPE_CLASSA = 1;
@@ -144,4 +145,6 @@ public:
 
 	int getCount() { return count; }
 	int getMaxCount() { return N; }
+
+	void setServerMode(bool b) { server_mode = b; }
 };

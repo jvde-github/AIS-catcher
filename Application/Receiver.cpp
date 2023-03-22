@@ -694,6 +694,10 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		port_set = true;
 		firstport = lastport = Util::Parse::Integer(arg, 1, 65535);
 	}
+	else if (option == "SERVER_MODE") {
+		bool b = Util::Parse::Switch(arg);
+		ships.setServerMode(b);
+	}
 	else if (option == "PORT_MIN") {
 		port_set = true;
 		firstport = Util::Parse::Integer(arg, 1, 65535);

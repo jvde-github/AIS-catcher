@@ -22,6 +22,13 @@
 
 void DB::setup(float lt, float ln) {
 
+	if (server_mode) {
+		N *= 32;
+		M *= 32;
+
+		std::cerr << "DB: internal ship database extended to " << N << " ships and " << M << " path points" << std::endl;
+	}
+
 	ships.resize(N);
 	std::memset(ships.data(), 0, N * sizeof(ShipList));
 	paths.resize(M);
