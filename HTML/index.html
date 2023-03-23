@@ -2706,7 +2706,7 @@
             markers[ship.mmsi].on('mouseover', function (e) { startHover(ship.mmsi); });
             markers[ship.mmsi].on('mouseout', function (e) { endHover(ship.mmsi); });
 
-            markers[ship.mmsi].bindTooltip(getTooltipContent(ship), { opacity: 0.85, permanent: true, offset: [15, 0], direction: 'right' });
+            markers[ship.mmsi].bindTooltip(getTooltipContent(ship), { opacity: 0.85, permanent: false, offset: [15, 0], direction: 'right' });
             markers[ship.mmsi].closeTooltip();
         }
 
