@@ -235,11 +235,13 @@ namespace IO {
 			std::istringstream line_stream(line);
 			std::string key, value;
 			std::getline(line_stream, key, ' ');
+			Util::Convert::toUpper(key);
+
 			if (key == "GET") {
 				std::getline(line_stream, value, ' ');
 				get = value;
 			}
-			else if (key == "Accept-Encoding:") {
+			else if (key == "ACCEPT-ENCODING:") {
 				std::getline(line_stream, value);
 				accept_gzip = value.find("gzip") != std::string::npos;
 			}
