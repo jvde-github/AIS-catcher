@@ -45,6 +45,7 @@
 #include "Keys.h"
 #include "TCP.h"
 #include "Utilities.h"
+#include "ZIP.h"
 
 namespace IO {
 
@@ -68,7 +69,7 @@ namespace IO {
 
 		virtual void Request(Client& c, const std::string& msg);
 
-		void Response(Client& c, std::string type, const std::string& content);
+		void Response(Client& c, std::string type, const std::string& content, bool gzip = false);
 		void Response(Client& c, std::string type, char* data, int len, bool gzip = false);
 
 		bool start(int port);
@@ -113,5 +114,7 @@ namespace IO {
 		void processClients();
 		void cleanUp();
 		void SleepAndWait();
+
+		ZIP zip;
 	};
 }

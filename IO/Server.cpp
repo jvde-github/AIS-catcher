@@ -235,7 +235,15 @@ namespace IO {
 		return "";
 	}
 
-	void Server::Response(Client& c, std::string type, const std::string& content) {
+	void Server::Response(Client& c, std::string type, const std::string& content, bool gzip) {
+#ifdef HASZLIB
+		if (gzip) {
+			zip.zip(content);
+			Response(c, type, (char*)zip.getOutputPtr(), zip.getOutputLength(), true);
+			return;
+		}
+#endif
+
 		Response(c, type, (char*)content.c_str(), content.size());
 	}
 
