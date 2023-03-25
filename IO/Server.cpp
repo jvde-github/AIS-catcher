@@ -136,10 +136,11 @@ namespace IO {
 
 				std::size_t pos = c.msg.find("\r\n\r\n");
 				if (pos != std::string::npos) {
-
-					std::string request = Parse(c.msg);
+					std::string request;
+					bool gzip;
+					Parse(c.msg, request, gzip);
 					if (!request.empty())
-						Request(c, request);
+						Request(c, request, gzip);
 
 					c.msg.erase(0, pos + 4);
 				}
@@ -164,7 +165,7 @@ namespace IO {
 		std::cerr << "Server: ending thread.\n";
 	}
 
-	void Server::Request(Client& c, const std::string& r) {
+	void Server::Request(Client& c, const std::string& r, bool) {
 		// TO DO: return 404 by default
 	}
 
@@ -222,17 +223,27 @@ namespace IO {
 		return true;
 	}
 
-	std::string Server::Parse(const std::string& s) {
-		int max = 10;
-		bool found_get = false;
+	void Server::Parse(const std::string& s, std::string& get, bool& accept_gzip) {
+		int max = 100;
+
+		get = "";
+		accept_gzip = false;
 
 		std::istringstream iss(s);
-		std::string item;
-		while (std::getline(iss, item, ' ') && --max) {
-			if (found_get) return item;
-			if (item == "GET") found_get = true;
+		std::string line;
+		while (std::getline(iss, line) && !line.empty()) {
+			std::istringstream line_stream(line);
+			std::string key, value;
+			std::getline(line_stream, key, ' ');
+			if (key == "GET") {
+				std::getline(line_stream, value, ' ');
+				get = value;
+			}
+			else if (key == "Accept-Encoding:") {
+				std::getline(line_stream, value);
+				accept_gzip = value.find("gzip") != std::string::npos;
+			}
 		}
-		return "";
 	}
 
 	void Server::Response(Client& c, std::string type, const std::string& content, bool gzip) {

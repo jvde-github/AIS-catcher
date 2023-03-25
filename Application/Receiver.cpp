@@ -576,7 +576,7 @@ void WebClient::close() {
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 
-void WebClient::Request(IO::Client& c, const std::string& response) {
+void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 
 	std::string r;
 	std::string a;
@@ -642,7 +642,7 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 	else if (r == "/ships.json") {
 
 		std::string content = ships.getJSON();
-		Response(c, "application/json", content, use_zlib);
+		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/ships_full.json") {
 
@@ -650,13 +650,13 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 		Response(c, "application/json", content, use_zlib);
 	}
 	else if (r == "/config.js") {
-		Response(c, "application/javascript", params + plugins, use_zlib);
+		Response(c, "application/javascript", params + plugins, use_zlib & gzip);
 	}
 	else if (r == "/config.css") {
-		Response(c, "text/css", stylesheets, use_zlib);
+		Response(c, "text/css", stylesheets, use_zlib & gzip);
 	}
 	else if (r == "/about.md") {
-		Response(c, "text/markdown", about, use_zlib);
+		Response(c, "text/markdown", about, use_zlib & gzip);
 	}
 	else if (r == "/path.json") {
 		int mmsi = -1;
@@ -664,7 +664,7 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 		ss >> mmsi;
 		if (mmsi >= 1 && mmsi <= 999999999) {
 			std::string content = ships.getPathJSON(mmsi);
-			Response(c, "application/json", content, use_zlib);
+			Response(c, "application/json", content, use_zlib & gzip);
 		}
 		else
 			Response(c, "application/json", "[]");
@@ -681,10 +681,10 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 		content += ",\"day\":";
 		content += hist_day.toJSON();
 		content += "}\n\n";
-		Response(c, "application/json", content, use_zlib);
+		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else
-		Server::Request(c, r);
+		Server::Request(c, r, false);
 }
 
 Setting& WebClient::Set(std::string option, std::string arg) {
