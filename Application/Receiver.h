@@ -238,6 +238,7 @@ class WebClient : public IO::Server, public Setting {
 	float lat = 0, lon = 0;
 	int backup_interval = -1;
 	bool port_set = false;
+	bool use_zlib = true;
 
 	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\naboutMDpresent=false;\n\n";
 	std::string plugins;

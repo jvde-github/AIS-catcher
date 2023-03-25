@@ -637,26 +637,26 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 
 		content += "\"received\":\"" + std::to_string(d1) + "." + std::to_string(d2) + unit + "\"}";
 
-		Response(c, "application/json", content);
+		Response(c, "application/json", content, use_zlib);
 	}
 	else if (r == "/ships.json") {
 
 		std::string content = ships.getJSON();
-		Response(c, "application/json", content);
+		Response(c, "application/json", content, use_zlib);
 	}
 	else if (r == "/ships_full.json") {
 
 		std::string content = ships.getJSON(true);
-		Response(c, "application/json", content);
+		Response(c, "application/json", content, use_zlib);
 	}
 	else if (r == "/config.js") {
-		Response(c, "application/javascript", params + plugins);
+		Response(c, "application/javascript", params + plugins, use_zlib);
 	}
 	else if (r == "/config.css") {
-		Response(c, "text/css", stylesheets);
+		Response(c, "text/css", stylesheets, use_zlib);
 	}
 	else if (r == "/about.md") {
-		Response(c, "text/markdown", about);
+		Response(c, "text/markdown", about, use_zlib);
 	}
 	else if (r == "/path.json") {
 		int mmsi = -1;
@@ -664,7 +664,7 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 		ss >> mmsi;
 		if (mmsi >= 1 && mmsi <= 999999999) {
 			std::string content = ships.getPathJSON(mmsi);
-			Response(c, "application/json", content);
+			Response(c, "application/json", content, use_zlib);
 		}
 		else
 			Response(c, "application/json", "[]");
@@ -681,7 +681,7 @@ void WebClient::Request(IO::Client& c, const std::string& response) {
 		content += ",\"day\":";
 		content += hist_day.toJSON();
 		content += "}\n\n";
-		Response(c, "application/json", content);
+		Response(c, "application/json", content, use_zlib);
 	}
 	else
 		Server::Request(c, r);
@@ -697,6 +697,9 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	else if (option == "SERVER_MODE") {
 		bool b = Util::Parse::Switch(arg);
 		ships.setServerMode(b);
+	}
+	else if (option == "ZLIB") {
+		use_zlib = Util::Parse::Switch(arg);
 	}
 	else if (option == "PORT_MIN") {
 		port_set = true;
