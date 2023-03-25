@@ -162,7 +162,7 @@ namespace IO {
 		std::time_t now = std::time(0);
 
 		if (protocol == PROTOCOL::AISCATCHER) {
-			msg += "{\n\t\"protocol\": \"jsonaiscatcher\",";
+			msg += "{\n\t\"protocol\": \"" + protocol_string + "\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"stationid\": ";
 			builder.stringify(stationid, msg);
@@ -286,11 +286,19 @@ namespace IO {
 
 				if (arg == "AISCATCHER") {
 					builder.setMap(JSON_DICT_FULL);
+					protocol_string = "jsonaiscatcher";
 					protocol = PROTOCOL::AISCATCHER;
 				}
 				else if (arg == "MINIMAL") {
 					builder.setMap(JSON_DICT_MINIMAL);
+					protocol_string = "jsonaiscatcher";
 					protocol = PROTOCOL::AISCATCHER;
+				}
+				else if (arg == "AIRFRAMES") {
+					builder.setMap(JSON_DICT_MINIMAL);
+					protocol_string = "airframes";
+					protocol = PROTOCOL::AISCATCHER;
+					gzip = zip.installed();
 				}
 				else if (arg == "LIST") {
 					builder.setMap(JSON_DICT_FULL);
