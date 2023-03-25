@@ -67,7 +67,7 @@ namespace IO {
 		Server();
 		~Server();
 
-		virtual void Request(Client& c, const std::string& msg);
+		virtual void Request(Client& c, const std::string& msg, bool accept_gzip);
 
 		void Response(Client& c, std::string type, const std::string& content, bool gzip = false);
 		void Response(Client& c, std::string type, char* data, int len, bool gzip = false);
@@ -106,7 +106,7 @@ namespace IO {
 		sockaddr_in service;
 
 		bool Send(SOCKET s, const char* data, int len);
-		std::string Parse(const std::string& s);
+		void Parse(const std::string& s, std::string& get, bool& accept_gzip);
 		int findFreeClient();
 
 		void acceptClients();
