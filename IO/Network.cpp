@@ -143,7 +143,7 @@ namespace IO {
 		}
 
 		if (show_response)
-			std::cerr << "HTTP: server response - " << response << std::endl;
+			std::cerr << "HTTP: server " << url << " response - " << response << std::endl;
 
 		return;
 	}
