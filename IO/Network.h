@@ -77,6 +77,7 @@ namespace IO {
 		char response[1024];
 
 		enum class PROTOCOL{ AISCATCHER, APRS, LIST } protocol = PROTOCOL::AISCATCHER;
+		std::string protocol_string = "jsonaiscatcher";
 
 		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s);
 
