@@ -70,13 +70,14 @@ namespace IO {
 
 		int INTERVAL = 60;
 		int TIMEOUT = 10;
+		float lat = 0.0, lon = 0.0;
 
 		std::string model, model_setting;
 		std::string product, vendor, serial, device_setting;
 
 		char response[1024];
 
-		enum class PROTOCOL{ AISCATCHER, APRS, LIST } protocol = PROTOCOL::AISCATCHER;
+		enum class PROTOCOL{ AISCATCHER, APRS, LIST, AIRFRAMES } protocol = PROTOCOL::AISCATCHER;
 		std::string protocol_string = "jsonaiscatcher";
 
 		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s);

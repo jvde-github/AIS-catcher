@@ -192,6 +192,23 @@ namespace IO {
 
 			send(msg, "");
 		}
+		else if (PROTOCOL::AIRFRAMES == protocol) {
+			msg += "{\n\t\"app\": {\n\t\t\"name\": \"AIS-Catcher\",\n\t\t\"ver\": \"" VERSION "\"";
+			msg += "\n\t},\n\t\"source\": {\n\t\t\"transport\": \"vhf\",\n\t\t\"protocol\": \"ais\",\n\t\t\"station_id\": ";
+			builder.stringify(stationid, msg);
+			msg += ",\n\t\t\"lat\": " + std::to_string(lat);
+			msg += ",\n\t\t\"lon\": " + std::to_string(lon);
+			msg += "\n\t\t},\n\t\"msgs\": [";
+
+			char delim = ' ';
+			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
+				msg = msg + delim + "\n\t\t" + *it;
+				delim = ',';
+			}
+
+			msg += "\n\t]\n}\n";
+			send(msg, "");
+		}
 		else if (PROTOCOL::APRS == protocol) {
 			msg += "{\n\t\"protocol\": \"jsonais\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
@@ -268,6 +285,12 @@ namespace IO {
 		else if (option == "SERIAL") {
 			serial = arg;
 		}
+		else if (option == "LAT") {
+			lat = Util::Parse::Float(arg);
+		}
+		else if (option == "LON") {
+			lon = Util::Parse::Float(arg);
+		}
 		else if (option == "DEVICE_SETTING") {
 			device_setting = arg;
 		}
@@ -297,8 +320,9 @@ namespace IO {
 				else if (arg == "AIRFRAMES") {
 					builder.setMap(JSON_DICT_MINIMAL);
 					protocol_string = "airframes";
-					protocol = PROTOCOL::AISCATCHER;
+					protocol = PROTOCOL::AIRFRAMES;
 					gzip = zip.installed();
+					INTERVAL = 30;
 				}
 				else if (arg == "LIST") {
 					builder.setMap(JSON_DICT_FULL);
