@@ -239,6 +239,7 @@ class WebClient : public IO::Server, public Setting {
 	int backup_interval = -1;
 	bool port_set = false;
 	bool use_zlib = true;
+	bool supportPrometheus = false;
 
 	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\naboutMDpresent=false;\n\n";
 	std::string plugins;
@@ -274,6 +275,29 @@ class WebClient : public IO::Server, public Setting {
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
 		std::string toPrometheus() { return stat.toPrometheus(); }
 	} counter;
+
+	class PromotheusCounter : public StreamIn<AIS::Message> {
+		std::mutex m;
+
+	public:
+		std::string ppm;
+
+		void Receive(const AIS::Message* data, int len, TAG& tag) {
+			if (ppm.size() > 32768) return;
+
+			m.lock();
+			ppm += "ais_msg_ppm{type=\"" + std::to_string(data[0].type()) + "\",mmsi=\"" + std::to_string(data[0].mmsi()) + "\",channel=\"" + std::string(1, data[0].getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
+			m.unlock();
+		}
+
+		void reset() {
+			m.lock();
+			ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
+			m.unlock();
+		}
+
+		PromotheusCounter() { reset(); }
+	} promotheus_capture;
 
 	struct RAWcounter : public StreamIn<RAW> {
 		uint64_t received = 0;

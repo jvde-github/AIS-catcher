@@ -517,6 +517,9 @@ void WebClient::connect(Receiver& r) {
 	r.OutputJSON(0).Connect((StreamIn<JSON::JSON>*)&ships);
 	r.OutputGPS(0).Connect((StreamIn<AIS::GPS>*)&ships);
 
+	if (supportPrometheus)
+		r.Output(0) >> promotheus_capture;
+
 	*r.device >> raw_counter;
 }
 
@@ -597,8 +600,11 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		Response(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
 	else if (r == "/metrics") {
-		std::string content = counter.toPrometheus();
-		Response(c, "application/text", content, use_zlib);
+		if (supportPrometheus) {
+			std::string content = counter.toPrometheus() + promotheus_capture.ppm;
+			Response(c, "application/text", content, use_zlib);
+			promotheus_capture.reset();
+		}
 	}
 	else if (r == "/stat.json") {
 
@@ -644,7 +650,6 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		Response(c, "application/json", content, use_zlib);
 	}
 	else if (r == "/ships.json") {
-
 		std::string content = ships.getJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
@@ -770,6 +775,9 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		std::cerr << "Server: about context from " << arg << std::endl;
 		plugins += "aboutMDpresent = true;";
 		about = Util::Helper::readFile(arg);
+	}
+	else if (option == "PROME") {
+		supportPrometheus = Util::Parse::Switch(arg);
 	}
 	else if (option == "REUSE_PORT") {
 		setReusePort(Util::Parse::Switch(arg));
