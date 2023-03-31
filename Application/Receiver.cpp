@@ -596,6 +596,10 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 	if (r == "/favicon.ico") {
 		Response(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
+	else if (r == "/metrics") {
+		std::string content = counter.toPrometheus();
+		Response(c, "application/text", content, use_zlib);
+	}
 	else if (r == "/stat.json") {
 
 		std::string content = "{\"stat\":" + counter.toJSON() + ",";
