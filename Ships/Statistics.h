@@ -94,6 +94,35 @@ public:
 		}
 	}
 
+	std::string toPrometheus() {
+		std::lock_guard<std::mutex> l{ this->m };
+
+		std::string element;
+
+		element += "# HELP ais_stat_count Total number of messages\n";
+		element += "# TYPE ais_stat_count counter\n";
+		element += "ais_stat_count " + std::to_string(_count) + "\n";
+		element += "# HELP ais_stat_distance Longest distance\n";
+		element += "# TYPE ais_stat_distance gauge\n";
+		element += "ais_stat_distance " + std::to_string(_distance) + "\n";
+
+		for (int i = 0; i < 4; i++) {
+			std::string ch(1, i + 'A');
+			element += "# HELP ais_stat_channel_" + ch + " Total number of messages on channel " + ch + "\n";
+			element += "# TYPE ais_stat_channel_" + ch + " counter\n";
+			element += "ais_stat_channel_" + ch + " " + std::to_string(_channel[i]) + "\n";
+		}
+
+		for (int i = 0; i < 27; i++) {
+			std::string type = std::to_string(i + 1);
+			element += "# HELP ais_stat_type_" + type + " Total number of messages of type " + type + "\n";
+			element += "# TYPE ais_stat_type_" + type + " counter\n";
+			element += "ais_stat_type_" + type + " " + std::to_string(_msg[i]) + "\n";
+		}
+
+		return element;
+	}
+
 	std::string toJSON(bool empty = false) {
 		std::lock_guard<std::mutex> l{ this->m };
 

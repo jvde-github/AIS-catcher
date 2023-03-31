@@ -272,6 +272,7 @@ class WebClient : public IO::Server, public Setting {
 		void Receive(const AIS::Message* msg, int len, TAG& tag);
 
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
+		std::string toPrometheus() { return stat.toPrometheus(); }
 	} counter;
 
 	struct RAWcounter : public StreamIn<RAW> {
