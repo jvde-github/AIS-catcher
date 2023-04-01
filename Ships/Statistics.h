@@ -108,16 +108,16 @@ public:
 
 		for (int i = 0; i < 4; i++) {
 			std::string ch(1, i + 'A');
-			element += "# HELP ais_stat_channel_" + ch + " Total number of messages on channel " + ch + "\n";
-			element += "# TYPE ais_stat_channel_" + ch + " counter\n";
-			element += "ais_stat_channel_" + ch + " " + std::to_string(_channel[i]) + "\n";
+			element += "# HELP ais_stat_count_channel_" + ch + " Total number of messages on channel " + ch + "\n";
+			element += "# TYPE ais_stat_count_channel_" + ch + " counter\n";
+			element += "ais_stat_count_channel_" + ch + " " + std::to_string(_channel[i]) + "\n";
 		}
 
 		for (int i = 0; i < 27; i++) {
 			std::string type = std::to_string(i + 1);
-			element += "# HELP ais_stat_type_" + type + " Total number of messages of type " + type + "\n";
-			element += "# TYPE ais_stat_type_" + type + " counter\n";
-			element += "ais_stat_type_" + type + " " + std::to_string(_msg[i]) + "\n";
+			element += "# HELP ais_stat_count_type_" + type + " Total number of messages of type " + type + "\n";
+			element += "# TYPE ais_stat_count_type_" + type + " counter\n";
+			element += "ais_stat_count_type_" + type + " " + std::to_string(_msg[i]) + "\n";
 		}
 
 		return element;

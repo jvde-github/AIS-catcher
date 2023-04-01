@@ -518,7 +518,7 @@ void WebClient::connect(Receiver& r) {
 	r.OutputGPS(0).Connect((StreamIn<AIS::GPS>*)&ships);
 
 	if (supportPrometheus)
-		r.Output(0) >> promotheus_capture;
+		r.Output(0) >> dataPrometheus;
 
 	*r.device >> raw_counter;
 }
@@ -601,9 +601,10 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 	}
 	else if (r == "/metrics") {
 		if (supportPrometheus) {
-			std::string content = counter.toPrometheus() + promotheus_capture.ppm;
+			std::string content = dataPrometheus.toPrometheus();
+			content += dataPrometheus.ppm + dataPrometheus.level;
 			Response(c, "application/text", content, use_zlib);
-			promotheus_capture.reset();
+			dataPrometheus.reset();
 		}
 	}
 	else if (r == "/stat.json") {

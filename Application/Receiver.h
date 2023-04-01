@@ -273,31 +273,38 @@ class WebClient : public IO::Server, public Setting {
 		void Receive(const AIS::Message* msg, int len, TAG& tag);
 
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
-		std::string toPrometheus() { return stat.toPrometheus(); }
 	} counter;
 
 	class PromotheusCounter : public StreamIn<AIS::Message> {
 		std::mutex m;
+		Statistics stat;
 
 	public:
 		std::string ppm;
+		std::string level;
 
 		void Receive(const AIS::Message* data, int len, TAG& tag) {
 			if (ppm.size() > 32768) return;
+			if (level.size() > 32768) return;
 
 			m.lock();
+			stat.Add(data[0], tag);
 			ppm += "ais_msg_ppm{type=\"" + std::to_string(data[0].type()) + "\",mmsi=\"" + std::to_string(data[0].mmsi()) + "\",channel=\"" + std::string(1, data[0].getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
+			level += "ais_msg_level{type=\"" + std::to_string(data[0].type()) + "\",mmsi=\"" + std::to_string(data[0].mmsi()) + "\",channel=\"" + std::string(1, data[0].getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
 			m.unlock();
 		}
 
 		void reset() {
 			m.lock();
 			ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
+			level = "# HELP ais_msg_level\n# TYPE ais_msg_level gauge\n";
 			m.unlock();
 		}
 
+		std::string toPrometheus() { return stat.toPrometheus(); }
 		PromotheusCounter() { reset(); }
-	} promotheus_capture;
+
+	} dataPrometheus;
 
 	struct RAWcounter : public StreamIn<RAW> {
 		uint64_t received = 0;
