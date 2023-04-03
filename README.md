@@ -33,7 +33,7 @@ For new features in the latest version please have a look at the [release page](
 AIS-catcher -N 8100 ABOUT about.md
 ```
 - **AIS2ADSB**: A simple script to export AIS messages to ADS-B format so SAR aircraft (and ships if needed) can be visualized in Virtual Radar Server. See [here](https://github.com/jvde-github/ais2adsb)
-- **Prometheus/Grafana interface**: First functionality to output some metrics from AIS-catcher to Prometheus, see [here](https://github.com/jvde-github/AIS-catcher/edit/main/README.md#sending-data-to-prometheus-for-use-in-grafana-dashboards).
+- **Prometheus/Grafana interface**: First functionality to output some metrics from AIS-catcher to Prometheus, see [here](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#sending-data-to-prometheus-for-use-in-grafana-dashboards).
 - **JSON over UDP output**: functionality to send NMEA messages packaged in a JSON object, e.g.:
 ```console
 AIS-catcher -u 192.168.1.235 4002 JSON on
