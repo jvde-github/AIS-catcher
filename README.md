@@ -256,13 +256,24 @@ AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 
 To give the user the option to tweak the look-and-feel and functionality of the webserver and/or modify for example the color scheme or regional preferences, the program provides the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
 ```console
-AIS-catcher -N PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
+AIS-catcher -N 8100 PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
 ```
 You can also include all plugin files from a directory using the command:
 ```console
-AIS-catcher -N PLUGIN_DIR /usr/share/aiscatcher/plugins
+AIS-catcher -N 8100 PLUGIN_DIR /usr/share/aiscatcher/plugins
 ```
 Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and style plugins. The repository includes a few example plugins that demonstrate how to add additional maps, create new menu items and present some of the ship data in a different unit (e.g. dimension of the vessel in feet instead of meters). 
+
+
+### Sending data to Prometheus for use in Grafana dashboards
+
+You can add the option "PROME on" to the web configuration command to start rendering Prometheus-compatible statistics at `/metrics`. For example:
+
+```console
+AIS-catcher -N 8100 PROME on
+```
+
+For more information on how to configure Prometheus and Grafana to get an initial dashboard, see [README-grafana.md](README-grafana.md).
 
 ### Posting messages over HTTP
 
@@ -631,8 +642,6 @@ INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 p
 
 If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. 
 You can download the APK from the mentioned project page or the Google Play store.
-
-
 
 ## Device specific settings
 
