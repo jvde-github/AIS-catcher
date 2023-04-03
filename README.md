@@ -273,7 +273,7 @@ You can add the option "PROME on" to the web configuration command to start rend
 AIS-catcher -N 8100 PROME on
 ```
 
-For more information on how to configure Prometheus and Grafana to get an initial dashboard, see [README-grafana.md](README-grafana.md).
+For more information on how to configure Prometheus and Grafana to get an initial dashboard, see [README-grafana.md](Documentation/README-grafana.md).
 
 ### Posting messages over HTTP
 
