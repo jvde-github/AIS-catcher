@@ -12,7 +12,7 @@ Prometheus will store a lot of data, and Grafana will do a lot of data queries. 
 
 You *can* do it on a single system. We're assuming below that you are not.
 
-## Step 1: Make Prometheus data available for AIS-Catcher
+## Step 1: Make Prometheus data available for AIS-catcher
  
 
 - Edit your AIS-catcher's command line and ensure that `PROME on` is included after the `-N <port>` directive. For example:
