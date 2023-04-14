@@ -168,7 +168,7 @@ namespace IO {
 	};
 
 	class TCP : public StreamIn<AIS::Message>, public Setting {
-		::TCP::Client2 tcp;
+		::TCP::ClientPersistent tcp;
 		AIS::Filter filter;
 		bool JSON = false;
 		int source = -1;
