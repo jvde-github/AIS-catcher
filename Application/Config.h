@@ -46,17 +46,19 @@ class Config {
 	OutputScreen& _screen;
 	OutputHTTP& _http;
 	OutputUDP& _udp;
+	OutputTCP& _tcp;
 	WebClient& _server;
 
 	bool isActiveObject(const JSON::Value& pd);
 	void setSettingsFromJSON(const JSON::Value& pd, Setting& s);
 	void setHTTPfromJSON(const JSON::Property& pd);
 	void setUDPfromJSON(const JSON::Property& pd);
+	void setTCPfromJSON(const JSON::Property& pd);
 	void setModelfromJSON(const JSON::Property& p);
 	void setServerfromJSON(const JSON::Value& pd);
 
 public:
-	Config(Receiver& r, OutputScreen& s, OutputHTTP& h, OutputUDP& u, WebClient& v) : _receiver(r), _screen(s), _http(h), _server(v), _udp(u){};
+	Config(Receiver& r, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, WebClient& v) : _receiver(r), _screen(s), _http(h), _server(v), _udp(u), _tcp(t) {};
 
 	void read(std::string& file_config);
 	void set(const std::string& str);
