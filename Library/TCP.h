@@ -62,45 +62,40 @@ namespace TCP {
 		int send(const char* msg, int len) { return ::send(sock, msg, len, 0); }
 	};
 
-	class Client2 {
-
-		SOCKET sock = -1;
-
-		struct addrinfo* address;
-
-		enum { READY,
-			   CONNECTING } state = CONNECTING;
-
-		std::time_t stamp = 0;
-		std::string host, port;
-
+	// will be combined with above....
+	class ClientPersistent {
 	public:
-		bool connect(std::string, std::string);
+		ClientPersistent() {}
+		~ClientPersistent() { disconnect(); }
+
 		void disconnect();
+		bool connect(std::string host, std::string port);
 
-		void reconnect();
+		int send(const void* data, int length);
 
-		int read(void* data, int length, bool wait = false);
-		int send(const char* msg, int len) {
+	private:
+		enum State { DISCONNECTED, CONNECTING, READY };
 
-			if (state != READY) reconnect();
-			if (sock == -1) return 0;
+		std::string host;
+		std::string port;
 
-			int n = ::send(sock, msg, len, 0);
+		int timeout = 2; // seconds
 
-			if (n <= 0) {
-				if (state == READY)
-					std::cerr << "TCP: failed to write to server, resetting connection.\n";
-				reconnect();
+		int sock = -1;
+		State state = DISCONNECTED;
+		time_t stamp = 0;
+
+		struct addrinfo* address = NULL;
+
+		bool isConnected();
+
+		bool reconnect() {
+			disconnect();
+			if (connect(host, port)) {
+				std::cerr << "TCP feed: connected to " << host << ":" << port << std::endl;
+				return true;
 			}
-			if (n > 0) {
-				if (state == CONNECTING)
-					std::cerr << "TCP: connected to server.\n";
-
-				state = READY;
-			}
-
-			return n;
+			return false;
 		}
 	};
 

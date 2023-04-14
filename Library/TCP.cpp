@@ -104,22 +104,19 @@ namespace TCP {
 		return 0;
 	}
 
-	// Client 2 - experimental
-
-	void Client2::disconnect() {
+	void ClientPersistent::disconnect() {
 		if (sock != -1)
 			closesocket(sock);
 		sock = -1;
+		state = DISCONNECTED;
 	}
 
-	bool Client2::connect(std::string hst, std::string prt) {
-
+	bool ClientPersistent::connect(std::string host, std::string port) {
 		int r;
 		struct addrinfo h;
-		fd_set fdr, fdw;
 
-		host = hst;
-		port = prt;
+		this->host = host;
+		this->port = port;
 
 		std::memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
@@ -145,47 +142,89 @@ namespace TCP {
 		u_long mode = 1; // 1 to enable non-blocking socket
 		ioctlsocket(sock, FIONBIO, &mode);
 #endif
-		std::cerr << "TCP: attempting to connect to server " << host << " on port " << port << ".\n";
 
-		stamp = std::time(0);
-		state = CONNECTING;
+		stamp = time(NULL);
 
-		int n = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
-		if (n != -1) {
-			std::cerr << "TCP: server " << host << " ready on port " << port << ". without delay\n";
+		if (::connect(sock, address->ai_addr, (int)address->ai_addrlen) != -1) {
 			state = READY;
 			return true;
 		}
 
-		std::cerr << "Output connect " << strerror(errno) << std::endl;
+#ifndef _WIN32
+		if (errno != EINPROGRESS) {
+			closesocket(sock);
+			sock = -1;
+			return false;
+		}
+#endif
 
-
-		return true;
+		return isConnected();
 	}
 
-	void Client2::reconnect() {
+	bool ClientPersistent::isConnected() {
+		fd_set fdr, fdw;
+
+		FD_ZERO(&fdr);
+		FD_SET(sock, &fdr);
+
+		FD_ZERO(&fdw);
+		FD_SET(sock, &fdw);
+
+		timeval to = { timeout, 0 };
+
+		if (select(sock + 1, &fdr, &fdw, NULL, &to) > 0) {
+			int error;
+			socklen_t len = sizeof(error);
+
+			getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len);
+			if (error != 0) return false;
+
+			state = READY;
+			return true;
+		}
+
 		state = CONNECTING;
-		if (((long)std::time(0) - (long)stamp) > 30) {
-			disconnect();
-			connect(host, port);
-		}
+		return false;
 	}
 
-	int Client2::read(void* data, int length, bool wait) {
-		fd_set fd;
-
-		FD_ZERO(&fd);
-		FD_SET(sock, &fd);
-
-		timeval to = { 0, 0 };
-
-		if (select(sock + 1, NULL, &fd, NULL, &to) < 0) {
-			return -1;
+	int ClientPersistent::send(const void* data, int length) {
+		if (state == DISCONNECTED) {
+			if ((long)time(NULL) - (long)stamp > 10) {
+				std::cerr << "TCP feed (" << host << ":" << port << "): not connected, reconnecting." << std::endl;
+				if (connect(host, port)) {
+					std::cerr << "TCP feed: connected to " << host << ":" << port << std::endl;
+					return true;
+				}
+			}
 		}
 
-		if (FD_ISSET(sock, &fd)) {
-			return recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
+		// check if sock is connected
+		if (state == CONNECTING) {
+			bool connected = isConnected();
+
+			if (connected) {
+				std::cerr << "TCP feed (" << host << ":" << port << "): connected to server." << std::endl;
+			}
+			else if ((long)time(NULL) - (long)stamp > 10) {
+				std::cerr << "TCP feed (" << host << ":" << port << "): timeout connecting to server, reconnect." << std::endl;
+				reconnect();
+			}			
 		}
-		return 0;
+
+		if (state == READY) {
+			int sent = ::send(sock, (char*)data, length, 0);
+
+			if (sent < length) {
+				std::cerr << "TCP feed (" << host << ":" << port << "): send error, reconnect." << std::endl;
+				reconnect();
+				return -1;
+			}
+			return sent;
+		}
+
+		// connecting or disconnected, so nothing sent
+		return -1;
 	}
+
+
 }

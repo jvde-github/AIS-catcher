@@ -483,13 +483,14 @@ namespace IO {
 	}
 
 	void TCP::Start() {
-		std::cerr << "TCP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
+		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
-		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << std::endl;
+		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ", status: ";
 
-		if (!tcp.connect(host, port)) {
-			std::cerr << "Cannot set up initial connect to TCP server" << std::endl;
-		}
+		if (tcp.connect(host, port)) 
+			std::cerr << "connected\n";
+		else
+			std::cerr << "pending\n";
 	}
 
 	void TCP::Stop() {
