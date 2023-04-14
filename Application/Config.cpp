@@ -73,6 +73,19 @@ void Config::setUDPfromJSON(const JSON::Property& pd) {
 	}
 }
 
+void Config::setTCPfromJSON(const JSON::Property& pd) {
+
+	if (!pd.Get().isArray())
+		throw std::runtime_error("TCP settings need to be an \"array\" of \"objects\" in config file.");
+
+	for (const auto& v : pd.Get().getArray()) {
+		if (!isActiveObject(v)) continue;
+
+		IO::TCP& tcp = _tcp.add();
+		setSettingsFromJSON(v, tcp);
+	}
+}
+
 void Config::setModelfromJSON(const JSON::Property& p) {
 
 	if (!isActiveObject(p.Get())) return;
@@ -192,6 +205,9 @@ void Config::set(const std::string& str) {
 			break;
 		case AIS::KEY_SETTING_UDP:
 			setUDPfromJSON(p);
+			break;
+		case AIS::KEY_SETTING_TCP:
+			setTCPfromJSON(p);
 			break;
 		case AIS::KEY_SETTING_SERVER:
 			if (!isActiveObject(p.Get())) continue;

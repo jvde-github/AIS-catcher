@@ -496,7 +496,7 @@ int main(int argc, char* argv[]) {
 			if (!servers.size())
 				servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
 
-			Config c(*_receivers.back(), screen, http, udp, *servers.back());
+			Config c(*_receivers.back(), screen, http, udp, tcp, *servers.back());
 			c.read(file_config);
 		}
 
