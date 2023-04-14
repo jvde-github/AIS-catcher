@@ -170,7 +170,7 @@ namespace TCP {
 		FD_ZERO(&fdw);
 		FD_SET(sock, &fdw);
 
-		timeval to = { timeout, 0 };
+		timeval to = { 0, 1 };
 
 		if (select(sock + 1, &fdr, &fdw, NULL, &to) > 0) {
 			int error;

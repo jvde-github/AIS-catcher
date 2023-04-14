@@ -41,7 +41,7 @@ BOOL WINAPI consoleHandler(DWORD signal) {
 #else
 void consoleHandler(int signal) {
 	if (signal == SIGPIPE) {
-		std::cerr << "Termination request SIGPIPE ignored" << std::endl;
+		// std::cerr << "Termination request SIGPIPE ignored" << std::endl;
 		return;
 	}
 	if (signal != SIGINT)
