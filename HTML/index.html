@@ -1603,8 +1603,8 @@
         return aboutmd;
     }
 
-    async function fetchShips() {
-        if (isFetchingShips) {
+    async function fetchShips(noDoubleFetch = true) {
+        if (isFetchingShips && noDoubleFetch) {
             console.log("A fetch operation is already running.");
             return;
         } 
@@ -3079,7 +3079,7 @@
     }
 
     async function openFocus(m, z) {
-        await fetchShips();
+        await fetchShips(false);
 
         selectMapTab(m);
         if (z) mapResetView(z);
