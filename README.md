@@ -24,6 +24,11 @@ Only use this software in regions where such use is permitted.
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
 
+## What's new
+New feature that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
+````
+AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
+````
 ## Usage
 ````
 use: AIS-catcher [options]
@@ -41,6 +46,7 @@ use: AIS-catcher [options]
 	[-N [optional: port][optional settings] - start http server at port, see README for details]
 	[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]
 	[-p xxx - set frequency correction for device in PPM (default: zero)]
+	[-P xxx.xx.xx.xx yyy - TCP destination address and port (default: off)]
 	[-q suppress NMEA messages to screen (-o 0)]
 	[-s xxx - sample rate in Hz (default: based on SDR device)]
 	[-T xx - auto terminate run with SDR after xxx seconds (default: off)]
@@ -278,9 +284,9 @@ As a final comment, to build AIS-catcher with HTTP support, please install the f
 sudo apt install libcurl4-openssl-dev zlib1g-dev
 ```
 
-### Input/output of AIS messages over UDP
+### Input/output of AIS messages over UDP and TCP
 
-AIS messages can be forwarded between applications over UDP via the `-u` switch as we have seen in the examples above.
+AIS messages can be forwarded between applications over UDP via the `-u` switch and TCP using `-P` as we have seen in the examples above.
 Additionally, AIS-catcher has the option to send NMEA messages packaged in a JSON object:
 ```console
 AIS-catcher -u 192.168.1.235 4002 JSON on
