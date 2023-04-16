@@ -408,6 +408,13 @@ An example config file looks as follows:
       "lat":52.0,
       "lon":4.3
    },
+   "tcp": [
+	{
+                "active": true,
+                "host": "5.9.207.224",
+                "port": 12
+        }
+   ],
    "udp":[
       {
          "host":"ais.fleetmon.com",
