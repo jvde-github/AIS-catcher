@@ -409,11 +409,11 @@ An example config file looks as follows:
       "lon":4.3
    },
    "tcp": [
-	{
-                "active": true,
-                "host": "5.9.207.224",
-                "port": 12
-        }
+      {
+         "active": true,
+         "host": "5.9.207.224",
+         "port": 12
+      }
    ],
    "udp":[
       {
