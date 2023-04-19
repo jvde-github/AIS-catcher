@@ -1190,7 +1190,7 @@
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
     var refreshIntervalMs = 2500;
     var range_update_time = null;
-    
+
     var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
@@ -1720,6 +1720,9 @@
                 if(Math.floor((now - range_update_time) / 1000 / 60) < 15) return;
                 range_update_time = now;
             }
+            else
+                range_update_time = new Date();
+
             map.removeLayer(marker_range);
             marker_range = null;
         }
