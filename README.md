@@ -34,7 +34,6 @@ Latest build also has an option to show the range on the map (run the program wi
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/233175928-43d9bf66-0002-4f6b-93e7-ba5f98b50d11.png" width="30%"/>
-<img src="https://user-images.githubusercontent.com/52420030/233175952-baef741e-9778-4552-88c3-c887ae497c8a.png" width="30%"/>
 </p>
 
 ## Usage
