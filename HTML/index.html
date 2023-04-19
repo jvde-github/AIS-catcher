@@ -81,7 +81,7 @@
         --table-header-background-color: rgb(69, 3, 69);
         --table-background-color: black;
         --table-selection-background-color: purple;
-        --table-alternate-background-color: rgb(56, 1, 56);
+        --table-alternate-background-color: rgb(27, 0, 27);
         --main-font-color: white;
         --shipcard-footer-background-color: purple;
         --shipcard-footer-hover-color: var(--secondary-color);
@@ -1708,8 +1708,22 @@
         }
         */
 
-        if (nothasStation || !settings.show_range || marker_range != null) return;
+        if (nothasStation || !settings.show_range) return;
 
+        // range plotted in last 15 minutes then return
+        if(marker_range != null) {
+            if(range_update_time != null) { 
+
+                const now = new Date();
+
+                if(Math.floor((now - range_update_time) / 1000 / 60) < 15) return;
+                range_update_time = now;
+            }
+            map.removeLayer(marker_range);
+            marker_range = null;
+        }
+
+        // get range data
         if (true) {
             try {
                 response = await fetch('history_full.json');
@@ -1723,7 +1737,7 @@
             h = JSON.parse(range_json);
         }
 
-
+        // calculate range
         const range_outline = [];
 
         const N = h.day.stat[0].radar_a.length;
@@ -1757,9 +1771,7 @@
             });
 
         }
-        if (marker_range != null) {
-            map.removeLayer(marker_range);
-        }
+
         marker_range = L.polygon(range_outline, { fillOpacity: 0.05, color: 'orange' });
         marker_range.addTo(map);
     }
