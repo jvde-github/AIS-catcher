@@ -27,7 +27,7 @@
         --ok-color: rgb(129, 244, 129);
         --error-color: red;
         --header-color: var(--primary-color);
-        --header-title-color:  #0e6cd8;
+        --header-title-color: #0e6cd8;
         --selection-color: orange;
         --mainspace-color: white;
         --backdrop-color: #f5f7fa;
@@ -38,8 +38,15 @@
         --menu-background-hover-color: #daebfe;
         --menu-font-color: dimgrey;
         --mainspace-container-color: lightgrey;
+        --table-header-background-color: var(--primary-color);
+        --table-background-color: white;
+        --table-selection-background-color: #daebfe;
+        --table-alternate-background-color: var(--panel-color);
+        --main-font-color: var(--tertiary-color);
         --shipcard-footer-background-color: var(--tertiary-color);
         --shipcard-footer-hover-color: var(--primary-color);
+        --shipcard-selection-color: rgb(240, 241, 248);
+        --shipcard-bottom-border-color: rgb(217, 218, 218);
         --chart1-color: rgba(93, 169, 213, 0.9);
         --chart2-color: rgba(157, 93, 213,0.9);
         --chart3-color: rgba(93, 213, 97,0.9);
@@ -48,6 +55,44 @@
         --hover-transform: scale(0.93);
         --hover-transition: transform ease-out 0.2s, background 0.4s;
         --hover-background: rgba(255, 255, 255, 0.5);
+    }
+
+    .dark {
+        /* Complementary colors */
+        --primary-color: #5DD5D5;
+        --secondary-color: #FFA07A;
+        --tertiary-color: #05081f;
+        /* Other colors */
+        --panel-color: black;
+        --ok-color: #7ce481;
+        --error-color: #ec7472;
+        --header-color: rgb(69, 3, 69);
+        --header-title-color: purple;
+        --selection-color: #9fa8da;
+        --mainspace-color: #212529;
+        --backdrop-color: black;
+        --focus-color: #90caf9;
+        --light-gray: lightgray;
+        --header-font-color: #f8f9fa;
+        --menu-background-color: black;
+        --menu-background-hover-color: #4d4d4d;
+        --menu-font-color: #f8f9fa;
+        --mainspace-container-color: #212529;
+        --table-header-background-color: rgb(69, 3, 69);
+        --table-background-color: black;
+        --table-selection-background-color: purple;
+        --table-alternate-background-color: rgb(56, 1, 56);
+        --main-font-color: white;
+        --shipcard-footer-background-color: purple;
+        --shipcard-footer-hover-color: var(--secondary-color);
+        --shipcard-selection-color: rgb(41, 40, 40);
+        --shipcard-bottom-border-color: purple;
+        --chart1-color: rgba(158, 226, 255, 0.9);
+        --chart2-color: rgba(255, 158, 158, 0.9);
+        --chart3-color: rgba(158, 255, 174, 0.9);
+        --chart4-color: rgba(255, 219, 158, 0.9);
+        --chart5-color: rgba(158, 255, 239, 0.9);
+        --hover-background: rgba(255, 255, 255, 0.1);
     }
 
     body,
@@ -125,7 +170,7 @@
     }
 
     .header-icon, .header-pulse-ok, .header-pulse-error {
-        width: 50px;
+        width: 35px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -160,13 +205,13 @@
 
     .header-menubutton {
         background: var(--menu-background-color);
-        color: black;
+        color: var(--menu-font-color);
         display: block;
         transition: var( --hover-transition);
         font-size: 18px;
         padding-top: 15px;
         width: 40px;
-        text-align: center;        
+        text-align: center;
     }
 
     .header-menubutton:hover {
@@ -264,7 +309,6 @@
         border: 1px;
     }
 
-
     @media only screen and (max-height : 1000px) {
         .menubar {
             display: flex;
@@ -345,6 +389,11 @@
         height: 100%;
     }
 
+    .aboutpage {
+        background-color: var(--backdrop-color);
+        color: var(--main-font-color);
+    }
+
     /* Table styling */
 
     .tablesection {
@@ -352,7 +401,8 @@
         display: flex;
         height: 100%;
         margin: 10px auto;
-        background-color: white;
+        color: var(--main-font-color);
+        background-color: var(--table-background-color);
         width: fit-content;
 
     }
@@ -409,7 +459,7 @@
     }
 
         table thead {
-            background-color: var(--primary-color);
+            background-color: var(--table-header-background-color);
             font-size: 1em;
             color: white;
         }
@@ -454,11 +504,11 @@
         }
 
         table > tbody >tr:nth-child(even) {
-                background: var(--panel-color);
+                background: var(--table-alternate-background-color);
             }
 
         table > tbody >tr:hover {
-            background: #daebfe;
+            background: var(--table-selection-background-color);
         }
 
     .table-aligned-center {
@@ -527,15 +577,16 @@
         z-index: 9998;
         position: absolute;
         visibility: hidden;
-        background: #fff;
+        background: var(--menu-background-color);
+        color: var(--menu-font-color);
         cursor: auto;
         border-radius: 15px;
     }
 
-    #shipcard.visible {
-        visibility: visible
-    }
-    
+        #shipcard.visible {
+            visibility: visible
+        }
+
     #shipcard_content {
         flex: 1;
         overflow: auto
@@ -560,29 +611,32 @@
     .shipcard-validated {
         border-left: 10px solid #7CFC00;
     }
+
     .shipcard-not-validated {
         border-left: 10px solid lightgrey;
     }
+
     .shipcard-dubious {
         border-left: 10px solid red;
     }
+
     .shipcard-not-validated-transparant {
         border-left: 10px solid transparent;
     }
-   
-    .shipcard-footer   {
-        background-color: var(--tertiary-color);
+
+    .shipcard-footer {
+        background-color: var(--shipcard-footer-background-color);
         border-bottom: 1px solid rgb(217, 218, 218);
         flex: 0 0 50px;
         border-radius: 10px;
         display: flex;
-        flex-direction: row;       
-        margin: 5px; 
+        flex-direction: row;
+        margin: 5px;
         margin-bottom: 10px;
-        justify-content: center;        
+        justify-content: center;
     }
 
-    .shipcard-footer  > div  {
+        .shipcard-footer > div {
             flex: 0 1 100px;
             display: flex;
             flex-direction: column;
@@ -590,27 +644,27 @@
             transition: var( --hover-transition);
         }
 
-        .shipcard-footer  > div:hover  {
-            cursor: pointer;
-            background: var(--hover-background);
-            transform: var(--hover-transform);        
-        }
-        
-        .shipcard-footer > div > i {
-            color: white;
-            font-size: 17px;
-            line-height: 17px;
-            margin:  auto;
-            padding: 10px;
-        }
+            .shipcard-footer > div:hover {
+                cursor: pointer;
+                background: var(--hover-background);
+                transform: var(--hover-transform);
+            }
 
-        .shipcard-footer  > div > span {
-            flex: 1;
-            font-size: 9px;
-            line-height: 3px;
-            color: white;
-            text-align: center;
-        }
+            .shipcard-footer > div > i {
+                color: white;
+                font-size: 17px;
+                line-height: 17px;
+                margin: auto;
+                padding: 10px;
+            }
+
+            .shipcard-footer > div > span {
+                flex: 1;
+                font-size: 9px;
+                line-height: 3px;
+                color: white;
+                text-align: center;
+            }
 
     #shipcard header > span:first-child {
         flex: 1 0 0;
@@ -624,15 +678,15 @@
         transition: var( --hover-transition);
     }
 
-    .shipcard-header-icon:hover {
-        cursor: pointer;
-        background: var(--hover-background);
-        transform: var(--hover-transform);        
-    }
+        .shipcard-header-icon:hover {
+            cursor: pointer;
+            background: var(--hover-background);
+            transform: var(--hover-transform);
+        }
 
-    #shipcard_content  {
+    #shipcard_content {
         display: flex;
-        flex-direction: column; 
+        flex-direction: column;
     }
 
     .shipcard-content-row {
@@ -640,54 +694,53 @@
         flex-direction: row;
         justify-content: stretch;
         padding: 10px;
-
-        border-bottom: 1px solid rgb(217, 218, 218);        
+        border-bottom: 1px solid var(--shipcard-bottom-border-color);
         transition: var( --hover-transition);
     }
 
-    .shipcard-content-row:hover {
-        cursor: pointer;
-    }
+        .shipcard-content-row:hover {
+            cursor: pointer;
+        }
 
-    .shipcard-content-row > div {
-        overflow: hidden;
-        flex: 1; 
-        display: flex;
-        justify-content: stretch;
-        flex-direction: column;
-    }
-    .shipcard-content-row > div > span:first-child {
-        color: rgb(111, 128, 124);
-        text-transform: uppercase;
-        font-size: 10px;
-        line-height: 14px;
-    }
+        .shipcard-content-row > div {
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            justify-content: stretch;
+            flex-direction: column;
+        }
 
-    .shipcard-content-row  > div > span:last-child {
-        line-height: 20px;
-        font-size: 14px;
-        text-transform: initial;
-    }
+            .shipcard-content-row > div > span:first-child {
+                color: rgb(111, 128, 124);
+                text-transform: uppercase;
+                font-size: 10px;
+                line-height: 14px;
+            }
 
-    .shipcard-content-row  > div > span:last-child:empty:after {
-        content:"-";
-    }
+            .shipcard-content-row > div > span:last-child {
+                line-height: 20px;
+                font-size: 14px;
+                text-transform: initial;
+            }
+
+                .shipcard-content-row > div > span:last-child:empty:after {
+                    content: "-";
+                }
 
     .shipcard-min-only {
         display: none;
     }
 
-    .shipcard-min-only.visible {
-        display: inherit;       
-    }
+        .shipcard-min-only.visible {
+            display: inherit;
+        }
 
     .shipcard-max-only.hide {
-
         display: none;
     }
 
     .shipcard-row-selected {
-        background-color: rgb(240, 241, 248);
+        background-color: var(--shipcard-selection-color);
         display: flex;
         flex-direction: row;
     }
@@ -777,15 +830,15 @@
     #summary_stat section div {
         display: flex;
     }
-    
-    #summary_stat section div span:first-child {
-        flex: 1 1 150px;
-        text-align: right;
-        color: var(--tertiary-color);
-        padding: 5px 20px 5px 20px;
-        display: flex;
-        flex-direction: column
-    }
+
+        #summary_stat section div span:first-child {
+            flex: 1 1 150px;
+            text-align: right;
+            color: var(--main-font-color);
+            padding: 5px 20px 5px 20px;
+            display: flex;
+            flex-direction: column
+        }
     #summary_stat section div span:last-child {
         flex: 1 0 150px;
         text-align: left;
@@ -834,25 +887,27 @@
 
 <body>
 
-<div class="header">
-    <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="fa-solid fa-bars"></i></div>
-    <div class="header-title"><span onclick="headerClick()" >AIS-catcher</span>
+    <div class="header">
+        <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="fa-solid fa-bars"></i></div>
+        <div class="header-title">
+            <span onclick="headerClick()">AIS-catcher</span>
 
-        <div id="menubar_mini">
-            <i id="stat_tab_mini" onclick="activateTab(event,'stat')"  class="fa-solid fa-briefcase"></i>
-            <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="fa-solid fa-chart-simple"></i>
-            <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="fa-solid fa-table"></i>
-            <i id="map_tab_mini" onclick="activateTab(event,'map')" class="fa-solid fa-map"></i>
-            <i id="about_tab_mini" onclick="activateTab(event,'about')" class="fa-solid fa-circle-info"></i>
+            <div id="menubar_mini">
+                <i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="fa-solid fa-briefcase"></i>
+                <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="fa-solid fa-chart-simple"></i>
+                <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="fa-solid fa-table"></i>
+                <i id="map_tab_mini" onclick="activateTab(event,'map')" class="fa-solid fa-map"></i>
+                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="fa-solid fa-circle-info"></i>
+            </div>
+
         </div>
-                
-    </div>
-    
-    <div title="List installed plugins" onclick="showPlugins()" class="header-icon"><i class="fas  fa-wrench fa-sm"></i></div>
-    <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
-    <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
 
-</div>
+        <div title="Toggle Dark/Light mode" onclick="toggleDarkMode()" class="header-icon"><i id="darkmodetoggle-id" class="fas fa-moon"></i></div>
+        <div title="List installed plugins" onclick="showPlugins()" class="header-icon"><i class="fas  fa-wrench fa-sm"></i></div>
+        <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
+        <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
+
+    </div>
 <nav  id="menubar">
     <div onclick="activateTab(event,'stat')" id="stat_tab"><i class="fa-solid fa-briefcase"></i><span>Summary</span></div>
     <div onclick="activateTab(event,'plots')" id="plots_tab"><i class="fa-solid fa-chart-simple"></i><span>Plots</span></div>
@@ -863,7 +918,7 @@
 <div class="mainspace-container">
     <div class="mainspace">
         <div class="tabcontent" id="about">
-            <div id="about_content"></div>
+            <div class="aboutpage" id="about_content"></div>
         </div>
         <div class="tabcontent" id="stat">
             <div id="summary_stat">
@@ -1135,10 +1190,10 @@
     var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
     var refreshIntervalMs = 2500;
 
-    var marker_center = null, marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
+    var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
     // default settings
-    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
+    var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true};
     let isFetchingShips = false;
 
     // some functions useful in plugins
@@ -1552,6 +1607,39 @@
         addControlToMap(labelToggleControl);
     }
 
+
+    function addRangeControl() {
+        // ------------
+        var rangeToggleControl = L.control({ position: 'bottomright' });
+
+        rangeToggleControl.onAdd = function (map) {
+
+            var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
+            controlDiv.title = "Show range";
+            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-label-toggle', controlDiv);
+            iconRangeSpan = L.DomUtil.create('span', 'fas fa-tower-cell', controlBoundary);
+            updateRangeControl();
+
+            controlDiv.addEventListener('click', function () {
+
+                settings.show_range = !settings.show_range;
+                updateRangeControl();
+                saveSettings();
+
+                if (!settings.show_range) {
+                    if (marker_range != null) {
+                        map.removeLayer(marker_range);
+                        marker_range = null;
+                    }
+                }
+                else
+                    plotRange();
+            });
+            return controlDiv;
+        };
+        addControlToMap(rangeToggleControl);
+    }
+
     function addStationControl() {
         // ------------
         var stationToggleControl = L.control({ position: 'bottomright' });
@@ -1601,6 +1689,79 @@
         }
         aboutmd = await response.text();
         return aboutmd;
+    }
+
+    async function plotRange() {
+
+        const nothasStation = station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
+
+        // add timestamp and check if last update was more than an hour ago
+        /*
+        {
+            const last_signal = new Date(station.last_signal * 1000);
+            const now = new Date();
+            const diff = now - last_signal;
+            const diffHours = Math.floor(diff / 1000 / 60 / 60);
+            if(diffHours > 1) {
+                setPulseError();
+            }
+        }
+        */
+
+        if (nothasStation || !settings.show_range || marker_range != null) return;
+
+        if (true) {
+            try {
+                response = await fetch('history_full.json');
+            } catch (error) {
+                setPulseError();
+            }
+            h = await response.json();
+            setPulseOk();
+        }
+        else {
+            h = JSON.parse(range_json);
+        }
+
+
+        const range_outline = [];
+
+        const N = h.day.stat[0].radar_a.length;
+        range = [];
+
+        for (let i = 0; i < N; i++) {
+            let m = 0;
+            for (j = 0; j < h.hour.stat.length; j++) {
+                m = Math.max(m, h.hour.stat[j].radar_a[i]);
+                m = Math.max(m, h.hour.stat[j].radar_b[i]);
+            }
+            for (j = 0; j < h.minute.stat.length; j++) {
+                m = Math.max(m, h.minute.stat[j].radar_a[i]);
+                m = Math.max(m, h.minute.stat[j].radar_b[i]);
+            }
+            range.push(m);
+        }
+
+        const deltaNorth = calcOffset1M(station, 0);
+        const deltaEast = calcOffset1M(station, 90);
+
+        for (let i = 0; i < N; i++) {
+            range_outline.push({
+                lat: station.lat + range[i] * deltaNorth[0] * 1000 / 0.5399568 * Math.cos(i * 2 / N * Math.PI),
+                lon: station.lon + range[i] * deltaEast[1] * 1000 / 0.5399568 * Math.sin(i * 2 / N * Math.PI)
+            });
+
+            range_outline.push({
+                lat: station.lat + range[i] * deltaNorth[0] * 1000 / 0.5399568 * Math.cos((i + 1) * 2 / N * Math.PI),
+                lon: station.lon + range[i] * deltaEast[1] * 1000 / 0.5399568 * Math.sin((i + 1) * 2 / N * Math.PI)
+            });
+
+        }
+        if (marker_range != null) {
+            map.removeLayer(marker_range);
+        }
+        marker_range = L.polygon(range_outline, { fillOpacity: 0.05, color: 'orange' });
+        marker_range.addTo(map);
     }
 
     async function fetchShips(noDoubleFetch = true) {
@@ -3064,6 +3225,42 @@
             updateTrack();
         }
         plotStation(station);
+        plotRange();
+    }
+
+    function updateRangeControl() {
+        iconRangeSpan.classList.remove('blue');
+        iconRangeSpan.classList.remove('red');
+        iconRangeSpan.classList.remove('grey');
+
+        if (settings.show_range) {
+            iconRangeSpan.classList.add('blue');
+        }
+        else {
+            iconRangeSpan.classList.add('grey');
+        }
+    }
+
+    function updateDarkMode() {
+        const root = document.querySelector(":root");
+        root.classList.remove("dark");
+
+        if(settings.dark_mode) root.classList.toggle("dark");
+        var icon = document.getElementById("darkmodetoggle-id");
+        if (settings.dark_mode) {
+            icon.classList.remove("fa-moon");
+            icon.classList.add("fa-sun");
+
+        } else {
+            icon.classList.remove("fa-sun");
+            icon.classList.add("fa-moon");
+        }
+    }
+
+    function toggleDarkMode() {
+        settings.dark_mode = !settings.dark_mode;
+        updateDarkMode();
+        saveSettings();
     }
 
     function refresh_data() {
@@ -3187,7 +3384,9 @@
     initMap();            
     addLabelControl(); 
     addStationControl();
-
+    addRangeControl();
+    updateDarkMode();
+    
     init_postTabsInit();
 
     console.log("Switch to active tab");
