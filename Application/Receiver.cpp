@@ -654,6 +654,10 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		std::string content = ships.getJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r == "/ships_array.json") {
+		std::string content = ships.getJSONcompact();
+		Response(c, "application/json", content, use_zlib & gzip);
+	}
 	else if (r == "/ships_full.json") {
 
 		std::string content = ships.getJSON(true);
