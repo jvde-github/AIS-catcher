@@ -1696,19 +1696,6 @@
 
         const nothasStation = station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
 
-        // add timestamp and check if last update was more than an hour ago
-        /*
-        {
-            const last_signal = new Date(station.last_signal * 1000);
-            const now = new Date();
-            const diff = now - last_signal;
-            const diffHours = Math.floor(diff / 1000 / 60 / 60);
-            if(diffHours > 1) {
-                setPulseError();
-            }
-        }
-        */
-
         if (nothasStation || !settings.show_range) return;
 
         // range plotted in last 15 minutes then return
@@ -1792,7 +1779,7 @@
         if(true) {
             isFetchingShips = true;
             try {
-                response = await fetch('ships.json');
+                response = await fetch('ships_array.json');
             } catch (error) {
                 setPulseError();
                 console.log("failed loading ships: " + error);
@@ -1808,8 +1795,14 @@
         }
         setPulseOk();        
 
+
+        const keys = [  "mmsi",  "lat",  "lon",  "distance",  "bearing",  "level",  "count",  "ppm",  "approx",  "heading",  "cog",  "speed",  "to_bow",  "to_stern",  "to_starboard",  "to_port",  "shiptype",  "validated",  "msg_type",  "channels",  "country",  "status",  "draught",  "eta_month",  "eta_day",  "eta_hour",  "eta_minute",  "imo",  "callsign",  "shipname",  "destination",  "last_signal"];
+
         shipsDB = {};
-        ships.ships.forEach(s => {
+        ships.values.forEach(v => {
+            
+            const s = Object.fromEntries(keys.map((k, i) => [k, v[i] ]));
+            
             if(includeShip(s)) {
                 const entry = {}; 
                 s.mmsi_type = getMMSItype(s);
@@ -1830,7 +1823,7 @@
             center = {lat: ship.lat, lon: ship.lon};
         }
         
-        return ships.ships.length;
+        return ships.values.length;
     }
 
     function toggleScreenSize() {

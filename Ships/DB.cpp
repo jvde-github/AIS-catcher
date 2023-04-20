@@ -70,6 +70,100 @@ void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, f
 	bearing = rad2deg(atan2(y, x));
 }
 
+// add member to get JSON in form of array with values and keys seperately
+std::string DB::getJSONcompact(bool full) {
+	const std::string null_str = "null";
+	const std::string comma = ",";
+	std::string str;
+
+	content = "{\"count\":" + std::to_string(count) + comma;
+	if (latlon_share)
+		content += ",\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "},";
+
+	content += "\"values\":[";
+
+	std::time_t tm = time(nullptr);
+	int ptr = first;
+
+	delim = "";
+	while (ptr != -1) {
+		const VesselDetail ship = ships[ptr].ship;
+		if (ship.mmsi != 0) {
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
+			if (!full && delta_time > TIME_HISTORY) break;
+
+			content += delim + "[" + std::to_string(ship.mmsi) + comma;
+			if (isValidCoord(ship.lat, ship.lon)) {
+				content += std::to_string(ship.lat) + comma;
+				content += std::to_string(ship.lon) + comma;
+
+				if (isValidCoord(lat, lon)) {
+					content += std::to_string(ship.distance) + comma;
+					content += std::to_string(ship.angle) + comma;
+				}
+				else {
+					content += null_str + comma;
+					content += null_str + comma;
+				}
+			}
+			else {
+				content += null_str + comma;
+				content += null_str + comma;
+				content += null_str + comma;
+				content += null_str + comma;
+			}
+
+			// content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
+			content += std::to_string(ship.level) + comma;
+			content += std::to_string(ship.count) + comma;
+			content += std::to_string(ship.ppm) + comma;
+			content += std::string(ship.approximate ? "true" : "false") + comma;
+
+			content += ((ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ship.heading)) + comma;
+			content += ((ship.cog == COG_UNDEFINED) ? null_str : std::to_string(ship.cog)) + comma;
+			content += ((ship.speed == SPEED_UNDEFINED) ? null_str : std::to_string(ship.speed)) + comma;
+
+			content += ((ship.to_bow == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_bow)) + comma;
+			content += ((ship.to_stern == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_stern)) + comma;
+			content += ((ship.to_starboard == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_starboard)) + comma;
+			content += ((ship.to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_port)) + comma;
+
+			content += std::to_string(ship.shiptype) + comma;
+			content += std::to_string(ship.validated) + comma;
+			content += std::to_string(ship.msg_type) + comma;
+			content += std::to_string(ship.channels) + comma;
+			content += "\"" + std::string(ship.country_code) + "\",";
+			content += std::to_string(ship.status) + comma;
+
+			content += std::to_string(ship.draught) + comma;
+
+			content += ((ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ship.month)) + comma;
+			content += ((ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ship.day)) + comma;
+			content += ((ship.hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(ship.hour)) + comma;
+			content += ((ship.minute == ETA_MINUTE_UNDEFINED) ? null_str : std::to_string(ship.minute)) + comma;
+
+			content += ((ship.IMO == IMO_UNDEFINED) ? null_str : std::to_string(ship.IMO)) + comma;
+
+			str = std::string(ship.callsign);
+			JSON::StringBuilder::stringify(str, content);
+
+			content += comma;
+			str = std::string(ship.shipname) + (ship.virtual_aid ? std::string(" [V]") : std::string(""));
+			JSON::StringBuilder::stringify(str, content);
+
+			content += comma;
+			str = std::string(ship.destination);
+			JSON::StringBuilder::stringify(str, content);
+
+			content += comma + std::to_string(delta_time) + "]";
+			delim = comma;
+		}
+		ptr = ships[ptr].next;
+	}
+	content += "],\"error\":false}\n\n";
+	return content;
+}
+
 std::string DB::getJSON(bool full) {
 	const std::string null_str = "null";
 	std::string str;
