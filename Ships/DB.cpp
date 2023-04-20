@@ -78,7 +78,7 @@ std::string DB::getJSONcompact(bool full) {
 
 	content = "{\"count\":" + std::to_string(count) + comma;
 	if (latlon_share)
-		content += ",\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "},";
+		content += "\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "},";
 
 	content += "\"values\":[";
 
