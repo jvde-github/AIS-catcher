@@ -29,6 +29,13 @@ New feature that sends messages to (e.g.) MarineTraffic as a TCP client (with au
 ````
 AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
 ````
+
+Latest build also has an option to show the range on the map (run the program with `share_loc on`) and a light/dark mode switch:
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/52420030/233175928-43d9bf66-0002-4f6b-93e7-ba5f98b50d11.png" width="30%"/>
+</p>
+
 ## Usage
 ````
 use: AIS-catcher [options]
