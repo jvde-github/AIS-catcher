@@ -36,7 +36,7 @@
         --header-font-color: white;
         --menu-background-color: white;
         --menu-background-hover-color: #daebfe;
-        --menu-font-color: dimgrey;
+        --menu-font-color: rgb(66, 66, 66);
         --mainspace-container-color: lightgrey;
         --table-header-background-color: var(--primary-color);
         --table-background-color: white;
@@ -911,7 +911,7 @@
         }
 
         #context-menu li:hover {
-            background-color: #f5f5f5;
+            background-color: var(--menu-background-hover-color);
         }
 
         #context-menu i {
@@ -974,7 +974,7 @@
             <li onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Show on VesselFinder</li>
             <li onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Show on ShipXplorer</li>
             <hr>
-            <li onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show shipcard</li>
+            <li onclick="showShipcard(context_mmsi)"><i class="fab fa-ship"></i>Show shipcard</li>
         </ul>
 
         <div class="tabcontent" id="about">
