@@ -899,15 +899,15 @@
             display: flex;
             align-items: center;
             height: 24px;
+            margin: auto;
             padding: 0 16px;
             cursor: pointer;
             white-space: nowrap; /* Prevent wrapping */
         }
 
-        #context-menu hr {
-            margin: 0;
-            border: none;
+        #context-menu div {
             border-top: 1px solid #ccc;
+            margin: 5px 0;
         }
 
         #context-menu li:hover {
@@ -917,6 +917,7 @@
         #context-menu i {
             margin-right: 8px;
             font-size: 16px;
+            width: 16px;
         }
 
         #context-menu .dynamic-item {
@@ -968,13 +969,17 @@
             <li class="dynamic-item"><i class="fas fa-crosshairs"></i>Pin to center</li>
             <li onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
             <li onclick="copyMMSI(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
-            <hr>
+
+            <div></div>
+
             <li onclick="openGoogle(context_mmsi)"><i class="fab fa-google"></i>Search on Google</li>
             <li onclick="openMarineTraffic(context_mmsi)"><i class="fab fa-m"></i>Show on MarineTraffic</li>
             <li onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Show on VesselFinder</li>
             <li onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Show on ShipXplorer</li>
-            <hr>
-            <li onclick="showShipcard(context_mmsi)"><i class="fab fa-ship"></i>Show shipcard</li>
+
+            <div></div>
+
+            <li onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show shipcard</li>
         </ul>
 
         <div class="tabcontent" id="about">
@@ -1291,7 +1296,7 @@
 
     function copyMMSI(m) {
         if(!navigator.clipboard) {
-            alert("Please copy the MMSI manually: " + m);
+            alert("Cannot copy in this browser. Please copy manually: " + m);
         }
         navigator.clipboard.writeText(m);
     }
