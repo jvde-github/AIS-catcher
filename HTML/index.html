@@ -975,7 +975,7 @@
             <li onclick="copyMMSI(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
 
             <li class="divider"></li>
-            <li onclick="openGoogle(context_mmsi)"><i class="fab fa-google"></i>Search on Google</li>
+            <li onclick="openGoogleSearch(context_mmsi)"><i class="fab fa-google"></i>Search on Google</li>
             <li onclick="openMarineTraffic(context_mmsi)"><i class="fab fa-m"></i>Show on MarineTraffic</li>
             <li onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Show on VesselFinder</li>
             <li onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Show on ShipXplorer</li>
@@ -1305,7 +1305,7 @@
         navigator.clipboard.writeText(m);
     }
 
-    function openGoogle(m) {
+    function openGoogleSearch(m) {
         window.open("https://www.google.com/search?q=" + m);
     }
 
