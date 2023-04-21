@@ -30,10 +30,15 @@ New feature that sends messages to (e.g.) MarineTraffic as a TCP client (with au
 AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
 ````
 
-Latest build also has an option to show the range on the map (run the program with `share_loc on`) and a light/dark mode switch:
+Latest build also has an option to show the range on the map (run the program with `share_loc on`):
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/52420030/233175928-43d9bf66-0002-4f6b-93e7-ba5f98b50d11.png" width="30%"/>
+<img width="649" alt="image" src="https://user-images.githubusercontent.com/52420030/233730949-7be02133-2152-48b3-9360-1cc9736d2817.png">
+</p>
+
+You can also  activate now a dark mode theme and right click on a ship icon to get a context sensitive menu:
+<p align="center">
+<img width="373" alt="image" src="https://user-images.githubusercontent.com/52420030/233730574-59f65178-c172-43a9-887c-4cf635c269f2.png">
 </p>
 
 ## Usage
