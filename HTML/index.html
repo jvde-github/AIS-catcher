@@ -1297,6 +1297,7 @@
     getCallSign = ship => ship.callsign;
     includeShip = ship => true;
 
+    
     function copyMMSI(m) {
         if(!navigator.clipboard) {
             alert("Cannot copy in this browser. Please copy manually: " + m);
@@ -2767,6 +2768,8 @@
 
             row.setAttribute("mmsi", ship.mmsi);
             row.setAttribute("onclick", "tableRowClick(" + ship.mmsi + ");");
+            row.setAttribute("oncontextmenu", "showContextMenu(event, " + ship.mmsi + ");");
+
 
             let nameCell = row.insertCell(0); nameCell.innerHTML = getFlag(ship.country) +  getShipName(ship);
 
