@@ -880,6 +880,52 @@
         color: lightgrey;
     }
 
+    #context-menu {
+        position: absolute;
+        display: none;
+        background-color: var(--menu-background-color);
+        border: 1px solid #ccc;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        list-style-type: none;
+        padding: 8px 0;
+        z-index: 10000;
+        font-size: 14px;
+        color: var(--menu-font-color);
+        width: auto;
+        margin: 0;
+    }
+
+        #context-menu li {
+            display: flex;
+            align-items: center;
+            height: 24px;
+            padding: 0 16px;
+            cursor: pointer;
+            white-space: nowrap; /* Prevent wrapping */
+        }
+
+        #context-menu hr {
+            margin: 0;
+            border: none;
+            border-top: 1px solid #ccc;
+        }
+
+        #context-menu li:hover {
+            background-color: #f5f5f5;
+        }
+
+        #context-menu i {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+
+        #context-menu .dynamic-item {
+            color: #666;
+        }
+
+            #context-menu .dynamic-item:hover {
+                background-color: transparent;
+            }
 </style>
 
 <link rel="stylesheet" href="config.css">
@@ -917,6 +963,20 @@
 </nav>
 <div class="mainspace-container">
     <div class="mainspace">
+
+        <ul id="context-menu">
+            <li class="dynamic-item"><i class="fas fa-crosshairs"></i>Pin to center</li>
+            <li onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
+            <li onclick="copyMMSI(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
+            <hr>
+            <li onclick="openGoogle(context_mmsi)"><i class="fab fa-google"></i>Search on Google</li>
+            <li onclick="openMarineTraffic(context_mmsi)"><i class="fab fa-m"></i>Show on MarineTraffic</li>
+            <li onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Show on VesselFinder</li>
+            <li onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Show on ShipXplorer</li>
+            <hr>
+            <li onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show shipcard</li>
+        </ul>
+
         <div class="tabcontent" id="about">
             <div class="aboutpage" id="about_content"></div>
         </div>
@@ -926,7 +986,7 @@
                     <div>
                         <span>Station</span><span id="stat_station"></span>
                     </div>
-                </section>            
+                </section>
                 <section>
                     <div>
                         <span>Device</span><span id="stat_product"></span>
@@ -937,7 +997,7 @@
                     <div>
                         <span>Serial</span><span id="stat_serial"></span>
                     </div>
-                </section>        
+                </section>
                 <section>
                     <div>
                         <span>Version</span><span id="stat_build_describe"></span>
@@ -948,7 +1008,7 @@
                     <div>
                         <span>Engine</span><span id="stat_model"></span>
                     </div>
-                </section>    
+                </section>
                 <section>
                     <div>
                         <span>Sampling rate</span><span id="stat_sample_rate"></span>
@@ -959,7 +1019,7 @@
                     <div>
                         <span>Running time</span><span id="stat_run_time"></span>
                     </div>
-                </section>            
+                </section>
                 <section>
                     <div>
                         <span>Total messages</span><span id="stat_stat_count"></span>
@@ -979,7 +1039,7 @@
                     <div>
                         <span>Vessels seen</span><span id="stat_vessel_count"></span>
                     </div>
-                </section>            
+                </section>
                 <section>
                     <div>
                         <span>Channel A</span><span id="stat_stat_channel0"></span>
@@ -1101,75 +1161,75 @@
         </div>
 
         <div class="tabcontent" id="map">
-                <aside id="shipcard" class="shipcard-ismax">
-                    <header id="shipcard_header">                        
-                        <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-                        <span><i title="Center map on current vessel" onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
-                        <span><i title="Show track of current vessel" onclick="showTrack()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
-                        <span><i onclick="setStation()" class="shipcard-header-icon fa-solid  fa-thumbtack"></i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-plus"></i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-minus"></i></span>
-                        <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
-                    </header>
+            <aside id="shipcard" class="shipcard-ismax">
+                <header id="shipcard_header">
+                    <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
+                    <span><i title="Center map on current vessel" onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
+                    <span><i title="Show track of current vessel" onclick="showTrack()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
+                    <span><i onclick="setStation()" class="shipcard-header-icon fa-solid  fa-thumbtack"></i></span>
+                    <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-plus"></i></span>
+                    <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-minus"></i></span>
+                    <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
+                </header>
 
-                    <div id="shipcard_content">
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>Status</span><span id="shipcard_status"></span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>Sender</span><span id="shipcard_type"></span></div>
-                            <div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
-                            <div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
-                            <div><span>IMO</span><span id="shipcard_imo">-</span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-row-selected">
-                            <div><span>Course</span><span id="shipcard_cog">-</span></div>
-                            <div><span>Speed</span><span id="shipcard_speed">-</span></div>
-                            <div><span>Heading</span><span id="shipcard_heading">-</span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only ">
-                            <div><span>Latitude</span><span id="shipcard_lat">-</span></div>
-                            <div><span>Longitude</span><span id="shipcard_lon">-</span></div>
-                            <div><span>Distance</span><span id="shipcard_distance">-</span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>Destination</span><span id="shipcard_destination"></span></div>
-                            <div><span>ETA</span><span id="shipcard_eta"></span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>last signal</span><span id="shipcard_last_signal"></span></div>
-                            <div><span>Count</span><span id="shipcard_count">-</span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>RSSI</span><span id="shipcard_level">-</span></div>
-                            <div><span>Drift</span><span id="shipcard_ppm">-</span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
-                            <div><span>Draught</span><span id="shipcard_draught">-</span></div>
-                        </div>
-
-                        <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
-                            <div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
-                            <div><span>Channels</span><span id="shipcard_channels">-</span></div>
-                        </div>
-
+                <div id="shipcard_content">
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>Status</span><span id="shipcard_status"></span></div>
                     </div>
-                    <footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">              
-                        <div title="Center map on current vessel" onclick="mapResetView(13)"><i class="fa-solid fa-bullseye fa-xl"></i><span>Focus</span></div>
-                        <div title="Show track of current vessel"  onclick="showTrack()"><i class="fa-solid fa-route fa-xl"></i><span>Track</span></div>
-                    </footer>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>Sender</span><span id="shipcard_type"></span></div>
+                        <div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
+                        <div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
+                        <div><span>IMO</span><span id="shipcard_imo">-</span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-row-selected">
+                        <div><span>Course</span><span id="shipcard_cog">-</span></div>
+                        <div><span>Speed</span><span id="shipcard_speed">-</span></div>
+                        <div><span>Heading</span><span id="shipcard_heading">-</span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only ">
+                        <div><span>Latitude</span><span id="shipcard_lat">-</span></div>
+                        <div><span>Longitude</span><span id="shipcard_lon">-</span></div>
+                        <div><span>Distance</span><span id="shipcard_distance">-</span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>Destination</span><span id="shipcard_destination"></span></div>
+                        <div><span>ETA</span><span id="shipcard_eta"></span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>last signal</span><span id="shipcard_last_signal"></span></div>
+                        <div><span>Count</span><span id="shipcard_count">-</span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>RSSI</span><span id="shipcard_level">-</span></div>
+                        <div><span>Drift</span><span id="shipcard_ppm">-</span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
+                        <div><span>Draught</span><span id="shipcard_draught">-</span></div>
+                    </div>
+
+                    <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                        <div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
+                        <div><span>Channels</span><span id="shipcard_channels">-</span></div>
+                    </div>
+
+                </div>
+                <footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">
+                    <div title="Center map on current vessel" onclick="mapResetView(13)"><i class="fa-solid fa-bullseye fa-xl"></i><span>Focus</span></div>
+                    <div title="Show track of current vessel" onclick="showTrack()"><i class="fa-solid fa-route fa-xl"></i><span>Track</span></div>
+                </footer>
             </aside>
 
             <div class="maptab">
@@ -1229,7 +1289,45 @@
     getCallSign = ship => ship.callsign;
     includeShip = ship => true;
 
-    
+    function copyMMSI(m) {
+        if(!navigator.clipboard) {
+            alert("Please copy the MMSI manually: " + m);
+        }
+        navigator.clipboard.writeText(m);
+    }
+
+    function openGoogle(m) {
+        window.open("https://www.google.com/search?q=" + m);
+    }
+
+    function openMarineTraffic(m) {
+        window.open(" https://www.marinetraffic.com/en/ais/details/ships/mmsi:" + m);
+    }
+
+    function openShipXplorer(m) {
+        window.open("https://www.shipxplorer.com/data/vessels/IMO-MMSI-" + m);
+    }
+
+    function openVesselFinder(m) {
+        window.open("https://www.vesselfinder.com/vessels/details/" + m);
+    }
+
+    function showContextMenu(event, mmsi) {
+        var contextMenu = document.getElementById('context-menu');
+
+        event.preventDefault();
+        context_mmsi = mmsi;
+
+        contextMenu.style.display = 'block';
+        contextMenu.style.left = (event.pageX + 5) + 'px';
+        contextMenu.style.top = (event.pageY + 5) + 'px';
+
+        document.addEventListener('click', function hideContextMenu(event) {
+            contextMenu.style.display = 'none';
+            document.removeEventListener('click', hideContextMenu);
+        });
+    }
+
     function getStatusVal(ship) {
         const StringFromStatus = ["Under way using engine",
             "At anchor",
@@ -2879,6 +2977,7 @@
             markers[ship.mmsi].on('click', function (e) { showShipcard(ship.mmsi); });
             markers[ship.mmsi].on('mouseover', function (e) { startHover(ship.mmsi); });
             markers[ship.mmsi].on('mouseout', function (e) { endHover(ship.mmsi); });
+            markers[ship.mmsi].on('contextmenu', function (e) { showContextMenu(event, ship.mmsi); });
 
             markers[ship.mmsi].bindTooltip(getTooltipContent(ship), { opacity: 0.85, permanent: false, offset: [15, 0], direction: 'right' });
             markers[ship.mmsi].closeTooltip();
@@ -2889,7 +2988,15 @@
             setHoverMarker([ship.lat, ship.lon]);
     }
 
-    function mapResetView(z) { map.setView(marker_focus.getLatLng(), Math.max(z,map.getZoom())); shipcardMinIfMaxonMobile(); }
+    function mapResetView(z, m) {
+        if (m && m in shipsDB) {
+            let ship = shipsDB[m].raw;
+            map.setView([ship.lat, ship.lon], Math.max(z, map.getZoom()));
+        }
+        else
+            map.setView(marker_focus.getLatLng(), Math.max(z, map.getZoom()));
+        shipcardMinIfMaxonMobile();
+    }
 
     function shipcardVisible() {
         return document.getElementById('shipcard').classList.contains('visible');
