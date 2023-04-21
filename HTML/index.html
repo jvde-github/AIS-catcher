@@ -55,6 +55,7 @@
         --hover-transform: scale(0.93);
         --hover-transition: transform ease-out 0.2s, background 0.4s;
         --hover-background: rgba(255, 255, 255, 0.5);
+        --graph-header-color: white;
     }
 
     .dark {
@@ -93,6 +94,7 @@
         --chart4-color: rgba(255, 219, 158, 0.9);
         --chart5-color: rgba(158, 255, 239, 0.9);
         --hover-background: rgba(255, 255, 255, 0.1);
+        --graph-header-color: rgb(27, 0, 27);
     }
 
     body,
@@ -378,7 +380,7 @@
         border-right: 10px solid lightgray;
 
         background-color: var(--secondary-color);
-        color: white;
+        color: var(--graph-header-color);
         
         text-align: center;
         font-size: 1.0em;
