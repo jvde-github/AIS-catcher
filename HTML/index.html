@@ -1322,9 +1322,26 @@
         contextMenu.style.left = (event.pageX + 5) + 'px';
         contextMenu.style.top = (event.pageY + 5) + 'px';
 
+        // Get dimensions
+        var contextMenuRect = contextMenu.getBoundingClientRect();
+        var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+        // Calculate maximum X and Y coordinates
+        var maxX = viewportWidth - contextMenuRect.width;
+        var maxY = viewportHeight - contextMenuRect.height;
+
+        // Adjust X and Y coordinates if necessary
+        var adjustedX = Math.min(event.pageX + 5, maxX);
+        var adjustedY = Math.min(event.pageY + 5, maxY);
+
+        // Set positions
+        contextMenu.style.left = adjustedX + 'px';
+        contextMenu.style.top = adjustedY + 'px';
+
         document.addEventListener('click', function hideContextMenu(event) {
-            contextMenu.style.display = 'none';
-            document.removeEventListener('click', hideContextMenu);
+        contextMenu.style.display = 'none';
+        document.removeEventListener('click', hideContextMenu);
         });
     }
 
