@@ -1834,7 +1834,7 @@
 
                 const now = new Date();
 
-                if(Math.floor((now - range_update_time) / 1000 / 60) < 15) return;
+                if(Math.floor((now - range_update_time) / 1000 / 60) < 5) return;
                 range_update_time = now;
             }
             else
@@ -1863,16 +1863,18 @@
 
         const N = h.day.stat[0].radar_a.length;
         range = [];
-
+ 
+        const curve_corr = 1.015426611885745; 
+     
         for (let i = 0; i < N; i++) {
             let m = 0;
             for (j = 0; j < h.hour.stat.length; j++) {
-                m = Math.max(m, h.hour.stat[j].radar_a[i]);
-                m = Math.max(m, h.hour.stat[j].radar_b[i]);
+                m = Math.max(m, curve_corr * h.hour.stat[j].radar_a[i]);
+                m = Math.max(m, curve_corr * h.hour.stat[j].radar_b[i]);
             }
             for (j = 0; j < h.minute.stat.length; j++) {
-                m = Math.max(m, h.minute.stat[j].radar_a[i]);
-                m = Math.max(m, h.minute.stat[j].radar_b[i]);
+                m = Math.max(m, curve_corr * h.minute.stat[j].radar_a[i]);
+                m = Math.max(m, curve_corr * h.minute.stat[j].radar_b[i]);
             }
             range.push(m);
         }
@@ -1880,6 +1882,7 @@
         const deltaNorth = calcOffset1M(station, 0);
         const deltaEast = calcOffset1M(station, 90);
 
+        // create polygon - included conversion from NMi -> meters
         for (let i = 0; i < N; i++) {
             range_outline.push({
                 lat: station.lat + range[i] * deltaNorth[0] * 1000 / 0.5399568 * Math.cos(i * 2 / N * Math.PI),
