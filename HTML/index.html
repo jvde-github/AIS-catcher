@@ -1747,6 +1747,12 @@
 
             controlDiv.addEventListener('click', function () {
 
+                if(!settings.show_range) {
+                    if(!((typeof param_share_loc != "undefined") && param_share_loc) || typeof param_lat === "undefined" || typeof param_lon === "undefined" ) {
+                        alert("Warning: Unable to show range as AIS-catcher was not started with 'share_loc on lat xxx lon yyy'");
+                    }
+                }
+
                 settings.show_range = !settings.show_range;
                 updateRangeControl();
                 saveSettings();

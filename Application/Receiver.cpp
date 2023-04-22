@@ -735,12 +735,16 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	}
 	else if (option == "LAT") {
 		lat = Util::Parse::Float(arg);
+		plugins += "param_lat=" + std::to_string(lat) + ";\n";
 	}
 	else if (option == "SHARE_LOC") {
-		ships.setShareLatLon(Util::Parse::Switch(arg));
+		bool b = Util::Parse::Switch(arg);
+		ships.setShareLatLon(b);
+		plugins += "param_share_loc=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "LON") {
 		lon = Util::Parse::Float(arg);
+		plugins += "param_lon=" + std::to_string(lon) + ";\n";
 	}
 	else if (option == "HISTORY") {
 		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600));
