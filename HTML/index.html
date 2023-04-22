@@ -1407,7 +1407,7 @@
 
         function copyClipboard(t) {
             if (!navigator.clipboard)
-                showDialog("Error","Cannot copy in this browser. Please copy manually: " + t);
+                showDialog("Action","No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
             else
                 navigator.clipboard.writeText(t);
         }
