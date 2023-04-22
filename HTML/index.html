@@ -1354,12 +1354,23 @@
         getCallSign = ship => ship.callsign;
         includeShip = ship => true;
 
+        function copyClipboard(t) {
+            if (!navigator.clipboard) {
+                alert("Cannot copy in this browser. Please copy manually: " + t);
+            }
+            navigator.clipboard.writeText(coords);
+        }
+
+        function copyCoordinates(m) {
+            let coords = 'not found';
+
+            if (m in shipsDB)
+                coords = shipsDB[m].raw.lat + "," + shipsDB[m].raw.lon;
+            copyClipboard(coords);
+        }
 
         function copyMMSI(m) {
-            if (!navigator.clipboard) {
-                alert("Cannot copy in this browser. Please copy manually: " + m);
-            }
-            navigator.clipboard.writeText(m);
+            copyClipboard(m);
         }
 
         function openGoogleSearch(m) {
