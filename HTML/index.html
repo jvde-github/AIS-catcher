@@ -887,6 +887,7 @@
         display: none;
         background-color: var(--menu-background-color);
         border: 1px solid #ccc;
+        border-radius: 5px;
         box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
         list-style-type: none;
         padding: 8px 0;
@@ -943,6 +944,7 @@
         top: 0;
         background-color: var(--menu-background-color);
         border: 1px solid #ccc;
+        border-radius: 5px;
         box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
         list-style-type: none;
         padding: 8px 0;
@@ -983,12 +985,59 @@
         display: inline;
     }
 
+/* Existing styles... */
+
+.hidden {
+    display: none;
+}
+
+#dialog-box {
+    position: fixed;
+    width: 300px;
+    background-color: var(--menu-background-color);
+    color: var(--menu-font-color);
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
+}
+
+.dialog-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.dialog-message {
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.dialog-close {
+    background-color: var(--menu-background-hover-color);
+    border: none;
+    color: var(--menu-font-color);
+    padding: 8px 16px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+
 </style>
 
 <link rel="stylesheet" href="config.css">
 </head>
 
-<body oncontextmenu="showContextMenu(event,0,[])">
+<body>
 
     <div class="header">
         <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="fa-solid fa-bars"></i></div>
@@ -1019,7 +1068,7 @@
         <div onclick="activateTab(event,'about')" id="about_tab"><i class="fa-solid fa-circle-info"></i><span>About</span></div>
     </nav>
     <div class="mainspace-container">
-        <div class="mainspace">
+        <div  oncontextmenu="showContextMenu(event,0,[])" class="mainspace">
 
             <ul id="context-menu">
                 <li class="submenu">
@@ -1041,6 +1090,12 @@
                 <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Find on VesselFinder</li>
                 <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Find on ShipXplorer</li>
             </ul>
+
+            <div id="dialog-box" class="hidden">
+                <div class="dialog-title">Dialog Title</div>
+                <div class="dialog-message">This is the message area.</div>
+                <button class="dialog-close" onclick="closeDialog()">Close</button>
+            </div>
 
             <div class="tabcontent" id="about">
                 <div class="aboutpage" id="about_content"></div>
@@ -1355,10 +1410,10 @@
         includeShip = ship => true;
 
         function copyClipboard(t) {
-            if (!navigator.clipboard) {
-                alert("Cannot copy in this browser. Please copy manually: " + t);
-            }
-            navigator.clipboard.writeText(t);
+            if (!navigator.clipboard)
+                showDialog("Error","Cannot copy in this browser. Please copy manually: " + t);
+            else
+                navigator.clipboard.writeText(t);
         }
 
         function copyCoordinates(m) {
@@ -1389,7 +1444,6 @@
             window.open("https://www.vesselfinder.com/vessels/details/" + m);
         }
 
-
         function showContextMenu(event, mmsi, context) {
             var contextMenu = document.getElementById('context-menu');
 
@@ -1408,7 +1462,6 @@
             mmsiItems.forEach(item => {
                 item.style.display = b ? 'flex' : 'none';
             });
-
             b = context.includes("ctx-map");
             mmsiItems = document.querySelectorAll('.ctx-map');
             mmsiItems.forEach(item => {
@@ -1419,20 +1472,16 @@
             contextMenu.style.left = (event.pageX + 5) + 'px';
             contextMenu.style.top = (event.pageY + 5) + 'px';
 
-            // Get dimensions
             var contextMenuRect = contextMenu.getBoundingClientRect();
             var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
             var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
 
-            // Calculate maximum X and Y coordinates
             var maxX = viewportWidth - contextMenuRect.width;
             var maxY = viewportHeight - contextMenuRect.height;
 
-            // Adjust X and Y coordinates if necessary
             var adjustedX = Math.min(event.pageX + 5, maxX);
             var adjustedY = Math.min(event.pageY + 5, maxY);
 
-            // Set positions
             contextMenu.style.left = adjustedX + 'px';
             contextMenu.style.top = adjustedY + 'px';
 
@@ -1440,6 +1489,21 @@
                 contextMenu.style.display = 'none';
                 document.removeEventListener('click', hideContextMenu);
             });
+        }
+
+        function showDialog(title, message) {
+            var dialogBox = document.getElementById('dialog-box');
+            var dialogTitle = dialogBox.querySelector('.dialog-title');
+            var dialogMessage = dialogBox.querySelector('.dialog-message');
+            
+            dialogTitle.innerText = title;
+            dialogMessage.innerText = message;
+            dialogBox.classList.remove('hidden');
+        }
+
+        function closeDialog() {
+            var dialogBox = document.getElementById('dialog-box');
+            dialogBox.classList.add('hidden');
         }
 
         function getStatusVal(ship) {
@@ -1885,7 +1949,7 @@
 
 
         function showPlugins() {
-            alert("Loaded plugins:\n" + plugins);
+            showDialog("Plugins","Loaded plugins:\n" + plugins);
         }
 
         async function fetchStatistics() {
