@@ -538,7 +538,7 @@ As per full release `v0.45` there is functionality to write messages to a databa
 ```console
 sudo -u postgres createdb ais
 ```
-Set up the necessary tables:
+Set up the necessary tables from the AIS-catcher directory:
 ```console
 psql ais <DBMS/create.sql 
 ```
