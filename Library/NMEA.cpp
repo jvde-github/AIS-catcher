@@ -71,12 +71,16 @@ namespace AIS {
 			msg.setChannel(aivdm.channel);
 
 			addline(aivdm);
-			if (regenerate)
-				msg.buildNMEA(tag);
-			else
-				msg.NMEA.push_back(aivdm.sentence);
-			Send(&msg, 1, tag);
 
+			if (msg.validate()) {
+				if (regenerate)
+					msg.buildNMEA(tag);
+				else
+					msg.NMEA.push_back(aivdm.sentence);
+				Send(&msg, 1, tag);
+			}
+			else
+				std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << std::endl;
 			return;
 		}
 
@@ -104,10 +108,15 @@ namespace AIS {
 			}
 		}
 
-		if (regenerate)
-			msg.buildNMEA(tag, aivdm.ID);
+		if (msg.validate()) {
+			if (regenerate)
+				msg.buildNMEA(tag, aivdm.ID);
 
-		Send(&msg, 1, tag);
+			Send(&msg, 1, tag);
+		}
+		else
+			std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << std::endl;
+
 		clean(aivdm.channel, aivdm.talkerID);
 	}
 
