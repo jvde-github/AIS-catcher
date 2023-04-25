@@ -70,8 +70,14 @@ namespace AIS {
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			msg.setChannel(channel);
 			msg.setLength(nBits);
-			msg.buildNMEA(tag);
-			Send(&msg, 1, tag);
+
+			if (msg.validate()) {
+				msg.buildNMEA(tag);
+				Send(&msg, 1, tag);
+			}
+			else
+				std::cerr << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength() << std::endl;
+
 			return true;
 		}
 		return false;
