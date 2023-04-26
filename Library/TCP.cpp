@@ -17,7 +17,9 @@
 
 #include <cstring>
 #include <string>
+
 #include "TCP.h"
+#include "Common.h"
 
 namespace TCP {
 	void Client::disconnect() {
@@ -111,12 +113,13 @@ namespace TCP {
 		state = DISCONNECTED;
 	}
 
-	bool ClientPersistent::connect(std::string host, std::string port) {
+	bool ClientPersistent::connect(std::string host, std::string port, bool persist) {
 		int r;
 		struct addrinfo h;
 
 		this->host = host;
 		this->port = port;
+		this->persistent = persist;
 
 		std::memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
@@ -191,9 +194,9 @@ namespace TCP {
 		if (state == DISCONNECTED) {
 			if ((long)time(NULL) - (long)stamp > 10) {
 				std::cerr << "TCP feed (" << host << ":" << port << "): not connected, reconnecting." << std::endl;
-				if (connect(host, port)) {
+				if (connect(host, port, persistent)) {
 					std::cerr << "TCP feed: connected to " << host << ":" << port << std::endl;
-					return true;
+					return 0;
 				}
 			}
 		}
@@ -208,23 +211,27 @@ namespace TCP {
 			else if ((long)time(NULL) - (long)stamp > 10) {
 				std::cerr << "TCP feed (" << host << ":" << port << "): timeout connecting to server, reconnect." << std::endl;
 				reconnect();
-			}			
+				return 0;
+			}	
 		}
 
 		if (state == READY) {
 			int sent = ::send(sock, (char*)data, length, 0);
 
 			if (sent < length) {
-				std::cerr << "TCP feed (" << host << ":" << port << "): send error, reconnect." << std::endl;
-				reconnect();
+				std::cerr << "TCP feed (" << host << ":" << port << "): send error.";
+				if (persistent) {
+					reconnect();
+					std::cerr << " Reconnect.\n";
+				}
+				else
+					std::cerr << std::endl;
 				return -1;
 			}
 			return sent;
 		}
 
 		// connecting or disconnected, so nothing sent
-		return -1;
+		return 0;
 	}
-
-
 }

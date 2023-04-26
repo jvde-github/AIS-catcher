@@ -65,19 +65,20 @@ namespace TCP {
 	// will be combined with above....
 	class ClientPersistent {
 	public:
+		
 		ClientPersistent() {}
 		~ClientPersistent() { disconnect(); }
 
 		void disconnect();
-		bool connect(std::string host, std::string port);
+		bool connect(std::string host, std::string port, bool persist);
 
 		int send(const void* data, int length);
-
 	private:
 		enum State { DISCONNECTED, CONNECTING, READY };
 
 		std::string host;
 		std::string port;
+		bool persistent = true;
 
 		int timeout = 2; // seconds
 
@@ -91,13 +92,11 @@ namespace TCP {
 
 		bool reconnect() {
 			disconnect();
-			if (connect(host, port)) {
+			if (connect(host, port, persistent)) {
 				std::cerr << "TCP feed: connected to " << host << ":" << port << std::endl;
 				return true;
 			}
 			return false;
 		}
 	};
-
-
 }
