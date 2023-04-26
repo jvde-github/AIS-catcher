@@ -74,6 +74,10 @@ namespace Demod {
 				t = a - b;
 				bits[nPhases - 1 - j] = (bits[nPhases - 1 - j] << 1) | (t > 0);
 				ma[nPhases - 1 - j] = weight * ma[nPhases - 1 - j] + (1 - weight) * std::abs(t);
+
+				// prevent error propagation of inf and nan in input
+				if (std::isinf(ma[j]) || std::isnan(ma[j])) ma[j] = 0;
+				if (std::isinf(ma[nPhases - 1 - j]) || std::isnan(ma[nPhases - 1 - j])) ma[nPhases - 1 - j] = 0;
 			}
 
 			// we look at previous [max_idx - nSearch, max_idx + nSearch]
