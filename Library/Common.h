@@ -29,6 +29,8 @@
 #define SleepSystem(x) usleep(x * 1000)
 #endif
 
+void StopRequest();
+
 typedef float FLOAT32;
 typedef double FLOAT64;
 typedef std::complex<FLOAT32> CFLOAT32;

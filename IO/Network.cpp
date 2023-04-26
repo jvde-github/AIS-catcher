@@ -454,8 +454,13 @@ namespace IO {
 			for (int i = 0; i < len; i++) {
 				if (!filter.include(data[i])) continue;
 
-				for (const auto& s : data[i].NMEA)
-					SendTo((s + "\r\n").c_str());
+				for (const auto& s : data[i].NMEA) {
+					if (SendTo((s + "\r\n").c_str()) < 0)
+						if (!persistent) {
+							std::cerr << "TCP feed: requesting termination.\n";
+							StopRequest();
+						}
+				}
 			}
 		}
 		else {
@@ -477,7 +482,12 @@ namespace IO {
 
 				for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
 				str += "]}\r\n";
-				SendTo(str);
+
+				if(SendTo(str) <0) 
+					if (!persistent) {
+						std::cerr << "TCP feed: requesting termination.\n";
+						StopRequest();
+					}
 			}
 		}
 	}
@@ -485,9 +495,10 @@ namespace IO {
 	void TCP::Start() {
 		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ", status: ";
 
-		if (tcp.connect(host, port)) 
+		if (tcp.connect(host, port, persistent)) 
 			std::cerr << "connected\n";
 		else
 			std::cerr << "pending\n";
@@ -508,6 +519,9 @@ namespace IO {
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
+		}
+		else if (option == "PERSIST") {
+			persistent = Util::Parse::Switch(arg);
 		}
 		else
 			return filter.Set(option, arg);

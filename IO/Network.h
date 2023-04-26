@@ -173,6 +173,7 @@ namespace IO {
 		bool JSON = false;
 		int source = -1;
 		std::string host, port;
+		bool persistent = true;
 
 	public:
 		virtual Setting& Set(std::string option, std::string arg);
@@ -180,11 +181,11 @@ namespace IO {
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 
 		void Start();
-
 		void Stop();
-		void SendTo(std::string str) {
+		
+		int SendTo(std::string str) {
 
-			tcp.send(str.c_str(), (int)str.length());
+			return tcp.send(str.c_str(), (int)str.length());
 		}
 		void setJSON(bool b) { JSON = b; }
 	};
