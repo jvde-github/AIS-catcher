@@ -12,7 +12,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 
 ### Disclaimer
 
-```AIS-catcher```  is created for research and educational purposes under the GPGL v3 license. It is a hobby project and not tested and designed for reliability and correctness. 
+```AIS-catcher```  is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and not tested and designed for reliability and correctness. 
 You can play with the software but it is the user's responsibility to use it prudently. So,  DO NOT rely upon this software in any way including for navigation 
 and/or safety of life or property purposes.
 There are variations in the legislation concerning radio reception in the different administrations around the world. 
