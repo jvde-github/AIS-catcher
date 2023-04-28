@@ -1405,13 +1405,47 @@
         getCallSign = ship => ship.callsign;
         includeShip = ship => true;
 
-        function copyClipboard(t) {
+        // https://stackoverflow.com/questions/51805395/navigator-clipboard-is-undefined
+        async function copyClipboard(t) {
+            try {
+                await copyToClipboard(t);
+            } catch(error) {
+                showDialog("Action","No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
+            }
+            return;
+
             if (!navigator.clipboard)
                 showDialog("Action","No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
             else
                 navigator.clipboard.writeText(t);
         }
 
+        async function copyToClipboard(textToCopy) {
+            // Navigator clipboard api needs a secure context (https)
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(textToCopy);
+            } else {
+                // Use the 'out of viewport hidden text area' trick
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                    
+                // Move textarea out of the viewport so it's not visible
+                textArea.style.position = "absolute";
+                textArea.style.left = "-999999px";
+                    
+                document.body.prepend(textArea);
+                textArea.select();
+
+                try {
+                    document.execCommand('copy');
+                } catch (error) {
+                    console.error(error);
+                } finally {
+                    textArea.remove();
+                }
+            }
+        }
+        
         function copyCoordinates(m) {
             let coords = 'not found';
 
