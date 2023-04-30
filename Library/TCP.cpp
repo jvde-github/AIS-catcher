@@ -219,15 +219,17 @@ namespace TCP {
 			int sent = ::send(sock, (char*)data, length, 0);
 
 			if (sent < length) {
-				std::cerr << "TCP feed (" << host << ":" << port << "): send error.";
-				if (persistent) {
-					reconnect();
-					std::cerr << " Reconnect.\n";
+					int error_code = errno; 
+					std::cerr << "TCP feed (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+					if (persistent) {
+						reconnect();
+						std::cerr << " Reconnect.\n";
+					}
+					else {
+						std::cerr << std::endl;
+					}
+					return -1;
 				}
-				else
-					std::cerr << std::endl;
-				return -1;
-			}
 			return sent;
 		}
 
