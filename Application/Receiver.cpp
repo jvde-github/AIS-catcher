@@ -683,6 +683,17 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		else
 			Response(c, "application/json", "[]");
 	}
+		else if (r == "/message") {
+		int mmsi = -1;
+		std::stringstream ss(a);
+		ss >> mmsi;
+		if (mmsi >= 1 && mmsi <= 999999999) {
+			std::string content = ships.getMessage(mmsi);
+			Response(c, "application/text", content, use_zlib & gzip);
+		}
+		else
+			Response(c, "application/text","Message not availaible");
+	}
 	else if (r == "/history_full.json") {
 
 		std::string content = "{";
@@ -741,6 +752,11 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		bool b = Util::Parse::Switch(arg);
 		ships.setShareLatLon(b);
 		plugins += "param_share_loc=" + (b ? std::string("true;\n") : std::string("false;\n"));
+	}
+	else if (option == "MESSAGE") {
+		bool b = Util::Parse::Switch(arg);
+		ships.setMsgSave(b);
+		plugins += "message_save=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "LON") {
 		lon = Util::Parse::Float(arg);

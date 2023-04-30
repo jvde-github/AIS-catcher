@@ -45,12 +45,14 @@ const int IMO_UNDEFINED = 0;
 const int ANGLE_UNDEFINED = -1;
 
 class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public StreamOut<JSON::JSON> {
+
 	int first, last, count, path_idx = 0;
 	std::string content, delim;
 	float lat, lon;
 	int TIME_HISTORY = 30 * 60;
 	bool latlon_share = false;
 	bool server_mode = false;
+	bool msg_save = false;
 
 	int N = 4096;
 	int M = 4096;
@@ -85,6 +87,7 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 		std::time_t last_signal;
 		bool approximate = false;
 		char shipname[21] = { 0 }, destination[21] = { 0 }, callsign[8] = { 0 }, country_code[3] = { 0 };
+		std::string *msg = NULL;
 	};
 
 	struct PathList {
@@ -143,9 +146,11 @@ public:
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false);
 	std::string getPathJSON(uint32_t);
+	std::string getMessage(uint32_t);
 
 	int getCount() { return count; }
 	int getMaxCount() { return N; }
 
 	void setServerMode(bool b) { server_mode = b; }
+	void setMsgSave(bool b) { msg_save = b; }
 };
