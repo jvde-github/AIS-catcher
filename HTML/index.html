@@ -1080,7 +1080,7 @@
                 <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
                 <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
-                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="fas fa-copy"></i>Show Last Message</li>
+                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="fas fa-envelope"></i>Show Last Message</li>
                 <li class="mmsi" onclick="copyMMSI(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
                 <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="fas fa-clipboard"></i>Copy Coordinates</li>
                 <li class="divider mmsi"></li>
@@ -1470,7 +1470,7 @@
 
             if (typeof message_save !== 'undefined' && message_save) {
                     s = await fetchNMEA(m);
-                    showDialog("Message",s+"\n\n");
+                    showDialog("Message",s+"\n");
             }
             else 
                 showDialog("Error","Please enable 'MESSAGE on' on AIS-catcher settings.");
