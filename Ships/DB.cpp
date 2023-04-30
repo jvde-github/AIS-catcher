@@ -292,6 +292,12 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 	return content;
 }
 
+std::string DB::getMessage(uint32_t mmsi) {
+	int ptr = findShip(mmsi);
+	if (ptr == -1 || !ships[ptr].ship.msg) return "";
+	return *ships[ptr].ship.msg;
+}
+
 int DB::findShip(uint32_t mmsi) {
 	int ptr = first, cnt = count;
 	while (ptr != -1 && --cnt >= 0) {
@@ -304,6 +310,9 @@ int DB::findShip(uint32_t mmsi) {
 int DB::createShip() {
 	int ptr = last;
 	count = MIN(count + 1, N);
+	if(ships[ptr].ship.msg)
+		delete ships[ptr].ship.msg;
+
 	ships[ptr].ship = VesselDetail();
 
 	return ptr;
@@ -459,6 +468,12 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	if (positionUpdated)
 		ship.approximate = msg->type() == 27;
 
+	if(msg_save) {
+		if(!ship.msg) ship.msg = new std::string();
+		ship.msg->clear();
+		for(const auto& s: msg->NMEA)
+			ship.msg->append(s + "\n");
+	}
 	return positionUpdated;
 }
 

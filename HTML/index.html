@@ -1011,6 +1011,8 @@
     font-size: 14px;
     user-select: text;
     margin-bottom: 20px;
+    overflow-y: auto;
+    box-sizing: border-box; 
 }
 
 .dialog-close {
@@ -1078,6 +1080,7 @@
                 <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
                 <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
+                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="fas fa-copy"></i>Show Last Message</li>
                 <li class="mmsi" onclick="copyMMSI(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
                 <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="fas fa-clipboard"></i>Copy Coordinates</li>
                 <li class="divider mmsi"></li>
@@ -1452,6 +1455,25 @@
             if (m in shipsDB)
                 coords = shipsDB[m].raw.lat + "," + shipsDB[m].raw.lon;
             copyClipboard(coords);
+        }
+
+        async function fetchNMEA(m) {
+            try {
+                response = await fetch('message?'+m);
+            } catch (error) {
+                return "Error fetching message from server.";
+            }
+            return response.text();
+        }
+
+        async function showNMEA(m) {
+
+            if (typeof message_save !== 'undefined' && message_save) {
+                    s = await fetchNMEA(m);
+                    showDialog("Message",s)
+            }
+            else 
+                showDialog("Error","Please enable 'MESSAGE on' on AIS-catcher settings.");
         }
 
         function copyMMSI(m) {
