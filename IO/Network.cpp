@@ -361,6 +361,7 @@ namespace IO {
 				}
 				catch (std::exception const& e) {
 					std::cerr << "UDP: " << e.what() << std::endl;
+					StopRequest();
 				}
 			}
 		}
