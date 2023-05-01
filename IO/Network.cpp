@@ -403,7 +403,7 @@ namespace IO {
 		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON);
-		if(reconnect) std::cerr << ", RECONNECT " << reconnect_time;
+		if(reconnect) std::cerr << ", reconnect: " << reconnect_time;
 		std::cerr << std::endl;
 
 		if (sock != -1) {
