@@ -1470,7 +1470,7 @@
 
             if (typeof message_save !== 'undefined' && message_save) {
                     s = await fetchNMEA(m);
-                    showDialog("Message",s+"\n");
+                    showDialog("Message " + m,s+"\n");
             }
             else 
                 showDialog("Error","Please enable 'MESSAGE on' on AIS-catcher settings.");
