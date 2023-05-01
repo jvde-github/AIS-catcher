@@ -402,7 +402,9 @@ namespace IO {
 	void UDP::Start() {
 		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
-		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << std::endl;
+		std::cerr << ", JSON: " << Util::Convert::toString(JSON);
+		if(reconnect) std::cerr << ", RECONNECT " << reconnect_time;
+		std::cerr << std::endl;
 
 		if (sock != -1) {
 			throw std::runtime_error("UDP: internal error, socket already defined.");
@@ -434,10 +436,16 @@ namespace IO {
 	}
 
 	void UDP::Stop() {
+		std::cerr << "UDP: close socket for host: " << host << ", port: " << port << std::endl;
+
 		if (sock != -1) {
 			closesocket(sock);
 			sock = -1;
 		}
+		if (address != NULL) {
+			freeaddrinfo(address);
+			address = NULL;
+    	}
 	}
 
 	Setting& UDP::Set(std::string option, std::string arg) {

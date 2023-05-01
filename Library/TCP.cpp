@@ -109,6 +109,12 @@ namespace TCP {
 	void ClientPersistent::disconnect() {
 		if (sock != -1)
 			closesocket(sock);
+
+		if (address != NULL) {
+			freeaddrinfo(address);
+			address = NULL;
+		}
+
 		sock = -1;
 		state = DISCONNECTED;
 	}
