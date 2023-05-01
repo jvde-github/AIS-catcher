@@ -352,6 +352,19 @@ namespace IO {
 	}
 
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
+		if(reconnect) {
+			std::time_t now = std::time(nullptr);
+			if (now - last_reconnect > 60*reconnect_time) {
+				try {
+					Stop();
+					Start();
+				}
+				catch (std::exception const& e) {
+					std::cerr << "UDP: " << e.what() << std::endl;
+				}
+			}
+		}
+		
 		if (sock != -1) {
 			if (!JSON) {
 				for (int i = 0; i < len; i++) {
@@ -416,6 +429,8 @@ namespace IO {
 		if (sock == -1) {
 			throw std::runtime_error("cannot create socket for UDP " + host + " port " + port);
 		}
+		if(reconnect)
+			last_reconnect = std::time(nullptr);
 	}
 
 	void UDP::Stop() {
@@ -438,7 +453,8 @@ namespace IO {
 			JSON = Util::Parse::Switch(arg);
 		}
 		else if (option == "RECONNECT") {
-			reconnect = Util::Parse::Switch(arg);
+			reconnect_time = Util::Parse::Integer(arg,1,24*60);
+			reconnect = true;
 		}
 		else
 			return filter.Set(option, arg);

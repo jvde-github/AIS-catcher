@@ -136,6 +136,8 @@ namespace IO {
 		int source = -1;
 		std::string host, port;
 		bool reconnect = false;
+		int reconnect_time = 10;
+		std::time_t last_reconnect = 0;
 		AIS::Filter filter;
 		bool JSON = false;
 
@@ -156,13 +158,7 @@ namespace IO {
 		void Stop();
 		void SendTo(std::string str) {
 
-			int sent = sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
-
-			if (reconnect && sent < 0) {
-				Stop();
-				Start();
-				sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
-			}
+			sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 		}
 		void setJSON(bool b) { JSON = b; }
 	};
