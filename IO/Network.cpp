@@ -352,17 +352,29 @@ namespace IO {
 	}
 
 	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
-		if(reconnect) {
-			std::time_t now = std::time(nullptr);
-			if (now - last_reconnect > 60*reconnect_time) {
-				try {
-					Stop();
-					Start();
-				}
-				catch (std::exception const& e) {
-					std::cerr << "UDP: " << e.what() << std::endl;
+		if(reset > 0) {
+			long now = (long) std::time(nullptr);
+			if ((now - last_reconnect) > 60*reset) {
+#ifdef WIN32
+				std::cerr << "UDP: recreate socket." << std::endl;
+#else
+				int optval;
+				socklen_t optlen = sizeof(optval);
+				int ret = getsockopt(sock, SOL_SOCKET, SO_ERROR, &optval, &optlen);
+				if(ret == 0 && optval == 0)
+					std::cerr << "UDP: recreate socket, note socket still correct" << std::endl;
+				else
+					std::cerr << "UDP: recreate socket ("<< ret << "," << optval << "): " << strerror(errno) << std::endl;
+#endif
+				closesocket(sock);
+				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+
+				if (sock == -1) {
+					std::cerr << "UDP: cannot create socket. Requesting termination.\n";
 					StopRequest();
 				}
+
+				last_reconnect = now;
 			}
 		}
 		
@@ -404,7 +416,7 @@ namespace IO {
 		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON);
-		if(reconnect) std::cerr << ", reconnect: " << reconnect_time;
+		if(reset > 0) std::cerr << ", reset: " << reset;
 		std::cerr << std::endl;
 
 		if (sock != -1) {
@@ -432,8 +444,8 @@ namespace IO {
 		if (sock == -1) {
 			throw std::runtime_error("cannot create socket for UDP " + host + " port " + port);
 		}
-		if(reconnect)
-			last_reconnect = std::time(nullptr);
+		if(reset > 0)
+			last_reconnect = (long) std::time(nullptr);
 	}
 
 	void UDP::Stop() {
@@ -461,9 +473,8 @@ namespace IO {
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
 		}
-		else if (option == "RECONNECT") {
-			reconnect_time = Util::Parse::Integer(arg,1,24*60);
-			reconnect = true;
+		else if (option == "RESET") {
+			reset = Util::Parse::Integer(arg,1,24*60);
 		}
 		else
 			return filter.Set(option, arg);

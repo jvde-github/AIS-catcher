@@ -135,9 +135,8 @@ namespace IO {
 		struct addrinfo* address = NULL;
 		int source = -1;
 		std::string host, port;
-		bool reconnect = false;
-		int reconnect_time = 10;
-		std::time_t last_reconnect = 0;
+		int reset = -1;
+		long last_reconnect = 0;
 		AIS::Filter filter;
 		bool JSON = false;
 
