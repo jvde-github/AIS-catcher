@@ -980,54 +980,54 @@
         display: inline;
     }
 
-/* Existing styles... */
+    .hidden {
+        display: none;
+    }
 
-.hidden {
-    display: none;
-}
+    #dialog-box {
+        position: fixed;
+        max-height: 80vh;
+        max-width: 80vw;
+        background-color: var(--menu-background-color);
+        color: var(--menu-font-color);
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10001;
+    }
 
-#dialog-box {
-    position: fixed;
-    width: 300px;
-    background-color: var(--menu-background-color);
-    color: var(--menu-font-color);
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-    padding: 20px;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10001;
-}
+    .dialog-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
 
-.dialog-title {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
+    .dialog-message {
+        font-size: 14px;
+        user-select: text;
+        margin-bottom: 20px;
+        max-height: 60vh;
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
 
-.dialog-message {
-    font-size: 14px;
-    user-select: text;
-    margin-bottom: 20px;
-    overflow-y: auto;
-    box-sizing: border-box; 
-}
-
-.dialog-close {
-    background-color: var(--menu-background-hover-color);
-    border: none;
-    color: var(--menu-font-color);
-    padding: 8px 16px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 14px;
-    margin: 4px 2px;
-    cursor: pointer;
-    border-radius: 4px;
-}
+    .dialog-close {
+        background-color: var(--menu-background-hover-color);
+        border: none;
+        color: var(--menu-font-color);
+        padding: 8px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
 
 
 </style>
@@ -1080,6 +1080,7 @@
                 <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
                 <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
+                <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="fas fa-envelope"></i>Show Vessel Database Entry</li>
                 <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="fas fa-envelope"></i>Show Last Message</li>
                 <li class="mmsi" onclick="copyMMSI(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
                 <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="fas fa-clipboard"></i>Copy Coordinates</li>
@@ -1460,11 +1461,11 @@
             copyClipboard(coords);
         }
 
-        async function fetchNMEA(m) {
+        async function fetchJSON(l,m) {
             try {
-                response = await fetch('message?'+m);
+                response = await fetch(l+'?'+m);
             } catch (error) {
-                return "Error fetching message from server.";
+                showialog("Error",error);  
             }
             return response.text();
         }
@@ -1472,11 +1473,38 @@
         async function showNMEA(m) {
 
             if (typeof message_save !== 'undefined' && message_save) {
-                    s = await fetchNMEA(m);
-                    showDialog("Message " + m,s+"\n");
+                s = await fetchJSON('message', m);
+                let obj = JSON.parse(s);
+
+                let tableHtml = '<table>';
+                for (let key in obj) {
+                    let value = obj[key];
+                    if (Array.isArray(value)) {
+                        value = JSON.stringify(value);
+                    }
+                    tableHtml += '<tr><td>' + key + '</td><td>' + value + '</td></tr>';
+                }
+                tableHtml += '</table>';
+
+                showDialog("Message " + m, tableHtml);
             }
             else 
                 showDialog("Error","Please enable 'MESSAGE on' on AIS-catcher settings.");
+            }
+
+
+        async function showVesselDetail(m) {
+
+            s = await fetchJSON('vessel', m);
+            let obj = JSON.parse(s);
+
+            let tableHtml = '<table>';
+            for (let key in obj) {
+                tableHtml += '<tr><td>' + key + '</td><td>' + obj[key] + '</td></tr>';
+            }
+            tableHtml += '</table>';
+
+            showDialog("Vessel " + m, tableHtml);
         }
 
         function copyMMSI(m) {
@@ -1552,7 +1580,7 @@
             var dialogMessage = dialogBox.querySelector('.dialog-message');
             
             dialogTitle.innerText = title;
-            dialogMessage.innerText = message;
+            dialogMessage.innerHTML = message;
             dialogBox.classList.remove('hidden');
         }
 

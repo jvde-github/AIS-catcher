@@ -46,6 +46,8 @@ const int ANGLE_UNDEFINED = -1;
 
 class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public StreamOut<JSON::JSON> {
 
+	JSON::StringBuilder builder;
+
 	int first, last, count, path_idx = 0;
 	std::string content, delim;
 	float lat, lon;
@@ -133,6 +135,9 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
 
 public:
+
+	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
+
 	void setup(float lat = 0.0f, float lon = 0.0f);
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setShareLatLon(bool b) { latlon_share = b; }
@@ -143,6 +148,8 @@ public:
 		lon = data[0].lon;
 	}
 
+	void getShipJSON(const VesselDetail& ship, std::string& content, long int now);
+	std::string getShipJSON(int mmsi);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false);
 	std::string getPathJSON(uint32_t);

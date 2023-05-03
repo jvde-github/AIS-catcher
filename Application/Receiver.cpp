@@ -684,7 +684,7 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		else
 			Response(c, "application/json", "[]");
 	}
-		else if (r == "/message") {
+	else if (r == "/message") {
 		int mmsi = -1;
 		std::stringstream ss(a);
 		ss >> mmsi;
@@ -694,6 +694,17 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		}
 		else
 			Response(c, "application/text","Message not availaible");
+	}
+	else if (r == "/vessel") {
+		int mmsi = -1;
+		std::stringstream ss(a);
+		ss >> mmsi;
+		if (mmsi >= 1 && mmsi <= 999999999) {
+			std::string content = ships.getShipJSON(mmsi);
+			Response(c, "application/text", content, use_zlib & gzip);
+		}
+		else
+			Response(c, "application/text", "Message not availaible");
 	}
 	else if (r == "/history_full.json") {
 
