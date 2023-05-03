@@ -355,17 +355,9 @@ namespace IO {
 		if(reset > 0) {
 			long now = (long) std::time(nullptr);
 			if ((now - last_reconnect) > 60*reset) {
-#ifdef WIN32
+
 				std::cerr << "UDP: recreate socket." << std::endl;
-#else
-				int optval;
-				socklen_t optlen = sizeof(optval);
-				int ret = getsockopt(sock, SOL_SOCKET, SO_ERROR, &optval, &optlen);
-				if(ret == 0 && optval == 0)
-					std::cerr << "UDP: recreate socket, note socket still correct" << std::endl;
-				else
-					std::cerr << "UDP: recreate socket ("<< ret << "," << optval << "): " << strerror(errno) << std::endl;
-#endif
+
 				closesocket(sock);
 				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
