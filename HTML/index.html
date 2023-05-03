@@ -1127,6 +1127,9 @@
                         <div>
                             <span>Engine</span><span id="stat_model"></span>
                         </div>
+                        <div>
+                            <span>Memory</span><span id="stat_memory"></span>
+                        </div>
                     </section>
                     <section>
                         <div>
@@ -2751,6 +2754,7 @@
                 [0, 1, 2, 3].forEach(e => document.getElementById('stat_stat_channel' + e).innerHTML = stat.stat.channel[e]);
 
                 // special formatting
+                document.getElementById("stat_memory").innerHTML = stat.memory? (Number(stat.memory/1000000).toFixed(1) + " MB") : "N/A";
                 document.getElementById("stat_msg_rate").innerHTML = Number(stat.msg_rate).toFixed(1) + " msg/s";
                 document.getElementById("stat_run_time").innerHTML = getDeltaTimeVal(stat.run_time);
 

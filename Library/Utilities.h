@@ -25,6 +25,14 @@
 #include <fstream>
 #include <mutex>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <psapi.h>
+#else
+#include <unistd.h>
+#endif
+
+
 #include "Stream.h"
 #include "Common.h"
 
@@ -119,6 +127,29 @@ namespace Util {
 			return str;
 		}
 		static std::vector<std::string> getFilesWithExtension(const std::string& directory, const std::string& extension);
+
+		static long getMemoryConsumption() {
+			int memory = 0;
+#ifdef _WIN32
+			HANDLE hProcess = GetCurrentProcess();
+			PROCESS_MEMORY_COUNTERS_EX pmc;
+			if (GetProcessMemoryInfo(hProcess, reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc))) {
+				memory = pmc.WorkingSetSize;
+			}
+#else
+			std::ifstream statm("/proc/self/statm");
+			if (statm.is_open()) {
+				std::string line;
+				std::getline(statm, line);
+				std::stringstream ss(line);
+				ss >> memory;
+			}
+			memory *= sysconf(_SC_PAGESIZE);
+#endif
+			return memory;
+
+		}
+
 	};
 
 	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {
