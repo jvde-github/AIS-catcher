@@ -142,9 +142,10 @@ namespace Util {
 				std::string line;
 				std::getline(statm, line);
 				std::stringstream ss(line);
-				ss >> memory;
+				long size, resident, shared, text, lib, data, dt;
+				ss >> size >> resident >> shared >> text >> lib >> data >> dt;
+				memory = resident * sysconf(_SC_PAGESIZE);
 			}
-			memory *= sysconf(_SC_PAGESIZE);
 #endif
 			return memory;
 
