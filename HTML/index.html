@@ -1889,7 +1889,7 @@
             map.on('zoomend', function (evt) { saveSettings(); updateTooltips(); });
             map.on('click', function () {
                 if (singleClickTimeout == null) {
-                    singleClickTimeout = setTimeout(() => { showShipcard(null); hideMenuifSmall(); singleClickTimeout = null; }, 400);
+                    singleClickTimeout = setTimeout(() => { showShipcard(null); hideMenuifSmall(); closeDialog(); singleClickTimeout = null; }, 400);
                 }
             });
             map.on('dblclick dragstart zoomstart', function () { if (singleClickTimeout != null) { clearTimeout(singleClickTimeout); singleClickTimeout = null; } });
