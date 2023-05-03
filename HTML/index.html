@@ -1480,7 +1480,7 @@
                 for (let key in obj) {
                     let value = obj[key];
                     if (Array.isArray(value)) {
-                        value = JSON.stringify(value);
+                        value = JSON.stringify(value).replace(/</g, '&lt;').replace(/>/g, '&gt;');
                     }
                     tableHtml += '<tr><td>' + key + '</td><td>' + value + '</td></tr>';
                 }
@@ -2032,7 +2032,7 @@
 
 
         function showPlugins() {
-            showDialog("Plugins","Loaded plugins:\n" + plugins);
+            showDialog("Plugins","<pre>Loaded plugins:\n" + plugins + "</pre>");
         }
 
         async function fetchStatistics() {
