@@ -765,7 +765,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		ships.setShareLatLon(b);
 		plugins += "param_share_loc=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
-	else if (option == "MESSAGE") {
+	else if (option == "MESSAGE" || option == "MSG") {
 		bool b = Util::Parse::Switch(arg);
 		ships.setMsgSave(b);
 		plugins += "message_save=" + (b ? std::string("true;\n") : std::string("false;\n"));
