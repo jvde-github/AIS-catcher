@@ -356,7 +356,7 @@ namespace IO {
 			long now = (long) std::time(nullptr);
 			if ((now - last_reconnect) > 60*reset) {
 
-				std::cerr << "UDP: recreate socket." << std::endl;
+				std::cerr << "UDP: recreate socket (" << host << ":" << port << ")" << std::endl;
 
 				closesocket(sock);
 				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
