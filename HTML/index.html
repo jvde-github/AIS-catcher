@@ -1076,6 +1076,7 @@
                         <li id="setting1" onclick="selectSetting(1)">Not implemented yet<span class="marker"><i class="fas fa-check"></i></span></li>
                     </ul>
                 </li>
+                <li class="copy-text" onclick="copyText(context_mmsi)"><i class="fas fa-clipboard"></i>Copy to Clipboard</li>
                 <li class="divider mmsi"></li>
                 <li class="mmsi-map"><i class="fas fa-crosshairs"></i>Pin to center</li>
                 <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
@@ -1083,7 +1084,7 @@
                 <li class="divider mmsi-map"></li>
                 <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="fas fa-database"></i>Show Vessel Database Entry</li>
                 <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="fas fa-envelope"></i>Show Last Message</li>
-                <li class="mmsi" onclick="copyMMSI(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
+                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
                 <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="fas fa-clipboard"></i>Copy Coordinates</li>
                 <li class="divider mmsi"></li>
                 <li class="mmsi" onclick="openGoogleSearch(context_mmsi)"><i class="fab fa-google"></i>Search on Google</li>
@@ -1377,6 +1378,7 @@
 
         var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
 
+        var context_text = "";
         // default settings
         var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true };
         let isFetchingShips = false;
@@ -1474,24 +1476,27 @@
         async function showNMEA(m) {
 
             if (typeof message_save !== 'undefined' && message_save) {
-                s = await fetchJSON('message', m);
-                let obj = JSON.parse(s);
+                const s = await fetchJSON('message', m);
+                const obj = JSON.parse(s);
 
                 let tableHtml = '<table>';
                 for (let key in obj) {
                     let value = obj[key];
                     if (Array.isArray(value)) {
-                        value = JSON.stringify(value).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        value = JSON.stringify(value).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '\\\'').replace(/"/g, '\\"');
                     }
-                    tableHtml += '<tr><td>' + key + '</td><td>' + value + '</td></tr>';
+                    tableHtml += '<tr><td>' + key + '</td><td oncontextmenu=\'showContextMenu(event,"' + value + ' ",["copy-text"])\'>' + value + '</td></tr>';
+
+                    //tableHtml += '<tr><td>' + key + '</td><td oncontextmenu=\'showContextMenu(event,"' + value + '",["copy-text"])\'>' + value + '</td></tr>';
                 }
                 tableHtml += '</table>';
 
-                showDialog("Message " + m, tableHtml);
+                showDialog('Message ' + m, tableHtml);
+            } else {
+                showDialog('Error', 'Please enable "-N MSG on" in AIS-catcher settings.');
             }
-            else 
-                showDialog("Error","Please enable '-N MSG on' on AIS-catcher settings.");
         }
+
 
 
         async function showVesselDetail(m) {
@@ -1508,7 +1513,7 @@
             showDialog("Vessel " + m, tableHtml);
         }
 
-        function copyMMSI(m) {
+        function copyText(m) {
             copyClipboard(m);
         }
 
@@ -1548,6 +1553,11 @@
             });
             b = context.includes("ctx-map");
             mmsiItems = document.querySelectorAll('.ctx-map');
+            mmsiItems.forEach(item => {
+                item.style.display = b ? 'flex' : 'none';
+            });
+            b = context.includes("copy-text");
+            mmsiItems = document.querySelectorAll('.copy-text');
             mmsiItems.forEach(item => {
                 item.style.display = b ? 'flex' : 'none';
             });
