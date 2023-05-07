@@ -526,7 +526,7 @@ namespace IO {
 		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ", status: ";
 
-		if (tcp.connect(host, port, persistent)) 
+		if (tcp.connect(host, port, persistent, 0)) 
 			std::cerr << "connected\n";
 		else
 			std::cerr << "pending\n";

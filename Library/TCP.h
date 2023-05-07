@@ -46,32 +46,18 @@
 #endif
 
 namespace TCP {
+
 	class Client {
-
-		SOCKET sock = -1;
-		int timeout = 2;
-
-		struct addrinfo* address = NULL;
-
-	public:
-		bool connect(std::string host, std::string port);
-		void disconnect();
-
-		void setTimeout(int t) { timeout = t; }
-		int read(void* data, int length, bool wait = false);
-		int send(const char* msg, int len) { return ::send(sock, msg, len, 0); }
-	};
-
-	// will be combined with above....
-	class ClientPersistent {
 	public:
 		
-		ClientPersistent() {}
-		~ClientPersistent() { disconnect(); }
+		Client() {}
+		~Client() { disconnect(); }
 
 		void disconnect();
-		bool connect(std::string host, std::string port, bool persist);
+		bool connect(std::string host, std::string port, bool persist, int timeout);
 
+		void setResetTime(int t) { reset_time = t; }
+		int read(void* data, int length, int t, bool wait = false);
 		int send(const void* data, int length);
 	private:
 		enum State { DISCONNECTED, CONNECTING, READY };
@@ -79,8 +65,8 @@ namespace TCP {
 		std::string host;
 		std::string port;
 		bool persistent = true;
-
-		int timeout = 2; // seconds
+		int reset_time = -1;
+		int timeout = 0;
 
 		int sock = -1;
 		State state = DISCONNECTED;
@@ -88,12 +74,13 @@ namespace TCP {
 
 		struct addrinfo* address = NULL;
 
-		bool isConnected();
+		void updateState();
+		bool isConnected(int t);
 
 		bool reconnect() {
 			disconnect();
-			if (connect(host, port, persistent)) {
-				std::cerr << "TCP feed: connected to " << host << ":" << port << std::endl;
+			if (connect(host, port, persistent, timeout)) {
+				std::cerr << "TCP (" << host << ":" << port << "): connected." << std::endl;
 				return true;
 			}
 			return false;

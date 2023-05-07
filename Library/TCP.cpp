@@ -22,91 +22,8 @@
 #include "Common.h"
 
 namespace TCP {
+
 	void Client::disconnect() {
-		if (sock != -1)
-			closesocket(sock);
-	}
-
-	bool Client::connect(std::string host, std::string port) {
-		int r;
-		struct addrinfo h;
-		fd_set fdr, fdw;
-
-		std::memset(&h, 0, sizeof(h));
-		h.ai_family = AF_UNSPEC;
-		h.ai_socktype = SOCK_STREAM;
-		h.ai_protocol = IPPROTO_TCP;
-
-#ifndef _WIN32
-		h.ai_flags = AI_ADDRCONFIG;
-#endif
-
-		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
-		if (code != 0 || address == NULL) return false;
-
-		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-		if (sock == -1) return false;
-
-#ifndef _WIN32
-		r = fcntl(sock, F_GETFL, 0);
-		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
-
-		if (r == -1) return false;
-#else
-		u_long mode = 1; // 1 to enable non-blocking socket
-		ioctlsocket(sock, FIONBIO, &mode);
-#endif
-
-		if (::connect(sock, address->ai_addr, (int)address->ai_addrlen) != -1)
-			return true;
-
-#ifndef _WIN32
-		if (errno != EINPROGRESS) {
-			closesocket(sock);
-			sock = -1;
-			return false;
-		}
-#endif
-
-		FD_ZERO(&fdr);
-		FD_SET(sock, &fdr);
-
-		FD_ZERO(&fdw);
-		FD_SET(sock, &fdw);
-
-		timeval to = { timeout, 0 };
-
-		if (select(sock + 1, &fdr, &fdw, NULL, &to) > 0) {
-			int error;
-			socklen_t len = sizeof(error);
-
-			getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len);
-			if (error != 0) return false;
-
-			return true;
-		}
-		return false;
-	}
-
-	int Client::read(void* data, int length, bool wait) {
-		fd_set fd;
-
-		FD_ZERO(&fd);
-		FD_SET(sock, &fd);
-
-		timeval to = { timeout, 0 };
-
-		if (select(sock + 1, &fd, NULL, NULL, &to) < 0) {
-			return -1;
-		}
-
-		if (FD_ISSET(sock, &fd)) {
-			return recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
-		}
-		return 0;
-	}
-
-	void ClientPersistent::disconnect() {
 		if (sock != -1)
 			closesocket(sock);
 
@@ -119,13 +36,14 @@ namespace TCP {
 		state = DISCONNECTED;
 	}
 
-	bool ClientPersistent::connect(std::string host, std::string port, bool persist) {
+	bool Client::connect(std::string host, std::string port, bool persist, int timeout) {
 		int r;
 		struct addrinfo h;
 
 		this->host = host;
 		this->port = port;
 		this->persistent = persist;
+		this->timeout = timeout;
 
 		std::memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
@@ -167,10 +85,12 @@ namespace TCP {
 		}
 #endif
 
-		return isConnected();
+		return isConnected(timeout);
 	}
 
-	bool ClientPersistent::isConnected() {
+	bool Client::isConnected(int t) {
+
+		if (state == READY) return true;
 		fd_set fdr, fdw;
 
 		FD_ZERO(&fdr);
@@ -179,7 +99,7 @@ namespace TCP {
 		FD_ZERO(&fdw);
 		FD_SET(sock, &fdw);
 
-		timeval to = { 0, 1 };
+		timeval to = { t, 1 };
 
 		if (select(sock + 1, &fdr, &fdw, NULL, &to) > 0) {
 			int error;
@@ -196,50 +116,106 @@ namespace TCP {
 		return false;
 	}
 
-	int ClientPersistent::send(const void* data, int length) {
+
+	void Client::updateState() {
+
+		if (state == READY && reset_time > 0 && (long)time(NULL) - (long)stamp > reset_time * 60) {
+			std::cerr << "TCP (" << host << ":" << port << "): connection expired, reconnect." << std::endl;
+			if (connect(host, port, persistent, timeout)) {
+				std::cerr << "TCP (" << host << ":" << port << "): connected." << std::endl;
+				return;
+			}
+		}
+
 		if (state == DISCONNECTED) {
 			if ((long)time(NULL) - (long)stamp > 10) {
-				std::cerr << "TCP feed (" << host << ":" << port << "): not connected, reconnecting." << std::endl;
-				if (connect(host, port, persistent)) {
-					std::cerr << "TCP feed: connected to " << host << ":" << port << std::endl;
-					return 0;
+				std::cerr << "TCP (" << host << ":" << port << "): not connected, reconnecting." << std::endl;
+				if (connect(host, port, persistent, timeout)) {
+					std::cerr << "TCP (" << host << ":" << port << "): connected." << std::endl;
+					return;
 				}
 			}
 		}
 
-		// check if sock is connected
 		if (state == CONNECTING) {
-			bool connected = isConnected();
+			bool connected = isConnected(0);
 
 			if (connected) {
-				std::cerr << "TCP feed (" << host << ":" << port << "): connected to server." << std::endl;
+				std::cerr << "TCP (" << host << ":" << port << "): connected to server." << std::endl;
 			}
 			else if ((long)time(NULL) - (long)stamp > 10) {
-				std::cerr << "TCP feed (" << host << ":" << port << "): timeout connecting to server, reconnect." << std::endl;
+				std::cerr << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect." << std::endl;
 				reconnect();
-				return 0;
-			}	
+				return;
+			}
 		}
+	}
+
+	int Client::send(const void* data, int length) {
+
+		updateState();
 
 		if (state == READY) {
 			int sent = ::send(sock, (char*)data, length, 0);
 
 			if (sent < length) {
 					int error_code = errno; 
-					std::cerr << "TCP feed (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+					std::cerr << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 					if (persistent) {
 						reconnect();
 						std::cerr << " Reconnect.\n";
+						return 0;
 					}
 					else {
 						std::cerr << std::endl;
+						return -1;
 					}
-					return -1;
 				}
 			return sent;
 		}
 
-		// connecting or disconnected, so nothing sent
+		return 0;
+	}
+
+	// zero if no input yet or connection being established
+	int Client::read(void* data, int length, int t, bool wait) {
+
+		updateState();
+
+		if (state == READY) {
+			fd_set fd, fe;
+
+			FD_ZERO(&fd);
+			FD_SET(sock, &fd);
+
+			FD_ZERO(&fe);
+			FD_SET(sock, &fe);
+
+			timeval to = { t, 0 };
+
+			if (select(sock + 1, &fd, NULL, &fe, &to) < 0) return 0;			
+
+			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe)) {
+				int retval = recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
+
+				if (retval <= 0) {
+					int error_code = errno;
+					std::cerr << "TCP (" << host << ":" << port << "): receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+
+					if (persistent) {
+						std::cerr << " Reconnect.\n";
+						reconnect();
+						return 0;
+					}
+					else {
+						std::cerr << std::endl;
+						return -1;
+					}					
+				}
+				return retval;
+			}
+		}
+
 		return 0;
 	}
 }

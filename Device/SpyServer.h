@@ -187,6 +187,7 @@ namespace Device {
 		uint32_t status = 0;
 		std::thread async_thread;
 		std::thread run_thread;
+		int timeout = 2;
 
 		void RunAsync();
 		void Run();

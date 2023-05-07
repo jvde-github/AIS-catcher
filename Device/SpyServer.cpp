@@ -36,7 +36,7 @@ namespace Device {
 
 	void SpyServer::Open(uint64_t h) {
 		std::cerr << "Connecting to SpyServer..." << std::endl;
-		if (!client.connect(host, port))
+		if (!client.connect(host, port, false, timeout))
 			throw std::runtime_error("SPYSERVER: cannot open connection.");
 
 		if (!sendHandshake()) {
@@ -93,7 +93,7 @@ namespace Device {
 		int maxzero = 2;
 
 		while (size > 0 && maxzero >= 0) {
-			int len = client.read(data, size);
+			int len = client.read(data, size, timeout);
 			if (len < 0) return false;
 			if (len == 0) maxzero--;
 			data += len;
@@ -235,7 +235,7 @@ namespace Device {
 			}
 
 			if (remainingBytes) {
-				int len = client.read(data.data(), remainingBytes);
+				int len = client.read(data.data(), remainingBytes, timeout);
 
 				if (len <= 0) {
 					std::cerr << "SPYSERVER: error receiving data from remote host. Cancelling. " << std::endl;
@@ -265,7 +265,6 @@ namespace Device {
 			throw std::runtime_error("SPYSERVER: format not supported.");
 		}
 	}
-
 
 	void SpyServer::Run() {
 		while (isStreaming()) {
