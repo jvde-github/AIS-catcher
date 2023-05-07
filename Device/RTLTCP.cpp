@@ -30,7 +30,8 @@ namespace Device {
 	}
 
 	void RTLTCP::Play() {
-		if (!client.connect(host, port))
+
+		if (!client.connect(host, port, persistent, timeout))
 			throw std::runtime_error("RTLTCP: cannot open socket.");
 
 		if (Protocol == PROTOCOL::RTLTCP) {
@@ -38,7 +39,7 @@ namespace Device {
 				uint32_t magic = 0, tuner = 0, gain = 0;
 			} dongle;
 			// RTLTCP protocol, check for dongle information
-			int len = client.read((char*)&dongle, 12);
+			int len = client.read((char*)&dongle, 12, timeout);
 			if (len != 12 || dongle.magic != 0x304C5452) throw std::runtime_error("RTLTCP: no or invalid response, likely not an rtl-tcp server.");
 		}
 
@@ -77,9 +78,9 @@ namespace Device {
 		std::vector<char> data(TRANSFER_SIZE);
 
 		while (isStreaming()) {
-			int len = client.read(data.data(), TRANSFER_SIZE);
+			int len = client.read(data.data(), TRANSFER_SIZE, 2);
 
-			if (len <= 0) {
+			if (len < 0) {
 				lost = true;
 				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
 				break;
@@ -100,7 +101,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else {
-				if (isStreaming()) std::cerr << "RTLTCP: timeout." << std::endl;
+				if (isStreaming() && format != Format::TXT) std::cerr << "RTLTCP: timeout." << std::endl;
 			}
 		}
 	}
@@ -117,7 +118,8 @@ namespace Device {
 	}
 
 	void RTLTCP::applySettings() {
-		client.setTimeout(timeout);
+		//client.setTimeout(timeout);
+		client.setResetTime(reset_time);
 
 		if (Protocol == PROTOCOL::RTLTCP) {
 			setParameterRTLTCP(5, freq_offset);
@@ -146,8 +148,14 @@ namespace Device {
 		else if (option == "RTLAGC") {
 			RTL_AGC = Util::Parse::Switch(arg);
 		}
+		else if (option == "PERSIST") {
+			persistent = Util::Parse::Switch(arg);
+		}
 		else if (option == "TIMEOUT") {
 			timeout = Util::Parse::Integer(arg, 1, 60);
+		}
+		else if (option == "RESET") {
+			reset_time = Util::Parse::Integer(arg, 1, 60);
 		}
 		else if (option == "HOST") {
 			host = arg;
@@ -174,6 +182,8 @@ namespace Device {
 		std::string str = " host " + host + " port " + port + " timeout " + std::to_string(timeout);
 		str += " tuner " + Util::Convert::toString(tuner_AGC, tuner_Gain);
 		str += " rtlagc " + Util::Convert::toString(RTL_AGC);
+		str += " persist " + Util::Convert::toString(persistent);
+		str += " reset " + (reset_time < 0 ? std::string("none") : std::to_string(reset_time));
 		str += " protocol " + (Protocol == PROTOCOL::NONE ? std::string("NONE") : std::string("RTLTCP"));
 
 		return Device::Get() + str;
