@@ -400,7 +400,6 @@
 
         .tabulator .tabulator-header {
             border-left: 10px solid var(--table-header-background-color);
-            ;
         }
 
             .tabulator .tabulator-header .tabulator-col {
@@ -436,53 +435,9 @@
 
         table {
             height: 100%;
-            min-width: 1300px;
             overflow: auto;
             border-collapse: collapse;
         }
-
-            table thead tr th:nth-child(1),
-            table tbody tr td:nth-child(1) {
-                text-align: left;
-                width: 220px;
-            }
-
-            table thead tr th:nth-child(3),
-            table tbody tr td:nth-child(3) {
-                text-align: left;
-                width: 65px;
-            }
-
-            table thead tr th:nth-child(10),
-            table thead tr th:nth-child(11),
-            table tbody tr td:nth-child(10),
-            table tbody tr td:nth-child(11) {
-                text-align: right;
-                width: 90px;
-            }
-
-            table thead tr th:nth-child(2),
-            table thead tr th:nth-child(4),
-            table thead tr th:nth-child(5),
-            table thead tr th:nth-child(6),
-            table thead tr th:nth-child(7),
-            table thead tr th:nth-child(8),
-            table thead tr th:nth-child(9),
-            table thead tr th:nth-child(12),
-            table thead tr th:nth-child(13),
-            table tbody tr td:nth-child(2),
-            table tbody tr td:nth-child(4),
-            table tbody tr td:nth-child(5),
-            table tbody tr td:nth-child(6),
-            table tbody tr td:nth-child(7),
-            table tbody tr td:nth-child(8),
-            table tbody tr td:nth-child(9),
-            table tbody tr td:nth-child(12),
-            table tbody tr td:nth-child(13),
-            {
-                text-align: right;
-                width: 45px;
-            }
 
             table thead {
                 background-color: var(--table-header-background-color);
@@ -516,15 +471,6 @@
                 padding: 10px 15px;
             }
 
-            table > tbody > tr > td[valid="Pending"],
-            table > tbody > tr > td[valid="No"] {
-                color: red;
-            }
-
-            table > tbody > tr > td[valid="Yes"] {
-                color: green;
-            }
-
             table > tbody > tr:nth-child(even) {
                 background: var(--table-alternate-background-color);
             }
@@ -541,6 +487,11 @@
             color: var(--selection-color);
         }
 
+        #shipTable {
+            max-height: calc(100vh - 135px);
+            max-width: 100vw;
+        }
+
         /* Map styling */
 
         #map {
@@ -548,10 +499,6 @@
             width: 100%;
         }
 
-        #shipTable {
-            max-height: calc(100vh - 135px);
-            max-width: 100vw;
-        }
 
         .maptab {
             height: 100%;
