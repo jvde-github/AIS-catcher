@@ -1504,25 +1504,12 @@
 
             context_mmsi = mmsi;
 
-            b = context.includes("mmsi-map");
-            mmsiItems = document.querySelectorAll('.mmsi-map');
-            mmsiItems.forEach(item => {
-                item.style.display = b ? 'flex' : 'none';
-            });
-            b = context.includes("mmsi");
-            mmsiItems = document.querySelectorAll('.mmsi');
-            mmsiItems.forEach(item => {
-                item.style.display = b ? 'flex' : 'none';
-            });
-            b = context.includes("ctx-map");
-            mmsiItems = document.querySelectorAll('.ctx-map');
-            mmsiItems.forEach(item => {
-                item.style.display = b ? 'flex' : 'none';
-            });
-            b = context.includes("copy-text");
-            mmsiItems = document.querySelectorAll('.copy-text');
-            mmsiItems.forEach(item => {
-                item.style.display = b ? 'flex' : 'none';
+            const classList = ['mmsi-map', 'mmsi', 'ctx-map', 'copy-text', 'table-menu'];
+
+            classList.forEach(className => {
+                const shouldDisplay = context.includes(className);
+                const elements = document.querySelectorAll('.' + className);
+                elements.forEach(element => { element.style.display = shouldDisplay ? 'flex' : 'none'; });
             });
 
             contextMenu.style.display = 'block';
@@ -3050,6 +3037,11 @@
             }
             else {
                 table.updateOrAddData(data);
+                table.getRows().forEach(row => {
+                    const mmsi = row.getData().mmsi;
+                    if (!(mmsi in shipsDB)) 
+                    row.delete();
+                });
             }
         }
 
