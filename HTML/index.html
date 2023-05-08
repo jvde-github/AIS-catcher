@@ -439,6 +439,7 @@
             width: fit-content;
         }
 
+        /* other tables */
         table {
             height: 100%;
             overflow: auto;
@@ -751,11 +752,9 @@
         }
 
         .leaflet-control-layers-toggle,
-        .leaflet-control-label-toggle,
-        .leaflet-control-station-toggle,
+        .leaflet-control-settings-toggle,
         .leaflet-control-zoom-in,
-        .leaflet-control-zoom-out,
-        .label-toggle-control {
+        .leaflet-control-zoom-out {
             font-size: 18px;
             background-color: white;
             min-width: 30px;
@@ -764,8 +763,7 @@
             max-height: 30px;
         }
 
-        .leaflet-control-label-toggle,
-        .leaflet-control-station-toggle {
+        .leaflet-control-settings-toggle {
             text-align: center;
             color: grey;
             transform: translate(200px 0)
@@ -818,7 +816,7 @@
         }
 
         .leaflet-tooltip {
-            background-color: var(--menu-background-color) !important;
+            background-color: var(--table-selection-background-color) !important;
             color: var(--menu-font-color) !important;
         }
 
@@ -909,48 +907,6 @@
                     background-color: transparent;
                 }
 
-        .submenu {
-            position: relative;
-        }
-
-        .submenu-items {
-            position: absolute;
-            display: none;
-            left: 100%;
-            top: 0;
-            background-color: var(--menu-background-color);
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-            list-style-type: none;
-            padding: 8px 0;
-            z-index: 10002;
-            font-size: 14px;
-            color: var(--menu-font-color);
-            width: auto;
-            margin: 0;
-        }
-
-            .submenu-items li {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                height: 24px;
-                margin: auto;
-                padding: 0 16px;
-                cursor: pointer;
-                white-space: nowrap;
-            }
-
-
-                .submenu-items li:hover {
-                    background-color: var(--menu-background-hover-color);
-                }
-
-        .submenu:hover .submenu-items {
-            display: block;
-        }
-
         .marker {
             display: inline;
             margin-left: 16px;
@@ -1032,8 +988,7 @@
         </div>
 
         <div title="Toggle Dark/Light mode" onclick="toggleDarkMode()" class="header-icon"><i id="darkmodetoggle-id" class="fas fa-moon"></i></div>
-        <div title="List installed plugins" onclick="showPlugins()" class="header-icon"><i class="fas  fa-wrench fa-sm"></i></div>
-        <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
+        <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon"><i class="fas fa-cog fa-sm"></i></div>        <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
         <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
 
     </div>
@@ -1045,20 +1000,16 @@
         <div onclick="activateTab(event,'about')" id="about_tab"><i class="fa-solid fa-circle-info"></i><span>About</span></div>
     </nav>
     <div class="mainspace-container">
-        <div oncontextmenu="showContextMenu(event,0,[])" class="mainspace">
+        <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
 
             <ul id="context-menu">
-                <li class="submenu">
-                    <i class="fas fa-cog"></i>Settings
-                    <ul class="submenu-items">
-                        <li id="setting1" onclick="selectSetting(1)">Not implemented yet<span class="marker"><i class="fas fa-check"></i></span></li>
-                    </ul>
-                </li>
                 <li class="copy-text" onclick="copyText(context_mmsi)"><i class="fas fa-clipboard"></i>Copy to Clipboard</li>
                 <li class="divider mmsi"></li>
                 <li class="table-menu" onclick="downloadCSV()"><i class="fas fa-download"></i>Download CSV</li>
                 <li class="divider table-menu"></li>
-                <li class="mmsi-map"><i class="fas fa-crosshairs"></i>Pin to center</li>
+                <li class="ctx-map" onclick="toggleLabel()"><i class="fas fa-tag"></i>Toggle Label display</li>
+                <li class="ctx-map" onclick="toggleRange()"><i class="fas fa-tower-cell"></i>Toggle Range display</li>
+                <li class="divider ctx-map"></li>
                 <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
                 <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
@@ -1071,6 +1022,9 @@
                 <li class="mmsi" onclick="openMarineTraffic(context_mmsi)"><i class="fab fa-m"> </i>Find on MarineTraffic</li>
                 <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Find on VesselFinder</li>
                 <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Find on ShipXplorer</li>
+                <li class="divider mmsi"></li>
+                <li class="settings" onclick="showPlugins()"><i class="fas fa-wrench"></i>Installed Plugins...</li>
+                <li class="settings" onclick="toggleDarkMode()"><i class="fas fa-moon"></i>Toggle Light/Dark mode</li>
             </ul>
 
             <div id="dialog-box" class="hidden">
@@ -1318,7 +1272,7 @@
                     </footer>
                 </aside>
 
-                <div oncontextmenu="showContextMenu(event,0,['ctx-map'])" class="maptab">
+                <div oncontextmenu="showContextMenu(event,0,['settings','ctx-map'])" class="maptab">
                     <div id="leaflet_map"></div>
                 </div>
             </div>
@@ -1446,7 +1400,7 @@
                     if (Array.isArray(value)) {
                         value = JSON.stringify(value).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '\\\'').replace(/"/g, '\\"');
                     }
-                    tableHtml += '<tr><td>' + key + '</td><td oncontextmenu=\'showContextMenu(event,"' + value + ' ",["copy-text"])\'>' + value + '</td></tr>';
+                    tableHtml += '<tr><td>' + key + '</td><td oncontextmenu=\'showContextMenu(event,"' + value + ' ",["settings","copy-text"])\'>' + value + '</td></tr>';
 
                     //tableHtml += '<tr><td>' + key + '</td><td oncontextmenu=\'showContextMenu(event,"' + value + '",["copy-text"])\'>' + value + '</td></tr>';
                 }
@@ -1497,12 +1451,14 @@
         function showContextMenu(event, mmsi, context) {
             var contextMenu = document.getElementById('context-menu');
 
-            event.preventDefault();
-            event.stopPropagation();
+            if (event && event.preventDefault) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
 
             context_mmsi = mmsi;
 
-            const classList = ['mmsi-map', 'mmsi', 'ctx-map', 'copy-text', 'table-menu'];
+            const classList = ['settings', 'mmsi-map', 'mmsi', 'ctx-map', 'copy-text', 'table-menu'];
 
             classList.forEach(className => {
                 const shouldDisplay = context.includes(className);
@@ -1511,27 +1467,35 @@
             });
 
             contextMenu.style.display = 'block';
-            contextMenu.style.left = (event.pageX + 5) + 'px';
-            contextMenu.style.top = (event.pageY + 5) + 'px';
 
-            var contextMenuRect = contextMenu.getBoundingClientRect();
-            var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-            var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            if (context.includes('center')) {
+                contextMenu.style.left = '50%';
+                contextMenu.style.top = '50%';
+                contextMenu.style.transform = 'translate(-50%, -50%)';
+            } else {
+                contextMenu.style.left = (event.pageX + 5) + 'px';
+                contextMenu.style.top = (event.pageY + 5) + 'px';
 
-            var maxX = viewportWidth - contextMenuRect.width;
-            var maxY = viewportHeight - contextMenuRect.height;
+                var contextMenuRect = contextMenu.getBoundingClientRect();
+                var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+                var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
 
-            var adjustedX = Math.min(event.pageX + 5, maxX);
-            var adjustedY = Math.min(event.pageY + 5, maxY);
+                var maxX = viewportWidth - contextMenuRect.width;
+                var maxY = viewportHeight - contextMenuRect.height;
 
-            contextMenu.style.left = adjustedX + 'px';
-            contextMenu.style.top = adjustedY + 'px';
+                var adjustedX = Math.min(event.pageX + 5, maxX);
+                var adjustedY = Math.min(event.pageY + 5, maxY);
+
+                contextMenu.style.left = adjustedX + 'px';
+                contextMenu.style.top = adjustedY + 'px';
+            }
 
             document.addEventListener('click', function hideContextMenu(event) {
                 contextMenu.style.display = 'none';
                 document.removeEventListener('click', hideContextMenu);
             });
         }
+
 
         function showDialog(title, message) {
             var dialogBox = document.getElementById('dialog-box');
@@ -1864,131 +1828,56 @@
             L.DomEvent.disableClickPropagation(document.getElementById('shipcard'));
         }
 
-        function updateLabelControl() {
-            iconLabelSpan.classList.remove('blue');
-            iconLabelSpan.classList.remove('red');
-            iconLabelSpan.classList.remove('grey');
 
-            if (settings.labels) {
-                iconLabelSpan.classList.add('blue');
+        function toggleLabel() {
+            settings.labels = !settings.labels;
+            saveSettings();
+
+            if (!settings.labels) {
+                for (let [key, m] of Object.entries(markers))
+                    if (m.isTooltipOpen()) m.getTooltip().toggle();
             }
-            else {
-                iconLabelSpan.classList.add('grey');
-            }
+            else
+                updateTooltips();
         }
 
-        function updateStationControl(center) {
-            iconStationSpan.classList.remove('blue');
-            iconStationSpan.classList.remove('red');
-            iconStationSpan.classList.remove('grey');
-
-            if (!center.hasOwnProperty('lat') || !center.hasOwnProperty('lon')) {
-                iconStationSpan.classList.add('red');
-                map.dragging.enable();
-            }
-            else if (settings.fix_center) {
-                iconStationSpan.classList.add('blue');
-                map.dragging.disable();
-            }
-            else {
-                iconStationSpan.classList.add('grey');
-                map.dragging.enable();
-            }
-        }
-
-        function addLabelControl() {
+        function addWrenchControl() {
             // ------------
-            var labelToggleControl = L.control({ position: 'bottomright' });
+            var wrenchControl = L.control({ position: 'bottomright' });
 
-            labelToggleControl.onAdd = function (map) {
+            wrenchControl.onAdd = function (map) {
 
                 var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-                controlDiv.title = "Show labels on screen";
-                var controlBoundary = L.DomUtil.create('div', 'leaflet-control-label-toggle', controlDiv);
-                iconLabelSpan = L.DomUtil.create('span', 'fas fa-tag', controlBoundary);
-                updateLabelControl();
+                controlDiv.title = "Settings";
+                var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
+                iconLabelSpan = L.DomUtil.create('span', 'fas fa-ellipsis-h', controlBoundary);
 
-                controlDiv.addEventListener('click', function () {
-
-                    settings.labels = !settings.labels;
-                    updateLabelControl();
-                    saveSettings();
-
-                    if (!settings.labels) {
-                        for (let [key, m] of Object.entries(markers))
-                            if (m.isTooltipOpen()) m.getTooltip().toggle();
-                    }
-                    else
-                        updateTooltips();
-                });
+                controlDiv.addEventListener('click', function (event) { showContextMenu(event,"",['settings','center','ctx-map']); });
                 return controlDiv;
             };
-            addControlToMap(labelToggleControl);
+            addControlToMap(wrenchControl);
         }
 
+        function toggleRange() {
 
-        function addRangeControl() {
-            // ------------
-            var rangeToggleControl = L.control({ position: 'bottomright' });
+            if (!((typeof param_share_loc != "undefined") && param_share_loc) || typeof param_lat === "undefined" || typeof param_lon === "undefined") {
+                showDialog("Error","Unable to show range as AIS-catcher was not started with <pre>-N SHARE_LOC on LAT xxx LON yyy</pre>");
+                settings.show_range = false;                                                                                                                        
+                return;
+            }
 
-            rangeToggleControl.onAdd = function (map) {
+            settings.show_range = !settings.show_range;
+            saveSettings();
 
-                var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-                controlDiv.title = "Show range";
-                var controlBoundary = L.DomUtil.create('div', 'leaflet-control-label-toggle', controlDiv);
-                iconRangeSpan = L.DomUtil.create('span', 'fas fa-tower-cell', controlBoundary);
-                updateRangeControl();
-
-                controlDiv.addEventListener('click', function () {
-
-                    if (!settings.show_range) {
-                        if (!((typeof param_share_loc != "undefined") && param_share_loc) || typeof param_lat === "undefined" || typeof param_lon === "undefined") {
-                            alert("Warning: Unable to show range as AIS-catcher was not started with 'share_loc on lat xxx lon yyy'");
-                        }
-                    }
-
-                    settings.show_range = !settings.show_range;
-                    updateRangeControl();
-                    saveSettings();
-
-                    if (!settings.show_range) {
-                        if (marker_range != null) {
-                            map.removeLayer(marker_range);
-                            marker_range = null;
-                        }
-                    }
-                    else
-                        plotRange();
-                });
-                return controlDiv;
-            };
-            addControlToMap(rangeToggleControl);
-        }
-
-        function addStationControl() {
-            // ------------
-            var stationToggleControl = L.control({ position: 'bottomright' });
-
-            stationToggleControl.onAdd = function (map) {
-
-                StationControlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-                StationControlDiv.title = "Fix map center at center point";
-                var controlBoundary = L.DomUtil.create('div', 'leaflet-control-station-toggle', StationControlDiv);
-                iconStationSpan = L.DomUtil.create('span', 'fas fa-bullseye', controlBoundary);
-                updateStationControl({});
-
-                StationControlDiv.addEventListener('click', function () {
-
-                    settings.fix_center = !settings.fix_center;
-                    saveSettings();
-                    plotStation();
-                });
-                return StationControlDiv;
-            };
-            addControlToMap(stationToggleControl);
-        }
-
-
+            if (!settings.show_range) {
+                if (marker_range != null) {
+                    map.removeLayer(marker_range);
+                    marker_range = null;
+                }
+            }
+            else
+                plotRange();
+        }   
 
         function showPlugins() {
             showDialog("Plugins","<pre>Loaded plugins:\n" + plugins + "</pre>");
@@ -3030,7 +2919,7 @@
                         },
                     ],
                 });
-                table.on("rowContext", function (e, row) { showContextMenu(event, row.getData().mmsi, ['mmsi', 'table-menu']); });
+                table.on("rowContext", function (e, row) { showContextMenu(event, row.getData().mmsi, ['settings','mmsi', 'table-menu']); });
                 table.on("rowClick", function (e, row) { tableRowClick(row.getData().mmsi); });
             }
             else {
@@ -3241,7 +3130,7 @@
                 markers[ship.mmsi].on('click', function (e) { showShipcard(ship.mmsi); });
                 markers[ship.mmsi].on('mouseover', function (e) { startHover(ship.mmsi); });
                 markers[ship.mmsi].on('mouseout', function (e) { endHover(ship.mmsi); });
-                markers[ship.mmsi].on('contextmenu', function (e) { showContextMenu(event, ship.mmsi, ['mmsi', 'mmsi-map']); });
+                markers[ship.mmsi].on('contextmenu', function (e) { showContextMenu(event, ship.mmsi, ['settings','ctx-map','mmsi', 'mmsi-map']); });
 
                 markers[ship.mmsi].bindTooltip(getTooltipContent(ship), { opacity: 0.85, permanent: false, offset: [15, 0], direction: 'right' });
                 markers[ship.mmsi].closeTooltip();
@@ -3474,7 +3363,7 @@
             } else {
                 if (marker_station == null) {
                     marker_station = L.circleMarker([station.lat, station.lon], { interactive: true, color: 'white', radius: 8, weight: 4, fillOpacity: 1, fillColor: 'red', pane: "locationMarker" })
-                    marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, ['station']); });
+                    marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, ['settings','ctx-menu','station']); });
                     marker_station.addTo(map);
                 }
                 else {
@@ -3524,9 +3413,6 @@
                 settings.lon = center.lon;
                 saveSettings();
             }
-
-            // update the menus with the latest center
-            updateStationControl(center);
         }
 
         function showShipcard(m) {
@@ -3762,9 +3648,7 @@
         initFullScreen();
         initPlots();
         initMap();
-        addLabelControl();
-        addStationControl();
-        addRangeControl();
+        addWrenchControl();
         updateDarkMode();
 
         init_postTabsInit();
