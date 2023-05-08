@@ -833,10 +833,28 @@
                             content: "-";
                         }
 
+        .flag-icon {
+            margin-right: 10px;
+        }
+
+        .leaflet-tooltip {
+            background-color: var(--menu-background-color) !important;
+            color: var(--menu-font-color) !important;
+        }
+
+        .leaflet-tooltip .flag-icon {
+            font-size: 12px;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+
         @media only screen and (max-width:750px) {
             .leaflet-tooltip {
                 font-size: 8px;
                 padding: 3px;
+            }
+            .leaflet-tooltip .flag-icon {
+                font-size: 8px;
             }
         }
 
@@ -2716,9 +2734,9 @@
         }
 
         function getFlag(country) {
-            return country ? `<span style="padding-right: 10px" title="` + country + `" class="fi fi-${country.toLowerCase()}"></span> ` : "";
-
+            return country ? `<span class="flag-icon fi fi-${country.toLowerCase()}" title="${country}"></span> ` : "";
         }
+
 
         // fetches main statistics from the server
         async function fetchStatistics() {
@@ -3045,10 +3063,8 @@
             }
         }
 
-
-
         function getTooltipContent(ship) {
-            return getFlag(ship.country) + `<b>${getShipName(ship) || "MMSI: " + ship.mmsi}</b><br>${getDeltaTimeVal(ship.last_signal)} ago`;
+            return getFlag(ship.country) + `<b>${getShipName(ship) || ship.mmsi}</b><br>${getDeltaTimeVal(ship.last_signal)} ago`;
         }
 
         function getTypeVal(ship) {
