@@ -390,6 +390,12 @@
         }
 
         /* Table styling */
+
+        #shipTable {
+            max-height: calc(100vh - 135px);
+            max-width: 100vw;
+        }
+
         .tabulator .tabulator-cell {
             border: dashed thin;
             border-color: lightgrey;
@@ -448,21 +454,8 @@
                 table thead > tr > th {
                     padding: 25px 15px;
                     border-collapse: collapse;
-                    transition: var(--hover-transition);
                 }
 
-            table > thead > tr > th:after {
-                content: " \f0dc ";
-                font-family: "Font Awesome 5 Free";
-                font-weight: 900;
-                color: lightgray;
-            }
-
-            table > thead > tr > th:hover {
-                background: var(--hover-background);
-                transform: var(--hover-transform);
-                cursor: pointer;
-            }
 
             table tbody th,
             td {
@@ -478,19 +471,6 @@
             table > tbody > tr:hover {
                 background: var(--table-selection-background-color);
             }
-
-        .table-aligned-center {
-            text-align: center
-        }
-
-        .selectable {
-            color: var(--selection-color);
-        }
-
-        #shipTable {
-            max-height: calc(100vh - 135px);
-            max-width: 100vw;
-        }
 
         /* Map styling */
 
