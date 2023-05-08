@@ -158,7 +158,7 @@ There are many libraries for decoding AIS messages to JSON format. I encourage y
 ### Web interface
 As per full release v0.42 AIS-catcher includes a simple web interface. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.com/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.com/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.com/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
 
-The web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/), [marked](https://github.com/markedjs/marked) and [flag-icons](https://github.com/lipis/flag-icons). 
+The web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/), tabulator, [marked](https://github.com/markedjs/marked) and [flag-icons](https://github.com/lipis/flag-icons). 
 
 Make sure you use the latest version and start the webserver as follows:
 ```console
