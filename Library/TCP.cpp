@@ -121,10 +121,7 @@ namespace TCP {
 
 		if (state == READY && reset_time > 0 && (long)time(NULL) - (long)stamp > reset_time * 60) {
 			std::cerr << "TCP (" << host << ":" << port << "): connection expired, reconnect." << std::endl;
-			if (connect(host, port, persistent, timeout)) {
-				std::cerr << "TCP (" << host << ":" << port << "): connected." << std::endl;
-				return;
-			}
+			reconnect();
 		}
 
 		if (state == DISCONNECTED) {
@@ -160,6 +157,11 @@ namespace TCP {
 
 			if (sent < length) {
 					int error_code = errno; 
+#ifdef _WIN32
+					if (error_code == WSAEWOULDBLOCK) return 0;
+#else
+					if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
+#endif
 					std::cerr << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 					if (persistent) {
 						reconnect();
@@ -200,6 +202,12 @@ namespace TCP {
 
 				if (retval <= 0) {
 					int error_code = errno;
+#ifdef _WIN32
+					if (error_code == WSAEWOULDBLOCK) return 0;
+#else
+					if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
+#endif
+
 					std::cerr << "TCP (" << host << ":" << port << "): receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 
 					if (persistent) {
