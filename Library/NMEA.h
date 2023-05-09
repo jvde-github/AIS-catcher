@@ -67,8 +67,8 @@ namespace AIS {
 		int search(const AIVDM& a);
 
 		bool isNMEAchar(char c) { return (c >= 40 && c < 88) || (c >= 96 && c <= 56 + 0b111111); }
-		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }
-		int fromHEX(char c) { return (c >= '0' && c <= '9') ? (c - '0') : (c - 'A' + 10); }
+		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
+		int fromHEX(char c) { return (c >= '0' && c <= '9') ? (c - '0') : ((c >= 'A' && c <= 'F') ? (c - 'A' + 10) : (c - 'a' + 10)); }
 
 		int NMEAchecksum(std::string s);
 
