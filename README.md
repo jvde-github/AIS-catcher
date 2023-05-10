@@ -29,7 +29,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 The most recent update presents a modest reconfiguration of the menu items, introducing additional functionalities through the use of context-sensitive menus, accessible through a right-click or long press on iOS. These new options include a theme for dark mode, the display of the station range on the map, simplified adjustment of the map's center, the availability of text-only labels, and the optional decluttering of shiplabels, showing details on the last received messsage from a vessel, among others.
 
 <p align="center">
-<img width="649" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/81dc1e95-0609-4270-9460-ab3cbdb36ddf">
+<img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/81dc1e95-0609-4270-9460-ab3cbdb36ddf">
 </p>
 
 Additionally a new feature has been added that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
