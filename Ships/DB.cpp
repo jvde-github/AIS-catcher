@@ -371,13 +371,13 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDe
 	bool position_updated = false;
 	switch (p.Key()) {
 	case AIS::KEY_LAT:
-		if ((msg->type()) != 8 && (msg->type() != 27 || allowApproximate || v.approximate)) {
+		if ((msg->type()) != 8 && msg->type() != 17 && (msg->type() != 27 || allowApproximate || v.approximate)) {
 			v.lat = p.Get().getFloat();
 			position_updated = true;
 		}
 		break;
 	case AIS::KEY_LON:
-		if ((msg->type()) != 8 && (msg->type() != 27 || allowApproximate || v.approximate)) {
+		if ((msg->type()) != 8 && msg->type() != 17 && (msg->type() != 27 || allowApproximate || v.approximate)) {
 			v.lon = p.Get().getFloat();
 			position_updated = true;
 		}
