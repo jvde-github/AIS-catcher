@@ -25,21 +25,17 @@ Only use this software in regions where such use is permitted.
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
 
 ## What's new
-New feature that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
+
+The most recent update presents a modest reconfiguration of the menu items, introducing additional functionalities through the use of context-sensitive menus, accessible through a right-click or long press on iOS. These new options include a theme for dark mode, the display of the station range on the map, simplified adjustment of the map's center, the availability of text-only labels, and the optional decluttering of shiplabels, showing details on the last received messsage from a vessel, among others.
+
+<p align="center">
+<img width="649" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/81dc1e95-0609-4270-9460-ab3cbdb36ddf">
+</p>
+
+Additionally a new feature has been added that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
 ````
 AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
 ````
-
-Latest build also has an option to show the range on the map (run the program with `share_loc on`):
-
-<p align="center">
-<img width="649" alt="image" src="https://user-images.githubusercontent.com/52420030/233730949-7be02133-2152-48b3-9360-1cc9736d2817.png">
-</p>
-
-You can also  activate now a dark mode theme and right click on a ship icon to get a context sensitive menu:
-<p align="center">
-<img width="373" alt="image" src="https://user-images.githubusercontent.com/52420030/233730574-59f65178-c172-43a9-887c-4cf635c269f2.png">
-</p>
 
 ## Usage
 ````
