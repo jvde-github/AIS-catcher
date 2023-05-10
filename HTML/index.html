@@ -1023,17 +1023,21 @@
         <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
 
             <ul id="context-menu">
+                <li class="station" onclick="pinStation()"><i class="fas fa-thumbtack"></i>Center map on station</li>
+                <li class="divider station"></li>
                 <li class="copy-text" onclick="copyText(context_mmsi)"><i class="fas fa-clipboard"></i>Copy to Clipboard</li>
                 <li class="divider copy-text"></li>
                 <li class="table-menu" onclick="downloadCSV()"><i class="fas fa-download"></i>Download CSV</li>
                 <li class="divider table-menu"></li>
+                <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="fas fa-undo"></i><span id="ctx_unpin">Release map center</span></li>
                 <li class="ctx-map" onclick="toggleLabel()"><i class="fas fa-tag"></i><span id="ctx_labelswitch"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="fas fa-tag"></i><span id="ctx_tooltipstyling"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipOverlap()" ><i class="fas fa-tag"></i><span id="ctx_tooltipoverlap"></span></li>
                 <li class="divider ctx-map"></li>
                 <li class="ctx-map" onclick="toggleRange()"><i class="fas fa-tower-cell"></i><span  id="ctx_range"></span></li>
                 <li class="divider ctx-map"></li>
-                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Focus</li>
+                <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="fas fa-thumbtack"></i>Center map on vessel</li>
+                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Zoom in on vessel</li>
                 <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
                 <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="fas fa-database"></i>Show Vessel Database Entry</li>
@@ -1229,7 +1233,6 @@
                         <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
                         <span><i title="Center map on current vessel" onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
                         <span><i title="Show track of current vessel" onclick="showTrack()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
-                        <span><i onclick="setStation()" class="shipcard-header-icon fa-solid  fa-thumbtack"></i></span>
                         <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-plus"></i></span>
                         <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-minus"></i></span>
                         <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
@@ -1486,7 +1489,7 @@
 
             context_mmsi = mmsi;
 
-            const classList = ['settings', 'mmsi-map', 'mmsi', 'ctx-map', 'copy-text', 'table-menu'];
+            const classList = ['station','settings', 'mmsi-map', 'mmsi', 'ctx-map', 'copy-text', 'table-menu'];
 
             classList.forEach(className => {
                 const shouldDisplay = context.includes(className);
@@ -1494,6 +1497,8 @@
                 elements.forEach(element => { element.style.display = shouldDisplay ? 'flex' : 'none'; });
             });
 
+            document.getElementById("ctx_menu_unpin").style.display = settings.fix_center ? "flex" : "none";
+            
             contextMenu.style.display = 'block';
 
             if (context.includes('center')) {
@@ -3179,10 +3184,10 @@
         function mapResetView(z, m) {
             if (m && m in shipsDB) {
                 let ship = shipsDB[m].raw;
-                map.setView([ship.lat, ship.lon], Math.max(z, map.getZoom()));
+                map.setView([ship.lat, ship.lon], Math.min(Math.max(z, map.getZoom()+1), map.getMaxZoom()));
             }
             else
-                map.setView(marker_focus.getLatLng(), Math.max(z, map.getZoom()));
+                map.setView(marker_focus.getLatLng(), Math.min(Math.max(z, map.getZoom()+1), map.getMaxZoom()));
             shipcardMinIfMaxonMobile();
         }
 
@@ -3208,6 +3213,23 @@
 
             saveSettings();
             plotStation();
+        }
+
+        function pinStation() {
+            pinVessel("STATION");
+        }
+
+        function pinVessel(m) {
+            settings.center_point = m;
+            settings.fix_center = true;
+            saveSettings();
+            plotStation();       
+        }
+        
+        function unpinCenter() {
+            settings.fix_center = false;
+            saveSettings();
+            plotStation();       
         }
 
         function removeTrack() {
@@ -3426,7 +3448,7 @@
             }
 
             // plot the center on the map
-            if (center == null || !center.hasOwnProperty("lat") || !center.hasOwnProperty("lon")) {
+            if (!settings.fix_center || center == null || !center.hasOwnProperty("lat") || !center.hasOwnProperty("lon")) {
                 if (marker_center) {
                     map.removeLayer(marker_center);
                     marker_center = null;
@@ -3446,7 +3468,7 @@
                 map.panTo([center.lat, center.lon]);
                 settings.lat = center.lat;
                 settings.lon = center.lon;
-                saveSettings();
+                //saveSettings();
             }
         }
 
