@@ -948,9 +948,8 @@
             background-color: var(--menu-background-color);
             color: var(--menu-font-color);
             border: 1px solid #ccc;
-            border-radius: 5px;
+            border-radius: 15px;
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-            padding: 20px;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
@@ -958,12 +957,18 @@
         }
 
         .dialog-title {
+            padding: 20px;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
             font-size: 18px;
             font-weight: bold;
             margin-bottom: 10px;
+            color: white;
+            background-color: var(--secondary-color);
         }
 
         .dialog-message {
+            padding: 0px 20px;
             font-size: 14px;
             user-select: text;
             margin-bottom: 20px;
@@ -973,17 +978,18 @@
         }
 
         .dialog-close {
+            padding: 10px 40px;
             background-color: var(--menu-background-hover-color);
             border: none;
             color: var(--menu-font-color);
-            padding: 8px 16px;
+            /*padding: 8px 16px;*/
             text-align: center;
             text-decoration: none;
             display: inline-block;
             font-size: 14px;
-            margin: 4px 2px;
+            margin: 0px 20px 20px 20px;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 10px;
         }
     </style>
 
@@ -1007,7 +1013,7 @@
 
         </div>
 
-        <div title="Toggle Dark/Light mode" onclick="toggleDarkMode()" class="header-icon"><i id="darkmodetoggle-id" class="fas fa-moon"></i></div>
+        <div title="About" onclick="showAboutDialog()" class="header-icon"><i class="fas fa-info-circle"></i></div>
         <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon"><i class="fas fa-cog fa-sm"></i></div>        <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
         <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
 
@@ -1321,7 +1327,7 @@
 
         var context_text = "";
         // default settings
-        var settings = { map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: false, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true };
+        var settings = { welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: false, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: false, eri: true, loadURL: true };
         let isFetchingShips = false;
 
         // some functions useful in plugins
@@ -3582,19 +3588,7 @@
         }
 
         function updateDarkMode() {
-            const root = document.querySelector(":root");
-            root.classList.remove("dark");
-
-            if (settings.dark_mode) root.classList.toggle("dark");
-            var icon = document.getElementById("darkmodetoggle-id");
-            if (settings.dark_mode) {
-                icon.classList.remove("fa-moon");
-                icon.classList.add("fa-sun");
-
-            } else {
-                icon.classList.remove("fa-sun");
-                icon.classList.add("fa-moon");
-            }
+            document.documentElement.classList.toggle("dark", settings.dark_mode);  
         }
 
         function toggleDarkMode() {
@@ -3677,6 +3671,41 @@
             }
         }
 
+        function showAboutDialog() {
+            const message = `
+            <div style="display: flex; align-items: center; font-size: 1.2em; margin-top: 10px;">
+            <span style=" font-size: 2.4em;  text-align: center; margin-right: 10px;"><i class="fas fa-ship"></i></span>
+            <span>
+                <a href="https://github.com/jvde-github/AIS-catcher""><b>AIS-catcher</b></a>
+                <br>
+                <b>&copy; 2021-2023 jvde.github@gmail.com</b>
+            </span>
+            </div>
+            <p>
+            AIS-catcher is a research and educational tool, provided under the 
+            <a href="https://github.com/jvde-github/AIS-catcher/blob/e66a4481e62d8f1775700e5f51fb7ad9ea569a12/LICENSE">GNU GPL v3 license</a>. It is not reliable for navigation or safety of life or property. Radio reception and handling regulations vary by region, so check your local administration's rules. Illegal use is strictly prohibited.
+            </p>
+            <p>
+            The web-interface gratefully uses the following libraries:
+            <a href="https://www.chartjs.org/docs/latest/charts/line.html" rel="nofollow">chart.js</a>, 
+            <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" rel="nofollow">chart.js annotation plugin</a>, 
+            <a href="https://leafletjs.com/" rel="nofollow">leaflet</a>, 
+            <a href="https://fontawesome.com/" rel="nofollow">Font Awesome</a>, 
+            <a href="https://tabulator.info/" rel="nofollow">tabulator</a>, 
+            <a href="https://github.com/markedjs/marked">marked</a> and 
+            <a href="https://github.com/lipis/flag-icons">flag-icons</a>. Please consult the links for the respective licenses.
+            </p>`;
+
+
+            showDialog("Disclaimer and warning",message)
+        }
+
+        function showWelcome() {
+            if(settings.welcome) showAboutDialog();
+            settings.welcome = false;
+            saveSettings();
+        }
+
         // for overwrite and insert code where needed
         function main() {
             plugins_main.forEach(function (p) { p(); });
@@ -3746,6 +3775,9 @@
             document.getElementById("about_tab").style.display = "none";
             document.getElementById("about_tab_mini").style.display = "none";
         }
+
+        showWelcome();
+
         main();
 
     </script>
