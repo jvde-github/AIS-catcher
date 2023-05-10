@@ -87,9 +87,11 @@ namespace AIS {
 		int result = search(aivdm);
 
 		if (aivdm.number != result + 1 || result == -1) {
-			std::cerr << "NMEA: incorrect multiline messages @ [" << aivdm.sentence << "]." << std::endl;
 			clean(aivdm.channel, aivdm.talkerID);
-			if (aivdm.number != 1) return;
+			if (aivdm.number != 1) {
+				std::cerr << "NMEA: missing part of multiline message [" << aivdm.sentence << "]" << std::endl;
+				return;
+			}
 		}
 
 		queue.push_back(aivdm);
