@@ -1008,12 +1008,11 @@
                 <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="fa-solid fa-chart-simple"></i>
                 <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="fa-solid fa-table"></i>
                 <i id="map_tab_mini" onclick="activateTab(event,'map')" class="fa-solid fa-map"></i>
-                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="fa-solid fa-circle-info"></i>
+                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="fa-solid fa-info-circle"></i>
             </div>
-
         </div>
 
-        <div title="About" onclick="showAboutDialog()" class="header-icon"><i class="fas fa-info-circle"></i></div>
+        <div title="About" onclick="showAboutDialog()" class="header-icon"><i class="fas fa-question-circle"></i></div>
         <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon"><i class="fas fa-cog fa-sm"></i></div>        <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
         <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
 
@@ -3683,7 +3682,9 @@
             </div>
             <p>
             AIS-catcher is a research and educational tool, provided under the 
-            <a href="https://github.com/jvde-github/AIS-catcher/blob/e66a4481e62d8f1775700e5f51fb7ad9ea569a12/LICENSE">GNU GPL v3 license</a>. It is not reliable for navigation or safety of life or property. Radio reception and handling regulations vary by region, so check your local administration's rules. Illegal use is strictly prohibited.
+            <a href="https://github.com/jvde-github/AIS-catcher/blob/e66a4481e62d8f1775700e5f51fb7ad9ea569a12/LICENSE">GNU GPL v3 license</a>. 
+            It is not reliable for navigation and safety of life or property. 
+            Radio reception and handling regulations vary by region, so check your local administration's rules. Illegal use is strictly prohibited.
             </p>
             <p>
             The web-interface gratefully uses the following libraries:
@@ -3697,7 +3698,7 @@
             </p>`;
 
 
-            showDialog("Disclaimer and warning",message)
+            showDialog("About...",message)
         }
 
         function showWelcome() {
