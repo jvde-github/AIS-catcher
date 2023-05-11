@@ -265,6 +265,7 @@ class WebClient : public IO::Server, public Setting {
 		Statistics stat;
 
 	public:
+		void setCutOff(int c) { stat.setCutoff(c); }
 		void Clear() { stat.Clear(); }
 
 		bool Load(std::ifstream& file) { return stat.Load(file); }
@@ -280,6 +281,8 @@ class WebClient : public IO::Server, public Setting {
 		Statistics stat;
 
 	public:
+		void setCutOff(int c) { stat.setCutoff(c); }
+
 		std::string ppm;
 		std::string level;
 
