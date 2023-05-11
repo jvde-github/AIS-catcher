@@ -760,6 +760,18 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		lat = Util::Parse::Float(arg);
 		plugins += "param_lat=" + std::to_string(lat) + ";\n";
 	}
+	else if (option == "CUTOFF") {
+		int cutoff = Util::Parse::Integer(arg, 0, 10000);
+		hist_minute.setCutoff(cutoff);
+		hist_second.setCutoff(cutoff);
+		hist_hour.setCutoff(cutoff);
+		hist_day.setCutoff(cutoff);
+		dataPrometheus.setCutOff(cutoff);
+		counter.setCutOff(cutoff);
+	}
+	else if (option == "STAT_LOG") {
+		hist_day.setLog(true);
+	}
 	else if (option == "SHARE_LOC") {
 		bool b = Util::Parse::Switch(arg);
 		ships.setShareLatLon(b);

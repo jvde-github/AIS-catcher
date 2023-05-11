@@ -28,10 +28,13 @@ class Statistics {
 
 	std::mutex m;
 
+	bool log = false;
+
 	static const int _MAGIC = 0x4f82b;
 	static const int _VERSION = 1;
 	static const int _RADAR_BUCKETS = 18;
-	static const int _LONG_RANGE_CUTOFF = 50;
+
+	int _LONG_RANGE_CUTOFF = 2500;
 
 	int _count;
 	int _msg[27];
@@ -42,7 +45,10 @@ class Statistics {
 	float _radarB[_RADAR_BUCKETS];
 
 public:
+	void setLog(bool b) { log = b; }
 	int getCount() { return _count; }
+	void setCutoff(int cutoff) { _LONG_RANGE_CUTOFF = cutoff; }
+
 	void Clear() {
 		std::lock_guard<std::mutex> l{ this->m };
 
@@ -73,22 +79,31 @@ public:
 
 		// for range we ignore atons for now
 		if (m.type() == 21) return;
-
-		if (tag.distance > _distance && (tag.distance < _LONG_RANGE_CUTOFF || tag.validated)) {
+		
+		if( !tag.validated || tag.distance > _LONG_RANGE_CUTOFF)
+			return;
+			 
+		if(tag.distance > _distance) {
 			_distance = tag.distance;
+			
+			if (log) {
+				std::cerr << "stat log: distance " << _distance << " ";
+				for(auto n : m.NMEA) std::cerr << n << " ";
+				std::cerr << std::endl;
+			}
 		}
 
 		if (m.type() == 18 || m.type() == 19 || m.type() == 24) {
 			if (tag.angle >= 0 && tag.angle < 360) {
 				int bucket = tag.angle / (360 / _RADAR_BUCKETS);
-				if (tag.distance > _radarB[bucket] && (tag.distance < _LONG_RANGE_CUTOFF || tag.validated))
+				if (tag.distance > _radarB[bucket])
 					_radarB[bucket] = tag.distance;
 			}
 		}
 		else if (m.type() <= 3 || m.type() == 5) {
 			if (tag.angle >= 0 && tag.angle < 360) {
 				int bucket = tag.angle / (360 / _RADAR_BUCKETS);
-				if (tag.distance > _radarA[bucket] && (tag.distance < _LONG_RANGE_CUTOFF || tag.validated))
+				if (tag.distance > _radarA[bucket])
 					_radarA[bucket] = tag.distance;
 			}
 		}

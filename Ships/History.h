@@ -33,6 +33,16 @@ struct History : public StreamIn<JSON::JSON> {
 
 	int start, end;
 
+	void setCutoff(int cutoff) {
+		for (int i = 0; i < N; i++) 
+			history[i].stat.setCutoff(cutoff);
+	}
+
+	void setLog(bool b) {
+		for (int i = 0; i < N; i++)
+			history[i].stat.setLog(b);
+			
+	}
 	void create(long int t) {
 		history[end].time = t;
 		history[end].stat.Clear();
