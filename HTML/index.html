@@ -3702,7 +3702,9 @@
         }
 
         function showWelcome() {
-            if(settings.welcome) showAboutDialog();
+            if(settings.welcome == true || settings.welcome == "true") 
+                showAboutDialog();
+            
             settings.welcome = false;
             saveSettings();
         }
