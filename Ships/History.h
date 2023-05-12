@@ -109,7 +109,7 @@ struct History : public StreamIn<JSON::JSON> {
 
 		if (!ReadInteger(file, tmp, 0x4f80b)) return false;
 		if (!ReadInteger(file, tmp, 1)) return false;
-		if (!ReadInteger(file, tmp, sizeof(history))) return false;
+		if (!ReadInteger(file, tmp, /*sizeof(history)*/ -1)) return false;
 		if (!ReadInteger(file, tmp, INTERVAL)) return false;
 		if (!ReadInteger(file, tmp, N)) return false;
 
