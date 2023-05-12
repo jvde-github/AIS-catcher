@@ -1502,7 +1502,7 @@
                 elements.forEach(element => { element.style.display = shouldDisplay ? 'flex' : 'none'; });
             });
 
-            document.getElementById("ctx_menu_unpin").style.display = settings.fix_center ? "flex" : "none";
+            document.getElementById("ctx_menu_unpin").style.display = (settings.fix_center && context.includes("ctx-map")) ? "flex" : "none";
             
             contextMenu.style.display = 'block';
 
