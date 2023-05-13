@@ -1035,12 +1035,14 @@
                 <li class="table-menu" onclick="downloadCSV()"><i class="fas fa-download"></i>Download CSV</li>
                 <li class="divider table-menu"></li>
                 <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="fas fa-undo"></i><span id="ctx_unpin">Release map center</span></li>
+                <li class="ctx-map" onclick="removeAllTracks()"><i class="fas fa-route"></i>Remove all tracks</li>
                 <li class="ctx-map" onclick="toggleLabel()"><i class="fas fa-tag"></i><span id="ctx_labelswitch"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="fas fa-tag"></i><span id="ctx_tooltipstyling"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipOverlap()" ><i class="fas fa-tag"></i><span id="ctx_tooltipoverlap"></span></li>
                 <li class="divider ctx-map"></li>
                 <li class="ctx-map" onclick="toggleRange()"><i class="fas fa-tower-cell"></i><span  id="ctx_range"></span></li>
                 <li class="divider ctx-map"></li>
+                <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="fas fa-route"></i><span id="ctx_track"></span></li>
                 <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="fas fa-thumbtack"></i>Center map on vessel</li>
                 <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Zoom in on vessel</li>
                 <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
@@ -1237,7 +1239,7 @@
                     <header id="shipcard_header">
                         <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
                         <span><i title="Center map on current vessel" onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
-                        <span><i title="Show track of current vessel" onclick="showTrack()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
+                        <span><i title="Show track of current vessel" onclick="toggleTrackCard()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
                         <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-plus"></i></span>
                         <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-minus"></i></span>
                         <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
@@ -1298,8 +1300,8 @@
 
                     </div>
                     <footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">
-                        <div title="Center map on current vessel" onclick="mapResetView(13)"><i class="fa-solid fa-bullseye fa-xl"></i><span>Focus</span></div>
-                        <div title="Show track of current vessel" onclick="showTrack()"><i class="fa-solid fa-route fa-xl"></i><span>Track</span></div>
+                        <div title="Center map on current vessel" onclick="mapResetView(13)"><i class="fa-solid fa-bullseye fa-xl"></i><span>Zoom</span></div>
+                        <div title="Track of current vessel" onclick="toggleTrackCard()"><i class="fa-solid fa-route fa-xl"></i><span id="shipcard_track">Track</span></div>
                     </footer>
                 </aside>
 
@@ -1322,7 +1324,7 @@
         var refreshIntervalMs = 2500;
         var range_update_time = null;
 
-        var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_track = null;
+        var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_tracks = {};
 
         var context_text = "";
         // default settings
@@ -1503,7 +1505,8 @@
             });
 
             document.getElementById("ctx_menu_unpin").style.display = (settings.fix_center && context.includes("ctx-map")) ? "flex" : "none";
-            
+            document.getElementById("ctx_track").innerText = (context_mmsi in marker_tracks && context.includes("mmsi-map")) ? "Hide Track" : "Show Track";
+
             contextMenu.style.display = 'block';
 
             if (context.includes('center')) {
@@ -3200,10 +3203,21 @@
             return document.getElementById('shipcard').classList.contains('visible');
         }
 
-        async function showTrack() {
+        async function toggleTrack(m) {
 
-            updateTrack();
-            shipcardMinIfMaxonMobile();
+            if(m in marker_tracks)
+                removeTrack(m);
+            else {
+                await showTrack(m);
+                shipcardMinIfMaxonMobile();
+            }
+        }
+
+        async function toggleTrackCard() {
+
+            toggleTrack(card_mmsi)
+            document.getElementById("shipcard_track").innerText = (card_mmsi in marker_tracks) ? "Hide Track" : "Show Track";
+
         }
 
         async function setStation() {
@@ -3236,36 +3250,55 @@
             plotStation();       
         }
 
-        function removeTrack() {
-            if (marker_track != null) map.removeLayer(marker_track);
-            marker_track = null;
+        function removeTrack(m) {
+            if(m in marker_tracks) {
+                map.removeLayer(marker_tracks[m])
+                delete marker_tracks[m];
+                if(m == card_mmsi)
+                    document.getElementById("shipcard_track").innerText = "Hide Track";
+            }
+        }
+
+        function removeAllTracks() {
+            for (var m in marker_tracks) {
+                removeTrack(m);
+            }
+        }
+
+        async function showTrack(m) {
+
+            try {
+                a = await fetch("path.json?" + m);
+                path = await a.json()
+            }
+            catch (error) {
+                console.log("Error loading path: " + error);
+                return;
+            }
+
+            const latLngs = [];
+
+            for (var i = 0; i < Math.min(path.length, 250); i++) {
+                latLngs.push([path[i].lat, path[i].lon]);
+            }
+
+            removeTrack(m);
+            marker_tracks[m] = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.85 }).addTo(map);
+
+            if (path.length > 0) {
+                markers[m].setLatLng([path[0].lat, path[0].lon]);
+            }
+
+            if(m == card_mmsi)
+                    document.getElementById("shipcard_track").innerText = "Hide Track";
 
         }
+
+
         async function updateTrack() {
 
-            if (card_mmsi in markers) {
-                try {
-                    a = await fetch("path.json?" + card_mmsi);
-                    path = await a.json()
-                }
-                catch (error) {
-                    console.log("Error loading path: " + error);
-                    return;
-                }
-
-                removeTrack();
-
-                const latLngs = [];
-
-                for (var i = 0; i < Math.min(path.length, 250); i++) {
-                    latLngs.push([path[i].lat, path[i].lon]);
-                }
-
-                marker_track = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.85 }).addTo(map);
-
-                if (path.length > 0) {
-                    markers[card_mmsi].setLatLng([path[0].lat, path[0].lon]);
-                }
+            for(var m in marker_tracks) {
+                showTrack(m);
             }
         }
 
@@ -3353,7 +3386,7 @@
                 document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
 
                 clearFocusMarker();
-                removeTrack();
+                removeTrack(card_mmsi);
 
                 return;
             }
@@ -3389,6 +3422,8 @@
             document.getElementById("shipcard_distance").innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
             document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimensionVal(ship.draught) + " " + getDimensionUnit() : null;
             document.getElementById("shipcard_dimension").innerHTML = (ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null) ? getDimensionVal(ship.to_bow + ship.to_stern) + " " + getDimensionUnit() + " x " + getDimensionVal(ship.to_port + ship.to_starboard) + " " + getDimensionUnit() : null;
+
+            document.getElementById("shipcard_track").innerText = (card_mmsi in marker_tracks) ? "Hide Track" : "Show Track";
         }
 
         function shipcardMinIfMaxonMobile() {
@@ -3478,7 +3513,7 @@
                 clearFocusMarker();
             }
 
-            if (m != card_mmsi || !shipcardVisible()) removeTrack();
+            //if (m != card_mmsi || !shipcardVisible()) removeTrack(card_mmsi);
             if (shipcardVisible()) setFocusMarker([ship.lat, ship.lon]);
 
             card_mmsi = m;
@@ -3552,8 +3587,9 @@
 
             if (card_mmsi != null && card_mmsi > 0 && markers[card_mmsi] != undefined) {
                 setFocusMarker(markers[card_mmsi].getLatLng());
-                updateTrack();
             }
+            updateTrack();
+
             plotStation(station);
             plotRange();
         }
@@ -3600,7 +3636,7 @@
             if (z) mapResetView(z);
             else mapResetView(13);
 
-            showTrack();
+            showTrack(m);
         }
 
         function activateTab(b, a) {
