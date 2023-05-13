@@ -674,15 +674,25 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		Response(c, "text/markdown", about, use_zlib & gzip);
 	}
 	else if (r == "/path.json") {
-		int mmsi = -1;
 		std::stringstream ss(a);
-		ss >> mmsi;
-		if (mmsi >= 1 && mmsi <= 999999999) {
-			std::string content = ships.getPathJSON(mmsi);
-			Response(c, "application/json", content, use_zlib & gzip);
+		std::string mmsi_str;
+		std::string content = "{";
+
+		while (std::getline(ss, mmsi_str, ',')) {
+			try {
+				int mmsi = std::stoi(mmsi_str);
+				if (mmsi >= 1 && mmsi <= 999999999) {
+					if (content.length() > 1) content += ",";
+					content += "\"" + std::to_string(mmsi) + "\":" + ships.getPathJSON(mmsi);
+				}
+			} catch (const std::invalid_argument& e) {
+				std::cerr << "Server: path MMSI invalid: " << mmsi_str << std::endl;
+			} catch (const std::out_of_range& e) {
+				std::cerr << "Server: path MMSI out of range: " << mmsi_str << std::endl;
+			}
 		}
-		else
-			Response(c, "application/json", "[]");
+		content += "}";
+		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/message") {
 		int mmsi = -1;

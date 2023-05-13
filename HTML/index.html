@@ -3265,29 +3265,40 @@
             }
         }
 
-        async function showTrack(m) {
-
-            try {
-                a = await fetch("path.json?" + m);
-                path = await a.json()
-            }
-            catch (error) {
-                console.log("Error loading path: " + error);
-                return;
-            }
-
+        function plotTrack(path,m) {
             const latLngs = [];
 
             for (var i = 0; i < Math.min(path.length, 250); i++) {
                 latLngs.push([path[i].lat, path[i].lon]);
             }
 
-            removeTrack(m);
             marker_tracks[m] = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.85 }).addTo(map);
 
             if (path.length > 0) {
                 markers[m].setLatLng([path[0].lat, path[0].lon]);
             }
+        }
+
+        async function showTrack(m) {
+
+            try {
+                a = await fetch("path.json?" + m);
+                paths = await a.json()
+            }
+            catch (error) {
+                console.log("Error loading path: " + error);
+                return;
+            }
+
+            if(m in paths)
+                path = paths[m];
+            else {
+                console.log("No path found for " + m);
+                return;
+            }
+
+            removeTrack(m);   
+            plotTrack(path,m);
 
             if(m == card_mmsi)
                     document.getElementById("shipcard_track").innerText = "Hide Track";
@@ -3297,8 +3308,23 @@
 
         async function updateTrack() {
 
-            for(var m in marker_tracks) {
-                showTrack(m);
+            if(Object.keys(marker_tracks).length == 0)
+                return;
+
+            try {
+                var mmsi_str = Object.keys(marker_tracks).join(',');
+                a = await fetch("path.json?" + mmsi_str);
+                paths = await a.json()
+            }
+            catch (error) {
+                console.log("Error loading path: " + error);
+                return;
+            }
+
+            removeAllTracks();
+            for (var mmsi in paths) {
+                var track = paths[mmsi];
+                plotTrack(track,mmsi);
             }
         }
 
