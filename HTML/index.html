@@ -1322,7 +1322,7 @@
         var refreshIntervalMs = 2500;
         var range_update_time = null;
 
-        var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_showtrack = false, marker_track = null;
+        var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_track = null;
 
         var context_text = "";
         // default settings
@@ -3202,7 +3202,6 @@
 
         async function showTrack() {
 
-            marker_showtrack = true;
             updateTrack();
             shipcardMinIfMaxonMobile();
         }
@@ -3238,52 +3237,38 @@
         }
 
         function removeTrack() {
-            marker_showtrack = false;
             if (marker_track != null) map.removeLayer(marker_track);
             marker_track = null;
 
         }
         async function updateTrack() {
 
-            if (card_mmsi in markers)
-                if (marker_showtrack) {
-
-                    try {
-                        a = await fetch("path.json?" + card_mmsi);
-                        path = await a.json()
-                    }
-                    catch (error) {
-                        console.log("Error loading path: " + error);
-                        return;
-                    }
-
-                    removeTrack();
-
-                    marker_track = L.featureGroup().addTo(map);
-                    for (var i = 0; i < Math.min(path.length, 250); i++) {
-                        if (i > 0) {
-                            var o = Math.max(0.25, 1 - path[i].received / (30 * 60));
-                            if (true || path[i].received - path[i - 1].received > 300 || i == path.length - 1 || i == 249) {
-                                var m = L.circleMarker([path[i].lat, path[i].lon], { opacity: o, color: '#12a5ed', radius: 1 }).addTo(map);
-                                m.bindTooltip(getDeltaTimeVal(path[i].received) + " ago", { opacity: 0.85, permanent: false, offset: [15, 0], direction: 'right' });
-                                marker_track.addLayer(m);
-                            }
-
-                            var l = new L.polyline([[path[i].lat, path[i].lon], [path[i - 1].lat, path[i - 1].lon]], { color: '#12a5ed', opacity: o });
-                            marker_track.addLayer(l);
-                        }
-                    }
-
-                    // assume track is more recent than entry in ShipsDB, to avoid elements not in sync
-                    if (path.length > 0) markers[card_mmsi].setLatLng([path[0].lat, path[0].lon]);
-
-                    //shipsDB[card_mmsi].raw.lat = path[0].lat;
-                    //shipsDB[card_mmsi].raw.lon = path[0].lon;
-                    //plotShip(shipsDB[card_mmsi].raw);
-
-                    marker_showtrack = true;
+            if (card_mmsi in markers) {
+                try {
+                    a = await fetch("path.json?" + card_mmsi);
+                    path = await a.json()
                 }
+                catch (error) {
+                    console.log("Error loading path: " + error);
+                    return;
+                }
+
+                removeTrack();
+
+                const latLngs = [];
+
+                for (var i = 0; i < Math.min(path.length, 250); i++) {
+                    latLngs.push([path[i].lat, path[i].lon]);
+                }
+
+                marker_track = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.85 }).addTo(map);
+
+                if (path.length > 0) {
+                    markers[card_mmsi].setLatLng([path[0].lat, path[0].lon]);
+                }
+            }
         }
+
 
         function isShipcardMax() {
 
