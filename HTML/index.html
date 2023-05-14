@@ -1238,10 +1238,10 @@
                 <aside id="shipcard" class="shipcard-ismax">
                     <header id="shipcard_header">
                         <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-                        <span><i title="Center map on current vessel" onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
-                        <span><i title="Show track of current vessel" onclick="toggleTrackCard()" class="shipcard-header-icon  shipcard-min-only aside-toggle fa-solid fa-route "></i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-plus"></i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-minus"></i></span>
+                        <span><i onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
+                        <span><i onclick="showContextMenu(event,card_mmsi,['settings', 'ctx-map', 'mmsi', 'mmsi-map','center'])" class="shipcard-header-icon fa-solid fa-plus"></i></span>
+                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-chevron-down"></i></span>
+                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-chevron-up"></i></span>
                         <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
                     </header>
 
