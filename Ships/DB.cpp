@@ -294,7 +294,7 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 	long int t = t0;
 
 	while (ptr != -1 && paths[ptr].mmsi == mmsi && (long int)paths[ptr].signal_time <= t) {
-		//t = (long int)paths[ptr].signal_time;
+		t = (long int)paths[ptr].signal_time;
 
 		if (isValidCoord(paths[ptr].lat, paths[ptr].lon)) {
 			content += "{\"lat\":";
