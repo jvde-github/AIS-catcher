@@ -3269,7 +3269,7 @@
         function plotTrack(path,m) {
             const latLngs = [];
 
-            if(m == null && !(m in markers) ) return;
+            if(m == null || !(m in markers) ) return;
 
             for (var i = 0; i < Math.min(path.length, 250); i++) {
                 latLngs.push([path[i].lat, path[i].lon]);
