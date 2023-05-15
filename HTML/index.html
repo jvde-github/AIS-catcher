@@ -1900,7 +1900,7 @@
             addControlToMap(wrenchControl);
         }
 
-        function toggleRange() {
+        async function toggleRange() {
 
             if (!((typeof param_share_loc != "undefined") && param_share_loc) || typeof param_lat === "undefined" || typeof param_lon === "undefined") {
                 showDialog("Error","Unable to show range as AIS-catcher was not started with <pre>-N SHARE_LOC on LAT xxx LON yyy</pre>");
@@ -1918,7 +1918,7 @@
                 }
             }
             else
-                plotRange();
+                await plotRange();
         }   
 
         function showPlugins() {
@@ -1953,36 +1953,29 @@
 
             if (nothasStation || !settings.show_range) return;
 
+            const now = new Date();
+
             // range plotted in last 15 minutes then return
             if (marker_range != null) {
-                if (range_update_time != null) {
-
-                    const now = new Date();
-
-                    if (Math.floor((now - range_update_time) / 1000 / 60) < 15) return;
-                    range_update_time = now;
-                }
-                else
-                    range_update_time = new Date();
-
+                if (range_update_time != null && Math.floor((now - range_update_time) / 1000 / 60) < 15)
+                    return;
+                    
                 map.removeLayer(marker_range);
                 marker_range = null;
             }
 
-            // get range data
-            if (true) {
-                try {
-                    response = await fetch('history_full.json');
-                } catch (error) {
-                    setPulseError();
-                }
-                h = await response.json();
-                setPulseOk();
-            }
-            else {
-                h = JSON.parse(range_json);
-            }
+            range_update_time = new Date();
 
+            try {
+                response = await fetch('history_full.json');
+                h = await response.json();
+            } catch (error) {
+                setPulseError();
+                return;
+            }
+            
+            setPulseOk();
+        
             // calculate range
             const range_outline = [];
 
@@ -3267,9 +3260,10 @@
         }
 
         function plotTrack(path,m) {
-            const latLngs = [];
 
             if(m == null || !(m in markers) ) return;
+
+            const latLngs = [];
 
             for (var i = 0; i < Math.min(path.length, 250); i++) {
                 latLngs.push([path[i].lat, path[i].lon]);
@@ -3620,7 +3614,7 @@
             await updateTrack();
 
             plotStation(station);
-            plotRange();
+            await plotRange();
         }
 
         function updateRangeControl() {
