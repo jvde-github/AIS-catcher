@@ -1323,6 +1323,7 @@
         var card_mmsi = null, hover_mmsi = null, build_string = "unknown";
         var refreshIntervalMs = 2500;
         var range_update_time = null;
+        let updateInProgress = false;
 
         var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_tracks = {};
 
@@ -3614,7 +3615,7 @@
             if (card_mmsi != null && card_mmsi > 0 && markers[card_mmsi] != undefined) {
                 setFocusMarker(markers[card_mmsi].getLatLng());
             }
-            updateTrack();
+            await updateTrack();
 
             plotStation(station);
             plotRange();
@@ -3644,16 +3645,32 @@
         }
 
         function refresh_data() {
+
             if (!document.hidden) {
-                if (settings.tab == "map") {
-                    updateMap();
-                    map.invalidateSize();
+                if (!updateInProgress) {
+                    updateInProgress = true;
+
+                    try {
+                        if (settings.tab == "map") {
+                            updateMap();
+                            map.invalidateSize();
+                        } else if (settings.tab == "stat") {
+                            updateStatistics();
+                        } else if (settings.tab == "plots") {
+                            updatePlots();
+                        } else if (settings.tab == "ships") {
+                            updateShipTable();
+                        }
+                    } catch (error) {
+                        // Handle the error if needed
+                        console.error(error);
+                    } finally {
+                        updateInProgress = false;
+                    }
                 }
-                else if (settings.tab == "stat") updateStatistics();
-                else if (settings.tab == "plots") updatePlots();
-                else if (settings.tab == "ships") updateShipTable();
             }
         }
+
 
         async function openFocus(m, z) {
             await fetchShips(false);
