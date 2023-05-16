@@ -3607,6 +3607,7 @@
         async function updateMap() {
 
             const n = await fetchShips();
+            await updateTrack();
 
             if (n == 0) return;
 
@@ -3642,7 +3643,6 @@
             if (card_mmsi != null && card_mmsi > 0 && markers[card_mmsi] != undefined) {
                 setFocusMarker(markers[card_mmsi].getLatLng());
             }
-            await updateTrack();
 
             plotStation(station);
             await plotRange();
