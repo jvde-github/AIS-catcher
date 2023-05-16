@@ -3082,7 +3082,7 @@
             let rects = [];
 
             if (hover_mmsi in markers) addTooltip(rects, markers[hover_mmsi]);
-            if (card_mmsi in markers) addTooltip(rects, markers[card_mmsi]);
+            if (hover_mmsi != card_mmsi && card_mmsi in markers) addTooltip(rects, markers[card_mmsi]);
 
             for (let [mmsi, m] of Object.entries(markers)) {
                 if (mmsi == card_mmsi || mmsi == hover_mmsi) continue;
