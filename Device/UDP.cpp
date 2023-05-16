@@ -32,6 +32,11 @@ namespace Device {
 			closesocket(sock);
 			sock = -1;
 		}
+		
+		if(address != NULL) {
+			freeaddrinfo(address);
+			address = NULL;
+		}
 	}
 
 	void UDP::StartServer() {
