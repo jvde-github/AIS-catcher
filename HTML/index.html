@@ -3507,7 +3507,7 @@
                         className: 'myDivIcon'
                     });
 
-                    marker_station = L.marker([station.lat, station.lon],{ interactive: true, color: 'red', icon:  fontAwesomeIcon}).addTo(map)
+                    marker_station = L.marker([station.lat, station.lon],{ interactive: true, color: 'red', icon:  fontAwesomeIcon});
                     //marker_station = L.circleMarker([station.lat, station.lon], { interactive: true, color: 'red', radius: 8, weight: 4, fillOpacity: 1, fillColor: 'red', pane: "locationMarker" })
                     marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, ['settings','ctx-map','ctx-menu','station']); });
                     marker_station.addTo(map);
