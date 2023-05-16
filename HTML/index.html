@@ -3107,16 +3107,16 @@
                 updateTooltips();
             }
 
+            if(!(hover_mmsi in shipsDB)) return;
+
             let ship = shipsDB[hover_mmsi].raw;
+
             plotShip(ship);
-            if(ship.mmsi in marker_tracks) {
-                removeTrack(ship.mmsi); 
-                plotTrack(ship.mmsi);
-            }
+            removeTrack(hover_mmsi); 
+            plotTrack(hover_mmsi);
         }
 
         function endHover(m) {
-            let ship = shipsDB[hover_mmsi].raw;
             m = hover_mmsi;
             hover_mmsi = null;
 
@@ -3127,13 +3127,15 @@
             else {
                 updateTooltips();
             }
-            if (ship) {
-                plotShip(ship);
-                if(ship.mmsi in marker_tracks) {
-                    removeTrack(ship.mmsi); 
-                    plotTrack(ship.mmsi);
-                }
+
+            if(m in shipsDB) {
+                let ship = shipsDB[m].raw;
+                if (ship) 
+                    plotShip(ship);
             }
+        
+            removeTrack(m); 
+            plotTrack(m);
             clearHoverMarker();
 
         }
@@ -3195,9 +3197,8 @@
         }
 
         function updateShipShape(ship) {
-            if (ship.mmsi in ship_shape)
-                if (ship_shape[ship.mmsi] != null)
-                    map.removeLayer(ship_shape[ship.mmsi]);
+            if (ship.mmsi in ship_shape && ship_shape[ship.mmsi] != null)
+                map.removeLayer(ship_shape[ship.mmsi]);
 
             ship_shape[ship.mmsi] = drawShipOutline(ship);
         }
@@ -3253,20 +3254,6 @@
 
             toggleTrack(card_mmsi)
             document.getElementById("shipcard_track").innerText = (card_mmsi in marker_tracks) ? "Hide Track" : "Show Track";
-
-        }
-
-        async function setStation() {
-
-            if (card_mmsi == settings.center_point) {
-                settings.center_point = "STATION";
-            }
-            else {
-                settings.center_point = card_mmsi;
-            }
-
-            saveSettings();
-            plotStation();
         }
 
         function pinStation() {
@@ -3335,8 +3322,7 @@
             }
 
             if(m in p) {
-                path = p[m];
-                paths[m] = path;
+                paths[m] = p[m];
             }
             else {
                 console.log("No path found for " + m);
@@ -3347,10 +3333,9 @@
             plotTrack(m);
 
             if(m == card_mmsi)
-                    document.getElementById("shipcard_track").innerText = "Hide Track";
+                document.getElementById("shipcard_track").innerText = "Hide Track";
 
         }
-
 
         async function updateTrack() {
 
@@ -3372,7 +3357,6 @@
                 plotTrack(mmsi);
             }
         }
-
 
         function isShipcardMax() {
 
@@ -3584,7 +3568,6 @@
                 clearFocusMarker();
             }
 
-            //if (m != card_mmsi || !shipcardVisible()) removeTrack(card_mmsi);
             if (shipcardVisible()) setFocusMarker([ship.lat, ship.lon]);
 
             card_mmsi = m;
