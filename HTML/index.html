@@ -1315,7 +1315,7 @@
     <div class="bottombar"></div>
 
     <script>
-        var chart_seconds, chart_minutes, interval, hist, ships, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
+        var chart_seconds, chart_minutes, interval, hist, ships, paths = {}, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
         var iconLabelSpan = null, iconStationSpan = null;
 
         var StationControlDiv = null;
@@ -2603,6 +2603,8 @@
             }
             else
                 toggleShipcardSize();
+
+            saveSettings();
         }
 
         function toggleShipcardSize() {
@@ -3107,6 +3109,10 @@
 
             let ship = shipsDB[hover_mmsi].raw;
             plotShip(ship);
+            if(ship.mmsi in marker_tracks) {
+                removeTrack(ship.mmsi); 
+                plotTrack(ship.mmsi);
+            }
         }
 
         function endHover(m) {
@@ -3121,7 +3127,13 @@
             else {
                 updateTooltips();
             }
-            if (ship) plotShip(ship);
+            if (ship) {
+                plotShip(ship);
+                if(ship.mmsi in marker_tracks) {
+                    removeTrack(ship.mmsi); 
+                    plotTrack(ship.mmsi);
+                }
+            }
             clearHoverMarker();
 
         }
@@ -3131,6 +3143,17 @@
             settings.lat = map.getCenter().lat;
             settings.lon = map.getCenter().lng;
             settings.zoom = map.getZoom();
+
+            const scRows = document.querySelectorAll('.shipcard-content-row');
+
+            const selectedRows = [];
+            scRows.forEach(row => {
+                const rowClasses = row.getAttribute('class');
+                selectedRows.push(rowClasses.includes('shipcard-max-only')?0:1);
+            });
+
+            settings.shipcard_max = isShipcardMax();
+            settings.shipcard_rows = selectedRows;
 
             localStorage.settings = JSON.stringify(settings);
         }
@@ -3143,6 +3166,25 @@
                 return;
             }
             settings = { ...settings, ...ls };
+
+            if(!shipcardismax()) 
+                    toggleShipcardSize();
+                
+            if (settings.shipcard_rows && settings.shipcard_rows.length > 0) {
+                const rows = document.querySelectorAll('.shipcard-content-row');
+
+                rows.forEach((row, index) => {
+                    if(settings.shipcard_rows[index] == 1) {
+                        row.setAttribute('class', 'shipcard-content-row shipcard-row-selected');
+                    }
+                    else {
+                        row.setAttribute('class', 'shipcard-content-row shipcard-max-only');
+                    }
+                });
+                if(settings.shipcard_max != shipcardismax()) {
+                    toggleShipcardSize();
+                }
+            } 
         }
 
         function loadSettingsFromURL() {
@@ -3259,9 +3301,11 @@
             }
         }
 
-        function plotTrack(path,m) {
+        function plotTrack(m) {
 
-            if(m == null || !(m in markers) ) return;
+            if(m == null || !(m in markers) || !(m in paths)) return;
+
+            const path = paths[m];
 
             const latLngs = [];
 
@@ -3269,7 +3313,10 @@
                 latLngs.push([path[i].lat, path[i].lon]);
             }
 
-            marker_tracks[m] = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.85 }).addTo(map);
+            if(m == hover_mmsi)
+                marker_tracks[m] = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.85, weight: 2 }).addTo(map);
+            else
+                marker_tracks[m] = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.7, weight: 1 }).addTo(map);
 
             if (path.length > 0) {
                 markers[m].setLatLng([path[0].lat, path[0].lon]);
@@ -3280,22 +3327,24 @@
 
             try {
                 a = await fetch("path.json?" + m);
-                paths = await a.json()
+                p = await a.json()
             }
             catch (error) {
                 console.log("Error loading path: " + error);
                 return;
             }
 
-            if(m in paths)
-                path = paths[m];
+            if(m in p) {
+                path = p[m];
+                paths[m] = path;
+            }
             else {
                 console.log("No path found for " + m);
                 return;
             }
 
             removeTrack(m);   
-            plotTrack(path,m);
+            plotTrack(m);
 
             if(m == card_mmsi)
                     document.getElementById("shipcard_track").innerText = "Hide Track";
@@ -3315,13 +3364,12 @@
             }
             catch (error) {
                 console.log("Error loading path: " + error);
-                return;
+                paths = {};
             }
 
             removeAllTracks();
             for (var mmsi in paths) {
-                var track = paths[mmsi];
-                plotTrack(track,mmsi);
+                plotTrack(mmsi);
             }
         }
 
@@ -3615,19 +3663,6 @@
 
             plotStation(station);
             await plotRange();
-        }
-
-        function updateRangeControl() {
-            iconRangeSpan.classList.remove('blue');
-            iconRangeSpan.classList.remove('red');
-            iconRangeSpan.classList.remove('grey');
-
-            if (settings.show_range) {
-                iconRangeSpan.classList.add('blue');
-            }
-            else {
-                iconRangeSpan.classList.add('grey');
-            }
         }
 
         function updateDarkMode() {
