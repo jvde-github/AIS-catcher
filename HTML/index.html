@@ -1035,7 +1035,7 @@
                 <li class="table-menu" onclick="downloadCSV()"><i class="fas fa-download"></i>Download CSV</li>
                 <li class="divider table-menu"></li>
                 <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="fas fa-undo"></i><span id="ctx_unpin">Release map center</span></li>
-                <li class="ctx-map" onclick="removeAllTracks()"><i class="fas fa-route"></i>Remove all tracks</li>
+                <li class="ctx-map" onclick="deleteAllTracks()"><i class="fas fa-route"></i>Remove all tracks</li>
                 <li class="ctx-map" onclick="toggleLabel()"><i class="fas fa-tag"></i><span id="ctx_labelswitch"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="fas fa-tag"></i><span id="ctx_tooltipstyling"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipOverlap()" ><i class="fas fa-tag"></i><span id="ctx_tooltipoverlap"></span></li>
@@ -2889,11 +2889,14 @@
                         {
                             title: "Shipname", field: "shipname", formatter: function (cell) {
                                 const ship = cell.getRow().getData();
-                                return getFlag(ship.country) + ship.shipname;
+                                return getFlag(ship.country) + getShipName(ship);
                             }
                         },
                         { title: "MMSI", field: "mmsi" },
-                        { title: "Callsign", field: "callsign" },
+                        { title: "Callsign", field: "callsign", formatter: function (cell) {
+                                const ship = cell.getRow().getData();
+                                return ship != null ? getCallSign(ship) : "";
+                            } },
                         {
                             title: "Last", field: "last_signal", formatter: function (cell) {
                                 const value = cell.getValue();
@@ -3242,8 +3245,10 @@
 
         async function toggleTrack(m) {
 
-            if(m in marker_tracks)
+            if(m in marker_tracks) {
                 removeTrack(m);
+                deletePath(m);
+            }
             else {
                 await showTrack(m);
                 shipcardMinIfMaxonMobile();
@@ -3282,10 +3287,19 @@
             }
         }
 
+        function deletePath(m) {
+            if(m in paths) delete paths[m];
+        }
+
         function removeAllTracks() {
             for (var m in marker_tracks) {
                 removeTrack(m);
             }
+        }
+
+        function deleteAllTracks() {
+            removeAllTracks();
+            paths = {};
         }
 
         function plotTrack(m) {
@@ -3305,11 +3319,11 @@
             else
                 marker_tracks[m] = new L.polyline(latLngs, { color: '#12a5ed', opacity: 0.7, weight: 1 }).addTo(map);
 
-            if (path.length > 0) {
-                markers[m].setLatLng([path[0].lat, path[0].lon]);
-            }
+            if(m == card_mmsi)
+                    document.getElementById("shipcard_track").innerText = "Hide Track";
         }
 
+        
         async function showTrack(m) {
 
             try {
@@ -3354,6 +3368,10 @@
 
             removeAllTracks();
             for (var mmsi in paths) {
+                if(mmsi in shipsDB) {
+                    shipsDB[mmsi].raw.lat = paths[mmsi][0].lat;
+                    shipsDB[mmsi].raw.lon = paths[mmsi][0].lon;
+                }
                 plotTrack(mmsi);
             }
         }
@@ -3442,7 +3460,7 @@
 
                 clearFocusMarker();
                 removeTrack(card_mmsi);
-
+                deletePath(card_mmsi);
                 return;
             }
 
@@ -3501,11 +3519,19 @@
                 if (marker_station == null) {
 
                     const fontAwesomeIcon = L.divIcon({
-                        html: '<i class="fa fa-tower-cell" style="color: red; font-size: 18px;"></i>',
+                        html: `<div style="position: relative; display: inline-block;">
+                                    <i class="fa fa-tower-cell" style="color: var(--secondary-color); font-size: 18px;"></i>
+                                    <div style="position: absolute; top: -6px; left: -6px; width: 32px; height: 32px; 
+                                                background-color: var(--tertiary-color); border-radius: 50%; z-index: -1;"></div>
+                                </div>`,
                         iconSize: [18, 18],
                         iconAnchor: [11, 9],
                         className: 'myDivIcon'
-                    });
+                        });
+
+
+
+
 
                     marker_station = L.marker([station.lat, station.lon],{ interactive: true, color: 'red', icon:  fontAwesomeIcon});
                     //marker_station = L.circleMarker([station.lat, station.lon], { interactive: true, color: 'red', radius: 8, weight: 4, fillOpacity: 1, fillColor: 'red', pane: "locationMarker" })
