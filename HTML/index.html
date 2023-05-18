@@ -991,6 +991,28 @@
             cursor: pointer;
             border-radius: 10px;
         }
+
+        .stationIcon {
+            position: relative;
+            display: inline-block;
+            }
+
+            .stationIcon i.fa.fa-tower-cell {
+            color: var(--secondary-color);
+            font-size: 14px;
+            }
+
+            .stationIcon div {
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            width: 24px;
+            height: 24px;
+            background-color: var(--tertiary-color);
+            border-radius: 50%;
+            z-index: -1;
+            }
+
     </style>
 
     <link rel="stylesheet" href="config.css">
@@ -3522,18 +3544,14 @@
             } else {
                 if (marker_station == null) {
 
-                    const fontAwesomeIcon = L.divIcon({
-                        html: `<div style="position: relative; display: inline-block;">
-                                    <i class="fa fa-tower-cell" style="color: var(--secondary-color); font-size: 14px;"></i>
-                                    <div style="position: absolute; top: -4px; left: -4px; width: 24px; height: 24px; 
-                                                background-color: var(--tertiary-color); border-radius: 50%; z-index: -1;"></div>
-                                </div>`,
+                    const stationIcon = L.divIcon({
+                        html: `<div class="stationIcon"><i class="fa fa-tower-cell"></i><div></div></div>`,
                         iconSize: [18, 18],
-                        iconAnchor: [11, 9],
+                        iconAnchor: [8, 9],
                         className: 'myDivIcon'
                         });
 
-                    marker_station = L.marker([station.lat, station.lon],{ interactive: true, color: 'red', icon:  fontAwesomeIcon});
+                    marker_station = L.marker([station.lat, station.lon],{ interactive: true, icon:  stationIcon});
                     marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, ['settings','ctx-map','ctx-menu','station']); });
                     marker_station.addTo(map);
                 }
@@ -3582,7 +3600,6 @@
                 map.panTo([center.lat, center.lon]);
                 settings.lat = center.lat;
                 settings.lon = center.lon;
-                //saveSettings();
             }
         }
 
