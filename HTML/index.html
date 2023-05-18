@@ -2019,7 +2019,7 @@
         async function fetchShips(noDoubleFetch = true) {
             if (isFetchingShips && noDoubleFetch) {
                 console.log("A fetch operation is already running.");
-                return;
+                return false;
             }
 
             let ships = {};
@@ -2032,7 +2032,7 @@
                 } catch (error) {
                     setPulseError();
                     console.log("failed loading ships: " + error);
-                    return;
+                    return false;
                 }
                 finally {
                     isFetchingShips = false;
@@ -2072,7 +2072,7 @@
                 center = { lat: ship.lat, lon: ship.lon };
             }
 
-            return ships.values.length;
+            return true;
         }
 
         function toggleScreenSize() {
@@ -2868,7 +2868,8 @@
 
         async function updateShipTable() {
 
-            await fetchShips();
+            const ok = await fetchShips();
+            if(!ok) return;
 
             const data = Object.values(shipsDB).map(ship => ship.raw);
 
@@ -3355,7 +3356,7 @@
         async function updateTrack() {
 
             if(Object.keys(marker_tracks).length == 0)
-                return;
+                return true;
 
             try {
                 var mmsi_str = Object.keys(marker_tracks).join(',');
@@ -3365,6 +3366,7 @@
             catch (error) {
                 console.log("Error loading path: " + error);
                 paths = {};
+                return false;
             }
 
             removeAllTracks();
@@ -3375,6 +3377,7 @@
                 }
                 plotTrack(mmsi);
             }
+            return true;
         }
 
         function isShipcardMax() {
@@ -3636,11 +3639,13 @@
         }
 
         async function updateMap() {
+            let ok = false;
 
-            const n = await fetchShips();
-            await updateTrack();
+            ok = await fetchShips();
+            if(!ok) return;
 
-            if (n == 0) return;
+            ok = await updateTrack();
+            //if(!ok) return;
 
             if (shipcardVisible()) populateShipcard();
 
