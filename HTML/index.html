@@ -1517,6 +1517,7 @@
             } else {
                 contextMenu.style.left = (event.pageX + 5) + 'px';
                 contextMenu.style.top = (event.pageY + 5) + 'px';
+                contextMenu.style.transform = 'none';
 
                 var contextMenuRect = contextMenu.getBoundingClientRect();
                 var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
@@ -3520,8 +3521,8 @@
 
                     const fontAwesomeIcon = L.divIcon({
                         html: `<div style="position: relative; display: inline-block;">
-                                    <i class="fa fa-tower-cell" style="color: var(--secondary-color); font-size: 18px;"></i>
-                                    <div style="position: absolute; top: -6px; left: -6px; width: 32px; height: 32px; 
+                                    <i class="fa fa-tower-cell" style="color: var(--secondary-color); font-size: 14px;"></i>
+                                    <div style="position: absolute; top: -4px; left: -4px; width: 24px; height: 24px; 
                                                 background-color: var(--tertiary-color); border-radius: 50%; z-index: -1;"></div>
                                 </div>`,
                         iconSize: [18, 18],
@@ -3529,12 +3530,7 @@
                         className: 'myDivIcon'
                         });
 
-
-
-
-
                     marker_station = L.marker([station.lat, station.lon],{ interactive: true, color: 'red', icon:  fontAwesomeIcon});
-                    //marker_station = L.circleMarker([station.lat, station.lon], { interactive: true, color: 'red', radius: 8, weight: 4, fillOpacity: 1, fillColor: 'red', pane: "locationMarker" })
                     marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, ['settings','ctx-map','ctx-menu','station']); });
                     marker_station.addTo(map);
                 }
