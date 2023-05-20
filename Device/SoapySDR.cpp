@@ -188,7 +188,7 @@ namespace Device {
 				auto device = SoapySDR::Device::make(dev_str);
 				int nChannels = device->getNumChannels(SOAPY_SDR_RX);
 				for (int c = 0; c < nChannels; c++) {
-					std::string serial_str = "SCH" + std::to_string(c) + "-" + d["serial"];
+					std::string serial_str = "SCH" + std::to_string(c) + "-" + d["driver"];
 					int rate = device->getSampleRate(SOAPY_SDR_RX, c);
 					dev_list.push_back(SoapyDevice(dev_str, c, rate));
 					DeviceList.push_back(Description("SOAPYSDR", dev_str, serial_str, (uint64_t)cnt, Type::SOAPYSDR));
