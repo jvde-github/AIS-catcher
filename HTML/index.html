@@ -2911,49 +2911,49 @@
                     paginationSizeSelector: [20, 50, 100],
                     columns: [
                         {
-                            title: "Shipname", field: "shipname", formatter: function (cell) {
+                            title: "Shipname", field: "shipname", sorter:"string", formatter: function (cell) {
                                 const ship = cell.getRow().getData();
                                 return getFlag(ship.country) + getShipName(ship);
                             }
                         },
-                        { title: "MMSI", field: "mmsi" },
-                        { title: "Callsign", field: "callsign", formatter: function (cell) {
+                        { title: "MMSI", field: "mmsi", sorter: "number" },
+                        { title: "Callsign", field: "callsign", sorter: "string", formatter: function (cell) {
                                 const ship = cell.getRow().getData();
                                 return ship != null ? getCallSign(ship) : "";
                             } },
                         {
-                            title: "Last", field: "last_signal", formatter: function (cell) {
+                            title: "Last", field: "last_signal", sorter: "number", formatter: function (cell) {
                                 const value = cell.getValue();
                                 return value != null ? getDeltaTimeVal(value) : "";
                             }
                         },
-                        { title: "Msgs", field: "count" },
+                        { title: "Msgs", field: "count", sorter: "number" },
                         {
-                            title: "PPM", field: "ppm", formatter: function (cell) {
+                            title: "PPM", field: "ppm", sorter: "number", formatter: function (cell) {
                                 const value = cell.getValue();
                                 return value != null ? Number(value).toFixed(1) : "";
                             }
                         },
                         {
-                            title: "RSSI", field: "level", formatter: function (cell) {
+                            title: "RSSI", field: "level", sorter: "number", formatter: function (cell) {
                                 const value = cell.getValue();
                                 return value != null ? Number(value).toFixed(1) : "";
                             }
                         },
                         {
-                            title: "Dist", field: "distance", formatter: function (cell) {
+                            title: "Dist", field: "distance", sorter: "number", formatter: function (cell) {
                                 const value = cell.getValue();
                                 return value != null ? getDistanceVal(value) : "";
                             }
                         },
                         {
-                            title: "Brg", field: "bearing", formatter: function (cell) {
+                            title: "Brg", field: "bearing", sorter: "number", formatter: function (cell) {
                                 const value = cell.getValue();
                                 return value != null ? Number(value).toFixed(0) + "&deg;" : "";
                             }
                         },
                         {
-                            title: "Lat", field: "lat", formatter: function (cell) {
+                            title: "Lat", field: "lat", sorter: "number", formatter: function (cell) {
                                 const ship = cell.getRow().getData();
                                 const color = ship.validated == 1 ? "green" : (ship.validated == -1 ? "red" : "inherited");
                                 return "<div style='color:" + color + "'>" + (ship.lat != null ? getLatVal(ship) : "") + "</div>";
@@ -2961,21 +2961,21 @@
                             }
                         },
                         {
-                            title: "Lon", field: "lon", formatter: function (cell) {
+                            title: "Lon", field: "lon", sorter: "number", formatter: function (cell) {
                                 const ship = cell.getRow().getData();
                                 const color = ship.validated == 1 ? "green" : (ship.validated == -1 ? "red" : "inherited");
                                 return "<div style='color:" + color + "'>" + (ship.lon != null ? getLonVal(ship) : "") + "</div>";
                             }
                         },
                         {
-                            title: "Valid", field: "validated", formatter: function (cell) {
+                            title: "Valid", field: "validated", sorter: "string", formatter: function (cell) {
                                 const value = cell.getValue();
                                 const txt = value == 1 ? "Yes" : (value == -1 ? "No" : "Pending");
                                 return txt;
                             }
                         },
                         {
-                            title: "Channels", field: "channels", formatter: function (cell) {
+                            title: "Channels", field: "channels", sorter: "number", formatter: function (cell) {
                                 const value = cell.getValue();
                                 return getStringfromChannels(value);
                             }
@@ -2992,6 +2992,8 @@
                     if (!(mmsi in shipsDB)) 
                     row.delete();
                 });
+                var sorters = table.getSorters();
+                table.setSort(sorters);
             }
         }
 
