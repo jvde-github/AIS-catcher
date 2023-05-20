@@ -27,6 +27,8 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 <p align="center">
 <img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/81dc1e95-0609-4270-9460-ab3cbdb36ddf">
 </p>
+
+
 ## Usage
 ````
 use: AIS-catcher [options]
