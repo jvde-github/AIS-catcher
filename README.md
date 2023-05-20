@@ -152,20 +152,13 @@ Meta data is not calculated by default to keep the program as light as possible 
 There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc).
 
 ### Web interface
-As per full release v0.42 AIS-catcher includes a simple web interface. Live demos are available for [East Boston, US](https://kx1t.com/ais/) and [Hai Phong, Vietnam](https://hpradar.com/aisv3/). Thank you [KX1T](https://kx1t.com/) and [Nguyen](https://hpradar.com/) for making this available. There is also a version of the [Comar R400N](https://comarsystems.com/product/r400n-network-ais-receiver-for-coastal-monitoring-applications/) running via AIS-catcher [here](https://hpradar.com/aisr4/) whereby input is NMEA text lines over serial as input and AIS-catcher only does the distribution and web visualization. 
-
-The web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/), tabulator, [marked](https://github.com/markedjs/marked) and [flag-icons](https://github.com/lipis/flag-icons). 
+As per full release v0.42 AIS-catcher includes a simple web interface. A live demo is available for [East Boston, US](https://kx1t.com/ais/). The web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Font Awesome](https://fontawesome.com/), tabulator, [marked](https://github.com/markedjs/marked) and [flag-icons](https://github.com/lipis/flag-icons). 
 
 Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
 ```
 where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a menu which gives access to tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
-Some development has been done to make this webinterface easily accessible on mobile devices as well (see screenshot) and enriching the experience, for example by adding the contours of a vessel where available: 
-
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/52420030/219856813-36a8a220-dc8a-4cf5-9390-0ce523454c55.png" width="30%"/>
-</p>
 
 There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
 ```console
@@ -173,15 +166,20 @@ AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
 This could be a useful option if you want to offer the interface externally. To display the distance of received messages to your station you need to provide the coordinates as follows:
 ```console
-AIS-catcher -N LAT 50 LON 3.141592
+AIS-catcher -N LAT 50 LON 3.141592 SHARE_LOC on
 ```
+The first two parameters in this example are needed to be able to calculate the distance to the station. The last option (default is off) will pass on and display the station location to the webclient.  
  The user can make a page in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab of the webserver:
 ```console
 AIS-catcher -N 8100 ABOUT about.md
 ```
 All these options can be captured in the configuration file (in a section with name ``server``), see below. 
 
-### User interface and visualization
+### User interface 
+
+The main menu tabs on top allow switching between different  functional areas. More functionality is available  through the use of context-sensitive menus, accessible through a right-click or long press on iOS. These options include a theme for dark mode, the display of the station range on the map, simplified adjustment of the map's center, switch to text-only shiplabels, optional decluttering of shiplabels, and showing details on the last received messsage from a vessel, among others.
+
+### Visualization
 
 When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle that will enclose the ships dimensions regardless of the direction it is pointing.
 This commonly happens with Class B ships and if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the historical frigate the USS Constitution, which is docked in the port of Boston. 
@@ -304,6 +302,11 @@ This will send over the NMEA lines plus additional meta data like signal level e
 AIS-catcher -x 192.168.1.235 4002
 ```
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings. 
+
+A feature has been added that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
+````
+AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
+````
 
 #### Setting up OpenCPN
 
