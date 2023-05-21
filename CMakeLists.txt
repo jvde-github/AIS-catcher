@@ -266,7 +266,7 @@ endif()
 if(SOAPYSDR)
 	pkg_check_modules(SOAPYSDR SoapySDR)
 
-	if(SOAPYSDR_INCLUDE_DIRS AND SOAPYSDR_LIBRARY_DIRS)
+	if(SOAPYSDR_FOUND)
 		message(STATUS "SOAPYSDR: found - ${SOAPYSDR_INCLUDE_DIRS}, ${SOAPYSDR_LIBRARIES}")
 		add_definitions(-DHASSOAPYSDR)
 	endif()

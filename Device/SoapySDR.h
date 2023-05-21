@@ -20,7 +20,6 @@
 #include "Device.h"
 
 #ifdef HASSOAPYSDR
-#include <rtl-sdr.h>
 #include <SoapySDR/Version.hpp>
 #include <SoapySDR/Modules.hpp>
 #include <SoapySDR/Registry.hpp>
