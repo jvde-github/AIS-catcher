@@ -1270,11 +1270,12 @@
                     <div id="shipcard_content">
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
                             <div><span>Status</span><span id="shipcard_status"></span></div>
+                            <div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
                         </div>
 
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
+                            <div><span>Country</span><span id="shipcard_country"></span></div>
                             <div><span>Sender</span><span id="shipcard_type"></span></div>
-                            <div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
                         </div>
 
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
@@ -3523,6 +3524,7 @@
             { id: "ppm", u: "ppm", d: 1 }
             ].forEach(el => document.getElementById("shipcard_" + el.id).innerHTML = ship[el.id] ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null);
 
+            document.getElementById("shipcard_country").innerHTML = getCountryName(ship.country);
             document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
             document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
             document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
