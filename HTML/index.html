@@ -2662,8 +2662,25 @@
             document.getElementById("pulse-id").className = "header-pulse-error";
         }
 
+        function getCountryName() {
+            let displayNames;
+
+            return function (isoCode) {
+                if (!displayNames && typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+                    displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+                }
+
+                if (displayNames) {
+                    const countryName = displayNames.of(isoCode);
+                    return countryName;
+                } else {
+                    return isoCode;
+                }
+            };
+        }
+
         function getFlag(country) {
-            return country ? `<span style="padding-right: 10px" title="` + country + `" class="fi fi-${country.toLowerCase()}"></span> ` : "<span></span>";
+            return country ? `<span style="padding-right: 10px" title="` + getCountryName(country) + `" class="fi fi-${country.toLowerCase()}"></span> ` : "<span></span>";
         }
 
         // fetches main statistics from the server
