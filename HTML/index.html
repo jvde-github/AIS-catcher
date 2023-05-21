@@ -2662,21 +2662,19 @@
             document.getElementById("pulse-id").className = "header-pulse-error";
         }
 
-        function getCountryName() {
-            let displayNames;
+        let displayNames;
 
-            return function (isoCode) {
-                if (!displayNames && typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
-                    displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
-                }
+        function getCountryName(isoCode) {
 
-                if (displayNames) {
-                    const countryName = displayNames.of(isoCode);
-                    return countryName;
-                } else {
-                    return isoCode;
-                }
-            };
+            if (!displayNames && typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+                displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+            }
+
+            if (displayNames) {
+                return displayNames.of(isoCode);
+            } else {
+                return isoCode;
+            }
         }
 
         function getFlag(country) {
