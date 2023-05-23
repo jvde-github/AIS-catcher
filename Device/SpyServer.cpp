@@ -160,7 +160,7 @@ namespace Device {
 		sendSetting(SETTING_IQ_DIGITAL_GAIN, { 0x0 });
 		Device::setFormat(Format::CS16);
 		sendStreamFormat();
-		setFreq(frequency);
+		setFreq(getCorrectedFrequency());
 		setRate(sample_rate);
 		if (tuner_gain != 0) setGain(tuner_gain);
 	}

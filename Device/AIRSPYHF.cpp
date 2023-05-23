@@ -130,7 +130,7 @@ namespace Device {
 		if (preamp) setLNA(1);
 
 		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set sample rate.");
-		if (airspyhf_set_freq(dev, frequency) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set frequency.");
+		if (airspyhf_set_freq(dev, getCorrectedFrequency()) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set frequency.");
 	}
 
 	Setting& AIRSPYHF::Set(std::string option, std::string arg) {
