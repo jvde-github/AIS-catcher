@@ -56,11 +56,15 @@ namespace Device {
 	class Device : public SimpleStreamOut<RAW>, public Setting {
 	protected:
 		bool streaming = false;
-		int freq_offset = 0;
+		FLOAT32 freq_offset = 0;
 		int tuner_bandwidth = 0;
 		uint32_t sample_rate = 0;
 		uint32_t frequency = 0;
 		Format format = Format::UNKNOWN;
+
+		uint32_t getCorrectedFrequency() {
+			return frequency * (1-freq_offset/1000000.0f);
+		}
 
 	public:
 		// DeviceBase
@@ -96,7 +100,7 @@ namespace Device {
 				tuner_bandwidth = Util::Parse::Integer(arg, 0, 1000000);
 			}
 			else if (option == "FREQOFFSET") {
-				freq_offset = Util::Parse::Integer(arg, -150, 150);
+				freq_offset = Util::Parse::Float(arg, -150, 150);
 			}
 			else if (option == "FORMAT") {
 				Format f;

@@ -167,7 +167,7 @@ namespace Device {
 		if (bias_tee) setBiasTee(true);
 
 		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set sample rate.");
-		if (airspy_set_freq(dev, frequency) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set frequency.");
+		if (airspy_set_freq(dev, getCorrectedFrequency()) != AIRSPY_SUCCESS) throw std::runtime_error("AIRSPY: cannot set frequency.");
 	}
 
 	Setting& AIRSPY::Set(std::string option, std::string arg) {
