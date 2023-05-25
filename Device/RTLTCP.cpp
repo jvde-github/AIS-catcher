@@ -174,8 +174,10 @@ namespace Device {
 				Protocol = PROTOCOL::NONE;
 			else if (arg == "RTLTCP")
 				Protocol = PROTOCOL::RTLTCP;
-			else if (arg == "GPSD")
+			else if (arg == "GPSD") {
 				Protocol = PROTOCOL::GPSD;
+				setFormat(Format::TXT);
+			}
 			else
 				throw std::runtime_error("RTLTCP: unknown protocol");
 		}
@@ -191,7 +193,7 @@ namespace Device {
 		str += " rtlagc " + Util::Convert::toString(RTL_AGC);
 		str += " persist " + Util::Convert::toString(persistent);
 		str += " reset " + (reset_time < 0 ? std::string("none") : std::to_string(reset_time));
-		str += " protocol " + (Protocol == PROTOCOL::NONE ? std::string("NONE") : std::string("RTLTCP"));
+		str += " protocol " + (Protocol == PROTOCOL::NONE ? std::string("NONE") : (Protocol == PROTOCOL::RTLTCP ? std::string("RTLTCP") : std::string("GPSD")));
 
 		return Device::Get() + str;
 	}

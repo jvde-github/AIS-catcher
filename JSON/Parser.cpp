@@ -240,8 +240,10 @@ namespace JSON {
 
 		while (is_match(TokenType::String)) {
 			int p = search(tokens[idx].text);
-			if (p < 0)
-				error_parser("\"" + tokens[idx].text + "\" is not an allowed \"key\"");
+			if (p < 0) {
+				if(!skipUnknownKeys)
+					error_parser("\"" + tokens[idx].text + "\" is not an allowed \"key\"");
+			}
 			next();
 
 			must_match(TokenType::Colon, "expected \':\'");

@@ -29,7 +29,7 @@ namespace Device {
 #ifdef HASHACKRF
 
 		hackrf_device* device = NULL;
-		hackrf_device_list_t* list = NULL;
+		static hackrf_device_list_t* list;
 		std::string serial;
 
 		int LNA_Gain = 8;

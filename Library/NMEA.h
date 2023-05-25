@@ -57,6 +57,7 @@ namespace AIS {
 		char prev = '\n';
 		int state = 0;
 		std::string line;
+		int count;
 
 		std::vector<AIVDM> queue;
 
