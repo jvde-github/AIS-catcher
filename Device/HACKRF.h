@@ -46,7 +46,10 @@ namespace Device {
 			if (hackrf_init() != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: Cannot open hackrf library");
 		}
 		~HACKRF() {
-			if (list) hackrf_device_list_free(list);
+			if (list) {
+				hackrf_device_list_free(list);
+				list = NULL;
+			}
 		}
 
 		// Control
