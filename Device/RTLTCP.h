@@ -30,7 +30,8 @@ namespace Device {
 
 		enum class PROTOCOL {
 			NONE,
-			RTLTCP
+			RTLTCP,
+			GPSD
 		} Protocol = PROTOCOL::RTLTCP;
 
 		// Protocol: RTL_TCP

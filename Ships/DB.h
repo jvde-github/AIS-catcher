@@ -50,7 +50,7 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 
 	int first, last, count, path_idx = 0;
 	std::string content, delim;
-	float lat, lon;
+	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	int TIME_HISTORY = 30 * 60;
 	bool latlon_share = false;
 	bool server_mode = false;
