@@ -41,6 +41,11 @@ namespace Device {
 			// RTLTCP protocol, check for dongle information
 			int len = client.read((char*)&dongle, 12, timeout);
 			if (len != 12 || dongle.magic != 0x304C5452) throw std::runtime_error("RTLTCP: no or invalid response, likely not an rtl-tcp server.");
+		} 
+		else if (Protocol == PROTOCOL::GPSD) {
+			std::string str = "?WATCH={\"nmea\":true}\n";
+			int len = client.send(str.c_str(), str.size());
+			if (len != str.size()) throw std::runtime_error("GPSD: no or invalid response, likely not a gpsd server.");
 		}
 
 		Device::Play();
@@ -169,6 +174,8 @@ namespace Device {
 				Protocol = PROTOCOL::NONE;
 			else if (arg == "RTLTCP")
 				Protocol = PROTOCOL::RTLTCP;
+			else if (arg == "GPSD")
+				Protocol = PROTOCOL::GPSD;
 			else
 				throw std::runtime_error("RTLTCP: unknown protocol");
 		}
