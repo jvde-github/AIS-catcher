@@ -27,7 +27,7 @@ Latest version is **v0.46** with various improvements to the user interface of t
 Recent changes to edge:
 - Fixing sorting issue on table
 - Hover on flag gives full country name instead of ISO code
-- 
+- Read station location from GPSD: `AIS-catcher -t gpsd localhost 2947 -N 8100 share_loc on` 
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
