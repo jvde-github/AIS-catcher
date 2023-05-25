@@ -213,9 +213,9 @@ namespace AIS {
 
 		split(s);
 
-		if (parts.size() != 13) return false;
+		if (parts.size() != 13 && parts.size() != 12) return false;
 
-		const std::string& crc = parts[12];
+		const std::string& crc = parts[parts.size()-1];
 		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
 
 		if (checksum != NMEAchecksum(line)) {
@@ -309,6 +309,7 @@ namespace AIS {
 		if (s[0] == '{') {
 			try {
 				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
+				parser.setSkipUnknown(true);
 				std::shared_ptr<JSON::JSON> j = parser.parse(s);
 
 				tag.ppm = 0;
@@ -332,9 +333,10 @@ namespace AIS {
 
 				for (const auto& p : j->getProperties()) {
 					if (p.Key() == AIS::KEY_NMEA) {
-
-						for (const auto& v : p.Get().getArray()) {
-							processAIS(v.getString(), tag, t);
+						if(p.Get().isArray()) {
+							for (const auto& v : p.Get().getArray()) {
+								processAIS(v.getString(), tag, t);
+							}
 						}
 					}
 				}
@@ -358,6 +360,7 @@ namespace AIS {
 					if (c == '{' && (prev == '\n' || prev == '\r')) {
 						line = c;
 						state = 1;
+						count = 1;
 					}
 					else if (c == '$' || c == '!') {
 						line = c;
@@ -375,11 +378,15 @@ namespace AIS {
 				// state = 1 (JSON) or state = 2 (NMEA)
 				if (state == 1) {
 					// we do not allow nested JSON, so processing until newline character or '}'
-					if (c == '}') {
-						t = 0;
-						tag.clear();
-						processJSONsentence(line, tag, t);
-						reset(c);
+					if (c == '{') count++;
+					else if (c == '}') {
+						--count;
+						if (!count) {
+							t = 0;
+							tag.clear();
+							processJSONsentence(line, tag, t);
+							reset(c);
+						}
 					}
 					else if (newline) {
 						std::cerr << "NMEA: newline in uncompleted JSON input not allowed";

@@ -31,6 +31,7 @@ namespace JSON {
 
 		const std::vector<std::vector<std::string>>* keymap = nullptr;
 		int dict = 0;
+		bool skipUnknownKeys = false;
 
 		std::string json;
 		std::vector<Token> tokens;
@@ -85,7 +86,7 @@ namespace JSON {
 		Parser(const std::vector<std::vector<std::string>>* map) : keymap(map) {}
 
 		std::shared_ptr<JSON> parse(const std::string& j);
-
+		void setSkipUnknown(bool b) { skipUnknownKeys = b; }
 		// dictionary to use
 		void setMap(int d) { dict = d; }
 	};
