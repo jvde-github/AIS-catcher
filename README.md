@@ -27,6 +27,7 @@ Latest version is **v0.46** with various improvements to the user interface of t
 Recent changes to edge:
 - Fixing sorting issue on table
 - Hover on flag gives full country name instead of ISO code
+- RTL-TCP switch `-t` allows setting protocol directly instead of via `-gt`: `AIS-catcher -t txt 153.44.253.27 5631'
 - Read station location from GPSD: `AIS-catcher -t gpsd localhost 2947 -N 8100 share_loc on` 
 ## Installation
 
@@ -486,7 +487,7 @@ netcat  153.44.253.27  5631 | AIS-catcher -r txt . -o 5
 
 For input via TCP you can skip the `netcat` command and directly read the input into the program as follows:
 ```console
-AIS-catcher -t 153.44.253.27 5631 -gt FORMAT txt PROTOCOL none
+AIS-catcher -t txt 153.44.253.27 5631
 ```
 Again, the `FORMAT txt` option switches of the buffering and automatically selects the NMEA decoder.
 

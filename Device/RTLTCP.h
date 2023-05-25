@@ -31,8 +31,23 @@ namespace Device {
 		enum class PROTOCOL {
 			NONE,
 			RTLTCP,
-			GPSD
+			GPSD,
+			TXT
 		} Protocol = PROTOCOL::RTLTCP;
+
+		std::string getProtocolString() const {
+			switch (Protocol) {
+				case PROTOCOL::NONE:
+					return "NONE";
+				case PROTOCOL::RTLTCP:
+					return "RTLTCP";
+				case PROTOCOL::GPSD:
+					return "GPSD";
+				case PROTOCOL::TXT:
+					return "TXT";
+			}
+			return "";
+		}
 
 		// Protocol: RTL_TCP
 		int freq_offset = 0;

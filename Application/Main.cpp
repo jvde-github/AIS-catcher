@@ -92,7 +92,7 @@ void Usage() {
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file or stdin (.), short for -r -ga FORMAT yy FILE filename" << std::endl;
-	std::cerr << "\t[-t [protocol] [host [port]] - read IQ data from remote RTL-TCP instance]" << std::endl;
+	std::cerr << "\t[-t [[protocol]] [host [port]] - read IQ data from remote RTL-TCP instance]" << std::endl;
 	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
 	std::cerr << "\t[-x [server][port] - UDP input of NMEA messages at port on server" << std::endl;
 	std::cerr << "\t[-y [host [port]] - read IQ data from remote SpyServer]" << std::endl;
@@ -313,7 +313,7 @@ int main(int argc, char* argv[]) {
 				receiver.addModel(2)->Set("FP_DS", "ON").Set("PS_EMA", "ON");
 				break;
 			case 't':
-				Assert(count <= 3, param, "requires one or two parameters [host] [[port]].");
+				Assert(count <= 3, param, "requires one, two or three parameters [protocol] [host] [port].");
 				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
