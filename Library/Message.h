@@ -29,7 +29,7 @@ namespace AIS {
 
 	class GPS {
 	public:
-		float lat, lon, heading, speed;
+		float lat = 0, lon = 0, heading = 0, speed = 0;
 	};
 
 	class Message {

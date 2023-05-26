@@ -37,7 +37,7 @@ namespace JSON {
 		std::cerr << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl;
-		throw std::runtime_error("syntax error in config file: " + err);
+		throw std::runtime_error("syntax error in JSON: " + err);
 	}
 
 	// Lex analysis
