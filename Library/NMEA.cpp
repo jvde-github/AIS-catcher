@@ -312,6 +312,9 @@ namespace AIS {
 				parser.setSkipUnknown(true);
 				std::shared_ptr<JSON::JSON> j = parser.parse(s);
 
+				std::string cls = "";
+				std::string dev = "";
+
 				tag.ppm = 0;
 				tag.sample_lvl = 0;
 				t = 0;
@@ -319,6 +322,12 @@ namespace AIS {
 				// phase 1, get the meta data in place
 				for (const auto& p : j->getProperties()) {
 					switch (p.Key()) {
+					case AIS::KEY_CLASS:
+						cls = p.Get().getString();
+						break;
+					case AIS::KEY_DEVICE:
+						dev = p.Get().getString();
+						break;
 					case AIS::KEY_SIGNAL_POWER:
 						tag.level = p.Get().getFloat();
 						break;
@@ -331,18 +340,51 @@ namespace AIS {
 					}
 				}
 
-				for (const auto& p : j->getProperties()) {
-					if (p.Key() == AIS::KEY_NMEA) {
-						if(p.Get().isArray()) {
-							for (const auto& v : p.Get().getArray()) {
-								processAIS(v.getString(), tag, t);
+				if(cls == "AIS" && dev == "AIS-catcher") {
+					for (const auto& p : j->getProperties()) {
+						if (p.Key() == AIS::KEY_NMEA) {
+							if(p.Get().isArray()) {
+								for (const auto& v : p.Get().getArray()) {
+									processAIS(v.getString(), tag, t);
+								}
 							}
 						}
 					}
 				}
+
+				if(cls == "TPV") {
+					GPS gps;
+					
+					for (const auto& p : j->getProperties()) {
+						if (p.Key() == AIS::KEY_LAT) {
+							if(p.Get().isFloat()) {
+								gps.lat = p.Get().getFloat();
+							}
+							else if(p.Get().isInt()) {
+								gps.lat = p.Get().getInt();
+							}
+						}
+						else if (p.Key() == AIS::KEY_LON) {
+							if(p.Get().isFloat()) {
+								gps.lon = p.Get().getFloat();
+							}
+							else if(p.Get().isInt()) {
+								gps.lon = p.Get().getInt();
+							}
+						}
+					}
+
+					if (gps.lat != 0 || gps.lon != 0) { 
+
+						outGPS.Send(&gps, 1, tag);
+						std::cerr << "JSON: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+					}
+				}
+
+
 			}
 			catch (std::exception const& e) {
-				std::cout << "UDP server: " << e.what() << std::endl;
+				std::cout << "NMEA model: " << e.what() << std::endl;
 			}
 		}
 	}

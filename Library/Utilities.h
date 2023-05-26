@@ -107,7 +107,7 @@ namespace Util {
 	class Parse {
 	public:
 		static long Integer(std::string str, long min = 0, long max = 0);
-		static FLOAT32 Float(std::string str, FLOAT32 min = -1e6, FLOAT32 max = +1e6);
+		static FLOAT32 Float(std::string str, FLOAT32 min = -1e30, FLOAT32 max = +1e30);
 		static bool StreamFormat(std::string str, Format& format);
 		static bool DeviceType(std::string str, Type& type);
 		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF");

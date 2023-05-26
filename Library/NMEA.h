@@ -60,7 +60,7 @@ namespace AIS {
 		int count;
 
 		std::vector<AIVDM> queue;
-
+		
 		void submitAIS(TAG& tag, long int t);
 		void addline(const AIVDM& a);
 		void reset(char);
