@@ -1932,21 +1932,25 @@
         }
 
         function addWrenchControl() {
-            // ------------
-            var wrenchControl = L.control({ position: 'bottomright' });
+        var wrenchControl = L.control({ position: 'bottomright' });
 
-            wrenchControl.onAdd = function (map) {
+        wrenchControl.onAdd = function (map) {
+            var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
+            controlDiv.title = "Settings";
+            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
+            var iconLabelSpan = L.DomUtil.create('span', 'material-icons', controlBoundary);
+            iconLabelSpan.innerHTML = "more_horiz";
 
-                var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-                controlDiv.title = "Settings";
-                var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
-                iconLabelSpan = L.DomUtil.create('span', 'fas fa-ellipsis-h', controlBoundary);
+            controlDiv.addEventListener('click', function (event) {
+            showContextMenu(event, "", ['settings', 'center', 'ctx-map']);
+            });
 
-                controlDiv.addEventListener('click', function (event) { showContextMenu(event,"",['settings','center','ctx-map']); });
-                return controlDiv;
-            };
-            addControlToMap(wrenchControl);
+            return controlDiv;
+        };
+
+        addControlToMap(wrenchControl);
         }
+
 
         async function toggleRange() {
 
