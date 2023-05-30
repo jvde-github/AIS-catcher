@@ -9,9 +9,6 @@
     <link rel="apple-touch-icon" href="favicon.ico">
 
     <script src="https://kit.fontawesome.com/296bfd8db6.js" crossorigin="anonymous"></script>
-    <!-- Material Design icons -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -1016,9 +1013,6 @@
             z-index: -1;
             }
 
-            .small-icon {
-                font-size: 16px; 
-            } 
     </style>
 
     <link rel="stylesheet" href="config.css">
@@ -1026,97 +1020,73 @@
 
 <body>
 
-            <div class="header">
-            <div onclick="toggleMenu()" class="header-menubutton">
-                <i id="header_menu_button" class="material-icons">menu</i>
-            </div>
-            <div class="header-title">
-                <span onclick="headerClick()">AIS-catcher</span>
-                <div id="menubar_mini">
-                <i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="material-icons small-icon">work</i>
-                <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="material-icons small-icon">bar_chart</i>
-                <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="material-icons small-icon">table_chart</i>
-                <i id="map_tab_mini" onclick="activateTab(event,'map')" class="material-icons small-icon">map</i>
-                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="material-icons small-icon">info</i>
-                </div>
-            </div>
-            <div title="About" onclick="showAboutDialog()" class="header-icon">
-                <i class="material-icons small-icon">help_outline</i>
-            </div>
-            <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon">
-                <i class="material-icons small-icon">settings</i>
-            </div>
-            <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon">
-                <i id="screentoggle-id" class="material-icons small-icon">fullscreen</i>
-            </div>
-            <div title="Connection status with server" id="pulse-id" class="header-pulse-ok">
-                <i class="material-icons small-icon">link</i>
-            </div>
-            </div>
+    <div class="header">
+        <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="fa-solid fa-bars"></i></div>
+        <div class="header-title">
+            <span onclick="headerClick()">AIS-catcher</span>
 
-            <nav id="menubar">
-            <div onclick="activateTab(event,'stat')" id="stat_tab">
-                <i class="material-icons">work</i>
-                <span>Summary</span>
+            <div id="menubar_mini">
+                <i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="fa-solid fa-briefcase"></i>
+                <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="fa-solid fa-chart-simple"></i>
+                <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="fa-solid fa-table"></i>
+                <i id="map_tab_mini" onclick="activateTab(event,'map')" class="fa-solid fa-map"></i>
+                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="fa-solid fa-info-circle"></i>
             </div>
-            <div onclick="activateTab(event,'plots')" id="plots_tab">
-                <i class="material-icons">bar_chart</i>
-                <span>Plots</span>
-            </div>
-            <div onclick="activateTab(event,'ships')" id="ships_tab">
-                <i class="material-icons">table_chart</i>
-                <span>Ships</span>
-            </div>
-            <div onclick="activateTab(event,'map')" id="map_tab">
-                <i class="material-icons">map</i>
-                <span>Map</span>
-            </div>
-            <div onclick="activateTab(event,'about')" id="about_tab">
-                <i class="material-icons">info</i>
-                <span>About</span>
-            </div>
-            </nav>
-            <div class="mainspace-container">
-            <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
-                <ul id="context-menu">
-                <li class="station" onclick="pinStation()"><i class="material-icons">location_on</i>Center map on station</li>
+        </div>
+
+        <div title="About" onclick="showAboutDialog()" class="header-icon"><i class="fas fa-question-circle"></i></div>
+        <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon"><i class="fas fa-cog fa-sm"></i></div>        <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
+        <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
+
+    </div>
+    <nav id="menubar">
+        <div onclick="activateTab(event,'stat')" id="stat_tab"><i class="fa-solid fa-briefcase"></i><span>Summary</span></div>
+        <div onclick="activateTab(event,'plots')" id="plots_tab"><i class="fa-solid fa-chart-simple"></i><span>Plots</span></div>
+        <div onclick="activateTab(event,'ships')" id="ships_tab"><i class="fa-solid fa-table"></i><span>Ships</span></div>
+        <div onclick="activateTab(event,'map')" id="map_tab"><i class="fa-solid fa-map"></i><span>Map</span></div>
+        <div onclick="activateTab(event,'about')" id="about_tab"><i class="fa-solid fa-circle-info"></i><span>About</span></div>
+    </nav>
+    <div class="mainspace-container">
+        <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
+
+            <ul id="context-menu">
+                <li class="station" onclick="pinStation()"><i class="fas fa-thumbtack"></i>Center map on station</li>
                 <li class="divider station"></li>
-                <li class="copy-text" onclick="copyText(context_mmsi)"><i class="material-icons">content_copy</i>Copy to Clipboard</li>
+                <li class="copy-text" onclick="copyText(context_mmsi)"><i class="fas fa-clipboard"></i>Copy to Clipboard</li>
                 <li class="divider copy-text"></li>
-                <li class="table-menu" onclick="downloadCSV()"><i class="material-icons">cloud_download</i>Download CSV</li>
+                <li class="table-menu" onclick="downloadCSV()"><i class="fas fa-download"></i>Download CSV</li>
                 <li class="divider table-menu"></li>
-                <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="material-icons">undo</i><span id="ctx_unpin">Release map center</span></li>
-                <li class="ctx-map" onclick="deleteAllTracks()"><i class="material-icons">delete_sweep</i>Remove all tracks</li>
-                <li class="ctx-map" onclick="toggleLabel()"><i class="material-icons">label</i><span id="ctx_labelswitch"></span></li>
-                <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="material-icons">label</i><span id="ctx_tooltipstyling"></span></li>
-                <li class="ctx-map" onclick="toggleTooltipOverlap()" ><i class="material-icons">label</i><span id="ctx_tooltipoverlap"></span></li>
+                <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="fas fa-undo"></i><span id="ctx_unpin">Release map center</span></li>
+                <li class="ctx-map" onclick="deleteAllTracks()"><i class="fas fa-route"></i>Remove all tracks</li>
+                <li class="ctx-map" onclick="toggleLabel()"><i class="fas fa-tag"></i><span id="ctx_labelswitch"></span></li>
+                <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="fas fa-tag"></i><span id="ctx_tooltipstyling"></span></li>
+                <li class="ctx-map" onclick="toggleTooltipOverlap()" ><i class="fas fa-tag"></i><span id="ctx_tooltipoverlap"></span></li>
                 <li class="divider ctx-map"></li>
-                <li class="ctx-map" onclick="toggleRange()"><i class="material-icons">signal_cellular_alt</i><span  id="ctx_range"></span></li>
+                <li class="ctx-map" onclick="toggleRange()"><i class="fas fa-tower-cell"></i><span  id="ctx_range"></span></li>
                 <li class="divider ctx-map"></li>
-                <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="material-icons">directions</i><span id="ctx_track"></span></li>
-                <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="material-icons">location_on</i>Center map on vessel</li>
-                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="material-icons">location_searching</i>Zoom in on vessel</li>
-                <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="material-icons">directions_boat</i>Show Shipcard</li>
+                <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="fas fa-route"></i><span id="ctx_track"></span></li>
+                <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="fas fa-thumbtack"></i>Center map on vessel</li>
+                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Zoom in on vessel</li>
+                <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
-                <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="material-icons">storage</i>Show Vessel Database Entry</li>
-                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="material-icons">email</i>Show Last Message</li>
-                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="material-icons">file_copy</i>Copy MMSI</li>
-                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="material-icons">content_paste</i>Copy Coordinates</li>
+                <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="fas fa-database"></i>Show Vessel Database Entry</li>
+                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="fas fa-envelope"></i>Show Last Message</li>
+                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
+                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="fas fa-clipboard"></i>Copy Coordinates</li>
                 <li class="divider mmsi"></li>
-                <li class="mmsi" onclick="openGoogleSearch(context_mmsi)"><i class="material-icons">search</i>Search on Google</li>
-                <li class="mmsi" onclick="openMarineTraffic(context_mmsi)"><i class="material-icons">explore</i>Find on MarineTraffic</li>
-                <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="material-icons">visibility</i>Find on VesselFinder</li>
-                <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="material-icons">directions_boat</i>Find on ShipXplorer</li>
+                <li class="mmsi" onclick="openGoogleSearch(context_mmsi)"><i class="fab fa-google"></i>Search on Google</li>
+                <li class="mmsi" onclick="openMarineTraffic(context_mmsi)"><i class="fab fa-m"> </i>Find on MarineTraffic</li>
+                <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Find on VesselFinder</li>
+                <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Find on ShipXplorer</li>
                 <li class="divider mmsi"></li>
-                <li class="settings" onclick="showPlugins()"><i class="material-icons">build</i>Installed Plugins...</li>
-                <li class="settings" onclick="toggleDarkMode()"><i class="material-icons">brightness_4</i>Toggle Light/Dark mode</li>
-                </ul>
-                <div id="dialog-box" class="hidden">
+                <li class="settings" onclick="showPlugins()"><i class="fas fa-wrench"></i>Installed Plugins...</li>
+                <li class="settings" onclick="toggleDarkMode()"><i class="fas fa-moon"></i>Toggle Light/Dark mode</li>
+            </ul>
+
+            <div id="dialog-box" class="hidden">
                 <div class="dialog-title">Dialog Title</div>
                 <div class="dialog-message">This is the message area.</div>
                 <button class="dialog-close" onclick="closeDialog()">Close</button>
-                </div>
-            </div>
             </div>
 
             <div class="tabcontent" id="about">
@@ -1425,6 +1395,11 @@
                 showDialog("Action","No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
             }
             return;
+
+            if (!navigator.clipboard)
+                showDialog("Action","No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
+            else
+                navigator.clipboard.writeText(t);
         }
 
         async function copyToClipboard(textToCopy) {
@@ -1933,25 +1908,21 @@
         }
 
         function addWrenchControl() {
-        var wrenchControl = L.control({ position: 'bottomright' });
+            // ------------
+            var wrenchControl = L.control({ position: 'bottomright' });
 
-        wrenchControl.onAdd = function (map) {
-            var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-            controlDiv.title = "Settings";
-            var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
-            var iconLabelSpan = L.DomUtil.create('span', 'material-icons', controlBoundary);
-            iconLabelSpan.innerHTML = "more_horiz";
+            wrenchControl.onAdd = function (map) {
 
-            controlDiv.addEventListener('click', function (event) {
-            showContextMenu(event, "", ['settings', 'center', 'ctx-map']);
-            });
+                var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
+                controlDiv.title = "Settings";
+                var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
+                iconLabelSpan = L.DomUtil.create('span', 'fas fa-ellipsis-h', controlBoundary);
 
-            return controlDiv;
-        };
-
-        addControlToMap(wrenchControl);
+                controlDiv.addEventListener('click', function (event) { showContextMenu(event,"",['settings','center','ctx-map']); });
+                return controlDiv;
+            };
+            addControlToMap(wrenchControl);
         }
-
 
         async function toggleRange() {
 
@@ -2169,13 +2140,8 @@
             document.getElementById("menubar").classList.toggle('visible');
             document.getElementById("menubar_mini").classList.toggle('show');
 
-            var menuButton = document.getElementById("header_menu_button");
-
-            if (menuButton.innerHTML === "menu") {
-                menuButton.innerHTML = "close";
-            } else {
-                menuButton.innerHTML = "menu";
-            }
+            document.getElementById("header_menu_button").classList.toggle("fa-bars");
+            document.getElementById("header_menu_button").classList.toggle("fa-xmark");
         }
 
         function initFullScreen() {
@@ -2186,12 +2152,14 @@
         }
 
         function handleFullScreenChange() {
-            var screenToggleIcon = document.getElementById("screentoggle-id");
+            var icon = document.getElementById("screentoggle-id");
+            if (document.fullscreenElement) {
+                icon.classList.remove("fs-icon-normal");
+                icon.classList.add("fs-icon-full");
 
-            if (screenToggleIcon.innerHTML === "fullscreen") {
-                screenToggleIcon.innerHTML = "fullscreen_exit";
             } else {
-                screenToggleIcon.innerHTML = "fullscreen";
+                icon.classList.remove("fs-icon-full");
+                icon.classList.add("fs-icon-normal");
             }
         }
 
@@ -3855,7 +3823,7 @@
         function showAboutDialog() {
             const message = `
             <div style="display: flex; align-items: center; margin-top: 10px;">
-            <span style="font-size: 2.4em;  text-align: center; margin-right: 10px;"><i class="material-icons">directions_boat</i></span>
+            <span style=" font-size: 2.4em;  text-align: center; margin-right: 10px;"><i class="fas fa-ship"></i></span>
             <span>
                 <a href="https://github.com/jvde-github/AIS-catcher"><b style="font-size: 1.6em;">AIS-catcher</b></a>
                 <br>
