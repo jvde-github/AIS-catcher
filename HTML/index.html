@@ -8,6 +8,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="favicon.ico">
 
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+
     <script src="https://kit.fontawesome.com/296bfd8db6.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
@@ -149,6 +152,10 @@
                 padding: 10px 15px;
             }
 
+        .small-icon {
+            font-size: 18px;
+        }
+
         @media only screen and (max-width:750px) {
             .header-title div {
                 display: none;
@@ -160,7 +167,8 @@
         }
 
         .header-title div i {
-            padding: 0px 20px;
+            padding: 0px 14px;
+            font-size: 18px;
             transition: var( --hover-transition);
         }
 
@@ -267,8 +275,8 @@
             #menubar div i {
                 padding-top: 10px;
                 padding-bottom: 10px;
-                font-size: 20px;
-                line-height: 20px;
+                font-size: 24px;
+                line-height: 24px;
             }
 
             #menubar div span {
@@ -1021,31 +1029,58 @@
 <body>
 
     <div class="header">
-        <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="fa-solid fa-bars"></i></div>
-        <div class="header-title">
+        <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="material-icons">menu</i></div>
+            <div class="header-title">
             <span onclick="headerClick()">AIS-catcher</span>
 
             <div id="menubar_mini">
-                <i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="fa-solid fa-briefcase"></i>
-                <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="fa-solid fa-chart-simple"></i>
-                <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="fa-solid fa-table"></i>
-                <i id="map_tab_mini" onclick="activateTab(event,'map')" class="fa-solid fa-map"></i>
-                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="fa-solid fa-info-circle"></i>
+                <i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="material-icons">business_center</i>
+                <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="material-icons">leaderboard</i>
+                <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="material-icons">view_list</i>
+                <i id="map_tab_mini" onclick="activateTab(event,'map')" class="material-icons-outlined">map</i>
+                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="material-icons">info</i>                
             </div>
         </div>
 
-        <div title="About" onclick="showAboutDialog()" class="header-icon"><i class="fas fa-question-circle"></i></div>
-        <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon"><i class="fas fa-cog fa-sm"></i></div>        <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon"><i id="screentoggle-id" class="fas fs-icon-normal fa-sm"></i></div>
-        <div title="Connection status with server" id="pulse-id" class="header-pulse-ok"><i class="fa-solid fa-link fa-sm"></i></div>
-
+        <div title="About" onclick="showAboutDialog()" class="header-icon">
+            <i class="material-icons small-icon">help</i>
+          </div>
+          
+          <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon">
+            <i class="material-icons small-icon">settings</i>
+          </div>
+          
+          <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon">
+            <i id="screentoggle-id" class="material-icons" small-icon>fullscreen</i>
+          </div>
+          
+          <div title="Connection status with server" id="pulse-id" class="header-pulse-ok">
+            <i class="material-icons small-icon">link</i>
+          </div>
+          
     </div>
     <nav id="menubar">
-        <div onclick="activateTab(event,'stat')" id="stat_tab"><i class="fa-solid fa-briefcase"></i><span>Summary</span></div>
-        <div onclick="activateTab(event,'plots')" id="plots_tab"><i class="fa-solid fa-chart-simple"></i><span>Plots</span></div>
-        <div onclick="activateTab(event,'ships')" id="ships_tab"><i class="fa-solid fa-table"></i><span>Ships</span></div>
-        <div onclick="activateTab(event,'map')" id="map_tab"><i class="fa-solid fa-map"></i><span>Map</span></div>
-        <div onclick="activateTab(event,'about')" id="about_tab"><i class="fa-solid fa-circle-info"></i><span>About</span></div>
+        <div onclick="activateTab(event,'stat')" id="stat_tab">
+            <i class="material-icons">business_center</i><span>Summary</span>
+          </div>
+          
+          <div onclick="activateTab(event,'plots')" id="plots_tab">
+            <i class="material-icons">leaderboard</i><span>Plots</span>
+          </div>
+          
+          <div onclick="activateTab(event,'ships')" id="ships_tab">
+            <i class="material-icons">view_list</i><span>Ships</span>
+          </div>
+          
+          <div onclick="activateTab(event,'map')" id="map_tab">
+            <i class="material-icons">map</i><span>Map</span>
+          </div>
+          
+          <div onclick="activateTab(event,'about')" id="about_tab">
+            <i class="material-icons">info</i><span>About</span>
+          </div>
     </nav>
+
     <div class="mainspace-container">
         <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
 
@@ -2140,8 +2175,12 @@
             document.getElementById("menubar").classList.toggle('visible');
             document.getElementById("menubar_mini").classList.toggle('show');
 
-            document.getElementById("header_menu_button").classList.toggle("fa-bars");
-            document.getElementById("header_menu_button").classList.toggle("fa-xmark");
+            var menuButton = document.getElementById("header_menu_button");
+            if(menuButton.innerHTML == "menu") {
+                menuButton.innerHTML = "close";
+            } else {
+                menuButton.innerHTML = "menu";
+            }
         }
 
         function initFullScreen() {
@@ -2154,14 +2193,12 @@
         function handleFullScreenChange() {
             var icon = document.getElementById("screentoggle-id");
             if (document.fullscreenElement) {
-                icon.classList.remove("fs-icon-normal");
-                icon.classList.add("fs-icon-full");
-
+                icon.innerHTML = "fullscreen_exit";
             } else {
-                icon.classList.remove("fs-icon-full");
-                icon.classList.add("fs-icon-normal");
+                icon.innerHTML = "fullscreen";
             }
         }
+
 
         // we calculate the lat/lon for 1m move in direction of heading
         // underlying calculation uses an offset of 100m and then scales down to 1.
@@ -3842,6 +3879,7 @@
             <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" rel="nofollow">chart.js annotation plugin</a>, 
             <a href="https://leafletjs.com/" rel="nofollow">leaflet</a>, 
             <a href="https://fontawesome.com/" rel="nofollow">Font Awesome</a>, 
+            <a href="https://developers.google.com/fonts/docs/material_icons#icon_font_for_the_web" rel="nofollow">Material Design Icons</a>, 
             <a href="https://tabulator.info/" rel="nofollow">tabulator</a>, 
             <a href="https://github.com/markedjs/marked">marked</a> and 
             <a href="https://github.com/lipis/flag-icons">flag-icons</a>. Please consult the links for the respective licenses.
