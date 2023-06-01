@@ -182,6 +182,23 @@ namespace AIS {
 		}
 	}
 
+	void JSONAIS::ProcessMsg6Data(const AIS::Message& msg) {
+		int dac = msg.getUint(72, 10);
+		int fid = msg.getUint(82, 6);
+
+		if (dac == 235 && fid == 10) {
+			UL(msg, AIS::KEY_ANA_INT, 88, 10, 0.05, 0);
+			UL(msg, AIS::KEY_ANA_EXT1, 98, 10, 0.05, 0);
+			UL(msg, AIS::KEY_ANA_EXT2, 108, 10, 0.05, 0);
+			U(msg, AIS::KEY_RACON, 118, 2);
+			U(msg, AIS::KEY_HEALTH, 122, 1);
+			U(msg, AIS::KEY_STAT_EXT, 123, 8);
+			B(msg, AIS::KEY_OFF_POSITION, 131, 1);
+		}
+		else
+			D(msg, AIS::KEY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
+	}
+
 	void JSONAIS::ProcessMsg8Data(const AIS::Message& msg) {
 		int dac = msg.getUint(40, 10);
 		int fid = msg.getUint(50, 6);
@@ -333,7 +350,7 @@ namespace AIS {
 			X(msg, AIS::KEY_SPARE, 71, 1);
 			U(msg, AIS::KEY_DAC, 72, 10);
 			U(msg, AIS::KEY_FID, 82, 6);
-			D(msg, AIS::KEY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
+			ProcessMsg6Data(msg);
 			break;
 		case 7:
 		case 13:
