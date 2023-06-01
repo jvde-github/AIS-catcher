@@ -617,8 +617,8 @@
 
                 .shipcard-footer > div > i {
                     color: white;
-                    font-size: 17px;
-                    line-height: 17px;
+                    font-size: 24px;
+                    line-height: 16px;
                     margin: auto;
                     padding: 10px;
                 }
@@ -1009,15 +1009,15 @@
             display: inline-block;
             }
 
-            .stationIcon i.fa.fa-tower-cell {
+            .stationIcon i  {
             color: var(--secondary-color);
-            font-size: 14px;
+            font-size: 18px;
             }
 
             .stationIcon div {
             position: absolute;
-            top: -4px;
-            left: -4px;
+            top: -2px;
+            left: -3px;
             width: 24px;
             height: 24px;
             background-color: var(--tertiary-color);
@@ -1364,9 +1364,14 @@
 
                     </div>
                     <footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">
-                        <div title="Center map on current vessel" onclick="mapResetView(13)"><i class="fa-solid fa-bullseye fa-xl"></i><span>Zoom</span></div>
-                        <div title="Track of current vessel" onclick="toggleTrackCard()"><i class="fa-solid fa-route fa-xl"></i><span id="shipcard_track">Track</span></div>
+                        <div title="Center map on current vessel" onclick="mapResetView(13)">
+                          <i class="material-icons" >zoom_in</i><span>Zoom</span>
+                        </div>
+                        <div title="Track of current vessel" onclick="toggleTrackCard()">
+                          <i class="material-icons"">timeline</i><span id="shipcard_track">Track</span>
+                        </div>
                     </footer>
+                      
                 </aside>
 
                 <div oncontextmenu="showContextMenu(event,0,['settings','ctx-map'])" class="maptab">
@@ -1949,19 +1954,19 @@
         }
 
         function addWrenchControl() {
-            // ------------
             var wrenchControl = L.control({ position: 'bottomright' });
 
             wrenchControl.onAdd = function (map) {
-
                 var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
                 controlDiv.title = "Settings";
                 var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
-                iconLabelSpan = L.DomUtil.create('span', 'fas fa-ellipsis-h', controlBoundary);
+                iconLabelSpan = L.DomUtil.create('span', 'material-icons', controlBoundary);
+                iconLabelSpan.innerHTML = "more_horiz";
 
                 controlDiv.addEventListener('click', function (event) { showContextMenu(event,"",['settings','center','ctx-map']); });
                 return controlDiv;
             };
+
             addControlToMap(wrenchControl);
         }
 
@@ -2159,9 +2164,13 @@
             const div = document.createElement('div');
 
             div.title = title;
-            div.innerHTML = '<i class="' + icon + ' fa-xl"></i><span>' + txt + '</span>';
+            if (icon.startsWith("fa")) {
+                icon = "question_mark";
+            }
+            div.innerHTML = '<i class="material-icons">'+icon+'</i><span>'+txt+'</span>';
             div.setAttribute("onclick", onclick);
 
+                        
             document.getElementById('shipcard_footer').appendChild(div);
         }
 
@@ -3605,13 +3614,13 @@
                 }
             } else {
                 if (marker_station == null) {
-
                     const stationIcon = L.divIcon({
-                        html: `<div class="stationIcon"><i class="fa fa-tower-cell"></i><div></div></div>`,
+                        html: `<div class="stationIcon"><i class="material-icons">cell_tower</i><div></div></div>`,
                         iconSize: [18, 18],
                         iconAnchor: [8, 9],
                         className: 'myDivIcon'
                         });
+
 
                     marker_station = L.marker([station.lat, station.lon],{ interactive: true, icon:  stationIcon});
                     marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, ['settings','ctx-map','ctx-menu','station']); });
@@ -3865,31 +3874,30 @@
 
         function showAboutDialog() {
             const message = `
-            <div style="display: flex; align-items: center; margin-top: 10px;">
-            <span style=" font-size: 2.4em;  text-align: center; margin-right: 10px;"><i class="fas fa-ship"></i></span>
-            <span>
+                <div style="display: flex; align-items: center; margin-top: 10px;">
+                <span style="text-align: center; margin-right: 10px;"><i style="font-size: 40px" class="material-icons">directions_boat</i></span>
+                <span>
                 <a href="https://github.com/jvde-github/AIS-catcher"><b style="font-size: 1.6em;">AIS-catcher</b></a>
                 <br>
                 <b style="font-size: 0.8em;">&copy; 2021-2023 jvde.github@gmail.com</b>
-            </span>
-            </div>
-            <p>
-            AIS-catcher is a research and educational tool, provided under the 
-            <a href="https://github.com/jvde-github/AIS-catcher/blob/e66a4481e62d8f1775700e5f51fb7ad9ea569a12/LICENSE">GNU GPL v3 license</a>. 
-            It is not reliable for navigation and safety of life or property. 
-            Radio reception and handling regulations vary by region, so check your local administration's rules. Illegal use is strictly prohibited.
-            </p>
-            <p>
-            The web-interface gratefully uses the following libraries:
-            <a href="https://www.chartjs.org/docs/latest/charts/line.html" rel="nofollow">chart.js</a>, 
-            <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" rel="nofollow">chart.js annotation plugin</a>, 
-            <a href="https://leafletjs.com/" rel="nofollow">leaflet</a>, 
-            <a href="https://fontawesome.com/" rel="nofollow">Font Awesome</a>, 
-            <a href="https://developers.google.com/fonts/docs/material_icons#icon_font_for_the_web" rel="nofollow">Material Design Icons</a>, 
-            <a href="https://tabulator.info/" rel="nofollow">tabulator</a>, 
-            <a href="https://github.com/markedjs/marked">marked</a> and 
-            <a href="https://github.com/lipis/flag-icons">flag-icons</a>. Please consult the links for the respective licenses.
-            </p>`;
+                </span>
+                </div>
+                <p>
+                AIS-catcher is a research and educational tool, provided under the
+                <a href="https://github.com/jvde-github/AIS-catcher/blob/e66a4481e62d8f1775700e5f51fb7ad9ea569a12/LICENSE">GNU GPL v3 license</a>.
+                It is not reliable for navigation and safety of life or property.
+                Radio reception and handling regulations vary by region, so check your local administration's rules. Illegal use is strictly prohibited.
+                </p>
+                <p>
+                The web-interface gratefully uses the following libraries:
+                <a href="https://www.chartjs.org/docs/latest/charts/line.html" rel="nofollow">chart.js</a>,
+                <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" rel="nofollow">chart.js annotation plugin</a>,
+                <a href="https://leafletjs.com/" rel="nofollow">leaflet</a>,
+                <a href="https://fonts.google.com/icons?selected=Material+Icons" rel="nofollow">Material Design Icons</a>,
+                <a href="https://tabulator.info/" rel="nofollow">tabulator</a>,
+                <a href="https://github.com/markedjs/marked">marked</a>, and
+                <a href="https://github.com/lipis/flag-icons">flag-icons</a>. Please consult the links for the respective licenses.
+                </p>`;
 
 
             showDialog("About...",message)

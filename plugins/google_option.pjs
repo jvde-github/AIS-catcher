@@ -8,4 +8,4 @@ function openGoogle() {
         }
 }
 
-addShipcardItem('fa brands fa-google','Google','Lookup vessel coordinates on Google maps','openGoogle()');
+addShipcardItem('search','Google','Lookup vessel coordinates on Google maps','openGoogle()');

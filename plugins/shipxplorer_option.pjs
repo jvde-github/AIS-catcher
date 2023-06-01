@@ -1,3 +1,3 @@
 // {"author":"jvde-github","description":"add option to look up vessel details in ShipXplorer"}
 
-addShipcardItem('fa-solid fa-s','ShipXplorer','Lookup vessel on ShipXplorer','window.open("https://www.shipxplorer.com/data/vessels/IMO-MMSI-" + card_mmsi)');
+addShipcardItem('search','ShipXplorer','Lookup vessel on ShipXplorer','window.open("https://www.shipxplorer.com/data/vessels/IMO-MMSI-" + card_mmsi)');
