@@ -634,14 +634,18 @@
         #shipcard header > span:first-child {
             flex: 1 0 0;
         }
-
+        
         .shipcard-header-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex: 0 1 0;
-            padding: 5px;
+            padding: 0px;
             border-radius: 10px;
             line-height: 10px;
-            transition: var( --hover-transition);
+            transition: var(--hover-transition);
         }
+
 
             .shipcard-header-icon:hover {
                 cursor: pointer;
@@ -1085,39 +1089,39 @@
         <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
 
             <ul id="context-menu">
-                <li class="station" onclick="pinStation()"><i class="fas fa-thumbtack"></i>Center map on station</li>
+                <li class="station" onclick="pinStation()"><i class="material-icons">push_pin</i>Center map on station</li>
                 <li class="divider station"></li>
-                <li class="copy-text" onclick="copyText(context_mmsi)"><i class="fas fa-clipboard"></i>Copy to Clipboard</li>
+                <li class="copy-text" onclick="copyText(context_mmsi)"><i class="material-icons">content_copy</i>Copy to Clipboard</li>
                 <li class="divider copy-text"></li>
-                <li class="table-menu" onclick="downloadCSV()"><i class="fas fa-download"></i>Download CSV</li>
+                <li class="table-menu" onclick="downloadCSV()"><i class="material-icons">cloud_download</i>Download CSV</li>
                 <li class="divider table-menu"></li>
-                <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="fas fa-undo"></i><span id="ctx_unpin">Release map center</span></li>
-                <li class="ctx-map" onclick="deleteAllTracks()"><i class="fas fa-route"></i>Remove all tracks</li>
-                <li class="ctx-map" onclick="toggleLabel()"><i class="fas fa-tag"></i><span id="ctx_labelswitch"></span></li>
-                <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="fas fa-tag"></i><span id="ctx_tooltipstyling"></span></li>
-                <li class="ctx-map" onclick="toggleTooltipOverlap()" ><i class="fas fa-tag"></i><span id="ctx_tooltipoverlap"></span></li>
+                <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="material-icons">undo</i><span id="ctx_unpin">Release map center</span></li>
+                <li class="ctx-map" onclick="deleteAllTracks()"><i class="material-icons">remove_circle_outline</i>Remove all tracks</li>
+                <li class="ctx-map" onclick="toggleLabel()"><i class="material-icons">label</i><span id="ctx_labelswitch"></span></li>
+                <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="material-icons">label</i><span id="ctx_tooltipstyling"></span></li>
+                <li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="material-icons">label</i><span id="ctx_tooltipoverlap"></span></li>
                 <li class="divider ctx-map"></li>
-                <li class="ctx-map" onclick="toggleRange()"><i class="fas fa-tower-cell"></i><span  id="ctx_range"></span></li>
+                <li class="ctx-map" onclick="toggleRange()"><i class="material-icons">signal_cellular_alt</i><span id="ctx_range"></span></li>
                 <li class="divider ctx-map"></li>
-                <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="fas fa-route"></i><span id="ctx_track"></span></li>
-                <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="fas fa-thumbtack"></i>Center map on vessel</li>
-                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="fas fa-bullseye"></i>Zoom in on vessel</li>
-                <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="fas fa-ship"></i>Show Shipcard</li>
+                <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="material-icons">timeline</i><span id="ctx_track"></span></li>
+                <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="material-icons">push_pin</i>Center map on vessel</li>
+                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="material-icons">zoom_in</i>Zoom in on vessel</li>
+                <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="material-icons">directions_boat</i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
-                <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="fas fa-database"></i>Show Vessel Database Entry</li>
-                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="fas fa-envelope"></i>Show Last Message</li>
-                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="fas fa-copy"></i>Copy MMSI</li>
-                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="fas fa-clipboard"></i>Copy Coordinates</li>
+                <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="material-icons">dns</i>Show Vessel Database Entry</li>
+                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="material-icons">mail</i>Show Last Message</li>
+                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="material-icons">content_copy</i>Copy MMSI</li>
+                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="material-icons">content_paste</i>Copy Coordinates</li>
                 <li class="divider mmsi"></li>
-                <li class="mmsi" onclick="openGoogleSearch(context_mmsi)"><i class="fab fa-google"></i>Search on Google</li>
-                <li class="mmsi" onclick="openMarineTraffic(context_mmsi)"><i class="fab fa-m"> </i>Find on MarineTraffic</li>
-                <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="fab fa-v"></i>Find on VesselFinder</li>
-                <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="fab fa-s"></i>Find on ShipXplorer</li>
+                <li class="mmsi" onclick="openGoogleSearch(context_mmsi)"><i class="material-icons">search</i>Search on Google</li>
+                <li class="mmsi" onclick="openMarineTraffic(context_mmsi)"><i class="material-icons">public</i>Find on MarineTraffic</li>
+                <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="material-icons">public</i>Find on VesselFinder</li>
+                <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="material-icons">public</i>Find on ShipXplorer</li>
                 <li class="divider mmsi"></li>
-                <li class="settings" onclick="showPlugins()"><i class="fas fa-wrench"></i>Installed Plugins...</li>
-                <li class="settings" onclick="toggleDarkMode()"><i class="fas fa-moon"></i>Toggle Light/Dark mode</li>
+                <li class="settings" onclick="showPlugins()"><i class="material-icons">build</i>Installed Plugins...</li>
+                <li class="settings" onclick="toggleDarkMode()"><i class="material-icons">brightness_4</i>Toggle Light/Dark mode</li>
             </ul>
-
+              
             <div id="dialog-box" class="hidden">
                 <div class="dialog-title">Dialog Title</div>
                 <div class="dialog-message">This is the message area.</div>
@@ -1293,15 +1297,17 @@
 
             <div class="tabcontent" id="map">
                 <aside id="shipcard" class="shipcard-ismax">
+
                     <header id="shipcard_header">
                         <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-                        <span><i onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only fa-solid fa-bullseye"></i></span>
-                        <span><i onclick="showContextMenu(event,card_mmsi,['settings', 'ctx-map', 'mmsi', 'mmsi-map'])" class="shipcard-header-icon fa-solid fa-plus"></i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only fa-solid fa-chevron-down"></i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon  shipcard-max-only fa-solid fa-chevron-up"></i></span>
-                        <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon fa-sharp fa-solid fa-xmark fa-lg"></i></span>
-                    </header>
+                        <span><i onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only material-icons">zoom_in</i></span>
+                        <span><i onclick="showContextMenu(event,card_mmsi,['settings', 'ctx-map', 'mmsi', 'mmsi-map'])" class="shipcard-header-icon material-icons">add</i></span>
+                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only material-icons">keyboard_arrow_down</i></span>
+                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-max-only material-icons">keyboard_arrow_up</i></span>
+                        <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon material-icons">close</i></span>
+                      </header>
 
+                      
                     <div id="shipcard_content">
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
                             <div><span>Status</span><span id="shipcard_status"></span></div>
