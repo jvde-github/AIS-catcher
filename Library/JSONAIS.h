@@ -30,7 +30,6 @@ namespace AIS {
 	class JSONAIS : public SimpleStreamInOut<Message, JSON::JSON> {
 		JSON::JSON json;
 
-		void ProcessMsg8Data(const AIS::Message& msg);
 		void ProcessMsg(const AIS::Message& msg, TAG& tag);
 
 		const std::string class_str = "AIS";
@@ -44,6 +43,10 @@ namespace AIS {
 		std::string eta, text, callsign, shipname, destination, name, vendorid;
 
 	protected:
+		void ProcessMsg8Data(const AIS::Message& msg);
+		void ProcessMsg6Data(const AIS::Message& msg);
+
+
 		void U(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0);
 		void UL(const AIS::Message& msg, int p, int start, int len, float a, float b, unsigned undefined = ~0);
 		void S(const AIS::Message& msg, int p, int start, int len, int undefined = ~0);
