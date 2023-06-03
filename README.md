@@ -29,7 +29,8 @@ Recent changes to edge:
 - Hover on flag gives full country name instead of ISO code
 - RTL-TCP switch `-t` allows setting protocol directly instead of via `-gt`: `AIS-catcher -t txt 153.44.253.27 5631`
 - Read station location from GPSD: `AIS-catcher -t gpsd localhost 2947 -N 8100 share_loc on` 
-- Migration from Fontawesome CDN icons to Material Design icons as Google font to deal with limit of free plan, update of plugins requires 
+- JSON output for AIS Msg 6 (DAC 235, FID 10)
+- Migration from Fontawesome CDN icons to Material Design icons as Google font to deal with limit of free plan, update of plugins required
 
 ## Installation
 

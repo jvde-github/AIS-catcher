@@ -41,6 +41,10 @@ namespace AIS {
 			src.setParams(sample_rate, 96000);
 			physical >> convert >> src >> ROT;
 		}
+		else if(MA_DS) {
+			DS_MA.setRates(sample_rate, 96000);
+			physical >> convert >> DS_MA >> ROT;
+		}
 		else {
 			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
@@ -262,13 +266,21 @@ namespace AIS {
 
 		if (option == "FP_DS") {
 			fixedpointDS = Util::Parse::Switch(arg);
+			MA_DS = false;
 		}
 		else if (option == "SOXR") {
 			SOXR_DS = Util::Parse::Switch(arg);
 			SAMPLERATE_DS = false;
+			MA_DS = false;
 		}
 		else if (option == "SRC") {
 			SAMPLERATE_DS = Util::Parse::Switch(arg);
+			SOXR_DS = false;
+			MA_DS = false;
+		}
+		else if (option == "MA") {
+			MA_DS = Util::Parse::Switch(arg);
+			SAMPLERATE_DS = false;
 			SOXR_DS = false;
 		}
 		else if (option == "DROOP") {
@@ -288,6 +300,8 @@ namespace AIS {
 			return "soxr ON " + Model::Get();
 		else if (SAMPLERATE_DS)
 			return "src ON " + Model::Get();
+		else if (MA_DS)
+			return "MA ON " + Model::Get();
 
 		return "droop " + Util::Convert::toString(droop_compensation) + " fp_ds " + Util::Convert::toString(fixedpointDS) + " " + Model::Get();
 	}
