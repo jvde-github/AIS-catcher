@@ -55,6 +55,31 @@ namespace DSP {
 		}
 	}
 
+	// Downsample moving average
+	void DownsampleMovingAverage::Receive(const CFLOAT32* data, int len, TAG& tag) {
+		if (output.size() < BLOCK_SIZE) output.resize(BLOCK_SIZE);
+
+		for(int i = 0; i < len; i++) {
+			D += data[i];
+			df++;
+
+			idx_out = idx_out + out_rate;
+
+			if(idx_out >= in_rate) {
+				idx_out %= in_rate;
+
+				output[idx_in] = D / (FLOAT32) df;
+				D = 0;
+				df = 0;
+
+				if(++idx_in == BLOCK_SIZE) {
+					Send(output.data(), BLOCK_SIZE, tag);
+					idx_in = 0;
+				}
+			}
+		}
+	}
+
 // helper macros for moving averages
 #define MA1(idx) \
 	r##idx = z;  \
