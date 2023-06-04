@@ -527,6 +527,10 @@ echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , ,
 ```
 These GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move. This is useful if you 
 use AIS-catcher to read from a hardware AIS receiver that has a built-in GPS.
+Another approach is to read from a GPSD server, in case it sits at post 2947 of the local PC: 
+```console
+AIS-catcher -t gpsd localhost 2947 -N 8100 share_loc on` 
+```
 
 All these new functions combined enables a command line like this:
 ```console
