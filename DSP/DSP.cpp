@@ -388,18 +388,18 @@ namespace DSP {
 		FFT::fft(fft_data);
 
 		if(wide) {
+			if(cumsum.size() < N) cumsum.resize(N);
 			int M = (int)(12500.0 / 48000.0 * N);
 			FLOAT32 wm = -1;
 
+			for(int i = 1; i < N - M; i++) {
+				cumsum[i] = cumsum[i-1] + std::abs(fft_data[(i + N / 2) % N]); //* std::abs(fft_data[(i + N / 2) % N]);
+			}
+
 			for(int i = 0; i < N - M; i++) {
-				FLOAT32 p = 0;
 
-				for(int j = 0; j < M; j++) {
-					p += std::abs(fft_data[(i + j + N / 2) % N]);
-				}
-
-				if(p > wm) {
-					wm = p;
+				if(cumsum[i+M] - cumsum[i] > wm) {
+					wm = cumsum[i+M] - cumsum[i];
 					wi = i;
 				}
 			}
