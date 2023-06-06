@@ -393,6 +393,7 @@ namespace DSP {
 			int M = (int)(12500.0 / 48000.0 * N);
 			FLOAT32 wm = -1;
 
+			cumsum[0] = 0;
 			for(int i = 1; i < N; i++) {
 				cumsum[i] = cumsum[i-1] + std::abs(fft_data[(i + N / 2) % N]); //* std::abs(fft_data[(i + N / 2) % N]);
 			}
