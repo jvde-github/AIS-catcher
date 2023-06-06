@@ -383,10 +383,31 @@ namespace DSP {
 	FLOAT32 SquareFreqOffsetCorrection::correctFrequency() {
 		FLOAT32 max_val = 0.0, fz = -1;
 		int delta = (int)(9600.0 / 48000.0 * N);
+		int wi = 0;
 
 		FFT::fft(fft_data);
 
-		for (int i = window; i < N - window - delta; i++) {
+		if(wide) {
+			int M = (int)(12500.0 / 48000.0 * N);
+			FLOAT32 wm = -1;
+
+			for(int i = 0; i < N - M; i++) {
+				FLOAT32 p = 0;
+
+				for(int j = 0; j < M; j++) {
+					p += std::abs(fft_data[(i + j + N / 2) % N]);
+				}
+
+				if(p > wm) {
+					wm = p;
+					wi = i;
+				}
+			}
+			wi = (wi + M/2 - N/2);  
+		}
+
+
+		for (int i = wi +  window; i < wi + N - window - delta; i++) {
 			FLOAT32 h = std::abs(fft_data[(i + N / 2) % N]) + std::abs(fft_data[(i + delta + N / 2) % N]);
 
 			if (h > max_val) {

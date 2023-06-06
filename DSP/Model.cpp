@@ -471,6 +471,11 @@ namespace AIS {
 		CGF_a.setParams(512, 187);
 		CGF_b.setParams(512, 187);
 
+		if(CGF_wide) {
+			CGF_a.setWide(true);
+			CGF_b.setWide(true);
+		}
+
 		*C_a >> CGF_a >> FC_a >> S_a;
 		*C_b >> CGF_b >> FC_b >> S_b;
 
@@ -510,6 +515,9 @@ namespace AIS {
 		if (option == "PS_EMA") {
 			PS_EMA = Util::Parse::Switch(arg);
 		}
+		else if (option == "AFC_WIDE") {
+			CGF_wide = Util::Parse::Switch(arg);
+		}
 		else
 			ModelFrontend::Set(option, arg);
 
@@ -517,7 +525,7 @@ namespace AIS {
 	}
 
 	std::string ModelChallenger::Get() {
-		return "ps_ema " + Util::Convert::toString(PS_EMA) + " " + ModelFrontend::Get();
+		return "ps_ema " + Util::Convert::toString(PS_EMA) + " afc_wide " + Util::Convert::toString(CGF_wide) + " " + ModelFrontend::Get();
 	}
 
 	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {

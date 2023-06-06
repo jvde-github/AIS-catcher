@@ -308,10 +308,12 @@ namespace DSP {
 		int logN = 11;
 		int count = 0;
 		int window = 750;
+		bool wide = false;
 
 		FLOAT32 correctFrequency();
 
 	public:
+		void setWide(bool b) { wide = b; }
 		void setParams(int, int);
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
