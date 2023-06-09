@@ -24,6 +24,15 @@ Only use this software in regions where such use is permitted.
 
 Latest version is **v0.47** with various improvements to the user interface of the webclient and smaller additions, like connecting to a GPSD server.
 
+New additions to the edge version:
+- new model that is less sensitive to frequency drift. You can this model plus the default model in parallel using the switch `-m 4 -go AFC_WIDE on -m 2 -v`. The output will be the message rate for the new and old model. Running both models on a file with ~410 messages and artifically shifting the frequency, shows the following:
+
+<p align="center">
+<img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/26c527ab-27f4-4eb2-9853-88a178a744fe">
+<img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/1b23c94c-52a3-4d9d-b0d2-3dc3a3ebfdc8">
+</p>
+First observation is that the new model (orange) has a lower message count of ~1.5% if the dongle has no frequency offset compared to the current default model (blue), sees a similar number of ships but should be unaffected if the dongle is off by +/- 5 ppm and not corrected by the `-p` switch.
+
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
