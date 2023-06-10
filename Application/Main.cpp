@@ -516,6 +516,7 @@ int main(int argc, char* argv[]) {
 		// set up the receiver and open the device
 
 		stat.resize(_receivers.size());
+		int group = 0;
 
 		for (int i = 0; i < _receivers.size(); i++) {
 			Receiver& r = *_receivers[i];
@@ -523,8 +524,8 @@ int main(int argc, char* argv[]) {
 			if (servers.size() > 0 && servers[0]->active()) r.setTags("DTM");
 
 			r.setupDevice();
-			// set up the decoding model(s)
-			r.setupModel();
+			// set up the decoding model(s), group is the last output group used
+			r.setupModel(group);
 
 			// set up all the output and connect to the receiver outputs
 			udp.connect(r);

@@ -208,14 +208,10 @@ std::unique_ptr<AIS::Model>& Receiver::addModel(int m) {
 	return models.back();
 }
 
-void Receiver::setupModel() {
+void Receiver::setupModel(int &group) {
 	// if nothing defined, create one model
 	if (!models.size())
 		addModel((device->getFormat() == Format::TXT) ? 5 : 2);
-
-	// build the decoder models
-	for (auto& m : models)
-		m->buildModel(ChannelNMEA[0], ChannelNMEA[1], device->getSampleRate(), timing, device);
 
 	// ensure some basic compatibility between model and device
 	for (const auto& m : models) {
@@ -224,9 +220,25 @@ void Receiver::setupModel() {
 			throw std::runtime_error("Decoding model and input format not consistent.");
 	}
 
+	// build the decoder models
+	for (auto& m : models) {
+		m->buildModel(ChannelNMEA[0], ChannelNMEA[1], device->getSampleRate(), timing, device);
+
+	}
+
 	// set up JSON output channels, still unconnected
 	jsonais.clear();
 	jsonais.resize(models.size());
+
+	// assign the output of each individual model to a seperate group
+	assert(group + models.size() < 32);
+
+	for(int i = 0; i < models.size(); i++) {
+		uint32_t mask = 1 << group;
+		jsonais[i].out.setGroupOut(mask);
+		models[i]->Output().out.setGroupOut(mask);
+		group++;
+	}
 }
 
 void Receiver::play() {
@@ -244,7 +256,7 @@ void Receiver::play() {
 		std::cerr << "Device    : " << device->getProduct() << std::endl;
 		std::cerr << "Settings  : " << device->Get() << std::endl;
 		for (int i = 0; i < models.size(); i++)
-			std::cerr << "Model #" + std::to_string(i) + "  : [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
+			std::cerr << "Model #" + std::to_string(i) + " -> " + std::to_string(models[i]->Output().out.getGroupOut()) + ": [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
 	}
 }
 
@@ -288,11 +300,17 @@ void OutputScreen::setScreen(OutputLevel o) {
 void OutputScreen::connect(Receiver& r) {
 
 	if (level == OutputLevel::NMEA || level == OutputLevel::JSON_NMEA || level == OutputLevel::FULL) {
-		r.Output(0) >> msg2screen;
+		for (int j = 0; j < r.Count(); j++) {
+			if (r.Output(j).canConnect(msg2screen.getGroupsIn()))
+				r.Output(j) >> msg2screen;
+		}
+
 		msg2screen.setDetail(level);
 	}
 	else if (level == OutputLevel::JSON_SPARSE || level == OutputLevel::JSON_FULL) {
-		r.OutputJSON(0) >> json2screen;
+		for (int j = 0; j < r.Count(); j++)
+			if (r.OutputJSON(j).canConnect(json2screen.getGroupsIn()))
+				r.OutputJSON(j) >> json2screen;
 
 		if (level == OutputLevel::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
 	}
@@ -383,7 +401,9 @@ IO::TCP& OutputTCP::add(const std::string& host, const std::string& port) {
 
 void OutputDBMS::connect(Receiver& r) {
 	for (int i = 0; i < _PSQL.size(); i++) {
-		r.OutputJSON(0) >> *_PSQL[i];
+		for (int j = 0; j < r.Count(); j++)
+			if (r.Output(j).canConnect(_PSQL[i]->getGroupsIn()))
+				r.OutputJSON(j) >> *_PSQL[i];
 	}
 }
 
@@ -505,22 +525,33 @@ void WebClient::BackupService() {
 
 void WebClient::connect(Receiver& r) {
 
-	sample_rate += std::to_string(r.device->getSampleRate() / 1000) + "K/S" + "<br>";
-	product += r.device->getProduct() + "<br>";
-	vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor()) + "<br>";
-	serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) + "<br>";
-	model += r.Model(0)->getName() + "<br>";
+	bool rec_details = false;
 
-	// connect all the statistical counters
-	r.Output(0) >> counter;
+	for (int j = 0; j < r.Count(); j++)
+		if (r.Output(j).canConnect(groups_in)) {
+			if (!rec_details) {
+				sample_rate += std::to_string(r.device->getSampleRate() / 1000) + "K/S" + "<br>";
+				product += r.device->getProduct() + "<br>";
+				vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor()) + "<br>";
+				serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) + "<br>";
+				rec_details = true;
+			}
+			model += r.Model(j)->getName() + "<br>";
 
-	r.OutputJSON(0).Connect((StreamIn<JSON::JSON>*)&ships);
-	r.OutputGPS(0).Connect((StreamIn<AIS::GPS>*)&ships);
+			// connect all the statistical counters
+			r.Output(j) >> counter;
 
-	if (supportPrometheus)
-		r.Output(0) >> dataPrometheus;
+			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*) & ships);
+			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*) & ships);
 
-	*r.device >> raw_counter;
+			if (supportPrometheus)
+				r.Output(j) >> dataPrometheus;
+
+			*r.device >> raw_counter;
+		}
+	if(!rec_details)
+		std::cerr << "Server: not connected to the output of any model." << std::endl;
+
 }
 
 void WebClient::start() {
@@ -746,6 +777,9 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	else if (option == "ZLIB") {
 		use_zlib = Util::Parse::Switch(arg);
 	}
+	else if (option == "GROUPS_IN") {
+		groups_in = Util::Parse::Integer(arg);
+	} 
 	else if (option == "PORT_MIN") {
 		port_set = true;
 		firstport = Util::Parse::Integer(arg, 1, 65535);

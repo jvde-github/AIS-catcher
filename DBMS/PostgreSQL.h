@@ -423,6 +423,8 @@ namespace IO {
 
 			if (option == "CONN_STR")
 				conn_string = arg;
+			else if (option == "GROUPS_IN")
+				setGroupsIn(Util::Parse::Integer(arg));
 			else if (option == "STATION_ID")
 				station_id = Util::Parse::Integer(arg);
 			else if (option == "NMEA")

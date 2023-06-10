@@ -288,6 +288,9 @@ namespace IO {
 		else if (option == "LAT") {
 			lat = Util::Parse::Float(arg);
 		}
+		else if (option == "GROUPS_IN") {
+			setGroupsIn(Util::Parse::Integer(arg));
+		}
 		else if (option == "LON") {
 			lon = Util::Parse::Float(arg);
 		}
@@ -465,6 +468,9 @@ namespace IO {
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
 		}
+		else if (option == "GROUPS_IN") {
+			setGroupsIn(Util::Parse::Integer(arg));
+		}
 		else if (option == "RESET") {
 			reset = Util::Parse::Integer(arg,1,24*60);
 		}
@@ -544,6 +550,9 @@ namespace IO {
 		}
 		else if (option == "PORT") {
 			port = arg;
+		}
+		else if (option == "GROUPS_IN") {
+			setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
