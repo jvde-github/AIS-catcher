@@ -24,7 +24,7 @@
 
 template <typename T>
 class StreamIn {
-	uint32_t groups_in = 1;
+	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
 
 public:
 	virtual void Receive(const T* data, int len, TAG& tag) {}
@@ -32,14 +32,14 @@ public:
 		Receive((const T*)data, len, tag);
 	}
 
-	uint32_t getGroupsIn() { return groups_in; }
-	void setGroupsIn(uint32_t g) { groups_in = g; }
+	uint64_t getGroupsIn() { return groups_in; }
+	void setGroupsIn(uint64_t g) { groups_in = g; }
 };
 
 template <typename S>
 class Connection {
 	std::vector<StreamIn<S>*> connections;
-	uint32_t groups = 1;
+	uint64_t groups = 1;
 
 public:
 	void Send(const S* data, int len, TAG& tag) {
@@ -61,7 +61,9 @@ public:
 		connections.push_back(s);
 	}
 
-	bool canConnect(uint32_t m) { return (groups & m) > 0; }
+	void setGroupOut(uint32_t g) { groups = g; }
+	uint64_t getGroupOut() { return groups; }
+	bool canConnect(uint64_t m) { return (groups & m) > 0; }
 	bool isConnected() { return connections.size() > 0; }
 	void clear() { connections.resize(0); }
 };

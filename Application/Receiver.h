@@ -148,12 +148,12 @@ public:
 	std::unique_ptr<AIS::Model>& Model(int i) { return models[i]; }
 	int Count() { return models.size(); }
 
-	void setup() {
+	void setup(int &g) {
 		setupDevice();
-		setupModel();
+		setupModel(g);
 	}
 	void setupDevice();
-	void setupModel();
+	void setupModel(int &g);
 
 	void play();
 	void stop();
@@ -231,6 +231,8 @@ public:
 
 //--------------------------------------------
 class WebClient : public IO::Server, public Setting {
+	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
+
 	int port = 0;
 	int firstport = 0;
 	int lastport = 0;

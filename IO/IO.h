@@ -107,7 +107,14 @@ namespace IO {
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 
 		Setting& Set(std::string option, std::string arg) {
-			filter.Set(option, arg);
+			Util::Convert::toUpper(option);
+
+			if (option == "GROUPS_IN") {
+				setGroupsIn(Util::Parse::Integer(arg));
+			}
+			else
+				filter.Set(option, arg);
+
 			return *this;
 		}
 	};
@@ -124,7 +131,13 @@ namespace IO {
 		void setMap(int m) { builder.setMap(m); }
 
 		Setting& Set(std::string option, std::string arg) {
-			filter.Set(option, arg);
+			Util::Convert::toUpper(option);
+			
+			if (option == "GROUPS_IN") {
+				setGroupsIn(Util::Parse::Integer(arg));
+			}
+			else
+				filter.Set(option, arg);
 			return *this;
 		}
 	};
