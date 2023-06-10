@@ -32,7 +32,7 @@ New additions to the edge version:
 <img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/1b23c94c-52a3-4d9d-b0d2-3dc3a3ebfdc8">
 </p>
 
-First observation is that the new model (orange) has a lower message count of ~1.5% if the dongle has no frequency offset compared to the current default model (blue), i.e. for the case of zero shift. The new model hears a similar number of ships but, as hoped, seems less affected if the dongle is off by +/- 5 ppm and not corrected by the `-p` switch.
+Initial observation is that the new model (orange) has a lower message count of ~1.5% if the dongle has no frequency offset compared to the current default model (blue), i.e. for the case of zero shift. The new model hears a similar number of ships but, as hoped, seems less affected if the dongle is off by +/- 5 ppm and not corrected by the `-p` switch.
 
 ## Installation
 
