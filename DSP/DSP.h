@@ -319,6 +319,26 @@ namespace DSP {
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
+	class SquareFreqOffsetCorrectionChallenger : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+		std::vector<CFLOAT32> output;
+		std::vector<CFLOAT32> fft_data;
+		std::vector<FLOAT32> cumsum;
+
+		CFLOAT32 rot = 1.0f;
+		int N = 2048;
+		int logN = 11;
+		int count = 0;
+		int window = 750;
+		bool wide = false;
+
+		FLOAT32 correctFrequency();
+
+	public:
+		void setWide(bool b) { wide = b; }
+		void setParams(int, int);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
+	};
+
 	class DS_UINT16 {
 		uint32_t h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 
