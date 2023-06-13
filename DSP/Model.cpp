@@ -451,7 +451,7 @@ namespace AIS {
 	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		setName("AIS engine " VERSION);
+		setName("AIS challenger " VERSION);
 
 		assert(C_a != NULL && C_b != NULL);
 
