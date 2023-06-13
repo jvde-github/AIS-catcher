@@ -388,8 +388,13 @@ namespace AIS {
 			CD_EMA_b.resize(nSymbolsPerSample);
 		}
 
-		CGF_a.setParams(512, CGF_wide ? 87 : 187);
-		CGF_b.setParams(512, CGF_wide ? 87 : 187);
+		CGF_a.setParams(512, 187);
+		CGF_b.setParams(512, 187);
+
+		if(CGF_wide) {
+			CGF_a.setWide(true);
+			CGF_b.setWide(true);
+		}
 
 		*C_a >> CGF_a >> FC_a >> S_a;
 		*C_b >> CGF_b >> FC_b >> S_b;
