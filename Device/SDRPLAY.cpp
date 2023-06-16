@@ -96,7 +96,7 @@ namespace Device {
 		chParams->ctrlParams.decimation.enable = 0;
 		chParams->ctrlParams.decimation.decimationFactor = 1;
 		chParams->ctrlParams.decimation.wideBandSignal = 1;
-		chParams->tunerParams.bwType = sdrplay_api_BW_1_536;
+		chParams->tunerParams.bwType = sdrplay_api_BW_0_200;
 		chParams->tunerParams.rfFreq.rfHz = frequency;
 
 		sdrplay_api_CallbackFnsT cbFns;
