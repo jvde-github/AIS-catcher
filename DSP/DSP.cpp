@@ -379,6 +379,7 @@ namespace DSP {
 #endif
 	}
 
+
 	// square the signal, find the mid-point between two peaks
 	FLOAT32 SquareFreqOffsetCorrection::correctFrequency() {
 		FLOAT32 max_val = 0.0, fz = -1;
@@ -391,18 +392,20 @@ namespace DSP {
 			if(cumsum.size() < N) cumsum.resize(N);
 
 			int M = (int)(12500.0 / 48000.0 * N);
+			int ofs = (M-delta)/2;
+
 			FLOAT32 wm = -1;
 
 			cumsum[0] = 0;
 			for(int i = 1; i < N; i++) {
 				FLOAT32 p = std::abs(fft_data[(i + N / 2) % N]);
-				cumsum[i] = cumsum[i-1] + p * p;
+				cumsum[i] = cumsum[i-1] + p;
 			}
 
 			for(int i = 0; i < N - M; i++) {
-
-				if(cumsum[i+M] - cumsum[i] > wm) {
-					wm = cumsum[i+M] - cumsum[i];
+				FLOAT32 v = cumsum[i+M] - cumsum[i]  + 0.6f * (std::abs(fft_data[(i + ofs + N / 2) % N]) + std::abs(fft_data[(i + ofs + delta + N / 2) % N]));
+				if(v > wm) {
+					wm = v;
 					wi = i;
 				}
 			}
@@ -437,81 +440,6 @@ namespace DSP {
 	}
 
 	void SquareFreqOffsetCorrection::Receive(const CFLOAT32* data, int len, TAG& tag) {
-		if (fft_data.size() < N) fft_data.resize(N);
-		if (output.size() < N) output.resize(N);
-
-		for (int i = 0; i < len; i++) {
-			fft_data[FFT::rev(count, logN)] = data[i] * data[i];
-			output[count] = data[i];
-
-			if (++count == N) {
-				tag.ppm = correctFrequency();
-				Send(output.data(), N, tag);
-				count = 0;
-			}
-		}
-	}
-
-
-	// square the signal, find the mid-point between two peaks
-	FLOAT32 SquareFreqOffsetCorrectionChallenger::correctFrequency() {
-		FLOAT32 max_val = 0.0, fz = -1;
-		int delta = (int)(9600.0 / 48000.0 * N);
-		int wi = 0;
-
-		FFT::fft(fft_data);
-
-		if(wide) {
-			if(cumsum.size() < N) cumsum.resize(N);
-
-			int M = (int)(12500.0 / 48000.0 * N);
-			FLOAT32 wm = -1;
-
-			cumsum[0] = 0;
-			for(int i = 1; i < N; i++) {
-				FLOAT32 p = std::abs(fft_data[(i + N / 2) % N]);
-				cumsum[i] = cumsum[i-1] + p;
-			}
-
-			for(int i = 0; i < N - M; i++) {
-				int o = (M-delta)/2;
-				FLOAT32 v = cumsum[i+M] - cumsum[i]  + 0.6 * (std::abs(fft_data[(i + o + N / 2) % N]) + std::abs(fft_data[(i + o + delta + N / 2) % N]));
-				if(v > wm) {
-					wm = v;
-					wi = i;
-				}
-			}
-			wi = (wi + M/2 - N/2);  
-		}
-
-		for (int i = wi +  window; i < wi + N - window - delta; i++) {
-			FLOAT32 h = std::abs(fft_data[(i + N / 2) % N]) + std::abs(fft_data[(i + delta + N / 2) % N]);
-
-			if (h > max_val) {
-				max_val = h;
-				fz = (N / 2 - (i + delta / 2.0f));
-			}
-		}
-
-		FLOAT32 f = fz / 2.0 / N;
-		CFLOAT32 rot_step = std::polar(1.0f, (float)(f * 2 * PI));
-
-		for (int i = 0; i < N; i++) {
-			rot *= rot_step;
-			output[i] *= rot;
-		}
-
-		rot /= std::abs(rot);
-		return f * 48000.0 / 162.0f;
-	}
-
-	void SquareFreqOffsetCorrectionChallenger::setParams(int n, int w) {
-		N = n;
-		logN = FFT::log2(N);
-		window = w;
-	}
-
-	void SquareFreqOffsetCorrectionChallenger::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		if (fft_data.size() < N) fft_data.resize(N);
 		if (output.size() < N) output.resize(N);
 

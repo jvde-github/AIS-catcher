@@ -135,7 +135,6 @@ namespace AIS {
 		void buildModel(char, char, int, bool, Device::Device*);
 	};
 
-
 	// Base model for development purposes, simplest and fastest
 	class ModelBase : public ModelFrontend {
 		Demod::FM FM_a, FM_b;
@@ -172,7 +171,7 @@ namespace AIS {
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
 	class ModelChallenger : public ModelFrontend {
-		DSP::SquareFreqOffsetCorrectionChallenger CGF_a, CGF_b;
+		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		std::vector<Demod::PhaseSearch> CD_a, CD_b;
 		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
 
