@@ -558,8 +558,9 @@ sudo apt install libpq-dev
 ```
 Now AIS-catcher can write the received messages to the database:
 ```console
-AIS-catcher -D dbname=ais
+AIS-catcher -D dbname=ais STATION_ID 17
 ```
+The `STATION_ID` setting is optional but will populate the entries in the database with the specified ID so multpiple feeders can write to one database.
 There are a few settings for the new `-D` swich of which the first is the connection string that specifies the database. If you want to use a space in the string use quotation marks aroundf the string. There are other settings that define how tables will be populated:
 
 | Table | Description | Settings |
