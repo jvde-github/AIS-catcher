@@ -22,18 +22,7 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-Latest version is **v0.47** with various improvements to the user interface of the webclient and smaller additions, like connecting to a GPSD server.
-
-New additions to the edge version:
-- Tweaking the bandwidth setting for the SDRplay increasing message reception slightly
-- new model that is less sensitive to frequency drift. You can run this model using the switch `-go AFC_WIDE on` (which is now the default as well). Running the new model setting and the previous default model on a file with ~410 messages and artifically shifting the frequency to simulate dongle frequency instability, shows the following:
-
-<p align="center">
-<img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/41c86f20-5bc3-4e83-be15-59d538820a52">
-<img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/7929bfaf-6e21-485d-9a98-4e1ab5f3384d">
-</p>
-
-Initial observation is that the new model (orange) has a similar message count if the dongle has no frequency offset compared to the current default model (blue), i.e. for the case of zero shift. The new model hears a similar number of ships but, as hoped, seems less affected if the dongle is off by +/- 5 ppm and not corrected by the `-p` switch.
+Latest version is **v0.48** with various improvements to the decoder.
 
 ## Installation
 
@@ -831,6 +820,7 @@ It will likely run out of the box in case you have already RTL-SDR software runn
 Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
  | :--- | :--- | :---: |   :--- | :---: | 
+ |v0.48| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.SDRPLAY.x64.zip) |
  |v0.47| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.SDRPLAY.x64.zip) |
    |v0.46| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.SDRPLAY.x64.zip) |
   |v0.45| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.SDRPLAY.x64.zip) |
@@ -972,7 +962,15 @@ Please note that the runs are performed on different days over different time sp
 ### Frequency offset
 AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide as input via the ```-p``` switch on the command line.
 
-If you are using a cheap RTL-SDR dongle that suffers from thermal drift (i.e. the required PPM correction drifts when the dongle is getting warmer), you could consider to use the option ``-go AFC_WIDE on`` or switch to a FM decoding model which is less sensitive for frequency offsets (``-m 0``). The frequency correction applied by the default decoding model can be made visible with the switch ``-M D`` so you can inspect.
+If you are using a cheap RTL-SDR dongle that suffers from thermal drift (i.e. the required PPM correction drifts when the dongle is getting warmer), you can use the option ``-go AFC_WIDE on`` (which is the default model). This is a relatively new model (per v0.48) that is less sensitive to frequency drift. You can switch off  this model using the switch `-go AFC_WIDE off'. Running the new model setting and the previous default yields more stability for frequecy drift.
+
+<p align="center">
+<img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/41c86f20-5bc3-4e83-be15-59d538820a52">
+<img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/7929bfaf-6e21-485d-9a98-4e1ab5f3384d">
+</p>
+
+
+
 
 ### System USB performance
 On some laptops we observed that Windows was struggling with high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is worthwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
