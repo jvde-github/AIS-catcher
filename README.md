@@ -552,16 +552,16 @@ AIS-catcher -D dbname=ais STATION_ID 17
 The `STATION_ID` setting is optional but will populate the entries in the database with the specified ID so multpiple feeders can write to one database.
 There are a few settings for the new `-D` swich of which the first is the connection string that specifies the database. If you want to use a space in the string use quotation marks aroundf the string. There are other settings that define how tables will be populated:
 
-| Table | Description | Settings |
-| :--- | :--- | :--- |
-| ais_message | received messages with meta data  | MSGS on/off |
-| ais_nmea | nmea sentences | NMEA on/off |
-| ais_basestation | basestation messsages from type 4 | BS on/off |
-| ais_sar_position | sar positions from type 9 | SAR on/off |
-| ais_aton | aton messages from type 21 | ATON on/off |
-| ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off |
-| ais_vessel_static | vessel static data from type 5, 19 | VS on/off |
-| ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys |
+| Table | Description | Settings | Default |
+| :--- | :--- | :--- | :--- |
+| ais_message | received messages with meta data  | MSGS on/off | on  |
+| ais_nmea | nmea sentences | NMEA on/off | off |
+| ais_basestation | basestation messsages from type 4 | BS on/off | off |
+| ais_sar_position | sar positions from type 9 | SAR on/off | on |
+| ais_aton | aton messages from type 21 | ATON on/off | on |
+| ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off | on |
+| ais_vessel_static | vessel static data from type 5, 19 | VS on/off | on |
+| ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys | empty |
 
 From thereon it is fairly straightforward to pick up this data and start analysis, e.g. in Excel:
 <img width="958" alt="image" src="https://user-images.githubusercontent.com/52420030/219857250-6c1a48a5-e0a6-426c-8e9a-b3740cc58e21.png">
