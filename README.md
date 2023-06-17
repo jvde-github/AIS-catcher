@@ -26,7 +26,7 @@ Latest version is **v0.47** with various improvements to the user interface of t
 
 New additions to the edge version:
 - Tweaking the bandwidth setting for the SDRplay increasing message reception slightly
-- new model that is less sensitive to frequency drift. You can run this model using the switch `-go AFC_WIDE on`. Running the new model setting and the default model on a file with ~410 messages and artifically shifting the frequency to simulate dongle frequency instability, shows the following:
+- new model that is less sensitive to frequency drift. You can run this model using the switch `-go AFC_WIDE on` (which is now the default as well). Running the new model setting and the previous default model on a file with ~410 messages and artifically shifting the frequency to simulate dongle frequency instability, shows the following:
 
 <p align="center">
 <img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/41c86f20-5bc3-4e83-be15-59d538820a52">
