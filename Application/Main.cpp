@@ -500,10 +500,8 @@ int main(int argc, char* argv[]) {
 			if (++nrec > 1) {
 				_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
-			if (!servers.size())
-				servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
 
-			Config c(*_receivers.back(), screen, http, udp, tcp, *servers.back());
+			Config c(*_receivers.back(), screen, http, udp, tcp, servers);
 			c.read(file_config);
 		}
 

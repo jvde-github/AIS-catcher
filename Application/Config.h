@@ -47,7 +47,7 @@ class Config {
 	OutputHTTP& _http;
 	OutputUDP& _udp;
 	OutputTCP& _tcp;
-	WebClient& _server;
+	std::vector<std::unique_ptr<WebClient>> & _server;
 
 	bool isActiveObject(const JSON::Value& pd);
 	void setSettingsFromJSON(const JSON::Value& pd, Setting& s);
@@ -58,7 +58,7 @@ class Config {
 	void setServerfromJSON(const JSON::Value& pd);
 
 public:
-	Config(Receiver& r, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, WebClient& v) : _receiver(r), _screen(s), _http(h), _server(v), _udp(u), _tcp(t) {};
+	Config(Receiver& r, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, std::vector<std::unique_ptr<WebClient>> & v) : _receiver(r), _screen(s), _http(h), _server(v), _udp(u), _tcp(t) {};
 
 	void read(std::string& file_config);
 	void set(const std::string& str);
