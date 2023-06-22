@@ -41,9 +41,23 @@ void Config::setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 
 void Config::setServerfromJSON(const JSON::Value& pd) {
 
-	setSettingsFromJSON(pd, _server);
-	_receiver.setTags("DTM");
-	_server.active() = true;
+	if(pd.isArray()) {
+		for (const auto& v : pd.getArray()) {
+			if (!isActiveObject(v)) continue;
+			_server.push_back(std::unique_ptr<WebClient>(new WebClient()));
+			setSettingsFromJSON(v, *_server.back());
+			_receiver.setTags("DTM");
+			_server.back()->active() = true;
+		}
+	}
+	else {
+		if (!isActiveObject(pd)) return;
+
+		_server.push_back(std::unique_ptr<WebClient>(new WebClient()));
+		setSettingsFromJSON(pd, *_server.back());
+		_receiver.setTags("DTM");
+		_server.back()->active() = true;
+	}
 }
 
 void Config::setHTTPfromJSON(const JSON::Property& pd) {
@@ -210,7 +224,6 @@ void Config::set(const std::string& str) {
 			setTCPfromJSON(p);
 			break;
 		case AIS::KEY_SETTING_SERVER:
-			if (!isActiveObject(p.Get())) continue;
 			setServerfromJSON(p.Get());
 			break;
 		case AIS::KEY_SETTING_HTTP:
