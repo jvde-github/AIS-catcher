@@ -136,12 +136,11 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool 
 		}
 	}
 
-
 	if(!unspecAllowed) {
 		if(serial.empty() && input.empty()) 
 			throw std::runtime_error("Config: receiver needs to have a serial or input specified in Config.");
 	}
-	
+
 	if( (!serial.empty() || !input.empty()) && ++_nrec > 1) {
 		std::cerr << "Creating new receiver for [" << serial << "] " << input << std::endl;
 		_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
@@ -157,6 +156,9 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool 
 	// pass 2
 	for (const auto& p : props) {
 		switch (p.Key()) {
+		case AIS::KEY_SETTING_VERBOSE:
+			_receivers.back()->verbose = Util::Parse::Switch(p.Get().to_string());
+			break;
 		case AIS::KEY_SETTING_MODEL:
 			setModelfromJSON(p);
 			break;
@@ -257,6 +259,7 @@ void Config::set(const std::string& str) {
 		// fields that are already processed for completeness
 		case AIS::KEY_SETTING_CONFIG:
 		case AIS::KEY_SETTING_VERSION:
+		case AIS::KEY_SETTING_VERBOSE:
 		case AIS::KEY_SETTING_SERIAL:
 		case AIS::KEY_SETTING_INPUT:
 		case AIS::KEY_SETTING_MODEL:
@@ -291,9 +294,6 @@ void Config::set(const std::string& str) {
 			break;
 		case AIS::KEY_SETTING_SCREEN:
 			_screen.setScreen(p.Get().to_string());
-			break;
-		case AIS::KEY_SETTING_VERBOSE:
-			_receivers.back()->verbose = Util::Parse::Switch(p.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_VERBOSE_TIME:
 			_screen.verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
