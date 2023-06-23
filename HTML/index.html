@@ -1115,6 +1115,7 @@
                 <li class="mmsi" onclick="openGoogleSearch(context_mmsi)"><i class="material-icons">search</i>Search on Google</li>
                 <li class="mmsi" onclick="openMarineTraffic(context_mmsi)"><i class="material-icons">public</i>Find on MarineTraffic</li>
                 <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="material-icons">public</i>Find on VesselFinder</li>
+                <li class="mmsi" onclick="openAISHub(context_mmsi)"><i class="material-icons">public</i>Find on AISHub</li>
                 <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="material-icons">public</i>Find on ShipXplorer</li>
                 <li class="divider mmsi"></li>
                 <li class="settings" onclick="showPlugins()"><i class="material-icons">build</i>Installed Plugins...</li>
@@ -1548,6 +1549,10 @@
 
         function openVesselFinder(m) {
             window.open("https://www.vesselfinder.com/vessels/details/" + m);
+        }
+
+        function openAISHub(m) {
+            window.open("https://www.aishub.net/vessels?Ship[mmsi]=" + m);
         }
 
         function showContextMenu(event, mmsi, context) {
