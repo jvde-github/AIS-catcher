@@ -95,6 +95,7 @@ namespace AIS {
 		{ "", "", "", "", "prome" },
 		{ "", "", "", "", "protocol" },
 		{ "", "", "", "", "ps_ema" },
+		{ "", "", "", "", "receiver" },
 		{ "", "", "", "", "reset" },
 		{ "", "", "", "", "response" },
 		{ "", "", "", "", "reuse_port" },
