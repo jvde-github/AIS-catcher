@@ -497,11 +497,8 @@ int main(int argc, char* argv[]) {
 		// Read config file
 
 		if (!file_config.empty()) {
-			if (++nrec > 1) {
-				_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
 
-			Config c(*_receivers.back(), screen, http, udp, tcp, servers);
+			Config c(_receivers, nrec, screen, http, udp, tcp, servers);
 			c.read(file_config);
 		}
 

@@ -46,7 +46,7 @@ void Config::setServerfromJSON(const JSON::Value& pd) {
 			if (!isActiveObject(v)) continue;
 			_server.push_back(std::unique_ptr<WebClient>(new WebClient()));
 			setSettingsFromJSON(v, *_server.back());
-			_receiver.setTags("DTM");
+			_receivers.back()->setTags("DTM");
 			_server.back()->active() = true;
 		}
 	}
@@ -55,7 +55,7 @@ void Config::setServerfromJSON(const JSON::Value& pd) {
 
 		_server.push_back(std::unique_ptr<WebClient>(new WebClient()));
 		setSettingsFromJSON(pd, *_server.back());
-		_receiver.setTags("DTM");
+		_receivers.back()->setTags("DTM");
 		_server.back()->active() = true;
 	}
 }
@@ -70,7 +70,7 @@ void Config::setHTTPfromJSON(const JSON::Property& pd) {
 
 		auto& h = _http.add(AIS::KeyMap, JSON_DICT_FULL);
 		setSettingsFromJSON(v, *h);
-		_receiver.setTags("DT");
+		_receivers.back()->setTags("DT");
 	}
 }
 
@@ -104,8 +104,117 @@ void Config::setModelfromJSON(const JSON::Property& p) {
 
 	if (!isActiveObject(p.Get())) return;
 
-	_receiver.addModel(2);
-	setSettingsFromJSON(p.Get(), *_receiver.Model(_receiver.Count() - 1));
+	_receivers.back()->addModel(2);
+	setSettingsFromJSON(p.Get(), *_receivers.back()->Model(_receivers.back()->Count() - 1));
+}
+
+void Config::setReceiverFromArray(const JSON::Property& pd) {
+	if (!pd.Get().isArray())
+		throw std::runtime_error("Receiver settings need to be an \"array\" of \"objects\" in config file.");
+
+	for (const auto& v : pd.Get().getArray()) {
+		if (!isActiveObject(v)) continue;
+
+		setReceiverfromJSON(v.getObject().getProperties(), false);
+	}
+}
+
+void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool unspecAllowed) {
+	std::string config, serial, input;
+	// pass 1
+	for (const auto& p : props) {
+		switch (p.Key()) {
+		case AIS::KEY_SETTING_SERIAL:
+			serial = p.Get().to_string();
+			break;
+		case AIS::KEY_SETTING_INPUT:
+			input = p.Get().to_string();
+			break;
+		case AIS::KEY_SETTING_ACTIVE:
+			if (!Util::Parse::Switch(p.Get().to_string())) return;
+			break;
+		}
+	}
+
+
+	if(!unspecAllowed) {
+		if(serial.empty() && input.empty()) 
+			throw std::runtime_error("Config: receiver needs to have a serial or input specified in Config.");
+	}
+	
+	if( (!serial.empty() || !input.empty()) && ++_nrec > 1) {
+		std::cerr << "Creating new receiver for [" << serial << "] " << input << std::endl;
+		_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+	}
+	
+	_receivers.back()->Serial() = serial;
+	if (!input.empty()) {
+		if (!Util::Parse::DeviceType(input, _receivers.back()->InputType())) {
+			throw std::runtime_error("\"" + input + "\" is unknown input type in config file");
+		}
+	}
+
+	// pass 2
+	for (const auto& p : props) {
+		switch (p.Key()) {
+		case AIS::KEY_SETTING_MODEL:
+			setModelfromJSON(p);
+			break;
+		case AIS::KEY_SETTING_META:
+			_receivers.back()->setTags(p.Get().to_string());
+			break;
+		case AIS::KEY_SETTING_RTLSDR:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->RTLSDR());
+			break;
+		case AIS::KEY_SETTING_RTLTCP:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->RTLTCP());
+			break;
+		case AIS::KEY_SETTING_AIRSPY:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->AIRSPY());
+			break;
+		case AIS::KEY_SETTING_AIRSPYHF:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->AIRSPYHF());
+			break;
+		case AIS::KEY_SETTING_SDRPLAY:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->SDRPLAY());
+			break;
+		case AIS::KEY_SETTING_WAVFILE:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->WAV());
+			break;
+		case AIS::KEY_SETTING_HACKRF:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->HACKRF());
+			break;
+		case AIS::KEY_SETTING_UDPSERVER:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->UDP());
+			break;
+		case AIS::KEY_SETTING_SOAPYSDR:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->SOAPYSDR());
+			break;
+		case AIS::KEY_SETTING_FILE:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->RAW());
+			break;
+		case AIS::KEY_SETTING_ZMQ:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->ZMQ());
+			break;
+		case AIS::KEY_SETTING_SPYSERVER:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->SpyServer());
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 void Config::read(std::string& file_config) {
@@ -122,13 +231,6 @@ void Config::set(const std::string& str) {
 	JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
 	std::shared_ptr<JSON::JSON> json = parser.parse(str);
 
-	// temporary check, back and forth
-	if (false) {
-
-		JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_SETTING);
-		std::cerr << "Config input : " << builder.stringify(*json) << std::endl;
-	}
-
 	// loop over all properties
 	const std::vector<JSON::Property>& props = json->getProperties();
 
@@ -141,81 +243,36 @@ void Config::set(const std::string& str) {
 		case AIS::KEY_SETTING_VERSION:
 			version = Util::Parse::Integer(p.Get().to_string());
 			break;
-		case AIS::KEY_SETTING_SERIAL:
-			serial = p.Get().to_string();
-			break;
-		case AIS::KEY_SETTING_INPUT:
-			input = p.Get().to_string();
-			break;
 		}
 	}
 
 	if (version < 1 || version > 1 || config != "aiscatcher")
 		throw std::runtime_error("version and/or format of config file not supported (required version <=1)");
 
-	_receiver.Serial() = serial;
-	if (!input.empty()) {
-		if (!Util::Parse::DeviceType(input, _receiver.InputType())) {
-			throw std::runtime_error("\"" + input + "\" is unknown input type in config file");
-		}
-	}
+	setReceiverfromJSON(props, true);
 
 	// pass 2
 	for (const auto& p : props) {
 		switch (p.Key()) {
+		// fields that are already processed for completeness
+		case AIS::KEY_SETTING_CONFIG:
+		case AIS::KEY_SETTING_VERSION:
+		case AIS::KEY_SETTING_SERIAL:
+		case AIS::KEY_SETTING_INPUT:
 		case AIS::KEY_SETTING_MODEL:
-			setModelfromJSON(p);
-			break;
 		case AIS::KEY_SETTING_META:
-			_receiver.setTags(p.Get().to_string());
-			break;
 		case AIS::KEY_SETTING_RTLSDR:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.RTLSDR());
-			break;
 		case AIS::KEY_SETTING_RTLTCP:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.RTLTCP());
-			break;
 		case AIS::KEY_SETTING_AIRSPY:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.AIRSPY());
-			break;
 		case AIS::KEY_SETTING_AIRSPYHF:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.AIRSPYHF());
-			break;
 		case AIS::KEY_SETTING_SDRPLAY:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.SDRPLAY());
-			break;
 		case AIS::KEY_SETTING_WAVFILE:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.WAV());
-			break;
 		case AIS::KEY_SETTING_HACKRF:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.HACKRF());
-			break;
 		case AIS::KEY_SETTING_UDPSERVER:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.UDP());
-			break;
 		case AIS::KEY_SETTING_SOAPYSDR:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.SOAPYSDR());
-			break;
 		case AIS::KEY_SETTING_FILE:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.RAW());
-			break;
 		case AIS::KEY_SETTING_ZMQ:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.ZMQ());
-			break;
 		case AIS::KEY_SETTING_SPYSERVER:
-			if (!isActiveObject(p.Get())) continue;
-			setSettingsFromJSON(p.Get(), _receiver.SpyServer());
 			break;
 		case AIS::KEY_SETTING_UDP:
 			setUDPfromJSON(p);
@@ -229,20 +286,17 @@ void Config::set(const std::string& str) {
 		case AIS::KEY_SETTING_HTTP:
 			setHTTPfromJSON(p);
 			break;
+		case AIS::KEY_SETTING_RECEIVER:
+			setReceiverFromArray(p);
+			break;
 		case AIS::KEY_SETTING_SCREEN:
 			_screen.setScreen(p.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_VERBOSE:
-			_receiver.verbose = Util::Parse::Switch(p.Get().to_string());
+			_receivers.back()->verbose = Util::Parse::Switch(p.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_VERBOSE_TIME:
 			_screen.verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
-			break;
-			// fields that are already processed for completeness
-		case AIS::KEY_SETTING_CONFIG:
-		case AIS::KEY_SETTING_VERSION:
-		case AIS::KEY_SETTING_SERIAL:
-		case AIS::KEY_SETTING_INPUT:
 			break;
 		default:
 			throw std::runtime_error("Config file: field \"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed.");

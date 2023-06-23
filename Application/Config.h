@@ -42,12 +42,14 @@
 
 class Config {
 
-	Receiver& _receiver;
+	std::vector<std::unique_ptr<Receiver>> & _receivers;
 	OutputScreen& _screen;
 	OutputHTTP& _http;
 	OutputUDP& _udp;
 	OutputTCP& _tcp;
 	std::vector<std::unique_ptr<WebClient>> & _server;
+
+	int _nrec;
 
 	bool isActiveObject(const JSON::Value& pd);
 	void setSettingsFromJSON(const JSON::Value& pd, Setting& s);
@@ -56,9 +58,12 @@ class Config {
 	void setTCPfromJSON(const JSON::Property& pd);
 	void setModelfromJSON(const JSON::Property& p);
 	void setServerfromJSON(const JSON::Value& pd);
+	void setReceiverfromJSON(const std::vector<JSON::Property>& pd, bool unspecAllowed);
+	void setReceiverFromArray(const JSON::Property& pd);
+
 
 public:
-	Config(Receiver& r, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, std::vector<std::unique_ptr<WebClient>> & v) : _receiver(r), _screen(s), _http(h), _server(v), _udp(u), _tcp(t) {};
+	Config(std::vector<std::unique_ptr<Receiver>> &r, int &nr, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, std::vector<std::unique_ptr<WebClient>> & v) : _receivers(r), _nrec(nr), _screen(s), _http(h), _server(v), _udp(u), _tcp(t) {};
 
 	void read(std::string& file_config);
 	void set(const std::string& str);
