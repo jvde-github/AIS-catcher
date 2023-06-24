@@ -52,6 +52,7 @@
 #include "Device/SDRPLAY.h"
 #include "Device/SpyServer.h"
 #include "Device/SoapySDR.h"
+#include "Device/Serial.h"
 #include "Device/ZMQ.h"
 #include "Device/UDP.h"
 
@@ -87,6 +88,7 @@ class Receiver {
 	Device::SDRPLAY _SDRPLAY;
 	Device::HACKRF _HACKRF;
 	Device::SOAPYSDR _SOAPYSDR;
+	Device::SerialPort _SerialPort;
 	Device::ZMQ _ZMQ;
 	Device::UDP _UDP;
 
@@ -109,6 +111,7 @@ public:
 	Device::AIRSPY& AIRSPY() { return _AIRSPY; };
 	Device::SDRPLAY& SDRPLAY() { return _SDRPLAY; };
 	Device::HACKRF& HACKRF() { return _HACKRF; };
+	Device::SerialPort& SerialPort() { return _SerialPort; };
 	Device::SOAPYSDR& SOAPYSDR() { return _SOAPYSDR; };
 	Device::ZMQ& ZMQ() { return _ZMQ; };
 	Device::UDP& UDP() { return _UDP; };
