@@ -89,6 +89,7 @@ void Usage() {
 	std::cerr << std::endl;
 	std::cerr << "\t[-d:x - select device based on index (default: 0)]" << std::endl;
 	std::cerr << "\t[-d xxxx - select device based on serial number]" << std::endl;
+	std::cerr << "\t[-e baudrate port - open device at serial port with given baudrate]" << std::endl;
 	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
 	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file or stdin (.), short for -r -ga FORMAT yy FILE filename" << std::endl;

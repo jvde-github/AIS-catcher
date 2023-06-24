@@ -61,10 +61,11 @@ use: AIS-catcher [options]
 
 	[-d:x - select device based on index (default: 0)]
 	[-d xxxx - select device based on serial number]
+	[-e baudrate port - open device at serial port with given baudrate]
 	[-l list available devices and terminate (default: off)]
 	[-L list supported SDR hardware and terminate (default: off)]
 	[-r [optional: yy] filename - read IQ data from file or stdin (.), short for -r -ga FORMAT yy FILE filename
-	[-t [host [port]] - read IQ data from remote RTL-TCP instance]
+	[-t [[protocol]] [host [port]] - read IQ data from remote RTL-TCP instance]
 	[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]
 	[-x [server][port] - UDP input of NMEA messages at port on server
 	[-y [host [port]] - read IQ data from remote SpyServer]
