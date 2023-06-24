@@ -138,11 +138,10 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool 
 
 	if(!unspecAllowed) {
 		if(serial.empty() && input.empty()) 
-			throw std::runtime_error("Config: receiver needs to have a serial or input specified in Config.");
+			throw std::runtime_error("receiver needs to have a serial or input specified in Config.");
 	}
 
 	if( (!serial.empty() || !input.empty()) && ++_nrec > 1) {
-		std::cerr << "Creating new receiver for [" << serial << "] " << input << std::endl;
 		_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 	}
 	

@@ -61,7 +61,6 @@ class Config {
 	void setReceiverfromJSON(const std::vector<JSON::Property>& pd, bool unspecAllowed);
 	void setReceiverFromArray(const JSON::Property& pd);
 
-
 public:
 	Config(std::vector<std::unique_ptr<Receiver>> &r, int &nr, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, std::vector<std::unique_ptr<WebClient>> & v) : _receivers(r), _nrec(nr), _screen(s), _http(h), _server(v), _udp(u), _tcp(t) {};
 
