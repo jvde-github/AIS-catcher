@@ -34,30 +34,36 @@
 namespace Device {
 
     class SerialPort : public Device {
+#ifdef _WIN32
+        HANDLE serial_handle = nullptr;
+#else
         int serial_fd = -1;
+#endif
 
         std::string port;
-        speed_t baudrate;
-        std::vector<char> buffer;
+        int baudrate;
 
         std::thread read_thread;
 
-        bool done = false;
+		bool lost = false;
 
         static const uint32_t BUFFER_SIZE = 16 * 16384;
 
         void ReadAsync();
 
     public:
-        SerialPort() : Device(Format::TXT, 288000), port(""), baudrate(B115200) {};
+        SerialPort() : Device(Format::TXT, 288000), port(""), baudrate(38400) {};
         ~SerialPort();
+
+		bool isStreaming() { return Device::isStreaming() && !lost; }
+		bool isCallback() { return true; }
 
         Setting& Set(std::string option, std::string arg);
         std::string Get();
 
         std::string getProduct() { return port; }
         std::string getVendor() { return "SERIAL"; }
-        std::string getSerial() { return """"; }
+        std::string getSerial() { return ""; }
 
         void setFormat(Format f) {}
         
