@@ -24,6 +24,11 @@ Only use this software in regions where such use is permitted.
 
 Latest version is **v0.48** with various improvements to the decoder.
 
+Option to read  from serial devices. Trialed succesfully with the dAISy hat but more testing needed:
+```
+AIS-catcher -e 38400 /dev/serial0
+```
+
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
