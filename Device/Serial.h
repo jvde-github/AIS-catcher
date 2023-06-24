@@ -61,8 +61,8 @@ namespace Device {
         Setting& Set(std::string option, std::string arg);
         std::string Get();
 
-        std::string getProduct() { return port; }
-        std::string getVendor() { return "SERIAL"; }
+        std::string getProduct() { return "SERIAL"; }
+        std::string getVendor() { return port; }
         std::string getSerial() { return ""; }
 
         void setFormat(Format f) {}
