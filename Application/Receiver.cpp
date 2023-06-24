@@ -593,17 +593,22 @@ void WebClient::start() {
 
 		backup_thread = std::thread(&WebClient::BackupService, this);
 		backup_thread.detach();
+		thread_running = true;
 	}
 }
 
-void WebClient::close() {
-
-	if (backup_interval > 0) {
+void WebClient::stopThread() {
+	if(thread_running) {
 		std::unique_lock<std::mutex> lock(m);
 
 		run = false;
 		cv.notify_all();
+		thread_running = false;
 	}
+}
+void WebClient::close() {
+
+	stopThread();
 
 	if (!filename.empty() && !Save()) {
 		std::cerr << "Statistics: cannot write file." << std::endl;

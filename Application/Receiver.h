@@ -245,6 +245,7 @@ class WebClient : public IO::Server, public Setting {
 	bool port_set = false;
 	bool use_zlib = true;
 	bool supportPrometheus = false;
+	bool thread_running = false;
 
 	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\naboutMDpresent=false;\n\n";
 	std::string plugins;
@@ -327,7 +328,10 @@ class WebClient : public IO::Server, public Setting {
 	bool Save();
 	void Clear();
 
+	void stopThread();
 public:
+	~WebClient() { stopThread(); }
+
 	bool& active() { return run; }
 	void connect(Receiver& r);
 	void start();
