@@ -124,6 +124,8 @@ namespace Util {
 			type = Type::SOAPYSDR;
 		else if (str == "ZMQ")
 			type = Type::ZMQ;
+		else if (str == "SERIALPORT")
+			type = Type::SERIALPORT;			
 		else if (str == "UDP" || str == "UDPSERVER")
 			type = Type::UDP;
 		else if (str == "SPYSERVER")

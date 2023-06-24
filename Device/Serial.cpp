@@ -30,20 +30,35 @@ namespace Device {
         DWORD bytesRead;
         OVERLAPPED overlapped = { 0 };
         overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-        DWORD dwCommEvent;
 
         while (isStreaming()) {
-            if (WaitCommEvent(serial_handle, &dwCommEvent, &overlapped)) {
-                if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped)) {
-                    if (GetLastError() != ERROR_IO_PENDING) { 
-                        std::cerr << "Serial read encountered an error: " << GetLastError() << std::endl;
+            if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped)) {
+                if (GetLastError() == ERROR_IO_PENDING) {
+                    // Wait for the read operation to complete
+                    DWORD dwWait = WaitForSingleObject(overlapped.hEvent, 1000); // Wait for 1 second
+                    if (dwWait == WAIT_OBJECT_0) {
+                        if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE)) {
+                            std::cerr << "error reading from serial device: " << GetLastError() << std::endl;
+                            lost = true;
+                        }
+                        else if (bytesRead) {
+                            r.size = bytesRead;
+                            Send(&r, 1, tag);
+                        }
+                    }
+                    if (dwWait != WAIT_TIMEOUT) {
+                        std::cerr << "error reading from serial device: " << GetLastError() << std::endl;
                         lost = true;
                     }
                 }
-                else if (bytesRead) {
-                    r.size = bytesRead;
-                    Send(&r, 1, tag);
+                else {
+                    std::cerr << "Serial read encountered an error: " << GetLastError() << std::endl;
+                    lost = true;
                 }
+            }
+            else if (bytesRead) {
+                r.size = bytesRead;
+                Send(&r, 1, tag);
             }
         }
 
@@ -102,10 +117,8 @@ namespace Device {
 
     void SerialPort::Play() {
 
-        Device::Play();
-
 #ifdef _WIN32
-        serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (serial_handle == INVALID_HANDLE_VALUE) {
             throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
         }
@@ -140,6 +153,7 @@ namespace Device {
         int flags = fcntl(serial_fd, F_GETFL, 0);
         fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
 #endif
+        Device::Play();
 
         lost = false;
         read_thread = std::thread(&SerialPort::ReadAsync, this);

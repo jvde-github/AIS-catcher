@@ -188,6 +188,10 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool 
 			if (!isActiveObject(p.Get())) continue;
 			setSettingsFromJSON(p.Get(), _receivers.back()->WAV());
 			break;
+		case AIS::KEY_SETTING_SERIALPORT:
+			if (!isActiveObject(p.Get())) continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->SerialPort());
+			break;			
 		case AIS::KEY_SETTING_HACKRF:
 			if (!isActiveObject(p.Get())) continue;
 			setSettingsFromJSON(p.Get(), _receivers.back()->HACKRF());
@@ -267,6 +271,7 @@ void Config::set(const std::string& str) {
 		case AIS::KEY_SETTING_RTLTCP:
 		case AIS::KEY_SETTING_AIRSPY:
 		case AIS::KEY_SETTING_AIRSPYHF:
+		case AIS::KEY_SETTING_SERIALPORT:
 		case AIS::KEY_SETTING_SDRPLAY:
 		case AIS::KEY_SETTING_WAVFILE:
 		case AIS::KEY_SETTING_HACKRF:
