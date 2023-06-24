@@ -22,24 +22,64 @@
 namespace Device {
 
     void SerialPort::ReadAsync() {
-#ifdef _WIN32
-        DWORD bytesRead;
-#else
-        int bytesRead;
-#endif
-        while (!done) {
-            buffer.resize(BUFFER_SIZE);
+
+    	char buffer[16384];
+		RAW r = { getFormat(), buffer, 0 };
 
 #ifdef _WIN32
-            ReadFile(serial_handle, buffer.data(), buffer.size(), &bytesRead, NULL);
-#else
-            bytesRead = read(serial_fd, buffer.data(), buffer.size());
-#endif
-            if (bytesRead > 0) {
-                // Process the data read from the serial port
-                std::cout.write(buffer.data(), bytesRead);
+        DWORD bytesRead;
+        OVERLAPPED overlapped = { 0 };
+        overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+        DWORD dwCommEvent;
+
+        while (isStreaming()) {
+            if (WaitCommEvent(serial_handle, &dwCommEvent, &overlapped)) {
+                if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped)) {
+                    if (GetLastError() != ERROR_IO_PENDING) { 
+                        std::cerr << "Serial read encountered an error: " << GetLastError() << std::endl;
+                        lost = true;
+                    }
+                }
+                else if (bytesRead) {
+                    r.size = bytesRead;
+                    Send(&r, 1, tag);
+                }
             }
         }
+
+        CloseHandle(overlapped.hEvent);
+#else
+
+        while (isStreaming()) {
+            fd_set read_fds;
+
+            FD_ZERO(&read_fds);
+            FD_SET(serial_fd, &read_fds);
+
+            struct timeval timeout = { 1, 0 };
+
+            int rslt = select(serial_fd + 1, &read_fds, NULL, NULL, &timeout);
+            if (rslt > 0) {
+                int nread = read(serial_fd, buffer, sizeof(buffer));
+                if (nread > 0) {
+                    r.size = nread;
+                    Send(&r, 1, tag);
+                }
+                else {
+                    if(nread == 0) {
+                        std::cerr << "Serial read encountered an error: unexpected end." << std::endl;
+                    }
+                    else {
+                        std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
+                    }
+                    lost = true;
+                }
+            } else if (rslt < 0) {        
+                    std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
+                lost = true;
+            }
+        }
+#endif
     }
 
     SerialPort::~SerialPort() {
@@ -61,6 +101,9 @@ namespace Device {
     }
 
     void SerialPort::Play() {
+
+        Device::Play();
+
 #ifdef _WIN32
         serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if (serial_handle == INVALID_HANDLE_VALUE) {
@@ -93,14 +136,17 @@ namespace Device {
         tty.c_cflag |= CS8; // 8 bits per byte
 
         tcsetattr(serial_fd, TCSANOW, &tty);
+
+        int flags = fcntl(serial_fd, F_GETFL, 0);
+        fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
 #endif
 
-        done = false;
+        lost = false;
         read_thread = std::thread(&SerialPort::ReadAsync, this);
     }
 
     void SerialPort::Stop() {
-        done = true;
+        lost = true;
         if (read_thread.joinable()) {
             read_thread.join();
         }
