@@ -632,7 +632,7 @@ int main(int argc, char* argv[]) {
 			s->close();
 	}
 	catch (std::exception const& e) {
-		std::cout << "Error: " << e.what() << std::endl;
+		std::cerr << "Error: " << e.what() << std::endl;
 		for (auto& r : _receivers) r->stop();
 		return -1;
 	}
