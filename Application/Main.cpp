@@ -381,6 +381,14 @@ int main(int argc, char* argv[]) {
 				if (count == 1) _receivers.back()->RAW().Set("FILE", arg1);
 				if (count == 2) _receivers.back()->RAW().Set("FORMAT", arg1).Set("FILE", arg2);
 				break;
+			case 'e':
+				Assert(count == 2, param, "requires two parameters [baudrate] [portname].");
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::SERIALPORT;
+				_receivers.back()->SerialPort().Set("BAUDRATE", arg1).Set("PORT", arg2);
+				break;
 			case 'l':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				list_devices = true;
