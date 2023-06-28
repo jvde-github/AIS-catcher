@@ -59,13 +59,6 @@ void Receiver::setChannel(std::string mode, std::string NMEA) {
 	Util::Convert::toUpper(mode);
 	Util::Convert::toUpper(NMEA);
 
-	if (NMEA.length() != 2 && NMEA.length() != 0)
-		throw std::runtime_error("invalid NMEA channel designation: " + NMEA);
-
-	for (int i = 0; i < NMEA.length(); i++)
-		if (!std::isalpha(NMEA[i]) && !std::isdigit(NMEA[i]) && NMEA[i] != '?')
-			throw std::runtime_error("invalid NMEA channel designation: " + std::string(1, NMEA[i]));
-
 	if (mode == "AB") {
 		ChannelMode = AIS::Mode::AB;
 		if (NMEA.empty()) NMEA = "AB";
@@ -73,9 +66,25 @@ void Receiver::setChannel(std::string mode, std::string NMEA) {
 	else if (mode == "CD") {
 		ChannelMode = AIS::Mode::CD;
 		if (NMEA.empty()) NMEA = "CD";
+	} 
+	else if (mode == "X") {
+		ChannelMode = AIS::Mode::X;
+		if (NMEA.empty()) {
+			NMEA = "XX";
+		}
+		else if (NMEA.length() == 1) {
+			NMEA += NMEA;
+		}
 	}
 	else
-		throw std::runtime_error("channel mode needs to be AB or CD");
+		throw std::runtime_error("channel mode needs to be AB, CD or X");
+
+	if (NMEA.length() != 2)
+		throw std::runtime_error("invalid NMEA channel designation: " + NMEA);
+
+	for (int i = 0; i < NMEA.length(); i++)
+		if (!std::isalpha(NMEA[i]) && !std::isdigit(NMEA[i]) && NMEA[i] != '?')
+			throw std::runtime_error("invalid NMEA channel designation: " + std::string(1, NMEA[i]));
 
 	ChannelNMEA = NMEA;
 }
@@ -224,6 +233,8 @@ void Receiver::setupModel(int &group) {
 
 	// build the decoder models
 	for (auto& m : models) {
+		m->setDesignation(ChannelNMEA);
+		m->setMode(ChannelMode);
 		m->buildModel(ChannelNMEA[0], ChannelNMEA[1], device->getSampleRate(), timing, device);
 
 	}
