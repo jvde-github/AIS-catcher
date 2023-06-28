@@ -35,7 +35,8 @@ namespace AIS {
 	enum class Mode {
 		AB,
 		CD,
-		ABCD
+		ABCD,
+		X
 	};
 
 	enum class ModelClass {
@@ -65,6 +66,9 @@ namespace AIS {
 	protected:
 		std::string name = "";
 
+		Mode mode = Mode::AB;
+		std::string designation = "AB";
+
 		Device::Device* device;
 		Util::Timer<RAW> timer;
 		MessageMutex output;
@@ -80,6 +84,9 @@ namespace AIS {
 		std::string getName() { return name; }
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
+
+		void setMode(Mode m) { mode = m; }
+		void setDesignation(const std::string &s) { designation = s; }
 
 		virtual Setting& Set(std::string option, std::string arg) { throw std::runtime_error("Model: unknown setting."); }
 		virtual std::string Get() { return ""; }
