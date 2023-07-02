@@ -42,9 +42,9 @@ namespace Device {
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;
 
-		int LNAstate = 0;
-		int gRdB = 40;
-		bool AGC = true;
+		int LNAstate = 3;
+		int gRdB = 45;
+		bool AGC = false;
 
 		static void callback_static(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int numSamples, unsigned int reset, void* cbContext);
 		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params, void* cbContext);

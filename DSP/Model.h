@@ -110,6 +110,7 @@ namespace AIS {
 		bool SOXR_DS = false;
 		bool SAMPLERATE_DS = false;
 		bool MA_DS = false;
+		bool allowDSK = false;
 
 		const int nSymbolsPerSample = 48000 / 9600;
 

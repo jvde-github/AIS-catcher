@@ -46,7 +46,10 @@ namespace AIS {
 			physical >> convert >> DS_MA >> ROT;
 		}
 		else {
-			const std::vector<uint32_t> definedRates = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
+			const std::vector<uint32_t> definedRatesNoDSK = { 96000, 192000, 288000, 384000, 768000, 1536000, 3072000, 6144000, 12288000 };
+			const std::vector<uint32_t> definedRatesDSK = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
+
+			const std::vector<uint32_t> & definedRates  = allowDSK ? definedRatesDSK : definedRatesNoDSK;
 
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
@@ -283,6 +286,9 @@ namespace AIS {
 			SAMPLERATE_DS = false;
 			SOXR_DS = false;
 		}
+		else if (option == "DSK") {
+			allowDSK = Util::Parse::Switch(arg);
+		}
 		else if (option == "DROOP") {
 			droop_compensation = Util::Parse::Switch(arg);
 		}
@@ -303,7 +309,7 @@ namespace AIS {
 		else if (MA_DS)
 			return "MA ON " + Model::Get();
 
-		return "droop " + Util::Convert::toString(droop_compensation) + " fp_ds " + Util::Convert::toString(fixedpointDS) + " " + Model::Get();
+		return "droop " + Util::Convert::toString(droop_compensation) + " fp_ds " + Util::Convert::toString(fixedpointDS) +  " dsk " + Util::Convert::toString(allowDSK) + " " + Model::Get();
 	}
 
 	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
