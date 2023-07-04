@@ -204,6 +204,7 @@ namespace AIS {
 	class ModelDiscriminator : public Model {
 		Util::RealPart RP;
 		Util::ImaginaryPart IP;
+		DSP::Upsample US;
 
 		DSP::Filter FR_a, FR_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;

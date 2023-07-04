@@ -560,15 +560,19 @@ namespace AIS {
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
-		switch (sample_rate) {
-		case 48000:
+		if (sample_rate == 48000) {
 			physical >> convert;
 			convert >> RP >> FR_a;
 			convert >> IP >> FR_b;
-			break;
-		default:
-			throw std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
 		}
+		else if( sample_rate < 48000) {
+			US.setParams(sample_rate, 48000);
+			physical >> convert >> US;
+			convert >> RP >> FR_a;
+			convert >> IP >> FR_b;
+		}
+		else
+			std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
 
 		FR_a >> S_a;
 		FR_b >> S_b;
