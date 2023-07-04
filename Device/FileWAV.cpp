@@ -83,7 +83,7 @@ namespace Device {
 		// process wave chunks until start of data
 		while (!file.eof()) {
 			file.read((char*)&chunk, sizeof(struct WaveChunk));
-			if (chunk.ID == 0x74636166)
+			if (chunk.ID == 0x74636166 || chunk.ID == 0x69787561)
 				file.ignore(chunk.size);
 			else if (chunk.ID == 0x61746164)
 				break;
