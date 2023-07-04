@@ -292,6 +292,9 @@ namespace AIS {
 		else if (option == "DROOP") {
 			droop_compensation = Util::Parse::Switch(arg);
 		}
+		else if (option == "STATION_ID") {
+			station = Util::Parse::Integer(arg);
+		}
 		else
 			Model::Set(option, arg);
 
@@ -321,8 +324,8 @@ namespace AIS {
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		DEC_a.setChannel(CH1);
-		DEC_b.setChannel(CH2);
+		DEC_a.setOrigin(CH1,station);
+		DEC_b.setOrigin(CH2,station);
 
 		*C_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
 		*C_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
@@ -352,8 +355,8 @@ namespace AIS {
 		*C_b >> FM_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setChannel(CH1);
-			DEC_b[i].setChannel(CH2);
+			DEC_a[i].setOrigin(CH1,station);
+			DEC_b[i].setOrigin(CH2,station);
 
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
@@ -406,8 +409,8 @@ namespace AIS {
 		*C_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setChannel(CH1);
-			DEC_b[i].setChannel(CH2);
+			DEC_a[i].setOrigin(CH1,station);
+			DEC_b[i].setOrigin(CH2,station);
 
 			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
@@ -491,8 +494,8 @@ namespace AIS {
 		*C_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setChannel(CH1);
-			DEC_b[i].setChannel(CH2);
+			DEC_a[i].setOrigin(CH1,station);
+			DEC_b[i].setOrigin(CH2,station);
 
 			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
@@ -573,8 +576,8 @@ namespace AIS {
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
 
-			DEC_a[i].setChannel(CH1);
-			DEC_b[i].setChannel(CH2);
+			DEC_a[i].setOrigin(CH1,station);
+			DEC_b[i].setOrigin(CH2,station);
 
 			for (int j = 0; j < nSymbolsPerSample; j++) {
 				if (i != j) {
@@ -592,6 +595,8 @@ namespace AIS {
 		device = dev;
 		*device >> nmea >> output;
 		nmea.outGPS >> output_gps;
+
+		nmea.setStation(station);
 	}
 
 	Setting& ModelNMEA::Set(std::string option, std::string arg) {
