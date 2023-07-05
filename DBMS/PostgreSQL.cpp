@@ -378,6 +378,8 @@ namespace IO {
 			setGroupsIn(Util::Parse::Integer(arg));
 		else if (option == "STATION_ID")
 			station_id = Util::Parse::Integer(arg);
+		else if (option == "INTERVAL")
+			INTERVAL = Util::Parse::Integer(arg,5,1800);
 		else if (option == "NMEA")
 			NMEA = Util::Parse::Switch(arg);
 		else if (option == "VP")
