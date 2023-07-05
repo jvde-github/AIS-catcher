@@ -35,7 +35,8 @@ namespace AIS {
 	enum class Mode {
 		AB,
 		CD,
-		ABCD
+		ABCD,
+		X
 	};
 
 	enum class ModelClass {
@@ -66,6 +67,9 @@ namespace AIS {
 		std::string name = "";
 		int station = 0;
 
+		Mode mode = Mode::AB;
+		std::string designation = "AB";
+
 		Device::Device* device;
 		Util::Timer<RAW> timer;
 		MessageMutex output;
@@ -82,6 +86,8 @@ namespace AIS {
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
+		void setMode(Mode m) { mode = m; }
+		void setDesignation(const std::string &s) { designation = s; }
 		virtual Setting& Set(std::string option, std::string arg) { 
 			Util::Convert::toUpper(option);
 
@@ -92,6 +98,7 @@ namespace AIS {
 
 			return *this;
 		}
+
 		virtual std::string Get() { return ""; }
 		virtual ModelClass getClass() { return ModelClass::IQ; }
 	};
@@ -208,6 +215,7 @@ namespace AIS {
 	class ModelDiscriminator : public Model {
 		Util::RealPart RP;
 		Util::ImaginaryPart IP;
+		DSP::Upsample US;
 
 		DSP::Filter FR_a, FR_b;
 		std::vector<AIS::Decoder> DEC_a, DEC_b;
