@@ -251,7 +251,7 @@ int main(int argc, char* argv[]) {
 			switch (param[1]) {
 			case 's':
 				Assert(count == 1, param, "does require one parameter [sample rate].");
-				receiver.setSampleRate(Util::Parse::Integer(arg1, 48000, 12288000));
+				receiver.setSampleRate(Util::Parse::Integer(arg1, 12500, 12288000));
 				break;
 			case 'm':
 				Assert(count == 1, param, "requires one parameter [model number].");

@@ -26,12 +26,22 @@ namespace AIS {
 	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		device = dev;
 
-		if (sample_rate < 96000 || sample_rate > 12288000)
-			throw std::runtime_error("Model: sample rate must be between 96K and 12288K (inclusive).");
-
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
+
+		if(mode == AIS::Mode::X) {
+			US.setParams(sample_rate, 48000);
+			physical >> convert >> US;
+
+			C_a = &US.out;			
+			C_b = &FCIC5_b.out;
+
+			return;
+		}
+		if (sample_rate < 96000 || sample_rate > 12288000)
+			throw std::runtime_error("Model: sample rate must be between 96K and 12288K (inclusive).");
+
 
 		if (SOXR_DS) {
 			sox.setParams(sample_rate, 96000);
@@ -559,15 +569,19 @@ namespace AIS {
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
-		switch (sample_rate) {
-		case 48000:
+		if (sample_rate == 48000) {
 			physical >> convert;
 			convert >> RP >> FR_a;
 			convert >> IP >> FR_b;
-			break;
-		default:
-			throw std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
 		}
+		else if( sample_rate < 48000) {
+			US.setParams(sample_rate, 48000);
+			physical >> convert >> US;
+			convert >> RP >> FR_a;
+			convert >> IP >> FR_b;
+		}
+		else
+			std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
 
 		FR_a >> S_a;
 		FR_b >> S_b;
