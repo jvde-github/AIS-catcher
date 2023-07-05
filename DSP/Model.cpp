@@ -31,14 +31,75 @@ namespace AIS {
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
 		if(mode == AIS::Mode::X) {
-			US.setParams(sample_rate, 48000);
-			physical >> convert >> US;
 
-			C_a = &US.out;			
+			if (sample_rate < 12000 || sample_rate > 192000)
+				throw std::runtime_error("Model: sample rate must be between 12k and 192k (inclusive).");
+
+			physical >> convert;
+
+			const std::vector<uint32_t> definedRates = { 48000, 96000, 192000 };
+
+			uint32_t bucket = 0xFFFF;
+			bool interpolated = false;
+
+			for (uint32_t r : definedRates)
+				if (r >= sample_rate) {
+					bucket = r;
+					if (r != sample_rate) interpolated = true;
+					break;
+				}
+
+			if (interpolated)
+				std::cerr << "Warning: sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." << std::endl;
+
+			US.setParams(sample_rate, bucket);
+
+			switch (bucket - (interpolated ? 1 : 0)) {
+			case 192000:
+				FDC.setTaps(-1.1f);
+				if (!droop_compensation)
+					convert >> DS2_2 >> DS2_1 >> FCIC5_a;
+				else
+					convert >> DS2_2 >> DS2_1 >> FDC >> FCIC5_a;
+				break;
+			case 192000 - 1:
+				FDC.setTaps(-1.1f);
+				if (!droop_compensation)
+					convert >> US >> DS2_2 >> DS2_1 >> FCIC5_a;
+				else
+					convert >> US >> DS2_2 >> DS2_1 >> FDC >> FCIC5_a;
+				break;
+			case 96000:
+				FDC.setTaps(-0.8f);
+				if (!droop_compensation)
+					convert >> DS2_1 >> FCIC5_a;
+				else
+					convert >> DS2_1 >> FDC >> FCIC5_a;
+				break;
+			case 96000 - 1:
+				FDC.setTaps(-0.8f);
+				if (!droop_compensation)
+					convert >> US >> DS2_1 >> FCIC5_a;
+				else
+					convert >> US >> DS2_1 >> FDC >> FCIC5_a;
+				break;
+			case 48000:
+				convert >> FCIC5_a;
+				break;
+			case 48000 - 1:
+				convert >> US >> FCIC5_a;
+				break;
+
+			default:
+				throw std::runtime_error("Model: internal error. Sample rate should be supported.");
+			}
+
+			C_a = &FCIC5_a.out;			
 			C_b = &FCIC5_b.out;
 
 			return;
 		}
+
 		if (sample_rate < 96000 || sample_rate > 12288000)
 			throw std::runtime_error("Model: sample rate must be between 96K and 12288K (inclusive).");
 
