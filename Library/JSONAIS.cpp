@@ -279,6 +279,10 @@ namespace AIS {
 			json.Add(AIS::KEY_PPM, tag.ppm);
 		}
 
+		if(msg.getStation()) {
+			json.Add(AIS::KEY_STATION_ID, msg.getStation());
+		}
+
 		U(msg, AIS::KEY_TYPE, 0, 6);
 		U(msg, AIS::KEY_REPEAT, 6, 2);
 		U(msg, AIS::KEY_MMSI, 8, 30);

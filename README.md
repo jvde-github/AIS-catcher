@@ -28,7 +28,12 @@ Edge version has an option to read  from serial devices with the switch `-e`. Tr
 ```
 AIS-catcher -e 38400 /dev/serial0
 ```
-
+Furthermore:
+- Improvement in default settings for SDRplay and downsampler at 2304K
+- Accepts SDRangel generated WAV files as input
+- new settings `-go ID xxx` that sets the station_id which will automatically feed into the database
+- Planned: `-c X`
+   
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.

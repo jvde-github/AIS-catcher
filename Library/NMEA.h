@@ -32,7 +32,7 @@ namespace AIS {
 
 	class NMEA : public SimpleStreamInOut<RAW, Message> {
 		Message msg;
-
+		int station = 0;
 		struct AIVDM {
 			std::string sentence;
 			std::string line;
@@ -92,6 +92,8 @@ namespace AIS {
 
 		void setRegenerate(bool b) { regenerate = b; }
 		bool getRegenerate() { return regenerate; }
+
+		void setStation(int s) { station = s; }
 
 		void setCRCcheck(bool b) { crc_check = b; }
 		bool getCRCcheck() { return crc_check; }

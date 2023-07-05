@@ -65,6 +65,7 @@ namespace AIS {
 	class Model : public Setting {
 	protected:
 		std::string name = "";
+		int station = 0;
 
 		Mode mode = Mode::AB;
 		std::string designation = "AB";
@@ -87,8 +88,17 @@ namespace AIS {
 
 		void setMode(Mode m) { mode = m; }
 		void setDesignation(const std::string &s) { designation = s; }
+		virtual Setting& Set(std::string option, std::string arg) { 
+			Util::Convert::toUpper(option);
 
-		virtual Setting& Set(std::string option, std::string arg) { throw std::runtime_error("Model: unknown setting."); }
+			if(option == "STATION_ID" || option == "ID") 
+				station = Util::Parse::Integer(arg);
+			else
+				throw std::runtime_error("Model: unknown setting."); 
+
+			return *this;
+		}
+
 		virtual std::string Get() { return ""; }
 		virtual ModelClass getClass() { return ModelClass::IQ; }
 	};
@@ -117,6 +127,7 @@ namespace AIS {
 		bool SOXR_DS = false;
 		bool SAMPLERATE_DS = false;
 		bool MA_DS = false;
+		bool allowDSK = false;
 
 		const int nSymbolsPerSample = 48000 / 9600;
 

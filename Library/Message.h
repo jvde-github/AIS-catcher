@@ -48,6 +48,7 @@ namespace AIS {
 		std::time_t rxtime;
 		int length;
 		char channel;
+		int station;
 
 	public:
 		std::vector<std::string> NMEA;
@@ -124,6 +125,8 @@ namespace AIS {
 		void setChannel(char c) { channel = c; }
 		char getChannel() const { return channel; }
 
+		void setOrigin(char c,int s) { channel = c; station = s; }
+		int getStation() const { return station; }
 		void buildNMEA(TAG& tag, int id = -1);
 	};
 
