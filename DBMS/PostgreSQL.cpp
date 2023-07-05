@@ -15,24 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-/*
-	Copyright(c) 2021-2023 jvde.github@gmail.com
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
 #include "DBMS/PostgreSQL.h"
 
 namespace IO {
@@ -175,7 +157,7 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
 		return "INSERT INTO ais_vessel_pos (" + keys + ") VALUES (" + values + ");\n";
@@ -212,7 +194,7 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
 		return "INSERT INTO ais_vessel_static (" + keys + ") VALUES (" + values + ");\n";
@@ -237,7 +219,7 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
 		return "INSERT INTO ais_basestation (" + keys + ") VALUES (" + values + ");\n";
@@ -264,7 +246,7 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
 		return "INSERT INTO ais_sar_position (" + keys + ") VALUES (" + values + ");\n";
@@ -298,7 +280,7 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
+		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
 		return "INSERT INTO ais_aton (" + keys + ") VALUES (" + values + ");\n";
@@ -320,16 +302,16 @@ namespace IO {
 		if (MSGS) {
 			sql += std::string("DROP TABLE IF EXISTS _id;\nWITH cte AS (INSERT INTO ais_message (mmsi, station_id, type, received_at, published_at, channel, signal_level, ppm) "
 								"VALUES (") +
-					std::to_string(msg->mmsi()) + ',' + std::to_string(station_id) + ',' + std::to_string(msg->type()) + ",\'" + std::string(Util::Convert::toTimestampStr(msg->getRxTimeUnix())) + "\', current_timestamp,\'" +
+					std::to_string(msg->mmsi()) + ',' + std::to_string(station_id ? station_id : msg->getStation()) + ',' + std::to_string(msg->type()) + ",\'" + std::string(Util::Convert::toTimestampStr(msg->getRxTimeUnix())) + "\', current_timestamp,\'" +
 					(char)msg->getChannel() + "\'," +
 					std::to_string(tag.level) + ',' + std::to_string(tag.ppm) +
 					") RETURNING id)\nSELECT id INTO _id FROM cte;";
 		}
 
 		if (NMEA) {
-			std::string keys = "msg_id,station_id,received_at";
-			std::string values = (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id);
-			values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
+			std::string keys = "msg_id,station_id,mmsi,received_at";
+			std::string values = (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
+			values += ","+std::to_string(msg->mmsi())+",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 			for (auto s : msg->NMEA) {
 
 				sql += "INSERT INTO ais_nmea (" + keys + ", nmea) VALUES (" + values + ",\'" + s + "\');\n";
@@ -396,6 +378,8 @@ namespace IO {
 			setGroupsIn(Util::Parse::Integer(arg));
 		else if (option == "STATION_ID")
 			station_id = Util::Parse::Integer(arg);
+		else if (option == "INTERVAL")
+			INTERVAL = Util::Parse::Integer(arg,5,1800);
 		else if (option == "NMEA")
 			NMEA = Util::Parse::Switch(arg);
 		else if (option == "VP")

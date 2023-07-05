@@ -37,6 +37,7 @@ namespace IO {
 						std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
 						if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
 						if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();
+						if (data[i].getStation()) std::cout << ", ID: " << data[i].getStation();
 						std::cout << ")" << std::endl;
 					}
 					break;
@@ -45,6 +46,7 @@ namespace IO {
 
 					if (tag.mode & 2) std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
 					if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
+					if (data[i].getStation()) std::cout << ",\"station_id\":" <<  data[i].getStation();
 
 					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type() << ",\"nmea\":[\"" << data[i].NMEA[0] << "\"";
 
