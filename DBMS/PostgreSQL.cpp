@@ -24,10 +24,9 @@ namespace IO {
 	void PostgreSQL::post() {
 
 		{
-			// std::cerr << sql << std::endl;
 			const std::lock_guard<std::mutex> lock(queue_mutex);
-			sql_trans = sql;
-			sql.clear();
+			sql_trans = "DO $$\nDECLARE\n\tm_id INTEGER;\nBEGIN\n" + sql.str() + "\nEND $$;\n";
+			sql.str("");
 		}
 
 		PGresult* res;
@@ -65,11 +64,13 @@ namespace IO {
 
 		while (!terminate) {
 
-			for (int i = 0; i < INTERVAL && sql.size() < 32768 * 16; i++) {
+			for (int i = 0; i < INTERVAL && sql.tellp() < 32768 * 16; i++) {
+			
 				SleepSystem(1000);
 				if (terminate) break;
 			}
-			if (!sql.empty()) post();
+			
+			if (sql.tellp()) post();
 		}
 	}
 #endif
@@ -134,7 +135,7 @@ namespace IO {
 	}
 
 #ifdef HASPSQL
-	std::string PostgreSQL::addVesselPosition(const JSON::JSON* data, const AIS::Message* msg) {
+	std::string PostgreSQL::addVesselPosition(const JSON::JSON* data, const AIS::Message* msg,const std::string &m,const std::string &s) {
 		if (!VP) return "";
 
 		std::string keys = "";
@@ -157,13 +158,13 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
+		values += m + ',' + s;
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-		return "INSERT INTO ais_vessel_pos (" + keys + ") VALUES (" + values + ");\n";
+		return "\tINSERT INTO ais_vessel_pos (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addVesselStatic(const JSON::JSON* data, const AIS::Message* msg) {
+	std::string PostgreSQL::addVesselStatic(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
 		if (!VS) return "";
 
 		std::string keys = "";
@@ -194,14 +195,14 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
+		values += m + ',' + s;
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-		return "INSERT INTO ais_vessel_static (" + keys + ") VALUES (" + values + ");\n";
+		return "\tINSERT INTO ais_vessel_static (" + keys + ") VALUES (" + values + ");\n";
 	}
 
 
-	std::string PostgreSQL::addBasestation(const JSON::JSON* data, const AIS::Message* msg) {
+	std::string PostgreSQL::addBasestation(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
 		if (!BS) return "";
 
 		std::string keys = "";
@@ -219,13 +220,13 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
+		values += m + ',' + s;
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-		return "INSERT INTO ais_basestation (" + keys + ") VALUES (" + values + ");\n";
+		return "\tINSERT INTO ais_basestation (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addSARposition(const JSON::JSON* data, const AIS::Message* msg) {
+	std::string PostgreSQL::addSARposition(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
 		if (!SAR) return "";
 
 		std::string keys = "";
@@ -246,13 +247,13 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
+		values += m + ',' + s;
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-		return "INSERT INTO ais_sar_position (" + keys + ") VALUES (" + values + ");\n";
+		return "\tINSERT INTO ais_sar_position (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addATON(const JSON::JSON* data, const AIS::Message* msg) {
+	std::string PostgreSQL::addATON(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
 		if (!ATON) return "";
 
 		std::string keys = "";
@@ -280,41 +281,39 @@ namespace IO {
 			}
 		}
 		keys += "msg_id,station_id,received_at";
-		values += (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
+		values += m + ',' + s;
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 
-		return "INSERT INTO ais_aton (" + keys + ") VALUES (" + values + ");\n";
+		return "\tINSERT INTO ais_aton (" + keys + ") VALUES (" + values + ");\n";
 	}
 
 	void PostgreSQL::Receive(const JSON::JSON* data, int len, TAG& tag) {
 
 		const std::lock_guard<std::mutex> lock(queue_mutex);
 
-		if (sql.size() > 32768 * 24) {
+		if (sql.tellp() > 32768 * 24) {
 			std::cerr << "DBMS: writing to database too slow, data lost." << std::endl;
-			sql.clear();
+			sql.str("");
 		}
 
 		const AIS::Message* msg = (AIS::Message*)data[0].binary;
 
 		if (!filter.include(*msg)) return;
 
+		std::string m_id = MSGS ? "m_id" : " NULL";
+		std::string s_id = std::to_string(station_id ? station_id : msg->getStation());
+
 		if (MSGS) {
-			sql += std::string("DROP TABLE IF EXISTS _id;\nWITH cte AS (INSERT INTO ais_message (mmsi, station_id, type, received_at, published_at, channel, signal_level, ppm) "
-								"VALUES (") +
-					std::to_string(msg->mmsi()) + ',' + std::to_string(station_id ? station_id : msg->getStation()) + ',' + std::to_string(msg->type()) + ",\'" + std::string(Util::Convert::toTimestampStr(msg->getRxTimeUnix())) + "\', current_timestamp,\'" +
-					(char)msg->getChannel() + "\'," +
-					std::to_string(tag.level) + ',' + std::to_string(tag.ppm) +
-					") RETURNING id)\nSELECT id INTO _id FROM cte;";
+			sql << "\tINSERT INTO ais_message (mmsi, station_id, type, received_at, published_at, channel, signal_level, ppm) "
+				<< "VALUES (" << msg->mmsi() << ',' + s_id << ',' << msg->type() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\', current_timestamp,\'"
+				<< (char)msg->getChannel() << "\'," << tag.level <<',' << tag.ppm
+				<< ") RETURNING id INTO m_id;\n";
 		}
 
 		if (NMEA) {
-			std::string keys = "msg_id,station_id,mmsi,received_at";
-			std::string values = (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + std::to_string(station_id ? station_id : msg->getStation());
-			values += ","+std::to_string(msg->mmsi())+",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'';
 			for (auto s : msg->NMEA) {
 
-				sql += "INSERT INTO ais_nmea (" + keys + ", nmea) VALUES (" + values + ",\'" + s + "\');\n";
+				sql << "\tINSERT INTO ais_nmea (msg_id,station_id,mmsi,received_at,nmea) VALUES (" << m_id << ',' << s_id  << ',' << msg->mmsi() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'" << s << "\');\n";
 			}
 		}
 
@@ -323,29 +322,29 @@ namespace IO {
 		case 2:
 		case 3:
 		case 27:
-			sql += addVesselPosition(data, msg);
+			sql << addVesselPosition(data, msg, m_id, s_id);
 			break;
 		case 4:
-			sql += addBasestation(data, msg);
+			sql << addBasestation(data, msg, m_id, s_id);
 			break;
 		case 5:
-			sql += addVesselStatic(data, msg);
+			sql << addVesselStatic(data, msg, m_id, s_id);
 			break;
 		case 9:
-			sql += addSARposition(data, msg);
+			sql << addSARposition(data, msg, m_id, s_id);
 			break;
 		case 18:
-			sql += addVesselPosition(data, msg);
+			sql << addVesselPosition(data, msg,  m_id, s_id);
 			break;
 		case 19:
-			sql += addVesselPosition(data, msg);
-			sql += addVesselStatic(data, msg);
+			sql << addVesselPosition(data, msg,  m_id, s_id);
+			sql << addVesselStatic(data, msg, m_id, s_id);
 			break;
 		case 21:
-			sql += addATON(data, msg);
+			sql << addATON(data, msg, m_id, s_id);
 			break;
 		case 24:
-			sql += addVesselStatic(data, msg);
+			sql << addVesselStatic(data, msg, m_id, s_id);
 			break;
 		default:
 			break;
@@ -354,16 +353,17 @@ namespace IO {
 		for (const auto& p : data[0].getProperties()) {
 			if (db_keys[p.Key()] != -1) {
 				if (p.Get().isString()) {
-					sql += "INSERT INTO ais_property (msg_id, key, value) VALUES (" + (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + "\'" + std::to_string(db_keys[p.Key()]) + "\',\'" + escape(p.Get().getString()) + "\');\n";
+					sql << "INSERT INTO ais_property (msg_id, key, value) VALUES (" << m_id << "\'" << db_keys[p.Key()] << "\',\'" << escape(p.Get().getString()) << "\');\n";
 				}
 				else {
 					std::string temp;
 					builder.to_string(temp, p.Get());
 					temp = temp.substr(0, 20);
-					sql += "INSERT INTO ais_property (msg_id, key, value) VALUES  (" + (MSGS ? std::string("(SELECT id FROM _id),") : std::string("NULL,")) + "\',\'" + temp + "\');\n";
+					sql << "INSERT INTO ais_property (msg_id, key, value) VALUES  (" << m_id << "\',\'" + temp + "\');\n";
 				}
 			}
 		}
+		sql << "\n";
 	}
 #endif
 
