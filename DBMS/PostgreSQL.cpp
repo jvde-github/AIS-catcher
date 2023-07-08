@@ -304,8 +304,8 @@ namespace IO {
 		std::string s_id = std::to_string(station_id ? station_id : msg->getStation());
 
 		if (MSGS) {
-			sql << "\tINSERT INTO ais_message (mmsi, station_id, type, received_at, published_at, channel, signal_level, ppm) "
-				<< "VALUES (" << msg->mmsi() << ',' + s_id << ',' << msg->type() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\', current_timestamp,\'"
+			sql << "\tINSERT INTO ais_message (mmsi, station_id, type, received_at,channel, signal_level, ppm) "
+				<< "VALUES (" << msg->mmsi() << ',' + s_id << ',' << msg->type() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'" 
 				<< (char)msg->getChannel() << "\'," << tag.level <<',' << tag.ppm
 				<< ") RETURNING id INTO m_id;\n";
 		}
