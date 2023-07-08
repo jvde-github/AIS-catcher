@@ -12,7 +12,7 @@ CREATE TABLE ais_message (
     id serial primary key,
     mmsi integer,
     received_at timestamp,
-    published_at timestamp,
+    published_at TIMESTAMP DEFAULT current_timestamp,
     station_id smallint,
     type smallint,
     channel character(1),
