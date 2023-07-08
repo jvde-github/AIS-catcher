@@ -7,7 +7,6 @@ DROP TABLE IF EXISTS ais_vessel_static;
 DROP TABLE IF EXISTS ais_property;
 DROP TABLE IF EXISTS ais_keys;
 DROP TABLE IF EXISTS ais_message;
-DROP TABLE IF EXISTS _id;
 
 CREATE TABLE ais_message (
     id serial primary key,
@@ -19,10 +18,6 @@ CREATE TABLE ais_message (
     channel character(1),
     signal_level real,
     ppm real
-);
-
-CREATE TABLE _id (
-    id integer
 );
 
 CREATE TABLE ais_nmea (
@@ -111,7 +106,6 @@ CREATE TABLE ais_property (
     key integer references ais_keys(key_id),
     value varchar(20)
 );
-
 
 /*
 INSERT INTO ais_keys (key_str) VALUES ('destination');
