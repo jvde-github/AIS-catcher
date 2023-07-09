@@ -22,17 +22,7 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-Latest version is **v0.48** with various improvements to the decoder.
-
-Edge version has an option to read  from serial devices with the switch `-e`. Trialed succesfully with the dAISy hat but more testing needed:
-```
-AIS-catcher -e 38400 /dev/serial0
-```
-Furthermore:
-- Improvement in default settings for SDRplay and downsampler at 2304K
-- Accepts SDRangel generated WAV files as input
-- new settings `-go ID xxx` that sets the station_id which will automatically feed into the database
-- Decode a single channel with `-c X`, see [here](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#connecting-to-gnu-radio-via-zmq) for an example.
+Latest version is **v0.49** with various improvements to the decoder.
    
 ## Installation
 
