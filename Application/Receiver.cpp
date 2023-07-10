@@ -574,8 +574,6 @@ void WebClient::connect(Connection<AIS::Message>& msg, Connection<JSON::JSON> &j
 		msg >> counter;
 
 		json.Connect((StreamIn<JSON::JSON>*) & ships);
-		msg.Connect((StreamIn<AIS::Message>*) & ships);
-
 		*device >> raw_counter;
 	}
 }
