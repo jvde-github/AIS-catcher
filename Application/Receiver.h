@@ -268,7 +268,7 @@ class WebClient : public IO::Server, public Setting {
 
 	void BackupService();
 	class Counter : public StreamIn<AIS::Message> {
-		Statistics stat;
+		MessageStatistics stat;
 
 	public:
 		void setCutOff(int c) { stat.setCutoff(c); }
@@ -284,7 +284,7 @@ class WebClient : public IO::Server, public Setting {
 
 	class PromotheusCounter : public StreamIn<AIS::Message> {
 		std::mutex m;
-		Statistics stat;
+		MessageStatistics stat;
 
 	public:
 		void setCutOff(int c) { stat.setCutoff(c); }
