@@ -28,7 +28,7 @@ struct History : public StreamIn<JSON::JSON> {
 
 	struct {
 		long int time;
-		Statistics stat;
+		MessageStatistics stat;
 	} history[N];
 
 	int start, end;

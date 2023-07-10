@@ -24,7 +24,7 @@
 // ----------------------------
 // Class to log message count stat
 
-class Statistics {
+class MessageStatistics {
 
 	std::mutex m;
 
