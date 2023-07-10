@@ -567,6 +567,20 @@ void WebClient::connect(Receiver& r) {
 
 }
 
+void WebClient::connect(Connection<AIS::Message>& msg, Connection<JSON::JSON> &json, Connection<RAW> &raw, Device::Device *device) {
+	
+	if (msg.canConnect(groups_in)) {
+		// connect all the statistical counters
+		msg >> counter;
+
+		json.Connect((StreamIn<JSON::JSON>*) & ships);
+		msg.Connect((StreamIn<AIS::Message>*) & ships);
+		raw.Connect((StreamIn<RAW>*) & ships);
+
+		*device >> raw_counter;
+	}
+}
+
 void WebClient::start() {
 	ships.setup(lat, lon);
 

@@ -334,6 +334,7 @@ public:
 
 	bool& active() { return run; }
 	void connect(Receiver& r);
+	void connect(Connection<AIS::Message>& msg, Connection<JSON::JSON> &json, Connection<RAW> &raw, Device::Device *device);
 	void start();
 	void close();
 
