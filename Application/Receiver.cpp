@@ -579,7 +579,6 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 		vendor = device.getVendor().empty() ? "-" : device.getVendor();
 		serial = device.getSerial().empty() ? "-" : device.getSerial();
 		model = m.getName();
-
 	}
 }
 
