@@ -32,7 +32,7 @@ jobs:
       run: |
         cd HTML
         rm HTML.cpp
-        cat index.html | gzip > index_html_gz
+        minify index.html | gzip > index_html_gz
         xxd -i index_html_gz > HTML.cpp
         cd ..
         if [[ -z $(git diff) ]]; then
