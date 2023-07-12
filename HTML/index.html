@@ -3269,6 +3269,7 @@
         }
 
         function loadSettings() {
+            /*
             try {
                 ls = JSON.parse(localStorage.settings);
             } catch (error) {
@@ -3276,7 +3277,18 @@
                 return;
             }
             settings = { ...settings, ...ls };
-
+            */ 
+            try {
+              const localStorageSettings = localStorage.getItem('settings');
+              if (localStorageSettings !== null) {
+                const ls = JSON.parse(localStorageSettings);
+                settings = { ...settings, ...ls };
+              }
+            } catch (error) {
+              console.log(error);
+              return;
+            }
+                        
             if(!shipcardismax()) 
                     toggleShipcardSize();
                 
