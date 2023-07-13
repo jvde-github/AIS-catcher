@@ -575,9 +575,7 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 		device >> raw_counter;
 
 		sample_rate = std::to_string(device.getSampleRate() / 1000) + "K/S";
-		product = device.getProduct();
-		vendor = device.getVendor().empty() ? "-" : device.getVendor();
-		serial = device.getSerial().empty() ? "-" : device.getSerial();
+		setDeviceDescription( device.getProduct(),device.getVendor().empty() ? "-" : device.getVendor(),device.getSerial().empty() ? "-" : device.getSerial());
 		model = m.getName();
 	}
 }
