@@ -2185,10 +2185,17 @@
         }
 
         function hideMenu() {
-            if (document.getElementById("menubar").classList.contains('visible')) {
+            if (document.getElementById("menubar").classList.contains('visible') && !hasNoHeader()) {
                 toggleMenu();
             }
         }
+
+        function showMenu() {
+            if (!document.getElementById("menubar").classList.contains('visible')) {
+                toggleMenu();
+            }
+        }
+
 
         function hideMenuifSmall() {
             //if(window.matchMedia("(max-height: 1000px)").matches)
@@ -3268,15 +3275,7 @@
         }
 
         function loadSettings() {
-            /*
-            try {
-                ls = JSON.parse(localStorage.settings);
-            } catch (error) {
-                console.log(error);
-                return;
-            }
-            settings = { ...settings, ...ls };
-            */ 
+
             try {
               const localStorageSettings = localStorage.getItem('settings');
               if (localStorageSettings !== null) {
@@ -3932,6 +3931,10 @@
             saveSettings();
         }
 
+        function hasNoHeader() {
+            return (settings.noheader === true || settings.noheader === 'true');
+        }
+
         // for overwrite and insert code where needed
         function main() {
             plugins_main.forEach(function (p) { p(); });
@@ -3988,7 +3991,7 @@
 
         init_postSettings();
 
-        if (settings && (settings.noheader === true || settings.noheader === 'true')) {
+        if (hasNoHeader()) {
             var headerElement = document.querySelector('.header');
             if (headerElement) {
                 headerElement.style.display = 'none';
@@ -4023,6 +4026,7 @@
 
         showWelcome();
 
+        if(hasNoHeader()) showMenu();
         main();
 
     </script>
