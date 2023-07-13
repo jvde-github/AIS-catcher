@@ -13,7 +13,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <link href="https://unpkg.com/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
@@ -3832,7 +3831,6 @@
             }
         }
 
-
         async function openFocus(m, z) {
             await fetchShips(false);
 
@@ -3939,6 +3937,21 @@
             plugins_main.forEach(function (p) { p(); });
         }
 
+        function setupAbout() {
+            fetchAbout().then(s => {
+                var scriptElement = document.createElement('script');
+                scriptElement.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+                document.head.appendChild(scriptElement);
+
+                scriptElement.onload = function() {
+                    document.getElementById("about_content").innerHTML = marked.parse(s);
+                };
+            }).catch(error => {
+                alert("Error loading about.md: " + error);
+                aboutMDpresent = false;
+            });
+        }
+
         function init_preSettings() { }
         function init_postSettings() { }
         function init_postTabsInit() { }
@@ -4000,15 +4013,12 @@
 
         saveSettings();
 
-        fetchAbout().then(s => {
-            document.getElementById("about_content").innerHTML = marked.parse(s);
-        }).catch(error => {
-            alert("Error loading about.md: " + error);
-            aboutMDpresent = false;
-        });
         if (aboutMDpresent == false) {
             document.getElementById("about_tab").style.display = "none";
             document.getElementById("about_tab_mini").style.display = "none";
+        }
+        else {
+            setupAbout();
         }
 
         showWelcome();
