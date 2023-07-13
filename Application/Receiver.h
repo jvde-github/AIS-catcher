@@ -338,6 +338,12 @@ public:
 	void start();
 	void close();
 
+	void setDeviceDescription(std::string p, std::string v, std::string s) {
+		product = p;
+		vendor = v;
+		serial = s;
+	}
+
 	bool isPortSet() { return port_set; }
 	// HTTP callbacks
 	void Request(IO::Client& c, const std::string& r, bool gzip);
