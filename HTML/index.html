@@ -3762,15 +3762,19 @@
             ok = await updateTrack();
             //if(!ok) return;
 
+            if(settings.setcoord == "true" || settings.setcoord == true) {
+                if(station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon")) {
+                    settings.setcoord = false;
+                    map.panTo([station.lat, station.lon]);
+                    saveSettings();
+                }
+            }
+
             if (shipcardVisible()) populateShipcard();
 
             for (let [mmsi, entry] of Object.entries(shipsDB)) {
                 let ship = entry.raw;
                 if (ship.lat != null && ship.lon != null && ship.lat != 0 && ship.lon != 0 && ship.lat < 90 && ship.lon < 180) {
-                    if (settings.setcoord) {
-                        map.panTo(new L.LatLng(ship.lat, ship.lon));
-                        settings.setcoord = false;
-                    }
                     plotShip(ship)
                 }
             }
@@ -3939,7 +3943,7 @@
         }
 
         function showWelcome() {
-            if(settings.welcome == true || settings.welcome == "true") 
+            if(settings.welcome == true || settings.welcome == "true" && !isAndroid()) 
                 showAboutDialog();
             
             settings.welcome = false;
