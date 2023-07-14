@@ -20,7 +20,7 @@
 //-----------------------------------
 // simple ship database
 
-void DB::setup(float lt, float ln) {
+void DB::setup() {
 
 	if (server_mode) {
 		N *= 32;
@@ -33,9 +33,6 @@ void DB::setup(float lt, float ln) {
 	std::memset(ships.data(), 0, N * sizeof(ShipList));
 	paths.resize(M);
 	std::memset(paths.data(), 0, M * sizeof(PathList));
-
-	lat = lt;
-	lon = ln;
 
 	first = N - 1;
 	last = 0;
@@ -77,7 +74,7 @@ std::string DB::getJSONcompact(bool full) {
 	std::string str;
 
 	content = "{\"count\":" + std::to_string(count) + comma;
-	if (latlon_share)
+	if (latlon_share && isValidCoord(lat, lon))
 		content += "\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "},";
 
 	content += "\"values\":[";

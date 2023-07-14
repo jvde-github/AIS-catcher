@@ -138,9 +138,12 @@ public:
 
 	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
 
-	void setup(float lat = 0.0f, float lon = 0.0f);
+	void setup();
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setShareLatLon(bool b) { latlon_share = b; }
+	void setLatLon(float lat, float lon) { this->lat = lat; this->lon = lon; }
+	void setLat(float lat) { this->lat = lat; }
+	void setLon(float lon) { this->lon = lon; }
 
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
 	void Receive(const AIS::GPS* data, int len, TAG& tag) {

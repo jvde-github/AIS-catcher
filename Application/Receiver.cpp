@@ -583,11 +583,11 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 void WebClient::Reset() {
 	Clear();
 	raw_counter.Reset();
-	ships.setup(lat, lon);
+	ships.setup();
 }
 
 void WebClient::start() {
-	ships.setup(lat, lon);
+	ships.setup();
 
 	if (filename.empty())
 		Clear();
@@ -838,7 +838,8 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		JSON::StringBuilder::stringify(arg, station_link);
 	}
 	else if (option == "LAT") {
-		lat = Util::Parse::Float(arg);
+		float lat = Util::Parse::Float(arg);
+		ships.setLat(lat);
 		plugins += "param_lat=" + std::to_string(lat) + ";\n";
 	}
 	else if (option == "CUTOFF") {
@@ -864,7 +865,8 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		plugins += "message_save=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "LON") {
-		lon = Util::Parse::Float(arg);
+		float lon = Util::Parse::Float(arg);
+		ships.setLon(lon);
 		plugins += "param_lon=" + std::to_string(lon) + ";\n";
 	}
 	else if (option == "HISTORY") {
