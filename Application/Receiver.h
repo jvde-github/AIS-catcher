@@ -240,7 +240,6 @@ class WebClient : public IO::Server, public Setting {
 	int firstport = 0;
 	int lastport = 0;
 	bool run = false;
-	float lat = 0, lon = 0;
 	int backup_interval = -1;
 	bool port_set = false;
 	bool use_zlib = true;
