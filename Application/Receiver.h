@@ -320,6 +320,7 @@ class WebClient : public IO::Server, public Setting {
 		void Receive(const RAW* data, int len, TAG& tag) {
 			received += data[0].size;
 		}
+		void Reset() { received = 0;}
 	} raw_counter;
 
 	DB ships;
@@ -337,6 +338,7 @@ public:
 	void connect(AIS::Model& model, Connection<JSON::JSON> &json, Device::Device &device) ;
 	void start();
 	void close();
+	void Reset();
 
 	void setDeviceDescription(std::string p, std::string v, std::string s) {
 		product = p;

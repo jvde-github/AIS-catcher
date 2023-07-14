@@ -580,6 +580,12 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 	}
 }
 
+void WebClient::Reset() {
+	Clear();
+	raw_counter.Reset();
+	ships.setup(lat, lon);
+}
+
 void WebClient::start() {
 	ships.setup(lat, lon);
 
@@ -630,6 +636,7 @@ void WebClient::stopThread() {
 		thread_running = false;
 	}
 }
+
 void WebClient::close() {
 
 	stopThread();
@@ -638,6 +645,7 @@ void WebClient::close() {
 		std::cerr << "Statistics: cannot write file." << std::endl;
 	}
 }
+
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 

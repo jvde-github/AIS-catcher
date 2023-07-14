@@ -124,7 +124,6 @@
             color: white;
         }
 
-
         .header-title {
             flex: 1;
             background-color: var(--header-title-color);
@@ -1030,7 +1029,7 @@
 
 <body>
 
-    <div class="header">
+    <div class="header noandroid">
         <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="material-icons">menu</i></div>
             <div class="header-title">
             <span onclick="headerClick()">AIS-catcher</span>
@@ -1107,18 +1106,18 @@
                 <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="material-icons">directions_boat</i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
                 <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="material-icons">dns</i>Show Vessel Database Entry</li>
-                <li class="mmsi" onclick="showNMEA(context_mmsi)"><i class="material-icons">mail</i>Show Last Message</li>
+                <li class="mmsi noandroid" onclick="showNMEA(context_mmsi)"><i class="material-icons">mail</i>Show Last Message</li>
                 <li class="mmsi" onclick="copyText(context_mmsi)"><i class="material-icons">content_copy</i>Copy MMSI</li>
                 <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="material-icons">content_paste</i>Copy Coordinates</li>
-                <li class="divider mmsi"></li>
-                <li class="mmsi" onclick="openGoogleSearch(context_mmsi)"><i class="material-icons">search</i>Search on Google</li>
-                <li class="mmsi" onclick="openMarineTraffic(context_mmsi)"><i class="material-icons">public</i>Find on MarineTraffic</li>
-                <li class="mmsi" onclick="openVesselFinder(context_mmsi)"><i class="material-icons">public</i>Find on VesselFinder</li>
-                <li class="mmsi" onclick="openAISHub(context_mmsi)"><i class="material-icons">public</i>Find on AISHub</li>
-                <li class="mmsi" onclick="openShipXplorer(context_mmsi)"><i class="material-icons">public</i>Find on ShipXplorer</li>
+                <li class="divider mmsi noandroid"></li>
+                <li class="mmsi noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="material-icons">search</i>Search on Google</li>
+                <li class="mmsi noandroid" onclick="openMarineTraffic(context_mmsi)"><i class="material-icons">public</i>Find on MarineTraffic</li>
+                <li class="mmsi noandroid" onclick="openVesselFinder(context_mmsi)"><i class="material-icons">public</i>Find on VesselFinder</li>
+                <li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="material-icons">public</i>Find on AISHub</li>
+                <li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="material-icons">public</i>Find on ShipXplorer</li>
                 <li class="divider mmsi"></li>
                 <li class="settings" onclick="showPlugins()"><i class="material-icons">build</i>Installed Plugins...</li>
-                <li class="settings" onclick="toggleDarkMode()"><i class="material-icons">brightness_4</i>Toggle Light/Dark mode</li>
+                <li class="settings noandroid" onclick="toggleDarkMode()"><i class="material-icons">brightness_4</i>Toggle Light/Dark mode</li>
             </ul>
               
             <div id="dialog-box" class="hidden">
@@ -1132,12 +1131,12 @@
             </div>
             <div class="tabcontent" id="stat">
                 <div id="summary_stat">
-                    <section>
+                    <section class="noandroid">
                         <div>
                             <span>Station</span><span id="stat_station"></span>
                         </div>
                     </section>
-                    <section>
+                    <section class="noandroid">
                         <div>
                             <span>Device</span><span id="stat_product"></span>
                         </div>
@@ -1148,7 +1147,7 @@
                             <span>Serial</span><span id="stat_serial"></span>
                         </div>
                     </section>
-                    <section>
+                    <section class="noandroid">
                         <div>
                             <span>Version</span><span id="stat_build_describe"></span>
                         </div>
@@ -1397,7 +1396,7 @@
 
         var context_text = "";
         // default settings
-        var settings = { noheader: false, welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
+        var settings = { android: false, welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
         let isFetchingShips = false;
 
         // some functions useful in plugins
@@ -1576,6 +1575,9 @@
                 const elements = document.querySelectorAll('.' + className);
                 elements.forEach(element => { element.style.display = shouldDisplay ? 'flex' : 'none'; });
             });
+
+            // we might have made non-android items visible in the context menu, so hide non-android items if needed
+            updateAndroid();
 
             document.getElementById("ctx_menu_unpin").style.display = (settings.fix_center && context.includes("ctx-map")) ? "flex" : "none";
             document.getElementById("ctx_track").innerText = (context_mmsi in marker_tracks && context.includes("mmsi-map")) ? "Hide Track" : "Show Track";
@@ -2185,7 +2187,7 @@
         }
 
         function hideMenu() {
-            if (document.getElementById("menubar").classList.contains('visible') && !hasNoHeader()) {
+            if (document.getElementById("menubar").classList.contains('visible') && !isAndroid()) {
                 toggleMenu();
             }
         }
@@ -3071,6 +3073,10 @@
                 table.on("rowClick", function (e, row) { tableRowClick(row.getData().mmsi); });
             }
             else {
+                if(data.length == 0) {
+                    table.clearData();
+                    return;
+                }
                 table.updateOrAddData(data);
                 table.getRows().forEach(row => {
                     const mmsi = row.getData().mmsi;
@@ -3892,6 +3898,15 @@
             }
         }
 
+        function updateAndroid() {
+            if(isAndroid()) {
+                var elements = document.querySelectorAll('.noandroid');
+                for (var i = 0; i < elements.length; i++) {
+                    elements[i].style.display = 'none';
+                }
+            }
+        }
+
         function showAboutDialog() {
             const message = `
                 <div style="display: flex; align-items: center; margin-top: 10px;">
@@ -3931,8 +3946,8 @@
             saveSettings();
         }
 
-        function hasNoHeader() {
-            return (settings.noheader === true || settings.noheader === 'true');
+        function isAndroid() {
+            return (settings.android === true || settings.android === 'true');
         }
 
         // for overwrite and insert code where needed
@@ -3991,12 +4006,7 @@
 
         init_postSettings();
 
-        if (hasNoHeader()) {
-            var headerElement = document.querySelector('.header');
-            if (headerElement) {
-                headerElement.style.display = 'none';
-            }
-        }
+        updateAndroid();
 
         console.log("Setup tabs");
         initFullScreen();
@@ -4026,7 +4036,7 @@
 
         showWelcome();
 
-        if(hasNoHeader()) showMenu();
+        if(isAndroid()) showMenu();
         main();
 
     </script>
