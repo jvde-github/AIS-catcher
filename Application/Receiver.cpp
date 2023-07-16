@@ -584,6 +584,7 @@ void WebClient::Reset() {
 	Clear();
 	raw_counter.Reset();
 	ships.setup();
+	time_start = time(nullptr);
 }
 
 void WebClient::start() {
