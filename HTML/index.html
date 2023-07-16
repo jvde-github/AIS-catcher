@@ -1982,23 +1982,29 @@
             addControlToMap(wrenchControl);
         }
 
+        function removeRange() {
+            if (marker_range != null) {
+                map.removeLayer(marker_range);
+                marker_range = null;
+            }
+        }
+
         async function toggleRange() {
 
-            if (!((typeof param_share_loc != "undefined") && param_share_loc) || typeof param_lat === "undefined" || typeof param_lon === "undefined") {
-                showDialog("Error","Unable to show range as AIS-catcher was not started with <pre>-N SHARE_LOC on LAT xxx LON yyy</pre>");
-                settings.show_range = false;                                                                                                                        
-                return;
-            }
+            const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
 
-            settings.show_range = !settings.show_range;
+            if (!((typeof param_share_loc != "undefined") && param_share_loc) || !isSationSet) {
+                showDialog("Error","Unable to show range as station location not available");
+                settings.show_range = false;                                                 
+
+            }
+            else 
+                settings.show_range = !settings.show_range;
+
             saveSettings();
 
-            if (!settings.show_range) {
-                if (marker_range != null) {
-                    map.removeLayer(marker_range);
-                    marker_range = null;
-                }
-            }
+            if (!settings.show_range) 
+                removeRange();                                                                       
             else 
                 await plotRange();
         }   
@@ -2030,11 +2036,15 @@
         }
 
         async function plotRange() {
+            
+            const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
 
-            const nothasStation = station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
+            if (!isSationSet || !settings.show_range) {
+                removeRange();
+                return;
+            }
 
-            if (nothasStation || !settings.show_range) return;
-
+            // we need to plot the range
             const now = new Date();
 
             // range plotted in last 15 minutes then return
@@ -2042,8 +2052,7 @@
                 if (range_update_time != null && Math.floor((now - range_update_time) / 1000 / 60) < 15)
                     return;
                     
-                map.removeLayer(marker_range);
-                marker_range = null;
+                removeRange();
             }
 
             range_update_time = new Date();
@@ -2052,6 +2061,7 @@
                 response = await fetch('history_full.json');
                 h = await response.json();
             } catch (error) {
+                settings.show_range = false;
                 setPulseError();
                 return;
             }
