@@ -840,7 +840,6 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	else if (option == "LAT") {
 		float lat = Util::Parse::Float(arg);
 		ships.setLat(lat);
-		plugins += "param_lat=" + std::to_string(lat) + ";\n";
 	}
 	else if (option == "CUTOFF") {
 		int cutoff = Util::Parse::Integer(arg, 0, 10000);
@@ -867,7 +866,6 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	else if (option == "LON") {
 		float lon = Util::Parse::Float(arg);
 		ships.setLon(lon);
-		plugins += "param_lon=" + std::to_string(lon) + ";\n";
 	}
 	else if (option == "HISTORY") {
 		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600));
