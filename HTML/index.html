@@ -8,9 +8,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="favicon.ico">
 
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
 
@@ -215,76 +212,82 @@
         .header-menubutton {
             background: var(--menu-background-color);
             color: var(--menu-font-color);
-            display: block;
-            transition: var( --hover-transition);
-            font-size: 18px;
-            padding-top: 15px;
-            width: 40px;
-            text-align: center;
-        }
-
-            .header-menubutton:hover {
-                cursor: pointer;
-            }
-
-        .bottombar {
-            flex: 0 0 15px;
-            background: var(--tertiary-color)
-        }
-
-        #menubar {
-            z-index: 9999;
-            background: var(--menu-background-color);
-            color: var(--menu-font-color);
-            text-align: center;
-            align-items: stretch;
-            display: none;
-            flex-direction: row;
-            visibility: visible;
-        }
-
-        @media only screen and (min-width : 750px) {
-            #menubar {
-                position: fixed;
-                top: 60px;
-                left: 10px;
-                right: 0;
-                width: 500px;
-                border: solid;
-                border-color: lightgrey;
-                border-radius: 20px;
-            }
-        }
-
-        #menubar div {
-            flex: 0 1 150px;
-            margin: 0 10px;
-            border: none;
-            cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
             transition: var( --hover-transition);
-            display: flex;
-            flex-direction: column;
+            font-size: 18px;
+            width: 40px;
         }
 
-            #menubar div i {
-                padding-top: 10px;
-                padding-bottom: 10px;
-                font-size: 24px;
-                line-height: 24px;
+            @media (hover: hover) {
+
+                .header-menubutton:hover {
+                    cursor: pointer;
+                }
             }
 
-            #menubar div span {
-                padding-bottom: 10px;
-                font-size: 10px;
-                line-height: 10px;
+            .bottombar {
+                flex: 0 0 15px;
+                background: var(--tertiary-color)
             }
 
-            #menubar div:hover {
-                background: var(--menu-background-hover-color);
-                transform: var(--hover-transform);
+            #menubar {
+                z-index: 9999;
+                background: var(--menu-background-color);
+                color: var(--menu-font-color);
+                text-align: center;
+                align-items: stretch;
+                display: none;
+                flex-direction: row;
+                visibility: visible;
+            }
+
+            @media only screen and (min-width : 750px) {
+                #menubar {
+                    position: fixed;
+                    top: 60px;
+                    left: 10px;
+                    right: 0;
+                    width: 500px;
+                    border: solid;
+                    border-color: lightgrey;
+                    border-radius: 20px;
+                }
+            }
+
+            #menubar div {
+                flex: 0 1 150px;
+                margin: 0 10px;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: var( --hover-transition);
+                display: flex;
+                flex-direction: column;
+            }
+
+                #menubar div i {
+                    padding-top: 10px;
+                    padding-bottom: 10px;
+                    font-size: 24px;
+                    line-height: 24px;
+                }
+
+                #menubar div span {
+                    padding-bottom: 10px;
+                    font-size: 10px;
+                    line-height: 10px;
+                }
+
+            @media (hover: hover) {
+
+                #menubar div:hover {
+                    background: var(--menu-background-hover-color);
+                    transform: var(--hover-transform);
+                }
             }
 
             #menubar div.active {
@@ -292,734 +295,1236 @@
                 color: var(--secondary-color);
             }
 
-        #menubar.visible {
-            display: flex;
-        }
-
-        .mainspace-container {
-            flex: 1 0 0;
-            overflow: auto;
-            background: var(--backdrop-color);
-            border-top: solid;
-            border-color: var(--mainspace-container-color);
-            border-width: 4px;
-            display: flex;
-            flex-direction: column;
-            justify-content: stretch;
-        }
-
-        .mainspace {
-            background: var(--mainspace-color);
-            margin: 20px;
-            flex: 1;
-            border: 1px;
-        }
-
-        @media only screen and (max-height : 1000px) {
-            .menubar {
+            #menubar.visible {
                 display: flex;
             }
 
-            .header-menubutton {
-                display: block;
-            }
-
-            .bottombar {
-                display: none;
+            .mainspace-container {
+                flex: 1 0 0;
+                overflow: auto;
+                background: var(--backdrop-color);
+                border-top: solid;
+                border-color: var(--mainspace-container-color);
+                border-width: 4px;
+                display: flex;
+                flex-direction: column;
+                justify-content: stretch;
             }
 
             .mainspace {
-                margin: 5px;
+                background: var(--mainspace-color);
+                margin: 20px;
+                flex: 1;
+                border: 1px;
             }
-        }
 
-        /* Plot styling */
-        .graphtab {
-            padding: 15px;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            column-gap: 15px;
-            row-gap: 15px;
-        }
+            @media only screen and (max-height : 1000px) {
+                .menubar {
+                    display: flex;
+                }
 
-        @media only screen and (max-width:2250px) {
+                .header-menubutton {
+                    display: block;
+                }
+
+                .bottombar {
+                    display: none;
+                }
+
+                .mainspace {
+                    margin: 5px;
+                }
+            }
+
+            /* Plot styling */
             .graphtab {
-                grid-template-columns: 1fr 1fr 1fr;
-                padding: 5px;
-            }
-        }
-
-        @media only screen and (max-width:1500px) {
-            .graphtab {
-                grid-template-columns: 1fr 1fr;
-                padding: 5px;
-            }
-        }
-
-        @media only screen and (max-width:800px) {
-            .graphtab {
-                grid-template-columns: 1fr;
-                padding: 0px;
-            }
-        }
-
-        .graph-panel {
-            padding: 10px;
-            overflow: auto;
-            background-color: var(--panel-color);
-            border-radius: 15px;
-        }
-
-
-            .graph-panel > header {
-                margin: 20px auto 30px auto;
-                padding: 5px 0px;
-                border-radius: 10px;
-                max-width: 400px;
-                width: calc(100% - 30px);
-                align-items: center;
-                border-left: 10px solid lightgray;
-                border-right: 10px solid lightgray;
-                background-color: var(--secondary-color);
-                color: var(--graph-header-color);
-                text-align: center;
-                font-size: 1.0em;
+                padding: 15px;
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr 1fr;
+                column-gap: 15px;
+                row-gap: 15px;
             }
 
-            .graph-panel > canvas {
-                width: 100%;
-                height: 100%;
+            @media only screen and (max-width:2250px) {
+                .graphtab {
+                    grid-template-columns: 1fr 1fr 1fr;
+                    padding: 5px;
+                }
             }
 
-        .aboutpage {
-            background-color: var(--backdrop-color);
-            color: var(--main-font-color);
-        }
-
-        /* Table styling */
-
-        #shipTable {
-            max-height: calc(100vh - 135px);
-            max-width: 100vw;
-        }
-
-        .tabulator .tabulator-cell {
-            border: dashed thin;
-            border-color: lightgrey;
-            padding: 10px 15px;
-            font-size: 0.9em;
-            color: var(--main-font-color);
-        }
-
-        .tabulator .tabulator-header {
-            border-left: 10px solid var(--table-header-background-color);
-        }
-
-            .tabulator .tabulator-header .tabulator-col {
-                background-color: var(--table-header-background-color);
-                font-size: 1em;
-                color: white;
-                border: none;
-                padding: 25px 15px;
-                border-collapse: collapse;
+            @media only screen and (max-width:1500px) {
+                .graphtab {
+                    grid-template-columns: 1fr 1fr;
+                    padding: 5px;
+                }
             }
 
-        .tabulator-row:hover {
-            background-color: var(--table-selection-background-color) !important;
-        }
-
-        .tabulator-row-odd {
-            background-color: var(--table-background-color);
-        }
-
-        .tabulator-row-even {
-            background-color: var(--table-alternate-background-color) !important;
-        }
-
-        .tablesection {
-            font-size: .8em;
-            display: flex;
-            height: 100%;
-            margin: 10px auto;
-            color: var(--main-font-color);
-            background-color: var(--table-background-color);
-            width: fit-content;
-        }
-
-        /* other tables */
-        table {
-            height: 100%;
-            overflow: auto;
-            border-collapse: collapse;
-        }
-
-            table thead {
-                background-color: var(--table-header-background-color);
-                font-size: 1em;
-                color: white;
+            @media only screen and (max-width:800px) {
+                .graphtab {
+                    grid-template-columns: 1fr;
+                    padding: 0px;
+                }
             }
 
-                table thead > tr > th {
+            .graph-panel {
+                padding: 10px;
+                overflow: auto;
+                background-color: var(--panel-color);
+                border-radius: 15px;
+            }
+
+
+                .graph-panel > header {
+                    margin: 20px auto 30px auto;
+                    padding: 5px 0px;
+                    border-radius: 10px;
+                    max-width: 400px;
+                    width: calc(100% - 30px);
+                    align-items: center;
+                    border-left: 10px solid lightgray;
+                    border-right: 10px solid lightgray;
+                    background-color: var(--secondary-color);
+                    color: var(--graph-header-color);
+                    text-align: center;
+                    font-size: 1.0em;
+                }
+
+                .graph-panel > canvas {
+                    width: 100%;
+                    height: 100%;
+                }
+
+            .aboutpage {
+                background-color: var(--backdrop-color);
+                color: var(--main-font-color);
+            }
+
+            /* Table styling */
+
+            #shipTable {
+                max-height: calc(100vh - 135px);
+                max-width: 100vw;
+            }
+
+            .tabulator .tabulator-cell {
+                border: dashed thin;
+                border-color: lightgrey;
+                padding: 10px 15px;
+                font-size: 0.9em;
+                color: var(--main-font-color);
+            }
+
+            .tabulator .tabulator-header {
+                border-left: 10px solid var(--table-header-background-color);
+            }
+
+                .tabulator .tabulator-header .tabulator-col {
+                    background-color: var(--table-header-background-color);
+                    font-size: 1em;
+                    color: white;
+                    border: none;
                     padding: 25px 15px;
                     border-collapse: collapse;
                 }
 
-
-            table tbody th,
-            td {
-                border: dashed thin;
-                border-color: lightgrey;
-                padding: 10px 15px;
+            .tabulator-row:hover {
+                background-color: var(--table-selection-background-color) !important;
             }
 
-            table > tbody > tr:nth-child(even) {
-                background: var(--table-alternate-background-color);
+            .tabulator-row-odd {
+                background-color: var(--table-background-color);
             }
 
-            table > tbody > tr:hover {
-                background: var(--table-selection-background-color);
+            .tabulator-row-even {
+                background-color: var(--table-alternate-background-color) !important;
             }
 
-        /* Map styling */
-
-        #map {
-            height: 100%;
-            width: 100%;
-        }
-
-
-        .maptab {
-            height: 100%;
-        }
-
-        .shiptable-map {
-            width: 10px;
-        }
-
-        .shipicon {
-            background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAAAoCAYAAAB5LPGYAAATHElEQVR42u3be3BU130H8O8599593H2BpJUwRgIhHlrJKwsQSCCJlWweIyLXBo+BWDZqhqi0zTgKSWcoQ6d/dPpHp4SSNDOdEcqOChlSO8UiMSi2k9iKi2RbjhCGBUEAFyyBESteq9Xu3d37OP3DKs56tbpXjz86U/1m9Me95+qz59793d8597HAbMzG//VwNbpEV6PLPlPe7uxd4u7sXTPmzcttEuflNs2YV+XlxCovN2PeNqtD3GZ1zJhXW20Wa6vNM+aJheWiWFg+Y169xSvWW7yGPGpIpNx+UG7fTHWQgu6noPtm7hSh+zGDHgH2E2DGPA7Yz82gx/PYz/Mz54Hy+0H5Gdxfup8z+H0QA9XPKm/fMAAAwi9+lxc6GpKmWf2sL8Z3DADAm+Y38vzBY9Py5uU2WeOxrQMAYLaczBsabJ2WV+XlrBUsewAAPibBvK6AOi1vm9Vh/XNFHgCAf+eFvHYpPC2vttpsfe176gAA/ORHXF7nmfi0PLGw3Mpv/usBAFDe/be86JWeaXn1Fq/126aKAQD4aeLjvNOxgDTdCvhKfPWirPjqRVkAXpmBE+SVsujqrLLo6hnzIuGyrEi4bMa8AmbPKmD2GfPKVTmrXJVnzFtXqWatq1RnzOOWr8nilq+ZMW8tn5+1ls835OkmoLJxbbPqtkN126FsXNs83d49I29sdstuuGU3npE3TtuTE7XNiZgbiZgbcqJ22p6XZTQ7mQAnE+BlGdP2nlOV5mxNRbam4jlVmbb38qtac04OQ04Ow8uvatP2uModzcSVDeLKBle5Y9reNt7bnE0dyKYObOO9zdNKQFejy5eoWFz8v8uJisXFrkaXbxrDr688tvaxVx5bW7w7e9eUvXm5TT4puuaxJ0XXFM/LbZqyV+XlfEuZ47G3lDmKq7zclL1tVoevUpUfe5WqXLzN6piyV1tt9q33qY+99T61uLbaPGVPLCz3cZ7Kxx7nqSwWC8un7NVbvL4qoeCxVyUUFNdbvL4pJ6Dm9eyTC9xfVZsCNzSvZ8qT1WK1ZF+BVPB4uUAqQLFaMmVPVYv2RcNfedFwAVS1aMpeLuz7cpjl8XIOsyAX9il7ZZq2b6mqPF5eqioo07Qpe+tr2b5ly7THy8uWaVhfy6bs0cLqffSJJV8tP7EEtLB6yl45l7dvKZf91f5y2Sjn8vZNKQFdjS5Porao7uvrE7VFda5Gl2cK1c9TE69N8WritXW7s3d5plD9PDHJl+LFJF/dvNwmzxSqn6dYm5PiFWtz6qq8nGcK1c+zUZVTvI2qXLfN6vBMofp5tmxRU7wtW9S62mqzZwrVz8Ot2JTicSs21YmF5Z4pVD/PZsGT4m0WPHX1Fq9n0gnIsnOaE975KesT3vlg2TmTniu4WXbzUxFvyvqnIl64WfakPcaymkdDT6WsHw09BcayJu05ITTnMTFlfR4T4YQwaW8+Y81PK3LK+qcVGfMZm7SXv5g1r1ippqxfsVJF/uLJe8Sd38zll6TOCfNLQNz5k/YWEFdzKb8gZX0pvwALiKt5gltU41a/zMRLvjalwG1K/Q8KIpg9Ngy2xM8buwWwO3tX5ovx7W2L4wWm1A5wEHiTh3OxlnOR85LB6pcZk7a2xaKLU/vHOPAC75mbJbSMjvRJBqtfZgXLbsthFlPqGUrAE+phOdGWgSCTDFa/zFdVuW2JppjGO+BmQjyjZrHlspKQDFa/zL/8jta2bJmW6nGAVSSe258LLTcHjN0yEgvLM/mN326jTyxJPX6UA0xWD3d/oEW+d1syWP0yv2Uqb1vKZY+zvxQW8J6HJNZyVQlKRitgY2LVQlu6Dxxra5zECdK4KrIqrTfWNikvMpLeG2ublLdYs6f1xtom5a1R5LTeWNukvIoKNa031jYpj1u6Oq031jYpr1xYlNYba2s0VAFdjS4iP19zMvH0grSPUpiZB8cspaJl6FD8fFyv+pHnEi+cLJGeTuuZmBlMQKnNaT50LnJer/qRRPwbJyPhkrSepplgsmilrgzHodGRPr3qR8pY1smFzJbW40EBQkr5nNihgSDTq37km6pycoUqp/XMYOAoV6qarIcuKwm96kf+4q+0k6vK1PSeGTBbaOmDoHDo5oCqV/0I9+zuk9zi0rQeEcxggqWUDwcPyfdu61U/8qpQdnIln5u+f4QHz0hpjKqHripB3QrYkKjIz0nqkKKCKMk7NrZNg4Gzo2FNtDzJU4gChSjJVeHLbQx5kdE1yf2jCghN9sa2MeQtYY4kTwWDiuREG9vGkLdOSSTvLwiUrz10GtvGkFddrSZ5svzl35/G2DaGPK5wbU7y7QTly78/rUxfbmPIqxQWJ/cPKmQk58vYNg26FVB4rcofW79sPgBww6OwfPjZqLX1/Tbze/1nKbhC5rSamM0EzWGBcF/JS7x1o3Wi3r1mfs1fPeqbDwD3hGF86Oge9Tta2zrF985CYIVOzWkSNRscqgP3zQ/yfiW9NaFnEV/zhx9WzwcAk+UeHHM+HHXNbWuzOX5/VjCxQk1zmlRFhCo7YBHv50VHfzWhtyk7w+9hrvkAMEJk/JGGR9+nd9ou0kdnQUihFZzJDA5WcBglal5fUJrQ+y7H+2uVxHwAGKYczvDm0Z+YLG3v8qazlNBCF5jJxhgcjOEhx+d1qPKE3vd/QP0bNqrzASAYJOjs5Ed/+M982+lT3FmOJ4Vz5jCTzQY4nQwjYZr39jvahJ657jt+3ls7HwBYaBhqf9eofOrHbWrfO2dB+UIiukzEYgOxOqBJo3mJC+9N6DVbavzPCsu/7J8Wxgfy9dEfx37f9rbcf5aCFLqI1WQjZjiJBY+0aN6vE5eSPPK14bdS+sH2LvAUpo8/6+U++EMrgOOho6HIWLsNQIPqW92UqCgog6LBeugXVaGjoe40w2/l9yJ/08UzHh9bPurt4j9oBXDcHzwWGWu3AWioUnxNFbG1ZQpR8CPbD6v8wWPdaYbfytGR73YxxsMq9vTyQncrgONDg62RsXYbgAZFrmySouVlhCiwO/+1amiwtTvN8Fv5DS23iwPBNTLSe5k8agVwvCugRsbabQAaPGxO01LmLFPB0EEHq7oCanea4bfy7+VYl8CALl7ofZdyrQCOt0vhyFi7DUDDZk1tqlLkMpkA/yBYqtqlcHea4bfyX36sdPEC8MHvae+bv6CtAI53nolHxtptABpe3K41+Wq0MkUGvt/MV3WeiXenGX4rhVf/qQucALW/q1f75GQrgOPRKz2RsXYbgAa6ZmsTV1RVBlWG/LO/rYpe6elOM/xW/qNlSxcPDmeU670dyuVWAMdPxwKRsXYbgIZv8J6man5JmQIVfxf7ddXpWKA7XQIeZvmLRHLjZkvoaKhP5ynJSpa/aA+5cTMaOhramyYBDy/U8sXP6Y0Wf/BYn85cceVCLX/P5/RG1B88tjdNAh7WtDyR0oGWocHWPp254kpNy9tD6UB0aLB1b5oEPOyGRRxGrKUroPbpzBVXumHZM4xYtCug7k2TgIeXMSZeJaSlXQr36cwVVy5jbM9VQqLtUnhvmgQ8XFLKxAufkpbOM/E+nbniypJStufCpyTaeSa+N00CHiZ5JSIbuNASvdLTpzNXXEnySvawgQvR6JWevWkS8LCHZouXtWDL6VigT2euuNJDs/dc1oLR07HAXszGbMzGbMzGbMzGbMzGbMzGbMzGbMzGbMzGbMzG/5sw9Ks4AB4ADMCnoaMhNp0P3J29K8nzB49Ny5uX25TkDQ22Tsur8nJJXldAnZa3zepI8tql8LS82mpzktd5Jj4tTywsT/KiV3qm5dVbvEne6VhgQo+fIPGKWF7ewcS65XXqgrkEAPirdyVnxqUT5MG9A6GjocFJJl5RrrbwYEV8Xd0CeQFhhOG6cE2a68448ZA8OOAPHhucZOIVadqCg/FYRZ2ceJIADCbzdSlnwdwThDw8MDTYOjjJxCvKguXgUuasy2RmAgB3iCTZvY9OjEI50BVQByeZeEVLGDu4XpHrcplKAOCPlJeyLfYTQUIOtEvhwUkmXlFxCTu4YaNat3AhIwBwuZ9KT+aaT9wexIHOM/HBSSZeEVlQfJDz1tYRdy4BA7Tbf5RsGU+eYA9uH4he6RmcZOIVLaPugzX8krqFNIMwAFfUISmHOE7cZeEDp2OBQcMV0NXoqlE2reuIblspMktyjtJwDOLPe25xH53bHDoa6jeYfDXPyps6toVeFM2aJaktzIXxuuv4rR7+o83+4LF+g8lXIyee6Xh4b6uoqebkM0oIY07W67d4/g+bhwZb+w0mX00Jy+hYo2WKwtdeEJKgopsO37pGQpu7Amq/weSreV5VOrbLMdHCkgtAmFAcNVludVJuc7sU7jeYfDUNu7SOhlcU0WJJ9kZGCH7ayt86/Su6ufNMvN9g8tVwlTs7hOrtIoTk74NJYcjvHb2lnfv15uiVnn6DyVfzIl/SsdO8SrQQIbl/LIa22Me3fqde3Xw6Fkjxxnsf0K2uL+uJNpTbmCn1hWlm5iE/nesUrj/aYH0y4o+fjys6yeeuUnw9Lz96xSaw1BdwzcyMktjTzuvWaxvy7E/6z0XOKzrJ51bkdT0Pgt+0MU1Iadc0M6RoiVO0Xd/gmLPIPzrSp+gkn7uQzemp0tw2fpy30wRQLGQ25xCNbZibo/gHgkzRST73Jk3taUxINtM47WYwrFAV5zWe35AhWPyXlYSik3zubS9pPd9ukm2mcUCzGShbrTk/+4zbwBPef3NAVXSSz01Xv9BjerbRBj4VJIIZXMEKpzp0c4NA4Zfv3VZ0ks+9hff0fMuy1mYiqQOqmfBYJeQ6rynBDQ7O6r+qBJO88d4HbJa2rrQzLv0P5pjAIf7CquUAthg4QZqfH9lq5xiXdgOBCXg+stWwF3r4vJ1N4DFNQGT0zwx7a7RMO51gOsyBoEzLNOy9lIjZ+Qk2EMCwXU4Y9l5uUOz8BKAgAA2vKoY9oeolO2j64wdOgFC13bC3w7TKzk/wA0sBHHaaxs+XlP9SK0p96lxR91MTy3PA3Nmb9LZbrVT45ipzdb1l0nJkMbeupyhlPjmu70VGloGxTF1vCXP6bOB1vfnMCgcEXc+nqb4Mpul6haqMeYzpelue03wZGfrXBUVFGhYugq5HS+t8xK5//OiCQpCshbres9xSXwbVzxcPPw/ziXOTbgIqT+VajU481TXLdb+5p2SvYa9MKdf15ESxYU+Wy3S9XNgMe0uYU9cr1VTDXpWm6nqrVjHD3jMbNF2PLi417NFin663gl9g2FvPF/C6CcgN3jd8GU6vfqF7qg/yg4a9a9xVXY/nbxn2eP66rncfxm9j3CFRXe9zQg17lynV9W7cIIa9wAWi67Hg54Y9bfCSrndTfWDY61eHNN0E5H/b001isv6XeycEeu2zXr3t3hd+0x2jMf0v1/QFPqNXdT3B1NnNcfqeWbwDSvX7FyAPuhPQHzIfkgSGIOl6pzi+WyK6t1fxBeVwiVBd7z+O025J0vdu36Lo/YToeuqHb3QzA78G1R58AfbfZ3W9k8qFbonp58tt7REuaHd6dRMQmnrE+m7/xFnNAMtbn94HcEJ3R6Ad+Y3zXTYxx3DafsqQB2hHXJm/1TnrGByuDkMeA45coI90z+Kz5IEhTwWOvC2YdfYXaBfMxjwFR069xU3sMeCNNzhjx09Tjyhn39E9fspH7Qb3lx3pSFzU3d834+PnS8qlUPx8fFg037lLXXPrlfys1Mt0RYPYEZD43360I3Q0FNDr4LnI+WGb03TXwbnq8+P5qRcVRMHbczqk94Tf7PAHj+l6oyN9w64M+13e5KiPRRel9o8qmJv1tmQyvb9jaLBV1xsIsmE+R7orEqE+m1nGO8A4Rx9KAfJgR1dA1fUuK4lhxWS9m0lI/WIt9SeSCgjeMlmktzh+R7sU1vVuDqjD9+8Kd+c9QeqXLNHGuSgD2t/kpZ//jNvReSau68n3bg/zI3fvYs68ejpv8bgZL39yStK6X98RvdKj611VgsMSVe66IdYXcO5x9lfDL+PnpXblwo7TsUBANwHHkrDXhsGLwlDMB4vJDkpAIwmYLn0B65u9/XznJztDR0PvGx37z0XO9/IuXBwy3/WZicVOQRHlIrgkXsJJx4n+D4TOnf7gMcPe6Ehf75xM00WLbchHOYsdhILjo7A5LsE595f9gunMzqHBVsPeQJD1spzoxUdE9pnA2SkB4kTDLSKhh97r7yePdnYFVMPeZSXRGzGLF4Mc77MS2CkIooQiwAl4XbD0v83xO9ulsGHv5oDae3tAuHjvPvWJIrFTCkQiBOc/5XDsmND/n6/TnZ1n4oY9+d7tXu7+wEUt/MAHk2gnlANiEWifX4TyX6/3az1v7oxe6THsXVWCvQ9J7GJQHfFZicnOgSLC4rigfIGfJ3r7TymXdp6OBcb1JpxcuBpdBEAlvnq296HRpx9pbkqneEaffqS5KZ3iGX36keamdIpn9OlHmpvSKZ7Rpx9pbkqneEaffqS5KZ3iGX36MV7UW7wp3nhPP2ZjNmZjNmYDAP4HqVQD1I/1cCYAAAAASUVORK5CYII=");
-            width: 20px;
-            height: 20px;
-            opacity: 1;
-            display: inline-block;
-        }
-
-        .staticon {
-            background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAAUCAYAAADRA14pAAACXUlEQVRYhe3Ru47aQABG4UMWKSGJUJRqW9JlN+yKJim59duQBwD2kShyqXBtkheghJ4KF0gICewCISxRMgg7BYYYe2ZtME0uI42EMDr6Pwz/j/S8A1L/Su9+MGCmaXy5UPQeBjPQLtYbwEzjMvvuDAPTdXGFYKNpfE0YvQPDBNcFsQEtcc8A0wVXwEYj2b68YWC5Lu7+JkTnwbB22P1NhM4bYPliidAfglgJ+tkpvTA2hD6pF8RK0LF7SmwA/S1m9AnsETp2T4UNoGP1bqOwfnS7HRm9jcb60e3IXhTWj25HoG9k2NGIZb9PazhkokB/V0Rv5NjREvotGE4UaGVPhh3Bsg+tIUwUaGnvvQy73SIKBR6833xarRAStPDQV/6eHLsVUDj0YCUkaOGhj3oy7BZEAd8+EBK08NBX7OW1GtfZLC8k/6qby/Ha+/wmlcIN/iCdhkyGt8Dz/XcpateQlfYgd+hBKtSDNJA56n2G6yyKffj2IdkHZDjeB0C9TtU0sYNv0LKwez264zGL4DPHQeg6P4GX4S31Kph2+A1aNvS6MF6EnzkCdGmvDlUT7OAbtMDuQXcMi+AzB4SOah/QaFCRoWXXw/5QxnbFihwtu44A/cleAyoytOx62Ih9MdHxsKego7GnoGNj96fZpKxCe9hO7NiuWFajHQH6Sb0mlFVoD3vivh26FEQ7DutO54zYrlgKo501dM7qNaEURDuw7pyDPUR9aA+rA6/Oiu2Kpd9oZw2dRD0/2sMm3Ac8PlKcTpknxx6KRZjOk2IPNShOYX4RrO98vGTsD+j9PecXIj9PVcetObkAAAAASUVORK5CYII=");
-            width: 20px;
-            height: 20px;
-            opacity: 1;
-            display: inline-block;
-        }
-
-        .planeicon {
-            background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAACt0lEQVRIx7XVT2hcVRTH8c9MJ5kwo5kEkv5Bilpr20j8E62xCyHZuHGhIM1CaXfWTUGoglpQF+rGZRE3BRVpEaSC1V2oGxcVsVhEIYZYK60UkyZmZpJmMs1k3nXhDQzTRidt8oPL475zzv3ec96959G6XkHYLl1FwKs2QD/t1zlf9uTkfp3z+Hm9Ae1YHNVfDobDGf0lVJFrJTjdImQ7Ou6Tq0F8ZnHPekKy0Ks9A1tlM2spQ3otzlnp8G9QyoZBblWtQB7Cx6vYTuCx29lAG97GEmof2TlZN1QNhkPdUPWE+yexHO3vRP81aQDnEZ7TWbxgcDIYDs3jd4N/HdA9Fy/n+Rh3g1I3uQ9v4nVkTto1PWJroV26Y7XdLEmqp0yWD5jojZm9j/dihjdA9uJTPPCCrrl37arukNvcauoXVa6+ZaLjM6VOjOEQvluBtEXyEaRO2VN81pZ8m1QOSdly+aJKeyKkd8qHgkxuzvLCbxbSaalkh9xSQaaAdE2ofGVqYcR4VzxUH+Ao/IpwUHfxkiemaoYq4x6f+cKe4vO6SrHeAeGcgcVgOJwzsNj4fkSh9Lnds2P2TtcMVa7YN/uSntlo/wXqL9s8dlrflaO2Xc1LrXTZ6/g2fqNHMNEEmcLDeC36LSLkpapv2DZzWt/lw3rHUYekYVcX8CGeQWdT2cdG9U8Hw+EbD87Eujfqzhh3LK6zsmaSiRftB5zBpQi9mUo1SQ9U1RNca7LP4+s4juBuPIXBDF5s8QCVm+Z//4dvgj9wHMfX1LtKlvNQUc9uVIMsBiEN1yXt8ae1rpAM7m16txs96wXZhE+w7w6ZGmyRXUAfRtHVygL/p2M49LT8nwfdJaFekNmUVb981rV+PIovUbvVdn+44bzXELqlluK82mA7eTvlamzdY/ixKLThe5yNADGbVfUPx0b/bFzy3uUAAAAASUVORK5CYII=");
-            width: 25px;
-            height: 25px;
-            opacity: 1;
-            display: inline-block;
-        }
-
-        .helicoptericon {
-            background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAADxUlEQVRIx61VXWgcVRg9d+7Mnd3Zmd1N405oE5KakLbYgDTFH5BUEFo1WJuUNkiLEkVFxSb4UEVsUCutbWPAH1y10qAP2tJa6kMJltKU+CDqKmxQMNZV2ZikSkKSNTP7Mz97fcnCMuxuNq3n8Z7vO+fe7565A6wOr3wSDM5up/RL3AS2UuAogJoSXPiYovwV13V+OhRaAnBvGY37KPAmAFJYEDwFzW+r6r49ongRQJ2H69zq96sAsFGW6TrgwRIGe48oyqdPMdZVyeTcAcOIdvh8Db2S9BWAhgJRA2yIUBpcbvL3+nxtnt7HBwOBwWnHSX1oWT0A8uVMAOBEv2Gc2MyY9jRjlwC0AMB+xjYW10cobS/a7fNDgcDAhGWlopbVBeCnYkGhzFzfP2iabzSJotQny5cAtNWLYlNxwS2iuGb57l5+V1UP/pjLzZ6y7YcAJLxitEIIxkdte+ZhWd7VLgjddaJY3yhJSoHMcb54JZttf0vT9n6dzSbPOE4XgJlSQnSFtP0yats/389Y13ZVrSNFJw8IArmbMe28aV674Lq7AMyVExFWMFkPoHHOdVPEsyGREH8mn1cuuu73ABqL0+QFKeO8+5Dff6iVsfVNkiQHBUEpJ5DjPDdt2/nfLOvvkWz2s7F8fsBbI5ZqfEKStu3WtC3VfL0yIXIzY2hm7FZFELrHDKM6k89t+1pbOp3QKQ01SVIgUOEkNufmjOPwSdv+N5bLjVc9riJsALDvPVXt71CUcIlRzW2bnU3mgD4AMQD2jVy8uV8UOzmQOT4/H8sD2QJxfmkpNriw8PuQqq7VgZ0AnBt5LFselaTYUCCQBHAAwCNXa2sX47rO47rOd1IaBaB1Uno5qml/rAPeKTf+critj7GJo4ryK4Dewui+CIdTcV3nP0QiBoD+5XXfPYJw4aSmJbcQMlytUfsLspw4oihTAHqK1tWPNG0xrut8tLZ2EcCe4pDdQcjpU8HgP3cKwjkAcsX/yYs+X+J1v38SQKeXPKYo38V1nZ8Nh1MAWr1JvZ2Q4Y81bXIHpSOVnvqWaceZfzWTeQzAiNfkuutOAsC860oAkh7aGef8ycOGcSZMSH0VoSqNTYS8Ftf1/HFF+WY1fatym+B8Lsu5Ne26U6vpqyYJzwIgD1DasFkUO1zOxRpB2PQcYx9ELetPAD4AhysJkBUdGBvuDYW6ZUJC3nqHc/OKaV5/KZ1uvamTcCD/bSZjraHU0CmlEVGUFlzXnHddOmXbbppzEf8DegCMAVgLYMddgpAA8AyAZgADAE6uJPAfk1U+b+R6xyUAAAAASUVORK5CYII=");
-            width: 25px;
-            height: 25px;
-            opacity: 1;
-            display: inline-block;
-        }
-
-        /* Shipcard styling */
-        #shipcard {
-            top: 10px;
-            left: 10px;
-            width: 400px;
-            display: flex;
-            flex-direction: column;
-            justify-content: stretch;
-            z-index: 9998;
-            position: absolute;
-            visibility: hidden;
-            background: var(--menu-background-color);
-            color: var(--menu-font-color);
-            cursor: auto;
-            border-radius: 15px;
-        }
-
-            #shipcard.visible {
-                visibility: visible
+            .tablesection {
+                font-size: .8em;
+                display: flex;
+                height: 100%;
+                margin: 10px auto;
+                color: var(--main-font-color);
+                background-color: var(--table-background-color);
+                width: fit-content;
             }
 
-        #shipcard_content {
-            flex: 1;
-            overflow: auto
-        }
+            /* other tables */
+            table {
+                height: 100%;
+                overflow: auto;
+                border-collapse: collapse;
+            }
 
-        #shipcard_header {
-            flex: 0 0 35px;
-            padding: 10px;
-            margin: 5px;
-            margin-top: 10px;
-            border-radius: 10px;
-            line-height: inherit;
-            align-items: center;
-            font-size: 18px;
-            color: white;
-            background-color: var(--secondary-color);
-            display: flex;
-            flex-direction: row;
-            justify-content: stretch;
-        }
+                table thead {
+                    background-color: var(--table-header-background-color);
+                    font-size: 1em;
+                    color: white;
+                }
 
-        .shipcard-validated {
-            border-left: 10px solid #7CFC00;
-        }
+                    table thead > tr > th {
+                        padding: 25px 15px;
+                        border-collapse: collapse;
+                    }
 
-        .shipcard-not-validated {
-            border-left: 10px solid lightgrey;
-        }
 
-        .shipcard-dubious {
-            border-left: 10px solid red;
-        }
+                table tbody th,
+                td {
+                    border: dashed thin;
+                    border-color: lightgrey;
+                    padding: 10px 15px;
+                }
 
-        .shipcard-not-validated-transparant {
-            border-left: 10px solid transparent;
-        }
+                table > tbody > tr:nth-child(even) {
+                    background: var(--table-alternate-background-color);
+                }
 
-        .shipcard-footer {
-            background-color: var(--shipcard-footer-background-color);
-            border-bottom: 1px solid rgb(217, 218, 218);
-            flex: 0 0 50px;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: row;
-            margin: 5px;
-            margin-bottom: 10px;
-            justify-content: center;
-        }
+                table > tbody > tr:hover {
+                    background: var(--table-selection-background-color);
+                }
 
-            .shipcard-footer > div {
-                flex: 0 1 100px;
+            .show {
+                display: none;
+            }
+            /* Map styling */
+
+            #map {
+                height: 100%;
+                width: 100%;
+            }
+
+
+            .maptab {
+                height: 100%;
+            }
+
+            .shiptable-map {
+                width: 10px;
+            }
+
+            .shipicon {
+                background: url("data:image/png;base64,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");
+                width: 20px;
+                height: 20px;
+                opacity: 1;
+                display: inline-block;
+            }
+
+            .staticon {
+                background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAAUCAYAAADRA14pAAACXUlEQVRYhe3Ru47aQABG4UMWKSGJUJRqW9JlN+yKJim59duQBwD2kShyqXBtkheghJ4KF0gICewCISxRMgg7BYYYe2ZtME0uI42EMDr6Pwz/j/S8A1L/Su9+MGCmaXy5UPQeBjPQLtYbwEzjMvvuDAPTdXGFYKNpfE0YvQPDBNcFsQEtcc8A0wVXwEYj2b68YWC5Lu7+JkTnwbB22P1NhM4bYPliidAfglgJ+tkpvTA2hD6pF8RK0LF7SmwA/S1m9AnsETp2T4UNoGP1bqOwfnS7HRm9jcb60e3IXhTWj25HoG9k2NGIZb9PazhkokB/V0Rv5NjREvotGE4UaGVPhh3Bsg+tIUwUaGnvvQy73SIKBR6833xarRAStPDQV/6eHLsVUDj0YCUkaOGhj3oy7BZEAd8+EBK08NBX7OW1GtfZLC8k/6qby/Ha+/wmlcIN/iCdhkyGt8Dz/XcpateQlfYgd+hBKtSDNJA56n2G6yyKffj2IdkHZDjeB0C9TtU0sYNv0LKwez264zGL4DPHQeg6P4GX4S31Kph2+A1aNvS6MF6EnzkCdGmvDlUT7OAbtMDuQXcMi+AzB4SOah/QaFCRoWXXw/5QxnbFihwtu44A/cleAyoytOx62Ih9MdHxsKego7GnoGNj96fZpKxCe9hO7NiuWFajHQH6Sb0mlFVoD3vivh26FEQ7DutO54zYrlgKo501dM7qNaEURDuw7pyDPUR9aA+rA6/Oiu2Kpd9oZw2dRD0/2sMm3Ac8PlKcTpknxx6KRZjOk2IPNShOYX4RrO98vGTsD+j9PecXIj9PVcetObkAAAAASUVORK5CYII=");
+                width: 20px;
+                height: 20px;
+                opacity: 1;
+                display: inline-block;
+            }
+
+            .planeicon {
+                background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAACt0lEQVRIx7XVT2hcVRTH8c9MJ5kwo5kEkv5Bilpr20j8E62xCyHZuHGhIM1CaXfWTUGoglpQF+rGZRE3BRVpEaSC1V2oGxcVsVhEIYZYK60UkyZmZpJmMs1k3nXhDQzTRidt8oPL475zzv3ec96959G6XkHYLl1FwKs2QD/t1zlf9uTkfp3z+Hm9Ae1YHNVfDobDGf0lVJFrJTjdImQ7Ou6Tq0F8ZnHPekKy0Ks9A1tlM2spQ3otzlnp8G9QyoZBblWtQB7Cx6vYTuCx29lAG97GEmof2TlZN1QNhkPdUPWE+yexHO3vRP81aQDnEZ7TWbxgcDIYDs3jd4N/HdA9Fy/n+Rh3g1I3uQ9v4nVkTto1PWJroV26Y7XdLEmqp0yWD5jojZm9j/dihjdA9uJTPPCCrrl37arukNvcauoXVa6+ZaLjM6VOjOEQvluBtEXyEaRO2VN81pZ8m1QOSdly+aJKeyKkd8qHgkxuzvLCbxbSaalkh9xSQaaAdE2ofGVqYcR4VzxUH+Ao/IpwUHfxkiemaoYq4x6f+cKe4vO6SrHeAeGcgcVgOJwzsNj4fkSh9Lnds2P2TtcMVa7YN/uSntlo/wXqL9s8dlrflaO2Xc1LrXTZ6/g2fqNHMNEEmcLDeC36LSLkpapv2DZzWt/lw3rHUYekYVcX8CGeQWdT2cdG9U8Hw+EbD87Eujfqzhh3LK6zsmaSiRftB5zBpQi9mUo1SQ9U1RNca7LP4+s4juBuPIXBDF5s8QCVm+Z//4dvgj9wHMfX1LtKlvNQUc9uVIMsBiEN1yXt8ae1rpAM7m16txs96wXZhE+w7w6ZGmyRXUAfRtHVygL/p2M49LT8nwfdJaFekNmUVb981rV+PIovUbvVdn+44bzXELqlluK82mA7eTvlamzdY/ixKLThe5yNADGbVfUPx0b/bFzy3uUAAAAASUVORK5CYII=");
+                width: 25px;
+                height: 25px;
+                opacity: 1;
+                display: inline-block;
+            }
+
+            .helicoptericon {
+                background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAADxUlEQVRIx61VXWgcVRg9d+7Mnd3Zmd1N405oE5KakLbYgDTFH5BUEFo1WJuUNkiLEkVFxSb4UEVsUCutbWPAH1y10qAP2tJa6kMJltKU+CDqKmxQMNZV2ZikSkKSNTP7Mz97fcnCMuxuNq3n8Z7vO+fe7565A6wOr3wSDM5up/RL3AS2UuAogJoSXPiYovwV13V+OhRaAnBvGY37KPAmAFJYEDwFzW+r6r49ongRQJ2H69zq96sAsFGW6TrgwRIGe48oyqdPMdZVyeTcAcOIdvh8Db2S9BWAhgJRA2yIUBpcbvL3+nxtnt7HBwOBwWnHSX1oWT0A8uVMAOBEv2Gc2MyY9jRjlwC0AMB+xjYW10cobS/a7fNDgcDAhGWlopbVBeCnYkGhzFzfP2iabzSJotQny5cAtNWLYlNxwS2iuGb57l5+V1UP/pjLzZ6y7YcAJLxitEIIxkdte+ZhWd7VLgjddaJY3yhJSoHMcb54JZttf0vT9n6dzSbPOE4XgJlSQnSFtP0yats/389Y13ZVrSNFJw8IArmbMe28aV674Lq7AMyVExFWMFkPoHHOdVPEsyGREH8mn1cuuu73ABqL0+QFKeO8+5Dff6iVsfVNkiQHBUEpJ5DjPDdt2/nfLOvvkWz2s7F8fsBbI5ZqfEKStu3WtC3VfL0yIXIzY2hm7FZFELrHDKM6k89t+1pbOp3QKQ01SVIgUOEkNufmjOPwSdv+N5bLjVc9riJsALDvPVXt71CUcIlRzW2bnU3mgD4AMQD2jVy8uV8UOzmQOT4/H8sD2QJxfmkpNriw8PuQqq7VgZ0AnBt5LFselaTYUCCQBHAAwCNXa2sX47rO47rOd1IaBaB1Uno5qml/rAPeKTf+critj7GJo4ryK4Dewui+CIdTcV3nP0QiBoD+5XXfPYJw4aSmJbcQMlytUfsLspw4oihTAHqK1tWPNG0xrut8tLZ2EcCe4pDdQcjpU8HgP3cKwjkAcsX/yYs+X+J1v38SQKeXPKYo38V1nZ8Nh1MAWr1JvZ2Q4Y81bXIHpSOVnvqWaceZfzWTeQzAiNfkuutOAsC860oAkh7aGef8ycOGcSZMSH0VoSqNTYS8Ftf1/HFF+WY1fatym+B8Lsu5Ne26U6vpqyYJzwIgD1DasFkUO1zOxRpB2PQcYx9ELetPAD4AhysJkBUdGBvuDYW6ZUJC3nqHc/OKaV5/KZ1uvamTcCD/bSZjraHU0CmlEVGUFlzXnHddOmXbbppzEf8DegCMAVgLYMddgpAA8AyAZgADAE6uJPAfk1U+b+R6xyUAAAAASUVORK5CYII=");
+                width: 25px;
+                height: 25px;
+                opacity: 1;
+                display: inline-block;
+            }
+
+            /* Shipcard styling */
+            #shipcard {
+                top: 10px;
+                left: 10px;
+                width: 400px;
                 display: flex;
                 flex-direction: column;
-                border-radius: 10px;
-                transition: var( --hover-transition);
+                justify-content: stretch;
+                z-index: 9998;
+                position: absolute;
+                visibility: hidden;
+                background: var(--menu-background-color);
+                color: var(--menu-font-color);
+                cursor: auto;
+                border-radius: 15px;
             }
+
+                #shipcard.visible {
+                    visibility: visible
+                }
+
+            #shipcard_content {
+                flex: 1;
+                overflow: auto
+            }
+
+            #shipcard_header {
+                flex: 0 0 35px;
+                padding: 10px;
+                margin: 5px;
+                margin-top: 10px;
+                border-radius: 10px;
+                line-height: inherit;
+                align-items: center;
+                font-size: 18px;
+                color: white;
+                background-color: var(--secondary-color);
+                display: flex;
+                flex-direction: row;
+                justify-content: stretch;
+            }
+
+            .shipcard-validated {
+                border-left: 10px solid #7CFC00;
+            }
+
+            .shipcard-not-validated {
+                border-left: 10px solid lightgrey;
+            }
+
+            .shipcard-dubious {
+                border-left: 10px solid red;
+            }
+
+            .shipcard-not-validated-transparant {
+                border-left: 10px solid transparent;
+            }
+
+            .shipcard-footer {
+                background-color: var(--shipcard-footer-background-color);
+                border-bottom: 1px solid rgb(217, 218, 218);
+                flex: 0 0 50px;
+                border-radius: 10px;
+                display: flex;
+                flex-direction: row;
+                margin: 5px;
+                margin-bottom: 10px;
+                justify-content: center;
+            }
+
+                .shipcard-footer > div {
+                    flex: 0 1 100px;
+                    display: flex;
+                    flex-direction: column;
+                    border-radius: 10px;
+                    transition: var( --hover-transition);
+                }
+
+            @media (hover: hover) {
 
                 .shipcard-footer > div:hover {
                     cursor: pointer;
                     background: var(--hover-background);
                     transform: var(--hover-transform);
                 }
-
-                .shipcard-footer > div > i {
-                    color: white;
-                    font-size: 24px;
-                    line-height: 16px;
-                    margin: auto;
-                    padding: 10px;
-                }
-
-                .shipcard-footer > div > span {
-                    flex: 1;
-                    font-size: 9px;
-                    line-height: 3px;
-                    color: white;
-                    text-align: center;
-                }
-
-        #shipcard header > span:first-child {
-            flex: 1 0 0;
-        }
-        
-        .shipcard-header-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 1 0;
-            padding: 0px;
-            border-radius: 10px;
-            line-height: 10px;
-            transition: var(--hover-transition);
-        }
-
-
-            .shipcard-header-icon:hover {
-                cursor: pointer;
-                background: var(--hover-background);
-                transform: var(--hover-transform);
             }
 
-        #shipcard_content {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .shipcard-content-row {
-            display: flex;
-            flex-direction: row;
-            justify-content: stretch;
-            padding: 10px;
-            border-bottom: 1px solid var(--shipcard-bottom-border-color);
-            transition: var( --hover-transition);
-        }
-
-            .shipcard-content-row:hover {
-                cursor: pointer;
-            }
-
-            .shipcard-content-row > div {
-                overflow: hidden;
+            .shipcard-footer > div > i {
                 flex: 1;
+                color: white;
+                font-size: 2px;
+                margin: auto;
+                padding: 10px;
+            }
+
+            .shipcard-footer > div > span {
+                flex: 1;
+                font-size: 9px;
+                line-height: 3px;
+                color: white;
+                text-align: center;
+            }
+
+            #shipcard header > span:first-child {
+                flex: 1 0 0;
+            }
+
+            .shipcard-header-icon {
                 display: flex;
-                justify-content: stretch;
+                align-items: center;
+                justify-content: center;
+                flex: 0 1 0;
+                padding: 0px;
+                border-radius: 10px;
+                font-size: 24px;
+                transition: var(--hover-transition);
+            }
+
+            @media (hover: hover) {
+
+                .shipcard-header-icon:hover {
+                    cursor: pointer;
+                    background: var(--hover-background);
+                    transform: var(--hover-transform);
+                }
+            }
+
+            #shipcard_content {
+                display: flex;
                 flex-direction: column;
             }
 
-                .shipcard-content-row > div > span:first-child {
-                    color: rgb(111, 128, 124);
-                    text-transform: uppercase;
-                    font-size: 10px;
-                    line-height: 14px;
-                }
-
-                .shipcard-content-row > div > span:last-child {
-                    line-height: 20px;
-                    font-size: 14px;
-                    text-transform: initial;
-                }
-
-                    .shipcard-content-row > div > span:last-child:empty:after {
-                        content: "-";
-                    }
-
-        .shipcard-min-only {
-            display: none;
-        }
-
-            .shipcard-min-only.visible {
-                display: inherit;
-            }
-
-        .shipcard-max-only.hide {
-            display: none;
-        }
-
-        .shipcard-row-selected {
-            background-color: var(--shipcard-selection-color);
-            display: flex;
-            flex-direction: row;
-        }
-
-        @media only screen and (max-width:500px) {
-            #shipcard {
-                width: 100%;
-                left: 0;
-                top: 0;
-                border-radius: 0px;
-            }
-
-                #shipcard header {
-                    font-size: 14px;
-                }
-        }
-
-        @media only screen and (max-height:800px) {
-            .shipcard-ismax {
-                height: 100%
-            }
-
-            #shipcard {
-                left: 0;
-                top: 0;
-                border-radius: 0px;
-            }
-
-                #shipcard header {
-                    font-size: 14px;
-                }
-        }
-
-        .pulse {
-            animation: pulsate 1s ease-out;
-            animation-iteration-count: infinite;
-            -webkit-animation: pulsate 1s ease-out;
-            -webkit-animation-iteration-count: infinite;
-            opacity: 0.25;
-        }
-
-        @keyframes pulsate {
-            0% {
-                transform: opacity 0.25;
-            }
-
-            50% {
-                opacity: 1.0;
-            }
-
-            100% {
-                transform: opacity 0.25;
-            }
-        }
-
-        .leaflet-control-layers-toggle,
-        .leaflet-control-settings-toggle,
-        .leaflet-control-zoom-in,
-        .leaflet-control-zoom-out {
-            font-size: 18px;
-            background-color: white;
-            min-width: 30px;
-            min-height: 30px;
-            max-width: 30px;
-            max-height: 30px;
-        }
-
-        .leaflet-control-settings-toggle {
-            text-align: center;
-            color: grey;
-            transform: translate(200px 0)
-        }
-
-        /* Summary tab */
-
-        #summary_stat {
-            max-width: 700px;
-            margin: 15px auto;
-            border-radius: 15px;
-            background-color: var(--panel-color);
-        }
-
-            #summary_stat section {
-                margin-bottom: 10px;
+            .shipcard-content-row {
+                display: flex;
+                flex-direction: row;
+                justify-content: stretch;
                 padding: 10px;
-                margin: 0 auto;
+                border-bottom: 1px solid var(--shipcard-bottom-border-color);
+                transition: var( --hover-transition);
             }
 
-                #summary_stat section div {
-                    display: flex;
+                .shipcard-content-row:hover {
+                    cursor: pointer;
                 }
 
-                    #summary_stat section div span:first-child {
-                        flex: 1 1 150px;
-                        text-align: right;
-                        color: var(--main-font-color);
-                        padding: 5px 20px 5px 20px;
-                        display: flex;
-                        flex-direction: column
+                .shipcard-content-row > div {
+                    overflow: hidden;
+                    flex: 1;
+                    display: flex;
+                    justify-content: stretch;
+                    flex-direction: column;
+                }
+
+                    .shipcard-content-row > div > span:first-child {
+                        color: rgb(111, 128, 124);
+                        text-transform: uppercase;
+                        font-size: 10px;
+                        line-height: 14px;
                     }
 
-                    #summary_stat section div span:last-child {
-                        flex: 1 0 150px;
-                        text-align: left;
-                        color: var(--primary-color);
-                        padding: 5px 20px 5px 20px;
-                        font-weight: 550;
-                        overflow-x: auto;
-                        border-left: solid 1px lightgray;
+                    .shipcard-content-row > div > span:last-child {
+                        line-height: 20px;
+                        font-size: 14px;
+                        text-transform: initial;
                     }
 
-                        #summary_stat section div span:last-child:empty:after {
+                        .shipcard-content-row > div > span:last-child:empty:after {
                             content: "-";
                         }
 
-        .flag-icon {
-            margin-right: 10px;
-        }
-
-        .leaflet-tooltip .flag-icon {
-            font-size: 12px;
-            vertical-align: middle;
-            margin-right: 5px;
-        }
-
-        .leaflet-tooltip {
-            background-color: var(--tooltip-background-color) !important;
-            color: var(--menu-font-color) !important;
-        }
-
-        .leaflet-tooltiplabel {
-            background-color: transparent !important;
-            color: var(--menu-font-color);
-            border: none;
-            box-shadow: none;
-            font-size: 10px;
-            padding: 3px;
-        }
-
-            .leaflet-tooltiplabel span:nth-child(1),
-            .leaflet-tooltiplabel span:nth-child(3) {
+            .shipcard-min-only {
                 display: none;
             }
 
-            .leaflet-tooltiplabel:before {
-                display: none;
-            }
-
-        @media only screen and (max-width:750px) {
-            .leaflet-tooltip, .leaflet-tooltiplabel {
-                font-size: 8px;
-                padding: 3px;
-            }
-            .leaflet-tooltip .flag-icon {
-                font-size: 8px;
-            }
-        }
-
-        .blue {
-            color: #12a5ed;
-        }
-
-        .green {
-            color: green;
-        }
-
-        .red {
-            color: red;
-        }
-
-        .grey {
-            color: dimgray;
-        }
-
-        .lightgrey {
-            color: lightgrey;
-        }
-
-        #context-menu {
-            position: absolute;
-            display: none;
-            background-color: var(--menu-background-color);
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-            list-style-type: none;
-            padding: 8px 0;
-            z-index: 10002;
-            font-size: 14px;
-            color: var(--menu-font-color);
-            width: auto;
-            margin: 0;
-        }
-
-            #context-menu li {
-                display: flex;
-                align-items: center;
-                height: 24px;
-                margin: auto;
-                padding: 0 16px;
-                cursor: pointer;
-                white-space: nowrap; /* Prevent wrapping */
-            }
-
-            #context-menu .divider {
-                height: 1px;
-                background-color: #ccc;
-                margin: 0.5rem 0;
-                pointer-events: none;
-            }
-
-            #context-menu li:hover {
-                background-color: var(--menu-background-hover-color);
-            }
-
-            #context-menu i {
-                margin-right: 8px;
-                font-size: 16px;
-                width: 16px;
-            }
-
-            #context-menu .dynamic-item {
-                color: #666;
-            }
-
-                #context-menu .dynamic-item:hover {
-                    background-color: transparent;
+                .shipcard-min-only.visible {
+                    display: inherit;
                 }
 
-        .marker {
-            display: inline;
-            margin-left: 16px;
-            color: var(--menu-marker-color);
-        }
-
-        .selected-setting .marker {
-            display: inline;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #dialog-box {
-            position: fixed;
-            max-height: 80vh;
-            max-width: 80vw;
-            background-color: var(--menu-background-color);
-            color: var(--menu-font-color);
-            border: 1px solid #ccc;
-            border-radius: 15px;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10001;
-        }
-
-        .dialog-title {
-            padding: 15px;
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: white;
-            background-color: var(--secondary-color);
-        }
-
-        .dialog-message {
-            padding: 0px 15px;
-            font-size: 14px;
-            user-select: text;
-            margin-bottom: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
-            box-sizing: border-box;
-        }
-
-        .dialog-close {
-            padding: 10px 40px;
-            background-color: var(--menu-background-hover-color);
-            border: none;
-            color: var(--menu-font-color);
-            /*padding: 8px 16px;*/
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 14px;
-            margin: 0px 15px 15px 15px;
-            cursor: pointer;
-            border-radius: 10px;
-        }
-
-        .stationIcon {
-            position: relative;
-            display: inline-block;
+            .shipcard-max-only.hide {
+                display: none;
             }
 
-            .stationIcon i  {
-            color: var(--secondary-color);
-            font-size: 18px;
+            .shipcard-row-selected {
+                background-color: var(--shipcard-selection-color);
+                display: flex;
+                flex-direction: row;
             }
 
-            .stationIcon div {
-            position: absolute;
-            top: -2px;
-            left: -3px;
-            width: 24px;
-            height: 24px;
-            background-color: var(--tertiary-color);
-            border-radius: 50%;
-            z-index: -1;
+            @media only screen and (max-width:500px) {
+                #shipcard {
+                    width: 100%;
+                    left: 0;
+                    top: 0;
+                    border-radius: 0px;
+                }
+
+                    #shipcard header {
+                        font-size: 14px;
+                    }
+            }
+
+            @media only screen and (max-height:800px) {
+                .shipcard-ismax {
+                    height: 100%
+                }
+
+                #shipcard {
+                    left: 0;
+                    top: 0;
+                    border-radius: 0px;
+                }
+
+                    #shipcard header {
+                        font-size: 14px;
+                    }
+            }
+
+            .pulse {
+                animation: pulsate 1s ease-out;
+                animation-iteration-count: infinite;
+                -webkit-animation: pulsate 1s ease-out;
+                -webkit-animation-iteration-count: infinite;
+                opacity: 0.25;
+            }
+
+            @keyframes pulsate {
+                0% {
+                    transform: opacity 0.25;
+                }
+
+                50% {
+                    opacity: 1.0;
+                }
+
+                100% {
+                    transform: opacity 0.25;
+                }
+            }
+
+            .leaflet-control-layers-toggle,
+            .leaflet-control-settings-toggle,
+            .leaflet-control-zoom-in,
+            .leaflet-control-zoom-out {
+                font-size: 18px;
+                background-color: white;
+                min-width: 30px;
+                min-height: 30px;
+                max-width: 30px;
+                max-height: 30px;
+            }
+
+            .leaflet-control-settings-toggle {
+                text-align: center;
+                color: grey;
+                transform: translate(200px 0)
+            }
+
+            /* Summary tab */
+
+            #summary_stat {
+                max-width: 700px;
+                margin: 15px auto;
+                border-radius: 15px;
+                background-color: var(--panel-color);
+            }
+
+                #summary_stat section {
+                    margin-bottom: 10px;
+                    padding: 10px;
+                    margin: 0 auto;
+                }
+
+                    #summary_stat section div {
+                        display: flex;
+                    }
+
+                        #summary_stat section div span:first-child {
+                            flex: 1 1 150px;
+                            text-align: right;
+                            color: var(--main-font-color);
+                            padding: 5px 20px 5px 20px;
+                            display: flex;
+                            flex-direction: column
+                        }
+
+                        #summary_stat section div span:last-child {
+                            flex: 1 0 150px;
+                            text-align: left;
+                            color: var(--primary-color);
+                            padding: 5px 20px 5px 20px;
+                            font-weight: 550;
+                            overflow-x: auto;
+                            border-left: solid 1px lightgray;
+                        }
+
+                            #summary_stat section div span:last-child:empty:after {
+                                content: "-";
+                            }
+
+            .flag-icon {
+                margin-right: 10px;
+            }
+
+            .leaflet-tooltip .flag-icon {
+                font-size: 12px;
+                vertical-align: middle;
+                margin-right: 5px;
+            }
+
+            .leaflet-tooltip {
+                background-color: var(--tooltip-background-color) !important;
+                color: var(--menu-font-color) !important;
+            }
+
+            .leaflet-tooltiplabel {
+                background-color: transparent !important;
+                color: var(--menu-font-color);
+                border: none;
+                box-shadow: none;
+                font-size: 10px;
+                padding: 3px;
+            }
+
+                .leaflet-tooltiplabel span:nth-child(1),
+                .leaflet-tooltiplabel span:nth-child(3) {
+                    display: none;
+                }
+
+                .leaflet-tooltiplabel:before {
+                    display: none;
+                }
+
+            @media only screen and (max-width:750px) {
+                .leaflet-tooltip, .leaflet-tooltiplabel {
+                    font-size: 8px;
+                    padding: 3px;
+                }
+
+                    .leaflet-tooltip .flag-icon {
+                        font-size: 8px;
+                    }
+            }
+
+            .blue {
+                color: #12a5ed;
+            }
+
+            .green {
+                color: green;
+            }
+
+            .red {
+                color: red;
+            }
+
+            .grey {
+                color: dimgray;
+            }
+
+            .lightgrey {
+                color: lightgrey;
+            }
+
+            #context-menu {
+                position: absolute;
+                display: none;
+                background-color: var(--menu-background-color);
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+                list-style-type: none;
+                padding: 8px 0;
+                z-index: 10002;
+                font-size: 14px;
+                color: var(--menu-font-color);
+                width: auto;
+                margin: 0;
+            }
+
+                #context-menu li {
+                    display: flex;
+                    align-items: center;
+                    height: 24px;
+                    margin: auto;
+                    padding: 0 16px;
+                    cursor: pointer;
+                    white-space: nowrap; /* Prevent wrapping */
+                }
+
+                #context-menu .divider {
+                    height: 1px;
+                    background-color: #ccc;
+                    margin: 0.5rem 0;
+                    pointer-events: none;
+                }
+
+                #context-menu li:hover {
+                    background-color: var(--menu-background-hover-color);
+                }
+
+                #context-menu i {
+                    margin-right: 8px;
+                    font-size: 16px;
+                    width: 16px;
+                }
+
+                #context-menu .dynamic-item {
+                    color: #666;
+                }
+
+                    #context-menu .dynamic-item:hover {
+                        background-color: transparent;
+                    }
+
+            .marker {
+                display: inline;
+                margin-left: 16px;
+                color: var(--menu-marker-color);
+            }
+
+            .selected-setting .marker {
+                display: inline;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            #dialog-box {
+                position: fixed;
+                max-height: 80vh;
+                max-width: 80vw;
+                background-color: var(--menu-background-color);
+                color: var(--menu-font-color);
+                border: 1px solid #ccc;
+                border-radius: 15px;
+                box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10001;
+            }
+
+            .dialog-title {
+                padding: 15px;
+                border-top-left-radius: 15px;
+                border-top-right-radius: 15px;
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: white;
+                background-color: var(--secondary-color);
+            }
+
+            .dialog-message {
+                padding: 0px 15px;
+                font-size: 14px;
+                user-select: text;
+                margin-bottom: 20px;
+                max-height: 60vh;
+                overflow-y: auto;
+                box-sizing: border-box;
+            }
+
+            .dialog-close {
+                padding: 10px 40px;
+                background-color: var(--menu-background-hover-color);
+                border: none;
+                color: var(--menu-font-color);
+                /*padding: 8px 16px;*/
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 14px;
+                margin: 0px 15px 15px 15px;
+                cursor: pointer;
+                border-radius: 10px;
+            }
+
+            .stationIcon {
+                position: relative;
+                display: inline-block;
+            }
+
+                .stationIcon i {
+                    color: var(--secondary-color);
+                    font-size: 18px;
+                }
+
+                .stationIcon div {
+                    position: absolute;
+                    top: -2px;
+                    left: -3px;
+                    width: 24px;
+                    height: 24px;
+                    background-color: var(--tertiary-color);
+                    border-radius: 50%;
+                    z-index: -1;
+                }
+
+            .business_center_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M140-120q-24 0-42-18t-18-42v-191h311v60h180v-60h309v191q0 24-18 42t-42 18H140Zm311-251v-60h60v60h-60ZM80-431v-229q0-24 18-42t42-18h180v-100q0-24 18-42t42-18h200q24 0 42 18t18 42v100h180q24 0 42 18t18 42v229H571v-60H391v60H80Zm300-289h200v-100H380v100Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .cloud_download_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M251-160q-88 0-149.5-61.5T40-371q0-78 50-137t127-71q18-90 83-150t151-68v349l-83-83-43 43 156 156 156-156-43-43-83 83v-349q101 11 169 90t68 185v24q72-2 122 46.5T920-329q0 69-50 119t-119 50H251Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .view_list_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M350-160h470q24.75 0 42.375-17.625T880-220v-114H350v174ZM80-626h210v-174H140q-24.75 0-42.375 17.625T80-740v114Zm0 233h210v-173H80v173Zm60 233h150v-174H80v114q0 24.75 17.625 42.375T140-160Zm210-233h530v-173H350v173Zm0-233h530v-114q0-24.75-17.625-42.375T820-800H350v174Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .map_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="m612-120-263-93-179 71q-17 9-33.5-1T120-173v-558q0-13 7.5-23t19.5-15l202-71 263 92 178-71q17-8 33.5 1.5T840-788v565q0 11-7.5 19T814-192l-202 72Zm-34-75v-505l-196-66v505l196 66Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .info_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M453-280h60v-240h-60v240Zm26.982-314q14.018 0 23.518-9.2T513-626q0-14.45-9.482-24.225-9.483-9.775-23.5-9.775-14.018 0-23.518 9.775T447-626q0 13.6 9.482 22.8 9.483 9.2 23.5 9.2Zm.284 514q-82.734 0-155.5-31.5t-127.266-86q-54.5-54.5-86-127.341Q80-397.681 80-480.5q0-82.819 31.5-155.659Q143-709 197.5-763t127.341-85.5Q397.681-880 480.5-880q82.819 0 155.659 31.5Q709-817 763-763t85.5 127Q880-563 880-480.266q0 82.734-31.5 155.5T763-197.684q-54 54.316-127 86Q563-80 480.266-80Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .help_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M484-247q16 0 27-11t11-27q0-16-11-27t-27-11q-16 0-27 11t-11 27q0 16 11 27t27 11Zm-35-146h59q0-26 6.5-47.5T555-490q31-26 44-51t13-55q0-53-34.5-85T486-713q-49 0-86.5 24.5T345-621l53 20q11-28 33-43.5t52-15.5q34 0 55 18.5t21 47.5q0 22-13 41.5T508-512q-30 26-44.5 51.5T449-393Zm31 313q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 31.5-156t86-127Q252-817 325-848.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 82-31.5 155T763-197.5q-54 54.5-127 86T480-80Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .leaderboard_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M80-120v-480h200v480H80Zm300 0v-720h200v720H380Zm300 0v-400h200v400H680Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .settings_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="m388-80-20-126q-19-7-40-19t-37-25l-118 54-93-164 108-79q-2-9-2.5-20.5T185-480q0-9 .5-20.5T188-521L80-600l93-164 118 54q16-13 37-25t40-18l20-127h184l20 126q19 7 40.5 18.5T669-710l118-54 93 164-108 77q2 10 2.5 21.5t.5 21.5q0 10-.5 21t-2.5 21l108 78-93 164-118-54q-16 13-36.5 25.5T592-206L572-80H388Zm92-270q54 0 92-38t38-92q0-54-38-92t-92-38q-54 0-92 38t-38 92q0 54 38 92t92 38Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .fullscreen_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M200-200v-193h60v133h133v60H200Zm0-367v-193h193v60H260v133h-60Zm367 367v-60h133v-133h60v193H567Zm133-367v-133H567v-60h193v193h-60Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .link_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M450-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h170v60H280q-58.333 0-99.167 40.765-40.833 40.764-40.833 99Q140-422 180.833-381q40.834 41 99.167 41h170v60ZM325-450v-60h310v60H325Zm185 170v-60h170q58.333 0 99.167-40.765 40.833-40.764 40.833-99Q820-538 779.167-579 738.333-620 680-620H510v-60h170q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H510Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .close_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="m249-207-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .push_pin_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="m634-448 86 77v60H510v241l-30 30-30-30v-241H240v-60l80-77v-333h-50v-60h414v60h-50v333Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .content_copy_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M180-81q-24 0-42-18t-18-42v-603h60v603h474v60H180Zm120-120q-24 0-42-18t-18-42v-560q0-24 18-42t42-18h440q24 0 42 18t18 42v560q0 24-18 42t-42 18H300Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+
+            .undo_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M259-200v-60h310q70 0 120.5-46.5T740-422q0-69-50.5-115.5T569-584H274l114 114-42 42-186-186 186-186 42 42-114 114h294q95 0 163.5 64T800-422q0 94-68.5 158T568-200H259Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .remove_circle_outline_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M280-453h400v-60H280v60ZM480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 31.5-156t86-127Q252-817 325-848.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 82-31.5 155T763-197.5q-54 54.5-127 86T480-80Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .label_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M840-480 671-241q-13 18-31 29.5T600-200H180q-25 0-42.5-17.5T120-260v-440q0-25 17.5-42.5T180-760h420q22 0 40 11.5t31 29.5l169 239Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .signal_cellular_alt_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M185-160v-117h127v117H185Zm253 0v-379h126v379H438Zm252 0v-640h126v640H690Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .timeline_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M109.912-240Q81-240 60.5-260.589 40-281.177 40-310.089 40-339 60.494-359.5t49.273-20.5q5.233 0 10.233.5 5 .5 13 2.5l200-200q-2-8-2.5-13t-.5-10.233q0-28.779 20.589-49.273Q371.177-670 400.089-670 429-670 449.5-649.366t20.5 49.61Q470-598 467-577l110 110q8-2 13-2.5t10-.5q5 0 10 .5t13 2.5l160-160q-2-8-2.5-13t-.5-10.233q0-28.779 20.589-49.273Q821.177-720 850.089-720 879-720 899.5-699.411q20.5 20.588 20.5 49.5Q920-621 899.506-600.5T850.233-580Q845-580 840-580.5q-5-.5-13-2.5L667-423q2 8 2.5 13t.5 10.233q0 28.779-20.589 49.273Q628.823-330 599.911-330 571-330 550.5-350.494T530-399.767q0-5.233.5-10.233.5-5 2.5-13L423-533q-8 2-13 2.5t-10.25.5q-1.75 0-22.75-3L177-333q2 8 2.5 13t.5 10.233q0 28.779-20.589 49.273Q138.823-240 109.912-240Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .zoom_in_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M796-121 533-384q-30 26-69.959 40.5T378-329q-108.162 0-183.081-75Q120-479 120-585t75-181q75-75 181.5-75t181 75Q632-691 632-584.85 632-542 618-502q-14 40-42 75l264 262-44 44ZM377-389q81.25 0 138.125-57.5T572-585q0-81-56.875-138.5T377-781q-82.083 0-139.542 57.5Q180-666 180-585t57.458 138.5Q294.917-389 377-389Zm-31-85v-82h-82v-60h82v-81h60v81h81v60h-81v82h-60Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .menu_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M120-240v-60h720v60H120Zm0-210v-60h720v60H120Zm0-210v-60h720v60H120Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .directions_boat_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M156-200 82-457q-4-12 1.5-23.5T101-496l59-20v-224q0-25 17.5-42t42.5-18h150v-120h220v120h150q25 0 42.5 17.5T800-740v225l60 19q11 4 16.5 15t1.5 23l-74 258q-48-5-89.5-29T641-286q-32 36-72.5 61T480-200q-48 0-88.5-25T319-286q-32 33-73.5 57T156-200ZM80-40v-60h80q42 0 83-13t77-37q36 24 77 36t83 12q42 0 83-12t77-36q36 24 77 37t83 13h80v60h-80q-41 0-81-10.5T640-81q-39 20-80 30.5T480-40q-39 0-80-10.5T320-81q-39 20-79 30.5T160-40H80Zm140-495 260-84 260 85v-206H220v205Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .dns_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M286.882-717Q266-717 251.5-702.382q-14.5 14.617-14.5 35.5Q237-646 251.618-631.5q14.617 14.5 35.5 14.5Q308-617 322.5-631.618q14.5-14.617 14.5-35.5Q337-688 322.382-702.5q-14.617-14.5-35.5-14.5Zm0 414Q266-303 251.5-288.382q-14.5 14.617-14.5 35.5Q237-232 251.618-217.5q14.617 14.5 35.5 14.5Q308-203 322.5-217.618q14.5-14.617 14.5-35.5Q337-274 322.382-288.5q-14.617-14.5-35.5-14.5ZM154-839h651q16 0 25.5 9.5t9.5 25.813V-535q0 17.425-9.5 29.212Q821-494 805-494H154q-15 0-24.5-11.788Q120-517.575 120-535v-268.687q0-16.313 9.5-25.813T154-839Zm0 413h647q15 0 27 12.5t12 28.527V-121q0 20-12 30.5T801-80H159q-16 0-27.5-10.5T120-121v-263.973q0-16.027 9.5-28.527T154-426Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .mail_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M140-160q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h680q24 0 42 18t18 42v520q0 24-18 42t-42 18H140Zm340-302 340-223v-55L480-522 140-740v55l340 223Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .content_paste_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M180-120q-26 0-43-17t-17-43v-600q0-26 17-43t43-17h202q7-35 34.5-57.5T480-920q36 0 63.5 22.5T578-840h202q26 0 43 17t17 43v600q0 26-17 43t-43 17H180Zm0-60h600v-600h-60v90H240v-90h-60v600Zm300-600q17 0 28.5-11.5T520-820q0-17-11.5-28.5T480-860q-17 0-28.5 11.5T440-820q0 17 11.5 28.5T480-780Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .search_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M796-121 533-384q-30 26-69.959 40.5T378-329q-108.162 0-183.081-75Q120-479 120-585t75-181q75-75 181.5-75t181 75Q632-691 632-584.85 632-542 618-502q-14 40-42 75l264 262-44 44ZM377-389q81.25 0 138.125-57.5T572-585q0-81-56.875-138.5T377-781q-82.083 0-139.542 57.5Q180-666 180-585t57.458 138.5Q294.917-389 377-389Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .public_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm-43-61v-82q-35 0-59-26t-24-61v-44L149-559q-5 20-7 39.5t-2 39.5q0 130 84.5 227T437-141Zm294-108q22-24 38.5-51t28-56.5q11.5-29.5 17-60.5t5.5-63q0-106-58-192.5T607-799v18q0 35-24 61t-59 26h-87v87q0 17-13.5 28T393-568h-83v88h258q17 0 28 13t11 30v127h43q29 0 51 17t30 44Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+
+            .build_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M705-128 447-388q-23 8-46 13t-47 5q-97 0-165-67.5T121-602q0-31 8-60.5t23-55.5l145 145 92-86-149-149q26-15 55-23.5t59-8.5q99 0 168.5 69.5T592-602q0 24-5 47t-13 46l259 258q11 11 11 26.5T833-198l-76 70q-11 11-26 11t-26-11Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .brightness_4_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M481-29 346-160H160v-186L26-480l134-134v-186h186l135-134 133 134h186v186l134 134-134 134v186H614L481-29Zm-2-191q111 0 186-75.5T740-481q0-110-75.5-185.5T479-742q-27 0-52 5.5T373-718q69 32 111 96t42 141q0 77-42 141t-111 97q24 11 50.5 17t55.5 6Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .keyboard_arrow_down_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M480-344 240-584l43-43 197 197 197-197 43 43-240 240Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .keyboard_arrow_up_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M480-554 283-357l-43-43 240-240 240 240-43 43-197-197Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .more_horiz_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"%3E%3Cpath d="M0 0h24v24H0V0z" fill="none"/%3E%3Cpath d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+
+            .cell_tower_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M198-278q-60-58-89-133T80-560q0-74 29-149t89-133l35 35q-50 49-76.5 116.5T130-560q0 63 26.5 130.5T233-313l-35 35Zm92-92q-40-37-59-89.5T212-560q0-48 19-100.5t59-89.5l35 35q-29 29-46 72.5T262-560q0 35 17.5 79.5T325-405l-35 35Zm4 290 133-405q-17-12-27.5-31T389-560q0-38 26.5-64.5T480-651q38 0 64.5 26.5T571-560q0 25-10.5 44T533-485L666-80h-59l-29-90H383l-30 90h-59Zm108-150h156l-78-238-78 238Zm268-140-35-35q29-29 46-72.5t17-82.5q0-35-17.5-79.5T635-715l35-35q39 37 58.5 89.5T748-560q0 47-19.5 100T670-370Zm92 92-35-35q49-49 76-116.5T830-560q0-63-27-130.5T727-807l35-35q60 58 89 133t29 149q0 75-27.5 149.5T762-278Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
+            #menubar_mini {
+                justify-content: space-around; /* Or use 'space-between' or 'center' etc. as needed */
+            }
+
+            .showflex {
+                display: flex;
+            }
+
+            .hide {
+                display: none;
             }
 
     </style>
@@ -1030,55 +1535,55 @@
 <body>
 
     <div class="header noandroid">
-        <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="material-icons">menu</i></div>
+        <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="menu_icon"></i></div>
             <div class="header-title">
             <span onclick="headerClick()">AIS-catcher</span>
 
-            <div id="menubar_mini">
-                <i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="material-icons">business_center</i>
-                <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="material-icons">leaderboard</i>
-                <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="material-icons">view_list</i>
-                <i id="map_tab_mini" onclick="activateTab(event,'map')" class="material-icons-outlined">map</i>
-                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="material-icons">info</i>                
+            <div id="menubar_mini" class="showflex">
+                <i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="business_center_icon"></i>
+                <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="leaderboard_icon"></i>
+                <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="view_list_icon"></i>
+                <i id="map_tab_mini" onclick="activateTab(event,'map')" class="map_icon"></i>
+                <i id="about_tab_mini" onclick="activateTab(event,'about')" class="info_icon"></i>                
             </div>
         </div>
 
         <div title="About" onclick="showAboutDialog()" class="header-icon">
-            <i class="material-icons small-icon">help</i>
+            <i class="help_icon small-icon"></i>
           </div>
           
           <div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon">
-            <i class="material-icons small-icon">settings</i>
+            <i class="settings_icon small-icon"></i>
           </div>
           
           <div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon">
-            <i id="screentoggle-id" class="material-icons" small-icon>fullscreen</i>
+            <i id="screentoggle-id" class="fullscreen_icon" small-icon></i>
           </div>
           
           <div title="Connection status with server" id="pulse-id" class="header-pulse-ok">
-            <i class="material-icons small-icon">link</i>
+            <i class="link_icon small-icon"></i>
           </div>
           
     </div>
     <nav id="menubar">
         <div onclick="activateTab(event,'stat')" id="stat_tab">
-            <i class="material-icons">business_center</i><span>Summary</span>
+            <i class="business_center_icon"></i><span>Summary</span>
           </div>
           
           <div onclick="activateTab(event,'plots')" id="plots_tab">
-            <i class="material-icons">leaderboard</i><span>Plots</span>
+            <i class="leaderboard_icon"></i><span>Plots</span>
           </div>
           
           <div onclick="activateTab(event,'ships')" id="ships_tab">
-            <i class="material-icons">view_list</i><span>Ships</span>
+            <i class="view_list_icon"></i><span>Ships</span>
           </div>
           
           <div onclick="activateTab(event,'map')" id="map_tab">
-            <i class="material-icons">map</i><span>Map</span>
+            <i class="map_icon"></i><span>Map</span>
           </div>
           
           <div onclick="activateTab(event,'about')" id="about_tab">
-            <i class="material-icons">info</i><span>About</span>
+            <i class="info_icon"></i><span>About</span>
           </div>
     </nav>
 
@@ -1086,38 +1591,38 @@
         <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
 
             <ul id="context-menu">
-                <li class="station" onclick="pinStation()"><i class="material-icons">push_pin</i>Center map on station</li>
+                <li class="station" onclick="pinStation()"><i class="push_pin_icon"></i>Center map on station</li>
                 <li class="divider station"></li>
-                <li class="copy-text" onclick="copyText(context_mmsi)"><i class="material-icons">content_copy</i>Copy to Clipboard</li>
+                <li class="copy-text" onclick="copyText(context_mmsi)"><i class="content_copy_icon"></i>Copy to Clipboard</li>
                 <li class="divider copy-text"></li>
-                <li class="table-menu" onclick="downloadCSV()"><i class="material-icons">cloud_download</i>Download CSV</li>
+                <li class="table-menu" onclick="downloadCSV()"><i class="cloud_download_icon"></i>Download CSV</li>
                 <li class="divider table-menu"></li>
-                <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="material-icons">undo</i><span id="ctx_unpin">Release map center</span></li>
-                <li class="ctx-map" onclick="deleteAllTracks()"><i class="material-icons">remove_circle_outline</i>Remove all tracks</li>
-                <li class="ctx-map" onclick="toggleLabel()"><i class="material-icons">label</i><span id="ctx_labelswitch"></span></li>
-                <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="material-icons">label</i><span id="ctx_tooltipstyling"></span></li>
-                <li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="material-icons">label</i><span id="ctx_tooltipoverlap"></span></li>
+                <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
+                <li class="ctx-map" onclick="deleteAllTracks()"><i class="remove_circle_outline_icon"></i>Remove all tracks</li>
+                <li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span></li>
+                <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="label_icon"></i><span id="ctx_tooltipstyling"></span></li>
+                <li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="label_icon"></i><span id="ctx_tooltipoverlap"></span></li>
                 <li class="divider ctx-map"></li>
-                <li class="ctx-map" onclick="toggleRange()"><i class="material-icons">signal_cellular_alt</i><span id="ctx_range"></span></li>
+                <li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span id="ctx_range"></span></li>
                 <li class="divider ctx-map"></li>
-                <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="material-icons">timeline</i><span id="ctx_track"></span></li>
-                <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="material-icons">push_pin</i>Center map on vessel</li>
-                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="material-icons">zoom_in</i>Zoom in on vessel</li>
-                <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="material-icons">directions_boat</i>Show Shipcard</li>
+                <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="timeline_icon"></i><span id="ctx_track"></span></li>
+                <li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="push_pin_icon"></i>Center map on vessel</li>
+                <li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
+                <li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="directions_boat_icon"></i>Show Shipcard</li>
                 <li class="divider mmsi-map"></li>
-                <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="material-icons">dns</i>Show Vessel Database Entry</li>
-                <li class="mmsi noandroid" onclick="showNMEA(context_mmsi)"><i class="material-icons">mail</i>Show Last Message</li>
-                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="material-icons">content_copy</i>Copy MMSI</li>
-                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="material-icons">content_paste</i>Copy Coordinates</li>
+                <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database Entry</li>
+                <li class="mmsi noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message</li>
+                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="content_copy_icon"></i>Copy MMSI</li>
+                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="content_paste_icon"></i>Copy Coordinates</li>
                 <li class="divider mmsi noandroid"></li>
-                <li class="mmsi noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="material-icons">search</i>Search on Google</li>
-                <li class="mmsi noandroid" onclick="openMarineTraffic(context_mmsi)"><i class="material-icons">public</i>Find on MarineTraffic</li>
-                <li class="mmsi noandroid" onclick="openVesselFinder(context_mmsi)"><i class="material-icons">public</i>Find on VesselFinder</li>
-                <li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="material-icons">public</i>Find on AISHub</li>
-                <li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="material-icons">public</i>Find on ShipXplorer</li>
+                <li class="mmsi noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="search_icon"></i>Search on Google</li>
+                <li class="mmsi noandroid" onclick="openMarineTraffic(context_mmsi)"><i class="public_icon"></i>Find on MarineTraffic</li>
+                <li class="mmsi noandroid" onclick="openVesselFinder(context_mmsi)"><i class="public_icon"></i>Find on VesselFinder</li>
+                <li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub</li>
+                <li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
                 <li class="divider mmsi"></li>
-                <li class="settings" onclick="showPlugins()"><i class="material-icons">build</i>Installed Plugins...</li>
-                <li class="settings noandroid" onclick="toggleDarkMode()"><i class="material-icons">brightness_4</i>Toggle Light/Dark mode</li>
+                <li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
+                <li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
             </ul>
               
             <div id="dialog-box" class="hidden">
@@ -1298,11 +1803,10 @@
 
                     <header id="shipcard_header">
                         <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-                        <span><i onclick="mapResetView(13)" class="shipcard-header-icon shipcard-min-only material-icons">zoom_in</i></span>
-                        <span><i onclick="showContextMenu(event,card_mmsi,['settings', 'ctx-map', 'mmsi', 'mmsi-map'])" class="shipcard-header-icon material-icons">add</i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-min-only material-icons">keyboard_arrow_down</i></span>
-                        <span><i onclick="toggleShipcardSize()" class="shipcard-header-icon shipcard-max-only material-icons">keyboard_arrow_up</i></span>
-                        <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon material-icons">close</i></span>
+                        <span><i onclick="mapResetView(13)" class="shipcard-header-icon zoom_in_icon"></i></span>
+                        <span><i onclick="showContextMenu(event,card_mmsi,['settings', 'ctx-map', 'mmsi', 'mmsi-map'])" class="shipcard-header-icon add_icon"></i></span>
+                        <span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button" class="shipcard-header-icon keyboard_arrow_up_icon"></i></span>
+                        <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon close_icon"></i></span>
                       </header>
 
                       
@@ -1363,10 +1867,10 @@
                     </div>
                     <footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">
                         <div title="Center map on current vessel" onclick="mapResetView(13)">
-                          <i class="material-icons" >zoom_in</i><span>Zoom</span>
+                          <i class="zoom_in_icon" ></i><span>Zoom</span>
                         </div>
                         <div title="Track of current vessel" onclick="toggleTrackCard()">
-                          <i class="material-icons"">timeline</i><span id="shipcard_track">Track</span>
+                          <i class="timeline_icon""></i><span id="shipcard_track">Track</span>
                         </div>
                     </footer>
                       
@@ -1972,8 +2476,8 @@
                 var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
                 controlDiv.title = "Settings";
                 var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
-                iconLabelSpan = L.DomUtil.create('span', 'material-icons', controlBoundary);
-                iconLabelSpan.innerHTML = "more_horiz";
+                iconLabelSpan = L.DomUtil.create('span', 'more_horiz_icon', controlBoundary);
+                iconLabelSpan.innerHTML = "";
 
                 controlDiv.addEventListener('click', function (event) { showContextMenu(event,"",['settings','center','ctx-map']); });
                 return controlDiv;
@@ -2189,7 +2693,9 @@
             if (icon.startsWith("fa")) {
                 icon = "question_mark";
             }
-            div.innerHTML = '<i class="material-icons">'+icon+'</i><span>'+txt+'</span>';
+            //div.innerHTML = '<i class="' + icon + '"_icon"></i><span>' + txt + '</span>';
+            div.innerHTML = '<i class="' + icon + '_icon"></i><span>' + txt + '</span>';
+
             div.setAttribute("onclick", onclick);
 
                         
@@ -2217,14 +2723,12 @@
 
         function toggleMenu() {
             document.getElementById("menubar").classList.toggle('visible');
-            document.getElementById("menubar_mini").classList.toggle('show');
+            document.getElementById("menubar_mini").classList.toggle('showflex');
+            document.getElementById("menubar_mini").classList.toggle('hide');
 
             var menuButton = document.getElementById("header_menu_button");
-            if(menuButton.innerHTML == "menu") {
-                menuButton.innerHTML = "close";
-            } else {
-                menuButton.innerHTML = "menu";
-            }
+            menuButton.classList.toggle("menu_icon");
+            menuButton.classList.toggle("close_icon");
         }
 
         function initFullScreen() {
@@ -2685,17 +3189,20 @@
         };
 
         function initPlots() {
-            chart_radar_hour = new Chart(document.getElementById('chart-radar-hour').getContext("2d"), plot_radar);
-            chart_radar_day = new Chart(document.getElementById('chart-radar-day').getContext("2d"), plot_radar);
-            chart_seconds = new Chart(document.getElementById('chart-seconds'), plot_count);
-            chart_minutes = new Chart(document.getElementById('chart-minutes'), plot_count);
-            chart_hours = new Chart(document.getElementById('chart-hours'), plot_count);
-            chart_days = new Chart(document.getElementById('chart-days'), plot_count);
-            chart_ppm = new Chart(document.getElementById('chart-ppm'), plot_single);
-            chart_ppm_minute = new Chart(document.getElementById('chart-ppm-minute'), plot_single);
-            chart_level = new Chart(document.getElementById('chart-level'), plot_level);
-            chart_distance_hour = new Chart(document.getElementById('chart-distance-hour'), plot_distance);
-            chart_distance_day = new Chart(document.getElementById('chart-distance-day'), plot_distance);
+            if (typeof Chart !== "undefined") {
+
+                chart_radar_hour = new Chart(document.getElementById('chart-radar-hour').getContext("2d"), plot_radar);
+                chart_radar_day = new Chart(document.getElementById('chart-radar-day').getContext("2d"), plot_radar);
+                chart_seconds = new Chart(document.getElementById('chart-seconds'), plot_count);
+                chart_minutes = new Chart(document.getElementById('chart-minutes'), plot_count);
+                chart_hours = new Chart(document.getElementById('chart-hours'), plot_count);
+                chart_days = new Chart(document.getElementById('chart-days'), plot_count);
+                chart_ppm = new Chart(document.getElementById('chart-ppm'), plot_single);
+                chart_ppm_minute = new Chart(document.getElementById('chart-ppm-minute'), plot_single);
+                chart_level = new Chart(document.getElementById('chart-level'), plot_level);
+                chart_distance_hour = new Chart(document.getElementById('chart-distance-hour'), plot_distance);
+                chart_distance_day = new Chart(document.getElementById('chart-distance-day'), plot_distance);
+            }
         }
 
         function shipcardismax() {
@@ -2717,7 +3224,9 @@
             Array.from(document.getElementsByClassName('shipcard-min-only')).forEach(e => e.classList.toggle("visible"));
             Array.from(document.getElementsByClassName('shipcard-max-only')).forEach(e => e.classList.toggle("hide"));
 
-            document.getElementById('shipcard').classList.toggle('shipcard-ismax');
+            document.getElementById('shipcard').classList.toggle('shipcard-ismax');            
+            document.getElementById('shipcard_minmax_button').classList.toggle('keyboard_arrow_down_icon');
+            document.getElementById('shipcard_minmax_button').classList.toggle('keyboard_arrow_up_icon');
 
             var e = document.getElementById('shipcard_content').children;
 
@@ -3652,7 +4161,7 @@
             } else {
                 if (marker_station == null) {
                     const stationIcon = L.divIcon({
-                        html: `<div class="stationIcon"><i class="material-icons">cell_tower</i><div></div></div>`,
+                        html: `<div class="stationIcon"><i class="cell_tower_icon"></i><div></div></div>`,
                         iconSize: [18, 18],
                         iconAnchor: [8, 9],
                         className: 'myDivIcon'
@@ -3924,7 +4433,7 @@
         function showAboutDialog() {
             const message = `
                 <div style="display: flex; align-items: center; margin-top: 10px;">
-                <span style="text-align: center; margin-right: 10px;"><i style="font-size: 40px" class="material-icons">directions_boat</i></span>
+                <span style="text-align: center; margin-right: 10px;"><i style="font-size: 40px" class="directions_boat_icon"></i></span>
                 <span>
                 <a href="https://github.com/jvde-github/AIS-catcher"><b style="font-size: 1.6em;">AIS-catcher</b></a>
                 <br>
