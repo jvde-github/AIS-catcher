@@ -839,8 +839,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		JSON::StringBuilder::stringify(arg, station_link);
 	}
 	else if (option == "LAT") {
-		float lat = Util::Parse::Float(arg);
-		ships.setLat(lat);
+		ships.setLat(Util::Parse::Float(arg));
 	}
 	else if (option == "CUTOFF") {
 		int cutoff = Util::Parse::Integer(arg, 0, 10000);
@@ -865,8 +864,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		plugins += "message_save=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "LON") {
-		float lon = Util::Parse::Float(arg);
-		ships.setLon(lon);
+		ships.setLon(Util::Parse::Float(arg));
 	}
 	else if (option == "HISTORY") {
 		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600));
