@@ -209,15 +209,18 @@
             font-family: "FontAwesome";
         }
 
+
         .header-menubutton {
             background: var(--menu-background-color);
             color: var(--menu-font-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
             transition: var( --hover-transition);
-            font-size: 18px;
+            font-size: 24px;
             width: 40px;
+        }
+
+        .header-menubutton > div {
+            padding: 15px 9px;
+            margin: auto;
         }
 
             @media (hover: hover) {
@@ -1184,6 +1187,20 @@
             }
 
 
+            .add_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+                background-color: currentColor;
+                --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M450-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h170v60H280q-58.333 0-99.167 40.765-40.833 40.764-40.833 99Q140-422 180.833-381q40.834 41 99.167 41h170v60ZM325-450v-60h310v60H325Zm185 170v-60h170q58.333 0 99.167-40.765 40.833-40.764 40.833-99Q820-538 779.167-579 738.333-620 680-620H510v-60h170q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H510Z"/%3E%3C/svg%3E');
+                -webkit-mask-image: var(--svg);
+                mask-image: var(--svg);
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
+            }
+
             .close_icon {
                 display: block;
                 width: 1em;
@@ -1535,7 +1552,7 @@
 <body>
 
     <div class="header noandroid">
-        <div onclick="toggleMenu()" class="header-menubutton"><i id="header_menu_button" class="menu_icon"></i></div>
+        <div onclick="toggleMenu()" class="header-menubutton"><div class="header-menu-box"><i id="header_menu_button" class="menu_icon"></i></div></div>
             <div class="header-title">
             <span onclick="headerClick()">AIS-catcher</span>
 
@@ -2478,6 +2495,7 @@
                 var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
                 iconLabelSpan = L.DomUtil.create('span', 'more_horiz_icon', controlBoundary);
                 iconLabelSpan.innerHTML = "";
+                iconLabelSpan.style.padding = "5px";
 
                 controlDiv.addEventListener('click', function (event) { showContextMenu(event,"",['settings','center','ctx-map']); });
                 return controlDiv;
