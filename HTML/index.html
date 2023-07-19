@@ -151,6 +151,10 @@
             font-size: 18px;
         }
 
+        .addscrollbar { /*
+            overflow: auto;
+            height: 100vh; */
+        }
 
         @media only screen and (max-width:750px) {
             .header-title div {
@@ -295,6 +299,7 @@
 
             .mainspace-container {
                 flex: 1 0 0;
+                overflow: auto;
                 background: var(--backdrop-color);
                 border-top: solid;
                 border-color: var(--mainspace-container-color);
@@ -309,15 +314,7 @@
                 margin: 20px;
                 flex: 1;
                 border: 1px;
-                display: flex;
-                flex-direction: column;
-                justify-content: stretch;
             }
-
-            .addscrollbar {
-                flex: 1 0 0;
-                overflow: auto;
-            }        
 
             @media only screen and (max-height : 1000px) {
                 .menubar {
