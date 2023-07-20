@@ -151,9 +151,12 @@
             font-size: 18px;
         }
 
-        .addscrollbar { /*
-            overflow: auto;
-            height: 100vh; */
+        .tabcontent {
+            flex: 1 0 0;
+        }
+
+        .addscrollbar { 
+            overflow: auto;  
         }
 
         @media only screen and (max-width:750px) {
@@ -299,7 +302,7 @@
 
             .mainspace-container {
                 flex: 1 0 0;
-                overflow: auto;
+                /*overflow: auto;*/
                 background: var(--backdrop-color);
                 border-top: solid;
                 border-color: var(--mainspace-container-color);
@@ -309,12 +312,15 @@
                 justify-content: stretch;
             }
 
-            .mainspace {
-                background: var(--mainspace-color);
-                margin: 20px;
-                flex: 1;
-                border: 1px;
-            }
+        .mainspace {
+            background: var(--mainspace-color);
+            margin: 20px;
+            flex: 1;
+            border: 1px;
+            display: flex;
+            flex-direction: column;
+            justify-content: stretch;
+        }
 
             @media only screen and (max-height : 1000px) {
                 .menubar {
