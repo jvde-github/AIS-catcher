@@ -10,6 +10,13 @@ This package introduces the `AIS-catcher` command, a dual-channel AIS receiver c
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! 
 
+## New Android version
+The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
+
+<p align="center">
+<img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/f635a308-a8a6-4de7-942d-a66666df8707">
+</p>
+
 ### Disclaimer
 
 ```AIS-catcher```  is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and not tested and designed for reliability and correctness. 
@@ -28,9 +35,7 @@ Latest version is **v0.49** with various improvements to the decoder.
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
 
-<p align="center">
-<img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/81dc1e95-0609-4270-9460-ab3cbdb36ddf">
-</p>
+
 
 
 ## Usage
