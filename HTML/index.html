@@ -152,7 +152,8 @@
         }
 
         .tabcontent {
-            flex: 1 0 0;
+            /* 0% does not work and minify changes that into 0% */
+            flex: 1 0 1px;
         }
 
         .addscrollbar { 
