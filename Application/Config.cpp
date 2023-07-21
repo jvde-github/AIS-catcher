@@ -141,11 +141,13 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool 
 			throw std::runtime_error("receiver needs to have a serial or input specified in Config.");
 	}
 
-	if( (!serial.empty() || !input.empty()) && ++_nrec > 1) {
-		_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+	if( (!serial.empty() || !input.empty())) {
+		if( ++_nrec > 1) 
+			_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+
+		_receivers.back()->Serial() = serial;
 	}
-	
-	_receivers.back()->Serial() = serial;
+
 	if (!input.empty()) {
 		if (!Util::Parse::DeviceType(input, _receivers.back()->InputType())) {
 			throw std::runtime_error("\"" + input + "\" is unknown input type in config file");
