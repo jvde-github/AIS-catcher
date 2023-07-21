@@ -43,7 +43,7 @@
 #include "AIS.h"
 #include "Keys.h"
 #include "TCP.h"
-#include "ZIP.h"
+#include "Library/ZIP.h"
 #include "Network.h"
 
 #include "JSON/JSON.h"
