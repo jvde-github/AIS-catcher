@@ -376,6 +376,7 @@ An example config file looks as follows:
    "version":"1",
    "serial": "00000001",
    "input": "rtlsdr",
+   "verbose": true,
    "rtlsdr":{
       "active":true,
       "rtlagc":true,
