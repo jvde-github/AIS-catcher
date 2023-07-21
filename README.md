@@ -419,7 +419,8 @@ An example config file looks as follows:
       "station":"My Station",
       "station_link":"http://example.com/",
       "lat":52.0,
-      "lon":4.3
+      "lon":4.3,
+      "plugin_dir": "/home/jasper/AIS-catcher/plugins/"
    },
    "tcp": [
       {
