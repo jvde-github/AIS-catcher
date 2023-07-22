@@ -134,7 +134,7 @@ namespace Device {
 			setParameterRTLTCP(5, freq_offset);
 			setParameterRTLTCP(3, tuner_AGC ? 0 : 1);
 
-			if (!tuner_AGC) setParameterRTLTCP(4, tuner_Gain);
+			if (!tuner_AGC) setParameterRTLTCP(4, tuner_Gain * 10);
 			if (RTL_AGC) setParameterRTLTCP(8, 1);
 
 			setParameterRTLTCP(2, sample_rate);
