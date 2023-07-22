@@ -2469,6 +2469,7 @@
             map.getPane("locationMarker").style.zIndex = 999;
 
             L.DomEvent.disableClickPropagation(document.getElementById('shipcard'));
+            addWrenchControl();
         }
 
 
@@ -4515,13 +4516,16 @@
         function init_postTabsInit() { }
 
         // add the default tile layers and overlay
-        addTileLayer("OpenStreetMap", L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }));
-        addTileLayer("Positron", L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }));
-        addTileLayer("Dark Matter", L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }));
-        addTileLayer("Voyager", L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }))
-        addTileLayer("Satellite", L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community' }));
+        if (typeof L !== "undefined") {
 
-        addOverlayLayer("OpenSeaMap", L.tileLayer('http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors', maxZoom: 18 }));
+            addTileLayer("OpenStreetMap", L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }));
+            addTileLayer("Positron", L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }));
+            addTileLayer("Dark Matter", L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }));
+            addTileLayer("Voyager", L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20 }))
+            addTileLayer("Satellite", L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community' }));
+
+            addOverlayLayer("OpenSeaMap", L.tileLayer('http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors', maxZoom: 18 }));
+        }
 
         let mdabout = "This content can be defined by the owner of the station";
 
@@ -4551,8 +4555,11 @@
         console.log("Setup tabs");
         initFullScreen();
         initPlots();
-        initMap();
-        addWrenchControl();
+
+        if (typeof L !== "undefined") {
+            initMap();
+        }
+
         updateDarkMode();
 
         init_postTabsInit();
