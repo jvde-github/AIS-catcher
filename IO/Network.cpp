@@ -411,7 +411,8 @@ namespace IO {
 		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON);
-		if(reset > 0) std::cerr << ", reset: " << reset;
+		if (broadcast) std::cerr << ", broadcast: true";
+		if (reset > 0) std::cerr << ", reset: " << reset;
 		std::cerr << std::endl;
 
 		if (sock != -1) {
