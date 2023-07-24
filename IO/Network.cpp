@@ -439,6 +439,16 @@ namespace IO {
 		if (sock == -1) {
 			throw std::runtime_error("cannot create socket for UDP " + host + " port " + port);
 		}
+
+#ifndef _WIN32
+		if (broadcast) {
+			int broadcastEnable = 1;
+			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char*)&broadcastEnable, sizeof(broadcastEnable)) < 0) {
+				throw std::runtime_error("UDP: cannot set broadcast option for socket.");
+			}
+		}
+#endif
+
 		if(reset > 0)
 			last_reconnect = (long) std::time(nullptr);
 	}
@@ -467,6 +477,9 @@ namespace IO {
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
+		}
+		else if (option == "BROADCAST") {
+			broadcast = Util::Parse::Switch(arg);
 		}
 		else if (option == "GROUPS_IN") {
 			setGroupsIn(Util::Parse::Integer(arg));
