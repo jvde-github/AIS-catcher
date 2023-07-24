@@ -138,6 +138,7 @@ namespace IO {
 		int reset = -1;
 		long last_reconnect = 0;
 		AIS::Filter filter;
+		bool broadcast = false;
 		bool JSON = false;
 
 	public:

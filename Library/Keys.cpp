@@ -47,6 +47,7 @@ namespace AIS {
 		{ "", "", "", "", "baudrate" },
 		{ "", "", "", "", "biastee" },
 		{ "", "", "", "", "block_type" },
+		{ "", "", "", "", "broadcast" },
 		{ "", "", "", "", "buffer_count" },
 		{ "", "", "", "", "callsign" },
 		{ "", "", "", "", "channel" },
