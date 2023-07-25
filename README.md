@@ -30,6 +30,13 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Latest version is **v0.49** with various improvements to the decoder.
+
+Recent changes to Edge:
+- bug fix to gain setting for RTL-TCP
+- `-u` has option `BROADCAST on` to enable sending to UDP broadcast addresses, e.g.
+```
+AIS-catcher -u 192.168.1.255 BROADCAST on
+```
    
 ## Installation
 
