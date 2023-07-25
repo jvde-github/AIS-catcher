@@ -1012,6 +1012,8 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 - Decoding: further model improvements e.g. using other filters, alternative freq correction models, software gain control
 - Improve the documentation listing all options and integrate JSON codes in all parts of the design
 - Make more settings optionally available in webclient
+- Webclient, plot with number of vessels
+- Webclient, option to show message count over different timeframe and per session
 - Add tool to compare different receivers (more statistics than just looking at message count)
 - Testing: assess gap with commercial equipment (partially done at Meteotoren)
 - Support NMEA tag blocks for timestamp
