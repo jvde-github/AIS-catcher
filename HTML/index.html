@@ -503,6 +503,18 @@
                 height: 100%;
             }
 
+            .round-control {
+                border-radius: 50%;
+            }
+
+            @media only screen and (max-height:300px) {
+
+                .min-height-300 {
+                    display: none;
+                }
+            }
+
+
             .shiptable-map {
                 width: 10px;
             }
@@ -1921,7 +1933,7 @@
 
         var context_text = "";
         // default settings
-        var settings = { android: false, welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
+        var settings = { counter: true, android: false, welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
         let isFetchingShips = false;
 
         // some functions useful in plugins
@@ -2470,6 +2482,7 @@
 
             L.DomEvent.disableClickPropagation(document.getElementById('shipcard'));
             addWrenchControl();
+            addMarkerCount();
         }
 
 
@@ -2485,16 +2498,47 @@
                 updateTooltips();
         }
 
+
+        function updateMarkerCount() {
+            let count = 0;
+            if (shipsDB != null) {
+                count = Object.keys(markers).length;
+            }
+            let e = document.getElementById('markerCount');
+            if (e != null)
+                e.innerText = count;
+        }
+
+        function addMarkerCount() {
+            if (settings.counter === "false") return;
+
+            var markerCountControl = L.control({ position: 'topright' });
+
+            markerCountControl.onAdd = function (map) {
+                var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers round-control min-height-300');
+                controlDiv.title = "Ship count on map";
+                var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle round-control', controlDiv);
+                iconLabelSpan = L.DomUtil.create('span', '', controlBoundary);
+                iconLabelSpan.innerHTML = '<span id="markerCount">0</span>';
+                iconLabelSpan.style.padding = "5px";
+                iconLabelSpan.style.fontSize = 12 + "px";
+                return controlDiv;
+            };
+
+            addControlToMap(markerCountControl);
+            updateMarkerCount();
+
+        }
         function addWrenchControl() {
             var wrenchControl = L.control({ position: 'bottomright' });
 
             wrenchControl.onAdd = function (map) {
                 var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers');
-                controlDiv.title = "Settings";
+                controlDiv.title = "More options...";
                 var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle', controlDiv);
                 iconLabelSpan = L.DomUtil.create('span', 'more_horiz_icon', controlBoundary);
                 iconLabelSpan.innerHTML = "";
-                iconLabelSpan.style.padding = "5px";
+                iconLabelSpan.style.padding = "6px";
 
                 controlDiv.addEventListener('click', function (event) { showContextMenu(event,"",['settings','center','ctx-map']); });
                 return controlDiv;
@@ -4338,6 +4382,7 @@
                 setFocusMarker(markers[card_mmsi].getLatLng());
             }
 
+            updateMarkerCount();
             plotStation(station);
             await plotRange();
         }

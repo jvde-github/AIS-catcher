@@ -17,6 +17,10 @@
 
 #include "DBMS/PostgreSQL.h"
 
+#include "AIS.h"
+#include "Utilities.h"
+#include "JSON/StringBuilder.h"
+
 namespace IO {
 
 
