@@ -850,9 +850,6 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		dataPrometheus.setCutOff(cutoff);
 		counter.setCutOff(cutoff);
 	}
-	else if (option == "STAT_LOG") {
-		hist_day.setLog(true);
-	}
 	else if (option == "SHARE_LOC") {
 		bool b = Util::Parse::Switch(arg);
 		ships.setShareLatLon(b);

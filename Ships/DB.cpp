@@ -511,6 +511,9 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	moveShipToFront(ptr);
 
 	VesselDetail& ship = ships[ptr].ship;
+
+	tag.previous_signal = ship.last_signal;
+
 	float lat_old = ship.lat;
 	float lon_old = ship.lon;
 

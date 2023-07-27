@@ -28,15 +28,14 @@ class MessageStatistics {
 
 	std::mutex m;
 
-	bool log = false;
-
 	static const int _MAGIC = 0x4f82b;
-	static const int _VERSION = 1;
+	static const int _VERSION = 2;
 	static const int _RADAR_BUCKETS = 18;
 
 	int _LONG_RANGE_CUTOFF = 2500;
 
 	int _count;
+	int _vessels;
 	int _msg[27];
 	int _channel[4];
 
@@ -45,9 +44,9 @@ class MessageStatistics {
 	float _radarB[_RADAR_BUCKETS];
 
 public:
-	void setLog(bool b) { log = b; }
 	int getCount() { return _count; }
 	void setCutoff(int cutoff) { _LONG_RANGE_CUTOFF = cutoff; }
+	void clearVessels() { _vessels = 0; }
 
 	void Clear() {
 		std::lock_guard<std::mutex> l{ this->m };
@@ -57,19 +56,21 @@ public:
 		std::memset(_radarA, 0, sizeof(_radarA));
 		std::memset(_radarB, 0, sizeof(_radarB));
 
-		_count = 0;
+		_count = _vessels = 0;
 		_distance = _ppm = 0;
 		_level_min = 1e6;
 		_level_max = -1e6;
 	}
 
-	void Add(const AIS::Message& m, const TAG& tag) {
+	void Add(const AIS::Message& m, const TAG& tag, bool new_vessel = false) {
 
 		std::lock_guard<std::mutex> l{ this->m };
 
 		if (m.type() > 27 || m.type() < 1) return;
 
 		_count++;
+		if(new_vessel) _vessels++;
+
 		_msg[m.type() - 1]++;
 		if (m.getChannel() >= 'A' || m.getChannel() <= 'D') _channel[m.getChannel() - 'A']++;
 
@@ -85,12 +86,6 @@ public:
 			 
 		if(tag.distance > _distance) {
 			_distance = tag.distance;
-			
-			if (log) {
-				std::cerr << "stat log: distance " << _distance << " ";
-				for(auto n : m.NMEA) std::cerr << n << " ";
-				std::cerr << std::endl;
-			}
 		}
 
 		if (m.type() == 18 || m.type() == 19 || m.type() == 24) {
@@ -144,6 +139,7 @@ public:
 		std::string element;
 
 		element += "{\"count\":" + std::to_string(empty ? 0 : _count) +
+				   ",\"vessels\":" + std::to_string(empty ? 0 : _vessels) +
 				   ",\"level_min\":" + std::to_string(empty || !_count ? 0 : _level_min) +
 				   ",\"level_max\":" + std::to_string(empty || !_count ? 0 : _level_max) +
 				   ",\"ppm\":" + std::to_string(empty || !_count ? 0 : _ppm / _count) +
@@ -174,6 +170,7 @@ public:
 		if (!file.write((const char*)&magic, sizeof(int))) return false;			 // Check magic number
 		if (!file.write((const char*)&version, sizeof(int))) return false;			 // Check version number
 		if (!file.write((const char*)&_count, sizeof(int))) return false;			 // Check count
+		if (!file.write((const char*)&_vessels, sizeof(int))) return false;			 // Check count
 		if (!file.write((const char*)&_msg, sizeof(_msg))) return false;			 // Check msg array
 		if (!file.write((const char*)&_channel, sizeof(_channel))) return false;	 // Check channel array
 		if (!file.write((const char*)&_level_min, sizeof(_level_min))) return false; // Check level
@@ -190,10 +187,12 @@ public:
 		std::lock_guard<std::mutex> l{ this->m };
 
 		int magic = 0, version = 0, sum = 0;
-
 		if (!file.read((char*)&magic, sizeof(int))) return false;			  // Check count
 		if (!file.read((char*)&version, sizeof(int))) return false;			  // Check count
 		if (!file.read((char*)&_count, sizeof(int))) return false;			  // Check count
+		if(version == _VERSION) {
+			if (!file.read((char*)&_vessels, sizeof(int))) return false;			  // Check count
+		}
 		if (!file.read((char*)&_msg, sizeof(_msg))) return false;			  // Check msg array
 		if (!file.read((char*)&_channel, sizeof(_channel))) return false;	  // Check channel array
 		if (!file.read((char*)&_level_min, sizeof(_level_min))) return false; // Check level
@@ -207,8 +206,7 @@ public:
 			std::cerr << "Statistics: error with incorrect file size." << std::endl;
 			return false;
 		}
-
-		if (magic != _MAGIC || version != _VERSION) return false;
+		if (magic != _MAGIC || (version != _VERSION && version != 1)) return false;
 
 		/*
 		sum = 0;
