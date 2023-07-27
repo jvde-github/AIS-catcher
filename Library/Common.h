@@ -83,9 +83,12 @@ struct TAG {
 	float sample_lvl = 0;
 	float level = 0;
 	float ppm = 0;
+
+	// some data flowing from DB downstream
 	int angle = -1;
 	float distance = -1;
 	bool validated = false;
+	std::time_t previous_signal;
 
 	void clear() {
 		sample_lvl = 0;

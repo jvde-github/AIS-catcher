@@ -38,11 +38,6 @@ struct History : public StreamIn<JSON::JSON> {
 			history[i].stat.setCutoff(cutoff);
 	}
 
-	void setLog(bool b) {
-		for (int i = 0; i < N; i++)
-			history[i].stat.setLog(b);
-			
-	}
 	void create(long int t) {
 		history[end].time = t;
 		history[end].stat.Clear();
@@ -64,6 +59,7 @@ struct History : public StreamIn<JSON::JSON> {
 
 			const AIS::Message* msg = (AIS::Message*)j[i].binary;
 			long int tm = ((long int)msg->getRxTimeUnix()) / (long int)INTERVAL;
+			long int tp = ((long int)tag.previous_signal) / (long int)INTERVAL;
 
 			if (history[end].time != tm) {
 				end = (end + 1) % N;
@@ -71,7 +67,7 @@ struct History : public StreamIn<JSON::JSON> {
 				if (start == end) start = (start + 1) % N;
 			}
 
-			history[end].stat.Add(*msg, tag);
+			history[end].stat.Add(*msg, tag, tm != tp);
 		}
 	}
 
@@ -120,6 +116,9 @@ struct History : public StreamIn<JSON::JSON> {
 			if (!file.read((char*)&history[i].time, sizeof(history[i].time))) return false;
 			if (!history[i].stat.Load(file)) return false;
 		}
+
+		// as database is not persistent we cannot combine old and new
+		history[end].stat.clearVessels();
 		return true;
 	}
 
