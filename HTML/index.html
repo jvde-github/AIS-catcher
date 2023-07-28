@@ -37,12 +37,14 @@
             --menu-background-color: white;
             --menu-background-hover-color: #daebfe;
             --menu-font-color: rgb(66, 66, 66);            
-            --chart1-color: rgba(93, 169, 213, 0.9);
-            --chart2-color: rgba(157, 93, 213,0.9);
-            --chart3-color: rgba(93, 213, 97,0.9);
-            --chart4-color: rgba(213, 157, 93,0.9);
-            --chart5-color: rgba(93, 213, 154,0.9);
-            --chart6-color:  #0e6cd8;
+            --chart1-color: rgba(93, 169, 213, 0.8);
+            --chart2-color: rgba(157, 93, 213,0.8);
+            --chart3-color: rgba(93, 213, 97,0.8);
+            --chart4-color: rgba(213, 157, 93,0.8);
+            --chart5-color: rgba(93, 213, 154,0.8);
+            --chart6-color:  rgba(211, 211, 211,0.8);
+            --chart-color:  rgb(66, 66, 66);
+            --chart-grid-color: lightgrey;
             --mainspace-container-color: lightgrey;
             --table-header-background-color: var(--primary-color);
             --table-background-color: white;
@@ -88,13 +90,14 @@
             --shipcard-footer-hover-color: var(--secondary-color);
             --shipcard-selection-color: rgb(41, 40, 40);
             --shipcard-bottom-border-color: var(--header-color);
-            --chart1-color: rgba(158, 226, 255, 0.9);
-            --chart2-color: rgba(255, 158, 158, 0.9);
-            --chart3-color: rgba(158, 255, 174, 0.9);
-            --chart4-color: rgba(255, 219, 158, 0.9);
-            --chart5-color: rgba(158, 255, 239, 0.9);
-            --chart6-color: rgba(158, 255, 239, 0.9);
-            --chart6-color: rgba(0, 0, 0,1);
+            --chart1-color: rgba(93, 169, 213, 0.8);
+            --chart2-color: rgba(157, 93, 213,0.8);
+            --chart3-color: rgba(93, 213, 97,0.8);
+            --chart4-color: rgba(213, 157, 93,0.8);
+            --chart5-color: rgba(93, 213, 154,0.8);
+            --chart6-color:  rgba(211, 211, 211,0.8);
+            --chart-color: lightgrey;
+            --chart-grid-color: rgb(56, 56, 56);
             --hover-background: rgba(255, 255, 255, 0.1);
             --graph-header-color: rgb(27, 0, 27);
             --tooltip-background-color: rgb(69, 3, 69);
@@ -1926,7 +1929,7 @@
     <div class="bottombar"></div>
 
     <script>
-        var chart_seconds, chart_minute_vessel, chart_minutes, interval, hist, ships, paths = {}, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
+        var interval, hist, ships, paths = {}, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
         var iconLabelSpan = null, iconStationSpan = null;
 
         var StationControlDiv = null;
@@ -3098,8 +3101,6 @@
                     type: 'line', 
                     showLine: true,
                     fill: false,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart6-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart6-color'),
                     pointStyle: false,
                     borderWidth: 2,
                 }, {
@@ -3107,8 +3108,6 @@
                     data: [],
                     showLine: true,
                     fill: 'origin',                    
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart1-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart1-color'),
                     borderWidth: 2,
                     pointStyle: false,
                 },
@@ -3117,8 +3116,6 @@
                     data: [],
                     showLine: true,
                     fill: '-1',
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart2-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart2-color'),
                     borderWidth: 2,
                     pointStyle: false
                 },
@@ -3126,8 +3123,6 @@
                     label: 'Base Station',
                     data: [],
                     showLine: true,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart5-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart5-color'),
                     fill: '-1',
                     borderWidth: 2,
                     pointStyle: false
@@ -3136,8 +3131,6 @@
                     label: 'Other',
                     data: [],
                     showLine: true,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
                     fill: '-1',
                     borderWidth: 2,
                     pointStyle: false
@@ -3154,8 +3147,6 @@
                     label: 'NE',
                     data: [],
                     showLine: true,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart1-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart1-color'),
                     pointStyle: false,
                     borderWidth: 2
                 },
@@ -3163,16 +3154,12 @@
                     label: 'SE',
                     data: [],
                     showLine: true,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart2-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart2-color'),
                     pointStyle: false,
                     borderWidth: 2
                 }, {
                     label: 'SW',
                     data: [],
                     showLine: true,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart3-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart3-color'),
                     pointStyle: false,
                     borderWidth: 2
                 },
@@ -3180,8 +3167,6 @@
                     label: 'NW',
                     data: [],
                     showLine: true,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
                     pointStyle: false,
                     borderWidth: 2
                 },
@@ -3205,8 +3190,6 @@
                     label: 'Data',
                     data: [],
                     showLine: true,
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
                     pointStyle: false,
                     borderWidth: 2
                 }]
@@ -3226,7 +3209,6 @@
                 }, {
                     label: 'Min',
                     data: [],
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart1-color'),
                     showLine: true,
                     pointStyle: false,
                     borderWidth: 1,
@@ -3249,11 +3231,9 @@
             data: {
                 datasets: [{
                     label: 'Class B',
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart2-color'),
                     borderWidth: 1
                 }, {
                     label: 'Class A',
-                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart4-color'),
                     borderWidth: 1
                 }]
             },
@@ -3269,6 +3249,53 @@
             }
         };
 
+        function cssvar(name) {
+            return getComputedStyle(document.body).getPropertyValue(name);
+        }
+
+        function updateChartColors(c,colorVariables) {
+            c.data.datasets.forEach((dataset, index) => {
+                const color = cssvar(colorVariables[index]);
+                
+                dataset.backgroundColor = color;
+                dataset.borderColor = color;
+            });
+
+            c.options.scales.x.ticks.color = cssvar('--chart-color');
+            c.options.scales.x.grid.color = cssvar('--chart-grid-color');
+
+            c.options.scales.y.ticks.color = cssvar('--chart-color');
+            c.options.scales.y.grid.color = cssvar('--chart-grid-color');
+
+            c.options.plugins.legend.labels.color = cssvar('--chart-color');
+        }
+
+        function updateColorMulti(c) {
+            const colorVariables = ['--chart4-color', '--chart1-color', '--chart2-color', '--chart5-color', '--chart6-color'];
+            updateChartColors(c,colorVariables);
+        }
+
+
+        function updateColorSingle(c) {
+            const colorVariables = ['--chart4-color', '--chart1-color', '--chart2-color', '--chart5-color', '--chart6-color'];
+            updateChartColors(c,colorVariables);
+        }
+
+        function updateColorRadar(c) {
+            const colorVariables = ['--chart2-color', '--chart4-color', '--chart2-color', '--chart5-color', '--chart4-color'];
+            c.data.datasets.forEach((dataset, index) => {
+                const color = cssvar(colorVariables[index]);
+                
+                dataset.backgroundColor = color;
+                dataset.borderColor = color;
+            });
+
+            c.options.scales.r.grid.color = cssvar('--chart-grid-color');
+            c.options.scales.r.ticks.color = cssvar('--chart-color');
+            c.options.scales.r.ticks.backdropColor = cssvar('--panel-color');
+
+        }
+        
         function initPlots() {
             if (typeof Chart !== "undefined") {
 
@@ -4419,8 +4446,34 @@
             await plotRange();
         }
 
+
         function updateDarkMode() {
             document.documentElement.classList.toggle("dark", settings.dark_mode);  
+            
+            const chartsToUpdateMulti = [chart_minutes, chart_hours, chart_days, chart_seconds];
+            const chartsToUpdateLevel = [chart_level];
+            const chartsToUpdateSingle = [chart_distance_day, chart_distance_hour,chart_ppm, chart_minute_vessel, chart_ppm_minute];
+            const chartsToUpdateRadar = [chart_radar_day, chart_radar_hour];
+
+            chartsToUpdateMulti.forEach(chart => {
+                updateColorMulti(chart);
+                chart.update();
+            });
+
+            chartsToUpdateSingle.forEach(chart => {
+                updateColorSingle(chart);
+                chart.update();
+            });
+
+            chartsToUpdateLevel.forEach(chart => {
+                const colorVariables = ['--chart1-color', '--chart1-color', '--chart1-color'];
+                updateChartColors(chart,colorVariables);                
+                chart.update();
+            });
+            chartsToUpdateRadar.forEach(chart => {
+                updateColorRadar(chart);
+                chart.update();
+            });
         }
 
         function toggleDarkMode() {
@@ -4615,7 +4668,7 @@
     <script src="config.js"></script>
 
     <script>
-        console.log("Plugin loading completed, build string: " + build_string);
+        console.log("Plugin loading completed");
 
         init_preSettings();
 
