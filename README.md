@@ -719,6 +719,12 @@ Settings specific for the SDRPlay  can be set on the command line with the ```-g
 AIS-catcher -gs lnastate 5
 ```
 
+### Serial Port
+Settings specific for reading NMEA lines from a serial port can all be set with the `e` switch fow now, e.g. on Linux:
+```console
+AIS-catcher -e 368400 /dev/serial1
+```
+
 ### HackRF
 Settings specific for the HackRF can be set on the command line with the ```-gf``` switch, e.g.:
 ```console
