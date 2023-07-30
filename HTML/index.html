@@ -2860,6 +2860,8 @@
             const latlng = L.latLng(ship.lat, ship.lon);
             const to_bow = ship.to_bow, to_stern = ship.to_stern, to_port = ship.to_port, to_starboard = ship.to_starboard;
             let heading = ship.heading;
+            let opacity = getShipOpacity(ship);
+            let fillOpacity = 0.2 * opacity;
 
             if (to_bow == null || to_stern == null || to_port == null || to_starboard == null) return;
 
@@ -2897,7 +2899,7 @@
                 ship_outline.push(D);
                 ship_outline.push(E);
 
-                return L.polygon(ship_outline, { ...col, fillOpacity: 0.2, ...style }).addTo(map);
+                return L.polygon(ship_outline, { ...col, fillOpacity: fillOpacity, opacity: opacity, ...style }).addTo(map);
             }
             else {
 
@@ -2905,7 +2907,7 @@
                 const r = Math.sqrt(a * a + b * b);
 
                 if (r < 2 || r > 300) return null;
-                return L.circle(latlng, { radius: r, ...col, fillOpacity: 0.2, ...style }).addTo(map);
+                return L.circle(latlng, { radius: r, ...col, fillOpacity: fillOpacity, pacity: opacity, ...style }).addTo(map);
             }
 
             return null;
@@ -3759,6 +3761,13 @@
             return "Unknown";
         }
 
+        function getShipOpacity(ship) {
+            if(settings.fading == false) return 1;
+
+            let opacity = 1 - (ship.last_signal / 1800)*0.8;
+            return Math.max(0.2, Math.min(1, opacity));
+        }
+
         function getIcon(ship) {
 
             const STATICON = 0;
@@ -3795,15 +3804,8 @@
             }
 
             let h = '';
-
-            let opacity = 1 - (ship.last_signal / 1800)*0.8;
-            opacity = Math.max(0.2, Math.min(1, opacity));
-
-            // Apply the opacity to the icon style
-            let iconStyle = '';
-            if (settings.fading) {
-                iconStyle = `opacity: ${opacity};`;
-            }
+            let opacity = getShipOpacity(ship);
+            let iconStyle = `opacity: ${opacity};`;
             
             switch (shipicon) {
                 case STATICON:
