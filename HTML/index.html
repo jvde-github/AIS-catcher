@@ -3796,7 +3796,7 @@
 
             let h = '';
 
-            let opacity = 1 - (ship.last_signal / 3600) * 0.8 + 0.2;
+            let opacity = 1 - (ship.last_signal / 1800)*0.8;
             opacity = Math.max(0.2, Math.min(1, opacity));
 
             // Apply the opacity to the icon style
