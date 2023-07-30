@@ -1642,6 +1642,7 @@
                 <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="label_icon"></i><span id="ctx_tooltipstyling"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="label_icon"></i><span id="ctx_tooltipoverlap"></span></li>
                 <li class="divider ctx-map"></li>
+                <li class="ctx-map" onclick="toggleFading()"><i class="directions_boat_icon"></i><span id="ctx_fading"></span></li>
                 <li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span id="ctx_range"></span></li>
                 <li class="divider ctx-map"></li>
                 <li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="timeline_icon"></i><span id="ctx_track"></span></li>
@@ -1943,7 +1944,7 @@
 
         var context_text = "";
         // default settings
-        var settings = { counter: true, android: false, welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
+        var settings = { counter: true, fading: false, android: false, welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
         let isFetchingShips = false;
 
         // some functions useful in plugins
@@ -2106,6 +2107,7 @@
             document.getElementById("ctx_tooltipstyling").textContent = settings.tooltipLean ? "Show detailed ship labels" : "Show text-only ship labels";
             document.getElementById("ctx_tooltipoverlap").textContent = settings.tooltipOverlap ? "De-clutter ship labels" : "Allow overlapping ship labels";
             document.getElementById("ctx_range").textContent = settings.show_range ? "Hide station range" : "Show station range";
+            document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
 
             context_mmsi = mmsi;
 
@@ -2583,6 +2585,10 @@
             else 
                 await plotRange();
         }   
+
+        function toggleFading() {
+            settings.fading = !settings.fading;
+        }
 
         function showPlugins() {
             showDialog("Plugins","<pre>Loaded plugins:\n" + plugins + "</pre>");
@@ -3790,21 +3796,30 @@
 
             let h = '';
 
+            let opacity = 1 - (ship.last_signal / 3600) * 0.8 + 0.2;
+            opacity = Math.max(0.2, Math.min(1, opacity));
+
+            // Apply the opacity to the icon style
+            let iconStyle = '';
+            if (settings.fading) {
+                iconStyle = `opacity: ${opacity};`;
+            }
+            
             switch (shipicon) {
                 case STATICON:
-                    h = '<DIV CLASS="staticon" style="background-position: -' + c + 'px -20px; transform: translate(-4px,-4px);"></DIV>';
+                    h = `<DIV CLASS="staticon" style="background-position: -${c}px -20px; transform: translate(-4px,-4px); ${iconStyle}"></DIV>`;
                     break;
                 case SHIPICON:
                     if (ship.speed != null && ship.speed > 0.5 && ship.cog != null)
-                        h = '<DIV CLASS="shipicon" style="background-position: -' + c + 'px 0; transform: translate(-3px,-3px) rotate(' + ship.cog + 'deg);"></DIV>';
+                        h = `<DIV CLASS="shipicon" style="background-position: -${c}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg); ${iconStyle}"></DIV>`;
                     else
-                        h = '<DIV CLASS="shipicon" style="background-position: -' + c + 'px -20px; transform: translate(-4px,-5px);"></DIV>';
+                        h = `<DIV CLASS="shipicon" style="background-position: -${c}px -20px; transform: translate(-4px,-5px); ${iconStyle}"></DIV>`;
                     break;
                 case PLANEICON:
-                    h = '<DIV CLASS="planeicon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(' + ship.cog + 'deg);"></DIV>';
+                    h = `<DIV CLASS="planeicon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"></DIV>`;
                     break;
                 case HELICOPTERICON:
-                    h = '<DIV CLASS="helicoptericon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(' + ship.cog + 'deg);"></DIV>';
+                    h = `<DIV CLASS="helicoptericon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"></DIV>`;
                     break;
                 default:
                     console.log("Error: shipicon undefined.");
