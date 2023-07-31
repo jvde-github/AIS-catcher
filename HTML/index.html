@@ -1704,13 +1704,13 @@
                 <li class="mmsi noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message</li>
                 <li class="mmsi" onclick="copyText(context_mmsi)"><i class="content_copy_icon"></i>Copy MMSI</li>
                 <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="content_paste_icon"></i>Copy Coordinates</li>
-                <li class="divider mmsi noandroid"></li>
+                <li class="divider mmsi"></li>
                 <li class="mmsi noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="search_icon"></i>Search on Google</li>
                 <li class="mmsi noandroid" onclick="openMarineTraffic(context_mmsi)"><i class="public_icon"></i>Find on MarineTraffic</li>
                 <li class="mmsi noandroid" onclick="openVesselFinder(context_mmsi)"><i class="public_icon"></i>Find on VesselFinder</li>
                 <li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub</li>
                 <li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
-                <li class="divider settings"></li>
+                <li class="divider mmsi noandroid"></li>
                 <li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
                 <li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
             </ul>
@@ -2737,6 +2737,15 @@
 
             marker_range = L.polygon(range_outline, { fillOpacity: 0.025, color: markerColor, interactive: false  });
             marker_range.addTo(map);
+            updateRangeColor();
+        }
+
+        function updateRangeColor() {
+
+            if(marker_range == null) return;
+
+            const markerColor = getComputedStyle(document.documentElement).getPropertyValue('--range-color').trim();
+            marker_range.setStyle({ color: markerColor });
         }
 
         async function fetchShips(noDoubleFetch = true) {
@@ -4542,6 +4551,8 @@
                 updateColorRadar(chart);
                 chart.update();
             });
+
+            updateRangeColor();
         }
 
         function toggleDarkMode() {
