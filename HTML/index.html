@@ -849,6 +849,13 @@
                 transform: translate(200px 0)
             }
 
+            .leaflet-control-layers-toggle:hover,
+            .leaflet-control-settings-toggle:hover,
+            .leaflet-control-layers:hover,
+            .leaflet-control-zoom a:hover {
+                background-color: var(--menu-background-color);
+            }
+
             @media (hover: hover) {
                 .leaflet-control-layers-toggle:hover,
                 .leaflet-control-settings-toggle:hover,
@@ -1703,7 +1710,7 @@
                 <li class="mmsi noandroid" onclick="openVesselFinder(context_mmsi)"><i class="public_icon"></i>Find on VesselFinder</li>
                 <li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub</li>
                 <li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
-                <li class="divider mmsi"></li>
+                <li class="divider settings"></li>
                 <li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
                 <li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
             </ul>
