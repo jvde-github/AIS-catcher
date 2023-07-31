@@ -14,7 +14,7 @@ The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous i
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
 
 <p align="center">
-<img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/f635a308-a8a6-4de7-942d-a66666df8707">
+<img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/7c54fe43-391d-46af-8d21-ecf97d4d185a">
 </p>
 
 ### Disclaimer
@@ -578,7 +578,7 @@ There are a few settings for the new `-D` swich of which the first is the connec
 | ais_vessel_static | vessel static data from type 5, 19 | VS on/off | on |
 | ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys | empty |
 
-From thereon it is fairly straightforward to pick up this data and start analysis. If the connection fails during the decoding, for whatever reason, the program will try to reconnect to the database every 2 seconds. The maximum number of failed connection attempts before the program terminates is set with `MAX_FAILS` and can be set on the command line. If `MAX_FAILS` is 1000 the program will not terminate if the connecton fails and instead continue to connect back to the server..  
+From thereon it is fairly straightforward to pick up this data and start analysis. If the connection fails during the decoding, for whatever reason, the program will try to reconnect to the database every 2 seconds. The maximum number of failed connection attempts before the program terminates is set with `MAX_FAILS` and can be provided on the command line. If `MAX_FAILS` is 1000 the program will not terminate if the connecton fails.  
 
 I hope this is sufficient to get you experimenting!
 
