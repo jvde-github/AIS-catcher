@@ -578,8 +578,7 @@ There are a few settings for the new `-D` swich of which the first is the connec
 | ais_vessel_static | vessel static data from type 5, 19 | VS on/off | on |
 | ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys | empty |
 
-From thereon it is fairly straightforward to pick up this data and start analysis, e.g. in Excel:
-<img width="958" alt="image" src="https://user-images.githubusercontent.com/52420030/219857250-6c1a48a5-e0a6-426c-8e9a-b3740cc58e21.png">
+From thereon it is fairly straightforward to pick up this data and start analysis. If the connection fails during the decoding, for whatever reason, the program will try to reconnect to the database every 2 seconds. The maximum number of failed connection attempts before the program terminates is set with `MAX_FAILS` and can be set on the command line. If `MAX_FAILS` is 1000 the program will not terminate if the connecton fails and instead continue to connect back to the server..  
 
 I hope this is sufficient to get you experimenting!
 
