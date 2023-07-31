@@ -23,6 +23,21 @@ namespace IO {
 #ifdef HASPSQL
 	void PostgreSQL::post() {
 
+		if (PQstatus(con) != CONNECTION_OK) {
+			std::cerr << "DBMS: Connection to PostgreSQL lost. Attempting to reset..." << std::endl;
+			PQreset(con);
+
+			if (PQstatus(con) != CONNECTION_OK) {
+				std::cerr << "DBMS: Could not reset connection. Aborting post." << std::endl;
+				conn_fails++;
+				return;
+			}
+			else {
+				std::cerr << "DBMS: Connection successfully reset." << std::endl;
+				conn_fails = 0;
+			}
+		}
+		
 		{
 			const std::lock_guard<std::mutex> lock(queue_mutex);
 			sql_trans = "DO $$\nDECLARE\n\tm_id INTEGER;\nBEGIN\n" + sql.str() + "\nEND $$;\n";
@@ -33,7 +48,8 @@ namespace IO {
 		res = PQexec(con, sql_trans.c_str());
 
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-			std::cerr << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con) << sql_trans << std::endl;
+			std::cerr << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con) << std::endl;
+			conn_fails = 1;
 		}
 		else {
 			std::cerr << "DBMS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
@@ -44,9 +60,8 @@ namespace IO {
 #endif
 	PostgreSQL::~PostgreSQL() {
 #ifdef HASPSQL
-		if (running) {
+		if (running) {			
 
-			post();
 			running = false;
 			terminate = true;
 			run_thread.join();
@@ -61,16 +76,23 @@ namespace IO {
 
 	void PostgreSQL::process() {
 		int i = 0;
+		bool error_mode = false;
 
 		while (!terminate) {
 
-			for (int i = 0; i < INTERVAL && sql.tellp() < 32768 * 16; i++) {
-			
+			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : 2) && sql.tellp() < 32768 * 16; i++) {
 				SleepSystem(1000);
-				if (terminate) break;
+
 			}
-			
+
 			if (sql.tellp()) post();
+
+			if (terminate) break;			
+
+			if (MAX_FAILS < 1000 && conn_fails > MAX_FAILS) {
+				std::cerr << "DBMS: max attemtps reached to connect to DBMS. Terminating." << std::endl;
+				StopRequest();
+			}
 		}
 	}
 #endif
@@ -82,8 +104,10 @@ namespace IO {
 		std::cerr << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
 		con = PQconnectdb(conn_string.c_str());
 
-		if (PQstatus(con) != CONNECTION_OK)
+		if (con == nullptr || PQstatus(con) != CONNECTION_OK)
 			throw std::runtime_error("DBMS: cannot open database :" + std::string(PQerrorMessage(con)));
+
+		conn_fails = 0;
 
 		PGresult* res = PQexec(con, "SELECT key_id, key_str FROM ais_keys");
 		if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -292,7 +316,7 @@ namespace IO {
 		const std::lock_guard<std::mutex> lock(queue_mutex);
 
 		if (sql.tellp() > 32768 * 24) {
-			std::cerr << "DBMS: writing to database too slow, data lost." << std::endl;
+			std::cerr << "DBMS: writing to database slow or failed, data lost." << std::endl;
 			sql.str("");
 		}
 
@@ -380,6 +404,8 @@ namespace IO {
 			station_id = Util::Parse::Integer(arg);
 		else if (option == "INTERVAL")
 			INTERVAL = Util::Parse::Integer(arg,5,1800);
+		else if (option == "MAX_FAILS")
+			MAX_FAILS = Util::Parse::Integer(arg);
 		else if (option == "NMEA")
 			NMEA = Util::Parse::Switch(arg);
 		else if (option == "VP")

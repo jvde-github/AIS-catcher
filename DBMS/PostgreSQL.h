@@ -42,6 +42,8 @@ namespace IO {
 		std::stringstream sql;
 		AIS::Filter filter;
 		int station_id = 0;
+		int conn_fails = 0;
+		int MAX_FAILS = 10;
 
 		std::string escape(const std::string& input) {
 			std::string output;
