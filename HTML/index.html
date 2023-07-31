@@ -54,6 +54,7 @@
             --table-background-color: white;
             --table-selection-background-color: #daebfe;
             --table-alternate-background-color: var(--panel-color);
+            --range-color: orange;
             --main-font-color: var(--tertiary-color);
             --stat-label-color: var(--tertiary-color);;
             --stat-divider-color: var(--tertiary-color);;
@@ -102,6 +103,7 @@
             --table-background-color: rgb(18, 18, 18);
             --table-selection-background-color: rgb(40, 40, 40);
             --table-alternate-background-color: rgb(30, 30, 30);
+            --range-color: rgb(15, 46, 77);
             --main-font-color: white;
             --stat-label-color: darkgrey;
             --stat-divider-color: rgb(50, 50, 50);
@@ -821,22 +823,30 @@
                 }
             }
 
+
             .leaflet-control-layers-toggle,
-            .leaflet-control-settings-toggle,            
-            .leaflet-control-zoom-in,
-            .leaflet-control-zoom-out {
+            .leaflet-control-settings-toggle
+            {
                 font-size: 18px;
-                background-color: white;
                 min-width: 30px;
                 min-height: 30px;
                 max-width: 30px;
                 max-height: 30px;
             }
 
+            .leaflet-control-layers-toggle,
+            .leaflet-control-settings-toggle,
 
+            .leaflet-control-layers,
+            .leaflet-control-zoom a {
+                background-color: var(--menu-background-color);
+                color: var(--menu-font-color);            
+            }
+
+            
             .leaflet-control-settings-toggle {
                 text-align: center;
-                color: grey;
+                color: var(--menu-font-color);
                 transform: translate(200px 0)
             }
 
@@ -2710,7 +2720,9 @@
 
             }
 
-            marker_range = L.polygon(range_outline, { fillOpacity: 0.025, color: 'orange', interactive: false  });
+            const markerColor = getComputedStyle(document.documentElement).getPropertyValue('--range-color').trim();
+
+            marker_range = L.polygon(range_outline, { fillOpacity: 0.025, color: markerColor, interactive: false  });
             marker_range.addTo(map);
         }
 
