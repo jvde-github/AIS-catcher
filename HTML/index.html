@@ -36,6 +36,7 @@
             --light-gray: lightgray;
             --header-font-color: white;
             --menu-background-color: white;
+            --leaflet-control-color: white;
             --menu-divider-color: #ccc; 
             --menu-border-color: #ccc;
             --dialog-title-color: var(--secondary-color);
@@ -94,6 +95,7 @@
             --light-gray: lightgray;
             --header-font-color: #f8f9fa;
             --menu-background-color: rgb(41, 41, 41);;
+            --leaflet-control-color: rgb(60, 60, 60);
             --menu-border-color: rgb(17,17,17);
             --dialog-title-color: rgb(50,50,50);
             --menu-divider-color: rgb(17,17,17);
@@ -840,7 +842,7 @@
             .leaflet-control-settings-toggle,
             .leaflet-control-layers,
             .leaflet-control-zoom a {
-                background-color: var(--menu-background-color);
+                background-color: var(--leaflet-control-color);
                 color: var(--menu-font-color);            
             }
 
@@ -866,6 +868,7 @@
                     background-color: var(--menu-background-hover-color);
                 }
             }
+
             /* Summary tab */
 
             #summary_stat {
