@@ -23,6 +23,7 @@
             --primary-color: #0857b1;
             --secondary-color: #12a5ed;
             --tertiary-color: #0b1033;
+            --bottombar-color: var(--tertiary-color);
             --panel-color: #f2f8ff;
             --ok-color: rgb(129, 244, 129);
             --error-color: red;
@@ -72,7 +73,7 @@
             --hover-background: rgba(255, 255, 255, 0.5);
             --graph-header-color: white;
             --graph-header-bg-color: var(--secondary-color);
-            --graph-header-side-color: lightgrey;
+            --graph-header-side-color: rgba(242, 248, 255, 0.5);
             --tooltip-background-color: #daebfe;
         }
 
@@ -80,6 +81,7 @@
             --primary-color: #5DD5D5;
             --secondary-color: #5DD5D5;
             --tertiary-color: #05081f;
+            --bottombar-color: black;
             --panel-color: rgb(18, 18, 18);
             --ok-color: #7ce481;
             --error-color: #cf6679;
@@ -265,7 +267,7 @@
 
             .bottombar {
                 flex: 0 0 15px;
-                background: var(--tertiary-color)
+                background: var(--bottombar-color)
             }
 
             #menubar {
