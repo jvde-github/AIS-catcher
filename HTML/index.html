@@ -836,7 +836,6 @@
 
             .leaflet-control-layers-toggle,
             .leaflet-control-settings-toggle,
-
             .leaflet-control-layers,
             .leaflet-control-zoom a {
                 background-color: var(--menu-background-color);
@@ -850,6 +849,14 @@
                 transform: translate(200px 0)
             }
 
+            @media (hover: hover) {
+                .leaflet-control-layers-toggle:hover,
+                .leaflet-control-settings-toggle:hover,
+                .leaflet-control-layers:hover,
+                .leaflet-control-zoom a:hover {
+                    background-color: var(--menu-background-hover-color);
+                }
+            }
             /* Summary tab */
 
             #summary_stat {
@@ -1884,7 +1891,7 @@
                         <span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
                         <span><i onclick="mapResetView(13)" id="shipcard_zoom_button" class="hide shipcard-header-icon zoom_in_icon"></i></span>
                         <span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button" class="shipcard-header-icon keyboard_arrow_up_icon"></i></span>
-                        <span><i onclick="showContextMenu(event,card_mmsi,['settings', 'ctx-map', 'mmsi', 'mmsi-map'])" class="shipcard-header-icon more_vert_icon"></i></span>
+                        <span><i onclick="showContextMenu(event,card_mmsi,[/*'settings', 'ctx-map',*/ 'mmsi', 'mmsi-map'])" class="shipcard-header-icon more_vert_icon"></i></span>
                         <span><i onclick="showShipcard(null)" style="color: red;" class="shipcard-header-icon close_icon"></i></span>
                       </header>
 
@@ -4034,7 +4041,7 @@
                 markers[ship.mmsi].on('click', function (e) { showShipcard(ship.mmsi); });
                 markers[ship.mmsi].on('mouseover', function (e) { startHover(ship.mmsi); });
                 markers[ship.mmsi].on('mouseout', function (e) { endHover(ship.mmsi); });
-                markers[ship.mmsi].on('contextmenu', function (e) { showContextMenu(event, ship.mmsi, ['settings', 'ctx-map', 'mmsi', 'mmsi-map']); });
+                markers[ship.mmsi].on('contextmenu', function (e) { showContextMenu(event, ship.mmsi, [/*'settings', 'ctx-map',*/ 'mmsi', 'mmsi-map']); });
 
                 createTooltip(ship);
             }
@@ -4346,7 +4353,7 @@
 
 
                     marker_station = L.marker([station.lat, station.lon],{ interactive: true, icon:  stationIcon});
-                    marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, ['settings','ctx-map','ctx-menu','station']); });
+                    marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, [/*'settings','ctx-map',*/'ctx-menu','station']); });
                     marker_station.addTo(map);
                 }
                 else {
