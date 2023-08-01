@@ -60,7 +60,7 @@ namespace IO {
 		std::vector<int> db_keys;
 #endif
 
-		bool MSGS = true, NMEA = false, VP = true, VS = true, BS = false, ATON = true, SAR = true;
+		bool MSGS = false, NMEA = false, VP = false, VS = false, BS = false, ATON = false, SAR = false, VD = true;
 		std::string conn_string = "dbname=ais";
 		std::thread run_thread;
 		bool terminate = false, running = false;
@@ -80,6 +80,7 @@ namespace IO {
 
 		std::string addVesselPosition(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s);
 		std::string addVesselStatic(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s);
+		std::string addVessel (const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s);
 		std::string addBasestation(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s);
 		std::string addSARposition(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s);
 		std::string addATON(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s);

@@ -37,7 +37,8 @@ Recent changes to Edge:
 ```
 AIS-catcher -u 192.168.1.255 BROADCAST on
 ```
-   
+- Add new database table (`ais_vessel`) that for each mmsi captures the last broadcasted data. 
+
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
@@ -1014,6 +1015,8 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 ## To do
 
+- Add Database configuration to the JSON config file
+- Add option to set timeout for database commits (make the execution non-blocking)
 - Decoding: further model improvements e.g. using other filters, alternative freq correction models, software gain control
 - Improve the documentation listing all options and integrate JSON codes in all parts of the design
 - Make more settings optionally available in webclient
