@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS ais_vessel_static;
 DROP TABLE IF EXISTS ais_property;
 DROP TABLE IF EXISTS ais_keys;
 DROP TABLE IF EXISTS ais_message;
+DROP TABLE IF EXISTS ais_vessel;
 
 CREATE TABLE ais_message (
     id serial primary key,
@@ -94,6 +95,38 @@ CREATE TABLE ais_vessel_static (
     eta varchar(12),
     draught real,
     destination varchar(20)
+);
+
+CREATE TABLE ais_vessel (
+    mmsi integer primary key,
+    signalpower real,
+    ppm real,
+    received_at timestamp,
+    station_id smallint,
+    msg_id integer references ais_message(id) ON DELETE SET NULL,
+    imo integer,
+    callsign varchar(7),
+    shipname varchar(20),
+    shiptype smallint,
+    to_port smallint,
+    to_bow smallint,
+    to_stern smallint,
+    to_starboard smallint,
+    eta varchar(12),
+    draught real,
+    destination varchar(20),
+    status smallint,
+    turn real,
+    speed real,
+    lat real,
+    lon real,
+    course real,
+    heading real,
+    aid_type smallint,
+    alt smallint,
+    count integer,
+    msg_types integer,
+    channels smallint
 );
 
 CREATE TABLE ais_keys (

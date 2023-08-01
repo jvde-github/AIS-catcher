@@ -52,7 +52,7 @@ namespace IO {
 			conn_fails = 1;
 		}
 		else {
-			std::cerr << "DBMS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
+			// std::cerr << "DBMS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
 		}
 
 		PQclear(res);
@@ -142,8 +142,10 @@ namespace IO {
 			terminate = false;
 
 			run_thread = std::thread(&PostgreSQL::process, this);
+
 			std::cerr << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
 			if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed();
+			std::cerr << ", V " << Util::Convert::toString(VD);
 			std::cerr << ", VP " << Util::Convert::toString(VP);
 			std::cerr << ", MSGS " << Util::Convert::toString(MSGS);
 			std::cerr << ", VS " << Util::Convert::toString(VS);
@@ -187,6 +189,64 @@ namespace IO {
 
 		return "\tINSERT INTO ais_vessel_pos (" + keys + ") VALUES (" + values + ");\n";
 	}
+
+	std::string PostgreSQL::addVessel(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
+		if (!VD) return "";
+
+		std::string keys = "";
+		std::string set = "ON CONFLICT (mmsi) DO UPDATE SET ";
+		std::string values = "";
+
+		for (const auto& p : data[0].getProperties()) {
+			switch (p.Key()) {
+			case AIS::KEY_MMSI:
+			case AIS::KEY_IMO:
+			case AIS::KEY_SHIPNAME:
+			case AIS::KEY_CALLSIGN:
+			case AIS::KEY_TO_BOW:
+			case AIS::KEY_TO_STERN:
+			case AIS::KEY_TO_STARBOARD:
+			case AIS::KEY_TO_PORT:
+			case AIS::KEY_DRAUGHT:
+			case AIS::KEY_SHIPTYPE:
+			case AIS::KEY_DESTINATION:
+			case AIS::KEY_ETA:
+			case AIS::KEY_LAT:
+			case AIS::KEY_LON:
+			case AIS::KEY_STATUS:
+			case AIS::KEY_TURN:
+			case AIS::KEY_PPM:
+			case AIS::KEY_SIGNAL_POWER:
+			case AIS::KEY_HEADING:
+			case AIS::KEY_ALT:
+			case AIS::KEY_AID_TYPE:
+			case AIS::KEY_COURSE:
+			case AIS::KEY_SPEED:
+				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+				set += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + "=EXCLUDED." + AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+
+				if (p.Get().isString()) {
+					values += "\'" + escape(p.Get().getString()) + "\'";
+				}
+				else
+					builder.to_string(values, p.Get());
+				values += ",";
+				break;
+			}
+		}
+		int type = 1 << msg->type();
+		int ch = msg->getChannel() - 'A';
+		if (ch < 0 || ch > 4) ch = 4;
+		ch = 1 << ch;
+
+		keys += "msg_id,station_id,received_at,count,msg_types,channels";
+		set += "msg_id=EXCLUDED.msg_id,station_id=EXCLUDED.station_id,received_at=EXCLUDED.received_at,count=ais_vessel.count+1,msg_types="+std::to_string(type)+"|ais_vessel.msg_types,channels="+std::to_string(ch)+"|ais_vessel.channels";
+		values += m + ',' + s;
+		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'' + ",1," + std::to_string(type) + "," + std::to_string(ch);
+
+		return "\tINSERT INTO ais_vessel (" + keys + ") VALUES (" + values + ")" + set + "; \n";
+	}
+
 
 	std::string PostgreSQL::addVesselStatic(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
 		if (!VS) return "";
@@ -340,35 +400,43 @@ namespace IO {
 				sql << "\tINSERT INTO ais_nmea (msg_id,station_id,mmsi,received_at,nmea) VALUES (" << m_id << ',' << s_id  << ',' << msg->mmsi() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'" << s << "\');\n";
 			}
 		}
-
+		
 		switch (msg->type()) {
 		case 1:
 		case 2:
 		case 3:
 		case 27:
 			sql << addVesselPosition(data, msg, m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 4:
 			sql << addBasestation(data, msg, m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 5:
 			sql << addVesselStatic(data, msg, m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 9:
 			sql << addSARposition(data, msg, m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 18:
 			sql << addVesselPosition(data, msg,  m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 19:
 			sql << addVesselPosition(data, msg,  m_id, s_id);
 			sql << addVesselStatic(data, msg, m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 21:
 			sql << addATON(data, msg, m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 24:
 			sql << addVesselStatic(data, msg, m_id, s_id);
+			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		default:
 			break;
@@ -410,6 +478,8 @@ namespace IO {
 			NMEA = Util::Parse::Switch(arg);
 		else if (option == "VP")
 			VP = Util::Parse::Switch(arg);
+		else if (option == "V")
+			VD = Util::Parse::Switch(arg);
 		else if (option == "VS")
 			VS = Util::Parse::Switch(arg);
 		else if (option == "MSGS")
