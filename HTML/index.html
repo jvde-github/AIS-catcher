@@ -76,6 +76,8 @@
             --graph-header-bg-color: var(--primary-color);
             --graph-header-side-color: rgba(242, 248, 255, 0.5);
             --tooltip-background-color: #daebfe;
+            --tooltip-border-color: white;
+
         }
 
         .dark {
@@ -132,7 +134,8 @@
             --graph-header-color:white;
             --graph-header-bg-color: rgb(41, 41, 41);
             --graph-header-side-color: rgb(32, 32, 32);
-            --tooltip-background-color: rgb(69, 3, 69);
+            --tooltip-background-color: rgb(60,60,60);
+            --tooltip-border-color: rgb(30,30,30);
         }
 
         body,
@@ -926,6 +929,11 @@
             .leaflet-tooltip {
                 background-color: var(--tooltip-background-color) !important;
                 color: var(--menu-font-color) !important;
+                border-color: var(--tooltip-border-color);
+            }
+
+            .leaflet-tooltip:before {
+                border-color: transparent  var(--tooltip-background-color) transparent  transparent; 
             }
 
             .leaflet-tooltiplabel {
