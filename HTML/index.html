@@ -2936,7 +2936,7 @@
             const to_bow = ship.to_bow, to_stern = ship.to_stern, to_port = ship.to_port, to_starboard = ship.to_starboard;
             let heading = ship.heading;
             let opacity = getShipOpacity(ship);
-            let fillOpacity = 0.2 * opacity;
+            let fillOpacity = 0.9 * opacity;
 
             if (to_bow == null || to_stern == null || to_port == null || to_starboard == null) return;
 
@@ -2945,12 +2945,13 @@
                 style.dashOffset = '0';
 
                 if (ship.cog != null && ship.speed > 1) heading = ship.cog;
+                fillOpacity = 0.2 * opacity;
             }
 
 
-            let col = { color: 'grey', fillColor: 'grey' };
-            if (ship.mmsi == hover_mmsi) col = { color: 'orange', fillColor: 'orange' };
-            else if (ship.mmsi == card_mmsi) col = { color: '#943b3e', fillColor: '#943b3e' };
+            let col = { color: 'darkgrey', fillColor: 'grey' };
+            if (ship.mmsi == hover_mmsi) col = { color: 'orange', fillColor: 'grey' };
+            else if (ship.mmsi == card_mmsi) col = { color: '#943b3e', fillColor: 'grey' };
 
             if (heading != null) {
                 const deltaBow = calcOffset1M(latlng, (heading) % 360);
