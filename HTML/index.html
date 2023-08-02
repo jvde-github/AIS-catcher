@@ -3008,7 +3008,7 @@
                 const r = Math.sqrt(a * a + b * b);
 
                 if (r < 2 || r > 300) return null;
-                return L.circle(latlng, { radius: r, ...col, fillOpacity: fillOpacity, pacity: opacity, ...style }).addTo(map);
+                return L.circle(latlng, { radius: r, ...col, fillOpacity: fillOpacity, opacity: opacity, ...style }).addTo(map);
             }
 
             return null;
