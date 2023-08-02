@@ -4051,6 +4051,8 @@
             for (const [key, value] of urlParams.entries())
                 if (settings.hasOwnProperty(key))
                     settings = { ...settings, [key]: value };
+
+            settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
         }
 
         function updateShipShape(ship) {
