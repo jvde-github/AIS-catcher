@@ -2003,12 +2003,13 @@
         var refreshIntervalMs = 2500;
         var range_update_time = null;
         let updateInProgress = false;
+        let activeTileLayer = null;
 
         var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_tracks = {};
 
         var context_text = "";
         // default settings
-        var settings = { counter: true, fading: false, android: false, welcome: true, map: 'Voyager', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
+        var settings = { counter: true, fading: false, android: false, welcome: true, map_day: 'Voyager', map_night: 'DarkMatter', zoom: 10, lat: 0, lon: 0, fix_center: false, center_point: "station", tooltipLean: true, tooltipOverlap: false, dark_mode: false, center_radius: 0, metric: "DEFAULT", setcoord: true, sort: 'distance', sort_dir: 'asc', tab: 'stat', labels: true, eri: true, loadURL: true };
         let isFetchingShips = false;
 
         // some functions useful in plugins
@@ -2534,11 +2535,35 @@
             window.open('https://github.com/jvde-github/AIS-catcher');
         }
 
+        function removeTileLayer() {
+            map.eachLayer(function (layer) {
+                if (layer instanceof L.TileLayer) {
+                    map.removeLayer(layer);
+                }
+            });
+        }
+
+        function updateMapLayer() {
+            if (activeTileLayer) {
+                removeTileLayer();
+                addMapLayer();
+            }            
+        }
+
+        function addMapLayer() {
+            if(settings.dark_mode)
+                activeTileLayer = ((settings.map_night in basemaps) ? basemaps[settings.map_night] : basemaps[Object.keys(basemaps)[0]]);
+            else                
+                activeTileLayer = ((settings.map_day in basemaps) ? basemaps[settings.map_day] : basemaps[Object.keys(basemaps)[0]]);
+
+            activeTileLayer.addTo(map);
+        }
+
         function initMap() {
 
             map = L.map('map', { zoomControl: false, zoomSnap: 0.01 }).setView([settings.lat, settings.lon], settings.zoom);
             var control = L.control.layers(basemaps, overlapmaps, { title: 'Select map and overlays', position: 'bottomright' }).addTo(map);
-            map.on('baselayerchange', function (event) { settings.map = event.name; saveSettings(); });
+            map.on('baselayerchange', function (event) { if(settings.dark_mode) settings.map_night = event.name; else settings.map_day = event.name; saveSettings(); });
             map.on('mousemove', function (evt) { saveSettings(); updateTooltips(); });
             map.on('zoomend', function (evt) { saveSettings(); updateTooltips(); });
             map.on('click', function () {
@@ -2551,7 +2576,7 @@
             map.addControl(new L.Control.Zoom({ position: 'bottomright' }));
             L.control.scale().addTo(map);
 
-            ((settings.map in basemaps) ? basemaps[settings.map] : basemaps[Object.keys(basemaps)[0]]).addTo(map);
+            addMapLayer();
 
             map.createPane("locationMarker");
             map.getPane("locationMarker").style.zIndex = 999;
@@ -4571,9 +4596,11 @@
             });
 
             updateRangeColor();
+            updateMapLayer();
         }
 
         function toggleDarkMode() {
+            
             settings.dark_mode = !settings.dark_mode;
             updateDarkMode();
             saveSettings();
