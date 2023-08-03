@@ -38,6 +38,7 @@ Recent changes to Edge:
 AIS-catcher -u 192.168.1.255 BROADCAST on
 ```
 - Add new database table (`ais_vessel`) that for each mmsi captures the last broadcasted data.
+- `MAX_FAILS` option for database writes
 - option to fade out vessel icons depending on signal age
 - some updates to the web UI, including improvements to dark mode
   
