@@ -4555,6 +4555,11 @@
                 }
             }
 
+
+            if (!(hover_mmsi != null && hover_mmsi in shipsDB)) {
+                clearHoverMarker();
+            }
+
             updateTooltips();
 
             if (card_mmsi != null && card_mmsi > 0 && markers[card_mmsi] != undefined) {
