@@ -106,6 +106,7 @@ jobs:
         ref: main
     
     - uses: cardinalby/git-get-release-action@v1
+      id: create_release
       env:
         GITHUB_TOKEN: ${{ github.token }}
       with:
@@ -222,7 +223,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.get_release.outputs.upload_url }} 
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
         asset_path: "./output/AIS-catcher ${{matrix.platform}}"
         asset_name: "AIS-catcher ${{matrix.platform}}"
         asset_content_type: application/zip
