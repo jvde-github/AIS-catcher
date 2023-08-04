@@ -211,10 +211,6 @@ jobs:
         path: |
           output
     
-    - name: Create ZIP file
-      run: |
-        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
-
     - name: Compress, upload, and delete ZIP file
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
