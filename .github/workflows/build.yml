@@ -104,14 +104,12 @@ jobs:
       with:
         fetch-depth: 0
         ref: main
-
-    - name: Get Edge
-      id: get_release
-      uses: bruceadams/get-release@v1.2.2
+    
+    - uses: cardinalby/git-get-release-action@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
       with:
-        tag_name: Edge
+        tag: 'Edge'   
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
