@@ -32,6 +32,7 @@ Only use this software in regions where such use is permitted.
 Latest version is **v0.50** with various improvements to the database interface and UI.
 
 - Creation of an Edge release where latest Windows binaries are stored. [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
+- Option `-ge print on` to dump raw input from serial device to screen
 
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/54eea1c6-2f72-4c23-91c4-dd289753d4cc)
 
@@ -50,6 +51,7 @@ use: AIS-catcher [options]
 	[-b benchmark demodulation models for time - for development purposes (default: off)]
 	[-c [AB/CD] - [optional: AB] select AIS channels and optionally the NMEA channel designations]
 	[-C [filename] - read configuration settings from file]
+	[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]
 	[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-H [optional: url] - send messages via HTTP, for options see documentation]
@@ -83,6 +85,7 @@ use: AIS-catcher [options]
 	Device specific settings:
 
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]
+	[-ge Serial Port: PRINT [on/off]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]
 	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
