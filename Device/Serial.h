@@ -46,10 +46,12 @@ namespace Device {
         std::thread read_thread;
 
 		bool lost = false;
+        bool print = false;
 
         static const uint32_t BUFFER_SIZE = 16 * 16384;
 
         void ReadAsync();
+        void Dump(RAW& r);
 
     public:
         SerialPort() : Device(Format::TXT, 288000), port(""), baudrate(38400) {};

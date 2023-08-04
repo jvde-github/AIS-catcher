@@ -43,10 +43,11 @@ namespace Device {
                         }
                         else if (bytesRead) {
                             r.size = bytesRead;
+                            Dump(r);
                             Send(&r, 1, tag);
                         }
                     }
-                    if (dwWait != WAIT_TIMEOUT) {
+                    if (dwWait != WAIT_TIMEOUT && dwWait != WAIT_OBJECT_0) {
                         std::cerr << "error reading from serial device: " << GetLastError() << std::endl;
                         lost = true;
                     }
@@ -58,6 +59,7 @@ namespace Device {
             }
             else if (bytesRead) {
                 r.size = bytesRead;
+                Dump(r);
                 Send(&r, 1, tag);
             }
         }
@@ -78,6 +80,7 @@ namespace Device {
                 int nread = read(serial_fd, buffer, sizeof(buffer));
                 if (nread > 0) {
                     r.size = nread;
+                    Dump(r);
                     Send(&r, 1, tag);
                 }
                 else {
@@ -95,6 +98,18 @@ namespace Device {
             }
         }
 #endif
+    }
+
+    void SerialPort::Dump(RAW &r) {
+        if (print) {
+            std::cerr << ">> ";  
+            for (int i = 0; i < r.size; i++) {
+                char c = ((char*)r.data)[i];
+                if(c != '\n' && c != '\r')
+                    std::cerr << c; 
+            }
+            std::cerr << std::endl;
+        }
     }
 
     SerialPort::~SerialPort() {
@@ -118,7 +133,7 @@ namespace Device {
     void SerialPort::Play() {
 
 #ifdef _WIN32
-        serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+        serial_handle = CreateFileA(port.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (serial_handle == INVALID_HANDLE_VALUE) {
             throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
         }
@@ -129,7 +144,10 @@ namespace Device {
         dcbSerialParams.ByteSize = 8;
         dcbSerialParams.StopBits = ONESTOPBIT;
         dcbSerialParams.Parity = NOPARITY;
-        SetCommState(serial_handle, &dcbSerialParams);
+        
+        if (!SetCommState(serial_handle, &dcbSerialParams)) {
+            throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+        }
 
 #else
         serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY);
@@ -175,6 +193,9 @@ namespace Device {
 		else if (option == "PORT") {
 			port = arg;
 		}
+        else if (option == "PRINT") {
+            print = Util::Parse::Switch(arg);
+        }
 		else
 			Device::Set(option, arg);
 
@@ -182,6 +203,6 @@ namespace Device {
 	}
 
 	std::string SerialPort::Get() {
-		return Device::Get() + " baudrate " + std::to_string(baudrate) + " port " + port;
+		return Device::Get() + " baudrate " + std::to_string(baudrate) + " port " + port + " print " + Util::Convert::toString(print);
 	}
 }
