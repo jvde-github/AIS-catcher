@@ -105,27 +105,6 @@ jobs:
         fetch-depth: 0
         ref: main
     
-    - name: Get Edge Release directory
-      uses: cardinalby/git-get-release-action@v1
-      id: create_release
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      with:
-        tag: 'Edge'   
-        
-    - name: Delete old release asset
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        for asset in $(gh api repos/jvde-github/AIS-catcher/releases/${{ steps.create_release.outputs.id }}/assets --jq ".[] | select(.name | endswith(\".zip\")) | .id")
-        do
-          if [ ! -z "$asset" ]; then
-            gh api -X DELETE repos/jvde-github/AIS-catcher/releases/assets/$asset
-          fi
-        done
-
-        
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
       with:
@@ -236,16 +215,14 @@ jobs:
       run: |
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
 
-    - name: Upload Artifact to Edge
-      shell: bash
+    - name: Compress, upload, and delete ZIP file
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release upload 'Edge' "./output/AIS-catcher ${{matrix.platform}}.zip" --repo jvde-github/AIS-catcher
-        
-    - name: Delete Zip file
-      run: del "output\AIS-catcher ${{matrix.platform}}.zip"
-  
+        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
+        bash -c "gh release upload 'Edge' './output/AIS-catcher ${{matrix.platform}}.zip' --repo jvde-github/AIS-catcher --clobber" 
+        del "output\AIS-catcher ${{matrix.platform}}.zip"
+
     - name: Download SDRPlay API
       run: |
         cd "C:/Program Files/"
@@ -282,15 +259,12 @@ jobs:
         path: |
           output
 
-    - name: Create ZIP file
-      run: |
-        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-
-    - name: Upload SDRPLAY Artifact to Edge
-      shell: bash
+    - name: Compress, upload, and delete ZIP file
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release upload 'Edge' "./output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip" --repo jvde-github/AIS-catcher
+        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+        bash -c "gh release upload 'Edge' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo jvde-github/AIS-catcher --clobber" 
+        del "output\AIS-catcher ${{matrix.platform}}.zip"
 
  
