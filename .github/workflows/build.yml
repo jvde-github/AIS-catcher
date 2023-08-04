@@ -99,7 +99,10 @@ jobs:
         platform: [x86, x64]
 
     steps:
-
+    
+    - name: Install GitHub CLI
+      run: choco install gh -y
+    
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
