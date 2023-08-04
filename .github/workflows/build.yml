@@ -224,7 +224,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} 
-        asset_path: "./output/AIS-catcher ${{matrix.platform}}"
+        asset_path: "./output/AIS-catcher ${{matrix.platform}}.zip"
         asset_name: "AIS-catcher ${{matrix.platform}}"
         asset_content_type: application/zip
         
@@ -263,3 +263,14 @@ jobs:
         name: "AIS-catcher SDRPLAY ${{matrix.platform}}"
         path: |
           output
+
+    - name: Upload SDRPLAY Artifact to Edge
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: "./output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+        asset_name: "AIS-catcher ${{matrix.platform}}"
+        asset_content_type: application/zip
+        
