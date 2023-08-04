@@ -118,20 +118,13 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        asset_id=$(gh api repos/jvde-github/AIS-catcher/releases/${{ steps.create_release.outputs.id }}/assets --jq ".[] | select(.name == \"AIS-catcher ${{matrix.platform}}.zip\") | .id")
-        if [ ! -z "$asset_id" ]; then
-          gh api -X DELETE repos/jvde-github/AIS-catcher/releases/assets/$asset_id
-        fi
+        for asset in $(gh api repos/jvde-github/AIS-catcher/releases/${{ steps.create_release.outputs.id }}/assets --jq ".[] | select(.name | endswith(\".zip\")) | .id")
+        do
+          if [ ! -z "$asset" ]; then
+            gh api -X DELETE repos/jvde-github/AIS-catcher/releases/assets/$asset
+          fi
+        done
 
-    - name: Delete old release asset 2
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        asset_id=$(gh api repos/jvde-github/AIS-catcher/releases/${{ steps.create_release.outputs.id }}/assets --jq ".[] | select(.name == \"AIS-catcher SDRPLAY ${{matrix.platform}}.zip\") | .id")
-        if [ ! -z "$asset_id" ]; then
-          gh api -X DELETE repos/jvde-github/AIS-catcher/releases/assets/$asset_id
-        fi
         
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
