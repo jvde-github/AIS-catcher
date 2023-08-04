@@ -105,6 +105,14 @@ jobs:
         fetch-depth: 0
         ref: main
 
+    - name: Get Edge
+      id: get_release
+      uses: bruceadams/get-release@v1.2.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: Edge
+
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
       with:
@@ -211,6 +219,16 @@ jobs:
         path: |
           output
 
+    - name: Upload Artifact to Edge
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release.outputs.upload_url }} 
+        asset_path: output
+        asset_name: "AIS-catcher ${{matrix.platform}}"
+        asset_content_type: application/zip
+        
     - name: Download SDRPlay API
       run: |
         cd "C:/Program Files/"
