@@ -225,7 +225,7 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} 
         asset_path: "./output/AIS-catcher ${{matrix.platform}}.zip"
-        asset_name: "AIS-catcher ${{matrix.platform}}"
+        asset_name: "AIS-catcher ${{matrix.platform}}.zip"
         asset_content_type: application/zip
         
     - name: Download SDRPlay API
@@ -271,6 +271,6 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} 
         asset_path: "./output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-        asset_name: "AIS-catcher ${{matrix.platform}}"
+        asset_name: "AIS-catcher ${{matrix.platform}}.zip"
         asset_content_type: application/zip
         
