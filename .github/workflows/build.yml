@@ -237,14 +237,11 @@ jobs:
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
 
     - name: Upload Artifact to Edge
-      uses: actions/upload-release-asset@v1
+      shell: bash
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} 
-        asset_path: "./output/AIS-catcher ${{matrix.platform}}.zip"
-        asset_name: "AIS-catcher ${{matrix.platform}}.zip"
-        asset_content_type: application/zip
+      run: |
+        gh release upload 'Edge' "./output/AIS-catcher ${{matrix.platform}}.zip" --repo jvde-github/AIS-catcher
         
     - name: Delete Zip file
       run: del "output\AIS-catcher ${{matrix.platform}}.zip"
@@ -290,15 +287,10 @@ jobs:
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
 
     - name: Upload SDRPLAY Artifact to Edge
-      uses: actions/upload-release-asset@v1
+      shell: bash
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} 
-        asset_path: "./output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-        asset_name: "AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-        asset_content_type: application/zip
-        
-    - name: Delete Zip file
-      run: del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+      run: |
+        gh release upload 'Edge' "./output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip" --repo jvde-github/AIS-catcher
+
  
