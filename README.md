@@ -31,6 +31,8 @@ Only use this software in regions where such use is permitted.
 
 Latest version is **v0.50** with various improvements to the database interface and UI.
 
+- Creation of an Edge release where latest Windows binaries are stored. [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
+- 
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/54eea1c6-2f72-4c23-91c4-dd289753d4cc)
 
 ## Installation
