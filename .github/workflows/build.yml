@@ -112,7 +112,25 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         tag: 'Edge'   
+        
+    - name: Delete old release asset
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        asset_id=$(gh api repos/jvde-github/AIS-catcher/releases/${{ steps.create_release.outputs.id }}/assets --jq ".[] | select(.name == \"AIS-catcher ${{matrix.platform}}.zip\") | .id")
+        if [ ! -z "$asset_id" ]; then
+          gh api -X DELETE repos/jvde-github/AIS-catcher/releases/assets/$asset_id
+        fi
 
+    - name: Delete old release asset SDRPLAY
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        asset_id=$(gh api repos/jvde-github/AIS-catcher/releases/${{ steps.create_release.outputs.id }}/assets --jq ".[] | select(.name == \"AIS-catcher SDRPLAY ${{matrix.platform}}.zip\") | .id")
+        if [ ! -z "$asset_id" ]; then
+          gh api -X DELETE repos/jvde-github/AIS-catcher/releases/assets/$asset_id
+        fi
+        
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1
       with:
