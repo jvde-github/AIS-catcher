@@ -219,7 +219,7 @@ jobs:
         path: |
           output
     
-    - name: Zip output directory
+    - name: Create ZIP file
       run: |
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
 
@@ -233,6 +233,9 @@ jobs:
         asset_name: "AIS-catcher ${{matrix.platform}}.zip"
         asset_content_type: application/zip
         
+    - name: Delete Zip file
+      run: del "output\AIS-catcher ${{matrix.platform}}.zip"
+  
     - name: Download SDRPlay API
       run: |
         cd "C:/Program Files/"
@@ -268,3 +271,21 @@ jobs:
         name: "AIS-catcher SDRPLAY ${{matrix.platform}}"
         path: |
           output
+
+    - name: Create ZIP file
+      run: |
+        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+
+    - name: Upload SDRPLAY Artifact to Edge
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: "./output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+        asset_name: "AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+        asset_content_type: application/zip
+        
+    - name: Delete Zip file
+      run: del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+ 
