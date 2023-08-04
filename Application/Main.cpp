@@ -103,6 +103,7 @@ void Usage() {
 	std::cerr << "\tDevice specific settings:" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]" << std::endl;
+	std::cerr << "\t[-ge Serial Port: PRINT [on/off]" << std::endl;
 	std::cerr << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]" << std::endl;
 	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
 	std::cerr << "\t[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
@@ -454,6 +455,9 @@ int main(int argc, char* argv[]) {
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3, param);
 				switch (param[2]) {
+				case 'e':
+					parseSettings(receiver.SerialPort(), argv, ptr, argc);
+					break;
 				case 'm':
 					parseSettings(receiver.AIRSPY(), argv, ptr, argc);
 					break;
