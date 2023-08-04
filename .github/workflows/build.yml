@@ -223,7 +223,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release.outputs.upload_url }} 
-        asset_path: output
+        asset_path: ./output/"AIS-catcher ${{matrix.platform}}"
         asset_name: "AIS-catcher ${{matrix.platform}}"
         asset_content_type: application/zip
         
