@@ -114,6 +114,7 @@ jobs:
         tag: 'Edge'   
         
     - name: Delete old release asset
+      shell: bash
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -122,7 +123,8 @@ jobs:
           gh api -X DELETE repos/jvde-github/AIS-catcher/releases/assets/$asset_id
         fi
 
-    - name: Delete old release asset SDRPLAY
+    - name: Delete old release asset 2
+      shell: bash
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
