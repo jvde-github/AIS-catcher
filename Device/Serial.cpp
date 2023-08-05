@@ -146,7 +146,7 @@ namespace Device {
 #ifdef _WIN32
         serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (serial_handle == INVALID_HANDLE_VALUE) {
-            throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+            throw std::runtime_error("Serial: cannot open serial port " + port + ".");
         }
         
         DCB dcb;
@@ -163,28 +163,28 @@ namespace Device {
             dcb.fRtsControl = RTS_CONTROL_ENABLE;
         }
         else
-            throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+            throw std::runtime_error("Serial: GetCommState failed.");
 
 
         if (!SetCommState(serial_handle, &dcb)) {
-            throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+            throw std::runtime_error("Serial: SetCommState failed.");
         }
 
-        COMMTIMEOUTS commTimeout;
+        COMMTIMEOUTS ct;
 
-        if(GetCommTimeouts(serial_handle, &commTimeout))
+        if(GetCommTimeouts(serial_handle, &ct))
         {
-            commTimeout.ReadIntervalTimeout = 2000;
-            commTimeout.ReadTotalTimeoutConstant = 2000;
-            commTimeout.ReadTotalTimeoutMultiplier = 0;
-            commTimeout.WriteTotalTimeoutConstant = 2000;
-            commTimeout.WriteTotalTimeoutMultiplier = 0;
+            ct.ReadIntervalTimeout = 2000;
+            ct.ReadTotalTimeoutConstant = 2000;
+            ct.ReadTotalTimeoutMultiplier = 0;
+            ct.WriteTotalTimeoutConstant = 2000;
+            ct.WriteTotalTimeoutMultiplier = 0;
         }
         else
-            throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+            throw std::runtime_error("Serial: GetCommTimeouts failed.");
 
-        if(!SetCommTimeouts(serial_handle, &commTimeout))
-            throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+        if(!SetCommTimeouts(serial_handle, &ct))
+            throw std::runtime_error("Serial: SetCommTimeouts failed.");
 
 #else
         serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY);
