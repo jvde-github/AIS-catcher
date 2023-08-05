@@ -144,27 +144,29 @@ namespace Device {
     void SerialPort::Play() {
 
 #ifdef _WIN32
-        serial_handle = CreateFileA(port.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+        serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (serial_handle == INVALID_HANDLE_VALUE) {
             throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
         }
         
-        DCB dcbSerialParams;
+        DCB dcb;
 
-        if(GetCommState(serial_handle, &dcbSerialParams))
+        if(GetCommState(serial_handle, &dcb))
         {
-            dcbSerialParams.BaudRate = baudrate;
-            dcbSerialParams.ByteSize = 8;
-            dcbSerialParams.Parity = NOPARITY;
-            dcbSerialParams.StopBits = ONESTOPBIT;
-            dcbSerialParams.fBinary = TRUE;
-            dcbSerialParams.fParity = TRUE;
+            dcb.BaudRate = baudrate;
+            dcb.ByteSize = 8;
+            dcb.Parity = NOPARITY;
+            dcb.StopBits = ONESTOPBIT;
+            dcb.fBinary = TRUE;
+            dcb.fParity = TRUE;
+            dcb.fDtrControl = DTR_CONTROL_ENABLE;
+            dcb.fRtsControl = RTS_CONTROL_ENABLE;
         }
         else
             throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
 
 
-        if (!SetCommState(serial_handle, &dcbSerialParams)) {
+        if (!SetCommState(serial_handle, &dcb)) {
             throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
         }
 
