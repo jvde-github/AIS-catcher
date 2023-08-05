@@ -25,11 +25,6 @@ jobs:
       with:
         fetch-depth: 0
         ref: main
-    
-    - name: Install brew packages
-      run: |
-        brew update
-        brew install  gzip xxd
   
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
