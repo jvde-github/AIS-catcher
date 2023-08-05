@@ -35,7 +35,7 @@ namespace Device {
 
     class SerialPort : public Device {
 #ifdef _WIN32
-        HANDLE serial_handle = nullptr;
+        HANDLE serial_handle = INVALID_HANDLE_VALUE;
 #else
         int serial_fd = -1;
 #endif
