@@ -29,7 +29,6 @@ jobs:
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        brew install vcpkg
         vcpkg integrate install
         vcpkg install libpq:${{matrix.platform}}-osx fftw3:${{matrix.platform}}-osx libusb:${{matrix.platform}}-osx pthread:${{matrix.platform}}-osx curl:${{matrix.platform}}-osx soxr:${{matrix.platform}}-osx zeromq:${{matrix.platform}}-osx
   
