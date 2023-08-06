@@ -29,8 +29,6 @@ Latest version is **v0.50** with various improvements to the database interface 
 - Option `-ge print on` to dump raw input from serial device to screento 
 - Bug fix reading from certain serial devices on Windows
 
-![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/54eea1c6-2f72-4c23-91c4-dd289753d4cc)
-
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
 
