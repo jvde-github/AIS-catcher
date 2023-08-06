@@ -353,9 +353,11 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
 
-### Long Range AIS messages
+### Long Range AIS messages and alternative channels
 
 AIS-catcher can be instructed to listen at frequency 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-c CD```. This follows ideas from a post on the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at the request of a user. The conventional decoder is available with the switch ```-c AB``` which is also the default if nothing is specified. Note that ``gpsdecode`` cannot handle channel designations C and D in NMEA lines. You can provide an optional argument to use channel A and B in the NMEA line with the command ```-c CD AB```.
+
+In a similar fashion `-c X` will decode one channel at mid frequency which is only useful for input over file. See ZMQ examnple below.
 
 ### Configuration file
 
