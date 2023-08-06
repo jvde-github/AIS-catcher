@@ -10,12 +10,6 @@ This package introduces the `AIS-catcher` command, a dual-channel AIS receiver c
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! 
 
-## New Android version
-The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
-
-<p align="center">
-<img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/59176a10-dc46-4ff8-9d43-abb2baa0f7c5">
-</p>
 
 ### Disclaimer
 
@@ -37,11 +31,15 @@ Latest version is **v0.50** with various improvements to the database interface 
 
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/54eea1c6-2f72-4c23-91c4-dd289753d4cc)
 
+### New Android version
+The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
+
+<p align="center">
+<img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/59176a10-dc46-4ff8-9d43-abb2baa0f7c5">
+</p>
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
-
-
 
 
 ## Usage
