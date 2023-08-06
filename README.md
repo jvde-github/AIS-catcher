@@ -168,48 +168,38 @@ Make sure you use the latest version and start the webserver as follows:
 ```console
 AIS-catcher -N 8100
 ```
-where ``8100`` is the port number. If you go in your browser to the IP address of the machine running AIS-catcher and specify the port (e.g. if your machine is raspberrypi, enter ``raspberrypi:8100``) you will see a menu which gives access to tabs providing insights into the reception of your station, including signal levels, ships seen, a simple map and message rate.  
+where ``8100`` is the port number. If your machine network name is raspberrypi then enter ``raspberrypi:8100``in your browser.  Here, you'll find a menu granting access to a variety of information sections.
 
-There is an option to provide the station name and a link to an external website which will be displayed on the Statistics page as follows:
+For users wishing to include a station name and an external website link in the Statistics section:
 ```console
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
-This could be a useful option if you want to offer the interface externally. To display the distance of received messages to your station you need to provide the coordinates as follows:
+This could be a useful option if you want to offer the interface externally. To display the distance of received messages from your station, set your coordinates:
 ```console
 AIS-catcher -N LAT 50 LON 3.141592 SHARE_LOC on
 ```
-The first two parameters in this example are needed to be able to calculate the distance to the station. The last option (default is off) will pass on and display the station location to the webclient.  
+The last option `share_loc`(default is off) will allow the web client to access and display the location.  
  The user can make a page in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab of the webserver:
 ```console
 AIS-catcher -N 8100 ABOUT about.md
 ```
 All these options can be captured in the configuration file (in a section with name ``server``), see below. 
 
-### User interface 
+#### Menu structure
 
-The main menu tabs on top allow switching between different  functional areas. More functionality is available  through the use of context-sensitive menus, accessible through a right-click or long press on iOS. These options include a theme for dark mode, the display of the station range on the map, simplified adjustment of the map's center, switch to text-only shiplabels, optional decluttering of shiplabels, and showing details on the last received messsage from a vessel, among others.
+The main menu tabs allow users to navigate between different functional areas. Context-sensitive menus, accessible through right-click, long press on iOS, or the vertical dot icon on the map, offer more functionalities. Options available include dark mode themes, displaying the station range on the map, locking/unlocking the map center, toggling text-only ship labels, decluttering ship labels, and viewing details of the last message received from a vessel, among others.
+#### Visualization
 
-### Visualization
-
-When AIS-catcher receives data that contains the dimensions of a vessel but not its heading, it will plot a circle that will enclose the ships dimensions regardless of the direction it is pointing.
-This commonly happens with Class B ships and if a reasonable approximation for heading, such as the course-over-ground, is available, it will be used as a proxy. Any shapes that are plotted this way will have a dashed border, to indicate that the information is incomplete. An example of this can be seen in the historical frigate the USS Constitution, which is docked in the port of Boston. 
+When AIS-catcher receives data containing a vessel's dimensions but not its heading, it displays a circle that accommodates the ship's dimensions for potential headings. This is common for Class B ships. If there's an approximation available for the heading, such as course-over-ground, it will be used. Shapes plotted using this approximation will have a dashed border, indicating incomplete information. An example is the USS Constitution docked in Boston.
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/219856857-e0965190-1468-47b6-88ad-423b77c455ff.png" width="50%"/>
 </p>
 
-Or view a live feed [here](https://kx1t.com/ais/?mmsi=369914081) provided by KX1T. 
+On the map page, clicking on a vessel will open a  **ship card** with details of the vesse. For smaller screens it can be minimized in the top bar (via the `^` symbol or by clicking on the header bar). The ship card will open minimized on mobile devices. In its maximized form, users can choose which rows will be visible in the minimized state. Additional options, such as looking up the vessel on aggregator sites, are available by clicking the three-dot icon on the ship card header.
 
-The "tag control" (above the zoom controls) will add labels to the map:
-
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/52420030/219856962-634baf0c-b584-483d-bb2d-c3a984a1cb9d.png" width="50%"/>
-</p>
-
-The summary window with details on a vessel, as received, is called the **ship card** and will be shown when a ship is selected on the map by the user. For smaller screens it can be minimized in the top bar (via minus symbols or by clicking on the header bar) and in fact the ship card will be opened in minimized mode on mobile devices as in the picture with the USS Constitution. In the max form the user can toggle rows that will be visible in this minimized state. These rows are shown with a light grey background. Finally, in minimized mode some options are accessible via icons in the top bar, including showing the vessel track and centering the map at the location of the current vessel which are otherwise provided in the bottom bar of the vessel card. Other options in the bottom bar give access to more ship details via some of the well-known aggregator sites.
-
-### Validation
-The web-interface shows a "validation" indication at the left border in the header of the ship card (and in the ship table).
+#### Validation
+The web-interface shows a "validation" indication at the left border of the ship card header.
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/212470486-8987fa96-5324-41d8-a782-dbcbdc18aca0.png" width="25%"/>
 </p>
@@ -218,19 +208,18 @@ AIS-catcher analyzes an enormous stream of bits  per day for both AIS channels (
 
 To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, evolving, "validation function" that checks the location of the vessel for consistency between messages and flags if this is inconsistent. Practically, if we receive a position from a MMSI which is relatively close to the last received position, the "validation" indicator will be green and the distance to the station will be used to determine range. Please note that messages within 50 NMi from the receiving station will be always included for range setting. The indicator will be grey if validation for the location could not be performed and red if it was not succesful. 
 
-### Plots
+#### Plots
 The plot tab contains several plots to assess the performance of the receiver:
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/219856922-33404fe8-dc54-4bc2-a1a6-84f4ce5dd72a.png" width="50%"/>
 </p>
-Upon restarting AIS-catcher, the history displayed in the graphs is typically lost. To preserve the state of the plots, a useful option is to save the content to a file, such as "stat.bin," at closure and to create a backup every 10 minutes. This can be accomplished with the following options:
-
+The plot tab features various charts assessing receiver performance. Restarting AIS-catcher typically erases history in the graphs. To retain plot states, save content to a file, such as "stat.bin," and backup every 10 minutes:
 ```console
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
 
-### Custom plugins and styles...
+#### Custom plugins and styles...
 
 To give the user the option to tweak the look-and-feel and functionality of the webserver and/or modify for example the color scheme or regional preferences, the program provides the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
 ```console
@@ -289,13 +278,15 @@ We can use this functionality to submit data to [APRS.fi](https://aprs.fi) direc
 ```console
 AIS-catcher -H http://aprs.fi/jsonais/post/secret-key ID callsign PROTOCOL aprs INTERVAL 30 -q
 ```
-Where ``secret-key`` should be your password and ``callsign`` your callsign.  The ``PROTOCOL`` setting instructs AIS-catcher to submit JSON in a form that is accepted by APRS.fi and posts a multi-part message. As another example, this functionality can feed the map of [Chaos Consulting](https://adsb.chaos-consulting.de/map/) without the need to install any additional scripts. The Chaos Consulting server has been set up so that it can read the AIS-catcher JSON format as per above:
+Where ``secret-key`` should be your password and ``callsign`` your callsign.  The ``PROTOCOL`` setting instructs AIS-catcher to submit JSON in a form that is accepted by APRS.fi and posts a multi-part message. 
+
+Aanother example of this HTTP feed functionality is to provide data to [Chaos Consulting](https://adsb.chaos-consulting.de/map/) without the need to install any additional scripts. The Chaos Consulting server has been set up so that it can read the AIS-catcher JSON format as per above:
 ```console
 AIS-catcher -H https://ais.chaos-consulting.de/shipin/index.php USERPWD Station:Password GZIP on INTERVAL 5
 ```
 Notice that this server requires authentication with a station name and password and accepts JSON with gzip encoding which significantly reduces bandwidth. The supported protocol switches are ``AISCATCHER`` (default), ``MINIMAL`` (NMEA lines and meta data), ``LINES`` (one JSON message per line), ``APRS`` (to submit to APRS.fi).
 
-As a final comment, to build AIS-catcher with HTTP support, please install the following libraries before running cmake:
+**Important**" to use and build AIS-catcher with HTTP support, please install the following libraries before running cmake:
 ```console
 sudo apt install libcurl4-openssl-dev zlib1g-dev
 ```
@@ -314,7 +305,7 @@ AIS-catcher -x 192.168.1.235 4002
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings. 
 
 A feature has been added that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
-````
+````console
 AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
 ````
 
@@ -365,6 +356,11 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 ```console
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
+
+### Long Range AIS messages
+
+AIS-catcher can be instructed to listen at frequency 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-c CD```. This follows ideas from a post on the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at the request of a user. The conventional decoder is available with the switch ```-c AB``` which is also the default if nothing is specified. Note that ``gpsdecode`` cannot handle channel designations C and D in NMEA lines. You can provide an optional argument to use channel A and B in the NMEA line with the command ```-c CD AB```.
+
 ### Configuration file
 
 As per version 0.41 AIS-catcher can be partially configured via a configuration file in JSON format,
@@ -479,7 +475,7 @@ Normally it is sufficient to include one of these fields and not both.
 The fields and values in the configuration file can be specified  consistent with the command line settings as described 
 in this document. JSON is however case sensitive so field names must be entered in lower case.
 
-### AIS-catcher as  NMEA decoder
+### NMEA input
 
 AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5`` which will automatically selected if the input format is set to `TXT`, e.g.:
 ```console
@@ -517,37 +513,43 @@ returns a warning on the incorrect CRC and:
 ```
 Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This latter 16 bit checksum/CRC is not included in the NMEA message.
 
-### GPS, multiple devices and plot station location on the webserver map
+### Input from GPS devices
+
+As discussed obove, the webserver will only share a known location of the station with the front-end webclient if `share_loc` is set for the webserver:
+```console
+AIS-catcher -N 8100 share_loc on
+```
+This option is switched off by default for privacy reasons in case the webclient is shared externally.
+The NMEA decoder accepts NMEA lines from a GPS device (NMEA lines GPRMC, GPGLL and GPGGA):
+```console
+echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
+```
+These GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move. This is useful if you 
+use AIS-catcher to read from a hardware AIS receiver that has a built-in GPS.
+Another approach is to read from a GPSD server, e.g. when GPSD listens on post 2947 of the local PC: 
+```console
+AIS-catcher -t gpsd localhost 2947 -N 8100 share_loc on` 
+```
+or from a serial device:
+```console
+AIS-catcher -e 38400 /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox
+````
+
+### Multiple device input
 
 The latest version can run with multiple receivers in parallel. For example, one dongle for channel A+B and one dongle for channel C+D. To run with two receivers in parallel you can use a command like:
 ```console
 AIS-catcher -d serial1 -v -d serial2 -c CD -v -N 8100
 ```
 
-There are a few other options that together can provide some interesting new functionality. Firstly, the webserver can share the location of the station with the front-end so it will be displayed on the map:
+These functions allow AIS-catcher to receive input from an AIS receiever over UDP and a connected GPS device in parallel, e.g.:
 ```console
-AIS-catcher -N 8100 share_loc on
+AIS-catcher -e 38400 /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 -x 192.168.1.235 4002 -N 8100 share_loc on
 ```
-This option is switched off by default for privacy reasons in case the webclient is shared externally.
-And secondly, the NMEA decoder accepts NMEA lines from a GPS device (NMEA lines GPRMC, GPGLL and GPGGA):
-```console
-echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
-```
-These GPS coordinates will be used to set the location of the station. In this way the station can be visualized and tracked while on the move. This is useful if you 
-use AIS-catcher to read from a hardware AIS receiver that has a built-in GPS.
-Another approach is to read from a GPSD server, in case it sits at post 2947 of the local PC: 
-```console
-AIS-catcher -t gpsd localhost 2947 -N 8100 share_loc on` 
-```
+The first receiver (`-e ...`) reads from a GPS device that is connected and emits NMEA lines. The second receiver (`-x`) reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
+by the GPS coordinates. The web-page has the functionality to fix the center of the map on the location of the receiving station.
 
-All these new functions combined enables a command line like this:
-```console
-AIS-catcher -r txt /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 192.168.1.235 4002 -N 8100 share_loc on
-```
-The first receiver (`-r txt ...`) reads from a GPS device that is connected and emits NMEA lines. The second receiver (`-x`) reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
-by the GPS coordinates. The web-page has the ability to fix the center of the map on the location of the receiving station.
-
-### Writing AIS messages to a Database
+### Writing AIS messages to a Postgres Database
 
 As per full release `v0.45` there is functionality to write messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
 ```console
@@ -565,23 +567,28 @@ Now AIS-catcher can write the received messages to the database:
 ```console
 AIS-catcher -D dbname=ais STATION_ID 17
 ```
+or when more details, like username and password, are required:
+```console
+AIS-catcher -D postgresql://[user[:password]@][netloc][:port][/dbname]
+```
 The `STATION_ID` setting is optional but will populate the entries in the database with the specified ID so multpiple feeders can write to one database.
 There are a few settings for the new `-D` swich of which the first is the connection string that specifies the database. If you want to use a space in the string use quotation marks aroundf the string. There are other settings that define how tables will be populated:
 
 | Table | Description | Settings | Default |
 | :--- | :--- | :--- | :--- |
-| ais_message | received messages with meta data  | MSGS on/off | on  |
+| ais_vessel | last received data per MMSI | V on/off | **on**  |
+| ais_message | received messages with meta data  | MSGS on/off | off  |
 | ais_nmea | nmea sentences | NMEA on/off | off |
 | ais_basestation | basestation messsages from type 4 | BS on/off | off |
-| ais_sar_position | sar positions from type 9 | SAR on/off | on |
-| ais_aton | aton messages from type 21 | ATON on/off | on |
-| ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off | on |
-| ais_vessel_static | vessel static data from type 5, 19 | VS on/off | on |
+| ais_sar_position | sar positions from type 9 | SAR on/off | off |
+| ais_aton | aton messages from type 21 | ATON on/off | off |
+| ais_vessel_pos | vessel position messages from type 1-3, 18, 19, 27 | VP on/off | off |
+| ais_vessel_static | vessel static data from type 5, 19 | VS on/off | off |
 | ais_property | specific key/value pairs with link to message  | fill with keys specified in the table ais_keys | empty |
 
-From thereon it is fairly straightforward to pick up this data and start analysis. If the connection fails during the decoding, for whatever reason, the program will try to reconnect to the database every 2 seconds. The maximum number of failed connection attempts before the program terminates is set with `MAX_FAILS` and can be provided on the command line. If `MAX_FAILS` is 1000 the program will not terminate if the connecton fails.  
+From thereon it is fairly straightforward to pick up this data and start analysis. If the connection fails during the decoding, for whatever reason, the program will try to reconnect to the database every 2 seconds. The maximum number of failed connection attempts before the program terminates is set with `MAX_FAILS` (<1000) and is set on the command line. If `MAX_FAILS` is 1000 the program will not terminate if the connecton fails.  
 
-I hope this is sufficient to get you experimenting!
+I hope this is sufficient to get you experimenting! Unfortunately the options cannot yet be set from the command line which is work in progress.
 
 ### Running on hardware with performance limitations
 
@@ -607,11 +614,8 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 [AIS engine (speed optimized) v0.31]	: 7722.32 ms
 ```
-This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with reasonable processor load.
+This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with reasonable processor load. Other options to reduce buffer overruns include lowering the sample rate to 288K and/or increasing BUFFER_COUNT. 
 
-### Long Range AIS messages
-
-AIS-catcher can be instructed to listen at frequency 156.8 Mhz to receive Channel 3/C and 4/D (vs A and B around 162 MHz) with the switch ```-c CD```. This follows ideas from a post on the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490) and at the request of a user. The conventional decoder is available with the switch ```-c AB``` which is also the default if nothing is specified. Note that ``gpsdecode`` cannot handle channel designations C and D in NMEA lines. You can provide an optional argument to use channel A and B in the NMEA line with the command ```-c CD AB```.
 
 ### Connecting to GNU Radio via ZMQ
 
