@@ -437,7 +437,7 @@ namespace AIS {
 				}
 				else if (state == 2) {
 					// end of line if we find a checksum or a newline character
-					bool isNMEA = line.size() > 10 && (line[3] == 'V' && line[4] == 'D' && line[5] == 'M');
+					bool isNMEA = line.size() > 10 && (line[3] == 'V' && line[4] == 'D' && (line[5] == 'M' || line[5] == 'O'));
 					bool checksum = isNMEA && (isHEX(line[line.size() - 1]) && isHEX(line[line.size() - 2]) && line[line.size() - 3] == '*' &&
 											   ((isdigit(line[line.size() - 4]) && line[line.size() - 5] == ',') || (line[line.size() - 4] == ',')));
 
@@ -448,6 +448,7 @@ namespace AIS {
 						t = 0;
 
 						if (type == "VDM") noerror &= processAIS(line, tag, t);
+						if (type == "VDO" && VDO) noerror &= processAIS(line, tag, t);
 						if (type == "GGA") noerror &= processGGA(line, tag, t);
 						if (type == "RMC") noerror &= processRMC(line, tag, t);
 						if (type == "GLL") noerror &= processGLL(line, tag, t);

@@ -78,6 +78,7 @@ namespace AIS {
 		bool regenerate = false;
 		bool crc_check = false;
 		bool JSON_input = false;
+		bool VDO = true;
 
 		void split(const std::string&);
 		std::string trim(const std::string&);
@@ -92,6 +93,9 @@ namespace AIS {
 
 		void setRegenerate(bool b) { regenerate = b; }
 		bool getRegenerate() { return regenerate; }
+
+		void setVDO(bool b) { VDO = b; }
+		bool getVDO() { return VDO; }
 
 		void setStation(int s) { station = s; }
 
