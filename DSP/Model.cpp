@@ -684,6 +684,9 @@ namespace AIS {
 		else if (option == "CRC_CHECK") {
 			nmea.setCRCcheck(Util::Parse::Switch(arg));
 		}
+		else if (option == "VDO") {
+			nmea.setVDO(Util::Parse::Switch(arg));
+		}
 		else
 			Model::Set(option, arg);
 
@@ -691,6 +694,6 @@ namespace AIS {
 	}
 
 	std::string ModelNMEA::Get() {
-		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + Model::Get();
+		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
 	}
 }
