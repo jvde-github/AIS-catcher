@@ -863,6 +863,12 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	else if (option == "LON") {
 		ships.setLon(Util::Parse::Float(arg));
 	}
+	else if (option == "USE_GPS") {
+		ships.setUseGPS(Util::Parse::Switch(arg));
+	}
+	else if (option == "OWN_MMSI") {
+		ships.setOwnMMSI(Util::Parse::Integer(arg));
+	}
 	else if (option == "HISTORY") {
 		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600));
 	}

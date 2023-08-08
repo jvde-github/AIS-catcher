@@ -55,6 +55,8 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	bool latlon_share = false;
 	bool server_mode = false;
 	bool msg_save = false;
+	bool use_GPS = true;
+	uint32_t own_mmsi = 0;
 
 	int N = 4096;
 	int M = 4096;
@@ -141,14 +143,18 @@ public:
 	void setup();
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setShareLatLon(bool b) { latlon_share = b; }
+	bool setUseGPS(bool b) { return use_GPS = b; }
 	void setLatLon(float lat, float lon) { this->lat = lat; this->lon = lon; }
 	void setLat(float lat) { this->lat = lat; }
 	void setLon(float lon) { this->lon = lon; }
-
+	void setOwnMMSI(uint32_t mmsi) { own_mmsi = mmsi; }
+	
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
 	void Receive(const AIS::GPS* data, int len, TAG& tag) {
-		lat = data[0].lat;
-		lon = data[0].lon;
+		if(use_GPS) {
+			lat = data[0].lat;
+			lon = data[0].lon;
+		}
 	}
 
 	void getShipJSON(const VesselDetail& ship, std::string& content, long int now);
