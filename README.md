@@ -36,6 +36,7 @@ The Android version of AIS-catcher has been recently overhauled and can be found
 <p align="center">
 <img width="40%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/59176a10-dc46-4ff8-9d43-abb2baa0f7c5">
 </p>
+
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images)  from the GitHub Container Registry.
