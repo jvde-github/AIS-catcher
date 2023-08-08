@@ -28,6 +28,7 @@ Latest version is **v0.50** with various improvements to the database interface 
 - Creation of an Edge Release where latest Windows binaries are stored: [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
 - Option `-ge print on` to dump raw input from serial device to screen
 - Bug fix in reading from certain serial devices on Windows
+- Accept VDO messages for NMEA input (`-go VDO on/off`)
 
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
