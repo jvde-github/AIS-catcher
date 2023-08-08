@@ -75,7 +75,7 @@ std::string DB::getJSONcompact(bool full) {
 
 	content = "{\"count\":" + std::to_string(count) + comma;
 	if (latlon_share && isValidCoord(lat, lon))
-		content += "\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "},";
+		content += "\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + ",\"mmsi\":" + std::to_string(own_mmsi) + "},";
 
 	content += "\"values\":[";
 
@@ -237,8 +237,8 @@ std::string DB::getJSON(bool full) {
 	std::string str;
 
 	content = "{\"count\":" + std::to_string(count);
-	if (latlon_share)
-		content += ",\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "}";
+	if (latlon_share) 
+		content += ",\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + ",\"mmsi\":" + std::to_string(own_mmsi) + "}";
 	content += ",\"ships\":[";
 
 	std::time_t tm = time(nullptr);
@@ -482,8 +482,14 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	for (const auto& p : data.getProperties())
 		positionUpdated |= updateFields(p, msg, ship, allowApproxLatLon);
 
-	if (positionUpdated)
+	if (positionUpdated) {
 		ship.approximate = msg->type() == 27;
+
+		if(ship.mmsi == own_mmsi) {
+			lat = ship.lat;
+			lon = ship.lon;		
+		}
+	}
 
 	if(msg_save) {
 		if(!ship.msg) ship.msg = new std::string();
