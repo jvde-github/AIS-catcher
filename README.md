@@ -29,7 +29,7 @@ Latest version is **v0.50** with various improvements to the database interface 
 - Option `-ge print on` to dump raw input from serial device to screen
 - Bug fix in reading from certain serial devices on Windows
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
-- New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. First option toggles the use of GPS NMEA input as station location for the map (default is on). The second options extracts the station location from the location of the vessel with the specified MMSI. Visuals need to be updated properly.
+- New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as  the location of the vessel with the specified MMSI. Note: visuals need to be updated properly.
 
 
 ### New Android version
