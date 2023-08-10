@@ -1623,6 +1623,13 @@
                 mask-size: 100% 100%;
             }
 
+
+            .empty_icon {
+                display: block;
+                width: 1em;
+                height: 1em;
+            }
+
             .showflex {
                 display: flex;
             }
@@ -2580,6 +2587,9 @@
 
             map.createPane("locationMarker");
             map.getPane("locationMarker").style.zIndex = 999;
+
+            map.createPane('stationPane');
+            map.getPane('stationPane').style.zIndex = 550;
 
             L.DomEvent.disableClickPropagation(document.getElementById('shipcard'));
             addWrenchControl();
@@ -4403,15 +4413,19 @@
                 }
             } else {
                 if (marker_station == null) {
+                    let cell = 'cell_tower_icon';
+                    if(station.hasOwnProperty('mmsi') && station.mmsi != 0) 
+                        cell = 'empty_icon';
+
                     const stationIcon = L.divIcon({
-                        html: `<div class="stationIcon"><i class="cell_tower_icon"></i><div></div></div>`,
+                        html: `<div class="stationIcon"><i class="`+cell+`"></i><div></div></div>`,
                         iconSize: [18, 18],
                         iconAnchor: [8, 9],
                         className: 'myDivIcon'
                         });
 
 
-                    marker_station = L.marker([station.lat, station.lon],{ interactive: true, icon:  stationIcon});
+                    marker_station = L.marker([station.lat, station.lon],{ interactive: true, icon:  stationIcon, pane: 'stationPane'});
                     marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, [/*'settings','ctx-map',*/'ctx-menu','station']); });
                     marker_station.addTo(map);
                 }
