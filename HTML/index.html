@@ -27,6 +27,7 @@
             --panel-color: #f2f8ff;
             --ok-color: rgb(129, 244, 129);
             --error-color: red;
+            --stationCircleColor: yellow;
             --header-color: var(--primary-color);
             --header-title-color: #0e6cd8;
             --selection-color: orange;
@@ -88,6 +89,7 @@
             --panel-color: rgb(18, 18, 18);
             --ok-color: #7ce481;
             --error-color: #cf6679;
+            --stationCircleColor: darkgrey;
             --header-color: #323232;
             --header-title-color: #4a4a4a;
             --selection-color: #9fa8da;
@@ -1119,6 +1121,28 @@
                     height: 24px;
                     background-color: var(--tertiary-color);
                     border-radius: 50%;
+                    z-index: -1;
+                }
+
+            .ownShipIcon {
+                position: relative;
+                display: inline-block;
+            }
+
+                .ownShipIcon i {
+                    color: var(--secondary-color);
+                    font-size: 18px;
+                }
+
+                .ownShipIcon div {
+                    position: absolute;
+                    top: -11px;
+                    left: -12px;
+                    width: 40px;
+                    height: 40px;
+                    background-color: var(--stationCircleColor);
+                    border-radius: 50%;
+                    opacity: 75%;
                     z-index: -1;
                 }
 
@@ -4413,17 +4437,21 @@
                 }
             } else {
                 if (marker_station == null) {
-                    let cell = 'cell_tower_icon';
-                    if(station.hasOwnProperty('mmsi') && station.mmsi != 0) 
-                        cell = 'empty_icon';
+                        let stationIcon = L.divIcon({
+                            html: `<div class="stationIcon"><i class="cell_tower_icon"></i><div></div></div>`,
+                            iconSize: [18, 18],
+                            iconAnchor: [8, 9],
+                            className: 'myDivIcon'
+                            });
 
-                    const stationIcon = L.divIcon({
-                        html: `<div class="stationIcon"><i class="`+cell+`"></i><div></div></div>`,
-                        iconSize: [18, 18],
-                        iconAnchor: [8, 9],
-                        className: 'myDivIcon'
-                        });
-
+                        if(station.hasOwnProperty('mmsi') && station.mmsi != 0) {
+                            stationIcon = L.divIcon({
+                                html: `<div class="ownShipIcon"><i class="cell_tower_icon"></i><div></div></div>`,
+                                iconSize: [18, 18],
+                                iconAnchor: [8, 9],
+                                className: 'myDivIcon'
+                                });
+                        }
 
                     marker_station = L.marker([station.lat, station.lon],{ interactive: true, icon:  stationIcon, pane: 'stationPane'});
                     marker_station.on('contextmenu', function (e) { showContextMenu(event, 0, [/*'settings','ctx-map',*/'ctx-menu','station']); });
