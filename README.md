@@ -25,11 +25,13 @@ Only use this software in regions where such use is permitted.
 
 Latest version is **v0.50** with various improvements to the database interface and UI.
 
+New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge):
+
 - Creation of an Edge Release where latest Windows binaries are stored: [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
 - Option `-ge print on` to dump raw input from serial device to screen
 - Bug fix in reading from certain serial devices on Windows
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
-- New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as  the location of the vessel with the specified MMSI. Note: visuals need to be updated properly.
+- New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted. 
 
 
 ### New Android version
