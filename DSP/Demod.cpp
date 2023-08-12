@@ -36,7 +36,6 @@ namespace Demod {
 		Send(output.data(), len, tag);
 	}
 
-	// Same version as above but instead relying on moving average to speed up
 	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
 			FLOAT32 re, im;

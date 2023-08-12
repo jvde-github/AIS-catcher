@@ -509,6 +509,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 
 	if (type < 1 || type > 27 || msg->mmsi() == 0) return;
 
+	// setup/find ship in database
 	int ptr = findShip(msg->mmsi());
 
 	if (ptr == -1)
@@ -516,8 +517,10 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 
 	moveShipToFront(ptr);
 
+	// update ship and tag data
 	VesselDetail& ship = ships[ptr].ship;
 
+	// save some data for later on
 	tag.previous_signal = ship.last_signal;
 
 	float lat_old = ship.lat;
@@ -529,7 +532,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 || type == 9)
 		addToPath(ptr);
 
-	// add check to update only when new lat/lon
+	// update ship with distance and bearing if position is updated with message
 	if (position_updated && isValidCoord(lat, lon)) {
 		getDistanceAndBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
 
