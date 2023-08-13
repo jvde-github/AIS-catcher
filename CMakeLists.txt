@@ -562,14 +562,14 @@ if(ZMQ)
 	else()
 		find_path(ZMQ_INCLUDE_DIR zmq.h HINTS ${POTHOSSDR_INCLUDE_DIR})
 
-  		file(GLOB ZMQ_LIBRARY_CANDIDATES "${POTHOSSDR_LIBRARY_DIR}/libzmq-mt-*.lib")
+  		file(GLOB ZMQ_LIBRARY_CANDIDATES "${POTHOSSDR_LIBRARY_DIR}/libzmq*.lib")
 		if(ZMQ_LIBRARY_CANDIDATES)
-		    list(GET ZMQ_LIBRARY_CANDIDATES 0 ZMQ_LIBRARY) # Take the first match as the desired library
+		    list(GET ZMQ_LIBRARY_CANDIDATES 0 ZMQ_LIBRARY)
 		endif()
 		
-		file(GLOB ZMQ_DLL_CANDIDATES "${POTHOSSDR_BINARY_DIR}/libzmq-mt-*.dll")
+		file(GLOB ZMQ_DLL_CANDIDATES "${POTHOSSDR_BINARY_DIR}/libzmq*.dll")
 		if(ZMQ_DLL_CANDIDATES)
-		    list(GET ZMQ_DLL_CANDIDATES 0 ZMQ_DLL) # Take the first match as the desired DLL
+		    list(GET ZMQ_DLL_CANDIDATES 0 ZMQ_DLL)
 		endif()
 
 		if(ZMQ_INCLUDE_DIR AND ZMQ_LIBRARY AND ZMQ_DLL)
