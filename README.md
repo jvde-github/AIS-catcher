@@ -216,7 +216,7 @@ The plot tab contains several plots to assess the performance of the receiver:
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/219856922-33404fe8-dc54-4bc2-a1a6-84f4ce5dd72a.png" width="50%"/>
 </p>
-The plot tab features various charts assessing receiver performance. Restarting AIS-catcher typically erases history in the graphs. To retain plot states and save the information to a fileuse the following:
+The plot tab features various charts assessing receiver performance. Restarting AIS-catcher typically erases history in the graphs. To retain plot states and save the information to a file use the following:
 
 ```console
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
