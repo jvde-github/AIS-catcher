@@ -216,10 +216,12 @@ The plot tab contains several plots to assess the performance of the receiver:
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/219856922-33404fe8-dc54-4bc2-a1a6-84f4ce5dd72a.png" width="50%"/>
 </p>
-The plot tab features various charts assessing receiver performance. Restarting AIS-catcher typically erases history in the graphs. To retain plot states, save content to a file, such as "stat.bin," and backup every 10 minutes:
+The plot tab features various charts assessing receiver performance. Restarting AIS-catcher typically erases history in the graphs. To retain plot states and save the information to a fileuse the following:
+
 ```console
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
+This will back up the plots every 10 minutes in a file `stat.bin`.
 
 #### Custom plugins and styles...
 
@@ -483,7 +485,7 @@ in this document. JSON is however case sensitive so field names must be entered 
 
 AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5`` which will automatically selected if the input format is set to `TXT`, e.g.:
 ```console
-echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher-r txt . -o 5
+echo '!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78'  | AIS-catcher -r txt . -o 5
 ```
 which produces
 ```json
@@ -491,7 +493,7 @@ which produces
 ```
 When piping NMEA text lines into AIS-catcher, use  format ``TXT`` this will also ensure that the program immediately processes the incoming characters and it will not buffer them first. The NMEA decoder can be activated with the switch `-m 5` but setting the input format to TXT will automatically activate this decoder. 
 
-This functionality opens a few doors. For example you can use AIS-catcher to read and forward messages from a dAISy Hat (simply read from the file ``/cat/serial0`` on Linux) or process the data from Norwegian coastal traffic offered via a TCP server, like this:  
+This functionality opens a few doors. For example you can use AIS-catcher to read and forward messages from a dAISy Hat (simply read from the file ``cat /dev/serial0`` on Linux) or process the data from Norwegian coastal traffic offered via a TCP server, like this:  
 ```console
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -o 5
 ```
@@ -592,7 +594,7 @@ There are a few settings for the new `-D` swich of which the first is the connec
 
 From thereon it is fairly straightforward to pick up this data and start analysis. If the connection fails during the decoding, for whatever reason, the program will try to reconnect to the database every 2 seconds. The maximum number of failed connection attempts before the program terminates is set with `MAX_FAILS` (<1000) and is set on the command line. If `MAX_FAILS` is 1000 the program will not terminate if the connecton fails.  
 
-I hope this is sufficient to get you experimenting! Unfortunately the options cannot yet be set from the command line which is work in progress.
+I hope this is sufficient to get you experimenting! Unfortunately the options cannot yet be set from the JSON configuration file which is work in progress.
 
 ### Running on hardware with performance limitations
 
