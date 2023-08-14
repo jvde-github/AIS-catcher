@@ -32,7 +32,8 @@ New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/relea
 - Bug fix in reading from certain serial devices on Windows
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
 - New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted.
-- Fix inclusion of lib ZMQ in Windows auto builds 
+- Fix inclusion of lib ZMQ in Windows auto builds
+- TCP listener for NMEA output, e.g. for port 5011 run with `-S 5011` 
 
 
 ### New Android version
