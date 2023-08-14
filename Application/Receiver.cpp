@@ -379,7 +379,7 @@ IO::UDP& OutputUDP::add(const std::string& host, const std::string& port) {
 }
 
 //-----------------------------------
-// set up UDP
+// set up TCP
 
 void OutputTCP::connect(Receiver& r) {
 	for (int i = 0; i < _TCP.size(); i++) {
@@ -460,6 +460,34 @@ void OutputHTTP::start() {
 		h->Start();
 	}
 }
+
+// --------------------------
+void OutputTCPlistener::connect(Receiver& r) {
+
+	for (auto& h : _listener) {
+
+
+		for (int i = 0; i < r.Count(); i++)
+			if (r.Output(i).canConnect(h->getGroupsIn()))
+				r.Output(i) >> *h;
+	}
+}
+
+void OutputTCPlistener::start() {
+
+	for (auto& h : _listener) {
+		h->Start();
+	}
+}
+
+IO::TCPlistener& OutputTCPlistener::add(const std::string& port) {
+	_listener.push_back(std::unique_ptr<IO::TCPlistener>(new IO::TCPlistener()));
+	_listener.back()->Set("PORT", port).Set("TIMEOUT","0");
+
+	return *_listener.back();
+}
+
+// ------------------------
 
 void WebClient::Counter::Receive(const AIS::Message* msg, int len, TAG& tag) {
 	stat.Add(msg[0], tag);

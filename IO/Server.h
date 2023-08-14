@@ -62,17 +62,23 @@ namespace IO {
 		void Read();
 	};
 
-	class Server {
+	class TCPServer {
 	public:
-		Server();
-		~Server();
-
-		virtual void Request(Client& c, const std::string& msg, bool accept_gzip);
-
-		void Response(Client& c, std::string type, const std::string& content, bool gzip = false);
-		void Response(Client& c, std::string type, char* data, int len, bool gzip = false);
+		~TCPServer();
 
 		bool start(int port);
+		bool SendAll(const std::string &m) {
+			for (auto& c : client) {
+				if (c.isConnected()) {
+					if (!Send(c.sock, m.c_str(), m.size())) {
+						c.Close();
+						std::cerr << "TCP listener: error sending to client, close connection." << std::endl;
+						return false;
+					}
+				}
+			}
+			return true;
+		}
 		void setReusePort(bool b) { reuse_port = b; }
 		bool setNonBlock(SOCKET sock) {
 
@@ -88,9 +94,9 @@ namespace IO {
 			return true;
 		}
 
-	private:
+	protected:
 		SOCKET sock = -1;
-		int timeout = 2;
+		int timeout = 30;
 		bool reuse_port = true;
 
 		const int MAX_CONN = 64;
@@ -100,20 +106,32 @@ namespace IO {
 		std::thread run_thread;
 
 		bool stop = false;
-		std::string ret, header;
 
 		void Run();
 		sockaddr_in service;
 
 		bool Send(SOCKET s, const char* data, int len);
-		void Parse(const std::string& s, std::string& get, bool& accept_gzip);
 		int findFreeClient();
 
 		void acceptClients();
 		void readClients();
-		void processClients();
+		virtual void processClients();
 		void cleanUp();
 		void SleepAndWait();
+	};
+
+	class Server : public TCPServer {
+	public:
+		virtual void Request(Client& c, const std::string& msg, bool accept_gzip);
+
+		void Response(Client& c, std::string type, const std::string& content, bool gzip = false);
+		void Response(Client& c, std::string type, char* data, int len, bool gzip = false);
+
+	private:
+		std::string ret, header;
+
+		void Parse(const std::string& s, std::string& get, bool& accept_gzip);
+		void processClients();
 
 		ZIP zip;
 	};

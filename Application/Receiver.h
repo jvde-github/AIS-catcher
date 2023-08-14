@@ -173,6 +173,17 @@ public:
 };
 
 //--------------------------------------------
+class OutputTCPlistener {
+	std::vector<std::unique_ptr<IO::TCPlistener>> _listener;
+
+public:
+	std::unique_ptr<IO::TCPlistener>& add(const std::vector<std::vector<std::string>>& km, int dict);
+	void connect(Receiver& r);
+	void start();
+	IO::TCPlistener& add(const std::string& port);
+};
+
+//--------------------------------------------
 class OutputUDP {
 	std::vector<std::unique_ptr<IO::UDP>> _UDP;
 

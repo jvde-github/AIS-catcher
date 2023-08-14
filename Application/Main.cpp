@@ -82,6 +82,7 @@ void Usage() {
 	std::cerr << "\t[-P xxx.xx.xx.xx yyy - TCP destination address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (-o 0)]" << std::endl;
 	std::cerr << "\t[-s xxx - sample rate in Hz (default: based on SDR device)]" << std::endl;
+	std::cerr << "\t[-S xxx - TCP server for NMEA lines at port xxx]" << std::endl;
 	std::cerr << "\t[-T xx - auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
 	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]" << std::endl;
@@ -211,6 +212,7 @@ int main(int argc, char* argv[]) {
 
 	OutputScreen screen;
 	OutputHTTP http;
+	OutputTCPlistener tcp_listener;
 	OutputUDP udp;
 	OutputTCP tcp;
 	OutputDBMS db;
@@ -285,6 +287,10 @@ int main(int argc, char* argv[]) {
 				}
 				servers.back()->active() = true;
 				parseSettings(*servers.back(), argv, ptr + (count % 2), argc);
+				break;
+			case 'S':
+				Assert(count == 1, param, "requires one parameter [port].");
+				tcp_listener.add(arg1);
 				break;
 			case 'v':
 				Assert(count <= 1, param);
@@ -539,6 +545,7 @@ int main(int argc, char* argv[]) {
 			// set up all the output and connect to the receiver outputs
 			udp.connect(r);
 			tcp.connect(r);
+			tcp_listener.connect(r);
 			http.connect(r);
 			screen.connect(r);
 			db.connect(r);
@@ -552,6 +559,7 @@ int main(int argc, char* argv[]) {
 		udp.start();
 		tcp.start();
 		http.start();
+		tcp_listener.start();
 		screen.start();
 		db.start();
 

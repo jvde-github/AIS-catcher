@@ -45,6 +45,7 @@
 #include "TCP.h"
 #include "Library/ZIP.h"
 #include "Network.h"
+#include "Server.h"
 
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
@@ -184,5 +185,30 @@ namespace IO {
 			return tcp.send(str.c_str(), (int)str.length());
 		}
 		void setJSON(bool b) { JSON = b; }
+	};
+
+	class TCPlistener : public StreamIn<AIS::Message>, public Setting, public TCPServer {
+		int port = 5010;
+	public:
+		virtual Setting& Set(std::string option, std::string arg) { 
+			Util::Convert::toUpper(option);
+
+			if (option == "PORT") {
+				port = Util::Parse::Integer(arg);
+			}
+			else if (option == "TIMEOUT") {
+				timeout = Util::Parse::Integer(arg);
+			}
+			return *this; 
+		}
+
+		void Receive(const AIS::Message* data, int len, TAG& tag) {
+			for(const auto &m: data->NMEA)
+				SendAll(m + "\r\n");
+		}
+
+		void Start() { TCPServer::start(port); }
+		void Stop() {}
+		
 	};
 }
