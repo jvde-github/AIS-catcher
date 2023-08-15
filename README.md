@@ -38,7 +38,7 @@ New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/relea
 ```console
 AIS-catcher -t txt raspberrypi 5011
 ```
-
+or use the `tcp_listener` keyword in the JSON configuration.
 
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
