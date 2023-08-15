@@ -319,6 +319,15 @@ A feature has been added that sends messages to (e.g.) MarineTraffic as a TCP cl
 ````console
 AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
 ````
+In this case AIS-catcher acts as a TCP client and conneccts to the remote listener at 192.168.1.239 port 2947. You can also set up AIS-catcher as a TCP listener itself, i.e. it acts as a TCP server where at most 64 clients can connect to.
+```consol
+AIS-catcher -S 5011
+```
+The program itself can also read from a TCP NMEA server:
+```console
+AIS-catcher -t txt 192.168.1.239 5011
+```
+This sets up a TCP connection as TCP device in this case reading text input in NMEA format. The `txt` input is the connection protocol and the same set up can also be used to read data from a RTL-TCP connection, see below.
 
 #### Setting up OpenCPN
 
