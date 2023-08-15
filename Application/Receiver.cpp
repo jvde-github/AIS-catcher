@@ -571,7 +571,7 @@ void WebClient::connect(Receiver& r) {
 	for (int j = 0; j < r.Count(); j++)
 		if (r.Output(j).canConnect(groups_in)) {
 			if (!rec_details) {
-				sample_rate += std::to_string(r.device->getSampleRate() / 1000) + "K/S" + "<br>";
+				sample_rate += r.device->getRateDescription()  + "<br>";
 				product += r.device->getProduct() + "<br>";
 				vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor()) + "<br>";
 				serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) + "<br>";
@@ -602,7 +602,7 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 		json.Connect((StreamIn<JSON::JSON>*) & ships);
 		device >> raw_counter;
 
-		sample_rate = std::to_string(device.getSampleRate() / 1000) + "K/S";
+		sample_rate = device.getRateDescription();
 		setDeviceDescription( device.getProduct(),device.getVendor().empty() ? "-" : device.getVendor(),device.getSerial().empty() ? "-" : device.getSerial());
 		model = m.getName();
 	}

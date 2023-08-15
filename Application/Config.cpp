@@ -100,6 +100,18 @@ void Config::setTCPfromJSON(const JSON::Property& pd) {
 	}
 }
 
+void Config::setTCPListenerfromJSON(const JSON::Property& pd) {
+
+	if (!pd.Get().isArray())
+		throw std::runtime_error("TCP Listener settings need to be an \"array\" of \"objects\" in config file.");
+
+	for (const auto& v : pd.Get().getArray()) {
+		if (!isActiveObject(v)) continue;
+
+		setSettingsFromJSON(v, _tcp_server.add());
+	}
+}
+
 void Config::setModelfromJSON(const JSON::Property& p) {
 
 	if (!isActiveObject(p.Get())) return;
@@ -288,6 +300,9 @@ void Config::set(const std::string& str) {
 			break;
 		case AIS::KEY_SETTING_TCP:
 			setTCPfromJSON(p);
+			break;
+		case AIS::KEY_SETTING_TCP_LISTENER:
+			setTCPListenerfromJSON(p);
 			break;
 		case AIS::KEY_SETTING_SERVER:
 			setServerfromJSON(p.Get());

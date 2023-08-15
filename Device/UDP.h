@@ -76,6 +76,7 @@ namespace Device {
 		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 		void getDeviceList(std::vector<Description>& DeviceList);
+		std::string getRateDescription() { return "N/A"; }
 
 		// Settings
 		Setting& Set(std::string option, std::string arg);
