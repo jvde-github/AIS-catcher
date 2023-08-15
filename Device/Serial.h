@@ -57,6 +57,8 @@ namespace Device {
         SerialPort() : Device(Format::TXT, 288000), port(""), baudrate(38400) {};
         ~SerialPort();
 
+		std::string getRateDescription() { return std::to_string(baudrate) + " baud"; }
+
 		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 

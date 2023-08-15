@@ -50,6 +50,8 @@
 namespace IO {
 
 	struct Client {
+		~Client() { Close(); }
+		
 		SOCKET sock = -1;
 		std::string msg;
 		std::time_t stamp;

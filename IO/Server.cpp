@@ -22,8 +22,10 @@
 namespace IO {
 
 	void Client::Close() {
-		if (sock != -1) closesocket(sock);
-		sock = -1;
+		if (sock != -1) {
+			closesocket(sock);
+			sock = -1;
+		}
 		msg.clear();
 	}
 

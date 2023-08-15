@@ -518,7 +518,7 @@ int main(int argc, char* argv[]) {
 
 		if (!file_config.empty()) {
 
-			Config c(_receivers, nrec, screen, http, udp, tcp, servers);
+			Config c(_receivers, nrec, screen, http, udp, tcp, tcp_listener, servers);
 			c.read(file_config);
 		}
 

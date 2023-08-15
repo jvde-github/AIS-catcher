@@ -460,6 +460,11 @@ An example config file looks as follows:
          "allow_type": "1,2,3,5,18,19,24"
       }
    ],
+   "tcp_listener": [
+      {
+         "port": 5012
+      }
+   ],
    "http":[
       {
          "url":"https://ais.chaos-consulting.de/shipin/index.php",

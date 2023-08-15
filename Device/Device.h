@@ -82,6 +82,7 @@ namespace Device {
 		virtual void setFrequency(uint32_t f) { frequency = f; }
 
 		virtual uint32_t getSampleRate() { return sample_rate; }
+		virtual std::string getRateDescription() { return std::to_string(getSampleRate() / 1000) + "K"; }
 		virtual uint32_t getFrequency() { return frequency; }
 
 		virtual bool isCallback() { return true; }

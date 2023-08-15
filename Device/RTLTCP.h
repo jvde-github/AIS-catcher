@@ -99,6 +99,8 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
+		std::string getRateDescription() { if(getFormat() == Format::TXT) return "N/A"; return Device::getRateDescription(); }
+
 		// Settings
 		Setting& Set(std::string option, std::string arg);
 		std::string Get();
