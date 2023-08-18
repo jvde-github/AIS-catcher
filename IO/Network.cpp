@@ -339,8 +339,9 @@ namespace IO {
 				else
 					throw std::runtime_error("HTTP: error - unknown protocol");
 			}
-			else
-				filter.Set(option, arg);
+			else if(!filter.SetOption(option, arg)) {
+				throw std::runtime_error("HTTP output - unknown option: " + option);
+			}
 		}
 #else
 		throw std::runtime_error("HTTP: not implemented, please recompile with libcurl support.");
@@ -488,8 +489,9 @@ namespace IO {
 		else if (option == "RESET") {
 			reset = Util::Parse::Integer(arg,1,24*60);
 		}
-		else
-			return filter.Set(option, arg);
+		else if(!filter.SetOption(option, arg)) {
+			throw std::runtime_error("UDP output - unknown option: " + option);
+		}
 
 		return *this;
 	}
@@ -540,6 +542,7 @@ namespace IO {
 	}
 
 	void TCPClientStreamer::Start() {
+		
 		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
@@ -579,14 +582,14 @@ namespace IO {
 		else if (option == "PERSIST") {
 			persistent = Util::Parse::Switch(arg);
 		}
-		else
-			return filter.Set(option, arg);
-
+		else if(!filter.SetOption(option, arg)) {
+			throw std::runtime_error("TCP client - unknown option: " + option);
+		}
 		return *this;
 	}
 
 	void TCPlistenerStreamer::Start() { 
-		std::cerr << "TCP listener: open TCP listener for port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
+		std::cerr << "TCP listener: open at port " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 	
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ".\n";
@@ -608,8 +611,9 @@ namespace IO {
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
 		}
-		else
-			return filter.Set(option, arg);
+		else if(!filter.SetOption(option, arg)) {
+			throw std::runtime_error("TCP listener - unknown option: " + option);
+		}
 		
 		return *this; 
 	}

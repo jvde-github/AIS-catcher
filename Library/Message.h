@@ -136,7 +136,7 @@ namespace AIS {
 		bool on = false;
 
 	public:
-		Setting& Set(std::string option, std::string arg);
+		bool SetOption(std::string option, std::string arg);
 		bool isOn() { return on; }
 		std::string getAllowed();
 		bool include(const Message& msg) {

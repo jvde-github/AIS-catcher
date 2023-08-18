@@ -164,7 +164,7 @@ namespace AIS {
 		}
 	}
 
-	Setting& Filter::Set(std::string option, std::string arg) {
+	bool Filter::SetOption(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "ALLOW_TYPE") {
@@ -177,6 +177,7 @@ namespace AIS {
 				unsigned type = Util::Parse::Integer(type_str, 1, 27);
 				allow |= 1U << type;
 			}
+			return true;
 		}
 		else if (option == "BLOCK_TYPE") {
 
@@ -189,12 +190,14 @@ namespace AIS {
 				block |= 1U << type;
 			}
 			allow = ~block & all_msg;
+			return true;
 		}
 		else if (option == "FILTER") {
 			Util::Convert::toUpper(arg);
 			on = Util::Parse::Switch(arg);
+			return true;
 		}
-		return *this;
+		return false;
 	}
 
 	std::string Filter::getAllowed() {
