@@ -45,7 +45,7 @@
 #include "TCP.h"
 #include "Library/ZIP.h"
 #include "Network.h"
-#include "Server.h"
+#include "HTTPServer.h"
 
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
@@ -121,8 +121,8 @@ namespace IO {
 		int sourceID = -1;
 
 	public:
-		friend class UDP;
-		friend class TCP;
+		friend class UDPStreamer;
+		friend class TCPClientStreamer;
 
 		UDPEndPoint(std::string a, std::string p, int id = -1) {
 			address = a, port = p;
@@ -131,7 +131,7 @@ namespace IO {
 		int ID() { return sourceID; }
 	};
 
-	class UDP : public StreamIn<AIS::Message>, public Setting {
+	class UDPStreamer : public StreamIn<AIS::Message>, public Setting {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
 		int source = -1;
@@ -143,8 +143,8 @@ namespace IO {
 		bool JSON = false;
 
 	public:
-		~UDP();
-		UDP();
+		~UDPStreamer();
+		UDPStreamer();
 
 		virtual Setting& Set(std::string option, std::string arg);
 
@@ -164,7 +164,7 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCP : public StreamIn<AIS::Message>, public Setting {
+	class TCPClientStreamer : public StreamIn<AIS::Message>, public Setting {
 		::TCP::Client tcp;
 		AIS::Filter filter;
 		bool JSON = false;
@@ -187,27 +187,16 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPlistener : public StreamIn<AIS::Message>, public Setting, public TCPServer {
+	class TCPlistenerStreamer : public StreamIn<AIS::Message>, public Setting, public TCP::Server {
 		int port = 5010;
+		AIS::Filter filter;
+		bool JSON = false;
 	public:
-		virtual Setting& Set(std::string option, std::string arg) { 
-			Util::Convert::toUpper(option);
+		virtual Setting& Set(std::string option, std::string arg);
 
-			if (option == "PORT") {
-				port = Util::Parse::Integer(arg);
-			}
-			else if (option == "TIMEOUT") {
-				timeout = Util::Parse::Integer(arg);
-			}
-			return *this; 
-		}
+		void Receive(const AIS::Message* data, int len, TAG& tag);
 
-		void Receive(const AIS::Message* data, int len, TAG& tag) {
-			for(const auto &m: data->NMEA)
-				SendAll(m + "\r\n");
-		}
-
-		void Start() { TCPServer::start(port); }
+		void Start();
 		void Stop() {}
 		
 	};

@@ -47,6 +47,79 @@
 
 namespace TCP {
 
+	struct Socket {
+		~Socket() { Close(); }
+		
+		SOCKET sock = -1;
+		std::string msg;
+		std::time_t stamp;
+
+		void Close();
+		void Start(SOCKET s);
+		int Inactive(std::time_t now);
+		bool isConnected() { return sock != -1; }
+
+		void Read();
+	};
+
+	class Server {
+	public:
+		~Server();
+
+		bool start(int port);
+		bool SendAll(const std::string &m) {
+			for (auto& c : client) {
+				if (c.isConnected()) {
+					if (!Send(c.sock, m.c_str(), m.size())) {
+						c.Close();
+						std::cerr << "TCP listener: error sending to client, close connection." << std::endl;
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+		void setReusePort(bool b) { reuse_port = b; }
+		bool setNonBlock(SOCKET sock) {
+
+#ifndef _WIN32
+			int r = fcntl(sock, F_GETFL, 0);
+			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+
+			if (r == -1) return false;
+#else
+			u_long mode = 1;
+			ioctlsocket(sock, FIONBIO, &mode);
+#endif
+			return true;
+		}
+
+	protected:
+		SOCKET sock = -1;
+		int timeout = 30;
+		bool reuse_port = true;
+
+		const int MAX_CONN = 64;
+		std::vector<Socket> client;
+
+		std::thread run_thread;
+
+		bool stop = false;
+
+		void Run();
+		sockaddr_in service;
+
+		bool Send(SOCKET s, const char* data, int len);
+		int findFreeClient();
+
+		void acceptClients();
+		void readClients();
+		virtual void processClients();
+		void cleanUp();
+		void SleepAndWait();
+	};
+
+
 	class Client {
 	public:
 		

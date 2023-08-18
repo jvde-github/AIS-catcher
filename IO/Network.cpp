@@ -348,13 +348,13 @@ namespace IO {
 		return *this;
 	}
 
-	UDP::UDP() {}
+	UDPStreamer::UDPStreamer() {}
 
-	UDP::~UDP() {
+	UDPStreamer::~UDPStreamer() {
 		Stop();
 	}
 
-	void UDP::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void UDPStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if(reset > 0) {
 			long now = (long) std::time(nullptr);
 			if ((now - last_reconnect) > 60*reset) {
@@ -407,7 +407,7 @@ namespace IO {
 		}
 	}
 
-	void UDP::Start() {
+	void UDPStreamer::Start() {
 		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON);
@@ -454,7 +454,7 @@ namespace IO {
 			last_reconnect = (long) std::time(nullptr);
 	}
 
-	void UDP::Stop() {
+	void UDPStreamer::Stop() {
 		std::cerr << "UDP: close socket for host: " << host << ", port: " << port << std::endl;
 
 		if (sock != -1) {
@@ -467,7 +467,7 @@ namespace IO {
     	}
 	}
 
-	Setting& UDP::Set(std::string option, std::string arg) {
+	Setting& UDPStreamer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "HOST") {
@@ -494,10 +494,9 @@ namespace IO {
 		return *this;
 	}
 
-
 	// TCP output to server
 
-	void TCP::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void TCPClientStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if (!JSON) {
 			for (int i = 0; i < len; i++) {
 				if (!filter.include(data[i])) continue;
@@ -540,7 +539,7 @@ namespace IO {
 		}
 	}
 
-	void TCP::Start() {
+	void TCPClientStreamer::Start() {
 		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
@@ -552,11 +551,11 @@ namespace IO {
 			std::cerr << "pending\n";
 	}
 
-	void TCP::Stop() {
+	void TCPClientStreamer::Stop() {
 		tcp.disconnect();
 	}
 
-	Setting& TCP::Set(std::string option, std::string arg) {
+	Setting& TCPClientStreamer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "HOST") {
@@ -578,5 +577,70 @@ namespace IO {
 			return filter.Set(option, arg);
 
 		return *this;
+	}
+
+	void TCPlistenerStreamer::Start() { 
+		std::cerr << "TCP listener: open TCP listener for port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
+		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+	
+		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ".\n";
+		Server::start(port); 
+	}
+	
+	Setting& TCPlistenerStreamer::Set(std::string option, std::string arg) { 
+		Util::Convert::toUpper(option);
+
+		if (option == "PORT") {
+			port = Util::Parse::Integer(arg);
+		}
+		else if (option == "TIMEOUT") {
+			timeout = Util::Parse::Integer(arg);
+		}  
+		else if (option == "GROUPS_IN") {
+			setGroupsIn(Util::Parse::Integer(arg));
+		}
+		else if (option == "JSON") {
+			JSON = Util::Parse::Switch(arg);
+		}
+		else
+			return filter.Set(option, arg);
+		
+		return *this; 
+	}
+
+	void TCPlistenerStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
+		if (!JSON) {
+			for (int i = 0; i < len; i++) {
+				if (!filter.include(data[i])) continue;
+
+				for (const auto& s : data[i].NMEA) {
+					SendAll(s + "\r\n");
+				}
+			}
+		}
+		else {
+			for (int i = 0; i < len; i++) {
+				if (!filter.include(data[i])) continue;
+
+				std::string str = "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"";
+				str += ((char)data[i].getChannel());
+				str += std::string("\"");
+
+				if (tag.mode & 2) {
+					// str += ",\"rxtime\":\"" + data[i].getRxTime() + "\"";
+					str += ",\"rxuxtime\":" + std::to_string(data[i].getRxTimeUnix());
+				}
+				if (tag.mode & 1) str += ",\"signalpower\":" + std::to_string(tag.level) + ",\"ppm\":" + std::to_string(tag.ppm);
+
+				str += ",\"mmsi\":" + std::to_string(data[i].mmsi()) + ",\"type\":" + std::to_string(data[i].type());
+				str += ",\"nmea\":[\"" + data[i].NMEA[0] + std::string("\"");
+
+				for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
+				str += "]}\r\n";
+
+				SendAll(str);
+			}
+		}
+		
 	}
 }

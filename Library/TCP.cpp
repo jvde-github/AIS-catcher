@@ -17,20 +17,238 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "TCP.h"
 #include "Common.h"
 
 namespace TCP {
 
-	void Client::disconnect() {
-		if (sock != -1)
+	void Socket::Close() {
+		if (sock != -1) {
 			closesocket(sock);
-
-		if (address != NULL) {
-			freeaddrinfo(address);
-			address = NULL;
+			sock = -1;
 		}
+		msg.clear();
+	}
+
+	void Socket::Start(SOCKET s) {
+		msg.clear();
+		stamp = std::time(0);
+		sock = s;
+	}
+
+	int Socket::Inactive(std::time_t now) {
+		return (int)((long int)now - (long int)stamp);
+	}
+
+	void Socket::Read() {
+		char buffer[1024];
+
+		if (isConnected()) {
+
+			int nread = recv(sock, buffer, sizeof(buffer), 0);
+#ifdef _WIN32
+			if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK)) {
+				int e = WSAGetLastError();
+#else
+			if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN)) {
+				int e = errno;
+#endif
+				if (nread < 0)
+					std::cerr << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock << std::endl;
+
+				Close();
+			}
+			else if (nread > 0) {
+				msg += std::string(buffer, nread);
+				stamp = std::time(0);
+			}
+		}
+	}
+
+	// TCP Server
+
+	Server::~Server() {
+		stop = true;
+		if (run_thread.joinable()) run_thread.join();
+		if (sock != -1) closesocket(sock);
+	}
+
+	int Server::findFreeClient() {
+		for (int i = 0; i < MAX_CONN; i++)
+			if (!client[i].isConnected()) return i;
+		return -1;
+	}
+
+	void Server::acceptClients() {
+		int addrlen = sizeof(service);
+		SOCKET conn_socket;
+
+		conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen);
+#ifdef _WIN32
+		if (conn_socket == SOCKET_ERROR) {
+			if (WSAGetLastError() != WSAEWOULDBLOCK) {
+				std::cerr << "TCP listener: error accepting connection. " << strerror(WSAGetLastError()) << std::endl;
+				return;
+			}
+		}
+#else
+		if (conn_socket == -1) {
+			if (errno != EWOULDBLOCK && errno != EAGAIN) {
+				std::cerr << "TCP Server: error accepting connection. " << strerror(errno) << std::endl;
+				return;
+			}
+		}
+#endif
+		else {
+			int ptr = findFreeClient();
+			if (ptr == -1) {
+				std::cerr << "TCP Server: max connections reached (" << MAX_CONN << ", closing socket." << std::endl;
+				closesocket(conn_socket);
+			}
+			else {
+				client[ptr].Start(conn_socket);
+				if (!setNonBlock(conn_socket)) {
+					std::cerr << "TCP Server: cannot make client socket non-blocking." << std::endl;
+					client[ptr].Close();
+				}
+			}
+		}
+	}
+
+	void Server::cleanUp() {
+
+		for (auto& c : client)
+			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout) {
+				std::cerr << "TCP Server: timeout, close client " << c.sock << std::endl;
+				c.Close();
+			}
+	}
+
+	void Server::readClients() {
+
+		for (auto& c : client) c.Read();
+	}
+
+	void Server::processClients() {
+		for (auto& c : client) {
+			if (c.isConnected()) {
+				c.msg.clear();
+			}
+		}
+	}
+
+	void Server::Run() {
+
+		while (!stop) {
+			acceptClients();
+			readClients();
+			processClients();
+			cleanUp();
+			SleepAndWait();
+		}
+
+		std::cerr << "TCP Server: thread ending.\n";
+	}
+
+	void Server::SleepAndWait() {
+		struct timeval tv;
+		fd_set fds;
+
+		FD_ZERO(&fds);
+		FD_SET(sock, &fds);
+
+		int maxfds = sock;
+
+		for (auto& c : client) {
+			if (c.isConnected()) {
+				FD_SET(c.sock, &fds);
+				if (c.sock > maxfds) maxfds = c.sock;
+			}
+		}
+
+		tv = { 1, 0 };
+		select(maxfds + 1, &fds, NULL, NULL, &tv);
+	}
+
+	bool Server::Send(SOCKET s, const char* data, int len) {
+		int sent = 0;
+		int bytes = 0;
+
+		while (sent < len) {
+			int remaining = len - sent;
+			bytes = ::send(s, data + sent, remaining, 0);
+
+#ifndef _WIN32
+			if (bytes != remaining) {
+				if (errno == EWOULDBLOCK || errno == EAGAIN) {
+					SleepSystem(100);
+				}
+				else {
+					std::cerr << "TCP Server: error sending response: " << strerror(errno) << std::endl;
+					return false;
+				}
+			}
+#else
+			if (bytes != remaining) {
+				if (WSAGetLastError() == WSAEWOULDBLOCK) {
+					SleepSystem(100);
+				}
+				else {
+					std::cerr << "TCP Server: error sending response: " << strerror(WSAGetLastError()) << std::endl;
+					return false;
+				}
+			}
+#endif
+			sent += bytes;
+		}
+		return true;
+	}
+
+	bool Server::start(int port) {
+
+		sock = socket(AF_INET, SOCK_STREAM, 0);
+		if (sock < 0) return false;
+
+#ifndef _WIN32
+		if (reuse_port) {
+			int optval = 1;
+			setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+		}
+#endif
+		memset(&service, 0, sizeof(service));
+		service.sin_family = AF_INET;
+		service.sin_addr.s_addr = htonl(INADDR_ANY);
+		service.sin_port = htons(port);
+
+		int r = bind(sock, (SOCKADDR*)&service, sizeof(service));
+		if (r == SOCKET_ERROR) {
+			closesocket(sock);
+			sock = -1;
+			return false;
+		}
+
+		if (listen(sock, 511) < 0) return false;
+
+		client.clear();
+		client.resize(MAX_CONN);
+
+		if (!setNonBlock(sock)) {
+			std::cerr << "TCP Server: cannot set socket to non-blocking\n";
+		}
+		stop = false;
+		std::cerr << "TCP Server: start thread at port " << port << std::endl;
+		run_thread = std::thread(&Server::Run, this);
+
+		return true;
+	}
+
+
+
+	void Client::disconnect() {
+		if (sock == -1)
+			closesocket(sock);
 
 		sock = -1;
 		state = DISCONNECTED;
@@ -39,6 +257,7 @@ namespace TCP {
 	bool Client::connect(std::string host, std::string port, bool persist, int timeout) {
 		int r;
 		struct addrinfo h;
+		struct addrinfo* address;
 
 		this->host = host;
 		this->port = port;
@@ -58,29 +277,41 @@ namespace TCP {
 		if (code != 0 || address == NULL) return false;
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-		if (sock == -1) return false;
+		if (sock == -1) {
+			freeaddrinfo(address);
+			return false;
+		}
 
+		if(persistent) {
 #ifndef _WIN32
-		r = fcntl(sock, F_GETFL, 0);
-		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+			r = fcntl(sock, F_GETFL, 0);
+			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
 
-		if (r == -1) return false;
+			if (r == -1) return false;
 #else
-		u_long mode = 1; // 1 to enable non-blocking socket
-		ioctlsocket(sock, FIONBIO, &mode);
+			u_long mode = 1; // 1 to enable non-blocking socket
+			ioctlsocket(sock, FIONBIO, &mode);
 #endif
+		}
 
 		stamp = time(NULL);
 
-		if (::connect(sock, address->ai_addr, (int)address->ai_addrlen) != -1) {
+		r = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
+		freeaddrinfo(address);
+
+		if (r != -1) {
 			state = READY;
 			return true;
 		}
 
 #ifndef _WIN32
 		if (errno != EINPROGRESS) {
-			closesocket(sock);
-			sock = -1;
+			disconnect();
+			return false;
+		}
+#else
+		if (WSAGetLastError() != WSAEWOULDBLOCK) {
+			disconnect();
 			return false;
 		}
 #endif
@@ -91,6 +322,7 @@ namespace TCP {
 	bool Client::isConnected(int t) {
 
 		if (state == READY) return true;
+
 		fd_set fdr, fdw;
 
 		FD_ZERO(&fdr);
@@ -169,7 +401,7 @@ namespace TCP {
 						return 0;
 					}
 					else {
-						std::cerr << std::endl;
+						std::cerr << " Failed.\n";
 						return -1;
 					}
 				}
@@ -216,6 +448,7 @@ namespace TCP {
 						return 0;
 					}
 					else {
+						std::cerr << " Failed.\n";
 						std::cerr << std::endl;
 						return -1;
 					}					

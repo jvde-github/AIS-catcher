@@ -364,14 +364,14 @@ void OutputUDP::start() {
 	}
 }
 
-IO::UDP& OutputUDP::add() {
+IO::UDPStreamer& OutputUDP::add() {
 
-	_UDP.push_back(std::unique_ptr<IO::UDP>(new IO::UDP()));
+	_UDP.push_back(std::unique_ptr<IO::UDPStreamer>(new IO::UDPStreamer()));
 	return *_UDP.back();
 }
 
-IO::UDP& OutputUDP::add(const std::string& host, const std::string& port) {
-	_UDP.push_back(std::unique_ptr<IO::UDP>(new IO::UDP()));
+IO::UDPStreamer& OutputUDP::add(const std::string& host, const std::string& port) {
+	_UDP.push_back(std::unique_ptr<IO::UDPStreamer>(new IO::UDPStreamer()));
 
 	_UDP.back()->Set("HOST", host).Set("PORT", port);
 
@@ -395,14 +395,14 @@ void OutputTCP::start() {
 	}
 }
 
-IO::TCP& OutputTCP::add() {
+IO::TCPClientStreamer& OutputTCP::add() {
 
-	_TCP.push_back(std::unique_ptr<IO::TCP>(new IO::TCP()));
+	_TCP.push_back(std::unique_ptr<IO::TCPClientStreamer>(new IO::TCPClientStreamer()));
 	return *_TCP.back();
 }
 
-IO::TCP& OutputTCP::add(const std::string& host, const std::string& port) {
-	_TCP.push_back(std::unique_ptr<IO::TCP>(new IO::TCP()));
+IO::TCPClientStreamer& OutputTCP::add(const std::string& host, const std::string& port) {
+	_TCP.push_back(std::unique_ptr<IO::TCPClientStreamer>(new IO::TCPClientStreamer()));
 
 	_TCP.back()->Set("HOST", host).Set("PORT", port);
 
@@ -480,8 +480,8 @@ void OutputTCPlistener::start() {
 	}
 }
 
-IO::TCPlistener& OutputTCPlistener::add(const std::string& port) {
-	_listener.push_back(std::unique_ptr<IO::TCPlistener>(new IO::TCPlistener()));
+IO::TCPlistenerStreamer& OutputTCPlistener::add(const std::string& port) {
+	_listener.push_back(std::unique_ptr<IO::TCPlistenerStreamer>(new IO::TCPlistenerStreamer()));
 	_listener.back()->Set("PORT", port).Set("TIMEOUT","0");
 
 	return *_listener.back();
@@ -632,7 +632,7 @@ void WebClient::start() {
 
 	if (firstport && lastport) {
 		for (port = firstport; port <= lastport; port++)
-			if (Server::start(port)) break;
+			if (HTTPServer::start(port)) break;
 
 		if (port > lastport)
 			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
@@ -678,7 +678,7 @@ void WebClient::close() {
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 
-void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
+void WebClient::Request(TCP::Socket& c, const std::string& response, bool gzip) {
 
 	std::string r;
 	std::string a;
@@ -828,7 +828,7 @@ void WebClient::Request(IO::Client& c, const std::string& response, bool gzip) {
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else
-		Server::Request(c, r, false);
+		HTTPServer::Request(c, r, false);
 }
 
 Setting& WebClient::Set(std::string option, std::string arg) {
