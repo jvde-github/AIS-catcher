@@ -22,7 +22,6 @@
 
 #include "AIS.h"
 #include "JSONAIS.h"
-#include "Server.h"
 
 #include "Keys.h"
 #include "JSON/JSON.h"

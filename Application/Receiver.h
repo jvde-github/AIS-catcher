@@ -32,7 +32,6 @@
 #include "Network.h"
 #include "AIS.h"
 #include "JSONAIS.h"
-#include "Server.h"
 #include "DB.h"
 #include "History.h"
 #include "PostgreSQL.h"
@@ -174,35 +173,35 @@ public:
 
 //--------------------------------------------
 class OutputTCPlistener {
-	std::vector<std::unique_ptr<IO::TCPlistener>> _listener;
+	std::vector<std::unique_ptr<IO::TCPlistenerStreamer>> _listener;
 
 public:
 	void connect(Receiver& r);
 	void start();
-	IO::TCPlistener& add(const std::string& port);
-	IO::TCPlistener& add() { return add("0"); }
+	IO::TCPlistenerStreamer& add(const std::string& port);
+	IO::TCPlistenerStreamer& add() { return add("0"); }
 };
 
 //--------------------------------------------
 class OutputUDP {
-	std::vector<std::unique_ptr<IO::UDP>> _UDP;
+	std::vector<std::unique_ptr<IO::UDPStreamer>> _UDP;
 
 public:
 	void connect(Receiver& r);
 	void start();
-	IO::UDP& add();
-	IO::UDP& add(const std::string& host, const std::string& port);
+	IO::UDPStreamer& add();
+	IO::UDPStreamer& add(const std::string& host, const std::string& port);
 };
 
 //--------------------------------------------
 class OutputTCP {
-	std::vector<std::unique_ptr<IO::TCP>> _TCP;
+	std::vector<std::unique_ptr<IO::TCPClientStreamer>> _TCP;
 
 public:
 	void connect(Receiver& r);
 	void start();
-	IO::TCP& add();
-	IO::TCP& add(const std::string& host, const std::string& port);
+	IO::TCPClientStreamer& add();
+	IO::TCPClientStreamer& add(const std::string& host, const std::string& port);
 };
 
 //--------------------------------------------
@@ -244,7 +243,7 @@ public:
 };
 
 //--------------------------------------------
-class WebClient : public IO::Server, public Setting {
+class WebClient : public IO::HTTPServer, public Setting {
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
 
 	int port = 0;
@@ -358,7 +357,7 @@ public:
 
 	bool isPortSet() { return port_set; }
 	// HTTP callbacks
-	void Request(IO::Client& c, const std::string& r, bool gzip);
+	void Request(TCP::Socket& c, const std::string& r, bool gzip);
 
 	Setting& Set(std::string option, std::string arg);
 	std::string Get() { return ""; };

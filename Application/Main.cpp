@@ -426,14 +426,14 @@ int main(int argc, char* argv[]) {
 			case 'u':
 				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
 				{
-					IO::UDP& u = udp.add(arg1, arg2);
+					IO::UDPStreamer& u = udp.add(arg1, arg2);
 					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
 				}
 				break;
 			case 'P':
 				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
 				{
-					IO::TCP& u = tcp.add(arg1, arg2);
+					IO::TCPClientStreamer& u = tcp.add(arg1, arg2);
 					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
 				}
 				break;

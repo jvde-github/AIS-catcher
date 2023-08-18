@@ -82,7 +82,7 @@ void Config::setUDPfromJSON(const JSON::Property& pd) {
 	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 
-		IO::UDP& udp = _udp.add();
+		IO::UDPStreamer& udp = _udp.add();
 		setSettingsFromJSON(v, udp);
 	}
 }
@@ -95,7 +95,7 @@ void Config::setTCPfromJSON(const JSON::Property& pd) {
 	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 
-		IO::TCP& tcp = _tcp.add();
+		IO::TCPClientStreamer& tcp = _tcp.add();
 		setSettingsFromJSON(v, tcp);
 	}
 }
