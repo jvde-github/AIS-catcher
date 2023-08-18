@@ -289,8 +289,13 @@ int main(int argc, char* argv[]) {
 				parseSettings(*servers.back(), argv, ptr + (count % 2), argc);
 				break;
 			case 'S':
-				Assert(count == 1, param, "requires one parameter [port].");
-				tcp_listener.add(arg1);
+				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter [port].");
+				{
+					IO::TCPlistenerStreamer& u = tcp_listener.add(arg1);
+					if (count >1) parseSettings(u, argv, ptr + 1, argc);
+				}
+				break;
+
 				break;
 			case 'v':
 				Assert(count <= 1, param);

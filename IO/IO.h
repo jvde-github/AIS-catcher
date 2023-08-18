@@ -112,8 +112,9 @@ namespace IO {
 			if (option == "GROUPS_IN") {
 				setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else
-				filter.Set(option, arg);
+			else if(!filter.SetOption(option, arg)) {
+				throw std::runtime_error("Message output - unknown option: " + option);
+			}
 
 			return *this;
 		}
@@ -136,8 +137,9 @@ namespace IO {
 			if (option == "GROUPS_IN") {
 				setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else
-				filter.Set(option, arg);
+			else if(!filter.SetOption(option, arg)) {
+				throw std::runtime_error("JSON output - unknown option: " + option);
+			}
 			return *this;
 		}
 	};
