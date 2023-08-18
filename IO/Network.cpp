@@ -547,8 +547,14 @@ namespace IO {
 
 		if (tcp.connect(host, port, persistent, 0)) 
 			std::cerr << "connected\n";
-		else
-			std::cerr << "pending\n";
+		else {
+			if(!persistent) {
+				std::cerr << "failed\n";
+				throw std::runtime_error("TCP feed cannot connect to " + host + " port " + port);
+			}
+			else
+				std::cerr << "pending\n";
+		}
 	}
 
 	void TCPClientStreamer::Stop() {
