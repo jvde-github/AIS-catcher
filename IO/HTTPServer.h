@@ -51,10 +51,10 @@ namespace IO {
 
 	class HTTPServer : public TCP::Server {
 	public:
-		virtual void Request(TCP::Socket& c, const std::string& msg, bool accept_gzip);
+		virtual void Request(TCP::ServerConnection& c, const std::string& msg, bool accept_gzip);
 
-		void Response(TCP::Socket& c, std::string type, const std::string& content, bool gzip = false);
-		void Response(TCP::Socket& c, std::string type, char* data, int len, bool gzip = false);
+		void Response(TCP::ServerConnection& c, std::string type, const std::string& content, bool gzip = false);
+		void Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false);
 
 	private:
 		std::string ret, header;

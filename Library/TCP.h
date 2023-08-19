@@ -47,8 +47,8 @@
 
 namespace TCP {
 
-	struct Socket {
-		~Socket() { Close(); }
+	struct ServerConnection {
+		~ServerConnection() { Close(); }
 		
 		SOCKET sock = -1;
 		std::string msg;
@@ -100,7 +100,7 @@ namespace TCP {
 		bool reuse_port = true;
 
 		const int MAX_CONN = 64;
-		std::vector<Socket> client;
+		std::vector<ServerConnection> client;
 
 		std::thread run_thread;
 
