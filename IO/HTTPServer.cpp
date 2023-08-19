@@ -45,7 +45,7 @@ namespace IO {
 		}
 	}
 
-	void HTTPServer::Request(TCP::Socket& c, const std::string& r, bool) {
+	void HTTPServer::Request(TCP::ServerConnection& c, const std::string& r, bool) {
 		// TO DO: return 404 by default
 	}
 
@@ -75,7 +75,7 @@ namespace IO {
 		}
 	}
 
-	void HTTPServer::Response(TCP::Socket& c, std::string type, const std::string& content, bool gzip) {
+	void HTTPServer::Response(TCP::ServerConnection& c, std::string type, const std::string& content, bool gzip) {
 #ifdef HASZLIB
 		if (gzip) {
 			zip.zip(content);
@@ -87,7 +87,7 @@ namespace IO {
 		Response(c, type, (char*)content.c_str(), content.size());
 	}
 
-	void HTTPServer::Response(TCP::Socket& c, std::string type, char* data, int len, bool gzip) {
+	void HTTPServer::Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip) {
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
 		if (gzip) header += "\r\nContent-Encoding: gzip";

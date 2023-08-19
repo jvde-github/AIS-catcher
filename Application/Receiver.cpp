@@ -678,7 +678,7 @@ void WebClient::close() {
 #include "HTML/HTML.cpp"
 #include "HTML/favicon.cpp"
 
-void WebClient::Request(TCP::Socket& c, const std::string& response, bool gzip) {
+void WebClient::Request(TCP::ServerConnection& c, const std::string& response, bool gzip) {
 
 	std::string r;
 	std::string a;

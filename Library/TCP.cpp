@@ -24,7 +24,9 @@
 
 namespace TCP {
 
-	void Socket::Close() {
+	// TO DO: create a BaseSocket class and clean up between files Network (AC streamers) and TCP (low level TCP connections)
+
+	void ServerConnection::Close() {
 		if (sock != -1) {
 			closesocket(sock);
 			sock = -1;
@@ -32,17 +34,17 @@ namespace TCP {
 		msg.clear();
 	}
 
-	void Socket::Start(SOCKET s) {
+	void ServerConnection::Start(SOCKET s) {
 		msg.clear();
 		stamp = std::time(0);
 		sock = s;
 	}
 
-	int Socket::Inactive(std::time_t now) {
+	int ServerConnection::Inactive(std::time_t now) {
 		return (int)((long int)now - (long int)stamp);
 	}
 
-	void Socket::Read() {
+	void ServerConnection::Read() {
 		char buffer[1024];
 
 		if (isConnected()) {
@@ -88,17 +90,15 @@ namespace TCP {
 		conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen);
 #ifdef _WIN32
 		if (conn_socket == SOCKET_ERROR) {
-			if (WSAGetLastError() != WSAEWOULDBLOCK) {
+			if (WSAGetLastError() != WSAEWOULDBLOCK) 
 				std::cerr << "TCP listener: error accepting connection. " << strerror(WSAGetLastError()) << std::endl;
-				return;
-			}
+			return;
 		}
 #else
 		if (conn_socket == -1) {
-			if (errno != EWOULDBLOCK && errno != EAGAIN) {
+			if (errno != EWOULDBLOCK && errno != EAGAIN)
 				std::cerr << "TCP Server: error accepting connection. " << strerror(errno) << std::endl;
-				return;
-			}
+			return;
 		}
 #endif
 		else {
