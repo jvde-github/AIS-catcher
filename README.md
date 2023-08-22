@@ -979,7 +979,7 @@ AIS-catcher automatically sets an appropriate sample rate depending on your devi
 ```
 96K, 192K, 288K, 384K, 768K, 1152K, 1536K, 3072K, 6144K, 12288K 
 ```
-There is no efficiency advantage of using other rates than in this list apart from limiting the bandwidth and data throughput.
+There is no efficiency advantage of using other rates than in this list apart from limiting the bandwidth and data throughput. Ideally, consider to use an option from the list as it avoids upsampling (and additional noise) but it is not required and the model works well with other sampling rates.
 In recent versions of AIS-catcher you can use the ``SOXR`` or ``libsamplerate`` (SRC) library for downsampling. In fact, you can compare the four different downsampling approaches with a command like:
 ```
 AIS-catcher -r posterholt.raw -m 2 -m 2 -go FP_DS on  -m 2 -go SOXR on -m 2 -go SRC on -b -q -v
