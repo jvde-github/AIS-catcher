@@ -975,12 +975,11 @@ Please note that the SDRplay devices are currently not supported in the Docker i
 ## Considerations
 
 ### A note on device sample rates
-AIS-catcher automatically sets an appropriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports most sample rates above 96K but will upsample to a higher sample rate where needed to the following rates:
+AIS-catcher automatically sets an appropriate sample rate depending on your device but provides the option to overwrite this default using the ```-s``` switch. For example for performance reasons you can decide to use a lower rate or improve the sensitivity by picking a higher rate than the default. The decoding model supports most sample rates above 96K but will internaly upsample a signal, if needed, to one of the follow rates:
 ```
 96K, 192K, 288K, 384K, 768K, 1152K, 1536K, 3072K, 6144K, 12288K 
 ```
-Before splitting the signal in two separate signals for channel A and B, AIS-catcher downsamples the signal to 96K samples/second by successively decimating the signal by a factor 2 and/or 3. 
-Input on all other sample rates is upsampled to a nearby higher rate to make it fit in this computational structure. Hence, there is no efficiency advantage of using these other rates.
+There is no efficiency advantage of using other rates than in this list apart from limiting the bandwidth and data throughput.
 In recent versions of AIS-catcher you can use the ``SOXR`` or ``libsamplerate`` (SRC) library for downsampling. In fact, you can compare the four different downsampling approaches with a command like:
 ```
 AIS-catcher -r posterholt.raw -m 2 -m 2 -go FP_DS on  -m 2 -go SOXR on -m 2 -go SRC on -b -q -v
