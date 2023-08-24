@@ -591,7 +591,7 @@ void WebClient::connect(Receiver& r) {
 			*r.device >> raw_counter;
 		}
 	if(!rec_details)
-		std::cerr << "Server: not connected to the output of any model." << std::endl;
+		std::cerr << "Web Client: not connected to the output of any model." << std::endl;
 
 }
 
@@ -728,6 +728,8 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",";
 		content += "\"run_time\":\"" + std::to_string((long int)time(0) - (long int)time_start) + "\",";
 		content += "\"memory\":" + std::to_string(Util::Helper::getMemoryConsumption()) + ",";
+		content += "\"os\":" + os + ",";
+		content += "\"hardware\":" + hardware + ",";
 
 		std::string unit;
 		const uint64_t GB = 1000000000;
