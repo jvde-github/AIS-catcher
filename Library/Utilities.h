@@ -24,6 +24,9 @@
 #include <iostream>
 #include <fstream>
 #include <mutex>
+#include <string>
+#include <array>
+#include <algorithm>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -148,9 +151,10 @@ namespace Util {
 			}
 #endif
 			return memory;
-
 		}
 
+		static std::string getOS();
+		static std::string getHardware();
 	};
 
 	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {

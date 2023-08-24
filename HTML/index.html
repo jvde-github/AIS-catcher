@@ -1779,6 +1779,12 @@
                     </section>
                     <section class="noandroid">
                         <div>
+                            <span>Operating System</span><span id="stat_os"></span>
+                        </div>
+                        <div>
+                            <span>Hardware</span><span id="stat_hardware"></span>
+                        </div>
+                        <div>
                             <span>Device</span><span id="stat_product"></span>
                         </div>
                         <div>
@@ -3543,7 +3549,7 @@
 
             if (stat) {
                 // in bulk....
-                ['build_describe', 'build_date', 'station', 'product', 'vendor', 'serial', 'model', 'sample_rate', 'received', 'vessel_count'].forEach(e => document.getElementById('stat_' + e).innerHTML = stat[e]);
+                ['os','hardware','build_describe', 'build_date', 'station', 'product', 'vendor', 'serial', 'model', 'sample_rate', 'received', 'vessel_count'].forEach(e => document.getElementById('stat_' + e).innerHTML = stat[e]);
                 ['stat', 'last_minute', 'last_day', 'last_hour'].forEach(e => document.getElementById('stat_' + e + '_count').innerHTML = stat[e].count);
                 [0, 1, 2, 3].forEach(e => document.getElementById('stat_stat_channel' + e).innerHTML = stat.stat.channel[e]);
 

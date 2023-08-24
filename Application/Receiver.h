@@ -270,6 +270,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	std::time_t time_start;
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
 	std::string filename = "";
+	std::string os, hardware;
 
 	std::mutex m;
 	std::condition_variable cv;
@@ -340,6 +341,11 @@ class WebClient : public IO::HTTPServer, public Setting {
 
 	void stopThread();
 public:
+	WebClient() {
+		os.clear(); JSON::StringBuilder::stringify(Util::Helper::getOS(),os);
+		hardware.clear(); JSON::StringBuilder::stringify(Util::Helper::getHardware(),hardware);
+	}
+
 	~WebClient() { stopThread(); }
 
 	bool& active() { return run; }
