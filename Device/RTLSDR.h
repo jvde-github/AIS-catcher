@@ -61,7 +61,7 @@ namespace Device {
 		void Run();
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
-		uint32_t BUFFER_COUNT = 2;
+		uint32_t BUFFER_COUNT = 24;
 
 		void setTuner_GainMode(int);
 		void setTuner_Gain(FLOAT32);
