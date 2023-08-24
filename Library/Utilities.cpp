@@ -312,11 +312,11 @@ namespace Util {
 
 	std::string Helper::getHardware() {
 #ifdef _WIN32
-		return "Windows";
+		return "";
 #eldif ANDROID
-		return "Android";	
+		return "";	
 #elif __APPLE__		
-		return "MacOS";
+		return "";
 #elif __linux__
 		std::string line, model_name, revision;
 
