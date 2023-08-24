@@ -708,7 +708,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 	}
 	else if (r == "/stat.json") {
 
-		std::string content = "{\"stat\":" + counter.toJSON() + ",";
+		std::string content = "{\"total\":" + counter.toJSON() + ",";
 		content += "\"last_day\":" + hist_day.lastStatToJSON() + ",";
 		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
 		content += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
