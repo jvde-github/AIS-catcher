@@ -28,6 +28,7 @@ Latest version is **v0.50** with various improvements to the database interface 
 New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge):
 
 - Creation of an Edge Release where latest Windows binaries are stored: [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
+- Increasesd the default RTL-SDR buffer, so running on a RPI Zero W only requires activating fast downsampling `-F`.
 - Option `-ge print on` to dump raw input from serial device to screen
 - Bug fix in reading from certain serial devices on Windows
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
@@ -143,6 +144,12 @@ AIS-catcher -gr RTLAGC on TUNER auto -a 192K
 ```
 It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try with and without this filter.
 To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
+
+AIS-catcher also supports the 17$ RPI Zero W. However, the hardware might not keep up with the high data flow. This can be resolved by activating fast downsampling via:
+```console
+AIS-catcher -F
+```
+Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default.
 
 ## Deep dives
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
