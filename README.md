@@ -617,17 +617,16 @@ From thereon it is fairly straightforward to pick up this data and start analysi
 
 I hope this is sufficient to get you experimenting! Unfortunately the options cannot yet be set from the JSON configuration file which is work in progress.
 
-### Running on hardware with performance limitations
+### Running on RPI Zero W
 
-AIS-catcher implements a trick to speed up downsampling for RTLSDR input at 1536K samples/second by using fixed point calculations (```-m 2 -go FP_DS on```). In essence the downsampling is done 
+AIS-catcher implements a trick to speed up downsampling for RTLSDR input at 1536K samples/second by using fixed point calculations (```-F```). In essence the downsampling is done 
 in 16 bit integers performed in parallel for the I and Q channel using only 32 bit integers.
-Furthermore a new model was introduced which uses exponential moving averages in the determination of the phase instead of a standard moving average as for the default model (```-m 2 -go PS_EMA on```).
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/raspberry.jpg" width=40% height=40%>
 </p>
 
-Both features can be activated with the ```-F``` switch. 
+This feature can activated with the ```-F``` switch and is only available for RTL-SDR running at a rate 1536K per second (the default). 
 To give an idea of the performance improvement on a Raspberry Pi Model B Rev 2 (700 MHz), I used the following command to decode from a file on the aforementioned Raspberry Pi:
 
 ```console
@@ -641,8 +640,10 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 [AIS engine (speed optimized) v0.31]	: 7722.32 ms
 ```
-This and other performance updates make the full version of AIS-catcher run on an early version of the Raspberry Pi with reasonable processor load. Other options to reduce buffer overruns include lowering the sample rate to 288K and/or increasing BUFFER_COUNT. 
-
+On a RPI Zero W this will bring down CPU load to ~40% likely there likely will be quite a few buffer overruns. To resolve this, increase the buffer count by adding `-gr BUFFER_COUNT 24`. So the command-line becomes:
+```console
+AIS-catcher -F -gr BUFFER_COUNT 24
+```
 
 ### Connecting to GNU Radio via ZMQ
 
