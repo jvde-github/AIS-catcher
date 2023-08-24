@@ -145,11 +145,11 @@ AIS-catcher -gr RTLAGC on TUNER auto -a 192K
 It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial  so it is definitely worthwhile to try with and without this filter.
 To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at the time, e.g. switch RTLAGC ``on`` or ``off`` and setting the TUNER to ``auto`` and try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
-AIS-catcher also supports the 18 Euro RPI Zero W. However, the hardware might not keep up with the high data flow. This can be resolved by activating fast downsampling via:
+AIS-catcher also supports the 18 Euro RPI Zero W. However, the hardware might not keep up with the high data flow. This can be resolved by activating **fast downsampling** via:
 ```console
-AIS-catcher -F.
+AIS-catcher -F
 ```
-Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device does still struggle, you can try running at a sample rate of 288K (`-s 288K`). Reception will be impacted noticably.
+Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device does still struggle, you can try running at a sample rate of 288K (`-s 288K`). Reception will be impacted noticably though.
 
 ## Deep dives
 ![Image](https://raw.githubusercontent.com/jvde-github/AIS-catcher/media/media/containership.jpg)
