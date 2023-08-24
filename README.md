@@ -617,7 +617,7 @@ From thereon it is fairly straightforward to pick up this data and start analysi
 
 I hope this is sufficient to get you experimenting! Unfortunately the options cannot yet be set from the JSON configuration file which is work in progress.
 
-### Running on RPI Zero W
+### Running on RPI Zero W and other performance limited devices
 
 AIS-catcher implements a trick to speed up downsampling for RTLSDR input at 1536K samples/second by using fixed point calculations (```-F```). In essence the downsampling is done 
 in 16 bit integers performed in parallel for the I and Q channel using only 32 bit integers.
@@ -640,10 +640,7 @@ Adding the ```-F``` switch yielded the same number of messages but timing is now
 ```
 [AIS engine (speed optimized) v0.31]	: 7722.32 ms
 ```
-On a RPI Zero W this will bring down CPU load to ~40% likely there likely will be quite a few buffer overruns. To resolve this, increase the buffer count by adding `-gr BUFFER_COUNT 24`. So the command-line becomes:
-```console
-AIS-catcher -F -gr BUFFER_COUNT 24
-```
+On a RPI Zero W this will bring down CPU load to ~40% and avoid buffer overruns.
 
 ### Connecting to GNU Radio via ZMQ
 
