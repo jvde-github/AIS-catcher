@@ -1929,6 +1929,65 @@
 
                     <div class="stat-panel">
 
+                        <header>This Session</header>
+
+
+                    <section>
+                        <div>
+                            <span>Total messages</span><span id="stat_session_count"></span>
+                        </div>
+                        <div>
+                            <span>Vessels seen</span><span id="stat_session_vessel_count"></span>
+                        </div>
+                    </section>
+                    <section>
+                        <div>
+                            <span>Channel A</span><span id="stat_session_channel0"></span>
+                        </div>
+                        <div>
+                            <span>Channel B</span><span id="stat_session_channel1"></span>
+                        </div>
+                        <div>
+                            <span>Channel C</span><span id="stat_session_channel2"></span>
+                        </div>
+                        <div>
+                            <span>Channel D</span><span id="stat_session_channel3"></span>
+                        </div>
+                    </section>
+                    <section>
+                        <div>
+                            <span>Class A position</span><span id="stat_session_msg123"></span>
+                        </div>
+                        <div>
+                            <span>Class A static</span><span id="stat_session_msg5"></span>
+                        </div>
+                        <div>
+                            <span>Class B position</span><span id="stat_session_msg1819"></span>
+                        </div>
+                        <div>
+                            <span>Class B static</span><span id="stat_session_msg24"></span>
+                        </div>
+                    </section>
+                    <section>
+                        <div>
+                            <span>Base station</span><span id="stat_session_msg4"></span>
+                        </div>
+                        <div>
+                            <span>SAR aircraft</span><span id="stat_session_msg9"></span>
+                        </div>
+                        <div>
+                            <span>Aid-to-Navigation</span><span id="stat_session_msg21"></span>
+                        </div>
+                        <div>
+                            <span>Other</span><span id="stat_session_msgother"></span>
+                        </div>
+                    </section>
+                    </div>
+
+
+
+                    <div class="stat-panel">
+
                         <header>Last Minute</header>
 
 
@@ -3799,6 +3858,7 @@
                 document.getElementById("stat_run_time").innerHTML = getDeltaTimeVal(stat.run_time);
 
                 updateStat(stat, "total"); 
+                updateStat(stat, "session"); 
                 updateStat(stat, "last_minute"); 
                 updateStat(stat, "last_hour"); 
                 updateStat(stat, "last_day"); 

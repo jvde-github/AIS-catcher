@@ -290,7 +290,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 		void Receive(const AIS::Message* msg, int len, TAG& tag);
 
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
-	} counter;
+	} counter, counter_session;
 
 	class PromotheusCounter : public StreamIn<AIS::Message> {
 		std::mutex m;
