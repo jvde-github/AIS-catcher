@@ -3102,4 +3102,8 @@ unsigned char index_html_gz[] = {
   0xab, 0x3c, 0x00, 0xff, 0x03, 0xb8, 0xc2, 0x1f, 0xe2, 0x92, 0xf7, 0x01,
   0x00
 };
+<<<<<<< HEAD
 unsigned int index_html_gz_len = 37213;
+=======
+unsigned int index_html_gz_len = 37213;
+>>>>>>> a2377663b211b3d3d45340efd68b1961c5a6dbac
