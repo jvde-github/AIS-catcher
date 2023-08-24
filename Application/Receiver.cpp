@@ -514,6 +514,7 @@ bool WebClient::Save() {
 
 void WebClient::Clear() {
 	counter.Clear();
+	counter_session.Clear();
 
 	hist_second.Clear();
 	hist_minute.Clear();
@@ -581,6 +582,7 @@ void WebClient::connect(Receiver& r) {
 
 			// connect all the statistical counters
 			r.Output(j) >> counter;
+			r.Output(j) >> counter_session;
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*) & ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*) & ships);
@@ -599,6 +601,8 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 	
 	if (m.Output().out.canConnect(groups_in)) {
 		m.Output() >> counter;
+		m.Output() >> counter_session;
+
 		json.Connect((StreamIn<JSON::JSON>*) & ships);
 		device >> raw_counter;
 
@@ -709,6 +713,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/stat.json") {
 
 		std::string content = "{\"total\":" + counter.toJSON() + ",";
+		content += "\"session\":" + counter_session.toJSON() + ",";
 		content += "\"last_day\":" + hist_day.lastStatToJSON() + ",";
 		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
 		content += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
@@ -879,6 +884,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		hist_day.setCutoff(cutoff);
 		dataPrometheus.setCutOff(cutoff);
 		counter.setCutOff(cutoff);
+		counter_session.setCutOff(cutoff);
 	}
 	else if (option == "SHARE_LOC") {
 		bool b = Util::Parse::Switch(arg);
