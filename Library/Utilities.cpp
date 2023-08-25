@@ -342,7 +342,7 @@ namespace Util {
 			}
 		}
 
-		return "";
+		return "Unknown";
 #endif			
 		return "";
 	}
