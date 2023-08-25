@@ -295,20 +295,33 @@ namespace Util {
 		FILE* fp = popen("lsb_release -ds", "r");
 		if (fp) {
 			
-			if (fgets(buffer.data(), buffer.size(), fp) != nullptr) {
+			if (fgets(buffer.data(), buffer.size(), fp) != nullptr)
 				os = buffer.data();
-				os.erase(std::remove(os.begin(), os.end(), '\n'), os.end());
-			}
+
 			pclose(fp);
-		}
-		if (os.empty()) 
-			return "Linux";
-		else
 			return os;
-#else
-		return "";
-#endif
 		}
+
+		{
+			std::ifstream inFile("/etc/os-release");
+			std::string line;
+			while (std::getline(inFile, line)) {
+				if (line.substr(0, 11) == "PRETTY_NAME") {
+					std::size_t start = line.find('"') + 1;
+					std::size_t end = line.rfind('"');
+					if (start != std::string::npos && end != std::string::npos) {
+						return line.substr(start, end - start);
+					}
+				}
+			}
+		}
+		return "Linux";
+
+
+#else
+    	return "";
+#endif
+	}
 
 	std::string Helper::getHardware() {
 #ifdef _WIN32
