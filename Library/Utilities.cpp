@@ -318,69 +318,31 @@ namespace Util {
 #elif __APPLE__		
 		return "";
 #elif __linux__
-		std::string line, model_name, revision;
+		std::string line, model_name;
 
 		{
-			std::ifstream cpuInfoFile("/proc/cpuinfo");
-			if (cpuInfoFile.is_open()) {
-				while (getline(cpuInfoFile, line)) {
+			std::ifstream inFile("/proc/device-tree/model");
+
+			if (inFile.is_open() && std::getline(inFile, line))
+				return line;
+		}
+		{
+			std::ifstream inFile("/proc/cpuinfo");
+			if (inFile.is_open()) {
+				while (getline(inFile, line)) {
 					if (line.substr(0, 10) == "model name") {
 						std::size_t pos = line.find(": ");
 						if (pos != std::string::npos) {
 							model_name = line.substr(pos + 2);
+							model_name.erase(std::remove(model_name.begin(), model_name.end(), '\n'), model_name.end());
+							return model_name;
 						}
-					} else if (line.substr(0, 8) == "Revision") {
-						std::size_t pos = line.find(": ");
-						if (pos != std::string::npos) {
-							revision = line.substr(pos + 2);
-						}
-					}
+					} 
 				}
 			}
 		}
 
-		if (revision == "900021") return "Raspberry Pi A+ 1.1";
-		if (revision == "900032") return "Raspberry Pi B+ 1.2";
-		if (revision == "900092") return "Raspberry Pi Zero 1.2";
-		if (revision == "900093") return "Raspberry Pi Zero 1.3";
-		if (revision == "9000c1") return "Raspberry Pi Zero W 1.1";
-		if (revision == "9020e0") return "Raspberry Pi 3A+ 1.0";
-		if (revision == "920092") return "Raspberry Pi Zero 1.2";
-		if (revision == "920093") return "Raspberry Pi Zero 1.3";
-		if (revision == "900061") return "Raspberry Pi CM1 1.1";
-		if (revision == "a01040") return "Raspberry Pi 2B 1.0";
-		if (revision == "a01041") return "Raspberry Pi 2B 1.1";
-		if (revision == "a02082") return "Raspberry Pi 3B 1.2";
-		if (revision == "a020a0") return "Raspberry Pi CM3 1.0";
-		if (revision == "a020d3") return "Raspberry Pi 3B+ 1.3";
-		if (revision == "a02042") return "Raspberry Pi 2B (with BCM2837) 1.2";
-		if (revision == "a21041") return "Raspberry Pi 2B 1.1";
-		if (revision == "a22042") return "Raspberry Pi 2B (with BCM2837) 1.2";
-		if (revision == "a22082") return "Raspberry Pi 3B 1.2";
-		if (revision == "a220a0") return "Raspberry Pi CM3 1.0";
-		if (revision == "a32082") return "Raspberry Pi 3B 1.2";
-		if (revision == "a52082") return "Raspberry Pi 3B 1.2";
-		if (revision == "a22083") return "Raspberry Pi 3B 1.3";
-		if (revision == "a02100") return "Raspberry Pi CM3+ 1.0";
-		if (revision == "a03111") return "Raspberry Pi 4B 1.1";
-		if (revision == "b03111") return "Raspberry Pi 4B 1.1";
-		if (revision == "b03112") return "Raspberry Pi 4B 1.2";
-		if (revision == "b03114") return "Raspberry Pi 4B 1.4";
-		if (revision == "b03115") return "Raspberry Pi 4B 1.5";
-		if (revision == "c03111") return "Raspberry Pi 4B 1.1";
-		if (revision == "c03112") return "Raspberry Pi 4B 1.2";
-		if (revision == "c03114") return "Raspberry Pi 4B 1.4";
-		if (revision == "c03115") return "Raspberry Pi 4B 1.5";
-		if (revision == "d03114") return "Raspberry Pi 4B 1.4";
-		if (revision == "d03115") return "Raspberry Pi 4B 1.5";
-		if (revision == "c03130") return "Raspberry Pi Pi 400 1.0";
-		if (revision == "a03140") return "Raspberry Pi CM4 1.0";
-		if (revision == "b03140") return "Raspberry Pi CM4 1.0";
-		if (revision == "c03140") return "Raspberry Pi CM4 1.0";
-		if (revision == "d03140") return "Raspberry Pi CM4 1.0";
-		if (revision == "902120") return "Raspberry Pi Zero 2 W 1.0";
-
-		return model_name;
+		return "";
 #endif			
 		return "";
 	}
