@@ -3867,6 +3867,10 @@
                 updateStat(stat, "last_minute"); 
                 updateStat(stat, "last_hour"); 
                 updateStat(stat, "last_day"); 
+
+                document.getElementById("stat_total_vessel_count").innerHTML = "-";
+                document.getElementById("stat_session_vessel_count").innerHTML = stat.vessel_count;
+
             }
         }
 
