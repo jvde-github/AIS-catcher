@@ -36,6 +36,7 @@ namespace JSON {
 				break;
 			case '\r':
 			case '\n':
+			case '\0':
 				break;
 			default:
 				json += c;
