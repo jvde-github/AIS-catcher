@@ -334,7 +334,6 @@ namespace Util {
 						std::size_t pos = line.find(": ");
 						if (pos != std::string::npos) {
 							model_name = line.substr(pos + 2);
-							model_name.erase(std::remove(model_name.begin(), model_name.end(), '\n'), model_name.end());
 							return model_name;
 						}
 					} 
