@@ -613,7 +613,12 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 }
 
 void WebClient::Reset() {
-	Clear();
+	counter_session.Clear();
+	hist_second.Clear();
+	hist_minute.Clear();
+	hist_hour.Clear();
+	hist_day.Clear();
+
 	raw_counter.Reset();
 	ships.setup();
 	time_start = time(nullptr);
