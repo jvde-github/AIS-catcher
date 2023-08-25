@@ -876,42 +876,48 @@
                 }
             }
 
-            /* Summary tab */
+            /* Summary tab */ 
             .stat-tab {
                 padding: 15px;
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr 1fr;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
                 column-gap: 15px;
                 row-gap: 15px;
             }
 
             @media only screen and (max-width:2250px) {
                 .stat-tab {
-                    grid-template-columns: 1fr 1fr 1fr;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
                     padding: 5px;
                 }
             }
 
             @media only screen and (max-width:1500px) {
                 .stat-tab {
-                    grid-template-columns: 1fr 1fr;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                     padding: 5px;
                 }
             }
 
-            @media only screen and (max-width:800px) {
+            @media only screen and (max-width:750px) {
                 .stat-tab {
-                    grid-template-columns: 1fr;
+                    grid-template-columns: repeat(1, minmax(0, 1fr));
                     padding: 0px;
                 }
+            } 
+/*
+            .stat-tab {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
-
+*/
             .stat-panel  {
                 max-width: 750px;
+                width: 100%;
                 border-radius: 15px;
                 background-color: var(--panel-color);
             }
-
 
                 .stat-panel > header {
                     margin: 20px auto 30px auto;
@@ -1872,6 +1878,63 @@
 
                 <div class="stat-panel">
 
+                    <header>This Session</header>
+
+                <section>
+                    <div>
+                        <span>Total messages</span><span id="stat_session_count"></span>
+                    </div>
+                    <div>
+                        <span>Vessels seen</span><span id="stat_session_vessel_count"></span>
+                    </div>
+                </section>
+                <section>
+                    <div>
+                        <span>Channel A</span><span id="stat_session_channel0"></span>
+                    </div>
+                    <div>
+                        <span>Channel B</span><span id="stat_session_channel1"></span>
+                    </div>
+                    <div>
+                        <span>Channel C</span><span id="stat_session_channel2"></span>
+                    </div>
+                    <div>
+                        <span>Channel D</span><span id="stat_session_channel3"></span>
+                    </div>
+                </section>
+                <section>
+                    <div>
+                        <span>Class A position</span><span id="stat_session_msg123"></span>
+                    </div>
+                    <div>
+                        <span>Class A static</span><span id="stat_session_msg5"></span>
+                    </div>
+                    <div>
+                        <span>Class B position</span><span id="stat_session_msg1819"></span>
+                    </div>
+                    <div>
+                        <span>Class B static</span><span id="stat_session_msg24"></span>
+                    </div>
+                </section>
+                <section>
+                    <div>
+                        <span>Base station</span><span id="stat_session_msg4"></span>
+                    </div>
+                    <div>
+                        <span>SAR aircraft</span><span id="stat_session_msg9"></span>
+                    </div>
+                    <div>
+                        <span>Aid-to-Navigation</span><span id="stat_session_msg21"></span>
+                    </div>
+                    <div>
+                        <span>Other</span><span id="stat_session_msgother"></span>
+                    </div>
+                </section>
+                </div>
+
+
+                <div class="stat-panel">
+
                     <header>Total Messages</header>
 
                     <section>
@@ -1926,64 +1989,6 @@
                     </section>
 
                     </div>
-
-                    <div class="stat-panel">
-
-                        <header>This Session</header>
-
-
-                    <section>
-                        <div>
-                            <span>Total messages</span><span id="stat_session_count"></span>
-                        </div>
-                        <div>
-                            <span>Vessels seen</span><span id="stat_session_vessel_count"></span>
-                        </div>
-                    </section>
-                    <section>
-                        <div>
-                            <span>Channel A</span><span id="stat_session_channel0"></span>
-                        </div>
-                        <div>
-                            <span>Channel B</span><span id="stat_session_channel1"></span>
-                        </div>
-                        <div>
-                            <span>Channel C</span><span id="stat_session_channel2"></span>
-                        </div>
-                        <div>
-                            <span>Channel D</span><span id="stat_session_channel3"></span>
-                        </div>
-                    </section>
-                    <section>
-                        <div>
-                            <span>Class A position</span><span id="stat_session_msg123"></span>
-                        </div>
-                        <div>
-                            <span>Class A static</span><span id="stat_session_msg5"></span>
-                        </div>
-                        <div>
-                            <span>Class B position</span><span id="stat_session_msg1819"></span>
-                        </div>
-                        <div>
-                            <span>Class B static</span><span id="stat_session_msg24"></span>
-                        </div>
-                    </section>
-                    <section>
-                        <div>
-                            <span>Base station</span><span id="stat_session_msg4"></span>
-                        </div>
-                        <div>
-                            <span>SAR aircraft</span><span id="stat_session_msg9"></span>
-                        </div>
-                        <div>
-                            <span>Aid-to-Navigation</span><span id="stat_session_msg21"></span>
-                        </div>
-                        <div>
-                            <span>Other</span><span id="stat_session_msgother"></span>
-                        </div>
-                    </section>
-                    </div>
-
 
 
                     <div class="stat-panel">
