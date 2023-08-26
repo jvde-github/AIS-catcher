@@ -299,9 +299,9 @@ namespace Util {
 				os = buffer.data();
 
 			pclose(fp);
-			return os;
 		}
 
+		if (os.empty())
 		{
 			std::ifstream inFile("/etc/os-release");
 			std::string line;
@@ -310,14 +310,16 @@ namespace Util {
 					std::size_t start = line.find('"') + 1;
 					std::size_t end = line.rfind('"');
 					if (start != std::string::npos && end != std::string::npos) {
-						return line.substr(start, end - start);
+						os = line.substr(start, end - start);
+						break;
 					}
 				}
 			}
 		}
-		return "Linux";
-
-
+		if (os.empty()) {
+			os = "Linux";
+		}
+		return os;
 #else
     	return "";
 #endif
