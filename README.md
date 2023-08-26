@@ -525,6 +525,7 @@ If you want to run multiple receivers, this is possible as well but the device s
     },
     {
       "input":"rtlsdr",
+      "serial":"ais",
       "verbose":true,
       "rtlsdr":{
         "bandwidth":"192k"
@@ -533,7 +534,7 @@ If you want to run multiple receivers, this is possible as well but the device s
   ]
 }
 ```
-
+If there is only one RTL-SDR is connected, only `input` set to `rtlsdr` is sufficient. Similarly, if there is only one device connected with serial `ais`, we only have to specify `serial`. 
 ### NMEA input
 
 AIS-catcher can be used as a command line utility that decodes NMEA lines in a file and prints the results as JSON. It provides a way to move the JSON analysis to the server side (send over NMEA with minimal meta data) or for unit testing the JSON decoder which was the prime reason for the addition of this feature. Use the model ``-m 5`` which will automatically selected if the input format is set to `TXT`, e.g.:
