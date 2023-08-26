@@ -2520,8 +2520,13 @@
                 contextMenu.style.transform = 'none';
 
                 var contextMenuRect = contextMenu.getBoundingClientRect();
-                var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-                var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                var viewportWidth = (window.innerWidth && window.outerWidth) 
+                    ? Math.min(window.innerWidth, window.outerWidth) 
+                    : document.documentElement.clientWidth;
+
+                var viewportHeight = (window.innerHeight && window.outerHeight) 
+                     ? Math.min(window.innerHeight, window.outerHeight) 
+                     : document.documentElement.clientHeight;
 
                 var maxX = viewportWidth - contextMenuRect.width;
                 var maxY = viewportHeight - contextMenuRect.height;
