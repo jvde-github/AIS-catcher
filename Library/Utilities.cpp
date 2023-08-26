@@ -342,6 +342,7 @@ namespace Util {
 				return line;
 		}
 
+		// For systems without a device-tree, approximation for the RPI
 		{
 			std::ifstream inFile("/proc/cpuinfo");
 			if (inFile.is_open()) {
@@ -404,7 +405,7 @@ namespace Util {
 
 		return model_name;
 
-		return "Unknown";
+		return "";
 #endif			
 		return "";
 	}
