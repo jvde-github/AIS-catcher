@@ -285,7 +285,7 @@ namespace Util {
 	std::string Helper::getOS() {
 #ifdef _WIN32
 		return "Windows";
-#elif ANDROID
+#elif __ANDROID__
 		return "Android";	
 #elif __APPLE__		
 		return "MacOS";
