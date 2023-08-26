@@ -507,8 +507,8 @@ This option  provides an easy way to switch on and off particular channels or do
 The fields and values in the configuration file can be specified  consistent with the command line settings as described 
 in this document. JSON is however case sensitive so field names must be entered in lower case.
 
-The active device is selected via the ``input`` or ``serial`` field. 
-If both are included the program will check that they are consistent, i.e. the hardware with the specified serial number must be of type ``input``. 
+The active device is selected via the ``input`` or ``serial`` field. Objects for specific SDRs like `rtlsdr` are setting the parameters of this device and do not automatically select it. Therefore, we can specify parameters for many devices even if not connected. This will not have an impact.
+If both `input` and `serial` are included to select a device for decoding, the program will check that they are consistent, i.e. the hardware with the specified serial number must be of type ``input``. 
 Normally it is sufficient to include one of these fields and not both. 
 If you want to run multiple receivers, this is possible as well but the device specific settings and selection needs to be included in an array ``receiver``:
 ```json
