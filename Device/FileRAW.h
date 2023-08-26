@@ -54,6 +54,8 @@ namespace Device {
 		// Settings
 		Setting& Set(std::string option, std::string arg);
 		std::string Get();
-		std::string getProduct() { return "FILE-RAW"; }
+		std::string getProduct() { return "File (RAW)"; }
+		std::string getVendor() { return "File"; }
+		std::string getSerial() { return filename; }
 	};
 }

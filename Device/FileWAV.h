@@ -39,7 +39,9 @@ namespace Device {
 		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 
-		std::string getProduct() { return "FILE-WAV"; }
+		std::string getProduct() { return "File (WAV)"; }
+		std::string getVendor() { return "File"; }
+		std::string getSerial() { return filename; }
 
 		void setFormat(Format f) {}
 	};
