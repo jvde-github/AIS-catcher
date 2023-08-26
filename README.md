@@ -28,7 +28,8 @@ Latest version is **v0.50** with various improvements to the database interface 
 New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge):
 
 - Creation of an Edge Release where latest Windows binaries are stored: [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
-- Increasesd the default RTL-SDR buffer, so running on a RPI Zero W only requires activating fast downsampling `-F`.
+- In case running with multiple dongles, the shipcard in the webclient now shows source (i.e. the SDR) of the last signal displayed. Also it will list all receivers that have received a message from the MMSI.
+- Increased the default RTL-SDR buffer, so running on a RPI Zero W only requires activating fast downsampling `-F`.
 - Option `-ge print on` to dump raw input from serial device to screen
 - Bug fix in reading from certain serial devices on Windows
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
