@@ -410,6 +410,7 @@ An example config file looks as follows:
   "serial":"00000001",
   "input":"rtlsdr",
   "verbose":true,
+  "screen": 0,
   "rtlsdr":{
     "active":true,
     "rtlagc":true,
