@@ -2275,12 +2275,14 @@
 
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
                             <div><span>last signal</span><span id="shipcard_last_signal"></span></div>
+                            <div><span>Source</span><span id="shipcard_last_group"></span></div>
                             <div><span>Count</span><span id="shipcard_count">-</span></div>
                         </div>
 
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
                             <div><span>RSSI</span><span id="shipcard_level">-</span></div>
                             <div><span>Drift</span><span id="shipcard_ppm">-</span></div>
+                            <div><span>Received</span><span id="shipcard_sources">-</span></div>
                         </div>
 
                         <div onclick="shipcardselect(this)" class="shipcard-content-row shipcard-max-only">
@@ -3144,7 +3146,7 @@
             setPulseOk();
 
 
-            const keys = ["mmsi", "lat", "lon", "distance", "bearing", "level", "count", "ppm", "approx", "heading", "cog", "speed", "to_bow", "to_stern", "to_starboard", "to_port", "shiptype", "validated", "msg_type", "channels", "country", "status", "draught", "eta_month", "eta_day", "eta_hour", "eta_minute", "imo", "callsign", "shipname", "destination", "last_signal"];
+            const keys = ["mmsi", "lat", "lon", "distance", "bearing", "level", "count", "ppm", "approx", "heading", "cog", "speed", "to_bow", "to_stern", "to_starboard", "to_port", "last_group", "group_mask", "shiptype", "validated", "msg_type", "channels", "country", "status", "draught", "eta_month", "eta_day", "eta_hour", "eta_minute", "imo", "callsign", "shipname", "destination", "last_signal"];
 
             shipsDB = {};
             ships.values.forEach(v => {
@@ -4657,6 +4659,27 @@
             return s;
         }
 
+        function getStringfromGroup(m) {
+
+            let s = "";
+            let delim = "";
+            let count = 0;
+
+            for (i = 0; i < 32; i++) {
+                let mask = 1 << i;
+                if ((m & mask) !== 0) {
+                        if(count == 4) {
+                        s += delim + "...";
+                        break;
+                    }
+                    s += delim + Number(i+1).toFixed(0);
+                    delim = ", ";
+                    count ++;
+                }
+            }
+            return s;
+        }
+
         function getStringfromChannels(m) {
             let s = "";
             let delim = "";
@@ -4713,6 +4736,10 @@
             document.getElementById("shipcard_country").innerHTML = getCountryName(ship.country);
             document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
             document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
+
+            document.getElementById("shipcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
+            document.getElementById("shipcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
+
             document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
             document.getElementById('shipcard_type').innerHTML = getTypeVal(ship);
             document.getElementById('shipcard_shiptype').innerHTML = getShipTypeVal(ship.shiptype);

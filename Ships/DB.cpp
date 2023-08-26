@@ -125,6 +125,9 @@ std::string DB::getJSONcompact(bool full) {
 			content += ((ship.to_starboard == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_starboard)) + comma;
 			content += ((ship.to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_port)) + comma;
 
+			content += std::to_string(ship.last_group) + comma;
+			content += std::to_string(ship.group_mask) + comma;
+
 			content += std::to_string(ship.shiptype) + comma;
 			content += std::to_string(ship.validated) + comma;
 			content += std::to_string(ship.msg_type) + comma;
@@ -471,6 +474,9 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 
 	ship.mmsi = msg->mmsi();
 	ship.count++;
+	ship.group_mask |= tag.group;
+	ship.last_group = tag.group;
+
 	ship.last_signal = msg->getRxTimeUnix();
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
