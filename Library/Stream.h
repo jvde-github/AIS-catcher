@@ -24,7 +24,7 @@
 
 template <typename T>
 class StreamIn {
-	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
+	uint64_t groups_in = GROUPS_ALL;
 
 public:
 	virtual void Receive(const T* data, int len, TAG& tag) {}
@@ -39,7 +39,7 @@ public:
 template <typename S>
 class Connection {
 	std::vector<StreamIn<S>*> connections;
-	uint64_t groups = 1;
+	uint64_t groups = GROUP_OUT_UNDEFINED;
 
 public:
 	void Send(const S* data, int len, TAG& tag) {
@@ -49,9 +49,12 @@ public:
 	void Send(S* data, int len, TAG& tag) {
 		if (connections.size() == 0) return;
 
+		if(groups != GROUP_OUT_UNDEFINED)
+			tag.group = groups;
+			
 		int sz1 = (int)connections.size() - 1;
 
-		for (int i = 0; i < sz1; i++)
+		for (int i = 0; i < sz1; i++) 
 			connections[i]->Receive((const S*)data, len, tag);
 
 		connections[sz1]->Receive(data, len, tag);

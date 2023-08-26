@@ -91,6 +91,8 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 		bool approximate = false;
 		char shipname[21] = { 0 }, destination[21] = { 0 }, callsign[8] = { 0 }, country_code[3] = { 0 };
 		std::string *msg = NULL;
+		uint64_t last_group = GROUP_OUT_UNDEFINED;
+		uint64_t group_mask = 0;
 	};
 
 	struct PathList {

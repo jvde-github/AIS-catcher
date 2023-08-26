@@ -31,6 +31,9 @@
 
 void StopRequest();
 
+#define GROUPS_ALL 0xFFFFFFFFFFFFFFFF
+#define GROUP_OUT_UNDEFINED (1ULL << 63)
+
 typedef float FLOAT32;
 typedef double FLOAT64;
 typedef std::complex<FLOAT32> CFLOAT32;
@@ -83,6 +86,7 @@ struct TAG {
 	float sample_lvl = 0;
 	float level = 0;
 	float ppm = 0;
+	uint64_t group = 0;
 
 	// some data flowing from DB downstream
 	int angle = -1;
@@ -91,6 +95,7 @@ struct TAG {
 	std::time_t previous_signal;
 
 	void clear() {
+		group = GROUP_OUT_UNDEFINED;
 		sample_lvl = 0;
 		level = 0;
 		ppm = 0;
