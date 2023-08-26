@@ -106,5 +106,8 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "RTLTCP"; }
+		std::string getSerial() { return "P" + port; }
+		std::string getVendor() { return "Network"; }
+
 	};
 }

@@ -83,6 +83,7 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "UDP"; }
-		std::string getVendor() { return "P" + port; }
+		std::string getSerial() { return "P" + port; }
+		std::string getVendor() { return "Network"; }
 	};
 }

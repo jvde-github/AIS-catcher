@@ -268,6 +268,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	History<90, 86400> hist_day;
 
 	std::time_t time_start;
+	int nConnections = 0;
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
 	std::string filename = "";
 	std::string os, hardware;
