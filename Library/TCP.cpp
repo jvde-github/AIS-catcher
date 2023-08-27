@@ -32,12 +32,12 @@ namespace TCP {
 			sock = -1;
 		}
 		msg.clear();
-		out.clear();
+		outLength = 0;
 	}
 
 	void ServerConnection::Start(SOCKET s) {
 		msg.clear();
-		out.clear();
+		outLength = 0;
 		stamp = std::time(0);
 		sock = s;
 	}
@@ -72,30 +72,30 @@ namespace TCP {
 	}
 
 	void ServerConnection::SendBuffer() {
-
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if (isConnected() && hasSendBuffer()) {
-			int remaining = out.length();
-			int bytes = ::send(sock, out.c_str(), remaining, 0);
+		if (isConnected() && outLength > 0) {
+			int remaining = outLength;
+			int bytes = ::send(sock, outBuffer, remaining, 0);
 
-			if(bytes < 0) return;
-			if(bytes < remaining) {
-				out = out.substr(bytes);
+			if (bytes < 0) return;
+			if (bytes < remaining) {
+				memmove(outBuffer, outBuffer + bytes, remaining - bytes);
+				outLength -= bytes;
 				return;
 			}
-			out.clear();			
+			outLength = 0;
 		}
 	}
-
-	bool ServerConnection::Send(const std::string &s) {
+	bool ServerConnection::Send(const char* buffer, int length) {
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if(out.length() + s.length() < 32768) {
-			
-			out += s;
+		if (outLength + length < sizeof(outBuffer)) {
+			std::memcpy(outBuffer + outLength, buffer, length);
+			outLength += length;
 			return true;
 		}
+		std::cerr << outLength << " + " << length << " > " << sizeof(outBuffer) << std::endl;
 		return false;
 	}
 	// TCP Server
@@ -212,7 +212,7 @@ namespace TCP {
 		tv = { 1, 0 };
 		select(maxfds + 1, &fds, &fdw, NULL, &tv);
 	}
-
+/*
 	bool Server::Send(SOCKET s, const char* data, int len) {
 		int sent = 0;
 		int bytes = 0;
@@ -246,7 +246,7 @@ namespace TCP {
 		}
 		return true;
 	}
-
+*/
 	bool Server::start(int port) {
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);

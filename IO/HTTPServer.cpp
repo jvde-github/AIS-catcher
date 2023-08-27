@@ -93,12 +93,12 @@ namespace IO {
 		if (gzip) header += "\r\nContent-Encoding: gzip";
 		header += "\r\nConnection: keep-alive\r\nContent-Length: " + std::to_string(len) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
 
-		if (!Send(c.sock, header.c_str(), header.length())) {
+		if (!Send(c, header.c_str(), header.length())) {
 			std::cerr << "Server: closing client socket." << std::endl;
 			c.Close();
 			return;
 		}
-		if (!Send(c.sock, data, len)) {
+		if (!Send(c, data, len)) {
 			std::cerr << "Server: closing client socket." << std::endl;
 			c.Close();
 			return;

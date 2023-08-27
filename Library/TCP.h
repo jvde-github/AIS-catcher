@@ -58,16 +58,17 @@ namespace TCP {
 		SOCKET sock = -1;
 
 		std::string msg;
-		std::string out;
+    	char outBuffer[512*1024];
+    	int outLength = 0;
 		std::time_t stamp;
 
 		void Close();
 		void Start(SOCKET s);
 		int Inactive(std::time_t now);
 		bool isConnected() { return sock != -1; }
-		bool hasSendBuffer() { return !out.empty(); }
+		bool hasSendBuffer() { return outLength>0; }
 		void SendBuffer();
-		bool Send(const std::string &s);
+		bool Send(const char* buffer, int length);
 		void Read();
 	};
 
@@ -79,7 +80,7 @@ namespace TCP {
 		bool SendAll(const std::string &m) {
 			for (auto& c : client) {
 				if (c.isConnected()) {
-					if (!c.Send(m)) {
+					if (!c.Send(m.c_str(), m.length())) {
 						c.Close();
 						std::cerr << "TCP listener: client not reading, close connection." << std::endl;
 						return false;
@@ -118,7 +119,11 @@ namespace TCP {
 		void Run();
 		sockaddr_in service;
 
-		bool Send(SOCKET s, const char* data, int len);
+		//bool Send(SOCKET s, const char* data, int len);
+		bool Send(ServerConnection &c, const char* data, int len) {
+			return c.Send(data, len);
+		}
+
 		int findFreeClient();
 
 		void acceptClients();
