@@ -32,10 +32,12 @@ namespace TCP {
 			sock = -1;
 		}
 		msg.clear();
+		out.clear();
 	}
 
 	void ServerConnection::Start(SOCKET s) {
 		msg.clear();
+		out.clear();
 		stamp = std::time(0);
 		sock = s;
 	}
@@ -69,6 +71,33 @@ namespace TCP {
 		}
 	}
 
+	void ServerConnection::SendBuffer() {
+
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if (isConnected() && hasSendBuffer()) {
+			int remaining = out.length();
+			int bytes = ::send(sock, out.c_str(), remaining, 0);
+
+			if(bytes < 0) return;
+			if(bytes < remaining) {
+				out = out.substr(bytes);
+				return;
+			}
+			out.clear();			
+		}
+	}
+
+	bool ServerConnection::Send(const std::string &s) {
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if(out.length() + s.length() < 32768) {
+			
+			out += s;
+			return true;
+		}
+		return false;
+	}
 	// TCP Server
 
 	Server::~Server() {
@@ -131,6 +160,11 @@ namespace TCP {
 		for (auto& c : client) c.Read();
 	}
 
+	void Server::writeClients() {
+
+		for (auto& c : client) c.SendBuffer();
+	}
+
 	void Server::processClients() {
 		for (auto& c : client) {
 			if (c.isConnected()) {
@@ -144,20 +178,23 @@ namespace TCP {
 		while (!stop) {
 			acceptClients();
 			readClients();
+			writeClients();
 			processClients();
 			cleanUp();
 			SleepAndWait();
 		}
-
+	
 		std::cerr << "TCP Server: thread ending.\n";
 	}
 
 	void Server::SleepAndWait() {
 		struct timeval tv;
-		fd_set fds;
+		fd_set fds, fdw;
 
 		FD_ZERO(&fds);
 		FD_SET(sock, &fds);
+
+		FD_ZERO(&fds);
 
 		int maxfds = sock;
 
@@ -165,11 +202,15 @@ namespace TCP {
 			if (c.isConnected()) {
 				FD_SET(c.sock, &fds);
 				if (c.sock > maxfds) maxfds = c.sock;
+
+				if(c.hasSendBuffer()) {
+					FD_SET(c.sock, &fdw);
+				}
 			}
 		}
 
 		tv = { 1, 0 };
-		select(maxfds + 1, &fds, NULL, NULL, &tv);
+		select(maxfds + 1, &fds, &fdw, NULL, &tv);
 	}
 
 	bool Server::Send(SOCKET s, const char* data, int len) {
@@ -231,8 +272,7 @@ namespace TCP {
 
 		if (listen(sock, 511) < 0) return false;
 
-		client.clear();
-		client.resize(MAX_CONN);
+		for(auto &c : client) c.Close();
 
 		if (!setNonBlock(sock)) {
 			std::cerr << "TCP Server: cannot set socket to non-blocking\n";
