@@ -51,13 +51,14 @@ namespace TCP {
 	class ServerConnection {
 	private:
 		std::mutex mtx;
+
 	public:
 		~ServerConnection() { Close(); }
-		
 
 		SOCKET sock = -1;
 
 		std::string msg;
+//		std::array(char, 512*1024) out;
     	char outBuffer[512*1024];
     	int outLength = 0;
 		std::time_t stamp;
