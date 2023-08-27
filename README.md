@@ -32,6 +32,7 @@ New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/relea
 - Increased the default RTL-SDR buffer, so running on a RPI Zero W only requires activating fast downsampling `-F`.
 - Option `-ge print on` to dump raw input from serial device to screen
 - Bug fix in reading from certain serial devices on Windows
+- Bug fix in properly closing when reading from TCP conenction e.g. RTL-TCP
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
 - New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted.
 - Fix inclusion of lib ZMQ in Windows auto builds
