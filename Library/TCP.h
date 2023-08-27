@@ -20,6 +20,7 @@
 #include <fstream>
 #include <iostream>
 #include <thread>
+#include <mutex>
 
 #ifdef _WIN32
 
@@ -47,18 +48,26 @@
 
 namespace TCP {
 
-	struct ServerConnection {
+	class ServerConnection {
+	private:
+		std::mutex mtx;
+	public:
 		~ServerConnection() { Close(); }
 		
+
 		SOCKET sock = -1;
+
 		std::string msg;
+		std::string out;
 		std::time_t stamp;
 
 		void Close();
 		void Start(SOCKET s);
 		int Inactive(std::time_t now);
 		bool isConnected() { return sock != -1; }
-
+		bool hasSendBuffer() { return !out.empty(); }
+		void SendBuffer();
+		bool Send(const std::string &s);
 		void Read();
 	};
 
@@ -70,9 +79,9 @@ namespace TCP {
 		bool SendAll(const std::string &m) {
 			for (auto& c : client) {
 				if (c.isConnected()) {
-					if (!Send(c.sock, m.c_str(), m.size())) {
+					if (!c.Send(m)) {
 						c.Close();
-						std::cerr << "TCP listener: error sending to client, close connection." << std::endl;
+						std::cerr << "TCP listener: client not reading, close connection." << std::endl;
 						return false;
 					}
 				}
@@ -99,8 +108,8 @@ namespace TCP {
 		int timeout = 30;
 		bool reuse_port = true;
 
-		const int MAX_CONN = 64;
-		std::vector<ServerConnection> client;
+		const static int MAX_CONN = 64;
+		std::array<ServerConnection,MAX_CONN> client;
 
 		std::thread run_thread;
 
@@ -114,6 +123,7 @@ namespace TCP {
 
 		void acceptClients();
 		void readClients();
+		void writeClients();
 		virtual void processClients();
 		void cleanUp();
 		void SleepAndWait();
