@@ -109,7 +109,7 @@ namespace TCP {
 		int timeout = 30;
 		bool reuse_port = true;
 
-		const static int MAX_CONN = 64;
+		const static int MAX_CONN = 16;
 		std::array<ServerConnection,MAX_CONN> client;
 
 		std::thread run_thread;
