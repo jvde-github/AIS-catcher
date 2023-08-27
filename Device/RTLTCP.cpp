@@ -25,7 +25,6 @@ namespace Device {
 	// Device RTLTCP
 
 	void RTLTCP::Close() {
-		client.disconnect();
 		Device::Close();
 	}
 
@@ -81,6 +80,7 @@ namespace Device {
 			if (async_thread.joinable()) async_thread.join();
 			if (run_thread.joinable()) run_thread.join();
 		}
+		client.disconnect();
 	}
 
 	void RTLTCP::RunAsync() {
