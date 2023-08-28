@@ -32,10 +32,12 @@ namespace TCP {
 			sock = -1;
 		}
 		msg.clear();
+		outLength = 0;
 	}
 
 	void ServerConnection::Start(SOCKET s) {
 		msg.clear();
+		outLength = 0;
 		stamp = std::time(0);
 		sock = s;
 	}
@@ -69,6 +71,43 @@ namespace TCP {
 		}
 	}
 
+	void ServerConnection::SendBuffer() {
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if (isConnected() && outLength > 0) {
+			int bytes = ::send(sock, outBuffer, outLength, 0);
+
+			if (bytes < 0) {
+#ifdef _WIN32
+				if (WSAGetLastError() != WSAEWOULDBLOCK) {
+#else
+				if (errno != EWOULDBLOCK && errno != EAGAIN) {
+#endif
+					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
+					Close();
+					return;
+				}
+			}
+			if (bytes < outLength) {
+				outLength -= bytes;
+				memmove(outBuffer, outBuffer + bytes, outLength);
+				return;
+			}
+			outLength = 0;
+		}
+	}
+	bool ServerConnection::Send(const char* data, int length) {
+		if(!isConnected()) return false;
+
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if (outLength + length < sizeof(outBuffer)) {
+			std::memcpy(outBuffer + outLength, data, length);
+			outLength += length;
+			return true;
+		}
+		return false;
+	}
 	// TCP Server
 
 	Server::~Server() {
@@ -131,6 +170,11 @@ namespace TCP {
 		for (auto& c : client) c.Read();
 	}
 
+	void Server::writeClients() {
+
+		for (auto& c : client) c.SendBuffer();
+	}
+
 	void Server::processClients() {
 		for (auto& c : client) {
 			if (c.isConnected()) {
@@ -144,20 +188,23 @@ namespace TCP {
 		while (!stop) {
 			acceptClients();
 			readClients();
+			writeClients();
 			processClients();
 			cleanUp();
 			SleepAndWait();
 		}
-
+	
 		std::cerr << "TCP Server: thread ending.\n";
 	}
 
 	void Server::SleepAndWait() {
 		struct timeval tv;
-		fd_set fds;
+		fd_set fds, fdw;
 
 		FD_ZERO(&fds);
 		FD_SET(sock, &fds);
+
+		FD_ZERO(&fdw);
 
 		int maxfds = sock;
 
@@ -165,45 +212,15 @@ namespace TCP {
 			if (c.isConnected()) {
 				FD_SET(c.sock, &fds);
 				if (c.sock > maxfds) maxfds = c.sock;
+
+				if(c.hasSendBuffer()) {
+					FD_SET(c.sock, &fdw);
+				}
 			}
 		}
 
 		tv = { 1, 0 };
-		select(maxfds + 1, &fds, NULL, NULL, &tv);
-	}
-
-	bool Server::Send(SOCKET s, const char* data, int len) {
-		int sent = 0;
-		int bytes = 0;
-
-		while (sent < len) {
-			int remaining = len - sent;
-			bytes = ::send(s, data + sent, remaining, 0);
-
-#ifndef _WIN32
-			if (bytes != remaining) {
-				if (errno == EWOULDBLOCK || errno == EAGAIN) {
-					SleepSystem(100);
-				}
-				else {
-					std::cerr << "TCP Server: error sending response: " << strerror(errno) << std::endl;
-					return false;
-				}
-			}
-#else
-			if (bytes != remaining) {
-				if (WSAGetLastError() == WSAEWOULDBLOCK) {
-					SleepSystem(100);
-				}
-				else {
-					std::cerr << "TCP Server: error sending response: " << strerror(WSAGetLastError()) << std::endl;
-					return false;
-				}
-			}
-#endif
-			sent += bytes;
-		}
-		return true;
+		select(maxfds + 1, &fds, &fdw, NULL, &tv);
 	}
 
 	bool Server::start(int port) {
@@ -231,8 +248,7 @@ namespace TCP {
 
 		if (listen(sock, 511) < 0) return false;
 
-		client.clear();
-		client.resize(MAX_CONN);
+		for(auto &c : client) c.Close();
 
 		if (!setNonBlock(sock)) {
 			std::cerr << "TCP Server: cannot set socket to non-blocking\n";
