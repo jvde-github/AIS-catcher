@@ -78,7 +78,17 @@ namespace TCP {
 			int remaining = outLength;
 			int bytes = ::send(sock, outBuffer, remaining, 0);
 
-			if (bytes < 0) return;
+			if (bytes < 0) {
+#ifdef _WIN32
+				if (WSAGetLastError() != WSAEWOULDBLOCK) {
+#else
+				if (errno != EWOULDBLOCK && errno != EAGAIN) {
+#endif
+					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
+					Close();
+					return;
+				}
+			}
 			if (bytes < remaining) {
 				memmove(outBuffer, outBuffer + bytes, remaining - bytes);
 				outLength -= bytes;
@@ -88,6 +98,8 @@ namespace TCP {
 		}
 	}
 	bool ServerConnection::Send(const char* buffer, int length) {
+		if(!isConnected()) return false;
+
 		std::lock_guard<std::mutex> lock(mtx);
 
 		if (outLength + length < sizeof(outBuffer)) {
@@ -95,7 +107,6 @@ namespace TCP {
 			outLength += length;
 			return true;
 		}
-		std::cerr << outLength << " + " << length << " > " << sizeof(outBuffer) << std::endl;
 		return false;
 	}
 	// TCP Server
