@@ -75,8 +75,7 @@ namespace TCP {
 		std::lock_guard<std::mutex> lock(mtx);
 
 		if (isConnected() && outLength > 0) {
-			int remaining = outLength;
-			int bytes = ::send(sock, outBuffer, remaining, 0);
+			int bytes = ::send(sock, outBuffer, outLength, 0);
 
 			if (bytes < 0) {
 #ifdef _WIN32
@@ -89,21 +88,21 @@ namespace TCP {
 					return;
 				}
 			}
-			if (bytes < remaining) {
-				memmove(outBuffer, outBuffer + bytes, remaining - bytes);
+			if (bytes < outLength) {
 				outLength -= bytes;
+				memmove(outBuffer, outBuffer + bytes, outLength);
 				return;
 			}
 			outLength = 0;
 		}
 	}
-	bool ServerConnection::Send(const char* buffer, int length) {
+	bool ServerConnection::Send(const char* data, int length) {
 		if(!isConnected()) return false;
 
 		std::lock_guard<std::mutex> lock(mtx);
 
 		if (outLength + length < sizeof(outBuffer)) {
-			std::memcpy(outBuffer + outLength, buffer, length);
+			std::memcpy(outBuffer + outLength, data, length);
 			outLength += length;
 			return true;
 		}
@@ -223,41 +222,7 @@ namespace TCP {
 		tv = { 1, 0 };
 		select(maxfds + 1, &fds, &fdw, NULL, &tv);
 	}
-/*
-	bool Server::Send(SOCKET s, const char* data, int len) {
-		int sent = 0;
-		int bytes = 0;
 
-		while (sent < len) {
-			int remaining = len - sent;
-			bytes = ::send(s, data + sent, remaining, 0);
-
-#ifndef _WIN32
-			if (bytes != remaining) {
-				if (errno == EWOULDBLOCK || errno == EAGAIN) {
-					SleepSystem(100);
-				}
-				else {
-					std::cerr << "TCP Server: error sending response: " << strerror(errno) << std::endl;
-					return false;
-				}
-			}
-#else
-			if (bytes != remaining) {
-				if (WSAGetLastError() == WSAEWOULDBLOCK) {
-					SleepSystem(100);
-				}
-				else {
-					std::cerr << "TCP Server: error sending response: " << strerror(WSAGetLastError()) << std::endl;
-					return false;
-				}
-			}
-#endif
-			sent += bytes;
-		}
-		return true;
-	}
-*/
 	bool Server::start(int port) {
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);

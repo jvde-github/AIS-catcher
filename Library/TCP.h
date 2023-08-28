@@ -21,6 +21,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <array>
 
 #ifdef _WIN32
 
@@ -58,8 +59,7 @@ namespace TCP {
 		SOCKET sock = -1;
 
 		std::string msg;
-//		std::array(char, 512*1024) out;
-    	char outBuffer[512*1024];
+    	char outBuffer[524288];
     	int outLength = 0;
 		std::time_t stamp;
 
@@ -120,7 +120,6 @@ namespace TCP {
 		void Run();
 		sockaddr_in service;
 
-		//bool Send(SOCKET s, const char* data, int len);
 		bool Send(ServerConnection &c, const char* data, int len) {
 			return c.Send(data, len);
 		}
