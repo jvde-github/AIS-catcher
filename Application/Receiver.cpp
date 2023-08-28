@@ -269,7 +269,8 @@ void Receiver::play() {
 		std::cerr << "Device    : " << device->getProduct() << std::endl;
 		std::cerr << "Settings  : " << device->Get() << std::endl;
 		for (int i = 0; i < models.size(); i++)
-			std::cerr << "Model #" + std::to_string(i) + " -> " + std::to_string(models[i]->Output().out.getGroupOut()) + ": [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
+			std::cerr << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut())+1)
+					  << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
 	}
 }
 
@@ -573,26 +574,10 @@ void WebClient::connect(Receiver& r) {
 		if (r.Output(j).canConnect(groups_in)) {
 			if (!rec_details) {
 
-				if(++nConnections == 2) {
-					std::string c = " <i>(1)</i><br>";
-					sample_rate = sample_rate + c;
-					product = product + c;
-					vendor = vendor + c;
-					serial = serial + c;
-				}
-				
-				sample_rate += r.device->getRateDescription() ;
-				product += r.device->getProduct() ;
-				vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor());
-				serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) ;
-
-				if(nConnections > 1) {
-					std::string c = " <i>(" + std::to_string(nConnections)+")</i><br>"; 
-					sample_rate += c;
-					product += c;
-					vendor += c;
-					serial += c;
-				}
+				sample_rate += r.device->getRateDescription() + "<br>";
+				product += r.device->getProduct() + "<br>";
+				vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor()) + "<br>";
+				serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) + "<br>";
 
 				rec_details = true;
 			}

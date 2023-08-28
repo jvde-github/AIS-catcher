@@ -129,6 +129,14 @@ namespace Util {
 			while (std::getline(file, line)) str += line + '\n';
 			return str;
 		}
+
+		static int lsb(uint64_t x) {
+			int n = 0;
+			for(int i = 0; i < 64; i++) {
+				if (x & (1ULL << i)) return i;
+			}
+			return -1;
+		}
 		static std::vector<std::string> getFilesWithExtension(const std::string& directory, const std::string& extension);
 
 		static long getMemoryConsumption() {
