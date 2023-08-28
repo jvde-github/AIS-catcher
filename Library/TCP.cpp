@@ -194,7 +194,7 @@ namespace TCP {
 		FD_ZERO(&fds);
 		FD_SET(sock, &fds);
 
-		FD_ZERO(&fds);
+		FD_ZERO(&fdw);
 
 		int maxfds = sock;
 
