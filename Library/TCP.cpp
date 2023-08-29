@@ -188,8 +188,8 @@ namespace TCP {
 		while (!stop) {
 			acceptClients();
 			readClients();
-			writeClients();
 			processClients();
+			writeClients();
 			cleanUp();
 			SleepAndWait();
 		}
