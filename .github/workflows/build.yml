@@ -32,8 +32,13 @@ jobs:
       run: |
         cd HTML
         rm HTML.cpp
+        rm HTML_local.cpp
         minify index.html | gzip > index_html_gz
         xxd -i index_html_gz > HTML.cpp
+        sed -e 's|https://cdn.jsdelivr.net/|lib/|g' -e 's|https://unpkg.com/|lib/|g' index.html > index_local.html
+        minify index_local.html | gzip > index_local_html_gz
+        xxd -i index_local_html_gz > HTML_local.cpp
+
         cd ..
         if [[ -z $(git diff) ]]; then
           echo "Nothing to commit, working tree clean"
@@ -42,6 +47,8 @@ jobs:
             echo "There are changes to be committed"
         fi
         git add HTML/HTML.cpp
+        git add HTML/index_local.html
+        git add HTML/HTML_local.cpp
         git add Application/AIS-catcher.h
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
