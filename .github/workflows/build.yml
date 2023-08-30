@@ -36,7 +36,7 @@ jobs:
         rm index_local.html
         minify index.html | gzip > index_html_gz
         xxd -i index_html_gz > HTML.cpp
-        sed -e 's|https://cdn.jsdelivr.net/|lib/|g' -e 's|https://unpkg.com/|lib/|g' index.html > index_local.html
+        sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' index.html > index_local.html
         minify index_local.html | gzip > index_local_html_gz
         xxd -i index_local_html_gz > HTML_local.cpp
 
