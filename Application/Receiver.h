@@ -259,6 +259,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\naboutMDpresent=false;\n\n";
 	std::string plugins;
 	std::string stylesheets;
+	std::string cdn;
 	std::string about = "This content can be set by the station owner";
 
 	// history of 180 minutes and 180 seconds

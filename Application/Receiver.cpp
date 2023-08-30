@@ -688,6 +688,7 @@ void WebClient::close() {
 }
 
 #include "HTML/HTML.cpp"
+#include "HTML/HTML_local.cpp"
 #include "HTML/favicon.cpp"
 
 void WebClient::Request(TCP::ServerConnection& c, const std::string& response, bool gzip) {
@@ -705,9 +706,37 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 	}
 
 	if (r == "/") {
-		Response(c, "text/html", (char*)index_html_gz, index_html_gz_len, true);
+		if(cdn.empty())
+			Response(c, "text/html", (char*)index_html_gz, index_html_gz_len, true);
+		else
+			Response(c, "text/html", (char*)index_local_html_gz, index_local_html_gz_len, true);
 	}
-	if (r == "/favicon.ico") {
+	else if (r.find("/cdn/") == 0) {
+		try {
+			std::string content =  Util::Helper::readFile(cdn+r);
+			std::string extension = r.substr(r.find_last_of('.') + 1);
+			std::string contentType;
+
+			if (extension == "svg") {
+				contentType = "image/svg+xml";
+			} else if (extension == "js") {
+				contentType = "application/javascript";
+			} else if (extension == "png") {
+				contentType = "image/png";
+			} else if (extension == "css") {
+				contentType = "text/css";
+			} else {
+				contentType = "application/octet-stream";
+			}
+
+			Response(c, contentType, (char*)content.c_str(), content.length(), false);
+		}
+		catch (const std::exception& e) {
+			Response(c, "text/html", (char*)"", 0, true);
+			std::cerr << "Server: cannot find file " << cdn << r << std::endl;
+		}
+	}
+	else if (r == "/favicon.ico") {
 		Response(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
 	else if (r == "/metrics") {
@@ -918,6 +947,10 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	}
 	else if (option == "FILE") {
 		filename = arg;
+	}
+	else if (option == "CDN") {
+		cdn = arg;
+		std::cerr << "Fetch Web Libraries locally at " << arg << std::endl;
 	}
 	else if (option == "BACKUP") {
 		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60);
