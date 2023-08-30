@@ -28,6 +28,14 @@ Latest version is **v0.50** with various improvements to the database interface 
 New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge):
 
 - Creation of an Edge Release where latest Windows binaries are stored: [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
+- Addition of an offline webclient version. This should run as usual but when offline map tiles are not stored so that might work only depending what is in the cache. Graphs and tables work. To run first  go to your home directory (say `/home/jasper`) and clone the necessary web assets:
+```console
+git clone https://github.com/jvde-github/webassets.git
+```
+Then run AIS-catcher as normal but with the CDN switch for the webserver pointing to the created directory:
+```console
+AIS-catcher -x 192.168.1.120 4002 -N 8100 CDN /home/jasper/webassets
+```
 - In case running with multiple dongles, the shipcard in the webclient now shows source (i.e. the SDR) of the last signal displayed. Also it will list all receivers that have received a message from the MMSI.
 - Increased the default RTL-SDR buffer, so running on a RPI Zero W only requires activating fast downsampling `-F`.
 - Option `-ge print on` to dump raw input from serial device to screen
