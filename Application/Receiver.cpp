@@ -711,7 +711,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		else
 			Response(c, "text/html", (char*)index_local_html_gz, index_local_html_gz_len, true);
 	}
-	else if (r.find("/cdn/") == 0) {
+	else if (r.find("/cdn/") == 0 && r.find("..") == std::string::npos) {	
 		try {
 			std::string content =  Util::Helper::readFile(cdn+r);
 			std::string extension = r.substr(r.find_last_of('.') + 1);
@@ -728,7 +728,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 			} else {
 				contentType = "application/octet-stream";
 			}
-
+		
 			Response(c, contentType, (char*)content.c_str(), content.length(), false);
 		}
 		catch (const std::exception& e) {
