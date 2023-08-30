@@ -8,15 +8,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="favicon.ico">
 
-    <script src="lib/npm/chart.js"></script>
-    <script src="lib/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="cdn/npm/chart.js"></script>
+    <script src="cdn/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
 
-    <link href="lib/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
-    <script type="text/javascript" src="lib/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
+    <link href="cdn/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
+    <script type="text/javascript" src="cdn/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
 
-    <link rel="stylesheet" href="lib/leaflet@1.9.3/dist/leaflet.css"/>
-    <link rel="stylesheet" href="lib/gh/lipis/flag-icons@6.6.6/css/flag-icons.min.css" />
-    <script src="lib/leaflet@1.9.3/dist/leaflet.js""></script>
+    <link rel="stylesheet" href="cdn/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="cdn/gh/lipis/flag-icons@6.6.6/css/flag-icons.min.css" />
+    <script src="cdn/leaflet@1.9.3/dist/leaflet.js""></script>
 
     <style>
         :root {
@@ -5140,7 +5140,7 @@
         function setupAbout() {
             fetchAbout().then(s => {
                 var scriptElement = document.createElement('script');
-                scriptElement.src = 'lib/npm/marked/marked.min.js';
+                scriptElement.src = 'cdn/npm/marked/marked.min.js';
                 document.head.appendChild(scriptElement);
 
                 scriptElement.onload = function() {
