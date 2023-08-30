@@ -32,7 +32,7 @@ New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/relea
 ```console
 git clone https://github.com/jvde-github/webassets.git
 ```
-Next run AIS-catcher with the CDN switch to point the webserver  to the created directory with necessary web content:
+Next run AIS-catcher with the CDN argument  to point the webserver  to the created directory with  web content:
 ```console
 AIS-catcher -x 192.168.1.120 4002 -N 8100 CDN /home/jasper/webassets
 ```
