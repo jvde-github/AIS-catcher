@@ -28,11 +28,11 @@ Latest version is **v0.50** with various improvements to the database interface 
 New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge):
 
 - Creation of an Edge Release where latest Windows binaries are stored: [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
-- Addition of an offline webclient version. This should run as usual but when offline map tiles are not stored so that might work only depending what is in the cache. Graphs and tables work. To run first  go to your home directory (say `/home/jasper`) and clone the necessary web assets:
+- Addition of an offline webclient version. This should run as usual but  offline map tiles are not stored so that might work only depending what is in the cache. Graphs and tables work. To run, first  go to your home directory (say `/home/jasper`) and clone the necessary web assets:
 ```console
 git clone https://github.com/jvde-github/webassets.git
 ```
-Then run AIS-catcher as normal but with the CDN switch for the webserver pointing to the created directory:
+Next run AIS-catcher with the CDN switch to point the webserver  to the created directory with necessary web content:
 ```console
 AIS-catcher -x 192.168.1.120 4002 -N 8100 CDN /home/jasper/webassets
 ```
