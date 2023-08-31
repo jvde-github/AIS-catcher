@@ -23,34 +23,7 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-Latest version is **v0.50** with various improvements to the database interface and UI.
-
-New additions to [Edge Version](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge):
-
-- Creation of an Edge Release where latest Windows binaries are stored: [HERE](https://github.com/jvde-github/AIS-catcher/releases/tag/Edge)
-- Addition of an offline webclient version. This should run as usual but  offline map tiles are not stored so that might work only depending what is in the cache. Graphs and tables work. To run, first  go to your home directory (say `/home/jasper`) and clone the necessary web assets:
-```console
-git clone https://github.com/jvde-github/webassets.git
-```
-Next run AIS-catcher with the CDN argument  to point the webserver  to the created directory with  web content:
-```console
-AIS-catcher -x 192.168.1.120 4002 -N 8100 CDN /home/jasper/webassets
-```
-- In case running with multiple dongles, the shipcard in the webclient now shows source (i.e. the SDR) of the last signal displayed. Also it will list all receivers that have received a message from the MMSI.
-- Increased the default RTL-SDR buffer, so running on a RPI Zero W only requires activating fast downsampling `-F`.
-- Option `-ge print on` to dump raw input from serial device to screen
-- Bug fix in reading from certain serial devices on Windows
-- Bug fix in properly closing when reading from TCP connection e.g. RTL-TCP
-- Fix to internal webserver to avoid one client blocking the server when sending
-- Accept VDO messages for NMEA input (`-go VDO on/off`)
-- New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted.
-- Fix inclusion of libzmq in Windows auto builds
-- TCP listener for NMEA output, e.g. for port 5011 run with `-S 5011`. AIS-catcher can read from this TCP server at address `raspberrypi`, e.g. like:
-
-```console
-AIS-catcher -t txt raspberrypi 5011
-```
-or use the `tcp_listener` keyword in the JSON configuration.
+Latest version is **v0.51** with various improvements (like a TCP listener for NMEA and offline mode for the webclient and switched `-N OWN_MMSI`).
 
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
