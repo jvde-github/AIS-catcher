@@ -711,9 +711,12 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		else
 			Response(c, "text/html", (char*)index_local_html_gz, index_local_html_gz_len, true);
 	}
-	else if (r.find("/cdn/") == 0 && r.find("..") == std::string::npos) {	
+	else if (!cdn.empty() && r.find("/cdn/") == 0) {	
 		try {
-			std::string content =  Util::Helper::readFile(cdn+r);
+
+			if(r.find("..") != std::string::npos || r.find(".") == std::string::npos)
+				throw std::runtime_error("Blocked, pattern not matching");
+
 			std::string extension = r.substr(r.find_last_of('.') + 1);
 			std::string contentType;
 
@@ -726,15 +729,15 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 			} else if (extension == "css") {
 				contentType = "text/css";
 			} else {
-				contentType = "application/octet-stream";
-			}
-		
-			Response(c, contentType, (char*)content.c_str(), content.length(), false);
+				throw std::runtime_error("Blocked " + extension);			}
+
+			std::string content =  Util::Helper::readFile(cdn+r);
+			Response(c, contentType, content, use_zlib);
 		}
 		catch (const std::exception& e) {
-			Response(c, "text/html", (char*)"", 0, true);
-			std::cerr << "Server: cannot find file " << cdn << r << std::endl;
+			std::cerr << "Server: error returning requested file (" << r << "): " << e.what() << std::endl;
 		}
+		Response(c, "text/html", std::string(""), true);
 	}
 	else if (r == "/favicon.ico") {
 		Response(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
