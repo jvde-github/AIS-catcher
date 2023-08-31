@@ -40,7 +40,7 @@ AIS-catcher -x 192.168.1.120 4002 -N 8100 CDN /home/jasper/webassets
 - Increased the default RTL-SDR buffer, so running on a RPI Zero W only requires activating fast downsampling `-F`.
 - Option `-ge print on` to dump raw input from serial device to screen
 - Bug fix in reading from certain serial devices on Windows
-- Bug fix in properly closing when reading from TCP conenction e.g. RTL-TCP
+- Bug fix in properly closing when reading from TCP connection e.g. RTL-TCP
 - Fix to internal webserver to avoid one client blocking the server when sending
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
 - New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted.
@@ -600,6 +600,8 @@ returns a warning on the incorrect CRC and:
 ```
 Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This latter 16 bit checksum/CRC is not included in the NMEA message.
 
+AIS-catcher will also accept AIVDO input which is typically used for the MMSI of the own ship. You can enable/disable this with: `-go VDO on/off`.
+
 ### Input of Station location
 
 As discussed obove, the webserver will only share a known location of the station with the front-end webclient if `share_loc` is set for the webserver:
@@ -814,6 +816,7 @@ Settings specific for reading NMEA lines from a serial port can all be set with 
 ```console
 AIS-catcher -e 368400 /dev/serial1
 ```
+To dump the raw input from the serial device on screen use `-ge print on`.
 
 ### HackRF
 Settings specific for the HackRF can be set on the command line with the ```-gf``` switch, e.g.:
