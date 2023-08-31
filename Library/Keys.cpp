@@ -50,6 +50,7 @@ namespace AIS {
 		{ "", "", "", "", "broadcast" },
 		{ "", "", "", "", "buffer_count" },
 		{ "", "", "", "", "callsign" },
+		{ "", "", "", "", "cdn" },
 		{ "", "", "", "", "channel" },
 		{ "", "", "", "", "config" },
 		{ "", "", "", "", "crc_check" },
