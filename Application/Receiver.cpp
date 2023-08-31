@@ -732,7 +732,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 				throw std::runtime_error("Blocked " + extension);			}
 
 			std::string content =  Util::Helper::readFile(cdn+r);
-			Response(c, contentType, content, use_zlib);
+			Response(c, contentType, content, use_zlib & gzip);
 		}
 		catch (const std::exception& e) {
 			std::cerr << "Server: error returning requested file (" << r << "): " << e.what() << std::endl;
@@ -795,7 +795,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 
 		content += "\"received\":\"" + std::to_string(d1) + "." + std::to_string(d2) + unit + "\"}";
 
-		Response(c, "application/json", content, use_zlib);
+		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/ships.json") {
 		std::string content = ships.getJSON();
@@ -808,7 +808,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/ships_full.json") {
 
 		std::string content = ships.getJSON(true);
-		Response(c, "application/json", content, use_zlib);
+		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/config.js") {
 		Response(c, "application/javascript", params + plugins, use_zlib & gzip);
