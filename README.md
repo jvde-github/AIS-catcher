@@ -44,7 +44,7 @@ AIS-catcher -x 192.168.1.120 4002 -N 8100 CDN /home/jasper/webassets
 - Fix to internal webserver to avoid one client blocking the server when sending
 - Accept VDO messages for NMEA input (`-go VDO on/off`)
 - New options `-N use_gps on/off` and `-N own_mmsi xxxxx` added. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted.
-- Fix inclusion of lib ZMQ in Windows auto builds
+- Fix inclusion of libzmq in Windows auto builds
 - TCP listener for NMEA output, e.g. for port 5011 run with `-S 5011`. AIS-catcher can read from this TCP server at address `raspberrypi`, e.g. like:
 
 ```console
@@ -189,6 +189,8 @@ Meta data is not calculated by default to keep the program as light as possible 
 There are many libraries for decoding AIS messages to JSON format. I encourage you to use your favorite library ([libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c), [pyais](https://github.com/M0r13n/pyais), etc).
 
 ### Web interface
+![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/54eea1c6-2f72-4c23-91c4-dd289753d4cc)
+
 As per full release v0.42 AIS-catcher includes a simple web interface. A live demo is available for [East Boston, US](https://kx1t.com/ais/). The web-interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Material Design Icons](https://m3.material.io/styles/icons/overview), tabulator, [marked](https://github.com/markedjs/marked) and [flag-icons](https://github.com/lipis/flag-icons). 
 
 Make sure you use the latest version and start the webserver as follows:
@@ -215,6 +217,7 @@ All these options can be captured in the configuration file (in a section with n
 #### Menu structure
 
 The main menu tabs allow users to navigate between different functional areas. Context-sensitive menus, accessible through right-click, long press on iOS, or the vertical dot icon on the map, offer more functionalities. Options available include dark mode themes, displaying the station range on the map, locking/unlocking the map center, toggling text-only ship labels, decluttering ship labels, and viewing details of the last message received from a vessel, among others.
+
 #### Visualization
 
 When AIS-catcher receives data containing a vessel's dimensions but not its heading, it displays a circle that accommodates the ship's dimensions for potential headings. This is common for Class B ships. If there's an approximation available for the heading, such as course-over-ground, it will be used. Shapes plotted using this approximation will have a dashed border, indicating incomplete information. An example is the USS Constitution docked in Boston.
@@ -260,6 +263,16 @@ AIS-catcher -N 8100 PLUGIN_DIR /usr/share/aiscatcher/plugins
 ```
 Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and style plugins. The repository includes a few example plugins that demonstrate how to add additional maps, create new menu items and present some of the ship data in a different unit (e.g. dimension of the vessel in feet instead of meters). 
 
+#### Offline Webclient
+As per version v0.51 there is an option to run the webclient without relying on online libraries. This should enable to use the web interface whilst travelling without internet connection. To run without using online libraries, first  go to your home directory (say `/home/jasper`) and clone the necessary web assets:
+```console
+git clone https://github.com/jvde-github/webassets.git
+```
+This will create a directory `webassets` that we need to share with AIS-catcher as alternative location for online web contents.
+To do this run AIS-catcher with the CDN argument followed by the location of the webassets directory:
+```console
+AIS-catcher -x 192.168.1.120 4002 -N 8100 CDN /home/jasper/webassets
+```
 
 ### Sending data to Prometheus for use in Grafana dashboards
 
@@ -585,7 +598,7 @@ returns a warning on the incorrect CRC and:
 ```
 Note that CRC/checksum is the simple xor-checksum for validating that the NMEA line is not corrupted and not the CRC that is transmitted with the AIS message for a decoder to check the correct reception over air. This latter 16 bit checksum/CRC is not included in the NMEA message.
 
-### Input from GPS devices
+### Input of Station location
 
 As discussed obove, the webserver will only share a known location of the station with the front-end webclient if `share_loc` is set for the webserver:
 ```console
@@ -606,6 +619,7 @@ or from a serial device:
 ```console
 AIS-catcher -e 38400 /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox
 ````
+The webclient has a options `-N use_gps on/off` and `-N own_mmsi xxxxx`. The former toggles the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted.
 
 ### Multiple device input
 
