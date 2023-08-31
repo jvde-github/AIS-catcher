@@ -346,6 +346,8 @@ AIS-catcher -x 192.168.1.235 4002
 ```
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings. 
 
+Another option for UDP include `BROADCAST on/off` to enable to send to broadcast addresses.
+
 A feature has been added that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
 ````console
 AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
