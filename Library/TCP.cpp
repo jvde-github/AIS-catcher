@@ -32,12 +32,12 @@ namespace TCP {
 			sock = -1;
 		}
 		msg.clear();
-		outLength = 0;
+		out.clear();
 	}
 
 	void ServerConnection::Start(SOCKET s) {
 		msg.clear();
-		outLength = 0;
+		out.clear();
 		stamp = std::time(0);
 		sock = s;
 	}
@@ -74,8 +74,8 @@ namespace TCP {
 	void ServerConnection::SendBuffer() {
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if (isConnected() && outLength > 0) {
-			int bytes = ::send(sock, outBuffer, outLength, 0);
+		if (isConnected() && hasSendBuffer()) {
+			int bytes = ::send(sock, out.data(), out.size(), 0);
 
 			if (bytes < 0) {
 #ifdef _WIN32
@@ -85,15 +85,15 @@ namespace TCP {
 #endif
 					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
 					Close();
-					return;
 				}
-			}
-			if (bytes < outLength) {
-				outLength -= bytes;
-				memmove(outBuffer, outBuffer + bytes, outLength);
+
 				return;
 			}
-			outLength = 0;
+
+			if (bytes < out.size())
+				out.erase(out.begin(), out.begin() + bytes);
+			else
+				out.clear();
 		}
 	}
 	bool ServerConnection::Send(const char* data, int length) {
@@ -101,13 +101,12 @@ namespace TCP {
 
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if (outLength + length < sizeof(outBuffer)) {
-			std::memcpy(outBuffer + outLength, data, length);
-			outLength += length;
-			return true;
-		}
-		return false;
+		if (out.size() + length > 1024*1024) return false;
+
+		out.insert(out.end(), data, data + length);
+		return true;
 	}
+
 	// TCP Server
 
 	Server::~Server() {
