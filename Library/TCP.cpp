@@ -75,6 +75,7 @@ namespace TCP {
 		std::lock_guard<std::mutex> lock(mtx);
 
 		if (isConnected() && hasSendBuffer()) {
+			
 			int bytes = ::send(sock, out.data(), out.size(), 0);
 
 			if (bytes < 0) {
@@ -86,11 +87,8 @@ namespace TCP {
 					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
 					Close();
 				}
-
-				return;
 			}
-
-			if (bytes < out.size())
+			else if (bytes < out.size())
 				out.erase(out.begin(), out.begin() + bytes);
 			else
 				out.clear();
@@ -159,7 +157,7 @@ namespace TCP {
 
 		for (auto& c : client)
 			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout) {
-				std::cerr << "TCP Server: timeout, close client " << c.sock << std::endl;
+				// std::cerr << "TCP Server: timeout, close client " << c.sock << std::endl;
 				c.Close();
 			}
 	}
