@@ -59,15 +59,14 @@ namespace TCP {
 		SOCKET sock = -1;
 
 		std::string msg;
-    	char outBuffer[524288];
-    	int outLength = 0;
+    	std::vector<char> out;
 		std::time_t stamp;
 
 		void Close();
 		void Start(SOCKET s);
 		int Inactive(std::time_t now);
 		bool isConnected() { return sock != -1; }
-		bool hasSendBuffer() { return outLength>0; }
+		bool hasSendBuffer() { return !out.empty(); }
 		void SendBuffer();
 		bool Send(const char* buffer, int length);
 		void Read();
