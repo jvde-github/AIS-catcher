@@ -736,8 +736,8 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		}
 		catch (const std::exception& e) {
 			std::cerr << "Server: error returning requested file (" << r << "): " << e.what() << std::endl;
+			Response(c, "text/html", std::string(""), true);
 		}
-		Response(c, "text/html", std::string(""), true);
 	}
 	else if (r == "/favicon.ico") {
 		Response(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
