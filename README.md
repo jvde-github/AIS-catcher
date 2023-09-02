@@ -25,6 +25,9 @@ Only use this software in regions where such use is permitted.
 
 Latest version is **v0.51** with various improvements (like a TCP listener for NMEA and offline mode for the webclient and switched `-N OWN_MMSI`).
 
+Latest Edge version:
+- Update RTL-SDR driver for Windows with RTL-SDR v4 updates
+  
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
 
