@@ -1,5 +1,5 @@
 # AIS-catcher: A comprehensive AIS Receiver for multiple platforms 
-This package introduces the `AIS-catcher` command, a dual-channel AIS receiver compatible with various hardware, including RTL-SDR dongles (such as the ShipXplorer AIS dongle), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, file input, and ZMQ and TCP servers (RTL-TCP/SpyServer). The output is delivered as NMEA messages, which can be displayed on screen or broadcast via UDP/HTTP/TCP. AIS-catcher is a lightweight command line utility and includes a built-in web server for use on secure internal networks.
+This package introduces the `AIS-catcher` command, a dual-channel AIS receiver compatible with various hardware, including RTL-SDR dongles (such as the ShipXplorer AIS dongle), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, file input, and ZMQ and TCP servers (RTL-TCP/SpyServer). The output is delivered as NMEA messages, which can be displayed on screen or send via UDP/HTTP/TCP. AIS-catcher is a lightweight command line utility and includes a built-in web server for use on secure internal networks.
 <p align="center">
   <img src="https://user-images.githubusercontent.com/52420030/219856752-b3a09051-b913-49bd-8af3-bca2e7a25130.png" width="30%"/>
 </p>
@@ -322,7 +322,7 @@ AIS-catcher -x 192.168.1.235 4002
 ```
 Most external programs will not be able to accept this JSON packaged NMEA strings. It is a way to transfer received messages between AIS-catcher instances without losing meta data like the timestamp, ppm correction and signal level. These are not captured in the standard NMEA strings. 
 
-Another option for UDP include `BROADCAST on/off` to enable to send to broadcast addresses.
+Another option for UDP include `BROADCAST on/off` to enable to send to a broadcast addresses.
 
 A feature has been added that sends messages to (e.g.) MarineTraffic as a TCP client (with auto-reconnect) using the `-P` switch. For example:
 ````console
