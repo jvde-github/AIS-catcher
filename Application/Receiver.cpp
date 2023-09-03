@@ -815,7 +815,8 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/sse") {
-		std::cerr << "SSE request";
+		// temporary design
+		std::cerr << "SSE request\n";
 		for (auto it = sse.begin(); it != sse.end(); ) {
 			if (!it->isConnected()) {
 				it->Close();
@@ -826,7 +827,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 			}
 		}
 
-		sse.push_back(IO::SSEConnection(&c));
+		sse.emplace_back(&c);
 		IO::SSEConnection& sc = sse.back();
 		sc.Start();
 

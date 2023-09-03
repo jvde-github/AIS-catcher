@@ -1846,7 +1846,7 @@
             </div>
 
             <div class="tabcontent addscrollbar" id="realtime">
-                <div class="realtimepage" id="realtime_content"></div>
+                <pre id="realtime_content"></pre>
             </div>
 
             <div class="tabcontent addscrollbar" id="stat">
@@ -5094,14 +5094,12 @@
                         sseDataDiv.innerHTML = sseDataDiv.innerHTML + "<br>" + e.data;
                         rtCount = rtCount + 1;
                     }, false);
-                    alert("opened");
                 }
             }
             else {
                 if (evtSource != null) {
                     evtSource.close();
                     evtSource = null;
-                    alert("closed");
                 }
             }
         }

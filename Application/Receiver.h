@@ -294,7 +294,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	} counter, counter_session;
 
 	class SSEStreamer : public StreamIn<AIS::Message> {
-		std::vector<IO::SSEConnection>* sse = NULL;
+		std::list<IO::SSEConnection>* sse = NULL;
 	public:
 		void Receive(const AIS::Message* data, int len, TAG& tag) {
 			if (sse) {
@@ -311,7 +311,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 
 			}
 		}
-		void setSSE(std::vector<IO::SSEConnection>* s) { sse = s; }
+		void setSSE(std::list<IO::SSEConnection>* s) { sse = s; }
 	} sse_streamer;
 
 	class PromotheusCounter : public StreamIn<AIS::Message> {
@@ -356,7 +356,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	} raw_counter;
 
 	DB ships;
-	std::vector<IO::SSEConnection> sse;
+	std::list<IO::SSEConnection> sse;
 
 	bool Load();
 	bool Save();
