@@ -586,6 +586,8 @@ void WebClient::connect(Receiver& r) {
 			// connect all the statistical counters
 			r.Output(j) >> counter;
 			r.Output(j) >> counter_session;
+			r.Output(j) >> sse_streamer;
+			sse_streamer.setSSE(&sse);
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*) & ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*) & ships);
@@ -605,6 +607,8 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 	if (m.Output().out.canConnect(groups_in)) {
 		m.Output() >> counter;
 		m.Output() >> counter_session;
+		m.Output() >> sse_streamer;
+		sse_streamer.setSSE(&sse);
 
 		json.Connect((StreamIn<JSON::JSON>*) & ships);
 		device >> raw_counter;
@@ -810,8 +814,25 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		std::string content = ships.getJSON(true);
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r == "/sse") {
+		std::cerr << "SSE request";
+		for (auto it = sse.begin(); it != sse.end(); ) {
+			if (!it->isConnected()) {
+				it->Close();
+				it = sse.erase(it); 
+			}
+			else {
+				++it; 
+			}
+		}
+
+		sse.push_back(IO::SSEConnection(&c));
+		IO::SSEConnection& sc = sse.back();
+		sc.Start();
+
+	}
 	else if (r == "/config.js") {
-		Response(c, "application/javascript", params + plugins, use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins, use_zlib& gzip);
 	}
 	else if (r == "/config.css") {
 		Response(c, "text/css", stylesheets, use_zlib & gzip);

@@ -61,6 +61,13 @@ namespace TCP {
 		std::string msg;
     	std::vector<char> out;
 		std::time_t stamp;
+		bool is_locked = false;
+
+		void Lock();
+		void Unlock();
+		bool isLocked() {
+			return is_locked;
+		}
 
 		void Close();
 		void Start(SOCKET s);
@@ -69,6 +76,7 @@ namespace TCP {
 		bool hasSendBuffer() { return !out.empty(); }
 		void SendBuffer();
 		bool Send(const char* buffer, int length);
+		bool SendDirect(const char* buffer, int length);
 		void Read();
 	};
 

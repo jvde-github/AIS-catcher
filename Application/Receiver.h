@@ -293,6 +293,27 @@ class WebClient : public IO::HTTPServer, public Setting {
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
 	} counter, counter_session;
 
+	class SSEStreamer : public StreamIn<AIS::Message> {
+		std::vector<IO::SSEConnection>* sse = NULL;
+	public:
+		void Receive(const AIS::Message* data, int len, TAG& tag) {
+			if (sse) {
+				for (auto it = sse->begin(); it != sse->end(); ) {
+					if (!it->isConnected()) {
+						it->Close();
+						it = sse->erase(it);
+					}
+					else {
+						it->SendEvent("nmea", data[0].NMEA[0]);
+						++it;
+					}
+				}
+
+			}
+		}
+		void setSSE(std::vector<IO::SSEConnection>* s) { sse = s; }
+	} sse_streamer;
+
 	class PromotheusCounter : public StreamIn<AIS::Message> {
 		std::mutex m;
 		MessageStatistics stat;
@@ -335,6 +356,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	} raw_counter;
 
 	DB ships;
+	std::vector<IO::SSEConnection> sse;
 
 	bool Load();
 	bool Save();

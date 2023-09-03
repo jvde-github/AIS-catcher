@@ -49,6 +49,55 @@
 
 namespace IO {
 
+	class SSEConnection {
+	protected:
+		bool running = false;
+		TCP::ServerConnection *connection;
+	public:
+		SSEConnection(TCP::ServerConnection *connection) : connection(connection) {}
+		~SSEConnection() { }
+
+		void Start() {
+			if (!connection) return;
+
+			running = true;
+			connection->Lock();
+
+			std::string headers = "HTTP/1.1 200 OK\r\n";
+			headers += "Content-Type: text/event-stream\r\n";
+			headers += "Cache-Control: no-cache\r\n";
+			headers += "Connection: keep-alive\r\n\r\n";
+
+			connection->SendDirect(headers.c_str(), headers.length());
+		}
+
+		bool isConnected() {
+			return connection && connection->isConnected();
+		}
+
+		void Close() {
+
+			if (connection) {
+				connection->SendDirect("\r\n", 1);
+				connection->Unlock();
+				connection->Close();
+				connection = nullptr;
+			}
+		}
+
+		void SendEvent(const std::string& eventName, const std::string& eventData, const std::string& eventId = "") {
+			if (connection && running) {
+				std::string eventStr = "event: " + eventName + "\r\n";
+				if (!eventId.empty()) {
+					eventStr += "id: " + eventId + "\r\n";
+				}
+				eventStr += "data: " + eventData + "\r\n\r\n";
+
+				connection->SendDirect(eventStr.c_str(), eventStr.length());
+			}
+		}
+	};
+
 	class HTTPServer : public TCP::Server {
 	public:
 		virtual void Request(TCP::ServerConnection& c, const std::string& msg, bool accept_gzip);

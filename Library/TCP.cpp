@@ -26,7 +26,17 @@ namespace TCP {
 
 	// TO DO: create a BaseSocket class and clean up between files Network (AC streamers) and TCP (low level TCP connections)
 
+	void ServerConnection::Lock() {
+		is_locked = true;
+	}
+
+	void ServerConnection::Unlock() {
+		is_locked = false;
+	}
+
 	void ServerConnection::Close() {
+
+
 		if (sock != -1) {
 			closesocket(sock);
 			sock = -1;
@@ -47,6 +57,8 @@ namespace TCP {
 	}
 
 	void ServerConnection::Read() {
+		std::lock_guard<std::mutex> lock(mtx);
+
 		char buffer[1024];
 
 		if (isConnected()) {
@@ -105,6 +117,36 @@ namespace TCP {
 		return true;
 	}
 
+	bool ServerConnection::SendDirect(const char* data, int length) {
+		if (!isConnected()) return false;
+
+		int bytes = 0;
+
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if (!hasSendBuffer()) {
+			 bytes = ::send(sock, data, length, 0);
+
+			if (bytes < 0) {
+#ifdef _WIN32
+				if (WSAGetLastError() != WSAEWOULDBLOCK) {
+#else
+				if (errno != EWOULDBLOCK && errno != EAGAIN) {
+#endif
+					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
+					Close();
+					return false;
+				}
+				bytes = 0;
+			}
+		}
+
+		if(bytes < length)
+			out.insert(out.end(), data + bytes, data + length - bytes);
+
+		return true;
+	}
+
 	// TCP Server
 
 	Server::~Server() {
@@ -115,7 +157,7 @@ namespace TCP {
 
 	int Server::findFreeClient() {
 		for (int i = 0; i < MAX_CONN; i++)
-			if (!client[i].isConnected()) return i;
+			if (!client[i].isLocked() && !client[i].isConnected()) return i;
 		return -1;
 	}
 
