@@ -99,6 +99,7 @@ namespace AIS {
 		{ "", "", "", "", "prome" },
 		{ "", "", "", "", "protocol" },
 		{ "", "", "", "", "ps_ema" },
+		{ "", "", "", "", "realtime" },
 		{ "", "", "", "", "receiver" },
 		{ "", "", "", "", "reset" },
 		{ "", "", "", "", "response" },
