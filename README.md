@@ -452,6 +452,7 @@ An example config file looks as follows:
   "server":{
     "file":"stat.bin",
     "backup":10,
+    "realtime": true,
     "active":true,
     "port":8100,
     "station":"My Station",
