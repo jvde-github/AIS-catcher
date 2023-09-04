@@ -586,6 +586,8 @@ void WebClient::connect(Receiver& r) {
 			// connect all the statistical counters
 			r.Output(j) >> counter;
 			r.Output(j) >> counter_session;
+			r.Output(j) >> sse_streamer;
+			sse_streamer.setSSE(this,1);
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*) & ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*) & ships);
@@ -605,6 +607,8 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 	if (m.Output().out.canConnect(groups_in)) {
 		m.Output() >> counter;
 		m.Output() >> counter_session;
+		m.Output() >> sse_streamer;
+		sse_streamer.setSSE(this,1);
 
 		json.Connect((StreamIn<JSON::JSON>*) & ships);
 		device >> raw_counter;
@@ -810,8 +814,12 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		std::string content = ships.getJSON(true);
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r == "/sse") {
+		if(realtime)
+			upgradeSSE(c, 1);
+	}
 	else if (r == "/config.js") {
-		Response(c, "application/javascript", params + plugins, use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins, use_zlib& gzip);
 	}
 	else if (r == "/config.css") {
 		Response(c, "text/css", stylesheets, use_zlib & gzip);
@@ -957,6 +965,13 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	}
 	else if (option == "BACKUP") {
 		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60);
+	}
+	else if (option == "REALTIME") {
+		realtime = Util::Parse::Switch(arg);		
+		if(realtime)
+			plugins += "realtime_enabled = true;\n";
+		else
+			plugins += "realtime_enabled = false;\n";
 	}
 	else if (option == "PLUGIN") {
 		std::cerr << "Server: adding plugin (JS): " << arg << std::endl;

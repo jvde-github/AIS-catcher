@@ -49,6 +49,68 @@
 
 namespace IO {
 
+	class SSEConnection {
+	protected:
+		bool running = false;
+		TCP::ServerConnection *connection;
+		int _id = 0;
+
+	public:
+		SSEConnection(TCP::ServerConnection *connection,int id) : connection(connection), _id(id) {
+			std::cerr << "SSE Connection Constructor : " << connection->sock << "\n";			
+		}
+
+		~SSEConnection() { 
+			std::cerr << "SSE Connection Destructor\n"; Close();
+		}
+
+		int getID() {
+			return _id;
+		}
+
+		void Start() {
+			if (!connection) return;
+
+			std::cerr << "SSE start: " << connection->sock << std::endl;
+			running = true;
+			connection->Lock();
+
+			std::string headers = "HTTP/1.1 200 OK\r\n";
+			headers += "Content-Type: text/event-stream\r\n";
+			headers += "Cache-Control: no-cache\r\n";
+			headers += "Connection: keep-alive\r\n\r\n";
+
+			connection->SendDirect(headers.c_str(), headers.length());
+		}
+
+		bool isConnected() {
+			return connection && connection->isConnected();
+		}
+
+		void Close() {
+
+			if (connection) {
+				std::cerr << "SSE close: " << connection->sock << std::endl;
+				connection->SendDirect("\r\n", 1);
+				connection->Unlock();
+				connection->Close();
+				connection = nullptr;
+			}
+		}
+
+		void SendEvent(const std::string& eventName, const std::string& eventData, const std::string& eventId = "") {
+			if (connection && running) {
+				std::string eventStr = "event: " + eventName + "\r\n";
+				if (!eventId.empty()) {
+					eventStr += "id: " + eventId + "\r\n";
+				}
+				eventStr += "data: " + eventData + "\r\n\r\n";
+
+				connection->SendDirect(eventStr.c_str(), eventStr.length());
+			}
+		}
+	};
+
 	class HTTPServer : public TCP::Server {
 	public:
 		virtual void Request(TCP::ServerConnection& c, const std::string& msg, bool accept_gzip);
@@ -56,8 +118,39 @@ namespace IO {
 		void Response(TCP::ServerConnection& c, std::string type, const std::string& content, bool gzip = false);
 		void Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false);
 
+		void cleanupSSE() {
+			for (auto it = sse.begin(); it != sse.end(); ) {
+				if (!it->isConnected()) {
+					it->Close();
+					it = sse.erase(it);
+				}
+				else {
+					++it;
+				}
+			}
+		}
+
+		void upgradeSSE(TCP::ServerConnection& c, int id) {
+			// temporary design
+			std::cerr << "SSE request\n";
+			cleanupSSE();
+
+			sse.emplace_back(&c, id);
+			sse.back().Start();
+		}
+
+		void sendSSE(int id, const std::string& event, const std::string& data) {
+			cleanUp();
+
+			for (auto it = sse.begin(); it != sse.end(); ++it) {				
+				if(it->getID() == id)
+					it->SendEvent("nmea", data);				
+			}
+		}
+
 	private:
 		std::string ret, header;
+		std::list<IO::SSEConnection> sse;
 
 		void Parse(const std::string& s, std::string& get, bool& accept_gzip);
 		void processClients();

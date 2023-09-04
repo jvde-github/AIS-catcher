@@ -253,6 +253,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	int backup_interval = -1;
 	bool port_set = false;
 	bool use_zlib = true;
+	bool realtime = true;
 	bool supportPrometheus = false;
 	bool thread_running = false;
 
@@ -292,6 +293,19 @@ class WebClient : public IO::HTTPServer, public Setting {
 
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
 	} counter, counter_session;
+
+	class SSEStreamer : public StreamIn<AIS::Message> {
+		HTTPServer* server = NULL;
+		int _id = 0;
+	public:
+		void Receive(const AIS::Message* data, int len, TAG& tag) {
+			if (server) {
+				for (const auto& s : data[0].NMEA)
+					server->sendSSE(_id, "nmea", s);
+			}
+		}
+		void setSSE(HTTPServer* s, int id) { server = s; _id = id; }
+	} sse_streamer;
 
 	class PromotheusCounter : public StreamIn<AIS::Message> {
 		std::mutex m;
