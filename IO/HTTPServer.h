@@ -53,12 +53,19 @@ namespace IO {
 	protected:
 		bool running = false;
 		TCP::ServerConnection *connection;
+		int _id = 0;
+
 	public:
-		SSEConnection(TCP::ServerConnection *connection) : connection(connection) {
+		SSEConnection(TCP::ServerConnection *connection,int id) : connection(connection), _id(id) {
 			std::cerr << "SSE Connection Constructor : " << connection->sock << "\n";			
 		}
+
 		~SSEConnection() { 
 			std::cerr << "SSE Connection Destructor\n"; Close();
+		}
+
+		int getID() {
+			return _id;
 		}
 
 		void Start() {
@@ -111,8 +118,39 @@ namespace IO {
 		void Response(TCP::ServerConnection& c, std::string type, const std::string& content, bool gzip = false);
 		void Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false);
 
+		void cleanupSSE() {
+			for (auto it = sse.begin(); it != sse.end(); ) {
+				if (!it->isConnected()) {
+					it->Close();
+					it = sse.erase(it);
+				}
+				else {
+					++it;
+				}
+			}
+		}
+
+		void upgradeSSE(TCP::ServerConnection& c, int id) {
+			// temporary design
+			std::cerr << "SSE request\n";
+			cleanupSSE();
+
+			sse.emplace_back(&c, id);
+			sse.back().Start();
+		}
+
+		void sendSSE(int id, const std::string& event, const std::string& data) {
+			cleanUp();
+
+			for (auto it = sse.begin(); it != sse.end(); ++it) {				
+				if(it->getID() == id)
+					it->SendEvent("nmea", data);				
+			}
+		}
+
 	private:
 		std::string ret, header;
+		std::list<IO::SSEConnection> sse;
 
 		void Parse(const std::string& s, std::string& get, bool& accept_gzip);
 		void processClients();

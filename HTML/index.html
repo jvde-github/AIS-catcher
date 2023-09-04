@@ -1207,12 +1207,12 @@
                         z-index: -1;
                     }
 
-                .watch_icon {
+                .feed_icon {
                     display: block;
                     width: 1em;
                     height: 1em;
                     background-color: currentColor;
-                    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="m366-80-47-171q-55-35-87-95t-32-134q0-74 32-134.5t87-94.5l47-171h228l47 171q55 34 87 94.5T760-480q0 74-32 134t-87 95L594-80H366Zm114-180q92 0 156-64t64-156q0-92-64-156t-156-64q-92 0-156 64t-64 156q0 92 64 156t156 64Z"/%3E%3C/svg%3E');
+                    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h462l198 198v462q0 24-18 42t-42 18H180Zm99-171h402v-60H279v60Zm0-159h402v-60H279v60Zm330-159h171L609-780v171Zm-330 0h201v-60H279v60Z"/%3E%3C/svg%3E');
                     -webkit-mask-image: var(--svg);
                     mask-image: var(--svg);
                     -webkit-mask-repeat: no-repeat;
@@ -1753,7 +1753,7 @@
                 <i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="leaderboard_icon"></i>
                 <i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="view_list_icon"></i>
                 <i id="map_tab_mini" onclick="activateTab(event,'map')" class="map_icon"></i>
-                <i id="realtime_tab_mini" onclick="activateTab(event,'realtime')" class="watch_icon"></i>
+                <i id="realtime_tab_mini" onclick="activateTab(event,'realtime')" class="feed_icon"></i>
                 <i id="about_tab_mini" onclick="activateTab(event,'about')" class="info_icon"></i>
             </div>
         </div>
@@ -1793,7 +1793,7 @@
         </div>
 
         <div onclick="activateTab(event,'realtime')" id="realtime_tab">
-            <i class="watch_icon"></i><span>Realtime</span>
+            <i class="feed_icon"></i><span>Realtime</span>
         </div>
 
         <div onclick="activateTab(event,'about')" id="about_tab">
@@ -5278,6 +5278,10 @@
             setupAbout();
         }
 
+        if (typeof realtime_enabled === 'undefined' || realtime_enabled === false) {
+            document.getElementById("realtime_tab").style.display = "none";
+            document.getElementById("realtime_tab_mini").style.display = "none";
+        }
         showWelcome();
 
         if (isAndroid()) showMenu();
