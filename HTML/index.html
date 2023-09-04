@@ -280,6 +280,11 @@
                     background: var(--bottombar-color)
                 }
 
+                #realtime_content {
+                    background: var(--menu-background-color);
+                    color: var(--menu-font-color);
+                }
+
                 #menubar {
                     z-index: 9999;
                     background: var(--menu-background-color);
@@ -5091,7 +5096,7 @@
                             sseDataDiv.innerHTML = "";
                             rtCount = 0;
                         }
-                        sseDataDiv.innerHTML = e.data + "<br>" + sseDataDiv.innerHTML ;
+                        sseDataDiv.innerText = e.data + "\n" + sseDataDiv.innerText ;
                         rtCount = rtCount + 1;
                     }, false);
                 }
