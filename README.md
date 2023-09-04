@@ -25,6 +25,9 @@ Only use this software in regions where such use is permitted.
 
 Latest version is **v0.52** which includes support for the RTL-SDR V4.
 Version **v0.51** has various improvements (like a TCP listener for NMEA and offline mode for the webclient and a new switch `-N OWN_MMSI`). See below documentation for more details.
+
+Latest Edge version:
+- Tab that shows realtime NMEA data as it comes in, activate with `-N REALTIME on`.
   
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
@@ -200,7 +203,7 @@ When AIS-catcher receives data containing a vessel's dimensions but not its head
   <img src="https://user-images.githubusercontent.com/52420030/219856857-e0965190-1468-47b6-88ad-423b77c455ff.png" width="50%"/>
 </p>
 
-On the map page, clicking on a vessel will open a  **ship card** with details of the vesse. For smaller screens it can be minimized in the top bar (via the `^` symbol or by clicking on the header bar). The ship card will open minimized on mobile devices. In its maximized form, users can choose which rows will be visible in the minimized state. Additional options, such as looking up the vessel on aggregator sites, are available by clicking the three-dot icon on the ship card header.
+On the map page, clicking on a vessel will open a  **ship card** with details of the vessel. For smaller screens it can be minimized in the top bar (via the `^` symbol or by clicking on the header bar). The ship card will open minimized on mobile devices. In its maximized form, users can choose which rows will be visible in the minimized state. Additional options, such as looking up the vessel on aggregator sites, are available by clicking the three-dot icon on the ship card header.
 
 #### Validation
 The web-interface shows a "validation" indication at the left border of the ship card header.
@@ -742,11 +745,6 @@ which produces:
 INFO: A: Received correctly: 153 packets, wrong CRC: 49 packets, wrong size: 4 packets
 INFO: B: Received correctly: 52 packets, wrong CRC: 65 packets, wrong size: 10 packets
 ```
-
-### Portable travel version for Android available [here](https://github.com/jvde-github/AIS-catcher-for-Android). 
-
-If you are travelling and looking for a portable system that can be used on an Android phone or running Android on an Odroid, check out the link. 
-You can download the APK from the mentioned project page or the Google Play store.
 
 ## Device specific settings
 
