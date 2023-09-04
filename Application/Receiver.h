@@ -253,7 +253,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	int backup_interval = -1;
 	bool port_set = false;
 	bool use_zlib = true;
-	bool realtime = true;
+	bool realtime = false;
 	bool supportPrometheus = false;
 	bool thread_running = false;
 
