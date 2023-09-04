@@ -5087,11 +5087,11 @@
                     const sseDataDiv = document.getElementById("realtime_content");
 
                     evtSource.addEventListener('nmea', function (e) {
-                        if (rtCount > 10) {
+                        if (rtCount > 25) {
                             sseDataDiv.innerHTML = "";
                             rtCount = 0;
                         }
-                        sseDataDiv.innerHTML = sseDataDiv.innerHTML + "<br>" + e.data;
+                        sseDataDiv.innerHTML = e.data + "<br>" + sseDataDiv.innerHTML ;
                         rtCount = rtCount + 1;
                     }, false);
                 }
