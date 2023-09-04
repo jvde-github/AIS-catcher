@@ -5092,7 +5092,7 @@
                     const sseDataDiv = document.getElementById("realtime_content");
 
                     evtSource.addEventListener('nmea', function (e) {
-                        if (rtCount > 25) {
+                        if (rtCount > 50) {
                             sseDataDiv.innerHTML = "";
                             rtCount = 0;
                         }
