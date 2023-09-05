@@ -110,9 +110,9 @@ namespace TCP {
 		}
 	}
 	bool ServerConnection::Send(const char* data, int length) {
-		if(!isConnected()) return false;
-
 		std::lock_guard<std::mutex> lock(mtx);
+
+		if(!isConnected()) return false;
 
 		if (out.size() + length > 1024*1024) return false;
 
@@ -121,11 +121,11 @@ namespace TCP {
 	}
 
 	bool ServerConnection::SendDirect(const char* data, int length) {
+		std::lock_guard<std::mutex> lock(mtx);
+
 		if (!isConnected()) return false;
 
 		int bytes = 0;
-
-		std::lock_guard<std::mutex> lock(mtx);
 
 		if (!hasSendBuffer()) {
 			 bytes = ::send(sock, data, length, 0);
