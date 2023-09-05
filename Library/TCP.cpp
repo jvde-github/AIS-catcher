@@ -35,8 +35,11 @@ namespace TCP {
 	}
 
 	void ServerConnection::Close() {
+		std::lock_guard<std::mutex> lock(mtx);
+		CloseUnsafe();
+	}
 
-
+	void ServerConnection::CloseUnsafe() {
 		if (sock != -1) {
 			closesocket(sock);
 			sock = -1;
@@ -74,7 +77,7 @@ namespace TCP {
 				if (nread < 0)
 					std::cerr << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock << std::endl;
 
-				Close();
+				CloseUnsafe();
 			}
 			else if (nread > 0) {
 				msg += std::string(buffer, nread);
@@ -97,7 +100,7 @@ namespace TCP {
 				if (errno != EWOULDBLOCK && errno != EAGAIN) {
 #endif
 					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
-					Close();
+					CloseUnsafe();
 				}
 			}
 			else if (bytes < out.size())
@@ -134,7 +137,7 @@ namespace TCP {
 				if (errno != EWOULDBLOCK && errno != EAGAIN) {
 #endif
 					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
-					Close();
+					CloseUnsafe();
 					return false;
 				}
 				bytes = 0;
@@ -199,7 +202,6 @@ namespace TCP {
 
 		for (auto& c : client)
 			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout && !c.isLocked()) {
-				// std::cerr << "TCP Server: timeout, close client " << c.sock << std::endl;
 				c.Close();
 			}
 	}
@@ -287,7 +289,10 @@ namespace TCP {
 
 		if (listen(sock, 511) < 0) return false;
 
-		for(auto &c : client) c.Close();
+		for(auto &c : client) {
+			c.Close();
+			c.Unlock();
+		}
 
 		if (!setNonBlock(sock)) {
 			std::cerr << "TCP Server: cannot set socket to non-blocking\n";

@@ -52,6 +52,7 @@ namespace TCP {
 	class ServerConnection {
 	private:
 		std::mutex mtx;
+		void CloseUnsafe();
 
 	public:
 		~ServerConnection() { Close(); }
