@@ -198,7 +198,7 @@ namespace TCP {
 	void Server::cleanUp() {
 
 		for (auto& c : client)
-			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout) {
+			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout && !c.isLocked()) {
 				// std::cerr << "TCP Server: timeout, close client " << c.sock << std::endl;
 				c.Close();
 			}

@@ -132,7 +132,7 @@ namespace IO {
 
 		void upgradeSSE(TCP::ServerConnection& c, int id) {
 			// temporary design
-			std::cerr << "SSE request\n";
+			std::cerr << "Upgrading to SSE connection\n";
 			cleanupSSE();
 
 			sse.emplace_back(&c, id);
@@ -140,12 +140,12 @@ namespace IO {
 		}
 
 		void sendSSE(int id, const std::string& event, const std::string& data) {
-			cleanUp();
 
 			for (auto it = sse.begin(); it != sse.end(); ++it) {				
 				if(it->getID() == id)
 					it->SendEvent("nmea", data);				
 			}
+			cleanupSSE();
 		}
 
 	private:
