@@ -203,7 +203,7 @@ namespace AIS {
 		if (error) return false;
 
 		outGPS.Send(&gps, 1, tag);
-		std::cerr << "GGA: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+		//std::cerr << "GGA: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -230,7 +230,7 @@ namespace AIS {
 		if (error) return false;
 
 		outGPS.Send(&gps, 1, tag);
-		std::cerr << "RMC: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+		//std::cerr << "RMC: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -257,7 +257,7 @@ namespace AIS {
 		if (error) return false;
 
 		outGPS.Send(&gps, 1, tag);
-		std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+		//std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -377,7 +377,7 @@ namespace AIS {
 					if (gps.lat != 0 || gps.lon != 0) { 
 
 						outGPS.Send(&gps, 1, tag);
-						std::cerr << "JSON: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+						//std::cerr << "JSON: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 					}
 				}
 

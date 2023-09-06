@@ -891,7 +891,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 
 	if (option == "PORT") {
 		port_set = true;
-		firstport = lastport = Util::Parse::Integer(arg, 1, 65535);
+		firstport = lastport = Util::Parse::Integer(arg, 1, 65535, option);
 	}
 	else if (option == "SERVER_MODE") {
 		bool b = Util::Parse::Switch(arg);
@@ -901,16 +901,16 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		use_zlib = Util::Parse::Switch(arg);
 	}
 	else if (option == "GROUPS_IN") {
-		groups_in = Util::Parse::Integer(arg);
+		groups_in = Util::Parse::Integer(arg, 0, GROUPS_ALL, option);
 	} 
 	else if (option == "PORT_MIN") {
 		port_set = true;
-		firstport = Util::Parse::Integer(arg, 1, 65535);
+		firstport = Util::Parse::Integer(arg, 1, 65535, option);
 		lastport = MAX(firstport, lastport);
 	}
 	else if (option == "PORT_MAX") {
 		port_set = true;
-		lastport = Util::Parse::Integer(arg, 1, 65535);
+		lastport = Util::Parse::Integer(arg, 1, 65535, option);
 		firstport = MIN(firstport, lastport);
 	}
 	else if (option == "STATION") {
@@ -925,7 +925,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		ships.setLat(Util::Parse::Float(arg));
 	}
 	else if (option == "CUTOFF") {
-		int cutoff = Util::Parse::Integer(arg, 0, 10000);
+		int cutoff = Util::Parse::Integer(arg, 0, 10000, option);
 		hist_minute.setCutoff(cutoff);
 		hist_second.setCutoff(cutoff);
 		hist_hour.setCutoff(cutoff);
@@ -951,10 +951,10 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		ships.setUseGPS(Util::Parse::Switch(arg));
 	}
 	else if (option == "OWN_MMSI") {
-		ships.setOwnMMSI(Util::Parse::Integer(arg));
+		ships.setOwnMMSI(Util::Parse::Integer(arg, 0, 999999999, option));
 	}
 	else if (option == "HISTORY") {
-		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600));
+		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600, option));
 	}
 	else if (option == "FILE") {
 		filename = arg;
@@ -964,7 +964,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		std::cerr << "Fetch Web Libraries locally at " << arg << std::endl;
 	}
 	else if (option == "BACKUP") {
-		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60);
+		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60, option);
 	}
 	else if (option == "REALTIME") {
 		realtime = Util::Parse::Switch(arg);		

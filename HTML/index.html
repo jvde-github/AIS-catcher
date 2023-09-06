@@ -505,35 +505,35 @@
                 }
 
                 /* other tables */
-                table {
+                .mytable {
                     height: 100%;
                     overflow: auto;
                     border-collapse: collapse;
                 }
 
-                    table thead {
+                .mytable thead {
                         background-color: var(--table-header-background-color);
                         font-size: 1em;
                         color: white;
                     }
 
-                        table thead > tr > th {
+                    .mytable thead > tr > th {
                             padding: 25px 15px;
                             border-collapse: collapse;
                         }
 
 
-                    table tbody th,
+                        .mytable tbody th,
                     td {
                         border: none;
                         padding: 10px 15px;
                     }
 
-                    table > tbody > tr:nth-child(even) {
+                    .mytable > tbody > tr:nth-child(even) {
                         background: var(--table-alternate-background-color);
                     }
 
-                    table > tbody > tr:hover {
+                    .mytable > tbody > tr:hover {
                         background: var(--table-selection-background-color);
                     }
 
@@ -1842,8 +1842,8 @@
                 <li class="divider mmsi-map"></li>
                 <li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database Entry</li>
                 <li class="mmsi noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message</li>
-                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="content_copy_icon"></i>Copy MMSI</li>
-                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="content_paste_icon"></i>Copy Coordinates</li>
+                <li class="mmsi" onclick="copyText(context_mmsi)"><i class="content_copy_icon noandroid"></i>Copy MMSI</li>
+                <li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i class="content_paste_icon noandroid"></i>Copy Coordinates</li>
                 <li class="divider mmsi"></li>
                 <li class="mmsi noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="search_icon"></i>Search on Google</li>
                 <li class="mmsi noandroid" onclick="openMarineTraffic(context_mmsi)"><i class="public_icon"></i>Find on MarineTraffic</li>
@@ -2492,7 +2492,7 @@
                 const s = await fetchJSON('message', m);
                 const obj = JSON.parse(s);
 
-                let tableHtml = '<table>';
+                let tableHtml = '<table class="mytable">';
                 for (let key in obj) {
                     let value = obj[key];
                     if (Array.isArray(value)) {
@@ -2517,7 +2517,7 @@
             s = await fetchJSON('vessel', m);
             let obj = JSON.parse(s);
 
-            let tableHtml = '<table>';
+            let tableHtml = '<table class="mytable">';
             for (let key in obj) {
                 tableHtml += '<tr><td>' + key + '</td><td>' + obj[key] + '</td></tr>';
             }
@@ -3028,6 +3028,9 @@
             let e = document.getElementById('markerCount');
             if (e != null)
                 e.innerText = count;
+
+            if(document.getElementById('statcard').style.display == 'block')
+                updateMarkerCountTooltip();
         }
 
         function addMarkerCount() {
@@ -3042,14 +3045,10 @@
                 L.DomEvent.on(controlDiv, 'mouseover', function () {
                     updateMarkerCountTooltip();
                     document.getElementById('statcard').style.display = 'block';
-                    //tooltip.setLatLng(map.getCenter());
-                    //tooltip.openOn(map);
                 });
 
                 L.DomEvent.on(controlDiv, 'mouseout', function () {
                     document.getElementById('statcard').style.display = 'none';
-
-                    //tooltip.removeFrom(map);
                 });
                 
                 var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle round-control', controlDiv);
@@ -5171,6 +5170,10 @@
                         sseDataDiv.innerText = e.data + "\n" + sseDataDiv.innerText ;
                         rtCount = rtCount + 1;
                     }, false);
+
+                    evtSource.onerror = function (event) {
+                            sseDataDiv.innerText = "Connection error. Server is not running or reverse web proxy not configured for Server-Side Events.";
+                    };
                 }
             }
             else {
