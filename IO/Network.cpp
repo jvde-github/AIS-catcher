@@ -574,7 +574,7 @@ namespace IO {
 			port = arg;
 		}
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg,0,GROUPS_ALL,option));
+			setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
@@ -606,7 +606,7 @@ namespace IO {
 			timeout = Util::Parse::Integer(arg);
 		}  
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg,0,GROUPS_ALL,option));
+			setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);

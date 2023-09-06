@@ -901,7 +901,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		use_zlib = Util::Parse::Switch(arg);
 	}
 	else if (option == "GROUPS_IN") {
-		groups_in = Util::Parse::Integer(arg, 0, GROUPS_ALL, option);
+		groups_in = Util::Parse::Integer(arg);
 	} 
 	else if (option == "PORT_MIN") {
 		port_set = true;
