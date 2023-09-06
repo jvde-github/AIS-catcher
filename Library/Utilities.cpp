@@ -47,7 +47,7 @@ namespace Util {
 		Send(output.data(), len, tag);
 	}
 
-	long Parse::Integer(std::string str, long min, long max) {
+	long Parse::Integer(std::string str, long min, long max, const std::string &setting) {
 		int number = 0;
 		std::string::size_type sz;
 
@@ -55,15 +55,22 @@ namespace Util {
 			number = std::stoi(str, &sz);
 		}
 		catch (const std::exception&) {
-			throw std::runtime_error("expected a number");
+			if(setting.empty())
+				throw std::runtime_error("expected a number");
+			else
+				throw std::runtime_error("expected a number for setting " + setting);
 		}
 
 		if (str.length() > sz && (str[sz] == 'K' || str[sz] == 'k'))
 			number *= 1000;
 
 		if (min != 0 || max != 0)
-			if (number < min || number > max) throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "]");
-
+			if (number < min || number > max) {
+				if(setting.empty()) 
+					throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "]");
+				else
+					throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "] for setting " + setting);
+			}
 		return number;
 	}
 

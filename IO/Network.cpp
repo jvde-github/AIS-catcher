@@ -265,10 +265,10 @@ namespace IO {
 			stationid = arg;
 		}
 		else if (option == "INTERVAL") {
-			INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24);
+			INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24, option);
 		}
 		else if (option == "TIMEOUT") {
-			TIMEOUT = Util::Parse::Integer(arg, 1, 30);
+			TIMEOUT = Util::Parse::Integer(arg, 1, 30, option);
 		}
 		else if (option == "MODEL") {
 			model = arg;
@@ -487,7 +487,7 @@ namespace IO {
 			setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "RESET") {
-			reset = Util::Parse::Integer(arg,1,24*60);
+			reset = Util::Parse::Integer(arg,1,24*60, option);
 		}
 		else if(!filter.SetOption(option, arg)) {
 			throw std::runtime_error("UDP output - unknown option: " + option);
@@ -574,7 +574,7 @@ namespace IO {
 			port = arg;
 		}
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg));
+			setGroupsIn(Util::Parse::Integer(arg,0,GROUPS_ALL,option));
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
@@ -600,13 +600,13 @@ namespace IO {
 		Util::Convert::toUpper(option);
 
 		if (option == "PORT") {
-			port = Util::Parse::Integer(arg);
+			port = Util::Parse::Integer(arg,0,0xFFFF,option);
 		}
 		else if (option == "TIMEOUT") {
 			timeout = Util::Parse::Integer(arg);
 		}  
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg));
+			setGroupsIn(Util::Parse::Integer(arg,0,GROUPS_ALL,option));
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
