@@ -910,6 +910,25 @@
                     justify-content: center;
                 }
 
+                .stat-tab {
+                    scrollbar-width: thin; /* Width of the scrollbar */
+                    scrollbar-color: transparent transparent; /* Make it transparent */
+                }
+
+                /*
+                .stat-tab::-webkit-scrollbar {
+                    width: 0.5rem; 
+                }
+
+                .stat-tab::-webkit-scrollbar-track {
+                    background: transparent; 
+                }
+
+                .stat-tab::-webkit-scrollbar-thumb {
+                    background: transparent; 
+                }
+                */
+
                 @media only screen and (max-width:2250px) {
                     .stat-tab {
                         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -976,7 +995,7 @@
                                 color: var(--stat-label-color);
                                 padding: 5px 20px 5px 20px;
                                 display: flex;
-                                flex-direction: column
+                                flex-direction: column;
                             }
 
                             .stat-panel section div span:last-child {
@@ -5172,8 +5191,13 @@
                     }, false);
 
                     evtSource.onerror = function (event) {
-                            sseDataDiv.innerText = "Connection error. Server is not running or reverse web proxy not configured for Server-Side Events.";
+                            sseDataDiv.innerText = "Connection error. Server is not reachable or reverse web proxy not configured for Server-Side Events.";
                     };
+
+                    evtSource.onopen = function (event) {
+                        sseDataDiv.innerText = "";
+
+                    }
                 }
             }
             else {
