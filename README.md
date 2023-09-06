@@ -226,7 +226,7 @@ The plot tab features various charts assessing receiver performance. Restarting 
 ```console
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
-This will back up the plots every 10 minutes in a file `stat.bin`.
+This will back up the plots every 10 minutes in a file `stat.bin`. Minimum backup interval is 5 minutes.
 
 #### Custom plugins and styles...
 
