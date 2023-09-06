@@ -910,24 +910,6 @@
                     justify-content: center;
                 }
 
-                .stat-tab {
-                    scrollbar-width: thin;
-                    scrollbar-color: transparent transparent;
-                }
-                
-                .stat-tab::-webkit-scrollbar {
-                    width: 0.5rem; 
-                }
-
-                .stat-tab::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-
-                .stat-tab::-webkit-scrollbar-thumb {
-                    background: transparent;
-                }
-                
-
                 @media only screen and (max-width:2250px) {
                     .stat-tab {
                         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1008,9 +990,26 @@
                                 border-left: solid 1px var(--stat-divider-color);
                             }
 
-                                .stat-panel section div span:last-child:empty:after {
-                                    content: "-";
-                                }
+                            .stat-panel section div span:last-child {
+                                scrollbar-width: thin;
+                                /*scrollbar-color: transparent transparent;*/
+                            }
+                            
+                            .stat-panel section div span:last-child::-webkit-scrollbar {
+                                width: 0.5rem; 
+                            }
+
+                            .stat-panel section div span:last-child::-webkit-scrollbar-track {
+                                /*background: transparent;*/
+                            }
+
+                            .stat-panel section div span:last-child::-webkit-scrollbar-thumb {
+                                /*background: transparent;*/
+                            }
+                    
+                            .stat-panel section div span:last-child:empty:after {
+                                content: "-";
+                            }
 
                 .flag-icon {
                     margin-right: 10px;
