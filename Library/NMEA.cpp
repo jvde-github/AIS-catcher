@@ -19,6 +19,8 @@
 
 namespace AIS {
 
+	const std::string empty;
+
 	void NMEA::reset(char c) {
 		state = 0;
 		line.clear();
@@ -196,14 +198,13 @@ namespace AIS {
 			return false;
 		}
 
-		GPS gps;
-		gps.lat = GpsToDecimal(trim(parts[2]).c_str(), trim(parts[3])[0], error);
-		gps.lon = GpsToDecimal(trim(parts[4]).c_str(), trim(parts[5])[0], error);
+		GPS gps(GpsToDecimal(trim(parts[2]).c_str(), trim(parts[3])[0], error),
+				GpsToDecimal(trim(parts[4]).c_str(), trim(parts[5])[0], error),
+				s,empty);
 
 		if (error) return false;
 
 		outGPS.Send(&gps, 1, tag);
-		//std::cerr << "GGA: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -223,9 +224,8 @@ namespace AIS {
 			if (crc_check) return false;
 		}
 
-		GPS gps;
-		gps.lat = GpsToDecimal(trim(parts[3]).c_str(), trim(parts[4])[0], error);
-		gps.lon = GpsToDecimal(trim(parts[5]).c_str(), trim(parts[6])[0], error);
+		GPS gps(GpsToDecimal(trim(parts[3]).c_str(), trim(parts[4])[0], error),
+				GpsToDecimal(trim(parts[5]).c_str(), trim(parts[6])[0], error),s,empty);
 
 		if (error) return false;
 
@@ -237,10 +237,12 @@ namespace AIS {
 
 	bool NMEA::processGLL(const std::string& s, TAG& tag, long t) {
 		bool error = false;
-
 		split(s);
 
-		if (parts.size() != 8) return false;
+		if (parts.size() != 8) {
+			std::cerr << "NMEA: GLL does not have 8 parts but " << parts.size() << std::endl;
+			return false;
+		}
 
 		const std::string& crc = parts[7];
 		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
@@ -250,12 +252,12 @@ namespace AIS {
 			if (crc_check) return false;
 		}
 
-		GPS gps;
-		gps.lat = GpsToDecimal(parts[1].c_str(), parts[2][0], error);
-		gps.lon = GpsToDecimal(parts[3].c_str(), parts[4][0], error);
+		float lat = GpsToDecimal(parts[1].c_str(), parts[2][0], error);
+		float lon = GpsToDecimal(parts[3].c_str(), parts[4][0], error);
 
 		if (error) return false;
 
+		GPS gps(lat,lon,s,empty);
 		outGPS.Send(&gps, 1, tag);
 		//std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
@@ -305,7 +307,8 @@ namespace AIS {
 		return true;
 	}
 
-	void NMEA::processJSONsentence(std::string s, TAG& tag, long t) {
+	void NMEA::processJSONsentence(const std::string &s, TAG& tag, long t) {
+		
 		if (s[0] == '{') {
 			try {
 				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
@@ -353,31 +356,31 @@ namespace AIS {
 				}
 
 				if(cls == "TPV") {
-					GPS gps;
-					
+					float lat = 0, lon = 0;
+
 					for (const auto& p : j->getProperties()) {
 						if (p.Key() == AIS::KEY_LAT) {
 							if(p.Get().isFloat()) {
-								gps.lat = p.Get().getFloat();
+								lat = p.Get().getFloat();
 							}
 							else if(p.Get().isInt()) {
-								gps.lat = p.Get().getInt();
+								lat = p.Get().getInt();
 							}
 						}
 						else if (p.Key() == AIS::KEY_LON) {
 							if(p.Get().isFloat()) {
-								gps.lon = p.Get().getFloat();
+								lon = p.Get().getFloat();
 							}
 							else if(p.Get().isInt()) {
-								gps.lon = p.Get().getInt();
+								lon = p.Get().getInt();
 							}
 						}
 					}
 
-					if (gps.lat != 0 || gps.lon != 0) { 
-
+					if (lat != 0 || lon != 0) { 
+						GPS gps(lat,lon,empty,s);
+						//std::cerr << "JSON: lat = " << gps.getLat() << ", lon = " << gps.getLon() << std::endl;
 						outGPS.Send(&gps, 1, tag);
-						//std::cerr << "JSON: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 					}
 				}
 

@@ -315,16 +315,23 @@ void OutputScreen::connect(Receiver& r) {
 
 	if (level == OutputLevel::NMEA || level == OutputLevel::JSON_NMEA || level == OutputLevel::FULL) {
 		for (int j = 0; j < r.Count(); j++) {
-			if (r.Output(j).canConnect(msg2screen.getGroupsIn()))
-				r.Output(j) >> msg2screen;
+			if (r.Output(j).canConnect(((StreamIn<AIS::Message>)msg2screen).getGroupsIn())) 
+				r.Output(j).Connect((StreamIn<AIS::Message>*)&msg2screen);
+
+			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)msg2screen).getGroupsIn()))
+				r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&msg2screen);
 		}
 
 		msg2screen.setDetail(level);
 	}
 	else if (level == OutputLevel::JSON_SPARSE || level == OutputLevel::JSON_FULL) {
-		for (int j = 0; j < r.Count(); j++)
-			if (r.OutputJSON(j).canConnect(json2screen.getGroupsIn()))
-				r.OutputJSON(j) >> json2screen;
+		for (int j = 0; j < r.Count(); j++) {
+			if (r.OutputJSON(j).canConnect(((StreamIn<JSON::JSON>)json2screen).getGroupsIn()))
+				r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&json2screen);
+
+			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)json2screen).getGroupsIn()))
+				r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&json2screen);
+		}
 
 		if (level == OutputLevel::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
 	}
