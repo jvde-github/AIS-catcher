@@ -355,7 +355,7 @@ namespace IO {
 		Stop();
 	}
 
-	void UDPStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void UDPStreamer::ResetIfNeeded() {
 		if(reset > 0) {
 			long now = (long) std::time(nullptr);
 			if ((now - last_reconnect) > 60*reset) {
@@ -366,44 +366,49 @@ namespace IO {
 				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 				if (sock == -1) {
-					std::cerr << "UDP: cannot create socket. Requesting termination.\n";
+					std::cerr << "UDP: cannot recreate socket. Requesting termination.\n";
 					StopRequest();
 				}
 
 				last_reconnect = now;
 			}
 		}
-		
-		if (sock != -1) {
-			if (!JSON) {
-				for (int i = 0; i < len; i++) {
-					if (!filter.include(data[i])) continue;
+	}
 
-					for (const auto& s : data[i].NMEA)
-						SendTo((s + "\r\n").c_str());
-				}
+	void UDPStreamer::Receive(const AIS::GPS* data, int len, TAG& tag) {
+
+		ResetIfNeeded();
+
+		if(sock == -1) return;
+
+		for (int i = 0; i < len; i++) {
+			if (filter.includeGPS()) {
+				if(!JSON)
+					SendTo((data[i].getNMEA()  + "\r\n").c_str());
+				else
+					SendTo((data[i].getJSON()  + "\r\n").c_str());
 			}
-			else {
-				for (int i = 0; i < len; i++) {
-					if (!filter.include(data[i])) continue;
+		}
+	}
 
-					std::string str = "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"";
-					str += ((char)data[i].getChannel());
-					str += std::string("\"");
+	void UDPStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
 
-					if (tag.mode & 2) {
-						// str += ",\"rxtime\":\"" + data[i].getRxTime() + "\"";
-						str += ",\"rxuxtime\":" + std::to_string(data[i].getRxTimeUnix());
-					}
-					if (tag.mode & 1) str += ",\"signalpower\":" + std::to_string(tag.level) + ",\"ppm\":" + std::to_string(tag.ppm);
+		ResetIfNeeded();
+		
+		if (sock == -1) return;
 
-					str += ",\"mmsi\":" + std::to_string(data[i].mmsi()) + ",\"type\":" + std::to_string(data[i].type());
-					str += ",\"nmea\":[\"" + data[i].NMEA[0] + std::string("\"");
+		if (!JSON) {
+			for (int i = 0; i < len; i++) {
+				if (!filter.include(data[i])) continue;
 
-					for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
-					str += "]}\r\n";
-					SendTo(str);
-				}
+				for (const auto& s : data[i].NMEA)
+					SendTo((s + "\r\n").c_str());
+			}
+		}
+		else {
+			for (int i = 0; i < len; i++) {
+				if (filter.include(data[i]))
+					SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm)  + "\r\n").c_str());
 			}
 		}
 	}
@@ -484,7 +489,8 @@ namespace IO {
 			broadcast = Util::Parse::Switch(arg);
 		}
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "RESET") {
 			reset = Util::Parse::Integer(arg,1,24*60, option);
@@ -497,6 +503,36 @@ namespace IO {
 	}
 
 	// TCP output to server
+
+	void TCPClientStreamer::Receive(const AIS::GPS* data, int len, TAG& tag) {
+
+		if (!filter.includeGPS()) return;
+
+		if (!JSON) {
+
+			for (int i = 0; i < len; i++) {
+
+				if (SendTo((data[i].getNMEA() + "\r\n").c_str()) < 0) {
+					if (!persistent) {
+						std::cerr << "TCP feed: requesting termination.\n";
+						StopRequest();
+					}
+				}
+			
+			}
+		}
+		else {
+			for (int i = 0; i < len; i++) {
+
+				if (SendTo((data[i].getJSON() + "\r\n").c_str()) < 0) {
+					if (!persistent) {
+						std::cerr << "TCP feed: requesting termination.\n";
+						StopRequest();
+					}
+				}
+			}
+		}
+	}
 
 	void TCPClientStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
 		if (!JSON) {
@@ -515,24 +551,8 @@ namespace IO {
 		else {
 			for (int i = 0; i < len; i++) {
 				if (!filter.include(data[i])) continue;
-
-				std::string str = "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"";
-				str += ((char)data[i].getChannel());
-				str += std::string("\"");
-
-				if (tag.mode & 2) {
-					// str += ",\"rxtime\":\"" + data[i].getRxTime() + "\"";
-					str += ",\"rxuxtime\":" + std::to_string(data[i].getRxTimeUnix());
-				}
-				if (tag.mode & 1) str += ",\"signalpower\":" + std::to_string(tag.level) + ",\"ppm\":" + std::to_string(tag.ppm);
-
-				str += ",\"mmsi\":" + std::to_string(data[i].mmsi()) + ",\"type\":" + std::to_string(data[i].type());
-				str += ",\"nmea\":[\"" + data[i].NMEA[0] + std::string("\"");
-
-				for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
-				str += "]}\r\n";
-
-				if(SendTo(str) <0) 
+				
+				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm)  + "\r\n").c_str()) < 0)
 					if (!persistent) {
 						std::cerr << "TCP feed: requesting termination.\n";
 						StopRequest();
@@ -574,7 +594,8 @@ namespace IO {
 			port = arg;
 		}
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
@@ -606,7 +627,8 @@ namespace IO {
 			timeout = Util::Parse::Integer(arg);
 		}  
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));		
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
@@ -616,6 +638,23 @@ namespace IO {
 		}
 		
 		return *this; 
+	}
+
+
+	void TCPlistenerStreamer::Receive(const AIS::GPS* data, int len, TAG& tag) {
+		if(!filter.includeGPS()) return;
+
+		if (!JSON) {
+			for (int i = 0; i < len; i++) {
+				SendAll(data[i].getNMEA() + "\r\n");
+			}
+		}
+		else {
+			for (int i = 0; i < len; i++) {
+				SendAll((data[i].getJSON()  + "\r\n").c_str());
+			}
+		}
+		
 	}
 
 	void TCPlistenerStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
@@ -632,23 +671,7 @@ namespace IO {
 			for (int i = 0; i < len; i++) {
 				if (!filter.include(data[i])) continue;
 
-				std::string str = "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"";
-				str += ((char)data[i].getChannel());
-				str += std::string("\"");
-
-				if (tag.mode & 2) {
-					// str += ",\"rxtime\":\"" + data[i].getRxTime() + "\"";
-					str += ",\"rxuxtime\":" + std::to_string(data[i].getRxTimeUnix());
-				}
-				if (tag.mode & 1) str += ",\"signalpower\":" + std::to_string(tag.level) + ",\"ppm\":" + std::to_string(tag.ppm);
-
-				str += ",\"mmsi\":" + std::to_string(data[i].mmsi()) + ",\"type\":" + std::to_string(data[i].type());
-				str += ",\"nmea\":[\"" + data[i].NMEA[0] + std::string("\"");
-
-				for (int j = 1; j < data[i].NMEA.size(); j++) str += ",\"" + data[i].NMEA[j] + "\"";
-				str += "]}\r\n";
-
-				SendAll(str);
+				SendAll((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm)  + "\r\n").c_str());
 			}
 		}
 		
