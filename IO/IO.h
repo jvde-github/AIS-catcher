@@ -97,20 +97,23 @@ namespace IO {
 		}
 	};
 
-	class MessageToScreen : public StreamIn<AIS::Message>, public Setting {
+	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
 	private:
 		OutputLevel level;
 		AIS::Filter filter;
 
 	public:
 		void setDetail(OutputLevel l) { level = l; }
+
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+		void Receive(const AIS::GPS* data, int len, TAG& tag);
 
 		Setting& Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);
 
 			if (option == "GROUPS_IN") {
-				setGroupsIn(Util::Parse::Integer(arg));
+				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
+				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
 			else if(!filter.SetOption(option, arg)) {
 				throw std::runtime_error("Message output - unknown option: " + option);
@@ -120,7 +123,7 @@ namespace IO {
 		}
 	};
 
-	class JSONtoScreen : public StreamIn<JSON::JSON>, public Setting {
+	class JSONtoScreen : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
 		JSON::StringBuilder builder;
 		std::string json;
 		AIS::Filter filter;
@@ -129,13 +132,15 @@ namespace IO {
 		JSONtoScreen(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
 
 		void Receive(const JSON::JSON* data, int len, TAG& tag);
+		void Receive(const AIS::GPS* data, int len, TAG& tag);
 		void setMap(int m) { builder.setMap(m); }
 
 		Setting& Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);
 			
 			if (option == "GROUPS_IN") {
-				setGroupsIn(Util::Parse::Integer(arg));
+				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
+				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
 			else if(!filter.SetOption(option, arg)) {
 				throw std::runtime_error("JSON output - unknown option: " + option);

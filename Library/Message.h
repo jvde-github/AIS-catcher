@@ -20,6 +20,8 @@
 #include <string>
 #include <time.h>
 #include <vector>
+#include <iomanip>
+#include <sstream>
 
 #include "Utilities.h"
 
@@ -28,8 +30,20 @@ namespace AIS {
 #define MAX_AIS_LENGTH (128 * 8)
 
 	class GPS {
-	public:
 		float lat = 0, lon = 0, heading = 0, speed = 0;
+		const std::string& nmea;
+		const std::string& json;
+
+		const std::string formatLatLon(float, bool) const;
+
+	public:
+		GPS(float lt, float ln, const std::string& s, const std::string& j) : lat(lt), lon(ln), nmea(s), json(j) {}
+
+		float getLat() const { return lat;  }
+		float getLon() const { return lon; }
+
+		const std::string getNMEA() const;
+		const std::string getJSON() const;
 	};
 
 	class Message {
@@ -37,12 +51,6 @@ namespace AIS {
 		const int MAX_NMEA_CHARS = 56;
 		static int ID;
 		std::string line = "!AIVDM,X,X,X,X," + std::string(MAX_NMEA_CHARS, '.') + ",X*XX\n\r"; // longest line
-
-		int NMEAchecksum(const std::string& s) {
-			int check = 0;
-			for (int i = 1; i < s.length(); i++) check ^= s[i];
-			return check;
-		}
 
 		uint8_t data[128];
 		std::time_t rxtime;
@@ -59,6 +67,8 @@ namespace AIS {
 			else
 				setRxTimeUnix(t);
 		}
+
+		std::string getNMEAJSON(unsigned mode, float level, float ppm) const;
 
 		std::string getRxTime() const {
 			return Util::Convert::toTimeStr(rxtime);
@@ -134,11 +144,13 @@ namespace AIS {
 		const uint32_t all_msg = 0b1111111111111111111111111110;
 		uint32_t allow = all_msg;
 		bool on = false;
+		bool GPS = true;
 
 	public:
 		bool SetOption(std::string option, std::string arg);
 		bool isOn() { return on; }
 		std::string getAllowed();
+		bool includeGPS() { return on ? GPS : true; }
 		bool include(const Message& msg) {
 			if (!on) return true;
 			unsigned type = msg.type() & 31;

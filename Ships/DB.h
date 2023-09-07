@@ -153,8 +153,8 @@ public:
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
 	void Receive(const AIS::GPS* data, int len, TAG& tag) {
 		if(use_GPS) {
-			lat = data[0].lat;
-			lon = data[0].lon;
+			lat = data[0].getLat();
+			lon = data[0].getLon();
 		}
 	}
 

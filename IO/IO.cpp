@@ -21,6 +21,25 @@
 
 namespace IO {
 
+	void MessageToScreen::Receive(const AIS::GPS* data, int len, TAG& tag) {
+		if (level == OutputLevel::NONE) return;
+
+		for (int i = 0; i < len; i++) {
+			if (filter.includeGPS()) {
+				switch (level) {
+				case OutputLevel::NMEA:
+				case OutputLevel::NMEA_TAG:
+				case OutputLevel::FULL:
+					std::cout << data[i].getNMEA() << std::endl;
+					break;
+				default:
+					std::cout << data[i].getJSON() << std::endl;
+					break;
+				}
+			}
+		}	
+	}
+
 	void MessageToScreen::Receive(const AIS::Message* data, int len, TAG& tag) {
 
 		if (level == OutputLevel::NONE) return;
@@ -42,22 +61,19 @@ namespace IO {
 					}
 					break;
 				case OutputLevel::JSON_NMEA:
-					std::cout << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << data[i].getChannel() << "\"";
-
-					if (tag.mode & 2) std::cout << ",\"rxtime\":\"" << data[i].getRxTime() << "\"";
-					if (tag.mode & 1) std::cout << ",\"signalpower\":" << tag.level << ",\"ppm\":" << tag.ppm;
-					if (data[i].getStation()) std::cout << ",\"station_id\":" <<  data[i].getStation();
-
-					std::cout << ",\"mmsi\":" << data[i].mmsi() << ",\"type\":" << data[i].type() << ",\"nmea\":[\"" << data[i].NMEA[0] << "\"";
-
-					for (int j = 1; j < data[i].NMEA.size(); j++)
-						std::cout << ",\"" << data[i].NMEA[j] << "\"";
-
-					std::cout << "]}" << std::endl;
+					std::cout << data[i].getNMEAJSON(tag.mode,tag.level,tag.ppm) << std::endl;
 					break;
 				default:
 					break;
 				}
+			}
+		}
+	}
+
+	void JSONtoScreen::Receive(const AIS::GPS* data, int len, TAG& tag) {
+		for (int i = 0; i < len; i++) {
+			if (filter.includeGPS()) {
+				std::cout << data[i].getJSON() << std::endl;
 			}
 		}
 	}

@@ -21,6 +21,76 @@ namespace AIS {
 
 	int Message::ID = 0;
 
+	int NMEAchecksum(const std::string& s) {
+		int check = 0;
+		for (int i = 1; i < s.length(); i++) check ^= s[i];
+		return check;
+	}
+
+	const std::string GPS::formatLatLon(float value, bool isLatitude) const {
+		std::stringstream ss;
+
+		int degrees = static_cast<int>(value);
+		float minutes = (value - degrees) * 60;
+
+		ss << std::setfill('0') << std::setw(isLatitude?2:3) << std::abs(degrees);		
+		ss << std::setfill('0') << std::setw(5) << std::fixed << std::setprecision(2) << minutes;
+
+		return ss.str();
+	}
+
+
+	const std::string GPS::getNMEA() const {
+		if (nmea.empty()) {
+			std::string flat = formatLatLon(lat,true);
+			std::string flon = formatLatLon(lon,false);
+
+			char latDir = lat >= 0 ? 'N' : 'S';
+			char lonDir = lon >= 0 ? 'E' : 'W';
+
+			std::string line = "$GPGLL," + flat + "," + latDir + "," + flon + "," + lonDir + ",,,";
+
+			int c = NMEAchecksum(line);
+
+			line += '*';
+			line += (c >> 4) < 10 ? (c >> 4) + '0' : (c >> 4) + 'A' - 10;
+			line += (c & 0xF) < 10 ? (c & 0xF) + '0' : (c & 0xF) + 'A' - 10;
+
+			return line;
+		}
+		else
+			return nmea;
+	}
+
+	const std::string GPS::getJSON() const {
+		if (json.empty())
+			return "{\"class\":\"TPV\",\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + "}";
+		else
+			return json;
+	}
+
+	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm) const {
+		std::stringstream ss;
+
+		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << getChannel() << "\"";
+
+		if (mode & 2) {
+			ss << ",\"rxuxtime\":" << getRxTimeUnix();
+			ss << ",\"rxtime\":\"" << getRxTime() << "\"";
+		}
+		if (mode & 1) ss << ",\"signalpower\":" << level << ",\"ppm\":" << ppm;
+		if (getStation()) ss << ",\"station_id\":" << getStation();
+
+		ss << ",\"mmsi\":" << mmsi() << ",\"type\":" << type() << ",\"nmea\":[\"" << NMEA[0] << "\"";
+
+		for (int j = 1; j < NMEA.size(); j++)
+			ss << ",\"" << NMEA[j] << "\"";
+
+		ss << "]}";
+
+		return ss.str();
+	}
+
 	unsigned Message::getUint(int start, int len) const {
 		// we start 2nd part of first byte and stop first part of last byte
 		int x = start >> 3, y = start & 7;
@@ -195,6 +265,11 @@ namespace AIS {
 		else if (option == "FILTER") {
 			Util::Convert::toUpper(arg);
 			on = Util::Parse::Switch(arg);
+			return true;
+		}
+		else if (option == "GPS") {
+			Util::Convert::toUpper(arg);
+			GPS = Util::Parse::Switch(arg);
 			return true;
 		}
 		return false;
