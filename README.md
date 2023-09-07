@@ -28,6 +28,7 @@ Version **v0.51** has various improvements (like a TCP listener for NMEA and off
 
 Latest Edge version:
 - Tab that shows realtime NMEA data as it comes in, activate with `-N REALTIME on`.
+- GPS input is included in screen output as NMEA or JSON depending on the output switch (`-o x`). GPS output can be filtered out using `FILTER ON GPS OFF` directly after the `-o x` switch where x is the output mode.
   
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
