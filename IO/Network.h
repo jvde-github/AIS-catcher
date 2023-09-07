@@ -131,7 +131,7 @@ namespace IO {
 		int ID() { return sourceID; }
 	};
 
-	class UDPStreamer : public StreamIn<AIS::Message>, public Setting {
+	class UDPStreamer : public StreamIn<AIS::Message>,  public StreamIn<AIS::GPS>, public Setting {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
 		int source = -1;
@@ -142,6 +142,8 @@ namespace IO {
 		bool broadcast = false;
 		bool JSON = false;
 
+		void ResetIfNeeded();
+		
 	public:
 		~UDPStreamer();
 		UDPStreamer();
@@ -149,6 +151,7 @@ namespace IO {
 		virtual Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+		void Receive(const AIS::GPS* data, int len, TAG& tag);
 
 		void Start();
 		void Start(UDPEndPoint& u) {
@@ -164,7 +167,7 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPClientStreamer : public StreamIn<AIS::Message>, public Setting {
+	class TCPClientStreamer : public StreamIn<AIS::Message>,  public StreamIn<AIS::GPS>, public Setting {
 		::TCP::Client tcp;
 		AIS::Filter filter;
 		bool JSON = false;
@@ -176,6 +179,7 @@ namespace IO {
 		virtual Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+		void Receive(const AIS::GPS* data, int len, TAG& tag);
 
 		void Start();
 		void Stop();
@@ -187,7 +191,7 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPlistenerStreamer : public StreamIn<AIS::Message>, public Setting, public TCP::Server {
+	class TCPlistenerStreamer : public StreamIn<AIS::Message>,  public StreamIn<AIS::GPS>, public Setting, public TCP::Server {
 		int port = 5010;
 		AIS::Filter filter;
 		bool JSON = false;
@@ -195,6 +199,7 @@ namespace IO {
 		virtual Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+		void Receive(const AIS::GPS* data, int len, TAG& tag);
 
 		void Start();
 		void Stop() {}

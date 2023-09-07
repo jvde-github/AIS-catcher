@@ -359,9 +359,15 @@ void OutputStatistics::start() {}
 void OutputUDP::connect(Receiver& r) {
 	// Create and connect output to UDP stream
 	for (int i = 0; i < _UDP.size(); i++) {
-		for (int j = 0; j < r.Count(); j++)
-			if (r.Output(j).canConnect(_UDP[i]->getGroupsIn()))
-				r.Output(j) >> *_UDP[i];
+		for (int j = 0; j < r.Count(); j++) {
+			StreamIn<AIS::Message> *um = (StreamIn<AIS::Message>*)&*_UDP[i];
+			if (r.Output(j).canConnect(um->getGroupsIn()))
+				r.Output(j).Connect(um);
+
+			StreamIn<AIS::GPS> *ug = (StreamIn<AIS::GPS>*)&*_UDP[i];
+			if (r.OutputGPS(j).canConnect(ug->getGroupsIn()))
+				r.OutputGPS(j).Connect(ug);
+		}
 	}
 }
 
@@ -391,9 +397,15 @@ IO::UDPStreamer& OutputUDP::add(const std::string& host, const std::string& port
 
 void OutputTCP::connect(Receiver& r) {
 	for (int i = 0; i < _TCP.size(); i++) {
-		for (int j = 0; j < r.Count(); j++)
-			if (r.Output(j).canConnect(_TCP[i]->getGroupsIn()))
-				r.Output(j) >> *_TCP[i];
+		for (int j = 0; j < r.Count(); j++) {
+			StreamIn<AIS::Message> *tm = (StreamIn<AIS::Message>*)&*_TCP[i];
+			if (r.Output(j).canConnect(tm->getGroupsIn()))
+				r.Output(j).Connect(tm);
+
+			StreamIn<AIS::GPS> *tg = (StreamIn<AIS::GPS>*)&*_TCP[i];
+			if (r.OutputGPS(j).canConnect(tg->getGroupsIn()))
+				r.OutputGPS(j).Connect(tg);
+		}
 	}
 }
 
@@ -474,10 +486,17 @@ void OutputTCPlistener::connect(Receiver& r) {
 
 	for (auto& h : _listener) {
 
+		for (int j = 0; j < r.Count(); j++) {
 
-		for (int i = 0; i < r.Count(); i++)
-			if (r.Output(i).canConnect(h->getGroupsIn()))
-				r.Output(i) >> *h;
+			StreamIn<AIS::Message> *tm = (StreamIn<AIS::Message>*)&*h;
+			if (r.Output(j).canConnect(tm->getGroupsIn()))
+				r.Output(j).Connect(tm);
+
+			StreamIn<AIS::GPS> *tg = (StreamIn<AIS::GPS>*)&*h;
+			if (r.OutputGPS(j).canConnect(tg->getGroupsIn()))
+				r.OutputGPS(j).Connect(tg);				
+		}
+
 	}
 }
 
