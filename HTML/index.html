@@ -3056,19 +3056,6 @@
                 if(key in shipsDB) {
                     let ship = shipsDB[key].raw;
                     switch (getShipTypeClass(ship)) {
-                        case ShippingClass.CARGO:
-                        case ShippingClass.OTHER:
-                        case ShippingClass.TANKER:
-                        case ShippingClass.PASSENGER:
-                        case ShippingClass.HIGHSPEED:
-                        case ShippingClass.SPECIAL:
-                        case ShippingClass.FISHING:
-                        case ShippingClass.B:
-                            if(ship.speed != null && ship.speed > 0.5)
-                                cMoving++;
-                            else
-                                cStationary++;
-                            break;
                         case ShippingClass.ATON:
                             cAton++; break;
                         case ShippingClass.PLANE:
@@ -3079,6 +3066,13 @@
                             cStation++; break;
                         case ShippingClass.SARTEPIRB:
                             cSarte++; break;
+                            case ShippingClass.CARGO:
+                        default:
+                            if(ship.speed != null && ship.speed > 0.5)
+                                cMoving++;
+                            else
+                                cStationary++;
+                            break;
                     }
                 }
             }
