@@ -2295,17 +2295,35 @@
                     <table>
                         <tr>
                           <td>
-                            <span CLASS="shipicon" style="background-position: -120px 0; transform: translate(-8px,-8px) rotate(25); "></span>
+                            <span CLASS="shipicon" style="background-position: -120px -0px; transform: translate(0px,0px) scale(1) rotate(45deg); "></span>
                           </td>
-                          <td>Moving</td>
                           <td><span id="statcard_moving"></span></td>
+                          <td>
+                            <span CLASS="shipicon" style="background-position: -120px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
+                            </td>
+                         <td><span id="statcard_stationary"></span></td>
                         </tr>
                         <tr>
                             <td>
-                                <span CLASS="shipicon" style="background-position: -120px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
+                                <span CLASS="staticon" style="background-position: -20px -20px; transform: translate(-8px,-8px) rotate(25); "></span>
+                              </td>
+                              <td><span id="statcard_station"></span></td>
+                              <td>
+                                <span CLASS="staticon" style="background-position: -0px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
+                                </td>
+                             <td><span id="statcard_aton"></span></td>
+                            </tr>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span CLASS="staticon" style="background-position: -40px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
+                              </td>
+                              <td><span id="statcard_sarte"></span></td>
+                              <td>
+                                <span CLASS="helicoptericon" style="background-position: -0px -0px; transform: translate(0px,0px) scale(0.8) rotate(45deg);"></span>
                             </td>
-                          <td>Stationary</td>
-                          <td><span id="statcard_stationary"></span></td>
+                             <td><span id="statcard_heli"></span></td>
+                            </tr>
                         </tr>
                       </table>
                       
@@ -3019,22 +3037,57 @@
 
             document.getElementById("statcard_stationary").innerHTML = "";
             document.getElementById("statcard_moving").innerHTML = "";
-            
+            document.getElementById("statcard_station").innerHTML = "";
+            document.getElementById("statcard_aton").innerHTML = "";
+            document.getElementById("statcard_heli").innerHTML = "";
+            document.getElementById("statcard_sarte").innerHTML = "";
+
+
             if (shipsDB == null) return;
 
-            let count = 0;
-            let moving = 0;
+            let cStationary = 0;
+            let cMoving = 0;
+            let cStation = 0;
+            let cAton = 0;
+            let cHeli = 0;
+            let cSarte = 0;
+
             for (let [key, m] of Object.entries(markers)) {
                 if(key in shipsDB) {
-                    let speed = shipsDB[key].raw.speed; 
-                    if(speed != null && speed > 0.5) 
-                        moving++;
-                    else 
-                        count++;
+                    let ship = shipsDB[key].raw;
+                    switch (getShipTypeClass(ship)) {
+                        case ShippingClass.CARGO:
+                        case ShippingClass.TANKER:
+                        case ShippingClass.PASSENGER:
+                        case ShippingClass.HIGHSPEED:
+                        case ShippingClass.SPECIAL:
+                        case ShippingClass.FISHING:
+                        case ShippingClass.B:
+                            if(ship.speed && ship.speed < 0.5)
+                                cStationary++;
+                            else
+                                cMoving++;
+                            break;
+                        case ShippingClass.ATON:
+                            cAton++; break;
+                        case ShippingClass.PLANE:
+                            cPlane++; break;
+                        case ShippingClass.HELICOPTER:
+                            cHeli++; break;
+                        case ShippingClass.STATION:
+                            cStation++; break;
+                        case ShippingClass.SARTEPIRB:
+                            cSarte++; break;
+                    }
                 }
             }
-            document.getElementById("statcard_stationary").innerText = count;
-            document.getElementById("statcard_moving").innerHTML = moving;
+            document.getElementById("statcard_stationary").innerText = cStationary;
+            document.getElementById("statcard_moving").innerHTML = cMoving;
+            document.getElementById("statcard_station").innerHTML = cStation;
+            document.getElementById("statcard_aton").innerHTML = cAton;
+            document.getElementById("statcard_heli").innerHTML = cHeli;
+            document.getElementById("statcard_sarte").innerHTML = cSarte;
+
         }
 
         function updateMarkerCount() {
@@ -4369,7 +4422,7 @@
                 case ShippingClass.STATION:
                     shipicon = STATICON; c = 20; break;
                 case ShippingClass.SARTEPIRB:
-                    c = 60; shipicon = STATICON; break;
+                    c = 40; shipicon = STATICON; break;
             }
 
             let h = '';
