@@ -16,7 +16,7 @@ RUN cd /root/AIS-catcher; mkdir build; cd build; cmake ..; make; make install
 # -------------------------
 # The application container
 # -------------------------
-FROM debian:bookwork-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update
 RUN apt-get upgrade -y
