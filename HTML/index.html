@@ -3057,21 +3057,22 @@
                     let ship = shipsDB[key].raw;
                     switch (getShipTypeClass(ship)) {
                         case ShippingClass.CARGO:
+                        case ShippingClass.UNKNOWN:
                         case ShippingClass.TANKER:
                         case ShippingClass.PASSENGER:
                         case ShippingClass.HIGHSPEED:
                         case ShippingClass.SPECIAL:
                         case ShippingClass.FISHING:
                         case ShippingClass.B:
-                            if(ship.speed && ship.speed < 0.5)
-                                cStationary++;
-                            else
+                            if(ship.speed != null && ship.speed > 0.5)
                                 cMoving++;
+                            else
+                                cStationary++;
                             break;
                         case ShippingClass.ATON:
                             cAton++; break;
                         case ShippingClass.PLANE:
-                            cPlane++; break;
+                            cHeli++; break;
                         case ShippingClass.HELICOPTER:
                             cHeli++; break;
                         case ShippingClass.STATION:
