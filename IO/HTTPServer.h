@@ -78,6 +78,7 @@ namespace IO {
 			std::string headers = "HTTP/1.1 200 OK\r\n";
 			headers += "Content-Type: text/event-stream\r\n";
 			headers += "Cache-Control: no-cache\r\n";
+			headers += "X-Accel-Buffering: no\r\n";
 			headers += "Connection: keep-alive\r\n\r\n";
 
 			connection->SendDirect(headers.c_str(), headers.length());
