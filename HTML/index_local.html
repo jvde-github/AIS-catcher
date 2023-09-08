@@ -3035,22 +3035,13 @@
 
         function updateMarkerCountTooltip() {
 
-            document.getElementById("statcard_stationary").innerHTML = "";
-            document.getElementById("statcard_moving").innerHTML = "";
-            document.getElementById("statcard_station").innerHTML = "";
-            document.getElementById("statcard_aton").innerHTML = "";
-            document.getElementById("statcard_heli").innerHTML = "";
-            document.getElementById("statcard_sarte").innerHTML = "";
-
+            ["statcard_stationary", "statcard_moving", "statcard_station", "statcard_aton", "statcard_heli", "statcard_sarte"].forEach(function(id) {
+                document.getElementById(id).innerHTML = "";
+            });
 
             if (shipsDB == null) return;
 
-            let cStationary = 0;
-            let cMoving = 0;
-            let cStation = 0;
-            let cAton = 0;
-            let cHeli = 0;
-            let cSarte = 0;
+            let cStationary = 0, cMoving = 0, cStation = 0, cAton = 0, cHeli = 0, cSarte = 0;
 
             for (let [key, m] of Object.entries(markers)) {
                 if(key in shipsDB) {
