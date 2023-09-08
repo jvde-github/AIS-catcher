@@ -16,12 +16,12 @@ RUN cd /root/AIS-catcher; mkdir build; cd build; cmake ..; make; make install
 # -------------------------
 # The application container
 # -------------------------
-FROM debian:bookworm-slim
+FROM debian:bookwork-slim
 
 RUN apt-get update
 RUN apt-get upgrade -y
 
-RUN apt-get install librtlsdr0 libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 libcurl4 libpq-dev -y
+RUN apt-get install librtlsdr0 libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 libcurl4 libpq5 libz1 -y
 
 COPY --from=build /usr/local/bin/AIS-catcher /usr/local/bin/AIS-catcher
 
