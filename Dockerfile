@@ -1,7 +1,7 @@
 # -------------------
 # The build container
 # -------------------
-FROM debian:bullseye-slim AS build
+FROM debian:bookworm-slim AS build
 
 RUN apt-get update
 RUN apt-get upgrade -y
@@ -16,7 +16,7 @@ RUN cd /root/AIS-catcher; mkdir build; cd build; cmake ..; make; make install
 # -------------------------
 # The application container
 # -------------------------
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update
 RUN apt-get upgrade -y
