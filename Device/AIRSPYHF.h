@@ -34,12 +34,12 @@ namespace Device {
 		uint64_t serial;
 
 		bool preamp = false;
-		bool treshold_high = false;
+		bool threshold_high = false;
 
 		static int callback_static(airspyhf_transfer_t* tf);
 		void callback(CFLOAT32*, int);
 
-		void setTreshold(int);
+		void setThreshold(int);
 		void setLNA(int);
 		void setAGC(void);
 

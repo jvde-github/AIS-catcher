@@ -272,6 +272,11 @@ namespace AIS {
 			GPS = Util::Parse::Switch(arg);
 			return true;
 		}
+		else if (option == "AIS") {
+			Util::Convert::toUpper(arg);
+			AIS = Util::Parse::Switch(arg);
+			return true;
+		}
 		return false;
 	}
 

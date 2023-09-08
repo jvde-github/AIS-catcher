@@ -98,8 +98,8 @@ namespace Device {
 		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set AGC to auto.");
 	}
 
-	void AIRSPYHF::setTreshold(int s) {
-		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set AGC treshold");
+	void AIRSPYHF::setThreshold(int s) {
+		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set AGC threshold");
 	}
 
 	void AIRSPYHF::setLNA(int s) {
@@ -126,7 +126,7 @@ namespace Device {
 
 	void AIRSPYHF::applySettings() {
 		setAGC();
-		setTreshold(treshold_high ? 1 : 0);
+		setThreshold(threshold_high ? 1 : 0);
 		if (preamp) setLNA(1);
 
 		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set sample rate.");
@@ -139,8 +139,11 @@ namespace Device {
 		if (option == "PREAMP") {
 			preamp = Util::Parse::Switch(arg);
 		}
-		else if (option == "TRESHOLD") {
-			treshold_high = Util::Parse::Switch(arg, "HIGH", "LOW");
+		else if (option == "TRESHOLD" || option == "THRESHOLD") {
+			threshold_high = Util::Parse::Switch(arg, "HIGH", "LOW");
+			
+			if(option == "TRESHOLD" )
+				std::cerr << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
 		}
 		else
 			Device::Set(option, arg);
@@ -149,7 +152,7 @@ namespace Device {
 	}
 
 	std::string AIRSPYHF::Get() {
-		return Device::Get() + " preamp " + Util::Convert::toString(preamp) + " treshold " + (treshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
+		return Device::Get() + " preamp " + Util::Convert::toString(preamp) + " threshold " + (threshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
 	}
 #endif
 }

@@ -144,7 +144,7 @@ namespace AIS {
 		const uint32_t all_msg = 0b1111111111111111111111111110;
 		uint32_t allow = all_msg;
 		bool on = false;
-		bool GPS = true;
+		bool GPS = true, AIS = true;
 
 	public:
 		bool SetOption(std::string option, std::string arg);
@@ -153,6 +153,7 @@ namespace AIS {
 		bool includeGPS() { return on ? GPS : true; }
 		bool include(const Message& msg) {
 			if (!on) return true;
+			if (!AIS) return false;
 			unsigned type = msg.type() & 31;
 			return ((1U << type) & allow) != 0;
 		}

@@ -87,7 +87,7 @@ use: AIS-catcher [options]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]
 	[-ge Serial Port: PRINT [on/off]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]
-	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
+	[-gh Airspy HF+: THRESHOLD [low/high] PREAMP [on/off] ]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 	[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
@@ -431,7 +431,7 @@ An example config file looks as follows:
   },
   "airspyhf":{
     "sample_rate":"192k",
-    "treshold":"low",
+    "threshold":"low",
     "preamp":false
   },
   "hackrf":{
