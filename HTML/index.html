@@ -5176,7 +5176,7 @@
 
             if (a == "realtime") {
                 if (evtSource == null) {
-                    evtSource = new EventSource("/sse");
+                    evtSource = new EventSource("sse");
                     const sseDataDiv = document.getElementById("realtime_content");
 
                     evtSource.addEventListener('nmea', function (e) {
