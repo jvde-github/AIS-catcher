@@ -78,7 +78,7 @@
                     --graph-header-side-color: rgba(242, 248, 255, 0.5);
                     --tooltip-background-color: #daebfe;
                     --tooltip-border-color: white;
-                    --leaflet-scale-textshadow: white 1px 1px 0px;
+                    --textshadow: white 1px 1px 0px;
                 }
 
                 .dark {
@@ -138,7 +138,7 @@
                     --graph-header-side-color: rgb(32, 32, 32);
                     --tooltip-background-color: rgb(60,60,60);
                     --tooltip-border-color: rgb(30,30,30);
-                    --leaflet-scale-textshadow: black 1px 1px 0px;
+                    --textshadow: black 1px 1px 0px;
                 }
 
                 body,
@@ -890,7 +890,7 @@
                 }
 
                 .leaflet-control-scale-line {
-                    text-shadow: var(--leaflet-scale-textshadow);
+                    text-shadow: var(--textshadow);
                 }
 
                 .leaflet-control-settings-toggle {
@@ -1051,6 +1051,7 @@
                 .leaflet-tooltiplabel {
                     background-color: transparent !important;
                     color: var(--menu-font-color);
+                    text-shadow: var(--textshadow);
                     border: none;
                     box-shadow: none;
                     font-size: 10px;
