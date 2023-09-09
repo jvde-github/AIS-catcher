@@ -28,6 +28,7 @@ Version **v0.51** has various improvements (like a TCP listener for NMEA and off
 
 Latest Edge version:
 - Tab that shows realtime NMEA data as it comes in, activate with `-N REALTIME on`.
+- Experimental "Fireworks" Mode, see [this](https://www.youtube.com/watch?v=jhVfnCd5tX4) video for demonstration.  
 - GPS input is included in screen output as NMEA or JSON depending on the output switch (`-o x`). GPS output can be filtered out using `FILTER ON GPS OFF` directly after the `-o x` switch where x is the output mode. Also works for TCP and UDP output.
   
 ### New Android version
