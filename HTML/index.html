@@ -856,7 +856,7 @@
                 }
 
                 .fadeOut {
-                    animation: fadeOutAnimation 1.5s linear forwards;
+                    animation: fadeOutAnimation 1s linear forwards;
                     opacity: 1;
                 }
 
@@ -3070,7 +3070,7 @@
             setTimeout(function () {
                 marker.removeFrom(map);
                 marker_fireworks.splice(marker_fireworks.indexOf(marker), 1); 
-            }, 1500);
+            }, 1000);
 
             marker_fireworks.push(marker); 
         }
@@ -3096,6 +3096,9 @@
                         }
                     }, false);
 
+                    evtSourceMap.onerror = function (event) {
+                        alert("Error connecting to Realtime Feed (SSE)");
+                    }
                     evtSourceMap.onopen = function (event) {
                         alert("Fireworks connected");
                     }
