@@ -91,6 +91,7 @@ struct TAG {
 	// some data flowing from DB downstream
 	int angle = -1;
 	float distance = -1;
+	float lat = 0, lon = 0;
 	bool validated = false;
 	std::time_t previous_signal;
 
@@ -99,6 +100,8 @@ struct TAG {
 		sample_lvl = 0;
 		level = 0;
 		ppm = 0;
+		lat = 0;
+		lon = 0;;
 	};
 };
 

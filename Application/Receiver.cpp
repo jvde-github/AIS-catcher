@@ -612,8 +612,8 @@ void WebClient::connect(Receiver& r) {
 			// connect all the statistical counters
 			r.Output(j) >> counter;
 			r.Output(j) >> counter_session;
-			r.Output(j) >> sse_streamer;
-			sse_streamer.setSSE(this,1);
+			ships >> sse_streamer;
+			sse_streamer.setSSE(this);
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*) & ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*) & ships);
@@ -633,8 +633,8 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Dev
 	if (m.Output().out.canConnect(groups_in)) {
 		m.Output() >> counter;
 		m.Output() >> counter_session;
-		m.Output() >> sse_streamer;
-		sse_streamer.setSSE(this,1);
+		ships >> sse_streamer;
+		sse_streamer.setSSE(this);
 
 		json.Connect((StreamIn<JSON::JSON>*) & ships);
 		device >> raw_counter;
@@ -843,6 +843,10 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/sse") {
 		if(realtime)
 			upgradeSSE(c, 1);
+	}
+	else if (r == "/signal") {
+		if(realtime)
+			upgradeSSE(c, 2);
 	}
 	else if (r == "/config.js") {
 		Response(c, "application/javascript", params + plugins, use_zlib& gzip);
