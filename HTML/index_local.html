@@ -855,6 +855,20 @@
                     }
                 }
 
+                .fadeOut {
+                    animation: fadeOutAnimation 3s linear forwards;
+                    opacity: 1;
+                }
+
+                @keyframes fadeOutAnimation {
+                    0% {
+                        opacity: 1;
+                    }
+                    100% {
+                        opacity: 0;
+                    }
+                }
+
 
                 .leaflet-control-layers-toggle,
                 .leaflet-control-settings-toggle {
@@ -1845,6 +1859,7 @@
                 <li class="divider table-menu"></li>
                 <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
                 <li class="ctx-map" onclick="deleteAllTracks()"><i class="remove_circle_outline_icon"></i>Remove all tracks</li>
+                <li class="ctx-map" onclick="ToggleFireworks()"><i class="remove_circle_outline_icon"></i>Toggle Realtime Signal Animation</li>
                 <li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="label_icon"></i><span id="ctx_tooltipstyling"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="label_icon"></i><span id="ctx_tooltipoverlap"></span></li>
@@ -2419,7 +2434,7 @@
 
     <script>
         var interval, hist, ships, paths = {}, markers = {}, ship_shape = {}, map, basemaps = {}, overlapmaps = {}, station = {}, shipsDB = {}, singleClickTimeout = null;
-        var iconLabelSpan = null, iconStationSpan = null, evtSource = null;
+        var iconLabelSpan = null, iconStationSpan = null, evtSource = null, evtSourceMap = null;
 
         var rtCount = 0;
         var StationControlDiv = null;
@@ -2431,6 +2446,7 @@
         let activeTileLayer = null;
 
         var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_tracks = {};
+        var marker_fireworks = [];
 
         var context_text = "";
         // default settings
@@ -3032,6 +3048,65 @@
                 updateTooltips();
         }
 
+        function addMarker(lat, lon) {
+            var latlon = [lat, lon];
+
+            var marker = L.circleMarker(latlon, {
+                interactive: false,
+                color: 'grey',
+                radius: 30,
+                weight: 10,
+                fillOpacity: 0,
+                pane: "locationMarker",
+                className: "fadeOut"
+            });
+
+            marker.addTo(map);
+
+            setTimeout(function () {
+                marker.removeFrom(map);
+                marker_fireworks.splice(marker_fireworks.indexOf(marker), 1); 
+            }, 3000);
+
+            marker_fireworks.push(marker); 
+        }
+
+        function ToggleFireworks() {
+            if (evtSourceMap == null) 
+                StartFireworks();
+            else
+                StopFireworks();
+        }
+
+        function StartFireworks() {
+            if (evtSourceMap == null) {
+                    evtSourceMap = new EventSource("signal");
+                    evtSourceMap.addEventListener('nmea', function (e) {
+                        
+                        console.log("marker_fireworks: " + marker_fireworks.length);
+                        var jsonData = JSON.parse(e.data);
+
+                        if (jsonData.hasOwnProperty('lat') && jsonData.hasOwnProperty('lon')) {
+                            var latlon = [jsonData.lat,jsonData.lon];
+
+                            addMarker(jsonData.lat, jsonData.lon);
+                        }
+                    }, false);
+
+                    evtSourceMap.onopen = function (event) {
+                        alert("Fireworks connected");
+                    }
+                }
+  
+        }
+
+        function StopFireworks() {
+            if (evtSourceMap != null) {
+                alert("Stop Fireworks")
+                evtSourceMap.close();
+                evtSourceMap = null;
+            }
+        }
 
         function updateMarkerCountTooltip() {
 
@@ -5212,6 +5287,9 @@
             clearInterval(interval);
             refresh_data();
             interval = setInterval(refresh_data, refreshIntervalMs)
+
+            if (a != "map")
+                StopFireworks();
 
             if (a == "realtime") {
                 if (evtSource == null) {
