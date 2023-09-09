@@ -60,9 +60,7 @@
                     --range-color: orange;
                     --main-font-color: var(--tertiary-color);
                     --stat-label-color: var(--tertiary-color);
-                    ;
                     --stat-divider-color: var(--tertiary-color);
-                    ;
                     --stat-color: var(--primary-color);
                     --shipcard-header-color: var(--secondary-color);
                     --shipcard-content-color: var(--menu-background-color);
@@ -80,6 +78,7 @@
                     --graph-header-side-color: rgba(242, 248, 255, 0.5);
                     --tooltip-background-color: #daebfe;
                     --tooltip-border-color: white;
+                    --leaflet-scale-textshadow: white 1px 1px 0px;
                 }
 
                 .dark {
@@ -100,7 +99,6 @@
                     --light-gray: lightgray;
                     --header-font-color: #f8f9fa;
                     --menu-background-color: rgb(41, 41, 41);
-                    ;
                     --leaflet-control-color: rgb(60, 60, 60);
                     --menu-border-color: rgb(17,17,17);
                     --dialog-title-color: rgb(50,50,50);
@@ -140,6 +138,7 @@
                     --graph-header-side-color: rgb(32, 32, 32);
                     --tooltip-background-color: rgb(60,60,60);
                     --tooltip-border-color: rgb(30,30,30);
+                    --leaflet-scale-textshadow: black 1px 1px 0px;
                 }
 
                 body,
@@ -888,6 +887,10 @@
                 .leaflet-control-zoom a {
                     background-color: var(--leaflet-control-color);
                     color: var(--menu-font-color);
+                }
+
+                .leaflet-control-scale-line {
+                    text-shadow: var(--leaflet-scale-textshadow);
                 }
 
                 .leaflet-control-settings-toggle {
