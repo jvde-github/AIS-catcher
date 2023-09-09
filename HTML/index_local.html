@@ -1253,6 +1253,20 @@
                         z-index: -1;
                     }
 
+                    .explosion_icon {
+                    display: block;
+                        width: 1em;
+                    height: 1em;
+                    background-color: currentColor;
+                    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M481-29 346-160H160v-186L26-480l134-134v-186h186l135-134 133 134h186v186l134 134-134 134v186H614L481-29Zm0-84 108-107h151v-151l109-109-109-109v-151H589L481-849 371-740H220v151L111-480l109 109v151h150l111 107Zm0 0L370-220H220v-151L111-480l109-109v-151h151l110-109 108 109h151v151l109 109-109 109v151H589L481-113Zm-1-112 76-75h104v-104l76-76-76-76v-104H556l-76-76-76 76H300v104l-76 76 76 76v104h102l78 75Z"/%3E%3C/svg%3E');
+                    -webkit-mask-image: var(--svg);
+                    mask-image: var(--svg);
+                    -webkit-mask-repeat: no-repeat;
+                    mask-repeat: no-repeat;
+                    -webkit-mask-size: 100% 100%;
+                    mask-size: 100% 100%;
+                }
+
                 .feed_icon {
                     display: block;
                     width: 1em;
@@ -1859,7 +1873,7 @@
                 <li class="divider table-menu"></li>
                 <li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
                 <li class="ctx-map" onclick="deleteAllTracks()"><i class="remove_circle_outline_icon"></i>Remove all tracks</li>
-                <li class="ctx-map" onclick="ToggleFireworks()"><i class="remove_circle_outline_icon"></i>Toggle Realtime Signal Animation</li>
+                <li class="ctx-map" onclick="ToggleFireworks()"><i class="explosion_icon"></i><span id="ctx_fireworks"></span></li>
                 <li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipStyling()"><i class="label_icon"></i><span id="ctx_tooltipstyling"></span></li>
                 <li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="label_icon"></i><span id="ctx_tooltipoverlap"></span></li>
@@ -2614,7 +2628,8 @@
             document.getElementById("ctx_tooltipoverlap").textContent = settings.tooltipOverlap ? "De-clutter ship labels" : "Allow overlapping ship labels";
             document.getElementById("ctx_range").textContent = settings.show_range ? "Hide station range" : "Show station range";
             document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
-
+            document.getElementById("ctx_fireworks").textContent = evtSourceMap == null ? "Start Fireworks Mode" : "Stop Fireworks Mode";
+        
             context_mmsi = mmsi;
 
             const classList = ['station', 'settings', 'mmsi-map', 'mmsi', 'ctx-map', 'copy-text', 'table-menu'];
@@ -3096,11 +3111,13 @@
                         }
                     }, false);
 
-                    evtSourceMap.onerror = function (event) {
-                        alert("Error connecting to Realtime Feed (SSE)");
+                    evtSourceMap.onerror = function (event) {                        
+                        StopFireworks() ;
+                        showDialog("Error","Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is run with -N REALTIME on and is running.")
                     }
+                    
                     evtSourceMap.onopen = function (event) {
-                        alert("Fireworks connected");
+                        console.log("Fireworks connected");
                     }
                 }
   
@@ -3108,7 +3125,7 @@
 
         function StopFireworks() {
             if (evtSourceMap != null) {
-                alert("Stop Fireworks")
+                console.log("Stop Fireworks")
                 evtSourceMap.close();
                 evtSourceMap = null;
             }
