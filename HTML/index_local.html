@@ -3102,7 +3102,7 @@
                     evtSourceMap = new EventSource("signal");
                     evtSourceMap.addEventListener('nmea', function (e) {
                         
-                        console.log("marker_fireworks: " + marker_fireworks.length);
+                        //console.log("marker_fireworks: " + marker_fireworks.length);
                         var jsonData = JSON.parse(e.data);
 
                         if (jsonData.hasOwnProperty('channel') ** jsonData.hasOwnProperty('lat') && jsonData.hasOwnProperty('lon')) {
