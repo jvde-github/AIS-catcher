@@ -856,7 +856,7 @@
                 }
 
                 .fadeOut {
-                    animation: fadeOutAnimation 3s linear forwards;
+                    animation: fadeOutAnimation 1.5s linear forwards;
                     opacity: 1;
                 }
 
@@ -3048,12 +3048,16 @@
                 updateTooltips();
         }
 
-        function addMarker(lat, lon) {
+        function addMarker(lat, lon, ch) {
             var latlon = [lat, lon];
+            var c = "grey";
+
+            if(ch == "A") c = "blue";
+            if(ch == "B") c = "red";
 
             var marker = L.circleMarker(latlon, {
                 interactive: false,
-                color: 'grey',
+                color: c,
                 radius: 30,
                 weight: 10,
                 fillOpacity: 0,
@@ -3066,7 +3070,7 @@
             setTimeout(function () {
                 marker.removeFrom(map);
                 marker_fireworks.splice(marker_fireworks.indexOf(marker), 1); 
-            }, 3000);
+            }, 1500);
 
             marker_fireworks.push(marker); 
         }
@@ -3086,10 +3090,9 @@
                         console.log("marker_fireworks: " + marker_fireworks.length);
                         var jsonData = JSON.parse(e.data);
 
-                        if (jsonData.hasOwnProperty('lat') && jsonData.hasOwnProperty('lon')) {
-                            var latlon = [jsonData.lat,jsonData.lon];
+                        if (jsonData.hasOwnProperty('channel') ** jsonData.hasOwnProperty('lat') && jsonData.hasOwnProperty('lon')) {
 
-                            addMarker(jsonData.lat, jsonData.lon);
+                            addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
                         }
                     }, false);
 

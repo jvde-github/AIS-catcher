@@ -304,7 +304,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 					server->sendSSE(1, "nmea", s);
 			
 				if(tag.lat != 0 && tag.lon != 0) {
-					std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
+					std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"channel\":\"" + m->getChannel() + "\",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
 					server->sendSSE(2, "nmea", json);
 				}
 			}
