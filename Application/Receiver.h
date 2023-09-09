@@ -294,17 +294,22 @@ class WebClient : public IO::HTTPServer, public Setting {
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
 	} counter, counter_session;
 
-	class SSEStreamer : public StreamIn<AIS::Message> {
+	class SSEStreamer : public StreamIn<JSON::JSON> {
 		HTTPServer* server = NULL;
-		int _id = 0;
 	public:
-		void Receive(const AIS::Message* data, int len, TAG& tag) {
+		void Receive(const JSON::JSON* data, int len, TAG& tag) {
 			if (server) {
-				for (const auto& s : data[0].NMEA)
-					server->sendSSE(_id, "nmea", s);
+				AIS::Message *m = (AIS::Message *)data[0].binary;
+				for (const auto& s : m->NMEA)
+					server->sendSSE(1, "nmea", s);
+			
+				if(tag.lat != 0 && tag.lon != 0) {
+					std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
+					server->sendSSE(2, "nmea", json);
+				}
 			}
 		}
-		void setSSE(HTTPServer* s, int id) { server = s; _id = id; }
+		void setSSE(HTTPServer* s) { server = s; }
 	} sse_streamer;
 
 	class PromotheusCounter : public StreamIn<AIS::Message> {

@@ -550,6 +550,21 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		tag.angle = ANGLE_UNDEFINED;
 	}
 
+	if(position_updated) {
+		tag.lat = ship.lat;
+		tag.lon = ship.lon;
+	}
+	else {
+		if(isValidCoord(lat_old, lon_old)) {
+			tag.lat = lat_old;
+			tag.lon = lon_old;
+		}
+		else {
+			tag.lat = 0;
+			tag.lon = 0;
+		}
+	}
+
 	if (position_updated && isValidCoord(lat_old, lon_old)) {
 		// flat earth approximation, roughly 10 nmi
 		float d = (ship.lat - lat_old) * (ship.lat - lat_old) + (ship.lon - lon_old) * (ship.lon - lon_old);
