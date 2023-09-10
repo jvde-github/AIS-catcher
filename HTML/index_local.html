@@ -79,6 +79,9 @@
                     --tooltip-background-color: #daebfe;
                     --tooltip-border-color: white;
                     --textshadow: white 1px 1px 0px;
+                    --notification-background-color: #0b1033;
+                    --notification-font-color: white;
+                    --notification-border-color: 0857b1;
                 }
 
                 .dark {
@@ -139,6 +142,9 @@
                     --tooltip-background-color: rgb(60,60,60);
                     --tooltip-border-color: rgb(30,30,30);
                     --textshadow: black 1px 1px 0px;
+                    --notification-background-color: lightgrey;
+                    --notification-font-color: black;
+                    --notification-border-color: rgb(17,17,17);
                 }
 
                 body,
@@ -196,7 +202,6 @@
                 }
 
                 .tabcontent {
-                    /* 0% does not work and minify changes that into 0% */
                     flex: 1 0 1px;
                 }
 
@@ -352,7 +357,7 @@
 
                 .mainspace-container {
                     flex: 1 0 0;
-                    /*overflow: auto;*/
+                    position: relative;
                     background: var(--backdrop-color);
                     border-top: solid;
                     border-color: var(--mainspace-container-color);
@@ -1099,7 +1104,7 @@
                 }
 
                 #context-menu {
-                    position: absolute;
+                    position: fixed;
                     display: none;
                     background-color: var(--menu-background-color);
                     border: 1px solid var(--menu-border-color);
@@ -1800,6 +1805,32 @@
                 .hide {
                     display: none;
                 }
+
+                .notification-container {
+                    position: absolute;
+                    top: 5px;
+                    left: 5px;
+                    z-index: 10005;
+                }
+
+                .notification {
+                    background-color: var(--notification-background-color);
+                    color: var(--notification-font-color);
+                    border-radius: 5px;
+                    border-color: var(--notification-border-color);
+                    padding: 10px;
+                    opacity: 1;
+                    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+                    margin-bottom: 5px;
+                }
+
+                .notification.fade-out {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+
+
+
     </style>
 
     <link rel="stylesheet" href="config.css">
@@ -1866,6 +1897,9 @@
     </nav>
 
     <div class="mainspace-container">
+
+        <div class="notification-container" id="notification-container"></div>            
+
         <div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
 
             <ul id="context-menu">
@@ -2503,6 +2537,8 @@
         getCallSign = ship => ship.callsign;
         includeShip = ship => true;
 
+        const notificationContainer = document.getElementById('notification-container');
+
         // https://stackoverflow.com/questions/51805395/navigator-clipboard-is-undefined
         async function copyClipboard(t) {
             try {
@@ -2700,6 +2736,22 @@
         function closeDialog() {
             var dialogBox = document.getElementById('dialog-box');
             dialogBox.classList.add('hidden');
+        }
+
+
+        function showNotification(message) {
+            const notificationElement = document.createElement('div');
+            notificationElement.classList.add('notification');
+            notificationElement.textContent = message;
+
+            notificationContainer.appendChild(notificationElement);
+
+            setTimeout(() => {
+                notificationElement.style.opacity = 0;
+                setTimeout(() => {
+                    notificationContainer.removeChild(notificationElement);
+                }, 500);
+            }, 4000);
         }
 
         function getStatusVal(ship) {
@@ -3121,6 +3173,7 @@
                     }
                     
                     evtSourceMap.onopen = function (event) {
+                        showNotification("Fireworks Mode started");
                         console.log("Fireworks connected");
                     }
                 }
@@ -3129,7 +3182,7 @@
 
         function StopFireworks() {
             if (evtSourceMap != null) {
-                console.log("Stop Fireworks")
+                showNotification("Fireworks Mode stopped");
                 evtSourceMap.close();
                 evtSourceMap = null;
             }
