@@ -2906,7 +2906,8 @@
             ATON: 9,
             SARTEPIRB: 10,
             FISHING: 12,
-            OTHER: 13
+            OTHER: 13,
+            UNKNOWN: 14
         };
 
         // MMSI types from AIS-catcher
@@ -3487,6 +3488,7 @@
                 if (includeShip(s)) {
                     const entry = {};
                     s.mmsi_type = getMMSItype(s);
+                    s.shiptype_class = getShipTypeClass(s);
                     entry.raw = s;
                     shipsDB[s.mmsi] = entry;
                 }
@@ -4433,6 +4435,10 @@
                                 return ship != null ? getCallSign(ship) : "";
                             }
                         },
+                        { title: "Type", field: "shiptype_class", sorter: "number", formatter: function (cell) {
+                            const ship = cell.getRow().getData();
+                            return ship != null ? "<span " + getIconCSS(ship) + "></span>": "";
+                        } },
                         {
                             title: "Last", field: "last_signal", sorter: "number", formatter: function (cell) {
                                 const value = cell.getValue();
@@ -4547,6 +4553,69 @@
 
             let opacity = 1 - (ship.last_signal / 1800) * 0.8;
             return Math.max(0.2, Math.min(1, opacity));
+        }
+
+        function getIconCSS(ship) {
+
+            const STATICON = 0;
+            const SHIPICON = 1;
+            const PLANEICON = 2;
+            const HELICOPTERICON = 3;
+
+            let shipicon = SHIPICON; c = 120;
+            let title = "Unknown";
+            switch (getShipTypeClass(ship)) {
+                case ShippingClass.CARGO:
+                    shipicon = SHIPICON; c = 0; title = "Cargo"; break;
+                case ShippingClass.TANKER:
+                    shipicon = SHIPICON; c = 80; title = "Tanker"; break;
+                case ShippingClass.PASSENGER:
+                    shipicon = SHIPICON; c = 40; title = "Passenger"; break;
+                case ShippingClass.HIGHSPEED:
+                    shipicon = SHIPICON; c = 100; title = "Highspeed"; break;
+                case ShippingClass.SPECIAL:
+                    shipicon = SHIPICON; c = 60; title = "Special"; break;
+                case ShippingClass.FISHING:
+                    shipicon = SHIPICON; c = 140; title = "Fishing"; break;
+                case ShippingClass.ATON:
+                    shipicon = STATICON; c = 0; title = "AtoN"; break;
+                case ShippingClass.PLANE:
+                    shipicon = PLANEICON; title = "Plane"; break;
+                case ShippingClass.HELICOPTER:
+                    shipicon = HELICOPTERICON; title = "Helicopter"; break;
+                case ShippingClass.B:
+                    shipicon = SHIPICON; c = 20; title = "Class B"; break;
+                case ShippingClass.STATION:
+                    shipicon = STATICON; c = 20; title = "Base Station"; break;
+                case ShippingClass.SARTEPIRB:
+                    c = 40; shipicon = STATICON; title = "SARTE/PIRB"; break;
+            }
+
+            let h = 'title="' + title + '" ';
+            let opacity = getShipOpacity(ship);
+            let iconStyle = `opacity: ${opacity};`;
+
+            switch (shipicon) {
+                case STATICON:
+                    h += `CLASS="staticon" style="background-position: -${c}px -20px; transform: translate(-4px,-4px); ${iconStyle}"`;
+                    break;
+                case SHIPICON:
+                    if (ship.speed != null && ship.speed > 0.5 && ship.cog != null)
+                        h += `CLASS="shipicon" style="background-position: -${c}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg); ${iconStyle}"`;
+                    else
+                        h += `CLASS="shipicon" style="background-position: -${c}px -20px; transform: translate(-4px,-5px); ${iconStyle}"`;
+                    break;
+                case PLANEICON:
+                    h += `CLASS="planeicon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"`;
+                    break;
+                case HELICOPTERICON:
+                    h += `CLASS="helicoptericon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"`;
+                    break;
+                default:
+                    console.log("Error: shipicon undefined.");
+            }
+
+            return h;
         }
 
         function getIcon(ship) {
