@@ -75,11 +75,11 @@ namespace IO {
 			running = true;
 			connection->Lock();
 
-			std::string headers = "HTTP/1.1 200 OK\r\n";
-			headers += "Content-Type: text/event-stream\r\n";
-			headers += "Cache-Control: no-cache\r\n";
-			headers += "X-Accel-Buffering: no\r\n";
-			headers += "Connection: keep-alive\r\n\r\n";
+			std::string headers = "HTTP/1.1 200 OK\n";
+			headers += "Content-Type: text/event-stream\n";
+			headers += "Cache-Control: no-cache\n";
+			headers += "X-Accel-Buffering: no\n";
+			headers += "Connection: keep-alive\n\n\n";
 
 			connection->SendDirect(headers.c_str(), headers.length());
 		}
