@@ -4563,35 +4563,41 @@
             const HELICOPTERICON = 3;
 
             let shipicon = SHIPICON; c = 120;
-            let title = "Unknown";
+
             switch (getShipTypeClass(ship)) {
                 case ShippingClass.CARGO:
-                    shipicon = SHIPICON; c = 0; title = "Cargo"; break;
+                    shipicon = SHIPICON; c = 0; break;
                 case ShippingClass.TANKER:
-                    shipicon = SHIPICON; c = 80; title = "Tanker"; break;
+                    shipicon = SHIPICON; c = 80; break;
                 case ShippingClass.PASSENGER:
-                    shipicon = SHIPICON; c = 40; title = "Passenger"; break;
+                    shipicon = SHIPICON; c = 40; break;
                 case ShippingClass.HIGHSPEED:
-                    shipicon = SHIPICON; c = 100; title = "Highspeed"; break;
+                    shipicon = SHIPICON; c = 100; break;
                 case ShippingClass.SPECIAL:
-                    shipicon = SHIPICON; c = 60; title = "Special"; break;
+                    shipicon = SHIPICON; c = 60; break;
                 case ShippingClass.FISHING:
-                    shipicon = SHIPICON; c = 140; title = "Fishing"; break;
+                    shipicon = SHIPICON; c = 140; break;
                 case ShippingClass.ATON:
-                    shipicon = STATICON; c = 0; title = "AtoN"; break;
+                    shipicon = STATICON; c = 0; break;
                 case ShippingClass.PLANE:
-                    shipicon = PLANEICON; title = "Plane"; break;
+                    shipicon = PLANEICON; break;
                 case ShippingClass.HELICOPTER:
-                    shipicon = HELICOPTERICON; title = "Helicopter"; break;
+                    shipicon = HELICOPTERICON; break;
                 case ShippingClass.B:
-                    shipicon = SHIPICON; c = 20; title = "Class B"; break;
+                    shipicon = SHIPICON; c = 20;break;
                 case ShippingClass.STATION:
-                    shipicon = STATICON; c = 20; title = "Base Station"; break;
+                    shipicon = STATICON; c = 20;break;
                 case ShippingClass.SARTEPIRB:
-                    c = 40; shipicon = STATICON; title = "SARTE/PIRB"; break;
+                    c = 40; shipicon = STATICON;break;
             }
 
+            let title = getTypeVal(ship);
+            let val = getShipTypeVal(ship.shiptype);
+
+            if(val !== "Not available") title += ' - ' + val;
+
             let h = 'title="' + title + '" ';
+            
             let opacity = getShipOpacity(ship);
             let iconStyle = `opacity: ${opacity};`;
 
