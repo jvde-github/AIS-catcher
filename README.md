@@ -23,14 +23,10 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-Latest version is **v0.52** which includes support for the RTL-SDR V4.
-Version **v0.51** has various improvements (like a TCP listener for NMEA and offline mode for the webclient and a new switch `-N OWN_MMSI`). See below documentation for more details.
+Latest version is **v0.53** introduced Fireworks Mode, a shiptype icon in the ship overview table, realtime NMEA streaming in the webclient and GPS input being forwarded to screen or the output channels.
 
-Latest Edge version:
-- Tab that shows realtime NMEA data as it comes in, activate with `-N REALTIME on`.
-- Experimental "Fireworks" Mode, see [this](https://www.youtube.com/watch?v=jhVfnCd5tX4) video for demonstration.
-- Addition of Ship type as Icon to Ship table overview
-- GPS input is included in screen output as NMEA or JSON depending on the output switch (`-o x`). GPS output can be filtered out using `FILTER ON GPS OFF` directly after the `-o x` switch where x is the output mode. Also works for TCP and UDP output.
+Version is **v0.52** included support for the RTL-SDR V4.
+Version **v0.51** has various improvements (like a TCP listener for NMEA and offline mode for the webclient and a new switch `-N OWN_MMSI`). See below documentation for more details.
   
 ### New Android version
 The Android version of AIS-catcher has been recently overhauled and can be found [here](https://github.com/jvde-github/AIS-catcher-for-Android).
@@ -915,7 +911,8 @@ Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
  | :--- | :--- | :---: |   :--- | :---: | 
 |Edge| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.SDRPLAY.x64.zip) |
-|v0.52| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.SDRPLAY.x64.zip) |
+|v0.53| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.SDRPLAY.x64.zip) |
+|v0.52| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.SDRPLAY.x64.zip) |
 |v0.51| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.SDRPLAY.x64.zip) |
   |v0.50| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.SDRPLAY.x64.zip) |
   |v0.49| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.SDRPLAY.x64.zip) |
