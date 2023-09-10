@@ -4420,6 +4420,7 @@
                     persistence: true,
                     pagination: "local",
                     paginationSize: 50,
+                    rowHeight:37,
                     paginationSizeSelector: [20, 50, 100],
                     columns: [
                         {
@@ -4597,19 +4598,21 @@
             if(val !== "Not available") title += ' - ' + val;
 
             let h = 'title="' + title + '" ';
-            
+
             let opacity = getShipOpacity(ship);
             let iconStyle = `opacity: ${opacity};`;
 
             switch (shipicon) {
                 case STATICON:
                     h += `CLASS="staticon" style="background-position: -${c}px -20px; transform: translate(-4px,-4px); ${iconStyle}"`;
+
                     break;
                 case SHIPICON:
                     if (ship.speed != null && ship.speed > 0.5 && ship.cog != null)
                         h += `CLASS="shipicon" style="background-position: -${c}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg); ${iconStyle}"`;
                     else
                         h += `CLASS="shipicon" style="background-position: -${c}px -20px; transform: translate(-4px,-5px); ${iconStyle}"`;
+
                     break;
                 case PLANEICON:
                     h += `CLASS="planeicon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"`;
