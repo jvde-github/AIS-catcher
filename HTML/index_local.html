@@ -3156,6 +3156,7 @@
         function StartFireworks() {
             if (evtSourceMap == null) {
                     evtSourceMap = new EventSource("signal");
+                    showNotification("Fireworks Mode request send to server");
                     evtSourceMap.addEventListener('nmea', function (e) {
                         
                         //console.log("marker_fireworks: " + marker_fireworks.length);
