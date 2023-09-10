@@ -1262,6 +1262,17 @@
                         z-index: -1;
                     }
 
+                    .leaflet-control-layers-toggle 
+                     {
+                       --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M480-130 120-410l50-37 310 241 310-241 50 37-360 280Zm0-152L120-562l360-280 360 280-360 280Zm0-301Zm0 225 262-204-262-204-262 204 262 204Z"/%3E%3C/svg%3E');
+                       -webkit-mask-image: var(--svg);
+                       mask-image: var(--svg);
+                       -webkit-mask-repeat: no-repeat;
+                       mask-repeat: no-repeat;
+                       -webkit-mask-size: 100% 100%;
+                       mask-size: 100% 100%;
+                    }
+                            
                 .explosion_icon {
                     display: block;
                         width: 1em;
