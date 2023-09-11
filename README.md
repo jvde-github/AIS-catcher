@@ -25,7 +25,7 @@ Only use this software in regions where such use is permitted.
 
 Latest version is **v0.53** introduced Fireworks Mode, a shiptype icon in the ship overview table, realtime NMEA streaming in the webclient and GPS input being forwarded to screen or the output channels.
 
-Version is **v0.52** included support for the RTL-SDR V4.
+Version **v0.52** included support for the RTL-SDR V4 for the Windows and Android builds.
 Version **v0.51** has various improvements (like a TCP listener for NMEA and offline mode for the webclient and a new switch `-N OWN_MMSI`). See below documentation for more details.
   
 ### New Android version
