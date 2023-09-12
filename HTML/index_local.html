@@ -3283,7 +3283,9 @@
             flashNumber("statcard_heli", cHeli);
             flashNumber("statcard_sarte", cSarte);
 
-            function flashNumber(id, newValue) {
+        }
+
+        function flashNumber(id, newValue) {
                 const element = document.getElementById(id);
                 const oldValue = parseInt(element.innerText) || 0;
 
@@ -3296,8 +3298,6 @@
                 setTimeout(() => {
                     element.classList.remove("flash-up");
                 }, 500);
-            }
-
         }
 
         function updateMarkerCount() {
@@ -3307,9 +3307,12 @@
             if (shipsDB != null) {
                 count = Object.keys(markers).length;
             }
+
+            flashNumber("markerCount", count);
+            /*
             let e = document.getElementById('markerCount');
             if (e != null)
-                e.innerText = count;
+                e.innerText = count;*/
 
             if(document.getElementById('statcard').style.display == 'block')
                 updateMarkerCountTooltip();
