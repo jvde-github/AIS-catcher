@@ -611,13 +611,32 @@
                     display: none;
                     flex-direction: column;
                     justify-content: stretch;
-                    z-index: 10000;
+                    z-index: 999;
                     position: absolute;
                     background: var(--menu-background-color);
                     color: var(--menu-font-color);
                     cursor: auto;
-                    border-radius: 15px;                   
+                    border-radius: 15px;
                     border: 1px solid var(--menu-border-color);
+                }
+
+                .statcard_inner {
+                    position: relative;
+                }
+
+                .statcard_inner table {
+                }
+
+                .active-control {
+                    /* Your active control styles here */
+                    background-color: green; /* Change to your desired active background color */
+                    color: white; /* Change to your desired active text color */
+                }
+
+                .inactive-control {
+                    /* Your inactive control styles here */
+                    background-color: gray; /* Change to your desired inactive background color */
+                    color: black; /* Change to your desired inactive text color */
                 }
 
                 /* Shipcard styling */
@@ -2376,42 +2395,43 @@
             <div class="tabcontent" id="map">
                 
                 <div id="statcard">
-                    <table>
-                        <tr>
-                          <td>
-                            <span CLASS="shipicon" style="background-position: -120px -0px; transform: translate(0px,0px) scale(1) rotate(45deg); "></span>
-                          </td>
-                          <td><span id="statcard_moving"></span></td>
-                          <td>
-                            <span CLASS="shipicon" style="background-position: -120px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
-                            </td>
-                         <td><span id="statcard_stationary"></span></td>
-                        </tr>
-                        <tr>
+                    <div class="statcard_inner">
+                        <table>
+                            <tr>
                             <td>
-                                <span CLASS="staticon" style="background-position: -20px -20px; transform: translate(-8px,-8px) rotate(25); "></span>
-                              </td>
-                              <td><span id="statcard_station"></span></td>
-                              <td>
-                                <span CLASS="staticon" style="background-position: -0px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
+                                <span title="Ships Moving" CLASS="shipicon" style="background-position: -120px -0px; transform: translate(0px,0px) scale(1) rotate(45deg); "></span>
+                            </td>
+                            <td><span title="Ships Moving" id="statcard_moving"></span></td>
+                            <td>
+                                <span title="Ships Sationary" CLASS="shipicon" style="background-position: -120px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
                                 </td>
-                             <td><span id="statcard_aton"></span></td>
+                            <td><span title="Ships Sationary" id="statcard_stationary"></span></td>
                             </tr>
-                        </tr>
-                        <tr>
-                            <td>
-                                <span CLASS="staticon" style="background-position: -40px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
-                              </td>
-                              <td><span id="statcard_sarte"></span></td>
-                              <td>
-                                <span CLASS="helicoptericon" style="background-position: -0px -0px; transform: translate(0px,0px) scale(0.8) rotate(45deg);"></span>
-                            </td>
-                             <td><span id="statcard_heli"></span></td>
+                            <tr>
+                                <td>
+                                    <span title = "Base Station" CLASS="staticon" style="background-position: -20px -20px; transform: translate(-8px,-8px) rotate(25); "></span>
+                                </td>
+                                <td><span title = "Base Station" id="statcard_station"></span></td>
+                                <td>
+                                    <span title = "Aid-to-Navigation" class="staticon" style="background-position: -0px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
+                                    </td>
+                                <td><span title = "Aid-to-Navigation" id="statcard_aton"></span></td>
+                                </tr>
                             </tr>
-                        </tr>
-                      </table>
-                      
-                  </div>
+                            <tr>
+                                <td>
+                                    <span title = "SARTE / EPIRB" CLASS="staticon" style="background-position: -40px -20px; transform: translate(-8px,-8px) rotate(45); "></span>
+                                </td>
+                                <td><span title = "SARTE / EPIRB" id="statcard_sarte"></span></td>
+                                <td>
+                                    <span title = "Plane/Helicopter" CLASS="helicoptericon" style="background-position: -0px -0px; transform: translate(0px,0px) scale(0.8) rotate(45deg);"></span>
+                                </td>
+                                <td><span id="statcard_heli"></span></td>
+                                </tr>
+                            </tr>
+                        </table>
+                    </div>  
+                </div>
 
                 <aside id="shipcard" class="shipcard-ismax">
 
@@ -2894,20 +2914,20 @@
         }
 
         const ShippingClass = {
-            CARGO: 0,
-            B: 1,
-            PASSENGER: 2,
-            SPECIAL: 3,
-            TANKER: 4,
-            HIGHSPEED: 5,
-            PLANE: 6,
-            HELICOPTER: 7,
-            STATION: 8,
-            ATON: 9,
-            SARTEPIRB: 10,
-            FISHING: 12,
-            OTHER: 13,
-            UNKNOWN: 14
+            OTHER: 0,
+            UNKNOWN: 1,
+            CARGO: 2,
+            B: 3,
+            PASSENGER: 4,
+            SPECIAL: 5,
+            TANKER: 6,
+            HIGHSPEED: 7,
+            FISHING: 8,
+            PLANE: 9,
+            HELICOPTER: 10,
+            STATION: 11,
+            ATON: 12,
+            SARTEPIRB: 13,
         };
 
         // MMSI types from AIS-catcher
@@ -3251,6 +3271,8 @@
         }
 
         function updateMarkerCount() {
+            updateControlClass();
+
             let count = 0;
             if (shipsDB != null) {
                 count = Object.keys(markers).length;
@@ -3263,36 +3285,112 @@
                 updateMarkerCountTooltip();
         }
 
+        function toggeStatcard () {
+            if(document.getElementById('statcard').style.display == 'block')
+                hideStatcard();
+            else
+                showStatcard();
+
+        }
+
+        function showStatcard() {
+            updateMarkerCountTooltip();
+            document.getElementById('statcard').style.display = 'block';
+        }
+
+        function hideStatcard() {
+            document.getElementById('statcard').style.display = 'none';
+        }
+
+        var isDragging = false;
+        var offsetX, offsetY;
+
+        var statcard = document.getElementById('statcard');
+
+        function startDrag(event) {
+            var clientX = event.clientX || event.touches[0].clientX;
+            var clientY = event.clientY || event.touches[0].clientY;
+
+            isDragging = true;
+
+            // take into account the header bar
+            var boundingRect = statcard.getBoundingClientRect();
+            offsetX = clientX - boundingRect.left;
+            offsetY = clientY - boundingRect.top + (isAndroid()?0:60);
+
+            statcard.style.cursor = 'grabbing';
+            L.DomEvent.stopPropagation(event);
+        }
+
+        // Handle drag movement statcard
+        function moveDrag(event) {
+            if (isDragging) {
+                var clientX = event.clientX || event.touches[0].clientX;
+                var clientY = event.clientY || event.touches[0].clientY;
+
+                var top = clientY - offsetY;
+                var left = clientX - offsetX;
+
+                statcard.style.top = top + 'px';
+                statcard.style.left = left + 'px';
+                statcard.style.right = 'auto';
+            }
+            L.DomEvent.stopPropagation(event);
+        }
+
+        function endDrag(event) {
+            isDragging = false;
+            statcard.style.cursor = 'auto';
+            L.DomEvent.stopPropagation(event);
+        }
+
+        statcard.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', moveDrag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('mouseleave', endDrag);
+
+        statcard.addEventListener('touchstart', startDrag);
+        document.addEventListener('touchmove', moveDrag);
+        document.addEventListener('touchend', endDrag);
+        document.addEventListener('touchcancel', endDrag);
+
+        function updateControlClass() {
+            if (document.getElementById('statcard').style.display != 'block') {
+                markerCountControl.getContainer().classList.remove('inactive-control');
+                markerCountControl.getContainer().classList.add('active-control');
+            } else {
+                markerCountControl.getContainer().classList.remove('active-control');
+                markerCountControl.getContainer().classList.add('inactive-control');
+            }
+        }
+        
+        var markerCountControl;
+
         function addMarkerCount() {
             if (settings.counter === "false") return;
 
-            var markerCountControl = L.control({ position: 'topright' });
+            markerCountControl = L.control({ position: 'topright' });
 
             markerCountControl.onAdd = function (map) {
                 var controlDiv = L.DomUtil.create('div', 'leaflet-control-layers round-control min-height-300');
 
-
-                L.DomEvent.on(controlDiv, 'mouseover', function () {
-                    updateMarkerCountTooltip();
-                    document.getElementById('statcard').style.display = 'block';
+                L.DomEvent.on(controlDiv, 'click', function () {
+                    toggeStatcard();
                 });
 
-                L.DomEvent.on(controlDiv, 'mouseout', function () {
-                    document.getElementById('statcard').style.display = 'none';
-                });
-                
                 var controlBoundary = L.DomUtil.create('div', 'leaflet-control-settings-toggle round-control', controlDiv);
                 iconLabelSpan = L.DomUtil.create('span', '', controlBoundary);
                 iconLabelSpan.innerHTML = '<span id="markerCount">0</span>';
                 iconLabelSpan.style.padding = "5px";
                 iconLabelSpan.style.fontSize = 12 + "px";
+
                 return controlDiv;
             };
 
             addControlToMap(markerCountControl);
             updateMarkerCount();
-
         }
+
         function addWrenchControl() {
             var wrenchControl = L.control({ position: 'bottomright' });
 
@@ -4599,7 +4697,7 @@
 
             let h = 'title="' + title + '" ';
 
-            let opacity = getShipOpacity(ship);
+            let opacity = 1;
             let iconStyle = `opacity: ${opacity};`;
 
             switch (shipicon) {
