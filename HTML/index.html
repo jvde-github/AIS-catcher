@@ -1865,27 +1865,18 @@
                     transform: translateY(-20px);
                 }
 
-                .flash-up-green {
-                    color: green !important;
-                    transition: color 0.25s ease;
-                }
-
-                .flash-up-red {
-                    color: red !important;
-                    transition: color 0.25s ease;
+                .flash-up {
+                    animation: flash 0.25s ease infinite; 
                 }
 
                 @keyframes flash {
-                    0%, 100% {
+                    0%{
                         opacity: 1;
                     }
-                    50% {
+                    100% {
                         opacity: 0;
                     }
                 }
-
-
-
 
     </style>
 
@@ -3296,16 +3287,14 @@
                 const element = document.getElementById(id);
                 const oldValue = parseInt(element.innerText) || 0;
 
-                if (newValue > oldValue) {
-                    element.classList.add("flash-up-green");
-                } else if (newValue < oldValue) {
-                    element.classList.add("flash-up-red");
+                if (newValue != oldValue) {
+                    element.classList.add("flash-up");
                 }
 
                 element.innerText = newValue;
 
                 setTimeout(() => {
-                    element.classList.remove("flash-up-green", "flash-up-red");
+                    element.classList.remove("flash-up");
                 }, 500);
             }
 
