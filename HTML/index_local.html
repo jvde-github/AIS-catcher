@@ -1865,6 +1865,26 @@
                     transform: translateY(-20px);
                 }
 
+                .flash-up-green {
+                    color: green !important;
+                    transition: color 0.25s ease;
+                }
+
+                .flash-up-red {
+                    color: red !important;
+                    transition: color 0.25s ease;
+                }
+
+                @keyframes flash {
+                    0%, 100% {
+                        opacity: 1;
+                    }
+                    50% {
+                        opacity: 0;
+                    }
+                }
+
+
 
 
     </style>
@@ -3229,11 +3249,14 @@
 
         function updateMarkerCountTooltip() {
 
-            ["statcard_stationary", "statcard_moving", "statcard_station", "statcard_aton", "statcard_heli", "statcard_sarte"].forEach(function(id) {
-                document.getElementById(id).innerHTML = "";
-            });
+            if (shipsDB == null) {
 
-            if (shipsDB == null) return;
+                ["statcard_stationary", "statcard_moving", "statcard_station", "statcard_aton", "statcard_heli", "statcard_sarte"].forEach(function(id) {
+                    document.getElementById(id).innerHTML = "";
+                });
+
+                return;
+            }
 
             let cStationary = 0, cMoving = 0, cStation = 0, cAton = 0, cHeli = 0, cSarte = 0;
 
@@ -3261,12 +3284,30 @@
                     }
                 }
             }
-            document.getElementById("statcard_stationary").innerText = cStationary;
-            document.getElementById("statcard_moving").innerHTML = cMoving;
-            document.getElementById("statcard_station").innerHTML = cStation;
-            document.getElementById("statcard_aton").innerHTML = cAton;
-            document.getElementById("statcard_heli").innerHTML = cHeli;
-            document.getElementById("statcard_sarte").innerHTML = cSarte;
+
+            flashNumber("statcard_stationary", cStationary);
+            flashNumber("statcard_moving", cMoving);
+            flashNumber("statcard_station", cStation);
+            flashNumber("statcard_aton", cAton);
+            flashNumber("statcard_heli", cHeli);
+            flashNumber("statcard_sarte", cSarte);
+
+            function flashNumber(id, newValue) {
+                const element = document.getElementById(id);
+                const oldValue = parseInt(element.innerText) || 0;
+
+                if (newValue > oldValue) {
+                    element.classList.add("flash-up-green");
+                } else if (newValue < oldValue) {
+                    element.classList.add("flash-up-red");
+                }
+
+                element.innerText = newValue;
+
+                setTimeout(() => {
+                    element.classList.remove("flash-up-green", "flash-up-red");
+                }, 500);
+            }
 
         }
 
