@@ -58,6 +58,7 @@
                     --table-selection-background-color: #daebfe;
                     --table-alternate-background-color: var(--panel-color);
                     --range-color: orange;
+                    --range-short-color: rgba(255, 166, 0, 0.534);
                     --main-font-color: var(--tertiary-color);
                     --stat-label-color: var(--tertiary-color);
                     --stat-divider-color: var(--tertiary-color);
@@ -114,7 +115,8 @@
                     --table-background-color: rgb(18, 18, 18);
                     --table-selection-background-color: rgb(40, 40, 40);
                     --table-alternate-background-color: rgb(30, 30, 30);
-                    --range-color: rgb(15, 46, 77);
+                    --range-color: rgb(150,150,150);
+                    --range-short-color: rgb(150,150,150,0.534);
                     --main-font-color: white;
                     --stat-label-color: darkgrey;
                     --stat-divider-color: rgb(50, 50, 50);
@@ -2546,7 +2548,7 @@
         let updateInProgress = false;
         let activeTileLayer = null;
 
-        var marker_center = null, marker_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_tracks = {};
+        var marker_center = null, marker_range = null, marker_short_range = null, marker_station = null, marker_focus = null, marker_hover = null, marker_tracks = {};
         var marker_fireworks = [];
 
         var context_text = "";
@@ -3448,6 +3450,10 @@
                 map.removeLayer(marker_range);
                 marker_range = null;
             }
+            if (marker_short_range != null) {
+                map.removeLayer(marker_short_range);
+                marker_short_range = null;
+            }
         }
 
         async function toggleRange() {
@@ -3535,19 +3541,23 @@
 
             // calculate range
             const range_outline = [];
+            const range_short_outline = [];
 
             const N = h.day.stat[0].radar_a.length;
-            range = [];
+            range = []; range_short = [];
 
             for (let i = 0; i < N; i++) {
                 let m = 0;
-                for (j = 0; j < h.hour.stat.length; j++) {
-                    m = Math.max(m, h.hour.stat[j].radar_a[i]);
-                    m = Math.max(m, h.hour.stat[j].radar_b[i]);
-                }
                 for (j = 0; j < h.minute.stat.length; j++) {
                     m = Math.max(m, h.minute.stat[j].radar_a[i]);
                     m = Math.max(m, h.minute.stat[j].radar_b[i]);
+                }
+
+                range_short.push(m*2);
+
+                for (j = 0; j < h.hour.stat.length; j++) {
+                    m = Math.max(m, h.hour.stat[j].radar_a[i]);
+                    m = Math.max(m, h.hour.stat[j].radar_b[i]);
                 }
                 range.push(m);
             }
@@ -3566,12 +3576,29 @@
                     lon: station.lon + range[i] * deltaEast[1] * 1000 / 0.5399568 * Math.sin((i + 1) * 2 / N * Math.PI)
                 });
 
+                range_short_outline.push({
+                    lat: station.lat + range_short[i] * deltaNorth[0] * 1000 / 0.5399568 * Math.cos(i * 2 / N * Math.PI),
+                    lon: station.lon + range_short[i] * deltaEast[1] * 1000 / 0.5399568 * Math.sin(i * 2 / N * Math.PI)
+                });
+
+                range_short_outline.push({
+                    lat: station.lat + range_short[i] * deltaNorth[0] * 1000 / 0.5399568 * Math.cos((i + 1) * 2 / N * Math.PI),
+                    lon: station.lon + range_short[i] * deltaEast[1] * 1000 / 0.5399568 * Math.sin((i + 1) * 2 / N * Math.PI)
+                });
+
             }
 
             const markerColor = getComputedStyle(document.documentElement).getPropertyValue('--range-color').trim();
 
-            marker_range = L.polygon(range_outline, { fillOpacity: 0.025, color: markerColor, interactive: false });
+            marker_range = L.polygon(range_outline, { fillOpacity: 0, color: markerColor, interactive: false });
             marker_range.addTo(map);
+
+
+            const markerShortColor = getComputedStyle(document.documentElement).getPropertyValue('--range-short-color').trim();
+
+            marker_short_range = L.polygon(range_short_outline, { fillOpacity: 0, color: markerShortColor, interactive: false });
+            marker_short_range.addTo(map);
+
             updateRangeColor();
         }
 
@@ -3580,7 +3607,10 @@
             if (marker_range == null) return;
 
             const markerColor = getComputedStyle(document.documentElement).getPropertyValue('--range-color').trim();
+            const markerShortColor = getComputedStyle(document.documentElement).getPropertyValue('--range-short-color').trim();
+
             marker_range.setStyle({ color: markerColor });
+            marker_short_range.setStyle({ color: markerShortColor });
         }
 
         async function fetchShips(noDoubleFetch = true) {
