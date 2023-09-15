@@ -20,8 +20,10 @@
 #include <iostream>
 #include <string>
 
+#ifdef HASOPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#endif
 
 #include "ZIP.h"
 #include "TCP.h"
