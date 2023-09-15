@@ -44,8 +44,8 @@
 #include "Keys.h"
 #include "TCP.h"
 #include "Library/ZIP.h"
-#include "Network.h"
 #include "HTTPServer.h"
+#include "HTTPClient.h"
 
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
@@ -56,8 +56,9 @@ namespace IO {
 
 		int source = -1;
 		JSON::StringBuilder builder;
+		bool test = false;
+		HTTPClient http;
 
-#ifdef HASCURL
 		AIS::Filter filter;
 		std::string json;
 
@@ -104,7 +105,6 @@ namespace IO {
 
 	public:
 		~HTTP() { Stop(); }
-#endif
 	public:
 		HTTP(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
 

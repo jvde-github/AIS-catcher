@@ -116,6 +116,7 @@ namespace Util {
 		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF");
 		static bool AutoInteger(std::string arg, int min, int max, int& val);
 		static bool AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32& val);
+		static void URL(const std::string& url, std::string &protocol, std::string &host, std::string &port, std::string &path);
 	};
 
 	class Helper {

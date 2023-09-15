@@ -36,7 +36,10 @@ namespace IO {
 #endif
 
 	void HTTP::Start() {
-#ifdef HASCURL
+#ifndef HASCURL		
+		if(!test) throw std::runtime_error("HTTP: curl not installed");
+#endif
+
 		if (!running) {
 
 			running = true;
@@ -47,13 +50,9 @@ namespace IO {
 			if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed() << ".";
 			std::cerr << std::endl;
 		}
-#else
-		throw std::runtime_error("HTTP: not implemented, please recompile with libcurl support.");
-#endif
 	}
 
 	void HTTP::Stop() {
-#ifdef HASCURL
 		if (running) {
 
 			running = false;
@@ -62,10 +61,8 @@ namespace IO {
 
 			std::cerr << "HTTP: stop thread (" << url << ")." << std::endl;
 		}
-#endif
 	}
 
-#ifdef HASCURL
 
 	// curl callback
 	size_t HTTP::curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
@@ -77,6 +74,8 @@ namespace IO {
 	}
 
 	void HTTP::send(const std::string& msg, const std::string& copyname) {
+#ifdef HASCURL
+
 		CURL* ch;
 		CURLcode r;
 
@@ -146,6 +145,8 @@ namespace IO {
 			std::cerr << "HTTP: server " << url << " response - " << response << std::endl;
 
 		return;
+#endif
+
 	}
 
 	void HTTP::post() {
@@ -159,6 +160,8 @@ namespace IO {
 		}
 
 		msg.clear();
+		std::string reply;
+
 		std::time_t now = std::time(0);
 
 		if (protocol == PROTOCOL::AISCATCHER) {
@@ -190,7 +193,11 @@ namespace IO {
 
 			msg += "\n\t]\n}\n";
 
-			send(msg, "");
+			if(test) {
+				http.Post(msg, reply, gzip, false, "");
+			}
+			else
+				send(msg, "");
 		}
 		else if (PROTOCOL::AIRFRAMES == protocol) {
 			msg += "{\n\t\"app\": {\n\t\t\"name\": \"AIS-Catcher\",\n\t\t\"ver\": \"" VERSION "\"";
@@ -207,7 +214,11 @@ namespace IO {
 			}
 
 			msg += "\n\t]\n}\n";
-			send(msg, "");
+			if(test) {
+				http.Post(msg, reply, gzip, false, "");
+			}
+			else
+				send(msg, "");
 		}
 		else if (PROTOCOL::APRS == protocol) {
 			msg += "{\n\t\"protocol\": \"jsonais\",";
@@ -225,16 +236,24 @@ namespace IO {
 			}
 
 			msg += "\n\t\t]\n\t}]\n}";
-
-			send(msg, "jsonais");
+			if(test) {
+				http.Post(msg, reply, gzip, true, "jsonais");
+			}
+			else
+				send(msg, "jsonais");
 		}
 		else if (PROTOCOL::LIST == protocol) {
 
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
 				msg += std::string(*it) + "\n";
 			}
-			send(msg, "");
+			if(test) {
+				http.Post(msg, reply, gzip, false, "");
+			}
+			else
+				send(msg, "");		
 		}
+		if(test) std::cerr << reply << std::endl;
 	}
 
 	void HTTP::process() {
@@ -249,20 +268,23 @@ namespace IO {
 			if (!url.empty()) post();
 		}
 	}
-#endif
 
 	Setting& HTTP::Set(std::string option, std::string arg) {
-#ifdef HASCURL
 		Util::Convert::toUpper(option);
 
 		if (option == "URL") {
 			url = arg;
+			http.setURL(url);
 		}
 		else if (option == "USERPWD") {
+			http.setUserPwd(arg);
 			userpwd = arg;
 		}
 		else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN") {
 			stationid = arg;
+		}
+		else if (option == "TEST") {
+			test = Util::Parse::Switch(arg);
 		}
 		else if (option == "INTERVAL") {
 			INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24, option);
@@ -343,9 +365,7 @@ namespace IO {
 				throw std::runtime_error("HTTP output - unknown option: " + option);
 			}
 		}
-#else
-		throw std::runtime_error("HTTP: not implemented, please recompile with libcurl support.");
-#endif
+
 		return *this;
 	}
 

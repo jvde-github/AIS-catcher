@@ -1,5 +1,5 @@
-SRC = Application/Main.cpp DBMS/PostgreSQL.cpp Ships/DB.cpp Application/Config.cpp Application/Receiver.cpp IO/IO.cpp IO/HTTPServer.cpp DSP/DSP.cpp Library/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp Library/Keys.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/NMEA.cpp Library/Utilities.cpp DSP/Demod.cpp Library/Message.cpp Device/UDP.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Device/Serial.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp
-OBJ = Main.o Receiver.o Config.o PostgreSQL.o DB.o IO.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o Serial.o RTLSDR.o HTTPServer.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o UDP.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o
+SRC = Application/Main.cpp IO/HTTPClient.cpp DBMS/PostgreSQL.cpp Ships/DB.cpp Application/Config.cpp Application/Receiver.cpp IO/IO.cpp IO/HTTPServer.cpp DSP/DSP.cpp Library/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp Library/Keys.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/NMEA.cpp Library/Utilities.cpp DSP/Demod.cpp Library/Message.cpp Device/UDP.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Device/Serial.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp
+OBJ = Main.o Receiver.o Config.o HTTPClient.o PostgreSQL.o DB.o IO.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o Serial.o RTLSDR.o HTTPServer.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o UDP.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o
 INCLUDE = -I. -IDBMS/ -IShips/ -ILibrary/ -IDSP/ -IApplication/ -IIO/
 CC = gcc
 
@@ -15,6 +15,7 @@ CFLAGS_ZMQ = -DHASZMQ $(shell pkg-config --cflags libzmq)
 CFLAGS_SOXR = -DHASSOXR $(shell pkg-config --cflags soxr)
 CFLAGS_SAMPLERATE = -DHASSAMPLERATE $(shell pkg-config --cflags samplerate)
 CFLAGS_CURL = -DHASCURL $(shell pkg-config --cflags libcurl)
+CFLAGS_SSL = -DHASOPENSSL $(shell pkg-config --cflags openssl)
 CFLAGS_SOAPYSDR = -DHASSOAPYSDR
 CFLAGS_ZLIB = -DHASZLIB ${shell pkg-config --cflags zlib}
 CFLAGS_PSQL  = -DHASPSQL ${shell pkg-config --cflags libpq}
@@ -29,6 +30,7 @@ LFLAGS_SOXR = $(shell pkg-config --libs soxr)
 LFLAGS_SAMPLERATE = $(shell pkg-config --libs samplerate)
 LFLAGS_SOAPYSDR = -lSoapySDR
 LFLAGS_CURL =$(shell pkg-config --libs libcurl)
+LFLAGS_SSL =$(shell pkg-config --libs openssl)
 LFLAGS_ZLIB =$(shell pkg-config --libs zlib)
 LFLAGS_PSQL =$(shell pkg-config --libs libpq)
 
@@ -84,6 +86,11 @@ endif
 ifneq ($(shell pkg-config --exists libpq && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_PSQL)
     LFLAGS_ALL += $(LFLAGS_PSQL)
+endif
+
+ifneq ($(shell pkg-config --exists openssl && echo 'T'),)
+    CFLAGS_ALL += $(CFLAGS_SSL)
+    LFLAGS_ALL += $(LFLAGS_SSL)
 endif
 
 # Building AIS-Catcher
