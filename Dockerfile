@@ -7,7 +7,7 @@ RUN apt-get update
 RUN apt-get upgrade -y
 
 RUN apt-get install git make gcc g++ cmake pkg-config -y
-RUN apt-get install librtlsdr-dev libairspy-dev libhackrf-dev libairspyhf-dev libzmq3-dev libsoxr-dev libcurl4-openssl-dev zlib1g-dev libpq-dev -y
+RUN apt-get install librtlsdr-dev libairspy-dev libhackrf-dev libairspyhf-dev libzmq3-dev libsoxr-dev libcurl4-openssl-dev zlib1g-dev libpq-dev libssl-dev -y
 
 COPY . /root/AIS-catcher
 

@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <vector>
+
 #ifdef HASZLIB
 #include <zlib.h>
 

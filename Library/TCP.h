@@ -155,6 +155,8 @@ namespace TCP {
 		void setResetTime(int t) { reset_time = t; }
 		int read(void* data, int length, int t, bool wait = false);
 		int send(const void* data, int length);
+
+		SOCKET getSocket() { return sock; }
 	private:
 		enum State { DISCONNECTED, CONNECTING, READY };
 

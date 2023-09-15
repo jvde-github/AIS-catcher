@@ -89,6 +89,40 @@ namespace Util {
 		return number;
 	}
 
+	void Parse::URL(const std::string& url, std::string &protocol, std::string &host, std::string &port, std::string &path) {
+			
+		int idx = url.find("://");
+		if (idx != std::string::npos) {
+
+			protocol = url.substr(0, idx);
+			path = "/";
+
+			idx += 3;
+			int hostEnd = url.find(':', idx);
+			if (hostEnd == std::string::npos) {
+				hostEnd = url.find('/', idx);
+			}
+			
+			if(hostEnd == std::string::npos) {
+				host = url.substr(idx, url.length() - idx);
+			}
+			else {
+				host = url.substr(idx, hostEnd - idx);
+
+				int portStart = url.find(':', hostEnd);
+				if (portStart != std::string::npos) {
+					int portEnd = url.find('/', portStart);
+						port = url.substr(portStart + 1, (portEnd != std::string::npos?portEnd:url.length()) - portStart - 1);
+				}
+
+				int pathStart = url.find('/', hostEnd);
+				if (pathStart != std::string::npos) {
+					path = url.substr(pathStart);
+				}
+			}
+		}
+	}	
+
 	bool Parse::StreamFormat(std::string str, Format& format) {
 		Convert::toUpper(str);
 		if (str == "CU8")

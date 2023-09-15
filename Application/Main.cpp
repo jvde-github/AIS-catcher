@@ -161,6 +161,9 @@ void printSupportedDevices() {
 #ifdef HASCURL
 	std::cerr << "CURL ";
 #endif
+#ifdef HASOPENSSL
+	std::cerr << "SSL ";
+#endif
 #ifdef HASPSQL
 	std::cerr << "PostgreSQL ";
 #endif
