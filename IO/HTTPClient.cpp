@@ -134,6 +134,8 @@ namespace IO {
 
 		if(secure) {
 #ifdef HASOPENSSL
+			SSL* ssl = nullptr;
+
 			std::cerr << " HTTP Client [" << host << "]: SSL enabled." << std::endl;
 			if(!Handshake()) return false;
 
@@ -160,7 +162,7 @@ namespace IO {
 				std::cerr << "HTTP Client [" << host << "]: SSL shutdown failed - error code : " << ERR_get_error() << std::endl;
 			}
 
-	        SSL_free(ssl);
+			SSL_free(ssl);
 			ssl = nullptr;
 #else
 			std::cerr << "HTTP Client [" << host << "]: SSL not supported." << std::endl;

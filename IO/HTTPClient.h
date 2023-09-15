@@ -46,7 +46,6 @@ namespace IO {
 		int msg_length = 0;
 
 		bool secure = false;
-		SSL* ssl = nullptr;
 
 		void validateLibs() {
 #ifndef HASOPENSSL
