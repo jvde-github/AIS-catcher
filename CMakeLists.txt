@@ -77,11 +77,11 @@ if(OPENSSL)
 
 		find_path(OPENSSL_INCLUDE_DIR openssl/ssl.h HINTS ${POTHOSSDR_INCLUDE_DIR})
 		find_library(OPENSSL_LIBRARY libssl.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+  		find_file(OPENSSL_DLL libssl-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
 		find_file(OPENSSL_DLL libssl-3.dll HINTS ${POTHOSSDR_BINARY_DIR})
-		find_file(OPENSSL_DLL libssl-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
+  		find_file(CRYPTO_DLL libcrypto-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
 		find_file(CRYPTO_DLL libcrypto-3.dll HINTS ${POTHOSSDR_BINARY_DIR})
-		find_file(CRYPTO_DLL libcrypto-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
-
+		
 		if(OPENSSL_INCLUDE_DIR AND OPENSSL_LIBRARY AND OPENSSL_DLL AND CRYPTO_DLL)
 			Message(STATUS "OPENSSL: found (PothosSDR) - " ${OPENSSL_INCLUDE_DIR}, ${OPENSSL_LIBRARY}, ${OPENSSL_DLL}, ${CRYPTO_DLL})
 			set(COPY_OPENSSL_DLL TRUE)
@@ -186,10 +186,10 @@ if(PSQL)
 		find_path(PQ_INCLUDE_DIR libpq-fe.h HINTS ${POTHOSSDR_INCLUDE_DIR})
 		find_library(PQ_LIBRARY libpq.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
 		find_file(PQ_DLL libpq.dll HINTS ${POTHOSSDR_BINARY_DIR})
+  		find_file(PQDIR_DLL libssl-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
 		find_file(PQDIR_DLL libssl-3.dll HINTS ${POTHOSSDR_BINARY_DIR})
-		find_file(PQDIR_DLL libssl-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
+  		find_file(PQDIR2_DLL libcrypto-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
 		find_file(PQDIR2_DLL libcrypto-3.dll HINTS ${POTHOSSDR_BINARY_DIR})
-		find_file(PQDIR2_DLL libcrypto-3-x64.dll HINTS ${POTHOSSDR_BINARY_DIR})
 		
 
 		if(PQ_INCLUDE_DIR AND PQ_LIBRARY AND PQ_DLL)
