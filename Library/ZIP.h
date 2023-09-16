@@ -37,7 +37,7 @@ class ZIP {
 	std::vector<unsigned char> output;
 
 public:
-	bool installed() {
+	static bool installed() {
 #ifdef HASZLIB
 		return true;
 #else

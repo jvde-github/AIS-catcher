@@ -46,6 +46,54 @@ static class SSLContext {
 #endif
 
 namespace IO {
+
+	void HTTPClient::parseResponse(HTTPResponse &result, const std::string &response) {
+
+		try {
+			std::istringstream iss(response);
+
+			std::string httpVersion, statusMessage;
+			int contentlength = 0;
+
+			iss >> httpVersion >> result.status;
+
+			std::getline(iss, statusMessage); 
+
+			std::string line;
+			bool isChunked = false;
+
+			// Parse headers
+			while (std::getline(iss, line) && line != "\r" && !line.empty()) {
+				if (line.find("Content-Length:") != std::string::npos) {
+					contentlength = std::stoi(line.substr(16));
+				} else if (line.find("Transfer-Encoding: chunked") != std::string::npos || line.find("Transfer-Encoding:chunked") != std::string::npos) {
+					isChunked = true;
+				} else if  (line.find("Transfer-Encoding:") != std::string::npos) {
+					std::cerr << "HTTP Client [" << host << "]: Transfer-Encoding not supported." << std::endl;
+					result.status = -2;
+					return;
+				}
+			}
+
+			if (isChunked) {
+				std::getline(iss, line);
+				int chunkSize = std::stoi(line, nullptr, 16);
+				if(chunkSize > 0) {
+					result.message.resize(chunkSize);
+					iss.read(&result.message[0], chunkSize);
+				}
+			}
+			else {
+				result.message.resize(contentlength);
+				iss.read(&result.message[0], contentlength);
+			}
+			
+		} catch (const std::exception&) {
+			result.status = -3;
+			return;
+		} 
+	}
+
 	void HTTPClient::createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname) {
 
 		// multipart
@@ -119,41 +167,42 @@ namespace IO {
 #endif
 	}
 
-	bool HTTPClient::Post(const std::string &msg, std::string &reply, bool gzip, bool multipart, const std::string &copyname) {
+	HTTPResponse HTTPClient::Post(const std::string &msg, bool gzip, bool multipart, const std::string &copyname) {
 		int r;
+
+		HTTPResponse repsonse;
 
 		createMessageBody(msg, gzip, multipart, copyname);
 		createHeader(gzip, multipart);
 
 		if (!client.connect(host, port, false, 1)) {
 			std::cerr << "HTTP Client [" << host << "]: error connecting to server." << std::endl;
-			return false;
+			return HTTPResponse();
 		}
 
-		std::memset(response, 0, sizeof(response));
+		std::memset(buffer, 0, sizeof(buffer));
 
 		if(secure) {
 #ifdef HASOPENSSL
 
-			std::cerr << " HTTP Client [" << host << "]: SSL enabled." << std::endl;
-			if(!Handshake()) return false;
+			if(!Handshake()) return repsonse;
 
 			r = SSL_write(ssl, header.c_str(), header.length());
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
-				return false;
+				return repsonse;
 			}
 			
 			r = SSL_write(ssl, msg_ptr, msg_length);
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
-				return false;
+				return repsonse;
 			}
 
-			r = SSL_read(ssl, response, sizeof(response));
+			r = SSL_read(ssl, buffer, sizeof(buffer));
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL read failed - error code : " << ERR_get_error() << std::endl;
-				return false;
+				return repsonse;
 			}
 
 			r = SSL_shutdown(ssl);
@@ -165,26 +214,27 @@ namespace IO {
 			ssl = nullptr;
 #else
 			std::cerr << "HTTP Client [" << host << "]: SSL not supported." << std::endl;
-			return false;
+			return repsonse;
 #endif
 		}
 		else {
 
 			if(client.send(header.c_str(), header.length()) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
-				return false;
+				return repsonse;
 			}
 			if(client.send(msg_ptr, msg_length) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
-				return false;
+				return repsonse;
 			}
 
-			client.read(response, sizeof(response), 1, false);
+			client.read(buffer, sizeof(buffer), 1, false);
 		}
-		reply = std::string(response);
-		client.disconnect();
 
-		return true;
+		client.disconnect();
+		parseResponse(repsonse, std::string(buffer));
+
+		return repsonse;
 	}
 
 	std::string HTTPClient::base64_encode(const std::string &in) {

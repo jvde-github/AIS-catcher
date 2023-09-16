@@ -160,7 +160,6 @@ namespace IO {
 		}
 
 		msg.clear();
-		std::string reply;
 
 		std::time_t now = std::time(0);
 
@@ -194,7 +193,9 @@ namespace IO {
 			msg += "\n\t]\n}\n";
 
 			if(test) {
-				http.Post(msg, reply, gzip, false, "");
+				HTTPResponse r = http.Post(msg, gzip, false, "");
+				if(r.status != 200 || show_response)
+					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;
 			}
 			else
 				send(msg, "");
@@ -215,7 +216,9 @@ namespace IO {
 
 			msg += "\n\t]\n}\n";
 			if(test) {
-				http.Post(msg, reply, gzip, false, "");
+				HTTPResponse r = http.Post(msg, gzip, false, "");
+				if(r.status != 200 || show_response)
+					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;			
 			}
 			else
 				send(msg, "");
@@ -237,7 +240,9 @@ namespace IO {
 
 			msg += "\n\t\t]\n\t}]\n}";
 			if(test) {
-				http.Post(msg, reply, gzip, true, "jsonais");
+				HTTPResponse r = http.Post(msg, gzip, true, "jsonais");
+				if(r.status != 200 || show_response)
+					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;
 			}
 			else
 				send(msg, "jsonais");
@@ -248,12 +253,13 @@ namespace IO {
 				msg += std::string(*it) + "\n";
 			}
 			if(test) {
-				http.Post(msg, reply, gzip, false, "");
+				HTTPResponse r = http.Post(msg, gzip, false, "");
+				if(r.status != 200 || show_response)
+					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;		
 			}
 			else
 				send(msg, "");		
 		}
-		if(test) std::cerr << reply << std::endl;
 	}
 
 	void HTTP::process() {
