@@ -27,16 +27,18 @@ namespace IO {
 			if (c.isConnected()) {
 
 				std::size_t pos = c.msg.find("\r\n\r\n");
-				if (pos != std::string::npos) {
+				while (pos != std::string::npos) {
 					std::string request;
 					bool gzip;
-					Parse(c.msg, request, gzip);
+					Parse(c.msg.substr(0, pos + 4), request, gzip);
 					if (!request.empty())
 						Request(c, request, gzip);
 
 					c.msg.erase(0, pos + 4);
+					pos = c.msg.find("\r\n\r\n");
 				}
-				else if (c.msg.size() > 8192) {
+
+				if (c.msg.size() > 8192) {
 					std::cerr << "Server: closing connection, client flooding server: " << c.sock << std::endl;
 					std::cerr << "Server: " << c.msg << std::endl;
 					c.Close();
