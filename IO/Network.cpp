@@ -35,7 +35,7 @@ namespace IO {
 	} _wsa;
 #endif
 
-	void HTTP::Start() {
+	void HTTPStreamer::Start() {
 #ifndef HASCURL		
 		if(!test) throw std::runtime_error("HTTP: curl not installed");
 #endif
@@ -45,14 +45,14 @@ namespace IO {
 			running = true;
 			terminate = false;
 
-			run_thread = std::thread(&HTTP::process, this);
+			run_thread = std::thread(&HTTPStreamer::process, this);
 			std::cerr << "HTTP: start thread (" << url << "), filter: " << Util::Convert::toString(filter.isOn());
 			if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed() << ".";
 			std::cerr << std::endl;
 		}
 	}
 
-	void HTTP::Stop() {
+	void HTTPStreamer::Stop() {
 		if (running) {
 
 			running = false;
@@ -65,7 +65,7 @@ namespace IO {
 
 
 	// curl callback
-	size_t HTTP::curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
+	size_t HTTPStreamer::curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
 		int len = MIN(size * nmemb, 1023);
 
 		std::memcpy(s, contents, len);
@@ -73,7 +73,7 @@ namespace IO {
 		return len;
 	}
 
-	void HTTP::send(const std::string& msg, const std::string& copyname) {
+	void HTTPStreamer::send(const std::string& msg, const std::string& copyname) {
 #ifdef HASCURL
 
 		CURL* ch;
@@ -149,7 +149,7 @@ namespace IO {
 
 	}
 
-	void HTTP::post() {
+	void HTTPStreamer::post() {
 		if (!queue.size()) return;
 
 		std::list<std::string> send_list;
@@ -262,7 +262,7 @@ namespace IO {
 		}
 	}
 
-	void HTTP::process() {
+	void HTTPStreamer::process() {
 		int i = 0;
 
 		while (!terminate) {
@@ -275,7 +275,7 @@ namespace IO {
 		}
 	}
 
-	Setting& HTTP::Set(std::string option, std::string arg) {
+	Setting& HTTPStreamer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "URL") {

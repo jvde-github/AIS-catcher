@@ -163,10 +163,10 @@ public:
 
 //--------------------------------------------
 class OutputHTTP {
-	std::vector<std::unique_ptr<IO::HTTP>> _http;
+	std::vector<std::unique_ptr<IO::HTTPStreamer>> _http;
 
 public:
-	std::unique_ptr<IO::HTTP>& add(const std::vector<std::vector<std::string>>& km, int dict);
+	std::unique_ptr<IO::HTTPStreamer>& add(const std::vector<std::vector<std::string>>& km, int dict);
 	void connect(Receiver& r);
 	void start();
 };
