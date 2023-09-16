@@ -23,10 +23,12 @@ namespace IO {
 
 	// HTTP Server
 	void HTTPServer::processClients() {
+		static const std::string EOF_MSG = "\r\n\r\n";
+
 		for (auto& c : client) {
 			if (c.isConnected()) {
 
-				std::size_t pos = c.msg.find("\r\n\r\n");
+				std::size_t pos = c.msg.find(EOF_MSG);
 				while (pos != std::string::npos) {
 					std::string request;
 					bool gzip;
@@ -35,7 +37,7 @@ namespace IO {
 						Request(c, request, gzip);
 
 					c.msg.erase(0, pos + 4);
-					pos = c.msg.find("\r\n\r\n");
+					pos = c.msg.find(EOF_MSG);
 				}
 
 				if (c.msg.size() > 8192) {
