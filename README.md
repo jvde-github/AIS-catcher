@@ -23,6 +23,12 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
+Edge version:
+- retiring Curl for HTTP message sending and directly using a simple TCP client with openssl where needed. This means that if you want to send data to a secure server, build with the ssl development libraries:
+```console
+sudo apt install libssl-dev
+```
+
 Latest version is **v0.53** introduced Fireworks Mode, a shiptype icon in the ship overview table, realtime NMEA streaming in the webclient and GPS input being forwarded to screen or the output channels.
 
 Version **v0.52** included support for the RTL-SDR V4 for the Windows and Android builds.
@@ -306,7 +312,7 @@ Notice that this server requires authentication with a station name and password
 
 **Important**" to use and build AIS-catcher with HTTP support, please install the following libraries before running cmake:
 ```console
-sudo apt install libcurl4-openssl-dev zlib1g-dev
+sudo apt install libssl-dev zlib1g-dev
 ```
 
 ### Input/output of AIS messages over UDP and TCP
