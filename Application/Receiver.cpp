@@ -453,8 +453,8 @@ IO::PostgreSQL& OutputDBMS::add() {
 }
 
 
-std::unique_ptr<IO::HTTP>& OutputHTTP::add(const std::vector<std::vector<std::string>>& km, int dict) {
-	_http.push_back(std::unique_ptr<IO::HTTP>(new IO::HTTP(&km, dict)));
+std::unique_ptr<IO::HTTPStreamer>& OutputHTTP::add(const std::vector<std::vector<std::string>>& km, int dict) {
+	_http.push_back(std::unique_ptr<IO::HTTPStreamer>(new IO::HTTPStreamer(&km, dict)));
 	return _http.back();
 }
 

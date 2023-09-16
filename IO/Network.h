@@ -52,11 +52,11 @@
 
 namespace IO {
 
-	class HTTP : public StreamIn<JSON::JSON>, public Setting {
+	class HTTPStreamer : public StreamIn<JSON::JSON>, public Setting {
 
 		int source = -1;
 		JSON::StringBuilder builder;
-		bool test = false;
+		bool test = true;
 		HTTPClient http;
 
 		AIS::Filter filter;
@@ -104,9 +104,9 @@ namespace IO {
 		std::list<std::string> queue;
 
 	public:
-		~HTTP() { Stop(); }
+		~HTTPStreamer() { Stop(); }
 	public:
-		HTTP(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
+		HTTPStreamer(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
 
 		virtual Setting& Set(std::string option, std::string arg);
 
