@@ -70,6 +70,7 @@ else()
 	set(LIBUSB_INCLUDE_DIR "")
 	set(LIBUSB_LIBRARY "")
 endif()
+
 if(MSVC AND NOT MSVC_VCPKG)
 	if (EXISTS "${POTHOSSDR_BINARY_DIR}/libssl-3-x64.dll")
 		set(OPENSSL_DLL "${POTHOSSDR_BINARY_DIR}/libssl-3-x64.dll")
@@ -161,10 +162,24 @@ if(CURL)
 	endif()
 endif()
 
-# Find zibl
+# Find zlib
 if(ZLIB)
 	if(MSVC AND CURL_INCLUDE_DIR AND CURL_LIBRARY)
+		find_path(ZLIB_INCLUDE_DIR zlib.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+		find_library(ZLIB_LIBRARY zlib.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+		find_file(ZLIB_DLL zlib1.dll HINTS ${POTHOSSDR_BINARY_DIR})
 
+		if(ZLIB_INCLUDE_DIR AND ZLIB_LIBRARY AND ZLIB_DLL)
+			Message(STATUS "ZLIB: found (PothosSDR) - " ${ZLIB_INCLUDE_DIR}, ${ZLIB_LIBRARY}, ${ZLIB_DLL})
+			set(COPY_ZLIB_DLL TRUE)
+			add_definitions(-DHASZLIB)
+
+			set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
+			set(ZLIB_LIBRARIES ${ZLIB_LIBRARY} )
+		else()
+		Message(STATUS "ZLIB: not found (PothosSDR) - " ${ZLIB_INCLUDE_DIR}, ${ZLIB_LIBRARY}, ${ZLIB_DLL})
+		endif()	
+		
 		add_definitions(-DHASZLIB)
 
 	else()
@@ -703,6 +718,10 @@ if(COPY_CURL_DLL)
 endif()
 
 if(COPY_ZLIB1_DLL)
+	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ZLIB1_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_ZLIB_DLL)
 	add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ZLIB1_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
