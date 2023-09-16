@@ -960,7 +960,7 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 ***SDRplay 1A***         | [API 3.x](https://www.sdrplay.com/downloads/) | - | [API 3.x](https://www.sdrplay.com/downloads/)     | [API 3.x](https://www.sdrplay.com/downloads/)  |
 ***SoapySDR***             | libsoapysdr-dev     |       |                  | X |
 ***ZeroMQ***             | libzmq3-dev     | zeromq      | ZeroMQ ZeroMQ:x64-windows                  | included |
-***HTTP post***             | libcurl4-openssl-dev zlib1g-dev | | curl curl:x64-windows | X |
+***HTTP post***             | libssl-dev zlib1g-dev | | openssl openssl:x64-windows | X |
 
 Once the dependencies are in place, the process to install AIS-catcher then on Linux based systems becomes:
 ```console
