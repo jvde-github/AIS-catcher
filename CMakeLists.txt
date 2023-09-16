@@ -42,7 +42,7 @@ find_package(Threads)
 
 # for MSVC we link to the PothosSDR install
 if(MSVC AND NOT MSVC_VCPKG)
-	if(NOT POTHOSSDR_BINARY_DIR) 
+	if(NOT POTHOSSDR_BINARY_DIR)
 		SET(POTHOSSDR_BINARY_DIR $ENV{PROGRAMFILES}\\PothosSDR\\bin )
 	endif()
 	if(NOT POTHOSSDR_LIBRARY_DIR)
@@ -83,7 +83,7 @@ if(MSVC AND NOT MSVC_VCPKG)
 		set(CRYPTO_DLL "${POTHOSSDR_BINARY_DIR}/libcrypto-3-x64.dll")
 	elseif (EXISTS "${POTHOSSDR_BINARY_DIR}/libcrypto-3.dll")
 		set(CRYPTO_DLL "${POTHOSSDR_BINARY_DIR}/libcrypto-3.dll")
-	endif ()		
+	endif ()
 	message(STATUS "Crypto DLL: ${CRYPTO_DLL}")
 endif()
 
@@ -103,21 +103,23 @@ if(OPENSSL)
 			set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARY} )
 		else()
 			Message(STATUS "OPENSSL: NOT found (PothosSDR) - " ${OPENSSL_INCLUDE_DIR}, ${OPENSSL_LIBRARY}, ${OPENSSL_DLL}, ${CRYPTO_DLL})
-		endif()	
-
-	else()
-		find_package(OpenSSL)
-
-		if(OPENSSL_INCLUDE_DIR AND OPENSSL_LIBRARIES)
-
-			message(STATUS "OPENSSL: found - ${OPENSSL_INCLUDE_DIR}, ${OPENSSL_LIBRARIES}")
-			add_definitions(-DHASOPENSSL)
-
-			set(OPENSSL_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
-
-		else()
-			message(STATUS "OPENSSL: not found - ${OPENSSL_INCLUDE_DIR}, ${OPENSSL_LIBRARY}")
 		endif()
+	else()
+
+		pkg_check_modules(PKG_SSL libssl)
+		find_path(SSL_INCLUDE_DIR openssl/ssl.h HINTS ${PKG_SSL_INCLUDE_DIRS})
+		find_library(SSL_LIBRARY NAMES libssl.so libssl.dylib HINTS ${PKG_SSL_LIBRARY_DIRS})
+		find_library(CRYPTO_LIBRARY NAMES libcrypto.so libcrypto.dylib HINTS ${PKG_SSL_LIBRARY_DIRS})
+
+		if(SSL_INCLUDE_DIR AND SSL_LIBRARY AND CRYPTO_LIBRARY)
+			message(STATUS "OPENSSL: found - ${SSL_INCLUDE_DIR}, ${SSL_LIBRARY}, ${CRYPTO_LIBRARY}")
+			add_definitions(-DHASOPENSSL)
+			set(OPENSSL_INCLUDE_DIRS ${SSL_INCLUDE_DIR})
+			set(OPENSSL_LIBRARIES ${SSL_LIBRARY} ${CRYPTO_LIBRARY})
+		else()
+			message(STATUS "OPENSSL: not found - ${SSL_INCLUDE_DIR}, ${SSL_LIBRARY}, ${CRYPTO_LIBRARY}")
+		endif()
+
 	endif()
 endif()
 
@@ -177,9 +179,9 @@ if(ZLIB)
 			set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
 			set(ZLIB_LIBRARIES ${ZLIB_LIBRARY} )
 		else()
-		Message(STATUS "ZLIB: not found (PothosSDR) - " ${ZLIB_INCLUDE_DIR}, ${ZLIB_LIBRARY}, ${ZLIB_DLL})
-		endif()	
-		
+			Message(STATUS "ZLIB: not found (PothosSDR) - " ${ZLIB_INCLUDE_DIR}, ${ZLIB_LIBRARY}, ${ZLIB_DLL})
+		endif()
+
 		add_definitions(-DHASZLIB)
 
 	else()
@@ -627,7 +629,7 @@ if(ZMQ)
 		if(ZMQ_LIBRARY_CANDIDATES)
 		    list(GET ZMQ_LIBRARY_CANDIDATES 0 ZMQ_LIBRARY)
 		endif()
-		
+
 		file(GLOB ZMQ_DLL_CANDIDATES "${POTHOSSDR_BINARY_DIR}/libzmq*.dll")
 		if(ZMQ_DLL_CANDIDATES)
 		    list(GET ZMQ_DLL_CANDIDATES 0 ZMQ_DLL)
