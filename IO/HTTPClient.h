@@ -31,15 +31,25 @@
 
 namespace IO {
 
+	struct HTTPResponse {
+		std::string message;
+		int status = -1;
+	};
+
 	class HTTPClient {
 		ZIP zip;
 		std::string boundary = "------------------------2e45e7d128457b6d";
 		std::string message, header;
 
-		char response[1024];
+		char buffer[1024];
 
 		std::string base64_encode(const std::string &in);
 
+		void createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname);
+		void createHeader(bool gzip, bool multipart);
+		bool Handshake();
+		void parseResponse(HTTPResponse &response, const std::string &msg);
+		
 	public:
 		TCP::Client client;
 		std::string protocol, host, port, path, userpwd;
@@ -74,10 +84,7 @@ namespace IO {
 			validateLibs();
 		}	
 
-		void createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname);
-		void createHeader(bool gzip, bool multipart);
-		bool Handshake();
-		bool Post(const std::string &msg, std::string &reply, bool gzip = false, bool multipart = false, const std::string &copyname = "");
+		HTTPResponse Post(const std::string &msg, bool gzip = false, bool multipart = false, const std::string &copyname = "");
 
 	};
 }
