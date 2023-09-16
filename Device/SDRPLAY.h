@@ -42,8 +42,8 @@ namespace Device {
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;
 
-		int LNAstate = 3;
-		int gRdB = 45;
+		int LNAstate = 0;
+		int gRdB = 32;
 		bool AGC = false;
 
 		static void callback_static(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int numSamples, unsigned int reset, void* cbContext);
