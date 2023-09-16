@@ -36,7 +36,7 @@ namespace IO {
 
 					c.msg.erase(0, pos + 4);
 				}
-				else if (c.msg.size() > 4096) {
+				else if (c.msg.size() > 8192) {
 					std::cerr << "Server: closing connection, client flooding server: " << c.sock << std::endl;
 					c.Close();
 				}
