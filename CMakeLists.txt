@@ -216,7 +216,7 @@ if(PSQL)
 		endif ()		
 		
 
-		if(PQ_INCLUDE_DIR AND PQ_LIBRARY AND PQ_DLL AND PQ_DIR and PQ_DIR2)
+		if(PQ_INCLUDE_DIR AND PQ_LIBRARY AND PQ_DLL AND PQ_DIR AND PQ_DIR2)
 			Message(STATUS "LIBPQ: found (PothosSDR) - " ${PQ_INCLUDE_DIR}, ${PQ_LIBRARY}, ${PQ_DLL}, ${PQDIR_DLL})
 			set(COPY_PQ_DLL TRUE)
 			add_definitions(-DHASPSQL)
