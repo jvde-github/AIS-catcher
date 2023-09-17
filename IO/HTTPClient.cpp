@@ -210,11 +210,6 @@ namespace IO {
 				return response;
 			}
 
-			r = SSL_shutdown(ssl);
-			if (r < 0) {
-				std::cerr << "HTTP Client [" << host << "]: SSL shutdown failed - error code : " << ERR_get_error() << std::endl;
-			}
-
 			freeSSL();
 #else
 			response.status = -1;
