@@ -3182,7 +3182,9 @@
                 showNotification("Switched to default metrics");
             }
             saveSettings();
+
             refresh_data();
+            if(table != null) table = null;
         }
 
         function addMarker(lat, lon, ch) {
