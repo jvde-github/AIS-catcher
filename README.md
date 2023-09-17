@@ -28,7 +28,8 @@ Edge version:
 ```console
 sudo apt install libssl-dev
 ```
-
+- Change the metric system used in the context menus
+  
 Latest version is **v0.53** introduced Fireworks Mode, a shiptype icon in the ship overview table, realtime NMEA streaming in the webclient and GPS input being forwarded to screen or the output channels.
 
 Version **v0.52** included support for the RTL-SDR V4 for the Windows and Android builds.
