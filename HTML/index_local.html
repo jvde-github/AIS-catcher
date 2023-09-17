@@ -1986,6 +1986,7 @@
                 <li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
                 <li class="divider mmsi noandroid"></li>
                 <li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
+                <li class="settings" onclick="toggleMetrics()"><i class="build_icon"></i><span id="ctx_toggle_metrics"></span></li>
                 <li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
             </ul>
 
@@ -2736,6 +2737,7 @@
 
             document.getElementById("ctx_menu_unpin").style.display = (settings.fix_center && context.includes("ctx-map")) ? "flex" : "none";
             document.getElementById("ctx_track").innerText = (context_mmsi in marker_tracks && context.includes("mmsi-map")) ? "Hide Track" : "Show Track";
+            document.getElementById("ctx_toggle_metrics").innerText = (settings.metric === "DEFAULT") ? "Switch to SI metrics" : "Switch to default metrics";
 
             contextMenu.style.display = 'block';
 
@@ -3169,6 +3171,18 @@
             }
             else
                 updateTooltips();
+        }
+
+        function toggleMetrics() {
+            if(settings.metric == "DEFAULT") {
+                settings.metric = "SI";
+                showNotification("Switched to SI metrics");
+            } else {
+                settings.metric = "DEFAULT";
+                showNotification("Switched to default metrics");
+            }
+            saveSettings();
+            refresh_data();
         }
 
         function addMarker(lat, lon, ch) {
