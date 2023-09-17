@@ -77,13 +77,11 @@ namespace IO {
 
 			if (isChunked) {
 				std::getline(iss, line);
-				int chunkSize = std::stoi(line, nullptr, 16);
-				if(chunkSize > 0) {
-					result.message.resize(chunkSize);
-					iss.read(&result.message[0], chunkSize);
-				}
+				contentlength = std::stoi(line, nullptr, 16);
+
 			}
-			else {
+
+			if(contentlength > 0) {
 				result.message.resize(contentlength);
 				iss.read(&result.message[0], contentlength);
 			}
@@ -91,7 +89,7 @@ namespace IO {
 		} catch (const std::exception&) {
 			result.status = -3;
 			return;
-		} 
+		}
 	}
 
 	void HTTPClient::createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname) {
@@ -125,23 +123,21 @@ namespace IO {
 	}
 
 	void HTTPClient::createHeader(bool gzip, bool multipart) {
-		if(!multipart) {
-			header = "POST " + path + " HTTP/1.1\r\nHost: " + host + "\r\n";
-			if (!userpwd.empty()) {
-				header += "Authorization: Basic " + base64_encode(userpwd) + "\r\n";
-			}
-			header += "Accept: */*\r\nContent-Type: application/json\r\n";
-			if (gzip) header += "Content-Encoding: gzip\r\n";
-			header += "Content-Length: " + std::to_string(msg_length) + "\r\n\r\n";
 
-			return;
+		header = "POST " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\n";
+		if (!userpwd.empty()) {
+			header += "Authorization: Basic " + base64_encode(userpwd) + "\r\n";
 		}
 
-		header = "POST " + path + " HTTP/1.1\r\n";
-		header += "Host: " + host + "\r\n";
-		header += "Accept: */*\r\n";
-		header += "Content-Length: " + std::to_string(msg_length) + "\r\n";
-		header += "Content-Type: multipart/form-data; boundary="+boundary+"\r\n\r\n";
+		if(!multipart) {
+			header += "Content-Type: application/json\r\n";
+			if (gzip) header += "Content-Encoding: gzip\r\n";
+		}
+		else {
+			header += "Content-Type: multipart/form-data; boundary="+boundary+"\r\n";
+		}
+
+		header += "Content-Length: " + std::to_string(msg_length) + "\r\n\r\n";
 	} 
 
 	bool HTTPClient::Handshake() {
