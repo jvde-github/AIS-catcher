@@ -183,7 +183,6 @@ namespace IO {
 
 			if(!Handshake()) {
 				freeSSL();
-				response.status = -1;
 				return response;
 			}
 
@@ -191,7 +190,6 @@ namespace IO {
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
 				freeSSL();
-				response.status = -1;
 				return response;
 			}
 			
@@ -206,13 +204,11 @@ namespace IO {
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL read failed - error code : " << ERR_get_error() << std::endl;
 				freeSSL();
-				response.status = -1;
 				return response;
 			}
 
 			freeSSL();
 #else
-			response.status = -1;
 			std::cerr << "HTTP Client [" << host << "]: SSL not supported." << std::endl;
 			return response;
 #endif
@@ -221,12 +217,10 @@ namespace IO {
 
 			if(client.send(header.c_str(), header.length()) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
-				response.status = -1;
 				return response;
 			}
 			if(client.send(msg_ptr, msg_length) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
-				response.status = -1;
 				return response;
 			}
 
