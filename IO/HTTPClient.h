@@ -49,6 +49,15 @@ namespace IO {
 		void createHeader(bool gzip, bool multipart);
 		bool Handshake();
 		void parseResponse(HTTPResponse &response, const std::string &msg);
+		void freeSSL() {
+#ifdef HASOPENSSL
+			if(ssl) {
+				SSL_shutdown(ssl);
+				SSL_free(ssl);
+				ssl = nullptr;
+			}
+#endif
+		}
 		
 	public:
 		TCP::Client client;

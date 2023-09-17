@@ -34,7 +34,7 @@ static class SSLContext {
 				ctx = SSL_CTX_new(SSLv23_client_method());
 
 				if (!ctx) {
-					throw "SSL_CTX_new() failed.";
+					throw std::runtime_error("SSL_CTX_new() failed.");
 				}
 			}
 			return ctx;
@@ -68,8 +68,8 @@ namespace IO {
 					contentlength = std::stoi(line.substr(16));
 				} else if (line.find("Transfer-Encoding: chunked") != std::string::npos || line.find("Transfer-Encoding:chunked") != std::string::npos) {
 					isChunked = true;
-				} else if  (line.find("Transfer-Encoding:") != std::string::npos) {
-					std::cerr << "HTTP Client [" << host << "]: Transfer-Encoding not supported." << std::endl;
+				} else if (line.find("Transfer-Encoding:") != std::string::npos) {
+					std::cerr << "HTTP Client [" << host << "]: Transfer-Encoding other than chunked not supported." << std::endl;
 					result.status = -2;
 					return;
 				}
@@ -166,7 +166,7 @@ namespace IO {
 	HTTPResponse HTTPClient::Post(const std::string &msg, bool gzip, bool multipart, const std::string &copyname) {
 		int r;
 
-		HTTPResponse repsonse;
+		HTTPResponse response;
 
 		createMessageBody(msg, gzip, multipart, copyname);
 		createHeader(gzip, multipart);
@@ -181,24 +181,33 @@ namespace IO {
 		if(secure) {
 #ifdef HASOPENSSL
 
-			if(!Handshake()) return repsonse;
+			if(!Handshake()) {
+				freeSSL();
+				response.status = -1;
+				return response;
+			}
 
 			r = SSL_write(ssl, header.c_str(), header.length());
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
-				return repsonse;
+				freeSSL();
+				response.status = -1;
+				return response;
 			}
 			
 			r = SSL_write(ssl, msg_ptr, msg_length);
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
-				return repsonse;
+				freeSSL();
+				return response;
 			}
 
 			r = SSL_read(ssl, buffer, sizeof(buffer));
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL read failed - error code : " << ERR_get_error() << std::endl;
-				return repsonse;
+				freeSSL();
+				response.status = -1;
+				return response;
 			}
 
 			r = SSL_shutdown(ssl);
@@ -206,31 +215,33 @@ namespace IO {
 				std::cerr << "HTTP Client [" << host << "]: SSL shutdown failed - error code : " << ERR_get_error() << std::endl;
 			}
 
-			SSL_free(ssl);
-			ssl = nullptr;
+			freeSSL();
 #else
+			response.status = -1;
 			std::cerr << "HTTP Client [" << host << "]: SSL not supported." << std::endl;
-			return repsonse;
+			return response;
 #endif
 		}
 		else {
 
 			if(client.send(header.c_str(), header.length()) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
-				return repsonse;
+				response.status = -1;
+				return response;
 			}
 			if(client.send(msg_ptr, msg_length) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
-				return repsonse;
+				response.status = -1;
+				return response;
 			}
 
 			client.read(buffer, sizeof(buffer), 1, false);
 		}
 
 		client.disconnect();
-		parseResponse(repsonse, std::string(buffer));
+		parseResponse(response, std::string(buffer));
 
-		return repsonse;
+		return response;
 	}
 
 	std::string HTTPClient::base64_encode(const std::string &in) {
