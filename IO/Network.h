@@ -20,10 +20,6 @@
 #include <thread>
 #include <mutex>
 
-#ifdef HASCURL
-#include <curl/curl.h>
-#endif
-
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -56,7 +52,6 @@ namespace IO {
 
 		int source = -1;
 		JSON::StringBuilder builder;
-		bool test = true;
 		HTTPClient http;
 
 		AIS::Filter filter;
@@ -82,9 +77,6 @@ namespace IO {
 		enum class PROTOCOL{ AISCATCHER, APRS, LIST, AIRFRAMES } protocol = PROTOCOL::AISCATCHER;
 		std::string protocol_string = "jsonaiscatcher";
 
-		static size_t curl_cb(char* contents, size_t size, size_t nmemb, char* s);
-
-		void send(const std::string&, const std::string&);
 		void post();
 		void process();
 
