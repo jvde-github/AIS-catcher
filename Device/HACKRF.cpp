@@ -27,7 +27,7 @@ namespace Device {
 #ifdef HASHACKRF
 
 	hackrf_device_list_t* HACKRF::list = NULL;
-	
+
 	void HACKRF::Open(uint64_t h) {
 		if (!list) throw std::runtime_error("HACKRF: cannot open device, internal error.");
 		if (h > list->devicecount) throw std::runtime_error("HACKRF: cannot open device.");
@@ -82,7 +82,7 @@ namespace Device {
 
 	void HACKRF::getDeviceList(std::vector<Description>& DeviceList) {
 
-		if(!list) {
+		if (!list) {
 			list = hackrf_device_list();
 		}
 

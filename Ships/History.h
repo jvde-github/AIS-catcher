@@ -34,7 +34,7 @@ struct History : public StreamIn<JSON::JSON> {
 	int start, end;
 
 	void setCutoff(int cutoff) {
-		for (int i = 0; i < N; i++) 
+		for (int i = 0; i < N; i++)
 			history[i].stat.setCutoff(cutoff);
 	}
 

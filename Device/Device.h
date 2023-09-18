@@ -63,7 +63,7 @@ namespace Device {
 		Format format = Format::UNKNOWN;
 
 		uint32_t getCorrectedFrequency() {
-			return frequency * (1-freq_offset/1000000.0f);
+			return frequency * (1 - freq_offset / 1000000.0f);
 		}
 
 	public:

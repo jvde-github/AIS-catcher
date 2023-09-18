@@ -151,8 +151,8 @@ namespace IO {
 			r = http.Post(msg, gzip, false, "");
 		}
 
-		if(r.status != 200 || show_response)
-			std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;	
+		if (r.status != 200 || show_response)
+			std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;
 	}
 
 	void HTTPStreamer::process() {
@@ -256,7 +256,7 @@ namespace IO {
 				else
 					throw std::runtime_error("HTTP: error - unknown protocol");
 			}
-			else if(!filter.SetOption(option, arg)) {
+			else if (!filter.SetOption(option, arg)) {
 				throw std::runtime_error("HTTP output - unknown option: " + option);
 			}
 		}
@@ -271,9 +271,9 @@ namespace IO {
 	}
 
 	void UDPStreamer::ResetIfNeeded() {
-		if(reset > 0) {
-			long now = (long) std::time(nullptr);
-			if ((now - last_reconnect) > 60*reset) {
+		if (reset > 0) {
+			long now = (long)std::time(nullptr);
+			if ((now - last_reconnect) > 60 * reset) {
 
 				std::cerr << "UDP: recreate socket (" << host << ":" << port << ")" << std::endl;
 
@@ -294,14 +294,14 @@ namespace IO {
 
 		ResetIfNeeded();
 
-		if(sock == -1) return;
+		if (sock == -1) return;
 
 		for (int i = 0; i < len; i++) {
 			if (filter.includeGPS()) {
-				if(!JSON)
-					SendTo((data[i].getNMEA()  + "\r\n").c_str());
+				if (!JSON)
+					SendTo((data[i].getNMEA() + "\r\n").c_str());
 				else
-					SendTo((data[i].getJSON()  + "\r\n").c_str());
+					SendTo((data[i].getJSON() + "\r\n").c_str());
 			}
 		}
 	}
@@ -309,7 +309,7 @@ namespace IO {
 	void UDPStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
 
 		ResetIfNeeded();
-		
+
 		if (sock == -1) return;
 
 		if (!JSON) {
@@ -323,7 +323,7 @@ namespace IO {
 		else {
 			for (int i = 0; i < len; i++) {
 				if (filter.include(data[i]))
-					SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm)  + "\r\n").c_str());
+					SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm) + "\r\n").c_str());
 			}
 		}
 	}
@@ -371,8 +371,8 @@ namespace IO {
 		}
 #endif
 
-		if(reset > 0)
-			last_reconnect = (long) std::time(nullptr);
+		if (reset > 0)
+			last_reconnect = (long)std::time(nullptr);
 	}
 
 	void UDPStreamer::Stop() {
@@ -385,7 +385,7 @@ namespace IO {
 		if (address != NULL) {
 			freeaddrinfo(address);
 			address = NULL;
-    	}
+		}
 	}
 
 	Setting& UDPStreamer::Set(std::string option, std::string arg) {
@@ -408,9 +408,9 @@ namespace IO {
 			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "RESET") {
-			reset = Util::Parse::Integer(arg,1,24*60, option);
+			reset = Util::Parse::Integer(arg, 1, 24 * 60, option);
 		}
-		else if(!filter.SetOption(option, arg)) {
+		else if (!filter.SetOption(option, arg)) {
 			throw std::runtime_error("UDP output - unknown option: " + option);
 		}
 
@@ -433,7 +433,6 @@ namespace IO {
 						StopRequest();
 					}
 				}
-			
 			}
 		}
 		else {
@@ -466,8 +465,8 @@ namespace IO {
 		else {
 			for (int i = 0; i < len; i++) {
 				if (!filter.include(data[i])) continue;
-				
-				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm)  + "\r\n").c_str()) < 0)
+
+				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm) + "\r\n").c_str()) < 0)
 					if (!persistent) {
 						std::cerr << "TCP feed: requesting termination.\n";
 						StopRequest();
@@ -477,16 +476,16 @@ namespace IO {
 	}
 
 	void TCPClientStreamer::Start() {
-		
+
 		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ", status: ";
 
-		if (tcp.connect(host, port, persistent, 0)) 
+		if (tcp.connect(host, port, persistent, 0))
 			std::cerr << "connected\n";
 		else {
-			if(!persistent) {
+			if (!persistent) {
 				std::cerr << "failed\n";
 				throw std::runtime_error("TCP feed cannot connect to " + host + " port " + port);
 			}
@@ -518,46 +517,46 @@ namespace IO {
 		else if (option == "PERSIST") {
 			persistent = Util::Parse::Switch(arg);
 		}
-		else if(!filter.SetOption(option, arg)) {
+		else if (!filter.SetOption(option, arg)) {
 			throw std::runtime_error("TCP client - unknown option: " + option);
 		}
 		return *this;
 	}
 
-	void TCPlistenerStreamer::Start() { 
+	void TCPlistenerStreamer::Start() {
 		std::cerr << "TCP listener: open at port " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
-	
+
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ".\n";
-		Server::start(port); 
+		Server::start(port);
 	}
-	
-	Setting& TCPlistenerStreamer::Set(std::string option, std::string arg) { 
+
+	Setting& TCPlistenerStreamer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
 		if (option == "PORT") {
-			port = Util::Parse::Integer(arg,0,0xFFFF,option);
+			port = Util::Parse::Integer(arg, 0, 0xFFFF, option);
 		}
 		else if (option == "TIMEOUT") {
 			timeout = Util::Parse::Integer(arg);
-		}  
+		}
 		else if (option == "GROUPS_IN") {
 			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
-			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));		
+			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);
 		}
-		else if(!filter.SetOption(option, arg)) {
+		else if (!filter.SetOption(option, arg)) {
 			throw std::runtime_error("TCP listener - unknown option: " + option);
 		}
-		
-		return *this; 
+
+		return *this;
 	}
 
 
 	void TCPlistenerStreamer::Receive(const AIS::GPS* data, int len, TAG& tag) {
-		if(!filter.includeGPS()) return;
+		if (!filter.includeGPS()) return;
 
 		if (!JSON) {
 			for (int i = 0; i < len; i++) {
@@ -566,10 +565,9 @@ namespace IO {
 		}
 		else {
 			for (int i = 0; i < len; i++) {
-				SendAll((data[i].getJSON()  + "\r\n").c_str());
+				SendAll((data[i].getJSON() + "\r\n").c_str());
 			}
 		}
-		
 	}
 
 	void TCPlistenerStreamer::Receive(const AIS::Message* data, int len, TAG& tag) {
@@ -586,9 +584,8 @@ namespace IO {
 			for (int i = 0; i < len; i++) {
 				if (!filter.include(data[i])) continue;
 
-				SendAll((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm)  + "\r\n").c_str());
+				SendAll((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm) + "\r\n").c_str());
 			}
 		}
-		
 	}
 }

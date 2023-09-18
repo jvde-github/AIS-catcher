@@ -64,8 +64,11 @@ namespace AIS {
 		Message msg;
 
 	public:
-		//virtual void setChannel(char c) { channel = c; }
-		void setOrigin(char c, int s) { channel = c; station = s; }
+		// virtual void setChannel(char c) { channel = c; }
+		void setOrigin(char c, int s) {
+			channel = c;
+			station = s;
+		}
 
 		void Receive(const FLOAT32* data, int len, TAG& tag);
 

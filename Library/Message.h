@@ -39,7 +39,7 @@ namespace AIS {
 	public:
 		GPS(float lt, float ln, const std::string& s, const std::string& j) : lat(lt), lon(ln), nmea(s), json(j) {}
 
-		float getLat() const { return lat;  }
+		float getLat() const { return lat; }
 		float getLon() const { return lon; }
 
 		const std::string getNMEA() const;
@@ -135,7 +135,10 @@ namespace AIS {
 		void setChannel(char c) { channel = c; }
 		char getChannel() const { return channel; }
 
-		void setOrigin(char c,int s) { channel = c; station = s; }
+		void setOrigin(char c, int s) {
+			channel = c;
+			station = s;
+		}
 		int getStation() const { return station; }
 		void buildNMEA(TAG& tag, int id = -1);
 	};

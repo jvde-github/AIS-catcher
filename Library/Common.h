@@ -31,7 +31,7 @@
 
 void StopRequest();
 
-#define GROUPS_ALL 0xFFFFFFFFFFFFFFFF
+#define GROUPS_ALL			0xFFFFFFFFFFFFFFFF
 #define GROUP_OUT_UNDEFINED (1ULL << 63)
 
 typedef float FLOAT32;
@@ -101,7 +101,8 @@ struct TAG {
 		level = 0;
 		ppm = 0;
 		lat = 0;
-		lon = 0;;
+		lon = 0;
+		;
 	};
 };
 

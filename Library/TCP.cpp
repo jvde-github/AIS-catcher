@@ -90,7 +90,7 @@ namespace TCP {
 		std::lock_guard<std::mutex> lock(mtx);
 
 		if (isConnected() && hasSendBuffer()) {
-			
+
 			int bytes = ::send(sock, out.data(), out.size(), 0);
 
 			if (bytes < 0) {
@@ -112,9 +112,9 @@ namespace TCP {
 	bool ServerConnection::Send(const char* data, int length) {
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if(!isConnected()) return false;
+		if (!isConnected()) return false;
 
-		if (out.size() + length > 1024*1024) return false;
+		if (out.size() + length > 1024 * 1024) return false;
 
 		out.insert(out.end(), data, data + length);
 		return true;
@@ -128,7 +128,7 @@ namespace TCP {
 		int bytes = 0;
 
 		if (!hasSendBuffer()) {
-			 bytes = ::send(sock, data, length, 0);
+			bytes = ::send(sock, data, length, 0);
 
 			if (bytes < 0) {
 #ifdef _WIN32
@@ -144,7 +144,7 @@ namespace TCP {
 			}
 		}
 
-		if(bytes < length)
+		if (bytes < length)
 			out.insert(out.end(), data + bytes, data + length - bytes);
 
 		return true;
@@ -171,7 +171,7 @@ namespace TCP {
 		conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen);
 #ifdef _WIN32
 		if (conn_socket == SOCKET_ERROR) {
-			if (WSAGetLastError() != WSAEWOULDBLOCK) 
+			if (WSAGetLastError() != WSAEWOULDBLOCK)
 				std::cerr << "TCP listener: error accepting connection. " << strerror(WSAGetLastError()) << std::endl;
 			return;
 		}
@@ -234,7 +234,7 @@ namespace TCP {
 			cleanUp();
 			SleepAndWait();
 		}
-	
+
 		std::cerr << "TCP Server: thread ending.\n";
 	}
 
@@ -254,7 +254,7 @@ namespace TCP {
 				FD_SET(c.sock, &fds);
 				if (c.sock > maxfds) maxfds = c.sock;
 
-				if(c.hasSendBuffer()) {
+				if (c.hasSendBuffer()) {
 					FD_SET(c.sock, &fdw);
 				}
 			}
@@ -289,7 +289,7 @@ namespace TCP {
 
 		if (listen(sock, 511) < 0) return false;
 
-		for(auto &c : client) {
+		for (auto& c : client) {
 			c.Close();
 			c.Unlock();
 		}
@@ -303,7 +303,6 @@ namespace TCP {
 
 		return true;
 	}
-
 
 
 	void Client::disconnect() {
@@ -342,7 +341,7 @@ namespace TCP {
 			return false;
 		}
 
-		if(persistent) {
+		if (persistent) {
 #ifndef _WIN32
 			r = fcntl(sock, F_GETFL, 0);
 			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
@@ -448,23 +447,23 @@ namespace TCP {
 			int sent = ::send(sock, (char*)data, length, 0);
 
 			if (sent < length) {
-					int error_code = errno; 
+				int error_code = errno;
 #ifdef _WIN32
-					if (error_code == WSAEWOULDBLOCK) return 0;
+				if (error_code == WSAEWOULDBLOCK) return 0;
 #else
-					if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
+				if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
 #endif
-					std::cerr << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
-					if (persistent) {
-						reconnect();
-						std::cerr << " Reconnect.\n";
-						return 0;
-					}
-					else {
-						std::cerr << " Failed.\n";
-						return -1;
-					}
+				std::cerr << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+				if (persistent) {
+					reconnect();
+					std::cerr << " Reconnect.\n";
+					return 0;
 				}
+				else {
+					std::cerr << " Failed.\n";
+					return -1;
+				}
+			}
 			return sent;
 		}
 
@@ -487,7 +486,7 @@ namespace TCP {
 
 			timeval to = { t, 0 };
 
-			if (select(sock + 1, &fd, NULL, &fe, &to) < 0) return 0;			
+			if (select(sock + 1, &fd, NULL, &fe, &to) < 0) return 0;
 
 			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe)) {
 				int retval = recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
@@ -511,7 +510,7 @@ namespace TCP {
 						std::cerr << " Failed.\n";
 						std::cerr << std::endl;
 						return -1;
-					}					
+					}
 				}
 				return retval;
 			}

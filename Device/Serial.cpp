@@ -21,205 +21,204 @@
 
 namespace Device {
 
-    void SerialPort::ReadAsync() {
+	void SerialPort::ReadAsync() {
 
-    	char buffer[16384];
+		char buffer[16384];
 		RAW r = { getFormat(), buffer, 0 };
 
 #ifdef _WIN32
-        std::cerr << "Serial: starting thread" << std::endl;
-        DWORD bytesRead;
+		std::cerr << "Serial: starting thread" << std::endl;
+		DWORD bytesRead;
 
-        HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-        while (isStreaming()) {
+		while (isStreaming()) {
 
-            OVERLAPPED overlapped = { 0 };
-            overlapped.hEvent = hEvent;
+			OVERLAPPED overlapped = { 0 };
+			overlapped.hEvent = hEvent;
 
-            if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped)) {
+			if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped)) {
 
-                if (GetLastError() == ERROR_IO_PENDING) {
+				if (GetLastError() == ERROR_IO_PENDING) {
 
-                    DWORD dwWait = WaitForSingleObject(overlapped.hEvent, 1000);
+					DWORD dwWait = WaitForSingleObject(overlapped.hEvent, 1000);
 
-                    if (dwWait == WAIT_OBJECT_0) {
+					if (dwWait == WAIT_OBJECT_0) {
 
-                        if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE)) {
-                            std::cerr << "error reading from serial device: " << GetLastError() << std::endl;
-                            lost = true;
-                            continue;
-                        }
-                        else if (bytesRead) {
-                            r.size = bytesRead;
-                            Dump(r);
-                            Send(&r, 1, tag);
-                        }
-                    }
-                    else if (dwWait != WAIT_TIMEOUT) {
-                        std::cerr << "Serial: error reading from device: " << GetLastError() << std::endl;
-                        lost = true;
-                        continue;
-                    }
-                }
-                else {
-                    std::cerr << "Serial: read encountered an error: " << GetLastError() << std::endl;
-                    lost = true;
-                    continue;
-                }
-            }
-            else if (bytesRead) {
-                r.size = bytesRead;
-                Dump(r);
-                Send(&r, 1, tag);
-            }
-        }
+						if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE)) {
+							std::cerr << "error reading from serial device: " << GetLastError() << std::endl;
+							lost = true;
+							continue;
+						}
+						else if (bytesRead) {
+							r.size = bytesRead;
+							Dump(r);
+							Send(&r, 1, tag);
+						}
+					}
+					else if (dwWait != WAIT_TIMEOUT) {
+						std::cerr << "Serial: error reading from device: " << GetLastError() << std::endl;
+						lost = true;
+						continue;
+					}
+				}
+				else {
+					std::cerr << "Serial: read encountered an error: " << GetLastError() << std::endl;
+					lost = true;
+					continue;
+				}
+			}
+			else if (bytesRead) {
+				r.size = bytesRead;
+				Dump(r);
+				Send(&r, 1, tag);
+			}
+		}
 
-        CloseHandle(hEvent);
+		CloseHandle(hEvent);
 #else
 
-        while (isStreaming()) {
-            fd_set read_fds;
+		while (isStreaming()) {
+			fd_set read_fds;
 
-            FD_ZERO(&read_fds);
-            FD_SET(serial_fd, &read_fds);
+			FD_ZERO(&read_fds);
+			FD_SET(serial_fd, &read_fds);
 
-            struct timeval timeout = { 1, 0 };
+			struct timeval timeout = { 1, 0 };
 
-            int rslt = select(serial_fd + 1, &read_fds, NULL, NULL, &timeout);
-            if (rslt > 0) {
-                int nread = read(serial_fd, buffer, sizeof(buffer));
-                if (nread > 0) {
-                    r.size = nread;
-                    Dump(r);
-                    Send(&r, 1, tag);
-                }
-                else {
-                    if(nread == 0) {
-                        std::cerr << "Serial read encountered an error: unexpected end." << std::endl;
-                    }
-                    else {
-                        std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
-                    }
-                    lost = true;
-                }
-            } else if (rslt < 0) {        
-                    std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
-                lost = true;
-            }
-        }
+			int rslt = select(serial_fd + 1, &read_fds, NULL, NULL, &timeout);
+			if (rslt > 0) {
+				int nread = read(serial_fd, buffer, sizeof(buffer));
+				if (nread > 0) {
+					r.size = nread;
+					Dump(r);
+					Send(&r, 1, tag);
+				}
+				else {
+					if (nread == 0) {
+						std::cerr << "Serial read encountered an error: unexpected end." << std::endl;
+					}
+					else {
+						std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
+					}
+					lost = true;
+				}
+			}
+			else if (rslt < 0) {
+				std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
+				lost = true;
+			}
+		}
 #endif
-    }
+	}
 
-    void SerialPort::Dump(RAW &r) {
-        if (print) {
-            std::cerr << ">> ";  
-            for (int i = 0; i < r.size; i++) {
-                char c = ((char*)r.data)[i];
-                if(c != '\n' && c != '\r')
-                    std::cerr << c; 
-            }
-            std::cerr << std::endl;
-        }
-    }
+	void SerialPort::Dump(RAW& r) {
+		if (print) {
+			std::cerr << ">> ";
+			for (int i = 0; i < r.size; i++) {
+				char c = ((char*)r.data)[i];
+				if (c != '\n' && c != '\r')
+					std::cerr << c;
+			}
+			std::cerr << std::endl;
+		}
+	}
 
-    SerialPort::~SerialPort() {
-        Close();
-    }
+	SerialPort::~SerialPort() {
+		Close();
+	}
 
-    void SerialPort::Close() {
+	void SerialPort::Close() {
 #ifdef _WIN32
-        if (serial_handle != INVALID_HANDLE_VALUE) {
-            CloseHandle(serial_handle);
-            serial_handle = INVALID_HANDLE_VALUE;
-        }
+		if (serial_handle != INVALID_HANDLE_VALUE) {
+			CloseHandle(serial_handle);
+			serial_handle = INVALID_HANDLE_VALUE;
+		}
 #else
-        if (serial_fd != -1) {
-            close(serial_fd);
-            serial_fd = -1;
-        }
+		if (serial_fd != -1) {
+			close(serial_fd);
+			serial_fd = -1;
+		}
 #endif
-    }
+	}
 
-    void SerialPort::Play() {
+	void SerialPort::Play() {
 
 #ifdef _WIN32
-        serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
-        if (serial_handle == INVALID_HANDLE_VALUE) {
-            throw std::runtime_error("Serial: cannot open serial port " + port + ".");
-        }
-        
-        DCB dcb;
+		serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+		if (serial_handle == INVALID_HANDLE_VALUE) {
+			throw std::runtime_error("Serial: cannot open serial port " + port + ".");
+		}
 
-        if(GetCommState(serial_handle, &dcb))
-        {
-            dcb.BaudRate = baudrate;
-            dcb.ByteSize = 8;
-            dcb.Parity = NOPARITY;
-            dcb.StopBits = ONESTOPBIT;
-            dcb.fBinary = TRUE;
-            dcb.fParity = TRUE;
-            dcb.fDtrControl = DTR_CONTROL_ENABLE;
-            dcb.fRtsControl = RTS_CONTROL_ENABLE;
-        }
-        else
-            throw std::runtime_error("Serial: GetCommState failed.");
+		DCB dcb;
+
+		if (GetCommState(serial_handle, &dcb)) {
+			dcb.BaudRate = baudrate;
+			dcb.ByteSize = 8;
+			dcb.Parity = NOPARITY;
+			dcb.StopBits = ONESTOPBIT;
+			dcb.fBinary = TRUE;
+			dcb.fParity = TRUE;
+			dcb.fDtrControl = DTR_CONTROL_ENABLE;
+			dcb.fRtsControl = RTS_CONTROL_ENABLE;
+		}
+		else
+			throw std::runtime_error("Serial: GetCommState failed.");
 
 
-        if (!SetCommState(serial_handle, &dcb)) {
-            throw std::runtime_error("Serial: SetCommState failed.");
-        }
+		if (!SetCommState(serial_handle, &dcb)) {
+			throw std::runtime_error("Serial: SetCommState failed.");
+		}
 
-        COMMTIMEOUTS ct;
+		COMMTIMEOUTS ct;
 
-        if(GetCommTimeouts(serial_handle, &ct))
-        {
-            ct.ReadIntervalTimeout = 2000;
-            ct.ReadTotalTimeoutConstant = 2000;
-            ct.ReadTotalTimeoutMultiplier = 0;
-            ct.WriteTotalTimeoutConstant = 2000;
-            ct.WriteTotalTimeoutMultiplier = 0;
-        }
-        else
-            throw std::runtime_error("Serial: GetCommTimeouts failed.");
+		if (GetCommTimeouts(serial_handle, &ct)) {
+			ct.ReadIntervalTimeout = 2000;
+			ct.ReadTotalTimeoutConstant = 2000;
+			ct.ReadTotalTimeoutMultiplier = 0;
+			ct.WriteTotalTimeoutConstant = 2000;
+			ct.WriteTotalTimeoutMultiplier = 0;
+		}
+		else
+			throw std::runtime_error("Serial: GetCommTimeouts failed.");
 
-        if(!SetCommTimeouts(serial_handle, &ct))
-            throw std::runtime_error("Serial: SetCommTimeouts failed.");
+		if (!SetCommTimeouts(serial_handle, &ct))
+			throw std::runtime_error("Serial: SetCommTimeouts failed.");
 
 #else
-        serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY);
-        if (serial_fd == -1) {
-            throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
-        }
+		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY);
+		if (serial_fd == -1) {
+			throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+		}
 
-        struct termios tty;
-        tcgetattr(serial_fd, &tty);
+		struct termios tty;
+		tcgetattr(serial_fd, &tty);
 
-        cfsetospeed(&tty, baudrate);
-        cfsetispeed(&tty, baudrate);
+		cfsetospeed(&tty, baudrate);
+		cfsetispeed(&tty, baudrate);
 
-        tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity
-        tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication
-        tty.c_cflag &= ~CSIZE; // Clear all bits that set the data size
-        tty.c_cflag |= CS8; // 8 bits per byte
+		tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity
+		tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication
+		tty.c_cflag &= ~CSIZE;	// Clear all bits that set the data size
+		tty.c_cflag |= CS8;		// 8 bits per byte
 
-        tcsetattr(serial_fd, TCSANOW, &tty);
+		tcsetattr(serial_fd, TCSANOW, &tty);
 
-        int flags = fcntl(serial_fd, F_GETFL, 0);
-        fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
+		int flags = fcntl(serial_fd, F_GETFL, 0);
+		fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
 #endif
-        Device::Play();
+		Device::Play();
 
-        lost = false;
-        read_thread = std::thread(&SerialPort::ReadAsync, this);
-    }
+		lost = false;
+		read_thread = std::thread(&SerialPort::ReadAsync, this);
+	}
 
-    void SerialPort::Stop() {
-        lost = true;
-        if (read_thread.joinable()) {
-            read_thread.join();
-        }
-    }
+	void SerialPort::Stop() {
+		lost = true;
+		if (read_thread.joinable()) {
+			read_thread.join();
+		}
+	}
 
 	Setting& SerialPort::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
@@ -230,9 +229,9 @@ namespace Device {
 		else if (option == "PORT") {
 			port = arg;
 		}
-        else if (option == "PRINT") {
-            print = Util::Parse::Switch(arg);
-        }
+		else if (option == "PRINT") {
+			print = Util::Parse::Switch(arg);
+		}
 		else
 			Device::Set(option, arg);
 

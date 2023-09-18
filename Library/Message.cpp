@@ -33,7 +33,7 @@ namespace AIS {
 		int degrees = static_cast<int>(value);
 		float minutes = (value - degrees) * 60;
 
-		ss << std::setfill('0') << std::setw(isLatitude?2:3) << std::abs(degrees);		
+		ss << std::setfill('0') << std::setw(isLatitude ? 2 : 3) << std::abs(degrees);
 		ss << std::setfill('0') << std::setw(5) << std::fixed << std::setprecision(2) << minutes;
 
 		return ss.str();
@@ -42,8 +42,8 @@ namespace AIS {
 
 	const std::string GPS::getNMEA() const {
 		if (nmea.empty()) {
-			std::string flat = formatLatLon(lat,true);
-			std::string flon = formatLatLon(lon,false);
+			std::string flat = formatLatLon(lat, true);
+			std::string flon = formatLatLon(lon, false);
 
 			char latDir = lat >= 0 ? 'N' : 'S';
 			char lonDir = lon >= 0 ? 'E' : 'W';

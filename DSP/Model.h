@@ -87,14 +87,14 @@ namespace AIS {
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
 		void setMode(Mode m) { mode = m; }
-		void setDesignation(const std::string &s) { designation = s; }
-		virtual Setting& Set(std::string option, std::string arg) { 
+		void setDesignation(const std::string& s) { designation = s; }
+		virtual Setting& Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);
 
-			if(option == "STATION_ID" || option == "ID") 
+			if (option == "STATION_ID" || option == "ID")
 				station = Util::Parse::Integer(arg);
 			else
-				throw std::runtime_error("Model: unknown setting."); 
+				throw std::runtime_error("Model: unknown setting.");
 
 			return *this;
 		}

@@ -33,47 +33,47 @@
 
 namespace Device {
 
-    class SerialPort : public Device {
+	class SerialPort : public Device {
 #ifdef _WIN32
-        HANDLE serial_handle = INVALID_HANDLE_VALUE;
+		HANDLE serial_handle = INVALID_HANDLE_VALUE;
 #else
-        int serial_fd = -1;
+		int serial_fd = -1;
 #endif
 
-        std::string port;
-        int baudrate;
+		std::string port;
+		int baudrate;
 
-        std::thread read_thread;
+		std::thread read_thread;
 
 		bool lost = false;
-        bool print = false;
+		bool print = false;
 
-        static const uint32_t BUFFER_SIZE = 16 * 16384;
+		static const uint32_t BUFFER_SIZE = 16 * 16384;
 
-        void ReadAsync();
-        void Dump(RAW& r);
+		void ReadAsync();
+		void Dump(RAW& r);
 
-    public:
-        SerialPort() : Device(Format::TXT, 288000), port(""), baudrate(38400) {};
-        ~SerialPort();
+	public:
+		SerialPort() : Device(Format::TXT, 288000), port(""), baudrate(38400){};
+		~SerialPort();
 
 		std::string getRateDescription() { return std::to_string(baudrate) + " baud"; }
 
 		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 
-        Setting& Set(std::string option, std::string arg);
-        std::string Get();
+		Setting& Set(std::string option, std::string arg);
+		std::string Get();
 
-        std::string getProduct() { return "Serial Port"; }
-        std::string getVendor() { return "Unknown"; }
-        std::string getSerial() { return port; }
+		std::string getProduct() { return "Serial Port"; }
+		std::string getVendor() { return "Unknown"; }
+		std::string getSerial() { return port; }
 
-        void setFormat(Format f) {}
-        
-        // Control
-        void Close();
-        void Play();
-        void Stop();
-    };
+		void setFormat(Format f) {}
+
+		// Control
+		void Close();
+		void Play();
+		void Stop();
+	};
 }

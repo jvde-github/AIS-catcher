@@ -43,57 +43,56 @@ namespace IO {
 
 		char buffer[1024];
 
-		std::string base64_encode(const std::string &in);
+		std::string base64_encode(const std::string& in);
 
-		void createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname);
+		void createMessageBody(const std::string& msg, bool gzip, bool multipart, const std::string& copyname);
 		void createHeader(bool gzip, bool multipart);
 		bool Handshake();
-		void parseResponse(HTTPResponse &response, const std::string &msg);
+		void parseResponse(HTTPResponse& response, const std::string& msg);
 		void freeSSL() {
 #ifdef HASOPENSSL
-			if(ssl) {
+			if (ssl) {
 				SSL_shutdown(ssl);
 				SSL_free(ssl);
 				ssl = nullptr;
 			}
 #endif
 		}
-		
+
 	public:
 		TCP::Client client;
 		std::string protocol, host, port, path, userpwd;
 
-		void *msg_ptr = nullptr;
+		void* msg_ptr = nullptr;
 		int msg_length = 0;
 
 		bool secure = false;
-		
+
 #ifdef HASOPENSSL
 		SSL* ssl = nullptr;
 #endif
 		void validateLibs() {
 #ifndef HASOPENSSL
-			if(secure)
+			if (secure)
 				throw std::runtime_error("SSL not supported in this build");
 #endif
 		}
-		
-		void setUserPwd(const std::string &up) {
+
+		void setUserPwd(const std::string& up) {
 			userpwd = up;
 		}
 
-		void setURL(const std::string &url) {
+		void setURL(const std::string& url) {
 			Util::Parse::URL(url, protocol, host, port, path);
 
 			secure = protocol == "https";
 
-			if(port.empty())
+			if (port.empty())
 				port = secure ? "443" : "80";
 
 			validateLibs();
-		}	
+		}
 
-		HTTPResponse Post(const std::string &msg, bool gzip = false, bool multipart = false, const std::string &copyname = "");
-
+		HTTPResponse Post(const std::string& msg, bool gzip = false, bool multipart = false, const std::string& copyname = "");
 	};
 }

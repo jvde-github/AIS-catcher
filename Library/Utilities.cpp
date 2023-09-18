@@ -47,7 +47,7 @@ namespace Util {
 		Send(output.data(), len, tag);
 	}
 
-	long Parse::Integer(std::string str, long min, long max, const std::string &setting) {
+	long Parse::Integer(std::string str, long min, long max, const std::string& setting) {
 		int number = 0;
 		std::string::size_type sz;
 
@@ -55,7 +55,7 @@ namespace Util {
 			number = std::stoi(str, &sz);
 		}
 		catch (const std::exception&) {
-			if(setting.empty())
+			if (setting.empty())
 				throw std::runtime_error("expected a number");
 			else
 				throw std::runtime_error("expected a number for setting " + setting);
@@ -66,7 +66,7 @@ namespace Util {
 
 		if (min != 0 || max != 0)
 			if (number < min || number > max) {
-				if(setting.empty()) 
+				if (setting.empty())
 					throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "]");
 				else
 					throw std::runtime_error("input " + std::to_string(number) + " out of range [" + std::to_string(min) + "," + std::to_string(max) + "] for setting " + setting);
@@ -89,8 +89,8 @@ namespace Util {
 		return number;
 	}
 
-	void Parse::URL(const std::string& url, std::string &protocol, std::string &host, std::string &port, std::string &path) {
-			
+	void Parse::URL(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path) {
+
 		int idx = url.find("://");
 		if (idx != std::string::npos) {
 
@@ -102,8 +102,8 @@ namespace Util {
 			if (hostEnd == std::string::npos) {
 				hostEnd = url.find('/', idx);
 			}
-			
-			if(hostEnd == std::string::npos) {
+
+			if (hostEnd == std::string::npos) {
 				host = url.substr(idx, url.length() - idx);
 			}
 			else {
@@ -112,7 +112,7 @@ namespace Util {
 				int portStart = url.find(':', hostEnd);
 				if (portStart != std::string::npos) {
 					int portEnd = url.find('/', portStart);
-						port = url.substr(portStart + 1, (portEnd != std::string::npos?portEnd:url.length()) - portStart - 1);
+					port = url.substr(portStart + 1, (portEnd != std::string::npos ? portEnd : url.length()) - portStart - 1);
 				}
 
 				int pathStart = url.find('/', hostEnd);
@@ -121,7 +121,7 @@ namespace Util {
 				}
 			}
 		}
-	}	
+	}
 
 	bool Parse::StreamFormat(std::string str, Format& format) {
 		Convert::toUpper(str);
@@ -166,7 +166,7 @@ namespace Util {
 		else if (str == "ZMQ")
 			type = Type::ZMQ;
 		else if (str == "SERIALPORT")
-			type = Type::SERIALPORT;			
+			type = Type::SERIALPORT;
 		else if (str == "UDP" || str == "UDPSERVER")
 			type = Type::UDP;
 		else if (str == "SPYSERVER")
@@ -327,23 +327,22 @@ namespace Util {
 #ifdef _WIN32
 		return "Windows";
 #elif __ANDROID__
-		return "Android";	
-#elif __APPLE__		
+		return "Android";
+#elif __APPLE__
 		return "MacOS";
 #elif __linux__
 		std::array<char, 128> buffer;
 		std::string os;
 		FILE* fp = popen("lsb_release -ds", "r");
 		if (fp) {
-			
+
 			if (fgets(buffer.data(), buffer.size(), fp) != nullptr)
 				os = buffer.data();
 
 			pclose(fp);
 		}
 
-		if (os.empty())
-		{
+		if (os.empty()) {
 			std::ifstream inFile("/etc/os-release");
 			std::string line;
 			while (std::getline(inFile, line)) {
@@ -362,7 +361,7 @@ namespace Util {
 		}
 		return os;
 #else
-    	return "";
+		return "";
 #endif
 	}
 
@@ -370,8 +369,8 @@ namespace Util {
 #ifdef _WIN32
 		return "";
 #elif ANDROID
-		return "";	
-#elif __APPLE__		
+		return "";
+#elif __APPLE__
 		return "";
 #elif __linux__
 		std::string line, model_name, revision;
@@ -393,7 +392,8 @@ namespace Util {
 						if (pos != std::string::npos) {
 							model_name = line.substr(pos + 2);
 						}
-					} else if (line.substr(0, 8) == "Revision") {
+					}
+					else if (line.substr(0, 8) == "Revision") {
 						std::size_t pos = line.find(": ");
 						if (pos != std::string::npos) {
 							revision = line.substr(pos + 2);
@@ -447,7 +447,7 @@ namespace Util {
 		return model_name;
 
 		return "";
-#endif			
+#endif
 		return "";
 	}
 
