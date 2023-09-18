@@ -1844,7 +1844,7 @@
 	</head>
 
 	<body>
-		<div class="header noandroid">
+		<div id="headerbar" class="header noandroid">
 			<div onclick="toggleMenu()" class="header-menubutton">
 				<div class="header-menu-box"><i id="header_menu_button" class="menu_icon"></i></div>
 			</div>
@@ -3242,8 +3242,14 @@
 
 				// take into account the header bar
 				var boundingRect = statcard.getBoundingClientRect();
+
+				const menubar = document.getElementById('menubar');
+				const position = window.getComputedStyle(menubar).getPropertyValue('position');
+				const menuHeight = position === "fixed" ? 0 : document.getElementById('menubar').offsetHeight;
+				const headerHeight = document.getElementById('headerbar').offsetHeight;
+
 				offsetX = clientX - boundingRect.left;
-				offsetY = clientY - boundingRect.top + (isAndroid() ? 0 : 60);
+				offsetY = clientY - boundingRect.top + menuHeight + headerHeight;
 
 				statcard.style.cursor = "grabbing";
 				L.DomEvent.stopPropagation(event);
