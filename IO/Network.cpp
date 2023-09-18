@@ -36,10 +36,6 @@ namespace IO {
 #endif
 
 	void HTTPStreamer::Start() {
-#ifndef HASCURL		
-		if(!test) throw std::runtime_error("HTTP: curl not installed");
-#endif
-
 		if (!running) {
 
 			running = true;
@@ -63,92 +59,6 @@ namespace IO {
 		}
 	}
 
-
-	// curl callback
-	size_t HTTPStreamer::curl_cb(char* contents, size_t size, size_t nmemb, char* s) {
-		int len = MIN(size * nmemb, 1023);
-
-		std::memcpy(s, contents, len);
-		s[len] = '\0';
-		return len;
-	}
-
-	void HTTPStreamer::send(const std::string& msg, const std::string& copyname) {
-#ifdef HASCURL
-
-		CURL* ch;
-		CURLcode r;
-
-		struct curl_slist* headers = NULL;
-		long retcode = 200;
-		struct curl_httppost *post = NULL, *last = NULL;
-
-		bool multipart = PROTOCOL::APRS == protocol;
-
-		response[0] = '\0';
-
-		headers = curl_slist_append(NULL, "Expect:");
-		if (gzip) {
-			zip.zip(msg);
-			headers = curl_slist_append(headers, "Content-encoding: gzip");
-		}
-
-		if (multipart)
-			curl_formadd(&post, &last, CURLFORM_COPYNAME, copyname.c_str(), CURLFORM_CONTENTTYPE, "application/json", CURLFORM_PTRCONTENTS, msg.c_str(), CURLFORM_END);
-		else {
-			headers = curl_slist_append(headers, "Content-Type: application/json");
-		}
-
-		if (!(ch = curl_easy_init())) {
-			std::cerr << "HTTP: cannot initialize curl." << std::endl;
-			return;
-		}
-
-		if (!headers)
-			std::cerr << "HTTP: append for expect header failed" << std::endl;
-		else
-			try {
-
-				if (!multipart) {
-					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDS, gzip ? zip.getOutputPtr() : msg.c_str()))) throw r;
-					if ((r = curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, (long)(gzip ? zip.getOutputLength() : msg.length())))) throw r;
-				}
-				else if ((r = curl_easy_setopt(ch, CURLOPT_HTTPPOST, post)))
-					throw r;
-
-				if ((r = curl_easy_setopt(ch, CURLOPT_URL, url.c_str()))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, curl_cb))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_WRITEDATA, response))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 1L))) throw r;
-				if (!userpwd.empty() && (r = curl_easy_setopt(ch, CURLOPT_USERPWD, userpwd.c_str()))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_VERBOSE, 0L))) throw r;
-				if ((r = curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)TIMEOUT))) throw r;
-
-				if ((r = curl_easy_perform(ch))) throw r;
-				if ((r = curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &retcode))) throw r;
-			}
-			catch (CURLcode cc) {
-				std::cerr << "HTTP: error - " << curl_easy_strerror(cc) << " (" << url << ")" << std::endl;
-			}
-
-		curl_easy_cleanup(ch);
-
-		if (headers) curl_slist_free_all(headers);
-		if (multipart) curl_formfree(post);
-
-		if (retcode != 200) {
-			std::cerr << "HTTP: server " << url << " returned " << retcode << std::endl;
-		}
-
-		if (show_response)
-			std::cerr << "HTTP: server " << url << " response - " << response << std::endl;
-
-		return;
-#endif
-
-	}
-
 	void HTTPStreamer::post() {
 		if (!queue.size()) return;
 
@@ -160,6 +70,7 @@ namespace IO {
 		}
 
 		msg.clear();
+		HTTPResponse r;
 
 		std::time_t now = std::time(0);
 
@@ -192,13 +103,7 @@ namespace IO {
 
 			msg += "\n\t]\n}\n";
 
-			if(test) {
-				HTTPResponse r = http.Post(msg, gzip, false, "");
-				if(r.status != 200 || show_response)
-					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;
-			}
-			else
-				send(msg, "");
+			r = http.Post(msg, gzip, false, "");
 		}
 		else if (PROTOCOL::AIRFRAMES == protocol) {
 			msg += "{\n\t\"app\": {\n\t\t\"name\": \"AIS-Catcher\",\n\t\t\"ver\": \"" VERSION "\"";
@@ -215,13 +120,8 @@ namespace IO {
 			}
 
 			msg += "\n\t]\n}\n";
-			if(test) {
-				HTTPResponse r = http.Post(msg, gzip, false, "");
-				if(r.status != 200 || show_response)
-					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;			
-			}
-			else
-				send(msg, "");
+
+			r = http.Post(msg, gzip, false, "");
 		}
 		else if (PROTOCOL::APRS == protocol) {
 			msg += "{\n\t\"protocol\": \"jsonais\",";
@@ -239,27 +139,20 @@ namespace IO {
 			}
 
 			msg += "\n\t\t]\n\t}]\n}";
-			if(test) {
-				HTTPResponse r = http.Post(msg, gzip, true, "jsonais");
-				if(r.status != 200 || show_response)
-					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;
-			}
-			else
-				send(msg, "jsonais");
+
+			r = http.Post(msg, gzip, true, "jsonais");
 		}
 		else if (PROTOCOL::LIST == protocol) {
 
 			for (auto it = send_list.begin(); it != send_list.end(); ++it) {
 				msg += std::string(*it) + "\n";
 			}
-			if(test) {
-				HTTPResponse r = http.Post(msg, gzip, false, "");
-				if(r.status != 200 || show_response)
-					std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;		
-			}
-			else
-				send(msg, "");		
+
+			r = http.Post(msg, gzip, false, "");
 		}
+
+		if(r.status != 200 || show_response)
+			std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;	
 	}
 
 	void HTTPStreamer::process() {
@@ -288,9 +181,6 @@ namespace IO {
 		}
 		else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN") {
 			stationid = arg;
-		}
-		else if (option == "TEST") {
-			test = Util::Parse::Switch(arg);
 		}
 		else if (option == "INTERVAL") {
 			INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24, option);
@@ -363,7 +253,6 @@ namespace IO {
 					builder.setMap(JSON_DICT_APRS);
 					protocol = PROTOCOL::APRS;
 				}
-
 				else
 					throw std::runtime_error("HTTP: error - unknown protocol");
 			}
