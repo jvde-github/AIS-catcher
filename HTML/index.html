@@ -3255,7 +3255,6 @@
 				L.DomEvent.stopPropagation(event);
 			}
 
-			// Handle drag movement statcard
 			function moveDrag(event) {
 				if (isDragging) {
 					var clientX = event.clientX || event.touches[0].clientX;
@@ -3263,6 +3262,26 @@
 
 					var top = clientY - offsetY;
 					var left = clientX - offsetX;
+
+					// Boundary checks
+					if (top < 0) {
+						top = 0;
+					}
+
+					if (left < 0) {
+						left = 0;
+					}
+
+					const statcardWidth = statcard.offsetWidth;
+					const statcardHeight = statcard.offsetHeight;
+
+					if (top + statcardHeight > window.innerHeight) {
+						top = window.innerHeight - statcardHeight;
+					}
+
+					if (left + statcardWidth > window.innerWidth) {
+						left = window.innerWidth - statcardWidth;
+					}
 
 					statcard.style.top = top + "px";
 					statcard.style.left = left + "px";
