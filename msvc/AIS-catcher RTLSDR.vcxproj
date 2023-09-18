@@ -45,6 +45,7 @@
     <ClCompile Include="..\JSON\StringBuilder.cpp" />
     <ClCompile Include="..\IO\Network.cpp" />
     <ClCompile Include="..\IO\HTTPServer.cpp" />
+    <ClCompile Include="..\IO\HTTPClient.cpp" />
     <ClCompile Include="..\JSON\JSON.cpp" />
     <ClCompile Include="..\Library\Keys.cpp" />
     <ClCompile Include="..\Library\AIS.cpp" />
@@ -90,6 +91,7 @@
     <ClInclude Include="..\DBMS\PostgreSQL.h" />
     <ClInclude Include="..\IO\Network.h" />
     <ClInclude Include="..\IO\HTTPServer.h" />
+    <ClInclude Include="..\IO\HTTPClient.h" />
     <ClInclude Include="..\Library\AIS.h" />
     <ClInclude Include="..\Library\Message.h" />
     <ClInclude Include="..\Library\Common.h" />
