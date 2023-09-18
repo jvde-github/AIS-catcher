@@ -40,7 +40,7 @@ namespace Device {
 			// RTLTCP protocol, check for dongle information
 			int len = client.read((char*)&dongle, 12, timeout);
 			if (len != 12 || dongle.magic != 0x304C5452) throw std::runtime_error("RTLTCP: no or invalid response, likely not an rtl-tcp server.");
-		} 
+		}
 		else if (Protocol == PROTOCOL::GPSD) {
 			const std::string str = "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\n";
 			int len = client.send(str.c_str(), str.size());
@@ -70,7 +70,7 @@ namespace Device {
 
 	void RTLTCP::Stop() {
 		if (Device::isStreaming()) {
-			if(Protocol == PROTOCOL::GPSD) {
+			if (Protocol == PROTOCOL::GPSD) {
 				const std::string str = "?WATCH={\"enable\":false}\n";
 				client.send(str.c_str(), str.size());
 			}
@@ -127,7 +127,7 @@ namespace Device {
 	}
 
 	void RTLTCP::applySettings() {
-		//client.setTimeout(timeout);
+		// client.setTimeout(timeout);
 		client.setResetTime(reset_time);
 
 		if (Protocol == PROTOCOL::RTLTCP) {

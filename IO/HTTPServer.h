@@ -48,16 +48,17 @@ namespace IO {
 	class SSEConnection {
 	protected:
 		bool running = false;
-		TCP::ServerConnection *connection;
+		TCP::ServerConnection* connection;
 		int _id = 0;
 
 	public:
-		SSEConnection(TCP::ServerConnection *connection,int id) : connection(connection), _id(id) {
-			std::cerr << "SSE Connection Constructor : " << connection->sock << "\n";			
+		SSEConnection(TCP::ServerConnection* connection, int id) : connection(connection), _id(id) {
+			std::cerr << "SSE Connection Constructor : " << connection->sock << "\n";
 		}
 
-		~SSEConnection() { 
-			std::cerr << "SSE Connection Destructor\n"; Close();
+		~SSEConnection() {
+			std::cerr << "SSE Connection Destructor\n";
+			Close();
 		}
 
 		int getID() {
@@ -116,7 +117,7 @@ namespace IO {
 		void Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false);
 
 		void cleanupSSE() {
-			for (auto it = sse.begin(); it != sse.end(); ) {
+			for (auto it = sse.begin(); it != sse.end();) {
 				if (!it->isConnected()) {
 					it->Close();
 					it = sse.erase(it);
@@ -138,9 +139,9 @@ namespace IO {
 
 		void sendSSE(int id, const std::string& event, const std::string& data) {
 
-			for (auto it = sse.begin(); it != sse.end(); ++it) {				
-				if(it->getID() == id)
-					it->SendEvent("nmea", data);				
+			for (auto it = sse.begin(); it != sse.end(); ++it) {
+				if (it->getID() == id)
+					it->SendEvent("nmea", data);
 			}
 			cleanupSSE();
 		}

@@ -241,7 +241,7 @@ namespace JSON {
 		while (is_match(TokenType::String)) {
 			int p = search(tokens[idx].text);
 			if (p < 0) {
-				if(!skipUnknownKeys)
+				if (!skipUnknownKeys)
 					error_parser("\"" + tokens[idx].text + "\" is not an allowed \"key\"");
 			}
 			next();

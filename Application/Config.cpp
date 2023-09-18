@@ -41,7 +41,7 @@ void Config::setSettingsFromJSON(const JSON::Value& pd, Setting& s) {
 
 void Config::setServerfromJSON(const JSON::Value& pd) {
 
-	if(pd.isArray()) {
+	if (pd.isArray()) {
 		for (const auto& v : pd.getArray()) {
 			if (!isActiveObject(v)) continue;
 			_server.push_back(std::unique_ptr<WebClient>(new WebClient()));
@@ -148,13 +148,13 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool 
 		}
 	}
 
-	if(!unspecAllowed) {
-		if(serial.empty() && input.empty()) 
+	if (!unspecAllowed) {
+		if (serial.empty() && input.empty())
 			throw std::runtime_error("receiver needs to have a serial or input specified in Config.");
 	}
 
-	if( (!serial.empty() || !input.empty())) {
-		if( ++_nrec > 1) 
+	if ((!serial.empty() || !input.empty())) {
+		if (++_nrec > 1)
 			_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 
 		_receivers.back()->Serial() = serial;
@@ -205,7 +205,7 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property>& props, bool 
 		case AIS::KEY_SETTING_SERIALPORT:
 			if (!isActiveObject(p.Get())) continue;
 			setSettingsFromJSON(p.Get(), _receivers.back()->SerialPort());
-			break;			
+			break;
 		case AIS::KEY_SETTING_HACKRF:
 			if (!isActiveObject(p.Get())) continue;
 			setSettingsFromJSON(p.Get(), _receivers.back()->HACKRF());

@@ -70,7 +70,7 @@ namespace AIS {
 		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp(t);
-			msg.setOrigin(aivdm.channel,station);
+			msg.setOrigin(aivdm.channel, station);
 
 			addline(aivdm);
 
@@ -103,7 +103,7 @@ namespace AIS {
 		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp(t);
-		msg.setOrigin(aivdm.channel,station);
+		msg.setOrigin(aivdm.channel, station);
 
 		for (auto it = queue.begin(); it != queue.end(); it++) {
 			if (it->channel == aivdm.channel) {
@@ -200,7 +200,7 @@ namespace AIS {
 
 		GPS gps(GpsToDecimal(trim(parts[2]).c_str(), trim(parts[3])[0], error),
 				GpsToDecimal(trim(parts[4]).c_str(), trim(parts[5])[0], error),
-				s,empty);
+				s, empty);
 
 		if (error) return false;
 
@@ -216,7 +216,7 @@ namespace AIS {
 
 		if (parts.size() != 13 && parts.size() != 12) return false;
 
-		const std::string& crc = parts[parts.size()-1];
+		const std::string& crc = parts[parts.size() - 1];
 		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
 
 		if (checksum != NMEAchecksum(line)) {
@@ -225,12 +225,12 @@ namespace AIS {
 		}
 
 		GPS gps(GpsToDecimal(trim(parts[3]).c_str(), trim(parts[4])[0], error),
-				GpsToDecimal(trim(parts[5]).c_str(), trim(parts[6])[0], error),s,empty);
+				GpsToDecimal(trim(parts[5]).c_str(), trim(parts[6])[0], error), s, empty);
 
 		if (error) return false;
 
 		outGPS.Send(&gps, 1, tag);
-		//std::cerr << "RMC: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+		// std::cerr << "RMC: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -257,9 +257,9 @@ namespace AIS {
 
 		if (error) return false;
 
-		GPS gps(lat,lon,s,empty);
+		GPS gps(lat, lon, s, empty);
 		outGPS.Send(&gps, 1, tag);
-		//std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
+		// std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -307,8 +307,8 @@ namespace AIS {
 		return true;
 	}
 
-	void NMEA::processJSONsentence(const std::string &s, TAG& tag, long t) {
-		
+	void NMEA::processJSONsentence(const std::string& s, TAG& tag, long t) {
+
 		if (s[0] == '{') {
 			try {
 				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
@@ -343,10 +343,10 @@ namespace AIS {
 					}
 				}
 
-				if(cls == "AIS" && dev == "AIS-catcher") {
+				if (cls == "AIS" && dev == "AIS-catcher") {
 					for (const auto& p : j->getProperties()) {
 						if (p.Key() == AIS::KEY_NMEA) {
-							if(p.Get().isArray()) {
+							if (p.Get().isArray()) {
 								for (const auto& v : p.Get().getArray()) {
 									processAIS(v.getString(), tag, t);
 								}
@@ -355,36 +355,34 @@ namespace AIS {
 					}
 				}
 
-				if(cls == "TPV") {
+				if (cls == "TPV") {
 					float lat = 0, lon = 0;
 
 					for (const auto& p : j->getProperties()) {
 						if (p.Key() == AIS::KEY_LAT) {
-							if(p.Get().isFloat()) {
+							if (p.Get().isFloat()) {
 								lat = p.Get().getFloat();
 							}
-							else if(p.Get().isInt()) {
+							else if (p.Get().isInt()) {
 								lat = p.Get().getInt();
 							}
 						}
 						else if (p.Key() == AIS::KEY_LON) {
-							if(p.Get().isFloat()) {
+							if (p.Get().isFloat()) {
 								lon = p.Get().getFloat();
 							}
-							else if(p.Get().isInt()) {
+							else if (p.Get().isInt()) {
 								lon = p.Get().getInt();
 							}
 						}
 					}
 
-					if (lat != 0 || lon != 0) { 
-						GPS gps(lat,lon,empty,s);
-						//std::cerr << "JSON: lat = " << gps.getLat() << ", lon = " << gps.getLon() << std::endl;
+					if (lat != 0 || lon != 0) {
+						GPS gps(lat, lon, empty, s);
+						// std::cerr << "JSON: lat = " << gps.getLat() << ", lon = " << gps.getLon() << std::endl;
 						outGPS.Send(&gps, 1, tag);
 					}
 				}
-
-
 			}
 			catch (std::exception const& e) {
 				std::cout << "NMEA model: " << e.what() << std::endl;
@@ -423,7 +421,8 @@ namespace AIS {
 				// state = 1 (JSON) or state = 2 (NMEA)
 				if (state == 1) {
 					// we do not allow nested JSON, so processing until newline character or '}'
-					if (c == '{') count++;
+					if (c == '{')
+						count++;
 					else if (c == '}') {
 						--count;
 						if (!count) {

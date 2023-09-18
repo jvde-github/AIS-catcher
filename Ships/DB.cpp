@@ -164,7 +164,7 @@ std::string DB::getJSONcompact(bool full) {
 	return content;
 }
 
-void DB::getShipJSON(const VesselDetail &ship, std::string &content, long int delta_time) {
+void DB::getShipJSON(const VesselDetail& ship, std::string& content, long int delta_time) {
 	const std::string null_str = "null";
 	std::string str;
 
@@ -240,7 +240,7 @@ std::string DB::getJSON(bool full) {
 	std::string str;
 
 	content = "{\"count\":" + std::to_string(count);
-	if (latlon_share) 
+	if (latlon_share)
 		content += ",\"station\":{\"lat\":" + std::to_string(lat) + ",\"lon\":" + std::to_string(lon) + ",\"mmsi\":" + std::to_string(own_mmsi) + "}";
 	content += ",\"ships\":[";
 
@@ -254,7 +254,7 @@ std::string DB::getJSON(bool full) {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (!full && delta_time > TIME_HISTORY) break;
 
-			content += delim; 
+			content += delim;
 			getShipJSON(ship, content, delta_time);
 			delim = ",";
 		}
@@ -267,11 +267,11 @@ std::string DB::getShipJSON(int mmsi) {
 	int ptr = findShip(mmsi);
 
 	if (ptr == -1) return "{}";
-	
-	const VesselDetail ship = ships[ptr].ship;		
+
+	const VesselDetail ship = ships[ptr].ship;
 	long int delta_time = (long int)time(nullptr) - (long int)ship.last_signal;
 
-	std::string content; 
+	std::string content;
 	getShipJSON(ship, content, delta_time);
 	return content;
 }
@@ -301,8 +301,8 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 			content += std::to_string(paths[ptr].lat);
 			content += ",\"lon\":";
 			content += std::to_string(paths[ptr].lon);
-			//content += ",\"received\":";
-			//content += std::to_string(t0 - t);
+			// content += ",\"received\":";
+			// content += std::to_string(t0 - t);
 			content += "},";
 		}
 		ptr = paths[ptr].next;
@@ -330,7 +330,7 @@ int DB::findShip(uint32_t mmsi) {
 int DB::createShip() {
 	int ptr = last;
 	count = MIN(count + 1, N);
-	if(ships[ptr].ship.msg)
+	if (ships[ptr].ship.msg)
 		delete ships[ptr].ship.msg;
 
 	ships[ptr].ship = VesselDetail();
@@ -491,14 +491,14 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	if (positionUpdated) {
 		ship.approximate = msg->type() == 27;
 
-		if(ship.mmsi == own_mmsi) {
+		if (ship.mmsi == own_mmsi) {
 			lat = ship.lat;
-			lon = ship.lon;		
+			lon = ship.lon;
 		}
 	}
 
-	if(msg_save) {
-		if(!ship.msg) ship.msg = new std::string();
+	if (msg_save) {
+		if (!ship.msg) ship.msg = new std::string();
 		ship.msg->clear();
 		builder.stringify(data, *ship.msg);
 	}
@@ -550,12 +550,12 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		tag.angle = ANGLE_UNDEFINED;
 	}
 
-	if(position_updated) {
+	if (position_updated) {
 		tag.lat = ship.lat;
 		tag.lon = ship.lon;
 	}
 	else {
-		if(isValidCoord(lat_old, lon_old)) {
+		if (isValidCoord(lat_old, lon_old)) {
 			tag.lat = lat_old;
 			tag.lon = lon_old;
 		}

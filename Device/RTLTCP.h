@@ -37,14 +37,14 @@ namespace Device {
 
 		std::string getProtocolString() const {
 			switch (Protocol) {
-				case PROTOCOL::NONE:
-					return "NONE";
-				case PROTOCOL::RTLTCP:
-					return "RTLTCP";
-				case PROTOCOL::GPSD:
-					return "GPSD";
-				case PROTOCOL::TXT:
-					return "TXT";
+			case PROTOCOL::NONE:
+				return "NONE";
+			case PROTOCOL::RTLTCP:
+				return "RTLTCP";
+			case PROTOCOL::GPSD:
+				return "GPSD";
+			case PROTOCOL::TXT:
+				return "TXT";
 			}
 			return "";
 		}
@@ -99,7 +99,10 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		std::string getRateDescription() { if(getFormat() == Format::TXT) return "N/A"; return Device::getRateDescription(); }
+		std::string getRateDescription() {
+			if (getFormat() == Format::TXT) return "N/A";
+			return Device::getRateDescription();
+		}
 
 		// Settings
 		Setting& Set(std::string option, std::string arg);
@@ -108,6 +111,5 @@ namespace Device {
 		std::string getProduct() { return "RTLTCP"; }
 		std::string getSerial() { return "P" + port; }
 		std::string getVendor() { return "Network"; }
-
 	};
 }

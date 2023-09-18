@@ -30,7 +30,7 @@ namespace AIS {
 
 		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
 
-		if(mode == AIS::Mode::X) {
+		if (mode == AIS::Mode::X) {
 
 			if (sample_rate < 12000 || sample_rate > 192000)
 				throw std::runtime_error("Model: sample rate must be between 12k and 192k (inclusive).");
@@ -94,7 +94,7 @@ namespace AIS {
 				throw std::runtime_error("Model: internal error. Sample rate should be supported.");
 			}
 
-			C_a = &FCIC5_a.out;			
+			C_a = &FCIC5_a.out;
 			C_b = &FCIC5_b.out;
 
 			return;
@@ -112,7 +112,7 @@ namespace AIS {
 			src.setParams(sample_rate, 96000);
 			physical >> convert >> src >> ROT;
 		}
-		else if(MA_DS) {
+		else if (MA_DS) {
 			DS_MA.setRates(sample_rate, 96000);
 			physical >> convert >> DS_MA >> ROT;
 		}
@@ -120,7 +120,7 @@ namespace AIS {
 			const std::vector<uint32_t> definedRatesNoDSK = { 96000, 192000, 288000, 384000, 768000, 1536000, 3072000, 6144000, 12288000 };
 			const std::vector<uint32_t> definedRatesDSK = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
 
-			const std::vector<uint32_t> & definedRates  = allowDSK ? definedRatesDSK : definedRatesNoDSK;
+			const std::vector<uint32_t>& definedRates = allowDSK ? definedRatesDSK : definedRatesNoDSK;
 
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
@@ -383,7 +383,7 @@ namespace AIS {
 		else if (MA_DS)
 			return "MA ON " + Model::Get();
 
-		return "droop " + Util::Convert::toString(droop_compensation) + " fp_ds " + Util::Convert::toString(fixedpointDS) +  " dsk " + Util::Convert::toString(allowDSK) + " " + Model::Get();
+		return "droop " + Util::Convert::toString(droop_compensation) + " fp_ds " + Util::Convert::toString(fixedpointDS) + " dsk " + Util::Convert::toString(allowDSK) + " " + Model::Get();
 	}
 
 	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
@@ -395,8 +395,8 @@ namespace AIS {
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		DEC_a.setOrigin(CH1,station);
-		DEC_b.setOrigin(CH2,station);
+		DEC_a.setOrigin(CH1, station);
+		DEC_b.setOrigin(CH2, station);
 
 		*C_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
 		*C_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
@@ -426,8 +426,8 @@ namespace AIS {
 		*C_b >> FM_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1,station);
-			DEC_b[i].setOrigin(CH2,station);
+			DEC_a[i].setOrigin(CH1, station);
+			DEC_b[i].setOrigin(CH2, station);
 
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
@@ -471,7 +471,7 @@ namespace AIS {
 		CGF_a.setParams(512, 187);
 		CGF_b.setParams(512, 187);
 
-		if(CGF_wide) {
+		if (CGF_wide) {
 			CGF_a.setWide(true);
 			CGF_b.setWide(true);
 		}
@@ -480,8 +480,8 @@ namespace AIS {
 		*C_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1,station);
-			DEC_b[i].setOrigin(CH2,station);
+			DEC_a[i].setOrigin(CH1, station);
+			DEC_b[i].setOrigin(CH2, station);
 
 			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
@@ -556,7 +556,7 @@ namespace AIS {
 		CGF_a.setParams(512, 187);
 		CGF_b.setParams(512, 187);
 
-		if(CGF_wide) {
+		if (CGF_wide) {
 			CGF_a.setWide(true);
 			CGF_b.setWide(true);
 		}
@@ -565,8 +565,8 @@ namespace AIS {
 		*C_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1,station);
-			DEC_b[i].setOrigin(CH2,station);
+			DEC_a[i].setOrigin(CH1, station);
+			DEC_b[i].setOrigin(CH2, station);
 
 			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
@@ -635,7 +635,7 @@ namespace AIS {
 			convert >> RP >> FR_a;
 			convert >> IP >> FR_b;
 		}
-		else if( sample_rate < 48000) {
+		else if (sample_rate < 48000) {
 			US.setParams(sample_rate, 48000);
 			physical >> convert >> US;
 			convert >> RP >> FR_a;
@@ -651,8 +651,8 @@ namespace AIS {
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
 
-			DEC_a[i].setOrigin(CH1,station);
-			DEC_b[i].setOrigin(CH2,station);
+			DEC_a[i].setOrigin(CH1, station);
+			DEC_b[i].setOrigin(CH2, station);
 
 			for (int j = 0; j < nSymbolsPerSample; j++) {
 				if (i != j) {

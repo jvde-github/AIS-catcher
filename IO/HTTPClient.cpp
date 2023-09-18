@@ -21,33 +21,32 @@
 
 #ifdef HASOPENSSL
 static class SSLContext {
-	    SSL_CTX* ctx = nullptr;
+	SSL_CTX* ctx = nullptr;
 
-	public:
+public:
+	SSL_CTX* getContext() {
+		if (!ctx) {
 
-		SSL_CTX* getContext() {
-			if(!ctx) {
+			(void)SSL_library_init();
+			SSL_load_error_strings();
 
-				(void)SSL_library_init();
-				SSL_load_error_strings();
+			ctx = SSL_CTX_new(SSLv23_client_method());
 
-				ctx = SSL_CTX_new(SSLv23_client_method());
-
-				if (!ctx) {
-					throw std::runtime_error("SSL_CTX_new() failed.");
-				}
+			if (!ctx) {
+				throw std::runtime_error("SSL_CTX_new() failed.");
 			}
-			return ctx;
 		}
-		~SSLContext() { 
-			if(ctx) SSL_CTX_free(ctx);
-		 }
+		return ctx;
+	}
+	~SSLContext() {
+		if (ctx) SSL_CTX_free(ctx);
+	}
 } _sse_context;
 #endif
 
 namespace IO {
 
-	void HTTPClient::parseResponse(HTTPResponse &result, const std::string &response) {
+	void HTTPClient::parseResponse(HTTPResponse& result, const std::string& response) {
 
 		try {
 			std::istringstream iss(response);
@@ -57,7 +56,7 @@ namespace IO {
 
 			iss >> httpVersion >> result.status;
 
-			std::getline(iss, statusMessage); 
+			std::getline(iss, statusMessage);
 
 			std::string line;
 			bool isChunked = false;
@@ -66,9 +65,11 @@ namespace IO {
 			while (std::getline(iss, line) && line != "\r" && !line.empty()) {
 				if (line.find("Content-Length:") != std::string::npos) {
 					contentlength = std::stoi(line.substr(16));
-				} else if (line.find("Transfer-Encoding: chunked") != std::string::npos || line.find("Transfer-Encoding:chunked") != std::string::npos) {
+				}
+				else if (line.find("Transfer-Encoding: chunked") != std::string::npos || line.find("Transfer-Encoding:chunked") != std::string::npos) {
 					isChunked = true;
-				} else if (line.find("Transfer-Encoding:") != std::string::npos) {
+				}
+				else if (line.find("Transfer-Encoding:") != std::string::npos) {
 					std::cerr << "HTTP Client [" << host << "]: Transfer-Encoding other than chunked not supported." << std::endl;
 					result.status = -2;
 					return;
@@ -78,29 +79,28 @@ namespace IO {
 			if (isChunked) {
 				std::getline(iss, line);
 				contentlength = std::stoi(line, nullptr, 16);
-
 			}
 
-			if(contentlength > 0) {
+			if (contentlength > 0) {
 				result.message.resize(contentlength);
 				iss.read(&result.message[0], contentlength);
 			}
-			
-		} catch (const std::exception&) {
+		}
+		catch (const std::exception&) {
 			result.status = -3;
 			return;
 		}
 	}
 
-	void HTTPClient::createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname) {
+	void HTTPClient::createMessageBody(const std::string& msg, bool gzip, bool multipart, const std::string& copyname) {
 
 		// multipart
-		if(multipart) {
+		if (multipart) {
 			message = "--" + boundary + "\n";
 			message += "Content-Disposition: form-data; name=\"" + copyname + "\"\n";
 			message += "Content-Type: application/json\n\n";
 			message += msg;
-			message += "\n--"+boundary+"--\n";
+			message += "\n--" + boundary + "--\n";
 
 			msg_ptr = (void*)message.c_str();
 			msg_length = message.length();
@@ -116,7 +116,7 @@ namespace IO {
 			return;
 		}
 
-		// plain 
+		// plain
 		message = msg;
 		msg_ptr = (void*)message.c_str();
 		msg_length = message.length();
@@ -129,16 +129,16 @@ namespace IO {
 			header += "Authorization: Basic " + base64_encode(userpwd) + "\r\n";
 		}
 
-		if(!multipart) {
+		if (!multipart) {
 			header += "Content-Type: application/json\r\n";
 			if (gzip) header += "Content-Encoding: gzip\r\n";
 		}
 		else {
-			header += "Content-Type: multipart/form-data; boundary="+boundary+"\r\n";
+			header += "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n";
 		}
 
 		header += "Content-Length: " + std::to_string(msg_length) + "\r\n\r\n";
-	} 
+	}
 
 	bool HTTPClient::Handshake() {
 #ifdef HASOPENSSL
@@ -163,7 +163,7 @@ namespace IO {
 #endif
 	}
 
-	HTTPResponse HTTPClient::Post(const std::string &msg, bool gzip, bool multipart, const std::string &copyname) {
+	HTTPResponse HTTPClient::Post(const std::string& msg, bool gzip, bool multipart, const std::string& copyname) {
 		int r;
 
 		HTTPResponse response;
@@ -178,10 +178,10 @@ namespace IO {
 
 		std::memset(buffer, 0, sizeof(buffer));
 
-		if(secure) {
+		if (secure) {
 #ifdef HASOPENSSL
 
-			if(!Handshake()) {
+			if (!Handshake()) {
 				freeSSL();
 				return response;
 			}
@@ -192,7 +192,7 @@ namespace IO {
 				freeSSL();
 				return response;
 			}
-			
+
 			r = SSL_write(ssl, msg_ptr, msg_length);
 			if (r <= 0) {
 				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
@@ -215,11 +215,11 @@ namespace IO {
 		}
 		else {
 
-			if(client.send(header.c_str(), header.length()) < 0) {
+			if (client.send(header.c_str(), header.length()) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
 				return response;
 			}
-			if(client.send(msg_ptr, msg_length) < 0) {
+			if (client.send(msg_ptr, msg_length) < 0) {
 				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
 				return response;
 			}
@@ -233,12 +233,12 @@ namespace IO {
 		return response;
 	}
 
-	std::string HTTPClient::base64_encode(const std::string &in) {
+	std::string HTTPClient::base64_encode(const std::string& in) {
 		const char base64_chars[] =
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 			"abcdefghijklmnopqrstuvwxyz"
 			"0123456789+/";
-			
+
 		std::string out;
 		int val = 0, valb = -6;
 		for (uint8_t c : in) {

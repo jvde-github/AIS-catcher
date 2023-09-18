@@ -150,12 +150,12 @@ public:
 	std::unique_ptr<AIS::Model>& Model(int i) { return models[i]; }
 	int Count() { return models.size(); }
 
-	void setup(int &g) {
+	void setup(int& g) {
 		setupDevice();
 		setupModel(g);
 	}
 	void setupDevice();
-	void setupModel(int &g);
+	void setupModel(int& g);
 
 	void play();
 	void stop();
@@ -296,14 +296,15 @@ class WebClient : public IO::HTTPServer, public Setting {
 
 	class SSEStreamer : public StreamIn<JSON::JSON> {
 		HTTPServer* server = NULL;
+
 	public:
 		void Receive(const JSON::JSON* data, int len, TAG& tag) {
 			if (server) {
-				AIS::Message *m = (AIS::Message *)data[0].binary;
+				AIS::Message* m = (AIS::Message*)data[0].binary;
 				for (const auto& s : m->NMEA)
 					server->sendSSE(1, "nmea", s);
-			
-				if(tag.lat != 0 && tag.lon != 0) {
+
+				if (tag.lat != 0 && tag.lon != 0) {
 					std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"channel\":\"" + m->getChannel() + "\",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
 					server->sendSSE(2, "nmea", json);
 				}
@@ -350,7 +351,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 		void Receive(const RAW* data, int len, TAG& tag) {
 			received += data[0].size;
 		}
-		void Reset() { received = 0;}
+		void Reset() { received = 0; }
 	} raw_counter;
 
 	DB ships;
@@ -360,17 +361,20 @@ class WebClient : public IO::HTTPServer, public Setting {
 	void Clear();
 
 	void stopThread();
+
 public:
 	WebClient() {
-		os.clear(); JSON::StringBuilder::stringify(Util::Helper::getOS(),os);
-		hardware.clear(); JSON::StringBuilder::stringify(Util::Helper::getHardware(),hardware);
+		os.clear();
+		JSON::StringBuilder::stringify(Util::Helper::getOS(), os);
+		hardware.clear();
+		JSON::StringBuilder::stringify(Util::Helper::getHardware(), hardware);
 	}
 
 	~WebClient() { stopThread(); }
 
 	bool& active() { return run; }
 	void connect(Receiver& r);
-	void connect(AIS::Model& model, Connection<JSON::JSON> &json, Device::Device &device) ;
+	void connect(AIS::Model& model, Connection<JSON::JSON>& json, Device::Device& device);
 	void start();
 	void close();
 	void Reset();

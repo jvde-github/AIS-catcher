@@ -37,7 +37,7 @@ namespace IO {
 					break;
 				}
 			}
-		}	
+		}
 	}
 
 	void MessageToScreen::Receive(const AIS::Message* data, int len, TAG& tag) {
@@ -61,7 +61,7 @@ namespace IO {
 					}
 					break;
 				case OutputLevel::JSON_NMEA:
-					std::cout << data[i].getNMEAJSON(tag.mode,tag.level,tag.ppm) << std::endl;
+					std::cout << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm) << std::endl;
 					break;
 				default:
 					break;

@@ -90,7 +90,7 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 		std::time_t last_signal;
 		bool approximate = false;
 		char shipname[21] = { 0 }, destination[21] = { 0 }, callsign[8] = { 0 }, country_code[3] = { 0 };
-		std::string *msg = NULL;
+		std::string* msg = NULL;
 		uint64_t last_group = GROUP_OUT_UNDEFINED;
 		uint64_t group_mask = 0;
 	};
@@ -138,21 +138,23 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
 
 public:
-
 	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
 
 	void setup();
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool setUseGPS(bool b) { return use_GPS = b; }
-	void setLatLon(float lat, float lon) { this->lat = lat; this->lon = lon; }
+	void setLatLon(float lat, float lon) {
+		this->lat = lat;
+		this->lon = lon;
+	}
 	void setLat(float lat) { this->lat = lat; }
 	void setLon(float lon) { this->lon = lon; }
 	void setOwnMMSI(uint32_t mmsi) { own_mmsi = mmsi; }
-	
+
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
 	void Receive(const AIS::GPS* data, int len, TAG& tag) {
-		if(use_GPS) {
+		if (use_GPS) {
 			lat = data[0].getLat();
 			lon = data[0].getLon();
 		}

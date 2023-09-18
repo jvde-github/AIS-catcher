@@ -69,7 +69,7 @@ public:
 		if (m.type() > 27 || m.type() < 1) return;
 
 		_count++;
-		if(new_vessel) _vessels++;
+		if (new_vessel) _vessels++;
 
 		_msg[m.type() - 1]++;
 		if (m.getChannel() >= 'A' || m.getChannel() <= 'D') _channel[m.getChannel() - 'A']++;
@@ -80,11 +80,11 @@ public:
 
 		// for range we ignore atons for now
 		if (m.type() == 21) return;
-		
-		if( !tag.validated || tag.distance > _LONG_RANGE_CUTOFF)
+
+		if (!tag.validated || tag.distance > _LONG_RANGE_CUTOFF)
 			return;
-			 
-		if(tag.distance > _distance) {
+
+		if (tag.distance > _distance) {
 			_distance = tag.distance;
 		}
 
@@ -187,11 +187,11 @@ public:
 		std::lock_guard<std::mutex> l{ this->m };
 
 		int magic = 0, version = 0, sum = 0;
-		if (!file.read((char*)&magic, sizeof(int))) return false;			  // Check count
-		if (!file.read((char*)&version, sizeof(int))) return false;			  // Check count
-		if (!file.read((char*)&_count, sizeof(int))) return false;			  // Check count
-		if(version == _VERSION) {
-			if (!file.read((char*)&_vessels, sizeof(int))) return false;			  // Check count
+		if (!file.read((char*)&magic, sizeof(int))) return false;	// Check count
+		if (!file.read((char*)&version, sizeof(int))) return false; // Check count
+		if (!file.read((char*)&_count, sizeof(int))) return false;	// Check count
+		if (version == _VERSION) {
+			if (!file.read((char*)&_vessels, sizeof(int))) return false; // Check count
 		}
 		if (!file.read((char*)&_msg, sizeof(_msg))) return false;			  // Check msg array
 		if (!file.read((char*)&_channel, sizeof(_channel))) return false;	  // Check channel array

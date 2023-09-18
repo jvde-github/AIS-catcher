@@ -49,12 +49,12 @@ public:
 	void Send(S* data, int len, TAG& tag) {
 		if (connections.size() == 0) return;
 
-		if(groups != GROUP_OUT_UNDEFINED)
+		if (groups != GROUP_OUT_UNDEFINED)
 			tag.group = groups;
-			
+
 		int sz1 = (int)connections.size() - 1;
 
-		for (int i = 0; i < sz1; i++) 
+		for (int i = 0; i < sz1; i++)
 			connections[i]->Receive((const S*)data, len, tag);
 
 		connections[sz1]->Receive(data, len, tag);

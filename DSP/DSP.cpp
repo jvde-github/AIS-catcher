@@ -59,20 +59,20 @@ namespace DSP {
 	void DownsampleMovingAverage::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		if (output.size() < BLOCK_SIZE) output.resize(BLOCK_SIZE);
 
-		for(int i = 0; i < len; i++) {
+		for (int i = 0; i < len; i++) {
 			D += data[i];
 			df++;
 
 			idx_out = idx_out + out_rate;
 
-			if(idx_out >= in_rate) {
+			if (idx_out >= in_rate) {
 				idx_out %= in_rate;
 
-				output[idx_in] = D / (FLOAT32) df;
+				output[idx_in] = D / (FLOAT32)df;
 				D = 0;
 				df = 0;
 
-				if(++idx_in == BLOCK_SIZE) {
+				if (++idx_in == BLOCK_SIZE) {
 					Send(output.data(), BLOCK_SIZE, tag);
 					idx_in = 0;
 				}
@@ -388,31 +388,31 @@ namespace DSP {
 
 		FFT::fft(fft_data);
 
-		if(wide) {
-			if(cumsum.size() < N) cumsum.resize(N);
+		if (wide) {
+			if (cumsum.size() < N) cumsum.resize(N);
 
 			int M = (int)(12500.0 / 48000.0 * N);
-			int ofs = (M-delta)/2;
+			int ofs = (M - delta) / 2;
 
 			FLOAT32 wm = -1;
 
 			cumsum[0] = 0;
-			for(int i = 1; i < N; i++) {
+			for (int i = 1; i < N; i++) {
 				FLOAT32 p = std::abs(fft_data[(i + N / 2) % N]);
-				cumsum[i] = cumsum[i-1] + p;
+				cumsum[i] = cumsum[i - 1] + p;
 			}
 
-			for(int i = 0; i < N - M; i++) {
-				FLOAT32 v = cumsum[i+M] - cumsum[i]  + 0.6f * (std::abs(fft_data[(i + ofs + N / 2) % N]) + std::abs(fft_data[(i + ofs + delta + N / 2) % N]));
-				if(v > wm) {
+			for (int i = 0; i < N - M; i++) {
+				FLOAT32 v = cumsum[i + M] - cumsum[i] + 0.6f * (std::abs(fft_data[(i + ofs + N / 2) % N]) + std::abs(fft_data[(i + ofs + delta + N / 2) % N]));
+				if (v > wm) {
 					wm = v;
 					wi = i;
 				}
 			}
-			wi = (wi + M/2 - N/2);  
+			wi = (wi + M / 2 - N / 2);
 		}
 
-		for (int i = wi +  window; i < wi + N - window - delta; i++) {
+		for (int i = wi + window; i < wi + N - window - delta; i++) {
 			FLOAT32 h = std::abs(fft_data[(i + N / 2) % N]) + std::abs(fft_data[(i + delta + N / 2) % N]);
 
 			if (h > max_val) {

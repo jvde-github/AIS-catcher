@@ -141,8 +141,8 @@ namespace Device {
 		}
 		else if (option == "TRESHOLD" || option == "THRESHOLD") {
 			threshold_high = Util::Parse::Switch(arg, "HIGH", "LOW");
-			
-			if(option == "TRESHOLD" )
+
+			if (option == "TRESHOLD")
 				std::cerr << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
 		}
 		else

@@ -109,7 +109,10 @@ namespace DSP {
 
 	public:
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
-		void setRates(int in, int out) { in_rate = in; out_rate = out; }
+		void setRates(int in, int out) {
+			in_rate = in;
+			out_rate = out;
+		}
 	};
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {

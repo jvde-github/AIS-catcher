@@ -60,7 +60,7 @@ namespace TCP {
 		SOCKET sock = -1;
 
 		std::string msg;
-    	std::vector<char> out;
+		std::vector<char> out;
 		std::time_t stamp;
 		bool is_locked = false;
 
@@ -86,7 +86,7 @@ namespace TCP {
 		~Server();
 
 		bool start(int port);
-		bool SendAll(const std::string &m) {
+		bool SendAll(const std::string& m) {
 			for (auto& c : client) {
 				if (c.isConnected()) {
 					if (!c.Send(m.c_str(), m.length())) {
@@ -119,7 +119,7 @@ namespace TCP {
 		bool reuse_port = true;
 
 		const static int MAX_CONN = 16;
-		std::array<ServerConnection,MAX_CONN> client;
+		std::array<ServerConnection, MAX_CONN> client;
 
 		std::thread run_thread;
 
@@ -128,7 +128,7 @@ namespace TCP {
 		void Run();
 		sockaddr_in service;
 
-		bool Send(ServerConnection &c, const char* data, int len) {
+		bool Send(ServerConnection& c, const char* data, int len) {
 			return c.Send(data, len);
 		}
 
@@ -145,7 +145,6 @@ namespace TCP {
 
 	class Client {
 	public:
-		
 		Client() {}
 		~Client() { disconnect(); }
 
@@ -157,8 +156,11 @@ namespace TCP {
 		int send(const void* data, int length);
 
 		SOCKET getSocket() { return sock; }
+
 	private:
-		enum State { DISCONNECTED, CONNECTING, READY };
+		enum State { DISCONNECTED,
+					 CONNECTING,
+					 READY };
 
 		std::string host;
 		std::string port;

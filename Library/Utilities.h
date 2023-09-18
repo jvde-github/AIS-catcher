@@ -109,14 +109,14 @@ namespace Util {
 
 	class Parse {
 	public:
-		static long Integer(std::string str, long min = 0, long max = 0, const std::string &setting = "");
+		static long Integer(std::string str, long min = 0, long max = 0, const std::string& setting = "");
 		static FLOAT32 Float(std::string str, FLOAT32 min = -1e30, FLOAT32 max = +1e30);
 		static bool StreamFormat(std::string str, Format& format);
 		static bool DeviceType(std::string str, Type& type);
 		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF");
 		static bool AutoInteger(std::string arg, int min, int max, int& val);
 		static bool AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32& val);
-		static void URL(const std::string& url, std::string &protocol, std::string &host, std::string &port, std::string &path);
+		static void URL(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path);
 	};
 
 	class Helper {
@@ -133,7 +133,7 @@ namespace Util {
 
 		static int lsb(uint64_t x) {
 			int n = 0;
-			for(int i = 0; i < 64; i++) {
+			for (int i = 0; i < 64; i++) {
 				if (x & (1ULL << i)) return i;
 			}
 			return -1;
@@ -168,6 +168,7 @@ namespace Util {
 
 	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {
 		std::vector<CFLOAT32> output;
+
 	public:
 		Connection<CU8> outCU8;
 		Connection<CS8> outCS8;

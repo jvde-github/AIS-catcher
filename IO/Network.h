@@ -74,7 +74,10 @@ namespace IO {
 
 		char response[1024];
 
-		enum class PROTOCOL{ AISCATCHER, APRS, LIST, AIRFRAMES } protocol = PROTOCOL::AISCATCHER;
+		enum class PROTOCOL { AISCATCHER,
+							  APRS,
+							  LIST,
+							  AIRFRAMES } protocol = PROTOCOL::AISCATCHER;
 		std::string protocol_string = "jsonaiscatcher";
 
 		void post();
@@ -97,6 +100,7 @@ namespace IO {
 
 	public:
 		~HTTPStreamer() { Stop(); }
+
 	public:
 		HTTPStreamer(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
 
@@ -123,7 +127,7 @@ namespace IO {
 		int ID() { return sourceID; }
 	};
 
-	class UDPStreamer : public StreamIn<AIS::Message>,  public StreamIn<AIS::GPS>, public Setting {
+	class UDPStreamer : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
 		int source = -1;
@@ -135,7 +139,7 @@ namespace IO {
 		bool JSON = false;
 
 		void ResetIfNeeded();
-		
+
 	public:
 		~UDPStreamer();
 		UDPStreamer();
@@ -159,7 +163,7 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPClientStreamer : public StreamIn<AIS::Message>,  public StreamIn<AIS::GPS>, public Setting {
+	class TCPClientStreamer : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
 		::TCP::Client tcp;
 		AIS::Filter filter;
 		bool JSON = false;
@@ -175,7 +179,7 @@ namespace IO {
 
 		void Start();
 		void Stop();
-		
+
 		int SendTo(std::string str) {
 
 			return tcp.send(str.c_str(), (int)str.length());
@@ -183,10 +187,11 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPlistenerStreamer : public StreamIn<AIS::Message>,  public StreamIn<AIS::GPS>, public Setting, public TCP::Server {
+	class TCPlistenerStreamer : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting, public TCP::Server {
 		int port = 5010;
 		AIS::Filter filter;
 		bool JSON = false;
+
 	public:
 		virtual Setting& Set(std::string option, std::string arg);
 
@@ -195,6 +200,5 @@ namespace IO {
 
 		void Start();
 		void Stop() {}
-		
 	};
 }

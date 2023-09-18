@@ -115,7 +115,7 @@ namespace IO {
 				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else if(!filter.SetOption(option, arg)) {
+			else if (!filter.SetOption(option, arg)) {
 				throw std::runtime_error("Message output - unknown option: " + option);
 			}
 
@@ -137,12 +137,12 @@ namespace IO {
 
 		Setting& Set(std::string option, std::string arg) {
 			Util::Convert::toUpper(option);
-			
+
 			if (option == "GROUPS_IN") {
 				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else if(!filter.SetOption(option, arg)) {
+			else if (!filter.SetOption(option, arg)) {
 				throw std::runtime_error("JSON output - unknown option: " + option);
 			}
 			return *this;

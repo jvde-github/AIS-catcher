@@ -37,7 +37,7 @@ namespace IO {
 				conn_fails = 0;
 			}
 		}
-		
+
 		{
 			const std::lock_guard<std::mutex> lock(queue_mutex);
 			sql_trans = "DO $$\nDECLARE\n\tm_id INTEGER;\nBEGIN\n" + sql.str() + "\nEND $$;\n";
@@ -60,7 +60,7 @@ namespace IO {
 #endif
 	PostgreSQL::~PostgreSQL() {
 #ifdef HASPSQL
-		if (running) {			
+		if (running) {
 
 			running = false;
 			terminate = true;
@@ -82,12 +82,11 @@ namespace IO {
 
 			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : 2) && sql.tellp() < 32768 * 16; i++) {
 				SleepSystem(1000);
-
 			}
 
 			if (sql.tellp()) post();
 
-			if (terminate) break;			
+			if (terminate) break;
 
 			if (MAX_FAILS < 1000 && conn_fails > MAX_FAILS) {
 				std::cerr << "DBMS: max attemtps reached to connect to DBMS. Terminating." << std::endl;
@@ -161,7 +160,7 @@ namespace IO {
 	}
 
 #ifdef HASPSQL
-	std::string PostgreSQL::addVesselPosition(const JSON::JSON* data, const AIS::Message* msg,const std::string &m,const std::string &s) {
+	std::string PostgreSQL::addVesselPosition(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
 		if (!VP) return "";
 
 		std::string keys = "";
@@ -240,7 +239,7 @@ namespace IO {
 		ch = 1 << ch;
 
 		keys += "msg_id,station_id,received_at,count,msg_types,channels";
-		set += "msg_id=EXCLUDED.msg_id,station_id=EXCLUDED.station_id,received_at=EXCLUDED.received_at,count=ais_vessel.count+1,msg_types="+std::to_string(type)+"|ais_vessel.msg_types,channels="+std::to_string(ch)+"|ais_vessel.channels";
+		set += "msg_id=EXCLUDED.msg_id,station_id=EXCLUDED.station_id,received_at=EXCLUDED.received_at,count=ais_vessel.count+1,msg_types=" + std::to_string(type) + "|ais_vessel.msg_types,channels=" + std::to_string(ch) + "|ais_vessel.channels";
 		values += m + ',' + s;
 		values += ",\'" + Util::Convert::toTimestampStr(msg->getRxTimeUnix()) + '\'' + ",1," + std::to_string(type) + "," + std::to_string(ch);
 
@@ -248,7 +247,7 @@ namespace IO {
 	}
 
 
-	std::string PostgreSQL::addVesselStatic(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
+	std::string PostgreSQL::addVesselStatic(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
 		if (!VS) return "";
 
 		std::string keys = "";
@@ -286,7 +285,7 @@ namespace IO {
 	}
 
 
-	std::string PostgreSQL::addBasestation(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
+	std::string PostgreSQL::addBasestation(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
 		if (!BS) return "";
 
 		std::string keys = "";
@@ -310,7 +309,7 @@ namespace IO {
 		return "\tINSERT INTO ais_basestation (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addSARposition(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
+	std::string PostgreSQL::addSARposition(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
 		if (!SAR) return "";
 
 		std::string keys = "";
@@ -337,7 +336,7 @@ namespace IO {
 		return "\tINSERT INTO ais_sar_position (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addATON(const JSON::JSON* data, const AIS::Message* msg, const std::string &m, const std::string &s) {
+	std::string PostgreSQL::addATON(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
 		if (!ATON) return "";
 
 		std::string keys = "";
@@ -389,18 +388,18 @@ namespace IO {
 
 		if (MSGS) {
 			sql << "\tINSERT INTO ais_message (mmsi, station_id, type, received_at,channel, signal_level, ppm) "
-				<< "VALUES (" << msg->mmsi() << ',' + s_id << ',' << msg->type() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'" 
-				<< (char)msg->getChannel() << "\'," << tag.level <<',' << tag.ppm
+				<< "VALUES (" << msg->mmsi() << ',' + s_id << ',' << msg->type() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'"
+				<< (char)msg->getChannel() << "\'," << tag.level << ',' << tag.ppm
 				<< ") RETURNING id INTO m_id;\n";
 		}
 
 		if (NMEA) {
 			for (auto s : msg->NMEA) {
 
-				sql << "\tINSERT INTO ais_nmea (msg_id,station_id,mmsi,received_at,nmea) VALUES (" << m_id << ',' << s_id  << ',' << msg->mmsi() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'" << s << "\');\n";
+				sql << "\tINSERT INTO ais_nmea (msg_id,station_id,mmsi,received_at,nmea) VALUES (" << m_id << ',' << s_id << ',' << msg->mmsi() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'" << s << "\');\n";
 			}
 		}
-		
+
 		switch (msg->type()) {
 		case 1:
 		case 2:
@@ -422,11 +421,11 @@ namespace IO {
 			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 18:
-			sql << addVesselPosition(data, msg,  m_id, s_id);
+			sql << addVesselPosition(data, msg, m_id, s_id);
 			sql << addVessel(data, msg, m_id, s_id);
 			break;
 		case 19:
-			sql << addVesselPosition(data, msg,  m_id, s_id);
+			sql << addVesselPosition(data, msg, m_id, s_id);
 			sql << addVesselStatic(data, msg, m_id, s_id);
 			sql << addVessel(data, msg, m_id, s_id);
 			break;
@@ -471,7 +470,7 @@ namespace IO {
 		else if (option == "STATION_ID")
 			station_id = Util::Parse::Integer(arg);
 		else if (option == "INTERVAL")
-			INTERVAL = Util::Parse::Integer(arg,5,1800);
+			INTERVAL = Util::Parse::Integer(arg, 5, 1800);
 		else if (option == "MAX_FAILS")
 			MAX_FAILS = Util::Parse::Integer(arg);
 		else if (option == "NMEA")
@@ -496,4 +495,3 @@ namespace IO {
 		return *this;
 	}
 };
-

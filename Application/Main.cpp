@@ -295,7 +295,7 @@ int main(int argc, char* argv[]) {
 				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter [port].");
 				{
 					IO::TCPlistenerStreamer& u = tcp_listener.add(arg1);
-					if (count >1) parseSettings(u, argv, ptr + 1, argc);
+					if (count > 1) parseSettings(u, argv, ptr + 1, argc);
 				}
 				break;
 
@@ -337,7 +337,7 @@ int main(int argc, char* argv[]) {
 				_receivers.back()->InputType() = Type::RTLTCP;
 				if (count == 1) _receivers.back()->RTLTCP().Set("host", arg1);
 				if (count == 2) _receivers.back()->RTLTCP().Set("port", arg2).Set("host", arg1);
-				if (count == 3) _receivers.back()->RTLTCP().Set("port", arg3).Set("host", arg2).Set("PROTOCOL",arg1);
+				if (count == 3) _receivers.back()->RTLTCP().Set("port", arg3).Set("host", arg2).Set("PROTOCOL", arg1);
 				break;
 			case 'x':
 				Assert(count == 2, param, "requires two parameters [server] [port].");

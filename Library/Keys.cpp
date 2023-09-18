@@ -34,7 +34,7 @@ namespace AIS {
 		{ "aid_type_text", "", "aid_type_text", "" },
 		{ "station_id", "", "station_id", "" },
 		// setting
-		{ "", "", "", "", "about" },		
+		{ "", "", "", "", "about" },
 		{ "", "", "", "", "active" },
 		{ "", "", "", "", "afc_wide" },
 		{ "", "", "", "", "agc" },

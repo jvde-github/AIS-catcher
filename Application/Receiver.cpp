@@ -66,7 +66,7 @@ void Receiver::setChannel(std::string mode, std::string NMEA) {
 	else if (mode == "CD") {
 		ChannelMode = AIS::Mode::CD;
 		if (NMEA.empty()) NMEA = "CD";
-	} 
+	}
 	else if (mode == "X") {
 		ChannelMode = AIS::Mode::X;
 		if (NMEA.empty()) {
@@ -219,7 +219,7 @@ std::unique_ptr<AIS::Model>& Receiver::addModel(int m) {
 	return models.back();
 }
 
-void Receiver::setupModel(int &group) {
+void Receiver::setupModel(int& group) {
 	// if nothing defined, create one model
 	if (!models.size())
 		addModel((device->getFormat() == Format::TXT) ? 5 : 2);
@@ -236,7 +236,6 @@ void Receiver::setupModel(int &group) {
 		m->setDesignation(ChannelNMEA);
 		m->setMode(ChannelMode);
 		m->buildModel(ChannelNMEA[0], ChannelNMEA[1], device->getSampleRate(), timing, device);
-
 	}
 
 	// set up JSON output channels, still unconnected
@@ -246,7 +245,7 @@ void Receiver::setupModel(int &group) {
 	// assign the output of each individual model to a seperate group
 	assert(group + models.size() < 32);
 
-	for(int i = 0; i < models.size(); i++) {
+	for (int i = 0; i < models.size(); i++) {
 		uint32_t mask = 1 << group;
 		jsonais[i].out.setGroupOut(mask);
 		models[i]->Output().out.setGroupOut(mask);
@@ -269,7 +268,7 @@ void Receiver::play() {
 		std::cerr << "Device    : " << device->getProduct() << std::endl;
 		std::cerr << "Settings  : " << device->Get() << std::endl;
 		for (int i = 0; i < models.size(); i++)
-			std::cerr << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut())+1)
+			std::cerr << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
 					  << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
 	}
 }
@@ -315,7 +314,7 @@ void OutputScreen::connect(Receiver& r) {
 
 	if (level == OutputLevel::NMEA || level == OutputLevel::JSON_NMEA || level == OutputLevel::FULL) {
 		for (int j = 0; j < r.Count(); j++) {
-			if (r.Output(j).canConnect(((StreamIn<AIS::Message>)msg2screen).getGroupsIn())) 
+			if (r.Output(j).canConnect(((StreamIn<AIS::Message>)msg2screen).getGroupsIn()))
 				r.Output(j).Connect((StreamIn<AIS::Message>*)&msg2screen);
 
 			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)msg2screen).getGroupsIn()))
@@ -360,11 +359,11 @@ void OutputUDP::connect(Receiver& r) {
 	// Create and connect output to UDP stream
 	for (int i = 0; i < _UDP.size(); i++) {
 		for (int j = 0; j < r.Count(); j++) {
-			StreamIn<AIS::Message> *um = (StreamIn<AIS::Message>*)&*_UDP[i];
+			StreamIn<AIS::Message>* um = (StreamIn<AIS::Message>*)&*_UDP[i];
 			if (r.Output(j).canConnect(um->getGroupsIn()))
 				r.Output(j).Connect(um);
 
-			StreamIn<AIS::GPS> *ug = (StreamIn<AIS::GPS>*)&*_UDP[i];
+			StreamIn<AIS::GPS>* ug = (StreamIn<AIS::GPS>*)&*_UDP[i];
 			if (r.OutputGPS(j).canConnect(ug->getGroupsIn()))
 				r.OutputGPS(j).Connect(ug);
 		}
@@ -398,11 +397,11 @@ IO::UDPStreamer& OutputUDP::add(const std::string& host, const std::string& port
 void OutputTCP::connect(Receiver& r) {
 	for (int i = 0; i < _TCP.size(); i++) {
 		for (int j = 0; j < r.Count(); j++) {
-			StreamIn<AIS::Message> *tm = (StreamIn<AIS::Message>*)&*_TCP[i];
+			StreamIn<AIS::Message>* tm = (StreamIn<AIS::Message>*)&*_TCP[i];
 			if (r.Output(j).canConnect(tm->getGroupsIn()))
 				r.Output(j).Connect(tm);
 
-			StreamIn<AIS::GPS> *tg = (StreamIn<AIS::GPS>*)&*_TCP[i];
+			StreamIn<AIS::GPS>* tg = (StreamIn<AIS::GPS>*)&*_TCP[i];
 			if (r.OutputGPS(j).canConnect(tg->getGroupsIn()))
 				r.OutputGPS(j).Connect(tg);
 		}
@@ -488,15 +487,14 @@ void OutputTCPlistener::connect(Receiver& r) {
 
 		for (int j = 0; j < r.Count(); j++) {
 
-			StreamIn<AIS::Message> *tm = (StreamIn<AIS::Message>*)&*h;
+			StreamIn<AIS::Message>* tm = (StreamIn<AIS::Message>*)&*h;
 			if (r.Output(j).canConnect(tm->getGroupsIn()))
 				r.Output(j).Connect(tm);
 
-			StreamIn<AIS::GPS> *tg = (StreamIn<AIS::GPS>*)&*h;
+			StreamIn<AIS::GPS>* tg = (StreamIn<AIS::GPS>*)&*h;
 			if (r.OutputGPS(j).canConnect(tg->getGroupsIn()))
-				r.OutputGPS(j).Connect(tg);				
+				r.OutputGPS(j).Connect(tg);
 		}
-
 	}
 }
 
@@ -509,7 +507,7 @@ void OutputTCPlistener::start() {
 
 IO::TCPlistenerStreamer& OutputTCPlistener::add(const std::string& port) {
 	_listener.push_back(std::unique_ptr<IO::TCPlistenerStreamer>(new IO::TCPlistenerStreamer()));
-	_listener.back()->Set("PORT", port).Set("TIMEOUT","0");
+	_listener.back()->Set("PORT", port).Set("TIMEOUT", "0");
 
 	return *_listener.back();
 }
@@ -613,30 +611,29 @@ void WebClient::connect(Receiver& r) {
 			r.Output(j) >> counter;
 			r.Output(j) >> counter_session;
 
-			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*) & ships);
-			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*) & ships);
+			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&ships);
+			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&ships);
 
 			if (supportPrometheus)
 				r.Output(j) >> dataPrometheus;
 
 			*r.device >> raw_counter;
 		}
-	if(!rec_details)
+	if (!rec_details)
 		std::cerr << "Web Client: not connected to the output of any model." << std::endl;
-
 }
 
-void WebClient::connect(AIS::Model& m, Connection<JSON::JSON> &json, Device::Device &device) {
-	
+void WebClient::connect(AIS::Model& m, Connection<JSON::JSON>& json, Device::Device& device) {
+
 	if (m.Output().out.canConnect(groups_in)) {
 		m.Output() >> counter;
 		m.Output() >> counter_session;
 
-		json.Connect((StreamIn<JSON::JSON>*) & ships);
+		json.Connect((StreamIn<JSON::JSON>*)&ships);
 		device >> raw_counter;
 
 		sample_rate = device.getRateDescription();
-		setDeviceDescription( device.getProduct(),device.getVendor().empty() ? "-" : device.getVendor(),device.getSerial().empty() ? "-" : device.getSerial());
+		setDeviceDescription(device.getProduct(), device.getVendor().empty() ? "-" : device.getVendor(), device.getSerial().empty() ? "-" : device.getSerial());
 		model = m.getName();
 	}
 }
@@ -665,7 +662,7 @@ void WebClient::start() {
 
 	ships >> sse_streamer;
 	sse_streamer.setSSE(this);
-	
+
 	ships >> hist_day;
 	ships >> hist_hour;
 	ships >> hist_minute;
@@ -698,7 +695,7 @@ void WebClient::start() {
 }
 
 void WebClient::stopThread() {
-	if(thread_running) {
+	if (thread_running) {
 		std::unique_lock<std::mutex> lock(m);
 
 		run = false;
@@ -735,15 +732,15 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 	}
 
 	if (r == "/") {
-		if(cdn.empty())
+		if (cdn.empty())
 			Response(c, "text/html", (char*)index_html_gz, index_html_gz_len, true);
 		else
 			Response(c, "text/html", (char*)index_local_html_gz, index_local_html_gz_len, true);
 	}
-	else if (!cdn.empty() && r.find("/cdn/") == 0) {	
+	else if (!cdn.empty() && r.find("/cdn/") == 0) {
 		try {
 
-			if(r.find("..") != std::string::npos || r.find(".") == std::string::npos)
+			if (r.find("..") != std::string::npos || r.find(".") == std::string::npos)
 				throw std::runtime_error("Blocked, pattern not matching");
 
 			std::string extension = r.substr(r.find_last_of('.') + 1);
@@ -751,16 +748,21 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 
 			if (extension == "svg") {
 				contentType = "image/svg+xml";
-			} else if (extension == "js") {
+			}
+			else if (extension == "js") {
 				contentType = "application/javascript";
-			} else if (extension == "png") {
+			}
+			else if (extension == "png") {
 				contentType = "image/png";
-			} else if (extension == "css") {
+			}
+			else if (extension == "css") {
 				contentType = "text/css";
-			} else {
-				throw std::runtime_error("Blocked " + extension);			}
+			}
+			else {
+				throw std::runtime_error("Blocked " + extension);
+			}
 
-			std::string content =  Util::Helper::readFile(cdn+r);
+			std::string content = Util::Helper::readFile(cdn + r);
 			Response(c, contentType, content, use_zlib & gzip);
 		}
 		catch (const std::exception& e) {
@@ -840,15 +842,15 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/sse") {
-		if(realtime)
+		if (realtime)
 			upgradeSSE(c, 1);
 	}
 	else if (r == "/signal") {
-		if(realtime)
+		if (realtime)
 			upgradeSSE(c, 2);
 	}
 	else if (r == "/config.js") {
-		Response(c, "application/javascript", params + plugins, use_zlib& gzip);
+		Response(c, "application/javascript", params + plugins, use_zlib & gzip);
 	}
 	else if (r == "/config.css") {
 		Response(c, "text/css", stylesheets, use_zlib & gzip);
@@ -868,9 +870,11 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 					if (content.length() > 1) content += ",";
 					content += "\"" + std::to_string(mmsi) + "\":" + ships.getPathJSON(mmsi);
 				}
-			} catch (const std::invalid_argument& e) {
+			}
+			catch (const std::invalid_argument& e) {
 				std::cerr << "Server: path MMSI invalid: " << mmsi_str << std::endl;
-			} catch (const std::out_of_range& e) {
+			}
+			catch (const std::out_of_range& e) {
 				std::cerr << "Server: path MMSI out of range: " << mmsi_str << std::endl;
 			}
 		}
@@ -880,12 +884,12 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/message") {
 		int mmsi = -1;
 		std::stringstream ss(a);
-	    if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999) {
+		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999) {
 			std::string content = ships.getMessage(mmsi);
 			Response(c, "application/text", content, use_zlib & gzip);
 		}
 		else
-			Response(c, "application/text","Message not availaible");
+			Response(c, "application/text", "Message not availaible");
 	}
 	else if (r == "/vessel") {
 		std::stringstream ss(a);
@@ -893,10 +897,11 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999) {
 			std::string content = ships.getShipJSON(mmsi);
 			Response(c, "application/text", content, use_zlib & gzip);
-		} else {
+		}
+		else {
 			Response(c, "application/text", "Vessel not available");
 		}
-	}	
+	}
 	else if (r == "/history_full.json") {
 
 		std::string content = "{";
@@ -931,7 +936,7 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 	}
 	else if (option == "GROUPS_IN") {
 		groups_in = Util::Parse::Integer(arg);
-	} 
+	}
 	else if (option == "PORT_MIN") {
 		port_set = true;
 		firstport = Util::Parse::Integer(arg, 1, 65535, option);
@@ -996,8 +1001,8 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60, option);
 	}
 	else if (option == "REALTIME") {
-		realtime = Util::Parse::Switch(arg);		
-		if(realtime)
+		realtime = Util::Parse::Switch(arg);
+		if (realtime)
 			plugins += "realtime_enabled = true;\n";
 		else
 			plugins += "realtime_enabled = false;\n";
