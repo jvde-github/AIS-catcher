@@ -20,9 +20,7 @@
 #include <cstring>
 
 #include "Filters.h"
-
 #include "Stream.h"
-#include "Signals.h"
 
 namespace Demod {
 	// needs to be a power of two for the Fast version

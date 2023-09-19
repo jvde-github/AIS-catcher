@@ -26,13 +26,10 @@
 #endif
 
 #include "Stream.h"
-#include "JSON/JSON.h"
 #include "Keys.h"
 #include "AIS.h"
-#include "Utilities.h"
+#include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
-
-// Needs major clean up and simplification
 
 namespace IO {
 

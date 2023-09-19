@@ -23,6 +23,7 @@
 
 #include <vector>
 #include <chrono>
+#include <cstring>
 
 // FIFO implementation: input (Push) can be any size, output (Pop) will be of size BLOCK_SIZE
 

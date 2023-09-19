@@ -36,8 +36,6 @@
 
 #include "Stream.h"
 #include "Common.h"
-#include "AIS.h"
-#include "Keys.h"
 #include "TCP.h"
 #include "Library/ZIP.h"
 #include "HTTPServer.h"

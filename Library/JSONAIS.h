@@ -23,8 +23,6 @@
 #include "JSON/JSON.h"
 #include "Keys.h"
 #include "AIS.h"
-#include "Signals.h"
-#include "Utilities.h"
 
 namespace AIS {
 	class JSONAIS : public SimpleStreamInOut<Message, JSON::JSON> {
