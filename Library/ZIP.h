@@ -18,6 +18,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 #ifdef HASZLIB
 #include <zlib.h>
@@ -56,7 +57,7 @@ public:
 		strm.opaque = Z_NULL;
 
 		if (deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) < 0) {
-			throw "ZLIB: error cannot initiate stream.";
+			throw std::runtime_error("ZLIB: error cannot initiate stream.");
 		}
 	}
 
@@ -82,7 +83,7 @@ public:
 			strm.avail_out = CHUNKSIZE;
 			strm.next_out = (unsigned char*)(output.data() + idx);
 			if (deflate(&strm, Z_FINISH) < 0)
-				throw "ZLIB: unexpected problem with ZLIB";
+				throw std::runtime_error("ZLIB: unexpected problem with ZLIB");
 
 			done = strm.avail_out != 0;
 			idx += CHUNKSIZE;
