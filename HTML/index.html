@@ -2490,7 +2490,7 @@
 			}
 
 			function copyText(m) {
-				copyClipboard(m);
+				if (copyClipboard(m)) showNotification("Content copied to clipboard");
 			}
 
 			function openGoogleSearch(m) {
@@ -2560,7 +2560,6 @@
 
 					var contextMenuRect = contextMenu.getBoundingClientRect();
 					var viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
-
 					var viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
 
 					var maxX = viewportWidth - contextMenuRect.width;
@@ -2606,7 +2605,7 @@
 					setTimeout(() => {
 						notificationContainer.removeChild(notificationElement);
 					}, 500);
-				}, 2500);
+				}, 2000);
 			}
 
 			function getStatusVal(ship) {
@@ -3264,36 +3263,23 @@
 
 			function moveDrag(event) {
 				if (isDragging) {
-					var clientX = event.clientX || event.touches[0].clientX;
-					var clientY = event.clientY || event.touches[0].clientY;
+					const clientX = event.clientX || event.touches[0].clientX;
+					const clientY = event.clientY || event.touches[0].clientY;
+
+					const viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
+					const viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
 
 					var top = clientY - offsetY;
 					var left = clientX - offsetX;
 
-					// Boundary checks
-					if (top < 0) {
-						top = 0;
-					}
-
-					if (left < 0) {
-						left = 0;
-					}
-
-					const statcardWidth = statcard.offsetWidth;
-					const statcardHeight = statcard.offsetHeight;
-
-					if (top + statcardHeight > window.innerHeight) {
-						top = window.innerHeight - statcardHeight;
-					}
-
-					if (left + statcardWidth > window.innerWidth) {
-						left = window.innerWidth - statcardWidth;
-					}
+					top = Math.max(0, Math.min(top, viewportHeight - statcard.offsetHeight));
+					left = Math.max(0, Math.min(left, viewportWidth - statcard.offsetWidth));
 
 					statcard.style.top = top + "px";
 					statcard.style.left = left + "px";
 					statcard.style.right = "auto";
 				}
+
 				L.DomEvent.stopPropagation(event);
 			}
 
@@ -3314,6 +3300,7 @@
 			document.addEventListener("touchcancel", endDrag);
 
 			function updateControlClass() {
+				
 				if (document.getElementById("statcard").style.display != "block") {
 					markerCountControl.getContainer().classList.remove("inactive-control");
 					markerCountControl.getContainer().classList.add("active-control");
