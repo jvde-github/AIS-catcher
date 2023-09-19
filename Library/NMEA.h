@@ -21,7 +21,6 @@
 
 #include "Message.h"
 #include "Stream.h"
-#include "Signals.h"
 
 #include "JSON/JSON.h"
 #include "JSON/Parser.h"

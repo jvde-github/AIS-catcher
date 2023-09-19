@@ -20,7 +20,7 @@
 #include <vector>
 #include <complex>
 
-#include "../Library/Common.h"
+#include "Common.h"
 
 namespace FFT {
 	static int log2(int x) {

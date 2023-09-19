@@ -17,19 +17,17 @@
 
 #pragma once
 
-#include "DSP.h"
-#include "Demod.h"
-
 #include "AIS-catcher.h"
 
 #include "Common.h"
 #include "Stream.h"
 #include "AIS.h"
 #include "NMEA.h"
-#include "Utilities.h"
+
+#include "DSP.h"
+#include "Demod.h"
 
 #include "Device/Device.h"
-#include "IO.h"
 
 namespace AIS {
 	enum class Mode {
