@@ -554,7 +554,7 @@ namespace DSP {
 		uint32_t z, r0, r1, r2, r3, r4;
 		uint32_t mask = 0xFFFFU >> shift;
 		mask |= mask << 16;
-		const uint32_t mask_uint = (1 << 15) | (1 << 31);
+		const uint32_t mask_uint = (1U << 15) | (1U << 31);
 		len >>= 1;
 
 		for (int i = 0; i < len; i++) {
