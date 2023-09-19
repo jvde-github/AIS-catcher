@@ -2177,17 +2177,17 @@
 							<table>
 								<tr>
 									<td>
-										<span title="Ships Moving" CLASS="shipicon" style="background-position: -120px -0px; transform: translate(0px, 0px) scale(1) rotate(45deg)"></span>
+										<span title="Ships Moving" class="shipicon" style="background-position: -120px -0px; transform: translate(0px, 0px) scale(1) rotate(45deg)"></span>
 									</td>
 									<td><span title="Ships Moving" id="statcard_moving"></span></td>
 									<td>
-										<span title="Ships Sationary" CLASS="shipicon" style="background-position: -120px -20px; transform: translate(-8px, -8px) rotate(45)"></span>
+										<span title="Ships Sationary" class="shipicon" style="background-position: -120px -20px; transform: translate(-8px, -8px) rotate(45)"></span>
 									</td>
 									<td><span title="Ships Sationary" id="statcard_stationary"></span></td>
 								</tr>
 								<tr>
 									<td>
-										<span title="Base Station" CLASS="staticon" style="background-position: -20px -20px; transform: translate(-8px, -8px) rotate(25)"></span>
+										<span title="Base Station" class="staticon" style="background-position: -20px -20px; transform: translate(-8px, -8px) rotate(25)"></span>
 									</td>
 									<td><span title="Base Station" id="statcard_station"></span></td>
 									<td>
@@ -2197,11 +2197,11 @@
 								</tr>
 								<tr>
 									<td>
-										<span title="SARTE / EPIRB" CLASS="staticon" style="background-position: -40px -20px; transform: translate(-8px, -8px) rotate(45)"></span>
+										<span title="SARTE / EPIRB" class="staticon" style="background-position: -40px -20px; transform: translate(-8px, -8px) rotate(45)"></span>
 									</td>
 									<td><span title="SARTE / EPIRB" id="statcard_sarte"></span></td>
 									<td>
-										<span title="Plane/Helicopter" CLASS="helicoptericon" style="background-position: -0px -0px; transform: translate(0px, 0px) scale(0.8) rotate(45deg)"></span>
+										<span title="Plane/Helicopter" class="helicoptericon" style="background-position: -0px -0px; transform: translate(0px, 0px) scale(0.8) rotate(45deg)"></span>
 									</td>
 									<td><span id="statcard_heli"></span></td>
 								</tr>
@@ -2406,7 +2406,9 @@
 					await copyToClipboard(t);
 				} catch (error) {
 					showDialog("Action", "No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
+					return false;
 				}
+				return true;
 			}
 
 			async function copyToClipboard(textToCopy) {
@@ -2439,7 +2441,7 @@
 				let coords = "not found";
 
 				if (m in shipsDB) coords = shipsDB[m].raw.lat + "," + shipsDB[m].raw.lon;
-				copyClipboard(coords);
+				if (copyClipboard(coords)) showNotification("Coordinates copied to clipboard");
 			}
 
 			async function fetchJSON(l, m) {
@@ -2604,7 +2606,7 @@
 					setTimeout(() => {
 						notificationContainer.removeChild(notificationElement);
 					}, 500);
-				}, 4000);
+				}, 2500);
 			}
 
 			function getStatusVal(ship) {
@@ -3100,6 +3102,11 @@
 
 			function StartFireworks() {
 				if (evtSourceMap == null) {
+					if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+						showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
+						return;
+					}
+
 					evtSourceMap = new EventSource("signal");
 
 					evtSourceMap.addEventListener(
@@ -3243,10 +3250,10 @@
 				// take into account the header bar
 				var boundingRect = statcard.getBoundingClientRect();
 
-				const menubar = document.getElementById('menubar');
-				const position = window.getComputedStyle(menubar).getPropertyValue('position');
-				const menuHeight = position === "fixed" ? 0 : document.getElementById('menubar').offsetHeight;
-				const headerHeight = document.getElementById('headerbar').offsetHeight;
+				const menubar = document.getElementById("menubar");
+				const position = window.getComputedStyle(menubar).getPropertyValue("position");
+				const menuHeight = position === "fixed" ? 0 : document.getElementById("menubar").offsetHeight;
+				const headerHeight = document.getElementById("headerbar").offsetHeight;
 
 				offsetX = clientX - boundingRect.left;
 				offsetY = clientY - boundingRect.top + menuHeight + headerHeight;
@@ -4682,179 +4689,51 @@
 				return Math.max(0.2, Math.min(1, opacity));
 			}
 
-			function getIconCSS(ship) {
-				const STATICON = 0;
-				const SHIPICON = 1;
-				const PLANEICON = 2;
-				const HELICOPTERICON = 3;
+			const shippingMappings = {
+				[ShippingClass.OTHER]: { className: "shipicon", value: 120 },
+				[ShippingClass.UNKNOWN]: { className: "shipicon", value: 120 },
+				[ShippingClass.CARGO]: { className: "shipicon", value: 0 },
+				[ShippingClass.TANKER]: { className: "shipicon", value: 80 },
+				[ShippingClass.PASSENGER]: { className: "shipicon", value: 40 },
+				[ShippingClass.HIGHSPEED]: { className: "shipicon", value: 100 },
+				[ShippingClass.SPECIAL]: { className: "shipicon", value: 60 },
+				[ShippingClass.FISHING]: { className: "shipicon", value: 140 },
+				[ShippingClass.ATON]: { className: "staticon", value: 0 },
+				[ShippingClass.PLANE]: { className: "planeicon", value: 0 },
+				[ShippingClass.HELICOPTER]: { className: "helicoptericon", value: 0 },
+				[ShippingClass.B]: { className: "shipicon", value: 20 },
+				[ShippingClass.STATION]: { className: "staticon", value: 20 },
+				[ShippingClass.SARTEPIRB]: { className: "staticon", value: 40 },
+			};
 
-				let shipicon = SHIPICON;
-				c = 120;
+			function getShipCSSClassAndStyle(ship, opacity = 1) {
+				let { className, value } = shippingMappings[getShipTypeClass(ship)] || { className: "shipicon", value: 120 };
 
-				switch (getShipTypeClass(ship)) {
-					case ShippingClass.CARGO:
-						shipicon = SHIPICON;
-						c = 0;
+				let style = `opacity: ${opacity};`;
+				switch (className) {
+					case "staticon":
+						style += `background-position: -${value}px -20px; transform: translate(-4px,-4px);`;
 						break;
-					case ShippingClass.TANKER:
-						shipicon = SHIPICON;
-						c = 80;
-						break;
-					case ShippingClass.PASSENGER:
-						shipicon = SHIPICON;
-						c = 40;
-						break;
-					case ShippingClass.HIGHSPEED:
-						shipicon = SHIPICON;
-						c = 100;
-						break;
-					case ShippingClass.SPECIAL:
-						shipicon = SHIPICON;
-						c = 60;
-						break;
-					case ShippingClass.FISHING:
-						shipicon = SHIPICON;
-						c = 140;
-						break;
-					case ShippingClass.ATON:
-						shipicon = STATICON;
-						c = 0;
-						break;
-					case ShippingClass.PLANE:
-						shipicon = PLANEICON;
-						break;
-					case ShippingClass.HELICOPTER:
-						shipicon = HELICOPTERICON;
-						break;
-					case ShippingClass.B:
-						shipicon = SHIPICON;
-						c = 20;
-						break;
-					case ShippingClass.STATION:
-						shipicon = STATICON;
-						c = 20;
-						break;
-					case ShippingClass.SARTEPIRB:
-						c = 40;
-						shipicon = STATICON;
-						break;
-				}
-
-				let title = getTypeVal(ship);
-				let val = getShipTypeVal(ship.shiptype);
-
-				if (val !== "Not available") title += " - " + val;
-
-				let h = 'title="' + title + '" ';
-
-				let opacity = 1;
-				let iconStyle = `opacity: ${opacity};`;
-
-				switch (shipicon) {
-					case STATICON:
-						h += `CLASS="staticon" style="background-position: -${c}px -20px; transform: translate(-4px,-4px); ${iconStyle}"`;
-
-						break;
-					case SHIPICON:
-						if (ship.speed != null && ship.speed > 0.5 && ship.cog != null)
-							h += `CLASS="shipicon" style="background-position: -${c}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg); ${iconStyle}"`;
-						else h += `CLASS="shipicon" style="background-position: -${c}px -20px; transform: translate(-4px,-5px); ${iconStyle}"`;
-
-						break;
-					case PLANEICON:
-						h += `CLASS="planeicon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"`;
-						break;
-					case HELICOPTERICON:
-						h += `CLASS="helicoptericon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"`;
+					case "shipicon":
+						if (ship.speed != null && ship.speed > 0.5 && ship.cog != null) style += `background-position: -${value}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg);`;
+						else style += `background-position: -${value}px -20px; transform: translate(-4px,-5px);`;
 						break;
 					default:
-						console.log("Error: shipicon undefined.");
+						style += `background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg);`;
+						break;
 				}
 
-				return h;
+				return { class: className, style: style };
+			}
+
+			function getIconCSS(ship, opacity = 1) {
+				const { class: classValue, style } = getShipCSSClassAndStyle(ship, opacity);
+				return `class="${classValue}" style="${style}"`;
 			}
 
 			function getIcon(ship) {
-				const STATICON = 0;
-				const SHIPICON = 1;
-				const PLANEICON = 2;
-				const HELICOPTERICON = 3;
-
-				let shipicon = SHIPICON;
-				c = 120;
-				switch (getShipTypeClass(ship)) {
-					case ShippingClass.CARGO:
-						shipicon = SHIPICON;
-						c = 0;
-						break;
-					case ShippingClass.TANKER:
-						shipicon = SHIPICON;
-						c = 80;
-						break;
-					case ShippingClass.PASSENGER:
-						shipicon = SHIPICON;
-						c = 40;
-						break;
-					case ShippingClass.HIGHSPEED:
-						shipicon = SHIPICON;
-						c = 100;
-						break;
-					case ShippingClass.SPECIAL:
-						shipicon = SHIPICON;
-						c = 60;
-						break;
-					case ShippingClass.FISHING:
-						shipicon = SHIPICON;
-						c = 140;
-						break;
-					case ShippingClass.ATON:
-						shipicon = STATICON;
-						c = 0;
-						break;
-					case ShippingClass.PLANE:
-						shipicon = PLANEICON;
-						break;
-					case ShippingClass.HELICOPTER:
-						shipicon = HELICOPTERICON;
-						break;
-					case ShippingClass.B:
-						shipicon = SHIPICON;
-						c = 20;
-						break;
-					case ShippingClass.STATION:
-						shipicon = STATICON;
-						c = 20;
-						break;
-					case ShippingClass.SARTEPIRB:
-						c = 40;
-						shipicon = STATICON;
-						break;
-				}
-
-				let h = "";
-				let opacity = getShipOpacity(ship);
-				let iconStyle = `opacity: ${opacity};`;
-
-				switch (shipicon) {
-					case STATICON:
-						h = `<DIV CLASS="staticon" style="background-position: -${c}px -20px; transform: translate(-4px,-4px); ${iconStyle}"></DIV>`;
-						break;
-					case SHIPICON:
-						if (ship.speed != null && ship.speed > 0.5 && ship.cog != null)
-							h = `<DIV CLASS="shipicon" style="background-position: -${c}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg); ${iconStyle}"></DIV>`;
-						else h = `<DIV CLASS="shipicon" style="background-position: -${c}px -20px; transform: translate(-4px,-5px); ${iconStyle}"></DIV>`;
-						break;
-					case PLANEICON:
-						h = `<DIV CLASS="planeicon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"></DIV>`;
-						break;
-					case HELICOPTERICON:
-						h = `<DIV CLASS="helicoptericon" style="background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg); ${iconStyle}"></DIV>`;
-						break;
-					default:
-						console.log("Error: shipicon undefined.");
-				}
-
-				return L.divIcon({ html: h, className: "undefined" });
+				const { class: classValue, style } = getShipCSSClassAndStyle(ship);
+				return L.divIcon({ html: `<div class="${classValue}" style="${style}"></div>`, className: "undefined" });
 			}
 
 			// Inspired by: https://gis.stackexchange.com/questions/382087/how-to-remove-leaflet-tooltiplabel-collision
