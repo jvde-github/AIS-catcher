@@ -281,7 +281,7 @@
 			}
 
 			.bottombar {
-				flex: 0 0 15px;
+				flex: 0 0 5px;
 				background: var(--bottombar-color);
 			}
 
@@ -370,7 +370,7 @@
 
 			.mainspace {
 				background: var(--mainspace-color);
-				margin: 20px;
+				margin: 5px;
 				flex: 1;
 				border: 1px;
 				display: flex;
@@ -389,10 +389,6 @@
 
 				.bottombar {
 					display: none;
-				}
-
-				.mainspace {
-					margin: 5px;
 				}
 			}
 
@@ -3255,8 +3251,8 @@
 				const menuHeight = position === "fixed" ? 0 : document.getElementById("menubar").offsetHeight;
 				const headerHeight = document.getElementById("headerbar").offsetHeight;
 
-				offsetX = clientX - boundingRect.left;
-				offsetY = clientY - boundingRect.top + menuHeight + headerHeight;
+				offsetX = clientX - boundingRect.left + 5; // 5px margin
+				offsetY = clientY - boundingRect.top + menuHeight + headerHeight + 5;
 
 				statcard.style.cursor = "grabbing";
 				L.DomEvent.stopPropagation(event);
