@@ -2998,6 +2998,7 @@
 			function initMap() {
 				map = L.map("map", { zoomControl: false, zoomSnap: 0.01 }).setView([settings.lat, settings.lon], settings.zoom);
 				var control = L.control.layers(basemaps, overlapmaps, { title: "Select map and overlays", position: "bottomright" }).addTo(map);
+
 				map.on("baselayerchange", function (event) {
 					if (settings.dark_mode) settings.map_night = event.name;
 					else settings.map_day = event.name;
@@ -3320,9 +3321,11 @@
 				markerCountControl.onAdd = function (map) {
 					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-300");
 
-					L.DomEvent.on(controlDiv, "click", function () {
+					L.DomEvent.on(controlDiv, "click", function (e) {
 						toggeStatcard();
+						L.DomEvent.stopPropagation(e);
 					});
+
 
 					var controlBoundary = L.DomUtil.create("div", "leaflet-control-settings-toggle round-control", controlDiv);
 					iconLabelSpan = L.DomUtil.create("span", "", controlBoundary);
@@ -4746,7 +4749,6 @@
 
 			function updateTooltips() {
 				if (!settings.labels) return;
-
 				let rects = [];
 
 				if (hover_mmsi in markers) addTooltip(rects, markers[hover_mmsi]);
