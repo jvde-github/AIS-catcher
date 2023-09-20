@@ -1272,6 +1272,20 @@
 				mask-size: 100% 100%;
 			}
 
+			.speed_icon {
+				display: block;
+					width: 1em;
+				height: 1em;
+				background-color: currentColor;
+				--svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M418-340q25 25 63 23.5t55-27.5l221-333-333 221q-26 18-28.5 54.5T418-340ZM192-160q-18 0-34-8.5T134-193q-26-48-40-100T80-399q0-83 31.5-156T197-682.5q54-54.5 126.5-86T478-800q83 0 156.5 31.5t128 86Q817-628 848.5-555T880-399q0 54-13 106.5T827-193q-9 16-25 24.5t-34 8.5H192Z"/%3E%3C/svg%3E');
+				-webkit-mask-image: var(--svg);
+				mask-image: var(--svg);
+				-webkit-mask-repeat: no-repeat;
+				mask-repeat: no-repeat;
+				-webkit-mask-size: 100% 100%;
+				mask-size: 100% 100%;
+			}
+
 			.explosion_icon {
 				display: block;
 				width: 1em;
@@ -1925,7 +1939,7 @@
 					<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
 					<li class="divider mmsi noandroid"></li>
 					<li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
-					<li class="settings" onclick="toggleMetrics()"><i class="build_icon"></i><span id="ctx_toggle_metrics"></span></li>
+					<li class="settings" onclick="toggleMetrics()"><i class="speed_icon"></i><span id="ctx_toggle_metrics"></span></li>
 					<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 				</ul>
 
