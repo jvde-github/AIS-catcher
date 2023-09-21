@@ -3247,7 +3247,7 @@
 			}
 
 			var isDragging = false;
-			var offsetX, offsetY;
+			var offsetX, offsetY, headerY;
 
 			var statcard = document.getElementById("statcard");
 
@@ -3265,14 +3265,16 @@
 				const menuHeight = position === "fixed" ? 0 : document.getElementById("menubar").offsetHeight;
 				const headerHeight = document.getElementById("headerbar").offsetHeight;
 
-				offsetX = clientX - boundingRect.left + 5; // 5px margin
-				offsetY = clientY - boundingRect.top + menuHeight + headerHeight + 5;
+				offsetX = clientX - boundingRect.left;
+				offsetY = clientY - boundingRect.top;
+				headerY = + menuHeight + headerHeight + 5;
 
 				statcard.style.cursor = "grabbing";
 				L.DomEvent.stopPropagation(event);
 			}
 
 			function moveDrag(event) {
+
 				if (isDragging) {
 					const clientX = event.clientX || event.touches[0].clientX;
 					const clientY = event.clientY || event.touches[0].clientY;
@@ -3280,11 +3282,8 @@
 					const viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
 					const viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
 
-					var top = clientY - offsetY;
-					var left = clientX - offsetX;
-
-					top = Math.max(0, Math.min(top, viewportHeight - statcard.offsetHeight));
-					left = Math.max(0, Math.min(left, viewportWidth - statcard.offsetWidth));
+					var top = Math.max(0, Math.min(clientY - offsetY, viewportHeight - 10 - statcard.offsetHeight) - headerY);
+					var left = Math.max(0, Math.min(clientX - offsetX, viewportWidth - 10 - statcard.offsetWidth));
 
 					statcard.style.top = top + "px";
 					statcard.style.left = left + "px";
