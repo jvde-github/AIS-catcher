@@ -1274,7 +1274,7 @@
 
 			.speed_icon {
 				display: block;
-					width: 1em;
+				width: 1em;
 				height: 1em;
 				background-color: currentColor;
 				--svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M418-340q25 25 63 23.5t55-27.5l221-333-333 221q-26 18-28.5 54.5T418-340ZM192-160q-18 0-34-8.5T134-193q-26-48-40-100T80-399q0-83 31.5-156T197-682.5q54-54.5 126.5-86T478-800q83 0 156.5 31.5t128 86Q817-628 848.5-555T880-399q0 54-13 106.5T827-193q-9 16-25 24.5t-34 8.5H192Z"/%3E%3C/svg%3E');
@@ -2555,7 +2555,8 @@
 
 				document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
 				document.getElementById("ctx_track").innerText = context_mmsi in marker_tracks && context.includes("mmsi-map") ? "Hide Track" : "Show Track";
-				document.getElementById("ctx_toggle_metrics").innerText = settings.metric === "DEFAULT" ? "Switch to SI metrics" : "Switch to default metrics";
+				document.getElementById("ctx_toggle_metrics").innerText =
+					settings.metric === "DEFAULT" ? "Switch to metric units" : settings.metric === "IMPERIAL" ? "Switch to default units" : "Switch to imperial units";
 
 				contextMenu.style.display = "block";
 
@@ -3067,10 +3068,13 @@
 			function toggleMetrics() {
 				if (settings.metric == "DEFAULT") {
 					settings.metric = "SI";
-					showNotification("Switched to SI metrics");
+					showNotification("Switched to metric units");
+				} else if (settings.metric == "SI") {
+					settings.metric = "IMPERIAL";
+					showNotification("Switched to imperial units");
 				} else {
 					settings.metric = "DEFAULT";
-					showNotification("Switched to default metrics");
+					showNotification("Switched to default units");
 				}
 				saveSettings();
 
@@ -3247,7 +3251,7 @@
 			}
 
 			var isDragging = false;
-			var offsetX, offsetY;
+			var offsetX, offsetY, headerY;
 
 			var statcard = document.getElementById("statcard");
 
@@ -3265,8 +3269,9 @@
 				const menuHeight = position === "fixed" ? 0 : document.getElementById("menubar").offsetHeight;
 				const headerHeight = document.getElementById("headerbar").offsetHeight;
 
-				offsetX = clientX - boundingRect.left + 5; // 5px margin
-				offsetY = clientY - boundingRect.top + menuHeight + headerHeight + 5;
+				offsetX = clientX - boundingRect.left;
+				offsetY = clientY - boundingRect.top;
+				headerY = +menuHeight + headerHeight + 5;
 
 				statcard.style.cursor = "grabbing";
 				L.DomEvent.stopPropagation(event);
@@ -3280,11 +3285,8 @@
 					const viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
 					const viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
 
-					var top = clientY - offsetY;
-					var left = clientX - offsetX;
-
-					top = Math.max(0, Math.min(top, viewportHeight - statcard.offsetHeight));
-					left = Math.max(0, Math.min(left, viewportWidth - statcard.offsetWidth));
+					var top = Math.max(0, Math.min(clientY - offsetY, viewportHeight - 10 - statcard.offsetHeight) - headerY);
+					var left = Math.max(0, Math.min(clientX - offsetX, viewportWidth - 10 - statcard.offsetWidth));
 
 					statcard.style.top = top + "px";
 					statcard.style.left = left + "px";
@@ -3311,7 +3313,6 @@
 			document.addEventListener("touchcancel", endDrag);
 
 			function updateControlClass() {
-				
 				if (document.getElementById("statcard").style.display != "block") {
 					markerCountControl.getContainer().classList.remove("inactive-control");
 					markerCountControl.getContainer().classList.add("active-control");
@@ -3335,7 +3336,6 @@
 						toggeStatcard();
 						L.DomEvent.stopPropagation(e);
 					});
-
 
 					var controlBoundary = L.DomUtil.create("div", "leaflet-control-settings-toggle round-control", controlDiv);
 					iconLabelSpan = L.DomUtil.create("span", "", controlBoundary);
