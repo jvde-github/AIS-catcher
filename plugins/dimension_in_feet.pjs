@@ -1,4 +1,0 @@
-// {"author":"jvde-github","description":"displays unit of dimensions in feet"}
-
-getDimensionVal = c => Number(c * 3.2808399).toFixed(0);
-getDimensionUnit = c => "ft";
