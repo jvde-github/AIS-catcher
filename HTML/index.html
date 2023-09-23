@@ -2311,6 +2311,7 @@
 				station = {},
 				shipsDB = {},
 				singleClickTimeout = null;
+				server_message = "";
 			var iconLabelSpan = null,
 				iconStationSpan = null,
 				evtSource = null,
@@ -2334,8 +2335,8 @@
 				marker_station = null,
 				marker_focus = null,
 				marker_hover = null,
-				marker_tracks = {};
-			var marker_fireworks = [];
+				marker_tracks = {},
+				marker_fireworks = [];
 
 			var context_text = "";
 
@@ -3401,6 +3402,11 @@
 
 			function showPlugins() {
 				showDialog("Plugins", "<pre>Loaded plugins:\n" + plugins + "</pre>");
+			}
+
+			function showServerErrors() {
+				if(server_message !== "")
+					showDialog("Warning", "<pre>" + server_message + "</pre>");
 			}
 
 			async function fetchStatistics() {
@@ -5697,6 +5703,7 @@
 				document.getElementById("realtime_tab").style.display = "none";
 				document.getElementById("realtime_tab_mini").style.display = "none";
 			}
+			showServerErrors();
 			showWelcome();
 
 			if (isAndroid()) showMenu();

@@ -1012,16 +1012,29 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		plugins += "console.log('plugin:" + arg + "');";
 		plugins += "plugins += 'JS: " + arg + "\\n';";
 		plugins += "\n\n//=============\n//" + arg + "\n\n";
-		plugins += Util::Helper::readFile(arg);
+		try {
+			plugins += Util::Helper::readFile(arg);
+		} catch (const std::exception& e) {
+			plugins += "// FAILED\n";
+			std::cerr << "Server: JS plugin error - " << e.what() << std::endl;
+			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
+		}
 	}
 	else if (option == "STYLE") {
 		std::cerr << "Server: adding plugin (CSS): " << arg << std::endl;
 		plugins += "console.log('css:" + arg + "');";
 		plugins += "plugins += 'CSS: " + arg + "\\n';";
 
-		stylesheets += "/* ================ */\r\n";
-		stylesheets += "/* CSS plugin: " + arg + "*/\r\n";
-		stylesheets += Util::Helper::readFile(arg) + "\r\n";
+		stylesheets += "/* ================ */\n";
+		stylesheets += "/* CSS plugin: " + arg + "*/\n";
+		try {
+			stylesheets += Util::Helper::readFile(arg) + "\n";
+		}
+		catch (const std::exception& e) {
+			stylesheets += "/* FAILED */\r\n";
+			std::cerr << "Server: style plugin error - " << e.what() << std::endl;
+			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
+		}
 	}
 	else if (option == "PLUGIN_DIR") {
 		const std::vector<std::string>& files_js = Util::Helper::getFilesWithExtension(arg, ".pjs");
