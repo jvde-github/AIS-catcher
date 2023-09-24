@@ -120,47 +120,10 @@ namespace Util {
 
 	class Helper {
 	public:
-		static std::string readFile(const std::string& filename) {
-			std::ifstream file(filename);
-
-			if (file.fail()) throw std::runtime_error("cannot read file: " + filename);
-
-			std::string str, line;
-			while (std::getline(file, line)) str += line + '\n';
-			return str;
-		}
-
-		static int lsb(uint64_t x) {
-			int n = 0;
-			for (int i = 0; i < 64; i++) {
-				if (x & (1ULL << i)) return i;
-			}
-			return -1;
-		}
+		static std::string readFile(const std::string& filename);
+		static int lsb(uint64_t x);
 		static std::vector<std::string> getFilesWithExtension(const std::string& directory, const std::string& extension);
-
-		static long getMemoryConsumption() {
-			int memory = 0;
-#ifdef _WIN32
-			HANDLE hProcess = GetCurrentProcess();
-			PROCESS_MEMORY_COUNTERS_EX pmc;
-			if (GetProcessMemoryInfo(hProcess, reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc))) {
-				memory = pmc.WorkingSetSize;
-			}
-#else
-			std::ifstream statm("/proc/self/statm");
-			if (statm.is_open()) {
-				std::string line;
-				std::getline(statm, line);
-				std::stringstream ss(line);
-				long size, resident, shared, text, lib, data, dt;
-				ss >> size >> resident >> shared >> text >> lib >> data >> dt;
-				memory = resident * sysconf(_SC_PAGESIZE);
-			}
-#endif
-			return memory;
-		}
-
+		static long getMemoryConsumption();
 		static std::string getOS();
 		static std::string getHardware();
 	};
