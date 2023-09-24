@@ -1014,7 +1014,8 @@ Setting& WebClient::Set(std::string option, std::string arg) {
 		plugins += "\n\n//=============\n//" + arg + "\n\n";
 		try {
 			plugins += Util::Helper::readFile(arg);
-		} catch (const std::exception& e) {
+		}
+		catch (const std::exception& e) {
 			plugins += "// FAILED\n";
 			std::cerr << "Server: JS plugin error - " << e.what() << std::endl;
 			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";

@@ -86,32 +86,9 @@ namespace TCP {
 		~Server();
 
 		bool start(int port);
-		bool SendAll(const std::string& m) {
-			for (auto& c : client) {
-				if (c.isConnected()) {
-					if (!c.Send(m.c_str(), m.length())) {
-						c.Close();
-						std::cerr << "TCP listener: client not reading, close connection." << std::endl;
-						return false;
-					}
-				}
-			}
-			return true;
-		}
+		bool SendAll(const std::string& m);
 		void setReusePort(bool b) { reuse_port = b; }
-		bool setNonBlock(SOCKET sock) {
-
-#ifndef _WIN32
-			int r = fcntl(sock, F_GETFL, 0);
-			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
-
-			if (r == -1) return false;
-#else
-			u_long mode = 1;
-			ioctlsocket(sock, FIONBIO, &mode);
-#endif
-			return true;
-		}
+		bool setNonBlock(SOCKET sock);
 
 	protected:
 		SOCKET sock = -1;

@@ -39,7 +39,6 @@ namespace AIS {
 		return ss.str();
 	}
 
-
 	const std::string GPS::getNMEA() const {
 		if (nmea.empty()) {
 			std::string flat = formatLatLon(lat, true);
@@ -89,6 +88,15 @@ namespace AIS {
 		ss << "]}";
 
 		return ss.str();
+	}
+
+	bool Message::validate() {
+		const int ml[27] = { 149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96 };
+
+		if (type() < 1 || type() > 27) return false;
+		if (getLength() < ml[type() - 1]) return false;
+
+		return true;
 	}
 
 	unsigned Message::getUint(int start, int len) const {
@@ -287,5 +295,12 @@ namespace AIS {
 				ret += (!ret.empty() ? std::string(",") : std::string("")) + std::to_string(i);
 		}
 		return ret;
+	}
+
+	bool Filter::include(const Message& msg) {
+		if (!on) return true;
+		if (!AIS) return false;
+		unsigned type = msg.type() & 31;
+		return ((1U << type) & allow) != 0;
 	}
 }

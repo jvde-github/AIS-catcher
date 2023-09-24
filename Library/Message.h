@@ -88,14 +88,7 @@ namespace AIS {
 			std::memset(data, 0, 128);
 		}
 
-		bool validate() {
-			const int ml[27] = { 149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96 };
-
-			if (type() < 1 || type() > 27) return false;
-			if (getLength() < ml[type() - 1]) return false;
-
-			return true;
-		}
+		bool validate();
 
 		unsigned type() const {
 			return data[0] >> 2;
@@ -154,11 +147,6 @@ namespace AIS {
 		bool isOn() { return on; }
 		std::string getAllowed();
 		bool includeGPS() { return on ? GPS : true; }
-		bool include(const Message& msg) {
-			if (!on) return true;
-			if (!AIS) return false;
-			unsigned type = msg.type() & 31;
-			return ((1U << type) & allow) != 0;
-		}
+		bool include(const Message& msg);
 	};
 }
