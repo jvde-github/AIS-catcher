@@ -24,7 +24,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Edge version:
-- retires the Curl library for HTTP message sending and directly uses a build-in TCP client leveraging openssl where needed for secure servers. This means that if you want to send data to a secure server, you have to build with the ssl development libraries:
+- retires the Curl library for HTTP message sending and directly uses a built-in TCP client leveraging openssl where needed for secure servers. This means that if you want to send data to a secure server, you have to build with the ssl development libraries:
 ```console
 sudo apt install libssl-dev
 ```
@@ -142,7 +142,7 @@ AIS-catcher also supports the 18 Euro RPI Zero W. However, the hardware might no
 ```console
 AIS-catcher -F
 ```
-Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device does still struggle, you can try running at a sample rate of 288K (`-s 288K`). Reception will be impacted noticably though.
+Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device does still struggle, you can try running at a sample rate of 288K (`-s 288K`). Reception will be impacted noticeably though.
 
 That's all there is. Below we will dive in some more details.
 
@@ -221,7 +221,7 @@ The web-interface shows a "validation" indication at the left border of the ship
 
 AIS-catcher analyzes an enormous stream of bits  per day for both AIS channels (2 to the power 33 to be precise). To avoid erroneous messages, the AIS system employs a 16 bit CRC and matching of other bit patterns. Unfortunately, pure statistically this cannot prevent that there will be an occasional technically correct but nonsense message. These are typically easy to recognize (e.g. looking at signal level, location on map) and the aggregator sites like MarineTraffic will filter these out. 
 
-To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, developing, "validation function" that checks the location of the vessel for consistency between messages and flags if there is an inconsistency. Practically speaking, if we receive a position from a MMSI which is relatively close to the last received position, the "validation" indicator will be green and the distance to the station will be included to determine the staion range. Please note that messages within 50 NMi from the receiving station will always be included for range setting. The validation indicator will be grey if validation for the location could not be performed and red if it was not succesful. 
+To reliably measure the reception range for the station in the web interface, AIS-catcher has implemented an, developing, "validation function" that checks the location of the vessel for consistency between messages and flags if there is an inconsistency. Practically speaking, if we receive a position from a MMSI which is relatively close to the last received position, the "validation" indicator will be green and the distance to the station will be included to determine the station range. Please note that messages within 50 NMi from the receiving station will always be included for range setting. The validation indicator will be grey if validation for the location could not be performed and red if it was not successful. 
 
 #### Plots
 The Plot section contains several visualizations to assess the performance of the receiver:
@@ -246,10 +246,10 @@ You can also include all plugin files from a specific directory using the comman
 ```console
 AIS-catcher -N 8100 PLUGIN_DIR /usr/share/aiscatcher/plugins
 ```
-Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and CSS style plugins. The repository includes a few example plugins that demonstrate how to add additional maps or cater for regional preferences. Examples of plugins can be found in another Github repository from jvde-github.
+Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and CSS style plugins. The repository includes a few example plugins that demonstrate how to add additional maps or cater for regional preferences. Examples of plugins can be found in [another](https://github.com/jvde-github/AIS-Catcher-PLUGINS) Github repository.
 
 #### Offline Webclient
-There is an option to run the webclient without relying on online libraries. This facilitates using the web interface whilst travelling without internet connection. The steps are simple. First  go to your home directory (say `/home/jasper`) and clone the necessary offline web assets:
+There is an option to run the webclient without relying on online libraries. This facilitates using the web interface whilst traveling without internet connection. The steps are simple. First  go to your home directory (say `/home/jasper`) and clone the necessary offline web assets:
 ```console
 git clone https://github.com/jvde-github/webassets.git
 ```
@@ -306,7 +306,7 @@ AIS-catcher -H http://aprs.fi/jsonais/post/secret-key ID callsign PROTOCOL aprs 
 ```
 Where ``secret-key`` should be your password and ``callsign`` your callsign.  The ``PROTOCOL`` setting instructs AIS-catcher to submit JSON in a form that is accepted by APRS.fi which is a multi-form HTTP message. 
 
-Aanother example of this HTTP feed functionality is to provide data to [Chaos Consulting](https://adsb.chaos-consulting.de/map/) without the need to install any additional scripts. The Chaos Consulting server has been set up so that it can read the AIS-catcher JSON format as per above:
+Another example of this HTTP feed functionality is to provide data to [Chaos Consulting](https://adsb.chaos-consulting.de/map/) without the need to install any additional scripts. The Chaos Consulting server has been set up so that it can read the AIS-catcher JSON format as per above:
 ```console
 AIS-catcher -H https://ais.chaos-consulting.de/shipin/index.php USERPWD Station:Password GZIP on INTERVAL 5
 ```
@@ -320,7 +320,7 @@ This step is only required if you want to ZIP content and post data to secure se
 
 The supported protocol switches are ``AISCATCHER`` (default), ``MINIMAL`` (NMEA lines and meta data), ``LINES`` (one JSON message per line), ``APRS`` (to submit to APRS.fi).
 
-### Input/output of AIS messages over UDP and TCP
+### Forwarding AIS messages over UDP and TCP
 
 AIS messages can be forwarded between applications over UDP via the `-u` switch and TCP using `-P` as we have seen in the examples above.
 Additionally, AIS-catcher has the option to send NMEA messages packaged in a JSON object:
@@ -339,8 +339,8 @@ A feature has been added that sends messages to (e.g.) MarineTraffic as a TCP cl
 ````console
 AIS-catcher -P 5.9.207.224 6767 -P 192.168.1.239 2947 
 ````
-In this case AIS-catcher acts as a TCP client and conneccts to the remote listener at 192.168.1.239 port 2947. You can also set up AIS-catcher as a TCP listener itself for sending NMEA messages, i.e. the program acts as a TCP server where at most 64 clients can connect to and read NMEA lines:
-```consol
+In this case AIS-catcher acts as a TCP client and connects to the remote listener at 192.168.1.239 port 2947. You can also set up AIS-catcher as a TCP listener itself for sending NMEA messages, i.e. the program acts as a TCP server where at most 64 clients can connect to and read NMEA lines:
+```console
 AIS-catcher -S 5011
 ```
 AIS-catcher itself can also read from such a TCP NMEA server:
@@ -396,7 +396,7 @@ For reference, as per version 0.36, AIS-catcher has the option to use the intern
 ```console
 AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on 
 ```
-Default assumption is that the file is in raw unisgned 8 bit IQ format. Alternative formats can be set via `-gr` (see below) and can even include NMEA strings in text input. 
+Default assumption is that the file is in raw unsigned 8 bit IQ format. Alternative formats can be set via `-gr` (see below) and can even include NMEA strings in text input. 
 
 ### Long Range AIS messages and alternative channels
 
@@ -589,7 +589,7 @@ Note that CRC/checksum is the simple xor-checksum for validating that the NMEA l
 
 AIS-catcher will also accept AIVDO input which is typically used for the MMSI of the own ship. You can enable/disable this with: `-go VDO on/off`.
 
-### Input of Station location
+### Specifying Station Location
 
 As discussed obove, the webserver will only share a known location of the station with the front-end webclient if `share_loc` is set for the webserver:
 ```console
@@ -1048,7 +1048,7 @@ with the following timings:
 [AIS engine v0.35 SOXR ]:                653.716 ms
 [AIS engine v0.35 SRC]:                  3762.6 ms
 ```
-Some libraries will require significant hardware resources. The advice is to use the native build-in downsampling functionality but it is fun to experiment.
+Some libraries will require significant hardware resources. The advice is to use the native built-in downsampling functionality but it is fun to experiment.
 
 The default downsampler uses a simple but efficient CIC5 filter. To mitigate some of the drawbacks of this method, version 0.39 onwards  uses by default  a simple droop compensator in the form of a fast 3 tap filter which can be switched off with the switch ``-go DROOP off``. 
 The following results are from my home station running for a few hours with the various methods running in parallel and counting number of messages:
