@@ -119,7 +119,10 @@ namespace Device {
 	}
 
 	bool AIRSPYHF::isStreaming() {
-		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1) lost = true;
+		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1) {
+			lost = true;
+			std::cerr << "AIRSPYHF: device stopped streaming." << std::endl;
+		}
 
 		return Device::isStreaming() && airspyhf_is_streaming(dev) == 1;
 	}
