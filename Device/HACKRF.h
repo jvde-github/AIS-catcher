@@ -50,6 +50,7 @@ namespace Device {
 				hackrf_device_list_free(list);
 				list = NULL;
 			}
+			hackrf_exit();
 		}
 
 		// Control
