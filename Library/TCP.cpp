@@ -225,17 +225,22 @@ namespace TCP {
 	}
 
 	void Server::Run() {
+		try {
+			while (!stop) {
+				acceptClients();
+				readClients();
+				processClients();
+				writeClients();
+				cleanUp();
+				SleepAndWait();
+			}
 
-		while (!stop) {
-			acceptClients();
-			readClients();
-			processClients();
-			writeClients();
-			cleanUp();
-			SleepAndWait();
+			std::cerr << "TCP Server: thread ending.\n";
 		}
-
-		std::cerr << "TCP Server: thread ending.\n";
+		catch (std::exception& e) {
+			std::cerr << "Server Run: " << e.what() << std::endl;
+			std::terminate();
+		}
 	}
 
 	void Server::SleepAndWait() {

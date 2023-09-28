@@ -89,16 +89,22 @@ namespace Device {
 	}
 
 	void RTLSDR::Run() {
-		while (isStreaming()) {
-			if (fifo.Wait()) {
-				RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
+		try {
+			while (isStreaming()) {
+				if (fifo.Wait()) {
+					RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
 
-				Send(&r, 1, tag);
-				fifo.Pop();
+					Send(&r, 1, tag);
+					fifo.Pop();
+				}
+				else {
+					if (isStreaming()) std::cerr << "RTLSDR: timeout." << std::endl;
+				}
 			}
-			else {
-				if (isStreaming()) std::cerr << "RTLSDR: timeout." << std::endl;
-			}
+		}
+		catch (std::exception& e) {
+			std::cerr << "RTLSDR Run: " << e.what() << std::endl;
+			std::terminate();
 		}
 	}
 

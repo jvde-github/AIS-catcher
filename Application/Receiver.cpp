@@ -574,17 +574,23 @@ bool WebClient::Load() {
 
 void WebClient::BackupService() {
 
-	std::cerr << "Server: starting backup service every " << backup_interval << " minutes." << std::endl;
-	while (true) {
-		std::unique_lock<std::mutex> lock(m);
+	try {
+		std::cerr << "Server: starting backup service every " << backup_interval << " minutes." << std::endl;
+		while (true) {
+			std::unique_lock<std::mutex> lock(m);
 
-		if (cv.wait_for(lock, std::chrono::minutes(backup_interval), [&] { return !run; })) {
-			break;
+			if (cv.wait_for(lock, std::chrono::minutes(backup_interval), [&] { return !run; })) {
+				break;
+			}
+
+			std::cerr << "Server: initiate backup." << std::endl;
+			if (!Save())
+				std::cerr << "Server: failed to write backup." << std::endl;
 		}
-
-		std::cerr << "Server: initiate backup." << std::endl;
-		if (!Save())
-			std::cerr << "Server: failed to write backup." << std::endl;
+	}
+	catch (std::exception& e) {
+		std::cerr << "WebClient BackupService: " << e.what() << std::endl;
+		std::terminate();
 	}
 
 	std::cerr << "Server: stopping backup service." << std::endl;
