@@ -392,78 +392,84 @@ namespace AIS {
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
 
-		long t = 0;
+		try {
+			long t = 0;
 
-		for (int j = 0; j < len; j++) {
-			for (int i = 0; i < data[j].size; i++) {
-				char c = ((char*)(data[j].data))[i];
+			for (int j = 0; j < len; j++) {
+				for (int i = 0; i < data[j].size; i++) {
+					char c = ((char*)(data[j].data))[i];
 
-				// state = 0, we are looking for the start of JSON or NMEA
-				if (state == 0) {
-					if (c == '{' && (prev == '\n' || prev == '\r')) {
-						line = c;
-						state = 1;
-						count = 1;
+					// state = 0, we are looking for the start of JSON or NMEA
+					if (state == 0) {
+						if (c == '{' && (prev == '\n' || prev == '\r')) {
+							line = c;
+							state = 1;
+							count = 1;
+						}
+						else if (c == '$' || c == '!') {
+							line = c;
+							state = 2;
+						}
+						prev = c;
+						continue;
 					}
-					else if (c == '$' || c == '!') {
-						line = c;
-						state = 2;
-					}
+
+					bool newline = c == '\r' || c == '\n' || c == '\t' || c == '\0';
+
+					if (!newline) line += c;
 					prev = c;
-					continue;
-				}
 
-				bool newline = c == '\r' || c == '\n' || c == '\t' || c == '\0';
-
-				if (!newline) line += c;
-				prev = c;
-
-				// state = 1 (JSON) or state = 2 (NMEA)
-				if (state == 1) {
-					// we do not allow nested JSON, so processing until newline character or '}'
-					if (c == '{')
-						count++;
-					else if (c == '}') {
-						--count;
-						if (!count) {
-							t = 0;
-							tag.clear();
-							processJSONsentence(line, tag, t);
+					// state = 1 (JSON) or state = 2 (NMEA)
+					if (state == 1) {
+						// we do not allow nested JSON, so processing until newline character or '}'
+						if (c == '{')
+							count++;
+						else if (c == '}') {
+							--count;
+							if (!count) {
+								t = 0;
+								tag.clear();
+								processJSONsentence(line, tag, t);
+								reset(c);
+							}
+						}
+						else if (newline) {
+							std::cerr << "NMEA: newline in uncompleted JSON input not allowed";
 							reset(c);
 						}
 					}
-					else if (newline) {
-						std::cerr << "NMEA: newline in uncompleted JSON input not allowed";
-						reset(c);
-					}
-				}
-				else if (state == 2) {
-					// end of line if we find a checksum or a newline character
-					bool isNMEA = line.size() > 10 && (line[3] == 'V' && line[4] == 'D' && (line[5] == 'M' || line[5] == 'O'));
-					bool checksum = isNMEA && (isHEX(line[line.size() - 1]) && isHEX(line[line.size() - 2]) && line[line.size() - 3] == '*' &&
-											   ((isdigit(line[line.size() - 4]) && line[line.size() - 5] == ',') || (line[line.size() - 4] == ',')));
+					else if (state == 2) {
+						// end of line if we find a checksum or a newline character
+						bool isNMEA = line.size() > 10 && (line[3] == 'V' && line[4] == 'D' && (line[5] == 'M' || line[5] == 'O'));
+						bool checksum = isNMEA && (isHEX(line[line.size() - 1]) && isHEX(line[line.size() - 2]) && line[line.size() - 3] == '*' &&
+												   ((isdigit(line[line.size() - 4]) && line[line.size() - 5] == ',') || (line[line.size() - 4] == ',')));
 
-					if (((isNMEA && checksum) || newline) && line.size() > 6) {
-						std::string type = line.substr(3, 3);
-						bool noerror = true;
-						tag.clear();
-						t = 0;
+						if (((isNMEA && checksum) || newline) && line.size() > 6) {
+							std::string type = line.substr(3, 3);
+							bool noerror = true;
+							tag.clear();
+							t = 0;
 
-						if (type == "VDM") noerror &= processAIS(line, tag, t);
-						if (type == "VDO" && VDO) noerror &= processAIS(line, tag, t);
-						if (type == "GGA") noerror &= processGGA(line, tag, t);
-						if (type == "RMC") noerror &= processRMC(line, tag, t);
-						if (type == "GLL") noerror &= processGLL(line, tag, t);
+							if (type == "VDM") noerror &= processAIS(line, tag, t);
+							if (type == "VDO" && VDO) noerror &= processAIS(line, tag, t);
+							if (type == "GGA") noerror &= processGGA(line, tag, t);
+							if (type == "RMC") noerror &= processRMC(line, tag, t);
+							if (type == "GLL") noerror &= processGLL(line, tag, t);
 
-						if (!noerror) {
-							std::cerr << "NMEA: error processing NMEA line " << line << std::endl;
+							if (!noerror) {
+								std::cerr << "NMEA: error processing NMEA line " << line << std::endl;
+							}
+							reset(c);
 						}
-						reset(c);
 					}
-				}
 
-				if (line.size() > 1024) reset(c);
+					if (line.size() > 1024) reset(c);
+				}
 			}
+		}
+		catch (std::exception& e) {
+			std::cerr << "NMEA Receive: " << e.what() << std::endl;
+			std::terminate();
 		}
 	}
 }
