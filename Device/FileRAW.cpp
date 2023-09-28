@@ -27,29 +27,41 @@ namespace Device {
 
 	void RAWFile::ReadAsync() {
 
-		while (file && !file->eof() && Device::isStreaming()) {
+		try {
+			while (file && !file->eof() && Device::isStreaming()) {
 
-			buffer.assign(buffer.size(), 0);
-			file->read((char*)buffer.data(), buffer.size());
-			while (isStreaming() && !fifo.Push(buffer.data(), buffer.size())) SleepSystem(1);
+				buffer.assign(buffer.size(), 0);
+				file->read((char*)buffer.data(), buffer.size());
+				while (isStreaming() && !fifo.Push(buffer.data(), buffer.size())) SleepSystem(1);
+			}
+		}
+		catch (std::exception& e) {
+			std::cerr << "RAWFile ReadAsync: " << e.what() << std::endl;
+			std::terminate();
 		}
 		eoi = true;
 	}
 
 	void RAWFile::Run() {
-		while (isStreaming()) {
-			if (fifo.Wait()) {
+		try {
+			while (isStreaming()) {
+				if (fifo.Wait()) {
 
-				RAW r = { getFormat(), fifo.Front(), fifo.BlockSize() };
-				Send(&r, 1, tag);
-				fifo.Pop();
+					RAW r = { getFormat(), fifo.Front(), fifo.BlockSize() };
+					Send(&r, 1, tag);
+					fifo.Pop();
+				}
+				else {
+					if (eoi && isStreaming())
+						done = true;
+					else if (isStreaming() && getFormat() != Format::TXT)
+						std::cerr << "FILE: timeout." << std::endl;
+				}
 			}
-			else {
-				if (eoi && isStreaming())
-					done = true;
-				else if (isStreaming() && getFormat() != Format::TXT)
-					std::cerr << "FILE: timeout." << std::endl;
-			}
+		}
+		catch (std::exception& e) {
+			std::cerr << "RAWFile Run: " << e.what() << std::endl;
+			std::terminate();
 		}
 	}
 
