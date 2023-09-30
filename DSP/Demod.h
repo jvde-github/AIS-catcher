@@ -67,7 +67,7 @@ namespace Demod {
 
 		static const int nSearch = 1;
 
-		const FLOAT32 weight = 0.85f;
+		FLOAT32 weight = 0.85f;
 
 		FLOAT32 ma[nPhases];
 		char bits[nPhases];
@@ -78,5 +78,6 @@ namespace Demod {
 		PhaseSearchEMA() { std::memset(ma, 0, nPhases * sizeof(FLOAT32)); }
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 		void setParams(int d) { nDelay = d; }
+		void setWeight(FLOAT32 w) { weight = w; }
 	};
 }
