@@ -531,7 +531,7 @@ namespace AIS {
 	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		setName("AIS Challenger Engine " VERSION);
+		setName("AIS engine " VERSION);
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -543,8 +543,6 @@ namespace AIS {
 
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
-		DEC_c.resize(nSymbolsPerSample);
-		DEC_d.resize(nSymbolsPerSample);
 
 		if (!PS_EMA) {
 			CD_a.resize(nSymbolsPerSample);
@@ -553,8 +551,6 @@ namespace AIS {
 		else {
 			CD_EMA_a.resize(nSymbolsPerSample);
 			CD_EMA_b.resize(nSymbolsPerSample);
-			CD_EMA_c.resize(nSymbolsPerSample);
-			CD_EMA_d.resize(nSymbolsPerSample);
 		}
 
 		CGF_a.setParams(512, 187);
@@ -571,8 +567,6 @@ namespace AIS {
 		for (int i = 0; i < nSymbolsPerSample; i++) {
 			DEC_a[i].setOrigin(CH1, station);
 			DEC_b[i].setOrigin(CH2, station);
-			DEC_c[i].setOrigin(CH1, station);
-			DEC_d[i].setOrigin(CH2, station);
 
 			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
@@ -584,32 +578,15 @@ namespace AIS {
 			else {
 				CD_EMA_a[i].setParams(nDelay);
 				CD_EMA_b[i].setParams(nDelay);
-				CD_EMA_c[i].setParams(nDelay);
-				CD_EMA_d[i].setParams(nDelay);
-
-				CD_EMA_c[i].setWeight(0.5f);
-				CD_EMA_d[i].setWeight(0.5f);
 
 				S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
 				S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
-				S_a.out[i] >> CD_EMA_c[i] >> DEC_c[i] >> output;
-				S_b.out[i] >> CD_EMA_d[i] >> DEC_d[i] >> output;
 			}
-
 			for (int j = 0; j < nSymbolsPerSample; j++) {
 				if (i != j) {
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
-					DEC_c[i].DecoderMessage.Connect(DEC_c[j]);
-					DEC_d[i].DecoderMessage.Connect(DEC_d[j]);
 				}
-			}
-
-			for (int j = 0; j < nSymbolsPerSample; j++) {
-					DEC_a[i].DecoderMessage.Connect(DEC_c[j]);
-					DEC_c[i].DecoderMessage.Connect(DEC_a[j]);
-					DEC_b[i].DecoderMessage.Connect(DEC_d[j]);
-					DEC_d[i].DecoderMessage.Connect(DEC_b[j]);
 			}
 		}
 

@@ -190,10 +190,9 @@ namespace AIS {
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		std::vector<Demod::PhaseSearch> CD_a, CD_b;
 		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
-		std::vector<Demod::PhaseSearchEMA> CD_EMA_c, CD_EMA_d;
 
 		DSP::FilterComplex FC_a, FC_b;
-		std::vector<AIS::Decoder> DEC_a, DEC_b, DEC_c, DEC_d;
+		std::vector<AIS::Decoder> DEC_a, DEC_b;
 		DSP::ScatterPLL S_a, S_b;
 
 	protected:
