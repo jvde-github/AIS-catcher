@@ -50,6 +50,12 @@ namespace AIS {
 			json.Add(p, (int)u);
 	}
 
+	void JSONAIS::US(const AIS::Message& msg, int p, int start, int len, int b, unsigned undefined) {
+		unsigned u = msg.getUint(start, len);
+		if (u != undefined)
+			json.Add(p, (int)(u + b));
+	}
+
 	void JSONAIS::UL(const AIS::Message& msg, int p, int start, int len, float a, float b, unsigned undefined) {
 		unsigned u = msg.getUint(start, len);
 		if (u != undefined)
@@ -231,7 +237,7 @@ namespace AIS {
 			SL(msg, AIS::KEY_AIRTEMP, 154, 11, 0.1, 0, -1024);
 			U(msg, AIS::KEY_HUMIDITY, 165, 7, 101);
 			SL(msg, AIS::KEY_DEWPOINT, 172, 10, 0.1, 0, 501);
-			UL(msg, AIS::KEY_PRESSURE, 182, 9, 1, 799, 511);
+			US(msg, AIS::KEY_PRESSURE, 182, 9, 799, 511);
 			U(msg, AIS::KEY_PRESSURETEND, 191, 2, 3);
 			U(msg, AIS::KEY_VISGREATER, 193, 1);
 			UL(msg, AIS::KEY_VISIBILITY, 194, 7, 0.1, 0);

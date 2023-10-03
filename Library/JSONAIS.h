@@ -47,6 +47,7 @@ namespace AIS {
 
 		void U(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0);
 		void UL(const AIS::Message& msg, int p, int start, int len, float a, float b, unsigned undefined = ~0);
+		void US(const AIS::Message& msg, int p, int start, int len, int b, unsigned undefined = ~0);
 		void S(const AIS::Message& msg, int p, int start, int len, int undefined = ~0);
 		void SL(const AIS::Message& msg, int p, int start, int len, float a, float b, int undefined = ~0);
 		void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::vector<std::string>* map = NULL);
