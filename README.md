@@ -10,7 +10,6 @@ This package introduces the `AIS-catcher` command, a dual-channel AIS receiver c
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! 
 
-
 ### Disclaimer
 
 ```AIS-catcher```  is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and not tested and designed for reliability and correctness. 
