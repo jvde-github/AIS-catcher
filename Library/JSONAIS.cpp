@@ -239,7 +239,7 @@ namespace AIS {
 			SL(msg, AIS::KEY_DEWPOINT, 172, 10, 0.1, 0, 501);
 			US(msg, AIS::KEY_PRESSURE, 182, 9, 799, 511);
 			U(msg, AIS::KEY_PRESSURETEND, 191, 2, 3);
-			U(msg, AIS::KEY_VISGREATER, 193, 1);
+			B(msg, AIS::KEY_VISGREATER, 193, 1);
 			UL(msg, AIS::KEY_VISIBILITY, 194, 7, 0.1, 0);
 			UL(msg, AIS::KEY_WATERLEVEL, 201, 12, 0.01, -10, 4002);
 			U(msg, AIS::KEY_LEVELTREND, 213, 2, 3);
