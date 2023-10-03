@@ -1918,7 +1918,6 @@
 					<li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span></li>
 					<li class="ctx-map" onclick="toggleTooltipStyling()"><i class="label_icon"></i><span id="ctx_tooltipstyling"></span></li>
 					<li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="label_icon"></i><span id="ctx_tooltipoverlap"></span></li>
-					<li class="ctx-map" onclick="copyMapURL()"><i class="content_copy_icon"></i>Copy URL with current map view</li>
 					<li class="divider ctx-map"></li>
 					<li class="ctx-map" onclick="toggleFading()"><i class="directions_boat_icon"></i><span id="ctx_fading"></span></li>
 					<li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span id="ctx_range"></span></li>
@@ -2456,9 +2455,9 @@
 				if (copyClipboard(coords)) showNotification("Coordinates copied to clipboard");
 			}
 
-			function copyMapURL() {
-				let url = window.location.href.split("?")[0] + "?lat=" + map.getCenter().lat.toFixed(5) + "&lon=" + map.getCenter().lng.toFixed(5) + "&zoom=" + map.getZoom() + "&tab=map";
-				if (copyClipboard(url)) showNotification("Coordinates copied to clipboard");
+			function updateMapURL() {
+				let newURL = window.location.href.split("?")[0] + "?lat=" + map.getCenter().lat.toFixed(5) + "&lon=" + map.getCenter().lng.toFixed(5) + "&zoom=" + map.getZoom() + "&tab=" + settings.tab;
+				history.replaceState(null, null, newURL);
 			}
 
 			async function fetchJSON(l, m) {
@@ -4844,6 +4843,8 @@
 				settings.shipcard_rows = selectedRows;
 
 				localStorage.settings = JSON.stringify(settings);
+
+				updateMapURL();
 			}
 
 			function loadSettings() {
