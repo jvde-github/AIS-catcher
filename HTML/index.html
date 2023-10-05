@@ -1206,6 +1206,10 @@
 				box-sizing: border-box;
 			}
 
+			.can-copy {
+				user-select: text;
+			}
+
 			.dialog-close {
 				padding: 10px 40px;
 				background-color: var(--menu-background-hover-color);
@@ -1954,7 +1958,7 @@
 					<div class="aboutpage" id="about_content"></div>
 				</div>
 
-				<div class="tabcontent addscrollbar" id="realtime">
+				<div class="tabcontent addscrollbar can-copy" id="realtime">
 					<pre id="realtime_content"></pre>
 				</div>
 
