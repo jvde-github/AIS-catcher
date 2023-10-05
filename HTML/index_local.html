@@ -4334,16 +4334,16 @@
 				var stat = await fetchStatistics();
 
 				if (stat) {
-					if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
-
-					var title = document.getElementById("stat_station").textContent;
-					if (title != "" && title != null) document.title = "AIS-catcher " + title;
 
 					// in bulk....
 					["os", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate", "received"].forEach(
 						(e) => (document.getElementById("stat_" + e).innerHTML = stat[e]),
 					);
-					//['stat', 'last_minute', 'last_day', 'last_hour'].forEach(e => document.getElementById('stat_' + e + '_count').innerHTML = stat[e].count);
+
+					if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
+
+					var title = document.getElementById("stat_station").textContent;
+					if (title != "" && title != null) document.title = "AIS-catcher " + title;
 
 					document.getElementById("stat_memory").innerHTML = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
 					document.getElementById("stat_msg_rate").innerHTML = Number(stat.msg_rate).toFixed(1) + " msg/s";
