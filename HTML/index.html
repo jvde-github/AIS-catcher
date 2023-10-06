@@ -645,14 +645,17 @@
 
 			.tablecard_inner {
 				position: relative;
-				height: 400px;
 			}
 
 			.tablecard_inner table {
+				overflow-x: scroll;
+				overflow-y: scroll;
+
 			}
 
 			.tablecard_inner table tbody {
 			}
+
 			.active-control {
 				background-color: green;
 				color: white;
@@ -3097,11 +3100,11 @@
 					saveSettings();
 				});
 				map.on("mousemove", function (evt) {
-					saveSettings();
+					debouncedSaveSettings();
 					updateTooltips();
 				});
 				map.on("zoomend", function (evt) {
-					saveSettings();
+					debouncedSaveSettings();
 					updateTooltips();
 				});
 				map.on("click", function () {
@@ -3292,7 +3295,7 @@
 
 			function updateTablecard() {
 
-				if (document.getElementById("tablecard").style.display != "block") return;
+				if (document.getElementById("tablecard").style.display != "inline-block") return;
 				var tableBody = document.getElementById("tablecardBody");
 				tableBody.innerHTML = "";
 
@@ -3364,14 +3367,14 @@
 			}
 
 			function toggleTablecard() {
-				if (document.getElementById("tablecard").style.display == "block") hideTablecard();
+				if (document.getElementById("tablecard").style.display == "inline-block") hideTablecard();
 				else showTablecard();
 			}
 
 			function showTablecard() {
 				showDialog("Warning", "Table card is not implemented yet.");
 
-				document.getElementById("tablecard").style.display = "block";
+				document.getElementById("tablecard").style.display = "inline-block";
 				updateTablecard();
 			}
 
@@ -4975,6 +4978,16 @@
 				plotTrack(m);
 				clearHoverMarker();
 			}
+
+			function debounce(func, wait) {
+				let timeout;
+				return function(...args) {
+					clearTimeout(timeout);
+					timeout = setTimeout(() => func.apply(this, args), wait);
+				};
+			}
+
+			const debouncedSaveSettings = debounce(saveSettings, 250);
 
 			function saveSettings() {
 				if (map !== undefined) {
