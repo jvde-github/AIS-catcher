@@ -567,6 +567,12 @@
 				}
 			}
 
+			@media only screen and (max-width: 1500px) {
+				.min-width-1500 {
+					display: none;
+				}
+			}
+
 			.shiptable-map {
 				width: 10px;
 			}
@@ -634,7 +640,7 @@
 				display: none;
 				flex-direction: column;
 				justify-content: stretch;
-				z-index: 999;
+				z-index: 998;
 				position: absolute;
 				background: var(--menu-background-color);
 				color: var(--menu-font-color);
@@ -645,12 +651,13 @@
 
 			.tablecard_inner {
 				position: relative;
+				height: 400px;
 			}
 
 			.tablecard_inner table {
 				overflow-x: scroll;
 				overflow-y: scroll;
-
+				height: 400px;
 			}
 
 			.tablecard_inner table tbody {
@@ -3295,7 +3302,7 @@
 
 			function updateTablecard() {
 
-				if (document.getElementById("tablecard").style.display != "inline-block") return;
+				if (document.getElementById("tablecard").style.display != "block") return;
 				var tableBody = document.getElementById("tablecardBody");
 				tableBody.innerHTML = "";
 
@@ -3367,14 +3374,14 @@
 			}
 
 			function toggleTablecard() {
-				if (document.getElementById("tablecard").style.display == "inline-block") hideTablecard();
+				if (document.getElementById("tablecard").style.display == "block") hideTablecard();
 				else showTablecard();
 			}
 
 			function showTablecard() {
 				showDialog("Warning", "Table card is not implemented yet.");
 
-				document.getElementById("tablecard").style.display = "inline-block";
+				document.getElementById("tablecard").style.display = "block";
 				updateTablecard();
 			}
 
@@ -3488,7 +3495,7 @@
 				markerTableControl = L.control({ position: "topright" });
 
 				markerTableControl.onAdd = function (map) {
-					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350");
+					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350 min-width-1500");
 
 					L.DomEvent.on(controlDiv, "click", function (e) {
 						L.DomEvent.stopPropagation(e);
