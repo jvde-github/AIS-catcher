@@ -561,6 +561,12 @@
 				}
 			}
 
+			@media only screen and (max-height: 350px) {
+				.min-height-350 {
+					display: none;
+				}
+			}
+
 			.shiptable-map {
 				width: 10px;
 			}
@@ -620,6 +626,33 @@
 			.statcard_inner table {
 			}
 
+			#tablecard {
+				top: 10px;
+				right: 50px;
+				width: 200px;
+				max-height: 400px;
+				display: none;
+				flex-direction: column;
+				justify-content: stretch;
+				z-index: 999;
+				position: absolute;
+				background: var(--menu-background-color);
+				color: var(--menu-font-color);
+				cursor: auto;
+				border-radius: 5px;
+				border: 2px solid var(--menu-border-color);
+			}
+
+			.tablecard_inner {
+				position: relative;
+				height: 400px;
+			}
+
+			.tablecard_inner table {
+			}
+
+			.tablecard_inner table tbody {
+			}
 			.active-control {
 				background-color: green;
 				color: white;
@@ -2247,6 +2280,20 @@
 						</div>
 					</div>
 
+					<div id="tablecard">
+						<div class="tablecard_inner addscrollbar">
+							<table class = "mytable">
+								<thead>
+									<tr>
+										<th>MMSI</th>
+									</tr>
+								</thead>
+								<tbody id="tablecardBody">
+								</tbody>
+							</table>
+						</div>
+					</div>
+					
 					<aside id="shipcard" class="shipcard-ismax">
 						<header id="shipcard_header">
 							<span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
@@ -3088,6 +3135,7 @@
 				L.DomEvent.disableClickPropagation(document.getElementById("shipcard"));
 				addWrenchControl();
 				addMarkerCount();
+				addTableControl();
 			}
 
 			function toggleLabel() {
@@ -3242,6 +3290,37 @@
 				flashNumber("statcard_sarte", cSarte);
 			}
 
+			function updateTablecard() {
+
+				if (document.getElementById("tablecard").style.display != "block") return;
+				var tableBody = document.getElementById("tablecardBody");
+				tableBody.innerHTML = "";
+
+				if (shipsDB == null) return;
+
+				for (let [key, m] of Object.entries(markers)) {
+					if (key in shipsDB) {
+						let ship = shipsDB[key].raw;
+						var row = tableBody.insertRow();
+						row.addEventListener('mouseover', function(e) {
+							startHover(ship.mmsi);
+							L.DomEvent.stopPropagation(e);
+						});
+						row.addEventListener('mouseout', function(e) {
+							endHover(ship.mmsi);
+							L.DomEvent.stopPropagation(e);
+						});			
+						row.addEventListener("click", function (e) {
+							showShipcard(ship.mmsi);
+							L.DomEvent.stopPropagation(e);
+						});
+						
+						var cell = row.insertCell(0);
+						cell.textContent = ship.mmsi;
+					}
+				}
+			}
+
 			function flashNumber(id, newValue) {
 				const element = document.getElementById(id);
 				const oldValue = parseInt(element.innerText) || 0;
@@ -3270,7 +3349,7 @@
 				if (document.getElementById("statcard").style.display == "block") updateMarkerCountTooltip();
 			}
 
-			function toggeStatcard() {
+			function toggleStatcard() {
 				if (document.getElementById("statcard").style.display == "block") hideStatcard();
 				else showStatcard();
 			}
@@ -3283,6 +3362,23 @@
 			function hideStatcard() {
 				document.getElementById("statcard").style.display = "none";
 			}
+
+			function toggleTablecard() {
+				if (document.getElementById("tablecard").style.display == "block") hideTablecard();
+				else showTablecard();
+			}
+
+			function showTablecard() {
+				showDialog("Warning", "Table card is not implemented yet.");
+
+				document.getElementById("tablecard").style.display = "block";
+				updateTablecard();
+			}
+
+			function hideTablecard() {
+				document.getElementById("tablecard").style.display = "none";
+			}
+
 
 			var isDragging = false;
 			var offsetX, offsetY, headerY;
@@ -3367,7 +3463,7 @@
 					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-300");
 
 					L.DomEvent.on(controlDiv, "click", function (e) {
-						toggeStatcard();
+						toggleStatcard();						
 						L.DomEvent.stopPropagation(e);
 					});
 
@@ -3382,6 +3478,30 @@
 
 				addControlToMap(markerCountControl);
 				updateMarkerCount();
+			}
+
+			function addTableControl() {
+
+				markerTableControl = L.control({ position: "topright" });
+
+				markerTableControl.onAdd = function (map) {
+					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350");
+
+					L.DomEvent.on(controlDiv, "click", function (e) {
+						L.DomEvent.stopPropagation(e);
+						toggleTablecard();
+					});
+
+					var controlBoundary = L.DomUtil.create("div", "leaflet-control-settings-toggle round-control", controlDiv);
+					iconLabelSpan = L.DomUtil.create("span", "directions_boat_icon", controlBoundary);
+					iconLabelSpan.innerHTML = "";
+					iconLabelSpan.style.padding = "6px";
+					iconLabelSpan.style.transform = "scale(0.4)";
+
+					return controlDiv;
+				};
+
+				addControlToMap(markerTableControl);
 			}
 
 			function addWrenchControl() {
@@ -5416,6 +5536,7 @@
 				}
 
 				updateMarkerCount();
+				updateTablecard();
 				plotStation(station);
 				await plotRange();
 			}
