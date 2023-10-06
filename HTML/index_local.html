@@ -2296,6 +2296,7 @@
 								<thead>
 									<tr>
 										<th>MMSI</th>
+										<th>Name</th>
 									</tr>
 								</thead>
 								<tbody id="tablecardBody">
@@ -2541,6 +2542,8 @@
 			}
 
 			function updateMapURL() {
+				if(isAndroid()) return;
+				
 				let newURL = window.location.href.split("?")[0] + "?lat=" + map.getCenter().lat.toFixed(5) + "&lon=" + map.getCenter().lng.toFixed(5) + "&zoom=" + map.getZoom() + "&tab=" + settings.tab;
 				history.replaceState(null, null, newURL);
 			}
@@ -3324,9 +3327,16 @@
 							showShipcard(ship.mmsi);
 							L.DomEvent.stopPropagation(e);
 						});
-						
-						var cell = row.insertCell(0);
-						cell.textContent = ship.mmsi;
+						row.addEventListener("contextmenu", function (e) {
+							showContextMenu(event, ship.mmsi, ["mmsi"]);
+							L.DomEvent.stopPropagation(e);
+						});
+									
+						var cell1 = row.insertCell(0);
+						cell1.textContent = ship.mmsi;
+
+						var cell2 = row.insertCell(1);
+						cell2.textContent = ship.shipname;
 					}
 				}
 			}
