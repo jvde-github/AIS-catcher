@@ -23,6 +23,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Edge version:
+- Functionality to draw ship overview list on map view for larger screens (click on ship icon on top right map)
 - retires the Curl library for HTTP message sending and directly uses a built-in TCP client leveraging openssl where needed for secure servers. This means that if you want to send data to a secure server, you have to build with the ssl development libraries:
 ```console
 sudo apt install libssl-dev
