@@ -635,7 +635,7 @@
 			#tablecard {
 				top: 10px;
 				right: 50px;
-				width: 500px;
+				width: 570px;
 				max-height: calc(100vh - 135px);
 				display: none;
 				flex-direction: column;
@@ -664,7 +664,7 @@
 
 			.tablecard_inner table thead {
 				background-color: var(--table-header-background-color);
-				font-size: 1em;
+				font-size: 16px;
 				color: white;
 			}
 
@@ -676,7 +676,7 @@
 
 			.tablecard_inner table > tbody > th, .tablecard_inner table > tbody > td {
 				border: none;
-				padding: 5px 5px;
+				padding: 3px 3px;
 			}
 
 			.tablecard_inner table > tbody > tr:nth-child(even) {
@@ -687,19 +687,27 @@
 				background: var(--table-selection-background-color);
 			}
 
-			.tablecard_inner table th:nth-child(1), .tablecard_inner table td:nth-child(1) { /* Name */
-				width: 250px;
+			.tablecard_inner table th:nth-child(1), .tablecard_inner table td:nth-child(1) { /* Flag */
+				width: 20px;
 			}
 
-			.tablecard_inner table th:nth-child(2), .tablecard_inner table td:nth-child(2) { /* Destination */
-				width: 150px;
+			.tablecard_inner table th:nth-child(2), .tablecard_inner table td:nth-child(2) { /* Name */
+				width: 220px;
 			}
 
-			.tablecard_inner table th:nth-child(3), .tablecard_inner table td:nth-child(3) { /* Type */
+			.tablecard_inner table th:nth-child(3), .tablecard_inner table td:nth-child(3) { /* Distance */
+				width: 100px;
+			}
+
+			.tablecard_inner table th:nth-child(4), .tablecard_inner table td:nth-child(4) { /* Speed */
+				width: 130px;
+			}
+
+			.tablecard_inner table th:nth-child(5), .tablecard_inner table td:nth-child(5) { /* Type */
 				width: 30px;
 			}
 
-			.tablecard_inner table th:nth-child(4), .tablecard_inner table td:nth-child(4) { /* Last */
+			.tablecard_inner table th:nth-child(6), .tablecard_inner table td:nth-child(6) { /* Last */
 				width: 70px;
 			}
 
@@ -2335,8 +2343,10 @@
 							<table class = "mytable">
 								<thead>
 									<tr>
+										<th></th>
 										<th>Name</th>
-										<th>Destination</th>
+										<th>Dist</th>
+										<th>Speed</th>
 										<th>Type</th>
 										<th>Last</th>
 									</tr>
@@ -3373,18 +3383,24 @@
 							showContextMenu(event, ship.mmsi, ["mmsi","mmsi-map"]);
 							L.DomEvent.stopPropagation(e);
 						});
-									
+		
 						var cell1 = row.insertCell(0);
-						cell1.innerHTML = getFlag(ship.country) + (getShipName(ship) || ship.mmsi);
+						cell1.innerHTML = getFlag(ship.country);
 
 						var cell2 = row.insertCell(1);
-						cell2.innerHTML = ship.destination;
+						cell2.innerHTML = (getShipName(ship) || ship.mmsi);
 
 						var cell3 = row.insertCell(2);
-						cell3.innerHTML = ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
+						cell3.innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : "";
 
 						var cell4 = row.insertCell(3);
-						cell4.innerHTML =  getDeltaTimeVal(ship.last_signal); 
+						cell4.innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
+
+						var cell5 = row.insertCell(4);
+						cell5.innerHTML = ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
+
+						var cell6 = row.insertCell(5);
+						cell6.innerHTML =  getDeltaTimeVal(ship.last_signal); 
 					}
 				}
 			}
