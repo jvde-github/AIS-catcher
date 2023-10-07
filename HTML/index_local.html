@@ -635,8 +635,8 @@
 			#tablecard {
 				top: 10px;
 				right: 50px;
-				width: 200px;
-				max-height: 400px;
+				width: 480px;
+				max-height: calc(100vh - 135px);
 				display: none;
 				flex-direction: column;
 				justify-content: stretch;
@@ -651,16 +651,59 @@
 
 			.tablecard_inner {
 				position: relative;
-				height: 400px;
-			}
-
-			.tablecard_inner table {
-				overflow-x: scroll;
-				overflow-y: scroll;
-				height: 400px;
+				height: calc(100vh - 135px);
 			}
 
 			.tablecard_inner table tbody {
+			}
+
+			.tablecard_inner table {
+				overflow: auto;
+				border-collapse: collapse;
+				overflow-x: scroll;
+				overflow-y: scroll;
+				height: calc(100vh - 135px);
+			}
+
+			.tablecard_inner table thead {
+				background-color: var(--table-header-background-color);
+				font-size: 1em;
+				color: white;
+			}
+
+			.tablecard_inner table thead > tr > th {
+				text-align: left;
+				padding: 10px 5px;
+				border-collapse: collapse;
+			}
+
+			.tablecard_inner table > tbody > th, .tablecard_inner table > tbody > td {
+				border: none;
+				padding: 5px 5px;
+			}
+
+			.tablecard_inner table > tbody > tr:nth-child(even) {
+				background: var(--table-alternate-background-color);
+			}
+
+			.tablecard_inner table > tbody > tr:hover {
+				background: var(--table-selection-background-color);
+			}
+
+			.tablecard_inner table th:nth-child(1), .tablecard_inner table td:nth-child(1) { /* Name */
+				width: 200px;
+			}
+
+			.tablecard_inner table th:nth-child(2), .tablecard_inner table td:nth-child(2) { /* Destination */
+				width: 200px;
+			}
+
+			.tablecard_inner table th:nth-child(3), .tablecard_inner table td:nth-child(3) { /* Type */
+				width: 30px;
+			}
+
+			.tablecard_inner table th:nth-child(4), .tablecard_inner table td:nth-child(4) { /* Last */
+				width: 50px;
 			}
 
 			.active-control {
@@ -2295,8 +2338,10 @@
 							<table class = "mytable">
 								<thead>
 									<tr>
-										<th>MMSI</th>
 										<th>Name</th>
+										<th>Destination</th>
+										<th>Type</th>
+										<th>Last</th>
 									</tr>
 								</thead>
 								<tbody id="tablecardBody">
@@ -3333,10 +3378,16 @@
 						});
 									
 						var cell1 = row.insertCell(0);
-						cell1.textContent = ship.mmsi;
+						cell1.innerHTML = getFlag(ship.country) + (getShipName(ship) || ship.mmsi);
 
 						var cell2 = row.insertCell(1);
-						cell2.textContent = ship.shipname;
+						cell2.innerHTML = ship.destination;
+
+						var cell3 = row.insertCell(2);
+						cell3.innerHTML = ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
+
+						var cell4 = row.insertCell(3);
+						cell4.innerHTML =  getDeltaTimeVal(ship.last_signal); 
 					}
 				}
 			}
@@ -3389,8 +3440,6 @@
 			}
 
 			function showTablecard() {
-				showDialog("Warning", "Table card is not implemented yet.");
-
 				document.getElementById("tablecard").style.display = "block";
 				updateTablecard();
 			}
