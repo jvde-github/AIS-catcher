@@ -20,4 +20,4 @@
 #define VERSION_NUMBER	 53
 #define VERSION			 "v0.53"
 #define COPYRIGHT		 "jvde-github and other contributors"
-#define VERSION_DESCRIBE	"v0.53-186-gc8b5c086"
+#define VERSION_DESCRIBE	"v0.53-188-g1ad6544d"
