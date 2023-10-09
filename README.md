@@ -901,6 +901,7 @@ A list of some stations mentioning using AIS-catcher:
 - [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
 - [Troguarat, France](https://www.marinetraffic.com/en/ais/details/stations/21360)
 - [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
+- [Vancouver, North](https://www.marinetraffic.com/en/ais/details/stations/29475) with hardware description [here](https://github.com/jvde-github/AIS-catcher/discussions/182).
 - [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
 - [Vasa, Finland](https://www.marinetraffic.com/en/ais/details/stations/14994)
 - [Vernouillet, France](https://www.marinetraffic.com/en/ais/details/stations/10668)
