@@ -2628,6 +2628,10 @@
 
 			function setLatLonInDMS(b) {
 				settings.latlon_in_dms = b;
+				saveSettings();
+
+				refresh_data();
+				if (table != null) table = null;
 			}
 
 			function copyCoordinates(m) {
