@@ -2066,10 +2066,13 @@
 							<header>System</header>
 							<section>
 								<div><span>Dark Mode</span><span>
-									<input type="checkbox" id="darkModeCheckbox" onchange="setDarkMode(this.checked)">	
+									<input type="checkbox" id="settings_darkmode" onchange="setDarkMode(this.checked)">	
+								</span></div>
+								<div><span>Lat/Lon in DMS</span><span>
+									<input type="checkbox" id="settings_latlon_in_dms" onchange="setLatLonInDMS(this.checked)">	
 								</span></div>
 								<div><span>Units</span><span>
-									<select id="metricsDropdown" onchange="setMetrics(this.value)">
+									<select id="settings_metric" onchange="setMetrics(this.value)">
 										<option value="default">Default</option>
 										<option value="metric">Metric</option>
 										<option value="imperial">Imperial</option>
@@ -2511,6 +2514,7 @@
 				fading: false,
 				android: false,
 				welcome: true,
+				latlon_in_dms: false,
 				map_day: "Voyager",
 				map_night: "DarkMatter",
 				zoom: 10,
@@ -2556,6 +2560,14 @@
 				c.addTo(map);
 			}
 
+			function decimalToDMS(l, isLatitude) {
+				var degrees = Math.floor(Math.abs(l));
+				var minutes = Math.floor((Math.abs(l) - degrees) * 60);
+				var seconds = Number((((Math.abs(l) - degrees) * 60) - minutes) * 60).toFixed(1);
+				var direction = (isLatitude ? (l > 0 ? "N" : "S") : (l > 0 ? "E" : "W"));
+				return degrees + "&deg" + minutes + "'" + seconds + "\"" + direction;
+			}
+
 			// transformations - for overwrite
 
 			getDimensionVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(0) : settings.metric === "SI" ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0));
@@ -2566,8 +2578,9 @@
 			getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
 			getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
 
-			getLatVal = (ship) => (ship.approx ? "<i>" : "") + Number(ship.lat).toFixed(5) + (ship.approx ? "</i>" : "");
-			getLonVal = (ship) => (ship.approx ? "<i>" : "") + Number(ship.lon).toFixed(5) + (ship.approx ? "</i>" : "");
+			getLatVal = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms? decimalToDMS(ship.lat, true) : Number(ship.lat).toFixed(5)) + (ship.approx ? "</i>" : "");
+			getLonVal = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms? decimalToDMS(ship.lon, false) : Number(ship.lon).toFixed(5) )+ (ship.approx ? "</i>" : "");
+
 			getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
 			getDeltaTimeVal = (s) => (s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m");
 			getShipName = (ship) => ship.shipname;
@@ -2611,6 +2624,10 @@
 						textArea.remove();
 					}
 				}
+			}
+
+			function setLatLonInDMS(b) {
+				settings.latlon_in_dms = b;
 			}
 
 			function copyCoordinates(m) {
@@ -3256,6 +3273,12 @@
 				if (table != null) table = null;
 			}
 
+			function getMetrics() {
+				if (settings.metric == "DEFAULT") return "Default";
+				if (settings.metric == "SI") return "Metric";
+				if (settings.metric == "IMPERIAL") return "Imperial";
+				return "Default";
+			}
 
 			function toggleMetrics() {
 				if (settings.metric == "DEFAULT") {
@@ -5134,6 +5157,7 @@
 				localStorage.settings = JSON.stringify(settings);
 
 				updateMapURL();
+				updateSettingsTab();
 			}
 
 			function loadSettings() {
@@ -5758,6 +5782,13 @@
 				showTrack(m);
 			}
 
+			function updateSettingsTab() {
+				document.getElementById("settings_darkmode").checked = settings.dark_mode;
+				document.getElementById("settings_latlon_in_dms").checked = settings.latlon_in_dms;
+				document.getElementById("settings_metric").value = getMetrics().toLowerCase();
+
+			}
+
 			function activateTab(b, a) {
 				hideMenuifSmall();
 
@@ -5781,6 +5812,7 @@
 				interval = setInterval(refresh_data, refreshIntervalMs);
 
 				if (a != "map") StopFireworks();
+				if(a == "settings") updateSettingsTab();
 
 				if (a == "realtime") {
 					if (evtSource == null) {
