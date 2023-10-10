@@ -1967,6 +1967,7 @@
 					<i id="map_tab_mini" onclick="activateTab(event,'map')" class="map_icon"></i>
 					<i id="realtime_tab_mini" onclick="activateTab(event,'realtime')" class="feed_icon"></i>
 					<i id="about_tab_mini" onclick="activateTab(event,'about')" class="info_icon"></i>
+					<i id="settings_tab_mini" onclick="activateTab(event,'settings')" style="display: none" class="info_icon"></i>
 				</div>
 			</div>
 
@@ -1998,6 +1999,8 @@
 			<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="feed_icon"></i><span>NMEA</span></div>
 
 			<div onclick="activateTab(event,'about')" id="about_tab"><i class="info_icon"></i><span>About</span></div>
+
+			<div onclick="activateTab(event,'settings')" id="settings_tab" style="display: none"><i class="info_icon"></i><span>Settings</span></div>
 		</nav>
 
 		<div class="mainspace-container">
@@ -2038,6 +2041,7 @@
 					<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
 					<li class="divider mmsi noandroid"></li>
 					<li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
+					<li class="settings" onclick="activateTab(null,'settings')"><i class="build_icon"></i>Settings...</li>
 					<li class="settings" onclick="toggleMetrics()"><i class="speed_icon"></i><span id="ctx_toggle_metrics"></span></li>
 					<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 				</ul>
@@ -2054,6 +2058,26 @@
 
 				<div class="tabcontent addscrollbar can-copy" id="realtime">
 					<pre id="realtime_content"></pre>
+				</div>
+
+				<div class="tabcontent addscrollbar" id="settings">
+					<div class="stat-tab">
+						<div class="stat-panel">
+							<header>System</header>
+							<section>
+								<div><span>Dark Mode</span><span>
+									<input type="checkbox" id="darkModeCheckbox" onchange="setDarkMode(this.checked)">	
+								</span></div>
+								<div><span>Units</span><span>
+									<select id="metricsDropdown" onchange="setMetrics(this.value)">
+										<option value="default">Default</option>
+										<option value="metric">Metric</option>
+										<option value="imperial">Imperial</option>
+									</select>
+								</span></div>
+							</section>
+						</div>
+					</div>
 				</div>
 
 				<div class="tabcontent addscrollbar" id="stat">
@@ -3214,6 +3238,24 @@
 					for (let [key, m] of Object.entries(markers)) if (m.isTooltipOpen()) m.getTooltip().toggle();
 				} else updateTooltips();
 			}
+
+			function setMetrics(s) {
+				if (s.toUpperCase() == "DEFAULT")
+					settings.metric = "DEFAULT";
+				else if (s.toUpperCase() == "METRIC")
+					settings.metric = "SI";
+				else if (s.toUpperCase() == "IMPERIAL")
+					settings.metric = "IMPERIAL";
+				else
+					settings.metric = "DEFAULT";
+
+				showNotification("Switched units to " + s);
+				saveSettings();
+
+				refresh_data();
+				if (table != null) table = null;
+			}
+
 
 			function toggleMetrics() {
 				if (settings.metric == "DEFAULT") {
@@ -5668,6 +5710,12 @@
 				updateMapLayer();
 			}
 
+			function setDarkMode(b) {
+				settings.dark_mode = b;
+				updateDarkMode();
+				saveSettings();
+			}
+
 			function toggleDarkMode() {
 				settings.dark_mode = !settings.dark_mode;
 				updateDarkMode();
@@ -5776,7 +5824,7 @@
 			}
 
 			function selectTab() {
-				if (settings.tab != "realtime" && settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat") {
+				if (settings.tab != "settings" && settings.tab != "realtime" && settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat") {
 					settings.tab = "stat";
 					alert("Invalid tab specified");
 				}
