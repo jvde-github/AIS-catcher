@@ -2071,6 +2071,9 @@
 								<div><span>Lat/Lon in DMS</span><span>
 									<input type="checkbox" id="settings_latlon_in_dms" onchange="setLatLonInDMS(this.checked)">	
 								</span></div>
+								<div><span>Dimension in Ft</span><span>
+									<input type="checkbox" id="settings_dim_in_feet" onchange="setDimensionInFeet(this.checked)">	
+								</span></div>
 								<div><span>Units</span><span>
 									<select id="settings_metric" onchange="setMetrics(this.value)">
 										<option value="default">Default</option>
@@ -2527,6 +2530,7 @@
 				dark_mode: false,
 				center_radius: 0,
 				metric: "DEFAULT",
+				dim_in_feet: false,
 				setcoord: true,
 				sort: "distance",
 				sort_dir: "asc",
@@ -2569,9 +2573,20 @@
 			}
 
 			// transformations - for overwrite
+			getDimensionVal = (c) => {
+				if (settings.dim_in_feet) {
+					return Number(c * 3.2808399).toFixed(0);
+				}
+				return (settings.metric === "DEFAULT" || settings.metric === "SI") ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0);
+			};
 
-			getDimensionVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(0) : settings.metric === "SI" ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0));
-			getDimensionUnit = () => (settings.metric === "DEFAULT" ? "m" : settings.metric === "SI" ? "m" : "ft");
+			getDimensionUnit = () => {
+				if (settings.dim_in_feet) {
+					return "ft";
+				}
+				return (settings.metric === "DEFAULT" || settings.metric === "SI") ? "m" : "ft";
+			};
+
 			getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
 			getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1);
 			getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
@@ -2632,6 +2647,12 @@
 
 				refresh_data();
 				if (table != null) table = null;
+			}
+
+			function setDimensionInFeet(b) {
+				settings.dim_in_feet = b;
+				saveSettings();
+				refresh_data();
 			}
 
 			function copyCoordinates(m) {
@@ -5199,6 +5220,8 @@
 				for (const [key, value] of urlParams.entries()) if (settings.hasOwnProperty(key)) settings = { ...settings, [key]: value };
 
 				settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
+				settings.latlon_in_dms = settings.latlon_in_dms == "true" || settings.latlon_in_dms == true;
+				settings.dim_in_feet = settings.dim_in_feet == "true" || settings.dim_in_feet == true;
 			}
 
 			function updateShipShape(ship) {
@@ -5789,6 +5812,7 @@
 			function updateSettingsTab() {
 				document.getElementById("settings_darkmode").checked = settings.dark_mode;
 				document.getElementById("settings_latlon_in_dms").checked = settings.latlon_in_dms;
+				document.getElementById("settings_dim_in_feet").checked = settings.dim_in_feet;
 				document.getElementById("settings_metric").value = getMetrics().toLowerCase();
 
 			}
