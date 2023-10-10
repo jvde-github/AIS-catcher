@@ -5996,6 +5996,8 @@
 		<script src="config.js"></script>
 
 		<script>
+			let urlParams = new URLSearchParams(window.location.search);
+
 			console.log("Plugin loading completed");
 
 			init_preSettings();
@@ -6026,7 +6028,6 @@
 			console.log("Switch to active tab");
 			selectTab();
 
-			let urlParams = new URLSearchParams(window.location.search);
 			if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"));
 
 			saveSettings();
