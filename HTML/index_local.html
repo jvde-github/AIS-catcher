@@ -2042,9 +2042,8 @@
 					<li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub</li>
 					<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
 					<li class="divider mmsi noandroid"></li>
-					<li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
 					<li class="settings" onclick="activateTab(null,'settings')"><i class="build_icon"></i>Settings...</li>
-					<li class="settings" onclick="toggleMetrics()"><i class="speed_icon"></i><span id="ctx_toggle_metrics"></span></li>
+					<li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
 					<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 				</ul>
 
@@ -2082,6 +2081,26 @@
 										<option value="metric">Metric</option>
 										<option value="imperial">Imperial</option>
 									</select>
+								</span></div>
+							</section>
+							<header>Map</header>
+							<section>
+								<div><span>Show range</span><span>
+									<input type="checkbox" id="settings_show_range" onchange="setRangeSwitch(this.checked)">	
+								</span></div>
+								<div><span>Fade icons</span><span>
+									<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)">	
+								</span></div>
+							</section>
+							<section>
+								<div><span>Show all labels</span><span>
+									<input type="checkbox" id="settings_labels" onchange="setLabel(this.checked)">	
+								</span></div>
+								<div><span>Show lean labels</span><span>
+									<input type="checkbox" id="settings_tooltipLean" onchange="setTooltipStyling(this.checked)">	
+								</span></div>
+								<div><span>Declutter labels</span><span>
+									<input type="checkbox" id="settings_tooltipOverlap" onchange="setTooltipOverlay(this.checked)">	
 								</span></div>
 							</section>
 						</div>
@@ -2772,8 +2791,6 @@
 
 				document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
 				document.getElementById("ctx_track").innerText = context_mmsi in marker_tracks && context.includes("mmsi-map") ? "Hide Track" : "Show Track";
-				document.getElementById("ctx_toggle_metrics").innerText =
-					settings.metric === "DEFAULT" ? "Switch to metric units" : settings.metric === "IMPERIAL" ? "Switch to default units" : "Switch to imperial units";
 
 				contextMenu.style.display = "block";
 
@@ -3274,6 +3291,10 @@
 				addTableControl();
 			}
 
+			function setLabel(b) {
+				if(settings.label != b) toggleLabel();
+			}
+
 			function toggleLabel() {
 				settings.labels = !settings.labels;
 				saveSettings();
@@ -3712,6 +3733,13 @@
 				}
 			}
 
+			function setRangeSwitch(b) {
+				if(b != settings.show_range) {
+					toggleRange();
+				}
+			}
+
+			
 			async function toggleRange() {
 				const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
 
@@ -3724,6 +3752,12 @@
 
 				if (!settings.show_range) removeRange();
 				else await plotRange();
+			}
+
+			function setFading(b) {
+				if(b != settings.fading) {
+					toggleFading();
+				}
 			}
 
 			function toggleFading() {
@@ -5658,16 +5692,24 @@
 				updateTooltips();
 			}
 
-			function toggleTooltipStyling() {
-				settings.tooltipLean = !settings.tooltipLean;
-				if (!settings.labels) settings.labels = true;
+			function setTooltipStyling(b) {
+				settings.tooltipLean = b;
 				saveSettings();
 				for (let [key, m] of Object.entries(markers)) {
 					const cls = settings.tooltipLean ? "leaflet-tooltiplabel" : "leaflet-tooltip";
 					markers[key].unbindTooltip();
 					createTooltip(shipsDB[key].raw);
 				}
-				updateTooltips();
+				updateTooltips();			
+			}
+
+			function toggleTooltipStyling() {
+				if (!settings.labels) settings.labels = true;
+				setTooltipStyling(!settings.tooltipLean);
+			}
+
+			function setTooltipOverlay(b) {
+				if(settings.tooltipOverlap != b) toggleTooltipOverlap();
 			}
 
 			function toggleTooltipOverlap() {
@@ -5816,6 +5858,12 @@
 				document.getElementById("settings_latlon_in_dms").checked = settings.latlon_in_dms;
 				document.getElementById("settings_dim_in_feet").checked = settings.dim_in_feet;
 				document.getElementById("settings_metric").value = getMetrics().toLowerCase();
+				document.getElementById("settings_fading").checked = settings.fading;
+				document.getElementById("settings_show_range").checked = settings.show_range;
+
+				document.getElementById("settings_tooltipOverlap").checked = settings.tooltipOverlap;
+				document.getElementById("settings_tooltipLean").checked = settings.tooltipLean;
+				document.getElementById("settings_labels").checked = settings.labels;
 
 			}
 
