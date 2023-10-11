@@ -2594,14 +2594,14 @@
 			}
 
 			// transformations - for overwrite
-			getDimensionVal = (c) => {
+			getDimVal = (c) => {
 				if (settings.dim_in_feet) {
 					return Number(c * 3.2808399).toFixed(0);
 				}
 				return (settings.metric === "DEFAULT" || settings.metric === "SI") ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0);
 			};
 
-			getDimensionUnit = () => {
+			getDimUnit = () => {
 				if (settings.dim_in_feet) {
 					return "ft";
 				}
@@ -2614,8 +2614,8 @@
 			getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
 			getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
 
-			getLatVal = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms? decimalToDMS(ship.lat, true) : Number(ship.lat).toFixed(5)) + (ship.approx ? "</i>" : "");
-			getLonVal = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms? decimalToDMS(ship.lon, false) : Number(ship.lon).toFixed(5) )+ (ship.approx ? "</i>" : "");
+			getLatValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms? decimalToDMS(ship.lat, true) : Number(ship.lat).toFixed(5)) + (ship.approx ? "</i>" : "");
+			getLonValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms? decimalToDMS(ship.lon, false) : Number(ship.lon).toFixed(5) )+ (ship.approx ? "</i>" : "");
 
 			getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
 			getDeltaTimeVal = (s) => (s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m");
@@ -4972,7 +4972,7 @@
 								formatter: function (cell) {
 									const ship = cell.getRow().getData();
 									const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-									return "<div style='color:" + color + "'>" + (ship.lat != null ? getLatVal(ship) : "") + "</div>";
+									return "<div style='color:" + color + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
 								},
 							},
 							{
@@ -4982,7 +4982,7 @@
 								formatter: function (cell) {
 									const ship = cell.getRow().getData();
 									const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-									return "<div style='color:" + color + "'>" + (ship.lon != null ? getLonVal(ship) : "") + "</div>";
+									return "<div style='color:" + color + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
 								},
 							},
 							{
@@ -5561,15 +5561,15 @@
 				document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
 				document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(ship.last_signal);
 				document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-				document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatVal(ship) : null;
-				document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonVal(ship) : null;
+				document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatValFormat(ship) : null;
+				document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonValFormat(ship) : null;
 
 				document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
 				document.getElementById("shipcard_distance").innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
-				document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimensionVal(ship.draught) + " " + getDimensionUnit() : null;
+				document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
 				document.getElementById("shipcard_dimension").innerHTML =
 					ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
-						? getDimensionVal(ship.to_bow + ship.to_stern) + " " + getDimensionUnit() + " x " + getDimensionVal(ship.to_port + ship.to_starboard) + " " + getDimensionUnit()
+						? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
 						: null;
 
 				document.getElementById("shipcard_track").innerText = card_mmsi in marker_tracks ? "Hide Track" : "Show Track";
