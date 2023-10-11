@@ -657,8 +657,7 @@
 			.tablecard_inner table {
 				overflow: auto;
 				border-collapse: collapse;
-				overflow-x: scroll;
-				overflow-y: scroll;
+				overflow: auto;
 				max-height: calc(100vh - 135px);
 			}
 
@@ -690,8 +689,11 @@
 			}
 
 			.tablecard_inner table th:nth-child(1), .tablecard_inner table td:nth-child(1) { /* Flag */
-				font-size: 24px;
 				width: 20px;
+			}
+
+			.tablecard_inner table td:nth-child(1) { /* Flag */
+				font-size: 24px;
 			}
 
 			.tablecard_inner table th:nth-child(2), .tablecard_inner table td:nth-child(2) { /* Name */
