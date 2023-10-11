@@ -1949,6 +1949,24 @@
 					opacity: 1;
 				}
 			}
+
+			.color-picker {
+				border: none;
+				width: 100px;
+				height: 20px;
+				cursor: pointer; 
+				vertical-align: middle;
+			}
+
+			.color-picker::-webkit-color-swatch-wrapper {
+				padding: 0;
+			}
+
+			.color-picker::-webkit-color-swatch {
+				border: none;
+			}
+
+
 		</style>
 
 		<link rel="stylesheet" href="config.css" />
@@ -2101,6 +2119,14 @@
 								</span></div>
 								<div><span>Declutter labels</span><span>
 									<input type="checkbox" id="settings_tooltipOverlap" onchange="setTooltipOverlay(!(this.checked))">	
+								</span></div>
+							</section>
+							<section>
+								<div><span>Ship Outline Border</span><span>
+									<input type="color" class="color-picker" id="settings_shipoutline_border" onchange="setShipOutlineBorder(this.value)">	
+								</span></div>
+								<div><span>Ship Outline Inner</span><span>
+									<input type="color" class="color-picker" id="settings_shipoutline_inner" onchange="setShipOutlineInner(this.value)">	
 								</span></div>
 							</section>
 						</div>
@@ -2548,6 +2574,8 @@
 				center_point: "station",
 				tooltipLean: true,
 				tooltipOverlap: false,
+				shipoutline_border: "#A9A9A9",
+				shipoutline_inner: "#808080",
 				dark_mode: false,
 				center_radius: 0,
 				metric: "DEFAULT",
@@ -4084,6 +4112,18 @@
 				return L.latLng([latlng.lat + delta[0] * distance, latlng.lng + delta[1] * distance]);
 			}
 
+			function setShipOutlineBorder(v) {
+				settings.shipoutline_border = v;
+				saveSettings();
+				refresh_data();
+			}
+
+			function setShipOutlineInner(v) {
+				settings.shipoutline_inner = v;
+				saveSettings();
+				refresh_data();
+			}
+			
 			function drawShipOutline(ship) {
 				if (ship == null) return;
 
@@ -4108,9 +4148,9 @@
 					fillOpacity = 0.2 * opacity;
 				}
 
-				let col = { color: "darkgrey", fillColor: "grey" };
-				if (ship.mmsi == hover_mmsi) col = { color: "orange", fillColor: "grey" };
-				else if (ship.mmsi == card_mmsi) col = { color: "#943b3e", fillColor: "grey" };
+				let col = { color: settings.shipoutline_border, fillColor: settings.shipoutline_inner };
+				if (ship.mmsi == hover_mmsi) col = { color: "orange", fillColor: settings.shipoutline_inner };
+				else if (ship.mmsi == card_mmsi) col = { color: "#943b3e", fillColor: settings.shipoutline_inner };
 
 				if (heading != null) {
 					const deltaBow = calcOffset1M(latlng, heading % 360);
@@ -5864,6 +5904,9 @@
 				document.getElementById("settings_tooltipOverlap").checked = settings.tooltipOverlap;
 				document.getElementById("settings_tooltipLean").checked = settings.tooltipLean;
 				document.getElementById("settings_labels").checked = settings.labels;
+
+				document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
+				document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
 
 			}
 
