@@ -56,8 +56,6 @@
 				--table-background-color: white;
 				--table-selection-background-color: #daebfe;
 				--table-alternate-background-color: var(--panel-color);
-				--range-color: orange;
-				--range-short-color: rgba(255, 165, 0, 0.2);
 				--main-font-color: var(--tertiary-color);
 				--stat-label-color: var(--tertiary-color);
 				--stat-divider-color: var(--tertiary-color);
@@ -114,8 +112,6 @@
 				--table-background-color: rgb(18, 18, 18);
 				--table-selection-background-color: rgb(60, 60, 60);
 				--table-alternate-background-color: rgb(30, 30, 30);
-				--range-color: rgb(75, 75, 75);
-				--range-short-color: rgb(75, 75, 75, 0.25);
 				--main-font-color: white;
 				--stat-label-color: darkgrey;
 				--stat-divider-color: rgb(50, 50, 50);
@@ -1062,8 +1058,8 @@
 				border-radius: 15px;
 			}
 			.stat-panel {
-				background-color: var(--panel-color);
 				margin: 0px;
+				background-color: var(--panel-color);
 				padding: 0px;
 			}
 
@@ -2185,7 +2181,7 @@
 					<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
 					<li class="divider mmsi noandroid"></li>
 					<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
-					<li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins...</li>
+					<li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins</li>
 					<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 				</ul>
 
@@ -2629,42 +2625,47 @@
 			var context_text = "";
 
 			// default settings
-			var settings = {
-				counter: true,
-				fading: false,
-				android: false,
-				welcome: true,
-				latlon_in_dms: false,
-				map_day: "Voyager",
-				map_night: "DarkMatter",
-				zoom: 10,
-				lat: 0,
-				lon: 0,
-				range_color: "#FFA500",
-				range_color_short: "#FFDAB9",
-				range_color_dark: "#4B4B4B",
-				range_color_dark_short: "#4B4B4B",
-				fix_center: false,
-				center_point: "station",
-				tooltipLean: true,
-				tooltipOverlap: false,
-				shipoutline_border: "#A9A9A9",
-				shipoutline_inner: "#808080",
-				shipoutline_opacity: 0.9,
-				dark_mode: false,
-				center_radius: 0,
-				metric: "DEFAULT",
-				dim_in_feet: false,
-				setcoord: true,
-				sort: "distance",
-				sort_dir: "asc",
-				tab: "stat",
-				labels: true,
-				eri: true,
-				loadURL: true,
-			};
+			var settings = {};
 			let isFetchingShips = false;
 
+			function restoreDefaultSettings() {
+				settings = {
+					counter: true,
+					fading: false,
+					android: false,
+					welcome: true,
+					latlon_in_dms: false,
+					map_day: "Voyager",
+					map_night: "DarkMatter",
+					zoom: 10,
+					lat: 0,
+					lon: 0,
+					range_color: "#FFA500",
+					range_color_short: "#FFDAB9",
+					range_color_dark: "#4B4B4B",
+					range_color_dark_short: "#4B4B4B",
+					fix_center: false,
+					center_point: "station",
+					tooltipLean: true,
+					tooltipOverlap: false,
+					shipoutline_border: "#A9A9A9",
+					shipoutline_inner: "#808080",
+					shipoutline_opacity: 0.9,
+					dark_mode: false,
+					center_radius: 0,
+					metric: "DEFAULT",
+					dim_in_feet: false,
+					setcoord: true,
+					sort: "distance",
+					sort_dir: "asc",
+					tab: "stat",
+					labels: true,
+					eri: true,
+					loadURL: true,
+				};
+			}
+
+	
 			// some functions useful in plugins
 			function addTileLayer(title, layer) {
 				basemaps[title] = layer;
@@ -6215,6 +6216,7 @@
 
 		<script>
 			let urlParams = new URLSearchParams(window.location.search);
+			restoreDefaultSettings();
 
 			console.log("Plugin loading completed");
 
