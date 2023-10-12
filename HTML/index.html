@@ -2002,18 +2002,19 @@
 
 			.close-btn {
 				position: absolute;
-				top: 10px; /* Adjust as needed */
-				right: 10px; /* Adjust as needed */
-				background-color: #f44336; /* red */
-				color: white;
+				top: 10px;
+				right: 10px;
+				background-color: #da190b;
+				font-size: 24px;
+				color: red;
 				border: none;
-				border-radius: 50%;
+				border-radius: 5px;
 				font-weight: bold;
 				cursor: pointer;
 			}
 
 			.close-btn:hover {
-				background-color: #da190b; /* darker red on hover */
+				background-color: #da190b;
 			}
 		</style>
 
@@ -2072,7 +2073,7 @@
 			<div class="notification-container" id="notification-container"></div>
 
 			<div class="settings_window addscrollbar" id="settings">
-					<button class="close-btn" onclick="closeSettings()">X</button>
+					<i class="close-btn close_icon" onclick="closeSettings()"></i>
 					<div class="stat-panel">
 						<header>System</header>
 						<section>
@@ -2126,7 +2127,24 @@
 									<input type="range"  id="settings_shipoutline_opacity" min="0" max="1" step="0.01" onchange="setShipOutlineOpacity(this.value)">
 								</span>
 							</div>
-							
+						</section>
+
+						<section>
+							<div><span>Range Color</span><span>
+								<input type="color" class="color-picker" id="settings_range_color" onchange="setRangeColor(this.value,'range_color')">	
+							</span></div>
+							<div><span>Range Color Short</span><span>
+								<input type="color" class="color-picker" id="settings_range_color_short" onchange="setRangeColor(this.value,'range_color_short')">	
+							</span></div>
+						</section>
+
+						<section>
+							<div><span>Range Color (Dark)</span><span>
+								<input type="color" class="color-picker" id="settings_range_color_dark" onchange="setRangeColor(this.value,'range_color_dark')">	
+							</span></div>
+							<div><span>Range Color Short (Dark)</span><span>
+								<input type="color" class="color-picker" id="settings_range_color_dark_short" onchange="setRangeColor(this.value,'range_color_dark_short')">	
+							</span></div>
 						</section>
 				</div>
 			</div>
@@ -2622,6 +2640,10 @@
 				zoom: 10,
 				lat: 0,
 				lon: 0,
+				range_color: "#FFA500",
+				range_color_short: "#FFDAB9",
+				range_color_dark: "#4B4B4B",
+				range_color_dark_short: "#4B4B4B",
 				fix_center: false,
 				center_point: "station",
 				tooltipLean: true,
@@ -3829,7 +3851,11 @@
 				}
 			}
 
-			
+			function setRangeColor(v,f) {
+				settings[f] = v;
+				updateRangeColor();
+			}
+
 			async function toggleRange() {
 				const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
 
@@ -3965,12 +3991,12 @@
 					});
 				}
 
-				const markerColor = getComputedStyle(document.documentElement).getPropertyValue("--range-color").trim();
+				const markerColor = settings.dark_mode ? settings.range_color_dark : settings.range_color;
 
 				marker_range = L.polygon(range_outline, { fillOpacity: 0, color: markerColor, interactive: false });
 				marker_range.addTo(map);
 
-				const markerShortColor = getComputedStyle(document.documentElement).getPropertyValue("--range-short-color").trim();
+				const markerShortColor = settings.dark_mode ? settings.range_color_dark_short : settings.range_color_short;
 
 				marker_short_range = L.polygon(range_short_outline, { fillOpacity: 0, color: markerShortColor, interactive: false });
 				marker_short_range.addTo(map);
@@ -3981,8 +4007,8 @@
 			function updateRangeColor() {
 				if (marker_range == null) return;
 
-				const markerColor = getComputedStyle(document.documentElement).getPropertyValue("--range-color").trim();
-				const markerShortColor = getComputedStyle(document.documentElement).getPropertyValue("--range-short-color").trim();
+				const markerColor = settings.dark_mode ? settings.range_color_dark : settings.range_color;
+				const markerShortColor = settings.dark_mode ? settings.range_color_dark_short : settings.range_color_short;
 
 				marker_range.setStyle({ color: markerColor });
 				marker_short_range.setStyle({ color: markerShortColor });
@@ -5976,6 +6002,11 @@
 				document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
 				document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
 				document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
+
+				document.getElementById("settings_range_color").value = settings.range_color;
+				document.getElementById("settings_range_color_short").value = settings.range_color_short;
+				document.getElementById("settings_range_color_dark").value = settings.range_color_dark;
+				document.getElementById("settings_range_color_dark_short").value = settings.range_color_dark_short;
 			}
 
 			function activateTab(b, a) {
