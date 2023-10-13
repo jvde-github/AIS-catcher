@@ -22,6 +22,7 @@
 				--primary-color: #0857b1;
 				--secondary-color: #12a5ed;
 				--tertiary-color: #0b1033;
+				--settings-bg-color: white;
 				--bottombar-color: var(--tertiary-color);
 				--panel-color: #f2f8ff;
 				--ok-color: rgb(129, 244, 129);
@@ -87,6 +88,7 @@
 				--secondary-color: #5dd5d5;
 				--tertiary-color: #05081f;
 				--bottombar-color: black;
+				--settings-bg-color: black;
 				--panel-color: rgb(18, 18, 18);
 				--ok-color: #7ce481;
 				--error-color: #cf6679;
@@ -1063,6 +1065,10 @@
 				padding: 0px;
 			}
 
+			.settings-bg {
+				background-color: var(--settings-bg-color);
+			}
+
 			.stat-panel > header {
 				margin: 20px auto 30px auto;
 				padding: 5px 0px;
@@ -1969,8 +1975,9 @@
 			}
 
 			.settings_window {
-				display: block;
-				background-color: var(--panel-color);
+				display: flex;
+				flex-direction: column;
+				background-color: var(--settings-bg-color);
 				width: 550px;
 				height: calc(100% - 60px);
 				top: 60px;
@@ -1996,22 +2003,42 @@
 				}
 			}
 
-			.close-btn {
-				position: absolute;
-				top: 10px;
-				right: 10px;
-				background-color: #da190b;
-				font-size: 24px;
-				color: red;
-				border: none;
-				border-radius: 5px;
-				font-weight: bold;
-				cursor: pointer;
+			.settings_main {
+				flex: 0 0 1;
+				overflow: auto;
 			}
 
-			.close-btn:hover {
-				background-color: #da190b;
+			.settings_header {
+				flex: 0 0 60px;
+				background-color: var(--settings-bg-color);
+				color: var(--menu-font-color);
+				border: none;
+				font-size: 24px;
+				border-bottom: solid 1px darkgrey;
+				display: flex;
+				flex-direction: row;
 			}
+
+			.settings_header div:nth-child(1) {
+				flex: 0 0 50px;
+				transform: scale(1.5) translateX(5px) translateY(12px);
+			}
+
+
+			.settings_header div:nth-child(2) {
+				flex: 1 1 0;
+				display: flex;
+				align-items: center;
+				padding-left: 10px;
+			}
+
+			.settings_header div:nth-child(3) {
+				flex: 0 0 50px;
+				transform: scale(1.5) translateX(0px) translateY(12px);
+				cursor: pointer;
+				color: red;
+			}
+
 		</style>
 
 		<link rel="stylesheet" href="config.css" />
@@ -2068,9 +2095,13 @@
 		<div class="mainspace-container">
 			<div class="notification-container" id="notification-container"></div>
 
-			<div class="settings_window addscrollbar" id="settings">
-					<i class="close-btn close_icon" onclick="closeSettings()"></i>
-					<div class="stat-panel">
+			<div class="settings_window settings-bg" id="settings">
+					<div class="settings_header">
+						<div class="settings_icon"></div>
+						<div>Settings</div>
+						<div onclick="closeSettings()" class="close_icon"></div>
+					</div>
+					<div class="settings_main stat-panel settings-bg">
 						<header>System</header>
 						<section>
 							<div><span>Dark Mode</span><span>
