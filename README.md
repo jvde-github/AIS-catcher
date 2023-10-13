@@ -23,7 +23,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Edge version:
-- Settings Menu. Plugins for formatting Lat/Lon in DMS and showing ship dimension in Feet will no longer work and have to be set via the settings menu. For now, close the Settings menu by selecting a different tab.
+- Settings Menu. Plugins for formatting Lat/Lon in DMS and showing ship dimension in Feet will no longer work and have to be set via the settings menu. 
 - Functionality to plot a list of all vessels on top of the map. This will only be visible for larger screens (click on ship icon on top right map)
 - retires the Curl library for HTTP message sending and directly uses a built-in TCP client leveraging openssl where needed for secure servers. This means that if you want to send data to a secure server, you have to build with the ssl development libraries:
 ```console
