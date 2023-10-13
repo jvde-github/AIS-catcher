@@ -1158,8 +1158,8 @@
 
 			.leaflet-tooltiplabel {
 				background-color: transparent !important;
-				color: var(--menu-font-color);
-				text-shadow: var(--textshadow);
+				color: var(--tooltip-font-color) !important;
+				text-shadow: var(--textshadow) !important;
 				border: none;
 				box-shadow: none;
 				font-size: 10px;
@@ -1216,7 +1216,7 @@
 				box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
 				list-style-type: none;
 				padding: 8px 0;
-				z-index: 10002;
+				z-index: 10004;
 				font-size: 14px;
 				color: var(--menu-font-color);
 				width: auto;
@@ -1284,7 +1284,7 @@
 				left: 50%;
 				top: 50%;
 				transform: translate(-50%, -50%);
-				z-index: 10001;
+				z-index: 10005;
 			}
 
 			.dialog-title {
@@ -2009,19 +2009,19 @@
 			}
 
 			.settings_header {
-				flex: 0 0 60px;
+				flex: 0 0 50px;
 				background-color: var(--settings-bg-color);
 				color: var(--menu-font-color);
 				border: none;
-				font-size: 24px;
+				font-size: 20px;
 				border-bottom: solid 1px darkgrey;
 				display: flex;
 				flex-direction: row;
 			}
 
 			.settings_header div:nth-child(1) {
-				flex: 0 0 50px;
-				transform: scale(1.5) translateX(5px) translateY(12px);
+				flex: 0 0 40px;
+				transform: scale(1.3) translateX(5px) translateY(11px);
 			}
 
 
@@ -2034,14 +2034,12 @@
 
 			.settings_header div:nth-child(3) {
 				flex: 0 0 50px;
-				transform: scale(1.5) translateX(0px) translateY(12px);
+				transform: scale(1.3) translateX(0px) translateY(11px);
 				cursor: pointer;
 				color: red;
 			}
 
 		</style>
-
-		<link rel="stylesheet" href="config.css" />
 	</head>
 
 	<body>
@@ -2137,6 +2135,12 @@
 							<div><span>Text-only labels</span><span>
 								<input type="checkbox" id="settings_tooltipLean" onchange="setTooltipStyling(this.checked)">	
 							</span></div>
+							<div><span>Label Color</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelColor" onchange="setLabelColor('tooltipLabelColor',this.value)">	
+							</span></div>
+							<div><span>Label Color (Dark)</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelColorDark" onchange="setLabelColor('tooltipLabelColorDark',this.value)">	
+							</span></div>
 							<div><span>Declutter labels</span><span>
 								<input type="checkbox" id="settings_tooltipOverlap" onchange="setTooltipOverlay(!(this.checked))">	
 							</span></div>
@@ -2160,7 +2164,7 @@
 							<div><span>Range Color</span><span>
 								<input type="color" class="color-picker" id="settings_range_color" onchange="setRangeColor(this.value,'range_color')">	
 							</span></div>
-							<div><span>Range Color Short</span><span>
+							<div><span>Range Short Color</span><span>
 								<input type="color" class="color-picker" id="settings_range_color_short" onchange="setRangeColor(this.value,'range_color_short')">	
 							</span></div>
 						</section>
@@ -2169,7 +2173,7 @@
 							<div><span>Range Color (Dark)</span><span>
 								<input type="color" class="color-picker" id="settings_range_color_dark" onchange="setRangeColor(this.value,'range_color_dark')">	
 							</span></div>
-							<div><span>Range Color Short (Dark)</span><span>
+							<div><span>Range Short Color (Dark)</span><span>
 								<input type="color" class="color-picker" id="settings_range_color_dark_short" onchange="setRangeColor(this.value,'range_color_dark_short')">	
 							</span></div>
 						</section>
@@ -2679,6 +2683,8 @@
 					center_point: "station",
 					tooltipLean: true,
 					tooltipOverlap: false,
+					tooltipLabelColor: "#424242",
+					tooltipLabelColorDark: "#f8f9fa",
 					shipoutline_border: "#A9A9A9",
 					shipoutline_inner: "#808080",
 					shipoutline_opacity: 0.9,
@@ -3384,10 +3390,18 @@
 				activeTileLayer.addTo(map);
 			}
 
+			var dynamicStyle = document.createElement('style');
+			document.head.appendChild(dynamicStyle);
+
+			function applyDynamicStyling() {
+			    dynamicStyle.innerHTML = `:root { --tooltip-font-color: ${settings.tooltipLabelColor}; } \n .dark { --tooltip-font-color: ${settings.tooltipLabelColorDark};}\n`;
+			}
+
 			function initMap() {
+
 				map = L.map("map", { zoomControl: false, zoomSnap: 0.01 }).setView([settings.lat, settings.lon], settings.zoom);
 				var control = L.control.layers(basemaps, overlapmaps, { title: "Select map and overlays", position: "bottomright" }).addTo(map);
-
+			
 				map.on("baselayerchange", function (event) {
 					if (settings.dark_mode) settings.map_night = event.name;
 					else settings.map_day = event.name;
@@ -5874,6 +5888,12 @@
 				setTooltipStyling(!settings.tooltipLean);
 			}
 
+			function setLabelColor(v, c) {
+				settings[v] = c;
+				saveSettings();
+				applyDynamicStyling();
+			}
+
 			function setTooltipOverlay(b) {
 				if(settings.tooltipOverlap != b) toggleTooltipOverlap();
 			}
@@ -6039,6 +6059,10 @@
 				document.getElementById("settings_range_color_short").value = settings.range_color_short;
 				document.getElementById("settings_range_color_dark").value = settings.range_color_dark;
 				document.getElementById("settings_range_color_dark_short").value = settings.range_color_dark_short;
+
+				document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
+				document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
+
 			}
 
 			function activateTab(b, a) {
@@ -6263,6 +6287,7 @@
 			init_postSettings();
 
 			updateAndroid();
+			applyDynamicStyling();
 
 			console.log("Setup tabs");
 			initFullScreen();
