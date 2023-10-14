@@ -81,6 +81,8 @@
 				--notification-background-color: #0b1033;
 				--notification-font-color: white;
 				--notification-border-color: 0857b1;
+				--label-shadow-color: white;
+				--label-shadow-width: 2px;
 			}
 
 			.dark {
@@ -144,6 +146,7 @@
 				--notification-background-color: lightgrey;
 				--notification-font-color: black;
 				--notification-border-color: rgb(17, 17, 17);
+				--label-shadow-color: black;
 			}
 
 			body,
@@ -1159,7 +1162,7 @@
 			.leaflet-tooltiplabel {
 				background-color: transparent !important;
 				color: var(--tooltip-font-color) !important;
-				text-shadow: var(--textshadow) !important;
+				text-shadow: 2px 0 var(--label-shadow-color), -2px 0 var(--label-shadow-color), 0 2px var(--label-shadow-color), 0 -2px var(--label-shadow-color), 1px 1px var(--label-shadow-color), -1px -1px var(--label-shadow-color), 1px -1px var(--label-shadow-color), -1px 1px var(--label-shadow-color) !important;
 				border: none;
 				box-shadow: none;
 				font-size: 10px;
@@ -2105,6 +2108,9 @@
 							<div><span>Dark Mode</span><span>
 								<input type="checkbox" id="settings_darkmode" onchange="setDarkMode(this.checked)">	
 							</span></div>
+							<div><span>Plugins</span><span style="cursor: pointer;" onclick="showPlugins()">
+								Show	
+							</span></div>
 							<div><span>Lat/Lon in DMS</span><span>
 								<input type="checkbox" id="settings_latlon_in_dms" onchange="setLatLonInDMS(this.checked)">	
 							</span></div>
@@ -2121,59 +2127,67 @@
 						</section>
 						<header>Map</header>
 						<section>
-							<div><span>Show range</span><span>
-								<input type="checkbox" id="settings_show_range" onchange="setRangeSwitch(this.checked)">	
-							</span></div>
 							<div><span>Fade icons</span><span>
 								<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)">	
 							</span></div>
 						</section>
+						<header>Ship Labels</header>
 						<section>
-							<div><span>Show all labels</span><span>
+							<div><span>Show all</span><span>
 								<input type="checkbox" id="settings_labels" onchange="setLabel(this.checked)">	
 							</span></div>
-							<div><span>Text-only labels</span><span>
+							<div><span>Text-only</span><span>
 								<input type="checkbox" id="settings_tooltipLean" onchange="setTooltipStyling(this.checked)">	
 							</span></div>
-							<div><span>Label Color</span><span>
-								<input type="color" class="color-picker" id="settings_tooltipLabelColor" onchange="setLabelColor('tooltipLabelColor',this.value)">	
-							</span></div>
-							<div><span>Label Color (Dark)</span><span>
-								<input type="color" class="color-picker" id="settings_tooltipLabelColorDark" onchange="setLabelColor('tooltipLabelColorDark',this.value)">	
-							</span></div>
-							<div><span>Declutter labels</span><span>
+							<div><span>Declutter</span><span>
 								<input type="checkbox" id="settings_tooltipOverlap" onchange="setTooltipOverlay(!(this.checked))">	
 							</span></div>
+						</section><section>
+							<div><span>Color</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelColor" onchange="setLabelColor('tooltipLabelColor',this.value)">	
+							</span></div>
+							<div><span>Shadow Color</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor" onchange="setLabelColor('tooltipLabelShadowColor',this.value)">	
+							</span></div>
+						</section><section>
+							<div><span>Color (Dark)</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelColorDark" onchange="setLabelColor('tooltipLabelColorDark',this.value)">	
+							</span></div>
+							<div><span>Shadow Color (Dark)</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark" onchange="setLabelColor('tooltipLabelShadowColorDark',this.value)">	
+							</span></div>
 						</section>
+						<header>Ship Outline</header>
 						<section>
-							<div><span>Ship Outline Border</span><span>
+							<div><span>Border Color</span><span>
 								<input type="color" class="color-picker" id="settings_shipoutline_border" onchange="setShipOutlineBorder(this.value)">	
 							</span></div>
-							<div><span>Ship Outline Inner</span><span>
+							<div><span>Inner Color</span><span>
 								<input type="color" class="color-picker" id="settings_shipoutline_inner" onchange="setShipOutlineInner(this.value)">	
 							</span></div>
 							<div>
-								<span>Ship Outline Opacity</span>
+								<span>Opacity</span>
 								<span>
 									<input type="range"  id="settings_shipoutline_opacity" min="0" max="1" step="0.01" onchange="setShipOutlineOpacity(this.value)">
 								</span>
 							</div>
 						</section>
-
+						<header>Station Range</header>
 						<section>
-							<div><span>Range Color</span><span>
+							<div><span>Show Range</span><span>
+								<input type="checkbox" id="settings_show_range" onchange="setRangeSwitch(this.checked)">	
+							</span></div>
+							<div><span>Color</span><span>
 								<input type="color" class="color-picker" id="settings_range_color" onchange="setRangeColor(this.value,'range_color')">	
 							</span></div>
-							<div><span>Range Short Color</span><span>
+							<div><span>Color (Short)</span><span>
 								<input type="color" class="color-picker" id="settings_range_color_short" onchange="setRangeColor(this.value,'range_color_short')">	
 							</span></div>
-						</section>
-
-						<section>
-							<div><span>Range Color (Dark)</span><span>
+						</section><section>
+							<div><span>Color (Dark)</span><span>
 								<input type="color" class="color-picker" id="settings_range_color_dark" onchange="setRangeColor(this.value,'range_color_dark')">	
 							</span></div>
-							<div><span>Range Short Color (Dark)</span><span>
+							<div><span>Color (Short, Dark)</span><span>
 								<input type="color" class="color-picker" id="settings_range_color_dark_short" onchange="setRangeColor(this.value,'range_color_dark_short')">	
 							</span></div>
 						</section>
@@ -2216,7 +2230,6 @@
 					<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
 					<li class="divider mmsi noandroid"></li>
 					<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
-					<li class="settings" onclick="showPlugins()"><i class="build_icon"></i>Installed Plugins</li>
 					<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 				</ul>
 
@@ -2669,7 +2682,7 @@
 					fading: false,
 					android: false,
 					welcome: true,
-					latlon_in_dms: false,
+					latlon_in_dms: true,
 					map_day: "Voyager",
 					map_night: "DarkMatter",
 					zoom: 10,
@@ -2685,6 +2698,8 @@
 					tooltipOverlap: false,
 					tooltipLabelColor: "#424242",
 					tooltipLabelColorDark: "#f8f9fa",
+					tooltipLabelShadowColor: "#f8f9fa",
+					tooltipLabelShadowColorDark: "#424242",
 					shipoutline_border: "#A9A9A9",
 					shipoutline_inner: "#808080",
 					shipoutline_opacity: 0.9,
@@ -3394,7 +3409,10 @@
 			document.head.appendChild(dynamicStyle);
 
 			function applyDynamicStyling() {
-			    dynamicStyle.innerHTML = `:root { --tooltip-font-color: ${settings.tooltipLabelColor}; } \n .dark { --tooltip-font-color: ${settings.tooltipLabelColorDark};}\n`;
+				let style = `:root { --tooltip-font-color: ${settings.tooltipLabelColor}; --label-shadow-color: ${settings.tooltipLabelShadowColor}} \n`;
+				style += `.dark { --tooltip-font-color: ${settings.tooltipLabelColorDark}; --label-shadow-color: ${settings.tooltipLabelShadowColorDark}}\n`;
+				
+			    dynamicStyle.innerHTML = style;
 			}
 
 			function initMap() {
@@ -5402,17 +5420,19 @@
 			}
 
 			function loadSettings() {
-				try {
-					const localStorageSettings = localStorage.getItem("settings");
-					if (localStorageSettings !== null) {
-						const ls = JSON.parse(localStorageSettings);
-						settings = { ...settings, ...ls };
-					}
-				} catch (error) {
-					console.log(error);
-					return;
-				}
+				if(!urlParams.has("reset")) {
 
+					try {
+						const localStorageSettings = localStorage.getItem("settings");
+						if (localStorageSettings !== null) {
+							const ls = JSON.parse(localStorageSettings);
+							settings = { ...settings, ...ls };
+						}
+					} catch (error) {
+						console.log(error);
+						return;
+					}
+				}
 				if (!shipcardismax()) toggleShipcardSize();
 
 				if (settings.shipcard_rows && settings.shipcard_rows.length > 0) {
@@ -5432,7 +5452,6 @@
 			}
 
 			function loadSettingsFromURL() {
-				const urlParams = new URLSearchParams(window.location.search);
 				for (const [key, value] of urlParams.entries()) if (settings.hasOwnProperty(key)) settings = { ...settings, [key]: value };
 
 				settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
@@ -6061,8 +6080,10 @@
 				document.getElementById("settings_range_color_dark_short").value = settings.range_color_dark_short;
 
 				document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
-				document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
+				document.getElementById("settings_tooltipLabelShadowColor").value = settings.tooltipLabelShadowColor;
 
+				document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
+				document.getElementById("settings_tooltipLabelShadowColorDark").value = settings.tooltipLabelShadowColorDark;
 			}
 
 			function activateTab(b, a) {
@@ -6282,7 +6303,7 @@
 
 			console.log("Load settings from URL parameters");
 
-			if (settings.loadURL) loadSettingsFromURL();
+			loadSettingsFromURL();
 
 			init_postSettings();
 
