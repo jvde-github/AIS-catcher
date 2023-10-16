@@ -3469,6 +3469,23 @@
 				map.getPane("stationPane").style.zIndex = 550;
 
 				L.DomEvent.disableClickPropagation(document.getElementById("shipcard"));
+				const overlayWindow = document.getElementById('tablecard');
+
+				overlayWindow.addEventListener('mouseenter', () => {
+					map.scrollWheelZoom.disable();
+				});
+
+				overlayWindow.addEventListener('mouseleave', () => {
+					map.scrollWheelZoom.enable();
+				});
+
+				overlayWindow.addEventListener('wheel', (event) => {
+					event.stopPropagation();
+				});
+
+
+				L.DomEvent.disableClickPropagation(overlayWindow);
+				
 				addWrenchControl();
 				addMarkerCount();
 				addTableControl();
