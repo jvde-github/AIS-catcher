@@ -92,7 +92,7 @@
 				--tertiary-color: #05081f;
 				--bottombar-color: black;
 				--settings-bg-color: rgb(25,25,25);
-				--settings-header-bg-color: rgb(40, 40, 40);
+				--settings-header-bg-color: rgb(50, 50, 50);
 				--panel-color: rgb(18, 18, 18);
 				--ok-color: #7ce481;
 				--error-color: #cf6679;
@@ -2018,19 +2018,19 @@
 			}
 
 			.settings_header {
-				flex: 0 0 50px;
+				flex: 0 0 40px;
 				background-color: var(--settings-bg-color);
 				color: var(--menu-font-color);
 				border: none;
 				font-size: 20px;
-				border-bottom: solid 1px darkgrey;
+				border-bottom: solid 1px var(--settings-header-bg-color);
 				display: flex;
 				flex-direction: row;
 			}
 
 			.settings_header div:nth-child(1) {
 				flex: 0 0 40px;
-				transform: scale(1.3) translateX(1px) translateY(11px);
+				transform: scale(1.15) translateX(1px) translateY(8px);
 			}
 
 
@@ -2043,8 +2043,8 @@
 			}
 
 			.settings_header div:nth-child(3) {
-				flex: 0 0 50px;
-				transform: scale(1.3) translateX(0px) translateY(11px);
+				flex: 0 0 40px;
+				transform: scale(1.15) translateX(1px) translateY(8px);
 				cursor: pointer;
 				color: red;
 			}
@@ -2698,7 +2698,7 @@
 					range_color: "#FFA500",
 					range_color_short: "#FFDAB9",
 					range_color_dark: "#4B4B4B",
-					range_color_dark_short: "#4B4B4B",
+					range_color_dark_short: "#303030",
 					fix_center: false,
 					center_point: "station",
 					tooltipLean: true,
@@ -3485,7 +3485,7 @@
 
 
 				L.DomEvent.disableClickPropagation(overlayWindow);
-				
+
 				addWrenchControl();
 				addMarkerCount();
 				addTableControl();
