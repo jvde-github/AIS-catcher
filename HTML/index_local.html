@@ -22,7 +22,8 @@
 				--primary-color: #0857b1;
 				--secondary-color: #12a5ed;
 				--tertiary-color: #0b1033;
-				--settings-bg-color: white;
+				--settings-bg-color: rgb(245,245,245);
+				--settings-header-bg-color: lightgrey;
 				--bottombar-color: var(--tertiary-color);
 				--panel-color: #f2f8ff;
 				--ok-color: rgb(129, 244, 129);
@@ -90,7 +91,8 @@
 				--secondary-color: #5dd5d5;
 				--tertiary-color: #05081f;
 				--bottombar-color: black;
-				--settings-bg-color: black;
+				--settings-bg-color: rgb(25,25,25);
+				--settings-header-bg-color: rgb(40, 40, 40);
 				--panel-color: rgb(18, 18, 18);
 				--ok-color: #7ce481;
 				--error-color: #cf6679;
@@ -1106,6 +1108,10 @@
 				display: flex;
 				flex-direction: column;
 			}
+			
+			.margin-bottom-zero {
+				margin-bottom: 0px;
+			}
 
 			.stat-panel section div span:last-child {
 				flex: 1 0 150px;
@@ -2024,15 +2030,16 @@
 
 			.settings_header div:nth-child(1) {
 				flex: 0 0 40px;
-				transform: scale(1.3) translateX(5px) translateY(11px);
+				transform: scale(1.3) translateX(1px) translateY(11px);
 			}
 
 
 			.settings_header div:nth-child(2) {
 				flex: 1 1 0;
+				background-color: var(--settings-header-bg-color);
 				display: flex;
 				align-items: center;
-				padding-left: 10px;
+				padding-left: 15px;
 			}
 
 			.settings_header div:nth-child(3) {
