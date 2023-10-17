@@ -5340,7 +5340,7 @@
 			function addTooltip(rects, m) {
 				if (m == null) return;
 
-				m.openTooltip();
+				if(!m.getTooltip().isOpen()) m.openTooltip();
 				const r = m.getTooltip()._container.getBoundingClientRect();
 
 				for (var i = 0; i < rects.length; i++) {
@@ -5362,7 +5362,9 @@
 
 				for (let [mmsi, m] of Object.entries(markers)) {
 					if (mmsi == card_mmsi || mmsi == hover_mmsi) continue;
-					if (settings.tooltipOverlap) m.openTooltip();
+					if (settings.tooltipOverlap) {
+						if(!m.getTooltip().isOpen()) m.openTooltip();
+					}
 					else addTooltip(rects, m);
 				}
 			}
