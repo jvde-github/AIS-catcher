@@ -3434,11 +3434,11 @@
 				});
 				map.on("mousemove", function (evt) {
 					debouncedSaveSettings();
-					updateTooltips();
+					//updateTooltips();
 				});
 				map.on("zoomend", function (evt) {
 					debouncedSaveSettings();
-					updateTooltips();
+					//updateTooltips();
 				});
 				map.on("click", function () {
 					if (singleClickTimeout == null) {
