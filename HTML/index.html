@@ -2214,8 +2214,6 @@
 					<li class="ctx-map" onclick="deleteAllTracks()"><i class="remove_circle_outline_icon"></i>Remove all tracks</li>
 					<li class="ctx-map" onclick="ToggleFireworks()"><i class="explosion_icon"></i><span id="ctx_fireworks"></span></li>
 					<li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span></li>
-					<li class="ctx-map" onclick="toggleTooltipStyling()"><i class="label_icon"></i><span id="ctx_tooltipstyling"></span></li>
-					<li class="ctx-map" onclick="toggleTooltipOverlap()"><i class="label_icon"></i><span id="ctx_tooltipoverlap"></span></li>
 					<li class="divider ctx-map"></li>
 					<li class="ctx-map" onclick="toggleFading()"><i class="directions_boat_icon"></i><span id="ctx_fading"></span></li>
 					<li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span id="ctx_range"></span></li>
@@ -2236,7 +2234,7 @@
 					<li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub</li>
 					<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
 					<li class="divider mmsi noandroid"></li>
-					<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
+					<li class="settings noandroid" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
 					<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 				</ul>
 
@@ -2940,8 +2938,6 @@
 				}
 
 				document.getElementById("ctx_labelswitch").textContent = settings.labels ? "Hide ship labels" : "Show ship labels";
-				document.getElementById("ctx_tooltipstyling").textContent = settings.tooltipLean ? "Show detailed ship labels" : "Show text-only ship labels";
-				document.getElementById("ctx_tooltipoverlap").textContent = settings.tooltipOverlap ? "De-clutter ship labels" : "Allow overlapping ship labels";
 				document.getElementById("ctx_range").textContent = settings.show_range ? "Hide station range" : "Show station range";
 				document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
 				document.getElementById("ctx_fireworks").textContent = evtSourceMap == null ? "Start Fireworks Mode" : "Stop Fireworks Mode";
