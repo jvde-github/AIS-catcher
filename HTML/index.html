@@ -5256,7 +5256,7 @@
 			function createTooltip(ship) {
 				const cls = settings.tooltipLean ? "leaflet-tooltiplabel" : "leaflet-tooltip";
 				const ofs = settings.tooltipLean ? 0 : 15;
-				markers[ship.mmsi].bindTooltip(getTooltipContent(ship), { className: cls, opacity: 0.85, permanent: false, offset: [ofs, 0], direction: "right" });
+				markers[ship.mmsi].bindTooltip(getTooltipContent(ship), { className: cls, opacity: 0.85, permanent: true, offset: [ofs, 0], direction: "right" });
 				markers[ship.mmsi].closeTooltip();
 			}
 
