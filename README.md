@@ -25,7 +25,7 @@ Only use this software in regions where such use is permitted.
 Edge version:
 - Settings Menu proving some option. Note: plugins for formatting Lat/Lon in DMS and showing ship dimension in Feet will no longer work and have to be set via the settings menu.
 
-  ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/762aec2e-9e79-440b-8c56-184ced4ef6ba)
+![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/f29aae44-a68b-4e47-8fba-e703add00f47)
 
 - Functionality to plot a list of all vessels on top of the map. This will only be visible for larger screens (click on ship icon on top right map)
 - retires the Curl library for HTTP message sending and directly uses a built-in TCP client leveraging openssl where needed for secure servers. This means that if you want to send data to a secure server, you have to build with the ssl development libraries:
