@@ -5379,7 +5379,8 @@
 						markers[hover_mmsi].openTooltip();
 					}
 				} else {
-					updateTooltips();
+					if(!settings.tooltipOverlap)
+						updateTooltips();
 				}
 
 				if (!(hover_mmsi in shipsDB)) return;
@@ -5398,7 +5399,8 @@
 				if (!settings.labels) {
 					if (m != null && m in markers) markers[m].closeTooltip();
 				} else {
-					updateTooltips();
+					if(!settings.tooltipOverlap)
+						updateTooltips();				
 				}
 
 				if (m in shipsDB) {
