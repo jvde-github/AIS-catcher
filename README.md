@@ -23,7 +23,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Edge version:
-- Settings Menu providing access to additional options.
+- Addition of a "Settings Menu" providing access to additional options which makes some of the previous plugins obsolete.
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/f29aae44-a68b-4e47-8fba-e703add00f47)
 
 - Functionality to plot a list of all vessels on top of the map. This will only be visible for larger screens (click on ship icon on top right map)
