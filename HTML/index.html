@@ -4323,7 +4323,7 @@
 					style.dashOffset = "0";
 
 					if (ship.cog != null && ship.speed > 1) heading = ship.cog;
-					fillOpacity = 0.2 * opacity;
+					fillOpacity = 0.2 * settings.shipoutline_opacity * opacity;
 				}
 
 				let col = { color: settings.shipoutline_border, fillColor: settings.shipoutline_inner };
