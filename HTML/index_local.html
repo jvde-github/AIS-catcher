@@ -2138,6 +2138,12 @@
 							<div><span>Fade icons</span><span>
 								<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)">	
 							</span></div>
+							<div><span>Hover Color</span><span>
+								<input type="color" class="color-picker" id="settings_shiphover_color" onchange="setShipStyling('shiphover_color',this.value)">	
+							</span></div>
+							<div><span>Selection Color</span><span>
+								<input type="color" class="color-picker" id="settings_shipselection_color" onchange="setShipStyling('shipselection_color',this.value)">	
+							</span></div>
 						</section>
 						<header>Ship Labels</header>
 						<section>
@@ -2168,15 +2174,15 @@
 						<header>Ship Outline</header>
 						<section>
 							<div><span>Border Color</span><span>
-								<input type="color" class="color-picker" id="settings_shipoutline_border" onchange="setShipOutlineBorder(this.value)">	
+								<input type="color" class="color-picker" id="settings_shipoutline_border" onchange="setShipStyling('shipoutline_border',this.value)">	
 							</span></div>
 							<div><span>Inner Color</span><span>
-								<input type="color" class="color-picker" id="settings_shipoutline_inner" onchange="setShipOutlineInner(this.value)">	
+								<input type="color" class="color-picker" id="settings_shipoutline_inner" onchange="setShipStyling('shipoutline_inner',this.value)">	
 							</span></div>
 							<div>
 								<span>Opacity</span>
 								<span>
-									<input type="range"  id="settings_shipoutline_opacity" min="0" max="1" step="0.01" onchange="setShipOutlineOpacity(this.value)">
+									<input type="range"  id="settings_shipoutline_opacity" min="0" max="1" step="0.01" onchange="setShipStyling('shipoutline_opacity',this.value)">
 								</span>
 							</div>
 						</section>
@@ -2706,6 +2712,8 @@
 					tooltipLabelColorDark: "#ffffff",
 					tooltipLabelShadowColor: "#ffffff",
 					tooltipLabelShadowColorDark: "#000000",
+					shiphover_color: "#FFA500",
+					shipselection_color: "#943b3e",
 					shipoutline_border: "#A9A9A9",
 					shipoutline_inner: "#808080",
 					shipoutline_opacity: 0.9,
@@ -4285,6 +4293,12 @@
 				return L.latLng([latlng.lat + delta[0] * distance, latlng.lng + delta[1] * distance]);
 			}
 
+			function setShipStyling(a,v) {
+				settings[a] = v;
+				saveSettings();
+				refresh_data();
+			}
+
 			function setShipOutlineBorder(v) {
 				settings.shipoutline_border = v;
 				saveSettings();
@@ -4328,8 +4342,8 @@
 				}
 
 				let col = { color: settings.shipoutline_border, fillColor: settings.shipoutline_inner };
-				if (ship.mmsi == hover_mmsi) col = { color: "orange", fillColor: settings.shipoutline_inner };
-				else if (ship.mmsi == card_mmsi) col = { color: "#943b3e", fillColor: settings.shipoutline_inner };
+				if (ship.mmsi == hover_mmsi) col = { color: settings.shiphover_color, fillColor: settings.shipoutline_inner };
+				else if (ship.mmsi == card_mmsi) col = { color: settings.shipselection_color, fillColor: settings.shipoutline_inner };
 
 				if (heading != null) {
 					const deltaBow = calcOffset1M(latlng, heading % 360);
@@ -5664,7 +5678,7 @@
 
 			function setFocusMarker(latlon) {
 				if (marker_focus == null) {
-					marker_focus = L.circleMarker(latlon, { interactive: false, color: "red", radius: 20, weight: 4, fillOpacity: 0, pane: "locationMarker", className: "pulse" });
+					marker_focus = L.circleMarker(latlon, { interactive: false, color: settings.shipselection_color, radius: 20, weight: 4, fillOpacity: 0, pane: "locationMarker", className: "pulse" });
 					marker_focus.addTo(map);
 				} else marker_focus.setLatLng(latlon);
 			}
@@ -5678,7 +5692,7 @@
 
 			function setHoverMarker(latlon) {
 				if (marker_hover == null) {
-					marker_hover = L.circleMarker(latlon, { interactive: false, color: "orange", radius: 16, weight: 4, fillOpacity: 0, pane: "locationMarker" });
+					marker_hover = L.circleMarker(latlon, { interactive: false, color: settings.shiphover_color, radius: 16, weight: 4, fillOpacity: 0, pane: "locationMarker" });
 					marker_hover.addTo(map);
 				} else marker_hover.setLatLng(latlon);
 			}
@@ -6089,6 +6103,9 @@
 				document.getElementById("settings_dim_in_feet").checked = settings.dim_in_feet;
 				document.getElementById("settings_metric").value = getMetrics().toLowerCase();
 				document.getElementById("settings_fading").checked = settings.fading;
+				document.getElementById("settings_shiphover_color").value = settings.shiphover_color;
+				document.getElementById("settings_shipselection_color").value = settings.shipselection_color;
+
 				document.getElementById("settings_show_range").checked = settings.show_range;
 
 				document.getElementById("settings_tooltipOverlap").checked = !settings.tooltipOverlap;
