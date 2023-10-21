@@ -2113,6 +2113,9 @@
 					<div class="settings_main stat-panel settings-bg">
 						<header>System</header>
 						<section>
+							<div><span>Settings</span><span style="cursor: pointer;" onclick="applyDefaultSettings()">
+								Reset	
+							</span></div>
 							<div><span>Dark Mode</span><span>
 								<input type="checkbox" id="settings_darkmode" onchange="setDarkMode(this.checked)">	
 							</span></div>
@@ -2722,8 +2725,6 @@
 					metric: "DEFAULT",
 					dim_in_feet: false,
 					setcoord: true,
-					sort: "distance",
-					sort_dir: "asc",
 					tab: "stat",
 					labels: true,
 					eri: true,
@@ -2732,6 +2733,37 @@
 			}
 
 	
+			function applyDefaultSettings() {
+				const t = settings.tab;
+
+				restoreDefaultSettings();
+
+				updateRangeColor();
+				setLatLonInDMS(settings.latlon_in_dms);
+				setDarkMode(settings.dark_mode);
+				setMetrics(settings.metric);
+				setDimensionInFeet(settings.dim_in_feet);
+				updateMapLayer();
+				updateTooltips();
+				setLabel(settings.label);
+				setTooltipOverlay(settings.tooltipOverlap);
+				setTooltipStyling(settings.tooltipLean);
+				setFading(settings.fading);
+
+				setLabelColor('tooltipLabelColor',settings.tooltipLabelColor);
+				setLabelColor('tooltipLabelShadowColor',settings.tooltipLabelShadowColor);
+				setLabelColor('tooltipLabelColorDark',settings.tooltipLabelColorDark);
+				setLabelColor('tooltipLabelShadowColorDark',settings.tooltipLabelShadowColorDark);
+
+				clearFocusMarker();
+				clearHoverMarker();
+
+				settings.tab = t;
+				settings.welcome = false;
+
+				refresh_data();
+			}
+
 			// some functions useful in plugins
 			function addTileLayer(title, layer) {
 				basemaps[title] = layer;
@@ -4296,6 +4328,9 @@
 			function setShipStyling(a,v) {
 				settings[a] = v;
 				saveSettings();
+				
+				clearFocusMarker();
+				clearHoverMarker();
 				refresh_data();
 			}
 	
