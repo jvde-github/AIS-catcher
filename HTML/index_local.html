@@ -2296,6 +2296,7 @@
 							<section>
 								<div><span>Total messages</span><span id="stat_session_count"></span></div>
 								<div><span>Vessels seen</span><span id="stat_session_vessel_count"></span></div>
+								<div><span>Max Distance</span><span id="stat_session_dist"></span></div>
 							</section>
 							<section>
 								<div><span>Channel A</span><span id="stat_session_channel0"></span></div>
@@ -2327,6 +2328,7 @@
 							<section>
 								<div><span>Total messages</span><span id="stat_total_count"></span></div>
 								<div><span>Vessels seen</span><span id="stat_total_vessel_count"></span></div>
+								<div><span>Max Distance</span><span id="stat_total_dist"></span></div>
 							</section>
 							<section>
 								<div><span>Channel A</span><span id="stat_total_channel0"></span></div>
@@ -2354,11 +2356,10 @@
 
 						<div class="stat-panel">
 							<header>Previous Minute</header>
-
-
 							<section>
 								<div><span>Total messages</span><span id="stat_last_minute_count"></span></div>
 								<div><span>Vessels seen</span><span id="stat_last_minute_vessel_count"></span></div>
+								<div><span>Max Distance</span><span id="stat_last_minute_dist"></span></div>
 							</section>
 							<section>
 								<div><span>Channel A</span><span id="stat_last_minute_channel0"></span></div>
@@ -2386,11 +2387,10 @@
 
 						<div class="stat-panel">
 							<header>Previous Hour</header>
-
-
 							<section>
 								<div><span>Total messages</span><span id="stat_last_hour_count"></span></div>
 								<div><span>Vessels seen</span><span id="stat_last_hour_vessel_count"></span></div>
+								<div><span>Max Distance</span><span id="stat_last_hour_dist"></span></div>
 							</section>
 							<section>
 								<div><span>Channel A</span><span id="stat_last_hour_channel0"></span></div>
@@ -2418,11 +2418,10 @@
 
 						<div class="stat-panel">
 							<header>Previous Day</header>
-
-
 							<section>
 								<div><span>Total messages</span><span id="stat_last_day_count"></span></div>
 								<div><span>Vessels seen</span><span id="stat_last_day_vessel_count"></span></div>
+								<div><span>Max Distance</span><span id="stat_last_day_dist"></span></div>
 							</section>
 							<section>
 								<div><span>Channel A</span><span id="stat_last_day_channel0"></span></div>
@@ -4892,8 +4891,8 @@
 				[0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerHTML = stat[tf].channel[e]));
 
 				document.getElementById("stat_" + tf + "_count").innerHTML = stat[tf].count;
+				document.getElementById("stat_" + tf + "_dist").innerHTML = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit() ;
 				document.getElementById("stat_" + tf + "_vessel_count").innerHTML = stat[tf].vessels;
-
 				document.getElementById("stat_" + tf + "_msg123").innerHTML = stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2];
 				document.getElementById("stat_" + tf + "_msg5").innerHTML = stat[tf].msg[4];
 				document.getElementById("stat_" + tf + "_msg18").innerHTML = stat[tf].msg[17];
