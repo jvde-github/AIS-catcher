@@ -2147,6 +2147,9 @@
 							<div><span>Selection Color</span><span>
 								<input type="color" class="color-picker" id="settings_shipselection_color" onchange="setShipStyling('shipselection_color',this.value)">	
 							</span></div>
+							<div><span>Track Color</span><span>
+								<input type="color" class="color-picker" id="settings_track_color" onchange="setTrackColor(this.value)">	
+							</span></div>
 						</section>
 						<header>Ship Labels</header>
 						<section>
@@ -2702,6 +2705,7 @@
 					zoom: 10,
 					lat: 0,
 					lon: 0,
+					track_color: "#12a5ed",
 					range_color: "#FFA500",
 					range_color_short: "#FFDAB9",
 					range_color_dark: "#4B4B4B",
@@ -4324,6 +4328,11 @@
 				return L.latLng([latlng.lat + delta[0] * distance, latlng.lng + delta[1] * distance]);
 			}
 
+			function setTrackColor(v) {
+				settings.track_color = v;
+				updateTrack();
+			}
+
 			function setShipStyling(a,v) {
 				settings[a] = v;
 				saveSettings();
@@ -5626,8 +5635,8 @@
 					latLngs.push([path[i].lat, path[i].lon]);
 				}
 
-				if (m == hover_mmsi) marker_tracks[m] = new L.polyline(latLngs, { color: "#12a5ed", opacity: 0.85, weight: 2 }).addTo(map);
-				else marker_tracks[m] = new L.polyline(latLngs, { color: "#12a5ed", opacity: 0.7, weight: 1 }).addTo(map);
+				if (m == hover_mmsi) marker_tracks[m] = new L.polyline(latLngs, { color: settings.track_color, opacity: 0.85, weight: 2 }).addTo(map);
+				else marker_tracks[m] = new L.polyline(latLngs, { color: settings.track_color, opacity: 0.7, weight: 1 }).addTo(map);
 
 				if (m == card_mmsi) document.getElementById("shipcard_track").innerText = "Hide Track";
 			}
@@ -6132,6 +6141,7 @@
 				document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
 				document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
 
+				document.getElementById("settings_track_color").value = settings.track_color;
 				document.getElementById("settings_range_color").value = settings.range_color;
 				document.getElementById("settings_range_color_short").value = settings.range_color_short;
 				document.getElementById("settings_range_color_dark").value = settings.range_color_dark;
