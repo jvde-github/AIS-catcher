@@ -2128,7 +2128,7 @@
 					<div>Ships</div>
 					<div onclick="hideTablecard()" class="close_icon"></div>
 				</div>
-				<div class="settings_main stat-panel settings-bg tablecard_inner">
+				<div class="settings-bg tablecard_inner">
 					<table class = "mytable">
 						<thead>
 							<tr>
@@ -2588,12 +2588,6 @@
 									<td><span id="statcard_heli"></span></td>
 								</tr>
 							</table>
-						</div>
-					</div>
-
-					<div id="tablecard">
-						<div class="tablecard_inner addscrollbar">
-
 						</div>
 					</div>
 					
@@ -3542,22 +3536,6 @@
 				map.getPane("stationPane").style.zIndex = 550;
 
 				L.DomEvent.disableClickPropagation(document.getElementById("shipcard"));
-				const overlayWindow = document.getElementById('tablecard');
-
-				overlayWindow.addEventListener('mouseenter', () => {
-					map.scrollWheelZoom.disable();
-				});
-
-				overlayWindow.addEventListener('mouseleave', () => {
-					map.scrollWheelZoom.enable();
-				});
-
-				overlayWindow.addEventListener('wheel', (event) => {
-					event.stopPropagation();
-				});
-
-
-				L.DomEvent.disableClickPropagation(overlayWindow);
 
 				addWrenchControl();
 				addMarkerCount();
