@@ -3785,7 +3785,7 @@
 						cell4.title = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit(): "";
 
 						var cell5 = row.insertCell(4);
-						cell5.innerHTML = ship != null ? "<span style='transform: translateY(1px);'" + getIconCSS(ship) + "></span>" : "";
+						cell5.innerHTML = ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
 
 						var cell6 = row.insertCell(5);
 						cell6.innerHTML =  getDeltaTimeVal(ship.last_signal); 
