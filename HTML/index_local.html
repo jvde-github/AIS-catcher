@@ -683,11 +683,11 @@
 			}
 
 			.tablecard_inner table th:nth-child(3), .tablecard_inner table td:nth-child(3) { /* Distance */
-				width: 50px;
+				width: 70px;
 			}
 
 			.tablecard_inner table th:nth-child(4), .tablecard_inner table td:nth-child(4) { /* Speed */
-				width: 50px;
+				width: 70px;
 			}
 
 			.tablecard_inner table th:nth-child(5), .tablecard_inner table td:nth-child(5) { /* Type */
@@ -697,6 +697,21 @@
 			.tablecard_inner table th:nth-child(6), .tablecard_inner table td:nth-child(6) { /* Last */
 				width: 120px;
 			}
+
+			.sort-icon::before {
+				content: "\2195";
+				font-size: 12px;
+				margin-left: 5px;
+			}
+
+			.sort-icon.ascending::before {
+				content: "\25B2";
+			}
+
+			.sort-icon.descending::before {
+				content: "\25BC";
+			}
+
 
 			.active-control {
 				background-color: green;
@@ -1994,7 +2009,7 @@
 				display: flex;
 				flex-direction: column;
 				background-color: var(--settings-bg-color);
-				width: 520px;
+				width: 560px;
 				height: calc(100% - 60px);
 				top: 60px;
 				right: 0px;
@@ -2003,7 +2018,7 @@
 				border: 1px solid var(--settings-header-bg-color); 
 				padding: 0px;
 				margin: 0px;
-				transform: translateX(520px);
+				transform: translateX(560px);
 			    transition: transform 0.3s ease-out;
 			}
 
@@ -2046,7 +2061,7 @@
 			}
 	
 			.leaflet-control-layers.active {
-				transform: translateX(-510px);
+				transform: translateX(-555px);
 			}
 
 			.leaflet-control-zoom {
@@ -2054,7 +2069,7 @@
 			}
 	
 			.leaflet-control-zoom.active {
-				transform: translateX(-510px);
+				transform: translateX(-555px);
 			}
 
 
@@ -2088,10 +2103,13 @@
 				padding-left: 15px;
 			}
 
-			.settings_header div:nth-child(3) {
+			.settings_header div:nth-child(n+3) {
 				flex: 0 0 40px;
 				transform: scale(1.15) translateX(1px) translateY(8px);
 				cursor: pointer;
+			}
+
+			.settings_header div:last-child {
 				color: red;
 			}
 
@@ -2154,18 +2172,19 @@
 				<div class="settings_header">
 					<div class="directions_boat_icon"></div>
 					<div>Ships</div>
+					<div onclick="notImplemented()" class="filter_alt_icon"></div>
 					<div onclick="hideTablecard()" class="close_icon"></div>
 				</div>
 				<div class="settings-bg tablecard_inner addscrollbar">
 					<table class = "mytable">
 						<thead>
 							<tr>
-								<th>Flag</th>
-								<th>Name</th>
-								<th>Dist</th>
-								<th>Speed</th>
-								<th>Type</th>
-								<th>Last</th>
+								<th onclick="notImplemented()">Flag <span class="sort-icon"></span></th>
+								<th onclick="notImplemented()">Name <span class="sort-icon"></span></th>
+								<th onclick="notImplemented()">Dist <span  class="sort-icon"></span></th>
+								<th onclick="notImplemented()">Speed <span  class="sort-icon"></span></th>
+								<th onclick="notImplemented()">Type<span class="sort-icon"></span></th>
+								<th onclick="notImplemented()">Last<span  class="sort-icon"></span></th>
 							</tr>
 						</thead>
 						<tbody class="addscrollbar" id="tablecardBody">
@@ -5442,6 +5461,11 @@
 					}
 					else addTooltip(rects, m);
 				}
+			}
+
+
+			function notImplemented() {
+				showDialog("Warning", "Not implemented yet");
 			}
 
 			function startHover(m) {
