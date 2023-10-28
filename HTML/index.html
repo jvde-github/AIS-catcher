@@ -53,6 +53,8 @@
 				--chart-color: rgb(66, 66, 66);
 				--chart-grid-color: lightgrey;
 				--mainspace-container-color: lightgrey;
+				--tableheader-header-color: black;
+				--tableheader-header-background-color: rgb(240,240,240);
 				--table-header-background-color: var(--primary-color);
 				--table-border-color: lightgrey;
 				--table-background-color: white;
@@ -113,6 +115,8 @@
 				--menu-background-hover-color: #4d4d4d;
 				--menu-font-color: #f8f9fa;
 				--mainspace-container-color: #212529;
+				--tableheader-header-color: white;
+				--tableheader-header-background-color:rgb(30,30,30);
 				--table-header-background-color: rgb(50, 50, 50);
 				--table-border-color: rgb(18, 18, 18);
 				--table-background-color: rgb(18, 18, 18);
@@ -640,13 +644,13 @@
 			}
 
 			.tablecard_inner table thead {
-				background-color: var(--table-header-background-color);
-				color: white;
+				background-color: var(--tableheader-header-background-color);
+				color: var(--tableheader-header-color);
 			}
 
 			.tablecard_inner table thead > tr > th {
 				text-align: left;
-				padding: 10px 5px;
+				padding: 10px 10px;
 				border-collapse: collapse;
 			}
 
