@@ -641,6 +641,7 @@
 				font-size: 14px;
 				margin-top: 10px;
 				color: var(--menu-font-color);
+				border: 1px solid var(--settings-header-bg-color); 
 			}
 
 			.tablecard_inner table thead {
@@ -694,7 +695,7 @@
 			}
 
 			.tablecard_inner table th:nth-child(6), .tablecard_inner table td:nth-child(6) { /* Last */
-				width: 100px;
+				width: 120px;
 			}
 
 			.active-control {
@@ -1965,17 +1966,17 @@
 				display: flex;
 				flex-direction: column;
 				background-color: var(--settings-bg-color);
-				width: 500px;
+				width: 520px;
 				height: calc(100% - 60px);
 				top: 60px;
 				right: 0px;
 				position: fixed;
 				z-index: 10003;
-				border: none;
-				border-radius: 0%;
+				border: 1px solid var(--settings-header-bg-color); 
+				border-radius: 0px;
 				padding: 0px;
 				margin: 0px;
-				transform: translateX(500px);
+				transform: translateX(520px);
 			    transition: transform 0.3s ease-out;
 			}
 
@@ -1994,7 +1995,7 @@
 				left: 0px;
 				position: fixed;
 				z-index: 10003;
-				border: none;
+				border: 1px solid darkgrey; 
 				border-radius: 0%;
 				padding: 0px;
 				margin: 0px;
@@ -2018,7 +2019,7 @@
 			}
 	
 			.leaflet-control-layers.active {
-				transform: translateX(-490px);
+				transform: translateX(-510px);
 			}
 
 			.leaflet-control-zoom {
@@ -2026,7 +2027,7 @@
 			}
 	
 			.leaflet-control-zoom.active {
-				transform: translateX(-490px);
+				transform: translateX(-510px);
 			}
 
 
