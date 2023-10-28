@@ -2184,7 +2184,7 @@
 						<thead>
 							<tr>
 								<th data-column="flag" class="sort-icon" onclick="updateTableSort(event)">Flag </th>
-								<th data-column="name" class="sort-icon" onclick="updateTableSort(event)">Name</th>
+								<th data-column="shipname" class="sort-icon" onclick="updateTableSort(event)">Name</th>
 								<th data-column="distance" class="sort-icon" onclick="updateTableSort(event)">Dist`</th>
 								<th data-column="speed" class="sort-icon" onclick="updateTableSort(event)">Spd</th>
 								<th data-column="type" class="sort-icon" onclick="updateTableSort(event)">Type</th>
@@ -2780,7 +2780,7 @@
 					lat: 0,
 					lon: 0,
 					tableside_column: "shipname",
-					tableside_ordering: "ascemding",
+					tableside_order: "ascending",
 					track_color: "#12a5ed",
 					range_color: "#FFA500",
 					range_color_short: "#FFDAB9",
@@ -2817,6 +2817,7 @@
 
 				restoreDefaultSettings();
 
+				updateSortMarkers();
 				updateRangeColor();
 				setLatLonInDMS(settings.latlon_in_dms);
 				setDarkMode(settings.dark_mode);
@@ -3798,7 +3799,7 @@
 					otherHeader.classList.remove('ascending');
 					otherHeader.classList.remove('descending');
 
-					if(otherHeader.getAttribute('data-column') == settings.tableside_column) {
+					if(otherHeader.getAttribute('data-column') === settings.tableside_column) {
 						otherHeader.classList.add(settings.tableside_order);
 					}
 				});
@@ -3835,7 +3836,7 @@
 
 				const sortFunctions = {
 					'flag': (a, b) => compareString(shipsDB[a].raw.country, shipsDB[b].raw.country),
-					'name': (a, b) => compareString(getShipName(shipsDB[a].raw), getShipName(shipsDB[b].raw)),
+					'shipname': (a, b) => compareString(getShipName(shipsDB[a].raw), getShipName(shipsDB[b].raw)),
 					'distance': (a, b) => compareNumber(shipsDB[a].raw.distance, shipsDB[b].raw.distance),
 					'speed': (a, b) => compareNumber(shipsDB[a].raw.speed, shipsDB[b].raw.speed),
 					'type': (a, b) => compareNumber(shipsDB[a].raw.shiptype_class, shipsDB[b].raw.shiptype_class),
