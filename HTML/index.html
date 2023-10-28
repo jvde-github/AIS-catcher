@@ -698,18 +698,21 @@
 				width: 80px;
 			}
 
-			.sort-icon::before {
-				content: "\2195";
+			.sort-icon::after {
+				content: "\25B2";
 				font-size: 12px;
 				margin-left: 5px;
+				color: transparent;
 			}
 
-			.sort-icon.ascending::before {
+			.sort-icon.ascending::after {
 				content: "\25B2";
+				color: var(--tableheader-header-color);
 			}
 
-			.sort-icon.descending::before {
+			.sort-icon.descending::after {
 				content: "\25BC";
+				color: var(--tableheader-header-color);
 			}
 
 
@@ -2101,6 +2104,7 @@
 				display: flex;
 				align-items: center;
 				padding-left: 15px;
+				font-size: 16px;
 			}
 
 			.settings_header div:nth-child(n+3) {
@@ -2179,12 +2183,12 @@
 					<table class = "mytable">
 						<thead>
 							<tr>
-								<th onclick="notImplemented()">Flag <span class="sort-icon"></span></th>
-								<th onclick="notImplemented()">Name <span class="sort-icon"></span></th>
-								<th onclick="notImplemented()">Dist <span  class="sort-icon"></span></th>
-								<th onclick="notImplemented()">Spd <span  class="sort-icon"></span></th>
-								<th onclick="notImplemented()">Type<span class="sort-icon"></span></th>
-								<th onclick="notImplemented()">Last<span  class="sort-icon"></span></th>
+								<th data-column="flag" class="sort-icon" onclick="updateTableSort(event)">Flag </th>
+								<th data-column="name" class="sort-icon" onclick="updateTableSort(event)">Name</th>
+								<th data-column="distance" class="sort-icon" onclick="updateTableSort(event)">Dist`</th>
+								<th data-column="speed" class="sort-icon" onclick="updateTableSort(event)">Spd</th>
+								<th data-column="type" class="sort-icon" onclick="updateTableSort(event)">Type</th>
+								<th data-column="last_signal" class="sort-icon" onclick="updateTableSort(event)">Last</th>
 							</tr>
 						</thead>
 						<tbody class="addscrollbar" id="tablecardBody">
@@ -2775,6 +2779,8 @@
 					zoom: 10,
 					lat: 0,
 					lon: 0,
+					tableside_column: "shipname",
+					tableside_ordering: "ascemding",
 					track_color: "#12a5ed",
 					range_color: "#FFA500",
 					range_color_short: "#FFDAB9",
@@ -3769,6 +3775,50 @@
 				flashNumber("statcard_sarte", cSarte);
 			}
 
+			function updateTableSort(event) {
+				const header = event.currentTarget; 
+
+				const column = header.getAttribute('data-column');
+				const currentOrder = header.classList.contains('ascending') ? 'ascending' : 'descending';
+
+				const newOrder = (currentOrder === 'descending') ? 'ascending' : 'descending';
+
+				settings.tableside_column = column;
+				settings.tableside_order = newOrder;
+
+				saveSettings();
+				updateSortMarkers();
+				updateTablecard();
+			}
+
+			function updateSortMarkers() {
+				const allHeaders = document.querySelectorAll('[data-column]');
+
+				allHeaders.forEach(otherHeader => {
+					otherHeader.classList.remove('ascending');
+					otherHeader.classList.remove('descending');
+
+					if(otherHeader.getAttribute('data-column') == settings.tableside_column) {
+						otherHeader.classList.add(settings.tableside_order);
+					}
+				});
+			}
+
+			function compareNumber(valueA, valueB) {
+				if (valueA == null && valueB == null) return settings.tableside_order === 'ascending' ? 1 : -1;
+				if (valueA == null) return settings.tableside_order === 'ascending' ? 1 : -1;
+				if (valueB == null) return settings.tableside_order === 'ascending' ? -1 : 1;;
+				return valueA - valueB;
+			}
+
+			function compareString(valueA, valueB) {
+				if (valueA == null && valueB == null) return 0;
+				if (valueA == null) return 1;
+				if (valueB == null) return -1;
+
+				return (valueA + '').localeCompare(valueB + '');
+			}
+
 			function updateTablecard() {
 
 				if(!document.getElementById("tableside").classList.contains("active")) return;
@@ -3778,10 +3828,35 @@
 
 				if (shipsDB == null) return;
 
-				for (let [key, m] of Object.entries(markers)) {
+				let shipKeys = Object.keys(shipsDB);
+
+				column = settings.tableside_column;
+				order = settings.tableside_order;
+
+				const sortFunctions = {
+					'flag': (a, b) => compareString(shipsDB[a].raw.country, shipsDB[b].raw.country),
+					'name': (a, b) => compareString(getShipName(shipsDB[a].raw), getShipName(shipsDB[b].raw)),
+					'distance': (a, b) => compareNumber(shipsDB[a].raw.distance, shipsDB[b].raw.distance),
+					'speed': (a, b) => compareNumber(shipsDB[a].raw.speed, shipsDB[b].raw.speed),
+					'type': (a, b) => compareNumber(shipsDB[a].raw.shiptype_class, shipsDB[b].raw.shiptype_class),
+					'last_signal': (a, b) => compareNumber(shipsDB[a].raw.last_signal, shipsDB[b].raw.last_signal)
+				};
+
+
+				if (column in sortFunctions) {
+					
+					shipKeys.sort((keyA, keyB) => {
+						const comparisonResult = sortFunctions[column](keyA, keyB);
+						return order === "ascending" ? comparisonResult : -comparisonResult;
+					});
+				}
+
+				for (let i = 0; i < Math.min(250,shipKeys.length); i++) {
+    				let key = shipKeys[i];
 					if (key in shipsDB) {
 						let ship = shipsDB[key].raw;
 						var row = tableBody.insertRow();
+
 						row.addEventListener('mouseover', function(e) {
 							startHover(ship.mmsi);
 							L.DomEvent.stopPropagation(e);
@@ -3807,11 +3882,11 @@
 
 						var cell3 = row.insertCell(2);
 						cell3.innerHTML = ship.distance ? getDistanceVal(ship.distance) : "";
-						cell3.title = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : "";
+						cell3.title = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : "";
 
 						var cell4 = row.insertCell(3);
-						cell4.innerHTML = ship.speed ? getSpeedVal(ship.speed) : "";
-						cell4.title = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit(): "";
+						cell4.innerHTML = ship.speed != null ? getSpeedVal(ship.speed) : "";
+						cell4.title = ship.speed  != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit(): "";
 
 						var cell5 = row.insertCell(4);
 						cell5.innerHTML = ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
@@ -5471,10 +5546,11 @@
 			function startHover(m) {
 				if (hover_mmsi != null) endHover(hover_mmsi);
 
+				if(!(m in markers)) return;
 				hover_mmsi = m;
 
 				if (!settings.labels) {
-					if (hover_mmsi != null && hover_mmsi in markers) {
+					if (hover_mmsi != null) {
 						markers[hover_mmsi].openTooltip();
 					}
 				} else {
@@ -6466,7 +6542,7 @@
 			selectTab();
 
 			if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"));
-
+			updateSortMarkers();
 			saveSettings();
 
 			if (aboutMDpresent == false) {
