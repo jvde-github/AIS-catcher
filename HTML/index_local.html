@@ -5666,7 +5666,8 @@
 			function updateShipShape(ship) {
 				if (ship.mmsi in ship_shape && ship_shape[ship.mmsi] != null) map.removeLayer(ship_shape[ship.mmsi]);
 
-				ship_shape[ship.mmsi] = drawShipOutline(ship);
+				if(ship.mmsi in markers)
+					ship_shape[ship.mmsi] = drawShipOutline(ship);
 			}
 
 			function plotShip(ship) {
@@ -6076,7 +6077,7 @@
 					clearFocusMarker();
 				}
 
-				if (shipcardVisible()) setFocusMarker([ship.lat, ship.lon]);
+				if (shipcardVisible() && m in markers) setFocusMarker([ship.lat, ship.lon]);
 
 				card_mmsi = m;
 
@@ -6085,7 +6086,7 @@
 
 				if (shipcardVisible()) {
 					populateShipcard();
-					if (!map.getBounds().contains(marker_focus.getLatLng())) {
+					if (m in markers && !map.getBounds().contains(marker_focus.getLatLng())) {
 						map.setView(marker_focus.getLatLng());
 					}
 
