@@ -633,41 +633,14 @@
 				position: relative;
 			}
 
-			.statcard_inner table {
-			}
-
-			#tablecard {
-				top: 10px;
-				right: 50px;
-				width: 600px;
-				max-height: calc(100vh - 135px);
-				display: none;
-				flex-direction: column;
-				justify-content: stretch;
-				z-index: 998;
-				position: absolute;
-				background: var(--menu-background-color);
-				color: var(--menu-font-color);
-				cursor: auto;
-				border-radius: 5px;
-				border: 2px solid var(--shipcard-content-color);
-			}
-
-			.tablecard_inner {
-				position: relative;
-				max-height: calc(100vh - 135px);
-			}
-
 			.tablecard_inner table {
-				overflow: auto;
-				border-collapse: collapse;
-				overflow: auto;
-				max-height: calc(100vh - 135px);
+				font-size: 14px;
+				margin-top: 10px;
+				color: var(--menu-font-color);
 			}
 
 			.tablecard_inner table thead {
-				background-color: var(--shipcard-header-color);
-				font-size: 16px;
+				background-color: var(--table-header-background-color);
 				color: white;
 			}
 
@@ -705,11 +678,11 @@
 			}
 
 			.tablecard_inner table th:nth-child(3), .tablecard_inner table td:nth-child(3) { /* Distance */
-				width: 100px;
+				width: 50px;
 			}
 
 			.tablecard_inner table th:nth-child(4), .tablecard_inner table td:nth-child(4) { /* Speed */
-				width: 130px;
+				width: 50px;
 			}
 
 			.tablecard_inner table th:nth-child(5), .tablecard_inner table td:nth-child(5) { /* Type */
@@ -1226,7 +1199,7 @@
 				box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
 				list-style-type: none;
 				padding: 8px 0;
-				z-index: 10004;
+				z-index: 10005;
 				font-size: 14px;
 				color: var(--menu-font-color);
 				width: auto;
@@ -1294,7 +1267,7 @@
 				left: 50%;
 				top: 50%;
 				transform: translate(-50%, -50%);
-				z-index: 10005;
+				z-index: 10004;
 			}
 
 			.dialog-title {
@@ -1984,6 +1957,29 @@
 				border: none;
 			}
 
+			.tableside_window {
+				display: flex;
+				flex-direction: column;
+				background-color: var(--settings-bg-color);
+				width: 500px;
+				height: calc(100% - 60px);
+				top: 60px;
+				right: 0px;
+				position: fixed;
+				z-index: 10003;
+				border: none;
+				border-radius: 0%;
+				padding: 0px;
+				margin: 0px;
+				transform: translateX(500px);
+			    transition: transform 0.3s ease-out;
+			}
+
+			.tableside_window.active {
+				transform: translateX(0);
+			}
+
+
 			.settings_window {
 				display: flex;
 				flex-direction: column;
@@ -2012,6 +2008,23 @@
 					transform: translateX(-100%); 
 				}
 			}
+			
+			.leaflet-control-layers {
+				transition: transform 0.3s ease-out;
+			}
+	
+			.leaflet-control-layers.active {
+				transform: translateX(-490px);
+			}
+
+			.leaflet-control-zoom {
+				transition: transform 0.3s ease-out;
+			}
+	
+			.leaflet-control-zoom.active {
+				transform: translateX(-490px);
+			}
+
 
 			.settings_main {
 				flex: 0 0 1;
@@ -2103,6 +2116,31 @@
 
 		<div class="mainspace-container">
 			<div class="notification-container" id="notification-container"></div>
+
+
+			<div class="tableside_window settings-bg tabcontent" id="tableside">
+				<div class="settings_header">
+					<div class="directions_boat_icon"></div>
+					<div>Ships</div>
+					<div onclick="hideTablecard()" class="close_icon"></div>
+				</div>
+				<div class="settings_main stat-panel settings-bg tablecard_inner">
+					<table class = "mytable">
+						<thead>
+							<tr>
+								<th>Flag</th>
+								<th>Name</th>
+								<th>Dist</th>
+								<th>Speed</th>
+								<th>Type</th>
+								<th>Last</th>
+							</tr>
+						</thead>
+						<tbody id="tablecardBody">
+						</tbody>
+					</table>
+				</div>	
+			</div>
 
 			<div class="settings_window settings-bg" id="settings">
 					<div class="settings_header">
@@ -2551,20 +2589,7 @@
 
 					<div id="tablecard">
 						<div class="tablecard_inner addscrollbar">
-							<table class = "mytable">
-								<thead>
-									<tr>
-										<th>Flag</th>
-										<th>Name</th>
-										<th>Dist</th>
-										<th>Speed</th>
-										<th>Type</th>
-										<th>Last</th>
-									</tr>
-								</thead>
-								<tbody id="tablecardBody">
-								</tbody>
-							</table>
+
 						</div>
 					</div>
 					
@@ -2874,6 +2899,10 @@
 
 			function closeSettings() {
 				document.querySelector('.settings_window').classList.remove('active');
+			}
+
+			function closeTableSide() {
+				document.querySelector('.tableside_window').classList.remove('active');
 			}
 
 			function setLatLonInDMS(b) {
@@ -3713,7 +3742,8 @@
 
 			function updateTablecard() {
 
-				if (document.getElementById("tablecard").style.display != "block") return;
+				if(!document.getElementById("tableside").classList.contains("active")) return;
+
 				var tableBody = document.getElementById("tablecardBody");
 				tableBody.innerHTML = "";
 
@@ -3747,13 +3777,15 @@
 						cell2.innerHTML = (getShipName(ship) || ship.mmsi);
 
 						var cell3 = row.insertCell(2);
-						cell3.innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : "";
+						cell3.innerHTML = ship.distance ? getDistanceVal(ship.distance) : "";
+						cell3.title = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : "";
 
 						var cell4 = row.insertCell(3);
-						cell4.innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
+						cell4.innerHTML = ship.speed ? getSpeedVal(ship.speed) : "";
+						cell4.title = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit(): "";
 
 						var cell5 = row.insertCell(4);
-						cell5.innerHTML = ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
+						cell5.innerHTML = ship != null ? "<span style='transform: translateY(1px);'" + getIconCSS(ship) + "></span>" : "";
 
 						var cell6 = row.insertCell(5);
 						cell6.innerHTML =  getDeltaTimeVal(ship.last_signal); 
@@ -3804,19 +3836,24 @@
 			}
 
 			function toggleTablecard() {
-				if (document.getElementById("tablecard").style.display == "block") hideTablecard();
-				else showTablecard();
-			}
-
-			function showTablecard() {
-				document.getElementById("tablecard").style.display = "block";
+				document.getElementById("tableside").classList.toggle("active");
+				var elements = document.querySelectorAll('.leaflet-control-layers');
+				elements.forEach(function(element) {
+				    element.classList.toggle('active');
+				});
+				var elements = document.querySelectorAll('.leaflet-control-zoom');
+				elements.forEach(function(element) {
+				    element.classList.toggle('active');
+				});
 				updateTablecard();
 			}
 
-			function hideTablecard() {
-				document.getElementById("tablecard").style.display = "none";
-			}
 
+			function hideTablecard() {
+				if(document.getElementById("tableside").classList.contains("active")) {
+					toggleTablecard();
+				}
+			}
 
 			var isDragging = false;
 			var offsetX, offsetY, headerY;
@@ -5114,14 +5151,6 @@
 				selectMapTab(m);
 			}
 
-			function sortTable(e) {
-				settings.sort = e.getAttribute("field");
-				settings.sort_dir = settings.sort_dir == "asc" ? "dec" : "asc";
-
-				saveSettings();
-				updateShipTable();
-			}
-
 			var table = null;
 
 			function downloadCSV() {
@@ -6165,6 +6194,8 @@
 				for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
 
 				document.getElementById(a).style.display = "block";
+				if(a === "map")
+					document.getElementById("tableside").style.display = "flex";
 
 				document.getElementById(a + "_tab").className += " active";
 				document.getElementById(a + "_tab_mini").className += " active";
@@ -6228,17 +6259,6 @@
 					alert("Invalid tab specified");
 				}
 				document.getElementById(settings.tab + "_tab").click();
-			}
-
-			async function loadPlugins() {
-				try {
-					const response = await fetch("config.js");
-					const config = await response.text();
-					window.eval(config);
-				} catch (error) {
-					console.error(error);
-					alert("Error loading plugins: " + error);
-				}
 			}
 
 			function updateAndroid() {
