@@ -2979,7 +2979,7 @@
 			function updateMapURL() {
 				if(isAndroid()) return;
 				
-				let newURL = window.location.href.split("?")[0] + "?lat=" + map.getCenter().lat.toFixed(5) + "&lon=" + map.getCenter().lng.toFixed(5) + "&zoom=" + map.getZoom() + "&tab=" + settings.tab;
+				let newURL = window.location.href.split("?")[0] + "?lat=" + map.getCenter().lat.toFixed(2) + "&lon=" + map.getCenter().lng.toFixed(2) + "&zoom=" + map.getZoom() + "&tab=" + settings.tab;
 				history.replaceState(null, null, newURL);
 			}
 
