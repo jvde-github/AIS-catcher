@@ -5007,26 +5007,23 @@
 
 			let displayNames;
 			function getCountryName(isoCode) {
-			    if (!isoCode || typeof isoCode !== "string" || isoCode.length !== 2) {
-			        return "";
-			    }
 			
 			    if (!displayNames && typeof Intl !== "undefined" && typeof Intl.DisplayNames === "function") {
-			        displayNames = new Intl.DisplayNames(["en"], { type: "region" });
+			        displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
 			    }
 			
 			    if (displayNames) {
-			        const countryName = displayNames.of(isoCode.toUpperCase());
-			        if (countryName !== undefined) {
-			            return countryName;
-			        } else {
-			            return "";
+			        try {
+			            const countryName = displayNames.of(isoCode);
+			            return countryName ? countryName : "";
+				} catch (error) {
+			            return isoCode;
 			        }
 			    } else {
 			        return isoCode;
 			    }
 			}
-
+			
 			function getFlag(country) {
 				return country ? `<span style="padding-right: 10px" title="` + getCountryName(country) + `" class="fi fi-${country.toLowerCase()}"></span> ` : "<span></span>";
 			}
