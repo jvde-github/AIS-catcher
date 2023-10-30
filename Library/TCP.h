@@ -22,6 +22,7 @@
 #include <thread>
 #include <mutex>
 #include <array>
+#include <vector>
 
 #ifdef _WIN32
 
