@@ -25,7 +25,7 @@
 #include <openssl/err.h>
 #endif
 
-#include "ZIP.h"
+#include "Library/ZIP.h"
 #include "TCP.h"
 #include "Utilities.h"
 
