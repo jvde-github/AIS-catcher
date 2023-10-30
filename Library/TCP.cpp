@@ -17,7 +17,6 @@
 
 #include <cstring>
 #include <string>
-#include <vector>
 
 #include "TCP.h"
 #include "Common.h"
