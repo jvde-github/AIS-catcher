@@ -378,7 +378,7 @@
 
 			.mainspace {
 				background: var(--mainspace-color);
-				margin: 5px;
+				margin: 2px;
 				flex: 1;
 				border: 1px;
 				display: flex;
@@ -2013,12 +2013,12 @@
 				flex-direction: column;
 				background-color: var(--settings-bg-color);
 				width: 560px;
-				height: calc(100% - 60px);
+				height: calc(100% - 63px);
 				top: 60px;
 				right: 0px;
 				position: fixed;
 				z-index: 10003;
-				border: 1px solid var(--settings-header-bg-color); 
+				border: 1px solid var(--settings-header-bg-color);
 				padding: 0px;
 				margin: 0px;
 				transform: translateX(560px);
@@ -2035,7 +2035,7 @@
 				flex-direction: column;
 				background-color: var(--settings-bg-color);
 				width: 500px;
-				height: calc(100% - 60px);
+				height: calc(100% - 63px);
 				top: 60px;
 				left: 0px;
 				position: fixed;
@@ -3551,14 +3551,16 @@
 					else settings.map_day = event.name;
 					saveSettings();
 				});
+
 				map.on("mousemove", function (evt) {
 					debouncedSaveSettings();
-					//updateTooltips();
 				});
+
 				map.on("zoomend", function (evt) {
 					debouncedSaveSettings();
 					updateTooltips();
 				});
+
 				map.on("click", function () {
 					if (singleClickTimeout == null) {
 						singleClickTimeout = setTimeout(() => {
@@ -3569,6 +3571,7 @@
 						}, 400);
 					}
 				});
+
 				map.on("dblclick dragstart zoomstart", function () {
 					if (singleClickTimeout != null) {
 						clearTimeout(singleClickTimeout);
@@ -3591,6 +3594,7 @@
 
 				addWrenchControl();
 				addMarkerCount();
+				// addFilterControl();
 				addTableControl();
 			}
 
@@ -4056,6 +4060,30 @@
 
 				addControlToMap(markerCountControl);
 				updateMarkerCount();
+			}
+
+			function addFilterControl() {
+
+				markerFilterControl = L.control({ position: "topright" });
+
+				markerFilterControl.onAdd = function (map) {
+					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350 min-width-1500");
+
+					L.DomEvent.on(controlDiv, "click", function (e) {
+						L.DomEvent.stopPropagation(e);
+						toggleTablecard();
+					});
+
+					var controlBoundary = L.DomUtil.create("div", "leaflet-control-settings-toggle round-control", controlDiv);
+					iconLabelSpan = L.DomUtil.create("span", "filter_alt_icon", controlBoundary);
+					iconLabelSpan.innerHTML = "";
+					iconLabelSpan.style.padding = "6px";
+					iconLabelSpan.style.transform = "scale(0.4)";
+
+					return controlDiv;
+				};
+
+				addControlToMap(markerFilterControl);
 			}
 
 			function addTableControl() {
@@ -6077,8 +6105,9 @@
 					aside.classList.toggle("visible");
 				} else if (visible && m == null) {
 					aside.classList.toggle("visible");
-					clearFocusMarker();
 				}
+
+				clearFocusMarker();
 
 				if (shipcardVisible() && m in markers) setFocusMarker([ship.lat, ship.lon]);
 
