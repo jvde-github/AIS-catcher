@@ -6,7 +6,6 @@ This package introduces the `AIS-catcher` command, a dual-channel AIS receiver c
 
  A few examples of live stations are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available.
 
-
 ## Purpose
 
 The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observation or sharing of recordings for setups where the current models are struggling is highly appreciated! 
