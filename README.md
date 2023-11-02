@@ -23,7 +23,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Edge:
-- I created [aischatcher.org](https://www.aiscatcher.org) and started sharing data from my own station at [here](https://aiscatcher.org/southwood).
+- I created [aischatcher.org](https://aiscatcher.org) and started sharing data from my own station at [here](https://aiscatcher.org/southwood).
   
 v0.54 is the latest version and added:
 - A "Settings Menu" providing access to additional (styling) options for the webclient:
