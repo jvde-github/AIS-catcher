@@ -44,6 +44,13 @@ namespace Device {
 		if (rtlsdr_open_file_descriptor(&dev, f) != 0) throw std::runtime_error("RTLSDR: cannot open device.");
 
 		Device::Open(f);
+
+		char v[256], p[256], s[256];
+		rtlsdr_get_usb_strings(dev, v, p, s);
+
+		product = std::string(p);
+		serial = std::string(s);
+		vendor = std::string(v);
 	}
 #endif
 
