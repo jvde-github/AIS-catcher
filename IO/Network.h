@@ -46,7 +46,7 @@
 
 namespace IO {
 
-	class HTTPStreamer : public StreamIn<JSON::JSON>, public Setting {
+	class HTTPStreamer : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
 
 		int source = -1;
 		JSON::StringBuilder builder;
@@ -92,6 +92,11 @@ namespace IO {
 					}
 				}
 			}
+		}
+		
+		void Receive(const AIS::GPS* data, int len, TAG& tag) {
+			lat = data->getLat();
+			lon = data->getLon();
 		}
 
 		std::list<std::string> queue;
