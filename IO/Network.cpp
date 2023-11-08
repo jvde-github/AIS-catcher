@@ -80,6 +80,8 @@ namespace IO {
 			msg += "\n\t\"stationid\": ";
 			builder.stringify(stationid, msg);
 			msg += ",";
+			msg += "\n\t\"station_lat\": " + (lat == 0.0 ? "null" : std::to_string(lat)) + ",";
+			msg += "\n\t\"station_lon\": " + (lon == 0.0 ? "null" : std::to_string(lon)) + ",";
 			msg += "\n\t\"receiver\":\n\t\t{\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
 			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",\n\t\t\"engine\": ";
 			builder.stringify(model, msg);
@@ -207,7 +209,8 @@ namespace IO {
 			lat = Util::Parse::Float(arg);
 		}
 		else if (option == "GROUPS_IN") {
-			setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "LON") {
 			lon = Util::Parse::Float(arg);
