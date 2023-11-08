@@ -86,6 +86,8 @@
 				--notification-border-color: 0857b1;
 				--label-shadow-color: white;
 				--label-shadow-width: 2px;
+				--link-color: #0857b1;
+  				--link-hover-focus-color: #12a5ed;
 			}
 
 			.dark {
@@ -153,6 +155,8 @@
 				--notification-font-color: black;
 				--notification-border-color: rgb(17, 17, 17);
 				--label-shadow-color: black;
+				--link-color: #5dd5d5;
+  				--link-hover-focus-color: #7ce481;
 			}
 
 			body,
@@ -171,6 +175,18 @@
 				overflow: hidden;
 			}
 
+
+			a {
+				color: var(--link-color);
+				text-decoration: none;
+			}
+
+			a:hover,
+			a:focus {
+				color: var(--link-hover-focus-color);
+				text-decoration: underline;
+			}
+			
 			.header {
 				background: var(--header-color);
 				flex: 0 0 40px;
