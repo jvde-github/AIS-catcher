@@ -4,8 +4,7 @@ This package introduces the `AIS-catcher` command, a dual-channel AIS receiver c
   <img src="https://user-images.githubusercontent.com/52420030/219856752-b3a09051-b913-49bd-8af3-bca2e7a25130.png" width="30%"/>
 </p>
 
- A few examples of live stations are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available.
-
+ A few examples of live stations are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available. By way of example, I am also sharing my own station at [aiscatcher.org](https://aiscatcher.org/southwood).
 
 ## Purpose
 
@@ -23,6 +22,9 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
+Edge:
+- I created [aischatcher.org](https://aiscatcher.org) and started sharing data from my own station at [here](https://aiscatcher.org/southwood).
+  
 v0.54 is the latest version and added:
 - A "Settings Menu" providing access to additional (styling) options for the webclient:
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/f29aae44-a68b-4e47-8fba-e703add00f47)
