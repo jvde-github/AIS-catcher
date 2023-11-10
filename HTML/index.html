@@ -5505,24 +5505,24 @@
 			}
 
 			const shippingMappings = {
-				[ShippingClass.OTHER]: { className: "shipicon", value: 120 },
-				[ShippingClass.UNKNOWN]: { className: "shipicon", value: 120 },
-				[ShippingClass.CARGO]: { className: "shipicon", value: 0 },
-				[ShippingClass.TANKER]: { className: "shipicon", value: 80 },
-				[ShippingClass.PASSENGER]: { className: "shipicon", value: 40 },
-				[ShippingClass.HIGHSPEED]: { className: "shipicon", value: 100 },
-				[ShippingClass.SPECIAL]: { className: "shipicon", value: 60 },
-				[ShippingClass.FISHING]: { className: "shipicon", value: 140 },
-				[ShippingClass.ATON]: { className: "staticon", value: 0 },
-				[ShippingClass.PLANE]: { className: "planeicon", value: 0 },
-				[ShippingClass.HELICOPTER]: { className: "helicoptericon", value: 0 },
-				[ShippingClass.B]: { className: "shipicon", value: 20 },
-				[ShippingClass.STATION]: { className: "staticon", value: 20 },
-				[ShippingClass.SARTEPIRB]: { className: "staticon", value: 40 },
+				[ShippingClass.OTHER]: { className: "shipicon", value: 120, hint: "Other" },
+				[ShippingClass.UNKNOWN]: { className: "shipicon", value: 120, hint: "Unknown" },
+				[ShippingClass.CARGO]: { className: "shipicon", value: 0, hint: "Cargo" },
+				[ShippingClass.TANKER]: { className: "shipicon", value: 80, hint: "Tanker" },
+				[ShippingClass.PASSENGER]: { className: "shipicon", value: 40, hint: "Passenger" },
+				[ShippingClass.HIGHSPEED]: { className: "shipicon", value: 100, hint: "High Speed" },
+				[ShippingClass.SPECIAL]: { className: "shipicon", value: 60, hint: "Special" },
+				[ShippingClass.FISHING]: { className: "shipicon", value: 140, hint: "Fishing" },
+				[ShippingClass.ATON]: { className: "staticon", value: 0, hint: "Aid-to-Navigation" },
+				[ShippingClass.PLANE]: { className: "planeicon", value: 0, hint: "Aircraft" },
+				[ShippingClass.HELICOPTER]: { className: "helicoptericon", value: 0, hint: "Helicopter" },
+				[ShippingClass.B]: { className: "shipicon", value: 20, hint: "Class B" },
+				[ShippingClass.STATION]: { className: "staticon", value: 20, hint: "Base Station" },
+				[ShippingClass.SARTEPIRB]: { className: "staticon", value: 40, hint: "AIS SART/EPIRB" }
 			};
 
 			function getShipCSSClassAndStyle(ship, opacity = 1) {
-				let { className, value } = shippingMappings[getShipTypeClass(ship)] || { className: "shipicon", value: 120 };
+				let { className, value, hint } = shippingMappings[getShipTypeClass(ship)] || { className: "shipicon", value: 120 };
 
 				let style = `opacity: ${opacity};`;
 				switch (className) {
@@ -5538,12 +5538,12 @@
 						break;
 				}
 
-				return { class: className, style: style };
+				return { class: className, style: style, hint: hint };
 			}
 
 			function getIconCSS(ship, opacity = 1) {
-				const { class: classValue, style } = getShipCSSClassAndStyle(ship, opacity);
-				return `class="${classValue}" style="${style}"`;
+				const { class: classValue, style, hint } = getShipCSSClassAndStyle(ship, opacity);
+				return `class="${classValue}" style="${style}" title="${hint}"`;
 			}
 
 			function getIcon(ship) {
