@@ -23,8 +23,8 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Edge:
-- I created [aischatcher.org](https://aiscatcher.org) and started sharing data from my own station at [here](https://aiscatcher.org/southwood).
-- GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...` is now included in HTTP client push
+- I created [aischatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood).
+- GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
   
 v0.54 is the latest version and added:
 - A "Settings Menu" providing access to additional (styling) options for the webclient:
