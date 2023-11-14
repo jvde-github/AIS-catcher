@@ -476,7 +476,8 @@ A fuller example config file looks as follows:
     "lat":52.0,
     "lon":4.3,
     "plugin_dir":"/home/jasper/AIS-catcher/plugins/",
-    "cdn":"/home/jasper/webassets"
+    "cdn":"/home/jasper/webassets",
+    "prome": true
   },
   "tcp":[
     {
