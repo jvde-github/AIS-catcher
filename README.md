@@ -1019,8 +1019,10 @@ Alternatively, the following `docker-compose.yml` configuration provides a good 
 ```yaml
 services:
   ais-catcher:
-    command: <ais-catcher command line options>
+    command: <ais-catcher command line options> (e.g. -N 8100)
     container_name: ais-catcher
+    ports:
+      - 8100:8100 <don't forget to passthrough ports for the webclient>
     devices:
       - "/dev/bus/usb:/dev/bus/usb"
     image: ghcr.io/jvde-github/ais-catcher:latest
