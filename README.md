@@ -25,7 +25,7 @@ Only use this software in regions where such use is permitted.
 Edge:
 - I created [aischatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood).
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
-- **If you want a persistent dashboard available outside the local network, please reach out an I will add it to aiscatcher.org. It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation for the station location.**. Data is not aggregated and forwarded.
+- **If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) an I will add it to aiscatcher.org. It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation for the station location.**. Data is not aggregated and forwarded.
   
 v0.54 is the latest version and added:
 - A "Settings Menu" providing access to additional (styling) options for the webclient:
