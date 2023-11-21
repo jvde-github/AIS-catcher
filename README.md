@@ -479,7 +479,8 @@ A fuller example config file looks as follows:
     "lon":4.3,
     "plugin_dir":"/home/jasper/AIS-catcher/plugins/",
     "cdn":"/home/jasper/webassets",
-    "prome": true
+    "prome": true,
+    "context": "settings"
   },
   "tcp":[
     {
