@@ -5680,7 +5680,7 @@
 				settings.shipcard_max = isShipcardMax();
 				settings.shipcard_rows = selectedRows;
 
-				localStorage.settings = JSON.stringify(settings);
+				localStorage[context] = JSON.stringify(settings);
 
 				updateMapURL();
 				updateSettingsTab();
@@ -5690,7 +5690,7 @@
 				if(!urlParams.has("reset")) {
 
 					try {
-						const localStorageSettings = localStorage.getItem("settings");
+						const localStorageSettings = localStorage.getItem(context);
 						if (localStorageSettings !== null) {
 							const ls = JSON.parse(localStorageSettings);
 							settings = { ...settings, ...ls };
