@@ -257,7 +257,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	bool supportPrometheus = false;
 	bool thread_running = false;
 
-	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\naboutMDpresent=false;\n\n";
+	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\naboutMDpresent=false;\n\n";
 	std::string plugins;
 	std::string stylesheets;
 	std::string cdn;
