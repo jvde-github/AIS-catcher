@@ -99,6 +99,11 @@ namespace Util {
 		static std::string toString(Format format);
 		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); };
 		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
+		static std::string toString(FLOAT32 f) {
+			std::string s = std::to_string(f);
+			if (s == "nan" || s == "-nan") return "null";
+			return s;
+		}
 
 		static void toUpper(std::string& s);
 		static void toFloat(CU8* in, CFLOAT32* out, int len);
