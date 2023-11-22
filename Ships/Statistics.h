@@ -21,6 +21,9 @@
 #include <memory>
 #include <mutex>
 
+#include "Utilities.h"
+#include "Message.h"
+
 // ----------------------------
 // Class to log message count stat
 
@@ -140,8 +143,8 @@ public:
 
 		element += "{\"count\":" + std::to_string(empty ? 0 : _count) +
 				   ",\"vessels\":" + std::to_string(empty ? 0 : _vessels) +
-				   ",\"level_min\":" + std::to_string(empty || !_count ? 0 : _level_min) +
-				   ",\"level_max\":" + std::to_string(empty || !_count ? 0 : _level_max) +
+				   ",\"level_min\":" + ((empty || !_count) ? std::string("0") : Util::Convert::toString(_level_min)) +
+				   ",\"level_max\":" + ((empty || !_count) ? std::string("0") : Util::Convert::toString(_level_max)) +
 				   ",\"ppm\":" + std::to_string(empty || !_count ? 0 : _ppm / _count) +
 				   ",\"dist\":" + std::to_string(empty ? 0 : _distance) +
 				   ",\"channel\":[";
