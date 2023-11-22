@@ -372,6 +372,7 @@ namespace TCP {
 			return false;
 		}
 
+#ifndef _WIN32
 		if (keep_alive) {
 			int optval = 1;
 			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
@@ -380,7 +381,7 @@ namespace TCP {
 				return false;
 			}
 		}
-
+#endif
 		if (persistent) {
 #ifndef _WIN32
 			r = fcntl(sock, F_GETFL, 0);
