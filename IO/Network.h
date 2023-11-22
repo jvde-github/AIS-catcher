@@ -172,6 +172,7 @@ namespace IO {
 		bool JSON = false;
 		int source = -1;
 		std::string host, port;
+		bool keep_alive = false;
 		bool persistent = true;
 
 	public:

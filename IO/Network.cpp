@@ -483,9 +483,10 @@ namespace IO {
 		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
 		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
+		std::cerr << ", KEEP_ALIVE: " << Util::Convert::toString(keep_alive);
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ", status: ";
 
-		if (tcp.connect(host, port, persistent, 0))
+		if (tcp.connect(host, port, persistent, 0, keep_alive))
 			std::cerr << "connected\n";
 		else {
 			if (!persistent) {
@@ -513,6 +514,9 @@ namespace IO {
 		else if (option == "GROUPS_IN") {
 			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
 			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
+		}
+		else if (option == "KEEP_ALIVE") {
+			keep_alive = Util::Parse::Switch(arg);
 		}
 		else if (option == "JSON") {
 			JSON = Util::Parse::Switch(arg);

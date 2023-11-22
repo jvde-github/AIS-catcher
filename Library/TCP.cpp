@@ -344,7 +344,7 @@ namespace TCP {
 		state = DISCONNECTED;
 	}
 
-	bool Client::connect(std::string host, std::string port, bool persist, int timeout) {
+	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive) {
 		int r;
 		struct addrinfo h;
 		struct addrinfo* address;
@@ -370,6 +370,15 @@ namespace TCP {
 		if (sock == -1) {
 			freeaddrinfo(address);
 			return false;
+		}
+
+		if (keep_alive) {
+			int optval = 1;
+			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+				freeaddrinfo(address);
+				disconnect();
+				return false;
+			}
 		}
 
 		if (persistent) {
