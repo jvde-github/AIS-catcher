@@ -127,7 +127,7 @@ namespace TCP {
 		~Client() { disconnect(); }
 
 		void disconnect();
-		bool connect(std::string host, std::string port, bool persist, int timeout);
+		bool connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive = false);
 
 		void setResetTime(int t) { reset_time = t; }
 		int read(void* data, int length, int t, bool wait = false);

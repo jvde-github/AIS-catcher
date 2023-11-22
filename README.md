@@ -486,7 +486,8 @@ A fuller example config file looks as follows:
     {
       "active":true,
       "host":"5.9.207.224",
-      "port":12
+      "port":12,
+      "keep_alive": false
     }
   ],
   "udp":[
