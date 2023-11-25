@@ -919,7 +919,10 @@ A list of some stations mentioning using AIS-catcher:
 - [Vasa, Finland](https://www.marinetraffic.com/en/ais/details/stations/14994)
 - [Vernouillet, France](https://www.marinetraffic.com/en/ais/details/stations/10668)
 - [Vlissingen, NL](https://www.marinetraffic.com/nl/ais/details/stations/17133)
+
+AIS-catcher connected to a commercial AIS receiver via serial port:
 - [Wren Road Rab 2](https://www.marinetraffic.com/en/ais/details/stations/9615)
+- [Baltimore, Ireland](https://www.marinetraffic.com/en/ais/details/stations/10083/_:6fee18c796a96183f56c876a2b26bac6)
 
 ## Build process
 
