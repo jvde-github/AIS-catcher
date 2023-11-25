@@ -23,7 +23,8 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 Edge:
-- I created [aischatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood).
+- I created [aischatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
+ dashboards for stations running AIS-catcher and link to interesting (open source) projects related to AIS and AIS-catcher.
 - **If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) an I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation for the station location.**. Data is not aggregated and forwarded.
 - Addition of option `-N CONTEXT yyyy` which will store the settings in the webbrowser in `yyyy`. This will allow to separate setting storage when running multiple webclients. 
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
