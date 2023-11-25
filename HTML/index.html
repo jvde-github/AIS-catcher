@@ -597,6 +597,12 @@
 				}
 			}
 
+			@media only screen and (max-width: 1400px) {
+				.min-width-1400 {
+					display: none;
+				}
+			}
+
 			.shiptable-map {
 				width: 10px;
 			}
@@ -4099,7 +4105,7 @@
 				markerFilterControl = L.control({ position: "topright" });
 
 				markerFilterControl.onAdd = function (map) {
-					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350 min-width-1500");
+					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350 min-width-1400");
 
 					L.DomEvent.on(controlDiv, "click", function (e) {
 						L.DomEvent.stopPropagation(e);
