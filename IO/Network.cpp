@@ -337,6 +337,8 @@ namespace IO {
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON);
 		if (broadcast) std::cerr << ", broadcast: true";
 		if (reset > 0) std::cerr << ", reset: " << reset;
+		if (!uuid.empty()) std::cerr << ", uuid: " << uuid;
+
 		std::cerr << std::endl;
 
 		if (sock != -1) {

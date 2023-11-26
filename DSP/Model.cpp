@@ -697,6 +697,6 @@ namespace AIS {
 	}
 
 	std::string ModelNMEA::Get() {
-		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
+		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " uuid " + nmea.getUUID() + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
 	}
 }
