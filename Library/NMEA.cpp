@@ -317,6 +317,7 @@ namespace AIS {
 
 				std::string cls = "";
 				std::string dev = "";
+				std::string suuid = "";
 
 				tag.ppm = 0;
 				tag.sample_lvl = 0;
@@ -327,6 +328,9 @@ namespace AIS {
 					switch (p.Key()) {
 					case AIS::KEY_CLASS:
 						cls = p.Get().getString();
+						break;
+					case AIS::KEY_UUID:
+						suuid = p.Get().getString();
 						break;
 					case AIS::KEY_DEVICE:
 						dev = p.Get().getString();
@@ -343,7 +347,7 @@ namespace AIS {
 					}
 				}
 
-				if (cls == "AIS" && dev == "AIS-catcher") {
+				if (cls == "AIS" && dev == "AIS-catcher" && (uuid.empty() || suuid == uuid)) {
 					for (const auto& p : j->getProperties()) {
 						if (p.Key() == AIS::KEY_NMEA) {
 							if (p.Get().isArray()) {

@@ -676,7 +676,7 @@ namespace AIS {
 
 	Setting& ModelNMEA::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
+		//Util::Convert::toUpper(arg);
 
 		if (option == "NMEA_REFRESH") {
 			nmea.setRegenerate(Util::Parse::Switch(arg));
@@ -686,6 +686,9 @@ namespace AIS {
 		}
 		else if (option == "VDO") {
 			nmea.setVDO(Util::Parse::Switch(arg));
+		}
+		else if (option == "UUID") {
+			nmea.setUUID(arg);
 		}
 		else
 			Model::Set(option, arg);

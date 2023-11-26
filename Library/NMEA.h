@@ -32,6 +32,8 @@ namespace AIS {
 	class NMEA : public SimpleStreamInOut<RAW, Message> {
 		Message msg;
 		int station = 0;
+		std::string uuid;
+		
 		struct AIVDM {
 			std::string sentence;
 			std::string line;
@@ -95,6 +97,7 @@ namespace AIS {
 
 		void setVDO(bool b) { VDO = b; }
 		bool getVDO() { return VDO; }
+		void setUUID(const std::string &u) { uuid = u; }
 
 		void setStation(int s) { station = s; }
 

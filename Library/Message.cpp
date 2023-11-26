@@ -68,7 +68,7 @@ namespace AIS {
 			return json;
 	}
 
-	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm) const {
+	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm, const std::string &uuid) const {
 		std::stringstream ss;
 
 		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << getChannel() << "\"";
@@ -77,6 +77,7 @@ namespace AIS {
 			ss << ",\"rxuxtime\":" << getRxTimeUnix();
 			ss << ",\"rxtime\":\"" << getRxTime() << "\"";
 		}
+		if( !uuid.empty() ) ss << ",\"uuid\":\"" << uuid << "\"";
 		if (mode & 1) ss << ",\"signalpower\":" << level << ",\"ppm\":" << ppm;
 		if (getStation()) ss << ",\"station_id\":" << getStation();
 

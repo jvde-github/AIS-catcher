@@ -140,6 +140,7 @@ namespace IO {
 		AIS::Filter filter;
 		bool broadcast = false;
 		bool JSON = false;
+		std::string uuid;
 
 		void ResetIfNeeded();
 
