@@ -98,6 +98,7 @@ namespace AIS {
 		void setVDO(bool b) { VDO = b; }
 		bool getVDO() { return VDO; }
 		void setUUID(const std::string &u) { uuid = u; }
+	 	std::string getUUID() { return uuid; }
 
 		void setStation(int s) { station = s; }
 
