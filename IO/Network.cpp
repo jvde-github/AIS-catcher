@@ -326,7 +326,7 @@ namespace IO {
 		else {
 			for (int i = 0; i < len; i++) {
 				if (filter.include(data[i]))
-					SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm) + "\r\n").c_str());
+					SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, uuid) + "\r\n").c_str());
 			}
 		}
 	}
@@ -412,6 +412,9 @@ namespace IO {
 		}
 		else if (option == "RESET") {
 			reset = Util::Parse::Integer(arg, 1, 24 * 60, option);
+		}
+		else if (option == "UUID") {
+			uuid = arg;
 		}
 		else if (!filter.SetOption(option, arg)) {
 			throw std::runtime_error("UDP output - unknown option: " + option);
