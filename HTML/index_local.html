@@ -2363,7 +2363,7 @@
 					<li class="divider ctx-map"></li>
 					<li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="timeline_icon"></i><span id="ctx_track"></span></li>
 					<li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="push_pin_icon"></i>Center map on vessel</li>
-					<li class="mmsi-map" onclick="mapResetView(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
+					<li class="mmsi-map" onclick="mapResetViewZoom(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
 					<li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="directions_boat_icon"></i>Show Shipcard</li>
 					<li class="divider mmsi-map"></li>
 					<li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database Entry</li>
@@ -2682,7 +2682,7 @@
 					<aside id="shipcard" class="shipcard-ismax">
 						<header id="shipcard_header">
 							<span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-							<span><i onclick="mapResetView(13)" id="shipcard_zoom_button" class="hide shipcard-header-icon zoom_in_icon"></i></span>
+							<span><i onclick="mapResetViewZoom(13)" id="shipcard_zoom_button" class="hide shipcard-header-icon zoom_in_icon"></i></span>
 							<span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button" class="shipcard-header-icon keyboard_arrow_up_icon"></i></span>
 							<span><i onclick="showContextMenu(event,card_mmsi,['mmsi', 'mmsi-map'])" class="shipcard-header-icon more_vert_icon"></i></span>
 							<span><i onclick="showShipcard(null)" style="color: red" class="shipcard-header-icon close_icon"></i></span>
@@ -2745,7 +2745,7 @@
 							</div>
 						</div>
 						<footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">
-							<div title="Center map on current vessel" onclick="mapResetView(13)"><i class="zoom_in_icon"></i><span>Zoom</span></div>
+							<div title="Center map on current vessel" onclick="mapResetViewZoom(13)"><i class="zoom_in_icon"></i><span>Zoom</span></div>
 							<div title="Track of current vessel" onclick="toggleTrackCard()"><i class="timeline_icon"></i><span id="shipcard_track">Track</span></div>
 						</footer>
 					</aside>
@@ -5767,11 +5767,19 @@
 				if (hover_mmsi == ship.mmsi) setHoverMarker([ship.lat, ship.lon]);
 			}
 
-			function mapResetView(z, m) {
+			function mapResetViewZoom(z, m) {
 				if (m && m in shipsDB) {
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
 				} else map.setView(marker_focus.getLatLng(), Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
+				shipcardMinIfMaxonMobile();
+			}
+
+			function mapResetView(z, m) {
+				if (m && m in shipsDB) {
+					let ship = shipsDB[m].raw;
+					map.setView([ship.lat, ship.lon], Math.min(z, map.getMaxZoom()));
+				} else map.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
 				shipcardMinIfMaxonMobile();
 			}
 
@@ -6328,7 +6336,7 @@
 
 				selectMapTab(m);
 				if (z) mapResetView(z);
-				else mapResetView(13);
+				else mapResetView(14);
 
 				showTrack(m);
 			}
