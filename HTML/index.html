@@ -2268,6 +2268,9 @@
 						</section>
 						<header>Map</header>
 						<section>
+							<div><span>Show Station Icon</span><span>
+								<input type="checkbox" id="settings_show_station" onchange="setShowStation(this.checked)">	
+							</span></div>
 							<div><span>Fade icons</span><span>
 								<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)">	
 							</span></div>
@@ -2838,6 +2841,7 @@
 					shipoutline_opacity: 0.9,
 					dark_mode: false,
 					center_radius: 0,
+					show_station: true,
 					metric: "DEFAULT",
 					dim_in_feet: false,
 					setcoord: true,
@@ -4202,6 +4206,10 @@
 
 				if (!settings.show_range) removeRange();
 				else await plotRange();
+			}
+
+			function setShowStation(b) {
+				settings.show_station = b;
 			}
 
 			function setFading(b) {
@@ -5728,6 +5736,7 @@
 				for (const [key, value] of urlParams.entries()) if (settings.hasOwnProperty(key)) settings = { ...settings, [key]: value };
 
 				settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
+				settings.show_station = settings.show_station == "true" || settings.show_station == true;
 				settings.latlon_in_dms = settings.latlon_in_dms == "true" || settings.latlon_in_dms == true;
 				settings.dim_in_feet = settings.dim_in_feet == "true" || settings.dim_in_feet == true;
 			}
@@ -6063,7 +6072,7 @@
 			}
 
 			function plotStation() {
-				const hasStation = station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
+				const hasStation = settings.show_station == false || station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
 				const hasMMSIcenter = settings.center_point && settings.center_point != "STATION" && settings.center_point in shipsDB;
 
 				// plot station on map
@@ -6346,6 +6355,7 @@
 				document.getElementById("settings_latlon_in_dms").checked = settings.latlon_in_dms;
 				document.getElementById("settings_dim_in_feet").checked = settings.dim_in_feet;
 				document.getElementById("settings_metric").value = getMetrics().toLowerCase();
+				document.getElementById("settings_show_station").checked = settings.show_station;
 				document.getElementById("settings_fading").checked = settings.fading;
 				document.getElementById("settings_shiphover_color").value = settings.shiphover_color;
 				document.getElementById("settings_shipselection_color").value = settings.shipselection_color;
