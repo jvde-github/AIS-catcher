@@ -5736,6 +5736,7 @@
 				for (const [key, value] of urlParams.entries()) if (settings.hasOwnProperty(key)) settings = { ...settings, [key]: value };
 
 				settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
+				settings.show_range = settings.show_range == "true" || settings.show_range == true;
 				settings.show_station = settings.show_station == "true" || settings.show_station == true;
 				settings.latlon_in_dms = settings.latlon_in_dms == "true" || settings.latlon_in_dms == true;
 				settings.dim_in_feet = settings.dim_in_feet == "true" || settings.dim_in_feet == true;
