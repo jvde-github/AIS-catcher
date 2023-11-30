@@ -5474,6 +5474,15 @@
 									return getStringfromChannels(value);
 								},
 							},
+							{
+								title: "Src",
+								field: "group_mask",
+								sorter: "number",
+								formatter: function (cell) {
+									const value = cell.getValue();
+									return getStringfromGroup(value);
+								},
+							},
 						],
 					});
 					table.on("rowContext", function (e, row) {
