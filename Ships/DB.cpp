@@ -193,6 +193,7 @@ void DB::getShipJSON(const VesselDetail& ship, std::string& content, long int de
 	content += "\"level\":" + std::to_string(ship.level) + ",";
 	content += "\"count\":" + std::to_string(ship.count) + ",";
 	content += "\"ppm\":" + std::to_string(ship.ppm) + ",";
+	content += "\"group_mask\":" + std::to_string(ship.group_mask) + ",";
 	content += "\"approx\":" + std::string(ship.approximate ? "true" : "false") + ",";
 
 	content += "\"heading\":" + ((ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ship.heading)) + ",";
