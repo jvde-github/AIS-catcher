@@ -571,6 +571,7 @@ namespace AIS {
 		throttle_a.out[0] >> FC_a >> S_a;
 		throttle_b.out[0] >> FC_b >> S_b;
 
+		// needs to be fixed for signal level
 		throttle_a.out[0] >> FM_af >> FR_af >> S_af;
 		throttle_b.out[0] >> FM_bf >> FR_bf >> S_bf;
 
