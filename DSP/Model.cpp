@@ -567,6 +567,7 @@ namespace AIS {
 		*C_a >> CGF_a >> throttle_a;
 		*C_b >> CGF_b >> throttle_b;
 
+		// throttling to make sure that the two channels are synchronized to avoid doubles
 		throttle_a.out[0] >> FC_a >> S_a;
 		throttle_b.out[0] >> FC_b >> S_b;
 
@@ -575,10 +576,10 @@ namespace AIS {
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
 			DEC_a[i].setOrigin(CH1, station);
-			DEC_b[i].setOrigin(CH2, station);
 			DEC_af[i].setOrigin(CH1, station);
-			DEC_bf[i].setOrigin(CH2, station);
 
+			DEC_b[i].setOrigin(CH2, station);
+			DEC_bf[i].setOrigin(CH2, station);
 
 			CD_EMA_a[i].setParams(nDelay);
 			CD_EMA_b[i].setParams(nDelay);
@@ -591,14 +592,16 @@ namespace AIS {
 
 			for (int j = 0; j < nSymbolsPerSample; j++) {
 				DEC_af[i].DecoderMessage.Connect(DEC_a[j]);
-				DEC_bf[i].DecoderMessage.Connect(DEC_b[j]);
 				DEC_a[i].DecoderMessage.Connect(DEC_af[j]);
+
+				DEC_bf[i].DecoderMessage.Connect(DEC_b[j]);
 				DEC_b[i].DecoderMessage.Connect(DEC_bf[j]);
 
 				if (i != j) {
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
-					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 					DEC_af[i].DecoderMessage.Connect(DEC_af[j]);
+
+					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 					DEC_bf[i].DecoderMessage.Connect(DEC_bf[j]);
 				}
 			}
