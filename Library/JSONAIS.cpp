@@ -403,7 +403,7 @@ namespace AIS {
 			U(msg, AIS::KEY_SEQNO, 38, 2);
 			U(msg, AIS::KEY_DEST_MMSI, 40, 30);
 			B(msg, AIS::KEY_RETRANSMIT, 70, 1);
-			T(msg, AIS::KEY_TEXT, 72,  MIN(936, msg.getLength() - 72), text);			
+			T(msg, AIS::KEY_TEXT, 72, MIN(936, msg.getLength() - 72), text);
 			break;
 		case 14:
 			T(msg, AIS::KEY_TEXT, 40, MIN(968, msg.getLength() - 40), text);

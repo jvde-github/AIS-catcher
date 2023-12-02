@@ -467,11 +467,11 @@ void OutputHTTP::connect(Receiver& r) {
 		h->Set("DEVICE_SETTING", "N/A").Set("PRODUCT", "N/A");
 		h->Set("VENDOR", "N/A").Set("SERIAL", "N/A");
 
-/*
-		for (int i = 0; i < r.Count(); i++)
-			if (r.Output(i).canConnect(h->getGroupsIn()))
-				r.OutputJSON(i) >> *h;
-*/
+		/*
+				for (int i = 0; i < r.Count(); i++)
+					if (r.Output(i).canConnect(h->getGroupsIn()))
+						r.OutputJSON(i) >> *h;
+		*/
 		for (int i = 0; i < r.Count(); i++) {
 			StreamIn<JSON::JSON>* tm = (StreamIn<JSON::JSON>*)&*h;
 			if (r.Output(i).canConnect(tm->getGroupsIn()))

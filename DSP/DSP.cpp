@@ -213,6 +213,18 @@ namespace DSP {
 
 		if (output.size() < len) output.resize(len);
 
+		if (len < taps.size()) {
+			for (j = 0; j < len; j++) {
+				for (i = 1; i < taps.size(); i++)
+					buffer[i - 1] = buffer[i];
+				buffer[taps.size() - 1] = data[j];
+
+				output[0] = dot(buffer.data());
+				Send(output.data(), 1, tag);
+			}
+			return;
+		}
+
 		for (j = 0, ptr = (int)taps.size() - 1; j < taps.size() - 1; ptr++, j++) {
 			buffer[ptr] = data[j];
 			output[j] = dot(&buffer[j]);
@@ -234,6 +246,18 @@ namespace DSP {
 		int ptr, i, j;
 
 		if (output.size() < len) output.resize(len);
+
+		if (len < taps.size()) {
+			for (j = 0; j < len; j++) {
+				for (i = 1; i < taps.size(); i++)
+					buffer[i - 1] = buffer[i];
+				buffer[taps.size() - 1] = data[j];
+
+				output[0] = dot(buffer.data());
+				Send(output.data(), 1, tag);
+			}
+			return;
+		}
 
 		for (j = 0, ptr = (int)taps.size() - 1; j < taps.size() - 1; ptr++, j++) {
 			buffer[ptr] = data[j];
