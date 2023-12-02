@@ -188,19 +188,19 @@ namespace AIS {
 	// Simple model embedding some elements of a coherent model with local phase estimation
 	class ModelChallenger : public ModelFrontend {
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
+
 
 		DSP::FilterComplex FC_a, FC_b;
-		std::vector<AIS::Decoder> DEC_a, DEC_b;
-		DSP::ScatterPLL S_a, S_b;
+		DSP::Filter FR_af, FR_bf;
 
+		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
 		Demod::FM FM_af, FM_bf;
 
-		DSP::Filter FR_af, FR_bf;
-		std::vector<AIS::Decoder> DEC_af, DEC_bf;
-		DSP::Deinterleave<FLOAT32> S_af, S_bf;
+		std::vector<AIS::Decoder> DEC_a, DEC_b, DEC_af, DEC_bf;
+		DSP::ScatterPLL S_a, S_b;
 
 		DSP::Deinterleave<CFLOAT32> throttle_a, throttle_b;
+		DSP::Deinterleave<FLOAT32> S_af, S_bf;
 
 	protected:
 		int nHistory = 12;
