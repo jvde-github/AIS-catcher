@@ -68,7 +68,7 @@ namespace AIS {
 				setRxTimeUnix(t);
 		}
 
-		std::string getNMEAJSON(unsigned mode, float level, float ppm, const std::string &uid = "") const;
+		std::string getNMEAJSON(unsigned mode, float level, float ppm, const std::string& uid = "") const;
 
 		std::string getRxTime() const {
 			return Util::Convert::toTimeStr(rxtime);

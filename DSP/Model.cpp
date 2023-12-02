@@ -537,21 +537,24 @@ namespace AIS {
 
 		FC_a.setTaps(Filters::Coherent);
 		FC_b.setTaps(Filters::Coherent);
+		FR_af.setTaps(Filters::Receiver);
+		FR_bf.setTaps(Filters::Receiver);
 
 		S_a.setConnections(nSymbolsPerSample);
 		S_b.setConnections(nSymbolsPerSample);
+		S_af.setConnections(nSymbolsPerSample);
+		S_bf.setConnections(nSymbolsPerSample);
+
+		throttle_a.setConnections(1);
+		throttle_b.setConnections(1);
 
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
+		DEC_af.resize(nSymbolsPerSample);
+		DEC_bf.resize(nSymbolsPerSample);
 
-		if (!PS_EMA) {
-			CD_a.resize(nSymbolsPerSample);
-			CD_b.resize(nSymbolsPerSample);
-		}
-		else {
-			CD_EMA_a.resize(nSymbolsPerSample);
-			CD_EMA_b.resize(nSymbolsPerSample);
-		}
+		CD_EMA_a.resize(nSymbolsPerSample);
+		CD_EMA_b.resize(nSymbolsPerSample);
 
 		CGF_a.setParams(512, 187);
 		CGF_b.setParams(512, 187);
@@ -561,31 +564,42 @@ namespace AIS {
 			CGF_b.setWide(true);
 		}
 
-		*C_a >> CGF_a >> FC_a >> S_a;
-		*C_b >> CGF_b >> FC_b >> S_b;
+		*C_a >> CGF_a >> throttle_a;
+		*C_b >> CGF_b >> throttle_b;
+
+		throttle_a.out[0] >> FC_a >> S_a;
+		throttle_b.out[0] >> FC_b >> S_b;
+
+		throttle_a.out[0] >> FM_af >> FR_af >> S_af;
+		throttle_b.out[0] >> FM_bf >> FR_bf >> S_bf;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
 			DEC_a[i].setOrigin(CH1, station);
 			DEC_b[i].setOrigin(CH2, station);
+			DEC_af[i].setOrigin(CH1, station);
+			DEC_bf[i].setOrigin(CH2, station);
 
-			if (!PS_EMA) {
-				CD_a[i].setParams(nHistory, nDelay);
-				CD_b[i].setParams(nHistory, nDelay);
 
-				S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
-				S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
-			}
-			else {
-				CD_EMA_a[i].setParams(nDelay);
-				CD_EMA_b[i].setParams(nDelay);
+			CD_EMA_a[i].setParams(nDelay);
+			CD_EMA_b[i].setParams(nDelay);
 
-				S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
-				S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
-			}
+			S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
+			S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
+
+			S_af.out[i] >> DEC_af[i] >> output;
+			S_bf.out[i] >> DEC_bf[i] >> output;
+
 			for (int j = 0; j < nSymbolsPerSample; j++) {
+				DEC_af[i].DecoderMessage.Connect(DEC_a[j]);
+				DEC_bf[i].DecoderMessage.Connect(DEC_b[j]);
+				DEC_a[i].DecoderMessage.Connect(DEC_af[j]);
+				DEC_b[i].DecoderMessage.Connect(DEC_bf[j]);
+
 				if (i != j) {
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
+					DEC_af[i].DecoderMessage.Connect(DEC_af[j]);
+					DEC_bf[i].DecoderMessage.Connect(DEC_bf[j]);
 				}
 			}
 		}
@@ -676,7 +690,7 @@ namespace AIS {
 
 	Setting& ModelNMEA::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
-		//Util::Convert::toUpper(arg);
+		// Util::Convert::toUpper(arg);
 
 		if (option == "NMEA_REFRESH") {
 			nmea.setRegenerate(Util::Parse::Switch(arg));

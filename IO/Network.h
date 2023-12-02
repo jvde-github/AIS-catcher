@@ -93,7 +93,7 @@ namespace IO {
 				}
 			}
 		}
-		
+
 		void Receive(const AIS::GPS* data, int len, TAG& tag) {
 			lat = data->getLat();
 			lon = data->getLon();
