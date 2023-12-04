@@ -31,7 +31,7 @@ Edge:
 - If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) an I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation for the station location. Data is not aggregated and forwarded.
 - Addition of option `-N CONTEXT yyyy` which will store the settings in the webbrowser in `yyyy`. This will allow to separate setting storage when running multiple webclients. 
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
-- First iteration of introducing data feeds with authentication to minimize security issues with data feeds, `-u x.x.x.x y UUID u`
+- First iteration of introducing data feeds with user id to minimize security issues with data feeds, `-u x.x.x.x y UUID u`. Exploring adding HMAC. 
   
 v0.54 is the latest version and added:
 - A "Settings Menu" providing access to additional (styling) options for the webclient:
