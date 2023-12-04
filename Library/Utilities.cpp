@@ -373,6 +373,7 @@ namespace Util {
 #elif __linux__
 		std::array<char, 128> buffer;
 		std::string os;
+		/*
 		FILE* fp = popen("lsb_release -ds", "r");
 		if (fp) {
 
@@ -381,7 +382,7 @@ namespace Util {
 
 			pclose(fp);
 		}
-
+		*/
 		if (os.empty()) {
 			std::ifstream inFile("/etc/os-release");
 			std::string line;
