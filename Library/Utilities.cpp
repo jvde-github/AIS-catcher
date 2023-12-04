@@ -444,7 +444,7 @@ namespace Util {
 				}
 			}
 		}
-
+		
 		if (revision == "900021") return "Raspberry Pi A+ 1.1";
 		if (revision == "900032") return "Raspberry Pi B+ 1.2";
 		if (revision == "900092") return "Raspberry Pi Zero 1.2";
@@ -485,6 +485,8 @@ namespace Util {
 		if (revision == "c03140") return "Raspberry Pi CM4 1.0";
 		if (revision == "d03140") return "Raspberry Pi CM4 1.0";
 		if (revision == "902120") return "Raspberry Pi Zero 2 W 1.0";
+		if (revision == "c04170") return "Raspberry Pi 5";
+		if (revision == "d04170") return "Raspberry Pi 5";
 
 		return model_name;
 
