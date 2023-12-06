@@ -5995,7 +5995,7 @@
 				const latLngs = [];
 
 				for (var i = 0; i < Math.min(path.length, 250); i++) {
-					latLngs.push([path[i].lat, path[i].lon]);
+					latLngs.push(path[i]);
 				}
 
 				if (m == hover_mmsi) marker_tracks[m] = new L.polyline(latLngs, { color: settings.track_color, opacity: 0.85, weight: 2 }).addTo(map);
@@ -6047,8 +6047,8 @@
 				for (var mmsi in paths) {
 					if (paths.hasOwnProperty(mmsi)) {
 						if (mmsi in shipsDB && paths[mmsi].length > 0) {
-							shipsDB[mmsi].raw.lat = paths[mmsi][0].lat;
-							shipsDB[mmsi].raw.lon = paths[mmsi][0].lon;
+							shipsDB[mmsi].raw.lat = paths[mmsi][0][0];
+							shipsDB[mmsi].raw.lon = paths[mmsi][0][1];
 							plotTrack(mmsi);
 						}
 					}

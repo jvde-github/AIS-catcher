@@ -322,13 +322,13 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 		t = (long int)paths[ptr].signal_time;
 
 		if (isValidCoord(paths[ptr].lat, paths[ptr].lon)) {
-			content += "{\"lat\":";
+			content += "[";
 			content += std::to_string(paths[ptr].lat);
-			content += ",\"lon\":";
+			content += ",";
 			content += std::to_string(paths[ptr].lon);
 			// content += ",\"received\":";
 			// content += std::to_string(t0 - t);
-			content += "},";
+			content += "],";
 		}
 		ptr = paths[ptr].next;
 	}
