@@ -3687,8 +3687,9 @@
 
 			function setMapOpacity() {
 				map.eachLayer(function (layer) {
-					if (layer.setOpacity) {
-						layer.setOpacity(settings.dark_mode ? settings.map_opacity_dark : settings.map_opacity);
+					if (layer instanceof L.TileLayer) {
+						var opacityValue = settings.dark_mode ? settings.map_opacity_dark : settings.map_opacity;
+						layer.setOpacity(opacityValue);
 					}
 				});
 			}
@@ -3700,6 +3701,7 @@
 				map.on("baselayerchange", function (event) {
 					if (settings.dark_mode) settings.map_night = event.name;
 					else settings.map_day = event.name;
+					setMapOpacity();
 					saveSettings();
 				});
 
