@@ -2,7 +2,7 @@
 This package introduces the `AIS-catcher` command, a dual-channel AIS receiver compatible with various hardware: RTL-SDR dongles (including the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). The output is delivered as NMEA messages, which can be displayed on screen or forwarded via UDP/HTTP/TCP. AIS-catcher is a lightweight command line utility and includes a built-in web server for use on secure internal networks.
 
 <p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/56ec9726-4696-49c1-aab2-0b295c36713a.png" width="30%"/>
+<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/66547067-971a-468d-ad3e-2883dffdd581.png" width="90%"/>
 </p>
 
  A few examples of live stations are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available. By way of example, I am also sharing my own station at [aiscatcher.org](https://aiscatcher.org/southwood).
@@ -25,6 +25,7 @@ Only use this software in regions where such use is permitted.
 
 Edge:
 - New decoding model (`-m 4`) that includes a differential decoder as a backstop for receiving ships that suffer from, e.g., clock drift issues. The **reported  drift and signal level are incorrect and there is some overhead in computation time (50%-75% increase)**
+- Experimental "Show all track" option
 - Added NOAA nautical charts as overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services)). These maps and the app is not suitable for navigation.
 - I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
  dashboards for stations running AIS-catcher and link to interesting (open source) projects related to AIS and AIS-catcher.
