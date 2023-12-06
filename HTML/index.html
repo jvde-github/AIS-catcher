@@ -2455,14 +2455,15 @@
 					<li class="table-menu" onclick="downloadCSV()"><i class="cloud_download_icon"></i>Download CSV</li>
 					<li class="divider table-menu"></li>
 					<li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
-					<li class="ctx-map" onclick="deleteAllTracks()"><i class="remove_circle_outline_icon"></i>Remove all tracks</li>
+					<li class="ctx-map ctx-noalltracks" onclick="showAllTracks(); updateShipcardTrackOption();"><i class="timeline_icon"></i>Show all tracks</li>
+					<li class="ctx-map ctx-removealltracks" onclick="deleteAllTracks(); show_all_tracks=false; updateShipcardTrackOption();"><i class="remove_circle_outline_icon"></i>Remove all tracks</li>
 					<li class="ctx-map" onclick="ToggleFireworks()"><i class="explosion_icon"></i><span id="ctx_fireworks"></span></li>
 					<li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span></li>
 					<li class="divider ctx-map"></li>
 					<li class="ctx-map" onclick="toggleFading()"><i class="directions_boat_icon"></i><span id="ctx_fading"></span></li>
 					<li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span id="ctx_range"></span></li>
 					<li class="divider ctx-map"></li>
-					<li class="mmsi-map" onclick="toggleTrack(context_mmsi)"><i class="timeline_icon"></i><span id="ctx_track"></span></li>
+					<li class="mmsi-map ctx-noalltracks" onclick="toggleTrack(context_mmsi)"><i class="timeline_icon"></i><span id="ctx_track"></span></li>
 					<li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="push_pin_icon"></i>Center map on vessel</li>
 					<li class="mmsi-map" onclick="mapResetViewZoom(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
 					<li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="directions_boat_icon"></i>Show Shipcard</li>
@@ -2847,7 +2848,7 @@
 						</div>
 						<footer id="shipcard_footer" class="shipcard-footer shipcard-max-only">
 							<div title="Center map on current vessel" onclick="mapResetViewZoom(13)"><i class="zoom_in_icon"></i><span>Zoom</span></div>
-							<div title="Track of current vessel" onclick="toggleTrackCard()"><i class="timeline_icon"></i><span id="shipcard_track">Track</span></div>
+							<div id="shipcard_track_option" title="Track of current vessel" onclick="toggleTrackCard()"><i class="timeline_icon"></i><span id="shipcard_track">Track</span></div>
 						</footer>
 					</aside>
 
@@ -2872,8 +2873,9 @@
 				overlapmaps = {},
 				station = {},
 				shipsDB = {},
-				singleClickTimeout = null;
-			server_message = "";
+				singleClickTimeout = null,
+				server_message = "",
+				show_all_tracks = false;
 			var iconLabelSpan = null,
 				iconStationSpan = null,
 				evtSource = null,
@@ -3223,6 +3225,27 @@
 
 				// we might have made non-android items visible in the context menu, so hide non-android items if needed
 				updateAndroid();
+				if(show_all_tracks) {
+					document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
+    					element.style.display = 'none';
+					});
+				}
+				else {
+					document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
+    					element.style.display = 'flex';
+					});				
+				}
+
+				if(show_all_tracks || Object.keys(marker_tracks).length > 0) {
+					document.querySelectorAll('.ctx-removealltracks').forEach(function(element) {
+    					element.style.display = 'flex';
+					});
+				}
+				else {
+					document.querySelectorAll('.ctx-removealltracks').forEach(function(element) {
+    					element.style.display = 'none';
+					});				
+				}
 
 				document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
 				document.getElementById("ctx_track").innerText = context_mmsi in marker_tracks && context.includes("mmsi-map") ? "Hide Track" : "Show Track";
@@ -5914,6 +5937,7 @@
 
 			async function toggleTrackCard() {
 				toggleTrack(card_mmsi);
+
 				document.getElementById("shipcard_track").innerText = card_mmsi in marker_tracks ? "Hide Track" : "Show Track";
 			}
 
@@ -5950,6 +5974,12 @@
 				for (var m in marker_tracks) {
 					removeTrack(m);
 				}
+			}
+
+			function showAllTracks() {
+				show_all_tracks = true;
+				updateTrack();
+			
 			}
 
 			function deleteAllTracks() {
@@ -5997,11 +6027,15 @@
 			}
 
 			async function updateTrack() {
-				if (Object.keys(marker_tracks).length == 0) return true;
+				if (Object.keys(marker_tracks).length == 0 && show_all_tracks  == false) return true;
 
 				try {
-					var mmsi_str = Object.keys(marker_tracks).join(",");
-					a = await fetch("path.json?" + mmsi_str);
+					if(show_all_tracks) 
+						a = await fetch("allpath.json");
+					else {
+						var mmsi_str = Object.keys(marker_tracks).join(",");
+						a = await fetch("path.json?" + mmsi_str);
+					}
 					paths = await a.json();
 				} catch (error) {
 					console.log("Error loading path: " + error);
@@ -6020,6 +6054,15 @@
 					}
 				}
 				return true;
+			}
+
+			function updateShipcardTrackOption() {
+				if(show_all_tracks) {
+						document.getElementById("shipcard_track_option").style.display = "none";
+				}
+				else {
+					document.getElementById("shipcard_track_option").style.display = "flex";
+				}
 			}
 
 			function isShipcardMax() {

@@ -444,7 +444,7 @@ namespace Util {
 				}
 			}
 		}
-		
+
 		if (revision == "900021") return "Raspberry Pi A+ 1.1";
 		if (revision == "900032") return "Raspberry Pi B+ 1.2";
 		if (revision == "900092") return "Raspberry Pi Zero 1.2";

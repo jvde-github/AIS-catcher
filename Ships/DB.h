@@ -165,6 +165,7 @@ public:
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false);
 	std::string getPathJSON(uint32_t);
+	std::string getAllPathJSON();
 	std::string getMessage(uint32_t);
 
 	int getCount() { return count; }

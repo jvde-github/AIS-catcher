@@ -898,6 +898,11 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		content += "}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r == "/allpath.json") {
+
+		std::string content = ships.getAllPathJSON();
+		Response(c, "application/json", content, use_zlib & gzip);
+	}
 	else if (r == "/message") {
 		int mmsi = -1;
 		std::stringstream ss(a);
