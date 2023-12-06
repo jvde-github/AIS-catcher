@@ -264,6 +264,7 @@ std::string DB::getJSON(bool full) {
 	content += "],\"error\":false}\n\n";
 	return content;
 }
+
 std::string DB::getShipJSON(int mmsi) {
 	int ptr = findShip(mmsi);
 
@@ -276,6 +277,29 @@ std::string DB::getShipJSON(int mmsi) {
 	getShipJSON(ship, content, delta_time);
 	return content;
 }
+
+std::string DB::getAllPathJSON() {
+	std::string content = "{";
+
+	std::time_t tm = time(nullptr);
+	int ptr = first;
+
+	delim = "";
+	while (ptr != -1) {
+		const VesselDetail ship = ships[ptr].ship;
+		if (ship.mmsi != 0) {
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
+			if (delta_time > TIME_HISTORY) break;
+
+			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getPathJSON(ship.mmsi);
+			delim = ",";
+		}
+		ptr = ships[ptr].next;
+	}
+	content += "}\n\n";
+	return content;
+}
+
 
 std::string DB::getPathJSON(uint32_t mmsi) {
 	const std::string null_str = "null";
