@@ -25,7 +25,7 @@ Only use this software in regions where such use is permitted.
 
 Edge:
 - New decoding model (`-m 4`) that includes a differential decoder as a backstop for receiving ships that suffer from, e.g., clock drift issues. The **reported  drift and signal level are incorrect and there is some overhead in computation time (50%-75% increase)**
-- Experimental "Show all track" option
+- Experimental "Show all track" option and setting to dim maps (see screenshot above for a demonstration for both at work)
 - Added NOAA nautical charts as overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services)). These maps and the app is not suitable for navigation.
 - I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
  dashboards for stations running AIS-catcher and link to interesting (open source) projects related to AIS and AIS-catcher.
