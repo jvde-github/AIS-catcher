@@ -3700,8 +3700,11 @@
 				map.on("baselayerchange", function (event) {
 					if (settings.dark_mode) settings.map_night = event.name;
 					else settings.map_day = event.name;
-					setMapOpacity();
 					saveSettings();
+				});
+
+				map.on("overlayadd", function(event) {
+					setMapOpacity();	
 				});
 
 				map.on("mousemove", function (evt) {
