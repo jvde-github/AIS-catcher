@@ -74,6 +74,7 @@ namespace AIS {
 		Util::PassThrough<GPS> output_gps;
 
 	public:
+		virtual ~Model() {}
 		virtual void buildModel(char, char, int, bool, Device::Device* d) { device = d; }
 
 		StreamOut<Message>& Output() { return output; }

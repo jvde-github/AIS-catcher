@@ -75,7 +75,10 @@ namespace Demod {
 		int max_idx = 0, rot = 0;
 
 	public:
-		PhaseSearchEMA() { std::memset(ma, 0, nPhases * sizeof(FLOAT32)); }
+		PhaseSearchEMA() {
+			std::memset(ma, 0, sizeof(ma));
+			std::memset(bits, 0, sizeof(bits));
+		}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 		void setParams(int d) { nDelay = d; }
 		void setWeight(FLOAT32 w) { weight = w; }

@@ -47,6 +47,8 @@ class MessageStatistics {
 	float _radarB[_RADAR_BUCKETS];
 
 public:
+	MessageStatistics() { Clear(); }
+
 	int getCount() { return _count; }
 	void setCutoff(int cutoff) { _LONG_RANGE_CUTOFF = cutoff; }
 	void clearVessels() { _vessels = 0; }

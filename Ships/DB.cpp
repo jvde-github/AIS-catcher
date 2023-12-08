@@ -382,31 +382,31 @@ void DB::moveShipToFront(int ptr) {
 }
 
 void DB::addToPath(int ptr) {
-	
+
 	int idx = ships[ptr].ship.path_ptr;
 	float lat = ships[ptr].ship.lat;
 	float lon = ships[ptr].ship.lon;
 
-	if(idx != -1) {
-			// path exists and ship did not move
-			if (paths[idx].lat == lat && paths[idx].lon == lon) {
-					paths[idx].signal_time = ships[ptr].ship.last_signal;
-					return;
-			}
-			// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update path point
-			if (paths[idx].next != -1 && paths[idx].mmsi == ships[ptr].ship.mmsi) {
-					float lat_prev = paths[paths[idx].next].lat;
-					float lon_prev = paths[paths[idx].next].lon;
+	if (idx != -1) {
+		// path exists and ship did not move
+		if (paths[idx].lat == lat && paths[idx].lon == lon) {
+			paths[idx].signal_time = ships[ptr].ship.last_signal;
+			return;
+		}
+		// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update path point
+		if (paths[idx].next != -1 && paths[idx].mmsi == ships[ptr].ship.mmsi) {
+			float lat_prev = paths[paths[idx].next].lat;
+			float lon_prev = paths[paths[idx].next].lon;
 
-					float d = (lat_prev - lat) * (lat_prev - lat) + (lon_prev - lon) * (lon_prev - lon);
+			float d = (lat_prev - lat) * (lat_prev - lat) + (lon_prev - lon) * (lon_prev - lon);
 
-					if (d < 0.000001) {
-							paths[idx].lat = lat;
-							paths[idx].lon = lon;
-							paths[idx].signal_time = ships[ptr].ship.last_signal;
-							return;
-					}
+			if (d < 0.000001) {
+				paths[idx].lat = lat;
+				paths[idx].lon = lon;
+				paths[idx].signal_time = ships[ptr].ship.last_signal;
+				return;
 			}
+		}
 	}
 
 	// create new path point
