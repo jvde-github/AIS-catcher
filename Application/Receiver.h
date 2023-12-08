@@ -279,7 +279,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 	std::thread backup_thread;
 
 	void BackupService();
-	class Counter : public StreamIn<AIS::Message> {
+	class Counter : public StreamIn<JSON::JSON> {
 		MessageStatistics stat;
 
 	public:
@@ -289,7 +289,7 @@ class WebClient : public IO::HTTPServer, public Setting {
 		bool Load(std::ifstream& file) { return stat.Load(file); }
 		bool Save(std::ofstream& file) { return stat.Save(file); }
 
-		void Receive(const AIS::Message* msg, int len, TAG& tag);
+		void Receive(const JSON::JSON* msg, int len, TAG& tag);
 
 		std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
 	} counter, counter_session;
