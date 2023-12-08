@@ -525,8 +525,8 @@ IO::TCPlistenerStreamer& OutputTCPlistener::add(const std::string& port) {
 
 // ------------------------
 
-void WebClient::Counter::Receive(const AIS::Message* msg, int len, TAG& tag) {
-	stat.Add(msg[0], tag);
+void WebClient::Counter::Receive(const JSON::JSON* msg, int len, TAG& tag) {
+	stat.Add(*((AIS::Message*)msg[0].binary), tag);
 }
 
 bool WebClient::Save() {
@@ -625,8 +625,7 @@ void WebClient::connect(Receiver& r) {
 			model += r.Model(j)->getName() + "<br>";
 
 			// connect all the statistical counters
-			r.Output(j) >> counter;
-			r.Output(j) >> counter_session;
+
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&ships);
@@ -643,8 +642,6 @@ void WebClient::connect(Receiver& r) {
 void WebClient::connect(AIS::Model& m, Connection<JSON::JSON>& json, Device::Device& device) {
 
 	if (m.Output().out.canConnect(groups_in)) {
-		m.Output() >> counter;
-		m.Output() >> counter_session;
 
 		json.Connect((StreamIn<JSON::JSON>*)&ships);
 		device >> raw_counter;
@@ -684,6 +681,9 @@ void WebClient::start() {
 	ships >> hist_hour;
 	ships >> hist_minute;
 	ships >> hist_second;
+
+	ships >> counter;
+	ships >> counter_session;
 
 	if (firstport && lastport) {
 		for (port = firstport; port <= lastport; port++)
