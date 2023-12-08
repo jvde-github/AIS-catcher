@@ -93,7 +93,7 @@ struct TAG {
 	float distance = -1;
 	float lat = 0, lon = 0;
 	bool validated = false;
-	std::time_t previous_signal;
+	std::time_t previous_signal = (std::time_t)0;
 
 	void clear() {
 		group = GROUP_OUT_UNDEFINED;
@@ -102,7 +102,10 @@ struct TAG {
 		ppm = 0;
 		lat = 0;
 		lon = 0;
-		;
+		distance = -1;
+		angle = -1;
+		validated = false;
+		previous_signal = (std::time_t)0;
 	};
 };
 
