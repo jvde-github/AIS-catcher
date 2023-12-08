@@ -93,6 +93,10 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 		std::string* msg = NULL;
 		uint64_t last_group = GROUP_OUT_UNDEFINED;
 		uint64_t group_mask = 0;
+
+		~VesselDetail() {
+			if (msg != NULL) delete msg;
+		}
 	};
 
 	struct PathList {

@@ -84,7 +84,7 @@ std::string DB::getJSONcompact(bool full) {
 
 	delim = "";
 	while (ptr != -1) {
-		const VesselDetail ship = ships[ptr].ship;
+		const VesselDetail& ship = ships[ptr].ship;
 		if (ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (!full && delta_time > TIME_HISTORY) break;
@@ -250,7 +250,7 @@ std::string DB::getJSON(bool full) {
 
 	delim = "";
 	while (ptr != -1) {
-		const VesselDetail ship = ships[ptr].ship;
+		const VesselDetail& ship = ships[ptr].ship;
 		if (ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (!full && delta_time > TIME_HISTORY) break;
@@ -270,7 +270,7 @@ std::string DB::getShipJSON(int mmsi) {
 
 	if (ptr == -1) return "{}";
 
-	const VesselDetail ship = ships[ptr].ship;
+	const VesselDetail& ship = ships[ptr].ship;
 	long int delta_time = (long int)time(nullptr) - (long int)ship.last_signal;
 
 	std::string content;
@@ -286,7 +286,7 @@ std::string DB::getAllPathJSON() {
 
 	delim = "";
 	while (ptr != -1) {
-		const VesselDetail ship = ships[ptr].ship;
+		const VesselDetail& ship = ships[ptr].ship;
 		if (ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (delta_time > TIME_HISTORY) break;
@@ -355,8 +355,6 @@ int DB::findShip(uint32_t mmsi) {
 int DB::createShip() {
 	int ptr = last;
 	count = MIN(count + 1, N);
-	if (ships[ptr].ship.msg)
-		delete ships[ptr].ship.msg;
 
 	ships[ptr].ship = VesselDetail();
 
