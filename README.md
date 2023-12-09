@@ -3,7 +3,7 @@
 This package introduces the `AIS-catcher` command, a dual-channel AIS receiver compatible with various Software Defined Radios (SDR): RTL-SDR dongles (including the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). The output is delivered as NMEA messages, which can be displayed on screen or forwarded via UDP/HTTP/TCP. AIS-catcher is a lightweight command line utility and includes a built-in web server for internal use on secure networks.
 
 <p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/66547067-971a-468d-ad3e-2883dffdd581.png" width="90%"/>
+<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9fd27b96-e37a-4f92-869c-b0ba782c12fa.png" width="90%"/>
 </p>
 
  A few examples of live stations are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available. By way of example, I am also sharing my own station at [aiscatcher.org](https://aiscatcher.org/southwood).
