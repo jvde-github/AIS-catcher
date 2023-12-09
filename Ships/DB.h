@@ -43,6 +43,56 @@ const int ETA_MINUTE_UNDEFINED = 60;
 const int IMO_UNDEFINED = 0;
 const int ANGLE_UNDEFINED = -1;
 
+struct PathPoint {
+	float lat, lon;
+	uint32_t mmsi = 0;
+	std::time_t signal_time = (std::time_t)0;
+	int next = 0;
+};
+
+struct Ship {
+	int prev, next;
+	uint32_t mmsi;
+	int count, msg_type, channels, shiptype, heading, status, virtual_aid, path_ptr;
+	int to_port, to_bow, to_starboard, to_stern, IMO, angle, validated;
+	char month, day, hour, minute;
+	float lat, lon, ppm, level, speed, cog, draught, distance;
+	std::time_t last_signal;
+	bool approximate;
+	char shipname[21], destination[21], callsign[8], country_code[3];
+	std::string msg;
+	uint64_t last_group, group_mask;
+
+	void reset() {
+		mmsi = count = msg_type = channels = shiptype = validated = virtual_aid = group_mask = 0;
+		path_ptr = -1;
+
+		heading = HEADING_UNDEFINED;
+		status = STATUS_UNDEFINED;
+		to_port = to_bow = to_starboard = to_stern = DIMENSION_UNDEFINED;
+		IMO = IMO_UNDEFINED;
+		angle = ANGLE_UNDEFINED;
+		month = ETA_MONTH_UNDEFINED;
+		day = ETA_DAY_UNDEFINED;
+		hour = ETA_HOUR_UNDEFINED;
+		minute = ETA_MINUTE_UNDEFINED;
+		lat = LAT_UNDEFINED;
+		lon = LON_UNDEFINED;
+		ppm = level = speed = draught = distance = 0;
+		cog = COG_UNDEFINED;
+		last_signal = {};
+		approximate = false;
+
+		memset(shipname, 0, sizeof(shipname));
+		memset(destination, 0, sizeof(destination));
+		memset(callsign, 0, sizeof(callsign));
+		memset(country_code, 0, sizeof(country_code));
+		last_group = GROUP_OUT_UNDEFINED;
+
+		msg.clear();
+	}
+};
+
 class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public StreamOut<JSON::JSON> {
 
 	JSON::StringBuilder builder;
@@ -67,75 +117,16 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	const int MSG_TYPE_ATON = 4;
 	const int MSG_TYPE_SAR = 5;
 
-	struct PathList {
-		float lat, lon;
-		uint32_t mmsi = 0;
-		std::time_t signal_time = (std::time_t)0;
-		int next = 0;
-	};
-
-	struct Ship {
-		int prev, next;
-		uint32_t mmsi;
-		int count, msg_type, channels, shiptype, heading, status, virtual_aid, path_ptr;
-		int to_port, to_bow, to_starboard, to_stern, IMO, angle, validated;
-		char month, day, hour, minute;
-		float lat, lon, ppm, level, speed, cog, draught, distance;
-		std::time_t last_signal;
-		bool approximate;
-		char shipname[21], destination[21], callsign[8], country_code[3];
-		std::string msg;
-		uint64_t last_group, group_mask;
-
-		void reset() {
-			mmsi = count = msg_type = channels = shiptype = validated = virtual_aid = 0;
-			path_ptr = -1;
-
-			heading = HEADING_UNDEFINED;
-			status = STATUS_UNDEFINED;
-			to_port = to_bow = to_starboard = to_stern = DIMENSION_UNDEFINED;
-			IMO = IMO_UNDEFINED;
-			angle = ANGLE_UNDEFINED;
-			month = ETA_MONTH_UNDEFINED;
-			day = ETA_DAY_UNDEFINED;
-			hour = ETA_HOUR_UNDEFINED;
-			minute = ETA_MINUTE_UNDEFINED;
-			lat = LAT_UNDEFINED;
-			lon = LON_UNDEFINED;
-			ppm = level = speed = draught = distance = 0;
-			cog = COG_UNDEFINED;
-			last_signal = {};
-			approximate = false;
-
-			memset(shipname, 0, sizeof(shipname));
-			memset(destination, 0, sizeof(destination));
-			memset(callsign, 0, sizeof(callsign));
-			memset(country_code, 0, sizeof(country_code));
-			last_group = GROUP_OUT_UNDEFINED;
-			group_mask = 0;
-			msg.clear();
-		}
-	};
-
 	std::vector<Ship> ships;
-	std::vector<PathList> paths;
+	std::vector<PathPoint> paths;
 
 	bool isValidCoord(float lat, float lon);
 	const float EarthRadius = 6371.0f;			// Earth radius in kilometers
 	const float NauticalMilePerKm = 0.5399568f; // Conversion factor
 
-	// Converts degrees to radians
-	float deg2rad(float deg) {
-		return deg * PI / 180.0f;
-	}
+	float deg2rad(float deg) { return deg * PI / 180.0f; }
+	int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
 
-	// Converts radians to degrees
-	int rad2deg(float rad) {
-		// return (360 + rad * 180 / PI) % 360;
-		return (int)(360 + rad * 180 / PI) % 360;
-	}
-
-	// int setMmsiType(int, int);
 	int findShip(uint32_t mmsi);
 	int createShip();
 	void moveShipToFront(int);

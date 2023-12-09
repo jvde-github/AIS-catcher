@@ -35,6 +35,7 @@ void DB::setup() {
 	first = N - 1;
 	last = 0;
 	count = 0;
+	
 	// set up linked list
 	for (int i = 0; i < N; i++) {
 		ships[i].next = i - 1;
@@ -65,7 +66,7 @@ void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, f
 	bearing = rad2deg(atan2(y, x));
 }
 
-// add member to get JSON in form of array with values and keys seperately
+// add member to get JSON in form of array with values and keys separately
 std::string DB::getJSONcompact(bool full) {
 	const std::string null_str = "null";
 	const std::string comma = ",";
@@ -108,7 +109,6 @@ std::string DB::getJSONcompact(bool full) {
 				content += null_str + comma;
 			}
 
-			// content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
 			content += std::to_string(ship.level) + comma;
 			content += std::to_string(ship.count) + comma;
 			content += std::to_string(ship.ppm) + comma;
@@ -265,7 +265,6 @@ std::string DB::getJSON(bool full) {
 
 std::string DB::getShipJSON(int mmsi) {
 	int ptr = findShip(mmsi);
-
 	if (ptr == -1) return "{}";
 
 	const Ship& ship = ships[ptr];
@@ -303,10 +302,7 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 	const std::string null_str = "null";
 	std::string str;
 
-	int idx = -1;
-	for (int i = 0; i < N && idx == -1; i++)
-		if (ships[i].mmsi == mmsi) idx = i;
-
+	int idx = findShip(mmsi);
 	if (idx == -1) return "[]";
 
 	content = "[";
@@ -324,8 +320,6 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 			content += std::to_string(paths[ptr].lat);
 			content += ",";
 			content += std::to_string(paths[ptr].lon);
-			// content += ",\"received\":";
-			// content += std::to_string(t0 - t);
 			content += "],";
 		}
 		ptr = paths[ptr].next;
