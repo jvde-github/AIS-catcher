@@ -5920,7 +5920,7 @@
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(z, map.getMaxZoom()));
 				} else if(marker_focus != null) 
-m					ap.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
+m					map.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
 
 				shipcardMinIfMaxonMobile();
 			}
