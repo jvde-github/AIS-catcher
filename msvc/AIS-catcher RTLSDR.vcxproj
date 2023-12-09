@@ -22,6 +22,7 @@
     <ClCompile Include="..\Application\Main.cpp" />
     <ClCompile Include="..\Application\Config.cpp" />
     <ClCompile Include="..\Application\Receiver.cpp" />
+    <ClCompile Include="..\Application\WebClient.cpp" />
     <ClCompile Include="..\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Device\AIRSPYHF.cpp" />
     <ClCompile Include="..\Device\FileRAW.cpp" />
@@ -58,6 +59,7 @@
   <ItemGroup>
     <ClInclude Include="..\Application\AIS-catcher.h" />
     <ClInclude Include="..\Application\Receiver.h" />
+    <ClInclude Include="..\Application\WebClient.h" />
     <ClInclude Include="..\Application\Config.h" />
     <ClInclude Include="..\Device\AIRSPY.h" />
     <ClInclude Include="..\Device\AIRSPYHF.h" />

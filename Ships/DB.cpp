@@ -35,7 +35,7 @@ void DB::setup() {
 	first = N - 1;
 	last = 0;
 	count = 0;
-	
+
 	// set up linked list
 	for (int i = 0; i < N; i++) {
 		ships[i].next = i - 1;

@@ -27,6 +27,7 @@
 #include "JSON/JSON.h"
 #include "JSON/Parser.h"
 #include "JSON/StringBuilder.h"
+#include "WebClient.h"
 
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
