@@ -27,10 +27,10 @@ v0.55 is the latest version and introduces the following:
 - Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services)). These maps and the applications are not suitable for navigation (just to reiterate that).
 - I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
  dashboards for stations running AIS-catcher and links to interesting (open-source) projects related to AIS and AIS-catcher.
-- If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) and I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation for the station location. Data is not aggregated and forwarded.
+- If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) and I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation of the station location. Data is not aggregated and forwarded.
 - Addition of option `-N CONTEXT yyyy` which will store the settings in the web browser in `yyyy`. This will allow to separate setting storage when running multiple web clients. 
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
-- Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions we are exploring adding HMAC authentication. 
+- Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions, we are exploring adding HMAC authentication. 
   
 v0.54 is the previous version:
 - A "Settings Menu" providing access to additional (styling) options for the web client:
@@ -144,7 +144,7 @@ For RTL-SDR devices performance can be sensitive to the device settings. In gene
 ```console
 AIS-catcher -gr RTLAGC on TUNER auto -a 192K
 ```
-It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial so it is worthwhile to try with and without this filter. To find the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at a time, e.g. switch RTLAGC ``on`` or ``off``, set the TUNER to ``auto`` or try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
+It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial so it is worthwhile to try with and without this filter. Finding the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at a time, e.g. switch RTLAGC ``on`` or ``off``, set the TUNER to ``auto`` or try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
 AIS-catcher also supports the 18 Euro RPI Zero W. However, the hardware might not keep up with the high data flow. This can be resolved by activating **fast downsampling** via:
 ```console
@@ -243,11 +243,11 @@ The Plot section contains several visualizations to assess the performance of th
 ```console
 AIS-catcher -N 8100 FILE stat.bin BACKUP 10
 ```
-This will back up the plots when the program closes and every 10 minutes in a file `stat.bin`. Minimum backup interval is 5 minutes.
+This will back up the plots when the program closes and every 10 minutes in a file `stat.bin`. The minimum backup interval is 5 minutes.
 
 #### Custom plugins and styles...
 
-To give the user the option to tweak the look-and-feel and functionality of the webclient and/or modify for example the color scheme or regional preferences, the program provides the option to inject custom plugins (JavaScript) and CSS in the website, with a command like:
+To give the user the option to tweak the look-and-feel and functionality of the web client and/or modify for example the color scheme or regional preferences, the program provides the option to inject custom plugins (JavaScript) and CSS into the website, with a command like:
 ```console
 AIS-catcher -N 8100 PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
 ```
@@ -255,7 +255,7 @@ You can also include all plugin files from a specific directory using the comman
 ```console
 AIS-catcher -N 8100 PLUGIN_DIR /usr/share/aiscatcher/plugins
 ```
-Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and CSS style plugins. The repository includes a few example plugins that demonstrate how to add additional maps or cater to regional preferences. Examples of plugins can be found in [another](https://github.com/jvde-github/AIS-Catcher-PLUGINS) Github repository.
+Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and CSS style plugins. The repository includes a few example plugins that demonstrate how to add additional maps or cater to regional preferences. Examples of plugins can be found in [another](https://github.com/jvde-github/AIS-Catcher-PLUGINS) GitHub repository.
 
 #### Offline Web client
 There is an option to run the web client without relying on online libraries. This facilitates using the web interface whilst traveling without an internet connection. The steps are simple. First, go to your home directory (say `/home/jasper`) and clone the necessary offline web assets:
@@ -279,7 +279,7 @@ For more information on how to configure Prometheus and Grafana to get an initia
 
 ### Posting messages over HTTP
 
-Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example, [APRS.fi](https://aprs.fi). As per version 0.29 AIS-catcher can do this directly via the ``-H`` switch. For example:
+Some cloud services collecting AIS data prefer messages to be periodically posted via the HTTP protocol, for example, [APRS.fi](https://aprs.fi). As per version 0.29, AIS-catcher can do this directly via the ``-H`` switch. For example:
 ```console
 AIS-catcher -r posterholt.raw -v 60 -H http://localhost:8000 INTERVAL 10 ID MyStation
 ```
@@ -389,7 +389,7 @@ Message type 8 is region-specific. If you encounter any messages in the wild tha
 
 ### Input from file and stdin
 
-AIS-catcher can read from file with the switch ``-r`` followed by the filename and with a ``.`` or ``stdin`` it reads from stdin, e.g. ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
+AIS-catcher can read from a file with the switch ``-r`` followed by the filename and with a ``.`` or ``stdin`` it reads from stdin, e.g. ``-r .``. The following command records a signal with ```rtl_sdr``` at a sampling rate of 288K Hz and pipes it to AIS-catcher for decoding:
 ```console
 rtl_sdr -s 288K -f 162M  - | AIS-catcher -r . -s 288K -v
 ```
@@ -411,7 +411,7 @@ In a similar fashion `-c X` will decode one channel. This is only useful in some
 
 ### Configuration file
 
-As per version 0.41 AIS-catcher can be mostly configured via a configuration file in JSON format,
+As per version 0.41, AIS-catcher can be mostly configured via a configuration file in JSON format,
 ```console
 AIS-catcher -C config.json
 ```
@@ -557,7 +557,7 @@ If you want to run multiple receivers simultaneously, this is possible as well b
   ]
 }
 ```
-If there is only one RTL-SDR is connected, only `input` set to `rtlsdr` is sufficient. Similarly, if there is only one device connected with serial `ais`, we only have to specify `serial`. 
+If there is only one RTL-SDR connected, only `input` set to `rtlsdr` is sufficient. Similarly, if there is only one device connected with serial `ais`, we only have to specify `serial`. 
 
 ### NMEA input
 
@@ -569,25 +569,25 @@ which produces
 ```json
 {"class":"AIS","device":"AIS-catcher","scaled":true,"channel":"B","nmea":["!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78"],"type":3,"repeat":0,"mmsi":477213600,"status":5,"status_text":"Moored","turn":0,"speed":0.000000,"accuracy":true,"lon":126.605469,"lat":37.460617,"course":39.000000,"heading":252,"second":12,"maneuver":0,"raim":false,"radio":0}
 ```
-When piping NMEA text lines into AIS-catcher, use format ``TXT`` which ensures that the program immediately processes the incoming characters and it will not buffer them first. The NMEA decoder can be activated with the switch `-m 5` but setting the input format to TXT will automatically activate this decoder. 
+When piping NMEA text lines into AIS-catcher, use format ``TXT`` which ensures that the program immediately processes the incoming characters and will not buffer them first. The NMEA decoder can be activated with the switch `-m 5` but setting the input format to TXT will automatically activate this decoder. 
 
 This functionality opens a few doors. For example, you can use AIS-catcher to read and forward messages from a dAISy Hat (simply read from the file ``cat /dev/serial0`` on Linux) or process the data from Norwegian coastal traffic offered via a TCP server, like this:  
 ```console
 netcat  153.44.253.27  5631 | AIS-catcher -r txt . -o 5
 ```
 
-For input via TCP you can skip the `netcat` command and directly read the input into the program as follows:
+For input via TCP, you can skip the `netcat` command and directly read the input into the program as follows:
 ```console
 AIS-catcher -t txt 153.44.253.27 5631
 ```
-Again, the `FORMAT txt` option switches of the buffering and automatically selects the NMEA decoder.
+Again, the `FORMAT txt` option switches off the buffering and automatically selects the NMEA decoder.
 
 Finally, you can also receive NMEA input via a built-in UDP server:
 ```console
 AIS-catcher -x 192.168.1.235 4002
 ```
 
-The functionality to read NMEA lines from text files has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines  against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only available switches for this decoder are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which force AIS-catcher to, respectively, recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
+The functionality to read NMEA lines from text files has been used to validate AIS-catcher JSON output on a [file](https://www.aishub.net/ais-dispatcher) with 80K+ lines against [pyais](https://pypi.org/project/pyais/) and [gpsdecode](https://gpsd.io/gpsdecode.html). Only available switches for this decoder are ``-go NMEA_REFRESH`` and ``-go CRC_CHECK`` which force AIS-catcher to, respectively, recalculate the NMEA lines if ``on`` (default ``off``) and ignore messages with incorrect CRC if ``on`` (default ``off``). Example: 
 ```console
 echo '$AIVDM,1,1,,,3776k`5000a3SLPEKnDQQWpH0000,0*79' | AIS-catcher -r txt . -n -go nmea_refresh on crc_check off
 ```
@@ -619,7 +619,7 @@ or from a serial device:
 ```console
 AIS-catcher -e 38400 /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox
 ````
-The web client has the options `-N use_gps on/off` and `-N own_mmsi xxxxx`. The first enables/disables the use of GPS NMEA input as location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own mmsi will be highlighted on the web client map.
+The web client has the options `-N use_gps on/off` and `-N own_mmsi xxxxx`. The first enables/disables the use of GPS NMEA input as the location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own MMSI will be highlighted on the web client map.
 
 ### Multiple device input
 
@@ -633,11 +633,11 @@ These functions allow AIS-catcher to receive input from an AIS receiver over UDP
 AIS-catcher -e 38400 /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_7_-_GPS_GNSS_Receiver-if00 -x 192.168.1.235 4002 -N 8100 share_loc on
 ```
 The first receiver (`-e ...`) reads from a GPS device that is connected and emits NMEA lines. The second receiver (`-x`) reads AIS NMEA lines at port 4002 coming from another instance of AIS-catcher. The station is now plotted on the map with the location as provided
-by the GPS coordinates. The web page has an option to fix the center of the map on the location of the receiving station (right click on the staion icon on the map).
+by the GPS coordinates. The web page has an option to fix the center of the map on the location of the receiving station (right-click on the station icon on the map).
 
 ### Writing AIS messages to a Postgres Database
 
-As per full release `v0.45` there is functionality to write messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
+As per full release `v0.45`, there is functionality to write messages to a database (PostgreSQL). The setup is fairly flexible and can be tailored to the particular needs. First create an empty PostgreSQL database, e.g on an Ubuntu distribution (this might be different on your system):
 ```console
 sudo -u postgres createdb ais
 ```
@@ -695,11 +695,11 @@ Resulting in 38 messages and the ```-b``` switch prints the timing used for deco
 ```
 [AIS engine v0.31]	: 17312.1 ms
 ```
-Adding the ```-F``` switch yielded the same number of messages but timing is now:
+Adding the ```-F``` switch yielded the same number of messages but the timing is now:
 ```
 [AIS engine (speed optimized) v0.31]	: 7722.32 ms
 ```
-On a RPI Zero W this will bring down CPU load to ~40% and avoid buffer overruns.
+On an RPI Zero W this will bring down CPU load to ~40% and avoid buffer overruns.
 
 ### Connecting to GNU Radio via ZMQ
 
