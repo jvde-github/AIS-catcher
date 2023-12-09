@@ -111,7 +111,7 @@ namespace TCP {
 		}
 
 		int findFreeClient();
-
+		int numberOfClients();
 		void acceptClients();
 		void readClients();
 		void writeClients();
