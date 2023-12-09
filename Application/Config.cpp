@@ -44,7 +44,7 @@ void Config::setServerfromJSON(const JSON::Value& pd) {
 	if (pd.isArray()) {
 		for (const auto& v : pd.getArray()) {
 			if (!isActiveObject(v)) continue;
-			_server.push_back(std::unique_ptr<WebClient>(new WebClient()));
+			_server.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
 			setSettingsFromJSON(v, *_server.back());
 			_receivers.back()->setTags("DTM");
 			_server.back()->active() = true;
@@ -53,7 +53,7 @@ void Config::setServerfromJSON(const JSON::Value& pd) {
 	else {
 		if (!isActiveObject(pd)) return;
 
-		_server.push_back(std::unique_ptr<WebClient>(new WebClient()));
+		_server.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
 		setSettingsFromJSON(pd, *_server.back());
 		_receivers.back()->setTags("DTM");
 		_server.back()->active() = true;

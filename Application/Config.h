@@ -27,6 +27,7 @@
 #include "JSON/JSON.h"
 #include "JSON/Parser.h"
 #include "JSON/StringBuilder.h"
+#include "WebViewer.h"
 
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
@@ -48,7 +49,7 @@ class Config {
 	OutputUDP& _udp;
 	OutputTCP& _tcp;
 	OutputTCPlistener& _tcp_server;
-	std::vector<std::unique_ptr<WebClient>>& _server;
+	std::vector<std::unique_ptr<WebViewer>>& _server;
 
 	int _nrec;
 
@@ -64,7 +65,7 @@ class Config {
 	void setReceiverFromArray(const JSON::Property& pd);
 
 public:
-	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, OutputTCPlistener& tl, std::vector<std::unique_ptr<WebClient>>& v) : _receivers(r), _nrec(nr), _screen(s), _http(h), _server(v), _udp(u), _tcp(t), _tcp_server(tl){};
+	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, OutputTCPlistener& tl, std::vector<std::unique_ptr<WebViewer>>& v) : _receivers(r), _nrec(nr), _screen(s), _http(h), _server(v), _udp(u), _tcp(t), _tcp_server(tl){};
 
 	void read(std::string& file_config);
 	void set(const std::string& str);

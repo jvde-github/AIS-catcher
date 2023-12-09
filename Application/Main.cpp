@@ -24,6 +24,7 @@
 #include "AIS-catcher.h"
 
 #include "Receiver.h"
+#include "WebViewer.h"
 #include "Config.h"
 
 #include "JSON/JSON.h"
@@ -220,7 +221,7 @@ int main(int argc, char* argv[]) {
 	OutputTCP tcp;
 	OutputDBMS db;
 	std::vector<OutputStatistics> stat;
-	std::vector<std::unique_ptr<WebClient>> servers;
+	std::vector<std::unique_ptr<WebViewer>> servers;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	int timeout = 0, nrec = 0;
@@ -280,12 +281,12 @@ int main(int argc, char* argv[]) {
 			case 'N':
 				Assert(count > 0, param, "requires at least one parameter");
 				if (servers.size() == 0)
-					servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
+					servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
 
 				if (count % 2 == 1) {
 					// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
 					if (servers.back()->isPortSet())
-						servers.push_back(std::unique_ptr<WebClient>(new WebClient()));
+						servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
 					servers.back()->Set("PORT", arg1);
 				}
 				servers.back()->active() = true;
