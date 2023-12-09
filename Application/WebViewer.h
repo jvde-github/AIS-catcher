@@ -104,7 +104,7 @@ struct RAWcounter : public StreamIn<RAW> {
 	void Reset() { received = 0; }
 };
 
-class WebClient : public IO::HTTPServer, public Setting {
+class WebViewer : public IO::HTTPServer, public Setting {
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
 
 	int port = 0;
@@ -155,14 +155,14 @@ class WebClient : public IO::HTTPServer, public Setting {
 	void stopThread();
 
 public:
-	WebClient() {
+	WebViewer() {
 		os.clear();
 		JSON::StringBuilder::stringify(Util::Helper::getOS(), os);
 		hardware.clear();
 		JSON::StringBuilder::stringify(Util::Helper::getHardware(), hardware);
 	}
 
-	~WebClient() { stopThread(); }
+	~WebViewer() { stopThread(); }
 
 	bool& active() { return run; }
 	void connect(Receiver& r);

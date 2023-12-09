@@ -15,10 +15,9 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "WebClient.h"
-#include "Utilities.h"
+#include "WebViewer.h"
 
-bool WebClient::Save() {
+bool WebViewer::Save() {
 	std::cerr << "Server: writing statistics to file " << filename << std::endl;
 	try {
 		std::ofstream infile(filename, std::ios::binary);
@@ -37,7 +36,7 @@ bool WebClient::Save() {
 	return true;
 }
 
-void WebClient::Clear() {
+void WebViewer::Clear() {
 	counter.Clear();
 	counter_session.Clear();
 
@@ -47,7 +46,7 @@ void WebClient::Clear() {
 	hist_day.Clear();
 }
 
-bool WebClient::Load() {
+bool WebViewer::Load() {
 
 	if (filename.empty()) return false;
 
@@ -72,7 +71,7 @@ bool WebClient::Load() {
 	return true;
 }
 
-void WebClient::BackupService() {
+void WebViewer::BackupService() {
 
 	try {
 		std::cerr << "Server: starting backup service every " << backup_interval << " minutes." << std::endl;
@@ -96,7 +95,7 @@ void WebClient::BackupService() {
 	std::cerr << "Server: stopping backup service." << std::endl;
 }
 
-void WebClient::connect(Receiver& r) {
+void WebViewer::connect(Receiver& r) {
 
 	bool rec_details = false;
 
@@ -128,7 +127,7 @@ void WebClient::connect(Receiver& r) {
 		std::cerr << "Web Client: not connected to the output of any model." << std::endl;
 }
 
-void WebClient::connect(AIS::Model& m, Connection<JSON::JSON>& json, Device::Device& device) {
+void WebViewer::connect(AIS::Model& m, Connection<JSON::JSON>& json, Device::Device& device) {
 
 	if (m.Output().out.canConnect(groups_in)) {
 
@@ -141,7 +140,7 @@ void WebClient::connect(AIS::Model& m, Connection<JSON::JSON>& json, Device::Dev
 	}
 }
 
-void WebClient::Reset() {
+void WebViewer::Reset() {
 	counter_session.Clear();
 	hist_second.Clear();
 	hist_minute.Clear();
@@ -153,7 +152,7 @@ void WebClient::Reset() {
 	time_start = time(nullptr);
 }
 
-void WebClient::start() {
+void WebViewer::start() {
 	ships.setup();
 
 	if (filename.empty())
@@ -194,13 +193,13 @@ void WebClient::start() {
 		if (filename.empty())
 			throw std::runtime_error("Server: backup of statistics requested without providing filename.");
 
-		backup_thread = std::thread(&WebClient::BackupService, this);
+		backup_thread = std::thread(&WebViewer::BackupService, this);
 		backup_thread.detach();
 		thread_running = true;
 	}
 }
 
-void WebClient::stopThread() {
+void WebViewer::stopThread() {
 	if (thread_running) {
 		std::unique_lock<std::mutex> lock(m);
 
@@ -210,7 +209,7 @@ void WebClient::stopThread() {
 	}
 }
 
-void WebClient::close() {
+void WebViewer::close() {
 
 	stopThread();
 
@@ -223,7 +222,7 @@ void WebClient::close() {
 #include "HTML/HTML_local.cpp"
 #include "HTML/favicon.cpp"
 
-void WebClient::Request(TCP::ServerConnection& c, const std::string& response, bool gzip) {
+void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, bool gzip) {
 
 	std::string r;
 	std::string a;
@@ -431,7 +430,7 @@ void WebClient::Request(TCP::ServerConnection& c, const std::string& response, b
 		HTTPServer::Request(c, r, false);
 }
 
-Setting& WebClient::Set(std::string option, std::string arg) {
+Setting& WebViewer::Set(std::string option, std::string arg) {
 	Util::Convert::toUpper(option);
 
 	if (option == "PORT") {
