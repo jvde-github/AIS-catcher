@@ -5909,8 +5909,8 @@
 				if (m && m in shipsDB) {
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
-				} 
-				else if(marker_focus != null) 
+				}
+				else if(marker_focus != null)
 					map.setView(marker_focus.getLatLng(), Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
 				shipcardMinIfMaxonMobile();
 			}
@@ -5920,7 +5920,7 @@
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(z, map.getMaxZoom()));
 				} else if(marker_focus != null) 
-m					map.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
+					map.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
 
 				shipcardMinIfMaxonMobile();
 			}
