@@ -30,7 +30,9 @@ void DB::setup() {
 	}
 
 	ships.resize(N);
+	std::memset(ships.data(), 0, N * sizeof(ShipList));
 	paths.resize(M);
+	std::memset(paths.data(), 0, M * sizeof(PathList));
 
 	first = N - 1;
 	last = 0;
@@ -65,7 +67,7 @@ void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, f
 	bearing = rad2deg(atan2(y, x));
 }
 
-// add member to get JSON in form of array with values and keys separately
+// add member to get JSON in form of array with values and keys seperately
 std::string DB::getJSONcompact(bool full) {
 	const std::string null_str = "null";
 	const std::string comma = ",";
@@ -82,7 +84,7 @@ std::string DB::getJSONcompact(bool full) {
 
 	delim = "";
 	while (ptr != -1) {
-		const Ship& ship = ships[ptr];
+		const VesselDetail& ship = ships[ptr].ship;
 		if (ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (!full && delta_time > TIME_HISTORY) break;
@@ -162,7 +164,7 @@ std::string DB::getJSONcompact(bool full) {
 	return content;
 }
 
-void DB::getShipJSON(const Ship& ship, std::string& content, long int delta_time) {
+void DB::getShipJSON(const VesselDetail& ship, std::string& content, long int delta_time) {
 	const std::string null_str = "null";
 	std::string str;
 
@@ -248,7 +250,7 @@ std::string DB::getJSON(bool full) {
 
 	delim = "";
 	while (ptr != -1) {
-		const Ship& ship = ships[ptr];
+		const VesselDetail& ship = ships[ptr].ship;
 		if (ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (!full && delta_time > TIME_HISTORY) break;
@@ -268,7 +270,7 @@ std::string DB::getShipJSON(int mmsi) {
 
 	if (ptr == -1) return "{}";
 
-	const Ship& ship = ships[ptr];
+	const VesselDetail& ship = ships[ptr].ship;
 	long int delta_time = (long int)time(nullptr) - (long int)ship.last_signal;
 
 	std::string content;
@@ -284,7 +286,7 @@ std::string DB::getAllPathJSON() {
 
 	delim = "";
 	while (ptr != -1) {
-		const Ship& ship = ships[ptr];
+		const VesselDetail& ship = ships[ptr].ship;
 		if (ship.mmsi != 0) {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (delta_time > TIME_HISTORY) break;
@@ -305,13 +307,13 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 
 	int idx = -1;
 	for (int i = 0; i < N && idx == -1; i++)
-		if (ships[i].mmsi == mmsi) idx = i;
+		if (ships[i].ship.mmsi == mmsi) idx = i;
 
 	if (idx == -1) return "[]";
 
 	content = "[";
 
-	int ptr = ships[idx].path_ptr;
+	int ptr = ships[idx].ship.path_ptr;
 	long int t0 = time(nullptr);
 
 	long int t = t0;
@@ -337,14 +339,14 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 
 std::string DB::getMessage(uint32_t mmsi) {
 	int ptr = findShip(mmsi);
-	if (ptr == -1) return "";
-	return ships[ptr].last_msg;
+	if (ptr == -1 || !ships[ptr].ship.msg) return "";
+	return *ships[ptr].ship.msg;
 }
 
 int DB::findShip(uint32_t mmsi) {
 	int ptr = first, cnt = count;
 	while (ptr != -1 && --cnt >= 0) {
-		if (ships[ptr].mmsi == mmsi) return ptr;
+		if (ships[ptr].ship.mmsi == mmsi) return ptr;
 		ptr = ships[ptr].next;
 	}
 	return -1;
@@ -354,7 +356,7 @@ int DB::createShip() {
 	int ptr = last;
 	count = MIN(count + 1, N);
 
-	ships[ptr].reset();
+	ships[ptr].ship = VesselDetail();
 
 	return ptr;
 }
@@ -379,18 +381,18 @@ void DB::moveShipToFront(int ptr) {
 
 void DB::addToPath(int ptr) {
 
-	int idx = ships[ptr].path_ptr;
-	float lat = ships[ptr].lat;
-	float lon = ships[ptr].lon;
+	int idx = ships[ptr].ship.path_ptr;
+	float lat = ships[ptr].ship.lat;
+	float lon = ships[ptr].ship.lon;
 
 	if (idx != -1) {
 		// path exists and ship did not move
 		if (paths[idx].lat == lat && paths[idx].lon == lon) {
-			paths[idx].signal_time = ships[ptr].last_signal;
+			paths[idx].signal_time = ships[ptr].ship.last_signal;
 			return;
 		}
 		// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update path point
-		if (paths[idx].next != -1 && paths[idx].mmsi == ships[ptr].mmsi) {
+		if (paths[idx].next != -1 && paths[idx].mmsi == ships[ptr].ship.mmsi) {
 			float lat_prev = paths[paths[idx].next].lat;
 			float lon_prev = paths[paths[idx].next].lon;
 
@@ -399,7 +401,7 @@ void DB::addToPath(int ptr) {
 			if (d < 0.000001) {
 				paths[idx].lat = lat;
 				paths[idx].lon = lon;
-				paths[idx].signal_time = ships[ptr].last_signal;
+				paths[idx].signal_time = ships[ptr].ship.last_signal;
 				return;
 			}
 		}
@@ -409,14 +411,14 @@ void DB::addToPath(int ptr) {
 	paths[path_idx].next = idx;
 	paths[path_idx].lat = lat;
 	paths[path_idx].lon = lon;
-	paths[path_idx].mmsi = ships[ptr].mmsi;
-	paths[path_idx].signal_time = ships[ptr].last_signal;
+	paths[path_idx].mmsi = ships[ptr].ship.mmsi;
+	paths[path_idx].signal_time = ships[ptr].ship.last_signal;
 
-	ships[ptr].path_ptr = path_idx;
+	ships[ptr].ship.path_ptr = path_idx;
 	path_idx = (path_idx + 1) % M;
 }
 
-bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, Ship& v, bool allowApproximate) {
+bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, VesselDetail& v, bool allowApproximate) {
 	bool position_updated = false;
 	switch (p.Key()) {
 	case AIS::KEY_LAT:
@@ -505,7 +507,7 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, Ship& v,
 	return position_updated;
 }
 
-bool DB::updateShip(const JSON::JSON& data, TAG& tag, Ship& ship) {
+bool DB::updateShip(const JSON::JSON& data, TAG& tag, VesselDetail& ship) {
 	const AIS::Message* msg = (AIS::Message*)data.binary;
 
 	// determine whether we accept msg 27 to update lat/lon
@@ -547,8 +549,9 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, Ship& ship) {
 	}
 
 	if (msg_save) {
-		ship.last_msg.clear();
-		builder.stringify(data, ship.last_msg);
+		if (!ship.msg) ship.msg = new std::string();
+		ship.msg->clear();
+		builder.stringify(data, *ship.msg);
 	}
 	return positionUpdated;
 }
@@ -572,7 +575,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 	moveShipToFront(ptr);
 
 	// update ship and tag data
-	Ship& ship = ships[ptr];
+	VesselDetail& ship = ships[ptr].ship;
 
 	// save some data for later on
 	tag.previous_signal = ship.last_signal;
@@ -617,7 +620,7 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		// flat earth approximation, roughly 10 nmi
 		float d = (ship.lat - lat_old) * (ship.lat - lat_old) + (ship.lon - lon_old) * (ship.lon - lon_old);
 		tag.validated = d < 0.1675;
-		ships[ptr].validated = tag.validated ? 1 : -1;
+		ships[ptr].ship.validated = tag.validated ? 1 : -1;
 	}
 	else
 		tag.validated = false;
