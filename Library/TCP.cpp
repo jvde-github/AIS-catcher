@@ -157,6 +157,12 @@ namespace TCP {
 		if (sock != -1) closesocket(sock);
 	}
 
+	int Server::numberOfClients() {
+		int n = 0;
+		for (auto& c : client) if (c.isConnected()) n++;
+		return n;
+	}
+
 	int Server::findFreeClient() {
 		for (int i = 0; i < MAX_CONN; i++)
 			if (!client[i].isLocked() && !client[i].isConnected()) return i;
