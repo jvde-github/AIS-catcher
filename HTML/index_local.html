@@ -5909,7 +5909,9 @@
 				if (m && m in shipsDB) {
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
-				} else map.setView(marker_focus.getLatLng(), Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
+				} 
+				else if(marker_focus != null) 
+					map.setView(marker_focus.getLatLng(), Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
 				shipcardMinIfMaxonMobile();
 			}
 
@@ -5917,7 +5919,9 @@
 				if (m && m in shipsDB) {
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(z, map.getMaxZoom()));
-				} else map.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
+				} else if(marker_focus != null) 
+m					ap.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
+
 				shipcardMinIfMaxonMobile();
 			}
 
@@ -6322,7 +6326,7 @@
 
 				if (shipcardVisible()) {
 					populateShipcard();
-					if (m in markers && !map.getBounds().contains(marker_focus.getLatLng())) {
+					if (m in markers && marker_focus != null && !map.getBounds().contains(marker_focus.getLatLng())) {
 						map.setView(marker_focus.getLatLng());
 					}
 
