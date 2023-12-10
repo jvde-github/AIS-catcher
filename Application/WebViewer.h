@@ -106,11 +106,18 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	std::string cdn;
 	std::string about = "This content can be set by the station owner";
 
+	DB ships;
+
 	// history of 180 minutes and 180 seconds
 	History<60, 60> hist_minute;
 	History<60, 1> hist_second;
 	History<24, 3600> hist_hour;
 	History<90, 86400> hist_day;
+
+	Counter counter, counter_session;
+	SSEStreamer sse_streamer;
+	PromotheusCounter dataPrometheus;
+	ByteCounter raw_counter;
 
 	std::time_t time_start;
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
@@ -120,13 +127,6 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	std::mutex m;
 	std::condition_variable cv;
 	std::thread backup_thread;
-
-	Counter counter, counter_session;
-	SSEStreamer sse_streamer;
-	PromotheusCounter dataPrometheus;
-	ByteCounter raw_counter;
-
-	DB ships;
 
 	void BackupService();
 
