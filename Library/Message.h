@@ -62,9 +62,9 @@ namespace AIS {
 		std::vector<std::string> NMEA;
 
 		void Stamp(std::time_t t = (std::time_t)0L) {
-			if ((long int)t == 0)
-				std::time(&rxtime);
-			else
+			std::time(&rxtime);
+
+			if ((long int)t != 0 && t < rxtime)
 				setRxTimeUnix(t);
 		}
 
