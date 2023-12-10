@@ -29,7 +29,6 @@ bool WebViewer::Save() {
 		infile.close();
 	}
 	catch (const std::exception& e) {
-		// An exception occurred
 		std::cerr << "Error: " << e.what() << std::endl;
 		return false;
 	}
@@ -63,7 +62,6 @@ bool WebViewer::Load() {
 		infile.close();
 	}
 	catch (const std::exception& e) {
-		// An exception occurred
 		std::cerr << "Error: " << e.what() << std::endl;
 		return false;
 	}
@@ -104,6 +102,7 @@ void WebViewer::connect(Receiver& r) {
 			if (!rec_details) {
 
 				sample_rate += r.device->getRateDescription() + "<br>";
+
 				JSON::StringBuilder::stringify(r.device->getProduct(), product, false);
 				JSON::StringBuilder::stringify(r.device->getVendor().empty() ? "-" : r.device->getVendor(), vendor, false);
 				JSON::StringBuilder::stringify(r.device->getSerial().empty() ? "-" : r.device->getSerial(), serial, false);
@@ -114,13 +113,14 @@ void WebViewer::connect(Receiver& r) {
 
 				rec_details = true;
 			}
-			model += r.Model(j)->getName() + "<br>";
+			model += r.Model(j)->getName() + newline;
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&ships);
 
 			*r.device >> raw_counter;
 		}
+
 	if (!rec_details)
 		std::cerr << "Web Client: not connected to the output of any model." << std::endl;
 }
@@ -288,7 +288,9 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 	}
 	else if (r == "/stat.json") {
 
-		std::string content = "{\"total\":" + counter.toJSON() + ",";
+		std::string content;
+
+		content += "{\"total\":" + counter.toJSON() + ",";
 		content += "\"session\":" + counter_session.toJSON() + ",";
 		content += "\"last_day\":" + hist_day.lastStatToJSON() + ",";
 		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
@@ -425,6 +427,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		content += ",\"day\":";
 		content += hist_day.toJSON();
 		content += "}\n\n";
+
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else

@@ -69,7 +69,7 @@ namespace AIS {
 
 		if (aivdm.count == 1) {
 			msg.clear();
-			msg.Stamp(stamp?0:t);
+			msg.Stamp(stamp ? 0 : t);
 			msg.setOrigin(aivdm.channel, station);
 
 			addline(aivdm);
