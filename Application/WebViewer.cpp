@@ -104,9 +104,9 @@ void WebViewer::connect(Receiver& r) {
 			if (!rec_details) {
 
 				sample_rate += r.device->getRateDescription() + "<br>";
-				JSON::StringBuilder::stringify(r.device->getProduct(), product);
-				JSON::StringBuilder::stringify(r.device->getVendor().empty() ? "-" : r.device->getVendor(), vendor);
-				JSON::StringBuilder::stringify(r.device->getSerial().empty() ? "-" : r.device->getSerial(), serial);
+				JSON::StringBuilder::stringify(r.device->getProduct(), product, false);
+				JSON::StringBuilder::stringify(r.device->getVendor().empty() ? "-" : r.device->getVendor(), vendor, false);
+				JSON::StringBuilder::stringify(r.device->getSerial().empty() ? "-" : r.device->getSerial(), serial, false);
 
 				product += newline;
 				vendor += newline;
