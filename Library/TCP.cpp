@@ -159,7 +159,8 @@ namespace TCP {
 
 	int Server::numberOfClients() {
 		int n = 0;
-		for (auto& c : client) if (c.isConnected()) n++;
+		for (auto& c : client)
+			if (c.isConnected()) n++;
 		return n;
 	}
 

@@ -67,7 +67,7 @@ public:
 		if (ppm.size() > 32768 || level.size() > 32768) {
 			return;
 		}
-		
+
 		m.lock();
 		stat.Add(data, tag);
 		ppm += "ais_msg_ppm{type=\"" + std::to_string(data.type()) + "\",mmsi=\"" + std::to_string(data.mmsi()) + "\",channel=\"" + std::string(1, data.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";

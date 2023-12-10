@@ -49,10 +49,10 @@ namespace IO {
 				switch (level) {
 				case OutputLevel::NMEA:
 				case OutputLevel::NMEA_TAG:
-					for (auto s : data[i].NMEA) std::cout << s << std::endl;
+					for (const auto& s : data[i].NMEA) std::cout << s << std::endl;
 					break;
 				case OutputLevel::FULL:
-					for (auto s : data[i].NMEA) {
+					for (const auto& s : data[i].NMEA) {
 						std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
 						if (tag.mode & 1) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
 						if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();

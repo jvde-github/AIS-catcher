@@ -53,7 +53,7 @@ namespace Device {
 
 		int rate = rates[0];
 		int mindelta = rates[0];
-		for (auto r : rates) {
+		for (const auto& r : rates) {
 			int delta = abs((int)r - (int)getSampleRate());
 			if (delta < mindelta) {
 				rate = r;
