@@ -53,11 +53,11 @@ namespace IO {
 
 	public:
 		SSEConnection(TCP::ServerConnection* connection, int id) : connection(connection), _id(id) {
-			std::cerr << "SSE Connection Constructor : " << connection->sock << "\n";
+			// std::cerr << "SSE Connection Constructor : " << connection->sock << "\n";
 		}
 
 		~SSEConnection() {
-			std::cerr << "SSE Connection Destructor\n";
+			// std::cerr << "SSE Connection Destructor\n";
 			Close();
 		}
 
@@ -68,7 +68,7 @@ namespace IO {
 		void Start() {
 			if (!connection) return;
 
-			std::cerr << "SSE start: " << connection->sock << std::endl;
+			// std::cerr << "SSE start: " << connection->sock << std::endl;
 			running = true;
 			connection->Lock();
 
@@ -88,7 +88,7 @@ namespace IO {
 		void Close() {
 
 			if (connection) {
-				std::cerr << "SSE close: " << connection->sock << std::endl;
+				// std::cerr << "SSE close: " << connection->sock << std::endl;
 				connection->SendDirect("\r\n", 1);
 				connection->Unlock();
 				connection->Close();
@@ -130,7 +130,7 @@ namespace IO {
 
 		void upgradeSSE(TCP::ServerConnection& c, int id) {
 			// temporary design
-			std::cerr << "Upgrading to SSE connection\n";
+			// std::cerr << "Upgrading to SSE connection\n";
 			cleanupSSE();
 
 			sse.emplace_back(&c, id);
