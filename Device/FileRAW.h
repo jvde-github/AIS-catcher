@@ -32,6 +32,7 @@ namespace Device {
 
 		bool eoi = false;
 		bool done = false;
+		bool loop = false;
 
 		FIFO fifo;
 

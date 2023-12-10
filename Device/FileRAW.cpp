@@ -28,11 +28,22 @@ namespace Device {
 	void RAWFile::ReadAsync() {
 
 		try {
-			while (file && !file->eof() && Device::isStreaming()) {
+			while (file && Device::isStreaming()) {
 
-				buffer.assign(buffer.size(), 0);
-				file->read((char*)buffer.data(), buffer.size());
-				while (isStreaming() && !fifo.Push(buffer.data(), buffer.size())) SleepSystem(1);
+				if (!file->eof()) {
+					buffer.assign(buffer.size(), 0);
+					file->read((char*)buffer.data(), buffer.size());
+					while (isStreaming() && !fifo.Push(buffer.data(), buffer.size())) SleepSystem(1);
+				}
+				else {
+					if (loop) {
+						file->clear();
+						file->seekg(0, std::ios::beg);
+					}
+					else {
+						break;
+					}
+				}
 			}
 		}
 		catch (std::exception& e) {
@@ -115,6 +126,9 @@ namespace Device {
 		if (option == "FILE") {
 			filename = arg;
 		}
+		else if (option == "LOOP") {
+			loop = Util::Parse::Switch(arg);
+		}
 		else
 			Device::Set(option, arg);
 
@@ -122,6 +136,6 @@ namespace Device {
 	}
 
 	std::string RAWFile::Get() {
-		return Device::Get() + " file " + filename;
+		return Device::Get() + " file " + filename + " loop " + Util::Convert::toString(loop);
 	}
 }

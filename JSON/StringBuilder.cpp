@@ -24,8 +24,8 @@ namespace JSON {
 
 	// StringBuilder - Build string from JSON object
 
-	void StringBuilder::stringify(const std::string& str, std::string& json) {
-		json += '\"';
+	void StringBuilder::stringify(const std::string& str, std::string& json, bool esc) {
+		if (esc) json += '\"';
 		for (char c : str) {
 			switch (c) {
 			case '\"':
@@ -42,7 +42,7 @@ namespace JSON {
 				json += c;
 			}
 		}
-		json += '\"';
+		if (esc) json += '\"';
 	}
 
 	void StringBuilder::to_string(std::string& json, const Value& v) {
@@ -77,7 +77,7 @@ namespace JSON {
 			json += '[';
 
 			bool first = true;
-			for (const auto val : a) {
+			for (const auto& val : a) {
 
 				if (!first) json += ',';
 				first = false;

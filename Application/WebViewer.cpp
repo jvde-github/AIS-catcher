@@ -98,15 +98,19 @@ void WebViewer::BackupService() {
 void WebViewer::connect(Receiver& r) {
 
 	bool rec_details = false;
-
+	static const std::string newline = "<br>";
 	for (int j = 0; j < r.Count(); j++)
 		if (r.Output(j).canConnect(groups_in)) {
 			if (!rec_details) {
 
 				sample_rate += r.device->getRateDescription() + "<br>";
-				product += r.device->getProduct() + "<br>";
-				vendor += (r.device->getVendor().empty() ? "-" : r.device->getVendor()) + "<br>";
-				serial += (r.device->getSerial().empty() ? "-" : r.device->getSerial()) + "<br>";
+				JSON::StringBuilder::stringify(r.device->getProduct(), product);
+				JSON::StringBuilder::stringify(r.device->getVendor().empty() ? "-" : r.device->getVendor(), vendor);
+				JSON::StringBuilder::stringify(r.device->getSerial().empty() ? "-" : r.device->getSerial(), serial);
+
+				product += newline;
+				vendor += newline;
+				serial += newline;
 
 				rec_details = true;
 			}
@@ -168,7 +172,7 @@ void WebViewer::start() {
 	ships >> counter_session;
 
 	if (supportPrometheus)
-		ships  >> dataPrometheus;
+		ships >> dataPrometheus;
 
 	if (firstport && lastport) {
 		for (port = firstport; port <= lastport; port++)

@@ -39,7 +39,7 @@ namespace JSON {
 
 		void to_string(std::string& json, const Value& v);
 		void stringify(const JSON& properties, std::string& json);
-		static void stringify(const std::string& str, std::string& json);
+		static void stringify(const std::string& str, std::string& json, bool esc = true);
 		std::string stringify(const JSON& properties) {
 			std::string j;
 			stringify(properties, j);

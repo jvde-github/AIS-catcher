@@ -160,7 +160,7 @@ namespace Device {
 
 		int gain = gains[0];
 
-		for (auto h : gains)
+		for (const auto& h : gains)
 			if (abs(h - g) < abs(g - gain)) gain = h;
 
 		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw std::runtime_error("RTLSDR: cannot set tuner gain.");

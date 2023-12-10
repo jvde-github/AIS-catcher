@@ -41,7 +41,7 @@ class SignalHub {
 public:
 	std::vector<SignalIn<T>*> destinations;
 	void Send(const T& m) {
-		for (auto d : destinations)
+		for (const auto& d : destinations)
 			d->Signal(m);
 	}
 	void Connect(SignalIn<T>& s) {

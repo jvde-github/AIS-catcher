@@ -305,7 +305,7 @@ namespace Device {
 
 		if (idx == -1) {
 			std::cerr << "SPYSERVER: sample rate not supported by server. Supported rates:" << std::endl;
-			for (auto r : _sample_rates) {
+			for (const auto& r : _sample_rates) {
 				std::cerr << " " << r.first;
 			}
 			std::cerr << std::endl;
