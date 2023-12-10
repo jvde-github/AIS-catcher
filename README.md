@@ -1,6 +1,6 @@
 # AIS-catcher: A multi-platform AIS Receiver
 
-This package introduces the `AIS-catcher` command, a dual-channel AIS receiver compatible with various Software Defined Radios (SDR): RTL-SDR dongles (including the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). The output is delivered as NMEA messages, which can be displayed on screen or forwarded via UDP/HTTP/TCP. AIS-catcher is a lightweight command line utility and includes a built-in web server for internal use on secure networks.
+This repository presents the `AIS-catcher` software, a versatile dual-channel AIS receiver that is compatible with a wide range of Software Defined Radios (SDRs). These include RTL-SDR dongles (such as the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). AIS-catcher delivers output in the form of NMEA messages, which can be conveniently displayed on screen or forwarded via UDP/HTTP/TCP. Designed as a lightweight command line utility, AIS-catcher also incorporates a built-in web server for internal use within secure networks.
 
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9fd27b96-e37a-4f92-869c-b0ba782c12fa.png" width="90%"/>
@@ -8,9 +8,15 @@ This package introduces the `AIS-catcher` command, a dual-channel AIS receiver c
 
  A few examples of live stations are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available. By way of example, I am also sharing my own station at [aiscatcher.org](https://aiscatcher.org/southwood).
 
+## License
+
+Copyright (C) 2021 - 2023 jvde.github at gmail.com. All rights reserved.
+
+Licensed under the GPGL3 license.
+
 ## Purpose
 
-The aim of ```AIS-catcher``` is to provide a platform to facilitate continuous improvement of receiver models. Any suggestions, observations or sharing of recordings for setups where the current models are struggling is highly appreciated! 
+The purpose of `AIS-catcher` is to serve as a platform that encourages the perpetual enhancement of receiver models. We greatly value and appreciate any suggestions, observations, or shared recordings, particularly from setups where the existing models encounter difficulties.
 
 ### Disclaimer
 `AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 
@@ -24,8 +30,9 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 v0.55 is the latest version and introduces the following:
-- "Show all track" option and a setting to dim maps (see screenshot above for a demonstration for both at work)
-- Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services)). These maps and the applications are not suitable for navigation (just to reiterate that).
+- "Show all track" option and a setting option to dim the maps for greater visibility (see screenshot above for an example)
+- Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services))
+These maps and the applications are not suitable for navigation (just to reiterate that).
 - I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
  dashboards for stations running AIS-catcher and links to interesting (open-source) projects related to AIS and AIS-catcher.
 - If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) and I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation of the station location. Data is not aggregated and forwarded.
