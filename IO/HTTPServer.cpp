@@ -49,15 +49,20 @@ namespace IO {
 		}
 	}
 
-	void HTTPServer::Request(TCP::ServerConnection& c, const std::string& r, bool) {
-		// TO DO: return 404 by default
+	void HTTPServer::Request(TCP::ServerConnection& c, const std::string& r, bool gzip) {
+		std::string header = "HTTP/1.1 404\r\nContent-Type: text/html\r\nContent-Length: 15\r\n\r\nPage not found.";
+
+		if (!Send(c, header.c_str(), header.length())) {
+			std::cerr << "Server: closing client socket." << std::endl;
+			c.Close();
+			return;
+		}
+		c.Close();
 	}
 
-
 	void HTTPServer::Parse(const std::string& s, std::string& get, bool& accept_gzip) {
-		int max = 100;
 
-		get = "";
+		get.clear();
 		accept_gzip = false;
 
 		std::istringstream iss(s);
