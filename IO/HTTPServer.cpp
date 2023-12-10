@@ -49,7 +49,7 @@ namespace IO {
 		}
 	}
 
-	void HTTPServer::Request(TCP::ServerConnection& c, const std::string& r, bool gzip) {
+	void HTTPServer::Request(TCP::ServerConnection& c, const std::string&, bool) {
 		std::string r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 15\r\nConnection: close\r\n\r\nPage not found.";
 		Send(c, r.c_str(), r.length());
 		c.Close();
