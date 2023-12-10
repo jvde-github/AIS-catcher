@@ -107,6 +107,7 @@ namespace AIS {
 		bool getCRCcheck() { return crc_check; }
 		void setJSON(bool b) { JSON_input = b; }
 		void setStamp(bool b) { stamp = b; }
+		bool getStamp() { return stamp; }
 
 		Connection<GPS> outGPS;
 	};
