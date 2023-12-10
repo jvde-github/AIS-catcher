@@ -34,12 +34,12 @@ These maps and the applications are not suitable for navigation (just to reitera
 - I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
  dashboards for stations running AIS-catcher and links to interesting (open-source) projects related to AIS and AIS-catcher.
 - If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) and I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation of the station location. Data is not aggregated and forwarded.
-- Addition of option `-N CONTEXT yyyy` which will store the settings in the web browser in `yyyy`. This will allow to separate setting storage when running multiple web clients. 
+- Addition of option `-N CONTEXT yyyy` which will store the settings in the web browser in `yyyy`. This will allow to separate setting storage when running multiple web viewers. 
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
 - Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions, we are exploring adding HMAC authentication. 
   
 v0.54 is the previous version:
-- A "Settings Menu" providing access to additional (styling) options for the web client:
+- A "Settings Menu" providing access to additional (styling) options for the web viewer:
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/f29aae44-a68b-4e47-8fba-e703add00f47)
 
 - Option to change the displayed units in the context menus (metric system, imperial system and AIS native units)
@@ -186,13 +186,13 @@ Meta data is not calculated by default to keep the program as light as possible 
 
 There are many libraries for decoding AIS messages in NMEA format to JSON format. I encourage you to use your favorite library. Some excellent choices include [libais](https://github.com/schwehr/libais), [gpsdecode](https://github.com/ukyg9e5r6k7gubiekd6/gpsd/blob/master/gpsdecode.c) and [pyais](https://github.com/M0r13n/pyais).
 
-### Web interface: Server
+### Web Viewer
 
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/54eea1c6-2f72-4c23-91c4-dd289753d4cc)
 
 AIS-catcher includes a simple web interface. A live demo is available for [East Boston, US](https://kx1t.com/ais/). The web interface gratefully uses the following libraries: [chart.js](https://www.chartjs.org/docs/latest/charts/line.html), chart.js [annotation plugin](https://www.chartjs.org/chartjs-plugin-annotation/latest/), [leaflet](https://leafletjs.com/), [Material Design Icons](https://m3.material.io/styles/icons/overview), tabulator, [marked](https://github.com/markedjs/marked) and [flag-icons](https://github.com/lipis/flag-icons). 
 
-Make sure you use the latest version and start the webserver as follows:
+Make sure you use the latest version and start the web viewer as follows:
 ```console
 AIS-catcher -N 8100
 ```
@@ -202,13 +202,13 @@ For users wishing to include a station name and a link to an external website in
 ```console
 AIS-catcher -N STATION Southwood STATION_LINK http://example.com
 ```
-This could be a useful option if you want to offer the interface externally. To display the reception range and distances from your station, provide the program with the station coordinates and permission to share the location with the web client:
+This could be a useful option if you want to offer the interface externally. To display the reception range and distances from your station, provide the program with the station coordinates and permission to share the location with the web viewer:
 ```console
 AIS-catcher -N LAT 50 LON 3.141592 SHARE_LOC on
 ```
-The last option `share_loc` (default is off) will allow the web client to access and display the location.
+The last option `share_loc` (default is off) will allow the web viewer to access and display the location.
 
- The user can make a page in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab of the web client:
+ The user can make a page in [markdown format](https://www.markdownguide.org/basic-syntax/). The content will be shown in the About tab of the web viewer:
 ```console
 AIS-catcher -N 8100 ABOUT about.md
 ```
@@ -253,7 +253,7 @@ This will back up the plots when the program closes and every 10 minutes in a fi
 
 #### Custom plugins and styles...
 
-To give the user the option to tweak the look-and-feel and functionality of the web client and/or modify for example the color scheme or regional preferences, the program provides the option to inject custom plugins (JavaScript) and CSS into the website, with a command like:
+To give the user the option to tweak the look-and-feel and functionality of the web viewer and/or modify for example the color scheme or regional preferences, the program provides the option to inject custom plugins (JavaScript) and CSS into the website, with a command like:
 ```console
 AIS-catcher -N 8100 PLUGIN plugin1.js PLUGIN plugin2.js STYLE mystyle.css
 ```
@@ -263,8 +263,8 @@ AIS-catcher -N 8100 PLUGIN_DIR /usr/share/aiscatcher/plugins
 ```
 Files need to have the extension ``.pjs`` and ``.pss`` for respectively JavaScript and CSS style plugins. The repository includes a few example plugins that demonstrate how to add additional maps or cater to regional preferences. Examples of plugins can be found in [another](https://github.com/jvde-github/AIS-Catcher-PLUGINS) GitHub repository.
 
-#### Offline Web client
-There is an option to run the web client without relying on online libraries. This facilitates using the web interface whilst traveling without an internet connection. The steps are simple. First, go to your home directory (say `/home/jasper`) and clone the necessary offline web assets:
+#### Offline web viewer
+There is an option to run the web viewer without relying on online libraries. This facilitates using the web interface whilst traveling without an internet connection. The steps are simple. First, go to your home directory (say `/home/jasper`) and clone the necessary offline web assets:
 ```console
 git clone https://github.com/jvde-github/webassets.git
 ```
@@ -607,11 +607,11 @@ AIS-catcher will also accept AIVDO input which is typically used for the MMSI of
 
 ### Specifying Station Location
 
-As discussed above, the webserver will only share a known location of the station with the front-end web client if `share_loc` is set for the webserver:
+As discussed above, the webserver will only share a known location of the station with the front-end web viewer if `share_loc` is set for the webserver:
 ```console
 AIS-catcher -N 8100 share_loc on
 ```
-This option is switched off by default for privacy reasons in case the web client is shared externally.
+This option is switched off by default for privacy reasons in case the web viewer is shared externally.
 The NMEA decoder accepts NMEA lines from a GPS device (NMEA lines GPRMC, GPGLL and GPGGA):
 ```console
 echo '$GPGGA, 161229.487, 3723.2475, N, 12158.3416, W, 1, 07, 1.0, 9.0, M, , , , 0000*18' | ./AIS-catcher -r txt .
@@ -625,7 +625,7 @@ or from a serial device:
 ```console
 AIS-catcher -e 38400 /dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox
 ````
-The web client has the options `-N use_gps on/off` and `-N own_mmsi xxxxx`. The first enables/disables the use of GPS NMEA input as the location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own MMSI will be highlighted on the web client map.
+The web viewer has the options `-N use_gps on/off` and `-N own_mmsi xxxxx`. The first enables/disables the use of GPS NMEA input as the location for the receiver station (default is on). The latter sets the station's location as the location of the vessel with the specified MMSI. The own MMSI will be highlighted on the web viewer map.
 
 ### Multiple device input
 
