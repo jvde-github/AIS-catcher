@@ -28,7 +28,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 v0.55 is the latest version and introduces the following:
-- "Show all track" option and a new adjustable setting to dim the maps for greater visibility of this ship icons (see screenshot above for an example)
+- "Show all track" option and a new adjustable setting to dim the maps for greater visibility of the ship icons (see screenshot above for an example)
 - Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services))
 These maps and the applications are not suitable for navigation (just to reiterate that).
 - I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
