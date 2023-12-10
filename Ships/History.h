@@ -61,7 +61,7 @@ struct History : public StreamIn<JSON::JSON> {
 			long int tm = ((long int)msg->getRxTimeUnix()) / (long int)INTERVAL;
 			long int tp = ((long int)tag.previous_signal) / (long int)INTERVAL;
 
-			if (history[end].time != tm) {
+			if (history[end].time < tm) {
 				end = (end + 1) % N;
 				create(tm);
 				if (start == end) start = (start + 1) % N;

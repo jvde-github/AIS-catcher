@@ -77,6 +77,7 @@ namespace AIS {
 		float GpsToDecimal(const char*, char, bool& error);
 
 		bool regenerate = false;
+		bool stamp = false;
 		bool crc_check = false;
 		bool JSON_input = false;
 		bool VDO = true;
@@ -105,6 +106,7 @@ namespace AIS {
 		void setCRCcheck(bool b) { crc_check = b; }
 		bool getCRCcheck() { return crc_check; }
 		void setJSON(bool b) { JSON_input = b; }
+		void setStamp(bool b) { stamp = b; }
 
 		Connection<GPS> outGPS;
 	};
