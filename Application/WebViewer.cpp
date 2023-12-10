@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2023 jvde.github@gmail.com
+	Copyright(c) 2021-2024 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -112,14 +112,8 @@ void WebViewer::connect(Receiver& r) {
 			}
 			model += r.Model(j)->getName() + "<br>";
 
-			// connect all the statistical counters
-
-
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&ships);
-
-			if (supportPrometheus)
-				r.Output(j) >> dataPrometheus;
 
 			*r.device >> raw_counter;
 		}
@@ -172,6 +166,9 @@ void WebViewer::start() {
 
 	ships >> counter;
 	ships >> counter_session;
+
+	if (supportPrometheus)
+		ships  >> dataPrometheus;
 
 	if (firstport && lastport) {
 		for (port = firstport; port <= lastport; port++)
@@ -281,7 +278,6 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/metrics") {
 		if (supportPrometheus) {
 			std::string content = dataPrometheus.toPrometheus();
-			content += dataPrometheus.ppm + dataPrometheus.level;
 			Response(c, "application/text", content, use_zlib);
 			dataPrometheus.reset();
 		}
