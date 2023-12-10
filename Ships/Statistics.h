@@ -21,6 +21,8 @@
 #include <memory>
 #include <mutex>
 
+#include "Stream.h"
+#include "JSONAIS.h"
 #include "Utilities.h"
 #include "Message.h"
 
@@ -223,4 +225,25 @@ public:
 		*/
 		return true;
 	}
+};
+
+class Counter : public StreamIn<JSON::JSON> {
+	MessageStatistics stat;
+
+public:
+	void setCutOff(int c) { stat.setCutoff(c); }
+	void Clear() { stat.Clear(); }
+
+	bool Load(std::ifstream& file) { return stat.Load(file); }
+	bool Save(std::ofstream& file) { return stat.Save(file); }
+
+	void Receive(const JSON::JSON* msg, int len, TAG& tag) { stat.Add(*((AIS::Message*)msg[0].binary), tag); }
+
+	std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
+};
+
+struct ByteCounter : public StreamIn<RAW> {
+	uint64_t received = 0;
+	void Receive(const RAW* data, int len, TAG& tag) { received += data[0].size; }
+	void Reset() { received = 0; }
 };

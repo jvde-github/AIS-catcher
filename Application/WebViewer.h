@@ -32,21 +32,6 @@
 #include "History.h"
 #include "Receiver.h"
 
-class Counter : public StreamIn<JSON::JSON> {
-	MessageStatistics stat;
-
-public:
-	void setCutOff(int c) { stat.setCutoff(c); }
-	void Clear() { stat.Clear(); }
-
-	bool Load(std::ifstream& file) { return stat.Load(file); }
-	bool Save(std::ofstream& file) { return stat.Save(file); }
-
-	void Receive(const JSON::JSON* msg, int len, TAG& tag) { stat.Add(*((AIS::Message*)msg[0].binary), tag); }
-
-	std::string toJSON(bool empty = false) { return stat.toJSON(empty); }
-};
-
 class SSEStreamer : public StreamIn<JSON::JSON> {
 	IO::HTTPServer* server = NULL;
 
@@ -66,24 +51,27 @@ public:
 	void setSSE(IO::HTTPServer* s) { server = s; }
 };
 
-class PromotheusCounter : public StreamIn<AIS::Message> {
+class PromotheusCounter : public StreamIn<JSON::JSON> {
 	std::mutex m;
 	MessageStatistics stat;
-
-public:
-	void setCutOff(int c) { stat.setCutoff(c); }
 
 	std::string ppm;
 	std::string level;
 
-	void Receive(const AIS::Message* data, int len, TAG& tag) {
-		if (ppm.size() > 32768) return;
-		if (level.size() > 32768) return;
+public:
+	void setCutOff(int c) { stat.setCutoff(c); }
 
+	void Receive(const JSON::JSON* json, int len, TAG& tag) {
+		AIS::Message& data = *((AIS::Message*)json[0].binary);
+
+		if (ppm.size() > 32768 || level.size() > 32768) {
+			return;
+		}
+		
 		m.lock();
-		stat.Add(data[0], tag);
-		ppm += "ais_msg_ppm{type=\"" + std::to_string(data[0].type()) + "\",mmsi=\"" + std::to_string(data[0].mmsi()) + "\",channel=\"" + std::string(1, data[0].getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
-		level += "ais_msg_level{type=\"" + std::to_string(data[0].type()) + "\",mmsi=\"" + std::to_string(data[0].mmsi()) + "\",channel=\"" + std::string(1, data[0].getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
+		stat.Add(data, tag);
+		ppm += "ais_msg_ppm{type=\"" + std::to_string(data.type()) + "\",mmsi=\"" + std::to_string(data.mmsi()) + "\",channel=\"" + std::string(1, data.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
+		level += "ais_msg_level{type=\"" + std::to_string(data.type()) + "\",mmsi=\"" + std::to_string(data.mmsi()) + "\",channel=\"" + std::string(1, data.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
 		m.unlock();
 	}
 
@@ -94,14 +82,8 @@ public:
 		m.unlock();
 	}
 
-	std::string toPrometheus() { return stat.toPrometheus(); }
+	std::string toPrometheus() { return stat.toPrometheus() + ppm + level; }
 	PromotheusCounter() { reset(); }
-};
-
-struct RAWcounter : public StreamIn<RAW> {
-	uint64_t received = 0;
-	void Receive(const RAW* data, int len, TAG& tag) { received += data[0].size; }
-	void Reset() { received = 0; }
 };
 
 class WebViewer : public IO::HTTPServer, public Setting {
@@ -118,7 +100,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	bool supportPrometheus = false;
 	bool thread_running = false;
 
-	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\naboutMDpresent=false;\n\n";
+	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\n\n";
 	std::string plugins;
 	std::string stylesheets;
 	std::string cdn;
@@ -142,7 +124,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	Counter counter, counter_session;
 	SSEStreamer sse_streamer;
 	PromotheusCounter dataPrometheus;
-	RAWcounter raw_counter;
+	ByteCounter raw_counter;
 
 	DB ships;
 
