@@ -3,7 +3,7 @@ OBJ = Main.o Receiver.o Config.o WebViewer.o HTTPClient.o PostgreSQL.o DB.o IO.o
 INCLUDE = -I. -IDBMS/ -IShips/ -ILibrary/ -IDSP/ -IApplication/ -IIO/
 CC = gcc
 
-override CFLAGS += -Ofast -std=c++11 $(INCLUDE)
+override CFLAGS += -Wall -Ofast -std=c++11 $(INCLUDE)
 override LFLAGS += -lstdc++ -lpthread -lm -o AIS-catcher
 
 CFLAGS_RTL = -DHASRTLSDR $(shell pkg-config --cflags librtlsdr)

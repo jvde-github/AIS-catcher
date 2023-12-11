@@ -36,12 +36,12 @@ namespace Device {
 
 
 	class Description {
-		Type type;
-		uint64_t handle;
 
 		std::string vendor;
 		std::string product;
 		std::string serial;
+		uint64_t handle;
+		Type type;
 
 	public:
 		Description(std::string v, std::string p, std::string s, uint64_t h, Type t) : vendor(v), product(p), serial(s), handle(h), type(t) {}
@@ -58,9 +58,9 @@ namespace Device {
 		bool streaming = false;
 		FLOAT32 freq_offset = 0;
 		int tuner_bandwidth = 0;
-		uint32_t sample_rate = 0;
 		uint32_t frequency = 0;
 		Format format = Format::UNKNOWN;
+		uint32_t sample_rate = 0;
 
 		uint32_t getCorrectedFrequency() {
 			return frequency * (1 - freq_offset / 1000000.0f);

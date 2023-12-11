@@ -38,7 +38,7 @@ namespace Demod {
 
 	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
-			FLOAT32 re, im;
+			FLOAT32 re = 0, im = 0;
 
 			//  multiply samples with (1j) ** i, to get all points on the same line
 			switch (rot) {
@@ -85,7 +85,8 @@ namespace Demod {
 			max_idx = idx;
 
 			for (int p = 0; p < nSearch << 1; p++) {
-				idx = (++idx) & (nPhases - 1);
+				idx++;
+				idx &= (nPhases - 1);
 
 				if (ma[idx] > max_val) {
 					max_val = ma[idx];
@@ -105,7 +106,7 @@ namespace Demod {
 
 	void PhaseSearch::Receive(const CFLOAT32* data, int len, TAG& tag) {
 		for (int i = 0; i < len; i++) {
-			FLOAT32 re, im;
+			FLOAT32 re = 0, im = 0;
 
 			//  multiply samples with (1j) ** i, to get all points on the same line
 			switch (rot) {

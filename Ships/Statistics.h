@@ -193,7 +193,7 @@ public:
 	bool Load(std::ifstream& file) {
 		std::lock_guard<std::mutex> l{ this->m };
 
-		int magic = 0, version = 0, sum = 0;
+		int magic = 0, version = 0;
 		if (!file.read((char*)&magic, sizeof(int))) return false;	// Check count
 		if (!file.read((char*)&version, sizeof(int))) return false; // Check count
 		if (!file.read((char*)&_count, sizeof(int))) return false;	// Check count
