@@ -158,7 +158,6 @@ namespace IO {
 	}
 
 	void HTTPStreamer::process() {
-		int i = 0;
 
 		while (!terminate) {
 

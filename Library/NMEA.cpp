@@ -274,9 +274,6 @@ namespace AIS {
 		if (parts[0].size() != 6) return false;
 		if (parts[0][0] != '$' && parts[0][0] != '!') return false;
 
-		char last = parts[0][1];
-		char c = parts[0][2];
-
 		aivdm.talkerID = ((parts[0][1] << 8) | parts[0][2]);
 		if (parts[1].size() != 1) return false;
 

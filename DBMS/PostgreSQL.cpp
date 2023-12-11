@@ -75,8 +75,6 @@ namespace IO {
 #ifdef HASPSQL
 
 	void PostgreSQL::process() {
-		int i = 0;
-		bool error_mode = false;
 
 		while (!terminate) {
 

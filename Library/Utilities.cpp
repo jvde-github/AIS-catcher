@@ -334,7 +334,6 @@ namespace Util {
 	}
 
 	int Helper::lsb(uint64_t x) {
-		int n = 0;
 		for (int i = 0; i < 64; i++) {
 			if (x & (1ULL << i)) return i;
 		}
@@ -371,32 +370,21 @@ namespace Util {
 #elif __APPLE__
 		return "MacOS";
 #elif __linux__
-		std::array<char, 128> buffer;
 		std::string os;
-		/*
-		FILE* fp = popen("lsb_release -ds", "r");
-		if (fp) {
 
-			if (fgets(buffer.data(), buffer.size(), fp) != nullptr)
-				os = buffer.data();
-
-			pclose(fp);
-		}
-		*/
-		if (os.empty()) {
-			std::ifstream inFile("/etc/os-release");
-			std::string line;
-			while (std::getline(inFile, line)) {
-				if (line.substr(0, 11) == "PRETTY_NAME") {
-					std::size_t start = line.find('"') + 1;
-					std::size_t end = line.rfind('"');
-					if (start != std::string::npos && end != std::string::npos) {
-						os = line.substr(start, end - start);
-						break;
-					}
+		std::ifstream inFile("/etc/os-release");
+		std::string line;
+		while (std::getline(inFile, line)) {
+			if (line.substr(0, 11) == "PRETTY_NAME") {
+				std::size_t start = line.find('"') + 1;
+				std::size_t end = line.rfind('"');
+				if (start != std::string::npos && end != std::string::npos) {
+					os = line.substr(start, end - start);
+					break;
 				}
 			}
 		}
+
 		if (os.empty()) {
 			os = "Linux";
 		}

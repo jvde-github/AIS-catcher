@@ -44,14 +44,14 @@
 class Config {
 
 	std::vector<std::unique_ptr<Receiver>>& _receivers;
+	int _nrec;
+
 	OutputScreen& _screen;
 	OutputHTTP& _http;
+	std::vector<std::unique_ptr<WebViewer>>& _server;
 	OutputUDP& _udp;
 	OutputTCP& _tcp;
 	OutputTCPlistener& _tcp_server;
-	std::vector<std::unique_ptr<WebViewer>>& _server;
-
-	int _nrec;
 
 	bool isActiveObject(const JSON::Value& pd);
 	void setSettingsFromJSON(const JSON::Value& pd, Setting& s);
