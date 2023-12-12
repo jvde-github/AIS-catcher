@@ -24,7 +24,8 @@
 #include "Statistics.h"
 
 template <int N, int INTERVAL>
-struct History : public StreamIn<JSON::JSON> {
+class  History : public StreamIn<JSON::JSON> {
+	std::mutex mtx;
 
 	struct {
 		long int time;
@@ -33,14 +34,22 @@ struct History : public StreamIn<JSON::JSON> {
 
 	int start, end;
 
-	void setCutoff(int cutoff) {
-		for (int i = 0; i < N; i++)
-			history[i].stat.setCutoff(cutoff);
-	}
-
 	void create(long int t) {
 		history[end].time = t;
 		history[end].stat.Clear();
+	}
+
+	bool readInteger(std::ifstream& file, int& dest, int check = -1) {
+		file.read((char*)&dest, sizeof(int));
+		if (check != -1 && dest != check) return false;
+		return true;
+	}
+
+public:
+
+	void setCutoff(int cutoff) {
+		for (int i = 0; i < N; i++)
+			history[i].stat.setCutoff(cutoff);
 	}
 
 	History() {
@@ -48,11 +57,14 @@ struct History : public StreamIn<JSON::JSON> {
 	}
 
 	void Clear() {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
 		start = end = 0;
 		create((long int)time(NULL) / (long int)INTERVAL);
 	}
 
 	void Receive(const JSON::JSON* j, int len, TAG& tag) {
+		std::lock_guard<std::mutex> l{ this->mtx };
 
 		for (int i = 0; i < len; i++) {
 			if (!j[i].binary) return;
@@ -72,6 +84,8 @@ struct History : public StreamIn<JSON::JSON> {
 	}
 
 	bool Save(std::ofstream& file) {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
 		int magic = 0x4f80b;
 		int version = 1;
 		int i = INTERVAL;
@@ -94,23 +108,19 @@ struct History : public StreamIn<JSON::JSON> {
 		return true;
 	}
 
-	bool ReadInteger(std::ifstream& file, int& dest, int check = -1) {
-		file.read((char*)&dest, sizeof(int));
-		if (check != -1 && dest != check) return false;
-		return true;
-	}
-
 	bool Load(std::ifstream& file) {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
 		int tmp;
 
-		if (!ReadInteger(file, tmp, 0x4f80b)) return false;
-		if (!ReadInteger(file, tmp, 1)) return false;
-		if (!ReadInteger(file, tmp, /*sizeof(history)*/ -1)) return false;
-		if (!ReadInteger(file, tmp, INTERVAL)) return false;
-		if (!ReadInteger(file, tmp, N)) return false;
+		if (!readInteger(file, tmp, 0x4f80b)) return false;
+		if (!readInteger(file, tmp, 1)) return false;
+		if (!readInteger(file, tmp, /*sizeof(history)*/ -1)) return false;
+		if (!readInteger(file, tmp, INTERVAL)) return false;
+		if (!readInteger(file, tmp, N)) return false;
 
-		ReadInteger(file, start, -1);
-		ReadInteger(file, end, -1);
+		readInteger(file, start, -1);
+		readInteger(file, end, -1);
 
 		for (int i = 0; i < N; i++) {
 			if (!file.read((char*)&history[i].time, sizeof(history[i].time))) return false;
@@ -123,6 +133,8 @@ struct History : public StreamIn<JSON::JSON> {
 	}
 
 	float getAverage() {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
 		float avg = 0.0f;
 
 		for (int idx = start; idx != end; idx = (idx + 1) % N)
@@ -133,12 +145,16 @@ struct History : public StreamIn<JSON::JSON> {
 	}
 
 	std::string lastStatToJSON() {
+		std::lock_guard<std::mutex> l{ this->mtx };
+	
 		// needs change, now it returns last interval in which we received messages
 		if (start == end) return history[0].stat.toJSON(true);
 		return history[(end + N - 1) % N].stat.toJSON(false);
 	}
 
 	std::string toJSON() {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
 		std::string content;
 		long int tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
 
