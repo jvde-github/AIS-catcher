@@ -138,8 +138,13 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 
 	void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
 
+	void getShipJSON(const Ship& ship, std::string& content, long int now);
+	std::string getSinglePathJSON(uint32_t);
+
 public:
 	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
+
+	std::mutex mtx;
 
 	void setup();
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
@@ -161,7 +166,6 @@ public:
 		}
 	}
 
-	void getShipJSON(const Ship& ship, std::string& content, long int now);
 	std::string getShipJSON(int mmsi);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false);

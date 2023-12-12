@@ -68,6 +68,8 @@ void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, f
 
 // add member to get JSON in form of array with values and keys separately
 std::string DB::getJSONcompact(bool full) {
+	std::lock_guard<std::mutex> lock(mtx);
+
 	const std::string null_str = "null";
 	const std::string comma = ",";
 	std::string str;
@@ -163,6 +165,7 @@ std::string DB::getJSONcompact(bool full) {
 }
 
 void DB::getShipJSON(const Ship& ship, std::string& content, long int delta_time) {
+
 	const std::string null_str = "null";
 	std::string str;
 
@@ -235,6 +238,8 @@ void DB::getShipJSON(const Ship& ship, std::string& content, long int delta_time
 }
 
 std::string DB::getJSON(bool full) {
+	std::lock_guard<std::mutex> lock(mtx);
+
 	const std::string null_str = "null";
 	std::string str;
 
@@ -264,18 +269,22 @@ std::string DB::getJSON(bool full) {
 }
 
 std::string DB::getShipJSON(int mmsi) {
+	std::lock_guard<std::mutex> lock(mtx);
+
 	int ptr = findShip(mmsi);
 	if (ptr == -1) return "{}";
 
 	const Ship& ship = ships[ptr];
 	long int delta_time = (long int)time(nullptr) - (long int)ship.last_signal;
-
+	
 	std::string content;
 	getShipJSON(ship, content, delta_time);
 	return content;
 }
 
 std::string DB::getAllPathJSON() {
+	std::lock_guard<std::mutex> lock(mtx);
+
 	std::string content = "{";
 
 	std::time_t tm = time(nullptr);
@@ -288,7 +297,7 @@ std::string DB::getAllPathJSON() {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (delta_time > TIME_HISTORY) break;
 
-			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getPathJSON(ship.mmsi);
+			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSON(ship.mmsi);
 			delim = ",";
 		}
 		ptr = ships[ptr].next;
@@ -298,7 +307,7 @@ std::string DB::getAllPathJSON() {
 }
 
 
-std::string DB::getPathJSON(uint32_t mmsi) {
+std::string DB::getSinglePathJSON(uint32_t mmsi) {
 	const std::string null_str = "null";
 	std::string str;
 
@@ -329,7 +338,14 @@ std::string DB::getPathJSON(uint32_t mmsi) {
 	return content;
 }
 
+std::string DB::getPathJSON(uint32_t mmsi) {
+	std::lock_guard<std::mutex> lock(mtx);
+	return getSinglePathJSON(mmsi);
+}
+
 std::string DB::getMessage(uint32_t mmsi) {
+	std::lock_guard<std::mutex> lock(mtx);
+
 	int ptr = findShip(mmsi);
 	if (ptr == -1) return "";
 	return ships[ptr].msg;
@@ -550,6 +566,7 @@ void DB::addValidation(int ptr, TAG& tag, float lat, float lon) {
 }
 
 void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
+	std::lock_guard<std::mutex> lock(mtx);
 
 	const AIS::Message* msg = (AIS::Message*)data[0].binary;
 	int type = msg->type();
