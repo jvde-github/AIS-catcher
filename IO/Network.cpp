@@ -153,7 +153,7 @@ namespace IO {
 			r = http.Post(msg, gzip, false, "");
 		}
 
-		if (r.status != 200 || show_response)
+		if (r.status < 200 || r.status > 299 || show_response)
 			std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;
 	}
 
