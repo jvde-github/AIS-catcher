@@ -2456,7 +2456,7 @@
 					<li class="divider table-menu"></li>
 					<li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
 					<li class="ctx-map ctx-noalltracks" onclick="showAllTracks(); updateShipcardTrackOption();"><i class="timeline_icon"></i>Show all tracks</li>
-					<li class="ctx-map ctx-removealltracks" onclick="deleteAllTracks(); show_all_tracks=false; updateShipcardTrackOption();"><i class="remove_circle_outline_icon"></i>Remove all tracks</li>
+					<li class="ctx-map ctx-removealltracks" onclick="deleteAllTracks(); show_all_tracks=false; updateShipcardTrackOption();"><i class="remove_circle_outline_icon"></i>Hide all tracks</li>
 					<li class="ctx-map" onclick="ToggleFireworks()"><i class="explosion_icon"></i><span id="ctx_fireworks"></span></li>
 					<li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span></li>
 					<li class="divider ctx-map"></li>
@@ -2507,6 +2507,10 @@
 							<section class="noandroid">
 								<div><span>OS</span><span id="stat_os"></span></div>
 								<div><span>Hardware</span><span id="stat_hardware"></span></div>
+								<div><span>HTTP clients</span><span id="stat_tcp_clients"></span></div>
+								<div><span>Update Frequency</span><span id="stat_update_time"></span></div>
+							</section>
+							<section class="noandroid">
 								<div><span>Device</span><span id="stat_product"></span></div>
 								<div><span>Vendor</span><span id="stat_vendor"></span></div>
 								<div><span>Serial</span><span id="stat_serial"></span></div>
@@ -2516,7 +2520,6 @@
 								<div><span>Build date</span><span id="stat_build_date"></span></div>
 								<div><span>Engine</span><span id="stat_model"></span></div>
 								<div><span>Memory</span><span id="stat_memory"></span></div>
-								<div><span>HTTP clients</span><span id="stat_tcp_clients"></span></div>
 							</section>
 							<section>
 								<div><span>Device rate</span><span id="stat_sample_rate"></span></div>
@@ -5279,6 +5282,7 @@
 
 					if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
+					document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs/1000).toFixed(1) + " s";
 					var title = document.getElementById("stat_station").textContent;
 					if (title != "" && title != null) document.title = "AIS-catcher " + title;
 
