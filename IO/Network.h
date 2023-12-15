@@ -83,6 +83,7 @@ namespace IO {
 		void process();
 
 		void Receive(const JSON::JSON* data, int len, TAG& tag) {
+
 			for (int i = 0; i < len; i++) {
 				if (filter.include(*(AIS::Message*)data[i].binary)) {
 					json.clear();

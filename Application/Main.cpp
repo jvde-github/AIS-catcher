@@ -554,7 +554,7 @@ int main(int argc, char* argv[]) {
 
 			// set up all the output and connect to the receiver outputs
 			for (auto& o : msg) o->Connect(r);
-			for (auto& j : msg) j->Connect(r);
+			for (auto& j : json) j->Connect(r);
 
 			screen.connect(r);
 
