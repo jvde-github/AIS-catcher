@@ -179,8 +179,8 @@ namespace Device {
 		if (bias_tee) setBiasTee(1);
 		if (tuner_bandwidth) setBandwidth(tuner_bandwidth);
 
-		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw std::runtime_error("RTLSDR: cannot set sample rate.");
 		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw std::runtime_error("RTLSDR: cannot set frequency.");
+		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw std::runtime_error("RTLSDR: cannot set sample rate.");
 	}
 
 	void RTLSDR::getDeviceList(std::vector<Description>& DeviceList) {
