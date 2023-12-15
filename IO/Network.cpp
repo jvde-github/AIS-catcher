@@ -76,6 +76,7 @@ namespace IO {
 		std::time_t now = std::time(0);
 
 		if (protocol == PROTOCOL::AISCATCHER) {
+
 			msg += "{\n\t\"protocol\": \"" + protocol_string + "\",";
 			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
 			msg += "\n\t\"stationid\": ";
