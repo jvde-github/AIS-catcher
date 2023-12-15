@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <mutex>
 #include <condition_variable>
 
@@ -27,13 +26,14 @@
 
 // FIFO implementation: input (Push) can be any size, output (Pop) will be of size BLOCK_SIZE
 
+
 class FIFO {
 	std::vector<char> _data;
 
 	int head = 0;
 	int tail = 0;
 
-	std::atomic<int> count;
+	int blocks_filled = 0;
 
 	std::mutex fifo_mutex;
 	std::condition_variable fifo_cond;
@@ -47,7 +47,7 @@ public:
 	void Init(int bs = 16 * 16384, int fs = 2) {
 		BLOCK_SIZE = bs;
 		N_BLOCKS = fs;
-		count = head = tail = 0;
+		blocks_filled = head = tail = 0;
 		_data.resize((int)(N_BLOCKS * BLOCK_SIZE));
 	}
 
@@ -56,44 +56,52 @@ public:
 	}
 
 	void Halt() {
-		{
-			std::lock_guard<std::mutex> lock(fifo_mutex);
-			count = -1;
-		}
+		std::lock_guard<std::mutex> lock(fifo_mutex);
+
+		blocks_filled = -1;
 		fifo_cond.notify_one();
 	}
 
 	bool Wait() {
-		if (count == 0) {
-			std::unique_lock<std::mutex> lock(fifo_mutex);
-			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this] { return count != 0; });
+		std::unique_lock<std::mutex> lock(fifo_mutex);
+
+		if (blocks_filled == 0) {
+			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this] { return blocks_filled != 0; });
 		}
-		return (count > 0);
+		return blocks_filled > 0;
 	}
 
 	char* Front() {
 		return _data.data() + head;
 	}
+
 	void Pop() {
-		if (count > 0) {
+		std::unique_lock<std::mutex> lock(fifo_mutex);
+
+		if (blocks_filled > 0) {
 			head = (head + BLOCK_SIZE) % (int)_data.size();
-			count--;
+			blocks_filled--;
 		}
 	}
+
 	bool Full() {
-		return count == N_BLOCKS;
+		std::unique_lock<std::mutex> lock(fifo_mutex);
+
+		return blocks_filled == N_BLOCKS;
 	}
 
 	bool Push(char* data, int sz) {
-		if (count == -1) return false;
+		std::unique_lock<std::mutex> lock(fifo_mutex);
+
 		if (sz <= 0) return true;
 
 		// size of new tail block including overflow (i.e. > BLOCK_SIZE)
-		int block_ready = (tail % BLOCK_SIZE + sz) / BLOCK_SIZE;
-		int block_needed = (tail % BLOCK_SIZE + sz - 1) / BLOCK_SIZE + 1;
+		int blocks_ready = (tail % BLOCK_SIZE + sz) / BLOCK_SIZE;
+		int blocks_needed = (tail % BLOCK_SIZE + sz - 1) / BLOCK_SIZE + 1;
 		int wrap = tail + sz - (int)_data.size();
 
-		if (count + block_needed > N_BLOCKS) return false;
+		if (blocks_filled == -1) return false;
+		if (blocks_filled + blocks_needed > N_BLOCKS) return false;
 
 		if (wrap <= 0) {
 			std::memcpy(_data.data() + tail, data, sz);
@@ -103,18 +111,12 @@ public:
 			std::memcpy(_data.data(), data + sz - wrap, wrap);
 		}
 
-		// if we completed a full block, ship it off
-		while (block_ready--) {
-			{
-				std::lock_guard<std::mutex> lock(fifo_mutex);
-				count++;
-			}
-
-			fifo_cond.notify_one();
-		}
-
 		tail = (tail + sz) % (int)_data.size();
 
+		if (blocks_ready > 0) {
+			blocks_filled += blocks_ready;
+			fifo_cond.notify_one();
+		}
 		return true;
 	}
 };
