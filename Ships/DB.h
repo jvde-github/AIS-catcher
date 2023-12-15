@@ -46,7 +46,7 @@ const int ANGLE_UNDEFINED = -1;
 struct PathPoint {
 	float lat, lon;
 	uint32_t mmsi = 0;
-	std::time_t signal_time = (std::time_t)0;
+	int count = 0;
 	int next = 0;
 };
 
@@ -78,7 +78,9 @@ struct Ship {
 		minute = ETA_MINUTE_UNDEFINED;
 		lat = LAT_UNDEFINED;
 		lon = LON_UNDEFINED;
-		ppm = level = speed = draught = distance = 0;
+		ppm = PPM_UNDEFINED;
+		level = LEVEL_UNDEFINED;
+		speed = draught = distance = 0;
 		cog = COG_UNDEFINED;
 		last_signal = {};
 		approximate = false;
@@ -139,7 +141,8 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
 
 	void getShipJSON(const Ship& ship, std::string& content, long int now);
-	std::string getSinglePathJSON(uint32_t);
+	std::string getSinglePathJSON(int);
+	bool isNextPathPoint(int idx, uint32_t mmsi, int count) { return idx != -1 && paths[idx].mmsi == mmsi && paths[idx].count < count; }
 
 public:
 	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}

@@ -19,7 +19,6 @@
 
 namespace IO {
 
-
 #ifdef HASPSQL
 	void PostgreSQL::post() {
 
@@ -456,7 +455,6 @@ namespace IO {
 	}
 #endif
 
-
 	Setting& PostgreSQL::Set(std::string option, std::string arg) {
 
 		Util::Convert::toUpper(option);
@@ -464,7 +462,7 @@ namespace IO {
 		if (option == "CONN_STR")
 			conn_string = arg;
 		else if (option == "GROUPS_IN")
-			setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
 		else if (option == "STATION_ID")
 			station_id = Util::Parse::Integer(arg);
 		else if (option == "INTERVAL")

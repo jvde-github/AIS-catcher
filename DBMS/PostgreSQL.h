@@ -30,10 +30,11 @@
 #include "AIS.h"
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
+#include "IO.h"
 
 namespace IO {
 
-	class PostgreSQL : public StreamIn<JSON::JSON>, public Setting {
+	class PostgreSQL : public OutputJSON {
 		JSON::StringBuilder builder;
 		std::string sql_trans;
 		std::stringstream sql;

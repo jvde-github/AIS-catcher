@@ -111,9 +111,9 @@ std::string DB::getJSONcompact(bool full) {
 				content += null_str + comma;
 			}
 
-			content += std::to_string(ship.level) + comma;
+			content += (ship.level == LEVEL_UNDEFINED ? null_str : std::to_string(ship.level)) + comma;
 			content += std::to_string(ship.count) + comma;
-			content += std::to_string(ship.ppm) + comma;
+			content += (ship.ppm == PPM_UNDEFINED ? null_str : std::to_string(ship.ppm)) + comma;
 			content += std::string(ship.approximate ? "true" : "false") + comma;
 
 			content += ((ship.heading == HEADING_UNDEFINED) ? null_str : std::to_string(ship.heading)) + comma;
@@ -191,9 +191,9 @@ void DB::getShipJSON(const Ship& ship, std::string& content, long int delta_time
 	}
 
 	// content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
-	content += "\"level\":" + std::to_string(ship.level) + ",";
+	content += "\"level\":" + (ship.level == LEVEL_UNDEFINED ? null_str : std::to_string(ship.level)) + ",";
 	content += "\"count\":" + std::to_string(ship.count) + ",";
-	content += "\"ppm\":" + std::to_string(ship.ppm) + ",";
+	content += "\"ppm\":" + (ship.ppm == PPM_UNDEFINED ? null_str : std::to_string(ship.ppm)) + ",";
 	content += "\"group_mask\":" + std::to_string(ship.group_mask) + ",";
 	content += "\"approx\":" + std::string(ship.approximate ? "true" : "false") + ",";
 
@@ -276,7 +276,7 @@ std::string DB::getShipJSON(int mmsi) {
 
 	const Ship& ship = ships[ptr];
 	long int delta_time = (long int)time(nullptr) - (long int)ship.last_signal;
-	
+
 	std::string content;
 	getShipJSON(ship, content, delta_time);
 	return content;
@@ -297,7 +297,7 @@ std::string DB::getAllPathJSON() {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (delta_time > TIME_HISTORY) break;
 
-			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSON(ship.mmsi);
+			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSON(ptr);
 			delim = ",";
 		}
 		ptr = ships[ptr].next;
@@ -306,23 +306,17 @@ std::string DB::getAllPathJSON() {
 	return content;
 }
 
-
-std::string DB::getSinglePathJSON(uint32_t mmsi) {
+std::string DB::getSinglePathJSON(int idx) {
 	const std::string null_str = "null";
 	std::string str;
 
-	int idx = findShip(mmsi);
-	if (idx == -1) return "[]";
+	uint32_t mmsi = ships[idx].mmsi;
+	int ptr = ships[idx].path_ptr;
+	int t = ships[idx].count + 1;
 
 	content = "[";
 
-	int ptr = ships[idx].path_ptr;
-	long int t0 = time(nullptr);
-
-	long int t = t0;
-
-	while (ptr != -1 && paths[ptr].mmsi == mmsi && (long int)paths[ptr].signal_time <= t) {
-		t = (long int)paths[ptr].signal_time;
+	while (isNextPathPoint(ptr, mmsi, t)) {
 
 		if (isValidCoord(paths[ptr].lat, paths[ptr].lon)) {
 			content += "[";
@@ -331,6 +325,7 @@ std::string DB::getSinglePathJSON(uint32_t mmsi) {
 			content += std::to_string(paths[ptr].lon);
 			content += "],";
 		}
+		t = paths[ptr].count;
 		ptr = paths[ptr].next;
 	}
 	if (content != "[") content.pop_back();
@@ -340,12 +335,13 @@ std::string DB::getSinglePathJSON(uint32_t mmsi) {
 
 std::string DB::getPathJSON(uint32_t mmsi) {
 	std::lock_guard<std::mutex> lock(mtx);
-	return getSinglePathJSON(mmsi);
+	int idx = findShip(mmsi);
+	if (idx == -1) return "[]";
+	return getSinglePathJSON(idx);
 }
 
 std::string DB::getMessage(uint32_t mmsi) {
 	std::lock_guard<std::mutex> lock(mtx);
-
 	int ptr = findShip(mmsi);
 	if (ptr == -1) return "";
 	return ships[ptr].msg;
@@ -391,24 +387,27 @@ void DB::addToPath(int ptr) {
 	int idx = ships[ptr].path_ptr;
 	float lat = ships[ptr].lat;
 	float lon = ships[ptr].lon;
+	int count = ships[ptr].count;
+	uint32_t mmsi = ships[ptr].mmsi;
 
-	if (idx != -1) {
+	if (isNextPathPoint(idx, mmsi, count)) {
 		// path exists and ship did not move
 		if (paths[idx].lat == lat && paths[idx].lon == lon) {
-			paths[idx].signal_time = ships[ptr].last_signal;
+			paths[idx].count = ships[ptr].count;
 			return;
 		}
 		// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update path point
-		if (paths[idx].next != -1 && paths[idx].mmsi == ships[ptr].mmsi) {
-			float lat_prev = paths[paths[idx].next].lat;
-			float lon_prev = paths[paths[idx].next].lon;
+		int next = paths[idx].next;
+		if (isNextPathPoint(next, mmsi, paths[idx].count)) {
+			float lat_prev = paths[next].lat;
+			float lon_prev = paths[next].lon;
 
 			float d = (lat_prev - lat) * (lat_prev - lat) + (lon_prev - lon) * (lon_prev - lon);
 
 			if (d < 0.000001) {
 				paths[idx].lat = lat;
 				paths[idx].lon = lon;
-				paths[idx].signal_time = ships[ptr].last_signal;
+				paths[idx].count = ships[ptr].count;
 				return;
 			}
 		}
@@ -419,7 +418,7 @@ void DB::addToPath(int ptr) {
 	paths[path_idx].lat = lat;
 	paths[path_idx].lon = lon;
 	paths[path_idx].mmsi = ships[ptr].mmsi;
-	paths[path_idx].signal_time = ships[ptr].last_signal;
+	paths[path_idx].count = ships[ptr].count;
 
 	ships[ptr].path_ptr = path_idx;
 	path_idx = (path_idx + 1) % M;

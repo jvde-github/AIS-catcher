@@ -45,13 +45,11 @@ class Config {
 
 	std::vector<std::unique_ptr<Receiver>>& _receivers;
 	int _nrec;
+	std::vector<std::unique_ptr<IO::OutputMessage>>& _msg;
+	std::vector<std::unique_ptr<IO::OutputJSON>>& _json;
 
 	OutputScreen& _screen;
-	OutputHTTP& _http;
 	std::vector<std::unique_ptr<WebViewer>>& _server;
-	OutputUDP& _udp;
-	OutputTCP& _tcp;
-	OutputTCPlistener& _tcp_server;
 
 	bool isActiveObject(const JSON::Value& pd);
 	void setSettingsFromJSON(const JSON::Value& pd, Setting& s);
@@ -65,7 +63,7 @@ class Config {
 	void setReceiverFromArray(const JSON::Property& pd);
 
 public:
-	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, OutputScreen& s, OutputHTTP& h, OutputUDP& u, OutputTCP& t, OutputTCPlistener& tl, std::vector<std::unique_ptr<WebViewer>>& v) : _receivers(r), _nrec(nr), _screen(s), _http(h), _server(v), _udp(u), _tcp(t), _tcp_server(tl){};
+	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, OutputScreen& s, std::vector<std::unique_ptr<WebViewer>>& v) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v){};
 
 	void read(std::string& file_config);
 	void set(const std::string& str);

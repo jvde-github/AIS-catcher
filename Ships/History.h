@@ -24,7 +24,7 @@
 #include "Statistics.h"
 
 template <int N, int INTERVAL>
-class  History : public StreamIn<JSON::JSON> {
+class History : public StreamIn<JSON::JSON> {
 	std::mutex mtx;
 
 	struct {
@@ -46,7 +46,6 @@ class  History : public StreamIn<JSON::JSON> {
 	}
 
 public:
-
 	void setCutoff(int cutoff) {
 		for (int i = 0; i < N; i++)
 			history[i].stat.setCutoff(cutoff);
@@ -146,7 +145,7 @@ public:
 
 	std::string lastStatToJSON() {
 		std::lock_guard<std::mutex> l{ this->mtx };
-	
+
 		// needs change, now it returns last interval in which we received messages
 		if (start == end) return history[0].stat.toJSON(true);
 		return history[(end + N - 1) % N].stat.toJSON(false);

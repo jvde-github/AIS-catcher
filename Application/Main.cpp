@@ -26,12 +26,10 @@
 #include "Receiver.h"
 #include "WebViewer.h"
 #include "Config.h"
-
 #include "JSON/JSON.h"
-#include "JSON/Parser.h"
-#include "JSON/StringBuilder.h"
+#include "IO.h"
+#include "PostgreSQL.h"
 
-#include "TCP.h"
 std::atomic<bool> stop;
 
 void StopRequest() {
@@ -215,13 +213,10 @@ int main(int argc, char* argv[]) {
 	_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 
 	OutputScreen screen;
-	OutputHTTP http;
-	OutputTCPlistener tcp_listener;
-	OutputUDP udp;
-	OutputTCP tcp;
-	OutputDBMS db;
 	std::vector<OutputStatistics> stat;
 	std::vector<std::unique_ptr<WebViewer>> servers;
+	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
+	std::vector<std::unique_ptr<IO::OutputJSON>> json;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	int timeout = 0, nrec = 0;
@@ -295,11 +290,11 @@ int main(int argc, char* argv[]) {
 			case 'S':
 				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter [port].");
 				{
-					IO::TCPlistenerStreamer& u = tcp_listener.add(arg1);
+					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
+					IO::OutputMessage& u = *msg.back();
+					u.Set("PORT", arg1).Set("TIMEOUT", "0");
 					if (count > 1) parseSettings(u, argv, ptr + 1, argc);
 				}
-				break;
-
 				break;
 			case 'v':
 				Assert(count <= 1, param);
@@ -349,7 +344,9 @@ int main(int argc, char* argv[]) {
 				_receivers.back()->UDP().Set("port", arg2).Set("server", arg1);
 				break;
 			case 'D': {
-				IO::PostgreSQL& d = db.add();
+				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::PostgreSQL()));
+				IO::OutputJSON& d = *json.back();
+
 				if (count % 2 == 1) {
 					d.Set("CONN_STR", arg1);
 					if (count > 1)
@@ -435,23 +432,28 @@ int main(int argc, char* argv[]) {
 			case 'u':
 				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
 				{
-					IO::UDPStreamer& u = udp.add(arg1, arg2);
-					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
+					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::UDPStreamer()));
+					IO::OutputMessage& o = *msg.back();
+					o.Set("HOST", arg1).Set("PORT", arg2);
+					if (count > 2) parseSettings(o, argv, ptr + 2, argc);
 				}
 				break;
 			case 'P':
 				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
 				{
-					IO::TCPClientStreamer& u = tcp.add(arg1, arg2);
-					if (count > 2) parseSettings(u, argv, ptr + 2, argc);
+					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+					IO::OutputMessage& p = *msg.back();
+					p.Set("HOST", arg1).Set("PORT", arg2);
+					if (count > 2) parseSettings(p, argv, ptr + 2, argc);
 				}
 				break;
 			case 'H':
 				Assert(count > 0, param);
 				{
-					auto& h = http.add(AIS::KeyMap, JSON_DICT_FULL);
-					if (count % 2) h->Set("URL", arg1);
-					parseSettings(*h, argv, ptr + (count % 2), argc);
+					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::HTTPStreamer()));
+					IO::OutputJSON& h = *json.back();
+					if (count % 2) h.Set("URL", arg1);
+					parseSettings(h, argv, ptr + (count % 2), argc);
 					receiver.setTags("DT");
 				}
 				break;
@@ -526,8 +528,7 @@ int main(int argc, char* argv[]) {
 		// Read config file
 
 		if (!file_config.empty()) {
-
-			Config c(_receivers, nrec, screen, http, udp, tcp, tcp_listener, servers);
+			Config c(_receivers, nrec, msg, json, screen, servers);
 			c.read(file_config);
 		}
 
@@ -552,12 +553,10 @@ int main(int argc, char* argv[]) {
 			r.setupModel(group);
 
 			// set up all the output and connect to the receiver outputs
-			udp.connect(r);
-			tcp.connect(r);
-			tcp_listener.connect(r);
-			http.connect(r);
+			for (auto& o : msg) o->Connect(r);
+			for (auto& j : msg) j->Connect(r);
+
 			screen.connect(r);
-			db.connect(r);
 
 			for (auto& s : servers)
 				if (s->active()) s->connect(r);
@@ -565,12 +564,10 @@ int main(int argc, char* argv[]) {
 			if (r.verbose) stat[i].connect(r);
 		}
 
-		udp.start();
-		tcp.start();
-		http.start();
-		tcp_listener.start();
+		for (auto& o : msg) o->Start();
+		for (auto& j : json) j->Start();
+
 		screen.start();
-		db.start();
 
 		for (auto& s : servers)
 			if (s->active()) s->start();

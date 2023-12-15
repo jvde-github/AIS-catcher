@@ -27,7 +27,28 @@
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
 
+class Receiver;
+
 namespace IO {
+
+	class OutputJSON : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
+	public:
+		virtual void Start(){};
+		virtual void Stop(){};
+		void Connect(Receiver& r);
+
+		virtual ~OutputJSON() { Stop(); }
+	};
+
+	class OutputMessage : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
+	public:
+		virtual void Start(){};
+		virtual void Stop(){};
+		void Connect(Receiver& r);
+
+		virtual ~OutputMessage() { Stop(); }
+	};
+
 	template <typename T>
 	class StreamCounter : public StreamIn<T> {
 		uint64_t count = 0;

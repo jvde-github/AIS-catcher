@@ -81,6 +81,9 @@ enum class OutputLevel {
 	JSON_FULL
 };
 
+const float LEVEL_UNDEFINED = 1024;
+const float PPM_UNDEFINED = 1024;
+
 struct TAG {
 	unsigned mode = 0;
 	float sample_lvl = 0;
@@ -98,8 +101,8 @@ struct TAG {
 	void clear() {
 		group = GROUP_OUT_UNDEFINED;
 		sample_lvl = 0;
-		level = 0;
-		ppm = 0;
+		level = LEVEL_UNDEFINED;
+		ppm = PPM_UNDEFINED;
 		lat = 0;
 		lon = 0;
 		distance = -1;

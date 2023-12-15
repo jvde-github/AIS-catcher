@@ -78,7 +78,19 @@ namespace AIS {
 			ss << ",\"rxtime\":\"" << getRxTime() << "\"";
 		}
 		if (!uuid.empty()) ss << ",\"uuid\":\"" << uuid << "\"";
-		if (mode & 1) ss << ",\"signalpower\":" << level << ",\"ppm\":" << ppm;
+		if (mode & 1) {
+			ss << ",\"signalpower\":";
+			if (level == LEVEL_UNDEFINED)
+				ss << "null";
+			else
+				ss << level;
+			ss << ",\"ppm\":";
+			if (ppm == PPM_UNDEFINED)
+				ss << "null";
+			else
+				ss << ppm;
+		}
+
 		if (getStation()) ss << ",\"station_id\":" << getStation();
 
 		ss << ",\"mmsi\":" << mmsi() << ",\"type\":" << type() << ",\"nmea\":[\"" << NMEA[0] << "\"";

@@ -68,8 +68,10 @@ void Config::setHTTPfromJSON(const JSON::Property& pd) {
 	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 
-		auto& h = _http.add(AIS::KeyMap, JSON_DICT_FULL);
-		setSettingsFromJSON(v, *h);
+		_json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::HTTPStreamer()));
+		IO::OutputJSON& h = *_json.back();
+
+		setSettingsFromJSON(v, h);
 		_receivers.back()->setTags("DT");
 	}
 }
@@ -82,8 +84,9 @@ void Config::setUDPfromJSON(const JSON::Property& pd) {
 	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 
-		IO::UDPStreamer& udp = _udp.add();
-		setSettingsFromJSON(v, udp);
+		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::UDPStreamer()));
+		IO::OutputMessage& o = *_msg.back();
+		setSettingsFromJSON(v, o);
 	}
 }
 
@@ -95,7 +98,8 @@ void Config::setTCPfromJSON(const JSON::Property& pd) {
 	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 
-		IO::TCPClientStreamer& tcp = _tcp.add();
+		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+		IO::OutputMessage& tcp = *_msg.back();
 		setSettingsFromJSON(v, tcp);
 	}
 }
@@ -108,7 +112,9 @@ void Config::setTCPListenerfromJSON(const JSON::Property& pd) {
 	for (const auto& v : pd.Get().getArray()) {
 		if (!isActiveObject(v)) continue;
 
-		setSettingsFromJSON(v, _tcp_server.add());
+		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
+		IO::OutputMessage& tcp = *_msg.back();
+		setSettingsFromJSON(v, tcp);
 	}
 }
 
