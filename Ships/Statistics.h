@@ -39,8 +39,7 @@ class MessageStatistics {
 
 	int _LONG_RANGE_CUTOFF = 2500;
 
-	int _count;
-	int _vessels;
+	int _count, _exclude, _vessels;
 	int _msg[27];
 	int _channel[4];
 
@@ -63,7 +62,7 @@ public:
 		std::memset(_radarA, 0, sizeof(_radarA));
 		std::memset(_radarB, 0, sizeof(_radarB));
 
-		_count = _vessels = 0;
+		_count = _vessels = _exclude = 0;
 		_distance = _ppm = 0;
 		_level_min = 1e6;
 		_level_max = -1e6;
@@ -81,11 +80,15 @@ public:
 		_msg[m.type() - 1]++;
 		if (m.getChannel() >= 'A' || m.getChannel() <= 'D') _channel[m.getChannel() - 'A']++;
 
-		_level_min = MIN(_level_min, tag.level);
-		_level_max = MAX(_level_max, tag.level);
-		_ppm += tag.ppm;
+		if (tag.level == LEVEL_UNDEFINED || tag.ppm == PPM_UNDEFINED)
+			_exclude++;
+		else {
+			_level_min = MIN(_level_min, tag.level);
+			_level_max = MAX(_level_max, tag.level);
+			_ppm += tag.ppm;
+		}
 
-		// for range we ignore atons for now
+		// for range we ignore atons
 		if (m.type() == 21) return;
 
 		if (!tag.validated || tag.distance > _LONG_RANGE_CUTOFF)
@@ -142,27 +145,31 @@ public:
 
 	std::string toJSON(bool empty = false) {
 		std::lock_guard<std::mutex> l{ this->m };
+		static const std::string null_str = "null";
+		static const std::string comma = ",";
 
 		std::string element;
 
+		int c = _count - _exclude;
+
 		element += "{\"count\":" + std::to_string(empty ? 0 : _count) +
 				   ",\"vessels\":" + std::to_string(empty ? 0 : _vessels) +
-				   ",\"level_min\":" + ((empty || !_count) ? std::string("0") : Util::Convert::toString(_level_min)) +
-				   ",\"level_max\":" + ((empty || !_count) ? std::string("0") : Util::Convert::toString(_level_max)) +
-				   ",\"ppm\":" + std::to_string(empty || !_count ? 0 : _ppm / _count) +
-				   ",\"dist\":" + std::to_string(empty ? 0 : _distance) +
+				   ",\"level_min\":" + ((empty || !c) ? null_str : Util::Convert::toString(_level_min)) +
+				   ",\"level_max\":" + ((empty || !c) ? null_str : Util::Convert::toString(_level_max)) +
+				   ",\"ppm\":" + (empty || !c ? null_str : std::to_string(_ppm / c)) +
+				   ",\"dist\":" + (empty ? null_str : std::to_string(_distance)) +
 				   ",\"channel\":[";
 
-		for (int i = 0; i < 4; i++) element += std::to_string(empty ? 0 : _channel[i]) + ",";
+		for (int i = 0; i < 4; i++) element += std::to_string(empty ? 0 : _channel[i]) + comma;
 		element.pop_back();
 		element += "],\"radar_a\":[";
-		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarA[i]) + ",";
+		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarA[i]) + comma;
 		element.pop_back();
 		element += "],\"radar_b\":[";
-		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarB[i]) + ",";
+		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarB[i]) + comma;
 		element.pop_back();
 		element += "],\"msg\":[";
-		for (int i = 0; i < 27; i++) element += std::to_string(empty ? 0 : _msg[i]) + ",";
+		for (int i = 0; i < 27; i++) element += std::to_string(empty ? 0 : _msg[i]) + comma;
 		element.pop_back();
 		element += "]}";
 		return element;

@@ -47,7 +47,6 @@ namespace JSON {
 			bool b;
 			long int i;
 			float f;
-
 			std::string* s;
 			std::vector<std::string>* as;
 			std::vector<Value>* a;
@@ -55,16 +54,17 @@ namespace JSON {
 		} data;
 
 	public:
-		float getFloat() const { return data.f; }
-		long int getInt() const { return data.i; }
-		bool getBool() const { return data.b; }
-
+		float getFloat(float d = 0.0f) const { return isFloat() ? data.f : d; }
+		long int getInt(long int d = 0) const { return isInt() ? data.i : d; }
+		bool getBool(bool d = false) const { return isBool() ? data.b : d; }
 		const std::vector<std::string>& getStringArray() const { return *data.as; }
 		const std::vector<Value>& getArray() const { return *data.a; }
-		const std::string& getString() const { return *data.s; }
+		const std::string getString() const { return isString() ? *data.s : std::string(""); }
 		const JSON& getObject() const { return *data.o; }
 
+
 		const bool isObject() const { return type == Type::OBJECT; }
+		const bool isBool() const { return type == Type::BOOL; }
 		const bool isArray() const { return type == Type::ARRAY; }
 		const bool isArrayString() const { return type == Type::ARRAY_STRING; }
 		const bool isString() const { return type == Type::STRING; }

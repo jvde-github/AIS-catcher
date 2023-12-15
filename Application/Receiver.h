@@ -31,15 +31,9 @@
 #include "IO.h"
 #include "Network.h"
 #include "AIS.h"
-#include "JSONAIS.h"
 #include "DB.h"
 #include "History.h"
-#include "PostgreSQL.h"
-
-#include "Keys.h"
 #include "JSON/JSON.h"
-#include "JSON/Parser.h"
-#include "JSON/StringBuilder.h"
 
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
@@ -56,59 +50,6 @@
 #include "Device/UDP.h"
 
 class Receiver;
-
-//--------------------------------------------
-class OutputHTTP {
-	std::vector<std::unique_ptr<IO::HTTPStreamer>> _http;
-
-public:
-	std::unique_ptr<IO::HTTPStreamer>& add(const std::vector<std::vector<std::string>>& km, int dict);
-	void connect(Receiver& r);
-	void start();
-};
-
-//--------------------------------------------
-class OutputTCPlistener {
-	std::vector<std::unique_ptr<IO::TCPlistenerStreamer>> _listener;
-
-public:
-	void connect(Receiver& r);
-	void start();
-	IO::TCPlistenerStreamer& add(const std::string& port);
-	IO::TCPlistenerStreamer& add() { return add("0"); }
-};
-
-//--------------------------------------------
-class OutputUDP {
-	std::vector<std::unique_ptr<IO::UDPStreamer>> _UDP;
-
-public:
-	void connect(Receiver& r);
-	void start();
-	IO::UDPStreamer& add();
-	IO::UDPStreamer& add(const std::string& host, const std::string& port);
-};
-
-//--------------------------------------------
-class OutputTCP {
-	std::vector<std::unique_ptr<IO::TCPClientStreamer>> _TCP;
-
-public:
-	void connect(Receiver& r);
-	void start();
-	IO::TCPClientStreamer& add();
-	IO::TCPClientStreamer& add(const std::string& host, const std::string& port);
-};
-
-//--------------------------------------------
-class OutputDBMS {
-	std::vector<std::unique_ptr<IO::PostgreSQL>> _PSQL;
-
-public:
-	void connect(Receiver& r);
-	void start();
-	IO::PostgreSQL& add();
-};
 
 //--------------------------------------------
 class OutputScreen {

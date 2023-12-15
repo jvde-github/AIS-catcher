@@ -84,7 +84,7 @@ namespace TCP {
 
 	class Server {
 	public:
-		~Server();
+		virtual ~Server();
 
 		bool start(int port);
 		bool SendAll(const std::string& m);

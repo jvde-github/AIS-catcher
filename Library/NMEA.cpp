@@ -316,8 +316,6 @@ namespace AIS {
 				std::string dev = "";
 				std::string suuid = "";
 
-				tag.ppm = 0;
-				tag.sample_lvl = 0;
 				t = 0;
 
 				// phase 1, get the meta data in place
@@ -333,10 +331,10 @@ namespace AIS {
 						dev = p.Get().getString();
 						break;
 					case AIS::KEY_SIGNAL_POWER:
-						tag.level = p.Get().getFloat();
+						tag.level = p.Get().getFloat(LEVEL_UNDEFINED);
 						break;
 					case AIS::KEY_PPM:
-						tag.ppm = p.Get().getFloat();
+						tag.ppm = p.Get().getFloat(PPM_UNDEFINED);
 						break;
 					case AIS::KEY_RXUXTIME:
 						t = p.Get().getInt();
@@ -345,6 +343,15 @@ namespace AIS {
 				}
 
 				if (cls == "AIS" && dev == "AIS-catcher" && (uuid.empty() || suuid == uuid)) {
+
+					// ------------------------------
+					// temporary check, should be removed
+					volatile float level_check = MIN(LEVEL_UNDEFINED + 1, tag.level);
+					if (level_check > LEVEL_UNDEFINED) {
+						std::cerr << "Warning: level check failed for " << s << std::endl;
+					}
+					// ------------------------------
+
 					for (const auto& p : j->getProperties()) {
 						if (p.Key() == AIS::KEY_NMEA) {
 							if (p.Get().isArray()) {

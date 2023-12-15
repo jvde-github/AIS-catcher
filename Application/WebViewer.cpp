@@ -18,7 +18,7 @@
 #include "WebViewer.h"
 
 bool WebViewer::Save() {
-	std::cerr << "Server: writing statistics to file " << filename << std::endl;
+	// std::cerr << "Server: writing statistics to file " << filename << std::endl;
 	try {
 		std::ofstream infile(filename, std::ios::binary);
 		if (!counter.Save(infile)) return false;
@@ -80,7 +80,7 @@ void WebViewer::BackupService() {
 				break;
 			}
 
-			std::cerr << "Server: initiate backup." << std::endl;
+			// std::cerr << "Server: initiate backup." << std::endl;
 			if (!Save())
 				std::cerr << "Server: failed to write backup." << std::endl;
 		}
@@ -121,8 +121,10 @@ void WebViewer::connect(Receiver& r) {
 			*r.device >> raw_counter;
 		}
 
+	/*
 	if (!rec_details)
 		std::cerr << "Web Client: not connected to the output of any model." << std::endl;
+	*/
 }
 
 void WebViewer::connect(AIS::Model& m, Connection<JSON::JSON>& json, Device::Device& device) {

@@ -43,10 +43,11 @@
 
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
+#include "IO.h"
 
 namespace IO {
 
-	class HTTPStreamer : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
+	class HTTPStreamer : public OutputJSON {
 
 		int source = -1;
 		JSON::StringBuilder builder;
@@ -67,10 +68,10 @@ namespace IO {
 		int TIMEOUT = 10;
 		float lat = 0.0, lon = 0.0;
 
-		std::string model, model_setting;
-		std::string product, vendor, serial, device_setting;
+		std::string model = "N/A", model_setting = "N/A";
+		std::string product = "N/A", vendor = "N/A", serial = "N/A", device_setting = "N/A";
 
-		char response[1024];
+		char response[1024] = { 0 };
 
 		enum class PROTOCOL { AISCATCHER,
 							  APRS,
@@ -103,11 +104,9 @@ namespace IO {
 
 	public:
 		~HTTPStreamer() { Stop(); }
+		HTTPStreamer() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
 
-	public:
-		HTTPStreamer(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
-
-		virtual Setting& Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 
 		void Start();
 		void Stop();
@@ -130,7 +129,7 @@ namespace IO {
 		int ID() { return sourceID; }
 	};
 
-	class UDPStreamer : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
+	class UDPStreamer : public OutputMessage {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
 		int source = -1;
@@ -148,7 +147,7 @@ namespace IO {
 		~UDPStreamer();
 		UDPStreamer();
 
-		virtual Setting& Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 		void Receive(const AIS::GPS* data, int len, TAG& tag);
@@ -167,7 +166,7 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPClientStreamer : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
+	class TCPClientStreamer : public OutputMessage {
 		::TCP::Client tcp;
 		AIS::Filter filter;
 		bool JSON = false;
@@ -177,7 +176,7 @@ namespace IO {
 		bool persistent = true;
 
 	public:
-		virtual Setting& Set(std::string option, std::string arg);
+		Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 		void Receive(const AIS::GPS* data, int len, TAG& tag);
@@ -192,13 +191,15 @@ namespace IO {
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPlistenerStreamer : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting, public TCP::Server {
+	class TCPlistenerStreamer : public OutputMessage, public TCP::Server {
 		int port = 5010;
 		AIS::Filter filter;
 		bool JSON = false;
 
 	public:
-		virtual Setting& Set(std::string option, std::string arg);
+		virtual ~TCPlistenerStreamer(){};
+
+		Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 		void Receive(const AIS::GPS* data, int len, TAG& tag);

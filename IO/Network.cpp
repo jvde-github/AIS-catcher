@@ -20,6 +20,7 @@
 #include "AIS-catcher.h"
 #include "Network.h"
 #include "Utilities.h"
+#include "Receiver.h"
 
 namespace IO {
 
