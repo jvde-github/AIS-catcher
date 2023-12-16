@@ -164,7 +164,6 @@ namespace IO {
 	}
 
 	HTTPResponse HTTPClient::Post(const std::string& msg, bool gzip, bool multipart, const std::string& copyname) {
-		int r;
 
 		HTTPResponse response;
 
@@ -180,6 +179,8 @@ namespace IO {
 
 		if (secure) {
 #ifdef HASOPENSSL
+
+			int r;
 
 			if (!Handshake()) {
 				freeSSL();
