@@ -2910,7 +2910,9 @@
 					latlon_in_dms: true,
 					show_range: false,
 					map_day: "Voyager (no labels)",
+					map_day_overlay: [], 
 					map_night: "Dark Matter (no labels)",
+					map_night_overlay: [],
 					zoom: 10,
 					lat: 0,
 					lon: 0,
@@ -3686,16 +3688,47 @@
 
 			function updateMapLayer() {
 				if (activeTileLayer) {
+
+					overlays_day = JSON.parse(JSON.stringify(settings.map_day_overlay));
+					overlays_night = JSON.parse(JSON.stringify(settings.map_night_overlay));
+
 					removeTileLayer();
+
+					settings.map_day_overlay = JSON.parse(JSON.stringify(overlays_day));
+					settings.map_night_overlay = JSON.parse(JSON.stringify(overlays_night));
+
 					addMapLayer();
 				}
 			}
 
 			function addMapLayer() {
-				if (settings.dark_mode) activeTileLayer = settings.map_night in basemaps ? basemaps[settings.map_night] : basemaps[Object.keys(basemaps)[0]];
-				else activeTileLayer = settings.map_day in basemaps ? basemaps[settings.map_day] : basemaps[Object.keys(basemaps)[0]];
+				if (settings.dark_mode) {
 
-				activeTileLayer.addTo(map);
+					activeTileLayer = settings.map_night in basemaps ? basemaps[settings.map_night] : basemaps[Object.keys(basemaps)[0]];
+					activeTileLayer.addTo(map);
+
+					if (settings.map_night_overlay.length > 0) {
+						for (let i = 0; i < settings.map_night_overlay.length; i++) {
+							if (settings.map_night_overlay[i] in overlapmaps) {
+								overlapmaps[settings.map_night_overlay[i]].addTo(map);
+							}
+						}
+					}
+
+				}
+				else {
+					activeTileLayer = settings.map_day in basemaps ? basemaps[settings.map_day] : basemaps[Object.keys(basemaps)[0]];
+					activeTileLayer.addTo(map);
+
+					if (settings.map_day_overlay.length > 0) {
+						for (let i = 0; i < settings.map_day_overlay.length; i++) {
+							if (settings.map_day_overlay[i] in overlapmaps) {
+								overlapmaps[settings.map_day_overlay[i]].addTo(map);
+							}
+						}
+					}
+				}
+
 			}
 
 			var dynamicStyle = document.createElement("style");
@@ -3747,7 +3780,31 @@
 				});
 
 				map.on("overlayadd", function(event) {
-					setMapOpacity();	
+					if (settings.dark_mode) {
+						if(!settings.map_night_overlay.includes(event.name))
+							settings.map_night_overlay.push(event.name);
+					}
+					else {
+						if(!settings.map_day_overlay.includes(event.name))
+							settings.map_day_overlay.push(event.name);
+					}
+					
+					setMapOpacity();
+					saveSettings();	
+				});
+
+				map.on("overlayremove", function(event) {
+					if (settings.dark_mode) {
+						if(settings.map_night_overlay.includes(event.name))
+							settings.map_night_overlay.splice(settings.map_night_overlay.indexOf(event.name), 1);
+					}
+					else {
+						if(settings.map_day_overlay.includes(event.name))
+							settings.map_day_overlay.splice(settings.map_day_overlay.indexOf(event.name), 1);
+					}
+					
+					setMapOpacity();
+					saveSettings();	
 				});
 
 				map.on("mousemove", function (evt) {
