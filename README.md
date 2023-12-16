@@ -1090,7 +1090,7 @@ AIS-catcher  -v 10 -gr rtlagc on -m 2 -go droop off -m 2 -m 2 -go soxr on
 ```
 Please note that the runs are performed on different days over different time spans so this does not represent a comparison of devices but you can compare within a column.
 
-### Frequency offset
+### Frequency Correction
 AIS-catcher tunes in on a frequency of 162 MHz. However, due to deviations in the internal oscillator of RTL-SDR devices, the actual frequency can be slightly off which will result in no or poor reception of AIS signals. It is therefore important to provide the program with the necessary correction in parts-per-million (ppm) to offset this deviation where needed. For most of our testing, we have used the RTL-SDR v3 dongle where in principle no frequency correction is needed as deviations are guaranteed to be small. For optimal reception though ensure you determine the necessary correction, e.g. [see](https://github.com/steve-m/kalibrate-rtl) and provide this as input via the ```-p``` switch on the command line.
 
 If you are using a cheap RTL-SDR dongle that suffers from thermal drift (i.e. the required PPM correction drifts when the dongle is getting warmer), you can use the option ``-go AFC_WIDE on`` (which is the default model in recent releases). This is a relatively new model (per v0.48) that is less sensitive to frequency drift. You can switch off this model using the switch `-go AFC_WIDE off'. Running the new model setting and the previous default yields results that are more stable for frequency drift.
@@ -1099,6 +1099,10 @@ If you are using a cheap RTL-SDR dongle that suffers from thermal drift (i.e. th
 <img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/41c86f20-5bc3-4e83-be15-59d538820a52">
 <img width="30%" alt="image" src="https://github.com/jvde-github/AIS-catcher/assets/52420030/7929bfaf-6e21-485d-9a98-4e1ab5f3384d">
 </p>
+
+##### Frequency Shift and PPM
+The Web Viewer and screen include plots of frequency shift and reports ppm (same). This is the frequency correction that AIS-catcher has done from the central frequencies to decode the signal. This assessment is based on the frequency offset of the RTL-SDR dongle but also the equipment from the sender. The number is in ppm and long-running averages can be used to determine the optimal ppm correction for your setup and then correct with `-p`. Deviations between -3 and +3 will usually not impact reception quality.
+
 
 ### System USB performance
 On some laptops we observed that Windows was struggling with the high volume of data transferred from the RTL SDR dongle to the PC. I am not sure why (likely some driver issue as Ubuntu on the same machine worked fine) but it is worthwhile to check if your system supports transferring from the dongle at a sampling rate of 1.536 MHz with the following command which is part of the osmocom rtl-sdr package:
