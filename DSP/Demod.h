@@ -53,7 +53,10 @@ namespace Demod {
 		int last = 0;
 
 	public:
+		virtual ~PhaseSearch() {}
+
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
+
 		void setParams(int h, int d) {
 			assert(nHistory <= maxHistory);
 			assert(nDelay <= nHistory);
@@ -69,16 +72,14 @@ namespace Demod {
 
 		FLOAT32 weight = 0.85f;
 
-		FLOAT32 ma[nPhases];
-		char bits[nPhases];
+		FLOAT32 ma[nPhases] = { 0 };
+		char bits[nPhases] = { 0 };
 
 		int max_idx = 0, rot = 0;
 
 	public:
-		PhaseSearchEMA() {
-			std::memset(ma, 0, sizeof(ma));
-			std::memset(bits, 0, sizeof(bits));
-		}
+		virtual ~PhaseSearchEMA() {}
+		
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 		void setParams(int d) { nDelay = d; }
 		void setWeight(FLOAT32 w) { weight = w; }

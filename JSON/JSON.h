@@ -165,13 +165,8 @@ namespace JSON {
 		std::vector<std::shared_ptr<std::string>> strings;
 		std::vector<std::shared_ptr<std::vector<Value>>> arrays;
 
-		// key map and used dictionary
-		const std::vector<std::vector<std::string>>* keymap = nullptr;
-
 	public:
 		void* binary = NULL;
-
-		JSON(const std::vector<std::vector<std::string>>* map) : keymap(map) {}
 
 		void clear() {
 			properties.clear();

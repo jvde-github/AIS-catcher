@@ -63,7 +63,6 @@ namespace IO {
 		std::thread run_thread;
 		bool terminate = false, running = false;
 		std::mutex queue_mutex;
-		uint32_t msg_id = 0;
 
 		int INTERVAL = 10;
 #ifdef HASPSQL

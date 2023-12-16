@@ -30,7 +30,7 @@ namespace AIS {
 #define MAX_AIS_LENGTH (128 * 8)
 
 	class GPS {
-		float lat = 0, lon = 0, heading = 0, speed = 0;
+		float lat = 0, lon = 0;
 		const std::string& nmea;
 		const std::string& json;
 

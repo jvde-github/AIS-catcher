@@ -64,6 +64,8 @@ namespace IO {
 			resetStatistic();
 		}
 
+		virtual ~StreamCounter() {}
+
 		void Receive(const T* data, int len, TAG& tag) {
 			count += len;
 		}

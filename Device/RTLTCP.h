@@ -54,7 +54,6 @@ namespace Device {
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
-		bool bias_tee = false;
 
 		// Protocol: NONE
 
@@ -62,8 +61,6 @@ namespace Device {
 
 		std::string host = "localhost";
 		std::string port = "1234";
-
-		struct addrinfo* address;
 
 		int TRANSFER_SIZE = 1024;
 		static const int BUFFER_SIZE = 16 * 16384;
