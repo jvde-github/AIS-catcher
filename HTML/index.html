@@ -324,18 +324,6 @@
 				visibility: visible;
 			}
 
-			@media only screen and (min-width: 750px) {
-				#menubar {
-					position: fixed;
-					top: 60px;
-					left: 10px;
-					right: 0;
-					width: 500px;
-					border: solid;
-					border-color: var(--menu-border-color);
-					border-radius: 20px;
-				}
-			}
 
 			#menubar div {
 				flex: 0 1 150px;
@@ -2263,13 +2251,13 @@
 					<header>System</header>
 					<section>
 						<div><span>Settings</span><span style="cursor: pointer" onclick="applyDefaultSettings()"> Reset </span></div>
-						<div>
+						<div class="noandroid">
 							<span>Dark Mode</span
 							><span>
 								<input type="checkbox" id="settings_darkmode" onchange="setDarkMode(this.checked)" />
 							</span>
 						</div>
-						<div><span>Plugins</span><span style="cursor: pointer" onclick="showPlugins()"> Show </span></div>
+						<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" onclick="showPlugins()"> Show </span></div>
 						<div>
 							<span>Lat/Lon in DMS</span
 							><span>
@@ -2479,7 +2467,7 @@
 					<li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub</li>
 					<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on ShipXplorer</li>
 					<li class="divider mmsi noandroid"></li>
-					<li class="settings noandroid" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
+					<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
 					<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 				</ul>
 
@@ -2964,7 +2952,12 @@
 			function applyDefaultSettings() {
 				const t = settings.tab;
 
+				let android = settings.android;
+				let darkmode = settings.dark_mode;
 				restoreDefaultSettings();
+				settings.android = android;
+				if(isAndroid())
+					settings.dark_mode = darkmode;
 
 				updateSortMarkers();
 				updateRangeColor();
@@ -3711,6 +3704,24 @@
 			function applyDynamicStyling() {
 				let style = `:root { --tooltip-font-color: ${settings.tooltipLabelColor}; --label-shadow-color: ${settings.tooltipLabelShadowColor}} \n`;
 				style += `.dark { --tooltip-font-color: ${settings.tooltipLabelColorDark}; --label-shadow-color: ${settings.tooltipLabelShadowColorDark}}\n`;
+
+				if(!isAndroid())
+					style += `
+						@media only screen and (min-width: 750px) {
+							#menubar {
+								position: fixed;
+								top: 60px;
+								left: 10px;
+								right: 0;
+								width: 500px;
+								border: solid;
+								border-color: var(--menu-border-color);
+								border-radius: 20px;
+							}
+						}
+						`;
+				else
+					style += ' .settings_window { top: 72px; }\n';
 
 				dynamicStyle.innerHTML = style;
 			}
@@ -6627,6 +6638,12 @@
 			function updateAndroid() {
 				if (isAndroid()) {
 					var elements = document.querySelectorAll(".noandroid");
+					for (var i = 0; i < elements.length; i++) {
+						elements[i].style.display = "none";
+					}
+				}
+				else {
+					var elements = document.querySelectorAll(".android");
 					for (var i = 0; i < elements.length; i++) {
 						elements[i].style.display = "none";
 					}
