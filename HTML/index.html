@@ -4191,6 +4191,13 @@
 			}
 
 			function toggleTablecard() {
+				// tableside is not active and width of screen is less than 800px switch tabs
+				if (!document.getElementById("tableside").classList.contains("active") && window.innerWidth < 800) {
+					settings.tab = "ships";
+					selectTab();
+					return;
+				}
+
 				document.getElementById("tableside").classList.toggle("active");
 				var elements = document.querySelectorAll(".leaflet-control-layers");
 				elements.forEach(function (element) {
@@ -4336,7 +4343,7 @@
 				markerTableControl = L.control({ position: "topright" });
 
 				markerTableControl.onAdd = function (map) {
-					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350 min-width-1500");
+					var controlDiv = L.DomUtil.create("div", "leaflet-control-layers round-control min-height-350");
 
 					L.DomEvent.on(controlDiv, "click", function (e) {
 						L.DomEvent.stopPropagation(e);
