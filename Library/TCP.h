@@ -150,8 +150,6 @@ namespace TCP {
 		State state = DISCONNECTED;
 		time_t stamp = 0;
 
-		struct addrinfo* address = NULL;
-
 		void updateState();
 		bool isConnected(int t);
 

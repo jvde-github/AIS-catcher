@@ -46,7 +46,6 @@ namespace AIS {
 		BIT lastBit = 0;
 		BIT prev = 0;
 
-		int MessageID = 0;
 		int nBytes = 0;
 		int nBits = 0;
 
@@ -64,7 +63,8 @@ namespace AIS {
 		Message msg;
 
 	public:
-		// virtual void setChannel(char c) { channel = c; }
+		virtual ~Decoder() {}
+
 		void setOrigin(char c, int s) {
 			channel = c;
 			station = s;

@@ -49,7 +49,6 @@ namespace IO {
 
 	class HTTPStreamer : public OutputJSON {
 
-		int source = -1;
 		JSON::StringBuilder builder;
 		HTTPClient http;
 
@@ -70,8 +69,6 @@ namespace IO {
 
 		std::string model = "N/A", model_setting = "N/A";
 		std::string product = "N/A", vendor = "N/A", serial = "N/A", device_setting = "N/A";
-
-		char response[1024] = { 0 };
 
 		enum class PROTOCOL { AISCATCHER,
 							  APRS,
@@ -133,7 +130,6 @@ namespace IO {
 	class UDPStreamer : public OutputMessage {
 		SOCKET sock = -1;
 		struct addrinfo* address = NULL;
-		int source = -1;
 		std::string host, port;
 		int reset = -1;
 		long last_reconnect = 0;
@@ -171,7 +167,6 @@ namespace IO {
 		::TCP::Client tcp;
 		AIS::Filter filter;
 		bool JSON = false;
-		int source = -1;
 		std::string host, port;
 		bool keep_alive = false;
 		bool persistent = true;

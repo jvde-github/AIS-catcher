@@ -233,7 +233,7 @@ namespace JSON {
 	}
 
 	std::shared_ptr<JSON> Parser::parse_core() {
-		std::shared_ptr<JSON> o = std::shared_ptr<JSON>(new JSON(keymap));
+		std::shared_ptr<JSON> o = std::shared_ptr<JSON>(new JSON());
 
 		must_match(TokenType::LeftBrace, "expected '{'");
 		next();

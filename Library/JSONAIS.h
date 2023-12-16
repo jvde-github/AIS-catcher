@@ -63,7 +63,7 @@ namespace AIS {
 		void ETA(const AIS::Message& msg, int p, int start, int len, std::string& str);
 
 	public:
-		JSONAIS() : json(&AIS::KeyMap) {}
+		virtual ~JSONAIS() {}
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
 	};
