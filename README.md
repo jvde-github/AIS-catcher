@@ -27,11 +27,11 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-Edge version:
+**Edge version** has recently added:
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the seperate tab with the ship list
   
-v0.55 is the latest version and introduces the following:
+**v0.55** is the latest version and introduces the following:
 - "Show all track" option and a new adjustable setting to dim the maps for greater visibility of the ship icons (see screenshot above for an example)
 - Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services))
 These maps and the applications are not suitable for navigation (just to reiterate that).
@@ -42,7 +42,7 @@ These maps and the applications are not suitable for navigation (just to reitera
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
 - Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions, we are exploring adding HMAC authentication. 
   
-v0.54 is the previous version:
+**v0.54** is the previous version adding:
 - A "Settings Menu" providing access to additional (styling) options for the web viewer:
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/f29aae44-a68b-4e47-8fba-e703add00f47)
 
