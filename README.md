@@ -156,11 +156,15 @@ AIS-catcher -gr RTLAGC on TUNER auto -a 192K
 ```
 It has been reported by several users that adding a bandwidth setting of ``-a 192K`` can be beneficial so it is worthwhile to try with and without this filter. Finding the best settings for your hardware requires some systematic experimentation whereby one parameter is changed at a time, e.g. switch RTLAGC ``on`` or ``off``, set the TUNER to ``auto`` or try fixed tuner gains between 0 and 50. The hardware settings available depend on the hardware and more details can be found below.
 
-AIS-catcher also supports the 18 Euro RPI Zero W. However, the hardware might not keep up with the high data flow. This can be resolved by activating **fast downsampling** via:
+AIS-catcher also supports the 18 Euro RPI Zero W. However, the hardware might not keep up with the high data flow. This can sometimes be resolved by activating **fast downsampling** via:
 ```console
 AIS-catcher -F
 ```
-Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device still struggles, you can try running at a sample rate of 288K (`-s 288K`). Reception will be impacted noticeably though. Unfortunately, this seems to be the best way to run on the Zero W for now as this Zero is struggling with the high data throuugput. 
+Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device still struggles, you can try running at a sample rate of 288K (`-s 288K`):
+```console
+AIS-catcher -s 288K
+```
+Reception will be impacted though. Unfortunately, latest feedback seems to be that this is best way to run on the Zero W as this Zero is struggling with the high data throuugput. Another drawback of these lower cost boards is that they can create interference that impacts the radio reception.
 
 That's all there is. Below we will dive into some more details.
 
