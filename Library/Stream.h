@@ -27,6 +27,7 @@ class StreamIn {
 	uint64_t groups_in = GROUPS_ALL;
 
 public:
+	virtual ~StreamIn() {}
 	virtual void Receive(const T* data, int len, TAG& tag) {}
 	virtual void Receive(T* data, int len, TAG& tag) {
 		Receive((const T*)data, len, tag);
@@ -86,7 +87,10 @@ public:
 };
 
 template <typename T, typename S>
-class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T> {};
+class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T> {
+public:
+	virtual ~SimpleStreamInOut() {}
+};
 
 template <typename S>
 class SimpleStreamOut : public StreamOut<S> {
@@ -94,6 +98,7 @@ protected:
 	TAG tag;
 
 public:
+	virtual ~SimpleStreamOut() {}
 	void setTag(const TAG& t) { tag = t; }
 };
 

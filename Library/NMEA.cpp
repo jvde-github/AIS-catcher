@@ -163,7 +163,7 @@ namespace AIS {
 				return 0;
 			}
 
-			float minutes = atof(nmeaPos);
+			float minutes = (float) atof(nmeaPos);
 			if (minutes == 0 && nmeaPos[0] != '0') {
 				error |= true;
 				return 0;
@@ -372,7 +372,7 @@ namespace AIS {
 								lat = p.Get().getFloat();
 							}
 							else if (p.Get().isInt()) {
-								lat = p.Get().getInt();
+								lat = (float) p.Get().getInt();
 							}
 						}
 						else if (p.Key() == AIS::KEY_LON) {
@@ -380,7 +380,7 @@ namespace AIS {
 								lon = p.Get().getFloat();
 							}
 							else if (p.Get().isInt()) {
-								lon = p.Get().getInt();
+								lon = (float) p.Get().getInt();
 							}
 						}
 					}

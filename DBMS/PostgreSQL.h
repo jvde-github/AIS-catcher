@@ -54,7 +54,7 @@ namespace IO {
 		}
 
 #ifdef HASPSQL
-		PGconn* con = NULL;
+		PGconn* con = nullptr;
 		std::vector<int> db_keys;
 #endif
 

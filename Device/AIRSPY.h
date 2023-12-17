@@ -31,7 +31,7 @@ namespace Device {
 	class AIRSPY : public Device {
 #ifdef HASAIRSPY
 
-		struct airspy_device* dev = NULL;
+		struct airspy_device* dev = nullptr;
 		bool lost = false;
 		std::vector<uint32_t> rates;
 		uint64_t serial;

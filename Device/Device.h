@@ -63,13 +63,14 @@ namespace Device {
 		uint32_t sample_rate = 0;
 
 		uint32_t getCorrectedFrequency() {
-			return frequency * (1 - freq_offset / 1000000.0f);
+			return (uint32_t) ((float) frequency * (1.0f - freq_offset / 1000000.0f));
 		}
 
 	public:
 		// DeviceBase
 		Device() {}
 		Device(Format f, uint32_t s) : format(f), sample_rate(s) {}
+		virtual ~Device() {}
 
 		virtual void Open(uint64_t) {}
 		virtual void OpenWithFileDescriptor(int) { throw std::runtime_error("Not supported for this device."); }

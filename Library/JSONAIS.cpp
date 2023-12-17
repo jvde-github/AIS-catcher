@@ -193,9 +193,9 @@ namespace AIS {
 		int fid = msg.getUint(82, 6);
 
 		if (dac == 235 && fid == 10) {
-			UL(msg, AIS::KEY_ANA_INT, 88, 10, 0.05, 0);
-			UL(msg, AIS::KEY_ANA_EXT1, 98, 10, 0.05, 0);
-			UL(msg, AIS::KEY_ANA_EXT2, 108, 10, 0.05, 0);
+			UL(msg, AIS::KEY_ANA_INT, 88, 10, 0.05f, 0);
+			UL(msg, AIS::KEY_ANA_EXT1, 98, 10, 0.05f, 0);
+			UL(msg, AIS::KEY_ANA_EXT2, 108, 10, 0.05f, 0);
 			U(msg, AIS::KEY_RACON, 118, 2);
 			U(msg, AIS::KEY_HEALTH, 122, 1);
 			U(msg, AIS::KEY_STAT_EXT, 123, 8);
@@ -212,11 +212,11 @@ namespace AIS {
 		// ECE/TRANS/SC.3/176
 		if (dac == 200 && fid == 10) {
 			T(msg, AIS::KEY_VIN, 56, 48, text);
-			UL(msg, AIS::KEY_LENGTH, 104, 13, 0.1, 0);
-			UL(msg, AIS::KEY_BEAM, 117, 10, 0.1, 0);
+			UL(msg, AIS::KEY_LENGTH, 104, 13, 0.1f, 0);
+			UL(msg, AIS::KEY_BEAM, 117, 10, 0.1f, 0);
 			E(msg, AIS::KEY_SHIPTYPE, 127, 14);
 			E(msg, AIS::KEY_HAZARD, 141, 3);
-			UL(msg, AIS::KEY_DRAUGHT, 144, 11, 0.01, 0);
+			UL(msg, AIS::KEY_DRAUGHT, 144, 11, 0.01f, 0);
 			E(msg, AIS::KEY_LOADED, 155, 2);
 			B(msg, AIS::KEY_SPEED_Q, 157, 1);
 			B(msg, AIS::KEY_COURSE_Q, 158, 1);
@@ -224,8 +224,8 @@ namespace AIS {
 		}
 		else if (dac == 1 && fid == 31) {
 			// Sources: http://vislab-ccom.unh.edu/~schwehr/papers/2010-IMO-SN.1-Circ.289.pdf, GPSDECODE
-			SL(msg, AIS::KEY_LON, 56, 25, 1 / 60000.0, 0);
-			SL(msg, AIS::KEY_LAT, 81, 24, 1 / 60000.0, 0);
+			SL(msg, AIS::KEY_LON, 56, 25, 1 / 60000.0f, 0);
+			SL(msg, AIS::KEY_LAT, 81, 24, 1 / 60000.0f, 0);
 			B(msg, AIS::KEY_ACCURACY, 105, 1);
 			U(msg, AIS::KEY_DAY, 106, 5, 0);
 			U(msg, AIS::KEY_HOUR, 111, 5, 24);
@@ -234,27 +234,27 @@ namespace AIS {
 			U(msg, AIS::KEY_WGUST, 129, 7, 127);
 			U(msg, AIS::KEY_WDIR, 136, 9, 360);
 			U(msg, AIS::KEY_WGUSTDIR, 145, 9, 360);
-			SL(msg, AIS::KEY_AIRTEMP, 154, 11, 0.1, 0, -1024);
+			SL(msg, AIS::KEY_AIRTEMP, 154, 11, 0.1f, 0, -1024);
 			U(msg, AIS::KEY_HUMIDITY, 165, 7, 101);
-			SL(msg, AIS::KEY_DEWPOINT, 172, 10, 0.1, 0, 501);
+			SL(msg, AIS::KEY_DEWPOINT, 172, 10, 0.1f, 0, 501);
 			US(msg, AIS::KEY_PRESSURE, 182, 9, 799, 511);
 			U(msg, AIS::KEY_PRESSURETEND, 191, 2, 3);
 			B(msg, AIS::KEY_VISGREATER, 193, 1);
-			UL(msg, AIS::KEY_VISIBILITY, 194, 7, 0.1, 0);
-			UL(msg, AIS::KEY_WATERLEVEL, 201, 12, 0.01, -10, 4002);
+			UL(msg, AIS::KEY_VISIBILITY, 194, 7, 0.1f, 0);
+			UL(msg, AIS::KEY_WATERLEVEL, 201, 12, 0.01f, -10, 4002);
 			U(msg, AIS::KEY_LEVELTREND, 213, 2, 3);
-			UL(msg, AIS::KEY_CSPEED, 215, 8, 0.1, 0, 255);
+			UL(msg, AIS::KEY_CSPEED, 215, 8, 0.1f, 0, 255);
 			U(msg, AIS::KEY_CDIR, 223, 9, 360);
-			UL(msg, AIS::KEY_CSPEED2, 232, 8, 0.1, 0);
+			UL(msg, AIS::KEY_CSPEED2, 232, 8, 0.1f, 0);
 			U(msg, AIS::KEY_CDIR2, 240, 9);
 			U(msg, AIS::KEY_CDEPTH2, 249, 5);
-			UL(msg, AIS::KEY_CSPEED3, 254, 8, 0.1, 0);
+			UL(msg, AIS::KEY_CSPEED3, 254, 8, 0.1f, 0);
 			U(msg, AIS::KEY_CDIR3, 262, 9);
 			U(msg, AIS::KEY_CDEPTH3, 271, 5);
-			UL(msg, AIS::KEY_WAVEHEIGHT, 276, 8, 0.1, 0);
+			UL(msg, AIS::KEY_WAVEHEIGHT, 276, 8, 0.1f, 0);
 			U(msg, AIS::KEY_WAVEPERIOD, 284, 6);
 			U(msg, AIS::KEY_WAVEDIR, 290, 9);
-			UL(msg, AIS::KEY_SWELLHEIGHT, 299, 8, 0.1, 0);
+			UL(msg, AIS::KEY_SWELLHEIGHT, 299, 8, 0.1f, 0);
 			U(msg, AIS::KEY_SWELLPERIOD, 307, 6);
 			U(msg, AIS::KEY_SWELLDIR, 313, 9);
 			U(msg, AIS::KEY_SEASTATE, 322, 4);
@@ -303,11 +303,11 @@ namespace AIS {
 		case 3:
 			E(msg, AIS::KEY_STATUS, 38, 4, AIS::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
 			TURN(msg, AIS::KEY_TURN, 42, 8);
-			UL(msg, AIS::KEY_SPEED, 50, 10, 0.1, 0, 1023);
+			UL(msg, AIS::KEY_SPEED, 50, 10, 0.1f, 0, 1023);
 			B(msg, AIS::KEY_ACCURACY, 60, 1);
-			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0, 0);
-			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0, 0);
-			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1, 0);
+			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0f, 0);
+			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1f, 0);
 			U(msg, AIS::KEY_HEADING, 128, 9 /*, 511*/);
 			U(msg, AIS::KEY_SECOND, 137, 6);
 			E(msg, AIS::KEY_MANEUVER, 143, 2);
@@ -325,8 +325,8 @@ namespace AIS {
 			U(msg, AIS::KEY_MINUTE, 66, 6, 60);
 			U(msg, AIS::KEY_SECOND, 72, 6, 60);
 			B(msg, AIS::KEY_ACCURACY, 78, 1);
-			SL(msg, AIS::KEY_LON, 79, 28, 1 / 600000.0, 0);
-			SL(msg, AIS::KEY_LAT, 107, 27, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LON, 79, 28, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LAT, 107, 27, 1 / 600000.0f, 0);
 			E(msg, AIS::KEY_EPFD, 134, 4, AIS::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
 			X(msg, AIS::KEY_SPARE, 138, 10);
 			B(msg, AIS::KEY_RAIM, 148, 1);
@@ -348,7 +348,7 @@ namespace AIS {
 			U(msg, AIS::KEY_DAY, 278, 5, 0);
 			U(msg, AIS::KEY_HOUR, 283, 5, 24);
 			U(msg, AIS::KEY_MINUTE, 288, 6, 60);
-			UL(msg, AIS::KEY_DRAUGHT, 294, 8, 0.1, 0);
+			UL(msg, AIS::KEY_DRAUGHT, 294, 8, 0.1f, 0);
 			T(msg, AIS::KEY_DESTINATION, 302, 120, destination);
 			B(msg, AIS::KEY_DTE, 422, 1);
 			X(msg, AIS::KEY_SPARE, 423, 1);
@@ -386,9 +386,9 @@ namespace AIS {
 			U(msg, AIS::KEY_ALT, 38, 12);
 			U(msg, AIS::KEY_SPEED, 50, 10);
 			B(msg, AIS::KEY_ACCURACY, 60, 1);
-			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0, 0);
-			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0, 0);
-			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1, 0);
+			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0f, 0);
+			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1f, 0);
 			U(msg, AIS::KEY_SECOND, 128, 6);
 			U(msg, AIS::KEY_REGIONAL, 134, 8);
 			B(msg, AIS::KEY_DTE, 142, 1);
@@ -430,16 +430,16 @@ namespace AIS {
 			U(msg, AIS::KEY_INCREMENT2, 134, 10);
 			break;
 		case 17:
-			SL(msg, AIS::KEY_LON, 40, 18, 1 / 600.0, 0);
-			SL(msg, AIS::KEY_LAT, 58, 17, 1 / 600.0, 0);
+			SL(msg, AIS::KEY_LON, 40, 18, 1 / 600.0f, 0);
+			SL(msg, AIS::KEY_LAT, 58, 17, 1 / 600.0f, 0);
 			D(msg, AIS::KEY_DATA, 80, MIN(736, msg.getLength() - 80), datastring);
 			break;
 		case 18:
-			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1, 0);
+			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1f, 0);
 			B(msg, AIS::KEY_ACCURACY, 56, 1);
-			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0, 0);
-			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0, 0);
-			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1, 0);
+			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0f, 0);
+			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1f, 0);
 			U(msg, AIS::KEY_HEADING, 124, 9);
 			U(msg, AIS::KEY_RESERVED, 38, 8);
 			U(msg, AIS::KEY_SECOND, 133, 6);
@@ -455,9 +455,9 @@ namespace AIS {
 			break;
 		case 19:
 			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1, 0);
-			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0, 0);
-			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0, 0);
-			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1, 0);
+			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0f, 0);
+			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1f, 0);
 			U(msg, AIS::KEY_HEADING, 124, 9);
 			T(msg, AIS::KEY_SHIPNAME, 143, 120, shipname);
 			E(msg, AIS::KEY_SHIPTYPE, 263, 8, AIS::KEY_SHIPTYPE_TEXT, &JSON_MAP_SHIPTYPE);
@@ -500,8 +500,8 @@ namespace AIS {
 			E(msg, AIS::KEY_AID_TYPE, 38, 5, AIS::KEY_AID_TYPE_TEXT, &JSON_MAP_AID_TYPE);
 			T(msg, AIS::KEY_NAME, 43, 120, name);
 			B(msg, AIS::KEY_ACCURACY, 163, 1);
-			SL(msg, AIS::KEY_LON, 164, 28, 1 / 600000.0, 0);
-			SL(msg, AIS::KEY_LAT, 192, 27, 1 / 600000.0, 0);
+			SL(msg, AIS::KEY_LON, 164, 28, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LAT, 192, 27, 1 / 600000.0f, 0);
 			U(msg, AIS::KEY_TO_BOW, 219, 9);
 			U(msg, AIS::KEY_TO_STERN, 228, 9);
 			U(msg, AIS::KEY_TO_PORT, 237, 6);
@@ -524,10 +524,10 @@ namespace AIS {
 				U(msg, AIS::KEY_DEST2, 104, 30); // check
 			}
 			else {
-				SL(msg, AIS::KEY_NE_LON, 69, 18, 1.0 / 600.0, 0);
-				SL(msg, AIS::KEY_NE_LAT, 87, 17, 1.0 / 600.0, 0);
-				SL(msg, AIS::KEY_SW_LON, 104, 18, 1.0 / 600.0, 0);
-				SL(msg, AIS::KEY_SW_LAT, 122, 17, 1.0 / 600.0, 0);
+				SL(msg, AIS::KEY_NE_LON, 69, 18, 1.0 / 600.0f, 0);
+				SL(msg, AIS::KEY_NE_LAT, 87, 17, 1.0 / 600.0f, 0);
+				SL(msg, AIS::KEY_SW_LON, 104, 18, 1.0 / 600.0f, 0);
+				SL(msg, AIS::KEY_SW_LAT, 122, 17, 1.0 / 600.0f, 0);
 			}
 			B(msg, AIS::KEY_ADDRESSED, 139, 1);
 			B(msg, AIS::KEY_BAND_A, 140, 1);
@@ -572,8 +572,8 @@ namespace AIS {
 			U(msg, AIS::KEY_ACCURACY, 38, 1);
 			U(msg, AIS::KEY_RAIM, 39, 1);
 			E(msg, AIS::KEY_STATUS, 40, 4, AIS::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
-			SL(msg, AIS::KEY_LON, 44, 18, 1 / 600.0, 0);
-			SL(msg, AIS::KEY_LAT, 62, 17, 1 / 600.0, 0);
+			SL(msg, AIS::KEY_LON, 44, 18, 1 / 600.0f, 0);
+			SL(msg, AIS::KEY_LAT, 62, 17, 1 / 600.0f, 0);
 			U(msg, AIS::KEY_SPEED, 79, 6);
 			U(msg, AIS::KEY_COURSE, 85, 9);
 			U(msg, AIS::KEY_GNSS, 94, 1);

@@ -327,7 +327,6 @@ void Config::set(const std::string& str) {
 			break;
 		default:
 			throw std::runtime_error("Config file: field \"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed.");
-			break;
 		}
 	}
 }

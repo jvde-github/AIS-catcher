@@ -123,23 +123,23 @@ public:
 	bool verbose = false;
 
 	// Devices
-	Device::RAWFile& RAW() { return _RAW; };
-	Device::WAVFile& WAV() { return _WAV; };
-	Device::RTLSDR& RTLSDR() { return _RTLSDR; };
+	Device::RAWFile& RAW() { return _RAW; }
+	Device::WAVFile& WAV() { return _WAV; }
+	Device::RTLSDR& RTLSDR() { return _RTLSDR; }
 	Device::RTLTCP& RTLTCP() { return _RTLTCP; };
-	Device::SpyServer& SpyServer() { return _SpyServer; };
-	Device::AIRSPYHF& AIRSPYHF() { return _AIRSPYHF; };
-	Device::AIRSPY& AIRSPY() { return _AIRSPY; };
-	Device::SDRPLAY& SDRPLAY() { return _SDRPLAY; };
-	Device::HACKRF& HACKRF() { return _HACKRF; };
-	Device::SerialPort& SerialPort() { return _SerialPort; };
-	Device::SOAPYSDR& SOAPYSDR() { return _SOAPYSDR; };
-	Device::ZMQ& ZMQ() { return _ZMQ; };
-	Device::UDP& UDP() { return _UDP; };
+	Device::SpyServer& SpyServer() { return _SpyServer; }
+	Device::AIRSPYHF& AIRSPYHF() { return _AIRSPYHF; }
+	Device::AIRSPY& AIRSPY() { return _AIRSPY; }
+	Device::SDRPLAY& SDRPLAY() { return _SDRPLAY; }
+	Device::HACKRF& HACKRF() { return _HACKRF; }
+	Device::SerialPort& SerialPort() { return _SerialPort; }
+	Device::SOAPYSDR& SOAPYSDR() { return _SOAPYSDR; }
+	Device::ZMQ& ZMQ() { return _ZMQ; }
+	Device::UDP& UDP() { return _UDP; }
 
 	// available devices
 	static std::vector<Device::Description> device_list;
-	Device::Device* device = NULL;
+	Device::Device* device = nullptr;
 
 	void refreshDevices(void);
 	bool isTXTformatSet() { return getDeviceByType(type) ? (getDeviceByType(type)->getFormat() == Format::TXT) : false; }

@@ -33,8 +33,8 @@ namespace IO {
 
 	class OutputJSON : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
 	public:
-		virtual void Start(){};
-		virtual void Stop(){};
+		virtual void Start(){}
+		virtual void Stop(){}
 		void Connect(Receiver& r);
 
 		virtual ~OutputJSON() { Stop(); }
@@ -42,8 +42,8 @@ namespace IO {
 
 	class OutputMessage : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
 	public:
-		virtual void Start(){};
-		virtual void Stop(){};
+		virtual void Start(){}
+		virtual void Stop(){}
 		void Connect(Receiver& r);
 
 		virtual ~OutputMessage() { Stop(); }
@@ -118,6 +118,7 @@ namespace IO {
 			for (int i = 0; i < len; i++)
 				std::cout << data[i] << std::endl;
 		}
+		virtual ~StringToScreen() {}
 	};
 
 	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
@@ -126,6 +127,7 @@ namespace IO {
 		AIS::Filter filter;
 
 	public:
+		virtual ~MessageToScreen() {}
 		void setDetail(OutputLevel l) { level = l; }
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);

@@ -89,7 +89,7 @@ namespace Device {
 				break;
 			else
 				throw std::runtime_error("unrecognized chunk in WAV-file.");
-		};
+		}
 
 		if (chunk.ID != 0x61746164) throw std::runtime_error("no Data in WAV-file.");
 

@@ -50,7 +50,7 @@ namespace TCP {
 	void ServerConnection::Start(SOCKET s) {
 		msg.clear();
 		out.clear();
-		stamp = std::time(0);
+		stamp = std::time(nullptr);
 		sock = s;
 	}
 
@@ -288,16 +288,16 @@ namespace TCP {
 		return true;
 	}
 
-	bool Server::setNonBlock(SOCKET sock) {
+	bool Server::setNonBlock(SOCKET s) {
 
 #ifndef _WIN32
-		int r = fcntl(sock, F_GETFL, 0);
-		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+		int r = fcntl(s, F_GETFL, 0);
+		r = fcntl(s, F_SETFL, r | O_NONBLOCK);
 
 		if (r == -1) return false;
 #else
 		u_long mode = 1;
-		ioctlsocket(sock, FIONBIO, &mode);
+		ioctlsocket(s, FIONBIO, &mode);
 #endif
 		return true;
 	}
@@ -371,7 +371,7 @@ namespace TCP {
 #endif
 
 		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
-		if (code != 0 || address == NULL) return false;
+		if (code != 0 || address == nullptr) return false;
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 		if (sock == -1) {
@@ -401,7 +401,7 @@ namespace TCP {
 #endif
 		}
 
-		stamp = time(NULL);
+		stamp = time(nullptr);
 
 		r = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
 		freeaddrinfo(address);
@@ -440,7 +440,7 @@ namespace TCP {
 
 		timeval to = { t, 1 };
 
-		if (select(sock + 1, &fdr, &fdw, NULL, &to) > 0) {
+		if (select(sock + 1, &fdr, &fdw, nullptr, &to) > 0) {
 			int error;
 			socklen_t len = sizeof(error);
 
@@ -458,13 +458,13 @@ namespace TCP {
 
 	void Client::updateState() {
 
-		if (state == READY && reset_time > 0 && (long)time(NULL) - (long)stamp > reset_time * 60) {
+		if (state == READY && reset_time > 0 && (long)time(nullptr) - (long)stamp > reset_time * 60) {
 			std::cerr << "TCP (" << host << ":" << port << "): connection expired, reconnect." << std::endl;
 			reconnect();
 		}
 
 		if (state == DISCONNECTED) {
-			if ((long)time(NULL) - (long)stamp > 10) {
+			if ((long)time(nullptr) - (long)stamp > 10) {
 				std::cerr << "TCP (" << host << ":" << port << "): not connected, reconnecting." << std::endl;
 				if (connect(host, port, persistent, timeout)) {
 					std::cerr << "TCP (" << host << ":" << port << "): connected." << std::endl;
@@ -479,7 +479,7 @@ namespace TCP {
 			if (connected) {
 				std::cerr << "TCP (" << host << ":" << port << "): connected to server." << std::endl;
 			}
-			else if ((long)time(NULL) - (long)stamp > 10) {
+			else if ((long)time(nullptr) - (long)stamp > 10) {
 				std::cerr << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect." << std::endl;
 				reconnect();
 				return;
@@ -534,7 +534,7 @@ namespace TCP {
 
 			timeval to = { t, 0 };
 
-			if (select(sock + 1, &fd, NULL, &fe, &to) < 0) return 0;
+			if (select(sock + 1, &fd, nullptr, &fe, &to) < 0) return 0;
 
 			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe)) {
 				int retval = recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);

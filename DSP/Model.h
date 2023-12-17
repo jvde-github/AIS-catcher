@@ -49,6 +49,7 @@ namespace AIS {
 		static std::mutex mtx;
 
 	public:
+		virtual ~MessageMutex() {}
 		virtual void Receive(const AIS::Message* data, int len, TAG& tag) {
 			std::lock_guard<std::mutex> lock(mtx);
 			Send(data, len, tag);
@@ -130,7 +131,7 @@ namespace AIS {
 
 		const int nSymbolsPerSample = 48000 / 9600;
 
-		Connection<CFLOAT32>*C_a = NULL, *C_b = NULL;
+		Connection<CFLOAT32>*C_a = nullptr, *C_b = nullptr;
 		DSP::Rotate ROT;
 
 	public:

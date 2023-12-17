@@ -33,9 +33,9 @@ namespace Device {
 			sock = -1;
 		}
 
-		if (address != NULL) {
+		if (address != nullptr) {
 			freeaddrinfo(address);
-			address = NULL;
+			address = nullptr;
 		}
 	}
 
@@ -134,7 +134,7 @@ namespace Device {
 				FD_SET(sock, &fds);
 
 				tv = { 1, 0 };
-				select(sock + 1, &fds, NULL, NULL, &tv);
+				select(sock + 1, &fds, nullptr, nullptr, &tv);
 
 				// SleepSystem(100);
 			}

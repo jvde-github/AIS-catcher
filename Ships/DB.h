@@ -32,8 +32,8 @@ const float LAT_UNDEFINED = 91;
 const float LON_UNDEFINED = 181;
 const float COG_UNDEFINED = 360;
 const float SPEED_UNDEFINED = -1;
-const float HEADING_UNDEFINED = 511;
 
+const int HEADING_UNDEFINED = 511;
 const int STATUS_UNDEFINED = 15;
 const int DIMENSION_UNDEFINED = -1;
 const int ETA_DAY_UNDEFINED = 0;

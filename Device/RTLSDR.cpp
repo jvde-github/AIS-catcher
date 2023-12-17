@@ -152,7 +152,7 @@ namespace Device {
 
 		if (rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw std::runtime_error("RTLSDR: cannot set gain mode.");
 
-		int nGains = rtlsdr_get_tuner_gains(dev, NULL);
+		int nGains = rtlsdr_get_tuner_gains(dev, nullptr);
 		if (nGains <= 0) throw std::runtime_error("RTLSDR: no gains available");
 
 		std::vector<int> gains(nGains);
@@ -184,13 +184,13 @@ namespace Device {
 	}
 
 	void RTLSDR::getDeviceList(std::vector<Description>& DeviceList) {
-		char vendor[256], product[256], serial[256];
+		char v[256], p[256], s[256];
 
 		int DeviceCount = rtlsdr_get_device_count();
 
 		for (int i = 0; i < DeviceCount; i++) {
-			rtlsdr_get_device_usb_strings(i, vendor, product, serial);
-			DeviceList.push_back(Description(vendor, product, serial, (uint64_t)i, Type::RTLSDR));
+			rtlsdr_get_device_usb_strings(i, v, p, s);
+			DeviceList.push_back(Description(v, p, s, (uint64_t)i, Type::RTLSDR));
 		}
 	}
 

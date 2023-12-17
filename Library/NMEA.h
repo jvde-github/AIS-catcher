@@ -68,7 +68,7 @@ namespace AIS {
 		void clean(char, int);
 		int search(const AIVDM& a);
 
-		bool isNMEAchar(char c) { return (c >= 40 && c < 88) || (c >= 96 && c <= 56 + 0b111111); }
+		bool isNMEAchar(char c) { return (c >= 40 && c < 88) || (c >= 96 && c <= 56 + 0x3F); }
 		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
 		int fromHEX(char c) { return (c >= '0' && c <= '9') ? (c - '0') : ((c >= 'A' && c <= 'F') ? (c - 'A' + 10) : (c - 'a' + 10)); }
 
@@ -91,6 +91,7 @@ namespace AIS {
 		bool processRMC(const std::string& s, TAG& tag, long t);
 
 	public:
+		virtual ~NMEA() {}
 		void Receive(const RAW* data, int len, TAG& tag);
 
 		void setRegenerate(bool b) { regenerate = b; }

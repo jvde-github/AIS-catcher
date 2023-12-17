@@ -50,10 +50,10 @@ namespace AIS {
 		void US(const AIS::Message& msg, int p, int start, int len, int b, unsigned undefined = ~0);
 		void S(const AIS::Message& msg, int p, int start, int len, int undefined = ~0);
 		void SL(const AIS::Message& msg, int p, int start, int len, float a, float b, int undefined = ~0);
-		void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::vector<std::string>* map = NULL);
+		void E(const AIS::Message& msg, int p, int start, int len, int pmap = 0, const std::vector<std::string>* map = nullptr);
 		void TURN(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0);
 		void B(const AIS::Message& msg, int p, int start, int len);
-		void X(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0){};
+		void X(const AIS::Message& msg, int p, int start, int len) {}
 
 		void COUNTRY(const AIS::Message& msg);
 

@@ -52,14 +52,8 @@ namespace IO {
 		int _id = 0;
 
 	public:
-		SSEConnection(TCP::ServerConnection* connection, int id) : connection(connection), _id(id) {
-			// std::cerr << "SSE Connection Constructor : " << connection->sock << "\n";
-		}
-
-		~SSEConnection() {
-			// std::cerr << "SSE Connection Destructor\n";
-			Close();
-		}
+		SSEConnection(TCP::ServerConnection* c, int id) : connection(c), _id(id) {}
+		~SSEConnection() { Close(); }
 
 		int getID() {
 			return _id;
