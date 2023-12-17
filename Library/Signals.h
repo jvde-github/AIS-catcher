@@ -32,8 +32,8 @@ enum class SystemSignal {
 template <typename T>
 class SignalIn {
 public:
-	virtual ~SignalIn() {};
-	virtual void Signal(const T& in){}
+	virtual ~SignalIn(){};
+	virtual void Signal(const T& in) {}
 };
 
 template <typename T>

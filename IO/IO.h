@@ -33,8 +33,8 @@ namespace IO {
 
 	class OutputJSON : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
 	public:
-		virtual void Start(){}
-		virtual void Stop(){}
+		virtual void Start() {}
+		virtual void Stop() {}
 		void Connect(Receiver& r);
 
 		virtual ~OutputJSON() { Stop(); }
@@ -42,8 +42,8 @@ namespace IO {
 
 	class OutputMessage : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
 	public:
-		virtual void Start(){}
-		virtual void Stop(){}
+		virtual void Start() {}
+		virtual void Stop() {}
 		void Connect(Receiver& r);
 
 		virtual ~OutputMessage() { Stop(); }
