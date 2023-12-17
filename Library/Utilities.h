@@ -44,6 +44,7 @@ namespace Util {
 		std::vector<FLOAT32> output;
 
 	public:
+		virtual ~RealPart() {}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
@@ -51,6 +52,7 @@ namespace Util {
 		std::vector<FLOAT32> output;
 
 	public:
+		virtual ~ImaginaryPart() {}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
@@ -58,6 +60,7 @@ namespace Util {
 	class PassThrough : public SimpleStreamInOut<T, T> {
 
 	public:
+		virtual ~PassThrough() {}
 		virtual void Receive(const T* data, int len, TAG& tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
 		virtual void Receive(T* data, int len, TAG& tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
 	};
@@ -77,6 +80,7 @@ namespace Util {
 		}
 
 	public:
+		virtual ~Timer() {}
 		virtual void Receive(const T* data, int len, TAG& tag) {
 			tic();
 			SimpleStreamInOut<T, T>::Send(data, len, tag);
@@ -97,7 +101,7 @@ namespace Util {
 		static std::string toTimestampStr(const std::time_t& t);
 		static std::string toHexString(uint64_t l);
 		static std::string toString(Format format);
-		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); };
+		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); }
 		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
 		static std::string toString(FLOAT32 f) {
 			std::string s = std::to_string(f);
@@ -137,6 +141,7 @@ namespace Util {
 		std::vector<CFLOAT32> output;
 
 	public:
+		virtual ~ConvertRAW() {}
 		Connection<CU8> outCU8;
 		Connection<CS8> outCS8;
 

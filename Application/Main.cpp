@@ -30,7 +30,7 @@
 #include "IO.h"
 #include "PostgreSQL.h"
 
-std::atomic<bool> stop;
+static std::atomic<bool> stop;
 
 void StopRequest() {
 	stop = true;
@@ -42,7 +42,7 @@ BOOL WINAPI consoleHandler(DWORD signal) {
 	return TRUE;
 }
 #else
-void consoleHandler(int signal) {
+static void consoleHandler(int signal) {
 	if (signal == SIGPIPE) {
 		// std::cerr << "Termination request SIGPIPE ignored" << std::endl;
 		return;
@@ -54,14 +54,14 @@ void consoleHandler(int signal) {
 }
 #endif
 
-void printVersion() {
+static void printVersion() {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << std::endl;
 	std::cerr << "(C) Copyright 2021-2023 " << COPYRIGHT << std::endl;
 	std::cerr << "This is free software; see the source for copying conditions.There is NO" << std::endl;
 	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
 }
 
-void Usage() {
+static void Usage() {
 	std::cerr << "use: AIS-catcher [options]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\t[-a xxx - set tuner bandwidth in Hz (default: off)]" << std::endl;
@@ -120,14 +120,14 @@ void Usage() {
 	std::cerr << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]" << std::endl;
 }
 
-void printDevices(Receiver& r) {
+static void printDevices(Receiver& r) {
 	std::cerr << "Found " << r.device_list.size() << " device(s):" << std::endl;
 	for (int i = 0; i < r.device_list.size(); i++) {
 		std::cerr << i << ": " << r.device_list[i].toString() << std::endl;
 	}
 }
 
-void printSupportedDevices() {
+static void printSupportedDevices() {
 	std::cerr << "SDR support: ";
 #ifdef HASRTLSDR
 	std::cerr << "RTLSDR ";
@@ -184,7 +184,7 @@ void printSupportedDevices() {
 // -------------------------------
 // Command line support functions
 
-void parseSettings(Setting& s, char* argv[], int ptr, int argc) {
+static void parseSettings(Setting& s, char* argv[], int ptr, int argc) {
 	ptr++;
 
 	while (ptr < argc - 1 && argv[ptr][0] != '-') {
@@ -195,11 +195,11 @@ void parseSettings(Setting& s, char* argv[], int ptr, int argc) {
 	}
 }
 
-bool isOption(std::string s) {
+static bool isOption(std::string s) {
 	return s.length() >= 2 && s[0] == '-' && std::isalpha(s[1]);
 }
 
-void Assert(bool b, std::string& context, std::string msg = "") {
+static void Assert(bool b, std::string& context, std::string msg = "") {
 	if (!b) {
 		throw std::runtime_error("syntax error on command line with setting \"" + context + "\". " + msg + "\n");
 	}

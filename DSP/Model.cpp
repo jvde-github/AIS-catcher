@@ -660,7 +660,7 @@ namespace AIS {
 			convert >> IP >> FR_b;
 		}
 		else
-			std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
+			throw std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
 
 		FR_a >> S_a;
 		FR_b >> S_b;

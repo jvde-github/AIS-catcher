@@ -37,6 +37,7 @@ namespace DSP {
 		bool FastPLL = true;
 
 	public:
+		virtual ~SimplePLL() {}
 		// StreamIn
 		virtual void Receive(const FLOAT32* data, int len, TAG& tag);
 
@@ -49,6 +50,7 @@ namespace DSP {
 		int lastSymbol = 0;
 
 	public:
+		virtual ~Deinterleave() {}
 		void setConnections(int n) { out.resize(n); }
 
 		// Streams out
@@ -69,6 +71,7 @@ namespace DSP {
 		FLOAT32 level = 0.0f;
 
 	public:
+		virtual ~ScatterPLL() {}
 		void setConnections(int n) {
 			out.resize(n);
 			sample.resize(n);
@@ -108,11 +111,9 @@ namespace DSP {
 		std::vector<CFLOAT32> output;
 
 	public:
+		virtual ~DownsampleMovingAverage() {}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
-		void setRates(int in, int out) {
-			in_rate = in;
-			out_rate = out;
-		}
+		void setRates(int i, int o) { in_rate = i; out_rate = o; }
 	};
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
@@ -120,6 +121,7 @@ namespace DSP {
 		std::vector<CFLOAT32> output;
 
 	public:
+		virtual ~Downsample2CIC5() {}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
@@ -127,6 +129,7 @@ namespace DSP {
 		std::vector<CFLOAT32> output;
 
 	public:
+		virtual ~Decimate2() {}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
@@ -139,6 +142,7 @@ namespace DSP {
 		int idx_out = 0;
 
 	public:
+		virtual ~Upsample() {}
 		void setParams(int n, int m) {
 			assert(n <= m);
 			increment = (FLOAT32)n / (FLOAT32)m;
@@ -167,6 +171,7 @@ namespace DSP {
 		}
 
 	public:
+		virtual ~DownsampleKFilter() {}
 		void setParams(const std::vector<FLOAT32>& t, int k) {
 			taps = t;
 			K = k;
@@ -191,7 +196,7 @@ namespace DSP {
 		}
 
 	public:
-		FilterComplex() {}
+		virtual ~FilterComplex() {}
 
 		void setTaps(const std::vector<FLOAT32>& t) {
 			taps = t;
@@ -215,6 +220,7 @@ namespace DSP {
 		}
 
 	public:
+		virtual ~Filter() {}
 		void setTaps(const std::vector<FLOAT32>& t) {
 			taps = t;
 			buffer.resize(taps.size() * 2, 0.0f);
@@ -229,6 +235,7 @@ namespace DSP {
 		std::vector<CFLOAT32> output;
 
 	public:
+		virtual ~FilterCIC5() {}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
@@ -240,7 +247,7 @@ namespace DSP {
 		CFLOAT32 h1 = 0.0f, h2 = 0.0f;
 
 	public:
-		FilterComplex3Tap() {}
+		virtual ~FilterComplex3Tap() {}
 
 		void setTaps(FLOAT32 a) {
 			alpha = a;
@@ -256,6 +263,8 @@ namespace DSP {
 		CFLOAT32 rot = 1.0f, mult = 1.0f;
 
 	public:
+		virtual ~Rotate() {}
+
 		void setRotation(float angle) { mult = std::polar(1.0f, angle); }
 
 		// Streams out
@@ -277,6 +286,7 @@ namespace DSP {
 		const int N = 16384;
 #endif
 	public:
+		virtual ~SOXR() {}
 		void setParams(int sample_rate, int out_rate);
 		virtual void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
@@ -293,6 +303,7 @@ namespace DSP {
 		int src_error = 0;
 #endif
 	public:
+		virtual ~SRC() {}
 #ifdef HASSAMPLERATE
 		~SRC() {
 			if (state) src_delete(state);
@@ -317,6 +328,7 @@ namespace DSP {
 		FLOAT32 correctFrequency();
 
 	public:
+		virtual ~SquareFreqOffsetCorrection() {}
 		void setWide(bool b) { wide = b; }
 		void setParams(int, int);
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
@@ -339,6 +351,7 @@ namespace DSP {
 		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
 
 	public:
+		virtual ~Downsample32_CU8() {}
 		void Receive(const CU8* data, int len, TAG& tag);
 	};
 
@@ -349,6 +362,7 @@ namespace DSP {
 		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
 
 	public:
+		virtual ~Downsample32_CS8() {}
 		void Receive(const CS8* data, int len, TAG& tag);
 	};
 
@@ -359,6 +373,7 @@ namespace DSP {
 		DS_UINT16 DS1, DS2, DS3, DS4;
 
 	public:
+		virtual ~Downsample16_CU8() {}
 		void Receive(const CU8* data, int len, TAG& tag);
 	};
 
@@ -379,6 +394,7 @@ namespace DSP {
 		DS_UINT16 DS1, DS2, DS3;
 
 	public:
+		virtual ~Downsample8_CU8() {}
 		void Receive(const CU8* data, int len, TAG& tag);
 	};
 
@@ -389,6 +405,7 @@ namespace DSP {
 		DS_UINT16 DS1, DS2, DS3;
 
 	public:
+		virtual ~Downsample8_CS8() {}
 		void Receive(const CS8* data, int len, TAG& tag);
 	};
 }

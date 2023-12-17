@@ -31,7 +31,7 @@
 
 class MessageStatistics {
 
-	std::mutex m;
+	std::mutex mtx;
 
 	static const int _MAGIC = 0x4f82b;
 	static const int _VERSION = 2;
@@ -55,7 +55,7 @@ public:
 	void clearVessels() { _vessels = 0; }
 
 	void Clear() {
-		std::lock_guard<std::mutex> l{ this->m };
+		std::lock_guard<std::mutex> l{ this->mtx };
 
 		std::memset(_msg, 0, sizeof(_msg));
 		std::memset(_channel, 0, sizeof(_channel));
@@ -70,7 +70,7 @@ public:
 
 	void Add(const AIS::Message& m, const TAG& tag, bool new_vessel = false) {
 
-		std::lock_guard<std::mutex> l{ this->m };
+		std::lock_guard<std::mutex> l{ this->mtx };
 
 		if (m.type() > 27 || m.type() < 1) return;
 
@@ -115,7 +115,7 @@ public:
 	}
 
 	std::string toPrometheus() {
-		std::lock_guard<std::mutex> l{ this->m };
+		std::lock_guard<std::mutex> l{ this->mtx };
 
 		std::string element;
 
@@ -144,7 +144,7 @@ public:
 	}
 
 	std::string toJSON(bool empty = false) {
-		std::lock_guard<std::mutex> l{ this->m };
+		std::lock_guard<std::mutex> l{ this->mtx };
 		static const std::string null_str = "null";
 		static const std::string comma = ",";
 
@@ -176,7 +176,7 @@ public:
 	}
 
 	bool Save(std::ofstream& file) {
-		std::lock_guard<std::mutex> l{ this->m };
+		std::lock_guard<std::mutex> l{ this->mtx };
 
 		int magic = _MAGIC;
 		int version = _VERSION;
@@ -198,7 +198,7 @@ public:
 	}
 
 	bool Load(std::ifstream& file) {
-		std::lock_guard<std::mutex> l{ this->m };
+		std::lock_guard<std::mutex> l{ this->mtx };
 
 		int magic = 0, version = 0;
 		if (!file.read((char*)&magic, sizeof(int))) return false;	// Check count
@@ -250,6 +250,7 @@ public:
 };
 
 struct ByteCounter : public StreamIn<RAW> {
+	virtual ~ByteCounter() {}
 	uint64_t received = 0;
 	void Receive(const RAW* data, int len, TAG& tag) { received += data[0].size; }
 	void Reset() { received = 0; }

@@ -477,8 +477,6 @@ namespace Util {
 		if (revision == "d04170") return "Raspberry Pi 5";
 
 		return model_name;
-
-		return "";
 #endif
 		return "";
 	}
@@ -502,8 +500,8 @@ namespace Util {
 #else
 		DIR* dir;
 		struct dirent* ent;
-		if ((dir = opendir(directory.c_str())) != NULL) {
-			while ((ent = readdir(dir)) != NULL) {
+		if ((dir = opendir(directory.c_str())) != nullptr) {
+			while ((ent = readdir(dir)) != nullptr) {
 				std::string file_name = ent->d_name;
 				if (file_name.length() >= extension.length() &&
 					file_name.compare(file_name.length() - extension.length(), extension.length(), extension) == 0) {

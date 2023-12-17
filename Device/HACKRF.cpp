@@ -26,7 +26,7 @@ namespace Device {
 
 #ifdef HASHACKRF
 
-	hackrf_device_list_t* HACKRF::list = NULL;
+	hackrf_device_list_t* HACKRF::list = nullptr;
 
 	void HACKRF::Open(uint64_t h) {
 		if (!list) throw std::runtime_error("HACKRF: cannot open device, internal error.");

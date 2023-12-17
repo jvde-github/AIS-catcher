@@ -28,7 +28,7 @@ class History : public StreamIn<JSON::JSON> {
 	std::mutex mtx;
 
 	struct {
-		long int time;
+		long int time = {};
 		MessageStatistics stat;
 	} history[N];
 
@@ -46,6 +46,7 @@ class History : public StreamIn<JSON::JSON> {
 	}
 
 public:
+	virtual ~History() {}
 	void setCutoff(int cutoff) {
 		for (int i = 0; i < N; i++)
 			history[i].stat.setCutoff(cutoff);
@@ -59,7 +60,7 @@ public:
 		std::lock_guard<std::mutex> l{ this->mtx };
 
 		start = end = 0;
-		create((long int)time(NULL) / (long int)INTERVAL);
+		create((long int)time(nullptr) / (long int)INTERVAL);
 	}
 
 	void Receive(const JSON::JSON* j, int len, TAG& tag) {

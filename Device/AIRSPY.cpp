@@ -216,8 +216,6 @@ namespace Device {
 			str += " mixer " + Util::Convert::toString(mixer_AGC, mixer_Gain);
 			str += " lna " + Util::Convert::toString(LNA_AGC, LNA_Gain) + " vga " + std::to_string(VGA_Gain);
 			break;
-		default:
-			break;
 		}
 
 		return Device::Get() + str + " biastee " + Util::Convert::toString(bias_tee) + " ";

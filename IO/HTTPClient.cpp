@@ -254,5 +254,4 @@ namespace IO {
 		while (out.size() % 4) out.push_back('=');
 		return out;
 	}
-
 }

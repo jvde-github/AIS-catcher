@@ -96,7 +96,7 @@ void WebViewer::BackupService() {
 void WebViewer::connect(Receiver& r) {
 
 	bool rec_details = false;
-	static const std::string newline = "<br>";
+	const std::string newline = "<br>";
 	for (int j = 0; j < r.Count(); j++)
 		if (r.Output(j).canConnect(groups_in)) {
 			if (!rec_details) {
@@ -312,7 +312,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		content += "\"build_date\":\"" + std::string(__DATE__) + "\",";
 		content += "\"build_version\":\"" + std::string(VERSION) + "\",";
 		content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",";
-		content += "\"run_time\":\"" + std::to_string((long int)time(0) - (long int)time_start) + "\",";
+		content += "\"run_time\":\"" + std::to_string((long int)time(nullptr) - (long int)time_start) + "\",";
 		content += "\"memory\":" + std::to_string(Util::Helper::getMemoryConsumption()) + ",";
 		content += "\"os\":" + os + ",";
 		content += "\"hardware\":" + hardware + ",";
@@ -381,10 +381,10 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 					content += "\"" + std::to_string(mmsi) + "\":" + ships.getPathJSON(mmsi);
 				}
 			}
-			catch (const std::invalid_argument& e) {
+			catch (const std::invalid_argument&) {
 				std::cerr << "Server: path MMSI invalid: " << mmsi_str << std::endl;
 			}
-			catch (const std::out_of_range& e) {
+			catch (const std::out_of_range&) {
 				std::cerr << "Server: path MMSI out of range: " << mmsi_str << std::endl;
 			}
 		}

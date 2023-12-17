@@ -116,7 +116,7 @@ namespace Device {
 	void RAWFile::Close() {
 		if (file && file != &std::cin) {
 			delete file;
-			file = NULL;
+			file = nullptr;
 		}
 	}
 

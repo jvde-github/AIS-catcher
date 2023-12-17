@@ -137,12 +137,13 @@ namespace AIS {
 	};
 
 	class Filter : public Setting {
-		const uint32_t all_msg = 0b1111111111111111111111111110;
+		const uint32_t all_msg = 0xFFFFFFFE;
 		uint32_t allow = all_msg;
 		bool on = false;
 		bool GPS = true, AIS = true;
 
 	public:
+		virtual ~Filter() {}
 		bool SetOption(std::string option, std::string arg);
 		bool isOn() { return on; }
 		std::string getAllowed();

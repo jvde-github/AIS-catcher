@@ -34,7 +34,7 @@ namespace Device {
 	class RTLSDR : public Device {
 #ifdef HASRTLSDR
 
-		rtlsdr_dev_t* dev = NULL;
+		rtlsdr_dev_t* dev = nullptr;
 
 		std::string vendor, product, serial;
 
@@ -92,9 +92,9 @@ namespace Device {
 		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 
-		std::string getProduct() { return product; };
-		std::string getVendor() { return vendor; };
-		std::string getSerial() { return serial; };
+		std::string getProduct() { return product; }
+		std::string getVendor() { return vendor; }
+		std::string getSerial() { return serial; }
 
 		void setFormat(Format f) {}
 #endif

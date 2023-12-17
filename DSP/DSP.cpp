@@ -445,7 +445,7 @@ namespace DSP {
 			}
 		}
 
-		FLOAT32 f = fz / 2.0 / N;
+		FLOAT32 f = fz / 2.0f / N;
 		CFLOAT32 rot_step = std::polar(1.0f, (float)(f * 2 * PI));
 
 		for (int i = 0; i < N; i++) {
@@ -454,7 +454,7 @@ namespace DSP {
 		}
 
 		rot /= std::abs(rot);
-		return f * 48000.0 / 162.0f;
+		return f * 48000.0f / 162.0f;
 	}
 
 	void SquareFreqOffsetCorrection::setParams(int n, int w) {

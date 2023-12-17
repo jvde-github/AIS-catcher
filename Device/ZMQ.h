@@ -31,8 +31,8 @@ namespace Device {
 	class ZMQ : public Device {
 #ifdef HASZMQ
 
-		void* context = NULL;
-		void* subscriber = NULL;
+		void* context = nullptr;
+		void* subscriber = nullptr;
 
 		std::string endpoint;
 

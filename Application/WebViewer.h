@@ -33,9 +33,10 @@
 #include "Receiver.h"
 
 class SSEStreamer : public StreamIn<JSON::JSON> {
-	IO::HTTPServer* server = NULL;
+	IO::HTTPServer* server = nullptr;
 
 public:
+	virtual ~SSEStreamer() {}
 	void Receive(const JSON::JSON* data, int len, TAG& tag) {
 		if (server) {
 			AIS::Message* m = (AIS::Message*)data[0].binary;
@@ -84,6 +85,7 @@ public:
 
 	std::string toPrometheus() { return stat.toPrometheus() + ppm + level; }
 	PromotheusCounter() { reset(); }
+	virtual ~PromotheusCounter() {}
 };
 
 class WebViewer : public IO::HTTPServer, public Setting {
@@ -164,5 +166,5 @@ public:
 	void Request(TCP::ServerConnection& c, const std::string& r, bool gzip);
 
 	Setting& Set(std::string option, std::string arg);
-	std::string Get() { return ""; };
+	std::string Get() { return ""; }
 };

@@ -28,7 +28,7 @@ namespace Device {
 	class HACKRF : public Device {
 #ifdef HASHACKRF
 
-		hackrf_device* device = NULL;
+		hackrf_device* device = nullptr;
 		static hackrf_device_list_t* list;
 		std::string serial;
 

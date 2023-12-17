@@ -67,7 +67,7 @@ namespace IO {
 
 			std::cerr << "DBMS: stop thread and database closed." << std::endl;
 		}
-		if (con != NULL) PQfinish(con);
+		if (con != nullptr) PQfinish(con);
 #endif
 	}
 
@@ -490,4 +490,4 @@ namespace IO {
 		}
 		return *this;
 	}
-};
+}

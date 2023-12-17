@@ -21,7 +21,7 @@ namespace AIS {
 
 	int Message::ID = 0;
 
-	int NMEAchecksum(const std::string& s) {
+	static int NMEAchecksum(const std::string& s) {
 		int check = 0;
 		for (int i = 1; i < s.length(); i++) check ^= s[i];
 		return check;

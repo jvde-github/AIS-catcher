@@ -282,6 +282,7 @@ std::string DB::getShipJSON(int mmsi) {
 	return content;
 }
 
+// needs fix, content is defined locally and in getSinglePathJSON member content is used as helper
 std::string DB::getAllPathJSON() {
 	std::lock_guard<std::mutex> lock(mtx);
 
@@ -448,25 +449,25 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, Ship& v,
 		break;
 	case AIS::KEY_MONTH:
 		if (msg->type() != 5) break;
-		v.month = p.Get().getInt();
+		v.month = (char) p.Get().getInt();
 		break;
 	case AIS::KEY_DAY:
 		if (msg->type() != 5) break;
-		v.day = p.Get().getInt();
+		v.day = (char) p.Get().getInt();
 		break;
 	case AIS::KEY_MINUTE:
 		if (msg->type() != 5) break;
-		v.minute = p.Get().getInt();
+		v.minute = (char)  p.Get().getInt();
 		break;
 	case AIS::KEY_HOUR:
 		if (msg->type() != 5) break;
-		v.hour = p.Get().getInt();
+		v.hour = (char) p.Get().getInt();
 		break;
 	case AIS::KEY_HEADING:
 		v.heading = p.Get().getInt();
 		break;
 	case AIS::KEY_DRAUGHT:
-		if (p.Get().getFloat() != 0.0)
+		if (p.Get().getFloat() != 0)
 			v.draught = p.Get().getFloat();
 		break;
 	case AIS::KEY_COURSE:
@@ -474,8 +475,8 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, Ship& v,
 		break;
 	case AIS::KEY_SPEED:
 		if (msg->type() == 9 && p.Get().getInt() != 1023)
-			v.speed = p.Get().getInt();
-		else if (p.Get().getFloat() != 102.3)
+			v.speed = (float) p.Get().getInt();
+		else if (p.Get().getFloat() != 102.3f)
 			v.speed = p.Get().getFloat();
 		break;
 	case AIS::KEY_STATUS:
@@ -559,9 +560,6 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, Ship& ship) {
 		builder.stringify(data, ship.msg);
 	}
 	return positionUpdated;
-}
-
-void DB::addValidation(int ptr, TAG& tag, float lat, float lon) {
 }
 
 void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
