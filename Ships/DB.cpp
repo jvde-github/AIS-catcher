@@ -449,19 +449,19 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, Ship& v,
 		break;
 	case AIS::KEY_MONTH:
 		if (msg->type() != 5) break;
-		v.month = (char) p.Get().getInt();
+		v.month = (char)p.Get().getInt();
 		break;
 	case AIS::KEY_DAY:
 		if (msg->type() != 5) break;
-		v.day = (char) p.Get().getInt();
+		v.day = (char)p.Get().getInt();
 		break;
 	case AIS::KEY_MINUTE:
 		if (msg->type() != 5) break;
-		v.minute = (char)  p.Get().getInt();
+		v.minute = (char)p.Get().getInt();
 		break;
 	case AIS::KEY_HOUR:
 		if (msg->type() != 5) break;
-		v.hour = (char) p.Get().getInt();
+		v.hour = (char)p.Get().getInt();
 		break;
 	case AIS::KEY_HEADING:
 		v.heading = p.Get().getInt();
@@ -475,7 +475,7 @@ bool DB::updateFields(const JSON::Property& p, const AIS::Message* msg, Ship& v,
 		break;
 	case AIS::KEY_SPEED:
 		if (msg->type() == 9 && p.Get().getInt() != 1023)
-			v.speed = (float) p.Get().getInt();
+			v.speed = (float)p.Get().getInt();
 		else if (p.Get().getFloat() != 102.3f)
 			v.speed = p.Get().getFloat();
 		break;

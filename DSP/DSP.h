@@ -113,7 +113,10 @@ namespace DSP {
 	public:
 		virtual ~DownsampleMovingAverage() {}
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
-		void setRates(int i, int o) { in_rate = i; out_rate = o; }
+		void setRates(int i, int o) {
+			in_rate = i;
+			out_rate = o;
+		}
 	};
 
 	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {

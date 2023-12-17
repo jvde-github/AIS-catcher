@@ -63,7 +63,7 @@ namespace Device {
 		uint32_t sample_rate = 0;
 
 		uint32_t getCorrectedFrequency() {
-			return (uint32_t) ((float) frequency * (1.0f - freq_offset / 1000000.0f));
+			return (uint32_t)((float)frequency * (1.0f - freq_offset / 1000000.0f));
 		}
 
 	public:

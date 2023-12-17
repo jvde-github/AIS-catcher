@@ -148,8 +148,9 @@ namespace Device {
 			remainingBytes = header.BodySize;
 			return true;
 		}
+
 		std::cerr << "SPYSERVER: unknown message type received." << std::endl;
-		return false;	
+		return false;
 	}
 
 	void SpyServer::applySettings() {
