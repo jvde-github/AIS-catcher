@@ -160,7 +160,7 @@ AIS-catcher also supports the 18 Euro RPI Zero W. However, the hardware might no
 ```console
 AIS-catcher -F
 ```
-Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device still struggles, you can try running at a sample rate of 288K (`-s 288K`). Reception will be impacted noticeably though.
+Fast downsampling uses approximations and comes at a very small performance degradation, so is not set by default. If your device still struggles, you can try running at a sample rate of 288K (`-s 288K`). Reception will be impacted noticeably though. Unfortunately, this seems to be the best way to run on the Zero W for now as this Zero is struggling with the high data throuugput. 
 
 That's all there is. Below we will dive into some more details.
 
