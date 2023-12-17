@@ -1133,6 +1133,12 @@ If your system allows for it you might opt to run ```AIS-catcher``` at a sample 
 
 - Add Database configuration to the JSON config file
 - Testing: assess the gap with commercial equipment (partially done at Meteotoren)
+- Improve decoder
 - Support NMEA tag blocks for timestamp
 - Channel AB+CD for devices with high sample rates like the Airspy
+- Offline map support
+- Input of NMEA via TCP
+- MTQQ support
+- Feedback advanced analytics via aiscatcher.org and shipcatcher.com
 - ....
+
