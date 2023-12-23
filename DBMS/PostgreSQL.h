@@ -87,7 +87,7 @@ namespace IO {
 
 		void setup();
 
-		void Start() {}
+		void Start() { setup(); }
 		void setMap(int m) { builder.setMap(m); }
 
 
