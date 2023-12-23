@@ -77,7 +77,7 @@ namespace AIS {
 		float GpsToDecimal(const char*, char, bool& error);
 
 		bool regenerate = false;
-		bool stamp = false;
+		bool stamp = true;
 		bool crc_check = false;
 		bool JSON_input = false;
 		bool VDO = true;
