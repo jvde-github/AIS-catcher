@@ -299,18 +299,19 @@ namespace DSP {
 		std::vector<CFLOAT32> output;
 		std::vector<CFLOAT32> out_src;
 
-		SRC_STATE* state = NULL;
+		SRC_STATE* state = nullptr;
 		int count = 0;
 		const int N = 16384;
 		double ratio = 0.0;
 		int src_error = 0;
 #endif
 	public:
-		virtual ~SRC() {}
 #ifdef HASSAMPLERATE
-		~SRC() {
+		virtual ~SRC() {
 			if (state) src_delete(state);
 		}
+#else
+		virtual ~SRC() {}
 #endif
 		void setParams(int sample_rate, int out_rate);
 		virtual void Receive(const CFLOAT32* data, int len, TAG& tag);
