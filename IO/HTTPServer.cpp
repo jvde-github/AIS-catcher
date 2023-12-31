@@ -94,7 +94,7 @@ namespace IO {
 	void HTTPServer::Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip) {
 #ifdef HASZLIB
 		if (gzip) {
-			zip.zip(data,len);
+			zip.zip(data, len);
 			ResponseRaw(c, type, (char*)zip.getOutputPtr(), zip.getOutputLength(), true);
 			return;
 		}

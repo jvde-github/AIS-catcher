@@ -103,7 +103,7 @@ public:
 		}
 	}
 
-	void getBinary(std::vector<char> &);
+	void getBinary(std::vector<char>&);
 	std::string getShipJSON(int mmsi);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false);

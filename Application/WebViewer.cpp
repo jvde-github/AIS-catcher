@@ -285,7 +285,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		if (supportPrometheus) {
 			std::string content = dataPrometheus.toPrometheus();
 			Response(c, "application/text", content, use_zlib);
-			dataPrometheus.reset();
+			dataPrometheus.Reset();
 		}
 	}
 	else if (r == "/stat.json") {

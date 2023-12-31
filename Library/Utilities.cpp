@@ -375,7 +375,7 @@ namespace Util {
 		Int16(f * 1000.0f, v);
 	}
 
-		void Serialize::FloatLow(FLOAT32 f, std::vector<char>& v) {
+	void Serialize::FloatLow(FLOAT32 f, std::vector<char>& v) {
 		Int16(f * 10.0f, v);
 	}
 
