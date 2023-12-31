@@ -66,12 +66,12 @@ void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, f
 	bearing = rad2deg(atan2(y, x));
 }
 
-void DB::getBinary(std::vector<char> &v) {
+void DB::getBinary(std::vector<char>& v) {
 	std::lock_guard<std::mutex> lock(mtx);
 
 	Util::Serialize::Uint64(time(nullptr), v);
 	Util::Serialize::Int32(count, v);
-	
+
 	if (latlon_share && isValidCoord(lat, lon)) {
 		Util::Serialize::Int8(1, v);
 		Util::Serialize::LatLon(lat, lon, v);
