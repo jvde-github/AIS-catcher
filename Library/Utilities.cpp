@@ -323,6 +323,54 @@ namespace Util {
 		out.Send(output.data(), size, tag);
 	}
 
+	void Serialize::Uint8(uint8_t i, std::vector<char>& v) {
+		v.push_back(i);
+	}
+
+	void Serialize::Uint16(uint16_t i, std::vector<char>& v) {
+		v.push_back((char)(i >> 8));
+		v.push_back((char)(i & 0xFF));
+	}
+
+	void Serialize::Uint32(uint32_t i, std::vector<char>& v) {
+		v.push_back((char)(i >> 24));
+		v.push_back((char)((i >> 16) & 0xFF));
+		v.push_back((char)((i >> 8) & 0xFF));
+		v.push_back((char)(i & 0xFF));
+	}
+
+	void Serialize::Uint64(uint64_t i, std::vector<char>& v) {
+		v.push_back((char)(i >> 56));
+		v.push_back((char)((i >> 48) & 0xFF));
+		v.push_back((char)((i >> 40) & 0xFF));
+		v.push_back((char)((i >> 32) & 0xFF));
+		v.push_back((char)((i >> 24) & 0xFF));
+		v.push_back((char)((i >> 16) & 0xFF));
+		v.push_back((char)((i >> 8) & 0xFF));
+		v.push_back((char)(i & 0xFF));
+	}
+
+	void Serialize::Int8(int8_t i, std::vector<char>& v) {
+		v.push_back(i);
+	}
+
+	void Serialize::Int16(int16_t i, std::vector<char>& v) {
+		Uint16((uint16_t)i, v);
+	}
+
+	void Serialize::Int32(int32_t i, std::vector<char>& v) {
+		Uint32((uint32_t)i, v);
+	}
+
+	void Serialize::Int64(int64_t i, std::vector<char>& v) {
+		Uint64((uint64_t)i, v);
+	}
+
+	void Serialize::String(const std::string& s, std::vector<char>& v) {
+		Uint8((uint8_t)s.length(), v);
+		v.insert(v.end(), s.begin(), s.end());
+	}
+
 	std::string Helper::readFile(const std::string& filename) {
 		std::ifstream file(filename);
 

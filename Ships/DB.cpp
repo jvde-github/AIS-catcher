@@ -129,6 +129,9 @@ std::string DB::getJSONcompact(bool full) {
 			content += std::to_string(ship.group_mask) + comma;
 
 			content += std::to_string(ship.shiptype) + comma;
+			content += std::to_string(ship.mmsi_type) + comma;
+			content += std::to_string(ship.shipclass) + comma;
+
 			content += std::to_string(ship.validated) + comma;
 			content += std::to_string(ship.msg_type) + comma;
 			content += std::to_string(ship.channels) + comma;
@@ -207,6 +210,9 @@ void DB::getShipJSON(const Ship& ship, std::string& content, long int delta_time
 	content += "\"to_port\":" + ((ship.to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(ship.to_port)) + ",";
 
 	content += "\"shiptype\":" + std::to_string(ship.shiptype) + ",";
+	content += "\"mmsi_type\":" + std::to_string(ship.mmsi_type) + ",";
+	content += "\"shipclass\":" + std::to_string(ship.shipclass) + ",";
+
 	content += "\"validated\":" + std::to_string(ship.validated) + ",";
 	content += "\"msg_type\":" + std::to_string(ship.msg_type) + ",";
 	content += "\"channels\":" + std::to_string(ship.channels) + ",";
@@ -545,6 +551,8 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, Ship& ship) {
 
 	for (const auto& p : data.getProperties())
 		positionUpdated |= updateFields(p, msg, ship, allowApproxLatLon);
+
+	ship.setType();
 
 	if (positionUpdated) {
 		ship.approximate = msg->type() == 27;

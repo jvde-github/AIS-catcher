@@ -324,7 +324,6 @@
 				visibility: visible;
 			}
 
-
 			#menubar div {
 				flex: 0 1 150px;
 				margin: 0 10px;
@@ -994,6 +993,7 @@
 				0% {
 					opacity: 1;
 				}
+
 				100% {
 					opacity: 0;
 				}
@@ -1088,6 +1088,7 @@
 				width: 100%;
 				border-radius: 15px;
 			}
+
 			.stat-panel {
 				margin: 0px;
 				background-color: var(--panel-color);
@@ -1271,7 +1272,8 @@
 				margin: auto;
 				padding: 0 16px;
 				cursor: pointer;
-				white-space: nowrap; /* Prevent wrapping */
+				white-space: nowrap;
+				/* Prevent wrapping */
 			}
 
 			#context-menu .divider {
@@ -2034,10 +2036,12 @@
 				0% {
 					opacity: 0;
 				}
+
 				100% {
 					opacity: 1;
 				}
 			}
+
 			.color-picker {
 				-webkit-appearance: none;
 				border-radius: 0;
@@ -2495,8 +2499,8 @@
 							<section class="noandroid">
 								<div><span>OS</span><span id="stat_os"></span></div>
 								<div><span>Hardware</span><span id="stat_hardware"></span></div>
-								<div title = "refresh rate of web viewer"><span>Refresh</span><span id="stat_update_time"></span></div>
-								<div title = "number of TCP clients to web viewer"><span>Connections</span><span id="stat_tcp_clients"></span></div>
+								<div title="refresh rate of web viewer"><span>Refresh</span><span id="stat_update_time"></span></div>
+								<div title="number of TCP clients to web viewer"><span>Connections</span><span id="stat_tcp_clients"></span></div>
 							</section>
 							<section class="noandroid">
 								<div><span>Device</span><span id="stat_product"></span></div>
@@ -2855,7 +2859,7 @@
 		<script>
 			var interval,
 				context = "settings",
-				aboutMDpresent=false,
+				aboutMDpresent = false,
 				hist,
 				ships,
 				paths = {},
@@ -2910,7 +2914,7 @@
 					latlon_in_dms: true,
 					show_range: false,
 					map_day: "Voyager (no labels)",
-					map_day_overlay: [], 
+					map_day_overlay: [],
 					map_night: "Dark Matter (no labels)",
 					map_night_overlay: [],
 					zoom: 10,
@@ -2958,8 +2962,7 @@
 				let darkmode = settings.dark_mode;
 				restoreDefaultSettings();
 				settings.android = android;
-				if(isAndroid())
-					settings.dark_mode = darkmode;
+				if (isAndroid()) settings.dark_mode = darkmode;
 
 				updateSortMarkers();
 				updateRangeColor();
@@ -3225,28 +3228,26 @@
 
 				// we might have made non-android items visible in the context menu, so hide non-android items if needed
 				updateAndroid();
-				if(show_all_tracks) {
-					document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
-    					element.style.display = 'none';
+				if (show_all_tracks) {
+					document.querySelectorAll(".ctx-noalltracks").forEach(function (element) {
+						element.style.display = "none";
 					});
-				}
-				else {
+				} else {
 					/*
-					document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
-    					element.style.display = 'flex';
-					});
-					*/				
+				document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
+					element.style.display = 'flex';
+				});
+				*/
 				}
 
-				if(show_all_tracks || Object.keys(marker_tracks).length > 0) {
-					document.querySelectorAll('.ctx-removealltracks').forEach(function(element) {
-    					element.style.display = 'flex';
+				if (show_all_tracks || Object.keys(marker_tracks).length > 0) {
+					document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
+						element.style.display = "flex";
 					});
-				}
-				else {
-					document.querySelectorAll('.ctx-removealltracks').forEach(function(element) {
-    					element.style.display = 'none';
-					});				
+				} else {
+					document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
+						element.style.display = "none";
+					});
 				}
 
 				document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
@@ -3361,7 +3362,7 @@
 				if (s <= 89) return "Tanker";
 				if (s <= 99) return "Other";
 
-				if ((settings.eri == true || settings.eri === "true") && ((s >= 1500 && s <= 1920) || (s >= 8000 && s <= 8510))) {
+				if ((s >= 1500 && s <= 1920) || (s >= 8000 && s <= 8510)) {
 					switch (s) {
 						case 8000:
 							return "Unknown (inland AIS)";
@@ -3529,151 +3530,6 @@
 			const SAR = 4;
 			const SARTEPIRB = 5;
 			const ATON = 6;
-
-			const CLASS_A_MASK = (1 << 1) | (1 << 2) | (1 << 3);
-			const CLASS_B_MASK = (1 << 18) | (1 << 19);
-
-			const CLASS_A_STATIC_MASK = 1 << 5;
-			const CLASS_B_STATIC_MASK = 1 << 24;
-
-			const BASESTATION_MASK = (1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 << 22) | (1 << 23);
-			const SAR_MASK = 1 << 9;
-			const ATON_MASK = 1 << 21;
-
-			function getMMSItype(ship) {
-				if ((ship.mmsi > 111000000 && ship.mmsi < 111999999) || (ship.mmsi > 11100000 && ship.mmsi < 11199999)) return SAR;
-
-				if (ship.msg_type & CLASS_A_MASK) return CLASS_A;
-				if (ship.msg_type & CLASS_B_MASK) return CLASS_B;
-
-				if (ship.msg_type & BASESTATION_MASK) return BASESTATION;
-				if (ship.msg_type & SAR_MASK) return SAR;
-				if (ship.msg_type & ATON_MASK) return ATON;
-
-				if (ship.mmsi >= 97000000 && ship.mmsi <= 98000000) return SARTEPIRB;
-
-				if (ship.msg_type & CLASS_A_STATIC_MASK) return CLASS_A;
-				if (ship.msg_type & CLASS_B_STATIC_MASK) return CLASS_B;
-
-				return OTHER;
-			}
-
-			function getShipTypeClassEri(ship) {
-				switch (ship.shiptype) {
-					case 8030:
-					case 8010:
-					case 8070:
-					case 8210:
-					case 8220:
-					case 8230:
-					case 8240:
-					case 8250:
-					case 8260:
-					case 8270:
-					case 8280:
-					case 8290:
-					case 8310:
-					case 8320:
-					case 8330:
-					case 8340:
-					case 8350:
-					case 8360:
-					case 8370:
-					case 8380:
-					case 8390:
-					case 8130:
-					case 8140:
-					case 8150:
-					case 8170:
-					case 8410:
-						return ShippingClass.CARGO;
-					case 8020:
-					case 8021:
-					case 8022:
-					case 8023:
-					case 8040:
-					case 8060:
-					case 8160:
-					case 8161:
-					case 8162:
-					case 8163:
-					case 8180:
-					case 8490:
-					case 8500:
-					case 1530:
-					case 1540:
-						return ShippingClass.TANKER;
-					case 8050:
-					case 8080:
-					case 8090:
-					case 8100:
-					case 8110:
-					case 8120:
-					case 8400:
-					case 8420:
-					case 8430:
-					case 8450:
-					case 8460:
-					case 8470:
-					case 8510:
-						return ShippingClass.SPECIAL;
-					case 8440:
-					case 8441:
-					case 8442:
-					case 8443:
-					case 8444:
-						return ShippingClass.PASSENGER;
-					case 8480:
-						return ShippingClass.FISHING;
-					case 1850:
-						return ShippingClass.B;
-					case 1900:
-					case 1910:
-					case 1920:
-						return ShippingClass.HIGHSPEED;
-				}
-				return ShippingClass.OTHER;
-			}
-
-			function getShipTypeClass(ship) {
-				let c = ShippingClass.UNKNOWN;
-
-				switch (ship.mmsi_type) {
-					case CLASS_A:
-					case CLASS_B:
-						if (ship.mmsi_type == CLASS_B) c = ShippingClass.B;
-						else c = ShippingClass.UNKNOWN;
-
-						// overwrite default if we have a better mapping
-						if (ship.shiptype >= 80 && ship.shiptype < 90) c = ShippingClass.TANKER;
-						else if (ship.shiptype >= 70 && ship.shiptype < 80) c = ShippingClass.CARGO;
-						else if (ship.shiptype >= 60 && ship.shiptype < 70) c = ShippingClass.PASSENGER;
-						else if (ship.shiptype >= 40 && ship.shiptype < 50) c = ShippingClass.HIGHSPEED;
-						else if (ship.shiptype >= 50 && ship.shiptype < 60) c = ShippingClass.SPECIAL;
-						else if (ship.shiptype == 30) c = ShippingClass.FISHING;
-						else if ((settings.eri == true || settings.eri === "true") && ((ship.shiptype >= 1500 && ship.shiptype <= 1920) || (ship.shiptype >= 8000 && ship.shiptype <= 8510)))
-							c = getShipTypeClassEri(ship);
-						break;
-					case BASESTATION:
-						c = ShippingClass.STATION;
-						break;
-					case SAR:
-						c = ShippingClass.HELICOPTER;
-						if (ship.mmsi > 111000000 && ship.mmsi < 111999999) {
-							if (Math.floor((ship.mmsi / 100) % 10, 0) == 1) c = ShippingClass.PLANE;
-						} else if (ship.mmsi > 11100000 && ship.mmsi < 11199999) if (Math.floor((ship.mmsi / 10) % 10, 0) == 1) c = ShippingClass.PLANE;
-						break;
-					case SARTEPIRB:
-						c = ShippingClass.SARTEPIRB;
-						break;
-					case ATON:
-						c = ShippingClass.ATON;
-						break;
-				}
-
-				return c;
-			}
-
 			function headerClick() {
 				window.open("https://aiscatcher.org");
 			}
@@ -3688,7 +3544,6 @@
 
 			function updateMapLayer() {
 				if (activeTileLayer) {
-
 					overlays_day = JSON.parse(JSON.stringify(settings.map_day_overlay));
 					overlays_night = JSON.parse(JSON.stringify(settings.map_night_overlay));
 
@@ -3703,7 +3558,6 @@
 
 			function addMapLayer() {
 				if (settings.dark_mode) {
-
 					activeTileLayer = settings.map_night in basemaps ? basemaps[settings.map_night] : basemaps[Object.keys(basemaps)[0]];
 					activeTileLayer.addTo(map);
 
@@ -3714,9 +3568,7 @@
 							}
 						}
 					}
-
-				}
-				else {
+				} else {
 					activeTileLayer = settings.map_day in basemaps ? basemaps[settings.map_day] : basemaps[Object.keys(basemaps)[0]];
 					activeTileLayer.addTo(map);
 
@@ -3728,7 +3580,6 @@
 						}
 					}
 				}
-
 			}
 
 			var dynamicStyle = document.createElement("style");
@@ -3738,7 +3589,7 @@
 				let style = `:root { --tooltip-font-color: ${settings.tooltipLabelColor}; --label-shadow-color: ${settings.tooltipLabelShadowColor}} \n`;
 				style += `.dark { --tooltip-font-color: ${settings.tooltipLabelColorDark}; --label-shadow-color: ${settings.tooltipLabelShadowColorDark}}\n`;
 
-				if(!isAndroid())
+				if (!isAndroid())
 					style += `
 						@media only screen and (min-width: 750px) {
 							#menubar {
@@ -3753,8 +3604,7 @@
 							}
 						}
 						`;
-				else
-					style += ' .settings_window { top: 72px; }\n';
+				else style += " .settings_window { top: 72px; }\n";
 
 				dynamicStyle.innerHTML = style;
 			}
@@ -3779,32 +3629,26 @@
 					saveSettings();
 				});
 
-				map.on("overlayadd", function(event) {
+				map.on("overlayadd", function (event) {
 					if (settings.dark_mode) {
-						if(!settings.map_night_overlay.includes(event.name))
-							settings.map_night_overlay.push(event.name);
+						if (!settings.map_night_overlay.includes(event.name)) settings.map_night_overlay.push(event.name);
+					} else {
+						if (!settings.map_day_overlay.includes(event.name)) settings.map_day_overlay.push(event.name);
 					}
-					else {
-						if(!settings.map_day_overlay.includes(event.name))
-							settings.map_day_overlay.push(event.name);
-					}
-					
+
 					setMapOpacity();
-					saveSettings();	
+					saveSettings();
 				});
 
-				map.on("overlayremove", function(event) {
+				map.on("overlayremove", function (event) {
 					if (settings.dark_mode) {
-						if(settings.map_night_overlay.includes(event.name))
-							settings.map_night_overlay.splice(settings.map_night_overlay.indexOf(event.name), 1);
+						if (settings.map_night_overlay.includes(event.name)) settings.map_night_overlay.splice(settings.map_night_overlay.indexOf(event.name), 1);
+					} else {
+						if (settings.map_day_overlay.includes(event.name)) settings.map_day_overlay.splice(settings.map_day_overlay.indexOf(event.name), 1);
 					}
-					else {
-						if(settings.map_day_overlay.includes(event.name))
-							settings.map_day_overlay.splice(settings.map_day_overlay.indexOf(event.name), 1);
-					}
-					
+
 					setMapOpacity();
-					saveSettings();	
+					saveSettings();
 				});
 
 				map.on("mousemove", function (evt) {
@@ -3996,7 +3840,7 @@
 				for (let [key, m] of Object.entries(markers)) {
 					if (key in shipsDB) {
 						let ship = shipsDB[key].raw;
-						switch (getShipTypeClass(ship)) {
+						switch (ship.shipclass) {
 							case ShippingClass.ATON:
 								cAton++;
 								break;
@@ -4091,7 +3935,7 @@
 					shipname: (a, b) => compareString(getShipName(shipsDB[a].raw), getShipName(shipsDB[b].raw)),
 					distance: (a, b) => compareNumber(shipsDB[a].raw.distance, shipsDB[b].raw.distance),
 					speed: (a, b) => compareNumber(shipsDB[a].raw.speed, shipsDB[b].raw.speed),
-					type: (a, b) => compareNumber(shipsDB[a].raw.shiptype_class, shipsDB[b].raw.shiptype_class),
+					type: (a, b) => compareNumber(shipsDB[a].raw.shipclass, shipsDB[b].raw.shipclass),
 					last_signal: (a, b) => compareNumber(shipsDB[a].raw.last_signal, shipsDB[b].raw.last_signal),
 				};
 
@@ -4608,6 +4452,8 @@
 					"last_group",
 					"group_mask",
 					"shiptype",
+					"mmsi_type",
+					"shipclass",
 					"validated",
 					"msg_type",
 					"channels",
@@ -4631,8 +4477,6 @@
 
 					if (includeShip(s)) {
 						const entry = {};
-						s.mmsi_type = getMMSItype(s);
-						s.shiptype_class = getShipTypeClass(s);
 						entry.raw = s;
 						shipsDB[s.mmsi] = entry;
 					}
@@ -5357,7 +5201,7 @@
 
 					if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
-					document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs/1000).toFixed(1) + " s";
+					document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
 					var title = document.getElementById("stat_station").textContent;
 					if (title != "" && title != null) document.title = "AIS-catcher " + title;
 
@@ -5589,7 +5433,7 @@
 							},
 							{
 								title: "Type",
-								field: "shiptype_class",
+								field: "shipclass",
 								sorter: "number",
 								formatter: function (cell) {
 									const ship = cell.getRow().getData();
@@ -5767,7 +5611,7 @@
 			};
 
 			function getShipCSSClassAndStyle(ship, opacity = 1) {
-				let { className, value, hint } = shippingMappings[getShipTypeClass(ship)] || { className: "shipicon", value: 120 };
+				let { className, value, hint } = shippingMappings[ship.shipclass] || { className: "shipicon", value: 120 };
 
 				let style = `opacity: ${opacity};`;
 				switch (className) {
@@ -5992,9 +5836,7 @@
 				if (m && m in shipsDB) {
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
-				}
-				else if(marker_focus != null)
-					map.setView(marker_focus.getLatLng(), Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
+				} else if (marker_focus != null) map.setView(marker_focus.getLatLng(), Math.min(Math.max(z, map.getZoom() + 1), map.getMaxZoom()));
 				shipcardMinIfMaxonMobile();
 			}
 
@@ -6002,8 +5844,7 @@
 				if (m && m in shipsDB) {
 					let ship = shipsDB[m].raw;
 					map.setView([ship.lat, ship.lon], Math.min(z, map.getMaxZoom()));
-				} else if(marker_focus != null) 
-					map.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
+				} else if (marker_focus != null) map.setView(marker_focus.getLatLng(), Math.min(z, map.getMaxZoom()));
 
 				shipcardMinIfMaxonMobile();
 			}
@@ -6066,7 +5907,6 @@
 			function showAllTracks() {
 				show_all_tracks = true;
 				updateTrack();
-			
 			}
 
 			function deleteAllTracks() {
@@ -6114,11 +5954,10 @@
 			}
 
 			async function updateTrack() {
-				if (Object.keys(marker_tracks).length == 0 && show_all_tracks  == false) return true;
+				if (Object.keys(marker_tracks).length == 0 && show_all_tracks == false) return true;
 
 				try {
-					if(show_all_tracks) 
-						a = await fetch("allpath.json");
+					if (show_all_tracks) a = await fetch("allpath.json");
 					else {
 						var mmsi_str = Object.keys(marker_tracks).join(",");
 						a = await fetch("path.json?" + mmsi_str);
@@ -6144,10 +5983,9 @@
 			}
 
 			function updateShipcardTrackOption() {
-				if(show_all_tracks) {
-						document.getElementById("shipcard_track_option").style.display = "none";
-				}
-				else {
+				if (show_all_tracks) {
+					document.getElementById("shipcard_track_option").style.display = "none";
+				} else {
 					document.getElementById("shipcard_track_option").style.display = "flex";
 				}
 			}
@@ -6705,8 +6543,7 @@
 					for (var i = 0; i < elements.length; i++) {
 						elements[i].style.display = "none";
 					}
-				}
-				else {
+				} else {
 					var elements = document.querySelectorAll(".android");
 					for (var i = 0; i < elements.length; i++) {
 						elements[i].style.display = "none";
