@@ -21,4 +21,4 @@
 #define VERSION		   "v0.55"
 #define COPYRIGHT	   "jvde-github and other contributors"
 
-#define VERSION_DESCRIBE	"v0.55-144-g1d74a05b"
+#define VERSION_DESCRIBE	"v0.55-146-g759c7901"
