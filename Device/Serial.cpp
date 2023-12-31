@@ -192,17 +192,52 @@ namespace Device {
 		}
 
 		struct termios tty;
-		tcgetattr(serial_fd, &tty);
+		if (tcgetattr(serial_fd, &tty) < 0) {
+			perror("tcgetattr");
+			throw std::runtime_error("Serial: tcgetattr failed.");
+		}
 
-		cfsetospeed(&tty, baudrate);
-		cfsetispeed(&tty, baudrate);
+		speed_t brc = B9600;
+		switch (baudrate) {
+		case 9600:
+			brc = B9600;
+			break;
+		case 19200:
+			brc = B19200;
+			break;
+		case 38400:
+			brc = B38400;
+			break;
+		case 57600:
+			brc = B57600;
+			break;
+		case 115200:
+			brc = B115200;
+			break;
+		default:
+			throw std::runtime_error("Serial: unsupported baudrate.");
+		}
+
+
+		if (cfsetospeed(&tty, brc) < 0) {
+			perror("cfsetospeed");
+			throw std::runtime_error("Serial: cfsetospeed failed.");
+		}
+
+		if (cfsetispeed(&tty, brc) < 0) {
+			perror("cfsetispeed");
+			throw std::runtime_error("Serial: cfsetispeed failed.");
+		}
 
 		tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity
 		tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication
 		tty.c_cflag &= ~CSIZE;	// Clear all bits that set the data size
 		tty.c_cflag |= CS8;		// 8 bits per byte
 
-		tcsetattr(serial_fd, TCSANOW, &tty);
+		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0) {
+			perror("tcsetattr");
+			throw std::runtime_error("Serial: tcsetattr failed.");
+		}
 
 		int flags = fcntl(serial_fd, F_GETFL, 0);
 		fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
