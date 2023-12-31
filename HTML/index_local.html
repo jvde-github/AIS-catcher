@@ -4534,7 +4534,7 @@
 				ship.channels = readInt8(view);
 				ship.country = String.fromCharCode(readInt8(view), readInt8(view));
 				ship.status = readInt8(view);
-				ship.draught = readFloatLow(view);
+				ship.draught = setNullIfLess(readFloatLow(view),0);
 
 				ship.eta_month = setNullIf(readInt8(view), 0);
 				ship.eta_day = setNullIf(readInt8(view), 0);
