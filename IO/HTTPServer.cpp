@@ -83,15 +83,27 @@ namespace IO {
 #ifdef HASZLIB
 		if (gzip) {
 			zip.zip(content);
-			Response(c, type, (char*)zip.getOutputPtr(), zip.getOutputLength(), true);
+			ResponseRaw(c, type, (char*)zip.getOutputPtr(), zip.getOutputLength(), true);
 			return;
 		}
 #endif
 
-		Response(c, type, (char*)content.c_str(), content.size());
+		ResponseRaw(c, type, (char*)content.c_str(), content.size());
 	}
 
 	void HTTPServer::Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip) {
+#ifdef HASZLIB
+		if (gzip) {
+			zip.zip(data,len);
+			ResponseRaw(c, type, (char*)zip.getOutputPtr(), zip.getOutputLength(), true);
+			return;
+		}
+#endif
+
+		ResponseRaw(c, type, data, len);
+	}
+
+	void HTTPServer::ResponseRaw(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip) {
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
 		if (gzip) header += "\r\nContent-Encoding: gzip";

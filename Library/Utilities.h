@@ -138,6 +138,9 @@ namespace Util {
 		static void Int32(int32_t i, std::vector<char>& v);
 		static void Int64(int64_t i, std::vector<char>& v);
 		static void String(const std::string& s, std::vector<char>& v);
+		static void LatLon(FLOAT32 lat, FLOAT32 lon, std::vector<char>& v);
+		static void Float(FLOAT32 f, std::vector<char>& v);
+		static void FloatLow(FLOAT32 f, std::vector<char>& v);
 	};
 
 	class Helper {

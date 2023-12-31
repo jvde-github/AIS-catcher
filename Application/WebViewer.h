@@ -101,6 +101,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	bool realtime = false;
 	bool supportPrometheus = false;
 	bool thread_running = false;
+	std::vector<char> binary;
 
 	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\n\n";
 	std::string plugins;

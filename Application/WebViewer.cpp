@@ -241,9 +241,9 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 
 	if (r == "/") {
 		if (cdn.empty())
-			Response(c, "text/html", (char*)index_html_gz, index_html_gz_len, true);
+			ResponseRaw(c, "text/html", (char*)index_html_gz, index_html_gz_len, true);
 		else
-			Response(c, "text/html", (char*)index_local_html_gz, index_local_html_gz_len, true);
+			ResponseRaw(c, "text/html", (char*)index_local_html_gz, index_local_html_gz_len, true);
 	}
 	else if (!cdn.empty() && r.find("/cdn/") == 0) {
 		try {
@@ -279,7 +279,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		}
 	}
 	else if (r == "/favicon.ico") {
-		Response(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
+		ResponseRaw(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
 	else if (r == "/metrics") {
 		if (supportPrometheus) {
@@ -345,6 +345,11 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/ships_array.json") {
 		std::string content = ships.getJSONcompact();
 		Response(c, "application/json", content, use_zlib & gzip);
+	}
+	else if (r == "/sb") {
+		binary.clear();
+		ships.getBinary(binary);
+		Response(c, "application/octet-stream", binary.data(), binary.size(), use_zlib & gzip);
 	}
 	else if (r == "/ships_full.json") {
 

@@ -94,4 +94,34 @@ public:
 		output.resize(strm.total_out);
 #endif
 	}
+
+	void zip(char* data, int len) {
+#ifdef HASZLIB
+
+		int idx = 0;
+		bool done = false;
+
+		init();
+
+		strm.next_in = (unsigned char*)data;
+		strm.avail_in = len;
+
+		while (!done) {
+
+			if (output.size() < idx + CHUNKSIZE) output.resize(idx + CHUNKSIZE);
+
+			strm.avail_out = CHUNKSIZE;
+			strm.next_out = (unsigned char*)(output.data() + idx);
+			if (deflate(&strm, Z_FINISH) < 0)
+				throw std::runtime_error("ZLIB: unexpected problem with ZLIB");
+
+			done = strm.avail_out != 0;
+			idx += CHUNKSIZE;
+		}
+
+		end();
+
+		output.resize(strm.total_out);
+#endif
+	}
 };
