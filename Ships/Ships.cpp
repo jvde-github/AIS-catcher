@@ -15,10 +15,4 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
-#define VERSION_NUMBER 55
-#define VERSION		   "v0.55"
-#define COPYRIGHT	   "jvde-github and other contributors"
-
-#define VERSION_DESCRIBE "v0.55-138-g52484a7c"
+#include "Ships.h"

@@ -127,6 +127,19 @@ namespace Util {
 		static void URL(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path);
 	};
 
+	class Serialize {
+	public:
+		static void Uint8(uint8_t i, std::vector<char>& v);
+		static void Uint16(uint16_t i, std::vector<char>& v);
+		static void Uint32(uint32_t i, std::vector<char>& v);
+		static void Uint64(uint64_t i, std::vector<char>& v);
+		static void Int8(int8_t i, std::vector<char>& v);
+		static void Int16(int16_t i, std::vector<char>& v);
+		static void Int32(int32_t i, std::vector<char>& v);
+		static void Int64(int64_t i, std::vector<char>& v);
+		static void String(const std::string& s, std::vector<char>& v);
+	};
+
 	class Helper {
 	public:
 		static std::string readFile(const std::string& filename);
