@@ -655,6 +655,9 @@ void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
 		}
 	}
 
+	tag.shipclass = ship.shipclass;
+	tag.speed = ship.speed;
+
 	if (position_updated && isValidCoord(lat_old, lon_old)) {
 		// flat earth approximation, roughly 10 nmi
 		float d = (ship.lat - lat_old) * (ship.lat - lat_old) + (ship.lon - lon_old) * (ship.lon - lon_old);

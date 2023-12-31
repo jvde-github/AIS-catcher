@@ -23,50 +23,6 @@
 
 #include "Common.h"
 
-const float DISTANCE_UNDEFINED = -1;
-const float LAT_UNDEFINED = 91;
-const float LON_UNDEFINED = 181;
-const float COG_UNDEFINED = 360;
-const float SPEED_UNDEFINED = -1;
-const float DRAUGHT_UNDEFINED = -1;
-
-const int HEADING_UNDEFINED = 511;
-const int STATUS_UNDEFINED = 15;
-const int DIMENSION_UNDEFINED = -1;
-const int ETA_DAY_UNDEFINED = 0;
-const int ETA_MONTH_UNDEFINED = 0;
-const int ETA_HOUR_UNDEFINED = 24;
-const int ETA_MINUTE_UNDEFINED = 60;
-const int IMO_UNDEFINED = 0;
-const int ANGLE_UNDEFINED = -1;
-
-enum ShippingClass {
-	CLASS_OTHER = 0,
-	CLASS_UNKNOWN = 1,
-	CLASS_CARGO = 2,
-	CLASS_B = 3,
-	CLASS_PASSENGER = 4,
-	CLASS_SPECIAL = 5,
-	CLASS_TANKER = 6,
-	CLASS_HIGHSPEED = 7,
-	CLASS_FISHING = 8,
-	CLASS_PLANE = 9,
-	CLASS_HELICOPTER = 10,
-	CLASS_STATION = 11,
-	CLASS_ATON = 12,
-	CLASS_SARTEPIRB = 13
-};
-
-enum MMSI_Class {
-	MMSI_OTHER = 0,
-	MMSI_CLASS_A = 1,
-	MMSI_CLASS_B = 2,
-	MMSI_BASESTATION = 3,
-	MMSI_SAR = 4,
-	MMSI_SARTEPIRB = 5,
-	MMSI_ATON = 6
-};
-
 const int CLASS_A_MASK = (1 << 1) | (1 << 2) | (1 << 3);
 const int CLASS_B_MASK = (1 << 18) | (1 << 19);
 

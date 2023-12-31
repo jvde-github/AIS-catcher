@@ -27,6 +27,7 @@
 #include "Common.h"
 #include "JSONAIS.h"
 #include "AIS.h"
+#include "Prometheus.h"
 #include "HTTPServer.h"
 #include "DB.h"
 #include "History.h"
@@ -50,42 +51,6 @@ public:
 		}
 	}
 	void setSSE(IO::HTTPServer* s) { server = s; }
-};
-
-class PromotheusCounter : public StreamIn<JSON::JSON> {
-	std::mutex m;
-	MessageStatistics stat;
-
-	std::string ppm;
-	std::string level;
-
-public:
-	void setCutOff(int c) { stat.setCutoff(c); }
-
-	void Receive(const JSON::JSON* json, int len, TAG& tag) {
-		AIS::Message& data = *((AIS::Message*)json[0].binary);
-
-		if (ppm.size() > 32768 || level.size() > 32768) {
-			return;
-		}
-
-		m.lock();
-		stat.Add(data, tag);
-		ppm += "ais_msg_ppm{type=\"" + std::to_string(data.type()) + "\",mmsi=\"" + std::to_string(data.mmsi()) + "\",channel=\"" + std::string(1, data.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
-		level += "ais_msg_level{type=\"" + std::to_string(data.type()) + "\",mmsi=\"" + std::to_string(data.mmsi()) + "\",channel=\"" + std::string(1, data.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
-		m.unlock();
-	}
-
-	void reset() {
-		m.lock();
-		ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
-		level = "# HELP ais_msg_level\n# TYPE ais_msg_level gauge\n";
-		m.unlock();
-	}
-
-	std::string toPrometheus() { return stat.toPrometheus() + ppm + level; }
-	PromotheusCounter() { reset(); }
-	virtual ~PromotheusCounter() {}
 };
 
 class WebViewer : public IO::HTTPServer, public Setting {

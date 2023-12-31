@@ -23,6 +23,7 @@
     <ClCompile Include="..\Application\Config.cpp" />
     <ClCompile Include="..\Application\Receiver.cpp" />
     <ClCompile Include="..\Application\WebViewer.cpp" />
+    <ClCompile Include="..\Application\Prometheus.cpp" />
     <ClCompile Include="..\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Device\AIRSPYHF.cpp" />
     <ClCompile Include="..\Device\FileRAW.cpp" />
@@ -37,6 +38,7 @@
     <ClCompile Include="..\Device\SoapySDR.cpp" />
     <ClCompile Include="..\Device\SpyServer.cpp" />
     <ClCompile Include="..\Ships\DB.cpp" />
+    <ClCompile Include="..\Ships\Ships.cpp" />
     <ClCompile Include="..\DSP\Demod.cpp" />
     <ClCompile Include="..\DSP\DSP.cpp" />
     <ClCompile Include="..\DSP\Model.cpp" />
@@ -60,6 +62,7 @@
     <ClInclude Include="..\Application\AIS-catcher.h" />
     <ClInclude Include="..\Application\Receiver.h" />
     <ClInclude Include="..\Application\WebViewer.h" />
+    <ClInclude Include="..\Application\Prometheus.h" />
     <ClInclude Include="..\Application\Config.h" />
     <ClInclude Include="..\Device\AIRSPY.h" />
     <ClInclude Include="..\Device\AIRSPYHF.h" />
@@ -83,6 +86,7 @@
     <ClInclude Include="..\Ships\DB.h" />
     <ClInclude Include="..\Ships\Statistics.h" />
     <ClInclude Include="..\Ships\History.h" />
+    <ClInclude Include="..\Ships\Ships.h" />
     <ClInclude Include="..\DSP\Demod.h" />
     <ClInclude Include="..\DSP\DSP.h" />
     <ClInclude Include="..\DSP\FFT.h" />
