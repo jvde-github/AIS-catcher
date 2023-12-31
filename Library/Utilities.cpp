@@ -371,6 +371,26 @@ namespace Util {
 		v.insert(v.end(), s.begin(), s.end());
 	}
 
+	void Serialize::Float(FLOAT32 f, std::vector<char>& v) {
+		Int16(f * 1000.0f, v);
+	}
+
+		void Serialize::FloatLow(FLOAT32 f, std::vector<char>& v) {
+		Int16(f * 10.0f, v);
+	}
+
+	void Serialize::LatLon(FLOAT32 lat, FLOAT32 lon, std::vector<char>& v) {
+
+		if (!(lat == 0 && lon == 0) && lat != 91 && lon != 181) {
+			Util::Serialize::Int32(lat * 6000000, v);
+			Util::Serialize::Int32(lon * 6000000, v);
+		}
+		else {
+			Util::Serialize::Int32(91 * 6000000, v);
+			Util::Serialize::Int32(181 * 6000000, v);
+		}
+	}
+
 	std::string Helper::readFile(const std::string& filename) {
 		std::ifstream file(filename);
 

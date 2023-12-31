@@ -66,6 +66,33 @@ void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, f
 	bearing = rad2deg(atan2(y, x));
 }
 
+void DB::getBinary(std::vector<char> &v) {
+	std::lock_guard<std::mutex> lock(mtx);
+
+	Util::Serialize::Uint64(time(nullptr), v);
+	Util::Serialize::Int32(count, v);
+	
+	if (latlon_share && isValidCoord(lat, lon)) {
+		Util::Serialize::Int8(1, v);
+		Util::Serialize::LatLon(lat, lon, v);
+		Util::Serialize::Uint32(own_mmsi, v);
+	}
+	else {
+		Util::Serialize::Int8(0, v);
+	}
+
+	int ptr = first;
+
+	delim = "";
+	while (ptr != -1) {
+		const Ship& ship = ships[ptr];
+		if (ship.mmsi != 0) {
+			ship.Serialize(v);
+		}
+		ptr = ships[ptr].next;
+	}
+}
+
 // add member to get JSON in form of array with values and keys separately
 std::string DB::getJSONcompact(bool full) {
 	std::lock_guard<std::mutex> lock(mtx);

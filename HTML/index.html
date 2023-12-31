@@ -2870,6 +2870,7 @@
 				overlapmaps = {},
 				station = {},
 				shipsDB = {},
+				fetch_binary = false,
 				singleClickTimeout = null,
 				server_message = "",
 				show_all_tracks = false;
@@ -3234,10 +3235,10 @@
 					});
 				} else {
 					/*
-				document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
-					element.style.display = 'flex';
-				});
-				*/
+			document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
+				element.style.display = 'flex';
+			});
+			*/
 				}
 
 				if (show_all_tracks || Object.keys(marker_tracks).length > 0) {
@@ -4407,6 +4408,206 @@
 
 				marker_range.setStyle({ color: markerColor });
 				marker_short_range.setStyle({ color: markerShortColor });
+			}
+
+			let view_offset = 0;
+
+			function readUint8(view) {
+				const val = view.getUint8(view_offset);
+				view_offset += 1;
+				return val;
+			}
+
+			function readUint16(view) {
+				const val = view.getUint16(view_offset);
+				view_offset += 2;
+				return val;
+			}
+
+			function readUint32(view) {
+				const val = view.getUint32(view_offset);
+				view_offset += 4;
+				return val;
+			}
+
+			function readUint64(view) {
+				const high = readUint32(view);
+				const low = readUint32(view);
+				return high * 2 ** 32 + low;
+			}
+
+			function readInt8(view) {
+				const val = view.getInt8(view_offset);
+				view_offset += 1;
+				return val;
+			}
+
+			function readInt16(view) {
+				const val = view.getInt16(view_offset);
+				view_offset += 2;
+				return val;
+			}
+
+			function readInt32(view) {
+				const val = view.getInt32(view_offset);
+				view_offset += 4;
+				return val;
+			}
+
+			function readInt64(view) {
+				const high = readInt32(view);
+				const low = readUint32(view);
+				return high * 2 ** 32 + low;
+			}
+
+			function readString(view) {
+				const length = readUint8(view);
+				let str = "";
+				for (let i = 0; i < length; i++) {
+					str += String.fromCharCode(readUint8(view));
+				}
+				return str;
+			}
+
+			function readFloat(view) {
+				return readInt16(view) / 1000.0;
+			}
+
+			function readFloatLow(view) {
+				return readInt16(view) / 10.0;
+			}
+
+			function readLatLon(view) {
+				const lat = readInt32(view) / 6000000.0;
+				const lon = readInt32(view) / 6000000.0;
+				return { lat, lon };
+			}
+
+			function deserialize(view, time) {
+				function setNullIf(value, condition) {
+					if (value == condition) return null;
+					return value;
+				}
+
+				function setNullIfLess(value, condition) {
+					if (value < condition) return null;
+					return value;
+				}
+
+				function setNullIfGreater(value, condition) {
+					if (value > condition) return null;
+					return value;
+				}
+
+				// Now, deserialize the Ship structure
+				const ship = {};
+				ship.mmsi = readUint32(view);
+				const latLon = readLatLon(view);
+				ship.lat = setNullIfGreater(latLon.lat, 90);
+				ship.lon = setNullIfGreater(latLon.lon, 180);
+				ship.distance = setNullIfLess(readFloatLow(view), 0);
+				ship.bearing = setNullIfLess(readFloatLow(view), 0);
+				ship.level = setNullIfGreater(readFloatLow(view), 1023);
+				ship.count = readInt16(view);
+				ship.ppm = setNullIfGreater(readFloatLow(view), 1023);
+
+				let approx_validated = readInt8(view);
+				ship.approx = (approx_validated & 1) == 1;
+				ship.validated = (approx_validated >> 1) & (1 == 1);
+
+				ship.heading = setNullIfGreater(readFloatLow(view), 510);
+				ship.cog = setNullIfGreater(readFloatLow(view), 359.9);
+				ship.speed = setNullIfLess(readFloatLow(view), 0);
+				ship.to_bow = setNullIf(readInt16(view), -1);
+				ship.to_stern = setNullIf(readInt16(view), -1);
+				ship.to_starboard = setNullIf(readInt16(view), -1);
+				ship.to_port = setNullIf(readInt16(view), -1);
+				ship.last_group = readUint64(view);
+				ship.group_mask = readUint64(view);
+				ship.shiptype = readInt16(view);
+
+				let shipclass_mmsitype = readUint8(view);
+				ship.shipclass = shipclass_mmsitype >> 4;
+				ship.mmsi_type = shipclass_mmsitype & 15;
+
+				ship.msg_type = readUint32(view);
+				ship.channels = readInt8(view);
+				ship.country = String.fromCharCode(readInt8(view), readInt8(view));
+				ship.status = readInt8(view);
+				ship.draught = readFloatLow(view);
+
+				ship.eta_month = setNullIf(readInt8(view), 0);
+				ship.eta_day = setNullIf(readInt8(view), 0);
+				ship.eta_hour = setNullIf(readInt8(view), 24);
+				ship.eta_minute = setNullIf(readInt8(view), 60);
+
+				ship.imo = setNullIf(readInt32(view), 0);
+				ship.callsign = readString(view);
+				ship.shipname = readString(view);
+				ship.destination = readString(view);
+				ship.received = readUint64(view);
+				ship.last_signal = time - ship.received;
+
+				return ship;
+			}
+
+			async function fetchShipsBinary(noDoubleFetch = true) {
+				if (isFetchingShips && noDoubleFetch) {
+					console.log("A fetch operation is already running.");
+					return false;
+				}
+
+				let ships = {};
+				station = {};
+				let arrayBuffer;
+
+				isFetchingShips = true;
+				try {
+					response = await fetch("sb");
+					const blob = await response.blob();
+					arrayBuffer = await blob.arrayBuffer();
+				} catch (error) {
+					setPulseError();
+					console.log("failed loading ships: " + error);
+					return false;
+				} finally {
+					isFetchingShips = false;
+				}
+
+				center = {};
+
+				setPulseOk();
+
+				shipsDB2 = {};
+				let view = new DataView(arrayBuffer);
+				view_offset = 0;
+
+				let time = readUint64(view);
+				let count = readInt32(view);
+
+				let hasstation = readInt8(view) == 1;
+				if (hasstation) {
+					station = readLatLon(view);
+					let own_mmsi = readUint32(view);
+				}
+
+				while (view_offset < view.byteLength) {
+					const ship = deserialize(view, time);
+					if (includeShip(ship)) {
+						const entry = {};
+						entry.raw = ship;
+						shipsDB2[ship.mmsi] = entry;
+					}
+				}
+
+				if (String(settings.center_point).toUpperCase() == "STATION") {
+					center = station;
+				} else if (settings.center_point in shipsDB) {
+					let ship = shipsDB[settings.center_point].raw;
+					center = { lat: ship.lat, lon: ship.lon };
+				}
+
+				return true;
 			}
 
 			async function fetchShips(noDoubleFetch = true) {
@@ -6288,11 +6489,65 @@
 				updateTooltips();
 			}
 
+			function compareObjects(obj1, obj2) {
+				const differences = {};
+
+				// Helper function to compare values
+				function compareValues(key, value1, value2) {
+					if (value1 === null || value2 === null) {
+						if (value1 !== value2) {
+							differences[key] = { obj1: value1, obj2: value2 };
+						}
+					} else if (typeof value1 === "object" && typeof value2 === "object") {
+						const objDiff = compareObjects(value1, value2);
+						if (Object.keys(objDiff).length > 0) {
+							differences[key] = objDiff;
+						}
+					} else if (value1 !== value2) {
+						differences[key] = { obj1: value1, obj2: value2 };
+					}
+				}
+
+				// Compare keys from obj1
+				for (const key of Object.keys(obj1)) {
+					if (key != "lat" && key != "lon" && key != "received")
+						if (!obj2.hasOwnProperty(key)) {
+							differences[key] = { obj1: obj1[key], obj2: undefined };
+						} else {
+							compareValues(key, obj1[key], obj2[key]);
+						}
+				}
+
+				// Compare keys from obj2
+				for (const key of Object.keys(obj2)) {
+					if (key != "lat" && key != "lon" && key != "received")
+						if (!obj1.hasOwnProperty(key)) {
+							differences[key] = { obj1: undefined, obj2: obj2[key] };
+						} else if (!differences.hasOwnProperty(key)) {
+							compareValues(key, obj1[key], obj2[key]);
+						}
+				}
+
+				return differences;
+			}
+
 			async function updateMap() {
 				let ok = false;
 
-				ok = await fetchShips();
+				if(fetch_binary)
+					ok = await fetchShipsBinary();
+				else
+					ok = await fetchShips();
+
 				if (!ok) return;
+
+				/* 
+			ok = await fetchShipsBinary();
+			if (!ok) return;
+
+			const differences = compareObjects(shipsDB, shipsDB2);
+			console.log("Differences:", differences);
+*/
 
 				ok = await updateTrack();
 				//if(!ok) return;
