@@ -28,6 +28,8 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 **Edge version** has recently added:
+- Bug fix in setting baud rate for serial devices
+- Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
 - Pyssel blog post describes procedure to show offline mbtiles maps [here](https://pysselilivet.blogspot.com/2023/12/ais-receiver-and-dispatcher-best.html)
