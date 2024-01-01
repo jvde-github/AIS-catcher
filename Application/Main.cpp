@@ -28,6 +28,7 @@
 #include "Config.h"
 #include "JSON/JSON.h"
 #include "IO.h"
+#include "NMEA2000.h"
 #include "PostgreSQL.h"
 
 static std::atomic<bool> stop;
@@ -156,6 +157,9 @@ static void printSupportedDevices() {
 	std::cerr << "Other support: ";
 #ifdef HASSOXR
 	std::cerr << "SOXR ";
+#endif
+#ifdef HASCANSOCKET
+	std::cerr << "CANsocket ";
 #endif
 #ifdef HASCURL
 	std::cerr << "CURL ";
@@ -455,6 +459,13 @@ int main(int argc, char* argv[]) {
 					if (count % 2) h.Set("URL", arg1);
 					parseSettings(h, argv, ptr + (count % 2), argc);
 					receiver.setTags("DT");
+				}
+				break;
+			case 'E':
+				throw std::runtime_error("experimental option -E, do not use.");
+				Assert(count == 0, param);
+				{
+					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::NMEA2000()));
 				}
 				break;
 			case 'h':
