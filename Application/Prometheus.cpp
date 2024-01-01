@@ -30,7 +30,7 @@ const std::string ShippingClassNames[] = {
     "Plane",          // CLASS_PLANE
     "Helicopter",     // CLASS_HELICOPTER
     "Station",        // CLASS_STATION
-    "Aids to Navigation", // CLASS_ATON
+    "Aid-to-Navigation", // CLASS_ATON
     "Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
 };
 
@@ -44,9 +44,8 @@ void PromotheusCounter::Clear() {
 	m.lock();
 	std::memset(_msg, 0, sizeof(_msg));
 	std::memset(_channel, 0, sizeof(_channel));
-	std::memset(_shipclass, 0, sizeof(_shipclass));
 
-	_count = _ship_moving = _ship_stationary = 0;
+	_count = 0;
 	_distance = 0;
 
 	m.unlock();
@@ -60,29 +59,20 @@ void PromotheusCounter::Add(const AIS::Message& m, const TAG& tag, bool new_vess
 	std::string speed = tag.speed < 0 ? "Unknown" : (tag.speed > 0.5 ? "Moving" : "Stationary");
 
 	if (tag.ppm < 1000)
-		ppm += "ais_msg_ppm{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + ShippingClassNames[tag.shipclass] + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
+		ppm += "ais_msg_ppm{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",station_id=\"" + std::to_string(m.getStation()) + "\",speed=\"" + speed + "\",shipclass=\"" + ShippingClassNames[tag.shipclass] + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
 
 	if (tag.level < 1000)
-		level += "ais_msg_level{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + ShippingClassNames[tag.shipclass] + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
+		level += "ais_msg_level{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",station_id=\"" + std::to_string(m.getStation()) + "\",speed=\"" + speed + "\",shipclass=\"" + ShippingClassNames[tag.shipclass] + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
 
 	_count++;
 	_msg[m.type() - 1]++;
 
-	if (tag.shipclass < 14 && tag.shipclass >= 0)
-		_shipclass[tag.shipclass]++;
 
 	if (m.getChannel() >= 'A' || m.getChannel() <= 'D')
 		_channel[m.getChannel() - 'A']++;
 
 	if (tag.distance > _distance) {
 		_distance = tag.distance;
-	}
-
-	if (tag.speed != SPEED_UNDEFINED && tag.shipclass != CLASS_ATON && tag.shipclass != CLASS_STATION && tag.shipclass != CLASS_HELICOPTER && tag.shipclass != CLASS_PLANE && tag.shipclass != CLASS_SARTEPIRB) {
-		if (tag.speed > 0.5)
-			_ship_moving++;
-		else
-			_ship_stationary++;
 	}
 }
 
@@ -115,15 +105,6 @@ std::string PromotheusCounter::toPrometheus() {
 	element += "# TYPE ais_stat_count counter\n";
 	element += "ais_stat_count " + std::to_string(_count) + "\n";
 
-	element += "# HELP ais_stat_ship_moving Total number of ships moving\n";
-	element += "# TYPE ais_stat_ship_moving counter\n";
-	element += "ais_stat_ship_moving " + std::to_string(_ship_moving) + "\n";
-
-	element += "# HELP ais_stat_ship_stationary Total number of ships stationary\n";
-	element += "# TYPE ais_stat_ship_stationary counter\n";
-	element += "ais_stat_ship_stationary " + std::to_string(_ship_stationary) + "\n";
-
-
 	element += "# HELP ais_stat_distance Longest distance\n";
 	element += "# TYPE ais_stat_distance gauge\n";
 	element += "ais_stat_distance " + std::to_string(_distance) + "\n";
@@ -142,12 +123,6 @@ std::string PromotheusCounter::toPrometheus() {
 		element += "ais_stat_count_type_" + type + " " + std::to_string(_msg[i]) + "\n";
 	}
 
-	for (int i = 0; i < 14; i++) {
-		std::string type = std::to_string(i);
-		element += "# HELP ais_stat_count_shipclass_" + type + " Total number of messages of shipclass " + type + "\n";
-		element += "# TYPE ais_stat_count_shipclass_" + type + " counter\n";
-		element += "ais_stat_count_shipclass_" + type + " " + std::to_string(_shipclass[i]) + "\n";
-	}
 	element += ppm + level;
 	m.unlock();
 	return element;
