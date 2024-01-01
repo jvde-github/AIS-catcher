@@ -221,10 +221,9 @@ namespace IO {
 
 			length = 0;
 
-			addByte(ais.type());
+			addByte(ais.repeat() << 6 | ais.type());
 			addUint32(ais.mmsi());
 			if (lon != LON_UNDEFINED && lat != LAT_UNDEFINED) {
-				std::cerr << length << std::endl;
 
 				addFloat4(lon, 1e-7);
 				addFloat4(lat, 1e-7);

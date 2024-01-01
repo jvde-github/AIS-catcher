@@ -462,7 +462,7 @@ int main(int argc, char* argv[]) {
 				}
 				break;
 			case 'E':
-				throw std::runtime_error("experimental option -E, do not use.");
+				//throw std::runtime_error("experimental option -E, do not use.");
 				Assert(count == 0, param);
 				{
 					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::NMEA2000()));
