@@ -17,11 +17,27 @@
 
 #include "Prometheus.h"
 
+const std::string ShippingClassNames[] = {
+    "Other",          // CLASS_OTHER
+    "Unknown",        // CLASS_UNKNOWN
+    "Cargo",          // CLASS_CARGO
+    "Class B",        // CLASS_B
+    "Passenger",      // CLASS_PASSENGER
+    "Special",        // CLASS_SPECIAL
+    "Tanker",         // CLASS_TANKER
+    "High Speed",     // CLASS_HIGHSPEED
+    "Fishing",        // CLASS_FISHING
+    "Plane",          // CLASS_PLANE
+    "Helicopter",     // CLASS_HELICOPTER
+    "Station",        // CLASS_STATION
+    "Aids to Navigation", // CLASS_ATON
+    "Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
+};
+
 PromotheusCounter::PromotheusCounter() {
 	Reset();
 	Clear();
 }
-
 
 void PromotheusCounter::Clear() {
 
@@ -39,14 +55,15 @@ void PromotheusCounter::Clear() {
 void PromotheusCounter::Add(const AIS::Message& m, const TAG& tag, bool new_vessel) {
 
 	if (m.type() > 27 || m.type() < 1) return;
+	if(tag.shipclass < 0 || tag.shipclass > 13) return;
 
-	std::string speed = tag.speed < 0 ? "unknown" : (tag.speed > 0.5 ? "moving" : "stationary");
+	std::string speed = tag.speed < 0 ? "Unknown" : (tag.speed > 0.5 ? "Moving" : "Stationary");
 
 	if (tag.ppm < 1000)
-		ppm += "ais_msg_ppm{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + std::to_string(tag.shipclass) + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
+		ppm += "ais_msg_ppm{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + ShippingClassNames[tag.shipclass] + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
 
 	if (tag.level < 1000)
-		level += "ais_msg_level{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + std::to_string(tag.shipclass) + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
+		level += "ais_msg_level{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + ShippingClassNames[tag.shipclass] + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
 
 	_count++;
 	_msg[m.type() - 1]++;
