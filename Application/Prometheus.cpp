@@ -39,11 +39,14 @@ void PromotheusCounter::Clear() {
 void PromotheusCounter::Add(const AIS::Message& m, const TAG& tag, bool new_vessel) {
 
 	if (m.type() > 27 || m.type() < 1) return;
+
+	std::string speed = tag.speed < 0 ? "unknown" : (tag.speed > 0.5 ? "moving" : "stationary");
+
 	if (tag.ppm < 1000)
-		ppm += "ais_msg_ppm{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
+		ppm += "ais_msg_ppm{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + std::to_string(tag.shipclass) + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.ppm) + "\n";
 
 	if (tag.level < 1000)
-		level += "ais_msg_level{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
+		level += "ais_msg_level{type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",speed=\"" + speed + "\",shipclass=\"" + std::to_string(tag.shipclass) + "\",channel=\"" + std::string(1, m.getChannel()) + "\"} " + std::to_string(tag.level) + "\n";
 
 	_count++;
 	_msg[m.type() - 1]++;
