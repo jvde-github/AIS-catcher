@@ -1016,12 +1016,14 @@ sudo make install
 For the SDRPlay the software needs to be downloaded and installed from the website of the manufacturer. Once installed, the AIS-catcher build process automatically includes it in the build if available. 
 
 
-### Running as a service on Ubuntu and Raspberry Pi
+### Running as a service on Ubuntu and ArchLinux
 
 Github user abcd567a has developed a nice [script](https://github.com/abcd567a/install-aiscatcher) and manual to automatically build AIS-catcher and set it up as a background service. I tested it on Ubuntu and advice to first systematically identify the optimal settings as described above starting with ``-s 1536K -gr tuner auto rtlagc on -a 192K``. It is paramount that the settings are edited:
 ```
 sudo nano /usr/share/aiscatcher/aiscatcher.conf 
+
 ```
+For ArchLinux consult the following [link](https://github.com/abcd567a/archlinux-aiscatcher) from the same author.
 
 ### Microsoft Visual Studio 2019+ via solution file (RTL-SDR/ZMQ only)
 
