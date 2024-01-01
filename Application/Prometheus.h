@@ -32,9 +32,6 @@ class PromotheusCounter : public StreamIn<JSON::JSON> {
 	unsigned int _count;
 	unsigned int _msg[27];
 	unsigned int _channel[4];
-	unsigned int _shipclass[14];
-	unsigned int _ship_stationary;
-	unsigned int _ship_moving;
 
 	float _distance;
 
