@@ -25,12 +25,13 @@
 #include "JSONAIS.h"
 
 
-// Work in progress. This code is heavily based on the work of CanBoat and others.... 
+// Work in progress. This code is heavily based on the work of CanBoat and others....
 // Sources:
 // https://github.com/AK-Homberger/NMEA2000-AIS-Gateway
 // https://github.com/ttlappalainen/NMEA2000
 // https://github.com/canboat/canboat
 
+// #define HASCANSOCKET
 
 #ifdef HASCANSOCKET
 #include <unistd.h>
@@ -113,6 +114,11 @@ namespace IO {
 			buffer[length++] = byte;
 		}
 
+		void addUint16(uint16_t value) {
+			std::memcpy(buffer + length, &value, 2);
+			length += 2;
+		}
+
 		void addInt32(int32_t value) {
 			std::memcpy(buffer + length, &value, 4);
 			length += 4;
@@ -168,7 +174,7 @@ namespace IO {
 
 		// Recipe from: https://github.com/AK-Homberger/NMEA2000-AIS-Gateway
 
-		void ClassAPositionReport(const AIS::Message& ais, const JSON::JSON* data) {
+		void createType123(const AIS::Message& ais, const JSON::JSON* data) {
 
 			frame.can_id = getCanIdFromISO11783Bits(4, 129038, 240, 255);
 
@@ -182,6 +188,7 @@ namespace IO {
 			int second = 0;
 			int raim = 0;
 			int accuracy = 0;
+			int maneuver = 0;
 
 			for (const JSON::Property& p : data[0].getProperties()) {
 				switch (p.Key()) {
@@ -202,6 +209,9 @@ namespace IO {
 					break;
 				case AIS::KEY_SECOND:
 					second = p.Get().getInt();
+					break;
+				case AIS::KEY_MANEUVER:
+					maneuver = p.Get().getInt();
 					break;
 				case AIS::KEY_RAIM:
 					raim = p.Get().getBool() ? 1 : 0;
@@ -253,11 +263,131 @@ namespace IO {
 				addFloat2Undefined();
 
 			addFloat2(turn * (2.0f * PI) / 360.0f / 60.0f, 3.125E-05); // incorrect probably
+
+			// seems to be different fron PGN.json
 			addByte(0xf0 | status);
 			addByte(0xf0);
 			addByte(0xff);
 			SendData();
 		}
+
+		std::string padded(const std::string& str, int length) {
+
+			if (str.length() < length) {
+				return str + std::string(length - str.length(), ' ');
+			}
+
+			if (str.length() > length) {
+				return str.substr(0, length);
+			}
+
+			return str;
+		}
+
+		void createType5(const AIS::Message& ais, const JSON::JSON* data) {
+
+			frame.can_id = getCanIdFromISO11783Bits(4, 129794, 240, 255);
+
+			int ais_version = 0;
+			int IMO = 0;
+			std::string callsign;
+			std::string shipname;
+			int shiptype = 0;
+			int to_bow = 0;
+			int to_stern = 0;
+			int to_starboard = 0;
+			int to_port = 0;
+			int month = 0;
+			int day = 0;
+			int hour = 0;
+			int minute = 0;
+			float draught = 0;
+			int epfd = 0;
+			std::string destination;
+			int dte = 0;
+
+			for (const JSON::Property& p : data[0].getProperties()) {
+				switch (p.Key()) {
+				case AIS::KEY_IMO:
+					IMO = p.Get().getInt();
+					break;
+				case AIS::KEY_CALLSIGN:
+					callsign = padded(p.Get().getString(), 7);
+					break;
+				case AIS::KEY_SHIPNAME:
+					shipname = padded(p.Get().getString(), 20);
+					break;
+				case AIS::KEY_SHIPTYPE:
+					shiptype = p.Get().getInt();
+					break;
+				case AIS::KEY_TO_BOW:
+					to_bow = p.Get().getInt();
+					break;
+				case AIS::KEY_TO_PORT:
+					to_port = p.Get().getInt();
+					break;
+				case AIS::KEY_TO_STARBOARD:
+					to_starboard = p.Get().getInt();
+					break;
+				case AIS::KEY_TO_STERN:
+					to_stern = p.Get().getInt();
+					break;
+				case AIS::KEY_MONTH:
+					month = p.Get().getInt();
+					break;
+				case AIS::KEY_DAY:
+					day = p.Get().getInt();
+					break;
+				case AIS::KEY_MINUTE:
+					minute = p.Get().getInt();
+					break;
+				case AIS::KEY_HOUR:
+					hour = p.Get().getInt();
+					break;
+				case AIS::KEY_EPFD:
+					epfd = p.Get().getInt();
+					break;
+				case AIS::KEY_DRAUGHT:
+					draught = p.Get().getFloat();
+					break;
+				case AIS::KEY_DESTINATION:
+					destination = padded(p.Get().getString(), 20);
+					break;
+				case AIS::KEY_DTE:
+					dte = p.Get().getBool() ? 1 : 0;
+					break;
+				}
+			}
+
+			length = 0;
+
+			addByte(ais.repeat() << 6 | ais.type());
+			addUint32(ais.mmsi());
+
+			addUint32(IMO);
+			for (char c : callsign)
+				addByte(c);
+
+			for (char c : shipname)
+				addByte(c);
+
+			addByte(shiptype);
+			addFloat2(to_bow + to_stern, 0.1);
+			addFloat2(to_starboard + to_port, 0.1);
+			addFloat2(to_starboard, 0.1);
+			addFloat2(to_bow, 0.1);
+			addUint16(day);
+			addUint32(hour * 3600 + minute * 60);
+			addFloat2(draught, 0.01);
+
+			for (char c : destination)
+				addByte(c);
+
+			addByte(ais_version << 6 | epfd << 2 | dte << 1);
+			addByte((ais.getChannel() == 'A' ? 0 : 1) << 3);
+			SendData();
+		}
+
 
 		void Receive(const JSON::JSON* data, int ln, TAG& tag) {
 			AIS::Message& ais = *((AIS::Message*)data[0].binary);
@@ -266,7 +396,10 @@ namespace IO {
 			case 1:
 			case 2:
 			case 3:
-				ClassAPositionReport(ais, data);
+				createType123(ais, data);
+				break;
+			case 5:
+				createType5(ais, data);
 				break;
 			default:
 				break;
