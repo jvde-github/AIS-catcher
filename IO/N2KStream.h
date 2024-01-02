@@ -33,7 +33,7 @@
 
 char socketName[50];
 #define SOCKET_CAN_PORT socketName
-const unsigned long TransmitMessages[] = { 129038L, 129794L, 0 };
+const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 0 };
 
 #include <NMEA2000_CAN.h>
 #include <N2kMessages.h>
@@ -204,6 +204,96 @@ namespace IO {
 			fifo_cond.notify_one();
 		}
 
+		void sendType4(const AIS::Message& ais, const JSON::JSON* data) {
+			double lat = LAT_UNDEFINED;
+			double lon = LON_UNDEFINED;
+			int raim = 0;
+			int accuracy = 0;
+			int hour = 0;
+			int minute = 0;
+			int second = 0;
+			int year = 0;
+			int month = 0;
+			int day = 0;
+			int epfd = 0;
+			int days = 0;
+
+			for (const JSON::Property& p : data[0].getProperties()) {
+				switch (p.Key()) {
+				case AIS::KEY_LAT:
+					lat = p.Get().getFloat();
+					break;
+				case AIS::KEY_LON:
+					lon = p.Get().getFloat();
+					break;
+				case AIS::KEY_RAIM:
+					raim = p.Get().getBool() ? 1 : 0;
+					break;
+				case AIS::KEY_EPFD:
+					epfd = p.Get().getBool() ? 1 : 0;
+					break;
+				case AIS::KEY_ACCURACY:
+					accuracy = p.Get().getBool() ? 1 : 0;
+					break;
+				case AIS::KEY_MINUTE:
+					minute = p.Get().getInt();
+					break;
+				case AIS::KEY_HOUR:
+					hour = p.Get().getInt();
+					break;
+				case AIS::KEY_SECOND:
+					second = p.Get().getInt();
+					break;
+				case AIS::KEY_YEAR:
+					year = p.Get().getInt();
+					break;
+				case AIS::KEY_MONTH:
+					month = p.Get().getInt();
+					break;
+				case AIS::KEY_DAY:
+					day = p.Get().getInt();
+					break;
+				}
+			}
+			tN2kMsg* N2kMsg = new tN2kMsg();
+
+			// requires fix
+			std::time_t now = std::time(nullptr);
+			std::tm* utc_tm = std::gmtime(&now);
+
+			if (utc_tm) {
+				utc_tm->tm_year = year - 1900;
+				utc_tm->tm_mon = month - 1;
+				utc_tm->tm_mday = day;
+				days = std::mktime(utc_tm) / 86400;
+			}
+
+
+			N2kMsg->SetPGN(129793L);
+			N2kMsg->Priority = 4;
+			N2kMsg->AddByte((ais.repeat() & 0x03) << 6 | ais.type());
+			N2kMsg->Add4ByteUInt(ais.mmsi());
+
+			N2kMsg->Add4ByteDouble(lon, 1e-07);
+			N2kMsg->Add4ByteDouble(lat, 1e-07);
+
+			N2kMsg->AddByte(raim << 1 | accuracy);
+			N2kMsg->Add4ByteUInt((hour * 3600 + minute * 60 + second) * 10000);
+
+			N2kMsg->AddByte(0x00);
+			N2kMsg->AddByte(0x00);
+			N2kMsg->AddByte((ais.getChannel() == 'A' ? 0 : 1) << 3);
+
+			N2kMsg->Add2ByteUInt(days);
+			N2kMsg->AddByte(0xf | epfd);
+			N2kMsg->AddByte(0xff);
+
+			mtx.lock();
+			queue.push_back(N2kMsg);
+			mtx.unlock();
+			fifo_cond.notify_one();
+		}
+
 		std::string pad(const std::string& str, int length) {
 
 			if (str.length() < length) {
@@ -303,7 +393,8 @@ namespace IO {
 
 			if (utc_tm) {
 				utc_tm->tm_year += (utc_tm->tm_mon + 1 < month || (utc_tm->tm_mon + 1 == month && day < utc_tm->tm_mday)) ? 1 : 0;
-				utc_tm->tm_mon = month - 1; utc_tm->tm_mday = day;
+				utc_tm->tm_mon = month - 1;
+				utc_tm->tm_mday = day;
 				days = std::mktime(utc_tm) / 86400;
 			}
 
@@ -331,6 +422,9 @@ namespace IO {
 				case 2:
 				case 3:
 					sendType123(ais, data);
+					break;
+				case 4:
+					sendType4(ais, data);
 					break;
 				case 5:
 					sendType5(ais, data);
