@@ -33,7 +33,7 @@
 
 char socketName[50];
 #define SOCKET_CAN_PORT socketName
-const unsigned long TransmitMessages[] PROGMEM = { 129038L, 129794L, 0 };
+const unsigned long TransmitMessages[]  = { 129038L, 129794L, 0 };
 
 #include <NMEA2000_CAN.h>
 #include <N2kMessages.h>
