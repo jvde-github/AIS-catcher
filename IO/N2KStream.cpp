@@ -19,10 +19,6 @@
 
 #ifndef _WIN32
 
-
-#include "NMEA2000.h"
-
-
 namespace IO {
 
 }

@@ -16,7 +16,9 @@ option(SAMPLERATE "Include SAMPLERATE support" ON)
 option(ZMQ "Include ZMQ support" ON)
 option(PSQL "Include PSQL support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
-option(CANSOCKET "Include CanSocket support" ON)
+option(NMEA2000 "Include NMEA2000 support" ON)
+
+set(NMEA2000_PATH "~" CACHE PATH "Path to NMEA2000 library")
 
 # Common compiler flags and options.
 
@@ -59,19 +61,20 @@ if(MSVC)
 	set(ADDITIONAL_LIBRARIES ws2_32.lib)
 endif()
 
-include(CheckIncludeFile)
+# Find NMEA2000 support on Linux
 
-# Find CanSocket support on Linux
-if(CANSOCKET)
-	if(NOT MSVC)
-		check_include_file(linux/can.h HAS_LINUX_CAN_H)
-		check_include_file(linux/can/raw.h HAS_LINUX_RAW_H)
-		if(HAS_LINUX_CAN_H AND HAS_LINUX_RAW_H)
-			add_definitions(-DHASCANSOCKET)
-			message(STATUS "CANSOCKET: found.")
-		else()
-			message(STATUS "CANSOCKET: not found.")
-		endif()
+if(NOT MSVC AND NMEA2000)
+
+	find_file(NMEA2000_LIB NAMES libnmea2000.a PATHS ${NMEA2000_PATH} ${NMEA2000_PATH}/src ${NMEA2000_PATH}/NMEA2000_AC/src)
+	find_path(NMEA2000_INCLUDE NAMES NMEA2000.h PATHS PATHS ${NMEA2000_PATH} ${NMEA2000_PATH}/src)
+
+	if(NMEA2000_LIB AND NMEA2000_INCLUDE)
+		add_definitions(-DHASNMEA2000)
+		set(NMEA2000_INCLUDE_DIRS ${NMEA2000_INCLUDE})
+		set(NMEA2000_LIBRARIES ${NMEA2000_LIB})
+		message(STATUS "NMEA2000: found ${NMEA2000_LIBRARIES} ${NMEA2000_INCLUDE_DIRS}")
+	else()
+		message(STATUS "NMEA2000: not found  ${NMEA2000_LIB} ${NMEA2000_INCLUDE}")
 	endif()
 endif()
 
@@ -672,13 +675,13 @@ set(CPP
 	Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp
 	Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp
 	DSP/DSP.cpp
-	IO/IO.cpp IO/NMEA2000.cpp)
+	IO/IO.cpp IO/N2KStream.cpp)
 
 set(HEADER
 	Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Application/WebViewer.h Application/Receiver.h Ships/Ships.h Ships/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h
 	Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h
 	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Ships/History.h Ships/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h
-	Device/Serial.h IO/NMEA2000.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h)
+	Device/Serial.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h)
 
 set(APP_INCLUDES . ./Ships ./DBMS ./Library ./DSP ./Application ./IO)
 
@@ -687,12 +690,13 @@ set(APP_INCLUDES . ./Ships ./DBMS ./Library ./DSP ./Application ./IO)
 add_executable(AIS-catcher ${CPP} ${HEADER})
 
 include_directories(
-	${AIRSPYHF_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
+	${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
 	${APP_INCLUDES})
 
 target_link_libraries(AIS-catcher
-	${AIRSPY_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES}  ${PQXX_LIBRARIES}  ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
+	${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES}  ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES}  ${PQXX_LIBRARIES}  ${SDRPLAY_LIBRARIES}  ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
 	${ADDITIONAL_LIBRARIES} Threads::Threads)
+
 
 # Copying DLLs to final location if needed
 if(COPY_SDRPLAY_DLL)
