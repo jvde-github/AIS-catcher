@@ -33,7 +33,7 @@
 
 char socketName[50];
 #define SOCKET_CAN_PORT socketName
-const unsigned long TransmitMessages[]  = { 129038L, 129794L, 0 };
+const unsigned long TransmitMessages[] = { 129038L, 129794L, 0 };
 
 #include <NMEA2000_CAN.h>
 #include <N2kMessages.h>
@@ -52,8 +52,10 @@ class Receiver;
 namespace IO {
 
 	class N2KStreamer : public OutputJSON {
-#ifdef HASNMEA2000
+		AIS::Filter filter;
+		std::string dev = "vcan0";
 
+#ifdef HASNMEA2000
 
 		std::thread run_thread;
 		std::mutex mtx;
@@ -63,7 +65,6 @@ namespace IO {
 		bool running = true;
 
 		tSocketStream serStream;
-		std::string dev = "vcan0";
 
 	public:
 		virtual ~N2KStreamer() {
@@ -328,7 +329,20 @@ namespace IO {
 			}
 			return;
 		}
-
 #endif
+		Setting& Set(std::string option, std::string arg) {
+			Util::Convert::toUpper(option);
+
+			if (option == "GROUPS_IN") {
+				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
+				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
+			} else if(option == "DEVICE") {
+				dev = arg;
+			}
+			else if (!filter.SetOption(option, arg)) {
+				throw std::runtime_error("JSON output - unknown option: " + option);
+			}
+			return *this;
+		}
 	};
 }
