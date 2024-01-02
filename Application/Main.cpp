@@ -461,15 +461,15 @@ int main(int argc, char* argv[]) {
 					receiver.setTags("DT");
 				}
 				break;
-			case 'E':
-				//throw std::runtime_error("experimental option -E, do not use.");
-				Assert(count == 0 || count == 1, param);
-				{
-					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
-					IO::OutputJSON& h = *json.back();
-					if (count == 1) h.Set("DEVICE", arg1);
-				}
-				break;
+			case 'E': {
+				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
+				IO::OutputJSON& h = *json.back();
+				if (count % 2)
+					h.Set("DEVICE", arg1);
+
+				if (count > 1)
+					parseSettings(h, argv, ptr + (count % 2), argc);
+			} break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				list_options = true;

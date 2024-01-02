@@ -238,6 +238,7 @@ namespace IO {
 			int epfd = 0;
 			char destination[20];
 			int dte = 0;
+			int days = 0;
 
 			for (const JSON::Property& p : data[0].getProperties()) {
 				switch (p.Key()) {
@@ -297,7 +298,15 @@ namespace IO {
 
 			tN2kMsg* N2kMsg = new tN2kMsg();
 
-			int days = 1;
+			std::time_t now = std::time(nullptr);
+			std::tm* utc_tm = std::gmtime(&now);
+
+			if (utc_tm) {
+				utc_tm->tm_year += (utc_tm->tm_mon + 1 < month || (utc_tm->tm_mon + 1 == month && day < utc_tm->tm_mday)) ? 1 : 0;
+				utc_tm->tm_mon = month - 1; utc_tm->tm_mday = day;
+				days = std::mktime(utc_tm) / 86400;
+			}
+
 			SetN2kAISClassAStatic(*N2kMsg, shiptype, (tN2kAISRepeat)ais.repeat(), ais.mmsi(),
 								  IMO, callsign, shipname, shiptype, to_bow + to_stern,
 								  to_port + to_starboard, to_starboard, to_bow, days,
@@ -315,19 +324,22 @@ namespace IO {
 		void Receive(const JSON::JSON* data, int ln, TAG& tag) {
 			AIS::Message& ais = *((AIS::Message*)data[0].binary);
 
-			switch (ais.type()) {
-			case 1:
-			case 2:
-			case 3:
-				sendType123(ais, data);
-				break;
-			case 5:
-				sendType5(ais, data);
-				break;
-			default:
-				break;
+			if (filter.include(ais)) {
+
+				switch (ais.type()) {
+				case 1:
+				case 2:
+				case 3:
+					sendType123(ais, data);
+					break;
+				case 5:
+					sendType5(ais, data);
+					break;
+				default:
+					break;
+				}
+				return;
 			}
-			return;
 		}
 #endif
 		Setting& Set(std::string option, std::string arg) {
@@ -336,7 +348,8 @@ namespace IO {
 			if (option == "GROUPS_IN") {
 				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-			} else if(option == "DEVICE") {
+			}
+			else if (option == "DEVICE") {
 				dev = arg;
 			}
 			else if (!filter.SetOption(option, arg)) {
