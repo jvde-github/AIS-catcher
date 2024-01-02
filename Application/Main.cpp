@@ -28,7 +28,7 @@
 #include "Config.h"
 #include "JSON/JSON.h"
 #include "IO.h"
-#include "NMEA2000.h"
+#include "IO/N2KStream.h"
 #include "PostgreSQL.h"
 
 static std::atomic<bool> stop;
@@ -158,8 +158,8 @@ static void printSupportedDevices() {
 #ifdef HASSOXR
 	std::cerr << "SOXR ";
 #endif
-#ifdef HASCANSOCKET
-	std::cerr << "CANsocket ";
+#ifdef HASNMEA2000
+	std::cerr << "NMEA2000 ";
 #endif
 #ifdef HASCURL
 	std::cerr << "CURL ";
@@ -465,7 +465,7 @@ int main(int argc, char* argv[]) {
 				//throw std::runtime_error("experimental option -E, do not use.");
 				Assert(count == 0, param);
 				{
-					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::NMEA2000()));
+					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
 				}
 				break;
 			case 'h':

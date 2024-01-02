@@ -43,7 +43,7 @@
     <ClCompile Include="..\DSP\DSP.cpp" />
     <ClCompile Include="..\DSP\Model.cpp" />
     <ClCompile Include="..\IO\IO.cpp" />
-    <ClCompile Include="..\IO\NMEA2000.cpp" />
+    <ClCompile Include="..\IO\N2KStream.cpp" />
     <ClCompile Include="..\DBMS\PostgreSQL.cpp" />
     <ClCompile Include="..\JSON\Parser.cpp" />
     <ClCompile Include="..\JSON\StringBuilder.cpp" />
@@ -55,7 +55,7 @@
     <ClCompile Include="..\Library\AIS.cpp" />
     <ClCompile Include="..\Library\Message.cpp" />
     <ClCompile Include="..\Library\JSONAIS.cpp" />
-    <ClCompile Include="..\Library\NMEA.cpp" />
+    <ClCompile Include="..\Library\N2KStream.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
   </ItemGroup>
@@ -95,7 +95,7 @@
     <ClInclude Include="..\DSP\Model.h" />
     <ClInclude Include="..\Library\Keys.h" />
     <ClInclude Include="..\IO\IO.h" />
-    <ClInclude Include="..\IO\NMEA2000.h" />
+    <ClInclude Include="..\IO\N2KStream.h" />
     <ClInclude Include="..\DBMS\PostgreSQL.h" />
     <ClInclude Include="..\IO\Network.h" />
     <ClInclude Include="..\IO\HTTPServer.h" />
