@@ -108,7 +108,6 @@ namespace IO {
 
 					tN2kMsg* N2kMsg = queue.front();
 					queue.pop_front();
-					std::cerr << "Sending" << std::endl;
 					NMEA2000.SendMsg(*N2kMsg);
 					delete N2kMsg;
 				}
