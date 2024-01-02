@@ -463,9 +463,11 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'E':
 				//throw std::runtime_error("experimental option -E, do not use.");
-				Assert(count == 0, param);
+				Assert(count == 0 || count == 1, param);
 				{
 					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
+					IO::OutputJSON& h = *json.back();
+					if (count == 1) h.Set("DEVICE", arg1);
 				}
 				break;
 			case 'h':
