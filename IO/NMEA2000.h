@@ -34,6 +34,9 @@
 // #define HASCANSOCKET
 
 #ifdef HASCANSOCKET
+#include <chrono>
+#include <ctime>
+
 #include <unistd.h>
 
 #include <net/if.h>
@@ -202,7 +205,7 @@ namespace IO {
 					status = p.Get().getInt();
 					break;
 				case AIS::KEY_TURN:
-					turn = p.Get().getFloat();
+					turn = p.Get().getInt();
 					break;
 				case AIS::KEY_HEADING:
 					heading = p.Get().getInt();
@@ -255,14 +258,15 @@ namespace IO {
 
 			addByte(0);
 			addByte(0);
-			addByte(0);
+			// deviation from NMEA2000
+			addByte((ais.getChannel() == 'A' ? 0 : 1) << 3);
 
 			if (heading != HEADING_UNDEFINED)
 				addFloat2(heading * (2.0f * PI) / 360.0f, 1e-04); // heading
 			else
 				addFloat2Undefined();
 
-			addFloat2(turn * (2.0f * PI) / 360.0f / 60.0f, 3.125E-05); // incorrect probably
+			addFloat2(turn * (2.0f * PI) / 360.0f / 60.0f, 3.125E-05);
 
 			// seems to be different fron PGN.json
 			addByte(0xf0 | status);
@@ -271,7 +275,7 @@ namespace IO {
 			SendData();
 		}
 
-		std::string padded(const std::string& str, int length) {
+		std::string pad(const std::string& str, int length) {
 
 			if (str.length() < length) {
 				return str + std::string(length - str.length(), ' ');
@@ -312,10 +316,10 @@ namespace IO {
 					IMO = p.Get().getInt();
 					break;
 				case AIS::KEY_CALLSIGN:
-					callsign = padded(p.Get().getString(), 7);
+					callsign = pad(p.Get().getString(), 7);
 					break;
 				case AIS::KEY_SHIPNAME:
-					shipname = padded(p.Get().getString(), 20);
+					shipname = pad(p.Get().getString(), 20);
 					break;
 				case AIS::KEY_SHIPTYPE:
 					shiptype = p.Get().getInt();
@@ -351,7 +355,7 @@ namespace IO {
 					draught = p.Get().getFloat();
 					break;
 				case AIS::KEY_DESTINATION:
-					destination = padded(p.Get().getString(), 20);
+					destination = pad(p.Get().getString(), 20);
 					break;
 				case AIS::KEY_DTE:
 					dte = p.Get().getBool() ? 1 : 0;
@@ -376,15 +380,35 @@ namespace IO {
 			addFloat2(to_starboard + to_port, 0.1);
 			addFloat2(to_starboard, 0.1);
 			addFloat2(to_bow, 0.1);
-			addUint16(day);
-			addUint32(hour * 3600 + minute * 60);
+
+			// calculate the ETA
+			std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+			std::tm* utc_tm = std::gmtime(&now);
+
+			if (utc_tm) {
+
+				if (utc_tm->tm_mon + 1 < month || (utc_tm->tm_mon + 1 == month && utc_tm->tm_mday < day))
+					utc_tm->tm_year++;
+
+				utc_tm->tm_mon = month - 1;
+				utc_tm->tm_mday = day;
+
+				addUint16(std::mktime(utc_tm) / (60 * 60 * 24L));
+			}
+			else {
+				addUint16(0);
+			}
+
+
+			// addUint16(day);
+			addUint32((hour * 3600 + minute * 60) * 10000);
 			addFloat2(draught, 0.01);
 
 			for (char c : destination)
 				addByte(c);
 
 			addByte(ais_version << 6 | epfd << 2 | dte << 1);
-			addByte((ais.getChannel() == 'A' ? 0 : 1) << 3);
+			addByte((ais.getChannel() == 'A' ? 0 : 1));
 			SendData();
 		}
 
