@@ -20,7 +20,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include <unistd.h>
 #include <thread>
 #include <mutex>
 #include <list>
@@ -74,7 +73,10 @@ namespace IO {
 #else
 	public:
 		void Start() { std::cout << "NMEA2000 support not included in this build." << std::endl; }
-		Setting& Set(std::string option, std::string arg) { std::cout << "NMEA2000 support not included in this build." << std::endl; }
+		Setting& Set(std::string option, std::string arg) {
+			std::cout << "NMEA2000 support not included in this build." << std::endl;
+			return *this;
+		}
 #endif
 	};
 }
