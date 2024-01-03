@@ -30,8 +30,16 @@ Only use this software in regions where such use is permitted.
 **Edge version** has recently added:
 - Bug fix in setting baud rate for serial devices
 - Experimentation with NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker (`--network host`) is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
+  ```console
+  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -E vcan0
   ```
-  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge-E vcan0
+  So the following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus:
+  ```console
+  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -x 192.168.1.120 4002 -E vcan0  
+  ```
+  Current implementation handles AIS messages 1-5 and have been tested with the CANboat utilities and a virtual network:
+  ```console
+  candump vcan0 | candump2analyzer | analyzer
   ```
 - Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
