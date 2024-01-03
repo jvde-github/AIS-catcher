@@ -18,20 +18,20 @@
 #include "Prometheus.h"
 
 const std::string ShippingClassNames[] = {
-    "Other",          // CLASS_OTHER
-    "Unknown",        // CLASS_UNKNOWN
-    "Cargo",          // CLASS_CARGO
-    "Class B",        // CLASS_B
-    "Passenger",      // CLASS_PASSENGER
-    "Special",        // CLASS_SPECIAL
-    "Tanker",         // CLASS_TANKER
-    "High Speed",     // CLASS_HIGHSPEED
-    "Fishing",        // CLASS_FISHING
-    "Plane",          // CLASS_PLANE
-    "Helicopter",     // CLASS_HELICOPTER
-    "Station",        // CLASS_STATION
-    "Aid-to-Navigation", // CLASS_ATON
-    "Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
+	"Other",							  // CLASS_OTHER
+	"Unknown",							  // CLASS_UNKNOWN
+	"Cargo",							  // CLASS_CARGO
+	"Class B",							  // CLASS_B
+	"Passenger",						  // CLASS_PASSENGER
+	"Special",							  // CLASS_SPECIAL
+	"Tanker",							  // CLASS_TANKER
+	"High Speed",						  // CLASS_HIGHSPEED
+	"Fishing",							  // CLASS_FISHING
+	"Plane",							  // CLASS_PLANE
+	"Helicopter",						  // CLASS_HELICOPTER
+	"Station",							  // CLASS_STATION
+	"Aid-to-Navigation",				  // CLASS_ATON
+	"Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
 };
 
 PromotheusCounter::PromotheusCounter() {
@@ -54,7 +54,7 @@ void PromotheusCounter::Clear() {
 void PromotheusCounter::Add(const AIS::Message& m, const TAG& tag, bool new_vessel) {
 
 	if (m.type() > 27 || m.type() < 1) return;
-	if(tag.shipclass < 0 || tag.shipclass > 13) return;
+	if (tag.shipclass < 0 || tag.shipclass > 13) return;
 
 	std::string speed = tag.speed < 0 ? "Unknown" : (tag.speed > 0.5 ? "Moving" : "Stationary");
 
