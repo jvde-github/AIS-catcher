@@ -29,7 +29,10 @@ Only use this software in regions where such use is permitted.
 
 **Edge version** has recently added:
 - Bug fix in setting baud rate for serial devices
-- Experimentation with NMEA2000 via socketCAN on Linux
+- Experimentation with NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker (`--network host`) is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
+  ```
+  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge-E vcan0
+  ```
 - Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
