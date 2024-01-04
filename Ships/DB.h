@@ -110,6 +110,7 @@ public:
 	std::string getPathJSON(uint32_t);
 	std::string getAllPathJSON();
 	std::string getMessage(uint32_t);
+	std::string getKML();
 
 	int getCount() { return count; }
 	int getMaxCount() { return N; }
