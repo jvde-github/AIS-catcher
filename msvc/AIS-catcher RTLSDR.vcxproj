@@ -55,7 +55,7 @@
     <ClCompile Include="..\Library\AIS.cpp" />
     <ClCompile Include="..\Library\Message.cpp" />
     <ClCompile Include="..\Library\JSONAIS.cpp" />
-    <ClCompile Include="..\Library\N2KStream.cpp" />
+    <ClCompile Include="..\Library\NMEA.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
   </ItemGroup>
