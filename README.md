@@ -37,7 +37,7 @@ Only use this software in regions where such use is permitted.
   ```console
   docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -x 192.168.1.120 4002 -E vcan0  
   ```
-  Current implementation handles AIS messages 1-5 and have been tested with the CANboat utilities and a virtual network:
+  Current implementation handles AIS messages 1-5, 9, 18, 19, 25 and have been very high-level tested with the CANboat utilities and a virtual network:  				
   ```console
   candump vcan0 | candump2analyzer | analyzer
   ```
