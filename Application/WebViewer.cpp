@@ -281,6 +281,10 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/favicon.ico") {
 		ResponseRaw(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
+	else if (r == "/kml") {		
+		std::string content = ships.getKML(); 
+		Response(c, "application/text", content, use_zlib);
+	}
 	else if (r == "/metrics") {
 		if (supportPrometheus) {
 			std::string content = dataPrometheus.toPrometheus();
