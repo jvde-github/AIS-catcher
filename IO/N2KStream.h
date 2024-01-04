@@ -67,6 +67,10 @@ namespace IO {
 
 		void sendType4(const AIS::Message& ais, const JSON::JSON* data);
 		void sendType5(const AIS::Message& ais, const JSON::JSON* data);
+		void sendType9(const AIS::Message& ais, const JSON::JSON* data);
+		void sendType18(const AIS::Message& ais, const JSON::JSON* data);
+		void sendType19(const AIS::Message& ais, const JSON::JSON* data);
+		void sendType24(const AIS::Message& ais, const JSON::JSON* data);
 
 		void Receive(const JSON::JSON* data, int ln, TAG& tag);
 		Setting& Set(std::string option, std::string arg);
