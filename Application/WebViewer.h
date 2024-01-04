@@ -64,6 +64,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	bool port_set = false;
 	bool use_zlib = true;
 	bool realtime = false;
+	bool KML = false;
 	bool supportPrometheus = false;
 	bool thread_running = false;
 	std::vector<char> binary;
