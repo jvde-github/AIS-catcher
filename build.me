@@ -1,0 +1,17 @@
+if [ -d "build" ]; then
+  rm -rf build
+  mkdir build
+  echo "Build directory deleted and recreated."
+else
+  mkdir build
+  echo "build directory created"
+fi
+
+if [ -d "NMEA2000_AC" ]; then
+  rm -rf NMEA2000_AC
+  echo "NMEA2000 library directory deleted."
+fi
+
+
+
+cd build; cmake ..; make; sudo make install; cd ..
