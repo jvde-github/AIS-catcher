@@ -281,9 +281,11 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 	else if (r == "/favicon.ico") {
 		ResponseRaw(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
-	else if (r == "/kml") {		
-		std::string content = ships.getKML(); 
-		Response(c, "application/text", content, use_zlib);
+	else if (r == "/kml") {
+		if (KML) {
+			std::string content = ships.getKML();
+			Response(c, "application/text", content, use_zlib);
+		}
 	}
 	else if (r == "/metrics") {
 		if (supportPrometheus) {
@@ -369,7 +371,8 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 			upgradeSSE(c, 2);
 	}
 	else if (r == "/icons.png") {
-		ResponseRaw(c, "image/png", (char*)icons_png_gz, icons_png_gz_len, true);
+		if (KML)
+			ResponseRaw(c, "image/png", (char*)icons_png_gz, icons_png_gz_len, true);
 	}
 	else if (r == "/config.js") {
 		Response(c, "application/javascript", params + plugins, use_zlib & gzip);
@@ -514,6 +517,9 @@ Setting& WebViewer::Set(std::string option, std::string arg) {
 	}
 	else if (option == "USE_GPS") {
 		ships.setUseGPS(Util::Parse::Switch(arg));
+	}
+	else if (option == "KML") {
+		KML = Util::Parse::Switch(arg);
 	}
 	else if (option == "OWN_MMSI") {
 		ships.setOwnMMSI(Util::Parse::Integer(arg, 0, 999999999, option));
