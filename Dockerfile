@@ -11,8 +11,7 @@ RUN apt-get install librtlsdr-dev libairspy-dev libhackrf-dev libairspyhf-dev li
 
 COPY . /root/AIS-catcher
 
-RUN cd /root/AIS-catcher; git clone https://github.com/jvde-github/NMEA2000_AC.git; cd NMEA2000_AC; scripts/cmake.sh 
-RUN cd /root/AIS-catcher; mkdir build; cd build; cmake .. -DNMEA2000_PATH=/root/AIS-catcher/NMEA2000_AC/src; make; make install
+RUN cd /root/AIS-catcher; ./build.NMEA2000
 
 # -------------------------
 # The application container

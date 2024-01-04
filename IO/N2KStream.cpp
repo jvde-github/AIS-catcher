@@ -103,7 +103,7 @@ namespace IO {
 	void N2KStreamer::sendType123(const AIS::Message& ais, const JSON::JSON* data) {
 
 		double lat = LAT_UNDEFINED, lon = LON_UNDEFINED, cog = COG_UNDEFINED, speed = SPEED_UNDEFINED, turn = 0;
-		int heading = HEADING_UNDEFINED, status = 0, second = 0, raim = 0, accuracy = 0, maneuver = 0;
+		int heading = HEADING_UNDEFINED, status = 0, second = 0, raim = 0, accuracy = 0/*, maneuver = 0*/;
 
 		for (const JSON::Property& p : data[0].getProperties()) {
 			switch (p.Key()) {
@@ -125,9 +125,11 @@ namespace IO {
 			case AIS::KEY_SECOND:
 				second = p.Get().getInt();
 				break;
+/*				
 			case AIS::KEY_MANEUVER:
 				maneuver = p.Get().getInt();
 				break;
+*/
 			case AIS::KEY_RAIM:
 				raim = p.Get().getBool() ? 1 : 0;
 				break;

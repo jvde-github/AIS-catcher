@@ -29,7 +29,7 @@ Only use this software in regions where such use is permitted.
 
 **Edge version** has recently added:
 - Bug fix in setting baud rate for serial devices
-- Experimentation with NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker (`--network host`) is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
+- Experimentation with NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker, but note that `--network host` is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
   ```console
   docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -E vcan0
   ```
@@ -41,11 +41,12 @@ Only use this software in regions where such use is permitted.
   ```console
   candump vcan0 | candump2analyzer | analyzer
   ```
+  Another option is to run `./build.NMEA2000` in the AIS-catcher directory. This only works on Linux with socketCAN support!
 - Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
 - Pyssel blog post describes procedure to show offline mbtiles maps [here](https://pysselilivet.blogspot.com/2023/12/ais-receiver-and-dispatcher-best.html)
-  
+
 **v0.55** is the latest version and introduces the following:
 - "Show all track" option and a new adjustable setting to dim the maps for greater visibility of the ship icons (see screenshot above for an example)
 - Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services))
@@ -56,7 +57,7 @@ These maps and the applications are not suitable for navigation (just to reitera
 - Addition of option `-N CONTEXT yyyy` which will store the settings in the web browser in `yyyy`. This will allow to separate setting storage when running multiple web viewers. 
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
 - Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions, we are exploring adding HMAC authentication. 
-  
+
 **v0.54** is the previous version adding:
 - A "Settings Menu" providing access to additional (styling) options for the web viewer:
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/f29aae44-a68b-4e47-8fba-e703add00f47)
