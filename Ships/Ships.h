@@ -52,4 +52,5 @@ struct Ship {
 	int getShipTypeClass();
 	void setType();
 	void Serialize(std::vector<char>& v) const;
+	void getKML(std::string&) const;
 };
