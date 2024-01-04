@@ -315,6 +315,22 @@ std::string DB::getShipJSON(int mmsi) {
 	return content;
 }
 
+std::string DB::getKML() {
+	std::lock_guard<std::mutex> lock(mtx);
+
+	std::string s = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns = \"http://www.opengis.net/kml/2.2\"><Document>";
+	int ptr = first;
+
+	while (ptr != -1) {
+		const Ship& ship = ships[ptr];
+		if (ship.mmsi != 0) ship.getKML(s);
+
+		ptr = ships[ptr].next;
+	}
+	s += "</Document></kml>";
+	return s;
+}
+
 // needs fix, content is defined locally and in getSinglePathJSON member content is used as helper
 std::string DB::getAllPathJSON() {
 	std::lock_guard<std::mutex> lock(mtx);
