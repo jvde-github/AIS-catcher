@@ -97,6 +97,51 @@ void Ship::Serialize(std::vector<char>& v) const {
 	Util::Serialize::Uint64(last_signal, v);
 }
 
+
+std::string getSprite(const Ship* ship) {
+	int speed_offset = (ship->speed != SPEED_UNDEFINED && ship->speed > 0.5) ? 20 : 0;
+	std::string shipofs = (ship->speed != SPEED_UNDEFINED && ship->speed > 0.5) ? "<y>88</y><w>20</w><h>20</h>" : "<y>68</y><w>20</w><h>20</h>";
+	std::string stationofs = "<y>50</y><w>20</w><h>20</h>";
+	
+	switch (ship->shipclass) {
+	case CLASS_OTHER: return "<x>120</x>" + shipofs;
+	case CLASS_UNKNOWN: return "<x>120</x>" + shipofs;
+	case CLASS_CARGO: return "<x>0</x>" + shipofs;
+	case CLASS_TANKER: return "<x>80</x>" + shipofs;
+	case CLASS_PASSENGER: return "<x>40</x>" + shipofs;
+	case CLASS_HIGHSPEED: return "<x>100</x>" + shipofs;
+	case CLASS_SPECIAL: return "<x>60</x>" + shipofs;
+	case CLASS_FISHING: return "<x>140</x>" + shipofs;
+	case CLASS_B: return "<x>140</x>" + shipofs;
+	case CLASS_ATON: return "<x>0</x>" + stationofs;
+	case CLASS_STATION: return "<x>20</x>" + stationofs;
+	case CLASS_SARTEPIRB: return "<x>40</x>" + stationofs;
+	case CLASS_HELICOPTER: return "<w>25</w><h>25</h>";
+	case CLASS_PLANE: return "<y>25</y><w>25</w><h>25</h>";
+	}
+	return "";
+}
+
+void Ship::getKML(std::string& kmlString) const {
+	if (lat == LAT_UNDEFINED || lon == LON_UNDEFINED || (lat == 0 && lon == 0))
+		return;
+
+	std::string shipNameStr(shipname);
+
+	const std::string name = !shipNameStr.empty() ? shipNameStr : std::to_string(mmsi);
+	const std::string styleId = "style" + std::to_string(mmsi);
+	const std::string coordinates = std::to_string(lon) + "," + std::to_string(lat) + ",0";
+
+	kmlString += "<Style id=\"" + styleId + "\"><IconStyle><scale>1</scale>"
+		"<heading>" + std::to_string(cog) + "</heading><Icon>"
+		"<href>/icons.png</href>" + getSprite(this) + "</Icon></IconStyle></Style>"
+		"<Placemark><name>" + name + "</name>"
+		"<description>Description of your placemark</description>"
+		"<styleUrl>#" + styleId + "</styleUrl>"
+		"<Point><coordinates>" + coordinates + "</coordinates>"
+		"</Point></Placemark>";
+}
+
 int Ship::getMMSItype() {
 	if ((mmsi > 111000000 && mmsi < 111999999) || (mmsi > 11100000 && mmsi < 11199999)) {
 		return MMSI_SAR;
