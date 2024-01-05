@@ -28,20 +28,21 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 **Edge version** has recently added:
+- geoJSON output available at webserver at `/geojson`, KML output available at `/kml` (use switch KML on). This will allow to view the ship positions in Google Earth Pro (add network link and set the auto refresh rate)
 - Bug fix in setting baud rate for serial devices
 - Experimentation with NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker, but note that `--network host` is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
   ```console
-  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -E vcan0
+  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -A vcan0
   ```
   So the following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus:
   ```console
-  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -x 192.168.1.120 4002 -E vcan0  
+  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -x 192.168.1.120 4002 -A vcan0  
   ```
-  Current implementation handles AIS messages 1-5, 9, 18, 19, 25 and have been very high-level tested with the CANboat utilities and a virtual network:  				
+  Current implementation handles AIS messages 1-5, 9, 18, 19, 25 and have been very high-level tested with the CANboat utilities and a virtual network:  
   ```console
   candump vcan0 | candump2analyzer | analyzer
   ```
-  Another option is to run `./build.NMEA2000` in the AIS-catcher directory. This only works on Linux with socketCAN support!
+  Another option is to run `./build.NMEA2000` in the AIS-catcher directory. This only works on Linux with socketCAN support and has not been tested properly. Work in progress: input over NMEA2000 and AIS messages 21 and 14.
 - Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
