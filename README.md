@@ -39,11 +39,11 @@ switches `-N geojson on` and `-N kml on`). This feature facilitates the visualiz
   ```console
   docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -x 192.168.1.120 4002 -A vcan0  
   ```
-  Current implementation handles AIS messages 1-5, 9, 18, 19, 25 and have been very high-level tested with the CANboat utilities and a virtual network:  
+  Current implementation handles AIS messages 1-5, 9, 18, 19, 21, 24 and have been very high-level tested with the CANboat utilities and a virtual network:  
   ```console
   candump vcan0 | candump2analyzer | analyzer
   ```
-  Another option is to run `./build.NMEA2000` in the AIS-catcher directory. This only works on Linux with socketCAN support and has not been tested properly. Work in progress: input over NMEA2000 and AIS messages 21 and 14.
+  Another option is to run `./build.NMEA2000` in the AIS-catcher directory. This only works on Linux with socketCAN support and has not been tested properly. Work in progress: input over NMEA and some more AIS messages.
 - Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
