@@ -82,14 +82,14 @@ The Android version of AIS-catcher has been recently overhauled and can be found
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry.
 
-## Cheatsheet
+## Usage
 
 AIS-catcher began as a basic decoder for RTL-SDR dongles, offering on-screen output and UDP transmission for key aggregation sites. Over time, we've expanded its compatibility to include a wider range of SDRs and input methods. On the output side, it now supports viewing signals and positions through a web viewer, saving to databases, and forwarding as NMEA2000 on Linux systems using socketCAN. This enhancement has subtly shifted AIS-catcher's role, making it a useful tool for managing different AIS data streams. Below is a cheatsheet for the various input and output modes.
 
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/55bc0e7a-7b15-482b-81dc-c410b1fc1b71)
 
+### Detailed settings
 
-## Usage
 ````
 use: AIS-catcher [options]
 
