@@ -28,8 +28,8 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 **Edge version** has recently added:
-- You can access the geoJSON output by visiting the web viewer at /geojson, and for KML output, please navigate to /kml (enable the KML switch with
-`-N KML on`). This feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE.
+- You can access the geoJSON output by visiting the web viewer at `/geojson`, and for KML output, please navigate to `/kml` (enable with the
+switches `-N geojson on` and `-N kml on`). This feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE.
 - Bug fix in setting baud rate for serial devices
 - Experimentation with NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker, but note that `--network host` is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
   ```console
