@@ -31,7 +31,7 @@
 #
 char socketName[50];
 #define SOCKET_CAN_PORT socketName
-const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 0 };
+const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 0 };
 
 #include <NMEA2000_CAN.h>
 #include <N2kMessages.h>
@@ -62,7 +62,7 @@ namespace IO {
 	}
 
 	void N2KStreamer::Stop() {
-		if(running) {
+		if (running) {
 			running = false;
 			run_thread.join();
 		}
@@ -551,6 +551,87 @@ namespace IO {
 		pushQueue(N2kMsg);
 	}
 
+	void N2KStreamer::sendType21(const AIS::Message& ais, const JSON::JSON* data) {
+
+		int aid_type = 0, accuracy = 0, to_bow = 0, to_stern = 0, to_starboard = 0, to_port = 0, epfd = 0, second = 0;
+		int off_position = 0, regional = 0, raim = 0, virtual_aid = 0, assigned = 0;
+		double lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+
+		char name[20] = { ' ' };
+
+
+		for (const JSON::Property& p : data[0].getProperties()) {
+			switch (p.Key()) {
+			case AIS::KEY_NAME: {
+				const std::string& s = p.Get().getString();
+				std::memcpy(name, s.c_str(), std::min(sizeof(name), s.size()));
+			} break;
+			case AIS::KEY_AID_TYPE:
+				aid_type = p.Get().getInt();
+				break;
+			case AIS::KEY_LAT:
+				lat = p.Get().getFloat();
+				break;
+			case AIS::KEY_LON:
+				lon = p.Get().getFloat();
+				break;
+			case AIS::KEY_ACCURACY:
+				accuracy = p.Get().getBool() ? 1 : 0;
+				break;
+			case AIS::KEY_OFF_POSITION:
+				off_position = p.Get().getBool() ? 1 : 0;
+				break;
+			case AIS::KEY_REGIONAL:
+				regional = p.Get().getInt();
+				break;
+			case AIS::KEY_RAIM:
+				raim = p.Get().getBool() ? 1 : 0;
+				break;
+			case AIS::KEY_VIRTUAL_AID:
+				virtual_aid = p.Get().getBool() ? 1 : 0;
+				break;
+			case AIS::KEY_ASSIGNED:
+				assigned = p.Get().getBool() ? 1 : 0;
+				break;
+			case AIS::KEY_TO_BOW:
+				to_bow = p.Get().getInt();
+				break;
+			case AIS::KEY_EPFD:
+				epfd = p.Get().getInt();
+				break;
+			case AIS::KEY_TO_PORT:
+				to_port = p.Get().getInt();
+				break;
+			case AIS::KEY_TO_STARBOARD:
+				to_starboard = p.Get().getInt();
+				break;
+			case AIS::KEY_TO_STERN:
+				to_stern = p.Get().getInt();
+				break;
+			}
+		}
+
+		tN2kMsg* N2kMsg = new tN2kMsg();
+
+		N2kMsg->SetPGN(129041L);
+		N2kMsg->Priority = 4;
+		N2kMsg->AddByte(ais.repeat() << 6 | ais.type());
+		N2kMsg->Add4ByteUInt(ais.mmsi());
+		N2kMsg->Add4ByteDouble(lon, 1e-07);
+		N2kMsg->Add4ByteDouble(lat, 1e-07);
+		N2kMsg->AddByte(second << 2 | raim << 1 | accuracy);
+		N2kMsg->Add2ByteUDouble(to_bow + to_stern, 0.1);
+		N2kMsg->Add2ByteUDouble(to_starboard + to_port, 0.1);
+		N2kMsg->Add2ByteUDouble(to_starboard, 0.1);
+		N2kMsg->Add2ByteUDouble(to_bow, 0.1);
+		N2kMsg->AddByte(assigned << 7 | virtual_aid << 6 | off_position << 5 | aid_type);
+		N2kMsg->AddByte(epfd << 1 | 0xe0);
+		N2kMsg->AddByte(regional);
+		N2kMsg->AddByte(ais.getChannel() == 'A' ? 1 : 0 | 0xe0);
+		N2kMsg->AddVarStr(name);
+
+		pushQueue(N2kMsg);
+	}
 
 	void N2KStreamer::sendType24(const AIS::Message& ais, const JSON::JSON* data) {
 
@@ -634,6 +715,9 @@ namespace IO {
 				break;
 			case 19:
 				sendType19(ais, data);
+				break;
+			case 21:
+				sendType21(ais, data);
 				break;
 			case 24:
 				sendType24(ais, data);

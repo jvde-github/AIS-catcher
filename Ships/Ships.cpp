@@ -155,68 +155,68 @@ bool Ship::getKML(std::string& kmlString) const {
 	return true;
 }
 
-bool Ship::getGeoJSON(std::string& geoJSONString) const {
+bool Ship::getGeoJSON(std::string& s) const {
 
 	const std::string coordinates = "[" + std::to_string(lon) + "," + std::to_string(lat) + "]";
 
-	geoJSONString += "{\"type\":\"Feature\",\"properties\":";
+	s += "{\"type\":\"Feature\",\"properties\":";
 
 	const std::string null_str = "null";
 	std::string str;
 
-	geoJSONString += "{\"mmsi\":" + std::to_string(mmsi) + ",";
+	s += "{\"mmsi\":" + std::to_string(mmsi) + ",";
 
-	geoJSONString += "\"distance\":" + std::to_string(distance) + ",";
-	geoJSONString += "\"bearing\":" + std::to_string(angle) + ",";
+	s += "\"distance\":" + std::to_string(distance) + ",";
+	s += "\"bearing\":" + std::to_string(angle) + ",";
 
-	geoJSONString += "\"level\":" + (level == LEVEL_UNDEFINED ? null_str : std::to_string(level)) + ",";
-	geoJSONString += "\"count\":" + std::to_string(count) + ",";
-	geoJSONString += "\"ppm\":" + (ppm == PPM_UNDEFINED ? null_str : std::to_string(ppm)) + ",";
-	geoJSONString += "\"group_mask\":" + std::to_string(group_mask) + ",";
-	geoJSONString += "\"approx\":" + std::string(approximate ? "true" : "false") + ",";
+	s += "\"level\":" + (level == LEVEL_UNDEFINED ? null_str : std::to_string(level)) + ",";
+	s += "\"count\":" + std::to_string(count) + ",";
+	s += "\"ppm\":" + (ppm == PPM_UNDEFINED ? null_str : std::to_string(ppm)) + ",";
+	s += "\"group_mask\":" + std::to_string(group_mask) + ",";
+	s += "\"approx\":" + std::string(approximate ? "true" : "false") + ",";
 
-	geoJSONString += "\"heading\":" + ((heading == HEADING_UNDEFINED) ? null_str : std::to_string(heading)) + ",";
-	geoJSONString += "\"cog\":" + ((cog == COG_UNDEFINED) ? null_str : std::to_string(cog)) + ",";
-	geoJSONString += "\"speed\":" + ((speed == SPEED_UNDEFINED) ? null_str : std::to_string(speed)) + ",";
+	s += "\"heading\":" + ((heading == HEADING_UNDEFINED) ? null_str : std::to_string(heading)) + ",";
+	s += "\"cog\":" + ((cog == COG_UNDEFINED) ? null_str : std::to_string(cog)) + ",";
+	s += "\"speed\":" + ((speed == SPEED_UNDEFINED) ? null_str : std::to_string(speed)) + ",";
 
-	geoJSONString += "\"to_bow\":" + ((to_bow == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_bow)) + ",";
-	geoJSONString += "\"to_stern\":" + ((to_stern == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_stern)) + ",";
-	geoJSONString += "\"to_starboard\":" + ((to_starboard == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_starboard)) + ",";
-	geoJSONString += "\"to_port\":" + ((to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_port)) + ",";
+	s += "\"to_bow\":" + ((to_bow == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_bow)) + ",";
+	s += "\"to_stern\":" + ((to_stern == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_stern)) + ",";
+	s += "\"to_starboard\":" + ((to_starboard == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_starboard)) + ",";
+	s += "\"to_port\":" + ((to_port == DIMENSION_UNDEFINED) ? null_str : std::to_string(to_port)) + ",";
 
-	geoJSONString += "\"shiptype\":" + std::to_string(shiptype) + ",";
-	geoJSONString += "\"mmsi_type\":" + std::to_string(mmsi_type) + ",";
-	geoJSONString += "\"shipclass\":" + std::to_string(shipclass) + ",";
+	s += "\"shiptype\":" + std::to_string(shiptype) + ",";
+	s += "\"mmsi_type\":" + std::to_string(mmsi_type) + ",";
+	s += "\"shipclass\":" + std::to_string(shipclass) + ",";
 
-	geoJSONString += "\"validated\":" + std::to_string(validated) + ",";
-	geoJSONString += "\"msg_type\":" + std::to_string(msg_type) + ",";
-	geoJSONString += "\"channels\":" + std::to_string(channels) + ",";
-	geoJSONString += "\"country\":\"" + std::string(country_code) + "\",";
-	geoJSONString += "\"status\":" + std::to_string(status) + ",";
+	s += "\"validated\":" + std::to_string(validated) + ",";
+	s += "\"msg_type\":" + std::to_string(msg_type) + ",";
+	s += "\"channels\":" + std::to_string(channels) + ",";
+	s += "\"country\":\"" + std::string(country_code) + "\",";
+	s += "\"status\":" + std::to_string(status) + ",";
 
-	geoJSONString += "\"draught\":" + std::to_string(draught) + ",";
+	s += "\"draught\":" + std::to_string(draught) + ",";
 
-	geoJSONString += "\"eta_month\":" + ((month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(month)) + ",";
-	geoJSONString += "\"eta_day\":" + ((day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(day)) + ",";
-	geoJSONString += "\"eta_hour\":" + ((hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(hour)) + ",";
-	geoJSONString += "\"eta_minute\":" + ((minute == ETA_MINUTE_UNDEFINED) ? null_str : std::to_string(minute)) + ",";
+	s += "\"eta_month\":" + ((month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(month)) + ",";
+	s += "\"eta_day\":" + ((day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(day)) + ",";
+	s += "\"eta_hour\":" + ((hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(hour)) + ",";
+	s += "\"eta_minute\":" + ((minute == ETA_MINUTE_UNDEFINED) ? null_str : std::to_string(minute)) + ",";
 
-	geoJSONString += "\"imo\":" + ((IMO == IMO_UNDEFINED) ? null_str : std::to_string(IMO)) + ",";
+	s += "\"imo\":" + ((IMO == IMO_UNDEFINED) ? null_str : std::to_string(IMO)) + ",";
 
-	geoJSONString += "\"callsign\":";
+	s += "\"callsign\":";
 	str = std::string(callsign);
-	JSON::StringBuilder::stringify(str, geoJSONString);
+	JSON::StringBuilder::stringify(str, s);
 
-	geoJSONString += ",\"shipname\":";
+	s += ",\"shipname\":";
 	str = std::string(shipname) + (virtual_aid ? std::string(" [V]") : std::string(""));
-	JSON::StringBuilder::stringify(str, geoJSONString);
+	JSON::StringBuilder::stringify(str, s);
 
-	geoJSONString += ",\"destination\":";
+	s += ",\"destination\":";
 	str = std::string(destination);
-	JSON::StringBuilder::stringify(str, geoJSONString);
+	JSON::StringBuilder::stringify(str, s);
 
-	geoJSONString += ",\"last_signal\":" + std::to_string(last_signal);
-	geoJSONString += "},\"geometry\":{\"type\":\"Point\",\"coordinates\":" + coordinates + "}}";
+	s += ",\"last_signal\":" + std::to_string(last_signal);
+	s += "},\"geometry\":{\"type\":\"Point\",\"coordinates\":" + coordinates + "}}";
 
 	return true;
 }
