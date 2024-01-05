@@ -411,6 +411,11 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		std::string content = ships.getAllPathJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r == "/geojson") {
+
+		std::string content = ships.getGeoJSON();
+		Response(c, "application/json", content, use_zlib & gzip);
+	}
 	else if (r == "/message") {
 		int mmsi = -1;
 		std::stringstream ss(a);

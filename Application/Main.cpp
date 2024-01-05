@@ -461,6 +461,7 @@ int main(int argc, char* argv[]) {
 					receiver.setTags("DT");
 				}
 				break;
+			case 'A':
 			case 'E': {
 				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
 				IO::OutputJSON& h = *json.back();

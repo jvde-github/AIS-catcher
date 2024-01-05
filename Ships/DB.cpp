@@ -331,6 +331,29 @@ std::string DB::getKML() {
 	return s;
 }
 
+std::string DB::getGeoJSON() {
+	std::lock_guard<std::mutex> lock(mtx);
+
+	std::string s = "{\"type\":\"FeatureCollection\",\"features\":[";
+	int ptr = first;
+	std::time_t tm = time(nullptr);
+
+	bool addcomma = false;
+	while (ptr != -1) {
+		const Ship& ship = ships[ptr];
+		if (ship.mmsi != 0) {
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
+			if (delta_time > TIME_HISTORY) break;
+
+			if(addcomma) s+= ",";
+			addcomma = ship.getGeoJSON(s);
+		}
+		ptr = ships[ptr].next;
+	}
+	s += "]}";
+	return s;
+}
+
 // needs fix, content is defined locally and in getSinglePathJSON member content is used as helper
 std::string DB::getAllPathJSON() {
 	std::lock_guard<std::mutex> lock(mtx);
