@@ -88,6 +88,8 @@ AIS-catcher began as a basic decoder for RTL-SDR dongles, offering on-screen out
 
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/55bc0e7a-7b15-482b-81dc-c410b1fc1b71)
 
+Please note that NMEA2000 input is currently under development and expected to be included in the coming week.
+
 ### Detailed settings
 
 ````
