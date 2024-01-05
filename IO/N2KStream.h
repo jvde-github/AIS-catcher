@@ -47,16 +47,14 @@ namespace IO {
 		std::condition_variable fifo_cond;
 
 		std::list<tN2kMsg*> queue;
-		bool running = true;
+		bool running = false;
 
 		tSocketStream serStream;
 
 		void emptyQueue();
 
 	public:
-		virtual ~N2KStreamer() {
-			if (running) Stop();
-		}
+		virtual ~N2KStreamer() { Stop(); }
 		void Start();
 		void Stop();
 

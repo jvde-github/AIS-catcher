@@ -135,9 +135,9 @@ std::string getSprite(const Ship* ship) {
 	return "";
 }
 
-void Ship::getKML(std::string& kmlString) const {
+bool Ship::getKML(std::string& kmlString) const {
 	if (lat == LAT_UNDEFINED || lon == LON_UNDEFINED || (lat == 0 && lon == 0))
-		return;
+		return false;
 
 	std::string shipNameStr(shipname);
 
@@ -145,19 +145,26 @@ void Ship::getKML(std::string& kmlString) const {
 	const std::string styleId = "style" + std::to_string(mmsi);
 	const std::string coordinates = std::to_string(lon) + "," + std::to_string(lat) + ",0";
 
-	kmlString += "<Style id=\"" + styleId + "\"><IconStyle><scale>1</scale>"
-											"<heading>" +
-				 std::to_string(cog) + "</heading><Icon>"
-									   "<href>/icons.png</href>" +
-				 getSprite(this) + "</Icon></IconStyle></Style>"
-								   "<Placemark><name>" +
-				 name + "</name>"
-						"<description>Description of your placemark</description>"
-						"<styleUrl>#" +
-				 styleId + "</styleUrl>"
-						   "<Point><coordinates>" +
-				 coordinates + "</coordinates>"
-							   "</Point></Placemark>";
+	kmlString += "<Style id=\"" + styleId + "\"><IconStyle><scale>1</scale><heading>" +
+				 std::to_string(cog) + "</heading><Icon><href>/icons.png</href>" +
+				 getSprite(this) + "</Icon></IconStyle></Style><Placemark><name>" +
+				 name + "</name><description>Description of your placemark</description><styleUrl>#" +
+				 styleId + "</styleUrl><Point><coordinates>" +
+				 coordinates + "</coordinates></Point></Placemark>";
+	return true;
+}
+
+bool Ship::getGeoJSON(std::string& geoJSONString) const {
+	if (mmsi == 0 || lat == LAT_UNDEFINED || lon == LON_UNDEFINED || (lat == 0 && lon == 0))
+		return false;
+
+	std::string shipNameStr(shipname);
+
+	const std::string name = !shipNameStr.empty() ? shipNameStr : std::to_string(mmsi);
+	const std::string coordinates = "[" + std::to_string(lon) + "," + std::to_string(lat) + "]";
+
+	geoJSONString += "{\"type\":\"Feature\",\"properties\":{\"name\":\"" + name + "\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":" + coordinates + "}}";
+	return true;
 }
 
 int Ship::getMMSItype() {

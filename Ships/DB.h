@@ -111,6 +111,7 @@ public:
 	std::string getAllPathJSON();
 	std::string getMessage(uint32_t);
 	std::string getKML();
+	std::string getGeoJSON();
 
 	int getCount() { return count; }
 	int getMaxCount() { return N; }

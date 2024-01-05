@@ -52,5 +52,6 @@ struct Ship {
 	int getShipTypeClass();
 	void setType();
 	void Serialize(std::vector<char>& v) const;
-	void getKML(std::string&) const;
+	bool getKML(std::string&) const;
+	bool getGeoJSON(std::string&) const;
 };

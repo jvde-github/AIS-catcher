@@ -57,15 +57,15 @@ namespace IO {
 			cout << "NMEA2000: Failed to open CAN port" << endl;
 		}
 
-		std::cerr << "NMEA2000: Start thread." << std::endl;
-
+		running = true;
 		run_thread = std::thread(&N2KStreamer::run, this);
 	}
 
 	void N2KStreamer::Stop() {
-		std::cerr << "stop thread" << std::endl;
-		running = false;
-		run_thread.join();
+		if(running) {
+			running = false;
+			run_thread.join();
+		}
 	}
 
 	void N2KStreamer::emptyQueue() {
@@ -86,7 +86,6 @@ namespace IO {
 	}
 
 	void N2KStreamer::run() {
-
 		while (running) {
 			NMEA2000.ParseMessages();
 			std::unique_lock<std::mutex> lck(mtx);
