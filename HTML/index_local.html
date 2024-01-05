@@ -6789,7 +6789,8 @@
 					settings.tab = "stat";
 					alert("Invalid tab specified");
 				}
-				document.getElementById(settings.tab + "_tab").click();
+				activateTab(null, settings.tab);
+				//document.getElementById(settings.tab + "_tab").click();
 			}
 
 			function updateAndroid() {
