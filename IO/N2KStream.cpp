@@ -28,19 +28,18 @@
 #include <cstring>
 
 #ifdef HASNMEA2000
-#
+
 char socketName[50];
 #define SOCKET_CAN_PORT socketName
-const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 129802L, 129802L, 0 };
 
 #include <NMEA2000_CAN.h>
-#include <N2kMessages.h>
 
 #include "JSONAIS.h"
-
 #include "N2KStream.h"
 
 namespace IO {
+	const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 129802L, 129802L, 0 };
+
 	bool N2KStreamer::connected = false;
 
 	void N2KStreamer::Start() {
@@ -49,13 +48,11 @@ namespace IO {
 		NMEA2000.SetProductInformation("00000002", 100, "AIS-catcher NMEA2000 plugin", "0.55", "0.55");
 		NMEA2000.SetDeviceInformation(1, 195, 70, 2046);
 		NMEA2000.SetMode(tNMEA2000::N2km_NodeOnly, 23);
-		NMEA2000.EnableForward(false);
 		NMEA2000.ExtendTransmitMessages(TransmitMessages);
-		NMEA2000.SetForwardStream(&serStream);
 		NMEA2000.SetOnOpen(&N2KStreamer::onOpen);
 
 		if (!NMEA2000.Open()) {
-			cout << "NMEA2000: Failed to open CAN port" << endl;
+			cout << "NMEA2000: Failed to open CAN port at first try." << endl;
 		}
 
 		running = true;
@@ -76,8 +73,8 @@ namespace IO {
 
 	void N2KStreamer::sendQueue() {
 
-		if(!connected) {
-			if(queue.size() > 100) {
+		if (!connected) {
+			if (queue.size() > 100) {
 				std::cerr << "NMEA2000: Queue size > 100, dropping messages" << std::endl;
 				emptyQueue();
 			}
@@ -168,22 +165,12 @@ namespace IO {
 		tN2kMsg* N2kMsg = new tN2kMsg();
 
 		N2kMsg->SetPGN(129038L);
-		N2kMsg->Priority = 4;
-		N2kMsg->AddByte((ais.repeat() & 0x03) << 6 | ais.type());
-		N2kMsg->Add4ByteUInt(ais.mmsi());
-		N2kMsg->Add4ByteDouble(lon, 1e-07);
-		N2kMsg->Add4ByteDouble(lat, 1e-07);
-		N2kMsg->AddByte(second << 2 | raim << 1 | accuracy);
-		N2kMsg->Add2ByteUDouble(cog * (2.0f * PI) / 360.0f, 1e-04);
-		N2kMsg->Add2ByteUDouble(speed * 1852.0f / 3600.0f, 0.01);
-		N2kMsg->AddByte(0x00);
-		N2kMsg->AddByte(0x00);
-		N2kMsg->AddByte((ais.getChannel() == 'A' ? 0 : 1) << 3);
-		N2kMsg->Add2ByteUDouble(heading * (2.0f * PI) / 360.0f, 1e-04);
-		N2kMsg->Add2ByteDouble(turn * (2.0f * PI) / 360.0f / 60.0f, 3.125E-05);
-		N2kMsg->AddByte(0xF0 | status);
-		N2kMsg->AddByte(0xff);
-		N2kMsg->AddByte(0xff);
+
+		SetN2kPGN129038(*N2kMsg, ais.type(), (tN2kAISRepeat)ais.repeat(), ais.mmsi(),
+						lat, lon, accuracy, raim,
+						second, cog * (2.0f * PI) / 360.0f, speed * 1852.0f / 3600.0f,
+						(tN2kAISTransceiverInformation)(ais.getChannel() == 'A' ? 0 : 1),
+						heading * (2.0f * PI) / 360.0f, turn * (2.0f * PI) / 360.0f / 60.0f, (tN2kAISNavStatus)status);
 
 		pushQueue(N2kMsg);
 	}
@@ -244,7 +231,7 @@ namespace IO {
 		}
 
 		N2kMsg->SetPGN(129793L);
-		N2kMsg->Priority = 4;
+		N2kMsg->Priority = 7;
 		N2kMsg->AddByte((ais.repeat() & 0x03) << 6 | ais.type());
 		N2kMsg->Add4ByteUInt(ais.mmsi());
 
@@ -415,32 +402,22 @@ namespace IO {
 		pushQueue(N2kMsg);
 	}
 
-	// based on https://github.com/AK-Homberger/NMEA2000-AIS-Gateway
 	void N2KStreamer::sendType14(const AIS::Message& ais, const JSON::JSON* data) {
 
+		char text[162] = { 0 };
 		// text length is max 968 6 bit letters
-		std::string text;
 		for (const JSON::Property& p : data[0].getProperties()) {
 			switch (p.Key()) {
 			case AIS::KEY_TEXT: {
-				text = p.Get().getString();
+				const std::string& s = p.Get().getString();
+				std::memcpy(text, s.c_str(), std::min(sizeof(text), s.size()));
 			} break;
 			}
 		}
 
 		tN2kMsg* N2kMsg = new tN2kMsg();
 
-		N2kMsg->SetPGN(129802L);
-		N2kMsg->Priority = 4;
-		N2kMsg->Destination = 255;
-		N2kMsg->AddByte(ais.repeat() << 6 | ais.type());
-		N2kMsg->Add4ByteUInt(ais.mmsi());
-		N2kMsg->AddByte(0);
-
-		N2kMsg->AddByte(text.length() + 2);
-		N2kMsg->AddByte(0x01);
-		for (auto c : text) N2kMsg->AddByte(c);
-
+		SetN2kPGN129802(*N2kMsg, ais.type(), (tN2kAISRepeat)ais.repeat(), ais.mmsi(), (tN2kAISTransceiverInformation)(ais.getChannel() == 'A' ? 0 : 1), text);
 		pushQueue(N2kMsg);
 	}
 
