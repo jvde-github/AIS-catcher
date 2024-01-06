@@ -31,7 +31,7 @@
 #
 char socketName[50];
 #define SOCKET_CAN_PORT socketName
-const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 129802L, 0 };
+const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 129802L, 129802L, 0 };
 
 #include <NMEA2000_CAN.h>
 #include <N2kMessages.h>
@@ -50,7 +50,6 @@ namespace IO {
 		NMEA2000.SetDeviceInformation(1, 195, 70, 2046);
 		NMEA2000.SetMode(tNMEA2000::N2km_NodeOnly, 23);
 		NMEA2000.EnableForward(false);
-		NMEA2000.SetForwardType(tNMEA2000::fwdt_Text);
 		NMEA2000.ExtendTransmitMessages(TransmitMessages);
 		NMEA2000.SetForwardStream(&serStream);
 		NMEA2000.SetOnOpen(&N2KStreamer::onOpen);
@@ -431,7 +430,7 @@ namespace IO {
 
 		tN2kMsg* N2kMsg = new tN2kMsg();
 
-		N2kMsg->SetPGN(129809L);
+		N2kMsg->SetPGN(129802L);
 		N2kMsg->Priority = 4;
 		N2kMsg->Destination = 255;
 		N2kMsg->AddByte(ais.repeat() << 6 | ais.type());
