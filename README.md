@@ -39,7 +39,7 @@ switches `-N geojson on` and `-N kml on`). This feature facilitates the visualiz
   ```console
   docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -x 192.168.1.120 4002 -A vcan0  
   ```
-  Current implementation handles AIS messages 1-5, 9, 18, 19, 21, 24 and have been very high-level tested with the CANboat utilities and a virtual network:  
+  Current implementation handles AIS messages 1-5, 9, 14, 18, 19, 21, 24 and have been very high-level tested with the CANboat utilities and a virtual network:  
   ```console
   candump vcan0 | candump2analyzer | analyzer
   ```

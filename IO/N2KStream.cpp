@@ -31,7 +31,7 @@
 #
 char socketName[50];
 #define SOCKET_CAN_PORT socketName
-const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 0 };
+const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 129802L, 0 };
 
 #include <NMEA2000_CAN.h>
 #include <N2kMessages.h>
@@ -41,6 +41,7 @@ const unsigned long TransmitMessages[] = { 129038L, 129793L, 129794L, 129798L, 1
 #include "N2KStream.h"
 
 namespace IO {
+	bool N2KStreamer::connected = false;
 
 	void N2KStreamer::Start() {
 		strcpy(socketName, dev.c_str());
@@ -52,6 +53,7 @@ namespace IO {
 		NMEA2000.SetForwardType(tNMEA2000::fwdt_Text);
 		NMEA2000.ExtendTransmitMessages(TransmitMessages);
 		NMEA2000.SetForwardStream(&serStream);
+		NMEA2000.SetOnOpen(&N2KStreamer::onOpen);
 
 		if (!NMEA2000.Open()) {
 			cout << "NMEA2000: Failed to open CAN port" << endl;
@@ -61,6 +63,11 @@ namespace IO {
 		run_thread = std::thread(&N2KStreamer::run, this);
 	}
 
+	void N2KStreamer::onOpen() {
+		connected = true;
+		std::cerr << "NM2000: Connected" << std::endl;
+	}
+
 	void N2KStreamer::Stop() {
 		if (running) {
 			running = false;
@@ -68,11 +75,29 @@ namespace IO {
 		}
 	}
 
-	void N2KStreamer::emptyQueue() {
+	void N2KStreamer::sendQueue() {
+
+		if(!connected) {
+			if(queue.size() > 100) {
+				std::cerr << "NMEA2000: Queue size > 100, dropping messages" << std::endl;
+				emptyQueue();
+			}
+			return;
+		}
 		while (!queue.empty()) {
+
 			tN2kMsg* N2kMsg = queue.front();
 			queue.pop_front();
 			NMEA2000.SendMsg(*N2kMsg);
+			delete N2kMsg;
+		}
+	}
+
+	void N2KStreamer::emptyQueue() {
+
+		while (!queue.empty()) {
+			tN2kMsg* N2kMsg = queue.front();
+			queue.pop_front();
 			delete N2kMsg;
 		}
 	}
@@ -90,7 +115,7 @@ namespace IO {
 			NMEA2000.ParseMessages();
 			std::unique_lock<std::mutex> lck(mtx);
 			fifo_cond.wait_for(lck, std::chrono::seconds(1));
-			emptyQueue();
+			sendQueue();
 		}
 
 		{
@@ -126,11 +151,6 @@ namespace IO {
 			case AIS::KEY_SECOND:
 				second = p.Get().getInt();
 				break;
-				/*
-							case AIS::KEY_MANEUVER:
-								maneuver = p.Get().getInt();
-								break;
-				*/
 			case AIS::KEY_RAIM:
 				raim = p.Get().getBool() ? 1 : 0;
 				break;
@@ -396,6 +416,34 @@ namespace IO {
 		pushQueue(N2kMsg);
 	}
 
+	// based on https://github.com/AK-Homberger/NMEA2000-AIS-Gateway
+	void N2KStreamer::sendType14(const AIS::Message& ais, const JSON::JSON* data) {
+
+		// text length is max 968 6 bit letters
+		std::string text;
+		for (const JSON::Property& p : data[0].getProperties()) {
+			switch (p.Key()) {
+			case AIS::KEY_TEXT: {
+				text = p.Get().getString();
+			} break;
+			}
+		}
+
+		tN2kMsg* N2kMsg = new tN2kMsg();
+
+		N2kMsg->SetPGN(129809L);
+		N2kMsg->Priority = 4;
+		N2kMsg->Destination = 255;
+		N2kMsg->AddByte(ais.repeat() << 6 | ais.type());
+		N2kMsg->Add4ByteUInt(ais.mmsi());
+		N2kMsg->AddByte(0);
+
+		N2kMsg->AddByte(text.length() + 2);
+		N2kMsg->AddByte(0x01);
+		for (auto c : text) N2kMsg->AddByte(c);
+
+		pushQueue(N2kMsg);
+	}
 
 	void N2KStreamer::sendType18(const AIS::Message& ais, const JSON::JSON* data) {
 
@@ -559,7 +607,6 @@ namespace IO {
 
 		char name[20] = { ' ' };
 
-
 		for (const JSON::Property& p : data[0].getProperties()) {
 			switch (p.Key()) {
 			case AIS::KEY_NAME: {
@@ -709,6 +756,9 @@ namespace IO {
 				break;
 			case 9:
 				sendType9(ais, data);
+				break;
+			case 14:
+				sendType14(ais, data);
 				break;
 			case 18:
 				sendType18(ais, data);
