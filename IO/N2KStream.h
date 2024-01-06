@@ -51,7 +51,9 @@ namespace IO {
 
 		tSocketStream serStream;
 
+		void sendQueue();
 		void emptyQueue();
+		static void onOpen();
 
 	public:
 		virtual ~N2KStreamer() { Stop(); }
@@ -59,6 +61,7 @@ namespace IO {
 		void Stop();
 
 		void run();
+		static bool connected;
 
 		void pushQueue(tN2kMsg* N2kMsg);
 		void sendType123(const AIS::Message& ais, const JSON::JSON* data);
@@ -66,6 +69,7 @@ namespace IO {
 		void sendType4(const AIS::Message& ais, const JSON::JSON* data);
 		void sendType5(const AIS::Message& ais, const JSON::JSON* data);
 		void sendType9(const AIS::Message& ais, const JSON::JSON* data);
+		void sendType14(const AIS::Message& ais, const JSON::JSON* data);
 		void sendType18(const AIS::Message& ais, const JSON::JSON* data);
 		void sendType19(const AIS::Message& ais, const JSON::JSON* data);
 		void sendType21(const AIS::Message& ais, const JSON::JSON* data);
