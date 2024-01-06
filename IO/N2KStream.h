@@ -28,7 +28,6 @@
 
 #ifdef HASNMEA2000
 #include <N2kMessages.h>
-#include <NMEA2000_SocketCAN.h>
 #endif
 
 #include "IO.h"
@@ -48,8 +47,6 @@ namespace IO {
 
 		std::list<tN2kMsg*> queue;
 		bool running = false;
-
-		tSocketStream serStream;
 
 		void sendQueue();
 		void emptyQueue();

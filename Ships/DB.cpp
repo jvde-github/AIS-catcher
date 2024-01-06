@@ -345,7 +345,7 @@ std::string DB::getGeoJSON() {
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
 			if (delta_time > TIME_HISTORY) break;
 
-			if(addcomma) s+= ",";
+			if (addcomma) s += ",";
 			addcomma = ship.getGeoJSON(s);
 		}
 		ptr = ships[ptr].next;
