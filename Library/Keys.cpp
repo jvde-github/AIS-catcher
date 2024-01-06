@@ -56,6 +56,7 @@ namespace AIS {
 		{ "", "", "", "", "context" },
 		{ "", "", "", "", "crc_check" },
 		{ "", "", "", "", "cutoff" },
+		{ "", "", "", "", "description" },
 		{ "", "", "", "", "device" },
 		{ "", "", "", "", "droop" },
 		{ "", "", "", "", "endpoint" },
