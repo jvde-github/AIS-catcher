@@ -105,7 +105,7 @@ public:
 					_radarB[bucket] = tag.distance;
 			}
 		}
-		else if (m.type() <= 3 || m.type() == 5) {
+		else if (m.type() <= 3 || m.type() == 5 || m.type() == 27) {
 			if (tag.angle >= 0 && tag.angle < 360) {
 				int bucket = tag.angle / (360 / _RADAR_BUCKETS);
 				if (tag.distance > _radarA[bucket])
