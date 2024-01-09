@@ -320,11 +320,15 @@ std::string DB::getKML() {
 
 	std::string s = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns = \"http://www.opengis.net/kml/2.2\"><Document>";
 	int ptr = first;
+	std::time_t tm = time(nullptr);
 
 	while (ptr != -1) {
 		const Ship& ship = ships[ptr];
-		if (ship.mmsi != 0) ship.getKML(s);
-
+		if (ship.mmsi != 0) {
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
+			if (delta_time > TIME_HISTORY) break;
+			ship.getKML(s);
+		}
 		ptr = ships[ptr].next;
 	}
 	s += "</Document></kml>";
