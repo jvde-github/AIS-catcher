@@ -602,12 +602,15 @@ int main(int argc, char* argv[]) {
 
 		while (!stop) {
 
+			/*
 			bool onerunning = false;
 			for (auto& r : _receivers) onerunning |= r->device->isStreaming();
 			if (!onerunning) {
 				stop = true;
 				continue;
 			}
+			*/
+			for (auto& r : _receivers) stop = stop | !(r->device->isStreaming());
 
 			if (iscallback) // don't go to sleep in case we are reading from a file
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
