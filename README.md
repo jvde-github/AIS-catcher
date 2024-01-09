@@ -10,7 +10,7 @@ This repository presents the `AIS-catcher` software, a versatile dual-channel AI
 
 ## License
 
-Copyright (C) 2021 - 2023 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
+Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
 
 ## Purpose
 
