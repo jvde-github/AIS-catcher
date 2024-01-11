@@ -32,7 +32,7 @@
 
 namespace Device {
 
-	class N2KSCAN : public Device, public StreamIn<tN2kMsg> {
+	class N2KSCAN : public Device, public Callback<tN2kMsg> {
 #ifdef HASNMEA2000
 		std::string _iface = "can0";
 		bool lost = false;
@@ -55,8 +55,9 @@ namespace Device {
 		std::string getSerial() { return _iface; }
 
 		void setFormat(Format f) {}
-		void Receive(const tN2kMsg* data, int len, TAG& t) {
-			RAW r = { getFormat(), (void*)data, 1 };
+		
+		void onMsg(const tN2kMsg & msg) {
+			RAW r = { getFormat(), (void*)&msg, 1 };
 			Send(&r, 1, tag);
 		}
 

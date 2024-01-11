@@ -152,10 +152,9 @@ namespace N2K {
 	// non-static
 
 	void N2KHubInterfaceHub::onMsg(const tN2kMsg& N2kMsg) {
-		TAG t;
 
 		if (input != nullptr)
-			input->Receive(&N2kMsg, 1, t);
+			input->onMsg(N2kMsg);
 	}
 
 	const unsigned long SupportedMessages[] = { 129038L, 129793L, 129794L, 129798L, 129039L, 129040L, 129809L, 129810L, 129041L, 129802L, 129802L, 0 };

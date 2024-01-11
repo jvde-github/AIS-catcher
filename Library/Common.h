@@ -176,6 +176,13 @@ struct Setting {
 	virtual std::string Get() { return ""; }
 };
 
+template <typename T>
+class Callback {
+public:
+	virtual ~Callback() {}
+	virtual void onMsg(const T&) {}
+};
+
 using namespace std::chrono;
 
 const FLOAT32 PI = 3.14159265358979323846f;
