@@ -23,6 +23,7 @@
 #include "Stream.h"
 #include "AIS.h"
 #include "NMEA.h"
+#include "N2K.h"
 
 #include "DSP.h"
 #include "Demod.h"
@@ -40,7 +41,8 @@ namespace AIS {
 	enum class ModelClass {
 		IQ,
 		FM,
-		TXT
+		TXT,
+		N2K
 	};
 
 	// idea is to avoid that message threads from different devices cause issues downstream (e.g. with sending UDP or updating the database).
@@ -245,4 +247,15 @@ namespace AIS {
 		std::string Get();
 		ModelClass getClass() { return ModelClass::TXT; }
 	};
+
+	class ModelN2K : public Model {
+		N2KtoMessage n2k;
+
+	public:
+		void buildModel(char, char, int, bool, Device::Device*);
+		Setting& Set(std::string option, std::string arg);
+		std::string Get();
+		ModelClass getClass() { return ModelClass::N2K; }
+	};
+
 }

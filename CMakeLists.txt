@@ -18,7 +18,7 @@ option(PSQL "Include PSQL support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
 option(NMEA2000 "Include NMEA2000 support" ON)
 
-set(NMEA2000_PATH "~" CACHE PATH "Path to NMEA2000 library")
+set(NMEA2000_PATH "." CACHE PATH "Path to NMEA2000 library")
 
 # Common compiler flags and options.
 
@@ -63,20 +63,32 @@ endif()
 
 # Find NMEA2000 support on Linux
 
+include(CheckIncludeFile)
+
+
+
 if(NOT MSVC AND NMEA2000)
 
-	find_file(NMEA2000_LIB NAMES libnmea2000.a PATHS ${NMEA2000_PATH} ${NMEA2000_PATH}/src ${NMEA2000_PATH}/NMEA2000_AC/src)
-	find_path(NMEA2000_INCLUDE NAMES NMEA2000.h PATHS PATHS ${NMEA2000_PATH} ${NMEA2000_PATH}/src ${NMEA2000_PATH}/NMEA2000_AC/src)
+	check_include_file("linux/can.h" HAVE_CAN_HEADER)
+	check_include_file("linux/can/raw.h" HAVE_RAW_CAN_HEADER)
 
-	if(NMEA2000_LIB AND NMEA2000_INCLUDE)
-		add_definitions(-DHASNMEA2000)
-		set(NMEA2000_INCLUDE_DIRS ${NMEA2000_INCLUDE})
-		set(NMEA2000_LIBRARIES ${NMEA2000_LIB})
-		message(STATUS "NMEA2000: found ${NMEA2000_LIBRARIES} ${NMEA2000_INCLUDE_DIRS}")
-	else()
-		message(STATUS "NMEA2000: not found  ${NMEA2000_LIB} ${NMEA2000_INCLUDE}")
-	endif()
+    if(HAVE_CAN_HEADER AND HAVE_RAW_CAN_HEADER)
+        find_file(NMEA2000_LIB NAMES libnmea2000.a PATHS ${NMEA2000_PATH} ${NMEA2000_PATH}/src ${NMEA2000_PATH}/NMEA2000/src)
+        find_path(NMEA2000_INCLUDE NAMES NMEA2000.h PATHS PATHS ${NMEA2000_PATH} ${NMEA2000_PATH}/src ${NMEA2000_PATH}/NMEA2000/src)
+
+        if(NMEA2000_LIB AND NMEA2000_INCLUDE)
+            add_definitions(-DHASNMEA2000)
+            set(NMEA2000_INCLUDE_DIRS ${NMEA2000_INCLUDE})
+            set(NMEA2000_LIBRARIES ${NMEA2000_LIB})
+            message(STATUS "NMEA2000: found ${NMEA2000_LIBRARIES} ${NMEA2000_INCLUDE_DIRS}")
+        else()
+            message(STATUS "NMEA2000: not found  ${NMEA2000_LIB} ${NMEA2000_INCLUDE}")
+        endif()
+    else()
+        message(STATUS "Required headers (can.h and raw/can.h) not found. ${HAVE_CAN_HEADER} ${HAVE_RAW_CAN_HEADER}")
+    endif()
 endif()
+
 
 # Find libusb, pthread
 if(NOT MSVC)
@@ -674,14 +686,14 @@ set(CPP
 	Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
 	Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp
 	Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp
-	DSP/DSP.cpp
-	IO/IO.cpp IO/N2KStream.cpp)
+	DSP/DSP.cpp Device/N2KSCAN.cpp
+	IO/IO.cpp IO/N2KStream.cpp Library/N2K.cpp IO/N2KInterface.cpp)
 
 set(HEADER
 	Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Application/WebViewer.h Application/Receiver.h Ships/Ships.h Ships/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h
 	Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h
-	Device/AIRSPY.h Library/FIFO.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Ships/History.h Ships/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h
-	Device/Serial.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h)
+	Device/AIRSPY.h Library/FIFO.h Device/N2KSCAN.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Ships/History.h Ships/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h
+	Device/Serial.h IO/N2KInterface.h Library/N2K.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/IO.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h)
 
 set(APP_INCLUDES . ./Ships ./DBMS ./Library ./DSP ./Application ./IO)
 

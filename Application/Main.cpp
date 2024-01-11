@@ -28,7 +28,7 @@
 #include "Config.h"
 #include "JSON/JSON.h"
 #include "IO.h"
-#include "IO/N2KStream.h"
+#include "N2KStream.h"
 #include "PostgreSQL.h"
 
 static std::atomic<bool> stop;
@@ -383,6 +383,16 @@ int main(int argc, char* argv[]) {
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				receiver.Timing() = true;
 				break;
+			case 'i':
+				Assert(count <= 1, param, "requires at most one option parameter.");
+				if (++nrec > 1) {
+					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+				}
+				_receivers.back()->InputType() = Type::N2K;
+				if (count == 1)
+					_receivers.back()->N2KSCAN().Set("INTERFACE", arg1);
+				break;
+
 			case 'w':
 				Assert(count <= 1, param);
 				if (++nrec > 1) {
@@ -462,6 +472,7 @@ int main(int argc, char* argv[]) {
 				}
 				break;
 			case 'A':
+			case 'I':
 			case 'E': {
 				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
 				IO::OutputJSON& h = *json.back();

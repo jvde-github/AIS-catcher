@@ -104,6 +104,10 @@ Device::Device* Receiver::getDeviceByType(Type type) {
 		return &_SerialPort;
 	case Type::UDP:
 		return &_UDP;
+#ifdef HASNMEA2000
+	case Type::N2K:
+		return &_N2KSCAN;
+#endif
 #ifdef HASZMQ
 	case Type::ZMQ:
 		return &_ZMQ;
@@ -213,6 +217,9 @@ std::unique_ptr<AIS::Model>& Receiver::addModel(int m) {
 	case 5:
 		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelNMEA()));
 		break;
+	case 6:
+		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelN2K()));
+		break;
 	default:
 		throw std::runtime_error("Model not implemented in this version. Check in later.");
 	}
@@ -221,9 +228,19 @@ std::unique_ptr<AIS::Model>& Receiver::addModel(int m) {
 
 void Receiver::setupModel(int& group) {
 	// if nothing defined, create one model
-	if (!models.size())
-		addModel((device->getFormat() == Format::TXT) ? 5 : 2);
-
+	if (!models.size()) {
+		switch (device->getFormat()) {
+		case Format::TXT:
+			addModel(5);
+			break;
+		case Format::N2K:
+			addModel(6);
+			break;
+		default:
+			addModel(2);
+			break;
+		}
+	}
 	// ensure some basic compatibility between model and device
 	for (const auto& m : models) {
 		if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||

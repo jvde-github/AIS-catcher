@@ -29,6 +29,8 @@
 #define SleepSystem(x) usleep(x * 1000)
 #endif
 
+class tN2kMsg;
+
 void StopRequest();
 
 #define GROUPS_ALL			0xFFFFFFFFFFFFFFFF
@@ -51,6 +53,7 @@ enum class Format {
 	CS16,
 	CS8,
 	TXT,
+	N2K,
 	UNKNOWN
 };
 
@@ -68,7 +71,8 @@ enum class Type {
 	HACKRF,
 	SOAPYSDR,
 	ZMQ,
-	SPYSERVER
+	SPYSERVER,
+	N2K
 };
 
 enum class OutputLevel {

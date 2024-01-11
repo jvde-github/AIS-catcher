@@ -48,6 +48,7 @@
 #include "Device/Serial.h"
 #include "Device/ZMQ.h"
 #include "Device/UDP.h"
+#include "Device/N2KSCAN.h"
 
 class Receiver;
 
@@ -112,6 +113,7 @@ class Receiver {
 	Device::SerialPort _SerialPort;
 	Device::ZMQ _ZMQ;
 	Device::UDP _UDP;
+	Device::N2KSCAN _N2KSCAN;
 
 	TAG tag;
 
@@ -136,6 +138,7 @@ public:
 	Device::SOAPYSDR& SOAPYSDR() { return _SOAPYSDR; }
 	Device::ZMQ& ZMQ() { return _ZMQ; }
 	Device::UDP& UDP() { return _UDP; }
+	Device::N2KSCAN& N2KSCAN() { return _N2KSCAN; }
 
 	// available devices
 	static std::vector<Device::Description> device_list;
