@@ -137,6 +137,36 @@ namespace AIS {
 		return u;
 	}
 
+	bool Message::setUint(int start, int len, unsigned val) {
+		if (length >> 3 >= MAX_AIS_LENGTH) return false;
+
+		int x = start >> 3, y = start & 7;
+		int remaining = len;
+
+		if (8 - y >= remaining) {
+			uint8_t bitmask = (0xFF >> (8 - remaining)) << (8 - y - remaining);
+			data[x] = (data[x] & ~bitmask) | ((val << (8 - y - remaining)) & bitmask);
+			return true;
+		}
+
+		uint8_t bitmask = 0xFF >> y;
+		data[x] = (data[x] & ~bitmask) | ((val >> (remaining - 8 + y)) & bitmask);
+		remaining -= 8 - y;
+		x++;
+
+		while (remaining >= 8) {
+			data[x++] = (val >> (remaining - 8)) & 0xFF;
+			remaining -= 8;
+		}
+
+		if (remaining > 0) {
+			uint8_t bitmask = 0xFF << (8 - remaining);
+			data[x] = (data[x] & ~bitmask) | ((val << (8 - remaining)) & bitmask);
+		}
+		length = std::max(start + len, length);
+		return true;
+	}
+
 	int Message::getInt(int start, int len) const {
 		const unsigned ones = ~0;
 		unsigned u = getUint(start, len);
@@ -144,6 +174,10 @@ namespace AIS {
 		// extend sign bit for the full bit
 		if (u & (1 << (len - 1))) u |= ones << len;
 		return (int)u;
+	}
+
+	bool Message::setInt(int start, int len, int val) {
+		return setUint(start, len, (unsigned)val);
 	}
 
 	void Message::getText(int start, int len, std::string& str) const {
@@ -164,6 +198,38 @@ namespace AIS {
 			str += (char)c;
 			start += 6;
 		}
+		return;
+	}
+
+	void Message::setText(int start, int len, char* str) {
+
+		int end = start + len;
+		if (end >> 3 >= MAX_AIS_LENGTH) return;
+
+		int idx = 0;
+		bool reachedEnd = false;
+
+		while (start < end) {
+			unsigned c = 0;
+
+			if (!reachedEnd) {
+				c = str[idx++];
+
+				if (!(c >= 32 && c <= 63) && !(c >= 65 && c <= 95)) {
+					reachedEnd = true;
+					c = 0;
+				}
+				else if (c & 64)
+					c &= 0b00111111;
+			}
+
+			setUint(start, 6, c);
+
+			start += 6;
+		}
+
+		length = std::max(end, length);
+
 		return;
 	}
 
@@ -231,7 +297,7 @@ namespace AIS {
 		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
 
 		if (length < (pos + 1) * 6) length = (pos + 1) * 6;
-		if (length > MAX_AIS_LENGTH) return;
+		if (length >= MAX_AIS_LENGTH) return;
 
 		c = (c >= 96 ? c - 56 : c - 48) & 0b00111111;
 
@@ -270,7 +336,7 @@ namespace AIS {
 			}
 			return true;
 		}
-		else if(option == "DESC" || option == "DESCRIPTION")
+		else if (option == "DESC" || option == "DESCRIPTION")
 			return true;
 		else if (option == "BLOCK_TYPE") {
 

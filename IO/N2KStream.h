@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2024 jvde.github@gmail.com
+	Copyright(c) 2024 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -35,32 +35,20 @@
 
 namespace IO {
 
-	class N2KStreamer : public OutputJSON {
+	class N2KStreamer : public IO::OutputJSON {
 		AIS::Filter filter;
-		std::string dev = "vcan0";
+		std::string dev = "can0";
 
 #ifdef HASNMEA2000
 
-		std::thread run_thread;
-		std::mutex mtx;
-		std::condition_variable fifo_cond;
-
-		std::list<tN2kMsg*> queue;
-		bool running = false;
-
-		void sendQueue();
-		void emptyQueue();
-		static void onOpen();
-
 	public:
 		virtual ~N2KStreamer() { Stop(); }
+
 		void Start();
 		void Stop();
 
-		void run();
-		static bool connected;
-
 		void pushQueue(tN2kMsg* N2kMsg);
+		
 		void sendType123(const AIS::Message& ais, const JSON::JSON* data);
 
 		void sendType4(const AIS::Message& ais, const JSON::JSON* data);
