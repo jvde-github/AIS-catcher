@@ -31,19 +31,28 @@ Only use this software in regions where such use is permitted.
 - You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
 switches `-N geojson on` and `-N kml on`). The KML feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE. A demonstration of the use of GeoJSON is [plotting the vessels on the tar1090 map.](https://github.com/jvde-github/AIS-in-TAR1090)
 - Bug fix in setting baud rate for serial devices
-- Experimentation with NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker, but note that `--network host` is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
+- Experimentation mode for NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker, but note that `--network host` is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
   ```console
   docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -A vcan0
   ```
-  So the following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus:
+  Another approach is to build AIS-catcher in the main directory with:
+  ```
+  ./build.NMEA2000
+  ```
+  This downloads and builds the [NMEA2000 library](https://github.com/ttlappalainen/NMEA2000) and includes it in the AIS-catcher build process.
+  The following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus:
   ```console
-  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -x 192.168.1.120 4002 -A vcan0  
+  AIS-catcher -x 192.168.1.120 4002 -I vcan0  
   ```
   Current implementation handles AIS messages 1-5, 9, 14, 18, 19, 21, 24 and have been very high-level tested with the CANboat utilities and a virtual network:  
   ```console
   candump vcan0 | candump2analyzer | analyzer
   ```
-  Another option is to run `./build.NMEA2000` in the AIS-catcher directory. This only works on Linux with socketCAN support and has not been tested properly. Work in progress: input over NMEA and some more AIS messages.
+  Another option is to have AIS-catcher read AIS messages on the NMEA2000 canbus:
+  ```console
+  AIS-catcher -i vcan0
+  ``` 
+  Note that this only works on Linux with socketCAN support and has not been tested properly. The program is not certified by NMEA and is not suitable for connecting to a NMEA2000 network on a boat. It is intended for experimentation only.
 - Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list

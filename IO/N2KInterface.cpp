@@ -21,9 +21,6 @@
 // The code is not yet ready for production use
 
 // Sources:
-// 	https://github.com/canboat/canboat
-// 	https://github.com/ttlappalainen/NMEA2000
-//	https://github.com/AK-Homberger/NMEA2000-AIS-Gateway
 // 	https://github.com/thomasonw/NMEA2000_socketCAN
 
 #include <cstring>
@@ -51,6 +48,7 @@ namespace N2K {
 	N2KHubInterfaceHub N2KInterface;
 	tNMEA2000_SCAN NMEA2000;
 
+	// This code is based and an extension of https://github.com/thomasonw/NMEA2000_socketCAN
 	bool tNMEA2000_SCAN::CANOpen() {
 		return OpenInterface(CANinterface);
 	}
@@ -119,6 +117,7 @@ namespace N2K {
 		return false;
 	}
 
+	// additions not in tNMEA2000
 	void tNMEA2000_SCAN::waitForFrame(int milliseconds) {
 		struct timeval tv = { 0, milliseconds * 1000 };
 		fd_set fds;
@@ -135,6 +134,8 @@ namespace N2K {
 		}
 	}
 
+	// N2KHubInterfaceHub - centralized input and output
+
 	// static
 	void N2KHubInterfaceHub::onMsgStatic(const tN2kMsg& N2kMsg) {
 		N2KInterface.onMsg(N2kMsg);
@@ -150,7 +151,6 @@ namespace N2K {
 	}
 
 	// non-static
-
 	void N2KHubInterfaceHub::onMsg(const tN2kMsg& N2kMsg) {
 
 		if (input != nullptr)
