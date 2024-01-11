@@ -15,6 +15,11 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// Sources:
+// 	https://github.com/canboat/canboat
+// 	https://github.com/ttlappalainen/NMEA2000
+//	https://github.com/AK-Homberger/NMEA2000-AIS-Gateway
+
 #ifdef HASNMEA2000
 #include <N2kMsg.h>
 #include "N2K.h"
