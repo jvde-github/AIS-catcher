@@ -31,6 +31,8 @@
 #include <N2kMsg.h>
 #endif
 
+#include "Common.h"
+
 namespace N2K {
 
 	// As the NMEA2000 library had a central NMEA2000 object, we need to make sure we only have one NMEA2000 object for receivers and sender
@@ -69,7 +71,7 @@ namespace N2K {
 			std::mutex mtx;
 			std::condition_variable fifo_cond;
 
-			StreamIn<tN2kMsg>* input = nullptr;
+			Callback<tN2kMsg>* input = nullptr;
 
 			bool running = false;
 			bool output = false;
@@ -90,14 +92,14 @@ namespace N2K {
 			void Start();
 			void Stop();
 
-			void addInput(StreamIn<tN2kMsg>* stream) {
+			void addInput(Callback<tN2kMsg>* cb) {
 				if (running) {
 					std::cerr << "NMEA2000: addOutput: cannot add input while running" << std::endl;
 					StopRequest();
 					return;
 				}
 
-				input = stream;
+				input = cb;
 			}
 
 			void addOutput() {
