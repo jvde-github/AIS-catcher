@@ -163,7 +163,7 @@ namespace AIS {
 			uint8_t bitmask = 0xFF << (8 - remaining);
 			data[x] = (data[x] & ~bitmask) | ((val << (8 - remaining)) & bitmask);
 		}
-		length = std::max(start + len, length);
+		length = MAX(start + len, length);
 		return true;
 	}
 
@@ -228,7 +228,7 @@ namespace AIS {
 			start += 6;
 		}
 
-		length = std::max(end, length);
+		length = MAX(end, length);
 
 		return;
 	}

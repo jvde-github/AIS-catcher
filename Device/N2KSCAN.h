@@ -20,7 +20,6 @@
 #include "Device.h"
 #include <iostream>
 #include <vector>
-#include <thread>
 #include <string>
 
 #ifdef _WIN32
