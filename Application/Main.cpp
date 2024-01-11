@@ -474,6 +474,7 @@ int main(int argc, char* argv[]) {
 			case 'A':
 			case 'I':
 			case 'E': {
+#ifdef HASNMEA2000
 				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
 				IO::OutputJSON& h = *json.back();
 				if (count % 2)
@@ -481,6 +482,9 @@ int main(int argc, char* argv[]) {
 
 				if (count > 1)
 					parseSettings(h, argv, ptr + (count % 2), argc);
+#else
+				throw std::runtime_error("NMEA2000 support not compiled in.");
+#endif
 			} break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);

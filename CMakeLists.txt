@@ -63,11 +63,9 @@ endif()
 
 # Find NMEA2000 support on Linux
 
-include(CheckIncludeFile)
-
-
-
 if(NOT MSVC AND NMEA2000)
+
+	include(CheckIncludeFile)
 
 	check_include_file("linux/can.h" HAVE_CAN_HEADER)
 	check_include_file("linux/can/raw.h" HAVE_RAW_CAN_HEADER)
@@ -88,7 +86,6 @@ if(NOT MSVC AND NMEA2000)
         message(STATUS "Required headers (can.h and raw/can.h) not found. ${HAVE_CAN_HEADER} ${HAVE_RAW_CAN_HEADER}")
     endif()
 endif()
-
 
 # Find libusb, pthread
 if(NOT MSVC)
