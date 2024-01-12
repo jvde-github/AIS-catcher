@@ -122,6 +122,7 @@ const float DRAUGHT_UNDEFINED = -1;
 const int HEADING_UNDEFINED = 511;
 const int STATUS_UNDEFINED = 15;
 const int DIMENSION_UNDEFINED = -1;
+const int ALT_UNDEFINED = 4095;
 const int ETA_DAY_UNDEFINED = 0;
 const int ETA_MONTH_UNDEFINED = 0;
 const int ETA_HOUR_UNDEFINED = 24;

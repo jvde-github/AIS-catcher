@@ -35,13 +35,10 @@
 
 namespace N2K {
 
-	// As the NMEA2000 library had a central NMEA2000 object, we need to make sure we only have one NMEA2000 object for receivers and sender
-	// The NMEA2000 object is created in the N2KHub class
-
 #ifdef HASNMEA2000
 
 	// based on NMEA2000_SocketCAN with additions to support the N2KHub class
-	class tNMEA2000_SCAN : public tNMEA2000 {
+	class tNMEA2000_SKTCAN : public tNMEA2000 {
 	protected:
 		bool CANOpen();
 		bool CANSendFrame(unsigned long id, unsigned char len, const unsigned char* buf, bool wait_sent);
@@ -52,77 +49,79 @@ namespace N2K {
 
 		bool OpenInterface(const std::string& port);
 
-		public:
-			virtual ~tNMEA2000_SCAN() {}
+	public:
+		virtual ~tNMEA2000_SKTCAN() {}
 
-			// additions to support the N2KHub class
-			void waitForFrame(int m);
-			void Close();
+		// additions to support the N2KHub class
+		void waitForFrame(int m);
+		void Close();
 
-			void setNetwork(std::string n) { CANinterface = n;}
-		};
+		void setNetwork(std::string n) { CANinterface = n; }
+	};
 
-		extern tNMEA2000_SCAN NMEA2000;
+	extern tNMEA2000_SKTCAN NMEA2000;
 
 
-		class N2KHubInterfaceHub {
-			std::string network = "";
-			std::thread run_thread;
-			std::mutex mtx;
-			std::condition_variable fifo_cond;
+	class N2KHubInterfaceHub {
+		std::string network = "";
+		std::thread run_thread;
+		std::mutex mtx;
+		std::condition_variable fifo_cond;
 
-			Callback<tN2kMsg>* input = nullptr;
+		Callback<tN2kMsg>* input = nullptr;
 
-			bool running = false;
-			bool output = false;
+		tNMEA2000_SKTCAN NMEA2000;
 
-			bool connected = false;
+		bool running = false;
+		bool output = false;
 
-			void onOpen();
-			static void onOpenStatic();
+		bool connected = false;
 
-			void onMsg(const tN2kMsg& N2kMsg);
-			static void onMsgStatic(const tN2kMsg& N2kMsg);
+		void onOpen();
+		static void onOpenStatic();
 
-			void run();
+		void onMsg(const tN2kMsg& N2kMsg);
+		static void onMsgStatic(const tN2kMsg& N2kMsg);
 
-		public:
-			virtual ~N2KHubInterfaceHub() { Stop(); }
+		void run();
 
-			void Start();
-			void Stop();
+	public:
+		virtual ~N2KHubInterfaceHub() { Stop(); }
 
-			void addInput(Callback<tN2kMsg>* cb) {
-				if (running) {
-					std::cerr << "NMEA2000: addOutput: cannot add input while running" << std::endl;
-					StopRequest();
-					return;
-				}
+		void Start();
+		void Stop();
 
-				input = cb;
+		void addInput(Callback<tN2kMsg>* cb) {
+			if (running) {
+				std::cerr << "NMEA2000: addOutput: cannot add input while running" << std::endl;
+				StopRequest();
+				return;
 			}
 
-			void addOutput() {
-				if (running) {
-					std::cerr << "NMEA2000: addOutput: cannot add output while running" << std::endl;
-					StopRequest();
-					return;
-				}
-				if (output)
-					throw std::runtime_error("NMEA2000: Max one NMEA2000 output channel is supported.");
+			input = cb;
+		}
 
-				output = true;
+		void addOutput() {
+			if (running) {
+				std::cerr << "NMEA2000: addOutput: cannot add output while running" << std::endl;
+				StopRequest();
+				return;
 			}
+			if (output)
+				throw std::runtime_error("NMEA2000: Max one NMEA2000 output channel is supported.");
 
-			void setNetwork(std::string n) {
-				if (!network.empty() && n != network) {
-					throw std::runtime_error("NMEA2000: only one network supported (" + network + " set and " + n + " requested");
-				}
-				network = n;
+			output = true;
+		}
+
+		void setNetwork(std::string n) {
+			if (!network.empty() && n != network) {
+				throw std::runtime_error("NMEA2000: only one network supported (" + network + " set and " + n + " requested");
 			}
+			network = n;
+		}
 
-			void sendMsg(const tN2kMsg& N2kMsg);
-		};
+		void sendMsg(const tN2kMsg& N2kMsg);
+	};
 
 #else
 	class N2KHubInterfaceHub {
@@ -133,5 +132,5 @@ namespace N2K {
 
 #endif
 
-		extern N2KHubInterfaceHub N2KInterface;
-	}
+	extern N2KHubInterfaceHub N2KInterface;
+}

@@ -69,10 +69,13 @@ static void Usage() {
 	std::cerr << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]" << std::endl;
 	std::cerr << "\t[-c [AB/CD] - [optional: AB] select AIS channels and optionally the NMEA channel designations]" << std::endl;
 	std::cerr << "\t[-C [filename] - read configuration settings from file]" << std::endl;
+	std::cerr << "\t[-D [connection string] - write messages to PostgreSQL database]" << std::endl;
 	std::cerr << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]" << std::endl;
 	std::cerr << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]" << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]" << std::endl;
+	std::cerr << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]" << std::endl;
+	std::cerr << "\t[-I [interface] - push messages as NMEA2000 data to a socketCAN interface - Linux only]" << std::endl;
 	std::cerr << "\t[-m xx - run specific decoding model (default: 2), see README for more details]" << std::endl;
 	std::cerr << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]" << std::endl;
 	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;

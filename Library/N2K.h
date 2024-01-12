@@ -35,6 +35,9 @@ namespace AIS {
 		void onMsg129038(const tN2kMsg& n2, TAG& t);
 		void onMsg129793(const tN2kMsg& n2, TAG& t);
 		void onMsg129794(const tN2kMsg& n2, TAG& tag);
+		void onMsg129798(const tN2kMsg& N2kMsg, TAG& tag);
+		void onMsg129802(const tN2kMsg& N2kMsg, TAG& tag);
+		void onMsg129039(const tN2kMsg& N2kMsg, TAG& tag);
 
 		public:
 			virtual ~N2KtoMessage() {}
