@@ -46,14 +46,13 @@ using namespace std;
 namespace N2K {
 
 	N2KHubInterfaceHub N2KInterface;
-	tNMEA2000_SCAN NMEA2000;
 
 	// This code is based and an extension of https://github.com/thomasonw/NMEA2000_socketCAN
-	bool tNMEA2000_SCAN::CANOpen() {
+	bool tNMEA2000_SKTCAN::CANOpen() {
 		return OpenInterface(CANinterface);
 	}
 
-	bool tNMEA2000_SCAN::OpenInterface(const std::string& iface) {
+	bool tNMEA2000_SKTCAN::OpenInterface(const std::string& iface) {
 		struct ifreq ifr = { 0 };
 		struct sockaddr_can addr = { 0 };
 
@@ -84,7 +83,7 @@ namespace N2K {
 		return true;
 	}
 
-	bool tNMEA2000_SCAN::CANSendFrame(unsigned long id, unsigned char len, const unsigned char* buf, bool wait_sent) {
+	bool tNMEA2000_SKTCAN::CANSendFrame(unsigned long id, unsigned char len, const unsigned char* buf, bool wait_sent) {
 		struct can_frame frame_wr = { 0 };
 
 		frame_wr.can_id = id | CAN_EFF_FLAG;
@@ -95,7 +94,7 @@ namespace N2K {
 	}
 
 
-	bool tNMEA2000_SCAN::CANGetFrame(unsigned long& id, unsigned char& len, unsigned char* buf) {
+	bool tNMEA2000_SKTCAN::CANGetFrame(unsigned long& id, unsigned char& len, unsigned char* buf) {
 		struct can_frame frame_rd;
 		struct timeval tv = { 0, 0 };
 		fd_set fds;
@@ -118,7 +117,7 @@ namespace N2K {
 	}
 
 	// additions not in tNMEA2000
-	void tNMEA2000_SCAN::waitForFrame(int milliseconds) {
+	void tNMEA2000_SKTCAN::waitForFrame(int milliseconds) {
 		struct timeval tv = { 0, milliseconds * 1000 };
 		fd_set fds;
 
@@ -128,7 +127,7 @@ namespace N2K {
 		select((skt + 1), &fds, NULL, NULL, &tv);
 	}
 
-	void tNMEA2000_SCAN::Close() {
+	void tNMEA2000_SKTCAN::Close() {
 		if (skt != -1) {
 			close(skt);
 		}

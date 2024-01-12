@@ -17,7 +17,7 @@
 
 #include <cstring>
 
-#include "N2KSCAN.h"
+#include "N2KsktCAN.h"
 #include "N2KInterface.h"
 
 #ifdef HASNMEA2000
@@ -34,6 +34,7 @@ namespace Device {
 		N2K::N2KInterface.addInput(this);
 		N2K::N2KInterface.setNetwork(_iface);
 	}
+	
 	void N2KSCAN::Play() {
 		N2K::N2KInterface.Start();
 	}

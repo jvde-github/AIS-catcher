@@ -21,8 +21,8 @@
 // The code is not yet ready for production use
 
 // Sources:
-// https://github.com/canboat/canboat
-// https://github.com/ttlappalainen/NMEA2000
+// 	https://github.com/canboat/canboat
+// 	https://github.com/ttlappalainen/NMEA2000
 
 #include <cstring>
 
@@ -93,8 +93,7 @@ namespace IO {
 
 		tN2kMsg N2kMsg;
 
-		// TO-DO: deal with undefined values
-		N2kMsg.SetPGN(129038L);
+		N2kMsg.SetPGN(129038);
 		N2kMsg.Priority = 4;
 		N2kMsg.AddByte((ais.repeat() & 0x03) << 6 | (ais.type() & 0x3f));
 		N2kMsg.Add4ByteUInt(ais.mmsi());
@@ -107,7 +106,7 @@ namespace IO {
 		N2kMsg.AddByte((radio >> 8) & 0xff);
 		N2kMsg.AddByte(((ais.getChannel() == 'A' ? 0 : 1) << 3) | ((radio >> 16) & 7));
 		N2kMsg.Add2ByteUDouble(heading, 1e-04 * 360.0f / (2.0f * PI), HEADING_UNDEFINED);
-		N2kMsg.Add2ByteDouble(turn, 3.125E-05 / PI * 180.0f * 60.0f, -128);
+		N2kMsg.Add2ByteDouble(turn, 3.125E-05 / PI * 180.0f * 60.0f,-128);
 		N2kMsg.AddByte((0xff << 6) | (maneuver & 3) << 4 | (status & 0x0f));
 		N2kMsg.AddByte(0xff);
 		N2kMsg.AddByte(0xff);
@@ -173,7 +172,7 @@ namespace IO {
 			days = std::mktime(utc_tm) / 86400;
 		}
 
-		N2kMsg.SetPGN(129793L);
+		N2kMsg.SetPGN(129793);
 		N2kMsg.Priority = 7;
 		N2kMsg.AddByte((ais.repeat() & 0x03) << 6 | ais.type());
 		N2kMsg.Add4ByteUInt(ais.mmsi());
@@ -292,15 +291,15 @@ namespace IO {
 		N2kMsg.Add2ByteDouble(draught, 0.01);
 		N2kMsg.AddStr(destination, 20);
 		N2kMsg.AddByte((dte & 0x01) << 6 | (epfd & 0x0f) << 2 | (ais_version & 0x03));
-		N2kMsg.AddByte(0xe0 | (ais.getChannel() == 'A' ? 0 : 1)); // changed vs NMEA2000 lib per canboat
+		N2kMsg.AddByte(0xe0 | (ais.getChannel() == 'A' ? 0 : 1));
 		N2kMsg.AddByte(0xff);
 
 		N2K::N2KInterface.sendMsg(N2kMsg);
 	}
 
 	void N2KStreamer::sendType9(const AIS::Message& ais, const JSON::JSON* data) {
-		double lat = LAT_UNDEFINED, lon = LON_UNDEFINED, cog = COG_UNDEFINED, speed = SPEED_UNDEFINED;
-		int alt = 0, raim = 0, accuracy = 0, second = 0, reserved = 0, dte = 0;
+		double lat = LAT_UNDEFINED, lon = LON_UNDEFINED, cog = COG_UNDEFINED;
+		int alt = 0, raim = 0, accuracy = 0, second = 0, reserved = 0, dte = 0, radio = 0, speed = 1023;
 
 		for (const JSON::Property& p : data[0].getProperties()) {
 			switch (p.Key()) {
@@ -314,10 +313,13 @@ namespace IO {
 				cog = p.Get().getFloat();
 				break;
 			case AIS::KEY_SPEED:
-				speed = p.Get().getFloat();
+				speed = p.Get().getInt();
 				break;
 			case AIS::KEY_ALT:
 				alt = p.Get().getInt();
+				break;
+			case AIS::KEY_RADIO:
+				radio = p.Get().getInt();
 				break;
 			case AIS::KEY_RAIM:
 				raim = p.Get().getBool() ? 1 : 0;
@@ -344,17 +346,18 @@ namespace IO {
 		N2kMsg.AddByte((ais.repeat() & 0x03) << 6 | ais.type());
 		N2kMsg.Add4ByteUInt(ais.mmsi());
 
-		N2kMsg.Add4ByteDouble(lon, 1e-07);
-		N2kMsg.Add4ByteDouble(lat, 1e-07);
+		N2kMsg.Add4ByteDouble(lon, 1e-07, LON_UNDEFINED);
+		N2kMsg.Add4ByteDouble(lat, 1e-07, LAT_UNDEFINED);
 
 		N2kMsg.AddByte(second << 2 | raim << 1 | accuracy);
-		N2kMsg.Add2ByteUDouble(cog * (2.0f * PI) / 360.0f, 1e-04);
-		N2kMsg.Add2ByteUDouble(speed * 1852.0f / 3600.0f, 0.1);
+		N2kMsg.Add2ByteUDouble(cog, 1e-04 * 180 / PI, COG_UNDEFINED);
+		N2kMsg.Add2ByteUDouble(speed, 0.1 * 3600.0f / 1852.0f, 1023);
 
-		N2kMsg.AddByte(0x00);
-		N2kMsg.AddByte(0x00);
-		N2kMsg.AddByte((ais.getChannel() == 'A' ? 0 : 1) << 3);
-		N2kMsg.Add4ByteUDouble(alt, 0.01);
+		N2kMsg.AddByte(radio & 0xff);
+		N2kMsg.AddByte((radio >> 8) & 0xff);
+		N2kMsg.AddByte(((ais.getChannel() == 'A' ? 0 : 1) << 3) | ((radio >> 16) & 7));
+
+		N2kMsg.Add4ByteDouble(alt, 0.01, ALT_UNDEFINED);
 		N2kMsg.AddByte(reserved);
 		N2kMsg.AddByte(dte | 254);
 
@@ -363,27 +366,31 @@ namespace IO {
 
 	void N2KStreamer::sendType14(const AIS::Message& ais, const JSON::JSON* data) {
 
-		char text[162] = { 0 };
-		// text length is max 968 6 bit letters
+		std::string text;
 		for (const JSON::Property& p : data[0].getProperties()) {
 			switch (p.Key()) {
 			case AIS::KEY_TEXT: {
-				const std::string& s = p.Get().getString();
-				std::memcpy(text, s.c_str(), std::min(sizeof(text), s.size()));
+				text = p.Get().getString();
 			} break;
 			}
 		}
 
 		tN2kMsg N2kMsg;
 
-		SetN2kPGN129802(N2kMsg, ais.type(), (tN2kAISRepeat)ais.repeat(), ais.mmsi(), (tN2kAISTransceiverInformation)(ais.getChannel() == 'A' ? 0 : 1), text);
+		N2kMsg.SetPGN(129802);
+		N2kMsg.Priority = 5;
+		N2kMsg.AddByte((ais.repeat() & 0x03) << 6 | ais.type());
+		N2kMsg.Add4ByteUInt(ais.mmsi());
+		N2kMsg.AddByte(0xe0 | (ais.getChannel() == 'A' ? 0 : 1));
+		N2kMsg.AddStr(text.c_str(), text.size());
+
 		N2K::N2KInterface.sendMsg(N2kMsg);
 	}
 
 	void N2KStreamer::sendType18(const AIS::Message& ais, const JSON::JSON* data) {
 
 		double lat = LAT_UNDEFINED, lon = LON_UNDEFINED, cog = COG_UNDEFINED, speed = SPEED_UNDEFINED;
-		int heading = HEADING_UNDEFINED, second = 0, raim = 0, accuracy = 0, CS = 0, display = 0, DSC = 0, band = 0, msg22 = 0, assigned = 0 /*, maneuver = 0*/;
+		int heading = HEADING_UNDEFINED, radio = 0, second = 0, raim = 0, accuracy = 0, CS = 0, display = 0, DSC = 0, band = 0, msg22 = 0, assigned = 0 /*, maneuver = 0*/;
 
 		for (const JSON::Property& p : data[0].getProperties()) {
 			switch (p.Key()) {
@@ -393,12 +400,14 @@ namespace IO {
 			case AIS::KEY_LON:
 				lon = p.Get().getFloat();
 				break;
-
 			case AIS::KEY_HEADING:
 				heading = p.Get().getInt();
 				break;
 			case AIS::KEY_SECOND:
 				second = p.Get().getInt();
+				break;
+			case AIS::KEY_RADIO:
+				radio = p.Get().getInt();
 				break;
 			case AIS::KEY_RAIM:
 				raim = p.Get().getBool() ? 1 : 0;
@@ -434,10 +443,23 @@ namespace IO {
 		}
 
 		tN2kMsg N2kMsg;
-
-		SetN2kAISClassBPosition(N2kMsg, ais.type(), (tN2kAISRepeat)ais.repeat(), ais.mmsi(), lat, lon, accuracy, raim,
-								second, cog * (2.0f * PI) / 360.0f, speed * 1852.0f / 3600.0f, (tN2kAISTransceiverInformation)(ais.getChannel() == 'A' ? 0 : 1),
-								heading * (2.0f * PI) / 360.0f, (tN2kAISUnit)CS, display, DSC, band, msg22, (tN2kAISMode)assigned, raim);
+		N2kMsg.SetPGN(129039);
+		N2kMsg.Priority = 4;
+		N2kMsg.AddByte(ais.repeat() << 6 | ais.type());
+		N2kMsg.Add4ByteUInt(ais.mmsi());
+		N2kMsg.Add4ByteDouble(lon, 1e-07, LON_UNDEFINED);
+		N2kMsg.Add4ByteDouble(lat, 1e-07, LAT_UNDEFINED);
+		N2kMsg.AddByte(second << 2 | raim << 1 | accuracy);
+		N2kMsg.Add2ByteUDouble(cog, 1e-04 * 180.0f / PI, COG_UNDEFINED);
+		N2kMsg.Add2ByteUDouble(speed, 0.01 * 3600.0f / 1852.0f, SPEED_UNDEFINED);
+		N2kMsg.AddByte(radio & 0xff);
+		N2kMsg.AddByte((radio >> 8) & 0xff);
+		N2kMsg.AddByte(((ais.getChannel() == 'A' ? 0 : 1) << 3) | ((radio >> 16) & 7));
+		N2kMsg.Add2ByteUDouble(heading, 1e-04 * 360.0f / (2.0f * PI), HEADING_UNDEFINED);
+		N2kMsg.AddByte(0xff); // Regional application
+		N2kMsg.AddByte(assigned << 7 | msg22 << 6 | band << 5 | DSC << 4 | display << 3 | CS << 2);
+		N2kMsg.AddByte(0xfe | (radio & 1)); // msg 18 has 20 radio bits, check whether this is correct indeed
+		N2kMsg.AddByte(0xff);
 
 		N2K::N2KInterface.sendMsg(N2kMsg);
 	}
@@ -508,19 +530,19 @@ namespace IO {
 
 		tN2kMsg N2kMsg;
 
-		N2kMsg.SetPGN(129040L);
+		N2kMsg.SetPGN(129040);
 		N2kMsg.Priority = 4;
 		N2kMsg.AddByte(ais.repeat() << 6 | ais.type());
 		N2kMsg.Add4ByteUInt(ais.mmsi());
-		N2kMsg.Add4ByteDouble(lon, 1e-07);
-		N2kMsg.Add4ByteDouble(lat, 1e-07);
+		N2kMsg.Add4ByteDouble(lon, 1e-07, LON_UNDEFINED);
+		N2kMsg.Add4ByteDouble(lat, 1e-07, LAT_UNDEFINED);
 		N2kMsg.AddByte(second << 2 | raim << 1 | accuracy);
-		N2kMsg.Add2ByteUDouble(cog * (2.0f * PI) / 360.0f, 1e-04);
-		N2kMsg.Add2ByteUDouble(speed * 1852.0f / 3600.0f, 0.01);
+		N2kMsg.Add2ByteUDouble(cog, 1e-04 * 180.0f / PI, COG_UNDEFINED);
+		N2kMsg.Add2ByteUDouble(speed, 0.01 * 3600.0f / 1852.0f, SPEED_UNDEFINED);
 		N2kMsg.AddByte(0xff);
 		N2kMsg.AddByte(0xff);
 		N2kMsg.AddByte(shiptype);
-		N2kMsg.Add2ByteUDouble(heading * (2.0f * PI) / 360.0f, 1e-04);
+		N2kMsg.Add2ByteUDouble(heading, 1e-04 * 360.0f / (2.0f * PI), HEADING_UNDEFINED);
 		N2kMsg.AddByte(epfd << 4);
 		N2kMsg.Add2ByteDouble(to_bow + to_stern, 0.1);
 		N2kMsg.Add2ByteDouble(to_port + to_starboard, 0.1);
@@ -595,19 +617,19 @@ namespace IO {
 
 		tN2kMsg N2kMsg;
 
-		N2kMsg.SetPGN(129041L);
+		N2kMsg.SetPGN(129041);
 		N2kMsg.Priority = 4;
 		N2kMsg.AddByte(ais.repeat() << 6 | ais.type());
 		N2kMsg.Add4ByteUInt(ais.mmsi());
-		N2kMsg.Add4ByteDouble(lon, 1e-07);
-		N2kMsg.Add4ByteDouble(lat, 1e-07);
+		N2kMsg.Add4ByteDouble(lon, 1e-07, LON_UNDEFINED);
+		N2kMsg.Add4ByteDouble(lat, 1e-07, LAT_UNDEFINED);
 		N2kMsg.AddByte(second << 2 | raim << 1 | accuracy);
 		N2kMsg.Add2ByteUDouble(to_bow + to_stern, 0.1);
 		N2kMsg.Add2ByteUDouble(to_starboard + to_port, 0.1);
 		N2kMsg.Add2ByteUDouble(to_starboard, 0.1);
 		N2kMsg.Add2ByteUDouble(to_bow, 0.1);
 		N2kMsg.AddByte(assigned << 7 | virtual_aid << 6 | off_position << 5 | aid_type);
-		N2kMsg.AddByte(epfd << 1 | 0xe0);
+		N2kMsg.AddByte(epfd << 1);
 		N2kMsg.AddByte(regional);
 		N2kMsg.AddByte(ais.getChannel() == 'A' ? 1 : 0 | 0xe0);
 		N2kMsg.AddVarStr(name);
@@ -618,7 +640,7 @@ namespace IO {
 	void N2KStreamer::sendType24(const AIS::Message& ais, const JSON::JSON* data) {
 
 		int shiptype = 0, to_bow = 0, to_stern = 0, to_starboard = 0, to_port = 0, mothership_mmsi = 0, partno = 0;
-		char shipname[20] = { ' ' }, callsign[7] = { ' ' }, vendorid[3] = { ' ' };
+		char shipname[20] = { ' ' }, callsign[7] = { ' ' }, vendorid[7] = { ' ' };
 
 
 		for (const JSON::Property& p : data[0].getProperties()) {
@@ -662,15 +684,32 @@ namespace IO {
 		tN2kMsg N2kMsg;
 
 		if (partno == 0) {
-			SetN2kAISClassBStaticPartA(N2kMsg, ais.type(), (tN2kAISRepeat)ais.repeat(), ais.mmsi(), shipname);
+			N2kMsg.SetPGN(129809);
+			N2kMsg.Priority = 6;
+			N2kMsg.AddByte(ais.repeat() << 6 | ais.type());
+			N2kMsg.Add4ByteUInt(ais.mmsi());
+			N2kMsg.AddStr(shipname, 20);
 		}
 		else {
-			SetN2kAISClassBStaticPartB(N2kMsg, ais.type(), (tN2kAISRepeat)ais.repeat(), ais.mmsi(), shiptype, vendorid, callsign, to_bow + to_stern, to_port + to_starboard, to_starboard, to_bow, mothership_mmsi);
+			N2kMsg.SetPGN(129810);
+			N2kMsg.Priority = 6;
+			N2kMsg.AddByte(ais.repeat() << 6 | ais.type());
+			N2kMsg.Add4ByteUInt(ais.mmsi());
+			N2kMsg.AddByte(shiptype);
+			N2kMsg.AddStr(vendorid, 7);
+			N2kMsg.AddStr(callsign, 7);
+			N2kMsg.Add2ByteUDouble(to_bow + to_stern, 0.1);
+			N2kMsg.Add2ByteUDouble(to_port + to_starboard, 0.1);
+			N2kMsg.Add2ByteUDouble(to_starboard, 0.1);
+			N2kMsg.Add2ByteUDouble(to_bow, 0.1);
+			N2kMsg.Add4ByteUInt(mothership_mmsi);
+			N2kMsg.AddByte(0xff);
+			N2kMsg.AddByte(ais.getChannel() == 'A' ? 1 : 0 | 0xe0);
+			N2kMsg.AddByte(0xff); // sequence ID
 		}
 
 		N2K::N2KInterface.sendMsg(N2kMsg);
 	}
-
 
 	void N2KStreamer::Receive(const JSON::JSON* data, int ln, TAG& tag) {
 		AIS::Message& ais = *((AIS::Message*)data[0].binary);

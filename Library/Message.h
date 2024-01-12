@@ -105,7 +105,7 @@ namespace AIS {
 		unsigned getUint(int start, int len) const;
 		int getInt(int start, int len) const;
 		void getText(int start, int len, std::string& str) const;
-		void setText(int start, int len, char * str);
+		void setText(int start, int len, const char * str);
 
 		bool setUint(int start, int len, unsigned val);
 		bool setInt(int start, int len, int val);

@@ -48,7 +48,7 @@
 #include "Device/Serial.h"
 #include "Device/ZMQ.h"
 #include "Device/UDP.h"
-#include "Device/N2KSCAN.h"
+#include "Device/N2KsktCAN.h"
 
 class Receiver;
 

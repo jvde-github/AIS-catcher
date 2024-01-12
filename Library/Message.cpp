@@ -201,7 +201,7 @@ namespace AIS {
 		return;
 	}
 
-	void Message::setText(int start, int len, char* str) {
+	void Message::setText(int start, int len, const char* str) {
 
 		int end = start + len;
 		if (end >> 3 >= MAX_AIS_LENGTH) return;
