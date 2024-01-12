@@ -31,23 +31,16 @@ Only use this software in regions where such use is permitted.
 - You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
 switches `-N geojson on` and `-N kml on`). The KML feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE. A demonstration of the use of GeoJSON is [plotting the vessels on the tar1090 map.](https://github.com/jvde-github/AIS-in-TAR1090)
 - Bug fix in setting baud rate for serial devices
-- Experimentation mode for NMEA2000 via socketCAN on Linux. Easiest is to use the latest Docker, but note that `--network host` is required to get access to socketCAN on the host. In this example `vcan0` is the socketCAN interface:
-  ```console
-  docker run --rm -it --pull always --network host ghcr.io/jvde-github/ais-catcher:edge -A vcan0
-  ```
-  Another approach is to build AIS-catcher in the main directory with:
+- Experimentation mode for NMEA2000 via socketCAN on Linux. As it requires the NMEA2000 library, build AIS-catcher in the main directory with:
   ```
   ./build.NMEA2000
   ```
   This downloads and builds the [NMEA2000 library](https://github.com/ttlappalainen/NMEA2000) and includes it in the AIS-catcher build process.
-  The following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus:
+  The following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus (`vcan0`):
   ```console
   AIS-catcher -x 192.168.1.120 4002 -I vcan0  
   ```
-  Current implementation handles AIS messages 1-5, 9, 14, 18, 19, 21, 24 and have been very high-level tested with the CANboat utilities and a virtual network:  
-  ```console
-  candump vcan0 | candump2analyzer | analyzer
-  ```
+  Current implementation handles AIS messages 1-5, 9, 14, 18, 19, 21, 24 and have been very high-level tested with the CANboat utilities and a virtual network.
   Another option is to have AIS-catcher read AIS messages on the NMEA2000 canbus:
   ```console
   AIS-catcher -i vcan0
@@ -101,10 +94,13 @@ use: AIS-catcher [options]
 	[-b benchmark demodulation models for time - for development purposes (default: off)]
 	[-c [AB/CD] - [optional: AB] select AIS channels and optionally the NMEA channel designations]
 	[-C [filename] - read configuration settings from file]
+	[-D [connection string] - write messages to PostgreSQL database]
 	[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]
 	[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-H [optional: url] - send messages via HTTP, for options see documentation]
+	[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]
+	[-I [interface] - push messages as NMEA2000 data to a socketCAN interface - Linux only]
 	[-m xx - run specific decoding model (default: 2), see README for more details]
 	[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]
 	[-n show NMEA messages on screen without detail (-o 1)]
@@ -138,7 +134,7 @@ use: AIS-catcher [options]
 	[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]
 	[-ge Serial Port: PRINT [on/off]
 	[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]
-	[-gh Airspy HF+: THRESHOLD [low/high] PREAMP [on/off] ]
+	[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]
 	[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]
 	[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] ]
 	[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]
