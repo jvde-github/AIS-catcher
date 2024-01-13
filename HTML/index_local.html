@@ -2890,6 +2890,7 @@
 			var range_update_time = null;
 			let updateInProgress = false;
 			let activeTileLayer = null;
+			var mapinteraction = false;
 
 			var marker_center = null,
 				marker_range = null,
@@ -2931,7 +2932,7 @@
 					fix_center: false,
 					center_point: "station",
 					tooltipLean: true,
-					tooltipOverlap: false,
+					tooltipOverlap: true,
 					tooltipLabelColor: "#000000",
 					tooltipLabelColorDark: "#ffffff",
 					tooltipLabelShadowColor: "#ffffff",
@@ -2948,7 +2949,7 @@
 					dim_in_feet: false,
 					setcoord: true,
 					tab: "stat",
-					labels: true,
+					labels: false,
 					eri: true,
 					loadURL: true,
 					map_opacity: 0.95,
@@ -3235,10 +3236,10 @@
 					});
 				} else {
 					/*
-			document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
-				element.style.display = 'flex';
-			});
-			*/
+		document.querySelectorAll('.ctx-noalltracks').forEach(function(element) {
+			element.style.display = 'flex';
+		});
+		*/
 				}
 
 				if (show_all_tracks || Object.keys(marker_tracks).length > 0) {
@@ -3620,7 +3621,7 @@
 			}
 
 			function initMap() {
-				map = L.map("map", { zoomControl: false, zoomSnap: 0.01 }).setView([settings.lat, settings.lon], settings.zoom);
+				map = L.map("map", { preferCanvas: false, zoomControl: false, zoomSnap: 0.01 }).setView([settings.lat, settings.lon], settings.zoom);
 				var control = L.control.layers(basemaps, overlapmaps, { title: "Select map and overlays", position: "bottomright" }).addTo(map);
 
 				map.on("baselayerchange", function (event) {
@@ -3679,6 +3680,14 @@
 					}
 				});
 
+				map.on("dragstart zoomstart", function () {
+					mapinteraction = true;
+				});
+
+				map.on("dragend zoomend", function () {
+					mapinteraction = false;
+				});
+
 				map.addControl(new L.Control.Zoom({ position: "bottomright" }));
 				L.control.scale().addTo(map);
 
@@ -3707,7 +3716,7 @@
 				saveSettings();
 
 				if (!settings.labels) {
-					for (let [key, m] of Object.entries(markers)) if (m.isTooltipOpen()) m.getTooltip().toggle();
+					for (let [key, m] of Object.entries(markers)) if (m.getTooltip()) m.unbindTooltip();
 				} else updateTooltips();
 			}
 
@@ -4534,7 +4543,7 @@
 				ship.channels = readInt8(view);
 				ship.country = String.fromCharCode(readInt8(view), readInt8(view));
 				ship.status = readInt8(view);
-				ship.draught = setNullIfLess(readFloatLow(view),0);
+				ship.draught = setNullIfLess(readFloatLow(view), 0);
 
 				ship.eta_month = setNullIf(readInt8(view), 0);
 				ship.eta_day = setNullIf(readInt8(view), 0);
@@ -5866,14 +5875,44 @@
 				if (!settings.labels) return;
 				let rects = [];
 
-				if (hover_mmsi in markers) addTooltip(rects, markers[hover_mmsi]);
-				if (hover_mmsi != card_mmsi && card_mmsi in markers) addTooltip(rects, markers[card_mmsi]);
+				const max_added = 250;
+
+				let added = 0;
+
+				if (hover_mmsi in markers) {
+					if(markers[hover_mmsi].getTooltip()) {
+						addTooltip(rects, markers[hover_mmsi]);
+						added++;
+					}
+					addTooltip(rects, markers[hover_mmsi]);
+				}
+
+				if (hover_mmsi != card_mmsi && card_mmsi in markers) {
+					if(markers[card_mmsi].getTooltip()) {
+						addTooltip(rects, markers[card_mmsi]);
+						added++;
+					}
+					addTooltip(rects, markers[card_mmsi]);
+				}
 
 				for (let [mmsi, m] of Object.entries(markers)) {
 					if (mmsi == card_mmsi || mmsi == hover_mmsi) continue;
+					if (!m.getTooltip()) {
+						added++;
+						createTooltip(shipsDB[mmsi].raw);
+						if(added >= max_added) break;
+					}
+				}
+
+				for (let [mmsi, m] of Object.entries(markers)) {
+					if (mmsi == card_mmsi || mmsi == hover_mmsi) continue;
+					if (!markers[mmsi].getTooltip()) continue;
+
 					if (settings.tooltipOverlap) {
 						if (!m.getTooltip().isOpen()) m.openTooltip();
-					} else addTooltip(rects, m);
+					} else {
+						addTooltip(rects, m);
+					}					
 				}
 			}
 
@@ -5884,11 +5923,14 @@
 			function startHover(m) {
 				if (hover_mmsi != null) endHover(hover_mmsi);
 
+				if ( mapinteraction) return;
 				if (!(m in markers)) return;
+
 				hover_mmsi = m;
 
 				if (!settings.labels) {
 					if (hover_mmsi != null) {
+						if (!markers[hover_mmsi].getTooltip()) createTooltip(shipsDB[hover_mmsi].raw);
 						markers[hover_mmsi].openTooltip();
 					}
 				} else {
@@ -5909,7 +5951,10 @@
 				hover_mmsi = null;
 
 				if (!settings.labels) {
-					if (m != null && m in markers) markers[m].closeTooltip();
+					if (m != null && m in markers) {
+						markers[m].closeTooltip();
+						if (!settings.labels) markers[m].unbindTooltip();
+					}
 				} else {
 					if (!settings.tooltipOverlap) updateTooltips();
 				}
@@ -6009,7 +6054,7 @@
 				if (ship.mmsi in markers) {
 					if (ship.mmsi != hover_mmsi) markers[ship.mmsi].setIcon(getIcon(ship)); // bug in leaflet??
 					markers[ship.mmsi].setLatLng([ship.lat, ship.lon]);
-					markers[ship.mmsi].getTooltip().setContent(getTooltipContent(ship));
+					if (markers[ship.mmsi].getTooltip()) markers[ship.mmsi].getTooltip().setContent(getTooltipContent(ship));
 				} else {
 					markers[ship.mmsi] = L.marker([ship.lat, ship.lon], { icon: getIcon(ship) }).addTo(map);
 
@@ -6025,8 +6070,6 @@
 					markers[ship.mmsi].on("contextmenu", function (e) {
 						showContextMenu(event, ship.mmsi, ["mmsi", "mmsi-map"]);
 					});
-
-					createTooltip(ship);
 				}
 
 				updateShipShape(ship);
@@ -6534,19 +6577,19 @@
 			async function updateMap() {
 				let ok = false;
 
-				if(fetch_binary)
-					ok = await fetchShipsBinary();
-				else
-					ok = await fetchShips();
+				if (mapinteraction) return;
+
+				if (fetch_binary) ok = await fetchShipsBinary();
+				else ok = await fetchShips();
 
 				if (!ok) return;
 
 				/* 
-			ok = await fetchShipsBinary();
-			if (!ok) return;
+		ok = await fetchShipsBinary();
+		if (!ok) return;
 
-			const differences = compareObjects(shipsDB, shipsDB2);
-			console.log("Differences:", differences);
+		const differences = compareObjects(shipsDB, shipsDB2);
+		console.log("Differences:", differences);
 */
 
 				ok = await updateTrack();
