@@ -1,6 +1,6 @@
 # AIS-catcher: A multi-platform AIS Receiver
 
-This repository presents the `AIS-catcher` software, a versatile dual-channel AIS receiver that is compatible with a wide range of Software Defined Radios (SDRs). These include RTL-SDR dongles (such as the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). AIS-catcher delivers output in the form of NMEA messages, which can be conveniently displayed on screen or forwarded via UDP/HTTP/TCP. Designed as a lightweight command line utility, AIS-catcher also incorporates a built-in web server for internal use within secure networks.
+This repository presents the `AIS-catcher` software, a versatile dual-channel AIS receiver that is compatible with a wide range of Software Defined Radios (SDRs). These include RTL-SDR dongles (such as the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). AIS-catcher delivers output in the form of NMEA messages, which can be conveniently displayed on screen or forwarded via UDP/HTTP/TCP. Designed as a lightweight command line utility, AIS-catcher also incorporates a built-in web server for internal use within secure networks. The project home page including several realtime examples can be found on the project page [aiscatcher.org](https://aiscatcher.org).
 
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9fd27b96-e37a-4f92-869c-b0ba782c12fa.png" width="90%"/>
@@ -27,25 +27,12 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-**Edge version** has recently added:
+**v0.56** has recently added:
+- small performance improvements in map rendering 
 - You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
 switches `-N geojson on` and `-N kml on`). The KML feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE. A demonstration of the use of GeoJSON is [plotting the vessels on the tar1090 map.](https://github.com/jvde-github/AIS-in-TAR1090)
 - Bug fix in setting baud rate for serial devices
-- Experimentation mode for NMEA2000 via socketCAN on Linux. As it requires the NMEA2000 library, build AIS-catcher in the main directory with:
-  ```
-  ./build.NMEA2000
-  ```
-  This downloads and builds the [NMEA2000 library](https://github.com/ttlappalainen/NMEA2000) and includes it in the AIS-catcher build process.
-  The following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus (`vcan0`):
-  ```console
-  AIS-catcher -x 192.168.1.120 4002 -I vcan0  
-  ```
-  Current implementation handles AIS messages 1-5, 9, 14, 18, 19, 21, 24 and have been very high-level tested with the CANboat utilities and a virtual network.
-  Another option is to have AIS-catcher read AIS messages on the NMEA2000 canbus:
-  ```console
-  AIS-catcher -i vcan0
-  ``` 
-  Note that this only works on Linux with socketCAN support and has not been tested properly. The program is not certified by NMEA and is not suitable for connecting to a NMEA2000 network on a boat. It is intended for experimentation only.
+- Experimentation mode for NMEA2000 via socketCAN on Linux. See documentation below.
 - Speed (moving/stationary) and Ship class now included as labels in Prometheus output
 - Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
 - Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
@@ -61,17 +48,6 @@ These maps and the applications are not suitable for navigation (just to reitera
 - Addition of option `-N CONTEXT yyyy` which will store the settings in the web browser in `yyyy`. This will allow to separate setting storage when running multiple web viewers. 
 - GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
 - Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions, we are exploring adding HMAC authentication. 
-
-**v0.54** is the previous version adding:
-- A "Settings Menu" providing access to additional (styling) options for the web viewer:
-![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/f29aae44-a68b-4e47-8fba-e703add00f47)
-
-- Option to change the displayed units in the context menus (metric system, imperial system and AIS native units)
-- Functionality to plot a list of all vessels on top of the map. This will only be visible for larger screens (click on the ship icon on the top right map)
-- retires the Curl library for HTTP message sending and directly uses a built-in TCP client leveraging openssl where needed for secure servers. This means that if you want to send data to a secure server, you have to build with the SSL development libraries:
-```console
-sudo apt install libssl-dev
-```
   
 ## Installation
 
@@ -441,12 +417,32 @@ AIS-catcher -s 1536K -r CU8 posterholt.raw -v -go SOXR on
 ```
 Default assumption is that the file is in raw unsigned 8-bit IQ format. Alternative formats can be set via `-gr` (see below) and can even include NMEA strings in text input. 
 
+
 ### Long Range AIS messages and alternative channels
 
 AIS-catcher has the option to listen at frequency 156.8 Mhz to receive Channel 3/C and 4/D (vs the default A and B around 162 MHz) with the switch ```-c CD```. This follows ideas from a post on the [Shipplotter forum](https://groups.io/g/shipplotter/topic/ais_type_27_long_range/92150532?p=,,,20,0,0,0::recentpostdate/sticky,,,20,2,0,92150532,previd%3D1657138240979957244,nextid%3D1644163712453715490&previd=1657138240979957244&nextid=1644163712453715490). The default decoder is available with the switch ```-c AB```. Note that ``gpsdecode`` cannot handle channel designations C and D in NMEA lines. You can provide an optional argument to use channel designations A and B in the NMEA line with the command ```-c CD AB```.
 
 In a similar fashion `-c X` will decode one channel. This is only useful in some instances, see the ZMQ example below.
 
+### NMEA2000 input and output via SocketCAN
+
+In v0.56 we introduced "Experimenter Mode" for NMEA2000 input and output via socketCAN on Linux. To properly handle the mechanics of a NMEA2000 network, the NMEA2000 library by  Timo Lappalainen
+is required, build AIS-catcher in the main directory with:
+  ```
+  ./build.NMEA2000
+  ```
+  This downloads and builds the [NMEA2000 library](https://github.com/ttlappalainen/NMEA2000) and includes it in the AIS-catcher build process.
+  The following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus (`vcan0`):
+  ```console
+  AIS-catcher -x 192.168.1.120 4002 -I vcan0  
+  ```
+  Current implementation handles AIS messages 1-5, 9, 11, 14, 18, 19, 21, 24 and have been very high-level tested with the excellent [CANboat](https://github.com/canboat/canboat) utilities and a virtual network.
+  Another option is to have AIS-catcher read AIS messages on the NMEA2000 canbus:
+  ```console
+  AIS-catcher -i vcan0
+  ``` 
+  Note that this only works on Linux with socketCAN support and has not been tested properly. Obviously, the program is not certified by NMEA and is not build for connecting it to a NMEA2000 network on a boat. It is for the experimenters wanting to learn and play with networks and AIS.
+  
 ### Configuration file
 
 As per version 0.41, AIS-catcher can be mostly configured via a configuration file in JSON format,
