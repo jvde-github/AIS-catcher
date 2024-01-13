@@ -547,7 +547,7 @@ namespace TCP {
 					if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
 #endif
 
-					std::cerr << "TCP (" << host << ":" << port << "): receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+					std::cerr << "TCP (" << host << ":" << port << ") receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 
 					if (persistent) {
 						std::cerr << " Reconnect.\n";
