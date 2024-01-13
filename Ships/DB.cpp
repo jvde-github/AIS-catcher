@@ -165,8 +165,7 @@ std::string DB::getJSONcompact(bool full) {
 			content += "\"" + std::string(ship.country_code) + "\",";
 			content += std::to_string(ship.status) + comma;
 
-			content += std::to_string(ship.draught) + comma;
-
+			content += ((ship.draught == DRAUGHT_UNDEFINED) ? null_str : std::to_string(ship.draught)) + comma;
 			content += ((ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ship.month)) + comma;
 			content += ((ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ship.day)) + comma;
 			content += ((ship.hour == ETA_HOUR_UNDEFINED) ? null_str : std::to_string(ship.hour)) + comma;
@@ -246,7 +245,7 @@ void DB::getShipJSON(const Ship& ship, std::string& content, long int delta_time
 	content += "\"country\":\"" + std::string(ship.country_code) + "\",";
 	content += "\"status\":" + std::to_string(ship.status) + ",";
 
-	content += "\"draught\":" + std::to_string(ship.draught) + ",";
+	content += "\"draught\":" + ((ship.to_port == DRAUGHT_UNDEFINED) ? null_str : std::to_string(ship.draught)) + ",";
 
 	content += "\"eta_month\":" + ((ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ship.month)) + ",";
 	content += "\"eta_day\":" + ((ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ship.day)) + ",";
