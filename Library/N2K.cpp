@@ -337,9 +337,8 @@ namespace AIS {
 	}
 
 	void N2KtoMessage::onMsg129039(const tN2kMsg& N2kMsg, TAG& tag) {
-		int repeat, status, type, second, mmsi, accuracy, raim, radio, channel, heading, lat, lon, cog, sog;
-		int regional, assigned, msg22, band, DSC, display, CS, radiobit;
-		double turn;
+		int repeat, type, second, mmsi, accuracy, raim, radio, channel, heading, lat, lon, cog, sog /*, radiobit*/;
+		int regional, assigned, msg22, band, DSC, display, CS;
 
 		int idx = 0;
 		unsigned char byte;
@@ -370,7 +369,7 @@ namespace AIS {
 		DSC = (byte >> 4) & 1;
 		display = (byte >> 3) & 1;
 		CS = (byte >> 2) & 1;
-		radiobit = N2kMsg.GetByte(idx) & 1;
+		//radiobit = N2kMsg.GetByte(idx) & 1;
 
 		msg.clear();
 
@@ -393,7 +392,7 @@ namespace AIS {
 		B(msg, msg22, 145, 1);
 		B(msg, assigned, 146, 1);
 		B(msg, raim, 147, 1);
-		U(msg, radio, 148, 20); // needs fix
+		U(msg, radio, 148, 20); // needs fix for radiobit
 
 		msg.Stamp();
 		msg.setChannel('A' + channel);
