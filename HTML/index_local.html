@@ -3660,6 +3660,14 @@
 				map.on("zoomend", function (evt) {
 					debouncedSaveSettings();
 					updateTooltips();
+
+					var currentZoomLevel = map.getZoom();
+    
+					if (currentZoomLevel < 14) {
+						map.getPane('shapePane').style.display = 'none';
+					} else {
+						map.getPane('shapePane').style.display = '';
+					}
 				});
 
 				map.on("click", function () {
@@ -3695,6 +3703,9 @@
 
 				map.createPane("locationMarker");
 				map.getPane("locationMarker").style.zIndex = 999;
+
+				map.createPane("shapePane");
+				map.getPane("shapePane").style.zIndex = 525;
 
 				map.createPane("stationPane");
 				map.getPane("stationPane").style.zIndex = 550;
@@ -4869,7 +4880,7 @@
 					ship_outline.push(D);
 					ship_outline.push(E);
 
-					return L.polygon(ship_outline, { ...col, fillOpacity: fillOpacity, opacity: opacity, ...style }).addTo(map);
+					return L.polygon(ship_outline, {  pane: 'shapePane', ...col, fillOpacity: fillOpacity, opacity: opacity, ...style }).addTo(map);
 				}
 
 				const a = Math.max(to_bow, to_stern);
@@ -4878,7 +4889,7 @@
 
 				if (r < 2 || r > 300) return null;
 
-				return L.circle(latlng, { radius: r, ...col, fillOpacity: fillOpacity, opacity: opacity, ...style }).addTo(map);
+				return L.circle(latlng, { pane: 'shapePane', radius: r, ...col, fillOpacity: fillOpacity, opacity: opacity, ...style }).addTo(map);
 			}
 
 			function average(d) {
