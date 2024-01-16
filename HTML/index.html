@@ -6196,9 +6196,9 @@
 					latLngs.push(path[i]);
 				}
 
-				let w = settings.track_weight;
+				let w = Number(settings.track_weight);
 
-				if (m == hover_mmsi) marker_tracks[m] = new L.polyline(latLngs, { color: settings.track_color, opacity: 0.85, weight: (w+1) }).addTo(map);
+				if (m == hover_mmsi) marker_tracks[m] = new L.polyline(latLngs, { color: settings.track_color, opacity: 0.85, weight: 2*w }).addTo(map);
 				else marker_tracks[m] = new L.polyline(latLngs, { color: settings.track_color, opacity: 0.7, weight: w }).addTo(map);
 
 				if (m == card_mmsi) document.getElementById("shipcard_track").innerText = "Hide Track";
