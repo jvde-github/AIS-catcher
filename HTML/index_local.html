@@ -2294,6 +2294,12 @@
 							</span>
 						</div>
 						<div>
+						<span>Icon Size</span>
+							<span>
+								<input type="range" id="settings_icon_scale" min="0.5" max="1" step="0.01" onchange="settings.icon_scale = this.value; updateMap(); saveSettings(); " />
+							</span>
+						</div>
+						<div>
 							<span>Dimming</span>
 							<span>
 								<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01" onchange="settings.map_opacity = this.value; setMapOpacity(); saveSettings(); " />
@@ -2914,6 +2920,7 @@
 					android: false,
 					welcome: true,
 					latlon_in_dms: true,
+					icon_scale: 0.85,
 					show_range: false,
 					map_day: "Voyager (no labels)",
 					map_day_overlay: [],
@@ -5835,16 +5842,18 @@
 				let { className, value, hint } = shippingMappings[ship.shipclass] || { className: "shipicon", value: 120 };
 
 				let style = `opacity: ${opacity};`;
+				let scale = settings.icon_scale;
+
 				switch (className) {
 					case "staticon":
-						style += `background-position: -${value}px -20px; transform: translate(-4px,-4px);`;
+						style += `background-position: -${value}px -20px; transform: translate(-4px,-4px) scale(${scale});`;
 						break;
 					case "shipicon":
-						if (ship.speed != null && ship.speed > 0.5 && ship.cog != null) style += `background-position: -${value}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg);`;
-						else style += `background-position: -${value}px -20px; transform: translate(-4px,-5px);`;
+						if (ship.speed != null && ship.speed > 0.5 && ship.cog != null) style += `background-position: -${value}px 0; transform: translate(-3px,-3px) rotate(${ship.cog}deg) scale(${scale});`;
+						else style += `background-position: -${value}px -20px; transform: translate(-4px,-5px) scale(${scale});`;
 						break;
 					default:
-						style += `background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg);`;
+						style += `background-position: 0px 0; transform: translate(-6px,-6px) rotate(${ship.cog}deg) scale(${scale});`;
 						break;
 				}
 
@@ -6760,6 +6769,7 @@
 				document.getElementById("settings_range_color_dark_short").value = settings.range_color_dark_short;
 
 				document.getElementById("settings_map_opacity").value = settings.map_opacity;
+				document.getElementById("settings_icon_scale").value = settings.icon_scale;
 				document.getElementById("settings_map_opacity_dark").value = settings.map_opacity_dark;
 
 				document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
