@@ -27,6 +27,9 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
+**Under development**: 
+Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
+
 **v0.56** has recently added:
 - small performance improvements in map rendering 
 - You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
