@@ -24,8 +24,7 @@ FROM debian:bookworm-slim
 RUN apt-get update
 RUN apt-get upgrade -y
 
-RUN git clone https://github.com/rtlsdrblog/rtl-sdr-blog && cd rtl-sdr-blog/ && dpkg-buildpackage -b --no-sign && cd .. && dpkg -i librtlsdr0_*.deb && dpkg -i librtlsdr-dev_*.deb && dpkg -i rtl-sdr_*.deb
-RUN apt-get install libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 libpq5 libz1 libssl3 -y
+RUN apt-get install librtlsdr0 libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 libpq5 libz1 libssl3 -y
 
 COPY --from=build /usr/local/bin/AIS-catcher /usr/local/bin/AIS-catcher
 
