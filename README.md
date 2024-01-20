@@ -30,6 +30,10 @@ Only use this software in regions where such use is permitted.
 **Under development**: 
 Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
 
+**Edge** version:
+- smaller default icons and setting option to set icon size
+- setting option to define width of vesseltracks
+
 **v0.56** has recently added:
 - small performance improvements in map rendering 
 - You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
