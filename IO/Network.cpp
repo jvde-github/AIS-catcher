@@ -376,7 +376,7 @@ namespace IO {
 			throw std::runtime_error("cannot make UDP socket non-blocking for " + host + " port " + port);
 #else
 		u_long mode = 1;
-		ioctlsocket(s, FIONBIO, &mode);
+		ioctlsocket(sock, FIONBIO, &mode);
 #endif
 	
 #ifndef _WIN32
