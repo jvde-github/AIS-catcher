@@ -369,6 +369,17 @@ namespace IO {
 		}
 
 #ifndef _WIN32
+		int r = fcntl(sock, F_GETFL, 0);
+		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
+
+		if (r < 0)
+			throw std::runtime_error("cannot make UDP socket non-blocking for " + host + " port " + port);
+#else
+		u_long mode = 1;
+		ioctlsocket(s, FIONBIO, &mode);
+#endif
+	
+#ifndef _WIN32
 		if (broadcast) {
 			int broadcastEnable = 1;
 			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char*)&broadcastEnable, sizeof(broadcastEnable)) < 0) {
