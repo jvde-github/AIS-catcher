@@ -33,6 +33,7 @@ Making enhancements to build a server version to handle high data throughput and
 **Edge** version:
 - smaller default icons and setting option to set icon size
 - setting option to define width of vesseltracks
+- performance improvements for TCP input and UDP output
 
 **v0.56** has recently added:
 - small performance improvements in map rendering 
