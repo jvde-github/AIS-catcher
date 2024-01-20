@@ -51,11 +51,9 @@ namespace Device {
 
 		if (getFormat() != Format::TXT) {
 			fifo.Init(BUFFER_SIZE);
-			TRANSFER_SIZE = 1024;
 		}
 		else {
 			fifo.Init(1, BUFFER_SIZE);
-			TRANSFER_SIZE = 1;
 		}
 
 		applySettings();
@@ -84,17 +82,18 @@ namespace Device {
 	}
 
 	void RTLTCP::RunAsync() {
-		std::vector<char> data(TRANSFER_SIZE);
+		if(buffer.size() < TRANSFER_SIZE)
+			buffer.resize(TRANSFER_SIZE);
 
 		while (isStreaming()) {
-			int len = client.read(data.data(), TRANSFER_SIZE, 2);
+			int len = client.read(buffer.data(), TRANSFER_SIZE, 2);
 
 			if (len < 0) {
 				lost = true;
 				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
 				break;
 			}
-			else if (isStreaming() && !fifo.Push(data.data(), len))
+			else if (isStreaming() && !fifo.Push(buffer.data(), len))
 				std::cerr << "RTLTCP: buffer overrun." << std::endl;
 		}
 	}

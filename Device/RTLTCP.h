@@ -62,8 +62,10 @@ namespace Device {
 		std::string host = "localhost";
 		std::string port = "1234";
 
-		int TRANSFER_SIZE = 1024;
+		const int TRANSFER_SIZE = 16384;
 		static const int BUFFER_SIZE = 16 * 16384;
+		std::vector<char> buffer;
+
 
 		int timeout = 2;
 		bool persistent = true;
