@@ -2168,6 +2168,25 @@
 			.settings_header div:last-child {
 				color: red;
 			}
+
+			.shipx {
+				opacity: 0;
+			}
+			
+			.shipx-visible {
+				background: #109856;
+				border: none;
+				opacity: 1;
+			}
+			
+			.shipx-visible.end {
+				transition: opacity 2s ease-in-out;
+				opacity: 0.01;
+			}
+			
+			.radar-hand {
+				filter: url(#blur);
+			}
 		</style>
 	</head>
 
