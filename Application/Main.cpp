@@ -464,6 +464,14 @@ int main(int argc, char* argv[]) {
 					if (count > 2) parseSettings(p, argv, ptr + 2, argc);
 				}
 				break;
+			case 'X':
+				Assert(count == 0, param, "no parameters allowed.");
+				{
+					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+					IO::OutputMessage& p = *msg.back();
+					p.Set("HOST", "aiscatcher.org").Set("PORT", "4242");
+				}
+				break;
 			case 'H':
 				Assert(count > 0, param);
 				{
