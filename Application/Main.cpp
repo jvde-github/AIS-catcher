@@ -227,6 +227,7 @@ int main(int argc, char* argv[]) {
 
 	bool list_devices = false, list_support = false, list_options = false;
 	int timeout = 0, nrec = 0;
+	bool timeout_nomsg = false;
 
 	try {
 #ifdef _WIN32
@@ -309,8 +310,9 @@ int main(int argc, char* argv[]) {
 				if (count == 1) screen.verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
 				break;
 			case 'T':
-				Assert(count == 1, param, "timeout parameter required.");
+				Assert(count == 1 || (count == 2 && arg2 == "nomsg_only"), param, "timeout requires one parameter with optional \"nomsg_only\".");
 				timeout = Util::Parse::Integer(arg1, 1, 3600);
+				if (count == 2) timeout_nomsg = true;
 				break;
 			case 'q':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -601,7 +603,7 @@ int main(int argc, char* argv[]) {
 			for (auto& s : servers)
 				if (s->active()) s->connect(r);
 
-			if (r.verbose) stat[i].connect(r);
+			if (r.verbose || timeout_nomsg) stat[i].connect(r);
 		}
 
 		for (auto& o : msg) o->Start();
@@ -618,8 +620,11 @@ int main(int argc, char* argv[]) {
 		stop = false;
 		const int SLEEP = 50;
 		auto time_start = high_resolution_clock::now();
+		auto time_timeout_start = time_start;
 		auto time_last = time_start;
 		bool oneverbose = false, iscallback = true;
+
+		long msg_count = 0;
 
 		for (auto& r : _receivers) {
 			oneverbose |= r->verbose;
@@ -661,9 +666,25 @@ int main(int argc, char* argv[]) {
 				}
 			}
 
-			if (timeout && duration_cast<seconds>(time_now - time_start).count() >= timeout) {
+			if (timeout && timeout_nomsg) {
+				long msg_count_now = 0;
+				for (int i = 0; i < _receivers.size(); i++) {
+					for (int j = 0; j < _receivers[i]->Count(); j++)
+						msg_count_now += stat[i].statistics[j].getCount();
+				}
+
+				if (msg_count_now > msg_count)
+					time_timeout_start = time_now;
+
+				msg_count = msg_count_now;
+			}
+
+			if (timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= timeout) {
 				stop = true;
-				std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
+				if (timeout_nomsg)
+					std::cerr << "Warning: Stop triggered, no messages were received for " << timeout << " seconds." << std::endl;
+				else
+					std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
 			}
 		}
 
