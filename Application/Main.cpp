@@ -221,6 +221,8 @@ int main(int argc, char* argv[]) {
 
 	OutputScreen screen;
 	std::vector<OutputStatistics> stat;
+	std::vector<int> msg_count;
+
 	std::vector<std::unique_ptr<WebViewer>> servers;
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
 	std::vector<std::unique_ptr<IO::OutputJSON>> json;
@@ -583,6 +585,8 @@ int main(int argc, char* argv[]) {
 		// set up the receiver and open the device
 
 		stat.resize(_receivers.size());
+		msg_count.resize(_receivers.size(), 0);
+
 		int group = 0;
 
 		for (int i = 0; i < _receivers.size(); i++) {
@@ -624,7 +628,6 @@ int main(int argc, char* argv[]) {
 		auto time_last = time_start;
 		bool oneverbose = false, iscallback = true;
 
-		long msg_count = 0;
 
 		for (auto& r : _receivers) {
 			oneverbose |= r->verbose;
@@ -667,16 +670,17 @@ int main(int argc, char* argv[]) {
 			}
 
 			if (timeout && timeout_nomsg) {
-				long msg_count_now = 0;
+				bool one_stale = false;
+
 				for (int i = 0; i < _receivers.size(); i++) {
-					for (int j = 0; j < _receivers[i]->Count(); j++)
-						msg_count_now += stat[i].statistics[j].getCount();
+					if (stat[i].statistics[0].getCount() == msg_count[i])
+						one_stale = true;
+						
+					msg_count[i] = stat[i].statistics[0].getCount();
 				}
 
-				if (msg_count_now > msg_count)
+				if (!one_stale)
 					time_timeout_start = time_now;
-
-				msg_count = msg_count_now;
 			}
 
 			if (timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= timeout) {
