@@ -359,12 +359,10 @@ void OutputScreen::start() {}
 
 void OutputStatistics::connect(Receiver& r) {
 
-	if (r.verbose) {
-		statistics.resize(r.Count());
+	statistics.resize(r.Count());
 
-		for (int i = 0; i < r.Count(); i++)
-			r.Output(i) >> statistics[i];
-	}
+	for (int i = 0; i < r.Count(); i++)
+		r.Output(i) >> statistics[i];
 }
 
 void OutputStatistics::start() {}
