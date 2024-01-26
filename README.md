@@ -34,6 +34,7 @@ Making enhancements to build a server version to handle high data throughput and
 - smaller default icons and setting option to set icon size
 - setting option to define width of vesseltracks
 - performance improvements for TCP input and UDP output
+- Option to auto terminate the program if no messages received for a while, e.g. after 10 minutes `-T 600 nomsg_ony`. This will help cure network connections for input or devices going stale without an error 
 
 **v0.56** has recently added:
 - small performance improvements in map rendering 
