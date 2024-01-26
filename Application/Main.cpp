@@ -228,7 +228,7 @@ int main(int argc, char* argv[]) {
 	std::vector<std::unique_ptr<IO::OutputJSON>> json;
 
 	bool list_devices = false, list_support = false, list_options = false;
-	int timeout = 0, nrec = 0;
+	int timeout = 0, nrec = 0, exit_code = 0;
 	bool timeout_nomsg = false;
 
 	try {
@@ -628,7 +628,6 @@ int main(int argc, char* argv[]) {
 		auto time_last = time_start;
 		bool oneverbose = false, iscallback = true;
 
-
 		for (auto& r : _receivers) {
 			oneverbose |= r->verbose;
 			iscallback &= r->device->isCallback();
@@ -675,7 +674,7 @@ int main(int argc, char* argv[]) {
 				for (int i = 0; i < _receivers.size(); i++) {
 					if (stat[i].statistics[0].getCount() == msg_count[i])
 						one_stale = true;
-						
+
 					msg_count[i] = stat[i].statistics[0].getCount();
 				}
 
@@ -685,10 +684,12 @@ int main(int argc, char* argv[]) {
 
 			if (timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= timeout) {
 				stop = true;
-				if (timeout_nomsg)
+				if (timeout_nomsg) 
 					std::cerr << "Warning: Stop triggered, no messages were received for " << timeout << " seconds." << std::endl;
-				else
+				else {
+					exit_code = -2;
 					std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
+				}
 			}
 		}
 
@@ -722,7 +723,7 @@ int main(int argc, char* argv[]) {
 	catch (std::exception const& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		for (auto& r : _receivers) r->stop();
-		return -1;
+		exit_code = -1;
 	}
-	return 0;
+	return exit_code;
 }
