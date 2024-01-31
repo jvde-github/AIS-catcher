@@ -147,8 +147,9 @@ public:
 	std::string lastStatToJSON() {
 		std::lock_guard<std::mutex> l{ this->mtx };
 
-		// needs change, now it returns last interval in which we received messages
-		if (start == end) return history[0].stat.toJSON(true);
+		long int tm = (long int) std::time(nullptr) / (long int)INTERVAL -1;
+		if (start == end || tm  > history[(end + N - 1) % N].time) return history[0].stat.toJSON(true);
+
 		return history[(end + N - 1) % N].stat.toJSON(false);
 	}
 
