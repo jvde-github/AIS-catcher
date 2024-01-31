@@ -5743,6 +5743,15 @@
 									return "<div style='color:" + color + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
 								},
 							},
+						{
+							title: "Spd",
+							field: "speed",
+							sorter: "number",
+							formatter: function (cell) {
+								const value = cell.getValue();
+								return value ? getSpeedVal(value) + " " + getSpeedUnit() : null;
+							},
+						},
 							{
 								title: "Valid",
 								field: "validated",
