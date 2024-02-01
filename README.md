@@ -463,108 +463,110 @@ where `config.json` is the name of the configuration file. The idea behind this 
 A fuller example config file looks as follows:
 ```json
 {
-  "config":"aiscatcher",
-  "version":"1",
-  "serial":"00000001",
-  "input":"rtlsdr",
-  "verbose":true,
-  "screen": 0,
-  "rtlsdr":{
-    "active":true,
-    "rtlagc":true,
-    "tuner":"auto",
-    "bandwidth":"192K",
-    "sample_rate":"1536K",
-    "biastee":false,
-    "buffer_count":2
-  },
-  "airspy":{
-    "sample_rate":"3000K",
-    "linearity":17,
-    "biastee":false
-  },
-  "airspyhf":{
-    "sample_rate":"192k",
-    "threshold":"low",
-    "preamp":false
-  },
-  "hackrf":{
-    "sample_rate":"6144k",
-    "lna":8,
-    "vga":20,
-    "preamp":false
-  },
-  "sdrplay":{
-    "sample_rate":"2304K",
-    "agc":true,
-    "lnastate":5,
-    "grdb":40
-  },
-  "udpserver":{
-    "server":"192.168.1.235",
-    "port":4002
-  },
-  "server":{
-    "file":"stat.bin",
-    "backup":10,
-    "realtime": true,
-    "active":true,
-    "port":8100,
-    "station":"My Station",
-    "station_link":"http://example.com/",
-    "share_loc": true,
-    "lat":52.0,
-    "lon":4.3,
-    "plugin_dir":"/home/jasper/AIS-catcher/plugins/",
-    "cdn":"/home/jasper/webassets",
-    "prome": true,
-    "context": "settings"
-  },
-  "tcp":[
-    {
-      "active":true,
-      "host":"5.9.207.224",
-      "port":12,
-      "keep_alive": false
-    }
-  ],
-  "udp":[
-    {
-      "host":"ais.fleetmon.com",
-      "port":0
+    "config": "aiscatcher",
+    "version": "1",
+    "input": "serialport",
+    "verbose": true,
+    "screen": 0,
+    "serialport": {
+        "baudrate": 38400,
+        "port": "/dev/tty0"
     },
-    {
-      "active":true,
-      "host":"hub.shipxplorer.com",
-      "port":0,
-      "filter":false,
-      "allow_type":"1,2,3,5,18,19,24"
-    }
-  ],
-  "tcp_listener":[
-    {
-      "port":5012
-    }
-  ],
-  "http":[
-    {
-      "url":"https://ais.chaos-consulting.de/shipin/index.php",
-      "userpwd":"user:pwd",
-      "interval":30,
-      "gzip":false,
-      "response":false,
-      "filter":false
+    "rtlsdr": {
+        "active": true,
+        "rtlagc": true,
+        "tuner": "auto",
+        "bandwidth": "192K",
+        "sample_rate": "1536K",
+        "biastee": false,
+        "buffer_count": 2
     },
-    {
-      "url":"http://aprs.fi/jsonais/post/secret_key",
-      "id":"myid",
-      "interval":60,
-      "protocol":"aprs",
-      "response":false
-    }
-  ]
-}
-```
+    "airspy": {
+        "sample_rate": "3000K",
+        "linearity": 17,
+        "biastee": false
+    },
+    "airspyhf": {
+        "sample_rate": "192k",
+        "threshold": "low",
+        "preamp": false
+    },
+    "hackrf": {
+        "sample_rate": "6144k",
+        "lna": 8,
+        "vga": 20,
+        "preamp": false
+    },
+    "sdrplay": {
+        "sample_rate": "2304K",
+        "agc": true,
+        "lnastate": 5,
+        "grdb": 40
+    },
+    "udpserver": {
+        "server": "192.168.1.235",
+        "port": 4002
+    },
+    "server": {
+        "file": "stat.bin",
+        "backup": 10,
+        "realtime": true,
+        "active": true,
+        "port": 8100,
+        "station": "My Station",
+        "station_link": "http://example.com/",
+        "share_loc": true,
+        "lat": 52,
+        "lon": 4.3,
+        "plugin_dir": "/home/jasper/AIS-catcher/plugins/",
+        "cdn": "/home/jasper/webassets",
+        "prome": true,
+        "context": "settings"
+    },
+    "tcp": [
+        {
+            "active": true,
+            "host": "5.9.207.224",
+            "port": 12,
+            "keep_alive": false
+        }
+    ],
+    "udp": [
+        {
+            "host": "ais.fleetmon.com",
+            "port": 0
+        },
+        {
+            "active": true,
+            "host": "hub.shipxplorer.com",
+            "port": 0,
+            "filter": false,
+            "allow_type": "1,2,3,5,18,19,24"
+        }
+    ],
+    "tcp_listener": [
+        {
+            "port": 5012
+        }
+    ],
+    "http": [
+        {
+            "url": "https://ais.chaos-consulting.de/shipin/index.php",
+            "userpwd": "user:pwd",
+            "interval": 30,
+            "gzip": false,
+            "response": false,
+            "filter": false
+        },
+        {
+            "url": "http://aprs.fi/jsonais/post/secret_key",
+            "id": "myid",
+            "interval": 60,
+            "protocol": "aprs",
+            "response": false
+        }
+    ]
+}```
 The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with an  "object" for each separate channel. In each object we can include the 
 boolean field ``active`` (see the second UDP definition) which will cause the program to ignore the settings if set to `false` providing an easy way to switch particular channels or dongle configurations on and off. 
 
