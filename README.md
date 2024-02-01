@@ -31,6 +31,7 @@ Only use this software in regions where such use is permitted.
 Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
 
 **Edge** version:
+- option `f` that writes the NMEA lines to a specified file
 - smaller default icons and setting option to set icon size
 - setting option to define width of vesseltracks
 - performance improvements for TCP input and UDP output
@@ -79,6 +80,7 @@ use: AIS-catcher [options]
 	[-C [filename] - read configuration settings from file]
 	[-D [connection string] - write messages to PostgreSQL database]
 	[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]
+	[-f [filename] write NMEA lines to file]
 	[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-H [optional: url] - send messages via HTTP, for options see documentation]

@@ -71,6 +71,7 @@ static void Usage() {
 	std::cerr << "\t[-C [filename] - read configuration settings from file]" << std::endl;
 	std::cerr << "\t[-D [connection string] - write messages to PostgreSQL database]" << std::endl;
 	std::cerr << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]" << std::endl;
+	std::cerr << "\t[-f [filename] write NMEA lines to file]" << std::endl;
 	std::cerr << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]" << std::endl;
 	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
 	std::cerr << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]" << std::endl;
@@ -304,6 +305,14 @@ int main(int argc, char* argv[]) {
 					IO::OutputMessage& u = *msg.back();
 					u.Set("PORT", arg1).Set("TIMEOUT", "0");
 					if (count > 1) parseSettings(u, argv, ptr + 1, argc);
+				}
+				break;
+			case 'f':
+				Assert(count == 1, param, "File output requires one parameter [filename]");
+				{
+					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MessageToFile()));
+					IO::OutputMessage& f = *msg.back();
+					f.Set("FILE", arg1);
 				}
 				break;
 			case 'v':
@@ -684,7 +693,7 @@ int main(int argc, char* argv[]) {
 
 			if (timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= timeout) {
 				stop = true;
-				if (timeout_nomsg) 
+				if (timeout_nomsg)
 					std::cerr << "Warning: Stop triggered, no messages were received for " << timeout << " seconds." << std::endl;
 				else {
 					exit_code = -2;

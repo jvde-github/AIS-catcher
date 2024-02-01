@@ -92,23 +92,53 @@ namespace IO {
 		}
 	};
 
-	template <typename T>
-	class StreamToFile : public StreamIn<T> {
+
+	class MessageToFile : public OutputMessage {
 		std::ofstream file;
 		std::string filename;
+		AIS::Filter filter;
 
 	public:
-		~StreamToFile() {
+		~MessageToFile() {
+			Stop();
+		}
+
+		void Start() {
+			file.open(filename, std::ios::out);
+			if (!file) {
+				throw std::runtime_error("File: failed to open file - " + filename);
+			}
+		}
+
+		void Stop() {
 			if (file.is_open())
 				file.close();
 		}
-		void openFile(std::string fn) {
-			filename = fn;
-			file.open(filename, std::ios::out | std::ios::binary);
+
+		void Receive(const AIS::Message* data, int len, TAG& tag) {
+			for (const std::string& s : data[0].NMEA) {
+				file << s << std::endl;
+			}
+			if (file.fail()) {
+				std::cerr << "File: cannot write to file." << std::endl;
+				StopRequest();
+			}
 		}
 
-		void Receive(const T* data, int len, TAG& tag) {
-			file.write((char*)data, len * sizeof(T));
+		Setting& Set(std::string option, std::string arg) {
+			Util::Convert::toUpper(option);
+
+			if (option == "GROUPS_IN") {
+				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
+				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
+			}
+			else if (option == "FILE") {
+				filename = arg;
+			}
+			else if (!filter.SetOption(option, arg)) {
+				throw std::runtime_error("JSON output - unknown option: " + option);
+			}
+			return *this;
 		}
 	};
 
