@@ -1,5 +1,3 @@
- Here is a suggested home page section:
-
 # AIS-catcher
 
 AIS-catcher is a versatile dual-channel AIS receiver compatible with various Software Defined Radios (SDRs) including RTL-SDR, AirSpy, HackRF, SDRPlay, and SoapySDR.
@@ -19,9 +17,9 @@ The goal of AIS-catcher is to provide a platform to advance AIS receiver algorit
 
 ## Getting Started
 
-- [Installation](installation.md) - Build instructions across platforms 
-- [Usage](usage.md) - Configure inputs, outputs and SDR settings 
+- [Installation](https://github.com/yanniedog/AIS-catcher/blob/main/readme/installation.md) - Build instructions across platforms 
+- [Usage](https://github.com/yanniedog/AIS-catcher/blob/main/readme/usage.md) - Configure inputs, outputs and SDR settings 
 - [Configuration](https://github.com/yanniedog/AIS-catcher/blob/main/readme/configuration.md) - Execution options for different use cases 
-- [Features](features.md) - Overview of key capabilities
+- [Features](https://github.com/yanniedog/AIS-catcher/blob/main/readme/features.md) - Overview of key capabilities
 
-Check out the [documentation](https://github.com/jvde-github/AIS-catcher) for more details and advanced usage. Feel free to [contribute](contributing.md) any issues, feature requests or code improvements!
+Check out the [documentation](https://github.com/jvde-github/AIS-catcher) for more details and advanced usage. Feel free to contribute any issues, feature requests or code improvements!
