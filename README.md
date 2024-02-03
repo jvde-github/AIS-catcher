@@ -16,49 +16,8 @@ Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. License
 
 The purpose of `AIS-catcher` is to serve as a platform that encourages the perpetual enhancement of receiver models. We greatly value and appreciate any suggestions, observations, or shared recordings, particularly from setups where the existing models encounter difficulties.
 
-### Disclaimer
-`AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 
-You can play with the software but it is the user's responsibility to use it prudently. So, DO NOT rely upon this software in any way including for navigation 
-and/or safety of life or property purposes.
-There are variations in the legislation concerning radio reception in the different administrations around the world. 
-It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
-It is specifically forbidden to use this software for any illegal purpose whatsoever. 
-Only use this software in regions where such use is permitted.
 
-## What's new?
 
-**Under development**: 
-Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
-
-**Edge** version:
-- option `f` that writes the NMEA lines to a specified file
-- smaller default icons and setting option to set icon size
-- setting option to define width of vesseltracks
-- performance improvements for TCP input and UDP output
-- Option to auto terminate the program if no messages received for a while, e.g. after 10 minutes `-T 600 nomsg_ony`. This will help cure network connections for input or devices going stale without an error 
-
-**v0.56** has recently added:
-- small performance improvements in map rendering 
-- You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
-switches `-N geojson on` and `-N kml on`). The KML feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE. A demonstration of the use of GeoJSON is [plotting the vessels on the tar1090 map.](https://github.com/jvde-github/AIS-in-TAR1090)
-- Bug fix in setting baud rate for serial devices
-- Experimenter Mode for NMEA2000 via socketCAN on Linux. [See documentation below](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#nmea2000-input-and-output-via-socketcan).
-- Speed (moving/stationary) and Ship class now included as labels in Prometheus output
-- Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
-- Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
-- Pyssel blog post describes procedure to show offline mbtiles maps [here](https://pysselilivet.blogspot.com/2023/12/ais-receiver-and-dispatcher-best.html)
-
-**v0.55** is the latest version and introduces the following:
-- "Show all track" option and a new adjustable setting to dim the maps for greater visibility of the ship icons (see screenshot above for an example)
-- Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services))
-These maps and the applications are not suitable for navigation (just to reiterate that).
-- I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
- dashboards for stations running AIS-catcher and links to interesting (open-source) projects related to AIS and AIS-catcher.
-- If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) and I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation of the station location. Data is not aggregated and forwarded.
-- Addition of option `-N CONTEXT yyyy` which will store the settings in the web browser in `yyyy`. This will allow to separate setting storage when running multiple web viewers. 
-- GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
-- Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions, we are exploring adding HMAC authentication. 
-  
 ## Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry.
@@ -900,72 +859,6 @@ To complete the example, this command also sets the tuner gain for the RTL-SDR t
 
 If the sample rates for a device are not supported by AIS-catcher, the SOXR functionality could be considered (e.g. ```-go SOXR on```). Again, we advise to use the built-in drivers and include resampling functionality where possible.  
 
-## Validation
-### Experiment at the [Meteotoren in Scheveningen](https://www.meteotoren.nl/index.php?id=index) 
-
-On August 25, 2022 I was given the opportunity to connect AIS-catcher for a few minutes to the antenna system at the [Meteotoren](https://www.meteotoren.nl/index.php?id=ais) which has a consistently high message rate and availability on [MarineTraffic](https://www.marinetraffic.com/en/ais/details/stations/15981). 
-
-We ran AIS-catcher on a laptop for 60 seconds and counted the number of messages for two RTL-SDR dongles (```-gr rtlagc on -T 60 -v 60```): 
-
-| SDR | Run 1 | Run 2 |
-| :--- | :--- | :---: |
-| RTL-SDR blog v3 | 1061 | 1255 |
-| ShipXplorer AIS dongle |  1372 | 1315 |
-
-The ShipXplorer AIS dongle, as far as I can see, is an RTL-SDR with an additional SAW filter (TA0395A). The two sets of runs suggest some advantages of using a dongle with a filter. For reference, the AIS-catcher default decoder showed roughly a 30% improvement over an FM-based decoder in message count. An important factor of the high message rate at the Meteotoren though seems to stem from the location and the installed Yagi antenna. An experiment where we reran with a standard antenna placed at a slightly lower height reduced the message count to below 800 messages per second. 
-
-<p align="center">
-<img src="https://user-images.githubusercontent.com/52420030/220280154-602637b2-5874-455f-86fd-cd55e6d51573.png" width=30% height=30%>
-<img src="https://user-images.githubusercontent.com/52420030/220280223-264e05da-9ccd-45b1-a5a7-58188e54f8de.png" width=30% height=30%>
-</p>
-
-Meteotoren feeds MarineTraffic with a [Comar SLR350NI](https://help.marinetraffic.com/hc/en-us/articles/227724587-Comar-SLR-350Ni). According to the MarineTraffic statistics the message count just prior and just after the experiment was in the area of 1350 messages/minute. We did not observe a difference in range with the MarineTraffic statistics to conclude (see pictures - left is AIS-catcher reception for a few minutes visualized with AISdispatcher, right is a screenshot from MarineTraffic).
-These initial results are promising and it would be interesting to compare, in a more scientific manner, how open-source decoders with a generic RTL-SDR and dedicated AIS receiver hardware compare. Thank you Meteotoren for facilitating!
-
-### Experimenting with recorded signals
-The functionality to receive radio input from `rtl_tcp` provides a route to compare different receiver packages on a deterministic input from a file. I have tweaked the callback function in `rtl_tcp` so that it instead sends over input from a file to an AIS receiver like `AIS-catcher` and `AISrec`. The same trick can be easily done for `rtl-ais`. The sampling rate of the input file was converted using `sox` to 240K samples/second for `rtl-tcp` and 1.6M samples/second for `rtl-ais`. 
-These programs, and others like `gnuais` have been the pioneers in the field of open-source AIS decoding and without them many related programs including this one would arguably not exist.
-The output of the various receivers was sent via UDP to AISdispatcher which removes any duplicates and counts messages. The results in terms of number of messages/distinct vessels:
- | File | AIS-catcher v0.35  | AIS-catcher v0.33 | rtl-ais | AISrec 2.208 (trial - super fast) | AISrec 2.208 (pro - slow2)  | AISrec 2.301 (pro - slow2) | Source |
- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |  :---: | 
- |Scheveningen |   44/37| 43/37  | 17/16 | 30/27 | 37/31 | 39/33 | recorded @ 1536K with `rtl-sdr` (auto gain) |
- |Moscow| 213/35 |210/32 | 146/27 |  195/31 |  183/34 | 198/35 | shared by user @ 1920K in [discussion](https://github.com/jvde-github/AIS-catcher/issues/7) |
- |Vlieland | 93/54 |93/53  | 51/31| 72/44 | 80/52 | 82/50 | recorded @ 1536K with `rtl-sdr` (auto gain) |
- |Posterholt |  39/22  |39/22 |2/2 | 13/12 | 31/21 | 31/20 | recorded @ 1536K with `rtl-sdr` (auto gain) |
- 
- **Update 1:** AISrec had a version update of 2.208 (October 23, 2021) with improved stability and reception quality and the table above has been updated to include the results from this recent version. 
-
- **Update 2:** Feverlaysoft has kindly provided me with a license for version 2.208 of AISrec allowing access to additional decoding models. Some experimentation suggests that "Slow2" works best for these particular examples and has been included in the above overview.
- 
- **Update 3:** AISrec had a version update to 2.301 (April 17, 2022) with reduced runtime and the table above has been updated to include the results from this recent version. 
- 
-### Some stations with AIS-catcher
-
-A list of some stations mentioning using AIS-catcher:
-- [A caruna, Spain](https://www.marinetraffic.com/en/ais/details/stations/23439)
-- [Asendorf, Germany](https://www.marinetraffic.com/en/ais/details/stations/19365)
-- [Blackfield 01, UK](https://www.marinetraffic.com/en/ais/details/stations/22665)
-- [Boston, US](https://www.marinetraffic.com/en/ais/details/stations/22977)
-- [Chaos Consulting, Germany](https://adsb.chaos-consulting.de/map/)
-- [Edinburgh, UK](https://www.marinetraffic.com/en/ais/details/stations/11523)
-- [Haiphong, Vietnam](https://www.marinetraffic.com/en/ais/details/stations/23016)
-- [La Linea de la Concepcion, Spain](https://www.marinetraffic.com/en/ais/details/stations/13854)
-- [Naha, Okinawa](https://www.marinetraffic.com/en/ais/details/stations/15306)
-- [Oranjeplaat Arnemuiden, NL](https://www.marinetraffic.com/en/ais/details/stations/17136)
-- [Pickwick Landing, USA](https://www.marinetraffic.com/en/ais/details/stations/25896)
-- [SeaRange AIS receiver](https://www.shipxplorer.com/searange-ais-receiver)
-- [Seattle Capitol Hill, US](https://www.marinetraffic.com/en/ais/details/stations/14916)
-- [Troguarat, France](https://www.marinetraffic.com/en/ais/details/stations/21360)
-- [Tyres, Sweden](https://www.marinetraffic.com/en/ais/details/stations/22269)
-- [Vancouver North, Canada](https://www.marinetraffic.com/en/ais/details/stations/29475) with hardware description [here](https://github.com/jvde-github/AIS-catcher/discussions/182).
-- [Vancouver West End, Canada](https://www.marinetraffic.com/en/ais/details/stations/7029)
-- [Vasa, Finland](https://www.marinetraffic.com/en/ais/details/stations/14994)
-- [Vernouillet, France](https://www.marinetraffic.com/en/ais/details/stations/10668)
-- [Vlissingen, NL](https://www.marinetraffic.com/nl/ais/details/stations/17133)
-
-AIS-catcher connected to a commercial AIS receiver via serial port:
-- [Wren Road Rab 2](https://www.marinetraffic.com/en/ais/details/stations/9615)
-- [Baltimore, Ireland](https://www.marinetraffic.com/en/ais/details/stations/10083/_:6fee18c796a96183f56c876a2b26bac6)
 
 ## Build process
 
@@ -977,30 +870,6 @@ Running ``AIS-catcher`` should be a simple matter of unpacking the ZIP file in o
 It will likely run out of the box in case you have already RTL-SDR software running on your PC. In case you encounter an issue, you might want to check:
 - installation of RTL-SDR drivers is done via [Zadig](https://www.rtl-sdr.com/tag/zadig/)
 - installation of the Visual Studio runtime [libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
-
-Recent releases:
- | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
- | :--- | :--- | :---: |   :--- | :---: | 
-|Edge| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.SDRPLAY.x64.zip) |
-|v0.56| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.SDRPLAY.x64.zip) |
-|v0.55| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.SDRPLAY.x64.zip) |
-|v0.54| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.54/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.54/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.54/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.54/AIS-catcher.SDRPLAY.x64.zip) |
-|v0.53| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.53/AIS-catcher.SDRPLAY.x64.zip) |
-|v0.52| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.52/AIS-catcher.SDRPLAY.x64.zip) |
-|v0.51| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.51b/AIS-catcher.SDRPLAY.x64.zip) |
-  |v0.50| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.50/AIS-catcher.SDRPLAY.x64.zip) |
-  |v0.49| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.49/AIS-catcher.SDRPLAY.x64.zip) |
- |v0.48| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.48/AIS-catcher.SDRPLAY.x64.zip) |
- |v0.47| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.47/AIS-catcher.SDRPLAY.x64.zip) |
-   |v0.46| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.46/AIS-catcher.SDRPLAY.x64.zip) |
-  |v0.45| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.45e/AIS-catcher.SDRPLAY.x64.zip) |
- |v0.44| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.44/AIS-catcher.SDRPLAY.x64.zip) |
- |v0.41| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.41/AIS-catcher.SDRPLAY.x64.zip) |
- |v0.40| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.40b/AIS-catcher.SDRPLAY.x64.zip) | 
- |v0.39| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.39/AIS-catcher.Edge.SDRPLAY.x64.zip) | 
-|v0.38| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.38/AIS-catcher.v0.38.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.38/AIS-catcher.v0.38.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.38/AIS-catcher.v0.38.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.38/AIS-catcher.v0.38.SDRPLAY.x64.zip) | 
-  |v0.37| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.37/AIS-catcher.v0.37.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.37/AIS-catcher.v0.37.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.37/AIS-catcher.v0.37.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.37/AIS-catcher.v0.37.SDRPLAY.x64.zip) | 
- |v0.36| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.36a/AIS-catcher.v0.36a.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.36a/AIS-catcher.v0.36a.x64.zip) | | |
 
  
 If you are looking for a Windows version for the latest development version, it is automatically produced by the standard workflow and referenced in the table above.
@@ -1165,22 +1034,4 @@ AIS-catcher -s 288000
 ```
 If your system allows for it you might opt to run ```AIS-catcher``` at a sample rate of ```2304000```. 
 
-### Known issues
-
-- call of ```rtlsdr_close```  on Windows can result in a crash. This is a problem with the rtlsdr library and not AIS-catcher. Solution: ensure you have the latest version of the library with this patch [rtlsdr](https://github.com/osmocom/rtl-sdr/pull/18). For the shared Windows binaries I have included [this version](https://github.com/jvde-github/rtl-sdr) of the library in which I did a proper [patch](https://lists.osmocom.org/hyperkitty/list/osmocom-sdr@lists.osmocom.org/thread/WPL5MZIX7CGVDF2NECPSTZYDLACAEXRI/) to fix this issue (essentially ensuring all usb transfers have been closed before freeing memory.
-- pkg-config on Raspberry Pi returns ```-L``` as library path which results in a build error. Temporarily fixed by assuming lib is in standard location, long term fix: switch to cmake
-- ...
-
-## To do
-
-- Add Database configuration to the JSON config file
-- Testing: assess the gap with commercial equipment (partially done at Meteotoren)
-- Improve decoder
-- Support NMEA tag blocks for timestamp
-- Channel AB+CD for devices with high sample rates like the Airspy
-- Offline map support
-- Input of NMEA via TCP
-- MTQQ support
-- Feedback advanced analytics via aiscatcher.org and shipcatcher.com
-- ....
 
