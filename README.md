@@ -21,7 +21,7 @@ The goal of AIS-catcher is to provide a platform to advance AIS receiver algorit
 
 - [Installation](installation.md) - Build instructions across platforms 
 - [Usage](usage.md) - Configure inputs, outputs and SDR settings 
-- [Configuration](configuration.md) - Execution options for different use cases
+- [Configuration](https://github.com/yanniedog/AIS-catcher/blob/main/readme/configuration.md) - Execution options for different use cases 
 - [Features](features.md) - Overview of key capabilities
 
 Check out the [documentation](https://github.com/jvde-github/AIS-catcher) for more details and advanced usage. Feel free to [contribute](contributing.md) any issues, feature requests or code improvements!
