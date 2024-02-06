@@ -33,6 +33,8 @@
 #include "History.h"
 #include "Receiver.h"
 
+extern bool communityFeed;
+
 class SSEStreamer : public StreamIn<JSON::JSON> {
 	IO::HTTPServer* server = nullptr;
 

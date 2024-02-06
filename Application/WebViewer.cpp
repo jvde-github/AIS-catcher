@@ -17,6 +17,8 @@
 
 #include "WebViewer.h"
 
+bool communityFeed = false;
+
 bool WebViewer::Save() {
 	// std::cerr << "Server: writing statistics to file " << filename << std::endl;
 	try {
@@ -372,7 +374,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		ResponseRaw(c, "image/png", (char*)icons_png_gz, icons_png_gz_len, true);
 	}
 	else if (r == "/config.js") {
-		Response(c, "application/javascript", params + plugins, use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins + "\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
 	else if (r == "/config.css") {
 		Response(c, "text/css", stylesheets, use_zlib & gzip);
