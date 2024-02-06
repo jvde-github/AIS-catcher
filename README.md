@@ -31,7 +31,7 @@ Only use this software in regions where such use is permitted.
 Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
 
 **Edge** version:
-- Starting to test receiving ships by others back in your AIS-catcher viewer. This will help to assess what signals are not received. Run the branche `feed` by cloning with `-b feed` and
+- Starting to test  ships received by others in your AIS-catcher viewer. This will help to assess what signals are not received. Run the branche `feed` by cloning with `-b feed` and
   start AIS-catcher with `-X`, this will send your AIS feed to aiscatcher.org. In exchange it will give you access to a map layer with a "Community Feed" that
   shows positions received by others. This is experimental and shared to help resolve bugs, so please share! **Please do not run with Plugins**
   ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/acaf6c50-e9c6-476b-a056-c17a67e045e1)
