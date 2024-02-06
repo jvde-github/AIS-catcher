@@ -31,6 +31,11 @@ Only use this software in regions where such use is permitted.
 Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
 
 **Edge** version:
+- Starting to test receiving communnity feed back in your AIS-catcher viewer. Run the branche `feed` by cloning with `-b feed` and
+  start AIS-catcher with `-X`, this will send your feed to aiscatcher.org. In exchange it will give you access to a map layer with a "Community Feed" that
+  shows positions received by others. **Please do not run with Plugins**
+  ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/acaf6c50-e9c6-476b-a056-c17a67e045e1)
+
 - option `f` that writes the NMEA lines to a specified file
 - smaller default icons and setting option to set icon size
 - setting option to define width of vesseltracks
