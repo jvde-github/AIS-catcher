@@ -7289,14 +7289,9 @@
 				}
 			}
 
-			let isFetchingCShips;
 			let CshipsDB = {}
 
 			async function fetchCommunityShips(noDoubleFetch = true) {
-				if (typeof isFetchingCShips !== 'undefined' && isFetchingCShips) {
-					console.log("A fetch operation is already running.");
-					return false;
-				}
 
 				let ships = {};
 				station = {};
@@ -7318,9 +7313,8 @@
 					setPulseError();
 					console.log("failed loading ships: " + error);
 					return false;
-				} finally {
-					isFetchingCShips = false;
 				}
+
 				ships = await response.json();
 
 				setPulseOk();
