@@ -4920,7 +4920,6 @@
 			}
 
 			let ships = {};
-			station = {};
 
 			isFetchingShips = true;
 			try {
@@ -4976,6 +4975,8 @@
 			];
 
 			shipsDB = {};
+			station = {};
+
 			ships.values.forEach((v) => {
 				const s = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
 
@@ -6525,7 +6526,9 @@
 				stationFeature = undefined;
 			}
 
-			if (hasNoStation) return;
+			if (hasNoStation) {
+				return;
+			}
 
 			const radius = 10;
 			let svgIconStyle = new ol.style.Style({
@@ -7294,9 +7297,7 @@
 			async function fetchCommunityShips(noDoubleFetch = true) {
 
 				let ships = {};
-				station = {};
 
-				isFetchingCShips = true;
 				try {
 					const extent = map.getView().calculateExtent(map.getSize());
 					const extentInLatLon = ol.proj.transformExtent(extent, 'EPSG:3857', 'EPSG:4326');
