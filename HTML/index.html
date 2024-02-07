@@ -3035,8 +3035,8 @@
 				range_color_dark_short: "#303030",
 				fix_center: false,
 				center_point: "station",
-				tooltipLabelColor: "#000000",
-				tooltipLabelColorDark: "#ffffff",
+				tooltipLabelColor: "#ffffff",
+				tooltipLabelColorDark: "#000000",
 				tooltipLabelShadowColor: "#ffffff",
 				tooltipLabelShadowColorDark: "#000000",
 				shiphover_color: "#FFA500",
@@ -7310,14 +7310,12 @@
 
 					response = await fetch("https://aiscatcher.org/hub_test/ships_array.json?" + zoom + "," + minLat + "," + minLon + "," + maxLat + "," + maxLon + "," + -1);
 				} catch (error) {
-					setPulseError();
 					console.log("failed loading ships: " + error);
 					return false;
 				}
 
 				ships = await response.json();
 
-				setPulseOk();
 
 				const keys = [
 					"mmsi",
