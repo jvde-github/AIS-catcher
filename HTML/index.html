@@ -7293,7 +7293,7 @@
 			let CshipsDB = {}
 
 			async function fetchCommunityShips(noDoubleFetch = true) {
-				if (isFetchingCShips) {
+				if (typeof isFetchingCShips !== 'undefined' && isFetchingCShips) {
 					console.log("A fetch operation is already running.");
 					return false;
 				}
@@ -7378,7 +7378,7 @@
 			debounceUpdateCommunityFeed = debounce(updateCommunityFeed, 250);
 
 			feedLayer.on('change:visible', function () {
-				if (feedLayer.getVisible()) { 
+				if (feedLayer.getVisible()) {
 					debounceUpdateCommunityFeed();
 				}
 			});
