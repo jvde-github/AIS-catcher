@@ -575,7 +575,9 @@ A fuller example config file looks as follows:
             "response": false
         }
     ]
-}```
+}
+```
+
 The UDP and HTTP outward connections are included as a JSON array (surrounded by `[` and `]`) with an  "object" for each separate channel. In each object we can include the 
 boolean field ``active`` (see the second UDP definition) which will cause the program to ignore the settings if set to `false` providing an easy way to switch particular channels or dongle configurations on and off. 
 
