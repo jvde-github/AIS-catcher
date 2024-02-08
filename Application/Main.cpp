@@ -480,10 +480,12 @@ int main(int argc, char* argv[]) {
 			case 'X':
 				Assert(count == 0, param, "no parameters allowed.");
 				{
-					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-					IO::OutputMessage& p = *msg.back();
-					p.Set("HOST", "aiscatcher.org").Set("PORT", "4242");
-					communityFeed = true;
+					if (!communityFeed) {
+						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+						IO::OutputMessage& p = *msg.back();
+						p.Set("HOST", "aiscatcher.org").Set("PORT", "4242");
+						communityFeed = true;
+					}
 				}
 				break;
 			case 'H':
