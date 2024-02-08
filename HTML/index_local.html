@@ -4725,7 +4725,6 @@
 				const conv = settings.metric === "DEFAULT" ? 1.852 : settings.metric === "SI" ? 1 : 1.15078;
 
 				const range = [5000, 10000, 25000, 50000, 100000];
-				//const range = [15000, 27800];
 
 				for (var i = 0; i < range.length; i++) {
 
@@ -4734,7 +4733,8 @@
 					});
 
 					distanceCircle.setStyle(greyLineStyle);
-					distanceCircle.tooltip = range[i] / 1000 + "K " + getDistanceUnit();
+					const unit = getDistanceUnit().toUpperCase();
+					distanceCircle.tooltip = range[i] / 1000 + "K " + unit;
 					rangeVector.addFeature(distanceCircle);
 					distanceFeatures.push(distanceCircle);
 				}
