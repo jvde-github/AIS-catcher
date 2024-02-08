@@ -2463,7 +2463,8 @@
 					ShipXplorer</li>
 				<li class="divider mmsi noandroid"></li>
 				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
-				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
+				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
+					Light/Dark mode</li>
 			</ul>
 
 			<div id="dialog-box" class="hidden">
@@ -2486,6 +2487,7 @@
 						<header>System</header>
 						<section class="noandroid">
 							<div><span>Station</span><span id="stat_station"></span></div>
+							<div title ="feeding aiscatcher.org"><span>Feeding Hub</span><span id="stat_sharing"></span></div>
 						</section>
 						<section class="noandroid">
 							<div><span>OS</span><span id="stat_os"></span></div>
@@ -5670,6 +5672,15 @@
 				);
 
 				if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
+
+				var statSharingElement = document.getElementById("stat_sharing");
+				if (stat.sharing) {
+					statSharingElement.innerHTML = "Yes";
+					statSharingElement.style.color = "green";
+				} else {
+					statSharingElement.innerHTML = "No";
+					statSharingElement.style.color = "red";
+				}
 
 				document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
 				var title = document.getElementById("stat_station").textContent;
