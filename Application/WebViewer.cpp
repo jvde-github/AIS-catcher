@@ -304,6 +304,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
 		content += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
 		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
+		content += "\"sharing\":" + std::string(communityFeed?"true":"false") + ",";
 
 		content += "\"station\":" + station + ",";
 		content += "\"station_link\":" + station_link + ",";
