@@ -483,6 +483,7 @@ int main(int argc, char* argv[]) {
 					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 					IO::OutputMessage& p = *msg.back();
 					p.Set("HOST", "aiscatcher.org").Set("PORT", "4242");
+					communityFeed = true;
 				}
 				break;
 			case 'H':
