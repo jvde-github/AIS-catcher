@@ -31,7 +31,7 @@ Only use this software in regions where such use is permitted.
 Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
 
 **Edge** version:
-- Switch `-X` that will feed the AIS messages to `aiscatcher.org`. This will include an additional map layer in the webviewer that shows ships received by neighbouring stations in grey for reference. The following is an example from my own station. The layer is only visible when feeding with -X and is called "Community Feed":
+- Switch `-X` that will feed the AIS messages to `aiscatcher.org`. This will then introduce an additional map layer in the webviewer that shows these community ships, i.e. received by neighbouring stations in grey for reference to calibrate reception. The following is an example from my own station. The layer is  available when feeding with -X and is called "Community Feed" (otherwise the handshake icon is shown in red):
   
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
