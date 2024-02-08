@@ -31,11 +31,11 @@ Only use this software in regions where such use is permitted.
 Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
 
 **Edge** version:
-- Switch `-X` that will feed the AIS messages to `aiscatcher.org`. This will include an additional map layer in the webviewer that shows ships received by neighbouring stations in grey for reference. The following is an example from my own station:
+- Switch `-X` that will feed the AIS messages to `aiscatcher.org`. This will include an additional map layer in the webviewer that shows ships received by neighbouring stations in grey for reference. The following is an example from my own station. The layer is only visible when feeding with -X and is called "Community Feed":
   
 ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f)
 
-- Performance improvements for large number of vessels by switching to Leaflet to Openlayers (notice this might require re-working some plugins). In openlayers it is easier to plot vessels on canvas
+- Performance improvements when drawing a large number of vessels by switching from Leaflet to Openlayers (notice this might require re-working some plugins). in openlayers it is more straightforward to plot ship icons on the canvas.
 - option `f` that writes the NMEA lines to a specified file
 - smaller default icons and setting option to set icon size
 - setting option to define width of vesseltracks
