@@ -2277,14 +2277,14 @@
 					<div>
 						<span>Track Color</span><span>
 							<input type="color" class="color-picker" id="settings_track_color"
-								onchange="setMapSetting(this.value)" />
+								onchange="setMapSetting('track_color', this.value)" />
 						</span>
 					</div>
 					<div>
 						<span>Track Weight</span>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
-								onchange="settings.track_weight = this.value; redrawMap(); saveSettings();" />
+								onchange="setMapSetting('track_weight', this.value)" />
 						</span>
 					</div>
 				</section>
@@ -3019,8 +3019,8 @@
 				icon_scale: 0.85,
 				track_weight: 1,
 				show_range: false,
-				distance_circles: false,
-				distance_circle_color:  '#1c71d8',
+				distance_circles: true,
+				distance_circle_color: '#1c71d8',
 				map_day: "OpenStreetMap",
 				map_overlay: [],
 				map_night: "Dark Matter (no labels)",
@@ -3236,7 +3236,7 @@
 					color: hoverMMSI && feature.ship.mmsi == hoverMMSI ? settings.shiphover_color : settings.shipoutline_border,
 					width: 2
 				}),
-			});;
+			});
 		}
 
 		var trackStyleFunction = function (feature) {
@@ -4670,6 +4670,30 @@
 			distanceFeatures = undefined;
 		}
 
+		function createDistanceGeometry(lat, lon, radius) {
+
+			/*
+			const center = ol.proj.fromLonLat([lon, lat]);
+			const circle = new ol.geom.Circle(center, radius);
+			return circle;
+			*/
+
+			const deltaNorth = calcOffset1M([station.lon, station.lat], 0)[0];
+			const deltaEast = calcOffset1M([station.lon, station.lat], 90)[1];
+			const N = 50;
+
+			let outline = [];
+			for (let i = 0; i < N; i++) {
+				outline.push([
+					station.lon + ((radius * deltaEast)) * Math.sin(((i * 2) / N) * Math.PI),
+					station.lat + ((radius * deltaNorth)) * Math.cos(((i * 2) / N) * Math.PI),
+				]);
+			}
+
+			outline = outline.map(point => ol.proj.fromLonLat(point));
+			return new ol.geom.Polygon([outline]);
+		}
+
 		function updateDistanceCircles() {
 			const lat = station.lat;
 			const lon = station.lon;
@@ -4678,6 +4702,8 @@
 				removeDistanceCircles();
 				return;
 			}
+
+			if (!lat || !lon) return;
 
 			if (!distanceFeatures || distanceLat != lat || distanceLon != lon || distanceMetric != settings.metric) {
 
@@ -4696,16 +4722,19 @@
 					})
 				});
 
-				const conv = settings.metric === "DEFAULT" ? 1 : settings.metric === "SI" ? 1.852 : 1.15078;
+				const conv = settings.metric === "DEFAULT" ? 1.852 : settings.metric === "SI" ? 1 : 1.15078;
 
-				const range = [10000, 25000, 50000, 100000];
+				const range = [5000, 10000, 25000, 50000, 100000];
 
 				for (var i = 0; i < range.length; i++) {
-					const distanceCircle = new ol.Feature({
-						geometry: new ol.geom.Circle(ol.proj.fromLonLat([lon, lat]), range[i] * conv)
+
+					let distanceCircle = new ol.Feature({
+						geometry: createDistanceGeometry(lat, lon, range[i] * conv)
 					});
+
 					distanceCircle.setStyle(greyLineStyle);
-					distanceCircle.tooltip = range[i] / 1000 + "K " + getDistanceUnit();
+					const unit = getDistanceUnit().toUpperCase();
+					distanceCircle.tooltip = range[i] / 1000 + "K " + unit;
 					rangeVector.addFeature(distanceCircle);
 					distanceFeatures.push(distanceCircle);
 				}
