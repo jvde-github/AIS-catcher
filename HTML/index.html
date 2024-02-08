@@ -2463,8 +2463,7 @@
 					ShipXplorer</li>
 				<li class="divider mmsi noandroid"></li>
 				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
-				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
-					Light/Dark mode</li>
+				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle Light/Dark mode</li>
 			</ul>
 
 			<div id="dialog-box" class="hidden">
@@ -2928,7 +2927,8 @@
 								d="M240-400q-33 0-56.5-23.5T160-480q0-33 23.5-56.5T240-560q33 0 56.5 23.5T320-480q0 33-23.5 56.5T240-400Zm240 0q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm240 0q-33 0-56.5-23.5T640-480q0-33 23.5-56.5T720-560q33 0 56.5 23.5T800-480q0 33-23.5 56.5T720-400Z" />
 						</svg>
 					</button>
-					<button type="button" id="xchange" class="btn btn-primary map-button fill-red">
+					<button type="button" id="xchange" onclick="showCommunity()"
+						class="btn btn-primary map-button fill-red">
 
 						<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20">
 							<path
@@ -3419,6 +3419,14 @@
 			let shipOutlineCoords = [A, B, C, D, E, A].map(coord => ol.proj.fromLonLat(coord));
 			return new ol.geom.Polygon([shipOutlineCoords]);
 		}
+
+		function showCommunity() {
+			if (!communityFeed) {
+				showDialog("Community feed is not available", "Enable by running with -X which will send your AIS data to aiscatcher.org and enable the options</br>Thank you for supporting AIS-catcher");
+				return;
+			}
+		}
+
 		async function showNMEA(m) {
 			if (typeof message_save !== "undefined" && message_save) {
 				const s = await fetchJSON("message", m);
