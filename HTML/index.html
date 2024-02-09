@@ -322,7 +322,7 @@
 		}
 
 		#menubar {
-			z-index: 9999;
+			z-index: 99999;
 			background: var(--menu-background-color);
 			color: var(--menu-font-color);
 			text-align: center;
@@ -3078,6 +3078,7 @@
 			setFading(settings.fading);
 
 			updateFocusMarker();
+			removeDistanceCircles();
 
 			settings.tab = t;
 			settings.welcome = false;
