@@ -2487,7 +2487,8 @@
 						<header>System</header>
 						<section class="noandroid">
 							<div><span>Station</span><span id="stat_station"></span></div>
-							<div title ="feeding aiscatcher.org"><span>Feeding Hub</span><span id="stat_sharing"></span></div>
+							<div title="feeding aiscatcher.org"><span>Feeding Hub</span><span id="stat_sharing"></span>
+							</div>
 						</section>
 						<section class="noandroid">
 							<div><span>OS</span><span id="stat_os"></span></div>
@@ -4744,8 +4745,7 @@
 					});
 
 					distanceCircle.setStyle(greyLineStyle);
-					const unit = getDistanceUnit().toUpperCase();
-					distanceCircle.tooltip = range[i] / 1000 + "K " + unit;
+					distanceCircle.tooltip = range[i] / 1000 + " " + getDistanceUnit().toUpperCase();
 					rangeVector.addFeature(distanceCircle);
 					distanceFeatures.push(distanceCircle);
 				}
@@ -6996,6 +6996,14 @@
 			await fetchShips(false);
 
 			selectMapTab(m);
+
+			let ship = shipsDB[m].raw;
+			if (ship && ship.lon && ship.lat) {
+				let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
+				let view = map.getView();
+				view.setCenter(shipCoords);
+			}
+
 			if (z) mapResetView(z);
 			else mapResetView(14);
 
