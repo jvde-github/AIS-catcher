@@ -18,11 +18,11 @@ The evolution of AIS-Catcher into a comprehensive tool depends on community part
 
 ## How to Participate
 
-Joining is straightforward: simply append -X to your command line. This action anonymously contributes your station's raw AIS data (same as what you send to MarineTraffic et al.) to our community hub, activating a "Community Feed" in your station's web viewer (under map layers). See below for a glimpse into how it integrates with your local dashboard:
+Joining is simple: just add -X to your command line. This step will anonymously share your station's raw AIS data—identical to the data you send to services like MarineTraffic—with our community hub. It activates a "Community Feed" in your station's web viewer, accessible under map layers. Below, you can see how it integrates with your local dashboard. The grey ship icons represent vessels not directly received by your station but detected by nearby stations.
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
 </p>
-No account or persoanl data is required. 
+No account is required and of course sharing with the community is fully optional.  
 
 ## We Value Your Ideas
 
