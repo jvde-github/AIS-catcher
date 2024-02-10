@@ -6049,7 +6049,7 @@
 		}
 
 		function getTooltipContent(ship) {
-			return '<div>' + getFlag(ship.country, '60px') + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b></div><div>${getDeltaTimeVal(ship.last_signal)} ago</div></div>`;
+			return '<div>' + getFlag(ship.country, '60px') + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
 		}
 
 		function getTypeVal(ship) {
