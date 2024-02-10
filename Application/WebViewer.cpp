@@ -227,6 +227,12 @@ void WebViewer::close() {
 #include "HTML/HTML_local.cpp"
 #include "HTML/favicon.cpp"
 
+std::string startCatch() { return "try{"; }
+
+std::string endCatch(const std::string& plugin) {
+	return "} catch (error) { showDialog(\"Error in Plugin " + plugin + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }";
+}
+
 void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, bool gzip) {
 
 	std::string r;
@@ -304,7 +310,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
 		content += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
 		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
-		content += "\"sharing\":" + std::string(communityFeed?"true":"false") + ",";
+		content += "\"sharing\":" + std::string(communityFeed ? "true" : "false") + ",";
 
 		content += "\"station\":" + station + ",";
 		content += "\"station_link\":" + station_link + ",";
@@ -375,9 +381,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		ResponseRaw(c, "image/png", (char*)icons_png_gz, icons_png_gz_len, true);
 	}
 	else if (r == "/config.js") {
-		const std::string start = "try{";
-		const std::string end = "} catch (error) { showDialog(\"Error in Plugins\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }";
-		Response(c, "application/javascript", params + start +  plugins + end + "\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins + "\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
 	else if (r == "/config.css") {
 		Response(c, "text/css", stylesheets, use_zlib & gzip);
@@ -559,9 +563,10 @@ Setting& WebViewer::Set(std::string option, std::string arg) {
 		plugins += "plugins += 'JS: " + arg + "\\n';";
 		plugins += "\n\n//=============\n//" + arg + "\n\n";
 		try {
-			plugins += Util::Helper::readFile(arg);
+			plugins += startCatch() + Util::Helper::readFile(arg) + endCatch(arg);
 		}
 		catch (const std::exception& e) {
+
 			plugins += "// FAILED\n";
 			std::cerr << "Server: JS plugin error - " << e.what() << std::endl;
 			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
