@@ -2300,6 +2300,13 @@
 						</span>
 					</div>
 					<div>
+						<span>Font Size</span>
+						<span>
+							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
+								onchange="setMapSetting('tooltipLabelFontSize', this.value)" />
+						</span>
+					</div>
+					<div>
 						<span>Declutter</span><span>
 							<input type="checkbox" id="settings_labels_declutter"
 								onchange="setMapSetting('labels_declutter',this.checked)" />
@@ -3043,6 +3050,7 @@
 				tooltipLabelColorDark: "#ffffff",
 				tooltipLabelShadowColor: "#000000",
 				tooltipLabelShadowColorDark: "#000000",
+				tooltipLabelFontSize: 12,
 				shiphover_color: "#FFA500",
 				shipselection_color: "#943b3e",
 				shipoutline_border: "#A9A9A9",
@@ -3278,6 +3286,7 @@
 		}
 
 		var labelStyle = function (feature) {
+			const font = settings.tooltipLabelFontSize + "px Arial";
 			return new ol.style.Style({
 				text: new ol.style.Text({
 					text: feature.ship.shipname || feature.ship.mmsi.toString(),
@@ -3291,7 +3300,7 @@
 						color: settings.dark_mode ? settings.tooltipLabelShadowColorDark : settings.tooltipLabelShadowColor,
 						width: 5
 					}),
-					font: '12px Arial'
+					font: font
 				})
 			});
 		};
@@ -7024,6 +7033,8 @@
 			document.getElementById("settings_distance_circle_color").value = settings.distance_circle_color;
 
 			document.getElementById("settings_labels_declutter").checked = settings.labels_declutter;
+			document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
+
 			document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
 
 			document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
