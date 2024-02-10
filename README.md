@@ -28,7 +28,7 @@ No account is required and of course sharing with the community is fully optiona
 
 Your support is pivotal in nurturing a vibrant, data-rich network. We're equally eager to hear your innovative ideas for enhancing AIS-catcher with this collective data. Your insights could lead to new features or improvements that benefit everyone in the community.
 
-Kind regards,
+Thank you for considering, with kind regards,
 Jasper
 
 </blockquote>
