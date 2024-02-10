@@ -6,13 +6,36 @@ This repository presents the `AIS-catcher` software, a versatile dual-channel AI
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9fd27b96-e37a-4f92-869c-b0ba782c12fa.png" width="90%"/>
 </p>
 
- A few examples of live stations are available online, for example for [East Boston, US](https://kx1t.com/ais/). Thank you [KX1T](https://kx1t.com/) for making this available. By way of example, I am also sharing my own station at [aiscatcher.org](https://aiscatcher.org/southwood).
+<blockquote style="border:2px solid green; padding:10px;">
+	
+# Update: Join Our Mission to Enhance AIS-Catcher
 
-## License
+AIS-Catcher has been a labor of love from the start. As a free, open-source project, it transforms SDR-equipped computers into AIS-receivers, continually enhanced through dedicated efforts in decoding improvements, user support, and expanded output options to serve various data aggregators. Our next ambitious step involves leveraging aggregated AIS data for real-time visualization in our local web dashboards. This will offer insights into receiver performance and situational awareness by integrating data from nearby stations. That is the simple idea.
+
+## Why Your Contribution Matters
+
+The evolution of AIS-Catcher into a comprehensive tool depends on community participation. By sharing AIS data with aiscatcher.org, you join a collective endeavor that enriches the AIS-Catcher ecosystem. This collaboration not only advances the project but also cultivates a more intricate and informative network for all users.
+
+## How to Participate
+
+Joining is straightforward: simply append -X to your command line. This action anonymously contributes your station's raw AIS data (akin when you send to MarineTraffic et al.) to our community hub, activating a "Community Feed" in your station's web viewer. See below for a glimpse into how it integrates with your local dashboard:
+<p align="center">
+<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
+</p>
+
+## We Value Your Ideas
+
+Your support is pivotal in nurturing a vibrant, data-rich network. We're equally eager to hear your innovative ideas for enhancing AIS-catcher with this collective data. Your insights could lead to new features or improvements that benefit everyone in the community.
+
+Jasper
+
+</blockquote>
+
+# License
 
 Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
 
-## Purpose
+# Purpose
 
 The purpose of `AIS-catcher` is to serve as a platform that encourages the perpetual enhancement of receiver models. We greatly value and appreciate any suggestions, observations, or shared recordings, particularly from setups where the existing models encounter difficulties.
 
@@ -31,13 +54,6 @@ Only use this software in regions where such use is permitted.
 Making enhancements to build a server version to handle high data throughput and manage multiple stations, for a sneak peek see [here](https://aiscatcher.org/#liveais).
 
 **Edge** version:
-- Switch `-X` that will feed the AIS messages to `aiscatcher.org` and will help support the continuous development of AIS-catcher. In the webviewer this  will then introduce an additional map layer that shows ships received by other terrestrial stations, e.g. what is shared by others. The following is an example from my own station. The layer is  available when feeding with -X and is called "Community Feed" (otherwise the handshake icon is shown in red):
-  
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
-</p>
-
-Your support is much appreciated!
 - Performance improvements when drawing a large number of vessels by switching from Leaflet to Openlayers (notice this might require re-working some plugins). in openlayers it is more straightforward to plot ship icons on the canvas.
 - option `f` that writes the NMEA lines to a specified file
 - smaller default icons and setting option to set icon size
