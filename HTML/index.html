@@ -2930,7 +2930,7 @@
 				</div>
 
 				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
-					style=" bottom: 120px; border-radius: 5px;">
+					style=" bottom: 140px; border-radius: 5px;">
 					<button type="button" onclick='showContextMenu(event, "", ["settings", "center", "ctx-map"]);'
 						class="btn btn-primary map-button color-grey">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
@@ -2949,7 +2949,7 @@
 				</div>
 
 				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
-					style=" bottom: 10px; border-radius: 5px;">
+					style=" bottom: 30px; border-radius: 5px;">
 					<button type="button" id="zoom-in" class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z" />
@@ -2966,6 +2966,11 @@
 								d="M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z" />
 						</svg>
 					</button>
+				</div>
+
+				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
+					style="padding: 3px; bottom: 0px; right: 10px; font-size: 8px; border-radius: 0px;">
+					<span id="map_attributions"></span>
 				</div>
 			</div>
 		</div>
@@ -3898,7 +3903,7 @@
 		function triggerMapLayer() {
 
 			if (activeTileLayer)
-					activeTileLayer.setVisible(false);
+				activeTileLayer.setVisible(false);
 
 			if (settings.dark_mode) {
 				activeTileLayer = settings.map_night in basemaps ? basemaps[settings.map_night] : basemaps[Object.keys(basemaps)[0]];
@@ -3916,6 +3921,16 @@
 						overlapmaps[settings.map_overlay[i]].setVisible(settings.map_overlay[i] in overlapmaps);
 				}
 			}
+
+			var attributions = activeTileLayer.getSource().getAttributions();
+			var mapAttributions = document.getElementById("map_attributions");
+			if (typeof attributions === 'function') {
+				var currentAttributions = attributions();
+				mapAttributions.innerHTML = currentAttributions.join(', ');
+			} else if (Array.isArray(attributions)) {
+				mapAttributions.innerHTML = attributions.join(', ');
+			}
+
 		}
 
 		var dynamicStyle = document.createElement("style");
@@ -7496,7 +7511,7 @@
 			document.getElementById("realtime_tab").style.display = "none";
 			document.getElementById("realtime_tab_mini").style.display = "none";
 		}
-		
+
 		showWelcome();
 
 		if (isAndroid()) showMenu();
