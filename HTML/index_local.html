@@ -2469,6 +2469,7 @@
 				<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on
 					ShipXplorer</li>
 				<li class="divider mmsi noandroid"></li>
+				<li class="settings" onclick="showServerErrors()"><i class="label_icon"></i>Show Server Errors</li>
 				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
 				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
 					Light/Dark mode</li>
@@ -3896,20 +3897,18 @@
 
 		function triggerMapLayer() {
 
-			if (settings.dark_mode) {
-				if (activeTileLayer)
+			if (activeTileLayer)
 					activeTileLayer.setVisible(false);
 
+			if (settings.dark_mode) {
 				activeTileLayer = settings.map_night in basemaps ? basemaps[settings.map_night] : basemaps[Object.keys(basemaps)[0]];
-				activeTileLayer.setVisible(true);
 
 			} else {
-				if (activeTileLayer)
-					activeTileLayer.setVisible(false);
-
 				activeTileLayer = settings.map_day in basemaps ? basemaps[settings.map_day] : basemaps[Object.keys(basemaps)[0]];
-				activeTileLayer.setVisible(true);
 			}
+
+			activeTileLayer.setVisible(true);
+			console.log("Map layer: " + activeTileLayer.get("title") + " visible: " + activeTileLayer.getMaxZoom() + " " + activeTileLayer.minZoom);
 
 			if (settings.map_overlay.length > 0) {
 				for (let i = 0; i < settings.map_overlay.length; i++) {
@@ -3989,7 +3988,7 @@
 				view: new ol.View({
 					center: ol.proj.fromLonLat([settings.lon || 0, settings.lat || 0]),
 					zoom: settings.zoom || 6,
-					enableRotation: false
+					enableRotation: false,
 				}),
 				controls: []
 			})
@@ -4536,7 +4535,7 @@
 		}
 
 		function showServerErrors() {
-			if (server_message !== "") showDialog("Warning", "<pre>" + server_message + "</pre>");
+			showDialog("Server Errors", server_message == "" ? "None" : ("<pre>" + server_message + "</pre>"));
 		}
 
 		async function fetchStatistics() {
@@ -7497,7 +7496,7 @@
 			document.getElementById("realtime_tab").style.display = "none";
 			document.getElementById("realtime_tab_mini").style.display = "none";
 		}
-		showServerErrors();
+		
 		showWelcome();
 
 		if (isAndroid()) showMenu();
