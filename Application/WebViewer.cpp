@@ -106,8 +106,8 @@ void WebViewer::addPlugin(const std::string& arg) {
 				break;
 			}
 		}
-		std::cerr << "Adding plugin (JS). Description: \"" << description << "\", Author: \"" << author << "\", version " << version << std::endl;
-		if(version != 2)
+		std::cerr << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version << std::endl;
+		if (version != 2)
 			throw std::runtime_error("Version not supported, expected 2, got " + std::to_string(version));
 		plugins += "try{" + s + "} catch (error) { showDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }";
 	}
