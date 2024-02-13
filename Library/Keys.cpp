@@ -42,6 +42,7 @@ namespace AIS {
 		{ "", "", "", "", "airspyhf" },
 		{ "", "", "", "", "allow_type" },
 		{ "", "", "", "", "antenna" },
+		{ "", "", "", "", "author" },
 		{ "", "", "", "", "backup" },
 		{ "", "", "", "", "bandwidth" },
 		{ "", "", "", "", "baudrate" },

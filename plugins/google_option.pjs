@@ -1,4 +1,4 @@
-// {"author":"jvde-github","description":"add option to look up location in Google Maps"}
+// {"author":"jvde-github","description":"add option to look up location in Google Maps", "version": 2}
 
 
 function openGoogle() {

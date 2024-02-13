@@ -101,6 +101,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	std::thread backup_thread;
 
 	void BackupService();
+	void addPlugin(const std::string &str);
 
 	bool Load();
 	bool Save();

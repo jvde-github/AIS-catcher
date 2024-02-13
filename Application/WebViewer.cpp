@@ -71,6 +71,54 @@ bool WebViewer::Load() {
 	return true;
 }
 
+void WebViewer::addPlugin(const std::string& arg) {
+	int version = 0;
+	std::string author, description;
+
+	plugins += "console.log('plugin:" + arg + "');";
+	plugins += "plugins += 'JS: " + arg + "\\n';";
+	plugins += "\n\n//=============\n//" + arg + "\n\n";
+	try {
+		std::string s = Util::Helper::readFile(arg);
+
+		JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
+		std::string firstline = s.substr(0, s.find('\n'));
+		if (firstline.length() > 2 && firstline[0] == '/' && firstline[1] == '/')
+			firstline = firstline.substr(2);
+		else
+			throw std::runtime_error("Plugin does not start with // followed by JSON description.");
+
+		std::shared_ptr<JSON::JSON> j = parser.parse(firstline);
+
+		for (const auto& p : j->getProperties()) {
+			switch (p.Key()) {
+			case AIS::KEY_SETTING_VERSION:
+				version = p.Get().getInt();
+				break;
+			case AIS::KEY_SETTING_AUTHOR:
+				author = p.Get().getString();
+				break;
+			case AIS::KEY_SETTING_DESCRIPTION:
+				description = p.Get().getString();
+				break;
+			default:
+				throw std::runtime_error("Unknown key in plugin JSON field");
+				break;
+			}
+		}
+		std::cerr << "Adding plugin (JS). Description: \"" << description << "\", Author: \"" << author << "\", version " << version << std::endl;
+		if(version != 2)
+			throw std::runtime_error("Version not supported, expected 2, got " + std::to_string(version));
+		plugins += "try{" + s + "} catch (error) { showDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }";
+	}
+	catch (const std::exception& e) {
+
+		plugins += "// FAILED\n";
+		std::cerr << "Server: Plugin ignored - JS plugin error : " << e.what() << std::endl;
+		plugins += "server_message += \"Plugin error (" + arg + ") " + std::string(e.what()) + "\\n\"\n";
+	}
+}
+
 void WebViewer::BackupService() {
 
 	try {
@@ -227,11 +275,6 @@ void WebViewer::close() {
 #include "HTML/HTML_local.cpp"
 #include "HTML/favicon.cpp"
 
-std::string startCatch() { return "try{"; }
-
-std::string endCatch(const std::string& plugin) {
-	return "} catch (error) { showDialog(\"Error in Plugin " + plugin + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }";
-}
 
 void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, bool gzip) {
 
@@ -558,19 +601,7 @@ Setting& WebViewer::Set(std::string option, std::string arg) {
 			plugins += "realtime_enabled = false;\n";
 	}
 	else if (option == "PLUGIN") {
-		std::cerr << "Server: adding plugin (JS): " << arg << std::endl;
-		plugins += "console.log('plugin:" + arg + "');";
-		plugins += "plugins += 'JS: " + arg + "\\n';";
-		plugins += "\n\n//=============\n//" + arg + "\n\n";
-		try {
-			plugins += startCatch() + Util::Helper::readFile(arg) + endCatch(arg);
-		}
-		catch (const std::exception& e) {
-
-			plugins += "// FAILED\n";
-			std::cerr << "Server: JS plugin error - " << e.what() << std::endl;
-			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
-		}
+		addPlugin(arg);
 	}
 	else if (option == "STYLE") {
 		std::cerr << "Server: adding plugin (CSS): " << arg << std::endl;
