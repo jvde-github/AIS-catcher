@@ -53,6 +53,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 **v0.57** version:
+- Please note that you have to update any plugins to the latest version!
 - Community feed by running with -X. This will feed the aiscatcher.org server and return data as an extra map layer option in your webviewer.
 - Performance improvements when drawing a large number of vessels by switching from Leaflet to Openlayers (notice this might require re-working some plugins). in openlayers it is more straightforward to plot ship icons on the canvas.
 - option `f` that writes the NMEA lines to a specified file
