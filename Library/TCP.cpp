@@ -448,6 +448,7 @@ namespace TCP {
 			if (error != 0) return false;
 
 			state = READY;
+			connects++;
 			return true;
 		}
 

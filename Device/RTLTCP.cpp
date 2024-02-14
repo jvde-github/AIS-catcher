@@ -28,10 +28,7 @@ namespace Device {
 		Device::Close();
 	}
 
-	void RTLTCP::Play() {
-
-		if (!client.connect(host, port, persistent, timeout))
-			throw std::runtime_error("RTLTCP: cannot open socket.");
+	void RTLTCP::sendProtocol() {
 
 		if (Protocol == PROTOCOL::RTLTCP) {
 			struct {
@@ -39,12 +36,28 @@ namespace Device {
 			} dongle;
 			// RTLTCP protocol, check for dongle information
 			int len = client.read((char*)&dongle, 12, timeout);
-			if (len != 12 || dongle.magic != 0x304C5452) throw std::runtime_error("RTLTCP: no or invalid response, likely not an rtl-tcp server.");
+			if (len != 12 || dongle.magic != 0x304C5452) {
+				std::cerr << "RTLTCP: no or invalid response, likely not an rtl-tcp server." << std::endl;
+				StopRequest();
+			}
 		}
 		else if (Protocol == PROTOCOL::GPSD) {
 			const std::string str = "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\n";
 			int len = client.send(str.c_str(), str.size());
-			if (len != str.size()) throw std::runtime_error("GPSD: no or invalid response, likely not a gpsd server.");
+			if (len != str.size()) {
+				std::cerr << "GPSD: no or invalid response, likely not a gpsd server." << std::endl;
+				StopRequest();
+			}
+		}
+	}
+
+	void RTLTCP::Play() {
+
+		if (!client.connect(host, port, persistent, timeout)) {
+			if (!persistent)
+				throw std::runtime_error("RTLTCP: cannot open socket.");
+
+			std::cerr << "RTLTCP: cannot open socket. Retrying in a few seconds." << std::endl;
 		}
 
 		Device::Play();
@@ -82,10 +95,16 @@ namespace Device {
 	}
 
 	void RTLTCP::RunAsync() {
-		if(buffer.size() < TRANSFER_SIZE)
+		if (buffer.size() < TRANSFER_SIZE)
 			buffer.resize(TRANSFER_SIZE);
 
 		while (isStreaming()) {
+			// send protocol
+			if (client.numberOfConnects() != connects) {
+				connects ++;
+				sendProtocol();
+			}
+
 			int len = client.read(buffer.data(), TRANSFER_SIZE, 2);
 
 			if (len < 0) {
