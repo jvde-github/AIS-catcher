@@ -134,6 +134,7 @@ namespace TCP {
 		int send(const void* data, int length);
 
 		SOCKET getSocket() { return sock; }
+		int numberOfConnects() { return connects; }
 
 	private:
 		enum State { DISCONNECTED,
@@ -145,6 +146,7 @@ namespace TCP {
 		bool persistent = true;
 		int reset_time = -1;
 		int timeout = 0;
+		int connects = 0;
 
 		int sock = -1;
 		State state = DISCONNECTED;

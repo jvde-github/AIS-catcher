@@ -71,6 +71,7 @@ namespace Device {
 		bool persistent = true;
 		int reset_time = -1;
 		bool lost = false;
+		int connects = 0;
 
 		std::thread async_thread;
 		std::thread run_thread;
@@ -82,6 +83,7 @@ namespace Device {
 
 		void setParameterRTLTCP(uint8_t cmd, uint32_t param);
 		void applySettings();
+		void sendProtocol();
 
 	public:
 		RTLTCP() : Device(Format::CF32, 288000) {}
