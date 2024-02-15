@@ -32,7 +32,7 @@
 namespace IO {
 
 	struct HTTPResponse {
-		std::string message;
+		std::string message = "No response.";
 		int status = -1;
 	};
 

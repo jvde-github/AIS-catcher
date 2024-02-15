@@ -88,6 +88,7 @@ namespace IO {
 		}
 		catch (const std::exception&) {
 			result.status = -3;
+			result.message = "Error parsing response.";
 			return;
 		}
 	}
@@ -225,7 +226,7 @@ namespace IO {
 				return response;
 			}
 
-			client.read(buffer, sizeof(buffer), 1, false);
+			client.read(buffer, sizeof(buffer), 2, false);
 		}
 
 		client.disconnect();
