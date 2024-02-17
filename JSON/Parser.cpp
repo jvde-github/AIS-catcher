@@ -63,6 +63,7 @@ namespace JSON {
 			if (std::isdigit(c) || c == '-') {
 				bool floating = false;
 				int start_idx = ptr;
+				bool scientific = false;
 
 				s.clear();
 
@@ -73,9 +74,24 @@ namespace JSON {
 						else
 							floating = true;
 					}
+					else if ((json[ptr] == 'e' || json[ptr] == 'E') && !scientific) {
+						if (!std::isdigit(json[ptr - 1]) && json[ptr - 1] != '.')
+							error("malformed number", ptr);
+
+						scientific = floating = true;
+
+						s += json[ptr++];
+						if (ptr != json.size() && (json[ptr] == '+' || json[ptr] == '-')) {
+							s += json[ptr++];
+						}
+
+						if (ptr == json.size() || !std::isdigit(json[ptr]))
+							error("malformed number", ptr);
+					}
+					
 					s += json[ptr++];
 
-				} while (ptr != json.size() && (std::isdigit(json[ptr]) || json[ptr] == '.'));
+				} while (ptr != json.size() && (std::isdigit(json[ptr]) || json[ptr] == '.' || json[ptr] == 'e' || json[ptr] == 'E'));
 
 				tokens.push_back(Token(floating ? TokenType::FloatingPoint : TokenType::Integer, s, ptr));
 			}
