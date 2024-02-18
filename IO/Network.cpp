@@ -498,7 +498,10 @@ namespace IO {
 	void TCPClientStreamer::Start() {
 
 		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
-		if (filter.isOn()) std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+		if (filter.isOn()) {
+			std::cerr << ", gps: " << Util::Convert::toString(filter.includeGPS());
+			std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+		}
 		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
 		std::cerr << ", KEEP_ALIVE: " << Util::Convert::toString(keep_alive);
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ", status: ";

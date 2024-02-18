@@ -370,6 +370,10 @@ namespace AIS {
 	}
 
 	std::string Filter::getAllowed() {
+
+		if(allow == all_msg)
+			return std::string("ALL");
+
 		std::string ret;
 		for (unsigned i = 1; i <= 27; i++) {
 			if ((allow & (1U << i)) > 0)
