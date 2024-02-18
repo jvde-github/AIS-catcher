@@ -22,7 +22,7 @@ Joining is simple: just add -X to your command line. This step will anonymously 
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
 </p>
-No account is required and of course sharing with the community is fully optional. See what data we are currently receiving (https://aiscatcher.org/hub).
+No account is required and of course sharing with the community is fully optional. See what data we are currently receiving (https://aiscatcher.org).
 
 ## We Value Your Ideas
 
