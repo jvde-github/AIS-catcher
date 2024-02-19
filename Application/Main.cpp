@@ -90,6 +90,7 @@ static void Usage() {
 	std::cerr << "\t[-T xx - auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
 	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]" << std::endl;
+	std::cerr << "\t[-X connect to AIS community feed at aiscatcher.org (default: off)]" << std::endl;
 	std::cerr << std::endl;
 	std::cerr << "\tDevice selection:" << std::endl;
 	std::cerr << std::endl;

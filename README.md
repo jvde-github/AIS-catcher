@@ -123,6 +123,7 @@ use: AIS-catcher [options]
 	[-T xx - auto terminate run with SDR after xxx seconds (default: off)]
 	[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]
 	[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]
+	[-X connect to AIS community feed at aiscatcher.org (default: off)]
 
 	Device selection:
 
@@ -176,11 +177,16 @@ AIS-catcher -L
 ```
 This lists all devices for which support is included in the executable. If particular hardware is not listed here, you might have to install the necessary libraries and rebuild AIS-catcher.
 
-To start AIS decoding, print some occasional statistics (every 10 seconds) and send AIS messages via UDP to ports 10110 and 10111, we can use the following command:
+To start AIS decoding, print some occasional statistics (every 10 seconds)
 ```console
-AIS-catcher -v 10 -u 127.0.0.1 10110 -u 127.0.0.1 10111
+AIS-catcher -v 10
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111`. These UDP messages are the primary method to forward messages for visualization in OpenCPN or to AIS aggregator websites like MarineTraffic, FleetMon, VesselFinder, ShipXplorer and others. See below for more pointers on how this can be set up.
+The next step is to share the data with other programs or services. 
+To share your raw feed with other AIS-catcher users (and see their data in your webviewer - see below) use -X (you can see the total feed at aiscatcher.org. Additionally, for sending the messages via UDP to ports 10110 and 10111, we can use the following command:
+```console
+AIS-catcher -v 10 -X -u 127.0.0.1 10110 -u 127.0.0.1 10111
+```
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111` annd will be visible on [aiscatcher.org](aiscatcher.org). The UDP messages are the primary method to forward messages for visualization in OpenCPN or to AIS aggregator websites like MarineTraffic, FleetMon, VesselFinder, ShipXplorer and others. See below for more pointers on how this can be set up.
 The AIS NMEA lines on screen can be suppressed with the option ```-q```. 
 
 For RTL-SDR devices performance can be sensitive to the device settings. In general, a good starting point is the following:
