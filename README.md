@@ -52,6 +52,9 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
+**Edge** version:
+- RTLSDR V4 support in docker image
+
 **v0.57** version:
 - Please note that you have to update any plugins to the latest version!
 - Community feed by running with -X. This will feed the aiscatcher.org server and return data as an extra map layer option in your webviewer.
