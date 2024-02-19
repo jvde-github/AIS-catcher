@@ -12,7 +12,7 @@ RUN apt-get install libusb-1.0.0-dev libairspy-dev libhackrf-dev libairspyhf-dev
 COPY . /root/AIS-catcher
 
 RUN cd /root/AIS-catcher; git clone https://github.com/osmocom/rtl-sdr.git
-RUN cd /root/AIS-catcher/rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON; make; make install;
+RUN cd /root/AIS-catcher/rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install; 
 RUN cp /root/AIS-catcher/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/
 RUN ldconfig
 
@@ -30,12 +30,15 @@ RUN apt-get update
 RUN apt-get upgrade -y
 
 RUN apt-get install git make gcc g++ cmake pkg-config libusb-1.0-0-dev -y
-RUN apt-get install libusb-1.0.0-dev libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 libpq5 libz1 libssl3 -y
+RUN apt-get install libusb-1.0 libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 libpq5 libz1 libssl3 -y
 
 RUN cd /root; git clone https://github.com/osmocom/rtl-sdr.git
-RUN cd /root/rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON; make; make install;
+RUN cd /root/rtl-sdr; mkdir build; cd build; cmake ../ -DCMAKE_BUILD_TYPE=Release -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install;
 RUN cp /root/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/
 RUN ldconfig
+
+RUN apt-get remove git make gcc g++ cmake pkg-config libusb-1.0-0-dev -y
+RUN  apt-get autoremove -y
 
 COPY --from=build /usr/local/bin/AIS-catcher /usr/local/bin/AIS-catcher
 
