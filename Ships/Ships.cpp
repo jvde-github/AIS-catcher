@@ -236,6 +236,7 @@ int Ship::getMMSItype() {
 	if (msg_type & BASESTATION_MASK) {
 		return MMSI_BASESTATION;
 	}
+
 	if (msg_type & SAR_MASK) {
 		return MMSI_SAR;
 	}
@@ -370,11 +371,8 @@ int Ship::getShipTypeClass() {
 		break;
 	case MMSI_SAR:
 		c = CLASS_HELICOPTER;
-		if ((mmsi > 111000000 && mmsi < 111999999) || (mmsi > 11100000 && mmsi < 11199999)) {
-			if ((mmsi / 100) % 10 == 1 || (mmsi / 10) % 10 == 1) {
+		if ((mmsi > 111000000 && mmsi < 111999999 && (mmsi / 100) % 10 == 1) || (mmsi > 11100000 && mmsi < 11199999 && (mmsi / 10) % 10 == 1))
 				c = CLASS_PLANE;
-			}
-		}
 		break;
 	case MMSI_SARTEPIRB:
 		c = CLASS_SARTEPIRB;
