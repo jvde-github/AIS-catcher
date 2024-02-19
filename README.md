@@ -182,11 +182,11 @@ To start AIS decoding, print some occasional statistics (every 10 seconds)
 AIS-catcher -v 10
 ```
 The next step is to share the data with other programs or services. 
-To share your raw feed with other AIS-catcher users (and see their data in your webviewer - see below) use -X (you can see the total feed at aiscatcher.org. Additionally, for sending the messages via UDP to ports 10110 and 10111, we can use the following command:
+To share your raw feed with other AIS-catcher users (and see their data in your webviewer - see below) use `-X`. Additionally, for sending the messages via UDP to ports 10110 and 10111, we can use the following command:
 ```console
 AIS-catcher -v 10 -X -u 127.0.0.1 10110 -u 127.0.0.1 10111
 ```
-If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111` annd will be visible on [aiscatcher.org](aiscatcher.org). The UDP messages are the primary method to forward messages for visualization in OpenCPN or to AIS aggregator websites like MarineTraffic, FleetMon, VesselFinder, ShipXplorer and others. See below for more pointers on how this can be set up.
+If successful, NMEA messages will start to come in, appear on the screen and send as UDP messages to `127.0.0.1` port `10110` and port `10111` and will be visible on [aiscatcher.org](https://aiscatcher.org). The UDP messages are the primary method to forward messages for visualization in OpenCPN or to AIS aggregator websites like MarineTraffic, FleetMon, VesselFinder, ShipXplorer and others. See below for more pointers on how this can be set up.
 The AIS NMEA lines on screen can be suppressed with the option ```-q```. 
 
 For RTL-SDR devices performance can be sensitive to the device settings. In general, a good starting point is the following:
