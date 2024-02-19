@@ -205,6 +205,12 @@ AIS-catcher -s 288K
 ```
 Reception will be impacted though. Unfortunately, latest feedback seems to be that this is best way to run on the Zero W as this Zero is struggling with the high data throuugput. Another drawback of these lower cost boards is that they can create interference that impacts the radio reception.
 
+Finally, to create a webviewer that you can access from your local network, use the following command:
+```console
+AIS-catcher -N 8100
+```
+A simple webviewer with a map (and community feed) will be available at `http://localhost:8100`. The webviewer can be accessed from any device on the same network with the IP address of the machine. The webviewer can be customized, see below.
+
 That's all there is. Below we will dive into some more details.
 
 ## Deep dives
