@@ -5699,7 +5699,7 @@
 
 				var statSharingElement = document.getElementById("stat_sharing");
 				if (stat.sharing) {
-					statSharingElement.innerHTML = "Yes";
+					statSharingElement.innerHTML = "<a href='" + stat.sharing_link + "'>Yes</a>";
 					statSharingElement.style.color = "green";
 				} else {
 					statSharingElement.innerHTML = "No";
