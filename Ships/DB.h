@@ -86,6 +86,8 @@ public:
 	void setup();
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setShareLatLon(bool b) { latlon_share = b; }
+	bool getShareLatLon() { return latlon_share; }
+	
 	bool setUseGPS(bool b) { return use_GPS = b; }
 	void setLatLon(float lat, float lon) {
 		this->lat = lat;
@@ -93,6 +95,10 @@ public:
 	}
 	void setLat(float lat) { this->lat = lat; }
 	void setLon(float lon) { this->lon = lon; }
+
+	float getLat() { return lat; }
+	float getLon() { return lon; }
+
 	void setOwnMMSI(uint32_t mmsi) { own_mmsi = mmsi; }
 
 	void Receive(const JSON::JSON* data, int len, TAG& tag);
