@@ -5698,13 +5698,10 @@
 				if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
 				var statSharingElement = document.getElementById("stat_sharing");
-				if (stat.sharing) {
-					statSharingElement.innerHTML = "<a href='" + stat.sharing_link + "'>Yes</a>";
-					statSharingElement.style.color = "green";
-				} else {
-					statSharingElement.innerHTML = "<a href='" + stat.sharing_link + "'>No</a>";
-					statSharingElement.style.color = "red";
-				}
+
+				statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank">${stat.sharing ? 'Yes' : 'No'}</a>`;
+				statSharingElement.style.color = stat.sharing ? "green" : "red";
+
 
 				document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
 				var title = document.getElementById("stat_station").textContent;
