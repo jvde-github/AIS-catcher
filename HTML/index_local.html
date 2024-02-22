@@ -2522,6 +2522,8 @@
 							<div><span>Data processed</span><span id="stat_received"></span></div>
 							<div><span>Running time</span><span id="stat_run_time"></span></div>
 							<div><span>Message rate</span><span id="stat_msg_rate"></span></div>
+							<div><span></span><span id="stat_msg_min_rate"></span></div>
+
 						</section>
 					</div>
 
@@ -5709,6 +5711,7 @@
 
 				document.getElementById("stat_memory").innerHTML = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
 				document.getElementById("stat_msg_rate").innerHTML = Number(stat.msg_rate).toFixed(1) + " msg/s";
+				document.getElementById("stat_msg_min_rate").innerHTML = Number(stat.last_minute.count).toFixed(0) + " msg/min";
 				document.getElementById("stat_run_time").innerHTML = getDeltaTimeVal(stat.run_time);
 
 				updateStat(stat, "total");
