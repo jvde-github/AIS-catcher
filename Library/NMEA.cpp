@@ -102,7 +102,7 @@ namespace AIS {
 		// multiline messages are now complete and in the right order
 		// we create a message and add the payloads to it
 		msg.clear();
-		msg.Stamp(t);
+		msg.Stamp(stamp ? 0 : t);
 		msg.setOrigin(aivdm.channel, station);
 
 		for (auto it = queue.begin(); it != queue.end(); it++) {
