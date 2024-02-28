@@ -103,6 +103,7 @@ namespace AIS {
 		std::string getUUID() { return uuid; }
 
 		void setStation(int s) { station = s; }
+		int getStation() { return station; }
 
 		void setCRCcheck(bool b) { crc_check = b; }
 		bool getCRCcheck() { return crc_check; }
