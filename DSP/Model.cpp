@@ -718,7 +718,7 @@ namespace AIS {
 	}
 
 	std::string ModelNMEA::Get() {
-		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " uuid " + nmea.getUUID() + " stamp " + Util::Convert::toString(nmea.getStamp()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
+		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " uuid " + nmea.getUUID() + " ID " + std::to_string(nmea.getStation()) + " stamp " + Util::Convert::toString(nmea.getStamp()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
 	}
 
 	void ModelN2K::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
