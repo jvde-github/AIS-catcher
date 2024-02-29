@@ -83,7 +83,7 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 AIS-catcher began as a basic decoder for RTL-SDR dongles, offering on-screen output and UDP transmission for key aggregation sites. Over time, we've expanded its compatibility to include a wider range of SDRs and input methods. On the output side, it now supports viewing signals and positions through a web viewer, saving to databases, and forwarding as NMEA2000 on Linux systems using socketCAN. This enhancement has subtly shifted AIS-catcher's role, making it a useful tool for managing different AIS data streams. Below is a cheatsheet for the various input and output modes.
 
-![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/fe40c406-f101-407d-b9d8-f10fe008aa87)
+![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/8cac0760-5fbd-4c3b-b75f-5434b2f383b4)
 
 ### Detailed settings
 
