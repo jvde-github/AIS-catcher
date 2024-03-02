@@ -100,6 +100,7 @@ jobs:
           
   macos-intel:
     runs-on: macos-12
+    needs: bakeHTML
     steps:
     - uses: actions/checkout@v4
     
