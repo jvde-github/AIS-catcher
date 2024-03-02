@@ -107,11 +107,13 @@ jobs:
       run: brew update
 
     - name: Install dependencies
-      run: brew install pkg-config libusb airspy airspyhf
+      run: brew install libusb airspy airspyhf hackrf zeromq
       
     - name: Install more recent librtlsdr
       run: git clone https://github.com/osmocom/rtl-sdr && cd rtl-sdr && mkdir build && cd build && cmake -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DCMAKE_BUILD_TYPE=Release .. && make -j3 LIBRARY_PATH=$(pkg-config --libs-only-L libusb-1.0 | sed 's/\-L//') && sudo make install && cd ../../
 
+    - name build AIS-catcher
+      run: mkdir build; cd build; cmake ..; make 
 
   Windows:
     runs-on: windows-2022
