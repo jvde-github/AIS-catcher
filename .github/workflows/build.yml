@@ -98,7 +98,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           
-  macos-arm:
+  macos-intel:
     runs-on: macos-12
     steps:
     - uses: actions/checkout@v4
@@ -114,8 +114,17 @@ jobs:
 
     - name: build AIS-catcher
       run: mkdir build; cd build; cmake ..; make
-      
 
+    - name: upload artifact
+      run: mkdir output; cp AIS-catcher output/
+      
+    - name: Upload Artifacts MACOS-intel
+      uses: actions/upload-artifact@v3
+      with:
+        name: "AIS-catcher macos-intel"
+        path: |
+          output
+          
   Windows:
     runs-on: windows-2022
     needs: bakeHTML
