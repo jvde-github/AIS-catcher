@@ -116,7 +116,7 @@ jobs:
       run: mkdir build; cd build; cmake ..; make
 
     - name: upload artifact
-      run: mkdir output; cp AIS-catcher output/
+      run: mkdir output; cp build/AIS-catcher output/
       
     - name: Upload Artifacts MACOS-intel
       uses: actions/upload-artifact@v3
