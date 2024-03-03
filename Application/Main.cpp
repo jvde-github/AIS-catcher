@@ -479,12 +479,16 @@ int main(int argc, char* argv[]) {
 				}
 				break;
 			case 'X':
-				Assert(count == 0, param, "no parameters allowed.");
+				Assert(count <= 1, param, "Only one optional parameter [sharing key] allowed.");
 				{
 					if (!communityFeed) {
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						IO::OutputMessage& p = *msg.back();
 						p.Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON","on").Set("FILTER","on").Set("GPS","off");
+
+						if(count == 1)
+							p.Set("UUID", arg1);
+
 						communityFeed = true;
 					}
 				}
