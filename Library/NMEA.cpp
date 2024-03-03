@@ -61,7 +61,7 @@ namespace AIS {
 		return c;
 	}
 
-	void NMEA::submitAIS(TAG& tag, long t) {
+	void NMEA::submitAIS(TAG& tag, long t, int thisstation) {
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
 			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "]." << std::endl;
 			if (crc_check) return;
@@ -70,7 +70,7 @@ namespace AIS {
 		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp(stamp ? 0 : t);
-			msg.setOrigin(aivdm.channel, station);
+			msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation);
 
 			addline(aivdm);
 
@@ -103,7 +103,7 @@ namespace AIS {
 		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp(stamp ? 0 : t);
-		msg.setOrigin(aivdm.channel, station);
+		msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation);
 
 		for (auto it = queue.begin(); it != queue.end(); it++) {
 			if (it->channel == aivdm.channel) {
@@ -264,8 +264,7 @@ namespace AIS {
 		return true;
 	}
 
-	bool NMEA::processAIS(const std::string& s, TAG& tag, long t) {
-
+	bool NMEA::processAIS(const std::string& s, TAG& tag, long t, int thisstation) {
 		split(s);
 		aivdm.reset();
 
@@ -299,7 +298,7 @@ namespace AIS {
 
 		aivdm.sentence = s;
 
-		submitAIS(tag, t);
+		submitAIS(tag, t, thisstation);
 
 		return true;
 	}
@@ -315,6 +314,7 @@ namespace AIS {
 				std::string cls = "";
 				std::string dev = "";
 				std::string suuid = "";
+				int thisstation = -1;
 
 				t = 0;
 
@@ -339,6 +339,9 @@ namespace AIS {
 					case AIS::KEY_RXUXTIME:
 						t = p.Get().getInt();
 						break;
+					case AIS::KEY_STATION_ID:
+						thisstation = p.Get().getInt();
+						break;
 					}
 				}
 
@@ -356,7 +359,7 @@ namespace AIS {
 						if (p.Key() == AIS::KEY_NMEA) {
 							if (p.Get().isArray()) {
 								for (const auto& v : p.Get().getArray()) {
-									processAIS(v.getString(), tag, t);
+									processAIS(v.getString(), tag, t, thisstation);
 								}
 							}
 						}

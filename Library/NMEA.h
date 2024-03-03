@@ -62,7 +62,7 @@ namespace AIS {
 
 		std::vector<AIVDM> queue;
 
-		void submitAIS(TAG& tag, long int t);
+		void submitAIS(TAG& tag, long int t, int thisstation);
 		void addline(const AIVDM& a);
 		void reset(char);
 		void clean(char, int);
@@ -85,7 +85,7 @@ namespace AIS {
 		void split(const std::string&);
 		std::string trim(const std::string&);
 		void processJSONsentence(const std::string& s, TAG& tag, long t);
-		bool processAIS(const std::string& s, TAG& tag, long t);
+		bool processAIS(const std::string& s, TAG& tag, long t, int thisstation = -1);
 		bool processGGA(const std::string& s, TAG& tag, long t);
 		bool processGLL(const std::string& s, TAG& tag, long t);
 		bool processRMC(const std::string& s, TAG& tag, long t);
