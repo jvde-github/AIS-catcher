@@ -151,6 +151,18 @@ namespace Util {
 		static long getMemoryConsumption();
 		static std::string getOS();
 		static std::string getHardware();
+		static bool isUUID(const std::string& s) {
+			if (s.size() != 36) return false;
+			for (int i = 0; i < 36; i++) {
+				if (i == 8 || i == 13 || i == 18 || i == 23) {
+					if (s[i] != '-') return false;
+				}
+				else {
+					if (!isxdigit(s[i])) return false;
+				}
+			}
+			return true;
+		}
 	};
 
 	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {

@@ -378,7 +378,7 @@ namespace IO {
 		u_long mode = 1;
 		ioctlsocket(sock, FIONBIO, &mode);
 #endif
-	
+
 #ifndef _WIN32
 		if (broadcast) {
 			int broadcastEnable = 1;
@@ -428,7 +428,10 @@ namespace IO {
 			reset = Util::Parse::Integer(arg, 1, 24 * 60, option);
 		}
 		else if (option == "UUID") {
-			uuid = arg;
+			if(Util::Helper::isUUID(arg))
+				uuid = arg;
+			else
+				throw std::runtime_error("UDP: invalid UUID: " + arg);
 		}
 		else if (!filter.SetOption(option, arg)) {
 			throw std::runtime_error("UDP output - unknown option: " + option);
@@ -486,7 +489,7 @@ namespace IO {
 			for (int i = 0; i < len; i++) {
 				if (!filter.include(data[i])) continue;
 
-				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm) + "\r\n").c_str()) < 0)
+				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, uuid) + "\r\n").c_str()) < 0)
 					if (!persistent) {
 						std::cerr << "TCP feed: requesting termination.\n";
 						StopRequest();
@@ -504,6 +507,7 @@ namespace IO {
 		}
 		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
 		std::cerr << ", KEEP_ALIVE: " << Util::Convert::toString(keep_alive);
+		if (!uuid.empty()) std::cerr << ", UUID: " << uuid;
 		std::cerr << ", JSON: " << Util::Convert::toString(JSON) << ", status: ";
 
 		if (tcp.connect(host, port, persistent, 0, keep_alive))
@@ -543,6 +547,12 @@ namespace IO {
 		}
 		else if (option == "PERSIST") {
 			persistent = Util::Parse::Switch(arg);
+		}
+		else if (option == "UUID") {
+			if(Util::Helper::isUUID(arg))
+				uuid = arg;
+			else
+				throw std::runtime_error("UDP: invalid UUID: " + arg);
 		}
 		else if (!filter.SetOption(option, arg)) {
 			throw std::runtime_error("TCP client - unknown option: " + option);

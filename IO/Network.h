@@ -170,6 +170,7 @@ namespace IO {
 		std::string host, port;
 		bool keep_alive = false;
 		bool persistent = true;
+		std::string uuid;
 
 	public:
 		Setting& Set(std::string option, std::string arg);
