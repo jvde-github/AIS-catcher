@@ -195,7 +195,7 @@ endif()
 
 # Find zlib
 if(ZLIB)
-	if(MSVC AND CURL_INCLUDE_DIR AND CURL_LIBRARY)
+	if(MSVC)
 		find_path(ZLIB_INCLUDE_DIR zlib.h HINTS ${POTHOSSDR_INCLUDE_DIR})
 		find_library(ZLIB_LIBRARY zlib.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
 		find_file(ZLIB_DLL zlib1.dll HINTS ${POTHOSSDR_BINARY_DIR})
