@@ -159,7 +159,6 @@ jobs:
       run: |
         mkdir output; cd output; mkdir plugins; mkdir Licenses; cd ..; mkdir include; cd include; mkdir curl; mkdir openssl; cd ..; mkdir release; mkdir lib;         
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\*.h include
-        cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\curl\*.h include\curl
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\openssl\*.h include\openssl
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
         cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
