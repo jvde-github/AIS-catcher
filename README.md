@@ -41,8 +41,12 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-**Edge** version:
+**v0.58** version:
 - RTLSDR V4 support in docker image
+- Fixing postgres support for windows binaries
+- Support to claim feeders by adding UUID to -X
+
+Earlier versions:
 
 **v0.57** version:
 - Please note that you have to update any plugins to the latest version!
