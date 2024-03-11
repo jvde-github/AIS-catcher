@@ -2246,7 +2246,7 @@
 					<div>
 						<span>Icon Size</span>
 						<span>
-							<input type="range" id="settings_icon_scale" min="0.5" max="1" step="0.01"
+							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
 								onchange="settings.icon_scale = this.value; redrawMap(); saveSettings(); " />
 						</span>
 					</div>
@@ -3034,7 +3034,7 @@
 				android: false,
 				welcome: true,
 				latlon_in_dms: true,
-				icon_scale: 0.85,
+				icon_scale: 1,
 				track_weight: 1,
 				show_range: false,
 				distance_circles: true,
@@ -3280,18 +3280,23 @@
 			});
 		}
 
+
 		var markerStyle = function (feature) {
+
+			var length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
+			var mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+
 			return new ol.style.Style({
 				image: new ol.style.Icon({
 					src: SpritesAll,
 					rotation: feature.ship.rot,
 					offset: [feature.ship.cx, feature.ship.cy],
 					size: [feature.ship.imgSize, feature.ship.imgSize],
-					scale: settings.icon_scale,
+					scale: settings.icon_scale * mult,
 					opacity: 1
 				})
-			})
-		}
+			});
+		};
 
 		var labelStyle = function (feature) {
 			const font = settings.tooltipLabelFontSize + "px Arial";
