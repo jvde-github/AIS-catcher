@@ -61,6 +61,7 @@ class Config {
 	void setServerfromJSON(const JSON::Value& pd);
 	void setReceiverfromJSON(const std::vector<JSON::Property>& pd, bool unspecAllowed);
 	void setReceiverFromArray(const JSON::Property& pd);
+	void setSharing(const std::vector<JSON::Property>& props);
 
 public:
 	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, OutputScreen& s, std::vector<std::unique_ptr<WebViewer>>& v) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v) {}
