@@ -121,6 +121,8 @@ namespace AIS {
 		{ "", "", "", "", "serialport" },
 		{ "", "", "", "", "server" },
 		{ "", "", "", "", "share_loc" },
+		{ "", "", "", "", "sharing" },
+		{ "", "", "", "", "sharing_key" },
 		{ "", "", "", "", "soapysdr" },
 		{ "", "", "", "", "soxr" },
 		{ "", "", "", "", "spyserver" },

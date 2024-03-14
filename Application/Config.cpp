@@ -249,6 +249,31 @@ void Config::read(std::string& file_config) {
 	}
 }
 
+void Config::setSharing(const std::vector<JSON::Property>& props) {
+
+	bool xchange = false;
+	std::string uuid;
+
+	for (const JSON::Property& p : props) {
+		if (p.Key() == AIS::KEY_SETTING_SHARING) {
+			xchange = Util::Parse::Switch(p.Get().to_string());
+		}
+		else if (p.Key() == AIS::KEY_SETTING_SHARING_KEY)
+			uuid = p.Get().to_string();
+	}
+
+	if (xchange && !communityFeed) {
+		communityFeed = true;
+		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+		IO::OutputMessage& p = *_msg.back();
+
+		p.Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
+
+		if (!uuid.empty())
+			p.Set("UUID", uuid);
+	}
+}
+
 void Config::set(const std::string& str) {
 	std::string config, serial, input;
 	int version = 0;
@@ -275,6 +300,7 @@ void Config::set(const std::string& str) {
 		throw std::runtime_error("version and/or format of config file not supported (required version <=1)");
 
 	setReceiverfromJSON(props, true);
+	setSharing(props);
 
 	// pass 2
 	for (const auto& p : props) {
@@ -300,6 +326,8 @@ void Config::set(const std::string& str) {
 		case AIS::KEY_SETTING_FILE:
 		case AIS::KEY_SETTING_ZMQ:
 		case AIS::KEY_SETTING_SPYSERVER:
+		case AIS::KEY_SETTING_SHARING:
+		case AIS::KEY_SETTING_SHARING_KEY:
 			break;
 		case AIS::KEY_SETTING_UDP:
 			setUDPfromJSON(p);
