@@ -114,7 +114,7 @@ void WebViewer::addPlugin(const std::string& arg) {
 	catch (const std::exception& e) {
 
 		plugins += "// FAILED\n";
-		std::cerr << "Server: Plugin ignored - JS plugin error : " << e.what() << std::endl;
+		std::cerr << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what() << std::endl;
 		plugins += "server_message += \"Plugin error (" + arg + ") " + std::string(e.what()) + "\\n\"\n";
 	}
 }
