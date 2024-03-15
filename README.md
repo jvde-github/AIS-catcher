@@ -44,7 +44,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 
 **Edge** version:
-- Add a sharing key to -X via [aiscatcher.org/addstation](aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable in a few weeks a station dashboard.
+- Add a sharing key to -X via [aiscatcher.org/addstation](https://aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable in a few weeks a station dashboard.
 
 **v0.58** version:
 - RTLSDR V4 support in docker image
