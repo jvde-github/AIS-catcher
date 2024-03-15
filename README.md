@@ -1147,6 +1147,9 @@ docker run --device /dev/bus/usb --rm -it ghcr.io/jvde-github/ais-catcher:edge
 ```
 Notice that if you want to run the webviewer (-N 8100) you need to make that available on the host system with (`-p 8100:8100`). To send UDP data to OpenCPN running on the host computer, you can try to find the bridge network address (`sudo docker network inspect bridge` as per [tutorials](https://www.geeksforgeeks.org/how-to-use-docker-default-bridge-networking/) and use this as UDP destination address (e.g. `-u 172.17.0.1  5077`). Alternatively you could use `--network host` although less desirable. Please consult the Docker documentation.
 
+An excellent Docker set-up is the [docker-shipfeeder](https://github.com/sdr-enthusiasts/docker-shipfeeder) that provides a user friendly way to 
+feed various aggregators with excellent documentation and user support by the sdrenthusiasts community.
+
 ## Considerations
 
 ### A note on device sample rates
