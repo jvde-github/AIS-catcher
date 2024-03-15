@@ -7356,6 +7356,29 @@
 				style: feederStyle
 			});
 
+
+			let FeedStationStyle = new ol.style.Style({
+				image: new ol.style.Circle({
+					radius: 4,
+					stroke: new ol.style.Stroke({
+						color: 'white',
+						width: 3
+					}),
+					fill: new ol.style.Fill({
+						color: getComputedStyle(document.documentElement).getPropertyValue('--tertiary-color')
+					}),
+				})
+			});
+
+			var feedStationVector = new ol.source.Vector({
+				features: []
+			});
+
+			var feeStationdLayer = new ol.layer.Vector({
+				source: feedStationVector,
+				style: FeedStationStyle
+			});
+
 			function redrawCommunityFeed(db) {
 
 				feedVector.clear();
@@ -7379,6 +7402,25 @@
 					}
 				}
 			}
+
+			function redrawCommunityStations() {
+				feedStationVector.clear();
+
+				// fetch stations from hub/stations.json
+				fetch("https://aiscatcher.org/hub/stations.json")
+					.then(response => response.json())
+					.then(data => {
+						data.forEach(station => {
+							const point = new ol.geom.Point(ol.proj.fromLonLat([station.longitude, station.latitude]))
+							var feature = new ol.Feature({
+								geometry: point
+							})
+							feature.tooltip = station.station_name
+							feedStationVector.addFeature(feature)
+						});
+					});
+			}
+
 
 			let CshipsDB = {}
 
@@ -7464,6 +7506,12 @@
 				}
 			});
 
+			feeStationdLayer.on('change:visible', function () {
+				if (feeStationdLayer.getVisible()) {
+					redrawCommunityStations();
+				}
+			});
+
 			function updateCommunityFeed() {
 				if (!feedLayer.isVisible()) return;
 				fetchCommunityShips().then((ok) => {
@@ -7473,6 +7521,7 @@
 				});
 			}
 			addOverlayLayer("Community Feed", feedLayer);
+			addOverlayLayer("Community Stations", feeStationdLayer);
 		}
 
 		let urlParams = new URLSearchParams(window.location.search);
