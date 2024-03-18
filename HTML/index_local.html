@@ -3986,7 +3986,7 @@
 			const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
 				function (feature) { if ('ship' in feature || 'link' in feature) { return feature; } }, { hitTolerance: 10 });
 
-			let included = 'ship' in feature && feature.ship.mmsi in shipsDB;
+			let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
 
 			if (feature && 'link' in feature && !included) {
 				window.open(feature.link, '_blank');
