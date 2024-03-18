@@ -3984,9 +3984,12 @@
 			}
 
 			const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-				function (feature) { if ('ship' in feature) { return feature; } }, { hitTolerance: 10 });
+				function (feature) { if ('ship' in feature || 'link' in feature) { return feature; } }, { hitTolerance: 10 });
 
-			if (feature) {
+			if (feature && 'link' in feature) {
+				window.open(feature.link, '_blank');
+			}
+			else if (feature && 'ship' in feature) {
 
 				closeDialog();
 				closeSettings();
@@ -3997,8 +4000,6 @@
 					showShipcard(null);
 					clickTimeout = null;
 				}, 300);
-
-
 			}
 		};
 
@@ -7397,7 +7398,7 @@
 						})
 
 						feature.ship = ship;
-
+						feature.link = 'https://www.shipcatcher.com/?mmsi=' + ship.mmsi
 						feedVector.addFeature(feature)
 					}
 				}
@@ -7416,6 +7417,7 @@
 								geometry: point
 							})
 							feature.tooltip = station.station_name
+							feature.link = 'https://aiscatcher.org/station/' + station.station_id
 							feedStationVector.addFeature(feature)
 						});
 					});
