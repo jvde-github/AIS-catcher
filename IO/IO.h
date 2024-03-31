@@ -98,13 +98,19 @@ namespace IO {
 		std::string filename;
 		AIS::Filter filter;
 
+		enum class OutputMode {
+			OUT,
+			APPEND
+		} mode = OutputMode::OUT;
+
 	public:
 		~MessageToFile() {
 			Stop();
 		}
 
 		void Start() {
-			file.open(filename, std::ios::out);
+			file.open(filename, mode == OutputMode::OUT ? std::ios::out : std::ios::app);
+
 			if (!file) {
 				throw std::runtime_error("File: failed to open file - " + filename);
 			}
@@ -135,8 +141,21 @@ namespace IO {
 			else if (option == "FILE") {
 				filename = arg;
 			}
+			else if (option == "MODE") {
+				Util::Convert::toUpper(arg);
+
+				if (arg == "OUT") {
+					mode = OutputMode::OUT;
+				}
+				else if (arg == "APPEND" || arg == "APP") {
+					mode = OutputMode::APPEND;
+				}
+				else {
+					throw std::runtime_error("File output - unknown mode: " + arg);
+				}
+			}
 			else if (!filter.SetOption(option, arg)) {
-				throw std::runtime_error("JSON output - unknown option: " + option);
+				throw std::runtime_error("File output - unknown option: " + option);
 			}
 			return *this;
 		}

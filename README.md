@@ -45,6 +45,7 @@ Only use this software in regions where such use is permitted.
 
 **Edge** version:
 - Add a sharing key to -X via [aiscatcher.org/addstation](https://aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable, in a few weeks, a station performance tracking dashboard.
+- Options to `-f` to append NMEA lines to file (`-f filename MODE APP` for appending and `-f filename MODE OUT` for starting fresh - default)
 
 **v0.58** version:
 - RTLSDR V4 support in docker image
@@ -105,7 +106,7 @@ use: AIS-catcher [options]
 	[-C [filename] - read configuration settings from file]
 	[-D [connection string] - write messages to PostgreSQL database]
 	[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]
-	[-f [filename] write NMEA lines to file]
+	[-f [filename [options]] write NMEA lines to file]
 	[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]
 	[-h display this message and terminate (default: false)]
 	[-H [optional: url] - send messages via HTTP, for options see documentation]
