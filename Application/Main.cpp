@@ -308,14 +308,14 @@ int main(int argc, char* argv[]) {
 					if (count > 1) parseSettings(u, argv, ptr + 1, argc);
 				}
 				break;
-			case 'f':
-				Assert(count == 1, param, "File output requires one parameter [filename]");
-				{
-					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MessageToFile()));
-					IO::OutputMessage& f = *msg.back();
+			case 'f': {
+				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MessageToFile()));
+				IO::OutputMessage& f = *msg.back();
+				if (count % 2 == 1) {
 					f.Set("FILE", arg1);
 				}
-				break;
+				if (count > 1) parseSettings(f, argv, ptr + (count % 2), argc);
+			} break;
 			case 'v':
 				Assert(count <= 1, param);
 				receiver.verbose = true;
@@ -484,9 +484,9 @@ int main(int argc, char* argv[]) {
 					if (!communityFeed) {
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						IO::OutputMessage& p = *msg.back();
-						p.Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON","on").Set("FILTER","on").Set("GPS","off");
+						p.Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
 
-						if(count == 1)
+						if (count == 1)
 							p.Set("UUID", arg1);
 
 						communityFeed = true;
@@ -572,7 +572,6 @@ int main(int argc, char* argv[]) {
 				case 'o':
 					if (receiver.Count() == 0) receiver.addModel(receiver.isTXTformatSet() ? 5 : 2);
 					parseSettings(*receiver.Model(receiver.Count() - 1), argv, ptr, argc);
-					break;
 					break;
 				default:
 					throw std::runtime_error("invalid -g switch on command line");
