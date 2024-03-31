@@ -101,10 +101,11 @@ namespace IO {
 		enum class OutputMode {
 			OUT,
 			APPEND
-		} mode = OutputMode::APPEND;
+		} mode;
 
 	public:
-		~MessageToFile() {
+		MessageToFile() : mode(OutputMode::APPEND) {}
+		~MessageToFile()  {
 			Stop();
 		}
 
