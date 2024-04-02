@@ -6122,7 +6122,7 @@
 
 			style += `background-position: -${ship.cx - 0}px -${ship.cy - 0}px; width: 20px; height: 20px; transform: rotate(${ship.rot}rad) scale(${scale});`;
 
-			return { class: "sprites", style: style };
+			return { class: "sprites", style: style, hint: ship.hint };
 		}
 
 		function getIconCSS(ship, opacity = 1) {
@@ -6821,13 +6821,15 @@
 			let sprite = shippingMappings[shipClass] || {
 				cx: 120,
 				cy: 20,
-				imgSize: 20
+				imgSize: 20,
+				hint: ''
 			}
 
 			ship.rot = 0
 			ship.cx = sprite.cx
 			ship.cy = sprite.cy
 			ship.imgSize = sprite.imgSize
+			ship.hint = sprite.hint
 
 			if (sprite.cy === 20) {
 				if (ship.speed != null && ship.speed > 0.5 && ship.cog != null) {
