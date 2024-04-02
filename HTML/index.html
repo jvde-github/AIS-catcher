@@ -726,15 +726,21 @@
 			cursor: auto;
 			border-radius: 5px;
 			border: 2px solid var(--menu-border-color);
+			padding: 0px;
 		}
 
 		.statcard_inner {
 			position: relative;
+			font-size: 12px;
 		}
 
+		.statcard_inner table {
+			margin: 0px;
+			padding: 0px;
+		}
 		.tablecard_inner table {
 			font-size: 10px;
-			margin: 10px;
+			margin: 5px;
 			color: var(--menu-font-color);
 			border: 1px solid var(--settings-header-bg-color);
 		}
@@ -753,7 +759,6 @@
 		.tablecard_inner table>tbody>th,
 		.tablecard_inner table>tbody>td {
 			border: none;
-			padding: 3px 3px;
 			margin: 0px;
 			padding: 0px;
 		}
@@ -2779,15 +2784,27 @@
 						<table>
 							<tr>
 								<td>
-									<span title="Ships Moving" class="shipicon"
+									<span title="Class A Moving" class="shipicon"
 										style="background-position: -120px -0px; transform: translate(0px, 0px) scale(1) rotate(45deg)"></span>
 								</td>
-								<td><span title="Ships Moving" id="statcard_moving"></span></td>
+								<td><span title="Class A Moving" id="statcard_moving"></span></td>
 								<td>
-									<span title="Ships Stationary" class="shipicon"
+									<span title="Class A Stationary" class="shipicon"
 										style="background-position: -120px -20px; transform: translate(-8px, -8px) rotate(45)"></span>
 								</td>
-								<td><span title="Ships Stationary" id="statcard_stationary"></span></td>
+								<td><span title="Class A Stationary" id="statcard_stationary"></span></td>
+							</tr>
+							<tr>
+								<td>
+									<span title="Class B Moving" class="shipicon"
+										style="background-position: -20px -0px; transform: translate(0px, 0px) scale(1) rotate(45deg)"></span>
+								</td>
+								<td><span title="Class B Moving" id="statcard_class_b_moving"></span></td>
+								<td>
+									<span title="Class B Stationary" class="shipicon"
+										style="background-position: -20px -20px; transform: translate(-8px, -8px) rotate(45)"></span>
+								</td>
+								<td><span title="Class B Stationary" id="statcard_class_b_stationary"></span></td>
 							</tr>
 							<tr>
 								<td>
@@ -4238,7 +4255,7 @@
 
 		function updateMarkerCountTooltip() {
 			if (shipsDB == null) {
-				["statcard_stationary", "statcard_moving", "statcard_station", "statcard_aton", "statcard_heli", "statcard_sarte"].forEach(function (id) {
+				["statcard_stationary", "statcard_moving", "statcard_class_b_stationary", "statcard_class_b_moving", "statcard_station", "statcard_aton", "statcard_heli", "statcard_sarte"].forEach(function (id) {
 					document.getElementById(id).innerHTML = "";
 				});
 
@@ -4247,6 +4264,8 @@
 
 			let cStationary = 0,
 				cMoving = 0,
+				cClassBstationary = 0,
+				cClassBmoving = 0,
 				cStation = 0,
 				cAton = 0,
 				cHeli = 0,
@@ -4271,7 +4290,10 @@
 						case ShippingClass.SARTEPIRB:
 							cSarte++;
 							break;
-						case ShippingClass.CARGO:
+						case ShippingClass.CLASS_B:
+							if (ship.speed != null && ship.speed > 0.5) cClassBmoving++;
+							else cClassBstationary++;
+							break;
 						default:
 							if (ship.speed != null && ship.speed > 0.5) cMoving++;
 							else cStationary++;
@@ -4286,6 +4308,8 @@
 			flashNumber("statcard_aton", cAton);
 			flashNumber("statcard_heli", cHeli);
 			flashNumber("statcard_sarte", cSarte);
+			flashNumber("statcard_class_b_stationary", cClassBstationary);
+			flashNumber("statcard_class_b_moving", cClassBmoving);
 		}
 
 		function updateTableSort(event) {
