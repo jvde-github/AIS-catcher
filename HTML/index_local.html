@@ -2367,6 +2367,13 @@
 								onchange="setMapSetting('shipoutline_opacity',this.value)" />
 						</span>
 					</div>
+					<div>
+						<span>Circle Outlines</span>
+						<span>
+							<input type="checkbox" id="settings_show_circle_outline"
+								onchange="setMapSetting('show_circle_outline',this.checked)" />
+						</span>
+					</div>
 				</section>
 				<header>Station Range</header>
 				<section>
@@ -3083,6 +3090,7 @@
 				shipoutline_border: "#A9A9A9",
 				shipoutline_inner: "#808080",
 				shipoutline_opacity: 0.9,
+				show_circle_outline: false,
 				dark_mode: false,
 				center_radius: 0,
 				show_station: true,
@@ -6932,7 +6940,7 @@
 					if (includeLabels)
 						labelVector.addFeature(feature)
 
-					if (map.getView().getZoom() > 11.5) {
+					if (map.getView().getZoom() > 11.5 && (ship.heading != null || settings.show_circle_outline)) {
 						var shapeFeature = new ol.Feature({
 							geometry: createShipOutlineGeometry(ship)
 						})
@@ -7094,6 +7102,7 @@
 			document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
 			document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
 			document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
+			document.getElementById("settings_show_circle_outline").value = settings.show_circle_outline;
 
 			document.getElementById("settings_track_color").value = settings.track_color;
 			document.getElementById("settings_range_color").value = settings.range_color;
