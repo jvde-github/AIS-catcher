@@ -11,7 +11,7 @@ RUN apt-get install libusb-1.0.0-dev libairspy-dev libhackrf-dev libairspyhf-dev
 
 COPY . /root/AIS-catcher
 
-RUN cd /root/AIS-catcher; git clone https://github.com/osmocom/rtl-sdr.git
+RUN cd /root/AIS-catcher; git clone https://gitea.osmocom.org/sdr/rtl-sdr.git
 RUN cd /root/AIS-catcher/rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install; 
 RUN cp /root/AIS-catcher/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/
 RUN ldconfig
