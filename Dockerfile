@@ -32,7 +32,7 @@ RUN apt-get upgrade -y
 RUN apt-get install git make gcc g++ cmake pkg-config libusb-1.0-0-dev -y
 RUN apt-get install libusb-1.0 libairspy0 libhackrf0 libairspyhf1 libzmq5 libsoxr0 libpq5 libz1 libssl3 -y
 
-RUN cd /root; git clone https://github.com/osmocom/rtl-sdr.git
+RUN cd /root; git clone https://gitea.osmocom.org/sdr/rtl-sdr.git
 RUN cd /root/rtl-sdr; mkdir build; cd build; cmake ../ -DCMAKE_BUILD_TYPE=Release -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install;
 RUN cp /root/rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/
 RUN ldconfig
