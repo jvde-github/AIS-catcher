@@ -699,7 +699,7 @@ namespace AIS {
 		if (option == "NMEA_REFRESH") {
 			nmea.setRegenerate(Util::Parse::Switch(arg));
 		}
-		if (option == "STAMP") {
+		else if (option == "STAMP") {
 			nmea.setStamp(Util::Parse::Switch(arg));
 		}
 		else if (option == "CRC_CHECK") {
