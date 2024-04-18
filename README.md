@@ -46,6 +46,7 @@ Only use this software in regions where such use is permitted.
 **Edge** version:
 - Add a sharing key to -X via [aiscatcher.org/addstation](https://aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable, in a few weeks, a station performance tracking dashboard.
 - Options to `-f` to append NMEA lines to file (`-f filename MODE APP` for appending (default) and `-f filename MODE OUT` for starting fresh)
+- Fix bug in display of icon for SARTE/EPIRB (red diamond)
 
 **v0.58** version:
 - RTLSDR V4 support in docker image
