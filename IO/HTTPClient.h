@@ -85,6 +85,12 @@ namespace IO {
 		void setURL(const std::string& url) {
 			Util::Parse::URL(url, protocol, host, port, path);
 
+			if(protocol.empty())
+				throw std::runtime_error("Invalid URL, missing protocol.");
+
+			if(protocol != "http" && protocol != "https")
+				throw std::runtime_error("Invalid protocol: " + protocol);
+				
 			secure = protocol == "https";
 
 			if (port.empty())
