@@ -43,7 +43,10 @@ Only use this software in regions where such use is permitted.
 
 ## What's new?
 
-**Edge** version:
+**Recent** developments:
+- Slowly improving the station page for feeders of aiscatcher.org. Color indicates number of stations covering area, opacity is linked to message count of station.
+  ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/9f52bcc7-a409-495b-8391-21d278598d8a)
+
 - Add a sharing key to -X via [aiscatcher.org/addstation](https://aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable, in a few weeks, a station performance tracking dashboard.
 - Options to `-f` to append NMEA lines to file (`-f filename MODE APP` for appending (default) and `-f filename MODE OUT` for starting fresh)
 - Fix bug in display of icon for SARTE/EPIRB (red diamond)
