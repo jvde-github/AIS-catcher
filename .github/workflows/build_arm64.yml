@@ -1,0 +1,34 @@
+name: Build (Docker/Windows)
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - '*'
+  pull_request:
+  workflow_dispatch:
+
+
+jobs:
+  linux-arm64:
+    runs-on: buildjet-4vcpu-ubuntu-2204-arm
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: apt install -y aha git make gcc g++ cmake pkg-config librtlsdr-dev whiptail libpq-dev
+
+    - name: build AIS-catcher
+      run: mkdir build; cd build; cmake ..; make
+
+    - name: upload artifact
+      run: mkdir output; cp build/AIS-catcher output/
+      
+    - name: Upload Artifacts linux-arm64
+      uses: actions/upload-artifact@v3
+      with:
+        name: "AIS-catcher linux-arm64"
+        path: |
+          output
