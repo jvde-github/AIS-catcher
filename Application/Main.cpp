@@ -479,7 +479,7 @@ int main(int argc, char* argv[]) {
 				}
 				break;
 			case 'X':
-				Assert(count <= 1 || (count > 1 && (count % 2)), param, "Only one optional parameter [sharing key] allowed.");
+				Assert(count <= 1, param, "Only one optional parameter [sharing key] allowed.");
 				{
 					if (!communityFeed) {
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
@@ -488,8 +488,6 @@ int main(int argc, char* argv[]) {
 
 						if (count == 1)
 							p.Set("UUID", arg1);
-
-						if (count > 1) parseSettings(p, argv, ptr + 1, argc);
 
 						communityFeed = true;
 					}
