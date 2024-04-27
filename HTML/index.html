@@ -3028,7 +3028,10 @@
 			evtSource = null,
 			evtSourceMap = null,
 			range_outline = undefined,
-			range_outline_short = undefined;
+			range_outline_short = undefined,
+			tab_title_station = "",
+			tab_title_count = null,
+			tab_title = "AIS-catcher";
 
 		const baseMapSelector = document.getElementById("baseMapSelector");
 
@@ -3103,6 +3106,10 @@
 				loadURL: true,
 				map_opacity: 0.5
 			};
+		}
+
+		function updateTitle() {
+			document.title = tab_title + " " + tab_title_station + " " + (tab_title_count ? " (" + tab_title_count + ")" : "") ;
 		}
 
 		function applyDefaultSettings() {
@@ -5109,6 +5116,9 @@
 				center = { lat: ship.lat, lon: ship.lon };
 			}
 
+			tab_title_count = ships.values.length;
+			updateTitle();
+
 			return true;
 		}
 
@@ -5753,8 +5763,10 @@
 
 				document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
 				var title = document.getElementById("stat_station").textContent;
-				if (title != "" && title != null) document.title = "AIS-catcher " + title;
-
+				if (title != "" && title != null) {
+					tab_title_station = title;
+					updateTitle();
+				}
 				document.getElementById("stat_memory").innerHTML = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
 				document.getElementById("stat_msg_rate").innerHTML = Number(stat.msg_rate).toFixed(1) + " msg/s";
 				document.getElementById("stat_msg_min_rate").innerHTML = Number(stat.last_minute.count).toFixed(0) + " msg/min";
