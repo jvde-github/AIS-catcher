@@ -263,6 +263,45 @@ namespace AIS {
 			U(msg, AIS::KEY_SALINITY, 339, 9, 510);
 			U(msg, AIS::KEY_ICE, 348, 2, 3);
 		}
+		// New message type with DAC = 001, FI = 11
+		else if (dac == 1 && fid == 11) {
+			SL(msg, AIS::KEY_LON, 40, 25, 1 / 60000.0f, 0); // Decode longitude
+			SL(msg, AIS::KEY_LAT, 65, 24, 1 / 60000.0f, 0); // Decode latitude
+			U(msg, AIS::KEY_DAY, 105, 5);					// Decode day (UTC)
+			U(msg, AIS::KEY_HOUR, 110, 5);					// Decode hour (UTC)
+			U(msg, AIS::KEY_MINUTE, 115, 6);				// Decode minute (UTC)
+			U(msg, AIS::KEY_WSPEED, 121, 7);				// Decode average wind speed
+			U(msg, AIS::KEY_WGUST, 128, 7);					// Decode wind gust speed
+			U(msg, AIS::KEY_WDIR, 135, 9);					// Decode wind direction
+			U(msg, AIS::KEY_WGUSTDIR, 144, 9);				// Decode wind gust direction
+			SL(msg, AIS::KEY_AIRTEMP, 153, 11, 0.1f, 0);	// Decode air temperature
+			U(msg, AIS::KEY_HUMIDITY, 164, 7);				// Decode relative humidity
+			SL(msg, AIS::KEY_DEWPOINT, 171, 10, 0.1f, 0);	// Decode dew point temperature
+			U(msg, AIS::KEY_PRESSURE, 181, 9);				// Decode air pressure
+			U(msg, AIS::KEY_PRESSURETEND, 190, 2);			// Decode air pressure tendency
+			UL(msg, AIS::KEY_VISIBILITY, 192, 8, 0.1f, 0);	// Decode horizontal visibility
+			SL(msg, AIS::KEY_WATERLEVEL, 200, 9, 0.1f, 0);	// Decode water level
+			U(msg, AIS::KEY_LEVELTREND, 209, 2);			// Decode water level trend
+			UL(msg, AIS::KEY_CSPEED, 211, 8, 0.1f, 0);		// Decode surface current speed
+			U(msg, AIS::KEY_CDIR, 219, 9);					// Decode surface current direction
+			UL(msg, AIS::KEY_CSPEED2, 228, 8, 0.1f, 0);		// Decode secondary current speed
+			U(msg, AIS::KEY_CDIR2, 236, 9);					// Decode secondary current direction
+			U(msg, AIS::KEY_CDEPTH2, 245, 5);				// Decode depth of secondary current measurement
+			UL(msg, AIS::KEY_CSPEED3, 250, 8, 0.1f, 0);		// Decode tertiary current speed
+			U(msg, AIS::KEY_CDIR3, 258, 9);					// Decode tertiary current direction
+			U(msg, AIS::KEY_CDEPTH3, 267, 5);				// Decode depth of tertiary current measurement
+			UL(msg, AIS::KEY_WAVEHEIGHT, 272, 8, 0.1f, 0);	// Decode significant wave height
+			U(msg, AIS::KEY_WAVEPERIOD, 280, 6);			// Decode wave period
+			U(msg, AIS::KEY_WAVEDIR, 286, 9);				// Decode wave direction
+			UL(msg, AIS::KEY_SWELLHEIGHT, 295, 8, 0.1f, 0); // Decode swell height
+			U(msg, AIS::KEY_SWELLPERIOD, 303, 6);			// Decode swell period
+			U(msg, AIS::KEY_SWELLDIR, 309, 9);				// Decode swell direction
+			U(msg, AIS::KEY_SEASTATE, 318, 4);				// Decode sea state
+			SL(msg, AIS::KEY_WATERTEMP, 322, 10, 0.1f, 0);	// Decode water temperature
+			U(msg, AIS::KEY_PRECIPTYPE, 332, 3);			// Decode type of precipitation
+			U(msg, AIS::KEY_SALINITY, 335, 9);				// Decode salinity
+			U(msg, AIS::KEY_ICE, 344, 2);					// Decode presence of ice
+		}
 	}
 
 	void JSONAIS::ProcessMsg(const AIS::Message& msg, TAG& tag) {
