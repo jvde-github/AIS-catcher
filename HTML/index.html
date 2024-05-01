@@ -2139,12 +2139,12 @@
 			<span onclick="headerClick()">AIS-catcher</span>
 
 			<div id="menubar_mini" class="showflex">
-				<i id="stat_tab_mini" onclick="activateTab(event,'stat')" class="business_center_icon"></i>
-				<i id="plots_tab_mini" onclick="activateTab(event,'plots')" class="leaderboard_icon"></i>
-				<i id="ships_tab_mini" onclick="activateTab(event,'ships')" class="view_list_icon"></i>
-				<i id="map_tab_mini" onclick="activateTab(event,'map')" class="map_icon"></i>
-				<i id="realtime_tab_mini" onclick="activateTab(event,'realtime')" class="feed_icon"></i>
-				<i id="about_tab_mini" onclick="activateTab(event,'about')" class="info_icon"></i>
+				<i id="stat_tab_mini" title="Statistics" onclick="activateTab(event,'stat')" class="business_center_icon"></i>
+				<i id="plots_tab_mini" title="Plots" onclick="activateTab(event,'plots')" class="leaderboard_icon"></i>
+				<i id="ships_tab_mini" title="Ship list" onclick="activateTab(event,'ships')" class="view_list_icon"></i>
+				<i id="map_tab_mini" title="Map" onclick="activateTab(event,'map')" class="map_icon"></i>
+				<i id="realtime_tab_mini" title="NMEA realtime" onclick="activateTab(event,'realtime')" class="feed_icon"></i>
+				<i id="about_tab_mini" title="About" onclick="activateTab(event,'about')" class="info_icon"></i>
 			</div>
 		</div>
 
@@ -2938,7 +2938,7 @@
 
 				<div id="hover-info"></div>
 
-				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
+				<div title = "Vseesel Count" class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
 					style="top: 10px;">
 					<button type="button" onclick="toggleStatcard();" class="btn btn-primary map-button"
 						style="font-size: 10px;">
@@ -2946,7 +2946,7 @@
 					</button>
 				</div>
 
-				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
+				<div title = "Vessel list" class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
 					style="top: 50px;">
 					<button type="button" onclick="toggleTablecard();" class="btn btn-primary map-button"
 						style="border-radius: 50%">
@@ -2957,7 +2957,7 @@
 					</button>
 				</div>
 
-				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
+				<div title="Settings" class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
 					style=" bottom: 140px; border-radius: 5px;">
 					<button type="button" onclick='showContextMenu(event, "", ["settings", "center", "ctx-map"]);'
 						class="btn btn-primary map-button color-grey">
@@ -2966,7 +2966,7 @@
 								d="M240-400q-33 0-56.5-23.5T160-480q0-33 23.5-56.5T240-560q33 0 56.5 23.5T320-480q0 33-23.5 56.5T240-400Zm240 0q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm240 0q-33 0-56.5-23.5T640-480q0-33 23.5-56.5T720-560q33 0 56.5 23.5T800-480q0 33-23.5 56.5T720-400Z" />
 						</svg>
 					</button>
-					<button type="button" id="xchange" onclick="showCommunity()"
+					<button title="Community feeding status" type="button" id="xchange" onclick="showCommunity()"
 						class="btn btn-primary map-button fill-red">
 
 						<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20">
@@ -2988,7 +2988,7 @@
 							<path d="M200-440v-80h560v80H200Z" />
 						</svg>
 					</button>
-					<button type="button" onclick='showMapMenu(event)' class="btn btn-primary map-button color-grey">
+					<button title="Map selection and overlays" type="button" onclick='showMapMenu(event)' class="btn btn-primary map-button color-grey">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
 								d="M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z" />
