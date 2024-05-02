@@ -90,11 +90,13 @@ namespace TCP {
 		bool SendAll(const std::string& m);
 		void setReusePort(bool b) { reuse_port = b; }
 		bool setNonBlock(SOCKET sock);
+		void setIP(std::string ip) { IP_BIND = ip; }
 
 	protected:
 		SOCKET sock = -1;
 		int timeout = 30;
 		bool reuse_port = true;
+		std::string IP_BIND;
 
 		const static int MAX_CONN = 16;
 		std::array<ServerConnection, MAX_CONN> client;
