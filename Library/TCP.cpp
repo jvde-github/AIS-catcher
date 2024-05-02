@@ -348,6 +348,11 @@ namespace TCP {
 			std::cerr << "TCP Server: cannot set socket to non-blocking\n";
 		}
 		stop = false;
+		if(IP_BIND.empty())
+			std::cerr << "TCP Server: start thread at port " << port << std::endl;
+		else
+			std::cerr << "TCP Server: start thread at IP " << IP_BIND << " port " << port << std::endl;
+			
 		std::cerr << "TCP Server: start thread at port " << port << std::endl;
 		run_thread = std::thread(&Server::Run, this);
 
