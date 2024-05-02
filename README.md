@@ -45,8 +45,7 @@ Only use this software in regions where such use is permitted.
 
 **Recent** developments:
 - Slowly improving the station page for feeders of aiscatcher.org. Color indicates number of stations covering area, opacity is linked to message count of station. To view your station statistics in this way, ensure you feed with a sharing key (UUID)
-  ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/9f52bcc7-a409-495b-8391-21d278598d8a)
-
+![Screenshot from 2024-05-02 21-23-24](https://github.com/jvde-github/AIS-catcher/assets/52420030/6a0391e6-a059-48fd-9543-89181262894f)
 - Add a sharing key to -X via [aiscatcher.org/addstation](https://aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable, in a few weeks, a station performance tracking dashboard.
 - Options to `-f` to append NMEA lines to file (`-f filename MODE APP` for appending (default) and `-f filename MODE OUT` for starting fresh)
 - Added vessel count to web viewer title (visible once on the map tab)
