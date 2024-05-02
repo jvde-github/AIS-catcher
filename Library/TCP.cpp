@@ -18,6 +18,10 @@
 #include <cstring>
 #include <string>
 
+#ifndef _WIN32
+#include <arpa/inet.h> // For inet_addr() and INADDR_ANY
+#endif
+
 #include "TCP.h"
 #include "Common.h"
 
@@ -315,7 +319,15 @@ namespace TCP {
 #endif
 		memset(&service, 0, sizeof(service));
 		service.sin_family = AF_INET;
-		service.sin_addr.s_addr = htonl(INADDR_ANY);
+
+		// Conditional binding based on IP_BIND
+		if (!IP_BIND.empty()) {
+			service.sin_addr.s_addr = inet_addr(IP_BIND.c_str());
+		}
+		else {
+			service.sin_addr.s_addr = htonl(INADDR_ANY);
+		}
+
 		service.sin_port = htons(port);
 
 		int r = bind(sock, (SOCKADDR*)&service, sizeof(service));

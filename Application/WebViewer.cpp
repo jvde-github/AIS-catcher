@@ -561,6 +561,9 @@ Setting& WebViewer::Set(std::string option, std::string arg) {
 		ships.setShareLatLon(b);
 		plugins += "param_share_loc=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
+	else if(option == "IP_BIND") {
+		setIP(arg);
+	}
 	else if (option == "CONTEXT") {
 		plugins += "context='" + arg + "';\n";
 	}
