@@ -6,23 +6,17 @@ This repository presents the `AIS-catcher` software, a versatile dual-channel AI
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9fd27b96-e37a-4f92-869c-b0ba782c12fa.png" width="90%"/>
 </p>
 	
-<blockquote style="border:2px solid green; padding:10px;">
+# Joining the community at aiscatcher.org
 
-# Support AIS-catcher
+AIS-catcher is a free, open-source project aimed at transforming SDR-equipped computers into AIS-receivers. It's continuously improved with decoding enhancements, user support, and expanded output options for commercial data aggregators. Our next step involves utilizing aggregated AIS data for real-time visualization in local web dashboards, enhancing receiver performance and situational awareness by integrating nearby station data.
 
-AIS-catcher has been a labor of love from the start. As a free, open-source project, it transforms SDR-equipped computers into AIS-receivers, continually enhanced through dedicated efforts in decoding improvements, user support, and expanded output options to serve various commercial data aggregators. Our next ambitious step involves leveraging aggregated AIS data for real-time visualization in our local web dashboards. This will offer insights into receiver performance and situational awareness by integrating data from nearby stations. That is the simple idea.
-
-## How to Participate
-
-Suporting is simple: ensure you are on the latest version and just add -X to your command line (or "sharing": true to the JSON configuration). This step will anonymously share your station's raw AIS data—identical to the data you send to services like MarineTraffic—with our community hub. It activates a "Community Feed" in your station's web viewer, accessible under map layers (bottom right map icon). If you want to share an approximate station location (and later view a station dashboard) you can add a unique sharing key created at aiscatcher.org/addstation. This sharing key can be added after the -X or in the JSON configuration via "sharing_key".
-
-Below, you can see how it integrates with your local dashboard. The grey ship icons represent vessels not directly received by this particular station but detected by nearby stations.
+To join, ensure you're on the latest version, visit [aiscatcher.org](https://aiscatcher.org), and [register](https://aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers. Below, you can see how it integrates with your local dashboard. The grey ship icons represent vessels not directly received by this particular station but detected by nearby stations.
 <p align="center">
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
 </p>
-No account is required and of course sharing with the community is fully optional. See what data we are currently receiving (https://aiscatcher.org). We're eager to hear your innovative ideas for enhancing AIS-catcher with this collective data. Your insights could lead to new features or improvements that benefit everyone in the community.
 
-</blockquote>
+Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We welcome your innovative ideas for enhancing AIS-catcher with this collective data, which could lead to new features or improvements benefiting the entire community.
+
 
 # License
 
