@@ -41,7 +41,8 @@ Only use this software in regions where such use is permitted.
 - Slowly improving the station page for feeders of aiscatcher.org. Color indicates number of stations covering area, opacity is linked to message count of station. To view your station statistics in this way, ensure you feed with a sharing key (UUID)
 ![Screenshot from 2024-05-02 21-23-24](https://github.com/jvde-github/AIS-catcher/assets/52420030/6a0391e6-a059-48fd-9543-89181262894f)
 - Add a sharing key to -X via [aiscatcher.org/addstation](https://aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable, in a few weeks, a station performance tracking dashboard.
-- Options to `-f` to append NMEA lines to file (`-f filename MODE APP` for appending (default) and `-f filename MODE OUT` for starting fresh)
+- TAR1090 can now visualize ship positions from AIS-catcher. See for an example [here](https://kx1t.com/trenton-tar1090/). 
+- Additional option  for `-f`-switch to either append NMEA lines to file (`-f filename MODE APP` for appending - default) or starting fresh with `-f filename MODE OUT`
 - Added vessel count to web viewer title (visible once on the map tab)
 - Fix bug in display of icon for SARTE/EPIRB (red diamond)
 - Additional option for WebViewer to bind server to specific IP address. This allows you to make the browser only visible on the local PC, via `-N IP_BIND localhost`. By default the webviewer is visible by other machines on the network.
