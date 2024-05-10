@@ -738,6 +738,7 @@
 			margin: 0px;
 			padding: 0px;
 		}
+
 		.tablecard_inner table {
 			font-size: 10px;
 			margin: 5px;
@@ -2139,11 +2140,13 @@
 			<span onclick="headerClick()">AIS-catcher</span>
 
 			<div id="menubar_mini" class="showflex">
-				<i id="stat_tab_mini" title="Statistics" onclick="activateTab(event,'stat')" class="business_center_icon"></i>
+				<i id="stat_tab_mini" title="Statistics" onclick="activateTab(event,'stat')"
+					class="business_center_icon"></i>
 				<i id="plots_tab_mini" title="Plots" onclick="activateTab(event,'plots')" class="leaderboard_icon"></i>
 				<i id="ships_tab_mini" title="Ships" onclick="activateTab(event,'ships')" class="view_list_icon"></i>
 				<i id="map_tab_mini" title="Map" onclick="activateTab(event,'map')" class="map_icon"></i>
-				<i id="realtime_tab_mini" title="NMEA realtime" onclick="activateTab(event,'realtime')" class="feed_icon"></i>
+				<i id="realtime_tab_mini" title="NMEA realtime" onclick="activateTab(event,'realtime')"
+					class="feed_icon"></i>
 				<i id="about_tab_mini" title="About" onclick="activateTab(event,'about')" class="info_icon"></i>
 			</div>
 		</div>
@@ -2383,6 +2386,16 @@
 						</span>
 					</div>
 					<div>
+						<span>Time Period</span>
+						<span>
+							<select id="settings_range_timeframe" onchange="setRangeTimePeriod(this.value)">
+								<option value="24h">Last 24 Hours</option>
+								<option value="7d">Last 7 Days</option>
+								<option value="30d">Last 30 Days</option>
+							</select>
+						</span>
+					</div>
+					<div>
 						<span>Color</span><span>
 							<input type="color" class="color-picker" id="settings_range_color"
 								onchange="setRangeColor(this.value,'range_color')" />
@@ -2461,7 +2474,8 @@
 				<li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="directions_boat_icon"></i>Show
 					Shipcard</li>
 				<li class="divider mmsi-map"></li>
-				<li class="mmsi" onclick="openAIScatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on aiscatcher.org
+				<li class="mmsi" onclick="openAIScatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on
+					aiscatcher.org
 				</li>
 				<li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database
 					Entry</li>
@@ -2938,7 +2952,8 @@
 
 				<div id="hover-info"></div>
 
-				<div title = "Counters" class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
+				<div title="Counters"
+					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
 					style="top: 10px;">
 					<button type="button" onclick="toggleStatcard();" class="btn btn-primary map-button"
 						style="font-size: 10px;">
@@ -2946,7 +2961,8 @@
 					</button>
 				</div>
 
-				<div title = "Ships" class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
+				<div title="Ships"
+					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box rounded"
 					style="top: 50px;">
 					<button type="button" onclick="toggleTablecard();" class="btn btn-primary map-button"
 						style="border-radius: 50%">
@@ -2957,7 +2973,8 @@
 					</button>
 				</div>
 
-				<div title="Settings" class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
+				<div title="Settings"
+					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
 					style=" bottom: 140px; border-radius: 5px;">
 					<button type="button" onclick='showContextMenu(event, "", ["settings", "center", "ctx-map"]);'
 						class="btn btn-primary map-button color-grey">
@@ -2988,7 +3005,8 @@
 							<path d="M200-440v-80h560v80H200Z" />
 						</svg>
 					</button>
-					<button title="Map selection and overlays" type="button" onclick='showMapMenu(event)' class="btn btn-primary map-button color-grey">
+					<button title="Map selection and overlays" type="button" onclick='showMapMenu(event)'
+						class="btn btn-primary map-button color-grey">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
 								d="M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z" />
@@ -3076,6 +3094,7 @@
 				lon: 0,
 				tableside_column: "shipname",
 				tableside_order: "ascending",
+				range_timeframe: '24h',
 				track_color: "#12a5ed",
 				range_color: "#FFA500",
 				range_color_short: "#FFDAB9",
@@ -3109,7 +3128,7 @@
 		}
 
 		function updateTitle() {
-			document.title =  (tab_title_count ? " (" + tab_title_count + ") " : "")  + tab_title + " " + tab_title_station ;
+			document.title = (tab_title_count ? " (" + tab_title_count + ") " : "") + tab_title + " " + tab_title_station;
 		}
 
 		function applyDefaultSettings() {
@@ -4576,6 +4595,12 @@
 			redrawMap();
 		}
 
+		function setRangeTimePeriod(v) {
+			settings.range_timeframe = v;
+			saveSettings();
+			fetchRange(true).then(() => drawRange());
+		}
+
 		async function toggleRange() {
 			const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
 
@@ -4630,7 +4655,7 @@
 			return aboutmd;
 		}
 
-		async function fetchRange() {
+		async function fetchRange(forcefetch = false) {
 			const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
 
 			if (!isSationSet || !settings.show_range) {
@@ -4641,7 +4666,7 @@
 
 			const now = new Date();
 
-			if (range_update_time && Math.floor((now - range_update_time) / 1000 / 60) < 15) return;
+			if (!forcefetch && range_update_time && Math.floor((now - range_update_time) / 1000 / 60) < 15) return;
 
 			range_update_time = now;
 
@@ -4677,6 +4702,14 @@
 					m = Math.max(m, h.hour.stat[j].radar_a[i]);
 					m = Math.max(m, h.hour.stat[j].radar_b[i]);
 				}
+
+				const additionalDays = settings.range_timeframe == "7d" ? 7 : settings.range_timeframe == "30d" ? 30 : 0;
+
+				for (j = 0; j <  Math.min(additionalDays, h.day.stat.length); j++) {
+					m = Math.max(m, h.day.stat[j].radar_a[i]);
+					m = Math.max(m, h.day.stat[j].radar_b[i]);
+				}
+
 				range.push(m);
 			}
 
@@ -4706,7 +4739,7 @@
 			}
 
 			range_outline = range_outline.map(point => ol.proj.fromLonLat(point));
-			range_outline_short = range_outline_short.map(point => ol.proj.fromLonLat(point));
+			range_outline_short = range_outline_short.map(point => 0*ol.proj.fromLonLat(point));
 		}
 
 		let rangeFeature = undefined;
@@ -4731,7 +4764,7 @@
 				});
 
 				rangeFeature.short = false;
-				rangeFeature.tooltip = "Station Range 24h";
+				rangeFeature.tooltip = "Station Range " + settings.range_timeframe;
 				rangeVector.addFeature(rangeFeature);
 			}
 
@@ -7118,6 +7151,7 @@
 
 			document.getElementById("settings_track_color").value = settings.track_color;
 			document.getElementById("settings_range_color").value = settings.range_color;
+			document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
 			document.getElementById("settings_range_color_short").value = settings.range_color_short;
 			document.getElementById("settings_range_color_dark").value = settings.range_color_dark;
 			document.getElementById("settings_range_color_dark_short").value = settings.range_color_dark_short;
