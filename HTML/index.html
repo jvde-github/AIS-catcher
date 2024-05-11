@@ -5317,14 +5317,18 @@
 					beginAtZero: true,
 					ticks: {
 						display: true,
+						align: 'center'  // Aligns tick labels
+					},
+					grid: {
+						display: true,  // Only the primary axis should display grid lines
 					},
 					title: {
 						display: true,
-						text: 'Message Count',  // Title for the left y-axis
+						text: 'Message Count',
 						font: {
-							size: 12  // Optional: Adjust font size as needed
+							size: 12
 						},
-						color: '#666'  // Optional: Adjust font color as needed
+						color: '#666'
 					}
 				},
 				y_right: {
@@ -5332,28 +5336,32 @@
 					beginAtZero: true,
 					ticks: {
 						display: true,
+						align: 'center'  // Aligns tick labels
+					},
+					grid: {
+						display: false,  // Disable grid lines on the secondary axis
 					},
 					position: 'right',
 					title: {
 						display: true,
-						text: 'Vessel Count',  // Title for the right y-axis
+						text: 'Vessel Count',
 						font: {
-							size: 12  // Optional: Adjust font size as needed
+							size: 12
 						},
-						color: '#666'  // Optional: Adjust font color as needed
+						color: '#666'
 					}
 				},
 				x: {
 					ticks: {
-						display: true,
+						display: true
 					},
 					title: {
 						display: true,
-						text: 'Time',  // Example title for the x-axis
+						text: 'Time',
 						font: {
-							size: 16  // Optional: Adjust font size as needed
+							size: 16
 						},
-						color: '#666'  // Optional: Adjust font color as needed
+						color: '#666'
 					}
 				},
 			}
@@ -5858,8 +5866,11 @@
 				var hS = [];
 				var hV = [];
 
+				let maxM = 0;
+				let maxV = 0;
+
 				const source = b[f];
-				for (let i = 0; i < source.time.length; i++) {
+				for (let i = 0; i < source.time.length; i++) {					
 					let cA = source.stat[i].msg[0] + source.stat[i].msg[1] + source.stat[i].msg[2] + source.stat[i].msg[4];
 					hA.push({ x: source.time[i], y: cA });
 					let cB = source.stat[i].msg[17] + source.stat[i].msg[18] + source.stat[i].msg[23];
@@ -5869,7 +5880,9 @@
 					let cT = source.stat[i].count - cA - cB - cS;
 					hT.push({ x: source.time[i], y: cT });
 					let cV = source.stat[i].vessels;
+					maxM = Math.max(maxM, source.stat[i].count)
 					hV.push({ x: source.time[i], y: cV });
+					maxV = Math.max(maxV, cV)
 				}
 
 				c.data.datasets[0].data = hV;
@@ -5877,6 +5890,10 @@
 				c.data.datasets[2].data = hB;
 				c.data.datasets[3].data = hS;
 				c.data.datasets[4].data = hT;
+
+				c.maxM = maxM;
+				c.maxV = maxV;
+				console.log(maxM, maxV);
 
 				c.update();
 			}
