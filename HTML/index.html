@@ -4705,7 +4705,7 @@
 
 				const additionalDays = settings.range_timeframe == "7d" ? 7 : settings.range_timeframe == "30d" ? 30 : 0;
 
-				for (j = 0; j <  Math.min(additionalDays, h.day.stat.length); j++) {
+				for (j = 0; j < Math.min(additionalDays, h.day.stat.length); j++) {
 					m = Math.max(m, h.day.stat[j].radar_a[i]);
 					m = Math.max(m, h.day.stat[j].radar_b[i]);
 				}
@@ -4739,7 +4739,7 @@
 			}
 
 			range_outline = range_outline.map(point => ol.proj.fromLonLat(point));
-			range_outline_short = range_outline_short.map(point => 0*ol.proj.fromLonLat(point));
+			range_outline_short = range_outline_short.map(point => 0 * ol.proj.fromLonLat(point));
 		}
 
 		let rangeFeature = undefined;
@@ -5318,13 +5318,46 @@
 					ticks: {
 						display: true,
 					},
+					title: {
+						display: true,
+						text: 'Message Count',  // Title for the left y-axis
+						font: {
+							size: 12  // Optional: Adjust font size as needed
+						},
+						color: '#666'  // Optional: Adjust font color as needed
+					}
+				},
+				y_right: {
+					stacked: true,
+					beginAtZero: true,
+					ticks: {
+						display: true,
+					},
+					position: 'right',
+					title: {
+						display: true,
+						text: 'Vessel Count',  // Title for the right y-axis
+						font: {
+							size: 12  // Optional: Adjust font size as needed
+						},
+						color: '#666'  // Optional: Adjust font color as needed
+					}
 				},
 				x: {
 					ticks: {
 						display: true,
 					},
+					title: {
+						display: true,
+						text: 'Time',  // Example title for the x-axis
+						font: {
+							size: 16  // Optional: Adjust font size as needed
+						},
+						color: '#666'  // Optional: Adjust font color as needed
+					}
 				},
-			},
+			}
+
 		};
 
 		const graph_options_single = {
@@ -5453,6 +5486,7 @@
 						fill: false,
 						pointStyle: false,
 						borderWidth: 2,
+						yAxisID: 'y_right', // correctly reference the right y-axis
 					},
 					{
 						label: "Class A",
