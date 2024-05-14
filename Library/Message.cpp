@@ -366,6 +366,10 @@ namespace AIS {
 			AIS = Util::Parse::Switch(arg);
 			return true;
 		}
+		else if (option == "ID") {			
+			ID_allowed = Util::Parse::Integer(arg,0,999999);
+			return true;
+		}
 		return false;
 	}
 
@@ -385,6 +389,7 @@ namespace AIS {
 	bool Filter::include(const Message& msg) {
 		if (!on) return true;
 		if (!AIS) return false;
+		if(ID_allowed && msg.getStation() != ID_allowed) return false;
 		unsigned type = msg.type() & 31;
 		return ((1U << type) & allow) != 0;
 	}

@@ -221,8 +221,10 @@ public:
 };
 
 struct ByteCounter : public StreamIn<RAW> {
+	AIS::Filter filter;
 	virtual ~ByteCounter() {}
 	uint64_t received = 0;
 	void Receive(const RAW* data, int len, TAG& tag) { received += data[0].size; }
 	void Reset() { received = 0; }
+	void setFilterOption(std::string &arg, std::string &opt) { filter.SetOption(arg, opt); }
 };

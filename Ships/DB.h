@@ -78,6 +78,8 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	std::string getSinglePathJSON(int);
 	bool isNextPathPoint(int idx, uint32_t mmsi, int count) { return idx != -1 && paths[idx].mmsi == mmsi && paths[idx].count < count; }
 
+	AIS::Filter filter;
+
 public:
 	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
 
@@ -124,4 +126,5 @@ public:
 
 	void setServerMode(bool b) { server_mode = b; }
 	void setMsgSave(bool b) { msg_save = b; }
+	void setFilterOption(std::string &opt, std::string &arg) { filter.SetOption(opt, arg); }
 };
