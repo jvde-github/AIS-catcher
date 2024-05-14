@@ -108,6 +108,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	void Clear();
 
 	void stopThread();
+	AIS::Filter filter;
 
 public:
 	WebViewer() {

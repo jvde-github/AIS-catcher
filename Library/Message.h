@@ -145,6 +145,7 @@ namespace AIS {
 		uint32_t allow = all_msg;
 		bool on = false;
 		bool GPS = true, AIS = true;
+		int ID_allowed = 0;
 
 	public:
 		virtual ~Filter() {}

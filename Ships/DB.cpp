@@ -640,6 +640,9 @@ bool DB::updateShip(const JSON::JSON& data, TAG& tag, Ship& ship) {
 }
 
 void DB::Receive(const JSON::JSON* data, int len, TAG& tag) {
+
+	if(!filter.include(*(AIS::Message*)data[0].binary)) return;
+	
 	std::lock_guard<std::mutex> lock(mtx);
 
 	const AIS::Message* msg = (AIS::Message*)data[0].binary;
