@@ -44,7 +44,11 @@ Only use this software in regions where such use is permitted.
 - TAR1090 can now visualize ship positions from AIS-catcher. See for an example [here](https://kx1t.com/trenton-tar1090/). 
 - Additional option  for `-f`-switch to either append NMEA lines to file (`-f filename MODE APP` for appending - default) or starting fresh with `-f filename MODE OUT`
 - History for range indicator can now be configured (24 hours default) with new option for 7 and 30 days history
-![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/9b2f0279-7cd9-4fce-b7bb-246777207361)
+- 
+<p align="center">
+  <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9b2f0279-7cd9-4fce-b7bb-246777207361" width="25%"/>
+</p>
+
 - Added a measure tool to measure distance and bearing between two points and/or ships. Start with CTRL-Click or activate the measure tool and press +
 - Added vessel count to web viewer title (visible once on the map tab)
 - Fix bug in display of icon for SARTE/EPIRB (red diamond)
