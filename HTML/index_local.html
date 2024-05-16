@@ -212,6 +212,7 @@
 
 		.header-title span {
 			padding: 15px;
+			padding-top: 17px;
 			line-height: 20px;
 			padding-right: 50px;
 		}
@@ -2999,7 +3000,7 @@
 
 				<aside id="measurecard" class="mapcard measurecard-width">
 					<header class="mapcard_header">
-						<span></span>
+						<span><i style="font-size: 30px" class="straighten_icon"></i></span>
 						<span><i onclick="measureMode = true; showNotification('Measure mode enabled - click on point or object')"
 								class="mapcard-header-icon add_icon"></i></span>
 						<span><i onclick="toggleMeasurecard()" style="color: red"
@@ -4297,7 +4298,6 @@
 
 
 				if ((measure.start_type == 'ship' && !(measure.start_value in shipsDB))) {
-					console.log(measure)
 					showNotification('Ship out of range for measurement.');
 					return false;
 				}
@@ -4378,6 +4378,7 @@
 			measures.push({ start_value: v, start_type: t, visible: true });
 			if (!measurecardVisible()) toggleMeasurecard();
 			showNotification('Started measuring....');
+			refreshMeasures();
 		}
 
 		function endMeasurement(t, v) {
