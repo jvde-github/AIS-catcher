@@ -517,11 +517,32 @@
 		.tablesection {
 			font-size: 0.8em;
 			display: flex;
+			flex-direction: column;
 			height: 100%;
 			margin: 10px auto;
 			color: var(--main-font-color);
 			background-color: var(--table-background-color);
 			width: fit-content;
+		}
+
+
+		.search-container {
+			display: flex;
+			justify-content: center;
+			margin-bottom: 10px;
+			margin-top: 10px;
+			width: 100%;
+		}
+
+		.search-box {
+			width: 300px;
+			padding: 10px;
+			font-size: 16px;
+			border: 1px solid var(--table-border-color);
+			border-radius: 5px;
+			color: var(--main-font-color);
+			background-color: var(--table-alternate-background-color);
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 		}
 
 		/* other tables */
@@ -2895,9 +2916,13 @@
 
 			<div class="tabcontent" id="ships">
 				<div class="tablesection">
+					<div class="search-container">
+						<input type="text" class="search-box" id="shipSearch" placeholder="Search for ships...">
+					</div>
 					<div id="shipTable"></div>
 				</div>
 			</div>
+
 
 			<div class="tabcontent" id="map">
 				<div id="statcard">
@@ -4384,8 +4409,18 @@
 
 			let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
 
-			if (event.originalEvent.ctrlKey || measureMode) {
+			if (event.originalEvent.ctrlKey || measureMode || isMeasuring) {
 				measureMode = false;
+
+				if (isMeasuring) {
+					if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
+						endMeasurement("ship", feature.ship.mmsi);
+					}
+					else {
+						endMeasurement("point", ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
+					}
+					return;
+				}
 
 				if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
 					startMeasurementAtPoint("ship", feature.ship.mmsi);
@@ -4397,16 +4432,7 @@
 				return;
 			}
 
-			if (isMeasuring) {
-				if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
-					endMeasurement("ship", feature.ship.mmsi);
-					return;
-				}
-				else {
-					endMeasurement("point", ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
-				}
-				return;
-			}
+
 
 			if (feature && 'link' in feature && !included) {
 				window.open(feature.link, '_blank');
@@ -6394,6 +6420,37 @@
 
 		function downloadCSV() {
 			if (table) table.download("csv", "data.csv");
+		}
+
+		document.getElementById("shipSearch").addEventListener("input", function (e) {
+			const query = e.target.value;
+			searchShips(query);
+		});
+
+		function searchShips(query) {
+			if (table) {
+				table.setFilter(customShipFilter, { query: query });
+			}
+		}
+
+		function customShipFilter(data, filterParams) {
+			const query = filterParams.query.toLowerCase();
+			return data.shipname.toLowerCase().includes(query) ||
+				data.mmsi.toString().includes(query) ||
+				data.callsign.toLowerCase().includes(query) ||
+				data.shipclass.toString().includes(query) ||
+				(data.last_signal != null && getDeltaTimeVal(data.last_signal).includes(query)) ||
+				(data.count != null && data.count.toString().includes(query)) ||
+				(data.ppm != null && data.ppm.toString().includes(query)) ||
+				(data.level != null && data.level.toString().includes(query)) ||
+				(data.distance != null && getDistanceVal(data.distance).includes(query)) ||
+				(data.bearing != null && data.bearing.toString().includes(query)) ||
+				(data.lat != null && getLatValFormat(data).includes(query)) ||
+				(data.lon != null && getLonValFormat(data).includes(query)) ||
+				(data.speed != null && getSpeedVal(data.speed).toString().includes(query)) ||
+				(data.validated != null && (data.validated == 1 ? "yes" : data.validated == -1 ? "no" : "pending").includes(query)) ||
+				(data.channels != null && getStringfromChannels(data.channels).includes(query)) ||
+				(data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
 		}
 
 		async function updateShipTable() {
