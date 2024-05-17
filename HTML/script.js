@@ -1185,7 +1185,7 @@ function startMeasurementAtPoint(t, v) {
 isMeasuring = true;
 measures.push({ start_value: v, start_type: t, visible: true });
 if (!measurecardVisible()) toggleMeasurecard();
-showNotification('Started measuring....');
+showNotification('Select end point or object');
 refreshMeasures();
 }
 
@@ -1201,7 +1201,7 @@ if (isMeasuring) {
 
     isMeasuring = false;
 
-    showNotification('Measurement finished.');
+    showNotification('Measurement added.');
     refreshMeasures();
 }
 }

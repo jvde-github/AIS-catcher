@@ -358,7 +358,7 @@ a:focus {
     background: var(--backdrop-color);
     border-top: solid;
     border-color: var(--mainspace-container-color);
-    border-width: 4px;
+    /*border-width: 4px;*/
     display: flex;
     flex-direction: column;
     justify-content: stretch;

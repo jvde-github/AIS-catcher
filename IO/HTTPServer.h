@@ -27,7 +27,7 @@
 #else
 #include <sys/socket.h>
 #include <netdb.h>
-#define SOCKET		int
+#define SOCKET int
 #define closesocket close
 #endif
 
@@ -43,24 +43,29 @@
 #include "Utilities.h"
 #include "Library/ZIP.h"
 
-namespace IO {
+namespace IO
+{
 
-	class SSEConnection {
+	class SSEConnection
+	{
 	protected:
 		bool running = false;
-		TCP::ServerConnection* connection;
+		TCP::ServerConnection *connection;
 		int _id = 0;
 
 	public:
-		SSEConnection(TCP::ServerConnection* c, int id) : connection(c), _id(id) {}
+		SSEConnection(TCP::ServerConnection *c, int id) : connection(c), _id(id) {}
 		~SSEConnection() { Close(); }
 
-		int getID() {
+		int getID()
+		{
 			return _id;
 		}
 
-		void Start() {
-			if (!connection) return;
+		void Start()
+		{
+			if (!connection)
+				return;
 
 			// std::cerr << "SSE start: " << connection->sock << std::endl;
 			running = true;
@@ -75,13 +80,16 @@ namespace IO {
 			connection->SendDirect(headers.c_str(), headers.length());
 		}
 
-		bool isConnected() {
+		bool isConnected()
+		{
 			return connection && connection->isConnected();
 		}
 
-		void Close() {
+		void Close()
+		{
 
-			if (connection) {
+			if (connection)
+			{
 				// std::cerr << "SSE close: " << connection->sock << std::endl;
 				connection->SendDirect("\r\n", 1);
 				connection->Unlock();
@@ -90,10 +98,13 @@ namespace IO {
 			}
 		}
 
-		void SendEvent(const std::string& eventName, const std::string& eventData, const std::string& eventId = "") {
-			if (connection && running) {
+		void SendEvent(const std::string &eventName, const std::string &eventData, const std::string &eventId = "")
+		{
+			if (connection && running)
+			{
 				std::string eventStr = "event: " + eventName + "\r\n";
-				if (!eventId.empty()) {
+				if (!eventId.empty())
+				{
 					eventStr += "id: " + eventId + "\r\n";
 				}
 				eventStr += "data: " + eventData + "\r\n\r\n";
@@ -103,28 +114,33 @@ namespace IO {
 		}
 	};
 
-	class HTTPServer : public TCP::Server {
+	class HTTPServer : public TCP::Server
+	{
 	public:
-		virtual void Request(TCP::ServerConnection& c, const std::string& msg, bool accept_gzip);
+		virtual void Request(TCP::ServerConnection &c, const std::string &msg, bool accept_gzip);
 
-		void Response(TCP::ServerConnection& c, std::string type, const std::string& content, bool gzip = false);
-		void Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false);
+		void Response(TCP::ServerConnection &c, std::string type, const std::string &content, bool gzip = false, bool cache = false);
+		void Response(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip = false, bool cache = false);
+		void ResponseRaw(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip = false, bool cache = false);
 
-		void ResponseRaw(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false, bool cache = false);
-
-		void cleanupSSE() {
-			for (auto it = sse.begin(); it != sse.end();) {
-				if (!it->isConnected()) {
+		void cleanupSSE()
+		{
+			for (auto it = sse.begin(); it != sse.end();)
+			{
+				if (!it->isConnected())
+				{
 					it->Close();
 					it = sse.erase(it);
 				}
-				else {
+				else
+				{
 					++it;
 				}
 			}
 		}
 
-		void upgradeSSE(TCP::ServerConnection& c, int id) {
+		void upgradeSSE(TCP::ServerConnection &c, int id)
+		{
 			// temporary design
 			// std::cerr << "Upgrading to SSE connection\n";
 			cleanupSSE();
@@ -133,9 +149,11 @@ namespace IO {
 			sse.back().Start();
 		}
 
-		void sendSSE(int id, const std::string& event, const std::string& data) {
+		void sendSSE(int id, const std::string &event, const std::string &data)
+		{
 
-			for (auto it = sse.begin(); it != sse.end(); ++it) {
+			for (auto it = sse.begin(); it != sse.end(); ++it)
+			{
 				if (it->getID() == id)
 					it->SendEvent("nmea", data);
 			}
@@ -146,7 +164,7 @@ namespace IO {
 		std::string ret, header;
 		std::list<IO::SSEConnection> sse;
 
-		void Parse(const std::string& s, std::string& get, bool& accept_gzip);
+		void Parse(const std::string &s, std::string &get, bool &accept_gzip);
 		void processClients();
 
 		ZIP zip;
