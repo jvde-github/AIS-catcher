@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css" />
 
-	<link rel="stylesheet" href="style_v0_58_137_g13a62c50.css" />
+	<link rel="stylesheet" href="style_1715975512.css" />
 	<link rel="stylesheet" href="config.css" />
 	
 </head>
@@ -773,7 +773,7 @@
 				<aside id="measurecard" class="mapcard measurecard-width">
 					<header class="mapcard_header">
 						<span><i style="font-size: 30px" class="straighten_icon"></i></span>
-						<span><i onclick="measureMode = true; showNotification('Measure mode enabled - click on point or object')"
+						<span><i onclick="measureMode = true; showNotification('Click on start point/object')"
 								class="mapcard-header-icon add_icon"></i></span>
 						<span><i onclick="toggleMeasurecard()" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
@@ -894,18 +894,18 @@
 
 				<div title="Counters"
 					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
-					style="top: 10px;">
+					style="top: 10px; border-radius: 17px;">
 					<button type="button" onclick="toggleStatcard();" class="btn btn-primary map-button"
-						style="font-size: 10px;">
+						style="font-size: 10px; border-radius: 2px; border-top-right-radius: 17px; border-top-left-radius: 17px;">
 						<span id="markerCount">0</span>
 					</button>
-					<button type="button" onclick="toggleTablecard();" class="btn btn-primary map-button">
+					<button type="button" onclick="toggleTablecard();" class="btn btn-primary map-button" style="border-radius: 2px;">
 						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
 							<path
 								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
 						</svg>
 					</button>
-					<button type="button" onclick="toggleMeasurecard();" class="btn btn-primary map-button">
+					<button type="button" onclick="toggleMeasurecard();" class="btn btn-primary map-button" style="border-radius: 2px; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px;">
 						<svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px">
 							<path
 								d="M160-240q-33 0-56.5-23.5T80-320v-320q0-33 23.5-56.5T160-720h640q33 0 56.5 23.5T880-640v320q0 33-23.5 56.5T800-240H160Zm0-80h640v-320H680v160h-80v-160h-80v160h-80v-160h-80v160h-80v-160H160v320Zm120-160h80-80Zm160 0h80-80Zm160 0h80-80Zm-120 0Z" />
@@ -964,7 +964,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_v0_58_137_g13a62c50.js"></script>
+	<script src="script_1715975512.js"></script>
 	<script src="config.js"></script>
 
 	<script>

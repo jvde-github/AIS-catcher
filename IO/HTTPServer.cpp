@@ -90,27 +90,27 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, std::string type, const std::string &content, bool gzip)
+	void HTTPServer::Response(TCP::ServerConnection &c, std::string type, const std::string &content, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(content);
-			ResponseRaw(c, type, (char *)zip.getOutputPtr(), zip.getOutputLength(), true);
+			ResponseRaw(c, type, (char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
 
-		ResponseRaw(c, type, (char *)content.c_str(), content.size());
+		ResponseRaw(c, type, (char *)content.c_str(), content.size(), cache);
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip)
+	void HTTPServer::Response(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(data, len);
-			ResponseRaw(c, type, (char *)zip.getOutputPtr(), zip.getOutputLength(), true);
+			ResponseRaw(c, type, (char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
