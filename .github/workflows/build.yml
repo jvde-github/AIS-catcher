@@ -91,34 +91,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           
-  macos-intel:
-    runs-on: macos-12
-    needs: bakeHTML
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Update brew repositories
-      run: brew update
-
-    - name: Install dependencies
-      run: brew install libusb 
-      
-    - name: Install more recent librtlsdr
-      run: git clone https://github.com/osmocom/rtl-sdr && cd rtl-sdr && mkdir build && cd build && cmake -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DCMAKE_BUILD_TYPE=Release .. && make -j3 LIBRARY_PATH=$(pkg-config --libs-only-L libusb-1.0 | sed 's/\-L//') && sudo make install && cd ../../
-
-    - name: build AIS-catcher
-      run: mkdir build; cd build; cmake ..; make
-
-    - name: upload artifact
-      run: mkdir output; cp build/AIS-catcher output/
-      
-    - name: Upload Artifacts MACOS-intel
-      uses: actions/upload-artifact@v3
-      with:
-        name: "AIS-catcher macos-intel"
-        path: |
-          output
-          
   Windows:
     runs-on: windows-2022
     needs: bakeHTML

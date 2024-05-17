@@ -6,6 +6,7 @@ This repository presents the `AIS-catcher` software, a versatile dual-channel AI
 <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9fd27b96-e37a-4f92-869c-b0ba782c12fa.png" width="90%"/>
 </p>
 	
+
 # Joining the community at aiscatcher.org
 
 AIS-catcher is a free, open-source project aimed at transforming SDR-equipped computers into AIS-receivers. It's continuously improved with decoding enhancements, user support, and expanded output options for commercial data aggregators. Our next step involves utilizing aggregated AIS data for real-time visualization in local web dashboards, enhancing receiver performance and situational awareness by integrating nearby station data.
