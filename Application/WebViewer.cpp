@@ -315,8 +315,10 @@ void WebViewer::close()
 	}
 }
 
-#include "HTML/HTML.cpp"
-#include "HTML/HTML_local.cpp"
+#include "HTML/index_html.cpp"
+#include "HTML/index_local_html.cpp"
+#include "HTML/script_js.cpp"
+#include "HTML/style_css.cpp"
 #include "HTML/favicon.cpp"
 
 void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, bool gzip)
@@ -326,6 +328,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	std::string a;
 
 	std::string::size_type pos = response.find('?');
+
 	if (pos != std::string::npos)
 	{
 		r = response.substr(0, pos);
@@ -342,6 +345,14 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			ResponseRaw(c, "text/html", (char *)index_html_gz, index_html_gz_len, true);
 		else
 			ResponseRaw(c, "text/html", (char *)index_local_html_gz, index_local_html_gz_len, true);
+	}
+	else if (r == "/script_" VERSION_URL_TAG ".js")
+	{
+		ResponseRaw(c, "application/javascript", (char *)script_js_gz, script_js_gz_len, true, true);
+	}
+	else if (r == "/style_" VERSION_URL_TAG ".css")
+	{
+		ResponseRaw(c, "text/css", (char *)style_css_gz, style_css_gz_len, true, true);
 	}
 	else if (!cdn.empty() && r.find("/cdn/") == 0)
 	{
