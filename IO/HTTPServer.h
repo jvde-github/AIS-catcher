@@ -110,7 +110,7 @@ namespace IO {
 		void Response(TCP::ServerConnection& c, std::string type, const std::string& content, bool gzip = false);
 		void Response(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false);
 
-		void ResponseRaw(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false);
+		void ResponseRaw(TCP::ServerConnection& c, std::string type, char* data, int len, bool gzip = false, bool cache = false);
 
 		void cleanupSSE() {
 			for (auto it = sse.begin(); it != sse.end();) {

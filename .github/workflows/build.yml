@@ -18,38 +18,31 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: main
-    - name: Install gzip, xxd, minify
+
+    - name: Install required tools
       run: |
         sudo apt-get update
         sudo apt-get install gzip xxd minify -y
-    - name: Stamp version number
-      run: |
-       git fetch --prune --unshallow
-       TAG=$(git describe --tags)
-       sed -i '/VERSION_DESCRIBE/d' Application/AIS-catcher.h
-       echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/AIS-catcher.h
-    - name: Minify and compress index.html
-      run: |
-        cd HTML
-        rm HTML.cpp
-        rm HTML_local.cpp
-        rm index_local.html
-        minify index.html | gzip > index_html_gz
-        xxd -i index_html_gz > HTML.cpp
-        sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' index.html > index_local.html
-        minify index_local.html | gzip > index_local_html_gz
-        xxd -i index_local_html_gz > HTML_local.cpp
 
-        cd ..
+    - name: Fetch git tags and run bake script
+      run: |
+        git fetch --prune --unshallow
+        TAG=$(git describe --tags)
+        ./build.html $TAG
+        
+    - name: Commit and push changes
+      run: |
         if [[ -z $(git diff) ]]; then
           echo "Nothing to commit, working tree clean"
-            exit 0
-          else
-            echo "There are changes to be committed"
+          exit 0
+        else
+          echo "There are changes to be committed"
         fi
-        git add HTML/HTML.cpp
+        git add HTML/index_html.cpp
         git add HTML/index_local.html
-        git add HTML/HTML_local.cpp
+        git add HTML/index_local_html.cpp
+        git add HTML/script_js.cpp
+        git add HTML/style_css.cpp
         git add Application/AIS-catcher.h
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
