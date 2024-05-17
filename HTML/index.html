@@ -3081,6 +3081,13 @@
 						</div>
 
 						<div onclick="shipcardselect(this)"
+						class="mapcard-content-row shipcard-content-row shipcard-max-only">
+						<div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
+						<div><span>Draught</span><span id="shipcard_draught">-</span></div>
+					</div>
+
+
+						<div onclick="shipcardselect(this)"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>last signal</span><span id="shipcard_last_signal"></span></div>
 							<div><span>Receiver</span><span id="shipcard_last_group"></span></div>
@@ -3094,16 +3101,12 @@
 							<div><span>Sources</span><span id="shipcard_sources">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
-							<div><span>Draught</span><span id="shipcard_draught">-</span></div>
-						</div>
 
 						<div onclick="shipcardselect(this)"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
 							<div><span>Channels</span><span id="shipcard_channels">-</span></div>
+							<div><span>Bearing</span><span id="shipcard_bearing">-</span></div>
 						</div>
 					</div>
 					<footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
@@ -7120,6 +7123,7 @@
 			// round and add units
 			[
 				{ id: "cog", u: "&deg", d: 0 },
+				{ id: "bearing", u: "&deg", d: 0 },
 				{ id: "heading", u: "&deg", d: 0 },
 				{ id: "level", u: "dB", d: 1 },
 				{ id: "ppm", u: "ppm", d: 1 },
