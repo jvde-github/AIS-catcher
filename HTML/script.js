@@ -3644,7 +3644,7 @@ const handlePointerMove = function (pixel, target) {
 
         const lastMeasureIndex = measures.length - 1;
 
-        if (mmsi) {
+        if (mmsi && mmsi != "station") {
             measures[lastMeasureIndex] = {
                 ...measures[lastMeasureIndex],
                 end_value: mmsi,
