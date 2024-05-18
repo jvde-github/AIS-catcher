@@ -59,31 +59,17 @@ Only use this software in regions where such use is permitted.
 - Option to apply filter functionality (control message routing) to webviewer and added option to filter on station_id
 - '-M DT' set by default UNLESS running with `-F` (turbo boost mode and no webviewer) or when overwritten with -M
 
-**v0.58** version:
-- RTLSDR V4 support in docker image
-- Fixing postgres support for windows binaries
-- Support to claim feeders by adding UUID to -X
-
 Earlier versions:
 
 **v0.57** version:
-- Please note that you have to update any plugins to the latest version!
 - Community feed by running with -X. This will feed the aiscatcher.org server and return data as an extra map layer option in your webviewer.
 - Performance improvements when drawing a large number of vessels by switching from Leaflet to Openlayers (notice this might require re-working some plugins). in openlayers it is more straightforward to plot ship icons on the canvas.
-- option `f` that writes the NMEA lines to a specified file
-- smaller default icons and setting option to set icon size
-- setting option to define width of vesseltracks
-- performance improvements for TCP input and UDP output
 - Option to auto terminate the program if no messages received for a while, e.g. after 10 minutes `-T 600 nomsg_ony`. This will help cure network connections for input or devices going stale without an error 
 
 **v0.56** has recently added:
 - You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
 switches `-N geojson on` and `-N kml on`). The KML feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE. A demonstration of the use of GeoJSON is [plotting the vessels on the tar1090 map.](https://github.com/jvde-github/AIS-in-TAR1090)
-- Bug fix in setting baud rate for serial devices
 - Experimenter Mode for NMEA2000 via socketCAN on Linux. [See documentation below](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#nmea2000-input-and-output-via-socketcan).
-- Speed (moving/stationary) and Ship class now included as labels in Prometheus output
-- Map overlays will be stored as part of the settings, so wil automatically reopen when the browser is refreshed (separate storage for day and night mode)
-- Ship icon that unlocks the side table is now always visible. For narrow screens (<800px) the button will open the separate tab with the ship list
 - Pyssel blog post describes procedure to show offline mbtiles maps [here](https://pysselilivet.blogspot.com/2023/12/ais-receiver-and-dispatcher-best.html)
 
 **v0.55** is the latest version and introduces the following:
@@ -1034,6 +1020,8 @@ Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
  | :--- | :--- | :---: |   :--- | :---: | 
 |Edge| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/Edge/AIS-catcher.SDRPLAY.x64.zip) |
+|v0.59| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.59/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.59/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.59/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.59/AIS-catcher.SDRPLAY.x64.zip) |
+|v0.58| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.58/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.58/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.58/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.58/AIS-catcher.SDRPLAY.x64.zip) |
 |v0.57| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.57/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.57/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.57/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.57/AIS-catcher.SDRPLAY.x64.zip) |
 |v0.56| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.56/AIS-catcher.SDRPLAY.x64.zip) |
 |v0.55| [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.x64.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.SDRPLAY.x86.zip) | [ZIP](https://github.com/jvde-github/AIS-catcher/releases/download/v0.55/AIS-catcher.SDRPLAY.x64.zip) |
