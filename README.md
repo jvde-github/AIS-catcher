@@ -56,7 +56,8 @@ Only use this software in regions where such use is permitted.
 - Additional option for WebViewer to bind server to specific IP address. This allows you to make the browser only visible on the local PC, via `-N IP_BIND localhost`. By default the webviewer is visible by other machines on the network.
 - Bug fix to range rings in 'imperial' units
 - Webviewer - ships tab has now a filter function to quickly look for a ship
-- Option to apply filter to webviewer and added option to filter on station_id
+- Option to apply filter functionality (control message routing) to webviewer and added option to filter on station_id
+- '-M DT' set by default UNLESS running with `-F` (turbo boost mode and no webviewer) or when overwritten with -M
 
 **v0.58** version:
 - RTLSDR V4 support in docker image
