@@ -152,6 +152,7 @@ public:
 	void setChannel(std::string mode, std::string NMEA);
 	void setTags(const std::string& s);
 	void removeTags(const std::string& s);
+	void clearTags() { tag.mode = 0; }
 
 	bool& Timing() { return timing; }
 

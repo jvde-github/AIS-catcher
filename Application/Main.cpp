@@ -274,6 +274,7 @@ int main(int argc, char* argv[]) {
 				break;
 			case 'M':
 				Assert(count <= 1, param, "requires zero or one parameter [DT].");
+				receiver.clearTags();
 				receiver.setTags(arg1);
 				break;
 			case 'c':
