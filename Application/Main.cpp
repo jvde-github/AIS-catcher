@@ -345,6 +345,7 @@ int main(int argc, char* argv[]) {
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				receiver.addModel(2)->Set("FP_DS", "ON").Set("PS_EMA", "ON");
+				receiver.removeTags("DT");
 				break;
 			case 't':
 				Assert(count <= 3, param, "requires one, two or three parameters [protocol] [host] [port].");

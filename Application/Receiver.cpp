@@ -54,6 +54,24 @@ void Receiver::setTags(const std::string& s) {
 	}
 }
 
+void Receiver::removeTags(const std::string& s) {
+	for (char c : s) {
+		switch (toupper(c)) {
+		case 'M':
+			tag.mode &= ~4;
+			break;
+		case 'T':
+			tag.mode &= ~2;
+			break;
+		case 'D':
+			tag.mode &= ~1;
+			break;
+		default:
+			throw std::runtime_error("illegal tag '" + std::string(1, c) + "' defined on command line [D / T / M]");
+		}
+	}
+}
+
 void Receiver::setChannel(std::string mode, std::string NMEA) {
 
 	Util::Convert::toUpper(mode);
