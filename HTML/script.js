@@ -3944,6 +3944,7 @@ function populateShipcard() {
             .querySelectorAll("span:nth-child(2)")
             .forEach((e) => (e.innerHTML = null));
         document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
+        document.getElementById("shipcard_header_flag").innerHTML = "";
         document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
 
         updateFocusMarker();
@@ -3952,7 +3953,8 @@ function populateShipcard() {
 
     let ship = shipsDB[card_mmsi].raw;
 
-    document.getElementById("shipcard_header_title").innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;") + (getShipName(ship) || ship.mmsi);
+    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;") ;
+    document.getElementById("shipcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
 
     setShipcardValidation(ship.validated);
 

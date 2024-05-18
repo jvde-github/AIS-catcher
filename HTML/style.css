@@ -879,8 +879,6 @@ td {
     margin: 5px;
     margin-top: 10px;
     border-radius: 0px;
-    line-height: inherit;
-    align-items: center;
     font-size: 16px;
     color: var(--shipcard-font-color);
     background-color: var(--shipcard-header-color);
@@ -888,8 +886,16 @@ td {
     display: flex;
     flex-direction: row;
     justify-content: stretch;
-    /*border-bottom: 2px solid var(--shipcard-footer-shadow-color);*/
     box-shadow: 0px 4px 8px 0px var(--shipcard-footer-shadow-color);
+}
+
+#shipcard_header_title {
+    flex: 1;    
+}
+
+#shipcard_header_flag {
+    flex: 0 1 auto;
+    margin-right: 5px;
 }
 
 .shipcard-validated {
