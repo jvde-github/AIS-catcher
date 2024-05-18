@@ -134,7 +134,7 @@ const float LEVEL_UNDEFINED = 1024;
 const float PPM_UNDEFINED = 1024;
 
 struct TAG {
-	unsigned mode = 0;
+	unsigned mode = 3;
 	float sample_lvl = 0;
 	float level = 0;
 	float ppm = 0;
