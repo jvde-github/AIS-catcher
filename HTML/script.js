@@ -513,6 +513,7 @@ let markerFeatures = {};
 
 let stationFeature = undefined;
 let hoverCircleFeature = undefined;
+let measureCircleFeature = undefined;
 let selectCircleFeature = undefined;
 
 
@@ -3637,6 +3638,17 @@ const handlePointerMove = function (pixel, target) {
         startHover(mmsi, pixel);
     } else if (hoverMMSI) {
         stopHover();
+    }
+
+    if(isMeasuring) {
+        const lastMeasureIndex = measures.length - 1;
+        measures[lastMeasureIndex] = {
+            ...measures[lastMeasureIndex],
+            end_value:  ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)),
+            end_type: "point"
+        };
+
+        refreshMeasures();    
     }
 };
 
