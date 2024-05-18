@@ -45,7 +45,7 @@ Only use this software in regions where such use is permitted.
 - TAR1090 can now visualize ship positions from AIS-catcher. See for an example [here](https://kx1t.com/trenton-tar1090/). 
 - Additional option  for `-f`-switch to either append NMEA lines to file (`-f filename MODE APP` for appending - default) or starting fresh with `-f filename MODE OUT`
 - History for range indicator can now be configured (24 hours default) with new option for 7 and 30 days history
-- 
+
 <p align="center">
   <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9b2f0279-7cd9-4fce-b7bb-246777207361" width="25%"/>
 </p>
@@ -60,28 +60,14 @@ Only use this software in regions where such use is permitted.
 - '-M DT' set by default UNLESS running with `-F` (turbo boost mode and no webviewer) or when overwritten with -M
 
 Earlier versions:
-
-**v0.57** version:
 - Community feed by running with -X. This will feed the aiscatcher.org server and return data as an extra map layer option in your webviewer.
 - Performance improvements when drawing a large number of vessels by switching from Leaflet to Openlayers (notice this might require re-working some plugins). in openlayers it is more straightforward to plot ship icons on the canvas.
 - Option to auto terminate the program if no messages received for a while, e.g. after 10 minutes `-T 600 nomsg_ony`. This will help cure network connections for input or devices going stale without an error 
-
-**v0.56** has recently added:
 - You can access  geoJSON output of the current ship positions by visiting the web viewer at `/geojson` and for KML output, please navigate to `/kml` (enable with the
 switches `-N geojson on` and `-N kml on`). The KML feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE. A demonstration of the use of GeoJSON is [plotting the vessels on the tar1090 map.](https://github.com/jvde-github/AIS-in-TAR1090)
 - Experimenter Mode for NMEA2000 via socketCAN on Linux. [See documentation below](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#nmea2000-input-and-output-via-socketcan).
 - Pyssel blog post describes procedure to show offline mbtiles maps [here](https://pysselilivet.blogspot.com/2023/12/ais-receiver-and-dispatcher-best.html)
 
-**v0.55** is the latest version and introduces the following:
-- "Show all track" option and a new adjustable setting to dim the maps for greater visibility of the ship icons (see screenshot above for an example)
-- Added NOAA nautical charts as an overlay ([link](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html#enc-display-services))
-These maps and the applications are not suitable for navigation (just to reiterate that).
-- I created [aiscatcher.org](https://aiscatcher.org) and started sharing data from my own station [here](https://aiscatcher.org/southwood). The site also contains links to several
- dashboards for stations running AIS-catcher and links to interesting (open-source) projects related to AIS and AIS-catcher.
-- If you want a persistent dashboard available outside the local network, please reach out (jvde.github at gmail.com) and I will add it to [aiscatcher.org](https://aiscatcher.org). It requires a UDP stream from AIS-catcher, station name and, optionally, a rough approximation of the station location. Data is not aggregated and forwarded.
-- Addition of option `-N CONTEXT yyyy` which will store the settings in the web browser in `yyyy`. This will allow to separate setting storage when running multiple web viewers. 
-- GPS information (e.g. via serial `-e ...` or gpsd `-t gpsd ...`) is now included in HTTP client push
-- Introducing data feeds with user ID to reduce security issues with data feeds, `-u x.x.x.x y UUID u`. For future versions, we are exploring adding HMAC authentication. 
   
 ## Installation
 
