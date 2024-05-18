@@ -3640,15 +3640,26 @@ const handlePointerMove = function (pixel, target) {
         stopHover();
     }
 
-    if(isMeasuring) {
-        const lastMeasureIndex = measures.length - 1;
-        measures[lastMeasureIndex] = {
-            ...measures[lastMeasureIndex],
-            end_value:  ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)),
-            end_type: "point"
-        };
+    if (isMeasuring) {
 
-        refreshMeasures();    
+        const lastMeasureIndex = measures.length - 1;
+
+        if (mmsi) {
+            measures[lastMeasureIndex] = {
+                ...measures[lastMeasureIndex],
+                end_value: mmsi,
+                end_type: "ship"
+            };
+        }
+        else {
+            measures[lastMeasureIndex] = {
+                ...measures[lastMeasureIndex],
+                end_value: ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)),
+                end_type: "point"
+            };
+        }
+
+        refreshMeasures();
     }
 };
 
