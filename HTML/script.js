@@ -430,7 +430,7 @@ const measureSource = new ol.source.Vector();
 const measureStyle = new ol.style.Style({
     stroke: new ol.style.Stroke({
         color: 'green',
-        lineDash: [20, 20], // 20 pixels of green followed by 20 pixels of white
+        lineDash: [20, 20], 
         width: 2,
     })
 });
@@ -438,8 +438,8 @@ const measureStyle = new ol.style.Style({
 const measureStyleWhite = new ol.style.Style({
     stroke: new ol.style.Stroke({
         color: 'white',
-        lineDash: [20, 20], // 20 pixels of white followed by 20 pixels of green
-        lineDashOffset: 20, // Start the white dash 20 pixels into the dash pattern
+        lineDash: [20, 20], 
+        lineDashOffset: 20, 
         width: 2,
     })
 });
@@ -452,7 +452,7 @@ const measureLabelStyle = new ol.style.Style({
             color: 'rgba(255, 255, 255, 1)',
         }),
         backgroundFill: new ol.style.Fill({
-            color: 'green', //'rgba(0, 0, 0, 0.7)',
+            color: 'green', 
         }),
         padding: [3, 3, 3, 3],
         textBaseline: 'bottom',
@@ -496,7 +496,7 @@ function measureStyleFunction(feature) {
     let point, label;
     if (type === 'LineString') {
         point = new ol.geom.Point(geometry.getLastCoordinate());
-        label = `${Math.round(feature.measureDistance * 100) / 100} NMi, ${Math.round(feature.measureBearing * 100) / 100} degrees`;
+        label = `${feature.measureDistance} ${getDistanceUnit()}, ${feature.measureBearing} degrees`;
     }
     styles.push(measureStyle);
     styles.push(measureStyleWhite);
@@ -1133,28 +1133,28 @@ function refreshMeasures() {
             }
         }
 
-        let nauticalMiles = 0, bearing = 0;
+        let distance = 0, bearing = 0;
 
         if (sc && ec) {
             const geometry = new ol.geom.LineString([sc, ec]);
 
             const length = ol.sphere.getLength(geometry);
-            nauticalMiles = length / 1852;
+            distance = getDistanceVal(length / 1852);
             const coordinates = geometry.getCoordinates();
             const start = ol.proj.toLonLat(coordinates[0]);
             const end = ol.proj.toLonLat(coordinates[coordinates.length - 1]);
-            bearing = calculateBearing(start, end);
+            bearing = calculateBearing(start, end).toFixed(0);
 
             if (measure.visible) {
                 const feature = new ol.Feature(geometry);
                 measureSource.addFeature(feature);
-                feature.measureDistance = nauticalMiles;
+                feature.measureDistance = distance;
                 feature.measureBearing = bearing;
             }
         }
         let icon = measure.visible ? 'visibility' : 'visibility_off';
 
-        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td>${nauticalMiles.toFixed(1)}</td><td>${bearing.toFixed(0)}</td></tr>`;
+        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
 
         return true;
     });
@@ -4268,7 +4268,6 @@ async function updateMap() {
     }
     if (shipcardVisible()) populateShipcard();
     updateMarkerCount();
-    refreshMeasures();
     await fetchRange();
 
     redrawMap();
@@ -4318,6 +4317,7 @@ function redrawMap() {
                 shapeVector.addFeature(shapeFeature)
             }
         }
+        refreshMeasures();
     }
 
     for (let [mmsi, entry] of Object.entries(paths)) {
