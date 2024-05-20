@@ -1335,14 +1335,15 @@ function initMap() {
 
     map.getTargetElement().addEventListener('contextmenu', function (evt) {
 
-        const mmsi = getFeatureMMSI(map.getEventPixel(evt), map.getTargetElement())
+        const f = getFeature(map.getEventPixel(evt), map.getTargetElement())
 
-        if (!mmsi)
+        if (!f)
             showContextMenu(evt, 0, ['settings', 'ctx-map']);
-        else if (mmsi == 'station')
+        else if ('station' in f) {
             showContextMenu(evt, null, ["station"]);
-        else
-            showContextMenu(evt, mmsi, ["mmsi", "mmsi-map"]);
+        }
+        else if ('ship' in f)
+            showContextMenu(evt, f.ship.mmsi, ["mmsi", "mmsi-map"]);
     });
 
     baseMapSelector.innerHTML = '';
@@ -3468,7 +3469,7 @@ async function updateShipTable() {
 }
 
 function getTooltipContent(ship) {
-    return '<div>' + getFlagStyled(ship.country,"padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px;") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
+    return '<div>' + getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px;") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
 }
 
 function getTypeVal(ship) {
@@ -3626,34 +3627,21 @@ function updateHoverMarker() {
     }
 }
 
+
+
 function getFeature(pixel, target) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
         function (feature) { if ('ship' in feature || 'tooltip' in feature) { return feature; } }, { hitTolerance: 10 });
 
-    if (feature) {
-        return feature;
-    }
-
-    return undefined;
-}
-
-function getFeatureMMSI(pixel, target) {
-    const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'tooltip' in feature) { return feature; } }, { hitTolerance: 10 });
-
-    if (feature) {
-        if ('ship' in feature) return feature.ship.mmsi;
-        else return feature.tooltip;
-    }
-
+    if (feature) return feature;
     return undefined;
 }
 
 const handlePointerMove = function (pixel, target) {
-    const mmsi = getFeatureMMSI(pixel, target)
+    const feature = getFeature(pixel, target)
 
-    if (mmsi) {
-        startHover(mmsi, pixel);
+    if (feature && 'ship' in feature) {
+        startHover(feature.ship.mmsi, pixel);
     } else if (hoverMMSI) {
         stopHover();
     }
@@ -3662,10 +3650,10 @@ const handlePointerMove = function (pixel, target) {
 
         const lastMeasureIndex = measures.length - 1;
 
-        if (mmsi && mmsi != "station") {
+        if (feature && 'ship' in feature)  {
             measures[lastMeasureIndex] = {
                 ...measures[lastMeasureIndex],
-                end_value: mmsi,
+                end_value: feature.ship.mmsi,
                 end_type: "ship"
             };
         }
@@ -4063,6 +4051,7 @@ function drawStation() {
 
     stationFeature.setStyle([CircleStyle, svgIconStyle]);
     stationFeature.tooltip = "Receiving Station";
+    stationFeature.station = true;
     extraVector.addFeature(stationFeature);
 
     // MMSI is driving center but does not exist
