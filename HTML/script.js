@@ -4648,9 +4648,7 @@ function setupAbout() {
 }
 
 addTileLayer("OpenStreetMap", new ol.layer.Tile({
-    source: new ol.source.OSM(),
-    maxZoom: 19
-}));
+    source: new ol.source.OSM({ maxZoom: 19} )}));
 
 addTileLayer("Positron", new ol.layer.Tile({
     source: new ol.source.XYZ({
