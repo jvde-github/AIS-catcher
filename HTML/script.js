@@ -430,7 +430,7 @@ const measureSource = new ol.source.Vector();
 const measureStyle = new ol.style.Style({
     stroke: new ol.style.Stroke({
         color: 'green',
-        lineDash: [20, 20], 
+        lineDash: [20, 20],
         width: 2,
     })
 });
@@ -438,8 +438,8 @@ const measureStyle = new ol.style.Style({
 const measureStyleWhite = new ol.style.Style({
     stroke: new ol.style.Stroke({
         color: 'white',
-        lineDash: [20, 20], 
-        lineDashOffset: 20, 
+        lineDash: [20, 20],
+        lineDashOffset: 20,
         width: 2,
     })
 });
@@ -452,7 +452,7 @@ const measureLabelStyle = new ol.style.Style({
             color: 'rgba(255, 255, 255, 1)',
         }),
         backgroundFill: new ol.style.Fill({
-            color: 'green', 
+            color: 'green',
         }),
         padding: [3, 3, 3, 3],
         textBaseline: 'bottom',
@@ -1188,6 +1188,7 @@ function startMeasurementAtPoint(t, v) {
     if (!measurecardVisible()) toggleMeasurecard();
     showNotification('Select end point or object');
     refreshMeasures();
+    startMeasureMode();
 }
 
 function endMeasurement(t, v) {
@@ -1204,7 +1205,23 @@ function endMeasurement(t, v) {
 
         showNotification('Measurement added.');
         refreshMeasures();
+        clearMeasureMode();
     }
+}
+
+function startMeasureMode() {
+    measureMode = true;
+    document.getElementById('map').classList.add('crosshair_cursor');
+}
+
+function clearMeasureMode() {
+    measureMode = false;
+    document.getElementById('map').classList.remove('crosshair_cursor');
+}
+
+function setMeasureMode() {
+    measureMode = true;
+    document.getElementById('map').classList.add('crosshair_cursor');
 }
 
 const handleClick = function (pixel, target, event) {
@@ -1239,6 +1256,7 @@ const handleClick = function (pixel, target, event) {
         else {
             startMeasurementAtPoint("point", ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
         }
+
         return;
     }
 
@@ -3450,7 +3468,7 @@ async function updateShipTable() {
 }
 
 function getTooltipContent(ship) {
-    return '<div>' + getFlag(ship.country, '60px') + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
+    return '<div>' + getFlagStyled(ship.country,"padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px;") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
 }
 
 function getTypeVal(ship) {
@@ -3953,7 +3971,7 @@ function populateShipcard() {
 
     let ship = shipsDB[card_mmsi].raw;
 
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;") ;
+    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;");
     document.getElementById("shipcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
 
     setShipcardValidation(ship.validated);
@@ -4648,7 +4666,8 @@ function setupAbout() {
 }
 
 addTileLayer("OpenStreetMap", new ol.layer.Tile({
-    source: new ol.source.OSM({ maxZoom: 19} )}));
+    source: new ol.source.OSM({ maxZoom: 19 })
+}));
 
 addTileLayer("Positron", new ol.layer.Tile({
     source: new ol.source.XYZ({

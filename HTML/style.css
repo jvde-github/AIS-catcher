@@ -565,6 +565,10 @@ td {
     background-color: black;
 }
 
+.crosshair_cursor {
+    cursor: crosshair;
+}
+
 .maptab {
     height: 100%;
     width: 100%;
@@ -976,7 +980,6 @@ td {
 @media (hover: hover) {
     .mapcard-header-icon:hover {
         cursor: pointer;
-        /*background: var(--hover-background);*/
         transform: var(--hover-transform);
     }
 }
