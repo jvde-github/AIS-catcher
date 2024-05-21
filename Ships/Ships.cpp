@@ -228,20 +228,20 @@ int Ship::getMMSItype() {
 	if (mmsi >= 970000000 && mmsi <= 980000000) {
 		return MMSI_SARTEPIRB;
 	}
+	if (msg_type & ATON_MASK || (mmsi >=  990000000 && mmsi <= 999999999)  ) {										  
+		return MMSI_ATON;
+	}
 	if (msg_type & CLASS_A_MASK) {
 		return MMSI_CLASS_A;
 	}
 	if (msg_type & CLASS_B_MASK) {
 		return MMSI_CLASS_B;
 	}
-	if (msg_type & BASESTATION_MASK) {
+	if (msg_type & BASESTATION_MASK || (mmsi < 9000000)) {
 		return MMSI_BASESTATION;
 	}
 	if (msg_type & SAR_MASK) {
 		return MMSI_SAR;
-	}
-	if (msg_type & ATON_MASK) {
-		return MMSI_ATON;
 	}
 	if (msg_type & CLASS_A_STATIC_MASK) {
 		return MMSI_CLASS_A;
