@@ -157,7 +157,7 @@ namespace AIS {
 			while (mid > 1000000) mid /= 10;
 			mid %= 1000;
 		}
-		else if (mid / 10 == 99) {
+		else if (mid / 10 == 99 || mid / 10 == 98) {
 			mid = msg.mmsi();
 			while (mid > 100000) mid /= 10;
 			mid %= 1000;

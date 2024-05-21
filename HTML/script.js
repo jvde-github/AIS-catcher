@@ -1104,8 +1104,6 @@ function refreshMeasures() {
     let content = '';
 
     measures = measures.filter(measure => {
-
-
         if ((measure.start_type == 'ship' && !(measure.start_value in shipsDB))) {
             showNotification('Ship out of range for measurement.');
             return false;
@@ -1113,22 +1111,22 @@ function refreshMeasures() {
 
         let sc = undefined, ss = undefined, from = undefined;
         if (measure.start_type == 'point') {
-            sc = ol.proj.fromLonLat(measure.start_value);
+            sc = measure.start_value;
             from = "point";
         } else {
             ss = shipsDB[measure.start_value].raw;
-            sc = ol.proj.fromLonLat([shipsDB[measure.start_value].raw.lon, shipsDB[measure.start_value].raw.lat]);
+            sc = [shipsDB[measure.start_value].raw.lon, shipsDB[measure.start_value].raw.lat];
             from = ss.shipname || ss.mmsi;
         }
 
         let ec = undefined, es = undefined, to = "";
         if ('end_type' in measure) {
             if (measure.end_type == 'point') {
-                ec = ol.proj.fromLonLat(measure.end_value);
+                ec = measure.end_value;
                 to = "point";
             } else {
                 es = shipsDB[measure.end_value].raw;
-                ec = ol.proj.fromLonLat([shipsDB[measure.end_value].raw.lon, shipsDB[measure.end_value].raw.lat]);
+                ec = [shipsDB[measure.end_value].raw.lon, shipsDB[measure.end_value].raw.lat];
                 to = es.shipname || es.mmsi;
             }
         }
@@ -1136,13 +1134,21 @@ function refreshMeasures() {
         let distance = 0, bearing = 0;
 
         if (sc && ec) {
-            const geometry = new ol.geom.LineString([sc, ec]);
+            const wgs84Sphere = new ol.Sphere(6378137);  // WGS84 radius
+            const steps = 100;  // Number of points along the path
+            const lineCoordinates = [];
 
-            const length = ol.sphere.getLength(geometry);
+            for (let i = 0; i <= steps; i++) {
+                const fraction = i / steps;
+                const coord = wgs84Sphere.interpolate(sc, ec, fraction);
+                lineCoordinates.push(ol.proj.fromLonLat(coord));
+            }
+
+            const geometry = new ol.geom.LineString(lineCoordinates);
+            const length = wgs84Sphere.getLength(new ol.geom.LineString([ol.proj.fromLonLat(sc), ol.proj.fromLonLat(ec)]));
             distance = getDistanceVal(length / 1852);
-            const coordinates = geometry.getCoordinates();
-            const start = ol.proj.toLonLat(coordinates[0]);
-            const end = ol.proj.toLonLat(coordinates[coordinates.length - 1]);
+            const start = ol.proj.toLonLat(geometry.getFirstCoordinate());
+            const end = ol.proj.toLonLat(geometry.getLastCoordinate());
             bearing = calculateBearing(start, end).toFixed(0);
 
             if (measure.visible) {
@@ -1152,6 +1158,7 @@ function refreshMeasures() {
                 feature.measureBearing = bearing;
             }
         }
+
         let icon = measure.visible ? 'visibility' : 'visibility_off';
 
         content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
@@ -1161,6 +1168,7 @@ function refreshMeasures() {
 
     mapcardContent.innerHTML = content;
 }
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const mapcardContent = document.getElementById('measurecardInner');
