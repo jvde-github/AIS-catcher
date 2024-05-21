@@ -206,7 +206,7 @@ jobs:
       run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output; 
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: "AIS-catcher ${{matrix.platform}}"
         path: |
@@ -250,7 +250,7 @@ jobs:
       run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output; 
 
     - name: Upload Artifacts SDRPLAY
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: "AIS-catcher SDRPLAY ${{matrix.platform}}"
         path: |
