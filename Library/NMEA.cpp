@@ -94,8 +94,8 @@ namespace AIS
 					msg.NMEA.push_back(aivdm.sentence);
 				Send(&msg, 1, tag);
 			}
-			else
-				std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << std::endl;
+			else if(msg.getLength() > 0)
+				std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() <<  " from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
 			return;
 		}
 
@@ -106,7 +106,7 @@ namespace AIS
 			clean(aivdm.channel, aivdm.talkerID);
 			if (aivdm.number != 1)
 			{
-				std::cerr << "NMEA: missing part of multiline message [" << aivdm.sentence << "]" << std::endl;
+				std::cerr << "NMEA: missing part of multiline message [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
 				return;
 			}
 		}
