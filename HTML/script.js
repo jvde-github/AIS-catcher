@@ -3642,6 +3642,9 @@ const handlePointerMove = function (pixel, target) {
 
     if (feature && 'ship' in feature) {
         startHover(feature.ship.mmsi, pixel);
+    }
+    else if(feature && 'tooltip' in feature) {
+        startHover(feature.tooltip, pixel);
     } else if (hoverMMSI) {
         stopHover();
     }
