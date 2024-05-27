@@ -1043,6 +1043,14 @@ sudo apt-get upgrade
 
 sudo apt-get install git make gcc g++ cmake pkg-config -y
 ```
+For MACos with `brew` installed:
+```
+brew update
+brew upgrade
+
+brew install git make gcc cmake pkg-config
+```
+
 AIS-catcher requires libraries for the particular hardware you want to use. The following table summarizes the installation instructions for all supported hardware:
 
   System              | Linux/Raspberry              | macOS  |  MSVC/vcpkg   |     MSVC/PothosSDR |
