@@ -1044,7 +1044,7 @@ sudo apt-get upgrade
 sudo apt-get install git make gcc g++ cmake pkg-config -y
 ```
 For MACos with `brew` installed:
-```
+```console
 brew update
 brew upgrade
 
