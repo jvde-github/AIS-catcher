@@ -167,7 +167,7 @@ struct TAG
 	{
 		driver = Type::NONE;
 		hardware.clear();
-		version = VERSION_NUMBER;
+		version = 0;
 		group = GROUP_OUT_UNDEFINED;
 		status = STATUS_OK;
 		sample_lvl = LEVEL_UNDEFINED;
