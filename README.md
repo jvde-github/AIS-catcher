@@ -37,7 +37,9 @@ It is specifically forbidden to use this software for any illegal purpose whatso
 Only use this software in regions where such use is permitted.
 
 ## What's new?
-
+**Edge** version:
+- Option to send fully decoded AIS messages in JSON format via UDP and TCP (similar to screen output with `-o 5`). Add `JSON_FULL on` to `~P/S/u`.
+  
 **v0.59** developments:
 - Slowly improving the station page for feeders of aiscatcher.org. Color indicates number of stations covering area, opacity is linked to message count of station. To view your station statistics in this way, ensure you feed with a sharing key (UUID)
 ![Screenshot from 2024-05-02 21-23-24](https://github.com/jvde-github/AIS-catcher/assets/52420030/6a0391e6-a059-48fd-9543-89181262894f)
