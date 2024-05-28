@@ -20,40 +20,74 @@
 #include "IO.h"
 #include "Receiver.h"
 
-namespace IO {
+namespace IO
+{
 
-	void OutputMessage::Connect(Receiver& r) {
+	void OutputMessage::ConnectMessage(Receiver &r)
+	{
 
-		for (int j = 0; j < r.Count(); j++) {
-			StreamIn<AIS::Message>* um = (StreamIn<AIS::Message>*)&*this;
+		for (int j = 0; j < r.Count(); j++)
+		{
+			StreamIn<AIS::Message> *um = (StreamIn<AIS::Message> *)&*this;
 			if (r.Output(j).canConnect(um->getGroupsIn()))
 				r.Output(j).Connect(um);
+		}
+	}
 
-			StreamIn<AIS::GPS>* ug = (StreamIn<AIS::GPS>*)&*this;
+	void OutputMessage::ConnectJSON(Receiver &r)
+	{
+
+		for (int j = 0; j < r.Count(); j++)
+		{
+			StreamIn<JSON::JSON> *um = (StreamIn<JSON::JSON> *)&*this;
+			if (r.Output(j).canConnect(um->getGroupsIn()))
+				r.OutputJSON(j).Connect(um);
+		}
+	}
+
+	void OutputMessage::Connect(Receiver &r)
+	{
+
+		if (JSON_input)
+			ConnectJSON(r);
+		else
+			ConnectMessage(r);
+
+		for (int j = 0; j < r.Count(); j++)
+		{
+
+			StreamIn<AIS::GPS> *ug = (StreamIn<AIS::GPS> *)&*this;
 			if (r.OutputGPS(j).canConnect(ug->getGroupsIn()))
 				r.OutputGPS(j).Connect(ug);
 		}
 	}
 
-	void OutputJSON::Connect(Receiver& r) {
+	void OutputJSON::Connect(Receiver &r)
+	{
 
-		for (int j = 0; j < r.Count(); j++) {
-			StreamIn<JSON::JSON>* um = (StreamIn<JSON::JSON>*)&*this;
+		for (int j = 0; j < r.Count(); j++)
+		{
+			StreamIn<JSON::JSON> *um = (StreamIn<JSON::JSON> *)&*this;
 			if (r.Output(j).canConnect(um->getGroupsIn()))
 				r.OutputJSON(j).Connect(um);
 
-			StreamIn<AIS::GPS>* ug = (StreamIn<AIS::GPS>*)&*this;
+			StreamIn<AIS::GPS> *ug = (StreamIn<AIS::GPS> *)&*this;
 			if (r.OutputGPS(j).canConnect(ug->getGroupsIn()))
 				r.OutputGPS(j).Connect(ug);
 		}
 	}
 
-	void MessageToScreen::Receive(const AIS::GPS* data, int len, TAG& tag) {
-		if (level == OutputLevel::NONE) return;
+	void MessageToScreen::Receive(const AIS::GPS *data, int len, TAG &tag)
+	{
+		if (level == OutputLevel::NONE)
+			return;
 
-		for (int i = 0; i < len; i++) {
-			if (filter.includeGPS()) {
-				switch (level) {
+		for (int i = 0; i < len; i++)
+		{
+			if (filter.includeGPS())
+			{
+				switch (level)
+				{
 				case OutputLevel::NMEA:
 				case OutputLevel::NMEA_TAG:
 				case OutputLevel::FULL:
@@ -67,28 +101,38 @@ namespace IO {
 		}
 	}
 
-	void MessageToScreen::Receive(const AIS::Message* data, int len, TAG& tag) {
+	void MessageToScreen::Receive(const AIS::Message *data, int len, TAG &tag)
+	{
 
-		if (level == OutputLevel::NONE) return;
+		if (level == OutputLevel::NONE)
+			return;
 
-		for (int i = 0; i < len; i++) {
-			if (filter.include(data[i])) {
-				switch (level) {
+		for (int i = 0; i < len; i++)
+		{
+			if (filter.include(data[i]))
+			{
+				switch (level)
+				{
 				case OutputLevel::NMEA:
 				case OutputLevel::NMEA_TAG:
-					for (const auto& s : data[i].NMEA) std::cout << s << std::endl;
+					for (const auto &s : data[i].NMEA)
+						std::cout << s << std::endl;
 					break;
 				case OutputLevel::FULL:
-					for (const auto& s : data[i].NMEA) {
+					for (const auto &s : data[i].NMEA)
+					{
 						std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-						if (tag.mode & 1 && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED) std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
-						if (tag.mode & 2) std::cout << ", timestamp: " << data[i].getRxTime();
-						if (data[i].getStation()) std::cout << ", ID: " << data[i].getStation();
+						if (tag.mode & 1 && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED)
+							std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
+						if (tag.mode & 2)
+							std::cout << ", timestamp: " << data[i].getRxTime();
+						if (data[i].getStation())
+							std::cout << ", ID: " << data[i].getStation();
 						std::cout << ")" << std::endl;
 					}
 					break;
 				case OutputLevel::JSON_NMEA:
-					std::cout << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm) << std::endl;
+					std::cout << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver) << std::endl;
 					break;
 				default:
 					break;
@@ -97,17 +141,23 @@ namespace IO {
 		}
 	}
 
-	void JSONtoScreen::Receive(const AIS::GPS* data, int len, TAG& tag) {
-		for (int i = 0; i < len; i++) {
-			if (filter.includeGPS()) {
+	void JSONtoScreen::Receive(const AIS::GPS *data, int len, TAG &tag)
+	{
+		for (int i = 0; i < len; i++)
+		{
+			if (filter.includeGPS())
+			{
 				std::cout << data[i].getJSON() << std::endl;
 			}
 		}
 	}
 
-	void JSONtoScreen::Receive(const JSON::JSON* data, int len, TAG& tag) {
-		for (int i = 0; i < len; i++) {
-			if (filter.include(*(AIS::Message*)data[i].binary)) {
+	void JSONtoScreen::Receive(const JSON::JSON *data, int len, TAG &tag)
+	{
+		for (int i = 0; i < len; i++)
+		{
+			if (filter.include(*(AIS::Message *)data[i].binary))
+			{
 				json.clear();
 				builder.stringify(data[i], json);
 				std::cout << json << std::endl;

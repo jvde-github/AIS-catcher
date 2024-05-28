@@ -42,7 +42,7 @@ namespace Device {
 		void applySettings();
 
 	public:
-		HACKRF() : Device(Format::CS8, 6144000) {
+		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF) {
 			if (hackrf_init() != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: Cannot open hackrf library");
 		}
 		~HACKRF() {
@@ -70,7 +70,7 @@ namespace Device {
 
 		std::string getProduct() { return "HACKRF"; }
 		std::string getVendor() { return "Great Scott Gadgets"; }
-		std::string getSerial() { return serial; }
+		std::string getSerial() { return serial; }		
 
 		void setFormat(Format f) {}
 #endif

@@ -49,7 +49,7 @@ namespace Device {
 		int timeout = 100;
 
 	public:
-		ZMQ() : Device(Format::CU8, 288000) {}
+		ZMQ() : Device(Format::CU8, 288000, Type::ZMQ) {}
 		// Control
 		void Open(uint64_t h);
 		void Close();

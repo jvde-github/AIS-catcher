@@ -68,10 +68,14 @@ namespace AIS {
 			return json;
 	}
 
-	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm, const std::string& uuid) const {
+	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, const std::string& uuid) const {
 		std::stringstream ss;
 
-		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"channel\":\"" << getChannel() << "\"";
+		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver <<  ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\"";
+		
+		if(status) {
+			ss << ",\"msg_status\":" << status;
+		}
 
 		if (mode & 2) {
 			ss << ",\"rxuxtime\":" << getRxTimeUnix();
@@ -367,7 +371,7 @@ namespace AIS {
 			return true;
 		}
 		else if (option == "ID") {			
-			ID_allowed = Util::Parse::Integer(arg,0,999999);
+			ID_allowed.push_back(Util::Parse::Integer(arg,0,999999));
 			return true;
 		}
 		return false;
@@ -389,7 +393,19 @@ namespace AIS {
 	bool Filter::include(const Message& msg) {
 		if (!on) return true;
 		if (!AIS) return false;
-		if(ID_allowed && msg.getStation() != ID_allowed) return false;
+		
+		bool ID_ok = true;
+		if(ID_allowed.size()) {
+
+			ID_ok = false;
+			for(auto id : ID_allowed) {
+				if(msg.getStation() == id) {
+					ID_ok = true;
+					break;
+				}
+			}
+		}
+		if(!ID_ok) return false;
 		unsigned type = msg.type() & 31;
 		return ((1U << type) & allow) != 0;
 	}

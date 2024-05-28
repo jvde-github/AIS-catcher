@@ -65,8 +65,8 @@ namespace Device {
 		void applySettings();
 
 	public:
-		UDP();
-		~UDP();
+		UDP() : Device(Format::TXT, 0, Type::UDP) {};
+		~UDP() {};
 
 		// Control
 		void Close();

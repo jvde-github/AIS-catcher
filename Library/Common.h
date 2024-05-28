@@ -29,11 +29,13 @@
 #define SleepSystem(x) usleep(x * 1000)
 #endif
 
+#include "AIS-catcher.h"
+
 class tN2kMsg;
 
 void StopRequest();
 
-#define GROUPS_ALL			0xFFFFFFFFFFFFFFFF
+#define GROUPS_ALL 0xFFFFFFFFFFFFFFFF
 #define GROUP_OUT_UNDEFINED (1ULL << 63)
 
 typedef float FLOAT32;
@@ -47,7 +49,8 @@ typedef std::complex<uint8_t> CU8;
 typedef std::complex<int8_t> CS8;
 typedef char BIT;
 
-enum class Format {
+enum class Format
+{
 	CU8,
 	CF32,
 	CS16,
@@ -57,25 +60,27 @@ enum class Format {
 	UNKNOWN
 };
 
-enum class Type {
-	NONE,
-	RTLSDR,
-	AIRSPYHF,
-	SERIALPORT,
-	AIRSPY,
-	SDRPLAY,
-	WAVFILE,
-	RAWFILE,
-	RTLTCP,
-	UDP,
-	HACKRF,
-	SOAPYSDR,
-	ZMQ,
-	SPYSERVER,
-	N2K
+enum class Type
+{
+	NONE = 0,
+	RTLSDR = 1,
+	AIRSPYHF = 2,
+	SERIALPORT = 3,
+	AIRSPY = 4,
+	SDRPLAY = 5,
+	WAVFILE = 6,
+	RAWFILE = 7,
+	RTLTCP = 8,
+	UDP = 9,
+	HACKRF = 10,
+	SOAPYSDR = 11,
+	ZMQ = 12,
+	SPYSERVER = 13,
+	N2K = 14
 };
 
-enum class OutputLevel {
+enum class OutputLevel
+{
 	NONE,
 	NMEA,
 	NMEA_TAG,
@@ -85,7 +90,8 @@ enum class OutputLevel {
 	JSON_FULL
 };
 
-enum ShippingClass {
+enum ShippingClass
+{
 	CLASS_OTHER = 0,
 	CLASS_UNKNOWN = 1,
 	CLASS_CARGO = 2,
@@ -102,7 +108,8 @@ enum ShippingClass {
 	CLASS_SARTEPIRB = 13
 };
 
-enum MMSI_Class {
+enum MMSI_Class
+{
 	MMSI_OTHER = 0,
 	MMSI_CLASS_A = 1,
 	MMSI_CLASS_B = 2,
@@ -133,7 +140,10 @@ const int ANGLE_UNDEFINED = -1;
 const float LEVEL_UNDEFINED = 1024;
 const float PPM_UNDEFINED = 1024;
 
-struct TAG {
+const int STATUS_OK = 0;
+
+struct TAG
+{
 	unsigned mode = 3;
 	float sample_lvl = 0;
 	float level = 0;
@@ -141,6 +151,8 @@ struct TAG {
 	uint64_t group = 0;
 
 	// some data flowing from DB downstream
+	int version = VERSION_NUMBER;
+	int status = STATUS_OK;
 	int angle = -1;
 	float distance = -1;
 	float lat = 0, lon = 0;
@@ -148,9 +160,16 @@ struct TAG {
 	std::time_t previous_signal = (std::time_t)0;
 	int shipclass = CLASS_UNKNOWN;
 	float speed = SPEED_UNDEFINED;
+	std::string hardware;
+	Type driver = Type::NONE;
 
-	void clear() {
+	void clear()
+	{
+		driver = Type::NONE;
+		hardware.clear();
+		version = VERSION_NUMBER;
 		group = GROUP_OUT_UNDEFINED;
+		status = STATUS_OK;
 		sample_lvl = LEVEL_UNDEFINED;
 		level = LEVEL_UNDEFINED;
 		ppm = PPM_UNDEFINED;
@@ -165,23 +184,26 @@ struct TAG {
 	}
 };
 
-struct RAW {
+struct RAW
+{
 	Format format;
-	void* data;
+	void *data;
 	int size;
 };
 
-struct Setting {
+struct Setting
+{
 	virtual ~Setting() {}
-	virtual Setting& Set(std::string option, std::string arg) { return *this; }
+	virtual Setting &Set(std::string option, std::string arg) { return *this; }
 	virtual std::string Get() { return ""; }
 };
 
 template <typename T>
-class Callback {
+class Callback
+{
 public:
 	virtual ~Callback() {}
-	virtual void onMsg(const T&) {}
+	virtual void onMsg(const T &) {}
 };
 
 using namespace std::chrono;

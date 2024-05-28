@@ -43,7 +43,7 @@ namespace Device {
 		void Run();
 
 	public:
-		RAWFile() : Device(Format::CU8, 1536000) {}
+		RAWFile() : Device(Format::CU8, 1536000, Type::RAWFILE) {}
 		// Control
 		void Close();
 		void Play();

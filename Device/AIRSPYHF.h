@@ -48,7 +48,7 @@ namespace Device {
 		void setDefaultRate();
 
 	public:
-		AIRSPYHF() : Device(Format::CF32, 0) {}
+		AIRSPYHF() : Device(Format::CF32, 0, Type::AIRSPYHF) {}
 
 		// Control
 		void Open(uint64_t h);

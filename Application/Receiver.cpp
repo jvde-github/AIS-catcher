@@ -210,6 +210,10 @@ void Receiver::setupDevice() {
 	if (ppm) device->Set("FREQOFFSET", std::to_string(ppm));
 	if (bandwidth) device->Set("BW", std::to_string(bandwidth));
 
+	tag.hardware = device->getProduct();
+	tag.driver = device->getDriver();
+	tag.version = VERSION_NUMBER;
+
 	device->setTag(tag);
 }
 

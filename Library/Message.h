@@ -68,7 +68,7 @@ namespace AIS {
 				setRxTimeUnix(t);
 		}
 
-		std::string getNMEAJSON(unsigned mode, float level, float ppm, const std::string& uid = "") const;
+		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string& hardware, int version, Type driver, const std::string& uid = "") const;
 
 		std::string getRxTime() const {
 			return Util::Convert::toTimeStr(rxtime);
@@ -145,7 +145,7 @@ namespace AIS {
 		uint32_t allow = all_msg;
 		bool on = false;
 		bool GPS = true, AIS = true;
-		int ID_allowed = 0;
+		std::vector<int> ID_allowed;
 
 	public:
 		virtual ~Filter() {}

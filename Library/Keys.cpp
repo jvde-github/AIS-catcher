@@ -22,8 +22,10 @@ namespace AIS {
 	const std::vector<std::vector<std::string>> KeyMap = {
 		{ "class", "class", "class", "" },
 		{ "device", "device", "device", "" },
+		{ "driver", "driver", "driver", "" },
 		{ "scaled", "", "scaled", "" },
 		{ "channel", "channel", "channel", "" },
+		{ "hardware", "hardware", "hardware", "" },
 		{ "signalpower", "signalpower", "signalpower", "" },
 		{ "ppm", "ppm", "ppm", "" },
 		{ "rxtime", "rxtime", "rxtime", "rxtime" },
@@ -33,6 +35,7 @@ namespace AIS {
 		{ "shiptype_text", "", "shiptype_text", "" },
 		{ "aid_type_text", "", "aid_type_text", "" },
 		{ "station_id", "", "station_id", "" },
+		{ "version", "", "version", "" },
 		// setting
 		{ "", "", "", "", "about" },
 		{ "", "", "", "", "active" },
@@ -79,6 +82,7 @@ namespace AIS {
 		{ "", "", "", "", "input" },
 		{ "", "", "", "", "interval" },
 		{ "", "", "", "", "json" },
+		{ "", "", "", "", "json_full" },
 		{ "", "", "", "", "keep_alive" },
 		{ "", "", "", "", "kml" },
 		{ "", "", "", "", "lat" },

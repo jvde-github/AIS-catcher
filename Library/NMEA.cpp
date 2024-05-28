@@ -94,8 +94,8 @@ namespace AIS
 					msg.NMEA.push_back(aivdm.sentence);
 				Send(&msg, 1, tag);
 			}
-			else if(msg.getLength() > 0)
-				std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() <<  " from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
+			else if (msg.getLength() > 0)
+				std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << " from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
 			return;
 		}
 
@@ -404,6 +404,15 @@ namespace AIS
 					case AIS::KEY_STATION_ID:
 						thisstation = p.Get().getInt();
 						break;
+					case AIS::KEY_VERSION:
+						tag.version = p.Get().getInt();
+						break;
+					case AIS::KEY_HARDWARE:
+						tag.hardware = p.Get().getString();
+						break;
+					case AIS::KEY_DRIVER:
+						tag.driver = (Type)p.Get().getInt();
+						break;
 					}
 				}
 
@@ -529,6 +538,7 @@ namespace AIS
 							{
 								t = 0;
 								tag.clear();
+
 								processJSONsentence(line, tag, t);
 								reset(c);
 							}
