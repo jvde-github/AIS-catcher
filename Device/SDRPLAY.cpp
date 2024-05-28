@@ -30,7 +30,7 @@ namespace Device {
 
 	int SDRPLAY::API_count = 0;
 
-	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000) {
+	SDRPLAY::SDRPLAY() : Device(Format::CF32, 230400, Type::SDRPLAY) {
 		float version = 0.0;
 
 		if (API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success) {
