@@ -41,6 +41,7 @@ namespace Device {
 		int getDefaultSampleRate() { return sample_rate; }
 	};
 
+
 	class SOAPYSDR : public Device {
 #ifdef HASSOAPYSDR
 
@@ -76,7 +77,7 @@ namespace Device {
 		int findRate(const std::vector<double>&);
 
 	public:
-		SOAPYSDR() : Device(Format::CF32, 0) {}
+		SOAPYSDR() : Device(Format::CF32, 0,Type::SOAPYSDR) {}
 
 		// Control
 		void Open(uint64_t h);

@@ -25,6 +25,7 @@
 
 namespace Device {
 
+
 	class SDRPLAY : public Device {
 #ifdef HASSDRPLAY
 
@@ -67,7 +68,7 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		SDRPLAY();
+		SDRPLAY() : Device(Format::CF32, 3000000, Type::SDRPLAY) {};
 		~SDRPLAY();
 
 		// Settings

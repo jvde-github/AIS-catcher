@@ -23,6 +23,7 @@
 // 	https://gpsd.gitlab.io/gpsd/AIVDM.html
 
 #include "JSONAIS.h"
+#include "AIS-catcher.h"
 
 #ifdef _WIN32
 #pragma warning(disable : 4996)
@@ -310,8 +311,11 @@ namespace AIS {
 		channel = std::string(1, msg.getChannel());
 
 		json.Add(AIS::KEY_CLASS, &class_str);
-		json.Add(AIS::KEY_DEVICE, &device);
-
+		json.Add(AIS::KEY_DEVICE, &device);		
+		json.Add(AIS::KEY_VERSION, tag.version);
+		json.Add(AIS::KEY_DRIVER, (int)tag.driver);
+		json.Add(AIS::KEY_HARDWARE, tag.hardware);
+		
 		if (tag.mode & 2)
 			json.Add(AIS::KEY_RXTIME, &rxtime);
 

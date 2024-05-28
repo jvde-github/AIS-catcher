@@ -72,7 +72,7 @@ namespace Device {
 		void applySettings();
 
 	public:
-		RTLSDR() : Device(Format::CU8, 1536000) {}
+		RTLSDR() : Device(Format::CU8, 1536000, Type::RTLSDR) {}
 
 		// Control
 		void Open(uint64_t h);

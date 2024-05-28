@@ -133,7 +133,6 @@ namespace IO {
 		std::string host, port;
 		int reset = -1;
 		long last_reconnect = 0;
-		AIS::Filter filter;
 		bool broadcast = false;
 		bool JSON = false;
 		std::string uuid;
@@ -147,6 +146,7 @@ namespace IO {
 		Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+		void Receive(const JSON::JSON* data, int len, TAG& tag);
 		void Receive(const AIS::GPS* data, int len, TAG& tag);
 
 		void Start();
@@ -157,7 +157,6 @@ namespace IO {
 		}
 		void Stop();
 		void SendTo(std::string str) {
-
 			sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 		}
 		void setJSON(bool b) { JSON = b; }
@@ -176,6 +175,7 @@ namespace IO {
 		Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+		void Receive(const JSON::JSON* data, int len, TAG& tag);
 		void Receive(const AIS::GPS* data, int len, TAG& tag);
 
 		void Start();
@@ -199,6 +199,7 @@ namespace IO {
 		Setting& Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message* data, int len, TAG& tag);
+		void Receive(const JSON::JSON* data, int len, TAG& tag);
 		void Receive(const AIS::GPS* data, int len, TAG& tag);
 
 		void Start();

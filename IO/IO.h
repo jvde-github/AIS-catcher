@@ -24,33 +24,58 @@
 #include "AIS.h"
 #include "Utilities.h"
 
+#include "Keys.h"
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
 
 class Receiver;
 
-namespace IO {
+namespace IO
+{
 
-	class OutputJSON : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
+	class OutputJSON : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting
+	{
 	public:
 		virtual void Start() {}
 		virtual void Stop() {}
-		void Connect(Receiver& r);
+		void Connect(Receiver &r);
 
 		virtual ~OutputJSON() { Stop(); }
 	};
 
-	class OutputMessage : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
+	class OutputMessage : public StreamIn<AIS::Message>, public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting
+	{
+	protected:
+		bool JSON_input = false;
+		std::string json;
+		AIS::Filter filter;
+		JSON::StringBuilder builder;
+
+		void ConnectMessage(Receiver &r);
+		void ConnectJSON(Receiver &r);
+
 	public:
 		virtual void Start() {}
 		virtual void Stop() {}
-		void Connect(Receiver& r);
+		void Connect(Receiver &r);
 
+		OutputMessage() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
 		virtual ~OutputMessage() { Stop(); }
+
+		bool setOption(std::string option, std::string arg)
+		{
+			if (option == "JSON_FULL")
+			{
+				JSON_input = Util::Parse::Switch(arg);
+				return true;
+			}
+			return filter.SetOption(option, arg);
+		}
 	};
 
 	template <typename T>
-	class StreamCounter : public StreamIn<T> {
+	class StreamCounter : public StreamIn<T>
+	{
 		uint64_t count = 0;
 		uint64_t lastcount = 0;
 		float rate = 0.0f;
@@ -60,19 +85,22 @@ namespace IO {
 		int msg_count = 0;
 
 	public:
-		StreamCounter() : StreamIn<T>() {
+		StreamCounter() : StreamIn<T>()
+		{
 			resetStatistic();
 		}
 
 		virtual ~StreamCounter() {}
 
-		void Receive(const T* data, int len, TAG& tag) {
+		void Receive(const T *data, int len, TAG &tag)
+		{
 			count += len;
 		}
 
 		uint64_t getCount() { return count; }
 
-		void Stamp() {
+		void Stamp()
+		{
 			auto timeNow = high_resolution_clock::now();
 			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
 
@@ -86,59 +114,94 @@ namespace IO {
 		float getRate() { return rate; }
 		int getDeltaCount() { return msg_count; }
 
-		void resetStatistic() {
+		void resetStatistic()
+		{
 			count = 0;
 			time_lastupdate = high_resolution_clock::now();
 		}
 	};
 
-
-	class MessageToFile : public OutputMessage {
+	class MessageToFile : public OutputMessage
+	{
 		std::ofstream file;
 		std::string filename;
-		AIS::Filter filter;
 
 		bool append_mode = true;
 
 	public:
-		~MessageToFile() {
+		~MessageToFile()
+		{
 			Stop();
 		}
 
-		void Start() {
+		void Start()
+		{
 			file.open(filename, append_mode ? std::ios::app : std::ios::out);
 
-			if (!file) {
+			if (!file)
+			{
 				throw std::runtime_error("File: failed to open file - " + filename);
 			}
 		}
 
-		void Stop() {
+		void Stop()
+		{
 			if (file.is_open())
 				file.close();
 		}
 
-		void Receive(const AIS::Message* data, int len, TAG& tag) {
-			for (const std::string& s : data[0].NMEA) {
-				file << s << std::endl;
+		void Receive(const AIS::Message *data, int len, TAG &tag)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (filter.include(data[i]))
+				{
+					for (const std::string &s : data[0].NMEA)
+					{
+						file << s << std::endl;
+					}
+				}
 			}
-			if (file.fail()) {
+			if (file.fail())
+			{
 				std::cerr << "File: cannot write to file." << std::endl;
 				StopRequest();
 			}
 		}
 
-		Setting& Set(std::string option, std::string arg) {
+		void Receive(const JSON::JSON *data, int len, TAG &tag)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (filter.include(*(AIS::Message *)data[i].binary))
+				{
+					json.clear();
+					builder.stringify(data[i], json);
+					file << json << std::endl;
+				}
+			}
+			if (file.fail())
+			{
+				std::cerr << "File: cannot write to file." << std::endl;
+				StopRequest();
+			}
+		}
+
+		Setting &Set(std::string option, std::string arg)
+		{
 			Util::Convert::toUpper(option);
 
-			if (option == "GROUPS_IN") {
+			if (option == "GROUPS_IN")
+			{
 				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else if (option == "FILE") {
+			else if (option == "FILE")
+			{
 				filename = arg;
 			}
-			else if (option == "MODE") {
+			else if (option == "MODE")
+			{
 				Util::Convert::toUpper(arg);
 
 				if (arg != "APPEND" && arg != "APP" && arg != "OUT")
@@ -146,23 +209,27 @@ namespace IO {
 
 				append_mode = arg == "APPEND" || arg == "APP";
 			}
-			else if (!filter.SetOption(option, arg)) {
+			else if (!OutputMessage::setOption(option, arg))
+			{
 				throw std::runtime_error("File output - unknown option: " + option);
 			}
 			return *this;
 		}
 	};
 
-	class StringToScreen : public StreamIn<std::string> {
+	class StringToScreen : public StreamIn<std::string>
+	{
 	public:
-		void Receive(const std::string* data, int len, TAG& tag) {
+		void Receive(const std::string *data, int len, TAG &tag)
+		{
 			for (int i = 0; i < len; i++)
 				std::cout << data[i] << std::endl;
 		}
 		virtual ~StringToScreen() {}
 	};
 
-	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting {
+	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting
+	{
 	private:
 		OutputLevel level;
 		AIS::Filter filter;
@@ -171,17 +238,20 @@ namespace IO {
 		virtual ~MessageToScreen() {}
 		void setDetail(OutputLevel l) { level = l; }
 
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void Receive(const AIS::GPS* data, int len, TAG& tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag);
+		void Receive(const AIS::GPS *data, int len, TAG &tag);
 
-		Setting& Set(std::string option, std::string arg) {
+		Setting &Set(std::string option, std::string arg)
+		{
 			Util::Convert::toUpper(option);
 
-			if (option == "GROUPS_IN") {
+			if (option == "GROUPS_IN")
+			{
 				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else if (!filter.SetOption(option, arg)) {
+			else if (!filter.SetOption(option, arg))
+			{
 				throw std::runtime_error("Message output - unknown option: " + option);
 			}
 
@@ -189,26 +259,30 @@ namespace IO {
 		}
 	};
 
-	class JSONtoScreen : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting {
+	class JSONtoScreen : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting
+	{
 		JSON::StringBuilder builder;
 		std::string json;
 		AIS::Filter filter;
 
 	public:
-		JSONtoScreen(const std::vector<std::vector<std::string>>* map, int d) : builder(map, d) {}
+		JSONtoScreen(const std::vector<std::vector<std::string>> *map, int d) : builder(map, d) {}
 
-		void Receive(const JSON::JSON* data, int len, TAG& tag);
-		void Receive(const AIS::GPS* data, int len, TAG& tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const AIS::GPS *data, int len, TAG &tag);
 		void setMap(int m) { builder.setMap(m); }
 
-		Setting& Set(std::string option, std::string arg) {
+		Setting &Set(std::string option, std::string arg)
+		{
 			Util::Convert::toUpper(option);
 
-			if (option == "GROUPS_IN") {
+			if (option == "GROUPS_IN")
+			{
 				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else if (!filter.SetOption(option, arg)) {
+			else if (!filter.SetOption(option, arg))
+			{
 				throw std::runtime_error("JSON output - unknown option: " + option);
 			}
 			return *this;

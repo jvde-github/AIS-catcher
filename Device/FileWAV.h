@@ -19,9 +19,11 @@
 
 #include "Device.h"
 
-namespace Device {
+namespace Device
+{
 
-	class WAVFile : public Device {
+	class WAVFile : public Device
+	{
 		std::ifstream file;
 		std::string filename;
 
@@ -29,6 +31,8 @@ namespace Device {
 		const int buffer_size = 16 * 16384;
 
 	public:
+		WAVFile() : Device(Format::CU8, 1536000, Type::WAVFILE) {}
+
 		// Control
 		void Close();
 		void Open(uint64_t);
@@ -36,7 +40,7 @@ namespace Device {
 		bool isStreaming();
 
 		// Settings
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 
 		std::string getProduct() { return "File (WAV)"; }

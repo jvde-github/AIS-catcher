@@ -33,13 +33,14 @@
 namespace Device {
 
 	class N2KSCAN : public Device, public Callback<tN2kMsg> {
+		
 #ifdef HASNMEA2000
 		std::string _iface = "can0";
 		bool lost = false;
 		std::vector<std::string> available_networks;
 
 	public:
-		N2KSCAN() : Device(Format::N2K, 288000){};
+		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K){};
 		~N2KSCAN();
 
 		std::string getRateDescription() { return "N/A"; }

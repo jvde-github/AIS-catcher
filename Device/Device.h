@@ -61,6 +61,7 @@ namespace Device {
 		uint32_t frequency = 0;
 		Format format = Format::UNKNOWN;
 		uint32_t sample_rate = 0;
+		Type DeviceType = Type::NONE;
 
 		uint32_t getCorrectedFrequency() {
 			return (uint32_t)((float)frequency * (1.0f - freq_offset / 1000000.0f));
@@ -69,7 +70,7 @@ namespace Device {
 	public:
 		// DeviceBase
 		Device() {}
-		Device(Format f, uint32_t s) : format(f), sample_rate(s) {}
+		Device(Format f, uint32_t s, Type t) : format(f), sample_rate(s), DeviceType(t) {}
 		virtual ~Device() {}
 
 		virtual void Open(uint64_t) {}
@@ -139,5 +140,6 @@ namespace Device {
 
 		virtual void setFormat(Format f) { format = f; }
 		virtual Format getFormat() { return format; }
+		Type getDriver() { return DeviceType; }
 	};
 }
