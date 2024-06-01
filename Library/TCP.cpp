@@ -117,7 +117,7 @@ namespace TCP {
 
 		if (!isConnected()) return false;
 
-		if (out.size() + length > 1024 * 1024) return false;
+		if (out.size() + length > MAX_BUFFER_SIZE) return false;
 
 		out.insert(out.end(), data, data + length);
 		return true;
