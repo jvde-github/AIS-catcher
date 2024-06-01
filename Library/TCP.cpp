@@ -486,18 +486,13 @@ namespace TCP {
 			std::cerr << "TCP (" << host << ":" << port << "): connection expired, reconnect." << std::endl;
 			reconnect();
 		}
-
-		if (state == DISCONNECTED) {
+		else if (state == DISCONNECTED) {
 			if ((long)time(nullptr) - (long)stamp > 10) {
 				std::cerr << "TCP (" << host << ":" << port << "): not connected, reconnecting." << std::endl;
-				if (connect(host, port, persistent, timeout)) {
-					std::cerr << "TCP (" << host << ":" << port << "): connected." << std::endl;
-					return;
-				}
+				reconnect();
 			}
 		}
-
-		if (state == CONNECTING) {
+		else if (state == CONNECTING) {
 			bool connected = isConnected(0);
 
 			if (connected) {
