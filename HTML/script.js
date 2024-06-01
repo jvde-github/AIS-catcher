@@ -3798,7 +3798,7 @@ async function toggleTrack(m) {
         marker_tracks.delete(Number(m));
         redrawMap();
     } else {
-        marker_tracks.add(m);
+        marker_tracks.add(Number(m));
         await fetchTracks();
         shipcardMinIfMaxonMobile();
         redrawMap();
