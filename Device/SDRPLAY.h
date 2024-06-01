@@ -68,7 +68,7 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		SDRPLAY() : Device(Format::CF32, 3000000, Type::SDRPLAY) {};
+		SDRPLAY();
 		~SDRPLAY();
 
 		// Settings
