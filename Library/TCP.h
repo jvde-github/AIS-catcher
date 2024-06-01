@@ -54,6 +54,7 @@ namespace TCP {
 	private:
 		std::mutex mtx;
 		void CloseUnsafe();
+		const static int MAX_BUFFER_SIZE = 1024 * 1024 * 8;
 
 	public:
 		~ServerConnection() { Close(); }
