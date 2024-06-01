@@ -372,7 +372,7 @@ namespace TCP {
 	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive) {
 		int r;
 		struct addrinfo h;
-		struct addrinfo* address;
+		struct addrinfo* address = nullptr;
 
 		this->host = host;
 		this->port = port;
@@ -412,7 +412,11 @@ namespace TCP {
 			r = fcntl(sock, F_GETFL, 0);
 			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
 
-			if (r == -1) return false;
+			if (r == -1) {
+				freeaddrinfo(address);
+				disconnect();
+				return false;
+			}
 #else
 			u_long mode = 1; // 1 to enable non-blocking socket
 			ioctlsocket(sock, FIONBIO, &mode);
@@ -447,6 +451,7 @@ namespace TCP {
 	bool Client::isConnected(int t) {
 
 		if (state == READY) return true;
+		if(sock == -1) return false;
 
 		fd_set fdr, fdw;
 
