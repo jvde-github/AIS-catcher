@@ -3643,7 +3643,7 @@ const handlePointerMove = function (pixel, target) {
     if (feature && 'ship' in feature) {
         startHover(feature.ship.mmsi, pixel);
     }
-    else if(feature && 'tooltip' in feature) {
+    else if (feature && 'tooltip' in feature) {
         startHover(feature.tooltip, pixel);
     } else if (hoverMMSI) {
         stopHover();
@@ -3653,7 +3653,7 @@ const handlePointerMove = function (pixel, target) {
 
         const lastMeasureIndex = measures.length - 1;
 
-        if (feature && 'ship' in feature)  {
+        if (feature && 'ship' in feature) {
             measures[lastMeasureIndex] = {
                 ...measures[lastMeasureIndex],
                 end_value: feature.ship.mmsi,
@@ -3774,8 +3774,8 @@ function mapResetViewZoom(z, m) {
 
 function mapResetView(z) {
 
+    let view = map.getView();
     view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
-
     shipcardMinIfMaxonMobile();
 }
 
