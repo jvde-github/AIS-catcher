@@ -68,7 +68,7 @@ function restoreDefaultSettings() {
         zoom: 10,
         lat: 0,
         lon: 0,
-        table_shiptype_use_icon: false,
+        table_shiptype_use_icon: true,
         tableside_column: "shipname",
         tableside_order: "ascending",
         range_timeframe: '24h',
