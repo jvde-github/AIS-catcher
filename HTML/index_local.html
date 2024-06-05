@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v8.2.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v8.2.0/ol.css" />
 
-	<link rel="stylesheet" href="style_v0_59_73_g2e46aabf.css" />
+	<link rel="stylesheet" href="style_1717606701.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -136,6 +136,12 @@
 								<option value="metric">Metric</option>
 								<option value="imperial">Imperial</option>
 							</select>
+						</span>
+					</div>
+					<div>
+						<span>Ship Type as Icon</span><span> 
+							<input type="checkbox" id="settings_table_shiptype_use_icon"
+								onchange="setTableIcon(this.checked)" />
 						</span>
 					</div>
 				</section>
@@ -775,9 +781,10 @@
 				<aside id="measurecard" class="mapcard measurecard-width">
 					<header class="mapcard_header">
 						<span><i style="font-size: 30px" class="straighten_icon"></i></span>
-						<span><i title = "start measurement" onclick="setMeasureMode(); showNotification('Click on start point/object')"
+						<span><i title="start measurement"
+								onclick="setMeasureMode(); showNotification('Click on start point/object')"
 								class="mapcard-header-icon add_icon"></i></span>
-						<span><i title = "close this window"onclick="toggleMeasurecard()" style="color: red"
+						<span><i title="close this window" onclick="toggleMeasurecard()" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
 
@@ -885,8 +892,8 @@
 						</div>
 					</div>
 					<footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
-						<div title="Center map on current vessel" onclick="openAIScatcherSite(card_mmsi)" class="noandroid"><i
-								class="info_icon"></i><span>aiscatcher.org</span></div>
+						<div title="Center map on current vessel" onclick="openAIScatcherSite(card_mmsi)"
+							class="noandroid"><i class="info_icon"></i><span>aiscatcher.org</span></div>
 						<div id="shipcard_track_option" title="Track of current vessel"
 							onclick="toggleTrack(card_mmsi)"><i class="timeline_icon"></i><span
 								id="shipcard_track">Track</span></div>
@@ -969,7 +976,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_v0_59_73_g2e46aabf.js"></script>
+	<script src="script_1717606701.js"></script>
 	<script src="config.js"></script>
 
 	<script>
