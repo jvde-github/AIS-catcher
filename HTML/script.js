@@ -68,6 +68,7 @@ function restoreDefaultSettings() {
         zoom: 10,
         lat: 0,
         lon: 0,
+        table_shiptype_use_icon: false,
         tableside_column: "shipname",
         tableside_order: "ascending",
         range_timeframe: '24h',
@@ -1419,6 +1420,14 @@ function setMetrics(s) {
     if (table != null) table = null;
 }
 
+function setTableIcon(s) {
+    settings.table_shiptype_use_icon = s;
+    saveSettings();
+
+    refresh_data();
+    if (table != null) table = null;
+}
+
 function getMetrics() {
     if (settings.metric == "DEFAULT") return "Default";
     if (settings.metric == "SI") return "Metric";
@@ -1682,7 +1691,7 @@ function updateTablecard() {
                 cell4.title = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
 
                 var cell5 = row.insertCell(4);
-                cell5.innerHTML = ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
+                cell5.innerHTML = getTableShiptype(ship);
 
                 var cell6 = row.insertCell(5);
                 cell6.innerHTML = getDeltaTimeVal(ship.last_signal);
@@ -3339,7 +3348,7 @@ async function updateShipTable() {
                     sorter: "number",
                     formatter: function (cell) {
                         const ship = cell.getRow().getData();
-                        return ship != null ? "<span " + getIconCSS(ship) + "></span>" : "";
+                        return getTableShiptype(ship);
                     },
                 },
                 {
@@ -3511,6 +3520,13 @@ function getShipCSSClassAndStyle(ship, opacity = 1) {
 function getIconCSS(ship, opacity = 1) {
     const { class: classValue, style, hint } = getShipCSSClassAndStyle(ship, opacity);
     return `class="${classValue}" style="${style}" title="${hint}"`;
+}
+
+function getTableShiptype(ship, opacity = 1) {
+    if(ship == null) return "";
+
+    const { class: classValue, style, hint } = getShipCSSClassAndStyle(ship, opacity);
+    return settings.table_shiptype_use_icon?`<span class="${classValue}" style="${style}" title="${hint}"></span>` : hint;
 }
 
 function getIcon(ship) {
@@ -4201,7 +4217,7 @@ const shippingMappings = {
     [ShippingClass.ATON]: {
         cx: 0,
         cy: 40,
-        hint: 'Aid-to-Navigation',
+        hint: 'AtoN',
         imgSize: 20
     },
     [ShippingClass.PLANE]: { cx: 0, cy: 60, hint: 'Aircraft', imgSize: 25 },
@@ -4221,7 +4237,7 @@ const shippingMappings = {
     [ShippingClass.SARTEPIRB]: {
         cx: 40,
         cy: 40,
-        hint: 'AIS SART/EPIRB',
+        hint: 'SART/EPIRB',
         imgSize: 20
     }
 }
@@ -4498,6 +4514,7 @@ function updateSettingsTab() {
 
     document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
     document.getElementById("settings_tooltipLabelShadowColorDark").value = settings.tooltipLabelShadowColorDark;
+    document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
 }
 
 function activateTab(b, a) {
