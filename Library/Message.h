@@ -146,6 +146,7 @@ namespace AIS {
 		bool on = false;
 		bool GPS = true, AIS = true;
 		std::vector<int> ID_allowed;
+		std::vector<int> MMSI_allowed;
 		std::string allowed_channels;
 
 	public:

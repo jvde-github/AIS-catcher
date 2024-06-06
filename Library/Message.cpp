@@ -426,17 +426,22 @@ namespace AIS
 			AIS = Util::Parse::Switch(arg);
 			return true;
 		}
-		else if (option == "ID")
+		else if (option == "ID" || option == "SELECT_ID")
 		{
 			ID_allowed.push_back(Util::Parse::Integer(arg, 0, 999999));
 			return true;
 		}
-		else if (option == "ALLOW_CHANNEL")
+		else if (option == "ALLOW_CHANNEL" || option == "SELECT_CHANNEL")
 		{
 
 			allowed_channels = arg;
 			Util::Convert::toUpper(allowed_channels);
 
+			return true;
+		}
+		else if (option == "ALLOW_MMSI" || option == "SELECT_MMSI")
+		{
+			MMSI_allowed.push_back(Util::Parse::Integer(arg, 0, 999999999));
 			return true;
 		}
 		return false;
@@ -485,7 +490,7 @@ namespace AIS
 		if (!allowed_channels.empty())
 		{
 			CH_ok = false;
-			for(char c : allowed_channels)
+			for (char c : allowed_channels)
 			{
 				if (msg.getChannel() == c)
 				{
@@ -496,6 +501,23 @@ namespace AIS
 		}
 
 		if (!CH_ok)
+			return false;
+
+		bool MMSI_ok = true;
+		if (!MMSI_allowed.empty())
+		{
+			MMSI_ok = false;
+			for (auto mmsi : MMSI_allowed)
+			{
+				if (msg.mmsi() == mmsi)
+				{
+					MMSI_ok = true;
+					break;
+				}
+			}
+		}
+
+		if (!MMSI_ok)
 			return false;
 
 		unsigned type = msg.type() & 31;
