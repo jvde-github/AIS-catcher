@@ -19,12 +19,14 @@
 
 #include "Serial.h"
 
-namespace Device {
+namespace Device
+{
 
-	void SerialPort::ReadAsync() {
+	void SerialPort::ReadAsync()
+	{
 
 		char buffer[16384];
-		RAW r = { getFormat(), buffer, 0 };
+		RAW r = {getFormat(), buffer, 0};
 
 #ifdef _WIN32
 		std::cerr << "Serial: starting thread" << std::endl;
@@ -32,43 +34,52 @@ namespace Device {
 
 		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-		while (isStreaming()) {
+		while (isStreaming())
+		{
 
-			OVERLAPPED overlapped = { 0 };
+			OVERLAPPED overlapped = {0};
 			overlapped.hEvent = hEvent;
 
-			if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped)) {
+			if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped))
+			{
 
-				if (GetLastError() == ERROR_IO_PENDING) {
+				if (GetLastError() == ERROR_IO_PENDING)
+				{
 
 					DWORD dwWait = WaitForSingleObject(overlapped.hEvent, 1000);
 
-					if (dwWait == WAIT_OBJECT_0) {
+					if (dwWait == WAIT_OBJECT_0)
+					{
 
-						if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE)) {
+						if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE))
+						{
 							std::cerr << "error reading from serial device: " << GetLastError() << std::endl;
 							lost = true;
 							continue;
 						}
-						else if (bytesRead) {
+						else if (bytesRead)
+						{
 							r.size = bytesRead;
 							Dump(r);
 							Send(&r, 1, tag);
 						}
 					}
-					else if (dwWait != WAIT_TIMEOUT) {
+					else if (dwWait != WAIT_TIMEOUT)
+					{
 						std::cerr << "Serial: error reading from device: " << GetLastError() << std::endl;
 						lost = true;
 						continue;
 					}
 				}
-				else {
+				else
+				{
 					std::cerr << "Serial: read encountered an error: " << GetLastError() << std::endl;
 					lost = true;
 					continue;
 				}
 			}
-			else if (bytesRead) {
+			else if (bytesRead)
+			{
 				r.size = bytesRead;
 				Dump(r);
 				Send(&r, 1, tag);
@@ -78,33 +89,40 @@ namespace Device {
 		CloseHandle(hEvent);
 #else
 
-		while (isStreaming()) {
+		while (isStreaming())
+		{
 			fd_set read_fds;
 
 			FD_ZERO(&read_fds);
 			FD_SET(serial_fd, &read_fds);
 
-			struct timeval timeout = { 1, 0 };
+			struct timeval timeout = {1, 0};
 
 			int rslt = select(serial_fd + 1, &read_fds, NULL, NULL, &timeout);
-			if (rslt > 0) {
+			if (rslt > 0)
+			{
 				int nread = read(serial_fd, buffer, sizeof(buffer));
-				if (nread > 0) {
+				if (nread > 0)
+				{
 					r.size = nread;
 					Dump(r);
 					Send(&r, 1, tag);
 				}
-				else {
-					if (nread == 0) {
+				else
+				{
+					if (nread == 0)
+					{
 						std::cerr << "Serial read encountered an error: unexpected end." << std::endl;
 					}
-					else {
+					else
+					{
 						std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
 					}
 					lost = true;
 				}
 			}
-			else if (rslt < 0) {
+			else if (rslt < 0)
+			{
 				std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
 				lost = true;
 			}
@@ -112,11 +130,14 @@ namespace Device {
 #endif
 	}
 
-	void SerialPort::Dump(RAW& r) {
-		if (print) {
+	void SerialPort::Dump(RAW &r)
+	{
+		if (print)
+		{
 			std::cerr << ">> ";
-			for (int i = 0; i < r.size; i++) {
-				char c = ((char*)r.data)[i];
+			for (int i = 0; i < r.size; i++)
+			{
+				char c = ((char *)r.data)[i];
 				if (c != '\n' && c != '\r')
 					std::cerr << c;
 			}
@@ -124,35 +145,42 @@ namespace Device {
 		}
 	}
 
-	SerialPort::~SerialPort() {
+	SerialPort::~SerialPort()
+	{
 		Close();
 	}
 
-	void SerialPort::Close() {
+	void SerialPort::Close()
+	{
 #ifdef _WIN32
-		if (serial_handle != INVALID_HANDLE_VALUE) {
+		if (serial_handle != INVALID_HANDLE_VALUE)
+		{
 			CloseHandle(serial_handle);
 			serial_handle = INVALID_HANDLE_VALUE;
 		}
 #else
-		if (serial_fd != -1) {
+		if (serial_fd != -1)
+		{
 			close(serial_fd);
 			serial_fd = -1;
 		}
 #endif
 	}
 
-	void SerialPort::Play() {
+	void SerialPort::Play()
+	{
 
 #ifdef _WIN32
 		serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
-		if (serial_handle == INVALID_HANDLE_VALUE) {
-			throw std::runtime_error("Serial: cannot open serial port " + port + ".");
+		if (serial_handle == INVALID_HANDLE_VALUE)
+		{
+			throw std::runtime_error("Serial: cannot open serial port " + port + ". Error: " + GetLastErrorAsString());
 		}
 
 		DCB dcb;
 
-		if (GetCommState(serial_handle, &dcb)) {
+		if (GetCommState(serial_handle, &dcb))
+		{
 			dcb.BaudRate = baudrate;
 			dcb.ByteSize = 8;
 			dcb.Parity = NOPARITY;
@@ -163,16 +191,17 @@ namespace Device {
 			dcb.fRtsControl = RTS_CONTROL_ENABLE;
 		}
 		else
-			throw std::runtime_error("Serial: GetCommState failed.");
+			throw std::runtime_error("Serial: GetCommState failed. Error: " + GetLastErrorAsString());
 
-
-		if (!SetCommState(serial_handle, &dcb)) {
-			throw std::runtime_error("Serial: SetCommState failed.");
+		if (!SetCommState(serial_handle, &dcb))
+		{
+			throw std::runtime_error("Serial: SetCommState failed. Error: " + GetLastErrorAsString());
 		}
 
 		COMMTIMEOUTS ct;
 
-		if (GetCommTimeouts(serial_handle, &ct)) {
+		if (GetCommTimeouts(serial_handle, &ct))
+		{
 			ct.ReadIntervalTimeout = 2000;
 			ct.ReadTotalTimeoutConstant = 2000;
 			ct.ReadTotalTimeoutMultiplier = 0;
@@ -180,25 +209,27 @@ namespace Device {
 			ct.WriteTotalTimeoutMultiplier = 0;
 		}
 		else
-			throw std::runtime_error("Serial: GetCommTimeouts failed.");
+			throw std::runtime_error("Serial: GetCommTimeouts failed. Error: " + GetLastErrorAsString());
 
 		if (!SetCommTimeouts(serial_handle, &ct))
-			throw std::runtime_error("Serial: SetCommTimeouts failed.");
-
+			throw std::runtime_error("Serial: SetCommTimeouts failed. Error: " + GetLastErrorAsString());
 #else
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY);
-		if (serial_fd == -1) {
+		if (serial_fd == -1)
+		{
 			throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
 		}
 
 		struct termios tty;
-		if (tcgetattr(serial_fd, &tty) < 0) {
+		if (tcgetattr(serial_fd, &tty) < 0)
+		{
 			perror("tcgetattr");
 			throw std::runtime_error("Serial: tcgetattr failed.");
 		}
 
 		speed_t brc = B9600;
-		switch (baudrate) {
+		switch (baudrate)
+		{
 		case 9600:
 			brc = B9600;
 			break;
@@ -218,13 +249,14 @@ namespace Device {
 			throw std::runtime_error("Serial: unsupported baudrate.");
 		}
 
-
-		if (cfsetospeed(&tty, brc) < 0) {
+		if (cfsetospeed(&tty, brc) < 0)
+		{
 			perror("cfsetospeed");
 			throw std::runtime_error("Serial: cfsetospeed failed.");
 		}
 
-		if (cfsetispeed(&tty, brc) < 0) {
+		if (cfsetispeed(&tty, brc) < 0)
+		{
 			perror("cfsetispeed");
 			throw std::runtime_error("Serial: cfsetispeed failed.");
 		}
@@ -234,7 +266,8 @@ namespace Device {
 		tty.c_cflag &= ~CSIZE;	// Clear all bits that set the data size
 		tty.c_cflag |= CS8;		// 8 bits per byte
 
-		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0) {
+		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0)
+		{
 			perror("tcsetattr");
 			throw std::runtime_error("Serial: tcsetattr failed.");
 		}
@@ -248,23 +281,29 @@ namespace Device {
 		read_thread = std::thread(&SerialPort::ReadAsync, this);
 	}
 
-	void SerialPort::Stop() {
+	void SerialPort::Stop()
+	{
 		lost = true;
-		if (read_thread.joinable()) {
+		if (read_thread.joinable())
+		{
 			read_thread.join();
 		}
 	}
 
-	Setting& SerialPort::Set(std::string option, std::string arg) {
+	Setting &SerialPort::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 
-		if (option == "BAUDRATE") {
+		if (option == "BAUDRATE")
+		{
 			baudrate = Util::Parse::Integer(arg);
 		}
-		else if (option == "PORT") {
+		else if (option == "PORT")
+		{
 			port = arg;
 		}
-		else if (option == "PRINT") {
+		else if (option == "PRINT")
+		{
 			print = Util::Parse::Switch(arg);
 		}
 		else
@@ -273,7 +312,8 @@ namespace Device {
 		return *this;
 	}
 
-	std::string SerialPort::Get() {
+	std::string SerialPort::Get()
+	{
 		return Device::Get() + " baudrate " + std::to_string(baudrate) + " port " + port + " print " + Util::Convert::toString(print);
 	}
 }

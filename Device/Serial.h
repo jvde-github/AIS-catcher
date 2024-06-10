@@ -31,11 +31,35 @@
 #include <fcntl.h>
 #endif
 
-namespace Device {
+namespace Device
+{
 
-	class SerialPort : public Device {
+	class SerialPort : public Device
+	{
 #ifdef _WIN32
 		HANDLE serial_handle = INVALID_HANDLE_VALUE;
+
+		std::string GetLastErrorAsString()
+		{
+			// Get the error message ID, if any.
+			DWORD errorMessageID = ::GetLastError();
+			if (errorMessageID == 0)
+			{
+				return std::string(); // No error message has been recorded
+			}
+
+			LPSTR messageBuffer = nullptr;
+			size_t size = FormatMessageA(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+
+			std::string message(messageBuffer, size);
+
+			// Free the buffer.
+			LocalFree(messageBuffer);
+
+			return message;
+		}
 #else
 		int serial_fd = -1;
 #endif
@@ -51,7 +75,7 @@ namespace Device {
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 
 		void ReadAsync();
-		void Dump(RAW& r);
+		void Dump(RAW &r);
 
 	public:
 		SerialPort() : Device(Format::TXT, 288000, Type::SERIALPORT), port(""), baudrate(38400){};
@@ -62,7 +86,7 @@ namespace Device {
 		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 
 		std::string getProduct() { return "Serial Port"; }
