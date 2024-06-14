@@ -3083,7 +3083,7 @@ async function updateStatistics() {
     if (stat) {
         // in bulk....
         ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate", "received"].forEach(
-            (e) => (document.getElementById("stat_" + e).innerText = stat[e]),
+            (e) => (document.getElementById("stat_" + e).innerHTML = stat[e]),
         );
 
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
