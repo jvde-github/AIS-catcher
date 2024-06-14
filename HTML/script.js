@@ -1680,7 +1680,7 @@ function updateTablecard() {
                 cell1.innerHTML = getFlag(ship.country);
 
                 var cell2 = row.insertCell(1);
-                cell2.innerHTML = shipName;
+                cell2.innerText = shipName;
 
                 var cell3 = row.insertCell(2);
                 cell3.innerHTML = ship.distance ? getDistanceVal(ship.distance) : "";
@@ -2303,6 +2303,20 @@ return true;
 }
 */
 
+function sanitizeString(input) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+        '`': '&#96;'
+    };
+    return input.replace(/[&<>"'`]/g, function (match) {
+        return map[match];
+    });
+}
+
 async function fetchShips(noDoubleFetch = true) {
     if (isFetchingShips && noDoubleFetch) {
         console.log("A fetch operation is already running.");
@@ -2371,6 +2385,9 @@ async function fetchShips(noDoubleFetch = true) {
         const s = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
 
         if (includeShip(s)) {
+            s.shipname = sanitizeString(s.shipname);
+            s.callsign = sanitizeString(s.callsign);
+            
             const entry = {};
             entry.raw = s;
             shipsDB[s.mmsi] = entry;
@@ -3038,26 +3055,26 @@ async function fetchStatistics() {
 }
 
 function updateStat(stat, tf) {
-    [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerHTML = stat[tf].channel[e]));
+    [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e]));
 
-    document.getElementById("stat_" + tf + "_count").innerHTML = stat[tf].count;
-    document.getElementById("stat_" + tf + "_dist").innerHTML = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
-    document.getElementById("stat_" + tf + "_vessel_count").innerHTML = stat[tf].vessels;
-    document.getElementById("stat_" + tf + "_msg123").innerHTML = stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2];
-    document.getElementById("stat_" + tf + "_msg5").innerHTML = stat[tf].msg[4];
-    document.getElementById("stat_" + tf + "_msg18").innerHTML = stat[tf].msg[17];
-    document.getElementById("stat_" + tf + "_msg19").innerHTML = stat[tf].msg[18];
-    document.getElementById("stat_" + tf + "_msg68").innerHTML = stat[tf].msg[5] + stat[tf].msg[7];
-    document.getElementById("stat_" + tf + "_msg1214").innerHTML = stat[tf].msg[11] + stat[tf].msg[13];
-    document.getElementById("stat_" + tf + "_msg24").innerHTML = stat[tf].msg[23];
-    document.getElementById("stat_" + tf + "_msg4").innerHTML = stat[tf].msg[3];
-    document.getElementById("stat_" + tf + "_msg9").innerHTML = stat[tf].msg[8];
-    document.getElementById("stat_" + tf + "_msg21").innerHTML = stat[tf].msg[20];
-    document.getElementById("stat_" + tf + "_msg27").innerHTML = stat[tf].msg[26];
+    document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count;
+    document.getElementById("stat_" + tf + "_dist").innerText = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
+    document.getElementById("stat_" + tf + "_vessel_count").innerText = stat[tf].vessels;
+    document.getElementById("stat_" + tf + "_msg123").innerText = stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2];
+    document.getElementById("stat_" + tf + "_msg5").innerText = stat[tf].msg[4];
+    document.getElementById("stat_" + tf + "_msg18").innerText = stat[tf].msg[17];
+    document.getElementById("stat_" + tf + "_msg19").innerText = stat[tf].msg[18];
+    document.getElementById("stat_" + tf + "_msg68").innerText = stat[tf].msg[5] + stat[tf].msg[7];
+    document.getElementById("stat_" + tf + "_msg1214").innerText = stat[tf].msg[11] + stat[tf].msg[13];
+    document.getElementById("stat_" + tf + "_msg24").innerText = stat[tf].msg[23];
+    document.getElementById("stat_" + tf + "_msg4").innerText = stat[tf].msg[3];
+    document.getElementById("stat_" + tf + "_msg9").innerText = stat[tf].msg[8];
+    document.getElementById("stat_" + tf + "_msg21").innerText = stat[tf].msg[20];
+    document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26];
 
     var count_other = 0;
     [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26].forEach((i) => (count_other += stat[tf].msg[i - 1]));
-    document.getElementById("stat_" + tf + "_msgother").innerHTML = count_other;
+    document.getElementById("stat_" + tf + "_msgother").innerText = count_other;
 }
 
 async function updateStatistics() {
@@ -3066,7 +3083,7 @@ async function updateStatistics() {
     if (stat) {
         // in bulk....
         ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate", "received"].forEach(
-            (e) => (document.getElementById("stat_" + e).innerHTML = stat[e]),
+            (e) => (document.getElementById("stat_" + e).innerText = stat[e]),
         );
 
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
@@ -3083,9 +3100,9 @@ async function updateStatistics() {
             tab_title_station = title;
             updateTitle();
         }
-        document.getElementById("stat_memory").innerHTML = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
-        document.getElementById("stat_msg_rate").innerHTML = Number(stat.msg_rate).toFixed(1) + " msg/s";
-        document.getElementById("stat_msg_min_rate").innerHTML = Number(stat.last_minute.count).toFixed(0) + " msg/min";
+        document.getElementById("stat_memory").innerText = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
+        document.getElementById("stat_msg_rate").innerText = Number(stat.msg_rate).toFixed(1) + " msg/s";
+        document.getElementById("stat_msg_min_rate").innerText = Number(stat.last_minute.count).toFixed(0) + " msg/min";
         document.getElementById("stat_run_time").innerHTML = getDeltaTimeVal(stat.run_time);
 
         updateStat(stat, "total");
@@ -3094,8 +3111,8 @@ async function updateStatistics() {
         updateStat(stat, "last_hour");
         updateStat(stat, "last_day");
 
-        document.getElementById("stat_total_vessel_count").innerHTML = "-";
-        document.getElementById("stat_session_vessel_count").innerHTML = stat.vessel_count;
+        document.getElementById("stat_total_vessel_count").innerText = "-";
+        document.getElementById("stat_session_vessel_count").innerText = stat.vessel_count;
     }
 }
 
@@ -3523,10 +3540,10 @@ function getIconCSS(ship, opacity = 1) {
 }
 
 function getTableShiptype(ship, opacity = 1) {
-    if(ship == null) return "";
+    if (ship == null) return "";
 
     const { class: classValue, style, hint } = getShipCSSClassAndStyle(ship, opacity);
-    return settings.table_shiptype_use_icon?`<span class="${classValue}" style="${style}" title="${hint}"></span>` : hint;
+    return settings.table_shiptype_use_icon ? `<span class="${classValue}" style="${style}" title="${hint}"></span>` : hint;
 }
 
 function getIcon(ship) {
@@ -3579,7 +3596,7 @@ const showTooltipShip = function (id, mmsi, pixel) {
     if (mmsi in shipsDB)
         id.innerHTML = getTooltipContent(shipsDB[mmsi].raw);
     else
-        id.innerHTML = mmsi;
+        id.innerText = mmsi;
 
     if (pixel) {
         id.style.left = pixel[0] + 'px';
