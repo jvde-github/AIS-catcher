@@ -4772,13 +4772,6 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
-addOverlayLayer("Experimental Ducting (Not updated)", new ol.layer.Tile({
-    source: new ol.source.XYZ({
-        url: 'https://aiscatcher.org/tiles/ducting/{z}/{x}/{-y}.png',  // Update the tile URL pattern
-        tileSize: [256, 256],
-        maxZoom: 5  // Set the maximum zoom level based on your generated tiles
-    })
-}));
 
 let mdabout = "This content can be defined by the owner of the station";
 
