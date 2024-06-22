@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v8.2.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v8.2.0/ol.css" />
 
-	<link rel="stylesheet" href="style_v0_59_91_gb2ceabfa.css" />
+	<link rel="stylesheet" href="style_1719091506.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -139,7 +139,7 @@
 						</span>
 					</div>
 					<div>
-						<span>Use Icon in Table</span><span> 
+						<span>Use Icon in Table</span><span>
 							<input type="checkbox" id="settings_table_shiptype_use_icon"
 								onchange="setTableIcon(this.checked)" />
 						</span>
@@ -976,7 +976,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_v0_59_91_gb2ceabfa.js"></script>
+	<script src="script_1719091506.js"></script>
 	<script src="config.js"></script>
 
 	<script>
@@ -1179,6 +1179,13 @@
 			}
 			addOverlayLayer("Community Feed", feedLayer);
 			addOverlayLayer("Community Stations", feeStationdLayer);
+			addOverlayLayer("Experimental Ducting (Not updated)", new ol.layer.Tile({
+				source: new ol.source.XYZ({
+					url: 'https://aiscatcher.org/tiles/ducting/{z}/{x}/{-y}.png',  // Update the tile URL pattern
+					tileSize: [256, 256],
+					maxZoom: 5  // Set the maximum zoom level based on your generated tiles
+				})
+			}));
 		}
 
 		let urlParams = new URLSearchParams(window.location.search);
