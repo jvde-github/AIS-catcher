@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css" />
 
-	<link rel="stylesheet" href="style_1719091506.css" />
+	<link rel="stylesheet" href="style_1719244520.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -976,7 +976,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_1719091506.js"></script>
+	<script src="script_1719244520.js"></script>
 	<script src="config.js"></script>
 
 	<script>
@@ -1179,7 +1179,7 @@
 			}
 			addOverlayLayer("Community Feed", feedLayer);
 			addOverlayLayer("Community Stations", feeStationdLayer);
-			addOverlayLayer("Experimental Ducting (Not updated)", new ol.layer.Tile({
+			addOverlayLayer("AIS Ducting Index", new ol.layer.Tile({
 				source: new ol.source.XYZ({
 					url: 'https://aiscatcher.org/tiles/ducting/{z}/{x}/{-y}.png',  // Update the tile URL pattern
 					tileSize: [256, 256],
