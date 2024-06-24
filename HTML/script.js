@@ -2387,7 +2387,7 @@ async function fetchShips(noDoubleFetch = true) {
         if (includeShip(s)) {
             s.shipname = sanitizeString(s.shipname);
             s.callsign = sanitizeString(s.callsign);
-            
+
             const entry = {};
             entry.raw = s;
             shipsDB[s.mmsi] = entry;
@@ -3786,8 +3786,18 @@ function loadSettings() {
 }
 
 function loadSettingsFromURL() {
-    for (const [key, value] of urlParams.entries()) if (settings.hasOwnProperty(key)) settings = { ...settings, [key]: value };
+    for (const [key, value] of urlParams.entries()) {
+        if (settings.hasOwnProperty(key)) {
+            if (key === 'map_overlay') {
+                if (!Array.isArray(settings[key])) settings[key] = [];
+                settings[key].push(value);
+            } else {
+                settings[key] = value;
+            }
+        }
+    }
 
+    // Convert boolean strings to actual booleans
     settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
     settings.show_range = settings.show_range == "true" || settings.show_range == true;
     settings.show_station = settings.show_station == "true" || settings.show_station == true;
