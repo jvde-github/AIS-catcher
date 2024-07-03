@@ -50,6 +50,8 @@ jobs:
         git push origin main
         
   build:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     needs: bakeHTML
     runs-on: ubuntu-latest
     strategy:
