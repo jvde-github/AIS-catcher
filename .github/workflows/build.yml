@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        distro: [bookworm, jessie, bullseye]
+        distro: [bookworm, bullseye]
         arch: [amd64, i386]
 
     steps:
