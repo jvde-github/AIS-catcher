@@ -49,35 +49,51 @@ jobs:
         git commit -m "Stamp version and bake index.html in HTML.cpp"
         git push origin main
         
-  build:
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    needs: bakeHTML
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        distro: [bookworm, bullseye, buster]
-        arch: [amd64, armhf, arm64]
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        ref: main
-    - name: Build Debian package
-      run: |
-        cp build-docker/bookworm/Dockerfile .
-        sed -i 's/FROM debian:bookworm/FROM debian:${{ matrix.distro }}/g' Dockerfile
-        sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
-        docker build -t ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }} .
-        docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }}
-        cp output/ais-catcher.deb ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb
-        gh release upload 'Edge' ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb --repo jvde-github/AIS-catcher --clobber 
-    - name: Upload Debian package as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}
-        path: ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb
+build:
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  needs: bakeHTML
+  runs-on: ubuntu-latest
+  strategy:
+    matrix:
+      package:
+        - { distro: 'debian', codename: 'bookworm', arch: 'amd64', filename: 'ais-catcher_debian_bookworm_amd64.deb' }
+        - { distro: 'debian', codename: 'bookworm', arch: 'armhf', filename: 'ais-catcher_debian_bookworm_armhf.deb' }
+        - { distro: 'debian', codename: 'bullseye', arch: 'amd64', filename: 'ais-catcher_debian_bullseye_amd64.deb' }
+        - { distro: 'debian', codename: 'bullseye', arch: 'armhf', filename: 'ais-catcher_debian_bullseye_armhf.deb' }
+        - { distro: 'debian', codename: 'buster', arch: 'amd64', filename: 'ais-catcher_debian_buster_amd64.deb' }
+        - { distro: 'debian', codename: 'buster', arch: 'armhf', filename: 'ais-catcher_debian_buster_armhf.deb' }
+        - { distro: 'debian', codename: 'sid', arch: 'amd64', filename: 'ais-catcher_debian_sid_amd64.deb' }
+        - { distro: 'debian', codename: 'sid', arch: 'armhf', filename: 'ais-catcher_debian_sid_armhf.deb' }
+        - { distro: 'raspios', codename: 'bullseye', arch: 'armhf', filename: 'ais-catcher_raspios_bullseye_armhf.deb' }
+        - { distro: 'ubuntu', codename: 'focal', arch: 'amd64', filename: 'ais-catcher_ubuntu_focal_amd64.deb' }
+        - { distro: 'ubuntu', codename: 'focal', arch: 'armhf', filename: 'ais-catcher_ubuntu_focal_armhf.deb' }
+        - { distro: 'ubuntu', codename: 'jammy', arch: 'amd64', filename: 'ais-catcher_ubuntu_jammy_amd64.deb' }
+        - { distro: 'ubuntu', codename: 'jammy', arch: 'armhf', filename: 'ais-catcher_ubuntu_jammy_armhf.deb' }
+        - { distro: 'ubuntu', codename: 'mantic', arch: 'amd64', filename: 'ais-catcher_ubuntu_mantic_amd64.deb' }
+        - { distro: 'ubuntu', codename: 'mantic', arch: 'armhf', filename: 'ais-catcher_ubuntu_mantic_armhf.deb' }
+        - { distro: 'ubuntu', codename: 'noble', arch: 'amd64', filename: 'ais-catcher_ubuntu_noble_amd64.deb' }
+        - { distro: 'ubuntu', codename: 'noble', arch: 'armhf', filename: 'ais-catcher_ubuntu_noble_armhf.deb' }
+  steps:
+  - name: Checkout Repository
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+      ref: main
+  - name: Build Debian package
+    run: |
+      cp build-docker/${{ matrix.package.distro }}_${{ matrix.package.codename }}_${{ matrix.package.arch }}/Dockerfile .
+      sed -i 's/FROM ${{ matrix.package.distro }}:${{ matrix.package.codename }}/FROM ${{ matrix.package.distro }}:${{ matrix.package.codename }}/g' Dockerfile
+      sed -i 's/amd64/${{ matrix.package.arch }}/g' Dockerfile
+      docker build -t ais-catcher-builder-${{ matrix.package.distro }}-${{ matrix.package.codename }}-${{ matrix.package.arch }} .
+      docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-${{ matrix.package.distro }}-${{ matrix.package.codename }}-${{ matrix.package.arch }}
+      cp output/ais-catcher.deb ${{ matrix.package.filename }}
+      gh release upload 'Edge' ${{ matrix.package.filename }} --repo jvde-github/AIS-catcher --clobber
+  - name: Upload Debian package as artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: ${{ matrix.package.filename }}
+      path: ${{ matrix.package.filename }}
              
   Docker:
     runs-on: ubuntu-latest
