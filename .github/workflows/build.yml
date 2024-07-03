@@ -49,22 +49,44 @@ jobs:
         git commit -m "Stamp version and bake index.html in HTML.cpp"
         git push origin main
         
-  Debian-Bookworm:
-    runs-on: ubuntu-latest
-    needs: bakeHTML
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
+name: Build Debian Packages
 
-      - name: Build debian package
-        run: |
-           cp build-docker/bookworm/Dockerfile .
-           docker build -t ais-catcher-builder .
-           docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder
-           cp output/ais-catcher.deb .
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro: [bookworm, jessie, bullseye]
+        arch: [amd64, i386]
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: main
+
+    - name: Build Debian package
+      run: |
+        cp build-docker/bookworm/Dockerfile .
+        sed -i 's/FROM debian:bookworm/FROM debian:${{ matrix.distro }}/g' Dockerfile
+        sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
+        docker build -t ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }} .
+        docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }}
+        cp output/ais-catcher-1.0-${{ matrix.arch }}.deb ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb
+
+    - name: Upload Debian package as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}
+        path: ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb
            
   Docker:
     runs-on: ubuntu-latest
