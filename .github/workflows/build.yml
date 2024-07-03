@@ -70,7 +70,7 @@ jobs:
         docker build -t ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }} .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }}
         cp output/ais-catcher.deb ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb
-        gh release upload 'Edge' ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb --repo jvde-github/AIS-catcher --clobber" 
+        gh release upload 'Edge' ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb --repo jvde-github/AIS-catcher --clobber 
     - name: Upload Debian package as artifact
       uses: actions/upload-artifact@v4
       with:
