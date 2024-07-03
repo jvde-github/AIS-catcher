@@ -49,7 +49,23 @@ jobs:
         git commit -m "Stamp version and bake index.html in HTML.cpp"
         git push origin main
         
-       
+  Debian-Bookworm:
+    runs-on: ubuntu-latest
+    needs: bakeHTML
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Build debian package
+        run: |
+           cp build-docker/bookworm/Dockerfile .
+           docker build -t ais-catcher-builder .
+           docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder
+           cp output/ais-catcher.deb .
+           
   Docker:
     runs-on: ubuntu-latest
     needs: bakeHTML
