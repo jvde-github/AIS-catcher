@@ -49,17 +49,8 @@ jobs:
         git commit -m "Stamp version and bake index.html in HTML.cpp"
         git push origin main
         
-name: Build Debian Packages
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-
   build:
+    needs: bakeHTML
     runs-on: ubuntu-latest
     strategy:
       matrix:
