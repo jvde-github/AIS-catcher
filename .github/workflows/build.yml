@@ -54,8 +54,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        distro: [bookworm, bullseye]
-        arch: [amd64, i386]
+        distro: [bookworm, bullseye, buster]
+        arch: [amd64]
 
     steps:
     - name: Checkout Repository
@@ -71,7 +71,7 @@ jobs:
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
         docker build -t ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }} .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-${{ matrix.distro }}-${{ matrix.arch }}
-        cp output/ais-catcher-1.0-${{ matrix.arch }}.deb ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb
+        cp output/ais-catcher.deb ais-catcher-${{ matrix.distro }}-${{ matrix.arch }}.deb
 
     - name: Upload Debian package as artifact
       uses: actions/upload-artifact@v4
