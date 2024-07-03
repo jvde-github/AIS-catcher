@@ -114,34 +114,6 @@ jobs:
       with:
         name: ${{ env.filename }}
         path: ${{ env.filename }}
-  
-  build_raspbian:
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    needs: bakeHTML
-    runs-on: ARM
-    strategy:
-      matrix:
-        codename: ['bullseye', 'buster']
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        ref: main
-    - name: Set filename
-      run: |
-        echo "filename=ais-catcher_raspbian_${{ matrix.codename }}_armhf.deb" >> $GITHUB_ENV
-    - name: Build Raspbian package
-      run: |
-        ./build.me "cmake build-essential librtlsdr-dev" ais-catcher armhf 1.0 librtlsdr0
-        cp ais-catcher_*.deb ${{ env.filename }}
-        gh release upload 'Edge' ${{ env.filename }} --repo jvde-github/AIS-catcher --clobber
-    - name: Upload Raspbian package as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.filename }}
-        path: ${{ env.filename }}
         
   Docker:
     runs-on: ubuntu-latest
