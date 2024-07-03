@@ -48,7 +48,7 @@ jobs:
         git config --local user.name "Github Action"
         git commit -m "Stamp version and bake index.html in HTML.cpp"
         git push origin main
-            
+        
   build_debian:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,8 +69,8 @@ jobs:
         echo "filename=ais-catcher_debian_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
     - name: Build Debian package
       run: |
-        cp build-docker/debian_${{ matrix.codename }}_${{ matrix.arch }}/Dockerfile .
-        sed -i 's/FROM debian:${{ matrix.codename }}/FROM debian:${{ matrix.codename }}/g' Dockerfile
+        cp build-docker/bookworm/Dockerfile .
+        sed -i 's/FROM debian:bookworm/FROM debian:${{ matrix.codename }}/g' Dockerfile
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
         docker build -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
@@ -102,8 +102,8 @@ jobs:
         echo "filename=ais-catcher_ubuntu_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
     - name: Build Ubuntu package
       run: |
-        cp build-docker/ubuntu_${{ matrix.codename }}_${{ matrix.arch }}/Dockerfile .
-        sed -i 's/FROM ubuntu:${{ matrix.codename }}/FROM ubuntu:${{ matrix.codename }}/g' Dockerfile
+        cp build-docker/bookworm/Dockerfile .
+        sed -i 's/FROM debian:bookworm/FROM ubuntu:${{ matrix.codename }}/g' Dockerfile
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
         docker build -t ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }} .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }}
@@ -114,7 +114,7 @@ jobs:
       with:
         name: ${{ env.filename }}
         path: ${{ env.filename }}
-        
+   
   Docker:
     runs-on: ubuntu-latest
     needs: bakeHTML
