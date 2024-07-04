@@ -56,7 +56,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=${4:-$(grep "^package_version=" build.me | cut -d'=' -f2)}
+package_version=v0.59-148-gf2e686ce
 install_deps=$5
 
 # Install build dependencies
