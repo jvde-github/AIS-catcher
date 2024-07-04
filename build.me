@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Function to install dependencies using apt
 install_dependencies() {
   if [ -n "$1" ]; then
@@ -8,7 +7,6 @@ install_dependencies() {
     apt-get install -y $1
   fi
 }
-
 # Function to build the project
 build_project() {
   if [ -d "build" ]; then
@@ -19,18 +17,15 @@ build_project() {
     mkdir build
     echo "build directory created"
   fi
-
   if [ -d "NMEA2000_AC" ]; then
     rm -rf NMEA2000_AC
     echo "NMEA2000 library directory deleted."
   fi
-
   cd build
   cmake ..
   make
   cd ..
 }
-
 # Function to create a Debian package
 create_debian_package() {
   if [ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ]; then
@@ -38,7 +33,6 @@ create_debian_package() {
     package_arch=$2
     package_version=$3
     install_deps=$4
-
     echo "Creating Debian package: $package_name"
     mkdir -p debian/DEBIAN
     echo "Package: $package_name" > debian/DEBIAN/control
@@ -46,29 +40,25 @@ create_debian_package() {
     echo "Architecture: $package_arch" >> debian/DEBIAN/control
     echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
     echo "Description: Your package description" >> debian/DEBIAN/control
-    echo "Depends: $install_deps" >> debian/DEBIAN/control
-
+    # Extract the required libstdc++ version using ldd
+    libstdcxx_version=$(ldd build/AIS-catcher | grep libstdc++ | awk '{print $1}')
+    echo "Depends: $install_deps, $libstdcxx_version" >> debian/DEBIAN/control
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
-
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
     rm -rf debian
   fi
 }
-
 # Parse command line arguments
 build_deps=$1
 deb_package=$2
 package_arch=$3
 package_version=$4
 install_deps=$5
-
 # Install build dependencies
 install_dependencies "$build_deps"
-
 # Build the project
 build_project
-
 # Create Debian package if specified
 create_debian_package "$deb_package" "$package_arch" "$package_version" "$install_deps"
