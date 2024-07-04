@@ -40,9 +40,7 @@ create_debian_package() {
     echo "Architecture: $package_arch" >> debian/DEBIAN/control
     echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
     echo "Description: Your package description" >> debian/DEBIAN/control
-    # Extract the required libstdc++ version using ldd
-    libstdcxx_version=$(ldd build/AIS-catcher | grep libstdc++ | awk '{print $1}')
-    echo "Depends: $install_deps, $libstdcxx_version" >> debian/DEBIAN/control
+    echo "Depends: $install_deps" >> debian/DEBIAN/control
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
     dpkg-deb --build debian
