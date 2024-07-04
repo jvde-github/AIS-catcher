@@ -8,7 +8,7 @@ COPY . /app
 WORKDIR /app
 
 # Build the project
-RUN ./build.me "cmake build-essential librtlsdr-dev" ais-catcher amd64 1.0 librtlsdr0
+RUN ./build.me "cmake build-essential" ais-catcher amd64 1.0 ""
 
 # Copy the generated Debian package to the host system
 CMD ["cp", "ais-catcher.deb", "/output/"]
