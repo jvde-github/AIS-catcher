@@ -1,12 +1,14 @@
 #!/bin/bash
+
 # Function to install dependencies using apt
 install_dependencies() {
   if [ -n "$1" ]; then
     echo "Installing build dependencies: $1"
-    apt-get update  
+    apt-get update
     apt-get install -y $1
   fi
 }
+
 # Function to build the project
 build_project() {
   if [ -d "build" ]; then
@@ -26,6 +28,7 @@ build_project() {
   make
   cd ..
 }
+
 # Function to create a Debian package
 create_debian_package() {
   if [ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ]; then
@@ -48,15 +51,19 @@ create_debian_package() {
     rm -rf debian
   fi
 }
+
 # Parse command line arguments
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=$4
+package_version=${4:-$(grep "^package_version=" build.me | cut -d'=' -f2)}
 install_deps=$5
+
 # Install build dependencies
 install_dependencies "$build_deps"
+
 # Build the project
 build_project
+
 # Create Debian package if specified
 create_debian_package "$deb_package" "$package_arch" "$package_version" "$install_deps"
