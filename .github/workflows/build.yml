@@ -64,7 +64,7 @@ jobs:
     strategy:
       matrix:
         codename: ['bookworm', 'bullseye', 'buster']
-        arch: ['amd64', 'armhf', 'arm64', 'aarch64']
+        arch: ['amd64', 'armhf', 'arm64']
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
     strategy:
       matrix:
         codename: ['focal', 'jammy', 'mantic', 'noble']
-        arch: ['amd64', 'i386', 'arm64']
+        arch: ['amd64', 'arm64']
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
