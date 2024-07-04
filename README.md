@@ -44,6 +44,11 @@ Only use this software in regions where such use is permitted.
   
   ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/d15920f1-d827-42da-9f05-3587fe553feb)
 
+  - Experimenting with debian packages to simplify installation. To do, make it work for the RTL-SDR V4, auto setting it up as system service, configuration editor and extensive testing. The install command will look something like:
+
+```sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/install-aiscatcher.sh)"
+```
+
 **v0.59** developments:
 - Slowly improving the station page for feeders of aiscatcher.org. Color indicates number of stations covering area, opacity is linked to message count of station. To view your station statistics in this way, ensure you feed with a sharing key (UUID)
 ![Screenshot from 2024-05-02 21-23-24](https://github.com/jvde-github/AIS-catcher/assets/52420030/6a0391e6-a059-48fd-9543-89181262894f)
