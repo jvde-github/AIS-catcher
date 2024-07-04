@@ -72,7 +72,7 @@ jobs:
         cp build-docker/bookworm/Dockerfile .
         sed -i 's/FROM debian:bookworm/FROM debian:${{ matrix.codename }}/g' Dockerfile
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
-        apt-get install qemu-user-static
+        sudo apt-get install qemu-user-static
         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
         docker build --platform ${{ matrix.arch}} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
