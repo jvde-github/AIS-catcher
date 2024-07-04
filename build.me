@@ -35,6 +35,31 @@ create_debian_package() {
     package_name=$1
     package_arch=$2
     package_version=$3
+
+    # Extract dependencies using ldd and filter the required libraries
+    echo "Extracting dependencies using ldd..."
+    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq|libz' | awk '{print $1}')
+
+    # Initialize the depends variable
+    depends=""
+
+    echo "Processing dependencies..."
+    # Iterate over each dependency and format it
+    for dep in $dependencies; do
+      # Extract the library name and version
+      echo "Processing dependency: $dep"
+      lib_name=$(echo "$dep" | awk -F'.so.' '{print $1}')
+      lib_version=$(echo "$dep" | awk -F'.so.' '{print $2}')
+      echo "Library name: $lib_name, Library version: $lib_version"
+      depends="$depends ${lib_name}${lib_version},"
+    done
+
+    # Remove the trailing comma and space
+    depends=${depends%,}
+
+    # Print dependencies for debugging
+    echo "Final Depends line: Depends: $depends"
+
     echo "Creating Debian package: $package_name"
     mkdir -p debian/DEBIAN
     echo "Package: $package_name" > debian/DEBIAN/control
@@ -42,18 +67,8 @@ create_debian_package() {
     echo "Architecture: $package_arch" >> debian/DEBIAN/control
     echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
     echo "Description: Your package description" >> debian/DEBIAN/control
+    echo "Depends: $depends" >> debian/DEBIAN/control
     
-    # Check dependencies using ldd and add them to the Depends field
-    dependencies=$(ldd build/AIS-catcher | awk '{print $1}' | grep -E 'librtlsdr|libairspy|libairspyhf|libhackrf|libzmq|libz')
-    if [ -n "$dependencies" ]; then
-      depends=""
-      for dep in $dependencies; do
-        dep_name=$(basename "$dep" | cut -d. -f1)
-        depends="$depends$dep_name, "
-      done
-      depends=${depends%, }
-      echo "Depends: $depends" >> debian/DEBIAN/control
-    fi
     
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
@@ -67,7 +82,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=0.59~156-g7a1408d2
+package_version=0.59~154-gc8868233
 install_deps=$5
 
 # Install build dependencies
