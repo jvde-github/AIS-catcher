@@ -25,18 +25,13 @@ install_dependencies() {
     echo "Updating package list..."
     sudo apt update
     echo "Installing required dependencies..."
-    sudo apt install -y wget gdebi-core
+    sudo apt install -y wget
 }
 
 # Function to download and install the correct package
 install_package() {
     BASE_URL="https://github.com/jvde-github/AIS-catcher/releases/download/Edge"
     PACKAGE_ARCH=$ARCH
-
-    if [ "$OS" == "raspbian" ] && [ "$ARCH" == "aarch64" ]; then
-        PACKAGE_ARCH="amd64"
-        echo "Using amd64 package for aarch64 on Raspbian."
-    fi
 
     FILE_NAME="ais-catcher_${OS}_${VERSION}_${PACKAGE_ARCH}.deb"
     PACKAGE_URL="${BASE_URL}/${FILE_NAME}"
@@ -49,7 +44,7 @@ install_package() {
     fi
 
     echo "Installing package..."
-    sudo apt install /tmp/ais-catcher.deb
+    sudo apt install /tmp/ais-catcher.deb -y
     if [ $? -ne 0 ]; then
         echo "Failed to install the package. Exiting."
         exit 1
