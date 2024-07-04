@@ -44,9 +44,10 @@ Only use this software in regions where such use is permitted.
   
   ![image](https://github.com/jvde-github/AIS-catcher/assets/52420030/d15920f1-d827-42da-9f05-3587fe553feb)
 
-  - Experimenting with debian packages to simplify installation. To do, make it work for the RTL-SDR V4, auto setting it up as system service, configuration editor and extensive testing. The install command will look something like:
+- Experimenting with debian packages to simplify installation. To do, make it work for the RTL-SDR V4, auto setting it up as system service, configuration editor and extensive testing. The install command will look something like:
 
-```sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/install-aiscatcher.sh)"
+```
+sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/install-aiscatcher.sh)"
 ```
 
 **v0.59** developments:
