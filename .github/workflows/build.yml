@@ -28,12 +28,8 @@ jobs:
       run: |
         git fetch --prune --unshallow
         TAG=$(git describe --tags)
-        ./build.html $TAG
-
-    - name: Update version in build.me
-      run: |
-        TAG=$(git describe --tags)
         sed -i "s/^package_version=.*/package_version=$TAG/" build.me
+        ./build.html $TAG
         
     - name: Commit and push changes
       run: |
