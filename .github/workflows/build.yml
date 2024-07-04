@@ -56,8 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        codename: ['bookworm', 'bullseye', 'buster', 'sid']
-        arch: ['amd64', 'armhf', 'arm64']
+        codename: ['bookworm', 'bullseye', 'buster']
+        arch: ['amd64', 'armhf', 'arm64', 'aarch64']
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
