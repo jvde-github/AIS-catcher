@@ -31,7 +31,7 @@ build_project() {
 
 # Function to create a Debian package
 create_debian_package() {
-  if [ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ]; then
+  if [ -n "$1" ]; then
     package_name=$1
     package_arch=$2
     package_version=$3
@@ -46,6 +46,17 @@ create_debian_package() {
     echo "Depends: $install_deps" >> debian/DEBIAN/control
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
+    
+    # Check dependencies using ldd and include them in the package if necessary
+    dependencies=$(ldd build/AIS-catcher | awk '{print $1}' | grep -E 'librtlsdr|libairspy|libairspyhf|libhackrf|libzmq')
+    for dep in $dependencies; do
+      if [ -f "$dep" ]; then
+        dep_name=$(basename "$dep")
+        mkdir -p "debian/usr/lib/${dep_name%.*}"
+        cp "$dep" "debian/usr/lib/${dep_name%.*}/"
+      fi
+    done
+    
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
     rm -rf debian
@@ -60,7 +71,7 @@ package_version=0.59~152-g922fcea4
 install_deps=$5
 
 # Install build dependencies
-install_dependencies "$build_deps"
+install_dependencies "librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev $build_deps"
 
 # Build the project
 build_project
