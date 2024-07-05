@@ -47,7 +47,7 @@ Only use this software in regions where such use is permitted.
 - Experimenting with debian packages to simplify installation. To do, make it work for the RTL-SDR V4, auto setting it up as system service, configuration editor and extensive testing. The install command will look something like:
 
 ```
-sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/install-aiscatcher.sh)"
+sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install.sh)"
 ```
 
 **v0.59** developments:
@@ -472,7 +472,7 @@ In a similar fashion `-c X` will decode one channel. This is only useful in some
 In v0.56 we introduced "Experimenter Mode" for NMEA2000 input and output via socketCAN on Linux. To properly handle the mechanics of a NMEA2000 network, the NMEA2000 library by  Timo Lappalainen
 is required, build AIS-catcher in the main directory with:
   ```
-  ./build.NMEA2000
+  ./scripts/build-NMEA2000.sh
   ```
   This downloads and builds the [NMEA2000 library](https://github.com/ttlappalainen/NMEA2000) and includes it in the AIS-catcher build process.
   The following example creates a UDP server listening on port 4002 and forwards these messages to the CAN-bus (`vcan0`):
