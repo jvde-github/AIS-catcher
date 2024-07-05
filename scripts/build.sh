@@ -142,7 +142,7 @@ cat  debian/DEBIAN/control
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=0.59~185-g156c116a
+package_version=0.59~187-g001a110f
 install_deps=$5
 
 # Install build dependencies
