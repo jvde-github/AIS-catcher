@@ -28,13 +28,13 @@ jobs:
       run: |
         git fetch --prune --unshallow
         TAG=$(git describe --tags)
-        ./build.html $TAG
+        ./scripts/build-html.sh $TAG
 
     - name: Update version in build.me
       run: |
         TAG=$(git describe --tags)
         DEBIAN_TAG=$(echo $TAG | sed 's/^v//; s/-/~/')
-        sed -i "s/^package_version=.*/package_version=$DEBIAN_TAG/" build.me
+        sed -i "s/^package_version=.*/package_version=$DEBIAN_TAG/" scripts/build.sh
         
     - name: Commit and push changes
       run: |
@@ -49,7 +49,7 @@ jobs:
         git add HTML/index_local_html.cpp
         git add HTML/script_js.cpp
         git add HTML/style_css.cpp
-        git add build.me
+        git add scripts/build.sh
         git add Application/AIS-catcher.h
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
