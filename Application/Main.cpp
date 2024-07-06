@@ -57,7 +57,7 @@ static void consoleHandler(int signal) {
 
 static void printVersion() {
 	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << std::endl;
-	std::cerr << "(C) Copyright 2021-2023 " << COPYRIGHT << std::endl;
+	std::cerr << "(C) Copyright 2021-2024 " << COPYRIGHT << std::endl;
 	std::cerr << "This is free software; see the source for copying conditions.There is NO" << std::endl;
 	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
 }
