@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Function to install dependencies using apt
+# install dependencies using apt
 install_dependencies() {
   if [ -n "$1" ]; then
     echo "Installing build dependencies: $1"
@@ -9,7 +9,7 @@ install_dependencies() {
   fi
 }
 
-# Function to build the project
+# build the project
 build_project() {
   if [ -d "build" ]; then
     rm -rf build
@@ -33,7 +33,8 @@ build_project() {
   cd ..
 }
 
-# Function to create a Debian package
+# create a Debian package
+
 create_debian_package() {
   if [ -n "$1" ]; then
     package_name="ais-catcher"
@@ -57,15 +58,10 @@ create_debian_package() {
       echo "Library name: $lib_name, Library version: $lib_version"
       depends="$depends ${lib_name}${lib_version},"
     done
-
-    # Remove the trailing comma and space
     depends=${depends%,}
 
-    # Print dependencies for debugging
     echo "Final Depends line: Depends: $depends"
 
-      
-    # Create the Debian package and include the disclaimer
     echo "Creating Debian package: $package_name"
     mkdir -p debian/DEBIAN
     echo "Package: $package_name" > debian/DEBIAN/control
@@ -75,33 +71,23 @@ create_debian_package() {
     echo "Description: AIS-catcher" >> debian/DEBIAN/control
     echo "Depends: $depends" >> debian/DEBIAN/control  # Ensure this line ends with a newline character
 
-cat  debian/DEBIAN/control
+    cat  debian/DEBIAN/control
 
-    # Add the GPL v3 disclaimer and installation prompt in the preinst script
     echo "#!/bin/bash" > debian/DEBIAN/preinst
-    echo "echo \"AIS-catcher is distributed under the GNU GPL v3 license.\" > /dev/tty" >> debian/DEBIAN/preinst
-    echo "echo \"This software is research and experimental software.\" > /dev/tty" >> debian/DEBIAN/preinst
-    echo "echo \"It is not intended for mission-critical use.\" > /dev/tty" >> debian/DEBIAN/preinst
-    echo "echo \"Use it at your own risk and responsibility.\" > /dev/tty" >> debian/DEBIAN/preinst
-    echo "echo \"It is your responsibility to ensure the legality of using this software in your region.\" > /dev/tty" >> debian/DEBIAN/preinst
-    echo "read -p \"Do you want to install AIS-catcher? (yes/no): \" choice" >> debian/DEBIAN/preinst
-    echo "case \"\$choice\" in" >> debian/DEBIAN/preinst
-    echo "  yes|Yes|YES )" >> debian/DEBIAN/preinst
-    echo "    echo \"Continuing with the installation...\"" >> debian/DEBIAN/preinst
-    echo "    ;;" >> debian/DEBIAN/preinst
-    echo "  * )" >> debian/DEBIAN/preinst
-    echo "    echo \"Installation aborted.\"" >> debian/DEBIAN/preinst
-    echo "    exit 1" >> debian/DEBIAN/preinst
-    echo "    ;;" >> debian/DEBIAN/preinst
-    echo "esac" >> debian/DEBIAN/preinst
+    echo "echo \"*******************************************************************\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"*                                                                 *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"* AIS-catcher is distributed under the GNU GPL v3 license.        *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"* This software is research and experimental software.            *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"* It is not intended for mission-critical use.                    *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"* Use it at your own risk and responsibility.                     *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"* It is your responsibility to ensure the legality of using       *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"* this software in your region.                                   *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"*                                                                 *\" > /dev/tty" >> debian/DEBIAN/preinst
+    echo "echo \"*******************************************************************\" > /dev/tty" >> debian/DEBIAN/preinst
+
     chmod +x debian/DEBIAN/preinst
-    
-    # Add the postinst script to create config.json if it doesn't exist and reload systemd
+
     echo "#!/bin/bash" > debian/DEBIAN/postinst
-    echo "# Stop ais-catcher service if it's running" >> debian/DEBIAN/postinst
-    echo "if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/postinst
-    echo "  systemctl stop ais-catcher" >> debian/DEBIAN/postinst
-    echo "fi" >> debian/DEBIAN/postinst
     echo "CONFIG_DIR=\"/etc/AIS-catcher\"" >> debian/DEBIAN/postinst
     echo "CONFIG_FILE=\"\$CONFIG_DIR/config.json\"" >> debian/DEBIAN/postinst
     echo "mkdir -p \"\$CONFIG_DIR\"" >> debian/DEBIAN/postinst
@@ -109,13 +95,57 @@ cat  debian/DEBIAN/control
     echo "  echo \"Creating empty config.json file...\"" >> debian/DEBIAN/postinst
     echo "  echo '{ \"config\": \"aiscatcher\", \"version\": 1 }' > \"\$CONFIG_FILE\"" >> debian/DEBIAN/postinst
     echo "fi" >> debian/DEBIAN/postinst
-    echo "echo \"Reloading systemd daemon...\"" >> debian/DEBIAN/postinst
-    echo "systemctl daemon-reload" >> debian/DEBIAN/postinst
-    echo "# Start ais-catcher service" >> debian/DEBIAN/postinst
-    echo "systemctl start ais-catcher" >> debian/DEBIAN/postinst
+    echo "# Check if systemd is available" >> debian/DEBIAN/postinst
+    echo "if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/postinst
+    echo "  # Check if ais-catcher service is running" >> debian/DEBIAN/postinst
+    echo "  if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/postinst
+    echo "    was_running=true" >> debian/DEBIAN/postinst
+    echo "  else" >> debian/DEBIAN/postinst
+    echo "    was_running=false" >> debian/DEBIAN/postinst
+    echo "  fi" >> debian/DEBIAN/postinst
+    echo "  # Stop ais-catcher service if it's running" >> debian/DEBIAN/postinst
+    echo "  if \$was_running; then" >> debian/DEBIAN/postinst
+    echo "    systemctl stop ais-catcher" >> debian/DEBIAN/postinst
+    echo "  fi" >> debian/DEBIAN/postinst
+    echo "  echo \"Reloading systemd daemon...\"" >> debian/DEBIAN/postinst
+    echo "  systemctl daemon-reload" >> debian/DEBIAN/postinst
+    echo "  # Restart ais-catcher service if it was running before" >> debian/DEBIAN/postinst
+    echo "  if \$was_running; then" >> debian/DEBIAN/postinst
+    echo "    systemctl start ais-catcher" >> debian/DEBIAN/postinst
+    echo "  fi" >> debian/DEBIAN/postinst
+    echo "fi" >> debian/DEBIAN/postinst
     chmod +x debian/DEBIAN/postinst
 
-    
+    echo "#!/bin/bash" > debian/DEBIAN/prerm
+    echo "# Check if systemd is available" >> debian/DEBIAN/prerm
+    echo "if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/prerm
+    echo "  echo \"Systemd detected.\"" >> debian/DEBIAN/prerm
+    echo "  # Check if ais-catcher service is running" >> debian/DEBIAN/prerm
+    echo "  if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/prerm
+    echo "    echo \"Stopping ais-catcher service...\"" >> debian/DEBIAN/prerm
+    echo "    # Stop ais-catcher service" >> debian/DEBIAN/prerm
+    echo "    systemctl stop ais-catcher" >> debian/DEBIAN/prerm
+    echo "    echo \"ais-catcher service stopped.\"" >> debian/DEBIAN/prerm
+    echo "  else" >> debian/DEBIAN/prerm
+    echo "    echo \"ais-catcher service is not running.\"" >> debian/DEBIAN/prerm
+    echo "  fi" >> debian/DEBIAN/prerm
+    echo "  echo \"Disabling ais-catcher service...\"" >> debian/DEBIAN/prerm
+    echo "  # Disable ais-catcher service" >> debian/DEBIAN/prerm
+    echo "  systemctl disable ais-catcher" >> debian/DEBIAN/prerm
+    echo "  echo \"ais-catcher service disabled.\"" >> debian/DEBIAN/prerm
+    echo "  echo \"Reloading systemd configuration...\"" >> debian/DEBIAN/prerm
+    echo "  # Reload systemd configuration" >> debian/DEBIAN/prerm
+    echo "  systemctl daemon-reload" >> debian/DEBIAN/prerm
+    echo "  echo \"Systemd configuration reloaded.\"" >> debian/DEBIAN/prerm
+    echo "else" >> debian/DEBIAN/prerm
+    echo "  echo \"Systemd not detected.\"" >> debian/DEBIAN/prerm
+    echo "fi" >> debian/DEBIAN/prerm
+    echo "echo \"Removing ais-catcher service file...\"" >> debian/DEBIAN/prerm
+    echo "# Remove the systemd service file" >> debian/DEBIAN/prerm
+    echo "rm -f /lib/systemd/system/ais-catcher.service" >> debian/DEBIAN/prerm
+    echo "echo \"ais-catcher service file removed.\"" >> debian/DEBIAN/prerm
+    chmod +x debian/DEBIAN/prerm
+
     # Add systemd service file
     mkdir -p debian/lib/systemd/system
     echo "[Unit]" > debian/lib/systemd/system/ais-catcher.service
@@ -132,6 +162,13 @@ cat  debian/DEBIAN/control
     # Build the project and package
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
+
+    cp scripts/aiscatcher-install debian/usr/bin/
+    chmod +x debian/usr/bin/aiscatcher-install
+
+    cp scripts/aiscatcher-control debian/usr/bin/
+    chmod +x debian/usr/bin/aiscatcher-control
+
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
     rm -rf debian
