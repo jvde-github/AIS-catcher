@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Check if whiptail is installed, if not install it
+if ! command -v whiptail &> /dev/null
+then
+    echo "whiptail is not installed. Installing it now..."
+    sudo apt-get update
+    sudo apt-get install -y whiptail
+fi
+
+# Function to check if systemd is active and installed
+is_systemd_active() {
+    if [ -d /run/systemd/system ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to check the status of the ais-catcher service
+get_service_status() {
+    if is_systemd_active; then
+        if systemctl is-active --quiet ais-catcher; then
+            echo "Active"
+        else
+            echo "Inactive"
+        fi
+    else
+        echo "N/A"
+    fi
+}
+
+# Function to start the ais-catcher service
+start_service() {
+    if is_systemd_active; then
+        sudo systemctl start ais-catcher
+        whiptail --title "Service Started" --msgbox "The ais-catcher service has been started." 8 40
+    else
+        whiptail --title "Systemd Not Active" --msgbox "Systemd is not active or installed. Cannot start the service." 8 60
+    fi
+}
+
+# Function to stop the ais-catcher service
+stop_service() {
+    if is_systemd_active; then
+        sudo systemctl stop ais-catcher
+        whiptail --title "Service Stopped" --msgbox "The ais-catcher service has been stopped." 8 40
+    else
+        whiptail --title "Systemd Not Active" --msgbox "Systemd is not active or installed. Cannot stop the service." 8 60
+    fi
+}
+
+# Function to display the menu
+display_menu() {
+    local status=$(get_service_status)
+    local menu_options=()
+
+    if is_systemd_active; then
+        if [ "$status" = "Active" ]; then
+            menu_options+=("Stop Service" "Stop the ais-catcher service")
+        else
+            menu_options+=("Start Service" "Start the ais-catcher service")
+        fi
+    fi
+
+    menu_options+=("Show Status" "Show the status of the ais-catcher service")
+    menu_options+=("Exit" "Exit the script")
+
+    local choice=$(whiptail --title "AIS-Catcher Main Menu" --nocancel --menu "Choose an option:" 15 60 4 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+
+    case $choice in
+        "Start Service")
+            start_service
+            ;;
+        "Stop Service")
+            stop_service
+            ;;
+        "Show Status")
+            whiptail --title "Service Status" --msgbox "The ais-catcher service is currently $status." 8 40
+            ;;
+        "Exit")
+            exit 0
+            ;;
+    esac
+}
+
+# Main script
+while true; do
+    display_menu
+done
