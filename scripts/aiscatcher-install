@@ -4,7 +4,11 @@
 detect_os_version() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        OS=$ID
+        if [ -n "$ID_LIKE" ]; then
+            OS=$ID_LIKE
+        else
+            OS=$ID
+        fi
         VERSION=$VERSION_CODENAME
         echo "Detected OS: $OS"
         echo "Detected Version: $VERSION"
