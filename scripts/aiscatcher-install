@@ -4,7 +4,9 @@
 detect_os_version() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        if [ -n "$ID_LIKE" ]; then
+        if [ "$ID" = "ubuntu" ] || [ "$ID" = "debian" ]; then
+            OS=$ID
+        elif [ -n "$ID_LIKE" ]; then
             OS=$ID_LIKE
         else
             OS=$ID
