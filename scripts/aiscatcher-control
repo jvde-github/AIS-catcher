@@ -85,7 +85,7 @@ stop_service() {
 
 # Function to get the list of input devices
 get_input_devices() {
-    AIS-catcher -l JSON on 2>/dev/null | jq -c '.devices[]'
+    /usr/bin/AIS-catcher -l JSON on 2>/dev/null | jq -c '.devices[]'
 }
 
 # Function to select an input device
@@ -129,7 +129,7 @@ test_in_foreground() {
         whiptail --title "Service Active" --msgbox "The ais-catcher service is currently running. Please stop the service before running in foreground." 10 70
     else
         whiptail --title "Running AIS-catcher" --msgbox "Running AIS-catcher in foreground with config file: $CONFIG_FILE" 10 70
-        AIS-catcher -C "$CONFIG_FILE"
+        /usr/bin/AIS-catcher -C "$CONFIG_FILE"
         read -p "Press Enter to continue..."
     fi
 }
@@ -154,15 +154,18 @@ configure_sharing() {
     local sharing=$(jq -r '.sharing // "false"' "$CONFIG_FILE")
     local sharing_key=$(jq -r '.sharing_key // ""' "$CONFIG_FILE")
     
-    local sharing_choice=$(whiptail --title "Configure Sharing" --nocancel --radiolist "Enable sharing:" 10 50 2 \
+    local sharing_choice=$(whiptail --title "Configure Sharing" --nocancel --radiolist "Enable sharing with aiscatcher.org:" 10 50 2 \
         "true" "Enable sharing" $(if [ "$sharing" = "true" ]; then echo "ON"; else echo "OFF"; fi) \
         "false" "Disable sharing" $(if [ "$sharing" = "false" ]; then echo "ON"; else echo "OFF"; fi) 3>&1 1>&2 2>&3)
     
-    local sharing_key_input=$(whiptail --title "Configure Sharing Key" --nocancel --inputbox "Enter sharing key:" 10 50 "$sharing_key" 3>&1 1>&2 2>&3)
-    
-    jq --arg sharing "$sharing_choice" --arg sharing_key "$sharing_key_input" '.sharing = $sharing | .sharing_key = $sharing_key' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    
-    whiptail --title "Sharing Configuration Updated" --msgbox "Sharing has been set to $sharing_choice with key: $sharing_key_input" 10 70
+    if [ "$sharing_choice" = "true" ]; then
+        local sharing_key_input=$(whiptail --title "Configure Sharing Key" --nocancel --inputbox "Enter sharing key:" 10 50 "$sharing_key" 3>&1 1>&2 2>&3)
+        jq --arg sharing "$sharing_choice" --arg sharing_key "$sharing_key_input" '.sharing = $sharing | .sharing_key = $sharing_key' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+        whiptail --title "Sharing Configuration Updated" --msgbox "Sharing has been set to $sharing_choice with key: $sharing_key_input" 10 70
+    else
+        jq --arg sharing "$sharing_choice" '.sharing = $sharing | .sharing_key = ""' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+        whiptail --title "Sharing Configuration Updated" --msgbox "Sharing has been set to $sharing_choice" 10 70
+    fi
 }
 
 # Function to prompt for enabling sharing
@@ -170,7 +173,7 @@ prompt_enable_sharing() {
     local sharing=$(jq -r '.sharing // "false"' "$CONFIG_FILE")
     
     if [ "$sharing" = "false" ]; then
-        if (whiptail --title "Enable Sharing" --yesno "Sharing is currently disabled. Enabling sharing will unlock additional features. Do you want to enable sharing?" 10 70); then
+        if (whiptail --title "Enable Sharing" --yesno "Sharing with aiscatcher.org is currently disabled. Enabling sharing will unlock additional features in the webviewer. Do you want to enable sharing?" 10 70); then
             jq '.sharing = "true"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
             whiptail --title "Sharing Enabled" --msgbox "Sharing has been enabled. Additional features are now available." 10 70
         fi
