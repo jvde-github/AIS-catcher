@@ -1,8 +1,14 @@
 #!/bin/bash
 
+CONFIG_FILE="/etc/AIS-catcher/config.json"
+
+# Allow custom config file as parameter
+if [ $# -gt 0 ]; then
+    CONFIG_FILE="$1"
+fi
+
 # Check if whiptail is installed, if not install it
-if ! command -v whiptail &> /dev/null
-then
+if ! command -v whiptail &> /dev/null; then
     echo "whiptail is not installed. Installing it now..."
     sudo apt-get update
     sudo apt-get install -y whiptail
@@ -30,6 +36,15 @@ get_service_status() {
     fi
 }
 
+# Function to show journal status if systemd is active
+show_journal_status() {
+    if is_systemd_active; then
+        sudo journalctl -u ais-catcher --no-pager -n 10
+    else
+        echo "N/A"
+    fi
+}
+
 # Function to start the ais-catcher service
 start_service() {
     if is_systemd_active; then
@@ -50,6 +65,33 @@ stop_service() {
     fi
 }
 
+# Function to get the list of input devices
+get_input_devices() {
+    AIS-catcher -l JSON | jq -c '.input_devices[]'
+}
+
+# Function to select an input device
+select_input_device() {
+    local devices=$(get_input_devices)
+    local menu_options=()
+    
+    while IFS= read -r device; do
+        local name=$(echo "$device" | jq -r '.name')
+        local description=$(echo "$device" | jq -r '.description')
+        menu_options+=("$name" "$description")
+    done <<< "$devices"
+
+    local choice=$(whiptail --title "Select Input Device" --nocancel --menu "Choose an input device:" 15 60 4 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+    
+    local selected_device=$(echo "$devices" | jq -c --arg name "$choice" 'select(.name == $name)')
+    local input=$(echo "$selected_device" | jq -r '.input')
+    local serial=$(echo "$selected_device" | jq -r '.serial')
+    
+    jq --arg input "$input" --arg serial "$serial" '.input = $input | .serial = $serial' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    
+    whiptail --title "Device Selected" --msgbox "The input device has been set to $choice." 8 40
+}
+
 # Function to display the menu
 display_menu() {
     local status=$(get_service_status)
@@ -63,6 +105,7 @@ display_menu() {
         fi
     fi
 
+    menu_options+=("Input Device" "Select the input device for ais-catcher")
     menu_options+=("Show Status" "Show the status of the ais-catcher service")
     menu_options+=("Exit" "Exit the script")
 
@@ -75,8 +118,12 @@ display_menu() {
         "Stop Service")
             stop_service
             ;;
+        "Input Device")
+            select_input_device
+            ;;
         "Show Status")
-            whiptail --title "Service Status" --msgbox "The ais-catcher service is currently $status." 8 40
+            local journal_status=$(show_journal_status)
+            whiptail --title "Service Status" --msgbox "The ais-catcher service is currently $status.\n\nJournal Status:\n$journal_status" 15 60
             ;;
         "Exit")
             exit 0
