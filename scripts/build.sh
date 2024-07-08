@@ -179,7 +179,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=0.59~201-ga7e400ad
+package_version=0.59~203-g168141aa
 install_deps=$5
 
 # Install build dependencies
