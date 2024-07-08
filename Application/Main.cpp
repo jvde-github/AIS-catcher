@@ -126,10 +126,25 @@ static void Usage() {
 	std::cerr << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]" << std::endl;
 }
 
-static void printDevices(Receiver& r) {
-	std::cerr << "Found " << r.device_list.size() << " device(s):" << std::endl;
-	for (int i = 0; i < r.device_list.size(); i++) {
-		std::cerr << i << ": " << r.device_list[i].toString() << std::endl;
+static void printDevices(Receiver& r, bool JSON = false) {
+	if (!JSON) {
+		std::cerr << "Found " << r.device_list.size() << " device(s):" << std::endl;
+		for (int i = 0; i < r.device_list.size(); i++) {
+			std::cout << i << ": " << r.device_list[i].toString() << std::endl;
+		}
+	}
+	else {
+		std::cout << "{\"devices\":[";
+
+		for (int i = 0; i < r.device_list.size(); i++) {
+			std::string type = Util::Parse::DeviceTypeString(r.device_list[i].getType());
+			std::cout << "{\"input\":\"" + type;
+			std::cout << "\",\"serial\":\"" + r.device_list[i].getSerial();
+			std::cout << "\",\"name\":\"" + type + " [" + r.device_list[i].getSerial() + "]\"";
+			
+			std::cout << "}" << (i == r.device_list.size() - 1 ? "" : ",");
+		}
+		std::cout << "]}\n";
 	}
 }
 
@@ -231,7 +246,7 @@ int main(int argc, char* argv[]) {
 
 	bool list_devices = false, list_support = false, list_options = false;
 	int timeout = 0, nrec = 0, exit_code = 0;
-	bool timeout_nomsg = false;
+	bool timeout_nomsg = false, list_devices_JSON = false;
 
 	try {
 #ifdef _WIN32
@@ -438,7 +453,11 @@ int main(int argc, char* argv[]) {
 				_receivers.back()->SerialPort().Set("BAUDRATE", arg1).Set("PORT", arg2);
 				break;
 			case 'l':
-				Assert(count == 0, param, MSG_NO_PARAMETER);
+				Assert(count == 0 || count == 2, param, MSG_NO_PARAMETER);
+				if (count == 2) {
+					Assert(arg1 == "JSON", param, "requires JSON on/off");
+					list_devices_JSON = Util::Parse::Switch(arg2);
+				}
 				list_devices = true;
 				break;
 			case 'L':
@@ -594,7 +613,7 @@ int main(int argc, char* argv[]) {
 			c.read(file_config);
 		}
 
-		if (list_devices) printDevices(*_receivers.back());
+		if (list_devices) printDevices(*_receivers.back(), list_devices_JSON);
 		if (list_support) printSupportedDevices();
 		if (list_options) Usage();
 		if (list_devices || list_support || list_options) return 0;
