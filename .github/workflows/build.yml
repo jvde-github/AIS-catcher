@@ -55,7 +55,7 @@ jobs:
         git config --local user.name "Github Action"
         git commit -m "Stamp version and bake index.html in HTML.cpp"
         git push origin main
-        
+  
   build_debian:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -74,23 +74,26 @@ jobs:
     - name: Set filename
       run: |
         echo "filename=ais-catcher_debian_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
-    - name: Map architecture to platform
+    - name: Map architecture to platform and base image
       run: |
         case "${{ matrix.arch }}" in
           amd64)
             echo "platform=linux/amd64" >> $GITHUB_ENV
+            echo "base_image=debian:${{ matrix.codename }}" >> $GITHUB_ENV
             ;;
           armhf)
             echo "platform=linux/arm/v6" >> $GITHUB_ENV
+            echo "base_image=arm32v6/debian:${{ matrix.codename }}" >> $GITHUB_ENV
             ;;
           arm64)
             echo "platform=linux/arm64" >> $GITHUB_ENV
+            echo "base_image=debian:${{ matrix.codename }}" >> $GITHUB_ENV
             ;;
         esac
     - name: Build Debian package
       run: |
         cp build-docker/bookworm/Dockerfile .
-        sed -i 's/FROM debian:bookworm/FROM debian:${{ matrix.codename }}/g' Dockerfile
+        sed -i 's/FROM debian:bookworm/FROM ${{ env.base_image }}/g' Dockerfile
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
         sudo apt-get install qemu-user-static
         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
