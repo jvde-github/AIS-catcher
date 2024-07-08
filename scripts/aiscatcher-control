@@ -2,6 +2,17 @@
 
 CONFIG_FILE="/etc/AIS-catcher/config.json"
 
+# Function to check if the script is being run as root
+check_root() {
+    if [ "$EUID" -ne 0 ]; then
+        echo "Script must be run as root. Try 'sudo $0'"
+        exit 1
+    fi
+}
+
+# Check if the script is being run as root
+check_root
+
 # Allow custom config file as parameter
 if [ $# -gt 0 ]; then
     CONFIG_FILE="$1"
@@ -10,8 +21,15 @@ fi
 # Check if whiptail is installed, if not install it
 if ! command -v whiptail &> /dev/null; then
     echo "whiptail is not installed. Installing it now..."
-    sudo apt-get update
-    sudo apt-get install -y whiptail
+    apt-get update
+    apt-get install -y whiptail
+fi
+
+# Check if jq is installed, if not install it
+if ! command -v jq &> /dev/null; then
+    echo "jq is not installed. Installing it now..."
+    apt-get update
+    apt-get install -y jq
 fi
 
 # Function to check if systemd is active and installed
@@ -39,7 +57,7 @@ get_service_status() {
 # Function to show journal status if systemd is active
 show_journal_status() {
     if is_systemd_active; then
-        sudo journalctl -u ais-catcher --no-pager -n 10
+        journalctl -u ais-catcher --no-pager -n 10
     else
         echo "N/A"
     fi
@@ -48,40 +66,52 @@ show_journal_status() {
 # Function to start the ais-catcher service
 start_service() {
     if is_systemd_active; then
-        sudo systemctl start ais-catcher
-        whiptail --title "Service Started" --msgbox "The ais-catcher service has been started." 8 40
+        systemctl start ais-catcher
+        whiptail --title "Service Started" --msgbox "The ais-catcher service has been started." 10 50
     else
-        whiptail --title "Systemd Not Active" --msgbox "Systemd is not active or installed. Cannot start the service." 8 60
+        whiptail --title "Systemd Not Active" --msgbox "Systemd is not active or installed. Cannot start the service." 10 70
     fi
 }
 
 # Function to stop the ais-catcher service
 stop_service() {
     if is_systemd_active; then
-        sudo systemctl stop ais-catcher
-        whiptail --title "Service Stopped" --msgbox "The ais-catcher service has been stopped." 8 40
+        systemctl stop ais-catcher
+        whiptail --title "Service Stopped" --msgbox "The ais-catcher service has been stopped." 10 50
     else
-        whiptail --title "Systemd Not Active" --msgbox "Systemd is not active or installed. Cannot stop the service." 8 60
+        whiptail --title "Systemd Not Active" --msgbox "Systemd is not active or installed. Cannot stop the service." 10 70
     fi
 }
 
 # Function to get the list of input devices
 get_input_devices() {
-    AIS-catcher -l JSON | jq -c '.input_devices[]'
+    AIS-catcher -l JSON on 2>/dev/null | jq -c '.devices[]'
 }
 
 # Function to select an input device
 select_input_device() {
-    local devices=$(get_input_devices)
+    local devices
+    devices=$(get_input_devices)
+
+    if [ -z "$devices" ]; then
+        whiptail --title "Error" --msgbox "Failed to get input devices or no devices available." 10 50
+        return
+    fi
+    
     local menu_options=()
     
     while IFS= read -r device; do
         local name=$(echo "$device" | jq -r '.name')
-        local description=$(echo "$device" | jq -r '.description')
+        local description="$name"
         menu_options+=("$name" "$description")
     done <<< "$devices"
 
-    local choice=$(whiptail --title "Select Input Device" --nocancel --menu "Choose an input device:" 15 60 4 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+    if [ ${#menu_options[@]} -eq 0 ]; then
+        whiptail --title "Error" --msgbox "No input devices found." 10 50
+        return
+    fi
+
+    local choice=$(whiptail --title "Select Input Device" --nocancel --menu "Choose an input device:" 20 70 10 "${menu_options[@]}" 3>&1 1>&2 2>&3)
     
     local selected_device=$(echo "$devices" | jq -c --arg name "$choice" 'select(.name == $name)')
     local input=$(echo "$selected_device" | jq -r '.input')
@@ -89,7 +119,62 @@ select_input_device() {
     
     jq --arg input "$input" --arg serial "$serial" '.input = $input | .serial = $serial' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     
-    whiptail --title "Device Selected" --msgbox "The input device has been set to $choice." 8 40
+    whiptail --title "Device Selected" --msgbox "The input device has been set to $choice." 10 50
+}
+
+# Function to test AIS-catcher in the foreground
+test_in_foreground() {
+    local status=$(get_service_status)
+    if [ "$status" = "Active" ]; then
+        whiptail --title "Service Active" --msgbox "The ais-catcher service is currently running. Please stop the service before running in foreground." 10 70
+    else
+        whiptail --title "Running AIS-catcher" --msgbox "Running AIS-catcher in foreground with config file: $CONFIG_FILE" 10 70
+        AIS-catcher -C "$CONFIG_FILE"
+        read -p "Press Enter to continue..."
+    fi
+}
+
+# Function to configure output (stub)
+configure_output() {
+    whiptail --title "Configure Output" --msgbox "This is a stub function to configure output settings." 10 50
+}
+
+# Function to configure devices (stub)
+configure_devices() {
+    whiptail --title "Configure Devices" --msgbox "This is a stub function to configure device settings." 10 50
+}
+
+# Function to configure web viewer (stub)
+configure_webviewer() {
+    whiptail --title "Configure Web Viewer" --msgbox "This is a stub function to configure web viewer settings." 10 50
+}
+
+# Function to configure sharing
+configure_sharing() {
+    local sharing=$(jq -r '.sharing // "false"' "$CONFIG_FILE")
+    local sharing_key=$(jq -r '.sharing_key // ""' "$CONFIG_FILE")
+    
+    local sharing_choice=$(whiptail --title "Configure Sharing" --nocancel --radiolist "Enable sharing:" 10 50 2 \
+        "true" "Enable sharing" $(if [ "$sharing" = "true" ]; then echo "ON"; else echo "OFF"; fi) \
+        "false" "Disable sharing" $(if [ "$sharing" = "false" ]; then echo "ON"; else echo "OFF"; fi) 3>&1 1>&2 2>&3)
+    
+    local sharing_key_input=$(whiptail --title "Configure Sharing Key" --nocancel --inputbox "Enter sharing key:" 10 50 "$sharing_key" 3>&1 1>&2 2>&3)
+    
+    jq --arg sharing "$sharing_choice" --arg sharing_key "$sharing_key_input" '.sharing = $sharing | .sharing_key = $sharing_key' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    
+    whiptail --title "Sharing Configuration Updated" --msgbox "Sharing has been set to $sharing_choice with key: $sharing_key_input" 10 70
+}
+
+# Function to prompt for enabling sharing
+prompt_enable_sharing() {
+    local sharing=$(jq -r '.sharing // "false"' "$CONFIG_FILE")
+    
+    if [ "$sharing" = "false" ]; then
+        if (whiptail --title "Enable Sharing" --yesno "Sharing is currently disabled. Enabling sharing will unlock additional features. Do you want to enable sharing?" 10 70); then
+            jq '.sharing = "true"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+            whiptail --title "Sharing Enabled" --msgbox "Sharing has been enabled. Additional features are now available." 10 70
+        fi
+    fi
 }
 
 # Function to display the menu
@@ -105,11 +190,16 @@ display_menu() {
         fi
     fi
 
-    menu_options+=("Input Device" "Select the input device for ais-catcher")
     menu_options+=("Show Status" "Show the status of the ais-catcher service")
+    menu_options+=("Input Device" "Select the input device for ais-catcher")
+    menu_options+=("Test in Foreground" "Run AIS-catcher in foreground with config file")
+    menu_options+=("Configure Output" "Configure output settings")
+    menu_options+=("Configure Devices" "Configure device settings")
+    menu_options+=("Configure Web Viewer" "Configure web viewer settings")
+    menu_options+=("Configure Sharing" "Configure sharing settings")
     menu_options+=("Exit" "Exit the script")
 
-    local choice=$(whiptail --title "AIS-Catcher Main Menu" --nocancel --menu "Choose an option:" 15 60 4 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+    local choice=$(whiptail --title "AIS-Catcher Main Menu" --nocancel --menu "Choose an option:" 20 70 10 "${menu_options[@]}" 3>&1 1>&2 2>&3)
 
     case $choice in
         "Start Service")
@@ -121,9 +211,24 @@ display_menu() {
         "Input Device")
             select_input_device
             ;;
+        "Test in Foreground")
+            test_in_foreground
+            ;;
         "Show Status")
             local journal_status=$(show_journal_status)
-            whiptail --title "Service Status" --msgbox "The ais-catcher service is currently $status.\n\nJournal Status:\n$journal_status" 15 60
+            whiptail --title "Service Status" --msgbox "The ais-catcher service is currently $status.\n\nJournal Status:\n$journal_status" 20 70
+            ;;
+        "Configure Output")
+            configure_output
+            ;;
+        "Configure Devices")
+            configure_devices
+            ;;
+        "Configure Web Viewer")
+            configure_webviewer
+            ;;
+        "Configure Sharing")
+            configure_sharing
             ;;
         "Exit")
             exit 0
@@ -132,6 +237,8 @@ display_menu() {
 }
 
 # Main script
+prompt_enable_sharing
+
 while true; do
     display_menu
 done

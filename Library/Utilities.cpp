@@ -176,6 +176,40 @@ namespace Util {
 
 		return true;
 	}
+	std::string Parse::DeviceTypeString(Type type) {
+		switch (type) {
+		case Type::NONE:
+			return "NONE";
+		case Type::RTLSDR:
+			return "RTLSDR";
+		case Type::AIRSPY:
+			return "AIRSPY";
+		case Type::AIRSPYHF:
+			return "AIRSPYHF";
+		case Type::SDRPLAY:
+			return "SDRPLAY";
+		case Type::WAVFILE:
+			return "WAVFILE";
+		case Type::RAWFILE:
+			return "RAWFILE";
+		case Type::RTLTCP:
+			return "RTLTCP";
+		case Type::HACKRF:
+			return "HACKRF";
+		case Type::SOAPYSDR:
+			return "SOAPYSDR";
+		case Type::ZMQ:
+			return "ZMQ";
+		case Type::SERIALPORT:
+			return "SERIALPORT";
+		case Type::UDP:
+			return "UDP";
+		case Type::SPYSERVER:
+			return "SPYSERVER";
+		default:
+			return "";
+		}
+	}
 
 	bool Parse::Switch(std::string arg, const std::string& TrueString, const std::string& FalseString) {
 		Util::Convert::toUpper(arg);
