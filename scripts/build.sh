@@ -90,10 +90,15 @@ create_debian_package() {
     echo "#!/bin/bash" > debian/DEBIAN/postinst
     echo "CONFIG_DIR=\"/etc/AIS-catcher\"" >> debian/DEBIAN/postinst
     echo "CONFIG_FILE=\"\$CONFIG_DIR/config.json\"" >> debian/DEBIAN/postinst
+    echo "CMD_FILE=\"\$CONFIG_DIR/config.cmd\"" >> debian/DEBIAN/postinst
     echo "mkdir -p \"\$CONFIG_DIR\"" >> debian/DEBIAN/postinst
     echo "if [ ! -f \"\$CONFIG_FILE\" ]; then" >> debian/DEBIAN/postinst
     echo "  echo \"Creating empty config.json file...\"" >> debian/DEBIAN/postinst
     echo "  echo '{ \"config\": \"aiscatcher\", \"version\": 1 }' > \"\$CONFIG_FILE\"" >> debian/DEBIAN/postinst
+    echo "fi" >> debian/DEBIAN/postinst
+    echo "if [ ! -f \"\$CMD_FILE\" ]; then" >> debian/DEBIAN/postinst
+    echo "  echo \"Creating empty config.cmd file...\"" >> debian/DEBIAN/postinst
+    echo "  echo '' > \"\$CMD_FILE\"" >> debian/DEBIAN/postinst
     echo "fi" >> debian/DEBIAN/postinst
     echo "# Check if systemd is available" >> debian/DEBIAN/postinst
     echo "if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/postinst
@@ -152,8 +157,8 @@ create_debian_package() {
     echo "Description=AIS-catcher Service" >> debian/lib/systemd/system/ais-catcher.service
     echo "After=network.target" >> debian/lib/systemd/system/ais-catcher.service
     echo "" >> debian/lib/systemd/system/ais-catcher.service
-    echo "[Service]" >> debian/lib/systemd/system/ais-catcher.service
-    echo "ExecStart=/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json" >> debian/lib/systemd/system/ais-catcher.service
+    echo "[Service]" >> debian/lib/systemd/system/ais-catcher.service 
+    echo "ExecStart=/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json \$(grep -v '^#' /etc/AIS-catcher/config.cmd | tr '\n' ' ')" >> debian/lib/systemd/system/ais-catcher.service
     echo "Restart=always" >> debian/lib/systemd/system/ais-catcher.service
     echo "" >> debian/lib/systemd/system/ais-catcher.service
     echo "[Install]" >> debian/lib/systemd/system/ais-catcher.service
