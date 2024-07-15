@@ -129,7 +129,8 @@ test_in_foreground() {
         whiptail --title "Service Active" --msgbox "The ais-catcher service is currently running. Please stop the service before running in foreground." 10 70
     else
         whiptail --title "Running AIS-catcher" --msgbox "Running AIS-catcher in foreground with config file: $CONFIG_FILE" 10 70
-        /usr/bin/AIS-catcher -C "$CONFIG_FILE"
+	/bin/bash -c '/usr/bin/AIS-catcher -C $CONFIG_FILE $(/bin/grep -v "^#" /etc/AIS-catcher/config.cmd | /usr/bin/tr "\n" " ")'
+
         read -p "Press Enter to continue..."
     fi
 }
