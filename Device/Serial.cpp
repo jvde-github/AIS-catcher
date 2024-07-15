@@ -214,7 +214,7 @@ namespace Device
 		if (!SetCommTimeouts(serial_handle, &ct))
 			throw std::runtime_error("Serial: SetCommTimeouts failed. Error: " + GetLastErrorAsString());
 #else
-		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY);
+		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
 		if (serial_fd == -1)
 		{
 			throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
