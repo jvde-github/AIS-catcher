@@ -158,7 +158,7 @@ create_debian_package() {
     echo "After=network.target" >> debian/lib/systemd/system/ais-catcher.service
     echo "" >> debian/lib/systemd/system/ais-catcher.service
     echo "[Service]" >> debian/lib/systemd/system/ais-catcher.service 
-    echo "ExecStart=/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json \$(grep -v '^#' /etc/AIS-catcher/config.cmd | tr '\n' ' ')" >> debian/lib/systemd/system/ais-catcher.service
+    echo "ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json \$(/bin/grep -v \"^#\" /etc/AIS-catcher/config.cmd | /usr/bin/tr \"\\n\" \" \")'" >> debian/lib/systemd/system/ais-catcher.service
     echo "Restart=always" >> debian/lib/systemd/system/ais-catcher.service
     echo "" >> debian/lib/systemd/system/ais-catcher.service
     echo "[Install]" >> debian/lib/systemd/system/ais-catcher.service
