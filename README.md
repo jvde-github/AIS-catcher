@@ -39,6 +39,7 @@ Only use this software in regions where such use is permitted.
 ## What's new?
 **Edge** version:
 - Option to send fully decoded AIS messages in JSON format via UDP and TCP (similar to screen output with `-o 5`). Add `JSON_FULL on` to `~P/S/u`.
+- Bug fix for connecting serial devices in macOS
 - Option to use text description in tables for ship type
 - Overlay in AIS-catcher webviewer that shows possibility of atmospheric ducting conditions enable long range AIS reception
   
