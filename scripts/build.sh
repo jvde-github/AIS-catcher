@@ -43,7 +43,7 @@ create_debian_package() {
 
     # Extract dependencies using ldd and filter the required libraries
     echo "Extracting dependencies using ldd..."
-    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq|libz' | awk '{print $1}')
+    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq|libz|libcrypto|libssl' | awk '{print $1}')
 
     # Initialize the depends variable
     depends=""
@@ -184,7 +184,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=0.59~235-g3093b93e
+package_version=0.59~233-g621675c4
 install_deps=$5
 
 # Install build dependencies
