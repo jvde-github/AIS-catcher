@@ -2524,23 +2524,18 @@ function average(d) {
     if (d.chart.data.datasets.length > 1) start = 1;
 
     var c = 0;
-    var visibleCount = 0;
 
     for (a = 0; a < b.length; a++) {
         if (b[a].x != 0) {
             for (i = start; i < d.chart.data.datasets.length; i++) {
-                if (!d.chart.getDatasetMeta(i).hidden) { // Check if the dataset is visible
+                if (!d.chart.getDatasetMeta(i).hidden) { 
                     c += d.chart.data.datasets[i].data[a].y;
-                    visibleCount++;
                 }
             }
         }
     }
 
-    // If there are no visible datasets, avoid division by zero
-    if (visibleCount === 0) return 0;
-
-    return c / visibleCount;
+    return c / (b.length - 1);
 }
 
 
