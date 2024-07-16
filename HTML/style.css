@@ -510,17 +510,6 @@ a:focus {
     width: 100%;
 }
 
-.search-box {
-    width: 300px;
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid var(--table-border-color);
-    border-radius: 5px;
-    color: var(--main-font-color);
-    background-color: var(--table-alternate-background-color);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
 /* other tables */
 .mytable {
     height: 100%;
@@ -894,7 +883,7 @@ td {
 }
 
 #shipcard_header_title {
-    flex: 1;    
+    flex: 1;
 }
 
 #shipcard_header_flag {
@@ -1442,6 +1431,19 @@ td {
     z-index: -1;
 }
 
+.view_column_icon {
+    display: block;
+     width: 1em;
+    height: 1em;
+    background-color: currentColor;
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24" viewBox="0 0 24 24" width="24"%3E%3Crect fill="none" height="24" width="24"/%3E%3Cg%3E%3Cpath d="M14.67,6v12c0,0.55-0.45,1-1,1h-3.33c-0.55,0-1-0.45-1-1V6c0-0.55,0.45-1,1-1h3.33C14.22,5,14.67,5.45,14.67,6z M16.67,19 H20c0.55,0,1-0.45,1-1V6c0-0.55-0.45-1-1-1h-3.33c-0.55,0-1,0.45-1,1v12C15.67,18.55,16.11,19,16.67,19z M8.33,18V6 c0-0.55-0.45-1-1-1H4C3.45,5,3,5.45,3,6v12c0,0.55,0.45,1,1,1h3.33C7.89,19,8.33,18.55,8.33,18z"/%3E%3C/g%3E%3C/svg%3E');
+    -webkit-mask-image: var(--svg);
+    mask-image: var(--svg);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+ }
 
 .delete_icon {
     display: block;
@@ -2233,4 +2235,78 @@ td {
 
 .settings_header div:last-child {
     color: red;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.search-box {
+    width: 300px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid var(--table-border-color);
+    border-radius: 5px;
+    color: var(--main-font-color);
+    background-color: var(--table-alternate-background-color);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.ship-table-column-controls {
+    display: flex;
+    align-items: center;
+}
+
+.ship-table-column-dropdown {
+    position: relative;
+    margin-right: 10px;
+}
+
+.ship-table-column-dropdown-toggle {
+    padding: 10px;
+    font-size: 16px;
+    color: var(--menu-font-color);
+    background-color: var(--menu-background-color);
+    cursor: pointer;
+    border: none;
+}
+
+.ship-table-column-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: var(--menu-background-color);
+    color: var(--menu-font-color);
+    min-width: 200px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    z-index: 1;
+}
+
+.ship-table-column-dropdown-item {
+    display: block;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.ship-table-column-dropdown-item:hover {
+    background-color: var(--menu-background-hover-color);
+}
+
+.ship-table-column-dropdown-item input { 
+    margin-right: 20px;
+}
+
+.ship-table-column-reset {
+    padding: 10px;
+    font-size: 16px;
+    color: var(--menu-font-color);
+    background-color: var(--menu-background-color);
+    cursor: pointer;
+    border: none;
 }

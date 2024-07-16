@@ -114,6 +114,7 @@ function applyDefaultSettings() {
     let android = settings.android;
     let darkmode = settings.dark_mode;
     restoreDefaultSettings();
+    
     settings.android = android;
     if (isAndroid()) settings.dark_mode = darkmode;
 
@@ -179,6 +180,9 @@ getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1);
 getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
 getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
 getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
+getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
+            ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
+            : null
 
 getLatValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms ? decimalToDMS(ship.lat, true) : Number(ship.lat).toFixed(5)) + (ship.approx ? "</i>" : "");
 getLonValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms ? decimalToDMS(ship.lon, false) : Number(ship.lon).toFixed(5)) + (ship.approx ? "</i>" : "");
@@ -3319,6 +3323,8 @@ function customShipFilter(data, filterParams) {
         (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
 }
 
+let tableFirstTime = true;
+
 async function updateShipTable() {
     const ok = await fetchShips();
     if (!ok) return;
@@ -3350,6 +3356,17 @@ async function updateShipTable() {
                     },
                 },
                 { title: "MMSI", field: "mmsi", sorter: "number" },
+                { title: "IMO", field: "imo", sorter: "number" },
+                { title: "Dest", field: "destination", sorter: "string" },
+                {
+                    title: "ETA",
+                    field: "eta",
+                    sorter: "string",
+                    formatter: function (cell) {
+                        const ship = cell.getRow().getData();
+                        return ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
+                    },
+                },
                 {
                     title: "Callsign",
                     field: "callsign",
@@ -3357,6 +3374,24 @@ async function updateShipTable() {
                     formatter: function (cell) {
                         const ship = cell.getRow().getData();
                         return ship != null ? getCallSign(ship) : "";
+                    },
+                },
+                {
+                    title: "Flag",
+                    field: "country",
+                    sorter: "string",
+                    formatter: function (cell) {
+                        const ship = cell.getRow().getData();
+                        return ship != null ? getCountryName(ship.country) : "";
+                    },
+                },
+                {
+                    title: "Status",
+                    field: "status",
+                    sorter: "string",
+                    formatter: function (cell) {
+                        const ship = cell.getRow().getData();
+                        return ship != null ?  getStatusVal(ship) : "";
                     },
                 },
                 {
@@ -3369,6 +3404,33 @@ async function updateShipTable() {
                     },
                 },
                 {
+                    title: "Class",
+                    field: "class",
+                    sorter: "string",
+                    formatter: function (cell) {
+                        const ship = cell.getRow().getData();
+                        return getTypeVal(ship);
+                    },
+                },
+                {
+                    title: "Dim",
+                    field: "dimension",
+                    sorter: "number",
+                    formatter: function (cell) {
+                        const ship = cell.getRow().getData();
+                        return ship ? getShipDimension(ship) || "" : "";
+                    },
+                },
+                {
+                    title: "Draught",
+                    field: "draught",
+                    sorter: "number",
+                    formatter: function (cell) {
+                        const ship = cell.getRow().getData();
+                        return ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
+                    },
+                },
+                {
                     title: "Last",
                     field: "last_signal",
                     sorter: "number",
@@ -3377,7 +3439,7 @@ async function updateShipTable() {
                         return value != null ? getDeltaTimeVal(value) : "";
                     },
                 },
-                { title: "Msgs", field: "count", sorter: "number" },
+                { title: "Count", field: "count", sorter: "number" },
                 {
                     title: "PPM",
                     field: "ppm",
@@ -3462,6 +3524,42 @@ async function updateShipTable() {
                         return getStringfromChannels(value);
                     },
                 },
+                { 
+                    title: "Msgs",
+                    field: "msg_type",
+                    sorter: "number",
+                    formatter: function (cell) {
+                        const value = cell.getValue();
+                        return getStringfromMsgType(value);
+                    },
+                },
+                { 
+                    title: "MSG6",
+                    field: "MSG6",
+                    sorter: "number",
+                    formatter: function (cell) {
+                        const value = cell.getValue();
+                        return value & (1 << 6) ? "Yes" : "No";
+                    },
+                },
+                { 
+                    title: "MSG8",
+                    field: "MSG8",
+                    sorter: "number",
+                    formatter: function (cell) {
+                        const value = cell.getValue();
+                        return value & (1 << 8) ? "Yes" : "No";
+                    },
+                },
+                { 
+                    title: "MSG27",
+                    field: "MSG27",
+                    sorter: "number",
+                    formatter: function (cell) {
+                        const value = cell.getValue();
+                        return value & (1 << 27) ? "Yes" : "No";
+                    },
+                },
                 {
                     title: "Src",
                     field: "group_mask",
@@ -3479,6 +3577,14 @@ async function updateShipTable() {
         table.on("rowClick", function (e, row) {
             tableRowClick(row.getData().mmsi);
         });
+        table.on("tableBuilt", function () {
+            if(tableFirstTime) {
+                resetShipTableColumns();
+                tableFirstTime = false;
+            }
+
+            populateShipTableColumnVisibilityMenu();
+        });
     } else {
         if (data.length == 0) {
             table.clearData();
@@ -3493,6 +3599,93 @@ async function updateShipTable() {
         table.setSort(sorters);
     }
 }
+
+function populateShipTableColumnVisibilityMenu() {
+    const shipTableColumnVisibilityMenu = document.getElementById("shipTableColumnVisibilityMenu");
+    shipTableColumnVisibilityMenu.innerHTML = ""; // Clear previous checkboxes
+
+    table.getColumns().forEach((column) => {
+        const checkboxId = `checkbox-${column.getField()}`;
+        const checkboxLabel = column.getDefinition().title;
+
+        const checkboxItem = document.createElement("div");
+        checkboxItem.classList.add("ship-table-column-dropdown-item");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = checkboxId;
+        checkbox.value = column.getField();
+        checkbox.checked = column.isVisible();
+        checkbox.addEventListener("change", updateShipTableColumnVisibility);
+
+        const label = document.createElement("label");
+        label.setAttribute("for", checkboxId);
+        label.textContent = checkboxLabel;
+
+        checkboxItem.appendChild(checkbox);
+        checkboxItem.appendChild(label);
+
+        shipTableColumnVisibilityMenu.appendChild(checkboxItem);
+    });
+}
+
+function updateShipTableColumnVisibility() {
+    const checkboxes = document.querySelectorAll("#shipTableColumnVisibilityMenu input[type='checkbox']");
+    const visibleColumns = Array.from(checkboxes)
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => checkbox.value);
+
+    const updatedColumns = table.getColumns().map((column) => {
+        return {
+            ...column.getDefinition(),
+            visible: visibleColumns.includes(column.getField())
+        };
+    });
+
+    table.setColumns(updatedColumns);
+}
+
+function resetShipTableColumns() {
+    const excludedFields = ['validated', 'count', 'channels', 'group_mask', 'msg_type', 'MSG6', 'MSG8', 'MSG27', 'shipclass', 'class', 'dimension', 'draught', 'eta', 'destination', 'country'
+    	];
+
+    const allColumns = table.getColumns();
+
+    const updatedColumns = allColumns.map(column => {
+        const field = column.getField();
+        return {
+            ...column.getDefinition(),
+            visible: !excludedFields.includes(field)
+        };
+    });
+
+    table.setColumns(updatedColumns);
+    populateShipTableColumnVisibilityMenu();
+}
+
+document.getElementById("shipTableColumnDropdownToggle").addEventListener("click", populateShipTableColumnVisibilityMenu);
+const dropdownToggle = document.getElementById('shipTableColumnDropdownToggle');
+const dropdownMenu = document.getElementById('shipTableColumnVisibilityMenu');
+
+function toggleDropdown() {
+    dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+}
+
+dropdownToggle.addEventListener('click', function (event) {
+    event.stopPropagation();
+    toggleDropdown();
+});
+
+document.addEventListener('click', function (event) {
+    if (!dropdownMenu.contains(event.target) && event.target !== dropdownToggle) {
+        dropdownMenu.style.display = 'none';
+    }
+});
+
+const resetButton = document.getElementById('shipTableColumnReset');
+resetButton.addEventListener('click', function (event) {
+    resetShipTableColumns();
+});
 
 function getTooltipContent(ship) {
     return '<div>' + getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px;") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
@@ -4041,10 +4234,7 @@ function populateShipcard() {
     document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
     document.getElementById("shipcard_distance").innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
-    document.getElementById("shipcard_dimension").innerHTML =
-        ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
-            ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
-            : null;
+    document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
 
     document.getElementById("shipcard_track").innerText = marker_tracks.has(Number(card_mmsi)) ? "Hide Track" : "Show Track";
 }
