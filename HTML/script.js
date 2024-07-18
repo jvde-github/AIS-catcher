@@ -3540,6 +3540,15 @@ async function updateShipTable() {
                     },
                 },
                 {
+                    title: "Repeated",
+                    field: "repeat",
+                    sorter: "string",
+                    formatter: function (cell) {
+                        const value = cell.getValue();
+                        return value == 1 ? "Yes" : "No";
+                    },
+                },
+                {
                     title: "Ch",
                     field: "channels",
                     sorter: "number",
