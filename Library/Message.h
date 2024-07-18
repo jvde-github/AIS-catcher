@@ -141,8 +141,9 @@ namespace AIS {
 	};
 
 	class Filter : public Setting {
-		const uint32_t all_msg = 0xFFFFFFFE;
-		uint32_t allow = all_msg;
+		const uint32_t all = 0xFFFFFFFF;
+		uint32_t allow = all;
+		uint32_t allow_repeat = all;
 		bool on = false;
 		bool GPS = true, AIS = true;
 		std::vector<int> ID_allowed;

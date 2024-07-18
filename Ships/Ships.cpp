@@ -22,8 +22,11 @@
 #include "JSON/StringBuilder.h"
 
 void Ship::reset() {
-	mmsi = count = msg_type = channels = shiptype = validated = virtual_aid = group_mask = 0;
+
 	path_ptr = -1;
+
+	mmsi = count = msg_type = shiptype = group_mask = 0;
+	flags.reset();
 
 	heading = HEADING_UNDEFINED;
 	status = STATUS_UNDEFINED;
@@ -46,7 +49,6 @@ void Ship::reset() {
 
 	cog = COG_UNDEFINED;
 	last_signal = {};
-	approximate = false;
 	shipclass = CLASS_UNKNOWN;
 	mmsi_type = MMSI_OTHER;
 
@@ -69,7 +71,7 @@ void Ship::Serialize(std::vector<char>& v) const {
 	Util::Serialize::FloatLow(level, v);
 	Util::Serialize::Int16(count, v);
 	Util::Serialize::FloatLow(ppm, v);
-	Util::Serialize::Int8((approximate ? 1 : 0) + (validated ? 2 : 0), v);
+	Util::Serialize::Int8((getApproximate()) + (getValidated()), v);
 	Util::Serialize::FloatLow(heading, v);
 	Util::Serialize::FloatLow(cog, v);
 	Util::Serialize::FloatLow(speed, v);
@@ -82,7 +84,7 @@ void Ship::Serialize(std::vector<char>& v) const {
 	Util::Serialize::Int16(shiptype, v);
 	Util::Serialize::Int8((shipclass << 4) + mmsi_type, v);
 	Util::Serialize::Uint32(msg_type, v);
-	Util::Serialize::Int8(channels, v);
+	Util::Serialize::Int8(getChannels(), v);
 	Util::Serialize::Int8(country_code[0], v);
 	Util::Serialize::Int8(country_code[1], v);
 	Util::Serialize::Int8(status, v);
@@ -93,7 +95,7 @@ void Ship::Serialize(std::vector<char>& v) const {
 	Util::Serialize::Int8(minute, v);
 	Util::Serialize::Int32(IMO, v);
 	Util::Serialize::String(std::string(callsign), v);
-	Util::Serialize::String(std::string(shipname) + (virtual_aid ? std::string(" [V]") : std::string("")), v);
+	Util::Serialize::String(std::string(shipname) + (getVirtualAid() ? std::string(" [V]") : std::string("")), v);
 	Util::Serialize::String(std::string(destination), v);
 	Util::Serialize::Uint64(last_signal, v);
 }
@@ -173,7 +175,7 @@ bool Ship::getGeoJSON(std::string& s) const {
 	s += "\"count\":" + std::to_string(count) + ",";
 	s += "\"ppm\":" + (ppm == PPM_UNDEFINED ? null_str : std::to_string(ppm)) + ",";
 	s += "\"group_mask\":" + std::to_string(group_mask) + ",";
-	s += "\"approx\":" + std::string(approximate ? "true" : "false") + ",";
+	s += "\"approx\":" + std::string(getApproximate() ? "true" : "false") + ",";
 
 	s += "\"heading\":" + ((heading == HEADING_UNDEFINED) ? null_str : std::to_string(heading)) + ",";
 	s += "\"cog\":" + ((cog == COG_UNDEFINED) ? null_str : std::to_string(cog)) + ",";
@@ -188,9 +190,9 @@ bool Ship::getGeoJSON(std::string& s) const {
 	s += "\"mmsi_type\":" + std::to_string(mmsi_type) + ",";
 	s += "\"shipclass\":" + std::to_string(shipclass) + ",";
 
-	s += "\"validated\":" + std::to_string(validated) + ",";
+	s += "\"validated\":" + std::to_string(getValidated()) + ",";
 	s += "\"msg_type\":" + std::to_string(msg_type) + ",";
-	s += "\"channels\":" + std::to_string(channels) + ",";
+	s += "\"channels\":" + std::to_string(getChannels()) + ",";
 	s += "\"country\":\"" + std::string(country_code) + "\",";
 	s += "\"status\":" + std::to_string(status) + ",";
 
@@ -208,7 +210,7 @@ bool Ship::getGeoJSON(std::string& s) const {
 	JSON::StringBuilder::stringify(str, s);
 
 	s += ",\"shipname\":";
-	str = std::string(shipname) + (virtual_aid ? std::string(" [V]") : std::string(""));
+	str = std::string(shipname) + (getVirtualAid() ? std::string(" [V]") : std::string(""));
 	JSON::StringBuilder::stringify(str, s);
 
 	s += ",\"destination\":";

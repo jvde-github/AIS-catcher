@@ -22,6 +22,7 @@
 #include <ctime>
 
 #include "Common.h"
+#include "Utilities.h"
 
 const int CLASS_A_MASK = (1 << 1) | (1 << 2) | (1 << 3);
 const int CLASS_B_MASK = (1 << 18) | (1 << 19);
@@ -34,24 +35,38 @@ const int SAR_MASK = 1 << 9;
 const int ATON_MASK = 1 << 21;
 
 struct Ship {
-	int prev, next;
-	uint32_t mmsi;
-	int count, msg_type, shipclass, mmsi_type, channels, shiptype, heading, status, virtual_aid, path_ptr;
-	int to_port, to_bow, to_starboard, to_stern, IMO, angle, validated;
-	char month, day, hour, minute;
-	float lat, lon, ppm, level, speed, cog, draught, distance;
-	std::time_t last_signal;
-	bool approximate;
-	char shipname[21], destination[21], callsign[8], country_code[3];
-	std::string msg;
-	uint64_t last_group, group_mask;
+    int prev, next;
+    uint32_t mmsi;
+    int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, path_ptr;
+    int to_port, to_bow, to_starboard, to_stern, IMO, angle;
+    char month, day, hour, minute;
+    float lat, lon, ppm, level, speed, cog, draught, distance;
+    std::time_t last_signal;
+    char shipname[21], destination[21], callsign[8], country_code[3];
+    std::string msg;
+    uint64_t last_group, group_mask;
+    Util::PackedInt flags;
 
-	void reset();
-	int getMMSItype();
-	int getShipTypeClassEri();
-	int getShipTypeClass();
-	void setType();
-	void Serialize(std::vector<char>& v) const;
-	bool getKML(std::string&) const;
-	bool getGeoJSON(std::string&) const;
+    void reset();
+    int getMMSItype();
+    int getShipTypeClassEri();
+    int getShipTypeClass();
+    void setType();
+    void Serialize(std::vector<char>& v) const;
+    bool getKML(std::string&) const;
+    bool getGeoJSON(std::string&) const;
+
+    // Setters for PackedInt fields
+    void setValidated(int val) { flags.set(0, 2, val); }
+    void setRepeat(int val) { flags.set(2, 2, val); }
+    void setVirtualAid(int val) { flags.set(4, 1, val); }
+    void setApproximate(int val) { flags.set(5, 1, val); }
+    void orOpChannels(int val) { flags.orOp(6, 4, val); }
+
+    // Getters for PackedInt fields
+    int getValidated() const { return flags.get(0, 2); }
+    int getRepeat() const { return flags.get(2, 2); }
+    int getVirtualAid() const { return flags.get(4, 1); }
+    int getApproximate() const { return flags.get(5, 1); }
+    int getChannels() const { return flags.get(6, 4); }
 };

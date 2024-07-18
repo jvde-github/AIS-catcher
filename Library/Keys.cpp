@@ -259,7 +259,7 @@ namespace AIS {
 		{ "radio", "", "", "" },
 		{ "raim", "", "", "" },
 		{ "regional", "", "", "" },
-		{ "repeat", "", "", "" },
+		{ "repeat", "", "repeat", "" },
 		{ "racon", "", "", "" },
 		{ "reserved", "", "", "" },
 		{ "retransmit", "", "", "" },
