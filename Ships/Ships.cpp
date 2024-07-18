@@ -48,7 +48,7 @@ void Ship::reset() {
 	speed = SPEED_UNDEFINED;
 
 	cog = COG_UNDEFINED;
-	last_signal = {};
+	last_signal = last_direct_signal = {};
 	shipclass = CLASS_UNKNOWN;
 	mmsi_type = MMSI_OTHER;
 

@@ -663,7 +663,7 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 {
 	const AIS::Message *msg = (AIS::Message *)data.binary;
-
+	
 	// determine whether we accept msg 27 to update lat/lon
 	bool allowApproxLatLon = false, positionUpdated = false;
 
@@ -684,7 +684,17 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	ship.last_group = tag.group;
 
 	ship.last_signal = msg->getRxTimeUnix();
-	ship.setRepeat(msg->repeat());
+
+	if(msg->repeat() == 0) {
+		ship.last_direct_signal = ship.last_signal;
+		ship.setRepeat(0);
+	}
+	else {
+		if(ship.last_signal - ship.last_direct_signal > 120) {			
+			ship.setRepeat(1);
+		}
+	}
+
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
 	ship.msg_type |= 1 << msg->type();
