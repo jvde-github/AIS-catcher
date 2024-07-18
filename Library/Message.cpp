@@ -79,7 +79,7 @@ namespace AIS
 	{
 		std::stringstream ss;
 
-		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\"";
+		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat();
 
 		if (status)
 		{
@@ -391,6 +391,19 @@ namespace AIS
 			}
 			return true;
 		}
+		else if (option == "ALLOW_REPEAT" || option == "SELECT_REPEAT")
+		{
+			std::stringstream ss(arg);
+			std::string type_str;
+			allow_repeat = 0;
+			while (ss.good())
+			{
+				getline(ss, type_str, ',');
+				unsigned r = Util::Parse::Integer(type_str, 0, 3);
+				allow_repeat |= 1U << r;
+			}
+			return true;
+		}
 		else if (option == "DESC" || option == "DESCRIPTION")
 			return true;
 		else if (option == "BLOCK_TYPE")
@@ -405,7 +418,22 @@ namespace AIS
 				unsigned type = Util::Parse::Integer(type_str, 1, 27);
 				block |= 1U << type;
 			}
-			allow = ~block & all_msg;
+			allow = ~block & all;
+			return true;
+		}
+		else if (option == "BLOCK_REPEAT")
+		{
+
+			std::stringstream ss(arg);
+			std::string type_str;
+			unsigned block = 0;
+			while (ss.good())
+			{
+				getline(ss, type_str, ',');
+				unsigned r = Util::Parse::Integer(type_str, 0, 3);
+				block |= 1U << r;
+			}
+			allow_repeat = ~block & all;
 			return true;
 		}
 		else if (option == "FILTER")
@@ -450,7 +478,7 @@ namespace AIS
 	std::string Filter::getAllowed()
 	{
 
-		if (allow == all_msg)
+		if (allow == all)
 			return std::string("ALL");
 
 		std::string ret;
@@ -521,6 +549,11 @@ namespace AIS
 			return false;
 
 		unsigned type = msg.type() & 31;
-		return ((1U << type) & allow) != 0;
+		unsigned repeat = msg.repeat() & 3;
+
+		bool type_ok = ((1U << type) & allow) != 0;
+		bool repeat_ok = ((1U << repeat) & allow_repeat) != 0;
+
+		return type_ok && repeat_ok;
 	}
 }

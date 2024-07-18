@@ -114,7 +114,7 @@ function applyDefaultSettings() {
     let android = settings.android;
     let darkmode = settings.dark_mode;
     restoreDefaultSettings();
-    
+
     settings.android = android;
     if (isAndroid()) settings.dark_mode = darkmode;
 
@@ -181,8 +181,8 @@ getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric
 getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
 getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
 getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
-            ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
-            : null
+    ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
+    : null
 
 getLatValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms ? decimalToDMS(ship.lat, true) : Number(ship.lat).toFixed(5)) + (ship.approx ? "</i>" : "");
 getLonValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms ? decimalToDMS(ship.lon, false) : Number(ship.lon).toFixed(5)) + (ship.approx ? "</i>" : "");
@@ -1687,8 +1687,8 @@ function updateTablecard() {
                 cell2.innerText = shipName;
 
                 var cell3 = row.insertCell(2);
-                cell3.innerHTML = ship.distance ? getDistanceVal(ship.distance) : "";
-                cell3.title = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : "";
+                cell3.innerHTML = ship.distance ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")): null
+                cell3.title = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit()   + (ship.repeat > 0 ? " (R)" : ""): "";
 
                 var cell4 = row.insertCell(3);
                 cell4.innerHTML = ship.speed != null ? getSpeedVal(ship.speed) : "";
@@ -2365,9 +2365,7 @@ async function fetchShips(noDoubleFetch = true) {
         "shiptype",
         "mmsi_type",
         "shipclass",
-        "validated",
         "msg_type",
-        "channels",
         "country",
         "status",
         "draught",
@@ -2380,6 +2378,10 @@ async function fetchShips(noDoubleFetch = true) {
         "shipname",
         "destination",
         "last_signal",
+        "flags",
+        "validated",
+        "channels"
+
     ];
 
     shipsDB = {};
@@ -2387,6 +2389,23 @@ async function fetchShips(noDoubleFetch = true) {
 
     ships.values.forEach((v) => {
         const s = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
+
+        const flags = s.flags;
+        s.validated2 = (flags & 3) == 2 ? -1 : flags & 3;
+
+
+        s.repeat = (flags >> 2) & 3;
+        s.virtual_aid = (flags >> 4) & 1;
+        s.approximate = (flags >> 5) & 1;
+        s.channels2 = (flags >> 6) & 0b1111; 
+
+        // Check for discrepancies and show error
+        if (s.validated !== s.validated2) {
+            console.log(`Mismatch in validated: ${s.validated} != ${s.validated2}`);
+        }
+        if (s.channels !== s.channels2) {
+            console.log(`Mismatch in channels: ${s.channels} != ${s.channels2}`);
+        }
 
         if (includeShip(s)) {
             s.shipname = sanitizeString(s.shipname);
@@ -2528,7 +2547,7 @@ function average(d) {
     for (a = 0; a < b.length; a++) {
         if (b[a].x != 0) {
             for (i = start; i < d.chart.data.datasets.length; i++) {
-                if (!d.chart.getDatasetMeta(i).hidden) { 
+                if (!d.chart.getDatasetMeta(i).hidden) {
                     c += d.chart.data.datasets[i].data[a].y;
                 }
             }
@@ -3396,7 +3415,7 @@ async function updateShipTable() {
                     sorter: "string",
                     formatter: function (cell) {
                         const ship = cell.getRow().getData();
-                        return ship != null ?  getStatusVal(ship) : "";
+                        return ship != null ? getStatusVal(ship) : "";
                     },
                 },
                 {
@@ -3468,8 +3487,8 @@ async function updateShipTable() {
                     field: "distance",
                     sorter: "number",
                     formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? getDistanceVal(value) : "";
+                        const ship = cell.getRow().getData();
+                        return ship != null ? getDistanceVal(ship.distance)  + (ship.repeat > 0 ? " (R)" : ""): "";
                     },
                 },
                 {
@@ -3529,7 +3548,7 @@ async function updateShipTable() {
                         return getStringfromChannels(value);
                     },
                 },
-                { 
+                {
                     title: "Msgs",
                     field: "msg_type",
                     sorter: "number",
@@ -3538,7 +3557,7 @@ async function updateShipTable() {
                         return getStringfromMsgType(value);
                     },
                 },
-                { 
+                {
                     title: "MSG6",
                     field: "MSG6",
                     sorter: "number",
@@ -3547,7 +3566,7 @@ async function updateShipTable() {
                         return value & (1 << 6) ? "Yes" : "No";
                     },
                 },
-                { 
+                {
                     title: "MSG8",
                     field: "MSG8",
                     sorter: "number",
@@ -3556,7 +3575,7 @@ async function updateShipTable() {
                         return value & (1 << 8) ? "Yes" : "No";
                     },
                 },
-                { 
+                {
                     title: "MSG27",
                     field: "MSG27",
                     sorter: "number",
@@ -3583,7 +3602,7 @@ async function updateShipTable() {
             tableRowClick(row.getData().mmsi);
         });
         table.on("tableBuilt", function () {
-            if(tableFirstTime) {
+            if (tableFirstTime) {
                 resetShipTableColumns();
                 tableFirstTime = false;
             }
@@ -3652,7 +3671,7 @@ function updateShipTableColumnVisibility() {
 
 function resetShipTableColumns() {
     const excludedFields = ['validated', 'count', 'channels', 'group_mask', 'msg_type', 'MSG6', 'MSG8', 'MSG27', 'shipclass', 'class', 'dimension', 'draught', 'eta', 'destination', 'country'
-    	];
+    ];
 
     const allColumns = table.getColumns();
 
@@ -4237,7 +4256,7 @@ function populateShipcard() {
     document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonValFormat(ship) : null;
 
     document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
-    document.getElementById("shipcard_distance").innerHTML = ship.distance ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
+    document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")): null;
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
 
