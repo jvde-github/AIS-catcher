@@ -690,7 +690,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 		ship.setRepeat(0);
 	}
 	else {
-		if(ship.last_signal - ship.last_direct_signal > 120) {			
+		if(ship.last_signal - ship.last_direct_signal > 60) {			
 			ship.setRepeat(1);
 		}
 	}
