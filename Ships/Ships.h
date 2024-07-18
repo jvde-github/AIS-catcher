@@ -41,7 +41,7 @@ struct Ship {
     int to_port, to_bow, to_starboard, to_stern, IMO, angle;
     char month, day, hour, minute;
     float lat, lon, ppm, level, speed, cog, draught, distance;
-    std::time_t last_signal;
+    std::time_t last_signal, last_direct_signal;
     char shipname[21], destination[21], callsign[8], country_code[3];
     std::string msg;
     uint64_t last_group, group_mask;
