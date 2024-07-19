@@ -128,26 +128,14 @@ test_in_foreground() {
     if [ "$status" = "Active" ]; then
         whiptail --title "Service Active" --msgbox "The ais-catcher service is currently running. Please stop the service before running in foreground." 10 70
     else
-        whiptail --title "Running AIS-catcher" --msgbox "Running AIS-catcher in foreground with config files" 10 70
-	/bin/bash -c '/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json $(/bin/grep -v "^#" /etc/AIS-catcher/config.cmd | /usr/bin/tr "\n" " ")'
-
+        local command="/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json $(/bin/grep -v "^#" /etc/AIS-catcher/config.cmd | /usr/bin/tr "\n" " ")"
+        
+        whiptail --title "Command to Run AIS-catcher" --msgbox "The following command will be executed:\n\n$command" 15 80
+        
+        /bin/bash -c "$command"
+        
         read -p "Press Enter to continue..."
     fi
-}
-
-# Function to configure output (stub)
-configure_output() {
-    whiptail --title "Configure Output" --msgbox "This is a stub function to configure output settings." 10 50
-}
-
-# Function to configure devices (stub)
-configure_devices() {
-    whiptail --title "Configure Devices" --msgbox "This is a stub function to configure device settings." 10 50
-}
-
-# Function to configure web viewer (stub)
-configure_webviewer() {
-    whiptail --title "Configure Web Viewer" --msgbox "This is a stub function to configure web viewer settings." 10 50
 }
 
 # Function to configure sharing
@@ -197,9 +185,6 @@ display_menu() {
     menu_options+=("Show Status" "Show the status of the ais-catcher service")
     menu_options+=("Input Device" "Select the input device for ais-catcher")
     menu_options+=("Test in Foreground" "Run AIS-catcher in foreground with config file")
-    menu_options+=("Configure Output" "Configure output settings")
-    menu_options+=("Configure Devices" "Configure device settings")
-    menu_options+=("Configure Web Viewer" "Configure web viewer settings")
     menu_options+=("Configure Sharing" "Configure sharing settings")
     menu_options+=("Exit" "Exit the script")
 
@@ -219,17 +204,9 @@ display_menu() {
             test_in_foreground
             ;;
         "Show Status")
-            local journal_status=$(show_journal_status)
-            whiptail --title "Service Status" --msgbox "The ais-catcher service is currently $status.\n\nJournal Status:\n$journal_status" 20 70
-            ;;
-        "Configure Output")
-            configure_output
-            ;;
-        "Configure Devices")
-            configure_devices
-            ;;
-        "Configure Web Viewer")
-            configure_webviewer
+            clear
+            systemctl status ais-catcher
+            read -p "Press Enter to continue..."
             ;;
         "Configure Sharing")
             configure_sharing
