@@ -148,8 +148,8 @@ create_debian_package() {
     cp scripts/aiscatcher-install debian/usr/bin/
     chmod +x debian/usr/bin/aiscatcher-install
 
-    cp scripts/aiscatcher-control debian/usr/bin/
-    chmod +x debian/usr/bin/aiscatcher-control
+    cp scripts/aiscatcher-config debian/usr/bin/
+    chmod +x debian/usr/bin/aiscatcher-config
 
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
