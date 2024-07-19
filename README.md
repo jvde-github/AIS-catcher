@@ -41,10 +41,10 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 
 ## Quick Start guide for Raspberry 2+
 
-This is a quick guide to install and run AIS-catcher on a Raspberry device and sets it up to run as a background service (also works for Ubuntu and Debian systems). 
+This is a quick guide to install and run AIS-catcher on a Raspberry device and set it up to run as a background service (also works for Ubuntu and Debian systems). 
 The RTL-SDR V4 is unfortunately not yet supported.
 
-The following instruction installs AIS-catcher but can also be used to update and existing system. Open a terminal on the raspberry or log in via ssh and copy/paste the following command:
+The following instruction installs AIS-catcher but can also be used to update an existing system. Open a terminal on the Raspberry or log in via ssh and copy/paste the following command:
 
 ```bash
     sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
@@ -53,20 +53,21 @@ If succesful AIS-catcher is now installed/updated and can be run as follows:
 ```
 /usr/bin/AIS-catcher -h
 ```
-For a detailed description of command line parameters see below. A configuration file is stored in `/etc/AIS-catcher/config.json` for JSON config (see below) and `/etc/AIS-catcher/config.cmd` for command line parameters. These will be used when running AIS-catcher as a background service.
+For a detailed description of command line parameters see below. A configuration file is stored in `/etc/AIS-catcher/config.json` as JSON config (see below) and `/etc/AIS-catcher/config.cmd` as command line parameters. These will both be used when running AIS-catcher as a background service.
 
 To get the program up and running with your dongle in the background, some basic configuration can also be done with our configuration tool:
 ```bash
 sudo aiscatcher-config
 ```
-![Screenshot from 2024-07-19 22-09-00](https://github.com/user-attachments/assets/35d03f59-b1bf-41c5-a537-abf75b5b6357)
 
-This has functionality to set the verbose mode, the type of output to screen and switch on sharing with `aiscatcher.org`. An optional sharing key can be obtained from
+![Screenshot from 2024-07-19 22-42-14](https://github.com/user-attachments/assets/36b9216d-59f0-4c5d-ad33-88d298a1da8d)
+
+This has functionality to set the verbose mode, the type of message output to screen and switch on sharing with `aiscatcher.org`. An optional sharing key can be obtained from
 the website at [here](https://aiscatcher.org/addstation_ac) or you can leave it empty. If you have multiple dongles you can also select the specific device.
 
 After this basic configuration you can perform a test run with the option `test in foreground`. The program will start and hopefully messages will come in. If everything works as expected you can stop this process (CTRL-C). Back in the menu you can start and stop AIS-catcher running in the background via Start and Stop service in the menu. That is all. Use the option to view the status of the background process.
 
-This is fairly new and under development so any feedback is appreciated.
+This is fairly new and under development so any feedback is appreciated. 
 
 
 
