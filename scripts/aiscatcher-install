@@ -69,4 +69,19 @@ detect_os_version
 detect_architecture
 install_dependencies
 install_package
+
+CONFIG_DIR="/etc/AIS-catcher"
+CONFIG_FILE="$CONFIG_DIR/config.json"
+CMD_FILE="$CONFIG_DIR/config.cmd"
+
+mkdir -p "$CONFIG_DIR"
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Creating empty config.json file..."
+  echo '{ "config": "aiscatcher", "version": 1 }' > "$CONFIG_FILE"
+fi
+if [ ! -f "$CMD_FILE" ]; then
+  echo "Creating empty config.cmd file..."
+  echo '' > "$CMD_FILE"
+fi
+
 echo "AIS Catcher installation script finished."
