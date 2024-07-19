@@ -63,7 +63,7 @@ sudo aiscatcher-config
 ![Screenshot from 2024-07-19 22-42-14](https://github.com/user-attachments/assets/36b9216d-59f0-4c5d-ad33-88d298a1da8d)
 
 This has functionality to set the verbose mode, the type of message output to screen and switch on sharing with `aiscatcher.org`. An optional sharing key can be obtained from
-the website at [here](https://aiscatcher.org/addstation_ac) or you can leave it empty. If you have multiple dongles you can also select the specific device.
+the  [website](https://aiscatcher.org/addstation_ac) or you can leave it empty. If you have multiple dongles you can also select the specific device.
 
 After this basic configuration you can perform a test run with the option `test in foreground`. The program will start and hopefully messages will come in. If everything works as expected you can stop this process (CTRL-C). Back in the menu you can start and stop AIS-catcher running in the background via Start and Stop service in the menu. That is all. Use the option to view the status of the background process.
 
