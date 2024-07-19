@@ -83,6 +83,16 @@ stop_service() {
     fi
 }
 
+# Function to restart the ais-catcher service
+restart_service() {
+    if is_systemd_active; then
+        systemctl restart ais-catcher
+        whiptail --title "Service Restarted" --msgbox "The ais-catcher service has been restarted." 10 50
+    else
+        whiptail --title "Systemd Not Active" --msgbox "Systemd is not active or installed. Cannot restart the service." 10 70
+    fi
+}
+
 # Function to get the list of input devices
 get_input_devices() {
     /usr/bin/AIS-catcher -l JSON on 2>/dev/null | jq -c '.devices[]'
@@ -155,6 +165,27 @@ configure_sharing() {
         jq --arg sharing "$sharing_choice" '.sharing = $sharing | .sharing_key = ""' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
         whiptail --title "Sharing Configuration Updated" --msgbox "Sharing has been set to $sharing_choice" 10 70
     fi
+
+    prompt_restart_service
+}
+
+# Function to configure screen output
+configure_screen_output() {
+    local screen=$(jq -r '.screen // "2"' "$CONFIG_FILE")
+    
+    local screen_choice=$(whiptail --title "Configure Screen Output" --nocancel --radiolist "Set screen output mode:" 20 70 10 \
+        "0" "None" $(if [ "$screen" = "0" ]; then echo "ON"; else echo "OFF"; fi) \
+        "1" "NMEA only" $(if [ "$screen" = "1" ]; then echo "ON"; else echo "OFF"; fi) \
+        "2" "NMEA with some additional attributes" $(if [ "$screen" = "2" ]; then echo "ON"; else echo "OFF"; fi) \
+        "3" "JSON (minimal)" $(if [ "$screen" = "3" ]; then echo "ON"; else echo "OFF"; fi) \
+        "4" "JSON (compact)" $(if [ "$screen" = "4" ]; then echo "ON"; else echo "OFF"; fi) \
+        "5" "JSON (full)" $(if [ "$screen" = "5" ]; then echo "ON"; else echo "OFF"; fi) 3>&1 1>&2 2>&3)
+    
+    jq --arg screen "$screen_choice" '.screen = ($screen | tonumber)' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    
+    whiptail --title "Screen Output Configuration Updated" --msgbox "Screen output has been set to mode: $screen_choice." 10 50
+    
+    prompt_restart_service
 }
 
 # Function to prompt for enabling sharing
@@ -165,6 +196,31 @@ prompt_enable_sharing() {
         if (whiptail --title "Enable Sharing" --yesno "Sharing with aiscatcher.org is currently disabled. Enabling sharing will unlock additional features in the webviewer. Do you want to enable sharing?" 10 70); then
             jq '.sharing = "true"' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
             whiptail --title "Sharing Enabled" --msgbox "Sharing has been enabled. Additional features are now available." 10 70
+        fi
+    fi
+}
+
+# Function to configure verbose mode
+configure_verbose() {
+    local verbose=$(jq -r '.verbose // "false"' "$CONFIG_FILE")
+
+    local verbose_choice=$(whiptail --title "Configure Verbose Mode" --nocancel --radiolist "Set verbose mode:" 10 50 2 \
+        "true" "Enable verbose mode" $(if [ "$verbose" = "true" ]; then echo "ON"; else echo "OFF"; fi) \
+        "false" "Disable verbose mode" $(if [ "$verbose" = "false" ]; then echo "ON"; else echo "OFF"; fi) 3>&1 1>&2 2>&3)
+
+    jq --arg verbose "$verbose_choice" '.verbose = ($verbose == "true")' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+
+    whiptail --title "Verbose Mode Configuration Updated" --msgbox "Verbose mode has been set to: $verbose_choice." 10 50
+
+    prompt_restart_service
+}
+
+# Function to prompt for service restart if configuration was updated
+prompt_restart_service() {
+    local status=$(get_service_status)
+    if [ "$status" = "Active" ]; then
+        if (whiptail --title "Restart Service" --yesno "The configuration has been updated. Do you want to restart the ais-catcher service for the changes to take effect?" 10 70); then
+            restart_service
         fi
     fi
 }
@@ -186,9 +242,11 @@ display_menu() {
     menu_options+=("Input Device" "Select the input device for ais-catcher")
     menu_options+=("Test in Foreground" "Run AIS-catcher in foreground with config file")
     menu_options+=("Configure Sharing" "Configure sharing settings")
+    menu_options+=("Configure Screen Output" "Set the screen output mode")
+    menu_options+=("Configure Verbose Mode" "Enable or disable verbose mode")
     menu_options+=("Exit" "Exit the script")
 
-    local choice=$(whiptail --title "AIS-Catcher Main Menu" --nocancel --menu "Choose an option:" 20 70 10 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+    local choice=$(whiptail --title "AIS-Catcher Main Menu" --nocancel --menu "Choose an option:" 20 80 10 "${menu_options[@]}" 3>&1 1>&2 2>&3)
 
     case $choice in
         "Start Service")
@@ -199,6 +257,7 @@ display_menu() {
             ;;
         "Input Device")
             select_input_device
+            prompt_restart_service
             ;;
         "Test in Foreground")
             test_in_foreground
@@ -208,9 +267,15 @@ display_menu() {
             systemctl status ais-catcher
             read -p "Press Enter to continue..."
             ;;
+        "Configure Screen Output")
+            configure_screen_output
+            ;;
         "Configure Sharing")
             configure_sharing
             ;;
+        "Configure Verbose Mode")
+            configure_verbose
+             ;;
         "Exit")
             exit 0
             ;;
