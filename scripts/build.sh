@@ -88,67 +88,44 @@ create_debian_package() {
     chmod +x debian/DEBIAN/preinst
 
     echo "#!/bin/bash" > debian/DEBIAN/postinst
-    echo "CONFIG_DIR=\"/etc/AIS-catcher\"" >> debian/DEBIAN/postinst
-    echo "CONFIG_FILE=\"\$CONFIG_DIR/config.json\"" >> debian/DEBIAN/postinst
-    echo "CMD_FILE=\"\$CONFIG_DIR/config.cmd\"" >> debian/DEBIAN/postinst
-    echo "mkdir -p \"\$CONFIG_DIR\"" >> debian/DEBIAN/postinst
-    echo "if [ ! -f \"\$CONFIG_FILE\" ]; then" >> debian/DEBIAN/postinst
-    echo "  echo \"Creating empty config.json file...\"" >> debian/DEBIAN/postinst
-    echo "  echo '{ \"config\": \"aiscatcher\", \"version\": 1 }' > \"\$CONFIG_FILE\"" >> debian/DEBIAN/postinst
-    echo "fi" >> debian/DEBIAN/postinst
-    echo "if [ ! -f \"\$CMD_FILE\" ]; then" >> debian/DEBIAN/postinst
-    echo "  echo \"Creating empty config.cmd file...\"" >> debian/DEBIAN/postinst
-    echo "  echo '' > \"\$CMD_FILE\"" >> debian/DEBIAN/postinst
-    echo "fi" >> debian/DEBIAN/postinst
-    echo "# Check if systemd is available" >> debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "set -e" >> debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "# Systemd service management" >> debian/DEBIAN/postinst
     echo "if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/postinst
-    echo "  # Check if ais-catcher service is running" >> debian/DEBIAN/postinst
-    echo "  if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/postinst
-    echo "    was_running=true" >> debian/DEBIAN/postinst
-    echo "  else" >> debian/DEBIAN/postinst
-    echo "    was_running=false" >> debian/DEBIAN/postinst
-    echo "  fi" >> debian/DEBIAN/postinst
-    echo "  # Stop ais-catcher service if it's running" >> debian/DEBIAN/postinst
-    echo "  if \$was_running; then" >> debian/DEBIAN/postinst
-    echo "    systemctl stop ais-catcher" >> debian/DEBIAN/postinst
-    echo "  fi" >> debian/DEBIAN/postinst
-    echo "  echo \"Reloading systemd daemon...\"" >> debian/DEBIAN/postinst
+    echo "  echo \"Systemd detected. Reloading systemd daemon...\"" >> debian/DEBIAN/postinst
     echo "  systemctl daemon-reload" >> debian/DEBIAN/postinst
-    echo "  # Restart ais-catcher service if it was running before" >> debian/DEBIAN/postinst
-    echo "  if \$was_running; then" >> debian/DEBIAN/postinst
-    echo "    systemctl start ais-catcher" >> debian/DEBIAN/postinst
+    echo "  " >> debian/DEBIAN/postinst
+    echo "  if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/postinst
+    echo "    echo \"Restarting ais-catcher...\"" >> debian/DEBIAN/postinst
+    echo "    systemctl restart ais-catcher" >> debian/DEBIAN/postinst
+    echo "  else" >> debian/DEBIAN/postinst
+    echo "    echo \"ais-catcher is not running. Enabling ais-catcher...\"" >> debian/DEBIAN/postinst
+    echo "    systemctl enable ais-catcher" >> debian/DEBIAN/postinst
     echo "  fi" >> debian/DEBIAN/postinst
     echo "fi" >> debian/DEBIAN/postinst
+
     chmod +x debian/DEBIAN/postinst
 
     echo "#!/bin/bash" > debian/DEBIAN/prerm
-    echo "# Check if systemd is available" >> debian/DEBIAN/prerm
+    echo "" >> debian/DEBIAN/prerm
+    echo "set -e" >> debian/DEBIAN/prerm
+    echo "" >> debian/DEBIAN/prerm
+    echo "# Systemd service management" >> debian/DEBIAN/prerm
     echo "if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/prerm
-    echo "  echo \"Systemd detected.\"" >> debian/DEBIAN/prerm
-    echo "  # Check if ais-catcher service is running" >> debian/DEBIAN/prerm
+    echo "  echo \"Systemd detected. Stopping and disabling ais-catcher...\"" >> debian/DEBIAN/prerm
+    echo "" >> debian/DEBIAN/prerm
     echo "  if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/prerm
-    echo "    echo \"Stopping ais-catcher service...\"" >> debian/DEBIAN/prerm
-    echo "    # Stop ais-catcher service" >> debian/DEBIAN/prerm
     echo "    systemctl stop ais-catcher" >> debian/DEBIAN/prerm
-    echo "    echo \"ais-catcher service stopped.\"" >> debian/DEBIAN/prerm
-    echo "  else" >> debian/DEBIAN/prerm
-    echo "    echo \"ais-catcher service is not running.\"" >> debian/DEBIAN/prerm
     echo "  fi" >> debian/DEBIAN/prerm
-    echo "  echo \"Disabling ais-catcher service...\"" >> debian/DEBIAN/prerm
-    echo "  # Disable ais-catcher service" >> debian/DEBIAN/prerm
+    echo "" >> debian/DEBIAN/prerm
     echo "  systemctl disable ais-catcher" >> debian/DEBIAN/prerm
-    echo "  echo \"ais-catcher service disabled.\"" >> debian/DEBIAN/prerm
-    echo "  echo \"Reloading systemd configuration...\"" >> debian/DEBIAN/prerm
-    echo "  # Reload systemd configuration" >> debian/DEBIAN/prerm
     echo "  systemctl daemon-reload" >> debian/DEBIAN/prerm
-    echo "  echo \"Systemd configuration reloaded.\"" >> debian/DEBIAN/prerm
-    echo "else" >> debian/DEBIAN/prerm
-    echo "  echo \"Systemd not detected.\"" >> debian/DEBIAN/prerm
     echo "fi" >> debian/DEBIAN/prerm
-    echo "echo \"Removing ais-catcher service file...\"" >> debian/DEBIAN/prerm
-    echo "# Remove the systemd service file" >> debian/DEBIAN/prerm
+    echo "" >> debian/DEBIAN/prerm
+    echo "# Remove service file" >> debian/DEBIAN/prerm
     echo "rm -f /lib/systemd/system/ais-catcher.service" >> debian/DEBIAN/prerm
-    echo "echo \"ais-catcher service file removed.\"" >> debian/DEBIAN/prerm
+
     chmod +x debian/DEBIAN/prerm
 
     # Add systemd service file
