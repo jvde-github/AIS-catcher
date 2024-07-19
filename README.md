@@ -18,7 +18,28 @@ To join, ensure you're on the latest version, visit [aiscatcher.org](https://ais
 
 Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We welcome your innovative ideas for enhancing AIS-catcher with this collective data, which could lead to new features or improvements benefiting the entire community.
 
-# Quick Start guide for Raspberry 2+
+# License
+
+Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
+
+# Purpose
+
+The purpose of `AIS-catcher` is to serve as a platform that encourages the perpetual enhancement of receiver models. We greatly value and appreciate any suggestions, observations, or shared recordings, particularly from setups where the existing models encounter difficulties.
+
+### Disclaimer
+`AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 
+You can play with the software but it is the user's responsibility to use it prudently. So, DO NOT rely upon this software in any way including for navigation 
+and/or safety of life or property purposes.
+There are variations in the legislation concerning radio reception in the different administrations around the world. 
+It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
+It is specifically forbidden to use this software for any illegal purpose whatsoever. 
+Only use this software in regions where such use is permitted.
+  
+## Installation
+
+Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry.
+
+## Quick Start guide for Raspberry 2+
 
 This is a quick guide to install and run AIS-catcher on a Raspberry device and sets it up to run as a background service (also works for Ubuntu and Debian systems). The
 The RTL-SDR V4 is unfortunately not yet supported.
@@ -47,22 +68,7 @@ After this basic configuration you can perform a test run with the option `test 
 
 This is fairly new and under development so any feedback is appreciated.
 
-# License
 
-Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
-
-# Purpose
-
-The purpose of `AIS-catcher` is to serve as a platform that encourages the perpetual enhancement of receiver models. We greatly value and appreciate any suggestions, observations, or shared recordings, particularly from setups where the existing models encounter difficulties.
-
-### Disclaimer
-`AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 
-You can play with the software but it is the user's responsibility to use it prudently. So, DO NOT rely upon this software in any way including for navigation 
-and/or safety of life or property purposes.
-There are variations in the legislation concerning radio reception in the different administrations around the world. 
-It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
-It is specifically forbidden to use this software for any illegal purpose whatsoever. 
-Only use this software in regions where such use is permitted.
 
 ## What's new?
 **Edge** version:
@@ -112,11 +118,6 @@ Earlier versions:
 switches `-N geojson on` and `-N kml on`). The KML feature facilitates the visualization of ship positions in Google Earth Pro. Be sure to add a network link and configure the auto-refresh rate in GE. A demonstration of the use of GeoJSON is [plotting the vessels on the tar1090 map.](https://github.com/jvde-github/AIS-in-TAR1090)
 - Experimenter Mode for NMEA2000 via socketCAN on Linux. [See documentation below](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#nmea2000-input-and-output-via-socketcan).
 - Pyssel blog post describes procedure to show offline mbtiles maps [here](https://pysselilivet.blogspot.com/2023/12/ais-receiver-and-dispatcher-best.html)
-
-  
-## Installation
-
-Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry.
 
 ## Usage
 
