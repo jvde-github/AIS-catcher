@@ -28,7 +28,7 @@ install_dependencies() {
     DEPS+="librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev "
   fi
   
-  DEPS+="cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev"
+  DEPS+="cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev"
   
   if [ -n "$DEPS" ]; then
     echo "Installing build dependencies: $DEPS"
