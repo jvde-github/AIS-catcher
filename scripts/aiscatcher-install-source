@@ -28,7 +28,7 @@ install_dependencies() {
     DEPS+="librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev "
   fi
   
-  DEPS+="libzmq3-dev libssl-dev zlib1g-dev"
+  DEPS+="cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev"
   
   if [ -n "$DEPS" ]; then
     echo "Installing build dependencies: $DEPS"
@@ -39,7 +39,10 @@ install_dependencies() {
 
 # Build the NMEA2000 library
 build_nmea2000() {
-  git clone https://github.com/ttlappalainen/NMEA2000.git
+  #git clone https://github.com/ttlappalainen/NMEA2000.git
+  wget https://github.com/ttlappalainen/NMEA2000/archive/refs/heads/master.zip
+  unzip master.zip  > /dev/null
+  mv NMEA2000-master NMEA2000
   cd NMEA2000/src
   g++ -O3 -c N2kMsg.cpp N2kStream.cpp N2kMessages.cpp N2kTimer.cpp NMEA2000.cpp N2kGroupFunctionDefaultHandlers.cpp N2kGroupFunction.cpp -I.
   ar rcs libnmea2000.a *.o 
@@ -48,7 +51,11 @@ build_nmea2000() {
 
 # Build the AIS-catcher project
 build_ais_catcher() {
-  git clone https://github.com/jvde-github/AIS-catcher.git
+  #git clone https://github.com/jvde-github/AIS-catcher.git
+  wget https://github.com/jvde-github/AIS-catcher/archive/refs/heads/main.zip
+  unzip main.zip  > /dev/null
+  mv AIS-catcher-main AIS-catcher
+
   cd AIS-catcher
   
   mkdir build
