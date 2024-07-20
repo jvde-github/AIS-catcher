@@ -51,7 +51,7 @@ sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catc
 > This builds and installs the application with full support for all native SDR drivers included in your OS. If you run hardware that is not natively supported by the OS or you 
 > already have the drivers installed. You can use:
 >```bash
->sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install-source)" --no-driver
+>wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install-source -O /tmp/aiscatcher-install-source.sh && chmod +x /tmp/aiscatcher-install-source.sh && sudo /tmp/aiscatcher-install-source.sh --no-driver
 >```
 >This will look for available SDR drivers on the system and include these in the build.
 >For RTL-SDR V4, install the driver following the instructions from the manufacturer and subsequently use above command.
