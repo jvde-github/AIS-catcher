@@ -78,6 +78,7 @@ copy_and_restart_service() {
 
   echo "Copying AIS-catcher executable to /usr/bin"
   cp AIS-catcher/build/AIS-catcher /usr/bin
+  cp AIS-catcher/scripts/aiscatcher-config /usr/bin
 
   if $SERVICE_ACTIVE; then
     echo "Starting $SERVICE_NAME..."
