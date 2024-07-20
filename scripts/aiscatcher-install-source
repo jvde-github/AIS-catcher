@@ -1,0 +1,163 @@
+#!/bin/bash
+
+# Function to print usage information
+print_usage() {
+  echo "Usage: $0 [--no-rtlsdr] [--no-airspy] [--no-airspyhf] [--no-hackrf]"
+  echo "Options:"
+  echo "  --no-rtlsdr    Exclude librtlsdr-dev from installation."
+  echo "  --no-airspy    Exclude libairspy-dev from installation."
+  echo "  --no-airspyhf  Exclude libairspyhf-dev from installation."
+  echo "  --no-hackrf    Exclude libhackrf-dev from installation."
+  exit 1
+}
+
+# Parse command-line arguments
+NO_RTLSDR=false
+NO_AIRSPY=false
+NO_AIRSPYHF=false
+NO_HACKRF=false
+
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    --no-rtlsdr) NO_RTLSDR=true ;;
+    --no-airspy) NO_AIRSPY=true ;;
+    --no-airspyhf) NO_AIRSPYHF=true ;;
+    --no-hackrf) NO_HACKRF=true ;;
+    *) print_usage ;;
+  esac
+  shift
+done
+
+# Install dependencies using apt
+install_dependencies() {
+  DEPS=""
+  
+  # Conditionally add dependencies based on flags
+  if [ "$NO_RTLSDR" = false ]; then
+    DEPS+="librtlsdr-dev "
+  fi
+  if [ "$NO_AIRSPY" = false ]; then
+    DEPS+="libairspy-dev "
+  fi
+  if [ "$NO_AIRSPYHF" = false ]; then
+    DEPS+="libairspyhf-dev "
+  fi
+  if [ "$NO_HACKRF" = false ]; then
+    DEPS+="libhackrf-dev "
+  fi
+  
+  DEPS+="libzmq3-dev libssl-dev zlib1g-dev"
+  
+  if [ -n "$DEPS" ]; then
+    echo "Installing build dependencies: $DEPS"
+    apt-get update
+    apt-get install -y $DEPS
+  fi
+}
+
+# Build the NMEA2000 library
+build_nmea2000() {
+  git clone https://github.com/ttlappalainen/NMEA2000.git
+  cd NMEA2000/src
+  g++ -O3 -c N2kMsg.cpp N2kStream.cpp N2kMessages.cpp N2kTimer.cpp NMEA2000.cpp N2kGroupFunctionDefaultHandlers.cpp N2kGroupFunction.cpp -I.
+  ar rcs libnmea2000.a *.o 
+  cd ../..
+}
+
+# Build the AIS-catcher project
+build_ais_catcher() {
+  git clone https://github.com/jvde-github/AIS-catcher.git
+  cd AIS-catcher
+  
+  mkdir build
+  cd build
+  cmake ..
+  make
+  cd ../..
+}
+
+# Copy executable and restart service if running
+copy_and_restart_service() {
+  SERVICE_NAME="ais-catcher.service"
+  SERVICE_ACTIVE=false
+
+  if systemctl is-active --quiet $SERVICE_NAME; then
+    SERVICE_ACTIVE=true
+    echo "Stopping $SERVICE_NAME..."
+    systemctl stop $SERVICE_NAME
+  fi
+
+  echo "Copying AIS-catcher executable to /usr/bin"
+  cp AIS-catcher/build/AIS-catcher /usr/bin
+
+  if $SERVICE_ACTIVE; then
+    echo "Starting $SERVICE_NAME..."
+    systemctl start $SERVICE_NAME
+  fi
+}
+
+# Setup systemd service
+setup_systemd_service() {
+  SERVICE_DIR="/etc/systemd/system"
+  SERVICE_FILE="$SERVICE_DIR/ais-catcher.service"
+
+  mkdir -p "$SERVICE_DIR"
+  echo "[Unit]" > "$SERVICE_FILE"
+  echo "Description=AIS-catcher Service" >> "$SERVICE_FILE"
+  echo "After=network.target" >> "$SERVICE_FILE"
+  echo "" >> "$SERVICE_FILE"
+  echo "[Service]" >> "$SERVICE_FILE"
+  echo "ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json \$(/bin/grep -v \"^#\" /etc/AIS-catcher/config.cmd | /usr/bin/tr \"\\n\" \" \")'" >> "$SERVICE_FILE"
+  echo "Restart=always" >> "$SERVICE_FILE"
+  echo "" >> "$SERVICE_FILE"
+  echo "[Install]" >> "$SERVICE_FILE"
+  echo "WantedBy=multi-user.target" >> "$SERVICE_FILE"
+
+  systemctl daemon-reload
+  systemctl enable ais-catcher.service
+}
+
+# Main script execution
+echo "Starting AIS Catcher installation script via source..."
+
+# Install build dependencies
+install_dependencies
+
+# Setup configuration files
+CONFIG_DIR="/etc/AIS-catcher"
+CONFIG_FILE="$CONFIG_DIR/config.json"
+CMD_FILE="$CONFIG_DIR/config.cmd"
+
+mkdir -p "$CONFIG_DIR"
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Creating config.json file..."
+  echo '{ "config": "aiscatcher", "version": 1, "screen": 2 }' > "$CONFIG_FILE"
+fi
+if [ ! -f "$CMD_FILE" ]; then
+  echo "Creating config.cmd file..."
+  echo '' > "$CMD_FILE"
+fi
+
+# Setup systemd service
+setup_systemd_service
+
+# Create a temporary directory for building the projects
+TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
+echo "Created temporary directory $TMP_DIR"
+cd "$TMP_DIR"
+
+# Build the NMEA2000 library and project
+build_nmea2000
+
+# Build the AIS-catcher project
+build_ais_catcher
+
+# Copy executable and restart service if necessary
+copy_and_restart_service
+
+# Cleanup temporary directory
+cd ..
+rm -rf "$TMP_DIR"
+echo "Temporary directory $TMP_DIR deleted."
+
+echo "AIS Catcher installation script finished."
