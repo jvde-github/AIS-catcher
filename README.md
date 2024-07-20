@@ -47,7 +47,7 @@ The RTL-SDR V4 is unfortunately not yet supported.
 The following instruction installs AIS-catcher but can also be used to update an existing system. Open a terminal on the Raspberry or log in via ssh and copy/paste the following command:
 
 ```bash
-    sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
+sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
 If succesful AIS-catcher is now installed/updated and can be run as follows:
 ```
