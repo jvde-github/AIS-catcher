@@ -111,20 +111,21 @@ create_debian_package() {
     echo "" >> debian/DEBIAN/prerm
     echo "set -e" >> debian/DEBIAN/prerm
     echo "" >> debian/DEBIAN/prerm
-    echo "# Systemd service management" >> debian/DEBIAN/prerm
-    echo "if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/prerm
-    echo "  echo \"Systemd detected. Stopping and disabling ais-catcher...\"" >> debian/DEBIAN/prerm
+    echo "if [ \"\$1\" != \"upgrade\" ] && [ \"\$1\" != \"deconfigure\" ]; then" >> debian/DEBIAN/prerm
+    echo "  # Systemd service management" >> debian/DEBIAN/prerm
+    echo "  if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/prerm
+    echo "    echo \"Systemd detected. Stopping and disabling ais-catcher...\"" >> debian/DEBIAN/prerm
     echo "" >> debian/DEBIAN/prerm
-    echo "  if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/prerm
-    echo "    systemctl stop ais-catcher" >> debian/DEBIAN/prerm
+    echo "    if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/prerm
+    echo "      systemctl stop ais-catcher" >> debian/DEBIAN/prerm
+    echo "    fi" >> debian/DEBIAN/prerm
+    echo "" >> debian/DEBIAN/prerm
+    echo "    systemctl disable ais-catcher" >> debian/DEBIAN/prerm
+    echo "    systemctl daemon-reload" >> debian/DEBIAN/prerm
+    echo "    echo \"Removing ais-catcher service file...\"" >> debian/DEBIAN/prerm
+    echo "    rm -f /lib/systemd/system/ais-catcher.service" >> debian/DEBIAN/prerm
     echo "  fi" >> debian/DEBIAN/prerm
-    echo "" >> debian/DEBIAN/prerm
-    echo "  systemctl disable ais-catcher" >> debian/DEBIAN/prerm
-    echo "  systemctl daemon-reload" >> debian/DEBIAN/prerm
     echo "fi" >> debian/DEBIAN/prerm
-    echo "" >> debian/DEBIAN/prerm
-    echo "# Remove service file" >> debian/DEBIAN/prerm
-    echo "rm -f /lib/systemd/system/ais-catcher.service" >> debian/DEBIAN/prerm
 
     chmod +x debian/DEBIAN/prerm
 
