@@ -34,18 +34,31 @@ Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We w
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry.
 
-## Quick Start guide for Raspberry 2+
+## Quick Start guide for Raspberry
 
 This is a quick guide to install and run AIS-catcher on a Raspberry device and set it up to run as a background service (also works for Ubuntu and Debian systems). 
-The RTL-SDR V4 is unfortunately not yet supported.
 
-The following instruction installs AIS-catcher but can also be used to update an existing system. Open a terminal on the Raspberry or log in via ssh and copy/paste the following command:
+The following instruction installs AIS-catcher but can also be used to update an existing system. Open a terminal on the Raspberry 2+ or log in via ssh and copy/paste the following command:
 
 ```bash
 sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
+> In some cases it can be useful to install and build from source. In this case the application is optimized for the specific hardware but can take bit longer to install and update:
+>```bash
+>sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install-source)"
+>```
+>Use this script also for older Raspberry Pi versions. 
+> This builds and installs the application with full support for all native SDR drivers included in your OS. If you run hardware that is not natively supported by the OS or you 
+> already have the drivers installed. You can use:
+>```bash
+>sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install-source --no-driver)"
+>```
+>This will look for available SDR drivers on the system and include these in the build.
+>For RTL-SDR V4, install the driver following the instructions from the manufacturer and subsequently use above command.
+
+
 If succesful AIS-catcher is now installed/updated and can be run as follows:
-```
+```bash
 /usr/bin/AIS-catcher -h
 ```
 For a detailed description of command line parameters see below. A configuration file is stored in `/etc/AIS-catcher/config.json` as JSON config (see below) and `/etc/AIS-catcher/config.cmd` as command line parameters. These will both be used when running AIS-catcher as a background service.
