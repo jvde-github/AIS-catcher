@@ -2,27 +2,18 @@
 
 # Function to print usage information
 print_usage() {
-  echo "Usage: $0 [--no-rtlsdr] [--no-airspy] [--no-airspyhf] [--no-hackrf]"
+  echo "Usage: $0 [--no-driver]"
   echo "Options:"
-  echo "  --no-rtlsdr    Exclude librtlsdr-dev from installation."
-  echo "  --no-airspy    Exclude libairspy-dev from installation."
-  echo "  --no-airspyhf  Exclude libairspyhf-dev from installation."
-  echo "  --no-hackrf    Exclude libhackrf-dev from installation."
+  echo "  --no-driver   Exclude all driver development packages from installation."
   exit 1
 }
 
 # Parse command-line arguments
-NO_RTLSDR=false
-NO_AIRSPY=false
-NO_AIRSPYHF=false
-NO_HACKRF=false
+NO_DRIVER=false
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    --no-rtlsdr) NO_RTLSDR=true ;;
-    --no-airspy) NO_AIRSPY=true ;;
-    --no-airspyhf) NO_AIRSPYHF=true ;;
-    --no-hackrf) NO_HACKRF=true ;;
+    --no-driver) NO_DRIVER=true ;;
     *) print_usage ;;
   esac
   shift
@@ -33,17 +24,8 @@ install_dependencies() {
   DEPS=""
   
   # Conditionally add dependencies based on flags
-  if [ "$NO_RTLSDR" = false ]; then
-    DEPS+="librtlsdr-dev "
-  fi
-  if [ "$NO_AIRSPY" = false ]; then
-    DEPS+="libairspy-dev "
-  fi
-  if [ "$NO_AIRSPYHF" = false ]; then
-    DEPS+="libairspyhf-dev "
-  fi
-  if [ "$NO_HACKRF" = false ]; then
-    DEPS+="libhackrf-dev "
+  if [ "$NO_DRIVER" = false ]; then
+    DEPS+="librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev "
   fi
   
   DEPS+="libzmq3-dev libssl-dev zlib1g-dev"
