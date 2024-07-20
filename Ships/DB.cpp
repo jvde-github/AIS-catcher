@@ -291,6 +291,7 @@ void DB::getShipJSON(const Ship &ship, std::string &content, long int delta_time
 	str = std::string(ship.destination);
 	JSON::StringBuilder::stringify(str, content);
 
+	content += ",\"repeat\":" + std::to_string(ship.getRepeat());
 	content += ",\"last_signal\":" + std::to_string(delta_time) + "}";
 }
 
