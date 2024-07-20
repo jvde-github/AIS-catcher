@@ -6,6 +6,15 @@ This repository presents the `AIS-catcher` software, a versatile dual-channel AI
 
 Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
 
+# Important Disclaimer
+`AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 
+You can play with the software but it is the user's responsibility to use it prudently. So, DO NOT rely upon this software in any way including for navigation 
+and/or safety of life or property purposes.
+There are variations in the legislation concerning radio reception in the different administrations around the world. 
+It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
+It is specifically forbidden to use this software for any illegal purpose whatsoever. 
+Only use this software in regions where such use is permitted.
+
 # Purpose
 
 The purpose of `AIS-catcher` is to serve as a platform that encourages the perpetual enhancement of receiver models. We greatly value and appreciate any suggestions, observations, or shared recordings, particularly from setups where the existing models encounter difficulties.
@@ -20,15 +29,6 @@ To join, ensure you're on the latest version, visit [aiscatcher.org](https://ais
 </p>
 
 Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We welcome your innovative ideas for enhancing AIS-catcher with this collective data, which could lead to new features or improvements benefiting the entire community.
-
-### Disclaimer
-`AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 
-You can play with the software but it is the user's responsibility to use it prudently. So, DO NOT rely upon this software in any way including for navigation 
-and/or safety of life or property purposes.
-There are variations in the legislation concerning radio reception in the different administrations around the world. 
-It is your responsibility to determine whether or not your local administration permits the reception and handling of AIS messages from ships. 
-It is specifically forbidden to use this software for any illegal purpose whatsoever. 
-Only use this software in regions where such use is permitted.
   
 ## Installation
 
