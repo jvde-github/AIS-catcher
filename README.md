@@ -2,22 +2,6 @@
 
 This repository presents the `AIS-catcher` software, a versatile dual-channel AIS receiver that is compatible with a wide range of Software Defined Radios (SDRs). These include RTL-SDR dongles (such as the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). AIS-catcher delivers output in the form of NMEA messages, which can be conveniently displayed on screen or forwarded via UDP/HTTP/TCP. Designed as a lightweight command line utility, AIS-catcher also incorporates a built-in web server for internal use within secure networks. The project home page including several realtime examples can be found at [aiscatcher.org](https://aiscatcher.org).
 
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9fd27b96-e37a-4f92-869c-b0ba782c12fa.png" width="90%"/>
-</p>
-	
-
-# Joining the community at aiscatcher.org
-
-AIS-catcher is a free, open-source project aimed at transforming SDR-equipped computers into AIS-receivers. It's continuously improved with decoding enhancements, user support, and expanded output options for commercial data aggregators. Our next step involves utilizing aggregated AIS data for real-time visualization in local web dashboards, enhancing receiver performance and situational awareness by integrating nearby station data.
-
-To join, ensure you're on the latest version, visit [aiscatcher.org](https://aiscatcher.org), and [register](https://aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers. Below, you can see how it integrates with your local dashboard. The grey ship icons represent vessels not directly received by this particular station but detected by nearby stations.
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
-</p>
-
-Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We welcome your innovative ideas for enhancing AIS-catcher with this collective data, which could lead to new features or improvements benefiting the entire community.
-
 # License
 
 Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
@@ -25,6 +9,17 @@ Copyright (C) 2021 - 2024 jvde.github at gmail.com. All rights reserved. License
 # Purpose
 
 The purpose of `AIS-catcher` is to serve as a platform that encourages the perpetual enhancement of receiver models. We greatly value and appreciate any suggestions, observations, or shared recordings, particularly from setups where the existing models encounter difficulties.
+
+# The aiscatcher.org community
+
+AIS-catcher is a free, open-source project aimed at transforming SDR-equipped computers into AIS-receivers. It's continuously improved with decoding enhancements, user support, and expanded output options for commercial data aggregators. As a seperate project we also aggregate AIS data with the aim of real-time visualization in local web dashboards, enhancing receiver performance and situational awareness by integrating nearby station data.
+
+To join, ensure you're on the latest version, visit [aiscatcher.org](https://aiscatcher.org), and [add](https://aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers. Below, you can see how it integrates with your local dashboard. The grey ship icons represent vessels not directly received by this particular station but detected by nearby stations.
+<p align="center">
+<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
+</p>
+
+Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We welcome your innovative ideas for enhancing AIS-catcher with this collective data, which could lead to new features or improvements benefiting the entire community.
 
 ### Disclaimer
 `AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 
