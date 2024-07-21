@@ -167,7 +167,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           
   Windows:
-    runs-on: windows-2022
+    runs-on: windows-2019
     needs: bakeHTML
 
     strategy:
