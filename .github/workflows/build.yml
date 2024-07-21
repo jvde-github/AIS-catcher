@@ -185,7 +185,6 @@ jobs:
       uses: microsoft/setup-msbuild@v2
       with:
         msbuild-architecture: ${{matrix.platform}}
-        vs-version: '[19.2,19.3)'
 
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
