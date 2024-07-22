@@ -54,15 +54,6 @@ get_service_status() {
     fi
 }
 
-# Function to show journal status if systemd is active
-show_journal_status() {
-    if is_systemd_active; then
-        journalctl -u ais-catcher --no-pager -n 10
-    else
-        echo "N/A"
-    fi
-}
-
 # Function to start the ais-catcher service
 start_service() {
     if is_systemd_active; then
@@ -263,7 +254,8 @@ display_menu() {
             test_in_foreground
             ;;
         "Show Status")
-            clear
+            echo "****************************"
+            echo "systemctl status ais-catcher"
             systemctl status ais-catcher
             read -p "Press Enter to continue..."
             ;;
