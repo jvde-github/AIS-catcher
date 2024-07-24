@@ -629,6 +629,10 @@ int main(int argc, char* argv[]) {
 		for (int i = 0; i < _receivers.size(); i++) {
 			Receiver& r = *_receivers[i];
 
+			for(int j = 0; j < _receivers.size(); j++)
+				if (i != j && r.Serial() == _receivers[j]->Serial())
+					throw std::runtime_error("trying to run multiple devices with same serial number: " + r.Serial());
+
 			if (servers.size() > 0 && servers[0]->active()) r.setTags("DTM");
 
 			r.setupDevice();
