@@ -96,21 +96,8 @@ install_dependencies() {
   fi
 }
 
-
 echo "All checks completed."
 
-
-# Build the NMEA2000 library
-build_nmea2000() {
-  #git clone https://github.com/ttlappalainen/NMEA2000.git
-  wget https://github.com/ttlappalainen/NMEA2000/archive/refs/heads/master.zip
-  unzip master.zip  > /dev/null
-  mv NMEA2000-master NMEA2000
-  cd NMEA2000/src
-  g++ -O3 -c N2kMsg.cpp N2kStream.cpp N2kMessages.cpp N2kTimer.cpp NMEA2000.cpp N2kGroupFunctionDefaultHandlers.cpp N2kGroupFunction.cpp -I.
-  ar rcs libnmea2000.a *.o 
-  cd ../..
-}
 
 # Build the AIS-catcher project
 build_ais_catcher() {
@@ -120,12 +107,7 @@ build_ais_catcher() {
   mv AIS-catcher-main AIS-catcher
 
   cd AIS-catcher
-  
-  mkdir build
-  cd build
-  cmake ..
-  make
-  cd ../..
+  ./scripts/build-NMEA2000.sh
 }
 
 # Copy executable and restart service if running
@@ -253,7 +235,7 @@ echo "Building from source.................................."
 echo "******************************************************"
 
 # Build the NMEA2000 library and project
-build_nmea2000
+# build_nmea2000
 
 # Build the AIS-catcher project
 build_ais_catcher
