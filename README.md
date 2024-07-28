@@ -40,7 +40,7 @@ This guide provides instructions for installing AIS-catcher on Debian-based syst
 #### Installation
 
 To install or update AIS-catcher, open a terminal or log in via SSH, then run the following command:
-```bash
+```console
 sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
 The script will install all dependencies and build AIS-catcher. The required SDR libraries for most SDRs is install from the official packages if cannot be found on the system. For the RTL-SDR we build from source from the official package to guarantee support for the RTL-SDR V4, but only if the package is not already installed on the system.
@@ -48,7 +48,7 @@ The script will install all dependencies and build AIS-catcher. The required SDR
 #### Verifying the installation
 
 To verify that AIS-catcher is installed or updated, run:
-```bash
+```console
 /usr/bin/AIS-catcher -L
 ```
 Not you can start playing with the various command line options, e.g. to start some basic decoding with a webviewer at `http://localhost:8100`:
@@ -85,8 +85,6 @@ sudo systemctl enable ais-catcher.service
 ```
 #### Feedback
 This is fairly new script and under development so any feedback is appreciated. 
-
-
 
 ## What's new?
 **Edge** version:
