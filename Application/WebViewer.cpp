@@ -19,11 +19,9 @@
 
 bool communityFeed = false;
 
-bool WebViewer::Save()
-{
+bool WebViewer::Save() {
 	// std::cerr << "Server: writing statistics to file " << filename << std::endl;
-	try
-	{
+	try {
 		std::ofstream infile(filename, std::ios::binary);
 		if (!counter.Save(infile))
 			return false;
@@ -37,16 +35,14 @@ bool WebViewer::Save()
 			return false;
 		infile.close();
 	}
-	catch (const std::exception &e)
-	{
+	catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return false;
 	}
 	return true;
 }
 
-void WebViewer::Clear()
-{
+void WebViewer::Clear() {
 	counter.Clear();
 	counter_session.Clear();
 
@@ -56,15 +52,13 @@ void WebViewer::Clear()
 	hist_day.Clear();
 }
 
-bool WebViewer::Load()
-{
+bool WebViewer::Load() {
 
 	if (filename.empty())
 		return false;
 
 	std::cerr << "Server: reading statistics from " << filename << std::endl;
-	try
-	{
+	try {
 		std::ifstream infile(filename, std::ios::binary);
 
 		if (!counter.Load(infile))
@@ -80,8 +74,7 @@ bool WebViewer::Load()
 
 		infile.close();
 	}
-	catch (const std::exception &e)
-	{
+	catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
 		return false;
 	}
@@ -89,16 +82,14 @@ bool WebViewer::Load()
 	return true;
 }
 
-void WebViewer::addPlugin(const std::string &arg)
-{
+void WebViewer::addPlugin(const std::string& arg) {
 	int version = 0;
 	std::string author, description;
 
 	plugins += "console.log('plugin:" + arg + "');";
 	plugins += "plugins += 'JS: " + arg + "\\n';";
 	plugins += "\n\n//=============\n//" + arg + "\n\n";
-	try
-	{
+	try {
 		std::string s = Util::Helper::readFile(arg);
 
 		JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
@@ -110,10 +101,8 @@ void WebViewer::addPlugin(const std::string &arg)
 
 		std::shared_ptr<JSON::JSON> j = parser.parse(firstline);
 
-		for (const auto &p : j->getProperties())
-		{
-			switch (p.Key())
-			{
+		for (const auto& p : j->getProperties()) {
+			switch (p.Key()) {
 			case AIS::KEY_SETTING_VERSION:
 				version = p.Get().getInt();
 				break;
@@ -133,8 +122,7 @@ void WebViewer::addPlugin(const std::string &arg)
 			throw std::runtime_error("Version not supported, expected 2, got " + std::to_string(version));
 		plugins += "try{" + s + "} catch (error) { showDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }";
 	}
-	catch (const std::exception &e)
-	{
+	catch (const std::exception& e) {
 
 		plugins += "// FAILED\n";
 		std::cerr << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what() << std::endl;
@@ -142,19 +130,14 @@ void WebViewer::addPlugin(const std::string &arg)
 	}
 }
 
-void WebViewer::BackupService()
-{
+void WebViewer::BackupService() {
 
-	try
-	{
+	try {
 		std::cerr << "Server: starting backup service every " << backup_interval << " minutes." << std::endl;
-		while (true)
-		{
+		while (true) {
 			std::unique_lock<std::mutex> lock(m);
 
-			if (cv.wait_for(lock, std::chrono::minutes(backup_interval), [&]
-							{ return !run; }))
-			{
+			if (cv.wait_for(lock, std::chrono::minutes(backup_interval), [&] { return !run; })) {
 				break;
 			}
 
@@ -163,8 +146,7 @@ void WebViewer::BackupService()
 				std::cerr << "Server: failed to write backup." << std::endl;
 		}
 	}
-	catch (std::exception &e)
-	{
+	catch (std::exception& e) {
 		std::cerr << "WebClient BackupService: " << e.what() << std::endl;
 		std::terminate();
 	}
@@ -172,16 +154,13 @@ void WebViewer::BackupService()
 	std::cerr << "Server: stopping backup service." << std::endl;
 }
 
-void WebViewer::connect(Receiver &r)
-{
+void WebViewer::connect(Receiver& r) {
 
 	bool rec_details = false;
 	const std::string newline = "<br>";
 	for (int j = 0; j < r.Count(); j++)
-		if (r.Output(j).canConnect(groups_in))
-		{
-			if (!rec_details)
-			{
+		if (r.Output(j).canConnect(groups_in)) {
+			if (!rec_details) {
 
 				sample_rate += r.device->getRateDescription() + "<br>";
 
@@ -197,8 +176,8 @@ void WebViewer::connect(Receiver &r)
 			}
 			model += r.Model(j)->getName() + newline;
 
-			r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&ships);
-			r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&ships);
+			r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&ships);
+			r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&ships);
 
 			*r.device >> raw_counter;
 		}
@@ -209,13 +188,11 @@ void WebViewer::connect(Receiver &r)
 	*/
 }
 
-void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Device &device)
-{
+void WebViewer::connect(AIS::Model& m, Connection<JSON::JSON>& json, Device::Device& device) {
 
-	if (m.Output().out.canConnect(groups_in))
-	{
+	if (m.Output().out.canConnect(groups_in)) {
 
-		json.Connect((StreamIn<JSON::JSON> *)&ships);
+		json.Connect((StreamIn<JSON::JSON>*)&ships);
 		device >> raw_counter;
 
 		sample_rate = device.getRateDescription();
@@ -224,8 +201,7 @@ void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Dev
 	}
 }
 
-void WebViewer::Reset()
-{
+void WebViewer::Reset() {
 	counter_session.Clear();
 	hist_second.Clear();
 	hist_minute.Clear();
@@ -237,14 +213,12 @@ void WebViewer::Reset()
 	time_start = time(nullptr);
 }
 
-void WebViewer::start()
-{
+void WebViewer::start() {
 	ships.setup();
 
 	if (filename.empty())
 		Clear();
-	else if (!Load())
-	{
+	else if (!Load()) {
 		std::cerr << "Statistics: cannot read file." << std::endl;
 		Clear();
 	}
@@ -263,8 +237,7 @@ void WebViewer::start()
 	if (supportPrometheus)
 		ships >> dataPrometheus;
 
-	if (firstport && lastport)
-	{
+	if (firstport && lastport) {
 		for (port = firstport; port <= lastport; port++)
 			if (HTTPServer::start(port))
 				break;
@@ -281,8 +254,7 @@ void WebViewer::start()
 
 	run = true;
 
-	if (backup_interval > 0)
-	{
+	if (backup_interval > 0) {
 		if (filename.empty())
 			throw std::runtime_error("Server: backup of statistics requested without providing filename.");
 
@@ -292,10 +264,8 @@ void WebViewer::start()
 	}
 }
 
-void WebViewer::stopThread()
-{
-	if (thread_running)
-	{
+void WebViewer::stopThread() {
+	if (thread_running) {
 		std::unique_lock<std::mutex> lock(m);
 
 		run = false;
@@ -304,13 +274,11 @@ void WebViewer::stopThread()
 	}
 }
 
-void WebViewer::close()
-{
+void WebViewer::close() {
 
 	stopThread();
 
-	if (!filename.empty() && !Save())
-	{
+	if (!filename.empty() && !Save()) {
 		std::cerr << "Statistics: cannot write file." << std::endl;
 	}
 }
@@ -321,43 +289,35 @@ void WebViewer::close()
 #include "HTML/style_css.cpp"
 #include "HTML/favicon.cpp"
 
-void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, bool gzip)
-{
+void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, bool gzip) {
 
 	std::string r;
 	std::string a;
 
 	std::string::size_type pos = response.find('?');
 
-	if (pos != std::string::npos)
-	{
+	if (pos != std::string::npos) {
 		r = response.substr(0, pos);
 		a = response.substr(pos + 1, response.length());
 	}
-	else
-	{
+	else {
 		r = response;
 	}
 
-	if (r == "/")
-	{
+	if (r == "/") {
 		if (cdn.empty())
-			ResponseRaw(c, "text/html", (char *)index_html_gz, index_html_gz_len, true);
+			ResponseRaw(c, "text/html", (char*)index_html_gz, index_html_gz_len, true);
 		else
-			ResponseRaw(c, "text/html", (char *)index_local_html_gz, index_local_html_gz_len, true);
+			ResponseRaw(c, "text/html", (char*)index_local_html_gz, index_local_html_gz_len, true);
 	}
-	else if (r == "/script_" VERSION_URL_TAG ".js")
-	{
-		ResponseRaw(c, "application/javascript", (char *)script_js_gz, script_js_gz_len, true, true);
+	else if (r == "/script_" VERSION_URL_TAG ".js") {
+		ResponseRaw(c, "application/javascript", (char*)script_js_gz, script_js_gz_len, true, true);
 	}
-	else if (r == "/style_" VERSION_URL_TAG ".css")
-	{
-		ResponseRaw(c, "text/css", (char *)style_css_gz, style_css_gz_len, true, true);
+	else if (r == "/style_" VERSION_URL_TAG ".css") {
+		ResponseRaw(c, "text/css", (char*)style_css_gz, style_css_gz_len, true, true);
 	}
-	else if (!cdn.empty() && r.find("/cdn/") == 0)
-	{
-		try
-		{
+	else if (!cdn.empty() && r.find("/cdn/") == 0) {
+		try {
 
 			if (r.find("..") != std::string::npos || r.find(".") == std::string::npos)
 				throw std::runtime_error("Blocked, pattern not matching");
@@ -365,56 +325,45 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			std::string extension = r.substr(r.find_last_of('.') + 1);
 			std::string contentType;
 
-			if (extension == "svg")
-			{
+			if (extension == "svg") {
 				contentType = "image/svg+xml";
 			}
-			else if (extension == "js")
-			{
+			else if (extension == "js") {
 				contentType = "application/javascript";
 			}
-			else if (extension == "png")
-			{
+			else if (extension == "png") {
 				contentType = "image/png";
 			}
-			else if (extension == "css")
-			{
+			else if (extension == "css") {
 				contentType = "text/css";
 			}
-			else
-			{
+			else {
 				throw std::runtime_error("Blocked " + extension);
 			}
 
 			std::string content = Util::Helper::readFile(cdn + r);
 			Response(c, contentType, content, use_zlib & gzip);
 		}
-		catch (const std::exception &e)
-		{
+		catch (const std::exception& e) {
 			std::cerr << "Server: error returning requested file (" << r << "): " << e.what() << std::endl;
 			Response(c, "text/html", std::string(""), true);
 		}
 	}
-	else if (r == "/favicon.ico")
-	{
-		ResponseRaw(c, "text/html", (char *)favicon_ico_gzip, favicon_ico_gzip_len, true);
+	else if (r == "/favicon.ico") {
+		ResponseRaw(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
 	}
-	else if (r == "/kml" && KML)
-	{
+	else if (r == "/kml" && KML) {
 		std::string content = ships.getKML();
 		Response(c, "application/text", content, use_zlib);
 	}
-	else if (r == "/metrics")
-	{
-		if (supportPrometheus)
-		{
+	else if (r == "/metrics") {
+		if (supportPrometheus) {
 			std::string content = dataPrometheus.toPrometheus();
 			Response(c, "application/text", content, use_zlib);
 			dataPrometheus.Reset();
 		}
 	}
-	else if (r == "/stat.json")
-	{
+	else if (r == "/stat.json") {
 
 		std::string content;
 
@@ -453,13 +402,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		const uint64_t MB = 1000000;
 		int norm = 0;
 
-		if (raw_counter.received > GB)
-		{
+		if (raw_counter.received > GB) {
 			norm = (raw_counter.received + (GB / 20)) / (GB / 10);
 			unit = "GB";
 		}
-		else
-		{
+		else {
 			norm = (raw_counter.received + (MB / 20)) / (MB / 10);
 			unit = "MB";
 		}
@@ -471,123 +418,99 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/ships.json")
-	{
+	else if (r == "/ships.json") {
 		std::string content = ships.getJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/ships_array.json")
-	{
+	else if (r == "/ships_array.json") {
 		std::string content = ships.getJSONcompact();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/sb")
-	{
+	else if (r == "/sb") {
 		binary.clear();
 		ships.getBinary(binary);
 		Response(c, "application/octet-stream", binary.data(), binary.size(), use_zlib & gzip);
 	}
-	else if (r == "/ships_full.json")
-	{
+	else if (r == "/ships_full.json") {
 
 		std::string content = ships.getJSON(true);
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/sse")
-	{
+	else if (r == "/sse") {
 		if (realtime)
 			upgradeSSE(c, 1);
 	}
-	else if (r == "/signal")
-	{
+	else if (r == "/signal") {
 		if (realtime)
 			upgradeSSE(c, 2);
 	}
-	else if (r == "/icons.png")
-	{
-		ResponseRaw(c, "image/png", (char *)icons_png_gz, icons_png_gz_len, true);
+	else if (r == "/icons.png") {
+		ResponseRaw(c, "image/png", (char*)icons_png_gz, icons_png_gz_len, true);
 	}
-	else if (r == "/config.js")
-	{
+	else if (r == "/config.js") {
 		Response(c, "application/javascript", params + plugins + "\nserver_version = false;\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
-	else if (r == "/config.css")
-	{
+	else if (r == "/config.css") {
 		Response(c, "text/css", stylesheets, use_zlib & gzip);
 	}
-	else if (r == "/about.md")
-	{
+	else if (r == "/about.md") {
 		Response(c, "text/markdown", about, use_zlib & gzip);
 	}
-	else if (r == "/path.json")
-	{
+	else if (r == "/path.json") {
 		std::stringstream ss(a);
 		std::string mmsi_str;
 		std::string content = "{";
 
-		while (std::getline(ss, mmsi_str, ','))
-		{
-			try
-			{
+		while (std::getline(ss, mmsi_str, ',')) {
+			try {
 				int mmsi = std::stoi(mmsi_str);
-				if (mmsi >= 1 && mmsi <= 999999999)
-				{
+				if (mmsi >= 1 && mmsi <= 999999999) {
 					if (content.length() > 1)
 						content += ",";
 					content += "\"" + std::to_string(mmsi) + "\":" + ships.getPathJSON(mmsi);
 				}
 			}
-			catch (const std::invalid_argument &)
-			{
+			catch (const std::invalid_argument&) {
 				std::cerr << "Server: path MMSI invalid: " << mmsi_str << std::endl;
 			}
-			catch (const std::out_of_range &)
-			{
+			catch (const std::out_of_range&) {
 				std::cerr << "Server: path MMSI out of range: " << mmsi_str << std::endl;
 			}
 		}
 		content += "}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/allpath.json")
-	{
+	else if (r == "/allpath.json") {
 
 		std::string content = ships.getAllPathJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/geojson" && GeoJSON)
-	{
+	else if (r == "/geojson" && GeoJSON) {
 		std::string content = ships.getGeoJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/message")
-	{
+	else if (r == "/message") {
 		int mmsi = -1;
 		std::stringstream ss(a);
-		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
-		{
+		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999) {
 			std::string content = ships.getMessage(mmsi);
 			Response(c, "application/text", content, use_zlib & gzip);
 		}
 		else
 			Response(c, "application/text", "Message not availaible");
 	}
-	else if (r == "/vessel")
-	{
+	else if (r == "/vessel") {
 		std::stringstream ss(a);
 		int mmsi;
-		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
-		{
+		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999) {
 			std::string content = ships.getShipJSON(mmsi);
 			Response(c, "application/text", content, use_zlib & gzip);
 		}
-		else
-		{
+		else {
 			Response(c, "application/text", "Vessel not available");
 		}
 	}
-	else if (r == "/history_full.json")
-	{
+	else if (r == "/history_full.json") {
 
 		std::string content = "{";
 		content += "\"second\":";
@@ -606,56 +529,45 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		HTTPServer::Request(c, r, false);
 }
 
-Setting &WebViewer::Set(std::string option, std::string arg)
-{
+Setting& WebViewer::Set(std::string option, std::string arg) {
 	Util::Convert::toUpper(option);
 
-	if (option == "PORT")
-	{
+	if (option == "PORT") {
 		port_set = true;
 		firstport = lastport = Util::Parse::Integer(arg, 1, 65535, option);
 	}
-	else if (option == "SERVER_MODE")
-	{
+	else if (option == "SERVER_MODE") {
 		bool b = Util::Parse::Switch(arg);
 		ships.setServerMode(b);
 	}
-	else if (option == "ZLIB")
-	{
+	else if (option == "ZLIB") {
 		use_zlib = Util::Parse::Switch(arg);
 	}
-	else if (option == "GROUPS_IN")
-	{
+	else if (option == "GROUPS_IN") {
 		groups_in = Util::Parse::Integer(arg);
 	}
-	else if (option == "PORT_MIN")
-	{
+	else if (option == "PORT_MIN") {
 		port_set = true;
 		firstport = Util::Parse::Integer(arg, 1, 65535, option);
 		lastport = MAX(firstport, lastport);
 	}
-	else if (option == "PORT_MAX")
-	{
+	else if (option == "PORT_MAX") {
 		port_set = true;
 		lastport = Util::Parse::Integer(arg, 1, 65535, option);
 		firstport = MIN(firstport, lastport);
 	}
-	else if (option == "STATION")
-	{
+	else if (option == "STATION") {
 		station.clear();
 		JSON::StringBuilder::stringify(arg, station);
 	}
-	else if (option == "STATION_LINK")
-	{
+	else if (option == "STATION_LINK") {
 		station_link.clear();
 		JSON::StringBuilder::stringify(arg, station_link);
 	}
-	else if (option == "LAT")
-	{
+	else if (option == "LAT") {
 		ships.setLat(Util::Parse::Float(arg));
 	}
-	else if (option == "CUTOFF")
-	{
+	else if (option == "CUTOFF") {
 		int cutoff = Util::Parse::Integer(arg, 0, 10000, option);
 		hist_minute.setCutoff(cutoff);
 		hist_second.setCutoff(cutoff);
@@ -665,127 +577,103 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		counter.setCutOff(cutoff);
 		counter_session.setCutOff(cutoff);
 	}
-	else if (option == "SHARE_LOC")
-	{
+	else if (option == "SHARE_LOC") {
 		bool b = Util::Parse::Switch(arg);
 		ships.setShareLatLon(b);
 		plugins += "param_share_loc=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
-	else if (option == "IP_BIND")
-	{
+	else if (option == "IP_BIND") {
 		setIP(arg);
 	}
-	else if (option == "CONTEXT")
-	{
+	else if (option == "CONTEXT") {
 		plugins += "context='" + arg + "';\n";
 	}
-	else if (option == "MESSAGE" || option == "MSG")
-	{
+	else if (option == "MESSAGE" || option == "MSG") {
 		bool b = Util::Parse::Switch(arg);
 		ships.setMsgSave(b);
 		plugins += "message_save=" + (b ? std::string("true;\n") : std::string("false;\n"));
 	}
-	else if (option == "LON")
-	{
+	else if (option == "LON") {
 		ships.setLon(Util::Parse::Float(arg));
 	}
-	else if (option == "USE_GPS")
-	{
+	else if (option == "USE_GPS") {
 		ships.setUseGPS(Util::Parse::Switch(arg));
 	}
-	else if (option == "KML")
-	{
+	else if (option == "KML") {
 		KML = Util::Parse::Switch(arg);
 	}
-	else if (option == "GEOJSON")
-	{
+	else if (option == "GEOJSON") {
 		GeoJSON = Util::Parse::Switch(arg);
 	}
-	else if (option == "OWN_MMSI")
-	{
+	else if (option == "OWN_MMSI") {
 		ships.setOwnMMSI(Util::Parse::Integer(arg, 0, 999999999, option));
 	}
-	else if (option == "HISTORY")
-	{
-		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 3600, option));
+	else if (option == "HISTORY") {
+		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 12 * 3600, option));
 	}
-	else if (option == "FILE")
-	{
+	else if (option == "FILE") {
 		filename = arg;
 	}
-	else if (option == "CDN")
-	{
+	else if (option == "CDN") {
 		cdn = arg;
 		std::cerr << "Fetch Web Libraries locally at " << arg << std::endl;
 	}
-	else if (option == "BACKUP")
-	{
+	else if (option == "BACKUP") {
 		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60, option);
 	}
-	else if (option == "REALTIME")
-	{
+	else if (option == "REALTIME") {
 		realtime = Util::Parse::Switch(arg);
 		if (realtime)
 			plugins += "realtime_enabled = true;\n";
 		else
 			plugins += "realtime_enabled = false;\n";
 	}
-	else if (option == "PLUGIN")
-	{
+	else if (option == "PLUGIN") {
 		addPlugin(arg);
 	}
-	else if (option == "STYLE")
-	{
+	else if (option == "STYLE") {
 		std::cerr << "Server: adding plugin (CSS): " << arg << std::endl;
 		plugins += "console.log('css:" + arg + "');";
 		plugins += "plugins += 'CSS: " + arg + "\\n';";
 
 		stylesheets += "/* ================ */\n";
 		stylesheets += "/* CSS plugin: " + arg + "*/\n";
-		try
-		{
+		try {
 			stylesheets += Util::Helper::readFile(arg) + "\n";
 		}
-		catch (const std::exception &e)
-		{
+		catch (const std::exception& e) {
 			stylesheets += "/* FAILED */\r\n";
 			std::cerr << "Server: style plugin error - " << e.what() << std::endl;
 			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
 		}
 	}
-	else if (option == "PLUGIN_DIR")
-	{
-		const std::vector<std::string> &files_js = Util::Helper::getFilesWithExtension(arg, ".pjs");
+	else if (option == "PLUGIN_DIR") {
+		const std::vector<std::string>& files_js = Util::Helper::getFilesWithExtension(arg, ".pjs");
 		for (auto f : files_js)
 			Set("PLUGIN", f);
 
-		const std::vector<std::string> &files_ss = Util::Helper::getFilesWithExtension(arg, ".pss");
+		const std::vector<std::string>& files_ss = Util::Helper::getFilesWithExtension(arg, ".pss");
 		for (auto f : files_ss)
 			Set("STYLE", f);
 
 		if (!files_ss.size() && !files_js.size())
 			std::cerr << "Server: no plugin files found in directory." << std::endl;
 	}
-	else if (option == "ABOUT")
-	{
+	else if (option == "ABOUT") {
 		std::cerr << "Server: about context from " << arg << std::endl;
 		plugins += "aboutMDpresent = true;";
 		about = Util::Helper::readFile(arg);
 	}
-	else if (option == "PROME")
-	{
+	else if (option == "PROME") {
 		supportPrometheus = Util::Parse::Switch(arg);
 	}
-	else if (option == "REUSE_PORT")
-	{
+	else if (option == "REUSE_PORT") {
 		setReusePort(Util::Parse::Switch(arg));
 	}
-	else if (!filter.SetOption(option, arg))
-	{
+	else if (!filter.SetOption(option, arg)) {
 		throw std::runtime_error("unrecognized setting for HTML service: " + option + " " + arg);
 	}
-	else
-	{
+	else {
 		ships.setFilterOption(option, arg);
 		raw_counter.setFilterOption(option, arg);
 	}
