@@ -1,31 +1,94 @@
 #!/bin/bash
 
-# Function to print usage information
-print_usage() {
-  echo "Usage: $0 [--no-driver]"
-  echo "Options:"
-  echo "  --no-driver   Exclude all driver development packages from installation."
-  exit 1
+# Include and library directories
+INCLUDE_DIRS_RTLSDR=("/usr/local/include" "/usr/include" "/opt/include" "/opt/local/include")
+LIBRARY_DIRS_RTLSDR=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
+INCLUDE_DIRS_AIRSPY=("/usr/local/include" "/usr/include")
+LIBRARY_DIRS_AIRSPY=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
+INCLUDE_DIRS_AIRSPYHF=("/usr/local/include" "/usr/include")
+LIBRARY_DIRS_AIRSPYHF=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
+INCLUDE_DIRS_HACKRF=("/usr/include/libhackrf" "/usr/local/include" "/usr/include")
+LIBRARY_DIRS_HACKRF=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
+
+install_librtlsdr_from_source() {
+  cd rtl-sdr/
+  mkdir build
+  cd build
+  cmake ../
+  make
+  sudo make install
+  sudo ldconfig
+  cd ../..
+  rm -rf rtl-sdr
 }
 
-# Parse command-line arguments
-NO_DRIVER=false
+install_package_apt() {
+    local package_name=$1
+    sudo apt-get update
+    sudo apt-get install -y "$package_name"
+}
 
-while [[ "$#" -gt 0 ]]; do
-  case $1 in
-    --no-driver) NO_DRIVER=true ;;
-    *) print_usage ;;
-  esac
-  shift
-done
+# Generic function to check for a library
+check_library() {
+    local pkg_name=$1
+    local header_name=$2
+    local library_name=$3
+    local include_dirs=("${!4}")
+    local library_dirs=("${!5}")
+    local install_func=$6
 
-# Install dependencies using apt
+    if ! pkg-config --exists "$pkg_name"; then
+        echo "pkg-config module for $pkg_name not found."
+
+        local header_found=false
+        local library_found=false
+
+        for dir in "${include_dirs[@]}"; do
+            if [[ -f "$dir/$header_name" ]]; then
+                header_found=true
+                break
+            fi
+        done
+
+        for dir in "${library_dirs[@]}"; do
+            if [[ -f "$dir/$library_name.so" || -f "$dir/$library_name.a" ]]; then
+                library_found=true
+                break
+            fi
+        done
+
+        if [[ "$header_found" == true && "$library_found" == true ]]; then
+            echo "$pkg_name header and library files found in include and library directories."
+        else
+            echo "$pkg_name header or library files not found. Installing..."
+            $install_func
+        fi
+    else
+        echo "pkg-config module for $pkg_name found."
+    fi
+}
+
+install_SDR_libraries() {
+    # Check and install librtlsdr from source
+    check_library "librtlsdr" "rtl-sdr.h" "librtlsdr" INCLUDE_DIRS_RTLSDR[@] LIBRARY_DIRS_RTLSDR[@] install_librtlsdr_from_source
+
+    # Check and install libairspy
+    check_library "libairspy" "airspy.h" "libairspy" INCLUDE_DIRS_AIRSPY[@] LIBRARY_DIRS_AIRSPY[@] "install_package_apt libairspy-dev"
+
+    # Check and install libairspyhf
+    check_library "libairspyhf" "airspyhf.h" "libairspyhf" INCLUDE_DIRS_AIRSPYHF[@] LIBRARY_DIRS_AIRSPYHF[@] "install_package_apt libairspyhf-dev"
+
+    # Check and install libhackrf
+    check_library "libhackrf" "hackrf.h" "libhackrf" INCLUDE_DIRS_HACKRF[@] LIBRARY_DIRS_HACKRF[@] "install_package_apt libhackrf-dev"
+
+    echo "All checks completed."
+}
+
 install_dependencies() {
   DEPS=""
   
-  # Conditionally add dependencies based on flags
   if [ "$NO_DRIVER" = false ]; then
-    DEPS+="librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev "
+    DEPS+=" libairspy-dev libairspyhf-dev libhackrf-dev "
   fi
   
   DEPS+="cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev"
@@ -36,6 +99,10 @@ install_dependencies() {
     apt-get install -y $DEPS
   fi
 }
+
+
+echo "All checks completed."
+
 
 # Build the NMEA2000 library
 build_nmea2000() {
@@ -112,6 +179,7 @@ echo "Starting AIS Catcher installation script via source..."
 
 # Install build dependencies
 install_dependencies
+install_SDR_libraries
 
 # Setup configuration files
 CONFIG_DIR="/etc/AIS-catcher"
