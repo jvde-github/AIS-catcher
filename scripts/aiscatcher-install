@@ -11,15 +11,15 @@ INCLUDE_DIRS_HACKRF=("/usr/include/libhackrf" "/usr/local/include" "/usr/include
 LIBRARY_DIRS_HACKRF=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
 
 install_librtlsdr_from_source() {
-  cd rtl-sdr/
-  mkdir build
-  cd build
-  cmake ../
-  make
-  sudo make install
-  sudo ldconfig
-  cd ../..
-  rm -rf rtl-sdr
+    git clone https://gitea.osmocom.org/sdr/rtl-sdr
+    cd rtl-sdr/
+    mkdir build
+    cd build
+    cmake ../
+    make
+    sudo make install
+    sudo ldconfig
+    cd ../..
 }
 
 install_package_apt() {
@@ -85,13 +85,8 @@ install_SDR_libraries() {
 }
 
 install_dependencies() {
-  DEPS=""
-  
-  if [ "$NO_DRIVER" = false ]; then
-    DEPS+=" libairspy-dev libairspyhf-dev libhackrf-dev "
-  fi
-  
-  DEPS+="cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev"
+
+  DEPS="git cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev libzmq3-dev"
   
   if [ -n "$DEPS" ]; then
     echo "Installing build dependencies: $DEPS"
@@ -145,7 +140,6 @@ copy_and_restart_service() {
 
   echo "Copying AIS-catcher executable to /usr/bin"
   cp AIS-catcher/build/AIS-catcher /usr/bin
-  cp AIS-catcher/scripts/aiscatcher-config /usr/bin
 
   if $SERVICE_ACTIVE; then
     echo "Starting $SERVICE_NAME..."
@@ -171,12 +165,17 @@ setup_systemd_service() {
   echo "WantedBy=multi-user.target" >> "$SERVICE_FILE"
 
   systemctl daemon-reload
-  systemctl enable ais-catcher.service
+  #systemctl enable ais-catcher.service
 }
 
 # Main script execution
+echo "******************************************************"
 echo "Starting AIS Catcher installation script via source..."
+echo "******************************************************"
 
+echo "******************************************************"
+echo "Installing dependencies..............................."
+echo "******************************************************"
 # Install build dependencies
 install_dependencies
 install_SDR_libraries
@@ -189,15 +188,63 @@ CMD_FILE="$CONFIG_DIR/config.cmd"
 mkdir -p "$CONFIG_DIR"
 if [ ! -f "$CONFIG_FILE" ]; then
   echo "Creating config.json file..."
-  echo '{ "config": "aiscatcher", "version": 1, "screen": 2 }' > "$CONFIG_FILE"
+  echo '{ "config": "aiscatcher", "version": 1 }' > "$CONFIG_FILE"
 fi
 if [ ! -f "$CMD_FILE" ]; then
   echo "Creating config.cmd file..."
-  echo '' > "$CMD_FILE"
+#!/bin/bash
+
+# Ensure the directory exists
+sudo mkdir -p /etc/ais-catcher
+
+# Write the provided content to config.cmd
+sudo bash -c "cat > $CMD_FILE" <<EOF
+# after saving this file, run
+# sudo systemctl restart ais-catcher.service
+# to update the program. 
+
+# select the device for decoding
+-d:0
+# or select via providing a serial number:
+# -d serialxxxx
+
+# Share your feed with the project site aiscatcher.org
+-X
+# Or get a sharing key at https://aiscatcher.org/addstation_ac and list your station in the station list:
+# -X sharing_key
+
+# ******************************************
+# Defining Webviewer
+
+# open a webviewer at port 8100:
+-N 8100
+# set your locacation and allow viewing in the webviewer:
+# LAT 12.3 LON 4.3 SHARE_LOC ON
+
+
+# ******************************************
+# Sharing with commercial aggregators
+
+# Share your data via UDP at IP address (127.0.0.1) and port (10110) (repeat as often as you want):
+# -u 127.0.0.1 10110
+
+# Share your data via UDP but reset the connection every 5 minutes to recover from any network issues
+# -u 127.0.0.1 10110 RESET 5
+
+# Share your data as a TCP client with IP address and port (repeat as often as you want):
+# -P IP port
+
+# Set up a TCP listening server at port, e.g. 5012:
+# -S 5012
+EOF
+
+echo "Config file created at $CMD_FILE"
+
 fi
 
-# Setup systemd service
-setup_systemd_service
+echo "******************************************************"
+echo "Building from source.................................."
+echo "******************************************************"
 
 # Create a temporary directory for building the projects
 TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
@@ -209,6 +256,13 @@ build_nmea2000
 
 # Build the AIS-catcher project
 build_ais_catcher
+
+echo "******************************************************"
+echo "Setup System Service.................................."
+echo "******************************************************"
+
+# Setup systemd service
+setup_systemd_service
 
 # Copy executable and restart service if necessary
 copy_and_restart_service

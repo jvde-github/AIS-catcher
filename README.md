@@ -34,48 +34,57 @@ Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We w
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry.
 
-## Quick Start guide for Raspberry
+## Quick Start Guide for Installing and Running AIS-catcher on Raspberry Pi/Ubuntu/Debian Systems
 
-This is a quick guide to install and run AIS-catcher on a Raspberry device and set it up to run as a background service (also works for Ubuntu and Debian systems). 
+This guide provides instructions for installing AIS-catcher on Debian-based systems (like Raspberry Pi) and setting it up to run as a background service. This ensures AIS-catcher will automatically start when the machine is booted.
+### Installation
 
-The following instruction installs AIS-catcher but can also be used to update an existing system. Open a terminal on the Raspberry 2+ or log in via ssh and copy/paste the following command:
-
+To install or update AIS-catcher, open a terminal or log in via SSH, then run the following command:
 ```bash
 sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
-> In some cases it can be useful to install and build from source. In this case the application is optimized for the specific hardware but can take bit longer to install and update:
->```bash
->sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install-source)"
->```
->Use this script also for older Raspberry Pi versions. 
-> This builds and installs the application with full support for all native SDR drivers included in your OS. If you run hardware that is not natively supported by the OS or you 
-> already have the drivers installed. You can use:
->```bash
->wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install-source -O /tmp/aiscatcher-install-source.sh && chmod +x /tmp/aiscatcher-install-source.sh && sudo /tmp/aiscatcher-install-source.sh --no-driver
->```
->This will look for available SDR drivers on the system and include these in the build.
->For RTL-SDR V4, install the driver following the instructions from the manufacturer and subsequently use above command.
+The script will install all dependencies and build AIS-catcher. The required SDR libraries for most SDRs is install from the official packages if cannot be found on the system. For the RTL-SDR we build from source from the official package to guarantee support for the RTL-SDR V4, but only if the package is not already installed on the system.
 
+### Verifying the installation
 
-If succesful AIS-catcher is now installed/updated and can be run as follows:
+To verify that AIS-catcher is installed or updated, run:
 ```bash
-/usr/bin/AIS-catcher -h
+/usr/bin/AIS-catcher -L
 ```
-For a detailed description of command line parameters see below. A configuration file is stored in `/etc/AIS-catcher/config.json` as JSON config (see below) and `/etc/AIS-catcher/config.cmd` as command line parameters. These will both be used when running AIS-catcher as a background service.
-
-To get the program up and running with your dongle in the background, some basic configuration can also be done with our configuration tool:
-```bash
-sudo aiscatcher-config
+Not you can start playing with the various command line options, e.g. to start some basic decoding with a webviewer at `http://localhost:8100`:
+```console
+/usr/bin/AIS-catcher -v 10 -N 8100
 ```
+If all works, you should start seeing NMEA lines on screen and the webviewer active at the aforementioned address.
 
-![Screenshot from 2024-07-19 22-42-14](https://github.com/user-attachments/assets/36b9216d-59f0-4c5d-ad33-88d298a1da8d)
+### Configuration
 
-This has functionality to set the verbose mode, the type of message output to screen and switch on sharing with `aiscatcher.org`. An optional sharing key can be obtained from
-the  [website](https://aiscatcher.org/addstation_ac) or you can leave it empty. If you have multiple dongles you can also select the specific device.
+For running AIS-catcher as a background service we can use two configuration files:
 
-After this basic configuration you can perform a test run with the option `test in foreground`. The program will start and hopefully messages will come in. If everything works as expected you can stop this process (CTRL-C). Back in the menu you can start and stop AIS-catcher running in the background via Start and Stop service in the menu. That is all. Use the option to view the status of the background process.
+- /etc/AIS-catcher/config.json (JSON configuration)
+- /etc/AIS-catcher/config.cmd (command line parameters)
 
-This is fairly new and under development so any feedback is appreciated. 
+You can edit the configuration file /etc/AIS-catcher/config.cmd to capture your equivalent settings. Lines starting with # are comments and ignored. The default file contains comments for popular options, which can be modified using a text editor, for example:
+```console
+sudo nano /etc/AIS-catcher/config.cmd
+``` `
+
+### Running AIS-catcher as a Background Service
+
+To start AIS-catcher as a background service, use:
+```console
+sudo systemctl start ais-catcher.service
+```
+To view the status of the service, run:
+```console
+sudo systemctl start ais-catcher.service
+```
+To ensure AIS-catcher starts automatically at boot time, enable the service with:
+```console
+sudo systemctl enable ais-catcher.service
+```
+### Feedback
+This is fairly new script and under development so any feedback is appreciated. 
 
 
 
