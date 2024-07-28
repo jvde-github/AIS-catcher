@@ -51,7 +51,7 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	uint32_t own_mmsi = 0;
 
 	int N = 4096;
-	int M = 4096;
+	int M = 4096 * 16;
 
 	std::vector<Ship> ships;
 	std::vector<PathPoint> paths;
