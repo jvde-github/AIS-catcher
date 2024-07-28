@@ -3679,7 +3679,7 @@ function updateShipTableColumnVisibility() {
 }
 
 function resetShipTableColumns() {
-    const excludedFields = ['validated', 'count', 'channels', 'group_mask', 'msg_type', 'MSG6', 'MSG8', 'MSG27', 'shipclass', 'class', 'dimension', 'draught', 'eta', 'destination', 'country'
+    const excludedFields = ['validated', 'count', 'channels', 'group_mask', 'msg_type', 'MSG6', 'MSG8', 'MSG27', 'class', 'dimension', 'draught', 'eta', 'destination', 'country'
     ];
 
     const allColumns = table.getColumns();
