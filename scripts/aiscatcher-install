@@ -1,258 +1,219 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Include and library directories
-INCLUDE_DIRS_RTLSDR=("/usr/local/include" "/usr/include" "/opt/include" "/opt/local/include")
-LIBRARY_DIRS_RTLSDR=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
-INCLUDE_DIRS_AIRSPY=("/usr/local/include" "/usr/include")
-LIBRARY_DIRS_AIRSPY=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
-INCLUDE_DIRS_AIRSPYHF=("/usr/local/include" "/usr/include")
-LIBRARY_DIRS_AIRSPYHF=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
-INCLUDE_DIRS_HACKRF=("/usr/include/libhackrf" "/usr/local/include" "/usr/include")
-LIBRARY_DIRS_HACKRF=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
+set -euo pipefail
 
-install_librtlsdr_from_source() {
-    apt install libusb-1.0-0-dev
-    git clone https://gitea.osmocom.org/sdr/rtl-sdr
-    cd rtl-sdr/
-    mkdir build
-    cd build
-    cmake ../
-    make
-    sudo make install
-    sudo ldconfig
-    cd ../..
+# Constants
+readonly SCRIPT_NAME=$(basename "$0")
+readonly LOG_FILE="/var/log/${SCRIPT_NAME%.*}.log"
+readonly TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
+readonly CONFIG_DIR="/etc/AIS-catcher"
+readonly CONFIG_FILE="${CONFIG_DIR}/config.json"
+readonly CMD_FILE="${CONFIG_DIR}/config.cmd"
+readonly SERVICE_NAME="ais-catcher.service"
+readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
+
+# SDR library paths
+readonly INCLUDE_DIRS=("/usr/local/include" "/usr/include" "/opt/include" "/opt/local/include")
+readonly LIBRARY_DIRS=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
+
+# Logger function
+log() {
+    local level="$1"
+    shift
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [${level}] $*" | tee -a "$LOG_FILE"
 }
 
-install_package_apt() {
-    local package_name=$1
-    sudo apt-get update
-    sudo apt-get install -y "$package_name"
+# Error handler
+error_exit() {
+    log "ERROR" "$1"
+    exit 1
 }
 
-# Generic function to check for a library
+# Cleanup function
+cleanup() {
+    log "INFO" "Cleaning up temporary directory ${TMP_DIR}"
+    rm -rf "$TMP_DIR"
+}
+
+# Install dependencies
+install_dependencies() {
+    local deps="git cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev libzmq3-dev unzip libusb-1.0-0-dev"
+    log "INFO" "Installing build dependencies: $deps"
+    sudo apt-get update || error_exit "Failed to update package lists"
+    sudo apt-get install -y $deps || error_exit "Failed to install dependencies"
+}
+
+# Check for library
 check_library() {
-    local pkg_name=$1
-    local header_name=$2
-    local library_name=$3
-    local include_dirs=("${!4}")
-    local library_dirs=("${!5}")
-    local install_func=$6
+    local lib_name="$1"
+    local header_name="$2"
+    local lib_file="$3"
 
-    if ! pkg-config --exists "$pkg_name"; then
-        echo "pkg-config module for $pkg_name not found."
+    log "INFO" "Checking for ${lib_name}"
 
-        local header_found=false
-        local library_found=false
+    if pkg-config --exists "${lib_name}"; then
+        log "INFO" "${lib_name} found via pkg-config"
+        return 0
+    fi
 
-        for dir in "${include_dirs[@]}"; do
-            if [[ -f "$dir/$header_name" ]]; then
-                header_found=true
-                break
-            fi
-        done
+    local header_found=false
+    local library_found=false
 
-        for dir in "${library_dirs[@]}"; do
-            if [[ -f "$dir/$library_name.so" || -f "$dir/$library_name.a" ]]; then
-                library_found=true
-                break
-            fi
-        done
-
-        if [[ "$header_found" == true && "$library_found" == true ]]; then
-            echo "$pkg_name header and library files found in include and library directories."
-        else
-            echo "$pkg_name header or library files not found. Installing..."
-            $install_func
+    for dir in "${INCLUDE_DIRS[@]}"; do
+        if [[ -f "${dir}/${header_name}" ]]; then
+            header_found=true
+            break
         fi
+    done
+
+    for dir in "${LIBRARY_DIRS[@]}"; do
+        if [[ -f "${dir}/${lib_file}.so" || -f "${dir}/${lib_file}.a" ]]; then
+            library_found=true
+            break
+        fi
+    done
+
+    if [[ "$header_found" == true && "$library_found" == true ]]; then
+        log "INFO" "${lib_name} found in system directories"
+        return 0
     else
-        echo "pkg-config module for $pkg_name found."
+        log "WARN" "${lib_name} not found"
+        return 1
     fi
 }
 
-install_SDR_libraries() {
-    # Check and install librtlsdr from source
-    check_library "librtlsdr" "rtl-sdr.h" "librtlsdr" INCLUDE_DIRS_RTLSDR[@] LIBRARY_DIRS_RTLSDR[@] install_librtlsdr_from_source
-
-    # Check and install libairspy
-    check_library "libairspy" "airspy.h" "libairspy" INCLUDE_DIRS_AIRSPY[@] LIBRARY_DIRS_AIRSPY[@] "install_package_apt libairspy-dev"
-
-    # Check and install libairspyhf
-    check_library "libairspyhf" "airspyhf.h" "libairspyhf" INCLUDE_DIRS_AIRSPYHF[@] LIBRARY_DIRS_AIRSPYHF[@] "install_package_apt libairspyhf-dev"
-
-    # Check and install libhackrf
-    check_library "libhackrf" "hackrf.h" "libhackrf" INCLUDE_DIRS_HACKRF[@] LIBRARY_DIRS_HACKRF[@] "install_package_apt libhackrf-dev"
-
-    echo "All checks completed."
+# Install librtlsdr from source
+install_librtlsdr_from_source() {
+    log "INFO" "Installing librtlsdr from source"
+    git clone https://gitea.osmocom.org/sdr/rtl-sdr || error_exit "Failed to clone rtl-sdr repository"
+    cd rtl-sdr || error_exit "Failed to change directory to rtl-sdr"
+    mkdir build && cd build || error_exit "Failed to create and enter build directory"
+    cmake ../ || error_exit "Failed to run cmake"
+    make || error_exit "Failed to build rtl-sdr"
+    sudo make install || error_exit "Failed to install rtl-sdr"
+    sudo ldconfig || error_exit "Failed to run ldconfig"
+    cd ../.. || error_exit "Failed to return to parent directory"
 }
 
-install_dependencies() {
+# Install SDR libraries
+install_sdr_libraries() {
+    local libraries=(
+        "librtlsdr:rtl-sdr.h:librtlsdr"
+        "libairspy:airspy.h:libairspy"
+        "libairspyhf:airspyhf.h:libairspyhf"
+        "libhackrf:hackrf.h:libhackrf"
+    )
 
-  DEPS="git cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev libzmq3-dev unzip"
-  
-  if [ -n "$DEPS" ]; then
-    echo "Installing build dependencies: $DEPS"
-    apt-get update
-    apt-get install -y $DEPS
-  fi
+    for lib_info in "${libraries[@]}"; do
+        IFS=':' read -r lib_name header lib_file <<< "$lib_info"
+        if ! check_library "$lib_name" "$header" "$lib_file"; then
+            case "$lib_name" in
+                librtlsdr)
+                    install_librtlsdr_from_source
+                    ;;
+                *)
+                    log "INFO" "Installing ${lib_name}-dev"
+                    sudo apt-get install -y "${lib_name}-dev" || error_exit "Failed to install ${lib_name}-dev"
+                    ;;
+            esac
+        fi
+    done
 }
 
-echo "All checks completed."
-
-
-# Build the AIS-catcher project
+# Build AIS-catcher
 build_ais_catcher() {
-  #git clone https://github.com/jvde-github/AIS-catcher.git
-  wget https://github.com/jvde-github/AIS-catcher/archive/refs/heads/main.zip
-  unzip main.zip  > /dev/null
-  mv AIS-catcher-main AIS-catcher
-
-  cd AIS-catcher
-  ./scripts/build-NMEA2000.sh
+    log "INFO" "Building AIS-catcher"
+    wget https://github.com/jvde-github/AIS-catcher/archive/refs/heads/main.zip || error_exit "Failed to download AIS-catcher"
+    unzip main.zip > /dev/null || error_exit "Failed to unzip AIS-catcher"
+    cd AIS-catcher-main
+    ./scripts/build-NMEA2000.sh
+   cd ..
 }
 
-# Copy executable and restart service if running
-copy_and_restart_service() {
-  SERVICE_NAME="ais-catcher.service"
-  SERVICE_ACTIVE=false
+# Setup configuration
+setup_configuration() {
+    log "INFO" "Setting up configuration files"
+    sudo mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
+    
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        echo '{ "config": "aiscatcher", "version": 1 }' | sudo tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
+    fi
+    
+    if [[ ! -f "$CMD_FILE" ]]; then
+        cat << EOF | sudo tee "$CMD_FILE" > /dev/null || error_exit "Failed to create config.cmd"
+# AIS-catcher configuration
+# Uncomment and modify options as needed
 
-  if systemctl is-active --quiet $SERVICE_NAME; then
-    SERVICE_ACTIVE=true
-    echo "Stopping $SERVICE_NAME..."
-    systemctl stop $SERVICE_NAME
-  fi
+# Select device for decoding
+-d:0
 
-  echo "Copying AIS-catcher executable to /usr/bin"
-  cp AIS-catcher/build/AIS-catcher /usr/bin
+# Share feed with aiscatcher.org
+-X
 
-  if $SERVICE_ACTIVE; then
-    echo "Starting $SERVICE_NAME..."
-    systemctl start $SERVICE_NAME
-  fi
+# Open webviewer at port 8100
+-N 8100
+
+# Uncomment to set location and allow viewing in webviewer
+# LAT 12.3 LON 4.3 SHARE_LOC ON
+
+# Uncomment to share data via UDP
+# -u 127.0.0.1 10110
+
+# Uncomment to set up a TCP listening server
+# -S 5012
+EOF
+    fi
 }
 
 # Setup systemd service
 setup_systemd_service() {
-  SERVICE_DIR="/etc/systemd/system"
-  SERVICE_FILE="$SERVICE_DIR/ais-catcher.service"
+    log "INFO" "Setting up systemd service"
+    cat << EOF | sudo tee "$SERVICE_FILE" > /dev/null || error_exit "Failed to create service file"
+[Unit]
+Description=AIS-catcher Service
+After=network.target
 
-  mkdir -p "$SERVICE_DIR"
-  echo "[Unit]" > "$SERVICE_FILE"
-  echo "Description=AIS-catcher Service" >> "$SERVICE_FILE"
-  echo "After=network.target" >> "$SERVICE_FILE"
-  echo "" >> "$SERVICE_FILE"
-  echo "[Service]" >> "$SERVICE_FILE"
-  echo "ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json \$(/bin/grep -v \"^#\" /etc/AIS-catcher/config.cmd | /usr/bin/tr \"\\n\" \" \")'" >> "$SERVICE_FILE"
-  echo "Restart=always" >> "$SERVICE_FILE"
-  echo "" >> "$SERVICE_FILE"
-  echo "[Install]" >> "$SERVICE_FILE"
-  echo "WantedBy=multi-user.target" >> "$SERVICE_FILE"
+[Service]
+ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -C ${CONFIG_FILE} \$(/bin/grep -v "^#" ${CMD_FILE} | /usr/bin/tr "\n" " ")'
+Restart=always
 
-  systemctl daemon-reload
-  #systemctl enable ais-catcher.service
-}
-
-# Main script execution
-echo "******************************************************"
-echo "Starting AIS Catcher installation script via source..."
-echo "******************************************************"
-
-# Create a temporary directory for building the projects
-TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
-echo "Created temporary directory $TMP_DIR"
-cd "$TMP_DIR"
-
-echo "******************************************************"
-echo "Installing dependencies..............................."
-echo "******************************************************"
-# Install build dependencies
-install_dependencies
-install_SDR_libraries
-
-# Setup configuration files
-CONFIG_DIR="/etc/AIS-catcher"
-CONFIG_FILE="$CONFIG_DIR/config.json"
-CMD_FILE="$CONFIG_DIR/config.cmd"
-
-mkdir -p "$CONFIG_DIR"
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "Creating config.json file..."
-  echo '{ "config": "aiscatcher", "version": 1 }' > "$CONFIG_FILE"
-fi
-if [ ! -f "$CMD_FILE" ]; then
-  echo "Creating config.cmd file..."
-#!/bin/bash
-
-# Ensure the directory exists
-sudo mkdir -p /etc/ais-catcher
-
-# Write the provided content to config.cmd
-sudo bash -c "cat > $CMD_FILE" <<EOF
-# after saving this file, run
-# sudo systemctl restart ais-catcher.service
-# to update the program. 
-
-# select the device for decoding
--d:0
-# or select via providing a serial number:
-# -d serialxxxx
-
-# Share your feed with the project site aiscatcher.org
--X
-# Or get a sharing key at https://aiscatcher.org/addstation_ac and list your station in the station list:
-# -X sharing_key
-
-# ******************************************
-# Defining Webviewer
-
-# open a webviewer at port 8100:
--N 8100
-# set your locacation and allow viewing in the webviewer:
-# LAT 12.3 LON 4.3 SHARE_LOC ON
-
-
-# ******************************************
-# Sharing with commercial aggregators
-
-# Share your data via UDP at IP address (127.0.0.1) and port (10110) (repeat as often as you want):
-# -u 127.0.0.1 10110
-
-# Share your data via UDP but reset the connection every 5 minutes to recover from any network issues
-# -u 127.0.0.1 10110 RESET 5
-
-# Share your data as a TCP client with IP address and port (repeat as often as you want):
-# -P IP port
-
-# Set up a TCP listening server at port, e.g. 5012:
-# -S 5012
+[Install]
+WantedBy=multi-user.target
 EOF
 
-echo "Config file created at $CMD_FILE"
+    sudo systemctl daemon-reload || error_exit "Failed to reload systemd"
+    sudo systemctl enable "$SERVICE_NAME" || error_exit "Failed to enable $SERVICE_NAME"
+}
 
-fi
+# Copy executable and restart service
+copy_and_restart_service() {
+    log "INFO" "Copying AIS-catcher executable and managing service"
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        sudo systemctl stop "$SERVICE_NAME" || log "WARN" "Failed to stop $SERVICE_NAME"
+    fi
 
-echo "******************************************************"
-echo "Building from source.................................."
-echo "******************************************************"
+    sudo cp AIS-catcher-main/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 
-# Build the NMEA2000 library and project
-# build_nmea2000
+    sudo systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
+}
 
-# Build the AIS-catcher project
-build_ais_catcher
+# Main function
+main() {
+    log "INFO" "Starting AIS-catcher installation script"
+    
+    trap cleanup EXIT
+    
+    cd "$TMP_DIR" || error_exit "Failed to change to temporary directory"
+    
+    install_dependencies
+    install_sdr_libraries
+    build_ais_catcher
+    setup_configuration
+    setup_systemd_service
+    copy_and_restart_service
+    
+    log "INFO" "AIS-catcher installation completed successfully"
+}
 
-echo "******************************************************"
-echo "Setup System Service.................................."
-echo "******************************************************"
-
-# Setup systemd service
-setup_systemd_service
-
-# Copy executable and restart service if necessary
-copy_and_restart_service
-
-# Cleanup temporary directory
-cd ..
-rm -rf "$TMP_DIR"
-echo "Temporary directory $TMP_DIR deleted."
-
-echo "AIS Catcher installation script finished."
+# Run the script
+main "$@"
