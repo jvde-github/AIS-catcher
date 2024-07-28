@@ -173,6 +173,11 @@ echo "******************************************************"
 echo "Starting AIS Catcher installation script via source..."
 echo "******************************************************"
 
+# Create a temporary directory for building the projects
+TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
+echo "Created temporary directory $TMP_DIR"
+cd "$TMP_DIR"
+
 echo "******************************************************"
 echo "Installing dependencies..............................."
 echo "******************************************************"
@@ -245,11 +250,6 @@ fi
 echo "******************************************************"
 echo "Building from source.................................."
 echo "******************************************************"
-
-# Create a temporary directory for building the projects
-TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
-echo "Created temporary directory $TMP_DIR"
-cd "$TMP_DIR"
 
 # Build the NMEA2000 library and project
 build_nmea2000
