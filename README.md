@@ -43,7 +43,7 @@ To install or update AIS-catcher, open a terminal or log in via SSH, then run th
 ```console
 sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
-The script will install all dependencies and build AIS-catcher. The required SDR libraries for most SDRs is install from the official packages if cannot be found on the system. For the RTL-SDR we build from source from the official package to guarantee support for the RTL-SDR V4, but only if the package is not already installed on the system.
+The script will install all dependencies and build AIS-catcher. The required SDR libraries are installed from the official packages if they cannot be found on the system. For the RTL-SDR we build from source from the official package to guarantee support for the RTL-SDR V4 but again only if the package is not already installed on the system.
 
 #### Verifying the installation
 
