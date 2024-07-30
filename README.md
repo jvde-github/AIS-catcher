@@ -43,7 +43,7 @@ To install or update AIS-catcher, open a terminal or log in via SSH, then run th
 ```console
 sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
-The script will install all dependencies and build AIS-catcher. The required SDR libraries are installed from the official packages if they cannot be found on the system. For the RTL-SDR we build from source from the official package to guarantee support for the RTL-SDR V4 but again only if the package is not already installed on the system.
+The script will install all dependencies and build AIS-catcher. The required SDR libraries are installed from the official packages if they cannot be found on the system. For the RTL-SDR we build from source from the official package to guarantee support for the RTL-SDR V4 but, again, only if the package is not already installed on the system. On a fresh Raspberry Pi4 this will take less than 20 minutes. 
 
 #### Verifying the installation
 
@@ -51,11 +51,11 @@ To verify that AIS-catcher is installed or updated, run:
 ```console
 /usr/bin/AIS-catcher -L
 ```
-Not you can start playing with the various command line options, e.g. to start some basic decoding with a webviewer at `http://localhost:8100`:
+Now you can start playing with the various command line options, e.g. to start some basic decoding with a webviewer at `http://localhost:8100`, use file following command:
 ```console
 /usr/bin/AIS-catcher -v 10 -N 8100
 ```
-If all works, you should start seeing NMEA lines on screen and the webviewer active at the aforementioned address.
+If all works, you should start seeing NMEA lines on screen and have an active webviewer at the aforementioned address.
 
 #### Configuration
 
@@ -64,18 +64,18 @@ For running AIS-catcher as a background service we can use two configuration fil
 - /etc/AIS-catcher/config.json (JSON configuration)
 - /etc/AIS-catcher/config.cmd (command line parameters)
 
-You can edit the configuration file /etc/AIS-catcher/config.cmd to capture your equivalent settings. Lines starting with # are comments and ignored. The default file contains comments for popular options, which can be modified using a text editor, for example:
+The simplest approach is to edit the configuration file /etc/AIS-catcher/config.cmd to capture your settings which are detailed below. Lines starting with # are considered comments and ignored. The default file contains comments for popular options, which can be modified using a text editor, for example:
 ```console
 sudo nano /etc/AIS-catcher/config.cmd
 ```
 
 #### Running AIS-catcher as a Background Service
 
-To start AIS-catcher as a background service, use:
+To start AIS-catcher as a background service use the following command:
 ```console
 sudo systemctl start ais-catcher.service
 ```
-To view the status of the service, run:
+To view the status of the service copy the following command:
 ```console
 sudo systemctl start ais-catcher.service
 ```
