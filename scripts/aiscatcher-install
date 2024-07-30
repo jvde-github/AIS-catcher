@@ -37,7 +37,7 @@ cleanup() {
 
 # Install dependencies
 install_dependencies() {
-    local deps="git cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev libpq-dev libzmq3-dev unzip libusb-1.0-0-dev libairspy-dev libairspyhf-dev libhackrf-dev"
+    local deps="git cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev libpq-dev libzmq3-dev unzip libusb-1.0-0-dev"
     log "INFO" "Installing build dependencies: $deps"
     sudo apt-get update || error_exit "Failed to update package lists"
     sudo apt-get install -y $deps || error_exit "Failed to install dependencies"
@@ -97,15 +97,28 @@ install_librtlsdr_from_source() {
 }
 
 # Install SDR libraries
-install_rtlsdr_library() {
-    local lib_name="librtlsdr"
-    local header="rtl-sdr.h"
-    local lib_file="librtlsdr"
+install_sdr_libraries() {
+    local libraries=(
+        "librtlsdr:rtl-sdr.h:librtlsdr"
+        "libairspy:airspy.h:libairspy"
+        "libairspyhf:airspyhf.h:libairspyhf"
+        "libhackrf:hackrf.h:libhackrf"
+    )
 
-    # Check if the library is already installed
-    if ! check_library "$lib_name" "$header" "$lib_file"; then
-        install_librtlsdr_from_source
-    fi
+    for lib_info in "${libraries[@]}"; do
+        IFS=':' read -r lib_name header lib_file <<< "$lib_info"
+        if ! check_library "$lib_name" "$header" "$lib_file"; then
+            case "$lib_name" in
+                librtlsdr)
+                    install_librtlsdr_from_source
+                    ;;
+                *)
+                    log "INFO" "Installing ${lib_name}-dev"
+                    sudo apt-get install -y "${lib_name}-dev" || error_exit "Failed to install ${lib_name}-dev"
+                    ;;
+            esac
+        fi
+    done
 }
 
 # Build AIS-catcher
@@ -211,7 +224,7 @@ main() {
     cd "$TMP_DIR" || error_exit "Failed to change to temporary directory"
     
     install_dependencies
-    install_rtlsdr_library
+    install_sdr_libraries
     build_ais_catcher
     setup_configuration
     setup_systemd_service
