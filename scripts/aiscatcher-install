@@ -37,7 +37,7 @@ cleanup() {
 
 # Install dependencies
 install_dependencies() {
-    local deps="git cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev libzmq3-dev unzip libusb-1.0-0-dev"
+    local deps="git cmake build-essential pkg-config wget libzmq3-dev libssl-dev zlib1g-dev libpq-dev libzmq3-dev unzip libusb-1.0-0-dev libairspy-dev libairspyhf-dev libhackrf-dev"
     log "INFO" "Installing build dependencies: $deps"
     sudo apt-get update || error_exit "Failed to update package lists"
     sudo apt-get install -y $deps || error_exit "Failed to install dependencies"
@@ -88,36 +88,24 @@ install_librtlsdr_from_source() {
     git clone https://gitea.osmocom.org/sdr/rtl-sdr || error_exit "Failed to clone rtl-sdr repository"
     cd rtl-sdr || error_exit "Failed to change directory to rtl-sdr"
     mkdir build && cd build || error_exit "Failed to create and enter build directory"
-    cmake ../ || error_exit "Failed to run cmake"
+    cmake ../ -DINSTALL_UDEV_RULES=ON  -DDETACH_KERNEL_DRIVER=ON|| error_exit "Failed to run cmake"
     make || error_exit "Failed to build rtl-sdr"
     sudo make install || error_exit "Failed to install rtl-sdr"
+    sudo cp ../rtl-sdr.rules /etc/udev/rules.d/ || error_exit "Failed to copy udev rules"
     sudo ldconfig || error_exit "Failed to run ldconfig"
     cd ../.. || error_exit "Failed to return to parent directory"
 }
 
 # Install SDR libraries
-install_sdr_libraries() {
-    local libraries=(
-        "librtlsdr:rtl-sdr.h:librtlsdr"
-        "libairspy:airspy.h:libairspy"
-        "libairspyhf:airspyhf.h:libairspyhf"
-        "libhackrf:hackrf.h:libhackrf"
-    )
+install_rtlsdr_library() {
+    local lib_name="librtlsdr"
+    local header="rtl-sdr.h"
+    local lib_file="librtlsdr"
 
-    for lib_info in "${libraries[@]}"; do
-        IFS=':' read -r lib_name header lib_file <<< "$lib_info"
-        if ! check_library "$lib_name" "$header" "$lib_file"; then
-            case "$lib_name" in
-                librtlsdr)
-                    install_librtlsdr_from_source
-                    ;;
-                *)
-                    log "INFO" "Installing ${lib_name}-dev"
-                    sudo apt-get install -y "${lib_name}-dev" || error_exit "Failed to install ${lib_name}-dev"
-                    ;;
-            esac
-        fi
-    done
+    # Check if the library is already installed
+    if ! check_library "$lib_name" "$header" "$lib_file"; then
+        install_librtlsdr_from_source
+    fi
 }
 
 # Build AIS-catcher
@@ -156,8 +144,11 @@ setup_configuration() {
 # Uncomment to set location and allow viewing in webviewer
 # LAT 12.3 LON 4.3 SHARE_LOC ON
 
-# Uncomment to share data via UDP
+# Uncomment and add to share data via UDP
 # -u 127.0.0.1 10110
+
+# Uncomment and add to share data via TCP
+# -P 127.0.0.1 10111
 
 # Uncomment to set up a TCP listening server
 # -S 5012
@@ -182,20 +173,34 @@ WantedBy=multi-user.target
 EOF
 
     sudo systemctl daemon-reload || error_exit "Failed to reload systemd"
-    sudo systemctl enable "$SERVICE_NAME" || error_exit "Failed to enable $SERVICE_NAME"
 }
 
-# Copy executable and restart service
+
 copy_and_restart_service() {
     log "INFO" "Copying AIS-catcher executable and managing service"
+    local was_active=false
+    local was_enabled=false
+
     if systemctl is-active --quiet "$SERVICE_NAME"; then
+        was_active=true
         sudo systemctl stop "$SERVICE_NAME" || log "WARN" "Failed to stop $SERVICE_NAME"
+    fi
+
+    if systemctl is-enabled --quiet "$SERVICE_NAME"; then
+        was_enabled=true
     fi
 
     sudo cp AIS-catcher-main/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 
-    sudo systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
+    if [[ "$was_active" == true ]]; then
+        sudo systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
+    fi
+
+    if [[ "$was_enabled" == true ]]; then
+        sudo systemctl enable "$SERVICE_NAME" || error_exit "Failed to enable $SERVICE_NAME"
+    fi
 }
+
 
 # Main function
 main() {
@@ -206,7 +211,7 @@ main() {
     cd "$TMP_DIR" || error_exit "Failed to change to temporary directory"
     
     install_dependencies
-    install_sdr_libraries
+    install_rtlsdr_library
     build_ais_catcher
     setup_configuration
     setup_systemd_service
