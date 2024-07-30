@@ -51,7 +51,7 @@ To verify that AIS-catcher is installed or updated, run:
 ```console
 /usr/bin/AIS-catcher -L
 ```
-Now you can start playing with the various command line options, e.g. to start some basic decoding with a webviewer at `http://localhost:8100`, use file following command:
+Now (re)connect the dongle and you can start playing with the various command line options, e.g. to start some basic decoding with a webviewer at `http://localhost:8100`, use file following command:
 ```console
 /usr/bin/AIS-catcher -v 10 -N 8100
 ```
