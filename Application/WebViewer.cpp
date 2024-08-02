@@ -375,9 +375,9 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
 		content += "\"sharing\":" + std::string(communityFeed ? "true" : "false") + ",";
 		if (ships.getShareLatLon() && ships.getLat() != LAT_UNDEFINED && ships.getLon() != LON_UNDEFINED)
-			content += "\"sharing_link\":\"https://aiscatcher.org/hub?tab=map&android=false&welcome=false&zoom=10&lat=" + std::to_string(ships.getLat()) + "&lon=" + std::to_string(ships.getLon()) + "\",";
+			content += "\"sharing_link\":\"https://aiscatcher.org/?&zoom=10&lat=" + std::to_string(ships.getLat()) + "&lon=" + std::to_string(ships.getLon()) + "\",";
 		else
-			content += "\"sharing_link\":\"https://aiscatcher.org/hub?tab=map&android=false&welcome=false\",";
+			content += "\"sharing_link\":\"https://aiscatcher.org\",";
 
 		content += "\"station\":" + station + ",";
 		content += "\"station_link\":" + station_link + ",";
