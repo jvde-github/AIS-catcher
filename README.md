@@ -86,6 +86,8 @@ sudo systemctl enable ais-catcher.service
 #### Feedback
 This is fairly new script and under development so any feedback is appreciated. 
 
+![image](https://github.com/user-attachments/assets/1be6abdb-7df2-4f4b-8d73-1740e0476013)
+
 ## What's new?
 **Edge** version:
 - Option to send fully decoded AIS messages in JSON format via UDP and TCP (similar to screen output with `-o 5`). Add `JSON_FULL on` to `~P/S/u`.
