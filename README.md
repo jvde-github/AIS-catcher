@@ -77,7 +77,7 @@ sudo systemctl start ais-catcher.service
 ```
 To view the status of the service copy the following command:
 ```console
-sudo systemctl start ais-catcher.service
+sudo systemctl status ais-catcher.service
 ```
 To ensure AIS-catcher starts automatically at boot time, enable the service with:
 ```console
