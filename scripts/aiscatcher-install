@@ -126,8 +126,9 @@ build_ais_catcher() {
     log "INFO" "Building AIS-catcher"
 
 git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 || error_exit "Failed to download AIS-catcher"
-    ./scripts/build-NMEA2000.sh
-   cd ..
+cd AIS-catcher
+./scripts/build-NMEA2000.sh
+cd ..
 }
 
 # Setup configuration
