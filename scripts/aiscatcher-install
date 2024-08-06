@@ -124,9 +124,8 @@ install_sdr_libraries() {
 # Build AIS-catcher
 build_ais_catcher() {
     log "INFO" "Building AIS-catcher"
-    wget https://github.com/jvde-github/AIS-catcher/archive/refs/heads/main.zip || error_exit "Failed to download AIS-catcher"
-    unzip main.zip > /dev/null || error_exit "Failed to unzip AIS-catcher"
-    cd AIS-catcher-main
+
+git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 || error_exit "Failed to download AIS-catcher"
     ./scripts/build-NMEA2000.sh
    cd ..
 }
@@ -203,7 +202,7 @@ copy_and_restart_service() {
         was_enabled=true
     fi
 
-    sudo cp AIS-catcher-main/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
+    sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 
     if [[ "$was_active" == true ]]; then
         sudo systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
