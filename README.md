@@ -1129,7 +1129,7 @@ AIS-catcher requires libraries for the particular hardware you want to use. The 
 
 Once the dependencies are in place, the process of installing AIS-catcher  on Linux-based systems becomes:
 ```console
-git clone https://github.com/jvde-github/AIS-catcher.git
+git clone https://github.com/jvde-github/AIS-catcher.git --depth 1
 cd AIS-catcher
 mkdir build
 cd build
