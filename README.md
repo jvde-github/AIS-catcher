@@ -39,11 +39,13 @@ Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.m
 This guide provides instructions for installing AIS-catcher on Debian-based systems (like Raspberry Pi) and setting it up to run as a background service. This ensures AIS-catcher will automatically start when the machine is booted.
 #### Installation
 
-To install or update AIS-catcher, open a terminal or log in via SSH, then run the following command:
+To install AIS-catcher via a script, open a terminal or log in via SSH, then run the following command:
 ```console
 sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
 The script will install all dependencies and build AIS-catcher. The required SDR libraries are installed from the official packages if they cannot be found on the system. For the RTL-SDR we build from source from the official package to guarantee support for the RTL-SDR V4 but, again, only if the package is not already installed on the system. On a fresh Raspberry Pi4 this will take less than 20 minutes. 
+
+To update AIS-catcher to the latest version, simply run the above command again.
 
 #### Verifying the installation
 
