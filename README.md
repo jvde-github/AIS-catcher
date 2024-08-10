@@ -91,7 +91,7 @@ This is fairly new script and under development so any feedback is appreciated.
 ![image](https://github.com/user-attachments/assets/1be6abdb-7df2-4f4b-8d73-1740e0476013)
 
 ## What's new?
-**Edge** version:
+**v0.60** version:
 - Option to send fully decoded AIS messages in JSON format via UDP and TCP (similar to screen output with `-o 5`). Add `JSON_FULL on` to `~P/S/u`.
 - Bug fix for connecting serial devices in macOS
 - Option to select columns in the table (and many more options added):
@@ -105,28 +105,11 @@ This is fairly new script and under development so any feedback is appreciated.
 
 - Added debian packages and installation script
 
-**v0.59** developments:
-- Slowly improving the station page for feeders of aiscatcher.org. Color indicates number of stations covering area, opacity is linked to message count of station. To view your station statistics in this way, ensure you feed with a sharing key (UUID)
-![Screenshot from 2024-05-02 21-23-24](https://github.com/jvde-github/AIS-catcher/assets/52420030/6a0391e6-a059-48fd-9543-89181262894f)
-- Add a sharing key to -X via [aiscatcher.org/addstation](https://aiscatcher.org/addstation) which will show the approximate station location in the map overlay and enable, in a few weeks, a station performance tracking dashboard.
-- TAR1090 can now visualize ship positions from AIS-catcher. See for an example [here](https://kx1t.com/trenton-tar1090/). 
-- Additional option  for `-f`-switch to either append NMEA lines to file (`-f filename MODE APP` for appending - default) or starting fresh with `-f filename MODE OUT`
-- History for range indicator can now be configured (24 hours default) with new option for 7 and 30 days history
-
-<p align="center">
-  <img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/9b2f0279-7cd9-4fce-b7bb-246777207361" width="25%"/>
-</p>
-
-- Added a measure tool to measure distance and bearing between two points and/or ships. Start with CTRL-Click or activate the measure tool and press +
-- Added vessel count to web viewer title (visible once on the map tab)
-- Fix bug in display of icon for SARTE/EPIRB (red diamond)
-- Additional option for WebViewer to bind server to specific IP address. This allows you to make the browser only visible on the local PC, via `-N IP_BIND localhost`. By default the webviewer is visible by other machines on the network.
-- Bug fix to range rings in 'imperial' units
-- Webviewer - ships tab has now a filter function to quickly look for a ship. Has also been added to the ship overview in the map tab
-- Option to apply filter functionality (control message routing) to webviewer and added option to filter on station_id
-- '-M DT' set by default UNLESS running with `-F` (turbo boost mode and no webviewer) or when overwritten with -M
 
 Earlier versions:
+
+- Added a measure tool to measure distance and bearing between two points and/or ships. Start with CTRL-Click or activate the measure tool and press +
+- Additional option  for `-f`-switch to either append NMEA lines to file (`-f filename MODE APP` for appending - default) or starting fresh with `-f filename MODE OUT`
 - Community feed by running with -X. This will feed the aiscatcher.org server and return data as an extra map layer option in your webviewer.
 - Performance improvements when drawing a large number of vessels by switching from Leaflet to Openlayers (notice this might require re-working some plugins). in openlayers it is more straightforward to plot ship icons on the canvas.
 - Option to auto terminate the program if no messages received for a while, e.g. after 10 minutes `-T 600 nomsg_ony`. This will help cure network connections for input or devices going stale without an error 
