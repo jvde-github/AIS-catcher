@@ -32,7 +32,7 @@ Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We w
   
 ## Installation
 
-Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry.
+Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry. Note that issues have reported for the latest Windows build on Windows 10 where the [VC runtime libraries](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) where not up to date so please ensure you have the latest installed.
 
 ### Quick Start Guide for Installing and Running AIS-catcher on Raspberry Pi/Ubuntu/Debian Systems
 
