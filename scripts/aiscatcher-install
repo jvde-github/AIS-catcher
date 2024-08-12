@@ -139,7 +139,7 @@ setup_configuration() {
     if [[ ! -d "$CONFIG_DIR/webassets" ]]; then
         git clone https://github.com/jvde-github/webassets.git "$CONFIG_DIR/webassets"
     else
-        git --git-dir="$CONFIG_DIR/webassets/.git" --work-tree="$CONFIG_DIR/webassets" pull origin main
+        git -c pull.rebase=false --git-dir="$CONFIG_DIR/webassets/.git" --work-tree="$CONFIG_DIR/webassets" pull origin main
     fi
 
 
