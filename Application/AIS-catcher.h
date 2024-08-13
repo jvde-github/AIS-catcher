@@ -21,5 +21,5 @@
 #define VERSION		   "v0.60"
 #define COPYRIGHT	   "jvde-github and other contributors"
 
-#define VERSION_DESCRIBE	"v0.60-14-g40d2e7aa"
-#define VERSION_URL_TAG	"v0_60_14_g40d2e7aa"
+#define VERSION_DESCRIBE	"v0.60-16-g526aa2c6"
+#define VERSION_URL_TAG	"v0_60_16_g526aa2c6"
