@@ -1047,6 +1047,8 @@ It will likely run out of the box in case you have already RTL-SDR software runn
 - installation of RTL-SDR drivers is done via [Zadig](https://www.rtl-sdr.com/tag/zadig/)
 - installation of the Visual Studio runtime [libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
 
+The AIS-catcher executables are build with the latest Windows MSVC compiler. Please update your [library]([libraries](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)) before starting the below executables. Issues have been reported on Windows 10.
+
 Recent releases:
  | Version | Win32  | x64 |  Win32 + SDRPlay | x64 + SDRPlay | 
  | :--- | :--- | :---: |   :--- | :---: | 
