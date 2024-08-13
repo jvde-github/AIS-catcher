@@ -100,7 +100,8 @@ function restoreDefaultSettings() {
         labels_declutter: true,
         eri: true,
         loadURL: true,
-        map_opacity: 0.5
+        map_opacity: 0.5,
+        shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"]
     };
 }
 
@@ -1687,8 +1688,8 @@ function updateTablecard() {
                 cell2.innerText = shipName;
 
                 var cell3 = row.insertCell(2);
-                cell3.innerHTML = ship.distance ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")): null
-                cell3.title = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit()   + (ship.repeat > 0 ? " (R)" : ""): "";
+                cell3.innerHTML = ship.distance ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : null
+                cell3.title = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "") : "";
 
                 var cell4 = row.insertCell(3);
                 cell4.innerHTML = ship.speed != null ? getSpeedVal(ship.speed) : "";
@@ -2397,7 +2398,7 @@ async function fetchShips(noDoubleFetch = true) {
         s.repeat = (flags >> 2) & 3;
         s.virtual_aid = (flags >> 4) & 1;
         s.approximate = (flags >> 5) & 1;
-        s.channels2 = (flags >> 6) & 0b1111; 
+        s.channels2 = (flags >> 6) & 0b1111;
 
         // Check for discrepancies and show error
         if (s.validated !== s.validated2) {
@@ -3488,7 +3489,7 @@ async function updateShipTable() {
                     sorter: "number",
                     formatter: function (cell) {
                         const ship = cell.getRow().getData();
-                        return ship != null ? getDistanceVal(ship.distance)  + (ship.repeat > 0 ? " (R)" : ""): "";
+                        return ship != null ? getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "") : "";
                     },
                 },
                 {
@@ -3612,7 +3613,7 @@ async function updateShipTable() {
         });
         table.on("tableBuilt", function () {
             if (tableFirstTime) {
-                resetShipTableColumns();
+                setShipTableColumns();
                 tableFirstTime = false;
             }
 
@@ -3635,7 +3636,7 @@ async function updateShipTable() {
 
 function populateShipTableColumnVisibilityMenu() {
     const shipTableColumnVisibilityMenu = document.getElementById("shipTableColumnVisibilityMenu");
-    shipTableColumnVisibilityMenu.innerHTML = ""; // Clear previous checkboxes
+    shipTableColumnVisibilityMenu.innerHTML = ""; 
 
     table.getColumns().forEach((column) => {
         const checkboxId = `checkbox-${column.getField()}`;
@@ -3664,23 +3665,22 @@ function populateShipTableColumnVisibilityMenu() {
 
 function updateShipTableColumnVisibility() {
     const checkboxes = document.querySelectorAll("#shipTableColumnVisibilityMenu input[type='checkbox']");
-    const visibleColumns = Array.from(checkboxes)
+    
+    settings.shiptable_columns = Array.from(checkboxes)
         .filter((checkbox) => checkbox.checked)
         .map((checkbox) => checkbox.value);
 
-    const updatedColumns = table.getColumns().map((column) => {
-        return {
-            ...column.getDefinition(),
-            visible: visibleColumns.includes(column.getField())
-        };
-    });
-
-    table.setColumns(updatedColumns);
+    setShipTableColumns();
 }
 
 function resetShipTableColumns() {
-    const excludedFields = ['validated', 'count', 'channels', 'group_mask', 'msg_type', 'MSG6', 'MSG8', 'MSG27', 'class', 'dimension', 'draught', 'eta', 'destination', 'country'
-    ];
+    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
+    setShipTableColumns();
+}
+
+function setShipTableColumns() {
+
+    saveSettings();
 
     const allColumns = table.getColumns();
 
@@ -3688,7 +3688,7 @@ function resetShipTableColumns() {
         const field = column.getField();
         return {
             ...column.getDefinition(),
-            visible: !excludedFields.includes(field)
+            visible: settings.shiptable_columns.includes(field)
         };
     });
 
@@ -4265,7 +4265,7 @@ function populateShipcard() {
     document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonValFormat(ship) : null;
 
     document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
-    document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")): null;
+    document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
 
