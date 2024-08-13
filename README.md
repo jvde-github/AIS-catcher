@@ -536,6 +536,8 @@ A fuller example config file looks as follows:
     "version": "1",
     "input": "serialport",
     "verbose": true,
+    "sharing": true,
+    "sharing_key": "6ef40ea8-59b9-11ef-8db4",
     "screen": 0,
     "serialport": {
         "baudrate": 38400,
