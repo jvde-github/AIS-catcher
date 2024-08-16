@@ -333,11 +333,17 @@ var markerStyle = function (feature) {
     });
 };
 
+function decodeHTMLEntities(text) {
+    const textArea = document.createElement('textarea');
+    textArea.innerHTML = text;
+    return textArea.value;
+}
+
 var labelStyle = function (feature) {
     const font = settings.tooltipLabelFontSize + "px Arial";
     return new ol.style.Style({
         text: new ol.style.Text({
-            text: feature.ship.shipname || feature.ship.mmsi.toString(),
+            text: decodeHTMLEntities(feature.ship.shipname || feature.ship.mmsi.toString()),
             overflow: true,
             offsetY: 25,
             offsetX: 25,
