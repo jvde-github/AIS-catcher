@@ -13,7 +13,7 @@ if [ -d "NMEA2000" ]; then
 fi
 
 # Attempt to clone the repository
-git clone https://github.com/ttlappalainen/NMEA2000.git --depth 1
+git clone https://github.com/jvde-github/NMEA2000.git --depth 1
 
 # Check if the clone was successful
 if [ $? -ne 0 ]; then
