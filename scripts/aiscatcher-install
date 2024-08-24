@@ -348,7 +348,7 @@ main() {
         log "INFO" "AIS-catcher installation from source"
         install_dependencies
         install_sdr_libraries
-        build_ais_catche
+        build_ais_catcher
         stop_and_save_service_state
 
         sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
