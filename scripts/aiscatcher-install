@@ -340,7 +340,6 @@ main() {
             stop_and_save_service_state
             install_from_package "$package"
             log "INFO" "AIS-catcher installation from package completed successfully"
-            exit 0
         else
             error_exit "Package installation requested but no package available for this system"
         fi
