@@ -251,11 +251,18 @@ install_from_package() {
    
     log "INFO" "Installing AIS-catcher from package: $package"
 
+    # Create a temporary directory with appropriate permissions
+    local temp_dir=$(mktemp -d)
+    chmod 755 "$temp_dir"
+
     # Download the package
     log "INFO" "Downloading package..."
-    if ! wget -q "$download_url"; then
+    if ! wget -q -P "$temp_dir" "$download_url"; then
         error_exit "Failed to download package"
     fi
+
+    # Ensure the downloaded file has correct permissions
+    chmod 644 "$temp_dir/$package"
 
     # Install the package and dependencies using apt
     log "INFO" "Installing package and dependencies..."
@@ -263,17 +270,16 @@ install_from_package() {
         error_exit "Failed to update package lists"
     fi
 
-    if ! sudo apt install -y ./"$package"; then
+    if ! sudo apt install -y "$temp_dir/$package"; then
         error_exit "Failed to install package"
     fi
 
     # Clean up
     log "INFO" "Cleaning up..."
-    rm "$package" || log "WARN" "Failed to remove package file: $package"
+    rm -rf "$temp_dir" || log "WARN" "Failed to remove temporary directory: $temp_dir"
 
     log "INFO" "AIS-catcher installation completed"
 }
-
 
 SERVICE_STATE=""
 
