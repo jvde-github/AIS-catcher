@@ -7,6 +7,7 @@ readonly SCRIPT_NAME=$(basename "$0")
 readonly LOG_FILE="/var/log/${SCRIPT_NAME%.*}.log"
 readonly TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
 readonly CONFIG_DIR="/etc/AIS-catcher"
+readonly PLUGIN_DIR="${CONFIG_DIR}/plugins"
 readonly CONFIG_FILE="${CONFIG_DIR}/config.json"
 readonly CMD_FILE="${CONFIG_DIR}/config.cmd"
 readonly SERVICE_NAME="ais-catcher.service"
@@ -56,7 +57,7 @@ get_system_info() {
 install_dependencies() {
     local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev libzmq3-dev unzip libusb-1.0-0-dev"
     log "INFO" "Installing build dependencies: $deps"
-    sudo apt-get install -y $deps || error_exit "Failed to install dependencies"
+    apt-get install -y $deps || error_exit "Failed to install dependencies"
 }
 
 # Function to check if a package is available
@@ -139,9 +140,9 @@ install_librtlsdr_from_source() {
     mkdir build && cd build || error_exit "Failed to create and enter build directory"
     cmake ../ -DINSTALL_UDEV_RULES=ON  -DDETACH_KERNEL_DRIVER=ON|| error_exit "Failed to run cmake"
     make || error_exit "Failed to build rtl-sdr"
-    sudo make install || error_exit "Failed to install rtl-sdr"
-    sudo cp ../rtl-sdr.rules /etc/udev/rules.d/ || error_exit "Failed to copy udev rules"
-    sudo ldconfig || error_exit "Failed to run ldconfig"
+    make install || error_exit "Failed to install rtl-sdr"
+    cp ../rtl-sdr.rules /etc/udev/rules.d/ || error_exit "Failed to copy udev rules"
+    ldconfig || error_exit "Failed to run ldconfig"
     cd ../.. || error_exit "Failed to return to parent directory"
 }
 
@@ -163,7 +164,7 @@ install_sdr_libraries() {
                     ;;
                 *)
                     log "INFO" "Installing ${lib_name}-dev"
-                    sudo apt-get install -y "${lib_name}-dev" || error_exit "Failed to install ${lib_name}-dev"
+                    apt-get install -y "${lib_name}-dev" || error_exit "Failed to install ${lib_name}-dev"
                     ;;
             esac
         fi
@@ -178,27 +179,52 @@ build_ais_catcher() {
     cd AIS-catcher
     ./scripts/build-NMEA2000.sh
     cd ..
-    sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
+    cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
+}
+
+install_plugins() {
+    log "INFO" "Installing plugins"
+    mkdir -p "$PLUGIN_DIR" || error_exit "Failed to create plugin directory"
+    cp AIS-catcher/plugins/* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
+}
+
+download_webassets() {
+    local webassets_url="https://github.com/jvde-github/webassets/archive/refs/heads/main.zip"
+    local temp_zip="/tmp/webassets.zip"
+    
+    log "INFO" "Downloading webassets"
+    if wget -q "$webassets_url" -O "$temp_zip"; then
+        if [[ -d "$CONFIG_DIR/webassets" ]]; then
+            log "INFO" "Removing old webassets"
+            sudo rm -rf "$CONFIG_DIR/webassets"
+        fi
+        
+        log "INFO" "Extracting webassets"
+        sudo unzip -q "$temp_zip" -d "$CONFIG_DIR"
+        sudo mv "$CONFIG_DIR/webassets-main" "$CONFIG_DIR/webassets"
+        rm "$temp_zip"
+        
+        log "INFO" "Webassets updated successfully"
+    else
+        log "ERROR" "Failed to download webassets"
+        return 1
+    fi
 }
 
 # Setup configuration
 setup_configuration() {
     log "INFO" "Setting up configuration files"
-    sudo mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
+    mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
 
-    if [[ ! -d "$CONFIG_DIR/webassets" ]]; then
-        git clone https://github.com/jvde-github/webassets.git "$CONFIG_DIR/webassets"
-    else
-        git -c pull.rebase=false --git-dir="$CONFIG_DIR/webassets/.git" --work-tree="$CONFIG_DIR/webassets" pull origin main
-    fi
+    download_webassets || error_exit "Failed to download webassets"
 
 
     if [[ ! -f "$CONFIG_FILE" ]]; then
-        echo '{ "config": "aiscatcher", "version": 1 }' | sudo tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
+        echo '{ "config": "aiscatcher", "version": 1 }' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
     fi
     
     if [[ ! -f "$CMD_FILE" ]]; then
-        cat << EOF | sudo tee "$CMD_FILE" > /dev/null || error_exit "Failed to create config.cmd"
+        cat << EOF | tee "$CMD_FILE" > /dev/null || error_exit "Failed to create config.cmd"
 # AIS-catcher configuration
 # Uncomment and modify options as needed
 
@@ -229,7 +255,7 @@ EOF
 # Setup systemd service
 setup_systemd_service() {
     log "INFO" "Setting up systemd service"
-    cat << EOF | sudo tee "$SERVICE_FILE" > /dev/null || error_exit "Failed to create service file"
+    cat << EOF | tee "$SERVICE_FILE" > /dev/null || error_exit "Failed to create service file"
 [Unit]
 Description=AIS-catcher Service
 After=network.target
@@ -242,8 +268,9 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-    sudo systemctl daemon-reload || error_exit "Failed to reload systemd"
+    systemctl daemon-reload || error_exit "Failed to reload systemd"
 }
+
 
 install_from_package() {
     local package=$1
@@ -266,11 +293,11 @@ install_from_package() {
 
     # Install the package and dependencies using apt
     log "INFO" "Installing package and dependencies..."
-    if ! sudo apt update; then
+    if ! apt update; then
         error_exit "Failed to update package lists"
     fi
 
-    if ! sudo apt install -y "$temp_dir/$package"; then
+    if ! apt install -y "$temp_dir/$package"; then
         error_exit "Failed to install package"
     fi
 
@@ -293,7 +320,7 @@ stop_disable_and_save_service_state() {
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         was_active=true
         log "INFO" "$SERVICE_NAME is active, attempting to stop"
-        sudo systemctl stop "$SERVICE_NAME"
+        systemctl stop "$SERVICE_NAME"
         
         # Verify that the service has actually stopped
         if systemctl is-active --quiet "$SERVICE_NAME"; then
@@ -309,7 +336,7 @@ stop_disable_and_save_service_state() {
     if systemctl is-enabled --quiet "$SERVICE_NAME"; then
         was_enabled=true
         log "INFO" "$SERVICE_NAME is enabled, attempting to disable"
-        sudo systemctl disable "$SERVICE_NAME"
+        systemctl disable "$SERVICE_NAME"
         
         # Verify that the service has actually been disabled
         if systemctl is-enabled --quiet "$SERVICE_NAME"; then
@@ -336,11 +363,11 @@ restore_service_state() {
     local was_enabled=${STATE_ARRAY[1]}
     
     if [[ "$was_active" == true ]]; then
-        sudo systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
+        systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
     fi
     
     if [[ "$was_enabled" == true ]]; then
-        sudo systemctl enable "$SERVICE_NAME" || error_exit "Failed to enable $SERVICE_NAME"
+        systemctl enable "$SERVICE_NAME" || error_exit "Failed to enable $SERVICE_NAME"
     fi
     
     # Clear the global state after restore
@@ -384,7 +411,8 @@ main() {
         stop_disable_and_save_service_state
         build_ais_catcher
 
-        sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
+        cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
+        install_plugins
     fi
     setup_configuration
     setup_systemd_service        
