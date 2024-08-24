@@ -98,6 +98,9 @@ create_debian_package() {
     cp scripts/aiscatcher-config debian/usr/bin/
     chmod +x debian/usr/bin/aiscatcher-config
 
+    mkdir -p debian/etc/ais-catcher/plugins
+    cp plugins/* debian/etc/ais-catcher/plugins/
+
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
     rm -rf debian
