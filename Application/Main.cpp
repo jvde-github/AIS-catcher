@@ -505,7 +505,7 @@ int main(int argc, char* argv[]) {
 					if (!communityFeed) {
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						IO::OutputMessage& p = *msg.back();
-						p.Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
+						p.Set("HOST", "185.77.96.227").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
 
 						if (count == 1)
 							p.Set("UUID", arg1);
