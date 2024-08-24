@@ -57,7 +57,7 @@ jobs:
         git push origin main
         
   build_debian:
-    if: false
+    if: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     needs: bakeHTML
