@@ -87,61 +87,7 @@ create_debian_package() {
 
     chmod +x debian/DEBIAN/preinst
 
-    echo "#!/bin/bash" > debian/DEBIAN/postinst
-    echo "" >> debian/DEBIAN/postinst
-    echo "set -e" >> debian/DEBIAN/postinst
-    echo "" >> debian/DEBIAN/postinst
-    echo "# Systemd service management" >> debian/DEBIAN/postinst
-    echo "if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/postinst
-    echo "  echo \"Systemd detected. Reloading systemd daemon...\"" >> debian/DEBIAN/postinst
-    echo "  systemctl daemon-reload" >> debian/DEBIAN/postinst
-    echo "  " >> debian/DEBIAN/postinst
-    echo "  if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/postinst
-    echo "    echo \"Restarting ais-catcher...\"" >> debian/DEBIAN/postinst
-    echo "    systemctl restart ais-catcher" >> debian/DEBIAN/postinst
-    echo "  else" >> debian/DEBIAN/postinst
-    echo "    echo \"ais-catcher is not running. Enabling ais-catcher...\"" >> debian/DEBIAN/postinst
-    echo "    systemctl enable ais-catcher" >> debian/DEBIAN/postinst
-    echo "  fi" >> debian/DEBIAN/postinst
-    echo "fi" >> debian/DEBIAN/postinst
-
-    chmod +x debian/DEBIAN/postinst
-
-    echo "#!/bin/bash" > debian/DEBIAN/prerm
-    echo "" >> debian/DEBIAN/prerm
-    echo "set -e" >> debian/DEBIAN/prerm
-    echo "" >> debian/DEBIAN/prerm
-    echo "if [ \"\$1\" != \"upgrade\" ] && [ \"\$1\" != \"deconfigure\" ]; then" >> debian/DEBIAN/prerm
-    echo "  # Systemd service management" >> debian/DEBIAN/prerm
-    echo "  if [ -d /run/systemd/system ]; then" >> debian/DEBIAN/prerm
-    echo "    echo \"Systemd detected. Stopping and disabling ais-catcher...\"" >> debian/DEBIAN/prerm
-    echo "" >> debian/DEBIAN/prerm
-    echo "    if systemctl is-active --quiet ais-catcher; then" >> debian/DEBIAN/prerm
-    echo "      systemctl stop ais-catcher" >> debian/DEBIAN/prerm
-    echo "    fi" >> debian/DEBIAN/prerm
-    echo "" >> debian/DEBIAN/prerm
-    echo "    systemctl disable ais-catcher" >> debian/DEBIAN/prerm
-    echo "    systemctl daemon-reload" >> debian/DEBIAN/prerm
-    echo "    echo \"Removing ais-catcher service file...\"" >> debian/DEBIAN/prerm
-    echo "    rm -f /lib/systemd/system/ais-catcher.service" >> debian/DEBIAN/prerm
-    echo "  fi" >> debian/DEBIAN/prerm
-    echo "fi" >> debian/DEBIAN/prerm
-
-    chmod +x debian/DEBIAN/prerm
-
-    # Add systemd service file
-    mkdir -p debian/lib/systemd/system
-    echo "[Unit]" > debian/lib/systemd/system/ais-catcher.service
-    echo "Description=AIS-catcher Service" >> debian/lib/systemd/system/ais-catcher.service
-    echo "After=network.target" >> debian/lib/systemd/system/ais-catcher.service
-    echo "" >> debian/lib/systemd/system/ais-catcher.service
-    echo "[Service]" >> debian/lib/systemd/system/ais-catcher.service 
-    echo "ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -C /etc/AIS-catcher/config.json \$(/bin/grep -v \"^#\" /etc/AIS-catcher/config.cmd | /usr/bin/tr \"\\n\" \" \")'" >> debian/lib/systemd/system/ais-catcher.service
-    echo "Restart=always" >> debian/lib/systemd/system/ais-catcher.service
-    echo "" >> debian/lib/systemd/system/ais-catcher.service
-    echo "[Install]" >> debian/lib/systemd/system/ais-catcher.service
-    echo "WantedBy=multi-user.target" >> debian/lib/systemd/system/ais-catcher.service
-    
+  
     # Build the project and package
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
