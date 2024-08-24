@@ -365,7 +365,7 @@ main() {
     # Check for -p flag
     if [[ "$@" == *"-p"* ]]; then
         if [ -n "$package" ]; then
-            stop_and_save_service_state
+            stop_disable_and_save_service_state
             install_from_package "$package"
             log "INFO" "AIS-catcher installation from package completed successfully"
         else
@@ -376,7 +376,7 @@ main() {
         install_dependencies
         install_sdr_libraries
         build_ais_catcher
-        stop_and_save_service_state
+        stop_disable_and_save_service_state
 
         sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
     fi
