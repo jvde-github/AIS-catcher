@@ -35,12 +35,61 @@ cleanup() {
     rm -rf "$TMP_DIR"
 }
 
+
+# Function to get Debian/Ubuntu version and architecture
+get_system_info() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$ID
+        VERSION=$VERSION_CODENAME
+    else
+        OS=$(uname -s)
+        VERSION=$(uname -r)
+    fi
+    ARCH=$(dpkg --print-architecture)
+    
+    echo "${OS}_${VERSION}_${ARCH}"
+}
+
+
 # Install dependencies
 install_dependencies() {
     local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev libzmq3-dev unzip libusb-1.0-0-dev"
     log "INFO" "Installing build dependencies: $deps"
-    sudo apt-get update || error_exit "Failed to update package lists"
     sudo apt-get install -y $deps || error_exit "Failed to install dependencies"
+}
+
+# Function to check if a package is available
+check_package_availability() {
+    local system_info=$1
+    local packages=(
+        "ais-catcher_debian_bookworm_amd64.deb"
+        "ais-catcher_debian_bookworm_arm64.deb"
+        "ais-catcher_debian_bookworm_armhf.deb"
+        "ais-catcher_debian_bullseye_amd64.deb"
+        "ais-catcher_debian_bullseye_arm64.deb"
+        "ais-catcher_debian_bullseye_armhf.deb"
+        "ais-catcher_debian_buster_amd64.deb"
+        "ais-catcher_debian_buster_arm64.deb"
+        "ais-catcher_debian_buster_armhf.deb"
+        "ais-catcher_ubuntu_focal_amd64.deb"
+        "ais-catcher_ubuntu_focal_arm64.deb"
+        "ais-catcher_ubuntu_jammy_amd64.deb"
+        "ais-catcher_ubuntu_jammy_arm64.deb"
+        "ais-catcher_ubuntu_mantic_amd64.deb"
+        "ais-catcher_ubuntu_mantic_arm64.deb"
+        "ais-catcher_ubuntu_noble_amd64.deb"
+        "ais-catcher_ubuntu_noble_arm64.deb"
+    )
+
+    for package in "${packages[@]}"; do
+        if [[ $package == *"$system_info"* ]]; then
+            echo "$package"
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 # Check for library
@@ -129,6 +178,7 @@ build_ais_catcher() {
     cd AIS-catcher
     ./scripts/build-NMEA2000.sh
     cd ..
+    sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 }
 
 # Setup configuration
@@ -195,32 +245,74 @@ EOF
     sudo systemctl daemon-reload || error_exit "Failed to reload systemd"
 }
 
+install_from_package() {
+    local package=$1
+    local download_url="https://github.com/jvde-github/AIS-catcher/releases/download/Edge/$package"
+    
+    log "INFO" "Installing AIS-catcher from package: $package"
 
-copy_and_restart_service() {
-    log "INFO" "Copying AIS-catcher executable and managing service"
+    # Download the package
+    log "INFO" "Downloading package..."
+    if ! wget -q "$download_url"; then
+        error_exit "Failed to download package"
+    fi
+
+    # Install the package
+    log "INFO" "Installing package..."
+    if ! sudo dpkg -i "$package"; then
+        error_exit "Failed to install package"
+    fi
+
+    # Clean up
+    log "INFO" "Cleaning up..."
+    rm "$package" || log "WARN" "Failed to remove package file: $package"
+
+    log "INFO" "AIS-catcher installation completed"
+}
+
+
+SERVICE_STATE=""
+
+# Function to stop the service and save its state
+stop_and_save_service_state() {
+    log "INFO" "Stopping AIS-catcher service and saving state"
     local was_active=false
     local was_enabled=false
-
+    
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         was_active=true
         sudo systemctl stop "$SERVICE_NAME" || log "WARN" "Failed to stop $SERVICE_NAME"
     fi
-
+    
     if systemctl is-enabled --quiet "$SERVICE_NAME"; then
         was_enabled=true
     fi
+    
+    # Save the state to the global variable
+    SERVICE_STATE="${was_active},${was_enabled}"
+    log "INFO" "Service state saved: $SERVICE_STATE"
+}
 
-    sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
-
+# Function to restore the service state
+restore_service_state() {
+    log "INFO" "Restoring AIS-catcher service state"
+    
+    IFS=',' read -ra STATE_ARRAY <<< "$SERVICE_STATE"
+    local was_active=${STATE_ARRAY[0]}
+    local was_enabled=${STATE_ARRAY[1]}
+    
     if [[ "$was_active" == true ]]; then
         sudo systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
     fi
-
+    
     if [[ "$was_enabled" == true ]]; then
         sudo systemctl enable "$SERVICE_NAME" || error_exit "Failed to enable $SERVICE_NAME"
     fi
+    
+    # Clear the global state after restore
+    SERVICE_STATE=""
+    log "INFO" "Service state restored and cleared"
 }
-
 
 # Main function
 main() {
@@ -228,14 +320,42 @@ main() {
     
     trap cleanup EXIT
     
+    sudo apt-get update || error_exit "Failed to update package lists"
+
     cd "$TMP_DIR" || error_exit "Failed to change to temporary directory"
+
+    local system_info=$(get_system_info)
+    log "INFO" "Detected system: $system_info"
     
-    install_dependencies
-    install_sdr_libraries
-    build_ais_catcher
+    local package=$(check_package_availability "$system_info")
+    if [ $? -eq 0 ]; then
+        log "INFO" "Package available: $package"
+    else
+        log "WARN" "No package available for this system"
+    fi
+
+    # Check for -p flag
+    if [[ "$@" == *"-p"* ]]; then
+        if [ -n "$package" ]; then
+            stop_and_save_service_state
+            install_from_package "$package"
+            log "INFO" "AIS-catcher installation from package completed successfully"
+            exit 0
+        else
+            error_exit "Package installation requested but no package available for this system"
+        fi
+    else
+        log "INFO" "AIS-catcher installation from source"
+        install_dependencies
+        install_sdr_libraries
+        build_ais_catche
+        stop_and_save_service_state
+
+        sudo cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
+    fi
     setup_configuration
-    setup_systemd_service
-    copy_and_restart_service
+    setup_systemd_service        
+    restore_service_state
     
     log "INFO" "AIS-catcher installation completed successfully"
 }
