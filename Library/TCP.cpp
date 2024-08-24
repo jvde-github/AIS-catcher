@@ -518,7 +518,10 @@ namespace TCP {
 #ifdef _WIN32
 				if (error_code == WSAEWOULDBLOCK) return 0;
 #else
-				if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
+				if (error_code == EAGAIN || error_code == EWOULDBLOCK || error_code == EINPROGRESS) {
+					std::cerr << "TCP (" << host << ":" << port << "): message might be lost. Error code: " << error_code << " (" << strerror(error_code) << ").";
+					return 0;
+				}
 #endif
 				std::cerr << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 				if (persistent) {
