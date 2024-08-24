@@ -92,13 +92,7 @@ create_debian_package() {
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
 
-    cp scripts/aiscatcher-install debian/usr/bin/
-    chmod +x debian/usr/bin/aiscatcher-install
-
-    cp scripts/aiscatcher-config debian/usr/bin/
-    chmod +x debian/usr/bin/aiscatcher-config
-
-    mkdir -p debian/etc/ais-catcher/plugins
+    mkdir -p debian/etc/AIS-catcher/plugins
     cp plugins/* debian/etc/ais-catcher/plugins/
 
     dpkg-deb --build debian
