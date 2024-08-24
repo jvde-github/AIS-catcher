@@ -248,7 +248,7 @@ EOF
 install_from_package() {
     local package=$1
     local download_url="https://github.com/jvde-github/AIS-catcher/releases/download/Edge/$package"
-    
+   
     log "INFO" "Installing AIS-catcher from package: $package"
 
     # Download the package
@@ -257,9 +257,13 @@ install_from_package() {
         error_exit "Failed to download package"
     fi
 
-    # Install the package
-    log "INFO" "Installing package..."
-    if ! sudo dpkg -i "$package"; then
+    # Install the package and dependencies using apt
+    log "INFO" "Installing package and dependencies..."
+    if ! sudo apt update; then
+        error_exit "Failed to update package lists"
+    fi
+
+    if ! sudo apt install -y ./"$package"; then
         error_exit "Failed to install package"
     fi
 
