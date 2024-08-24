@@ -278,24 +278,48 @@ install_from_package() {
 SERVICE_STATE=""
 
 # Function to stop the service and save its state
-stop_and_save_service_state() {
-    log "INFO" "Stopping AIS-catcher service and saving state"
+stop_disable_and_save_service_state() {
+    log "INFO" "Checking AIS-catcher service state, stopping if active, and disabling"
     local was_active=false
     local was_enabled=false
-    
+
+    # Check if the service is active
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         was_active=true
-        sudo systemctl stop "$SERVICE_NAME" || log "WARN" "Failed to stop $SERVICE_NAME"
+        log "INFO" "$SERVICE_NAME is active, attempting to stop"
+        sudo systemctl stop "$SERVICE_NAME"
+        
+        # Verify that the service has actually stopped
+        if systemctl is-active --quiet "$SERVICE_NAME"; then
+            log "WARN" "Failed to stop $SERVICE_NAME"
+        else
+            log "INFO" "$SERVICE_NAME stopped successfully"
+        fi
+    else
+        log "INFO" "$SERVICE_NAME is not active, no need to stop"
     fi
-    
+
+    # Check if the service is enabled
     if systemctl is-enabled --quiet "$SERVICE_NAME"; then
         was_enabled=true
+        log "INFO" "$SERVICE_NAME is enabled, attempting to disable"
+        sudo systemctl disable "$SERVICE_NAME"
+        
+        # Verify that the service has actually been disabled
+        if systemctl is-enabled --quiet "$SERVICE_NAME"; then
+            log "WARN" "Failed to disable $SERVICE_NAME"
+        else
+            log "INFO" "$SERVICE_NAME disabled successfully"
+        fi
+    else
+        log "INFO" "$SERVICE_NAME is not enabled, no need to disable"
     fi
-    
+
     # Save the state to the global variable
     SERVICE_STATE="${was_active},${was_enabled}"
     log "INFO" "Service state saved: $SERVICE_STATE"
 }
+
 
 # Function to restore the service state
 restore_service_state() {
