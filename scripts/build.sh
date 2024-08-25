@@ -93,7 +93,7 @@ create_debian_package() {
     cp build/AIS-catcher debian/usr/bin/
 
     mkdir -p debian/etc/AIS-catcher/plugins
-    cp plugins/* debian/etc/ais-catcher/plugins/
+    cp plugins/* debian/etc/AIS-catcher/plugins/
 
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
