@@ -91,6 +91,9 @@ This is fairly new script and under development so any feedback is appreciated.
 ![image](https://github.com/user-attachments/assets/1be6abdb-7df2-4f4b-8d73-1740e0476013)
 
 ## What's new?
+**Edge**:
+- Fix to system daemon file to restart process after 10s only
+  
 **v0.60** version:
 - Option to send fully decoded AIS messages in JSON format via UDP and TCP (similar to screen output with `-o 5`). Add `JSON_FULL on` to `~P/S/u`.
 - Bug fix for connecting serial devices in macOS
