@@ -189,10 +189,24 @@ getLatValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms
 getLonValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms ? decimalToDMS(ship.lon, false) : Number(ship.lon).toFixed(5)) + (ship.approx ? "</i>" : "");
 
 getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
-getDeltaTimeVal = (s) => (s < 60 ? s + "s" : s < 60 * 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m");
 getShipName = (ship) => ship.shipname;
 getCallSign = (ship) => ship.callsign;
 includeShip = (ship) => true;
+
+const getDeltaTimeVal = (s) => {
+    const days = Math.floor(s / (24 * 3600));
+    const hours = Math.floor((s % (24 * 3600)) / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    const seconds = s % 60;
+  
+    let result = '';
+    if (days > 0) result += `${days}d `;
+    if (hours > 0 || days > 0) result += `${hours}h `;
+    if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}m `;
+    if (seconds > 0 || (days === 0 && hours === 0 && minutes === 0)) result += `${seconds}s`;
+  
+    return result.trim();
+  };
 
 const notificationContainer = document.getElementById("notification-container");
 
