@@ -350,7 +350,7 @@ void WebViewer::Request(TCP::ServerConnection& c, const std::string& response, b
 		}
 	}
 	else if (r == "/favicon.ico") {
-		ResponseRaw(c, "text/html", (char*)favicon_ico_gzip, favicon_ico_gzip_len, true);
+		ResponseRaw(c, "text/html", (char*)favicon_ico_gz, favicon_ico_gz_len, true);
 	}
 	else if (r == "/kml" && KML) {
 		std::string content = ships.getKML();
