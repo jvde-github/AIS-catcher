@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.0.0/ol.css">
 	
-	<link rel="stylesheet" href="style_1725215572.css" />
+	<link rel="stylesheet" href="style_1725220904.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -195,6 +195,11 @@
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
 								onchange="setMapSetting('track_weight', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Track Show on Hover</span><span>
+							<input type="checkbox" id="settings_show_track_on_hover" onchange="settings.show_track_on_hover = this.checked; saveSettings()" />
 						</span>
 					</div>
 				</section>
@@ -996,7 +1001,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_1725215572.js"></script>
+	<script src="script_1725220904.js"></script>
 	<script src="config.js"></script>
 
 	<script>

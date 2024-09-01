@@ -38,7 +38,7 @@ var refreshIntervalMs = 2500;
 var range_update_time = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
-var
+var hover_enabled_track = false,
     marker_tracks = new Set(),
     marker_fireworks = [];
 
@@ -101,6 +101,8 @@ function restoreDefaultSettings() {
         eri: true,
         loadURL: true,
         map_opacity: 0.5,
+        show_track_on_hover: false,
+        show_track_on_select: false,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"]
     };
 }
@@ -198,15 +200,15 @@ const getDeltaTimeVal = (s) => {
     const hours = Math.floor((s % (24 * 3600)) / 3600);
     const minutes = Math.floor((s % 3600) / 60);
     const seconds = s % 60;
-  
+
     let result = '';
     if (days > 0) result += `${days}d `;
     if (hours > 0 || days > 0) result += `${hours}h `;
     if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}m `;
     if (seconds > 0 || (days === 0 && hours === 0 && minutes === 0)) result += `${seconds}s`;
-  
+
     return result.trim();
-  };
+};
 
 const notificationContainer = document.getElementById("notification-container");
 
@@ -3656,7 +3658,7 @@ async function updateShipTable() {
 
 function populateShipTableColumnVisibilityMenu() {
     const shipTableColumnVisibilityMenu = document.getElementById("shipTableColumnVisibilityMenu");
-    shipTableColumnVisibilityMenu.innerHTML = ""; 
+    shipTableColumnVisibilityMenu.innerHTML = "";
 
     table.getColumns().forEach((column) => {
         const checkboxId = `checkbox-${column.getField()}`;
@@ -3685,7 +3687,7 @@ function populateShipTableColumnVisibilityMenu() {
 
 function updateShipTableColumnVisibility() {
     const checkboxes = document.querySelectorAll("#shipTableColumnVisibilityMenu input[type='checkbox']");
-    
+
     settings.shiptable_columns = Array.from(checkboxes)
         .filter((checkbox) => checkbox.checked)
         .map((checkbox) => checkbox.value);
@@ -3803,11 +3805,16 @@ function notImplemented() {
 
 
 const stopHover = function () {
+
+    if (!hoverMMSI) return;
+
     hover_info.style.visibility = 'hidden';
 
     if (hoverMMSI in shapeFeatures) {
         shapeFeatures[hoverMMSI].changed();
     }
+
+    if (hover_enabled_track) hideTrack(hoverMMSI);
 
     hoverMMSI = undefined;
     updateHoverMarker();
@@ -3873,6 +3880,10 @@ const startHover = function (mmsi, pixel = undefined) {
         }
         updateHoverMarker();
         trackLayer.changed();
+        if (settings.show_track_on_hover) {
+            hover_enabled_track = !trackIsShown(hoverMMSI);
+            if (hover_enabled_track) showTrack(mmsi);
+        }
         if (mmsi in shapeFeatures) {
             shapeFeatures[mmsi].changed();
         }
@@ -4096,6 +4107,22 @@ async function toggleTrack(m) {
     if (card_mmsi == m) {
         document.getElementById("shipcard_track").innerText = marker_tracks.has(Number(card_mmsi)) ? "Hide Track" : "Show Track";
     }
+}
+
+async function showTrack(m) {
+    if (!marker_tracks.has(Number(m))) {
+        toggleTrack(m);
+    }
+}
+
+async function hideTrack(m) {
+    if (marker_tracks.has(Number(m))) {
+        toggleTrack(m);
+    }
+}
+
+function trackIsShown(m) {
+    return marker_tracks.has(Number(m));
 }
 
 function pinStation() {
@@ -4785,6 +4812,8 @@ function updateSettingsTab() {
     document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
     document.getElementById("settings_tooltipLabelShadowColorDark").value = settings.tooltipLabelShadowColorDark;
     document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
+    document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
+
 }
 
 function activateTab(b, a) {
