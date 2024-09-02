@@ -39,6 +39,7 @@ var range_update_time = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
 var hover_enabled_track = false,
+    select_enabled_track = false,
     marker_tracks = new Set(),
     marker_fireworks = [];
 
@@ -4145,6 +4146,7 @@ function unpinCenter() {
 
 async function showAllTracks() {
     show_all_tracks = true;
+    select_enabled_track = hover_enabled_track = false;
     await fetchTracks();
     redrawMap();
     updateShipcardTrackOption()
@@ -4405,9 +4407,35 @@ function showShipcard(m) {
     ship = m in shipsDB ? shipsDB[m].raw : null;
     ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
 
+    if (select_enabled_track && (card_mmsi != m || m == null)) {
+        if (trackIsShown(card_mmsi)) {
+            hideTrack(card_mmsi);
+            select_enabled_track = false;
+        }
+    }
+
+    if(settings.show_track_on_select && m != null) {
+        if(!trackIsShown(m)) {
+            select_enabled_track = true;
+            showTrack(m);
+        }
+        else {
+            if(hoverMMSI == m && hover_enabled_track) {
+                hover_enabled_track = false;
+                select_enabled_track = true;
+            }
+        }
+    }
+
     if (m != null && !visible) {
         if (measurecardVisible()) toggleMeasurecard();
         aside.classList.toggle("visible");
+
+        if (settings.show_track_on_select && !trackIsShown(m)) {
+            select_enabled_track = true;
+            showTrack(m);
+        }
+
     } else if (visible && m == null) {
         aside.classList.toggle("visible");
     }
@@ -4813,6 +4841,8 @@ function updateSettingsTab() {
     document.getElementById("settings_tooltipLabelShadowColorDark").value = settings.tooltipLabelShadowColorDark;
     document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
+    document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
+
 
 }
 
