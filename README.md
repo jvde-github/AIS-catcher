@@ -92,6 +92,7 @@ This is fairly new script and under development so any feedback is appreciated.
 
 ## What's new?
 **Edge**:
+- Options to automatically show the vessel track when hovering over and/or selecting a vessel
 - Fix to system daemon file to restart process after 10s only
   
 **v0.60** version:
