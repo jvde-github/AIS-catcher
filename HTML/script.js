@@ -319,7 +319,7 @@ var trackStyleFunction = function (feature) {
         c = settings.shiphover_color;
         w = w + 2;
     }
-    if (feature.mmsi == card_mmsi) {
+    else if (feature.mmsi == card_mmsi) {
         c = settings.shipselection_color;
         w = w + 2;
     }
