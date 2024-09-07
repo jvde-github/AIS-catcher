@@ -106,7 +106,7 @@ namespace AIS
 			clean(aivdm.channel, aivdm.talkerID);
 			if (aivdm.number != 1)
 			{
-				std::cerr << "NMEA: missing part of multiline message [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
+				//std::cerr << "NMEA: missing part of multiline message [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
 				return;
 			}
 		}
@@ -259,9 +259,10 @@ namespace AIS
 
 		if (checksum != NMEAchecksum(line))
 		{
-			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
-			if (crc_check)
+			if (crc_check) {
+				std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
 				return false;
+			}
 		}
 
 		GPS gps(GpsToDecimal(trim(parts[3]).c_str(), trim(parts[4])[0], error),
