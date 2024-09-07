@@ -38,6 +38,7 @@ namespace Device {
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 		uint32_t BUFFER_COUNT = 2;
+		int TXT_BLOCK_SIZE = 1;
 
 		void ReadAsync();
 		void Run();

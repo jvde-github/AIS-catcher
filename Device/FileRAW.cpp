@@ -84,8 +84,8 @@ namespace Device {
 			buffer.resize(BUFFER_SIZE);
 		}
 		else {
-			fifo.Init(1, BUFFER_SIZE);
-			buffer.resize(1);
+			fifo.Init(TXT_BLOCK_SIZE, BUFFER_SIZE);
+			buffer.resize(TXT_BLOCK_SIZE);
 		}
 
 		if (filename == "." || filename == "stdin") {
@@ -128,6 +128,9 @@ namespace Device {
 		}
 		else if (option == "LOOP") {
 			loop = Util::Parse::Switch(arg);
+		}
+		else if (option == "TXT_BLOCK_SIZE") {
+			TXT_BLOCK_SIZE = Util::Parse::Integer(arg,1, 16384);
 		}
 		else
 			Device::Set(option, arg);
