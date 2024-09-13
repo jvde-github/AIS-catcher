@@ -81,6 +81,8 @@ namespace AIS {
 		bool crc_check = false;
 		bool JSON_input = false;
 		bool VDO = true;
+		bool warnings = true;
+		bool includeGPS = true;
 
 		void split(const std::string&);
 		std::string trim(const std::string&);
@@ -105,6 +107,8 @@ namespace AIS {
 		void setStation(int s) { station = s; }
 		int getStation() { return station; }
 
+		void setWarnings(bool b) { warnings = b; }
+		void setGPS(bool b) { includeGPS = b; }
 		void setCRCcheck(bool b) { crc_check = b; }
 		bool getCRCcheck() { return crc_check; }
 		void setJSON(bool b) { JSON_input = b; }
