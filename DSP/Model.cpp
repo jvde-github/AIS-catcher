@@ -711,6 +711,12 @@ namespace AIS {
 		else if (option == "UUID") {
 			nmea.setUUID(arg);
 		}
+		else if (option == "WARNINGS") {
+			nmea.setWarnings(Util::Parse::Switch(arg));
+		}
+		else if (option == "GPS") {
+			nmea.setGPS(Util::Parse::Switch(arg));
+		}
 		else
 			Model::Set(option, arg);
 

@@ -63,7 +63,7 @@ namespace AIS {
 
 	void NMEA::submitAIS(TAG& tag, long t, int thisstation) {
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
-			std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
+			if (warnings) std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
 			if (crc_check)
 				return;
 		}
@@ -83,7 +83,7 @@ namespace AIS {
 				Send(&msg, 1, tag);
 			}
 			else if (msg.getLength() > 0)
-				std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << " from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
+				if (warnings) std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << " from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
 			return;
 		}
 
@@ -121,7 +121,7 @@ namespace AIS {
 
 			Send(&msg, 1, tag);
 		}
-		else
+		else if (warnings)
 			std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << std::endl;
 
 		clean(aivdm.channel, aivdm.talkerID);
@@ -182,6 +182,10 @@ namespace AIS {
 	}
 
 	bool NMEA::processGGA(const std::string& s, TAG& tag, long t) {
+
+		if (!includeGPS)
+			return true;
+
 		bool error = false;
 
 		split(s);
@@ -194,7 +198,7 @@ namespace AIS {
 
 		if (checksum != NMEAchecksum(line)) {
 			if (crc_check) {
-				std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+				if (warnings) std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
 				return false;
 			}
 		}
@@ -202,7 +206,7 @@ namespace AIS {
 		// no proper fix
 		int fix = atoi(parts[6].c_str());
 		if (fix != 1 && fix != 2) {
-			std::cerr << "NMEA: no fix in GPGGA NMEA:" << parts[6] << std::endl;
+			if (warnings) std::cerr << "NMEA: no fix in GPGGA NMEA:" << parts[6] << std::endl;
 			return false;
 		}
 
@@ -219,6 +223,10 @@ namespace AIS {
 	}
 
 	bool NMEA::processRMC(const std::string& s, TAG& tag, long t) {
+
+		if (!includeGPS)
+			return true;
+
 		bool error = false;
 
 		split(s);
@@ -231,7 +239,7 @@ namespace AIS {
 
 		if (checksum != NMEAchecksum(line)) {
 			if (crc_check) {
-				std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+				if (warnings) std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
 				return false;
 			}
 		}
@@ -249,11 +257,15 @@ namespace AIS {
 	}
 
 	bool NMEA::processGLL(const std::string& s, TAG& tag, long t) {
+
+		if (!includeGPS)
+			return true;
+
 		bool error = false;
 		split(s);
 
 		if (parts.size() != 8) {
-			std::cerr << "NMEA: GLL does not have 8 parts but " << parts.size() << std::endl;
+			if (warnings) std::cerr << "NMEA: GLL does not have 8 parts but " << parts.size() << std::endl;
 			return false;
 		}
 
@@ -261,7 +273,7 @@ namespace AIS {
 		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
 
 		if (checksum != NMEAchecksum(line)) {
-			std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (warnings) std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
 			if (crc_check)
 				return false;
 		}
@@ -385,7 +397,7 @@ namespace AIS {
 					// temporary check, should be removed
 					volatile float level_check = MIN(LEVEL_UNDEFINED + 1, tag.level);
 					if (level_check > LEVEL_UNDEFINED) {
-						std::cerr << "Warning: level check failed for " << s << std::endl;
+						if (warnings) std::cerr << "Warning: level check failed for " << s << std::endl;
 					}
 					// ------------------------------
 
@@ -400,7 +412,7 @@ namespace AIS {
 					}
 				}
 
-				if (cls == "TPV") {
+				if (cls == "TPV" && includeGPS) {
 					float lat = 0, lon = 0;
 
 					for (const auto& p : j->getProperties()) {
@@ -481,7 +493,7 @@ namespace AIS {
 							}
 						}
 						else if (newline) {
-							std::cerr << "NMEA: newline in uncompleted JSON input not allowed";
+							if (warnings) std::cerr << "NMEA: newline in uncompleted JSON input not allowed";
 							reset(c);
 						}
 					}
@@ -509,7 +521,7 @@ namespace AIS {
 								noerror &= processGLL(line, tag, t);
 
 							if (!noerror) {
-								std::cerr << "NMEA: error processing NMEA line " << line << std::endl;
+								if (warnings) std::cerr << "NMEA: error processing NMEA line " << line << std::endl;
 							}
 							reset(c);
 						}
@@ -521,7 +533,7 @@ namespace AIS {
 			}
 		}
 		catch (std::exception& e) {
-			std::cerr << "NMEA Receive: " << e.what() << std::endl;
+			if (warnings) std::cerr << "NMEA Receive: " << e.what() << std::endl;
 			std::terminate();
 		}
 	}
