@@ -382,7 +382,7 @@ hoverCircleStyleFunction = function (feature) {
             radius: 20,
             stroke: new ol.style.Stroke({
                 color: settings.shiphover_color,
-                width: 5
+                width: 8
             })
         })
     });
@@ -394,7 +394,7 @@ selectCircleStyleFunction = function (feature) {
             radius: 15,
             stroke: new ol.style.Stroke({
                 color: settings.shipselection_color,
-                width: 5
+                width: 8
             })
         })
     });
@@ -1298,7 +1298,7 @@ const handleClick = function (pixel, target, event) {
 
         closeDialog();
         closeSettings();
-        showShipcard(feature.ship.mmsi);
+        showShipcard(feature.ship.mmsi, pixel);
     }
     else {
         clickTimeout = setTimeout(function () {
@@ -3051,6 +3051,15 @@ function toggleShipcardSize() {
                 (!e[i].classList.contains("shipcard-max-only") && !e[i].classList.contains("shipcard-row-selected"))
             )
                 e[i].classList.toggle("shipcard-row-selected");
+
+            const aside = document.getElementById("shipcard");
+            if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
+
+                if (card_mmsi in shipsDB) {
+                    let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]));
+                    positionAside(pixel, aside);
+                }
+            }
         }
     } else {
         for (let i = 0; i < e.length; i++) {
@@ -4400,7 +4409,95 @@ function drawStation() {
     }
 }
 
-function showShipcard(m) {
+function adjustMapForShipcard(ship, pixel) {
+    if (ship && ship.lon && ship.lat) {
+        let view = map.getView();
+        // Use the provided pixel if defined, otherwise calculate it
+        if (!pixel) {
+            let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
+            pixel = map.getPixelFromCoordinate(shipCoords);
+        }
+
+        let shipcard = document.getElementById("shipcard");
+        let shipcardRect = shipcard.getBoundingClientRect();
+        let mapElement = map.getTargetElement();
+        let mapRect = mapElement.getBoundingClientRect();
+
+        let isUnderShipcard = (
+            pixel[0] + mapRect.left >= shipcardRect.left &&
+            pixel[0] + mapRect.left <= shipcardRect.right &&
+            pixel[1] + mapRect.top >= shipcardRect.top &&
+            pixel[1] + mapRect.top <= shipcardRect.bottom
+        );
+
+        if (isUnderShipcard) {
+            let newPixel = [...pixel];
+            let margin = 10; // Margin in pixels
+
+            if (shipcardRect.bottom + margin + 20 <= mapRect.bottom) { // 20 is an approximate marker height
+                newPixel[1] = shipcardRect.bottom + margin;
+            }
+            else if (shipcardRect.right + margin + 20 <= mapRect.right) { // 20 is an approximate marker width
+                newPixel[0] = shipcardRect.right + margin;
+            }
+            newPixel = pixel;
+
+
+            console.log("Original pixel:", pixel);
+            console.log("New pixel:", newPixel);
+
+            let currentCenter = view.getCenter();
+            let newCenter = map.getCoordinateFromPixel(newPixel);
+            let centerDiff = [newCenter[0] - currentCenter[0], newCenter[1] - currentCenter[1]];
+
+            stopHover();
+            view.animate({
+                center: [currentCenter[0] + centerDiff[0], currentCenter[1] + centerDiff[1]],
+                duration: 1000
+            });
+        }
+    }
+}
+
+function positionAside(pixel, aside) {
+
+    stopHover();
+    aside.style.left = "";
+    aside.style.top = "";
+
+    if (pixel) {
+        const margin = 35;
+
+        let marginRight = document.getElementById("tableside").classList.contains("active") ? 592 : 30;
+
+        const mapSize = map.getSize();
+        const shipCardRect = aside.getBoundingClientRect();
+        const shipCardWidth = shipCardRect.width;
+        const shipCardHeight = shipCardRect.height;
+
+        const rightSpace = mapSize[0] - (pixel[0] + shipCardWidth + margin + marginRight);
+        const leftSpace = pixel[0] - (shipCardWidth + margin);
+
+        if ((rightSpace > 0 || leftSpace > 0) && mapSize[1] > shipCardHeight + 2 * margin) {
+
+            let topPosition = pixel[1] - (shipCardHeight / 2);
+            topPosition = Math.max(margin, Math.min(mapSize[1] - shipCardHeight - margin, topPosition));
+
+            aside.style.top = `${topPosition}px`;
+
+            if (rightSpace >= 0) {
+                aside.style.left = `${pixel[0] + margin}px`;
+            } else if (leftSpace >= 0) {
+                aside.style.left = `${pixel[0] - shipCardWidth - margin}px`;
+            } else {
+                aside.style.left = `${(mapSize[0] - shipCardWidth) / 2}px`;
+            }
+        }
+    }
+    adjustMapForShipcard(ship, pixel);
+}
+
+function showShipcard(m, pixel = undefined) {
     const aside = document.getElementById("shipcard");
     const visible = shipcardVisible();
 
@@ -4414,13 +4511,13 @@ function showShipcard(m) {
         }
     }
 
-    if(settings.show_track_on_select && m != null) {
-        if(!trackIsShown(m)) {
+    if (settings.show_track_on_select && m != null) {
+        if (!trackIsShown(m)) {
             select_enabled_track = true;
             showTrack(m);
         }
         else {
-            if(hoverMMSI == m && hover_enabled_track) {
+            if (hoverMMSI == m && hover_enabled_track) {
                 hover_enabled_track = false;
                 select_enabled_track = true;
             }
@@ -4448,18 +4545,11 @@ function showShipcard(m) {
     if (shipcardVisible()) {
         populateShipcard();
 
-        if (ship && ship.lon && ship.lat) {
-            let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
-
-            let view = map.getView();
-            let extent = view.calculateExtent(map.getSize());
-
-            if (!ol.extent.containsCoordinate(extent, shipCoords)) {
-                view.setCenter(shipCoords);
-                //view.setZoom(view.getMaxZoom());
-            }
+        if (isShipcardMax()) {
+            toggleShipcardSize();
         }
         if (!visible) shipcardMinIfMaxonMobile();
+        positionAside(pixel, aside);
     }
 }
 
