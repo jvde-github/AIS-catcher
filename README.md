@@ -47,6 +47,12 @@ The script will install all dependencies and build AIS-catcher. The required SDR
 
 To update AIS-catcher to the latest version, simply run the above command again.
 
+If you want to use pre-installed Debian packes in the installation use:
+```console
+sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)" _ -p
+```
+The advantage that this avoids an compilation step which can save quite a bit of time on older Raspberry devices but it does not optimize the binaries for the specific hardware and ***is not compatible with the RTL-SDR V4***.
+
 #### Verifying the installation
 
 To verify that AIS-catcher is installed or updated, run:
