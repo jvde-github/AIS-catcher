@@ -4543,13 +4543,19 @@ function showShipcard(m, pixel = undefined) {
     trackLayer.changed();
 
     if (shipcardVisible()) {
-        populateShipcard();
 
         if (isShipcardMax()) {
             toggleShipcardSize();
         }
         if (!visible) shipcardMinIfMaxonMobile();
         positionAside(pixel, aside);
+        populateShipcard();
+
+        // trigger reflow for iPad Safari
+        aside.style.display = 'none';
+        aside.offsetHeight;
+        aside.style.display = '';	
+        
     }
 }
 
