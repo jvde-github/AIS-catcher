@@ -740,7 +740,18 @@ function showContextMenu(event, mmsi, context) {
     }
 
     document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
-    document.getElementById("ctx_track").innerText = marker_tracks.has(Number(context_mmsi)) && context.includes("mmsi-map") ? "Hide Track" : "Show Track";
+
+    if (settings.show_track_on_select && context_mmsi == card_mmsi) {
+        document.getElementById("ctx_track").innerText = select_enabled_track && context.includes("mmsi-map") ? "Pin Track" : "Unpin Track";
+    }
+    else {
+        const isTrackVisible = marker_tracks.has(Number(context_mmsi));
+        const isHovering = hoverMMSI === context_mmsi && hover_enabled_track;
+        const isOnMmsiMap = context.includes("mmsi-map");
+
+        document.getElementById("ctx_track").innerText =
+            (isTrackVisible && !isHovering && isOnMmsiMap) ? "Hide Track" : "Show Track";
+    }
 
     contextMenu.style.display = "block";
 
@@ -1701,7 +1712,6 @@ function updateTablecard() {
                 });
                 row.addEventListener("contextmenu", function (e) {
                     showContextMenu(event, ship.mmsi, ["mmsi", "mmsi-map"]);
-                    sss
                 });
 
                 var cell1 = row.insertCell(0);
@@ -3827,6 +3837,7 @@ const stopHover = function () {
     if (hover_enabled_track) hideTrack(hoverMMSI);
 
     hoverMMSI = undefined;
+    hover_enabled_track = false;
     updateHoverMarker();
     trackLayer.changed();
 }
@@ -4102,7 +4113,7 @@ function toggleMeasurecard() {
     document.getElementById("measurecard").classList.toggle("visible");
 }
 
-async function toggleTrack(m) {
+async function ToggleTrackOnMap(m) {
 
     if (marker_tracks.has(Number(m))) {
         marker_tracks.delete(Number(m));
@@ -4113,22 +4124,33 @@ async function toggleTrack(m) {
         shipcardMinIfMaxonMobile();
         redrawMap();
     }
+}
 
-    if (card_mmsi == m) {
-        document.getElementById("shipcard_track").innerText = marker_tracks.has(Number(card_mmsi)) ? "Hide Track" : "Show Track";
+async function toggleTrack(m) {
+    if (settings.show_track_on_select && card_mmsi == m) {
+        select_enabled_track = !select_enabled_track;
     }
+    else {
+        ToggleTrackOnMap(m);
+    }
+    updateShipcardTrackOption(m);
+
 }
 
 async function showTrack(m) {
     if (!marker_tracks.has(Number(m))) {
-        toggleTrack(m);
+        ToggleTrackOnMap(m);
     }
+    updateShipcardTrackOption(m);
+
 }
 
 async function hideTrack(m) {
     if (marker_tracks.has(Number(m))) {
-        toggleTrack(m);
+        ToggleTrackOnMap(m);
     }
+    updateShipcardTrackOption(m);
+
 }
 
 function trackIsShown(m) {
@@ -4162,12 +4184,24 @@ async function showAllTracks() {
 }
 
 function deleteAllTracks() {
-    paths = {};
-    marker_tracks = new Set();
     show_all_tracks = false;
-    redrawMap();
-    updateShipcardTrackOption();
+    marker_tracks = new Set();
+    let p = {};
+
+    if (card_mmsi && settings.show_track_on_select) {
+        marker_tracks.add(Number(card_mmsi));
+        select_enabled_track = true;
+
+        if (paths[card_mmsi]) {
+            p[card_mmsi] = paths[card_mmsi];
+        }
+    }
+
+    paths = p;
+
+    redrawMap(); updateShipcardTrackOption();
 }
+
 
 async function fetchTracks() {
     if (marker_tracks.size == 0 && show_all_tracks == false) return true;
@@ -4178,7 +4212,7 @@ async function fetchTracks() {
 
             for (var mmsi of marker_tracks) {
                 if (!(mmsi in shipsDB)) {
-                    toggleTrack(mmsi);
+                    ToggleTrackOnMap(mmsi);
                 }
             }
 
@@ -4208,6 +4242,19 @@ function updateShipcardTrackOption() {
         document.getElementById("shipcard_track_option").style.display = "none";
     } else {
         document.getElementById("shipcard_track_option").style.display = "flex";
+    }
+
+    if (card_mmsi) {
+        if (settings.show_track_on_select) {
+            document.getElementById("shipcard_track").innerText = select_enabled_track ? "Pin Track" : "Unpin Track";
+        }
+        else {
+            const isTrackVisible = marker_tracks.has(Number(card_mmsi));
+            const isHovering = hoverMMSI === card_mmsi && hover_enabled_track;
+    
+            document.getElementById("shipcard_track").innerText =
+                (isTrackVisible && !isHovering) ? "Hide Track" : "Show Track";
+        }
     }
 }
 
@@ -4327,7 +4374,8 @@ function populateShipcard() {
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
 
-    document.getElementById("shipcard_track").innerText = marker_tracks.has(Number(card_mmsi)) ? "Hide Track" : "Show Track";
+    updateShipcardTrackOption(card_mmsi);
+
 }
 
 function shipcardMinIfMaxonMobile() {
@@ -4504,23 +4552,12 @@ function showShipcard(m, pixel = undefined) {
     ship = m in shipsDB ? shipsDB[m].raw : null;
     ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
 
-    if (select_enabled_track && (card_mmsi != m || m == null)) {
-        if (trackIsShown(card_mmsi)) {
-            hideTrack(card_mmsi);
-            select_enabled_track = false;
-        }
-    }
 
-    if (settings.show_track_on_select && m != null) {
-        if (!trackIsShown(m)) {
-            select_enabled_track = true;
-            showTrack(m);
-        }
-        else {
-            if (hoverMMSI == m && hover_enabled_track) {
-                hover_enabled_track = false;
-                select_enabled_track = true;
-            }
+    if (select_enabled_track && (card_mmsi != m || m == null)) {
+        select_enabled_track = false;
+
+        if (!(card_mmsi == hoverMMSI && hover_enabled_track)) {
+            hideTrack(card_mmsi);
         }
     }
 
@@ -4528,10 +4565,20 @@ function showShipcard(m, pixel = undefined) {
         if (measurecardVisible()) toggleMeasurecard();
         aside.classList.toggle("visible");
 
-        if (settings.show_track_on_select && !trackIsShown(m)) {
-            select_enabled_track = true;
-            showTrack(m);
+        //if (settings.show_track_on_select && hoverMMSI == m) hover_enabled_track = false;
+        select_enabled_track = false;
+
+        if (settings.show_track_on_select) {
+            if (hoverMMSI === m && hover_enabled_track) {
+                hover_enabled_track = false;
+                select_enabled_track = true;
+            }
+            else if (!trackIsShown(m)) {
+                select_enabled_track = true;
+                showTrack(m);
+            }
         }
+
 
     } else if (visible && m == null) {
         aside.classList.toggle("visible");
@@ -4554,8 +4601,7 @@ function showShipcard(m, pixel = undefined) {
         // trigger reflow for iPad Safari
         aside.style.display = 'none';
         aside.offsetHeight;
-        aside.style.display = '';	
-        
+        aside.style.display = '';
     }
 }
 
@@ -4700,7 +4746,6 @@ async function updateMap() {
     if (fetch_binary) ok = await fetchShipsBinary();
     else ok = await fetchShips();
     if (!ok) return;
-
 
     ok = await fetchTracks();
     if (!ok) return;
@@ -4862,6 +4907,7 @@ function refresh_data() {
             try {
                 if (settings.tab === "map") {
                     await updateMap();
+
                 } else if (settings.tab === "stat") {
                     await updateStatistics();
                 } else if (settings.tab === "plots") {
@@ -5180,6 +5226,37 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
+
+function makeDraggable(element) {
+    let offsetX, offsetY;
+
+    element.addEventListener('mousedown', (e) => {
+        // Prevent default behavior (like text selection)
+        e.preventDefault();
+
+        offsetX = e.clientX - element.getBoundingClientRect().left;
+        offsetY = e.clientY - element.getBoundingClientRect().top;
+
+        element.style.position = 'absolute';
+        
+        const onMouseMove = (e) => {
+            element.style.left = `${e.clientX - offsetX}px`;
+            element.style.top = `${e.clientY - offsetY}px`;
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+}
+
+document.querySelectorAll('.mapcard').forEach(card => {
+    makeDraggable(card);
+});
 
 let mdabout = "This content can be defined by the owner of the station";
 
