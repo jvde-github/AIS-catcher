@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "AIS-catcher.h"
+
 #include <chrono>
 #include <complex>
 
@@ -28,8 +30,6 @@
 #include <signal.h>
 #define SleepSystem(x) usleep(x * 1000)
 #endif
-
-#include "AIS-catcher.h"
 
 class tN2kMsg;
 

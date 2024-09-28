@@ -17,6 +17,7 @@
 
 #include <vector>
 
+#include "AIS-catcher.h"
 #include "Ships.h"
 #include "Utilities.h"
 #include "JSON/StringBuilder.h"
