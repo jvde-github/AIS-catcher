@@ -4251,7 +4251,7 @@ function updateShipcardTrackOption() {
         else {
             const isTrackVisible = marker_tracks.has(Number(card_mmsi));
             const isHovering = hoverMMSI === card_mmsi && hover_enabled_track;
-    
+
             document.getElementById("shipcard_track").innerText =
                 (isTrackVisible && !isHovering) ? "Hide Track" : "Show Track";
         }
@@ -4565,9 +4565,16 @@ function showShipcard(m, pixel = undefined) {
         if (measurecardVisible()) toggleMeasurecard();
         aside.classList.toggle("visible");
 
-        //if (settings.show_track_on_select && hoverMMSI == m) hover_enabled_track = false;
         select_enabled_track = false;
 
+
+    } else if (visible && m == null) {
+        aside.classList.toggle("visible");
+    }
+
+    card_mmsi = m;
+
+    if (shipcardVisible()) {
         if (settings.show_track_on_select) {
             if (hoverMMSI === m && hover_enabled_track) {
                 hover_enabled_track = false;
@@ -4580,16 +4587,8 @@ function showShipcard(m, pixel = undefined) {
         }
 
 
-    } else if (visible && m == null) {
-        aside.classList.toggle("visible");
-    }
-
-    card_mmsi = m;
-
-    updateFocusMarker();
-    trackLayer.changed();
-
-    if (shipcardVisible()) {
+        updateFocusMarker();
+        trackLayer.changed();
 
         if (isShipcardMax()) {
             toggleShipcardSize();
@@ -5231,14 +5230,14 @@ function makeDraggable(element) {
     let offsetX, offsetY;
 
     element.addEventListener('mousedown', (e) => {
-        // Prevent default behavior (like text selection)
+
         e.preventDefault();
 
         offsetX = e.clientX - element.getBoundingClientRect().left;
         offsetY = e.clientY - element.getBoundingClientRect().top;
 
         element.style.position = 'absolute';
-        
+
         const onMouseMove = (e) => {
             element.style.left = `${e.clientX - offsetX}px`;
             element.style.top = `${e.clientY - offsetY}px`;
