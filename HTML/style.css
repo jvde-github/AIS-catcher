@@ -709,7 +709,7 @@ td {
 
 #statcard {
     top: 10px;
-    right: 50px;
+    left: calc(100% - 50px - 200px);
     display: none;
     flex-direction: column;
     justify-content: stretch;
