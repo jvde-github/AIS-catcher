@@ -1802,64 +1802,6 @@ function hideTablecard() {
     }
 }
 
-var isDragging = false;
-var offsetX, offsetY, headerY;
-
-var statcard = document.getElementById("statcard");
-
-function startDrag(event) {
-    var clientX = event.clientX || event.touches[0].clientX;
-    var clientY = event.clientY || event.touches[0].clientY;
-
-    isDragging = true;
-
-    var boundingRect = statcard.getBoundingClientRect();
-
-    const menubar = document.getElementById("menubar");
-    const position = window.getComputedStyle(menubar).getPropertyValue("position");
-    const menuHeight = position === "fixed" ? 0 : document.getElementById("menubar").offsetHeight;
-    const headerHeight = document.getElementById("headerbar").offsetHeight;
-
-    offsetX = clientX - boundingRect.left;
-    offsetY = clientY - boundingRect.top;
-    headerY = +menuHeight + headerHeight + 5;
-
-    statcard.style.cursor = "grabbing";
-    L.DomEvent.stopPropagation(event);
-}
-
-function moveDrag(event) {
-    if (isDragging) {
-        const clientX = event.clientX || event.touches[0].clientX;
-        const clientY = event.clientY || event.touches[0].clientY;
-
-        const viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
-        const viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
-
-        var top = Math.max(0, Math.min(clientY - offsetY, viewportHeight - 10 - statcard.offsetHeight) - headerY);
-        var left = Math.max(0, Math.min(clientX - offsetX, viewportWidth - 10 - statcard.offsetWidth));
-
-        statcard.style.top = top + "px";
-        statcard.style.left = left + "px";
-        statcard.style.right = "auto";
-    }
-}
-
-function endDrag(event) {
-    isDragging = false;
-    statcard.style.cursor = "auto";
-}
-
-statcard.addEventListener("mousedown", startDrag);
-document.addEventListener("mousemove", moveDrag);
-document.addEventListener("mouseup", endDrag);
-document.addEventListener("mouseleave", endDrag);
-
-statcard.addEventListener("touchstart", startDrag);
-document.addEventListener("touchmove", moveDrag);
-document.addEventListener("touchend", endDrag);
-document.addEventListener("touchcancel", endDrag);
-
 function setRangeSwitch(b) {
     if (b != settings.show_range) {
         toggleRange();
@@ -5236,54 +5178,95 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
-// Global flag to track if a drag has just occurred
 let isDraggingGlobal = false;
 
 function makeDraggable(element) {
     let offsetX, offsetY;
     let dragging = false;
     let startX, startY;
-    const moveThreshold = 5; // Minimum pixels to consider as a drag
+    const moveThreshold = 5;
+    let isDraggingGlobal = false; // Define the variable
 
+    // Ensure the element has the correct positioning
+    const computedStyle = window.getComputedStyle(element);
+    if (!['absolute', 'relative', 'fixed'].includes(computedStyle.position)) {
+        element.style.position = 'absolute';
+    }
+
+    // Helper functions to handle drag logic
+    function onDragStart(clientX, clientY) {
+        startX = clientX;
+        startY = clientY;
+        offsetX = clientX - element.offsetLeft;
+        offsetY = clientY - element.offsetTop;
+        dragging = false;
+    }
+
+    function onDragMove(clientX, clientY) {
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        if (!dragging && (Math.abs(dx) > moveThreshold || Math.abs(dy) > moveThreshold)) {
+            dragging = true;
+            isDraggingGlobal = true;
+        }
+
+        if (dragging) {
+            // Update position using left and top
+            element.style.left = `${clientX - offsetX}px`;
+            element.style.top = `${clientY - offsetY}px`;
+        }
+    }
+
+    function onDragEnd() {
+        if (dragging) {
+            // Optional: Add any cleanup logic here
+            isDraggingGlobal = false;
+        }
+        dragging = false;
+    }
+
+    // Mouse Event Handlers
     element.addEventListener('mousedown', (e) => {
         e.preventDefault();
-
-        // Calculate initial positions
-        offsetX = e.clientX - element.offsetLeft;
-        offsetY = e.clientY - element.offsetTop;
-        startX = e.clientX;
-        startY = e.clientY;
-        dragging = false;
+        onDragStart(e.clientX, e.clientY);
 
         const onMouseMove = (e) => {
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-
-            if (!dragging && (Math.abs(dx) > moveThreshold || Math.abs(dy) > moveThreshold)) {
-                dragging = true;
-                isDraggingGlobal = true;
-            }
-
-            if (dragging) {
-                e.preventDefault();
-                element.style.left = `${e.clientX - offsetX}px`;
-                element.style.top = `${e.clientY - offsetY}px`;
-            }
+            onDragMove(e.clientX, e.clientY);
         };
 
         const onMouseUp = (e) => {
+            onDragEnd();
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
-
-            if (dragging) {
-                e.preventDefault();
-            }
         };
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     });
+
+    element.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        onDragStart(touch.clientX, touch.clientY);
+
+        const onTouchMove = (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            onDragMove(touch.clientX, touch.clientY);
+        };
+
+        const onTouchEnd = (e) => {
+            onDragEnd();
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+        };
+
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onTouchEnd);
+    });
 }
+
 
 document.querySelectorAll('.draggable').forEach(card => {
     makeDraggable(card);
