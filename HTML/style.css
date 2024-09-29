@@ -156,6 +156,15 @@ html {
     touch-action: none;
 }
 
+.draggable {
+    cursor: grab;
+}
+
+.draggable.dragging {
+    cursor: grabbing;
+}
+
+
 a {
     color: var(--link-color);
     text-decoration: none;
@@ -606,7 +615,7 @@ td {
     z-index: 100;
     font-size: 12px;
     background-color: rgba(var(--menu-background-color), 0.6) !important;
-    background-color: rgba(0,0,0, 0.2) !important;
+    background-color: rgba(0, 0, 0, 0.2) !important;
     color: var(--menu-font-color) !important;
     color: white !important;
     text-align: center;
