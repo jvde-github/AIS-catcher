@@ -4460,9 +4460,20 @@ function drawStation() {
 function adjustMapForShipcard(ship, pixel) {
     if (ship && ship.lon && ship.lat) {
         let view = map.getView();
+
+        let currentExtent = view.calculateExtent(map.getSize());
+        let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
+
+        if (!ol.extent.containsCoordinate(currentExtent, shipCoords)) {
+            view.animate({
+                center: shipCoords,
+                duration: 1000
+            });
+            return;
+        }
+
         // Use the provided pixel if defined, otherwise calculate it
         if (!pixel) {
-            let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
             pixel = map.getPixelFromCoordinate(shipCoords);
         }
 
@@ -5225,27 +5236,48 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
+// Global flag to track if a drag has just occurred
+let isDraggingGlobal = false;
 
 function makeDraggable(element) {
     let offsetX, offsetY;
+    let dragging = false;
+    let startX, startY;
+    const moveThreshold = 5; // Minimum pixels to consider as a drag
 
     element.addEventListener('mousedown', (e) => {
-
         e.preventDefault();
 
-        offsetX = e.clientX - element.getBoundingClientRect().left;
-        offsetY = e.clientY - element.getBoundingClientRect().top;
-
-        element.style.position = 'absolute';
+        // Calculate initial positions
+        offsetX = e.clientX - element.offsetLeft;
+        offsetY = e.clientY - element.offsetTop;
+        startX = e.clientX;
+        startY = e.clientY;
+        dragging = false;
 
         const onMouseMove = (e) => {
-            element.style.left = `${e.clientX - offsetX}px`;
-            element.style.top = `${e.clientY - offsetY}px`;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            if (!dragging && (Math.abs(dx) > moveThreshold || Math.abs(dy) > moveThreshold)) {
+                dragging = true;
+                isDraggingGlobal = true;
+            }
+
+            if (dragging) {
+                e.preventDefault();
+                element.style.left = `${e.clientX - offsetX}px`;
+                element.style.top = `${e.clientY - offsetY}px`;
+            }
         };
 
-        const onMouseUp = () => {
+        const onMouseUp = (e) => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+
+            if (dragging) {
+                e.preventDefault();
+            }
         };
 
         document.addEventListener('mousemove', onMouseMove);
@@ -5253,9 +5285,17 @@ function makeDraggable(element) {
     });
 }
 
-document.querySelectorAll('.mapcard').forEach(card => {
+document.querySelectorAll('.draggable').forEach(card => {
     makeDraggable(card);
 });
+
+document.addEventListener('click', function (e) {
+    if (isDraggingGlobal) {
+        e.preventDefault();
+        e.stopPropagation();
+        isDraggingGlobal = false;
+    }
+}, true);
 
 let mdabout = "This content can be defined by the owner of the station";
 
