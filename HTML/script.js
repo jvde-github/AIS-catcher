@@ -5179,27 +5179,27 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
 }));
 
 let isDraggingGlobal = false;
+let clickPrevent = false;
 
 function makeDraggable(element) {
     let offsetX, offsetY;
     let dragging = false;
     let startX, startY;
     const moveThreshold = 5;
-    let isDraggingGlobal = false; // Define the variable
+    isDraggingGlobal = false;
 
-    // Ensure the element has the correct positioning
     const computedStyle = window.getComputedStyle(element);
     if (!['absolute', 'relative', 'fixed'].includes(computedStyle.position)) {
         element.style.position = 'absolute';
     }
 
-    // Helper functions to handle drag logic
     function onDragStart(clientX, clientY) {
         startX = clientX;
         startY = clientY;
         offsetX = clientX - element.offsetLeft;
         offsetY = clientY - element.offsetTop;
         dragging = false;
+        clickPrevent = false;
     }
 
     function onDragMove(clientX, clientY) {
@@ -5212,7 +5212,6 @@ function makeDraggable(element) {
         }
 
         if (dragging) {
-            // Update position using left and top
             element.style.left = `${clientX - offsetX}px`;
             element.style.top = `${clientY - offsetY}px`;
         }
@@ -5220,13 +5219,12 @@ function makeDraggable(element) {
 
     function onDragEnd() {
         if (dragging) {
-            // Optional: Add any cleanup logic here
             isDraggingGlobal = false;
+            clickPrevent = true; // Set flag to prevent click
         }
         dragging = false;
     }
 
-    // Mouse Event Handlers
     element.addEventListener('mousedown', (e) => {
         e.preventDefault();
         onDragStart(e.clientX, e.clientY);
@@ -5267,18 +5265,25 @@ function makeDraggable(element) {
     });
 }
 
-
 document.querySelectorAll('.draggable').forEach(card => {
     makeDraggable(card);
 });
 
 document.addEventListener('click', function (e) {
+    if (clickPrevent) {
+        e.preventDefault();
+        e.stopPropagation();
+        clickPrevent = false;
+        return;
+    }
+
     if (isDraggingGlobal) {
         e.preventDefault();
         e.stopPropagation();
         isDraggingGlobal = false;
     }
 }, true);
+
 
 let mdabout = "This content can be defined by the owner of the station";
 
