@@ -5178,20 +5178,11 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
-let isDraggingGlobal = false;
-let clickPrevent = false;
-
 function makeDraggable(element) {
     let offsetX, offsetY;
     let dragging = false;
     let startX, startY;
     const moveThreshold = 5;
-    isDraggingGlobal = false;
-
-    const computedStyle = window.getComputedStyle(element);
-    if (!['absolute', 'relative', 'fixed'].includes(computedStyle.position)) {
-        element.style.position = 'absolute';
-    }
 
     function onDragStart(clientX, clientY) {
         startX = clientX;
@@ -5200,15 +5191,20 @@ function makeDraggable(element) {
         offsetY = clientY - element.offsetTop;
         dragging = false;
         clickPrevent = false;
+        element.classList.remove('dragging');
     }
 
-    function onDragMove(clientX, clientY) {
+    function onDragMove(clientX, clientY, e) {
         const dx = clientX - startX;
         const dy = clientY - startY;
 
         if (!dragging && (Math.abs(dx) > moveThreshold || Math.abs(dy) > moveThreshold)) {
             dragging = true;
             isDraggingGlobal = true;
+            clickPrevent = true; 
+            element.classList.add('dragging'); 
+
+            e.preventDefault();
         }
 
         if (dragging) {
@@ -5220,69 +5216,44 @@ function makeDraggable(element) {
     function onDragEnd() {
         if (dragging) {
             isDraggingGlobal = false;
-            clickPrevent = true; // Set flag to prevent click
+            clickPrevent = true; 
+            element.classList.remove('dragging');
         }
         dragging = false;
     }
 
-    element.addEventListener('mousedown', (e) => {
-        e.preventDefault();
+    element.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); 
+        element.setPointerCapture(e.pointerId);
         onDragStart(e.clientX, e.clientY);
 
-        const onMouseMove = (e) => {
-            onDragMove(e.clientX, e.clientY);
+        const onPointerMove = (e) => {
+            onDragMove(e.clientX, e.clientY, e);
         };
 
-        const onMouseUp = (e) => {
+        const onPointerUp = (e) => {
             onDragEnd();
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
+            element.removeEventListener('pointermove', onPointerMove);
+            element.removeEventListener('pointerup', onPointerUp);
         };
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+        element.addEventListener('pointermove', onPointerMove);
+        element.addEventListener('pointerup', onPointerUp);
     });
 
-    element.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        onDragStart(touch.clientX, touch.clientY);
-
-        const onTouchMove = (e) => {
+    element.addEventListener('click', (e) => {
+        if (clickPrevent) {
             e.preventDefault();
-            const touch = e.touches[0];
-            onDragMove(touch.clientX, touch.clientY);
-        };
-
-        const onTouchEnd = (e) => {
-            onDragEnd();
-            document.removeEventListener('touchmove', onTouchMove);
-            document.removeEventListener('touchend', onTouchEnd);
-        };
-
-        document.addEventListener('touchmove', onTouchMove, { passive: false });
-        document.addEventListener('touchend', onTouchEnd);
+            e.stopPropagation();
+            clickPrevent = false;
+            return;
+        }
     });
 }
 
 document.querySelectorAll('.draggable').forEach(card => {
     makeDraggable(card);
 });
-
-document.addEventListener('click', function (e) {
-    if (clickPrevent) {
-        e.preventDefault();
-        e.stopPropagation();
-        clickPrevent = false;
-        return;
-    }
-
-    if (isDraggingGlobal) {
-        e.preventDefault();
-        e.stopPropagation();
-        isDraggingGlobal = false;
-    }
-}, true);
 
 
 let mdabout = "This content can be defined by the owner of the station";
