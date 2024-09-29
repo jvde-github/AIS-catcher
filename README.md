@@ -101,6 +101,7 @@ This is fairly new script and under development so any feedback is appreciated.
 - Options to automatically show the vessel track when hovering over and/or selecting a vessel
 - Fix to system daemon file to restart process after 10s only
 - Shipcard is placed near the vessel if the screen dimensions allow for it
+- Shipcard is draggable
   
 **v0.60** version:
 - Option to send fully decoded AIS messages in JSON format via UDP and TCP (similar to screen output with `-o 5`). Add `JSON_FULL on` to `~P/S/u`.
