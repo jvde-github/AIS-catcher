@@ -4540,9 +4540,6 @@ function showShipcard(m, pixel = undefined) {
         }
 
 
-        updateFocusMarker();
-        trackLayer.changed();
-
         if (isShipcardMax()) {
             toggleShipcardSize();
         }
@@ -4555,6 +4552,9 @@ function showShipcard(m, pixel = undefined) {
         aside.offsetHeight;
         aside.style.display = '';
     }
+
+    trackLayer.changed();
+    updateFocusMarker();
 }
 
 function compareObjects(obj1, obj2) {
@@ -5178,6 +5178,9 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
+let isDraggingGlobal = false;
+let clickPrevent = false;
+
 function makeDraggable(element) {
     let offsetX, offsetY;
     let dragging = false;
@@ -5201,8 +5204,8 @@ function makeDraggable(element) {
         if (!dragging && (Math.abs(dx) > moveThreshold || Math.abs(dy) > moveThreshold)) {
             dragging = true;
             isDraggingGlobal = true;
-            clickPrevent = true; 
-            element.classList.add('dragging'); 
+            clickPrevent = true;
+            element.classList.add('dragging');
 
             e.preventDefault();
         }
@@ -5216,14 +5219,14 @@ function makeDraggable(element) {
     function onDragEnd() {
         if (dragging) {
             isDraggingGlobal = false;
-            clickPrevent = true; 
+            clickPrevent = true;
             element.classList.remove('dragging');
         }
         dragging = false;
     }
 
     element.addEventListener('pointerdown', (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
         element.setPointerCapture(e.pointerId);
         onDragStart(e.clientX, e.clientY);
 
@@ -5251,9 +5254,20 @@ function makeDraggable(element) {
     });
 }
 
-document.querySelectorAll('.draggable').forEach(card => {
-    makeDraggable(card);
-});
+document.addEventListener('click', function (e) {
+    if (clickPrevent) {
+        e.preventDefault();
+        e.stopPropagation();
+        clickPrevent = false;
+    }
+}, true);
+
+
+if (!window.matchMedia('(max-width: 500px), (max-height: 800px)').matches) {
+    document.querySelectorAll('.draggable').forEach(card => {
+        makeDraggable(card);
+    });
+}
 
 
 let mdabout = "This content can be defined by the owner of the station";
