@@ -3854,8 +3854,6 @@ const startHover = function (mmsi, pixel = undefined) {
         if (hoverMMSI || hoverCircleFeature) {
             stopHover();
         }
-
-
         if ((mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
             hoverMMSI = mmsi;
             showTooltipShip(hover_info, hoverMMSI, pixel, shipsDB[mmsi].raw.cog);
@@ -3917,11 +3915,11 @@ const handlePointerMove = function (pixel, target) {
     const feature = getFeature(pixel, target)
 
     if (feature && 'ship' in feature) {
+        const mmsi = feature.ship.mmsi;
+        const center = ol.proj.fromLonLat([shipsDB[mmsi].raw.lon, shipsDB[mmsi].raw.lat]);
+        pixel = map.getPixelFromCoordinate(center);
 
-        const coordinate = feature.getGeometry().getCoordinates();
-        pixel = map.getPixelFromCoordinate(coordinate);
-
-        startHover(feature.ship.mmsi, pixel);
+        startHover(mmsi, pixel);
     }
     else if (feature && 'tooltip' in feature) {
         if ('station' in feature) {
