@@ -614,15 +614,13 @@ td {
     width: auto;
     z-index: 100;
     font-size: 12px;
-    background-color: rgba(var(--menu-background-color), 0.6) !important;
     background-color: rgba(0, 0, 0, 0.2) !important;
-    color: var(--menu-font-color) !important;
     color: white !important;
     text-align: center;
     border-radius: 4px;
     padding: 5px;
-    left: 50%;
-    transform: translateX(3%);
+    left: 0;
+    top: 0; 
     visibility: hidden;
     pointer-events: none;
 }
