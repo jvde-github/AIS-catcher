@@ -23,6 +23,7 @@ var iconLabelSpan = null,
     range_outline_short = undefined,
     tab_title_station = "",
     tab_title_count = null,
+    context_mmsi = null,
     tab_title = "AIS-catcher";
 
 const baseMapSelector = document.getElementById("baseMapSelector");
@@ -3771,16 +3772,18 @@ const stopHover = function () {
     if (!hoverMMSI) return;
 
     hover_info.style.visibility = 'hidden';
-
-    if (hoverMMSI in shapeFeatures) {
-        shapeFeatures[hoverMMSI].changed();
-    }
+    hover_info.style.left = '0px';
+    hover_info.style.top = '0px';
 
     if (hover_enabled_track) hideTrack(hoverMMSI);
 
     hoverMMSI = undefined;
     hover_enabled_track = false;
     updateHoverMarker();
+
+    if (hoverMMSI in shapeFeatures) {
+        shapeFeatures[hoverMMSI].changed();
+    }
     trackLayer.changed();
 }
 
@@ -3808,21 +3811,42 @@ function updateFocusMarker() {
     }
 }
 
-const showTooltipShip = function (id, mmsi, pixel) {
-    if (mmsi in shipsDB)
-        id.innerHTML = getTooltipContent(shipsDB[mmsi].raw);
-    else
-        id.innerText = mmsi;
+const showTooltipShip = (tooltip, mmsi, pixel, angle = 0) => {
+
+    tooltip.innerHTML = shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi;
 
     if (pixel) {
-        id.style.left = pixel[0] + 'px';
-        id.style.top = pixel[1] + 'px';
+        const [mapW, mapH] = map.getSize();
+        const { offsetWidth: tw, offsetHeight: th } = tooltip;
+        const dist = 15;
 
-        if ((pixel[0] >= 0 || pixel[0] <= map.getSize()[0] || pixel[1] >= 0 || pixel[1] <= map.getSize()[1])) {
-            id.style.visibility = 'visible';
+        // we position the tooltip top-right of the ship in the direction of the ship's course to minimize overlap with path
+        const calculatePosition = (currentAngle) => {
+            const rad = (currentAngle + 45) * Math.PI / 180;
+            const s = Math.sin(rad);
+            const c = -Math.cos(rad);
+            let x = pixel[0] + dist * s + (s < 0 ? -tw : 0);
+            let y = pixel[1] + dist * c + (c < 0 ? -th : 0);
+            return { x, y };
+        };
+        
+        let pos = calculatePosition(angle);
+        // if it is off the screen, we try to move it to the opposite side
+        if (pos.x + tw > mapW - 50 || pos.x < 0 || pos.y + th > mapH - 10 || pos.y < 0) {
+            pos = calculatePosition(angle + 180);
         }
+
+        // avoid that it is on top of controls or off screen
+        pos.x = Math.min(Math.max(pos.x, 10), mapW - tw - 50);
+        pos.y = Math.min(Math.max(pos.y, 10), mapH - th - 10);
+
+        Object.assign(tooltip.style, {
+            left: `${pos.x}px`,
+            top: `${pos.y}px`,
+            visibility: 'visible'
+        });
     }
-}
+};
 
 const startHover = function (mmsi, pixel = undefined) {
 
@@ -3835,7 +3859,7 @@ const startHover = function (mmsi, pixel = undefined) {
             const center = ol.proj.fromLonLat([shipsDB[mmsi].raw.lon, shipsDB[mmsi].raw.lat]);
             pixel = map.getPixelFromCoordinate(center);
             hoverMMSI = mmsi;
-            showTooltipShip(hover_info, hoverMMSI, pixel);
+            showTooltipShip(hover_info, hoverMMSI, pixel, shipsDB[mmsi].raw.cog);
         }
         else {
             hoverMMSI = mmsi;
@@ -5177,7 +5201,6 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
         serverType: 'geoserver'
     })
 }));
-
 let isDraggingGlobal = false;
 let clickPrevent = false;
 
@@ -5185,7 +5208,7 @@ function makeDraggable(element) {
     let offsetX, offsetY;
     let dragging = false;
     let startX, startY;
-    const moveThreshold = 5;
+    const moveThreshold = 15; // Increased threshold to accommodate touchpad sensitivity
 
     function onDragStart(clientX, clientY) {
         startX = clientX;
@@ -5200,8 +5223,9 @@ function makeDraggable(element) {
     function onDragMove(clientX, clientY, e) {
         const dx = clientX - startX;
         const dy = clientY - startY;
+        const distanceSquared = dx * dx + dy * dy;
 
-        if (!dragging && (Math.abs(dx) > moveThreshold || Math.abs(dy) > moveThreshold)) {
+        if (!dragging && distanceSquared > moveThreshold * moveThreshold) {
             dragging = true;
             isDraggingGlobal = true;
             clickPrevent = true;
@@ -5236,6 +5260,7 @@ function makeDraggable(element) {
 
         const onPointerUp = (e) => {
             onDragEnd();
+            element.releasePointerCapture(e.pointerId); // Release pointer capture
             element.removeEventListener('pointermove', onPointerMove);
             element.removeEventListener('pointerup', onPointerUp);
         };
@@ -5261,7 +5286,6 @@ document.addEventListener('click', function (e) {
         clickPrevent = false;
     }
 }, true);
-
 
 if (!window.matchMedia('(max-width: 500px), (max-height: 800px)').matches) {
     document.querySelectorAll('.draggable').forEach(card => {
