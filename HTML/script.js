@@ -743,7 +743,7 @@ function showContextMenu(event, mmsi, context) {
     document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
 
     if (settings.show_track_on_select && context_mmsi == card_mmsi) {
-        document.getElementById("ctx_track").innerText = select_enabled_track && context.includes("mmsi-map") ? "Pin Track" : "Unpin Track";
+        document.getElementById("ctx_track").innerText = select_enabled_track && context.includes("mmsi-map") ? "Show Track" : "Hide Track";
     }
     else {
         const isTrackVisible = marker_tracks.has(Number(context_mmsi));
@@ -3821,15 +3821,15 @@ const showTooltipShip = (tooltip, mmsi, pixel, angle = 0) => {
         const dist = 15;
 
         // we position the tooltip top-right of the ship in the direction of the ship's course to minimize overlap with path
-        const calculatePosition = (currentAngle) => {
-            const rad = (currentAngle + 45) * Math.PI / 180;
+        const calculatePosition = (a) => {
+            const rad = (a + 45) * Math.PI / 180;
             const s = Math.sin(rad);
             const c = -Math.cos(rad);
             let x = pixel[0] + dist * s + (s < 0 ? -tw : 0);
             let y = pixel[1] + dist * c + (c < 0 ? -th : 0);
             return { x, y };
         };
-        
+
         let pos = calculatePosition(angle);
         // if it is off the screen, we try to move it to the opposite side
         if (pos.x + tw > mapW - 50 || pos.x < 0 || pos.y + th > mapH - 10 || pos.y < 0) {
@@ -3855,9 +3855,8 @@ const startHover = function (mmsi, pixel = undefined) {
             stopHover();
         }
 
+
         if ((mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
-            const center = ol.proj.fromLonLat([shipsDB[mmsi].raw.lon, shipsDB[mmsi].raw.lat]);
-            pixel = map.getPixelFromCoordinate(center);
             hoverMMSI = mmsi;
             showTooltipShip(hover_info, hoverMMSI, pixel, shipsDB[mmsi].raw.cog);
         }
@@ -3918,9 +3917,17 @@ const handlePointerMove = function (pixel, target) {
     const feature = getFeature(pixel, target)
 
     if (feature && 'ship' in feature) {
+
+        const coordinate = feature.getGeometry().getCoordinates();
+        pixel = map.getPixelFromCoordinate(coordinate);
+
         startHover(feature.ship.mmsi, pixel);
     }
     else if (feature && 'tooltip' in feature) {
+        if ('station' in feature) {
+            const coordinate = feature.getGeometry().getCoordinates();
+            pixel = map.getPixelFromCoordinate(coordinate);
+        }
         startHover(feature.tooltip, pixel);
     } else if (hoverMMSI) {
         stopHover();
@@ -4212,7 +4219,11 @@ function updateShipcardTrackOption() {
 
     if (card_mmsi) {
         if (settings.show_track_on_select) {
-            document.getElementById("shipcard_track").innerText = select_enabled_track ? "Pin Track" : "Unpin Track";
+            if(select_enabled_track) {
+                document.getElementById("shipcard_track").innerText = "Show Track";           
+            } else {
+                document.getElementById("shipcard_track").innerText = "Hide Track";
+            }            
         }
         else {
             const isTrackVisible = marker_tracks.has(Number(card_mmsi));
@@ -5260,7 +5271,7 @@ function makeDraggable(element) {
 
         const onPointerUp = (e) => {
             onDragEnd();
-            element.releasePointerCapture(e.pointerId); // Release pointer capture
+            element.releasePointerCapture(e.pointerId);
             element.removeEventListener('pointermove', onPointerMove);
             element.removeEventListener('pointerup', onPointerUp);
         };
