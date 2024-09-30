@@ -741,18 +741,7 @@ function showContextMenu(event, mmsi, context) {
     }
 
     document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
-
-    if (settings.show_track_on_select && context_mmsi == card_mmsi) {
-        document.getElementById("ctx_track").innerText = select_enabled_track && context.includes("mmsi-map") ? "Show Track" : "Hide Track";
-    }
-    else {
-        const isTrackVisible = marker_tracks.has(Number(context_mmsi));
-        const isHovering = hoverMMSI === context_mmsi && hover_enabled_track;
-        const isOnMmsiMap = context.includes("mmsi-map");
-
-        document.getElementById("ctx_track").innerText =
-            (isTrackVisible && !isHovering && isOnMmsiMap) ? "Hide Track" : "Show Track";
-    }
+    document.getElementById("ctx_track").innerText = trackOptionString(context_mmsi);
 
     contextMenu.style.display = "block";
 
@@ -3864,9 +3853,12 @@ const startHover = function (mmsi, pixel = undefined) {
         }
         updateHoverMarker();
         trackLayer.changed();
+
         if (settings.show_track_on_hover) {
             hover_enabled_track = !trackIsShown(hoverMMSI);
-            if (hover_enabled_track) showTrack(mmsi);
+            if (hover_enabled_track) {
+                showTrack(mmsi);
+            }
         }
         if (mmsi in shapeFeatures) {
             shapeFeatures[mmsi].changed();
@@ -4208,6 +4200,15 @@ async function fetchTracks() {
     return true;
 }
 
+function trackOptionString(mmsi) {
+    const hover_track = mmsi == hoverMMSI && hover_enabled_track;
+    const select_track = mmsi == card_mmsi && select_enabled_track;
+    const track_shown = marker_tracks.has(Number(mmsi));
+
+    if (hover_track || select_track) return "Show Track";
+    return track_shown ? "Hide Track" : "Show Track";
+}
+
 function updateShipcardTrackOption() {
     if (show_all_tracks) {
         document.getElementById("shipcard_track_option").style.display = "none";
@@ -4216,20 +4217,7 @@ function updateShipcardTrackOption() {
     }
 
     if (card_mmsi) {
-        if (settings.show_track_on_select) {
-            if(select_enabled_track) {
-                document.getElementById("shipcard_track").innerText = "Show Track";           
-            } else {
-                document.getElementById("shipcard_track").innerText = "Hide Track";
-            }            
-        }
-        else {
-            const isTrackVisible = marker_tracks.has(Number(card_mmsi));
-            const isHovering = hoverMMSI === card_mmsi && hover_enabled_track;
-
-            document.getElementById("shipcard_track").innerText =
-                (isTrackVisible && !isHovering) ? "Hide Track" : "Show Track";
-        }
+        document.getElementById("shipcard_track").innerText = trackOptionString(card_mmsi);
     }
 }
 
