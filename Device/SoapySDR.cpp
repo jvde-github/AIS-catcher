@@ -51,7 +51,7 @@ namespace Device {
 			dev = SoapySDR::Device::make(device_args);
 		}
 		catch (std::exception& e) {
-			throw std::runtime_error("SOAPYSDR: cannot open device.");
+			throw std::runtime_error("SOAPYSDR: cannot open device: " + std::string(e.what()));
 		}
 
 		applySettings();
@@ -76,7 +76,7 @@ namespace Device {
 			if (run_thread.joinable()) run_thread.join();
 		}
 
-		if (dev != NULL) {
+		if (dev != NULL && !skip_unmake) {
 			SoapySDR::Device::unmake(dev);
 		}
 	}
@@ -108,9 +108,10 @@ namespace Device {
 			while (isStreaming()) {
 				int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
 
-				if (ret < -1) {
+				if (ret < 0) {
 					std::cerr << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret) << std::endl;
 					lost = true;
+					skip_unmake = true;
 				}
 				if (ret > 0 && isStreaming() && !fifo.Push((char*)input.data(), ret * sizeof(CFLOAT32)))
 					std::cerr << "SOAPYSDR: buffer overrun." << std::endl;
