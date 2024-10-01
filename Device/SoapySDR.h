@@ -57,6 +57,7 @@ namespace Device {
 		int channel = 0;
 		bool AGC = true;
 		bool print = false;
+		bool skip_unmake = false;
 
 		std::thread async_thread;
 		std::thread run_thread;
