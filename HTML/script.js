@@ -3774,29 +3774,6 @@ function notImplemented() {
 }
 
 
-const stopHover = function () {
-
-    if (!hoverMMSI) return;
-
-    hover_info.style.visibility = 'hidden';
-    hover_info.style.left = '0px';
-    hover_info.style.top = '0px';
-
-    if (hover_enabled_track) hideTrack(hoverMMSI);
-    const dc = hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature);
-
-    hoverMMSI = undefined;
-    hover_feature = undefined;
-    hover_enabled_track = false;
-    if (dc) rangeLayer.changed();
-
-    updateHoverMarker();
-
-    if (hoverMMSI in shapeFeatures) {
-        shapeFeatures[hoverMMSI].changed();
-    }
-    trackLayer.changed();
-}
 
 function updateFocusMarker() {
     if (selectCircleFeature) {
@@ -3859,17 +3836,56 @@ const showTooltipShip = (tooltip, mmsi, pixel, angle = 0) => {
     }
 };
 
-const startHover = function (mmsi, pixel = undefined) {
+
+const stopHover = function () {
+
+    if (!hoverMMSI) return;
+
+    hover_info.style.visibility = 'hidden';
+    hover_info.style.left = '0px';
+    hover_info.style.top = '0px';
+
+    if (hover_enabled_track) hideTrack(hoverMMSI);
+    const dc = hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature);
+
+    hoverMMSI = undefined;
+    hover_feature = undefined;
+    hover_enabled_track = false;
+    if (dc) rangeLayer.changed();
+
+    updateHoverMarker();
+
+    if (hoverMMSI in shapeFeatures) {
+        shapeFeatures[hoverMMSI].changed();
+    }
+    trackLayer.changed();
+}
+
+const startHover = function (mmsi, pixel, feature) {
 
     if (mmsi !== hoverMMSI) {
+        stopHover();
+
+        hoverMMSI = mmsi;
+        hover_feature = feature;
 
         if ((mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
-            hoverMMSI = mmsi;
             showTooltipShip(hover_info, hoverMMSI, pixel, shipsDB[mmsi].raw.cog);
+
+            if (settings.show_track_on_hover) {
+                hover_enabled_track = !trackIsShown(hoverMMSI);
+                if (hover_enabled_track) {
+                    showTrack(mmsi);
+                }
+            }
+            
+            if (mmsi in shapeFeatures) {
+                shapeFeatures[mmsi].changed();
+            }
+
             trackLayer.changed();
         }
         else {
-            hoverMMSI = mmsi;
             showTooltipShip(hover_info, hoverMMSI, pixel);
 
             if (hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature))
@@ -3877,16 +3893,6 @@ const startHover = function (mmsi, pixel = undefined) {
         }
 
         updateHoverMarker();
-
-        if (settings.show_track_on_hover) {
-            hover_enabled_track = !trackIsShown(hoverMMSI);
-            if (hover_enabled_track) {
-                showTrack(mmsi);
-            }
-        }
-        if (mmsi in shapeFeatures) {
-            shapeFeatures[mmsi].changed();
-        }
     }
 }
 
@@ -3930,14 +3936,11 @@ function getFeature(pixel, target) {
 const handlePointerMove = function (pixel, target) {
     const feature = getFeature(pixel, target)
 
-    if (feature != hover_feature) stopHover();
-
     if (feature && 'ship' in feature) {
         const mmsi = feature.ship.mmsi;
         const center = ol.proj.fromLonLat([shipsDB[mmsi].raw.lon, shipsDB[mmsi].raw.lat]);
         pixel = map.getPixelFromCoordinate(center);
-        hover_feature = feature;
-        startHover(mmsi, pixel);
+        startHover(mmsi, pixel, feature);
     }
     else if (feature && 'tooltip' in feature) {
         if ('station' in feature) {
@@ -3945,7 +3948,7 @@ const handlePointerMove = function (pixel, target) {
             pixel = map.getPixelFromCoordinate(coordinate);
         }
         hover_feature = feature;
-        startHover(feature.tooltip, pixel);
+        startHover(feature.tooltip, pixel, feature);
     } else if (hoverMMSI) {
         stopHover();
     }
