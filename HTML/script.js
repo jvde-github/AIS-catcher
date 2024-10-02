@@ -32,7 +32,7 @@ const baseMapSelector = document.getElementById("baseMapSelector");
 
 var rtCount = 0;
 var shipcardIconCount = undefined;
-var shipcardIconMax = 4;
+var shipcardIconMax = 3;
 var shipcardIconOffset = 0;
 var StationControlDiv = null;
 var plugins = "",
