@@ -89,6 +89,7 @@ static void Usage()
 	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;
 	std::cerr << "\t[-N [optional: port][optional settings] - start http server at port, see README for details]" << std::endl;
 	std::cerr << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]" << std::endl;
+	std::cerr << "\t[-O MMSI - sets the own mmsi of the receiver]" << std::endl;
 	std::cerr << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]" << std::endl;
 	std::cerr << "\t[-P xxx.xx.xx.xx yyy - TCP destination address and port (default: off)]" << std::endl;
 	std::cerr << "\t[-q suppress NMEA messages to screen (-o 0)]" << std::endl;
