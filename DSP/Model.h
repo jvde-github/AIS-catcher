@@ -97,6 +97,7 @@ namespace AIS
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
 		void setMode(Mode m) { mode = m; }
+		void setOwnMMSI(int m) { own_mmsi = m; }
 		void setDesignation(const std::string &s) { designation = s; }
 		virtual Setting &Set(std::string option, std::string arg)
 		{
