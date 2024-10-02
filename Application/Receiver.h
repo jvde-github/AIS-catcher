@@ -87,7 +87,7 @@ class Receiver {
 
 	Type type = Type::NONE;
 	std::string serial;
-	int sample_rate = 0, bandwidth = 0, ppm = 0;
+	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
 	Device::Device* getDeviceByType(Type type);
 
 	//  Models
@@ -150,6 +150,7 @@ public:
 	// Model
 	void setChannel(std::string mode) { setChannel(mode, ""); }
 	void setChannel(std::string mode, std::string NMEA);
+	void setOwnMMSI(int m) { own_mmsi = m; }
 	void setTags(const std::string& s);
 	void removeTags(const std::string& s);
 	void clearTags() { tag.mode = 0; }

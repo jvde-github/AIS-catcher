@@ -274,6 +274,7 @@ void Receiver::setupModel(int& group) {
 	for (auto& m : models) {
 		m->setDesignation(ChannelNMEA);
 		m->setMode(ChannelMode);
+		m->setOwnMMSI(own_mmsi);
 		m->buildModel(ChannelNMEA[0], ChannelNMEA[1], device->getSampleRate(), timing, device);
 	}
 

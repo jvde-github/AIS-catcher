@@ -684,7 +684,7 @@ int main(int argc, char *argv[])
 
 		if (!file_config.empty())
 		{
-			Config c(_receivers, nrec, msg, json, screen, servers,own_mmsi);
+			Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
 			c.read(file_config);
 		}
 
@@ -708,12 +708,7 @@ int main(int argc, char *argv[])
 		for (int i = 0; i < _receivers.size(); i++)
 		{
 			Receiver &r = *_receivers[i];
-
-			if (own_mmsi != -1)
-				for (int mi = 0; mi < r.Count(); mi++)
-				{
-					r.Model(mi)->Set("OWN_MMSI", std::to_string(own_mmsi));
-				}
+			r.setOwnMMSI(own_mmsi);
 
 			if (servers.size() > 0 && servers[0]->active())
 				r.setTags("DTM");
@@ -748,7 +743,8 @@ int main(int argc, char *argv[])
 		for (auto &s : servers)
 			if (s->active())
 			{
-				if (own_mmsi != -1) {
+				if (own_mmsi != -1)
+				{
 					s->Set("SHARE_LOC", "true");
 					s->Set("OWN_MMSI", std::to_string(own_mmsi));
 				}
