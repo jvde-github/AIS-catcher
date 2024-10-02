@@ -614,7 +614,7 @@ td {
     width: auto;
     z-index: 100;
     font-size: 12px;
-    background-color: rgba(0, 0, 0, 0.2) !important;
+    background-color: rgba(0, 0, 0, 0.3) !important;
     color: white !important;
     text-align: center;
     border-radius: 4px;
@@ -889,6 +889,7 @@ td {
     flex-direction: row;
     justify-content: stretch;
     box-shadow: 0px 4px 8px 0px var(--shipcard-footer-shadow-color);
+    box-shadow: 1px 4px 8px 1px var(--shipcard-footer-shadow-color);
 }
 
 #shipcard_header_title {
@@ -919,8 +920,8 @@ td {
 .mapcard-footer {
     background-color: var(--shipcard-footer-background-color);
     color: var(--shipcard-footer-font-color);
-    /*border-top: 2px solid var(--shipcard-footer-shadow-color);*/
     box-shadow: 0px 4px 8px 0px var(--shipcard-footer-shadow-color);
+    box-shadow: 1px 4px 8px 1px var(--shipcard-footer-shadow-color);
     flex: 0 0 50px;
     border-radius: 0px;
     display: flex;

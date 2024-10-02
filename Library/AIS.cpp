@@ -70,6 +70,7 @@ namespace AIS {
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			msg.setChannel(channel);
 			msg.setLength(nBits);
+			msg.setOwnMMSI(own_mmsi);
 
 			if (msg.validate()) {
 				msg.buildNMEA(tag);

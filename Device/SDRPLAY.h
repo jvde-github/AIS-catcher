@@ -27,6 +27,11 @@ namespace Device {
 
 
 	class SDRPLAY : public Device {
+
+		int LNAstate = 0;
+		int gRdB = 32;
+		bool AGC = false;
+
 #ifdef HASSDRPLAY
 
 		// Data is processed in seperate thread
@@ -42,10 +47,6 @@ namespace Device {
 		sdrplay_api_DeviceT device;
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;
-
-		int LNAstate = 0;
-		int gRdB = 32;
-		bool AGC = false;
 
 		static void callback_static(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int numSamples, unsigned int reset, void* cbContext);
 		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params, void* cbContext);
@@ -71,15 +72,14 @@ namespace Device {
 		SDRPLAY();
 		~SDRPLAY();
 
-		// Settings
-		Setting& Set(std::string option, std::string arg);
-		std::string Get();
-
 		std::string getProduct() { return getHardwareDescription(device.hwVer); }
 		std::string getVendor() { return "SDRPLAY"; }
 		std::string getSerial() { return device.SerNo; }
 
 		void setFormat(Format f) {}
 #endif
+		// Settings
+		Setting& Set(std::string option, std::string arg);
+		std::string Get();
 	};
 }

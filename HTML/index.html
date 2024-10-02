@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.0.0/ol.css">
 	
-	<link rel="stylesheet" href="style_1727727309.css" />
+	<link rel="stylesheet" href="style_1727887341.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -1006,7 +1006,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_1727727309.js"></script>
+	<script src="script_1727887341.js"></script>
 	<script src="config.js"></script>
 
 	<script>
@@ -1247,6 +1247,7 @@
 		if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"));
 		updateSortMarkers();
 		saveSettings();
+		prepareShipcard();
 
 		if (aboutMDpresent == false) {
 			document.getElementById("about_tab").style.display = "none";
@@ -1260,7 +1261,7 @@
 			document.getElementById("realtime_tab_mini").style.display = "none";
 		}
 
-		showWelcome();
+		showWelcome();		
 
 		if (isAndroid()) showMenu();
 		main();
