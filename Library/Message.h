@@ -57,6 +57,7 @@ namespace AIS {
 		int length;
 		char channel;
 		int station;
+		int own_mmsi = -1;
 
 	public:
 		std::vector<std::string> NMEA;
@@ -132,11 +133,13 @@ namespace AIS {
 		void setChannel(char c) { channel = c; }
 		char getChannel() const { return channel; }
 
-		void setOrigin(char c, int s) {
+		void setOrigin(char c, int s, int o) {
 			channel = c;
 			station = s;
+			own_mmsi = o;
 		}
 		int getStation() const { return station; }
+		void setOwnMMSI(int m) { own_mmsi = m; }
 		void buildNMEA(TAG& tag, int id = -1);
 	};
 

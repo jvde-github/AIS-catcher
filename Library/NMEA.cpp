@@ -71,7 +71,7 @@ namespace AIS {
 		if (aivdm.count == 1) {
 			msg.clear();
 			msg.Stamp(stamp ? 0 : t);
-			msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation);
+			msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation, own_mmsi);
 
 			addline(aivdm);
 
@@ -105,7 +105,7 @@ namespace AIS {
 		// we create a message and add the payloads to it
 		msg.clear();
 		msg.Stamp(stamp ? 0 : t);
-		msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation);
+		msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation, own_mmsi);
 
 		for (auto it = queue.begin(); it != queue.end(); it++) {
 			if (it->channel == aivdm.channel) {

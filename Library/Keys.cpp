@@ -98,6 +98,7 @@ namespace AIS {
 		{ "", "", "", "", "msg_output" },
 		{ "", "", "", "", "nmea_refresh" },
 		{ "", "", "", "", "output" },
+		{ "", "", "", "", "own_mmsi" },
 		{ "", "", "", "", "persist" },
 		{ "", "", "", "", "plugin" },
 		{ "", "", "", "", "plugin_dir" },

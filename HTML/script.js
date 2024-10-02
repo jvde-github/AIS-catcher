@@ -14,6 +14,7 @@ var interval,
     fetch_binary = false,
     singleClickTimeout = null,
     server_message = "",
+    hover_feature = undefined,
     show_all_tracks = false;
 var iconLabelSpan = null,
     iconStationSpan = null,
@@ -26,9 +27,13 @@ var iconLabelSpan = null,
     context_mmsi = null,
     tab_title = "AIS-catcher";
 
+const maxShipcardIcons = 4;
 const baseMapSelector = document.getElementById("baseMapSelector");
 
 var rtCount = 0;
+var shipcardIconCount = undefined;
+var shipcardIconMax = 4;
+var shipcardIconOffset = 0;
 var StationControlDiv = null;
 var plugins = "",
     plugins_main = [];
@@ -288,10 +293,11 @@ var rangeStyleFunction = function (feature) {
     } else {
         clr = settings.dark_mode ? settings.range_color_dark : settings.range_color;
     }
+
     return new ol.style.Style({
         stroke: new ol.style.Stroke({
             color: clr,
-            width: 2
+            width: feature === hover_feature ? 4 : 2
         })
     });
 }
@@ -1972,6 +1978,7 @@ function drawRange() {
         });
 
         rangeFeature.short = false;
+        rangeFeature.rangering = true;
         rangeFeature.tooltip = "Station Range " + settings.range_timeframe;
         rangeVector.addFeature(rangeFeature);
     }
@@ -1982,10 +1989,10 @@ function drawRange() {
         });
 
         rangeShortFeature.tooltip = "Station Range 1h";
+        rangeShortFeature.rangering = true;
         rangeShortFeature.short = true;
         rangeVector.addFeature(rangeShortFeature);
     }
-
 }
 
 var distanceFeatures = undefined;
@@ -2001,13 +2008,30 @@ function removeDistanceCircles() {
     distanceFeatures = undefined;
 }
 
-function createDistanceGeometry(lat, lon, radius) {
 
-    /*
-    const center = ol.proj.fromLonLat([lon, lat]);
-    const circle = new ol.geom.Circle(center, radius);
-    return circle;
-    */
+function distanceCircleStyleFunction(feature) {
+    let clr, width;
+
+    if (feature === hover_feature) {
+        clr = 'orange';
+        clr = settings.distance_circle_color;
+
+        width = 5;
+    } else {
+        clr = settings.distance_circle_color;
+        width = 1;
+    }
+
+    return new ol.style.Style({
+        stroke: new ol.style.Stroke({
+            color: clr,
+            width: width
+        })
+    });
+}
+
+
+function createDistanceGeometry(lat, lon, radius) {
 
     const deltaNorth = calcOffset1M([station.lon, station.lat], 0)[0];
     const deltaEast = calcOffset1M([station.lon, station.lat], 90)[1];
@@ -2046,13 +2070,6 @@ function updateDistanceCircles() {
 
         distanceFeatures = [];
 
-        var greyLineStyle = new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                color: settings.distance_circle_color,
-                width: 1
-            })
-        });
-
         const conv = settings.metric === "DEFAULT" ? 1.852 : settings.metric === "SI" ? 1 : 1.609344;
 
         const range = [5000, 10000, 25000, 50000, 100000];
@@ -2063,8 +2080,9 @@ function updateDistanceCircles() {
                 geometry: createDistanceGeometry(lat, lon, range[i] * conv)
             });
 
-            distanceCircle.setStyle(greyLineStyle);
             distanceCircle.tooltip = range[i] / 1000 + " " + getDistanceUnit().toUpperCase();
+            distanceCircle.distancecircle = true;
+            distanceCircle.setStyle(distanceCircleStyleFunction);
             rangeVector.addFeature(distanceCircle);
             distanceFeatures.push(distanceCircle);
         }
@@ -2073,55 +2091,55 @@ function updateDistanceCircles() {
 
 /*
 let view_offset = 0;
-
+ 
 function readUint8(view) {
 const val = view.getUint8(view_offset);
 view_offset += 1;
 return val;
 }
-
+ 
 function readUint16(view) {
 const val = view.getUint16(view_offset);
 view_offset += 2;
 return val;
 }
-
+ 
 function readUint32(view) {
 const val = view.getUint32(view_offset);
 view_offset += 4;
 return val;
 }
-
+ 
 function readUint64(view) {
 const high = readUint32(view);
 const low = readUint32(view);
 return high * 2 ** 32 + low;
 }
-
+ 
 function readInt8(view) {
 const val = view.getInt8(view_offset);
 view_offset += 1;
 return val;
 }
-
+ 
 function readInt16(view) {
 const val = view.getInt16(view_offset);
 view_offset += 2;
 return val;
 }
-
+ 
 function readInt32(view) {
 const val = view.getInt32(view_offset);
 view_offset += 4;
 return val;
 }
-
+ 
 function readInt64(view) {
 const high = readInt32(view);
 const low = readUint32(view);
 return high * 2 ** 32 + low;
 }
-
+ 
 function readString(view) {
 const length = readUint8(view);
 let str = "";
@@ -2130,37 +2148,37 @@ for (let i = 0; i < length; i++) {
 }
 return str;
 }
-
+ 
 function readFloat(view) {
 return readInt16(view) / 1000.0;
 }
-
+ 
 function readFloatLow(view) {
 return readInt16(view) / 10.0;
 }
-
+ 
 function readLatLon(view) {
 const lat = readInt32(view) / 6000000.0;
 const lon = readInt32(view) / 6000000.0;
 return { lat, lon };
 }
-
+ 
 function deserialize(view, time) {
 function setNullIf(value, condition) {
     if (value == condition) return null;
     return value;
 }
-
+ 
 function setNullIfLess(value, condition) {
     if (value < condition) return null;
     return value;
 }
-
+ 
 function setNullIfGreater(value, condition) {
     if (value > condition) return null;
     return value;
 }
-
+ 
 // Now, deserialize the Ship structure
 const ship = {};
 ship.mmsi = readUint32(view);
@@ -2172,11 +2190,11 @@ ship.bearing = setNullIfLess(readFloatLow(view), 0);
 ship.level = setNullIfGreater(readFloatLow(view), 1023);
 ship.count = readInt16(view);
 ship.ppm = setNullIfGreater(readFloatLow(view), 1023);
-
+ 
 let approx_validated = readInt8(view);
 ship.approx = (approx_validated & 1) == 1;
 ship.validated = (approx_validated >> 1) & (1 == 1);
-
+ 
 ship.heading = setNullIfGreater(readFloatLow(view), 510);
 ship.cog = setNullIfGreater(readFloatLow(view), 359.9);
 ship.speed = setNullIfLess(readFloatLow(view), 0);
@@ -2187,42 +2205,42 @@ ship.to_port = setNullIf(readInt16(view), -1);
 ship.last_group = readUint64(view);
 ship.group_mask = readUint64(view);
 ship.shiptype = readInt16(view);
-
+ 
 let shipclass_mmsitype = readUint8(view);
 ship.shipclass = shipclass_mmsitype >> 4;
 ship.mmsi_type = shipclass_mmsitype & 15;
-
+ 
 ship.msg_type = readUint32(view);
 ship.channels = readInt8(view);
 ship.country = String.fromCharCode(readInt8(view), readInt8(view));
 ship.status = readInt8(view);
 ship.draught = setNullIfLess(readFloatLow(view), 0);
-
+ 
 ship.eta_month = setNullIf(readInt8(view), 0);
 ship.eta_day = setNullIf(readInt8(view), 0);
 ship.eta_hour = setNullIf(readInt8(view), 24);
 ship.eta_minute = setNullIf(readInt8(view), 60);
-
+ 
 ship.imo = setNullIf(readInt32(view), 0);
 ship.callsign = readString(view);
 ship.shipname = readString(view);
 ship.destination = readString(view);
 ship.received = readUint64(view);
 ship.last_signal = time - ship.received;
-
+ 
 return ship;
 }
-
+ 
 async function fetchShipsBinary(noDoubleFetch = true) {
 if (isFetchingShips && noDoubleFetch) {
     console.log("A fetch operation is already running.");
     return false;
 }
-
+ 
 let ships = {};
 station = {};
 let arrayBuffer;
-
+ 
 isFetchingShips = true;
 try {
     response = await fetch("sb");
@@ -2235,24 +2253,24 @@ try {
 } finally {
     isFetchingShips = false;
 }
-
+ 
 center = {};
-
+ 
 setPulseOk();
-
+ 
 shipsDB2 = {};
 let view = new DataView(arrayBuffer);
 view_offset = 0;
-
+ 
 let time = readUint64(view);
 let count = readInt32(view);
-
+ 
 let hasstation = readInt8(view) == 1;
 if (hasstation) {
     station = readLatLon(view);
     let own_mmsi = readUint32(view);
 }
-
+ 
 while (view_offset < view.byteLength) {
     const ship = deserialize(view, time);
     if (includeShip(ship)) {
@@ -2261,14 +2279,14 @@ while (view_offset < view.byteLength) {
         shipsDB2[ship.mmsi] = entry;
     }
 }
-
+ 
 if (String(settings.center_point).toUpperCase() == "STATION") {
     center = station;
 } else if (settings.center_point in shipsDB) {
     let ship = shipsDB[settings.center_point].raw;
     center = { lat: ship.lat, lon: ship.lon };
 }
-
+ 
 return true;
 }
 */
@@ -3695,7 +3713,7 @@ resetButton.addEventListener('click', function (event) {
 });
 
 function getTooltipContent(ship) {
-    return '<div>' + getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px;") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
+    return '<div>' + getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
 }
 
 function getTypeVal(ship) {
@@ -3765,9 +3783,13 @@ const stopHover = function () {
     hover_info.style.top = '0px';
 
     if (hover_enabled_track) hideTrack(hoverMMSI);
+    const dc = hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature);
 
     hoverMMSI = undefined;
+    hover_feature = undefined;
     hover_enabled_track = false;
+    if (dc) rangeLayer.changed();
+
     updateHoverMarker();
 
     if (hoverMMSI in shapeFeatures) {
@@ -3840,19 +3862,21 @@ const showTooltipShip = (tooltip, mmsi, pixel, angle = 0) => {
 const startHover = function (mmsi, pixel = undefined) {
 
     if (mmsi !== hoverMMSI) {
-        if (hoverMMSI || hoverCircleFeature) {
-            stopHover();
-        }
+
         if ((mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
             hoverMMSI = mmsi;
             showTooltipShip(hover_info, hoverMMSI, pixel, shipsDB[mmsi].raw.cog);
+            trackLayer.changed();
         }
         else {
             hoverMMSI = mmsi;
             showTooltipShip(hover_info, hoverMMSI, pixel);
+
+            if (hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature))
+                rangeLayer.changed();
         }
+
         updateHoverMarker();
-        trackLayer.changed();
 
         if (settings.show_track_on_hover) {
             hover_enabled_track = !trackIsShown(hoverMMSI);
@@ -3906,11 +3930,13 @@ function getFeature(pixel, target) {
 const handlePointerMove = function (pixel, target) {
     const feature = getFeature(pixel, target)
 
+    if (feature != hover_feature) stopHover();
+
     if (feature && 'ship' in feature) {
         const mmsi = feature.ship.mmsi;
         const center = ol.proj.fromLonLat([shipsDB[mmsi].raw.lon, shipsDB[mmsi].raw.lat]);
         pixel = map.getPixelFromCoordinate(center);
-
+        hover_feature = feature;
         startHover(mmsi, pixel);
     }
     else if (feature && 'tooltip' in feature) {
@@ -3918,6 +3944,7 @@ const handlePointerMove = function (pixel, target) {
             const coordinate = feature.getGeometry().getCoordinates();
             pixel = map.getPixelFromCoordinate(coordinate);
         }
+        hover_feature = feature;
         startHover(feature.tooltip, pixel);
     } else if (hoverMMSI) {
         stopHover();
@@ -4210,10 +4237,14 @@ function trackOptionString(mmsi) {
 }
 
 function updateShipcardTrackOption() {
+    const trackOptionElement = document.getElementById("shipcard_track_option");
+
     if (show_all_tracks) {
-        document.getElementById("shipcard_track_option").style.display = "none";
+        trackOptionElement.style.opacity = "0.5";
+        trackOptionElement.style.pointerEvents = "none";
     } else {
-        document.getElementById("shipcard_track_option").style.display = "flex";
+        trackOptionElement.style.opacity = "1";
+        trackOptionElement.style.pointerEvents = "auto";
     }
 
     if (card_mmsi) {
@@ -4284,6 +4315,7 @@ function setShipcardValidation(v) {
 }
 
 function populateShipcard() {
+
     if (!(card_mmsi in shipsDB)) {
         document
             .getElementById("shipcard_content")
@@ -4464,10 +4496,6 @@ function adjustMapForShipcard(ship, pixel) {
             }
             newPixel = pixel;
 
-
-            console.log("Original pixel:", pixel);
-            console.log("New pixel:", newPixel);
-
             let currentCenter = view.getCenter();
             let newCenter = map.getCoordinateFromPixel(newPixel);
             let centerDiff = [newCenter[0] - currentCenter[0], newCenter[1] - currentCenter[1]];
@@ -4517,6 +4545,28 @@ function positionAside(pixel, aside) {
         }
     }
     adjustMapForShipcard(ship, pixel);
+}
+
+function displayShipcardIcons() {
+    let icons = document.getElementById("shipcard_footer").children;
+    for (let i = 0; i < icons.length - 1; i++) {
+        icons[i].style.display = i >= shipcardIconOffset && i < shipcardIconOffset + shipcardIconMax ? "flex" : "none";
+    }
+}
+
+function rotateShipcardIcons() {
+    shipcardIconOffset += shipcardIconMax;
+    if (shipcardIconOffset >= shipcardIconCount) shipcardIconOffset = 0;
+    displayShipcardIcons();
+}
+
+function prepareShipcard() {
+    shipcardIconCount = document.getElementById("shipcard_footer").childElementCount
+
+    if (shipcardIconCount > shipcardIconMax + 1) {
+        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()');
+    }
+    displayShipcardIcons();
 }
 
 function showShipcard(m, pixel = undefined) {

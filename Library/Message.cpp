@@ -280,6 +280,7 @@ namespace AIS
 
 		const int IDX_COUNT = 7;
 		const int IDX_NUMBER = 9;
+		const int IDX_OWN_MMSI = 5;
 
 		if (id >= 0 && id < 10)
 			ID = id;
@@ -288,7 +289,8 @@ namespace AIS
 		int nSentences = (nAISletters + MAX_NMEA_CHARS - 1) / MAX_NMEA_CHARS;
 
 		line.resize(11);
-
+		
+		line[IDX_OWN_MMSI] = own_mmsi == mmsi() ? 'O' : 'M';
 		line[IDX_COUNT] = (char)(nSentences + '0');
 		line[IDX_NUMBER] = '0';
 

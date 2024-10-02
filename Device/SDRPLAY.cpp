@@ -198,6 +198,7 @@ namespace Device {
 		return "UNKNOWN";
 	}
 
+#endif
 	Setting& SDRPLAY::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
@@ -220,5 +221,4 @@ namespace Device {
 		return Device::Get() + " agc " + Util::Convert::toString(AGC) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ";
 	}
 
-#endif
 }

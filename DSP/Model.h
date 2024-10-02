@@ -30,15 +30,18 @@
 
 #include "Device/Device.h"
 
-namespace AIS {
-	enum class Mode {
+namespace AIS
+{
+	enum class Mode
+	{
 		AB,
 		CD,
 		ABCD,
 		X
 	};
 
-	enum class ModelClass {
+	enum class ModelClass
+	{
 		IQ,
 		FM,
 		TXT,
@@ -47,41 +50,46 @@ namespace AIS {
 
 	// idea is to avoid that message threads from different devices cause issues downstream (e.g. with sending UDP or updating the database).
 	// can also be done further downstream
-	class MessageMutex : public SimpleStreamInOut<AIS::Message, AIS::Message> {
+	class MessageMutex : public SimpleStreamInOut<AIS::Message, AIS::Message>
+	{
 		static std::mutex mtx;
 
 	public:
 		virtual ~MessageMutex() {}
-		virtual void Receive(const AIS::Message* data, int len, TAG& tag) {
+		virtual void Receive(const AIS::Message *data, int len, TAG &tag)
+		{
 			std::lock_guard<std::mutex> lock(mtx);
 			Send(data, len, tag);
 		}
-		virtual void Receive(AIS::Message* data, int len, TAG& tag) {
+		virtual void Receive(AIS::Message *data, int len, TAG &tag)
+		{
 			std::lock_guard<std::mutex> lock(mtx);
 			Send(data, len, tag);
 		}
 	};
 
 	// Abstract demodulation model
-	class Model : public Setting {
+	class Model : public Setting
+	{
 	protected:
 		std::string name = "";
 		int station = 0;
+		int own_mmsi = -1;
 
 		Mode mode = Mode::AB;
 		std::string designation = "AB";
 
-		Device::Device* device;
+		Device::Device *device;
 		Util::Timer<RAW> timer;
 		MessageMutex output;
 		Util::PassThrough<GPS> output_gps;
 
 	public:
 		virtual ~Model() {}
-		virtual void buildModel(char, char, int, bool, Device::Device* d) { device = d; }
+		virtual void buildModel(char, char, int, bool, Device::Device *d) { device = d; }
 
-		StreamOut<Message>& Output() { return output; }
-		StreamOut<GPS>& OutputGPS() { return output_gps; }
+		StreamOut<Message> &Output() { return output; }
+		StreamOut<GPS> &OutputGPS() { return output_gps; }
 
 		void setName(std::string s) { name = s; }
 		std::string getName() { return name; }
@@ -89,12 +97,15 @@ namespace AIS {
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
 		void setMode(Mode m) { mode = m; }
-		void setDesignation(const std::string& s) { designation = s; }
-		virtual Setting& Set(std::string option, std::string arg) {
+		void setDesignation(const std::string &s) { designation = s; }
+		virtual Setting &Set(std::string option, std::string arg)
+		{
 			Util::Convert::toUpper(option);
 
 			if (option == "STATION_ID" || option == "ID")
 				station = Util::Parse::Integer(arg);
+			else if (option == "OWN_MMSI")
+				own_mmsi = Util::Parse::Integer(arg);
 			else
 				throw std::runtime_error("Model: unknown setting.");
 
@@ -105,9 +116,9 @@ namespace AIS {
 		virtual ModelClass getClass() { return ModelClass::IQ; }
 	};
 
-
 	// Common front-end downsampling
-	class ModelFrontend : public Model {
+	class ModelFrontend : public Model
+	{
 	private:
 		DSP::SOXR sox;
 		DSP::SRC src;
@@ -133,18 +144,19 @@ namespace AIS {
 
 		const int nSymbolsPerSample = 48000 / 9600;
 
-		Connection<CFLOAT32>*C_a = nullptr, *C_b = nullptr;
+		Connection<CFLOAT32> *C_a = nullptr, *C_b = nullptr;
 		DSP::Rotate ROT;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device *);
 
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 	};
 
 	// Standard demodulation model, FM with brute-force timing recovery
-	class ModelStandard : public ModelFrontend {
+	class ModelStandard : public ModelFrontend
+	{
 		Demod::FM FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
@@ -152,22 +164,24 @@ namespace AIS {
 		DSP::Deinterleave<FLOAT32> S_a, S_b;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device *);
 	};
 
 	// Base model for development purposes, simplest and fastest
-	class ModelBase : public ModelFrontend {
+	class ModelBase : public ModelFrontend
+	{
 		Demod::FM FM_a, FM_b;
 		DSP::Filter FR_a, FR_b;
 		DSP::SimplePLL sampler_a, sampler_b;
 		AIS::Decoder DEC_a, DEC_b;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device *);
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
-	class ModelDefault : public ModelFrontend {
+	class ModelDefault : public ModelFrontend
+	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		std::vector<Demod::PhaseSearch> CD_a, CD_b;
 		std::vector<Demod::PhaseSearchEMA> CD_EMA_a, CD_EMA_b;
@@ -184,15 +198,15 @@ namespace AIS {
 		bool CGF_wide = true;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
-		Setting& Set(std::string option, std::string arg);
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 	};
 
 	// Simple model embedding some elements of a coherent model with local phase estimation
-	class ModelChallenger : public ModelFrontend {
+	class ModelChallenger : public ModelFrontend
+	{
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
-
 
 		DSP::FilterComplex FC_a, FC_b;
 		DSP::Filter FR_af, FR_bf;
@@ -214,14 +228,14 @@ namespace AIS {
 		bool CGF_wide = true;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
-		Setting& Set(std::string option, std::string arg);
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 	};
 
-
 	// Standard demodulation model for FM discriminator input
-	class ModelDiscriminator : public Model {
+	class ModelDiscriminator : public Model
+	{
 		Util::RealPart RP;
 		Util::ImaginaryPart IP;
 		DSP::Upsample US;
@@ -233,27 +247,29 @@ namespace AIS {
 		Util::ConvertRAW convert;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
+		void buildModel(char, char, int, bool, Device::Device *);
 		ModelClass getClass() { return ModelClass::FM; }
 	};
 
 	// Standard demodulation model for FM discriminator input
-	class ModelNMEA : public Model {
+	class ModelNMEA : public Model
+	{
 		NMEA nmea;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
-		Setting& Set(std::string option, std::string arg);
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::TXT; }
 	};
 
-	class ModelN2K : public Model {
+	class ModelN2K : public Model
+	{
 		N2KtoMessage n2k;
 
 	public:
-		void buildModel(char, char, int, bool, Device::Device*);
-		Setting& Set(std::string option, std::string arg);
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::N2K; }
 	};

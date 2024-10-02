@@ -59,6 +59,7 @@ namespace AIS {
 		int state = 0;
 		std::string line;
 		int count;
+		int own_mmsi = -1;
 
 		std::vector<AIVDM> queue;
 
@@ -114,6 +115,7 @@ namespace AIS {
 		void setJSON(bool b) { JSON_input = b; }
 		void setStamp(bool b) { stamp = b; }
 		bool getStamp() { return stamp; }
+		void setOwnMMSI(int m) { own_mmsi = m; }
 
 		Connection<GPS> outGPS;
 	};

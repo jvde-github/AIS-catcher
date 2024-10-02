@@ -51,6 +51,8 @@ class Config {
 	OutputScreen& _screen;
 	std::vector<std::unique_ptr<WebViewer>>& _server;
 
+	int &_own_mmsi;
+
 	bool isActiveObject(const JSON::Value& pd);
 	void setSettingsFromJSON(const JSON::Value& pd, Setting& s);
 	void setHTTPfromJSON(const JSON::Property& pd);
@@ -64,7 +66,7 @@ class Config {
 	void setSharing(const std::vector<JSON::Property>& props);
 
 public:
-	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, OutputScreen& s, std::vector<std::unique_ptr<WebViewer>>& v) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v) {}
+	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, OutputScreen& s, std::vector<std::unique_ptr<WebViewer>>& v,int &own_mmsi) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v), _own_mmsi(own_mmsi) {}
 
 	void read(std::string& file_config);
 	void set(const std::string& str);

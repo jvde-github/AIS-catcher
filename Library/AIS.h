@@ -36,6 +36,7 @@ namespace AIS {
 	class Decoder : public SimpleStreamInOut<FLOAT32, Message>, public SignalIn<DecoderSignals> {
 		char channel = '?';
 		int station = 0;
+		int own_mmsi = -1;
 
 		const int MaxBits = MAX_AIS_LENGTH;
 		const int MIN_TRAINING_BITS = 4;
@@ -65,9 +66,10 @@ namespace AIS {
 	public:
 		virtual ~Decoder() {}
 
-		void setOrigin(char c, int s) {
+		void setOrigin(char c, int s, int o) {
 			channel = c;
 			station = s;
+			own_mmsi = o;
 		}
 
 		void Receive(const FLOAT32* data, int len, TAG& tag);

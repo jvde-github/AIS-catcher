@@ -395,8 +395,8 @@ namespace AIS {
 		FR_a.setTaps(Filters::Receiver);
 		FR_b.setTaps(Filters::Receiver);
 
-		DEC_a.setOrigin(CH1, station);
-		DEC_b.setOrigin(CH2, station);
+		DEC_a.setOrigin(CH1, station, own_mmsi);
+		DEC_b.setOrigin(CH2, station, own_mmsi);
 
 		*C_a >> FM_a >> FR_a >> sampler_a >> DEC_a >> output;
 		*C_b >> FM_b >> FR_b >> sampler_b >> DEC_b >> output;
@@ -426,8 +426,8 @@ namespace AIS {
 		*C_b >> FM_b >> FR_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1, station);
-			DEC_b[i].setOrigin(CH2, station);
+			DEC_a[i].setOrigin(CH1, station, own_mmsi);
+			DEC_b[i].setOrigin(CH2, station, own_mmsi);
 
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
@@ -480,8 +480,8 @@ namespace AIS {
 		*C_b >> CGF_b >> FC_b >> S_b;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1, station);
-			DEC_b[i].setOrigin(CH2, station);
+			DEC_a[i].setOrigin(CH1, station,own_mmsi);
+			DEC_b[i].setOrigin(CH2, station,own_mmsi);
 
 			if (!PS_EMA) {
 				CD_a[i].setParams(nHistory, nDelay);
@@ -576,11 +576,11 @@ namespace AIS {
 		throttle_b.out[0] >> FM_bf >> FR_bf >> S_bf;
 
 		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1, station);
-			DEC_af[i].setOrigin(CH1, station);
+			DEC_a[i].setOrigin(CH1, station,own_mmsi);
+			DEC_af[i].setOrigin(CH1, station,own_mmsi);
 
-			DEC_b[i].setOrigin(CH2, station);
-			DEC_bf[i].setOrigin(CH2, station);
+			DEC_b[i].setOrigin(CH2, station,own_mmsi);
+			DEC_bf[i].setOrigin(CH2, station,own_mmsi);
 
 			CD_EMA_a[i].setParams(nDelay);
 			CD_EMA_b[i].setParams(nDelay);
@@ -669,8 +669,8 @@ namespace AIS {
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
 
-			DEC_a[i].setOrigin(CH1, station);
-			DEC_b[i].setOrigin(CH2, station);
+			DEC_a[i].setOrigin(CH1, station,own_mmsi);
+			DEC_b[i].setOrigin(CH2, station,own_mmsi);
 
 			for (int j = 0; j < nSymbolsPerSample; j++) {
 				if (i != j) {
@@ -690,6 +690,7 @@ namespace AIS {
 		nmea.outGPS >> output_gps;
 
 		nmea.setStation(station);
+		nmea.setOwnMMSI(own_mmsi);
 	}
 
 	Setting& ModelNMEA::Set(std::string option, std::string arg) {
