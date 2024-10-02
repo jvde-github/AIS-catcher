@@ -1711,7 +1711,7 @@ function updateTablecard() {
                 });
 
                 var cell1 = row.insertCell(0);
-                cell1.innerHTML = getFlag(ship.country);
+                cell1.innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 16px;")
 
                 var cell2 = row.insertCell(1);
                 cell2.innerText = shipName;
