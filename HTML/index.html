@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.0.0/ol.css">
 	
-	<link rel="stylesheet" href="style_1727953012.css" />
+	<link rel="stylesheet" href="style_1727978836.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -1006,7 +1006,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_1727953012.js"></script>
+	<script src="script_1727978836.js"></script>
 	<script src="config.js"></script>
 
 	<script>
@@ -1084,6 +1084,7 @@
 
 						feature.ship = ship;
 						feature.link = 'https://www.shipcatcher.com/?zoom=12&mmsi=' + ship.mmsi
+						feature.tooltip = ship.shipname || ship.mmsi 
 						feedVector.addFeature(feature)
 					}
 				}
