@@ -3841,25 +3841,27 @@ const stopHover = function () {
 
     if (!hoverMMSI) return;
 
+    let hover_mmsi = hoverMMSI;
+
     debounceShowHoverTrack.cancel();
-    
+
     hover_info.style.visibility = 'hidden';
     hover_info.style.left = '0px';
     hover_info.style.top = '0px';
 
     if (hover_enabled_track) hideTrack(hoverMMSI);
+
     const dc = hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature);
+    const sf = hoverMMSI in shapeFeatures;
 
     hoverMMSI = undefined;
     hover_feature = undefined;
     hover_enabled_track = false;
+
     if (dc) rangeLayer.changed();
+    shapeLayer.changed();
 
     updateHoverMarker();
-
-    if (hoverMMSI in shapeFeatures) {
-        shapeFeatures[hoverMMSI].changed();
-    }
     trackLayer.changed();
 }
 
@@ -3886,7 +3888,7 @@ const startHover = function (mmsi, pixel, feature) {
             if (settings.show_track_on_hover && pixel) {
                 debounceShowHoverTrack(mmsi);
             }
-            
+
             if (mmsi in shapeFeatures) {
                 shapeFeatures[mmsi].changed();
             }
@@ -3990,7 +3992,7 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);
     }
-    debounced.cancel = function() {
+    debounced.cancel = function () {
         clearTimeout(timeout);
     };
     return debounced;
