@@ -3799,14 +3799,14 @@ function updateFocusMarker() {
     }
 }
 
-const showTooltipShip = (tooltip, mmsi, pixel, angle = 0) => {
+const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
     tooltip.innerHTML = shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi;
 
     if (pixel) {
         const [mapW, mapH] = map.getSize();
         const { offsetWidth: tw, offsetHeight: th } = tooltip;
-        const dist = 15;
+        const dist = distance;
 
         // we position the tooltip top-right of the ship in the direction of the ship's course to minimize overlap with path
         const calculatePosition = (a) => {
@@ -3883,7 +3883,7 @@ const startHover = function (mmsi, pixel, feature) {
         hover_feature = feature;
 
         if ((mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
-            showTooltipShip(hover_info, hoverMMSI, pixel, shipsDB[mmsi].raw.cog);
+            showTooltipShip(hover_info, hoverMMSI, pixel, 15, shipsDB[mmsi].raw.cog);
 
             if (settings.show_track_on_hover && pixel) {
                 debounceShowHoverTrack(mmsi);
@@ -3896,7 +3896,7 @@ const startHover = function (mmsi, pixel, feature) {
             trackLayer.changed();
         }
         else {
-            showTooltipShip(hover_info, hoverMMSI, pixel);
+            showTooltipShip(hover_info, hoverMMSI, pixel, 0);
 
             if (hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature))
                 rangeLayer.changed();
@@ -3934,6 +3934,23 @@ function updateHoverMarker() {
 }
 
 
+const normalizePixel = (coord) => {
+    const view = map.getView(),
+          projection = view.getProjection(),
+          centerX = view.getCenter()[0],
+          worldWidth = ol.extent.getWidth(projection.getExtent());
+
+    coord[0] -= Math.floor((coord[0] - centerX) / worldWidth + 0.5) * worldWidth;
+
+    const [x, y] = map.getPixelFromCoordinate(coord),
+          [width, height] = map.getSize();
+
+    return [
+        Math.max(0, Math.min(width - 1, x)),
+        Math.max(0, Math.min(height - 1, y))
+    ];
+};
+
 
 function getFeature(pixel, target) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
@@ -3946,17 +3963,20 @@ function getFeature(pixel, target) {
 const handlePointerMove = function (pixel, target) {
     const feature = getFeature(pixel, target)
 
-    if (feature && 'ship' in feature) {
-        const mmsi = feature.ship.mmsi;
-        const center = ol.proj.fromLonLat([shipsDB[mmsi].raw.lon, shipsDB[mmsi].raw.lat]);
-        pixel = map.getPixelFromCoordinate(center);
+    if (feature) {
+        const geometry = feature.getGeometry();
+        const geometryType = geometry.getType();
+        if (geometryType === 'Point') {
+            const coordinate = geometry.getCoordinates();
+            pixel = normalizePixel(coordinate);
+        }
+    }
+
+    if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
+        const mmsi = feature.ship.mmsi;        
         startHover(mmsi, pixel, feature);
     }
     else if (feature && 'tooltip' in feature) {
-        if ('station' in feature) {
-            const coordinate = feature.getGeometry().getCoordinates();
-            pixel = map.getPixelFromCoordinate(coordinate);
-        }
         startHover(feature.tooltip, pixel, feature);
     } else if (hoverMMSI) {
         stopHover();
