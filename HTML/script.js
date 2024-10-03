@@ -3841,6 +3841,8 @@ const stopHover = function () {
 
     if (!hoverMMSI) return;
 
+    debounceShowHoverTrack.cancel();
+    
     hover_info.style.visibility = 'hidden';
     hover_info.style.left = '0px';
     hover_info.style.top = '0px';
@@ -3861,6 +3863,15 @@ const stopHover = function () {
     trackLayer.changed();
 }
 
+function showHoverTrack(mmsi) {
+    if (mmsi) {
+        hover_enabled_track = !trackIsShown(hoverMMSI);
+        if (hover_enabled_track) {
+            showTrack(mmsi);
+        }
+    }
+}
+
 const startHover = function (mmsi, pixel, feature) {
 
     if (mmsi !== hoverMMSI) {
@@ -3872,11 +3883,8 @@ const startHover = function (mmsi, pixel, feature) {
         if ((mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
             showTooltipShip(hover_info, hoverMMSI, pixel, shipsDB[mmsi].raw.cog);
 
-            if (settings.show_track_on_hover) {
-                hover_enabled_track = !trackIsShown(hoverMMSI);
-                if (hover_enabled_track) {
-                    showTrack(mmsi);
-                }
+            if (settings.show_track_on_hover && pixel) {
+                debounceShowHoverTrack(mmsi);
             }
             
             if (mmsi in shapeFeatures) {
@@ -3947,7 +3955,6 @@ const handlePointerMove = function (pixel, target) {
             const coordinate = feature.getGeometry().getCoordinates();
             pixel = map.getPixelFromCoordinate(coordinate);
         }
-        hover_feature = feature;
         startHover(feature.tooltip, pixel, feature);
     } else if (hoverMMSI) {
         stopHover();
@@ -3979,14 +3986,20 @@ const handlePointerMove = function (pixel, target) {
 
 function debounce(func, wait) {
     let timeout;
-    return function (...args) {
+    function debounced(...args) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);
+    }
+    debounced.cancel = function() {
+        clearTimeout(timeout);
     };
+    return debounced;
 }
 
 const debouncedSaveSettings = debounce(saveSettings, 250);
 const debouncedDrawMap = debounce(redrawMap, 250);
+const debounceShowHoverTrack = debounce(showHoverTrack, 250);
+
 
 function updateMapURL() {
     if (isAndroid()) return;
