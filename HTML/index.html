@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.0.0/ol.css">
 	
-	<link rel="stylesheet" href="style_1727978836.css" />
+	<link rel="stylesheet" href="style_1728149326.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -736,8 +736,8 @@
 
 
 			<div class="tabcontent" id="map">
-				<div id="statcard" class="draggable">
-					<div class="statcard_inner">
+				<aside id="statcard">
+					<div class="statcard_inner draggable">
 						<table>
 							<tr>
 								<td>
@@ -838,12 +838,11 @@
 
 				</aside>
 
-				<aside id="shipcard" class="mapcard shipcard-width shipcard-ismax draggable">
+				<aside id="shipcard" class="mapcard shipcard-width shipcard-ismax">
 					<header id="shipcard_header" class="mapcard_header">
 						<span onclick="toggleShipcardSize()" id="shipcard_header_flag"></span>
 						<span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-						<span><i onclick="mapResetViewZoom(13, card_mmsi)"
-								class="mapcard-header-icon zoom_in_icon"></i></span>
+						<span class="draggable draggable-hide-if-not-active"><i class="mapcard-header-icon drag_indicator_icon"></i></span>
 						<span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button"
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
 						<span><i onclick="showContextMenu(event,card_mmsi,['mmsi', 'mmsi-map'])"
@@ -1006,7 +1005,7 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="script_1727978836.js"></script>
+	<script src="script_1728149326.js"></script>
 	<script src="config.js"></script>
 
 	<script>

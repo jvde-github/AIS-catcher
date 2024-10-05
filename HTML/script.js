@@ -5286,98 +5286,66 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
         serverType: 'geoserver'
     })
 }));
-let isDraggingGlobal = false;
-let clickPrevent = false;
 
-function makeDraggable(element) {
-    let offsetX, offsetY;
-    let dragging = false;
-    let startX, startY;
-    const moveThreshold = 15; // Increased threshold to accommodate touchpad sensitivity
+function makeDraggable(dragHandle, dragTarget) {
+    const moveThreshold = 15;
+    let isDragging = false;
+    let startX, startY, offsetX, offsetY;
 
-    function onDragStart(clientX, clientY) {
-        startX = clientX;
-        startY = clientY;
-        offsetX = clientX - element.offsetLeft;
-        offsetY = clientY - element.offsetTop;
-        dragging = false;
-        clickPrevent = false;
-        element.classList.remove('dragging');
-    }
-
-    function onDragMove(clientX, clientY, e) {
-        const dx = clientX - startX;
-        const dy = clientY - startY;
-        const distanceSquared = dx * dx + dy * dy;
-
-        if (!dragging && distanceSquared > moveThreshold * moveThreshold) {
-            dragging = true;
-            isDraggingGlobal = true;
-            clickPrevent = true;
-            element.classList.add('dragging');
-
-            e.preventDefault();
-        }
-
-        if (dragging) {
-            element.style.left = `${clientX - offsetX}px`;
-            element.style.top = `${clientY - offsetY}px`;
-        }
-    }
-
-    function onDragEnd() {
-        if (dragging) {
-            isDraggingGlobal = false;
-            clickPrevent = true;
-            element.classList.remove('dragging');
-        }
-        dragging = false;
-    }
-
-    element.addEventListener('pointerdown', (e) => {
+    dragHandle.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        element.setPointerCapture(e.pointerId);
-        onDragStart(e.clientX, e.clientY);
+
+        startX = e.clientX;
+        startY = e.clientY;
+        offsetX = startX - dragTarget.offsetLeft;
+        offsetY = startY - dragTarget.offsetTop;
 
         const onPointerMove = (e) => {
-            onDragMove(e.clientX, e.clientY, e);
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            if (!isDragging && (dx * dx + dy * dy) > moveThreshold * moveThreshold) {
+                isDragging = true;
+                dragTarget.classList.add('dragging');
+            }
+
+            if (isDragging) {
+                dragTarget.style.left = `${e.clientX - offsetX}px`;
+                dragTarget.style.top = `${e.clientY - offsetY}px`;
+            }
         };
 
-        const onPointerUp = (e) => {
-            onDragEnd();
-            element.releasePointerCapture(e.pointerId);
-            element.removeEventListener('pointermove', onPointerMove);
-            element.removeEventListener('pointerup', onPointerUp);
+        const onPointerUp = () => {
+            if (isDragging) {
+                isDragging = false;
+                dragTarget.classList.remove('dragging');
+            }
+
+            dragHandle.releasePointerCapture(e.pointerId);
+            dragHandle.removeEventListener('pointermove', onPointerMove);
+            dragHandle.removeEventListener('pointerup', onPointerUp);
         };
 
-        element.addEventListener('pointermove', onPointerMove);
-        element.addEventListener('pointerup', onPointerUp);
+        dragHandle.setPointerCapture(e.pointerId);
+        dragHandle.addEventListener('pointermove', onPointerMove);
+        dragHandle.addEventListener('pointerup', onPointerUp);
     });
+}
 
-    element.addEventListener('click', (e) => {
-        if (clickPrevent) {
-            e.preventDefault();
-            e.stopPropagation();
-            clickPrevent = false;
-            return;
+if (!window.matchMedia('(max-width: 500px), (max-height: 800px)').matches) {
+    document.querySelectorAll('aside').forEach((aside) => {
+        const dragHandle = aside.querySelector('.draggable');
+        if (dragHandle) {
+            makeDraggable(dragHandle, aside);
         }
     });
 }
-
-document.addEventListener('click', function (e) {
-    if (clickPrevent) {
-        e.preventDefault();
-        e.stopPropagation();
-        clickPrevent = false;
-    }
-}, true);
-
-if (!window.matchMedia('(max-width: 500px), (max-height: 800px)').matches) {
-    document.querySelectorAll('.draggable').forEach(card => {
-        makeDraggable(card);
+else {
+    // hide all spans with class "draggable-hide-if-not-active"
+    document.querySelectorAll('.draggable-hide-if-not-active').forEach((span) => {
+        span.style.display = 'none';
     });
 }
-
 
 let mdabout = "This content can be defined by the owner of the station";
 
