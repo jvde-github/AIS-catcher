@@ -157,7 +157,7 @@ html {
 }
 
 .draggable {
-    cursor: grab;
+    cursor: move;
 }
 
 .draggable.dragging {
