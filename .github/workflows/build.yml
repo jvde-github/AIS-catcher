@@ -50,7 +50,7 @@ jobs:
         git add HTML/script_js.cpp
         git add HTML/style_css.cpp
         git add scripts/build.sh
-        git add Application/AIS-catcher.h
+        git add Application/version.h
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
         git commit -m "Stamp version and bake index.html in HTML.cpp"
