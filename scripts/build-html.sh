@@ -14,11 +14,11 @@ URL_SAFE_TAG=$(echo "$TAG" | sed 's/[.]/_/g' | sed 's/[-]/_/g')
 echo "Tag: $TAG"
 echo "URL-safe Tag: $URL_SAFE_TAG"
 
-# Update Application/AIS-catcher.h
-sed -i '/VERSION_DESCRIBE/d' Application/AIS-catcher.h
-echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/AIS-catcher.h
-sed -i '/VERSION_URL_TAG/d' Application/AIS-catcher.h
-echo -e "#define VERSION_URL_TAG\t\"$URL_SAFE_TAG\"" >> Application/AIS-catcher.h
+# Update Application/version.h
+sed -i '/VERSION_DESCRIBE/d' Application/version.h
+echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/version.h
+sed -i '/VERSION_URL_TAG/d' Application/version.h
+echo -e "#define VERSION_URL_TAG\t\"$URL_SAFE_TAG\"" >> Application/version.h
 
 # Replace script.js and style.css with their versioned counterparts in index.html
 sed -i "s|script_[^\.]*\.js|script_${URL_SAFE_TAG}.js|g" HTML/index.html
@@ -31,7 +31,7 @@ sed -i "s|style\.css|style_${URL_SAFE_TAG}.css|g" HTML/index.html
 # Create a local version and perform the same replacement
 sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' HTML/index.html > HTML/index_local.html
 
-echo "Updated Application/AIS-catcher.h with VERSION_DESCRIBE and VERSION_URL_TAG"
+echo "Updated Application/version.h with VERSION_DESCRIBE and VERSION_URL_TAG"
 echo "Updated index.html with versioned script and style references"
 
 # Minify and compress index.html and generate corresponding C++ files

@@ -72,7 +72,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	bool thread_running = false;
 	std::vector<char> binary;
 
-	std::string params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\n\n";
+	std::string params;
 	std::string plugins;
 	std::string stylesheets;
 	std::string cdn;
@@ -111,12 +111,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	AIS::Filter filter;
 
 public:
-	WebViewer() {
-		os.clear();
-		JSON::StringBuilder::stringify(Util::Helper::getOS(), os);
-		hardware.clear();
-		JSON::StringBuilder::stringify(Util::Helper::getHardware(), hardware);
-	}
+	WebViewer();
 
 	~WebViewer() { stopThread(); }
 

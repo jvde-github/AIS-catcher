@@ -20,6 +20,3 @@
 #define VERSION_NUMBER 60
 #define VERSION		   "v0.60"
 #define COPYRIGHT	   "jvde-github and other contributors"
-
-#define VERSION_DESCRIBE	"v0.60-153-gff7eed17"
-#define VERSION_URL_TAG	"v0_60_153_gff7eed17"
