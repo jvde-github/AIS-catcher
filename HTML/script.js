@@ -5336,7 +5336,7 @@ if (!window.matchMedia('(max-width: 500px), (max-height: 800px)').matches) {
     document.querySelectorAll('aside').forEach((aside) => {
         const dragHandle = aside.querySelector('.draggable');
         if (dragHandle) {
-            makeDraggable(dragHandle, aside);
+           // makeDraggable(dragHandle, aside);
         }
     });
 }
