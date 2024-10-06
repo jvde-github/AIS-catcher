@@ -3936,14 +3936,14 @@ function updateHoverMarker() {
 
 const normalizePixel = (coord) => {
     const view = map.getView(),
-          projection = view.getProjection(),
-          centerX = view.getCenter()[0],
-          worldWidth = ol.extent.getWidth(projection.getExtent());
+        projection = view.getProjection(),
+        centerX = view.getCenter()[0],
+        worldWidth = ol.extent.getWidth(projection.getExtent());
 
     coord[0] -= Math.floor((coord[0] - centerX) / worldWidth + 0.5) * worldWidth;
 
     const [x, y] = map.getPixelFromCoordinate(coord),
-          [width, height] = map.getSize();
+        [width, height] = map.getSize();
 
     return [
         Math.max(0, Math.min(width - 1, x)),
@@ -3973,7 +3973,7 @@ const handlePointerMove = function (pixel, target) {
     }
 
     if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
-        const mmsi = feature.ship.mmsi;        
+        const mmsi = feature.ship.mmsi;
         startHover(mmsi, pixel, feature);
     }
     else if (feature && 'tooltip' in feature) {
@@ -5292,6 +5292,9 @@ function makeDraggable(dragHandle, dragTarget) {
     let isDragging = false;
     let startX, startY, offsetX, offsetY;
 
+    // add class cursor-move to dragHandle
+    dragHandle.classList.add('cursor-move');
+
     dragHandle.addEventListener('pointerdown', (e) => {
         e.preventDefault();
 
@@ -5315,7 +5318,7 @@ function makeDraggable(dragHandle, dragTarget) {
             }
         };
 
-        const onPointerUp = () => {
+        const onPointerUp = (e) => {
             if (isDragging) {
                 isDragging = false;
                 dragTarget.classList.remove('dragging');
@@ -5336,7 +5339,7 @@ if (!window.matchMedia('(max-width: 500px), (max-height: 800px)').matches) {
     document.querySelectorAll('aside').forEach((aside) => {
         const dragHandle = aside.querySelector('.draggable');
         if (dragHandle) {
-           // makeDraggable(dragHandle, aside);
+            makeDraggable(dragHandle, aside);
         }
     });
 }
