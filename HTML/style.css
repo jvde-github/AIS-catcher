@@ -156,8 +156,8 @@ html {
     touch-action: none;
 }
 
-.draggable {
-    cursor: move;
+.cursor-move {
+    cursor: move !important;
 }
 
 .draggable.dragging {
