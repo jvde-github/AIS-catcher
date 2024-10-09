@@ -23,6 +23,8 @@ bool communityFeed = false;
 WebViewer::WebViewer()
 {
 	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\n\n";
+	plugin_code = "\n\nfunction loadPlugins() {\n";
+	plugins = "let plugins = '';\nlet server_message = '';\n";
 	os.clear();
 	JSON::StringBuilder::stringify(Util::Helper::getOS(), os);
 	hardware.clear();
@@ -139,9 +141,9 @@ void WebViewer::addPlugin(const std::string &arg)
 			}
 		}
 		std::cerr << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version << std::endl;
-		if (version != 2)
-			throw std::runtime_error("Version not supported, expected 2, got " + std::to_string(version));
-		plugins += "try{" + s + "} catch (error) { showDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }";
+		if (version != 3)
+			throw std::runtime_error("Version not supported, expected 3, got " + std::to_string(version));
+		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
 	}
 	catch (const std::exception &e)
 	{
@@ -519,7 +521,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	}
 	else if (r == "/config.js")
 	{
-		Response(c, "application/javascript", params + plugins + "\nserver_version = false;\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
 	else if (r == "/config.css")
 	{

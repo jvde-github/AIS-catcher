@@ -13,7 +13,6 @@ var interval,
     shipsDB = {},
     fetch_binary = false,
     singleClickTimeout = null,
-    server_message = "",
     hover_feature = undefined,
     show_all_tracks = false;
 var iconLabelSpan = null,
@@ -35,8 +34,7 @@ var shipcardIconCount = undefined;
 var shipcardIconMax = 3;
 var shipcardIconOffset = 0;
 var StationControlDiv = null;
-var plugins = "",
-    plugins_main = [];
+var plugins_main = [];
 var card_mmsi = null,
     hover_mmsi = null,
     build_string = "unknown";
@@ -5353,3 +5351,262 @@ else {
 let mdabout = "This content can be defined by the owner of the station";
 
 console.log("Starting plugin code");
+
+
+loadPlugins();
+		
+var button = document.getElementById('xchange'); // Get the button by its ID
+
+if (communityFeed) {
+    button.classList.remove('fill-red');
+    button.classList.add('fill-green');
+}
+
+
+if (communityFeed) {
+    var feedVector = new ol.source.Vector({
+        features: []
+    });
+
+    var feederStyle = function (feature) {
+        return new ol.style.Style({
+            image: new ol.style.Icon({
+                src: "https://aiscatcher.org/hub_test/sprites_hub.png",
+                rotation: feature.ship.rot,
+                offset: [feature.ship.cx, feature.ship.cy],
+                size: [feature.ship.imgSize, feature.ship.imgSize],
+                scale: settings.icon_scale * 0.8,
+                opacity: 1
+            })
+        })
+    }
+
+    var feedLayer = new ol.layer.Vector({
+        source: feedVector,
+        style: feederStyle
+    });
+
+
+    let FeedStationStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+            radius: 4,
+            stroke: new ol.style.Stroke({
+                color: 'white',
+                width: 3
+            }),
+            fill: new ol.style.Fill({
+                color: getComputedStyle(document.documentElement).getPropertyValue('--tertiary-color')
+            }),
+        })
+    });
+
+    var feedStationVector = new ol.source.Vector({
+        features: []
+    });
+
+    var feeStationdLayer = new ol.layer.Vector({
+        source: feedStationVector,
+        style: FeedStationStyle
+    });
+
+    function redrawCommunityFeed(db) {
+
+        feedVector.clear();
+
+        for (let [mmsi, entry] of Object.entries(CshipsDB)) {
+            let ship = entry.raw;
+            if (ship.lat != null && ship.lon != null && ship.lat != 0 && ship.lon != 0 && ship.lat < 90 && ship.lon < 180) {
+                getSprite(ship)
+
+                const lon = ship.lon
+                const lat = ship.lat
+
+                const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
+                var feature = new ol.Feature({
+                    geometry: point
+                })
+
+                feature.ship = ship;
+                feature.link = 'https://www.shipcatcher.com/?zoom=12&mmsi=' + ship.mmsi
+                feature.tooltip = ship.shipname || ship.mmsi 
+                feedVector.addFeature(feature)
+            }
+        }
+    }
+
+    function redrawCommunityStations() {
+        feedStationVector.clear();
+
+        // fetch stations from hub/stations.json
+        fetch("https://aiscatcher.org/hub/stations.json")
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(station => {
+                    const point = new ol.geom.Point(ol.proj.fromLonLat([station.longitude, station.latitude]))
+                    var feature = new ol.Feature({
+                        geometry: point
+                    })
+                    feature.tooltip = station.station_name
+                    feature.link = 'https://aiscatcher.org/station/' + station.station_id
+                    feedStationVector.addFeature(feature)
+                });
+            });
+    }
+
+
+    let CshipsDB = {}
+
+    async function fetchCommunityShips(noDoubleFetch = true) {
+
+        let ships = {};
+
+        try {
+            const extent = map.getView().calculateExtent(map.getSize());
+            const extentInLatLon = ol.proj.transformExtent(extent, 'EPSG:3857', 'EPSG:4326');
+
+            let minLon = extentInLatLon[0] - 0.0045;
+            let minLat = extentInLatLon[1] - 0.0045;
+            let maxLon = extentInLatLon[2] + 0.0045;
+            let maxLat = extentInLatLon[3] + 0.0045;
+
+            let zoom = map.getView().getZoom();
+
+            response = await fetch("https://aiscatcher.org/hub_test/ships_array.json?" + zoom + "," + minLat + "," + minLon + "," + maxLat + "," + maxLon + "," + -1);
+        } catch (error) {
+            console.log("failed loading ships: " + error);
+            return false;
+        }
+
+        ships = await response.json();
+
+
+        const keys = [
+            "mmsi",
+            "lat",
+            "lon",
+            "distance",
+            "bearing",
+            "level",
+            "count",
+            "ppm",
+            "approx",
+            "heading",
+            "cog",
+            "speed",
+            "to_bow",
+            "to_stern",
+            "to_starboard",
+            "to_port",
+            "last_group",
+            "group_mask",
+            "shiptype",
+            "mmsi_type",
+            "shipclass",
+            "validated",
+            "msg_type",
+            "channels",
+            "country",
+            "status",
+            "draught",
+            "eta_month",
+            "eta_day",
+            "eta_hour",
+            "eta_minute",
+            "imo",
+            "callsign",
+            "shipname",
+            "destination",
+            "last_signal",
+        ];
+
+        CshipsDB = {};
+        ships.values.forEach((v) => {
+            const s = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
+            const entry = {};
+            entry.raw = s;
+            CshipsDB[s.mmsi] = entry;
+        });
+
+        return true;
+    }
+
+    debounceUpdateCommunityFeed = debounce(updateCommunityFeed, 250);
+
+    feedLayer.on('change:visible', function () {
+        if (feedLayer.getVisible()) {
+            debounceUpdateCommunityFeed();
+        }
+    });
+
+    feeStationdLayer.on('change:visible', function () {
+        if (feeStationdLayer.getVisible()) {
+            redrawCommunityStations();
+        }
+    });
+
+    function updateCommunityFeed() {
+        if (!feedLayer.isVisible()) return;
+        fetchCommunityShips().then((ok) => {
+            if (ok) {
+                redrawCommunityFeed(CshipsDB);
+            }
+        });
+    }
+    addOverlayLayer("Community Feed", feedLayer);
+    addOverlayLayer("Community Stations", feeStationdLayer);
+    addOverlayLayer("AIS Ducting Index", new ol.layer.Tile({
+        source: new ol.source.XYZ({
+            url: 'https://aiscatcher.org/tiles/ducting/{z}/{x}/{-y}.png',  // Update the tile URL pattern
+            tileSize: [256, 256],
+            maxZoom: 5  // Set the maximum zoom level based on your generated tiles
+        })
+    }));
+}
+
+let urlParams = new URLSearchParams(window.location.search);
+restoreDefaultSettings();
+
+console.log("Plugin loading completed");
+
+console.log("Load settings");
+loadSettings();
+
+console.log("Load settings from URL parameters");
+
+loadSettingsFromURL();
+
+updateAndroid();
+applyDynamicStyling();
+
+console.log("Setup tabs");
+initFullScreen();
+initPlots();
+
+initMap();
+
+updateDarkMode();
+
+console.log("Switch to active tab");
+selectTab();
+
+if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"));
+updateSortMarkers();
+saveSettings();
+prepareShipcard();
+
+if (aboutMDpresent == false) {
+    document.getElementById("about_tab").style.display = "none";
+    document.getElementById("about_tab_mini").style.display = "none";
+} else {
+    setupAbout();
+}
+
+if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+    document.getElementById("realtime_tab").style.display = "none";
+    document.getElementById("realtime_tab_mini").style.display = "none";
+}
+
+showWelcome();		
+
+if (isAndroid()) showMenu();
+main();
