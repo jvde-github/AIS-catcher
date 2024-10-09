@@ -73,6 +73,7 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	std::vector<char> binary;
 
 	std::string params;
+	std::string plugin_code;
 	std::string plugins;
 	std::string stylesheets;
 	std::string cdn;
