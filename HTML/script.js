@@ -1,5 +1,4 @@
 var interval,
-    context = "settings",
     aboutMDpresent = false,
     hist,
     ships,
