@@ -5353,7 +5353,7 @@ let mdabout = "This content can be defined by the owner of the station";
 console.log("Starting plugin code");
 
 
-loadPlugins();
+loadPlugins && loadPlugins();
 		
 var button = document.getElementById('xchange'); // Get the button by its ID
 

@@ -519,7 +519,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	{
 		ResponseRaw(c, "image/png", (char *)icons_png_gz, icons_png_gz_len, true);
 	}
-	else if (r == "/config.js")
+	else if (r == "/plugins.js")
 	{
 		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}

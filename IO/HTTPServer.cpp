@@ -133,6 +133,10 @@ namespace IO
 			strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now));
 			header += "\r\nExpires: " + std::string(buf);
 		}
+		else 
+		{
+			header += "\r\nCache-Control: no-cache";
+		}
 
 		header += "\r\nConnection: keep-alive\r\nContent-Length: " + std::to_string(len) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
 
