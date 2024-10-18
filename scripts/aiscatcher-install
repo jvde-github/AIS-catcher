@@ -220,7 +220,7 @@ setup_configuration() {
 
 
     if [[ ! -f "$CONFIG_FILE" ]]; then
-        echo '{ "config": "aiscatcher", "version": 1 }' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
+        echo '{ "config": "aiscatcher", "version": 1, "sharing": true }' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
     fi
     
     if [[ ! -f "$CMD_FILE" ]]; then
@@ -229,13 +229,13 @@ setup_configuration() {
 # Uncomment and modify options as needed
 
 # Select device for decoding
--d:0
+# -d:0
 
 # Share feed with aiscatcher.org, add UUID from aiscatcher.org (optional)
--X
+# -X
 
 # Open webviewer at port 8100
--N 8100 CDN ${CONFIG_DIR}/webassets
+# -N 8100 CDN ${CONFIG_DIR}/webassets
 
 # Uncomment to set location and allow viewing in webviewer
 # LAT 12.3 LON 4.3 SHARE_LOC ON
