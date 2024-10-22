@@ -175,6 +175,9 @@ namespace Device {
 		else if (option == "RTLAGC") {
 			RTL_AGC = Util::Parse::Switch(arg);
 		}
+		else if (option == "FREQOFFSET") {
+			freq_offset = Util::Parse::Integer(arg, -150, 150);
+		}
 		else if (option == "PERSIST") {
 			persistent = Util::Parse::Switch(arg);
 		}
