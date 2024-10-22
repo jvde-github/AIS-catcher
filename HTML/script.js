@@ -4086,6 +4086,8 @@ function loadSettings() {
             toggleShipcardSize();
         }
     }
+
+    settings.android = false;
 }
 
 function loadSettingsFromURL() {
