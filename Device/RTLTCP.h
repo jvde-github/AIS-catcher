@@ -50,7 +50,6 @@ namespace Device {
 		}
 
 		// Protocol: RTL_TCP
-		int freq_offset = 0;
 		bool tuner_AGC = true;
 		bool RTL_AGC = false;
 		FLOAT32 tuner_Gain = 33.0;
