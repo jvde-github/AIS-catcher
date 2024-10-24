@@ -30,7 +30,7 @@ namespace Device {
 
 	int SDRPLAY::API_count = 0;
 
-	SDRPLAY::SDRPLAY() : Device(Format::CF32, 230400, Type::SDRPLAY) {
+	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000, Type::SDRPLAY) {
 		float version = 0.0;
 
 		if (API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success) {
@@ -103,7 +103,8 @@ namespace Device {
 		cbFns.StreamACbFn = callback_static;
 		cbFns.EventCbFn = callback_event_static;
 
-		if (sdrplay_api_Init(device.dev, &cbFns, (void*)this) != sdrplay_api_Success) throw std::runtime_error("SDRPLAY: cannot start device");
+		sdrplay_api_ErrT e = sdrplay_api_Init(device.dev, &cbFns, (void*)this);
+		if (e != sdrplay_api_Success) throw std::runtime_error("SDRPLAY: cannot start device - " + std::string(sdrplay_api_GetErrorString(e)));
 
 		Device::Play();
 
