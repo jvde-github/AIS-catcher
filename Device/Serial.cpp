@@ -29,7 +29,7 @@ namespace Device
 		RAW r = {getFormat(), buffer, 0};
 
 #ifdef _WIN32
-		std::cerr << "Serial: starting thread" << std::endl;
+		Info() << "Serial: starting thread" << std::endl;
 		DWORD bytesRead;
 
 		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -53,7 +53,7 @@ namespace Device
 
 						if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE))
 						{
-							std::cerr << "error reading from serial device: " << GetLastError() << std::endl;
+							Error()  << "error reading from serial device: " << GetLastError() << std::endl;
 							lost = true;
 							continue;
 						}
@@ -66,14 +66,14 @@ namespace Device
 					}
 					else if (dwWait != WAIT_TIMEOUT)
 					{
-						std::cerr << "Serial: error reading from device: " << GetLastError() << std::endl;
+						Error()  << "Serial: error reading from device: " << GetLastError() << std::endl;
 						lost = true;
 						continue;
 					}
 				}
 				else
 				{
-					std::cerr << "Serial: read encountered an error: " << GetLastError() << std::endl;
+					Error()  << "Serial: read encountered an error: " << GetLastError() << std::endl;
 					lost = true;
 					continue;
 				}
@@ -112,18 +112,18 @@ namespace Device
 				{
 					if (nread == 0)
 					{
-						std::cerr << "Serial read encountered an error: unexpected end." << std::endl;
+						Error()  << "Serial read encountered an error: unexpected end." << std::endl;
 					}
 					else
 					{
-						std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
+						Error()  << "Serial read encountered an error: " << strerror(errno) << std::endl;
 					}
 					lost = true;
 				}
 			}
 			else if (rslt < 0)
 			{
-				std::cerr << "Serial read encountered an error: " << strerror(errno) << std::endl;
+				Error()  << "Serial read encountered an error: " << strerror(errno) << std::endl;
 				lost = true;
 			}
 		}

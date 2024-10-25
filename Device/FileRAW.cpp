@@ -47,7 +47,7 @@ namespace Device {
 			}
 		}
 		catch (std::exception& e) {
-			std::cerr << "RAWFile ReadAsync: " << e.what() << std::endl;
+			Error() << "RAWFile ReadAsync: " << e.what();
 			std::terminate();
 		}
 		eoi = true;
@@ -66,12 +66,12 @@ namespace Device {
 					if (eoi && isStreaming())
 						done = true;
 					else if (isStreaming() && getFormat() != Format::TXT)
-						std::cerr << "FILE: timeout." << std::endl;
+						Error() << "FILE: timeout.";
 				}
 			}
 		}
 		catch (std::exception& e) {
-			std::cerr << "RAWFile Run: " << e.what() << std::endl;
+			Error() << "RAWFile Run: " << e.what();
 			std::terminate();
 		}
 	}
@@ -130,7 +130,7 @@ namespace Device {
 			loop = Util::Parse::Switch(arg);
 		}
 		else if (option == "TXT_BLOCK_SIZE") {
-			TXT_BLOCK_SIZE = Util::Parse::Integer(arg,1, 16384);
+			TXT_BLOCK_SIZE = Util::Parse::Integer(arg, 1, 16384);
 		}
 		else
 			Device::Set(option, arg);
