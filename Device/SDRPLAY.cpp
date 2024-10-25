@@ -67,7 +67,7 @@ namespace Device {
 
 		err = sdrplay_api_SelectDevice(&device);
 		if (err != sdrplay_api_Success) {
-			std::cerr << sdrplay_api_GetErrorString(err) << std::endl;
+			Error()  << sdrplay_api_GetErrorString(err) << std::endl;
 			sdrplay_api_UnlockDeviceApi();
 			throw std::runtime_error("SDRPLAY: cannot open device");
 		}
@@ -139,7 +139,7 @@ namespace Device {
 
 	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params) {
 		if (eventId == sdrplay_api_DeviceRemoved) {
-			std::cerr << "SDRPLAY: device disconnected" << std::endl;
+			Error()  << "SDRPLAY: device disconnected" << std::endl;
 			Stop();
 		}
 	}
@@ -154,7 +154,7 @@ namespace Device {
 			}
 
 			if (!fifo.Push((char*)output.data(), len * sizeof(CFLOAT32)))
-				std::cerr << "SDRPLAY: buffer overrun." << std::endl;
+				Error()  << "SDRPLAY: buffer overrun." << std::endl;
 		}
 	}
 
@@ -166,7 +166,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else if (isStreaming())
-				std::cerr << "SDRPLAY: timeout." << std::endl;
+				Error()  << "SDRPLAY: timeout." << std::endl;
 		}
 	}
 

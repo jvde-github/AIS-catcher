@@ -105,18 +105,18 @@ namespace Device {
 					fifo.Pop();
 				}
 				else {
-					if (isStreaming()) std::cerr << "RTLSDR: timeout." << std::endl;
+					if (isStreaming()) Error() << "RTLSDR: timeout.";
 				}
 			}
 		}
 		catch (std::exception& e) {
-			std::cerr << "RTLSDR Run: " << e.what() << std::endl;
+			Error() << "RTLSDR Run: " << e.what();
 			std::terminate();
 		}
 	}
 
 	void RTLSDR::callback(CU8* buf, int len) {
-		if (isStreaming() && !fifo.Push((char*)buf, len)) std::cerr << "RTLSDR: buffer overrun." << std::endl;
+		if (isStreaming() && !fifo.Push((char*)buf, len)) Error() << "RTLSDR: buffer overrun.";
 	}
 
 	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx) {

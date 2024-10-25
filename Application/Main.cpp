@@ -133,8 +133,9 @@ static void Usage() {
 static void printDevices(Receiver& r, bool JSON = false) {
 	if (!JSON) {
 		Info() << "Found " << r.device_list.size() << " device(s):";
+		
 		for (int i = 0; i < r.device_list.size(); i++) {
-			std::cout << i << ": " << r.device_list[i].toString();
+			Info() << i << ": " << r.device_list[i].toString();
 		}
 	}
 	else {

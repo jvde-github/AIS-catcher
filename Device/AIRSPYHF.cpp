@@ -121,7 +121,7 @@ namespace Device {
 	bool AIRSPYHF::isStreaming() {
 		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1) {
 			lost = true;
-			std::cerr << "AIRSPYHF: device stopped streaming." << std::endl;
+			Warning()  << "AIRSPYHF: device stopped streaming." ;
 		}
 
 		return Device::isStreaming() && airspyhf_is_streaming(dev) == 1;
@@ -146,7 +146,7 @@ namespace Device {
 			threshold_high = Util::Parse::Switch(arg, "HIGH", "LOW");
 
 			if (option == "TRESHOLD")
-				std::cerr << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
+				Warning()  << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
 		}
 		else
 			Device::Set(option, arg);

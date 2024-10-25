@@ -37,7 +37,7 @@ namespace Device {
 			// RTLTCP protocol, check for dongle information
 			int len = client.read((char*)&dongle, 12, timeout);
 			if (len != 12 || dongle.magic != 0x304C5452) {
-				std::cerr << "RTLTCP: no or invalid response, likely not an rtl-tcp server." << std::endl;
+				Error() << "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
 				StopRequest();
 			}
 		}
@@ -45,7 +45,7 @@ namespace Device {
 			const std::string str = "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\n";
 			int len = client.send(str.c_str(), str.size());
 			if (len != str.size()) {
-				std::cerr << "GPSD: no or invalid response, likely not a gpsd server." << std::endl;
+				Error() << "GPSD: no or invalid response, likely not a gpsd server.";
 				StopRequest();
 			}
 		}
@@ -57,7 +57,7 @@ namespace Device {
 			if (!persistent)
 				throw std::runtime_error("RTLTCP: cannot open socket.");
 
-			std::cerr << "RTLTCP: cannot open socket. Retrying in a few seconds." << std::endl;
+			Error() << "RTLTCP: cannot open socket. Retrying in a few seconds.";
 		}
 
 		Device::Play();
@@ -101,7 +101,7 @@ namespace Device {
 		while (isStreaming()) {
 			// send protocol
 			if (client.numberOfConnects() != connects) {
-				connects ++;
+				connects++;
 				sendProtocol();
 			}
 
@@ -109,11 +109,11 @@ namespace Device {
 
 			if (len < 0) {
 				lost = true;
-				std::cerr << "RTLTCP: error receiving data from remote host. Cancelling. " << std::endl;
+				Error() << "RTLTCP: error receiving data from remote host. Cancelling. ";
 				break;
 			}
 			else if (isStreaming() && !fifo.Push(buffer.data(), len))
-				std::cerr << "RTLTCP: buffer overrun." << std::endl;
+				Error() << "RTLTCP: buffer overrun.";
 		}
 	}
 
@@ -128,7 +128,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else {
-				if (isStreaming() && format != Format::TXT) std::cerr << "RTLTCP: timeout." << std::endl;
+				if (isStreaming() && format != Format::TXT) Error() << "RTLTCP: timeout.";
 			}
 		}
 	}

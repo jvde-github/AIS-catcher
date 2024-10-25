@@ -24,16 +24,16 @@ namespace IO {
 	void PostgreSQL::post() {
 
 		if (PQstatus(con) != CONNECTION_OK) {
-			std::cerr << "DBMS: Connection to PostgreSQL lost. Attempting to reset..." << std::endl;
+			Warning() << "DBMS: Connection to PostgreSQL lost. Attempting to reset..." ;
 			PQreset(con);
 
 			if (PQstatus(con) != CONNECTION_OK) {
-				std::cerr << "DBMS: Could not reset connection. Aborting post." << std::endl;
+				Error() << "DBMS: Could not reset connection. Aborting post." ;
 				conn_fails++;
 				return;
 			}
 			else {
-				std::cerr << "DBMS: Connection successfully reset." << std::endl;
+				Warning() << "DBMS: Connection successfully reset." ;
 				conn_fails = 0;
 			}
 		}
@@ -48,11 +48,11 @@ namespace IO {
 		res = PQexec(con, sql_trans.c_str());
 
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-			std::cerr << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con) << std::endl;
+			Error() << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con) ;
 			conn_fails = 1;
 		}
 		else {
-			// std::cerr << "DBMS: write completed (" << sql_trans.size() << " bytes)." << std::endl;
+			// Info() << "DBMS: write completed (" << sql_trans.size() << " bytes)." ;
 		}
 
 		PQclear(res);
@@ -66,7 +66,7 @@ namespace IO {
 			terminate = true;
 			run_thread.join();
 
-			std::cerr << "DBMS: stop thread and database closed." << std::endl;
+			Info() << "DBMS: stop thread and database closed." ;
 		}
 		if (con != nullptr) PQfinish(con);
 #endif
@@ -87,7 +87,7 @@ namespace IO {
 			if (terminate) break;
 
 			if (MAX_FAILS < 1000 && conn_fails > MAX_FAILS) {
-				std::cerr << "DBMS: max attemtps reached to connect to DBMS. Terminating." << std::endl;
+				Error() << "DBMS: max attemtps reached to connect to DBMS. Terminating." ;
 				StopRequest();
 			}
 		}
@@ -98,7 +98,7 @@ namespace IO {
 #ifdef HASPSQL
 
 		db_keys.resize(AIS::KeyMap.size(), -1);
-		std::cerr << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
+		Info() << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
 		con = PQconnectdb(conn_string.c_str());
 
 		if (con == nullptr || PQstatus(con) != CONNECTION_OK)
@@ -129,7 +129,7 @@ namespace IO {
 		}
 
 		if (key_count > 0 && !MSGS) {
-			std::cerr << "DBMS: no messages logged in combination with property logging. MSGS ON auto activated." << std::endl;
+			Info() << "DBMS: no messages logged in combination with property logging. MSGS ON auto activated." ;
 			MSGS = true;
 		}
 
@@ -140,17 +140,16 @@ namespace IO {
 
 			run_thread = std::thread(&PostgreSQL::process, this);
 
-			std::cerr << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
-			if (filter.isOn()) std::cerr << ", Allowed: " << filter.getAllowed();
-			std::cerr << ", V " << Util::Convert::toString(VD);
-			std::cerr << ", VP " << Util::Convert::toString(VP);
-			std::cerr << ", MSGS " << Util::Convert::toString(MSGS);
-			std::cerr << ", VS " << Util::Convert::toString(VS);
-			std::cerr << ", BS " << Util::Convert::toString(BS);
-			std::cerr << ", SAR " << Util::Convert::toString(SAR);
-			std::cerr << ", ATON " << Util::Convert::toString(ATON);
-			std::cerr << ", NMEA " << Util::Convert::toString(NMEA);
-			std::cerr << std::endl;
+			Info() << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
+			if (filter.isOn()) Info() << ", Allowed: " << filter.getAllowed();
+			Info() << ", V " << Util::Convert::toString(VD)
+				   << ", VP " << Util::Convert::toString(VP)
+				   << ", MSGS " << Util::Convert::toString(MSGS)
+				   << ", VS " << Util::Convert::toString(VS)
+				   << ", BS " << Util::Convert::toString(BS)
+				   << ", SAR " << Util::Convert::toString(SAR)
+				   << ", ATON " << Util::Convert::toString(ATON)
+				   << ", NMEA " << Util::Convert::toString(NMEA);
 		}
 #else
 		throw std::runtime_error("DBMS: no support for PostgeSQL build in.");
@@ -373,7 +372,7 @@ namespace IO {
 		const std::lock_guard<std::mutex> lock(queue_mutex);
 
 		if (sql.tellp() > 32768 * 24) {
-			std::cerr << "DBMS: writing to database slow or failed, data lost." << std::endl;
+			Info() << "DBMS: writing to database slow or failed, data lost." ;
 			sql.str("");
 		}
 

@@ -90,7 +90,7 @@ namespace Device {
 			stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, stream_args);
 		}
 		catch (std::exception& e) {
-			std::cerr << "SOAPYSDR: " << e.what() << std::endl;
+			Error()  << "SOAPYSDR: " << e.what() << std::endl;
 			lost = true;
 			return;
 		}
@@ -109,16 +109,16 @@ namespace Device {
 				int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
 
 				if (ret < 0) {
-					std::cerr << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret) << std::endl;
+					Error()  << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret) << std::endl;
 					lost = true;
 					skip_unmake = true;
 				}
 				if (ret > 0 && isStreaming() && !fifo.Push((char*)input.data(), ret * sizeof(CFLOAT32)))
-					std::cerr << "SOAPYSDR: buffer overrun." << std::endl;
+					Error()  << "SOAPYSDR: buffer overrun." << std::endl;
 			}
 		}
 		catch (std::exception& e) {
-			std::cerr << "SOAPYSDR: exception " << e.what() << std::endl;
+			Error()  << "SOAPYSDR: exception " << e.what() << std::endl;
 			lost = true;
 		}
 		flags = 0;
@@ -138,7 +138,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else {
-				if (isStreaming()) std::cerr << "SOAPYSDR: timeout." << std::endl;
+				if (isStreaming()) Error()  << "SOAPYSDR: timeout." << std::endl;
 			}
 		}
 	}
