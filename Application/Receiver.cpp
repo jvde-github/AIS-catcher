@@ -165,7 +165,7 @@ void Receiver::setupDevice() {
 	uint64_t handle = device_list.empty() ? 0 : device_list[0].getHandle();
 
 	if (!serial.empty())
-		std::cerr << "Searching for device with SN " << serial << "." << std::endl;
+		Info() << "Searching for device with SN " << serial << "." ;
 
 	if (!serial.empty() || type != Type::NONE) {
 		idx = -1;
@@ -305,10 +305,10 @@ void Receiver::play() {
 	device->Play();
 
 	if (verbose) {
-		std::cerr << "Device    : " << device->getProduct() << std::endl;
-		std::cerr << "Settings  : " << device->Get() << std::endl;
+		Info() << "Device    : " << device->getProduct() ;
+		Info() << "Settings  : " << device->Get() ;
 		for (int i = 0; i < models.size(); i++)
-			std::cerr << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
+			Info() << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
 					  << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
 	}
 }

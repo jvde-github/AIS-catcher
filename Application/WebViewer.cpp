@@ -33,7 +33,7 @@ WebViewer::WebViewer()
 
 bool WebViewer::Save()
 {
-	// std::cerr << "Server: writing statistics to file " << filename << std::endl;
+	// std::cerr << "Server: writing statistics to file " << filename ;
 	try
 	{
 		std::ofstream infile(filename, std::ios::binary);
@@ -51,7 +51,7 @@ bool WebViewer::Save()
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr << "Error: " << e.what() << std::endl;
+		Error() << e.what() ;
 		return false;
 	}
 	return true;
@@ -74,7 +74,7 @@ bool WebViewer::Load()
 	if (filename.empty())
 		return false;
 
-	std::cerr << "Server: reading statistics from " << filename << std::endl;
+	Info() << "Server: reading statistics from " << filename ;
 	try
 	{
 		std::ifstream infile(filename, std::ios::binary);
@@ -94,7 +94,7 @@ bool WebViewer::Load()
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr << "Error: " << e.what() << std::endl;
+		Error() << e.what() ;
 		return false;
 	}
 
@@ -140,7 +140,7 @@ void WebViewer::addPlugin(const std::string &arg)
 				break;
 			}
 		}
-		std::cerr << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version << std::endl;
+		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version ;
 		if (version != 3)
 			throw std::runtime_error("Version not supported, expected 3, got " + std::to_string(version));
 		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
@@ -149,7 +149,7 @@ void WebViewer::addPlugin(const std::string &arg)
 	{
 
 		plugins += "// FAILED\n";
-		std::cerr << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what() << std::endl;
+		Info() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what() ;
 		plugins += "server_message += \"Plugin error (" + arg + ") " + std::string(e.what()) + "\\n\"\n";
 	}
 }
@@ -159,7 +159,7 @@ void WebViewer::BackupService()
 
 	try
 	{
-		std::cerr << "Server: starting backup service every " << backup_interval << " minutes." << std::endl;
+		Info() << "Server: starting backup service every " << backup_interval << " minutes." ;
 		while (true)
 		{
 			std::unique_lock<std::mutex> lock(m);
@@ -170,18 +170,18 @@ void WebViewer::BackupService()
 				break;
 			}
 
-			// std::cerr << "Server: initiate backup." << std::endl;
+			// std::cerr << "Server: initiate backup." ;
 			if (!Save())
-				std::cerr << "Server: failed to write backup." << std::endl;
+				Error() << "Server failed to write backup." ;
 		}
 	}
 	catch (std::exception &e)
 	{
-		std::cerr << "WebClient BackupService: " << e.what() << std::endl;
+		Error() << "WebClient BackupService: " << e.what() ;
 		std::terminate();
 	}
 
-	std::cerr << "Server: stopping backup service." << std::endl;
+	Info() << "Server: stopping backup service." ;
 }
 
 void WebViewer::connect(Receiver &r)
@@ -217,7 +217,7 @@ void WebViewer::connect(Receiver &r)
 
 	/*
 	if (!rec_details)
-		std::cerr << "Web Client: not connected to the output of any model." << std::endl;
+		std::cerr << "Web Client: not connected to the output of any model." ;
 	*/
 }
 
@@ -257,7 +257,7 @@ void WebViewer::start()
 		Clear();
 	else if (!Load())
 	{
-		std::cerr << "Statistics: cannot read file." << std::endl;
+		Error() << "Statistics - cannot read file." ;
 		Clear();
 	}
 
@@ -284,7 +284,7 @@ void WebViewer::start()
 		if (port > lastport)
 			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
 
-		std::cerr << "HTML Server running at port " << std::to_string(port) << std::endl;
+		Info() << "HTML Server running at port " << std::to_string(port) ;
 	}
 	else
 		throw std::runtime_error("HTML server ports not specified");
@@ -323,7 +323,7 @@ void WebViewer::close()
 
 	if (!filename.empty() && !Save())
 	{
-		std::cerr << "Statistics: cannot write file." << std::endl;
+		Error() << "Statistics - cannot write file." ;
 	}
 }
 
@@ -403,7 +403,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		}
 		catch (const std::exception &e)
 		{
-			std::cerr << "Server: error returning requested file (" << r << "): " << e.what() << std::endl;
+			Error() << "Server - error returning requested file (" << r << "): " << e.what() ;
 			Response(c, "text/html", std::string(""), true);
 		}
 	}
@@ -551,11 +551,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			}
 			catch (const std::invalid_argument &)
 			{
-				std::cerr << "Server: path MMSI invalid: " << mmsi_str << std::endl;
+				Error() << "Server - path MMSI invalid: " << mmsi_str ;
 			}
 			catch (const std::out_of_range &)
 			{
-				std::cerr << "Server: path MMSI out of range: " << mmsi_str << std::endl;
+				Error() << "Server - path MMSI out of range: " << mmsi_str ;
 			}
 		}
 		content += "}";
@@ -728,7 +728,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "CDN")
 	{
 		cdn = arg;
-		std::cerr << "Fetch Web Libraries locally at " << arg << std::endl;
+		Info() << "Fetch Web Libraries locally at " << arg ;
 	}
 	else if (option == "BACKUP")
 	{
@@ -748,7 +748,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "STYLE")
 	{
-		std::cerr << "Server: adding plugin (CSS): " << arg << std::endl;
+		Info() << "Server: adding plugin (CSS): " << arg ;
 		plugins += "console.log('css:" + arg + "');";
 		plugins += "plugins += 'CSS: " + arg + "\\n';";
 
@@ -761,7 +761,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		catch (const std::exception &e)
 		{
 			stylesheets += "/* FAILED */\r\n";
-			std::cerr << "Server: style plugin error - " << e.what() << std::endl;
+			Info() << "Server: style plugin error - " << e.what() ;
 			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
 		}
 	}
@@ -776,11 +776,11 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 			Set("STYLE", f);
 
 		if (!files_ss.size() && !files_js.size())
-			std::cerr << "Server: no plugin files found in directory." << std::endl;
+			Info() << "Server: no plugin files found in directory." ;
 	}
 	else if (option == "ABOUT")
 	{
-		std::cerr << "Server: about context from " << arg << std::endl;
+		Info() << "Server: about context from " << arg ;
 		plugins += "aboutMDpresent = true;";
 		about = Util::Helper::readFile(arg);
 	}
