@@ -18,6 +18,7 @@
 #pragma once
 
 #include "AIS-catcher.h"
+#include "Logger.h"
 
 #include <chrono>
 #include <complex>

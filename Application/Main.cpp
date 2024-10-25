@@ -31,126 +31,116 @@
 #include "IO.h"
 #include "N2KStream.h"
 #include "PostgreSQL.h"
+#include "Logger.h"
 
 static std::atomic<bool> stop;
 
-void StopRequest()
-{
+void StopRequest() {
 	stop = true;
 }
 
 #ifdef _WIN32
-BOOL WINAPI consoleHandler(DWORD signal)
-{
+BOOL WINAPI consoleHandler(DWORD signal) {
 	if (signal == CTRL_C_EVENT)
 		stop = true;
 	return TRUE;
 }
 #else
-static void consoleHandler(int signal)
-{
-	if (signal == SIGPIPE)
-	{
-		// std::cerr << "Termination request SIGPIPE ignored" << std::endl;
+static void consoleHandler(int signal) {
+	if (signal == SIGPIPE) {
+		// Info() << "Termination request SIGPIPE ignored" ;
 		return;
 	}
 	if (signal != SIGINT)
-		std::cerr << "Termination request: " << signal << std::endl;
+		Error() << "Termination request: " << signal;
 
 	stop = true;
 }
 #endif
 
-static void printVersion()
-{
-	std::cerr << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << std::endl;
-	std::cerr << "(C) Copyright 2021-2024 " << COPYRIGHT << std::endl;
-	std::cerr << "This is free software; see the source for copying conditions.There is NO" << std::endl;
-	std::cerr << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << std::endl;
+static void printVersion() {
+	Info() << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE;
+	Info() << "(C) Copyright 2021-2024 " << COPYRIGHT;
+	Info() << "This is free software; see the source for copying conditions.There is NO";
+	Info() << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 }
 
-static void Usage()
-{
-	std::cerr << "use: AIS-catcher [options]" << std::endl;
-	std::cerr << std::endl;
-	std::cerr << "\t[-a xxx - set tuner bandwidth in Hz (default: off)]" << std::endl;
-	std::cerr << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]" << std::endl;
-	std::cerr << "\t[-c [AB/CD] - [optional: AB] select AIS channels and optionally the NMEA channel designations]" << std::endl;
-	std::cerr << "\t[-C [filename] - read configuration settings from file]" << std::endl;
-	std::cerr << "\t[-D [connection string] - write messages to PostgreSQL database]" << std::endl;
-	std::cerr << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]" << std::endl;
-	std::cerr << "\t[-f [filename] write NMEA lines to file]" << std::endl;
-	std::cerr << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]" << std::endl;
-	std::cerr << "\t[-h display this message and terminate (default: false)]" << std::endl;
-	std::cerr << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]" << std::endl;
-	std::cerr << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]" << std::endl;
-	std::cerr << "\t[-I [interface] - push messages as NMEA2000 data to a socketCAN interface - Linux only]" << std::endl;
-	std::cerr << "\t[-m xx - run specific decoding model (default: 2), see README for more details]" << std::endl;
-	std::cerr << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]" << std::endl;
-	std::cerr << "\t[-n show NMEA messages on screen without detail (-o 1)]" << std::endl;
-	std::cerr << "\t[-N [optional: port][optional settings] - start http server at port, see README for details]" << std::endl;
-	std::cerr << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]" << std::endl;
-	std::cerr << "\t[-O MMSI - sets the own mmsi of the receiver]" << std::endl;
-	std::cerr << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]" << std::endl;
-	std::cerr << "\t[-P xxx.xx.xx.xx yyy - TCP destination address and port (default: off)]" << std::endl;
-	std::cerr << "\t[-q suppress NMEA messages to screen (-o 0)]" << std::endl;
-	std::cerr << "\t[-s xxx - sample rate in Hz (default: based on SDR device)]" << std::endl;
-	std::cerr << "\t[-S xxx - TCP server for NMEA lines at port xxx]" << std::endl;
-	std::cerr << "\t[-T xx - auto terminate run with SDR after xxx seconds (default: off)]" << std::endl;
-	std::cerr << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]" << std::endl;
-	std::cerr << "\t[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]" << std::endl;
-	std::cerr << "\t[-X connect to AIS community feed at aiscatcher.org (default: off)]" << std::endl;
-	std::cerr << std::endl;
-	std::cerr << "\tDevice selection:" << std::endl;
-	std::cerr << std::endl;
-	std::cerr << "\t[-d:x - select device based on index (default: 0)]" << std::endl;
-	std::cerr << "\t[-d xxxx - select device based on serial number]" << std::endl;
-	std::cerr << "\t[-e baudrate port - open device at serial port with given baudrate]" << std::endl;
-	std::cerr << "\t[-l list available devices and terminate (default: off)]" << std::endl;
-	std::cerr << "\t[-L list supported SDR hardware and terminate (default: off)]" << std::endl;
-	std::cerr << "\t[-r [optional: yy] filename - read IQ data from file or stdin (.), short for -r -ga FORMAT yy FILE filename" << std::endl;
-	std::cerr << "\t[-t [[protocol]] [host [port]] - read IQ data from remote RTL-TCP instance]" << std::endl;
-	std::cerr << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]" << std::endl;
-	std::cerr << "\t[-x [server][port] - UDP input of NMEA messages at port on server" << std::endl;
-	std::cerr << "\t[-y [host [port]] - read IQ data from remote SpyServer]" << std::endl;
-	std::cerr << "\t[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]" << std::endl;
-	std::cerr << std::endl;
-	std::cerr << "\tDevice specific settings:" << std::endl;
-	std::cerr << std::endl;
-	std::cerr << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]" << std::endl;
-	std::cerr << "\t[-ge Serial Port: PRINT [on/off]" << std::endl;
-	std::cerr << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]" << std::endl;
-	std::cerr << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]" << std::endl;
-	std::cerr << "\t[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]" << std::endl;
-	std::cerr << "\t[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] ]" << std::endl;
-	std::cerr << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]" << std::endl;
-	std::cerr << "\t[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60] ]" << std::endl;
-	std::cerr << "\t[-gu SOAPYSDR: DEVICE [string] GAIN [string] AGC [on/off] STREAM [string] SETTING [string] CH [0+] PROBE [on/off] ANTENNA [string] ]" << std::endl;
-	std::cerr << "\t[-gw WAV file: FILE [filename] ]" << std::endl;
-	std::cerr << "\t[-gy SPYSERVER: HOST [address] PORT [port] GAIN [0-50] ]" << std::endl;
-	std::cerr << "\t[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8] ]" << std::endl;
-	std::cerr << std::endl;
-	std::cerr << "\tModel specific settings:" << std::endl;
-	std::cerr << std::endl;
-	std::cerr << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]" << std::endl;
+static void Usage() {
+	Info() << "use: AIS-catcher [options]";
+	Info() << "";
+	Info() << "\t[-a xxx - set tuner bandwidth in Hz (default: off)]";
+	Info() << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]";
+	Info() << "\t[-c [AB/CD] - [optional: AB] select AIS channels and optionally the NMEA channel designations]";
+	Info() << "\t[-C [filename] - read configuration settings from file]";
+	Info() << "\t[-D [connection string] - write messages to PostgreSQL database]";
+	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
+	Info() << "\t[-f [filename] write NMEA lines to file]";
+	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
+	Info() << "\t[-h display this message and terminate (default: false)]";
+	Info() << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]";
+	Info() << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]";
+	Info() << "\t[-I [interface] - push messages as NMEA2000 data to a socketCAN interface - Linux only]";
+	Info() << "\t[-m xx - run specific decoding model (default: 2), see README for more details]";
+	Info() << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]";
+	Info() << "\t[-n show NMEA messages on screen without detail (-o 1)]";
+	Info() << "\t[-N [optional: port][optional settings] - start http server at port, see README for details]";
+	Info() << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]";
+	Info() << "\t[-O MMSI - sets the own mmsi of the receiver]";
+	Info() << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]";
+	Info() << "\t[-P xxx.xx.xx.xx yyy - TCP destination address and port (default: off)]";
+	Info() << "\t[-q suppress NMEA messages to screen (-o 0)]";
+	Info() << "\t[-s xxx - sample rate in Hz (default: based on SDR device)]";
+	Info() << "\t[-S xxx - TCP server for NMEA lines at port xxx]";
+	Info() << "\t[-T xx - auto terminate run with SDR after xxx seconds (default: off)]";
+	Info() << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]";
+	Info() << "\t[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]";
+	Info() << "\t[-X connect to AIS community feed at aiscatcher.org (default: off)]";
+	Info() << "";
+	Info() << "\tDevice selection:";
+	Info() << "";
+	Info() << "\t[-d:x - select device based on index (default: 0)]";
+	Info() << "\t[-d xxxx - select device based on serial number]";
+	Info() << "\t[-e baudrate port - open device at serial port with given baudrate]";
+	Info() << "\t[-l list available devices and terminate (default: off)]";
+	Info() << "\t[-L list supported SDR hardware and terminate (default: off)]";
+	Info() << "\t[-r [optional: yy] filename - read IQ data from file or stdin (.), short for -r -ga FORMAT yy FILE filename";
+	Info() << "\t[-t [[protocol]] [host [port]] - read IQ data from remote RTL-TCP instance]";
+	Info() << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]";
+	Info() << "\t[-x [server][port] - UDP input of NMEA messages at port on server";
+	Info() << "\t[-y [host [port]] - read IQ data from remote SpyServer]";
+	Info() << "\t[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]";
+	Info() << "";
+	Info() << "\tDevice specific settings:";
+	Info() << "";
+	Info() << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]";
+	Info() << "\t[-ge Serial Port: PRINT [on/off]";
+	Info() << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]";
+	Info() << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]";
+	Info() << "\t[-gm Airspy: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]";
+	Info() << "\t[-gr RTLSDRs: TUNER [auto/0.0-50.0] RTLAGC [on/off] BIASTEE [on/off] ]";
+	Info() << "\t[-gs SDRPLAY: GRDB [0-59] LNASTATE [0-9] AGC [on/off] ]";
+	Info() << "\t[-gt RTLTCP: HOST [address] PORT [port] TUNER [auto/0.0-50.0] RTLAGC [on/off] FREQOFFSET [-150-150] PROTOCOL [none/rtltcp] TIMEOUT [1-60] ]";
+	Info() << "\t[-gu SOAPYSDR: DEVICE [string] GAIN [string] AGC [on/off] STREAM [string] SETTING [string] CH [0+] PROBE [on/off] ANTENNA [string] ]";
+	Info() << "\t[-gw WAV file: FILE [filename] ]";
+	Info() << "\t[-gy SPYSERVER: HOST [address] PORT [port] GAIN [0-50] ]";
+	Info() << "\t[-gz ZMQ: ENDPOINT [endpoint] FORMAT [CF32/CS16/CU8/CS8] ]";
+	Info() << "";
+	Info() << "\tModel specific settings:";
+	Info() << "";
+	Info() << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]";
 }
 
-static void printDevices(Receiver &r, bool JSON = false)
-{
-	if (!JSON)
-	{
-		std::cerr << "Found " << r.device_list.size() << " device(s):" << std::endl;
-		for (int i = 0; i < r.device_list.size(); i++)
-		{
-			std::cout << i << ": " << r.device_list[i].toString() << std::endl;
+static void printDevices(Receiver& r, bool JSON = false) {
+	if (!JSON) {
+		Info() << "Found " << r.device_list.size() << " device(s):";
+		for (int i = 0; i < r.device_list.size(); i++) {
+			std::cout << i << ": " << r.device_list[i].toString();
 		}
 	}
-	else
-	{
+	else {
 		std::cout << "{\"devices\":[";
 
-		for (int i = 0; i < r.device_list.size(); i++)
-		{
+		for (int i = 0; i < r.device_list.size(); i++) {
 			std::string type = Util::Parse::DeviceTypeString(r.device_list[i].getType());
 			std::cout << "{\"input\":\"" + type;
 			std::cout << "\",\"serial\":\"" + r.device_list[i].getSerial();
@@ -161,74 +151,77 @@ static void printDevices(Receiver &r, bool JSON = false)
 		std::cout << "]}\n";
 	}
 }
-
-static void printSupportedDevices()
-{
-	std::cerr << "SDR support: ";
+static void printSupportedDevices() {
+	std::ostringstream sdr_support;
+	sdr_support << "SDR support: ";
 #ifdef HASRTLSDR
-	std::cerr << "RTLSDR ";
+	sdr_support << "RTLSDR ";
 #endif
 #ifdef HASAIRSPY
-	std::cerr << "AIRSPY ";
+	sdr_support << "AIRSPY ";
 #endif
 #ifdef HASAIRSPYHF
-	std::cerr << "AIRSPYHF+ ";
+	sdr_support << "AIRSPYHF+ ";
 #endif
 #ifdef HASSDRPLAY
-	std::cerr << "SDRPLAY ";
+	sdr_support << "SDRPLAY ";
 #endif
-	std::cerr << "RTLTCP SPYSERVER ";
+	sdr_support << "RTLTCP SPYSERVER ";
 #ifdef HASZMQ
-	std::cerr << "ZMQ ";
+	sdr_support << "ZMQ ";
 #endif
 #ifdef HASHACKRF
-	std::cerr << "HACKRF ";
+	sdr_support << "HACKRF ";
 #endif
 #ifdef HASSOAPYSDR
-	std::cerr << "SOAPYSDR ";
+	sdr_support << "SOAPYSDR ";
 #endif
-	std::cerr << std::endl;
 
-	std::cerr << "Other support: ";
+	// Output all SDR support messages on one line
+	Info() << sdr_support.str();
+
+	std::ostringstream other_support;
+	other_support << "Other support: ";
 #ifdef HASSOXR
-	std::cerr << "SOXR ";
+	other_support << "SOXR ";
 #endif
 #ifdef HASNMEA2000
-	std::cerr << "NMEA2000 ";
+	other_support << "NMEA2000 ";
 #endif
 #ifdef HASCURL
-	std::cerr << "CURL ";
+	other_support << "CURL ";
 #endif
 #ifdef HASOPENSSL
-	std::cerr << "SSL ";
+	other_support << "SSL ";
 #endif
 #ifdef HASPSQL
-	std::cerr << "PostgreSQL ";
+	other_support << "PostgreSQL ";
 #endif
 #ifdef HASZLIB
-	std::cerr << "ZLIB ";
+	other_support << "ZLIB ";
 #endif
 #ifdef HASSAMPLERATE
-	std::cerr << "LIBSAMPLERATE ";
+	other_support << "LIBSAMPLERATE ";
 #endif
 #ifdef HASRTLSDR_BIASTEE
-	std::cerr << "RTLSDR-BIASTEE ";
+	other_support << "RTLSDR-BIASTEE ";
 #endif
 #ifdef HASRTLSDR_TUNERBW
-	std::cerr << "RTLSDR-TUNERBW ";
+	other_support << "RTLSDR-TUNERBW ";
 #endif
-	std::cerr << std::endl;
+
+	// Output all other support messages on one line
+	Info() << other_support.str();
 }
+
 
 // -------------------------------
 // Command line support functions
 
-static void parseSettings(Setting &s, char *argv[], int ptr, int argc)
-{
+static void parseSettings(Setting& s, char* argv[], int ptr, int argc) {
 	ptr++;
 
-	while (ptr < argc - 1 && argv[ptr][0] != '-')
-	{
+	while (ptr < argc - 1 && argv[ptr][0] != '-') {
 		std::string option = argv[ptr++];
 		std::string arg = argv[ptr++];
 
@@ -236,21 +229,17 @@ static void parseSettings(Setting &s, char *argv[], int ptr, int argc)
 	}
 }
 
-static bool isOption(std::string s)
-{
+static bool isOption(std::string s) {
 	return s.length() >= 2 && s[0] == '-' && std::isalpha(s[1]);
 }
 
-static void Assert(bool b, std::string &context, std::string msg = "")
-{
-	if (!b)
-	{
+static void Assert(bool b, std::string& context, std::string msg = "") {
+	if (!b) {
 		throw std::runtime_error("syntax error on command line with setting \"" + context + "\". " + msg + "\n");
 	}
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char* argv[]) {
 
 	std::string file_config;
 
@@ -270,8 +259,12 @@ int main(int argc, char *argv[])
 	bool timeout_nomsg = false, list_devices_JSON = false;
 	int own_mmsi = -1;
 
-	try
-	{
+	Logger::getInstance();
+	Logger::getInstance().setLogToConsole(true);
+
+	Info() << "Application started.";
+
+	try {
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
 			throw std::runtime_error("could not set control handler");
@@ -288,9 +281,8 @@ int main(int argc, char *argv[])
 		const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
 		int ptr = 1;
 
-		while (ptr < argc)
-		{
-			Receiver &receiver = *_receivers.back();
+		while (ptr < argc) {
+			Receiver& receiver = *_receivers.back();
 
 			std::string param = std::string(argv[ptr]);
 			Assert(param[0] == '-', param, "setting does not start with \"-\".");
@@ -303,8 +295,7 @@ int main(int argc, char *argv[])
 			std::string arg2 = count >= 2 ? std::string(argv[ptr + 2]) : "";
 			std::string arg3 = count >= 3 ? std::string(argv[ptr + 3]) : "";
 
-			switch (param[1])
-			{
+			switch (param[1]) {
 			case 's':
 				Assert(count == 1, param, "does require one parameter [sample rate].");
 				receiver.setSampleRate(Util::Parse::Integer(arg1, 12500, 12288000));
@@ -334,8 +325,7 @@ int main(int argc, char *argv[])
 				if (servers.size() == 0)
 					servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
 
-				if (count % 2 == 1)
-				{
+				if (count % 2 == 1) {
 					// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
 					if (servers.back()->isPortSet())
 						servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
@@ -348,24 +338,21 @@ int main(int argc, char *argv[])
 				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter [port].");
 				{
 					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
-					IO::OutputMessage &u = *msg.back();
+					IO::OutputMessage& u = *msg.back();
 					u.Set("PORT", arg1).Set("TIMEOUT", "0");
 					if (count > 1)
 						parseSettings(u, argv, ptr + 1, argc);
 				}
 				break;
-			case 'f':
-			{
+			case 'f': {
 				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MessageToFile()));
-				IO::OutputMessage &f = *msg.back();
-				if (count % 2 == 1)
-				{
+				IO::OutputMessage& f = *msg.back();
+				if (count % 2 == 1) {
 					f.Set("FILE", arg1);
 				}
 				if (count > 1)
 					parseSettings(f, argv, ptr + (count % 2), argc);
-			}
-			break;
+			} break;
 			case 'v':
 				Assert(count <= 1, param);
 				receiver.verbose = true;
@@ -393,8 +380,7 @@ int main(int argc, char *argv[])
 			case 'o':
 				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter.");
 				screen.setScreen(arg1);
-				if (count > 1)
-				{
+				if (count > 1) {
 					parseSettings(screen.msg2screen, argv, ptr + 1, argc);
 					parseSettings(screen.json2screen, argv, ptr + 1, argc);
 				}
@@ -406,8 +392,7 @@ int main(int argc, char *argv[])
 				break;
 			case 't':
 				Assert(count <= 3, param, "requires one, two or three parameters [protocol] [host] [port].");
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::RTLTCP;
@@ -420,35 +405,29 @@ int main(int argc, char *argv[])
 				break;
 			case 'x':
 				Assert(count == 2, param, "requires two parameters [server] [port].");
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::UDP;
 				_receivers.back()->UDP().Set("port", arg2).Set("server", arg1);
 				break;
-			case 'D':
-			{
+			case 'D': {
 				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::PostgreSQL()));
-				IO::OutputJSON &d = *json.back();
+				IO::OutputJSON& d = *json.back();
 
-				if (count % 2 == 1)
-				{
+				if (count % 2 == 1) {
 					d.Set("CONN_STR", arg1);
 					if (count > 1)
 						parseSettings(d, argv, ptr + 1, argc);
 				}
-				else
-				{
+				else {
 					if (count >= 2)
 						parseSettings(d, argv, ptr, argc);
 				}
-			}
-			break;
+			} break;
 			case 'y':
 				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::SPYSERVER;
@@ -459,8 +438,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'z':
 				Assert(count <= 2, param, "requires at most two parameters [[format]] [endpoint].");
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::ZMQ;
@@ -475,8 +453,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'i':
 				Assert(count <= 1, param, "requires at most one option parameter.");
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::N2K;
@@ -486,8 +463,7 @@ int main(int argc, char *argv[])
 
 			case 'w':
 				Assert(count <= 1, param);
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::WAVFILE;
@@ -496,8 +472,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'r':
 				Assert(count <= 2, param, "requires at most two parameters [[format]] [filename].");
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::RAWFILE;
@@ -508,8 +483,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'e':
 				Assert(count == 2, param, "requires two parameters [baudrate] [portname].");
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::SERIALPORT;
@@ -517,8 +491,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'l':
 				Assert(count == 0 || count == 2, param, MSG_NO_PARAMETER);
-				if (count == 2)
-				{
+				if (count == 2) {
 					Assert(arg1 == "JSON", param, "requires JSON on/off");
 					list_devices_JSON = Util::Parse::Switch(arg2);
 				}
@@ -529,20 +502,17 @@ int main(int argc, char *argv[])
 				list_support = true;
 				break;
 			case 'd':
-				if (++nrec > 1)
-				{
+				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 
-				if (param.length() == 4 && param[2] == ':')
-				{
+				if (param.length() == 4 && param[2] == ':') {
 					Assert(count == 0, param, MSG_NO_PARAMETER);
 					int n = param[3] - '0';
 					Assert(n >= 0 && n < receiver.device_list.size(), param, "device does not exist");
 					_receivers.back()->Serial() = receiver.device_list[n].getSerial();
 				}
-				else
-				{
+				else {
 					Assert(param.length() == 2, param, "syntax error in device setting");
 					Assert(count == 1, param, "device setting requires one parameter [serial number]");
 					_receivers.back()->Serial() = arg1;
@@ -552,7 +522,7 @@ int main(int argc, char *argv[])
 				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
 				{
 					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::UDPStreamer()));
-					IO::OutputMessage &o = *msg.back();
+					IO::OutputMessage& o = *msg.back();
 					o.Set("HOST", arg1).Set("PORT", arg2);
 					if (count > 2)
 						parseSettings(o, argv, ptr + 2, argc);
@@ -562,7 +532,7 @@ int main(int argc, char *argv[])
 				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
 				{
 					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-					IO::OutputMessage &p = *msg.back();
+					IO::OutputMessage& p = *msg.back();
 					p.Set("HOST", arg1).Set("PORT", arg2);
 					if (count > 2)
 						parseSettings(p, argv, ptr + 2, argc);
@@ -571,10 +541,9 @@ int main(int argc, char *argv[])
 			case 'X':
 				Assert(count <= 1, param, "Only one optional parameter [sharing key] allowed.");
 				{
-					if (!communityFeed)
-					{
+					if (!communityFeed) {
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-						IO::OutputMessage &p = *msg.back();
+						IO::OutputMessage& p = *msg.back();
 						p.Set("HOST", "185.77.96.227").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
 
 						if (count == 1)
@@ -588,7 +557,7 @@ int main(int argc, char *argv[])
 				Assert(count > 0, param);
 				{
 					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::HTTPStreamer()));
-					IO::OutputJSON &h = *json.back();
+					IO::OutputJSON& h = *json.back();
 					if (count % 2)
 						h.Set("URL", arg1);
 					parseSettings(h, argv, ptr + (count % 2), argc);
@@ -597,11 +566,10 @@ int main(int argc, char *argv[])
 				break;
 			case 'A':
 			case 'I':
-			case 'E':
-			{
+			case 'E': {
 #ifdef HASNMEA2000
 				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
-				IO::OutputJSON &h = *json.back();
+				IO::OutputJSON& h = *json.back();
 				if (count % 2)
 					h.Set("DEVICE", arg1);
 
@@ -610,8 +578,7 @@ int main(int argc, char *argv[])
 #else
 				throw std::runtime_error("NMEA2000 support not compiled in.");
 #endif
-			}
-			break;
+			} break;
 			case 'h':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				list_options = true;
@@ -626,8 +593,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3, param);
-				switch (param[2])
-				{
+				switch (param[2]) {
 				case 'e':
 					parseSettings(receiver.SerialPort(), argv, ptr, argc);
 					break;
@@ -683,8 +649,7 @@ int main(int argc, char *argv[])
 		// -------------
 		// Read config file
 
-		if (!file_config.empty())
-		{
+		if (!file_config.empty()) {
 			Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
 			c.read(file_config);
 		}
@@ -706,9 +671,8 @@ int main(int argc, char *argv[])
 
 		int group = 0;
 
-		for (int i = 0; i < _receivers.size(); i++)
-		{
-			Receiver &r = *_receivers[i];
+		for (int i = 0; i < _receivers.size(); i++) {
+			Receiver& r = *_receivers[i];
 			r.setOwnMMSI(own_mmsi);
 
 			if (servers.size() > 0 && servers[0]->active())
@@ -719,14 +683,14 @@ int main(int argc, char *argv[])
 			r.setupModel(group);
 
 			// set up all the output and connect to the receiver outputs
-			for (auto &o : msg)
+			for (auto& o : msg)
 				o->Connect(r);
-			for (auto &j : json)
+			for (auto& j : json)
 				j->Connect(r);
 
 			screen.connect(r);
 
-			for (auto &s : servers)
+			for (auto& s : servers)
 				if (s->active())
 					s->connect(r);
 
@@ -734,27 +698,25 @@ int main(int argc, char *argv[])
 				stat[i].connect(r);
 		}
 
-		for (auto &o : msg)
+		for (auto& o : msg)
 			o->Start();
-		for (auto &j : json)
+		for (auto& j : json)
 			j->Start();
 
 		screen.start();
 
-		for (auto &s : servers)
-			if (s->active())
-			{
-				if (own_mmsi != -1)
-				{
+		for (auto& s : servers)
+			if (s->active()) {
+				if (own_mmsi != -1) {
 					s->Set("SHARE_LOC", "true");
 					s->Set("OWN_MMSI", std::to_string(own_mmsi));
 				}
 				s->start();
 			}
 
-		for (auto &s : stat)
+		for (auto& s : stat)
 			s.start();
-		for (auto &r : _receivers)
+		for (auto& r : _receivers)
 			r->play();
 
 		stop = false;
@@ -764,15 +726,13 @@ int main(int argc, char *argv[])
 		auto time_last = time_start;
 		bool oneverbose = false, iscallback = true;
 
-		for (auto &r : _receivers)
-		{
+		for (auto& r : _receivers) {
 			oneverbose |= r->verbose;
 			iscallback &= r->device->isCallback();
 		}
 
-		while (!stop)
-		{
-			for (auto &r : _receivers)
+		while (!stop) {
+			for (auto& r : _receivers)
 				stop = stop | !(r->device->isStreaming());
 
 			if (iscallback) // don't go to sleep in case we are reading from a file
@@ -783,32 +743,26 @@ int main(int argc, char *argv[])
 
 			auto time_now = high_resolution_clock::now();
 
-			if (oneverbose && duration_cast<seconds>(time_now - time_last).count() >= screen.verboseUpdateTime)
-			{
+			if (oneverbose && duration_cast<seconds>(time_now - time_last).count() >= screen.verboseUpdateTime) {
 				time_last = time_now;
 
-				for (int i = 0; i < _receivers.size(); i++)
-				{
-					Receiver &r = *_receivers[i];
-					if (r.verbose)
-					{
-						for (int j = 0; j < r.Count(); j++)
-						{
+				for (int i = 0; i < _receivers.size(); i++) {
+					Receiver& r = *_receivers[i];
+					if (r.verbose) {
+						for (int j = 0; j < r.Count(); j++) {
 							stat[i].statistics[j].Stamp();
 							std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
-							std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << stat[i].statistics[j].getDeltaCount() << " msgs, total: "
-									  << stat[i].statistics[j].getCount() << " msgs, rate: " << stat[i].statistics[j].getRate() << " msg/s" << std::endl;
+							Info() << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << stat[i].statistics[j].getDeltaCount() << " msgs, total: "
+								   << stat[i].statistics[j].getCount() << " msgs, rate: " << stat[i].statistics[j].getRate() << " msg/s";
 						}
 					}
 				}
 			}
 
-			if (timeout && timeout_nomsg)
-			{
+			if (timeout && timeout_nomsg) {
 				bool one_stale = false;
 
-				for (int i = 0; i < _receivers.size(); i++)
-				{
+				for (int i = 0; i < _receivers.size(); i++) {
 					if (stat[i].statistics[0].getCount() == msg_count[i])
 						one_stale = true;
 
@@ -819,54 +773,46 @@ int main(int argc, char *argv[])
 					time_timeout_start = time_now;
 			}
 
-			if (timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= timeout)
-			{
+			if (timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= timeout) {
 				stop = true;
 				if (timeout_nomsg)
-					std::cerr << "Warning: Stop triggered, no messages were received for " << timeout << " seconds." << std::endl;
-				else
-				{
+					Warning() << "Stop triggered, no messages were received for " << timeout << " seconds.";
+				else {
 					exit_code = -2;
-					std::cerr << "Warning: Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")" << std::endl;
+					Warning() << "Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")";
 				}
 			}
 		}
 
-		for (int i = 0; i < _receivers.size(); i++)
-		{
-			Receiver &r = *_receivers[i];
+		for (int i = 0; i < _receivers.size(); i++) {
+			Receiver& r = *_receivers[i];
 			r.stop();
 
 			// End Main loop
 			// -----------------
 
-			if (r.verbose)
-			{
-				std::cerr << "----------------------" << std::endl;
-				for (int j = 0; j < r.Count(); j++)
-				{
+			if (r.verbose) {
+				Info() << "----------------------";
+				for (int j = 0; j < r.Count(); j++) {
 					std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
 					stat[i].statistics[j].Stamp();
-					std::cerr << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat[i].statistics[j].getCount() << " msgs" << std::endl;
+					Info() << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat[i].statistics[j].getCount() << " msgs";
 				}
 			}
 
 			if (r.Timing())
-				for (int j = 0; j < r.Count(); j++)
-				{
+				for (int j = 0; j < r.Count(); j++) {
 					std::string name = r.Model(j)->getName();
-					std::cerr << "[" << r.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ')
-							  << r.Model(j)->getTotalTiming() << " ms" << std::endl;
+					Info() << "[" << r.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ') << r.Model(j)->getTotalTiming() << " ms";
 				}
 		}
 
-		for (auto &s : servers)
+		for (auto& s : servers)
 			s->close();
 	}
-	catch (std::exception const &e)
-	{
-		std::cerr << "Error: " << e.what() << std::endl;
-		for (auto &r : _receivers)
+	catch (std::exception const& e) {
+		Error() << e.what();
+		for (auto& r : _receivers)
 			r->stop();
 		exit_code = -1;
 	}
