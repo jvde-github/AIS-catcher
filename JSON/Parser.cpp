@@ -29,12 +29,13 @@ namespace JSON {
 		int from = MAX(pos - char_limit, 0);
 		int to = MIN(pos + char_limit, json.size());
 
+		std::stringstream ss;
 		for (int i = from; i < to; i++) {
 			char c = json[i];
 			char d = (c == '\t' || c == '\r' || c == '\n') ? ' ' : c;
-			std::cerr << d;
+			ss << d;
 		}
-		std::cerr << std::endl
+		ss << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl;
 		throw std::runtime_error("syntax error in JSON: " + err);

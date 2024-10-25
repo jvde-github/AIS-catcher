@@ -309,7 +309,7 @@ void Receiver::play() {
 		Info() << "Settings  : " << device->Get() ;
 		for (int i = 0; i < models.size(); i++)
 			Info() << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
-					  << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() + "\n";
+					  << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get();
 	}
 }
 

@@ -28,7 +28,7 @@
 #include "WebViewer.h"
 #include "Config.h"
 #include "JSON/JSON.h"
-#include "IO.h"
+#include "MsgOut.h"
 #include "N2KStream.h"
 #include "PostgreSQL.h"
 #include "Logger.h"
@@ -52,7 +52,7 @@ static void consoleHandler(int signal) {
 		return;
 	}
 	if (signal != SIGINT)
-		Error() << "Termination request: " << signal;
+		std::cerr << "Termination request: " << signal;
 
 	stop = true;
 }

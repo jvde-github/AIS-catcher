@@ -42,7 +42,7 @@
     <ClCompile Include="..\DSP\Demod.cpp" />
     <ClCompile Include="..\DSP\DSP.cpp" />
     <ClCompile Include="..\DSP\Model.cpp" />
-    <ClCompile Include="..\IO\IO.cpp" />
+    <ClCompile Include="..\IO\MsgOut.cpp" />
     <ClCompile Include="..\IO\N2KStream.cpp" />
     <ClCompile Include="..\DBMS\PostgreSQL.cpp" />
     <ClCompile Include="..\JSON\Parser.cpp" />
@@ -56,6 +56,7 @@
     <ClCompile Include="..\Library\Message.cpp" />
     <ClCompile Include="..\Library\JSONAIS.cpp" />
     <ClCompile Include="..\Library\NMEA.cpp" />
+    <ClCompile Include="..\Library\Logger.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
   </ItemGroup>
@@ -94,7 +95,7 @@
     <ClInclude Include="..\DSP\Filters.h" />
     <ClInclude Include="..\DSP\Model.h" />
     <ClInclude Include="..\Library\Keys.h" />
-    <ClInclude Include="..\IO\IO.h" />
+    <ClInclude Include="..\IO\MsgOut.h" />
     <ClInclude Include="..\IO\N2KStream.h" />
     <ClInclude Include="..\DBMS\PostgreSQL.h" />
     <ClInclude Include="..\IO\Network.h" />
@@ -107,6 +108,7 @@
     <ClInclude Include="..\Library\Stream.h" />
     <ClInclude Include="..\Library\NMEA.h" />
     <ClInclude Include="..\Library\TCP.h" />
+    <ClInclude Include="..\Library\Logger.h" />
     <ClInclude Include="..\Library\Utilities.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

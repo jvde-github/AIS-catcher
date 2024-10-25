@@ -58,21 +58,21 @@ namespace N2K {
 
 		skt = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 		if (skt < 0) {
-			cerr << "NMEA2000: cannot open CAN socket: " << CANinterface  << endl;
+			Error() << "NMEA2000: cannot open CAN socket: " << CANinterface;
 			return false;
 		}
 
 		strcpy(ifr.ifr_name, iface.c_str());
 
 		if (ioctl(skt, SIOCGIFINDEX, &ifr) < 0) {
-			std::cerr << "NMEA2000: ioctl failed on " << ifr.ifr_name << endl;
+			Error() << "NMEA2000: ioctl failed on " << ifr.ifr_name << endl;
 			return false;
 		}
 
 		addr.can_family = AF_CAN;
 		addr.can_ifindex = ifr.ifr_ifindex;
 		if (bind(skt, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-			std::cerr << "NMEA2000: cannot bind to socket." << endl;
+			Error() << "NMEA2000: cannot bind to socket." << endl;
 			return false;
 		}
 
@@ -146,7 +146,7 @@ namespace N2K {
 
 	void N2KHubInterfaceHub::onOpen() {
 		connected = true;
-		std::cerr << "NMEA2000: Connected" << std::endl;
+		Info() << "NMEA2000: Connected" ;
 	}
 
 	// non-static
@@ -164,7 +164,7 @@ namespace N2K {
 			NMEA2000.setNetwork(network);	
 
 			if (input && output)
-				std::cerr << "NMEA2000: warning input and output are both enabled. Device will not receive own messages." << std::endl;
+				Warning()<< "NMEA2000: warning input and output are both enabled. Device will not receive own messages." ;
 
 			NMEA2000.SetProductInformation("00000002", 100, "AIS-catcher NMEA2000 plugin", "0.55", "0.55");
 			NMEA2000.SetDeviceInformation(1, 195, 70, 2046);
@@ -178,10 +178,10 @@ namespace N2K {
 			NMEA2000.SetOnOpen(&N2KHubInterfaceHub::onOpenStatic);
 			NMEA2000.SetMsgHandler(onMsgStatic);
 
-			std::cerr << "Opening NMEA2000 network \"" + network + "\"..." << std::endl;
+			Info() << "Opening NMEA2000 network \"" + network + "\"..." ;
 
 			if (!NMEA2000.Open()) {
-				cout << "NMEA2000: not opened (yet)." << endl;
+				Info()  << "NMEA2000: not opened (yet).";
 			}
 
 			running = true;

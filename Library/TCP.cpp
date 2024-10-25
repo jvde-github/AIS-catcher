@@ -23,7 +23,6 @@
 #endif
 
 #include "TCP.h"
-#include "Common.h"
 
 namespace TCP {
 
@@ -78,7 +77,7 @@ namespace TCP {
 				int e = errno;
 #endif
 				if (nread < 0)
-					std::cerr << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock << std::endl;
+					Error() << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock ;
 
 				CloseUnsafe();
 			}
@@ -102,7 +101,7 @@ namespace TCP {
 #else
 				if (errno != EWOULDBLOCK && errno != EAGAIN) {
 #endif
-					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
+					Error() << "TCP Connection: error message to client: " << strerror(errno) ;
 					CloseUnsafe();
 				}
 			}
@@ -139,7 +138,7 @@ namespace TCP {
 #else
 				if (errno != EWOULDBLOCK && errno != EAGAIN) {
 #endif
-					std::cerr << "TCP Connection: error message to client: " << strerror(errno) << std::endl;
+					Error() << "TCP Connection: error message to client: " << strerror(errno) ;
 					CloseUnsafe();
 					return false;
 				}
@@ -182,26 +181,26 @@ namespace TCP {
 #ifdef _WIN32
 		if (conn_socket == SOCKET_ERROR) {
 			if (WSAGetLastError() != WSAEWOULDBLOCK)
-				std::cerr << "TCP listener: error accepting connection. " << strerror(WSAGetLastError()) << std::endl;
+				Error() << "TCP listener: error accepting connection. " << strerror(WSAGetLastError()) ;
 			return;
 		}
 #else
 		if (conn_socket == -1) {
 			if (errno != EWOULDBLOCK && errno != EAGAIN)
-				std::cerr << "TCP Server: error accepting connection. " << strerror(errno) << std::endl;
+				Error() << "TCP Server: error accepting connection. " << strerror(errno) ;
 			return;
 		}
 #endif
 		else {
 			int ptr = findFreeClient();
 			if (ptr == -1) {
-				std::cerr << "TCP Server: max connections reached (" << MAX_CONN << ", closing socket." << std::endl;
+				Error() << "TCP Server: max connections reached (" << MAX_CONN << ", closing socket." ;
 				closesocket(conn_socket);
 			}
 			else {
 				client[ptr].Start(conn_socket);
 				if (!setNonBlock(conn_socket)) {
-					std::cerr << "TCP Server: cannot make client socket non-blocking." << std::endl;
+					Error() << "TCP Server: cannot make client socket non-blocking." ;
 					client[ptr].Close();
 				}
 			}
@@ -245,10 +244,10 @@ namespace TCP {
 				SleepAndWait();
 			}
 
-			std::cerr << "TCP Server: thread ending.\n";
+			Info() << "TCP Server: thread ending.\n";
 		}
 		catch (std::exception& e) {
-			std::cerr << "Server Run: " << e.what() << std::endl;
+			Error() << "Server Run: " << e.what() ;
 			std::terminate();
 		}
 	}
@@ -284,7 +283,7 @@ namespace TCP {
 			if (c.isConnected()) {
 				if (!c.Send(m.c_str(), m.length())) {
 					c.Close();
-					std::cerr << "TCP listener: client not reading, close connection." << std::endl;
+					Error() << "TCP listener: client not reading, close connection." ;
 					return false;
 				}
 			}
@@ -345,14 +344,14 @@ namespace TCP {
 		}
 
 		if (!setNonBlock(sock)) {
-			std::cerr << "TCP Server: cannot set socket to non-blocking\n";
+			Error() << "TCP Server: cannot set socket to non-blocking\n";
 		}
 		stop = false;
 
 		if(IP_BIND.empty())
-			std::cerr << "TCP Server: start thread at port " << port << std::endl;
+			Info() << "TCP Server: start thread at port " << port ;
 		else
-			std::cerr << "TCP Server: start thread at IP " << IP_BIND << " port " << port << std::endl;
+			Info() << "TCP Server: start thread at IP " << IP_BIND << " port " << port ;
 
 
 		run_thread = std::thread(&Server::Run, this);
@@ -483,12 +482,12 @@ namespace TCP {
 	void Client::updateState() {
 
 		if (state == READY && reset_time > 0 && (long)time(nullptr) - (long)stamp > reset_time * 60) {
-			std::cerr << "TCP (" << host << ":" << port << "): connection expired, reconnect." << std::endl;
+			Info() << "TCP (" << host << ":" << port << "): connection expired, reconnect." ;
 			reconnect();
 		}
 		else if (state == DISCONNECTED) {
 			if ((long)time(nullptr) - (long)stamp > 10) {
-				std::cerr << "TCP (" << host << ":" << port << "): not connected, reconnecting." << std::endl;
+				Info() << "TCP (" << host << ":" << port << "): not connected, reconnecting." ;
 				reconnect();
 			}
 		}
@@ -496,10 +495,10 @@ namespace TCP {
 			bool connected = isConnected(0);
 
 			if (connected) {
-				std::cerr << "TCP (" << host << ":" << port << "): connected to server." << std::endl;
+				Info() << "TCP (" << host << ":" << port << "): connected to server." ;
 			}
 			else if ((long)time(nullptr) - (long)stamp > 10) {
-				std::cerr << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect." << std::endl;
+				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect." ;
 				reconnect();
 				return;
 			}
@@ -519,18 +518,19 @@ namespace TCP {
 				if (error_code == WSAEWOULDBLOCK) return 0;
 #else
 				if (error_code == EAGAIN || error_code == EWOULDBLOCK || error_code == EINPROGRESS) {
-					std::cerr << "TCP (" << host << ":" << port << "): message might be lost. Error code: " << error_code << " (" << strerror(error_code) << ").";
+					Error() << "TCP (" << host << ":" << port << "): message might be lost. Error code: " << error_code << " (" << strerror(error_code) << ").";
 					return 0;
 				}
 #endif
-				std::cerr << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+	
+				Error() << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 				if (persistent) {
 					reconnect();
-					std::cerr << " Reconnect.\n";
+					Error() << " Reconnect.\n";
 					return 0;
 				}
 				else {
-					std::cerr << " Failed.\n";
+					Error() << " Failed.\n";
 					return -1;
 				}
 			}
@@ -568,19 +568,19 @@ namespace TCP {
 #else
 					if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
 #endif
-
-					std::cerr << "TCP (" << host << ":" << port << ") receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+				std::stringstream ss;
+					ss << "TCP (" << host << ":" << port << ") receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 
 					if (persistent) {
-						std::cerr << " Reconnect.\n";
+						ss << " Reconnect.\n";
 						reconnect();
 						return 0;
 					}
 					else {
-						std::cerr << " Failed.\n";
-						std::cerr << std::endl;
+						ss << " Failed.\n";
 						return -1;
 					}
+					Info() << ss.str();
 				}
 				return retval;
 			}
