@@ -262,8 +262,6 @@ int main(int argc, char* argv[]) {
 	Logger::getInstance();
 	Logger::getInstance().setLogToConsole(true);
 
-	Info() << "Application started.";
-
 	try {
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
@@ -275,7 +273,6 @@ int main(int argc, char* argv[]) {
 		signal(SIGPIPE, consoleHandler);
 #endif
 
-		printVersion();
 		_receivers.back()->refreshDevices();
 
 		const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
@@ -296,6 +293,10 @@ int main(int argc, char* argv[]) {
 			std::string arg3 = count >= 3 ? std::string(argv[ptr + 3]) : "";
 
 			switch (param[1]) {
+			case 'G':
+				Assert(count == 1, param, MSG_NO_PARAMETER);
+				Logger::getInstance().setLogToFile(true, arg1);
+				break;
 			case 's':
 				Assert(count == 1, param, "does require one parameter [sample rate].");
 				receiver.setSampleRate(Util::Parse::Integer(arg1, 12500, 12288000));
@@ -645,6 +646,8 @@ int main(int argc, char* argv[]) {
 
 			ptr += count + 1;
 		}
+
+		printVersion();
 
 		// -------------
 		// Read config file
