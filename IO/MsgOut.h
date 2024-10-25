@@ -20,6 +20,7 @@
 #include <iostream>
 #include <iomanip>
 
+#include "Common.h"
 #include "Stream.h"
 #include "AIS.h"
 #include "Utilities.h"
@@ -164,7 +165,7 @@ namespace IO
 			}
 			if (file.fail())
 			{
-				std::cerr << "File: cannot write to file." << std::endl;
+				Error() << "File: cannot write to file.";
 				StopRequest();
 			}
 		}
@@ -182,7 +183,7 @@ namespace IO
 			}
 			if (file.fail())
 			{
-				std::cerr << "File: cannot write to file." << std::endl;
+				Error() << "File: cannot write to file.";
 				StopRequest();
 			}
 		}

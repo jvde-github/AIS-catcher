@@ -30,7 +30,7 @@
 #include <N2kMessages.h>
 #endif
 
-#include "IO.h"
+#include "MsgOut.h"
 #include "AIS.h"
 
 namespace IO {

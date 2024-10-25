@@ -17,7 +17,7 @@
 
 #include <cstring>
 
-#include "IO.h"
+#include "MsgOut.h"
 #include "Receiver.h"
 
 namespace IO

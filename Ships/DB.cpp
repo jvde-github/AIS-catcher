@@ -29,7 +29,7 @@ void DB::setup()
 		N *= 32;
 		M *= 32;
 
-		std::cerr << "DB: internal ship database extended to " << N << " ships and " << M << " path points" << std::endl;
+		Info() << "DB: internal ship database extended to " << N << " ships and " << M << " path points";
 	}
 
 	ships.resize(N);
@@ -203,7 +203,7 @@ std::string DB::getJSONcompact(bool full)
 
 			content += comma + std::to_string(delta_time);
 			content += comma + std::to_string(ship.flags.getPackedValue());
-			content += comma + std::to_string(ship.getValidated()) ;
+			content += comma + std::to_string(ship.getValidated());
 			content += comma + std::to_string(ship.getChannels()) + "]";
 
 			delim = comma;
@@ -373,32 +373,31 @@ std::string DB::getKML()
 
 std::string DB::getGeoJSON()
 {
-    std::lock_guard<std::mutex> lock(mtx);
+	std::lock_guard<std::mutex> lock(mtx);
 
-    std::string s = "{\"type\":\"FeatureCollection\",\"time_span\":" + std::to_string(TIME_HISTORY) + ",\"features\":[";
-    int ptr = first;
-    std::time_t tm = time(nullptr);
+	std::string s = "{\"type\":\"FeatureCollection\",\"time_span\":" + std::to_string(TIME_HISTORY) + ",\"features\":[";
+	int ptr = first;
+	std::time_t tm = time(nullptr);
 
-    bool addcomma = false;
-    while (ptr != -1)
-    {
-        const Ship &ship = ships[ptr];
-        if (ship.mmsi != 0)
-        {
-            long int delta_time = (long int)tm - (long int)ship.last_signal;
-            if (delta_time > TIME_HISTORY)
-                break;
+	bool addcomma = false;
+	while (ptr != -1)
+	{
+		const Ship &ship = ships[ptr];
+		if (ship.mmsi != 0)
+		{
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
+			if (delta_time > TIME_HISTORY)
+				break;
 
-            if (addcomma)
-                s += ",";
-            addcomma = ship.getGeoJSON(s);
-        }
-        ptr = ships[ptr].next;
-    }
-    s += "]}";
-    return s;
+			if (addcomma)
+				s += ",";
+			addcomma = ship.getGeoJSON(s);
+		}
+		ptr = ships[ptr].next;
+	}
+	s += "]}";
+	return s;
 }
-
 
 // needs fix, content is defined locally and in getSinglePathJSON member content is used as helper
 std::string DB::getAllPathJSON()
@@ -666,7 +665,7 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 {
 	const AIS::Message *msg = (AIS::Message *)data.binary;
-	
+
 	// determine whether we accept msg 27 to update lat/lon
 	bool allowApproxLatLon = false, positionUpdated = false;
 
@@ -688,12 +687,15 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 
 	ship.last_signal = msg->getRxTimeUnix();
 
-	if(msg->repeat() == 0) {
+	if (msg->repeat() == 0)
+	{
 		ship.last_direct_signal = ship.last_signal;
 		ship.setRepeat(0);
 	}
-	else {
-		if(ship.last_signal - ship.last_direct_signal > 60) {			
+	else
+	{
+		if (ship.last_signal - ship.last_direct_signal > 60)
+		{
 			ship.setRepeat(1);
 		}
 	}

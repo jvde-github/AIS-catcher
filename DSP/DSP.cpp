@@ -342,7 +342,7 @@ namespace DSP {
 
 		if (error) {
 			soxr_delete(m_soxr);
-			std::cerr << "Error: SOX processing returns error." << std::endl;
+			Error() << "SOX processing returns error." << std::endl;
 		}
 
 		for (int i = 0; i < sz; i++) {
@@ -389,7 +389,7 @@ namespace DSP {
 		int ret = src_process(state, &sd);
 
 		if (ret) {
-			std::cerr << "Error: libsamplerate processing returns error: " << src_strerror(ret) << std::endl;
+			Error() << "libsamplerate processing returns error: " << src_strerror(ret) ;
 		}
 		else {
 			for (int i = 0; i < sd.output_frames_gen; i++) {

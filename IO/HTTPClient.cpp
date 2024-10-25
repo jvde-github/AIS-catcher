@@ -70,7 +70,7 @@ namespace IO {
 					isChunked = true;
 				}
 				else if (line.find("Transfer-Encoding:") != std::string::npos) {
-					std::cerr << "HTTP Client [" << host << "]: Transfer-Encoding other than chunked not supported." << std::endl;
+					Error() << "HTTP Client [" << host << "]: Transfer-Encoding other than chunked not supported." ;
 					result.status = -2;
 					return;
 				}
@@ -145,7 +145,7 @@ namespace IO {
 #ifdef HASOPENSSL
 		ssl = SSL_new(_sse_context.getContext());
 		if (!ssl) {
-			std::cerr << "HTTP Client [" << host << "]: error during SSL new - error code : " << ERR_get_error() << std::endl;
+			Error() << "HTTP Client [" << host << "]: error during SSL new - error code : " << ERR_get_error() ;
 			return false;
 		}
 
@@ -153,12 +153,12 @@ namespace IO {
 		SSL_set_fd(ssl, client.getSocket());
 
 		if (SSL_connect(ssl) != 1) {
-			std::cerr << "HTTP Client [" << host << "]: error during SSL handshake - error code : " << ERR_get_error() << std::endl;
+			Error() << "HTTP Client [" << host << "]: error during SSL handshake - error code : " << ERR_get_error() ;
 			return false;
 		}
 		return true;
 #else
-		std::cerr << "HTTP Client [" << host << "]: error during Handshake, SSL not supported in this build." << std::endl;
+		Error() << "HTTP Client [" << host << "]: error during Handshake, SSL not supported in this build." ;
 
 		return false;
 #endif
@@ -172,7 +172,7 @@ namespace IO {
 		createHeader(gzip, multipart);
 
 		if (!client.connect(host, port, false, 1)) {
-			std::cerr << "HTTP Client [" << host << "]: error connecting to server." << std::endl;
+			Error() << "HTTP Client [" << host << "]: error connecting to server." ;
 			return HTTPResponse();
 		}
 
@@ -190,39 +190,39 @@ namespace IO {
 
 			r = SSL_write(ssl, header.c_str(), header.length());
 			if (r <= 0) {
-				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
+				Error() << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() ;
 				freeSSL();
 				return response;
 			}
 
 			r = SSL_write(ssl, msg_ptr, msg_length);
 			if (r <= 0) {
-				std::cerr << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() << std::endl;
+				Error() << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() ;
 				freeSSL();
 				return response;
 			}
 
 			r = SSL_read(ssl, buffer, sizeof(buffer));
 			if (r <= 0) {
-				std::cerr << "HTTP Client [" << host << "]: SSL read failed - error code : " << ERR_get_error() << std::endl;
+				Error() << "HTTP Client [" << host << "]: SSL read failed - error code : " << ERR_get_error() ;
 				freeSSL();
 				return response;
 			}
 
 			freeSSL();
 #else
-			std::cerr << "HTTP Client [" << host << "]: SSL not supported." << std::endl;
+			Error() << "HTTP Client [" << host << "]: SSL not supported." ;
 			return response;
 #endif
 		}
 		else {
 
 			if (client.send(header.c_str(), header.length()) < 0) {
-				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
+				Error() << "HTTP Client [" << host << "]: write failed" ;
 				return response;
 			}
 			if (client.send(msg_ptr, msg_length) < 0) {
-				std::cerr << "HTTP Client [" << host << "]: write failed" << std::endl;
+				Error() << "HTTP Client [" << host << "]: write failed" ;
 				return response;
 			}
 

@@ -10,7 +10,7 @@
 #include <io.h>
 #else
 #include <unistd.h>
-#include <sys/types.h>
+#include <sys/types.h> 
 #include <sys/stat.h>
 #include <fcntl.h>
 #endif
@@ -47,11 +47,11 @@ Logger::~Logger() {
 
 std::string Logger::logLevelToString(LogLevel level) {
 	switch (level) {
-	case LogLevel::INFO:
+	case LogLevel::_INFO:
 		return "INFO";
-	case LogLevel::WARNING:
+	case LogLevel::_WARNING:
 		return "WARNING";
-	case LogLevel::ERROR:
+	case LogLevel::_ERROR:
 		return "ERROR";
 	default:
 		return "UNKNOWN";
@@ -220,11 +220,11 @@ void Logger::log(LogLevel level, const std::string& message) {
 
 	if (log_to_console_) {
 
-		if (level == LogLevel::INFO) {
+		if (level == LogLevel::_INFO) {
 			std::cerr << message << "\n";
 		}
 		else {
-			std::cerr << logLevelToString(level) << ": " << message << "\n";
+			std::cerr << "[" << logLevelToString(level) << "] " << message << "\n";
 		}
 	}
 }
@@ -275,13 +275,13 @@ LogStream::~LogStream() {
 
 // Convenience functions
 LogStream Info() {
-	return LogStream(LogLevel::INFO);
+	return LogStream(LogLevel::_INFO);
 }
 
 LogStream Warning() {
-	return LogStream(LogLevel::WARNING);
+	return LogStream(LogLevel::_WARNING);
 }
 
 LogStream Error() {
-	return LogStream(LogLevel::ERROR);
+	return LogStream(LogLevel::_ERROR);
 }
