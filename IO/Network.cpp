@@ -48,10 +48,7 @@ namespace IO
 			terminate = false;
 
 			run_thread = std::thread(&HTTPStreamer::process, this);
-			std::cerr << "HTTP: start thread (" << url << "), filter: " << Util::Convert::toString(filter.isOn());
-			if (filter.isOn())
-				std::cerr << ", Allowed: " << filter.getAllowed() << ".";
-			std::cerr << std::endl;
+			Info() << "HTTP: start thread (" << url << "), filter: " << Util::Convert::toString(filter.isOn()) << (filter.isOn() ? ", Allowed: " + filter.getAllowed() : "");
 		}
 	}
 
@@ -64,7 +61,7 @@ namespace IO
 			terminate = true;
 			run_thread.join();
 
-			std::cerr << "HTTP: stop thread (" << url << ")." << std::endl;
+			Info() << "HTTP: stop thread (" << url << ").";
 		}
 	}
 
@@ -174,7 +171,7 @@ namespace IO
 		}
 
 		if (r.status < 200 || r.status > 299 || show_response)
-			std::cerr << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message << std::endl;
+			Error() << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message;
 	}
 
 	void HTTPStreamer::process()
@@ -331,14 +328,14 @@ namespace IO
 			if ((now - last_reconnect) > 60 * reset)
 			{
 
-				std::cerr << "UDP: recreate socket (" << host << ":" << port << ")" << std::endl;
+				Info() << "UDP: recreate socket (" << host << ":" << port << ")";
 
 				closesocket(sock);
 				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 				if (sock == -1)
 				{
-					std::cerr << "UDP: cannot recreate socket. Requesting termination.\n";
+					Error() << "UDP: cannot recreate socket. Requesting termination.";
 					StopRequest();
 				}
 
@@ -417,18 +414,19 @@ namespace IO
 
 	void UDPStreamer::Start()
 	{
-		std::cerr << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
+		std::stringstream ss;
+		ss << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn())
-			std::cerr << ", allowed: {" << filter.getAllowed() << "}";
-		std::cerr << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "");
+			ss << ", allowed: {" << filter.getAllowed() << "}";
+		ss << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "");
 		if (broadcast)
-			std::cerr << ", broadcast: true";
+			ss << ", broadcast: true";
 		if (reset > 0)
-			std::cerr << ", reset: " << reset;
+			ss << ", reset: " << reset;
 		if (!uuid.empty())
-			std::cerr << ", uuid: " << uuid;
+			ss << ", uuid: " << uuid;
 
-		std::cerr << std::endl;
+		Info() << ss.str();
 
 		if (sock != -1)
 		{
@@ -487,7 +485,7 @@ namespace IO
 
 	void UDPStreamer::Stop()
 	{
-		std::cerr << "UDP: close socket for host: " << host << ", port: " << port << std::endl;
+		Info() << "UDP: close socket for host: " << host << ", port: " << port;
 
 		if (sock != -1)
 		{
@@ -563,7 +561,7 @@ namespace IO
 				{
 					if (!persistent)
 					{
-						std::cerr << "TCP feed: requesting termination.\n";
+						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 				}
@@ -578,7 +576,7 @@ namespace IO
 				{
 					if (!persistent)
 					{
-						std::cerr << "TCP feed: requesting termination.\n";
+						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 				}
@@ -600,7 +598,7 @@ namespace IO
 					if (SendTo((s + "\r\n").c_str()) < 0)
 						if (!persistent)
 						{
-							std::cerr << "TCP feed: requesting termination.\n";
+							Error() << "TCP feed: requesting termination.";
 							StopRequest();
 						}
 				}
@@ -616,7 +614,7 @@ namespace IO
 				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, uuid) + "\r\n").c_str()) < 0)
 					if (!persistent)
 					{
-						std::cerr << "TCP feed: requesting termination.\n";
+						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 			}
@@ -635,7 +633,7 @@ namespace IO
 				if (SendTo((json + "\r\n").c_str()) < 0)
 					if (!persistent)
 					{
-						std::cerr << "TCP feed: requesting termination.\n";
+						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 			}
@@ -644,32 +642,35 @@ namespace IO
 
 	void TCPClientStreamer::Start()
 	{
+		std::stringstream ss;
 
-		std::cerr << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
+		ss << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn())
 		{
-			std::cerr << ", gps: " << Util::Convert::toString(filter.includeGPS());
-			std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+			ss << ", gps: " << Util::Convert::toString(filter.includeGPS());
+			ss << ", allowed: {" << filter.getAllowed() << "}";
 		}
-		std::cerr << ", PERSIST: " << Util::Convert::toString(persistent);
-		std::cerr << ", KEEP_ALIVE: " << Util::Convert::toString(keep_alive);
+		ss << ", PERSIST: " << Util::Convert::toString(persistent);
+		ss << ", KEEP_ALIVE: " << Util::Convert::toString(keep_alive);
 		if (!uuid.empty())
-			std::cerr << ", UUID: " << uuid;
+			ss << ", UUID: " << uuid;
 
-		std::cerr << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "") << ", status: ";
+		ss << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "") << ", status: ";
 
 		if (tcp.connect(host, port, persistent, 0, keep_alive))
-			std::cerr << "connected\n";
+			ss << "connected\n";
 		else
 		{
 			if (!persistent)
 			{
-				std::cerr << "failed\n";
+				ss << "failed";
 				throw std::runtime_error("TCP feed cannot connect to " + host + " port " + port);
 			}
 			else
-				std::cerr << "pending\n";
+				ss << "pending";
 		}
+
+		Info() << ss.str();
 	}
 
 	void TCPClientStreamer::Stop()
@@ -722,11 +723,14 @@ namespace IO
 
 	void TCPlistenerStreamer::Start()
 	{
-		std::cerr << "TCP listener: open at port " << port << ", filter: " << Util::Convert::toString(filter.isOn());
+		std::stringstream ss;
+		ss << "TCP listener: open at port " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn())
-			std::cerr << ", allowed: {" << filter.getAllowed() << "}";
+			ss << ", allowed: {" << filter.getAllowed() << "}";
 
-		std::cerr << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "") << ".\n";
+		ss<< ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "") << ".";
+
+		Info() << ss.str();
 		Server::start(port);
 	}
 

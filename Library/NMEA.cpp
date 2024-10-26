@@ -63,7 +63,7 @@ namespace AIS {
 
 	void NMEA::submitAIS(TAG& tag, long t, int thisstation) {
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence)) {
-			if (warnings) std::cerr << "NMEA: incorrect checksum [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
+			if (warnings)Warning() << "NMEA: incorrect checksum [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." ;
 			if (crc_check)
 				return;
 		}
@@ -83,7 +83,7 @@ namespace AIS {
 				Send(&msg, 1, tag);
 			}
 			else if (msg.getLength() > 0)
-				if (warnings) std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << " from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
+				if (warnings) Warning() << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << " from station " << (thisstation == -1 ? station : thisstation) << "." ;
 			return;
 		}
 
@@ -92,7 +92,6 @@ namespace AIS {
 		if (aivdm.number != result + 1 || result == -1) {
 			clean(aivdm.channel, aivdm.talkerID);
 			if (aivdm.number != 1) {
-				// std::cerr << "NMEA: missing part of multiline message [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << "." << std::endl;
 				return;
 			}
 		}
@@ -122,7 +121,7 @@ namespace AIS {
 			Send(&msg, 1, tag);
 		}
 		else if (warnings)
-			std::cerr << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << std::endl;
+			Warning() << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() ;
 
 		clean(aivdm.channel, aivdm.talkerID);
 	}
@@ -198,7 +197,7 @@ namespace AIS {
 
 		if (checksum != NMEAchecksum(line)) {
 			if (crc_check) {
-				if (warnings) std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+				if (warnings) Warning() << "NMEA: incorrect checksum [" << line << "]." ;
 				return false;
 			}
 		}
@@ -206,7 +205,7 @@ namespace AIS {
 		// no proper fix
 		int fix = atoi(parts[6].c_str());
 		if (fix != 1 && fix != 2) {
-			if (warnings) std::cerr << "NMEA: no fix in GPGGA NMEA:" << parts[6] << std::endl;
+			if (warnings) Warning()<< "NMEA: no fix in GPGGA NMEA:" << parts[6] ;
 			return false;
 		}
 
@@ -239,7 +238,7 @@ namespace AIS {
 
 		if (checksum != NMEAchecksum(line)) {
 			if (crc_check) {
-				if (warnings) std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+				if (warnings) Warning() << "NMEA: incorrect checksum [" << line << "]." ;
 				return false;
 			}
 		}
@@ -251,7 +250,6 @@ namespace AIS {
 			return false;
 
 		outGPS.Send(&gps, 1, tag);
-		// std::cerr << "RMC: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -265,7 +263,7 @@ namespace AIS {
 		split(s);
 
 		if (parts.size() != 8) {
-			if (warnings) std::cerr << "NMEA: GLL does not have 8 parts but " << parts.size() << std::endl;
+			if (warnings) Warning() << "NMEA: GLL does not have 8 parts but " << parts.size() ;
 			return false;
 		}
 
@@ -273,7 +271,7 @@ namespace AIS {
 		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
 
 		if (checksum != NMEAchecksum(line)) {
-			if (warnings) std::cerr << "NMEA: incorrect checksum [" << line << "]." << std::endl;
+			if (warnings) Warning() << "NMEA: incorrect checksum [" << line << "]." ;
 			if (crc_check)
 				return false;
 		}
@@ -286,7 +284,6 @@ namespace AIS {
 
 		GPS gps(lat, lon, s, empty);
 		outGPS.Send(&gps, 1, tag);
-		// std::cerr << "GLL: lat = " << gps.lat << ", lon = " << gps.lon << std::endl;
 
 		return true;
 	}
@@ -397,7 +394,7 @@ namespace AIS {
 					// temporary check, should be removed
 					volatile float level_check = MIN(LEVEL_UNDEFINED + 1, tag.level);
 					if (level_check > LEVEL_UNDEFINED) {
-						if (warnings) std::cerr << "Warning: level check failed for " << s << std::endl;
+						if (warnings) Warning() << "Warning: level check failed for " << s ;
 					}
 					// ------------------------------
 
@@ -436,13 +433,12 @@ namespace AIS {
 
 					if (lat != 0 || lon != 0) {
 						GPS gps(lat, lon, empty, s);
-						// std::cerr << "JSON: lat = " << gps.getLat() << ", lon = " << gps.getLon() << std::endl;
 						outGPS.Send(&gps, 1, tag);
 					}
 				}
 			}
 			catch (std::exception const& e) {
-				std::cout << "NMEA model: " << e.what() << std::endl;
+				std::cout << "NMEA model: " << e.what() ;
 			}
 		}
 	}
@@ -493,7 +489,7 @@ namespace AIS {
 							}
 						}
 						else if (newline) {
-							if (warnings) std::cerr << "NMEA: newline in uncompleted JSON input not allowed";
+							if (warnings) Warning() << "NMEA: newline in uncompleted JSON input not allowed";
 							reset(c);
 						}
 					}
@@ -521,7 +517,7 @@ namespace AIS {
 								noerror &= processGLL(line, tag, t);
 
 							if (!noerror) {
-								if (warnings) std::cerr << "NMEA: error processing NMEA line " << line << std::endl;
+								if (warnings) Warning() << "NMEA: error processing NMEA line " << line ;
 							}
 							reset(c);
 						}
@@ -533,7 +529,7 @@ namespace AIS {
 			}
 		}
 		catch (std::exception& e) {
-			if (warnings) std::cerr << "NMEA Receive: " << e.what() << std::endl;
+			if (warnings) Warning() << "NMEA Receive: " << e.what() ;
 			std::terminate();
 		}
 	}

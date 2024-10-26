@@ -9,9 +9,9 @@
 
 // Log levels
 enum class LogLevel {
-    INFO,
-    WARNING,
-    ERROR
+    _INFO,
+    _WARNING,
+    _ERROR
 };
 
 class Logger {

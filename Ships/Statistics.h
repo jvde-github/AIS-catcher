@@ -188,19 +188,11 @@ public:
 		if (!file.read((char*)&_radarB, sizeof(_radarB))) return false;		  // Check radar array
 
 		if (false && !file.eof()) {
-			std::cerr << "Statistics: error with incorrect file size." << std::endl;
+			Warning() << "Statistics: error with incorrect file size.";
 			return false;
 		}
 		if (magic != _MAGIC || (version != _VERSION && version != 1)) return false;
 
-		/*
-		sum = 0;
-		for (int i = 0; i < 27; i++) sum += _msg[i];
-		if (_count != sum) {
-			std::cerr << "Statistics: error with consistency [sum of msg count != total msg count]." << std::endl;
-			return false;
-		}
-		*/
 		return true;
 	}
 };

@@ -33,7 +33,7 @@ namespace Device {
 		int rc = zmq_connect(subscriber, endpoint.c_str());
 
 		if (rc != 0) {
-			std::cerr << "ZMQ: subscribing to " << endpoint << std::endl;
+			Error() << "ZMQ: subscribing to " << endpoint << std::endl;
 			throw std::runtime_error("ZMQ: cannot connect subscriber.");
 		}
 		rc = zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
@@ -81,7 +81,7 @@ namespace Device {
 
 		while (isStreaming()) {
 			int len = zmq_recv(subscriber, data.data(), BUFFER_SIZE, 0);
-			if (len > 0 && !fifo.Push(data.data(), len)) std::cerr << "ZMQ: buffer overrun." << std::endl;
+			if (len > 0 && !fifo.Push(data.data(), len)) Error() << "ZMQ: buffer overrun." << std::endl;
 		}
 	}
 
@@ -95,7 +95,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else {
-				std::cerr << "ZMQ: no signal." << std::endl;
+				Error() << "ZMQ: no signal." << std::endl;
 			}
 		}
 	}

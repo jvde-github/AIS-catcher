@@ -80,12 +80,12 @@ namespace Device
 
 		if (bind(sock, address->ai_addr, address->ai_addrlen) != 0)
 		{
-			std::cerr << "UDP: binding to " << server << " port " << port << ": " << strerror(errno) << "\n";
+			Info() << "UDP: binding to " << server << " port " << port << ": " << strerror(errno);
 			throw std::runtime_error("UDP: cannot bind to port.");
 		}
 
 		SleepSystem(100);
-		std::cerr << "UDP: server opened at port " << port << std::endl;
+		Info() << "UDP: server opened at port " << port;
 	}
 
 	void UDP::Close()
@@ -120,7 +120,7 @@ namespace Device
 
 	void UDP::Run()
 	{
-		std::cerr << "UDP: starting thread.\n";
+		Info() << "UDP: starting thread.\n";
 		char buffer[16384];
 		RAW r = {getFormat(), buffer, 0};
 		int nread;
@@ -154,10 +154,10 @@ namespace Device
 		}
 		catch (std::exception &e)
 		{
-			std::cerr << "UDP Run: " << e.what() << std::endl;
+			Error() << "UDP Run: " << e.what() << std::endl;
 			std::terminate();
 		}
-		std::cerr << "UDP: ending thread.\n";
+		Info() << "UDP: ending thread.\n";
 	}
 
 	void UDP::applySettings()

@@ -47,8 +47,7 @@ namespace IO
 
 				if (c.msg.size() > 8192)
 				{
-					std::cerr << "Server: closing connection, client flooding server: " << c.sock << std::endl;
-					// std::cerr << "Server: " << c.msg << std::endl;
+					Error()<< "Server: closing connection, client flooding server: " << c.sock ;
 					c.Close();
 				}
 			}
@@ -142,13 +141,13 @@ namespace IO
 
 		if (!Send(c, header.c_str(), header.length()))
 		{
-			std::cerr << "Server: closing client socket." << std::endl;
+			Error() << "Server: closing client socket." ;
 			c.Close();
 			return;
 		}
 		if (!Send(c, data, len))
 		{
-			std::cerr << "Server: closing client socket." << std::endl;
+			Error() << "Server: closing client socket." ;
 			c.Close();
 			return;
 		}

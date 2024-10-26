@@ -34,6 +34,21 @@ Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We w
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry. Note that issues have reported for the latest Windows build on Windows 10 where the [VC runtime libraries](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) where not up to date so please ensure you have the latest installed.
 
+### Experimental: UI for managing AIS-catcher settings
+
+There is a prototype available to manage AIS-catcher (start/stop) and confugure settings in an HTML environment.
+<p align="center">
+<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/38804ce9-e9a6-469c-9e08-acfcdcaebb4b.png" width="30%"/>
+</p>
+
+Intent is to  offer it as a system service and as a self-contained docker image. To test the Docker image:
+```
+docker run --privileged -v /dev/bus/usb:/dev/bus/usb -p 8110:8110 -p 8100:8100 --pull=always ghcr.io/jvde-github/ais-catcher-control:edge
+```
+Now go in the browser to http://your-ip-address:8110. There you can select the active input device, detailed device settings, output channels and start and stop the program in the control area, including viewing the log. Notice that if settings are changed, these need to be saved to file first (press save) and to become effective, in the control section the program needs to be stopped and started. The initial username/password is admin/admin.
+
+As mentioned, this is a prototype and under active development. Feedback is appreciated though.
+
 ### Quick Start Guide for Installing and Running AIS-catcher on Raspberry Pi/Ubuntu/Debian Systems
 
 This guide provides instructions for installing AIS-catcher on Debian-based systems (like Raspberry Pi) and setting it up to run as a background service. This ensures AIS-catcher will automatically start when the machine is booted.
