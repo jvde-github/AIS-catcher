@@ -92,7 +92,10 @@ namespace Device {
 		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
 
 		// did we terminate too early?
-		if (isStreaming()) lost = true;
+		if (isStreaming()) {
+			Warning() << "RTLSDR: lost device. Terminating.";
+			lost = true;
+		}
 	}
 
 	void RTLSDR::Run() {
