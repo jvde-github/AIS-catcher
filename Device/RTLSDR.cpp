@@ -93,7 +93,7 @@ namespace Device {
 
 		// did we terminate too early?
 		if (isStreaming()) {
-			Warning() << "RTLSDR: lost device. Terminating.";
+			Error() << "RTLSDR: lost device. Terminating.";
 			lost = true;
 		}
 	}
