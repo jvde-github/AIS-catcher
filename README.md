@@ -47,6 +47,8 @@ docker run --privileged -v /dev/bus/usb:/dev/bus/usb -p 8110:8110 -p 8100:8100 -
 ```
 Now go in the browser to http://your-ip-address:8110. There you can select the active input device, detailed device settings, output channels and start and stop the program in the control area, including viewing the log. Notice that if settings are changed, these need to be saved to file first (press save) and to become effective, in the control section the program needs to be stopped and started. The initial username/password is admin/admin.
 
+As mentioned, this is a prototype and under active development. Feedback is appreciated though.
+
 ### Quick Start Guide for Installing and Running AIS-catcher on Raspberry Pi/Ubuntu/Debian Systems
 
 This guide provides instructions for installing AIS-catcher on Debian-based systems (like Raspberry Pi) and setting it up to run as a background service. This ensures AIS-catcher will automatically start when the machine is booted.
