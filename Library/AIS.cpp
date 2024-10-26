@@ -26,14 +26,17 @@
 #pragma warning(disable : 4996)
 #endif
 
-namespace AIS {
+namespace AIS
+{
 
-	void Decoder::NextState(State s, int pos) {
+	void Decoder::NextState(State s, int pos)
+	{
 		state = s;
 		position = pos;
 		one_seq_count = 0;
 
-		switch (s) {
+		switch (s)
+		{
 		case State::TRAINING:
 			DecoderMessage.Send(DecoderSignals::StartTraining);
 			break;
@@ -48,7 +51,8 @@ namespace AIS {
 		}
 	}
 
-	bool Decoder::CRC16(int len) {
+	bool Decoder::CRC16(int len)
+	{
 		const uint16_t checksum = ~0x0F47, poly = 0x8408;
 		uint16_t CRC = 0xFFFF;
 
@@ -58,34 +62,41 @@ namespace AIS {
 		return CRC == checksum;
 	}
 
-	bool Decoder::processData(int len, TAG& tag) {
-		if (len > 16 && CRC16(len)) {
+	bool Decoder::processData(int len, TAG &tag)
+	{
+		if (len > 16 && CRC16(len))
+		{
 			nBits = len - 16;
 			nBytes = (nBits + 7) / 8;
 
 			// calculate the power of the signal in dB, if requested and timestamp
-			if (tag.mode & 1 && tag.level != 0.0) tag.level = 10.0f * log10(tag.level);
-			if (tag.mode & 2) msg.Stamp();
+			if (tag.mode & 1 && tag.level != 0.0)
+				tag.level = 10.0f * log10(tag.level);
+			if (tag.mode & 2)
+				msg.Stamp();
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
 			msg.setChannel(channel);
 			msg.setLength(nBits);
 			msg.setOwnMMSI(own_mmsi);
 
-			if (msg.validate()) {
+			if (msg.validate())
+			{
 				msg.buildNMEA(tag);
 				Send(&msg, 1, tag);
 			}
 			else
-				std::cerr << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength() << std::endl;
+				Warning() << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength();
 
 			return true;
 		}
 		return false;
 	}
 
-	void Decoder::Signal(const DecoderSignals& in) {
-		switch (in) {
+	void Decoder::Signal(const DecoderSignals &in)
+	{
+		switch (in)
+		{
 		case DecoderSignals::Reset:
 			NextState(State::TRAINING, 0);
 			break;
@@ -95,11 +106,13 @@ namespace AIS {
 	}
 
 	// returns true if data so far cannot result anymore in a valid message
-	bool Decoder::canStop(int len) {
+	bool Decoder::canStop(int len)
+	{
 		const int END = 24;
 		int t = msg.type();
 
-		switch (len) {
+		switch (len)
+		{
 		case 8:
 			return t > 27 || t == 0;
 		case 38:
@@ -122,8 +135,10 @@ namespace AIS {
 		return false;
 	}
 
-	void Decoder::Receive(const FLOAT32* data, int len, TAG& tag) {
-		for (int i = 0; i < len; i++) {
+	void Decoder::Receive(const FLOAT32 *data, int len, TAG &tag)
+	{
+		for (int i = 0; i < len; i++)
+		{
 			// NRZI
 			BIT d = data[i] > 0;
 			BIT Bit = !(d ^ prev);
@@ -131,7 +146,8 @@ namespace AIS {
 
 			// State machine
 			// At this stage: "position" bits into sequence, inspect the next bit:
-			switch (state) {
+			switch (state)
+			{
 			case State::TRAINING:
 				if (Bit != lastBit) // 01 10
 				{
@@ -147,15 +163,18 @@ namespace AIS {
 				break;
 			case State::STARTFLAG:
 
-				if (position == 7) {
-					if (Bit == 0) {
+				if (position == 7)
+				{
+					if (Bit == 0)
+					{
 						NextState(State::DATAFCS, 0); // 0111111*0....
 						level = 0.0f;
 					}
 					else
 						NextState(State::TRAINING, 0);
 				}
-				else {
+				else
+				{
 					if (Bit == 1)
 						position++;
 					else
@@ -167,11 +186,15 @@ namespace AIS {
 				msg.setBit(position++, Bit);
 
 				// add power of signal of bit length
-				if (tag.mode & 1) level += tag.sample_lvl;
+				if (tag.mode & 1)
+					level += tag.sample_lvl;
 
-				if (Bit == 1) {
-					if (one_seq_count == 5) {
-						if (tag.mode & 1) tag.level = level / position;
+				if (Bit == 1)
+				{
+					if (one_seq_count == 5)
+					{
+						if (tag.mode & 1)
+							tag.level = level / position;
 						if (processData(position - 7, tag))
 							NextState(State::FOUNDMESSAGE, 0);
 						NextState(State::TRAINING, 0);
@@ -179,12 +202,15 @@ namespace AIS {
 					else
 						one_seq_count++;
 				}
-				else {
-					if (one_seq_count == 5) position--; // bit-destuff
+				else
+				{
+					if (one_seq_count == 5)
+						position--; // bit-destuff
 					one_seq_count = 0;
 				}
 
-				if (position == MaxBits || (QuickReset && canStop(position))) NextState(State::TRAINING, 0);
+				if (position == MaxBits || (QuickReset && canStop(position)))
+					NextState(State::TRAINING, 0);
 				break;
 
 			default:

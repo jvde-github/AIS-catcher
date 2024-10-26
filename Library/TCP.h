@@ -48,6 +48,8 @@
 #include <netinet/in.h>
 #endif
 
+#include "Common.h"
+
 namespace TCP {
 
 	class ServerConnection {
@@ -161,7 +163,7 @@ namespace TCP {
 		bool reconnect() {
 			disconnect();
 			if (connect(host, port, persistent, timeout)) {
-				std::cerr << "TCP (" << host << ":" << port << "): connected." << std::endl;
+				Info() << "TCP (" << host << ":" << port << "): connected.";
 				return true;
 			}
 			return false;

@@ -93,7 +93,7 @@ namespace N2K {
 
 		void addInput(Callback<tN2kMsg>* cb) {
 			if (running) {
-				std::cerr << "NMEA2000: addOutput: cannot add input while running" << std::endl;
+				Error() << "NMEA2000: addOutput: cannot add input while running" ;
 				StopRequest();
 				return;
 			}
@@ -103,7 +103,7 @@ namespace N2K {
 
 		void addOutput() {
 			if (running) {
-				std::cerr << "NMEA2000: addOutput: cannot add output while running" << std::endl;
+				Error() << "NMEA2000: addOutput: cannot add output while running" ;
 				StopRequest();
 				return;
 			}

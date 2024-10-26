@@ -50,7 +50,7 @@ namespace AIS {
 				}
 
 			if (interpolated)
-				std::cerr << "Warning: sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." << std::endl;
+				Warning() << "Warning: sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." ;
 
 			US.setParams(sample_rate, bucket);
 
@@ -133,7 +133,7 @@ namespace AIS {
 				}
 
 			if (interpolated)
-				std::cerr << "Warning: sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." << std::endl;
+				Warning() << "sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." ;
 
 			US.setParams(sample_rate, bucket);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
