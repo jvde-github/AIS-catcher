@@ -1,5 +1,4 @@
 var interval,
-    aboutMDpresent = false,
     hist,
     ships,
     paths = {},
