@@ -482,12 +482,12 @@ namespace TCP {
 	void Client::updateState() {
 
 		if (state == READY && reset_time > 0 && (long)time(nullptr) - (long)stamp > reset_time * 60) {
-			Info() << "TCP (" << host << ":" << port << "): connection expired, reconnect." ;
+			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect." ;
 			reconnect();
 		}
 		else if (state == DISCONNECTED) {
 			if ((long)time(nullptr) - (long)stamp > 10) {
-				Info() << "TCP (" << host << ":" << port << "): not connected, reconnecting." ;
+				Warning() << "TCP (" << host << ":" << port << "): not connected, reconnecting." ;
 				reconnect();
 			}
 		}
@@ -495,7 +495,7 @@ namespace TCP {
 			bool connected = isConnected(0);
 
 			if (connected) {
-				Info() << "TCP (" << host << ":" << port << "): connected to server." ;
+				Warning() << "TCP (" << host << ":" << port << "): connected to server." ;
 			}
 			else if ((long)time(nullptr) - (long)stamp > 10) {
 				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect." ;
