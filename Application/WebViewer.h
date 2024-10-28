@@ -70,6 +70,8 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	bool GeoJSON = false;
 	bool supportPrometheus = false;
 	bool thread_running = false;
+	bool aboutPresent = false;
+	
 	std::vector<char> binary;
 
 	std::string params;

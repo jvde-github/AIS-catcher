@@ -515,7 +515,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	}
 	else if (r == "/plugins.js")
 	{
-		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false")  + ";\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
 	else if (r == "/config.css")
 	{
@@ -775,8 +775,8 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "ABOUT")
 	{
 		Info() << "Server: about context from " << arg ;
-		plugins += "aboutMDpresent = true;";
 		about = Util::Helper::readFile(arg);
+		aboutPresent = true;
 	}
 	else if (option == "PROME")
 	{
