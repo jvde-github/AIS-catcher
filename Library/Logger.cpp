@@ -10,7 +10,7 @@
 #include <io.h>
 #else
 #include <unistd.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #endif
@@ -31,7 +31,7 @@ Logger::Logger(const std::string& filename, bool log_to_console, bool log_to_fil
 	: log_file_name_(filename), log_to_console_(log_to_console), log_to_file_(log_to_file) {
 	if (log_to_file_) {
 		// Changed from append mode to overwrite mode
-		file_stream_.open(log_file_name_, std::ios::out | std::ios::binary);
+		file_stream_.open(log_file_name_, std::ios::out | std::ios::app | std::ios::binary);
 		if (!file_stream_) {
 			std::cerr << "Logger Error: Failed to open log file: " << log_file_name_ << std::endl;
 			log_to_file_ = false; // Disable file logging if opening fails
@@ -245,7 +245,7 @@ void Logger::setLogToFile(bool enable, const std::string& filename) {
 		}
 		// Open file stream if not open
 		if (!file_stream_.is_open()) {
-			file_stream_.open(log_file_name_, std::ios::out | std::ios::binary);
+			file_stream_.open(log_file_name_, std::ios::out | std::ios::app | std::ios::binary);
 			if (!file_stream_) {
 				std::cerr << "Logger Error: Failed to open log file: " << log_file_name_ << std::endl;
 				log_to_file_ = false;
