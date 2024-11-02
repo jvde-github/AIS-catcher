@@ -88,7 +88,7 @@ When you first access the interface, use the default credentials (username: `adm
 
 ![Password Change](https://github.com/user-attachments/assets/bce2f1e6-cd6f-4c29-af52-03c90c72d04c)
 
-### Input Device Configuration
+### Input Device Selection
 
 In the Input section of the web GUI, you'll need to select your input device. The interface allows you to select from any connected devices or manually specify a device type and serial number. If you're using a single SDR device, you can leave the device selection as 'None', and AIS-catcher will automatically use the available device.
 
