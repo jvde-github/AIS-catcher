@@ -220,7 +220,7 @@ setup_configuration() {
 
 
     if [[ ! -f "$CONFIG_FILE" ]]; then
-        echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","biastee":false,"rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
+        echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
     fi
     
     if [[ ! -f "$CMD_FILE" ]]; then
