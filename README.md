@@ -47,7 +47,7 @@ This tutorial will guide you through the process of installing and running AIS-c
 
 ## Setting Up the Raspberry Pi
 
-The first step in setting up AIS-catcher is preparing your Raspberry Pi. Begin by downloading and installing the Raspberry Pi Imager from the [official website](https://www.raspberrypi.com/software/). Once installed, launch the Raspberry Pi Imager application. In the application, you'll need to select your preferred Raspberry Pi OS version and choose the SD card you've inserted as your storage device.
+The first step in setting up the AIS receiver is preparing your Raspberry Pi if not already done. Begin by downloading and installing the Raspberry Pi Imager from the [official website](https://www.raspberrypi.com/software/). Once installed, launch the Raspberry Pi Imager application. In the application, you'll need to select your preferred Raspberry Pi OS version and choose the SD card you've inserted as your storage device.
 
 Before writing the image, access the advanced options by clicking the settings gear icon. Here, you'll need to configure several important settings. Enable SSH access to allow remote connections to your Pi. Set up a hostname for your device (for example, 'zerowh') and create your username and password credentials. Don't forget to configure your Wi-Fi settings by entering your network's SSID and password.
 
