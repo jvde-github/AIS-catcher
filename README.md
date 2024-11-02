@@ -97,9 +97,9 @@ In the Input section of the web GUI, you'll need to select your input device. Th
 
 ### Output Settings
 
-AIS-catcher offers the ability to share your data with the aiscatcher.org community. Navigate to the Output > Community section to enable this feature. By default, sharing is anonymous, but you can generate and enter a sharing key to associate the data with your station and view statistics.
+AIS-catcher offers the ability to share your data with the aiscatcher.org community. Navigate to the Output > Community section to enable this feature. By default, sharing is anonymous, but you can generate and enter a sharing key to associate the data with your station and view statistics. If you want to create a sharing key click "Create" and this will take you to the page on aiscatcher.org where you can set up a station and receive a sharing key.
 
-![Community Sharing](https://github.com/user-attachments/assets/b04c5889-f783-416f-a774-5ca0b430c538)
+![image](https://github.com/user-attachments/assets/52252f59-5bbb-4bb6-b728-a769a0860b73)
 
 The web viewer configuration can be found under Output > Web Viewer. Here, you should activate the viewer and enter your station details, including a name and your geographical coordinates.
 
