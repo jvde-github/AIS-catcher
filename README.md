@@ -107,7 +107,7 @@ The web viewer configuration can be found under Output > Web Viewer. Here, you s
 
 ### Device Settings
 
-Specific device settings for your SDR or other input device can be set in the Device section. 
+Specific device settings for your SDR or other input device can be set in the Devices section. 
 
 ### Service Control
 
