@@ -6,153 +6,99 @@ This tutorial will guide you through the process of installing and running AIS-c
 - [Setting Up the Raspberry Pi](#setting-up-the-raspberry-pi)
 - [Installing AIS-catcher](#installing-ais-catcher)
 - [Configuring AIS-catcher via the Web GUI](#configuring-ais-catcher-via-the-web-gui)
-  - [Accessing the Web GUI](#accessing-the-web-gui)
-  - [Setting Up the Input Device](#setting-up-the-input-device)
-  - [Configuring Output Settings](#configuring-output-settings)
-  - [Starting the AIS-catcher Service](#starting-the-ais-catcher-service)
 - [Accessing the AIS Web Viewer](#accessing-the-ais-web-viewer)
 - [Conclusion](#conclusion)
 
 ## Setting Up the Raspberry Pi
 
-1. **Install Raspberry Pi OS:**
-   - Download and install the Raspberry Pi Imager from [here](https://www.raspberrypi.com/software/).
-   - Launch the Raspberry Pi Imager and select:
-     - Operating System: Choose your preferred Raspberry Pi OS version
-     - Storage: Select the SD card you have inserted
+The first step in setting up AIS-catcher is preparing your Raspberry Pi. Begin by downloading and installing the Raspberry Pi Imager from the [official website](https://www.raspberrypi.com/software/). Once installed, launch the Raspberry Pi Imager application. In the application, you'll need to select your preferred Raspberry Pi OS version and choose the SD card you've inserted as your storage device.
 
-2. **Configure Advanced Options:**
-   - Click on the Settings (gear icon) to access advanced options
-   - Configure the following:
-     - Enable SSH: Check this option to enable SSH access
-     - Set Hostname: For example, `zerowh`
-     - Set Username and Password: For example, username `jasper`
-     - Configure Wi-Fi: Enter your Wi-Fi SSID and password
+Before writing the image, access the advanced options by clicking the settings gear icon. Here, you'll need to configure several important settings. Enable SSH access to allow remote connections to your Pi. Set up a hostname for your device (for example, 'zerowh') and create your username and password credentials. Don't forget to configure your Wi-Fi settings by entering your network's SSID and password.
 
-3. **Boot the Raspberry Pi:**
-   - Insert the SD card into the Raspberry Pi and power it on
-   - Once booted, you can access it via terminal or SSH:
-     ```bash
-     ssh jasper@zerowh
-     ```
+After configuring these settings, insert the SD card into your Raspberry Pi and power it on. Once the system has booted, you can connect to it via SSH using a terminal. For example, if you used the hostname 'zerowh' and username 'jasper', you would connect using:
+
+```bash
+ssh jasper@zerowh
+```
 
 ## Installing AIS-catcher
 
-To install or update AIS-catcher, run the following command on your Raspberry Pi:
+Installing AIS-catcher is straightforward using the provided installation script. Open your terminal and run the following command:
 
 ```bash
 sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install)"
 ```
 
-This script will:
-- Install AIS-catcher and its configuration files
-- Set up a system service to run AIS-catcher in the background
-- Compile the program optimized for your device
-- Install drivers from source for compatibility with devices like the RTL-SDR V4
+This installation script performs several important tasks. It installs AIS-catcher along with its configuration files, sets up a system service to run AIS-catcher in the background, compiles the program with optimizations for your specific device, and installs necessary drivers from source for compatibility with devices like the RTL-SDR V4.
 
-> **Note:** Installation may take some time on less powerful devices due to the compilation process.
+> **Note:** Be patient during the installation process, as compilation can take considerable time on less powerful devices.
 
-After installation, you can verify the installation by running:
+To verify that the installation was successful, you can run the following command:
 ```bash
 AIS-catcher -h
 ```
 
 ## Configuring AIS-catcher via the Web GUI
 
-For basic configuration, AIS-catcher provides a simple web-based GUI.
+AIS-catcher provides a web-based graphical user interface for easy configuration. It needs to be installed as a separate service by entering in the terminal:
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/jvde-github/AIS-catcher-control/main/install_ais_catcher_control.sh)"
+```
+To access it, open your web browser and navigate to your Raspberry Pi's IP address on port 8110 (for example, `http://zerowh:8110`). 
 
-### Accessing the Web GUI
+![Login Screen](https://github.com/user-attachments/assets/2c10c830-84e2-42b1-bb67-9300be6d53be)
 
-1. **Open a Web Browser:**
-   - Navigate to `http://<raspberry_pi_ip>:8110`
-   - Example: `http://zerowh:8110`
+When you first access the interface, use the default credentials (username: `admin`, password: `admin`). You'll be prompted to change this password immediately for security purposes.
 
-2. **Log In:**
-   - Username: `admin`
-   - Password: `admin`
+![Password Change](https://github.com/user-attachments/assets/bce2f1e6-cd6f-4c29-af52-03c90c72d04c)
 
-3. **Change the Default Password:**
-   - After logging in, you will be prompted to set a new secure password
+### Input Device Configuration
 
-### Setting Up the Input Device
+In the Input section of the web GUI, you'll need to configure your SDR device. The interface allows you to select from any connected devices or manually specify a device type and serial number. If you're using a single SDR device, you can leave the device selection as 'None', and AIS-catcher will automatically use the available device.
 
-1. **Navigate to the Input Section:**
-   - Click on the Input tab in the GUI
+![Input Configuration](https://github.com/user-attachments/assets/b960cc3e-276a-403f-acf9-50734886374f)
 
-2. **Select Your SDR Device:**
-   - Click on Select Device to choose from connected devices
-   - Alternatively, manually enter the device type or serial number
-   - If you leave Device as None and don't provide a serial number, AIS-catcher will use any connected device (suitable if only one SDR is connected)
+### Output Settings
 
-3. **Save the Configuration:**
-   - Click on Save to update the configuration file
-   - Note: Changes take effect after restarting the AIS-catcher service
+AIS-catcher offers the ability to share your data with the aiscatcher.org community. Navigate to the Output > Community section to enable this feature. By default, sharing is anonymous, but you can generate and enter a sharing key to associate the data with your station and view statistics.
 
-### Configuring Output Settings
+![Community Sharing](https://github.com/user-attachments/assets/b04c5889-f783-416f-a774-5ca0b430c538)
 
-#### Sharing Data with AIScatcher.org
+The web viewer configuration can be found under Output > Web Viewer. Here, you should activate the viewer and enter your station details, including a name and your geographical coordinates.
 
-1. **Navigate to Output > Community:**
-   - Click on the Output tab and select Community
+![Web Viewer Settings](https://github.com/user-attachments/assets/c6fc1a5f-c47d-41b2-96b1-82308eea2b14)
 
-2. **Enable Data Sharing:**
-   - Check the option to share your data with AIScatcher.org (anonymous by default)
+### Service Control
 
-3. **Enter Sharing Key (Optional):**
-   - To associate your station and view statistics:
-     - Click on Create to generate a sharing key on AIScatcher.org
-     - Enter the provided sharing key in the GUI
+The Control section is where you manage the AIS-catcher service. Here you can start and stop the service, enable auto-start functionality, and monitor the service status through the log display. 
 
-#### Setting Up the Web Viewer
+> **Note:** After any modification to the settings the changes need to be saved and the program needs to be (re)started for the changes to become effective.
 
-1. **Navigate to Output > Web Viewer:**
-   - Click on Web Viewer under the Output tab
-
-2. **Configure the Web Viewer:**
-   - Activate: Ensure the web viewer is active
-   - Station Name: Enter a name for your station
-   - Latitude and Longitude: Provide your station's coordinates
-
-### Starting the AIS-catcher Service
-
-1. **Navigate to the Control Section:**
-   - Click on the Control tab
-
-2. **Start the Service:**
-   - Click on Start to run AIS-catcher
-   - The Log section will display real-time feedback
-
-3. **Enable Auto-Start:**
-   - Toggle Auto-Start to automatically run AIS-catcher at boot and restart it if it stops unexpectedly
-
-4. **Monitor Service Status:**
-   - The Control page displays the current status and any error messages
+![Service Control](https://github.com/user-attachments/assets/d6cfc5d6-6c7a-4cd7-90a6-67772077afd3)
 
 ## Accessing the AIS Web Viewer
 
-With AIS-catcher running, you can view the received AIS data through the web viewer.
+Once AIS-catcher is running, you can view your received AIS data through the web viewer. Access it by navigating to your Raspberry Pi's IP address on port 8100 (for example, `http://zerowh:8100`). The viewer provides a real-time display of AIS messages and vessel positions, allowing you to verify that your setup is working correctly.
 
-1. **Open a Web Browser:**
-   - Navigate to `http://<raspberry_pi_ip>:8100`
-   - Example: `http://zerowh:8100`
-
-2. **View AIS Data:**
-   - The web viewer displays real-time AIS messages and vessel positions
-   - Use this interface to verify that your setup is functioning correctly
+![AIS Web Viewer](https://github.com/user-attachments/assets/d81ac931-81dc-43d4-aba3-b6de2641953f)
 
 ## Conclusion
 
-You have successfully installed and configured AIS-catcher on your Raspberry Pi. Your station is now receiving AIS messages and, if configured, sharing data with AIScatcher.org. You can monitor vessel traffic in real-time using the web viewer.
+With these steps completed, you now have a fully functional AIS receiving station running on your Raspberry Pi. The system will receive AIS messages from nearby vessels and, if configured, share this data with the AIScatcher.org community. You can monitor vessel traffic in real-time through the web viewer interface.
 
-For advanced configurations, you can edit the JSON configuration file located at:
+For advanced users who want to fine-tune their setup, AIS-catcher provides two configuration files:
+
+The JSON configuration file at:
 ```bash
 /etc/AIS-catcher/config.json
 ```
 
-Or modify command-line parameters in:
+And the command-line parameters file at:
 ```bash
 /etc/AIS-catcher/config.cmd
 ```
+
+> **Note:** The GUI script can also be run for existing installations that are based on the AIS-catcher install script. But once configuration files are manually edited they cannot be edited via the HTML forms anymore. The configuration files still can be edited though under the advanced options menu. 
 
 ### References:
 - [AIS-catcher GitHub Repository](https://github.com/jvde-github/AIS-catcher)
