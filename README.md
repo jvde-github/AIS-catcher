@@ -56,6 +56,7 @@ After configuring these settings, insert the SD card into your Raspberry Pi and 
 ```bash
 ssh jasper@zerowh
 ```
+For Windows systems you could use [https://www.putty.org/](PuTTy). 
 
 ## Installing AIS-catcher
 
