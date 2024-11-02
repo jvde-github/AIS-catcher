@@ -90,7 +90,7 @@ When you first access the interface, use the default credentials (username: `adm
 
 ### Input Device Configuration
 
-In the Input section of the web GUI, you'll need to configure your SDR device. The interface allows you to select from any connected devices or manually specify a device type and serial number. If you're using a single SDR device, you can leave the device selection as 'None', and AIS-catcher will automatically use the available device.
+In the Input section of the web GUI, you'll need to select your input device. The interface allows you to select from any connected devices or manually specify a device type and serial number. If you're using a single SDR device, you can leave the device selection as 'None', and AIS-catcher will automatically use the available device.
 
 ![Input Configuration](https://github.com/user-attachments/assets/b960cc3e-276a-403f-acf9-50734886374f)
 
@@ -103,6 +103,10 @@ AIS-catcher offers the ability to share your data with the aiscatcher.org commun
 The web viewer configuration can be found under Output > Web Viewer. Here, you should activate the viewer and enter your station details, including a name and your geographical coordinates.
 
 ![Web Viewer Settings](https://github.com/user-attachments/assets/c6fc1a5f-c47d-41b2-96b1-82308eea2b14)
+
+### Device Settings
+
+Specific device settings for your SDR or other input device can be set in the Device section. 
 
 ### Service Control
 
