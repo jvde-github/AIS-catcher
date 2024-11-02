@@ -220,34 +220,13 @@ setup_configuration() {
 
 
     if [[ ! -f "$CONFIG_FILE" ]]; then
-        echo '{ "config": "aiscatcher", "version": 1, "sharing": true }' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
+        echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","biastee":false,"rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
     fi
     
     if [[ ! -f "$CMD_FILE" ]]; then
         cat << EOF | tee "$CMD_FILE" > /dev/null || error_exit "Failed to create config.cmd"
 # AIS-catcher configuration
-# Uncomment and modify options as needed
 
-# Select device for decoding
-# -d:0
-
-# Share feed with aiscatcher.org, add UUID from aiscatcher.org (optional)
-# -X
-
-# Open webviewer at port 8100
-# -N 8100 CDN ${CONFIG_DIR}/webassets
-
-# Uncomment to set location and allow viewing in webviewer
-# LAT 12.3 LON 4.3 SHARE_LOC ON
-
-# Uncomment and add to share data via UDP (multiple allowed)
-# -u 127.0.0.1 10110
-
-# Uncomment and add to share data via TCP
-# -P 127.0.0.1 10111
-
-# Uncomment to set up a TCP listening server
-# -S 5012
 EOF
     fi
 }
