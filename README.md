@@ -30,22 +30,22 @@ To join, ensure you're on the latest version, visit [aiscatcher.org](https://ais
 
 Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We welcome your innovative ideas for enhancing AIS-catcher with this collective data, which could lead to new features or improvements benefiting the entire community.
   
-## General Installation
+# General Installation
 
 Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry. Note that issues have reported for the latest Windows build on Windows 10 where the [VC runtime libraries](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) where not up to date so please ensure you have the latest installed.
 
-## Quick Guide on turning a Raspberry Pi into a AIS receiver
+# Quick Guide on turning a Raspberry Pi into a AIS receiver
 
 This tutorial will guide you through the process of installing and running AIS-catcher on a Raspberry Pi. AIS-catcher is a software tool used to receive and decode Automatic Identification System (AIS) messages from ships, using Software Defined Radio (SDR) devices like the RTL-SDR dongle.
 
-### Table of Contents
+## Table of Contents
 - [Setting Up the Raspberry Pi](#setting-up-the-raspberry-pi)
 - [Installing AIS-catcher](#installing-ais-catcher)
 - [Configuring AIS-catcher via the Web GUI](#configuring-ais-catcher-via-the-web-gui)
 - [Accessing the AIS Web Viewer](#accessing-the-ais-web-viewer)
 - [Conclusion](#conclusion)
 
-### Setting Up the Raspberry Pi
+## Setting Up the Raspberry Pi
 
 The first step in setting up AIS-catcher is preparing your Raspberry Pi. Begin by downloading and installing the Raspberry Pi Imager from the [official website](https://www.raspberrypi.com/software/). Once installed, launch the Raspberry Pi Imager application. In the application, you'll need to select your preferred Raspberry Pi OS version and choose the SD card you've inserted as your storage device.
 
@@ -57,7 +57,7 @@ After configuring these settings, insert the SD card into your Raspberry Pi and 
 ssh jasper@zerowh
 ```
 
-### Installing AIS-catcher
+## Installing AIS-catcher
 
 Installing AIS-catcher is straightforward using the provided installation script. Open your terminal and run the following command:
 
@@ -74,7 +74,7 @@ To verify that the installation was successful, you can run the following comman
 AIS-catcher -h
 ```
 
-### Configuring AIS-catcher via the Web GUI
+## Configuring AIS-catcher via the Web GUI
 
 AIS-catcher provides a web-based graphical user interface for easy configuration. It needs to be installed as a separate service by entering in the terminal:
 ```bash
@@ -88,13 +88,13 @@ When you first access the interface, use the default credentials (username: `adm
 
 ![Password Change](https://github.com/user-attachments/assets/bce2f1e6-cd6f-4c29-af52-03c90c72d04c)
 
-#### Input Device Configuration
+### Input Device Configuration
 
 In the Input section of the web GUI, you'll need to configure your SDR device. The interface allows you to select from any connected devices or manually specify a device type and serial number. If you're using a single SDR device, you can leave the device selection as 'None', and AIS-catcher will automatically use the available device.
 
 ![Input Configuration](https://github.com/user-attachments/assets/b960cc3e-276a-403f-acf9-50734886374f)
 
-#### Output Settings
+### Output Settings
 
 AIS-catcher offers the ability to share your data with the aiscatcher.org community. Navigate to the Output > Community section to enable this feature. By default, sharing is anonymous, but you can generate and enter a sharing key to associate the data with your station and view statistics.
 
@@ -104,7 +104,7 @@ The web viewer configuration can be found under Output > Web Viewer. Here, you s
 
 ![Web Viewer Settings](https://github.com/user-attachments/assets/c6fc1a5f-c47d-41b2-96b1-82308eea2b14)
 
-#### Service Control
+### Service Control
 
 The Control section is where you manage the AIS-catcher service. Here you can start and stop the service, enable auto-start functionality, and monitor the service status through the log display. 
 
@@ -112,13 +112,13 @@ The Control section is where you manage the AIS-catcher service. Here you can st
 
 ![Service Control](https://github.com/user-attachments/assets/d6cfc5d6-6c7a-4cd7-90a6-67772077afd3)
 
-### Accessing the AIS Web Viewer
+## Accessing the AIS Web Viewer
 
 Once AIS-catcher is running, you can view your received AIS data through the web viewer. Access it by navigating to your Raspberry Pi's IP address on port 8100 (for example, `http://zerowh:8100`). The viewer provides a real-time display of AIS messages and vessel positions, allowing you to verify that your setup is working correctly.
 
 ![AIS Web Viewer](https://github.com/user-attachments/assets/d81ac931-81dc-43d4-aba3-b6de2641953f)
 
-### Conclusion
+## Conclusion
 
 With these steps completed, you now have a fully functional AIS receiving station running on your Raspberry Pi. The system will receive AIS messages from nearby vessels and, if configured, share this data with the AIScatcher.org community. You can monitor vessel traffic in real-time through the web viewer interface.
 
@@ -136,7 +136,7 @@ And the command-line parameters file at:
 
 > **Note:** The GUI script can also be run for existing installations that are based on the AIS-catcher install script. But once configuration files are manually edited they cannot be edited via the HTML forms anymore. The configuration files still can be edited though under the advanced options menu. 
 
-### References:
+## References:
 - [AIS-catcher GitHub Repository](https://github.com/jvde-github/AIS-catcher)
 - [Raspberry Pi Official Website](https://www.raspberrypi.com/)
 
@@ -144,10 +144,10 @@ And the command-line parameters file at:
 
 
 
-### Installing on a Raspberry Pi/Ubuntu/Debian Systems without HTML interface
+# Basic Installation on a Raspberry Pi/Ubuntu/Debian Systems
 
 This guide provides instructions for installing AIS-catcher on Debian-based systems (like Raspberry Pi) and setting it up to run as a background service. This ensures AIS-catcher will automatically start when the machine is booted.
-#### Installation
+## Installation
 
 To install AIS-catcher via a script, open a terminal or log in via SSH, then run the following command:
 ```console
@@ -163,7 +163,7 @@ sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/jvde-github/AIS-catc
 ```
 The advantage that this avoids an compilation step which can save quite a bit of time on older Raspberry devices but it does not optimize the binaries for the specific hardware and ***is not compatible with the RTL-SDR V4***.
 
-#### Verifying the installation
+### Verifying the installation
 
 To verify that AIS-catcher is installed or updated, run:
 ```console
@@ -175,7 +175,7 @@ Now (re)connect the dongle and you can start playing with the various command li
 ```
 If all works, you should start seeing NMEA lines on screen and have an active webviewer at the aforementioned address.
 
-#### Configuration
+### Configuration
 
 For running AIS-catcher as a background service we can use two configuration files:
 
@@ -187,7 +187,7 @@ The simplest approach is to edit the configuration file /etc/AIS-catcher/config.
 sudo nano /etc/AIS-catcher/config.cmd
 ```
 
-#### Running AIS-catcher as a Background Service
+### Running AIS-catcher as a Background Service
 
 To start AIS-catcher as a background service use the following command:
 ```console
@@ -201,7 +201,7 @@ To ensure AIS-catcher starts automatically at boot time, enable the service with
 ```console
 sudo systemctl enable ais-catcher.service
 ```
-#### Feedback
+### Feedback
 This is fairly new script and under development so any feedback is appreciated. 
 
 ![image](https://github.com/user-attachments/assets/1be6abdb-7df2-4f4b-8d73-1740e0476013)
