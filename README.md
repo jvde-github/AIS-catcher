@@ -23,10 +23,7 @@ The purpose of `AIS-catcher` is to serve as a platform that encourages the perpe
 
 AIS-catcher is a free, open-source project aimed at transforming SDR-equipped computers into AIS-receivers. It's continuously improved with decoding enhancements, user support, and expanded output options for commercial data aggregators. As a seperate project we also aggregate AIS data with the aim of real-time visualization in local web dashboards, enhancing receiver performance and situational awareness by integrating nearby station data.
 
-To join, ensure you're on the latest version, visit [aiscatcher.org](https://aiscatcher.org), and [add](https://aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers. Below, you can see how it integrates with your local dashboard. The grey ship icons represent vessels not directly received by this particular station but detected by nearby stations.
-<p align="center">
-<img src="https://github.com/jvde-github/AIS-catcher/assets/52420030/58a9f701-afbb-42f4-9751-6f2be8fd1b6f.png" width="30%"/>
-</p>
+To join, ensure you're on the latest version, visit [aiscatcher.org](https://aiscatcher.org), and [add](https://aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers and some other features.
 
 Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We welcome your innovative ideas for enhancing AIS-catcher with this collective data, which could lead to new features or improvements benefiting the entire community.
   
@@ -101,13 +98,17 @@ AIS-catcher offers the ability to share your data with the aiscatcher.org commun
 
 ![image](https://github.com/user-attachments/assets/52252f59-5bbb-4bb6-b728-a769a0860b73)
 
-The web viewer configuration can be found under Output > Web Viewer. Here, you should activate the viewer and enter your station details, including a name and your geographical coordinates.
+#### Local Webviewer
+
+The local web viewer configuration can be found under Output > Web Viewer. Here, you should activate the viewer and enter your station details, including a name and your geographical coordinates.
 
 ![Web Viewer Settings](https://github.com/user-attachments/assets/c6fc1a5f-c47d-41b2-96b1-82308eea2b14)
 
+This local webviewer is available from your Raspberry device (e.g. in this example at port 8100, hence can be accessed with `http://zerowh:8100` in the browser) and not by default accessible outside the local network. Some users share their webviewer externally, see [https://aiscatcher.org/dashboards](here) for some examples. The station page that you feed to aiscatcher.org with a sharing key is visible for the outside world.
+
 ### Device Settings
 
-Specific device settings for your SDR or other input device can be set in the Devices section. 
+Specific device settings for your SDR or other input device can be set in the Devices section. Currently there are tabs to configure the RTL-SDR, AirSpy HF+ and input via TCP.
 
 ### Service Control
 
@@ -119,7 +120,7 @@ The Control section is where you manage the AIS-catcher service. Here you can st
 
 ## Accessing the AIS Web Viewer
 
-Once AIS-catcher is running, you can view your received AIS data through the web viewer. Access it by navigating to your Raspberry Pi's IP address on port 8100 (for example, `http://zerowh:8100`). The viewer provides a real-time display of AIS messages and vessel positions, allowing you to verify that your setup is working correctly.
+Press start in the Control section and ensure that it is running without errors (see the log). Once AIS-catcher is running, you can view your received AIS data through the aforementioned local web viewer. Access it by navigating to your Raspberry Pi's IP address on port 8100 (for example, `http://zerowh:8100`). The viewer provides a real-time display of AIS messages and vessel positions, allowing you to verify that your setup is working correctly. Another option is to have a quick view by choosing the Webviewer menu item in the Control pages.
 
 ![AIS Web Viewer](https://github.com/user-attachments/assets/d81ac931-81dc-43d4-aba3-b6de2641953f)
 
