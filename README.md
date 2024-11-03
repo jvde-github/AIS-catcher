@@ -104,7 +104,7 @@ The local web viewer configuration can be found under Output > Web Viewer. Here,
 
 ![Web Viewer Settings](https://github.com/user-attachments/assets/c6fc1a5f-c47d-41b2-96b1-82308eea2b14)
 
-This local webviewer is available from your Raspberry device (e.g. in this example at port 8100, hence can be accessed with `http://zerowh:8100` in the browser) and not by default accessible outside the local network. Some users share their webviewer externally, see [https://aiscatcher.org/dashboards](here) for some examples. The station page that you feed to aiscatcher.org with a sharing key is visible for the outside world.
+This local webviewer is available from your Raspberry device (e.g. in this example at port 8100, hence can be accessed with `http://zerowh:8100` in the browser) and not by default accessible outside the local network. Some users share their webviewer externally, see [here](https://aiscatcher.org/dashboards) for some examples. The station page that you feed to aiscatcher.org with a sharing key is visible for the outside world.
 
 ### Device Settings
 
