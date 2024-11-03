@@ -29,7 +29,7 @@ Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We w
   
 # General Installation
 
-Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry. Note that issues have reported for the latest Windows build on Windows 10 where the [VC runtime libraries](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) where not up to date so please ensure you have the latest installed.
+Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry. Note that issues have reported for the latest Windows build on Windows 10 where the [VC runtime libraries](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) where not up to date so please ensure you have the latest installed. In the next chapters we show quick star guides for setting up AIS-catcher on the Raspberry Pi with a web interface for configuration, and secondly a simple script to do a full installation on Debain-based systems. 
 
 # Quick Guide on turning a Raspberry Pi into a AIS receiver
 
