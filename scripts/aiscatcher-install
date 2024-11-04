@@ -17,6 +17,10 @@ readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 readonly INCLUDE_DIRS=("/usr/local/include" "/usr/include" "/opt/include" "/opt/local/include")
 readonly LIBRARY_DIRS=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
 
+# Global variables
+DEBUG_BUILD=false
+INSTALL_PACKAGE=false
+
 # Logger function
 log() {
     local level="$1"
@@ -177,10 +181,20 @@ build_ais_catcher() {
 
     git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 || error_exit "Failed to download AIS-catcher"
     cd AIS-catcher
-    ./scripts/build-NMEA2000.sh
+
+    if [ "$DEBUG_BUILD" = true ]; then
+        log "INFO" "including debug symbols"
+        ./scripts/build-NMEA2000.sh -d
+    else
+        log "INFO" "excluding debug symbols"
+        ./scripts/build-NMEA2000.sh
+    fi
+    
     cd ..
     cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 }
+
+
 
 install_plugins() {
     log "INFO" "Installing plugins"
@@ -217,7 +231,6 @@ setup_configuration() {
     mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
 
     download_webassets || error_exit "Failed to download webassets"
-
 
     if [[ ! -f "$CONFIG_FILE" ]]; then
         echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
@@ -376,8 +389,28 @@ main() {
         log "WARN" "No package available for this system"
     fi
 
-    # Check for -p flag
-    if [[ "$@" == *"-p"* ]]; then
+    # Parse command-line arguments
+    while [[ $# -gt 0 ]]; do
+        key="$1"
+
+        case $key in
+            -d|--debug)
+            DEBUG_BUILD=true
+            log "INFO" "Debug build requested"
+            shift # past argument
+            ;;
+            -p|--package)
+            log "INFO" "Package installation requested"
+            INSTALL_PACKAGE=true
+            shift # past argument
+            ;;
+            *)
+            shift # past unrecognized argument
+            ;;
+        esac
+    done
+    
+    if [ "$INSTALL_PACKAGE" = true ]; then
         if [ -n "$package" ]; then
             stop_disable_and_save_service_state
             install_from_package "$package"
@@ -392,9 +425,9 @@ main() {
         stop_disable_and_save_service_state
         build_ais_catcher
 
-        cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
         install_plugins
     fi
+
     setup_configuration
     setup_systemd_service        
     restore_service_state

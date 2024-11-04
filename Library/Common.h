@@ -32,6 +32,12 @@
 #define SleepSystem(x) usleep(x * 1000)
 #endif
 
+#ifdef DEBUG
+#define DBG(msg) std::cerr << "**** " << msg << std::endl;
+#else
+#define DBG(msg)
+#endif
+
 class tN2kMsg;
 
 void StopRequest();

@@ -24,25 +24,32 @@
 
 #include "TCP.h"
 
-namespace TCP {
+namespace TCP
+{
 
+	const int TCP::Server::MAX_CONN;
 	// TO DO: create a BaseSocket class and clean up between files Network (AC streamers) and TCP (low level TCP connections)
 
-	void ServerConnection::Lock() {
+	void ServerConnection::Lock()
+	{
 		is_locked = true;
 	}
 
-	void ServerConnection::Unlock() {
+	void ServerConnection::Unlock()
+	{
 		is_locked = false;
 	}
 
-	void ServerConnection::Close() {
+	void ServerConnection::Close()
+	{
 		std::lock_guard<std::mutex> lock(mtx);
 		CloseUnsafe();
 	}
 
-	void ServerConnection::CloseUnsafe() {
-		if (sock != -1) {
+	void ServerConnection::CloseUnsafe()
+	{
+		if (sock != -1)
+		{
 			closesocket(sock);
 			sock = -1;
 		}
@@ -50,58 +57,70 @@ namespace TCP {
 		out.clear();
 	}
 
-	void ServerConnection::Start(SOCKET s) {
+	void ServerConnection::Start(SOCKET s)
+	{
 		msg.clear();
 		out.clear();
 		stamp = std::time(nullptr);
 		sock = s;
 	}
 
-	int ServerConnection::Inactive(std::time_t now) {
+	int ServerConnection::Inactive(std::time_t now)
+	{
 		return (int)((long int)now - (long int)stamp);
 	}
 
-	void ServerConnection::Read() {
+	void ServerConnection::Read()
+	{
 		std::lock_guard<std::mutex> lock(mtx);
 
 		char buffer[1024];
 
-		if (isConnected()) {
+		if (isConnected())
+		{
 
 			int nread = recv(sock, buffer, sizeof(buffer), 0);
 #ifdef _WIN32
-			if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK)) {
+			if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK))
+			{
 				int e = WSAGetLastError();
 #else
-			if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN)) {
+			if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN))
+			{
 				int e = errno;
 #endif
 				if (nread < 0)
-					Error() << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock ;
+					Error() << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock;
 
 				CloseUnsafe();
 			}
-			else if (nread > 0) {
+			else if (nread > 0)
+			{
 				msg += std::string(buffer, nread);
 				stamp = std::time(0);
 			}
 		}
 	}
 
-	void ServerConnection::SendBuffer() {
+	void ServerConnection::SendBuffer()
+	{
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if (isConnected() && hasSendBuffer()) {
+		if (isConnected() && hasSendBuffer())
+		{
 
 			int bytes = ::send(sock, out.data(), out.size(), 0);
 
-			if (bytes < 0) {
+			if (bytes < 0)
+			{
 #ifdef _WIN32
-				if (WSAGetLastError() != WSAEWOULDBLOCK) {
+				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				{
 #else
-				if (errno != EWOULDBLOCK && errno != EAGAIN) {
+				if (errno != EWOULDBLOCK && errno != EAGAIN)
+				{
 #endif
-					Error() << "TCP Connection: error message to client: " << strerror(errno) ;
+					Error() << "TCP Connection: error message to client: " << strerror(errno);
 					CloseUnsafe();
 				}
 			}
@@ -111,34 +130,43 @@ namespace TCP {
 				out.clear();
 		}
 	}
-	bool ServerConnection::Send(const char* data, int length) {
+	bool ServerConnection::Send(const char *data, int length)
+	{
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if (!isConnected()) return false;
+		if (!isConnected())
+			return false;
 
-		if (out.size() + length > MAX_BUFFER_SIZE) return false;
+		if (out.size() + length > MAX_BUFFER_SIZE)
+			return false;
 
 		out.insert(out.end(), data, data + length);
 		return true;
 	}
 
-	bool ServerConnection::SendDirect(const char* data, int length) {
+	bool ServerConnection::SendDirect(const char *data, int length)
+	{
 		std::lock_guard<std::mutex> lock(mtx);
 
-		if (!isConnected()) return false;
+		if (!isConnected())
+			return false;
 
 		int bytes = 0;
 
-		if (!hasSendBuffer()) {
+		if (!hasSendBuffer())
+		{
 			bytes = ::send(sock, data, length, 0);
 
-			if (bytes < 0) {
+			if (bytes < 0)
+			{
 #ifdef _WIN32
-				if (WSAGetLastError() != WSAEWOULDBLOCK) {
+				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				{
 #else
-				if (errno != EWOULDBLOCK && errno != EAGAIN) {
+				if (errno != EWOULDBLOCK && errno != EAGAIN)
+				{
 #endif
-					Error() << "TCP Connection: error message to client: " << strerror(errno) ;
+					Error() << "TCP Connection: error message to client: " << strerror(errno);
 					CloseUnsafe();
 					return false;
 				}
@@ -154,88 +182,114 @@ namespace TCP {
 
 	// TCP Server
 
-	Server::~Server() {
+	Server::~Server()
+	{
 		stop = true;
-		if (run_thread.joinable()) run_thread.join();
-		if (sock != -1) closesocket(sock);
+		if (run_thread.joinable())
+			run_thread.join();
+		if (sock != -1)
+			closesocket(sock);
 	}
 
-	int Server::numberOfClients() {
+	int Server::numberOfClients()
+	{
 		int n = 0;
-		for (auto& c : client)
-			if (c.isConnected()) n++;
+		for (auto &c : client)
+			if (c.isConnected())
+				n++;
 		return n;
 	}
 
-	int Server::findFreeClient() {
+	int Server::findFreeClient()
+	{
 		for (int i = 0; i < MAX_CONN; i++)
-			if (!client[i].isLocked() && !client[i].isConnected()) return i;
+			if (!client[i].isLocked() && !client[i].isConnected())
+				return i;
 		return -1;
 	}
 
-	void Server::acceptClients() {
+	void Server::acceptClients()
+	{
 		int addrlen = sizeof(service);
 		SOCKET conn_socket;
 
-		conn_socket = accept(sock, (SOCKADDR*)&service, (socklen_t*)&addrlen);
+		conn_socket = accept(sock, (SOCKADDR *)&service, (socklen_t *)&addrlen);
 #ifdef _WIN32
-		if (conn_socket == SOCKET_ERROR) {
+		if (conn_socket == SOCKET_ERROR)
+		{
 			if (WSAGetLastError() != WSAEWOULDBLOCK)
-				Error() << "TCP listener: error accepting connection. " << strerror(WSAGetLastError()) ;
+				Error() << "TCP listener: error accepting connection. " << strerror(WSAGetLastError());
 			return;
 		}
 #else
-		if (conn_socket == -1) {
+		if (conn_socket == -1)
+		{
 			if (errno != EWOULDBLOCK && errno != EAGAIN)
-				Error() << "TCP Server: error accepting connection. " << strerror(errno) ;
+				Error() << "TCP Server: error accepting connection. " << strerror(errno);
 			return;
 		}
 #endif
-		else {
+		else
+		{
 			int ptr = findFreeClient();
-			if (ptr == -1) {
-				Error() << "TCP Server: max connections reached (" << MAX_CONN << ", closing socket." ;
+			if (ptr == -1)
+			{
+				Error() << "TCP Server: max connections reached (" << MAX_CONN << ", closing socket.";
 				closesocket(conn_socket);
 			}
-			else {
+			else
+			{
 				client[ptr].Start(conn_socket);
-				if (!setNonBlock(conn_socket)) {
-					Error() << "TCP Server: cannot make client socket non-blocking." ;
+				if (!setNonBlock(conn_socket))
+				{
+					Error() << "TCP Server: cannot make client socket non-blocking.";
 					client[ptr].Close();
 				}
 			}
 		}
 	}
 
-	void Server::cleanUp() {
+	void Server::cleanUp()
+	{
 
-		for (auto& c : client)
-			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout && !c.isLocked()) {
+		for (auto &c : client)
+			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout && !c.isLocked())
+			{
 				c.Close();
 			}
 	}
 
-	void Server::readClients() {
+	void Server::readClients()
+	{
 
-		for (auto& c : client) c.Read();
+		for (auto &c : client)
+			c.Read();
 	}
 
-	void Server::writeClients() {
+	void Server::writeClients()
+	{
 
-		for (auto& c : client) c.SendBuffer();
+		for (auto &c : client)
+			c.SendBuffer();
 	}
 
-	void Server::processClients() {
-		for (auto& c : client) {
-			if (c.isConnected()) {
+	void Server::processClients()
+	{
+		for (auto &c : client)
+		{
+			if (c.isConnected())
+			{
 				c.msg.clear();
 			}
 		}
 	}
 
-	void Server::Run() {
-		try {
-			while (!stop) {
+	void Server::Run()
+	{
+		try
+		{
+			while (!stop)
+			{
 				acceptClients();
 				readClients();
 				processClients();
@@ -246,13 +300,15 @@ namespace TCP {
 
 			Info() << "TCP Server: thread ending.\n";
 		}
-		catch (std::exception& e) {
-			Error() << "Server Run: " << e.what() ;
+		catch (std::exception &e)
+		{
+			Error() << "Server Run: " << e.what();
 			std::terminate();
 		}
 	}
 
-	void Server::SleepAndWait() {
+	void Server::SleepAndWait()
+	{
 		struct timeval tv;
 		fd_set fds, fdw;
 
@@ -263,27 +319,35 @@ namespace TCP {
 
 		int maxfds = sock;
 
-		for (auto& c : client) {
-			if (c.isConnected()) {
+		for (auto &c : client)
+		{
+			if (c.isConnected())
+			{
 				FD_SET(c.sock, &fds);
-				if (c.sock > maxfds) maxfds = c.sock;
+				if (c.sock > maxfds)
+					maxfds = c.sock;
 
-				if (c.hasSendBuffer()) {
+				if (c.hasSendBuffer())
+				{
 					FD_SET(c.sock, &fdw);
 				}
 			}
 		}
 
-		tv = { 1, 0 };
+		tv = {1, 0};
 		select(maxfds + 1, &fds, &fdw, NULL, &tv);
 	}
 
-	bool Server::SendAll(const std::string& m) {
-		for (auto& c : client) {
-			if (c.isConnected()) {
-				if (!c.Send(m.c_str(), m.length())) {
+	bool Server::SendAll(const std::string &m)
+	{
+		for (auto &c : client)
+		{
+			if (c.isConnected())
+			{
+				if (!c.Send(m.c_str(), m.length()))
+				{
 					c.Close();
-					Error() << "TCP listener: client not reading, close connection." ;
+					Error() << "TCP listener: client not reading, close connection.";
 					return false;
 				}
 			}
@@ -291,13 +355,15 @@ namespace TCP {
 		return true;
 	}
 
-	bool Server::setNonBlock(SOCKET s) {
+	bool Server::setNonBlock(SOCKET s)
+	{
 
 #ifndef _WIN32
 		int r = fcntl(s, F_GETFL, 0);
 		r = fcntl(s, F_SETFL, r | O_NONBLOCK);
 
-		if (r == -1) return false;
+		if (r == -1)
+			return false;
 #else
 		u_long mode = 1;
 		ioctlsocket(s, FIONBIO, &mode);
@@ -305,13 +371,16 @@ namespace TCP {
 		return true;
 	}
 
-	bool Server::start(int port) {
+	bool Server::start(int port)
+	{
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);
-		if (sock < 0) return false;
+		if (sock < 0)
+			return false;
 
 #ifndef _WIN32
-		if (reuse_port) {
+		if (reuse_port)
+		{
 			int optval = 1;
 			setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
 		}
@@ -320,47 +389,52 @@ namespace TCP {
 		service.sin_family = AF_INET;
 
 		// Conditional binding based on IP_BIND
-		if (!IP_BIND.empty()) {
+		if (!IP_BIND.empty())
+		{
 			service.sin_addr.s_addr = inet_addr(IP_BIND.c_str());
 		}
-		else {
+		else
+		{
 			service.sin_addr.s_addr = htonl(INADDR_ANY);
 		}
 
 		service.sin_port = htons(port);
 
-		int r = bind(sock, (SOCKADDR*)&service, sizeof(service));
-		if (r == SOCKET_ERROR) {
+		int r = bind(sock, (SOCKADDR *)&service, sizeof(service));
+		if (r == SOCKET_ERROR)
+		{
 			closesocket(sock);
 			sock = -1;
 			return false;
 		}
 
-		if (listen(sock, 511) < 0) return false;
+		if (listen(sock, 511) < 0)
+			return false;
 
-		for (auto& c : client) {
+		for (auto &c : client)
+		{
 			c.Close();
 			c.Unlock();
 		}
 
-		if (!setNonBlock(sock)) {
+		if (!setNonBlock(sock))
+		{
 			Error() << "TCP Server: cannot set socket to non-blocking\n";
 		}
 		stop = false;
 
-		if(IP_BIND.empty())
-			Info() << "TCP Server: start thread at port " << port ;
+		if (IP_BIND.empty())
+			Info() << "TCP Server: start thread at port " << port;
 		else
-			Info() << "TCP Server: start thread at IP " << IP_BIND << " port " << port ;
-
+			Info() << "TCP Server: start thread at IP " << IP_BIND << " port " << port;
 
 		run_thread = std::thread(&Server::Run, this);
 
 		return true;
 	}
 
-
-	void Client::disconnect() {
+	void Client::disconnect()
+	{
 		if (sock != -1)
 			closesocket(sock);
 
@@ -368,10 +442,11 @@ namespace TCP {
 		state = DISCONNECTED;
 	}
 
-	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive) {
+	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive)
+	{
 		int r;
 		struct addrinfo h;
-		struct addrinfo* address = nullptr;
+		struct addrinfo *address = nullptr;
 
 		this->host = host;
 		this->port = port;
@@ -388,30 +463,36 @@ namespace TCP {
 #endif
 
 		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
-		if (code != 0 || address == nullptr) return false;
+		if (code != 0 || address == nullptr)
+			return false;
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-		if (sock == -1) {
+		if (sock == -1)
+		{
 			freeaddrinfo(address);
 			return false;
 		}
 
 #ifndef _WIN32
-		if (keep_alive) {
+		if (keep_alive)
+		{
 			int optval = 1;
-			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1)
+			{
 				freeaddrinfo(address);
 				disconnect();
 				return false;
 			}
 		}
 #endif
-		if (persistent) {
+		if (persistent)
+		{
 #ifndef _WIN32
 			r = fcntl(sock, F_GETFL, 0);
 			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
 
-			if (r == -1) {
+			if (r == -1)
+			{
 				freeaddrinfo(address);
 				disconnect();
 				return false;
@@ -427,18 +508,21 @@ namespace TCP {
 		r = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
 		freeaddrinfo(address);
 
-		if (r != -1) {
+		if (r != -1)
+		{
 			state = READY;
 			return true;
 		}
 
 #ifndef _WIN32
-		if (errno != EINPROGRESS) {
+		if (errno != EINPROGRESS)
+		{
 			disconnect();
 			return false;
 		}
 #else
-		if (WSAGetLastError() != WSAEWOULDBLOCK) {
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
 			disconnect();
 			return false;
 		}
@@ -447,10 +531,13 @@ namespace TCP {
 		return isConnected(timeout);
 	}
 
-	bool Client::isConnected(int t) {
+	bool Client::isConnected(int t)
+	{
 
-		if (state == READY) return true;
-		if(sock == -1) return false;
+		if (state == READY)
+			return true;
+		if (sock == -1)
+			return false;
 
 		fd_set fdr, fdw;
 
@@ -460,14 +547,16 @@ namespace TCP {
 		FD_ZERO(&fdw);
 		FD_SET(sock, &fdw);
 
-		timeval to = { t, 1 };
+		timeval to = {t, 1};
 
-		if (select(sock + 1, &fdr, &fdw, nullptr, &to) > 0) {
+		if (select(sock + 1, &fdr, &fdw, nullptr, &to) > 0)
+		{
 			int error;
 			socklen_t len = sizeof(error);
 
-			getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len);
-			if (error != 0) return false;
+			getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&error, &len);
+			if (error != 0)
+				return false;
 
 			state = READY;
 			connects++;
@@ -478,58 +567,71 @@ namespace TCP {
 		return false;
 	}
 
+	void Client::updateState()
+	{
 
-	void Client::updateState() {
-
-		if (state == READY && reset_time > 0 && (long)time(nullptr) - (long)stamp > reset_time * 60) {
-			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect." ;
+		if (state == READY && reset_time > 0 && (long)time(nullptr) - (long)stamp > reset_time * 60)
+		{
+			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect.";
 			reconnect();
 		}
-		else if (state == DISCONNECTED) {
-			if ((long)time(nullptr) - (long)stamp > 10) {
-				Warning() << "TCP (" << host << ":" << port << "): not connected, reconnecting." ;
+		else if (state == DISCONNECTED)
+		{
+			if ((long)time(nullptr) - (long)stamp > 10)
+			{
+				Warning() << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
 				reconnect();
 			}
 		}
-		else if (state == CONNECTING) {
+		else if (state == CONNECTING)
+		{
 			bool connected = isConnected(0);
 
-			if (connected) {
-				Warning() << "TCP (" << host << ":" << port << "): connected to server." ;
+			if (connected)
+			{
+				Warning() << "TCP (" << host << ":" << port << "): connected to server.";
 			}
-			else if ((long)time(nullptr) - (long)stamp > 10) {
-				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect." ;
+			else if ((long)time(nullptr) - (long)stamp > 10)
+			{
+				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect.";
 				reconnect();
 				return;
 			}
 		}
 	}
 
-	int Client::send(const void* data, int length) {
+	int Client::send(const void *data, int length)
+	{
 
 		updateState();
 
-		if (state == READY) {
-			int sent = ::send(sock, (char*)data, length, 0);
+		if (state == READY)
+		{
+			int sent = ::send(sock, (char *)data, length, 0);
 
-			if (sent < length) {
+			if (sent < length)
+			{
 				int error_code = errno;
 #ifdef _WIN32
-				if (error_code == WSAEWOULDBLOCK) return 0;
+				if (error_code == WSAEWOULDBLOCK)
+					return 0;
 #else
-				if (error_code == EAGAIN || error_code == EWOULDBLOCK || error_code == EINPROGRESS) {
+				if (error_code == EAGAIN || error_code == EWOULDBLOCK || error_code == EINPROGRESS)
+				{
 					Error() << "TCP (" << host << ":" << port << "): message might be lost. Error code: " << error_code << " (" << strerror(error_code) << ").";
 					return 0;
 				}
 #endif
-	
+
 				Error() << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
-				if (persistent) {
+				if (persistent)
+				{
 					reconnect();
 					Error() << " Reconnect.\n";
 					return 0;
 				}
-				else {
+				else
+				{
 					Error() << " Failed.\n";
 					return -1;
 				}
@@ -541,11 +643,13 @@ namespace TCP {
 	}
 
 	// zero if no input yet or connection being established
-	int Client::read(void* data, int length, int t, bool wait) {
+	int Client::read(void *data, int length, int t, bool wait)
+	{
 
 		updateState();
 
-		if (state == READY) {
+		if (state == READY)
+		{
 			fd_set fd, fe;
 
 			FD_ZERO(&fd);
@@ -554,29 +658,36 @@ namespace TCP {
 			FD_ZERO(&fe);
 			FD_SET(sock, &fe);
 
-			timeval to = { t, 0 };
+			timeval to = {t, 0};
 
-			if (select(sock + 1, &fd, nullptr, &fe, &to) < 0) return 0;
+			if (select(sock + 1, &fd, nullptr, &fe, &to) < 0)
+				return 0;
 
-			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe)) {
-				int retval = recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
+			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe))
+			{
+				int retval = recv(sock, (char *)data, length, wait ? MSG_WAITALL : 0);
 
-				if (retval <= 0) {
+				if (retval <= 0)
+				{
 					int error_code = errno;
 #ifdef _WIN32
-					if (error_code == WSAEWOULDBLOCK) return 0;
+					if (error_code == WSAEWOULDBLOCK)
+						return 0;
 #else
-					if (error_code == EAGAIN || error_code == EWOULDBLOCK) return 0;
+					if (error_code == EAGAIN || error_code == EWOULDBLOCK)
+						return 0;
 #endif
-				std::stringstream ss;
+					std::stringstream ss;
 					ss << "TCP (" << host << ":" << port << ") receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
 
-					if (persistent) {
+					if (persistent)
+					{
 						ss << " Reconnect.\n";
 						reconnect();
 						return 0;
 					}
-					else {
+					else
+					{
 						ss << " Failed.\n";
 						return -1;
 					}
