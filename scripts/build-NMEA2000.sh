@@ -1,3 +1,20 @@
+#!/bin/bash
+
+DEBUG_BUILD=false
+
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -d|--debug)
+        DEBUG_BUILD=true
+        shift
+        ;;
+        *)
+        shift
+        ;;
+    esac
+done
+
 if [ -d "build" ]; then
   rm -rf build
   mkdir build
@@ -27,5 +44,12 @@ g++ -O3 -c  N2kMsg.cpp  N2kStream.cpp N2kMessages.cpp N2kTimer.cpp  NMEA2000.cpp
 ar rcs libnmea2000.a *.o 
 
 cd ../../build
-cmake .. -DNMEA2000_PATH=..
+if [ "$DEBUG_BUILD" = true ]; then
+    echo "Configuring AIS-catcher build in debug mode..."
+    cmake .. -DNMEA2000_PATH=.. -DENABLE_DEBUG=ON
+else
+    echo "Configuring AIS-catcher build in release mode..."
+    cmake .. -DNMEA2000_PATH=..
+fi
+
 make
