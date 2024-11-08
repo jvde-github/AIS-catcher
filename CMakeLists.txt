@@ -374,7 +374,7 @@ endif()
 
 if(SOAPYSDR)
 
-    if(MSVC_VCPKG)
+    if(MSVC)
         find_package(SoapySDR CONFIG)
         if(SoapySDR_FOUND)
             message(STATUS "Found SoapySDR via CONFIG mode")
