@@ -340,4 +340,37 @@ jobs:
         bash -c "gh release upload 'Edge' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo jvde-github/AIS-catcher --clobber" 
         del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
 
+    - name: Building with SoapySDR support
+      run: |
+      
+        echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
+        $gen = "Visual Studio 17 2022"
+        $config = "Release"
+
+        echo "AIS-catcher"
+        vcpkg install soapysdr:${{matrix.platform}}-windows
+        Remove-Item build -Recurse
+        mkdir build; cd build
+        cmake .. -DSOAPYSDR=ON -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
+        cd ..
+        cp LICENSE output\Licenses\AIS-catcher
+
+    - name: Prepare output SOAPYSDR
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output; 
+
+    - name: Upload Artifacts SOAPYSDR
+      uses: actions/upload-artifact@v4
+      with:
+        name: "AIS-catcher SOAPYSDR ${{matrix.platform}}"
+        path: |
+          output
+
+    - name: Compress, upload, and delete ZIP file
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SOAPYSDR ${{matrix.platform}}.zip"
+        bash -c "gh release upload 'Edge' './output/AIS-catcher SOAPYSDR ${{matrix.platform}}.zip' --repo jvde-github/AIS-catcher --clobber" 
+        del "output\AIS-catcher SOAPYSDR ${{matrix.platform}}.zip"
  
