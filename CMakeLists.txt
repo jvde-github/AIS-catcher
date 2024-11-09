@@ -48,11 +48,11 @@ if(UNIX AND NOT APPLE)
     find_library(DL_LIBRARY dl REQUIRED)
     if(ENABLE_DEBUG)
         add_compile_options(
-            -g3 
-            -ggdb 
-            -O0 
-            -fno-omit-frame-pointer 
-            -rdynamic 
+            -g3
+            -ggdb
+            -O0
+            -fno-omit-frame-pointer
+            -rdynamic
             -no-pie
         )
         add_definitions(-DDEBUG)
@@ -374,19 +374,25 @@ endif()
 
 if(SOAPYSDR)
 
-    if(MSVC)
-        find_package(SoapySDR CONFIG)
-        if(SoapySDR_FOUND)
-            message(STATUS "Found SoapySDR via CONFIG mode")
-            message(STATUS "SoapySDR include: ${SoapySDR_INCLUDE_DIRS}")
-            message(STATUS "SoapySDR libraries: ${SoapySDR_LIBRARIES}")
+    if(MSVC AND NOT MSVC_VCPKG)
+        find_path(SOAPYSDR_INCLUDE_DIR SOapySDR/Device.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+        find_library(SOAPYSDR_LIBRARY SoapySDR.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+        find_file(SOAPYSDR_DLL SoapySDR.dll HINTS ${POTHOSSDR_BINARY_DIR})
+
+        if(SOAPYSDR_INCLUDE_DIR AND SOAPYSDR_LIBRARY AND SOAPYSDR_DLL)
+            Message(STATUS "SOAPYSDR: found (PothosSDR) - " ${SOAPYSDR_INCLUDE_DIR}, ${SOAPYSDR_LIBRARY}, ${SOAPYSDR_DLL})
+            set(COPYSOAPYSDR TRUE)
             add_definitions(-DHASSOAPYSDR)
+
+            set(SOAPYSDR_INCLUDE_DIRS ${SOAPYSDR_INCLUDE_DIR})
+            set(SOAPYSDR_LIBRARIES ${SOAPYSDR_LIBRARY})
+
         else()
-            message(STATUS "SOAPYSDR not found")
+            Message(STATUS "SOAPYSDR: NOT found (PothosSDR) - " ${SOAPYSDR_INCLUDE_DIR}, ${SOAPYSDR_LIBRARY}, ${SOAPYSDR_DLL})
         endif()
     else()
         pkg_check_modules(SOAPYSDR SoapySDR)
-    
+
         if(SOAPYSDR_FOUND)
             message(STATUS "SOAPYSDR: found - ${SOAPYSDR_INCLUDE_DIRS}, ${SOAPYSDR_LIBRARIES}")
             add_definitions(-DHASSOAPYSDR)
@@ -788,6 +794,10 @@ endif()
 
 if(COPY_SAMPLERATE_DLL)
     add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SAMPLERATE_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_SOAPYSDR_DLL)
+    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SOAPYSDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_PTHREAD_LIBUSB_DLL)
