@@ -29,7 +29,11 @@ Check the data we're receiving at [aiscatcher.org](https://aiscatcher.org). We w
   
 # General Installation
 
-Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry. Note that issues have reported for the latest Windows build on Windows 10 where the [VC runtime libraries](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) where not up to date so please ensure you have the latest installed. In the next chapters we show quick star guides for setting up AIS-catcher on the Raspberry Pi with a web interface for configuration, and secondly a simple script to do a full installation on Debain-based systems. 
+Windows [Binaries](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) and Building [instructions](https://github.com/jvde-github/AIS-catcher/blob/main/README.md#Build-process) for many systems are provided below. Pre-built Docker container images containing AIS-catcher are [available](https://github.com/jvde-github/AIS-catcher#container-images) from the GitHub Container Registry. 
+
+> **Note:** Issues have been reported for the latest Windows version on Windows 10 where the [VC runtime libraries](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) was not up to date. So please ensure you have the latest VC runtime installed.
+
+In the next chapters we show quick starter guides for setting up AIS-catcher on the Raspberry Pi with an easy web interface for configuration. We also discuss a full installation script for easy install on Debian-based systems. 
 
 # Quick Guide on turning a Raspberry Pi into a AIS receiver
 
@@ -80,49 +84,52 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/jvde-github/AIS-cat
 ```
 To access it, open your web browser and navigate to your Raspberry Pi's IP address on port 8110 (for example, `http://zerowh:8110`). 
 
-![Login Screen](https://github.com/user-attachments/assets/2c10c830-84e2-42b1-bb67-9300be6d53be)
+![image](https://github.com/user-attachments/assets/1fe942d2-dd3a-4116-99e8-f88f2de4ed14)
+
 
 When you first access the interface, use the default credentials (username: `admin`, password: `admin`). You'll be prompted to change this password immediately for security purposes.
 
-![Password Change](https://github.com/user-attachments/assets/bce2f1e6-cd6f-4c29-af52-03c90c72d04c)
+![image](https://github.com/user-attachments/assets/aea1eb3b-0344-47a9-8b4f-8ddd77ecdeb0)
+
 
 ### Input Device Selection
 
-In the Input section of the web GUI, you'll need to select your input device. The interface allows you to select from any connected devices or manually specify a device type and serial number. If you're using a single SDR device, you can leave the device selection as 'None', and AIS-catcher will automatically use the available device.
+In the Input section of the web GUI, you'll need to select your input device. The interface allows you to select from any connected devices or manually specify a device type and serial number. If you're using a single SDR device, you can leave the device selection as 'None', and AIS-catcher will automatically use the available device. You can also click the Search Icon to let AIS-catcher detect the available SDR hardware.
 
-![Input Configuration](https://github.com/user-attachments/assets/b960cc3e-276a-403f-acf9-50734886374f)
+![image](https://github.com/user-attachments/assets/83cc4f88-7d76-49db-b126-e62a2b652663)
 
+Specific device settings for your SDR or other input device can be set on this page as well. 
+
+> **Note:** After any modification to the settings the changes need to be saved and the program needs to be (re)started for the changes to become effective.
+> 
 ### Output Settings
 
 AIS-catcher offers the ability to share your data with the aiscatcher.org community. Navigate to the Output > Community section to enable this feature. By default, sharing is anonymous, but you can generate and enter a sharing key to associate the data with your station and view statistics. If you want to create a sharing key click "Create" and this will take you to the page on aiscatcher.org where you can set up a station and receive a sharing key.
 
-![image](https://github.com/user-attachments/assets/52252f59-5bbb-4bb6-b728-a769a0860b73)
+![image](https://github.com/user-attachments/assets/4d4c61f1-cfdc-445f-8393-8018614143d2)
 
 #### Local Webviewer
 
 The local web viewer configuration can be found under Output > Web Viewer. Here, you should activate the viewer and enter your station details, including a name and your geographical coordinates.
 
-![Web Viewer Settings](https://github.com/user-attachments/assets/c6fc1a5f-c47d-41b2-96b1-82308eea2b14)
+![image](https://github.com/user-attachments/assets/c59cf7cf-d20b-4c4d-8fa3-e5ba5e1e5471)
 
-This local webviewer is available from your Raspberry device (e.g. in this example at port 8100, hence can be accessed with `http://zerowh:8100` in the browser) and not by default accessible outside the local network. Some users share their webviewer externally, see [here](https://aiscatcher.org/dashboards) for some examples. The station page that you feed to aiscatcher.org with a sharing key is visible for the outside world.
 
-### Device Settings
+This local webviewer is available from your Raspberry device (e.g. in this example at port 8100, hence can be accessed with `http://zerowh:8100` in the browser) and not by default accessible outside the local network. Some users share their webviewer externally, see [here](https://aiscatcher.org/dashboards) for examples. 
 
-Specific device settings for your SDR or other input device can be set in the Devices section. Currently there are tabs to configure the RTL-SDR, AirSpy HF+ and input via TCP.
+> **Note:** If you desire a public page with your station performance the easiest approach is to feed aiscatcher.org with a sharing key.
 
 ### Service Control
 
 The Control section is where you manage the AIS-catcher service. Here you can start and stop the service, enable auto-start functionality, and monitor the service status through the log display. 
+![image](https://github.com/user-attachments/assets/abf29893-0567-4b94-9354-e0630cc6f9fc)
 
-> **Note:** After any modification to the settings the changes need to be saved and the program needs to be (re)started for the changes to become effective.
-
-![Service Control](https://github.com/user-attachments/assets/d6cfc5d6-6c7a-4cd7-90a6-67772077afd3)
 
 ## Accessing the AIS Web Viewer
 
-Press start in the Control section and ensure that it is running without errors (see the log). Once AIS-catcher is running, you can view your received AIS data through the aforementioned local web viewer. Access it by navigating to your Raspberry Pi's IP address on port 8100 (for example, `http://zerowh:8100`). The viewer provides a real-time display of AIS messages and vessel positions, allowing you to verify that your setup is working correctly. Another option is to have a quick view by choosing the Webviewer menu item in the Control pages.
+Press start in the Control section and ensure that it is running without errors (see the log). Once AIS-catcher is running, you can view your received AIS data through the aforementioned local web viewer. Access it by navigating to your Raspberry Pi's IP address on port 8100 (for example, `http://zerowh:8100`). The viewer provides a real-time display of AIS messages and vessel positions, allowing you to verify that your setup is working correctly. Another option is to have a quick view by choosing the Webviewer menu item in the menu.
 
-![AIS Web Viewer](https://github.com/user-attachments/assets/d81ac931-81dc-43d4-aba3-b6de2641953f)
+![image](https://github.com/user-attachments/assets/1762ee88-e8b0-47a3-b50a-1ca2a7b42acb)
 
 ## Conclusion
 
