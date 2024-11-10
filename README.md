@@ -106,7 +106,7 @@ Specific device settings for your SDR or other input device can be set on this p
 
 AIS-catcher offers the ability to share your data with the aiscatcher.org community. Navigate to the Output > Community section to enable this feature. By default, sharing is anonymous, but you can generate and enter a sharing key to associate the data with your station and view statistics. If you want to create a sharing key click "Create" and this will take you to the page on aiscatcher.org where you can set up a station and receive a sharing key.
 
-![image](https://github.com/user-attachments/assets/4d4c61f1-cfdc-445f-8393-8018614143d2)
+![image](https://github.com/user-attachments/assets/9f032bea-784f-465a-93f4-003a5fd7f587)
 
 #### Local Webviewer
 
