@@ -171,6 +171,8 @@ namespace Util {
 			type = Type::UDP;
 		else if (str == "SPYSERVER")
 			type = Type::SPYSERVER;
+		else if (str == "NMEA2000")
+			type = Type::N2K;
 		else
 			return false;
 
@@ -206,6 +208,8 @@ namespace Util {
 			return "UDP";
 		case Type::SPYSERVER:
 			return "SPYSERVER";
+		case Type::N2K:
+			return "NMEA2000";
 		default:
 			return "";
 		}
