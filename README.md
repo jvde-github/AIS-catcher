@@ -37,7 +37,10 @@ In the next chapters we show quick starter guides for setting up AIS-catcher on 
 
 # Quick Guide on turning a Raspberry Pi into a AIS receiver
 
-This tutorial will guide you through the process of installing and running AIS-catcher on a Raspberry Pi. AIS-catcher is a software tool used to receive and decode Automatic Identification System (AIS) messages from ships, using Software Defined Radio (SDR) devices like the RTL-SDR dongle.
+This tutorial will guide you through the process of installing and running AIS-catcher on a Raspberry Pi. AIS-catcher is a software tool used to receive and decode Automatic Identification System (AIS) messages from ships, using Software Defined Radio (SDR) devices like the RTL-SDR dongle. If you are already up and running with Docker installed, you can simply use:
+```console
+docker run --privileged -v /dev/bus/usb:/dev/bus/usb -p 8110:8110 -p 8100:8100 --pull=always ghcr.io/jvde-github/ais-catcher-control:edge
+```
 
 ## Table of Contents
 - [Setting Up the Raspberry Pi](#setting-up-the-raspberry-pi)
