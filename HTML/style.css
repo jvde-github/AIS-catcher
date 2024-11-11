@@ -2278,6 +2278,7 @@ td {
     padding: 5px 10px;
     font-size: 16px;
     border: none; 
+    color: var(--menu-font-color);
     background-color: transparent;  
 }
 
