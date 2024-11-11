@@ -115,9 +115,6 @@ AIS-catcher offers the ability to share your data with the aiscatcher.org commun
 
 The local web viewer configuration can be found under Output > Web Viewer. Here, you should activate the viewer and enter your station details, including a name and your geographical coordinates.
 
-![image](https://github.com/user-attachments/assets/c59cf7cf-d20b-4c4d-8fa3-e5ba5e1e5471)
-
-
 This local webviewer is available from your Raspberry device (e.g. in this example at port 8100, hence can be accessed with `http://zerowh:8100` in the browser) and not by default accessible outside the local network. Some users share their webviewer externally, see [here](https://aiscatcher.org/dashboards) for examples. 
 
 > **Note:** If you desire a public page with your station performance the easiest approach is to feed aiscatcher.org with a sharing key.
