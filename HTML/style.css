@@ -40,7 +40,7 @@
     --table-selection-background-color: #daebfe;
     --table-alternate-background-color: var(--panel-color);
     --main-font-color: var(--tertiary-color);
-    --stat-label-color: var(--tertiary-color);
+    --stat-label-color: darkgrey;
     --stat-divider-color: var(--tertiary-color);
     --stat-color: var(--tertiary-color);
     --shipcard-font-color: var(--menu-font-color);
