@@ -3870,6 +3870,12 @@ function showHoverTrack(mmsi) {
     }
 }
 
+function toggleAttribution() {
+    const attribution = document.getElementById('map_attributions');
+    const currentDisplay = attribution.style.display;
+    attribution.style.display = currentDisplay === 'none' ? 'block' : 'none';
+}
+
 const startHover = function (mmsi, pixel, feature) {
 
     if (mmsi !== hoverMMSI) {
@@ -5354,7 +5360,7 @@ console.log("Starting plugin code");
 
 
 loadPlugins && loadPlugins();
-		
+
 var button = document.getElementById('xchange'); // Get the button by its ID
 
 if (communityFeed) {
@@ -5428,7 +5434,7 @@ if (communityFeed) {
 
                 feature.ship = ship;
                 feature.link = 'https://www.shipcatcher.com/?zoom=12&mmsi=' + ship.mmsi
-                feature.tooltip = ship.shipname || ship.mmsi 
+                feature.tooltip = ship.shipname || ship.mmsi
                 feedVector.addFeature(feature)
             }
         }
@@ -5606,7 +5612,7 @@ if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
     document.getElementById("realtime_tab_mini").style.display = "none";
 }
 
-showWelcome();		
+showWelcome();
 
 if (isAndroid()) showMenu();
 main();
