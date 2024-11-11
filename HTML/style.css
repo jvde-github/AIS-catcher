@@ -85,7 +85,7 @@
     --header-color: #323232;
     --header-title-color: #4a4a4a;
     --selection-color: #9fa8da;
-    --mainspace-color: rgb(18, 18, 18);
+    --mainspace-color: black;
     --backdrop-color: black;
     --focus-color: #90caf9;
     --light-gray: lightgray;
@@ -1231,7 +1231,7 @@ td {
     text-align: left;
     color: var(--stat-color);
     padding: 5px 20px 5px 20px;
-    font-weight: 550;
+    /*font-weight: 550;*/
     overflow-x: auto;
     white-space: nowrap;
     border-left: solid 1px var(--stat-divider-color);
