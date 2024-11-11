@@ -77,7 +77,7 @@
     --tertiary-color: #05081f;
     --bottombar-color: black;
     --settings-bg-color: rgb(25, 25, 25);
-    --settings-header-bg-color: rgb(50, 50, 50);
+    --settings-header-bg-color: rgb(25, 25, 25);
     --panel-color: black;
     --ok-color: #7ce481;
     --error-color: #cf6679;
@@ -2242,7 +2242,7 @@ td {
 }
 
 .settings_header div:nth-child(1) {
-    flex: 0 0 40px;
+    flex: 0 0 0px;
     transform: scale(1.15) translateX(1px) translateY(8px);
 }
 
@@ -2277,10 +2277,13 @@ td {
     width: 100%;
     height: 28px;  
     padding: 5px 10px;
+    margin: 2px;
     font-size: 16px;
-    border: none; 
+    border-radius: 15px;
+    border: solid 1px var(--menu-font-color);  
     color: var(--menu-font-color);
     background-color: transparent;  
+    max-width: 500px;
 }
 
 .search-box:focus {
