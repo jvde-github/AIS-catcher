@@ -283,7 +283,7 @@ a:focus {
     transition: var(--hover-transition);
     font-size: 24px;
     width: 40px;
-    border-right: 1px solid lightgrey;
+    border-right: 1px solid darkgrey;
 }
 
 .header-menubutton>div {
