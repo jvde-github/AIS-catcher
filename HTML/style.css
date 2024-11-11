@@ -5,14 +5,14 @@
     --settings-bg-color: rgb(245, 245, 245);
     --settings-header-bg-color: lightgrey;
     --bottombar-color: var(--tertiary-color);
-    --panel-color: #f2f8ff;
+    --panel-color: white;
     --ok-color: rgb(129, 244, 129);
     --error-color: red;
     --stationCircleColor: yellow;
     --header-color: var(--primary-color);
     --header-title-color: #0e6cd8;
     --selection-color: orange;
-    --mainspace-color: white;
+    --mainspace-color: rgb(240,240,240);
     --backdrop-color: #f5f7fa;
     --focus-color: red;
     --light-gray: lightgray;
@@ -42,7 +42,7 @@
     --main-font-color: var(--tertiary-color);
     --stat-label-color: var(--tertiary-color);
     --stat-divider-color: var(--tertiary-color);
-    --stat-color: var(--primary-color);
+    --stat-color: var(--tertiary-color);
     --shipcard-font-color: var(--menu-font-color);
     --shipcard-header-color: var(--menu-background-color);
     --shipcard-content-color: var(--menu-background-color);
@@ -78,14 +78,14 @@
     --bottombar-color: black;
     --settings-bg-color: rgb(25, 25, 25);
     --settings-header-bg-color: rgb(50, 50, 50);
-    --panel-color: rgb(18, 18, 18);
+    --panel-color: black;
     --ok-color: #7ce481;
     --error-color: #cf6679;
     --stationCircleColor: darkgrey;
     --header-color: #323232;
     --header-title-color: #4a4a4a;
     --selection-color: #9fa8da;
-    --mainspace-color: black;
+    --mainspace-color: rgb(18, 18, 18);
     --backdrop-color: black;
     --focus-color: #90caf9;
     --light-gray: lightgray;
@@ -202,13 +202,12 @@ a:focus {
 }
 
 .header-title div {
-    padding: 15px;
     background: var(--header-color);
+    padding: 10px;
     margin: auto 0;
     border-radius: 20px;
     font-size: 15px;
     line-height: 15px;
-    padding: 10px 15px;
 }
 
 .rounded {
@@ -284,6 +283,7 @@ a:focus {
     transition: var(--hover-transition);
     font-size: 24px;
     width: 40px;
+    border-right: 1px solid lightgrey;
 }
 
 .header-menubutton>div {
@@ -365,9 +365,7 @@ a:focus {
     flex: 1 0 0;
     position: relative;
     background: var(--backdrop-color);
-    border-top: solid;
-    border-color: var(--mainspace-container-color);
-    /*border-width: 4px;*/
+    border-top: solid 1px var(--mainspace-container-color);
     display: flex;
     flex-direction: column;
     justify-content: stretch;
@@ -375,7 +373,7 @@ a:focus {
 
 .mainspace {
     background: var(--mainspace-color);
-    margin: 2px;
+    margin: 0px;
     flex: 1;
     border: 1px;
     display: flex;
@@ -1179,6 +1177,10 @@ td {
     margin: 0px;
     background-color: var(--panel-color);
     padding: 0px;
+
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--shipcard-footer-shadow-color);
 }
 
 .settings-bg {
@@ -2176,15 +2178,15 @@ td {
     flex-direction: column;
     background-color: var(--settings-bg-color);
     width: 560px;
-    height: calc(100% - 63px);
-    top: 60px;
+    height: calc(100% - 55px);
+    top: 55px;
     right: 0px;
     position: fixed;
     z-index: 10003;
     border: 1px solid var(--settings-header-bg-color);
     padding: 0px;
     margin: 0px;
-    transform: translateX(560px);
+    transform: translateX(562px);
     transition: transform 0.3s ease-out;
 }
 
@@ -2197,8 +2199,8 @@ td {
     flex-direction: column;
     background-color: var(--settings-bg-color);
     width: 500px;
-    height: calc(100% - 63px);
-    top: 60px;
+    height: calc(100% - 55px);
+    top: 55px;
     left: 0px;
     position: fixed;
     z-index: 10003;
@@ -2271,14 +2273,16 @@ td {
 }
 
 .search-box {
-    width: 300px;
-    padding: 10px;
+    width: 100%;
+    height: 28px;  
+    padding: 5px 10px;
     font-size: 16px;
-    border: 1px solid var(--table-border-color);
-    border-radius: 5px;
-    color: var(--main-font-color);
-    background-color: var(--table-alternate-background-color);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border: none; 
+    background-color: transparent;  
+}
+
+.search-box:focus {
+    outline: none;  
 }
 
 .ship-table-column-controls {
