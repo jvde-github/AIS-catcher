@@ -2,8 +2,8 @@
     --primary-color: #0857b1;
     --secondary-color: #12a5ed;
     --tertiary-color: #0b1033;
-    --settings-bg-color: rgb(245, 245, 245);
-    --settings-header-bg-color: lightgrey;
+    --settings-bg-color: white;
+    --settings-header-bg-color: white;
     --bottombar-color: var(--tertiary-color);
     --panel-color: white;
     --ok-color: rgb(129, 244, 129);
@@ -2210,6 +2210,7 @@ td {
     margin: 0px;
     transform: translateX(-100%);
     transition: transform 0.3s ease-out;
+    box-shadow: 10px 0 15px -5px rgba(0, 0, 0, 0.3); /* Added right shadow */
 }
 
 .settings_window.active {
