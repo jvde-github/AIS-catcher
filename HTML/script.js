@@ -3072,26 +3072,26 @@ async function fetchStatistics() {
 }
 
 function updateStat(stat, tf) {
-    [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e]));
+    [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e].toLocaleString()));
 
-    document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count;
+    document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count.toLocaleString();
     document.getElementById("stat_" + tf + "_dist").innerText = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
-    document.getElementById("stat_" + tf + "_vessel_count").innerText = stat[tf].vessels;
-    document.getElementById("stat_" + tf + "_msg123").innerText = stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2];
-    document.getElementById("stat_" + tf + "_msg5").innerText = stat[tf].msg[4];
-    document.getElementById("stat_" + tf + "_msg18").innerText = stat[tf].msg[17];
-    document.getElementById("stat_" + tf + "_msg19").innerText = stat[tf].msg[18];
-    document.getElementById("stat_" + tf + "_msg68").innerText = stat[tf].msg[5] + stat[tf].msg[7];
-    document.getElementById("stat_" + tf + "_msg1214").innerText = stat[tf].msg[11] + stat[tf].msg[13];
-    document.getElementById("stat_" + tf + "_msg24").innerText = stat[tf].msg[23];
-    document.getElementById("stat_" + tf + "_msg4").innerText = stat[tf].msg[3];
-    document.getElementById("stat_" + tf + "_msg9").innerText = stat[tf].msg[8];
-    document.getElementById("stat_" + tf + "_msg21").innerText = stat[tf].msg[20];
-    document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26];
+    document.getElementById("stat_" + tf + "_vessel_count").innerText = stat[tf].vessels.toLocaleString();
+    document.getElementById("stat_" + tf + "_msg123").innerText = (stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2]).toLocaleString();
+    document.getElementById("stat_" + tf + "_msg5").innerText = stat[tf].msg[4].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg18").innerText = stat[tf].msg[17].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg19").innerText = stat[tf].msg[18].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg68").innerText = (stat[tf].msg[5] + stat[tf].msg[7]).toLocaleString();
+    document.getElementById("stat_" + tf + "_msg1214").innerText = (stat[tf].msg[11] + stat[tf].msg[13]).toLocaleString();
+    document.getElementById("stat_" + tf + "_msg24").innerText = stat[tf].msg[23].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg4").innerText = stat[tf].msg[3].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg9").innerText = stat[tf].msg[8].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg21").innerText = stat[tf].msg[20].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26].toLocaleString();
 
     var count_other = 0;
     [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26].forEach((i) => (count_other += stat[tf].msg[i - 1]));
-    document.getElementById("stat_" + tf + "_msgother").innerText = count_other;
+    document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
 }
 
 async function updateStatistics() {
