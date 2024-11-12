@@ -182,7 +182,7 @@ getDimUnit = () => {
 };
 
 getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
-getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1);
+getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
 getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
 getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
 getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
