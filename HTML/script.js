@@ -1100,16 +1100,17 @@ function applyDynamicStyling() {
             @media only screen and (min-width: 750px) {
                 #menubar {
                     position: fixed;
-                    top: 60px;
+                    top: 70px;
                     left: 10px;
                     right: 0;
                     width: 500px;
                     border: solid;
                     border-color: var(--menu-border-color);
-                    border-radius: 20px;
+                    border-radius: 5px;
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
                 }
             }
-            `;
+    `;
     else style += " .settings_window { top: 72px; }\n";
 
     dynamicStyle.innerHTML = style;
