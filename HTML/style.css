@@ -283,7 +283,7 @@ a:focus {
     transition: var(--hover-transition);
     font-size: 24px;
     width: 40px;
-    border-right: 1px solid darkgrey;
+    border-right: 1px solid rgb(120,120,120);
 }
 
 .header-menubutton>div {
@@ -395,7 +395,6 @@ a:focus {
     }
 }
 
-/* Plot styling */
 .graphtab {
     padding: 15px;
     display: grid;
@@ -1177,7 +1176,6 @@ td {
     margin: 0px;
     background-color: var(--panel-color);
     padding: 0px;
-
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--shipcard-footer-shadow-color);
@@ -2188,6 +2186,7 @@ td {
     margin: 0px;
     transform: translateX(562px);
     transition: transform 0.3s ease-out;
+    box-shadow: -10px 0 15px -5px rgba(0, 0, 0, 0.3);
 }
 
 .tableside_window.active {
@@ -2210,7 +2209,7 @@ td {
     margin: 0px;
     transform: translateX(-100%);
     transition: transform 0.3s ease-out;
-    box-shadow: 10px 0 15px -5px rgba(0, 0, 0, 0.3); /* Added right shadow */
+    box-shadow: 10px 0 15px -5px rgba(0, 0, 0, 0.3); 
 }
 
 .settings_window.active {
@@ -2237,7 +2236,7 @@ td {
     font-size: 20px;
     border-bottom: solid 1px var(--settings-header-bg-color);
     display: flex;
-    border-radius: 5px;
+    border-radius: 0px;
     flex-direction: row;
 }
 

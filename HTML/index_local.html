@@ -7,8 +7,8 @@
 	<meta name="viewport"
 		content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0, user-scalable=no" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-	
+	<link rel="icon" type="image/x-icon" href="/favicon.ico">
+
 	<script src="cdn/npm/chart.js"></script>
 	<script src="cdn/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
 
@@ -19,8 +19,8 @@
 
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
-	
-	<link rel="stylesheet" href="style_v0_60_272_g901ef9f5.css" />
+
+	<link rel="stylesheet" href="style_1731434074.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -111,7 +111,7 @@
 				<div></div>
 				<div onclick="closeSettings()" class="close_icon"></div>
 			</div>
-			<div class="settings_main stat-panel settings-bg">
+			<div class="settings_main stat-panel settings-bg" style="border-radius: 0px;">
 				<header>System</header>
 				<section>
 					<div><span>Settings</span><span style="cursor: pointer" onclick="applyDefaultSettings()"> Reset
@@ -199,12 +199,14 @@
 					</div>
 					<div>
 						<span>Show Track on Selection</span><span>
-							<input type="checkbox" id="settings_show_track_on_select" onchange="settings.show_track_on_select = this.checked; saveSettings()" />
+							<input type="checkbox" id="settings_show_track_on_select"
+								onchange="settings.show_track_on_select = this.checked; saveSettings()" />
 						</span>
 					</div>
 					<div>
 						<span>Show Track on Hover</span><span>
-							<input type="checkbox" id="settings_show_track_on_hover" onchange="settings.show_track_on_hover = this.checked; saveSettings()" />
+							<input type="checkbox" id="settings_show_track_on_hover"
+								onchange="settings.show_track_on_hover = this.checked; saveSettings()" />
 						</span>
 					</div>
 				</section>
@@ -810,10 +812,17 @@
 
 				<aside id="measurecard" class="mapcard measurecard-width">
 					<header class="mapcard_header">
-						<span><i style="font-size: 30px" class="straighten_icon"></i></span>
-						<span><i title="start measurement"
-								onclick="setMeasureMode(); showNotification('Click on start point/object')"
-								class="mapcard-header-icon add_icon"></i></span>
+						<span>
+						</span>
+						<span title="start measurement"
+							onclick="setMeasureMode(); showNotification('Click on start point/object')"
+							class="mapcard-header-icon add_icon">
+							<svg xmlns="http://www.w3.org/2000/svg" height="0px" viewBox="0 -960 960 960" width="24px"
+								fill="currentColor">
+								<path
+									d="M440-400h80v-120h120v-80H520v-120h-80v120H320v80h120v120Zm40 214q122-112 181-203.5T720-552q0-109-69.5-178.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186Zm0 106Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 100-79.5 217.5T480-80Zm0-480Z" />
+							</svg>
+						</span>
 						<span><i title="close this window" onclick="toggleMeasurecard()" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
@@ -842,7 +851,8 @@
 					<header id="shipcard_header" class="mapcard_header">
 						<span onclick="toggleShipcardSize()" id="shipcard_header_flag"></span>
 						<span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-						<span class=""><i class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
+						<span class=""><i
+								class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
 						<span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button"
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
 						<span><i onclick="showContextMenu(event,card_mmsi,['mmsi', 'mmsi-map'])"
@@ -924,7 +934,7 @@
 						<div title="Center map on current vessel" onclick="openAIScatcherSite(card_mmsi)"
 							class="noandroid"><i class="info_icon"></i><span>aiscatcher.org</span></div>
 						<div id="shipcard_track_option" title="Track of current vessel"
-							onclick="toggleTrack(card_mmsi)"><i id = "shipcard_track_icon" class="timeline_icon"></i><span
+							onclick="toggleTrack(card_mmsi)"><i id="shipcard_track_icon" class="timeline_icon"></i><span
 								id="shipcard_track">Track</span></div>
 					</footer>
 				</aside>
@@ -1006,7 +1016,7 @@
 	<div class="bottombar"></div>
 
 	<script src="plugins.js"></script>
-	<script src="script_v0_60_272_g901ef9f5.js"></script>
+	<script src="script_1731434074.js"></script>
 
 
 </body>
