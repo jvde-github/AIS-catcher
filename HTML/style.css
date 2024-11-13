@@ -1357,7 +1357,7 @@ td {
     color: var(--menu-font-color);
     border: 0px solid #ccc;
     border-radius: 4px;
-    box-shadow: 2px 2px 5px var(--shadow-color);
+    box-shadow: 3px 3px 10px var(--shadow-color);
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
