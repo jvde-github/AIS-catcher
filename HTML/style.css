@@ -1143,7 +1143,7 @@ td {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     column-gap: 25px;
     row-gap: 25px;
-    max-width: min(calc(100% - 30px), 3000px);
+    max-width: min(calc(100% - 0px), 3000px);
     margin: 0 auto;
     margin-top: 10px;
     justify-content: center;
@@ -2236,9 +2236,8 @@ td {
     flex: 0 0 40px;
     background-color: var(--settings-bg-color);
     color: var(--menu-font-color);
-    border: none;
+    border-bottom: solid 1px var(--shadow-color-light);
     font-size: 20px;
-    border-bottom: solid 1px var(--settings-header-bg-color);
     display: flex;
     border-radius: 0px;
     flex-direction: row;
