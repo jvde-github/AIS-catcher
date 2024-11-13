@@ -1143,7 +1143,7 @@ td {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     column-gap: 25px;
     row-gap: 25px;
-    max-width: min(calc(100% - 0px), 3000px);
+    max-width: min(calc(100% - 30px), 3000px);
     margin: 0 auto;
     margin-top: 10px;
     justify-content: center;
