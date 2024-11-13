@@ -2,6 +2,7 @@
     --primary-color: #0857b1;
     --secondary-color: #12a5ed;
     --tertiary-color: #0b1033;
+    --shadow-color: rgba(0, 0, 0, 0.3);
     --settings-bg-color: white;
     --settings-header-bg-color: white;
     --bottombar-color: var(--tertiary-color);
@@ -75,6 +76,7 @@
     --primary-color: #5dd5d5;
     --secondary-color: #5dd5d5;
     --tertiary-color: #05081f;
+    --shadow-color: rgba(255, 255, 255, 0.1);
     --bottombar-color: black;
     --settings-bg-color: rgb(25, 25, 25);
     --settings-header-bg-color: rgb(25, 25, 25);
@@ -429,6 +431,7 @@ a:focus {
     overflow: auto;
     background-color: var(--panel-color);
     border-radius: 15px;
+    box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .graph-panel>header {
@@ -885,8 +888,6 @@ td {
     display: flex;
     flex-direction: row;
     justify-content: stretch;
-    box-shadow: 0px 4px 8px 0px var(--shipcard-footer-shadow-color);
-    box-shadow: 1px 4px 8px 1px var(--shipcard-footer-shadow-color);
 }
 
 #shipcard_header_title {
@@ -917,8 +918,6 @@ td {
 .mapcard-footer {
     background-color: var(--shipcard-footer-background-color);
     color: var(--shipcard-footer-font-color);
-    box-shadow: 0px 4px 8px 0px var(--shipcard-footer-shadow-color);
-    box-shadow: 1px 4px 8px 1px var(--shipcard-footer-shadow-color);
     flex: 0 0 50px;
     border-radius: 0px;
     display: flex;
@@ -1138,9 +1137,9 @@ td {
     padding: 15px;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    column-gap: 15px;
-    row-gap: 15px;
-    max-width: 3000px;
+    column-gap: 25px;
+    row-gap: 25px;
+    max-width: min(calc(100% - 60px), 3000px); 
     margin: 0 auto;
     justify-content: center;
 }
@@ -1170,6 +1169,7 @@ td {
     max-width: 750px;
     width: 100%;
     border-radius: 15px;
+    box-shadow: 0 2px 8px var(--box-shadow);
 }
 
 .stat-panel {
@@ -1177,7 +1177,7 @@ td {
     background-color: var(--panel-color);
     padding: 0px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 4px var(--shadow-color);
     border: 1px solid var(--shipcard-footer-shadow-color);
 }
 
@@ -2186,7 +2186,7 @@ td {
     margin: 0px;
     transform: translateX(562px);
     transition: transform 0.3s ease-out;
-    box-shadow: -10px 0 15px -5px rgba(0, 0, 0, 0.3);
+    box-shadow: -10px 0 15px -5px var(--shadow-color);
 }
 
 .tableside_window.active {
@@ -2209,7 +2209,7 @@ td {
     margin: 0px;
     transform: translateX(-100%);
     transition: transform 0.3s ease-out;
-    box-shadow: 10px 0 15px -5px rgba(0, 0, 0, 0.3); 
+    box-shadow: 10px 0 15px -5px var(--shadow-color); 
 }
 
 .settings_window.active {
