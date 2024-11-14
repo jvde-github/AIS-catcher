@@ -221,6 +221,8 @@ This is fairly new script and under development so any feedback is appreciated.
 
 ## What's new?
 **Edge**:
+- smaller UI tidy up (e.g. opens default on map and adjusted colors)
+- added NMEA2000 settings to the JSON configuration
 - Options to automatically show the vessel track when hovering over and/or selecting a vessel
 - Fix to system daemon file to restart process after 10s only
 - Shipcard is placed near the vessel if the screen dimensions allow for it
