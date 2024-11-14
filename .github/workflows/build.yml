@@ -77,6 +77,7 @@ jobs:
         echo "filename=ais-catcher_debian_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
     - name: Build Debian package
       run: |
+        sudo apt-get update
         cp build-docker/bookworm/Dockerfile .
         sed -i 's/FROM debian:bookworm/FROM debian:${{ matrix.codename }}/g' Dockerfile
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
