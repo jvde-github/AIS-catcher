@@ -37,7 +37,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
     if(ARMV6)
         message(STATUS "Compiling for ARMv6 (Raspberry Pi Zero)")
-        set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -march=armv6 -mfpu=vfp -mfloat-abi=hard")
+        set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -mfpu=vfp -mfloat-abi=hard")
     endif()
 elseif(MSVC)
     set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN /EHsc /Oi /Ot /fp:fast")
