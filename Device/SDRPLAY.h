@@ -31,6 +31,7 @@ namespace Device {
 		int LNAstate = 0;
 		int gRdB = 32;
 		bool AGC = false;
+		char antenna = 'A';
 
 #ifdef HASSDRPLAY
 
