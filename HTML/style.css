@@ -2017,7 +2017,7 @@ td {
     border-radius: 5px;
     padding: 0px;
     margin: 0px;
-    transform: translateX(-100%);
+    transform: translateX(-110%);
     transition: transform 0.3s ease-out;
     box-shadow: 10px 0 15px -5px var(--shadow-color);
 }
