@@ -67,7 +67,7 @@ namespace Device {
 
 		err = sdrplay_api_SelectDevice(&device);
 		if (err != sdrplay_api_Success) {
-			Error()  << sdrplay_api_GetErrorString(err) << std::endl;
+			Error() << sdrplay_api_GetErrorString(err) << std::endl;
 			sdrplay_api_UnlockDeviceApi();
 			throw std::runtime_error("SDRPLAY: cannot open device");
 		}
@@ -77,9 +77,26 @@ namespace Device {
 			throw std::runtime_error("SDRPLAY: cannot get device parameters.");
 		}
 
-		chParams = deviceParams->rxChannelA;
 
 		if (streaming) throw std::runtime_error("SDRPLAY: internal error, settings modified while streaming.");
+
+		if (device.hwVer == SDRPLAY_RSPdx_ID) {
+			switch (antenna) {
+			case 'A':
+				deviceParams->devParams->rspDxParams.antennaSel = sdrplay_api_RspDx_ANTENNA_A;
+				break;
+			case 'B':
+				deviceParams->devParams->rspDxParams.antennaSel = sdrplay_api_RspDx_ANTENNA_B;
+				break;
+			case 'C':
+				deviceParams->devParams->rspDxParams.antennaSel = sdrplay_api_RspDx_ANTENNA_C;
+				break;
+			default:
+				throw std::runtime_error("SDRPLAY: Invalid antenna selection.");
+			}
+		}
+
+		chParams = deviceParams->rxChannelA;
 
 		chParams->ctrlParams.agc.enable = AGC ? sdrplay_api_AGC_CTRL_EN : sdrplay_api_AGC_DISABLE;
 		chParams->tunerParams.gain.gRdB = gRdB;
@@ -139,7 +156,7 @@ namespace Device {
 
 	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params) {
 		if (eventId == sdrplay_api_DeviceRemoved) {
-			Error()  << "SDRPLAY: device disconnected" << std::endl;
+			Error() << "SDRPLAY: device disconnected" << std::endl;
 			Stop();
 		}
 	}
@@ -154,7 +171,7 @@ namespace Device {
 			}
 
 			if (!fifo.Push((char*)output.data(), len * sizeof(CFLOAT32)))
-				Error()  << "SDRPLAY: buffer overrun." << std::endl;
+				Error() << "SDRPLAY: buffer overrun." << std::endl;
 		}
 	}
 
@@ -166,7 +183,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else if (isStreaming())
-				Error()  << "SDRPLAY: timeout." << std::endl;
+				Error() << "SDRPLAY: timeout." << std::endl;
 		}
 	}
 
@@ -212,6 +229,13 @@ namespace Device {
 		else if (option == "GRDB") {
 			gRdB = Util::Parse::Integer(arg, 0, 59);
 		}
+		else if (option == "ANTENNA") {
+			if (antenna == 'A' || antenna == 'B') {
+				antenna = arg[0];
+			}
+			else
+				throw std::runtime_error("SDRPLAY: invalid antenna.");
+		}
 		else
 			Device::Set(option, arg);
 
@@ -219,7 +243,7 @@ namespace Device {
 	}
 
 	std::string SDRPLAY::Get() {
-		return Device::Get() + " agc " + Util::Convert::toString(AGC) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ";
+		return Device::Get() + " agc " + Util::Convert::toString(AGC) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ANTENNA " + antenna + " ";
 	}
 
 }
