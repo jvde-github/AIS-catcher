@@ -135,7 +135,7 @@ namespace TCP {
 		bool connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive = false);
 
 		void setResetTime(int t) { reset_time = t; }
-		int read(void* data, int length, int t, bool wait = false);
+		int read(void* data, int length, int t = 1, bool wait = false);
 		int send(const void* data, int length);
 
 		SOCKET getSocket() { return sock; }
