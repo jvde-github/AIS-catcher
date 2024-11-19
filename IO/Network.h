@@ -205,4 +205,42 @@ namespace IO {
 		void Start();
 		void Stop() {}
 	};
+
+	class MQTTStreamer : public OutputMessage
+    {
+    private:
+        enum class PacketType
+        {
+            CONNECT = 1,
+            CONNACK = 2,
+            PUBLISH = 3,
+            PUBACK = 4,
+            SUBSCRIBE = 8,
+            SUBACK = 9,
+            DISCONNECT = 14
+        };
+
+        TCP::Client tcp;
+        std::string broker_host = "127.0.0.1";
+        std::string broker_port = "1883";
+        std::string topic = "ais/data";
+        std::string client_id;
+        std::string username;
+        std::string password;
+		
+        int qos = 0;
+        bool retain = false;
+        std::string json;
+        bool connected = false;
+
+        bool connect();
+        void publish(const std::string &message);
+
+    public:
+        void Start();
+        void Stop();
+
+        void Receive(const AIS::Message *data, int len, TAG &tag);
+        Setting &Set(std::string option, std::string arg);
+    };
 }
