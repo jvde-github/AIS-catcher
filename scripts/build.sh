@@ -112,7 +112,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=0.60~312-g4f7b402d
+package_version=0.60~314-gfaddef77
 install_deps=$5
 
 # Install build dependencies
