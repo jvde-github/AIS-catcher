@@ -222,6 +222,16 @@ This is fairly new script and under development so any feedback is appreciated.
 ## What's new?
 **Edge**:
 - Support to publish AIS messages to MQTT broker, use -Q followed by settings (HOST/PORT/TOPIC). Work in progress, needs some code to handle connection breaks).
+
+Example:
+```console
+AIS-catcher -Q CLIENT_ID aiscatcher TOPIC ais/data
+```
+If you want to send more condensed JSON:
+```console
+AIS-catcher -Q JSON_FULL off
+```
+
 - smaller UI tidy up (e.g. opens default on map and adjusted colors)
 - added NMEA2000 settings to the JSON configuration
 - Options to automatically show the vessel track when hovering over and/or selecting a vessel
