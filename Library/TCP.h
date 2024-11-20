@@ -23,6 +23,7 @@
 #include <mutex>
 #include <array>
 #include <vector>
+#include <functional>
 
 #ifdef _WIN32
 
@@ -36,8 +37,8 @@
 #include <netdb.h>
 #include <sys/socket.h>
 
-#define SOCKET		 int
-#define SOCKADDR	 struct sockaddr
+#define SOCKET int
+#define SOCKADDR struct sockaddr
 #define SOCKET_ERROR -1
 
 #define closesocket close
@@ -50,9 +51,11 @@
 
 #include "Common.h"
 
-namespace TCP {
+namespace TCP
+{
 
-	class ServerConnection {
+	class ServerConnection
+	{
 	private:
 		std::mutex mtx;
 		void CloseUnsafe();
@@ -70,7 +73,8 @@ namespace TCP {
 
 		void Lock();
 		void Unlock();
-		bool isLocked() {
+		bool isLocked()
+		{
 			return is_locked;
 		}
 
@@ -80,17 +84,18 @@ namespace TCP {
 		bool isConnected() { return sock != -1; }
 		bool hasSendBuffer() { return !out.empty(); }
 		void SendBuffer();
-		bool Send(const char* buffer, int length);
-		bool SendDirect(const char* buffer, int length);
+		bool Send(const char *buffer, int length);
+		bool SendDirect(const char *buffer, int length);
 		void Read();
 	};
 
-	class Server {
+	class Server
+	{
 	public:
 		virtual ~Server();
 
 		bool start(int port);
-		bool SendAll(const std::string& m);
+		bool SendAll(const std::string &m);
 		void setReusePort(bool b) { reuse_port = b; }
 		bool setNonBlock(SOCKET sock);
 		void setIP(std::string ip) { IP_BIND = ip; }
@@ -111,7 +116,8 @@ namespace TCP {
 		void Run();
 		sockaddr_in service;
 
-		bool Send(ServerConnection& c, const char* data, int len) {
+		bool Send(ServerConnection &c, const char *data, int len)
+		{
 			return c.Send(data, len);
 		}
 
@@ -125,8 +131,8 @@ namespace TCP {
 		void SleepAndWait();
 	};
 
-
-	class Client {
+	class Client
+	{
 	public:
 		Client() {}
 		~Client() { disconnect(); }
@@ -135,16 +141,22 @@ namespace TCP {
 		bool connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive = false);
 
 		void setResetTime(int t) { reset_time = t; }
-		int read(void* data, int length, int t = 1, bool wait = false);
-		int send(const void* data, int length);
+		int read(void *data, int length, int t = 1, bool wait = false);
+		int send(const void *data, int length);
 
 		SOCKET getSocket() { return sock; }
 		int numberOfConnects() { return connects; }
 
+		void setOnConnectedCallback(std::function<void()> callback) { onConnected = callback; }
+		void setOnDisconnectedCallback(std::function<void()> callback) { onDisconnected = callback; }
+
 	private:
-		enum State { DISCONNECTED,
-					 CONNECTING,
-					 READY };
+		enum State
+		{
+			DISCONNECTED,
+			CONNECTING,
+			READY
+		};
 
 		std::string host;
 		std::string port;
@@ -157,12 +169,17 @@ namespace TCP {
 		State state = DISCONNECTED;
 		time_t stamp = 0;
 
+		std::function<void()> onConnected = nullptr;
+		std::function<void()> onDisconnected = nullptr;
+
 		void updateState();
 		bool isConnected(int t);
 
-		bool reconnect() {
+		bool reconnect()
+		{
 			disconnect();
-			if (connect(host, port, persistent, timeout)) {
+			if (connect(host, port, persistent, timeout))
+			{
 				Info() << "TCP (" << host << ":" << port << "): connected.";
 				return true;
 			}

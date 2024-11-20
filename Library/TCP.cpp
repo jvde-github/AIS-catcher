@@ -440,6 +440,11 @@ namespace TCP
 
 		sock = -1;
 		state = DISCONNECTED;
+
+		if (onDisconnected)
+		{
+			onDisconnected();
+		}
 	}
 
 	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive)
@@ -511,6 +516,10 @@ namespace TCP
 		if (r != -1)
 		{
 			state = READY;
+
+			if (onConnected)
+				onConnected();
+
 			return true;
 		}
 
@@ -560,6 +569,9 @@ namespace TCP
 
 			state = READY;
 			connects++;
+			if (onConnected)
+				onConnected();
+
 			return true;
 		}
 
@@ -569,7 +581,6 @@ namespace TCP
 
 	void Client::updateState()
 	{
-
 		if (state == READY && reset_time > 0 && (long)time(nullptr) - (long)stamp > reset_time * 60)
 		{
 			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect.";
