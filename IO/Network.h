@@ -26,7 +26,7 @@
 #else
 #include <sys/socket.h>
 #include <netdb.h>
-#define SOCKET		int
+#define SOCKET int
 #define closesocket close
 #endif
 
@@ -45,9 +45,11 @@
 #include "JSON/StringBuilder.h"
 #include "MsgOut.h"
 
-namespace IO {
+namespace IO
+{
 
-	class HTTPStreamer : public OutputJSON {
+	class HTTPStreamer : public OutputJSON
+	{
 
 		JSON::StringBuilder builder;
 		HTTPClient http;
@@ -70,19 +72,25 @@ namespace IO {
 		std::string model = "N/A", model_setting = "N/A";
 		std::string product = "N/A", vendor = "N/A", serial = "N/A", device_setting = "N/A";
 
-		enum class PROTOCOL { AISCATCHER,
-							  APRS,
-							  LIST,
-							  AIRFRAMES } protocol = PROTOCOL::AISCATCHER;
+		enum class PROTOCOL
+		{
+			AISCATCHER,
+			APRS,
+			LIST,
+			AIRFRAMES
+		} protocol = PROTOCOL::AISCATCHER;
 		std::string protocol_string = "jsonaiscatcher";
 
 		void post();
 		void process();
 
-		void Receive(const JSON::JSON* data, int len, TAG& tag) {
+		void Receive(const JSON::JSON *data, int len, TAG &tag)
+		{
 
-			for (int i = 0; i < len; i++) {
-				if (filter.include(*(AIS::Message*)data[i].binary)) {
+			for (int i = 0; i < len; i++)
+			{
+				if (filter.include(*(AIS::Message *)data[i].binary))
+				{
 					json.clear();
 					builder.stringify(data[i], json);
 					{
@@ -93,7 +101,8 @@ namespace IO {
 			}
 		}
 
-		void Receive(const AIS::GPS* data, int len, TAG& tag) {
+		void Receive(const AIS::GPS *data, int len, TAG &tag)
+		{
 			lat = data->getLat();
 			lon = data->getLon();
 		}
@@ -104,13 +113,14 @@ namespace IO {
 		~HTTPStreamer() { Stop(); }
 		HTTPStreamer() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
 
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 
 		void Start();
 		void Stop();
 	};
 
-	class UDPEndPoint {
+	class UDPEndPoint
+	{
 		std::string address;
 		std::string port;
 
@@ -120,16 +130,18 @@ namespace IO {
 		friend class UDPStreamer;
 		friend class TCPClientStreamer;
 
-		UDPEndPoint(std::string a, std::string p, int id = -1) {
+		UDPEndPoint(std::string a, std::string p, int id = -1)
+		{
 			address = a, port = p;
 			sourceID = id;
 		}
 		int ID() { return sourceID; }
 	};
 
-	class UDPStreamer : public OutputMessage {
+	class UDPStreamer : public OutputMessage
+	{
 		SOCKET sock = -1;
-		struct addrinfo* address = NULL;
+		struct addrinfo *address = NULL;
 		std::string host, port;
 		int reset = -1;
 		long last_reconnect = 0;
@@ -143,26 +155,29 @@ namespace IO {
 		~UDPStreamer();
 		UDPStreamer();
 
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void Receive(const JSON::JSON* data, int len, TAG& tag);
-		void Receive(const AIS::GPS* data, int len, TAG& tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const AIS::GPS *data, int len, TAG &tag);
 
 		void Start();
-		void Start(UDPEndPoint& u) {
+		void Start(UDPEndPoint &u)
+		{
 			host = u.address;
 			port = u.port;
 			Start();
 		}
 		void Stop();
-		void SendTo(std::string str) {
+		void SendTo(std::string str)
+		{
 			sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 		}
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPClientStreamer : public OutputMessage {
+	class TCPClientStreamer : public OutputMessage
+	{
 		::TCP::Client tcp;
 		AIS::Filter filter;
 		bool JSON = false;
@@ -172,75 +187,83 @@ namespace IO {
 		std::string uuid;
 
 	public:
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void Receive(const JSON::JSON* data, int len, TAG& tag);
-		void Receive(const AIS::GPS* data, int len, TAG& tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const AIS::GPS *data, int len, TAG &tag);
 
 		void Start();
 		void Stop();
 
-		int SendTo(std::string str) {
+		int SendTo(std::string str)
+		{
 
 			return tcp.send(str.c_str(), (int)str.length());
 		}
 		void setJSON(bool b) { JSON = b; }
 	};
 
-	class TCPlistenerStreamer : public OutputMessage, public TCP::Server {
+	class TCPlistenerStreamer : public OutputMessage, public TCP::Server
+	{
 		int port = 5010;
 		AIS::Filter filter;
 		bool JSON = false;
 
 	public:
-		virtual ~TCPlistenerStreamer(){};
+		virtual ~TCPlistenerStreamer() {};
 
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 
-		void Receive(const AIS::Message* data, int len, TAG& tag);
-		void Receive(const JSON::JSON* data, int len, TAG& tag);
-		void Receive(const AIS::GPS* data, int len, TAG& tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const AIS::GPS *data, int len, TAG &tag);
 
 		void Start();
 		void Stop() {}
 	};
 
 	class MQTTStreamer : public OutputMessage
-    {
-    private:
-        enum class PacketType
-        {
-            CONNECT = 1,
-            CONNACK = 2,
-            PUBLISH = 3,
-            PUBACK = 4,
-            SUBSCRIBE = 8,
-            SUBACK = 9,
-            DISCONNECT = 14
-        };
+	{
+	private:
+		enum class PacketType
+		{
+			CONNECT = 1,
+			CONNACK = 2,
+			PUBLISH = 3,
+			PUBACK = 4,
+			SUBSCRIBE = 8,
+			SUBACK = 9,
+			DISCONNECT = 14
+		};
 
-        TCP::Client tcp;
-        std::string broker_host = "127.0.0.1";
-        std::string broker_port = "1883";
-        std::string topic = "ais/data";
-        std::string client_id;
-        std::string username;
-        std::string password;
-		
-        int qos = 0;
-        bool retain = false;
-        std::string json;
-        bool connected = false;
+		TCP::Client tcp;
+		std::string broker_host = "127.0.0.1";
+		std::string broker_port = "1883";
+		std::string topic = "ais/data";
+		std::string client_id;
+		std::string username;
+		std::string password;
 
-        bool connect();
-        void publish(const std::string &message);
+		int qos = 0;
+		std::string json;
+		bool connected = false;
 
-    public:
-        void Start();
-        void Stop();
+		bool connect();
+		void publish(const std::string &message);
+		void handshake();
 
-        void Receive(const AIS::Message *data, int len, TAG &tag);
-        Setting &Set(std::string option, std::string arg);
-    };
+	public:
+		MQTTStreamer() : OutputMessage()
+		{
+			JSON_input = true;
+		}
+		void Start();
+		void Stop();
+
+		void Receive(const AIS::Message *data, int len, TAG &tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+
+		Setting &Set(std::string option, std::string arg);
+	};
 }

@@ -48,6 +48,7 @@ namespace IO
 	{
 	protected:
 		bool JSON_input = false;
+
 		std::string json;
 		AIS::Filter filter;
 		JSON::StringBuilder builder;
