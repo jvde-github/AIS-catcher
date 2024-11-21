@@ -608,7 +608,7 @@ namespace TCP
 
 			if (connected)
 			{
-				Warning() << "TCP (" << host << ":" << port << "): connected to server.";
+				//Warning() << "TCP (" << host << ":" << port << "): connected to server.";
 			}
 			else if ((long)time(nullptr) - (long)stamp > 10)
 			{
