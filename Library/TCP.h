@@ -143,6 +143,7 @@ namespace TCP
 		void setResetTime(int t) { reset_time = t; }
 		int read(void *data, int length, int t = 1, bool wait = false);
 		int send(const void *data, int length);
+		void updateConnection();
 
 		SOCKET getSocket() { return sock; }
 		int numberOfConnects() { return connects; }
@@ -179,10 +180,8 @@ namespace TCP
 		{
 			disconnect();
 			if (connect(host, port, persistent, timeout))
-			{
-				Info() << "TCP (" << host << ":" << port << "): connected.";
 				return true;
-			}
+
 			return false;
 		}
 	};

@@ -436,15 +436,20 @@ namespace TCP
 	void Client::disconnect()
 	{
 		if (sock != -1)
+		{
 			closesocket(sock);
+
+			if (onDisconnected)
+			{
+				onDisconnected();
+			}
+		}
+
+		if (state == READY)
+			Info() << "TCP (" << host << ":" << port << "): disconnected.";
 
 		sock = -1;
 		state = DISCONNECTED;
-
-		if (onDisconnected)
-		{
-			onDisconnected();
-		}
 	}
 
 	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive)
@@ -516,6 +521,7 @@ namespace TCP
 		if (r != -1)
 		{
 			state = READY;
+			Info() << "TCP (" << host << ":" << port << "): connected.";
 
 			if (onConnected)
 				onConnected();
@@ -568,6 +574,8 @@ namespace TCP
 				return false;
 
 			state = READY;
+			Info() << "TCP (" << host << ":" << port << "): connected.";
+
 			connects++;
 			if (onConnected)
 				onConnected();
@@ -611,6 +619,11 @@ namespace TCP
 		}
 	}
 
+	void Client::updateConnection()
+	{
+		updateState();
+	}
+
 	int Client::send(const void *data, int length)
 	{
 
@@ -634,16 +647,14 @@ namespace TCP
 				}
 #endif
 
-				Error() << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+				Error() << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
 				if (persistent)
 				{
 					reconnect();
-					Error() << " Reconnect.\n";
 					return 0;
 				}
 				else
 				{
-					Error() << " Failed.\n";
 					return -1;
 				}
 			}
@@ -688,21 +699,17 @@ namespace TCP
 					if (error_code == EAGAIN || error_code == EWOULDBLOCK)
 						return 0;
 #endif
-					std::stringstream ss;
-					ss << "TCP (" << host << ":" << port << ") receive error. Error code: " << error_code << " (" << strerror(error_code) << ").";
+					Info() << "TCP (" << host << ":" << port << ") receive error with recv returns " << retval << ". Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
 
 					if (persistent)
 					{
-						ss << " Reconnect.\n";
 						reconnect();
 						return 0;
 					}
 					else
 					{
-						ss << " Failed.\n";
 						return -1;
 					}
-					Info() << ss.str();
 				}
 				return retval;
 			}

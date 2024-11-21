@@ -253,6 +253,7 @@ namespace IO
 		void publish(const std::string &message);
 		void handshake();
 
+		void setConnected(bool b);
 	public:
 		MQTTStreamer() : OutputMessage()
 		{
