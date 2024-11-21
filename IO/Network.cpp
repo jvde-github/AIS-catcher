@@ -170,8 +170,10 @@ namespace IO
 			r = http.Post(msg, gzip, false, "");
 		}
 
-		if (r.status < 200 || r.status > 299 || show_response)
+		if (r.status < 200 || r.status > 299)
 			Error() << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message;
+		else if(show_response)
+			Info() << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message;
 	}
 
 	void HTTPStreamer::process()
