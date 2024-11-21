@@ -231,6 +231,10 @@ If you want to send more condensed JSON:
 ```console
 AIS-catcher -Q JSON_FULL off
 ```
+Authentication can also be easily set if needed:
+```console
+AIS-catcher -Q USERNAME admin PASSWORD admin
+```
 
 - smaller UI tidy up (e.g. opens default on map and adjusted colors)
 - added NMEA2000 settings to the JSON configuration
