@@ -824,10 +824,51 @@ namespace IO
 		}
 	}
 
+	std::string connackCodeToString(int connackReturnCode)
+	{
+		switch (connackReturnCode)
+		{
+		case 0x00:
+			return "Connection accepted.";
+		case 0x01:
+			return "Rejected: Unsupported protocol version.";
+		case 0x02:
+			return "Rejected: Invalid or disallowed client ID.";
+		case 0x03:
+			return "Rejected: Server unavailable.";
+		case 0x04:
+			return "Rejected: Invalid username or password.";
+		case 0x05:
+			return "Rejected: Unauthorized connection.";
+		default:
+			return "Unknown error code.";
+		}
+	}
+
+	void MQTTStreamer::setConnected(bool c)
+	{
+		if (c)
+		{
+			connected = true;
+			tcp.setOnDisconnectedCallback(
+				[this]()
+				{
+					Error() << "MQTT: Disconnected from broker " << broker_host << ":" << broker_port;
+					connected = false;
+				});
+		}
+		else
+		{
+			connected = false;
+			tcp.setOnDisconnectedCallback(nullptr);
+		}
+	}
+
 	void MQTTStreamer::handshake()
 	{
+		Info() << "MQTT: Starting Handshake with broker " << broker_host << ":" << broker_port;
 
-		Info() << "MQTT: Handshake with broker " << broker_host << ":" << broker_port;
+		setConnected(false);
 
 		std::vector<uint8_t> data;
 
@@ -846,8 +887,8 @@ namespace IO
 
 		data.push_back(remaining_length);
 
-		data.push_back(0x00); // Length MSB
-		data.push_back(0x04); // Length LSB
+		data.push_back(0x00);
+		data.push_back(0x04);
 		data.push_back('M');
 		data.push_back('Q');
 		data.push_back('T');
@@ -891,6 +932,8 @@ namespace IO
 		if (tcp.send((char *)data.data(), data.size()) < 0)
 		{
 			Error() << "MQTT: Failed to send CONNECT packet";
+			tcp.disconnect();
+
 			return;
 		}
 
@@ -899,12 +942,16 @@ namespace IO
 		if (tcp.read((void *)fixedHeader, 2, 5) != 2)
 		{
 			Error() << "MQTT: Failed to read CONNACK fixed header, error ";
+			tcp.disconnect();
+
 			return;
 		}
 
 		if ((fixedHeader[0] >> 4) != (uint8_t)(PacketType::CONNACK))
 		{
 			Error() << "MQTT: Expected CONNACK packet, but received different packet type";
+			tcp.disconnect();
+
 			return;
 		}
 
@@ -921,11 +968,15 @@ namespace IO
 			if (multiplier > 128 * 128 * 128)
 			{
 				Error() << "MQTT: Malformed Remaining Length in CONNACK";
+				tcp.disconnect();
+
 				return;
 			}
 			if ((encodedByte & 128) != 0 && tcp.read((char *)&encodedByte, 1) != 1)
 			{
 				Error() << "MQTT: Failed to read Remaining Length byte";
+				tcp.disconnect();
+
 				return;
 			}
 			index++;
@@ -937,6 +988,7 @@ namespace IO
 		if (rv != (int)remainingLength)
 		{
 			Error() << "MQTT: Failed to read CONNACK payload " << rv << " " << remainingLength;
+			tcp.disconnect();
 			return;
 		}
 
@@ -944,16 +996,19 @@ namespace IO
 
 		if (connackReturnCode != 0)
 		{
-			Error() << "MQTT: CONNACK returned error code " << (int)connackReturnCode;
+			Error() << "MQTT: CONNACK returned error code [" << (int)connackReturnCode << "]: " << connackCodeToString(connackReturnCode);
+			tcp.disconnect();
+			return;
 		}
 
-		connected = true;
+		setConnected(true);
+
 	}
 
 	bool MQTTStreamer::connect()
 	{
 
-		connected = false;
+		setConnected(false);
 
 		if (!tcp.connect(broker_host, broker_port, true, 0, true))
 		{
@@ -966,12 +1021,18 @@ namespace IO
 
 	void MQTTStreamer::publish(const std::string &msg)
 	{
+		if (!connected)
+		{
+			tcp.updateConnection();
+			return;
+		}
+
 		int topic_len = topic.length();
 		int total_len = 2 + topic_len + msg.length();
-		
+
 		uint8_t data[2048] = {0};
 
-		if(msg.length() > sizeof(data) - 4 - topic_len)
+		if (msg.length() > sizeof(data) - 4 - topic_len)
 		{
 			Warning() << "MQTT: message too long, skipped";
 			return;
@@ -1005,6 +1066,10 @@ namespace IO
 	{
 		std::stringstream ss;
 
+		tcp.setOnConnectedCallback(
+			[this]()
+			{ this->handshake(); });
+
 		ss << "MQTT: Connecting to broker: " << broker_host << ":" << broker_port
 		   << ", topic: " << topic << ", QoS: " << qos
 		   << ", filter: " << Util::Convert::toString(filter.isOn());
@@ -1014,27 +1079,16 @@ namespace IO
 
 		Info() << ss.str();
 
-		tcp.setOnConnectedCallback(
-			[this]()
-			{ this->handshake(); });
-
-		tcp.setOnDisconnectedCallback(
-			[this]()
-			{ connected = false; });
-
 		connect();
 	}
 
 	void MQTTStreamer::Stop()
 	{
-		if (connected)
-			connected = false;
 
 		tcp.disconnect();
 		Info() << "MQTT: Disconnected from broker";
 
-		tcp.setOnConnectedCallback(nullptr);
-		tcp.setOnDisconnectedCallback(nullptr);
+		setConnected(false);
 	}
 
 	void MQTTStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
