@@ -228,11 +228,16 @@ namespace Device {
 	}
 
 	std::string RTLTCP::Get() {
-		std::string str = " host " + host + " port " + port + " timeout " + std::to_string(timeout);
-		str += " tuner " + Util::Convert::toString(tuner_AGC, tuner_Gain);
-		str += " rtlagc " + Util::Convert::toString(RTL_AGC);
-		str += " persist " + Util::Convert::toString(persistent);
-		str += " reset " + (reset_time < 0 ? std::string("none") : std::to_string(reset_time));
+
+		Protocol::ProtocolBase *p = transport;
+
+		std::string str;
+
+		while(p) {
+			str += " " + p->getValues();
+			p = p->getPrev() ;
+		}
+
 		str += " protocol " + getProtocolString();
 
 		return Device::Get() + str;
