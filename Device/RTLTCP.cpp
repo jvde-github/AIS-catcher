@@ -221,21 +221,28 @@ namespace Device {
 			else
 				throw std::runtime_error("RTLTCP: unknown protocol");
 		}
-		else
-			Device::Set(option, arg);
+		else {
+			bool b = false;
+
+			b |= tcp.setValue(option, arg);
+			b |= mqtt.setValue(option, arg);
+
+			if (!b)
+				Device::Set(option, arg);
+		}
 
 		return *this;
 	}
 
 	std::string RTLTCP::Get() {
 
-		Protocol::ProtocolBase *p = transport;
+		Protocol::ProtocolBase* p = transport;
 
 		std::string str;
 
-		while(p) {
+		while (p) {
 			str += " " + p->getValues();
-			p = p->getPrev() ;
+			p = p->getPrev();
 		}
 
 		str += " protocol " + getProtocolString();
