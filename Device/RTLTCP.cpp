@@ -35,7 +35,7 @@ namespace Device {
 				uint32_t magic = 0, tuner = 0, gain = 0;
 			} dongle;
 			// RTLTCP protocol, check for dongle information
-			int len = client.read((char*)&dongle, 12, timeout);
+			int len = transport->read((void*)&dongle, 12, timeout, true);
 			if (len != 12 || dongle.magic != 0x304C5452) {
 				Error() << "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
 				StopRequest();
@@ -43,7 +43,7 @@ namespace Device {
 		}
 		else if (Protocol == PROTOCOL::GPSD) {
 			const std::string str = "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\n";
-			int len = client.send(str.c_str(), str.size());
+			int len = transport->send(str.c_str(), str.size());
 			if (len != str.size()) {
 				Error() << "GPSD: no or invalid response, likely not a gpsd server.";
 				StopRequest();
@@ -53,11 +53,20 @@ namespace Device {
 
 	void RTLTCP::Play() {
 
-		if (!client.connect(host, port, persistent, timeout)) {
+		switch (Protocol) {
+		case PROTOCOL::MQTT:
+			transport = tcp.add(&mqtt);
+			mqtt.setValue("SUBSCRIBE", "ON");
+			break;
+		default:
+			break;
+		}
+
+		if (!transport->connect()) {
 			if (!persistent)
 				throw std::runtime_error("RTLTCP: cannot open socket.");
 
-			Error() << "RTLTCP: cannot open socket. Retrying in a few seconds.";
+			Error() << "RTLTCP: cannot connect. Retrying in a few seconds.";
 		}
 
 		Device::Play();
@@ -83,7 +92,7 @@ namespace Device {
 		if (Device::isStreaming()) {
 			if (Protocol == PROTOCOL::GPSD) {
 				const std::string str = "?WATCH={\"enable\":false}\n";
-				client.send(str.c_str(), str.size());
+				transport->send(str.c_str(), str.size());
 			}
 			Device::Stop();
 			fifo.Halt();
@@ -91,7 +100,7 @@ namespace Device {
 			if (async_thread.joinable()) async_thread.join();
 			if (run_thread.joinable()) run_thread.join();
 		}
-		client.disconnect();
+		transport->disconnect();
 	}
 
 	void RTLTCP::RunAsync() {
@@ -99,17 +108,12 @@ namespace Device {
 			buffer.resize(TRANSFER_SIZE);
 
 		while (isStreaming()) {
-			// send protocol
-			if (client.numberOfConnects() != connects) {
-				connects++;
-				sendProtocol();
-			}
 
-			int len = client.read(buffer.data(), TRANSFER_SIZE, 2);
+			int len = transport->read((void*)buffer.data(), TRANSFER_SIZE, 2, false);
 
 			if (len < 0) {
 				lost = true;
-				Error() << "RTLTCP: error receiving data from remote host. Cancelling. ";
+				Error() << "RTLTCP: error receiving data from remote host [" << len << "]. Cancelling. ";
 				break;
 			}
 			else if (isStreaming() && !fifo.Push(buffer.data(), len))
@@ -141,12 +145,12 @@ namespace Device {
 		instruction[3] = p >> 8;
 		instruction[2] = p >> 16;
 		instruction[1] = p >> 24;
-		client.send((const char*)instruction, 5);
+		transport->send((const char*)instruction, 5);
 	}
 
 	void RTLTCP::applySettings() {
 		// client.setTimeout(timeout);
-		client.setResetTime(reset_time);
+		// client.setResetTime(reset_time);
 
 		if (Protocol == PROTOCOL::RTLTCP) {
 			setParameterRTLTCP(5, freq_offset);
@@ -177,17 +181,21 @@ namespace Device {
 		}
 		else if (option == "PERSIST") {
 			persistent = Util::Parse::Switch(arg);
+			tcp.setValue("PERSIST", arg);
 		}
 		else if (option == "TIMEOUT") {
 			timeout = Util::Parse::Integer(arg, 1, 60);
+			tcp.setValue("TIMEOUT", arg);
 		}
 		else if (option == "RESET") {
 			reset_time = Util::Parse::Integer(arg, 1, 60);
 		}
 		else if (option == "HOST") {
 			host = arg;
+			tcp.setValue("HOST", arg);
 		}
 		else if (option == "PORT") {
+			tcp.setValue("PORT", arg);
 			port = arg;
 		}
 		else if (option == "PROTOCOL") {
@@ -204,6 +212,10 @@ namespace Device {
 			}
 			else if (arg == "TXT") {
 				Protocol = PROTOCOL::TXT;
+				setFormat(Format::TXT);
+			}
+			else if (arg == "MQTT") {
+				Protocol = PROTOCOL::MQTT;
 				setFormat(Format::TXT);
 			}
 			else
