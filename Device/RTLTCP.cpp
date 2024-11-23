@@ -29,18 +29,6 @@ namespace Device {
 	}
 
 	void RTLTCP::sendProtocol() {
-
-		if (Protocol == PROTOCOL::RTLTCP) {
-			struct {
-				uint32_t magic = 0, tuner = 0, gain = 0;
-			} dongle;
-			// RTLTCP protocol, check for dongle information
-			int len = transport->read((char*)&dongle, 12, timeout);
-			if (len != 12 || dongle.magic != 0x304C5452) {
-				Error() << "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
-				StopRequest();
-			}
-		}
 	}
 
 	void RTLTCP::Play() {
@@ -53,19 +41,23 @@ namespace Device {
 		case PROTOCOL::GPSD:
 			transport = tcp.add(&gpsd);
 			break;
+		case PROTOCOL::RTLTCP:
+			transport = tcp.add(&rtltcp);
 		default:
 			break;
 		}
 
+		rtltcp.setValue("FREQUENCY", std::to_string(frequency));
+		rtltcp.setValue("RATE", std::to_string(sample_rate));
+		rtltcp.setValue("FREQOFFSET", std::to_string(freq_offset));
+		rtltcp.setValue("BANDWIDTH", std::to_string(tuner_bandwidth));
+
 		if (!transport->connect()) {
 			if (!persistent)
 				throw std::runtime_error("RTLTCP: cannot open socket.");
-
-			Error() << "RTLTCP: cannot open socket. Retrying in a few seconds.";
 		}
 
 		Device::Play();
-
 
 		if (getFormat() != Format::TXT) {
 			fifo.Init(BUFFER_SIZE);
@@ -73,8 +65,6 @@ namespace Device {
 		else {
 			fifo.Init(1, BUFFER_SIZE);
 		}
-
-		applySettings();
 
 		lost = false;
 
@@ -101,14 +91,6 @@ namespace Device {
 			buffer.resize(TRANSFER_SIZE);
 
 		while (isStreaming()) {
-			// send protocol
-
-			/*
-			if (transport->numberOfConnects() != connects) {
-				connects++;
-				sendProtocol();
-			}
-			*/
 
 			int len = transport->read(buffer.data(), TRANSFER_SIZE, 2);
 
@@ -138,35 +120,6 @@ namespace Device {
 		}
 	}
 
-	void RTLTCP::setParameterRTLTCP(uint8_t c, uint32_t p) {
-		char instruction[5];
-
-		instruction[0] = c;
-		instruction[4] = p;
-		instruction[3] = p >> 8;
-		instruction[2] = p >> 16;
-		instruction[1] = p >> 24;
-		transport->send((const char*)instruction, 5);
-	}
-
-	void RTLTCP::applySettings() {
-		// client.setTimeout(timeout);
-		// transport->setResetTime(reset_time);
-
-		if (Protocol == PROTOCOL::RTLTCP) {
-			setParameterRTLTCP(5, freq_offset);
-			setParameterRTLTCP(3, tuner_AGC ? 0 : 1);
-
-			if (!tuner_AGC) setParameterRTLTCP(4, tuner_Gain * 10);
-			if (RTL_AGC) setParameterRTLTCP(8, 1);
-
-			setParameterRTLTCP(2, sample_rate);
-			setParameterRTLTCP(1, frequency);
-
-			setFormat(Format::CU8);
-		}
-	}
-
 	void RTLTCP::getDeviceList(std::vector<Description>& DeviceList) {
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
@@ -174,34 +127,14 @@ namespace Device {
 	Setting& RTLTCP::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
-		bool b = false;
+		tcp.setValue(option, arg);
+		mqtt.setValue(option, arg);
+		gpsd.setValue(option, arg);
+		rtltcp.setValue(option, arg);
 
-		b |= tcp.setValue(option, arg);
-		b |= mqtt.setValue(option, arg);
-		b |= gpsd.setValue(option, arg);
+		Device::Set(option, arg);
 
-		if (option == "TUNER") {
-			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);
-		}
-		else if (option == "RTLAGC") {
-			RTL_AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "PERSIST") {
-			persistent = Util::Parse::Switch(arg);
-		}
-		else if (option == "TIMEOUT") {
-			timeout = Util::Parse::Integer(arg, 1, 60);
-		}
-		else if (option == "RESET") {
-			reset_time = Util::Parse::Integer(arg, 1, 60);
-		}
-		else if (option == "HOST") {
-			host = arg;
-		}
-		else if (option == "PORT") {
-			port = arg;
-		}
-		else if (option == "PROTOCOL") {
+		if (option == "PROTOCOL") {
 			Util::Convert::toUpper(arg);
 			if (arg == "NONE")
 				Protocol = PROTOCOL::NONE;
@@ -224,8 +157,6 @@ namespace Device {
 			else
 				throw std::runtime_error("RTLTCP: unknown protocol");
 		}
-		else if (!b)
-			Device::Set(option, arg);
 
 		return *this;
 	}

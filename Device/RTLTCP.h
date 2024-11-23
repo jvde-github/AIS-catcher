@@ -52,20 +52,11 @@ namespace Device {
 			return "";
 		}
 
-		// Protocol: RTL_TCP
-		bool tuner_AGC = true;
-		bool RTL_AGC = false;
-		FLOAT32 tuner_Gain = 33.0;
-
-		// Protocol: NONE
-
 		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;
 		Protocol::GPSD gpsd;
+		Protocol::RTLTCP rtltcp;
 		Protocol::ProtocolBase* transport = &tcp;
-
-		std::string host = "localhost";
-		std::string port = "1234";
 
 		const int TRANSFER_SIZE = 16384;
 		static const int BUFFER_SIZE = 16 * 16384;
@@ -86,8 +77,6 @@ namespace Device {
 
 		FIFO fifo;
 
-		void setParameterRTLTCP(uint8_t cmd, uint32_t param);
-		void applySettings();
 		void sendProtocol();
 
 	public:

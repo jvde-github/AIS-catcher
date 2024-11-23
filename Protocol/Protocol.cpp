@@ -174,6 +174,7 @@ namespace Protocol {
 
 	int TCP::send(const void* data, int length) {
 		if (state == READY) {
+
 			int sent = ::send(sock, (char*)data, length, 0);
 
 			if (sent < length) {

@@ -179,7 +179,7 @@ namespace Protocol {
 		}
 
 		std::string getValues() {
-			return "HOST: " + host + " PORT: " + port + " PERSIST: " + Util::Convert::toString(persistent) + " KEEP_ALIVE: " + Util::Convert::toString(keep_alive);
+			return "host " + host + " port " + port + " persist " + Util::Convert::toString(persistent) + " keep_alive " + Util::Convert::toString(keep_alive);
 		}
 
 	private:
@@ -543,7 +543,7 @@ namespace Protocol {
 		}
 
 		std::string getValues() {
-			return "TOPIC: " + topic + " CLIENT_ID: " + client_id + " USERNAME: " + username + " PASSWORD: " + password + " QOS: " + std::to_string(qos);
+			return "topic " + topic + " client_id " + client_id + " username " + username + " password " + password + " qos " + std::to_string(qos);
 		}
 	};
 
@@ -569,6 +569,93 @@ namespace Protocol {
 				const std::string str = "?WATCH={\"enable\":false}\n";
 				prev->send(str.c_str(), str.size());
 			}
+		}
+	};
+
+	class RTLTCP : public ProtocolBase {
+
+	protected:
+		void setParameter(uint8_t c, uint32_t p) {
+			char instruction[5];
+
+			instruction[0] = c;
+			instruction[4] = p;
+			instruction[3] = p >> 8;
+			instruction[2] = p >> 16;
+			instruction[1] = p >> 24;
+			if (prev) prev->send(instruction, 5);
+		}
+
+		FLOAT32 freq_offset = 0;
+		int tuner_bandwidth = 0;
+		uint32_t frequency = 0;
+		uint32_t sample_rate = 0;
+		bool tuner_AGC = true;
+		bool RTL_AGC = false;
+		FLOAT32 tuner_Gain = 33.0;
+
+		void applySettings() {
+
+			std::cerr << "RTLTCP: setting parameters" << std::endl;
+			setParameter(5, freq_offset);
+			setParameter(3, tuner_AGC ? 0 : 1);
+
+			if (!tuner_AGC) setParameter(4, tuner_Gain * 10);
+			if (RTL_AGC) setParameter(8, 1);
+
+			setParameter(2, sample_rate);
+			setParameter(1, frequency);
+		}
+
+
+	public:
+		void onConnect() {
+			applySettings();
+
+			struct {
+				uint32_t magic = 0, tuner = 0, gain = 0;
+			} dongle;
+			// RTLTCP protocol, check for dongle information
+			int len = prev->read((char*)&dongle, 12, 5);
+			if (len != 12 || dongle.magic != 0x304C5452) {
+				Error() << "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
+				disconnect();
+			}
+
+			ProtocolBase::onConnect();
+		}
+
+		bool setValue(const std::string& key, const std::string& value) {
+			if (key == "TUNER") {
+				tuner_AGC = Util::Parse::AutoFloat(value, 0, 50, tuner_Gain);
+			}
+			else if (key == "RTLAGC") {
+				RTL_AGC = Util::Parse::Switch(value);
+			}
+			else if (key == "TUNER") {
+				tuner_AGC = Util::Parse::AutoFloat(value, 0, 50, tuner_Gain);
+			}
+			else if (key == "RATE" || key == "SAMPLE_RATE") {
+				sample_rate = ((Util::Parse::Integer(value, 0, 20000000)));
+			}
+			else if (key == "BW" || key == "BANDWIDTH") {
+				tuner_bandwidth = Util::Parse::Integer(value, 0, 1000000);
+			}
+			else if (key == "FREQOFFSET") {
+				freq_offset = Util::Parse::Float(value, -150, 150);
+			}
+			else if (key == "FREQUENCY") {
+				frequency = Util::Parse::Integer(value, 0, 2000000000);
+			}
+			else
+				return false;
+
+
+			return true;
+		}
+
+		std::string getValues() {
+			return "frequency " + std::to_string(frequency) + " freqoffset " + std::to_string(freq_offset) + " rate " + std::to_string(sample_rate) + " bandwidth " + std::to_string(tuner_bandwidth) + " tuner " + std::to_string(tuner_Gain) + " rtlagc " + Util::Convert::toString(RTL_AGC);
 		}
 	};
 }
