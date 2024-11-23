@@ -4,8 +4,8 @@ namespace Protocol {
 	void TCP::disconnect() {
 
 		if (sock != -1) {
-			closesocket(sock);
 			onDisconnect();
+			closesocket(sock);
 		}
 
 		if (state == READY)
@@ -124,13 +124,13 @@ namespace Protocol {
 
 			if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) != 0) {
 				Error() << "TCP (" << host << ":" << port << "): getsockopt failed.";
-                disconnect();
+				disconnect();
 				return false;
 			}
 
 			if (error != 0) {
 				Error() << "TCP (" << host << ":" << port << "): connection failed with error " << error << " (" << strerror(error) << ").";
-                disconnect();
+				disconnect();
 				return false;
 			}
 
@@ -209,8 +209,7 @@ namespace Protocol {
 	}
 
 	// zero if no input yet or connection being established
-	int TCP::read(void* data, int length, int t, bool wait)
-	{
+	int TCP::read(void* data, int length, int t, bool wait) {
 		if (state == READY) {
 			fd_set fd, fe;
 
@@ -255,8 +254,8 @@ namespace Protocol {
 		}
 		else {
 			updateState();
-            return 0;
-        }
+			return 0;
+		}
 
 		return 0;
 	}

@@ -86,6 +86,7 @@ namespace Protocol {
 		}
 
 		virtual bool connect() {
+
 			if (prev)
 				return prev->connect();
 
@@ -212,6 +213,7 @@ namespace Protocol {
 	class MQTT : public ProtocolBase {
 
 		std::vector<uint8_t> packet, buffer;
+		int buffer_ptr = 0;
 
 		enum class PacketType {
 			CONNECT = 1,
@@ -225,9 +227,10 @@ namespace Protocol {
 
 		std::string host, port, username, password;
 		std::string topic = "ais/data";
-		std::string client_id = "aiscatcher";
+		std::string client_id;
 
 		int qos = 0;
+		int packet_id = 1;
 
 		bool connected = false;
 		bool subscribe = false;
@@ -273,10 +276,10 @@ namespace Protocol {
 
 		void subscribePacket() {
 
-			int length = 2 + 2 + topic.length() + 1;
+			int packet_length = 2 + 2 + topic.length() + 1;
 
 			createPacket(0x82);
-			pushVariableLength(length);
+			pushVariableLength(packet_length);
 
 			pushInt(1);
 			pushString(topic);
@@ -303,7 +306,7 @@ namespace Protocol {
 			pushVariableLength(length);
 
 			pushString("MQTT");
-			pushByte(0x04);
+			pushByte(0x04); // MQTT 3.1.1
 			pushByte(flags);
 
 			// keep alive is set to two minutes
@@ -358,15 +361,13 @@ namespace Protocol {
 				return;
 			}
 
-			if (readPacket(b, length) && (b >> 4) != (uint8_t)(PacketType::CONNACK)) {
+			if (!readPacket(b, length) || (b >> 4) != (uint8_t)(PacketType::CONNACK)) {
 				Error() << "MQTT: Failed to read CONNACK fixed header.";
 				disconnect();
 				return;
 			}
 
 			connected = true;
-
-			Info() << "MQTT: Connected to broker";
 
 			if (subscribe) {
 				subscribePacket();
@@ -377,13 +378,13 @@ namespace Protocol {
 					return;
 				}
 
-				if (!readPacket(b,length))
-				{
+				if (!readPacket(b, length)) {
 					Error() << "MQTT: Failed to read SUBACK packet";
 					disconnect();
 					return;
 				}
 			}
+			Info() << "MQTT: Connected to broker";
 		}
 
 		bool readPacket(uint8_t& type, int& length) {
@@ -408,7 +409,7 @@ namespace Protocol {
 			if (!connected)
 				handshake();
 
-			read_ptr = 0;
+			buffer_ptr = 0;
 
 			ProtocolBase::onConnect();
 		}
@@ -417,9 +418,8 @@ namespace Protocol {
 			ProtocolBase::onDisconnect();
 
 			connected = false;
-			read_ptr = 0;
+			buffer_ptr = 0;
 		}
-
 
 		bool setValue(const std::string& key, const std::string& value) {
 			if (key == "TOPIC")
@@ -452,65 +452,52 @@ namespace Protocol {
 			return false;
 		}
 
-		int send(const void* str, int length) override {
+		int send(const void* str, int length) {
 			if (!isConnected())
 				return 0;
 
-			std::string msg = std::string((char*)str);
-
-			int topic_len = topic.length();
-			int total_len = 2 + topic_len + msg.length();
-
-			packet.resize(0);
-
-			if (msg.length() > 2048) {
+			if (length > 2048) {
 				Warning() << "MQTT: message too long, skipped";
 				return -1;
 			}
 
-			packet.push_back(0x30);
-			packet.push_back((qos << 1) & 0x06);
+			createPacket(0x30 | (qos << 1));
 
-			pushVariableLength(total_len);
+			int packet_length = 2 + topic.length() + length + (qos > 0 ? 2 : 0);
 
-			packet.push_back(topic_len >> 8);
-			packet.push_back(topic_len & 0xFF);
+			pushVariableLength(packet_length);
+			pushString(topic);
+
+			if (qos > 0) pushInt(packet_id++);
+
+			packet.insert(packet.end(), (char*)str, (char*)str + length);
 
 			return prev->send(packet.data(), packet.size());
 		}
 
-
-		int read_ptr = 0;
-
 		int read(void* data, int data_len, int t = 1, bool wait = false) override {
+
 			if (!isConnected())
 				return 0;
 
 			if (buffer.empty())
 				buffer.resize(16384);
 
-			int len = prev->read((char*)buffer.data() + read_ptr, buffer.size() - read_ptr, t, wait);
+			int len = prev->read((char*)buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
 			if (len <= 0)
 				return len;
 
-			read_ptr += len;
+			buffer_ptr += len;
 
-			if (read_ptr < 2)
+			if (buffer_ptr < 2)
 				return 0;
-
-			// check header
-			if ((buffer[0] & 0xF0) != 0x30) {
-				std::cerr << "MQTT: Invalid header" << std::endl;
-				disconnect();
-				return -1;
-			}
 
 			int length = 0;
 			int multiplier = 1;
 
 			int i = 1;
 			do {
-				if (i >= read_ptr)
+				if (i >= buffer_ptr)
 					return 0;
 
 				length += (buffer[i] & 127) * multiplier;
@@ -526,7 +513,7 @@ namespace Protocol {
 
 			} while ((buffer[i - 1] & 128) != 0);
 
-			if (read_ptr < length + i)
+			if (buffer_ptr < length + i)
 				return 0;
 
 			int topic_len = (buffer[i] << 8) + buffer[i + 1];
@@ -540,11 +527,19 @@ namespace Protocol {
 				return -1;
 			}
 
-			memcpy(data, buffer.data() + i, length);
-			memmove(buffer.data(), buffer.data() + length + i, read_ptr - length - i);
+			// check header
+			if ((buffer[0] & 0xF0) == 0x30) {
+				memcpy(data, buffer.data() + i, length);
+				memmove(buffer.data(), buffer.data() + length + i, buffer_ptr - length - i);
+				buffer_ptr -= length + i;
+				return length;
+			}
+			else {
+				std::cerr << "MQTT: packet received: " << ((int)buffer[0] >> 4) << std::endl;
+				buffer_ptr -= length + i;
+			}
 
-			read_ptr -= length + i;
-			return length;
+			return 0;
 		}
 
 		std::string getValues() {
@@ -552,5 +547,28 @@ namespace Protocol {
 		}
 	};
 
+	class GPSD : public ProtocolBase {
+		void onConnect() {
+			const std::string str = "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\n";
+			if (prev) {
+				int len = prev->send(str.c_str(), str.size());
+				if (len != str.size()) {
+					Error() << "GPSD: no or invalid response, likely not a gpsd server.";
+					disconnect();
+					;
+				}
+			}
 
+			ProtocolBase::onConnect();
+		}
+
+		void onDisconnect() {
+			ProtocolBase::onDisconnect();
+
+			if (prev) {
+				const std::string str = "?WATCH={\"enable\":false}\n";
+				prev->send(str.c_str(), str.size());
+			}
+		}
+	};
 }

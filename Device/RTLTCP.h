@@ -58,9 +58,11 @@ namespace Device {
 		FLOAT32 tuner_Gain = 33.0;
 
 		// Protocol: NONE
+
 		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;
-		Protocol::ProtocolBase *transport = &tcp;
+		Protocol::GPSD gpsd;
+		Protocol::ProtocolBase* transport = &tcp;
 
 		std::string host = "localhost";
 		std::string port = "1234";
