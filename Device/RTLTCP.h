@@ -62,12 +62,7 @@ namespace Device {
 		static const int BUFFER_SIZE = 16 * 16384;
 		std::vector<char> buffer;
 
-
-		int timeout = 2;
-		bool persistent = true;
-		int reset_time = -1;
 		bool lost = false;
-		int connects = 0;
 
 		std::thread async_thread;
 		std::thread run_thread;

@@ -75,16 +75,28 @@ namespace Protocol {
 		if (persistent) {
 #ifndef _WIN32
 			r = fcntl(sock, F_GETFL, 0);
+			if (r == -1) { // Fixed: Check return value of fcntl()
+				freeaddrinfo(address);
+				disconnect();
+				Error() << "TCP (" << host << ":" << port << "): fcntl F_GETFL failed: " << strerror(errno);
+				return false;
+			}
 			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
-
 			if (r == -1) {
 				freeaddrinfo(address);
 				disconnect();
+				Error() << "TCP (" << host << ":" << port << "): fcntl F_SETFL failed: " << strerror(errno);
 				return false;
 			}
 #else
-			u_long mode = 1; // 1 to enable non-blocking socket
-			ioctlsocket(sock, FIONBIO, &mode);
+			u_long mode = 1;							  // 1 to enable non-blocking socket
+			if (ioctlsocket(sock, FIONBIO, &mode) != 0) { // Fixed: Check return value of ioctlsocket()
+				freeaddrinfo(address);
+				disconnect();
+				int error_code = WSAGetLastError();
+				Error() << "TCP (" << host << ":" << port << "): ioctlsocket failed. Error code: " << error_code;
+				return false;
+			}
 #endif
 		}
 
@@ -113,7 +125,7 @@ namespace Protocol {
 		}
 #endif
 
-		return isConnected(timeout);
+		return isConnected(timeout) || persistent;
 	}
 
 
@@ -136,7 +148,7 @@ namespace Protocol {
 		timeval to = { t, 1 }; // t seconds and 1 microsecond
 
 		if (select(sock + 1, &fdr, &fdw, nullptr, &to) > 0) {
-			int error = -1; // Initialize to a non-zero value
+			int error = -1;
 			socklen_t len = sizeof(error);
 
 			if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) != 0) {
@@ -165,13 +177,14 @@ namespace Protocol {
 	}
 
 	void TCP::updateState() {
-		if (state == READY && reset_time > 0 && (long)time(nullptr) - (long)stamp > reset_time * 60) {
+
+		if (state == READY && reset_time > 0 && std::difftime(time(nullptr), stamp) > reset_time * 60) {
 			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect.";
 			reconnect();
 		}
 
 		else if (state == DISCONNECTED) {
-			if ((long)time(nullptr) - (long)stamp > 10) {
+			if (std::difftime(time(nullptr), stamp) > RECONNECT_TIME) {
 				Warning() << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
 				reconnect();
 			}
@@ -180,7 +193,7 @@ namespace Protocol {
 		else if (state == CONNECTING) {
 			bool connected = isConnected(0);
 
-			if (!connected && (long)time(nullptr) - (long)stamp > 10) {
+			if (!connected && std::difftime(time(nullptr), stamp) > RECONNECT_TIME) {
 				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect.";
 				reconnect();
 
@@ -226,7 +239,6 @@ namespace Protocol {
 		return 0;
 	}
 
-	// zero if no input yet or connection being established
 	int TCP::read(void* data, int length, int t, bool wait) {
 		if (state == READY) {
 			fd_set fd, fe;

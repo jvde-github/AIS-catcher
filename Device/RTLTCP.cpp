@@ -53,7 +53,6 @@ namespace Device {
 		rtltcp.setValue("BANDWIDTH", std::to_string(tuner_bandwidth));
 
 		if (!transport->connect()) {
-			if (!persistent)
 				throw std::runtime_error("RTLTCP: cannot open socket.");
 		}
 

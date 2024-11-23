@@ -59,7 +59,7 @@ namespace Protocol {
 		ProtocolBase* next = nullptr;
 
 	public:
-	
+
 		ProtocolBase* getPrev() { return prev; }
 		ProtocolBase* getNext() { return next; }
 
@@ -125,7 +125,7 @@ namespace Protocol {
 
 
 	class TCP : public ProtocolBase {
-
+		const int RECONNECT_TIME = 10;
 	public:
 		void disconnect();
 		bool connect();
