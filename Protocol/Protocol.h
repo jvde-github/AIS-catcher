@@ -77,8 +77,8 @@ namespace Protocol {
 		ProtocolBase() {}
 		~ProtocolBase() { disconnect(); }
 
-        ProtocolBase *getPrev() { return prev; }
-        ProtocolBase *getNext() { return next; }
+		ProtocolBase* getPrev() { return prev; }
+		ProtocolBase* getNext() { return next; }
 
 		virtual void disconnect() {
 			if (prev)
@@ -132,7 +132,7 @@ namespace Protocol {
 			next = p;
 			p->prev = this;
 
-            return p;
+			return p;
 		}
 
 		virtual bool setValue(const std::string& key, const std::string& value) { return false; }
@@ -158,7 +158,7 @@ namespace Protocol {
 		}
 
 		bool setValue(const std::string& key, const std::string& value) {
-            
+
 			if (key == "HOST")
 				host = value;
 			else if (key == "PORT")
@@ -215,36 +215,22 @@ namespace Protocol {
 		std::vector<uint8_t> data, buffer;
 
 		enum class PacketType {
-
 			CONNECT = 1,
-
 			CONNACK = 2,
-
 			PUBLISH = 3,
-
 			PUBACK = 4,
-
 			SUBSCRIBE = 8,
-
 			SUBACK = 9,
-
 			DISCONNECT = 14
-
 		};
 
 
 		std::string broker_host = "127.0.0.1";
-
 		std::string broker_port = "1883";
-
 		std::string topic = "ais/data";
-
 		std::string client_id;
-
 		std::string username;
-
 		std::string password;
-
 
 		int qos = 0;
 
@@ -254,19 +240,11 @@ namespace Protocol {
 		void encodeLength(size_t length)
 
 		{
-
-			do
-
-			{
-
+			do {
 				uint8_t encodedByte = length % 128;
 
 				length /= 128;
-
-				if (length > 0)
-
-				{
-
+				if (length > 0) {
 					encodedByte |= 128;
 				}
 
@@ -466,7 +444,7 @@ namespace Protocol {
 
 				Error() << "MQTT: Failed to send CONNECT packet";
 
-				prev->disconnect();
+				disconnect();
 
 
 				return;
@@ -482,7 +460,7 @@ namespace Protocol {
 
 				Error() << "MQTT: Failed to read CONNACK fixed header, error ";
 
-				prev->disconnect();
+				disconnect();
 
 
 				return;
@@ -495,7 +473,7 @@ namespace Protocol {
 
 				Error() << "MQTT: Expected CONNACK packet, but received different packet type";
 
-				prev->disconnect();
+				disconnect();
 
 
 				return;
@@ -511,7 +489,7 @@ namespace Protocol {
 
 				Error() << "MQTT: Failed to read CONNACK remaining length";
 
-				prev->disconnect();
+				disconnect();
 
 				return;
 			}
@@ -564,7 +542,7 @@ namespace Protocol {
 
 					Error() << "MQTT: Failed to send SUBSCRIBE packet";
 
-					prev->disconnect();
+					disconnect();
 
 
 					return;
@@ -577,7 +555,7 @@ namespace Protocol {
 
 					Error() << "MQTT: Failed to read SUBACK packet";
 
-					prev->disconnect();
+					disconnect();
 
 					return;
 				}
@@ -617,24 +595,19 @@ namespace Protocol {
 
 
 	public:
-		void onConnect()
-
-		{
-
+		void onConnect() {
 			if (!connected)
-
 				handshake();
 
+			read_ptr = 0;
 
 			ProtocolBase::onConnect();
 		}
 
 
-		void onDisconnect()
-
-		{
-
+		void onDisconnect() {
 			connected = false;
+			read_ptr = 0;
 
 			ProtocolBase::onDisconnect();
 		}
@@ -773,7 +746,7 @@ namespace Protocol {
 			// check header
 			if ((buffer[0] & 0xF0) != 0x30) {
 				std::cerr << "MQTT: Invalid header" << std::endl;
-				prev->disconnect();
+				disconnect();
 				return -1;
 			}
 
@@ -788,7 +761,7 @@ namespace Protocol {
 				length += (buffer[i] & 127) * multiplier;
 
 				if (length > data_len) {
-					prev->disconnect();
+					disconnect();
 					Error() << "MQTT: Invalid length";
 					return -1;
 				}
@@ -808,7 +781,7 @@ namespace Protocol {
 
 			if (length < 0) {
 				Error() << "MQTT: Invalid length";
-				prev->disconnect();
+				disconnect();
 				return -1;
 			}
 
