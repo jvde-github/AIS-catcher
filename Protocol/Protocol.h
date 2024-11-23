@@ -1,36 +1,21 @@
-
 /*
-
-	Copyright(c) 2023-2024 jvde.github@gmail.com
-
+	Copyright(c) 2021-2024 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
-
 	it under the terms of the GNU General Public License as published by
-
 	the Free Software Foundation, either version 3 of the License, or
-
 	(at your option) any later version.
 
-
 	This program is distributed in the hope that it will be useful,
-
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-
 	GNU General Public License for more details.
 
-
 	You should have received a copy of the GNU General Public License
-
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 */
 
-
 #pragma once
-
 
 #include <fstream>
 #include <iostream>
@@ -74,9 +59,7 @@ namespace Protocol {
 		ProtocolBase* next = nullptr;
 
 	public:
-		ProtocolBase() {}
-		~ProtocolBase() { disconnect(); }
-
+	
 		ProtocolBase* getPrev() { return prev; }
 		ProtocolBase* getNext() { return next; }
 
@@ -536,6 +519,7 @@ namespace Protocol {
 			}
 			else {
 				std::cerr << "MQTT: packet received: " << ((int)buffer[0] >> 4) << std::endl;
+				memmove(buffer.data(), buffer.data() + length + i, buffer_ptr - length - i);
 				buffer_ptr -= length + i;
 			}
 
@@ -632,9 +616,6 @@ namespace Protocol {
 			else if (key == "RTLAGC") {
 				RTL_AGC = Util::Parse::Switch(value);
 			}
-			else if (key == "TUNER") {
-				tuner_AGC = Util::Parse::AutoFloat(value, 0, 50, tuner_Gain);
-			}
 			else if (key == "RATE" || key == "SAMPLE_RATE") {
 				sample_rate = ((Util::Parse::Integer(value, 0, 20000000)));
 			}
@@ -649,7 +630,6 @@ namespace Protocol {
 			}
 			else
 				return false;
-
 
 			return true;
 		}
