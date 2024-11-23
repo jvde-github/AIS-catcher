@@ -164,7 +164,7 @@ namespace Protocol {
 			else if (key == "PORT")
 				port = value;
 			else if (key == "RESET")
-				reset_time = std::stoi(value);
+				reset_time = Util::Parse::Integer(value, 0, 3600, key);
 			else if (key == "PERSISTENT")
 				persistent = Util::Parse::Switch(value);
 			else if (key == "TIMEOUT")
@@ -209,10 +209,9 @@ namespace Protocol {
 		}
 	};
 
-
 	class MQTT : public ProtocolBase {
 
-		std::vector<uint8_t> data, buffer;
+		std::vector<uint8_t> packet, buffer;
 
 		enum class PacketType {
 			CONNECT = 1,
@@ -224,22 +223,22 @@ namespace Protocol {
 			DISCONNECT = 14
 		};
 
-
-		std::string broker_host = "127.0.0.1";
-		std::string broker_port = "1883";
+		std::string host, port, username, password;
 		std::string topic = "ais/data";
-		std::string client_id;
-		std::string username;
-		std::string password;
+		std::string client_id = "aiscatcher";
 
 		int qos = 0;
 
 		bool connected = false;
 		bool subscribe = false;
 
-		void encodeLength(size_t length)
+		void pushVariableLength(int length) {
+			if (length >= 128 * 128 * 128 * 128) {
+				Error() << "MQTT: Length encoding error: " << length;
+				disconnect();
+				return;
+			}
 
-		{
 			do {
 				uint8_t encodedByte = length % 128;
 
@@ -248,351 +247,161 @@ namespace Protocol {
 					encodedByte |= 128;
 				}
 
-				data.push_back(encodedByte);
+				packet.push_back(encodedByte);
 
 			} while (length > 0);
 		}
 
-
-		void subscribePacket()
-
-		{
-
-			data.resize(0);
-
-			data.push_back(0x82);
-
-			size_t remaining_length = 2 + 2 + topic.length() + 1;
-
-			encodeLength(remaining_length);
-
-
-			data.push_back(0x00);
-
-			data.push_back(0x01);
-
-
-			data.push_back((topic.length() >> 8) & 0xFF);
-
-			data.push_back(topic.length() & 0xFF);
-
-
-			data.insert(data.end(), topic.begin(), topic.end());
-
-
-			data.push_back(static_cast<uint8_t>(qos));
+		void pushInt(int length) {
+			packet.push_back(length >> 8);
+			packet.push_back(length & 0xFF);
 		}
 
+		void pushByte(uint8_t byte) {
+			packet.push_back(byte);
+		}
 
-		void connectPacket()
+		void createPacket(uint8_t type) {
+			packet.resize(0);
+			packet.push_back(type);
+		}
 
-		{
+		void pushString(const std::string& str) {
+			pushInt(str.length());
+			packet.insert(packet.end(), str.begin(), str.end());
+		}
 
-			data.resize(0);
+		void subscribePacket() {
 
-			data.push_back(0x10);
+			int length = 2 + 2 + topic.length() + 1;
 
+			createPacket(0x82);
+			pushVariableLength(length);
 
-			size_t remaining_length = 12 + client_id.length();
+			pushInt(1);
+			pushString(topic);
+			pushByte(qos);
+		}
 
-			if (!username.empty())
+		void connectPacket() {
 
-			{
+			packet.push_back(0x10);
+			createPacket(0x10);
 
-				remaining_length += 2 + username.length();
-			}
-
-
-			if (!password.empty())
-
-			{
-
-				remaining_length += 2 + password.length();
-			}
-
-
-			encodeLength(remaining_length);
-
-
-			data.push_back(0x00);
-
-			data.push_back(0x04);
-
-			data.push_back('M');
-
-			data.push_back('Q');
-
-			data.push_back('T');
-
-			data.push_back('T');
-
-
-			data.push_back(0x04);
-
-
+			int length = 12 + client_id.length();
 			uint8_t flags = 0x02;
 
-			if (!username.empty())
-
+			if (!username.empty()) {
+				length += 2 + username.length();
 				flags |= 0x80;
-
-			if (!password.empty())
-
+			}
+			if (!password.empty()) {
+				length += 2 + password.length();
 				flags |= 0x40;
+			}
 
-			data.push_back(flags);
+			pushVariableLength(length);
 
+			pushString("MQTT");
+			pushByte(0x04);
+			pushByte(flags);
 
 			// keep alive is set to two minutes
+			pushInt(120);
 
-			data.push_back(0x00);
+			pushString(client_id);
 
-			data.push_back(120);
-
-
-			// Client ID
-
-			data.push_back((client_id.length() >> 8) & 0xFF);
-
-			data.push_back(client_id.length() & 0xFF);
-
-			data.insert(data.end(), client_id.begin(), client_id.end());
-
-
-			// Username if present
-
-			if (!username.empty())
-
-			{
-
-				data.push_back((username.length() >> 8) & 0xFF);
-
-				data.push_back(username.length() & 0xFF);
-
-				data.insert(data.end(), username.begin(), username.end());
-			}
-
-
-			// Password if present
-
-			if (!password.empty())
-
-			{
-
-				data.push_back((password.length() >> 8) & 0xFF);
-
-				data.push_back(password.length() & 0xFF);
-
-				data.insert(data.end(), password.begin(), password.end());
-			}
+			if (!username.empty()) pushString(username);
+			if (!password.empty()) pushString(password);
 		}
 
 
-		int readRemainingLength()
-
-		{
-
+		int readRemainingLength() {
 			int length = 0;
+			int multiplier = 1;
+			uint8_t b;
 
-			size_t multiplier = 1;
-
-			uint8_t encodedByte;
-
-			do
-
-			{
-
-				if (prev->read((char*)&encodedByte, 1) != 1)
-
+			do {
+				if (prev->read((char*)&b, 1) != 1)
 					return -1;
 
-				length += (encodedByte & 127) * multiplier;
+				length += (b & 127) * multiplier;
 
 				multiplier *= 128;
 
 				if (multiplier > 128 * 128 * 128)
-
 					return -1;
 
-			} while ((encodedByte & 128) != 0);
+			} while ((b & 128) != 0);
 
 
 			return length;
 		}
 
 
-		void handshake()
+		void handshake() {
 
-		{
+			uint8_t b;
+			int length;
 
-			Info() << "MQTT: Starting Handshake with broker " << broker_host << ":" << broker_port;
+			Info() << "MQTT: Starting Handshake with broker " << host << ":" << port;
 
 			connected = false;
 
-
-			if (!prev)
-
-				return;
-
+			if (!prev) return;
 
 			connectPacket();
 
-
-			if (prev->send((char*)data.data(), data.size()) < 0)
-
-			{
-
+			if (prev->send(packet.data(), packet.size()) < 0) {
 				Error() << "MQTT: Failed to send CONNECT packet";
-
 				disconnect();
-
-
 				return;
 			}
 
-
-			uint8_t fixedHeader[1];
-
-
-			if (prev->read((void*)fixedHeader, 1, 5) != 1)
-
-			{
-
-				Error() << "MQTT: Failed to read CONNACK fixed header, error ";
-
+			if (readPacket(b, length) && (b >> 4) != (uint8_t)(PacketType::CONNACK)) {
+				Error() << "MQTT: Failed to read CONNACK fixed header.";
 				disconnect();
-
-
 				return;
 			}
-
-
-			if ((fixedHeader[0] >> 4) != (uint8_t)(PacketType::CONNACK))
-
-			{
-
-				Error() << "MQTT: Expected CONNACK packet, but received different packet type";
-
-				disconnect();
-
-
-				return;
-			}
-
-
-			int length = readRemainingLength();
-
-
-			if (length < 0)
-
-			{
-
-				Error() << "MQTT: Failed to read CONNACK remaining length";
-
-				disconnect();
-
-				return;
-			}
-
-
-			data.resize(length);
-
-
-			int rv = prev->read((char*)data.data(), length, 5);
-
-			if (rv != (int)length)
-
-			{
-
-				Error() << "MQTT: Failed to read CONNACK payload " << rv << " " << length;
-
-				disconnect();
-
-				return;
-			}
-
-
-			uint8_t connackReturnCode = data[1];
-
-
-			if (connackReturnCode != 0)
-
-			{
-
-				disconnect();
-
-				return;
-			}
-
 
 			connected = true;
 
 			Info() << "MQTT: Connected to broker";
 
-
-			if (subscribe)
-
-			{
+			if (subscribe) {
 				subscribePacket();
 
-
-				if (prev->send((char*)data.data(), data.size()) < 0)
-
-				{
-
+				if (prev->send((char*)packet.data(), packet.size()) < 0) {
 					Error() << "MQTT: Failed to send SUBSCRIBE packet";
-
 					disconnect();
-
-
 					return;
 				}
 
-
-				if (!handleSubAck())
-
+				if (!readPacket(b,length))
 				{
-
 					Error() << "MQTT: Failed to read SUBACK packet";
-
 					disconnect();
-
 					return;
 				}
 			}
 		}
 
-
-		bool handleSubAck()
-
-		{
-
-			char h;
-
-			if (prev->read(&h, 1, 5, true) != 1)
-
+		bool readPacket(uint8_t& type, int& length) {
+			if (prev->read(&type, 1, 5, true) != 1)
 				return false;
 
-
-			Info() << "MQTT: SUBACK packet received ";
-
-
-			int length = readRemainingLength();
+			length = readRemainingLength();
 
 			if (length < 0)
-
 				return false;
 
+			packet.resize(length);
 
-			data.resize(length);
-
-			if (prev->read((char*)data.data(), length, 5, true) != length)
-
+			if (prev->read(packet.data(), length, 5, true) != length)
 				return false;
 
 			return true;
 		}
-
 
 	public:
 		void onConnect() {
@@ -604,12 +413,11 @@ namespace Protocol {
 			ProtocolBase::onConnect();
 		}
 
-
 		void onDisconnect() {
+			ProtocolBase::onDisconnect();
+
 			connected = false;
 			read_ptr = 0;
-
-			ProtocolBase::onDisconnect();
 		}
 
 
@@ -633,95 +441,42 @@ namespace Protocol {
 		}
 
 
-		bool isConnected()
-
-		{
-
+		bool isConnected() {
 			if (connected)
-
 				return true;
 
-
-			if (prev && prev->isConnected())
-
-			{
-
+			if (prev && prev->isConnected()) {
 				return connected;
 			}
-
 
 			return false;
 		}
 
-
-		int send(const void* str, int length) override
-
-		{
-
+		int send(const void* str, int length) override {
 			if (!isConnected())
-
 				return 0;
-
 
 			std::string msg = std::string((char*)str);
 
-
 			int topic_len = topic.length();
-
 			int total_len = 2 + topic_len + msg.length();
 
+			packet.resize(0);
 
-			uint8_t data[2048] = { 0 };
-
-
-			if (msg.length() > sizeof(data) - 4 - topic_len)
-
-			{
-
+			if (msg.length() > 2048) {
 				Warning() << "MQTT: message too long, skipped";
-
 				return -1;
 			}
 
+			packet.push_back(0x30);
+			packet.push_back((qos << 1) & 0x06);
 
-			data[0] = 0x30;
+			pushVariableLength(total_len);
 
-			data[0] |= (qos << 1) & 0x06;
+			packet.push_back(topic_len >> 8);
+			packet.push_back(topic_len & 0xFF);
 
-
-			int pos = 1;
-
-			do
-
-			{
-
-				uint8_t encoded_byte = total_len & 127;
-
-				total_len = total_len >> 7;
-
-				if (total_len > 0)
-
-				{
-
-					encoded_byte |= 128;
-				}
-
-				data[pos++] = encoded_byte;
-
-			} while (total_len > 0);
-
-
-			data[pos] = 0;
-
-			data[pos + 1] = topic_len;
-
-
-			memcpy(&data[pos + 2], topic.c_str(), topic_len);
-
-			memcpy(&data[pos + 2 + topic_len], msg.c_str(), msg.length());
-
-
-			return prev->send((char*)data, pos + 2 + topic_len + msg.length());
+			return prev->send(packet.data(), packet.size());
 		}
 
 
