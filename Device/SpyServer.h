@@ -22,7 +22,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "TCP.h"
+#include "Protocol.h"
 
 
 namespace Device {
@@ -176,7 +176,7 @@ namespace Device {
 	class SpyServer : public Device {
 		FLOAT32 tuner_gain = 0.0;
 
-		::TCP::Client client;
+		Protocol::TCP client;
 
 		std::string host = "localhost";
 		std::string port = "1234";

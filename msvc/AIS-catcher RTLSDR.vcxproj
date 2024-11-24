@@ -59,6 +59,7 @@
     <ClCompile Include="..\Library\Logger.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
+    <ClCompile Include="..\Protocol\Protocol.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Application\AIS-catcher.h" />
@@ -110,6 +111,7 @@
     <ClInclude Include="..\Library\TCP.h" />
     <ClInclude Include="..\Library\Logger.h" />
     <ClInclude Include="..\Library\Utilities.h" />
+    <ClInclude Include="..\Protocol\Protocol.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -165,25 +167,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../Protocol;../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../Protocol;../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../Protocol;../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../Protocol;../DBMS;..;../Application;../Ships;../Library;../IO;../DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
