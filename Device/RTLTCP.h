@@ -22,7 +22,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "TCP.h"
+#include "Protocol.h"
 
 namespace Device {
 
@@ -32,7 +32,8 @@ namespace Device {
 			NONE,
 			RTLTCP,
 			GPSD,
-			TXT
+			TXT,
+			MQTT
 		} Protocol = PROTOCOL::RTLTCP;
 
 		std::string getProtocolString() const {
@@ -45,32 +46,23 @@ namespace Device {
 				return "GPSD";
 			case PROTOCOL::TXT:
 				return "TXT";
+			case PROTOCOL::MQTT:
+				return "MQTT";
 			}
 			return "";
 		}
 
-		// Protocol: RTL_TCP
-		bool tuner_AGC = true;
-		bool RTL_AGC = false;
-		FLOAT32 tuner_Gain = 33.0;
-
-		// Protocol: NONE
-
-		::TCP::Client client;
-
-		std::string host = "localhost";
-		std::string port = "1234";
+		Protocol::TCP tcp;
+		Protocol::MQTT mqtt;
+		Protocol::GPSD gpsd;
+		Protocol::RTLTCP rtltcp;
+		Protocol::ProtocolBase* transport = &tcp;
 
 		const int TRANSFER_SIZE = 16384;
 		static const int BUFFER_SIZE = 16 * 16384;
 		std::vector<char> buffer;
 
-
-		int timeout = 2;
-		bool persistent = true;
-		int reset_time = -1;
 		bool lost = false;
-		int connects = 0;
 
 		std::thread async_thread;
 		std::thread run_thread;
@@ -80,8 +72,6 @@ namespace Device {
 
 		FIFO fifo;
 
-		void setParameterRTLTCP(uint8_t cmd, uint32_t param);
-		void applySettings();
 		void sendProtocol();
 
 	public:

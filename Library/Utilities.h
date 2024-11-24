@@ -37,64 +37,55 @@
 
 #include "Stream.h"
 
-namespace Util
-{
+namespace Util {
 
-	class RealPart : public SimpleStreamInOut<CFLOAT32, FLOAT32>
-	{
+	class RealPart : public SimpleStreamInOut<CFLOAT32, FLOAT32> {
 		std::vector<FLOAT32> output;
 
 	public:
 		virtual ~RealPart() {}
-		void Receive(const CFLOAT32 *data, int len, TAG &tag);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
-	class ImaginaryPart : public SimpleStreamInOut<CFLOAT32, FLOAT32>
-	{
+	class ImaginaryPart : public SimpleStreamInOut<CFLOAT32, FLOAT32> {
 		std::vector<FLOAT32> output;
 
 	public:
 		virtual ~ImaginaryPart() {}
-		void Receive(const CFLOAT32 *data, int len, TAG &tag);
+		void Receive(const CFLOAT32* data, int len, TAG& tag);
 	};
 
 	template <typename T>
-	class PassThrough : public SimpleStreamInOut<T, T>
-	{
+	class PassThrough : public SimpleStreamInOut<T, T> {
 
 	public:
 		virtual ~PassThrough() {}
-		virtual void Receive(const T *data, int len, TAG &tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
-		virtual void Receive(T *data, int len, TAG &tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
+		virtual void Receive(const T* data, int len, TAG& tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
+		virtual void Receive(T* data, int len, TAG& tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
 	};
 
 	template <typename T>
-	class Timer : public SimpleStreamInOut<T, T>
-	{
+	class Timer : public SimpleStreamInOut<T, T> {
 
 		high_resolution_clock::time_point time_start;
 		float timing = 0.0;
 
-		void tic()
-		{
+		void tic() {
 			time_start = high_resolution_clock::now();
 		}
 
-		void toc()
-		{
+		void toc() {
 			timing += 1e-3f * duration_cast<microseconds>(high_resolution_clock::now() - time_start).count();
 		}
 
 	public:
 		virtual ~Timer() {}
-		virtual void Receive(const T *data, int len, TAG &tag)
-		{
+		virtual void Receive(const T* data, int len, TAG& tag) {
 			tic();
 			SimpleStreamInOut<T, T>::Send(data, len, tag);
 			toc();
 		}
-		virtual void Receive(T *data, int len, TAG &tag)
-		{
+		virtual void Receive(T* data, int len, TAG& tag) {
 			tic();
 			SimpleStreamInOut<T, T>::Send(data, len, tag);
 			toc();
@@ -103,83 +94,75 @@ namespace Util
 		float getTotalTiming() { return timing; }
 	};
 
-	class Convert
-	{
+	class Convert {
 	public:
-		static std::string toTimeStr(const std::time_t &t);
-		static std::string toTimestampStr(const std::time_t &t);
+		static std::string toTimeStr(const std::time_t& t);
+		static std::string toTimestampStr(const std::time_t& t);
 		static std::string toHexString(uint64_t l);
 		static std::string toString(Format format);
 		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); }
 		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
-		static std::string toString(FLOAT32 f)
-		{
+		static std::string toString(FLOAT32 f) {
 			std::string s = std::to_string(f);
 			if (s == "nan" || s == "-nan")
 				return "null";
 			return s;
 		}
 
-		static void toUpper(std::string &s);
-		static void toFloat(CU8 *in, CFLOAT32 *out, int len);
-		static void toFloat(CS8 *in, CFLOAT32 *out, int len);
-		static void toFloat(CS16 *in, CFLOAT32 *out, int len);
+		static void toUpper(std::string& s);
+		static void toFloat(CU8* in, CFLOAT32* out, int len);
+		static void toFloat(CS8* in, CFLOAT32* out, int len);
+		static void toFloat(CS16* in, CFLOAT32* out, int len);
 	};
 
-	class Parse
-	{
+	class Parse {
 	public:
-		static long Integer(std::string str, long min = 0, long max = 0, const std::string &setting = "");
+		static long Integer(std::string str, long min = 0, long max = 0, const std::string& setting = "");
 		static FLOAT32 Float(std::string str, FLOAT32 min = -1e30, FLOAT32 max = +1e30);
-		static bool StreamFormat(std::string str, Format &format);
-		static bool DeviceType(std::string str, Type &type);
+		static bool StreamFormat(std::string str, Format& format);
+		static bool DeviceType(std::string str, Type& type);
 		static std::string DeviceTypeString(Type type);
 
-		static bool Switch(std::string arg, const std::string &TrueString = "ON", const std::string &FalseString = "OFF");
-		static bool AutoInteger(std::string arg, int min, int max, int &val);
-		static bool AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32 &val);
-		static void URL(const std::string &url, std::string &protocol, std::string &host, std::string &port, std::string &path);
+		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF");
+		static bool AutoInteger(std::string arg, int min, int max, int& val);
+		static bool AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32& val);
+		static void HTTP_URL(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path);
+		static void URL(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path);
 	};
 
-	class Serialize
-	{
+	class Serialize {
 	public:
-		static void Uint8(uint8_t i, std::vector<char> &v);
-		static void Uint16(uint16_t i, std::vector<char> &v);
-		static void Uint32(uint32_t i, std::vector<char> &v);
-		static void Uint64(uint64_t i, std::vector<char> &v);
-		static void Int8(int8_t i, std::vector<char> &v);
-		static void Int16(int16_t i, std::vector<char> &v);
-		static void Int32(int32_t i, std::vector<char> &v);
-		static void Int64(int64_t i, std::vector<char> &v);
-		static void String(const std::string &s, std::vector<char> &v);
-		static void LatLon(FLOAT32 lat, FLOAT32 lon, std::vector<char> &v);
-		static void Float(FLOAT32 f, std::vector<char> &v);
-		static void FloatLow(FLOAT32 f, std::vector<char> &v);
+		static void Uint8(uint8_t i, std::vector<char>& v);
+		static void Uint16(uint16_t i, std::vector<char>& v);
+		static void Uint32(uint32_t i, std::vector<char>& v);
+		static void Uint64(uint64_t i, std::vector<char>& v);
+		static void Int8(int8_t i, std::vector<char>& v);
+		static void Int16(int16_t i, std::vector<char>& v);
+		static void Int32(int32_t i, std::vector<char>& v);
+		static void Int64(int64_t i, std::vector<char>& v);
+		static void String(const std::string& s, std::vector<char>& v);
+		static void LatLon(FLOAT32 lat, FLOAT32 lon, std::vector<char>& v);
+		static void Float(FLOAT32 f, std::vector<char>& v);
+		static void FloatLow(FLOAT32 f, std::vector<char>& v);
 	};
 
-	class Helper
-	{
+	class Helper {
 	public:
-		static std::string readFile(const std::string &filename);
+		static std::string readFile(const std::string& filename);
 		static int lsb(uint64_t x);
-		static std::vector<std::string> getFilesWithExtension(const std::string &directory, const std::string &extension);
+		static std::vector<std::string> getFilesWithExtension(const std::string& directory, const std::string& extension);
 		static long getMemoryConsumption();
 		static std::string getOS();
 		static std::string getHardware();
-		static bool isUUID(const std::string &s)
-		{
+		static bool isUUID(const std::string& s) {
 			if (s.size() != 36)
 				return false;
-			for (int i = 0; i < 36; i++)
-			{
-				if (i == 8 || i == 13 || i == 18 || i == 23)
-				{
+			for (int i = 0; i < 36; i++) {
+				if (i == 8 || i == 13 || i == 18 || i == 23) {
 					if (s[i] != '-')
 						return false;
 				}
-				else
-				{
+				else {
 					if (!isxdigit(s[i]))
 						return false;
 				}
@@ -188,8 +171,7 @@ namespace Util
 		}
 	};
 
-	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32>
-	{
+	class ConvertRAW : public SimpleStreamInOut<RAW, CFLOAT32> {
 		std::vector<CFLOAT32> output;
 
 	public:
@@ -197,11 +179,10 @@ namespace Util
 		Connection<CU8> outCU8;
 		Connection<CS8> outCS8;
 
-		void Receive(const RAW *raw, int len, TAG &tag);
+		void Receive(const RAW* raw, int len, TAG& tag);
 	};
 
-	class PackedInt
-	{
+	class PackedInt {
 	private:
 		uint32_t value = 0;
 
@@ -209,38 +190,31 @@ namespace Util
 		PackedInt() : value(0) {}
 		PackedInt(int val) : value(val) {}
 
-		inline int get(int position, int size) const
-		{
+		inline int get(int position, int size) const {
 			return (value >> position) & ((1 << size) - 1);
 		}
 
-		inline void set(int position, int size, int fieldValue)
-		{
+		inline void set(int position, int size, int fieldValue) {
 			value = (value & ~(((1 << size) - 1) << position)) | ((fieldValue & ((1 << size) - 1)) << position);
 		}
 
-		inline void andOp(int position, int size, int fieldValue)
-		{
+		inline void andOp(int position, int size, int fieldValue) {
 			value &= ((fieldValue & ((1 << size) - 1)) << position);
 		}
 
-		inline void orOp(int position, int size, int fieldValue)
-		{
+		inline void orOp(int position, int size, int fieldValue) {
 			value |= ((fieldValue & ((1 << size) - 1)) << position);
 		}
 
-		inline int getPackedValue() const
-		{
+		inline int getPackedValue() const {
 			return value;
 		}
 
-		inline void setPackedValue(int val)
-		{
+		inline void setPackedValue(int val) {
 			value = val;
 		}
 
-		inline void reset()
-		{
+		inline void reset() {
 			value = 0;
 		}
 	};
