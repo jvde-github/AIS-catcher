@@ -572,7 +572,6 @@ namespace Protocol {
 				if (len != str.size()) {
 					Error() << "GPSD: no or invalid response, likely not a gpsd server.";
 					disconnect();
-					;
 				}
 			}
 
@@ -594,7 +593,7 @@ namespace Protocol {
 	protected:
 		bool connected = false;
 
-		void setParameter(uint8_t c, uint32_t p) {
+		void sendParam(uint8_t c, uint32_t p) {
 			char instruction[5];
 
 			instruction[0] = c;
@@ -616,14 +615,14 @@ namespace Protocol {
 		void applySettings() {
 
 			std::cerr << "RTLTCP: setting parameters" << std::endl;
-			setParameter(5, freq_offset);
-			setParameter(3, tuner_AGC ? 0 : 1);
+			sendParam(5, freq_offset);
+			sendParam(3, tuner_AGC ? 0 : 1);
 
-			if (!tuner_AGC) setParameter(4, tuner_Gain * 10);
-			if (RTL_AGC) setParameter(8, 1);
+			if (!tuner_AGC) sendParam(4, tuner_Gain * 10);
+			if (RTL_AGC) sendParam(8, 1);
 
-			setParameter(2, sample_rate);
-			setParameter(1, frequency);
+			sendParam(2, sample_rate);
+			sendParam(1, frequency);
 		}
 
 
