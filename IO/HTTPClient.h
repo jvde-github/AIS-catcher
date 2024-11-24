@@ -83,7 +83,7 @@ namespace IO {
 		}
 
 		void setURL(const std::string& url) {
-			Util::Parse::URL(url, protocol, host, port, path);
+			Util::Parse::HTTP_URL(url, protocol, host, port, path);
 
 			if(protocol.empty())
 				throw std::runtime_error("Invalid URL, missing protocol.");

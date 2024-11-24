@@ -53,7 +53,7 @@ namespace Device {
 		rtltcp.setValue("BANDWIDTH", std::to_string(tuner_bandwidth));
 
 		if (!transport->connect()) {
-				throw std::runtime_error("RTLTCP: cannot open socket.");
+			throw std::runtime_error("RTLTCP: cannot open socket.");
 		}
 
 		Device::Play();
@@ -133,7 +133,16 @@ namespace Device {
 
 		Device::Set(option, arg);
 
-		if (option == "PROTOCOL") {
+		if (option == "URL") {
+			std::string prot, host, port, path;
+			Util::Parse::URL(arg, prot, host, port, path);
+
+			if (!host.empty()) Set("HOST", host);
+			if (!port.empty()) Set("PORT", port);
+			if (!prot.empty()) Set("PROTOCOL", prot);
+		}
+		else if (option == "PROTOCOL") {
+
 			Util::Convert::toUpper(arg);
 			if (arg == "NONE")
 				Protocol = PROTOCOL::NONE;

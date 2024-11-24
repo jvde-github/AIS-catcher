@@ -59,6 +59,8 @@ namespace Protocol {
 		ProtocolBase* next = nullptr;
 
 	public:
+		ProtocolBase() = default;
+		virtual ~ProtocolBase() {}
 
 		ProtocolBase* getPrev() { return prev; }
 		ProtocolBase* getNext() { return next; }
@@ -126,6 +128,7 @@ namespace Protocol {
 
 	class TCP : public ProtocolBase {
 		const int RECONNECT_TIME = 10;
+
 	public:
 		void disconnect();
 		bool connect();
@@ -344,13 +347,39 @@ namespace Protocol {
 				return;
 			}
 
-			if (!readPacket(b, length) || (b >> 4) != (uint8_t)(PacketType::CONNACK)) {
+			if (!readPacket(b, length) || packet.size() < 2 || (b >> 4) != (uint8_t)(PacketType::CONNACK)) {
 				Error() << "MQTT: Failed to read CONNACK fixed header.";
 				disconnect();
 				return;
 			}
 
-			connected = true;
+			if (packet[1] != 0) {
+				switch (packet[1]) {
+				case 1:
+					Error() << "MQTT: Connection Refused - Unacceptable Protocol Version.";
+					break;
+				case 2:
+					Error() << "MQTT: Connection Refused - Identifier Rejected.";
+					break;
+				case 3:
+					Error() << "MQTT: Connection Refused - Server Unavailable.";
+					break;
+				case 4:
+					Error() << "MQTT: Connection Refused - Not Authorized.";
+					break;
+				case 5:
+					Error() << "MQTT: Connection Refused - Bad Username or Password.";
+					break;
+				case 6:
+					Error() << "MQTT: Connection Refused - Not Authorized (Enhanced).";
+					break;
+				default:
+					Error() << "MQTT: Connection Refused - Unknown Return Code: " << (int)packet[1];
+				}
+				disconnect();
+				return;
+			}
+
 
 			if (subscribe) {
 				subscribePacket();
@@ -367,7 +396,8 @@ namespace Protocol {
 					return;
 				}
 			}
-			Info() << "MQTT: Connected to broker";
+			Info() << "MQTT: Connected to broker " << (subscribe ? "and subscribed" : "");
+			connected = true;
 		}
 
 		bool readPacket(uint8_t& type, int& length) {
@@ -417,12 +447,15 @@ namespace Protocol {
 				qos = Util::Parse::Integer(value, 0, 2, key);
 			else if (key == "SUBSCRIBE")
 				subscribe = Util::Parse::Switch(value);
+			else if (key == "HOST")
+				host = value;
+			else if (key == "PORT")
+				port = value;
 			else
 				return false;
 
 			return true;
 		}
-
 
 		bool isConnected() {
 			if (connected)
@@ -559,6 +592,8 @@ namespace Protocol {
 	class RTLTCP : public ProtocolBase {
 
 	protected:
+		bool connected = false;
+
 		void setParameter(uint8_t c, uint32_t p) {
 			char instruction[5];
 
@@ -599,14 +634,25 @@ namespace Protocol {
 			struct {
 				uint32_t magic = 0, tuner = 0, gain = 0;
 			} dongle;
-			// RTLTCP protocol, check for dongle information
+
 			int len = prev->read((char*)&dongle, 12, 5);
 			if (len != 12 || dongle.magic != 0x304C5452) {
 				Error() << "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
 				disconnect();
 			}
-
+			connected = true;
 			ProtocolBase::onConnect();
+		}
+
+		void onDisconnect() {
+			ProtocolBase::onDisconnect();
+			connected = false;
+		}
+
+		int read(void* data, int data_len, int t = 1, bool wait = false) override {
+			if (prev && connected) return prev->read(data, data_len, t, wait);
+
+			return 0;
 		}
 
 		bool setValue(const std::string& key, const std::string& value) {

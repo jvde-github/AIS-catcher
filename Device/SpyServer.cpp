@@ -35,7 +35,7 @@ namespace Device {
 	//        channels, digital gain and recovery in case we get off sync with headers if needed
 
 	void SpyServer::Open(uint64_t h) {
-		Info() << "Connecting to SpyServer..." ;
+		Info() << "Connecting to SpyServer...";
 		if (!client.connect(host, port, false, timeout))
 			throw std::runtime_error("SPYSERVER: cannot open connection.");
 
@@ -105,13 +105,13 @@ namespace Device {
 	bool SpyServer::processHeader() {
 		// read header
 		if (!read((char*)&header, sizeof(MessageHeader))) {
-			Error()  << "SPYSERVER: no data received." ;
+			Error() << "SPYSERVER: no data received.";
 			return false;
 		}
 
 		// check header
 		if ((header.ProtocolID & 0xFFFF0000) != (SPYSERVER_PROTOCOL_VERSION & 0xFFFF0000) || header.BodySize > SPYSERVER_MAX_MESSAGE_BODY_SIZE) {
-			Error()  << "SPYSERVER: protocol ID not supported (" << (header.ProtocolID >> 24 & 0xFF) << "." << (header.ProtocolID >> 16 & 0xFF) << ")" ;
+			Error() << "SPYSERVER: protocol ID not supported (" << (header.ProtocolID >> 24 & 0xFF) << "." << (header.ProtocolID >> 16 & 0xFF) << ")";
 			return false;
 		}
 
@@ -149,7 +149,7 @@ namespace Device {
 			return true;
 		}
 
-		Error()  << "SPYSERVER: unknown message type received." ;
+		Error() << "SPYSERVER: unknown message type received.";
 		return false;
 	}
 
@@ -167,7 +167,7 @@ namespace Device {
 		if (client_sync.CanControl)
 			sendSetting(SETTING_GAIN, { (uint32_t)gain });
 		else
-			Error()  << "SPYSERVER: server does not give gain control." ;
+			Error() << "SPYSERVER: server does not give gain control.";
 	}
 
 	bool SpyServer::sendSetting(uint32_t type, const std::vector<uint32_t>& params) {
@@ -227,7 +227,7 @@ namespace Device {
 		while (isStreaming()) {
 			if (remainingBytes == 0) {
 				if (!processHeader()) {
-					Error()  << "SPYSERVER: no valid message received." ;
+					Error() << "SPYSERVER: no valid message received.";
 					lost = true;
 				}
 			}
@@ -236,12 +236,12 @@ namespace Device {
 				int len = client.read(data.data(), remainingBytes, timeout);
 
 				if (len <= 0) {
-					Error()  << "SPYSERVER: error receiving data from remote host. Cancelling. " ;
+					Error() << "SPYSERVER: error receiving data from remote host. Cancelling. ";
 					lost = true;
 					break;
 				}
 				else {
-					if (isStreaming() && !fifo.Push(data.data(), len)) Error()  << "SPYSERVER: buffer overrun." ;
+					if (isStreaming() && !fifo.Push(data.data(), len)) Error() << "SPYSERVER: buffer overrun.";
 					remainingBytes -= len;
 				}
 			}
@@ -272,23 +272,23 @@ namespace Device {
 				fifo.Pop();
 			}
 			else {
-				if (isStreaming()) Error()  << "SPYSERVER: timeout." ;
+				if (isStreaming()) Error() << "SPYSERVER: timeout.";
 			}
 		}
 	}
 
 	void SpyServer::printDevice() {
-		Info() << "Device info:" ;
-		Info() << "  Serial: " << device_info.DeviceSerial << " DeviceType: " << device_info.DeviceType << " MaximumSampleRate: " << device_info.MaximumSampleRate << " MaximumBandwidth: " << device_info.MaximumBandwidth ;
-		Info() << "  DecimationStageCount: " << device_info.DecimationStageCount << " GainStageCount: " << device_info.GainStageCount << " MaximumGainIndex: " << device_info.MaximumGainIndex ;
-		Info() << "  Minimum/Maximum Frequency: " << device_info.MinimumFrequency << "/" << device_info.MaximumFrequency << " resolution: " << device_info.Resolution ;
-		Info() << "  MinimumIQDecimation: " << device_info.MinimumIQDecimation << " ForcedIQFormat: " << device_info.ForcedIQFormat ;
+		Info() << "Device info:";
+		Info() << "  Serial: " << device_info.DeviceSerial << " DeviceType: " << device_info.DeviceType << " MaximumSampleRate: " << device_info.MaximumSampleRate << " MaximumBandwidth: " << device_info.MaximumBandwidth;
+		Info() << "  DecimationStageCount: " << device_info.DecimationStageCount << " GainStageCount: " << device_info.GainStageCount << " MaximumGainIndex: " << device_info.MaximumGainIndex;
+		Info() << "  Minimum/Maximum Frequency: " << device_info.MinimumFrequency << "/" << device_info.MaximumFrequency << " resolution: " << device_info.Resolution;
+		Info() << "  MinimumIQDecimation: " << device_info.MinimumIQDecimation << " ForcedIQFormat: " << device_info.ForcedIQFormat;
 	}
 
 	void SpyServer::printSync() {
-		Info() << "Client:" ;
-		Info() << "  CanControl: " << client_sync.CanControl << " Gain: " << client_sync.Gain << " DeviceCenterFrequency: " << client_sync.DeviceCenterFrequency ;
-		Info() << "  IQCenterFrequency: " << client_sync.IQCenterFrequency << "  Minimum/Maximum Frequency: " << client_sync.MinimumIQCenterFrequency << "/" << client_sync.MaximumIQCenterFrequency << " resolution: " << device_info.Resolution ;
+		Info() << "Client:";
+		Info() << "  CanControl: " << client_sync.CanControl << " Gain: " << client_sync.Gain << " DeviceCenterFrequency: " << client_sync.DeviceCenterFrequency;
+		Info() << "  IQCenterFrequency: " << client_sync.IQCenterFrequency << "  Minimum/Maximum Frequency: " << client_sync.MinimumIQCenterFrequency << "/" << client_sync.MaximumIQCenterFrequency << " resolution: " << device_info.Resolution;
 	}
 
 	bool SpyServer::setRate(uint32_t rate) {
@@ -302,7 +302,7 @@ namespace Device {
 		}
 
 		if (idx == -1) {
-			Error() << "SPYSERVER: sample rate not supported by server. Supported rates:" ;
+			Error() << "SPYSERVER: sample rate not supported by server. Supported rates:";
 			for (const auto& r : _sample_rates) {
 				Error() << " " << r.first;
 			}
@@ -340,7 +340,16 @@ namespace Device {
 	Setting& SpyServer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
 
-		if (option == "GAIN") {
+		if (option == "URL") {
+			std::string prot, host, port, path;
+			Util::Parse::URL(arg, prot, host, port, path);
+
+			if (!host.empty()) Set("HOST", host);
+			if (!port.empty()) Set("PORT", port);
+			if (!prot.empty() && prot != "sdr")
+				throw std::runtime_error("SPYSERVER: protocol not supported.");
+		}
+		else if (option == "GAIN") {
 			tuner_gain = Util::Parse::Float(arg, 0, 50);
 		}
 		else if (option == "HOST") {

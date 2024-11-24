@@ -91,6 +91,40 @@ namespace Util {
 
 	void Parse::URL(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path) {
 
+		std::string s = url;
+
+		protocol.clear();
+		host.clear();
+		port.clear();
+		path = "/";
+
+		size_t idx = s.find("://");
+		if (idx != std::string::npos) {
+
+			protocol = s.substr(0, idx);
+			s = s.substr(idx + 3);
+		}
+
+		idx = s.find('/');
+		if (idx != std::string::npos) {
+			path = s.substr(idx);
+			s = s.substr(0, idx);
+		}
+
+		idx = s.find(':');
+		if (idx != std::string::npos) {
+			host = s.substr(0, idx);
+			port = s.substr(idx + 1);
+		}
+		else {
+			host = s;
+		}
+		std::cerr << "URL: " << host << " " << port << " " << path << " protocol " << protocol << std::endl;
+	}
+
+
+	void Parse::HTTP_URL(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path) {
+
 		int idx = url.find("://");
 		if (idx != std::string::npos) {
 

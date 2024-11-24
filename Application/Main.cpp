@@ -399,14 +399,8 @@ int main(int argc, char* argv[]) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::RTLTCP;
-				if (count == 1) {
-					std::string protocol, host, port, path;
-					Util::Parse::URL(arg1, protocol, host, port, path);
-
-					if (!host.empty()) _receivers.back()->RTLTCP().Set("host", host);
-					if (!protocol.empty()) _receivers.back()->RTLTCP().Set("protocol", protocol);
-					if (!port.empty()) _receivers.back()->RTLTCP().Set("port", port);
-				}
+				if (count == 1) 
+					_receivers.back()->RTLTCP().Set("url", arg1);
 				if (count == 2)
 					_receivers.back()->RTLTCP().Set("port", arg2).Set("host", arg1);
 				if (count == 3)
@@ -435,14 +429,14 @@ int main(int argc, char* argv[]) {
 				}
 			} break;
 			case 'y':
-				Assert(count <= 2, param, "requires one or two parameters [host] [[port]].");
+				Assert(count <= 2, param, "requires one or two parameters [url] or [host] [port].");
 				if (++nrec > 1) {
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
 				_receivers.back()->InputType() = Type::SPYSERVER;
 				if (count == 1)
-					_receivers.back()->SpyServer().Set("host", arg1);
-				if (count == 2)
+					_receivers.back()->SpyServer().Set("url", arg1);
+				else if (count == 2)
 					_receivers.back()->SpyServer().Set("port", arg2).Set("host", arg1);
 				break;
 			case 'z':
