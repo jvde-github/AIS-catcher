@@ -742,12 +742,11 @@ namespace IO {
 			}
 		}
 
-		char d[1024];
-		mqtt.read(d, 1024, 0, false);
+		char d[2048];
+		mqtt.read(d, sizeof(d), 0, false);
 	}
 
 	Setting& MQTTStreamer::Set(std::string option, std::string arg) {
-		Info() << "MQTT: Setting option " << option << " to " << arg;
 		Util::Convert::toUpper(option);
 
 		if (tcp.setValue(option, arg))
