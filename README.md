@@ -663,7 +663,7 @@ In a similar fashion `-c X` will decode one channel. This is only useful in some
 
 AIS-catcher can push AIS messages via the MQTT protocol (3.1.1) to a broker with the `-Q` switch. An example with all settings:
 ```console
-AIS-catcher -Q HOST 127.0.0.1 PORT 1883 USERNAME admin PASSWORD admin CLIENT_ID aiscatcher QOS 0 TOPC data/ais JSON_FULL on
+AIS-catcher -Q HOST 127.0.0.1 PORT 1883 USERNAME admin PASSWORD admin CLIENT_ID aiscatcher QOS 0 TOPIC data/ais JSON_FULL on
 ```
 We can also read as input from a MQTT broker:
 ```console
