@@ -659,6 +659,17 @@ AIS-catcher has the option to listen at frequency 156.8 Mhz to receive Channel 3
 
 In a similar fashion `-c X` will decode one channel. This is only useful in some instances, see the ZMQ example below.
 
+### MQTT
+
+AIS-catcher can push AIS messages via the MQTT protocol (3.1.1) to a broker with the `-Q` switch. An example with all settings:
+```console
+AIS-catcher -Q HOST 127.0.0.1 PORT 1883 USERNAME admin PASSWORD admin CLIENT_ID aiscatcher QOS 0 TOPC data/ais JSON_FULL on
+```
+We can also read as input from a MQTT broker:
+```console
+AIS-catcher -t mqtt://127.0.0.1:1883 -gt TOPIC data/ais USERNAME admin PASSWORD admin
+```
+
 ### NMEA2000 input and output via SocketCAN
 
 In v0.56 we introduced "Experimenter Mode" for NMEA2000 input and output via socketCAN on Linux. To properly handle the mechanics of a NMEA2000 network, the NMEA2000 library by  Timo Lappalainen
