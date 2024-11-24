@@ -99,11 +99,6 @@ namespace Protocol {
 			return -1;
 		}
 
-		virtual void updateState() {
-			if (prev)
-				prev->updateState();
-		}
-
 		virtual void onConnect() {
 			if (next)
 				next->onConnect();
@@ -130,13 +125,13 @@ namespace Protocol {
 		const int RECONNECT_TIME = 10;
 
 	public:
-		void disconnect();
-		bool connect();
+		void disconnect() override;
+		bool connect() override;
 
-		int read(void* data, int length, int t, bool wait);
-		int send(const void* data, int length);
+		int read(void* data, int length, int t, bool wait) override;
+		int send(const void* data, int length) override;
 
-		bool isConnected() {
+		bool isConnected() override {
 			if (state == READY)
 				return true;
 
@@ -144,7 +139,7 @@ namespace Protocol {
 			return state == READY;
 		}
 
-		bool setValue(const std::string& key, const std::string& value) {
+		bool setValue(const std::string& key, const std::string& value) override {
 
 			if (key == "HOST")
 				host = value;
@@ -164,7 +159,7 @@ namespace Protocol {
 			return true;
 		}
 
-		std::string getValues() {
+		std::string getValues() override {
 			return "host " + host + " port " + port + " persist " + Util::Convert::toString(persistent) + " keep_alive " + Util::Convert::toString(keep_alive);
 		}
 
@@ -418,7 +413,7 @@ namespace Protocol {
 		}
 
 	public:
-		void onConnect() {
+		void onConnect() override {
 			if (!connected)
 				handshake();
 
@@ -427,14 +422,14 @@ namespace Protocol {
 			ProtocolBase::onConnect();
 		}
 
-		void onDisconnect() {
+		void onDisconnect() override {
 			ProtocolBase::onDisconnect();
 
 			connected = false;
 			buffer_ptr = 0;
 		}
 
-		bool setValue(const std::string& key, const std::string& value) {
+		bool setValue(const std::string& key, const std::string& value) override {
 			if (key == "TOPIC")
 				topic = value;
 			else if (key == "CLIENT_ID")
@@ -457,7 +452,7 @@ namespace Protocol {
 			return true;
 		}
 
-		bool isConnected() {
+		bool isConnected() override {
 			if (connected)
 				return true;
 
@@ -468,7 +463,7 @@ namespace Protocol {
 			return false;
 		}
 
-		int send(const void* str, int length) {
+		int send(const void* str, int length) override {
 			if (!isConnected())
 				return 0;
 
@@ -559,13 +554,13 @@ namespace Protocol {
 			return 0;
 		}
 
-		std::string getValues() {
+		std::string getValues() override {
 			return "topic " + topic + " client_id " + client_id + " username " + username + " password " + password + " qos " + std::to_string(qos);
 		}
 	};
 
 	class GPSD : public ProtocolBase {
-		void onConnect() {
+		void onConnect() override {
 			const std::string str = "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\n";
 			if (prev) {
 				int len = prev->send(str.c_str(), str.size());
@@ -578,7 +573,7 @@ namespace Protocol {
 			ProtocolBase::onConnect();
 		}
 
-		void onDisconnect() {
+		void onDisconnect() override {
 			ProtocolBase::onDisconnect();
 
 			if (prev) {
@@ -627,7 +622,7 @@ namespace Protocol {
 
 
 	public:
-		void onConnect() {
+		void onConnect() override {
 			applySettings();
 
 			struct {
@@ -643,7 +638,7 @@ namespace Protocol {
 			ProtocolBase::onConnect();
 		}
 
-		void onDisconnect() {
+		void onDisconnect() override {
 			ProtocolBase::onDisconnect();
 			connected = false;
 		}
@@ -654,7 +649,7 @@ namespace Protocol {
 			return 0;
 		}
 
-		bool setValue(const std::string& key, const std::string& value) {
+		bool setValue(const std::string& key, const std::string& value) override {
 			if (key == "TUNER") {
 				tuner_AGC = Util::Parse::AutoFloat(value, 0, 50, tuner_Gain);
 			}
@@ -679,7 +674,7 @@ namespace Protocol {
 			return true;
 		}
 
-		std::string getValues() {
+		std::string getValues() override {
 			return "frequency " + std::to_string(frequency) + " freqoffset " + std::to_string(freq_offset) + " rate " + std::to_string(sample_rate) + " bandwidth " + std::to_string(tuner_bandwidth) + " tuner " + std::to_string(tuner_Gain) + " rtlagc " + Util::Convert::toString(RTL_AGC);
 		}
 	};
