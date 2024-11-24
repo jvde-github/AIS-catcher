@@ -1,2 +1,2 @@
-#define VERSION_DESCRIBE	"v0.60-340-gbbaf3c9d"
-#define VERSION_URL_TAG	"v0_60_340_gbbaf3c9d"
+#define VERSION_DESCRIBE	"v0.60-342-g509799cf"
+#define VERSION_URL_TAG	"v0_60_342_g509799cf"
