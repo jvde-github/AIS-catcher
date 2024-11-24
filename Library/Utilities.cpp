@@ -119,7 +119,6 @@ namespace Util {
 		else {
 			host = s;
 		}
-		std::cerr << "URL: " << host << " " << port << " " << path << " protocol " << protocol << std::endl;
 	}
 
 
