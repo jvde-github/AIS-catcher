@@ -36,7 +36,9 @@ namespace Device {
 
 	void SpyServer::Open(uint64_t h) {
 		Info() << "Connecting to SpyServer...";
-		if (!client.connect(host, port, false, timeout))
+		client.setValue("TIMEOUT", std::to_string(timeout));
+		
+		if (!client.connect()) //host, port, false, timeout))
 			throw std::runtime_error("SPYSERVER: cannot open connection.");
 
 		if (!sendHandshake()) {
@@ -93,7 +95,7 @@ namespace Device {
 		int maxzero = 2;
 
 		while (size > 0 && maxzero >= 0) {
-			int len = client.read(data, size, timeout);
+			int len = client.read(data, size, timeout, false);
 			if (len < 0) return false;
 			if (len == 0) maxzero--;
 			data += len;
@@ -233,7 +235,7 @@ namespace Device {
 			}
 
 			if (remainingBytes) {
-				int len = client.read(data.data(), remainingBytes, timeout);
+				int len = client.read(data.data(), remainingBytes, timeout, false);
 
 				if (len <= 0) {
 					Error() << "SPYSERVER: error receiving data from remote host. Cancelling. ";
@@ -339,6 +341,8 @@ namespace Device {
 
 	Setting& SpyServer::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
+
+		client.setValue(option, arg);
 
 		if (option == "URL") {
 			std::string prot, host, port, path;
