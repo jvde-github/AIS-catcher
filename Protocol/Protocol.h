@@ -90,6 +90,30 @@ namespace Protocol
 			return false;
 		}
 
+		virtual std::string getHost()
+		{
+			if (prev)
+				return prev->getHost();
+
+			return "";
+		}
+
+		virtual std::string getPort()
+		{
+			if (prev)
+				return prev->getPort();
+
+			return "";
+		}
+
+		virtual SOCKET getSocket()
+		{
+			if (prev)
+				return prev->getSocket();
+
+			return -1;
+		}
+
 		virtual int read(void *data, int length, int t = 1, bool wait = false)
 		{
 			if (prev)
@@ -176,6 +200,21 @@ namespace Protocol
 			return "host " + host + " port " + port + " persist " + Util::Convert::toString(persistent) + " keep_alive " + Util::Convert::toString(keep_alive);
 		}
 
+		std::string getHost() override
+		{
+			return host;
+		}
+
+		std::string getPort() override
+		{
+			return port;
+		}
+
+		SOCKET getSocket() override
+		{
+			return sock;
+		}
+
 	private:
 		enum State
 		{
@@ -234,7 +273,7 @@ namespace Protocol
 			RESERVED_15 = 15 << 4  // 240
 		};
 
-		std::string host, port, username, password;
+		std::string username, password;
 		std::string topic = "ais/data";
 		std::string client_id;
 
@@ -345,14 +384,14 @@ namespace Protocol
 
 			do
 			{
+				if (shift >= 28)
+					return -1;
+
 				if (prev->read((char *)&b, 1) != 1)
 					return -1;
 
 				length |= (b & 127) << shift;
 				shift += 7;
-
-				if (shift > 28)
-					return -1;
 
 			} while ((b & 128) != 0);
 
@@ -365,7 +404,7 @@ namespace Protocol
 			uint8_t b;
 			int length;
 
-			Info() << "MQTT: Starting Handshake with broker " << host << ":" << port;
+			Info() << "MQTT: Starting Handshake with broker " << getHost() << ":" << getPort();
 
 			connected = false;
 
@@ -487,10 +526,6 @@ namespace Protocol
 				qos = Util::Parse::Integer(value, 0, 2, key);
 			else if (key == "SUBSCRIBE")
 				subscribe = Util::Parse::Switch(value);
-			else if (key == "HOST")
-				host = value;
-			else if (key == "PORT")
-				port = value;
 			else
 				return false;
 
@@ -564,15 +599,15 @@ namespace Protocol
 					if (i >= buffer_ptr)
 						return 0;
 
-					length |= (buffer[i] & 127) << shift;
-					shift += 7;
-
-					if (shift > 28)
+					if (shift >= 28)
 					{
-						Error() << "MQTT: Length cannot be processed: " << length;
+						Error() << "MQTT: Length of packet is at most 4 bytes.";
 						disconnect();
 						return -1;
 					}
+
+					length |= (buffer[i] & 127) << shift;
+					shift += 7;
 
 				} while ((buffer[i++] & 128) != 0);
 
@@ -611,20 +646,11 @@ namespace Protocol
 					}
 					break;
 				}
-				case PacketType::PUBACK:
-					break;
 				case PacketType::PINGREQ:
 					createPacket(PacketType::PINGRESP, 0);
 					pushVariableLength(0);
 					prev->send(packet.data(), packet.size());
 					break;
-
-				case PacketType::DISCONNECT:
-					break;
-
-				case PacketType::PUBCOMP:
-					break;
-
 				case PacketType::PUBREC:
 					createPacket(PacketType::PUBREL, 2);
 					pushVariableLength(2);
@@ -634,7 +660,10 @@ namespace Protocol
 						return -1;
 
 					break;
-
+				case PacketType::PUBACK:
+				case PacketType::DISCONNECT:
+				case PacketType::PUBCOMP:
+					break;
 				default:
 					Warning() << "MQTT: packet received: " << ((int)buffer[0] >> 4);
 					break;
