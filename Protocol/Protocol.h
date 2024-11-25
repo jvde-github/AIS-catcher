@@ -612,25 +612,20 @@ namespace Protocol
 					break;
 				}
 				case PacketType::PUBACK:
-					Warning() << "MQTT: PUBACK received";
 					break;
 				case PacketType::PINGREQ:
-					Warning() << "MQTT: PINGREQ received";
 					createPacket(PacketType::PINGRESP, 0);
 					pushVariableLength(0);
 					prev->send(packet.data(), packet.size());
 					break;
 
 				case PacketType::DISCONNECT:
-					Warning() << "MQTT: DISCONNECT received";
 					break;
 
 				case PacketType::PUBCOMP:
-					Warning() << "MQTT: PUBCOMP received";
 					break;
 
 				case PacketType::PUBREC:
-					Warning() << "MQTT: PUBREC received";
 					createPacket(PacketType::PUBREL, 2);
 					pushVariableLength(2);
 					pushByte(buffer[i]);
@@ -638,12 +633,10 @@ namespace Protocol
 					if (prev->send(packet.data(), packet.size()) != packet.size())
 						return -1;
 
-					Warning() << "MQTT: PUBREL send";
 					break;
 
 				default:
 					Warning() << "MQTT: packet received: " << ((int)buffer[0] >> 4);
-					Warning() << "MQTT: packet length: " << (int)buffer[0];
 					break;
 				}
 
