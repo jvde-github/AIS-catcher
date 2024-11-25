@@ -112,8 +112,8 @@ namespace Device {
 				else
 					setFormat(f);
 			}
-			//else
-			//	throw std::runtime_error("Invalid Device setting: \"" + option + "\"");
+			else
+				throw std::runtime_error("Invalid Device setting: \"" + option + "\"");
 
 			return *this;
 		}

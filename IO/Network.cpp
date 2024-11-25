@@ -870,9 +870,10 @@ namespace IO
 	{
 		Util::Convert::toUpper(option);
 
-		tcp.setValue(option, arg);
-		mqtt.setValue(option, arg);
-		OutputMessage::setOption(option, arg);
+		if(!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !OutputMessage::setOption(option, arg))
+		{
+			throw std::runtime_error("MQTT output - unknown option: " + option);
+		}	
 
 		return *this;
 	}

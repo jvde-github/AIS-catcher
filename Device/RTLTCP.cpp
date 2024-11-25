@@ -19,21 +19,26 @@
 
 #include "RTLTCP.h"
 
-namespace Device {
+namespace Device
+{
 
 	//---------------------------------------
 	// Device RTLTCP
 
-	void RTLTCP::Close() {
+	void RTLTCP::Close()
+	{
 		Device::Close();
 	}
 
-	void RTLTCP::sendProtocol() {
+	void RTLTCP::sendProtocol()
+	{
 	}
 
-	void RTLTCP::Play() {
+	void RTLTCP::Play()
+	{
 
-		switch (Protocol) {
+		switch (Protocol)
+		{
 		case PROTOCOL::MQTT:
 			transport = tcp.add(&mqtt);
 			mqtt.setValue("SUBSCRIBE", "on");
@@ -52,16 +57,19 @@ namespace Device {
 		rtltcp.setValue("FREQOFFSET", std::to_string(freq_offset));
 		rtltcp.setValue("BANDWIDTH", std::to_string(tuner_bandwidth));
 
-		if (!transport->connect()) {
-			throw std::runtime_error("RTLTCP: cannot open socket.");
+		if (!transport->connect())
+		{
+			throw std::runtime_error("RTLTCP: cannot open connection with " + tcp.getHost() + ":" + tcp.getPort());
 		}
 
 		Device::Play();
 
-		if (getFormat() != Format::TXT) {
+		if (getFormat() != Format::TXT)
+		{
 			fifo.Init(BUFFER_SIZE);
 		}
-		else {
+		else
+		{
 			fifo.Init(1, BUFFER_SIZE);
 		}
 
@@ -73,27 +81,34 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void RTLTCP::Stop() {
-		if (Device::isStreaming()) {
+	void RTLTCP::Stop()
+	{
+		if (Device::isStreaming())
+		{
 
 			Device::Stop();
 			fifo.Halt();
 
-			if (async_thread.joinable()) async_thread.join();
-			if (run_thread.joinable()) run_thread.join();
+			if (async_thread.joinable())
+				async_thread.join();
+			if (run_thread.joinable())
+				run_thread.join();
 		}
 		transport->disconnect();
 	}
 
-	void RTLTCP::RunAsync() {
+	void RTLTCP::RunAsync()
+	{
 		if (buffer.size() < TRANSFER_SIZE)
 			buffer.resize(TRANSFER_SIZE);
 
-		while (isStreaming()) {
+		while (isStreaming())
+		{
 
 			int len = transport->read(buffer.data(), TRANSFER_SIZE, 2);
 
-			if (len < 0) {
+			if (len < 0)
+			{
 				lost = true;
 				Error() << "RTLTCP: error receiving data from remote host. Cancelling. ";
 				break;
@@ -103,77 +118,86 @@ namespace Device {
 		}
 	}
 
-	void RTLTCP::Run() {
+	void RTLTCP::Run()
+	{
 		std::vector<char> output(fifo.BlockSize());
-		RAW r = { getFormat(), NULL, fifo.BlockSize() };
+		RAW r = {getFormat(), NULL, fifo.BlockSize()};
 
-		while (isStreaming()) {
-			if (fifo.Wait()) {
+		while (isStreaming())
+		{
+			if (fifo.Wait())
+			{
 				r.data = fifo.Front();
 				Send(&r, 1, tag);
 				fifo.Pop();
 			}
-			else {
-				if (isStreaming() && format != Format::TXT) Error() << "RTLTCP: timeout.";
+			else
+			{
+				if (isStreaming() && format != Format::TXT)
+					Error() << "RTLTCP: timeout.";
 			}
 		}
 	}
 
-	void RTLTCP::getDeviceList(std::vector<Description>& DeviceList) {
+	void RTLTCP::getDeviceList(std::vector<Description> &DeviceList)
+	{
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
 
-	Setting& RTLTCP::Set(std::string option, std::string arg) {
+	Setting &RTLTCP::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 
-		tcp.setValue(option, arg);
-		mqtt.setValue(option, arg);
-		gpsd.setValue(option, arg);
-		rtltcp.setValue(option, arg);
-
-		Device::Set(option, arg);
-
-		if (option == "URL") {
+		if (option == "URL")
+		{
 			std::string prot, host, port, path;
 			Util::Parse::URL(arg, prot, host, port, path);
 
-			if (!host.empty()) Set("HOST", host);
-			if (!port.empty()) Set("PORT", port);
-			if (!prot.empty()) Set("PROTOCOL", prot);
+			if (!host.empty())
+				Set("HOST", host);
+			if (!port.empty())
+				Set("PORT", port);
+			if (!prot.empty())
+				Set("PROTOCOL", prot);
 		}
-		else if (option == "PROTOCOL") {
-
+		else if (option == "PROTOCOL")
+		{
 			Util::Convert::toUpper(arg);
 			if (arg == "NONE")
 				Protocol = PROTOCOL::NONE;
-			else if (arg == "RTLTCP") {
+			else if (arg == "RTLTCP")
+			{
 				Protocol = PROTOCOL::RTLTCP;
 				setFormat(Format::CU8);
 			}
-			else if (arg == "GPSD") {
+			else if (arg == "GPSD")
+			{
 				Protocol = PROTOCOL::GPSD;
 				setFormat(Format::TXT);
 			}
-			else if (arg == "TXT") {
+			else if (arg == "TXT")
+			{
 				Protocol = PROTOCOL::TXT;
 				setFormat(Format::TXT);
 			}
-			else if (arg == "MQTT") {
+			else if (arg == "MQTT")
+			{
 				Protocol = PROTOCOL::MQTT;
 				setFormat(Format::TXT);
 			}
-			else
-				throw std::runtime_error("RTLTCP: unknown protocol");
 		}
+		else if (!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !gpsd.setValue(option, arg) && !rtltcp.setValue(option, arg))
+			Device::Set(option, arg);
 
 		return *this;
 	}
 
-	std::string RTLTCP::Get() {
-
-		Protocol::ProtocolBase* p = transport;
+	std::string RTLTCP::Get()
+	{
+		Protocol::ProtocolBase *p = transport;
 		std::string str;
-		while (p) {
+		while (p)
+		{
 			str += p->getValues() + " ";
 			p = p->getPrev();
 		}
