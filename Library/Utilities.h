@@ -110,6 +110,7 @@ namespace Util {
 		}
 
 		static void toUpper(std::string& s);
+		static void toLower(std::string& s);
 		static void toFloat(CU8* in, CFLOAT32* out, int len);
 		static void toFloat(CS8* in, CFLOAT32* out, int len);
 		static void toFloat(CS16* in, CFLOAT32* out, int len);

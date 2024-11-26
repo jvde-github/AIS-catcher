@@ -24,20 +24,27 @@
 
 #include "Protocol.h"
 
-namespace Device {
+namespace Device
+{
 
-	class RTLTCP : public Device {
+	class RTLTCP : public Device
+	{
 
-		enum class PROTOCOL {
+		enum class PROTOCOL
+		{
 			NONE,
 			RTLTCP,
 			GPSD,
 			TXT,
-			MQTT
+			MQTT,
+			WS,
+			WSMQTT
 		} Protocol = PROTOCOL::RTLTCP;
 
-		std::string getProtocolString() const {
-			switch (Protocol) {
+		std::string getProtocolString() const
+		{
+			switch (Protocol)
+			{
 			case PROTOCOL::NONE:
 				return "NONE";
 			case PROTOCOL::RTLTCP:
@@ -46,8 +53,12 @@ namespace Device {
 				return "GPSD";
 			case PROTOCOL::TXT:
 				return "TXT";
+			case PROTOCOL::WS:
+				return "WS";
 			case PROTOCOL::MQTT:
 				return "MQTT";
+			case PROTOCOL::WSMQTT:
+				return "WS-MQTT";
 			}
 			return "";
 		}
@@ -56,7 +67,8 @@ namespace Device {
 		Protocol::MQTT mqtt;
 		Protocol::GPSD gpsd;
 		Protocol::RTLTCP rtltcp;
-		Protocol::ProtocolBase* transport = &tcp;
+		Protocol::WebSocket ws;
+		Protocol::ProtocolBase *session = &tcp;
 
 		const int TRANSFER_SIZE = 16384;
 		static const int BUFFER_SIZE = 16 * 16384;
@@ -87,15 +99,17 @@ namespace Device {
 		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 
-		void getDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList);
 
-		std::string getRateDescription() {
-			if (getFormat() == Format::TXT) return "N/A";
+		std::string getRateDescription()
+		{
+			if (getFormat() == Format::TXT)
+				return "N/A";
 			return Device::getRateDescription();
 		}
 
 		// Settings
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 
 		std::string getProduct() { return "RTLTCP"; }

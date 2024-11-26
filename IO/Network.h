@@ -214,6 +214,7 @@ namespace IO {
 	private:
 		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;
+		Protocol::WebSocket ws;
 		std::string json;
 
 	public:
