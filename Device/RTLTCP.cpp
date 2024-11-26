@@ -40,14 +40,25 @@ namespace Device
 		switch (Protocol)
 		{
 		case PROTOCOL::MQTT:
-			transport = tcp.add(&mqtt);
+			session = tcp.add(&mqtt);
 			mqtt.setValue("SUBSCRIBE", "on");
 			break;
 		case PROTOCOL::GPSD:
-			transport = tcp.add(&gpsd);
+			session = tcp.add(&gpsd);
 			break;
 		case PROTOCOL::RTLTCP:
-			transport = tcp.add(&rtltcp);
+			session = tcp.add(&rtltcp);
+			break;
+		case PROTOCOL::WS:
+			session = tcp.add(&ws);
+			break;
+		case PROTOCOL::WSMQTT:
+			session = tcp.add(&ws);
+			session = ws.add(&mqtt);
+			ws.setValue("PROTOCOLS", "mqtt");
+			ws.setValue("BINARY", "on");
+			mqtt.setValue("SUBSCRIBE", "on");
+			break;
 		default:
 			break;
 		}
@@ -57,7 +68,7 @@ namespace Device
 		rtltcp.setValue("FREQOFFSET", std::to_string(freq_offset));
 		rtltcp.setValue("BANDWIDTH", std::to_string(tuner_bandwidth));
 
-		if (!transport->connect())
+		if (!session->connect())
 		{
 			throw std::runtime_error("RTLTCP: cannot open connection with " + tcp.getHost() + ":" + tcp.getPort());
 		}
@@ -94,7 +105,7 @@ namespace Device
 			if (run_thread.joinable())
 				run_thread.join();
 		}
-		transport->disconnect();
+		session->disconnect();
 	}
 
 	void RTLTCP::RunAsync()
@@ -105,7 +116,7 @@ namespace Device
 		while (isStreaming())
 		{
 
-			int len = transport->read(buffer.data(), TRANSFER_SIZE, 2);
+			int len = session->read(buffer.data(), TRANSFER_SIZE, 2);
 
 			if (len < 0)
 			{
@@ -185,6 +196,18 @@ namespace Device
 				Protocol = PROTOCOL::MQTT;
 				setFormat(Format::TXT);
 			}
+			else if (arg == "WS")
+			{
+				Protocol = PROTOCOL::WS;
+				setFormat(Format::TXT);
+			}
+			else if (arg == "WSMQTT")
+			{
+				Protocol = PROTOCOL::WSMQTT;
+				setFormat(Format::TXT);
+			}
+			else
+				throw std::runtime_error("RTLTCP: unknown protocol: " + arg);
 		}
 		else if (!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !gpsd.setValue(option, arg) && !rtltcp.setValue(option, arg))
 			Device::Set(option, arg);
@@ -194,7 +217,7 @@ namespace Device
 
 	std::string RTLTCP::Get()
 	{
-		Protocol::ProtocolBase *p = transport;
+		Protocol::ProtocolBase *p = session;
 		std::string str;
 		while (p)
 		{

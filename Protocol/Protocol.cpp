@@ -17,10 +17,13 @@
 
 #include "Protocol.h"
 
-namespace Protocol {
-	void TCP::disconnect() {
+namespace Protocol
+{
+	void TCP::disconnect()
+	{
 
-		if (sock != -1) {
+		if (sock != -1)
+		{
 			onDisconnect();
 			closesocket(sock);
 		}
@@ -32,14 +35,15 @@ namespace Protocol {
 		state = DISCONNECTED;
 	}
 
-	bool TCP::connect() {
+	bool TCP::connect()
+	{
 
 		state = DISCONNECTED;
 		stamp = time(nullptr);
 
 		int r;
 		struct addrinfo h;
-		struct addrinfo* address = nullptr;
+		struct addrinfo *address = nullptr;
 
 		std::memset(&h, 0, sizeof(h));
 		h.ai_family = AF_UNSPEC;
@@ -56,15 +60,18 @@ namespace Protocol {
 
 		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
-		if (sock == -1) {
+		if (sock == -1)
+		{
 			freeaddrinfo(address);
 			return false;
 		}
 
 #ifndef _WIN32
-		if (keep_alive) {
+		if (keep_alive)
+		{
 			int optval = 1;
-			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1)
+			{
 				freeaddrinfo(address);
 				disconnect();
 				return false;
@@ -72,25 +79,29 @@ namespace Protocol {
 		}
 #endif
 
-		if (persistent) {
+		if (persistent)
+		{
 #ifndef _WIN32
 			r = fcntl(sock, F_GETFL, 0);
-			if (r == -1) { // Fixed: Check return value of fcntl()
+			if (r == -1)
+			{ // Fixed: Check return value of fcntl()
 				freeaddrinfo(address);
 				disconnect();
 				Error() << "TCP (" << host << ":" << port << "): fcntl F_GETFL failed: " << strerror(errno);
 				return false;
 			}
 			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
-			if (r == -1) {
+			if (r == -1)
+			{
 				freeaddrinfo(address);
 				disconnect();
 				Error() << "TCP (" << host << ":" << port << "): fcntl F_SETFL failed: " << strerror(errno);
 				return false;
 			}
 #else
-			u_long mode = 1;							  // 1 to enable non-blocking socket
-			if (ioctlsocket(sock, FIONBIO, &mode) != 0) { // Fixed: Check return value of ioctlsocket()
+			u_long mode = 1; // 1 to enable non-blocking socket
+			if (ioctlsocket(sock, FIONBIO, &mode) != 0)
+			{ // Fixed: Check return value of ioctlsocket()
 				freeaddrinfo(address);
 				disconnect();
 				int error_code = WSAGetLastError();
@@ -103,7 +114,8 @@ namespace Protocol {
 		r = ::connect(sock, address->ai_addr, (int)address->ai_addrlen);
 		freeaddrinfo(address);
 
-		if (r != -1) {
+		if (r != -1)
+		{
 			state = READY;
 
 			Info() << "TCP (" << host << ":" << port << "): connected.";
@@ -114,12 +126,14 @@ namespace Protocol {
 
 #ifndef _WIN32
 
-		if (errno != EINPROGRESS) {
+		if (errno != EINPROGRESS)
+		{
 			disconnect();
 			return false;
 		}
 #else
-		if (WSAGetLastError() != WSAEWOULDBLOCK) {
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
 			disconnect();
 			return false;
 		}
@@ -128,8 +142,8 @@ namespace Protocol {
 		return isConnected(timeout) || persistent;
 	}
 
-
-	bool TCP::isConnected(int t) {
+	bool TCP::isConnected(int t)
+	{
 
 		if (state == READY)
 			return true;
@@ -145,19 +159,22 @@ namespace Protocol {
 		FD_ZERO(&fdw);
 		FD_SET(sock, &fdw);
 
-		timeval to = { t, 1 }; // t seconds and 1 microsecond
+		timeval to = {t, 1}; // t seconds and 1 microsecond
 
-		if (select(sock + 1, &fdr, &fdw, nullptr, &to) > 0) {
+		if (select(sock + 1, &fdr, &fdw, nullptr, &to) > 0)
+		{
 			int error = -1;
 			socklen_t len = sizeof(error);
 
-			if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) != 0) {
+			if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&error, &len) != 0)
+			{
 				Error() << "TCP (" << host << ":" << port << "): getsockopt failed.";
 				disconnect();
 				return false;
 			}
 
-			if (error != 0) {
+			if (error != 0)
+			{
 				Error() << "TCP (" << host << ":" << port << "): connection failed with error " << error << " (" << strerror(error) << ").";
 				disconnect();
 				return false;
@@ -171,29 +188,34 @@ namespace Protocol {
 			return true;
 		}
 
-
 		state = CONNECTING;
 		return false;
 	}
 
-	void TCP::updateState() {
+	void TCP::updateState()
+	{
 
-		if (state == READY && reset_time > 0 && std::difftime(time(nullptr), stamp) > reset_time * 60) {
+		if (state == READY && reset_time > 0 && std::difftime(time(nullptr), stamp) > reset_time * 60)
+		{
 			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect.";
 			reconnect();
 		}
 
-		else if (state == DISCONNECTED) {
-			if (std::difftime(time(nullptr), stamp) > RECONNECT_TIME) {
+		else if (state == DISCONNECTED)
+		{
+			if (std::difftime(time(nullptr), stamp) > RECONNECT_TIME)
+			{
 				Warning() << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
 				reconnect();
 			}
 		}
 
-		else if (state == CONNECTING) {
+		else if (state == CONNECTING)
+		{
 			bool connected = isConnected(0);
 
-			if (!connected && std::difftime(time(nullptr), stamp) > RECONNECT_TIME) {
+			if (!connected && std::difftime(time(nullptr), stamp) > RECONNECT_TIME)
+			{
 				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect.";
 				reconnect();
 
@@ -202,30 +224,35 @@ namespace Protocol {
 		}
 	}
 
-	int TCP::send(const void* data, int length) {
-		if (state == READY) {
+	int TCP::send(const void *data, int length)
+	{
+		if (state == READY)
+		{
 
-			int sent = ::send(sock, (char*)data, length, 0);
-
-			if (sent < length) {
+			int sent = ::send(sock, (char *)data, length, 0);
+			if (sent < length)
+			{
 				int error_code = errno;
 #ifdef _WIN32
 				if (error_code == WSAEWOULDBLOCK)
 					return 0;
 
 #else
-				if (error_code == EAGAIN || error_code == EWOULDBLOCK || error_code == EINPROGRESS) {
+				if (error_code == EAGAIN || error_code == EWOULDBLOCK || error_code == EINPROGRESS)
+				{
 					Error() << "TCP (" << host << ":" << port << "): message might be lost. Error code: " << error_code << " (" << strerror(error_code) << ").";
 					return 0;
 				}
 
 #endif
 				Error() << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
-				if (persistent) {
+				if (persistent)
+				{
 					reconnect();
 					return 0;
 				}
-				else {
+				else
+				{
 					return -1;
 				}
 			}
@@ -235,12 +262,13 @@ namespace Protocol {
 		else
 			updateState();
 
-
 		return 0;
 	}
 
-	int TCP::read(void* data, int length, int t, bool wait) {
-		if (state == READY) {
+	int TCP::read(void *data, int length, int t, bool wait)
+	{
+		if (state == READY)
+		{
 			fd_set fd, fe;
 
 			FD_ZERO(&fd);
@@ -249,16 +277,17 @@ namespace Protocol {
 			FD_ZERO(&fe);
 			FD_SET(sock, &fe);
 
-			timeval to = { t, 0 };
+			timeval to = {t, 0};
 
 			if (select(sock + 1, &fd, nullptr, &fe, &to) < 0)
 				return 0;
 
+			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe))
+			{
+				int retval = recv(sock, (char *)data, length, wait ? MSG_WAITALL : 0);
 
-			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe)) {
-				int retval = recv(sock, (char*)data, length, wait ? MSG_WAITALL : 0);
-
-				if (retval <= 0) {
+				if (retval <= 0)
+				{
 					int error_code = errno;
 #ifdef _WIN32
 					if (error_code == WSAEWOULDBLOCK)
@@ -270,11 +299,13 @@ namespace Protocol {
 
 					Info() << "TCP (" << host << ":" << port << ") receive error with recv returns " << retval << ". Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
 
-					if (persistent) {
+					if (persistent)
+					{
 						reconnect();
 						return 0;
 					}
-					else {
+					else
+					{
 						return -1;
 					}
 				}
@@ -282,7 +313,8 @@ namespace Protocol {
 				return retval;
 			}
 		}
-		else {
+		else
+		{
 			updateState();
 			return 0;
 		}
@@ -290,26 +322,36 @@ namespace Protocol {
 		return 0;
 	}
 
-	void WebSocket::onConnect() {
-		if (!performHandshake()) {
+	void WebSocket::onConnect()
+	{
+		buffer_ptr = 0;
+
+		Info() << "WebSocket: transport active for " << getHost() << ":" << getPort() << path;
+
+		if (!performHandshake())
+		{
 			Error() << "WebSocket: Handshake failed.";
 			disconnect();
 			return;
 		}
 
 		connected = true;
+		Info() << "WebSocket: Connected to " << getHost() << ":" << getPort() << path;
 		ProtocolBase::onConnect();
 	}
 
-	bool WebSocket::performHandshake() {
-		if (!prev) {
+	bool WebSocket::performHandshake()
+	{
+		if (!prev)
+		{
 			Error() << "WebSocket: No underlying connection.";
 			return false;
 		}
 
 		// Generate a random Sec-WebSocket-Key
 		std::array<uint8_t, 16> key_bytes;
-		for (auto& byte : key_bytes) {
+		for (auto &byte : key_bytes)
+		{
 			byte = rand() % 256;
 		}
 		std::string secWebSocketKey = base64Encode(key_bytes.data(), key_bytes.size());
@@ -323,10 +365,12 @@ namespace Protocol {
 		request << "Sec-WebSocket-Key: " << secWebSocketKey << "\r\n";
 		request << "Sec-WebSocket-Version: 13\r\n";
 
-		if (!origin.empty()) {
+		if (!origin.empty())
+		{
 			request << "Origin: " << origin << "\r\n";
 		}
-		if (!protocols.empty()) {
+		if (!protocols.empty())
+		{
 			request << "Sec-WebSocket-Protocol: " << protocols << "\r\n";
 		}
 		request << "\r\n";
@@ -334,7 +378,8 @@ namespace Protocol {
 		std::string request_str = request.str();
 
 		// Send the handshake request
-		if (prev->send(request_str.c_str(), request_str.size()) != (int)request_str.size()) {
+		if (prev->send(request_str.c_str(), request_str.size()) != (int)request_str.size())
+		{
 			Error() << "WebSocket: Failed to send handshake request.";
 			return false;
 		}
@@ -342,22 +387,27 @@ namespace Protocol {
 		// Read the response
 		char response[2048];
 		int len = prev->read(response, sizeof(response), 5, true);
-		if (len <= 0) {
+		if (len <= 0)
+		{
 			Error() << "WebSocket: No response to handshake request.";
 			return false;
 		}
 
 		std::string response_str(response, len);
+		std::string rs_lower(response_str);
 
 		// Parse the response
 		if (response_str.find("HTTP/1.1 101") == std::string::npos &&
-			response_str.find("HTTP/1.0 101") == std::string::npos) {
+			response_str.find("HTTP/1.0 101") == std::string::npos)
+		{
 			Error() << "WebSocket: Invalid handshake response.";
 			return false;
 		}
+		Util::Convert::toLower(rs_lower);
 
-		if (response_str.find("Upgrade: websocket") == std::string::npos ||
-			response_str.find("Connection: Upgrade") == std::string::npos) {
+		if (rs_lower.find("upgrade: websocket") == std::string::npos ||
+			rs_lower.find("connection: upgrade") == std::string::npos)
+		{
 			Error() << "WebSocket: Missing required headers in handshake response.";
 			return false;
 		}
@@ -366,8 +416,15 @@ namespace Protocol {
 		std::string accept_key;
 		std::istringstream resp_stream(response_str);
 		std::string line;
-		while (std::getline(resp_stream, line)) {
-			if (line.find("Sec-WebSocket-Accept:") != std::string::npos) {
+
+		while (std::getline(resp_stream, line))
+		{
+			std::string lower(line);
+			;
+			Util::Convert::toLower(lower);
+
+			if (lower.find("sec-websocket-accept:") != std::string::npos)
+			{
 				accept_key = line.substr(line.find(":") + 2); // Add 2 to skip ": "
 				// Remove trailing whitespace and CR/LF
 				accept_key = accept_key.substr(0, accept_key.find_last_not_of(" \r\n") + 1);
@@ -375,38 +432,78 @@ namespace Protocol {
 			}
 		}
 
-		if (accept_key.empty()) {
+		if (accept_key.empty())
+		{
 			Error() << "WebSocket: Missing Sec-WebSocket-Accept header.";
 			return false;
 		}
 
 		// Compute the expected accept key
 		std::string concatenated = secWebSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-		std::string expected_accept_key = base64Encode(reinterpret_cast<const uint8_t*>(sha1Hash(concatenated).c_str()), 20);
+		std::string expected_accept_key = base64Encode(reinterpret_cast<const uint8_t *>(sha1Hash(concatenated).c_str()), 20);
 
 		// Trim both keys to ensure exact comparison
 		accept_key.erase(std::remove_if(accept_key.begin(), accept_key.end(), ::isspace), accept_key.end());
 		expected_accept_key.erase(std::remove_if(expected_accept_key.begin(), expected_accept_key.end(), ::isspace), expected_accept_key.end());
 
-		if (accept_key != expected_accept_key) {
+		if (accept_key != expected_accept_key)
+		{
 			Error() << "WebSocket: Invalid Sec-WebSocket-Accept value: '" << accept_key << "' expected: '" << expected_accept_key << "'";
 			return false;
 		}
 
-		handshakeDone = true;
 		return true;
 	}
 
-	int WebSocket::send(const void* data, int length) {
-		if (!connected || !prev) {
-			Error() << "WebSocket: Not connected.";
-			return -1;
+	// https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
+	int WebSocket::send(const void *data, int length)
+	{
+		if (!isConnected())
+			return 0;
+
+		if (length > 4096)
+		{
+			Warning() << "WebSocket: message too long, skipped";
+			return 0;
 		}
 
-		std::vector<uint8_t> frame = createFrame(data, length);
+		uint8_t opcode = (uint8_t)(binary ? OPCODE::BINARY : OPCODE::TEXT);
+
+		frame.resize(0);
+		frame.push_back(0x80 | opcode); // FIN bit set and opcode
+
+		if (length <= 125)
+		{
+			frame.push_back(0x80 | length);
+		}
+		else if (length <= 65535)
+		{
+			frame.push_back(0x80 | 126);
+			frame.push_back((length >> 8) & 0xFF);
+			frame.push_back(length & 0xFF);
+		}
+		else
+		{
+			frame.push_back(0x80 | 127);
+			for (int i = 7; i >= 0; --i)
+				frame.push_back((length >> (8 * i)) & 0xFF);
+		}
+
+		// Generate a random masking key
+		uint8_t masking_key[4];
+		for (int i = 0; i < 4; ++i)
+			masking_key[i] = rand() & 0xFF;
+
+		frame.insert(frame.end(), masking_key, masking_key + 4);
+
+		for (int i = 0; i < length; ++i)
+		{
+			frame.push_back(((const uint8_t *)data)[i] ^ masking_key[i % 4]);
+		}
 
 		int sent = prev->send(frame.data(), frame.size());
-		if (sent != (int)frame.size()) {
+		if (sent != (int)frame.size())
+		{
 			Error() << "WebSocket: Failed to send frame.";
 			return -1;
 		}
@@ -414,133 +511,107 @@ namespace Protocol {
 		return length;
 	}
 
-	std::vector<uint8_t> WebSocket::createFrame(const void* data, int length) {
-		std::vector<uint8_t> frame;
-		uint8_t opcode = 0x1; // Text frame
-
-		frame.push_back(0x80 | opcode); // FIN bit set and opcode
-
-		if (length <= 125) {
-			frame.push_back(0x80 | length); // Mask bit set and payload length
-		}
-		else if (length <= 65535) {
-			frame.push_back(0x80 | 126);
-			frame.push_back((length >> 8) & 0xFF);
-			frame.push_back(length & 0xFF);
-		}
-		else {
-			frame.push_back(0x80 | 127);
-			for (int i = 7; i >= 0; --i) {
-				frame.push_back((length >> (8 * i)) & 0xFF);
-			}
-		}
-
-		// Generate a random masking key
-		uint8_t masking_key[4];
-		for (int i = 0; i < 4; ++i) {
-			masking_key[i] = rand() % 256;
-		}
-		frame.insert(frame.end(), masking_key, masking_key + 4);
-
-		// Mask the payload data
-		const uint8_t* data_bytes = reinterpret_cast<const uint8_t*>(data);
-		for (int i = 0; i < length; ++i) {
-			frame.push_back(data_bytes[i] ^ masking_key[i % 4]);
-		}
-
-		return frame;
-	}
-
-	int WebSocket::read(void* data, int length, int t, bool wait) {
-		if (!connected || !prev) {
-			return -1;
-		}
-
-		uint8_t tmp_buf[2048];
-		int len = prev->read(tmp_buf, sizeof(tmp_buf), t, wait);
-		if (len <= 0) {
-			return len;
-		}
-
-		buffer.insert(buffer.end(), tmp_buf, tmp_buf + len);
-
-		std::vector<uint8_t> frame(buffer.begin(), buffer.end());
-		int payload_length = parseFrame(frame, data, length);
-		if (payload_length < 0) {
+	int WebSocket::read(void *data, int data_len, int t, bool wait)
+	{
+		if (!isConnected())
 			return 0;
+
+		if (buffer.empty())
+		{
+			buffer.resize(16384);
+			received.resize(16384);
 		}
-		else {
-			buffer.erase(buffer.begin(), buffer.begin() + frame.size());
-			return payload_length;
+
+		int len = prev->read(buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
+		if (len <= 0)
+			return len;
+		
+		buffer_ptr += len;
+
+		while (true)
+		{
+			if (buffer_ptr < 2)
+				return 0;
+
+			bool mask = buffer[1] & 0x80;
+			int length = buffer[1] & 0x7F;
+			int ptr = 2;
+
+			if (length == 126)
+			{
+				if (buffer_ptr < 4)
+					return 0;
+
+				length = (buffer[ptr] << 8) | buffer[ptr + 1];
+				ptr += 2;
+			}
+			else if (length == 127)
+			{
+				if (buffer_ptr < ptr + 8)
+					return 0;
+
+				for (int i = 0, length = 0; i < 8; ++i)
+					length = (length << 8) | buffer[ptr + i];
+
+				ptr += 8;
+			}
+
+			uint8_t masking_key[4];
+
+			if (mask)
+			{
+				if (buffer_ptr < ptr + 4 + length)
+					return 0;
+
+				masking_key[0] = frame[ptr++];
+				masking_key[1] = frame[ptr++];
+				masking_key[2] = frame[ptr++];
+				masking_key[3] = frame[ptr++];
+			}
+			else
+			{
+				if (buffer_ptr < ptr + length)
+					return 0;
+			}
+
+			int data_returned = 0;
+
+			switch ((OPCODE)(buffer[0] & 0x0F))
+			{
+			case OPCODE::TEXT:
+			case OPCODE::BINARY:
+
+				if (data_len < length)
+					break;
+
+				for (int i = 0; i < length; ++i)
+				{
+					if (mask)
+						buffer[ptr + i] ^= masking_key[i % 4];
+				}
+
+				memmove(received.data() + received_ptr, buffer.data() + ptr, length);
+				received_ptr += length;
+				data_returned = length;
+
+				break;
+			case OPCODE::CLOSE:
+				Warning() << "WebSocket: Connection closed by remote host.";
+				disconnect();
+				break;
+			default:
+				Warning() << "WebSocket: Unsupported opcode: " << (int)(buffer[0] & 0x0F);
+				break;
+			}
+			buffer_ptr -= ptr + length;
+
+			if (data_returned)
+				return data_returned;
 		}
 	}
 
-	int WebSocket::parseFrame(std::vector<uint8_t>& frame, void* data, int data_len) {
-		if (frame.size() < 2) {
-			return -1; // Need more data
-		}
-
-		uint8_t b2 = frame[1];
-
-		bool mask = b2 & 0x80;
-		uint64_t payload_len = b2 & 0x7F;
-
-		size_t pos = 2;
-
-		if (payload_len == 126) {
-			if (frame.size() < pos + 2) {
-				return -1; // Need more data
-			}
-			payload_len = (frame[pos] << 8) | frame[pos + 1];
-			pos += 2;
-		}
-		else if (payload_len == 127) {
-			if (frame.size() < pos + 8) {
-				return -1; // Need more data
-			}
-			payload_len = 0;
-			for (int i = 0; i < 8; ++i) {
-				payload_len = (payload_len << 8) | frame[pos + i];
-			}
-			pos += 8;
-		}
-
-		if (mask) {
-			if (frame.size() < pos + 4) {
-				return -1; // Need more data
-			}
-		}
-
-		if (frame.size() < pos + (mask ? 4 : 0) + payload_len) {
-			return -1; // Need more data
-		}
-
-		uint8_t masking_key[4];
-		if (mask) {
-			masking_key[0] = frame[pos++];
-			masking_key[1] = frame[pos++];
-			masking_key[2] = frame[pos++];
-			masking_key[3] = frame[pos++];
-		}
-
-		if (payload_len > (uint64_t)data_len) {
-			Error() << "WebSocket: Payload too large.";
-			return -2;
-		}
-
-		uint8_t* data_bytes = reinterpret_cast<uint8_t*>(data);
-
-		for (uint64_t i = 0; i < payload_len; ++i) {
-			data_bytes[i] = frame[pos + i];
-			if (mask) {
-				data_bytes[i] ^= masking_key[i % 4];
-			}
-		}
-
-		return payload_len;
-	}
-
-	bool WebSocket::isConnected() {
+	bool WebSocket::isConnected()
+	{
 
 		if (connected)
 			return true;
@@ -551,34 +622,39 @@ namespace Protocol {
 		return false;
 	}
 
-
-	void WebSocket::onDisconnect() {
+	void WebSocket::onDisconnect()
+	{
 		connected = false;
-		handshakeDone = false;
-		buffer.clear();
+
 		ProtocolBase::onDisconnect();
 	}
 
-	bool WebSocket::setValue(const std::string& key, const std::string& value) {
+	bool WebSocket::setValue(const std::string &key, const std::string &value)
+	{
 
-		if (key == "ORIGIN") {
+		if (key == "ORIGIN")
+		{
 			origin = value;
 		}
-		else if (key == "PROTOCOLS") {
+		else if (key == "PROTOCOLS")
+		{
 			protocols = value;
 		}
-		else {
-			return false;
+		else if (key == "BINARY")
+		{
+			binary = Util::Parse::Switch(value);
 		}
-		return true;
+
+		return false;
 	}
 
-	std::string WebSocket::getValues() {
+	std::string WebSocket::getValues()
+	{
 		return "host " + getHost() + " path " + path + " origin " + origin + " protocols " + protocols;
 	}
 
-	std::string WebSocket::sha1Hash(const std::string& d) {
-
+	std::string WebSocket::sha1Hash(const std::string &d)
+	{
 		unsigned char hash[20];
 
 		uint32_t h0 = 0x67452301;
@@ -595,25 +671,30 @@ namespace Protocol {
 		msg.push_back(0x80);
 
 		// Append zeros
-		while ((msg.size() % 64) != 56) {
+		while ((msg.size() % 64) != 56)
+		{
 			msg.push_back(0x00);
 		}
 
 		// Append length
-		for (int i = 7; i >= 0; --i) {
+		for (int i = 7; i >= 0; --i)
+		{
 			msg.push_back((original_bit_len >> (i * 8)) & 0xFF);
 		}
 
 		// Process message in 512-bit chunks
-		auto leftrotate = [](uint32_t x, uint32_t c) -> uint32_t {
+		auto leftrotate = [](uint32_t x, uint32_t c) -> uint32_t
+		{
 			return (x << c) | (x >> (32 - c));
 		};
 
-		for (size_t chunk = 0; chunk < msg.size(); chunk += 64) {
+		for (size_t chunk = 0; chunk < msg.size(); chunk += 64)
+		{
 			uint32_t w[80];
 
 			// Break chunk into sixteen 32-bit words
-			for (int i = 0; i < 16; i++) {
+			for (int i = 0; i < 16; i++)
+			{
 				w[i] = (msg[chunk + 4 * i] << 24) |
 					   (msg[chunk + 4 * i + 1] << 16) |
 					   (msg[chunk + 4 * i + 2] << 8) |
@@ -621,7 +702,8 @@ namespace Protocol {
 			}
 
 			// Extend the sixteen 32-bit words into eighty 32-bit words
-			for (int i = 16; i < 80; i++) {
+			for (int i = 16; i < 80; i++)
+			{
 				w[i] = leftrotate(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
 			}
 
@@ -633,22 +715,27 @@ namespace Protocol {
 			uint32_t e = h4;
 
 			// Main loop
-			for (int i = 0; i < 80; i++) {
+			for (int i = 0; i < 80; i++)
+			{
 				uint32_t f, k;
 
-				if (i < 20) {
+				if (i < 20)
+				{
 					f = (b & c) | ((~b) & d);
 					k = 0x5A827999;
 				}
-				else if (i < 40) {
+				else if (i < 40)
+				{
 					f = b ^ c ^ d;
 					k = 0x6ED9EBA1;
 				}
-				else if (i < 60) {
+				else if (i < 60)
+				{
 					f = (b & c) | (b & d) | (c & d);
 					k = 0x8F1BBCDC;
 				}
-				else {
+				else
+				{
 					f = b ^ c ^ d;
 					k = 0xCA62C1D6;
 				}
@@ -668,7 +755,6 @@ namespace Protocol {
 			h3 += d;
 			h4 += e;
 		}
-
 
 		// Store hash as big-endian bytes
 		hash[0] = (h0 >> 24) & 0xFF;
@@ -697,10 +783,11 @@ namespace Protocol {
 		hash[19] = h4 & 0xFF;
 
 		// Return raw bytes as string
-		return std::string(reinterpret_cast<char*>(hash), 20);
+		return std::string(reinterpret_cast<char *>(hash), 20);
 	}
 
-	std::string WebSocket::base64Encode(const uint8_t* data, size_t len) {
+	std::string WebSocket::base64Encode(const uint8_t *data, size_t len)
+	{
 		static const char base64_chars[] =
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -708,7 +795,8 @@ namespace Protocol {
 		encoded.reserve(((len + 2) / 3) * 4);
 
 		size_t i = 0;
-		while (i < len) {
+		while (i < len)
+		{
 			uint32_t octet_a = i < len ? data[i++] : 0;
 			uint32_t octet_b = i < len ? data[i++] : 0;
 			uint32_t octet_c = i < len ? data[i++] : 0;
@@ -721,11 +809,13 @@ namespace Protocol {
 			encoded += base64_chars[triple & 0x3F];
 		}
 
-		if (len % 3 == 1) {
+		if (len % 3 == 1)
+		{
 			encoded[encoded.length() - 1] = '=';
 			encoded[encoded.length() - 2] = '=';
 		}
-		else if (len % 3 == 2) {
+		else if (len % 3 == 2)
+		{
 			encoded[encoded.length() - 1] = '=';
 		}
 
