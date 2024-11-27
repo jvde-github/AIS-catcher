@@ -221,22 +221,33 @@ This is fairly new script and under development so any feedback is appreciated.
 
 ## What's new?
 **Edge**:
-- Support to publish AIS messages to MQTT broker, use -Q followed by settings (HOST/PORT/TOPIC). Work in progress, needs some code to handle connection breaks).
+- Support to publish AIS messages to MQTT broker.
 
 Example:
 ```console
-AIS-catcher -Q CLIENT_ID aiscatcher TOPIC ais/data
+AIS-catcher -Q mqtt://127.0.0.1:1883 
 ```
-If you want to send more condensed JSON:
+or via WebSockets:
 ```console
-AIS-catcher -Q JSON_FULL off
+AIS-catcher -Q wsmqtt://127.0.0.1:1883 
 ```
-Authentication can also be easily set if needed:
+Add `MSGFORMAT` to specify the data send to the Broker (NMEA/JSON_NMEA/JSON_FULL) or provide a `TOPIC`, both are optional:
 ```console
-AIS-catcher -Q USERNAME admin PASSWORD admin
+AIS-catcher -Q mqtt://127.0.0.1:1883 admin MSGFORMAT JSON_FULL TOPIC data/ais
+```
+Authentication and client can also be easily set if needed:
+```console
+AIS-catcher -Q mqtt://127.0.0.1:1883 USERNAME admin PASSWORD admin CLIENT aiscatcher
+```
+
+To read from a MQTT broker as input use `-t mqtt://` (or `wsmqtt://` for WebSocket communication with the broker):
+```console
+AIS-catcher -t mqtt://127.0.0.1:1883 -gt USERNAME admin PASSWORD admin
 ```
 
 - smaller UI tidy up (e.g. opens default on map and adjusted colors)
+- `-y`  now accepts the server location as `sdr://127.0.0.1:5555`
+- `-t` now accepts the server location and protocol as `txt://127.0.0.1:4001` for text over TCP, `gpsd://127.0.0.1:4267` for a GPSD server and `rtltcp://127.0.0.1:4099` for a RTL_TCP server and `tcp://127.0.0.1:1313` for raw IQ data over tcp
 - added NMEA2000 settings to the JSON configuration
 - Options to automatically show the vessel track when hovering over and/or selecting a vessel
 - Fix to system daemon file to restart process after 10s only
