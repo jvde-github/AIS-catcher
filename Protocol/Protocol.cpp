@@ -325,8 +325,7 @@ namespace Protocol
 	void WebSocket::onConnect()
 	{
 		buffer_ptr = 0;
-
-		Info() << "WebSocket: transport active for " << getHost() << ":" << getPort() << path;
+		received_ptr = 0;
 
 		if (!performHandshake())
 		{
@@ -511,21 +510,46 @@ namespace Protocol
 		return length;
 	}
 
+	int WebSocket::populateData(void *data, int length)
+	{
+		int l = MIN(received_ptr, length);
+
+		if (l > 0)
+		{
+			memcpy(data, received.data(), l);
+			memmove(received.data(), received.data() + l, received_ptr - l);
+			received_ptr -= l;
+		}
+		return l;
+	}
+
 	int WebSocket::read(void *data, int data_len, int t, bool wait)
 	{
-		if (!isConnected())
-			return 0;
-
 		if (buffer.empty())
 		{
 			buffer.resize(16384);
 			received.resize(16384);
 		}
 
+		if (received_ptr >= data_len)
+		{
+			return populateData(data, data_len);
+		}
+
+		getFrames(data, data_len, t, wait);
+
+		return populateData(data, data_len);
+	}
+
+	int WebSocket::getFrames(void *data, int data_len, int t, bool wait)
+	{
+		if (!isConnected())
+			return 0;
+
 		int len = prev->read(buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
 		if (len <= 0)
 			return len;
-		
+
 		buffer_ptr += len;
 
 		while (true)
@@ -563,10 +587,10 @@ namespace Protocol
 				if (buffer_ptr < ptr + 4 + length)
 					return 0;
 
-				masking_key[0] = frame[ptr++];
-				masking_key[1] = frame[ptr++];
-				masking_key[2] = frame[ptr++];
-				masking_key[3] = frame[ptr++];
+				masking_key[0] = buffer[ptr++];
+				masking_key[1] = buffer[ptr++];
+				masking_key[2] = buffer[ptr++];
+				masking_key[3] = buffer[ptr++];
 			}
 			else
 			{
@@ -574,15 +598,10 @@ namespace Protocol
 					return 0;
 			}
 
-			int data_returned = 0;
-
 			switch ((OPCODE)(buffer[0] & 0x0F))
 			{
 			case OPCODE::TEXT:
 			case OPCODE::BINARY:
-
-				if (data_len < length)
-					break;
 
 				for (int i = 0; i < length; ++i)
 				{
@@ -590,10 +609,15 @@ namespace Protocol
 						buffer[ptr + i] ^= masking_key[i % 4];
 				}
 
-				memmove(received.data() + received_ptr, buffer.data() + ptr, length);
-				received_ptr += length;
-				data_returned = length;
-
+				if (received_ptr + length < received.size())
+				{
+					memmove(received.data() + received_ptr, buffer.data() + ptr, length);
+					received_ptr += length;
+				}
+				else
+				{
+					Warning() << "WebSocket: buffer overflow";
+				}
 				break;
 			case OPCODE::CLOSE:
 				Warning() << "WebSocket: Connection closed by remote host.";
@@ -603,10 +627,9 @@ namespace Protocol
 				Warning() << "WebSocket: Unsupported opcode: " << (int)(buffer[0] & 0x0F);
 				break;
 			}
-			buffer_ptr -= ptr + length;
 
-			if (data_returned)
-				return data_returned;
+			memmove(buffer.data(), buffer.data() + ptr + length, buffer_ptr - ptr - length);
+			buffer_ptr -= ptr + length;
 		}
 	}
 

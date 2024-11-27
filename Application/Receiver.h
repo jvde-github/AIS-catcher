@@ -54,7 +54,7 @@ class Receiver;
 
 //--------------------------------------------
 class OutputScreen {
-	OutputLevel level = OutputLevel::FULL;
+	MessageFormat level = MessageFormat::FULL;
 
 public:
 	IO::MessageToScreen msg2screen;
@@ -65,7 +65,7 @@ public:
 	OutputScreen() : json2screen(&AIS::KeyMap, JSON_DICT_FULL) {}
 
 	void setScreen(const std::string& str);
-	void setScreen(OutputLevel o);
+	void setScreen(MessageFormat o);
 	void connect(Receiver& r);
 	void start();
 };

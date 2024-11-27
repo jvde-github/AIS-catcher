@@ -233,12 +233,12 @@ namespace IO
 	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting
 	{
 	private:
-		OutputLevel level;
+		MessageFormat level;
 		AIS::Filter filter;
 
 	public:
 		virtual ~MessageToScreen() {}
-		void setDetail(OutputLevel l) { level = l; }
+		void setDetail(MessageFormat l) { level = l; }
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const AIS::GPS *data, int len, TAG &tag);

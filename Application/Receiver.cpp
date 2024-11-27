@@ -325,34 +325,34 @@ void Receiver::stop() {
 void OutputScreen::setScreen(const std::string& str) {
 	switch (Util::Parse::Integer(str, 0, 5)) {
 	case 0:
-		level = OutputLevel::NONE;
+		level = MessageFormat::SILENT;
 		break;
 	case 1:
-		level = OutputLevel::NMEA;
+		level = MessageFormat::NMEA;
 		break;
 	case 2:
-		level = OutputLevel::FULL;
+		level = MessageFormat::FULL;
 		break;
 	case 3:
-		level = OutputLevel::JSON_NMEA;
+		level = MessageFormat::JSON_NMEA;
 		break;
 	case 4:
-		level = OutputLevel::JSON_SPARSE;
+		level = MessageFormat::JSON_SPARSE;
 		break;
 	case 5:
-		level = OutputLevel::JSON_FULL;
+		level = MessageFormat::JSON_FULL;
 		break;
 	default:
 		throw std::runtime_error("unknown option for screen output: " + str);
 	}
 }
-void OutputScreen::setScreen(OutputLevel o) {
+void OutputScreen::setScreen(MessageFormat o) {
 	level = o;
 }
 
 void OutputScreen::connect(Receiver& r) {
 
-	if (level == OutputLevel::NMEA || level == OutputLevel::JSON_NMEA || level == OutputLevel::FULL) {
+	if (level == MessageFormat::NMEA || level == MessageFormat::JSON_NMEA || level == MessageFormat::FULL) {
 		for (int j = 0; j < r.Count(); j++) {
 			if (r.Output(j).canConnect(((StreamIn<AIS::Message>)msg2screen).getGroupsIn()))
 				r.Output(j).Connect((StreamIn<AIS::Message>*)&msg2screen);
@@ -363,7 +363,7 @@ void OutputScreen::connect(Receiver& r) {
 
 		msg2screen.setDetail(level);
 	}
-	else if (level == OutputLevel::JSON_SPARSE || level == OutputLevel::JSON_FULL) {
+	else if (level == MessageFormat::JSON_SPARSE || level == MessageFormat::JSON_FULL) {
 		for (int j = 0; j < r.Count(); j++) {
 			if (r.OutputJSON(j).canConnect(((StreamIn<JSON::JSON>)json2screen).getGroupsIn()))
 				r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&json2screen);
@@ -372,7 +372,7 @@ void OutputScreen::connect(Receiver& r) {
 				r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&json2screen);
 		}
 
-		if (level == OutputLevel::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
+		if (level == MessageFormat::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
 	}
 }
 

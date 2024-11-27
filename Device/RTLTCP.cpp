@@ -173,41 +173,36 @@ namespace Device
 		}
 		else if (option == "PROTOCOL")
 		{
-			Util::Convert::toUpper(arg);
-			if (arg == "NONE")
-				Protocol = PROTOCOL::NONE;
-			else if (arg == "RTLTCP")
-			{
-				Protocol = PROTOCOL::RTLTCP;
-				setFormat(Format::CU8);
-			}
-			else if (arg == "GPSD")
-			{
-				Protocol = PROTOCOL::GPSD;
-				setFormat(Format::TXT);
-			}
-			else if (arg == "TXT")
-			{
-				Protocol = PROTOCOL::TXT;
-				setFormat(Format::TXT);
-			}
-			else if (arg == "MQTT")
-			{
-				Protocol = PROTOCOL::MQTT;
-				setFormat(Format::TXT);
-			}
-			else if (arg == "WS")
-			{
-				Protocol = PROTOCOL::WS;
-				setFormat(Format::TXT);
-			}
-			else if (arg == "WSMQTT")
-			{
-				Protocol = PROTOCOL::WSMQTT;
-				setFormat(Format::TXT);
-			}
-			else
+
+			if (!Util::Parse().Protocol(arg, Protocol))
 				throw std::runtime_error("RTLTCP: unknown protocol: " + arg);
+
+			switch (Protocol)
+			{
+			case PROTOCOL::NONE:
+				setFormat(Format::TXT);
+				break;
+			case PROTOCOL::RTLTCP:
+				setFormat(Format::CU8);
+				break;
+			case PROTOCOL::GPSD:
+				setFormat(Format::TXT);
+				break;
+			case PROTOCOL::MQTT:
+				setFormat(Format::TXT);
+				break;
+			case PROTOCOL::WS:
+				setFormat(Format::TXT);
+				break;
+			case PROTOCOL::WSMQTT:
+				setFormat(Format::TXT);
+				break;
+			case PROTOCOL::TXT:
+				setFormat(Format::TXT);
+				break;
+			default:
+				throw std::runtime_error("RTLTCP: unsupported protocol: " + arg);
+			}
 		}
 		else if (!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !gpsd.setValue(option, arg) && !rtltcp.setValue(option, arg))
 			Device::Set(option, arg);
@@ -218,12 +213,12 @@ namespace Device
 	std::string RTLTCP::Get()
 	{
 		Protocol::ProtocolBase *p = session;
-		std::string str;
+		std::string str = "protocol " + Util::Convert::toString(Protocol) + " " + Device::Get() + "\n";
 		while (p)
 		{
-			str += p->getValues() + " ";
+			str += "  " + p->getLayer() + ": " + p->getValues() + "\n";
 			p = p->getPrev();
 		}
-		return "protocol " + getProtocolString() + " " + Device::Get() + " " + str;
+		return str;
 	}
 }

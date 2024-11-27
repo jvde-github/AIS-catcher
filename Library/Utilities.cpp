@@ -239,6 +239,81 @@ namespace Util
 
 		return true;
 	}
+
+	bool Parse::Protocol(std::string arg, PROTOCOL &protocol)
+	{
+		Util::Convert::toUpper(arg);
+		if (arg == "NONE")
+		{
+			protocol = PROTOCOL::NONE;
+		}
+		else if (arg == "RTLTCP")
+		{
+			protocol = PROTOCOL::RTLTCP;
+		}
+		else if (arg == "GPSD")
+		{
+			protocol = PROTOCOL::GPSD;
+		}
+		else if (arg == "TXT")
+		{
+			protocol = PROTOCOL::TXT;
+		}
+		else if (arg == "MQTT")
+		{
+			protocol = PROTOCOL::MQTT;
+		}
+		else if (arg == "WS")
+		{
+			protocol = PROTOCOL::WS;
+		}
+		else if (arg == "WSMQTT")
+		{
+			protocol = PROTOCOL::WSMQTT;
+		}
+		else
+			return false;
+
+		return true;
+	}
+
+	bool Parse::OutputFormat(std::string str, MessageFormat &out)
+	{
+		Convert::toUpper(str);
+		if (str == "NONE" || str == "0")
+		{
+			out = MessageFormat::SILENT;
+		}
+		else if (str == "NMEA" || str == "1")
+		{
+			out = MessageFormat::NMEA;
+		}
+		else if (str == "NMEA_TAG")
+		{
+			out = MessageFormat::NMEA_TAG;
+		}
+		else if (str == "FULL" || str == "2")
+		{
+			out = MessageFormat::FULL;
+		}
+		else if (str == "JSON_NMEA" || str == "3")
+		{
+			out = MessageFormat::JSON_NMEA;
+		}
+		else if (str == "JSON_SPARSE" || str == "4")
+		{
+			out = MessageFormat::JSON_SPARSE;
+		}
+		else if (str == "JSON_FULL" || str == "5")
+		{
+			out = MessageFormat::JSON_FULL;
+		}
+		else
+			return false;
+
+		return true;
+	}
+
 	std::string Parse::DeviceTypeString(Type type)
 	{
 		switch (type)
@@ -350,6 +425,52 @@ namespace Util
 			break;
 		}
 		return "UNKNOWN";
+	}
+
+	std::string Convert::toString(PROTOCOL protocol)
+	{
+		switch (protocol)
+		{
+		case PROTOCOL::NONE:
+			return "NONE";
+		case PROTOCOL::RTLTCP:
+			return "RTLTCP";
+		case PROTOCOL::GPSD:
+			return "GPSD";
+		case PROTOCOL::TXT:
+			return "TXT";
+		case PROTOCOL::WS:
+			return "WS";
+		case PROTOCOL::MQTT:
+			return "MQTT";
+		case PROTOCOL::WSMQTT:
+			return "WSMQTT";
+		}
+		return "";
+	}
+
+	std::string Convert::toString(MessageFormat out)
+	{
+		switch (out)
+		{
+		case MessageFormat::SILENT:
+			return "NONE";
+		case MessageFormat::NMEA:
+			return "NMEA";
+		case MessageFormat::NMEA_TAG:
+			return "NMEA_TAG";
+		case MessageFormat::FULL:
+			return "FULL";
+		case MessageFormat::JSON_NMEA:
+			return "JSON_NMEA";
+		case MessageFormat::JSON_SPARSE:
+			return "JSON_SPARSE";
+		case MessageFormat::JSON_FULL:
+			return "JSON_FULL";
+		default:
+			break;
+		}
+		return "";
 	}
 
 	void Convert::toUpper(std::string &s)
