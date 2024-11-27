@@ -108,6 +108,8 @@ namespace Util {
 				return "null";
 			return s;
 		}
+		static std::string toString(PROTOCOL protocol);
+		static std::string toString(MessageFormat out);
 
 		static void toUpper(std::string& s);
 		static void toLower(std::string& s);
@@ -122,6 +124,8 @@ namespace Util {
 		static FLOAT32 Float(std::string str, FLOAT32 min = -1e30, FLOAT32 max = +1e30);
 		static bool StreamFormat(std::string str, Format& format);
 		static bool DeviceType(std::string str, Type& type);
+		static bool Protocol(std::string str, PROTOCOL& protocol);
+		static bool OutputFormat(std::string str, MessageFormat &out);
 		static std::string DeviceTypeString(Type type);
 
 		static bool Switch(std::string arg, const std::string& TrueString = "ON", const std::string& FalseString = "OFF");

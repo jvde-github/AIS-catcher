@@ -67,6 +67,17 @@ enum class Format
 	UNKNOWN
 };
 
+enum class PROTOCOL
+{
+	NONE,
+	RTLTCP,
+	GPSD,
+	TXT,
+	MQTT,
+	WS,
+	WSMQTT
+};
+
 enum class Type
 {
 	NONE = 0,
@@ -86,9 +97,10 @@ enum class Type
 	N2K = 14
 };
 
-enum class OutputLevel
+enum class MessageFormat
 {
-	NONE,
+	UNDEFINED,
+	SILENT,
 	NMEA,
 	NMEA_TAG,
 	FULL,

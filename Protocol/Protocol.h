@@ -60,12 +60,16 @@ namespace Protocol
 		ProtocolBase *prev = nullptr;
 		ProtocolBase *next = nullptr;
 
+		std::string layer = "*";
+
 	public:
-		ProtocolBase() = default;
+		ProtocolBase(std::string l) : layer(l) {};
 		virtual ~ProtocolBase() {}
 
 		ProtocolBase *getPrev() { return prev; }
 		ProtocolBase *getNext() { return next; }
+
+		std::string getLayer() { return layer; }
 
 		virtual void disconnect()
 		{
@@ -146,6 +150,7 @@ namespace Protocol
 		{
 			next = p;
 			p->prev = this;
+			p->next = nullptr;
 
 			return p;
 		}
@@ -159,6 +164,7 @@ namespace Protocol
 		const int RECONNECT_TIME = 10;
 
 	public:
+		TCP() : ProtocolBase("TCP") {};
 		void disconnect() override;
 		bool connect() override;
 
@@ -463,14 +469,6 @@ namespace Protocol
 					disconnect();
 					return;
 				}
-				/*
-				if (!readPacket(b, length))
-				{
-					Error() << "MQTT: Failed to read SUBACK packet";
-					disconnect();
-					return;
-				}
-				*/
 			}
 			Info() << "MQTT: Connected to broker " << (subscribe ? "and subscribed" : "");
 			connected = true;
@@ -495,6 +493,7 @@ namespace Protocol
 		}
 
 	public:
+		MQTT() : ProtocolBase("MQTT") {};
 		void onConnect() override
 		{
 			buffer_ptr = 0;
@@ -579,6 +578,7 @@ namespace Protocol
 				buffer.resize(16384);
 
 			int len = prev->read((char *)buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
+
 			if (len <= 0)
 				return len;
 
@@ -711,6 +711,9 @@ namespace Protocol
 				prev->send(str.c_str(), str.size());
 			}
 		}
+
+	public:
+		GPSD() : ProtocolBase("GPSD") {};
 	};
 
 	class RTLTCP : public ProtocolBase
@@ -757,6 +760,8 @@ namespace Protocol
 		}
 
 	public:
+		RTLTCP() : ProtocolBase("RTLTCP") {};
+
 		void onConnect() override
 		{
 			applySettings();
@@ -858,10 +863,15 @@ namespace Protocol
 
 		bool performHandshake();
 
+		int getFrames(void *data, int length, int t = 1, bool wait = false);
+		int populateData(void *data, int length);
+
 		std::string base64Encode(const uint8_t *data, size_t len);
 		std::string sha1Hash(const std::string &data);
 
 	public:
+		WebSocket() : ProtocolBase("WS") {};
+
 		void onConnect() override;
 		void onDisconnect() override;
 		bool isConnected() override;

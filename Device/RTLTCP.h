@@ -30,38 +30,7 @@ namespace Device
 	class RTLTCP : public Device
 	{
 
-		enum class PROTOCOL
-		{
-			NONE,
-			RTLTCP,
-			GPSD,
-			TXT,
-			MQTT,
-			WS,
-			WSMQTT
-		} Protocol = PROTOCOL::RTLTCP;
-
-		std::string getProtocolString() const
-		{
-			switch (Protocol)
-			{
-			case PROTOCOL::NONE:
-				return "NONE";
-			case PROTOCOL::RTLTCP:
-				return "RTLTCP";
-			case PROTOCOL::GPSD:
-				return "GPSD";
-			case PROTOCOL::TXT:
-				return "TXT";
-			case PROTOCOL::WS:
-				return "WS";
-			case PROTOCOL::MQTT:
-				return "MQTT";
-			case PROTOCOL::WSMQTT:
-				return "WS-MQTT";
-			}
-			return "";
-		}
+		PROTOCOL Protocol = PROTOCOL::RTLTCP;
 
 		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;

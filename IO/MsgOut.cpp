@@ -79,7 +79,7 @@ namespace IO
 
 	void MessageToScreen::Receive(const AIS::GPS *data, int len, TAG &tag)
 	{
-		if (level == OutputLevel::NONE)
+		if (level == MessageFormat::SILENT)
 			return;
 
 		for (int i = 0; i < len; i++)
@@ -88,9 +88,9 @@ namespace IO
 			{
 				switch (level)
 				{
-				case OutputLevel::NMEA:
-				case OutputLevel::NMEA_TAG:
-				case OutputLevel::FULL:
+				case MessageFormat::NMEA:
+				case MessageFormat::NMEA_TAG:
+				case MessageFormat::FULL:
 					std::cout << data[i].getNMEA() << std::endl;
 					break;
 				default:
@@ -104,7 +104,7 @@ namespace IO
 	void MessageToScreen::Receive(const AIS::Message *data, int len, TAG &tag)
 	{
 
-		if (level == OutputLevel::NONE)
+		if (level == MessageFormat::SILENT)
 			return;
 
 		for (int i = 0; i < len; i++)
@@ -113,12 +113,12 @@ namespace IO
 			{
 				switch (level)
 				{
-				case OutputLevel::NMEA:
-				case OutputLevel::NMEA_TAG:
+				case MessageFormat::NMEA:
+				case MessageFormat::NMEA_TAG:
 					for (const auto &s : data[i].NMEA)
 						std::cout << s << std::endl;
 					break;
-				case OutputLevel::FULL:
+				case MessageFormat::FULL:
 					for (const auto &s : data[i].NMEA)
 					{
 						std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
@@ -133,7 +133,7 @@ namespace IO
 						std::cout << ")" << std::endl;
 					}
 					break;
-				case OutputLevel::JSON_NMEA:
+				case MessageFormat::JSON_NMEA:
 					std::cout << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver) << std::endl;
 					break;
 				default:
