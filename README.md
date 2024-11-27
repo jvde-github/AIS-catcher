@@ -248,6 +248,7 @@ AIS-catcher -t mqtt://127.0.0.1:1883 -gt USERNAME admin PASSWORD admin
 - smaller UI tidy up (e.g. opens default on map and adjusted colors)
 - `-y`  now accepts the server location as `sdr://127.0.0.1:5555`
 - `-t` now accepts the server location and protocol as `txt://127.0.0.1:4001` for text over TCP, `gpsd://127.0.0.1:4267` for a GPSD server and `rtltcp://127.0.0.1:4099` for a RTL_TCP server and `tcp://127.0.0.1:1313` for raw IQ data over tcp
+- `-t` and `-Q` can send text data using WebSockets using `ws://`
 - added NMEA2000 settings to the JSON configuration
 - Options to automatically show the vessel track when hovering over and/or selecting a vessel
 - Fix to system daemon file to restart process after 10s only
