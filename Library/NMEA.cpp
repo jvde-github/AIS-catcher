@@ -444,7 +444,7 @@ namespace AIS {
 	}
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW* data, int len, TAG& tag) {
-
+			
 		try {
 			long t = 0;
 
@@ -454,7 +454,7 @@ namespace AIS {
 
 					// state = 0, we are looking for the start of JSON or NMEA
 					if (state == 0) {
-						if (c == '{' && (prev == '\n' || prev == '\r')) {
+						if (c == '{' && (prev == '\n' || prev == '\r' || prev == '}')) {
 							line = c;
 							state = 1;
 							count = 1;
