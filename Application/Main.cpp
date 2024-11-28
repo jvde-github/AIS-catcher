@@ -420,7 +420,7 @@ int main(int argc, char *argv[])
 				receiver.removeTags("DT");
 				break;
 			case 't':
-				Assert(count <= 3, param, "requires one, two or three parameters [protocol] [host] [port].");
+				Assert(count <= 3, param, "requires one parameter [url], or two or three parameters [[protocol]] [host] [port].");
 				if (++nrec > 1)
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
