@@ -237,12 +237,12 @@ AIS-catcher -Q mqtt://127.0.0.1:1883 admin MSGFORMAT JSON_FULL TOPIC data/ais
 ```
 Authentication and client can also be easily set if needed:
 ```console
-AIS-catcher -Q mqtt://127.0.0.1:1883 USERNAME admin PASSWORD admin CLIENT aiscatcher
+AIS-catcher -Q mqtt://username:password@127.0.0.1:1883  admin CLIENT aiscatcher
 ```
 
 To read from a MQTT broker as input use `-t mqtt://` (or `wsmqtt://` for WebSocket communication with the broker):
 ```console
-AIS-catcher -t mqtt://127.0.0.1:1883 -gt USERNAME admin PASSWORD admin
+AIS-catcher -t mqtt://username:password@127.0.0.1:1883 
 ```
 
 - smaller UI tidy up (e.g. opens default on map and adjusted colors)
