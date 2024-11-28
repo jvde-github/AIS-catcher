@@ -345,8 +345,8 @@ namespace Device {
 		client.setValue(option, arg);
 
 		if (option == "URL") {
-			std::string prot, host, port, path;
-			Util::Parse::URL(arg, prot, host, port, path);
+			std::string prot, host, port, path, username, password;
+			Util::Parse::URL(arg, prot, username, password, host, port, path);
 
 			if (!host.empty()) Set("HOST", host);
 			if (!port.empty()) Set("PORT", port);

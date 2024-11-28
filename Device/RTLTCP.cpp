@@ -161,8 +161,8 @@ namespace Device
 
 		if (option == "URL")
 		{
-			std::string prot, host, port, path;
-			Util::Parse::URL(arg, prot, host, port, path);
+			std::string prot, host, port, path, username, password;
+			Util::Parse::URL(arg, prot, username, password, host, port, path);
 
 			if (!host.empty())
 				Set("HOST", host);
@@ -170,6 +170,10 @@ namespace Device
 				Set("PORT", port);
 			if (!prot.empty())
 				Set("PROTOCOL", prot);
+			if (!username.empty())
+				Set("USERNAME", username);
+			if (!password.empty())
+				Set("PASSWORD", password);
 		}
 		else if (option == "PROTOCOL")
 		{
