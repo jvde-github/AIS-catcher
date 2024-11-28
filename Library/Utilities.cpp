@@ -104,12 +104,15 @@ namespace Util
 		return number;
 	}
 
-	void Parse::URL(const std::string &url, std::string &protocol, std::string &host, std::string &port, std::string &path)
-	{
+#include <string>
 
+	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path)
+	{
 		std::string s = url;
 
 		protocol.clear();
+		username.clear();
+		password.clear();
 		host.clear();
 		port.clear();
 		path = "/";
@@ -117,7 +120,6 @@ namespace Util
 		size_t idx = s.find("://");
 		if (idx != std::string::npos)
 		{
-
 			protocol = s.substr(0, idx);
 			s = s.substr(idx + 3);
 		}
@@ -127,6 +129,24 @@ namespace Util
 		{
 			path = s.substr(idx);
 			s = s.substr(0, idx);
+		}
+
+		size_t at_pos = s.find('@');
+		if (at_pos != std::string::npos)
+		{
+			std::string userinfo = s.substr(0, at_pos);
+			s = s.substr(at_pos + 1);
+
+			size_t colon_pos = userinfo.find(':');
+			if (colon_pos != std::string::npos)
+			{
+				username = userinfo.substr(0, colon_pos);
+				password = userinfo.substr(colon_pos + 1);
+			}
+			else
+			{
+				username = userinfo;
+			}
 		}
 
 		idx = s.find(':');
