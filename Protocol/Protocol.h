@@ -68,7 +68,7 @@ namespace Protocol
 			if (result != 0)
 			{
 #ifdef _WIN32
-				errorMessage = std::to_string(result);
+				msg = std::to_string(result);
 #else
 				msg = gai_strerror(result);
 #endif
