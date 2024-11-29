@@ -225,7 +225,9 @@ namespace Protocol
 			if (sent < length)
 			{
 #ifdef _WIN32
-				if (WSAGetLastError() == WSAEWOULDBLOCK)
+				int error_code = WSAGetLastError();
+
+				if (error_code == WSAEWOULDBLOCK)
 					return 0;
 
 #else
