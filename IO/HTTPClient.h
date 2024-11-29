@@ -43,8 +43,6 @@ namespace IO {
 
 		char buffer[1024];
 
-		std::string base64_encode(const std::string& in);
-
 		void createMessageBody(const std::string& msg, bool gzip, bool multipart, const std::string& copyname);
 		void createHeader(bool gzip, bool multipart);
 		bool Handshake();

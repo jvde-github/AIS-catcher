@@ -119,8 +119,11 @@ namespace Util
 				return "null";
 			return s;
 		}
+
 		static std::string toString(PROTOCOL protocol);
 		static std::string toString(MessageFormat out);
+
+		static std::string BASE64toString(const std::string &s);
 
 		static void toUpper(std::string &s);
 		static void toLower(std::string &s);

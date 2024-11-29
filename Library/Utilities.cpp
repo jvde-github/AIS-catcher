@@ -493,6 +493,29 @@ namespace Util
 		return "";
 	}
 
+	std::string Convert::BASE64toString(const std::string &in)
+	{
+		const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+		std::string out;
+		int val = 0, valb = -6;
+		for (uint8_t c : in)
+		{
+			val = (val << 8) + c;
+			valb += 8;
+			while (valb >= 0)
+			{
+				out.push_back(base64_chars[(val >> valb) & 0x3F]);
+				valb -= 6;
+			}
+		}
+		if (valb > -6)
+			out.push_back(base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
+		while (out.size() % 4)
+			out.push_back('=');
+		return out;
+	}
+
 	void Convert::toUpper(std::string &s)
 	{
 		for (auto &c : s)
