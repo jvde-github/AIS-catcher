@@ -53,6 +53,57 @@
 
 namespace Protocol
 {
+	class AddressInfo
+	{
+	public:
+		AddressInfo(const std::string &host, const std::string &service, const struct addrinfo *hints = nullptr) : address(nullptr), msg("")
+		{
+			if (address != nullptr)
+			{
+				freeaddrinfo(address);
+				address = nullptr;
+			}
+
+			int result = getaddrinfo(host.c_str(), service.c_str(), hints, &address);
+			if (result != 0)
+			{
+#ifdef _WIN32
+				errorMessage = std::to_string(result);
+#else
+				msg = gai_strerror(result);
+#endif
+			}
+		}
+
+		~AddressInfo()
+		{
+			if (address != nullptr)
+			{
+				freeaddrinfo(address);
+			}
+		}
+
+		struct addrinfo *get() const
+		{
+			return address;
+		}
+
+		bool isSuccess() const
+		{
+			return address != nullptr;
+		}
+
+		std::string getErrorMessage() const
+		{
+			return msg;
+		}
+
+	private:
+		struct addrinfo *address;
+		bool success;
+		std::string msg;
+	};
+
 	class ProtocolBase
 	{
 
@@ -846,6 +897,7 @@ namespace Protocol
 			PONG = 0xA
 		};
 
+		const int MAX_PACKET_SIZE = 16384;
 		bool connected = false;
 		bool binary = false;
 
@@ -866,7 +918,6 @@ namespace Protocol
 		int getFrames(void *data, int length, int t = 1, bool wait = false);
 		int populateData(void *data, int length);
 
-		std::string base64Encode(const uint8_t *data, size_t len);
 		std::string sha1Hash(const std::string &data);
 
 	public:
