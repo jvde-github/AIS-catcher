@@ -50,7 +50,7 @@ namespace Device {
 	}
 
 	SDRPLAY::~SDRPLAY() {
-		if (--API_count) sdrplay_api_Close();
+		if (--API_count == 0) sdrplay_api_Close();
 	}
 
 	void SDRPLAY::Open(uint64_t h) {
