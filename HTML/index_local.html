@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style_v0_60_385_g377f094b.css" />
+	<link rel="stylesheet" href="style_v0_60_389_g059669f2.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -45,8 +45,8 @@
 			</div>
 		</div>
 
-		<div title="About" onclick="showAboutDialog()" class="header-icon">
-			<i class="help_icon small-icon"></i>
+		<div title="About" onclick="toggleInfoPanel()" class="header-icon">
+			<i class="info_icon small-icon"></i>
 		</div>
 
 		<div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon">
@@ -63,8 +63,10 @@
 	</div>
 	<nav id="menubar">
 		<div onclick="activateTab(event,'map')" id="map_tab"><i class="map_icon"></i><span>Map</span></div>
-		<div onclick="activateTab(event,'stat')" id="stat_tab"><i class="business_center_icon"></i><span>Summary</span>		</div>
-		<div onclick="activateTab(event,'plots')" id="plots_tab"><i class="leaderboard_icon"></i><span>Plots</span> </div>
+		<div onclick="activateTab(event,'stat')" id="stat_tab"><i class="business_center_icon"></i><span>Summary</span>
+		</div>
+		<div onclick="activateTab(event,'plots')" id="plots_tab"><i class="leaderboard_icon"></i><span>Plots</span>
+		</div>
 		<div onclick="activateTab(event,'ships')" id="ships_tab"><i class="view_list_icon"></i><span>Ships</span></div>
 		<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="feed_icon"></i><span>NMEA</span></div>
 		<div onclick="activateTab(event,'about')" id="about_tab"><i class="info_icon"></i><span>About</span></div>
@@ -1009,9 +1011,118 @@
 	<div class="bottombar"></div>
 
 	<script src="plugins.js"></script>
-	<script src="script_v0_60_385_g377f094b.js"></script>
+	<script src="script_v0_60_389_g059669f2.js"></script>
 
 
+	<div class="overlay" onclick="toggleInfoPanel()"></div>
+	<div class="info-panel">
+		<div class="header-info-panel">
+		</div>
+
+		<div class="content">
+			<div class="quick-links">
+				<a href="https://docs.aiscatcher.org" target="_blank" class="quick-link">
+					<svg xmlns="http://www.w3.org/2000/svg" height="40px" viewBox="0 -960 960 960" width="40px"
+						fill="#5f6368">
+						<path
+							d="M280-280h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Zm-80 480q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z" />
+					</svg>
+					<span>Documentation</span>
+				</a>
+				<a href="https://github.com/jvde-github/AIS-catcher/discussions" target="_blank" class="quick-link">
+					<svg xmlns="http://www.w3.org/2000/svg" height="40px" viewBox="0 -960 960 960" width="40px"
+						fill="#5f6368">
+						<path
+							d="M880-80 720-240H320q-33 0-56.5-23.5T240-320v-40h440q33 0 56.5-23.5T760-440v-280h40q33 0 56.5 23.5T880-640v560ZM160-473l47-47h393v-280H160v327ZM80-280v-520q0-33 23.5-56.5T160-880h440q33 0 56.5 23.5T680-800v280q0 33-23.5 56.5T600-440H240L80-280Zm80-240v-280 280Z" />
+					</svg>
+					<span>Forum</span>
+				</a>
+				<a href="https://github.com/jvde-github/AIS-catcher" target="_blank" class="quick-link">
+					<svg width="40" height="40" viewBox="0 0 98 96" xmlns="http://www.w3.org/2000/svg">
+						<path fill-rule="evenodd" clip-rule="evenodd"
+							d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z"
+							fill="#24292f" />
+					</svg> <span>GitHub</span>
+				</a>
+				<a onclick="toggleInfoPanel(); showAboutDialog(); " target="_blank" class="quick-link">
+					<svg xmlns="http://www.w3.org/2000/svg" height="40px" viewBox="0 -960 960 960" width="40px" fill="#5f6368"><path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+					<span>About</span>
+				</a>
+			</div>
+
+			<div class="info-panel-section">
+				<div class="link-list">
+					<a href="https://docs.aiscatcher.org/getting-started/overview/" target="_blank" class="link-item">
+						<span>Getting Started Guide</span>
+						<span class="arrow_right_alt_icon"></span>
+					</a>
+					<a href="https://docs.aiscatcher.org/getting-started/ais-basics/" target="_blank" class="link-item">
+						<span>Introduction to AIS</span>
+						<span class="arrow_right_alt_icon"></span>
+					</a>
+					<a href="https://docs.aiscatcher.org/what-is-new/" target="_blank" class="link-item">
+						<span>What is new?</span>
+						<span class="arrow_right_alt_icon"></span>
+					</a>
+					<a href="https://docs.aiscatcher.org/community/" target="_blank" class="link-item">
+						<span>Community Hub</span>
+						<span class="arrow_right_alt_icon"></span>
+					</a>
+					<a href="https://docs.aiscatcher.org/references/overview/" target="_blank" class="link-item">
+						<span>Reference Material</span>
+						<span class="arrow_right_alt_icon"></span>
+					</a>
+				</div>
+			</div>
+
+			<div class="info-panel-section">
+				<div class="social-box">
+					<div class="social-links">
+						<span>Follow Us</span>
+						<div class="social-icons">
+							<a href="https://github.com/jvde-github/AIS-catcher" target="_blank" class="social-link">
+								<svg width="16" height="16" viewBox="0 0 98 96" xmlns="http://www.w3.org/2000/svg">
+									<path fill-rule="evenodd" clip-rule="evenodd"
+										d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z"
+										fill="#24292f" />
+								</svg>
+							</a>
+							<a href="https://x.com/githubjvde" target="_blank" class="social-link">
+								<svg height="16" width="26" version="1.1" id="Layer_1"
+									xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+									viewBox="0 0 410.155 410.155" xml:space="preserve">
+									<path style="fill:#76A9EA;" d="M403.632,74.18c-9.113,4.041-18.573,7.229-28.28,9.537c10.696-10.164,18.738-22.877,23.275-37.067
+                           l0,0c1.295-4.051-3.105-7.554-6.763-5.385l0,0c-13.504,8.01-28.05,14.019-43.235,17.862c-0.881,0.223-1.79,0.336-2.702,0.336
+                           c-2.766,0-5.455-1.027-7.57-2.891c-16.156-14.239-36.935-22.081-58.508-22.081c-9.335,0-18.76,1.455-28.014,4.325
+                           c-28.672,8.893-50.795,32.544-57.736,61.724c-2.604,10.945-3.309,21.9-2.097,32.56c0.139,1.225-0.44,2.08-0.797,2.481
+                           c-0.627,0.703-1.516,1.106-2.439,1.106c-0.103,0-0.209-0.005-0.314-0.015c-62.762-5.831-119.358-36.068-159.363-85.14l0,0
+                           c-2.04-2.503-5.952-2.196-7.578,0.593l0,0C13.677,65.565,9.537,80.937,9.537,96.579c0,23.972,9.631,46.563,26.36,63.032
+                           c-7.035-1.668-13.844-4.295-20.169-7.808l0,0c-3.06-1.7-6.825,0.485-6.868,3.985l0,0c-0.438,35.612,20.412,67.3,51.646,81.569
+                           c-0.629,0.015-1.258,0.022-1.888,0.022c-4.951,0-9.964-0.478-14.898-1.421l0,0c-3.446-0.658-6.341,2.611-5.271,5.952l0,0
+                           c10.138,31.651,37.39,54.981,70.002,60.278c-27.066,18.169-58.585,27.753-91.39,27.753l-10.227-0.006
+                           c-3.151,0-5.816,2.054-6.619,5.106c-0.791,3.006,0.666,6.177,3.353,7.74c36.966,21.513,79.131,32.883,121.955,32.883
+                           c37.485,0,72.549-7.439,104.219-22.109c29.033-13.449,54.689-32.674,76.255-57.141c20.09-22.792,35.8-49.103,46.692-78.201
+                           c10.383-27.737,15.871-57.333,15.871-85.589v-1.346c-0.001-4.537,2.051-8.806,5.631-11.712c13.585-11.03,25.415-24.014,35.16-38.591
+                           l0,0C411.924,77.126,407.866,72.302,403.632,74.18L403.632,74.18z" />
+								</svg> </a>
+							<a href="https://youtube.com/@jvde-github8400" target="_blank" class="social-link">
+								<svg height="16" width="16" version="1.1" id="Layer_1"
+									xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+									viewBox="0 0 461.001 461.001" xml:space="preserve">
+									<g>
+										<path style="fill:#F61C0D;"
+											d="M365.257,67.393H95.744C42.866,67.393,0,110.259,0,163.137v134.728
+                               c0,52.878,42.866,95.744,95.744,95.744h269.513c52.878,0,95.744-42.866,95.744-95.744V163.137
+                               C461.001,110.259,418.135,67.393,365.257,67.393z M300.506,237.056l-126.06,60.123c-3.359,1.602-7.239-0.847-7.239-4.568V168.607
+                               c0-3.774,3.982-6.22,7.348-4.514l126.06,63.881C304.363,229.873,304.298,235.248,300.506,237.056z" />
+									</g>
+								</svg> </a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
 
 </html>
