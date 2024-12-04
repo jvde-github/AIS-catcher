@@ -28,6 +28,7 @@ To join, ensure you're on the latest version, visit [aiscatcher.org](https://ais
 
 - Documentation: [here](https://docs.aiscatcher.org)
 - Installation: [here](https://docs.aiscatcher.org/installation/overview)
+- What is New?: [here](https://docs.aiscatcher.org/what-is-new/)
 - Forum: [here](https://github.com/jvde-github/AIS-catcher/discussions)
 - Bug Reports: [here](https://github.com/jvde-github/AIS-catcher/issues)
 
