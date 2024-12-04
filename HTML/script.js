@@ -110,6 +110,14 @@ function restoreDefaultSettings() {
     };
 }
 
+function toggleInfoPanel() {
+    const overlay = document.querySelector('.overlay');
+    const infoPanel = document.querySelector('.info-panel');
+
+    overlay.classList.toggle('active');
+    infoPanel.classList.toggle('active');
+}
+
 function updateTitle() {
     document.title = (tab_title_count ? " (" + tab_title_count + ") " : "") + tab_title + " " + tab_title_station;
 }
