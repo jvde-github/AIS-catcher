@@ -2162,7 +2162,7 @@ td {
     height: 100%;
     background: white;
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
-    font-size: 16px;
+    font-size: 14px;
     transition: right 0.3s ease;
     z-index: 20010;
     overflow-y: auto;
@@ -2282,7 +2282,7 @@ td {
 .social-box {
     border: 1px solid #eee;
     border-radius: 8px;
-    padding: 20px;
+    padding: 16px;
     background: #f8f9fa;
 }
 
