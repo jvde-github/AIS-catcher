@@ -73,7 +73,12 @@ namespace Device {
 
 	public:
 		RTLSDR() : Device(Format::CU8, 1536000, Type::RTLSDR) {}
-
+		~RTLSDR() {
+			if (dev != nullptr) {
+				rtlsdr_close(dev);
+				dev = nullptr;
+			}
+		}
 		// Control
 		void Open(uint64_t h);
 #ifdef HASRTL_ANDROID
