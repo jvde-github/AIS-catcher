@@ -2199,8 +2199,9 @@ td {
 
 .header-info-panel {
     padding: 20px;
-    margin-left: autol
-}
+    display: flex;
+    justify-content: flex-end;
+  }
 
 .info-panel-close-btn {
     cursor: pointer;
