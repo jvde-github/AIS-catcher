@@ -56,8 +56,11 @@ namespace Device {
 
 	void RTLSDR::Close() {
 		Device::Close();
-		rtlsdr_close(dev);
-		dev = nullptr;
+
+		if (dev) {
+			rtlsdr_close(dev);
+			dev = nullptr;
+		}
 	}
 
 	void RTLSDR::Play() {
