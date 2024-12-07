@@ -118,7 +118,7 @@ namespace Device {
 		}
 		catch (std::exception& e) {
 			Error() << "RTLSDR Run: " << e.what();
-			std::terminate();
+			StopRequest();
 		}
 	}
 
