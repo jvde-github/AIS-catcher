@@ -206,6 +206,9 @@ static void printSupportedDevices() {
 #ifdef HASSAMPLERATE
 	other_support << "LIBSAMPLERATE ";
 #endif
+#ifdef HASSQLITE
+	other_support << "SQLITE ";
+#endif
 #ifdef HASRTLSDR_BIASTEE
 	other_support << "RTLSDR-BIASTEE ";
 #endif
