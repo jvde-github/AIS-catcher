@@ -15,6 +15,7 @@ option(ZLIB "Include ZLIB support" ON)
 option(SAMPLERATE "Include SAMPLERATE support" ON)
 option(ZMQ "Include ZMQ support" ON)
 option(PSQL "Include PSQL support" ON)
+option(SQLITE "Include SQLITE support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
 option(NMEA2000 "Include NMEA2000 support" ON)
 option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
@@ -290,6 +291,40 @@ if(PSQL)
             add_definitions(-DHASPSQL)
         else()
             message(STATUS "PQ: not found - ${PQ_INCLUDE_DIR}, ${PQ_LIBRARY}")
+        endif()
+    endif()
+endif()
+
+# Find sqlite
+if(SQLITE)
+    if(MSVC AND NOT MSVC_VCPKG)
+        find_path(SQLITE_INCLUDE_DIR sqlite3.h HINTS ${POTHOSSDR_INCLUDE_DIR})
+        find_library(SQLITE_LIBRARY sqlite3.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+        find_file(SQLITE_DLL sqlite3.dll HINTS ${POTHOSSDR_BINARY_DIR})
+        
+        if(SQLITE_INCLUDE_DIR AND SQLITE_LIBRARY AND SQLITE_DLL)
+        message(STATUS "SQLite: found (PothosSDR) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
+            set(COPY_SQLITE_DLL TRUE)
+            add_definitions(-DHASSQLITE)
+            set(SQLITE_INCLUDE_DIRS ${SQLITE_INCLUDE_DIR})
+            set(SQLITE_LIBRARIES ${SQLITE_LIBRARY})
+        else()
+            message(STATUS "SQLite: Not found (PothosSDR) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
+        endif()
+    else()
+        # For Unix-like systems, use pkg-config if available
+        pkg_check_modules(PKG_SQLITE sqlite3)
+        
+        find_path(SQLITE_INCLUDE_DIR sqlite3.h HINTS ${PKG_SQLITE_INCLUDE_DIRS})
+        find_library(SQLITE_LIBRARY sqlite3 HINTS ${PKG_SQLITE_LIBRARY_DIRS})
+        
+        if(SQLITE_INCLUDE_DIR AND SQLITE_LIBRARY)
+            message(STATUS "SQLite: found - ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}")
+            set(SQLITE_INCLUDE_DIRS ${SQLITE_INCLUDE_DIR})
+            set(SQLITE_LIBRARIES ${SQLITE_LIBRARY})
+            add_definitions(-DHASSQLITE)
+        else()
+            message(STATUS "SQLite: not found - ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}")
         endif()
     endif()
 endif()
@@ -724,7 +759,7 @@ set(CPP
     IO/MsgOut.cpp IO/N2KStream.cpp Library/N2K.cpp IO/N2KInterface.cpp Protocol/Protocol.cpp)
 
 set(HEADER
-    Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Library/Logger.h Application/WebViewer.h Application/Receiver.h Ships/Ships.h Ships/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h
+    Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Library/Logger.h Application/WebViewer.h Application/Receiver.h Ships/Ships.h Ships/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h Application/MapTiles.h
     Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h
     Device/AIRSPY.h Library/FIFO.h Device/N2KsktCAN.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Ships/History.h Ships/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h
     Device/Serial.h IO/N2KInterface.h Library/N2K.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/MsgOut.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h Protocol/Protocol.h)
@@ -736,10 +771,10 @@ set(APP_INCLUDES . ./Ships ./DBMS ./Library ./DSP ./Application ./IO ./Protocol)
 add_executable(AIS-catcher ${CPP} ${HEADER})
 
 include_directories(
-    . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+    . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 target_link_libraries(AIS-catcher
-    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
+    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES} ${SQLITE_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 
@@ -779,6 +814,10 @@ endif()
 
 if(COPY_PQ_DLL)
     add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_SQLITE_DLL)
+    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SQLITE_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_CURL_DLL)

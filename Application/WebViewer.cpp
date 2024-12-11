@@ -31,6 +31,71 @@ WebViewer::WebViewer()
 	JSON::StringBuilder::stringify(Util::Helper::getHardware(), hardware);
 }
 
+std::vector<std::string> WebViewer::parsePath(const std::string &url)
+{
+	std::vector<std::string> path;
+	std::string pattern = "/";
+
+	auto pos = url.find(pattern);
+	if (pos != 0)
+		return path;
+
+	std::string remainder = url.substr(pattern.length());
+	std::stringstream ss(remainder);
+	std::string segment;
+
+	while (std::getline(ss, segment, '/'))
+	{
+		if (!segment.empty())
+		{
+			path.push_back(segment);
+		}
+	}
+
+	return path;
+}
+
+bool WebViewer::parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y)
+{
+	std::string pattern = "/tiles/";
+
+	layerID.clear();
+
+	std::string segment;
+	std::vector<std::string> segments = parsePath(url);
+
+	if (segments.size() != 5 && segments[0] != "tiles")
+		return false;
+
+	try
+	{
+		layerID = segments[1];
+		z = std::stoi(segments[2]);
+		x = std::stoi(segments[3]);
+		y = std::stoi(segments[4]);
+
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
+{
+	auto source = std::make_shared<MBTilesSupport>();
+	if (source->open(filepath))
+	{
+		mapSources.push_back(source);
+		plugin_code += source->generatePluginCode(overlay);
+	}
+	else
+	{
+		Error() << "Failed to load MBTiles from: " << filepath;
+	}
+}
+
 bool WebViewer::Save()
 {
 	try
@@ -50,7 +115,7 @@ bool WebViewer::Save()
 	}
 	catch (const std::exception &e)
 	{
-		Error() << e.what() ;
+		Error() << e.what();
 		return false;
 	}
 	return true;
@@ -73,7 +138,7 @@ bool WebViewer::Load()
 	if (filename.empty())
 		return false;
 
-	Info() << "Server: reading statistics from " << filename ;
+	Info() << "Server: reading statistics from " << filename;
 	try
 	{
 		std::ifstream infile(filename, std::ios::binary);
@@ -93,7 +158,7 @@ bool WebViewer::Load()
 	}
 	catch (const std::exception &e)
 	{
-		Error() << e.what() ;
+		Error() << e.what();
 		return false;
 	}
 
@@ -139,7 +204,7 @@ void WebViewer::addPlugin(const std::string &arg)
 				break;
 			}
 		}
-		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version ;
+		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version;
 		if (version != 3)
 			throw std::runtime_error("Version not supported, expected 3, got " + std::to_string(version));
 		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
@@ -148,17 +213,16 @@ void WebViewer::addPlugin(const std::string &arg)
 	{
 
 		plugins += "// FAILED\n";
-		Info() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what() ;
+		Info() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
 		plugins += "server_message += \"Plugin error (" + arg + ") " + std::string(e.what()) + "\\n\"\n";
 	}
 }
 
 void WebViewer::BackupService()
 {
-
 	try
 	{
-		Info() << "Server: starting backup service every " << backup_interval << " minutes." ;
+		Info() << "Server: starting backup service every " << backup_interval << " minutes.";
 		while (true)
 		{
 			std::unique_lock<std::mutex> lock(m);
@@ -170,21 +234,20 @@ void WebViewer::BackupService()
 			}
 
 			if (!Save())
-				Error() << "Server failed to write backup." ;
+				Error() << "Server failed to write backup.";
 		}
 	}
 	catch (std::exception &e)
 	{
-		Error() << "WebClient BackupService: " << e.what() ;
+		Error() << "WebClient BackupService: " << e.what();
 		std::terminate();
 	}
 
-	Info() << "Server: stopping backup service." ;
+	Info() << "Server: stopping backup service.";
 }
 
 void WebViewer::connect(Receiver &r)
 {
-
 	bool rec_details = false;
 	const std::string newline = "<br>";
 	for (int j = 0; j < r.Count(); j++)
@@ -212,12 +275,10 @@ void WebViewer::connect(Receiver &r)
 
 			*r.device >> raw_counter;
 		}
-
 }
 
 void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Device &device)
 {
-
 	if (m.Output().out.canConnect(groups_in))
 	{
 
@@ -251,7 +312,7 @@ void WebViewer::start()
 		Clear();
 	else if (!Load())
 	{
-		Error() << "Statistics - cannot read file." ;
+		Error() << "Statistics - cannot read file.";
 		Clear();
 	}
 
@@ -278,7 +339,7 @@ void WebViewer::start()
 		if (port > lastport)
 			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
 
-		Info() << "HTML Server running at port " << std::to_string(port) ;
+		Info() << "HTML Server running at port " << std::to_string(port);
 	}
 	else
 		throw std::runtime_error("HTML server ports not specified");
@@ -317,7 +378,7 @@ void WebViewer::close()
 
 	if (!filename.empty() && !Save())
 	{
-		Error() << "Statistics - cannot write file." ;
+		Error() << "Statistics - cannot write file.";
 	}
 }
 
@@ -397,7 +458,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		}
 		catch (const std::exception &e)
 		{
-			Error() << "Server - error returning requested file (" << r << "): " << e.what() ;
+			Error() << "Server - error returning requested file (" << r << "): " << e.what();
 			Response(c, "text/html", std::string(""), true);
 		}
 	}
@@ -515,7 +576,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	}
 	else if (r == "/plugins.js")
 	{
-		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false")  + ";\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
 	else if (r == "/config.css")
 	{
@@ -545,11 +606,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			}
 			catch (const std::invalid_argument &)
 			{
-				Error() << "Server - path MMSI invalid: " << mmsi_str ;
+				Error() << "Server - path MMSI invalid: " << mmsi_str;
 			}
 			catch (const std::out_of_range &)
 			{
-				Error() << "Server - path MMSI out of range: " << mmsi_str ;
+				Error() << "Server - path MMSI out of range: " << mmsi_str;
 			}
 		}
 		content += "}";
@@ -608,8 +669,39 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r.substr(0, 6) == "/tiles")
+	{
+		int z, x, y;
+		std::string layer;
+		if (parseMBTilesURL(r, layer, z, x, y))
+		{
+			for (const auto &source : mapSources)
+			{
+				if (source->getLayerID() != layer)
+					continue;
+
+				if (source->isValidTile(z, x, y))
+				{
+					std::string contentType;
+					const std::vector<unsigned char> &data = source->getTile(z, x, y, contentType);
+
+					if (!data.empty())
+					{
+						Response(c, contentType, (char *)data.data(), data.size(), use_zlib & gzip, true);
+						return;
+					}
+				}
+			}
+			Response(c, "text/plain", std::string("Tile not found"), false, true);
+			return;
+		}
+			Response(c, "text/plain", std::string("Invalid Tile Request"), false, true);
+		return;
+	}
 	else
+	{
 		HTTPServer::Request(c, r, false);
+	}
 }
 
 Setting &WebViewer::Set(std::string option, std::string arg)
@@ -722,7 +814,15 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "CDN")
 	{
 		cdn = arg;
-		Info() << "Fetch Web Libraries locally at " << arg ;
+		Info() << "Fetch Web Libraries locally at " << arg;
+	}
+	else if (option == "MBTILES")
+	{
+		addMBTilesSource(arg, false);
+	}
+	else if (option == "MBOVERLAY")
+	{
+		addMBTilesSource(arg, true);
 	}
 	else if (option == "BACKUP")
 	{
@@ -742,7 +842,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "STYLE")
 	{
-		Info() << "Server: adding plugin (CSS): " << arg ;
+		Info() << "Server: adding plugin (CSS): " << arg;
 		plugins += "console.log('css:" + arg + "');";
 		plugins += "plugins += 'CSS: " + arg + "\\n';";
 
@@ -755,7 +855,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		catch (const std::exception &e)
 		{
 			stylesheets += "/* FAILED */\r\n";
-			Info() << "Server: style plugin error - " << e.what() ;
+			Info() << "Server: style plugin error - " << e.what();
 			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
 		}
 	}
@@ -770,11 +870,11 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 			Set("STYLE", f);
 
 		if (!files_ss.size() && !files_js.size())
-			Info() << "Server: no plugin files found in directory." ;
+			Info() << "Server: no plugin files found in directory.";
 	}
 	else if (option == "ABOUT")
 	{
-		Info() << "Server: about context from " << arg ;
+		Info() << "Server: about context from " << arg;
 		about = Util::Helper::readFile(arg);
 		aboutPresent = true;
 	}
