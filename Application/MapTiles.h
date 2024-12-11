@@ -4,9 +4,11 @@
 #include <vector>
 #include <utility>
 
+#ifdef HASSQLITE
 #include <sqlite3.h>
 #include <sstream>
 #include <cstdint>
+#endif
 
 class MapTiles
 {
