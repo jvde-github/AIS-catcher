@@ -22,6 +22,7 @@
 #include <condition_variable>
 #include <mutex>
 
+#include <map>
 #include "AIS-catcher.h"
 
 #include "Common.h"
@@ -32,30 +33,36 @@
 #include "DB.h"
 #include "History.h"
 #include "Receiver.h"
+#include "MapTiles.h"
 
 extern bool communityFeed;
 
-class SSEStreamer : public StreamIn<JSON::JSON> {
-	IO::HTTPServer* server = nullptr;
+class SSEStreamer : public StreamIn<JSON::JSON>
+{
+	IO::HTTPServer *server = nullptr;
 
 public:
 	virtual ~SSEStreamer() {}
-	void Receive(const JSON::JSON* data, int len, TAG& tag) {
-		if (server) {
-			AIS::Message* m = (AIS::Message*)data[0].binary;
-			for (const auto& s : m->NMEA)
+	void Receive(const JSON::JSON *data, int len, TAG &tag)
+	{
+		if (server)
+		{
+			AIS::Message *m = (AIS::Message *)data[0].binary;
+			for (const auto &s : m->NMEA)
 				server->sendSSE(1, "nmea", s);
 
-			if (tag.lat != 0 && tag.lon != 0) {
+			if (tag.lat != 0 && tag.lon != 0)
+			{
 				std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"channel\":\"" + m->getChannel() + "\",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
 				server->sendSSE(2, "nmea", json);
 			}
 		}
 	}
-	void setSSE(IO::HTTPServer* s) { server = s; }
+	void setSSE(IO::HTTPServer *s) { server = s; }
 };
 
-class WebViewer : public IO::HTTPServer, public Setting {
+class WebViewer : public IO::HTTPServer, public Setting
+{
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
 
 	int port = 0;
@@ -71,8 +78,9 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	bool supportPrometheus = false;
 	bool thread_running = false;
 	bool aboutPresent = false;
-	
+
 	std::vector<char> binary;
+	std::vector<std::shared_ptr<MapTiles>> mapSources;
 
 	std::string params;
 	std::string plugin_code;
@@ -113,19 +121,24 @@ class WebViewer : public IO::HTTPServer, public Setting {
 	void stopThread();
 	AIS::Filter filter;
 
+	std::vector<std::string> parsePath(const std::string &url);
+	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
+	void addMBTilesSource(const std::string &filepath, bool overlay);
+
 public:
 	WebViewer();
 
 	~WebViewer() { stopThread(); }
 
-	bool& active() { return run; }
-	void connect(Receiver& r);
-	void connect(AIS::Model& model, Connection<JSON::JSON>& json, Device::Device& device);
+	bool &active() { return run; }
+	void connect(Receiver &r);
+	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
 	void start();
 	void close();
 	void Reset();
 
-	void setDeviceDescription(std::string p, std::string v, std::string s) {
+	void setDeviceDescription(std::string p, std::string v, std::string s)
+	{
 		product = p;
 		vendor = v;
 		serial = s;
@@ -133,8 +146,8 @@ public:
 
 	bool isPortSet() { return port_set; }
 	// HTTP callbacks
-	void Request(TCP::ServerConnection& c, const std::string& r, bool gzip);
+	void Request(TCP::ServerConnection &c, const std::string &r, bool gzip);
 
-	Setting& Set(std::string option, std::string arg);
+	Setting &Set(std::string option, std::string arg);
 	std::string Get() { return ""; }
 };

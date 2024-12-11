@@ -126,7 +126,7 @@ namespace IO
 
 		if (cache)
 		{
-			header += "\r\nCache-Control: public, max-age=31536000";
+			header += "\r\nCache-Control: max-age=14187, stale-while-revalidate=604800, stale-if-error=604800";
 			time_t now = time(0) + 31536000;
 			char buf[100];
 			strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now));
