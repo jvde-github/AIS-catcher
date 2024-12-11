@@ -116,7 +116,7 @@ package_version=0.61~14-g96eddaee
 install_deps=$5
 
 # Install build dependencies
-install_dependencies "librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev $build_deps"
+install_dependencies "librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev $build_deps"
 
 # Build the project
 build_project
