@@ -40,6 +40,14 @@ cleanup() {
     rm -rf "$TMP_DIR"
 }
 
+check_existing_service() {
+    if systemctl is-enabled aiscatcher.service &>/dev/null; then
+        log "ERROR" "Detected existing aiscatcher.service. Please disable it first with:"
+        log "ERROR" "sudo systemctl disable aiscatcher.service"
+        log "ERROR" "Then try running this script again."
+        exit 1
+    fi
+}
 
 # Function to get Debian/Ubuntu version and architecture
 get_system_info() {
@@ -372,6 +380,8 @@ restore_service_state() {
 # Main function
 main() {
     log "INFO" "Starting AIS-catcher installation script"
+    
+    check_existing_service
     
     trap cleanup EXIT
     
