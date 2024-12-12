@@ -174,27 +174,36 @@ namespace Device {
 		Util::Convert::toUpper(option);
 
 		if (option == "SENSITIVITY") {
-			mode = AIRSPYGainMode::Sensitivity;
+			if(!explicit_gain) mode = AIRSPYGainMode::Sensitivity;
 			gain = Util::Parse::Integer(arg, 0, 21);
 		}
 		else if (option == "LINEARITY") {
-			mode = AIRSPYGainMode::Linearity;
+			if(!explicit_gain) mode = AIRSPYGainMode::Linearity;
 			gain = Util::Parse::Integer(arg, 0, 21);
 		}
 		else if (option == "VGA") {
-			mode = AIRSPYGainMode::Free;
+			if(!explicit_gain) mode = AIRSPYGainMode::Free;
 			VGA_Gain = Util::Parse::Integer(arg, 0, 14);
 		}
 		else if (option == "MIXER") {
-			mode = AIRSPYGainMode::Free;
+			if(!explicit_gain) mode = AIRSPYGainMode::Free;
 			mixer_AGC = Util::Parse::AutoInteger(arg, 0, 14, mixer_Gain);
 		}
 		else if (option == "LNA") {
-			mode = AIRSPYGainMode::Free;
+			if(!explicit_gain) mode = AIRSPYGainMode::Free;
 			LNA_AGC = Util::Parse::AutoInteger(arg, 0, 14, LNA_Gain);
 		}
 		else if (option == "BIASTEE") {
 			bias_tee = Util::Parse::Switch(arg);
+		}
+		else if (option == "GAIN_MODE") {
+			Util::Convert::toUpper(arg);
+			explicit_gain = true;
+
+			if (arg == "SENSITIVITY") mode = AIRSPYGainMode::Sensitivity;
+			else if (arg == "LINEARITY") mode = AIRSPYGainMode::Linearity;
+			else if (arg == "FREE") mode = AIRSPYGainMode::Free;
+			else throw std::runtime_error("AIRSPY: invalid gain mode.");
 		}
 		else
 			Device::Set(option, arg);

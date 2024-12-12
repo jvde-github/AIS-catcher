@@ -208,8 +208,11 @@ namespace Device
 				throw std::runtime_error("RTLTCP: unsupported protocol: " + arg);
 			}
 		}
-		else if (!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !gpsd.setValue(option, arg) && !rtltcp.setValue(option, arg))
-			Device::Set(option, arg);
+		else
+		{
+			if (!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !gpsd.setValue(option, arg) && !rtltcp.setValue(option, arg) && !ws.setValue(option, arg))
+				Device::Set(option, arg);
+		}
 
 		return *this;
 	}

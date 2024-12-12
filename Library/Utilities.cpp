@@ -61,7 +61,8 @@ namespace Util
 
 		try
 		{
-			number = std::stoi(str, &sz);
+			if (!str.empty())
+				number = std::stoi(str, &sz);
 		}
 		catch (const std::exception &)
 		{
@@ -91,7 +92,8 @@ namespace Util
 
 		try
 		{
-			number = std::stof(str);
+			if (!str.empty())
+				number = std::stof(str);
 		}
 		catch (const std::exception &)
 		{
