@@ -4953,6 +4953,7 @@ function toggleDarkMode() {
     saveSettings();
 }
 
+/*
 function refresh_data() {
     if (!document.hidden && !updateInProgress) {
         updateInProgress = true;
@@ -4976,6 +4977,32 @@ function refresh_data() {
             }
         })();
     }
+}
+*/
+
+function refresh_data() {
+    if (!document.hidden && !updateInProgress) {
+        updateInProgress = true;
+        
+        return (async () => {
+            try {
+                if (settings.tab === "map") {
+                    await updateMap();
+                } else if (settings.tab === "stat") {
+                    await updateStatistics();
+                } else if (settings.tab === "plots") {
+                    await updatePlots();
+                } else if (settings.tab === "ships") {
+                    await updateShipTable();
+                }
+            } catch (error) {
+                console.error("Error updating data:", error);
+            } finally {
+                updateInProgress = false;
+            }
+        })();
+    }
+    return Promise.resolve();
 }
 
 async function openFocus(m, z) {
@@ -5062,8 +5089,12 @@ function activateTab(b, a) {
     saveSettings();
 
     clearInterval(interval);
-    refresh_data();
-    interval = setInterval(refresh_data, refreshIntervalMs);
+    //refresh_data();
+    //interval = setInterval(refresh_data, refreshIntervalMs);
+
+    refresh_data().then(() => {
+        interval = setInterval(refresh_data, refreshIntervalMs);
+    });
 
     if (a != "map") StopFireworks();
     if (a == "settings") updateSettingsTab();
