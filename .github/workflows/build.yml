@@ -196,7 +196,7 @@ jobs:
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows openssl:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows zlib:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
+        vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows sqlite3:${{matrix.platform}}-windows openssl:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows zlib:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
     - name: Setting up directories
       run: |
         mkdir output; cd output; mkdir plugins; mkdir Licenses; cd ..; mkdir include; cd include; mkdir curl; mkdir openssl; cd ..; mkdir release; mkdir lib;         
