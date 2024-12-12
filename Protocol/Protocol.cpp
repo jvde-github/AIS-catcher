@@ -678,18 +678,20 @@ namespace Protocol
 
 	bool WebSocket::setValue(const std::string &key, const std::string &value)
 	{
-
 		if (key == "ORIGIN")
 		{
 			origin = value;
+			return true;
 		}
 		else if (key == "PROTOCOLS")
 		{
 			protocols = value;
+			return true;
 		}
 		else if (key == "BINARY")
 		{
 			binary = Util::Parse::Switch(value);
+			return true;
 		}
 
 		return false;
