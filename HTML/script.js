@@ -1034,14 +1034,6 @@ function headerClick() {
     window.open("https://aiscatcher.org");
 }
 
-function removeTileLayer() {
-    map.eachLayer(function (layer) {
-        if (layer instanceof L.TileLayer) {
-            map.removeLayer(layer);
-        }
-    });
-}
-
 function updateMapLayer() {
 
     if (activeTileLayer) {
@@ -1850,18 +1842,6 @@ function showPlugins() {
 
 function showServerErrors() {
     showDialog("Server Errors", server_message == "" ? "None" : ("<pre>" + server_message + "</pre>"));
-}
-
-async function fetchStatistics() {
-    try {
-        response = await fetch("stat.json");
-    } catch (error) {
-        setPulseError();
-        return;
-    }
-    statistics = await response.json();
-    setPulseOk();
-    return statistics;
 }
 
 async function fetchAbout() {
