@@ -1,21 +1,14 @@
 var interval,
-    hist,
-    ships,
     paths = {},
-    markers = {},
-    ship_shape = {},
     map,
     basemaps = {},
     overlapmaps = {},
     station = {},
     shipsDB = {},
     fetch_binary = false,
-    singleClickTimeout = null,
     hover_feature = undefined,
     show_all_tracks = false;
-var iconLabelSpan = null,
-    iconStationSpan = null,
-    evtSource = null,
+var evtSource = null,
     evtSourceMap = null,
     range_outline = undefined,
     range_outline_short = undefined,
@@ -24,14 +17,12 @@ var iconLabelSpan = null,
     context_mmsi = null,
     tab_title = "AIS-catcher";
 
-const maxShipcardIcons = 4;
 const baseMapSelector = document.getElementById("baseMapSelector");
 
 var rtCount = 0;
 var shipcardIconCount = undefined;
 var shipcardIconMax = 3;
 var shipcardIconOffset = 0;
-var StationControlDiv = null;
 var plugins_main = [];
 var card_mmsi = null,
     hover_mmsi = null,
@@ -42,8 +33,7 @@ let updateInProgress = false;
 let activeTileLayer = undefined;
 var hover_enabled_track = false,
     select_enabled_track = false,
-    marker_tracks = new Set(),
-    marker_fireworks = [];
+    marker_tracks = new Set();
 
 const hover_info = document.getElementById('hover-info');
 
@@ -608,7 +598,7 @@ function showCommunity() {
 
 async function showNMEA(m) {
     if (typeof message_save !== "undefined" && message_save) {
-        const s = await fetchJSON("message", m);
+        const s = await fetchJSON("api/message", m);
         const obj = JSON.parse(s);
 
         let tableHtml = '<table class="mytable">';
@@ -628,7 +618,7 @@ async function showNMEA(m) {
 }
 
 async function showVesselDetail(m) {
-    s = await fetchJSON("vessel", m);
+    s = await fetchJSON("api/vessel", m);
     let obj = JSON.parse(s);
 
     let tableHtml = '<table class="mytable">';
@@ -1512,7 +1502,7 @@ function StartFireworks() {
             return;
         }
 
-        evtSourceMap = new EventSource("signal");
+        evtSourceMap = new EventSource("api/signal");
 
         evtSourceMap.addEventListener(
             "nmea",
@@ -1870,7 +1860,7 @@ async function fetchRange(forcefetch = false) {
     range_update_time = now;
 
     try {
-        response = await fetch("history_full.json");
+        response = await fetch("api/history_full.json");
         h = await response.json();
     } catch (error) {
         settings.show_range = false;
@@ -2300,7 +2290,7 @@ async function fetchShips(noDoubleFetch = true) {
 
     isFetchingShips = true;
     try {
-        response = await fetch("ships_array.json");
+        response = await fetch("api/ships_array.json");
     } catch (error) {
         setPulseError();
         console.log("failed loading ships: " + error);
@@ -2949,20 +2939,49 @@ function updateColorRadar(c) {
     c.options.scales.r.ticks.backdropColor = cssvar("--panel-color");
 }
 
+function cloneChartConfig(config) {
+    const clone = JSON.parse(JSON.stringify(config));
+
+    if (clone.options?.plugins?.annotation?.annotations?.graph_annotation) {
+        clone.options.plugins.annotation.annotations.graph_annotation.value = 
+            (a) => average(a);
+    }
+    return clone;
+}
+
 function initPlots() {
-    if (typeof Chart !== "undefined") {
-        chart_radar_hour = new Chart(document.getElementById("chart-radar-hour").getContext("2d"), plot_radar);
-        chart_radar_day = new Chart(document.getElementById("chart-radar-day").getContext("2d"), plot_radar);
-        chart_seconds = new Chart(document.getElementById("chart-seconds"), plot_count);
-        chart_minutes = new Chart(document.getElementById("chart-minutes"), plot_count);
-        chart_hours = new Chart(document.getElementById("chart-hours"), plot_count);
-        chart_days = new Chart(document.getElementById("chart-days"), plot_count);
-        chart_ppm = new Chart(document.getElementById("chart-ppm"), plot_single);
-        chart_ppm_minute = new Chart(document.getElementById("chart-ppm-minute"), plot_single);
-        chart_level = new Chart(document.getElementById("chart-level"), plot_level);
-        chart_distance_hour = new Chart(document.getElementById("chart-distance-hour"), plot_distance);
-        chart_distance_day = new Chart(document.getElementById("chart-distance-day"), plot_distance);
-        chart_minute_vessel = new Chart(document.getElementById("chart-vessels-minute"), plot_single);
+    if (typeof Chart === "undefined") return;
+
+    const chartConfigs = [
+        { varName: "chart_radar_hour", id: "chart-radar-hour", ctx: "2d", config: plot_radar, clone: true },
+        { varName: "chart_radar_day", id: "chart-radar-day", ctx: "2d", config: plot_radar, clone: true },
+        { varName: "chart_seconds", id: "chart-seconds", config: plot_count, clone: true },
+        { varName: "chart_minutes", id: "chart-minutes", config: plot_count, clone: true },
+        { varName: "chart_hours", id: "chart-hours", config: plot_count, clone: true },
+        { varName: "chart_days", id: "chart-days", config: plot_count, clone: true },
+        { varName: "chart_ppm", id: "chart-ppm", config: plot_single, clone: true },
+        { varName: "chart_ppm_minute", id: "chart-ppm-minute", config: plot_single, clone: true },
+        { varName: "chart_level", id: "chart-level", config: plot_level, clone: false },
+        { varName: "chart_distance_hour", id: "chart-distance-hour", config: plot_distance, clone: false },
+        { varName: "chart_distance_day", id: "chart-distance-day", config: plot_distance, clone: false },
+        { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single, clone: false }
+    ];
+
+    for (const { varName, id, ctx, config, clone } of chartConfigs) {
+        try {
+            const canvas = document.getElementById(id);
+            if (!canvas) {
+                console.warn(`Canvas element not found: ${id}`);
+                continue;
+            }
+
+            const context = ctx === "2d" ? canvas.getContext("2d") : canvas;
+            const chartConfig = clone ? cloneChartConfig(config) : config;
+            
+            window[varName] = new Chart(context, chartConfig);
+        } catch (error) {
+            console.error(`Failed to initialize chart ${id}:`, error);
+        }
     }
 }
 
@@ -3050,7 +3069,7 @@ function getFlagStyled(country, style) {
 // fetches main statistics from the server
 async function fetchStatistics() {
     try {
-        response = await fetch("stat.json");
+        response = await fetch("api/stat.json");
     } catch (error) {
         setPulseError();
         return;
@@ -3253,7 +3272,7 @@ async function updatePlots() {
 
     if (true) {
         try {
-            response = await fetch("history_full.json");
+            response = await fetch("api/history_full.json");
         } catch (error) {
             setPulseError();
         }
@@ -4228,7 +4247,7 @@ async function fetchTracks() {
     if (marker_tracks.size == 0 && show_all_tracks == false) return true;
 
     try {
-        if (show_all_tracks) a = await fetch("allpath.json");
+        if (show_all_tracks) a = await fetch("api/allpath.json");
         else {
 
             for (var mmsi of marker_tracks) {
@@ -4238,7 +4257,7 @@ async function fetchTracks() {
             }
 
             var mmsi_str = Array.from(marker_tracks).join(",");
-            a = await fetch("path.json?" + mmsi_str);
+            a = await fetch("api/path.json?" + mmsi_str);
         }
         paths = await a.json();
     } catch (error) {
@@ -5101,7 +5120,7 @@ function activateTab(b, a) {
 
     if (a == "realtime") {
         if (evtSource == null) {
-            evtSource = new EventSource("sse");
+            evtSource = new EventSource("api/sse");
             const sseDataDiv = document.getElementById("realtime_content");
 
             evtSource.addEventListener(
