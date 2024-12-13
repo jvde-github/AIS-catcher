@@ -480,7 +480,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			dataPrometheus.Reset();
 		}
 	}
-	else if (r == "/stat.json")
+	else if (r == "/api/stat.json")
 	{
 
 		std::string content;
@@ -538,12 +538,12 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/ships.json")
+	else if (r == "/api/ships.json")
 	{
 		std::string content = ships.getJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/ships_array.json")
+	else if (r == "/api/ships_array.json")
 	{
 		std::string content = ships.getJSONcompact();
 		Response(c, "application/json", content, use_zlib & gzip);
@@ -554,18 +554,18 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		ships.getBinary(binary);
 		Response(c, "application/octet-stream", binary.data(), binary.size(), use_zlib & gzip);
 	}
-	else if (r == "/ships_full.json")
+	else if (r == "/api/ships_full.json")
 	{
 
 		std::string content = ships.getJSON(true);
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/sse")
+	else if (r == "/api/sse")
 	{
 		if (realtime)
 			upgradeSSE(c, 1);
 	}
-	else if (r == "/signal")
+	else if (r == "/api/signal")
 	{
 		if (realtime)
 			upgradeSSE(c, 2);
@@ -586,7 +586,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	{
 		Response(c, "text/markdown", about, use_zlib & gzip);
 	}
-	else if (r == "/path.json")
+	else if (r == "/api/path.json")
 	{
 		std::stringstream ss(a);
 		std::string mmsi_str;
@@ -616,7 +616,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		content += "}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/allpath.json")
+	else if (r == "/api/allpath.json")
 	{
 
 		std::string content = ships.getAllPathJSON();
@@ -627,7 +627,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		std::string content = ships.getGeoJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/message")
+	else if (r == "/api/message")
 	{
 		int mmsi = -1;
 		std::stringstream ss(a);
@@ -639,7 +639,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		else
 			Response(c, "application/text", "Message not availaible");
 	}
-	else if (r == "/vessel")
+	else if (r == "/api/vessel")
 	{
 		std::stringstream ss(a);
 		int mmsi;
@@ -653,7 +653,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			Response(c, "application/text", "Vessel not available");
 		}
 	}
-	else if (r == "/history_full.json")
+	else if (r == "/api/history_full.json")
 	{
 
 		std::string content = "{";
