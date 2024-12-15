@@ -480,7 +480,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			dataPrometheus.Reset();
 		}
 	}
-	else if (r == "/api/stat.json")
+	else if (r == "/api/stat.json" || r == "/stat.json")
 	{
 
 		std::string content;
