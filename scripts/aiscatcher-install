@@ -8,6 +8,8 @@ readonly LOG_FILE="/var/log/${SCRIPT_NAME%.*}.log"
 readonly TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
 readonly CONFIG_DIR="/etc/AIS-catcher"
 readonly PLUGIN_DIR="${CONFIG_DIR}/plugins"
+readonly DBMS_DIR="${CONFIG_DIR}/DBMS"
+readonly README_DIR="${CONFIG_DIR}/README"
 readonly CONFIG_FILE="${CONFIG_DIR}/config.json"
 readonly CMD_FILE="${CONFIG_DIR}/config.cmd"
 readonly SERVICE_NAME="ais-catcher.service"
@@ -204,10 +206,19 @@ build_ais_catcher() {
 
 
 
-install_plugins() {
+install_additional_files() {
     log "INFO" "Installing plugins"
     mkdir -p "$PLUGIN_DIR" || error_exit "Failed to create plugin directory"
     cp AIS-catcher/plugins/* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
+
+    log "INFO" "Installing DBMS"
+    mkdir -p "$DBMS_DIR" || error_exit "Failed to create DBMS directory"
+    cp AIS-catcher/DBMS/create.sql "$DBMS_DIR" || error_exit "Failed to copy DBMS"
+
+    log "INFO" "Installing README"
+    mkdir -p "$README_DIR" || error_exit "Failed to create README directory"
+    cp AIS-catcher/README.md "$README_DIR" || error_exit "Failed to copy README"
+
 }
 
 download_webassets() {
@@ -435,7 +446,7 @@ main() {
         stop_disable_and_save_service_state
         build_ais_catcher
 
-        install_plugins
+        install_additional_files
     fi
 
     setup_configuration
