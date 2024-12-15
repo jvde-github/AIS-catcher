@@ -219,6 +219,8 @@ install_additional_files() {
     mkdir -p "$README_DIR" || error_exit "Failed to create README directory"
     cp AIS-catcher/README.md "$README_DIR" || error_exit "Failed to copy README"
 
+    log "INFO" "Copying LICENSE"
+    cp AIS-catcher/LICENSE /etc/AIS-catcher/LICENSE || error_exit "Failed to copy LICENSE"
 }
 
 download_webassets() {
