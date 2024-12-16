@@ -538,7 +538,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/api/ships.json")
+	else if (r == "/api/ships.json" || r == "/ships.json")
 	{
 		std::string content = ships.getJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
