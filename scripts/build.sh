@@ -123,7 +123,7 @@ package_version=0.61~43-g15dcc700
 install_deps=$5
 
 # Install build dependencies
-install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev libusb-dev $build_deps"
+install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev  libusb-1.0-0-dev $build_deps"
 
 # Build the project
 build_project
