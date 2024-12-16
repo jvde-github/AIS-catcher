@@ -5,6 +5,7 @@ project(AIS-catcher)
 
 option(SOAPYSDR "Include Soapy SDR support" OFF)
 option(RTLSDR "Include RTLSDR support" ON)
+option(RTLSDR_STATIC "Statically link RTLSDR library" OFF)
 option(AIRSPY "Include Airspy support" ON)
 option(SDRPLAY "Include SDRPLAY support" ON)
 option(AIRSPYHF "Include Airspy HF+ support" ON)
@@ -445,9 +446,19 @@ if(RTLSDR)
             HINTS ${PKG_RTLSDR_INCLUDE_DIRS} $ENV{RTLSDR_DIR}/include
             PATHS /usr/local/include /usr/include /opt/include /opt/local/include)
 
-        find_library(RTLSDR_LIBRARY rtlsdr
-            HINTS ${PKG_RTLSDR_LIBRARY_DIRS} $ENV{RTLSDR_DIR}/lib
-            PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
+        if(RTLSDR_STATIC)
+        # Look for static library first
+        find_library(RTLSDR_LIBRARY 
+                NAMES librtlsdr.a rtlsdr.a
+                HINTS ${PKG_RTLSDR_LIBRARY_DIRS} $ENV{RTLSDR_DIR}/lib
+                PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
+        else()
+            # Look for shared library
+            find_library(RTLSDR_LIBRARY rtlsdr
+                HINTS ${PKG_RTLSDR_LIBRARY_DIRS} $ENV{RTLSDR_DIR}/lib
+                PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
+        endif()
+
 
         if(RTLSDR_INCLUDE_DIR AND RTLSDR_LIBRARY)
 
@@ -456,6 +467,9 @@ if(RTLSDR)
 
             set(RTLSDR_INCLUDE_DIRS ${RTLSDR_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIR})
             set(RTLSDR_LIBRARIES ${RTLSDR_LIBRARY} ${LIBUSB_LIBRARY})
+            if(RTLSDR_STATIC)
+                message(STATUS "RTLSDR: using static linking")
+            endif()
 
             include(CheckFunctionExists)
             set(CMAKE_REQUIRED_LIBRARIES ${RTLSDR_LIBRARIES})
