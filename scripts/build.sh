@@ -7,6 +7,13 @@ install_dependencies() {
     apt-get update
     apt-get install -y $1
   fi
+
+  echo "Installing rtl-sdr from source"	
+  git clone https://gitea.osmocom.org/sdr/rtl-sdr.git
+  cd rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install; 
+  cd ..; cd ..
+  cp rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/
+  ldconfig
 }
 
 # build the project
@@ -33,7 +40,7 @@ build_project() {
   if [ "$package_arch" = "armhf" ]; then  
     cmake .. -DNMEA2000_PATH=.. -DARMV6=ON; 
   else
-    cmake .. -DNMEA2000_PATH=..; 
+    cmake .. -DNMEA2000_PATH=..  -DRTLSDR_STATIC=ON; 
   fi
   
   make
@@ -50,7 +57,7 @@ create_debian_package() {
 
     # Extract dependencies using ldd and filter the required libraries
     echo "Extracting dependencies using ldd..."
-    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq|libz|libssl' | awk '{print $1}')
+    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq|libz|libssl|libusb' | awk '{print $1}')
 
     # Initialize the depends variable
     depends=""
@@ -116,7 +123,7 @@ package_version=0.61~41-g9bc5557d
 install_deps=$5
 
 # Install build dependencies
-install_dependencies "librtlsdr-dev libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev $build_deps"
+install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev libusb-dev $build_deps"
 
 # Build the project
 build_project
