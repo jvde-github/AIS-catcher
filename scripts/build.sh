@@ -62,19 +62,34 @@ create_debian_package() {
     # Initialize the depends variable
     depends=""
 
-    echo "Processing dependencies..."
+    # Print all found dependencies first
+    echo "Found dependencies:"
+    printf '%s\n' "$dependencies"
+    echo ""
+
+    echo "Processing dependencies for package control file:"
     # Iterate over each dependency and format it
     for dep in $dependencies; do
       # Extract the library name and version
-      echo "Processing dependency: $dep"
       lib_name=$(echo "$dep" | awk -F'.so.' '{print $1}')
       lib_version=$(echo "$dep" | awk -F'.so.' '{print $2}')
-      echo "Library name: $lib_name, Library version: $lib_version"
-      depends="$depends ${lib_name}${lib_version},"
+      
+      # Check if lib_name ends in a digit
+      if [[ $lib_name =~ [0-9]$ ]]; then
+          # Add hyphen before the version
+          echo "  $dep -> ${lib_name}-${lib_version} (added hyphen)"
+          depends="$depends ${lib_name}-${lib_version},"
+      else
+          echo "  $dep -> ${lib_name}${lib_version}"
+          depends="$depends ${lib_name}${lib_version},"
+      fi
     done
     depends=${depends%,}
-
-    echo "Final Depends line: Depends: $depends"
+    
+    echo ""
+    echo "Final dependency string:"
+    echo "$depends"
+    echo "======================\n"
 
     echo "Creating Debian package: $package_name"
     mkdir -p debian/DEBIAN
