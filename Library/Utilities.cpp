@@ -57,7 +57,7 @@ namespace Util
 	long Parse::Integer(std::string str, long min, long max, const std::string &setting)
 	{
 		long number = 0;
-		std::string::size_type sz;
+		size_t sz = str.length();
 
 		try
 		{

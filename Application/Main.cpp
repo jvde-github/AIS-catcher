@@ -771,7 +771,7 @@ int main(int argc, char* argv[]) {
 		DBG("Entering main loop");
 		while (!stop) {
 			for (auto& r : _receivers)
-				stop = stop | !(r->device->isStreaming());
+				stop = stop || !(r->device->isStreaming());
 
 			if (iscallback) // don't go to sleep in case we are reading from a file
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));

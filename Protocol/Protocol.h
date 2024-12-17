@@ -100,7 +100,6 @@ namespace Protocol
 
 	private:
 		struct addrinfo *address;
-		bool success;
 		std::string msg;
 	};
 
@@ -909,7 +908,6 @@ namespace Protocol
 
 		int buffer_ptr = 0;
 		int received_ptr = 0;
-		int send_ptr = 0;
 
 		std::string path = "/";
 		std::string origin;

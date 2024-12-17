@@ -35,7 +35,7 @@ LFLAGS_ZLIB =$(shell pkg-config --libs zlib)
 LFLAGS_PSQL =$(shell pkg-config --libs libpq)
 
 
-CFLAGS_ALL =
+CFLAGS_ALL = -Wall -Wno-overloaded-virtual
 LFLAGS_ALL =
 
 ifneq ($(shell pkg-config --exists soxr && echo 'T'),)
