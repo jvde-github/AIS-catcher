@@ -136,7 +136,7 @@ namespace Util
 	{
 	public:
 		static long Integer(std::string str, long min = 0, long max = 0, const std::string &setting = "");
-		static FLOAT32 Float(std::string str, FLOAT32 min = -1e30, FLOAT32 max = +1e30);
+		static double Float(std::string str, double min = -1e30, double max = +1e30);
 		static bool StreamFormat(std::string str, Format &format);
 		static bool DeviceType(std::string str, Type &type);
 		static bool Protocol(std::string str, PROTOCOL &protocol);
@@ -145,7 +145,7 @@ namespace Util
 
 		static bool Switch(std::string arg, const std::string &TrueString = "ON", const std::string &FalseString = "OFF");
 		static bool AutoInteger(std::string arg, int min, int max, int &val);
-		static bool AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32 &val);
+		static bool AutoFloat(std::string arg, double min, double max, double &val);
 		static void HTTP_URL(const std::string &url, std::string &protocol, std::string &host, std::string &port, std::string &path);
 		static void URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path);
 	};

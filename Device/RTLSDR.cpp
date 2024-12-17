@@ -205,7 +205,9 @@ namespace Device {
 		Util::Convert::toUpper(option);
 
 		if (option == "TUNER") {
-			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, tuner_Gain);
+			double temp;
+			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, temp);
+			tuner_Gain = (FLOAT32)temp;
 		}
 		else if (option == "BUFFER_COUNT") {
 			BUFFER_COUNT = Util::Parse::Integer(arg, 1, 100);
