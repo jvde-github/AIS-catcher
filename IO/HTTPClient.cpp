@@ -171,6 +171,7 @@ namespace IO {
 		createMessageBody(msg, gzip, multipart, copyname);
 		createHeader(gzip, multipart);
 
+		client.setVerbosity(false);
 		if (!client.connect(host, port, false, 1)) {
 			Error() << "HTTP Client [" << host << "]: error connecting to server." ;
 			return HTTPResponse();

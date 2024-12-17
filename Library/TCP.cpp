@@ -445,7 +445,7 @@ namespace TCP
 			}
 		}
 
-		if (state == READY)
+		if (state == READY && verbose)
 			Info() << "TCP (" << host << ":" << port << "): disconnected.";
 
 		sock = -1;
@@ -521,7 +521,9 @@ namespace TCP
 		if (r != -1)
 		{
 			state = READY;
-			Info() << "TCP (" << host << ":" << port << "): connected.";
+
+			if (verbose)
+				Info() << "TCP (" << host << ":" << port << "): connected.";
 
 			if (onConnected)
 				onConnected();
@@ -574,7 +576,9 @@ namespace TCP
 				return false;
 
 			state = READY;
-			Info() << "TCP (" << host << ":" << port << "): connected.";
+
+			if (verbose)
+				Info() << "TCP (" << host << ":" << port << "): connected.";
 
 			connects++;
 			if (onConnected)
@@ -608,7 +612,7 @@ namespace TCP
 
 			if (connected)
 			{
-				//Warning() << "TCP (" << host << ":" << port << "): connected to server.";
+				// Warning() << "TCP (" << host << ":" << port << "): connected to server.";
 			}
 			else if ((long)time(nullptr) - (long)stamp > 10)
 			{
