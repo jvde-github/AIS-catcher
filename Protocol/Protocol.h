@@ -850,7 +850,9 @@ namespace Protocol
 		{
 			if (key == "TUNER")
 			{
-				tuner_AGC = Util::Parse::AutoFloat(value, 0, 50, tuner_Gain);
+				double temp;
+				tuner_AGC = Util::Parse::AutoFloat(value, 0, 50, temp);
+				tuner_Gain = (FLOAT32)temp;
 			}
 			else if (key == "RTLAGC")
 			{

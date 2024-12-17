@@ -56,13 +56,13 @@ namespace Util
 
 	long Parse::Integer(std::string str, long min, long max, const std::string &setting)
 	{
-		int number = 0;
+		long number = 0;
 		std::string::size_type sz;
 
 		try
 		{
 			if (!str.empty())
-				number = std::stoi(str, &sz);
+				number = std::stol(str, &sz);
 		}
 		catch (const std::exception &)
 		{
@@ -86,14 +86,14 @@ namespace Util
 		return number;
 	}
 
-	FLOAT32 Parse::Float(std::string str, FLOAT32 min, FLOAT32 max)
+	double Parse::Float(std::string str, double min, double max)
 	{
-		FLOAT32 number = 0;
+		double number = 0;
 
 		try
 		{
 			if (!str.empty())
-				number = std::stof(str);
+				number = std::stod(str);
 		}
 		catch (const std::exception &)
 		{
@@ -396,7 +396,7 @@ namespace Util
 		return false;
 	}
 
-	bool Parse::AutoFloat(std::string arg, FLOAT32 min, FLOAT32 max, FLOAT32 &val)
+	bool Parse::AutoFloat(std::string arg, double min, double max, double &val)
 	{
 		Util::Convert::toUpper(arg);
 		if (arg == "AUTO")

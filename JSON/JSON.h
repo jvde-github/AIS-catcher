@@ -46,15 +46,15 @@ namespace JSON {
 		union Data {
 			bool b;
 			long int i;
-			float f;
+			double f;
 			std::string* s;
 			std::vector<std::string>* as;
 			std::vector<Value>* a;
 			JSON* o;
 		} data;
 
-	public:
-		float getFloat(float d = 0.0f) const { return isFloat() ? data.f : d; }
+	public:		
+		double getFloat(double d = 0.0f) const { return isFloat() ? data.f : (isInt() ? (double)(data.i) : d); }
 		long int getInt(long int d = 0) const { return isInt() ? data.i : d; }
 		bool getBool(bool d = false) const { return isBool() ? data.b : d; }
 		const std::vector<std::string>& getStringArray() const { return *data.as; }
@@ -71,7 +71,7 @@ namespace JSON {
 		const bool isFloat() const { return type == Type::FLOAT; }
 		const bool isInt() const { return type == Type::INT; }
 
-		void setFloat(float v) {
+		void setFloat(double v) {
 			data.f = v;
 			type = Type::FLOAT;
 		}
@@ -124,7 +124,7 @@ namespace JSON {
 			key = p;
 			value.setInt(v);
 		}
-		Property(int p, float v) {
+		Property(int p, double v) {
 			key = p;
 			value.setFloat(v);
 		}
@@ -191,8 +191,8 @@ namespace JSON {
 			properties.push_back(Property(p, (long int)v));
 		}
 
-		void Add(int p, float v) {
-			properties.push_back(Property(p, (float)v));
+		void Add(int p, double v) {
+			properties.push_back(Property(p, (double)v));
 		}
 
 		void Add(int p, bool v) {
