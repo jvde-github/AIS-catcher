@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <cstdio>
 #include <vector>
+#include <algorithm>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -16,49 +17,95 @@
 #endif
 
 #include "Logger.h"
+#include "Utilities.h"
 
 std::unique_ptr<Logger> Logger::instance_ = nullptr;
 
-Logger& Logger::getInstance(const std::string& filename, bool log_to_console, bool log_to_file) {
+#ifdef HASSYSLOG
+#include <syslog.h>
+class SyslogHandler
+{
+public:
+	SyslogHandler(std::string ident = "aiscatcher")
+	{
+		openlog(ident.c_str(), LOG_PID, LOG_USER);
+	}
+
+	~SyslogHandler()
+	{
+		closelog();
+	}
+
+	void operator()(const LogMessage &msg)
+	{
+		int priority;
+		switch (msg.level)
+		{
+		case LogLevel::_ERROR:
+			priority = LOG_ERR;
+			break;
+		case LogLevel::_WARNING:
+			priority = LOG_WARNING;
+			break;
+		case LogLevel::_CRITICAL:
+			priority = LOG_CRIT;
+			break;
+		default:
+			priority = LOG_INFO;
+			break;
+		}
+		syslog(priority, "%s", msg.message.c_str());
+	}
+};
+#else
+class SyslogHandler
+{
+public:
+	SyslogHandler(std::string ident)
+	{
+		throw std::runtime_error("No system logger available");
+	}
+
+	~SyslogHandler()
+	{
+	}
+
+	void operator()(const LogMessage &msg)
+	{
+	}
+};
+#endif
+
+Logger &Logger::getInstance()
+{
 	static std::once_flag onceFlag;
-	std::call_once(onceFlag, [&]() {
-		instance_.reset(new Logger(filename, log_to_console, log_to_file));
-	});
+	std::call_once(onceFlag, [&]()
+				   { instance_.reset(new Logger()); });
 	return *instance_;
 }
 
-Logger::Logger(const std::string& filename, bool log_to_console, bool log_to_file)
-	: log_file_name_(filename), log_to_console_(log_to_console), log_to_file_(log_to_file) {
-	if (log_to_file_) {
-		// Changed from append mode to overwrite mode
-		file_stream_.open(log_file_name_, std::ios::out | std::ios::app | std::ios::binary);
-		if (!file_stream_) {
-			std::cerr << "Logger Error: Failed to open log file: " << log_file_name_ << std::endl;
-			log_to_file_ = false; // Disable file logging if opening fails
-		}
+Setting &Logger::Set(std::string option, std::string arg)
+{
+	Util::Convert::toUpper(option);
+
+	if (option == "SYSTEM")
+	{
+		setLogToSystem("aiscatcher");
 	}
+	else
+	{
+		throw std::runtime_error("Unknown option: " + option);
+	}
+	return *this;
 }
 
-Logger::~Logger() {
-	if (file_stream_.is_open()) {
-		file_stream_.close();
-	}
+void Logger::setLogToSystem(std::string ident)
+{
+	Logger::getInstance().addLogListener(SyslogHandler(ident));
 }
 
-std::string Logger::logLevelToString(LogLevel level) {
-	switch (level) {
-	case LogLevel::_INFO:
-		return "INFO";
-	case LogLevel::_WARNING:
-		return "WARNING";
-	case LogLevel::_ERROR:
-		return "ERROR";
-	default:
-		return "UNKNOWN";
-	}
-}
-
-std::string Logger::getCurrentTime() {
+std::string Logger::getCurrentTime()
+{
 	auto now = std::chrono::system_clock::now();
 	std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
 	char time_buffer[20];
@@ -80,208 +127,117 @@ std::string Logger::getCurrentTime() {
 	return ss.str();
 }
 
-std::size_t Logger::getFileSize(const std::string& filename) {
-#ifdef _WIN32
-	struct _stat64 st;
-	if (_stat64(filename.c_str(), &st) == 0) {
-		return static_cast<std::size_t>(st.st_size);
-	}
-#else
-	struct stat st;
-	if (stat(filename.c_str(), &st) == 0) {
-		return static_cast<std::size_t>(st.st_size);
-	}
-#endif
-	return 0;
+void Logger::storeMessage(const LogMessage &msg)
+{
+	std::lock_guard<std::mutex> lock(mutex_);
+
+	if (!message_buffer_.size())
+		return;
+
+	message_buffer_[buffer_position_] = msg;
+	buffer_position_ = (buffer_position_ + 1) % message_buffer_.size();
 }
 
-// Truncate the log file to retain the last kRetainSize bytes (5MB)
-void Logger::truncateLogFile() {
-	if (!log_to_file_) return;
+std::vector<LogMessage> Logger::getLastMessages(int n)
+{
+	std::lock_guard<std::mutex> lock(mutex_);
 
-	if (file_stream_.is_open()) {
-		file_stream_.close();
+	n = MIN(n, message_buffer_.size());
+
+	std::vector<LogMessage> result;
+	if (!message_buffer_.size())
+	{
+		return result;
 	}
 
-	std::size_t current_size = getFileSize(log_file_name_);
-	std::size_t new_size = (current_size > kRetainSize) ? kRetainSize : current_size;
-	std::size_t start_pos = current_size - new_size;
+	int ptr = (buffer_position_ + 1 + message_buffer_.size() - n) % message_buffer_.size();
 
-	std::vector<char> buffer(new_size);
-
-#ifdef _WIN32
-	// Open the file in binary mode
-	FILE* file = nullptr;
-	errno_t err = fopen_s(&file, log_file_name_.c_str(), "rb+");
-	if (err != 0 || file == nullptr) {
-		std::cerr << "Logger Error: Failed to open log file for truncation: " << log_file_name_ << std::endl;
-		return;
-	}
-
-	// Read the last new_size bytes
-	_fseeki64(file, start_pos, SEEK_SET);
-	size_t bytes_read = fread(buffer.data(), 1, new_size, file);
-	if (bytes_read != new_size) {
-		std::cerr << "Logger Error: Failed to read log file during truncation: " << log_file_name_ << std::endl;
-		fclose(file);
-		return;
-	}
-
-	// Truncate the file
-	_chsize_s(_fileno(file), 0);
-
-	// Write back the retained data
-	_fseeki64(file, 0, SEEK_SET);
-	size_t bytes_written = fwrite(buffer.data(), 1, new_size, file);
-	if (bytes_written != new_size) {
-		std::cerr << "Logger Error: Failed to write to log file during truncation: " << log_file_name_ << std::endl;
-	}
-
-	fclose(file);
-#else
-	int fd = open(log_file_name_.c_str(), O_RDWR);
-	if (fd == -1) {
-		std::cerr << "Logger Error: Failed to open log file for truncation: " << log_file_name_ << std::endl;
-		return;
-	}
-
-	// Read the last new_size bytes
-	if (lseek(fd, start_pos, SEEK_SET) == -1) {
-		std::cerr << "Logger Error: Failed to seek in log file: " << log_file_name_ << std::endl;
-		close(fd);
-		return;
-	}
-	ssize_t bytes_read = read(fd, buffer.data(), new_size);
-	if (bytes_read != static_cast<ssize_t>(new_size)) {
-		std::cerr << "Logger Error: Failed to read log file during truncation: " << log_file_name_ << std::endl;
-		close(fd);
-		return;
-	}
-
-	// Truncate the file
-	if (ftruncate(fd, 0) != 0) {
-		std::cerr << "Logger Error: Failed to truncate log file: " << log_file_name_ << std::endl;
-		close(fd);
-		return;
-	}
-
-	// Write back the retained data
-	if (lseek(fd, 0, SEEK_SET) == -1) {
-		std::cerr << "Logger Error: Failed to seek in log file: " << log_file_name_ << std::endl;
-		close(fd);
-		return;
-	}
-	ssize_t bytes_written = write(fd, buffer.data(), new_size);
-	if (bytes_written != static_cast<ssize_t>(new_size)) {
-		std::cerr << "Logger Error: Failed to write to log file during truncation: " << log_file_name_ << std::endl;
-	}
-
-	close(fd);
-#endif
-
-	// Reopen the log file for overwriting
-	file_stream_.open(log_file_name_, std::ios::out | std::ios::binary);
-	if (!file_stream_) {
-		std::cerr << "Logger Error: Failed to reopen log file after truncation: " << log_file_name_ << std::endl;
-		log_to_file_ = false;
-	}
-}
-
-void Logger::rotateLogFile() {
-	if (!log_to_file_ || !file_stream_.is_open()) return;
-
-	std::size_t file_size = getFileSize(log_file_name_);
-	if (file_size < kMaxFileSize) {
-		return;
-	}
-
-	truncateLogFile();
-}
-
-void Logger::log(LogLevel level, const std::string& message) {
-
-	if (log_to_file_) {
-		std::string time_str = getCurrentTime();
-		std::ostringstream formatted_message;
-		formatted_message << "[" << logLevelToString(level) << "] [" << time_str << "] " << message << "\n";
-		std::string final_message = formatted_message.str();
-
+	while (ptr != buffer_position_)
+	{
+		if (message_buffer_[ptr].level != LogLevel::_EMPTY)
 		{
-			std::lock_guard<std::mutex> lock(mutex_);
-
-			rotateLogFile();
-
-			if (file_stream_.is_open()) {
-				file_stream_ << final_message;
-				file_stream_.flush();
-			}
+			result.push_back(message_buffer_[ptr]);
 		}
+		ptr = (ptr + 1) % message_buffer_.size();
 	}
 
-	if (log_to_console_) {
-
-		if (level == LogLevel::_INFO) {
-			std::cerr << message << "\n";
-		}
-		else {
-			std::cerr << "[" << logLevelToString(level) << "] " << message << "\n";
-		}
-	}
+	return result;
 }
 
-
-void Logger::setLogToConsole(bool enable) {
+int Logger::addLogListener(LogCallback callback)
+{
 	std::lock_guard<std::mutex> lock(mutex_);
-	log_to_console_ = enable;
+
+	id++;
+	log_listeners_.push_back({id, callback});
+	return id;
 }
 
-void Logger::setLogToFile(bool enable, const std::string& filename) {
+void Logger::removeLogListener(int id)
+{
 	std::lock_guard<std::mutex> lock(mutex_);
-	if (enable && !log_to_file_) {
-		// Enable file logging
-		log_to_file_ = true;
-		if (!filename.empty()) {
-			log_file_name_ = filename;
-		}
-		// Open file stream if not open
-		if (!file_stream_.is_open()) {
-			file_stream_.open(log_file_name_, std::ios::out | std::ios::app | std::ios::binary);
-			if (!file_stream_) {
-				std::cerr << "Logger Error: Failed to open log file: " << log_file_name_ << std::endl;
-				log_to_file_ = false;
-			}
-		}
-	}
-	else if (!enable && log_to_file_) {
-		// Disable file logging
-		if (file_stream_.is_open()) {
-			file_stream_.close();
-		}
-		log_to_file_ = false;
+
+	auto it = std::find_if(log_listeners_.begin(), log_listeners_.end(),
+						   [id](const LogListener &listener)
+						   {
+							   return listener.id == id;
+						   });
+
+	if (it != log_listeners_.end())
+	{
+		log_listeners_.erase(it);
 	}
 }
 
-void Logger::setLogToFile(bool enable) {
-	setLogToFile(enable, "");
+void Logger::notifyListeners(const LogMessage &msg)
+{
+	std::vector<LogCallback> listeners;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+	}
+
+	for (const auto &listener : log_listeners_)
+	{
+		listener.callback(msg);
+	}
+}
+
+void Logger::log(LogLevel level, const std::string &message)
+{
+	std::string time_str = getCurrentTime();
+	LogMessage log_msg(level, message, time_str);
+
+	storeMessage(log_msg);
+	notifyListeners(log_msg);
 }
 
 LogStream::LogStream(LogLevel level)
-	: level_(level), stream_(new std::ostringstream()) {
+	: level_(level), stream_(new std::ostringstream())
+{
 }
 
-LogStream::~LogStream() {
+LogStream::~LogStream()
+{
 	Logger::getInstance().log(level_, stream_->str());
 }
 
 // Convenience functions
-LogStream Info() {
+LogStream Info()
+{
 	return LogStream(LogLevel::_INFO);
 }
 
-LogStream Warning() {
+LogStream Warning()
+{
 	return LogStream(LogLevel::_WARNING);
 }
 
-LogStream Error() {
+LogStream Error()
+{
 	return LogStream(LogLevel::_ERROR);
+}
+
+LogStream Critical()
+{
+	return LogStream(LogLevel::_CRITICAL);
 }

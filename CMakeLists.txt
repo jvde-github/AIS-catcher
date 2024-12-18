@@ -42,9 +42,30 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${OPTIMIZATION_FLAGS}")
 
-# Use pkg-config
 include(FindPkgConfig)
+include(CheckIncludeFile)
+include(CheckSymbolExists)
+
+# Use pkg-config
 find_package(Threads)
+
+if(MSVC)
+    add_definitions(-DHASEVENTLOG)
+elseif(APPLE)
+    check_include_file("os/log.h" HASOSLOG)
+    if(HASOSLOG)
+        add_definitions(-DHAS_OSLOG)
+    endif()
+elseif(UNIX)
+    check_include_file("syslog.h" HASSYSLOG)
+    if(HASSYSLOG)
+        
+        check_symbol_exists(syslog "syslog.h" CAN_USE_SYSLOG)
+        if(CAN_USE_SYSLOG)
+            add_definitions(-DHASSYSLOG)
+        endif()
+    endif()
+endif()
 
 # Debug symbols and optimization settings for AIS-catcher
 if(UNIX AND NOT APPLE)
@@ -85,7 +106,6 @@ endif()
 
 if(NOT MSVC AND NMEA2000)
 
-    include(CheckIncludeFile)
 
     check_include_file("linux/can.h" HAVE_CAN_HEADER)
     check_include_file("linux/can/raw.h" HAVE_RAW_CAN_HEADER)
