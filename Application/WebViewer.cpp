@@ -319,8 +319,11 @@ void WebViewer::start()
 	ships >> sse_streamer;
 	sse_streamer.setSSE(this);
 
-	//logger.setSSE(this);
-	//logger.Start();
+	if (showlog)
+	{
+		logger.setSSE(this);
+		logger.Start();
+	}
 
 	ships >> hist_day;
 	ships >> hist_hour;
@@ -562,19 +565,23 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		std::string content = ships.getJSON(true);
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/api/sse")
+	else if (r == "/api/sse" && realtime)
 	{
-		if (realtime)
 			upgradeSSE(c, 1);
 	}
-	else if (r == "/api/signal")
+	else if (r == "/api/signal" && realtime)
 	{
-		if (realtime)
 			upgradeSSE(c, 2);
 	}
-	/*else if(r == "/api/log") {
-		upgradeSSE(c,3);
-	}*/
+	else if (r == "/api/log" && showlog)
+	{
+		IO::SSEConnection *s = upgradeSSE(c, 3);
+		auto l = Logger::getInstance().getLastMessages(25);
+		for (auto &m : l)
+		{
+			s->SendEvent("log", m.message);
+		}
+	}
 	else if (r == "/icons.png")
 	{
 		ResponseRaw(c, "image/png", (char *)icons_png_gz, icons_png_gz_len, true);
@@ -700,7 +707,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			Response(c, "text/plain", std::string("Tile not found"), false, true);
 			return;
 		}
-			Response(c, "text/plain", std::string("Invalid Tile Request"), false, true);
+		Response(c, "text/plain", std::string("Invalid Tile Request"), false, true);
 		return;
 	}
 	else
@@ -840,6 +847,14 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 			plugins += "realtime_enabled = true;\n";
 		else
 			plugins += "realtime_enabled = false;\n";
+	}
+	else if (option == "LOG")
+	{
+		showlog = Util::Parse::Switch(arg);
+		if (showlog)
+			plugins += "log_enabled = true;\n";
+		else
+			plugins += "log_enabled = false;\n";
 	}
 	else if (option == "PLUGIN")
 	{

@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
 
 	try
 	{
-		Logger::getInstance().setMaxBufferSize(1000);
+		Logger::getInstance().setMaxBufferSize(50);
 		cb = Logger::getInstance().addLogListener([](const LogMessage &msg)
 												  { std::cerr << msg.message << "\n"; });
 

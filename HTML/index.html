@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style_1734543969.css" />
+	<link rel="stylesheet" href="style_1734552677.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -41,6 +41,8 @@
 				<i id="ships_tab_mini" title="Ships" onclick="activateTab(event,'ships')" class="view_list_icon"></i>
 				<i id="realtime_tab_mini" title="NMEA realtime" onclick="activateTab(event,'realtime')"
 					class="feed_icon"></i>
+				<i id="log_tab_mini" title="NMEA realtime" onclick="activateTab(event,'log')"
+					class="visibility_icon"></i>
 				<i id="about_tab_mini" title="About" onclick="activateTab(event,'about')" class="info_icon"></i>
 			</div>
 		</div>
@@ -69,6 +71,7 @@
 		</div>
 		<div onclick="activateTab(event,'ships')" id="ships_tab"><i class="view_list_icon"></i><span>Ships</span></div>
 		<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="feed_icon"></i><span>NMEA</span></div>
+		<div onclick="activateTab(event,'log')" id="log_tab"><i class="visibility_icon"></i><span>Log</span></div>
 		<div onclick="activateTab(event,'about')" id="about_tab"><i class="info_icon"></i><span>About</span></div>
 	</nav>
 
@@ -424,6 +427,13 @@
 
 			<div class="tabcontent addscrollbar can-copy" id="realtime">
 				<pre id="realtime_content"></pre>
+			</div>
+
+			<div class="log-container can-copy addscrollbar" id="log">
+				<div class="log-state-indicator" id="log_state">Status: Connected</div>
+				<div class="log-content-container" id="log_scroll">
+					<pre id="log_content"></pre>
+				</div>
 			</div>
 
 			<div class="tabcontent addscrollbar" id="stat" style="display: none;">
@@ -1011,7 +1021,7 @@
 	<div class="bottombar"></div>
 
 	<script src="plugins.js"></script>
-	<script src="script_1734543969.js"></script>
+	<script src="script_1734552677.js"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>
