@@ -274,7 +274,7 @@ Description=AIS-catcher Service
 After=network.target
 
 [Service]
-ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -C ${CONFIG_FILE} \$(/bin/grep -v "^#" ${CMD_FILE} | /bin/grep -v "^[[:space:]]*$" | /usr/bin/tr "\n" " ")'
+ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} \$(/bin/grep -v "^#" ${CMD_FILE} | /bin/grep -v "^[[:space:]]*$" | /usr/bin/tr "\n" " ")'
 Restart=always
 RestartSec=10
 StartLimitBurst=0
