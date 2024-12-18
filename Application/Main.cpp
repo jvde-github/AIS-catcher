@@ -282,24 +282,25 @@ int main(int argc, char *argv[])
 	int timeout = 0, nrec = 0, exit_code = 0;
 	bool timeout_nomsg = false, list_devices_JSON = false, no_run = false;
 	int own_mmsi = -1;
+	int cb = -1;
 
 	try
 	{
 		Logger::getInstance().setMaxBufferSize(1000);
-		Logger::getInstance().addLogListener([](const LogMessage &msg)
-											 {
+		cb = Logger::getInstance().addLogListener([](const LogMessage &msg)
+												  {
 #ifndef _WIN32
-												 const std::string RED = "\033[31m";
-												 const std::string YELLOW = "\033[33m";
-												 const std::string RESET = "\033[0m";
+													  const std::string RED = "\033[31m";
+													  const std::string YELLOW = "\033[33m";
+													  const std::string RESET = "\033[0m";
 
-												 std::cerr << ((msg.level == LogLevel::_ERROR || msg.level == LogLevel::_CRITICAL) ? RED : msg.level == LogLevel::_WARNING ? YELLOW
-																																										   : RESET)
-														   << msg.message << RESET << "\n";
+													  std::cerr << ((msg.level == LogLevel::_ERROR || msg.level == LogLevel::_CRITICAL) ? RED : msg.level == LogLevel::_WARNING ? YELLOW
+																																												: RESET)
+																<< msg.message << RESET << "\n";
 #else
-												 std::cerr << msg.message << "\n";
+													  std::cerr << msg.message << "\n";
 #endif
-											 });
+												  });
 
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
@@ -335,6 +336,11 @@ int main(int argc, char *argv[])
 			{
 			case 'G':
 				Assert(count % 2 == 0, param, "requires parameters in key/value pairs");
+				if(cb != -1) {
+					Logger::getInstance().removeLogListener(cb);
+					cb = -1;
+				}
+
 				parseSettings(Logger::getInstance(), argv, ptr, argc);
 				break;
 			case 's':
