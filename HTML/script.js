@@ -5166,7 +5166,7 @@ function activateTab(b, a) {
                 function (e) {
                     const content = document.getElementById('log_content');
                     const scroll = document.getElementById('log_scroll');
-                    content.textContent += text + '\n';
+                    content.textContent += e.data + '\n';
                     scroll.scrollTop = scroll.scrollHeight;
                 },
                 false,
