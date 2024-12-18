@@ -5157,6 +5157,8 @@ function activateTab(b, a) {
             };
         }
     } if (a == "log") {
+        document.getElementById('log_content').textContent = '';
+        
         if (evtSourceLog == null) {
             evtSourceLog = new EventSource("api/log");
             const sseDataDiv = document.getElementById("log_content");
