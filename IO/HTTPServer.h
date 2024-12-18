@@ -139,12 +139,14 @@ namespace IO
 			}
 		}
 
-		void upgradeSSE(TCP::ServerConnection &c, int id)
+		IO::SSEConnection *upgradeSSE(TCP::ServerConnection &c, int id)
 		{
 			cleanupSSE();
 
 			sse.emplace_back(&c, id);
-			sse.back().Start();
+			auto &connection = sse.back();
+			connection.Start();
+			return &connection;
 		}
 
 		void sendSSE(int id, const std::string &event, const std::string &data)
@@ -153,7 +155,7 @@ namespace IO
 			for (auto it = sse.begin(); it != sse.end(); ++it)
 			{
 				if (it->getID() == id)
-					it->SendEvent(sse_topic[MIN(id,3)], data);
+					it->SendEvent(sse_topic[MIN(id, 3)], data);
 			}
 			cleanupSSE();
 		}

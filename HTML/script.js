@@ -8,7 +8,8 @@ var interval,
     fetch_binary = false,
     hover_feature = undefined,
     show_all_tracks = false;
-var evtSource = null,
+var evtSourceSSE = null,
+    evtSourceLog = null,
     evtSourceMap = null,
     range_outline = undefined,
     range_outline_short = undefined,
@@ -2943,7 +2944,7 @@ function cloneChartConfig(config) {
     const clone = JSON.parse(JSON.stringify(config));
 
     if (clone.options?.plugins?.annotation?.annotations?.graph_annotation) {
-        clone.options.plugins.annotation.annotations.graph_annotation.value = 
+        clone.options.plugins.annotation.annotations.graph_annotation.value =
             (a) => average(a);
     }
     return clone;
@@ -2977,7 +2978,7 @@ function initPlots() {
 
             const context = ctx === "2d" ? canvas.getContext("2d") : canvas;
             const chartConfig = clone ? cloneChartConfig(config) : config;
-            
+
             window[varName] = new Chart(context, chartConfig);
         } catch (error) {
             console.error(`Failed to initialize chart ${id}:`, error);
@@ -5002,7 +5003,7 @@ function refresh_data() {
 function refresh_data() {
     if (!document.hidden && !updateInProgress) {
         updateInProgress = true;
-        
+
         return (async () => {
             try {
                 if (settings.tab === "map") {
@@ -5117,13 +5118,23 @@ function activateTab(b, a) {
 
     if (a != "map") StopFireworks();
     if (a == "settings") updateSettingsTab();
+    if (a != 'log' && evtSourceLog != null) {
+        evtSourceLog.close();
+        showNotification("Realtime Log connection closed");
+        evtSourceLog = null;
+    }
+    if (a != 'realtime' && evtSourceSSE != null) {
+        evtSourceSSE.close();
+        showNotification("Realtime NMEA connection closed");
+        evtSourceSSE = null;
+    }
 
     if (a == "realtime") {
-        if (evtSource == null) {
-            evtSource = new EventSource("api/sse");
+        if (evtSourceSSE == null) {
+            evtSourceSSE = new EventSource("api/sse");
             const sseDataDiv = document.getElementById("realtime_content");
 
-            evtSource.addEventListener(
+            evtSourceSSE.addEventListener(
                 "nmea",
                 function (e) {
                     if (rtCount > 50) {
@@ -5136,20 +5147,39 @@ function activateTab(b, a) {
                 false,
             );
 
-            evtSource.onerror = function (event) {
+            evtSourceSSE.onerror = function (event) {
                 sseDataDiv.innerText = "Connection error. Server is not reachable or reverse web proxy not configured for Server-Side Events.";
             };
 
-            evtSource.onopen = function (event) {
+            evtSourceSSE.onopen = function (event) {
                 showNotification("Realtime NMEA connection established");
                 sseDataDiv.innerText = "";
             };
         }
-    } else {
-        if (evtSource != null) {
-            evtSource.close();
-            showNotification("Realtime NMEA connection closed");
-            evtSource = null;
+    } if (a == "log") {
+        if (evtSourceLog == null) {
+            evtSourceLog = new EventSource("api/log");
+            const sseDataDiv = document.getElementById("log_content");
+
+            evtSourceLog.addEventListener(
+                "log",
+                function (e) {
+                    const content = document.getElementById('log_content');
+                    const scroll = document.getElementById('log_scroll');
+                    content.textContent += text + '\n';
+                    scroll.scrollTop = scroll.scrollHeight;
+                },
+                false,
+            );
+
+            evtSourceLog.onerror = function (event) {
+                document.getElementById("log_state").innerText = "Log Server is not reachable.\n";
+            };
+
+            evtSourceLog.onopen = function (event) {
+                showNotification("Realtime Log connection established");
+                document.getElementById("log_state").innerText = "";
+            };
         }
     }
 }
@@ -5162,7 +5192,7 @@ function selectMapTab(m) {
 function selectTab() {
     if (settings.tab == "settings") settings.tab = "stat";
 
-    if (settings.tab != "realtime" && settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat") {
+    if (settings.tab != "realtime" && settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat" && settings.tab != "log") {
         settings.tab = "stat";
         alert("Invalid tab specified");
     }
@@ -5649,6 +5679,11 @@ if (aboutMDpresent == false) {
 if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
     document.getElementById("realtime_tab").style.display = "none";
     document.getElementById("realtime_tab_mini").style.display = "none";
+}
+
+if (typeof log_enabled === "undefined" || log_enabled === false) {
+    document.getElementById("log_tab").style.display = "none";
+    document.getElementById("log_tab_mini").style.display = "none";
 }
 
 showWelcome();

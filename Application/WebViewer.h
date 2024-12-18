@@ -61,7 +61,6 @@ public:
 	void setSSE(IO::HTTPServer *s) { server = s; }
 };
 
-/*
 class WebViewerLogger
 {
 protected:
@@ -98,7 +97,6 @@ public:
 		server = s;
 	}
 };
-*/
 
 class WebViewer : public IO::HTTPServer, public Setting
 {
@@ -112,6 +110,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 	bool port_set = false;
 	bool use_zlib = true;
 	bool realtime = false;
+	bool showlog = false;
 	bool KML = false;
 	bool GeoJSON = false;
 	bool supportPrometheus = false;
@@ -138,7 +137,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 
 	Counter counter, counter_session;
 	SSEStreamer sse_streamer;
-	//WebViewerLogger logger;
+	WebViewerLogger logger;
 	PromotheusCounter dataPrometheus;
 	ByteCounter raw_counter;
 
@@ -168,7 +167,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 public:
 	WebViewer();
 
-	~WebViewer() { /*logger.Stop();*/  stopThread(); }
+	~WebViewer() { logger.Stop();  stopThread(); }
 
 	bool &active() { return run; }
 	void connect(Receiver &r);
