@@ -5120,7 +5120,6 @@ function activateTab(b, a) {
     if (a == "settings") updateSettingsTab();
     if (a != 'log' && evtSourceLog != null) {
         evtSourceLog.close();
-        showNotification("Realtime Log connection closed");
         evtSourceLog = null;
     }
     if (a != 'realtime' && evtSourceSSE != null) {
@@ -5179,7 +5178,6 @@ function activateTab(b, a) {
             };
 
             evtSourceLog.onopen = function (event) {
-                showNotification("Realtime Log connection established");
                 document.getElementById("log_state").innerText = "";
             };
         }
