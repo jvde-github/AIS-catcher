@@ -114,6 +114,8 @@ namespace IO
 
 	class HTTPServer : public TCP::Server
 	{
+		std::array<std::string, 4> sse_topic = {"aiscatcher", "nmea", "nmea", "log"};
+
 	public:
 		virtual void Request(TCP::ServerConnection &c, const std::string &msg, bool accept_gzip);
 
@@ -151,7 +153,7 @@ namespace IO
 			for (auto it = sse.begin(); it != sse.end(); ++it)
 			{
 				if (it->getID() == id)
-					it->SendEvent("nmea", data);
+					it->SendEvent(sse_topic[MIN(id,3)], data);
 			}
 			cleanupSSE();
 		}

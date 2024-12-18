@@ -61,6 +61,45 @@ public:
 	void setSSE(IO::HTTPServer *s) { server = s; }
 };
 
+/*
+class WebViewerLogger
+{
+protected:
+	IO::HTTPServer *server = nullptr;
+	Logger::LogCallback logCallback;
+	int cb = -1;
+
+public:
+	void Start()
+	{
+		logCallback = [this](const LogMessage &msg)
+		{
+			if (server)
+			{
+				server->sendSSE(3, "log", msg.message);
+			}
+		};
+
+		cb = Logger::getInstance().addLogListener(logCallback);
+	}
+
+	void Stop()
+	{
+		if (cb != -1) {
+			Logger::getInstance().removeLogListener(cb);
+			cb = -1;
+		}
+	}
+
+	virtual ~WebViewerLogger() {}
+
+	void setSSE(IO::HTTPServer *s)
+	{
+		server = s;
+	}
+};
+*/
+
 class WebViewer : public IO::HTTPServer, public Setting
 {
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
@@ -99,6 +138,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 
 	Counter counter, counter_session;
 	SSEStreamer sse_streamer;
+	//WebViewerLogger logger;
 	PromotheusCounter dataPrometheus;
 	ByteCounter raw_counter;
 
@@ -128,7 +168,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 public:
 	WebViewer();
 
-	~WebViewer() { stopThread(); }
+	~WebViewer() { /*logger.Stop();*/  stopThread(); }
 
 	bool &active() { return run; }
 	void connect(Receiver &r);

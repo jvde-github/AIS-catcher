@@ -1,79 +1,127 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+/*
+    Copyright(c) 2021-2024 jvde.github@gmail.com
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#pragma once
 
 #include <string>
 #include <fstream>
 #include <mutex>
 #include <memory>
 #include <sstream>
+#include <functional>
+#include <vector>
 
-// Log levels
-enum class LogLevel {
+#include "Common.h"
+
+enum class LogLevel
+{
     _INFO,
     _WARNING,
-    _ERROR
+    _ERROR,
+    _CRITICAL,
+    _EMPTY
 };
 
-class Logger {
+struct LogMessage
+{
+    LogLevel level;
+    std::string message;
+    std::string time;
+
+    LogMessage() : level(LogLevel::_EMPTY), message(std::move("")), time(std::move("")) {}
+    LogMessage(LogLevel l, std::string msg, std::string time) : level(l), message(std::move(msg)), time(std::move(time)) {}
+};
+
+struct Setting2
+{
+    virtual ~Setting2() {}
+    virtual Setting2 &Set(std::string option, std::string arg) { return *this; }
+    virtual std::string Get() { return ""; }
+};
+
+class Logger : public Setting
+{
 public:
-    static Logger& getInstance(const std::string& filename = "log.txt", bool log_to_console = false, bool log_to_file = false);
+    static Logger &getInstance();
 
-    Logger(const Logger&) = delete;
-    Logger& operator=(const Logger&) = delete;
+    ~Logger() = default;
 
-    ~Logger();
+    typedef std::function<void(const LogMessage &)> LogCallback;
+    void log(LogLevel level, const std::string &message);
 
-    void log(LogLevel level, const std::string& message);
+    int addLogListener(LogCallback callback);
+    void removeLogListener(int id);
 
-    // Updated method declarations
-    void setLogToConsole(bool enable);
+    std::vector<LogMessage> getLastMessages(int n);
+    void setMaxBufferSize(int size)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        message_buffer_.resize(size);
+    }
 
-    // Overloaded setLogToFile methods
-    void setLogToFile(bool enable);
-    void setLogToFile(bool enable, const std::string& filename);
+    void setLogToSystem(std::string ident = "aiscatcher");
+
+    Setting &Set(std::string option, std::string arg);
 
 private:
-    Logger(const std::string& filename, bool log_to_console, bool log_to_file);
+    struct LogListener
+    {
+        int id;
+        LogCallback callback;
+    };
 
-    void rotateLogFile();
-    void truncateLogFile();
-    std::string logLevelToString(LogLevel level);
     std::string getCurrentTime();
-    std::size_t getFileSize(const std::string& filename);
-
-    std::ofstream file_stream_;
-    std::string log_file_name_;
-
-    static constexpr std::size_t kMaxFileSize = 10 * 1024 * 1024;
-    static constexpr std::size_t kRetainSize = 5 * 1024 * 1024;
 
     std::mutex mutex_;
 
-    bool log_to_console_;
-    bool log_to_file_;
-
     static std::unique_ptr<Logger> instance_;
+
+    std::vector<LogMessage> message_buffer_;
+    int buffer_position_ = 0;
+    std::vector<LogListener> log_listeners_;
+
+    void storeMessage(const LogMessage &msg);
+    void notifyListeners(const LogMessage &msg);
+
+    int id = 1;
 };
 
-class LogStream {
+class LogStream
+{
 public:
     LogStream(LogLevel level);
     ~LogStream();
 
-    LogStream(const LogStream&) = delete;
-    LogStream& operator=(const LogStream&) = delete;
+    LogStream(const LogStream &) = delete;
+    LogStream &operator=(const LogStream &) = delete;
 
-    LogStream(LogStream&&) = default;
-    LogStream& operator=(LogStream&&) = default;
+    LogStream(LogStream &&) = default;
+    LogStream &operator=(LogStream &&) = default;
 
     template <typename T>
-    LogStream& operator<<(const T& msg) {
+    LogStream &operator<<(const T &msg)
+    {
         (*stream_) << msg;
         return *this;
     }
 
-    typedef std::ostream& (*Manipulator)(std::ostream&);
-    LogStream& operator<<(Manipulator manip) {
+    typedef std::ostream &(*Manipulator)(std::ostream &);
+    LogStream &operator<<(Manipulator manip)
+    {
         manip(*stream_);
         return *this;
     }
@@ -83,9 +131,7 @@ private:
     std::unique_ptr<std::ostringstream> stream_;
 };
 
-// Convenience functions
 LogStream Info();
 LogStream Warning();
 LogStream Error();
-
-#endif // LOGGER_H
+LogStream Critical();

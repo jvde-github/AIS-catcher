@@ -319,6 +319,9 @@ void WebViewer::start()
 	ships >> sse_streamer;
 	sse_streamer.setSSE(this);
 
+	//logger.setSSE(this);
+	//logger.Start();
+
 	ships >> hist_day;
 	ships >> hist_hour;
 	ships >> hist_minute;
@@ -556,7 +559,6 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	}
 	else if (r == "/api/ships_full.json")
 	{
-
 		std::string content = ships.getJSON(true);
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
@@ -570,6 +572,9 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		if (realtime)
 			upgradeSSE(c, 2);
 	}
+	/*else if(r == "/api/log") {
+		upgradeSSE(c,3);
+	}*/
 	else if (r == "/icons.png")
 	{
 		ResponseRaw(c, "image/png", (char *)icons_png_gz, icons_png_gz_len, true);
