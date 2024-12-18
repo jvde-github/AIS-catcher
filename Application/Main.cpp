@@ -288,19 +288,7 @@ int main(int argc, char *argv[])
 	{
 		Logger::getInstance().setMaxBufferSize(1000);
 		cb = Logger::getInstance().addLogListener([](const LogMessage &msg)
-												  {
-#ifndef _WIN32
-													  const std::string RED = "\033[31m";
-													  const std::string YELLOW = "\033[33m";
-													  const std::string RESET = "\033[0m";
-
-													  std::cerr << ((msg.level == LogLevel::_ERROR || msg.level == LogLevel::_CRITICAL) ? RED : msg.level == LogLevel::_WARNING ? YELLOW
-																																												: RESET)
-																<< msg.message << RESET << "\n";
-#else
-													  std::cerr << msg.message << "\n";
-#endif
-												  });
+												  { std::cerr << msg.message << "\n"; });
 
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
@@ -336,7 +324,8 @@ int main(int argc, char *argv[])
 			{
 			case 'G':
 				Assert(count % 2 == 0, param, "requires parameters in key/value pairs");
-				if(cb != -1) {
+				if (cb != -1)
+				{
 					Logger::getInstance().removeLogListener(cb);
 					cb = -1;
 				}
