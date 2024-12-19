@@ -18,6 +18,7 @@
 
 #include "Logger.h"
 #include "Utilities.h"
+#include "JSON/StringBuilder.h"
 
 std::unique_ptr<Logger> Logger::instance_ = nullptr;
 
@@ -75,6 +76,32 @@ public:
 	}
 };
 #endif
+
+std::string LogMessage::levelToString() const
+{
+	switch (level)
+	{
+	case LogLevel::_INFO:
+		return "info";
+	case LogLevel::_WARNING:
+		return "warning";
+	case LogLevel::_ERROR:
+		return "error";
+	case LogLevel::_CRITICAL:
+		return "critical";
+	case LogLevel::_EMPTY:
+		return "empty";
+	}
+	return "unknown";
+}
+
+std::string LogMessage::toJSON() const
+{
+	std::string msg;
+	JSON::StringBuilder::stringify(message, msg);
+
+	return "{\"level\":\"" + levelToString() + "\",\"message\":" + msg + ",\"time\":\"" + time + "\"}";
+}
 
 Logger &Logger::getInstance()
 {

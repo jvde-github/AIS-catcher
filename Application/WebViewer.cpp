@@ -20,6 +20,45 @@
 
 bool communityFeed = false;
 
+void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
+{
+	if (server)
+	{
+		AIS::Message *m = (AIS::Message *)data[0].binary;
+		for (const auto &s : m->NMEA)
+		{
+			std::string nmea = s;
+
+			int end = nmea.rfind(',');
+			if (end == std::string::npos)
+				continue;
+
+			int start = nmea.rfind(',', end - 1);
+			if (start == std::string::npos)
+				continue;
+
+			int len = end - start - 1;
+
+			if (len == 0)
+				continue;
+
+			for (int i = 0; i < 3; i++)
+			{
+				idx = (idx + 1) % len;
+				nmea[MIN(start + 1 + idx, nmea.length() - 1)] = '*';
+			}
+
+			server->sendSSE(1, "nmea", nmea);
+		}
+
+		if (tag.lat != 0 && tag.lon != 0)
+		{
+			std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"channel\":\"" + m->getChannel() + "\",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
+			server->sendSSE(2, "nmea", json);
+		}
+	}
+}
+
 WebViewer::WebViewer()
 {
 	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\n\n";
@@ -567,11 +606,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	}
 	else if (r == "/api/sse" && realtime)
 	{
-			upgradeSSE(c, 1);
+		upgradeSSE(c, 1);
 	}
 	else if (r == "/api/signal" && realtime)
 	{
-			upgradeSSE(c, 2);
+		upgradeSSE(c, 2);
 	}
 	else if (r == "/api/log" && showlog)
 	{
@@ -579,7 +618,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		auto l = Logger::getInstance().getLastMessages(25);
 		for (auto &m : l)
 		{
-			s->SendEvent("log", m.message);
+			s->SendEvent("log", m.toJSON());
 		}
 	}
 	else if (r == "/icons.png")

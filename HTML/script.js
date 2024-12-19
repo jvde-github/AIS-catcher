@@ -7,10 +7,10 @@ var interval,
     shipsDB = {},
     fetch_binary = false,
     hover_feature = undefined,
-    show_all_tracks = false;
-var evtSourceSSE = null,
-    evtSourceLog = null,
+    show_all_tracks = false,
     evtSourceMap = null,
+    logViewer = null,
+    realtimeViewer = null,
     range_outline = undefined,
     range_outline_short = undefined,
     tab_title_station = "",
@@ -5089,6 +5089,160 @@ function updateSettingsTab() {
 
 }
 
+class RealtimeViewer {
+    constructor() {
+        this.content = document.getElementById('realtime_content');
+        this.eventSource = null;
+        this.lineCount = 0;
+        this.maxLines = 50;
+    }
+
+    connect() {
+        if (this.eventSource) return;
+        this.eventSource = new EventSource("api/sse");
+
+        this.eventSource.addEventListener('nmea', (event) => {
+            if (this.lineCount > this.maxLines) {
+                this.content.innerHTML = "";
+                this.lineCount = 0;
+            }
+            this.content.innerText = event.data + "\n" + this.content.innerText;
+            this.lineCount++;
+        });
+
+        this.eventSource.addEventListener('error', () => {
+            this.content.innerText = "Connection error. Server is not reachable or reverse web proxy not configured for Server-Side Events.";
+        });
+
+        this.eventSource.addEventListener('open', () => {
+            this.content.innerText = "";
+            //showNotification("Realtime NMEA connection established");
+        });
+    }
+
+    disconnect() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+            //showNotification("Realtime NMEA connection closed");
+        }
+    }
+}
+
+class LogViewer {
+    constructor() {
+        this.logState = document.getElementById('log_state');
+        this.logScroll = document.getElementById('log_scroll');
+        this.logContent = document.getElementById('log_content');
+        this.eventSource = null;
+    }
+
+    connect() {
+        if (this.eventSource) return;
+        this.eventSource = new EventSource("api/log");
+
+        this.eventSource.addEventListener('log', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                this.appendFormattedLog(data);
+                this.scrollToBottom();
+            } catch (error) {
+                console.error('Error handling log event:', error);
+                this.appendRawLog(event.data);
+            }
+        });
+
+        this.eventSource.addEventListener('open', () => {
+            this.updateConnectionState(true);
+        });
+
+        this.eventSource.addEventListener('error', () => {
+            this.updateConnectionState(false);
+        });
+
+        this.logContent.innerHTML = '';
+    }
+
+    appendFormattedLog(data) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry ' + (data.level || 'info');
+
+        const icon = document.createElement('span');
+        switch (data.level) {
+            case 'error':
+                icon.className = 'error_od_icon';
+                break;
+            case 'warning':
+                icon.className = 'warning_od_icon';
+                break;
+            default:
+                icon.className = '';
+        }
+        icon.style.flexShrink = '0';
+        icon.style.marginTop = '0.2rem';
+        icon.style.width = '1.2em';
+        icon.style.height = '1.2em';
+
+        const content = document.createElement('div');
+        content.style.flex = '1';
+
+        const timestamp = document.createElement('div');
+        timestamp.className = 'timestamp';
+        timestamp.textContent = data.time;
+        timestamp.style.fontSize = '0.75rem';
+        timestamp.style.marginBottom = '0.05rem';
+
+        const message = document.createElement('div');
+        message.textContent = data.message.replace(/^"|"$/g, '');
+
+        content.appendChild(timestamp);
+        content.appendChild(message);
+        logEntry.appendChild(icon);
+        logEntry.appendChild(content);
+
+        this.logContent.appendChild(logEntry);
+    }
+
+    appendRawLog(message) {
+        const logEntry = document.createElement('div');
+        logEntry.textContent = message + '\n';
+        this.logContent.appendChild(logEntry);
+    }
+
+    disconnect() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+        }
+        this.updateConnectionState(false);
+    }
+
+    scrollToBottom() {
+        requestAnimationFrame(() => {
+            this.logScroll.scrollTop = this.logScroll.scrollHeight;
+        });
+    }
+
+    updateConnectionState(connected) {
+        const stateIcon = document.createElement('span');
+        stateIcon.className = connected ? 'info_od_icon' : 'error_od_icon';
+        stateIcon.style.display = 'inline-block';
+        stateIcon.style.verticalAlign = 'middle';
+        stateIcon.style.marginRight = '0.5em';
+        stateIcon.style.width = '1em';
+        stateIcon.style.height = '1em';
+
+        const status = connected ? 'Connected' : 'Disconnected';
+        this.logState.innerHTML = '';
+        this.logState.display = 'none';
+        if (!connected) {
+            this.logState.appendChild(stateIcon);
+            this.logState.appendChild(document.createTextNode(`Status: ${status}`));
+        }
+    }
+}
+
+
 function activateTab(b, a) {
     hideMenuifSmall();
 
@@ -5118,69 +5272,24 @@ function activateTab(b, a) {
 
     if (a != "map") StopFireworks();
     if (a == "settings") updateSettingsTab();
-    if (a != 'log' && evtSourceLog != null) {
-        evtSourceLog.close();
-        evtSourceLog = null;
+
+    if (a == "log") {
+
+        logViewer = new LogViewer();
+        logViewer.connect();
     }
-    if (a != 'realtime' && evtSourceSSE != null) {
-        evtSourceSSE.close();
-        showNotification("Realtime NMEA connection closed");
-        evtSourceSSE = null;
+    if (a != 'log' && logViewer) {
+        logViewer.disconnect();
+        logViewer = null;
     }
 
     if (a == "realtime") {
-        if (evtSourceSSE == null) {
-            evtSourceSSE = new EventSource("api/sse");
-            const sseDataDiv = document.getElementById("realtime_content");
-
-            evtSourceSSE.addEventListener(
-                "nmea",
-                function (e) {
-                    if (rtCount > 50) {
-                        sseDataDiv.innerHTML = "";
-                        rtCount = 0;
-                    }
-                    sseDataDiv.innerText = e.data + "\n" + sseDataDiv.innerText;
-                    rtCount = rtCount + 1;
-                },
-                false,
-            );
-
-            evtSourceSSE.onerror = function (event) {
-                sseDataDiv.innerText = "Connection error. Server is not reachable or reverse web proxy not configured for Server-Side Events.";
-            };
-
-            evtSourceSSE.onopen = function (event) {
-                showNotification("Realtime NMEA connection established");
-                sseDataDiv.innerText = "";
-            };
-        }
-    } if (a == "log") {
-        document.getElementById('log_content').textContent = '';
-        
-        if (evtSourceLog == null) {
-            evtSourceLog = new EventSource("api/log");
-            const sseDataDiv = document.getElementById("log_content");
-
-            evtSourceLog.addEventListener(
-                "log",
-                function (e) {
-                    const content = document.getElementById('log_content');
-                    const scroll = document.getElementById('log_scroll');
-                    content.textContent += e.data + '\n';
-                    scroll.scrollTop = scroll.scrollHeight;
-                },
-                false,
-            );
-
-            evtSourceLog.onerror = function (event) {
-                document.getElementById("log_state").innerText = "Log Server is not reachable.\n";
-            };
-
-            evtSourceLog.onopen = function (event) {
-                document.getElementById("log_state").innerText = "";
-            };
-        }
+        realtimeViewer = new RealtimeViewer();
+        realtimeViewer.connect();
+    }
+    if (a != 'realtime' && realtimeViewer) {
+        realtimeViewer.disconnect();
+        realtimeViewer = null;
     }
 }
 
