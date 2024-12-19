@@ -344,11 +344,11 @@ void Receiver::play()
 	if (verbose)
 	{
 		std::stringstream ss;
-		ss << "Device    : " << device->getProduct()
-			   << "Settings  : " << device->Get();
+		ss << "Device    : " << device->getProduct() << "\n"
+			   << "Settings  : " << device->Get() << "\n"; 
 		for (int i = 0; i < models.size(); i++)
 			ss << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
-				   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get();
+				   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() << "\n";
 
 		Info() << ss.str();
 	}
