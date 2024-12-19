@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 #include "Receiver.h"
 #include "Utilities.h"
 #include "JSON/StringBuilder.h"
@@ -24,8 +25,8 @@
 
 std::vector<Device::Description> Receiver::device_list;
 
-
-void Receiver::refreshDevices(void) {
+void Receiver::refreshDevices(void)
+{
 	device_list.clear();
 
 	RTLSDR().getDeviceList(device_list);
@@ -36,9 +37,12 @@ void Receiver::refreshDevices(void) {
 	SOAPYSDR().getDeviceList(device_list);
 }
 
-void Receiver::setTags(const std::string& s) {
-	for (char c : s) {
-		switch (toupper(c)) {
+void Receiver::setTags(const std::string &s)
+{
+	for (char c : s)
+	{
+		switch (toupper(c))
+		{
 		case 'M':
 			tag.mode |= 4;
 			break;
@@ -54,9 +58,12 @@ void Receiver::setTags(const std::string& s) {
 	}
 }
 
-void Receiver::removeTags(const std::string& s) {
-	for (char c : s) {
-		switch (toupper(c)) {
+void Receiver::removeTags(const std::string &s)
+{
+	for (char c : s)
+	{
+		switch (toupper(c))
+		{
 		case 'M':
 			tag.mode &= ~4;
 			break;
@@ -72,25 +79,33 @@ void Receiver::removeTags(const std::string& s) {
 	}
 }
 
-void Receiver::setChannel(std::string mode, std::string NMEA) {
+void Receiver::setChannel(std::string mode, std::string NMEA)
+{
 
 	Util::Convert::toUpper(mode);
 	Util::Convert::toUpper(NMEA);
 
-	if (mode == "AB") {
+	if (mode == "AB")
+	{
 		ChannelMode = AIS::Mode::AB;
-		if (NMEA.empty()) NMEA = "AB";
+		if (NMEA.empty())
+			NMEA = "AB";
 	}
-	else if (mode == "CD") {
+	else if (mode == "CD")
+	{
 		ChannelMode = AIS::Mode::CD;
-		if (NMEA.empty()) NMEA = "CD";
+		if (NMEA.empty())
+			NMEA = "CD";
 	}
-	else if (mode == "X") {
+	else if (mode == "X")
+	{
 		ChannelMode = AIS::Mode::X;
-		if (NMEA.empty()) {
+		if (NMEA.empty())
+		{
 			NMEA = "XX";
 		}
-		else if (NMEA.length() == 1) {
+		else if (NMEA.length() == 1)
+		{
 			NMEA += NMEA;
 		}
 	}
@@ -108,8 +123,10 @@ void Receiver::setChannel(std::string mode, std::string NMEA) {
 }
 
 // Set up Device
-Device::Device* Receiver::getDeviceByType(Type type) {
-	switch (type) {
+Device::Device *Receiver::getDeviceByType(Type type)
+{
+	switch (type)
+	{
 	case Type::WAVFILE:
 		return &_WAV;
 	case Type::RAWFILE:
@@ -159,27 +176,32 @@ Device::Device* Receiver::getDeviceByType(Type type) {
 	}
 }
 
-void Receiver::setupDevice() {
+void Receiver::setupDevice()
+{
 
 	int idx = device_list.empty() ? -1 : 0;
 	uint64_t handle = device_list.empty() ? 0 : device_list[0].getHandle();
 
 	if (!serial.empty())
-		Info() << "Searching for device with SN " << serial << "." ;
+		Info() << "Searching for device with SN " << serial << ".";
 
-	if (!serial.empty() || type != Type::NONE) {
+	if (!serial.empty() || type != Type::NONE)
+	{
 		idx = -1;
-		for (int i = 0; i < device_list.size(); i++) {
+		for (int i = 0; i < device_list.size(); i++)
+		{
 			bool serial_match = device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType());
 			bool type_match = serial.empty() && (type == device_list[i].getType());
 
-			if (serial_match || type_match) {
+			if (serial_match || type_match)
+			{
 				idx = i;
 				handle = device_list[i].getHandle();
 				break;
 			}
 		}
-		if (idx == -1) {
+		if (idx == -1)
+		{
 
 			if (!serial.empty())
 				throw std::runtime_error("Cannot find device with specified parameters");
@@ -197,7 +219,8 @@ void Receiver::setupDevice() {
 	else
 		device = getDeviceByType(device_list[idx].getType());
 
-	if (device == 0) throw std::runtime_error("cannot set up device");
+	if (device == 0)
+		throw std::runtime_error("cannot set up device");
 
 	device->Open(handle);
 
@@ -206,9 +229,12 @@ void Receiver::setupDevice() {
 	else
 		device->setFrequency((int)(156800000));
 
-	if (sample_rate) device->setSampleRate(sample_rate);
-	if (ppm) device->Set("FREQOFFSET", std::to_string(ppm));
-	if (bandwidth) device->Set("BW", std::to_string(bandwidth));
+	if (sample_rate)
+		device->setSampleRate(sample_rate);
+	if (ppm)
+		device->Set("FREQOFFSET", std::to_string(ppm));
+	if (bandwidth)
+		device->Set("BW", std::to_string(bandwidth));
 
 	tag.hardware = device->getProduct();
 	tag.driver = device->getDriver();
@@ -218,9 +244,11 @@ void Receiver::setupDevice() {
 }
 
 // Set up model
-std::unique_ptr<AIS::Model>& Receiver::addModel(int m) {
+std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
+{
 
-	switch (m) {
+	switch (m)
+	{
 	case 0:
 		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelStandard()));
 		break;
@@ -248,10 +276,13 @@ std::unique_ptr<AIS::Model>& Receiver::addModel(int m) {
 	return models.back();
 }
 
-void Receiver::setupModel(int& group) {
+void Receiver::setupModel(int &group)
+{
 	// if nothing defined, create one model
-	if (!models.size()) {
-		switch (device->getFormat()) {
+	if (!models.size())
+	{
+		switch (device->getFormat())
+		{
 		case Format::TXT:
 			addModel(5);
 			break;
@@ -264,14 +295,16 @@ void Receiver::setupModel(int& group) {
 		}
 	}
 	// ensure some basic compatibility between model and device
-	for (const auto& m : models) {
+	for (const auto &m : models)
+	{
 		if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
 			(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT))
 			throw std::runtime_error("Decoding model and input format not consistent.");
 	}
 
 	// build the decoder models
-	for (auto& m : models) {
+	for (auto &m : models)
+	{
 		m->setDesignation(ChannelNMEA);
 		m->setMode(ChannelMode);
 		m->setOwnMMSI(own_mmsi);
@@ -285,7 +318,8 @@ void Receiver::setupModel(int& group) {
 	// assign the output of each individual model to a seperate group
 	assert(group + models.size() < 32);
 
-	for (int i = 0; i < models.size(); i++) {
+	for (int i = 0; i < models.size(); i++)
+	{
 		uint32_t mask = 1 << group;
 		jsonais[i].out.setGroupOut(mask);
 		models[i]->Output().out.setGroupOut(mask);
@@ -293,27 +327,35 @@ void Receiver::setupModel(int& group) {
 	}
 }
 
-void Receiver::play() {
+void Receiver::play()
+{
 
 	// connect the JSON output where and if needed
-	for (int i = 0; i < jsonais.size(); i++) {
-		if (jsonais[i].out.isConnected()) {
+	for (int i = 0; i < jsonais.size(); i++)
+	{
+		if (jsonais[i].out.isConnected())
+		{
 			models[i]->Output() >> jsonais[i];
 		}
 	}
 
 	device->Play();
 
-	if (verbose) {
-		Info() << "Device    : " << device->getProduct() ;
-		Info() << "Settings  : " << device->Get() ;
+	if (verbose)
+	{
+		std::stringstream ss;
+		ss << "Device    : " << device->getProduct()
+			   << "Settings  : " << device->Get();
 		for (int i = 0; i < models.size(); i++)
-			Info() << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
-					  << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get();
+			ss << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
+				   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get();
+
+		Info() << ss.str();
 	}
 }
 
-void Receiver::stop() {
+void Receiver::stop()
+{
 	if (device)
 		device->Stop();
 }
@@ -321,9 +363,10 @@ void Receiver::stop() {
 //-----------------------------------
 // set up screen output
 
-
-void OutputScreen::setScreen(const std::string& str) {
-	switch (Util::Parse::Integer(str, 0, 5)) {
+void OutputScreen::setScreen(const std::string &str)
+{
+	switch (Util::Parse::Integer(str, 0, 5))
+	{
 	case 0:
 		level = MessageFormat::SILENT;
 		break;
@@ -346,33 +389,40 @@ void OutputScreen::setScreen(const std::string& str) {
 		throw std::runtime_error("unknown option for screen output: " + str);
 	}
 }
-void OutputScreen::setScreen(MessageFormat o) {
+void OutputScreen::setScreen(MessageFormat o)
+{
 	level = o;
 }
 
-void OutputScreen::connect(Receiver& r) {
+void OutputScreen::connect(Receiver &r)
+{
 
-	if (level == MessageFormat::NMEA || level == MessageFormat::JSON_NMEA || level == MessageFormat::FULL) {
-		for (int j = 0; j < r.Count(); j++) {
+	if (level == MessageFormat::NMEA || level == MessageFormat::JSON_NMEA || level == MessageFormat::FULL)
+	{
+		for (int j = 0; j < r.Count(); j++)
+		{
 			if (r.Output(j).canConnect(((StreamIn<AIS::Message>)msg2screen).getGroupsIn()))
-				r.Output(j).Connect((StreamIn<AIS::Message>*)&msg2screen);
+				r.Output(j).Connect((StreamIn<AIS::Message> *)&msg2screen);
 
 			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)msg2screen).getGroupsIn()))
-				r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&msg2screen);
+				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&msg2screen);
 		}
 
 		msg2screen.setDetail(level);
 	}
-	else if (level == MessageFormat::JSON_SPARSE || level == MessageFormat::JSON_FULL) {
-		for (int j = 0; j < r.Count(); j++) {
+	else if (level == MessageFormat::JSON_SPARSE || level == MessageFormat::JSON_FULL)
+	{
+		for (int j = 0; j < r.Count(); j++)
+		{
 			if (r.OutputJSON(j).canConnect(((StreamIn<JSON::JSON>)json2screen).getGroupsIn()))
-				r.OutputJSON(j).Connect((StreamIn<JSON::JSON>*)&json2screen);
+				r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&json2screen);
 
 			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)json2screen).getGroupsIn()))
-				r.OutputGPS(j).Connect((StreamIn<AIS::GPS>*)&json2screen);
+				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&json2screen);
 		}
 
-		if (level == MessageFormat::JSON_SPARSE) json2screen.setMap(JSON_DICT_SPARSE);
+		if (level == MessageFormat::JSON_SPARSE)
+			json2screen.setMap(JSON_DICT_SPARSE);
 	}
 }
 
@@ -380,7 +430,8 @@ void OutputScreen::start() {}
 //-----------------------------------
 // set up screen counters
 
-void OutputStatistics::connect(Receiver& r) {
+void OutputStatistics::connect(Receiver &r)
+{
 
 	statistics.resize(r.Count());
 

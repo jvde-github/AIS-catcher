@@ -41,23 +41,12 @@ class SSEStreamer : public StreamIn<JSON::JSON>
 {
 	IO::HTTPServer *server = nullptr;
 
-public:
-	virtual ~SSEStreamer() {}
-	void Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-		if (server)
-		{
-			AIS::Message *m = (AIS::Message *)data[0].binary;
-			for (const auto &s : m->NMEA)
-				server->sendSSE(1, "nmea", s);
+	unsigned idx = 0;
 
-			if (tag.lat != 0 && tag.lon != 0)
-			{
-				std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"channel\":\"" + m->getChannel() + "\",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
-				server->sendSSE(2, "nmea", json);
-			}
-		}
-	}
+public:
+	virtual ~SSEStreamer() = default;
+
+	void Receive(const JSON::JSON *data, int len, TAG &tag);
 	void setSSE(IO::HTTPServer *s) { server = s; }
 };
 
@@ -75,7 +64,8 @@ public:
 		{
 			if (server)
 			{
-				server->sendSSE(3, "log", msg.message);
+
+				server->sendSSE(3, "log", msg.toJSON());
 			}
 		};
 
@@ -84,13 +74,14 @@ public:
 
 	void Stop()
 	{
-		if (cb != -1) {
+		if (cb != -1)
+		{
 			Logger::getInstance().removeLogListener(cb);
 			cb = -1;
 		}
 	}
 
-	virtual ~WebViewerLogger() {}
+	virtual ~WebViewerLogger() = default;
 
 	void setSSE(IO::HTTPServer *s)
 	{
@@ -167,7 +158,13 @@ class WebViewer : public IO::HTTPServer, public Setting
 public:
 	WebViewer();
 
-	~WebViewer() { logger.Stop();  stopThread(); }
+	~WebViewer()
+	{
+		if(showlog)
+			logger.Stop();
+			
+		stopThread();
+	}
 
 	bool &active() { return run; }
 	void connect(Receiver &r);

@@ -703,7 +703,7 @@ namespace TCP
 					if (error_code == EAGAIN || error_code == EWOULDBLOCK)
 						return 0;
 #endif
-					Info() << "TCP (" << host << ":" << port << ") receive error with recv returns " << retval << ". Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
+					Error() << "TCP (" << host << ":" << port << ") receive error with recv returns " << retval << ". Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
 
 					if (persistent)
 					{

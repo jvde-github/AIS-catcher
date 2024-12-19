@@ -44,14 +44,11 @@ struct LogMessage
 
     LogMessage() : level(LogLevel::_EMPTY), message(std::move("")), time(std::move("")) {}
     LogMessage(LogLevel l, std::string msg, std::string time) : level(l), message(std::move(msg)), time(std::move(time)) {}
+
+    std::string levelToString() const;
+    std::string toJSON() const;
 };
 
-struct Setting2
-{
-    virtual ~Setting2() {}
-    virtual Setting2 &Set(std::string option, std::string arg) { return *this; }
-    virtual std::string Get() { return ""; }
-};
 
 class Logger : public Setting
 {

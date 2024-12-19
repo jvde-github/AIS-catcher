@@ -34,9 +34,11 @@ namespace JSON {
 			case '\\':
 				json += "\\\\";
 				break;
-			case '\r':
+			case '\r':			
+			case '\0':				
+				break;
 			case '\n':
-			case '\0':
+				json += "\\n";
 				break;
 			default:
 				json += c;

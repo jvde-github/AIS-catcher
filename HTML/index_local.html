@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style_v0_61_74_g24e87433.css" />
+	<link rel="stylesheet" href="style_1734616954.css" />
 	<link rel="stylesheet" href="config.css" />
 
 </head>
@@ -38,11 +38,11 @@
 				<i id="stat_tab_mini" title="Statistics" onclick="activateTab(event,'stat')"
 					class="business_center_icon"></i>
 				<i id="plots_tab_mini" title="Plots" onclick="activateTab(event,'plots')" class="leaderboard_icon"></i>
-				<i id="ships_tab_mini" title="Ships" onclick="activateTab(event,'ships')" class="view_list_icon"></i>
+				<i id="ships_tab_mini" title="Ships" onclick="activateTab(event,'ships')" class="table_icon"></i>
 				<i id="realtime_tab_mini" title="NMEA realtime" onclick="activateTab(event,'realtime')"
-					class="feed_icon"></i>
+					class="comment_icon"></i>
 				<i id="log_tab_mini" title="NMEA realtime" onclick="activateTab(event,'log')"
-					class="visibility_icon"></i>
+					class="terminal_icon"></i>
 				<i id="about_tab_mini" title="About" onclick="activateTab(event,'about')" class="info_icon"></i>
 			</div>
 		</div>
@@ -69,9 +69,9 @@
 		</div>
 		<div onclick="activateTab(event,'plots')" id="plots_tab"><i class="leaderboard_icon"></i><span>Plots</span>
 		</div>
-		<div onclick="activateTab(event,'ships')" id="ships_tab"><i class="view_list_icon"></i><span>Ships</span></div>
-		<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="feed_icon"></i><span>NMEA</span></div>
-		<div onclick="activateTab(event,'log')" id="log_tab"><i class="visibility_icon"></i><span>Log</span></div>
+		<div onclick="activateTab(event,'ships')" id="ships_tab"><i class="table_icon"></i><span>Ships</span></div>
+		<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="comment_icon"></i><span>NMEA</span></div>
+		<div onclick="activateTab(event,'log')" id="log_tab"><i class="terminal_icon"></i><span>Log</span></div>
 		<div onclick="activateTab(event,'about')" id="about_tab"><i class="info_icon"></i><span>About</span></div>
 	</nav>
 
@@ -430,9 +430,11 @@
 			</div>
 
 			<div class="tabcontent can-copy addscrollbar" id="log">
-				<div class="log-state-indicator" id="log_state">Status: Connected</div>
-				<div class="log-content-container" id="log_scroll">
-					<pre id="log_content"></pre>
+				<div class="log-viewer">
+					<div class="log-state-indicator" id="log_state">Status: Connecting...</div>
+					<div class="log-content-container" id="log_scroll">
+						<pre class="log-content" id="log_content"></pre>
+					</div>
 				</div>
 			</div>
 
@@ -1021,7 +1023,7 @@
 	<div class="bottombar"></div>
 
 	<script src="plugins.js"></script>
-	<script src="script_v0_61_74_g24e87433.js"></script>
+	<script src="script_1734616954.js"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

@@ -64,10 +64,10 @@ static void consoleHandler(int signal)
 
 static void printVersion()
 {
-	Info() << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE;
-	Info() << "(C) Copyright 2021-2024 " << COPYRIGHT;
-	Info() << "This is free software; see the source for copying conditions.There is NO";
-	Info() << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+	Info() << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << "\n"
+		   << "(C) Copyright 2021-2024 " << COPYRIGHT << "\n"
+		   << "This is free software; see the source for copying conditions.There is NO" << "\n"
+		   << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 }
 
 static void Usage()
@@ -892,8 +892,8 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-
-		DBG("Stopping receivers");
+		
+		std::stringstream ss;
 		for (int i = 0; i < _receivers.size(); i++)
 		{
 			Receiver &r = *_receivers[i];
@@ -904,12 +904,12 @@ int main(int argc, char *argv[])
 
 			if (r.verbose)
 			{
-				Info() << "----------------------";
+				ss << "----------------------\n";
 				for (int j = 0; j < r.Count(); j++)
 				{
 					std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
 					stat[i].statistics[j].Stamp();
-					Info() << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat[i].statistics[j].getCount() << " msgs";
+					ss << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat[i].statistics[j].getCount() << " msgs" << "\n";
 				}
 			}
 
@@ -917,8 +917,9 @@ int main(int argc, char *argv[])
 				for (int j = 0; j < r.Count(); j++)
 				{
 					std::string name = r.Model(j)->getName();
-					Info() << "[" << r.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ') << r.Model(j)->getTotalTiming() << " ms";
+					ss << "[" << r.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ') << r.Model(j)->getTotalTiming() << " ms" << "\n";
 				}
+			Info() << ss.str();
 		}
 
 		for (auto &s : servers)
