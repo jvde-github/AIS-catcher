@@ -21,6 +21,7 @@
 #include <mutex>
 #include <functional>
 #include <vector>
+#include <memory>
 #include <atomic>
 
 #include "Common.h"
