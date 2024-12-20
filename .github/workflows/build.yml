@@ -364,9 +364,11 @@ jobs:
       # Create a custom triplet for v141_xp if needed
       - name: Create custom vcpkg triplet for v141_xp Win32
         run: |
-          echo "set(VCPKG_PLATFORM_TOOLSET v141_xp)" > vcpkg/triplets/x86-windows-v141-xp.cmake
-          echo "set(VCPKG_CRT_LINKAGE dynamic)" >> vcpkg/triplets/x86-windows-v141-xp.cmake
-          echo "set(VCPKG_LIBRARY_LINKAGE dynamic)" >> vcpkg/triplets/x86-windows-v141-xp.cmake
+          set(VCPKG_TARGET_ARCHITECTURE x86)
+          set(VCPKG_CRT_LINKAGE dynamic)
+          set(VCPKG_LIBRARY_LINKAGE dynamic)
+          set(VCPKG_PLATFORM_TOOLSET v141_xp)
+
 
       # Install dependencies using vcpkg
       - name: Install dependencies (rtl-sdr & pthreads)
