@@ -18,12 +18,10 @@
 #pragma once
 
 #include <string>
-#include <fstream>
 #include <mutex>
-#include <memory>
-#include <sstream>
 #include <functional>
 #include <vector>
+#include <atomic>
 
 #include "Common.h"
 
