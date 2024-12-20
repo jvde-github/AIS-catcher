@@ -355,8 +355,10 @@ void WebViewer::start()
 		Clear();
 	}
 
-	ships >> sse_streamer;
-	sse_streamer.setSSE(this);
+	if(realtime) {
+		ships >> sse_streamer;
+		sse_streamer.setSSE(this);
+	}
 
 	if (showlog)
 	{

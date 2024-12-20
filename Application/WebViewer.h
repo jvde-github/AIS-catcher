@@ -64,7 +64,6 @@ public:
 		{
 			if (server)
 			{
-
 				server->sendSSE(3, "log", msg.toJSON());
 			}
 		};

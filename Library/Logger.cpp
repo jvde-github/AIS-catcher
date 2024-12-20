@@ -218,15 +218,18 @@ void Logger::removeLogListener(int id)
 
 void Logger::notifyListeners(const LogMessage &msg)
 {
-	std::vector<LogCallback> listeners;
-	{
-		std::lock_guard<std::mutex> lock(mutex_);
-	}
+	static std::atomic<bool> in_notify(false);
+	bool is_notifying = in_notify.exchange(true);
+	
+    if(is_notifying) return;
+
+	std::lock_guard<std::mutex> lock(mutex_);
 
 	for (const auto &listener : log_listeners_)
 	{
 		listener.callback(msg);
 	}
+	in_notify.store(false);
 }
 
 void Logger::log(LogLevel level, const std::string &message)

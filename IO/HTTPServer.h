@@ -54,7 +54,7 @@ namespace IO
 		int _id = 0;
 
 	public:
-		SSEConnection(TCP::ServerConnection *c, int id) : connection(c), _id(id) {}
+		SSEConnection(TCP::ServerConnection *c, int id) : connection(c), _id(id) { c->setVerbosity(false); }
 		~SSEConnection() { Close(); }
 
 		int getID()
