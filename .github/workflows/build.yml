@@ -342,6 +342,9 @@ jobs:
         del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
 
   build-win7-x86:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    needs: bakeHTML
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
