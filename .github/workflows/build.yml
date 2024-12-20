@@ -371,8 +371,8 @@ jobs:
       # Install dependencies using vcpkg
       - name: Install dependencies (rtl-sdr & pthreads)
         run: |
-          vcpkg\vcpkg install rtl-sdr:x86-windows-v141-xp pthreads:x86-windows-v141-xp
-
+          vcpkg install rtl-sdr:x86-windows-v141-xp pthreads:x86-windows-v141-xp
+          
       # Configure with CMake
       # We use -D_WIN32_WINNT=0x0601 to ensure code targets Windows 7.
       # We specify the toolset -T v141_xp and -A Win32 for 32-bit builds.
