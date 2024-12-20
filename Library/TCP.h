@@ -60,6 +60,7 @@ namespace TCP
 		std::mutex mtx;
 		void CloseUnsafe();
 		const static int MAX_BUFFER_SIZE = 1024 * 1024 * 8;
+		bool verbose = true;
 
 	public:
 		~ServerConnection() { Close(); }
@@ -87,6 +88,7 @@ namespace TCP
 		bool Send(const char *buffer, int length);
 		bool SendDirect(const char *buffer, int length);
 		void Read();
+		void setVerbosity(bool v) { verbose = v; }
 	};
 
 	class Server

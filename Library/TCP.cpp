@@ -89,7 +89,7 @@ namespace TCP
 			{
 				int e = errno;
 #endif
-				if (nread < 0)
+				if (nread < 0 && verbose)
 					Error() << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock;
 
 				CloseUnsafe();
@@ -120,7 +120,9 @@ namespace TCP
 				if (errno != EWOULDBLOCK && errno != EAGAIN)
 				{
 #endif
-					Error() << "TCP Connection: error message to client: " << strerror(errno);
+					if(verbose)
+						Error() << "TCP Connection: error message to client: " << strerror(errno);
+
 					CloseUnsafe();
 				}
 			}
@@ -166,7 +168,9 @@ namespace TCP
 				if (errno != EWOULDBLOCK && errno != EAGAIN)
 				{
 #endif
-					Error() << "TCP Connection: error message to client: " << strerror(errno);
+					if(verbose)
+						Error() << "TCP Connection: error message to client: " << strerror(errno);
+						
 					CloseUnsafe();
 					return false;
 				}
