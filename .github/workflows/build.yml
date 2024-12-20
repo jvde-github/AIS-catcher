@@ -355,6 +355,20 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Install Visual Studio components
+        run: |
+          # Download vs_buildtools.exe installer
+          Invoke-WebRequest -Uri https://aka.ms/vs/17/release/vs_buildtools.exe -OutFile vs_buildtools.exe
+          
+          # Install required components silently
+          Start-Process -Wait -FilePath .\vs_buildtools.exe -ArgumentList `
+            "--quiet", "--wait", "--norestart", "--nocache", `
+            "--installPath", "C:\BuildTools", `
+            "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64", `
+            "--add", "Microsoft.VisualStudio.Component.VC.140", `
+            "--add", "Microsoft.VisualStudio.Component.Windows10SDK", `
+            "--add", "Microsoft.VisualStudio.Component.VC.v141.xp"
+
       - name: Install vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg.git
