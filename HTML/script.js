@@ -2984,6 +2984,8 @@ function initPlots() {
             console.error(`Failed to initialize chart ${id}:`, error);
         }
     }
+    chart_level = new Chart(document.getElementById("chart-level"), plot_level);
+
 }
 
 function shipcardismax() {
