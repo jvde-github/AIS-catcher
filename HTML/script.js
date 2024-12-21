@@ -2962,7 +2962,7 @@ function initPlots() {
         { varName: "chart_days", id: "chart-days", config: plot_count, clone: true },
         { varName: "chart_ppm", id: "chart-ppm", config: plot_single, clone: true },
         { varName: "chart_ppm_minute", id: "chart-ppm-minute", config: plot_single, clone: true },
-        { varName: "chart_level", id: "chart-level", config: plot_level, clone: false },
+        //{ varName: "chart_level", id: "chart-level", config: plot_level, clone: false },
         { varName: "chart_distance_hour", id: "chart-distance-hour", config: plot_distance, clone: false },
         { varName: "chart_distance_day", id: "chart-distance-day", config: plot_distance, clone: false },
         { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single, clone: false }
