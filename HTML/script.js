@@ -5330,7 +5330,7 @@ function showAboutDialog() {
         <span>
         <a href="https://aiscatcher.org"><b style="font-size: 1.6em;">AIS-catcher</b></a>
         <br>
-        <b style="font-size: 0.8em;">&copy; 2021-2023 jvde.github@gmail.com</b>
+        <b style="font-size: 0.8em;">&copy; 2021-2025 jvde.github@gmail.com</b>
         </span>
         </div>
         <p>
