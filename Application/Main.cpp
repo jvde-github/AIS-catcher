@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2024 jvde.github@gmail.com
+	Copyright(c) 2021-2025 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ static void consoleHandler(int signal)
 static void printVersion()
 {
 	Info() << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << "\n"
-		   << "(C) Copyright 2021-2024 " << COPYRIGHT << "\n"
+		   << "(C) Copyright 2021-2025 " << COPYRIGHT << "\n"
 		   << "This is free software; see the source for copying conditions.There is NO" << "\n"
 		   << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 }

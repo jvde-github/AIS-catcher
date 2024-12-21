@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2024 jvde.github@gmail.com
+	Copyright(c) 2021-2025 jvde.github@gmail.com
 	Copyright(c) 2021-2022 gtlittlewing
 
 	This program is free software: you can redistribute it and/or modify
