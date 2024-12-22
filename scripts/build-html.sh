@@ -44,7 +44,7 @@ xxd -i index_html_gz > index_html.cpp
 minify index_local.html | gzip > index_local_html_gz
 xxd -i index_local_html_gz > index_local_html.cpp
 
-minify script.js | gzip > script_js_gz
+cat script.js | gzip > script_js_gz
 xxd -i script_js_gz > script_js.cpp
 
 minify style.css | gzip > style_css_gz
