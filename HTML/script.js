@@ -3223,6 +3223,7 @@ function updateChartSingle(b, f1, f2, c) {
     }
 }
 
+/*
 function updateChartLevel(b, f1, f2, c) {
     if (b.hasOwnProperty(f1)) {
         const source = b[f1];
@@ -3242,6 +3243,35 @@ function updateChartLevel(b, f1, f2, c) {
 
         c.update();
     }
+}
+*/
+
+function updateChartLevel(chartData, timeframe, chartName, chart) {
+    if (!chartData?.hasOwnProperty(timeframe)) {
+        return;
+    }
+
+    const timeSeriesData = chartData[timeframe];
+    
+    const minLevelData = [];
+    for (let i = 0; i < timeSeriesData.time.length; i++) {
+        minLevelData.push({
+            x: timeSeriesData.time[i],
+            y: timeSeriesData.stat[i].level_min === 0 ? null : timeSeriesData.stat[i].level_min
+        });
+    }
+    chart.data.datasets[1].data = minLevelData;
+
+    const maxLevelData = [];
+    for (let i = 0; i < timeSeriesData.time.length; i++) {
+        maxLevelData.push({
+            x: timeSeriesData.time[i],
+            y: timeSeriesData.stat[i].level_max === 0 ? null : timeSeriesData.stat[i].level_max
+        });
+    }
+    chart.data.datasets[0].data = maxLevelData;
+
+    chart.update();
 }
 
 function updateRadar(b, f, c) {
