@@ -338,7 +338,7 @@ namespace IO
 				if (sock == -1)
 				{
 					Error() << "UDP: cannot recreate socket. Requesting termination.";
-					Command() << "stop";
+					StopRequest();
 				}
 
 				last_reconnect = now;
@@ -564,7 +564,7 @@ namespace IO
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
-						Command() << "stop";
+						StopRequest();
 					}
 				}
 			}
@@ -579,7 +579,7 @@ namespace IO
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
-						Command() << "stop";
+						StopRequest();
 					}
 				}
 			}
@@ -601,7 +601,7 @@ namespace IO
 						if (!persistent)
 						{
 							Error() << "TCP feed: requesting termination.";
-							Command() << "stop";
+							StopRequest();
 						}
 				}
 			}
@@ -617,7 +617,7 @@ namespace IO
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
-						Command() << "stop";
+						StopRequest();
 					}
 			}
 		}
@@ -636,7 +636,7 @@ namespace IO
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
-						Command() << "stop";
+						StopRequest();
 					}
 			}
 		}

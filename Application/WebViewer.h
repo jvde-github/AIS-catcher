@@ -159,13 +159,10 @@ public:
 
 	~WebViewer()
 	{
-		std::cerr << "WebViewer: stop" << std::endl;
 		if(showlog)
 			logger.Stop();
 			
 		stopThread();
-				std::cerr << "WebViewer: stopped" << std::endl;
-
 	}
 
 	bool &active() { return run; }
