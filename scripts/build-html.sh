@@ -51,3 +51,14 @@ minify style.css | gzip > style_css_gz
 xxd -i style_css_gz > style_css.cpp
 
 cd ..
+
+TEMP_DIR=$(mktemp -d)
+
+echo "Copying web files to temporary directory..."
+cp -r HTML/*.html  "$TEMP_DIR"
+cp -r HTML/*.css "$TEMP_DIR"
+cp -r HTML/*.js  "$TEMP_DIR"
+
+./scripts/build-web-db.sh "$TEMP_DIR"
+xxd -i web.db ./HTML/web_db.cpp
+rm -rf "$TEMP_DIR"
