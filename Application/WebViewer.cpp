@@ -17,6 +17,7 @@
 
 #include "version.h"
 #include "WebViewer.h"
+#include "HTML/WebDB.h"
 
 bool communityFeed = false;
 
@@ -355,7 +356,8 @@ void WebViewer::start()
 		Clear();
 	}
 
-	if(realtime) {
+	if (realtime)
+	{
 		ships >> sse_streamer;
 		sse_streamer.setSSE(this);
 	}
@@ -429,12 +431,6 @@ void WebViewer::close()
 	}
 }
 
-#include "HTML/index_html.cpp"
-#include "HTML/index_local_html.cpp"
-#include "HTML/script_js.cpp"
-#include "HTML/style_css.cpp"
-#include "HTML/favicon.cpp"
-
 void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, bool gzip)
 {
 
@@ -456,19 +452,12 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	if (r == "/")
 	{
 		if (cdn.empty())
-			ResponseRaw(c, "text/html", (char *)index_html_gz, index_html_gz_len, true);
+			r = "/index.html";
 		else
-			ResponseRaw(c, "text/html", (char *)index_local_html_gz, index_local_html_gz_len, true);
+			r = "/index_local.html";
 	}
-	else if (r == "/script_" VERSION_URL_TAG ".js")
-	{
-		ResponseRaw(c, "application/javascript", (char *)script_js_gz, script_js_gz_len, true, true);
-	}
-	else if (r == "/style_" VERSION_URL_TAG ".css")
-	{
-		ResponseRaw(c, "text/css", (char *)style_css_gz, style_css_gz_len, true, true);
-	}
-	else if (!cdn.empty() && r.find("/cdn/") == 0)
+
+	if (!cdn.empty() && r.find("/cdn/") == 0)
 	{
 		try
 		{
@@ -508,11 +497,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			Error() << "Server - error returning requested file (" << r << "): " << e.what();
 			Response(c, "text/html", std::string(""), true);
 		}
-	}
-	else if (r == "/favicon.ico")
-	{
-		ResponseRaw(c, "text/html", (char *)favicon_ico_gz, favicon_ico_gz_len, true);
-	}
+	} 
 	else if (r == "/kml" && KML)
 	{
 		std::string content = ships.getKML();
@@ -622,11 +607,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		{
 			s->SendEvent("log", m.toJSON());
 		}
-	}
-	else if (r == "/icons.png")
-	{
-		ResponseRaw(c, "image/png", (char *)icons_png_gz, icons_png_gz_len, true);
-	}
+	} 
 	else if (r == "/plugins.js")
 	{
 		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
@@ -751,9 +732,21 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		Response(c, "text/plain", std::string("Invalid Tile Request"), false, true);
 		return;
 	}
-	else
+	else if (r.rfind("/", 0) == 0)
 	{
-		HTTPServer::Request(c, r, false);
+		std::string filename = r.substr(1);
+
+		auto it = WebDB::files.find(filename);
+		if (it != WebDB::files.end())
+		{
+			const WebDB::FileData &file = it->second;
+			ResponseRaw(c, file.mime_type, (char *)file.data, file.size, true, std::string(file.mime_type) != "text/html");
+		}
+		else
+		{
+			std::cerr << "File not found" << std::endl;
+			HTTPServer::Request(c, r, false);
+		}
 	}
 }
 

@@ -20,13 +20,13 @@ echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/version.h
 sed -i '/VERSION_URL_TAG/d' Application/version.h
 echo -e "#define VERSION_URL_TAG\t\"$URL_SAFE_TAG\"" >> Application/version.h
 
-# Replace script.js and style.css with their versioned counterparts in index.html
-sed -i "s|script_[^\.]*\.js|script_${URL_SAFE_TAG}.js|g" HTML/index.html
-sed -i "s|style_[^\.]*\.css|style_${URL_SAFE_TAG}.css|g" HTML/index.html
+# Generate hashes from actual file content
+CSS_HASH=$(md5sum HTML/style.css | cut -d' ' -f1)
+JS_HASH=$(md5sum HTML/script.js | cut -d' ' -f1)
 
-# Alternatively, if there are also unversioned occurrences, include those as well:
-sed -i "s|script\.js|script_${URL_SAFE_TAG}.js|g" HTML/index.html
-sed -i "s|style\.css|style_${URL_SAFE_TAG}.css|g" HTML/index.html
+# Update the hashes in index.html
+sed -i "s|style\.css?hash=[^\"]*|style.css?hash=${CSS_HASH}|g" HTML/index.html
+sed -i "s|script\.js?hash=[^\"]*|script.js?hash=${JS_HASH}|g" HTML/index.html
 
 # Create a local version and perform the same replacement
 sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' HTML/index.html > HTML/index_local.html
@@ -59,7 +59,8 @@ cp -r HTML/*.html  "$TEMP_DIR"
 cp -r HTML/*.css "$TEMP_DIR"
 cp -r HTML/*.js  "$TEMP_DIR"
 cp -r HTML/*.ico "$TEMP_DIR"
+cp -r HTML/*.png "$TEMP_DIR"
 
 ./scripts/build-web-db.sh "$TEMP_DIR"
-xxd -i web.db ./HTML/web_db.cpp
+cp web_db.cpp ./HTML
 rm -rf "$TEMP_DIR"
