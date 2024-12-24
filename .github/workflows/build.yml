@@ -44,12 +44,7 @@ jobs:
         else
           echo "There are changes to be committed"
         fi
-        git add HTML/index_html.cpp
-        git add HTML/index_local.html
-        git add HTML/index_local_html.cpp
-        git add HTML/script_js.cpp
-        git add HTML/style_css.cpp
-        git add HTML/web_db.cpp
+        git add HTML/WebDB.cpp
         git add scripts/build.sh
         git add Application/version.h
         git config --local user.email "action@github.com"
