@@ -2,63 +2,48 @@
 
 # Check if directory argument is provided, otherwise use current directory
 BASE_DIR="${1:-.}"
-DB_FILE="web.db"
+OUTPUT_FILE="HTML/WebDB.cpp"
 
-# Remove existing database if it exists
-if [ -f "$DB_FILE" ]; then
-    rm "$DB_FILE"
+# Remove existing output file if it exists
+if [ -f "$OUTPUT_FILE" ]; then
+    rm "$OUTPUT_FILE"
 fi
 
-# Create the SQLite database and table with optimizations
-sqlite3 "$DB_FILE" <<EOF
-PRAGMA page_size=4096;
-PRAGMA encoding='UTF-8';
-PRAGMA journal_mode=OFF;
-PRAGMA synchronous=OFF;
-PRAGMA locking_mode=EXCLUSIVE;
-CREATE TABLE files (
-    path TEXT PRIMARY KEY,
-    content BLOB,
-    mime_type TEXT,
-    timestamp INTEGER,
-    original_size INTEGER
-);
+# Write header includes
+cat > "$OUTPUT_FILE" << 'EOF'
+#include "WebDB.h"
+
+namespace WebDB
+{
+
+  std::unordered_map<std::string, FileData> files;
+
 EOF
+
+# Function to convert filename to valid C identifier
+make_identifier() {
+    echo "$1" | sed 's/[^a-zA-Z0-9]/_/g' | sed 's/^[0-9]/_&/'
+}
 
 # Function to get MIME type based on extension
 get_mime_type() {
     local file="$1"
     local ext="${file##*.}"
     case "${ext,,}" in
-        # Text files
-        "html"|"htm") mime_type="text/html" ;;
-        "css")        mime_type="text/css" ;;
-        "js")         mime_type="application/javascript" ;;
-        "json")       mime_type="application/json" ;;
-        "txt")        mime_type="text/plain" ;;
-        "md")         mime_type="text/markdown" ;;
-        "xml")        mime_type="application/xml" ;;
-        "svg")        mime_type="image/svg+xml" ;;
-        # Images
-        "jpg"|"jpeg") mime_type="image/jpeg" ;;
-        "png")        mime_type="image/png" ;;
-        "gif")        mime_type="image/gif" ;;
-        "ico")        mime_type="image/x-icon" ;;
-        "webp")       mime_type="image/webp" ;;
-        # Default
-        *)            mime_type="application/octet-stream" ;;
-    esac
-    echo "$mime_type"
-}
-
-# Check if a MIME type is text-based
-is_text_mime() {
-    local mime="$1"
-    case "$mime" in
-        text/*|application/javascript|application/json|application/xml|image/svg+xml)
-            return 0 ;;
-        *)
-            return 1 ;;
+        "html"|"htm") echo "text/html" ;;
+        "css")        echo "text/css" ;;
+        "js")         echo "application/javascript" ;;
+        "json")       echo "application/json" ;;
+        "txt")        echo "text/plain" ;;
+        "md")         echo "text/markdown" ;;
+        "xml")        echo "application/xml" ;;
+        "svg")        echo "image/svg+xml" ;;
+        "jpg"|"jpeg") echo "image/jpeg" ;;
+        "png")        echo "image/png" ;;
+        "gif")        echo "image/gif" ;;
+        "ico")        echo "image/x-icon" ;;
+        "webp")       echo "image/webp" ;;
+        *)            echo "application/octet-stream" ;;
     esac
 }
 
@@ -71,46 +56,38 @@ process_file() {
     # Calculate relative path from BASE_DIR
     local relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
     
-    # Skip the database file itself and files outside BASE_DIR
-    if [ "$relative_path" = "$DB_FILE" ] || [[ $relative_path == ../* ]]; then
+    # Skip the output file itself and files outside BASE_DIR
+    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
         return
     fi
 
     echo "Processing: $relative_path"
     
-    # Get file metadata
+    # Create C-friendly identifier
+    local identifier=$(make_identifier "$relative_path")
     local mime_type=$(get_mime_type "$file")
-    local timestamp=$(stat -c %Y "$file")
-    local original_size=$(stat -c %s "$file")
 
     # Compress the file content
-    if is_text_mime "$mime_type"; then
-        # For text files, normalize line endings and compress
-        tr -d '\r' < "$file" | gzip -9 -n > "$TEMP_FILE"
-    else
-        # For binary files, just compress
-        gzip -9 -n < "$file" > "$TEMP_FILE"
-    fi
+    gzip -9 -n < "$file" > "$TEMP_FILE"
 
-    # Insert into database using SQLite's readfile() for binary data
-    sqlite3 "$DB_FILE" <<EOF
-INSERT INTO files (path, content, mime_type, timestamp, original_size)
-SELECT
-    '$relative_path',
-    readfile('$TEMP_FILE'),
-    '$mime_type',
-    $timestamp,
-    $original_size;
-EOF
+    # Generate the C array data
+    {
+        echo "// File: $relative_path"
+        echo "static const unsigned char data_${identifier}[] = {"
+        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | head -n -1
+        echo "};"
+        echo "static const size_t size_${identifier} = sizeof(data_${identifier});"
+        echo
+    } >> "$OUTPUT_FILE"
 }
 
 # Export functions and variables
 export -f process_file
-export DB_FILE
+export -f make_identifier
 export -f get_mime_type
-export -f is_text_mime
-export TEMP_FILE
+export OUTPUT_FILE
 export BASE_DIR
+export TEMP_FILE
 
 # Resolve BASE_DIR to absolute path
 BASE_DIR=$(realpath "$BASE_DIR")
@@ -122,29 +99,40 @@ find "$BASE_DIR" -type f -exec bash -c 'process_file "$0"' {} \;
 # Remove temporary file
 rm -f "$TEMP_FILE"
 
-# Create index and optimize
-sqlite3 "$DB_FILE" <<EOF
-CREATE INDEX idx_path ON files(path);
-VACUUM;
-ANALYZE;
+# Write the initialization function
+cat >> "$OUTPUT_FILE" << 'EOF'
+
+void initialize() {
 EOF
 
-echo "Database created successfully at $DB_FILE"
+# Add each file to the map
+find "$BASE_DIR" -type f | while read -r file; do
+    relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
+    # Skip output file and files outside BASE_DIR
+    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
+        continue
+    fi
+    identifier=$(make_identifier "$relative_path")
+    mime_type=$(get_mime_type "$file")
+    echo "    files.emplace(\"${relative_path}\", FileData(data_${identifier}, size_${identifier}, \"${mime_type}\"));" >> "$OUTPUT_FILE"
+done
+
+# Close the initialization function and namespace
+cat >> "$OUTPUT_FILE" << 'EOF'
+}
+
+struct Init {
+    Init() {
+        initialize();
+    }
+} init;
+
+} // namespace WebDB
+EOF
+
+echo "Header file generated successfully at $OUTPUT_FILE"
 
 # Print some statistics
 echo "Statistics:"
-sqlite3 "$DB_FILE" <<EOF
-SELECT
-    COUNT(*) as 'Total Files',
-    ROUND(SUM(length(content))/1024.0/1024.0, 2) as 'Compressed Size (MB)',
-    ROUND(SUM(original_size)/1024.0/1024.0, 2) as 'Original Size (MB)',
-    ROUND((1 - SUM(length(content))*1.0/SUM(original_size))*100, 1) as 'Space Saved %'
-FROM files;
-
-SELECT mime_type, COUNT(*) as count,
-    ROUND(SUM(length(content))/1024.0, 1) as 'KB Compressed',
-    ROUND(SUM(original_size)/1024.0, 1) as 'KB Original'
-FROM files
-GROUP BY mime_type
-ORDER BY count DESC;
-EOF
+echo "Total files processed: $(find "$BASE_DIR" -type f | wc -l)"
+echo "Output file size: $(stat -f %z "$OUTPUT_FILE" 2>/dev/null || stat -c %s "$OUTPUT_FILE") bytes"

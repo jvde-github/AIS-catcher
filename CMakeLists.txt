@@ -788,7 +788,7 @@ set(CPP
     Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/JSONAIS.cpp Library/Keys.cpp
     Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
     Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp Library/Logger.cpp
-    Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp
+    Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp HTML/WebDB.cpp
     DSP/DSP.cpp Device/N2KsktCAN.cpp
     IO/MsgOut.cpp IO/N2KStream.cpp Library/N2K.cpp IO/N2KInterface.cpp Protocol/Protocol.cpp)
 

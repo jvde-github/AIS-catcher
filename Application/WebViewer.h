@@ -22,7 +22,6 @@
 #include <condition_variable>
 #include <mutex>
 
-#include <map>
 #include "AIS-catcher.h"
 
 #include "Common.h"
@@ -159,9 +158,9 @@ public:
 
 	~WebViewer()
 	{
-		if(showlog)
+		if (showlog)
 			logger.Stop();
-			
+
 		stopThread();
 	}
 
