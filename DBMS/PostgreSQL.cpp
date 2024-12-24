@@ -88,7 +88,7 @@ namespace IO {
 
 			if (MAX_FAILS < 1000 && conn_fails > MAX_FAILS) {
 				Error() << "DBMS: max attemtps reached to connect to DBMS. Terminating." ;
-				StopRequest();
+				Command() << "stop";
 			}
 		}
 	}
