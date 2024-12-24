@@ -58,6 +58,7 @@ echo "Copying web files to temporary directory..."
 cp -r HTML/*.html  "$TEMP_DIR"
 cp -r HTML/*.css "$TEMP_DIR"
 cp -r HTML/*.js  "$TEMP_DIR"
+cp -r HTML/*.ico "$TEMP_DIR"
 
 ./scripts/build-web-db.sh "$TEMP_DIR"
 xxd -i web.db ./HTML/web_db.cpp
