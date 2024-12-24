@@ -104,6 +104,7 @@ namespace Device {
 	}
 
 	void RAWFile::Stop() {
+		std::cerr << "RAW file stop()" << std::endl;
 		if (Device::isStreaming()) {
 			Device::Stop();
 			fifo.Halt();

@@ -18,6 +18,7 @@
 #include "version.h"
 #include "WebViewer.h"
 
+#include "Application.h"
 bool communityFeed = false;
 
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
@@ -355,7 +356,8 @@ void WebViewer::start()
 		Clear();
 	}
 
-	if(realtime) {
+	if (realtime)
+	{
 		ships >> sse_streamer;
 		sse_streamer.setSSE(this);
 	}
@@ -435,6 +437,10 @@ void WebViewer::close()
 #include "HTML/style_css.cpp"
 #include "HTML/favicon.cpp"
 
+#include "control.h"
+#include "control.js"
+#include "control.css"
+
 void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, bool gzip)
 {
 
@@ -460,13 +466,25 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		else
 			ResponseRaw(c, "text/html", (char *)index_local_html_gz, index_local_html_gz_len, true);
 	}
+	else if (r == "/control.html")
+	{
+		ResponseRaw(c, "text/html", (char *)control_html, control_html_len, false);
+	}
 	else if (r == "/script_" VERSION_URL_TAG ".js")
 	{
 		ResponseRaw(c, "application/javascript", (char *)script_js_gz, script_js_gz_len, true, true);
 	}
+	else if (r == "/index.3e965ac6.js")
+	{
+		ResponseRaw(c, "application/javascript", (char *)index_3e965ac6_js, index_3e965ac6_js_len, true, true);
+	}
 	else if (r == "/style_" VERSION_URL_TAG ".css")
 	{
 		ResponseRaw(c, "text/css", (char *)style_css_gz, style_css_gz_len, true, true);
+	}
+	else if (r == "/index.4d663569.css")
+	{
+		ResponseRaw(c, "text/css", (char *)index_4d663569_css, index_4d663569_css_len, true, true);
 	}
 	else if (!cdn.empty() && r.find("/cdn/") == 0)
 	{
@@ -691,6 +709,23 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		}
 		else
 			Response(c, "application/text", "Message not availaible");
+	}
+	else if (r == "/api/stop")
+	{
+		Command() << "stop";
+		std::string content = "ok";
+		Response(c, "application/text", content, use_zlib & gzip);
+	}
+	else if (r == "/api/restart")
+	{
+		Command() << "restart";
+		std::string content = "ok";
+		Response(c, "application/text", content, use_zlib & gzip);
+	}
+	else if (r == "/api/getconfig")
+	{
+		std::string content = app.getJSONConfig();
+		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/vessel")
 	{
