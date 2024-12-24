@@ -32,7 +32,6 @@ enum class LogLevel
     _WARNING,
     _ERROR,
     _CRITICAL,
-    _COMMAND,
     _EMPTY
 };
 
@@ -52,7 +51,6 @@ struct LogMessage
 
 class Logger : public Setting
 {
-            
 public:
     static Logger &getInstance();
 
@@ -75,15 +73,7 @@ public:
 
     Setting &Set(std::string option, std::string arg);
 
-    void shutdown() {
-        should_stop_.store(true);
-        std::lock_guard<std::mutex> lock(mutex_);
-        log_listeners_.clear();
-        message_buffer_.clear();
-    }
 private:
-       std::atomic<bool> should_stop_{false};
-
     struct LogListener
     {
         int id;
@@ -141,4 +131,3 @@ LogStream Info();
 LogStream Warning();
 LogStream Error();
 LogStream Critical();
-LogStream Command();

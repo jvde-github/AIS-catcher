@@ -89,8 +89,6 @@ std::string LogMessage::levelToString() const
 		return "error";
 	case LogLevel::_CRITICAL:
 		return "critical";
-	case LogLevel::_COMMAND:
-		return "command";
 	case LogLevel::_EMPTY:
 		return "empty";
 	}
@@ -222,9 +220,8 @@ void Logger::notifyListeners(const LogMessage &msg)
 {
 	static std::atomic<bool> in_notify(false);
 	bool is_notifying = in_notify.exchange(true);
-
-	if (is_notifying)
-		return;
+	
+    if(is_notifying) return;
 
 	std::lock_guard<std::mutex> lock(mutex_);
 
@@ -273,9 +270,4 @@ LogStream Error()
 LogStream Critical()
 {
 	return LogStream(LogLevel::_CRITICAL);
-}
-
-LogStream Command()
-{
-	return LogStream(LogLevel::_COMMAND);
 }

@@ -167,7 +167,7 @@ namespace IO
 			if (file.fail())
 			{
 				Error() << "File: cannot write to file.";
-				Command() << "stop";
+				StopRequest();
 			}
 		}
 
@@ -185,7 +185,7 @@ namespace IO
 			if (file.fail())
 			{
 				Error() << "File: cannot write to file.";
-				Command() << "stop";
+				StopRequest();
 			}
 		}
 

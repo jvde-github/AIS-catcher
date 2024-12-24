@@ -290,7 +290,6 @@ namespace TCP
 
 	void Server::Run()
 	{
-		std::cerr << "RUN THREAD STARTED"	<< std::endl;
 		try
 		{
 			while (!stop)
@@ -434,7 +433,6 @@ namespace TCP
 			Info() << "TCP Server: start thread at IP " << IP_BIND << " port " << port;
 
 		run_thread = std::thread(&Server::Run, this);
-		std::cerr << "THREAD STARTED"	<< std::endl;
 
 		return true;
 	}
