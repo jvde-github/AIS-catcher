@@ -36,6 +36,13 @@ var hover_enabled_track = false,
     select_enabled_track = false,
     marker_tracks = new Set();
 
+if (typeof window.loadPlugins === 'undefined') {
+    window.loadPlugins = function () { };
+    communityFeed = false;
+    aboutMDpresent = false;
+    context = "aiscatcher";
+}
+
 const hover_info = document.getElementById('hover-info');
 
 let measures = [];
@@ -3252,7 +3259,7 @@ function updateChartLevel(chartData, timeframe, chartName, chart) {
     }
 
     const timeSeriesData = chartData[timeframe];
-    
+
     const minLevelData = [];
     for (let i = 0; i < timeSeriesData.time.length; i++) {
         minLevelData.push({
