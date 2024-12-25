@@ -34,33 +34,6 @@ sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' HTM
 echo "Updated Application/version.h with VERSION_DESCRIBE and VERSION_URL_TAG"
 echo "Updated index.html with versioned script and style references"
 
-# Minify and compress index.html and generate corresponding C++ files
-cd HTML
 
-rm index_html.cpp index_local_html.cpp style_css.cpp script_js.cpp
-minify index.html | gzip > index_html_gz
-xxd -i index_html_gz > index_html.cpp
+./scripts/build-web-db.sh HTML
 
-minify index_local.html | gzip > index_local_html_gz
-xxd -i index_local_html_gz > index_local_html.cpp
-
-minify script.js | gzip > script_js_gz
-xxd -i script_js_gz > script_js.cpp
-
-minify style.css | gzip > style_css_gz
-xxd -i style_css_gz > style_css.cpp
-
-cd ..
-
-TEMP_DIR=$(mktemp -d)
-
-echo "Copying web files to temporary directory..."
-cp -r HTML/*.html  "$TEMP_DIR"
-cp -r HTML/*.css "$TEMP_DIR"
-cp -r HTML/*.js  "$TEMP_DIR"
-cp -r HTML/*.ico "$TEMP_DIR"
-cp -r HTML/*.png "$TEMP_DIR"
-
-./scripts/build-web-db.sh "$TEMP_DIR"
-cp web_db.cpp ./HTML
-rm -rf "$TEMP_DIR"
