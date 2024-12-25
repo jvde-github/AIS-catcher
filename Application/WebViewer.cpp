@@ -17,7 +17,7 @@
 
 #include "version.h"
 #include "WebViewer.h"
-#include "HTML/WebDB.h"
+#include "Application/WebDB.h"
 
 bool communityFeed = false;
 
