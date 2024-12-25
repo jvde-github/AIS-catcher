@@ -44,7 +44,7 @@ jobs:
         else
           echo "There are changes to be committed"
         fi
-        git add HTML/WebDB.cpp
+        git add Application/WebDB.cpp
         git add scripts/build.sh
         git add Application/version.h
         git config --local user.email "action@github.com"

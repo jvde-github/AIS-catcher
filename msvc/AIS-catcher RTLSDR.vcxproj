@@ -24,6 +24,7 @@
     <ClCompile Include="..\Application\Receiver.cpp" />
     <ClCompile Include="..\Application\WebViewer.cpp" />
     <ClCompile Include="..\Application\Prometheus.cpp" />
+    <ClCompile Include="..\Application\WebDB.cpp" />
     <ClCompile Include="..\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Device\AIRSPYHF.cpp" />
     <ClCompile Include="..\Device\FileRAW.cpp" />
@@ -66,6 +67,7 @@
     <ClInclude Include="..\Application\Receiver.h" />
     <ClInclude Include="..\Application\WebViewer.h" />
     <ClInclude Include="..\Application\Prometheus.h" />
+    <ClInclude Include="..\Application\WebDB.h" />
     <ClInclude Include="..\Application\Config.h" />
     <ClInclude Include="..\Device\AIRSPY.h" />
     <ClInclude Include="..\Device\AIRSPYHF.h" />
