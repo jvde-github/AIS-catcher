@@ -608,11 +608,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			s->SendEvent("log", m.toJSON());
 		}
 	} 
-	else if (r == "/plugins.js")
+	else if (r == "/custom/plugins.js")
 	{
 		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
-	else if (r == "/config.css")
+	else if (r == "/custom/config.css")
 	{
 		Response(c, "text/css", stylesheets, use_zlib & gzip);
 	}
