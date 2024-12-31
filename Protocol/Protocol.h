@@ -232,7 +232,6 @@ namespace Protocol
 
 		bool setValue(const std::string &key, const std::string &value) override
 		{
-
 			if (key == "HOST")
 				host = value;
 			else if (key == "PORT")
@@ -253,7 +252,7 @@ namespace Protocol
 
 		std::string getValues() override
 		{
-			return "host " + host + " port " + port + " persist " + Util::Convert::toString(persistent) + " keep_alive " + Util::Convert::toString(keep_alive);
+			return "host " + host + " port " + port + " timeout " + std::to_string(timeout) + " persist " + Util::Convert::toString(persistent) + " keep_alive " + Util::Convert::toString(keep_alive);
 		}
 
 		std::string getHost() override
