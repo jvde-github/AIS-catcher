@@ -22,9 +22,7 @@
 #include "Message.h"
 #include "Stream.h"
 
-#include "JSON/JSON.h"
-#include "JSON/Parser.h"
-#include "JSON/StringBuilder.h"
+#include "Utilities.h"
 #include "Keys.h"
 #include "ADSB.h"
 
@@ -82,10 +80,8 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
         // Timestamps (Fields 7-10)
         if (!fields[6].empty() && !fields[7].empty())
         {
-            struct tm tm = {};
             std::string datetime = fields[6] + " " + fields[7];
-            strptime(datetime.c_str(), "%Y/%m/%d %H:%M:%S", &tm);
-            msg.setRxTimeUnix(mktime(&tm));
+            msg.setRxTimeUnix(Util::Parse::DateTime(datetime));
         }
 
         // Callsign (Field 10)

@@ -22,8 +22,8 @@ namespace Plane
 
     enum class BoolType
     {
-        FALSE = 0,
-        TRUE = 1,
+        IS_FALSE = 0,
+        IS_TRUE = 1,
         UNKNOWN = 2
     };
 
