@@ -79,7 +79,7 @@ namespace Device {
 	void RAWFile::Play() {
 		Device::Play();
 
-		if (getFormat() != Format::TXT) {
+		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION) {
 			fifo.Init(BUFFER_SIZE, BUFFER_COUNT);
 			buffer.resize(BUFFER_SIZE);
 		}

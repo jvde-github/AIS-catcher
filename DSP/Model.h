@@ -24,6 +24,7 @@
 #include "AIS.h"
 #include "NMEA.h"
 #include "N2K.h"
+#include "Basestation.h"
 
 #include "DSP.h"
 #include "Demod.h"
@@ -45,7 +46,8 @@ namespace AIS
 		IQ,
 		FM,
 		TXT,
-		N2K
+		N2K,
+		BASESTATION
 	};
 
 	// idea is to avoid that message threads from different devices cause issues downstream (e.g. with sending UDP or updating the database).
@@ -68,6 +70,26 @@ namespace AIS
 		}
 	};
 
+	// idea is to avoid that message threads from different devices cause issues downstream (e.g. with sending UDP or updating the database).
+	// can also be done further downstream
+	class MessageMutexADSB : public SimpleStreamInOut<Plane::ADSB, Plane::ADSB>
+	{
+		static std::mutex mtx;
+
+	public:
+		virtual ~MessageMutexADSB() {}
+		virtual void Receive(const Plane::ADSB *data, int len, TAG &tag)
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			Send(data, len, tag);
+		}
+		virtual void Receive(Plane::ADSB *data, int len, TAG &tag)
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			Send(data, len, tag);
+		}
+	};
+
 	// Abstract demodulation model
 	class Model : public Setting
 	{
@@ -82,6 +104,7 @@ namespace AIS
 		Device::Device *device;
 		Util::Timer<RAW> timer;
 		MessageMutex output;
+		MessageMutexADSB outputADSB;
 		Util::PassThrough<GPS> output_gps;
 
 	public:
@@ -90,6 +113,7 @@ namespace AIS
 
 		StreamOut<Message> &Output() { return output; }
 		StreamOut<GPS> &OutputGPS() { return output_gps; }
+		StreamOut<Plane::ADSB> &OutputADSB() { return outputADSB; }
 
 		void setName(std::string s) { name = s; }
 		std::string getName() { return name; }
@@ -273,6 +297,17 @@ namespace AIS
 		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::N2K; }
+	};
+
+	class ModelBaseStation : public Model
+	{
+		Basestation model;
+
+	public:
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
+		std::string Get();
+		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
 
 }

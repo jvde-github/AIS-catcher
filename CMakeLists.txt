@@ -789,12 +789,12 @@ set(CPP
     Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
     Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp Library/Logger.cpp
     Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp Application/WebDB.cpp
-    DSP/DSP.cpp Device/N2KsktCAN.cpp
+    DSP/DSP.cpp Device/N2KsktCAN.cpp Library/Basestation.cpp
     IO/MsgOut.cpp IO/N2KStream.cpp Library/N2K.cpp IO/N2KInterface.cpp Protocol/Protocol.cpp)
 
 set(HEADER
     Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Application/WebDB.h Library/Logger.h Application/WebViewer.h Application/Receiver.h Ships/Ships.h Ships/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h Application/MapTiles.h
-    Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h
+    Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h Library/Basestation.h Library/ADSB.h
     Device/AIRSPY.h Library/FIFO.h Device/N2KsktCAN.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Ships/History.h Ships/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h
     Device/Serial.h IO/N2KInterface.h Library/N2K.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/MsgOut.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h Protocol/Protocol.h)
 

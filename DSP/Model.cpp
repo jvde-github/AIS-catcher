@@ -20,41 +20,48 @@
 #include "Model.h"
 #include "Utilities.h"
 
-namespace AIS {
+namespace AIS
+{
 	std::mutex MessageMutex::mtx;
+	std::mutex MessageMutexADSB::mtx;
 
-	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		device = dev;
 
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
-		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 
-		if (mode == AIS::Mode::X) {
+		if (mode == AIS::Mode::X)
+		{
 
 			if (sample_rate < 12000 || sample_rate > 192000)
 				throw std::runtime_error("Model: sample rate must be between 12k and 192k (inclusive).");
 
 			physical >> convert;
 
-			const std::vector<uint32_t> definedRates = { 48000, 96000, 192000 };
+			const std::vector<uint32_t> definedRates = {48000, 96000, 192000};
 
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
 
 			for (uint32_t r : definedRates)
-				if (r >= sample_rate) {
+				if (r >= sample_rate)
+				{
 					bucket = r;
-					if (r != sample_rate) interpolated = true;
+					if (r != sample_rate)
+						interpolated = true;
 					break;
 				}
 
 			if (interpolated)
-				Warning() << "Warning: sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." ;
+				Warning() << "Warning: sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K.";
 
 			US.setParams(sample_rate, bucket);
 
-			switch (bucket - (interpolated ? 1 : 0)) {
+			switch (bucket - (interpolated ? 1 : 0))
+			{
 			case 192000:
 				FDC.setTaps(-1.1f);
 				if (!droop_compensation)
@@ -103,37 +110,42 @@ namespace AIS {
 		if (sample_rate < 96000 || sample_rate > 12288000)
 			throw std::runtime_error("Model: sample rate must be between 96K and 12288K (inclusive).");
 
-
-		if (SOXR_DS) {
+		if (SOXR_DS)
+		{
 			sox.setParams(sample_rate, 96000);
 			physical >> convert >> sox >> ROT;
 		}
-		else if (SAMPLERATE_DS) {
+		else if (SAMPLERATE_DS)
+		{
 			src.setParams(sample_rate, 96000);
 			physical >> convert >> src >> ROT;
 		}
-		else if (MA_DS) {
+		else if (MA_DS)
+		{
 			DS_MA.setRates(sample_rate, 96000);
 			physical >> convert >> DS_MA >> ROT;
 		}
-		else {
-			const std::vector<uint32_t> definedRatesNoDSK = { 96000, 192000, 288000, 384000, 768000, 1536000, 3072000, 6144000, 12288000 };
-			const std::vector<uint32_t> definedRatesDSK = { 96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000 };
+		else
+		{
+			const std::vector<uint32_t> definedRatesNoDSK = {96000, 192000, 288000, 384000, 768000, 1536000, 3072000, 6144000, 12288000};
+			const std::vector<uint32_t> definedRatesDSK = {96000, 192000, 288000, 384000, 576000, 768000, 1152000, 1536000, 2304000, 3072000, 6144000, 12288000};
 
-			const std::vector<uint32_t>& definedRates = allowDSK ? definedRatesDSK : definedRatesNoDSK;
+			const std::vector<uint32_t> &definedRates = allowDSK ? definedRatesDSK : definedRatesNoDSK;
 
 			uint32_t bucket = 0xFFFF;
 			bool interpolated = false;
 
 			for (uint32_t r : definedRates)
-				if (r >= sample_rate) {
+				if (r >= sample_rate)
+				{
 					bucket = r;
-					if (r != sample_rate) interpolated = true;
+					if (r != sample_rate)
+						interpolated = true;
 					break;
 				}
 
 			if (interpolated)
-				Warning() << "sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K." ;
+				Warning() << "sample rate " << sample_rate / 1000 << "K upsampled to " << bucket / 1000 << "K.";
 
 			US.setParams(sample_rate, bucket);
 			DSK.setParams(Filters::BlackmanHarris_28_3, 3);
@@ -143,7 +155,8 @@ namespace AIS {
 			// FDC is a 3-tap filter to compensate for droop in the CIC5 downsampling filters
 			// Filter coefficients currently set on empirical basis, and ignored for downsampling including decimation by 3
 
-			switch (bucket - (interpolated ? 1 : 0)) {
+			switch (bucket - (interpolated ? 1 : 0))
+			{
 				// 2^7
 			case 12288000:
 				FDC.setTaps(-2.0f);
@@ -209,13 +222,15 @@ namespace AIS {
 				// 2^4
 			case 1536000:
 				FDC.setTaps(-1.2f);
-				if (!fixedpointDS) {
+				if (!fixedpointDS)
+				{
 					if (!droop_compensation)
 						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
 					else
 						convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
 				}
-				else {
+				else
+				{
 					if (!droop_compensation)
 						convert.outCU8 >> DS16_CU8 >> ROT;
 					else
@@ -334,36 +349,44 @@ namespace AIS {
 		return;
 	}
 
-	Setting& ModelFrontend::Set(std::string option, std::string arg) {
+	Setting &ModelFrontend::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
-		if (option == "FP_DS") {
+		if (option == "FP_DS")
+		{
 			fixedpointDS = Util::Parse::Switch(arg);
 			MA_DS = false;
 		}
-		else if (option == "SOXR") {
+		else if (option == "SOXR")
+		{
 			SOXR_DS = Util::Parse::Switch(arg);
 			SAMPLERATE_DS = false;
 			MA_DS = false;
 		}
-		else if (option == "SRC") {
+		else if (option == "SRC")
+		{
 			SAMPLERATE_DS = Util::Parse::Switch(arg);
 			SOXR_DS = false;
 			MA_DS = false;
 		}
-		else if (option == "MA") {
+		else if (option == "MA")
+		{
 			MA_DS = Util::Parse::Switch(arg);
 			SAMPLERATE_DS = false;
 			SOXR_DS = false;
 		}
-		else if (option == "DSK") {
+		else if (option == "DSK")
+		{
 			allowDSK = Util::Parse::Switch(arg);
 		}
-		else if (option == "DROOP") {
+		else if (option == "DROOP")
+		{
 			droop_compensation = Util::Parse::Switch(arg);
 		}
-		else if (option == "STATION_ID") {
+		else if (option == "STATION_ID")
+		{
 			station = Util::Parse::Integer(arg);
 		}
 		else
@@ -372,7 +395,8 @@ namespace AIS {
 		return *this;
 	}
 
-	std::string ModelFrontend::Get() {
+	std::string ModelFrontend::Get()
+	{
 
 		std::string str;
 
@@ -386,7 +410,8 @@ namespace AIS {
 		return "droop " + Util::Convert::toString(droop_compensation) + " fp_ds " + Util::Convert::toString(fixedpointDS) + " dsk " + Util::Convert::toString(allowDSK) + " " + Model::Get();
 	}
 
-	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 		setName("Base (non-coherent)");
 
@@ -407,7 +432,8 @@ namespace AIS {
 		return;
 	}
 
-	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 		setName("Standard (non-coherent)");
 
@@ -425,15 +451,18 @@ namespace AIS {
 		*C_a >> FM_a >> FR_a >> S_a;
 		*C_b >> FM_b >> FR_b >> S_b;
 
-		for (int i = 0; i < nSymbolsPerSample; i++) {
+		for (int i = 0; i < nSymbolsPerSample; i++)
+		{
 			DEC_a[i].setOrigin(CH1, station, own_mmsi);
 			DEC_b[i].setOrigin(CH2, station, own_mmsi);
 
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
 
-			for (int j = 0; j < nSymbolsPerSample; j++) {
-				if (i != j) {
+			for (int j = 0; j < nSymbolsPerSample; j++)
+			{
+				if (i != j)
+				{
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
@@ -443,7 +472,8 @@ namespace AIS {
 		return;
 	}
 
-	void ModelDefault::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelDefault::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
 		setName("AIS engine " VERSION);
@@ -459,11 +489,13 @@ namespace AIS {
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		if (!PS_EMA) {
+		if (!PS_EMA)
+		{
 			CD_a.resize(nSymbolsPerSample);
 			CD_b.resize(nSymbolsPerSample);
 		}
-		else {
+		else
+		{
 			CD_EMA_a.resize(nSymbolsPerSample);
 			CD_EMA_b.resize(nSymbolsPerSample);
 		}
@@ -471,7 +503,8 @@ namespace AIS {
 		CGF_a.setParams(512, 187);
 		CGF_b.setParams(512, 187);
 
-		if (CGF_wide) {
+		if (CGF_wide)
+		{
 			CGF_a.setWide(true);
 			CGF_b.setWide(true);
 		}
@@ -479,26 +512,31 @@ namespace AIS {
 		*C_a >> CGF_a >> FC_a >> S_a;
 		*C_b >> CGF_b >> FC_b >> S_b;
 
-		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1, station,own_mmsi);
-			DEC_b[i].setOrigin(CH2, station,own_mmsi);
+		for (int i = 0; i < nSymbolsPerSample; i++)
+		{
+			DEC_a[i].setOrigin(CH1, station, own_mmsi);
+			DEC_b[i].setOrigin(CH2, station, own_mmsi);
 
-			if (!PS_EMA) {
+			if (!PS_EMA)
+			{
 				CD_a[i].setParams(nHistory, nDelay);
 				CD_b[i].setParams(nHistory, nDelay);
 
 				S_a.out[i] >> CD_a[i] >> DEC_a[i] >> output;
 				S_b.out[i] >> CD_b[i] >> DEC_b[i] >> output;
 			}
-			else {
+			else
+			{
 				CD_EMA_a[i].setParams(nDelay);
 				CD_EMA_b[i].setParams(nDelay);
 
 				S_a.out[i] >> CD_EMA_a[i] >> DEC_a[i] >> output;
 				S_b.out[i] >> CD_EMA_b[i] >> DEC_b[i] >> output;
 			}
-			for (int j = 0; j < nSymbolsPerSample; j++) {
-				if (i != j) {
+			for (int j = 0; j < nSymbolsPerSample; j++)
+			{
+				if (i != j)
+				{
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
@@ -508,14 +546,17 @@ namespace AIS {
 		return;
 	}
 
-	Setting& ModelDefault::Set(std::string option, std::string arg) {
+	Setting &ModelDefault::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
-		if (option == "PS_EMA") {
+		if (option == "PS_EMA")
+		{
 			PS_EMA = Util::Parse::Switch(arg);
 		}
-		else if (option == "AFC_WIDE") {
+		else if (option == "AFC_WIDE")
+		{
 			CGF_wide = Util::Parse::Switch(arg);
 		}
 		else
@@ -524,11 +565,13 @@ namespace AIS {
 		return *this;
 	}
 
-	std::string ModelDefault::Get() {
+	std::string ModelDefault::Get()
+	{
 		return "ps_ema " + Util::Convert::toString(PS_EMA) + " afc_wide " + Util::Convert::toString(CGF_wide) + " " + ModelFrontend::Get();
 	}
 
-	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelChallenger::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
 		setName("Challenger " VERSION);
@@ -559,7 +602,8 @@ namespace AIS {
 		CGF_a.setParams(512, 187);
 		CGF_b.setParams(512, 187);
 
-		if (CGF_wide) {
+		if (CGF_wide)
+		{
 			CGF_a.setWide(true);
 			CGF_b.setWide(true);
 		}
@@ -575,12 +619,13 @@ namespace AIS {
 		throttle_a.out[0] >> FM_af >> FR_af >> S_af;
 		throttle_b.out[0] >> FM_bf >> FR_bf >> S_bf;
 
-		for (int i = 0; i < nSymbolsPerSample; i++) {
-			DEC_a[i].setOrigin(CH1, station,own_mmsi);
-			DEC_af[i].setOrigin(CH1, station,own_mmsi);
+		for (int i = 0; i < nSymbolsPerSample; i++)
+		{
+			DEC_a[i].setOrigin(CH1, station, own_mmsi);
+			DEC_af[i].setOrigin(CH1, station, own_mmsi);
 
-			DEC_b[i].setOrigin(CH2, station,own_mmsi);
-			DEC_bf[i].setOrigin(CH2, station,own_mmsi);
+			DEC_b[i].setOrigin(CH2, station, own_mmsi);
+			DEC_bf[i].setOrigin(CH2, station, own_mmsi);
 
 			CD_EMA_a[i].setParams(nDelay);
 			CD_EMA_b[i].setParams(nDelay);
@@ -591,14 +636,16 @@ namespace AIS {
 			S_af.out[i] >> DEC_af[i] >> output;
 			S_bf.out[i] >> DEC_bf[i] >> output;
 
-			for (int j = 0; j < nSymbolsPerSample; j++) {
+			for (int j = 0; j < nSymbolsPerSample; j++)
+			{
 				DEC_af[i].DecoderMessage.Connect(DEC_a[j]);
 				DEC_a[i].DecoderMessage.Connect(DEC_af[j]);
 
 				DEC_bf[i].DecoderMessage.Connect(DEC_b[j]);
 				DEC_b[i].DecoderMessage.Connect(DEC_bf[j]);
 
-				if (i != j) {
+				if (i != j)
+				{
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_af[i].DecoderMessage.Connect(DEC_af[j]);
 
@@ -611,14 +658,17 @@ namespace AIS {
 		return;
 	}
 
-	Setting& ModelChallenger::Set(std::string option, std::string arg) {
+	Setting &ModelChallenger::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 		Util::Convert::toUpper(arg);
 
-		if (option == "PS_EMA") {
+		if (option == "PS_EMA")
+		{
 			PS_EMA = Util::Parse::Switch(arg);
 		}
-		else if (option == "AFC_WIDE") {
+		else if (option == "AFC_WIDE")
+		{
 			CGF_wide = Util::Parse::Switch(arg);
 		}
 		else
@@ -627,11 +677,13 @@ namespace AIS {
 		return *this;
 	}
 
-	std::string ModelChallenger::Get() {
+	std::string ModelChallenger::Get()
+	{
 		return "ps_ema " + Util::Convert::toString(PS_EMA) + " afc_wide " + Util::Convert::toString(CGF_wide) + " " + ModelFrontend::Get();
 	}
 
-	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		setName("FM discriminator output model");
 
 		device = dev;
@@ -646,14 +698,16 @@ namespace AIS {
 		DEC_a.resize(nSymbolsPerSample);
 		DEC_b.resize(nSymbolsPerSample);
 
-		Connection<RAW>& physical = timerOn ? (*device >> timer).out : device->out;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 
-		if (sample_rate == 48000) {
+		if (sample_rate == 48000)
+		{
 			physical >> convert;
 			convert >> RP >> FR_a;
 			convert >> IP >> FR_b;
 		}
-		else if (sample_rate < 48000) {
+		else if (sample_rate < 48000)
+		{
 			US.setParams(sample_rate, 48000);
 			physical >> convert >> US;
 			convert >> RP >> FR_a;
@@ -665,15 +719,18 @@ namespace AIS {
 		FR_a >> S_a;
 		FR_b >> S_b;
 
-		for (int i = 0; i < nSymbolsPerSample; i++) {
+		for (int i = 0; i < nSymbolsPerSample; i++)
+		{
 			S_a.out[i] >> DEC_a[i] >> output;
 			S_b.out[i] >> DEC_b[i] >> output;
 
-			DEC_a[i].setOrigin(CH1, station,own_mmsi);
-			DEC_b[i].setOrigin(CH2, station,own_mmsi);
+			DEC_a[i].setOrigin(CH1, station, own_mmsi);
+			DEC_b[i].setOrigin(CH2, station, own_mmsi);
 
-			for (int j = 0; j < nSymbolsPerSample; j++) {
-				if (i != j) {
+			for (int j = 0; j < nSymbolsPerSample; j++)
+			{
+				if (i != j)
+				{
 					DEC_a[i].DecoderMessage.Connect(DEC_a[j]);
 					DEC_b[i].DecoderMessage.Connect(DEC_b[j]);
 				}
@@ -683,7 +740,8 @@ namespace AIS {
 		return;
 	}
 
-	void ModelNMEA::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelNMEA::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		setName("NMEA input");
 		device = dev;
 		*device >> nmea >> output;
@@ -693,29 +751,37 @@ namespace AIS {
 		nmea.setOwnMMSI(own_mmsi);
 	}
 
-	Setting& ModelNMEA::Set(std::string option, std::string arg) {
+	Setting &ModelNMEA::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 		// Util::Convert::toUpper(arg);
 
-		if (option == "NMEA_REFRESH") {
+		if (option == "NMEA_REFRESH")
+		{
 			nmea.setRegenerate(Util::Parse::Switch(arg));
 		}
-		else if (option == "STAMP") {
+		else if (option == "STAMP")
+		{
 			nmea.setStamp(Util::Parse::Switch(arg));
 		}
-		else if (option == "CRC_CHECK") {
+		else if (option == "CRC_CHECK")
+		{
 			nmea.setCRCcheck(Util::Parse::Switch(arg));
 		}
-		else if (option == "VDO") {
+		else if (option == "VDO")
+		{
 			nmea.setVDO(Util::Parse::Switch(arg));
 		}
-		else if (option == "UUID") {
+		else if (option == "UUID")
+		{
 			nmea.setUUID(arg);
 		}
-		else if (option == "WARNINGS") {
+		else if (option == "WARNINGS")
+		{
 			nmea.setWarnings(Util::Parse::Switch(arg));
 		}
-		else if (option == "GPS") {
+		else if (option == "GPS")
+		{
 			nmea.setGPS(Util::Parse::Switch(arg));
 		}
 		else
@@ -724,25 +790,49 @@ namespace AIS {
 		return *this;
 	}
 
-	std::string ModelNMEA::Get() {
+	std::string ModelNMEA::Get()
+	{
 		return "nmea_refresh " + Util::Convert::toString(nmea.getRegenerate()) + " uuid " + nmea.getUUID() + " ID " + std::to_string(nmea.getStation()) + " stamp " + Util::Convert::toString(nmea.getStamp()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
 	}
 
-	void ModelN2K::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device* dev) {
+	void ModelN2K::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
 		setName("N2K input");
 		device = dev;
 		*device >> n2k >> output;
 	}
 
-	Setting& ModelN2K::Set(std::string option, std::string arg) {
+	Setting &ModelN2K::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 
 		Model::Set(option, arg);
 		return *this;
 	}
 
-	std::string ModelN2K::Get() {
+	std::string ModelN2K::Get()
+	{
 		return Model::Get();
 	}
 
+	void ModelBaseStation::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
+		setName("ADSB input");
+		device = dev;
+		*device >> model >> outputADSB;
+	}
+
+	Setting &ModelBaseStation::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		Model::Set(option, arg);
+
+		return *this;
+	}
+
+	std::string ModelBaseStation::Get()
+	{
+		return Model::Get();
+	}
 }
