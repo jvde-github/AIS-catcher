@@ -48,6 +48,7 @@ namespace Device
 			break;
 		case PROTOCOL::RTLTCP:
 			session = tcp.add(&rtltcp);
+			tcp.setValue("TIMEOUT", "2");
 			break;
 		case PROTOCOL::WS:
 			session = tcp.add(&ws);
