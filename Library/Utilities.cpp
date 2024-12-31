@@ -16,6 +16,7 @@
 */
 
 #include <iomanip>
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -105,8 +106,6 @@ namespace Util
 
 		return number;
 	}
-
-#include <string>
 
 	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path)
 	{
@@ -380,6 +379,25 @@ namespace Util
 			return "";
 		}
 	}
+
+#ifdef _WIN32
+	std::time_t Parse::DateTime(const std::string &datetime)
+	{
+		std::tm tm = {};
+		std::istringstream ss(datetime);
+		ss >> std::get_time(&tm, "%Y/%m/%d %H:%M:%S");
+		if (ss.fail())
+			return 0;
+		return _mkgmtime(&tm);
+	}
+#else
+	std::time_t Parse::DateTime(const std::string &datetime)
+	{
+		std::tm tm = {};
+		strptime(datetime.c_str(), "%Y/%m/%d %H:%M:%S", &tm);
+		return timegm(&tm);
+	}
+#endif
 
 	bool Parse::Switch(std::string arg, const std::string &TrueString, const std::string &FalseString)
 	{
