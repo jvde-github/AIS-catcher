@@ -217,6 +217,8 @@ namespace Util
 			format = Format::CS8;
 		else if (str == "TXT")
 			format = Format::TXT;
+		else if (str == "BASESTATION")
+			format = Format::BASESTATION;
 		else
 			return false;
 
@@ -292,6 +294,10 @@ namespace Util
 		else if (arg == "WSMQTT")
 		{
 			protocol = PROTOCOL::WSMQTT;
+		}
+		else if (arg == "BASESTATION")
+		{
+			protocol = PROTOCOL::BASESTATION;
 		}
 		else
 			return false;
@@ -443,6 +449,8 @@ namespace Util
 			return "CS8";
 		case Format::TXT:
 			return "TXT";
+		case Format::BASESTATION:
+			return "BASESTATION";
 		default:
 			break;
 		}
@@ -467,6 +475,8 @@ namespace Util
 			return "MQTT";
 		case PROTOCOL::WSMQTT:
 			return "WSMQTT";
+		case PROTOCOL::BASESTATION:
+			return "BASESTATION";
 		}
 		return "";
 	}

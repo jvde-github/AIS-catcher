@@ -15,7 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include "Receiver.h"
 #include "Utilities.h"
 #include "JSON/StringBuilder.h"
@@ -270,6 +269,9 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 	case 6:
 		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelN2K()));
 		break;
+	case 7:
+		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelBaseStation()));
+		break;
 	default:
 		throw std::runtime_error("Model not implemented in this version. Check in later.");
 	}
@@ -289,6 +291,9 @@ void Receiver::setupModel(int &group)
 		case Format::N2K:
 			addModel(6);
 			break;
+		case Format::BASESTATION:
+			addModel(7);
+			break;
 		default:
 			addModel(2);
 			break;
@@ -298,7 +303,8 @@ void Receiver::setupModel(int &group)
 	for (const auto &m : models)
 	{
 		if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
-			(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT))
+			(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT) || 
+			(m->getClass() == AIS::ModelClass::BASESTATION && device->getFormat() != Format::BASESTATION) )
 			throw std::runtime_error("Decoding model and input format not consistent.");
 	}
 
@@ -345,10 +351,10 @@ void Receiver::play()
 	{
 		std::stringstream ss;
 		ss << "Device    : " << device->getProduct() << "\n"
-			   << "Settings  : " << device->Get() << "\n"; 
+		   << "Settings  : " << device->Get() << "\n";
 		for (int i = 0; i < models.size(); i++)
 			ss << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
-				   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() << "\n";
+			   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() << "\n";
 
 		Info() << ss.str();
 	}

@@ -63,6 +63,7 @@ enum class Format
 	CS8,
 	TXT,
 	N2K,
+	BASESTATION,
 	UNKNOWN
 };
 
@@ -74,7 +75,8 @@ enum class PROTOCOL
 	TXT,
 	MQTT,
 	WS,
-	WSMQTT
+	WSMQTT,
+	BASESTATION
 };
 
 enum class Type
@@ -159,6 +161,11 @@ const float LEVEL_UNDEFINED = 1024;
 const float PPM_UNDEFINED = 1024;
 
 const int STATUS_OK = 0;
+
+const int GROUNDSPEED_UNDEFINED = -1;
+const int VERTRATE_UNDEFINED = -10000;
+const int SQUAWK_UNDEFINED = -1;           
+const int TRACK_UNDEFINED  = 360;
 
 struct TAG
 {
