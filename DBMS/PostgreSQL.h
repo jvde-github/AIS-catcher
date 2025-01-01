@@ -40,7 +40,7 @@ namespace IO {
 		std::stringstream sql;
 		AIS::Filter filter;
 		int station_id = 0;
-#ifdef WIN32
+#ifdef HASPSQL
 		int conn_fails = 0;
 #endif
 		int MAX_FAILS = 10;
@@ -58,14 +58,14 @@ namespace IO {
 #ifdef HASPSQL
 		PGconn* con = nullptr;
 		std::vector<int> db_keys;
+		bool terminate = false, running = false;
+
 #endif
 
 		bool MSGS = false, NMEA = false, VP = false, VS = false, BS = false, ATON = false, SAR = false, VD = true;
 		std::string conn_string = "dbname=ais";
 		std::thread run_thread;
-#ifdef WIN32
-		bool terminate = false, running = false;
-#endif
+
 		std::mutex queue_mutex;
 
 		int INTERVAL = 10;
