@@ -146,7 +146,7 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
             msg.setOnGround((Plane::BoolType)(fields[21] == "-1"));
         }
 
-        msg.Print();
+        //msg.Print();
         Send(&msg, 1, tag);
     }
 

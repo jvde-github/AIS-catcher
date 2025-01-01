@@ -30,6 +30,7 @@
 #include "Prometheus.h"
 #include "HTTPServer.h"
 #include "DB.h"
+#include "PlaneDB.h"
 #include "History.h"
 #include "Receiver.h"
 #include "MapTiles.h"
@@ -117,6 +118,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 	std::string about = "This content can be set by the station owner";
 
 	DB ships;
+	PlaneDB planes;
 
 	// history of 180 minutes and 180 seconds
 	History<60, 60> hist_minute;

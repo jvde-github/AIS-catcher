@@ -312,6 +312,7 @@ void WebViewer::connect(Receiver &r)
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&ships);
+			r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
 
 			*r.device >> raw_counter;
 		}
@@ -578,6 +579,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	else if (r == "/api/ships_array.json")
 	{
 		std::string content = ships.getJSONcompact();
+		Response(c, "application/json", content, use_zlib & gzip);
+	}
+		else if (r == "/api/planes_array.json")
+	{
+		std::string content = planes.getCompactArray();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/sb")

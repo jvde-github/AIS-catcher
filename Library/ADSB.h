@@ -40,9 +40,9 @@ namespace Plane
         ALL_CALL_REPLY = 8     // All Call Reply
     };
 
-    class ADSB
+    struct ADSB
     {
-    protected:
+        int prev, next;
         std::time_t rxtime;
         MessageType type;
         TransmissionType transmission;
@@ -52,14 +52,13 @@ namespace Plane
         FLOAT32 groundspeed; // Speed over ground
         FLOAT32 track;       // Track angle
         int vertrate;        // Vertical rate
-        char callsign[8];    // Aircraft callsign
+        char callsign[9];    // Aircraft callsign, nul terminated
         int squawk;          // Mode A squawk code
         BoolType alert;      // Squawk change flag
         BoolType emergency;  // Emergency flag
         BoolType spi;        // Ident flag
         BoolType onground;   // Ground squat switch flag
 
-    public:
         void Stamp(std::time_t t = (std::time_t)0L)
         {
             std::time(&rxtime);
@@ -83,7 +82,7 @@ namespace Plane
             vertrate = VERTRATE_UNDEFINED;
             squawk = SQUAWK_UNDEFINED;
             alert = emergency = spi = onground = BoolType::UNKNOWN;
-            std::memset(callsign, '@', 8);
+            callsign[8] = '\0';
         }
 
         // Getters
@@ -97,7 +96,7 @@ namespace Plane
         FLOAT32 getGroundSpeed() const { return groundspeed; }
         FLOAT32 getTrack() const { return track; }
         int getVertRate() const { return vertrate; }
-        std::string getCallsign() const { return std::string(callsign, 8); }
+        std::string getCallsign() const { return std::string(callsign); }
         int getSquawk() const { return squawk; }
         BoolType getAlert() const { return alert; }
         BoolType getEmergency() const { return emergency; }
@@ -120,9 +119,17 @@ namespace Plane
         void setVertRate(int vr) { vertrate = vr; }
         void setCallsign(const std::string &c)
         {
-            std::memset(callsign, '@', 8);
-            std::strncpy(callsign, c.c_str(), MIN(c.length(), sizeof(callsign)));
+            for(int i = 0; i < 8; i++)
+            {
+                if (i < c.size() && c[i] != '\0' && c[i] != '@')
+                    callsign[i] = c[i];
+                else {
+                    callsign[i] = '\0';
+                    break;
+                }
+            }
         }
+
         void setSquawk(int s) { squawk = s; }
         void setAlert(BoolType a) { alert = (BoolType)a; }
         void setEmergency(BoolType e) { emergency = (BoolType)e; }
