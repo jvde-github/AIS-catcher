@@ -38,8 +38,8 @@
     <ClCompile Include="..\Device\SDRPLAY.cpp" />
     <ClCompile Include="..\Device\SoapySDR.cpp" />
     <ClCompile Include="..\Device\SpyServer.cpp" />
-    <ClCompile Include="..\Ships\DB.cpp" />
-    <ClCompile Include="..\Ships\Ships.cpp" />
+    <ClCompile Include="..\Tracking\DB.cpp" />
+    <ClCompile Include="..\Tracking\Ships.cpp" />
     <ClCompile Include="..\DSP\Demod.cpp" />
     <ClCompile Include="..\DSP\DSP.cpp" />
     <ClCompile Include="..\DSP\Model.cpp" />
@@ -89,10 +89,10 @@
     <ClInclude Include="..\Device\SDRPLAY.h" />
     <ClInclude Include="..\Device\SoapySDR.h" />
     <ClInclude Include="..\Device\SpyServer.h" />
-    <ClInclude Include="..\Ships\DB.h" />
-    <ClInclude Include="..\Ships\Statistics.h" />
-    <ClInclude Include="..\Ships\History.h" />
-    <ClInclude Include="..\Ships\Ships.h" />
+    <ClInclude Include="..\Tracking\DB.h" />
+    <ClInclude Include="..\Tracking\Statistics.h" />
+    <ClInclude Include="..\Tracking\History.h" />
+    <ClInclude Include="..\Tracking\Ships.h" />
     <ClInclude Include="..\DSP\Demod.h" />
     <ClInclude Include="..\DSP\DSP.h" />
     <ClInclude Include="..\DSP\FFT.h" />
