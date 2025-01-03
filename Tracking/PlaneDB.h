@@ -111,7 +111,7 @@ public:
         if (msg->getSquawk() != SQUAWK_UNDEFINED) {
             plane.setSquawk(msg->getSquawk());
         }
-        if (msg->getCallsign() != "@@@@@@@@") {
+        if (!msg->getCallsign().empty()) {
             plane.setCallsign(msg->getCallsign());
         }
 
@@ -169,7 +169,7 @@ public:
                     (plane.getTrack() != TRACK_UNDEFINED ? std::to_string(plane.getTrack()) : null_str) + comma +
                     (plane.getVertRate() != VERTRATE_UNDEFINED ? std::to_string(plane.getVertRate()) : null_str) + comma +
                     (plane.getSquawk() != SQUAWK_UNDEFINED ? std::to_string(plane.getSquawk()) : null_str) + comma +
-                    plane.getCallsign()  + comma +
+                    + "\"" + plane.getCallsign()  + "\"" + comma +
                     (plane.getAlert() != Plane::BoolType::UNKNOWN ? std::to_string(static_cast<int>(plane.getAlert())) : null_str) + comma +
                     (plane.getEmergency() != Plane::BoolType::UNKNOWN ? std::to_string(static_cast<int>(plane.getEmergency())) : null_str) + comma +
                     (plane.getSPI() != Plane::BoolType::UNKNOWN ? std::to_string(static_cast<int>(plane.getSPI())) : null_str) + comma +

@@ -74,7 +74,10 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
         // HexIdent (Field 4)
         if (!fields[4].empty())
         {
-            msg.setHexIdent(std::stoul(fields[4], nullptr, 16));
+            if(fields[4][0] == '~')
+                msg.setHexIdent(std::stoul(fields[4].substr(1), nullptr, 16));
+            else
+                msg.setHexIdent(std::stoul(fields[4], nullptr, 16));
         }
 
         // Timestamps (Fields 7-10)
@@ -89,6 +92,7 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
         {
             msg.setCallsign(fields[10]);
         }
+
 
         // Altitude (Field 11)
         if (fields.size() > 11 && !fields[11].empty())
@@ -147,6 +151,7 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
         }
 
         //msg.Print();
+
         Send(&msg, 1, tag);
     }
 
@@ -163,7 +168,12 @@ public:
                 {
                     if (line.length() > 0)
                     {
+                        try {
                         processLine();
+                        } catch (const std::exception &e) {
+                            std::cerr << "Error processing line: " << line << " " << e.what() << std::endl;
+                        
+                        }
                         line.clear();
                     }
                 }
