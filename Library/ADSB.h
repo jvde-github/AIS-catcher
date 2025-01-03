@@ -82,7 +82,7 @@ namespace Plane
             vertrate = VERTRATE_UNDEFINED;
             squawk = SQUAWK_UNDEFINED;
             alert = emergency = spi = onground = BoolType::UNKNOWN;
-            callsign[8] = '\0';
+            callsign[0] = '\0';
         }
 
         // Getters
@@ -117,12 +117,19 @@ namespace Plane
         void setGroundSpeed(FLOAT32 gs) { groundspeed = gs; }
         void setTrack(FLOAT32 t) { track = t; }
         void setVertRate(int vr) { vertrate = vr; }
-        void setCallsign(const std::string &c)
-        {
-            for(int i = 0; i < 8; i++)
-            {
-                if (i < c.size() && c[i] != '\0' && c[i] != '@')
+
+        void setCallsign(const std::string &c) {
+            callsign[0] = '\0';  
+            size_t end = c.length();
+            while (end > 0 && c[end-1] == ' ') {
+                end--;
+            }
+            
+            for(int i = 0; i < 8; i++) {
+                if (i < end && c[i] != '\0' && c[i] != '@' && c[i] >= 32 && c[i] <= 126)  
+                {
                     callsign[i] = c[i];
+                }
                 else {
                     callsign[i] = '\0';
                     break;
