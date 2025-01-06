@@ -52,7 +52,7 @@ void Receiver::setTags(const std::string &s)
 			tag.mode |= 1;
 			break;
 		default:
-			throw std::runtime_error("illegal tag '" + std::string(1, c) + "' defined on command line [D / T / M]");
+			Warning() << "Unknown tag '" + std::string(1,c) + "' defined on command line [D / T /M]";
 		}
 	}
 }
