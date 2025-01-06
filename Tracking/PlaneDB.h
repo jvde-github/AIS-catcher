@@ -157,7 +157,7 @@ public:
                 
                 // Skip inactive planes unless requested
                 if (!include_inactive && time_since_update > 3600) {
-                    //break;
+                    break;
                 }
                 
                 content += delim + "[" +
