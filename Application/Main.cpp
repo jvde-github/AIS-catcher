@@ -265,7 +265,7 @@ static void Assert(bool b, std::string &context, std::string msg = "")
 int main(int argc, char *argv[])
 {
 
-	std::string file_config;
+	//std::string file_config;
 
 	std::vector<std::unique_ptr<Receiver>> _receivers;
 	_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
@@ -283,6 +283,8 @@ int main(int argc, char *argv[])
 	bool timeout_nomsg = false, list_devices_JSON = false, no_run = false;
 	int own_mmsi = -1;
 	int cb = -1;
+
+	Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
 
 	try
 	{
@@ -354,7 +356,11 @@ int main(int argc, char *argv[])
 				break;
 			case 'C':
 				Assert(count == 1, param, "one parameter required: filename");
-				file_config = arg1;
+				//file_config = arg1;
+				if (!arg1.empty())
+				{
+					c.read(arg1);
+				}
 				break;
 			case 'N':
 				Assert(count > 0, param, "requires at least one parameter");
@@ -731,6 +737,7 @@ int main(int argc, char *argv[])
 
 		printVersion();
 
+		/*
 		// -------------
 		// Read config file
 
@@ -739,7 +746,7 @@ int main(int argc, char *argv[])
 			Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
 			c.read(file_config);
 		}
-
+		*/
 		if (list_devices)
 			printDevices(*_receivers.back(), list_devices_JSON);
 		if (list_support)
