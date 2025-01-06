@@ -285,6 +285,7 @@ int main(int argc, char *argv[])
 	int cb = -1;
 
 	Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
+	IO::OutputMessage *commm_feed = nullptr;
 
 	try
 	{
@@ -621,14 +622,14 @@ int main(int argc, char *argv[])
 					if (!communityFeed)
 					{
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-						IO::OutputMessage &p = *msg.back();
-						p.Set("HOST", "185.77.96.227").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
-
-						if (count == 1)
-							p.Set("UUID", arg1);
+						commm_feed = msg.back().get();
+						commm_feed->Set("HOST", "185.77.96.227").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
 
 						communityFeed = true;
 					}
+
+					if (count == 1 && commm_feed)
+						commm_feed->Set("UUID", arg1);
 				}
 				break;
 			case 'H':
