@@ -124,6 +124,21 @@ void Config::setTCPfromJSON(const JSON::Property &pd)
 	}
 }
 
+void Config::setMQTTfromJSON(const JSON::Property &pd)
+{
+	if (!pd.Get().isArray())
+		throw std::runtime_error("MQTT settings need to be an \"array\" of \"objects\" in config file.");
+
+	for (const auto &v : pd.Get().getArray())
+	{
+		if (!isActiveObject(v))
+			continue;
+
+		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MQTTStreamer()));
+		IO::OutputMessage &mqtt = *_msg.back();
+		setSettingsFromJSON(v, mqtt);
+	}
+}
 void Config::setTCPListenerfromJSON(const JSON::Property &pd)
 {
 
@@ -406,6 +421,9 @@ void Config::set(const std::string &str)
 			break;
 		case AIS::KEY_SETTING_TCP:
 			setTCPfromJSON(p);
+			break;
+		case AIS::KEY_SETTING_MQTT:
+			setMQTTfromJSON(p);
 			break;
 		case AIS::KEY_SETTING_TCP_LISTENER:
 			setTCPListenerfromJSON(p);

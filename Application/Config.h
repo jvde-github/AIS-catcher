@@ -58,6 +58,7 @@ class Config {
 	void setHTTPfromJSON(const JSON::Property& pd);
 	void setUDPfromJSON(const JSON::Property& pd);
 	void setTCPfromJSON(const JSON::Property& pd);
+	void setMQTTfromJSON(const JSON::Property& pd);
 	void setTCPListenerfromJSON(const JSON::Property& pd);
 	void setModelfromJSON(const JSON::Property& p);
 	void setServerfromJSON(const JSON::Value& pd);

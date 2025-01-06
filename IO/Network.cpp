@@ -833,7 +833,9 @@ namespace IO
 
 	void MQTTStreamer::Start()
 	{
-
+		std::stringstream ss;
+		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort() << ", filter: " << Util::Convert::toString(filter.isOn());
+		
 		switch (Protocol)
 		{
 		case PROTOCOL::MQTT:
@@ -858,6 +860,7 @@ namespace IO
 		{
 			throw std::runtime_error("MQTT: cannot connect to " + session->getHost() + " port " + session->getPort());
 		}
+		Info() << ss.str();
 	}
 
 	void MQTTStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
