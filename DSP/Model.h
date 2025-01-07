@@ -25,6 +25,7 @@
 #include "NMEA.h"
 #include "N2K.h"
 #include "Basestation.h"
+#include "Beast.h"
 
 #include "DSP.h"
 #include "Demod.h"
@@ -310,4 +311,14 @@ namespace AIS
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
 
+	class ModelBeast : public Model
+	{
+		Beast model;
+
+	public:
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
+		std::string Get();
+		ModelClass getClass() { return ModelClass::BASESTATION; }
+	};
 }

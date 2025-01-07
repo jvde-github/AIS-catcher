@@ -218,6 +218,8 @@ namespace Util
 			format = Format::TXT;
 		else if (str == "BASESTATION")
 			format = Format::BASESTATION;
+		else if (str == "BEAST")
+			format = Format::BEAST;
 		else
 			return false;
 
@@ -297,6 +299,10 @@ namespace Util
 		else if (arg == "BASESTATION")
 		{
 			protocol = PROTOCOL::BASESTATION;
+		}
+		else if (arg == "BEAST")
+		{
+			protocol = PROTOCOL::BEAST;
 		}
 		else
 			return false;
@@ -469,6 +475,8 @@ namespace Util
 			return "TXT";
 		case Format::BASESTATION:
 			return "BASESTATION";
+		case Format::BEAST:
+			return "BEAST";
 		default:
 			break;
 		}
@@ -495,6 +503,8 @@ namespace Util
 			return "WSMQTT";
 		case PROTOCOL::BASESTATION:
 			return "BASESTATION";
+		case PROTOCOL::BEAST:
+			return "BEAST";
 		}
 		return "";
 	}

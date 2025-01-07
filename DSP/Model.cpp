@@ -835,4 +835,25 @@ namespace AIS
 	{
 		return Model::Get();
 	}
+
+	void ModelBeast::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
+		setName("ADSB input");
+		device = dev;
+		*device >> model >> outputADSB;
+	}
+
+	Setting &ModelBeast::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		Model::Set(option, arg);
+
+		return *this;
+	}
+
+	std::string ModelBeast::Get()
+	{
+		return Model::Get();
+	}
 }
