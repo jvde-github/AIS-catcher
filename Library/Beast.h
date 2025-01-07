@@ -217,11 +217,7 @@ private:
     {
         if (buffer.size() != 2)
             return;
-
-        uint16_t modeAC = (buffer[0] << 8) | buffer[1];
-        // Process Mode A/C message...
-        // Implementation details depend on your message handling system
-    }
+        }
 
     void ProcessModeSShort(TAG &tag)
     {
