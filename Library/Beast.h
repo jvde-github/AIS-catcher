@@ -1,284 +1,322 @@
-/*
-    Copyright(c) 2021-2025 jvde.github@gmail.com
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
 #pragma once
 
 #include <iomanip>
+#include <vector>
+#include <ctime>
+#include <sstream>
+#include <stdexcept>
 
-#include "Message.h"
-#include "Stream.h"
+class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
+{
+    static constexpr size_t MAX_MESSAGE_SIZE = 1024; // Reasonable maximum size
+    static constexpr double BEAST_CLOCK_MHZ = 12.0;  // 12 MHz clock rate
 
-#include "Utilities.h"
-#include "Keys.h"
-#include "ADSB.h"
+    enum
+    {
+        BEAST_ESCAPE = 0x1A,
+        BEAST_ESCAPE_START = 0x1B
+    };
 
-
-class Beast : public SimpleStreamInOut<RAW, Plane::ADSB> {
-enum {
-    BEAST_ESCAPE = 0x1A,
-    BEAST_ESCAPE_START = 0x1B
-};
-
-    enum class State {
+    enum class State
+    {
         WAIT_ESCAPE,
         WAIT_TYPE,
         READ_TIMESTAMP,
+        READ_SIGNAL,
         READ_PAYLOAD,
         READ_ESCAPE
     };
 
     uint8_t type;
     uint64_t timestamp;
+    double signalLevel;
     std::vector<uint8_t> payload;
+    std::vector<uint8_t> buffer;
 
     State state = State::WAIT_ESCAPE;
     int bytes_read = 0;
-    std::vector<uint8_t> buffer;
 
 public:
     virtual ~Beast() {}
 
-    void Receive(const RAW* data, int len, TAG& tag) {
-        for (int j = 0; j < len; j++) {
-            for (int i = 0; i < data[j].size; i++) {
-                uint8_t c = ((uint8_t*)(data[j].data))[i];
+    void Receive(const RAW *data, int len, TAG &tag)
+    {
+        for (int j = 0; j < len; j++)
+        {
+            for (int i = 0; i < data[j].size; i++)
+            {
+                uint8_t c = ((uint8_t *)(data[j].data))[i];
                 ProcessByte(c, tag);
             }
         }
     }
 
 private:
-       void ProcessByte(uint8_t byte, TAG& tag) {
-        switch (state) {
-            case State::WAIT_ESCAPE:
-                if (byte == BEAST_ESCAPE) {
-                    state = State::WAIT_TYPE;
-                    buffer.clear();
-                }
-                break;
+    void Clear()
+    {
+        state = State::WAIT_ESCAPE;
+        buffer.clear();
+    }
 
-            case State::WAIT_TYPE:
-                if (byte >= 0x31 && byte <= 0x33) {  // Valid message types: '1', '2', '3'
-                    type = byte;
-                    state = State::READ_TIMESTAMP;
-                    bytes_read = 0;
-                    buffer.clear();  // Clear buffer when starting new message
-                } else {
-                    state = State::WAIT_ESCAPE;
-                    // Add error logging here if needed
-                }
-                break;
+    void ProcessByte(uint8_t byte, TAG &tag)
+    {
+        if (buffer.size() > MAX_MESSAGE_SIZE)
+        {
+            Clear();
+            return;
+        }
 
-            case State::READ_TIMESTAMP:
-                if (byte == BEAST_ESCAPE) {
-                    state = State::READ_ESCAPE;
-                    break;
-                }
-                
-                buffer.push_back(byte);
-                bytes_read++;
-                
-                if (bytes_read == 6) {  // 6-byte timestamp
-                    timestamp = 0;
-                    for (int i = 0; i < 6; i++) {
-                        timestamp = (timestamp << 8) | buffer[i];
-                    }
-                    buffer.clear();
-                    state = State::READ_PAYLOAD;
-                    bytes_read = 0;
-                }
-                break;
-
-            case State::READ_PAYLOAD: {
-                if (byte == BEAST_ESCAPE) {
-                    state = State::READ_ESCAPE;
-                    break;
-                }
-                
-                buffer.push_back(byte);
-                bytes_read++;
-                
-                int expected_len = 0;
-                switch (type) {
-                    case '1': expected_len = 7; break;  // Mode AC
-                    case '2': expected_len = 14; break; // Mode S short
-                    case '3': expected_len = 21; break; // Mode S long
-                    default:
-                        state = State::WAIT_ESCAPE;  // Reset on invalid type
-                        return;
-                }
-                
-                if (bytes_read == expected_len) {
-                    switch (type) {
-                        case '1': ProcessModeAC(); break;  // Mode AC
-                        case '2': ProcessModeSshort(); break; // Mode S short
-                        case '3': ProcessModeSlong(); break; // Mode S long
-
-                    }
-                    state = State::WAIT_ESCAPE;
-                    buffer.clear();
-                } else if (bytes_read > expected_len) {  
-                    state = State::WAIT_ESCAPE;
-                    buffer.clear();
-                }
+        switch (state)
+        {
+        case State::WAIT_ESCAPE:
+            if (byte == BEAST_ESCAPE)
+            {
+                state = State::WAIT_TYPE;
+                buffer.clear();
             }
             break;
 
-            case State::READ_ESCAPE:
-                if (byte == BEAST_ESCAPE) {
-                    buffer.push_back(BEAST_ESCAPE);
-                    bytes_read++;
-                    state = State::READ_PAYLOAD;
-                } else if (byte == BEAST_ESCAPE_START) {
-                    state = State::WAIT_TYPE;
-                    buffer.clear();
-                    bytes_read = 0;
-                } else {
-                    state = State::WAIT_ESCAPE;  
-                    buffer.clear();
-                }
+        case State::WAIT_TYPE:
+            if (byte >= 0x31 && byte <= 0x33)
+            { // Valid types: '1', '2', '3'
+                type = byte;
+                state = State::READ_TIMESTAMP;
+                bytes_read = 0;
+                buffer.clear();
+            }
+            else
+            {
+                state = State::WAIT_ESCAPE;
+            }
+            break;
+
+        case State::READ_TIMESTAMP:
+            if (byte == BEAST_ESCAPE)
+            {
+                state = State::READ_ESCAPE;
                 break;
-        }
-    }
-
-  void ProcessModeAC() {
-        // Mode A/C messages are 7 bytes
-        if (buffer.size() != 7) return;
-
-        // First byte is signal level
-        uint8_t signalLevel = buffer[0];
-
-        // Mode A/C data is in the next 2 bytes
-        uint16_t modeAC = (buffer[1] << 8) | buffer[2];
-        
-        std::cout << "\nMode A/C Message:" << std::endl;
-        std::cout << "Timestamp: " << formatTimestamp(timestamp) << std::endl;
-        std::cout << "Signal Level: " << (int)signalLevel << " dB" << std::endl;
-        std::cout << "Mode A/C Code: " << std::hex << modeAC << std::dec << std::endl;
-    }
-
-    void ProcessModeSshort() {
-        // Mode S short messages are 14 bytes
-        if (buffer.size() != 14) return;
-
-        // First byte is signal level
-        uint8_t signalLevel = buffer[0];
-
-        // ICAO address is in bytes 1-3
-        uint32_t icao = (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
-
-        // Payload starts at byte 4
-        std::cout << "\nMode S Short Message:" << std::endl;
-        std::cout << "Timestamp: " << formatTimestamp(timestamp) << std::endl;
-        std::cout << "Signal Level: " << (int)signalLevel << " dB" << std::endl;
-        std::cout << "ICAO: " << formatICAO(icao) << std::endl;
-        
-        // Downlink Format (DF) is in the first 5 bits
-        uint8_t df = getBits(buffer, 32, 5);
-        std::cout << "Downlink Format: " << (int)df << std::endl;
-
-        // Print raw payload in hex
-        std::cout << "Payload: ";
-        for (size_t i = 4; i < buffer.size(); i++) {
-            std::cout << std::hex << std::setfill('0') << std::setw(2) 
-                     << (int)buffer[i] << " ";
-        }
-        std::cout << std::dec << std::endl;
-    }
-
-    void ProcessModeSlong() {
-        // Mode S long messages are 21 bytes
-        if (buffer.size() != 21) return;
-
-        // First byte is signal level
-        uint8_t signalLevel = buffer[0];
-
-        // ICAO address is in bytes 1-3
-        uint32_t icao = (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
-
-        std::cout << "\nMode S Long Message:" << std::endl;
-        std::cout << "Timestamp: " << formatTimestamp(timestamp) << std::endl;
-        std::cout << "Signal Level: " << (int)signalLevel << " dB" << std::endl;
-        std::cout << "ICAO: " << formatICAO(icao) << std::endl;
-
-        // Downlink Format (DF) is in the first 5 bits
-        uint8_t df = getBits(buffer, 32, 5);
-        std::cout << "Downlink Format: " << (int)df << std::endl;
-
-        // If DF17 (ADS-B), decode more fields
-        if (df == 17) {
-            uint8_t capability = getBits(buffer, 37, 3);
-            uint8_t typeCode = getBits(buffer, 40, 5);
-            
-            std::cout << "ADS-B Message:" << std::endl;
-            std::cout << "Type Code: " << (int)typeCode << std::endl;
-            
-            // Decode position for airborne position messages
-            if (typeCode >= 9 && typeCode <= 18) {
-                uint8_t altitude_code = getBits(buffer, 45, 12);
-                std::cout << "Altitude Code: " << (int)altitude_code << std::endl;
             }
-            // Decode identification messages
-            else if (typeCode >= 1 && typeCode <= 4) {
-                char callsign[9] = {0};
-                for (int i = 0; i < 8; i++) {
-                    uint8_t c = getBits(buffer, 45 + i*6, 6);
-                    callsign[i] = (c > 0 && c <= 26) ? ('A' + c - 1) : 
-                                 (c >= 48 && c <= 57) ? (c - 48 + '0') : ' ';
-                }
-                std::cout << "Callsign: " << callsign << std::endl;
+
+            buffer.push_back(byte);
+            bytes_read++;
+
+            if (bytes_read == 6)
+            { // 6-byte timestamp
+                timestamp = ParseTimestamp();
+                buffer.clear();
+                state = State::READ_SIGNAL;
+                bytes_read = 0;
+            }
+            break;
+
+        case State::READ_SIGNAL:
+            if (byte == BEAST_ESCAPE)
+            {
+                state = State::READ_ESCAPE;
+                break;
+            }
+
+            // Process signal level as in readsb
+            signalLevel = static_cast<double>(byte) / 255.0;
+            signalLevel = signalLevel * signalLevel; // Square for power
+            state = State::READ_PAYLOAD;
+            bytes_read = 0;
+            break;
+
+        case State::READ_PAYLOAD:
+        {
+            if (byte == BEAST_ESCAPE)
+            {
+                state = State::READ_ESCAPE;
+                break;
+            }
+
+            buffer.push_back(byte);
+            bytes_read++;
+
+            int expected_len = GetExpectedLength();
+            if (bytes_read == expected_len)
+            {
+                ProcessMessage(tag);
+                state = State::WAIT_ESCAPE;
+                buffer.clear();
             }
         }
+        break;
 
-        // Print raw payload in hex
-        std::cout << "Payload: ";
-        for (size_t i = 4; i < buffer.size(); i++) {
-            std::cout << std::hex << std::setfill('0') << std::setw(2) 
-                     << (int)buffer[i] << " ";
+        case State::READ_ESCAPE:
+            if (byte == BEAST_ESCAPE)
+            {
+                buffer.push_back(BEAST_ESCAPE);
+                bytes_read++;
+                state = State::READ_PAYLOAD;
+            }
+            else if (byte == BEAST_ESCAPE_START)
+            {
+                state = State::WAIT_TYPE;
+                buffer.clear();
+                bytes_read = 0;
+            }
+            else
+            {
+                state = State::WAIT_ESCAPE;
+                buffer.clear();
+            }
+            break;
         }
-        std::cout << std::dec << std::endl;
     }
-      uint32_t getBits(const std::vector<uint8_t>& data, int start, int len) {
+
+    uint64_t ParseTimestamp()
+    {
+        if (buffer.size() != 6)
+        {
+            Error() << "Invalid timestamp buffer size";
+        }
+
+        uint64_t ts = 0;
+        // Process in big-endian order
+        for (int i = 0; i < 6; i++)
+        {
+            ts = (ts << 8) | buffer[i];
+        }
+        return ts;
+    }
+
+    int GetExpectedLength() const
+    {
+        switch (type)
+        {
+        case '1':
+            return 2; // Mode AC
+        case '2':
+            return 7; // Mode S short
+        case '3':
+            return 14; // Mode S long
+        default:
+            return 0;
+        }
+    }
+
+    void ProcessMessage(TAG &tag)
+    {
+        switch (type)
+        {
+        case '1':
+            ProcessModeAC(tag);
+            break;
+        case '2':
+            ProcessModeSShort(tag);
+            break;
+        case '3':
+            ProcessModeSLong(tag);
+            break;
+        }
+    }
+
+    void ProcessModeAC(TAG &tag)
+    {
+        if (buffer.size() != 2)
+            return;
+
+        uint16_t modeAC = (buffer[0] << 8) | buffer[1];
+        // Process Mode A/C message...
+        // Implementation details depend on your message handling system
+    }
+
+    void ProcessModeSShort(TAG &tag)
+    {
+        if (buffer.size() != 7)
+            return;
+        ProcessModeS(tag, false);
+    }
+
+    void ProcessModeSLong(TAG &tag)
+    {
+        if (buffer.size() != 14)
+            return;
+        ProcessModeS(tag, true);
+    }
+
+    std::string getDFMeaning(uint8_t df)
+    {
+        switch (df)
+        {
+        case 0:
+            return "Short Air-Air Surveillance (ACAS)";
+        case 4:
+            return "Surveillance, Altitude Reply";
+        case 5:
+            return "Surveillance, Identity Reply";
+        case 11:
+            return "Mode S All-Call Reply";
+        case 16:
+            return "Long Air-Air Surveillance (ACAS)";
+        case 17:
+            return "Extended Squitter ADS-B";
+        case 18:
+            return "Extended Squitter/Supplementary, TIS-B";
+        case 19:
+            return "Extended Squitter Military Application";
+        case 20:
+            return "Comm-B Altitude Reply";
+        case 21:
+            return "Comm-B Identity Reply";
+        case 24:
+            return "Comm-D Extended Length Message";
+        default:
+            return "Unknown DF Type";
+        }
+    }
+
+    uint32_t getICAO(const std::vector<uint8_t>& buffer, uint8_t df) {
+    switch(df) {
+        case 17:  // ADS-B
+        case 18:  // TIS-B
+            return (buffer[0] << 16) | (buffer[1] << 8) | buffer[2];
+            
+        case 11:  // All Call Reply
+            // ICAO is in bits 9-32
+            return getBits(buffer, 9, 24);
+            
+        case 0:   // Short Air-Air Surveillance
+        case 4:   // Altitude Reply
+        case 5:   // Identity Reply
+        case 16:  // Long Air-Air Surveillance
+            return 0;  // These formats don't contain ICAO
+            
+        default:
+            return 0;  // Unknown format
+    }
+}
+    void ProcessModeS(TAG &tag, bool isLong)
+    {
+        uint8_t df = getBits(buffer, 0, 5);    
+        uint32_t icao = getICAO(buffer, df);
+
+        std::cerr << "-----" << std::endl;
+        if(icao)
+        std::cerr << "ICAO: " << std::hex << std::setw(6) << std::setfill('0') << icao << std::dec << std::endl;
+        std::cerr << "df = " << static_cast<int>(df) << std::endl;
+        std::cerr << "Timestamp: " << timestamp << std::endl;
+        std::cerr << "Signal level: " << signalLevel << std::endl;
+        std::cerr << "DF meaning: " << getDFMeaning(df) << std::endl;
+
+        // Create and populate your message structure based on DF type
+        // Implementation depends on your message handling system
+    }
+
+    uint32_t getBits(const std::vector<uint8_t> &data, int startBit, int length)
+    {
         uint32_t result = 0;
-        for (int i = 0; i < len; i++) {
-            int byteIndex = (start + i) / 8;
-            int bitIndex = 7 - ((start + i) % 8);
-            if (data[byteIndex] & (1 << bitIndex)) {
-                result |= (1 << (len - 1 - i));
+        for (int i = 0; i < length; i++)
+        {
+            int byteIdx = (startBit + i) / 8;
+            int bitIdx = 7 - ((startBit + i) % 8);
+            if (byteIdx < data.size() && (data[byteIdx] & (1 << bitIdx)))
+            {
+                result |= (1 << (length - 1 - i));
             }
         }
         return result;
-    }
-
-    std::string formatTimestamp(uint64_t ts) {
-        time_t seconds = ts / 1000000;
-        uint32_t microseconds = ts % 1000000;
-        struct tm* tm = gmtime(&seconds);
-        char buffer[32];
-        strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", tm);
-        std::stringstream ss;
-        ss << buffer << "." << std::setfill('0') << std::setw(6) << microseconds;
-        return ss.str();
-    }
-
-    // Helper to format ICAO address
-    std::string formatICAO(uint32_t icao) {
-        std::stringstream ss;
-        ss << std::hex << std::uppercase << std::setfill('0') << std::setw(6) << icao;
-        return ss.str();
     }
 };
