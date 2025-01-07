@@ -58,6 +58,7 @@
     <ClCompile Include="..\Library\JSONAIS.cpp" />
     <ClCompile Include="..\Library\NMEA.cpp" />
     <ClCompile Include="..\Library\Basestation.cpp" />
+    <ClCompile Include="..\Library\Beast.cpp" />
     <ClCompile Include="..\Library\Logger.cpp" />
     <ClCompile Include="..\Library\TCP.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
@@ -114,6 +115,7 @@
     <ClInclude Include="..\Library\TCP.h" />
     <ClInclude Include="..\Library\ADSB.h" />
     <ClInclude Include="..\Library\Basestation.h" />
+    <ClInclude Include="..\Library\Beast.h" />
     <ClInclude Include="..\Library\Logger.h" />
     <ClInclude Include="..\Library\Utilities.h" />
     <ClInclude Include="..\Protocol\Protocol.h" />

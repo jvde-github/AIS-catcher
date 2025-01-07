@@ -64,6 +64,7 @@ enum class Format
 	TXT,
 	N2K,
 	BASESTATION,
+	BEAST,
 	UNKNOWN
 };
 
@@ -76,7 +77,8 @@ enum class PROTOCOL
 	MQTT,
 	WS,
 	WSMQTT,
-	BASESTATION
+	BASESTATION,
+	BEAST
 };
 
 enum class Type
