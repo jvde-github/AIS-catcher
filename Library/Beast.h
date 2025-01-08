@@ -52,6 +52,168 @@ public:
     }
 
 private:
+    void ProcessModeS(TAG &tag, bool isLong)
+    {
+        uint8_t df = getBits(buffer, 0, 5);
+        uint32_t icao = getICAO(buffer, df);
+
+        std::cerr << "-----" << std::endl;
+
+        // Print message info
+        std::cerr << "Raw message: ";
+        for (const auto &b : buffer)
+        {
+            std::cerr << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(b);
+        }
+        std::cerr << std::dec << std::endl;
+
+        std::cerr << "df = " << static_cast<int>(df) << std::endl;
+        std::cerr << "Timestamp: " << timestamp << std::endl;
+        std::cerr << "Signal level: " << signalLevel << std::endl;
+        std::cerr << "DF meaning: " << getDFMeaning(df) << std::endl;
+
+        // Print ICAO if available
+        if (icao)
+        {
+            std::cerr << "ICAO: " << std::hex << std::setw(6) << std::setfill('0') << icao << std::dec << std::endl;
+        }
+
+        // Flight Status for DF 4,5,20,21
+        if (df == 4 || df == 5 || df == 20 || df == 21)
+        {
+            uint8_t fs = getBits(buffer, 5, 3);
+            std::string fs_meaning;
+            switch (fs)
+            {
+            case 0:
+                fs_meaning = "no alert, no SPI, aircraft is airborne";
+                break;
+            case 1:
+                fs_meaning = "no alert, no SPI, aircraft is on-ground";
+                break;
+            case 2:
+                fs_meaning = "alert, no SPI, aircraft is airborne";
+                break;
+            case 3:
+                fs_meaning = "alert, no SPI, aircraft is on-ground";
+                break;
+            case 4:
+                fs_meaning = "alert, SPI, aircraft is airborne or on-ground";
+                break;
+            case 5:
+                fs_meaning = "no alert, SPI, aircraft is airborne or on-ground";
+                break;
+            default:
+                fs_meaning = "unknown";
+                break;
+            }
+            std::cerr << "Flight Status: " << static_cast<int>(fs) << " (" << fs_meaning << ")" << std::endl;
+        }
+
+        // Altitude for DF 0,4,16,20
+        if (df == 0 || df == 4 || df == 16 || df == 20)
+        {
+            std::string altitude_code = getBitsString(buffer, 19, 13);
+            bool m_bit = altitude_code[6] == '1';
+            bool q_bit = altitude_code[8] == '1';
+
+            int altitude = -1;
+            if (q_bit && !m_bit)
+            { // 25ft interval
+                std::string vbin = altitude_code.substr(0, 6) + altitude_code[7] + altitude_code.substr(9);
+                altitude = binToInt(vbin) * 25 - 1000;
+                std::cerr << "Altitude: " << altitude << " ft (25ft interval)" << std::endl;
+            }
+            else
+            {
+                std::cerr << "Altitude: encoding not implemented" << std::endl;
+            }
+        }
+
+        // Identity/Squawk for DF 5,21
+        if (df == 5 || df == 21)
+        {
+            std::string id_code = getBitsString(buffer, 19, 13);
+            // Implement squawk code extraction similar to pyModeS squawk function
+            std::cerr << "Identity code (raw): " << id_code << std::endl;
+        }
+
+        // Type code for DF 17,18 (ADS-B)
+        if (df == 17 || df == 18)
+        {
+            uint8_t tc = getBits(buffer, 32, 5);
+            std::cerr << "Type Code: " << static_cast<int>(tc) << std::endl;
+
+            if (tc >= 1 && tc <= 4)
+            {
+                std::cerr << "Message Type: Aircraft Identification" << std::endl;
+                // Implement aircraft identification decoding
+            }
+            else if (tc >= 5 && tc <= 8)
+            {
+                std::cerr << "Message Type: Surface Position" << std::endl;
+            }
+            else if (tc >= 9 && tc <= 18)
+            {
+                std::cerr << "Message Type: Airborne Position" << std::endl;
+            }
+            else if (tc == 19)
+            {
+                std::cerr << "Message Type: Airborne Velocity" << std::endl;
+                // Implement velocity decoding
+            }
+        }
+
+        // Print binary representation for debugging
+        std::cerr << "Binary message: ";
+        for (size_t i = 0; i < buffer.size() * 8; i++)
+        {
+            std::cerr << ((getBits(buffer, i, 1) == 1) ? "1" : "0");
+        }
+        std::cerr << std::endl;
+
+        std::vector<uint8_t> full_message;
+        full_message.push_back(BEAST_ESCAPE); // Start marker
+        full_message.push_back(type);         // Message type
+
+        // Add timestamp bytes
+        for (int i = 0; i < 6; i++)
+        {
+            full_message.push_back((timestamp >> (i * 8)) & 0xFF);
+        }
+
+        // Add signal level
+        full_message.push_back(static_cast<uint8_t>(signalLevel * 255));
+
+        // Add payload
+        full_message.insert(full_message.end(), buffer.begin(), buffer.end());
+
+        std::cerr << "\nTest command:\n"
+                  << generateEchoCommand(full_message) << std::endl;
+    }
+
+    // Helper function to get bits as string
+    std::string getBitsString(const std::vector<uint8_t> &data, int startBit, int length)
+    {
+        std::string result;
+        for (int i = 0; i < length; i++)
+        {
+            int byteIdx = (startBit + i) / 8;
+            int bitIdx = 7 - ((startBit + i) % 8);
+            if (byteIdx < data.size())
+            {
+                result += (data[byteIdx] & (1 << bitIdx)) ? "1" : "0";
+            }
+        }
+        return result;
+    }
+
+    // Helper function to convert binary string to integer
+    int binToInt(const std::string &binstr)
+    {
+        return std::stoi(binstr, nullptr, 2);
+    }
+
     void Clear()
     {
         state = State::WAIT_ESCAPE;
@@ -166,6 +328,18 @@ private:
         }
     }
 
+    static std::string generateEchoCommand(const std::vector<uint8_t> &data)
+    {
+        std::stringstream ss;
+        ss << "echo -en \"";
+        for (const auto &byte : data)
+        {
+            ss << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+        }
+        ss << "\" > test.beast";
+        return ss.str();
+    }
+
     uint64_t ParseTimestamp()
     {
         if (buffer.size() != 6)
@@ -174,8 +348,8 @@ private:
         }
 
         uint64_t ts = 0;
-        // Process in big-endian order
-        for (int i = 0; i < 6; i++)
+
+        for (int i = 5; i >= 0; i--)
         {
             ts = (ts << 8) | buffer[i];
         }
@@ -217,7 +391,7 @@ private:
     {
         if (buffer.size() != 2)
             return;
-        }
+    }
 
     void ProcessModeSShort(TAG &tag)
     {
@@ -264,41 +438,27 @@ private:
         }
     }
 
-    uint32_t getICAO(const std::vector<uint8_t>& buffer, uint8_t df) {
-    switch(df) {
-        case 17:  // ADS-B
-        case 18:  // TIS-B
-            return (buffer[0] << 16) | (buffer[1] << 8) | buffer[2];
-            
-        case 11:  // All Call Reply
+    uint32_t getICAO(const std::vector<uint8_t> &buffer, uint8_t df)
+    {
+        switch (df)
+        {
+        case 17:                                                     // ADS-B
+        case 18:                                                     // TIS-B
+            return (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]; // Changed from [0,1,2] to [1,2,3]
+
+        case 11: // All Call Reply
             // ICAO is in bits 9-32
             return getBits(buffer, 9, 24);
-            
-        case 0:   // Short Air-Air Surveillance
-        case 4:   // Altitude Reply
-        case 5:   // Identity Reply
-        case 16:  // Long Air-Air Surveillance
-            return 0;  // These formats don't contain ICAO
-            
+
+        case 0:       // Short Air-Air Surveillance
+        case 4:       // Altitude Reply
+        case 5:       // Identity Reply
+        case 16:      // Long Air-Air Surveillance
+            return 0; // These formats don't contain ICAO
+
         default:
-            return 0;  // Unknown format
-    }
-}
-    void ProcessModeS(TAG &tag, bool isLong)
-    {
-        uint8_t df = getBits(buffer, 0, 5);    
-        uint32_t icao = getICAO(buffer, df);
-
-        std::cerr << "-----" << std::endl;
-        if(icao)
-        std::cerr << "ICAO: " << std::hex << std::setw(6) << std::setfill('0') << icao << std::dec << std::endl;
-        std::cerr << "df = " << static_cast<int>(df) << std::endl;
-        std::cerr << "Timestamp: " << timestamp << std::endl;
-        std::cerr << "Signal level: " << signalLevel << std::endl;
-        std::cerr << "DF meaning: " << getDFMeaning(df) << std::endl;
-
-        // Create and populate your message structure based on DF type
-        // Implementation depends on your message handling system
+            return 0; // Unknown format
+        }
     }
 
     uint32_t getBits(const std::vector<uint8_t> &data, int startBit, int length)
