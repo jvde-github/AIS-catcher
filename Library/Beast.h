@@ -288,7 +288,7 @@ private:
             // Calculate ground speed and heading
             double speed = sqrt(east_west_vel * east_west_vel +
                                 north_south_vel * north_south_vel);
-            double heading = atan2(east_west_vel, north_south_vel) * 180 / M_PI;
+            double heading = atan2(east_west_vel, north_south_vel) * 180 / PI;
             if (heading < 0)
                 heading += 360;
 
