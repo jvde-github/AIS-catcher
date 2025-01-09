@@ -349,7 +349,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 
 		commm_feed->Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
 	}
-	if (!uuid.empty())
+	if (!uuid.empty() && commm_feed)
 		commm_feed->Set("UUID", uuid);
 	
 }
