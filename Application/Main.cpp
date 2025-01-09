@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 	int cb = -1;
 
 	Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
-	IO::OutputMessage *commm_feed = nullptr;
+	extern IO::OutputMessage *commm_feed;
 
 	try
 	{
@@ -619,13 +619,11 @@ int main(int argc, char *argv[])
 			case 'X':
 				Assert(count <= 1, param, "Only one optional parameter [sharing key] allowed.");
 				{
-					if (!communityFeed)
+					if (!commm_feed)
 					{
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						commm_feed = msg.back().get();
 						commm_feed->Set("HOST", "185.77.96.227").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
-
-						communityFeed = true;
 					}
 
 					if (count == 1 && commm_feed)

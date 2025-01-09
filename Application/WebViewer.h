@@ -35,7 +35,6 @@
 #include "Receiver.h"
 #include "MapTiles.h"
 
-extern bool communityFeed;
 
 class SSEStreamer : public StreamIn<JSON::JSON>
 {

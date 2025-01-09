@@ -330,6 +330,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 
 	bool xchange = false;
 	std::string uuid;
+	extern IO::OutputMessage *commm_feed;
 
 	for (const JSON::Property &p : props)
 	{
@@ -341,17 +342,16 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 			uuid = p.Get().to_string();
 	}
 
-	if (xchange && !communityFeed)
+	if (xchange && !commm_feed)
 	{
-		communityFeed = true;
 		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-		IO::OutputMessage &p = *_msg.back();
+		commm_feed = _msg.back().get();
 
-		p.Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
-
-		if (!uuid.empty())
-			p.Set("UUID", uuid);
+		commm_feed->Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off");
 	}
+	if (!uuid.empty())
+		commm_feed->Set("UUID", uuid);
+	
 }
 
 void Config::set(const std::string &str)

@@ -19,7 +19,8 @@
 #include "WebViewer.h"
 #include "Application/WebDB.h"
 
-bool communityFeed = false;
+IO::OutputMessage *commm_feed = nullptr;
+
 
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
@@ -524,7 +525,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
 		content += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
 		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
-		content += "\"sharing\":" + std::string(communityFeed ? "true" : "false") + ",";
+		content += "\"sharing\":" + std::string(commm_feed ? "true" : "false") + ",";
 		if (ships.getShareLatLon() && ships.getLat() != LAT_UNDEFINED && ships.getLon() != LON_UNDEFINED)
 			content += "\"sharing_link\":\"https://aiscatcher.org/?&zoom=10&lat=" + std::to_string(ships.getLat()) + "&lon=" + std::to_string(ships.getLon()) + "\",";
 		else
@@ -616,7 +617,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	} 
 	else if (r == "/custom/plugins.js")
 	{
-		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (communityFeed ? "true" : "false") + ";\n", use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
 	else if (r == "/custom/config.css")
 	{
