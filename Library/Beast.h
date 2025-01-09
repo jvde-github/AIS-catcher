@@ -59,7 +59,7 @@ private:
 
         std::cerr << "-----" << std::endl;
 
-        // Print message info
+        // Base message info - keep existing code
         std::cerr << "Raw message: ";
         for (const auto &b : buffer)
         {
@@ -72,10 +72,57 @@ private:
         std::cerr << "Signal level: " << signalLevel << std::endl;
         std::cerr << "DF meaning: " << getDFMeaning(df) << std::endl;
 
-        // Print ICAO if available
         if (icao)
         {
             std::cerr << "ICAO: " << std::hex << std::setw(6) << std::setfill('0') << icao << std::dec << std::endl;
+        }
+
+        // Enhanced decoding
+        if (df == 17 || df == 18)
+        {
+            uint8_t tc = getBits(buffer, 32, 5);
+            std::cerr << "Type Code: " << static_cast<int>(tc) << std::endl;
+
+            // Aircraft Identification (Callsign)
+            if (tc >= 1 && tc <= 4)
+            {
+                std::cerr << "Message Type: Aircraft Identification" << std::endl;
+                std::string callsign = decodeCallsign();
+                std::cerr << "Callsign: " << callsign << std::endl;
+            }
+            // Position messages
+            else if (tc >= 9 && tc <= 18)
+            {
+                std::cerr << "Message Type: Airborne Position" << std::endl;
+                //bool onGround = false;
+                if (tc >= 9 && tc <= 18)
+                {
+                    std::cerr << "On Ground: No" << std::endl;
+                }
+                else if (tc >= 5 && tc <= 8)
+                {
+                    std::cerr << "On Ground: Yes" << std::endl;
+                    //onGround = true;
+                }
+            }
+            // Airborne velocity
+            else if (tc == 19)
+            {
+                std::cerr << "Message Type: Airborne Velocity" << std::endl;
+                decodeVelocity();
+            }
+        }
+
+        // Flight Status (existing code)
+        if (df == 4 || df == 5 || df == 20 || df == 21)
+        {
+            uint8_t fs = getBits(buffer, 5, 3);
+            std::string fs_meaning;
+            switch (fs)
+            {
+                // ... keep existing flight status code ...
+            }
+            std::cerr << "Flight Status: " << static_cast<int>(fs) << " (" << fs_meaning << ")" << std::endl;
         }
 
         // Flight Status for DF 4,5,20,21
@@ -190,6 +237,77 @@ private:
 
         std::cerr << "\nTest command:\n"
                   << generateEchoCommand(full_message) << std::endl;
+    }
+
+    std::string decodeCallsign()
+    {
+        static const char *callsignChars =
+            "?ABCDEFGHIJKLMNOPQRSTUVWXYZ????? ???????????????0123456789??????";
+
+        std::string callsign;
+        for (int i = 0; i < 8; i++)
+        {
+            uint32_t char_code = getBits(buffer, 40 + (i * 6), 6);
+            if (char_code > 0 && char_code < 64)
+            {
+                char c = callsignChars[char_code];
+                if (c != '?' && c != ' ')
+                {
+                    callsign += c;
+                }
+            }
+        }
+        return callsign;
+    }
+
+    void decodeVelocity()
+    {
+        // Get subtype (1-4)
+        uint8_t subtype = getBits(buffer, 37, 3);
+
+        if (subtype == 1 || subtype == 2)
+        { // Ground speed
+            // East-West velocity
+            bool east_west_sign = getBits(buffer, 45, 1);
+            int east_west_vel = getBits(buffer, 46, 10) - 1;
+            if (east_west_sign)
+                east_west_vel *= -1;
+
+            // North-South velocity
+            bool north_south_sign = getBits(buffer, 56, 1);
+            int north_south_vel = getBits(buffer, 57, 10) - 1;
+            if (north_south_sign)
+                north_south_vel *= -1;
+
+            // Vertical rate
+            bool vert_rate_sign = getBits(buffer, 68, 1);
+            int vert_rate = (getBits(buffer, 69, 9) - 1) * 64;
+            if (vert_rate_sign)
+                vert_rate *= -1;
+
+            // Calculate ground speed and heading
+            double speed = sqrt(east_west_vel * east_west_vel +
+                                north_south_vel * north_south_vel);
+            double heading = atan2(east_west_vel, north_south_vel) * 180 / M_PI;
+            if (heading < 0)
+                heading += 360;
+
+            std::cerr << "Ground Speed: " << speed << " knots" << std::endl;
+            std::cerr << "Heading: " << heading << " degrees" << std::endl;
+            std::cerr << "Vertical Rate: " << vert_rate << " ft/min" << std::endl;
+        }
+        else if (subtype == 3 || subtype == 4)
+        {                                                // Airspeed
+            bool airspeed_type = getBits(buffer, 56, 1); // 0 = IAS, 1 = TAS
+            int airspeed = getBits(buffer, 57, 10);
+
+            std::cerr << (airspeed_type ? "True" : "Indicated")
+                      << " Airspeed: " << airspeed << " knots" << std::endl;
+
+            // Heading
+            int heading = getBits(buffer, 46, 10) * 360.0 / 1024.0;
+            std::cerr << "Heading: " << heading << " degrees" << std::endl;
+        }
     }
 
     // Helper function to get bits as string
@@ -332,11 +450,13 @@ private:
     {
         std::stringstream ss;
         ss << "echo -en \"";
-        for (const auto &byte : data)
+        // Skip Beast format elements, just output the raw message
+        for (const auto &byte : data) // Changed from buffer to data
         {
-            ss << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+            ss << "\\x" << std::hex << std::setw(2) << std::setfill('0')
+               << static_cast<int>(byte);
         }
-        ss << "\" > test.beast";
+        ss << "\" > raw_message.bin"; // Changed filename to indicate raw format
         return ss.str();
     }
 
