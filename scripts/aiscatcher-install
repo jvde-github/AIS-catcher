@@ -69,7 +69,7 @@ get_system_info() {
 
 # Install dependencies
 install_dependencies() {
-    local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev libzmq3-dev unzip libusb-1.0-0-dev libsqlite3-dev"
+    local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev unzip libusb-1.0-0-dev libsqlite3-dev"
     log "INFO" "Installing build dependencies: $deps"
     apt-get install -y $deps || error_exit "Failed to install dependencies"
 }
