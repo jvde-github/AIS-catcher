@@ -1,20 +1,19 @@
 /*
-	Copyright(c) 2021-2025 jvde.github@gmail.com
+    Copyright(c) 2021-2025 jvde.github@gmail.com
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 
 #pragma once
 
@@ -30,11 +29,10 @@
 // https://github.com/cjkreklow/go-adsb
 // https://pure.tudelft.nl/ws/portalfiles/portal/104877928/11_Book_Manuscript_69_1_10_20210510.pdf
 
-
 class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
 {
     static constexpr size_t MAX_MESSAGE_SIZE = 1024;
-    static constexpr double BEAST_CLOCK_MHZ = 12.0;  
+    static constexpr double BEAST_CLOCK_MHZ = 12.0;
 
     JSON::JSON json;
     std::string callsign;
@@ -121,7 +119,7 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
             int n = ((alt & 0xFE0) >> 1) | (alt & 0xF);
             return ((n * 25) - 1000);
         }
-        return 0; 
+        return 0;
     }
 
     void decodeAltitude(const std::vector<uint8_t> &msg, int startBit, int len)
@@ -166,7 +164,7 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
         json.Add(AIS::KEY_VELOCITY_TYPE, (int)subtype);
 
         if (subtype == 1 || subtype == 2)
-        {   // Ground speed
+        { // Ground speed
             // East-West velocity
             bool ew_sign = getBits(msg, 45, 1);
             int ew_vel = (getBits(msg, 46, 10) - 1) * (ew_sign ? -1 : 1);
@@ -177,7 +175,7 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
 
             // Calculate ground speed and heading
             double speed = sqrt(ew_vel * ew_vel + ns_vel * ns_vel);
-            double heading = atan2(ew_vel, ns_vel) * 180 / M_PI;
+            double heading = atan2(ew_vel, ns_vel) * 180 / PI;
             if (heading < 0)
                 heading += 360;
 
@@ -267,9 +265,7 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
             break;
         }
 
-//        std::string j;
-//        builder.stringify(json, j);
-//        std::cout << j << std::endl;
+ 
     }
 
     void ProcessModeS(const std::vector<uint8_t> &msg, double signalLevel, uint64_t timestamp, TAG &tag)
@@ -278,6 +274,9 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
 
         // Add basic message info
         uint8_t df = getBits(msg, 0, 5);
+        json.Add(AIS::KEY_CLASS, &class_str);
+        json.Add(AIS::KEY_DEVICE, &device);
+
         json.Add(AIS::KEY_DF, (int)df);
         json.Add(AIS::KEY_SIGNAL, signalLevel);
         json.Add(AIS::KEY_TIMESTAMP, (double)timestamp / BEAST_CLOCK_MHZ);
@@ -321,11 +320,10 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
         Send(&json, 1, tag);
     }
 
-
-    JSON::StringBuilder builder;
+    const std::string class_str = "ADSB";
+    const std::string device = "AIS-catcher";
 
 public:
-    Beast() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
     virtual ~Beast() {}
 
     void Receive(const RAW *data, int len, TAG &tag)
