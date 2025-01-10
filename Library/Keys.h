@@ -20,18 +20,20 @@
 #include <vector>
 #include <string>
 
-#define JSON_DICT_FULL	  0
+#define JSON_DICT_FULL 0
 #define JSON_DICT_MINIMAL 1
-#define JSON_DICT_SPARSE  2
-#define JSON_DICT_APRS	  3
+#define JSON_DICT_SPARSE 2
+#define JSON_DICT_APRS 3
 #define JSON_DICT_SETTING 4
 
-namespace AIS {
+namespace AIS
+{
 
 	extern const std::vector<std::vector<std::string>> KeyMap;
 
 	// JSON keys
-	enum Keys {
+	enum Keys
+	{
 		KEY_CLASS = 0,
 		KEY_DEVICE,
 		KEY_DRIVER,
@@ -344,6 +346,28 @@ namespace AIS {
 		KEY_WGUSTDIR,
 		KEY_WSPEED,
 		KEY_YEAR,
-		KEY_ZONESIZE
+		KEY_ZONESIZE,
+		// ADSB
+		KEY_ALT_UNIT,
+		KEY_VELOCITY_TYPE,
+		KEY_GROUND_SPEED,
+		KEY_VERTICAL_RATE,
+		KEY_TRUE_AIRSPEED,
+		KEY_INDICATED_AIRSPEED,
+		KEY_CPR_ODD,
+		KEY_CPR_LAT,
+		KEY_CPR_LON,
+		KEY_DF,
+		KEY_SIGNAL,
+		KEY_VS,
+		KEY_CC,
+		KEY_SL,
+		KEY_RI,
+		KEY_FS,
+		KEY_DR,
+		KEY_CA,
+		KEY_AA,
+		KEY_IID,
+		KEY_RAW_MESSAGE
 	};
 }
