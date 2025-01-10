@@ -110,7 +110,10 @@ namespace IO
 				for (const auto &p : data[i].getProperties())
 					if (p.Key() == AIS::KEY_RAW_MESSAGE)
 					{
-						std::cout << "*" << p.Get().getString() << "*" << std::endl;
+						if(level == MessageFormat::JSON_NMEA)
+							std::cout << "{\"raw_message\":\"" <<  p.Get().getString() << "\"}" << std::endl;
+						else
+							std::cout << "*" << p.Get().getString() << ";" << std::endl;
 					}
 			}
 		}
