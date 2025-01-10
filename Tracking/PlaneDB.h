@@ -1,7 +1,7 @@
 #include "ADSB.h"
 #include "Stream.h"
 
-class PlaneDB : public StreamIn<Plane::ADSB>
+class PlaneDB : public StreamIn<JSON::JSON>
 {
     std::mutex mtx;
 private:
@@ -66,9 +66,9 @@ public:
         return -1;
     }
 
-       void Receive(const Plane::ADSB* msg, int len, TAG& tag) {
+       void Receive(const JSON::JSON* msg, int len, TAG& tag) {
         std::lock_guard<std::mutex> lock(mtx);
-        
+        /*
         // Skip invalid messages
         if (msg->getHexIdent() == 0) return;
 
@@ -136,6 +136,7 @@ public:
             tag.lat = msg->getLat();
             tag.lon = msg->getLon();
         }
+        */
     }
 
   std::string getCompactArray(bool include_inactive = false) {

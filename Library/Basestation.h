@@ -26,7 +26,7 @@
 #include "Keys.h"
 #include "ADSB.h"
 
-class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
+class Basestation : public SimpleStreamInOut<RAW, JSON::JSON>
 {
     std::string line;
 
@@ -152,7 +152,7 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
 
         //msg.Print();
 
-        Send(&msg, 1, tag);
+        //Send(&msg, 1, tag);
     }
 
 public:

@@ -6,7 +6,7 @@
 #include <sstream>
 #include <stdexcept>
 
-class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
+class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
 {
     static constexpr size_t MAX_MESSAGE_SIZE = 1024; // Reasonable maximum size
     static constexpr double BEAST_CLOCK_MHZ = 12.0;  // 12 MHz clock rate

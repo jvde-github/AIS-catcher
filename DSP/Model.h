@@ -73,18 +73,18 @@ namespace AIS
 
 	// idea is to avoid that message threads from different devices cause issues downstream (e.g. with sending UDP or updating the database).
 	// can also be done further downstream
-	class MessageMutexADSB : public SimpleStreamInOut<Plane::ADSB, Plane::ADSB>
+	class MessageMutexADSB : public SimpleStreamInOut<JSON::JSON, JSON::JSON>
 	{
 		static std::mutex mtx;
 
 	public:
 		virtual ~MessageMutexADSB() {}
-		virtual void Receive(const Plane::ADSB *data, int len, TAG &tag)
+		virtual void Receive(const JSON::JSON *data, int len, TAG &tag)
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 			Send(data, len, tag);
 		}
-		virtual void Receive(Plane::ADSB *data, int len, TAG &tag)
+		virtual void Receive(JSON::JSON *data, int len, TAG &tag)
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 			Send(data, len, tag);
@@ -114,7 +114,7 @@ namespace AIS
 
 		StreamOut<Message> &Output() { return output; }
 		StreamOut<GPS> &OutputGPS() { return output_gps; }
-		StreamOut<Plane::ADSB> &OutputADSB() { return outputADSB; }
+		StreamOut<JSON::JSON> &OutputADSB() { return outputADSB; }
 
 		void setName(std::string s) { name = s; }
 		std::string getName() { return name; }
