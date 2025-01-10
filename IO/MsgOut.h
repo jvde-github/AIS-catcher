@@ -230,7 +230,7 @@ namespace IO
 		virtual ~StringToScreen() {}
 	};
 
-	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public Setting
+	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public StreamIn<JSON::JSON>, public Setting
 	{
 	private:
 		MessageFormat level;
@@ -242,6 +242,8 @@ namespace IO
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const AIS::GPS *data, int len, TAG &tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+
 
 		Setting &Set(std::string option, std::string arg)
 		{
