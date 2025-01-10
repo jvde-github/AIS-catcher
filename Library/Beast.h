@@ -267,12 +267,12 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
             break;
         }
 
-        std::string j;
-        builder.stringify(json, j);
-        std::cout << j << std::endl;
+//        std::string j;
+//        builder.stringify(json, j);
+//        std::cout << j << std::endl;
     }
 
-    void ProcessModeS(const std::vector<uint8_t> &msg, double signalLevel, uint64_t timestamp)
+    void ProcessModeS(const std::vector<uint8_t> &msg, double signalLevel, uint64_t timestamp, TAG &tag)
     {
         json.clear();
 
@@ -318,7 +318,10 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
             decodeExtendedSquitter(msg);
             break;
         }
+        Send(&json, 1, tag);
     }
+
+
     JSON::StringBuilder builder;
 
 public:
@@ -492,7 +495,7 @@ private:
 
         case '2':
         case '3':
-            ProcessModeS(buffer, signalLevel, timestamp);
+            ProcessModeS(buffer, signalLevel, timestamp, tag);
             break;
         }
     }

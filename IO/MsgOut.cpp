@@ -101,6 +101,21 @@ namespace IO
 		}
 	}
 
+	void MessageToScreen::Receive(const JSON::JSON *data, int len, TAG &tag)
+	{
+		for (int i = 0; i < len; i++)
+		{
+			if (filter.include(*(AIS::Message *)data[i].binary))
+			{
+				for (const auto &p : data[i].getProperties())
+					if (p.Key() == AIS::KEY_RAW_MESSAGE)
+					{
+						std::cout << "*" << p.Get().getString() << "*" << std::endl;
+					}
+			}
+		}
+	}
+
 	void MessageToScreen::Receive(const AIS::Message *data, int len, TAG &tag)
 	{
 
@@ -122,14 +137,14 @@ namespace IO
 					for (const auto &s : data[i].NMEA)
 					{
 						std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-						
+
 						if (tag.mode & 1 && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED)
 							std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
 						if (tag.mode & 2)
 							std::cout << ", timestamp: " << data[i].getRxTime();
 						if (data[i].getStation())
 							std::cout << ", ID: " << data[i].getStation();
-							
+
 						std::cout << ")" << std::endl;
 					}
 					break;

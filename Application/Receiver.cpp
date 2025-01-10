@@ -52,7 +52,7 @@ void Receiver::setTags(const std::string &s)
 			tag.mode |= 1;
 			break;
 		default:
-			Warning() << "Unknown tag '" + std::string(1,c) + "' defined on command line ignored [D / T / M]";
+			Warning() << "Unknown tag '" + std::string(1, c) + "' defined on command line ignored [D / T / M]";
 		}
 	}
 }
@@ -310,8 +310,8 @@ void Receiver::setupModel(int &group)
 	for (const auto &m : models)
 	{
 		if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
-			(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT) || 
-			(m->getClass() == AIS::ModelClass::BASESTATION && (device->getFormat() != Format::BASESTATION && device->getFormat() != Format::BEAST) ) ) 
+			(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT) ||
+			(m->getClass() == AIS::ModelClass::BASESTATION && (device->getFormat() != Format::BASESTATION && device->getFormat() != Format::BEAST)))
 			throw std::runtime_error("Decoding model and input format not consistent.");
 	}
 
@@ -419,6 +419,9 @@ void OutputScreen::connect(Receiver &r)
 
 			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)msg2screen).getGroupsIn()))
 				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&msg2screen);
+
+			if (r.OutputADSB(j).canConnect(((StreamIn<JSON::JSON>)msg2screen).getGroupsIn()))
+				r.OutputADSB(j).Connect((StreamIn<JSON::JSON> *)&msg2screen);
 		}
 
 		msg2screen.setDetail(level);
@@ -432,6 +435,9 @@ void OutputScreen::connect(Receiver &r)
 
 			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)json2screen).getGroupsIn()))
 				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&json2screen);
+
+			if (r.OutputADSB(j).canConnect(((StreamIn<JSON::JSON>)json2screen).getGroupsIn()))
+				r.OutputADSB(j).Connect((StreamIn<JSON::JSON> *)&json2screen);
 		}
 
 		if (level == MessageFormat::JSON_SPARSE)
