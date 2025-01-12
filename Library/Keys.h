@@ -358,6 +358,7 @@ namespace AIS
 		KEY_CPR_LAT,
 		KEY_CPR_LON,
 		KEY_DF,
+		KEY_DF_TEXT,
 		KEY_SIGNAL,
 		KEY_VS,
 		KEY_CC,
@@ -366,8 +367,12 @@ namespace AIS
 		KEY_FS,
 		KEY_DR,
 		KEY_CA,
+		KEY_CA_TEXT,
 		KEY_AA,
 		KEY_IID,
-		KEY_RAW_MESSAGE
+		KEY_RAW_MESSAGE,
+		KEY_ICAO,
+		KEY_TYPE_TEXT,
+		KEY_WAKE_VORTEX
 	};
 }

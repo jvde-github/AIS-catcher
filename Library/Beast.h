@@ -36,6 +36,7 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
 
     JSON::JSON json;
     std::string callsign;
+    const std::string undefined = "Undefined";
 
     enum
     {
@@ -89,6 +90,19 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
     void B(const std::vector<uint8_t> &msg, int key, int start, int len)
     {
         json.Add(key, (bool)getBits(msg, start, len));
+    }
+
+    void E(const std::vector<uint8_t> &msg, int p, int start, int len, int pmap, const std::vector<std::string> *map)
+    {
+        unsigned u = getBits(msg, start, len);
+        json.Add(p, (int)u);
+        if (map)
+        {
+            if (u < map->size())
+                json.Add(pmap, &(*map)[u]);
+            else
+                json.Add(pmap, &undefined);
+        }
     }
 
     int decodeAC(unsigned ac)
@@ -199,20 +213,17 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
         }
     }
 
-    void decodeIdentification(const std::vector<uint8_t> &msg)
+    void decodeCallsign(const std::vector<uint8_t> &msg)
     {
-        static const char *ais_charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZ------0123456789-----";
-        std::string callsign;
-
+        static const char *ais_charset = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
+        callsign.clear();
         for (int i = 0; i < 8; i++)
         {
             uint32_t char_code = getBits(msg, 40 + (i * 6), 6);
-            if (char_code > 0 && char_code < 40)
-            {
-                char c = ais_charset[char_code];
-                if (c != '-')
-                    callsign += c;
-            }
+
+            char c = ais_charset[char_code];
+            if (c != '#')
+                callsign += c;
         }
 
         if (!callsign.empty())
@@ -224,7 +235,9 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
     void decodeExtendedSquitter(const std::vector<uint8_t> &msg)
     {
         uint8_t type = getBits(msg, 32, 5);
-        json.Add(AIS::KEY_TYPE, (int)type);
+        E(msg, AIS::KEY_CA, 5, 3, AIS::KEY_CA_TEXT, &ADSB_MAP_CA);
+        U(msg, AIS::KEY_ICAO, 8, 24);
+        E(msg, AIS::KEY_TYPE, 32, 5, AIS::KEY_TYPE_TEXT, &ADSB_MAP_TYPE);
 
         switch (type)
         {
@@ -232,7 +245,8 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
         case 2:
         case 3:
         case 4: // Aircraft Identification
-            decodeIdentification(msg);
+            E(msg, AIS::KEY_CA, 37, 3, AIS::KEY_WAKE_VORTEX, &ADSB_MAP_WAKE_VORTEX[type]);
+            decodeCallsign(msg);
             break;
 
         case 19: // Airborne Velocity
@@ -264,8 +278,6 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
             U(msg, AIS::KEY_CPR_LON, 72, 17);
             break;
         }
-
- 
     }
 
     void ProcessModeS(const std::vector<uint8_t> &msg, double signalLevel, uint64_t timestamp, TAG &tag)
@@ -277,7 +289,8 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
         json.Add(AIS::KEY_CLASS, &class_str);
         json.Add(AIS::KEY_DEVICE, &device);
 
-        json.Add(AIS::KEY_DF, (int)df);
+        // json.Add(AIS::KEY_DF, (int)df);
+        E(msg, AIS::KEY_DF, 0, 5, AIS::KEY_DF_TEXT, &ADSB_MAP_DF);
         json.Add(AIS::KEY_SIGNAL, signalLevel);
         json.Add(AIS::KEY_TIMESTAMP, (double)timestamp / BEAST_CLOCK_MHZ);
         json.Add(AIS::KEY_RAW_MESSAGE, bytesToHexString(msg));
@@ -307,17 +320,18 @@ class Beast : public SimpleStreamInOut<RAW, JSON::JSON>
 
         case 17: // Extended Squitter
             U(msg, AIS::KEY_CA, 5, 3);
-            U(msg, AIS::KEY_AA, 8, 24);
+            // U(msg, AIS::KEY_AA, 8, 24);
             decodeExtendedSquitter(msg);
+            Send(&json, 1, tag);
+
             break;
 
         case 18: // Extended Squitter/Supplementary
             // U(msg, AIS::KEY_CF, 5, 3);  // Control Field instead of CA
-            U(msg, AIS::KEY_AA, 8, 24);
+            // U(msg, AIS::KEY_AA, 8, 24);
             decodeExtendedSquitter(msg);
             break;
         }
-        Send(&json, 1, tag);
     }
 
     const std::string class_str = "ADSB";
@@ -497,4 +511,119 @@ private:
             break;
         }
     }
+
+    const std::vector<std::string> ADSB_MAP_CA = {
+        "Level 1 transponder",               // 0
+        "Reserved",                          // 1
+        "Reserved",                          // 2
+        "Reserved",                          // 3
+        "Level 2+ transponder (on-ground)",  // 4
+        "Level 2+ transponder (airborne)",   // 5
+        "Level 2+ transponder (ground/air)", // 6
+        "DR=0 or FS=2,3,4,5 (ground/air)"    // 7
+    };
+
+    const std::vector<std::string> ADSB_MAP_DF = {
+        "Short air-air surveillance (ACAS)", // 0
+        "Reserved",                          // 1
+        "Reserved",                          // 2
+        "Reserved",                          // 3
+        "Surveillance, altitude reply",      // 4
+        "Surveillance, identity reply",      // 5
+        "Reserved",                          // 6
+        "Reserved",                          // 7
+        "Reserved",                          // 8
+        "Reserved",                          // 9
+        "Reserved",                          // 10
+        "All-Call reply",                    // 11
+        "Reserved",                          // 12
+        "Reserved",                          // 13
+        "Reserved",                          // 14
+        "Reserved",                          // 15
+        "Long air-air surveillance (ACAS)",  // 16
+        "Extended squitter",                 // 17
+        "Extended squitter/non transponder", // 18
+        "Military extended squitter",        // 19
+        "Comm-B, altitude reply",            // 20
+        "Comm-B, identity reply",            // 21
+        "Reserved",                          // 22
+        "Reserved",                          // 23
+        "Comm-D (ELM)"                       // 24
+    };
+
+    const std::vector<std::string> ADSB_MAP_TYPE = {
+        "Reserved",                            // 0
+        "Aircraft identification",             // 1
+        "Aircraft identification",             // 2
+        "Aircraft identification",             // 3
+        "Aircraft identification",             // 4
+        "Surface position",                    // 5
+        "Surface position",                    // 6
+        "Surface position",                    // 7
+        "Surface position",                    // 8
+        "Airborne position (w/Baro Altitude)", // 9
+        "Airborne position (w/Baro Altitude)", // 10
+        "Airborne position (w/Baro Altitude)", // 11
+        "Airborne position (w/Baro Altitude)", // 12
+        "Airborne position (w/Baro Altitude)", // 13
+        "Airborne position (w/Baro Altitude)", // 14
+        "Airborne position (w/Baro Altitude)", // 15
+        "Airborne position (w/Baro Altitude)", // 16
+        "Airborne position (w/Baro Altitude)", // 17
+        "Airborne position (w/Baro Altitude)", // 18
+        "Airborne velocities",                 // 19
+        "Airborne position (w/GNSS Height)",   // 20
+        "Airborne position (w/GNSS Height)",   // 21
+        "Airborne position (w/GNSS Height)",   // 22
+        "Reserved",                            // 23
+        "Reserved",                            // 24
+        "Reserved",                            // 25
+        "Reserved",                            // 26
+        "Reserved",                            // 27
+        "Aircraft status",                     // 28
+        "Target state and status information", // 29
+        "Reserved",                            // 30
+        "Aircraft operation status"            // 31
+    };
+
+    const std::vector<std::vector<std::string>> ADSB_MAP_WAKE_VORTEX = {
+        {
+
+        },
+        // Type 1 (index 0)
+        {
+          "No category information"
+        },
+        // Type 2 (index 1)
+        {
+            "No category information",
+            "Surface emergency vehicle",
+            "Reserved",
+            "Surface service vehicle",
+            "Ground obstruction",
+            "Ground obstruction",
+            "Ground obstruction",
+            "Ground obstruction"},
+        // Type 3 (index 2)
+        {
+            "No category information",
+            "Glider, sailplane",
+            "Lighter-than-air",
+            "Parachutist, skydiver",
+            "Ultralight, hang-glider, paraglider",
+            "Reserved",
+            "Unmanned aerial vehicle",
+            "Space or transatmospheric vehicle"},
+        // Type 4 (index 3)
+        {
+            "No category information",
+            "Light (< 7000 kg)",
+            "Medium 1 (7000-34000 kg)",
+            "Medium 2 (34000-136000 kg)",
+            "High vortex aircraft",
+            "Heavy (> 136000 kg)",
+            "High performance (> 400 kt, > 5g acceleration)",
+            "Rotorcraft"
+        }
+    };
 };

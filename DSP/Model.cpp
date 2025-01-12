@@ -856,4 +856,22 @@ namespace AIS
 	{
 		return Model::Get();
 	}
+
+	Setting &ModelExport::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		Model::Set(option, arg);
+		return *this;
+	}
+
+	std::string ModelExport::Get()
+	{
+		return Model::Get();
+	}
+
+	void ModelExport::buildModel(char, char, int, bool, Device::Device *) {
+
+	}
+
 }
