@@ -423,8 +423,8 @@ void OutputScreen::connect(Receiver &r)
 			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)msg2screen).getGroupsIn()))
 				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&msg2screen);
 
-			if (r.OutputADSB(j).canConnect(((StreamIn<JSON::JSON>)msg2screen).getGroupsIn()))
-				r.OutputADSB(j).Connect((StreamIn<JSON::JSON> *)&msg2screen);
+			if (r.OutputADSB(j).canConnect(((StreamIn<Plane::ADSB>)msg2screen).getGroupsIn()))
+				r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&msg2screen);
 		}
 
 		msg2screen.setDetail(level);
@@ -438,9 +438,6 @@ void OutputScreen::connect(Receiver &r)
 
 			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)json2screen).getGroupsIn()))
 				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&json2screen);
-
-			if (r.OutputADSB(j).canConnect(((StreamIn<JSON::JSON>)json2screen).getGroupsIn()))
-				r.OutputADSB(j).Connect((StreamIn<JSON::JSON> *)&json2screen);
 		}
 
 		if (level == MessageFormat::JSON_SPARSE)

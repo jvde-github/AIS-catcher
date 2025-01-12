@@ -101,21 +101,11 @@ namespace IO
 		}
 	}
 
-	void MessageToScreen::Receive(const JSON::JSON *data, int len, TAG &tag)
+	void MessageToScreen::Receive(const Plane::ADSB *data, int len, TAG &tag)
 	{
 		for (int i = 0; i < len; i++)
 		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
-			{
-				for (const auto &p : data[i].getProperties())
-					if (p.Key() == AIS::KEY_RAW_MESSAGE)
-					{
-						if(level == MessageFormat::JSON_NMEA)
-							std::cout << "{\"raw_message\":\"" <<  p.Get().getString() << "\"}" << std::endl;
-						else
-							std::cout << "*" << p.Get().getString() << ";" << std::endl;
-					}
-			}
+			data[i].Print();
 		}
 	}
 

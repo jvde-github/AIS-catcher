@@ -140,6 +140,7 @@ public:
     }
 
   std::string getCompactArray(bool include_inactive = false) {
+    /*
         std::lock_guard<std::mutex> lock(mtx);
         
         const std::string null_str = "null";
@@ -185,6 +186,8 @@ public:
         }
         
         content += "],\"error\":false}\n\n";
+        */
+       std::string content;
         return content;
     }
 

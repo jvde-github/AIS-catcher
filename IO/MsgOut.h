@@ -24,7 +24,7 @@
 #include "Stream.h"
 #include "AIS.h"
 #include "Utilities.h"
-
+#include "ADSB.h"
 #include "Keys.h"
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
@@ -230,7 +230,7 @@ namespace IO
 		virtual ~StringToScreen() {}
 	};
 
-	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public StreamIn<JSON::JSON>, public Setting
+	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public StreamIn<Plane::ADSB>, public Setting
 	{
 	private:
 		MessageFormat level;
@@ -242,7 +242,7 @@ namespace IO
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const AIS::GPS *data, int len, TAG &tag);
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const Plane::ADSB *data, int len, TAG &tag);
 
 
 		Setting &Set(std::string option, std::string arg)

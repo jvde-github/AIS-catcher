@@ -313,7 +313,7 @@ void WebViewer::connect(Receiver &r)
 
 			r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&ships);
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&ships);
-			r.OutputADSB(j).Connect((StreamIn<JSON::JSON> *)&planes);
+			//r.OutputADSB(j).Connect((StreamIn<JSON::JSON> *)&planes);
 
 			*r.device >> raw_counter;
 		}

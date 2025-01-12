@@ -789,7 +789,7 @@ set(CPP
     Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
     Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp Library/Logger.cpp
     Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp Application/WebDB.cpp
-    DSP/DSP.cpp Device/N2KsktCAN.cpp Library/Basestation.cpp Library/Beast.cpp
+    DSP/DSP.cpp Device/N2KsktCAN.cpp Library/Basestation.cpp Library/Beast.cpp Library/ADSB.cpp
     IO/MsgOut.cpp IO/N2KStream.cpp Library/N2K.cpp IO/N2KInterface.cpp Protocol/Protocol.cpp)
 
 set(HEADER
