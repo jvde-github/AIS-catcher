@@ -1,3 +1,21 @@
+/*
+	Copyright(c) 2021-2025 jvde.github@gmail.com
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+
 #pragma once
 #include <string>
 #include <time.h>
@@ -10,54 +28,43 @@
 
 namespace Plane
 {
-    enum class MessageType
-    {
-        MSG = 0,
-        SEL, // Selection Change
-        ID,  // New ID
-        AIR, // New Aircraft
-        STA, // Status Change
-        CLK  // Click
-    };
+        static constexpr double BEAST_CLOCK_MHZ = 12.0;
 
-    enum class BoolType
-    {
-        IS_FALSE = 0,
-        IS_TRUE = 1,
-        UNKNOWN = 2
-    };
 
-    enum class TransmissionType
+    struct CPR
     {
-        NONE = 0,
-        ES_IDENTIFICATION = 1, // ES Identification and Category
-        ES_SURFACE_POS = 2,    // ES Surface Position
-        ES_AIRBORNE_POS = 3,   // ES Airborne Position
-        ES_AIRBORNE_VEL = 4,   // ES Airborne Velocity
-        SURVEILLANCE_ALT = 5,  // Surveillance Alt
-        SURVEILLANCE_ID = 6,   // Surveillance ID
-        AIR_TO_AIR = 7,        // Air To Air
-        ALL_CALL_REPLY = 8     // All Call Reply
+        int lat, lon;
+        std::time_t timestamp;
+
+        void clear()
+        {
+            lat = LAT_UNDEFINED;
+            lon = LON_UNDEFINED;
+            timestamp = TIME_UNDEFINED;
+        }
     };
 
     struct ADSB
     {
+        uint8_t msg[14]; // Raw message
+        int df;          // Downlink format
+        int msgtype;     // Message type
+        int len;         // Length of message
         int prev, next;
         std::time_t rxtime;
-        MessageType type;
-        TransmissionType transmission;
-        uint32_t hexident;   // Aircraft Mode S hex code
-        int altitude;        // Mode C altitude
-        FLOAT32 lat, lon;    // Position
-        FLOAT32 groundspeed; // Speed over ground
-        FLOAT32 track;       // Track angle
-        int vertrate;        // Vertical rate
-        char callsign[9];    // Aircraft callsign, nul terminated
-        int squawk;          // Mode A squawk code
-        BoolType alert;      // Squawk change flag
-        BoolType emergency;  // Emergency flag
-        BoolType spi;        // Ident flag
-        BoolType onground;   // Ground squat switch flag
+        uint32_t hexident;     // Aircraft Mode S hex code
+        int altitude;          // Mode C altitude
+        FLOAT32 lat, lon;      // Position
+        FLOAT32 speed;         // Speed over ground
+        FLOAT32 heading;       // Track angle
+        int vertrate;          // Vertical rate
+        char callsign[10];      // Aircraft callsign, nul terminated
+        int squawk;            // Mode A squawk code
+        int airborne;          // 0 = on ground, 1 = airborne, 2 = unknown
+        long messages;         // Number of Mode S messages received
+        struct CPR even, odd;  // CPR coordinates
+        FLOAT32 signalLevel;   // Signal level
+        std::time_t timestamp; // Timestamp
 
         void Stamp(std::time_t t = (std::time_t)0L)
         {
@@ -69,115 +76,97 @@ namespace Plane
         void setRxTimeUnix(std::time_t t) { rxtime = t; }
         std::time_t getRxTimeUnix() const { return rxtime; }
 
+        void Decode();
+
         void clear()
         {
-            type = MessageType::MSG;
-            transmission = TransmissionType::NONE;
-            hexident = 0;
-            altitude = 0;
+            msgtype = MSG_TYPE_UNDEFINED;
+            df = DF_UNDEFINED;
+            len = 0;
+            rxtime = TIME_UNDEFINED;
+            hexident = HEXIDENT_UNDEFINED;
+            altitude = ALTITUDE_UNDEFINED;
             lat = LAT_UNDEFINED;
             lon = LON_UNDEFINED;
-            groundspeed = GROUNDSPEED_UNDEFINED;
-            track = TRACK_UNDEFINED;
-            vertrate = VERTRATE_UNDEFINED;
+            speed = SPEED_UNDEFINED;
+            heading = HEADING_UNDEFINED;
+            vertrate = VERT_RATE_UNDEFINED;
             squawk = SQUAWK_UNDEFINED;
-            alert = emergency = spi = onground = BoolType::UNKNOWN;
+            airborne = AIRBORNE_UNDEFINED;
+            signalLevel = LEVEL_UNDEFINED;
+            timestamp = TIME_UNDEFINED;
+
+            even.clear();
+            odd.clear();
+
             callsign[0] = '\0';
         }
 
-        // Getters
-        MessageType getType() const { return type; }
-        TransmissionType getTransmission() const { return transmission; }
-
-        uint32_t getHexIdent() const { return hexident; }
-        int getAltitude() const { return altitude; }
-        FLOAT32 getLat() const { return lat; }
-        FLOAT32 getLon() const { return lon; }
-        FLOAT32 getGroundSpeed() const { return groundspeed; }
-        FLOAT32 getTrack() const { return track; }
-        int getVertRate() const { return vertrate; }
-        std::string getCallsign() const { return std::string(callsign); }
-        int getSquawk() const { return squawk; }
-        BoolType getAlert() const { return alert; }
-        BoolType getEmergency() const { return emergency; }
-        BoolType getSPI() const { return spi; }
-        BoolType isOnGround() const { return onground; }
-
-        // Setters
-        void setType(MessageType t) { type = t; }
-        void setTransmission(TransmissionType t) { transmission = t; }
-
-        void setHexIdent(uint32_t h) { hexident = h; }
-        void setAltitude(int a) { altitude = a; }
-        void setPosition(FLOAT32 la, FLOAT32 lo)
+        std::string getRaw() const
         {
-            lat = la;
-            lon = lo;
-        }
-        void setGroundSpeed(FLOAT32 gs) { groundspeed = gs; }
-        void setTrack(FLOAT32 t) { track = t; }
-        void setVertRate(int vr) { vertrate = vr; }
-
-        void setCallsign(const std::string &c) {
-            callsign[0] = '\0';  
-            size_t end = c.length();
-            while (end > 0 && c[end-1] == ' ') {
-                end--;
+            std::stringstream ss;
+            ss << std::hex << std::setfill('0');
+            for (const auto &byte : msg)
+            {
+                ss << std::setw(2) << static_cast<int>(byte);
             }
-            
-            for(int i = 0; i < 8; i++) {
-                if (i < end && c[i] != '\0' && c[i] != '@' && c[i] >= 32 && c[i] <= 126)  
+            return ss.str();
+        }
+
+        uint32_t getBits(int startBit, int len) const
+        {
+            uint32_t result = 0;
+            for (int i = 0; i < len; i++)
+            {
+                int byteIdx = (startBit + i) / 8;
+                int bitIdx = 7 - ((startBit + i) % 8);
+                if (byteIdx < sizeof(msg) && (msg[byteIdx] & (1 << bitIdx)))
                 {
-                    callsign[i] = c[i];
-                }
-                else {
-                    callsign[i] = '\0';
-                    break;
+                    result |= (1 << (len - 1 - i));
                 }
             }
+            return result;
         }
 
-        void setSquawk(int s) { squawk = s; }
-        void setAlert(BoolType a) { alert = (BoolType)a; }
-        void setEmergency(BoolType e) { emergency = (BoolType)e; }
-        void setSPI(BoolType s) { spi = (BoolType)s; }
-        void setOnGround(BoolType g) { onground = (BoolType)g; }
-
-        void Print()
+        void Print() const
         {
-            char timebuf[32];
-            std::strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", std::localtime(&rxtime));
+            if (msgtype != MSG_TYPE_UNDEFINED)
+                std::cout << "MSG: " << (char)msgtype << std::endl;
 
-            std::cout << "ADSB: " << std::endl;
-            std::cout << "  Time: " << timebuf << std::endl;
-            std::cout << "  Type: " << (int)type << std::endl;
-            if (transmission != TransmissionType::NONE)
-                std::cout << "  Transmission: " << (int)transmission << std::endl;
-            std::cout << "  HexIdent: " << std::setfill('0') << std::setw(6) << std::hex << std::uppercase << hexident << std::dec << std::endl;
-            if (altitude != 0)
-                std::cout << "  Altitude: " << altitude << std::endl;
+            if(df != DF_UNDEFINED)
+                std::cout << "DF: " << df << std::endl;
+
+            if (hexident != HEXIDENT_UNDEFINED)
+                std::cout << "HEX: " << std::hex << hexident << std::dec << std::endl;
+
+            if (altitude != ALTITUDE_UNDEFINED)
+                std::cout << "ALT: " << altitude << std::endl;
+
             if (lat != LAT_UNDEFINED)
-                std::cout << "  Lat: " << lat << std::endl;
+                std::cout << "LAT: " << lat << std::endl;
+
             if (lon != LON_UNDEFINED)
-                std::cout << "  Lon: " << lon << std::endl;
-            if (groundspeed != GROUNDSPEED_UNDEFINED)
-                std::cout << "  GroundSpeed: " << groundspeed << std::endl;
-            if (track != TRACK_UNDEFINED)
-                std::cout << "  Track: " << track << std::endl;
-            if (vertrate != VERTRATE_UNDEFINED)
-                std::cout << "  VertRate: " << vertrate << std::endl;
-            if (std::string(callsign, 8) != "@@@@@@@@")
-                std::cout << "  Callsign: " << std::string(callsign, 8) << std::endl;
+                std::cout << "LON: " << lon << std::endl;
+
+            if (speed != SPEED_UNDEFINED)
+                std::cout << "SPD: " << speed << std::endl;
+
+            if (heading != HEADING_UNDEFINED)
+                std::cout << "HDG: " << heading << std::endl;
+
+            if (vertrate != VERT_RATE_UNDEFINED)
+                std::cout << "V/S: " << vertrate << std::endl;
+
             if (squawk != SQUAWK_UNDEFINED)
-                std::cout << "  Squawk: " << squawk << std::endl;
-            if (alert != BoolType::UNKNOWN)
-                std::cout << "  Alert: " << (int)alert << std::endl;
-            if (emergency != BoolType::UNKNOWN)
-                std::cout << "  Emergency: " << (int)emergency << std::endl;
-            if (spi != BoolType::UNKNOWN)
-                std::cout << "  SPI: " << (int)spi << std::endl;
-            if (onground != BoolType::UNKNOWN)
-                std::cout << "  OnGround: " << (int)onground << std::endl;
+                std::cout << "SQK: " << squawk << std::endl;
+
+            if (airborne != AIRBORNE_UNDEFINED)
+                std::cout << "AIR: " << airborne << std::endl;
+
+            if (callsign[0] != '\0')
+                std::cout << "CSN: " << callsign << std::endl;
         }
+
+        void Callsign();
     };
 }

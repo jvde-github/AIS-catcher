@@ -164,10 +164,14 @@ const float PPM_UNDEFINED = 1024;
 
 const int STATUS_OK = 0;
 
-const int GROUNDSPEED_UNDEFINED = -1;
-const int VERTRATE_UNDEFINED = -10000;
-const int SQUAWK_UNDEFINED = -1;           
-const int TRACK_UNDEFINED  = 360;
+const int MSG_TYPE_UNDEFINED = -1;
+const int DF_UNDEFINED = -1;
+const std::time_t TIME_UNDEFINED = (std::time_t)0L;
+const uint32_t HEXIDENT_UNDEFINED = 0;
+const int ALTITUDE_UNDEFINED = -1000000;
+const int VERT_RATE_UNDEFINED = -10000;
+const int SQUAWK_UNDEFINED = -1;
+const int AIRBORNE_UNDEFINED = 2;
 
 struct TAG
 {
