@@ -25,6 +25,7 @@
 #endif
 
 #include "Utilities.h"
+#include "Logger.h"
 
 namespace Util
 {
@@ -661,6 +662,119 @@ namespace Util
 		}
 
 		out.Send(output.data(), size, tag);
+	}
+
+	void WriteWAV::Open(const std::string &filename, int sample_rate)
+	{
+		if (stopping)
+			return;
+
+		try
+		{
+			file.open(filename, std::ios::binary);
+			if (!file.is_open())
+			{
+				throw std::runtime_error("Cannot open WAV file for writing: \"" + filename + "\"");
+			}
+
+			header.sample_rate_val = sample_rate;
+
+			switch (format)
+			{
+			case Format::CU8:
+			case Format::CS8:
+				header.bit_depth = 8;
+				break;
+			case Format::CS16:
+				header.bit_depth = 16;
+				break;
+			case Format::CF32:
+				header.bit_depth = 32;
+				header.audio_format = 3;
+				break;
+			default:
+				throw std::runtime_error("Unsupported format for WAV file writing");
+			}
+
+			header.byte_rate = sample_rate * 2 * (header.bit_depth / 8);
+			header.sample_alignment = 2 * (header.bit_depth / 8);
+
+			// Write the header
+			file.write(reinterpret_cast<const char *>(&header), sizeof(header));
+		}
+		catch (const std::exception &e)
+		{
+			Error() << "WAV out: " << e.what() << std::endl;
+			stopping = true;
+			StopRequest();
+		}
+	}
+
+	WriteWAV::~WriteWAV()
+	{
+		if (file.is_open())
+		{
+			// Get current position
+			std::streampos pos = file.tellp();
+			std::streamoff data_size = pos - std::streamoff(sizeof(WAVHeader));
+			uint32_t wav_size = data_size + 36; // Total size - 8
+
+			// Update RIFF chunk size
+			file.seekp(4);
+			file.write((const char *)(&wav_size), 4);
+
+			// Update data chunk size
+			file.seekp(40);
+			uint32_t data_chunk_size = (uint32_t)(data_size);
+			file.write((char *)(&data_chunk_size), 4);
+
+			file.close();
+		}
+	}
+
+	void WriteWAV::Receive(const RAW *raw, int len, TAG &tag)
+	{
+		if (stopping)
+			return;
+
+		format = raw->format;
+
+		if (!file.is_open())
+		{
+			Open(filename, sample_rate);
+		}
+
+		if (!file.is_open() || stopping)
+			return;
+
+		// Write the data directly
+		try
+		{
+			file.write(reinterpret_cast<const char *>(raw->data), raw->size);
+		}
+		catch (const std::exception &e)
+		{
+			Error() << "WAV out: " << e.what() << std::endl;
+			stopping = true;
+			StopRequest();
+		}
+	}
+
+	bool WriteWAV::setValue(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		if (option == "FILE")
+		{
+			filename = arg;
+			return true;
+		}
+		else if (option == "RATE")
+		{
+			sample_rate = Parse::Integer(arg, 0, 1000000000, "RATE");
+			return true;
+		}
+		return false;
 	}
 
 	void Serialize::Uint8(uint8_t i, std::vector<char> &v)

@@ -859,9 +859,9 @@ namespace AIS
 
 	Setting &ModelExport::Set(std::string option, std::string arg)
 	{
-		Util::Convert::toUpper(option);
+		if (!wav.setValue(option, arg))
+			Model::Set(option, arg);
 
-		Model::Set(option, arg);
 		return *this;
 	}
 
@@ -870,8 +870,14 @@ namespace AIS
 		return Model::Get();
 	}
 
-	void ModelExport::buildModel(char, char, int, bool, Device::Device *) {
+	void ModelExport::buildModel(char, char, int sample_rate, bool, Device::Device *dev)
+	{
+		setName("Export output");
+		device = dev;
 
+		wav.setValue("rate", std::to_string(sample_rate));
+
+		*device >> wav;
 	}
 
 }
