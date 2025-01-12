@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'm':
 				Assert(count == 1, param, "requires one parameter [model number].");
-				receiver.addModel(Util::Parse::Integer(arg1, 0, 5));
+				receiver.addModel(Util::Parse::Integer(arg1, 0, 9));
 				break;
 			case 'M':
 				Assert(count <= 1, param, "requires zero or one parameter [DT].");

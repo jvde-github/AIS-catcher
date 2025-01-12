@@ -324,7 +324,7 @@ namespace AIS
 
 	class ModelExport : public Model
 	{
-		Beast model;
+		Util::WriteWAV wav;
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
