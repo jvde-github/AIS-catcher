@@ -321,4 +321,15 @@ namespace AIS
 		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
+
+	class ModelExport : public Model
+	{
+		Beast model;
+
+	public:
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
+		std::string Get();
+		ModelClass getClass() { return ModelClass::IQ; }
+	};
 }

@@ -344,6 +344,7 @@ namespace AIS
 		{"cpr_lat", "cpr_lat", "cpr_lat", "lat"},								// KEY_CPR_LAT
 		{"cpr_lon", "cpr_lon", "cpr_lon", "lon"},								// KEY_CPR_LON
 		{"df", "df", "df", ""},													// KEY_DF
+		{"df_text", "df_text", "df_text", ""},									// KEY_DF
 		{"signal", "signal", "signal", ""},										// KEY_SIGNAL
 		{"vertical_status", "vertical_status", "vertical_status", ""},			// KEY_VS
 		{"cross_link", "cross_link", "cross_link", ""},							// KEY_CC
@@ -352,9 +353,12 @@ namespace AIS
 		{"flight_status", "flight_status", "flight_status", ""},				// KEY_FS
 		{"downlink_request", "downlink_request", "downlink_request", ""},		// KEY_DR
 		{"capability", "capability", "capability", ""},							// KEY_CA
+		{"capability_text", "capability_text", "capability_text", ""},			// KEY_CA_TEXT
 		{"address", "address", "address", ""},									// KEY_AA
 		{"interrogator", "interrogator", "interrogator", ""},					// KEY_IID
-		{"raw_message", "raw_message", "raw_message", ""}					
-
+		{"raw_message", "raw_message", "raw_message", ""},
+		{"icao", "icao", "icao", ""},
+		{"type_text", "type_text", "type_text", ""},
+		{"wake_vortex", "wake_vortex", "wake_vortex", ""} 						// KEY_WAKE_VORTEX
 	};
 }
