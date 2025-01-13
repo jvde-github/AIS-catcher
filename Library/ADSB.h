@@ -1,20 +1,19 @@
 /*
-	Copyright(c) 2021-2025 jvde.github@gmail.com
+    Copyright(c) 2021-2025 jvde.github@gmail.com
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 
 #pragma once
 #include <string>
@@ -28,19 +27,20 @@
 
 namespace Plane
 {
-        static constexpr double BEAST_CLOCK_MHZ = 12.0;
-
+    static constexpr double BEAST_CLOCK_MHZ = 12.0;
 
     struct CPR
     {
         int lat, lon;
         std::time_t timestamp;
+        bool airborne;
 
         void clear()
         {
             lat = LAT_UNDEFINED;
             lon = LON_UNDEFINED;
             timestamp = TIME_UNDEFINED;
+            airborne = false;
         }
     };
 
@@ -58,7 +58,7 @@ namespace Plane
         FLOAT32 speed;         // Speed over ground
         FLOAT32 heading;       // Track angle
         int vertrate;          // Vertical rate
-        char callsign[10];      // Aircraft callsign, nul terminated
+        char callsign[10];     // Aircraft callsign, nul terminated
         int squawk;            // Mode A squawk code
         int airborne;          // 0 = on ground, 1 = airborne, 2 = unknown
         long messages;         // Number of Mode S messages received
@@ -128,45 +128,9 @@ namespace Plane
             return result;
         }
 
-        void Print() const
-        {
-            if (msgtype != MSG_TYPE_UNDEFINED)
-                std::cout << "MSG: " << (char)msgtype << std::endl;
-
-            if(df != DF_UNDEFINED)
-                std::cout << "DF: " << df << std::endl;
-
-            if (hexident != HEXIDENT_UNDEFINED)
-                std::cout << "HEX: " << std::hex << hexident << std::dec << std::endl;
-
-            if (altitude != ALTITUDE_UNDEFINED)
-                std::cout << "ALT: " << altitude << std::endl;
-
-            if (lat != LAT_UNDEFINED)
-                std::cout << "LAT: " << lat << std::endl;
-
-            if (lon != LON_UNDEFINED)
-                std::cout << "LON: " << lon << std::endl;
-
-            if (speed != SPEED_UNDEFINED)
-                std::cout << "SPD: " << speed << std::endl;
-
-            if (heading != HEADING_UNDEFINED)
-                std::cout << "HDG: " << heading << std::endl;
-
-            if (vertrate != VERT_RATE_UNDEFINED)
-                std::cout << "V/S: " << vertrate << std::endl;
-
-            if (squawk != SQUAWK_UNDEFINED)
-                std::cout << "SQK: " << squawk << std::endl;
-
-            if (airborne != AIRBORNE_UNDEFINED)
-                std::cout << "AIR: " << airborne << std::endl;
-
-            if (callsign[0] != '\0')
-                std::cout << "CSN: " << callsign << std::endl;
-        }
-
+        void Print() const;
         void Callsign();
+        int decodeAC12Field();
+        int decodeAC13Field();
     };
 }
