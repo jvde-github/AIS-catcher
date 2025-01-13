@@ -82,7 +82,7 @@ namespace IO
 
 		std::time_t now = std::time(0);
 
-		if (protocol == PROTOCOL::AISCATCHER)
+		if (protocol == PROTOCOL::AISCATCHER || protocol == PROTOCOL::AIRFRAMES)
 		{
 
 			msg += "{\n\t\"protocol\": \"" + protocol_string + "\",";
