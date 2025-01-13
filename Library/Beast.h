@@ -20,11 +20,6 @@
 #include <vector>
 #include <ctime>
 
-// References:
-// https://github.com/wiedehopf/readsb/blob/dev/mode_s.c
-// https://github.com/cjkreklow/go-adsb
-// https://pure.tudelft.nl/ws/portalfiles/portal/104877928/11_Book_Manuscript_69_1_10_20210510.pdf
-
 class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
     static constexpr size_t MAX_MESSAGE_SIZE = 1024;
@@ -66,7 +61,6 @@ public:
     }
 
 private:
-
     void Clear()
     {
         state = State::WAIT_ESCAPE;
@@ -74,7 +68,7 @@ private:
         msg.clear();
     }
 
-   void ProcessByte(uint8_t byte, TAG &tag)
+    void ProcessByte(uint8_t byte, TAG &tag)
     {
         if (buffer.size() > MAX_MESSAGE_SIZE)
         {
@@ -96,7 +90,9 @@ private:
             if (byte >= 0x31 && byte <= 0x33)
             { // Valid types: '1', '2', '3'
                 msg.clear();
+                msg.Stamp();
                 msg.msgtype = byte;
+
                 state = State::READ_TIMESTAMP;
                 bytes_read = 0;
                 buffer.clear();
@@ -156,9 +152,17 @@ private:
             int expected_len = GetExpectedLength();
             if (bytes_read == expected_len)
             {
-                msg.Decode();
-                std::cout << "----- ADSB Message -----" << std::endl;
-                msg.Print();
+                if (msg.msgtype == '2' || msg.msgtype == '3')
+                {
+                    msg.Decode();
+                }
+                else if (msg.msgtype != '1')
+                {
+                    std::cerr << "Unknown message type: " << msg.msgtype << std::endl;
+                }
+                //std::cout << "----- ADSB Message -----" << std::endl;
+                //msg.Print();
+                
                 state = State::WAIT_ESCAPE;
                 buffer.clear();
             }
@@ -187,7 +191,6 @@ private:
         }
     }
 
- 
     uint64_t ParseTimestamp() const
     {
         if (buffer.size() < 6)
