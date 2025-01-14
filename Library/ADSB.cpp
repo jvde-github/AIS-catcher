@@ -220,26 +220,21 @@ namespace Plane
             case 6:
             case 7:
             case 8:
-                airborne = 0; // Aircraft is on the ground
-                {
-                    // Store CPR position
-                    int is_odd = getBits(54, 1);
-                    if (is_odd)
-                    {
-                        odd.lat = getBits(55, 17);
-                        odd.lon = getBits(72, 17);
-                        odd.timestamp = rxtime;
-                        odd.airborne = false;
-                    }
-                    else
-                    {
-                        even.lat = getBits(55, 17);
-                        even.lon = getBits(72, 17);
-                        even.timestamp = rxtime;
-                        even.airborne = false;
-                    }
-                }
-                break;
+            {
+                airborne = 0;
+                int is_odd = msg[6] & (1 << 2);
+
+                int lat = ((msg[6] & 3) << 15) | (msg[7] << 7) | (msg[8] >> 1);
+                int lon = ((msg[8] & 1) << 16) | (msg[9] << 8) | msg[10];
+
+                CPR &cpr = is_odd ? odd : even;
+
+                cpr.lat = lat;
+                cpr.lon = lon;
+                cpr.timestamp = rxtime;
+                cpr.airborne = false;
+            }
+            break;
 
             case 9: // Airborne Position
             case 10:
@@ -253,9 +248,8 @@ namespace Plane
             case 18:
             {
                 altitude = decodeAC12Field();
-                airborne = 1; // Aircraft is airborne
+                airborne = 1; 
 
-                // Store CPR position
                 int is_odd = msg[6] & (1 << 2);
 
                 int lat = ((msg[6] & 3) << 15) | (msg[7] << 7) | (msg[8] >> 1);
@@ -341,55 +335,123 @@ namespace Plane
 
     void ADSB::decodeCPR()
     {
-        // Validate input data
         if (even.lat == CPR_POSITION_UNDEFINED ||
             odd.lat == CPR_POSITION_UNDEFINED ||
             std::abs(even.timestamp - odd.timestamp) > 10)
         {
-            return;
+            return; 
         }
 
         if (even.airborne != odd.airborne)
+        {
             return;
+        }
 
-        // Constants
-        constexpr double AirDlat0 = 360.0 / 60;
-        constexpr double AirDlat1 = 360.0 / 59;
-        constexpr double CPR_SCALE = 131072.0;
+        if (even.airborne)
+        {
+            decodeCPR_airborne();
+        }
+        else
+        {
+            decodeCPR_surface();
+        }
+    }
 
-        // Calculate global latitude
-        int j = floor(((59 * even.lat - 60 * odd.lat) / CPR_SCALE) + 0.5);
-        double rlat0 = AirDlat0 * (cprModFunction(j, 60) + even.lat / CPR_SCALE);
-        double rlat1 = AirDlat1 * (cprModFunction(j, 59) + odd.lat / CPR_SCALE);
+    void ADSB::decodeCPR_airborne()
+    {
+        constexpr double CPR_SCALE = 131072.0;    
+        constexpr double AirDlat0 = 360.0 / 60.0; 
+        constexpr double AirDlat1 = 360.0 / 59.0; 
 
-        // Normalize latitudes
-        if (rlat0 >= 270)
-            rlat0 -= 360;
-        if (rlat1 >= 270)
-            rlat1 -= 360;
+        bool use_even = (even.timestamp > odd.timestamp);
 
-        // Validate latitude zones
-        if (cprNLFunction(rlat0) != cprNLFunction(rlat1))
-            return;
+        int latEvenBits = even.lat;
+        int latOddBits = odd.lat;
 
-        // Select most recent position
-        bool use_even = even.timestamp > odd.timestamp;
-        double rlat = use_even ? rlat0 : rlat1;
-        double raw_lon = use_even ? even.lon : odd.lon;
-        int nl = cprNLFunction(rlat);
+        int j = (int) std::floor(((59.0 * latEvenBits) - (60.0 * latOddBits)) / CPR_SCALE + 0.5);
+
+        double rlatEven = AirDlat0 * (cprModFunction(j, 60) + static_cast<double>(latEvenBits) / CPR_SCALE);
+        double rlatOdd = AirDlat1 * (cprModFunction(j, 59) + static_cast<double>(latOddBits) / CPR_SCALE);
+
+        if (rlatEven >= 270.0)
+            rlatEven -= 360.0;
+        if (rlatOdd >= 270.0)
+            rlatOdd -= 360.0;
+
+        if (cprNLFunction(rlatEven) != cprNLFunction(rlatOdd))
+        {
+            return; 
+        }
+
+        double finalLat = use_even ? rlatEven : rlatOdd;
+
+        // Next, compute longitude
+        int nl = cprNLFunction(finalLat);
         int ni = MAX(nl - (use_even ? 0 : 1), 1);
 
-        // Calculate longitude
-        double m = floor((((even.lon * (nl - 1)) - (odd.lon * nl)) / CPR_SCALE) + 0.5);
+        int lonEvenBits = even.lon;
+        int lonOddBits = odd.lon;
 
-        // Set final position
-        lon = (360.0 / ni) * (cprModFunction(m, ni) + raw_lon / CPR_SCALE);
-        lat = rlat;
+        double m = std::floor(
+            ((static_cast<double>(lonEvenBits) * (nl - 1)) -
+             (static_cast<double>(lonOddBits) * nl)) /
+                CPR_SCALE +
+            0.5);
+
+        double rawLon = use_even ? lonEvenBits : lonOddBits;
+
+        double finalLon = (360.0 / ni) * (cprModFunction(static_cast<int>(m), ni) + rawLon / CPR_SCALE);
+
+        if (finalLon > 180.0)
+            finalLon -= 360.0;
+
+        lat = finalLat;
+        lon = finalLon;
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
+    }
+
+    void ADSB::decodeCPR_surface()
+    {
+        constexpr double CPR_SCALE = 131072.0;      
+        constexpr double SurfaceDlat = 90.0 / 15.0; 
+        constexpr int SURFACE_ZONES = 15;           
+
+        bool use_even = (even.timestamp > odd.timestamp);
+
+        int latEvenBits = even.lat;
+        int latOddBits = odd.lat;
+
+        int j = static_cast<int>(
+            std::floor(((15.0 * latEvenBits) - (15.0 * latOddBits)) / CPR_SCALE + 0.5));
+
+        double rlatEven = SurfaceDlat * (cprModFunction(j, SURFACE_ZONES) + static_cast<double>(latEvenBits) / CPR_SCALE);
+        double rlatOdd = SurfaceDlat * (cprModFunction(j, SURFACE_ZONES) + static_cast<double>(latOddBits) / CPR_SCALE);
+
+        if (rlatEven > 90.0)
+            rlatEven -= 180.0;
+        if (rlatOdd > 90.0)
+            rlatOdd -= 180.0;
+
+        double finalLat = use_even ? rlatEven : rlatOdd;
+
+        int lonEvenBits = even.lon;
+        int lonOddBits = odd.lon;
+
+        double m = std::floor(
+            ((15.0 * lonEvenBits) - (15.0 * lonOddBits)) / CPR_SCALE + 0.5);
+
+        double rawLon = use_even ? lonEvenBits : lonOddBits;
+
+        double finalLon = (360.0 / SURFACE_ZONES) * (cprModFunction(static_cast<int>(m), SURFACE_ZONES) + rawLon / CPR_SCALE);
 
         // Normalize longitude
-        if (lon > 180)
-            lon -= 360;
+        if (finalLon > 180.0)
+            finalLon -= 360.0;
+
+        // Store final result
+        lat = finalLat;
+        lon = finalLon;
+        latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
     }
 
     void ADSB::Print() const

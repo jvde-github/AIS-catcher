@@ -225,5 +225,7 @@ namespace Plane
         double cprDlonFunction(double lat, int isodd);
 
         void decodeCPR();
+        void decodeCPR_airborne();
+        void decodeCPR_surface();
     };
 }
