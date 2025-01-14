@@ -102,6 +102,7 @@ public:
         plane.nMessages++;
 
         // Update position if valid
+
         if (msg->lat != LAT_UNDEFINED && msg->lon != LON_UNDEFINED)
         {
             plane.lat = msg->lat;
@@ -114,6 +115,7 @@ public:
             plane.even.lat = msg->even.lat;
             plane.even.lon = msg->even.lon;
             plane.even.timestamp = msg->even.timestamp;
+            plane.even.airborne = msg->even.airborne;
 
             plane.decodeCPR();
         }
@@ -123,6 +125,7 @@ public:
             plane.odd.lat = msg->odd.lat;
             plane.odd.lon = msg->odd.lon;
             plane.odd.timestamp = msg->odd.timestamp;
+            plane.odd.airborne = msg->odd.airborne;
 
             plane.decodeCPR();
         }
