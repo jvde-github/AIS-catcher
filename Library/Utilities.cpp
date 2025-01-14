@@ -221,6 +221,8 @@ namespace Util
 			format = Format::BASESTATION;
 		else if (str == "BEAST")
 			format = Format::BEAST;
+		else if (str == "RAW1090")
+			format = Format::RAW1090;
 		else
 			return false;
 
@@ -304,6 +306,10 @@ namespace Util
 		else if (arg == "BEAST")
 		{
 			protocol = PROTOCOL::BEAST;
+		}
+		else if (arg == "RAW1090")
+		{
+			protocol = PROTOCOL::RAW1090;
 		}
 		else
 			return false;
@@ -478,6 +484,8 @@ namespace Util
 			return "BASESTATION";
 		case Format::BEAST:
 			return "BEAST";
+		case Format::RAW1090:
+			return "RAW1090";
 		default:
 			break;
 		}
@@ -506,6 +514,8 @@ namespace Util
 			return "BASESTATION";
 		case PROTOCOL::BEAST:
 			return "BEAST";
+		case PROTOCOL::RAW1090:
+			return "RAW1090";
 		}
 		return "";
 	}

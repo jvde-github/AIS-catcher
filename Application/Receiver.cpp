@@ -278,6 +278,9 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 	case 9:
 		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelExport()));
 		break;
+	case 10:
+		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelRAW1090()));
+		break;
 	default:
 		throw std::runtime_error("Model not implemented in this version. Check in later.");
 	}
@@ -303,6 +306,9 @@ void Receiver::setupModel(int &group)
 		case Format::BEAST:
 			addModel(8);
 			break;
+		case Format::RAW1090:
+			addModel(10);
+			break;
 		default:
 			addModel(2);
 			break;
@@ -314,7 +320,7 @@ void Receiver::setupModel(int &group)
 	{
 		if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
 			(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT) ||
-			(m->getClass() == AIS::ModelClass::BASESTATION && (device->getFormat() != Format::BASESTATION && device->getFormat() != Format::BEAST)))
+			(m->getClass() == AIS::ModelClass::BASESTATION && (device->getFormat() != Format::BASESTATION && device->getFormat() != Format::BEAST && device->getFormat() != Format::RAW1090)))
 			throw std::runtime_error("Decoding model and input format not consistent.");
 	}
 

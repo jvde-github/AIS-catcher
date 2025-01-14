@@ -20,6 +20,90 @@
 #include <vector>
 #include <ctime>
 
+class RAW1090 : public SimpleStreamInOut<RAW, Plane::ADSB>
+{
+    Plane::ADSB msg;
+    static constexpr size_t MAX_MSG_LEN = 14;
+    enum class State
+    {
+        WAIT_START, // Waiting for '*'
+        READ_MSG,   // Reading message content
+    };
+    State state = State::WAIT_START;
+    uint8_t nibbles = 0; // Track number of nibbles processed
+
+public:
+    virtual ~RAW1090() {}
+    void ProcessByte(uint8_t byte, TAG &tag)
+    {
+        if (byte == '\r' || byte == '\n')
+        {
+            state = State::WAIT_START;
+            return;
+        }
+        switch (state)
+        {
+        case State::WAIT_START:
+            if (byte == '*')
+            {
+                msg.clear();
+                msg.Stamp();
+                state = State::READ_MSG;
+                nibbles = 0;
+            }
+            break;
+        case State::READ_MSG:
+            if (byte == ';')
+            {
+                if (msg.len > 0)
+                {
+                    msg.Decode();
+                    //msg.Print();
+                    Send(&msg, 1, tag);
+                }
+                state = State::WAIT_START;
+                return;
+            }
+
+            if (msg.len >= MAX_MSG_LEN)
+            {
+                state = State::WAIT_START;
+                return;
+            }
+
+            uint8_t val = (byte | 0x20) - '0';
+            if (val > 9)
+                val -= ('a' - '0' - 10);
+            if (val > 15)
+            {
+                state = State::WAIT_START;
+                return;
+            }
+
+            if (nibbles % 2 == 0)
+                msg.msg[msg.len] = val << 4; // High nibble
+            else
+            {
+                msg.msg[msg.len] |= val; // Low nibble
+                msg.len++;
+            }
+            nibbles++;
+            break;
+        }
+    }
+    void Receive(const RAW *data, int len, TAG &tag)
+    {
+        for (int j = 0; j < len; j++)
+        {
+            for (int i = 0; i < data[j].size; i++)
+            {
+                uint8_t c = ((uint8_t *)(data[j].data))[i];
+                ProcessByte(c, tag);
+            }
+        }
+    }
+};
+
 class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
     static constexpr size_t MAX_MESSAGE_SIZE = 1024;
@@ -162,7 +246,8 @@ private:
                 }
                 //std::cout << "----- ADSB Message -----" << std::endl;
                 //msg.Print();
-                
+                Send(&msg, 1, tag);
+
                 state = State::WAIT_ESCAPE;
                 buffer.clear();
             }

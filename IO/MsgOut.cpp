@@ -105,7 +105,7 @@ namespace IO
 	{
 		for (int i = 0; i < len; i++)
 		{
-			data[i].Print();
+			//data[i].Print();
 		}
 	}
 

@@ -65,6 +65,7 @@ enum class Format
 	N2K,
 	BASESTATION,
 	BEAST,
+	RAW1090,
 	UNKNOWN
 };
 
@@ -78,7 +79,8 @@ enum class PROTOCOL
 	WS,
 	WSMQTT,
 	BASESTATION,
-	BEAST
+	BEAST,
+	RAW1090
 };
 
 enum class Type
@@ -163,6 +165,10 @@ const float LEVEL_UNDEFINED = 1024;
 const float PPM_UNDEFINED = 1024;
 
 const int STATUS_OK = 0;
+const int STATUS_ERROR = 1;
+
+const int HEXINDENT_DIRECT = 1;
+const int HEXINDENT_IMPLIED_FROM_CRC = 2;
 
 const int MSG_TYPE_UNDEFINED = -1;
 const int DF_UNDEFINED = -1;
@@ -172,6 +178,8 @@ const int ALTITUDE_UNDEFINED = -1000000;
 const int VERT_RATE_UNDEFINED = -10000;
 const int SQUAWK_UNDEFINED = -1;
 const int AIRBORNE_UNDEFINED = 2;
+const int CRC_UNDEFINED = -1;
+const int CPR_POSITION_UNDEFINED = -1;
 
 struct TAG
 {

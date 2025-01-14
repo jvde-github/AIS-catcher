@@ -28,6 +28,13 @@
 namespace Plane
 {
     static constexpr double BEAST_CLOCK_MHZ = 12.0;
+    // CPR position update related constants
+    static constexpr double CPR_MAX_TIMEDIFF = 10.0; // Maximum time difference between even/odd messages
+    static constexpr int NZ = 15;                    // Number of geographic latitude zones
+    static constexpr double AirDlat0 = 360.0 / 60;   // Even message latitude zone size
+    static constexpr double AirDlat1 = 360.0 / 59;   // Odd message latitude zone size
+
+    extern uint32_t crc_table[112];
 
     struct CPR
     {
@@ -37,8 +44,8 @@ namespace Plane
 
         void clear()
         {
-            lat = LAT_UNDEFINED;
-            lon = LON_UNDEFINED;
+            lat = CPR_POSITION_UNDEFINED;
+            lon = CPR_POSITION_UNDEFINED;
             timestamp = TIME_UNDEFINED;
             airborne = false;
         }
@@ -52,19 +59,24 @@ namespace Plane
         int len;         // Length of message
         int prev, next;
         std::time_t rxtime;
-        uint32_t hexident;     // Aircraft Mode S hex code
-        int altitude;          // Mode C altitude
-        FLOAT32 lat, lon;      // Position
+        uint32_t hexident; // Aircraft Mode S hex code
+        int hexident_status;
+        int altitude;     // Mode C altitude
+        FLOAT32 lat, lon; // Position
+        std::time_t latlon_timestamp;
         FLOAT32 speed;         // Speed over ground
         FLOAT32 heading;       // Track angle
         int vertrate;          // Vertical rate
-        char callsign[10];     // Aircraft callsign, nul terminated
+        char callsign[9];      // Aircraft callsign, nul terminated
         int squawk;            // Mode A squawk code
         int airborne;          // 0 = on ground, 1 = airborne, 2 = unknown
         long messages;         // Number of Mode S messages received
         struct CPR even, odd;  // CPR coordinates
         FLOAT32 signalLevel;   // Signal level
         std::time_t timestamp; // Timestamp
+        int crc;               // CRC checksum
+        int status;            // Status
+        long nMessages;
 
         void Stamp(std::time_t t = (std::time_t)0L)
         {
@@ -85,9 +97,11 @@ namespace Plane
             len = 0;
             rxtime = TIME_UNDEFINED;
             hexident = HEXIDENT_UNDEFINED;
+            hexident_status = HEXIDENT_UNDEFINED;
             altitude = ALTITUDE_UNDEFINED;
             lat = LAT_UNDEFINED;
             lon = LON_UNDEFINED;
+            latlon_timestamp = TIME_UNDEFINED;
             speed = SPEED_UNDEFINED;
             heading = HEADING_UNDEFINED;
             vertrate = VERT_RATE_UNDEFINED;
@@ -95,11 +109,15 @@ namespace Plane
             airborne = AIRBORNE_UNDEFINED;
             signalLevel = LEVEL_UNDEFINED;
             timestamp = TIME_UNDEFINED;
+            crc = CRC_UNDEFINED;
+            status = STATUS_OK;
+            nMessages = 0;
 
             even.clear();
             odd.clear();
 
-            callsign[0] = '\0';
+            std::memcpy(msg, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(msg));
+            std::memcpy(callsign, "\0\0\0\0\0\0\0\0\0\0", sizeof(callsign));
         }
 
         std::string getRaw() const
@@ -128,9 +146,84 @@ namespace Plane
             return result;
         }
 
+        int getMessageLength(int df)
+        {
+            if (df == 17 || df == 18 || df == 16 || df == 20 || df == 21)
+                return 14;
+
+            return 7;
+        }
+
+        bool validateLength()
+        {
+            int expected = getMessageLength(df);
+            return len == expected;
+        }
+
+        void setCRC()
+        {
+            if (len >= 3)
+            {
+                crc = ((uint32_t)msg[len - 3] << 16) |
+                      ((uint32_t)msg[len - 2] << 8) |
+                      ((uint32_t)msg[len - 1]);
+            }
+            else
+            {
+                crc = CRC_UNDEFINED;
+            }
+        }
+
+        uint32_t calcCRC()
+        {
+            uint32_t crc = 0;
+            int bits = len * 8;
+            int offset = (bits == 112) ? 0 : (112 - 56);
+
+            // For each bit in the message
+            for (int j = 0; j < bits; j++)
+            {
+                // Get byte and bit position
+                int byte = j / 8;
+                int bit = j % 8;
+                int bitmask = 1 << (7 - bit);
+
+                // If bit is set, xor with corresponding table entry
+                if (msg[byte] & bitmask)
+                {
+                    crc ^= crc_table[j + offset];
+                }
+            }
+            return crc; // Returns 24-bit CRC
+        }
+
+        void setCRCandICAO()
+        {
+            setCRC();
+
+            uint32_t calc_crc = calcCRC();
+            hexident = crc ^ calc_crc;
+
+            hexident_status = HEXINDENT_IMPLIED_FROM_CRC;
+        }
+
+        // Verify message CRC
+        bool verifyCRC()
+        {
+            uint32_t computed = calcCRC();
+            return (computed == crc);
+        }
+
         void Print() const;
         void Callsign();
         int decodeAC12Field();
         int decodeAC13Field();
+
+        int cprModFunction(int a, int b);
+        int cprNLFunction(double lat);
+        int cprNFunction(double lat, int isodd);
+        double cprDlonFunction(double lat, int isodd);
+
+        void decodeCPR();
     };
 }
