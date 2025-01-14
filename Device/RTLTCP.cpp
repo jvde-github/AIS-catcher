@@ -76,7 +76,7 @@ namespace Device
 
 		Device::Play();
 
-		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST)
+		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST && getFormat() != Format::RAW1090)
 		{
 			fifo.Init(BUFFER_SIZE);
 		}
@@ -210,7 +210,10 @@ namespace Device
 				break;
 			case PROTOCOL::BEAST:
 				setFormat(Format::BEAST);
-			break;
+				break;
+			case PROTOCOL::RAW1090:
+				setFormat(Format::RAW1090);
+				break;
 			default:
 				throw std::runtime_error("RTLTCP: unsupported protocol: " + arg);
 			}

@@ -857,6 +857,28 @@ namespace AIS
 		return Model::Get();
 	}
 
+
+	void ModelRAW1090::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
+		setName("ADSB input");
+		device = dev;
+		*device >> model >> outputADSB;
+	}
+
+	Setting &ModelRAW1090::Set(std::string option, std::string arg)
+	{
+		Util::Convert::toUpper(option);
+
+		Model::Set(option, arg);
+
+		return *this;
+	}
+
+	std::string ModelRAW1090::Get()
+	{
+		return Model::Get();
+	}
+
 	Setting &ModelExport::Set(std::string option, std::string arg)
 	{
 		if (!wav.setValue(option, arg))

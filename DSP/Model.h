@@ -322,6 +322,18 @@ namespace AIS
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
 
+	class ModelRAW1090 : public Model
+	{
+		RAW1090 model;
+
+	public:
+		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &Set(std::string option, std::string arg);
+		std::string Get();
+		ModelClass getClass() { return ModelClass::BASESTATION; }
+	};
+
+
 	class ModelExport : public Model
 	{
 		Util::WriteWAV wav;

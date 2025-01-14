@@ -1,17 +1,20 @@
 #include "ADSB.h"
 #include "Stream.h"
 
-class PlaneDB : public StreamIn<JSON::JSON>
+class PlaneDB : public StreamIn<Plane::ADSB>
 {
     std::mutex mtx;
+
 private:
     int first = -1;
     int last = -1;
     int count = 0;
-    std::vector<Plane::ADSB> items;  
+    std::vector<Plane::ADSB> items;
     int N = 512;
+
 public:
-    PlaneDB() {
+    PlaneDB()
+    {
         items.resize(N);
 
         first = N - 1;
@@ -27,7 +30,8 @@ public:
         items[N - 1].prev = -1;
     }
 
-    void moveToFront(int ptr) {
+    void moveToFront(int ptr)
+    {
         if (ptr == first)
             return;
 
@@ -36,7 +40,7 @@ public:
             items[items[ptr].next].prev = items[ptr].prev;
         else
             last = items[ptr].prev;
-        
+
         items[items[ptr].prev].next = items[ptr].next;
 
         // new ship is first in list
@@ -47,7 +51,8 @@ public:
         first = ptr;
     }
 
-    int create() {
+    int create()
+    {
         int ptr = last;
         count = MIN(count + 1, N);
         items[ptr].clear();
@@ -55,8 +60,9 @@ public:
         return ptr;
     }
 
-    int find(int hexid) const {
-	    int ptr = first, cnt = count;
+    int find(int hexid) const
+    {
+        int ptr = first, cnt = count;
         while (ptr != -1 && --cnt >= 0)
         {
             if (items[ptr].hexident == hexid)
@@ -66,128 +72,142 @@ public:
         return -1;
     }
 
-       void Receive(const JSON::JSON* msg, int len, TAG& tag) {
+    void Receive(const Plane::ADSB *msg, int len, TAG &tag)
+    {
         std::lock_guard<std::mutex> lock(mtx);
-        /*
+
         // Skip invalid messages
-        if (msg->getHexIdent() == 0) return;
+        if (msg->hexident == HEXIDENT_UNDEFINED)
+            return;
 
         // Find or create plane entry
-        int ptr = find(msg->getHexIdent());
-        if (ptr == -1) {
+        int ptr = find(msg->hexident);
+
+        if (ptr == -1)
+        {
+            // if ICAO is implied from CRC, ignore the message if not known
+            if (msg->hexident_status == HEXINDENT_IMPLIED_FROM_CRC)
+                return;
+
             ptr = create();
         }
 
         // Move to front and update data
         moveToFront(ptr);
-        Plane::ADSB& plane = items[ptr];
+        Plane::ADSB &plane = items[ptr];
 
         // Update timestamp and core identifiers
-        plane.setRxTimeUnix(msg->getRxTimeUnix());
-        plane.setHexIdent(msg->getHexIdent());
-        
+        plane.rxtime = msg->rxtime;
+        plane.hexident = msg->hexident;
+        plane.nMessages++;
+
         // Update position if valid
-        if (msg->getLat() != LAT_UNDEFINED && msg->getLon() != LON_UNDEFINED) {
-            plane.setPosition(msg->getLat(), msg->getLon());
+        if (msg->lat != LAT_UNDEFINED && msg->lon != LON_UNDEFINED)
+        {
+            plane.lat = msg->lat;
+            plane.lon = msg->lon;
+            plane.latlon_timestamp = msg->rxtime;
+        }
+
+        if (msg->even.lat != CPR_POSITION_UNDEFINED && msg->even.lon != CPR_POSITION_UNDEFINED)
+        {
+            plane.even.lat = msg->even.lat;
+            plane.even.lon = msg->even.lon;
+            plane.even.timestamp = msg->even.timestamp;
+
+            plane.decodeCPR();
+        }
+
+        if (msg->odd.lat != CPR_POSITION_UNDEFINED && msg->odd.lon != CPR_POSITION_UNDEFINED)
+        {
+            plane.odd.lat = msg->odd.lat;
+            plane.odd.lon = msg->odd.lon;
+            plane.odd.timestamp = msg->odd.timestamp;
+
+            plane.decodeCPR();
         }
 
         // Update altitude
-        if (msg->getAltitude() != 0) {
-            plane.setAltitude(msg->getAltitude());
+        if (msg->altitude != ALTITUDE_UNDEFINED)
+        {
+            plane.altitude = msg->altitude;
         }
 
         // Update movement data
-        if (msg->getGroundSpeed() != GROUNDSPEED_UNDEFINED) {
-            plane.setGroundSpeed(msg->getGroundSpeed());
+        if (msg->speed != SPEED_UNDEFINED)
+        {
+            plane.speed = msg->speed;
         }
-        if (msg->getTrack() != TRACK_UNDEFINED) {
-            plane.setTrack(msg->getTrack());
+        if (msg->heading != HEADING_UNDEFINED)
+        {
+            plane.heading = msg->heading;
         }
-        if (msg->getVertRate() != VERTRATE_UNDEFINED) {
-            plane.setVertRate(msg->getVertRate());
+        if (msg->vertrate != VERT_RATE_UNDEFINED)
+        {
+            plane.vertrate = msg->vertrate;
         }
 
         // Update identification
-        if (msg->getSquawk() != SQUAWK_UNDEFINED) {
-            plane.setSquawk(msg->getSquawk());
-        }
-        if (!msg->getCallsign().empty()) {
-            plane.setCallsign(msg->getCallsign());
+        if (msg->squawk != SQUAWK_UNDEFINED)
+        {
+            plane.squawk = msg->squawk;
         }
 
-        // Update status flags
-        if (msg->getAlert() != Plane::BoolType::UNKNOWN) {
-            plane.setAlert(msg->getAlert());
-        }
-        if (msg->getEmergency() != Plane::BoolType::UNKNOWN) {
-            plane.setEmergency(msg->getEmergency());
-        }
-        if (msg->getSPI() != Plane::BoolType::UNKNOWN) {
-            plane.setSPI(msg->getSPI());
-        }
-        if (msg->isOnGround() != Plane::BoolType::UNKNOWN) {
-            plane.setOnGround(msg->isOnGround());
+        if (msg->callsign[0] != '\0')
+        {
+            std::memcpy(plane.callsign, msg->callsign, sizeof(plane.callsign));
         }
 
-        plane.setType(msg->getType());
-        plane.setTransmission(msg->getTransmission());
-
-        if (msg->getLat() != LAT_UNDEFINED && msg->getLon() != LON_UNDEFINED) {
-            tag.lat = msg->getLat();
-            tag.lon = msg->getLon();
+        if (msg->airborne != AIRBORNE_UNDEFINED)
+        {
+            plane.airborne = msg->airborne;
         }
-        */
     }
 
-  std::string getCompactArray(bool include_inactive = false) {
-    /*
+    std::string getCompactArray(bool include_inactive = false)
+    {
         std::lock_guard<std::mutex> lock(mtx);
-        
+
         const std::string null_str = "null";
         const std::string comma = ",";
         std::string content = "{\"count\":" + std::to_string(count) + ",\"values\":[";
-        
+
         std::time_t now = std::time(nullptr);
         int ptr = first;
         std::string delim = "";
-        
-        while (ptr != -1) {
-            const Plane::ADSB& plane = items[ptr];
 
-            if (plane.getHexIdent() != 0) {
+        while (ptr != -1)
+        {
+            const Plane::ADSB &plane = items[ptr];
+
+            if (plane.hexident != HEXIDENT_UNDEFINED)
+            {
                 long int time_since_update = now - plane.getRxTimeUnix();
-                
+
                 // Skip inactive planes unless requested
-                if (!include_inactive && time_since_update > 3600) {
+                if (!include_inactive && time_since_update > 60)
+                {
                     break;
                 }
-                
+
                 content += delim + "[" +
-                    std::to_string(plane.getHexIdent()) + comma +
-                    (plane.getLat() != LAT_UNDEFINED ? std::to_string(plane.getLat()) : null_str) + comma +
-                    (plane.getLon() != LON_UNDEFINED ? std::to_string(plane.getLon()) : null_str) + comma +
-                    (plane.getAltitude() != 0 ? std::to_string(plane.getAltitude()) : null_str) + comma +
-                    (plane.getGroundSpeed() != GROUNDSPEED_UNDEFINED ? std::to_string(plane.getGroundSpeed()) : null_str) + comma +
-                    (plane.getTrack() != TRACK_UNDEFINED ? std::to_string(plane.getTrack()) : null_str) + comma +
-                    (plane.getVertRate() != VERTRATE_UNDEFINED ? std::to_string(plane.getVertRate()) : null_str) + comma +
-                    (plane.getSquawk() != SQUAWK_UNDEFINED ? std::to_string(plane.getSquawk()) : null_str) + comma +
-                    + "\"" + plane.getCallsign()  + "\"" + comma +
-                    (plane.getAlert() != Plane::BoolType::UNKNOWN ? std::to_string(static_cast<int>(plane.getAlert())) : null_str) + comma +
-                    (plane.getEmergency() != Plane::BoolType::UNKNOWN ? std::to_string(static_cast<int>(plane.getEmergency())) : null_str) + comma +
-                    (plane.getSPI() != Plane::BoolType::UNKNOWN ? std::to_string(static_cast<int>(plane.getSPI())) : null_str) + comma +
-                    (plane.isOnGround() != Plane::BoolType::UNKNOWN ? std::to_string(static_cast<int>(plane.isOnGround())) : null_str) + comma +
-                    std::to_string(static_cast<int>(plane.getType())) + comma +
-                    std::to_string(static_cast<int>(plane.getTransmission())) + comma +
-                    std::to_string(time_since_update) + "]";
-                
+                           std::to_string(plane.hexident) + comma +
+                           (plane.lat != LAT_UNDEFINED ? std::to_string(plane.lat) : null_str) + comma +
+                           (plane.lon != LON_UNDEFINED ? std::to_string(plane.lon) : null_str) + comma +
+                           (plane.altitude != ALTITUDE_UNDEFINED ? std::to_string(plane.altitude) : null_str) + comma +
+                           (plane.speed != SPEED_UNDEFINED ? std::to_string(plane.speed) : null_str) + comma +
+                           (plane.heading != HEADING_UNDEFINED ? std::to_string(plane.heading) : null_str) + comma +
+                           (plane.vertrate != VERT_RATE_UNDEFINED ? std::to_string(plane.vertrate) : null_str) + comma +
+                           (plane.squawk != SQUAWK_UNDEFINED ? std::to_string(plane.squawk) : null_str) + comma +
+                           std::string("\"") + plane.callsign + "\"" + comma +
+                           std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + "]";
+
                 delim = comma;
             }
             ptr = items[ptr].next;
         }
-        
+
         content += "],\"error\":false}\n\n";
-        */
-       std::string content;
         return content;
     }
 
