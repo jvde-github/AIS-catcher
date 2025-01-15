@@ -117,7 +117,7 @@ public:
             plane.even.timestamp = msg->even.timestamp;
             plane.even.airborne = msg->even.airborne;
 
-            plane.decodeCPR();
+            plane.decodeCPR(42,-71, true);
         }
 
         if (msg->odd.lat != CPR_POSITION_UNDEFINED && msg->odd.lon != CPR_POSITION_UNDEFINED)
@@ -127,7 +127,7 @@ public:
             plane.odd.timestamp = msg->odd.timestamp;
             plane.odd.airborne = msg->odd.airborne;
 
-            plane.decodeCPR();
+            plane.decodeCPR(42,-71, false);
         }
 
         // Update altitude

@@ -116,8 +116,7 @@ namespace Plane
             even.clear();
             odd.clear();
 
-            std::memcpy(msg, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(msg));
-            std::memcpy(callsign, "\0\0\0\0\0\0\0\0\0\0", sizeof(callsign));
+            callsign[0] = '\0';
         }
 
         std::string getRaw() const
@@ -218,14 +217,17 @@ namespace Plane
         void Callsign();
         int decodeAC12Field();
         int decodeAC13Field();
+        double decodeMovement();
 
-        int cprModFunction(int a, int b);
-        int cprNLFunction(double lat);
+        int MOD(int a, int b);
+        int NL(double lat);
         int cprNFunction(double lat, int isodd);
+        bool cprNLcheck(double, int);
+
         double cprDlonFunction(double lat, int isodd);
 
-        void decodeCPR();
-        void decodeCPR_airborne();
-        void decodeCPR_surface();
+        void decodeCPR(FLOAT32 lat, FLOAT32 lon, bool is_even);
+        void decodeCPR_airborne(bool is_even);
+        void decodeCPR_surface(FLOAT32, FLOAT32, bool);
     };
 }
