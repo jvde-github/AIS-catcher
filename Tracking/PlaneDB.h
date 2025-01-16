@@ -140,8 +140,9 @@ public:
             FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 
             // if (!plane.airborne)
-            calcReferencePosition(tag, ptr, lat, lon);
-            plane.decodeCPR(lat, lon, true);
+            FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
+            calcReferencePosition(tag, ptr, ref_lat, ref_lon);   
+            plane.decodeCPR(ref_lat, ref_lon, true);
         }
 
         if (msg->odd.Valid())
@@ -151,10 +152,9 @@ public:
             plane.odd.timestamp = msg->odd.timestamp;
             plane.odd.airborne = msg->odd.airborne;
 
-            FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-            // if (!plane.airborne)
-            calcReferencePosition(tag, ptr, lat, lon);
-            plane.decodeCPR(lat, lon, false);
+            FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
+            calcReferencePosition(tag, ptr, ref_lat, ref_lon);   
+            plane.decodeCPR(ref_lat, ref_lon, false);
         }
 
         // Update altitude
