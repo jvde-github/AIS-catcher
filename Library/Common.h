@@ -201,6 +201,8 @@ struct TAG
 	float speed = SPEED_UNDEFINED;
 	std::string hardware;
 	Type driver = Type::NONE;
+	FLOAT32 station_lat = LAT_UNDEFINED;
+	FLOAT32 station_lon = LON_UNDEFINED;
 
 	void clear()
 	{

@@ -21,7 +21,6 @@
 
 IO::OutputMessage *commm_feed = nullptr;
 
-
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
 	if (server)
@@ -499,7 +498,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			Error() << "Server - error returning requested file (" << r << "): " << e.what();
 			Response(c, "text/html", std::string(""), true);
 		}
-	} 
+	}
 	else if (r == "/kml" && KML)
 	{
 		std::string content = ships.getKML();
@@ -582,7 +581,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		std::string content = ships.getJSONcompact();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-		else if (r == "/api/planes_array.json")
+	else if (r == "/api/planes_array.json")
 	{
 		std::string content = planes.getCompactArray();
 		Response(c, "application/json", content, use_zlib & gzip);
@@ -614,7 +613,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		{
 			s->SendEvent("log", m.toJSON());
 		}
-	} 
+	}
 	else if (r == "/custom/plugins.js")
 	{
 		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
@@ -804,6 +803,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "LAT")
 	{
 		ships.setLat(Util::Parse::Float(arg));
+		planes.setLat(Util::Parse::Float(arg));
 	}
 	else if (option == "CUTOFF")
 	{
@@ -839,6 +839,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "LON")
 	{
 		ships.setLon(Util::Parse::Float(arg));
+		planes.setLon(Util::Parse::Float(arg));
 	}
 	else if (option == "USE_GPS")
 	{

@@ -857,7 +857,6 @@ namespace AIS
 		return Model::Get();
 	}
 
-
 	void ModelRAW1090::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		setName("ADSB input");

@@ -12,6 +12,8 @@ private:
     std::vector<Plane::ADSB> items;
     int N = 512;
 
+    FLOAT32 station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
+
 public:
     PlaneDB()
     {
@@ -28,6 +30,23 @@ public:
             items[i].prev = i + 1;
         }
         items[N - 1].prev = -1;
+    }
+
+    void calcReferencePosition(TAG &tag, int ptr, FLOAT32 &lat, FLOAT32 &lon)
+    {
+        lat = station_lat;
+        lon = station_lon;
+
+        if (tag.station_lat != LAT_UNDEFINED && tag.station_lon != LON_UNDEFINED)
+        {
+            lat = tag.station_lat;
+            lon = tag.station_lon;
+        }
+        if (items[ptr].lat != LAT_UNDEFINED && items[ptr].lon != LON_UNDEFINED)
+        {
+            lat = items[ptr].lat;
+            lon = items[ptr].lon;
+        }
     }
 
     void moveToFront(int ptr)
@@ -110,24 +129,32 @@ public:
             plane.latlon_timestamp = msg->rxtime;
         }
 
-        if (msg->even.lat != CPR_POSITION_UNDEFINED && msg->even.lon != CPR_POSITION_UNDEFINED)
+        if (msg->even.Valid())
         {
+
             plane.even.lat = msg->even.lat;
             plane.even.lon = msg->even.lon;
             plane.even.timestamp = msg->even.timestamp;
             plane.even.airborne = msg->even.airborne;
 
-            plane.decodeCPR(42,-71, true);
+            FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+
+            // if (!plane.airborne)
+            calcReferencePosition(tag, ptr, lat, lon);
+            plane.decodeCPR(lat, lon, true);
         }
 
-        if (msg->odd.lat != CPR_POSITION_UNDEFINED && msg->odd.lon != CPR_POSITION_UNDEFINED)
+        if (msg->odd.Valid())
         {
             plane.odd.lat = msg->odd.lat;
             plane.odd.lon = msg->odd.lon;
             plane.odd.timestamp = msg->odd.timestamp;
             plane.odd.airborne = msg->odd.airborne;
 
-            plane.decodeCPR(42,-71, false);
+            FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+            // if (!plane.airborne)
+            calcReferencePosition(tag, ptr, lat, lon);
+            plane.decodeCPR(lat, lon, false);
         }
 
         // Update altitude
@@ -217,4 +244,7 @@ public:
     int getFirst() const { return first; }
     int getLast() const { return last; }
     int getCount() const { return count; }
+
+    void setLat(FLOAT32 lat) { this->station_lat = lat; }
+    void setLon(FLOAT32 lon) { this->station_lon = lon; }
 };

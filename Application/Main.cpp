@@ -641,6 +641,10 @@ int main(int argc, char *argv[])
 					receiver.setTags("DT");
 				}
 				break;
+			case 'Z':
+				Assert(count == 2,param, "Location Setting requires two parameters (lat/lon)");
+				receiver.setLatLon(Util::Parse::Float(arg1), Util::Parse::Float(arg2));
+				break;
 			case 'A':
 			case 'I':
 			case 'E':
@@ -758,7 +762,6 @@ int main(int argc, char *argv[])
 		// -------------
 		// set up the receiver and open the device
 
-		DBG("Creating stat and msg_count");
 		stat.resize(_receivers.size());
 		msg_count.resize(_receivers.size(), 0);
 
@@ -766,7 +769,6 @@ int main(int argc, char *argv[])
 
 		for (int i = 0; i < _receivers.size(); i++)
 		{
-			DBG("Setting up receiver: " + std::to_string(i));
 
 			Receiver &r = *_receivers[i];
 			r.setOwnMMSI(own_mmsi);

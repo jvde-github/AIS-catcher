@@ -238,6 +238,8 @@ void Receiver::setupDevice()
 	tag.hardware = device->getProduct();
 	tag.driver = device->getDriver();
 	tag.version = VERSION_NUMBER;
+	tag.station_lat = station_lat;
+	tag.station_lon = station_lon;
 
 	device->setTag(tag);
 }
@@ -461,7 +463,10 @@ void OutputStatistics::connect(Receiver &r)
 	statistics.resize(r.Count());
 
 	for (int i = 0; i < r.Count(); i++)
-		r.Output(i) >> statistics[i];
+	{
+		r.Output(i).Connect((StreamIn<AIS::Message> *)&statistics[i]);
+		r.OutputADSB(i).Connect((StreamIn<Plane::ADSB> *)&statistics[i]);
+	}
 }
 
 void OutputStatistics::start() {}

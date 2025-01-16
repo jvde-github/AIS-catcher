@@ -71,19 +71,12 @@ namespace Plane
             if (q_bit)
             {
                 // N is the 11 bit integer resulting from removal of M and Q bits
-                int n = ((msg[2] & 31) << 6) |
-                        ((msg[3] & 0x80) >> 2) |
-                        ((msg[3] & 0x20) >> 1) |
-                        (msg[3] & 15);
-                // Final altitude is the resulting number multiplied by 25, minus 1000.
+                int n = ((msg[2] & 31) << 6) | ((msg[3] & 0x80) >> 2) | ((msg[3] & 0x20) >> 1) | (msg[3] & 15);
                 return n * 25 - 1000;
             }
         }
         /*
-        else
-        {
-            *unit = UNIT_METERS;
-        }
+        altitude in meters not implemented
         */
         return ALTITUDE_UNDEFINED;
     }
@@ -97,7 +90,6 @@ namespace Plane
         {
             // N is the 11 bit integer after removing Q bit
             int n = ((msg[5] >> 1) << 4) | ((msg[6] & 0xF0) >> 4);
-            // Final altitude is n * 25 - 1000
             return n * 25 - 1000;
         }
         return ALTITUDE_UNDEFINED;
@@ -105,23 +97,23 @@ namespace Plane
 
     double ADSB::decodeMovement()
     {
-        int encoded_speed = getBits(37, 7);
+        int val = getBits(37, 7);
 
-        if (encoded_speed == 1)
+        if (val == 1)
             return 0.0; // Stopped (v < 0.125 kt)
-        if (encoded_speed >= 2 && encoded_speed <= 8)
-            return 0.125 * (encoded_speed - 1); // 0.125 kt steps
-        if (encoded_speed >= 9 && encoded_speed <= 12)
-            return 1.0 + 0.25 * (encoded_speed - 8); // 0.25 kt steps
-        if (encoded_speed >= 13 && encoded_speed <= 38)
-            return 2.0 + 0.5 * (encoded_speed - 12); // 0.5 kt steps
-        if (encoded_speed >= 39 && encoded_speed <= 93)
-            return 15.0 + 1.0 * (encoded_speed - 38); // 1 kt steps
-        if (encoded_speed >= 94 && encoded_speed <= 108)
-            return 70.0 + 2.0 * (encoded_speed - 93); // 2 kt steps
-        if (encoded_speed >= 109 && encoded_speed <= 123)
-            return 100.0 + 5.0 * (encoded_speed - 108); // 5 kt steps
-        if (encoded_speed == 124)
+        if (val >= 2 && val <= 8)
+            return 0.125 * (val - 1); // 0.125 kt steps
+        if (val >= 9 && val <= 12)
+            return 1.0 + 0.25 * (val - 8); // 0.25 kt steps
+        if (val >= 13 && val <= 38)
+            return 2.0 + 0.5 * (val - 12); // 0.5 kt steps
+        if (val >= 39 && val <= 93)
+            return 15.0 + 1.0 * (val - 38); // 1 kt steps
+        if (val >= 94 && val <= 108)
+            return 70.0 + 2.0 * (val - 93); // 2 kt steps
+        if (val >= 109 && val <= 123)
+            return 100.0 + 5.0 * (val - 108); // 5 kt steps
+        if (val == 124)
             return 175.0; // v ≥ 175 kt
 
         return SPEED_UNDEFINED;
@@ -150,9 +142,6 @@ namespace Plane
         {
             setCRCandICAO();
             altitude = decodeAC13Field();
-
-            // These message types are always from airborne aircraft
-            airborne = 1;
         }
         break;
 
@@ -170,8 +159,16 @@ namespace Plane
             break;
         }
         case 11: // All-Call Reply, ground or air
+        {
             hexident = getBits(8, 24);
             hexident_status = HEXINDENT_DIRECT;
+
+            int capability = getBits(5, 3);
+
+            if (capability == 4)
+                airborne = 0;
+            else if (capability == 5)
+                airborne = 1;
 
             if (!verifyCRC())
             {
@@ -180,7 +177,7 @@ namespace Plane
             }
 
             break;
-
+        }
         case 17: // Extended Squitter
         case 18: // Extended Squitter/Supplementary
             hexident = getBits(8, 24);
@@ -192,10 +189,10 @@ namespace Plane
                 return;
             }
 
-            int EStype = getBits(32, 5);
-            int ESsubtype = getBits(37, 3); // ME message subtype
+            int TC = getBits(32, 5);
+            int ST = getBits(37, 3); // ME message subtype
 
-            switch (EStype)
+            switch (TC)
             {
             case 1: // Aircraft Identification
             case 2:
@@ -205,39 +202,41 @@ namespace Plane
                 break;
 
             case 19: // Airborne Velocity
-                if (ESsubtype >= 1 && ESsubtype <= 4)
+                if (ST >= 1 && ST <= 4)
                 {
-                    // Velocity decoding
-                    if (ESsubtype == 1 || ESsubtype == 2)
+                    if (ST == 1 || ST == 2)
                     {
-                        int ew_dir = (msg[5] & 4) >> 2;
-                        int ew_vel = ((msg[5] & 3) << 8) | msg[6];
-                        int ns_dir = (msg[7] & 0x80) >> 7;
-                        int ns_vel = ((msg[7] & 0x7f) << 3) | ((msg[8] & 0xe0) >> 5);
+                        int Vew = getBits(46, 10);
+                        int Vns = getBits(57, 10);
 
-                        if (ew_vel && ns_vel)
+                        if (Vew && Vns)
                         {
-                            if (ew_dir)
-                                ew_vel *= -1;
-                            if (ns_dir)
-                                ns_vel *= -1;
+                            bool Dew = getBits(45, 1);
+                            bool Dns = getBits(56, 1);
 
-                            speed = sqrt(ns_vel * ns_vel + ew_vel * ew_vel);
-                            heading = atan2(ew_vel, ns_vel) * 360.0 / (2 * PI);
+                            Vew = Dew ? -(Vew - 1) : (Vew - 1);
+                            Vns = Dns ? -(Vns - 1) : (Vns - 1);
+
+                            speed = sqrt(Vns * Vns + Vew * Vew);
+                            heading = atan2(Vew, Vns) * 360.0 / (2 * PI);
                             if (heading < 0)
                                 heading += 360;
+
+                            if (ST == 2)
+                                speed *= 4;
                         }
 
-                        int vr_sign = (msg[8] & 0x8) >> 3;
-                        vertrate = ((msg[8] & 7) << 6) | ((msg[9] & 0xfc) >> 2);
-                        if (vr_sign)
-                            vertrate *= -1;
-                        vertrate = (vertrate - 1) * 64;
-
-                        // Airborne velocity messages are always from airborne aircraft
+                        int VR = getBits(69, 9);
+                        if (VR)
+                        {
+                            bool Svr = getBits(68, 1);
+                            vertrate = (VR - 1) * 64 * (Svr ? -1 : 1);
+                        }
                         airborne = 1;
                     }
+                    // ignore ST 3/4, unknown aircraft speed
                 }
+
                 break;
 
             case 5: // Surface Position
@@ -258,8 +257,6 @@ namespace Plane
                 cpr.lon = getBits(71, 17);
                 cpr.timestamp = rxtime;
                 cpr.airborne = false;
-
-                Print();
             }
             break;
 
@@ -310,44 +307,29 @@ namespace Plane
             return 1;
 
         double tmp = 1 - (1 - cos(PI / (2.0 * 15.0))) / pow(cos(PI / 180.0 * abs(lat)), 2);
-        return floor(2 * PI / acos(tmp));
+        return std::floor(2 * PI / acos(tmp));
     }
 
-    void ADSB::decodeCPR(FLOAT32 lat, FLOAT32 lon, bool use_even)
+    bool ADSB::decodeCPR(FLOAT32 lat, FLOAT32 lon, bool use_even)
     {
-        if (even.lat == CPR_POSITION_UNDEFINED ||
-            odd.lat == CPR_POSITION_UNDEFINED ||
-            std::abs(even.timestamp - odd.timestamp) > 10)
-        {
-            return;
-        }
-
-        if (even.airborne != odd.airborne)
-        {
-            return;
-        }
+        if (!even.Valid() || !odd.Valid() || (even.airborne != odd.airborne))
+            return false;
 
         if (even.airborne)
         {
-            decodeCPR_airborne(use_even);
+            return decodeCPR_airborne(use_even);
         }
-        else
-        {
-            if (lat != LAT_UNDEFINED && lon != LON_UNDEFINED)
-            {
-                decodeCPR_surface(lat, lon, use_even);
-            }
-        }
+        return decodeCPR_surface(lat, lon, use_even);
     }
 
-    void ADSB::decodeCPR_airborne(bool use_even)
+    bool ADSB::decodeCPR_airborne(bool use_even)
     {
         constexpr double CPR_SCALE = (double)(1 << 17);
 
         int j = (int)std::floor(((59.0 * even.lat) - (60.0 * odd.lat)) / CPR_SCALE + 0.5);
 
-        double lat_even = 360.0 / 60.0 * (MOD(j, 60) + even.lat / CPR_SCALE);
-        double lat_odd = 360.0 / (60.0 - 1) * (MOD(j, 59) + odd.lat / CPR_SCALE);
+        double lat_even = 360.0 / 60 * (MOD(j, 60) + even.lat / CPR_SCALE);
+        double lat_odd = 360.0 / 59 * (MOD(j, 59) + odd.lat / CPR_SCALE);
 
         if (lat_even >= 270.0)
             lat_even -= 360.0;
@@ -357,49 +339,108 @@ namespace Plane
         int nl = NL(lat_even);
 
         if (nl != NL(lat_odd))
-            return;
+            return false;
 
         lat = use_even ? lat_even : lat_odd;
 
         int ni = MAX(nl - (use_even ? 0 : 1), 1);
-        int m = std::floor(((even.lon * (nl - 1)) - (odd.lon * nl)) / CPR_SCALE + 0.5);
+        int m = std::floor((even.lon * (nl - 1) - odd.lon * nl) / CPR_SCALE + 0.5);
 
         double lon_final = use_even ? even.lon : odd.lon;
 
-        lon = (360.0 / ni) * (MOD(static_cast<int>(m), ni) + lon_final / CPR_SCALE);
+        lon = (360.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
 
         if (lon > 180.0)
             lon -= 360.0;
 
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
+
+        return true;
+    }
+
+    bool ADSB::decodeCPR_airborne_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon)
+    {
+        constexpr double CPR_SCALE = (double)(1 << 17);
+
+        CPR &cpr = use_even ? even : odd;
+        double d_lat = use_even ? 360.0 / 60 : 360.0 / 59;
+        int j = std::floor(ref_lat / d_lat) + std::floor(0.5 + MOD(ref_lat, d_lat) / d_lat - cpr.lat / CPR_SCALE + 0.5);
+
+        lat = d_lat * (j + cpr.lat / CPR_SCALE);
+
+        int ni = NL(lat) - (use_even ? 0 : 1);
+        double d_lon = ni > 0 ? 360 / ni : 360;
+
+        int m = std::floor(ref_lon / d_lon) + std::floor(0.5 + (MOD(ref_lon, d_lon) / d_lon) - cpr.lon / CPR_SCALE);
+
+        lon = d_lon * (m + cpr.lon / CPR_SCALE);
+        latlon_timestamp = cpr.timestamp;
+
+        return true;
     }
 
     // based on the example from the 1090 riddle
-    void ADSB::decodeCPR_surface(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even)
+    bool ADSB::decodeCPR_surface(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even)
     {
+        static bool warning_given = false;
+
+        if (ref_lat == LAT_UNDEFINED || ref_lon == LON_UNDEFINED)
+        {
+            if (!warning_given)
+            {
+                Error() << "ADSB: Reference position is not available. Cannot determine location of onground planes. Provide receiver location with -Z lat lon." << std::endl;
+                warning_given = true;
+            }
+            return false;
+        }
+
         constexpr double CPR_SCALE = (double)(1 << 17);
 
         int j = (int)std::floor((59 * even.lat - 60 * odd.lat) / CPR_SCALE + 0.5);
 
-        double lat_even = 90.0 / 60.0 * (MOD(j, 60) + even.lat / CPR_SCALE);
-        double lat_odd = 90.0 / (60.0 - 1) * (MOD(j, 59) + odd.lat / CPR_SCALE);
+        double lat_even = 90.0 / 60 * (MOD(j, 60) + even.lat / CPR_SCALE);
+        double lat_odd = 90.0 / 59 * (MOD(j, 59) + odd.lat / CPR_SCALE);
 
         int nl = NL(lat_even);
 
         if (nl != NL(lat_odd))
-            return;
+            return false;
 
         lat = use_even ? lat_even : lat_odd;
         lat -= 90.0 * std::floor((lat - ref_lat + 45.0) / 90.0);
 
         int ni = MAX(nl - (use_even ? 0 : 1), 1);
 
-        int m = std::floor(((even.lon * (nl - 1)) - (odd.lon * nl)) / CPR_SCALE + 0.5);
+        int m = std::floor((even.lon * (nl - 1) - odd.lon * nl) / CPR_SCALE + 0.5);
         double lon_final = use_even ? even.lon : odd.lon;
 
         lon = (90.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
         lon -= 90.0 * std::floor((lon - ref_lon + 45.0) / 90.0);
+
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
+
+        return true;
+    }
+
+    bool ADSB::decodeCPR_surface_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon)
+    {
+        constexpr double CPR_SCALE = (double)(1 << 17);
+
+        CPR &cpr = use_even ? even : odd;
+        double d_lat = use_even ? 90.0 / 60 : 90.0 / 59;
+        int j = std::floor(ref_lat / d_lat) + std::floor(0.5 + MOD(ref_lat, d_lat) / d_lat - cpr.lat / CPR_SCALE + 0.5);
+
+        lat = d_lat * (j + cpr.lat / CPR_SCALE);
+
+        int ni = NL(lat) - (use_even ? 0 : 1);
+        double d_lon = ni > 0 ? 90 / ni : 90;
+
+        int m = std::floor(ref_lon / d_lon) + std::floor(0.5 + (MOD(ref_lon, d_lon) / d_lon) - cpr.lon / CPR_SCALE);
+
+        lon = d_lon * (m + cpr.lon / CPR_SCALE);
+        latlon_timestamp = cpr.timestamp;
+
+        return true;
     }
 
     void ADSB::Print() const
@@ -457,5 +498,11 @@ namespace Plane
 
         if (even.lat != CPR_POSITION_UNDEFINED)
             std::cout << "EVEN: " << even.lat << ", " << even.lon << std::endl;
+
+        if (timestamp != TIME_UNDEFINED)
+            std::cout << "TS: " << (long)(timestamp) << std::endl;
+
+        if (signalLevel != LEVEL_UNDEFINED)
+            std::cout << "LVL: " << signalLevel << std::endl;
     }
 }

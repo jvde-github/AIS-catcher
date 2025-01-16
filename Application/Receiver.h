@@ -53,7 +53,8 @@
 class Receiver;
 
 //--------------------------------------------
-class OutputScreen {
+class OutputScreen
+{
 	MessageFormat level = MessageFormat::FULL;
 
 public:
@@ -64,31 +65,36 @@ public:
 
 	OutputScreen() : json2screen(&AIS::KeyMap, JSON_DICT_FULL) {}
 
-	void setScreen(const std::string& str);
+	void setScreen(const std::string &str);
 	void setScreen(MessageFormat o);
-	void connect(Receiver& r);
+	void connect(Receiver &r);
 	void start();
 };
 
 //--------------------------------------------
-class OutputStatistics {
+class OutputStatistics
+{
 
 public:
-	std::vector<IO::StreamCounter<AIS::Message>> statistics;
+	std::vector<IO::StreamCounter> statistics;
 
-	void connect(Receiver& r);
+	void connect(Receiver &r);
 	void start();
 };
 
 // Hardware + Model with output connectors for messages and JSON
-class Receiver {
+class Receiver
+{
 
 	bool timing = false;
 
 	Type type = Type::NONE;
 	std::string serial;
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
-	Device::Device* getDeviceByType(Type type);
+	FLOAT32 station_lat = LAT_UNDEFINED;
+	FLOAT32 station_lon = LON_UNDEFINED;
+
+	Device::Device *getDeviceByType(Type type);
 
 	//  Models
 	std::vector<std::unique_ptr<AIS::Model>> models;
@@ -118,31 +124,33 @@ class Receiver {
 	TAG tag;
 
 public:
-	~Receiver() {
-		if (device) device->Close();
+	~Receiver()
+	{
+		if (device)
+			device->Close();
 	}
 
 	bool verbose = false;
 
 	// Devices
-	Device::RAWFile& RAW() { return _RAW; }
-	Device::WAVFile& WAV() { return _WAV; }
-	Device::RTLSDR& RTLSDR() { return _RTLSDR; }
-	Device::RTLTCP& RTLTCP() { return _RTLTCP; };
-	Device::SpyServer& SpyServer() { return _SpyServer; }
-	Device::AIRSPYHF& AIRSPYHF() { return _AIRSPYHF; }
-	Device::AIRSPY& AIRSPY() { return _AIRSPY; }
-	Device::SDRPLAY& SDRPLAY() { return _SDRPLAY; }
-	Device::HACKRF& HACKRF() { return _HACKRF; }
-	Device::SerialPort& SerialPort() { return _SerialPort; }
-	Device::SOAPYSDR& SOAPYSDR() { return _SOAPYSDR; }
-	Device::ZMQ& ZMQ() { return _ZMQ; }
-	Device::UDP& UDP() { return _UDP; }
-	Device::N2KSCAN& N2KSCAN() { return _N2KSCAN; }
+	Device::RAWFile &RAW() { return _RAW; }
+	Device::WAVFile &WAV() { return _WAV; }
+	Device::RTLSDR &RTLSDR() { return _RTLSDR; }
+	Device::RTLTCP &RTLTCP() { return _RTLTCP; };
+	Device::SpyServer &SpyServer() { return _SpyServer; }
+	Device::AIRSPYHF &AIRSPYHF() { return _AIRSPYHF; }
+	Device::AIRSPY &AIRSPY() { return _AIRSPY; }
+	Device::SDRPLAY &SDRPLAY() { return _SDRPLAY; }
+	Device::HACKRF &HACKRF() { return _HACKRF; }
+	Device::SerialPort &SerialPort() { return _SerialPort; }
+	Device::SOAPYSDR &SOAPYSDR() { return _SOAPYSDR; }
+	Device::ZMQ &ZMQ() { return _ZMQ; }
+	Device::UDP &UDP() { return _UDP; }
+	Device::N2KSCAN &N2KSCAN() { return _N2KSCAN; }
 
 	// available devices
 	static std::vector<Device::Description> device_list;
-	Device::Device* device = nullptr;
+	Device::Device *device = nullptr;
 
 	void refreshDevices(void);
 	bool isTXTformatSet() { return getDeviceByType(type) ? (getDeviceByType(type)->getFormat() == Format::TXT) : false; }
@@ -151,41 +159,49 @@ public:
 	void setChannel(std::string mode) { setChannel(mode, ""); }
 	void setChannel(std::string mode, std::string NMEA);
 	void setOwnMMSI(int m) { own_mmsi = m; }
-	void setTags(const std::string& s);
-	void removeTags(const std::string& s);
+	void setTags(const std::string &s);
+	void removeTags(const std::string &s);
 	void clearTags() { tag.mode = 0; }
+	void setLatLon(FLOAT32 lat, FLOAT32 lon)
+	{
+		station_lat = lat;
+		station_lon = lon;
+	}
 
-	bool& Timing() { return timing; }
+	bool &Timing() { return timing; }
 
 	// Receiver output are Messages or JSON
-	Connection<AIS::Message>& Output(int i) { return models[i]->Output().out; }
-	Connection<AIS::GPS>& OutputGPS(int i) { return models[i]->OutputGPS().out; }
-	Connection<Plane::ADSB>& OutputADSB(int i) { return models[i]->OutputADSB().out; }
+	Connection<AIS::Message> &Output(int i) { return models[i]->Output().out; }
+	Connection<AIS::GPS> &OutputGPS(int i) { return models[i]->OutputGPS().out; }
+	Connection<Plane::ADSB> &OutputADSB(int i) { return models[i]->OutputADSB().out; }
 
-	Connection<JSON::JSON>& OutputJSON(int i) { return jsonais[i].out; }
+	Connection<JSON::JSON> &OutputJSON(int i) { return jsonais[i].out; }
 
 	void setSampleRate(int s) { sample_rate = s; }
 	void setBandwidth(int b) { bandwidth = b; }
 	void setPPM(int p) { ppm = p; }
 
-	Type& InputType() {
+	Type &InputType()
+	{
 		return type;
 	}
 
-	std::string& Serial() {
+	std::string &Serial()
+	{
 		return serial;
 	}
 
-	std::unique_ptr<AIS::Model>& addModel(int m);
-	std::unique_ptr<AIS::Model>& Model(int i) { return models[i]; }
+	std::unique_ptr<AIS::Model> &addModel(int m);
+	std::unique_ptr<AIS::Model> &Model(int i) { return models[i]; }
 	int Count() { return models.size(); }
 
-	void setup(int& g) {
+	void setup(int &g)
+	{
 		setupDevice();
 		setupModel(g);
 	}
 	void setupDevice();
-	void setupModel(int& g);
+	void setupModel(int &g);
 
 	void play();
 	void stop();

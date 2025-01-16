@@ -30,10 +30,11 @@ class RAW1090 : public SimpleStreamInOut<RAW, Plane::ADSB>
         READ_MSG,   // Reading message content
     };
     State state = State::WAIT_START;
-    uint8_t nibbles = 0; // Track number of nibbles processed
+    uint8_t nibbles = 0;
 
 public:
     virtual ~RAW1090() {}
+
     void ProcessByte(uint8_t byte, TAG &tag)
     {
         if (byte == '\r' || byte == '\n')
@@ -58,7 +59,6 @@ public:
                 if (msg.len > 0)
                 {
                     msg.Decode();
-                    //msg.Print();
                     Send(&msg, 1, tag);
                 }
                 state = State::WAIT_START;
@@ -128,6 +128,7 @@ class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
     std::vector<uint8_t> buffer;
     State state = State::WAIT_ESCAPE;
     int bytes_read = 0;
+
 
 public:
     virtual ~Beast() {}
@@ -213,9 +214,8 @@ private:
                 break;
             }
 
-            // Process signal level as in readsb
             msg.signalLevel = byte / 255.0f;
-            msg.signalLevel = msg.signalLevel * msg.signalLevel; // Square for power
+            msg.signalLevel = 2 * 10 * log10(msg.signalLevel);
             state = State::READ_PAYLOAD;
             bytes_read = 0;
             break;
@@ -244,8 +244,6 @@ private:
                 {
                     std::cerr << "Unknown message type: " << msg.msgtype << std::endl;
                 }
-                //std::cout << "----- ADSB Message -----" << std::endl;
-                //msg.Print();
                 Send(&msg, 1, tag);
 
                 state = State::WAIT_ESCAPE;
