@@ -75,8 +75,7 @@ namespace IO
 		}
 	};
 
-	template <typename T>
-	class StreamCounter : public StreamIn<T>
+	class StreamCounter : public StreamIn<AIS::Message>, public StreamIn<Plane::ADSB>
 	{
 		uint64_t count = 0;
 		uint64_t lastcount = 0;
@@ -87,14 +86,19 @@ namespace IO
 		int msg_count = 0;
 
 	public:
-		StreamCounter() : StreamIn<T>()
+		StreamCounter() : StreamIn<AIS::Message>()
 		{
 			resetStatistic();
 		}
 
 		virtual ~StreamCounter() {}
 
-		void Receive(const T *data, int len, TAG &tag)
+		void Receive(const AIS::Message *data, int len, TAG &tag) override
+		{
+			count += len;
+		}
+
+		void Receive(const Plane::ADSB *data, int len, TAG &tag) override
 		{
 			count += len;
 		}

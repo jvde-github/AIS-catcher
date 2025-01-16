@@ -49,6 +49,10 @@ namespace Plane
             timestamp = TIME_UNDEFINED;
             airborne = false;
         }
+
+        bool Valid() const  {
+            return lat != CPR_POSITION_UNDEFINED && lon != CPR_POSITION_UNDEFINED;
+        }
     };
 
     struct ADSB
@@ -206,7 +210,6 @@ namespace Plane
             hexident_status = HEXINDENT_IMPLIED_FROM_CRC;
         }
 
-        // Verify message CRC
         bool verifyCRC()
         {
             uint32_t computed = calcCRC();
@@ -221,13 +224,11 @@ namespace Plane
 
         int MOD(int a, int b);
         int NL(double lat);
-        int cprNFunction(double lat, int isodd);
-        bool cprNLcheck(double, int);
 
-        double cprDlonFunction(double lat, int isodd);
-
-        void decodeCPR(FLOAT32 lat, FLOAT32 lon, bool is_even);
-        void decodeCPR_airborne(bool is_even);
-        void decodeCPR_surface(FLOAT32, FLOAT32, bool);
+        bool decodeCPR(FLOAT32 lat, FLOAT32 lon, bool is_even);
+        bool decodeCPR_airborne(bool is_even);
+        bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32);
+        bool decodeCPR_surface(FLOAT32, FLOAT32, bool);
+        bool decodeCPR_surface_reference( bool, FLOAT32, FLOAT32);
     };
 }
