@@ -137,11 +137,9 @@ public:
             plane.even.timestamp = msg->even.timestamp;
             plane.even.airborne = msg->even.airborne;
 
-            FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-
-            // if (!plane.airborne)
             FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
-            calcReferencePosition(tag, ptr, ref_lat, ref_lon);   
+            if (!msg->even.airborne)
+                calcReferencePosition(tag, ptr, ref_lat, ref_lon);
             plane.decodeCPR(ref_lat, ref_lon, true);
         }
 
@@ -153,7 +151,8 @@ public:
             plane.odd.airborne = msg->odd.airborne;
 
             FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
-            calcReferencePosition(tag, ptr, ref_lat, ref_lon);   
+            if (!msg->odd.airborne)
+                calcReferencePosition(tag, ptr, ref_lat, ref_lon);
             plane.decodeCPR(ref_lat, ref_lon, false);
         }
 

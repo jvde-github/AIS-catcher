@@ -117,7 +117,7 @@ namespace Device
 		while (isStreaming())
 		{
 
-			int len = session->read(buffer.data(), TRANSFER_SIZE, 2);
+			int len = session->read(buffer.data(), TRANSFER_SIZE, 1);
 
 			if (len < 0)
 			{
@@ -139,9 +139,12 @@ namespace Device
 		{
 			if (fifo.Wait())
 			{
-				r.data = fifo.Front();
+				int nblocks = -1;
+				r.data = fifo.Front(nblocks);
+				r.size = nblocks * fifo.BlockSize();
+
 				Send(&r, 1, tag);
-				fifo.Pop();
+				fifo.Pop(nblocks);
 			}
 			else
 			{
