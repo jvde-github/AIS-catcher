@@ -26,8 +26,8 @@
 
 // FIFO implementation: input (Push) can be any size, output (Pop) will be of size BLOCK_SIZE
 
-
-class FIFO {
+class FIFO
+{
 	std::vector<char> _data;
 
 	int head = 0;
@@ -44,76 +44,108 @@ class FIFO {
 	const static int timeout = 1500;
 
 public:
-	void Init(int bs = 16 * 16384, int fs = 2) {
+	void Init(int bs = 16 * 16384, int fs = 2)
+	{
 		BLOCK_SIZE = bs;
 		N_BLOCKS = fs;
 		blocks_filled = head = tail = 0;
 		_data.resize((int)(N_BLOCKS * BLOCK_SIZE));
 	}
 
-	int BlockSize() {
+	int BlockSize()
+	{
 		return BLOCK_SIZE;
 	}
 
-	void Halt() {
+	void Halt()
+	{
 		std::lock_guard<std::mutex> lock(fifo_mutex);
 
 		blocks_filled = -1;
 		fifo_cond.notify_one();
 	}
 
-	bool Wait() {
+	bool Wait()
+	{
 		std::unique_lock<std::mutex> lock(fifo_mutex);
 
-		if (blocks_filled == 0) {
-			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this] { return blocks_filled != 0; });
+		if (blocks_filled == 0)
+		{
+			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this]
+							   { return blocks_filled != 0; });
 		}
 		return blocks_filled > 0;
 	}
 
-	char* Front() {
+	char *Front()
+	{
 		return _data.data() + head;
 	}
 
-	void Pop() {
+	char *Front(int &requested)
+	{
+		int to_wrap = ((_data.size() - head) / BLOCK_SIZE);
+
+		if (requested < 0)
+			requested = to_wrap;
+		if (blocks_filled < requested)
+			requested = blocks_filled;
+
+		return _data.data() + head;
+	}
+
+	void Pop(int count = 1)
+	{
 		std::unique_lock<std::mutex> lock(fifo_mutex);
 
-		if (blocks_filled > 0) {
-			head = (head + BLOCK_SIZE) % (int)_data.size();
-			blocks_filled--;
+		if (blocks_filled < count)
+			count = blocks_filled;
+
+		if (count > 0)
+		{
+			head = (head + count * BLOCK_SIZE) % (int)_data.size();
+			blocks_filled -= count;
 		}
 	}
 
-	bool Full() {
+	bool Full()
+	{
 		std::unique_lock<std::mutex> lock(fifo_mutex);
 
 		return blocks_filled == N_BLOCKS;
 	}
 
-	bool Push(char* data, int sz) {
+	bool Push(char *data, int sz)
+	{
 		std::unique_lock<std::mutex> lock(fifo_mutex);
 
-		if (sz <= 0) return true;
+		if (sz <= 0)
+			return true;
 
 		// size of new tail block including overflow (i.e. > BLOCK_SIZE)
 		int blocks_ready = (tail % BLOCK_SIZE + sz) / BLOCK_SIZE;
 		int blocks_needed = (tail % BLOCK_SIZE + sz - 1) / BLOCK_SIZE + 1;
 		int wrap = tail + sz - (int)_data.size();
 
-		if (blocks_filled == -1) return false;
-		if (blocks_filled + blocks_needed > N_BLOCKS) return false;
+		if (blocks_filled == -1)
+			return false;
+		if (blocks_filled + blocks_needed > N_BLOCKS)
+			return false;
 
-		if (wrap <= 0) {
+		if (wrap <= 0)
+		{
 			std::memcpy(_data.data() + tail, data, sz);
 		}
-		else {
+		else
+		{
 			std::memcpy(_data.data() + tail, data, sz - wrap);
 			std::memcpy(_data.data(), data + sz - wrap, wrap);
 		}
 
 		tail = (tail + sz) % (int)_data.size();
 
-		if (blocks_ready > 0) {
+		if (blocks_ready > 0)
+		{
 			blocks_filled += blocks_ready;
 			fifo_cond.notify_one();
 		}
