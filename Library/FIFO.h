@@ -36,7 +36,8 @@ class FIFO
 	int blocks_filled = 0;
 
 	std::mutex fifo_mutex;
-	std::condition_variable fifo_cond;
+	std::condition_variable fifo_notempty;
+	std::condition_variable fifo_notfull;
 
 	int BLOCK_SIZE = 16 * 16384;
 	int N_BLOCKS = 2;
@@ -62,7 +63,8 @@ public:
 		std::lock_guard<std::mutex> lock(fifo_mutex);
 
 		blocks_filled = -1;
-		fifo_cond.notify_one();
+		fifo_notempty.notify_one();
+		fifo_notfull.notify_one();
 	}
 
 	bool Wait()
@@ -71,7 +73,7 @@ public:
 
 		if (blocks_filled == 0)
 		{
-			fifo_cond.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this]
+			fifo_notempty.wait_for(lock, std::chrono::milliseconds((int)(timeout)), [this]
 							   { return blocks_filled != 0; });
 		}
 		return blocks_filled > 0;
@@ -105,6 +107,7 @@ public:
 		{
 			head = (head + count * BLOCK_SIZE) % (int)_data.size();
 			blocks_filled -= count;
+			fifo_notfull.notify_one();
 		}
 	}
 
@@ -115,7 +118,7 @@ public:
 		return blocks_filled == N_BLOCKS;
 	}
 
-	bool Push(char *data, int sz)
+	bool Push(char *data, int sz, bool wait = false)
 	{
 		std::unique_lock<std::mutex> lock(fifo_mutex);
 
@@ -129,8 +132,21 @@ public:
 
 		if (blocks_filled == -1)
 			return false;
+
 		if (blocks_filled + blocks_needed > N_BLOCKS)
-			return false;
+		{
+			if (wait)
+			{
+				while (blocks_filled != -1 && (blocks_filled + blocks_needed > N_BLOCKS))
+				{
+					fifo_notfull.wait(lock);
+				}
+			}
+			else
+			{
+				return false;
+			}
+		}
 
 		if (wrap <= 0)
 		{
@@ -147,7 +163,7 @@ public:
 		if (blocks_ready > 0)
 		{
 			blocks_filled += blocks_ready;
-			fifo_cond.notify_one();
+			fifo_notempty.notify_one();
 		}
 		return true;
 	}
