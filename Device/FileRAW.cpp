@@ -35,10 +35,10 @@ namespace Device
 
 				if (!file->eof())
 				{
-					buffer.assign(buffer.size(), 0);
 					file->read((char *)buffer.data(), buffer.size());
-					while (isStreaming() && !fifo.Push(buffer.data(), buffer.size()))
-						SleepSystem(1);
+					std::streamsize bytesRead = file->gcount();
+					if (bytesRead > 0)
+						fifo.Push(buffer.data(), bytesRead, true);
 				}
 				else
 				{
