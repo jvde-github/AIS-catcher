@@ -20,76 +20,89 @@
 
 #include "Parser.h"
 
-namespace JSON {
+namespace JSON
+{
 
 	// Parser -- Build JSON object from String
 
-	void Parser::error(const std::string& err, int pos) {
+	void Parser::error(const std::string &err, int pos)
+	{
 		const int char_limit = 40;
 		int from = MAX(pos - char_limit, 0);
 		int to = MIN(pos + char_limit, json.size());
 
 		std::stringstream ss;
-		for (int i = from; i < to; i++) {
+		for (int i = from; i < to; i++)
+		{
 			char c = json[i];
 			char d = (c == '\t' || c == '\r' || c == '\n') ? ' ' : c;
 			ss << d;
 		}
 		ss << std::endl
-				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl
-				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl;
-		throw std::runtime_error("JSON parsing error: " + err);
+		   << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl
+		   << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl;
+		throw std::runtime_error("syntax error in JSON: " + err);
 	}
 
 	// Lex analysis
 
-	void Parser::skip_whitespace(int& ptr) {
-		while (ptr < json.size() && std::isspace(json[ptr])) ptr++;
+	void Parser::skip_whitespace(int &ptr)
+	{
+		while (ptr < json.size() && std::isspace(json[ptr]))
+			ptr++;
 	}
 
-	void Parser::tokenizer() {
+	void Parser::tokenizer()
+	{
 
 		tokens.clear();
 		std::string s;
 		int ptr = 0;
 
-		while (ptr < json.size()) {
+		while (ptr < json.size())
+		{
 
 			skip_whitespace(ptr);
-			if (ptr == json.size()) break;
+			if (ptr == json.size())
+				break;
 
 			char c = json[ptr];
 
 			// number
-			if (std::isdigit(c) || c == '-') {
+			if (std::isdigit(c) || c == '-')
+			{
 				bool floating = false;
 				int start_idx = ptr;
 				bool scientific = false;
 
 				s.clear();
 
-				do {
-					if (json[ptr] == '.') {
+				do
+				{
+					if (json[ptr] == '.')
+					{
 						if (floating || start_idx == ptr || !std::isdigit(json[ptr - 1]))
 							error("malformed number", ptr);
 						else
 							floating = true;
 					}
-					else if ((json[ptr] == 'e' || json[ptr] == 'E') && !scientific) {
+					else if ((json[ptr] == 'e' || json[ptr] == 'E') && !scientific)
+					{
 						if (!std::isdigit(json[ptr - 1]) && json[ptr - 1] != '.')
 							error("malformed number", ptr);
 
 						scientific = floating = true;
 
 						s += json[ptr++];
-						if (ptr != json.size() && (json[ptr] == '+' || json[ptr] == '-')) {
+						if (ptr != json.size() && (json[ptr] == '+' || json[ptr] == '-'))
+						{
 							s += json[ptr++];
 						}
 
 						if (ptr == json.size() || !std::isdigit(json[ptr]))
 							error("malformed number", ptr);
 					}
-					
+
 					s += json[ptr++];
 
 				} while (ptr != json.size() && (std::isdigit(json[ptr]) || json[ptr] == '.' || json[ptr] == 'e' || json[ptr] == 'E'));
@@ -97,33 +110,76 @@ namespace JSON {
 				tokens.push_back(Token(floating ? TokenType::FloatingPoint : TokenType::Integer, s, ptr));
 			}
 			// string
-			else if (c == '\"') {
+			else if (c == '\"')
+			{
 				s.clear();
 				ptr++;
 
-				while (ptr != json.size() && json[ptr] != '\"' && json[ptr] != '\n' && json[ptr] != '\r') {
-					if (json[ptr] == '\\') {
-						if (++ptr == json.size()) error("line ends in string literal escape sequence", ptr);
-						if (json[ptr] != '\"') {
-							Error() << "Cannot parse JSON string: " << json;
-							error("escape sequence not supported\\allowed", ptr);
+				while (ptr != json.size() && json[ptr] != '\"' && json[ptr] != '\n' && json[ptr] != '\r')
+				{
+					char c = json[ptr];
+					if (c == '\\')
+					{
+						if (++ptr == json.size())
+							error("line ends in string literal escape sequence", ptr);
+						c = json[ptr];
+						switch (c)
+						{
+						case '\"':
+							break;
+						case '\\':
+							break;
+						case '/':
+							break;
+						case 'b':
+							c = '\b';
+							break;
+						case 'f':
+							c = '\f';
+							break;
+						case 'n':
+							c = '\n';
+							break;
+						case 'r':
+							c = '\r';
+							break;
+						case 't':
+							c = '\t';
+							break;
+						case 'u':
+						{
+							if (ptr + 4 >= json.size())
+								error("line ends in string literal unicode escape sequence", ptr);
+							std::string hex = json.substr(ptr + 1, 4);
+							for (int i = 0; i < 4; i++)
+								if (!std::isxdigit(hex[i]))
+									error("illegal unicode escape sequence", ptr);
+							c = std::stoi(hex, nullptr, 16);
+							ptr += 4;
+							break;
 						}
-				
+						default:
+							error("illegal escape sequence " + std::to_string((int)(c)), ptr);
+						}
 					}
-					s += json[ptr++];
+					s += c;
+					ptr++;
 				};
 
-				if (json.size() == ptr || json[ptr] != '\"') error("line ends in string literal", ptr);
+				if (json.size() == ptr || json[ptr] != '\"')
+					error("line ends in string literal", ptr);
 
 				tokens.push_back(Token(TokenType::String, s, ptr));
 				ptr++;
 			}
 			// keyword
-			else if (isalpha(c)) {
+			else if (isalpha(c))
+			{
 
 				s.clear();
 
-				while (ptr != json.size() && isalpha(json[ptr])) s += json[ptr++];
+				while (ptr != json.size() && isalpha(json[ptr]))
+					s += json[ptr++];
 
 				if (s == "true")
 					tokens.push_back(Token(TokenType::True, "", ptr));
@@ -135,8 +191,10 @@ namespace JSON {
 					error("illegal identifier : \"" + s + "\"", ptr);
 			}
 			// special characters
-			else {
-				switch (c) {
+			else
+			{
+				switch (c)
+				{
 				case '{':
 					tokens.push_back(Token(TokenType::LeftBrace, "", ptr));
 					break;
@@ -167,39 +225,50 @@ namespace JSON {
 
 	// Parsing functions
 
-	void Parser::error_parser(const std::string& err) {
+	void Parser::error_parser(const std::string &err)
+	{
 		error(err, tokens[MIN(tokens.size() - 1, idx)].pos);
 	}
 
-	bool Parser::is_match(TokenType t) {
-		if (idx >= tokens.size()) error_parser("unexpected end in input");
+	bool Parser::is_match(TokenType t)
+	{
+		if (idx >= tokens.size())
+			error_parser("unexpected end in input");
 		return tokens[idx].type == t;
 	}
 
-	void Parser::must_match(TokenType t, const std::string& err) {
-		if (!is_match(t)) error_parser(err);
+	void Parser::must_match(TokenType t, const std::string &err)
+	{
+		if (!is_match(t))
+			error_parser(err);
 	}
 
-	void Parser::next() {
+	void Parser::next()
+	{
 		idx++;
-		if (idx >= tokens.size()) error_parser("unexpected end in input");
+		if (idx >= tokens.size())
+			error_parser("unexpected end in input");
 	}
 
 	// search for keyword in "map", returns index in map or -1 if not found
-	int Parser::search(const std::string& s) {
+	int Parser::search(const std::string &s)
+	{
 		int p = -1;
 		for (int i = 0; i < keymap->size(); i++)
-			if (dict < (*keymap)[i].size() && (*keymap)[i][dict] == s) {
+			if (dict < (*keymap)[i].size() && (*keymap)[i][dict] == s)
+			{
 				p = i;
 				break;
 			}
 		return p;
 	}
 
-	Value Parser::parse_value(std::shared_ptr<JSON> o) {
+	Value Parser::parse_value(std::shared_ptr<JSON> o)
+	{
 		Value v = Value();
 		v.setNull();
-		switch (tokens[idx].type) {
+		switch (tokens[idx].type)
+		{
 		case TokenType::Integer:
 			v.setInt(Util::Parse::Integer(tokens[idx].text));
 			break;
@@ -230,10 +299,12 @@ namespace JSON {
 
 			next();
 
-			while (!is_match(TokenType::RightBracket)) {
+			while (!is_match(TokenType::RightBracket))
+			{
 				o->arrays.back()->push_back(parse_value(o));
 				next();
-				if (!is_match(TokenType::Comma)) break;
+				if (!is_match(TokenType::Comma))
+					break;
 				next();
 				if (is_match(TokenType::RightBracket))
 					error_parser("comma cannot be followed by ']'");
@@ -253,15 +324,18 @@ namespace JSON {
 		return v;
 	}
 
-	std::shared_ptr<JSON> Parser::parse_core() {
+	std::shared_ptr<JSON> Parser::parse_core()
+	{
 		std::shared_ptr<JSON> o = std::shared_ptr<JSON>(new JSON());
 
 		must_match(TokenType::LeftBrace, "expected '{'");
 		next();
 
-		while (is_match(TokenType::String)) {
+		while (is_match(TokenType::String))
+		{
 			int p = search(tokens[idx].text);
-			if (p < 0) {
+			if (p < 0)
+			{
 				if (!skipUnknownKeys)
 					error_parser("\"" + tokens[idx].text + "\" is not an allowed \"key\"");
 			}
@@ -273,7 +347,8 @@ namespace JSON {
 			o->Add(p, parse_value(o));
 			next();
 
-			if (!is_match(TokenType::Comma)) break;
+			if (!is_match(TokenType::Comma))
+				break;
 			next();
 			if (!is_match(TokenType::String))
 				error_parser("comma needs to be followed by property");
@@ -282,7 +357,8 @@ namespace JSON {
 		must_match(TokenType::RightBrace, "expected '}'");
 		return o;
 	}
-	std::shared_ptr<JSON> Parser::parse(const std::string& j) {
+	std::shared_ptr<JSON> Parser::parse(const std::string &j)
+	{
 		json = j;
 		idx = 0;
 		tokenizer();
