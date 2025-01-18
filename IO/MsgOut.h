@@ -82,7 +82,6 @@ namespace IO
 		float rate = 0.0f;
 
 		high_resolution_clock::time_point time_lastupdate;
-		float seconds = 0;
 		int msg_count = 0;
 
 	public:
