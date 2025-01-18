@@ -38,7 +38,7 @@ namespace JSON {
 		ss << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl
 				  << std::string(MIN(char_limit, pos), ' ') << "^" << std::endl;
-		throw std::runtime_error("syntax error in JSON: " + err);
+		throw std::runtime_error("JSON parsing error: " + err);
 	}
 
 	// Lex analysis
@@ -104,7 +104,11 @@ namespace JSON {
 				while (ptr != json.size() && json[ptr] != '\"' && json[ptr] != '\n' && json[ptr] != '\r') {
 					if (json[ptr] == '\\') {
 						if (++ptr == json.size()) error("line ends in string literal escape sequence", ptr);
-						if (json[ptr] != '\"') error("escape sequence not supported\\allowed", ptr);
+						if (json[ptr] != '\"') {
+							Error() << "Cannot parse JSON string: " << json;
+							error("escape sequence not supported\\allowed", ptr);
+						}
+				
 					}
 					s += json[ptr++];
 				};
