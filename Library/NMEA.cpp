@@ -438,7 +438,7 @@ namespace AIS {
 				}
 			}
 			catch (std::exception const& e) {
-				std::cout << "NMEA model: " << e.what() ;
+				Error() << "NMEA model: " << e.what() ;
 			}
 		}
 	}
