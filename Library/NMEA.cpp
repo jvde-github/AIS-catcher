@@ -381,7 +381,7 @@ namespace AIS
 			return false;
 		aivdm.checksum = (fromHEX(parts[6][2]) << 4) | fromHEX(parts[6][3]);
 
-		aivdm.sentence = str;
+		aivdm.sentence = nmea;
 
 		submitAIS(tag, t, thisstation);
 
