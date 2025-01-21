@@ -50,18 +50,26 @@ namespace Plane
             airborne = false;
         }
 
-        bool Valid() const  {
+        bool Valid() const
+        {
             return lat != CPR_POSITION_UNDEFINED && lon != CPR_POSITION_UNDEFINED;
         }
     };
 
     struct ADSB
     {
+        struct LL
+        {
+            int prev, next;
+        };
+
+        LL time_ll;
+        LL hash_ll;
+
         uint8_t msg[14]; // Raw message
         int df;          // Downlink format
         int msgtype;     // Message type
         int len;         // Length of message
-        int prev, next;
         std::time_t rxtime;
         uint32_t hexident; // Aircraft Mode S hex code
         int hexident_status;
@@ -177,29 +185,7 @@ namespace Plane
             }
         }
 
-        uint32_t calcCRC()
-        {
-            uint32_t crc = 0;
-            int bits = len * 8;
-            int offset = (bits == 112) ? 0 : (112 - 56);
-
-            // For each bit in the message
-            for (int j = 0; j < bits; j++)
-            {
-                // Get byte and bit position
-                int byte = j / 8;
-                int bit = j % 8;
-                int bitmask = 1 << (7 - bit);
-
-                // If bit is set, xor with corresponding table entry
-                if (msg[byte] & bitmask)
-                {
-                    crc ^= crc_table[j + offset];
-                }
-            }
-            return crc; // Returns 24-bit CRC
-        }
-
+        uint32_t calcCRC();
         void setCRCandICAO()
         {
             setCRC();
@@ -213,6 +199,7 @@ namespace Plane
         bool verifyCRC()
         {
             uint32_t computed = calcCRC();
+
             return (computed == crc);
         }
 
@@ -229,6 +216,6 @@ namespace Plane
         bool decodeCPR_airborne(bool is_even);
         bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32);
         bool decodeCPR_surface(FLOAT32, FLOAT32, bool);
-        bool decodeCPR_surface_reference( bool, FLOAT32, FLOAT32);
+        bool decodeCPR_surface_reference(bool, FLOAT32, FLOAT32);
     };
 }
