@@ -1,3 +1,5 @@
+#include <array>
+
 #include "ADSB.h"
 #include "Stream.h"
 
@@ -5,14 +7,50 @@ class PlaneDB : public StreamIn<Plane::ADSB>
 {
     std::mutex mtx;
 
+    struct LL
+    {
+        int prev, next;
+    };
+    const int END = -2;
+    const int FREE = -1;
+
 private:
     int first = -1;
     int last = -1;
     int count = 0;
     std::vector<Plane::ADSB> items;
-    int N = 512;
+    const int N = 512;
+    std::array<LL, 512> hash_ll;
 
     FLOAT32 station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
+
+    void checkDepth()
+    {
+
+        int m = 0, gc = 0;
+        for (int i = 0; i < N; i++)
+        {
+            int c = 0;
+            int ptr = hash_ll[i].next;
+            while (ptr != END)
+            {
+                c++;
+                gc++;
+                ptr = items[ptr].hash_ll.next;
+            }
+            if (c > m)
+                m = c;
+        }
+        std::cerr << "Max: " << m << " out of total " << gc << std::endl;
+    }
+
+    int hash(uint32_t hexident) const
+    {
+        const uint32_t PRIME = 16777619;
+        uint32_t hash = 2166136261;
+        hash = (hash ^ hexident) * PRIME;
+        return hash % (N - 1);
+    }
 
 public:
     PlaneDB()
@@ -26,10 +64,19 @@ public:
         // set up linked list
         for (int i = 0; i < N; i++)
         {
-            items[i].next = i - 1;
-            items[i].prev = i + 1;
+            items[i].time_ll.next = i - 1;
+            items[i].time_ll.prev = i + 1;
+
+            items[i].hash_ll.prev = FREE;
+            items[i].hash_ll.next = FREE;
         }
-        items[N - 1].prev = -1;
+        items[N - 1].time_ll.prev = -1;
+
+        for (int i = 0; i < N; i++)
+        {
+            hash_ll[i].prev = END;
+            hash_ll[i].next = END;
+        }
     }
 
     void calcReferencePosition(TAG &tag, int ptr, FLOAT32 &lat, FLOAT32 &lon)
@@ -55,39 +102,70 @@ public:
             return;
 
         // remove ptr out of the linked list
-        if (items[ptr].next != -1)
-            items[items[ptr].next].prev = items[ptr].prev;
+        if (items[ptr].time_ll.next != -1)
+            items[items[ptr].time_ll.next].time_ll.prev = items[ptr].time_ll.prev;
         else
-            last = items[ptr].prev;
+            last = items[ptr].time_ll.prev;
 
-        items[items[ptr].prev].next = items[ptr].next;
+        items[items[ptr].time_ll.prev].time_ll.next = items[ptr].time_ll.next;
 
         // new ship is first in list
-        items[ptr].next = first;
-        items[ptr].prev = -1;
+        items[ptr].time_ll.next = first;
+        items[ptr].time_ll.prev = -1;
 
-        items[first].prev = ptr;
+        items[first].time_ll.prev = ptr;
         first = ptr;
     }
 
-    int create()
+    int create(int hexident)
     {
         int ptr = last;
+
+        int oldhash = hash(items[ptr].hexident);
+        int newhash = hash(hexident);
+
+        // Remove from hash list if already present
+        if (items[ptr].hash_ll.next != FREE || items[ptr].hash_ll.prev != FREE)
+        {
+            if (items[ptr].hash_ll.next != END)
+                items[items[ptr].hash_ll.next].hash_ll.prev = items[ptr].hash_ll.prev;
+            else
+                hash_ll[oldhash].prev = items[ptr].hash_ll.prev;
+
+            if (items[ptr].hash_ll.prev != END)
+                items[items[ptr].hash_ll.prev].hash_ll.next = items[ptr].hash_ll.next;
+            else
+                hash_ll[oldhash].next = items[ptr].hash_ll.next;
+        }
+
+        // Insert into hash list (node is guaranteed to be removed already)
+        items[ptr].hash_ll.prev = END;
+        items[ptr].hash_ll.next = hash_ll[newhash].next;
+
+        if (hash_ll[newhash].next != END)
+            items[hash_ll[newhash].next].hash_ll.prev = ptr;
+
+        hash_ll[newhash].next = ptr;
+
         count = MIN(count + 1, N);
         items[ptr].clear();
+        items[ptr].hexident = hexident;
 
         return ptr;
     }
 
     int find(int hexid) const
     {
-        int ptr = first, cnt = count;
-        while (ptr != -1 && --cnt >= 0)
+
+        int h = hash(hexid);
+        int ptr = hash_ll[h].next;
+        while (ptr != END)
         {
             if (items[ptr].hexident == hexid)
                 return ptr;
-            ptr = items[ptr].next;
+            ptr = items[ptr].hash_ll.next;
         }
+
         return -1;
     }
 
@@ -108,7 +186,7 @@ public:
             if (msg->hexident_status == HEXINDENT_IMPLIED_FROM_CRC)
                 return;
 
-            ptr = create();
+            ptr = create(msg->hexident);
         }
 
         // Move to front and update data
@@ -233,7 +311,7 @@ public:
 
                 delim = comma;
             }
-            ptr = items[ptr].next;
+            ptr = items[ptr].time_ll.next;
         }
 
         content += "],\"error\":false}\n\n";
