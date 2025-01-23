@@ -383,7 +383,7 @@
 				</li>
 				<li class="mmsi-map" onclick="mapResetViewZoom(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on
 					vessel</li>
-				<li class="mmsi-map" onclick="showShipcard(context_mmsi)"><i class="directions_boat_icon"></i>Show
+				<li class="mmsi-map" onclick="showShipcard('ship',context_mmsi)"><i class="directions_boat_icon"></i>Show
 					Shipcard</li>
 				<li class="divider mmsi-map"></li>
 				<li class="mmsi" onclick="openAIScatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on
@@ -864,7 +864,7 @@
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
 						<span><i onclick="showContextMenu(event,card_mmsi,['mmsi', 'mmsi-map'])"
 								class="mapcard-header-icon more_vert_icon"></i></span>
-						<span><i onclick="showShipcard(null)" style="color: red"
+						<span><i onclick="showShipcard(null,null)" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
 
@@ -899,13 +899,14 @@
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Latitude</span><span id="shipcard_lat">-</span></div>
 							<div><span>Longitude</span><span id="shipcard_lon">-</span></div>
-							<div><span>Distance</span><span id="shipcard_distance">-</span></div>
+							<div><span>Altitude</span><span id="shipcard_altitude">-</span></div>
 						</div>
 
 						<div onclick="shipcardselect(this)"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Destination</span><span id="shipcard_destination"></span></div>
 							<div><span>ETA</span><span id="shipcard_eta"></span></div>
+							<div><span>Distance</span><span id="shipcard_distance">-</span></div>
 						</div>
 
 						<div onclick="shipcardselect(this)"
@@ -1023,7 +1024,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=d7e703cf45f70db3a09c348403e32d9a"></script>
+	<script src="script.js?hash=ed3cc66b42bf1df2600e368c93c150f8"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

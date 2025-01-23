@@ -77,7 +77,7 @@ namespace Plane
     }
 
     void ADSB::Callsign()
-    {
+    {        
         static const char *cs_table = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
         int len = 0;
 
@@ -231,6 +231,8 @@ namespace Plane
             case 2:
             case 3:
             case 4:
+            
+                category = TC * 10 + ST;
                 Callsign();
                 break;
 

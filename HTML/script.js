@@ -5,6 +5,7 @@ var interval,
     overlapmaps = {},
     station = {},
     shipsDB = {},
+    planesDB = {},
     fetch_binary = false,
     hover_feature = undefined,
     show_all_tracks = false,
@@ -26,6 +27,7 @@ var shipcardIconMax = 3;
 var shipcardIconOffset = 0;
 var plugins_main = [];
 var card_mmsi = null,
+    card_type = null,
     hover_mmsi = null,
     build_string = "unknown";
 var refreshIntervalMs = 2500;
@@ -286,6 +288,7 @@ function copyCoordinates(m) {
 }
 
 let hoverMMSI = undefined;
+let hoverType = undefined;
 
 var rangeStyleFunction = function (feature) {
     let clr = undefined;
@@ -314,7 +317,7 @@ var shapeStyleFunction = function (feature) {
             color: `rgba(${parseInt(c.slice(-6, -4), 16)}, ${parseInt(c.slice(-4, -2), 16)}, ${parseInt(c.slice(-2), 16)}, ${o})`
         }),
         stroke: new ol.style.Stroke({
-            color: hoverMMSI && feature.ship.mmsi == hoverMMSI ? settings.shiphover_color : settings.shipoutline_border,
+            color: hoverMMSI && hoverType == 'ship' && feature.ship.mmsi == hoverMMSI ? settings.shiphover_color : settings.shipoutline_border,
             width: 2
         }),
     });
@@ -324,11 +327,11 @@ var trackStyleFunction = function (feature) {
     var w = Number(settings.track_weight);
     var c = settings.track_color;
 
-    if (feature.mmsi == hoverMMSI) {
+    if (feature.mmsi == hoverMMSI && hoverType == 'ship') {
         c = settings.shiphover_color;
         w = w + 2;
     }
-    else if (feature.mmsi == card_mmsi) {
+    else if (feature.mmsi == card_mmsi && card_type == 'ship') {
         c = settings.shipselection_color;
         w = w + 2;
     }
@@ -359,6 +362,50 @@ var markerStyle = function (feature) {
     });
 };
 
+var planeStyleOld = function (feature) {
+
+    return new ol.style.Style({
+        image: new ol.style.Icon({
+            src: SpritesAll,
+            rotation: feature.plane.rot,
+            offset: [feature.plane.cx, feature.plane.cy],
+            size: [feature.plane.imgSize, feature.plane.imgSize],
+            scale: settings.icon_scale * feature.plane.scaling,
+            opacity: 1
+        })
+    });
+};
+
+var planeStyle = function (feature) {
+    const altitude = feature.plane.altitude || 0;
+    const shadowScale = Math.min(Math.max(altitude / 40000, 0.1), 1); // 0.1-1 scale based on height up to 40000ft
+
+    return [
+        // Shadow/border layer
+        new ol.style.Style({
+            image: new ol.style.Icon({
+                src: "https://aiscatcher.org/hub_test/sprites_hub.png",
+                rotation: feature.plane.rot,
+                offset: [feature.plane.cx, feature.plane.cy],
+                size: [feature.plane.imgSize, feature.plane.imgSize],
+                scale: (settings.icon_scale * feature.plane.scaling) * (1 + shadowScale * 1),
+                opacity: 0.25
+            })
+        }),
+        // Main aircraft layer
+        new ol.style.Style({
+            image: new ol.style.Icon({
+                src: SpritesAll,
+                rotation: feature.plane.rot,
+                offset: [feature.plane.cx, feature.plane.cy],
+                size: [feature.plane.imgSize, feature.plane.imgSize],
+                scale: settings.icon_scale * feature.plane.scaling,
+                opacity: 1
+            })
+        })
+    ];
+};
+
 function decodeHTMLEntities(text) {
     const textArea = document.createElement('textarea');
     textArea.innerHTML = text;
@@ -369,7 +416,9 @@ var labelStyle = function (feature) {
     const font = settings.tooltipLabelFontSize + "px Arial";
     return new ol.style.Style({
         text: new ol.style.Text({
-            text: decodeHTMLEntities(feature.ship.shipname || feature.ship.mmsi.toString()),
+            text: decodeHTMLEntities('ship' in feature ?
+                (feature.ship.shipname || feature.ship.mmsi.toString()) :
+                (feature.plane.callsign || feature.plane.hexident.toString(16).toUpperCase().padStart(6, '0'))),
             overflow: true,
             offsetY: 25,
             offsetX: 25,
@@ -433,9 +482,19 @@ var labelVector = new ol.source.Vector({
     features: []
 });
 
+var planeVector = new ol.source.Vector({
+    features: []
+});
+
 var markerLayer = new ol.layer.Vector({
     source: markerVector,
     style: markerStyle
+})
+
+var planeLayer = new ol.layer.Vector({
+    source: planeVector,
+    style: planeStyle,
+    visible: false
 })
 
 var shapeLayer = new ol.layer.Vector({
@@ -548,6 +607,7 @@ function measureStyleFunction(feature) {
 
 let shapeFeatures = {};
 let markerFeatures = {};
+let planeFeatures = {};
 
 let stationFeature = undefined;
 let hoverCircleFeature = undefined;
@@ -1263,9 +1323,10 @@ const handleClick = function (pixel, target, event) {
     }
 
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'link' in feature) { return feature; } }, { hitTolerance: 10 });
+        function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature) { return feature; } }, { hitTolerance: 10 });
 
     let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
+    let included_plane = feature && 'plane' in feature && feature.plane.hexident in planesDB;
 
     if (event.originalEvent.ctrlKey || measureMode || isMeasuring) {
         measureMode = false;
@@ -1300,11 +1361,17 @@ const handleClick = function (pixel, target, event) {
 
         closeDialog();
         closeSettings();
-        showShipcard(feature.ship.mmsi, pixel);
+        showShipcard('ship', feature.ship.mmsi, pixel);
+    }
+    else if (feature && 'plane' in feature || included_plane) {
+
+        closeDialog();
+        closeSettings();
+        showShipcard('plane', feature.plane.hexident, pixel);
     }
     else {
         clickTimeout = setTimeout(function () {
-            showShipcard(null);
+            showShipcard(null, null);
             clickTimeout = null;
         }, 300);
     }
@@ -1333,7 +1400,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [rangeLayer, shapeLayer, trackLayer, markerLayer, labelLayer, extraLayer, measureVector].forEach(layer => {
+    [rangeLayer, shapeLayer, trackLayer, markerLayer, planeLayer, labelLayer, extraLayer, measureVector].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -1693,13 +1760,13 @@ function updateTablecard() {
                 var row = tableBody.insertRow();
 
                 row.addEventListener("mouseover", function (e) {
-                    startHover(ship.mmsi);
+                    startHover('ship', ship.mmsi);
                 });
                 row.addEventListener("mouseout", function (e) {
                     stopHover();
                 });
                 row.addEventListener("click", function (e) {
-                    showShipcard(ship.mmsi);
+                    showShipcard('ship', ship.mmsi);
                 });
                 row.addEventListener("contextmenu", function (e) {
                     showContextMenu(event, ship.mmsi, ["mmsi", "mmsi-map"]);
@@ -2348,7 +2415,6 @@ async function fetchShips(noDoubleFetch = true) {
         "flags",
         "validated",
         "channels"
-
     ];
 
     shipsDB = {};
@@ -2396,6 +2462,59 @@ async function fetchShips(noDoubleFetch = true) {
 
     tab_title_count = ships.values.length;
     updateTitle();
+
+    return true;
+}
+
+async function fetchPlanes() {
+
+    let planes = {};
+
+    try {
+        response = await fetch("api/planes_array.json");
+    } catch (error) {
+        setPulseError();
+        console.log("failed loading planes: " + error);
+        return false;
+    } finally {
+    }
+
+    planes = await response.json();
+    setPulseOk();
+
+    const keys = [
+        "hexident",
+        "lat",
+        "lon",
+        "altitude",
+        "speed",
+        "heading",
+        "vertrate",
+        "squawk",
+        "callsign",
+        "airborne",
+        "nMessages",
+        "last_signal",
+        "category",
+        "level"
+    ];
+
+    planesDB = {};
+
+    planes.values.forEach((v) => {
+        const p = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
+
+        p.shipclass = ShippingClass.PLANE;
+
+        p.validated = 1;
+        p.name = p.callsign || p.hexident;
+
+        // Store in database 
+        const entry = {};
+        entry.raw = p;
+        planesDB[p.hexident] = entry;
+    });
+
 
     return true;
 }
@@ -3029,7 +3148,7 @@ function toggleShipcardSize() {
             const aside = document.getElementById("shipcard");
             if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
 
-                if (card_mmsi in shipsDB) {
+                if (card_mmsi in shipsDB && card_type == "ship") {
                     let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]));
                     positionAside(pixel, aside);
                 }
@@ -3760,6 +3879,12 @@ function getTooltipContent(ship) {
     return '<div>' + getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
 }
 
+function getTooltipContentPlane(plane) {
+    const altitude = plane.altitude ? Math.round(plane.altitude) : '-';
+    const speed = plane.speed ? Math.round(plane.speed) : '-';
+    return `<div><div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude} ft</b>/<b>${speed} kts</b></div><div>Received <b>${getDeltaTimeVal(plane.last_signal)}</b> ago</div></div>`;
+}
+
 function getTypeVal(ship) {
     switch (ship.mmsi_type) {
         case CLASS_A:
@@ -3821,8 +3946,13 @@ function notImplemented() {
 
 function updateFocusMarker() {
     if (selectCircleFeature) {
-        if (card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
+        if (card_type == 'ship' && card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
             const center = ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]);
+            selectCircleFeature.setGeometry(new ol.geom.Point(center));
+            return;
+        }
+        else if (card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
+            const center = ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]);
             selectCircleFeature.setGeometry(new ol.geom.Point(center));
             return;
         }
@@ -3833,9 +3963,17 @@ function updateFocusMarker() {
         }
     }
 
-    if (card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
+    if (card_type == 'ship' && card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
 
         const center = ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]);
+        selectCircleFeature = new ol.Feature(new ol.geom.Point(center));
+        selectCircleFeature.setStyle(selectCircleStyleFunction);
+        selectCircleFeature.mmsi = card_mmsi;
+        extraVector.addFeature(selectCircleFeature);
+    }
+    else if(card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
+
+        const center = ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]);
         selectCircleFeature = new ol.Feature(new ol.geom.Point(center));
         selectCircleFeature.setStyle(selectCircleStyleFunction);
         selectCircleFeature.mmsi = card_mmsi;
@@ -3845,7 +3983,7 @@ function updateFocusMarker() {
 
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
-    tooltip.innerHTML = shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi;
+    tooltip.innerHTML = mmsi;
 
     if (pixel) {
         const [mapW, mapH] = map.getSize();
@@ -3899,11 +4037,14 @@ const stopHover = function () {
     const sf = hoverMMSI in shapeFeatures;
 
     hoverMMSI = undefined;
+    hoverType = undefined;
     hover_feature = undefined;
     hover_enabled_track = false;
 
     if (dc) rangeLayer.changed();
-    shapeLayer.changed();
+
+    if (hoverType == 'ship' && sf)
+        shapeLayer.changed();
 
     updateHoverMarker();
     trackLayer.changed();
@@ -3924,16 +4065,19 @@ function toggleAttribution() {
     attribution.style.display = currentDisplay === 'none' ? 'block' : 'none';
 }
 
-const startHover = function (mmsi, pixel, feature) {
+const startHover = function (type, mmsi, pixel, feature) {
 
-    if (mmsi !== hoverMMSI) {
+    if (type != 'ship' && type != 'tooltip' && type != 'plane') return;
+
+    if (mmsi !== hoverMMSI || hoverType !== type) {
         stopHover();
 
         hoverMMSI = mmsi;
+        hoverType = type;
         hover_feature = feature;
 
-        if ((mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
-            showTooltipShip(hover_info, hoverMMSI, pixel, 15, shipsDB[mmsi].raw.cog);
+        if (type == 'ship' && (mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
+            showTooltipShip(hover_info, shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi, pixel, 15, shipsDB[mmsi].raw.cog);
 
             if (settings.show_track_on_hover && pixel) {
                 debounceShowHoverTrack(mmsi);
@@ -3944,6 +4088,8 @@ const startHover = function (mmsi, pixel, feature) {
             }
 
             trackLayer.changed();
+        } else if (type == 'plane' && (mmsi in planesDB && planesDB[mmsi].raw.lon && planesDB[mmsi].raw.lat)) {
+            showTooltipShip(hover_info, planesDB[mmsi]?.raw ? getTooltipContentPlane(planesDB[mmsi].raw) : mmsi, pixel, 15, planesDB[mmsi].raw.heading);
         }
         else {
             showTooltipShip(hover_info, hoverMMSI, pixel, 0);
@@ -3960,8 +4106,13 @@ const startHover = function (mmsi, pixel, feature) {
 function updateHoverMarker() {
 
     if (hoverCircleFeature) {
-        if (hoverMMSI in shipsDB && shipsDB[hoverMMSI].raw.lon && shipsDB[hoverMMSI].raw.lat) {
+        if (hoverType == 'ship' && hoverMMSI in shipsDB && shipsDB[hoverMMSI].raw.lon && shipsDB[hoverMMSI].raw.lat) {
             const center = ol.proj.fromLonLat([shipsDB[hoverMMSI].raw.lon, shipsDB[hoverMMSI].raw.lat]);
+            hoverCircleFeature.setGeometry(new ol.geom.Point(center));
+            return;
+        }
+        else if (hoverType == 'plane' && hoverMMSI in planesDB && planesDB[hoverMMSI].raw.lon && planesDB[hoverMMSI].raw.lat) {
+            const center = ol.proj.fromLonLat([planesDB[hoverMMSI].raw.lon, planesDB[hoverMMSI].raw.lat]);
             hoverCircleFeature.setGeometry(new ol.geom.Point(center));
             return;
         }
@@ -3969,13 +4120,21 @@ function updateHoverMarker() {
             extraVector.removeFeature(hoverCircleFeature);
             hoverCircleFeature = undefined;
             hoverMMSI = undefined;
+            hoverType = undefined;
             return;
         }
     }
 
-    if (hoverMMSI in shipsDB && shipsDB[hoverMMSI].raw.lon && shipsDB[hoverMMSI].raw.lat) {
+    if (hoverType == 'ship' && hoverMMSI in shipsDB && shipsDB[hoverMMSI].raw.lon && shipsDB[hoverMMSI].raw.lat) {
 
         const center = ol.proj.fromLonLat([shipsDB[hoverMMSI].raw.lon, shipsDB[hoverMMSI].raw.lat]);
+        hoverCircleFeature = new ol.Feature(new ol.geom.Point(center));
+        hoverCircleFeature.setStyle(hoverCircleStyleFunction);
+        hoverCircleFeature.mmsi = hoverMMSI;
+        extraVector.addFeature(hoverCircleFeature);
+    }
+    else if (hoverType == 'plane' && hoverMMSI in planesDB && planesDB[hoverMMSI].raw.lon && planesDB[hoverMMSI].raw.lat) {
+        const center = ol.proj.fromLonLat([planesDB[hoverMMSI].raw.lon, planesDB[hoverMMSI].raw.lat]);
         hoverCircleFeature = new ol.Feature(new ol.geom.Point(center));
         hoverCircleFeature.setStyle(hoverCircleStyleFunction);
         hoverCircleFeature.mmsi = hoverMMSI;
@@ -4004,7 +4163,7 @@ const normalizePixel = (coord) => {
 
 function getFeature(pixel, target) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'tooltip' in feature) { return feature; } }, { hitTolerance: 10 });
+        function (feature) { if ('ship' in feature || 'plane' in feature || 'tooltip' in feature) { return feature; } }, { hitTolerance: 10 });
 
     if (feature) return feature;
     return undefined;
@@ -4024,11 +4183,15 @@ const handlePointerMove = function (pixel, target) {
 
     if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
         const mmsi = feature.ship.mmsi;
-        startHover(mmsi, pixel, feature);
+        startHover('ship', mmsi, pixel, feature);
+    }
+    else if (feature && 'plane' in feature && feature.plane.hexident in planesDB) {
+        const hexident = feature.plane.hexident;
+        startHover('plane', hexident, pixel, feature);
     }
     else if (feature && 'tooltip' in feature) {
-        startHover(feature.tooltip, pixel, feature);
-    } else if (hoverMMSI) {
+        startHover('tooltip', feature.tooltip, pixel, feature);
+    } else if (hoverMMSI || hoverType) {
         stopHover();
     }
 
@@ -4189,7 +4352,7 @@ function measurecardVisible() {
 }
 
 function toggleMeasurecard() {
-    if (shipcardVisible() && !measurecardVisible()) showShipcard(null);
+    if (shipcardVisible() && !measurecardVisible()) showShipcard(null, null);
     document.getElementById("measurecard").classList.toggle("visible");
 }
 
@@ -4207,7 +4370,7 @@ async function ToggleTrackOnMap(m) {
 }
 
 async function toggleTrack(m) {
-    if (settings.show_track_on_select && card_mmsi == m) {
+    if (settings.show_track_on_select && card_mmsi == m && card_type == 'ship') {
         select_enabled_track = !select_enabled_track;
     }
     else {
@@ -4268,7 +4431,7 @@ function deleteAllTracks() {
     marker_tracks = new Set();
     let p = {};
 
-    if (card_mmsi && settings.show_track_on_select) {
+    if (card_type == 'ship' && card_mmsi && settings.show_track_on_select) {
         marker_tracks.add(Number(card_mmsi));
         select_enabled_track = true;
 
@@ -4318,8 +4481,8 @@ async function fetchTracks() {
 }
 
 function trackOptionString(mmsi) {
-    const hover_track = mmsi == hoverMMSI && hover_enabled_track;
-    const select_track = mmsi == card_mmsi && select_enabled_track;
+    const hover_track = mmsi == hoverType == 'ship' && hoverMMSI && hover_enabled_track;
+    const select_track = card_type == 'ship' && mmsi == card_mmsi && select_enabled_track;
     const track_shown = marker_tracks.has(Number(mmsi));
 
     if (hover_track || select_track) return "Show Track";
@@ -4329,7 +4492,7 @@ function trackOptionString(mmsi) {
 function updateShipcardTrackOption() {
     const trackOptionElement = document.getElementById("shipcard_track_option");
 
-    if (show_all_tracks) {
+    if (show_all_tracks || card_type == 'plane') {
         trackOptionElement.style.opacity = "0.5";
         trackOptionElement.style.pointerEvents = "none";
     } else {
@@ -4337,7 +4500,7 @@ function updateShipcardTrackOption() {
         trackOptionElement.style.pointerEvents = "auto";
     }
 
-    if (card_mmsi) {
+    if (card_mmsi && card_type == 'ship') {
         document.getElementById("shipcard_track").innerText = trackOptionString(card_mmsi);
     }
 }
@@ -4406,6 +4569,8 @@ function setShipcardValidation(v) {
 
 function populateShipcard() {
 
+    if (card_type != 'ship') return;
+
     if (!(card_mmsi in shipsDB)) {
         document
             .getElementById("shipcard_content")
@@ -4462,6 +4627,71 @@ function populateShipcard() {
     updateShipcardTrackOption(card_mmsi);
 
 }
+
+function populatePlanecard() {
+
+    if (card_type != 'plane') return;
+
+    document
+        .getElementById("shipcard_content")
+        .querySelectorAll("span:nth-child(2)")
+        .forEach((e) => (e.innerHTML = null));
+
+    if (!(card_mmsi in planesDB)) {
+        document
+            .getElementById("shipcard_content")
+            .querySelectorAll("span:nth-child(2)")
+            .forEach((e) => (e.innerHTML = null));
+        document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
+        document.getElementById("shipcard_header_flag").innerHTML = "";
+        document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
+
+        updateFocusMarker();
+        return;
+    }
+
+    let plane = planesDB[card_mmsi].raw;
+
+    document.getElementById("shipcard_header_flag").innerHTML = '';
+    document.getElementById("shipcard_header_title").innerHTML = (plane.callsign || plane.hexident);
+
+    setShipcardValidation(plane.validated);
+
+    [
+        { id: "heading", u: "&deg", d: 0 },
+        { id: "level", u: "dB", d: 1 },
+    ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = plane[el.id] ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
+
+    document.getElementById("shipcard_callsign").innerHTML = plane.callsign;
+    /*
+    "hexident",
+    "lat",
+    "lon",
+    "altitude",
+    "speed",
+    "heading",
+    "vertrate",
+    "squawk",
+    "callsign",
+    "airborne",
+    "nMessages",
+    "last_signal",
+    "category"
+    */
+    document.getElementById("shipcard_type").innerHTML = plane.category;
+    document.getElementById("shipcard_count").innerHTML = plane.nMessages;
+
+    document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(plane.last_signal);
+    document.getElementById("shipcard_lat").innerHTML = plane.lat ? getLatValFormat(plane) : null;
+    document.getElementById("shipcard_lon").innerHTML = plane.lon ? getLonValFormat(plane) : null;
+    document.getElementById("shipcard_altitude").innerHTML = plane.altitude ? plane.altitude + " ft" : null;
+
+    document.getElementById("shipcard_speed").innerHTML = plane.speed ? getSpeedVal(plane.speed) + " " + getSpeedUnit() : null;
+
+    updateShipcardTrackOption(card_mmsi);
+
+}
+
 
 function shipcardMinIfMaxonMobile() {
     if (shipcardVisible() && window.matchMedia("(max-height: 1000px) and (max-width: 500px)").matches && isShipcardMax()) {
@@ -4659,7 +4889,7 @@ function prepareShipcard() {
     displayShipcardIcons();
 }
 
-function showShipcard(m, pixel = undefined) {
+function showShipcard(type, m, pixel = undefined) {
     const aside = document.getElementById("shipcard");
     const visible = shipcardVisible();
 
@@ -4670,7 +4900,7 @@ function showShipcard(m, pixel = undefined) {
     if (select_enabled_track && (card_mmsi != m || m == null)) {
         select_enabled_track = false;
 
-        if (!(card_mmsi == hoverMMSI && hover_enabled_track)) {
+        if (!(card_mmsi == hoverMMSI && hover_enabled_track && hoverType == 'ship')) {
             hideTrack(card_mmsi);
         }
     }
@@ -4687,10 +4917,11 @@ function showShipcard(m, pixel = undefined) {
     }
 
     card_mmsi = m;
+    card_type = type;
 
     if (shipcardVisible()) {
-        if (settings.show_track_on_select) {
-            if (hoverMMSI === m && hover_enabled_track) {
+        if (settings.show_track_on_select && card_type == 'ship') {
+            if (hoverMMSI === m && hover_enabled_track && hoverType == 'ship') {
                 hover_enabled_track = false;
                 select_enabled_track = true;
             }
@@ -4706,7 +4937,9 @@ function showShipcard(m, pixel = undefined) {
         }
         if (!visible) shipcardMinIfMaxonMobile();
         positionAside(pixel, aside);
-        populateShipcard();
+
+        if (card_type == 'ship') populateShipcard();
+        else if (card_type == 'plane') populatePlanecard();
 
         // trigger reflow for iPad Safari
         aside.style.display = 'none';
@@ -4716,48 +4949,6 @@ function showShipcard(m, pixel = undefined) {
 
     trackLayer.changed();
     updateFocusMarker();
-}
-
-function compareObjects(obj1, obj2) {
-    const differences = {};
-
-    // Helper function to compare values
-    function compareValues(key, value1, value2) {
-        if (value1 === null || value2 === null) {
-            if (value1 !== value2) {
-                differences[key] = { obj1: value1, obj2: value2 };
-            }
-        } else if (typeof value1 === "object" && typeof value2 === "object") {
-            const objDiff = compareObjects(value1, value2);
-            if (Object.keys(objDiff).length > 0) {
-                differences[key] = objDiff;
-            }
-        } else if (value1 !== value2) {
-            differences[key] = { obj1: value1, obj2: value2 };
-        }
-    }
-
-    // Compare keys from obj1
-    for (const key of Object.keys(obj1)) {
-        if (key != "lat" && key != "lon" && key != "received")
-            if (!obj2.hasOwnProperty(key)) {
-                differences[key] = { obj1: obj1[key], obj2: undefined };
-            } else {
-                compareValues(key, obj1[key], obj2[key]);
-            }
-    }
-
-    // Compare keys from obj2
-    for (const key of Object.keys(obj2)) {
-        if (key != "lat" && key != "lon" && key != "received")
-            if (!obj1.hasOwnProperty(key)) {
-                differences[key] = { obj1: undefined, obj2: obj2[key] };
-            } else if (!differences.hasOwnProperty(key)) {
-                compareValues(key, obj1[key], obj2[key]);
-            }
-    }
-
-    return differences;
 }
 
 const shippingMappings = {
@@ -4849,6 +5040,50 @@ function getSprite(ship) {
     return
 }
 
+function getPlaneSprite(plane) {
+    let sprite = shippingMappings[ShippingClass.PLANE];
+
+    // Handle rotorcraft (TC=4, CA=7)
+    if (plane.category && plane.category == 47) {
+        sprite = shippingMappings[ShippingClass.HELICOPTER];
+    }
+
+    // Set scaling based on wake vortex category
+    if (plane.category) {
+        const ca = plane.category % 10;  // Extract CA value
+        switch (ca) {
+            case 1: // Light
+                plane.scaling = 0.5;
+                break;
+            case 2: // Medium 1
+            case 3: // Medium 2
+                plane.scaling = 0.75;
+                break;
+            case 4: // High vortex
+            case 5: // Heavy
+                plane.scaling = 1.0;
+                break;
+            case 6: // High performance
+                plane.scaling = 0.8;
+                break;
+            case 7: // Rotorcraft
+                plane.scaling = 0.6;
+                break;
+            default:
+                plane.scaling = 0.75; // Default scaling
+        }
+    }
+
+    plane.scaling = plane.scaling * 1.2
+    plane.rot = plane.heading * 3.1415926 / 180;
+    plane.cx = sprite.cx;
+    plane.cy = sprite.cy;
+    plane.imgSize = sprite.imgSize;
+    plane.hint = sprite.hint;
+
+    return sprite;
+}
+
 var SpritesAll =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABuCAYAAACgLRjpAAAc1UlEQVR4nO2de1hU953/3+c2l8MMg8IMaATvCuIYURSVQSDGWAy5CIlpA0ISSmPcXzPb3d/q+qTtb9ttt+262bTNY7bK2g22tE00pk00W9ekNCsmGk1ipMG7Ri4NggFHYG7n8v39MSNhmDOcM0KeGHNezzMPz5zvd158hvPmzLl8v2cAHZ2bHVu1jbdV2yxj5atxVPE1jqox86Wl1/Jp6bVj5nM5Gd7lZMbMV2a28mVm65j5iguMfHGBccx8fGYez2fmjZmv1OTkS01OTT5ak5FmNoNmNo2qqohfSm+mQY+ZD6A3Ywx9FLCZAsbMxwCbmTH0sSw2s+zY+UCzm0GzY/h+6c2MxvVBqXWwVdvMwto7WwGAe/H1DE+9xzea4mocVebywEOtAPCS8YWMHV07R+VLS681B/xrWgHAaHo5o7OtblQ+l5MxLyGOVgA4THVlNDVLo/KVma3mR0ShFQCeZ7mMPb6+UfmKC4zmb/6t1AoAz/6UyWg8GBiVj8/MM7OrNrQCgLj/uQzvqSOj8pWanOavG5a0AsB/Bg9n7PU3j+jTsgWsDCyakhJYNCUFQOVoirvuy/UuSsn1Lhoz30BfbspAX+6Y+aYTS8p0YhkzX54kpORJwpj5luVLKcvypTHzMbMXpzCzF4+Zbyk7NWUpO1WTTzWA4sqlbslugWS3QFy51D3a6u4QVrrtgh12wY47hJWj9gnBYnfQb0fQb4cQLB61z0nGuxMJh0TCwUnGj9p3jyS6HbIEhyzhHkkcte/hdbI7NZUgNZXg4XXyqH1M/kNuyuYAZXOAyX9o1L4y1ul20FY4aCvKWKeqb8QA2qpthcEl07KvPw8umZZtq7YV3mhxNY6qwjz/0kFfnn9pdo2j6oZ9aem1hT7v4kGfz7s4Oy299oZ9LidTOJNYB30ziTXb5WRu2FdmthbmS8KgL18SssvM1hv2FRcYC5cXSoO+5YVSdnGB8YZ9fGZeIZOVP+hjsvKz+cy8G/aVmpyFLm76oM/FTc8uNTlH9I0YQNmZtUmYbh98Lky3Q3Zm3fDOarY0b9N03/TB59N905EtzbthnyTN2eTt+9Tn7ZsOSZpzw750WDalEtPg81RiQjosN+zLleVNMyVx8PlMSUSuLN+wb3kx2TRrljz4fNYsGcuLyQ376MyCTfSEGZ8+nzADdGbBDfvymIxNMxnH4POZjAN5TMaIvpgBtFXbsoLFc0qGLw8WzymxVduy4i2uxlGVVRQojvIVBYpLahxVcfvS0muz/L7CKJ/fV1iSll4bt8/lZLKy5aQoX7acVOJyMnH7yszWrJWSEOVbKQklZWZr3L7iAmPW6tVSlG/1aqmkuMAYt4/PzMticu6K8jE5d5XwmXlx+0pNzqxVXFaUbxWXVVJqcsb0xQwgcaS6g86JUcuDzokgjtS49xXsxOGeO+CMWj53wAk7ccTtIyTF3e+ZG7W83zMXhKTE7UsE584gfNTyDMIjEVzcvomEuG8Xhajlt4sCJhISt2/qNOLOWSBFLc9ZIGHqtPh9lH2qm5k6L2o5M3UeKPvUuH2TKJt7Pjspavl8dhImUbaYPsUA2qptycHVCysJx0S1EY5BcPXCSlu1LVlrcTWOquSvBO6u5AgX1cYRDl8J3F1Z46jS7EtLr032+1ZVEjnaR2QOft+qyrT0Ws0+l5NJziHJlYzCWSkGFHJIcqXLyWj2lZmtyfdLQiUHEtXGgeB+SagsM1s1+4oLjMkPPSxXctFvFxwHPPSwXFlcYNTs4zPzkpll5ZVgFIQMB2ZZeSWfmafZV2pyJpdzt1dyiM4LBwbl3O2VpSanoi/WFrA6uHByQqxfGG6r1loggOqFAwtj+sJtcfkGrsX2hdvi8k2TLTF94ba4fItFIaYv3BaXb8kSKaYv3BaXj5m5KKYv3BaXL4+bEtMXblP0RQXQVm2jhPuKNspWY8zfJluNEO4r2mirtqmeyK5xVFH3BO/faJGsMftYJCvuCd6/scZRpepLS6+lgoG7N4pC7Cs9omBBMHD3xrT0WlWfy8lQuSRlo0nhv/c6JjDIJSkbXU5G1VdmtlJfk8SNViLH7GMlMr4miRvLzFZVX3GBkfrGE/LGxMTorel1EhMJvvGEvLG4wKjq4zPzKGZFzUbKHHt9UGYrmBU1G/nMPFVfqclJreNyN1opU8w+VsqEdVzuxlKTM8qntAWsCC6ZmhpRkCiBEiP3P8J9KtQKBFCx2JsX4RMpESIlRnQK99HkG+hfHFkfLYKiI33hPpp8M4g1wieBQBr28Rnuo8m3TAxGvl9QEId9vIf7aPIVFEgRPkEIPYYS7qPJx2QujfBBEkOPIYT7aPLlc9Mi64MEAZF5CfeJ8rHDF0gFuW5xgi1URHc/DMfb+rkDHzQAgLDy9org/HSLZLdAnGCDVJDrRv0bvx6punxxuXtCMHQwc4XrxnH+/f43DK83AMCK4J0V8705lhTBjgnBicgXl7t3YOeIPlFY5g54JwAADKYr4C3H+42mxgYACPiLK7z98y1BfwoC3gkQE5e5gboRfZkkyT2OGAAA1ygBH1ED/c1UTwMAOMn4iikkwZJIOIwjBmSSJHcTPhnRt1KW3BPl0B+/m2bwLsP172PYBgC4WxIrFkqCxS5LmChLWClL7j3AiL41D8ju2yaFtqZdXRTeeYfpf/klugEA1pTLFYsXSxaHg+C2STLWPCC7Gw+O7KMX3eemx4fWB/F0Qzr/Xr/0zisNAMAsvreCmb7AQtnsoMdPBL3oPjdOHRnRV8JmuW+jk0L1yX04Jrb2vyr8pQEA7uHmVuSyGRYHbcVtdBJK2Cz3XjRH+CL+LW3Vtnzf369tAkvDcPj8MebNo3UAGjz1noFwewKACqlwUW1wyfRciDLMT7/o8tR7DikVV+Ooyv/bgf/bxBIWh01vH2ti36wD0LCja+dAuD0BQIVLLKxd4l+aK1Iifprwb64dXTsVfWnptfn9155sIoSFmT9yjOUO1QFo6GyrGwi3JwCoEIX8Wp83L5eiRFgSf+7qbKtT9LmcTP7dcnoTAwpnqWvHTlJX6wA0NDVLA+H2BAAVWSSpdiZJzJVAsI9uczU1S4q+MrM1/7uCv4kjQBPLHdtPM3UAGvb4+gbC7QkAKlbJUq1LFHIFCvg+Z3Lt8fUp+ooLjPn//jOxieWAN/9MH3vpRboOQEPjwcBAuD0BQEX5Wrm2sEjOFQXg79ysq/FgQNHHZ+blc+t+3ASGg9TSdEx+5+U6AA3eU0cGwu0JACroxWtqmTmuXEgChF/9o8t76oiir9TkzP+BaXUTCwYHxXPH9okn6wA07PU3D4TbEwBU3M1m1RawM3JFSPi2/zXXXn/zoG94AJ8hU6fw1MWPtnnqPe8p/dIhfReQqVMepy5+5PXUe76l1KfGUfXMZHkqf4m+uG1H184RfTWOqgWT5amPX6Ivend07VT0paXXPiPLGTxNt27rbKsb0ZeWXrtAljMep+lWb2dbnaLP5WSescPEd8O/ralZGtHncjIL7DA93g2/t6lZUvSVma3PzCKEP0NR2/b4+kb0lZmtC2YR8vgZivLu8fUp+ooLjM/Mm0/4E8epbY0HAyP6iguMC+bNJ4+fOE55Gw8GFH18Zt4zVMY8nrSe2OY9dWREH5+Zt4DKmPc4aT3h9Z46ougrNTmfyaId/Em5a9tef/OIvlKTc0EW7Xj8pNzl3etvVvTp6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo3JpomhUHIAsAAXDcU++JfVVcAzWOqgjfjq6do/KlpddG+Drb6kblczmZCF9TszQqX5nZGuHb4+sbla+4wBjhazwYGJWPz8yL8HlPHRmVr9TkjPDt9TeP6Iu6FnwdW7VtDsnI2BJcNrtEmjSOAgD2zGVf4vgPd1M9V57y1Hva4imsxlE1J12evGVJYFnJJGESRSiCc9xZ3zj7+N29VM9TO7p2xuVLS6+dI8uTtgT8S0qE4G0UQGAwnvOlThq3m6J6n+psq4vL53Iyc1Jg2jKTJJYkk9Coko8pn8/ivLq7H+JTTc1SXL4ys3XODEK2LBeFknQiUQBwmmZ9DpNldxdFPbXH1xeXr7jAOCd7Htly50qpZPJkQgHAyRbad1u6cXdHG55qPBiIy8dn5s2hJmVvYZzFJZQ9nQIB5I7TvoTxt+0mPR1PeU8dictXanLOmUXbtxSxM0om0+MpAuCU1OlLpay7L5O+p/b6mxV9iltAW7WtSLxr2T5v2QKemCIzSvf5wf/mSDvz9vurPPWeFi3F1TiqilYId+0r85TzRjly2E4f04ff2Rraj7Bvr9rRtVOTLy29tkgI3rGv98oaXpYih42xXB+SUn7XzrJHV3W21WnyuZxM0Twyft9iOZnnhg0Q8kHCIbq7/SzlWdXULGnylZmtRfdJ4r61gp83kcgNQB9Fo95gam+kmVV7fH2afMUFxqKKKnlfRaXIm0yRvmvXKPxnHdu+9w/0qsaDAU0+PjOviMn/6j6uYC0PLnJ9EF8fhDfq2+X3X1vlPXVEk6/U5CwqZ+ft+6pxIW+iIge5XiN+/Jf/cPvr0plVe/3NUb6oANqqbXZpee6FgeplFsIoj1elBAmWf99/mj55JkdtonqNo8ruEgsvrOuttjBEecydQAn4afLTp0/TJ3PUJqqnpdfaRWHZhU8ur7OQGD6KFmBP+9lpmjmTozZR3eVk7Jkk6UKh7LDQMfZIJBDsYzpOd2AgR22iepnZar9Lli7UBLyWWB8vAij8yMSf/oCic9QmqhcXGO1lD8oX1j8hWNgYQkEA/um7htNvH6Jy1Caq85l5dnrR/RcMd9VYQMcYAykJCOz60Wly9nCO2kT1UpPTvprNulBryrewMcY3C5DwA+8fT78nd+QMn6iu9Aq3b82CmOEDQsPyA/cvnA1g9UjFXffdd21NzPABoWH59w2s0ezz9N4XM3xAaFj+QP+9mn2L5eSY4QNCw/Jz5WTNvgeD/pjhA0LD8tcKQc2+hyvEmOEDQsPyK9aJmn2c68HY4QMAhgPnWqvZ95BhYczwAaFh+V81KOcl6lXSkvmF0rjoyTnDCc5OBbE77lLrt0hcUjhOHKfqm+WbjRRiV/WJYm6hEFD3DVybBUKSVX0zSGJhQuxd4UEmEjOs4FR9hbJUOH6E0dDXyZQEpBGi6lt9j1w4frz6ccGcOTImT4Gqj55fUkhZ1P9+9KRMUCmTVX0rmJmF42n1vGSxaZhIJUb5ogIozk03q9rCSItnq665uYJTsy9XzFP1CcFszT5ByFX1pSNBs28GSVT1zZclzT6XLKn6Fi4kmn133Cmr+uhp8zX76OxCVV8OO0mzbzk7PcoXFUCm7RPNh+H0mb+q/qu3sW2afWeZM6o+lm3X7GPZc6q+T6D9NMbHlFfVd4miNftO0rSq7+JFSrOv+QSl6iNdlzT75LYPVX0fST2afS1SZ5QvKoDsgSOHKH/0fNaofh97QJ89f0yt35+4/znkp/2qvo8Nf8V5+oyqjzM0HmIYdZ+R/xg0rV5fM9VzKAj1j8xeKohO+FR9rzLsIR+lenoVf6UZfEjRqr7fNtCHfD51X0c7jWPvUKo+6a0XDpGg+g2w5J6/glx4V9X3snjikI+o56VDvooT8sdRvug9R1nabt7fMnKqCWB65fgnAHar/WIZ8vb/Sdw/oo+AYK/lVU0+QN5uSz6g8l9HYLXt0+QjwPYT9FXV/+J3qR5NPgnY/t+cUeX9Ans4ozafiO2vvsKM7CPACy8w2v5+srRdfPePqn8/8e09Gt8v2b4v+BfV9/tSQDkvUQH01HtauJcbN5gbTyvKKFEG/+oJH/P2+5Wees8nagXu6NrZ8ophz4bGxD8ptouUiH1Jr/qOsG9V7ujaqerrbKtrMRhf3ZCU8mfl+mgR4+z7fCz7TmVnW52qr6lZajlKdW/4kPYotksgeJfu8Z2lPJVNzZKqb4+vr6WB4Ta8zilPaxVB4fcGk6+RZir3+PpUfY0HAy2/2Mps2P9H5d0xUQR272J9e/9AVzYeDKj6vKeOtEiv120QP3hDuYMkQjj8B5/83muV3lNHVH17/c0t9cLRDQeCJ5Xrg4w9geO+A9KZyr3+5ihfzG27rdpWLi2ZvzXompUqpSUCBGAvXoHhrbMt9PEP13vqPQfVihtKjaOqfLG4dOsyvys1TUgDQHDReBFvGw+1nGCOr9/RtTMuX1p6bbkoLtrq9y5LDQZCswJN5oswmg+3MEzz+s62urh8LidTPoMkbs0kttQkhO5p0I0ATlOelktU//qmZikuX5nZWl4kS1sLJSF1ghz6iD9PM/hfhms5QtPr9/j64vIVFxjL775X3rriTjl14sSQ79xZGm+8wbQ0vk6tbzwYiMvHZ+aV0zklW5m5Ran0+AkAIZA7L0D6y5stcsuf13tPHYnLV2pylq9gZm4t5malTqRtICA4L13Bn8WzLW9JH63f629W9I24cxGeeJ6PT6/tvaX16ocS4YnnET6tVz+UCE88j/BpvfqhRHjieYRP69UPJcITzyN8Wq9+KBGeeB7h03r1Q4nwxPMIn9arH0qEJ55H+JSufujo6Ojo6Oh8YZgGDWMHbyGfzk3E7e+/j7b6evwHxmYl3w683wbUj5nvfaCtHmNWn85NxLyWFrQTAhIMQqivxy8wupU8D2hpD506DQpA/ah9LUA7AUgQEOox6vp0biKcLS3oIATk+mOUIXQCLR2h8F1/jCqEzhagY4hMD+EtxNzh4VMIobav+Qr7osMXFcK4fMPDpxDCeHw6NxExwzcshNugbSWPEL6IEGr2xQrfsBBq9encRGSrhW9oCJ9/XnUlZ6uHb2gIn1f1qYVvaAif10P4hWKOUvjOnMEnTU149sMPcTFGCLdDeSXPUQ7fmU+ApmeBDy/GCGFMn1L4zgCfNAHPfghcjBHCWD6dm4gspfBJEoI5Obg33CfP40FQIYTBcAiHTjLIUg6fFARyBn2AJ6gQwmA4hBE+pfBJQDAHQ+oDggohDD6PqPp0bhJoACgvR1piIpRuc06mTsX129EnUVT0F1+wLGA2YzyAwfFHFMrTgERFHzB10AcojfZlAZgjfA8AaYmIUR+G1AeF+gCYEVmfzk3II49gRXs7eoZv4To60HPwIA6cP4/u4W2yjOCuXdgDQGFWyiMrgPae6C1cRw9w8ABwvju6TQ4CuxR9jwAr2oGe4Vu4DqDnIHDgPNA9vE0GgrsQqz6dm45HH8UdSiFUeoTD9xJGXLmP3qEcQqWHHAR2jeh7FLhDKYRKj3D4VOrTuenQEkJt4Rs0agihevgGbRpCqIfvC85jj6E4VgjD4duNuFbuY8WxQygHgV1x+R4DimOFMBy+OOvTuel47DEUDQ+hLCOwe/eNrtzHiqJDKAeA3TfkewwoGh5CGQjs1sN36zA0hOHw7QIQ80vpNBiLPg2hHAB2j8o3NITh8I2yPp2bjpoaFLa24vLowzdoLARaL482fIM2oLAVuKyH79ZmMcZ25d7sPh0dHZ1I/g4ASQftR+iKw99/zvXofMk4/gAS+zxwdT6AxD4AJz7vgnS+PBgA+PZjroegiBzA3KsA/NBPd+iMEq3DlNIBmKaDFwAg/NMIYMpnVJfOlwStATQCgB0GFgDSYFS/paiOjgbiGqhpROjmiyPdT1lHJx70kcI6nytaAjgPwC9jtP0KwMKxK0dH51M4AN8FEAQg7MCMTgmFfoIiIqHQ/yvM7AQghtu/H+6vozMm5AB4DwApQ2LvOSzuJCgiwx/nsfjjSoy7htCJ6ffCr9PR0czwowkDgG8D2ASA/TVmdT+INJsBtNJ8DABAELJ/Fzo9lThjR2iL+BMAP0Boy6ijMyJDA5gLoB7AnIeRdO2fMcs/DbxDq+gCvF3fwRnTb3A1EUALgFoAb41tuTq3GhRC+24/APAtANQuZPbeh9QEDhQPQPZA9FyA1yCD0DOQQGxg+WsQB85igKZBydPAB21gbQBoAcT7B1weeBCnkhA6wHkWwGaErpro6ChyEgBZh3G9l5B3WUCh9xQWXdmNzN6vIekqQvt3BAA5ihwfQRE5ihzf0OUPwnb1BczuaUFut4BCbweW9HwDKT3h9ubP643pfDGQnoSj5ffI6tiMCV0JoK6PdgkAeBOhfcL5AM4MC+BlALcD2Bju5wNAEkD5/xETrvweWa1/A/spANLn8aZ0vjjI+HRrdg7AVoTuNpA4rF/LfsztJigir8N5BaH9vKFYw6/7Wdhz3an+NUQ6X1pYhE4yvwPgAIBLiB2YqwLkFADwQ5IB9A9r7wPwSvjxLQCTAaxEaLSyjo4iLICva+w7/KuERvoWHRnARYTuybL9BurS+ZIQ17XgqxATAMALSb/Pis6YEE8AewkIDQAByAbop1Z0xgCtAWQBTB22bDaAlLEtR+fLhpYAMgD+C8ASC1gBAFJhHEDo+8D2A0j6zKrT0QHwcwBkNRJaT2NRVxeWeS4hz7MJaWcQOs2yH/qcXJ3PiL/Bp+fzBABkHKhg+Ll/SNuvP7cKdb7QqH0EDx1e1QLg3V4QDsBhAIfw6R1JF3wGtenoRPHU84mJ3SsZ5vefdyE6tyYLGeBfAIxTaEv6Mc+3HXc4yG9ttj4AhTEcdzDAj6B/W5GOBoZ/BE/7qcXy8AMsuxdA6rC21QvNZgsAzDYamYlAiYLvwR/yfH2twXA/9ADqaGB4AHd9s7//uQKTadIjHPdHAJOuN4wDZtkZJjH8IvMjJtPcYa99dEtCwpYOUfT8IhhcC30Qgo4GlA5C/tXd3/+v2QaD9RsGw34A0wGgwmCYPbS/nWEW4NOt3P95OiHhO6eCQc9zweD90McA6mgk1lHw1n8YGPjnySzLPWk07gcw9zaWnTy0QwrLjkdoX3Hzzy2Wf3g3EOjeIQilCA3F0tHRhNp+WvkPef7ZXknqn8Jx41w8P3jprVUQrny9t/fQ96zWpY0+3/kXRXENQoNUdXQ0o+VAYdX3zOZt91qtk6ghX3clEuI7Lwhdv+7ru/CqJJUD6P3sytS5VVE7ET0FQMYVSfJQw75rjaUos0+W+b2S9A6ADOhHvTo3gGJoaKDs22bzt2caDFMmc5wxkaZj3gcwQEigQxDks8Fg52t+f8Obsvydz65cnVsNxdusPcZxy8usVk13OTBSlHGawYBpBsNUnqbXvNnfrwdQRzOKAfyNIJyZ6/WeczCMbTLHJSSMsAUUCBn4qyiSVkG4djQQ+OCzK1XnVkRtv20WgIeftVjcBTyfNLwxQMiV5d3dlwLAkwCOIjRiRkdHM2oHIQMVLLuaAL6f9PQclYcMw3+pr+/olt7e809bLBMcwD0I3RdGR2fMmL6O444+nZBwCcA3AXy1MTn56nGHgxx3OMg9DPMcAOtqhjnwnNV6YWJoPrB+616dMWHOkwbDqX/h+dMAHgkvm7U7Kclz3OEgx+z2fgDu8HJTPk2/vN1qvZRDUb+EHkKdUbLgW0bjuR/yfDuAtUOWW7ZZrVePOxzkT8nJVwE8MKTNuIiifrsjMfHyYprehfBNzXV04mXhRpPp3PfM5lYAq4c3/pjnjxx3OMiLSUkeADOHNbO3U9Qv66zW1rsY5jXoJ6Z1NDD8IGR6hyj2/D+frwrAa8M7fyxJrQDQI0kcQrfxGIr4ASFf/35//++SKOo2BbeOzujIpKh/Ou5wyD/hef3GkzpjQlxbqVOEXPETEuyQpPbPqiCdLxdajlifAEB9hWEmZbNsgUQIO46mMzcYDP/xXDB4EYAJobvk6+jEjeqBwhMGwy8fsdnWGCnKNry/SMjAGwMDH2/yeocfkOjoaEJ1C0gA+bDPFxzPMP0OhmHsLMv1StJAjyQx7YIgeQnRz/vpfKasRegWvBMA3JVH0+cArAcwDcB3oN//T2cU/H8SmD8+LrQaXgAAAABJRU5ErkJggg=='
 
@@ -4863,6 +5098,11 @@ async function updateMap() {
     ok = await fetchTracks();
     if (!ok) return;
 
+    if (planeLayer.isVisible()) {
+        ok = await fetchPlanes();
+        if (!ok) return;
+    }
+
     if (settings.setcoord == "true" || settings.setcoord == true) {
         if (station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon")) {
             settings.setcoord = false;
@@ -4871,7 +5111,14 @@ async function updateMap() {
             saveSettings();
         }
     }
-    if (shipcardVisible()) populateShipcard();
+
+    if (shipcardVisible()) {
+        if (card_type == "ship")
+            populateShipcard();
+        else if (card_type == "plane")
+            populatePlanecard();
+    }
+
     updateMarkerCount();
     await fetchRange();
 
@@ -4883,6 +5130,7 @@ function redrawMap() {
     markerFeatures = {};
 
     markerVector.clear();
+    planeVector.clear();
     shapeVector.clear();
     labelVector.clear();
     trackVector.clear();
@@ -4923,6 +5171,29 @@ function redrawMap() {
             }
         }
         refreshMeasures();
+    }
+
+    for (let [hexident, entry] of Object.entries(planesDB)) {
+        let plane = entry.raw;
+        if (plane.lat != null && plane.lon != null && plane.lat != 0 && plane.lon != 0 && plane.lat < 90 && plane.lon < 180) {
+            getPlaneSprite(plane)
+
+            const lon = plane.lon
+            const lat = plane.lat
+
+            const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
+            var feature = new ol.Feature({
+                geometry: point
+            })
+
+            feature.plane = plane;
+
+            markerFeatures[plane.hexident] = feature
+            planeVector.addFeature(feature)
+
+            if (includeLabels)
+                labelVector.addFeature(feature)
+        }
     }
 
     for (let [mmsi, entry] of Object.entries(paths)) {
@@ -5334,7 +5605,7 @@ function activateTab(b, a) {
 
 function selectMapTab(m) {
     document.getElementById("map_tab").click();
-    if (m in shipsDB) showShipcard(m);
+    if (m in shipsDB) showShipcard('ship', m);
 }
 
 function selectTab() {
@@ -5508,6 +5779,9 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
+
+//addOverlayLayer("Planes", planeLayer);
+
 function makeDraggable(dragHandle, dragTarget) {
     const moveThreshold = 15;
     let isDragging = false;
@@ -5580,13 +5854,12 @@ loadPlugins && loadPlugins();
 
 var button = document.getElementById('xchange'); // Get the button by its ID
 
+planeLayer.setVisible(true);
+
 if (communityFeed) {
     button.classList.remove('fill-red');
     button.classList.add('fill-green');
-}
 
-
-if (communityFeed) {
     var feedVector = new ol.source.Vector({
         features: []
     });

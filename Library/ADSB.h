@@ -81,6 +81,7 @@ namespace Plane
         int vertrate;          // Vertical rate
         char callsign[9];      // Aircraft callsign, nul terminated
         int squawk;            // Mode A squawk code
+        int category;          // ADS-B category
         int airborne;          // 0 = on ground, 1 = airborne, 2 = unknown
         long messages;         // Number of Mode S messages received
         struct CPR even, odd;  // CPR coordinates
@@ -121,6 +122,7 @@ namespace Plane
             airborne = AIRBORNE_UNDEFINED;
             signalLevel = LEVEL_UNDEFINED;
             timestamp = TIME_UNDEFINED;
+            category = CATEGORY_UNDEFINED;
             crc = CRC_UNDEFINED;
             status = STATUS_OK;
             nMessages = 0;

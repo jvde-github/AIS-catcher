@@ -38,7 +38,7 @@ struct Ship {
     int prev, next;
     uint32_t mmsi;
     int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, path_ptr;
-    int to_port, to_bow, to_starboard, to_stern, IMO, angle;
+    int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude;
     char month, day, hour, minute;
     float lat, lon, ppm, level, speed, cog, draught, distance;
     std::time_t last_signal, last_direct_signal;

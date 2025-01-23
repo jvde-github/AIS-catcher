@@ -42,6 +42,7 @@ void Ship::reset() {
 	lon = LON_UNDEFINED;
 	ppm = PPM_UNDEFINED;
 	level = LEVEL_UNDEFINED;
+	altitude = ALT_UNDEFINED;
 
 	distance = DISTANCE_UNDEFINED;
 	angle = ANGLE_UNDEFINED;

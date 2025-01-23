@@ -642,6 +642,9 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 	case AIS::KEY_TO_STARBOARD:
 		v.to_starboard = p.Get().getInt();
 		break;
+	case AIS::KEY_ALT:
+		v.altitude = p.Get().getInt();
+		break;
 	case AIS::KEY_VIRTUAL_AID:
 		v.setVirtualAid(p.Get().getBool());
 		break;
