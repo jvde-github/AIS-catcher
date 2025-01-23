@@ -11,8 +11,8 @@ class PlaneDB : public StreamIn<Plane::ADSB>
     {
         int prev, next;
     };
-    const int END = -2;
-    const int FREE = -1;
+    const int END = -1;
+    const int FREE = -2;
 
 private:
     int first = -1;
@@ -24,6 +24,7 @@ private:
 
     FLOAT32 station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
 
+    // for debugging
     void checkDepth()
     {
 
@@ -35,21 +36,23 @@ private:
             while (ptr != END)
             {
                 c++;
-                gc++;
                 ptr = items[ptr].hash_ll.next;
             }
             if (c > m)
                 m = c;
+
+            gc += c;
         }
         std::cerr << "Max: " << m << " out of total " << gc << std::endl;
     }
 
+    // FNV-1 hash
     int hash(uint32_t hexident) const
     {
         const uint32_t PRIME = 16777619;
         uint32_t hash = 2166136261;
         hash = (hash ^ hexident) * PRIME;
-        return hash % (N - 1);
+        return hash % N;
     }
 
 public:
@@ -174,7 +177,7 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
 
         // Skip invalid messages
-        if (msg->hexident == HEXIDENT_UNDEFINED)
+        if (msg->hexident == HEXIDENT_UNDEFINED || msg->status == STATUS_ERROR)
             return;
 
         // Find or create plane entry
@@ -198,8 +201,11 @@ public:
         plane.hexident = msg->hexident;
         plane.nMessages++;
 
-        // Update position if valid
+        // update category if valid
+        if (msg->category != CATEGORY_UNDEFINED)
+            plane.category = msg->category;
 
+        // Update position if valid
         if (msg->lat != LAT_UNDEFINED && msg->lon != LON_UNDEFINED)
         {
             plane.lat = msg->lat;
@@ -209,7 +215,6 @@ public:
 
         if (msg->even.Valid())
         {
-
             plane.even.lat = msg->even.lat;
             plane.even.lon = msg->even.lon;
             plane.even.timestamp = msg->even.timestamp;
@@ -218,6 +223,7 @@ public:
             FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
             if (!msg->even.airborne)
                 calcReferencePosition(tag, ptr, ref_lat, ref_lon);
+
             plane.decodeCPR(ref_lat, ref_lon, true);
         }
 
@@ -229,8 +235,10 @@ public:
             plane.odd.airborne = msg->odd.airborne;
 
             FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
+
             if (!msg->odd.airborne)
                 calcReferencePosition(tag, ptr, ref_lat, ref_lon);
+
             plane.decodeCPR(ref_lat, ref_lon, false);
         }
 
@@ -307,7 +315,9 @@ public:
                            (plane.vertrate != VERT_RATE_UNDEFINED ? std::to_string(plane.vertrate) : null_str) + comma +
                            (plane.squawk != SQUAWK_UNDEFINED ? std::to_string(plane.squawk) : null_str) + comma +
                            std::string("\"") + plane.callsign + "\"" + comma +
-                           std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + "]";
+                           std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + comma +
+                           (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
+                           (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + "]";
 
                 delim = comma;
             }
