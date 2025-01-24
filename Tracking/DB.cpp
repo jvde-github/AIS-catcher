@@ -204,7 +204,8 @@ std::string DB::getJSONcompact(bool full)
 			content += comma + std::to_string(delta_time);
 			content += comma + std::to_string(ship.flags.getPackedValue());
 			content += comma + std::to_string(ship.getValidated());
-			content += comma + std::to_string(ship.getChannels()) + "]";
+			content += comma + std::to_string(ship.getChannels());
+			content += comma + ((ship.altitude == ALT_UNDEFINED) ? null_str : std::to_string(ship.altitude)) + "]";
 
 			delim = comma;
 		}

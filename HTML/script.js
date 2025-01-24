@@ -1,3 +1,4 @@
+
 var interval,
     paths = {},
     map,
@@ -17,6 +18,7 @@ var interval,
     tab_title_station = "",
     tab_title_count = null,
     context_mmsi = null,
+    context_type = null,
     tab_title = "AIS-catcher";
 
 const baseMapSelector = document.getElementById("baseMapSelector");
@@ -204,6 +206,8 @@ getLonValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms
 getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
 getShipName = (ship) => ship.shipname;
 getCallSign = (ship) => ship.callsign;
+getICAOfromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
+getICAO = (plane) => getICAOfromHexIdent(plane.hexident)
 includeShip = (ship) => true;
 
 const getDeltaTimeVal = (s) => {
@@ -418,7 +422,7 @@ var labelStyle = function (feature) {
         text: new ol.style.Text({
             text: decodeHTMLEntities('ship' in feature ?
                 (feature.ship.shipname || feature.ship.mmsi.toString()) :
-                (feature.plane.callsign || feature.plane.hexident.toString(16).toUpperCase().padStart(6, '0'))),
+                (feature.plane.callsign || getICAO(feature.plane))),
             overflow: true,
             offsetY: 25,
             offsetX: 25,
@@ -675,7 +679,7 @@ async function showNMEA(m) {
             if (Array.isArray(value)) {
                 value = JSON.stringify(value).replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "\\'").replace(/"/g, '\\"');
             }
-            tableHtml += "<tr><td>" + key + "</td><td oncontextmenu='showContextMenu(event,\"" + value + ' ",["settings","copy-text"])\'>' + value + "</td></tr>";
+            tableHtml += "<tr><td>" + key + "</td><td oncontextmenu='showContextMenu(event,\"" + value + ' ","ship",["settings","copy-text"])\'>' + value + "</td></tr>";
         }
         tableHtml += "</table>";
 
@@ -726,6 +730,15 @@ function openAISHub(m) {
     window.open("https://www.aishub.net/vessels?Ship[mmsi]=" + m);
 }
 
+function openPlaneSpotters(m) {
+    window.open("https://www.planespotters.net/hex/" + getICAOfromHexIdent(m));
+}
+
+function openADSBExchange(m) {
+    window.open("https://globe.adsbexchange.com/?icao=" + getICAOfromHexIdent(m));
+}
+
+
 const mapMenu = document.getElementById("map-menu");
 
 function hideMapMenu(event) {
@@ -764,7 +777,7 @@ function hideContextMenu(event) {
     document.removeEventListener("click", hideContextMenu);
 }
 
-function showContextMenu(event, mmsi, context) {
+function showContextMenu(event, mmsi, type, context) {
 
     if (event && event.preventDefault) {
         event.preventDefault();
@@ -779,10 +792,17 @@ function showContextMenu(event, mmsi, context) {
     document.getElementById("ctx_fireworks").textContent = evtSourceMap == null ? "Start Fireworks Mode" : "Stop Fireworks Mode";
 
     context_mmsi = mmsi;
+    context_type = type;
 
-    const classList = ["station", "settings", "mmsi-map", "mmsi", "ctx-map", "copy-text", "table-menu"];
+    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu"];
 
     classList.forEach((className) => {
+        if (context.includes('object')) {
+            context.push(type);
+        }
+        if (context.includes('object-map')) {
+            context.push(type+"-map");	
+        }
         const shouldDisplay = context.includes(className);
         const elements = document.querySelectorAll("." + className);
         elements.forEach((element) => {
@@ -1436,12 +1456,14 @@ function initMap() {
         const f = getFeature(map.getEventPixel(evt), map.getTargetElement())
 
         if (!f)
-            showContextMenu(evt, 0, ['settings', 'ctx-map']);
+            showContextMenu(evt, 0, null, ['settings', 'ctx-map']);
         else if ('station' in f) {
-            showContextMenu(evt, null, ["station"]);
+            showContextMenu(evt, null, null, ["station"]);
         }
-        else if ('ship' in f)
-            showContextMenu(evt, f.ship.mmsi, ["mmsi", "mmsi-map"]);
+        else if ('ship' in f )
+            showContextMenu(evt, f.ship.mmsi, 'ship', ["ship", "ship-map"]);
+        else if ('plane' in f )
+            showContextMenu(evt, f.plane.hexident, 'plane', ["plane", "plane-map"]);        
     });
 
     baseMapSelector.innerHTML = '';
@@ -1769,7 +1791,7 @@ function updateTablecard() {
                     showShipcard('ship', ship.mmsi);
                 });
                 row.addEventListener("contextmenu", function (e) {
-                    showContextMenu(event, ship.mmsi, ["mmsi", "mmsi-map"]);
+                    showContextMenu(event, ship.mmsi, "ship", ["object", "object-map"]);
                 });
 
                 var cell1 = row.insertCell(0);
@@ -2414,7 +2436,8 @@ async function fetchShips(noDoubleFetch = true) {
         "last_signal",
         "flags",
         "validated",
-        "channels"
+        "channels",
+        "altitude"
     ];
 
     shipsDB = {};
@@ -2533,17 +2556,15 @@ function toggleScreenSize() {
     }
 }
 
-function addShipcardItem(icon, txt, title, onclick) {
+function addShipcardItem(icon, txt, title, onclick, contextType = 'ship') {
     const div = document.createElement("div");
-
     div.title = title;
+    div.setAttribute("data-context-type", contextType);
     if (icon.startsWith("fa")) {
         icon = "question_mark";
     }
     div.innerHTML = '<i class="' + icon + '_icon"></i><span>' + txt + "</span>";
-
     div.setAttribute("onclick", onclick);
-
     document.getElementById("shipcard_footer").appendChild(div);
 }
 
@@ -3150,6 +3171,10 @@ function toggleShipcardSize() {
 
                 if (card_mmsi in shipsDB && card_type == "ship") {
                     let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]));
+                    positionAside(pixel, aside);
+                }
+                else if (card_mmsi in planesDB && card_type == "plane") {
+                    let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]));
                     positionAside(pixel, aside);
                 }
             }
@@ -3761,7 +3786,7 @@ async function updateShipTable() {
             ],
         });
         table.on("rowContext", function (e, row) {
-            showContextMenu(event, row.getData().mmsi, ["settings", "mmsi", "table-menu"]);
+            showContextMenu(e, row.getData().mmsi, "ship", ["settings", "ship", "table-menu"]);
         });
         table.on("rowClick", function (e, row) {
             tableRowClick(row.getData().mmsi);
@@ -3971,7 +3996,7 @@ function updateFocusMarker() {
         selectCircleFeature.mmsi = card_mmsi;
         extraVector.addFeature(selectCircleFeature);
     }
-    else if(card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
+    else if (card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
 
         const center = ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]);
         selectCircleFeature = new ol.Feature(new ol.geom.Point(center));
@@ -4618,6 +4643,7 @@ function populateShipcard() {
     document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
     document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatValFormat(ship) : null;
     document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonValFormat(ship) : null;
+    document.getElementById("shipcard_altitude").innerHTML = ship.altitude;
 
     document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
     document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
@@ -4652,46 +4678,32 @@ function populatePlanecard() {
 
     let plane = planesDB[card_mmsi].raw;
 
-    document.getElementById("shipcard_header_flag").innerHTML = '';
-    document.getElementById("shipcard_header_title").innerHTML = (plane.callsign || plane.hexident);
-
     setShipcardValidation(plane.validated);
+    // Set header
 
+    document.getElementById("shipcard_header_title").textContent = (plane.callsign || getICAO(plane));
+    document.getElementById("shipcard_header_flag").innerHTML = "&#9992;";
+
+    // Populate plane fields
+    document.getElementById("shipcard_plane_callsign").textContent = plane.callsign || "-";
+    document.getElementById("shipcard_plane_hexident").textContent = getICAO(plane);
+    document.getElementById("shipcard_plane_category").textContent = plane.category || "-";
+    document.getElementById("shipcard_plane_squawk").textContent = plane.squawk || "-";
+    document.getElementById("shipcard_plane_speed").innerHTML = plane.speed ? getSpeedVal(plane.speed) + " " + getSpeedUnit() : null;
+
+    document.getElementById("shipcard_plane_altitude").textContent = plane.altitude ? `${plane.altitude} ft` : "-";
+    document.getElementById("shipcard_plane_lat").innerHTML = plane.lat ? getLatValFormat(plane) : null;
+    document.getElementById("shipcard_plane_lon").innerHTML = plane.lon ? getLonValFormat(plane) : null;
+    document.getElementById("shipcard_plane_vertrate").textContent = plane.vertrate ? `${plane.vertrate} ft/min` : "-";
+    document.getElementById("shipcard_plane_last_signal").textContent = getDeltaTimeVal(plane.last_signal);;
+    document.getElementById("shipcard_plane_messages").textContent = plane.nMessages || "-";
     [
         { id: "heading", u: "&deg", d: 0 },
-        { id: "level", u: "dB", d: 1 },
-    ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = plane[el.id] ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
-
-    document.getElementById("shipcard_callsign").innerHTML = plane.callsign;
-    /*
-    "hexident",
-    "lat",
-    "lon",
-    "altitude",
-    "speed",
-    "heading",
-    "vertrate",
-    "squawk",
-    "callsign",
-    "airborne",
-    "nMessages",
-    "last_signal",
-    "category"
-    */
-    document.getElementById("shipcard_type").innerHTML = plane.category;
-    document.getElementById("shipcard_count").innerHTML = plane.nMessages;
-
-    document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(plane.last_signal);
-    document.getElementById("shipcard_lat").innerHTML = plane.lat ? getLatValFormat(plane) : null;
-    document.getElementById("shipcard_lon").innerHTML = plane.lon ? getLonValFormat(plane) : null;
-    document.getElementById("shipcard_altitude").innerHTML = plane.altitude ? plane.altitude + " ft" : null;
-
-    document.getElementById("shipcard_speed").innerHTML = plane.speed ? getSpeedVal(plane.speed) + " " + getSpeedUnit() : null;
+        { id: "level", u: "dB", d: 1 }
+    ].forEach((el) => (document.getElementById("shipcard_plane_" + el.id).innerHTML = plane[el.id] ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
 
     updateShipcardTrackOption(card_mmsi);
-
 }
-
 
 function shipcardMinIfMaxonMobile() {
     if (shipcardVisible() && window.matchMedia("(max-height: 1000px) and (max-width: 500px)").matches && isShipcardMax()) {
@@ -4772,12 +4784,22 @@ function drawStation() {
     }
 }
 
-function adjustMapForShipcard(ship, pixel) {
-    if (ship && ship.lon && ship.lat) {
+function adjustMapForShipcard(pixel) {
+
+    let lat = null, lon = null;
+    if (card_type == 'ship' && card_mmsi in shipsDB) {
+        lat = shipsDB[card_mmsi].raw.lat;
+        lon = shipsDB[card_mmsi].raw.lon;
+    } else if (card_type == 'plane' && card_mmsi in planesDB) {
+        lat = planesDB[card_mmsi].raw.lat;
+        lon = planesDB[card_mmsi].raw.lon;
+    }
+
+    if (lat && lon) {
         let view = map.getView();
 
         let currentExtent = view.calculateExtent(map.getSize());
-        let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
+        let shipCoords = ol.proj.fromLonLat([lon, lat]);
 
         if (!ol.extent.containsCoordinate(currentExtent, shipCoords)) {
             view.animate({
@@ -4864,37 +4886,62 @@ function positionAside(pixel, aside) {
             }
         }
     }
-    adjustMapForShipcard(ship, pixel);
+    adjustMapForShipcard(pixel);
 }
 
-function displayShipcardIcons() {
-    let icons = document.getElementById("shipcard_footer").children;
-    for (let i = 0; i < icons.length - 1; i++) {
-        icons[i].style.display = i >= shipcardIconOffset && i < shipcardIconOffset + shipcardIconMax ? "flex" : "none";
+function displayShipcardIcons(type) {
+    let icons = document.querySelectorAll('#shipcard_footer > div');
+    let idx = 0;
+
+    for (let icon of icons) {
+        // Hide icons that don't match current context type
+        if (icon.dataset.contextType !== type && icon.dataset.contextType) {
+            icon.style.display = "none";
+            continue;
+        }
+
+        // Show if within offset range or is More button
+        const isMoreButton = icon.querySelector('i').classList.contains('more_horiz_icon');
+        const isInRange = idx >= shipcardIconOffset[type] && idx < shipcardIconOffset[type] + shipcardIconMax;
+        icon.style.display = (isInRange || isMoreButton) ? "flex" : "none";
+        idx++;
     }
 }
 
 function rotateShipcardIcons() {
-    shipcardIconOffset += shipcardIconMax;
-    if (shipcardIconOffset >= shipcardIconCount) shipcardIconOffset = 0;
-    displayShipcardIcons();
+    shipcardIconOffset[card_type] += shipcardIconMax;
+    if (shipcardIconOffset[card_type] >= shipcardIconCount[card_type]) {
+        shipcardIconOffset[card_type] = 0;
+    }
+    displayShipcardIcons(card_type);
 }
 
 function prepareShipcard() {
-    shipcardIconCount = document.getElementById("shipcard_footer").childElementCount
+    // Initialize offset/count objects if needed
+    shipcardIconOffset = shipcardIconOffset || { ship: 0, plane: 0 };
+    shipcardIconCount = shipcardIconCount || { ship: 0, plane: 0 };
 
-    if (shipcardIconCount > shipcardIconMax + 1) {
-        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()');
+    // Count icons for each context
+    shipcardIconCount.ship = document.querySelectorAll('#shipcard_footer > div[data-context-type="ship"]').length;
+    shipcardIconCount.plane = document.querySelectorAll('#shipcard_footer > div[data-context-type="plane"]').length;
+
+    // Add More button for each context if needed
+    if (shipcardIconCount.ship > shipcardIconMax + 1) {
+        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'ship');
     }
-    displayShipcardIcons();
+    if (shipcardIconCount.plane > shipcardIconMax + 1) {
+        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'plane');
+    }
+
+    displayShipcardIcons('ship');
 }
 
 function showShipcard(type, m, pixel = undefined) {
     const aside = document.getElementById("shipcard");
     const visible = shipcardVisible();
 
-    ship = m in shipsDB ? shipsDB[m].raw : null;
-    ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
+    let ship = m in shipsDB ? shipsDB[m].raw : null;
+    let ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
 
 
     if (select_enabled_track && (card_mmsi != m || m == null)) {
@@ -4916,8 +4963,22 @@ function showShipcard(type, m, pixel = undefined) {
         aside.classList.toggle("visible");
     }
 
+
+    if (type !== card_type) {
+        document.querySelectorAll('#shipcard_content [data-context-type]').forEach(element => {
+            if (element.dataset.contextType === type) {
+                element.style.display = '';
+            } else {
+                element.style.display = 'none';
+            }
+        });
+
+        displayShipcardIcons(type);
+    }
+
     card_mmsi = m;
     card_type = type;
+
 
     if (shipcardVisible()) {
         if (settings.show_track_on_select && card_type == 'ship') {

@@ -502,14 +502,14 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	else if (r == "/kml" && KML)
 	{
 		std::string content = ships.getKML();
-		Response(c, "application/text", content, use_zlib);
+		Response(c, "application/vnd.google-earth.kml+xml", content, use_zlib & gzip);
 	}
 	else if (r == "/metrics")
 	{
 		if (supportPrometheus)
 		{
 			std::string content = dataPrometheus.toPrometheus();
-			Response(c, "application/text", content, use_zlib);
+			Response(c, "text/plain", content, use_zlib & gzip);
 			dataPrometheus.Reset();
 		}
 	}
