@@ -105,8 +105,8 @@ namespace IO
 	{
 		for (int i = 0; i < len; i++)
 		{
-			std::cout << "**** ADSB ****" << std::endl;
-			data[i].Print();
+			//std::cout << "**** ADSB ****" << std::endl;
+			//data[i].Print();
 		}
 	}
 
