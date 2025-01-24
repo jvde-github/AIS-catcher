@@ -41,8 +41,7 @@
 				<i id="ships_tab_mini" title="Ships" onclick="activateTab(event,'ships')" class="table_icon"></i>
 				<i id="realtime_tab_mini" title="NMEA realtime" onclick="activateTab(event,'realtime')"
 					class="comment_icon"></i>
-				<i id="log_tab_mini" title="NMEA realtime" onclick="activateTab(event,'log')"
-					class="terminal_icon"></i>
+				<i id="log_tab_mini" title="NMEA realtime" onclick="activateTab(event,'log')" class="terminal_icon"></i>
 				<i id="about_tab_mini" title="About" onclick="activateTab(event,'about')" class="info_icon"></i>
 			</div>
 		</div>
@@ -51,7 +50,7 @@
 			<i class="info_icon small-icon"></i>
 		</div>
 
-		<div title="Settings" onclick="showContextMenu(event, '', ['settings', 'center'])" class="header-icon">
+		<div title="Settings" onclick="showContextMenu(event, '','', ['settings', 'center'])" class="header-icon">
 			<i class="settings_icon small-icon"></i>
 		</div>
 
@@ -70,7 +69,8 @@
 		<div onclick="activateTab(event,'plots')" id="plots_tab"><i class="leaderboard_icon"></i><span>Plots</span>
 		</div>
 		<div onclick="activateTab(event,'ships')" id="ships_tab"><i class="table_icon"></i><span>Ships</span></div>
-		<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="comment_icon"></i><span>NMEA</span></div>
+		<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="comment_icon"></i><span>NMEA</span>
+		</div>
 		<div onclick="activateTab(event,'log')" id="log_tab"><i class="terminal_icon"></i><span>Log</span></div>
 		<div onclick="activateTab(event,'about')" id="about_tab"><i class="info_icon"></i><span>About</span></div>
 	</nav>
@@ -352,7 +352,7 @@
 			</div>
 		</div>
 
-		<div oncontextmenu="showContextMenu(event,0,['settings'])" class="mainspace">
+		<div oncontextmenu="showContextMenu(event,0,'',['settings'])" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
 				<li class="station" onclick="pinStation()"><i class="push_pin_icon"></i>Center map on station</li>
 				<li class="divider station"></li>
@@ -377,38 +377,48 @@
 				<li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span
 						id="ctx_range"></span></li>
 				<li class="divider ctx-map"></li>
-				<li class="mmsi-map ctx-noalltracks" onclick="toggleTrack(context_mmsi)"><i
+				<li class="ship-map ctx-noalltracks" onclick="toggleTrack(context_mmsi)"><i
 						class="timeline_icon"></i><span id="ctx_track"></span></li>
-				<li class="mmsi-map" onclick="pinVessel(context_mmsi)"><i class="push_pin_icon"></i>Center map on vessel
+				<li class="ship-map" onclick="pinVessel(context_mmsi)"><i class="push_pin_icon"></i>Center map on vessel
 				</li>
-				<li class="mmsi-map" onclick="mapResetViewZoom(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on
+				<li class="ship-map" onclick="mapResetViewZoom(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on
 					vessel</li>
-				<li class="mmsi-map" onclick="showShipcard('ship',context_mmsi)"><i class="directions_boat_icon"></i>Show
-					Shipcard</li>
-				<li class="divider mmsi-map"></li>
-				<li class="mmsi" onclick="openAIScatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on
+				<li class="ship-map" onclick="showShipcard('ship',context_mmsi)"><i
+						class="directions_boat_icon"></i>Show
+					Ship Card</li>
+				<li class="plane-map" onclick="showShipcard('plane',context_mmsi)"><i
+						class="directions_boat_icon"></i>Show
+					Plane Card</li>
+				<li class="divider ship-map plane-map"></li>				
+				<li class="ship" onclick="openAIScatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on
 					aiscatcher.org
 				</li>
-				<li class="mmsi" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database
+				<li class="ship" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database
 					Entry</li>
-				<li class="mmsi noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message
+				<li class="ship noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message
 				</li>
-				<li class="mmsi" onclick="copyText(context_mmsi)"><i class="content_copy_icon noandroid"></i>Copy MMSI
+				<li class="ship" onclick="copyText(context_mmsi)"><i class="content_copy_icon noandroid"></i>Copy MMSI
 				</li>
-				<li class="mmsi" onclick="copyCoordinates(context_mmsi)"><i
+				<li class="plane" onclick="copyText(getICAOfromHexIdent(context_mmsi))"><i
+						class="content_copy_icon noandroid"></i>Copy ICAO
+				</li>
+				<li class="ship" onclick="copyCoordinates(context_mmsi)"><i
 						class="content_paste_icon noandroid"></i>Copy Coordinates</li>
-				<li class="divider mmsi"></li>
-				<li class="mmsi noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="search_icon"></i>Search on
+				<li class="divider ship plane"></li>
+				<li class="plane noandroid" onclick="openGoogleSearch(getICAOfromHexIdent(context_mmsi))"><i
+						class="search_icon"></i>Search on
 					Google</li>
-				<li class="mmsi noandroid" onclick="openMarineTraffic(context_mmsi)"><i class="public_icon"></i>Find on
+				<li class="ship noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="search_icon"></i>Search on
+					Google</li>
+				<li class="ship noandroid" onclick="openMarineTraffic(context_mmsi)"><i class="public_icon"></i>Find on
 					MarineTraffic</li>
-				<li class="mmsi noandroid" onclick="openVesselFinder(context_mmsi)"><i class="public_icon"></i>Find on
+				<li class="ship noandroid" onclick="openVesselFinder(context_mmsi)"><i class="public_icon"></i>Find on
 					VesselFinder</li>
-				<li class="mmsi noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub
+				<li class="ship noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub
 				</li>
-				<li class="mmsi noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on
+				<li class="ship noandroid" onclick="openShipXplorer(context_mmsi)"><i class="public_icon"></i>Find on
 					ShipXplorer</li>
-				<li class="divider mmsi noandroid"></li>
+				<li class="divider ship plane noandroid"></li>				
 				<li class="settings" onclick="showServerErrors()"><i class="label_icon"></i>Show Server Errors</li>
 				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
 				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
@@ -862,88 +872,133 @@
 								class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
 						<span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button"
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
-						<span><i onclick="showContextMenu(event,card_mmsi,['mmsi', 'mmsi-map'])"
+						<span><i onclick="showContextMenu(event,card_mmsi,card_type,['object', 'object-map'])"
 								class="mapcard-header-icon more_vert_icon"></i></span>
 						<span><i onclick="showShipcard(null,null)" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
 
 					<div id="shipcard_content" class="mapcard_content">
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Status</span><span id="shipcard_status"></span></div>
 							<div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Country</span><span id="shipcard_country"></span></div>
 							<div><span>Sender</span><span id="shipcard_type"></span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
 							<div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
 							<div><span>IMO</span><span id="shipcard_imo">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
-							<div><span>Course</span><span id="shipcard_cog">-</span></div>
 							<div><span>Speed</span><span id="shipcard_speed">-</span></div>
 							<div><span>Heading</span><span id="shipcard_heading">-</span></div>
-						</div>
-
-						<div onclick="shipcardselect(this)"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Latitude</span><span id="shipcard_lat">-</span></div>
-							<div><span>Longitude</span><span id="shipcard_lon">-</span></div>
 							<div><span>Altitude</span><span id="shipcard_altitude">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
+							class="mapcard-content-row shipcard-content-row shipcard-max-only">
+							<div><span>Latitude</span><span id="shipcard_lat">-</span></div>
+							<div><span>Longitude</span><span id="shipcard_lon">-</span></div>
+							<div><span>Course</span><span id="shipcard_cog">-</span></div>
+						</div>
+
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Destination</span><span id="shipcard_destination"></span></div>
 							<div><span>ETA</span><span id="shipcard_eta"></span></div>
 							<div><span>Distance</span><span id="shipcard_distance">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
 							<div><span>Draught</span><span id="shipcard_draught">-</span></div>
 						</div>
 
-
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>last signal</span><span id="shipcard_last_signal"></span></div>
 							<div><span>Receiver</span><span id="shipcard_last_group"></span></div>
 							<div><span>Count</span><span id="shipcard_count">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>RSSI</span><span id="shipcard_level">-</span></div>
 							<div><span>Drift</span><span id="shipcard_ppm">-</span></div>
 							<div><span>Sources</span><span id="shipcard_sources">-</span></div>
 						</div>
 
-
-						<div onclick="shipcardselect(this)"
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
 							<div><span>Channels</span><span id="shipcard_channels">-</span></div>
 							<div><span>Bearing</span><span id="shipcard_bearing">-</span></div>
 						</div>
+
+						<!-- Plane Content -->
+						<div onclick="shipcardselect(this)" data-context-type="plane"
+							class="mapcard-content-row shipcard-content-row shipcard-max-only">
+							<div><span>Callsign</span><span id="shipcard_plane_callsign">-</span></div>
+							<div><span>ICAO</span><span id="shipcard_plane_hexident">-</span></div>
+						</div>
+
+						<div onclick="shipcardselect(this)" data-context-type="plane"
+							class="mapcard-content-row shipcard-content-row shipcard-max-only">
+							<div><span>Category</span><span id="shipcard_plane_category">-</span></div>
+							<div><span>Squawk</span><span id="shipcard_plane_squawk">-</span></div>
+						</div>
+
+						<div onclick="shipcardselect(this)" data-context-type="plane"
+							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
+							<div><span>Speed</span><span id="shipcard_plane_speed">-</span></div>
+							<div><span>Heading</span><span id="shipcard_plane_heading">-</span></div>
+							<div><span>Altitude</span><span id="shipcard_plane_altitude">-</span></div>
+						</div>
+
+						<div onclick="shipcardselect(this)" data-context-type="plane"
+							class="mapcard-content-row shipcard-content-row shipcard-max-only">
+							<div><span>Latitude</span><span id="shipcard_plane_lat">-</span></div>
+							<div><span>Longitude</span><span id="shipcard_plane_lon">-</span></div>
+							<div><span>Vert Rate</span><span id="shipcard_plane_vertrate">-</span></div>
+						</div>
+
+						<div onclick="shipcardselect(this)" data-context-type="plane"
+							class="mapcard-content-row shipcard-content-row shipcard-max-only">
+							<div><span>Last Signal</span><span id="shipcard_plane_last_signal">-</span></div>
+							<div><span>Messages</span><span id="shipcard_plane_messages">-</span></div>
+							<div><span>RSSI</span><span id="shipcard_plane_level">-</span></div>
+						</div>
+
 					</div>
 					<footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
 						<div title="Center map on current vessel" onclick="openAIScatcherSite(card_mmsi)"
-							class="noandroid"><i class="info_icon"></i><span>aiscatcher.org</span></div>
-						<div id="shipcard_track_option" title="Track of current vessel"
+							data-context-type="ship" class="noandroid"><i
+								class="info_icon"></i><span>aiscatcher.org</span></div>
+						<div id="shipcard_track_option" title="Track of current vessel" data-context-type="ship"
 							onclick="toggleTrack(card_mmsi)"><i id="shipcard_track_icon" class="timeline_icon"></i><span
 								id="shipcard_track">Track</span></div>
+
+
+						<div title="Search on PlaneSpotters" onclick="openPlaneSpotters(card_mmsi)"
+							data-context-type="plane">
+							<i class="search_icon"></i><span>PlaneSpotters</span>
+						</div>
+						<div title="Search on ADS-B Exchange" onclick="openADSBExchange(card_mmsi)"
+							data-context-type="plane">
+							<i class="search_icon"></i><span>ADS-B Exchange</span>
+						</div>
+
 					</footer>
 				</aside>
 
@@ -976,7 +1031,7 @@
 				<div title="Settings"
 					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
 					style=" bottom: 140px; border-radius: 5px;">
-					<button type="button" onclick='showContextMenu(event, "", ["settings", "center", "ctx-map"]);'
+					<button type="button" onclick='showContextMenu(event, "","", ["settings", "center", "ctx-map"]);'
 						class="btn btn-primary map-button color-grey">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
@@ -1024,7 +1079,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=ed3cc66b42bf1df2600e368c93c150f8"></script>
+	<script src="script.js?hash=799f5e4c03da9c5d9353b1be93e540cd"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>
