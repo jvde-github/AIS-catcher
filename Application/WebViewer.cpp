@@ -750,7 +750,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		}
 		else
 		{
-			std::cerr << "File not found" << std::endl;
+			Error() << "File not found: " << filename << std::endl;
 			HTTPServer::Request(c, r, false);
 		}
 	}
