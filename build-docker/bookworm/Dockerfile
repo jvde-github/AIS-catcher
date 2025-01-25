@@ -3,7 +3,7 @@ FROM debian:bookworm
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/New_York
 
-RUN apt-get update && apt-get upgrade -y
+RUN apt-get update &&  apt-get dist-upgrade -y && apt-get install -y build-essential
 
 COPY . /app
 WORKDIR /app
