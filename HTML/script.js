@@ -4731,8 +4731,8 @@ function populatePlanecard() {
     document.getElementById("shipcard_plane_vertrate").textContent = plane.vertrate ? `${plane.vertrate} ft/min` : "-";
     document.getElementById("shipcard_plane_last_signal").textContent = getDeltaTimeVal(plane.last_signal);;
     document.getElementById("shipcard_plane_messages").textContent = plane.nMessages || "-";
-    document.getElementById("shipcard_plane_shipcard_plane_downlink").textContent = getStringfromMsgType(plane.message_types);
-    document.getElementById("shipcard_plane_shipcard_plane_TC").textContent = getStringfromMsgType(plane.message_types >> 32);
+    document.getElementById("shipcard_plane_downlink").textContent = getStringfromMsgType(plane.message_types);
+    document.getElementById("shipcard_plane_TC").textContent = getStringfromMsgType(plane.message_types >> 32);
     document.getElementById("shipcard_plane_distance").innerHTML = plane.distance ? (getDistanceVal(plane.distance) + " " + getDistanceUnit()) : null;
 
     [
