@@ -154,6 +154,8 @@ public:
         items[ptr].clear();
         items[ptr].hexident = hexident;
 
+        items[ptr].setCountryCode();
+
         return ptr;
     }
 
@@ -198,7 +200,6 @@ public:
 
         // Update timestamp and core identifiers
         plane.rxtime = msg->rxtime;
-        plane.hexident = msg->hexident;
         plane.nMessages++;
 
         // update category if valid
@@ -305,6 +306,7 @@ public:
                     break;
                 }
 
+                
                 content += delim + "[" +
                            std::to_string(plane.hexident) + comma +
                            (plane.lat != LAT_UNDEFINED ? std::to_string(plane.lat) : null_str) + comma +
@@ -317,7 +319,8 @@ public:
                            std::string("\"") + plane.callsign + "\"" + comma +
                            std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + comma +
                            (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
-                           (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + "]";
+                           (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma + 
+                           (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code,2) + "\"" : null_str )  + "]";
 
                 delim = comma;
             }
