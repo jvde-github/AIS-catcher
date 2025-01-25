@@ -130,9 +130,14 @@ jobs:
         name: ${{ env.filename }}
         path: ${{ env.filename }}
         
-  Docker:
+  Docker-build:
     runs-on: ubuntu-latest
     needs: bakeHTML
+    strategy:
+      # limit concurrency so QEMU doesn't run out of memory
+      max-parallel: 1
+      matrix:
+        platform: [amd64, 386, arm64, arm/v6, arm/v7]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -163,14 +168,42 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Images
+      - name: Build & Push Single-Arch Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64, linux/386, linux/arm64, linux/arm/v6, linux/arm/v7
+          # Build only one platform (the one from matrix.platform)
+          platforms: linux/${{ matrix.platform }}
+          tags: ghcr.io/${{ github.repository }}:edge-${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  Docker-manifest:
+    runs-on: ubuntu-latest
+    # depends on the entire matrix from Docker-build finishing
+    needs: Docker-build
+    steps:
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Multi-Arch Manifest
+        if: github.event_name != 'pull_request'
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:edge \
+            ghcr.io/${{ github.repository }}:edge-amd64 \
+            ghcr.io/${{ github.repository }}:edge-386 \
+            ghcr.io/${{ github.repository }}:edge-arm64 \
+            ghcr.io/${{ github.repository }}:edge-arm/v6 \
+            ghcr.io/${{ github.repository }}:edge-arm/v7
           
   Windows:
     runs-on: windows-2022
