@@ -93,6 +93,7 @@ namespace Plane
         int status;            // Status
         char country_code[2];  // Country code
         long nMessages;
+        uint64_t message_types;
 
         void Stamp(std::time_t t = (std::time_t)0L)
         {
@@ -128,6 +129,7 @@ namespace Plane
             category = CATEGORY_UNDEFINED;
             distance = DISTANCE_UNDEFINED;
             angle = ANGLE_UNDEFINED;
+            message_types = 0;
 
             crc = CRC_UNDEFINED;
             status = STATUS_OK;

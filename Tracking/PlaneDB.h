@@ -229,6 +229,8 @@ public:
         plane.rxtime = msg->rxtime;
         plane.nMessages++;
 
+        plane.message_types |= msg->message_types;
+        
         // update category if valid
         if (msg->category != CATEGORY_UNDEFINED)
             plane.category = msg->category;
@@ -359,8 +361,8 @@ public:
                            (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
                            (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
                            (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma + 
-                           (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + 
-                           "]";
+                           (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
+                           std::to_string(plane.message_types) + "]";
 
                 delim = comma;
             }
