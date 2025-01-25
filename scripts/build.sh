@@ -39,7 +39,7 @@ build_project() {
   cd ../../build; ls ..; 
   cmake .. -DNMEA2000_PATH=..  -DRTLSDR_STATIC=ON; 
   
-  make -j1
+  make
   cd ..
 }
 
