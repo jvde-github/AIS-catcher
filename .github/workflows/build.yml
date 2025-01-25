@@ -71,15 +71,22 @@ jobs:
     - name: Set filename
       run: |
         echo "filename=ais-catcher_debian_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v3
+    - name: Setup Buildx
+      uses: docker/setup-buildx-action@v3
+      
     - name: Build Debian package
       run: |
         sudo apt-get update
         cp build-docker/bookworm/Dockerfile .
         sed -i 's/FROM debian:bookworm/FROM debian:${{ matrix.codename }}/g' Dockerfile
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
-        sudo apt-get install qemu-user-static
-        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-        docker build --platform ${{ matrix.arch}} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} .
+        #sudo apt-get install qemu-user-static
+        #docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+        #docker build --platform ${{ matrix.arch}} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} .
+        #docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
+        docker buildx build --platform linux/${{ matrix.arch }} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} --load .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
         cp output/ais-catcher.deb ${{ env.filename }}
         gh release upload 'Edge' ${{ env.filename }} --repo jvde-github/AIS-catcher --clobber
