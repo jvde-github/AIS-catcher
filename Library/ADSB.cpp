@@ -227,8 +227,8 @@ namespace Plane
             int TC = getBits(32, 5);
             int ST = getBits(37, 3); // ME message subtype
 
-            message_types |= 1 << (32+TC);
-            
+            message_subtypes |= 1 << TC;
+
             switch (TC)
             {
             case 1: // Aircraft Identification
