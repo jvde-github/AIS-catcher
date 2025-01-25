@@ -345,19 +345,19 @@ namespace Plane
         return std::floor(2 * PI / acos(tmp));
     }
 
-    bool ADSB::decodeCPR(FLOAT32 lat, FLOAT32 lon, bool use_even)
+    bool ADSB::decodeCPR(FLOAT32 lat, FLOAT32 lon, bool use_even, bool &updated)
     {
         if (!even.Valid() || !odd.Valid() || (even.airborne != odd.airborne))
             return false;
 
         if (even.airborne)
         {
-            return decodeCPR_airborne(use_even);
+            return decodeCPR_airborne(use_even, updated);
         }
-        return decodeCPR_surface(lat, lon, use_even);
+        return decodeCPR_surface(lat, lon, use_even, updated);
     }
 
-    bool ADSB::decodeCPR_airborne(bool use_even)
+    bool ADSB::decodeCPR_airborne(bool use_even, bool &updated)
     {
         constexpr double CPR_SCALE = (double)(1 << 17);
 
@@ -389,11 +389,12 @@ namespace Plane
             lon -= 360.0;
 
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
+        updated = true;
 
         return true;
     }
 
-    bool ADSB::decodeCPR_airborne_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon)
+    bool ADSB::decodeCPR_airborne_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon, bool &updated)
     {
         constexpr double CPR_SCALE = (double)(1 << 17);
 
@@ -410,12 +411,12 @@ namespace Plane
 
         lon = d_lon * (m + cpr.lon / CPR_SCALE);
         latlon_timestamp = cpr.timestamp;
-
+        updated = true;
         return true;
     }
 
     // based on the example from the 1090 riddle
-    bool ADSB::decodeCPR_surface(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even)
+    bool ADSB::decodeCPR_surface(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even, bool &updated)
     {
         static bool warning_given = false;
 
@@ -453,11 +454,11 @@ namespace Plane
         lon -= 90.0 * std::floor((lon - ref_lon + 45.0) / 90.0);
 
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
-
+        updated = true;
         return true;
     }
 
-    bool ADSB::decodeCPR_surface_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon)
+    bool ADSB::decodeCPR_surface_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon, bool &updated)
     {
         constexpr double CPR_SCALE = (double)(1 << 17);
 
@@ -474,7 +475,7 @@ namespace Plane
 
         lon = d_lon * (m + cpr.lon / CPR_SCALE);
         latlon_timestamp = cpr.timestamp;
-
+        updated = true;
         return true;
     }
 

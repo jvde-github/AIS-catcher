@@ -174,8 +174,35 @@ public:
         return -1;
     }
 
+    const float EarthRadius = 6371.0f;          // Earth radius in kilometers
+    const float NauticalMilePerKm = 0.5399568f; // Conversion factor
+
+    float deg2rad(float deg) { return deg * PI / 180.0f; }
+    int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
+
+    // https://www.movable-type.co.uk/scripts/latlong.html
+    void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing)
+    {
+        // Convert the latitudes and longitudes from degrees to radians
+        lat1 = deg2rad(lat1);
+        lon1 = deg2rad(lon1);
+        lat2 = deg2rad(lat2);
+        lon2 = deg2rad(lon2);
+
+        // Compute the distance using the haversine formula
+        float dlat = lat2 - lat1, dlon = lon2 - lon1;
+        float a = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
+        distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));
+
+        float y = sin(dlon) * cos(lat2);
+        float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon);
+        bearing = rad2deg(atan2(y, x));
+    }
+
     void Receive(const Plane::ADSB *msg, int len, TAG &tag)
     {
+        bool position_updated = false;
+
         std::lock_guard<std::mutex> lock(mtx);
 
         // Skip invalid messages
@@ -225,7 +252,7 @@ public:
             if (!msg->even.airborne)
                 calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-            plane.decodeCPR(ref_lat, ref_lon, true);
+            plane.decodeCPR(ref_lat, ref_lon, true, position_updated);
         }
 
         if (msg->odd.Valid())
@@ -240,7 +267,19 @@ public:
             if (!msg->odd.airborne)
                 calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-            plane.decodeCPR(ref_lat, ref_lon, false);
+            plane.decodeCPR(ref_lat, ref_lon, false, position_updated);
+        }
+
+        if (position_updated && tag.station_lat != LAT_UNDEFINED && tag.station_lon != LON_UNDEFINED)
+        {
+            getDistanceAndBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
+            tag.distance = plane.distance;
+            tag.angle = plane.angle;
+        }
+        else
+        {
+            tag.distance = DISTANCE_UNDEFINED;
+            tag.angle = ANGLE_UNDEFINED;
         }
 
         // Update altitude
@@ -306,7 +345,6 @@ public:
                     break;
                 }
 
-                
                 content += delim + "[" +
                            std::to_string(plane.hexident) + comma +
                            (plane.lat != LAT_UNDEFINED ? std::to_string(plane.lat) : null_str) + comma +
@@ -319,8 +357,10 @@ public:
                            std::string("\"") + plane.callsign + "\"" + comma +
                            std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + comma +
                            (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
-                           (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma + 
-                           (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code,2) + "\"" : null_str )  + "]";
+                           (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
+                           (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma + 
+                           (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + 
+                           "]";
 
                 delim = comma;
             }
