@@ -37,13 +37,9 @@ build_project() {
   g++ -O3 -c  N2kMsg.cpp  N2kStream.cpp N2kMessages.cpp   N2kTimer.cpp  NMEA2000.cpp  N2kGroupFunctionDefaultHandlers.cpp  N2kGroupFunction.cpp  -I.
   ar rcs libnmea2000.a *.o 
   cd ../../build; ls ..; 
-  if [ "$package_arch" = "armhf" ]; then  
-    cmake .. -DNMEA2000_PATH=.. -DARMV6=ON; 
-  else
-    cmake .. -DNMEA2000_PATH=..  -DRTLSDR_STATIC=ON; 
-  fi
+  cmake .. -DNMEA2000_PATH=..  -DRTLSDR_STATIC=ON; 
   
-  make
+  make -j1
   cd ..
 }
 
