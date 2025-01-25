@@ -105,7 +105,7 @@ jobs:
     strategy:
       matrix:
         codename: ['focal', 'jammy',  'noble']
-        arch: ['amd64', 'arm64']
+        arch: ['amd64']
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
