@@ -88,13 +88,9 @@ check_package_availability() {
         "ais-catcher_debian_buster_arm64.deb"
         "ais-catcher_debian_buster_armhf.deb"
         "ais-catcher_ubuntu_focal_amd64.deb"
-        "ais-catcher_ubuntu_focal_arm64.deb"
         "ais-catcher_ubuntu_jammy_amd64.deb"
-        "ais-catcher_ubuntu_jammy_arm64.deb"
         "ais-catcher_ubuntu_mantic_amd64.deb"
-        "ais-catcher_ubuntu_mantic_arm64.deb"
         "ais-catcher_ubuntu_noble_amd64.deb"
-        "ais-catcher_ubuntu_noble_arm64.deb"
     )
 
     for package in "${packages[@]}"; do
