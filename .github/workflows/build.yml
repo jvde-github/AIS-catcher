@@ -59,7 +59,6 @@ jobs:
     needs: bakeHTML
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
         codename: ['bookworm', 'bullseye', 'buster']
         arch: ['amd64', 'armhf', 'arm64']
