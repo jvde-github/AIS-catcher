@@ -78,6 +78,8 @@ namespace Plane
         std::time_t latlon_timestamp;
         FLOAT32 speed;         // Speed over ground
         FLOAT32 heading;       // Track angle
+        FLOAT32 distance;     // Distance from station
+        int angle;        // Angle from station
         int vertrate;          // Vertical rate
         char callsign[9];      // Aircraft callsign, nul terminated
         int squawk;            // Mode A squawk code
@@ -124,6 +126,9 @@ namespace Plane
             signalLevel = LEVEL_UNDEFINED;
             timestamp = TIME_UNDEFINED;
             category = CATEGORY_UNDEFINED;
+            distance = DISTANCE_UNDEFINED;
+            angle = ANGLE_UNDEFINED;
+
             crc = CRC_UNDEFINED;
             status = STATUS_OK;
             country_code[0] = country_code[1] = ' ';            
@@ -216,11 +221,11 @@ namespace Plane
         int MOD(int a, int b);
         int NL(double lat);
 
-        bool decodeCPR(FLOAT32 lat, FLOAT32 lon, bool is_even);
-        bool decodeCPR_airborne(bool is_even);
-        bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32);
-        bool decodeCPR_surface(FLOAT32, FLOAT32, bool);
-        bool decodeCPR_surface_reference(bool, FLOAT32, FLOAT32);
+        bool decodeCPR(FLOAT32 lat, FLOAT32 lon, bool is_even, bool &);
+        bool decodeCPR_airborne(bool is_even, bool &);
+        bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32, bool &);
+        bool decodeCPR_surface(FLOAT32, FLOAT32, bool, bool &);
+        bool decodeCPR_surface_reference(bool, FLOAT32, FLOAT32, bool &);
 
         void setCountryCode();
     };

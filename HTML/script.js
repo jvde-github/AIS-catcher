@@ -2520,7 +2520,8 @@ async function fetchPlanes() {
         "last_signal",
         "category",
         "level",
-        "country"
+        "country",
+        "distance"
     ];
 
     planesDB = {};
@@ -3906,12 +3907,12 @@ function getTooltipContent(ship) {
 }
 
 function getTooltipContentPlane(plane) {
-    const altitude = plane.altitude ? Math.round(plane.altitude) : '-';
+    const altitude = plane.airborne == 1 ? (plane.altitude ? Math.round(plane.altitude) + ' ft' : '-') : 'ground';
     const speed = plane.speed ? Math.round(plane.speed) : '-';
     return '<div>' +
         getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
         `</div><div>
-            <div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude} ft</b>/<b>${speed} kts</b></div>
+            <div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude}</b>/<b>${speed} kts</b></div>
             <div>Received <b>${getDeltaTimeVal(plane.last_signal)}</b> ago</div>
         </div>`;
 }
@@ -4729,6 +4730,8 @@ function populatePlanecard() {
     document.getElementById("shipcard_plane_vertrate").textContent = plane.vertrate ? `${plane.vertrate} ft/min` : "-";
     document.getElementById("shipcard_plane_last_signal").textContent = getDeltaTimeVal(plane.last_signal);;
     document.getElementById("shipcard_plane_messages").textContent = plane.nMessages || "-";
+    document.getElementById("shipcard_plane_distance").innerHTML = plane.distance ? (getDistanceVal(plane.distance) + " " + getDistanceUnit()) : null;
+
     [
         { id: "heading", u: "&deg", d: 0 },
         { id: "level", u: "dB", d: 1 }
@@ -5141,8 +5144,11 @@ function getPlaneSprite(plane) {
         sprite = shippingMappings[ShippingClass.HELICOPTER];
     }
 
+    plane.scaling = 0.75; // Default scalin
+
     // Set scaling based on wake vortex category
     if (plane.category) {
+
         const ca = plane.category % 10;  // Extract CA value
         switch (ca) {
             case 1: // Light
@@ -5162,8 +5168,6 @@ function getPlaneSprite(plane) {
             case 7: // Rotorcraft
                 plane.scaling = 0.6;
                 break;
-            default:
-                plane.scaling = 0.75; // Default scaling
         }
     }
 
