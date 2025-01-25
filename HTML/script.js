@@ -385,7 +385,7 @@ var planeStyle = function (feature) {
     const shadowScale = Math.min(Math.max(altitude / 40000, 0.1), 1); // 0.1-1 scale based on height up to 40000ft
 
     return [
-        // Shadow/border layer
+        /* Shadow/border layer
         new ol.style.Style({
             image: new ol.style.Icon({
                 src: "https://aiscatcher.org/hub_test/sprites_hub.png",
@@ -395,7 +395,7 @@ var planeStyle = function (feature) {
                 scale: (settings.icon_scale * feature.plane.scaling) * (1 + shadowScale * 1),
                 opacity: 0.25
             })
-        }),
+        }), */
         // Main aircraft layer
         new ol.style.Style({
             image: new ol.style.Icon({
@@ -4691,7 +4691,7 @@ function populatePlanecard() {
     document.getElementById("shipcard_plane_squawk").textContent = plane.squawk || "-";
     document.getElementById("shipcard_plane_speed").innerHTML = plane.speed ? getSpeedVal(plane.speed) + " " + getSpeedUnit() : null;
 
-    document.getElementById("shipcard_plane_altitude").textContent = plane.altitude ? `${plane.altitude} ft` : "-";
+    document.getElementById("shipcard_plane_altitude").textContent = plane.airborne == 1 ? (plane.altitude ? `${plane.altitude} ft` : "-") : "on ground";
     document.getElementById("shipcard_plane_lat").innerHTML = plane.lat ? getLatValFormat(plane) : null;
     document.getElementById("shipcard_plane_lon").innerHTML = plane.lon ? getLonValFormat(plane) : null;
     document.getElementById("shipcard_plane_vertrate").textContent = plane.vertrate ? `${plane.vertrate} ft/min` : "-";
