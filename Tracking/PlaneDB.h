@@ -230,7 +230,8 @@ public:
         plane.nMessages++;
 
         plane.message_types |= msg->message_types;
-        
+        plane.message_subtypes |= msg->message_subtypes;
+
         // update category if valid
         if (msg->category != CATEGORY_UNDEFINED)
             plane.category = msg->category;
@@ -362,7 +363,7 @@ public:
                            (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
                            (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma + 
                            (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
-                           std::to_string(plane.message_types) + "]";
+                           std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) + "]";
 
                 delim = comma;
             }
