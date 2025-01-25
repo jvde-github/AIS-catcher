@@ -801,7 +801,7 @@ function showContextMenu(event, mmsi, type, context) {
             context.push(type);
         }
         if (context.includes('object-map')) {
-            context.push(type+"-map");	
+            context.push(type + "-map");
         }
         const shouldDisplay = context.includes(className);
         const elements = document.querySelectorAll("." + className);
@@ -1460,10 +1460,10 @@ function initMap() {
         else if ('station' in f) {
             showContextMenu(evt, null, null, ["station"]);
         }
-        else if ('ship' in f )
+        else if ('ship' in f)
             showContextMenu(evt, f.ship.mmsi, 'ship', ["ship", "ship-map"]);
-        else if ('plane' in f )
-            showContextMenu(evt, f.plane.hexident, 'plane', ["plane", "plane-map"]);        
+        else if ('plane' in f)
+            showContextMenu(evt, f.plane.hexident, 'plane', ["plane", "plane-map"]);
     });
 
     baseMapSelector.innerHTML = '';
@@ -2519,7 +2519,8 @@ async function fetchPlanes() {
         "nMessages",
         "last_signal",
         "category",
-        "level"
+        "level",
+        "country"
     ];
 
     planesDB = {};
@@ -3907,7 +3908,12 @@ function getTooltipContent(ship) {
 function getTooltipContentPlane(plane) {
     const altitude = plane.altitude ? Math.round(plane.altitude) : '-';
     const speed = plane.speed ? Math.round(plane.speed) : '-';
-    return `<div><div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude} ft</b>/<b>${speed} kts</b></div><div>Received <b>${getDeltaTimeVal(plane.last_signal)}</b> ago</div></div>`;
+    return '<div>' +
+        getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
+        `</div><div>
+            <div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude} ft</b>/<b>${speed} kts</b></div>
+            <div>Received <b>${getDeltaTimeVal(plane.last_signal)}</b> ago</div>
+        </div>`;
 }
 
 function getTypeVal(ship) {
@@ -4654,6 +4660,30 @@ function populateShipcard() {
 
 }
 
+function getCategory(plane) {
+    if (!plane || !plane.category) return "-";
+
+    const categories = {
+        41: "< 7 MT",
+        42: "7 - 34 MT",
+        43: "34 - 136 MT",
+        44: "High vortex",
+        45: "> 136 MT",
+        46: "High perf",
+        47: "Rotorcraft",
+        31: "Glider",
+        32: "LTA",
+        33: "Parachutist",
+        34: "Ultralight",
+        36: "UAV",
+        37: "Space",
+        21: "Emergency",
+        23: "Service"
+    };
+
+    return categories[plane.category] || plane.category.toString() || "-";
+}
+
 function populatePlanecard() {
 
     if (card_type != 'plane') return;
@@ -4679,15 +4709,17 @@ function populatePlanecard() {
     let plane = planesDB[card_mmsi].raw;
 
     setShipcardValidation(plane.validated);
-    // Set header
 
+    // Set header
     document.getElementById("shipcard_header_title").textContent = (plane.callsign || getICAO(plane));
-    document.getElementById("shipcard_header_flag").innerHTML = "&#9992;";
+    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;");
 
     // Populate plane fields
+    document.getElementById("shipcard_plane_country").innerHTML = getCountryName(plane.country);
+    document.getElementById("shipcard_plane_type").innerHTML = "ADSB";
     document.getElementById("shipcard_plane_callsign").textContent = plane.callsign || "-";
     document.getElementById("shipcard_plane_hexident").textContent = getICAO(plane);
-    document.getElementById("shipcard_plane_category").textContent = plane.category || "-";
+    document.getElementById("shipcard_plane_category").textContent = getCategory(plane);
     document.getElementById("shipcard_plane_squawk").textContent = plane.squawk || "-";
     document.getElementById("shipcard_plane_speed").innerHTML = plane.speed ? getSpeedVal(plane.speed) + " " + getSpeedUnit() : null;
 

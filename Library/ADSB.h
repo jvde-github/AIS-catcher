@@ -89,6 +89,7 @@ namespace Plane
         std::time_t timestamp; // Timestamp
         int crc;               // CRC checksum
         int status;            // Status
+        char country_code[2];  // Country code
         long nMessages;
 
         void Stamp(std::time_t t = (std::time_t)0L)
@@ -125,6 +126,7 @@ namespace Plane
             category = CATEGORY_UNDEFINED;
             crc = CRC_UNDEFINED;
             status = STATUS_OK;
+            country_code[0] = country_code[1] = ' ';            
             nMessages = 0;
 
             even.clear();
@@ -219,5 +221,7 @@ namespace Plane
         bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32);
         bool decodeCPR_surface(FLOAT32, FLOAT32, bool);
         bool decodeCPR_surface_reference(bool, FLOAT32, FLOAT32);
+
+        void setCountryCode();
     };
 }
