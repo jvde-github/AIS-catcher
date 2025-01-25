@@ -54,7 +54,7 @@ create_debian_package() {
     # Extract dependencies using ldd and filter the required libraries
     echo "Extracting dependencies using ldd..."
     # dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq|libz|libssl|libusb|libsqlite3' | awk '{print $1}')
-    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq3|libz|libssl|libusb-1\.0|libsqlite3' | awk '{print $1}')
+    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq3|libz|libssl|libusb-1\.0|libsqlite3|libpq' | awk '{print $1}')
 
     # Initialize the depends variable
     depends=""
@@ -135,7 +135,7 @@ package_version=0.61~275-gdb0e5183
 install_deps=$5
 
 # Install build dependencies
-install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev  libusb-1.0-0-dev $build_deps"
+install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev  libusb-1.0-0-dev libpq-dev $build_deps"
 
 # Build the project
 build_project
