@@ -167,6 +167,8 @@ namespace Plane
 
         setCRC();
 
+        message_types |= 1 << df;
+
         switch (df)
         {
         case 0:  // Short Air-Air Surveillance
@@ -225,6 +227,8 @@ namespace Plane
             int TC = getBits(32, 5);
             int ST = getBits(37, 3); // ME message subtype
 
+            message_types |= 1 << (32+TC);
+            
             switch (TC)
             {
             case 1: // Aircraft Identification
