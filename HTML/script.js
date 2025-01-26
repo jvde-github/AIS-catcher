@@ -2523,7 +2523,9 @@ async function fetchPlanes() {
         "country",
         "distance",
         "message_types",
-        "message_subtypes"
+        "message_subtypes",
+        "group_mask",
+        "last_mask"
     ];
 
     planesDB = {};
@@ -4735,6 +4737,9 @@ function populatePlanecard() {
     document.getElementById("shipcard_plane_downlink").textContent = getStringfromMsgType(plane.message_types);
     document.getElementById("shipcard_plane_TC").textContent = getStringfromMsgType(plane.message_subtypes);
     document.getElementById("shipcard_plane_distance").innerHTML = plane.distance ? (getDistanceVal(plane.distance) + " " + getDistanceUnit()) : null;
+
+    document.getElementById("shipcard_plane_last_group").innerHTML = getStringfromGroup(plane.last_group);
+    document.getElementById("shipcard_plane_sources").innerHTML = getStringfromGroup(plane.group_mask);
 
     [
         { id: "heading", u: "&deg", d: 0 },

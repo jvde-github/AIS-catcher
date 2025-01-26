@@ -78,8 +78,8 @@ namespace Plane
         std::time_t latlon_timestamp;
         FLOAT32 speed;         // Speed over ground
         FLOAT32 heading;       // Track angle
-        FLOAT32 distance;     // Distance from station
-        int angle;        // Angle from station
+        FLOAT32 distance;      // Distance from station
+        int angle;             // Angle from station
         int vertrate;          // Vertical rate
         char callsign[9];      // Aircraft callsign, nul terminated
         int squawk;            // Mode A squawk code
@@ -95,6 +95,7 @@ namespace Plane
         long nMessages;
         uint32_t message_types;
         uint32_t message_subtypes;
+        uint64_t last_group, group_mask;
 
         void Stamp(std::time_t t = (std::time_t)0L)
         {
@@ -135,13 +136,15 @@ namespace Plane
 
             crc = CRC_UNDEFINED;
             status = STATUS_OK;
-            country_code[0] = country_code[1] = ' ';            
+            country_code[0] = country_code[1] = ' ';
             nMessages = 0;
 
             even.clear();
             odd.clear();
 
             callsign[0] = '\0';
+            last_group = GROUP_OUT_UNDEFINED;
+            group_mask = 0;
         }
 
         std::string getRaw() const
