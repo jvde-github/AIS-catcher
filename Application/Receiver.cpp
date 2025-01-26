@@ -347,6 +347,7 @@ void Receiver::setupModel(int &group)
 		uint32_t mask = 1 << group;
 		jsonais[i].out.setGroupOut(mask);
 		models[i]->Output().out.setGroupOut(mask);
+		models[i]->OutputADSB().out.setGroupOut(mask);
 		group++;
 	}
 }

@@ -2525,7 +2525,7 @@ async function fetchPlanes() {
         "message_types",
         "message_subtypes",
         "group_mask",
-        "last_mask"
+        "last_group"
     ];
 
     planesDB = {};
