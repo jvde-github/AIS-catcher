@@ -213,8 +213,9 @@ namespace Plane
 
             break;
         }
-        case 17: // Extended Squitter
         case 18: // Extended Squitter/Supplementary
+            break;
+        case 17: // Extended Squitter
             hexident = getBits(8, 24);
             hexident_status = HEXINDENT_DIRECT;
 
