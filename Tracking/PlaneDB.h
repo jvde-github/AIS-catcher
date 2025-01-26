@@ -366,7 +366,7 @@ public:
                            (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma +
                            (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
                            std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) +comma +
-                           std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group) + comma +
+                           std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group)  +
                             "]";
 
                 delim = comma;
