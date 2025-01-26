@@ -228,6 +228,8 @@ public:
         // Update timestamp and core identifiers
         plane.rxtime = msg->rxtime;
         plane.nMessages++;
+        plane.group_mask |= tag.group;
+        plane.last_group = tag.group;
 
         plane.message_types |= msg->message_types;
         plane.message_subtypes |= msg->message_subtypes;
@@ -361,9 +363,11 @@ public:
                            std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + comma +
                            (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
                            (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
-                           (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma + 
+                           (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma +
                            (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
-                           std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) + "]";
+                           std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) +comma +
+                           std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group) + comma +
+                            "]";
 
                 delim = comma;
             }
