@@ -2525,7 +2525,8 @@ async function fetchPlanes() {
         "message_types",
         "message_subtypes",
         "group_mask",
-        "last_group"
+        "last_group",
+        "bearing"
     ];
 
     planesDB = {};
@@ -4743,7 +4744,8 @@ function populatePlanecard() {
 
     [
         { id: "heading", u: "&deg", d: 0 },
-        { id: "level", u: "dB", d: 1 }
+        { id: "level", u: "dB", d: 1 },
+        { id: "bearing", u: "&deg", d: 0 }
     ].forEach((el) => (document.getElementById("shipcard_plane_" + el.id).innerHTML = plane[el.id] ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
 
     updateShipcardTrackOption(card_mmsi);
