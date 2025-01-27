@@ -214,6 +214,14 @@ namespace Protocol
 		const int RECONNECT_TIME = 10;
 
 	public:
+
+			enum State
+		{
+			DISCONNECTED,
+			CONNECTING,
+			READY
+		};
+
 		TCP() : ProtocolBase("TCP") {};
 		void disconnect() override;
 		bool connect() override;
@@ -270,13 +278,9 @@ namespace Protocol
 			return sock;
 		}
 
+		enum State getState() { return state; }
+		
 	private:
-		enum State
-		{
-			DISCONNECTED,
-			CONNECTING,
-			READY
-		};
 
 		std::string host;
 		std::string port;
@@ -284,7 +288,7 @@ namespace Protocol
 		bool persistent = true;
 		int reset_time = -1;
 		int timeout = 0;
-		bool keep_alive = false;
+		bool keep_alive = true;
 
 		int sock = -1;
 		State state = DISCONNECTED;
