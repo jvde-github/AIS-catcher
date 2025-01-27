@@ -17,6 +17,43 @@
 
 #include "Protocol.h"
 
+#include <sys/types.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <mstcpip.h>
+
+#elif defined(__APPLE__)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <unistd.h>
+
+#elif defined(__ANDROID__)
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <android/log.h>
+#else
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <unistd.h>
+
+#endif
+
+#include <errno.h>
+
 namespace Protocol
 {
 
@@ -62,20 +99,72 @@ namespace Protocol
 		}
 
 		sock = socket(ai.get()->ai_family, ai.get()->ai_socktype, ai.get()->ai_protocol);
+
 		if (sock == -1)
 			return false;
 
-#ifndef _WIN32
+		int yes = 1;
+#ifdef _WIN32
+		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char *)&yes, sizeof(yes)) == -1)
+#else
+		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *)&yes, sizeof(yes)) == -1)
+#endif
+		{
+			disconnect();
+			return false;
+		}
+
 		if (keep_alive)
 		{
-			int optval = 1;
-			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1)
+			int idle = 20;
+			int interval = 5;
+			int count = 2;
+#ifdef _WIN32
+			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (const char *)&yes, sizeof(yes)))
+#else
+			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&yes, sizeof(yes)))
+#endif
 			{
 				disconnect();
 				return false;
 			}
-		}
+#if defined(__APPLE__)
+			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
+			{
+				disconnect();
+				return false;
+			}
+#elif defined(_WIN32)
+			// Windows specific keepalive
+			struct tcp_keepalive keepalive;
+			keepalive.onoff = 1;
+			keepalive.keepalivetime = idle * 1000;
+			keepalive.keepaliveinterval = interval * 1000;
+			DWORD br;
+			if (WSAIoctl(sock, SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive), NULL, 0, &br, NULL, NULL) == SOCKET_ERROR)
+			{
+				disconnect();
+				return false;
+			}
+#elif defined(__ANDROID__)
+			// Android uses same config as Linux
+			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
+				setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
+				setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)))
+			{
+				disconnect();
+				return false;
+			}
+#else
+			if (setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
+				setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
+				setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
+			{
+				disconnect();
+				return false;
+			}
 #endif
+		}
 
 		if (persistent)
 		{

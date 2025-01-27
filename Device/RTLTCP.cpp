@@ -149,7 +149,11 @@ namespace Device
 			else
 			{
 				if (isStreaming() && format != Format::TXT)
-					Error() << "RTLTCP: timeout.";
+
+					if(tcp.getState() == Protocol::TCP::State::READY)
+					{
+						Error() << "RTLTCP [" << tcp.getHost() <<  ":" << tcp.getPort() << "]: timeout.";
+					}
 			}
 		}
 	}
