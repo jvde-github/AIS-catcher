@@ -12,7 +12,7 @@ on:
 
 jobs:
   bakeHTML:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     needs: bakeHTML
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         codename: ['bookworm', 'bullseye', 'buster']
@@ -130,7 +130,7 @@ jobs:
         path: ${{ env.filename }}
         
   Docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: bakeHTML
     steps:
       - name: Checkout Repository
