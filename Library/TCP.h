@@ -140,7 +140,7 @@ namespace TCP
 		~Client() { disconnect(); }
 
 		void disconnect();
-		bool connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive = false);
+		bool connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive = false, int idle = 300, int interval = 180, int count = 3);
 
 		void setResetTime(int t) { reset_time = t; }
 		int read(void *data, int length, int t = 1, bool wait = false);
