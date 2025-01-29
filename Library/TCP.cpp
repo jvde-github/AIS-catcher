@@ -22,6 +22,39 @@
 #include <arpa/inet.h> // For inet_addr() and INADDR_ANY
 #endif
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <mstcpip.h>
+
+#elif defined(__APPLE__)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <unistd.h>
+
+#elif defined(__ANDROID__)
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <android/log.h>
+#else
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <unistd.h>
+
+#endif
+
 #include "TCP.h"
 
 namespace TCP
@@ -120,7 +153,7 @@ namespace TCP
 				if (errno != EWOULDBLOCK && errno != EAGAIN)
 				{
 #endif
-					if(verbose)
+					if (verbose)
 						Error() << "TCP Connection: error message to client: " << strerror(errno);
 
 					CloseUnsafe();
@@ -168,9 +201,9 @@ namespace TCP
 				if (errno != EWOULDBLOCK && errno != EAGAIN)
 				{
 #endif
-					if(verbose)
+					if (verbose)
 						Error() << "TCP Connection: error message to client: " << strerror(errno);
-						
+
 					CloseUnsafe();
 					return false;
 				}
@@ -456,7 +489,7 @@ namespace TCP
 		state = DISCONNECTED;
 	}
 
-	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive)
+	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive, int idle, int interval, int count)
 	{
 		int r;
 		struct addrinfo h;
@@ -490,13 +523,59 @@ namespace TCP
 #ifndef _WIN32
 		if (keep_alive)
 		{
-			int optval = 1;
-			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1)
+			int yes = 1;
+
+#ifdef _WIN32
+			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (const char *)&yes, sizeof(yes)))
+#else
+			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&yes, sizeof(yes)))
+#endif
 			{
 				freeaddrinfo(address);
 				disconnect();
 				return false;
 			}
+#if defined(__APPLE__)
+			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
+			{
+				freeaddrinfo(address);
+				disconnect();
+				return false;
+			}
+#elif defined(_WIN32)
+			// Windows specific keepalive
+			struct tcp_keepalive keepalive;
+			keepalive.onoff = 1;
+			keepalive.keepalivetime = idle * 1000;
+			keepalive.keepaliveinterval = interval * 1000;
+			DWORD br;
+			if (WSAIoctl(sock, SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive), NULL, 0, &br, NULL, NULL) == SOCKET_ERROR)
+			{
+				freeaddrinfo(address);
+				disconnect();
+				return false;
+			}
+#elif defined(__ANDROID__)
+			// Android uses same config as Linux
+			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
+				setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
+				setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)))
+			{
+				freeaddrinfo(address);
+
+				disconnect();
+				return false;
+			}
+#else
+			if (setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
+				setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
+				setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
+			{
+				freeaddrinfo(address);
+				disconnect();
+				return false;
+			}
+#endif
 		}
 #endif
 		if (persistent)
