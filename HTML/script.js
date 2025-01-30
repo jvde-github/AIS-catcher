@@ -738,6 +738,9 @@ function openADSBExchange(m) {
     window.open("https://globe.adsbexchange.com/?icao=" + getICAOfromHexIdent(m));
 }
 
+function openFlightAware(m) {
+    window.open("https://flightaware.com/live/modes/" + getICAOfromHexIdent(m)) + "/redirect";
+}
 
 const mapMenu = document.getElementById("map-menu");
 
