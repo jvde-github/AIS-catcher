@@ -739,7 +739,7 @@ function openADSBExchange(m) {
 }
 
 function openFlightAware(m) {
-    window.open("https://flightaware.com/live/modes/" + getICAOfromHexIdent(m)) + "/redirect";
+    window.open("https://flightaware.com/live/modes/" + getICAOfromHexIdent(m) + "/redirect");
 }
 
 const mapMenu = document.getElementById("map-menu");
