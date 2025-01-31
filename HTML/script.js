@@ -5189,11 +5189,11 @@ function getPlaneSprite(plane) {
     plane.rot = plane.heading * 3.1415926 / 180;
     plane.cx = sprite.cx;
 
-    if(plane.airborne == 0) 
+    if (plane.airborne == 0)
         plane.cx = 25;
     else
         plane.cx = 50;
-    
+
     plane.cy = sprite.cy;
     plane.imgSize = sprite.imgSize;
     plane.hint = sprite.hint;
@@ -5895,8 +5895,64 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
+let rainviewerRadar = new ol.layer.Tile({
+    name: 'rainviewer_radar',
+    title: 'RainViewer Radar',
+    type: 'overlay',
+    opacity: 0.7, 
+});
 
-//addOverlayLayer("Planes", planeLayer);
+let rainviewerClouds = new ol.layer.Tile({
+    name: 'rainviewer_clouds',
+    title: 'RainViewer Clouds',
+    type: 'overlay',
+});
+
+async function refreshRainviewerLayers() {
+    try {
+        // Get latest timestamps from RainViewer API
+        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+        const data = await response.json();
+
+        // Update radar layer
+        const latestRadar = data.radar.past[data.radar.past.length - 1];
+        const radarSource = new ol.source.XYZ({
+            url: `https://tilecache.rainviewer.com/v2/radar/${latestRadar.time}/512/{z}/{x}/{y}/6/1_1.png`,
+            attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>'
+        });
+        rainviewerRadar.setSource(radarSource);
+
+        // Update clouds layer
+        const latestClouds = data.satellite.infrared[data.satellite.infrared.length - 1];
+        const cloudsSource = new ol.source.XYZ({
+            url: `https://tilecache.rainviewer.com/${latestClouds.path}/512/{z}/{x}/{y}/0/0_0.png`,
+            attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>'
+        });
+        rainviewerClouds.setSource(cloudsSource);
+
+    } catch (error) {
+        console.error("Error refreshing RainViewer layers:", error);
+    }
+}
+
+addOverlayLayer("RainViewer Radar", rainviewerRadar);
+addOverlayLayer("RainViewer Clouds", rainviewerClouds);
+
+rainviewerRadar.on('change:visible', function (evt) {
+    if (evt.target.getVisible()) {
+        refreshRainviewerLayers();
+        window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000); 
+    }
+});
+
+rainviewerClouds.on('change:visible', function (evt) {
+    if (evt.target.getVisible()) {
+        refreshRainviewerLayers();
+        window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000);
+    }
+});
+
+
 
 function makeDraggable(dragHandle, dragTarget) {
     const moveThreshold = 15;
