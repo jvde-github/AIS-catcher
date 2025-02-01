@@ -3749,7 +3749,7 @@ async function updateShipTable() {
                     },
                 },
                 {
-                    title: "Msgs",
+                    title: "Msg Type",
                     field: "msg_type",
                     sorter: "number",
                     formatter: function (cell) {
