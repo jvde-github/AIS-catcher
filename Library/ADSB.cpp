@@ -456,7 +456,7 @@ namespace Plane
         double lon_final = use_even ? even.lon : odd.lon;
 
         ln = (90.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
-        ln -= 90.0 * std::floor((lon - ref_lon + 45.0) / 90.0);
+        ln -= 90.0 * std::floor((ln - ref_lon + 45.0) / 90.0);
 
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
         updated = true;

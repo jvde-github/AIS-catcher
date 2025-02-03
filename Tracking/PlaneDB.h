@@ -14,15 +14,6 @@ class PlaneDB : public StreamIn<Plane::ADSB>
     const int END = -1;
     const int FREE = -2;
 
-    struct
-    {
-        int lat, lon;
-        std::time_t timestamp;
-        struct Plane::CPR cpr;
-        bool even;
-    } CPR_history[3];
-    int CPR_history_idx = 0;
-
 private:
     int first = -1;
     int last = -1;
@@ -293,39 +284,51 @@ public:
                 if (std::fabs(plane.lat - lat_new) > 0.1 || std::fabs(plane.lon - lon_new) > 0.1)
                 {
                     plane.position_status = Plane::ValueStatus::UNKNOWN;
-                    //std::cerr << "Inconsistent position for " << std::hex << plane.hexident << std::dec << std::endl;
                 }
             }
 
+            plane.position_status = Plane::ValueStatus::VALID;
+
             // store the history of the last 3 CPR positions
-            CPR_history[CPR_history_idx].lat = lat_new;
-            CPR_history[CPR_history_idx].lon = lon_new;
-            CPR_history[CPR_history_idx].even = msg->even.Valid();
-            CPR_history[CPR_history_idx].cpr = msg->even.Valid() ? plane.even : plane.odd;
+            plane.CPR_history[plane.CPR_history_idx].lat = lat_new;
+            plane.CPR_history[plane.CPR_history_idx].lon = lon_new;
+            plane.CPR_history[plane.CPR_history_idx].even = msg->even.Valid();
+            plane.CPR_history[plane.CPR_history_idx].cpr = msg->even.Valid() ? plane.even : plane.odd;
 
             if (plane.position_status == Plane::ValueStatus::UNKNOWN)
             {
                 // check for consistency with independent position
-                int prev = (CPR_history_idx + 2) % 3;
-                int indepedent = (CPR_history_idx + 1) % 3;
+                int prev = (plane.CPR_history_idx + 2) % 3;
+                int indepedent = (plane.CPR_history_idx + 1) % 3;
 
-                if (CPR_history[prev].cpr.Valid() && CPR_history[CPR_history_idx].cpr.Valid() && CPR_history[CPR_history_idx].even != CPR_history[prev].even)
+                if (plane.CPR_history[prev].cpr.Valid() && plane.CPR_history[plane.CPR_history_idx].cpr.Valid() && plane.CPR_history[plane.CPR_history_idx].even != plane.CPR_history[prev].even)
                 {
-                    if (CPR_history[indepedent].cpr.Valid())
+                    if (plane.CPR_history[indepedent].cpr.Valid())
                     {
-                        FLOAT32 distance = DISTANCE_UNDEFINED;
-                        int angle = ANGLE_UNDEFINED;
-                        getDistanceAndBearing(CPR_history[indepedent].lat, CPR_history[indepedent].lon, lat_new, lon_new, distance, angle);
-                        
-                        if (distance < 500)
+                        // check against last independent position, i.e. with different CPR pair
+                        double deltat = 1 - plane.CPR_history[indepedent].cpr.timestamp + plane.CPR_history[plane.CPR_history_idx].cpr.timestamp;
+
+                        if (deltat < 15 * 60)
                         {
-                            plane.position_status = Plane::ValueStatus::VALID;
+                            FLOAT32 distance = DISTANCE_UNDEFINED;
+                            int angle = ANGLE_UNDEFINED;
+                            getDistanceAndBearing(plane.CPR_history[indepedent].lat, plane.CPR_history[indepedent].lon, lat_new, lon_new, distance, angle);
+             
+                            double deltat = 1 - plane.CPR_history[indepedent].cpr.timestamp + plane.CPR_history[plane.CPR_history_idx].cpr.timestamp;
+                            double speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
+                            double max_distance = deltat * speed / 3600.0;
+
+                            std::cerr << "Distance: " << distance << " Max: " << max_distance << std::endl;
+                            if (distance < max_distance)
+                            {
+                                plane.position_status = Plane::ValueStatus::VALID;
+                            }
                         }
                     }
                 }
             }
 
-            CPR_history_idx = (CPR_history_idx + 1) % 3;
+            plane.CPR_history_idx = (plane.CPR_history_idx + 1) % 3;
 
             if (plane.position_status == Plane::ValueStatus::VALID)
             {
