@@ -243,7 +243,7 @@ public:
         {
             plane.lat = msg->lat;
             plane.lon = msg->lon;
-            plane.latlon_timestamp = msg->rxtime;
+            plane.position_timestamp = msg->rxtime;
         }
 
         FLOAT32 lat_new = LAT_UNDEFINED, lon_new = LON_UNDEFINED;
@@ -330,7 +330,7 @@ public:
             {
                 plane.lat = lat_new;
                 plane.lon = lon_new;
-                plane.latlon_timestamp = msg->rxtime;
+                plane.position_timestamp = msg->rxtime;
             }
         }
 
