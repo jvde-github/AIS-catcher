@@ -14,6 +14,15 @@ class PlaneDB : public StreamIn<Plane::ADSB>
     const int END = -1;
     const int FREE = -2;
 
+    struct
+    {
+        int lat, lon;
+        std::time_t timestamp;
+        struct Plane::CPR cpr;
+        bool even;
+    } CPR_history[3];
+    int CPR_history_idx = 0;
+
 private:
     int first = -1;
     int last = -1;
@@ -246,6 +255,8 @@ public:
             plane.latlon_timestamp = msg->rxtime;
         }
 
+        FLOAT32 lat_new = LAT_UNDEFINED, lon_new = LON_UNDEFINED;
+
         if (msg->even.Valid())
         {
             plane.even.lat = msg->even.lat;
@@ -257,7 +268,7 @@ public:
             if (!msg->even.airborne)
                 calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-            plane.decodeCPR(ref_lat, ref_lon, true, position_updated);
+            plane.decodeCPR(ref_lat, ref_lon, true, position_updated, lat_new, lon_new);
         }
 
         if (msg->odd.Valid())
@@ -272,7 +283,56 @@ public:
             if (!msg->odd.airborne)
                 calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-            plane.decodeCPR(ref_lat, ref_lon, false, position_updated);
+            plane.decodeCPR(ref_lat, ref_lon, false, position_updated, lat_new, lon_new);
+        }
+
+        if (position_updated)
+        {
+            if (plane.position_status == Plane::ValueStatus::VALID)
+            {
+                if (std::fabs(plane.lat - lat_new) > 0.1 || std::fabs(plane.lon - lon_new) > 0.1)
+                {
+                    plane.position_status = Plane::ValueStatus::UNKNOWN;
+                    //std::cerr << "Inconsistent position for " << std::hex << plane.hexident << std::dec << std::endl;
+                }
+            }
+
+            // store the history of the last 3 CPR positions
+            CPR_history[CPR_history_idx].lat = lat_new;
+            CPR_history[CPR_history_idx].lon = lon_new;
+            CPR_history[CPR_history_idx].even = msg->even.Valid();
+            CPR_history[CPR_history_idx].cpr = msg->even.Valid() ? plane.even : plane.odd;
+
+            if (plane.position_status == Plane::ValueStatus::UNKNOWN)
+            {
+                // check for consistency with independent position
+                int prev = (CPR_history_idx + 2) % 3;
+                int indepedent = (CPR_history_idx + 1) % 3;
+
+                if (CPR_history[prev].cpr.Valid() && CPR_history[CPR_history_idx].cpr.Valid() && CPR_history[CPR_history_idx].even != CPR_history[prev].even)
+                {
+                    if (CPR_history[indepedent].cpr.Valid())
+                    {
+                        FLOAT32 distance = DISTANCE_UNDEFINED;
+                        int angle = ANGLE_UNDEFINED;
+                        getDistanceAndBearing(CPR_history[indepedent].lat, CPR_history[indepedent].lon, lat_new, lon_new, distance, angle);
+                        
+                        if (distance < 500)
+                        {
+                            plane.position_status = Plane::ValueStatus::VALID;
+                        }
+                    }
+                }
+            }
+
+            CPR_history_idx = (CPR_history_idx + 1) % 3;
+
+            if (plane.position_status == Plane::ValueStatus::VALID)
+            {
+                plane.lat = lat_new;
+                plane.lon = lon_new;
+                plane.latlon_timestamp = msg->rxtime;
+            }
         }
 
         if (position_updated && tag.station_lat != LAT_UNDEFINED && tag.station_lon != LON_UNDEFINED)
@@ -365,10 +425,10 @@ public:
                            (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
                            (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma +
                            (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
-                           std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) +comma +
-                           std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group)  + comma +
-                            (plane.angle != ANGLE_UNDEFINED ? std::to_string(plane.angle) : null_str) +
-                            "]";
+                           std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) + comma +
+                           std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group) + comma +
+                           (plane.angle != ANGLE_UNDEFINED ? std::to_string(plane.angle) : null_str) +
+                           "]";
 
                 delim = comma;
             }
