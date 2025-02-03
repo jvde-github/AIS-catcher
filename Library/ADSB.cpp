@@ -393,7 +393,7 @@ namespace Plane
         if (ln > 180.0)
             ln -= 360.0;
 
-        latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
+        position_timestamp = use_even ? even.timestamp : odd.timestamp;
         updated = true;
 
         return true;
@@ -415,7 +415,7 @@ namespace Plane
         int m = std::floor(ref_lon / d_lon) + std::floor(0.5 + (MOD(ref_lon, d_lon) / d_lon) - cpr.lon / CPR_SCALE);
 
         ln = d_lon * (m + cpr.lon / CPR_SCALE);
-        latlon_timestamp = cpr.timestamp;
+        position_timestamp = cpr.timestamp;
         updated = true;
         return true;
     }
@@ -458,7 +458,7 @@ namespace Plane
         ln = (90.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
         ln -= 90.0 * std::floor((ln - ref_lon + 45.0) / 90.0);
 
-        latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
+        position_timestamp = use_even ? even.timestamp : odd.timestamp;
         updated = true;
         return true;
     }
@@ -479,7 +479,7 @@ namespace Plane
         int m = std::floor(ref_lon / d_lon) + std::floor(0.5 + (MOD(ref_lon, d_lon) / d_lon) - cpr.lon / CPR_SCALE);
 
         ln = d_lon * (m + cpr.lon / CPR_SCALE);
-        latlon_timestamp = cpr.timestamp;
+        position_timestamp = cpr.timestamp;
         updated = true;
         return true;
     }

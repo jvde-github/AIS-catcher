@@ -92,7 +92,7 @@ namespace Plane
         int altitude;     // Mode C altitude
         FLOAT32 lat, lon; // Position
         ValueStatus position_status;
-        std::time_t latlon_timestamp;
+        std::time_t position_timestamp;
         FLOAT32 speed;         // Speed over ground
         FLOAT32 heading;       // Track angle
         FLOAT32 distance;      // Distance from station
@@ -137,7 +137,7 @@ namespace Plane
             altitude = ALTITUDE_UNDEFINED;
             lat = LAT_UNDEFINED;
             lon = LON_UNDEFINED;
-            latlon_timestamp = TIME_UNDEFINED;
+            position_timestamp = TIME_UNDEFINED;
             speed = SPEED_UNDEFINED;
             heading = HEADING_UNDEFINED;
             vertrate = VERT_RATE_UNDEFINED;
