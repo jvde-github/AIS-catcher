@@ -237,7 +237,7 @@ private:
                 }
                 else if (msg.msgtype != '1')
                 {
-                    std::cerr << "Unknown message type: " << msg.msgtype << std::endl;
+                    Error() << "Unknown message type: " << msg.msgtype;
                 }
                 Send(&msg, 1, tag);
 
