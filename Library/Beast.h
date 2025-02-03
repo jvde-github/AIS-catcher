@@ -110,8 +110,7 @@ class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
 
     enum BeastConstants
     {
-        BEAST_ESCAPE = 0x1A,
-        BEAST_ESCAPE_START = 0x1B
+        BEAST_ESCAPE = 0x1A
     };
 
     enum class State
@@ -121,14 +120,12 @@ class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
         READ_TIMESTAMP,
         READ_SIGNAL,
         READ_PAYLOAD,
-        READ_ESCAPE
     };
 
     Plane::ADSB msg;
     std::vector<uint8_t> buffer;
     State state = State::WAIT_ESCAPE;
     int bytes_read = 0;
-
 
 public:
     virtual ~Beast() {}
@@ -146,6 +143,8 @@ public:
     }
 
 private:
+    bool inEscape = false;
+
     void Clear()
     {
         state = State::WAIT_ESCAPE;
@@ -161,16 +160,29 @@ private:
             return;
         }
 
-        switch (state)
+        if (byte == BEAST_ESCAPE)
         {
-        case State::WAIT_ESCAPE:
-            if (byte == BEAST_ESCAPE)
+            if (state == State::WAIT_ESCAPE)
             {
                 state = State::WAIT_TYPE;
                 buffer.clear();
+                return;
             }
-            break;
+            else if (inEscape)
+            {
+                inEscape = false;
+            }
+            else
+            {
+                inEscape = true;
+                return;
+            }
+        }
 
+        switch (state)
+        {
+        case State::WAIT_ESCAPE:
+            break;
         case State::WAIT_TYPE:
             if (byte >= 0x31 && byte <= 0x33)
             { // Valid types: '1', '2', '3'
@@ -189,12 +201,6 @@ private:
             break;
 
         case State::READ_TIMESTAMP:
-            if (byte == BEAST_ESCAPE)
-            {
-                state = State::READ_ESCAPE;
-                break;
-            }
-
             buffer.push_back(byte);
             bytes_read++;
 
@@ -208,11 +214,6 @@ private:
             break;
 
         case State::READ_SIGNAL:
-            if (byte == BEAST_ESCAPE)
-            {
-                state = State::READ_ESCAPE;
-                break;
-            }
 
             msg.signalLevel = byte / 255.0f;
             msg.signalLevel = 2 * 10 * log10(msg.signalLevel);
@@ -222,12 +223,6 @@ private:
 
         case State::READ_PAYLOAD:
         {
-            if (byte == BEAST_ESCAPE)
-            {
-                state = State::READ_ESCAPE;
-                break;
-            }
-
             buffer.push_back(byte);
             msg.msg[bytes_read] = byte;
             bytes_read++;
@@ -251,26 +246,6 @@ private:
             }
         }
         break;
-
-        case State::READ_ESCAPE:
-            if (byte == BEAST_ESCAPE)
-            {
-                buffer.push_back(BEAST_ESCAPE);
-                bytes_read++;
-                state = State::READ_PAYLOAD;
-            }
-            else if (byte == BEAST_ESCAPE_START)
-            {
-                state = State::WAIT_TYPE;
-                buffer.clear();
-                bytes_read = 0;
-            }
-            else
-            {
-                state = State::WAIT_ESCAPE;
-                buffer.clear();
-            }
-            break;
         }
     }
 
