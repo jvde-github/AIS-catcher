@@ -281,13 +281,12 @@ public:
         {
             if (plane.position_status == Plane::ValueStatus::VALID)
             {
+                // this can be improved by checking the distance to the last known position
                 if (std::fabs(plane.lat - lat_new) > 0.1 || std::fabs(plane.lon - lon_new) > 0.1)
                 {
                     plane.position_status = Plane::ValueStatus::UNKNOWN;
                 }
             }
-
-            plane.position_status = Plane::ValueStatus::VALID;
 
             // store the history of the last 3 CPR positions
             plane.CPR_history[plane.CPR_history_idx].lat = lat_new;
@@ -305,20 +304,17 @@ public:
                 {
                     if (plane.CPR_history[indepedent].cpr.Valid())
                     {
-                        // check against last independent position, i.e. with different CPR pair
+                        // check against last independent position, i.e. with different CPR pair for both legs
                         double deltat = 1 - plane.CPR_history[indepedent].cpr.timestamp + plane.CPR_history[plane.CPR_history_idx].cpr.timestamp;
-
                         if (deltat < 15 * 60)
                         {
                             FLOAT32 distance = DISTANCE_UNDEFINED;
                             int angle = ANGLE_UNDEFINED;
                             getDistanceAndBearing(plane.CPR_history[indepedent].lat, plane.CPR_history[indepedent].lon, lat_new, lon_new, distance, angle);
-             
-                            double deltat = 1 - plane.CPR_history[indepedent].cpr.timestamp + plane.CPR_history[plane.CPR_history_idx].cpr.timestamp;
+
                             double speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
                             double max_distance = deltat * speed / 3600.0;
 
-                            std::cerr << "Distance: " << distance << " Max: " << max_distance << std::endl;
                             if (distance < max_distance)
                             {
                                 plane.position_status = Plane::ValueStatus::VALID;
@@ -408,32 +404,35 @@ public:
                 long int time_since_update = now - plane.getRxTimeUnix();
 
                 // Skip inactive planes unless requested
-                if (!include_inactive && time_since_update > 60)
+                if (!include_inactive && time_since_update > 300)
                 {
                     break;
                 }
 
-                content += delim + "[" +
-                           std::to_string(plane.hexident) + comma +
-                           (plane.lat != LAT_UNDEFINED ? std::to_string(plane.lat) : null_str) + comma +
-                           (plane.lon != LON_UNDEFINED ? std::to_string(plane.lon) : null_str) + comma +
-                           (plane.altitude != ALTITUDE_UNDEFINED ? std::to_string(plane.altitude) : null_str) + comma +
-                           (plane.speed != SPEED_UNDEFINED ? std::to_string(plane.speed) : null_str) + comma +
-                           (plane.heading != HEADING_UNDEFINED ? std::to_string(plane.heading) : null_str) + comma +
-                           (plane.vertrate != VERT_RATE_UNDEFINED ? std::to_string(plane.vertrate) : null_str) + comma +
-                           (plane.squawk != SQUAWK_UNDEFINED ? std::to_string(plane.squawk) : null_str) + comma +
-                           std::string("\"") + plane.callsign + "\"" + comma +
-                           std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + comma +
-                           (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
-                           (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
-                           (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma +
-                           (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
-                           std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) + comma +
-                           std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group) + comma +
-                           (plane.angle != ANGLE_UNDEFINED ? std::to_string(plane.angle) : null_str) +
-                           "]";
+                if (time_since_update <= 60 || plane.airborne == 0)
+                {
+                    content += delim + "[" +
+                               std::to_string(plane.hexident) + comma +
+                               (plane.lat != LAT_UNDEFINED ? std::to_string(plane.lat) : null_str) + comma +
+                               (plane.lon != LON_UNDEFINED ? std::to_string(plane.lon) : null_str) + comma +
+                               (plane.altitude != ALTITUDE_UNDEFINED ? std::to_string(plane.altitude) : null_str) + comma +
+                               (plane.speed != SPEED_UNDEFINED ? std::to_string(plane.speed) : null_str) + comma +
+                               (plane.heading != HEADING_UNDEFINED ? std::to_string(plane.heading) : null_str) + comma +
+                               (plane.vertrate != VERT_RATE_UNDEFINED ? std::to_string(plane.vertrate) : null_str) + comma +
+                               (plane.squawk != SQUAWK_UNDEFINED ? std::to_string(plane.squawk) : null_str) + comma +
+                               std::string("\"") + plane.callsign + "\"" + comma +
+                               std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + comma +
+                               (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
+                               (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
+                               (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma +
+                               (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
+                               std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) + comma +
+                               std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group) + comma +
+                               (plane.angle != ANGLE_UNDEFINED ? std::to_string(plane.angle) : null_str) +
+                               "]";
 
-                delim = comma;
+                    delim = comma;
+                }
             }
             ptr = items[ptr].time_ll.next;
         }

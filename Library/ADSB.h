@@ -152,7 +152,8 @@ namespace Plane
             message_subtypes = 0;
             position_status = ValueStatus::UNKNOWN;
 
-            for(int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3; i++)
+            {
                 CPR_history[i].cpr.clear();
                 CPR_history[i].lat = LAT_UNDEFINED;
                 CPR_history[i].lon = LON_UNDEFINED;
