@@ -73,6 +73,15 @@ namespace Plane
         LL time_ll;
         LL hash_ll;
 
+        struct
+        {
+            FLOAT32 lat, lon;
+            std::time_t timestamp;
+            struct Plane::CPR cpr;
+            bool even;
+        } CPR_history[3];
+        int CPR_history_idx = 0;
+
         uint8_t msg[14]; // Raw message
         int df;          // Downlink format
         int msgtype;     // Message type
@@ -142,6 +151,12 @@ namespace Plane
             message_types = 0;
             message_subtypes = 0;
             position_status = ValueStatus::UNKNOWN;
+
+            for(int i = 0; i < 3; i++) {
+                CPR_history[i].cpr.clear();
+                CPR_history[i].lat = LAT_UNDEFINED;
+                CPR_history[i].lon = LON_UNDEFINED;
+            }
 
             crc = CRC_UNDEFINED;
             status = STATUS_OK;
