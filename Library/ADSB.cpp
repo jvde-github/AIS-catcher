@@ -350,19 +350,19 @@ namespace Plane
         return std::floor(2 * PI / acos(tmp));
     }
 
-    bool ADSB::decodeCPR(FLOAT32 lat, FLOAT32 lon, bool use_even, bool &updated)
+    bool ADSB::decodeCPR(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even, bool &updated,  FLOAT32 &lt, FLOAT32 &ln)
     {
         if (!even.Valid() || !odd.Valid() || (even.airborne != odd.airborne))
             return false;
 
         if (even.airborne)
         {
-            return decodeCPR_airborne(use_even, updated);
+            return decodeCPR_airborne(use_even, updated, lt, ln);
         }
-        return decodeCPR_surface(lat, lon, use_even, updated);
+        return decodeCPR_surface(ref_lat, ref_lon, use_even, updated, lt, ln);
     }
 
-    bool ADSB::decodeCPR_airborne(bool use_even, bool &updated)
+    bool ADSB::decodeCPR_airborne(bool use_even, bool &updated, FLOAT32 &lt, FLOAT32 &ln)
     {
         constexpr double CPR_SCALE = (double)(1 << 17);
 
@@ -381,17 +381,17 @@ namespace Plane
         if (nl != NL(lat_odd))
             return false;
 
-        lat = use_even ? lat_even : lat_odd;
+        lt = use_even ? lat_even : lat_odd;
 
         int ni = MAX(nl - (use_even ? 0 : 1), 1);
         int m = std::floor((even.lon * (nl - 1) - odd.lon * nl) / CPR_SCALE + 0.5);
 
         double lon_final = use_even ? even.lon : odd.lon;
 
-        lon = (360.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
+        ln = (360.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
 
-        if (lon > 180.0)
-            lon -= 360.0;
+        if (ln > 180.0)
+            ln -= 360.0;
 
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
         updated = true;
@@ -399,7 +399,7 @@ namespace Plane
         return true;
     }
 
-    bool ADSB::decodeCPR_airborne_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon, bool &updated)
+    bool ADSB::decodeCPR_airborne_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon, bool &updated, FLOAT32 &lt, FLOAT32 &ln)
     {
         constexpr double CPR_SCALE = (double)(1 << 17);
 
@@ -407,21 +407,21 @@ namespace Plane
         double d_lat = use_even ? 360.0 / 60 : 360.0 / 59;
         int j = std::floor(ref_lat / d_lat) + std::floor(0.5 + MOD(ref_lat, d_lat) / d_lat - cpr.lat / CPR_SCALE + 0.5);
 
-        lat = d_lat * (j + cpr.lat / CPR_SCALE);
+        lt = d_lat * (j + cpr.lat / CPR_SCALE);
 
-        int ni = NL(lat) - (use_even ? 0 : 1);
+        int ni = NL(lt) - (use_even ? 0 : 1);
         double d_lon = ni > 0 ? 360 / ni : 360;
 
         int m = std::floor(ref_lon / d_lon) + std::floor(0.5 + (MOD(ref_lon, d_lon) / d_lon) - cpr.lon / CPR_SCALE);
 
-        lon = d_lon * (m + cpr.lon / CPR_SCALE);
+        ln = d_lon * (m + cpr.lon / CPR_SCALE);
         latlon_timestamp = cpr.timestamp;
         updated = true;
         return true;
     }
 
     // based on the example from the 1090 riddle
-    bool ADSB::decodeCPR_surface(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even, bool &updated)
+    bool ADSB::decodeCPR_surface(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even, bool &updated, FLOAT32 &lt, FLOAT32 &ln)
     {
         static bool warning_given = false;
 
@@ -447,23 +447,23 @@ namespace Plane
         if (nl != NL(lat_odd))
             return false;
 
-        lat = use_even ? lat_even : lat_odd;
-        lat -= 90.0 * std::floor((lat - ref_lat + 45.0) / 90.0);
+        lt = use_even ? lat_even : lat_odd;
+        lt -= 90.0 * std::floor((lt - ref_lat + 45.0) / 90.0);
 
         int ni = MAX(nl - (use_even ? 0 : 1), 1);
 
         int m = std::floor((even.lon * (nl - 1) - odd.lon * nl) / CPR_SCALE + 0.5);
         double lon_final = use_even ? even.lon : odd.lon;
 
-        lon = (90.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
-        lon -= 90.0 * std::floor((lon - ref_lon + 45.0) / 90.0);
+        ln = (90.0 / ni) * (MOD(m, ni) + lon_final / CPR_SCALE);
+        ln -= 90.0 * std::floor((lon - ref_lon + 45.0) / 90.0);
 
         latlon_timestamp = use_even ? even.timestamp : odd.timestamp;
         updated = true;
         return true;
     }
 
-    bool ADSB::decodeCPR_surface_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon, bool &updated)
+    bool ADSB::decodeCPR_surface_reference(bool use_even, FLOAT32 ref_lat, FLOAT32 ref_lon, bool &updated, FLOAT32 &lt, FLOAT32 &ln)
     {
         constexpr double CPR_SCALE = (double)(1 << 17);
 
@@ -471,14 +471,14 @@ namespace Plane
         double d_lat = use_even ? 90.0 / 60 : 90.0 / 59;
         int j = std::floor(ref_lat / d_lat) + std::floor(0.5 + MOD(ref_lat, d_lat) / d_lat - cpr.lat / CPR_SCALE + 0.5);
 
-        lat = d_lat * (j + cpr.lat / CPR_SCALE);
+        lt = d_lat * (j + cpr.lat / CPR_SCALE);
 
-        int ni = NL(lat) - (use_even ? 0 : 1);
+        int ni = NL(lt) - (use_even ? 0 : 1);
         double d_lon = ni > 0 ? 90 / ni : 90;
 
         int m = std::floor(ref_lon / d_lon) + std::floor(0.5 + (MOD(ref_lon, d_lon) / d_lon) - cpr.lon / CPR_SCALE);
 
-        lon = d_lon * (m + cpr.lon / CPR_SCALE);
+        ln = d_lon * (m + cpr.lon / CPR_SCALE);
         latlon_timestamp = cpr.timestamp;
         updated = true;
         return true;

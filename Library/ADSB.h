@@ -36,6 +36,13 @@ namespace Plane
 
     extern uint32_t crc_table[112];
 
+    enum class ValueStatus
+    {
+        VALID,
+        INVALID,
+        UNKNOWN
+    };
+
     struct CPR
     {
         int lat, lon;
@@ -75,6 +82,7 @@ namespace Plane
         int hexident_status;
         int altitude;     // Mode C altitude
         FLOAT32 lat, lon; // Position
+        ValueStatus position_status;
         std::time_t latlon_timestamp;
         FLOAT32 speed;         // Speed over ground
         FLOAT32 heading;       // Track angle
@@ -133,6 +141,7 @@ namespace Plane
             angle = ANGLE_UNDEFINED;
             message_types = 0;
             message_subtypes = 0;
+            position_status = ValueStatus::UNKNOWN;
 
             crc = CRC_UNDEFINED;
             status = STATUS_OK;
@@ -228,11 +237,11 @@ namespace Plane
         int MOD(int a, int b);
         int NL(double lat);
 
-        bool decodeCPR(FLOAT32 lat, FLOAT32 lon, bool is_even, bool &);
-        bool decodeCPR_airborne(bool is_even, bool &);
-        bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32, bool &);
-        bool decodeCPR_surface(FLOAT32, FLOAT32, bool, bool &);
-        bool decodeCPR_surface_reference(bool, FLOAT32, FLOAT32, bool &);
+        bool decodeCPR(FLOAT32 ref_lat, FLOAT32 ref_lon, bool is_even, bool &, FLOAT32 &lt, FLOAT32 &ln);
+        bool decodeCPR_airborne(bool is_even, bool &, FLOAT32 &lt, FLOAT32 &ln);
+        bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32, bool &, FLOAT32 &lt, FLOAT32 &ln);
+        bool decodeCPR_surface(FLOAT32, FLOAT32, bool, bool &, FLOAT32 &lt, FLOAT32 &ln);
+        bool decodeCPR_surface_reference(bool, FLOAT32, FLOAT32, bool &, FLOAT32 &lt, FLOAT32 &ln);
 
         void setCountryCode();
     };
