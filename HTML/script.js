@@ -2540,7 +2540,7 @@ async function fetchPlanes() {
         p.shipclass = ShippingClass.PLANE;
 
         p.validated = 1;
-        p.name = p.callsign || p.hexident;
+        p.name = p.callsign || getICAO(p);
 
         // Store in database 
         const entry = {};
@@ -3920,7 +3920,7 @@ function getTooltipContentPlane(plane) {
     return '<div>' +
         getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
         `</div><div>
-            <div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude}</b>/<b>${speed} kts</b></div>
+            <div><b>${plane.callsign || getICAO(plane)}</b> at <b>${altitude}</b>/<b>${speed} kts</b></div>
             <div>Received <b>${getDeltaTimeVal(plane.last_signal)}</b> ago</div>
         </div>`;
 }
