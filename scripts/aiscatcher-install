@@ -224,7 +224,7 @@ download_webassets() {
     local temp_zip="/tmp/webassets.zip"
     
     log "INFO" "Downloading webassets"
-    if curl -s "$webassets_url" -o "$temp_zip"; then
+    if curl -sL "$webassets_url" -o "$temp_zip"; then
         if [[ -d "$CONFIG_DIR/webassets" ]]; then
             log "INFO" "Removing old webassets"
             sudo rm -rf "$CONFIG_DIR/webassets"
@@ -293,7 +293,7 @@ install_from_package() {
 
     # Download the package
     log "INFO" "Downloading package..."
-    if ! curl -s -o "$temp_dir/$(basename "$download_url")" "$download_url"; then
+    if ! curl -sL -o "$temp_dir/$(basename "$download_url")" "$download_url"; then
         error_exit "Failed to download package"
     fi
 
