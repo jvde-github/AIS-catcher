@@ -50,18 +50,16 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	bool use_GPS = true;
 	uint32_t own_mmsi = 0;
 
-	int N = 4096;
-	int M = 4096 * 16;
+	int Nships = 4096;
+	int Npaths = 4096 * 16;
 
 	std::vector<Ship> ships;
 	std::vector<PathPoint> paths;
 
 	bool isValidCoord(float lat, float lon);
-	const float EarthRadius = 6371.0f;			// Earth radius in kilometers
-	const float NauticalMilePerKm = 0.5399568f; // Conversion factor
 
-	float deg2rad(float deg) { return deg * PI / 180.0f; }
-	int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
+	static float deg2rad(float deg) { return deg * PI / 180.0f; }
+	static int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
 
 	int findShip(uint32_t mmsi);
 	int createShip();
@@ -70,9 +68,8 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 
 	bool updateShip(const JSON::JSON&, TAG&, Ship&);
 	void addToPath(int ptr);
-	void addValidation(int, TAG&, float, float);
 
-	void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
+	static void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
 
 	void getShipJSON(const Ship& ship, std::string& content, long int now);
 	std::string getSinglePathJSON(int);
@@ -122,7 +119,7 @@ public:
 	std::string getGeoJSON();
 
 	int getCount() { return count; }
-	int getMaxCount() { return N; }
+	int getMaxCount() { return Nships; }
 
 	void setServerMode(bool b) { server_mode = b; }
 	void setMsgSave(bool b) { msg_save = b; }

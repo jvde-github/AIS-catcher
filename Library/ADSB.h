@@ -80,6 +80,7 @@ namespace Plane
             struct Plane::CPR cpr;
             bool even;
         } CPR_history[3];
+        
         int CPR_history_idx = 0;
 
         uint8_t msg[14]; // Raw message
@@ -250,8 +251,8 @@ namespace Plane
         int decodeAC13Field();
         double decodeMovement();
 
-        int MOD(int a, int b);
-        int NL(double lat);
+        static int MOD(int a, int b);
+        static int NL(double lat);
 
         bool decodeCPR(FLOAT32 ref_lat, FLOAT32 ref_lon, bool is_even, bool &, FLOAT32 &lt, FLOAT32 &ln);
         bool decodeCPR_airborne(bool is_even, bool &, FLOAT32 &lt, FLOAT32 &ln);
