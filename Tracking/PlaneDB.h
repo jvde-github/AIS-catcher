@@ -5,6 +5,7 @@
 
 class PlaneDB : public StreamIn<Plane::ADSB>
 {
+private:
     std::mutex mtx;
 
     struct LL
@@ -22,7 +23,31 @@ class PlaneDB : public StreamIn<Plane::ADSB>
     int CPR_cache_even_idx = 0;
     int CPR_cache_odd_idx = 0;
 
-private:
+    static float deg2rad(float deg) { return deg * PI / 180.0f; }
+    static int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
+
+    // https://www.movable-type.co.uk/scripts/latlong.html
+    static void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing)
+    {
+        const float EarthRadius = 6371.0f;          // Earth radius in kilometers
+        const float NauticalMilePerKm = 0.5399568f; // Conversion factor
+
+        // Convert the latitudes and longitudes from degrees to radians
+        lat1 = deg2rad(lat1);
+        lon1 = deg2rad(lon1);
+        lat2 = deg2rad(lat2);
+        lon2 = deg2rad(lon2);
+
+        // Compute the distance using the haversine formula
+        float dlat = lat2 - lat1, dlon = lon2 - lon1;
+        float a = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
+        distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));
+
+        float y = sin(dlon) * cos(lat2);
+        float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon);
+        bearing = rad2deg(atan2(y, x));
+    }
+
     int first = -1;
     int last = -1;
     int count = 0;
@@ -188,31 +213,6 @@ public:
         return -1;
     }
 
-    const float EarthRadius = 6371.0f;          // Earth radius in kilometers
-    const float NauticalMilePerKm = 0.5399568f; // Conversion factor
-
-    float deg2rad(float deg) { return deg * PI / 180.0f; }
-    int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
-
-    // https://www.movable-type.co.uk/scripts/latlong.html
-    void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing)
-    {
-        // Convert the latitudes and longitudes from degrees to radians
-        lat1 = deg2rad(lat1);
-        lon1 = deg2rad(lon1);
-        lat2 = deg2rad(lat2);
-        lon2 = deg2rad(lon2);
-
-        // Compute the distance using the haversine formula
-        float dlat = lat2 - lat1, dlon = lon2 - lon1;
-        float a = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
-        distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));
-
-        float y = sin(dlon) * cos(lat2);
-        float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon);
-        bearing = rad2deg(atan2(y, x));
-    }
-
     bool checkInCPRCache(const Plane::CPR &cpr, bool even, FLOAT32 &lat)
     {
         bool duplicate = false;
@@ -233,7 +233,7 @@ public:
             (even ? CPR_cache_even[idx] : CPR_cache_odd[idx]) = cpr;
             idx = (idx + 1) % CPR_CACHE_SIZE;
         }
-        
+
         return duplicate;
     }
 

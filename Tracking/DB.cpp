@@ -26,26 +26,26 @@ void DB::setup()
 
 	if (server_mode)
 	{
-		N *= 32;
-		M *= 32;
+		Nships *= 32;
+		Npaths *= 32;
 
-		Info() << "DB: internal ship database extended to " << N << " ships and " << M << " path points";
+		Info() << "DB: internal ship database extended to " << Nships << " ships and " << Npaths << " path points";
 	}
 
-	ships.resize(N);
-	paths.resize(M);
+	ships.resize(Nships);
+	paths.resize(Npaths);
 
-	first = N - 1;
+	first = Nships - 1;
 	last = 0;
 	count = 0;
 
 	// set up linked list
-	for (int i = 0; i < N; i++)
+	for (int i = 0; i < Nships; i++)
 	{
 		ships[i].next = i - 1;
 		ships[i].prev = i + 1;
 	}
-	ships[N - 1].prev = -1;
+	ships[Nships - 1].prev = -1;
 }
 
 bool DB::isValidCoord(float lat, float lon)
@@ -56,6 +56,9 @@ bool DB::isValidCoord(float lat, float lon)
 // https://www.movable-type.co.uk/scripts/latlong.html
 void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing)
 {
+	const float EarthRadius = 6371.0f;			// Earth radius in kilometers
+	const float NauticalMilePerKm = 0.5399568f; // Conversion factor
+
 	// Convert the latitudes and longitudes from degrees to radians
 	lat1 = deg2rad(lat1);
 	lon1 = deg2rad(lon1);
@@ -493,7 +496,7 @@ int DB::findShip(uint32_t mmsi)
 int DB::createShip()
 {
 	int ptr = last;
-	count = MIN(count + 1, N);
+	count = MIN(count + 1, Nships);
 	ships[ptr].reset();
 
 	return ptr;
@@ -563,7 +566,7 @@ void DB::addToPath(int ptr)
 	paths[path_idx].count = ships[ptr].count;
 
 	ships[ptr].path_ptr = path_idx;
-	path_idx = (path_idx + 1) % M;
+	path_idx = (path_idx + 1) % Npaths;
 }
 
 bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v, bool allowApproximate)
