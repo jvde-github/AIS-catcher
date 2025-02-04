@@ -14,6 +14,14 @@ class PlaneDB : public StreamIn<Plane::ADSB>
     const int END = -1;
     const int FREE = -2;
 
+    const static int CPR_CACHE_SIZE = 3;
+
+    Plane::CPR CPR_cache_even[CPR_CACHE_SIZE];
+    Plane::CPR CPR_cache_odd[CPR_CACHE_SIZE];
+
+    int CPR_cache_even_idx = 0;
+    int CPR_cache_odd_idx = 0;
+
 private:
     int first = -1;
     int last = -1;
@@ -79,6 +87,12 @@ public:
         {
             hash_ll[i].prev = END;
             hash_ll[i].next = END;
+        }
+
+        for (int i = 0; i < CPR_CACHE_SIZE; i++)
+        {
+            CPR_cache_even[i].clear();
+            CPR_cache_odd[i].clear();
         }
     }
 
@@ -199,6 +213,30 @@ public:
         bearing = rad2deg(atan2(y, x));
     }
 
+    bool checkInCPRCache(const Plane::CPR &cpr, bool even, FLOAT32 &lat)
+    {
+        bool duplicate = false;
+        int &idx = even ? CPR_cache_even_idx : CPR_cache_odd_idx;
+
+        for (int i = 0; i < CPR_CACHE_SIZE && !duplicate; i++)
+        {
+            Plane::CPR &cache = even ? CPR_cache_even[i] : CPR_cache_odd[i];
+
+            if (!cache.Valid() || cpr.timestamp - cache.timestamp > 2)
+                continue;
+
+            duplicate = cache.lat == cpr.lat && cache.lon == cpr.lon && cache.airborne == cpr.airborne;
+        }
+
+        if (!duplicate)
+        {
+            (even ? CPR_cache_even[idx] : CPR_cache_odd[idx]) = cpr;
+            idx = (idx + 1) % CPR_CACHE_SIZE;
+        }
+        
+        return duplicate;
+    }
+
     void Receive(const Plane::ADSB *msg, int len, TAG &tag)
     {
         bool position_updated = false;
@@ -250,31 +288,37 @@ public:
 
         if (msg->even.Valid())
         {
-            plane.even.lat = msg->even.lat;
-            plane.even.lon = msg->even.lon;
-            plane.even.timestamp = msg->even.timestamp;
-            plane.even.airborne = msg->even.airborne;
+            if (!checkInCPRCache(msg->even, true, lat_new))
+            {
+                plane.even.lat = msg->even.lat;
+                plane.even.lon = msg->even.lon;
+                plane.even.timestamp = msg->even.timestamp;
+                plane.even.airborne = msg->even.airborne;
 
-            FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
-            if (!msg->even.airborne)
-                calcReferencePosition(tag, ptr, ref_lat, ref_lon);
+                FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
+                if (!msg->even.airborne)
+                    calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-            plane.decodeCPR(ref_lat, ref_lon, true, position_updated, lat_new, lon_new);
+                plane.decodeCPR(ref_lat, ref_lon, true, position_updated, lat_new, lon_new);
+            }
         }
 
         if (msg->odd.Valid())
         {
-            plane.odd.lat = msg->odd.lat;
-            plane.odd.lon = msg->odd.lon;
-            plane.odd.timestamp = msg->odd.timestamp;
-            plane.odd.airborne = msg->odd.airborne;
+            if (!checkInCPRCache(msg->odd, false, lat_new))
+            {
+                plane.odd.lat = msg->odd.lat;
+                plane.odd.lon = msg->odd.lon;
+                plane.odd.timestamp = msg->odd.timestamp;
+                plane.odd.airborne = msg->odd.airborne;
 
-            FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
+                FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
 
-            if (!msg->odd.airborne)
-                calcReferencePosition(tag, ptr, ref_lat, ref_lon);
+                if (!msg->odd.airborne)
+                    calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-            plane.decodeCPR(ref_lat, ref_lon, false, position_updated, lat_new, lon_new);
+                plane.decodeCPR(ref_lat, ref_lon, false, position_updated, lat_new, lon_new);
+            }
         }
 
         if (position_updated)
