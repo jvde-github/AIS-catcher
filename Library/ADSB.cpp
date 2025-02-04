@@ -346,7 +346,7 @@ namespace Plane
         else if (lat > 87)
             return 1;
 
-        double tmp = 1 - (1 - cos(PI / (2.0 * 15.0))) / pow(cos(PI / 180.0 * abs(lat)), 2);
+        double tmp = 1 - (1 - cos(PI / (2.0 * 15.0))) / pow(cos(PI / 180.0 * lat), 2);
         return std::floor(2 * PI / acos(tmp));
     }
 
