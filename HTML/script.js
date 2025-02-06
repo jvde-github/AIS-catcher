@@ -19,6 +19,7 @@ var interval,
     tab_title_count = null,
     context_mmsi = null,
     context_type = null,
+    aboutContentLoaded = false,
     tab_title = "AIS-catcher";
 
 const baseMapSelector = document.getElementById("baseMapSelector");
@@ -2540,7 +2541,7 @@ async function fetchPlanes() {
         p.shipclass = ShippingClass.PLANE;
 
         p.validated = 1;
-        p.name = p.callsign || getICAO(p);
+        p.name = p.callsign || p.hexident;
 
         // Store in database 
         const entry = {};
@@ -3920,7 +3921,7 @@ function getTooltipContentPlane(plane) {
     return '<div>' +
         getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
         `</div><div>
-            <div><b>${plane.callsign || getICAO(plane)}</b> at <b>${altitude}</b>/<b>${speed} kts</b></div>
+            <div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude}</b>/<b>${speed} kts</b></div>
             <div>Received <b>${getDeltaTimeVal(plane.last_signal)}</b> ago</div>
         </div>`;
 }
@@ -5717,6 +5718,9 @@ function activateTab(b, a) {
         realtimeViewer.disconnect();
         realtimeViewer = null;
     }
+    if (a === "about") { 
+        setupAbout();
+    }
 }
 
 function selectMapTab(m) {
@@ -5798,6 +5802,11 @@ function main() {
 }
 
 function setupAbout() {
+
+    if (aboutContentLoaded) {
+        return;
+    }
+
     fetchAbout()
         .then((s) => {
             var scriptElement = document.createElement("script");
@@ -5806,6 +5815,7 @@ function setupAbout() {
 
             scriptElement.onload = function () {
                 document.getElementById("about_content").innerHTML = marked.parse(s);
+                aboutContentLoaded = true;
             };
         })
         .catch((error) => {
@@ -6265,8 +6275,6 @@ prepareShipcard();
 if (aboutMDpresent == false) {
     document.getElementById("about_tab").style.display = "none";
     document.getElementById("about_tab_mini").style.display = "none";
-} else {
-    setupAbout();
 }
 
 if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
