@@ -491,6 +491,10 @@ namespace TCP
 
 	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive, int idle, int interval, int count)
 	{
+		if(sock != -1) {
+			Warning() << "TCP (" << this->host << ":" << this->port << "): connection overwritten. Socket not properly closed.";
+		}
+
 		int r;
 		struct addrinfo h;
 		struct addrinfo *address = nullptr;
