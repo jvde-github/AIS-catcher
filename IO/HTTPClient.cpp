@@ -186,6 +186,7 @@ namespace IO {
 
 			if (!Handshake()) {
 				freeSSL();
+				client.disconnect();
 				return response;
 			}
 
@@ -193,6 +194,7 @@ namespace IO {
 			if (r <= 0) {
 				Error() << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() ;
 				freeSSL();
+				client.disconnect();
 				return response;
 			}
 
@@ -200,6 +202,7 @@ namespace IO {
 			if (r <= 0) {
 				Error() << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() ;
 				freeSSL();
+				client.disconnect();
 				return response;
 			}
 
@@ -207,6 +210,7 @@ namespace IO {
 			if (r <= 0) {
 				Error() << "HTTP Client [" << host << "]: SSL read failed - error code : " << ERR_get_error() ;
 				freeSSL();
+				client.disconnect();
 				return response;
 			}
 
@@ -220,10 +224,12 @@ namespace IO {
 
 			if (client.send(header.c_str(), header.length()) < 0) {
 				Error() << "HTTP Client [" << host << "]: write failed" ;
+				client.disconnect();
 				return response;
 			}
 			if (client.send(msg_ptr, msg_length) < 0) {
 				Error() << "HTTP Client [" << host << "]: write failed" ;
+				client.disconnect();
 				return response;
 			}
 
