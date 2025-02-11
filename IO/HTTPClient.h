@@ -45,7 +45,7 @@ namespace IO {
 
 		void createMessageBody(const std::string& msg, bool gzip, bool multipart, const std::string& copyname);
 		void createHeader(bool gzip, bool multipart);
-		bool Handshake();
+		bool Handshake(TCP::Client &client);
 		void parseResponse(HTTPResponse& response, const std::string& msg);
 		void freeSSL() {
 #ifdef HASOPENSSL
@@ -58,7 +58,6 @@ namespace IO {
 		}
 
 	public:
-		TCP::Client client;
 		std::string protocol, host, port, path, userpwd;
 
 		void* msg_ptr = nullptr;
