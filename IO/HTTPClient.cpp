@@ -141,7 +141,7 @@ namespace IO {
 		header += "Content-Length: " + std::to_string(msg_length) + "\r\n\r\n";
 	}
 
-	bool HTTPClient::Handshake() {
+	bool HTTPClient::Handshake(TCP::Client &client) {
 #ifdef HASOPENSSL
 		ssl = SSL_new(_sse_context.getContext());
 		if (!ssl) {
@@ -166,6 +166,7 @@ namespace IO {
 
 	HTTPResponse HTTPClient::Post(const std::string& msg, bool gzip, bool multipart, const std::string& copyname) {
 
+		TCP::Client client;
 		HTTPResponse response;
 
 		createMessageBody(msg, gzip, multipart, copyname);
@@ -184,9 +185,8 @@ namespace IO {
 
 			int r;
 
-			if (!Handshake()) {
+			if (!Handshake(client)) {
 				freeSSL();
-				client.disconnect();
 				return response;
 			}
 
@@ -194,7 +194,6 @@ namespace IO {
 			if (r <= 0) {
 				Error() << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() ;
 				freeSSL();
-				client.disconnect();
 				return response;
 			}
 
@@ -202,7 +201,6 @@ namespace IO {
 			if (r <= 0) {
 				Error() << "HTTP Client [" << host << "]: SSL write failed - error code : " << ERR_get_error() ;
 				freeSSL();
-				client.disconnect();
 				return response;
 			}
 
@@ -210,7 +208,6 @@ namespace IO {
 			if (r <= 0) {
 				Error() << "HTTP Client [" << host << "]: SSL read failed - error code : " << ERR_get_error() ;
 				freeSSL();
-				client.disconnect();
 				return response;
 			}
 
@@ -224,19 +221,16 @@ namespace IO {
 
 			if (client.send(header.c_str(), header.length()) < 0) {
 				Error() << "HTTP Client [" << host << "]: write failed" ;
-				client.disconnect();
 				return response;
 			}
 			if (client.send(msg_ptr, msg_length) < 0) {
 				Error() << "HTTP Client [" << host << "]: write failed" ;
-				client.disconnect();
 				return response;
 			}
 
 			client.read(buffer, sizeof(buffer), 2, false);
 		}
 
-		client.disconnect();
 		parseResponse(response, std::string(buffer));
 
 		return response;
