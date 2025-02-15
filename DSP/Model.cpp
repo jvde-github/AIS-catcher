@@ -798,6 +798,7 @@ namespace AIS
 	void ModelN2K::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		setName("N2K input");
+		n2k.setOwnMMSI(own_mmsi);
 		device = dev;
 		*device >> n2k >> output;
 	}
