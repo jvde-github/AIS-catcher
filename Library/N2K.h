@@ -29,8 +29,9 @@
 namespace AIS {
 
 	class N2KtoMessage : public SimpleStreamInOut<RAW, Message> {
-#ifdef HASNMEA2000
 		Message msg;
+
+#ifdef HASNMEA2000
 
 		void onMsg129038(const tN2kMsg& n2, TAG& t);
 		void onMsg129793(const tN2kMsg& n2, TAG& t);
@@ -43,5 +44,8 @@ namespace AIS {
 			virtual ~N2KtoMessage() {}
 			void Receive(const RAW* data, int len, TAG& tag);
 #endif
-		};
+		public:
+			void setOwnMMSI(int mmsi) { msg.setOwnMMSI(mmsi); }
+
+};
 	}
