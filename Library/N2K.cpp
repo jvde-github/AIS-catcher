@@ -602,7 +602,9 @@ namespace AIS
 		U(msg, type, 0, 6);
 		U(msg, repeat, 6, 2);
 		U(msg, mmsi, 8, 30);
-		T(msg, shipname, 38, 120);
+		U(msg, 0, 38, 2);
+		T(msg, shipname, 40, 120);
+
 		msg.Stamp();
 		msg.setChannel('A');
 		msg.buildNMEA(tag);
@@ -658,19 +660,23 @@ namespace AIS
 		U(msg, type, 0, 6);
 		U(msg, repeat, 6, 2);
 		U(msg, mmsi, 8, 30);
-		U(msg, shiptype, 38, 8);
-		T(msg, vendorid, 46, 42);
-		T(msg, callsign, 88, 42);
-		U(msg, bow_stern, 130, 10);
-		U(msg, port_starboard, 140, 10);
-		U(msg, to_starboard, 150, 10);
-		U(msg, to_bow, 160, 10);
-		U(msg, mothership_mmsi, 170, 32);
+		U(msg, 1, 38, 2);
+
+		U(msg, shiptype, 40, 8);
+		T(msg, vendorid, 48, 42);
+		T(msg, callsign, 89, 42);
+		U(msg, to_bow, 132, 9);
+		U(msg, bow_stern - to_bow, 141, 9);
+		U(msg, port_starboard - to_starboard, 150, 6);
+		U(msg, to_starboard, 156, 6);
+		U(msg, mothership_mmsi, 162, 6);
 		msg.Stamp();
 		msg.setChannel(channel ? 'B' : 'A');
 		msg.buildNMEA(tag);
 		Send(&msg, 1, tag);
 	}
+
+
 
 	void N2KtoMessage::Receive(const RAW *data, int len, TAG &tag)
 	{
@@ -685,6 +691,7 @@ namespace AIS
 			break;
 		case 129793:
 			onMsg129793(N2kMsg, tag);
+			break;
 		case 129794:
 			onMsg129794(N2kMsg, tag);
 			break;

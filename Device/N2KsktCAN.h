@@ -67,6 +67,9 @@ namespace Device {
 		void Close();
 		void Play();
 		void Stop();
+
+		virtual void getDeviceList(std::vector<Description>& DeviceList);
+
 #endif
 	};
 }
