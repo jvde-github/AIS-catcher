@@ -33,12 +33,35 @@ namespace AIS {
 
 #ifdef HASNMEA2000
 
-		void onMsg129038(const tN2kMsg& n2, TAG& t);
-		void onMsg129793(const tN2kMsg& n2, TAG& t);
-		void onMsg129794(const tN2kMsg& n2, TAG& tag);
-		void onMsg129798(const tN2kMsg& N2kMsg, TAG& tag);
-		void onMsg129802(const tN2kMsg& N2kMsg, TAG& tag);
-		void onMsg129039(const tN2kMsg& N2kMsg, TAG& tag);
+       // Handler for PGN 129038: AIS Type 1, 2, 3 (Position Report).
+	   void onMsg129038(const tN2kMsg& n2, TAG& t);
+
+	   // Handler for PGN 129793: AIS Type 4 (and Type 11) (UTC/Date & Position Report).
+	   void onMsg129793(const tN2kMsg& n2, TAG& t);
+
+	   // Handler for PGN 129794: AIS Type 5 (Static and Voyage Related Data).
+	   void onMsg129794(const tN2kMsg& n2, TAG& tag);
+
+	   // Handler for PGN 129798: AIS Type 9 (Extended Position Report).
+	   void onMsg129798(const tN2kMsg& N2kMsg, TAG& tag);
+
+	   // Handler for PGN 129802: AIS Type 14 (Safety-Related Broadcast Message).
+	   void onMsg129802(const tN2kMsg& N2kMsg, TAG& tag);
+
+	   // Handler for PGN 129039: AIS Type 18 (Class B Position Report).
+	   void onMsg129039(const tN2kMsg& N2kMsg, TAG& tag);
+
+	   // Handler for PGN 129040: AIS Type 19 (Class B Extended Position Report).
+	   void onMsg129040(const tN2kMsg& N2kMsg, TAG& tag);
+
+	   // Handler for PGN 129041: AIS Type 21 (Aid-to-Navigation Report).
+	   void onMsg129041(const tN2kMsg& N2kMsg, TAG& tag);
+
+	   // Handler for PGN 129809: AIS Type 24, Part A (Static Data Report - Part A).
+	   void onMsg129809(const tN2kMsg& N2kMsg, TAG& tag);
+
+	   // Handler for PGN 129810: AIS Type 24, Part B (Static Data Report - Part B).
+	   void onMsg129810(const tN2kMsg& N2kMsg, TAG& tag);
 
 		public:
 			virtual ~N2KtoMessage() {}
