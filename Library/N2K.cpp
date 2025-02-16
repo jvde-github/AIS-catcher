@@ -24,27 +24,29 @@
 #include <N2kMsg.h>
 #include "N2K.h"
 
-
 #define U(m, v, s, l) m.setUint(s, l, v)
 #define S(m, v, s, l) m.setInt(s, l, v)
 
-#define X(m, v, s, l)				m.setUint(s, l, v)
+#define X(m, v, s, l) m.setUint(s, l, v)
 #define UL(m, v, s, l, alpha, beta) m.setUint(s, l, (unsigned int)(0.5f + ((v) - (beta)) / (alpha)))
 #define SL(m, v, s, l, alpha, beta) m.setInt(s, l, (int)(0.5f + ((v) - (beta)) / (alpha)))
-#define E(m, v, s, l)				m.setUint(s, l, v)
-#define B(m, v, s, l)				m.setUint(s, l, v ? 1 : 0)
-#define TURN(m, v, s, l)			m.setInt(s, l, v == 10000 ? -128 : (unsigned int)(0.5f + v / 5.0f))
-#define T(m, v, s, l)				m.setText(s, l, v)
+#define E(m, v, s, l) m.setUint(s, l, v)
+#define B(m, v, s, l) m.setUint(s, l, v ? 1 : 0)
+#define TURN(m, v, s, l) m.setInt(s, l, v == 10000 ? -128 : (unsigned int)(0.5f + v / 5.0f))
+#define T(m, v, s, l) m.setText(s, l, v)
 
+namespace AIS
+{
 
-namespace AIS {
-
-	inline int ROUND(double x) {
-		if (x < 0) return (int)(-0.5f + x);
+	inline int ROUND(double x)
+	{
+		if (x < 0)
+			return (int)(-0.5f + x);
 		return (int)(0.5f + x);
 	}
 
-	void N2KtoMessage::onMsg129038(const tN2kMsg& N2kMsg, TAG& tag) {
+	void N2KtoMessage::onMsg129038(const tN2kMsg &N2kMsg, TAG &tag)
+	{
 		int repeat, status, type, second, mmsi, accuracy, raim, radio, maneuver, channel, heading, lat, lon, cog, sog, turn_unscaled;
 		double turn;
 
@@ -106,7 +108,8 @@ namespace AIS {
 		Send(&msg, 1, tag);
 	}
 
-	void N2KtoMessage::onMsg129793(const tN2kMsg& N2kMsg, TAG& tag) {
+	void N2KtoMessage::onMsg129793(const tN2kMsg &N2kMsg, TAG &tag)
+	{
 		int repeat, type, mmsi, channel;
 		int year = 0, month = 0, day = 0, hour, minute, second, accuracy, epfd, raim, radio;
 		int lat, lon;
@@ -139,8 +142,9 @@ namespace AIS {
 		radio |= (byte & 3) << 16;
 		days = N2kMsg.Get2ByteUInt(idx);
 		time_t e = 24 * 3600 * (long int)days;
-		struct tm* timeInfo = gmtime(&e);
-		if (timeInfo) {
+		struct tm *timeInfo = gmtime(&e);
+		if (timeInfo)
+		{
 			year = timeInfo->tm_year + 1900;
 			day = timeInfo->tm_mday;
 			month = timeInfo->tm_mon + 1;
@@ -174,11 +178,12 @@ namespace AIS {
 		Send(&msg, 1, tag);
 	}
 
-	void N2KtoMessage::onMsg129794(const tN2kMsg& N2kMsg, TAG& tag) {
+	void N2KtoMessage::onMsg129794(const tN2kMsg &N2kMsg, TAG &tag)
+	{
 
 		int mmsi, IMO;
 		int hour, minute, day = 0, month = 0;
-		char callsign[8] = { 0 }, shipname[21] = { 0 }, destination[21] = { 0 };
+		char callsign[8] = {0}, shipname[21] = {0}, destination[21] = {0};
 		int length, beam, to_starboard, to_bow, draught;
 		int type;
 		int repeat, shiptype;
@@ -217,8 +222,9 @@ namespace AIS {
 		minute = (int)nSeconds % 60;
 
 		time_t e = 24 * 3600 * (long int)nDays;
-		struct tm* timeInfo = gmtime(&e);
-		if (timeInfo) {
+		struct tm *timeInfo = gmtime(&e);
+		if (timeInfo)
+		{
 			day = timeInfo->tm_mday;
 			month = timeInfo->tm_mon + 1;
 		}
@@ -254,7 +260,8 @@ namespace AIS {
 		Send(&msg, 1, tag);
 	}
 
-	void N2KtoMessage::onMsg129798(const tN2kMsg& N2kMsg, TAG& tag) {
+	void N2KtoMessage::onMsg129798(const tN2kMsg &N2kMsg, TAG &tag)
+	{
 		int repeat, type, second, mmsi, accuracy, raim, radio, channel, lat, lon, cog, sog, alt, dte;
 
 		int idx = 0;
@@ -306,8 +313,8 @@ namespace AIS {
 		Send(&msg, 1, tag);
 	}
 
-
-	void N2KtoMessage::onMsg129802(const tN2kMsg& N2kMsg, TAG& tag) {
+	void N2KtoMessage::onMsg129802(const tN2kMsg &N2kMsg, TAG &tag)
+	{
 		int repeat, type, mmsi, channel;
 
 		int idx = 0;
@@ -336,7 +343,8 @@ namespace AIS {
 		Send(&msg, 1, tag);
 	}
 
-	void N2KtoMessage::onMsg129039(const tN2kMsg& N2kMsg, TAG& tag) {
+	void N2KtoMessage::onMsg129039(const tN2kMsg &N2kMsg, TAG &tag)
+	{
 		int repeat, type, second, mmsi, accuracy, raim, radio, channel, heading, lat, lon, cog, sog /*, radiobit*/;
 		int regional, assigned, msg22, band, DSC, display, CS;
 
@@ -369,7 +377,7 @@ namespace AIS {
 		DSC = (byte >> 4) & 1;
 		display = (byte >> 3) & 1;
 		CS = (byte >> 2) & 1;
-		//radiobit = N2kMsg.GetByte(idx) & 1;
+		// radiobit = N2kMsg.GetByte(idx) & 1;
 
 		msg.clear();
 
@@ -401,11 +409,277 @@ namespace AIS {
 		Send(&msg, 1, tag);
 	}
 
-	void N2KtoMessage::Receive(const RAW* data, int len, TAG& tag) {
-		if (len == 0) return;
-		tN2kMsg N2kMsg = *((tN2kMsg*)data->data);
+	//----------------------------------------------------------------------
+	// PGN 129040: AIS Type 19 (Class B Extended Position Report)
+	//----------------------------------------------------------------------
+	void N2KtoMessage::onMsg129040(const tN2kMsg &N2kMsg, TAG &tag)
+	{
+		int repeat, type, mmsi;
+		int second, raim, accuracy;
+		int lon, lat;
+		int cog, speed;
+		int shiptype, heading, epfd;
+		int bow_stern, port_starboard, to_starboard, to_bow;
+		int dte_assigned;
+		char shipname[21] = {0};
 
-		switch (N2kMsg.PGN) {
+		int idx = 0;
+		unsigned char byte;
+
+		// Extract type and repeat from the first byte
+		byte = N2kMsg.GetByte(idx);
+		type = byte & 0x3F;
+		repeat = (byte >> 6) & 0x03;
+
+		mmsi = N2kMsg.Get4ByteUInt(idx);
+
+		// Extract longitude and latitude using the same scaling as other handlers
+		lon = AIS::ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LON_UNDEFINED * 600000));
+		lat = AIS::ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LAT_UNDEFINED * 600000));
+
+		// Next byte: seconds, raim, and accuracy
+		byte = N2kMsg.GetByte(idx);
+		second = (byte >> 2) & 0x3F;
+		raim = (byte >> 1) & 0x01;
+		accuracy = byte & 0x01;
+
+		// Two bytes: COG and SOG
+		cog = AIS::ROUND(N2kMsg.Get2ByteUDouble(1e-04 * 180.0f / PI, idx, COG_UNDEFINED));
+		speed = AIS::ROUND(N2kMsg.Get2ByteUDouble(0.01 * 3600.0f / 1852.0f, idx, SPEED_UNDEFINED));
+
+		// Skip two spare bytes (commonly set to 0xff)
+		N2kMsg.GetByte(idx);
+		N2kMsg.GetByte(idx);
+
+		// 1 byte: ship type
+		shiptype = N2kMsg.GetByte(idx);
+		// 2 bytes: Heading
+		heading = AIS::ROUND(N2kMsg.Get2ByteUDouble(1e-04 * 360.0f / (2.0f * PI), idx, HEADING_UNDEFINED));
+
+		// 1 byte: EPFD (encoded as epfd << 4)
+		byte = N2kMsg.GetByte(idx);
+		epfd = (byte >> 4) & 0x0F;
+
+		// 2 bytes each: dimensions (to_bow+to_stern, to_port+to_starboard, to_starboard, to_bow)
+		bow_stern = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		port_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_bow = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+
+		// 20-character ship name
+		N2kMsg.GetStr(shipname, 20, idx);
+
+		// 1 byte: combined DTE and assigned flag
+		dte_assigned = N2kMsg.GetByte(idx);
+
+		// Skip two spare bytes
+		N2kMsg.GetByte(idx);
+		N2kMsg.GetByte(idx);
+
+		// Build the AIS message (bit offsets and lengths are exemplary)
+		msg.clear();
+		U(msg, type, 0, 6);
+		U(msg, repeat, 6, 2);
+		U(msg, mmsi, 8, 30);
+		U(msg, lon, 38, 28);
+		S(msg, lat, 66, 27);
+		U(msg, cog, 93, 12);
+		U(msg, speed, 105, 10);
+		U(msg, second, 115, 6);
+		U(msg, shiptype, 121, 8);
+		U(msg, heading, 129, 9);
+		U(msg, epfd, 138, 4);
+		U(msg, bow_stern, 142, 10);
+		U(msg, port_starboard, 152, 10);
+		U(msg, to_starboard, 162, 9);
+		U(msg, to_bow, 171, 9);
+		T(msg, shipname, 180, 120);
+		U(msg, dte_assigned, 300, 8);
+
+		msg.Stamp();
+		msg.setChannel('A'); // Adjust channel extraction if needed
+		msg.buildNMEA(tag);
+		Send(&msg, 1, tag);
+	}
+
+	//----------------------------------------------------------------------
+	// PGN 129041: AIS Type 21 (Aid-to-Navigation Report)
+	//----------------------------------------------------------------------
+	void N2KtoMessage::onMsg129041(const tN2kMsg &N2kMsg, TAG &tag)
+	{
+		int repeat, type, mmsi;
+		int second, raim, accuracy;
+		int lon, lat;
+		int to_bow_stern, to_port_starboard, to_starboard, to_bow;
+		int combined; // Contains flags: assigned, virtual aid, off-position, and aid type
+		int epfd, regional, channel;
+		std::string name;
+
+		int idx = 0;
+		unsigned char byte;
+
+		// Extract header: type and repeat
+		byte = N2kMsg.GetByte(idx);
+		type = byte & 0x3F;
+		repeat = (byte >> 6) & 0x03;
+
+		mmsi = N2kMsg.Get4ByteUInt(idx);
+		lon = AIS::ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LON_UNDEFINED * 600000));
+		lat = AIS::ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LAT_UNDEFINED * 600000));
+
+		// Next byte: seconds, raim, and accuracy
+		byte = N2kMsg.GetByte(idx);
+		second = (byte >> 2) & 0x3F;
+		raim = (byte >> 1) & 0x01;
+		accuracy = byte & 0x01;
+
+		// Dimensions: to_bow+to_stern, to_port+to_starboard, to_starboard, to_bow
+		to_bow_stern = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_port_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_bow = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+
+		// Extract combined flags (assigned, virtual aid, off-position, aid type)
+		combined = N2kMsg.GetByte(idx);
+
+		// Extract EPFD and regional bits
+		epfd = N2kMsg.GetByte(idx);
+		regional = N2kMsg.GetByte(idx);
+		// Extract channel (simplified extraction)
+		byte = N2kMsg.GetByte(idx);
+		channel = (byte & 0x01);
+
+		// Variable-length Aid name: extract remaining bytes
+		while (idx < N2kMsg.DataLen)
+		{
+			name.push_back(N2kMsg.GetByte(idx));
+		}
+
+		msg.clear();
+		U(msg, type, 0, 6);
+		U(msg, repeat, 6, 2);
+		U(msg, mmsi, 8, 30);
+		U(msg, lon, 38, 28);
+		S(msg, lat, 66, 27);
+		U(msg, second, 93, 6);
+		U(msg, to_bow_stern, 99, 10);
+		U(msg, to_port_starboard, 109, 10);
+		U(msg, to_starboard, 119, 9);
+		U(msg, to_bow, 128, 9);
+		U(msg, combined, 137, 8);
+		U(msg, epfd, 145, 8);
+		U(msg, regional, 153, 8);
+		U(msg, channel, 161, 8);
+		T(msg, name.c_str(), 169, name.size() * 6);
+
+		msg.Stamp();
+		msg.setChannel('A' + channel);
+		msg.buildNMEA(tag);
+		Send(&msg, 1, tag);
+	}
+
+	//----------------------------------------------------------------------
+	// PGN 129809: AIS Type 24, Part A (Static Data Report - Part A)
+	//----------------------------------------------------------------------
+	void N2KtoMessage::onMsg129809(const tN2kMsg &N2kMsg, TAG &tag)
+	{
+		int repeat, type, mmsi;
+		char shipname[21] = {0};
+		int idx = 0;
+		unsigned char byte;
+
+		// Extract header: type and repeat
+		byte = N2kMsg.GetByte(idx);
+		type = byte & 0x3F;
+		repeat = (byte >> 6) & 0x03;
+
+		mmsi = N2kMsg.Get4ByteUInt(idx);
+
+		// Extract the 20-character ship name
+		N2kMsg.GetStr(shipname, 20, idx);
+
+		msg.clear();
+		U(msg, type, 0, 6);
+		U(msg, repeat, 6, 2);
+		U(msg, mmsi, 8, 30);
+		T(msg, shipname, 38, 120);
+		msg.Stamp();
+		msg.setChannel('A');
+		msg.buildNMEA(tag);
+		Send(&msg, 1, tag);
+	}
+
+	//----------------------------------------------------------------------
+	// PGN 129810: AIS Type 24, Part B (Static Data Report - Part B)
+	//----------------------------------------------------------------------
+	void N2KtoMessage::onMsg129810(const tN2kMsg &N2kMsg, TAG &tag)
+	{
+		int repeat, type, mmsi;
+		int shiptype;
+		char vendorid[8] = {0}, callsign[8] = {0};
+		int bow_stern, port_starboard, to_starboard, to_bow;
+		int mothership_mmsi;
+		int idx = 0;
+		unsigned char byte;
+
+		// Extract header: type and repeat
+		byte = N2kMsg.GetByte(idx);
+		type = byte & 0x3F;
+		repeat = (byte >> 6) & 0x03;
+
+		mmsi = N2kMsg.Get4ByteUInt(idx);
+
+		// Extract ship type
+		shiptype = N2kMsg.GetByte(idx);
+
+		// Extract vendor ID and callsign (7 characters each)
+		N2kMsg.GetStr(vendorid, 7, idx);
+		N2kMsg.GetStr(callsign, 7, idx);
+
+		// Extract dimensions: bow+stern, port+starboard, starboard, bow
+		bow_stern = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		port_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_bow = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+
+		// Extract mothership MMSI
+		mothership_mmsi = N2kMsg.Get4ByteUInt(idx);
+
+		// Skip spare byte
+		N2kMsg.GetByte(idx);
+
+		// Extract channel from the next byte (simplified extraction)
+		byte = N2kMsg.GetByte(idx);
+		int channel = (byte & 0x01);
+		// Skip sequence ID byte
+		N2kMsg.GetByte(idx);
+
+		msg.clear();
+		U(msg, type, 0, 6);
+		U(msg, repeat, 6, 2);
+		U(msg, mmsi, 8, 30);
+		U(msg, shiptype, 38, 8);
+		T(msg, vendorid, 46, 42);
+		T(msg, callsign, 88, 42);
+		U(msg, bow_stern, 130, 10);
+		U(msg, port_starboard, 140, 10);
+		U(msg, to_starboard, 150, 10);
+		U(msg, to_bow, 160, 10);
+		U(msg, mothership_mmsi, 170, 32);
+		msg.Stamp();
+		msg.setChannel(channel ? 'B' : 'A');
+		msg.buildNMEA(tag);
+		Send(&msg, 1, tag);
+	}
+
+	void N2KtoMessage::Receive(const RAW *data, int len, TAG &tag)
+	{
+		if (len == 0)
+			return;
+		tN2kMsg N2kMsg = *((tN2kMsg *)data->data);
+
+		switch (N2kMsg.PGN)
+		{
 		case 129038:
 			onMsg129038(N2kMsg, tag);
 			break;
@@ -422,6 +696,18 @@ namespace AIS {
 			break;
 		case 129039:
 			onMsg129039(N2kMsg, tag);
+			break;
+		case 129040:
+			onMsg129040(N2kMsg, tag);
+			break;
+		case 129041:
+			onMsg129041(N2kMsg, tag);
+			break;
+		case 129809:
+			onMsg129809(N2kMsg, tag);
+			break;
+		case 129810:
+			onMsg129810(N2kMsg, tag);
 			break;
 		default:
 			break;
