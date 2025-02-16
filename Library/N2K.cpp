@@ -415,7 +415,7 @@ namespace AIS
 	void N2KtoMessage::onMsg129040(const tN2kMsg &N2kMsg, TAG &tag)
 	{
 		int repeat, type, mmsi;
-		int second, raim, accuracy;
+		int second; //, raim, accuracy;
 		int lon, lat;
 		int cog, speed;
 		int shiptype, heading, epfd;
@@ -440,8 +440,8 @@ namespace AIS
 		// Next byte: seconds, raim, and accuracy
 		byte = N2kMsg.GetByte(idx);
 		second = (byte >> 2) & 0x3F;
-		raim = (byte >> 1) & 0x01;
-		accuracy = byte & 0x01;
+		// raim = (byte >> 1) & 0x01;
+		// accuracy = byte & 0x01;
 
 		// Two bytes: COG and SOG
 		cog = AIS::ROUND(N2kMsg.Get2ByteUDouble(1e-04 * 180.0f / PI, idx, COG_UNDEFINED));
@@ -508,7 +508,7 @@ namespace AIS
 	void N2KtoMessage::onMsg129041(const tN2kMsg &N2kMsg, TAG &tag)
 	{
 		int repeat, type, mmsi;
-		int second, raim, accuracy;
+		int second; //, raim, accuracy;
 		int lon, lat;
 		int to_bow_stern, to_port_starboard, to_starboard, to_bow;
 		int combined; // Contains flags: assigned, virtual aid, off-position, and aid type
@@ -530,8 +530,8 @@ namespace AIS
 		// Next byte: seconds, raim, and accuracy
 		byte = N2kMsg.GetByte(idx);
 		second = (byte >> 2) & 0x3F;
-		raim = (byte >> 1) & 0x01;
-		accuracy = byte & 0x01;
+		// raim = (byte >> 1) & 0x01;
+		// accuracy = byte & 0x01;
 
 		// Dimensions: to_bow+to_stern, to_port+to_starboard, to_starboard, to_bow
 		to_bow_stern = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
