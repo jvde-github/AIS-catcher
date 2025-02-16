@@ -664,7 +664,7 @@ namespace AIS
 
 		U(msg, shiptype, 40, 8);
 		T(msg, vendorid, 48, 42);
-		T(msg, callsign, 89, 42);
+		T(msg, callsign, 90, 42);
 		U(msg, to_bow, 132, 9);
 		U(msg, bow_stern - to_bow, 141, 9);
 		U(msg, port_starboard - to_starboard, 150, 6);
