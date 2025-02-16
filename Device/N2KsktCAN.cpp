@@ -58,6 +58,11 @@ namespace Device {
 	std::string N2KSCAN::Get() {
 		return Device::Get() + " network " + _iface;
 	}
+
+	void N2KSCAN::getDeviceList(std::vector<Description>& DeviceList) {
+		
+	}
+
 }
 
 #endif
