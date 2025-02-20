@@ -102,7 +102,7 @@ namespace AIS
 		U(msg, radio, 149, 19);
 
 		msg.Stamp();
-		msg.setChannel('A' + channel);
+		msg.setChannel('A' + channel % 2);
 		msg.buildNMEA(tag);
 
 		Send(&msg, 1, tag);
@@ -172,7 +172,7 @@ namespace AIS
 		U(msg, radio, 149, 19);
 
 		msg.Stamp();
-		msg.setChannel('A' + channel);
+		msg.setChannel('A' + channel % 2);
 		msg.buildNMEA(tag);
 
 		Send(&msg, 1, tag);
@@ -254,7 +254,7 @@ namespace AIS
 		U(msg, 0, 423, 1); // spare
 
 		msg.Stamp();
-		msg.setChannel('A' + channel);
+		msg.setChannel('A' + channel % 2);
 		msg.buildNMEA(tag);
 
 		Send(&msg, 1, tag);
@@ -307,7 +307,7 @@ namespace AIS
 		U(msg, radio, 148, 20);
 
 		msg.Stamp();
-		msg.setChannel('A' + channel);
+		msg.setChannel('A' + channel % 2);
 		msg.buildNMEA(tag);
 
 		Send(&msg, 1, tag);
@@ -337,7 +337,7 @@ namespace AIS
 		T(msg, text.c_str(), 40, text.length() * 6);
 
 		msg.Stamp();
-		msg.setChannel('A' + channel);
+		msg.setChannel('A' + channel % 2);
 		msg.buildNMEA(tag);
 
 		Send(&msg, 1, tag);
@@ -403,7 +403,7 @@ namespace AIS
 		U(msg, radio, 148, 20); // needs fix for radiobit
 
 		msg.Stamp();
-		msg.setChannel('A' + channel);
+		msg.setChannel('A' + channel % 2);
 		msg.buildNMEA(tag);
 
 		Send(&msg, 1, tag);
@@ -573,7 +573,7 @@ namespace AIS
 		T(msg, name.c_str(), 169, name.size() * 6);
 
 		msg.Stamp();
-		msg.setChannel('A' + channel);
+		msg.setChannel('A' + channel % 2);
 		msg.buildNMEA(tag);
 		Send(&msg, 1, tag);
 	}
