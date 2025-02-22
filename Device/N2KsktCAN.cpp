@@ -74,12 +74,13 @@ namespace Device {
 			return;
 		}
 		
-		for (uint64_t i = 0, ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next, i++) {
+		uint64_t i = 0;
+		for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next, i++) {
 			if (ifa->ifa_addr == nullptr)
 				continue;
 
 			if (ifa->ifa_addr->sa_family == AF_CAN) {
-				DeviceList.push_back(Description(ifa->ifa_name, "", "", i, Type::N2KSCAN));
+				DeviceList.push_back(Description("BNME2000", "CANbus", ifa->ifa_name,  i, Type::N2K));
 				available_intefaces.push_back(ifa->ifa_name);
 			}
 		}
