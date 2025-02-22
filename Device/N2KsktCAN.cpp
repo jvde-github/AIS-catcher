@@ -46,8 +46,12 @@ namespace Device
 		{
 			if(h < available_intefaces.size())
 				_iface = available_intefaces[h];
-			else 
-				throw std::runtime_error("No available interfaces");
+			else {
+				Error() << "Requested interface #" << h << " is not available";
+				for(auto i : available_intefaces)
+					Error() << "Available interface: " << i;
+				throw std::runtime_error("NMEA2000: No available interfaces.");
+			}
 		}
 		N2K::N2KInterface.addInput(this);
 		N2K::N2KInterface.setNetwork(_iface);
@@ -105,7 +109,7 @@ namespace Device
 			{
 				continue;
 			}
-			DeviceList.push_back(Description("BNME2000", "CANbus", ifa->ifa_name, i, Type::N2K));
+			DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i, Type::N2K));
 			available_intefaces.push_back(ifa->ifa_name);
 		}
 
