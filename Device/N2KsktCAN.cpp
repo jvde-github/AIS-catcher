@@ -42,13 +42,14 @@ namespace Device
 
 	void N2KSCAN::Open(uint64_t h)
 	{
-		if(_iface.empty())
+		if (_iface.empty())
 		{
-			if(h < available_intefaces.size())
+			if (h < available_intefaces.size())
 				_iface = available_intefaces[h];
-			else {
+			else
+			{
 				Error() << "Requested interface #" << h << " is not available";
-				for(auto i : available_intefaces)
+				for (auto i : available_intefaces)
 					Error() << "Available interface: " << i;
 				throw std::runtime_error("NMEA2000: No available interfaces.");
 			}
@@ -97,7 +98,7 @@ namespace Device
 		}
 
 		uint64_t i = 0;
-		for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next, i++)
+		for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next)
 		{
 
 			// check for virtual CAN interfaces
@@ -109,7 +110,7 @@ namespace Device
 			{
 				continue;
 			}
-			DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i, Type::N2K));
+			DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i++, Type::N2K));
 			available_intefaces.push_back(ifa->ifa_name);
 		}
 
