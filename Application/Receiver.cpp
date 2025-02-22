@@ -34,6 +34,7 @@ void Receiver::refreshDevices(void)
 	SDRPLAY().getDeviceList(device_list);
 	HACKRF().getDeviceList(device_list);
 	SOAPYSDR().getDeviceList(device_list);
+	N2KSCAN().getDeviceList(device_list);
 }
 
 void Receiver::setTags(const std::string &s)
