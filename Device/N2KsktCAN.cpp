@@ -28,32 +28,47 @@
 #endif
 
 #ifdef HASNMEA2000
-namespace Device {
+namespace Device
+{
 
-	N2KSCAN::~N2KSCAN() {
+	N2KSCAN::~N2KSCAN()
+	{
 		Close();
 	}
 
-	void N2KSCAN::Close() {
+	void N2KSCAN::Close()
+	{
 	}
 
-	void N2KSCAN::Open(uint64_t) {
+	void N2KSCAN::Open(uint64_t h)
+	{
+		if(_iface.empty())
+		{
+			if(h < available_intefaces.size())
+				_iface = available_intefaces[h];
+			else 
+				throw std::runtime_error("No available interfaces");
+		}
 		N2K::N2KInterface.addInput(this);
 		N2K::N2KInterface.setNetwork(_iface);
 	}
-	
-	void N2KSCAN::Play() {
+
+	void N2KSCAN::Play()
+	{
 		N2K::N2KInterface.Start();
 	}
 
-	void N2KSCAN::Stop() {
+	void N2KSCAN::Stop()
+	{
 		N2K::N2KInterface.Stop();
 	}
 
-	Setting& N2KSCAN::Set(std::string option, std::string arg) {
+	Setting &N2KSCAN::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 
-		if (option == "INTERFACE") {
+		if (option == "INTERFACE")
+		{
 			_iface = arg;
 		}
 		else
@@ -62,29 +77,38 @@ namespace Device {
 		return *this;
 	}
 
-	std::string N2KSCAN::Get() {
+	std::string N2KSCAN::Get()
+	{
 		return Device::Get() + " network " + _iface;
 	}
 
-	void N2KSCAN::getDeviceList(std::vector<Description>& DeviceList) {
+	void N2KSCAN::getDeviceList(std::vector<Description> &DeviceList)
+	{
 		// 			DeviceList.push_back(Description(v, p, s, (uint64_t)i, Type::RTLSDR));
 		struct ifaddrs *ifaddr = nullptr, *ifa = nullptr;
-    
-		if (getifaddrs(&ifaddr) == -1) {
+
+		if (getifaddrs(&ifaddr) == -1)
+		{
 			return;
 		}
-		
+
 		uint64_t i = 0;
-		for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next, i++) {
-			if (ifa->ifa_addr == nullptr)
+		for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next, i++)
+		{
+
+			// check for virtual CAN interfaces
+			if (ifa->ifa_addr == nullptr && (strncmp(ifa->ifa_name, "vcan", 4) != 0))
 				continue;
 
-			if (ifa->ifa_addr->sa_family == AF_CAN) {
-				DeviceList.push_back(Description("BNME2000", "CANbus", ifa->ifa_name,  i, Type::N2K));
-				available_intefaces.push_back(ifa->ifa_name);
+			// If there is an address, only add if it is a CAN interface.
+			if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family != AF_CAN)
+			{
+				continue;
 			}
+			DeviceList.push_back(Description("BNME2000", "CANbus", ifa->ifa_name, i, Type::N2K));
+			available_intefaces.push_back(ifa->ifa_name);
 		}
-		
+
 		freeifaddrs(ifaddr);
 	}
 

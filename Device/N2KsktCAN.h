@@ -35,7 +35,7 @@ namespace Device {
 	class N2KSCAN : public Device, public Callback<tN2kMsg> {
 		
 #ifdef HASNMEA2000
-		std::string _iface = "can0";
+		std::string _iface = "";
 		bool lost = false;
 		std::vector<std::string> available_intefaces;
 
