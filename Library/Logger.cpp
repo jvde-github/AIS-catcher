@@ -64,6 +64,7 @@ class SyslogHandler
 public:
 	SyslogHandler(std::string ident)
 	{
+		std::cerr << "No system logger available" << std::endl;
 		throw std::runtime_error("No system logger available");
 	}
 

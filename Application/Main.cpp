@@ -201,6 +201,9 @@ static void printSupportedDevices()
 #ifdef HASSOXR
 	other_support << "SOXR ";
 #endif
+#ifdef HASSYSLOG
+	other_support << "SYSLOG ";
+#endif
 #ifdef HASNMEA2000
 	other_support << "NMEA2000 ";
 #endif
