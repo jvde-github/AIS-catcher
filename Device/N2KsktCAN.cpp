@@ -100,18 +100,30 @@ namespace Device
 		uint64_t i = 0;
 		for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next)
 		{
-
-			// check for virtual CAN interfaces
-			if (ifa->ifa_addr == nullptr && (strncmp(ifa->ifa_name, "vcan", 4) != 0))
+			if (ifa->ifa_name == nullptr)
 				continue;
 
-			// If there is an address, only add if it is a CAN interface.
-			if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family != AF_CAN)
+			// Check if it's either a CAN or virtual CAN interface by name
+			bool is_can_by_name = (strncmp(ifa->ifa_name, "can", 3) == 0);
+			bool is_vcan = (strncmp(ifa->ifa_name, "vcan", 4) == 0);
+
+			// If it has no address but is a CAN or vCAN interface by name, include it
+			if (ifa->ifa_addr == nullptr)
 			{
+				if (is_can_by_name || is_vcan)
+				{
+					DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i++, Type::N2K));
+					available_intefaces.push_back(ifa->ifa_name);
+				}
 				continue;
 			}
-			DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i++, Type::N2K));
-			available_intefaces.push_back(ifa->ifa_name);
+
+			// For interfaces with addresses, check if they're CAN interfaces by address family
+			if (ifa->ifa_addr->sa_family == AF_CAN)
+			{
+				DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i++, Type::N2K));
+				available_intefaces.push_back(ifa->ifa_name);
+			}
 		}
 
 		freeifaddrs(ifaddr);
