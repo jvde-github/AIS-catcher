@@ -28,15 +28,29 @@
 #include "JSON/StringBuilder.h"
 #include "Ships.h"
 
-
-struct PathPoint {
+struct PathPoint
+{
 	float lat, lon;
 	uint32_t mmsi = 0;
 	int count = 0;
 	int next = 0;
 };
 
-class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public StreamOut<JSON::JSON> {
+struct BinaryMessage
+{
+	std::string json;
+	int type;
+	int dac;
+	int fi;
+	bool hasPosition;
+	time_t timestamp;
+	bool used;
+
+	BinaryMessage() : used(false) {}
+};
+
+class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public StreamOut<JSON::JSON>
+{
 
 	JSON::StringBuilder builder;
 
@@ -64,18 +78,25 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	int findShip(uint32_t mmsi);
 	int createShip();
 	void moveShipToFront(int);
-	bool updateFields(const JSON::Property& p, const AIS::Message* msg, Ship& v, bool allowApproximate);
+	bool updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v, bool allowApproximate);
 
-	bool updateShip(const JSON::JSON&, TAG&, Ship&);
+	bool updateShip(const JSON::JSON &, TAG &, Ship &);
 	void addToPath(int ptr);
 
-	static void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float& distance, int& bearing);
+	static void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing);
 
-	void getShipJSON(const Ship& ship, std::string& content, long int now);
+	void getShipJSON(const Ship &ship, std::string &content, long int now);
 	std::string getSinglePathJSON(int);
 	bool isNextPathPoint(int idx, uint32_t mmsi, int count) { return idx != -1 && paths[idx].mmsi == mmsi && paths[idx].count < count; }
 
 	AIS::Filter filter;
+
+	static const int MAX_BINARY_MESSAGES = 10;
+    BinaryMessage binaryMessages[MAX_BINARY_MESSAGES];
+    int binaryMsgIndex = 0;  
+
+	void addBinaryMessage(const std::string& jsonStr, int msgType, int dac, int fi, bool hasPos);
+	void processBinaryMessage(const JSON::JSON &data, Ship &ship);
 
 public:
 	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
@@ -86,9 +107,10 @@ public:
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }
-	
+
 	bool setUseGPS(bool b) { return use_GPS = b; }
-	void setLatLon(float lat, float lon) {
+	void setLatLon(float lat, float lon)
+	{
 		this->lat = lat;
 		this->lon = lon;
 	}
@@ -100,15 +122,17 @@ public:
 
 	void setOwnMMSI(uint32_t mmsi) { own_mmsi = mmsi; }
 
-	void Receive(const JSON::JSON* data, int len, TAG& tag);
-	void Receive(const AIS::GPS* data, int len, TAG& tag) {
-		if (use_GPS) {
+	void Receive(const JSON::JSON *data, int len, TAG &tag);
+	void Receive(const AIS::GPS *data, int len, TAG &tag)
+	{
+		if (use_GPS)
+		{
 			lat = data[0].getLat();
 			lon = data[0].getLon();
 		}
 	}
 
-	void getBinary(std::vector<char>&);
+	void getBinary(std::vector<char> &);
 	std::string getShipJSON(int mmsi);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false);
@@ -124,4 +148,6 @@ public:
 	void setServerMode(bool b) { server_mode = b; }
 	void setMsgSave(bool b) { msg_save = b; }
 	void setFilterOption(std::string &opt, std::string &arg) { filter.SetOption(opt, arg); }
+
+	std::string getBinaryMessagesJSON() const;
 };
