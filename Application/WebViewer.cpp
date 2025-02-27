@@ -614,6 +614,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			s->SendEvent("log", m.toJSON());
 		}
 	}
+	else if (r == "/api/binmsgs")
+	{
+		std::string content = ships.getBinaryMessagesJSON();
+		Response(c, "application/json", content, use_zlib & gzip);
+	}
 	else if (r == "/custom/plugins.js")
 	{
 		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
