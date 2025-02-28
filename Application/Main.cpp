@@ -268,7 +268,7 @@ static void Assert(bool b, std::string &context, std::string msg = "")
 int main(int argc, char *argv[])
 {
 
-	//std::string file_config;
+	// std::string file_config;
 
 	std::vector<std::unique_ptr<Receiver>> _receivers;
 	_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
 
 	bool list_devices = false, list_support = false, list_options = false;
 	int timeout = 0, nrec = 0, exit_code = 0;
-	bool timeout_nomsg = false, list_devices_JSON = false, no_run = false;
+	bool timeout_nomsg = false, list_devices_JSON = false, no_run = false, show_copyright = true;
 	int own_mmsi = -1;
 	int cb = -1;
 
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'C':
 				Assert(count == 1, param, "one parameter required: filename");
-				//file_config = arg1;
+				// file_config = arg1;
 				if (!arg1.empty())
 				{
 					c.read(arg1);
@@ -645,7 +645,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'Z':
-				Assert(count == 2,param, "Location Setting requires two parameters (lat/lon)");
+				Assert(count == 2, param, "Location Setting requires two parameters (lat/lon)");
 				receiver.setLatLon(Util::Parse::Float(arg1), Util::Parse::Float(arg2));
 				break;
 			case 'A':
@@ -670,9 +670,15 @@ int main(int argc, char *argv[])
 				if (count == 1)
 				{
 					Util::Convert::toUpper(arg1);
-					Assert(arg1 == "JSON", param, "parameter needs to be JSON");
-					std::cout << "{\"version\":\"" << VERSION << "\",\"version_describe\":\"" << VERSION_DESCRIBE << "\",\"version_code\":" << VERSION_NUMBER << "}\n";
+					Assert(arg1 == "JSON" || arg1 == "BUILD", param, "parameter needs to be JSON or BUILD");
+
+					if (arg1 == "JSON")
+						std::cout << "{\"version\":\"" << VERSION << "\",\"version_describe\":\"" << VERSION_DESCRIBE << "\",\"version_code\":" << VERSION_NUMBER << "}\n";
+					else
+						std::cout << VERSION_DESCRIBE << "\n";
+
 					no_run = true;
+					show_copyright = false;
 				}
 				else
 					list_options = true;
@@ -741,7 +747,8 @@ int main(int argc, char *argv[])
 			ptr += count + 1;
 		}
 
-		printVersion();
+		if(show_copyright)
+			printVersion();
 
 		/*
 		// -------------
@@ -903,7 +910,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		
+
 		std::stringstream ss;
 		for (int i = 0; i < _receivers.size(); i++)
 		{
