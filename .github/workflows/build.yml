@@ -73,9 +73,7 @@ jobs:
         echo "filename=ais-catcher_debian_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
 
     - name: Setup QEMU
-      run:  |
-            sudo apt-get install qemu-user-static -y
-            docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      uses: docker/setup-qemu-action@v3
 
     - name: Setup Buildx
       uses: docker/setup-buildx-action@v3
