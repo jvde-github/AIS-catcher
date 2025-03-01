@@ -6,6 +6,7 @@ var interval,
     overlapmaps = {},
     station = {},
     shipsDB = {},
+    binaryDB = {},
     planesDB = {},
     fetch_binary = false,
     hover_feature = undefined,
@@ -367,6 +368,29 @@ var markerStyle = function (feature) {
     });
 };
 
+var binaryStyle = function (feature) {
+    return new ol.style.Style({
+        image: new ol.style.Circle({
+            radius: 8,
+            fill: new ol.style.Fill({
+                color: 'rgba(0, 0, 255, 0.7)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: 'white',
+                width: 1.5
+            })
+        }),
+        text: new ol.style.Text({
+            text: 'i',
+            font: 'bold 10px Arial',
+            fill: new ol.style.Fill({
+                color: 'white'
+            }),
+            offsetY: 0.5
+        })
+    });
+};
+
 var planeStyleOld = function (feature) {
 
     return new ol.style.Style({
@@ -467,6 +491,11 @@ var markerVector = new ol.source.Vector({
     features: []
 })
 
+var binaryVector = new ol.source.Vector({
+    features: []
+})
+
+
 var rangeVector = new ol.source.Vector({
     features: []
 })
@@ -494,6 +523,11 @@ var planeVector = new ol.source.Vector({
 var markerLayer = new ol.layer.Vector({
     source: markerVector,
     style: markerStyle
+})
+
+var binaryLayer = new ol.layer.Vector({
+    source: binaryVector,
+    style: binaryStyle
 })
 
 var planeLayer = new ol.layer.Vector({
@@ -1424,7 +1458,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [rangeLayer, shapeLayer, trackLayer, markerLayer, planeLayer, labelLayer, extraLayer, measureVector].forEach(layer => {
+    [rangeLayer, shapeLayer, trackLayer, markerLayer, binaryLayer, planeLayer, labelLayer, extraLayer, measureVector].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -2379,6 +2413,20 @@ function sanitizeString(input) {
     return input.replace(/[&<>"'`]/g, function (match) {
         return map[match];
     });
+}
+
+async function fetchBinary() {
+
+    binaryDB = {};
+    try {
+        response = await fetch("api/binmsgs.json");
+        binaryDB = await response.json();
+        setPulseOk();
+    } catch (error) {
+        setPulseError();
+        console.log("failed loading binary: " + error);
+        return false;
+    }
 }
 
 async function fetchShips(noDoubleFetch = true) {
@@ -4108,7 +4156,7 @@ function toggleAttribution() {
 
 const startHover = function (type, mmsi, pixel, feature) {
 
-    if (type != 'ship' && type != 'tooltip' && type != 'plane') return;
+    if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary') return;
 
     if (mmsi !== hoverMMSI || hoverType !== type) {
         stopHover();
@@ -4131,6 +4179,8 @@ const startHover = function (type, mmsi, pixel, feature) {
             trackLayer.changed();
         } else if (type == 'plane' && (mmsi in planesDB && planesDB[mmsi].raw.lon && planesDB[mmsi].raw.lat)) {
             showTooltipShip(hover_info, planesDB[mmsi]?.raw ? getTooltipContentPlane(planesDB[mmsi].raw) : mmsi, pixel, 15, planesDB[mmsi].raw.heading);
+        } else if (type == 'binary') {
+            showTooltipShip(hover_info, "Binary Message", pixel, 0);
         }
         else {
             showTooltipShip(hover_info, hoverMMSI, pixel, 0);
@@ -4204,7 +4254,7 @@ const normalizePixel = (coord) => {
 
 function getFeature(pixel, target) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'plane' in feature || 'tooltip' in feature) { return feature; } }, { hitTolerance: 10 });
+        function (feature) { if ('ship' in feature || 'plane' in feature || 'tooltip' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
 
     if (feature) return feature;
     return undefined;
@@ -4229,6 +4279,9 @@ const handlePointerMove = function (pixel, target) {
     else if (feature && 'plane' in feature && feature.plane.hexident in planesDB) {
         const hexident = feature.plane.hexident;
         startHover('plane', hexident, pixel, feature);
+    }
+    else if (feature && 'binary' in feature) {
+        startHover('binary', feature.binary_id, pixel, feature);
     }
     else if (feature && 'tooltip' in feature) {
         startHover('tooltip', feature.tooltip, pixel, feature);
@@ -5150,7 +5203,6 @@ function getSprite(ship) {
 
     return
 }
-
 function getPlaneSprite(plane) {
     let sprite = shippingMappings[ShippingClass.PLANE];
 
@@ -5208,8 +5260,7 @@ var SpritesAll =
 async function updateMap() {
     let ok = false;
 
-    if (fetch_binary) ok = await fetchShipsBinary();
-    else ok = await fetchShips();
+    ok = await fetchShips();
     if (!ok) return;
 
     ok = await fetchTracks();
@@ -5217,6 +5268,11 @@ async function updateMap() {
 
     if (planeLayer.isVisible()) {
         ok = await fetchPlanes();
+        if (!ok) return;
+    }
+
+    if (binaryLayer.isVisible()) {
+        ok = await fetchBinary();
         if (!ok) return;
     }
 
@@ -5247,6 +5303,7 @@ function redrawMap() {
     markerFeatures = {};
 
     markerVector.clear();
+    binaryVector.clear();
     planeVector.clear();
     shapeVector.clear();
     labelVector.clear();
@@ -5288,6 +5345,23 @@ function redrawMap() {
             }
         }
         refreshMeasures();
+    }
+
+    // loop over binaryDB and add features to the map
+    for (let i = 0; i < binaryDB.length; i++) {
+        let binary = binaryDB[i];
+        if (binary.lat != null && binary.lon != null && binary.lat != 0 && binary.lon != 0 && binary.lat < 90 && binary.lon < 180) {
+
+            const point = new ol.geom.Point(ol.proj.fromLonLat([binary.lon, binary.lat]))
+            var feature = new ol.Feature({
+                geometry: point
+            })
+
+            feature.binary = binary;
+            feature.binary_id = i;
+
+            binaryVector.addFeature(feature)
+        }
     }
 
     for (let [hexident, entry] of Object.entries(planesDB)) {
@@ -5718,7 +5792,7 @@ function activateTab(b, a) {
         realtimeViewer.disconnect();
         realtimeViewer = null;
     }
-    if (a === "about") { 
+    if (a === "about") {
         setupAbout();
     }
 }
@@ -5909,7 +5983,7 @@ let rainviewerRadar = new ol.layer.Tile({
     name: 'rainviewer_radar',
     title: 'RainViewer Radar',
     type: 'overlay',
-    opacity: 0.7, 
+    opacity: 0.7,
 });
 
 let rainviewerClouds = new ol.layer.Tile({
@@ -5951,7 +6025,7 @@ addOverlayLayer("RainViewer Clouds", rainviewerClouds);
 rainviewerRadar.on('change:visible', function (evt) {
     if (evt.target.getVisible()) {
         refreshRainviewerLayers();
-        window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000); 
+        window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000);
     }
 });
 

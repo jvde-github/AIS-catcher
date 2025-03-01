@@ -740,75 +740,82 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 
 void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship)
 {
-    const AIS::Message *msg = (AIS::Message *)data.binary;
-    int type = msg->type();
-    
-    // Only process binary message types 6 and 8
-    if (type != 6 && type != 8)
-        return;
-    
-    int dac = -1;
-    int fi = -1;
-    bool hasPosition = false;
-    
-    // Extract DAC and FI from message
-    for (const auto &p : data.getProperties()) {
-        if (p.Key() == AIS::KEY_DAC)
-            dac = p.Get().getInt();
-        else if (p.Key() == AIS::KEY_FID)
-            fi = p.Get().getInt();
-        else if (p.Key() == AIS::KEY_LAT || p.Key() == AIS::KEY_LON)
-            hasPosition = true;
-    }
-    
-    if (dac != -1 && fi != -1) {
-        std::string jsonStr;
-        builder.stringify(data, jsonStr);
-        
-        addBinaryMessage(jsonStr, type, dac, fi, hasPosition);
-    }
+	const AIS::Message *msg = (AIS::Message *)data.binary;
+	int type = msg->type();
+
+	// Only process binary message types 6 and 8
+	if (type != 6 && type != 8)
+		return;
+
+	BinaryMessage &binmsg = binaryMessages[binaryMsgIndex];
+	binmsg.Clear();
+
+	binmsg.type = type;
+
+	// Extract DAC and FI from message
+	for (const auto &p : data.getProperties())
+	{
+		if (p.Key() == AIS::KEY_DAC)
+		{
+			binmsg.dac = p.Get().getInt();
+		}
+		else if (p.Key() == AIS::KEY_FID)
+		{
+			binmsg.fi = p.Get().getInt();
+		}
+		else if (p.Key() == AIS::KEY_LAT)
+		{
+			binmsg.lat = p.Get().getFloat();
+		}
+		else if (p.Key() == AIS::KEY_LON)
+		{
+			binmsg.lon = p.Get().getFloat();
+		}
+	}
+
+	if (binmsg.dac != -1 && binmsg.fi != -1)
+	{
+		binmsg.json.clear();
+		builder.stringify(data, binmsg.json);
+		binmsg.used = true;
+		binmsg.timestamp = msg->getRxTimeUnix();
+		binaryMsgIndex = (binaryMsgIndex + 1) % MAX_BINARY_MESSAGES;
+	}
 }
 
-void DB::addBinaryMessage(const std::string& jsonStr, int msgType, int dac, int fi, bool hasPos) {
-	BinaryMessage& msg = binaryMessages[binaryMsgIndex];
-	
-	msg.json = jsonStr;
-	msg.type = msgType;
-	msg.dac = dac;
-	msg.fi = fi;
-	msg.hasPosition = hasPos;
-	msg.timestamp = time(nullptr);
-	msg.used = true;
-	
-	binaryMsgIndex = (binaryMsgIndex + 1) % MAX_BINARY_MESSAGES;
-}
-
-std::string DB::getBinaryMessagesJSON() const {
+std::string DB::getBinaryMessagesJSON() const
+{
 	std::string result = "[";
 	bool first = true;
-	
+
 	// Start from newest message and go backward
 	int startIndex = (binaryMsgIndex + MAX_BINARY_MESSAGES - 1) % MAX_BINARY_MESSAGES;
-	
-	for (int i = 0; i < MAX_BINARY_MESSAGES; i++) {
+	std::time_t tm = time(nullptr);
+
+	for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
+	{
 		int idx = (startIndex - i + MAX_BINARY_MESSAGES) % MAX_BINARY_MESSAGES;
-		const BinaryMessage& msg = binaryMessages[idx];
-		
-		if (!msg.used) continue;
-		
-		if (!first) result += ",";
-		first = false;
-		
+		const BinaryMessage &msg = binaryMessages[idx];
+
+		if (!msg.used || (long int) tm - (long int) msg.timestamp > TIME_HISTORY)
+			continue;
+
+		if (!first)
+			result += ",";
+		else
+			first = false;
+
 		result += "{";
 		result += "\"type\":" + std::to_string(msg.type) + ",";
 		result += "\"dac\":" + std::to_string(msg.dac) + ",";
 		result += "\"fi\":" + std::to_string(msg.fi) + ",";
-		result += "\"hasPosition\":" + std::string(msg.hasPosition ? "true" : "false") + ",";
+		result += "\"lat\":" + (msg.lat == LAT_UNDEFINED ? "null" : std::to_string(msg.lat)) + ",";
+		result += "\"lon\":" + (msg.lon == LON_UNDEFINED ? "null" : std::to_string(msg.lon)) + ",";
 		result += "\"timestamp\":" + std::to_string(msg.timestamp) + ",";
 		result += "\"message\":" + msg.json;
 		result += "}";
 	}
-	
+
 	result += "]";
 	return result;
 }
@@ -886,7 +893,7 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	tag.shipclass = ship.shipclass;
 	tag.speed = ship.speed;
 
-	if(type == 6 || type ==8 ) 
+	if (type == 6 || type == 8)
 		processBinaryMessage(data[0], ship);
 
 	if (position_updated && isValidCoord(lat_old, lon_old))
