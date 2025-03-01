@@ -3975,79 +3975,59 @@ function getTooltipContentPlane(plane) {
 }
 
 function getTooltipContentBinary(binary) {
-    if ('message' in binary) {
+    if ('message' in binary && binary.message && binary.message.dac == 1 && binary.message.fid == 31) {
         let msg = binary.message;
-        if (msg && msg.dac == 1 && msg.fid == 31) {
-            let mmsi = msg.mmsi;
-            let shipname = '';
-            
-            if (mmsi in shipsDB) {
-                shipname = shipsDB[mmsi].raw.shipname;
+        let mmsi = msg.mmsi;
+        let shipname = (mmsi in shipsDB && shipsDB[mmsi].raw.shipname) ? shipsDB[mmsi].raw.shipname : mmsi;
+        
+        // Start building HTML content
+        let content = '<div class="meteo-tooltip">';
+        content += '<h4>' + shipname + ' - Meteorological Station</h4>';
+        
+        // Only add sections for available data
+        const sections = [
+            {
+                label: 'Wind',
+                value: ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) ?
+                    msg.wspeed.toFixed(1) + ' knots' + 
+                    (('wdir' in msg && msg.wdir !== undefined && msg.wdir !== null && msg.wdir !== 360) ? 
+                        ' from ' + msg.wdir + ' &deg' : '') : null
+            },
+            {
+                label: 'Air Temperature',
+                value: ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) ?
+                    msg.airtemp.toFixed(1) + ' &deg C' : null
+            },
+            {
+                label: 'Air Pressure',
+                value: ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) ?
+                    msg.pressure.toFixed(1) + ' hPa' + 
+                    (('pressuretend' in msg && msg.pressuretend !== undefined && msg.pressuretend !== null) ?
+                        ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')' : '') : null
+            },
+            {
+                label: 'Water Level',
+                value: ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) ?
+                    msg.waterlevel.toFixed(2) + ' m' : null
+            },
+            {
+                label: 'Water Temperature',
+                value: ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) ?
+                    msg.watertemp.toFixed(1) + ' &deg C' : null
             }
-            if (shipname == '') {
-                shipname = mmsi;
-            }
-            
-            // Start building HTML content
-            let content = '<div class="meteo-tooltip">';
-            content += '<h4>' + shipname + ' - Meteorological Station</h4>';
-            
-            // Wind speed and direction
-            content += '<div class="meteo-section">';
-            content += '<strong>Wind:</strong> ';
-            if ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) {
-                content += msg.wspeed.toFixed(1) + ' knots';
-                
-                if ('wdir' in msg && msg.wdir !== undefined && msg.wdir !== null && msg.wdir !== 360) {
-                    content += ' from ' + msg.wdir + ' &deg';
-                }
-            } else {
-                content += 'Data not available';
-            }
-            content += '</div>';
-            
-            // Air temperature
-            content += '<div class="meteo-section">';
-            content += '<strong>Air Temperature:</strong> ';
-            if ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) {
-                content += msg.airtemp.toFixed(1) + ' &deg C';
-            } else {
-                content += 'Data not available';
-            }
-            content += '</div>';
-            
-            // Air pressure
-            content += '<div class="meteo-section">';
-            content += '<strong>Air Pressure:</strong> ';
-            if ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) {
-                content += msg.pressure.toFixed(1) + ' hPa';
-                
-                // Add pressure tendency if available
-                if ('pressuretend' in msg && msg.pressuretend !== undefined && msg.pressuretend !== null) {
-                    let tendencyText = '';
-                    switch (msg.pressuretend) {
-                        case 0: tendencyText = '(steady)'; break;
-                        case 1: tendencyText = '(decreasing)'; break;
-                        case 2: tendencyText = '(increasing)'; break;
-                        default: tendencyText = '';
-                    }
-                    content += ' ' + tendencyText;
-                }
-            } else {
-                content += 'Data not available';
-            }
-            content += '</div>';
-            
-            // If there's water data available, show that too
-            if ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) {
+        ];
+        
+        // Add each available section to the content
+        sections.forEach(section => {
+            if (section.value) {
                 content += '<div class="meteo-section">';
-                content += '<strong>Water Level:</strong> ' + msg.waterlevel.toFixed(2) + ' m';
+                content += '<strong>' + section.label + ':</strong> ' + section.value;
                 content += '</div>';
             }
-            
-            content += '</div>';
-            return content;
-        }
+        });
+        
+        content += '</div>';
+        return content;
     }
     return '<div>Unknown message</div>';
 }

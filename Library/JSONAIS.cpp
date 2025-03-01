@@ -259,7 +259,7 @@ namespace AIS {
 			U(msg, AIS::KEY_SWELLPERIOD, 307, 6);
 			U(msg, AIS::KEY_SWELLDIR, 313, 9);
 			U(msg, AIS::KEY_SEASTATE, 322, 4);
-			// SL(msg, AIS::KEY_WATERTEMP, 326, 10, 0.1, 0, 501);
+			SL(msg, AIS::KEY_WATERTEMP, 326, 10, 0.1, 0, 501);
 			U(msg, AIS::KEY_PRECIPTYPE, 336, 3, 7);
 			U(msg, AIS::KEY_SALINITY, 339, 9, 510);
 			U(msg, AIS::KEY_ICE, 348, 2, 3);
