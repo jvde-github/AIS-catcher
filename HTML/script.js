@@ -3974,6 +3974,84 @@ function getTooltipContentPlane(plane) {
         </div>`;
 }
 
+function getTooltipContentBinary(binary) {
+    if ('message' in binary) {
+        let msg = binary.message;
+        if (msg && msg.dac == 1 && msg.fid == 31) {
+            let mmsi = msg.mmsi;
+            let shipname = '';
+            
+            if (mmsi in shipsDB) {
+                shipname = shipsDB[mmsi].raw.shipname;
+            }
+            if (shipname == '') {
+                shipname = mmsi;
+            }
+            
+            // Start building HTML content
+            let content = '<div class="meteo-tooltip">';
+            content += '<h4>' + shipname + ' - Meteorological Station</h4>';
+            
+            // Wind speed and direction
+            content += '<div class="meteo-section">';
+            content += '<strong>Wind:</strong> ';
+            if ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) {
+                content += msg.wspeed.toFixed(1) + ' knots';
+                
+                if ('wdir' in msg && msg.wdir !== undefined && msg.wdir !== null && msg.wdir !== 360) {
+                    content += ' from ' + msg.wdir + ' &deg';
+                }
+            } else {
+                content += 'Data not available';
+            }
+            content += '</div>';
+            
+            // Air temperature
+            content += '<div class="meteo-section">';
+            content += '<strong>Air Temperature:</strong> ';
+            if ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) {
+                content += msg.airtemp.toFixed(1) + ' &deg C';
+            } else {
+                content += 'Data not available';
+            }
+            content += '</div>';
+            
+            // Air pressure
+            content += '<div class="meteo-section">';
+            content += '<strong>Air Pressure:</strong> ';
+            if ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) {
+                content += msg.pressure.toFixed(1) + ' hPa';
+                
+                // Add pressure tendency if available
+                if ('pressuretend' in msg && msg.pressuretend !== undefined && msg.pressuretend !== null) {
+                    let tendencyText = '';
+                    switch (msg.pressuretend) {
+                        case 0: tendencyText = '(steady)'; break;
+                        case 1: tendencyText = '(decreasing)'; break;
+                        case 2: tendencyText = '(increasing)'; break;
+                        default: tendencyText = '';
+                    }
+                    content += ' ' + tendencyText;
+                }
+            } else {
+                content += 'Data not available';
+            }
+            content += '</div>';
+            
+            // If there's water data available, show that too
+            if ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) {
+                content += '<div class="meteo-section">';
+                content += '<strong>Water Level:</strong> ' + msg.waterlevel.toFixed(2) + ' m';
+                content += '</div>';
+            }
+            
+            content += '</div>';
+            return content;
+        }
+    }
+    return '<div>Unknown message</div>';
+}
+
 function getTypeVal(ship) {
     switch (ship.mmsi_type) {
         case CLASS_A:
@@ -4180,7 +4258,8 @@ const startHover = function (type, mmsi, pixel, feature) {
         } else if (type == 'plane' && (mmsi in planesDB && planesDB[mmsi].raw.lon && planesDB[mmsi].raw.lat)) {
             showTooltipShip(hover_info, planesDB[mmsi]?.raw ? getTooltipContentPlane(planesDB[mmsi].raw) : mmsi, pixel, 15, planesDB[mmsi].raw.heading);
         } else if (type == 'binary') {
-            showTooltipShip(hover_info, "Binary Message", pixel, 0);
+            let binary = binaryDB[mmsi - 1];
+            showTooltipShip(hover_info, getTooltipContentBinary(binary), pixel, 0);
         }
         else {
             showTooltipShip(hover_info, hoverMMSI, pixel, 0);
@@ -5347,18 +5426,17 @@ function redrawMap() {
         refreshMeasures();
     }
 
-    // loop over binaryDB and add features to the map
     for (let i = 0; i < binaryDB.length; i++) {
         let binary = binaryDB[i];
-        if (binary.lat != null && binary.lon != null && binary.lat != 0 && binary.lon != 0 && binary.lat < 90 && binary.lon < 180) {
+        if (binary.message.lat != null && binary.message.lon != null && binary.message.lat != 0 && binary.message.lon != 0 && binary.message.lat < 90 && binary.message.lon < 180) {
 
-            const point = new ol.geom.Point(ol.proj.fromLonLat([binary.lon, binary.lat]))
+            const point = new ol.geom.Point(ol.proj.fromLonLat([binary.message.lon, binary.message.lat]))
             var feature = new ol.Feature({
                 geometry: point
             })
 
             feature.binary = binary;
-            feature.binary_id = i;
+            feature.binary_id = 1 + i;
 
             binaryVector.addFeature(feature)
         }
