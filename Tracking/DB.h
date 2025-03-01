@@ -39,9 +39,6 @@ struct PathPoint
 struct BinaryMessage
 {
 	std::string json;
-	FLOAT32 lat;
-	FLOAT32 lon;
-	uint32_t mmsi;
 	int type;
 	int dac;
 	int fi;
@@ -54,9 +51,6 @@ struct BinaryMessage
 	void Clear()
 	{
 		used = false;
-		lat = LAT_UNDEFINED;
-		lon = LON_UNDEFINED;
-		mmsi = 0XFFFF;
 		type = dac = fi = -1;
 	};
 };

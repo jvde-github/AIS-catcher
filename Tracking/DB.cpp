@@ -763,17 +763,10 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship)
 		{
 			binmsg.fi = p.Get().getInt();
 		}
-		else if (p.Key() == AIS::KEY_LAT)
-		{
-			binmsg.lat = p.Get().getFloat();
-		}
-		else if (p.Key() == AIS::KEY_LON)
-		{
-			binmsg.lon = p.Get().getFloat();
-		}
 	}
 
-	if (binmsg.dac != -1 && binmsg.fi != -1)
+	//if (binmsg.dac != -1 && binmsg.fi != -1)
+	if(binmsg.dac == 1 && binmsg.fi == 31)
 	{
 		binmsg.json.clear();
 		builder.stringify(data, binmsg.json);
@@ -809,8 +802,6 @@ std::string DB::getBinaryMessagesJSON() const
 		result += "\"type\":" + std::to_string(msg.type) + ",";
 		result += "\"dac\":" + std::to_string(msg.dac) + ",";
 		result += "\"fi\":" + std::to_string(msg.fi) + ",";
-		result += "\"lat\":" + (msg.lat == LAT_UNDEFINED ? "null" : std::to_string(msg.lat)) + ",";
-		result += "\"lon\":" + (msg.lon == LON_UNDEFINED ? "null" : std::to_string(msg.lon)) + ",";
 		result += "\"timestamp\":" + std::to_string(msg.timestamp) + ",";
 		result += "\"message\":" + msg.json;
 		result += "}";
