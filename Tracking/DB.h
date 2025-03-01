@@ -39,6 +39,9 @@ struct PathPoint
 struct BinaryMessage
 {
 	std::string json;
+	FLOAT32 lat;
+	FLOAT32 lon;
+	uint32_t mmsi;
 	int type;
 	int dac;
 	int fi;
@@ -46,10 +49,21 @@ struct BinaryMessage
 	time_t timestamp;
 	bool used;
 
-	BinaryMessage() : used(false) {}
+	BinaryMessage() { Clear(); }
+
+	void Clear()
+	{
+		used = false;
+		lat = LAT_UNDEFINED;
+		lon = LON_UNDEFINED;
+		mmsi = 0XFFFF;
+		type = dac = fi = -1;
+	};
 };
 
-class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public StreamOut<JSON::JSON>
+class DB : public StreamIn<JSON::JSON>,
+		   public StreamIn<AIS::GPS>,
+		   public StreamOut<JSON::JSON>
 {
 
 	JSON::StringBuilder builder;
@@ -92,10 +106,9 @@ class DB : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Stream
 	AIS::Filter filter;
 
 	static const int MAX_BINARY_MESSAGES = 10;
-    BinaryMessage binaryMessages[MAX_BINARY_MESSAGES];
-    int binaryMsgIndex = 0;  
+	BinaryMessage binaryMessages[MAX_BINARY_MESSAGES];
+	int binaryMsgIndex = 0;
 
-	void addBinaryMessage(const std::string& jsonStr, int msgType, int dac, int fi, bool hasPos);
 	void processBinaryMessage(const JSON::JSON &data, Ship &ship);
 
 public:

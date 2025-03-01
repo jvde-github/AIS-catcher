@@ -614,7 +614,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 			s->SendEvent("log", m.toJSON());
 		}
 	}
-	else if (r == "/api/binmsgs")
+	else if (r == "/api/binmsgs.json")
 	{
 		std::string content = ships.getBinaryMessagesJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
