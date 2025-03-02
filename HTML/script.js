@@ -2427,6 +2427,7 @@ async function fetchBinary() {
         console.log("failed loading binary: " + error);
         return false;
     }
+    return true;
 }
 
 async function fetchShips(noDoubleFetch = true) {
