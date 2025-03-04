@@ -141,6 +141,7 @@ namespace AIS {
 		int getStation() const { return station; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
 		void buildNMEA(TAG& tag, int id = -1);
+		bool isOwn() const { return own_mmsi == mmsi(); }
 	};
 
 	class Filter : public Setting {
@@ -148,11 +149,14 @@ namespace AIS {
 		uint32_t allow = all;
 		uint32_t allow_repeat = all;
 		bool on = false;
+		bool downsample = false;		
 		bool GPS = true, AIS = true;
 		std::vector<int> ID_allowed;
 		std::vector<int> MMSI_allowed;
 		std::vector<int> MMSI_blocked;
 		std::string allowed_channels;
+		int downsample_time = 10;
+		long int last_VDO = 0;
 
 	public:
 		virtual ~Filter() {}
