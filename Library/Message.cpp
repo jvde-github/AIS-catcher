@@ -507,9 +507,12 @@ namespace AIS
 	{
 		if (downsample)
 		{
-			if (msg.isOwn() && msg.getRxTimeUnix() - last_VDO < downsample_time)
-				return false;
-			last_VDO = msg.getRxTimeUnix();
+			if (msg.isOwn()) {
+				if (msg.getRxTimeUnix() - last_VDO < downsample_time) {
+					return false;
+				}
+				last_VDO = msg.getRxTimeUnix();
+			}
 		}
 
 		if (!on)
