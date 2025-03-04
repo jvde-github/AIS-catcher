@@ -180,7 +180,7 @@ namespace IO
 	class TCPClientStreamer : public OutputMessage
 	{
 		::TCP::Client tcp;
-		AIS::Filter filter;
+		//AIS::Filter filter;
 		bool JSON = false;
 		std::string host, port;
 		bool keep_alive = false;
@@ -208,7 +208,7 @@ namespace IO
 	class TCPlistenerStreamer : public OutputMessage, public TCP::Server
 	{
 		int port = 5010;
-		AIS::Filter filter;
+		//AIS::Filter filter;
 		bool JSON = false;
 
 	public:
