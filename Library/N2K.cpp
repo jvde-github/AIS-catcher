@@ -180,7 +180,6 @@ namespace AIS
 
 	void N2KtoMessage::onMsg129794(const tN2kMsg &N2kMsg, TAG &tag)
 	{
-
 		int mmsi, IMO;
 		int hour, minute, day = 0, month = 0;
 		char callsign[8] = {0}, shipname[21] = {0}, destination[21] = {0};
@@ -508,72 +507,99 @@ namespace AIS
 	void N2KtoMessage::onMsg129041(const tN2kMsg &N2kMsg, TAG &tag)
 	{
 		int repeat, type, mmsi;
-		int second; //, raim, accuracy;
+		int accuracy, raim, second;
 		int lon, lat;
-		int to_bow_stern, to_port_starboard, to_starboard, to_bow;
-		int combined; // Contains flags: assigned, virtual aid, off-position, and aid type
-		int epfd, regional, channel;
-		std::string name;
-
+		int length, beam, to_starboard, to_bow;
+		int aid_type, off_position, virtual_aid, assigned;
+		int epfd, status, transceiver;
+		int regional;
+		char name_buffer[21] = {0};
 		int idx = 0;
 		unsigned char byte;
 
-		// Extract header: type and repeat
 		byte = N2kMsg.GetByte(idx);
 		type = byte & 0x3F;
 		repeat = (byte >> 6) & 0x03;
 
 		mmsi = N2kMsg.Get4ByteUInt(idx);
-		lon = AIS::ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LON_UNDEFINED * 600000));
-		lat = AIS::ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LAT_UNDEFINED * 600000));
 
-		// Next byte: seconds, raim, and accuracy
+		lon = ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LON_UNDEFINED * 600000));
+		lat = ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LAT_UNDEFINED * 600000));
+
 		byte = N2kMsg.GetByte(idx);
+		accuracy = byte & 0x01;
+		raim = (byte >> 1) & 0x01;
 		second = (byte >> 2) & 0x3F;
-		// raim = (byte >> 1) & 0x01;
-		// accuracy = byte & 0x01;
 
-		// Dimensions: to_bow+to_stern, to_port+to_starboard, to_starboard, to_bow
-		to_bow_stern = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
-		to_port_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
-		to_starboard = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
-		to_bow = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		length = ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		beam = ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_starboard = ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
+		to_bow = ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
 
-		// Extract combined flags (assigned, virtual aid, off-position, aid type)
-		combined = N2kMsg.GetByte(idx);
-
-		// Extract EPFD and regional bits
-		epfd = N2kMsg.GetByte(idx);
-		regional = N2kMsg.GetByte(idx);
-		// Extract channel (simplified extraction)
 		byte = N2kMsg.GetByte(idx);
-		channel = (byte & 0x01);
+		aid_type = byte & 0x1F;
+		off_position = (byte >> 5) & 0x01;
+		virtual_aid = (byte >> 6) & 0x01;
+		assigned = (byte >> 7) & 0x01;
 
-		// Variable-length Aid name: extract remaining bytes
-		while (idx < N2kMsg.DataLen)
+		byte = N2kMsg.GetByte(idx);
+		epfd = byte & 0x0F;
+
+		status = N2kMsg.GetByte(idx);
+		regional = N2kMsg.GetByte(idx) & 0x7F;
+
+		byte = N2kMsg.GetByte(idx);
+		transceiver = byte & 0x1F;
+
+		if (idx < N2kMsg.DataLen)
 		{
-			name.push_back(N2kMsg.GetByte(idx));
+			byte = N2kMsg.GetByte(idx);
+
+			int nameIdx = 0;
+			while (nameIdx < 20 && idx < N2kMsg.DataLen)
+			{
+				byte = N2kMsg.GetByte(idx);
+
+				if (byte >= 32 && byte <= 126)
+				{
+					name_buffer[nameIdx++] = byte;
+				}
+				else
+				{
+					break; 
+				}
+			}
+
+			while (nameIdx > 0 && name_buffer[nameIdx - 1] == ' ')
+			{
+				name_buffer[--nameIdx] = 0;
+			}
 		}
 
 		msg.clear();
-		U(msg, type, 0, 6);
-		U(msg, repeat, 6, 2);
-		U(msg, mmsi, 8, 30);
-		U(msg, lon, 38, 28);
-		S(msg, lat, 66, 27);
-		U(msg, second, 93, 6);
-		U(msg, to_bow_stern, 99, 10);
-		U(msg, to_port_starboard, 109, 10);
-		U(msg, to_starboard, 119, 9);
-		U(msg, to_bow, 128, 9);
-		U(msg, combined, 137, 8);
-		U(msg, epfd, 145, 8);
-		U(msg, regional, 153, 8);
-		U(msg, channel, 161, 8);
-		T(msg, name.c_str(), 169, name.size() * 6);
+		U(msg, type, 0, 6);					 // Message type (21)
+		U(msg, repeat, 6, 2);				 // Repeat indicator
+		U(msg, mmsi, 8, 30);				 // MMSI
+		U(msg, aid_type, 38, 5);			 // Aid type (5 bits)
+		T(msg, name_buffer, 43, 120);		 // Name (120 bits)
+		U(msg, accuracy, 163, 1);			 // Position accuracy bit
+		S(msg, lon, 164, 28);				 // Longitude
+		S(msg, lat, 192, 27);				 // Latitude
+		U(msg, to_bow, 219, 9);				 // Dimension to Bow
+		U(msg, length - to_bow, 228, 9);	 // Dimension to Stern
+		U(msg, beam - to_starboard, 237, 6); // Dimension to Port
+		U(msg, to_starboard, 243, 6);		 // Dimension to Starboard
+		U(msg, epfd, 249, 4);				 // Type of EPFD
+		U(msg, second, 253, 6);				 // UTC second
+		U(msg, off_position, 259, 1);		 // Off-Position Indicator
+		U(msg, regional, 260, 7);			 // Regional reserved (7 bits)
+		U(msg, raim, 267, 1);				 // RAIM flag
+		U(msg, virtual_aid, 268, 1);		 // Virtual-aid flag
+		U(msg, assigned, 269, 1);			 // Assigned-mode flag
+		U(msg, 0, 270, 1);					 // Spare bit
 
 		msg.Stamp();
-		msg.setChannel('A' + channel % 2);
+		msg.setChannel('A' + (transceiver & 0x01));
 		msg.buildNMEA(tag);
 		Send(&msg, 1, tag);
 	}
@@ -675,8 +701,6 @@ namespace AIS
 		msg.buildNMEA(tag);
 		Send(&msg, 1, tag);
 	}
-
-
 
 	void N2KtoMessage::Receive(const RAW *data, int len, TAG &tag)
 	{
