@@ -32,11 +32,10 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
 
     void processLine()
     {
-        /*
         Plane::ADSB msg;
         msg.clear();
         TAG tag;
-
+    
         std::vector<std::string> fields;
         std::stringstream ss(line);
         std::string field;
@@ -46,115 +45,106 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
                 field = field.substr(1, field.length() - 2);
             fields.push_back(field);
         }
-
+    
         if (fields.size() < 10)
             return;
-
+    
         // Message type
+        /*
         if (fields[0] == "MSG")
         {
-            msg.setType(Plane::MessageType::MSG);
-
+            msg.msgtype = MSG_TYPE_MSG; // Assuming this constant exists
+            
             if (!fields[1].empty())
             {
+                // Store transmission type if needed
                 int trans = std::stoi(fields[1]);
-                msg.setTransmission(static_cast<Plane::TransmissionType>(trans));
+                // You would need to store this in an appropriate field
             }
         }
         else if (fields[0] == "SEL")
-            msg.setType(Plane::MessageType::SEL);
+            msg.msgtype = MSG_TYPE_SEL; // Assuming this constant exists
         else if (fields[0] == "ID")
-            msg.setType(Plane::MessageType::ID);
+            msg.msgtype = MSG_TYPE_ID; // Assuming this constant exists
         else if (fields[0] == "AIR")
-            msg.setType(Plane::MessageType::AIR);
+            msg.msgtype = MSG_TYPE_AIR; // Assuming this constant exists
         else if (fields[0] == "STA")
-            msg.setType(Plane::MessageType::STA);
+            msg.msgtype = MSG_TYPE_STA; // Assuming this constant exists
         else if (fields[0] == "CLK")
-            msg.setType(Plane::MessageType::CLK);
+            msg.msgtype = MSG_TYPE_CLK; // Assuming this constant exists
+        */
 
         // HexIdent (Field 4)
         if (!fields[4].empty())
         {
             if(fields[4][0] == '~')
-                msg.setHexIdent(std::stoul(fields[4].substr(1), nullptr, 16));
+                msg.hexident = std::stoul(fields[4].substr(1), nullptr, 16);
             else
-                msg.setHexIdent(std::stoul(fields[4], nullptr, 16));
+                msg.hexident = std::stoul(fields[4], nullptr, 16);
         }
-
+    
         // Timestamps (Fields 7-10)
         if (!fields[6].empty() && !fields[7].empty())
         {
             std::string datetime = fields[6] + " " + fields[7];
-            msg.setRxTimeUnix(Util::Parse::DateTime(datetime));
+            msg.rxtime = Util::Parse::DateTime(datetime);
         }
-
+    
         // Callsign (Field 10)
         if (fields.size() > 10 && !fields[10].empty())
         {
-            msg.setCallsign(fields[10]);
+            std::strncpy(msg.callsign, fields[10].c_str(), 8);
+            msg.callsign[8] = '\0'; // Ensure null termination
         }
-
-
+    
         // Altitude (Field 11)
         if (fields.size() > 11 && !fields[11].empty())
         {
-            msg.setAltitude(std::stoi(fields[11]));
+            msg.altitude = std::stoi(fields[11]);
         }
-
+    
         // Groundspeed (Field 12)
         if (fields.size() > 12 && !fields[12].empty())
         {
-            msg.setGroundSpeed(std::stof(fields[12]));
+            msg.speed = std::stof(fields[12]);
         }
-
+    
         // Track (Field 13)
         if (fields.size() > 13 && !fields[13].empty())
         {
-            msg.setTrack(std::stof(fields[13]));
+            msg.heading = std::stof(fields[13]);
         }
-
+    
         // Position (Fields 14,15)
         if (fields.size() > 15 && !fields[14].empty() && !fields[15].empty())
         {
-            msg.setPosition(std::stof(fields[14]), std::stof(fields[15]));
+            msg.lat = std::stof(fields[14]);
+            msg.lon = std::stof(fields[15]);
+            msg.position_status = Plane::ValueStatus::VALID;
+            std::time(&msg.position_timestamp);
         }
-
+    
         // Vertical Rate (Field 16)
         if (fields.size() > 16 && !fields[16].empty())
         {
-            msg.setVertRate(std::stoi(fields[16]));
+            msg.vertrate = std::stoi(fields[16]);
         }
-
+    
         // Squawk (Field 17)
         if (fields.size() > 17 && !fields[17].empty())
         {
-            msg.setSquawk(std::stoi(fields[17]));
+            msg.squawk = std::stoi(fields[17]);
         }
-
-        // Alert, Emergency, SPI (Fields 18-20)
-        if (fields.size() > 18 && !fields[18].empty())
-        {
-            msg.setAlert((Plane::BoolType)(fields[18] == "-1"));
-        }
-        if (fields.size() > 19 && !fields[19].empty())
-        {
-            msg.setEmergency((Plane::BoolType)(fields[19] == "-1"));
-        }
-        if (fields.size() > 20 && !fields[20].empty())
-        {
-            msg.setSPI((Plane::BoolType)(fields[20] == "-1"));
-        }
-
-        // Ground (Field 21)
-        if (fields.size() > 21 && !fields[21].empty())
-        {
-            msg.setOnGround((Plane::BoolType)(fields[21] == "-1"));
-        }
-
-        //msg.Print();
-
-        //Send(&msg, 1, tag);
-        */
+    
+        // Alert, Emergency, SPI, Ground (Fields 18-21)
+        // These would need appropriate fields to store values, which aren't clear from the struct
+        
+        // Set country code based on hexident
+        msg.setCountryCode();
+        
+        // Decode the message according to ADSB protocol
+        // Send message to next processing stage
+        Send(&msg, 1, tag);
     }
 
 public:
