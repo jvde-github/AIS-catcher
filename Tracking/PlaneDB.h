@@ -286,6 +286,13 @@ public:
 
         FLOAT32 lat_new = LAT_UNDEFINED, lon_new = LON_UNDEFINED;
 
+        if(msg->lat != LAT_UNDEFINED && msg->lon != LON_UNDEFINED)
+        {
+            lat_new = msg->lat;
+            lon_new = msg->lon;
+            position_updated = true;
+        }
+        
         if (msg->even.Valid())
         {
             if (!checkInCPRCache(msg->even, true, lat_new))
