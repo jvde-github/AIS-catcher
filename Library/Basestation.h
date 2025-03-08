@@ -49,31 +49,29 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
         if (fields.size() < 10)
             return;
     
-        // Message type
+        // Message type - ensure these are uncommented and using the correct constants
         /*
         if (fields[0] == "MSG")
         {
-            msg.msgtype = MSG_TYPE_MSG; // Assuming this constant exists
+            msg.msgtype = MSG_TYPE_MSG; 
             
             if (!fields[1].empty())
             {
-                // Store transmission type if needed
                 int trans = std::stoi(fields[1]);
-                // You would need to store this in an appropriate field
+                // Store transmission type if needed
             }
         }
         else if (fields[0] == "SEL")
-            msg.msgtype = MSG_TYPE_SEL; // Assuming this constant exists
+            msg.msgtype = MSG_TYPE_SEL;
         else if (fields[0] == "ID")
-            msg.msgtype = MSG_TYPE_ID; // Assuming this constant exists
+            msg.msgtype = MSG_TYPE_ID;
         else if (fields[0] == "AIR")
-            msg.msgtype = MSG_TYPE_AIR; // Assuming this constant exists
+            msg.msgtype = MSG_TYPE_AIR;
         else if (fields[0] == "STA")
-            msg.msgtype = MSG_TYPE_STA; // Assuming this constant exists
+            msg.msgtype = MSG_TYPE_STA;
         else if (fields[0] == "CLK")
-            msg.msgtype = MSG_TYPE_CLK; // Assuming this constant exists
+            msg.msgtype = MSG_TYPE_CLK;
         */
-
         // HexIdent (Field 4)
         if (!fields[4].empty())
         {
@@ -136,13 +134,40 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
             msg.squawk = std::stoi(fields[17]);
         }
     
-        // Alert, Emergency, SPI, Ground (Fields 18-21)
-        // These would need appropriate fields to store values, which aren't clear from the struct
-        
-        // Set country code based on hexident
+        // Alert (Field 18)
+        // if (fields.size() > 18 && !fields[18].empty())
+        // {
+        //     // Set alert status if you have a field for it
+        // }
+    
+        // Emergency (Field 19)
+        // if (fields.size() > 19 && !fields[19].empty())
+        // {
+        //     // Set emergency status if you have a field for it
+        // }
+    
+        // SPI (Field 20)
+        // if (fields.size() > 20 && !fields[20].empty())
+        // {
+        //     // Set SPI status if you have a field for it
+        // }
+    
+        // Ground (Field 21) - properly set airborne status
+        if (fields.size() > 21 && !fields[21].empty())
+        {
+            if (fields[21] == "-1")
+                msg.airborne = 0;  // On ground
+            else
+                msg.airborne = 1;  // Airborne
+        }
+        else
+        {
+            msg.airborne = 2;  // Unknown status
+        }
+    
         msg.setCountryCode();
         
-        // Decode the message according to ADSB protocol
+    
         // Send message to next processing stage
         Send(&msg, 1, tag);
     }
