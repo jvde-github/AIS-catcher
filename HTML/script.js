@@ -368,28 +368,6 @@ var markerStyle = function (feature) {
     });
 };
 
-var binaryStyle = function (feature) {
-    return new ol.style.Style({
-        image: new ol.style.Circle({
-            radius: 8,
-            fill: new ol.style.Fill({
-                color: 'rgba(0, 0, 255, 0.7)'
-            }),
-            stroke: new ol.style.Stroke({
-                color: 'white',
-                width: 1.5
-            })
-        }),
-        text: new ol.style.Text({
-            text: 'i',
-            font: 'bold 10px Arial',
-            fill: new ol.style.Fill({
-                color: 'white'
-            }),
-            offsetY: 0.5
-        })
-    });
-};
 
 var planeStyleOld = function (feature) {
 
@@ -486,6 +464,88 @@ selectCircleStyleFunction = function (feature) {
         })
     });
 }
+
+const binaryStyle = function(feature) {
+    const count = feature.get('binary_count') || feature.binary_count || 1;
+    const isAssociated = feature.get('is_associated') || feature.is_associated;
+    
+    const zIndex = isAssociated ? 200 : 100;
+    
+    if (isAssociated) {
+        // Style for binary features at ship locations (badge style)
+        const outlineStyle = new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 12, 
+                fill: new ol.style.Fill({
+                    color: 'rgba(255, 255, 255, 0)' 
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'white',
+                    width: 2
+                })
+            }),
+            zIndex: zIndex
+        });
+        
+        const badgeStyle = new ol.style.Style({
+            geometry: function(feature) {
+                const center = feature.getGeometry().getCoordinates();
+                return new ol.geom.Point(center);
+            },
+            image: new ol.style.Circle({
+                radius: 8,
+                fill: new ol.style.Fill({
+                    color: 'rgba(220, 0, 0, 0.9)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'white',
+                    width: 1
+                }),
+                displacement: [10, 10]
+            }),
+            text: new ol.style.Text({
+                text: count.toString(),
+                font: 'bold 9px Arial', 
+                fill: new ol.style.Fill({
+                    color: 'white'
+                }),
+                offsetX: 10, 
+                offsetY: -10, 
+                textAlign: 'center',
+                textBaseline: 'middle'
+            }),
+            zIndex: zIndex + 1 
+        });
+        
+        return [outlineStyle, badgeStyle];
+    } else {
+        const circleStyle = new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 10,  
+                fill: new ol.style.Fill({
+                    color: 'rgba(220, 0, 0, 0.9)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'white',
+                    width: 1.5
+                })
+            }),
+            text: new ol.style.Text({
+                text: count.toString(),
+                font: 'bold 9px Arial', // Reduced from 10px
+                fill: new ol.style.Fill({
+                    color: 'white'
+                }),
+                textAlign: 'center',
+                textBaseline: 'middle'
+            }),
+            zIndex: zIndex // Same z-index for the entire standalone badge
+        });
+        
+        return [circleStyle];
+    }
+};
+
 
 var markerVector = new ol.source.Vector({
     features: []
@@ -1458,7 +1518,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [rangeLayer, shapeLayer, trackLayer, markerLayer, binaryLayer, planeLayer, labelLayer, extraLayer, measureVector].forEach(layer => {
+    [rangeLayer, shapeLayer, trackLayer, markerLayer, planeLayer, labelLayer, extraLayer, binaryLayer, measureVector].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -2415,19 +2475,50 @@ function sanitizeString(input) {
     });
 }
 
-async function fetchBinary() {
+function formatTime(timestamp) {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
+async function fetchBinary() {
     binaryDB = {};
+    standaloneBinaryMessages = []; // For messages not at ship locations
+    
     try {
         response = await fetch("api/binmsgs.json");
-        binaryDB = await response.json();
+        const messages = await response.json();
+        
+        // Group messages by MMSI
+        messages.forEach((msg, index) => {
+            if (msg.message && msg.message.mmsi && msg.message.lat && msg.message.lon) {
+                const mmsi = msg.message.mmsi;
+                
+                if (!binaryDB[mmsi]) {
+                    binaryDB[mmsi] = {
+                        ship_messages: [], // Messages to show at ship location
+                        standalone_messages: [] // Messages to show at their own locations
+                    };
+                }
+                
+                msg.formattedTime = formatTime(msg.timestamp);
+                msg.index = index + 1; 
+                
+                // Store the message's own coordinates 
+                msg.message_lat = msg.message.lat;
+                msg.message_lon = msg.message.lon;
+                
+                // We'll categorize messages later when drawing them
+                binaryDB[mmsi].ship_messages.push(msg);
+            }
+        });
+        
         setPulseOk();
+        return true;
     } catch (error) {
         setPulseError();
-        console.log("failed loading binary: " + error);
+        console.log("Failed loading binary:", error);
         return false;
     }
-    return true;
 }
 
 async function fetchShips(noDoubleFetch = true) {
@@ -3961,76 +4052,40 @@ resetButton.addEventListener('click', function (event) {
 });
 
 function getTooltipContent(ship) {
-    return '<div>' + getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") + `</div><div><div><b>${getShipName(ship) || ship.mmsi}</b> at <b>${getSpeedVal(ship.speed)} ${getSpeedUnit()}</b></div><div>Received <b>${getDeltaTimeVal(ship.last_signal)}</b> ago</div></div>`;
+    let content = '<div class="tooltip-card">' +
+        getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
+        '<div>' +
+            (getShipName(ship) || ship.mmsi) + ' at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '<br>' +
+            'Received ' + getDeltaTimeVal(ship.last_signal) + ' ago' +
+        '</div>' +
+    '</div>';
+
+    if (ship.mmsi in binaryDB && binaryDB[ship.mmsi].ship_messages && 
+        binaryDB[ship.mmsi].ship_messages.length > 0) {
+        
+        const meteoMessages = binaryDB[ship.mmsi].ship_messages.filter(msg => 
+            msg.message && msg.message.dac == 1 && 
+            (msg.message.fid == 31 || msg.message.fi == 31)
+        );
+        
+        if (meteoMessages.length > 0) {
+            content += getBinaryMessageContent(meteoMessages, true);
+        }
+    }
+    
+    return content;
 }
 
 function getTooltipContentPlane(plane) {
     const altitude = plane.airborne == 1 ? (plane.altitude ? Math.round(plane.altitude) + ' ft' : '-') : 'ground';
     const speed = plane.speed ? Math.round(plane.speed) : '-';
-    return '<div>' +
+    return '<div class="tooltip-card">' +
         getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
-        `</div><div>
-            <div><b>${plane.callsign || plane.hexident}</b> at <b>${altitude}</b>/<b>${speed} kts</b></div>
-            <div>Received <b>${getDeltaTimeVal(plane.last_signal)}</b> ago</div>
-        </div>`;
-}
-
-function getTooltipContentBinary(binary) {
-    if ('message' in binary && binary.message && binary.message.dac == 1 && binary.message.fid == 31) {
-        let msg = binary.message;
-        let mmsi = msg.mmsi;
-        let shipname = (mmsi in shipsDB && shipsDB[mmsi].raw.shipname) ? shipsDB[mmsi].raw.shipname : mmsi;
-        
-        // Start building HTML content
-        let content = '<div class="meteo-tooltip">';
-        content += '<h4>' + shipname + ' - Meteorological Station</h4>';
-        
-        // Only add sections for available data
-        const sections = [
-            {
-                label: 'Wind',
-                value: ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) ?
-                    msg.wspeed.toFixed(1) + ' knots' + 
-                    (('wdir' in msg && msg.wdir !== undefined && msg.wdir !== null && msg.wdir !== 360) ? 
-                        ' from ' + msg.wdir + ' &deg' : '') : null
-            },
-            {
-                label: 'Air Temperature',
-                value: ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) ?
-                    msg.airtemp.toFixed(1) + ' &deg C' : null
-            },
-            {
-                label: 'Air Pressure',
-                value: ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) ?
-                    msg.pressure.toFixed(1) + ' hPa' + 
-                    (('pressuretend' in msg && msg.pressuretend !== undefined && msg.pressuretend !== null) ?
-                        ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')' : '') : null
-            },
-            {
-                label: 'Water Level',
-                value: ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) ?
-                    msg.waterlevel.toFixed(2) + ' m' : null
-            },
-            {
-                label: 'Water Temperature',
-                value: ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) ?
-                    msg.watertemp.toFixed(1) + ' &deg C' : null
-            }
-        ];
-        
-        // Add each available section to the content
-        sections.forEach(section => {
-            if (section.value) {
-                content += '<div class="meteo-section">';
-                content += '<strong>' + section.label + ':</strong> ' + section.value;
-                content += '</div>';
-            }
-        });
-        
-        content += '</div>';
-        return content;
-    }
-    return '<div>Unknown message</div>';
+        '<div>' +
+        (plane.callsign || plane.hexident) + ' at ' + altitude + '/' + speed + ' kts<br>' +
+        'Received ' + getDeltaTimeVal(plane.last_signal) + ' ago' +
+        '</div>' +
+        '</div>';
 }
 
 function getTypeVal(ship) {
@@ -4213,6 +4268,124 @@ function toggleAttribution() {
     attribution.style.display = currentDisplay === 'none' ? 'block' : 'none';
 }
 
+function getTooltipContentBinary(mmsiOrBinary) {
+    if (typeof mmsiOrBinary === 'number' || typeof mmsiOrBinary === 'string') {
+        const mmsi = Number(mmsiOrBinary);
+        if (mmsi in binaryDB && binaryDB[mmsi].length > 0) {
+            const meteoMessages = binaryDB[mmsi].filter(msg =>
+                msg.message &&
+                msg.message.dac == 1 &&
+                (msg.message.fid == 31 || msg.message.fi == 31)
+            );
+
+            if (meteoMessages.length > 0) {
+                meteoMessages.sort((a, b) => b.timestamp - a.timestamp);
+
+                let content = '';
+
+                meteoMessages.forEach((meteoMsg, index) => {
+                    if (index > 0) {
+                        content += '<hr style="margin: 12px 0; border: 0; border-top: 1px dashed rgba(255,255,255,0.8);">';
+                    }
+
+                    // Add the individual message content
+                    content += getBinaryMessageContent(meteoMsg);
+                });
+
+                return content;
+            }
+        }
+        return ''; // No meteorological messages found
+    }
+
+    return getBinaryMessageContent(mmsiOrBinary);
+}
+
+function getBinaryMessageContent(binary, showMultiple = false) {
+    const messages = Array.isArray(binary) ? binary : [binary];
+    
+    if (messages.length === 0) return '';
+    
+    messages.sort((a, b) => b.timestamp - a.timestamp);
+    
+    const messagesToShow = showMultiple ? Math.min(messages.length, 3) : 1;
+    
+    let content = '<div class="meteo-tooltip" style="max-width: 320px;">';
+    
+    for (let i = 0; i < messagesToShow; i++) {
+        const msg = messages[i].message;
+        
+        if (i > 0) {
+            content += '<hr style="margin: 10px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.3);">';
+        }
+        
+        content += `<h4 style="margin: 5px 0; font-size: 12px; color: #eee;">${messages[i].formattedTime} - Meteo`;
+        if (messagesToShow > 1) {
+            content += ` (${i+1}/${messagesToShow})`;
+        }
+        content += '</h4>';
+        
+        content += '<div style="display: grid; grid-template-columns: 1fr 1fr; grid-gap: 5px;">';
+        
+        // Wind data
+        if ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Wind:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.wspeed.toFixed(1) + ' knots';
+            if ('wdir' in msg && msg.wdir !== undefined && msg.wdir !== null && msg.wdir !== 360) {
+                content += ' from ' + msg.wdir + '&deg';
+            }
+            content += '</div></div>';
+        }
+        
+        // Air temperature
+        if ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Air Temp:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.airtemp.toFixed(1) + '&deg C</div>';
+            content += '</div>';
+        }
+        
+        // Air pressure
+        if ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Pressure:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.pressure.toFixed(1) + ' hPa';
+            if ('pressuretend' in msg && msg.pressuretend !== undefined && msg.pressuretend !== null) {
+                content += ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')';
+            }
+            content += '</div></div>';
+        }
+        
+        // Water level
+        if ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Water Level:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.waterlevel.toFixed(2) + ' m</div>';
+            content += '</div>';
+        }
+        
+        // Water temperature
+        if ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Water Temp:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.watertemp.toFixed(1) + '&deg C</div>';
+            content += '</div>';
+        }
+        
+        // End grid
+        content += '</div>';
+    }
+    
+    // If there are more messages than we show
+    if (messages.length > messagesToShow) {
+        content += `<div style="text-align: center; font-size: 10px; margin-top: 5px; font-style: italic; color: #ccc;"></div>`;
+    }
+    
+    content += '</div>';
+    return content;
+}
+
 const startHover = function (type, mmsi, pixel, feature) {
 
     if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary') return;
@@ -4225,22 +4398,17 @@ const startHover = function (type, mmsi, pixel, feature) {
         hover_feature = feature;
 
         if (type == 'ship' && (mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
-            showTooltipShip(hover_info, shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi, pixel, 15, shipsDB[mmsi].raw.cog);
-
+            let tooltip = shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi;
+            showTooltipShip(hover_info, tooltip, pixel, 15, shipsDB[mmsi].raw.cog);
             if (settings.show_track_on_hover && pixel) {
                 debounceShowHoverTrack(mmsi);
             }
-
             if (mmsi in shapeFeatures) {
                 shapeFeatures[mmsi].changed();
             }
-
             trackLayer.changed();
         } else if (type == 'plane' && (mmsi in planesDB && planesDB[mmsi].raw.lon && planesDB[mmsi].raw.lat)) {
             showTooltipShip(hover_info, planesDB[mmsi]?.raw ? getTooltipContentPlane(planesDB[mmsi].raw) : mmsi, pixel, 15, planesDB[mmsi].raw.heading);
-        } else if (type == 'binary') {
-            let binary = binaryDB[mmsi - 1];
-            showTooltipShip(hover_info, getTooltipContentBinary(binary), pixel, 0);
         }
         else {
             showTooltipShip(hover_info, hoverMMSI, pixel, 0);
@@ -4252,7 +4420,6 @@ const startHover = function (type, mmsi, pixel, feature) {
         updateHoverMarker();
     }
 }
-
 
 function updateHoverMarker() {
 
@@ -4293,7 +4460,6 @@ function updateHoverMarker() {
     }
 }
 
-
 const normalizePixel = (coord) => {
     const view = map.getView(),
         projection = view.getProjection(),
@@ -4311,7 +4477,6 @@ const normalizePixel = (coord) => {
     ];
 };
 
-
 function getFeature(pixel, target) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
         function (feature) { if ('ship' in feature || 'plane' in feature || 'tooltip' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
@@ -4321,7 +4486,7 @@ function getFeature(pixel, target) {
 }
 
 const handlePointerMove = function (pixel, target) {
-    const feature = getFeature(pixel, target)
+    const feature = getFeature(pixel, target);
 
     if (feature) {
         const geometry = feature.getGeometry();
@@ -4340,8 +4505,48 @@ const handlePointerMove = function (pixel, target) {
         const hexident = feature.plane.hexident;
         startHover('plane', hexident, pixel, feature);
     }
-    else if (feature && 'binary' in feature) {
-        startHover('binary', feature.binary_id, pixel, feature);
+    else if (feature && feature.binary === true) {
+        // Handle hover for binary features (both ship-associated and standalone)
+        if (feature.is_associated && feature.binary_mmsi && feature.binary_mmsi in shipsDB) {
+            // For ship-associated binary features, redirect to ship hover
+            startHover('ship', feature.binary_mmsi, pixel, feature);
+            return;
+        } else if (feature.binary_messages && feature.binary_messages.length > 0) {
+            // For standalone binary clusters
+            let tooltipContent = `<div class="tooltip-card">`;
+            
+            // Find MMSI counts to show in tooltip
+            if (feature.binary_mmsi_counts) {
+                const mmsiEntries = Object.entries(feature.binary_mmsi_counts);
+                if (mmsiEntries.length > 0) {
+                    tooltipContent += '<div style="margin-top: 5px; font-size: 0.9em;">From: ';
+                    mmsiEntries.slice(0, 3).forEach(([mmsi, count], index) => {
+                        const shipName = (mmsi in shipsDB && shipsDB[mmsi].raw.shipname) ? 
+                            shipsDB[mmsi].raw.shipname : `MMSI ${mmsi}`;
+                        tooltipContent += `${index > 0 ? ', ' : ''}${shipName} (${count})`;
+                    });
+                    if (mmsiEntries.length > 3) {
+                        tooltipContent += ` and ${mmsiEntries.length - 3} more`;
+                    }
+                    tooltipContent += '</div>';
+                }
+            }
+            tooltipContent += '</div>';
+            
+            // Add meteo data if available
+            const meteoMessages = feature.binary_messages.filter(msg => 
+                msg.message && msg.message.dac == 1 && 
+                (msg.message.fid == 31 || msg.message.fi == 31)
+            );
+            
+            if (meteoMessages.length > 0) {
+                tooltipContent += getBinaryMessageContent(meteoMessages, true);
+            }
+            
+            startHover('tooltip', tooltipContent, pixel, feature);
+        } else {
+            startHover('tooltip', "Binary Message", pixel, feature);
+        }
     }
     else if (feature && 'tooltip' in feature) {
         startHover('tooltip', feature.tooltip, pixel, feature);
@@ -4350,7 +4555,6 @@ const handlePointerMove = function (pixel, target) {
     }
 
     if (isMeasuring) {
-
         const lastMeasureIndex = measures.length - 1;
 
         if (feature && 'ship' in feature) {
@@ -4371,7 +4575,6 @@ const handlePointerMove = function (pixel, target) {
         refreshMeasures();
     }
 };
-
 
 function debounce(func, wait) {
     let timeout;
@@ -5358,6 +5561,152 @@ async function updateMap() {
     redrawMap();
 }
 
+function redrawBinaryMessages() {
+    binaryVector.clear();
+    
+    const gridCells = {}; // For clustering standalone messages
+    const gridSize = 0.01; // Grid size in degrees (approx. 1km)
+    
+    // Process messages for vessels
+    for (const [mmsi, msgData] of Object.entries(binaryDB)) {
+        if (!msgData.ship_messages || msgData.ship_messages.length === 0) continue;
+        
+        // Cache all messages
+        const allMessages = msgData.ship_messages;
+        
+        // Check if the ship exists in shipsDB
+        const shipExists = mmsi in shipsDB;
+        const hasValidShipCoordinates = shipExists && 
+                                        shipsDB[mmsi].raw.lat !== null && 
+                                        shipsDB[mmsi].raw.lon !== null && 
+                                        shipsDB[mmsi].raw.lat !== 0 && 
+                                        shipsDB[mmsi].raw.lon !== 0 && 
+                                        shipsDB[mmsi].raw.lat < 90 && 
+                                        shipsDB[mmsi].raw.lon < 180;
+        
+        if (hasValidShipCoordinates) {
+            // Prepare arrays for messages to show at ship or at their own locations
+            const shipMessages = [];
+            const standaloneMessages = [];
+            
+            const ship = shipsDB[mmsi].raw;
+            const shipLat = ship.lat;
+            const shipLon = ship.lon;
+            
+            // Sort messages by proximity to the ship
+            allMessages.forEach(msg => {
+                if (!msg.message_lat || !msg.message_lon) return;
+                
+                const msgLat = msg.message_lat;
+                const msgLon = msg.message_lon;
+                
+                // Skip invalid coordinates
+                if (msgLat === 0 || msgLon === 0 || msgLat > 90 || msgLon > 180) return;
+                
+                // Simple distance calculation
+                const distanceThreshold = 0.05; // Approx 5km
+                const distance = Math.sqrt(
+                    Math.pow(msgLat - shipLat, 2) + 
+                    Math.pow(msgLon - shipLon, 2)
+                );
+                
+                if (distance <= distanceThreshold) {
+                    // Message is close to ship, show at ship location
+                    shipMessages.push(msg);
+                } else {
+                    // Message is far from ship, show at its own location
+                    standaloneMessages.push(msg);
+                    addMessageToGridCell(msg, mmsi, gridCells, gridSize);
+                }
+            });
+            
+            // Create badge at ship location if there are messages to show there
+            if (shipMessages.length > 0) {
+                const point = new ol.geom.Point(ol.proj.fromLonLat([shipLon, shipLat]));
+                const feature = new ol.Feature({
+                    geometry: point
+                });
+                
+                feature.binary = true;
+                feature.ship = ship;
+                feature.binary_mmsi = mmsi;
+                feature.binary_count = shipMessages.length;
+                feature.binary_messages = shipMessages;
+                feature.is_associated = true;
+                feature.setId(`binary-ship-${mmsi}`);
+                
+                binaryVector.addFeature(feature);
+            }
+            
+        } else {
+            // No associated ship with valid coordinates - add all messages to grid cells for clustering
+            allMessages.forEach(msg => {
+                if (!msg.message_lat || !msg.message_lon) return;
+                addMessageToGridCell(msg, mmsi, gridCells, gridSize);
+            });
+        }
+    }
+    
+    // Create features for grid cells (clustered standalone messages)
+    createGridCellFeatures(gridCells);
+}
+
+// Helper function to add a message to the appropriate grid cell
+function addMessageToGridCell(msg, mmsi, gridCells, gridSize) {
+    const msgLat = msg.message_lat;
+    const msgLon = msg.message_lon;
+    
+    // Skip invalid coordinates
+    if (msgLat === 0 || msgLon === 0 || msgLat > 90 || msgLon > 180) return;
+    
+    // Create grid cell key for clustering
+    const gridX = Math.floor(msgLon / gridSize);
+    const gridY = Math.floor(msgLat / gridSize);
+    const gridKey = `${gridX},${gridY}`;
+    
+    if (!gridCells[gridKey]) {
+        gridCells[gridKey] = {
+            messages: [],
+            totalLat: 0,
+            totalLon: 0,
+            mmsiCounts: {}
+        };
+    }
+    
+    // Add to grid cell for clustering
+    gridCells[gridKey].messages.push(msg);
+    gridCells[gridKey].totalLat += msgLat;
+    gridCells[gridKey].totalLon += msgLon;
+    gridCells[gridKey].mmsiCounts[mmsi] = 
+        (gridCells[gridKey].mmsiCounts[mmsi] || 0) + 1;
+}
+
+// Helper function to create features for grid cells
+function createGridCellFeatures(gridCells) {
+    for (const [gridKey, gridData] of Object.entries(gridCells)) {
+        if (gridData.messages.length === 0) continue;
+        
+        // Calculate average position for this grid cell
+        const avgLat = gridData.totalLat / gridData.messages.length;
+        const avgLon = gridData.totalLon / gridData.messages.length;
+        
+        const point = new ol.geom.Point(ol.proj.fromLonLat([avgLon, avgLat]));
+        const feature = new ol.Feature({
+            geometry: point
+        });
+        
+        feature.binary = true;
+        feature.binary_count = gridData.messages.length;
+        feature.binary_messages = gridData.messages;
+        feature.binary_mmsi_counts = gridData.mmsiCounts;
+        feature.is_associated = false;
+        feature.tooltip = `${gridData.messages.length} binary messages`;
+        feature.setId(`binary-standalone-${gridKey}`);
+        
+        binaryVector.addFeature(feature);
+    }
+}
+
 function redrawMap() {
     shapeFeatures = {};
     markerFeatures = {};
@@ -5407,21 +5756,7 @@ function redrawMap() {
         refreshMeasures();
     }
 
-    for (let i = 0; i < binaryDB.length; i++) {
-        let binary = binaryDB[i];
-        if (binary.message.lat != null && binary.message.lon != null && binary.message.lat != 0 && binary.message.lon != 0 && binary.message.lat < 90 && binary.message.lon < 180) {
-
-            const point = new ol.geom.Point(ol.proj.fromLonLat([binary.message.lon, binary.message.lat]))
-            var feature = new ol.Feature({
-                geometry: point
-            })
-
-            feature.binary = binary;
-            feature.binary_id = 1 + i;
-
-            binaryVector.addFeature(feature)
-        }
-    }
+    redrawBinaryMessages();
 
     for (let [hexident, entry] of Object.entries(planesDB)) {
         let plane = entry.raw;
