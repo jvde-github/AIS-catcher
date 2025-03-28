@@ -738,10 +738,11 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	return positionUpdated;
 }
 
-void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship)
+void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position_updated)
 {
 	const AIS::Message *msg = (AIS::Message *)data.binary;
 	int type = msg->type();
+	FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 
 	// Only process binary message types 6 and 8
 	if (type != 6 && type != 8)
@@ -763,6 +764,12 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship)
 		{
 			binmsg.fi = p.Get().getInt();
 		}
+		else if(p.Key() == AIS::KEY_LAT) {
+				lat = p.Get().getFloat();
+		}
+		else if(p.Key() == AIS::KEY_LON) {
+				lon = p.Get().getFloat();
+		}
 	}
 
 	//if (binmsg.dac != -1 && binmsg.fi != -1)
@@ -771,6 +778,18 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship)
 		binmsg.json.clear();
 		builder.stringify(data, binmsg.json);
 		binmsg.used = true;
+		if(isValidCoord(lat, lon))
+		{
+			binmsg.lat = lat;
+			binmsg.lon = lon;
+
+			if(false && !isValidCoord(ship.lat, ship.lon)) {
+				position_updated = true;
+				ship.lat = lat;
+				ship.lon = lon;
+			}
+			
+		}
 		binmsg.timestamp = msg->getRxTimeUnix();
 		binaryMsgIndex = (binaryMsgIndex + 1) % MAX_BINARY_MESSAGES;
 	}
@@ -813,7 +832,6 @@ std::string DB::getBinaryMessagesJSON() const
 
 void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
-
 	if (!filter.include(*(AIS::Message *)data[0].binary))
 		return;
 
@@ -885,7 +903,7 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	tag.speed = ship.speed;
 
 	if (type == 6 || type == 8)
-		processBinaryMessage(data[0], ship);
+		processBinaryMessage(data[0], ship, position_updated);
 
 	if (position_updated && isValidCoord(lat_old, lon_old))
 	{

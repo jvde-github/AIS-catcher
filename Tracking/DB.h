@@ -42,7 +42,7 @@ struct BinaryMessage
 	int type;
 	int dac;
 	int fi;
-	bool hasPosition;
+	FLOAT32 lat, lon;
 	time_t timestamp;
 	bool used;
 
@@ -52,6 +52,8 @@ struct BinaryMessage
 	{
 		used = false;
 		type = dac = fi = -1;
+		lat = LAT_UNDEFINED;
+		lon = LON_UNDEFINED;
 	};
 };
 
@@ -103,7 +105,7 @@ class DB : public StreamIn<JSON::JSON>,
 	BinaryMessage binaryMessages[MAX_BINARY_MESSAGES];
 	int binaryMsgIndex = 0;
 
-	void processBinaryMessage(const JSON::JSON &data, Ship &ship);
+	void processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position_updated);
 
 public:
 	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}

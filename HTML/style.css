@@ -606,7 +606,7 @@ td {
 #hover-info {
     position: absolute;
     display: flex;
-    flex-direction: row;
+    flex-direction: column; /* Overall container stacks cards vertically */
     flex: 0 0 auto;
     height: auto;
     width: auto;
@@ -623,6 +623,22 @@ td {
     pointer-events: none;
 }
 
+.tooltip-card {
+    display: flex;
+    flex-direction: row; /* For flag and text side-by-side */
+    align-items: center;
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.tooltip-meteo {
+    display: flex;
+    flex-direction: column; /* Stack meteo content vertically */
+    align-items: flex-start;
+    width: 100%;
+    margin-top: 5px; /* Adjust spacing if needed */
+}
+
 #hover-info div div {
     text-align: left;
 }
@@ -631,12 +647,44 @@ td {
     font-size: 26px;
 }
 
+
 .fill-red {
     fill: #ff0000 !important;
 }
 
 .fill-green {
     fill: green !important;
+}
+
+.meteo-tooltip {
+    margin-top: 3px;
+    padding: 3px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+.meteo-tooltip h4 {
+    margin: 0 0 8px 0;
+    color: #FFA500;
+    font-size: 1em;
+}
+.meteo-section {
+    margin-bottom: 2px;
+    font-size: 0.9em;
+    display: block;
+}
+.meteo-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+.meteo-value {
+    margin-left: 10px;
+    color: rgba(255, 255, 255, 0.95);
+}
+#hover-info {
+    max-width: 350px;
+    overflow: hidden;
+    pointer-events: none;
 }
 
 @media only screen and (max-height: 300px) {
