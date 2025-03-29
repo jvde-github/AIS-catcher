@@ -4405,7 +4405,15 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             content += '<hr style="margin: 10px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.3);">';
         }
         
-        content += `<h4 style="margin: 5px 0; font-size: 12px; color: #eee;">${messages[i].formattedTime} - Meteo`;
+        // Determine if it's just meteo or also has hydro data
+        const hasHydroData = 
+            ('watercurrent' in msg && msg.watercurrent !== undefined && msg.watercurrent !== null) ||
+            ('currentspeed' in msg && msg.currentspeed !== undefined && msg.currentspeed !== null) ||
+            ('currentdir' in msg && msg.currentdir !== undefined && msg.currentdir !== null) ||
+            ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) ||
+            ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null);
+        
+        content += `<h4 style="margin: 5px 0; font-size: 12px; color: #eee;">${messages[i].formattedTime} - ${hasHydroData ? 'Meteo & Hydro' : 'Meteo'}`;
         if (messagesToShow > 1) {
             content += ` (${i+1}/${messagesToShow})`;
         }
@@ -4443,6 +4451,20 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             content += '</div></div>';
         }
         
+        // Water current speed and direction
+        const currentSpeed = msg.watercurrent || msg.currentspeed;
+        const currentDir = msg.currentdir || msg.currentdirection;
+        
+        if (currentSpeed !== undefined && currentSpeed !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Current:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + currentSpeed.toFixed(1) + ' knots';
+            if (currentDir !== undefined && currentDir !== null && currentDir !== 360) {
+                content += ' to ' + currentDir + '&deg';
+            }
+            content += '</div></div>';
+        }
+        
         // Water level
         if ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4456,6 +4478,42 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
             content += '<div style="font-size: 11px; color: #ccc;">Water Temp:</div>';
             content += '<div style="font-size: 11px; font-weight: bold;">' + msg.watertemp.toFixed(1) + '&deg C</div>';
+            content += '</div>';
+        }
+        
+        // Wave data
+        if ('waveheight' in msg && msg.waveheight !== undefined && msg.waveheight !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Wave:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.waveheight.toFixed(1) + ' m';
+            if ('wavedir' in msg && msg.wavedir !== undefined && msg.wavedir !== null && msg.wavedir !== 360) {
+                content += ' from ' + msg.wavedir + '&deg';
+            }
+            if ('waveperiod' in msg && msg.waveperiod !== undefined && msg.waveperiod !== null) {
+                content += ', ' + msg.waveperiod + 's';
+            }
+            content += '</div></div>';
+        }
+        
+        // Swell data
+        if ('swellheight' in msg && msg.swellheight !== undefined && msg.swellheight !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Swell:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.swellheight.toFixed(1) + ' m';
+            if ('swelldir' in msg && msg.swelldir !== undefined && msg.swelldir !== null && msg.swelldir !== 360) {
+                content += ' from ' + msg.swelldir + '&deg';
+            }
+            if ('swellperiod' in msg && msg.swellperiod !== undefined && msg.swellperiod !== null) {
+                content += ', ' + msg.swellperiod + 's';
+            }
+            content += '</div></div>';
+        }
+        
+        // Visibility
+        if ('visibility' in msg && msg.visibility !== undefined && msg.visibility !== null) {
+            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
+            content += '<div style="font-size: 11px; color: #ccc;">Visibility:</div>';
+            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.visibility.toFixed(1) + ' nm</div>';
             content += '</div>';
         }
         
