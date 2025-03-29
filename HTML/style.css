@@ -606,7 +606,8 @@ td {
 #hover-info {
     position: absolute;
     display: flex;
-    flex-direction: column; /* Overall container stacks cards vertically */
+    flex-direction: column;
+    /* Overall container stacks cards vertically */
     flex: 0 0 auto;
     height: auto;
     width: auto;
@@ -625,7 +626,8 @@ td {
 
 .tooltip-card {
     display: flex;
-    flex-direction: row; /* For flag and text side-by-side */
+    flex-direction: row;
+    /* For flag and text side-by-side */
     align-items: center;
     width: 100%;
     margin-bottom: 5px;
@@ -633,10 +635,12 @@ td {
 
 .tooltip-meteo {
     display: flex;
-    flex-direction: column; /* Stack meteo content vertically */
+    flex-direction: column;
+    /* Stack meteo content vertically */
     align-items: flex-start;
     width: 100%;
-    margin-top: 5px; /* Adjust spacing if needed */
+    margin-top: 5px;
+    /* Adjust spacing if needed */
 }
 
 #hover-info div div {
@@ -656,31 +660,8 @@ td {
     fill: green !important;
 }
 
-.meteo-tooltip {
-    margin-top: 3px;
-    padding: 3px;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 4px;
-}
-.meteo-tooltip h4 {
-    margin: 0 0 8px 0;
-    color: #FFA500;
-    font-size: 1em;
-}
-.meteo-section {
-    margin-bottom: 2px;
-    font-size: 0.9em;
-    display: block;
-}
-.meteo-label {
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: bold;
-    margin-bottom: 2px;
-}
-.meteo-value {
-    margin-left: 10px;
-    color: rgba(255, 255, 255, 0.95);
-}
+
+
 #hover-info {
     max-width: 350px;
     overflow: hidden;
@@ -929,6 +910,31 @@ td {
 
 .shipcard-dubious {
     border-left: 10px solid red;
+}
+
+.message-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background-color: #dc0000;
+    color: white;
+    border-radius: 50%;
+    min-width: 16px;
+    height: 16px;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2px;
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    z-index: 100;
+    pointer-events: none;
+}
+
+#shipcard_footer>div {
+    position: relative;
 }
 
 .mapcard-footer {
@@ -1330,50 +1336,86 @@ td {
     display: none;
 }
 
+/* Improved Binary Message Tooltip Styling */
+.meteo-tooltip {
+    margin-top: 5px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    max-width: 300px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.95);
+    /* Ensure text is always visible on dark background */
+}
+
+.meteo-tooltip h4 {
+    margin: 0 0 8px 0;
+    color: #FFA500;
+    /* Orange always works well on dark backgrounds */
+    font-size: 0.9em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 4px;
+}
+
+.meteo-section {
+    margin-bottom: 4px;
+    font-size: 0.85em;
+    display: flex;
+    justify-content: space-between;
+}
+
+.meteo-label {
+    color: rgba(255, 255, 255, 0.8);
+    /* Light text for dark background */
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.meteo-value {
+    color: rgba(255, 255, 255, 0.95);
+    /* Brighter text for values */
+    font-weight: normal;
+}
+
+/* Improved Dialog Box Styling - Preserving Original Structure */
 #dialog-box {
     position: fixed;
     max-height: 80vh;
-    width: 900px;
-    max-width: min(calc(100% - 20px), 900px);
+    width: 90%;
+    max-width: 900px;
     background-color: var(--menu-background-color);
     color: var(--menu-font-color);
     border: 0px solid #ccc;
-    border-radius: 4px;
-    box-shadow: 3px 3px 10px var(--shadow-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px var(--shadow-color);
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
     z-index: 10004;
+    overflow: hidden;
 }
 
 .dialog-title {
-    padding: 15px;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
+    padding: 15px 20px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 10px;
-    border-bottom: solid 1px var(--menu-divider-color)
-        /*color: white;
-    background-color: var(--dialog-title-color);*/
+    margin-bottom: 0;
+    border-bottom: solid 1px var(--menu-divider-color);
 }
 
 .dialog-message {
-    padding: 0px 15px;
+    padding: 15px 20px;
     font-size: 14px;
     user-select: text;
-    margin-bottom: 20px;
-    max-height: 60vh;
     overflow-y: auto;
+    max-height: calc(80vh - 130px);
     box-sizing: border-box;
 }
 
-.can-copy {
-    user-select: text;
-}
-
 .dialog-close {
-    padding: 10px 40px;
+    padding: 8px 20px;
     background-color: var(--menu-background-hover-color);
     border: none;
     color: var(--menu-font-color);
@@ -1383,8 +1425,182 @@ td {
     font-size: 14px;
     margin: 0px 15px 15px 15px;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
 }
+
+.dialog-close:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Binary Messages Dialog Styling */
+.binary-messages-list {
+    padding: 10px 0;
+}
+
+.binary-message-count {
+    font-size: 0.9em;
+    color: var(--menu-font-color);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--menu-divider-color);
+    display: none;
+    /* Hide this since we'll show count in title */
+}
+
+.binary-message-item {
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.binary-message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.binary-message-time {
+    font-weight: bold;
+    color: var(--menu-font-color);
+}
+
+.binary-message-source {
+    color: var(--secondary-color);
+}
+
+.binary-message-details {
+    margin-top: 10px;
+    font-size: 0.9em;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.binary-raw-data {
+    margin-top: 10px;
+}
+
+.binary-raw-data summary {
+    cursor: pointer;
+    font-size: 0.85em;
+    color: var(--menu-font-color);
+    opacity: 0.8;
+    padding: 5px 0;
+}
+
+.binary-raw-data pre {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    font-size: 0.8em;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Message Count Badge */
+.message-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #d32f2f;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.75em;
+    font-weight: bold;
+    margin-left: 10px;
+    min-width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
+/* Binary Message Content */
+.binary-message-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.binary-message-content div {
+    margin-bottom: 8px;
+}
+
+.binary-message-content strong {
+    display: block;
+    font-size: 0.85em;
+    color: var(--menu-font-color);
+    opacity: 0.75;
+    margin-bottom: 4px;
+}
+
+.binary-message-content span {
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+/* Handle Dark Mode */
+.dark .binary-message-item {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .binary-message-content strong {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .binary-raw-data pre {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 600px) {
+    .binary-message-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile Adjustments */
+@media only screen and (max-width: 600px) {
+    #dialog-box {
+        width: 95%;
+        max-height: 90vh;
+        border-radius: 4px;
+    }
+
+    .dialog-title {
+        font-size: 16px;
+        padding: 12px 15px;
+    }
+
+    .dialog-message {
+        padding: 12px 15px;
+        font-size: 13px;
+        max-height: calc(90vh - 110px);
+    }
+
+    .dialog-close {
+        font-size: 13px;
+        padding: 8px 15px;
+        margin: 0px 12px 12px 12px;
+    }
+
+    .binary-message-item {
+        padding: 8px;
+    }
+
+    .meteo-tooltip {
+        max-width: 250px;
+    }
+}
+
+.can-copy {
+    user-select: text;
+}
+
 
 .Icon {
     position: relative;
@@ -1428,6 +1644,20 @@ td {
     mask-size: 100% 100%;
 }
 
+
+.mail_icon {
+    display: block;
+    width: 1em;
+    height: 1em;
+    background-color: currentColor;
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M140-160q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h680q24 0 42 18t18 42v520q0 24-18 42t-42 18H140Zm340-302L140-685v465h680v-465L480-462Zm0-60 336-218H145l335 218ZM140-685v-55 520-465Z"/%3E%3C/svg%3E');
+    -webkit-mask-image: var(--svg);
+    mask-image: var(--svg);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+}
 
 .table_icon {
     display: block;

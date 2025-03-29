@@ -783,7 +783,7 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 			binmsg.lat = lat;
 			binmsg.lon = lon;
 
-			if(false && !isValidCoord(ship.lat, ship.lon)) {
+			if( !isValidCoord(ship.lat, ship.lon)) {
 				position_updated = true;
 				ship.lat = lat;
 				ship.lon = lon;
