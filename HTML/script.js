@@ -797,6 +797,88 @@ async function showVesselDetail(m) {
     showDialog("Vessel " + m, tableHtml);
 }
 
+function showBinaryMessageDialog(featureOrMmsi) {
+    let title, content;
+    
+    if (typeof featureOrMmsi === 'object') {
+        if (!featureOrMmsi.binary_messages || featureOrMmsi.binary_messages.length === 0) {
+            showDialog("Binary Message", "No message content available");
+            return;
+        }
+        
+        title = "Binary Messages";
+        content = getBinaryMessageList(featureOrMmsi.binary_messages);
+        
+    } else if (typeof featureOrMmsi === 'number' || typeof featureOrMmsi === 'string') {
+        const mmsi = Number(featureOrMmsi);
+        
+        if (!binaryDB[mmsi] || !binaryDB[mmsi].ship_messages || binaryDB[mmsi].ship_messages.length === 0) {
+            showDialog("Binary Messages", "No binary messages available for this vessel");
+            return;
+        }
+        
+        const shipName = mmsi in shipsDB ? (shipsDB[mmsi].raw.shipname || `MMSI ${mmsi}`) : `MMSI ${mmsi}`;
+        title = `Binary Messages for ${shipName}`;
+        content = getBinaryMessageList(binaryDB[mmsi].ship_messages);
+    }
+    
+    showDialog(title, content);
+}
+
+function getBinaryMessageList(messages) {
+    if (!messages || messages.length === 0) {
+        return "<p>No messages available</p>";
+    }
+    
+    const sortedMessages = [...messages].sort((a, b) => b.timestamp - a.timestamp);
+    
+    let content = '<div class="binary-messages-list">';
+    
+    content += `<div class="binary-message-count">${sortedMessages.length} message${sortedMessages.length > 1 ? 's' : ''} available</div>`;
+    
+    sortedMessages.forEach((msg, index) => {
+        if (index > 0) {
+            content += '<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">';
+        }
+        
+        content += '<div class="binary-message-item">';
+        
+        content += `<div class="binary-message-header">
+                      <span class="binary-message-time">${msg.formattedTime || new Date(msg.timestamp * 1000).toLocaleTimeString()}</span>`;
+        
+        if (msg.message && msg.message.mmsi) {
+            const shipName = msg.message.mmsi in shipsDB ? 
+                (shipsDB[msg.message.mmsi].raw.shipname || `MMSI ${msg.message.mmsi}`) : 
+                `MMSI ${msg.message.mmsi}`;
+            
+            content += `<span class="binary-message-source"> from ${shipName}</span>`;
+        }
+        
+        content += '</div>'; 
+        
+        if (msg.message && msg.message.dac == 1 && (msg.message.fid == 31 || msg.message.fi == 31)) {
+            content += getBinaryMessageContent(msg, false);
+        } else {
+            content += '<div class="binary-message-details">';
+            content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
+            
+            // Add a collapsible section for raw data
+            content += `<details class="binary-raw-data">
+                          <summary>Show Raw Data</summary>
+                          <pre>${JSON.stringify(msg.message, null, 2)}</pre>
+                        </details>`;
+            
+            content += '</div>';
+        }
+        
+        content += '</div>';
+    });
+    
+    content += '</div>'; 
+    
+    return content;
+}
+
 function copyText(m) {
     if (copyClipboard(m)) showNotification("Content copied to clipboard");
 }
@@ -1441,7 +1523,7 @@ const handleClick = function (pixel, target, event) {
     }
 
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature) { return feature; } }, { hitTolerance: 10 });
+        function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
 
     let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
     let included_plane = feature && 'plane' in feature && feature.plane.hexident in planesDB;
@@ -1474,8 +1556,12 @@ const handleClick = function (pixel, target, event) {
 
     if (feature && 'link' in feature && !included) {
         window.open(feature.link, '_blank');
-    }
-    else if (feature && 'ship' in feature || included) {
+    } else  if (feature && feature.binary === true && !feature.is_associated) {
+        closeDialog();
+        closeSettings();  
+        showBinaryMessageDialog(feature);
+        return;
+    } else if (feature && 'ship' in feature || included) {
 
         closeDialog();
         closeSettings();
