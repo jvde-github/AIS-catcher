@@ -252,8 +252,8 @@ namespace AIS {
 			UL(msg, AIS::KEY_CSPEED3, 254, 8, 0.1f, 0);
 			U(msg, AIS::KEY_CDIR3, 262, 9);
 			U(msg, AIS::KEY_CDEPTH3, 271, 5);
-			UL(msg, AIS::KEY_WAVEHEIGHT, 276, 8, 0.1f, 0);
-			U(msg, AIS::KEY_WAVEPERIOD, 284, 6);
+			UL(msg, AIS::KEY_WAVEHEIGHT, 276, 8, 0.1f, 0, 255);
+			U(msg, AIS::KEY_WAVEPERIOD, 284, 6, 63);
 			U(msg, AIS::KEY_WAVEDIR, 290, 9);
 			UL(msg, AIS::KEY_SWELLHEIGHT, 299, 8, 0.1f, 0);
 			U(msg, AIS::KEY_SWELLPERIOD, 307, 6);
