@@ -5010,6 +5010,37 @@ function setShipcardValidation(v) {
     }
 }
 
+function updateMessageButton() {
+    const messageButton = document.querySelector('#shipcard_footer [onclick="showBinaryMessageDialog(card_mmsi)"]');
+    if (!messageButton) return;
+    
+    const iconElement = messageButton.querySelector('i.mail_icon');
+    if (!iconElement) return;
+    
+    const hasBinaryMsgs = card_mmsi && 
+                          binaryDB && 
+                          card_mmsi in binaryDB && 
+                          binaryDB[card_mmsi].ship_messages && 
+                          binaryDB[card_mmsi].ship_messages.length > 0;
+    
+    const existingBadge = iconElement.querySelector('.message-badge');
+    if (existingBadge) {
+        existingBadge.remove();
+    }
+    
+    if (hasBinaryMsgs) {
+        const count = binaryDB[card_mmsi].ship_messages.length;
+        messageButton.style.display = '';
+        
+        const badge = document.createElement('span');
+        badge.className = 'message-badge';
+        badge.textContent = count;
+        iconElement.appendChild(badge);
+    } else {
+        messageButton.style.display = 'none';
+    }
+}
+
 function populateShipcard() {
 
     if (card_type != 'ship') return;
@@ -5069,6 +5100,7 @@ function populateShipcard() {
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
 
     updateShipcardTrackOption(card_mmsi);
+    updateMessageButton();
 
 }
 
@@ -6515,8 +6547,6 @@ rainviewerClouds.on('change:visible', function (evt) {
         window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000);
     }
 });
-
-
 
 function makeDraggable(dragHandle, dragTarget) {
     const moveThreshold = 15;
