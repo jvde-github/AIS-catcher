@@ -3369,7 +3369,7 @@ function initPlots() {
         }
     }
     chart_level = new Chart(document.getElementById("chart-level"), plot_level);
-
+    chart_level_hour = new Chart(document.getElementById("chart-level-hour"), plot_level);
 }
 
 function shipcardismax() {
@@ -3711,6 +3711,7 @@ async function updatePlots() {
     updateChartSingle(b, "minute", "ppm", chart_ppm_minute);
     updateChartSingle(b, "hour", "ppm", chart_ppm);
     updateChartLevel(b, "minute", "level", chart_level);
+    updateChartLevel(b, "hour", "level", chart_level_hour);
     updateChartSingle(b, "minute", "vessels", chart_minute_vessel);
 
     //plot_radar.options.ticks.scale.max = 200;
@@ -5990,7 +5991,7 @@ function updateDarkMode() {
     document.documentElement.classList.toggle("dark", settings.dark_mode);
 
     const chartsToUpdateMulti = [chart_minutes, chart_hours, chart_days, chart_seconds];
-    const chartsToUpdateLevel = [chart_level];
+    const chartsToUpdateLevel = [chart_level, chart_level_hour];
     const chartsToUpdateSingle = [chart_distance_day, chart_distance_hour, chart_ppm, chart_minute_vessel, chart_ppm_minute];
     const chartsToUpdateRadar = [chart_radar_day, chart_radar_hour];
 
