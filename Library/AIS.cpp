@@ -64,7 +64,7 @@ namespace AIS
 
 	bool Decoder::processData(int len, TAG &tag)
 	{
-		if (len > 16 && CRC16(len))
+		if (len >= 16 && CRC16(len))
 		{
 			nBits = len - 16;
 			nBytes = (nBits + 7) / 8;
@@ -109,13 +109,16 @@ namespace AIS
 	bool Decoder::canStop(int len)
 	{
 		const int END = 24;
+
+		if(len < 6 + END) return false;
+
 		int t = msg.type();
 
 		switch (len)
 		{
-		case 8:
+		case 6 + END:
 			return t > 27 || t == 0;
-		case 38:
+		case 8 + 30 + END:
 			return msg.mmsi() > 999999999;
 		case 72 + END:
 			return t == 10;

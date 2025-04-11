@@ -110,7 +110,9 @@ namespace AIS
 		if (getStation())
 			ss << ",\"station_id\":" << getStation();
 
-		ss << ",\"mmsi\":" << mmsi() << ",\"type\":" << type() << ",\"nmea\":[\"" << NMEA[0] << "\"";
+		if(getLength() > 0)
+			ss << ",\"mmsi\":" << mmsi() << ",\"type\":" << type();
+		ss << ",\"nmea\":[\"" << NMEA[0] << "\"";
 
 		for (int j = 1; j < NMEA.size(); j++)
 			ss << ",\"" << NMEA[j] << "\"";
@@ -122,6 +124,8 @@ namespace AIS
 
 	bool Message::validate()
 	{
+		if(getLength() == 0) return true;
+
 		const int ml[27] = {149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96};
 
 		if (type() < 1 || type() > 27)
@@ -286,7 +290,7 @@ namespace AIS
 			ID = id;
 
 		int nAISletters = (length + 6 - 1) / 6;
-		int nSentences = (nAISletters + MAX_NMEA_CHARS - 1) / MAX_NMEA_CHARS;
+		int nSentences = (nAISletters == 0) ? 1 : (nAISletters + MAX_NMEA_CHARS - 1) / MAX_NMEA_CHARS;
 
 		line.resize(11);
 
