@@ -130,7 +130,13 @@ namespace IO
 				case MessageFormat::FULL:
 					for (const auto &s : data[i].NMEA)
 					{
-						std::cout << s << " ( MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
+						
+						std::cout << s << " ( ";
+
+						if(data[i].getLength() > 0)							
+							std::cout << "MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
+						else
+							std::cout << "empty";
 
 						if (tag.mode & 1 && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED)
 							std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
