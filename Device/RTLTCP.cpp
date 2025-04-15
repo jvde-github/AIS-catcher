@@ -148,12 +148,13 @@ namespace Device
 			}
 			else
 			{
-				if (isStreaming() && format != Format::TXT)
-
+				if (isStreaming() && (format == Format::CU8 || format == Format::CS8 || format == Format::CS16 || format == Format::CF32))
+				{
 					if(tcp.getState() == Protocol::TCP::State::READY)
 					{
 						Error() << "RTLTCP [" << tcp.getHost() <<  ":" << tcp.getPort() << "]: timeout.";
 					}
+				}
 			}
 		}
 	}
