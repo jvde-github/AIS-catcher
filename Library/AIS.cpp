@@ -79,6 +79,8 @@ namespace AIS
 			msg.setChannel(channel);
 			msg.setLength(nBits);
 			msg.setOwnMMSI(own_mmsi);
+			msg.setStartIdx(start_idx);
+			msg.setEndIdx(end_idx);
 
 			if (msg.validate())
 			{
@@ -110,7 +112,8 @@ namespace AIS
 	{
 		const int END = 24;
 
-		if(len < 6 + END) return false;
+		if (len < 6 + END)
+			return false;
 
 		int t = msg.type();
 
@@ -149,9 +152,11 @@ namespace AIS
 
 			// State machine
 			// At this stage: "position" bits into sequence, inspect the next bit:
+
 			switch (state)
 			{
 			case State::TRAINING:
+				start_idx = tag.sample_idx;
 				if (Bit != lastBit) // 01 10
 				{
 					position++;
@@ -198,6 +203,7 @@ namespace AIS
 					{
 						if (tag.mode & 1)
 							tag.level = level / position;
+						end_idx = tag.sample_idx;
 						if (processData(position - 7, tag))
 							NextState(State::FOUNDMESSAGE, 0);
 						NextState(State::TRAINING, 0);

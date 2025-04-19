@@ -23,9 +23,11 @@
 #include "Stream.h"
 #include "Signals.h"
 
-namespace AIS {
+namespace AIS
+{
 
-	enum class State {
+	enum class State
+	{
 		TRAINING,
 		STARTFLAG,
 		STOPFLAG,
@@ -33,7 +35,8 @@ namespace AIS {
 		FOUNDMESSAGE
 	};
 
-	class Decoder : public SimpleStreamInOut<FLOAT32, Message>, public SignalIn<DecoderSignals> {
+	class Decoder : public SimpleStreamInOut<FLOAT32, Message>, public SignalIn<DecoderSignals>
+	{
 		char channel = '?';
 		int station = 0;
 		int own_mmsi = -1;
@@ -57,25 +60,29 @@ namespace AIS {
 		void NextState(State s, int pos);
 
 		bool CRC16(int len);
-		bool processData(int len, TAG& tag);
+		bool processData(int len, TAG &tag);
 
 		bool canStop(int);
 
 		Message msg;
 
+		long start_idx = 0;
+		long end_idx = 0;
+
 	public:
 		virtual ~Decoder() {}
 
-		void setOrigin(char c, int s, int o) {
+		void setOrigin(char c, int s, int o)
+		{
 			channel = c;
 			station = s;
 			own_mmsi = o;
 		}
 
-		void Receive(const FLOAT32* data, int len, TAG& tag);
+		void Receive(const FLOAT32 *data, int len, TAG &tag);
 
 		// MessageIn
-		virtual void Signal(const DecoderSignals& in);
+		virtual void Signal(const DecoderSignals &in);
 		// MessageOut
 		SignalHub<DecoderSignals> DecoderMessage;
 	};

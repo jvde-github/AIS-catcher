@@ -132,6 +132,23 @@ namespace Util
 		static void toFloat(CS16 *in, CFLOAT32 *out, int len);
 	};
 
+	class ConvertToRAW : public SimpleStreamInOut<CFLOAT32, RAW>
+	{
+	public:
+		void Receive(const CFLOAT32 *data, int len, TAG &tag)
+		{
+			if (!out.isConnected())
+				return;
+
+			RAW rawOutput;
+			rawOutput.format = Format::CF32;
+			rawOutput.data = (void *)data;
+			rawOutput.size = len * sizeof(CFLOAT32);
+
+			Send(&rawOutput, 1, tag);
+		}
+	};
+
 	class Parse
 	{
 	public:

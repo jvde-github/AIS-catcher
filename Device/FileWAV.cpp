@@ -53,9 +53,9 @@ namespace Device {
 		struct WaveChunk chunk = { 0, 0 };
 
 		file.open(filename, std::ios::in | std::ios::binary);
+		if(!file) throw std::runtime_error("cannot open WAV file: \"" + filename + "\"");	
 		file.read((char*)&header, sizeof(struct WAVHeader));
-
-		if (!file) throw std::runtime_error("cannot read from WAV file.");
+		if (!file) throw std::runtime_error("cannot read header from WAV file: \"" + filename + "\"");
 
 		// process header and format chunk
 		bool valid = true;
@@ -66,7 +66,7 @@ namespace Device {
 		valid &= header.groupID == 0x46464952;
 		valid &= header.RIFFtype == 0x45564157;
 
-		if (!valid) throw std::runtime_error("Eror: Not a supported WAV-file.");
+		if (!valid) throw std::runtime_error("not a supported WAV-file.");
 
 		if (header.wFormatTag == 3 && header.wBitsPerSample == 32)
 			Device::setFormat(Format::CF32);

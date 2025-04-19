@@ -79,7 +79,7 @@ namespace AIS
 	{
 		std::stringstream ss;
 
-		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat();
+		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat() << ",\"ssc\":"<< start_idx << ",\"sl\":" << (end_idx-start_idx);
 
 		if (status)
 		{
