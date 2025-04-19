@@ -29,8 +29,10 @@
 #include "Stream.h"
 #include "Signals.h"
 
-namespace DSP {
-	class SimplePLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public SignalIn<DecoderSignals> {
+namespace DSP
+{
+	class SimplePLL : public SimpleStreamInOut<FLOAT32, FLOAT32>, public SignalIn<DecoderSignals>
+	{
 		BIT prev = 0;
 
 		float PLL = 0.0f;
@@ -39,15 +41,17 @@ namespace DSP {
 	public:
 		virtual ~SimplePLL() {}
 		// StreamIn
-		virtual void Receive(const FLOAT32* data, int len, TAG& tag);
+		virtual void Receive(const FLOAT32 *data, int len, TAG &tag);
 
 		// MessageIn
-		virtual void Signal(const DecoderSignals& in);
+		virtual void Signal(const DecoderSignals &in);
 	};
 
 	template <typename T>
-	class Deinterleave : public StreamIn<T> {
+	class Deinterleave : public StreamIn<T>
+	{
 		int lastSymbol = 0;
+		long sample_idx = 0;
 
 	public:
 		virtual ~Deinterleave() {}
@@ -57,22 +61,28 @@ namespace DSP {
 		std::vector<Connection<T>> out;
 
 		// Streams in
-		void Receive(const T* data, int len, TAG& tag) {
-			for (int i = 0; i < len; i++) {
+		void Receive(const T *data, int len, TAG &tag)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				tag.sample_idx = sample_idx++;
 				out[lastSymbol].Send(&data[i], 1, tag);
 				lastSymbol = (lastSymbol + 1) % out.size();
 			}
 		}
 	};
 
-	class ScatterPLL : public StreamIn<CFLOAT32> {
+	class ScatterPLL : public StreamIn<CFLOAT32>
+	{
 		int lastSymbol = 0;
 		std::vector<CFLOAT32> sample;
 		FLOAT32 level = 0.0f;
+		long sample_idx = 0;
 
 	public:
 		virtual ~ScatterPLL() {}
-		void setConnections(int n) {
+		void setConnections(int n)
+		{
 			out.resize(n);
 			sample.resize(n);
 		}
@@ -81,16 +91,23 @@ namespace DSP {
 		std::vector<Connection<CFLOAT32>> out;
 
 		// Streams in
-		void Receive(const CFLOAT32* data, int len, TAG& tag) {
-			for (int i = 0; i < len; i++) {
+		void Receive(const CFLOAT32 *data, int len, TAG &tag)
+		{
+			for (int i = 0; i < len; i++)
+			{
 				sample[lastSymbol] = data[i];
-				if (tag.mode & 1) level += std::norm(data[i]);
+				if (tag.mode & 1)
+					level += std::norm(data[i]);
 
-				if (++lastSymbol == out.size()) {
-					if (tag.mode & 1) tag.sample_lvl = level / out.size();
+				if (++lastSymbol == out.size())
+				{
+					if (tag.mode & 1)
+						tag.sample_lvl = level / out.size();
 
-					for (int j = 0; j < out.size(); j++) {
+					for (int j = 0; j < out.size(); j++)
+					{
 						out[j].Send(&sample[j], 1, tag);
+						tag.sample_idx = sample_idx++;
 					}
 					level = 0.0f;
 					lastSymbol = 0;
@@ -99,7 +116,8 @@ namespace DSP {
 		}
 	};
 
-	class DownsampleMovingAverage : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class DownsampleMovingAverage : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		CFLOAT32 D;
 		int idx_out = 0;
 		int idx_in = 0;
@@ -112,31 +130,35 @@ namespace DSP {
 
 	public:
 		virtual ~DownsampleMovingAverage() {}
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
-		void setRates(int i, int o) {
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
+		void setRates(int i, int o)
+		{
 			in_rate = i;
 			out_rate = o;
 		}
 	};
 
-	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class Downsample2CIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		CFLOAT32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 		std::vector<CFLOAT32> output;
 
 	public:
 		virtual ~Downsample2CIC5() {}
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 
 	public:
 		virtual ~Decimate2() {}
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class Upsample : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class Upsample : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 
 		FLOAT32 alpha = 0, increment = 1.0f;
@@ -146,15 +168,17 @@ namespace DSP {
 
 	public:
 		virtual ~Upsample() {}
-		void setParams(int n, int m) {
+		void setParams(int n, int m)
+		{
 			assert(n <= m);
 			increment = (FLOAT32)n / (FLOAT32)m;
 		}
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class DownsampleKFilter : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class DownsampleKFilter : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 
 		std::vector<CFLOAT32> buffer;
@@ -167,82 +191,95 @@ namespace DSP {
 
 		static const int outputSize = 16384 / 2;
 
-		inline CFLOAT32 dot(const CFLOAT32* data) {
+		inline CFLOAT32 dot(const CFLOAT32 *data)
+		{
 			CFLOAT32 x = 0.0f;
-			for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
+			for (int i = 0; i < taps.size(); i++)
+				x += taps[i] * *data++;
 			return x;
 		}
 
 	public:
 		virtual ~DownsampleKFilter() {}
-		void setParams(const std::vector<FLOAT32>& t, int k) {
+		void setParams(const std::vector<FLOAT32> &t, int k)
+		{
 			taps = t;
 			K = k;
 		}
-		void setTaps(const std::vector<FLOAT32>& t) { taps = t; }
+		void setTaps(const std::vector<FLOAT32> &t) { taps = t; }
 		void setK(int k) { K = k; }
 
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class FilterComplex : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class FilterComplex : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 
 		std::vector<CFLOAT32> buffer;
 		std::vector<FLOAT32> taps;
 
-		inline CFLOAT32 dot(const CFLOAT32* data) {
+		inline CFLOAT32 dot(const CFLOAT32 *data)
+		{
 			CFLOAT32 x = 0.0f;
-			for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
+			for (int i = 0; i < taps.size(); i++)
+				x += taps[i] * *data++;
 			return x;
 		}
 
 	public:
 		virtual ~FilterComplex() {}
 
-		void setTaps(const std::vector<FLOAT32>& t) {
+		void setTaps(const std::vector<FLOAT32> &t)
+		{
 			taps = t;
 			buffer.resize(taps.size() * 2, 0.0f);
 		}
 
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class Filter : public SimpleStreamInOut<FLOAT32, FLOAT32> {
+	class Filter : public SimpleStreamInOut<FLOAT32, FLOAT32>
+	{
 		std::vector<FLOAT32> output;
 		std::vector<FLOAT32> buffer;
 		std::vector<FLOAT32> taps;
 
-		inline FLOAT32 dot(const FLOAT32* data) {
+		inline FLOAT32 dot(const FLOAT32 *data)
+		{
 			FLOAT32 x = 0.0f;
-			for (int i = 0; i < taps.size(); i++) x += taps[i] * *data++;
+			for (int i = 0; i < taps.size(); i++)
+				x += taps[i] * *data++;
 
 			return x;
 		}
 
 	public:
 		virtual ~Filter() {}
-		void setTaps(const std::vector<FLOAT32>& t) {
+		void setTaps(const std::vector<FLOAT32> &t)
+		{
 			taps = t;
 			buffer.resize(taps.size() * 2, 0.0f);
 		}
 
 		// StreamIn
-		void Receive(const FLOAT32* data, int len, TAG& tag);
+		void Receive(const FLOAT32 *data, int len, TAG &tag);
 	};
 
-	class FilterCIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class FilterCIC5 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		CFLOAT32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 		std::vector<CFLOAT32> output;
 
 	public:
 		virtual ~FilterCIC5() {}
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class FilterComplex3Tap : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class FilterComplex3Tap : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 
 		FLOAT32 alpha = 0.0f;
@@ -252,16 +289,18 @@ namespace DSP {
 	public:
 		virtual ~FilterComplex3Tap() {}
 
-		void setTaps(FLOAT32 a) {
+		void setTaps(FLOAT32 a)
+		{
 			alpha = a;
 			beta = 1 - 2 * a;
 		}
 
 		// StreamIn
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class Rotate : public StreamIn<CFLOAT32> {
+	class Rotate : public StreamIn<CFLOAT32>
+	{
 		std::vector<CFLOAT32> output_up, output_down;
 		CFLOAT32 rot = 1.0f, mult = 1.0f;
 
@@ -275,10 +314,11 @@ namespace DSP {
 		Connection<CFLOAT32> down;
 
 		// Streams in
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class SOXR : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class SOXR : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 #ifdef HASSOXR
 		soxr_t m_soxr;
 
@@ -291,15 +331,16 @@ namespace DSP {
 	public:
 		virtual ~SOXR() {}
 		void setParams(int sample_rate, int out_rate);
-		virtual void Receive(const CFLOAT32* data, int len, TAG& tag);
+		virtual void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class SRC : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class SRC : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 #ifdef HASSAMPLERATE
 		std::vector<CFLOAT32> output;
 		std::vector<CFLOAT32> out_src;
 
-		SRC_STATE* state = nullptr;
+		SRC_STATE *state = nullptr;
 		int count = 0;
 		const int N = 16384;
 		double ratio = 0.0;
@@ -307,17 +348,20 @@ namespace DSP {
 #endif
 	public:
 #ifdef HASSAMPLERATE
-		virtual ~SRC() {
-			if (state) src_delete(state);
+		virtual ~SRC()
+		{
+			if (state)
+				src_delete(state);
 		}
 #else
 		virtual ~SRC() {}
 #endif
 		void setParams(int sample_rate, int out_rate);
-		virtual void Receive(const CFLOAT32* data, int len, TAG& tag);
+		virtual void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32> {
+	class SquareFreqOffsetCorrection : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 		std::vector<CFLOAT32> fft_data;
 		std::vector<FLOAT32> cumsum;
@@ -335,20 +379,22 @@ namespace DSP {
 		virtual ~SquareFreqOffsetCorrection() {}
 		void setWide(bool b) { wide = b; }
 		void setParams(int, int);
-		void Receive(const CFLOAT32* data, int len, TAG& tag);
+		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class DS_UINT16 {
+	class DS_UINT16
+	{
 		uint32_t h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0;
 
 	public:
-		int Run(uint32_t*, int, int);
-		int Run(uint8_t*, uint32_t*, int, int);
-		int Run(int8_t*, uint32_t*, int, int);
-		int Run(uint32_t*, CFLOAT32*, int, int);
+		int Run(uint32_t *, int, int);
+		int Run(uint8_t *, uint32_t *, int, int);
+		int Run(int8_t *, uint32_t *, int, int);
+		int Run(uint32_t *, CFLOAT32 *, int, int);
 	};
 
-	class Downsample32_CU8 : public SimpleStreamInOut<CU8, CFLOAT32> {
+	class Downsample32_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 		std::vector<uint32_t> buffer;
 
@@ -356,10 +402,11 @@ namespace DSP {
 
 	public:
 		virtual ~Downsample32_CU8() {}
-		void Receive(const CU8* data, int len, TAG& tag);
+		void Receive(const CU8 *data, int len, TAG &tag);
 	};
 
-	class Downsample32_CS8 : public SimpleStreamInOut<CS8, CFLOAT32> {
+	class Downsample32_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 		std::vector<uint32_t> buffer;
 
@@ -367,10 +414,11 @@ namespace DSP {
 
 	public:
 		virtual ~Downsample32_CS8() {}
-		void Receive(const CS8* data, int len, TAG& tag);
+		void Receive(const CS8 *data, int len, TAG &tag);
 	};
 
-	class Downsample16_CU8 : public SimpleStreamInOut<CU8, CFLOAT32> {
+	class Downsample16_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 		std::vector<uint32_t> buffer;
 
@@ -378,20 +426,22 @@ namespace DSP {
 
 	public:
 		virtual ~Downsample16_CU8() {}
-		void Receive(const CU8* data, int len, TAG& tag);
+		void Receive(const CU8 *data, int len, TAG &tag);
 	};
 
-	class Downsample16_CS8 : public SimpleStreamInOut<CS8, CFLOAT32> {
+	class Downsample16_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 		std::vector<uint32_t> buffer;
 
 		DS_UINT16 DS1, DS2, DS3, DS4;
 
 	public:
-		void Receive(const CS8* data, int len, TAG& tag);
+		void Receive(const CS8 *data, int len, TAG &tag);
 	};
 
-	class Downsample8_CU8 : public SimpleStreamInOut<CU8, CFLOAT32> {
+	class Downsample8_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 		std::vector<uint32_t> buffer;
 
@@ -399,10 +449,11 @@ namespace DSP {
 
 	public:
 		virtual ~Downsample8_CU8() {}
-		void Receive(const CU8* data, int len, TAG& tag);
+		void Receive(const CU8 *data, int len, TAG &tag);
 	};
 
-	class Downsample8_CS8 : public SimpleStreamInOut<CS8, CFLOAT32> {
+	class Downsample8_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
+	{
 		std::vector<CFLOAT32> output;
 		std::vector<uint32_t> buffer;
 
@@ -410,6 +461,6 @@ namespace DSP {
 
 	public:
 		virtual ~Downsample8_CS8() {}
-		void Receive(const CS8* data, int len, TAG& tag);
+		void Receive(const CS8 *data, int len, TAG &tag);
 	};
 }

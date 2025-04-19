@@ -25,19 +25,21 @@
 
 #include "Utilities.h"
 
-namespace AIS {
+namespace AIS
+{
 
 #define MAX_AIS_LENGTH (128 * 8)
 
-	class GPS {
+	class GPS
+	{
 		float lat = 0, lon = 0;
-		const std::string& nmea;
-		const std::string& json;
+		const std::string &nmea;
+		const std::string &json;
 
 		const std::string formatLatLon(float, bool) const;
 
 	public:
-		GPS(float lt, float ln, const std::string& s, const std::string& j) : lat(lt), lon(ln), nmea(s), json(j) {}
+		GPS(float lt, float ln, const std::string &s, const std::string &j) : lat(lt), lon(ln), nmea(s), json(j) {}
 
 		float getLat() const { return lat; }
 		float getLon() const { return lon; }
@@ -46,7 +48,8 @@ namespace AIS {
 		const std::string getJSON() const;
 	};
 
-	class Message {
+	class Message
+	{
 	protected:
 		const int MAX_NMEA_CHARS = 56;
 		static int ID;
@@ -56,34 +59,50 @@ namespace AIS {
 		std::time_t rxtime;
 		int length;
 		char channel;
+		long start_idx, end_idx;
 		int station;
 		int own_mmsi = -1;
 
 	public:
 		std::vector<std::string> NMEA;
 
-		void Stamp(std::time_t t = (std::time_t)0L) {
+		void Stamp(std::time_t t = (std::time_t)0L)
+		{
 			std::time(&rxtime);
 
 			if ((long int)t != 0 && t < rxtime)
 				setRxTimeUnix(t);
 		}
 
-		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string& hardware, int version, Type driver, const std::string& uid = "") const;
+		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, const std::string &uid = "") const;
 
-		std::string getRxTime() const {
+		std::string getRxTime() const
+		{
 			return Util::Convert::toTimeStr(rxtime);
 		}
 
-		std::time_t getRxTimeUnix() const {
+		std::time_t getRxTimeUnix() const
+		{
 			return rxtime;
 		}
 
-		void setRxTimeUnix(std::time_t t) {
+		void setRxTimeUnix(std::time_t t)
+		{
 			rxtime = t;
 		}
 
-		void clear() {
+		void setStartIdx(long s)
+		{
+			start_idx = s;
+		}
+
+		void setEndIdx(long e)
+		{
+			end_idx = e;
+		}
+
+		void clear()
+		{
 			length = 0;
 			NMEA.resize(0);
 			std::memset(data, 0, 128);
@@ -91,34 +110,39 @@ namespace AIS {
 
 		bool validate();
 
-		unsigned type() const {
+		unsigned type() const
+		{
 			return data[0] >> 2;
 		}
 
-		unsigned repeat() const {
+		unsigned repeat() const
+		{
 			return data[0] & 3;
 		}
 
-		unsigned mmsi() const {
+		unsigned mmsi() const
+		{
 			return (data[1] << 22) | (data[2] << 14) | (data[3] << 6) | (data[4] >> 2);
 		}
 
 		unsigned getUint(int start, int len) const;
 		int getInt(int start, int len) const;
-		void getText(int start, int len, std::string& str) const;
-		void setText(int start, int len, const char * str);
+		void getText(int start, int len, std::string &str) const;
+		void setText(int start, int len, const char *str);
 
 		bool setUint(int start, int len, unsigned val);
 		bool setInt(int start, int len, int val);
 
-		void setBit(int i, bool b) {
+		void setBit(int i, bool b)
+		{
 			if (b)
 				data[i >> 3] |= (1 << (i & 7));
 			else
 				data[i >> 3] &= ~(1 << (i & 7));
 		}
 
-		bool getBit(int i) const {
+		bool getBit(int i) const
+		{
 			return data[i >> 3] & (1 << (i & 7));
 		}
 
@@ -133,23 +157,25 @@ namespace AIS {
 		void setChannel(char c) { channel = c; }
 		char getChannel() const { return channel; }
 
-		void setOrigin(char c, int s, int o) {
+		void setOrigin(char c, int s, int o)
+		{
 			channel = c;
 			station = s;
 			own_mmsi = o;
 		}
 		int getStation() const { return station; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
-		void buildNMEA(TAG& tag, int id = -1);
+		void buildNMEA(TAG &tag, int id = -1);
 		bool isOwn() const { return own_mmsi == mmsi(); }
 	};
 
-	class Filter : public Setting {
+	class Filter : public Setting
+	{
 		const uint32_t all = 0xFFFFFFFF;
 		uint32_t allow = all;
 		uint32_t allow_repeat = all;
 		bool on = false;
-		bool downsample = false;		
+		bool downsample = false;
 		bool GPS = true, AIS = true;
 		std::vector<int> ID_allowed;
 		std::vector<int> MMSI_allowed;
@@ -164,6 +190,6 @@ namespace AIS {
 		bool isOn() { return on; }
 		std::string getAllowed();
 		bool includeGPS() { return on ? GPS : true; }
-		bool include(const Message& msg);
+		bool include(const Message &msg);
 	};
 }

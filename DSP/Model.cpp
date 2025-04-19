@@ -346,6 +346,13 @@ namespace AIS
 		C_a = &FCIC5_a.out;
 		C_b = &FCIC5_b.out;
 
+		// add wav-write to dump 48K channels
+		if (dump)
+		{
+			*C_a >> convertA >> wavA;
+			*C_b >> convertB >> wavB;
+		}
+
 		return;
 	}
 
@@ -388,6 +395,14 @@ namespace AIS
 		else if (option == "STATION_ID")
 		{
 			station = Util::Parse::Integer(arg);
+		}
+		else if (option == "DUMP")
+		{
+			wavA.setValue("FILE", arg + "_A.wav");
+			wavB.setValue("FILE", arg + "_B.wav");
+			wavA.setValue("RATE", "48000");
+			wavB.setValue("RATE", "48000");
+			dump = true;
 		}
 		else
 			Model::Set(option, arg);

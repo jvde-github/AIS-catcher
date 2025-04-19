@@ -204,6 +204,8 @@ struct TAG
 	Type driver = Type::NONE;
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
+	long sample_idx = 0;
+	long msg_idx_start, msg_idx_end;
 
 	void clear()
 	{
@@ -220,6 +222,7 @@ struct TAG
 		distance = DISTANCE_UNDEFINED;
 		speed = SPEED_UNDEFINED;
 		angle = ANGLE_UNDEFINED;
+		msg_idx_start = msg_idx_end = 0;
 		validated = false;
 		previous_signal = (std::time_t)0;
 		shipclass = CLASS_UNKNOWN;

@@ -173,6 +173,11 @@ namespace AIS
 		Connection<CFLOAT32> *C_a = nullptr, *C_b = nullptr;
 		DSP::Rotate ROT;
 
+		// dump 48K channels to WAV files
+		Util::WriteWAV wavA, wavB;
+		Util::ConvertToRAW convertA, convertB;
+		bool dump = false;
+
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
 
@@ -332,7 +337,6 @@ namespace AIS
 		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
-
 
 	class ModelExport : public Model
 	{
