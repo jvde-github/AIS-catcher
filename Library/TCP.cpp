@@ -179,6 +179,34 @@ namespace TCP
 		return true;
 	}
 
+	bool ServerConnection::SendRaw(const char *data, int length) {
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if (!isConnected())
+			return false;
+
+		int bytes = ::send(sock, data, length, 0);	
+
+		if (bytes < 0)
+		{
+#ifdef _WIN32
+			if (WSAGetLastError() != WSAEWOULDBLOCK)
+			{
+#else
+			if (errno != EWOULDBLOCK && errno != EAGAIN)
+			{
+#endif
+				if (verbose)
+					Error() << "TCP Connection: error message to client: " << strerror(errno);
+
+				CloseUnsafe();
+				return false;
+			}
+			bytes = 0;
+		}
+		return true;
+	}
+
 	bool ServerConnection::SendDirect(const char *data, int length)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
@@ -407,7 +435,7 @@ namespace TCP
 		{
 			if (c.isConnected())
 			{
-				if (!c.SendDirect(m.c_str(), m.length()))
+				if (!c.SendRaw(m.c_str(), m.length()))
 				{
 					c.Close();
 					Error() << "TCP listener: client not reading, close connection.";
