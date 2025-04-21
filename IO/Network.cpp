@@ -774,14 +774,14 @@ namespace IO
 		{
 			for (int i = 0; i < len; i++)
 			{
-				SendAll(data[i].getNMEA() + "\r\n");
+				SendAllDirect(data[i].getNMEA() + "\r\n");
 			}
 		}
 		else
 		{
 			for (int i = 0; i < len; i++)
 			{
-				SendAll((data[i].getJSON() + "\r\n").c_str());
+				SendAllDirect((data[i].getJSON() + "\r\n").c_str());
 			}
 		}
 	}

@@ -401,6 +401,23 @@ namespace TCP
 		return true;
 	}
 
+	bool Server::SendAllDirect(const std::string &m)
+	{
+		for (auto &c : client)
+		{
+			if (c.isConnected())
+			{
+				if (!c.SendDirect(m.c_str(), m.length()))
+				{
+					c.Close();
+					Error() << "TCP listener: client not reading, close connection.";
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	bool Server::setNonBlock(SOCKET s)
 	{
 
