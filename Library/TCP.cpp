@@ -277,6 +277,15 @@ namespace TCP
 			else
 			{
 				client[ptr].Start(conn_socket);
+
+				int flag = 1;
+				if (setsockopt(conn_socket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag)) != 0)
+				{
+					Error() << "TCP Server: cannot set TCP_NODELAY on client socket.";
+					client[ptr].Close();
+					return;
+				}
+
 				if (!setNonBlock(conn_socket))
 				{
 					Error() << "TCP Server: cannot make client socket non-blocking.";
@@ -491,7 +500,8 @@ namespace TCP
 
 	bool Client::connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive, int idle, int interval, int count)
 	{
-		if(sock != -1) {
+		if (sock != -1)
+		{
 			Warning() << "TCP (" << this->host << ":" << this->port << "): connection overwritten. Socket not properly closed.";
 		}
 
@@ -521,6 +531,14 @@ namespace TCP
 		if (sock == -1)
 		{
 			freeaddrinfo(address);
+			return false;
+		}
+
+		int flag = 1;
+		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag)) != 0)
+		{
+			freeaddrinfo(address);
+			disconnect();
 			return false;
 		}
 
