@@ -98,6 +98,8 @@ namespace TCP
 
 		bool start(int port);
 		bool SendAll(const std::string &m);
+		bool SendAllDirect(const std::string &m);
+
 		void setReusePort(bool b) { reuse_port = b; }
 		bool setNonBlock(SOCKET sock);
 		void setIP(std::string ip) { IP_BIND = ip; }
