@@ -87,6 +87,7 @@ namespace TCP
 		void SendBuffer();
 		bool Send(const char *buffer, int length);
 		bool SendDirect(const char *buffer, int length);
+		bool SendRaw(const char *buffer, int length);
 		void Read();
 		void setVerbosity(bool v) { verbose = v; }
 	};
