@@ -1,6 +1,16 @@
 # CMake definitions for AIS-catcher
 
-cmake_minimum_required(VERSION 3.02)
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "4.0")
+    cmake_minimum_required(VERSION 4.0)
+    message(STATUS "Using CMake ${CMAKE_VERSION} with 4.0+ features")
+elseif(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.02")
+    cmake_minimum_required(VERSION 3.02)
+    message(STATUS "Using CMake ${CMAKE_VERSION} with 3.02+ features")
+else()
+    # If below 3.02, warn user
+    message(WARNING "CMake ${CMAKE_VERSION} detected. This project is designed for CMake 3.02 or higher.")
+endif()
+
 project(AIS-catcher)
 
 option(SOAPYSDR "Include Soapy SDR support" OFF)
