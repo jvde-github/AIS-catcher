@@ -1,4 +1,5 @@
-** Due to a power outage at the hosting provider, aiscatcher.org is down for maintenance **
+*** [Due  to a power outage at the hosting provider, aiscatcher.org is down](https://statuspage.hostinger.com) ***
+
 
 # AIS-catcher: A multi-platform AIS Receiver
 
