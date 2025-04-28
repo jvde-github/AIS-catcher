@@ -1,6 +1,3 @@
-*** [Due  to a power outage at the hosting provider, aiscatcher.org is down](https://statuspage.hostinger.com) ***
-
-
 # AIS-catcher: A multi-platform AIS Receiver
 
 This repository presents the `AIS-catcher` software, a versatile dual-channel AIS receiver that is compatible with a wide range of Software Defined Radios (SDRs). These include RTL-SDR dongles (such as the ShipXplorer AIS dongle and RTL SDR Blog v4), AirSpy (Mini/R2/HF+), HackRF, SDRPlay, SoapySDR, and file/network input (ZMQ/RTL-TCP/SpyServer). AIS-catcher delivers output in the form of NMEA messages, which can be conveniently displayed on screen or forwarded via UDP/HTTP/TCP. Designed as a lightweight command line utility, AIS-catcher also incorporates a built-in web server for internal use within secure networks. The project home page including several realtime examples can be found at [aiscatcher.org](https://aiscatcher.org).
