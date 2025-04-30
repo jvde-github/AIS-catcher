@@ -390,7 +390,7 @@ namespace IO
 			for (int i = 0; i < len; i++)
 			{
 				if (filter.include(data[i]))
-					SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, uuid) + "\r\n").c_str());
+					SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4, uuid) + "\r\n").c_str());
 			}
 		}
 	}
@@ -537,6 +537,10 @@ namespace IO
 			else
 				throw std::runtime_error("UDP: invalid UUID: " + arg);
 		}
+		else if (option == "INCLUDE_SAMPLE_START")
+		{
+			include_sample_start = Util::Parse::Switch(arg);
+		}
 		else if (!OutputMessage::setOption(option, arg))
 		{
 			throw std::runtime_error("UDP output - unknown option: " + option);
@@ -613,7 +617,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, uuid) + "\r\n").c_str()) < 0)
+				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4, uuid) + "\r\n").c_str()) < 0)
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
@@ -716,6 +720,10 @@ namespace IO
 			else
 				throw std::runtime_error("UDP: invalid UUID: " + arg);
 		}
+		else if (option == "INCLUDE_SAMPLE_START")
+		{
+			include_sample_start = Util::Parse::Switch(arg);
+		}
 		else if (!OutputMessage::setOption(option, arg))
 		{
 			throw std::runtime_error("TCP client - unknown option: " + option);
@@ -756,6 +764,10 @@ namespace IO
 		else if (option == "JSON")
 		{
 			JSON = Util::Parse::Switch(arg);
+		}
+		else if (option == "INCLUDE_SAMPLE_START")
+		{
+			include_sample_start = Util::Parse::Switch(arg);
 		}
 		else if (!OutputMessage::setOption(option, arg))
 		{
@@ -808,7 +820,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				SendAll((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver) + "\r\n").c_str());
+				SendAll((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4) + "\r\n").c_str());
 			}
 		}
 	}
@@ -835,7 +847,7 @@ namespace IO
 	{
 		std::stringstream ss;
 		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort() << ", filter: " << Util::Convert::toString(filter.isOn());
-		
+
 		switch (Protocol)
 		{
 		case PROTOCOL::MQTT:
@@ -879,7 +891,7 @@ namespace IO
 			}
 			else
 			{
-				std::string s = data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver) + "\r\n";
+				std::string s = data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, tag.ipv4) + "\r\n";
 				session->send(s.c_str(), s.length());
 			}
 		}

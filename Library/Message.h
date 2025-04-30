@@ -74,7 +74,7 @@ namespace AIS
 				setRxTimeUnix(t);
 		}
 
-		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, const std::string &uid = "") const;
+		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ss = false,  uint32_t ipv4 = 0, const std::string &uid = "") const;
 
 		std::string getRxTime() const
 		{

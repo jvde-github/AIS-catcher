@@ -149,6 +149,7 @@ namespace IO
 		bool broadcast = false;
 		bool JSON = false;
 		std::string uuid;
+		bool include_sample_start = false;
 
 		void ResetIfNeeded();
 
@@ -186,6 +187,7 @@ namespace IO
 		bool keep_alive = false;
 		bool persistent = true;
 		std::string uuid;
+		bool include_sample_start = false;
 
 	public:
 		Setting &Set(std::string option, std::string arg);
@@ -210,6 +212,7 @@ namespace IO
 		int port = 5010;
 		//AIS::Filter filter;
 		bool JSON = false;
+		bool include_sample_start = false;
 
 	public:
 		virtual ~TCPlistenerStreamer() {};

@@ -156,15 +156,16 @@ namespace AIS
 			switch (state)
 			{
 			case State::TRAINING:
-				start_idx = tag.sample_idx;
 				if (Bit != lastBit) // 01 10
 				{
 					position++;
 				}
 				else // 11 or 00
 				{
-					if (position > MIN_TRAINING_BITS)
+					if (position > MIN_TRAINING_BITS) {
+						start_idx = tag.sample_idx;
 						NextState(State::STARTFLAG, Bit ? 3 : 1); // we are at * in ..0101|01*111110 ..010|*01111110
+					}
 					else
 						NextState(State::TRAINING, 0);
 				}

@@ -69,7 +69,7 @@ namespace AIS
 		return c;
 	}
 
-	void NMEA::submitAIS(TAG &tag, long t, int thisstation)
+	void NMEA::submitAIS(TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation)
 	{
 		if (aivdm.checksum != NMEAchecksum(aivdm.sentence))
 		{
@@ -84,6 +84,8 @@ namespace AIS
 			msg.clear();
 			msg.Stamp(stamp ? 0 : t);
 			msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation, own_mmsi);
+			msg.setStartIdx(ssc);
+			msg.setEndIdx(ssc + sl);
 
 			addline(aivdm);
 
@@ -330,7 +332,7 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processAIS(const std::string &str, TAG &tag, long t, int thisstation)
+	bool NMEA::processAIS(const std::string &str, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation)
 	{
 		int pos = str.find_first_of("$!");
 		if (pos == std::string::npos)
@@ -383,7 +385,7 @@ namespace AIS
 
 		aivdm.sentence = nmea;
 
-		submitAIS(tag, t, thisstation);
+		submitAIS(tag, t, ssc, sl, thisstation);
 
 		return true;
 	}
@@ -403,6 +405,8 @@ namespace AIS
 				std::string dev = "";
 				std::string suuid = "";
 				int thisstation = -1;
+				uint64_t ssc = 0;
+				uint16_t sl = 0;
 
 				t = 0;
 
@@ -441,6 +445,15 @@ namespace AIS
 					case AIS::KEY_DRIVER:
 						tag.driver = (Type)p.Get().getInt();
 						break;
+					case AIS::KEY_SAMPLE_START_COUNT:
+						ssc = p.Get().getInt();
+						break;
+					case AIS::KEY_SAMPLE_LENGTH:
+						sl = p.Get().getInt();
+						break;
+					case AIS::KEY_IPV4:
+						tag.ipv4 = p.Get().getInt();
+						break;
 					}
 				}
 
@@ -465,7 +478,7 @@ namespace AIS
 							{
 								for (const auto &v : p.Get().getArray())
 								{
-									processAIS(v.getString(), tag, t, thisstation);
+									processAIS(v.getString(), tag, t, ssc, sl, thisstation);
 								}
 							}
 						}
@@ -593,9 +606,9 @@ namespace AIS
 							t = 0;
 
 							if (type == "VDM")
-								noerror &= processAIS(line, tag, t);
+								noerror &= processAIS(line, tag, 0, 0, t);
 							if (type == "VDO" && VDO)
-								noerror &= processAIS(line, tag, t);
+								noerror &= processAIS(line, tag, 0, 0, t);
 							if (type == "GGA")
 								noerror &= processGGA(line, tag, t);
 							if (type == "RMC")

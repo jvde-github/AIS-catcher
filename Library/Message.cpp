@@ -75,11 +75,14 @@ namespace AIS
 			return json;
 	}
 
-	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, const std::string &uuid) const
+	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ssl, uint32_t ipv4, const std::string &uuid) const
 	{
 		std::stringstream ss;
 
-		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat() << ",\"ssc\":"<< start_idx << ",\"sl\":" << (end_idx-start_idx);
+		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat();
+		
+		if(include_ssl) 
+			ss << ",\"ssc\":"<< start_idx << ",\"sl\":" << (end_idx-start_idx);
 
 		if (status)
 		{
@@ -91,8 +94,13 @@ namespace AIS
 			ss << ",\"rxuxtime\":" << getRxTimeUnix();
 			ss << ",\"rxtime\":\"" << getRxTime() << "\"";
 		}
+
 		if (!uuid.empty())
 			ss << ",\"uuid\":\"" << uuid << "\"";
+
+		if(ipv4)
+			ss << ",\"ipv4\":" << ipv4;
+			
 		if (mode & 1)
 		{
 			ss << ",\"signalpower\":";
