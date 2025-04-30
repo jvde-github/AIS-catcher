@@ -347,7 +347,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 		commm_feed = _msg.back().get();
 
-		commm_feed->Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on");
+		commm_feed->Set("HOST", "aiscatcher.org").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
 	}
 	if (!uuid.empty() && commm_feed)
 		commm_feed->Set("UUID", uuid);

@@ -27,6 +27,7 @@ namespace AIS
 		{"scaled", "", "scaled", ""},
 		{"channel", "channel", "channel", ""},
 		{"hardware", "hardware", "hardware", ""},
+		{"ipv4", "ipv4", "ipv4", ""},
 		{"signalpower", "signalpower", "signalpower", ""},
 		{"ppm", "ppm", "ppm", ""},
 		{"rxtime", "rxtime", "rxtime", "rxtime"},
@@ -35,6 +36,8 @@ namespace AIS
 		{"eta", "", "eta", ""},
 		{"shiptype_text", "", "shiptype_text", ""},
 		{"aid_type_text", "", "aid_type_text", ""},
+		{"ssc", "", "ssc", ""},
+		{"sl", "", "sl", ""},
 		{"station_id", "", "station_id", ""},
 		{"version", "", "version", ""},
 		// setting
