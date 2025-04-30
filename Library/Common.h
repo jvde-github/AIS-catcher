@@ -206,7 +206,7 @@ struct TAG
 	FLOAT32 station_lon = LON_UNDEFINED;
 	long sample_idx = 0;
 	long msg_idx_start, msg_idx_end;
-	uint16_t ipv4 = 0;
+	uint32_t ipv4 = 0;
 
 	void clear()
 	{
