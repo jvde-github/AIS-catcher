@@ -141,7 +141,7 @@ std::string DB::getJSONcompact(bool full)
 				content += std::to_string(ship.lat) + comma;
 				content += std::to_string(ship.lon) + comma;
 
-				if (isValidCoord(lat, lon))
+				if (ship.distance != DISTANCE_UNDEFINED && ship.angle != ANGLE_UNDEFINED)
 				{
 					content += std::to_string(ship.distance) + comma;
 					content += std::to_string(ship.angle) + comma;
@@ -742,7 +742,7 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 {
 	const AIS::Message *msg = (AIS::Message *)data.binary;
 	int type = msg->type();
-	FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+	FLOAT32 loc_lat = LAT_UNDEFINED, loc_lon = LON_UNDEFINED;
 
 	// Only process binary message types 6 and 8
 	if (type != 6 && type != 8)
@@ -764,31 +764,34 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 		{
 			binmsg.fi = p.Get().getInt();
 		}
-		else if(p.Key() == AIS::KEY_LAT) {
-				lat = p.Get().getFloat();
+		else if (p.Key() == AIS::KEY_LAT)
+		{
+			loc_lat = p.Get().getFloat();
 		}
-		else if(p.Key() == AIS::KEY_LON) {
-				lon = p.Get().getFloat();
+		else if (p.Key() == AIS::KEY_LON)
+		{
+			loc_lon = p.Get().getFloat();
 		}
 	}
 
-	//if (binmsg.dac != -1 && binmsg.fi != -1)
-	if(binmsg.dac == 1 && binmsg.fi == 31)
+	// if (binmsg.dac != -1 && binmsg.fi != -1)
+	if (binmsg.dac == 1 && binmsg.fi == 31)
 	{
 		binmsg.json.clear();
 		builder.stringify(data, binmsg.json);
 		binmsg.used = true;
-		if(isValidCoord(lat, lon))
+		if (isValidCoord(loc_lat, loc_lon))
 		{
-			binmsg.lat = lat;
-			binmsg.lon = lon;
+			binmsg.lat = loc_lat;
+			binmsg.lon = loc_lon;
 
-			if( !isValidCoord(ship.lat, ship.lon)) {
+			// switch off approximation of mmsi location
+			if (false && !isValidCoord(ship.lat, ship.lon))
+			{
 				position_updated = true;
-				ship.lat = lat;
-				ship.lon = lon;
+				ship.lat = loc_lat;
+				ship.lon = loc_lon;
 			}
-			
 		}
 		binmsg.timestamp = msg->getRxTimeUnix();
 		binaryMsgIndex = (binaryMsgIndex + 1) % MAX_BINARY_MESSAGES;
@@ -809,7 +812,7 @@ std::string DB::getBinaryMessagesJSON() const
 		int idx = (startIndex - i + MAX_BINARY_MESSAGES) % MAX_BINARY_MESSAGES;
 		const BinaryMessage &msg = binaryMessages[idx];
 
-		if (!msg.used || (long int) tm - (long int) msg.timestamp > TIME_HISTORY)
+		if (!msg.used || (long int)tm - (long int)msg.timestamp > TIME_HISTORY)
 			continue;
 
 		if (!first)
@@ -866,6 +869,9 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 || type == 9)
 		addToPath(ptr);
 
+	if (type == 6 || type == 8)
+		processBinaryMessage(data[0], ship, position_updated);
+
 	// update ship with distance and bearing if position is updated with message
 	if (position_updated && isValidCoord(lat, lon))
 	{
@@ -901,9 +907,6 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 	tag.shipclass = ship.shipclass;
 	tag.speed = ship.speed;
-
-	if (type == 6 || type == 8)
-		processBinaryMessage(data[0], ship, position_updated);
 
 	if (position_updated && isValidCoord(lat_old, lon_old))
 	{

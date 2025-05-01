@@ -465,19 +465,19 @@ selectCircleStyleFunction = function (feature) {
     });
 }
 
-const binaryStyle = function(feature) {
+const binaryStyle = function (feature) {
     const count = feature.get('binary_count') || feature.binary_count || 1;
     const isAssociated = feature.get('is_associated') || feature.is_associated;
-    
+
     const zIndex = isAssociated ? 200 : 100;
-    
+
     if (isAssociated) {
         // Style for binary features at ship locations (badge style)
         const outlineStyle = new ol.style.Style({
             image: new ol.style.Circle({
-                radius: 12, 
+                radius: 12,
                 fill: new ol.style.Fill({
-                    color: 'rgba(255, 255, 255, 0)' 
+                    color: 'rgba(255, 255, 255, 0)'
                 }),
                 stroke: new ol.style.Stroke({
                     color: 'white',
@@ -486,9 +486,9 @@ const binaryStyle = function(feature) {
             }),
             zIndex: zIndex
         });
-        
+
         const badgeStyle = new ol.style.Style({
-            geometry: function(feature) {
+            geometry: function (feature) {
                 const center = feature.getGeometry().getCoordinates();
                 return new ol.geom.Point(center);
             },
@@ -505,23 +505,23 @@ const binaryStyle = function(feature) {
             }),
             text: new ol.style.Text({
                 text: count.toString(),
-                font: 'bold 9px Arial', 
+                font: 'bold 9px Arial',
                 fill: new ol.style.Fill({
                     color: 'white'
                 }),
-                offsetX: 10, 
-                offsetY: -10, 
+                offsetX: 10,
+                offsetY: -10,
                 textAlign: 'center',
                 textBaseline: 'middle'
             }),
-            zIndex: zIndex + 1 
+            zIndex: zIndex + 1
         });
-        
+
         return [outlineStyle, badgeStyle];
     } else {
         const circleStyle = new ol.style.Style({
             image: new ol.style.Circle({
-                radius: 10,  
+                radius: 10,
                 fill: new ol.style.Fill({
                     color: 'rgba(220, 0, 0, 0.9)'
                 }),
@@ -541,7 +541,7 @@ const binaryStyle = function(feature) {
             }),
             zIndex: zIndex // Same z-index for the entire standalone badge
         });
-        
+
         return [circleStyle];
     }
 };
@@ -799,29 +799,29 @@ async function showVesselDetail(m) {
 
 function showBinaryMessageDialog(featureOrMmsi) {
     let title, content;
-    
+
     if (typeof featureOrMmsi === 'object') {
         if (!featureOrMmsi.binary_messages || featureOrMmsi.binary_messages.length === 0) {
             showDialog("Binary Message", "No message content available");
             return;
         }
-        
+
         title = "Binary Messages";
         content = getBinaryMessageList(featureOrMmsi.binary_messages);
-        
+
     } else if (typeof featureOrMmsi === 'number' || typeof featureOrMmsi === 'string') {
         const mmsi = Number(featureOrMmsi);
-        
+
         if (!binaryDB[mmsi] || !binaryDB[mmsi].ship_messages || binaryDB[mmsi].ship_messages.length === 0) {
             showDialog("Binary Messages", "No binary messages available for this vessel");
             return;
         }
-        
+
         const shipName = mmsi in shipsDB ? (shipsDB[mmsi].raw.shipname || `MMSI ${mmsi}`) : `MMSI ${mmsi}`;
         title = `Binary Messages for ${shipName}`;
         content = getBinaryMessageList(binaryDB[mmsi].ship_messages);
     }
-    
+
     showDialog(title, content);
 }
 
@@ -829,53 +829,53 @@ function getBinaryMessageList(messages) {
     if (!messages || messages.length === 0) {
         return "<p>No messages available</p>";
     }
-    
+
     const sortedMessages = [...messages].sort((a, b) => b.timestamp - a.timestamp);
-    
+
     let content = '<div class="binary-messages-list">';
-    
+
     content += `<div class="binary-message-count">${sortedMessages.length} message${sortedMessages.length > 1 ? 's' : ''} available</div>`;
-    
+
     sortedMessages.forEach((msg, index) => {
         if (index > 0) {
             content += '<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">';
         }
-        
+
         content += '<div class="binary-message-item">';
-        
+
         content += `<div class="binary-message-header">
                       <span class="binary-message-time">${msg.formattedTime || new Date(msg.timestamp * 1000).toLocaleTimeString()}</span>`;
-        
+
         if (msg.message && msg.message.mmsi) {
-            const shipName = msg.message.mmsi in shipsDB ? 
-                (shipsDB[msg.message.mmsi].raw.shipname || `MMSI ${msg.message.mmsi}`) : 
+            const shipName = msg.message.mmsi in shipsDB ?
+                (shipsDB[msg.message.mmsi].raw.shipname || `MMSI ${msg.message.mmsi}`) :
                 `MMSI ${msg.message.mmsi}`;
-            
+
             content += `<span class="binary-message-source"> from ${shipName}</span>`;
         }
-        
-        content += '</div>'; 
-        
+
+        content += '</div>';
+
         if (msg.message && msg.message.dac == 1 && (msg.message.fid == 31 || msg.message.fi == 31)) {
             content += getBinaryMessageContent(msg, false);
         } else {
             content += '<div class="binary-message-details">';
             content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
-            
+
             // Add a collapsible section for raw data
             content += `<details class="binary-raw-data">
                           <summary>Show Raw Data</summary>
                           <pre>${JSON.stringify(msg.message, null, 2)}</pre>
                         </details>`;
-            
+
             content += '</div>';
         }
-        
+
         content += '</div>';
     });
-    
-    content += '</div>'; 
-    
+
+    content += '</div>';
+
     return content;
 }
 
@@ -1556,9 +1556,9 @@ const handleClick = function (pixel, target, event) {
 
     if (feature && 'link' in feature && !included) {
         window.open(feature.link, '_blank');
-    } else  if (feature && feature.binary === true && !feature.is_associated) {
+    } else if (feature && feature.binary === true && !feature.is_associated) {
         closeDialog();
-        closeSettings();  
+        closeSettings();
         showBinaryMessageDialog(feature);
         return;
     } else if (feature && 'ship' in feature || included) {
@@ -2569,35 +2569,35 @@ function formatTime(timestamp) {
 async function fetchBinary() {
     binaryDB = {};
     standaloneBinaryMessages = []; // For messages not at ship locations
-    
+
     try {
         response = await fetch("api/binmsgs.json");
         const messages = await response.json();
-        
+
         // Group messages by MMSI
         messages.forEach((msg, index) => {
             if (msg.message && msg.message.mmsi && msg.message.lat && msg.message.lon) {
                 const mmsi = msg.message.mmsi;
-                
+
                 if (!binaryDB[mmsi]) {
                     binaryDB[mmsi] = {
                         ship_messages: [], // Messages to show at ship location
                         standalone_messages: [] // Messages to show at their own locations
                     };
                 }
-                
+
                 msg.formattedTime = formatTime(msg.timestamp);
-                msg.index = index + 1; 
-                
+                msg.index = index + 1;
+
                 // Store the message's own coordinates 
                 msg.message_lat = msg.message.lat;
                 msg.message_lon = msg.message.lon;
-                
+
                 // We'll categorize messages later when drawing them
                 binaryDB[mmsi].ship_messages.push(msg);
             }
         });
-        
+
         setPulseOk();
         return true;
     } catch (error) {
@@ -3907,7 +3907,9 @@ async function updateShipTable() {
                     sorter: "number",
                     formatter: function (cell) {
                         const ship = cell.getRow().getData();
-                        return ship != null ? getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "") : "";
+                        return (ship != null && ship.distance != null)
+                            ? getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")
+                            : "";
                     },
                 },
                 {
@@ -4142,24 +4144,24 @@ function getTooltipContent(ship) {
     let content = '<div class="tooltip-card">' +
         getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
         '<div>' +
-            (getShipName(ship) || ship.mmsi) + ' at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '<br>' +
-            'Received ' + getDeltaTimeVal(ship.last_signal) + ' ago' +
+        (getShipName(ship) || ship.mmsi) + ' at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '<br>' +
+        'Received ' + getDeltaTimeVal(ship.last_signal) + ' ago' +
         '</div>' +
-    '</div>';
+        '</div>';
 
-    if (ship.mmsi in binaryDB && binaryDB[ship.mmsi].ship_messages && 
+    if (ship.mmsi in binaryDB && binaryDB[ship.mmsi].ship_messages &&
         binaryDB[ship.mmsi].ship_messages.length > 0) {
-        
-        const meteoMessages = binaryDB[ship.mmsi].ship_messages.filter(msg => 
-            msg.message && msg.message.dac == 1 && 
+
+        const meteoMessages = binaryDB[ship.mmsi].ship_messages.filter(msg =>
+            msg.message && msg.message.dac == 1 &&
             (msg.message.fid == 31 || msg.message.fi == 31)
         );
-        
+
         if (meteoMessages.length > 0) {
             content += getBinaryMessageContent(meteoMessages, true);
         }
     }
-    
+
     return content;
 }
 
@@ -4390,38 +4392,38 @@ function getTooltipContentBinary(mmsiOrBinary) {
 
 function getBinaryMessageContent(binary, showMultiple = false) {
     const messages = Array.isArray(binary) ? binary : [binary];
-    
+
     if (messages.length === 0) return '';
-    
+
     messages.sort((a, b) => b.timestamp - a.timestamp);
-    
+
     const messagesToShow = showMultiple ? Math.min(messages.length, 3) : 1;
-    
+
     let content = '<div class="meteo-tooltip" style="max-width: 320px;">';
-    
+
     for (let i = 0; i < messagesToShow; i++) {
         const msg = messages[i].message;
-        
+
         if (i > 0) {
             content += '<hr style="margin: 10px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.3);">';
         }
-        
+
         // Determine if it's just meteo or also has hydro data
-        const hasHydroData = 
+        const hasHydroData =
             ('watercurrent' in msg && msg.watercurrent !== undefined && msg.watercurrent !== null) ||
             ('currentspeed' in msg && msg.currentspeed !== undefined && msg.currentspeed !== null) ||
             ('currentdir' in msg && msg.currentdir !== undefined && msg.currentdir !== null) ||
             ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) ||
             ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null);
-        
+
         content += `<h4 style="margin: 5px 0; font-size: 12px; color: #eee;">${messages[i].formattedTime} - ${hasHydroData ? 'Meteo & Hydro' : 'Meteo'}`;
         if (messagesToShow > 1) {
-            content += ` (${i+1}/${messagesToShow})`;
+            content += ` (${i + 1}/${messagesToShow})`;
         }
         content += '</h4>';
-        
+
         content += '<div style="display: grid; grid-template-columns: 1fr 1fr; grid-gap: 5px;">';
-        
+
         // Wind data
         if ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4432,7 +4434,7 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             }
             content += '</div></div>';
         }
-        
+
         // Air temperature
         if ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4440,7 +4442,7 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             content += '<div style="font-size: 11px; font-weight: bold;">' + msg.airtemp.toFixed(1) + '&deg C</div>';
             content += '</div>';
         }
-        
+
         // Air pressure
         if ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4451,11 +4453,11 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             }
             content += '</div></div>';
         }
-        
+
         // Water current speed and direction
         const currentSpeed = msg.watercurrent || msg.currentspeed;
         const currentDir = msg.currentdir || msg.currentdirection;
-        
+
         if (currentSpeed !== undefined && currentSpeed !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
             content += '<div style="font-size: 11px; color: #ccc;">Current:</div>';
@@ -4465,7 +4467,7 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             }
             content += '</div></div>';
         }
-        
+
         // Water level
         if ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4473,7 +4475,7 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             content += '<div style="font-size: 11px; font-weight: bold;">' + msg.waterlevel.toFixed(2) + ' m</div>';
             content += '</div>';
         }
-        
+
         // Water temperature
         if ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4481,7 +4483,7 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             content += '<div style="font-size: 11px; font-weight: bold;">' + msg.watertemp.toFixed(1) + '&deg C</div>';
             content += '</div>';
         }
-        
+
         // Wave data
         if ('waveheight' in msg && msg.waveheight !== undefined && msg.waveheight !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4495,7 +4497,7 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             }
             content += '</div></div>';
         }
-        
+
         // Swell data
         if ('swellheight' in msg && msg.swellheight !== undefined && msg.swellheight !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4509,7 +4511,7 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             }
             content += '</div></div>';
         }
-        
+
         // Visibility
         if ('visibility' in msg && msg.visibility !== undefined && msg.visibility !== null) {
             content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
@@ -4517,16 +4519,16 @@ function getBinaryMessageContent(binary, showMultiple = false) {
             content += '<div style="font-size: 11px; font-weight: bold;">' + msg.visibility.toFixed(1) + ' nm</div>';
             content += '</div>';
         }
-        
+
         // End grid
         content += '</div>';
     }
-    
+
     // If there are more messages than we show
     if (messages.length > messagesToShow) {
         content += `<div style="text-align: center; font-size: 10px; margin-top: 5px; font-style: italic; color: #ccc;"></div>`;
     }
-    
+
     content += '</div>';
     return content;
 }
@@ -4659,14 +4661,14 @@ const handlePointerMove = function (pixel, target) {
         } else if (feature.binary_messages && feature.binary_messages.length > 0) {
             // For standalone binary clusters
             let tooltipContent = `<div class="tooltip-card">`;
-            
+
             // Find MMSI counts to show in tooltip
             if (feature.binary_mmsi_counts) {
                 const mmsiEntries = Object.entries(feature.binary_mmsi_counts);
                 if (mmsiEntries.length > 0) {
                     tooltipContent += '<div style="margin-top: 5px; font-size: 0.9em;">From: ';
                     mmsiEntries.slice(0, 3).forEach(([mmsi, count], index) => {
-                        const shipName = (mmsi in shipsDB && shipsDB[mmsi].raw.shipname) ? 
+                        const shipName = (mmsi in shipsDB && shipsDB[mmsi].raw.shipname) ?
                             shipsDB[mmsi].raw.shipname : `MMSI ${mmsi}`;
                         tooltipContent += `${index > 0 ? ', ' : ''}${shipName} (${count})`;
                     });
@@ -4677,17 +4679,17 @@ const handlePointerMove = function (pixel, target) {
                 }
             }
             tooltipContent += '</div>';
-            
+
             // Add meteo data if available
-            const meteoMessages = feature.binary_messages.filter(msg => 
-                msg.message && msg.message.dac == 1 && 
+            const meteoMessages = feature.binary_messages.filter(msg =>
+                msg.message && msg.message.dac == 1 &&
                 (msg.message.fid == 31 || msg.message.fi == 31)
             );
-            
+
             if (meteoMessages.length > 0) {
                 tooltipContent += getBinaryMessageContent(meteoMessages, true);
             }
-            
+
             startHover('tooltip', tooltipContent, pixel, feature);
         } else {
             startHover('tooltip', "Binary Message", pixel, feature);
@@ -5072,25 +5074,25 @@ function setShipcardValidation(v) {
 function updateMessageButton() {
     const messageButton = document.querySelector('#shipcard_footer [onclick="showBinaryMessageDialog(card_mmsi)"]');
     if (!messageButton) return;
-    
+
     const iconElement = messageButton.querySelector('i.mail_icon');
     if (!iconElement) return;
-    
-    const hasBinaryMsgs = card_mmsi && 
-                          binaryDB && 
-                          card_mmsi in binaryDB && 
-                          binaryDB[card_mmsi].ship_messages && 
-                          binaryDB[card_mmsi].ship_messages.length > 0;
-    
+
+    const hasBinaryMsgs = card_mmsi &&
+        binaryDB &&
+        card_mmsi in binaryDB &&
+        binaryDB[card_mmsi].ship_messages &&
+        binaryDB[card_mmsi].ship_messages.length > 0;
+
     const existingBadge = iconElement.querySelector('.message-badge');
     if (existingBadge) {
         existingBadge.remove();
     }
-    
+
     if (hasBinaryMsgs) {
         const count = binaryDB[card_mmsi].ship_messages.length;
         messageButton.style.display = '';
-        
+
         const badge = document.createElement('span');
         badge.className = 'message-badge';
         badge.textContent = count;
@@ -5740,53 +5742,53 @@ async function updateMap() {
 
 function redrawBinaryMessages() {
     binaryVector.clear();
-    
+
     const gridCells = {}; // For clustering standalone messages
     const gridSize = 0.01; // Grid size in degrees (approx. 1km)
-    
+
     // Process messages for vessels
     for (const [mmsi, msgData] of Object.entries(binaryDB)) {
         if (!msgData.ship_messages || msgData.ship_messages.length === 0) continue;
-        
+
         // Cache all messages
         const allMessages = msgData.ship_messages;
-        
+
         // Check if the ship exists in shipsDB
         const shipExists = mmsi in shipsDB;
-        const hasValidShipCoordinates = shipExists && 
-                                        shipsDB[mmsi].raw.lat !== null && 
-                                        shipsDB[mmsi].raw.lon !== null && 
-                                        shipsDB[mmsi].raw.lat !== 0 && 
-                                        shipsDB[mmsi].raw.lon !== 0 && 
-                                        shipsDB[mmsi].raw.lat < 90 && 
-                                        shipsDB[mmsi].raw.lon < 180;
-        
+        const hasValidShipCoordinates = shipExists &&
+            shipsDB[mmsi].raw.lat !== null &&
+            shipsDB[mmsi].raw.lon !== null &&
+            shipsDB[mmsi].raw.lat !== 0 &&
+            shipsDB[mmsi].raw.lon !== 0 &&
+            shipsDB[mmsi].raw.lat < 90 &&
+            shipsDB[mmsi].raw.lon < 180;
+
         if (hasValidShipCoordinates) {
             // Prepare arrays for messages to show at ship or at their own locations
             const shipMessages = [];
             const standaloneMessages = [];
-            
+
             const ship = shipsDB[mmsi].raw;
             const shipLat = ship.lat;
             const shipLon = ship.lon;
-            
+
             // Sort messages by proximity to the ship
             allMessages.forEach(msg => {
                 if (!msg.message_lat || !msg.message_lon) return;
-                
+
                 const msgLat = msg.message_lat;
                 const msgLon = msg.message_lon;
-                
+
                 // Skip invalid coordinates
                 if (msgLat === 0 || msgLon === 0 || msgLat > 90 || msgLon > 180) return;
-                
+
                 // Simple distance calculation
                 const distanceThreshold = 0.05; // Approx 5km
                 const distance = Math.sqrt(
-                    Math.pow(msgLat - shipLat, 2) + 
+                    Math.pow(msgLat - shipLat, 2) +
                     Math.pow(msgLon - shipLon, 2)
                 );
-                
+
                 if (distance <= distanceThreshold) {
                     // Message is close to ship, show at ship location
                     shipMessages.push(msg);
@@ -5796,14 +5798,14 @@ function redrawBinaryMessages() {
                     addMessageToGridCell(msg, mmsi, gridCells, gridSize);
                 }
             });
-            
+
             // Create badge at ship location if there are messages to show there
             if (shipMessages.length > 0) {
                 const point = new ol.geom.Point(ol.proj.fromLonLat([shipLon, shipLat]));
                 const feature = new ol.Feature({
                     geometry: point
                 });
-                
+
                 feature.binary = true;
                 feature.ship = ship;
                 feature.binary_mmsi = mmsi;
@@ -5811,10 +5813,10 @@ function redrawBinaryMessages() {
                 feature.binary_messages = shipMessages;
                 feature.is_associated = true;
                 feature.setId(`binary-ship-${mmsi}`);
-                
+
                 binaryVector.addFeature(feature);
             }
-            
+
         } else {
             // No associated ship with valid coordinates - add all messages to grid cells for clustering
             allMessages.forEach(msg => {
@@ -5823,7 +5825,7 @@ function redrawBinaryMessages() {
             });
         }
     }
-    
+
     // Create features for grid cells (clustered standalone messages)
     createGridCellFeatures(gridCells);
 }
@@ -5832,15 +5834,15 @@ function redrawBinaryMessages() {
 function addMessageToGridCell(msg, mmsi, gridCells, gridSize) {
     const msgLat = msg.message_lat;
     const msgLon = msg.message_lon;
-    
+
     // Skip invalid coordinates
     if (msgLat === 0 || msgLon === 0 || msgLat > 90 || msgLon > 180) return;
-    
+
     // Create grid cell key for clustering
     const gridX = Math.floor(msgLon / gridSize);
     const gridY = Math.floor(msgLat / gridSize);
     const gridKey = `${gridX},${gridY}`;
-    
+
     if (!gridCells[gridKey]) {
         gridCells[gridKey] = {
             messages: [],
@@ -5849,12 +5851,12 @@ function addMessageToGridCell(msg, mmsi, gridCells, gridSize) {
             mmsiCounts: {}
         };
     }
-    
+
     // Add to grid cell for clustering
     gridCells[gridKey].messages.push(msg);
     gridCells[gridKey].totalLat += msgLat;
     gridCells[gridKey].totalLon += msgLon;
-    gridCells[gridKey].mmsiCounts[mmsi] = 
+    gridCells[gridKey].mmsiCounts[mmsi] =
         (gridCells[gridKey].mmsiCounts[mmsi] || 0) + 1;
 }
 
@@ -5862,16 +5864,16 @@ function addMessageToGridCell(msg, mmsi, gridCells, gridSize) {
 function createGridCellFeatures(gridCells) {
     for (const [gridKey, gridData] of Object.entries(gridCells)) {
         if (gridData.messages.length === 0) continue;
-        
+
         // Calculate average position for this grid cell
         const avgLat = gridData.totalLat / gridData.messages.length;
         const avgLon = gridData.totalLon / gridData.messages.length;
-        
+
         const point = new ol.geom.Point(ol.proj.fromLonLat([avgLon, avgLat]));
         const feature = new ol.Feature({
             geometry: point
         });
-        
+
         feature.binary = true;
         feature.binary_count = gridData.messages.length;
         feature.binary_messages = gridData.messages;
@@ -5879,7 +5881,7 @@ function createGridCellFeatures(gridCells) {
         feature.is_associated = false;
         feature.tooltip = `${gridData.messages.length} binary messages`;
         feature.setId(`binary-standalone-${gridKey}`);
-        
+
         binaryVector.addFeature(feature);
     }
 }
