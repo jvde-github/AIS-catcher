@@ -160,6 +160,7 @@ const int ETA_HOUR_UNDEFINED = 24;
 const int ETA_MINUTE_UNDEFINED = 60;
 const int IMO_UNDEFINED = 0;
 const int ANGLE_UNDEFINED = -1;
+const int RECEIVED_STATIONS_UNDEFINED = -1;
 
 const float LEVEL_UNDEFINED = 1024;
 const float PPM_UNDEFINED = 1024;

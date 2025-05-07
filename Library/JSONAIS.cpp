@@ -341,6 +341,48 @@ namespace AIS
 		}
 	}
 
+	void JSONAIS::ProcessRadio(const AIS::Message &msg, int start, int len)
+	{
+		unsigned radio_value = msg.getUint(start, len);
+
+		if (radio_value != 0 && len == 19)
+		{
+			json.Add(AIS::KEY_RADIO, (int)radio_value);
+
+			unsigned sync_state = (radio_value >> 17) & 0x03;
+			json.Add(AIS::KEY_SYNC_STATE, (int)sync_state);
+
+			unsigned slot_timeout = (radio_value >> 14) & 0x07;
+			json.Add(AIS::KEY_SLOT_TIMEOUT, (int)slot_timeout);
+
+			unsigned sub_msg = radio_value & 0x3FFF;
+
+			if (slot_timeout == 0)
+			{
+				json.Add(AIS::KEY_SLOT_OFFSET, (int)sub_msg);
+			}
+			else if (slot_timeout == 1)
+			{
+				unsigned utc_hour = (sub_msg >> 9) & 0x1F;	 // 5 bits (13-9)
+				unsigned utc_minute = (sub_msg >> 2) & 0x7F; // 7 bits (8-2)
+
+				json.Add(AIS::KEY_UTC_HOUR, (int)utc_hour);
+				json.Add(AIS::KEY_UTC_MINUTE, (int)utc_minute);
+			}
+			else if (slot_timeout == 2 || slot_timeout == 4 || slot_timeout == 6)
+			{
+				json.Add(AIS::KEY_SLOT_NUMBER, (int)sub_msg);
+			}
+			else if (slot_timeout == 3 || slot_timeout == 5 || slot_timeout == 7)
+			{
+				json.Add(AIS::KEY_RECEIVED_STATIONS, (int)sub_msg);
+			}
+		}
+		else
+		{
+			json.Add(AIS::KEY_RADIO, 0);
+		}
+	}
 	void JSONAIS::ProcessMsg(const AIS::Message &msg, TAG &tag)
 	{
 
@@ -388,6 +430,7 @@ namespace AIS
 		case 1:
 		case 2:
 		case 3:
+		{
 			E(msg, AIS::KEY_STATUS, 38, 4, AIS::KEY_STATUS_TEXT, &JSON_MAP_STATUS);
 			TURN(msg, AIS::KEY_TURN, 42, 8);
 			UL(msg, AIS::KEY_SPEED, 50, 10, 0.1f, 0, 1023);
@@ -400,8 +443,10 @@ namespace AIS
 			E(msg, AIS::KEY_MANEUVER, 143, 2);
 			X(msg, AIS::KEY_SPARE, 145, 3);
 			B(msg, AIS::KEY_RAIM, 148, 1);
-			U(msg, AIS::KEY_RADIO, 149, MIN(19, MAX(msg.getLength() - 149, 0)));
+
+			ProcessRadio(msg, 149, MAX(MIN(19, msg.getLength() - 149),0));
 			break;
+		}
 		case 4:
 		case 11:
 			TIMESTAMP(msg, AIS::KEY_TIMESTAMP, 38, 40, timestamp);
@@ -417,7 +462,8 @@ namespace AIS
 			E(msg, AIS::KEY_EPFD, 134, 4, AIS::KEY_EPFD_TEXT, &JSON_MAP_EPFD);
 			X(msg, AIS::KEY_SPARE, 138, 10);
 			B(msg, AIS::KEY_RAIM, 148, 1);
-			U(msg, AIS::KEY_RADIO, 149, 19);
+
+			ProcessRadio(msg, 149, MAX(MIN(19, msg.getLength() - 149),0));
 			break;
 		case 5:
 			U(msg, AIS::KEY_AIS_VERSION, 38, 2);

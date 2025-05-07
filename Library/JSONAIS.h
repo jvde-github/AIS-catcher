@@ -43,6 +43,7 @@ namespace AIS {
 	protected:
 		void ProcessMsg8Data(const AIS::Message& msg);
 		void ProcessMsg6Data(const AIS::Message& msg);
+		void ProcessRadio(const AIS::Message &msg, int start, int len);
 
 
 		void U(const AIS::Message& msg, int p, int start, int len, unsigned undefined = ~0);
