@@ -43,6 +43,7 @@ void Ship::reset() {
 	ppm = PPM_UNDEFINED;
 	level = LEVEL_UNDEFINED;
 	altitude = ALT_UNDEFINED;
+	received_stations = RECEIVED_STATIONS_UNDEFINED;
 
 	distance = DISTANCE_UNDEFINED;
 	angle = ANGLE_UNDEFINED;

@@ -238,6 +238,7 @@ namespace IO
 	private:
 		MessageFormat level;
 		AIS::Filter filter;
+		bool include_sample_start = false;
 
 	public:
 		virtual ~MessageToScreen() {}
@@ -257,6 +258,9 @@ namespace IO
 				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
+			else if (option == "INCLUDE_SAMPLE_START") {
+				include_sample_start = Util::Parse::Switch(arg);
+			}
 			else if (!filter.SetOption(option, arg))
 			{
 				throw std::runtime_error("Message output - unknown option: " + option);
@@ -271,6 +275,7 @@ namespace IO
 		JSON::StringBuilder builder;
 		std::string json;
 		AIS::Filter filter;
+		bool include_sample_start = false;
 
 	public:
 		JSONtoScreen(const std::vector<std::vector<std::string>> *map, int d) : builder(map, d) {}
@@ -287,6 +292,9 @@ namespace IO
 			{
 				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
+			}
+			else if (option == "INCLUDE_SAMPLE_START") {
+				include_sample_start = Util::Parse::Switch(arg);
 			}
 			else if (!filter.SetOption(option, arg))
 			{

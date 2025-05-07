@@ -208,7 +208,8 @@ std::string DB::getJSONcompact(bool full)
 			content += comma + std::to_string(ship.flags.getPackedValue());
 			content += comma + std::to_string(ship.getValidated());
 			content += comma + std::to_string(ship.getChannels());
-			content += comma + ((ship.altitude == ALT_UNDEFINED) ? null_str : std::to_string(ship.altitude)) + "]";
+			content += comma + ((ship.altitude == ALT_UNDEFINED) ? null_str : std::to_string(ship.altitude));
+			content += comma + ((ship.received_stations == RECEIVED_STATIONS_UNDEFINED) ? null_str : std::to_string(ship.received_stations)) + "]";
 
 			delim = comma;
 		}
@@ -645,6 +646,9 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 		break;
 	case AIS::KEY_TO_STARBOARD:
 		v.to_starboard = p.Get().getInt();
+		break;
+	case AIS::KEY_RECEIVED_STATIONS:
+		v.received_stations = p.Get().getInt();
 		break;
 	case AIS::KEY_ALT:
 		v.altitude = p.Get().getInt();

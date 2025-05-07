@@ -2667,7 +2667,8 @@ async function fetchShips(noDoubleFetch = true) {
         "flags",
         "validated",
         "channels",
-        "altitude"
+        "altitude",
+        "received_stations"
     ];
 
     shipsDB = {};
@@ -5127,7 +5128,7 @@ function populateShipcard() {
     setShipcardValidation(ship.validated);
 
     // verbatim copies
-    ["destination", "mmsi", "count", "imo"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e]));
+    ["destination", "mmsi", "count", "imo", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e]));
 
     // round and add units
     [

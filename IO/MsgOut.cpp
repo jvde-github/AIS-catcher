@@ -149,7 +149,7 @@ namespace IO
 					}
 					break;
 				case MessageFormat::JSON_NMEA:
-					std::cout << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver) << std::endl;
+					std::cout << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start) << std::endl;
 					break;
 				default:
 					break;
