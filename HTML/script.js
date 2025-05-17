@@ -63,7 +63,7 @@ function restoreDefaultSettings() {
         fading: false,
         android: false,
         welcome: true,
-        latlon_in_dms: true,
+        coordinate_format: "decimal",
         icon_scale: 1,
         track_weight: 1,
         show_range: false,
@@ -184,6 +184,13 @@ function decimalToDMS(l, isLatitude) {
     return degrees + "&deg" + minutes + "'" + seconds + '"' + direction;
 }
 
+function decimalToDDM(l, isLatitude) {
+    var degrees = Math.floor(Math.abs(l));
+    var minutes = ((Math.abs(l) - degrees) * 60).toFixed(2);
+    var direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
+    return degrees + "&deg;" + minutes + "'" + direction;
+}
+
 // transformations - for overwrite
 getDimVal = (c) => {
     return settings.metric === "DEFAULT" || settings.metric === "SI" ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0);
@@ -202,8 +209,47 @@ getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && shi
     ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
     : null
 
-getLatValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms ? decimalToDMS(ship.lat, true) : Number(ship.lat).toFixed(5)) + (ship.approx ? "</i>" : "");
-getLonValFormat = (ship) => (ship.approx ? "<i>" : "") + (settings.latlon_in_dms ? decimalToDMS(ship.lon, false) : Number(ship.lon).toFixed(5)) + (ship.approx ? "</i>" : "");
+
+
+getLatValFormat = (ship) => {
+    const prefix = ship.approx ? "<i>" : "";
+    const suffix = ship.approx ? "</i>" : "";
+    let content = "";
+
+    switch (settings.coordinate_format) {
+        case "dms":
+            content = decimalToDMS(ship.lat, true);
+            break;
+        case "ddm":
+            content = decimalToDDM(ship.lat, true);
+            break;
+        default: // decimal
+            content = Number(ship.lat).toFixed(5);
+            break;
+    }
+
+    return prefix + content + suffix;
+};
+
+getLonValFormat = (ship) => {
+    const prefix = ship.approx ? "<i>" : "";
+    const suffix = ship.approx ? "</i>" : "";
+    let content = "";
+
+    switch (settings.coordinate_format) {
+        case "dms":
+            content = decimalToDMS(ship.lon, false);
+            break;
+        case "ddm":
+            content = decimalToDDM(ship.lon, false);
+            break;
+        default: // decimal
+            content = Number(ship.lon).toFixed(5);
+            break;
+    }
+
+    return prefix + content + suffix;
+};
 
 getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
 getShipName = (ship) => ship.shipname;
@@ -278,13 +324,14 @@ function closeTableSide() {
     document.querySelector(".tableside_window").classList.remove("active");
 }
 
-function setLatLonInDMS(b) {
-    settings.latlon_in_dms = b;
+function setCoordinateFormat(format) {
+    settings.coordinate_format = format;
     saveSettings();
 
     refresh_data();
     if (table != null) table = null;
 }
+
 
 function copyCoordinates(m) {
     let coords = "not found";
@@ -1327,7 +1374,6 @@ function triggerMapLayer() {
     }
 
     activeTileLayer.setVisible(true);
-    console.log("Map layer: " + activeTileLayer.get("title") + " visible: " + activeTileLayer.getMaxZoom() + " " + activeTileLayer.minZoom);
 
     if (settings.map_overlay.length > 0) {
         for (let i = 0; i < settings.map_overlay.length; i++) {
@@ -4778,6 +4824,15 @@ function saveSettings() {
     updateSettingsTab();
 }
 
+function updateForLegacySettings() {
+    if ('latlon_in_dms' in settings) {
+
+        settings.coordinate_format = settings.latlon_in_dms ? "dms" : "decimal";
+        delete settings.latlon_in_dms;
+    }
+}
+
+
 function loadSettings() {
     if (!urlParams.has("reset")) {
         try {
@@ -4827,7 +4882,6 @@ function loadSettingsFromURL() {
     settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
     settings.show_range = settings.show_range == "true" || settings.show_range == true;
     settings.show_station = settings.show_station == "true" || settings.show_station == true;
-    settings.latlon_in_dms = settings.latlon_in_dms == "true" || settings.latlon_in_dms == true;
 }
 
 function mapResetViewZoom(z, m) {
@@ -6120,7 +6174,7 @@ async function openFocus(m, z) {
 
 function updateSettingsTab() {
     document.getElementById("settings_darkmode").checked = settings.dark_mode;
-    document.getElementById("settings_latlon_in_dms").checked = settings.latlon_in_dms;
+    document.getElementById("settings_coordinate_format").value = settings.coordinate_format;
     document.getElementById("settings_metric").value = getMetrics().toLowerCase();
     document.getElementById("settings_show_station").checked = settings.show_station;
     document.getElementById("settings_fading").checked = settings.fading;
@@ -6898,6 +6952,8 @@ loadSettings();
 console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
+updateForLegacySettings();
+
 
 updateAndroid();
 applyDynamicStyling();
