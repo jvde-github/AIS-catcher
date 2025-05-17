@@ -1,4 +1,4 @@
 #pragma once
 
-#define VERSION_DESCRIBE	"v0.62"
-#define VERSION_URL_TAG	"v0_62"
+#define VERSION_DESCRIBE	"1747479493"
+#define VERSION_URL_TAG	"1747479493"

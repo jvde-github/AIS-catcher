@@ -122,9 +122,12 @@
 					<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" onclick="showPlugins()">
 							Show </span></div>
 					<div>
-						<span>Lat/Lon in DMS</span><span>
-							<input type="checkbox" id="settings_latlon_in_dms"
-								onchange="setLatLonInDMS(this.checked)" />
+						<span>Coordinate Format</span><span>
+							<select id="settings_coordinate_format" onchange="setCoordinateFormat(this.value)">
+								<option value="decimal">Decimal Degrees</option>
+								<option value="ddm">Degrees Decimal Minutes</option>
+								<option value="dms">Degrees Minutes Seconds</option>
+							</select>
 						</span>
 					</div>
 					<div>
@@ -1007,8 +1010,8 @@
 					</div>
 					<footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
 						<div title="View binary messages" onclick="showBinaryMessageDialog(card_mmsi)"
-						data-context-type="ship" class="noandroid"><i
-							class="mail_icon"></i><span>Messages</span></div>							
+							data-context-type="ship" class="noandroid"><i class="mail_icon"></i><span>Messages</span>
+						</div>
 						<div title="Lookup on commuinity site" onclick="openAIScatcherSite(card_mmsi)"
 							data-context-type="ship" class="noandroid"><i
 								class="info_icon"></i><span>aiscatcher.org</span></div>
@@ -1110,7 +1113,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=468121a35def74cec0f91f47c132213f"></script>
+	<script src="script.js?hash=9b1c3c8ffffa934651691b5f79f3442d"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>
