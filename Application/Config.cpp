@@ -152,6 +152,7 @@ void Config::setTCPListenerfromJSON(const JSON::Property &pd)
 
 		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
 		IO::OutputMessage &tcp = *_msg.back();
+		tcp.Set("TIMEOUT", "0");
 		setSettingsFromJSON(v, tcp);
 	}
 }
