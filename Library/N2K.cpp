@@ -566,7 +566,7 @@ namespace AIS
 				}
 				else
 				{
-					break; 
+					break;
 				}
 			}
 
@@ -592,11 +592,11 @@ namespace AIS
 		U(msg, epfd, 249, 4);				 // Type of EPFD
 		U(msg, second, 253, 6);				 // UTC second
 		U(msg, off_position, 259, 1);		 // Off-Position Indicator
-		U(msg, regional, 260, 7);			 // Regional reserved (7 bits)
-		U(msg, raim, 267, 1);				 // RAIM flag
-		U(msg, virtual_aid, 268, 1);		 // Virtual-aid flag
-		U(msg, assigned, 269, 1);			 // Assigned-mode flag
-		U(msg, 0, 270, 1);					 // Spare bit
+		U(msg, regional, 260, 8);			 // Regional reserved (8 bits)
+		U(msg, raim, 268, 1);				 // RAIM flag !
+		U(msg, virtual_aid, 269, 1);		 // Virtual-aid flag
+		U(msg, assigned, 270, 1);			 // Assigned-mode flag
+		U(msg, 0, 271, 1);					 // Spare bit
 
 		msg.Stamp();
 		msg.setChannel('A' + (transceiver & 0x01));
