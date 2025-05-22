@@ -414,12 +414,12 @@ namespace AIS
 	void N2KtoMessage::onMsg129040(const tN2kMsg &N2kMsg, TAG &tag)
 	{
 		int repeat, type, mmsi;
-		int second; //, raim, accuracy;
+		int second, raim, accuracy;
 		int lon, lat;
 		int cog, speed;
 		int shiptype, heading, epfd;
 		int bow_stern, port_starboard, to_starboard, to_bow;
-		int dte_assigned;
+		int dte, assigned, regional;
 		char shipname[21] = {0};
 
 		int idx = 0;
@@ -439,12 +439,12 @@ namespace AIS
 		// Next byte: seconds, raim, and accuracy
 		byte = N2kMsg.GetByte(idx);
 		second = (byte >> 2) & 0x3F;
-		// raim = (byte >> 1) & 0x01;
-		// accuracy = byte & 0x01;
+		raim = (byte >> 1) & 0x01;
+		accuracy = byte & 0x01;
 
 		// Two bytes: COG and SOG
-		cog = AIS::ROUND(N2kMsg.Get2ByteUDouble(1e-04 * 180.0f / PI, idx, COG_UNDEFINED));
-		speed = AIS::ROUND(N2kMsg.Get2ByteUDouble(0.01 * 3600.0f / 1852.0f, idx, SPEED_UNDEFINED));
+		cog = AIS::ROUND(N2kMsg.Get2ByteUDouble(1e-04 * 180.0f / PI * 10, idx, COG_UNDEFINED * 10));
+		speed = AIS::ROUND(N2kMsg.Get2ByteUDouble(0.01 * 3600.0f / 1852.0f * 10, idx, SPEED_UNDEFINED * 10));
 
 		// Skip two spare bytes (commonly set to 0xff)
 		N2kMsg.GetByte(idx);
@@ -452,12 +452,14 @@ namespace AIS
 
 		// 1 byte: ship type
 		shiptype = N2kMsg.GetByte(idx);
+
 		// 2 bytes: Heading
 		heading = AIS::ROUND(N2kMsg.Get2ByteUDouble(1e-04 * 360.0f / (2.0f * PI), idx, HEADING_UNDEFINED));
 
-		// 1 byte: EPFD (encoded as epfd << 4)
+		// 1 byte: EPFD (encoded as epfd << 4) and regional
 		byte = N2kMsg.GetByte(idx);
 		epfd = (byte >> 4) & 0x0F;
+		regional = byte & 0x0F;
 
 		// 2 bytes each: dimensions (to_bow+to_stern, to_port+to_starboard, to_starboard, to_bow)
 		bow_stern = AIS::ROUND(N2kMsg.Get2ByteDouble(0.1, idx));
@@ -469,34 +471,58 @@ namespace AIS
 		N2kMsg.GetStr(shipname, 20, idx);
 
 		// 1 byte: combined DTE and assigned flag
-		dte_assigned = N2kMsg.GetByte(idx);
+		byte = N2kMsg.GetByte(idx);
+		dte = byte & 0x01;
+		assigned = (byte >> 1) & 0x01;
 
-		// Skip two spare bytes
-		N2kMsg.GetByte(idx);
-		N2kMsg.GetByte(idx);
+		// Skip remaining spare bytes
+		while (idx < N2kMsg.DataLen)
+		{
+			N2kMsg.GetByte(idx);
+		}
 
-		// Build the AIS message (bit offsets and lengths are exemplary)
+		// Build the AIS message with CORRECT bit field layout for Type 19
 		msg.clear();
-		U(msg, type, 0, 6);
-		U(msg, repeat, 6, 2);
-		U(msg, mmsi, 8, 30);
-		U(msg, lon, 38, 28);
-		S(msg, lat, 66, 27);
-		U(msg, cog, 93, 12);
-		U(msg, speed, 105, 10);
-		U(msg, second, 115, 6);
-		U(msg, shiptype, 121, 8);
-		U(msg, heading, 129, 9);
-		U(msg, epfd, 138, 4);
-		U(msg, bow_stern, 142, 10);
-		U(msg, port_starboard, 152, 10);
-		U(msg, to_starboard, 162, 9);
-		U(msg, to_bow, 171, 9);
-		T(msg, shipname, 180, 120);
-		U(msg, dte_assigned, 300, 8);
+
+		// Standard AIS header
+		U(msg, type, 0, 6);	  // Message type (19)
+		U(msg, repeat, 6, 2); // Repeat indicator
+		U(msg, mmsi, 8, 30);  // MMSI
+
+		// Reserved field (required for Type 19)
+		U(msg, 0, 38, 8); // Reserved (8 bits)
+
+		// Position and movement data
+		U(msg, speed, 46, 10);	 // Speed over ground (10 bits)
+		B(msg, accuracy, 56, 1); // Position accuracy (1 bit)
+		S(msg, lon, 57, 28);	 // Longitude (28 bits, signed)
+		S(msg, lat, 85, 27);	 // Latitude (27 bits, signed)
+		U(msg, cog, 112, 12);	 // Course over ground (12 bits)
+		U(msg, heading, 124, 9); // True heading (9 bits)
+
+		// Time and regional data
+		U(msg, second, 133, 6);	  // UTC second (6 bits)
+		U(msg, regional, 139, 4); // Regional reserved (4 bits)
+
+		// Ship static data
+		T(msg, shipname, 143, 120); // Ship name (120 bits = 20 chars * 6 bits)
+		U(msg, shiptype, 263, 8);	// Ship type (8 bits)
+
+		// Dimensions
+		U(msg, to_bow, 271, 9);						   // Dimension to bow (9 bits)
+		U(msg, bow_stern - to_bow, 280, 9);			   // Dimension to stern (9 bits)
+		U(msg, port_starboard - to_starboard, 289, 6); // Dimension to port (6 bits)
+		U(msg, to_starboard, 295, 6);				   // Dimension to starboard (6 bits)
+
+		// Equipment and flags
+		U(msg, epfd, 301, 4);	  // Type of EPFD (4 bits)
+		B(msg, raim, 305, 1);	  // RAIM flag (1 bit)
+		B(msg, dte, 306, 1);	  // DTE (1 bit)
+		B(msg, assigned, 307, 1); // Assigned mode flag (1 bit)
+		U(msg, 0, 308, 4);		  // Spare (4 bits)
 
 		msg.Stamp();
-		msg.setChannel('A'); // Adjust channel extraction if needed
+		msg.setChannel('A'); // Use appropriate channel logic if available
 		msg.buildNMEA(tag);
 		Send(&msg, 1, tag);
 	}
@@ -523,6 +549,7 @@ namespace AIS
 
 		mmsi = N2kMsg.Get4ByteUInt(idx);
 
+		// Use consistent scaling with other message types for proper JSON decoding
 		lon = ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LON_UNDEFINED * 600000));
 		lat = ROUND(N2kMsg.Get4ByteDouble(1e-07 * 600000.0f, idx, LAT_UNDEFINED * 600000));
 
@@ -551,10 +578,9 @@ namespace AIS
 		byte = N2kMsg.GetByte(idx);
 		transceiver = byte & 0x1F;
 
+		// Extract name with proper handling
 		if (idx < N2kMsg.DataLen)
 		{
-			byte = N2kMsg.GetByte(idx);
-
 			int nameIdx = 0;
 			while (nameIdx < 20 && idx < N2kMsg.DataLen)
 			{
@@ -564,41 +590,60 @@ namespace AIS
 				{
 					name_buffer[nameIdx++] = byte;
 				}
+				else if (byte == 0)
+				{
+					break; // End of string
+				}
 				else
 				{
-					break;
+					name_buffer[nameIdx++] = '@'; // Replace invalid chars with @
 				}
 			}
 
+			// Trim trailing spaces
 			while (nameIdx > 0 && name_buffer[nameIdx - 1] == ' ')
 			{
 				name_buffer[--nameIdx] = 0;
 			}
 		}
 
+		// Build AIS message with CORRECTED field encoding
 		msg.clear();
-		U(msg, type, 0, 6);					 // Message type (21)
-		U(msg, repeat, 6, 2);				 // Repeat indicator
-		U(msg, mmsi, 8, 30);				 // MMSI
-		U(msg, aid_type, 38, 5);			 // Aid type (5 bits)
-		T(msg, name_buffer, 43, 120);		 // Name (120 bits)
-		U(msg, accuracy, 163, 1);			 // Position accuracy bit
-		S(msg, lon, 164, 28);				 // Longitude
-		S(msg, lat, 192, 27);				 // Latitude
-		U(msg, to_bow, 219, 9);				 // Dimension to Bow
-		U(msg, length - to_bow, 228, 9);	 // Dimension to Stern
-		U(msg, beam - to_starboard, 237, 6); // Dimension to Port
-		U(msg, to_starboard, 243, 6);		 // Dimension to Starboard
-		U(msg, epfd, 249, 4);				 // Type of EPFD
-		U(msg, second, 253, 6);				 // UTC second
-		U(msg, off_position, 259, 1);		 // Off-Position Indicator
-		U(msg, regional, 260, 8);			 // Regional reserved (8 bits)
-		U(msg, raim, 268, 1);				 // RAIM flag !
-		U(msg, virtual_aid, 269, 1);		 // Virtual-aid flag
-		U(msg, assigned, 270, 1);			 // Assigned-mode flag
-		U(msg, 0, 271, 1);					 // Spare bit
+
+		// Standard AIS header
+		U(msg, type, 0, 6);	  // Message type (21)
+		U(msg, repeat, 6, 2); // Repeat indicator
+		U(msg, mmsi, 8, 30);  // MMSI
+
+		// Aid-to-Navigation specific data
+		U(msg, aid_type, 38, 5);	  // Aid type (5 bits)
+		T(msg, name_buffer, 43, 120); // Name (120 bits = 20 chars * 6 bits)
+
+		// Position data
+		B(msg, accuracy, 163, 1); // Position accuracy (CORRECTED: use B for boolean)
+		S(msg, lon, 164, 28);	  // Longitude (28 bits, signed)
+		S(msg, lat, 192, 27);	  // Latitude (27 bits, signed)
+
+		// Dimensions - these calculations are correct for AIS format
+		U(msg, to_bow, 219, 9);				 // Dimension to Bow (9 bits)
+		U(msg, length - to_bow, 228, 9);	 // Dimension to Stern (9 bits)
+		U(msg, beam - to_starboard, 237, 6); // Dimension to Port (6 bits)
+		U(msg, to_starboard, 243, 6);		 // Dimension to Starboard (6 bits)
+
+		// Equipment and status
+		U(msg, epfd, 249, 4);	// Type of EPFD (4 bits)
+		U(msg, second, 253, 6); // UTC second (6 bits)
+
+		// Flags and indicators
+		B(msg, off_position, 259, 1); // Off-Position Indicator (CORRECTED: use B)
+		U(msg, regional, 260, 8);	  // Regional reserved (8 bits)
+		B(msg, raim, 268, 1);		  // RAIM flag (CORRECTED: use B)
+		B(msg, virtual_aid, 269, 1);  // Virtual-aid flag (CORRECTED: use B)
+		B(msg, assigned, 270, 1);	  // Assigned-mode flag (CORRECTED: use B)
+		U(msg, 0, 271, 1);			  // Spare bit
 
 		msg.Stamp();
+		// Use transceiver info for channel if available, otherwise default to A
 		msg.setChannel('A' + (transceiver & 0x01));
 		msg.buildNMEA(tag);
 		Send(&msg, 1, tag);
