@@ -1424,8 +1424,11 @@ function setMapOpacity() {
     for (let key in basemaps)
         basemaps[key].setOpacity(Number(settings.map_opacity));
 
-    for (let key in overlapmaps)
-        overlapmaps[key].setOpacity(Number(settings.map_opacity));
+    for (let key in overlapmaps) {
+        if (key !== "Aircraft") {
+            overlapmaps[key].setOpacity(Number(settings.map_opacity));
+        }
+    }
 }
 
 var clickTimeout = undefined;
@@ -1650,7 +1653,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [rangeLayer, shapeLayer, trackLayer, markerLayer, planeLayer, labelLayer, extraLayer, binaryLayer, measureVector].forEach(layer => {
+    [rangeLayer, shapeLayer, trackLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measureVector].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -4830,6 +4833,11 @@ function updateForLegacySettings() {
         settings.coordinate_format = settings.latlon_in_dms ? "dms" : "decimal";
         delete settings.latlon_in_dms;
     }
+
+    if(!("showPlanesAtFirst" in settings)) {
+        settings.showPlanesAtFirst = true;
+        settings.map_overlay.push("Aircraft");
+    }
 }
 
 
@@ -6727,6 +6735,9 @@ else {
     });
 }
 
+addOverlayLayer("Aircraft", planeLayer);
+
+
 let mdabout = "This content can be defined by the owner of the station";
 
 console.log("Starting plugin code");
@@ -6736,7 +6747,6 @@ loadPlugins && loadPlugins();
 
 var button = document.getElementById('xchange'); // Get the button by its ID
 
-planeLayer.setVisible(true);
 
 if (communityFeed) {
     button.classList.remove('fill-red');
