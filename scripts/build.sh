@@ -45,6 +45,8 @@ build_project() {
 
 # create a Debian package
 
+# create a Debian package
+
 create_debian_package() {
   if [ -n "$1" ]; then
     package_name="ais-catcher"
@@ -113,13 +115,112 @@ create_debian_package() {
 
     chmod +x debian/DEBIAN/preinst
 
-  
+    # Create postinst script for udev rules installation
+    echo "#!/bin/bash" > debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "# Install RTL-SDR udev rules" >> debian/DEBIAN/postinst
+    echo "RULES_FILE=\"rtl-sdr.rules\"" >> debian/DEBIAN/postinst
+    echo "SOURCE_RULES=\"/usr/share/ais-catcher/\$RULES_FILE\"" >> debian/DEBIAN/postinst
+    echo "TARGET_RULES=\"/etc/udev/rules.d/\$RULES_FILE\"" >> debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "install_udev_rules() {" >> debian/DEBIAN/postinst
+    echo "    echo \"Installing RTL-SDR udev rules...\"" >> debian/DEBIAN/postinst
+    echo "    " >> debian/DEBIAN/postinst
+    echo "    # Check if target rules already exist" >> debian/DEBIAN/postinst
+    echo "    if [ -f \"\$TARGET_RULES\" ]; then" >> debian/DEBIAN/postinst
+    echo "        # Compare checksums to see if files are different" >> debian/DEBIAN/postinst
+    echo "        if command -v md5sum >/dev/null 2>&1; then" >> debian/DEBIAN/postinst
+    echo "            existing_md5=\$(md5sum \"\$TARGET_RULES\" | cut -d' ' -f1)" >> debian/DEBIAN/postinst
+    echo "            new_md5=\$(md5sum \"\$SOURCE_RULES\" | cut -d' ' -f1)" >> debian/DEBIAN/postinst
+    echo "            " >> debian/DEBIAN/postinst
+    echo "            if [ \"\$existing_md5\" = \"\$new_md5\" ]; then" >> debian/DEBIAN/postinst
+    echo "                echo \"RTL-SDR udev rules are already up to date.\"" >> debian/DEBIAN/postinst
+    echo "                return 0" >> debian/DEBIAN/postinst
+    echo "            else" >> debian/DEBIAN/postinst
+    echo "                echo \"Warning: Different RTL-SDR udev rules already exist.\"" >> debian/DEBIAN/postinst
+    echo "                echo \"Backing up existing rules to \$TARGET_RULES.backup\"" >> debian/DEBIAN/postinst
+    echo "                cp \"\$TARGET_RULES\" \"\$TARGET_RULES.backup\" 2>/dev/null || true" >> debian/DEBIAN/postinst
+    echo "            fi" >> debian/DEBIAN/postinst
+    echo "        else" >> debian/DEBIAN/postinst
+    echo "            echo \"Warning: RTL-SDR udev rules already exist. Backing up...\"" >> debian/DEBIAN/postinst
+    echo "            cp \"\$TARGET_RULES\" \"\$TARGET_RULES.backup\" 2>/dev/null || true" >> debian/DEBIAN/postinst
+    echo "        fi" >> debian/DEBIAN/postinst
+    echo "    fi" >> debian/DEBIAN/postinst
+    echo "    " >> debian/DEBIAN/postinst
+    echo "    # Copy the new rules" >> debian/DEBIAN/postinst
+    echo "    if cp \"\$SOURCE_RULES\" \"\$TARGET_RULES\" 2>/dev/null; then" >> debian/DEBIAN/postinst
+    echo "        echo \"RTL-SDR udev rules installed successfully.\"" >> debian/DEBIAN/postinst
+    echo "        " >> debian/DEBIAN/postinst
+    echo "        # Trigger udev reload" >> debian/DEBIAN/postinst
+    echo "        reload_udev_rules" >> debian/DEBIAN/postinst
+    echo "    else" >> debian/DEBIAN/postinst
+    echo "        echo \"Error: Failed to install RTL-SDR udev rules.\"" >> debian/DEBIAN/postinst
+    echo "        echo \"You may need to manually copy \$SOURCE_RULES to \$TARGET_RULES\"" >> debian/DEBIAN/postinst
+    echo "        return 1" >> debian/DEBIAN/postinst
+    echo "    fi" >> debian/DEBIAN/postinst
+    echo "}" >> debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "reload_udev_rules() {" >> debian/DEBIAN/postinst
+    echo "    echo \"Reloading udev rules...\"" >> debian/DEBIAN/postinst
+    echo "    " >> debian/DEBIAN/postinst
+    echo "    # Try different methods to reload udev rules" >> debian/DEBIAN/postinst
+    echo "    if command -v udevadm >/dev/null 2>&1; then" >> debian/DEBIAN/postinst
+    echo "        if udevadm control --reload-rules 2>/dev/null; then" >> debian/DEBIAN/postinst
+    echo "            echo \"Udev rules reloaded successfully.\"" >> debian/DEBIAN/postinst
+    echo "            " >> debian/DEBIAN/postinst
+    echo "            # Trigger udev to reprocess devices" >> debian/DEBIAN/postinst
+    echo "            if udevadm trigger --subsystem-match=usb 2>/dev/null; then" >> debian/DEBIAN/postinst
+    echo "                echo \"Udev USB devices retriggered.\"" >> debian/DEBIAN/postinst
+    echo "            else" >> debian/DEBIAN/postinst
+    echo "                echo \"Note: Could not retrigger USB devices automatically.\"" >> debian/DEBIAN/postinst
+    echo "            fi" >> debian/DEBIAN/postinst
+    echo "        else" >> debian/DEBIAN/postinst
+    echo "            echo \"Warning: Failed to reload udev rules using udevadm.\"" >> debian/DEBIAN/postinst
+    echo "            suggest_manual_reload" >> debian/DEBIAN/postinst
+    echo "        fi" >> debian/DEBIAN/postinst
+    echo "    elif [ -f /proc/sys/kernel/hotplug ]; then" >> debian/DEBIAN/postinst
+    echo "        # Fallback for older systems" >> debian/DEBIAN/postinst
+    echo "        echo \"Attempting to reload using legacy method...\"" >> debian/DEBIAN/postinst
+    echo "        killall -USR1 udevd 2>/dev/null || killall -USR1 systemd-udevd 2>/dev/null || true" >> debian/DEBIAN/postinst
+    echo "        echo \"Legacy udev reload attempted.\"" >> debian/DEBIAN/postinst
+    echo "    else" >> debian/DEBIAN/postinst
+    echo "        echo \"Warning: Could not find udevadm or legacy udev reload method.\"" >> debian/DEBIAN/postinst
+    echo "        suggest_manual_reload" >> debian/DEBIAN/postinst
+    echo "    fi" >> debian/DEBIAN/postinst
+    echo "}" >> debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "suggest_manual_reload() {" >> debian/DEBIAN/postinst
+    echo "    echo \"\"" >> debian/DEBIAN/postinst
+    echo "    echo \"To activate the RTL-SDR udev rules, you can try one of the following:\"" >> debian/DEBIAN/postinst
+    echo "    echo \"  1. Disconnect and reconnect your RTL-SDR device\"" >> debian/DEBIAN/postinst
+    echo "    echo \"  2. Run: sudo udevadm control --reload-rules && sudo udevadm trigger\"" >> debian/DEBIAN/postinst
+    echo "    echo \"  3. Reboot your system\"" >> debian/DEBIAN/postinst
+    echo "    echo \"\"" >> debian/DEBIAN/postinst
+    echo "}" >> debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "# Main execution" >> debian/DEBIAN/postinst
+    echo "case \"\$1\" in" >> debian/DEBIAN/postinst
+    echo "    configure)" >> debian/DEBIAN/postinst
+    echo "        install_udev_rules" >> debian/DEBIAN/postinst
+    echo "        ;;" >> debian/DEBIAN/postinst
+    echo "    *)" >> debian/DEBIAN/postinst
+    echo "        ;;" >> debian/DEBIAN/postinst
+    echo "esac" >> debian/DEBIAN/postinst
+    echo "" >> debian/DEBIAN/postinst
+    echo "exit 0" >> debian/DEBIAN/postinst
+
+    chmod +x debian/DEBIAN/postinst
+
     # Build the project and package
     mkdir -p debian/usr/bin
     cp build/AIS-catcher debian/usr/bin/
 
     mkdir -p debian/etc/AIS-catcher/plugins
     cp plugins/* debian/etc/AIS-catcher/plugins/
+
+    # Store udev rules in a proper location within the package
+    mkdir -p debian/usr/share/ais-catcher
+    cp rtl-sdr/rtl-sdr.rules debian/usr/share/ais-catcher/
 
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
