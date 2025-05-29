@@ -185,6 +185,7 @@ namespace AIS
 		{
 			uint8_t bitmask = (0xFF >> (8 - remaining)) << (8 - y - remaining);
 			data[x] = (data[x] & ~bitmask) | ((val << (8 - y - remaining)) & bitmask);
+			length = MAX(start + len, length);
 			return true;
 		}
 
