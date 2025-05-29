@@ -153,9 +153,163 @@ install_librtlsdr_from_source() {
     cmake ../ -DINSTALL_UDEV_RULES=ON  -DDETACH_KERNEL_DRIVER=ON|| error_exit "Failed to run cmake"
     make || error_exit "Failed to build rtl-sdr"
     make install || error_exit "Failed to install rtl-sdr"
-    cp ../rtl-sdr.rules /etc/udev/rules.d/ || error_exit "Failed to copy udev rules"
+    
+    # Install udev rules with conflict handling
+    install_rtlsdr_udev_rules "../rtl-sdr.rules"
+    
     ldconfig || error_exit "Failed to run ldconfig"
     cd ../.. || error_exit "Failed to return to parent directory"
+}
+
+# Function to install RTL-SDR udev rules with conflict detection and refresh
+install_rtlsdr_udev_rules() {
+    local source_rules="$1"
+    local target_rules="/etc/udev/rules.d/rtl-sdr.rules"
+    
+    log "INFO" "Installing RTL-SDR udev rules"
+    
+    # Check if source rules file exists
+    if [[ ! -f "$source_rules" ]]; then
+        log "ERROR" "Source udev rules file not found: $source_rules"
+        return 1
+    fi
+    
+    # Check if target rules already exist
+    if [[ -f "$target_rules" ]]; then
+        # Compare checksums to see if files are different
+        if command -v md5sum >/dev/null 2>&1; then
+            local existing_md5=$(md5sum "$target_rules" | cut -d' ' -f1)
+            local new_md5=$(md5sum "$source_rules" | cut -d' ' -f1)
+            
+            if [[ "$existing_md5" = "$new_md5" ]]; then
+                log "INFO" "RTL-SDR udev rules are already up to date"
+                return 0
+            else
+                log "WARN" "Different RTL-SDR udev rules already exist"
+                log "INFO" "Backing up existing rules to ${target_rules}.backup"
+                cp "$target_rules" "${target_rules}.backup" 2>/dev/null || log "WARN" "Failed to backup existing rules"
+            fi
+        else
+            log "WARN" "RTL-SDR udev rules already exist. Backing up..."
+            cp "$target_rules" "${target_rules}.backup" 2>/dev/null || log "WARN" "Failed to backup existing rules"
+        fi
+    fi
+    
+    # Copy the new rules
+    if cp "$source_rules" "$target_rules" 2>/dev/null; then
+        log "INFO" "RTL-SDR udev rules installed successfully"
+        
+        # Set proper permissions
+        chmod 644 "$target_rules" || log "WARN" "Failed to set permissions on udev rules"
+        
+        # Trigger udev reload
+        reload_udev_rules
+    else
+        error_exit "Failed to install RTL-SDR udev rules"
+    fi
+}
+
+# Function to reload udev rules and trigger device refresh
+reload_udev_rules() {
+    log "INFO" "Reloading udev rules"
+    
+    # Try different methods to reload udev rules
+    if command -v udevadm >/dev/null 2>&1; then
+        if udevadm control --reload-rules 2>/dev/null; then
+            log "INFO" "Udev rules reloaded successfully"
+            
+            # Trigger udev to reprocess USB devices
+            if udevadm trigger --subsystem-match=usb 2>/dev/null; then
+                log "INFO" "Udev USB devices retriggered"
+                
+                # Give udev some time to process
+                sleep 2
+                
+                # Verify RTL-SDR devices are recognized
+                check_rtlsdr_devices
+            else
+                log "WARN" "Could not retrigger USB devices automatically"
+                suggest_manual_udev_reload
+            fi
+        else
+            log "WARN" "Failed to reload udev rules using udevadm"
+            try_legacy_udev_reload
+        fi
+    else
+        log "WARN" "udevadm not found, trying legacy methods"
+        try_legacy_udev_reload
+    fi
+}
+
+# Function to try legacy udev reload methods
+try_legacy_udev_reload() {
+    log "INFO" "Attempting legacy udev reload methods"
+    
+    # Try different legacy approaches
+    local reload_success=false
+    
+    # Method 1: Send signal to udevd
+    if killall -USR1 udevd 2>/dev/null; then
+        log "INFO" "Sent reload signal to udevd"
+        reload_success=true
+    elif killall -USR1 systemd-udevd 2>/dev/null; then
+        log "INFO" "Sent reload signal to systemd-udevd"
+        reload_success=true
+    fi
+    
+    # Method 2: Try service restart as last resort
+    if [[ "$reload_success" = false ]]; then
+        if systemctl restart systemd-udevd 2>/dev/null; then
+            log "INFO" "Restarted systemd-udevd service"
+            reload_success=true
+        elif service udev restart 2>/dev/null; then
+            log "INFO" "Restarted udev service"
+            reload_success=true
+        fi
+    fi
+    
+    if [[ "$reload_success" = true ]]; then
+        sleep 3  # Give more time for legacy methods
+        check_rtlsdr_devices
+    else
+        log "WARN" "All udev reload methods failed"
+        suggest_manual_udev_reload
+    fi
+}
+
+# Function to check if RTL-SDR devices are properly recognized
+check_rtlsdr_devices() {
+    log "INFO" "Checking for RTL-SDR devices"
+    
+    # Check using rtl_test if available
+    if command -v rtl_test >/dev/null 2>&1; then
+        local device_count=$(rtl_test -t 2>/dev/null | grep -c "Found.*device" || echo "0")
+        if [[ "$device_count" -gt 0 ]]; then
+            log "INFO" "Found $device_count RTL-SDR device(s)"
+            return 0
+        fi
+    fi
+    
+    # Check using lsusb for common RTL-SDR devices
+    if command -v lsusb >/dev/null 2>&1; then
+        local rtl_devices=$(lsusb | grep -E "(RTL28|0bda:28)" | wc -l)
+        if [[ "$rtl_devices" -gt 0 ]]; then
+            log "INFO" "Found $rtl_devices potential RTL-SDR device(s) via lsusb"
+            return 0
+        fi
+    fi
+    
+    log "INFO" "No RTL-SDR devices detected (may need to be connected)"
+    return 1
+}
+
+# Function to suggest manual udev reload steps
+suggest_manual_udev_reload() {
+    log "WARN" "Automatic udev reload failed. To activate RTL-SDR udev rules:"
+    log "INFO" "  1. Disconnect and reconnect your RTL-SDR device"
+    log "INFO" "  2. Run: sudo udevadm control --reload-rules && sudo udevadm trigger"
+    log "INFO" "  3. Or restart the system"
+    log "INFO" "  4. Verify with: rtl_test -t (if device is connected)"
 }
 
 # Install SDR libraries
