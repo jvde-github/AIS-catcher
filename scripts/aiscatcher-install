@@ -262,8 +262,7 @@ try_legacy_udev_reload() {
         fi
     fi
     
-    if [[ "$reload_success" = true ]]; then
-    else
+    if [[ "$reload_success" != true ]]; then
         log "WARN" "All udev reload methods failed"
         suggest_manual_udev_reload
     fi
