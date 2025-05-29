@@ -537,7 +537,7 @@ namespace AIS
 		int lon, lat;
 		int length, beam, to_starboard, to_bow;
 		int aid_type, off_position, virtual_aid, assigned;
-		int epfd, status, transceiver;
+		int epfd, transceiver;
 		int regional;
 		char name_buffer[21] = {0};
 		int idx = 0;
@@ -572,7 +572,7 @@ namespace AIS
 		byte = N2kMsg.GetByte(idx);
 		epfd = byte & 0x0F;
 
-		status = N2kMsg.GetByte(idx);
+		N2kMsg.GetByte(idx);
 		regional = N2kMsg.GetByte(idx) & 0x7F;
 
 		byte = N2kMsg.GetByte(idx);

@@ -79,10 +79,10 @@ namespace AIS
 	{
 		std::stringstream ss;
 
-		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" + hardware + "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat();
-		
-		if(include_ssl) 
-			ss << ",\"ssc\":"<< start_idx << ",\"sl\":" << (end_idx-start_idx);
+		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" << hardware << "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat();
+
+		if (include_ssl)
+			ss << ",\"ssc\":" << start_idx << ",\"sl\":" << (end_idx - start_idx);
 
 		if (status)
 		{
@@ -98,9 +98,9 @@ namespace AIS
 		if (!uuid.empty())
 			ss << ",\"uuid\":\"" << uuid << "\"";
 
-		if(ipv4)
+		if (ipv4)
 			ss << ",\"ipv4\":" << ipv4;
-			
+
 		if (mode & 1)
 		{
 			ss << ",\"signalpower\":";
@@ -118,7 +118,7 @@ namespace AIS
 		if (getStation())
 			ss << ",\"station_id\":" << getStation();
 
-		if(getLength() > 0)
+		if (getLength() > 0)
 			ss << ",\"mmsi\":" << mmsi() << ",\"type\":" << type();
 		ss << ",\"nmea\":[\"" << NMEA[0] << "\"";
 
@@ -132,7 +132,8 @@ namespace AIS
 
 	bool Message::validate()
 	{
-		if(getLength() == 0) return true;
+		if (getLength() == 0)
+			return true;
 
 		const int ml[27] = {149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96};
 
@@ -398,9 +399,8 @@ namespace AIS
 			std::stringstream ss(arg);
 			std::string type_str;
 			allow = 0;
-			while (ss.good())
+			while (getline(ss, type_str, ','))
 			{
-				getline(ss, type_str, ',');
 				unsigned type = Util::Parse::Integer(type_str, 1, 27);
 				allow |= 1U << type;
 			}
@@ -411,9 +411,8 @@ namespace AIS
 			std::stringstream ss(arg);
 			std::string type_str;
 			allow_repeat = 0;
-			while (ss.good())
+			while (getline(ss, type_str, ','))
 			{
-				getline(ss, type_str, ',');
 				unsigned r = Util::Parse::Integer(type_str, 0, 3);
 				allow_repeat |= 1U << r;
 			}
@@ -427,9 +426,8 @@ namespace AIS
 			std::stringstream ss(arg);
 			std::string type_str;
 			unsigned block = 0;
-			while (ss.good())
+			while (getline(ss, type_str, ','))
 			{
-				getline(ss, type_str, ',');
 				unsigned type = Util::Parse::Integer(type_str, 1, 27);
 				block |= 1U << type;
 			}
@@ -442,9 +440,8 @@ namespace AIS
 			std::stringstream ss(arg);
 			std::string type_str;
 			unsigned block = 0;
-			while (ss.good())
+			while (getline(ss, type_str, ','))
 			{
-				getline(ss, type_str, ',');
 				unsigned r = Util::Parse::Integer(type_str, 0, 3);
 				block |= 1U << r;
 			}
@@ -520,8 +517,10 @@ namespace AIS
 	{
 		if (downsample)
 		{
-			if (msg.isOwn()) {
-				if (msg.getRxTimeUnix() - last_VDO < downsample_time) {
+			if (msg.isOwn())
+			{
+				if (msg.getRxTimeUnix() - last_VDO < downsample_time)
+				{
 					return false;
 				}
 				last_VDO = msg.getRxTimeUnix();
