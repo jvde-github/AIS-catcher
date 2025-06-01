@@ -4834,7 +4834,7 @@ function updateForLegacySettings() {
         delete settings.latlon_in_dms;
     }
 
-    if(!("showPlanesAtFirst" in settings)) {
+    if (!("showPlanesAtFirst" in settings)) {
         settings.showPlanesAtFirst = true;
         settings.map_overlay.push("Aircraft");
     }
@@ -6000,26 +6000,29 @@ function redrawMap() {
 
     redrawBinaryMessages();
 
-    for (let [hexident, entry] of Object.entries(planesDB)) {
-        let plane = entry.raw;
-        if (plane.lat != null && plane.lon != null && plane.lat != 0 && plane.lon != 0 && plane.lat < 90 && plane.lon < 180) {
-            getPlaneSprite(plane)
+    if (planeLayer.isVisible()) {
 
-            const lon = plane.lon
-            const lat = plane.lat
+        for (let [hexident, entry] of Object.entries(planesDB)) {
+            let plane = entry.raw;
+            if (plane.lat != null && plane.lon != null && plane.lat != 0 && plane.lon != 0 && plane.lat < 90 && plane.lon < 180) {
+                getPlaneSprite(plane)
 
-            const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
-            var feature = new ol.Feature({
-                geometry: point
-            })
+                const lon = plane.lon
+                const lat = plane.lat
 
-            feature.plane = plane;
+                const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
+                var feature = new ol.Feature({
+                    geometry: point
+                })
 
-            markerFeatures[plane.hexident] = feature
-            planeVector.addFeature(feature)
+                feature.plane = plane;
 
-            if (includeLabels)
-                labelVector.addFeature(feature)
+                markerFeatures[plane.hexident] = feature
+                planeVector.addFeature(feature)
+
+                if (includeLabels)
+                    labelVector.addFeature(feature)
+            }
         }
     }
 
