@@ -22,6 +22,7 @@ readonly LIBRARY_DIRS=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
 # Global variables
 DEBUG_BUILD=false
 INSTALL_PACKAGE=false
+SERVICE_STATE=""
 
 # Logger function
 log() {
@@ -33,6 +34,11 @@ log() {
 # Error handler
 error_exit() {
     log "ERROR" "$1"
+    # Try to restore service state before exiting
+    if [[ -n "$SERVICE_STATE" ]]; then
+        log "INFO" "Attempting to restore service state before exit"
+        restore_service_state || log "WARN" "Failed to restore service state during error exit"
+    fi
     exit 1
 }
 
@@ -321,8 +327,6 @@ build_ais_catcher() {
     cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 }
 
-
-
 install_additional_files() {
     log "INFO" "Installing plugins"
     mkdir -p "$PLUGIN_DIR" || error_exit "Failed to create plugin directory"
@@ -402,6 +406,7 @@ EOF
     systemctl daemon-reload || error_exit "Failed to reload systemd"
 }
 
+# FIXED: Improved package installation function
 install_from_package() {
     local package=$1
     local download_url="https://github.com/jvde-github/AIS-catcher/releases/download/Edge/$package"
@@ -415,30 +420,42 @@ install_from_package() {
     # Download the package
     log "INFO" "Downloading package..."
     if ! curl -sL -o "$temp_dir/$(basename "$download_url")" "$download_url"; then
+        rm -rf "$temp_dir"
         error_exit "Failed to download package"
     fi
 
     # Ensure the downloaded file has correct permissions
     chmod 644 "$temp_dir/$package"
 
-    # Install the package and dependencies using apt
+    # Install the package and dependencies using apt with proper flags
     log "INFO" "Installing package and dependencies..."
     if ! apt-get update; then
+        rm -rf "$temp_dir"
         error_exit "Failed to update package lists"
     fi
 
-    if ! apt-get install -y "$temp_dir/$package"; then
-        error_exit "Failed to install package"
+    # Use --allow-downgrades to handle version conflicts and better error handling
+    local install_success=false
+    if apt-get install -y --allow-downgrades "$temp_dir/$package" 2>/dev/null; then
+        install_success=true
+        log "INFO" "Package installed successfully"
+    else
+        log "WARN" "Standard package installation failed, trying with additional flags..."
+        if apt-get install -y --allow-downgrades --allow-change-held-packages "$temp_dir/$package"; then
+            install_success=true
+            log "INFO" "Package installed successfully with additional flags"
+        fi
     fi
 
-    # Clean up
-    log "INFO" "Cleaning up..."
+    # Clean up temporary directory
     rm -rf "$temp_dir" || log "WARN" "Failed to remove temporary directory: $temp_dir"
 
-    log "INFO" "AIS-catcher installation completed"
-}
+    if [[ "$install_success" != true ]]; then
+        error_exit "Failed to install package after all attempts"
+    fi
 
-SERVICE_STATE=""
+    log "INFO" "AIS-catcher package installation completed"
+}
 
 # Function to stop the service and save its state
 stop_disable_and_save_service_state() {
@@ -450,13 +467,10 @@ stop_disable_and_save_service_state() {
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         was_active=true
         log "INFO" "$SERVICE_NAME is active, attempting to stop"
-        systemctl stop "$SERVICE_NAME"
-        
-        # Verify that the service has actually stopped
-        if systemctl is-active --quiet "$SERVICE_NAME"; then
-            log "WARN" "Failed to stop $SERVICE_NAME"
-        else
+        if systemctl stop "$SERVICE_NAME"; then
             log "INFO" "$SERVICE_NAME stopped successfully"
+        else
+            log "WARN" "Failed to stop $SERVICE_NAME"
         fi
     else
         log "INFO" "$SERVICE_NAME is not active, no need to stop"
@@ -466,13 +480,10 @@ stop_disable_and_save_service_state() {
     if systemctl is-enabled --quiet "$SERVICE_NAME"; then
         was_enabled=true
         log "INFO" "$SERVICE_NAME is enabled, attempting to disable"
-        systemctl disable "$SERVICE_NAME"
-        
-        # Verify that the service has actually been disabled
-        if systemctl is-enabled --quiet "$SERVICE_NAME"; then
-            log "WARN" "Failed to disable $SERVICE_NAME"
-        else
+        if systemctl disable "$SERVICE_NAME"; then
             log "INFO" "$SERVICE_NAME disabled successfully"
+        else
+            log "WARN" "Failed to disable $SERVICE_NAME"
         fi
     else
         log "INFO" "$SERVICE_NAME is not enabled, no need to disable"
@@ -483,26 +494,51 @@ stop_disable_and_save_service_state() {
     log "INFO" "Service state saved: $SERVICE_STATE"
 }
 
-
-# Function to restore the service state
+# FIXED: Improved service state restoration with better error handling
 restore_service_state() {
+    if [[ -z "$SERVICE_STATE" ]]; then
+        log "INFO" "No service state to restore"
+        return 0
+    fi
+
     log "INFO" "Restoring AIS-catcher service state"
     
     IFS=',' read -ra STATE_ARRAY <<< "$SERVICE_STATE"
-    local was_active=${STATE_ARRAY[0]}
-    local was_enabled=${STATE_ARRAY[1]}
+    local was_active=${STATE_ARRAY[0]:-false}
+    local was_enabled=${STATE_ARRAY[1]:-false}
     
-    if [[ "$was_active" == true ]]; then
-        systemctl start "$SERVICE_NAME" || error_exit "Failed to start $SERVICE_NAME"
+    # Enable first if it was enabled
+    if [[ "$was_enabled" == true ]]; then
+        if systemctl enable "$SERVICE_NAME"; then
+            log "INFO" "$SERVICE_NAME enabled successfully"
+        else
+            log "ERROR" "Failed to enable $SERVICE_NAME"
+            return 1
+        fi
     fi
     
-    if [[ "$was_enabled" == true ]]; then
-        systemctl enable "$SERVICE_NAME" || error_exit "Failed to enable $SERVICE_NAME"
+    # Then start if it was active
+    if [[ "$was_active" == true ]]; then
+        if systemctl start "$SERVICE_NAME"; then
+            log "INFO" "$SERVICE_NAME started successfully"
+            # Give service a moment to start and check status
+            sleep 2
+            if systemctl is-active --quiet "$SERVICE_NAME"; then
+                log "INFO" "$SERVICE_NAME is running properly"
+            else
+                log "WARN" "$SERVICE_NAME may have failed to start properly"
+                systemctl status "$SERVICE_NAME" --no-pager || true
+            fi
+        else
+            log "ERROR" "Failed to start $SERVICE_NAME"
+            return 1
+        fi
     fi
     
     # Clear the global state after restore
     SERVICE_STATE=""
     log "INFO" "Service state restored and cleared"
+    return 0
 }
 
 # Main function
@@ -548,27 +584,32 @@ main() {
         esac
     done
     
+    # Stop and disable service before any installation
+    stop_disable_and_save_service_state
+    
     if [ "$INSTALL_PACKAGE" = true ]; then
         if [ -n "$package" ]; then
-            stop_disable_and_save_service_state
             install_from_package "$package"
             log "INFO" "AIS-catcher installation from package completed successfully"
         else
-            error_exit "Package installation requested but no package available for this system. Consider bulding from source: see https://docs.aiscatcher.org/installation/ubuntu-debian/#install-from-source"
+            error_exit "Package installation requested but no package available for this system. Consider building from source: see https://docs.aiscatcher.org/installation/ubuntu-debian/#install-from-source"
         fi
     else
         log "INFO" "AIS-catcher installation from source"
         install_dependencies
         install_sdr_libraries
-        stop_disable_and_save_service_state
         build_ais_catcher
-
         install_additional_files
     fi
 
     setup_configuration
     setup_systemd_service        
-    restore_service_state
+    
+    # Restore service state
+    if ! restore_service_state; then
+        log "ERROR" "Failed to restore service state"
+        exit 1
+    fi
     
     log "INFO" "AIS-catcher installation completed successfully"
 }
