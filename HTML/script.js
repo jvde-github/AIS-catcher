@@ -1743,6 +1743,7 @@ function initMap() {
                 }
             }
             saveSettings();
+            redrawMap();
         });
     });
 
