@@ -1752,7 +1752,7 @@ function initMap() {
 
 function toggleLabel() {
     if (settings.show_labels == "never") {
-        settings.show_labels = "dynamic";
+        settings.show_labels = "always";
     } else
         settings.show_labels = "never";
 
