@@ -48,10 +48,10 @@
 #include <netinet/in.h>
 #endif
 
-// #ifdef HASOPENSSL
+#ifdef HASOPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-// #endif
+#endif
 
 #include "Utilities.h"
 #include "Common.h"
@@ -308,6 +308,8 @@ namespace Protocol
 		}
 	};
 
+#ifdef HASOPENSSL
+
 	class TLS : public ProtocolBase
 	{
 	private:
@@ -401,7 +403,7 @@ namespace Protocol
 			performHandshake();
 		}
 
-		void onDisconnect()
+		void onDisconnect() override
 		{
 			ProtocolBase::onDisconnect();
 
@@ -600,6 +602,22 @@ namespace Protocol
 			}
 		}
 	};
+#else
+	class TLS : public ProtocolBase
+	{
+	public:
+		TLS() : ProtocolBase("TLS") {};
+
+		
+		bool connect() override
+		{
+			Error() << "TLS: OpenSSL support not available. Cannot connect.";
+			return false;
+		}
+
+	
+	};
+#endif	
 
 	// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
 
