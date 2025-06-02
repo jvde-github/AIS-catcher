@@ -56,9 +56,11 @@
 
 namespace Protocol
 {
-
+	
+#ifdef HASOPENSSL
 	bool TLS::ssl_initialized = false;
 	int TLS::ssl_ref_count = 0;
+#endif
 
 	void TCP::disconnect()
 	{
