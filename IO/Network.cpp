@@ -847,11 +847,20 @@ namespace IO
 	{
 		std::stringstream ss;
 		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort() << ", filter: " << Util::Convert::toString(filter.isOn());
+		tcp.setValue("PERSISTENT", "on");
 
 		switch (Protocol)
 		{
+
+		case PROTOCOL::TLS:
+			session = tcp.add(&tls);
+			break;
 		case PROTOCOL::MQTT:
 			session = tcp.add(&mqtt);
+			break;
+		case PROTOCOL::MQTTS:
+			session = tcp.add(&tls);
+			session = tls.add(&mqtt);
 			break;
 		case PROTOCOL::WS:
 			session = tcp.add(&ws);
@@ -859,6 +868,15 @@ namespace IO
 		case PROTOCOL::WSMQTT:
 
 			session = tcp.add(&ws);
+			session = ws.add(&mqtt);
+
+			ws.setValue("PROTOCOLS", "mqtt");
+			ws.setValue("BINARY", "on");
+			break;
+		case PROTOCOL::WSSMQTT:
+
+			session = tcp.add(&tls);
+			session = tls.add(&ws);
 			session = ws.add(&mqtt);
 
 			ws.setValue("PROTOCOLS", "mqtt");
@@ -970,6 +988,10 @@ namespace IO
 			case PROTOCOL::WS:
 			case PROTOCOL::WSMQTT:
 			case PROTOCOL::TXT:
+			case PROTOCOL::TLS:
+			case PROTOCOL::TCP:
+			case PROTOCOL::WSSMQTT:
+			case PROTOCOL::MQTTS:
 				break;
 			default:
 				throw std::runtime_error("TCO output: unsupported protocol: " + arg);

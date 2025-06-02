@@ -57,6 +57,9 @@
 namespace Protocol
 {
 
+	bool TLS::ssl_initialized = false;
+	int TLS::ssl_ref_count = 0;
+
 	void TCP::disconnect()
 	{
 
