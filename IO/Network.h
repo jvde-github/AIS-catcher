@@ -234,6 +234,7 @@ namespace IO
 		PROTOCOL Protocol = PROTOCOL::MQTT;
 		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;
+		Protocol::TLS tls;
 		Protocol::WebSocket ws;
 		Protocol::ProtocolBase *session = &tcp;
 

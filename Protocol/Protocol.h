@@ -48,6 +48,11 @@
 #include <netinet/in.h>
 #endif
 
+// #ifdef HASOPENSSL
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+// #endif
+
 #include "Utilities.h"
 #include "Common.h"
 
@@ -214,8 +219,7 @@ namespace Protocol
 		const int RECONNECT_TIME = 10;
 
 	public:
-
-			enum State
+		enum State
 		{
 			DISCONNECTED,
 			CONNECTING,
@@ -279,9 +283,8 @@ namespace Protocol
 		}
 
 		enum State getState() { return state; }
-		
-	private:
 
+	private:
 		std::string host;
 		std::string port;
 
@@ -299,8 +302,302 @@ namespace Protocol
 
 		bool reconnect()
 		{
+			std::cerr << "TCP: Reconnecting to " << host << ":" << port << std::endl;
 			disconnect();
 			return connect();
+		}
+	};
+
+	class TLS : public ProtocolBase
+	{
+	private:
+		SSL_CTX *ctx = nullptr;
+		SSL *ssl = nullptr;
+		bool connected = false;
+		bool handshake_complete = false;
+
+		static bool ssl_initialized;
+		static int ssl_ref_count;
+		bool verify_certificates = false;
+
+		enum TLS_STATE
+		{
+			TLS_DISCONNECTED,
+			TLS_HANDSHAKING,
+			TLS_CONNECTED
+		} tls_state = TLS_DISCONNECTED;
+
+	public:
+		TLS() : ProtocolBase("TLS")
+		{
+			initializeSSL();
+		}
+
+		~TLS()
+		{
+			disconnect();
+			cleanupSSL();
+		}
+
+		// Initialize OpenSSL library (call once globally)
+		static void initializeSSL()
+		{
+			if (!ssl_initialized)
+			{
+				SSL_load_error_strings();
+				SSL_library_init();
+				OpenSSL_add_all_algorithms();
+				ssl_initialized = true;
+			}
+			ssl_ref_count++;
+		}
+
+		// Cleanup OpenSSL library
+		static void cleanupSSL()
+		{
+			ssl_ref_count--;
+			if (ssl_ref_count <= 0 && ssl_initialized)
+			{
+				EVP_cleanup();
+				ERR_free_strings();
+				ssl_initialized = false;
+			}
+		}
+
+		void onConnect() override
+		{
+			// Create SSL context
+			ctx = SSL_CTX_new(TLS_client_method());
+			if (!ctx)
+			{
+				Error() << "TLS: Failed to create SSL context for " << getHost() << ":" << getPort();
+			}
+
+			if (verify_certificates)
+			{
+				SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+				SSL_CTX_set_default_verify_paths(ctx);
+			}
+			else
+			{
+				SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+				Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
+			}
+
+			// Create SSL object
+			ssl = SSL_new(ctx);
+			if (!ssl)
+			{
+				Error() << "TLS: Failed to create SSL object for " << getHost() << ":" << getPort();
+				disconnect();
+			}
+
+			// Create custom BIO that uses our TCP connection
+			BIO *bio = BIO_new(BIO_s_socket());
+			BIO_set_fd(bio, getSocket(), BIO_NOCLOSE);
+			SSL_set_bio(ssl, bio, bio);
+
+			tls_state = TLS_HANDSHAKING;
+			performHandshake();
+		}
+
+		void onDisconnect()
+		{
+			ProtocolBase::onDisconnect();
+
+			if (ssl)
+			{
+				if (handshake_complete)
+				{
+					SSL_shutdown(ssl);
+				}
+				SSL_free(ssl);
+				ssl = nullptr;
+			}
+
+			if (ctx)
+			{
+				SSL_CTX_free(ctx);
+				ctx = nullptr;
+			}
+
+			connected = false;
+			handshake_complete = false;
+			tls_state = TLS_DISCONNECTED;
+
+			Info() << "TLS (" + getHost() + ":" + getPort() + "): Disconnected";
+		}
+
+		bool isConnected() override
+		{
+			bool prev_connected = prev ? prev->isConnected() : false;
+			return connected && handshake_complete && prev_connected;
+		}
+
+		int send(const void *data, int length) override
+		{
+			if (!isConnected())
+			{
+				updateState();
+				return 0;
+			}
+
+			int sent = SSL_write(ssl, data, length);
+			if (sent <= 0)
+			{
+				int error = SSL_get_error(ssl, sent);
+
+				switch (error)
+				{
+				case SSL_ERROR_WANT_WRITE:
+				case SSL_ERROR_WANT_READ:
+					// Non-blocking operation would block
+					return 0;
+
+				case SSL_ERROR_ZERO_RETURN:
+					// Connection closed cleanly
+					Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
+					disconnect();
+					return -1;
+
+				case SSL_ERROR_SYSCALL:
+				case SSL_ERROR_SSL:
+				default:
+					Error() << "TLS (" << getHost() << ":" << getPort() << "): Send error: " << getSSLErrorString(error);
+					disconnect();
+					return -1;
+				}
+			}
+
+			return sent;
+		}
+
+		int read(void *data, int length, int timeout = 0, bool wait = false) override
+		{
+			if (!isConnected())
+			{
+				updateState();
+				return 0;
+			}
+
+			// Check if there's pending data in SSL buffer
+			int pending = SSL_pending(ssl);
+			if (pending > 0)
+			{
+				// Read from SSL buffer first
+				int received = SSL_read(ssl, data, length);
+				if (received > 0)
+				{
+					return received;
+				}
+			}
+
+			int received = SSL_read(ssl, data, length);
+			if (received <= 0)
+			{
+				int error = SSL_get_error(ssl, received);
+
+				switch (error)
+				{
+				case SSL_ERROR_WANT_READ:
+				case SSL_ERROR_WANT_WRITE:
+					return 0;
+
+				case SSL_ERROR_ZERO_RETURN:
+					// Connection closed cleanly
+					Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
+					disconnect();
+					return -1;
+
+				case SSL_ERROR_SYSCALL:
+				case SSL_ERROR_SSL:
+				default:
+					Error() << "TLS (" << getHost() << ":" << getPort() << "): Read error: " << getSSLErrorString(error);
+					disconnect();
+					return -1;
+				}
+			}
+
+			return received;
+		}
+
+		void updateState()
+		{
+			if (tls_state == TLS_HANDSHAKING)
+			{
+				performHandshake();
+			}
+		}
+
+	private:
+		bool performHandshake()
+		{
+			if (!ssl)
+				return false;
+
+			int result = SSL_connect(ssl);
+
+			if (result == 1)
+			{
+				// Handshake completed successfully
+				handshake_complete = true;
+				connected = true;
+				tls_state = TLS_CONNECTED;
+
+				Info() << "TLS: Connected to " << getHost() << ":" << getPort() << " using " << SSL_get_version(ssl) << " with " << SSL_get_cipher(ssl);
+
+				ProtocolBase::onConnect();
+				return true;
+			}
+
+			int error = SSL_get_error(ssl, result);
+
+			switch (error)
+			{
+			case SSL_ERROR_WANT_READ:
+			case SSL_ERROR_WANT_WRITE:
+				return false;
+
+			case SSL_ERROR_SYSCALL:
+			case SSL_ERROR_SSL:
+			default:
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): Handshake failed: " << getSSLErrorString(error);
+
+				// Print detailed SSL error
+				unsigned long ssl_err = ERR_get_error();
+				if (ssl_err != 0)
+				{
+					char err_buf[256];
+					ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+					Error() << "TLS (" << getHost() << ":" << getPort() << "): SSL Error details: " << err_buf;
+				}
+
+				disconnect();
+				return false;
+			}
+		}
+
+		std::string getSSLErrorString(int error)
+		{
+			switch (error)
+			{
+			case SSL_ERROR_NONE:
+				return "No error";
+			case SSL_ERROR_SSL:
+				return "SSL protocol error";
+			case SSL_ERROR_WANT_READ:
+				return "Want read";
+			case SSL_ERROR_WANT_WRITE:
+				return "Want write";
+			case SSL_ERROR_SYSCALL:
+				return "System call error";
+			case SSL_ERROR_ZERO_RETURN:
+				return "Connection closed";
+			default:
+				char buffer[256];
+				ERR_error_string_n(ERR_get_error(), buffer, sizeof(buffer));
+				return std::string(buffer);
+			}
 		}
 	};
 

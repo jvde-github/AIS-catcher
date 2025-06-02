@@ -80,7 +80,11 @@ enum class PROTOCOL
 	WSMQTT,
 	BASESTATION,
 	BEAST,
-	RAW1090
+	RAW1090,
+	TLS,
+	TCP,
+	MQTTS,
+	WSSMQTT
 };
 
 enum class Type

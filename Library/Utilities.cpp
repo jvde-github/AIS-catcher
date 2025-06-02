@@ -311,6 +311,19 @@ namespace Util
 		{
 			protocol = PROTOCOL::RAW1090;
 		}
+		else if (arg == "TLS")
+		{
+			protocol = PROTOCOL::TLS;
+		}
+		else if(arg == "TCP") {
+			protocol = PROTOCOL::TCP;  
+			}
+		else if (arg == "MQTTS") {
+			protocol = PROTOCOL::MQTTS;
+		}
+		else if(arg == "WSSMQTT") { 
+			protocol = PROTOCOL::WSSMQTT;
+		}
 		else
 			return false;
 
@@ -485,7 +498,7 @@ namespace Util
 		case Format::BEAST:
 			return "BEAST";
 		case Format::RAW1090:
-			return "RAW1090";
+			return "RAW1090";		
 		default:
 			break;
 		}
@@ -516,6 +529,14 @@ namespace Util
 			return "BEAST";
 		case PROTOCOL::RAW1090:
 			return "RAW1090";
+		case PROTOCOL::TLS:
+			return "TLS";
+		case PROTOCOL::TCP:
+			return "TCP";
+		case PROTOCOL::MQTTS:
+			return "MQTTS";
+		case PROTOCOL::WSSMQTT:
+			return "WSSMQTT";
 		}
 		return "";
 	}
