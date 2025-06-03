@@ -315,7 +315,6 @@ namespace Protocol
 	private:
 		SSL_CTX *ctx = nullptr;
 		SSL *ssl = nullptr;
-		bool connected = false;
 		bool handshake_complete = false;
 
 		static bool ssl_initialized;
@@ -412,6 +411,7 @@ namespace Protocol
 				if (handshake_complete)
 				{
 					SSL_shutdown(ssl);
+					Info() << "TLS (" + getHost() + ":" + getPort() + "): Disconnected";
 				}
 				SSL_free(ssl);
 				ssl = nullptr;
@@ -423,26 +423,26 @@ namespace Protocol
 				ctx = nullptr;
 			}
 
-			connected = false;
 			handshake_complete = false;
 			tls_state = TLS_DISCONNECTED;
-
-			Info() << "TLS (" + getHost() + ":" + getPort() + "): Disconnected";
 		}
 
 		bool isConnected() override
 		{
 			bool prev_connected = prev ? prev->isConnected() : false;
-			return connected && handshake_complete && prev_connected;
+
+			if (prev_connected && !handshake_complete)
+			{
+				updateState();
+			}
+
+			return prev_connected && handshake_complete;
 		}
 
 		int send(const void *data, int length) override
 		{
 			if (!isConnected())
-			{
-				updateState();
 				return 0;
-			}
 
 			int sent = SSL_write(ssl, data, length);
 			if (sent <= 0)
@@ -477,16 +477,11 @@ namespace Protocol
 		int read(void *data, int length, int timeout = 0, bool wait = false) override
 		{
 			if (!isConnected())
-			{
-				updateState();
 				return 0;
-			}
 
-			// Check if there's pending data in SSL buffer
 			int pending = SSL_pending(ssl);
 			if (pending > 0)
 			{
-				// Read from SSL buffer first
 				int received = SSL_read(ssl, data, length);
 				if (received > 0)
 				{
@@ -494,33 +489,55 @@ namespace Protocol
 				}
 			}
 
-			int received = SSL_read(ssl, data, length);
-			if (received <= 0)
+			if (wait && timeout > 0)
 			{
-				int error = SSL_get_error(ssl, received);
+				int sock = getSocket();
+				fd_set readfds;
+				FD_ZERO(&readfds);
+				FD_SET(sock, &readfds);
 
-				switch (error)
+				struct timeval tv;
+				tv.tv_sec = timeout;
+				tv.tv_usec = 0;
+
+				int rv = select(sock + 1, &readfds, nullptr, nullptr, &tv);
+				if (rv < 0)
 				{
-				case SSL_ERROR_WANT_READ:
-				case SSL_ERROR_WANT_WRITE:
-					return 0;
-
-				case SSL_ERROR_ZERO_RETURN:
-					// Connection closed cleanly
-					Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
-					disconnect();
-					return -1;
-
-				case SSL_ERROR_SYSCALL:
-				case SSL_ERROR_SSL:
-				default:
-					Error() << "TLS (" << getHost() << ":" << getPort() << "): Read error: " << getSSLErrorString(error);
+					perror("TLS select");
 					disconnect();
 					return -1;
 				}
+				if (rv == 0)
+				{
+					return 0;
+				}
+			}
+			int received = SSL_read(ssl, data, length);
+			if (received > 0)
+			{
+				return received;
 			}
 
-			return received;
+			int error = SSL_get_error(ssl, received);
+			switch (error)
+			{
+			case SSL_ERROR_WANT_READ:
+			case SSL_ERROR_WANT_WRITE:
+				return 0;
+
+			case SSL_ERROR_ZERO_RETURN:
+				// Connection closed cleanly by peer
+				Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
+				disconnect();
+				return -1;
+
+			case SSL_ERROR_SYSCALL:
+			case SSL_ERROR_SSL:
+			default:
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): Read error: " << getSSLErrorString(error);
+				disconnect();
+				return -1;
+			}
 		}
 
 		void updateState()
@@ -543,7 +560,6 @@ namespace Protocol
 			{
 				// Handshake completed successfully
 				handshake_complete = true;
-				connected = true;
 				tls_state = TLS_CONNECTED;
 
 				Info() << "TLS: Connected to " << getHost() << ":" << getPort() << " using " << SSL_get_version(ssl) << " with " << SSL_get_cipher(ssl);
@@ -608,16 +624,13 @@ namespace Protocol
 	public:
 		TLS() : ProtocolBase("TLS") {};
 
-		
 		bool connect() override
 		{
 			Error() << "TLS: OpenSSL support not available. Cannot connect.";
 			return false;
 		}
-
-	
 	};
-#endif	
+#endif
 
 	// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
 
@@ -900,15 +913,9 @@ namespace Protocol
 
 		bool isConnected() override
 		{
-			if (connected)
-				return true;
+			bool prev_connected = prev ? prev->isConnected() : false;
 
-			if (prev && prev->isConnected())
-			{
-				return connected;
-			}
-
-			return false;
+			return prev_connected && connected;
 		}
 
 		int send(const void *str, int length) override
