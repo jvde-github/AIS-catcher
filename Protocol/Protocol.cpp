@@ -72,7 +72,7 @@ namespace Protocol
 		}
 
 		if (state == READY)
-			Info() << "TCP (" << host << ":" << port << "): disconnected.";
+			Info() << "TCP (" << host << ":" << port << "): Disconnected.";
 
 		sock = -1;
 		state = DISCONNECTED;
