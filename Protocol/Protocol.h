@@ -486,7 +486,7 @@ namespace Protocol
 				int pending = SSL_pending(ssl);
 				if (pending > 0)
 				{
-					int to_read = std::min(pending, length);
+					int to_read = MIN(pending, length);
 					int r = SSL_read(ssl, data, to_read);
 					return (r > 0 ? r : 0);
 				}
