@@ -320,7 +320,7 @@ namespace Protocol
 
 		static bool ssl_initialized;
 		static int ssl_ref_count;
-		bool verify_certificates = false;
+		bool verify_certificates = true;
 
 		enum TLS_STATE
 		{
