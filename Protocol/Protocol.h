@@ -307,6 +307,16 @@ namespace Protocol
 			disconnect();
 			return connect();
 		}
+
+		int handleNetworkError(const char *operation, int error_code, int partial_bytes_processed)
+		{
+			Error() << "TCP (" << host << ":" << port << "): " << operation << " error " << error_code
+					<< " (" << strerror(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
+
+			if (persistent)
+				reconnect();
+			return partial_bytes_processed > 0 ? partial_bytes_processed : (persistent ? 0 : -1);
+		}
 	};
 
 #ifdef HASOPENSSL
@@ -320,7 +330,7 @@ namespace Protocol
 
 		static bool ssl_initialized;
 		static int ssl_ref_count;
-		bool verify_certificates = true;
+		bool verify_certificates = false;
 
 		enum TLS_STATE
 		{
@@ -560,7 +570,7 @@ namespace Protocol
 				{
 				case SSL_ERROR_WANT_READ:
 				case SSL_ERROR_WANT_WRITE:
-					time ++;
+					time++;
 					continue;
 
 				case SSL_ERROR_ZERO_RETURN:

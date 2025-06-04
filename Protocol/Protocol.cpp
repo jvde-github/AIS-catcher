@@ -56,7 +56,7 @@
 
 namespace Protocol
 {
-	
+
 #ifdef HASOPENSSL
 	bool TLS::ssl_initialized = false;
 	int TLS::ssl_ref_count = 0;
@@ -262,7 +262,7 @@ namespace Protocol
 
 			if (error != 0)
 			{
-				Error() << "TCP (" << host << ":" << port << "): connection failed with error " << error << " (" << strerror(error) << ").";
+				Error() << "TCP (" << host << ":" << port << "): " << strerror(error) << " (" << error << ").";
 				disconnect();
 				return false;
 			}
@@ -312,107 +312,109 @@ namespace Protocol
 
 	int TCP::send(const void *data, int length)
 	{
-		if (state == READY)
-		{
+		updateState();
+		if (state != READY)
+			return persistent ? 0 : -1;
 
-			int sent = ::send(sock, (char *)data, length, 0);
-			if (sent < length)
+		int sent = ::send(sock, (char *)data, length, 0);
+		if (sent < 0)
+		{
+#ifdef _WIN32
+			int error_code = WSAGetLastError();
+			bool would_block = (error_code == WSAEWOULDBLOCK);
+#else
+			int error_code = errno;
+			bool would_block = (error_code == EAGAIN || error_code == EWOULDBLOCK);
+#endif
+
+			if (would_block)
+				return 0;
+
+			return handleNetworkError("send", error_code, 0);
+		}
+
+		if (sent < length)
+		{
+			Warning() << "TCP (" << host << ":" << port << "): partial send " << sent << "/" << length << " bytes.";
+		}
+
+		return sent;
+	}
+
+	int TCP::read(void *data, int length, int timeout, bool wait)
+	{
+		updateState();
+		if (state != READY)
+			return persistent ? 0 : -1;
+
+		char *buffer = (char *)data;
+		int total_received = 0;
+		int remaining_length = length;
+		int remaining_time = timeout = MAX(timeout, 0);
+
+		time_t start_time = time(nullptr);
+
+		while (remaining_length > 0)
+		{
+			// check it time has passed if timeout is set
+			if (timeout)
+			{
+				int elapsed = (int)std::difftime(time(nullptr), start_time);
+				remaining_time = MAX(timeout - elapsed, 0);
+				if (remaining_time <= 0)
+					break;
+			}
+
+			fd_set readfds, exceptfds;
+			FD_ZERO(&readfds);
+			FD_ZERO(&exceptfds);
+			FD_SET(sock, &readfds);
+			FD_SET(sock, &exceptfds);
+
+			timeval tv = {remaining_time, 1};
+			int select_result = select(sock + 1, &readfds, nullptr, &exceptfds, &tv);
+
+			if (select_result < 0)
+			{
+				int error_code = errno;
+				if (error_code == EINTR)
+					continue;
+
+				return handleNetworkError("select()", error_code, total_received);
+			}
+
+			if (select_result == 0 || (!FD_ISSET(sock, &readfds) && !FD_ISSET(sock, &exceptfds)))
+				continue;
+
+			int received = recv(sock, buffer + total_received, remaining_length, 0);
+
+			if (received == 0)
+				return handleNetworkError("recv()", 0, total_received);
+
+			if (received < 0)
 			{
 #ifdef _WIN32
 				int error_code = WSAGetLastError();
-
-				if (error_code == WSAEWOULDBLOCK)
-					return 0;
-
+				bool would_block = (error_code == WSAEWOULDBLOCK);
 #else
 				int error_code = errno;
-
-				if (error_code == EAGAIN || error_code == EWOULDBLOCK || error_code == EINPROGRESS)
-				{
-					Error() << "TCP (" << host << ":" << port << "): message might be lost. Error code: " << error_code << " (" << strerror(error_code) << ").";
-					return 0;
-				}
-
+				bool would_block = (error_code == EAGAIN || error_code == EWOULDBLOCK);
 #endif
-				Error() << "TCP (" << host << ":" << port << "): send error. Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
-				if (persistent)
-				{
-					reconnect();
-					return 0;
-				}
-				else
-				{
-					return -1;
-				}
+
+				if (would_block)
+					continue;
+
+				return handleNetworkError("receive", error_code, total_received);
 			}
-			return sent;
+
+			total_received += received;
+			remaining_length -= received;
+
+			if (!wait)
+				break;
 		}
 
-		else
-			updateState();
-
-		return 0;
-	}
-
-	int TCP::read(void *data, int length, int t, bool wait)
-	{
-		if (state == READY)
-		{
-			fd_set fd, fe;
-
-			FD_ZERO(&fd);
-			FD_SET(sock, &fd);
-
-			FD_ZERO(&fe);
-			FD_SET(sock, &fe);
-
-			timeval to = {t, 0};
-
-			if (select(sock + 1, &fd, nullptr, &fe, &to) < 0)
-				return 0;
-
-			if (FD_ISSET(sock, &fd) || FD_ISSET(sock, &fe))
-			{
-#ifndef _WIN32
-				int retval = recv(sock, (char *)data, length, wait ? MSG_WAITALL : 0);
-#else
-				int retval = recv(sock, (char *)data, length, 0);
-#endif
-				if (retval <= 0)
-				{
-#ifdef _WIN32
-					int error_code = WSAGetLastError();
-					if (error_code == WSAEWOULDBLOCK)
-						return 0;
-#else
-					int error_code = errno;
-					if (error_code == EAGAIN || error_code == EWOULDBLOCK)
-						return 0;
-#endif
-
-					Error() << "TCP (" << host << ":" << port << ") receive error with recv returns " << retval << ". Error code: " << error_code << " (" << strerror(error_code) << ")." << (persistent ? " Reconnect." : " Failed.");
-
-					if (persistent)
-					{
-						reconnect();
-						return 0;
-					}
-					else
-					{
-						return -1;
-					}
-				}
-
-				return retval;
-			}
-		}
-		else
-		{
-			updateState();
-			return 0;
-		}
-
-		return 0;
+		return total_received;
 	}
 
 	void WebSocket::onConnect()
