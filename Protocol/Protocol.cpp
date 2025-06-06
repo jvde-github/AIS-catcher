@@ -400,11 +400,12 @@ namespace Protocol
 				bool would_block = (error_code == EAGAIN || error_code == EWOULDBLOCK);
 #endif
 
-				if (would_block)
+				if (would_block) {
 					if(timeout)
 						continue;
 					else
 						break;
+				}
 
 				return handleNetworkError("receive", error_code, total_received);
 			}
