@@ -313,8 +313,9 @@ namespace Protocol
 			Error() << "TCP (" << host << ":" << port << "): " << operation << " error " << error_code
 					<< " (" << strerror(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
 
-			if (persistent)
-				reconnect();
+			//if (persistent)
+			//	reconnect();
+			disconnect();
 			return partial_bytes_processed > 0 ? partial_bytes_processed : (persistent ? 0 : -1);
 		}
 	};
@@ -557,8 +558,7 @@ namespace Protocol
 			int l = readPacket(b, length);
 			if (!l || packet.size() < 2 || (b & 0xF0) != (uint8_t)(PacketType::CONNACK))
 			{
-				Error() << "MQTT: Failed to read CONNACK packet l = " << l << " size = " << packet.size() << " type = 0x" << std::hex << (int)b;
-				Error() << "MQTT: Expected CONNACK but received different packet type";
+				Error() << "MQTT: failed to read CONNACK packet";
 				disconnect();
 				return;
 			}
