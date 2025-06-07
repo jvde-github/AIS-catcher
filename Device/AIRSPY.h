@@ -43,6 +43,7 @@ namespace Device {
 		} mode = AIRSPYGainMode::Linearity;
 		int gain = 17;
 
+		bool real_mode = false;
 		bool explicit_gain = false;
 		bool mixer_AGC = true;
 		bool LNA_AGC = true;

@@ -66,6 +66,7 @@ enum class Format
 	BASESTATION,
 	BEAST,
 	RAW1090,
+	S16,
 	UNKNOWN
 };
 
