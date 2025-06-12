@@ -34,6 +34,7 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
     {
         Plane::ADSB msg;
         msg.clear();
+        msg.Stamp();
         TAG tag;
 
         std::vector<std::string> fields;
@@ -86,7 +87,7 @@ class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
         if (!fields[6].empty() && !fields[7].empty())
         {
             std::string datetime = fields[6] + " " + fields[7];
-            msg.rxtime = Util::Parse::DateTime(datetime);
+            msg.timestamp = Util::Parse::DateTime(datetime);
         }
 
         // Callsign (Field 10)

@@ -265,6 +265,7 @@ public:
 
         // Update timestamp and core identifiers
         plane.rxtime = msg->rxtime;
+
         plane.nMessages++;
         plane.group_mask |= tag.group;
         plane.last_group = tag.group;
