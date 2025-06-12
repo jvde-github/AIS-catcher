@@ -460,7 +460,7 @@ public:
                     break;
                 }
 
-                if (time_since_update <= 60 || plane.airborne == 0)
+                if (time_since_update <= 60 || (time_since_update <= 300 && plane.airborne == 0))
                 {
                     content += delim + "[" +
                                std::to_string(plane.hexident) + comma +
