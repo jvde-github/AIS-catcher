@@ -6598,6 +6598,22 @@ addTileLayer("Satellite", new ol.layer.Tile({
     })
 }));
 
+addTileLayer("Eniro (Scandinavia)", new ol.layer.Tile({
+    source: new ol.source.XYZ({
+        tileUrlFunction: function (tileCoord) {
+            const z = tileCoord[0];
+            const x = tileCoord[1];
+            const y = Math.pow(2, z) - tileCoord[2] - 1;
+            const subdomains = ['map01', 'map02', 'map03', 'map04'];
+            const subdomain = subdomains[(x + y) % subdomains.length];
+            return `https://${subdomain}.eniro.com/geowebcache/service/tms1.0.0/nautical/${z}/${x}/${y}.png`;
+        },
+        tileGrid: ol.tilegrid.createXYZ({ maxZoom: 17 }),
+        attributions: '&copy; <a href="https://kartor.eniro.se/">Eniro</a> / Kort & Matrikelstyrelsen',
+        maxZoom: 17
+    })
+}));
+
 
 addOverlayLayer("OpenSeaMap", new ol.layer.Tile({
     source: new ol.source.XYZ({
