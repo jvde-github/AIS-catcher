@@ -67,7 +67,8 @@ enum class Format
 	BEAST,
 	RAW1090,
 	S16,
-	UNKNOWN
+	UNKNOWN,
+	F32_FS4
 };
 
 enum class PROTOCOL

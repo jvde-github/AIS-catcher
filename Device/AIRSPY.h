@@ -69,6 +69,7 @@ namespace Device {
 		void setLinearity_Gain(int);
 
 		void applySettings();
+		void applyBandwidth();
 
 		void setDefaultRate();
 
