@@ -223,6 +223,8 @@ namespace Util
 			format = Format::BEAST;
 		else if (str == "RAW1090")
 			format = Format::RAW1090;
+		else if (str == "F32_FS4")
+			format = Format::F32_FS4;
 		else
 			return false;
 
@@ -315,13 +317,16 @@ namespace Util
 		{
 			protocol = PROTOCOL::TLS;
 		}
-		else if(arg == "TCP") {
-			protocol = PROTOCOL::TCP;  
-			}
-		else if (arg == "MQTTS") {
+		else if (arg == "TCP")
+		{
+			protocol = PROTOCOL::TCP;
+		}
+		else if (arg == "MQTTS")
+		{
 			protocol = PROTOCOL::MQTTS;
 		}
-		else if(arg == "WSSMQTT") { 
+		else if (arg == "WSSMQTT")
+		{
 			protocol = PROTOCOL::WSSMQTT;
 		}
 		else
@@ -498,7 +503,9 @@ namespace Util
 		case Format::BEAST:
 			return "BEAST";
 		case Format::RAW1090:
-			return "RAW1090";		
+			return "RAW1090";
+		case Format::F32_FS4:
+			return "F32_FS4";
 		default:
 			break;
 		}
@@ -688,6 +695,19 @@ namespace Util
 			Util::Convert::toFloat((CS8 *)raw->data, output.data(), size);
 			break;
 
+		case Format::F32_FS4:
+			size = raw->size / sizeof(FLOAT32);
+			if (output.size() < size)
+				output.resize(size);
+
+			for (int i = 0; i < size; i += 4)
+			{
+				output[i] = CFLOAT32(((FLOAT32 *)raw->data)[i], 0.0f);
+				output[i + 1] = CFLOAT32(0.0f, ((FLOAT32 *)raw->data)[i + 1]);
+				output[i + 2] = CFLOAT32(-((FLOAT32 *)raw->data)[i + 2], 0.0f);
+				output[i + 3] = CFLOAT32(0.0f, -((FLOAT32 *)raw->data)[i + 3]);
+			}
+			break;
 		default:
 			return;
 		}

@@ -33,6 +33,10 @@ namespace Device
 	{
 		if (airspy_open_sn(&dev, h) != AIRSPY_SUCCESS)
 			throw std::runtime_error("AIRSPY: cannot open device.");
+
+		if (real_mode)
+			airspy_set_sample_type(dev, AIRSPY_SAMPLE_FLOAT32_REAL);
+
 		setDefaultRate();
 		Device::Open(h);
 		serial = h;
@@ -43,6 +47,10 @@ namespace Device
 	{
 		if (airspy_open_file_descriptor(&dev, fd) != AIRSPY_SUCCESS)
 			throw std::runtime_error("AIRSPY: cannot open device.");
+
+		if (real_mode)
+			airspy_set_sample_type(dev, AIRSPY_SAMPLE_FLOAT32_REAL);
+
 		setDefaultRate();
 		Device::Open(0);
 	}
@@ -69,6 +77,7 @@ namespace Device
 				mindelta = delta;
 			}
 		}
+
 		setSampleRate(rate);
 	}
 
@@ -100,7 +109,7 @@ namespace Device
 
 	void AIRSPY::callback(CFLOAT32 *data, int len)
 	{
-		RAW r = {Format::CF32, data, (int)(len * sizeof(CFLOAT32))};
+		RAW r = {real_mode ? Format::F32_FS4 : Format::CF32, data, (int)(len * (real_mode ? sizeof(FLOAT32) : sizeof(CFLOAT32)))};
 		Send(&r, 1, tag);
 	}
 
@@ -180,6 +189,36 @@ namespace Device
 		return Device::isStreaming() && airspy_is_streaming(dev) == 1;
 	}
 
+	// taken from acarsdec and pioneered by T. Leconte: https://github.com/TLeconte/acarsdec
+
+	static const unsigned int r820t_hf[] = {1953050, 1980748, 2001344, 2032592, 2060291, 2087988};
+	static const unsigned int r820t_lf[] = {525548, 656935, 795424, 898403, 1186034, 1502073, 1715133, 1853622};
+
+	void AIRSPY::applyBandwidth()
+	{
+		if (tuner_bandwidth >= 0 && real_mode)
+		{
+			int i, j;
+
+			for (i = 7; i >= 0; i--)
+				if ((r820t_hf[5] - r820t_lf[i]) >= tuner_bandwidth)
+					break;
+
+			if (i >= 0)
+			{
+
+				for (j = 5; j >= 0; j--)
+					if ((r820t_hf[j] - r820t_lf[i]) <= tuner_bandwidth)
+						break;
+				j++;
+
+				airspy_r820t_write(dev, 10, 0xB0 | (15 - j));
+				airspy_r820t_write(dev, 11, 0xE0 | (15 - i));
+
+				std::cerr << "AIRSPY: setting tuner bandwidth to " << tuner_bandwidth << " Hz, using HF range " << r820t_hf[j] << " Hz to " << r820t_lf[i] << " Hz." << std::endl;
+			}
+		}
+	}
 	void AIRSPY::applySettings()
 	{
 		switch (mode)
@@ -206,6 +245,9 @@ namespace Device
 
 		if (airspy_set_samplerate(dev, sample_rate) != AIRSPY_SUCCESS)
 			throw std::runtime_error("AIRSPY: cannot set sample rate.");
+
+		applyBandwidth();
+
 		if (airspy_set_freq(dev, getCorrectedFrequency()) != AIRSPY_SUCCESS)
 			throw std::runtime_error("AIRSPY: cannot set frequency.");
 	}
@@ -253,7 +295,7 @@ namespace Device
 			real_mode = Util::Parse::Switch(arg);
 
 			if (real_mode)
-				format = Format::S16;
+				format = Format::F32_FS4;
 			else
 				format = Format::CF32;
 		}
