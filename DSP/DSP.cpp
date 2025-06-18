@@ -195,8 +195,8 @@ namespace DSP {
 				output[idx_out++] = (1 - alpha) * a + alpha * b;
 				alpha += increment;
 
-				if (idx_out == len) {
-					Send(output.data(), len, tag);
+				if (idx_out == len || idx_out == output.size()) {
+					Send(output.data(), idx_out, tag);
 					idx_out = 0;
 				}
 
