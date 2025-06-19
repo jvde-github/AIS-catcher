@@ -19,7 +19,7 @@ It is your responsibility to determine whether or not your local administration 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
 Only use this software in regions where such use is permitted.
 
-## Feature overview
+## Feature overview: Input -> Output
 
 ![image](https://github.com/user-attachments/assets/6677b833-bd2c-4338-babe-3817d6a7c3ea)
 
