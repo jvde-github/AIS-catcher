@@ -30,6 +30,7 @@ option(SQLITE "Include SQLITE support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
 option(NMEA2000 "Include NMEA2000 support" ON)
 option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
+option(BLUETOOTH "Include Bluetooth support" OFF)
 
 set(NMEA2000_PATH "." CACHE PATH "Path to NMEA2000 library")
 
@@ -166,6 +167,22 @@ if(MSVC AND NOT MSVC_VCPKG)
     message(STATUS "Crypto DLL: ${CRYPTO_DLL}")
 endif()
 
+if(NOT MSVC AND BLUETOOTH)
+
+    pkg_check_modules(PKG_BLUETOOTH bluetooth)
+    find_path(BLUETOOTH_INCLUDE_DIR bluetooth/bluetooth.h HINTS ${PKG_BLUETOOTH_INCLUDE_DIRS})
+    find_library(BLUETOOTH_LIBRARY NAMES bluetooth HINTS ${PKG_BLUETOOTH_LIBRARY_DIRS})
+
+    if(BLUETOOTH_INCLUDE_DIR AND BLUETOOTH_LIBRARY)
+        message(STATUS "BLUETOOTH: found - ${BLUETOOTH_INCLUDE_DIR}, ${BLUETOOTH_LIBRARY}")
+        add_definitions(-DHASBLUETOOTH)
+
+        set(BLUETOOTH_INCLUDE_DIRS ${BLUETOOTH_INCLUDE_DIR})
+        set(BLUETOOTH_LIBRARIES ${BLUETOOTH_LIBRARY})
+    else()
+        message(STATUS "BLUETOOTH: not found - ${BLUETOOTH_INCLUDE_DIR}, ${BLUETOOTH_LIBRARY}")
+    endif()
+endif()
 # Find ssl
 if(OPENSSL)
     if(MSVC AND NOT MSVC_VCPKG)
@@ -795,7 +812,7 @@ endif()
 
 set(CPP
     Application/Main.cpp Application/Prometheus.cpp Application/WebViewer.cpp Application/Receiver.cpp Application/Config.cpp Tracking/Ships.cpp Tracking/DB.cpp DBMS/PostgreSQL.cpp Library/StackTracer.cpp
-    Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/JSONAIS.cpp Library/Keys.cpp
+    Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/JSONAIS.cpp Library/Keys.cpp Library/Bluetooth.cpp
     Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
     Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp Library/Logger.cpp
     Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp Application/WebDB.cpp
@@ -804,7 +821,7 @@ set(CPP
 
 set(HEADER
     Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Application/WebDB.h Library/Logger.h Application/WebViewer.h Application/Receiver.h Tracking/Ships.h Tracking/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h Application/MapTiles.h Library/Beast.h
-    Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h Library/Basestation.h Library/ADSB.h
+    Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h Library/Basestation.h Library/ADSB.h Library/Bluetooth.h
     Device/AIRSPY.h Library/FIFO.h Device/N2KsktCAN.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Tracking/History.h Tracking/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h Tracking/PlaneDB.h
     Device/Serial.h IO/N2KInterface.h Library/N2K.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/MsgOut.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h Protocol/Protocol.h)
 

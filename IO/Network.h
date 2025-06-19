@@ -37,6 +37,7 @@
 #include "Stream.h"
 #include "Common.h"
 #include "TCP.h"
+#include "Bluetooth.h"
 #include "Library/ZIP.h"
 #include "HTTPServer.h"
 #include "HTTPClient.h"
@@ -181,7 +182,7 @@ namespace IO
 	class TCPClientStreamer : public OutputMessage
 	{
 		::TCP::Client tcp;
-		//AIS::Filter filter;
+		// AIS::Filter filter;
 		bool JSON = false;
 		std::string host, port;
 		bool keep_alive = false;
@@ -210,7 +211,7 @@ namespace IO
 	class TCPlistenerStreamer : public OutputMessage, public TCP::Server
 	{
 		int port = 5010;
-		//AIS::Filter filter;
+		// AIS::Filter filter;
 		bool JSON = false;
 		bool include_sample_start = false;
 
@@ -256,5 +257,25 @@ namespace IO
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
 
 		Setting &Set(std::string option, std::string arg);
+	};
+
+	class BluetoothStreamer : public OutputMessage, public Bluetooth::Server
+	{
+		int channel = 1;
+		// AIS::Filter filter;
+		bool JSON = false;
+		bool include_sample_start = false;
+
+	public:
+		virtual ~BluetoothStreamer() {};
+
+		Setting &Set(std::string option, std::string arg);
+
+		void Receive(const AIS::Message *data, int len, TAG &tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const AIS::GPS *data, int len, TAG &tag);
+
+		void Start() override;
+		void Stop() {}
 	};
 }
