@@ -115,8 +115,8 @@ namespace TCP
 		std::array<ServerConnection, MAX_CONN> client;
 
 		std::thread run_thread;
-
-		bool stop = false;
+		
+		std::atomic<bool> stop{false};
 
 		void Run();
 		sockaddr_in service;

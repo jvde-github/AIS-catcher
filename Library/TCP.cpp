@@ -179,13 +179,14 @@ namespace TCP
 		return true;
 	}
 
-	bool ServerConnection::SendRaw(const char *data, int length) {
+	bool ServerConnection::SendRaw(const char *data, int length)
+	{
 		std::lock_guard<std::mutex> lock(mtx);
 
 		if (!isConnected())
 			return false;
 
-		int bytes = ::send(sock, data, length, 0);	
+		int bytes = ::send(sock, data, length, 0);
 
 		if (bytes < 0)
 		{
@@ -250,6 +251,12 @@ namespace TCP
 	Server::~Server()
 	{
 		stop = true;
+
+		for (auto &c : client)
+		{
+			c.Close();
+		}
+
 		if (run_thread.joinable())
 			run_thread.join();
 		if (sock != -1)
@@ -369,7 +376,9 @@ namespace TCP
 				processClients();
 				writeClients();
 				cleanUp();
-				SleepAndWait();
+
+				if (!stop)
+					SleepAndWait();
 			}
 
 			Info() << "TCP Server: thread ending.\n";
