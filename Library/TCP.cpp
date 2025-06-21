@@ -386,7 +386,7 @@ namespace TCP
 		catch (std::exception &e)
 		{
 			Error() << "Server Run: " << e.what();
-			std::terminate();
+			StopRequest();
 		}
 	}
 
