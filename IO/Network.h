@@ -242,10 +242,11 @@ namespace IO
 		MessageFormat fmt = MessageFormat::JSON_FULL;
 
 		std::string json;
+		Util::TemplateString topic_template;
 		bool JSON_NMEA = false;
 
 	public:
-		MQTTStreamer() : OutputMessage()
+		MQTTStreamer() : OutputMessage(), topic_template("ais/data")
 		{
 			JSON_input = true;
 		}
