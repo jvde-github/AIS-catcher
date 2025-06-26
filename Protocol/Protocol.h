@@ -313,7 +313,7 @@ namespace Protocol
 			Error() << "TCP (" << host << ":" << port << "): " << operation << " error " << error_code
 					<< " (" << strerror(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
 
-			//if (persistent)
+			// if (persistent)
 			//	reconnect();
 			disconnect();
 			return partial_bytes_processed > 0 ? partial_bytes_processed : (persistent ? 0 : -1);
@@ -331,7 +331,7 @@ namespace Protocol
 
 		static bool ssl_initialized;
 		static int ssl_ref_count;
-		
+
 		bool verify_certificates = true;
 
 		enum TLS_STATE
@@ -667,7 +667,7 @@ namespace Protocol
 			return prev_connected && connected;
 		}
 
-		int send(const void *str, int length) override
+		int send(const void *str, int length, const std::string &tpc)
 		{
 			if (!isConnected())
 				return 0;
@@ -680,10 +680,10 @@ namespace Protocol
 
 			createPacket(PacketType::PUBLISH, qos << 1);
 
-			int packet_length = 2 + topic.length() + length + (qos > 0 ? 2 : 0);
+			int packet_length = 2 + tpc.length() + length + (qos > 0 ? 2 : 0);
 
 			pushVariableLength(packet_length);
-			pushString(topic);
+			pushString(tpc);
 
 			if (qos > 0)
 				pushInt(packet_id++);
@@ -691,6 +691,11 @@ namespace Protocol
 			packet.insert(packet.end(), (char *)str, (char *)str + length);
 
 			return prev->send(packet.data(), packet.size());
+		}
+
+		int send(const void *str, int length) override
+		{
+			return send(str, length, topic);
 		}
 
 		int read(void *data, int data_len, int t = 1, bool wait = false) override
