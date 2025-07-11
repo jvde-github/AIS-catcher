@@ -16,6 +16,9 @@
 */
 
 #include <cstring>
+#ifndef _WIN32
+#include <sys/select.h>
+#endif
 
 #include "Utilities.h"
 #include "UDP.h"
