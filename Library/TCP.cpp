@@ -538,11 +538,6 @@ namespace TCP
 		if (sock != -1)
 		{
 			closesocket(sock);
-
-			if (onDisconnected)
-			{
-				onDisconnected();
-			}
 		}
 
 		if (state == READY && verbose)
@@ -684,9 +679,6 @@ namespace TCP
 			if (verbose)
 				Info() << "TCP (" << host << ":" << port << "): connected.";
 
-			if (onConnected)
-				onConnected();
-
 			return true;
 		}
 
@@ -740,8 +732,8 @@ namespace TCP
 				Info() << "TCP (" << host << ":" << port << "): connected.";
 
 			connects++;
-			if (onConnected)
-				onConnected();
+			//if (onConnected)
+			//	onConnected();
 
 			return true;
 		}

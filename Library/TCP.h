@@ -153,8 +153,6 @@ namespace TCP
 		SOCKET getSocket() { return sock; }
 		int numberOfConnects() { return connects; }
 
-		void setOnConnectedCallback(std::function<void()> callback) { onConnected = callback; }
-		void setOnDisconnectedCallback(std::function<void()> callback) { onDisconnected = callback; }
 		void setVerbosity(bool v) { verbose = v; }
 
 	private:
@@ -176,9 +174,6 @@ namespace TCP
 		State state = DISCONNECTED;
 		time_t stamp = 0;
 		bool verbose = true;
-
-		std::function<void()> onConnected = nullptr;
-		std::function<void()> onDisconnected = nullptr;
 
 		void updateState();
 		bool isConnected(int t);
