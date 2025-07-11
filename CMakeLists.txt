@@ -70,7 +70,7 @@ elseif(APPLE)
 elseif(UNIX)
     check_include_file("syslog.h" HASSYSLOG)
     if(HASSYSLOG)
-        
+
         check_symbol_exists(syslog "syslog.h" CAN_USE_SYSLOG)
         if(CAN_USE_SYSLOG)
             add_definitions(-DHASSYSLOG)
@@ -81,11 +81,6 @@ endif()
 # Debug symbols and optimization settings for AIS-catcher
 if(UNIX AND NOT APPLE)
     find_library(DL_LIBRARY dl REQUIRED)
-    check_include_file("execinfo.h" HASEXECINFO)
-
-    if(HASEXECINFO)
-        add_definitions(-DHASEXECINFO)
-    endif()
 
     if(ENABLE_DEBUG)
         add_compile_options(
@@ -355,9 +350,9 @@ if(SQLITE)
         find_path(SQLITE_INCLUDE_DIR sqlite3.h HINTS ${POTHOSSDR_INCLUDE_DIR})
         find_library(SQLITE_LIBRARY sqlite3.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
         find_file(SQLITE_DLL sqlite3.dll HINTS ${POTHOSSDR_BINARY_DIR})
-        
+
         if(SQLITE_INCLUDE_DIR AND SQLITE_LIBRARY AND SQLITE_DLL)
-        message(STATUS "SQLite: found (PothosSDR) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
+            message(STATUS "SQLite: found (PothosSDR) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
             set(COPY_SQLITE_DLL TRUE)
             add_definitions(-DHASSQLITE)
             set(SQLITE_INCLUDE_DIRS ${SQLITE_INCLUDE_DIR})
@@ -368,10 +363,10 @@ if(SQLITE)
     else()
         # For Unix-like systems, use pkg-config if available
         pkg_check_modules(PKG_SQLITE sqlite3)
-        
+
         find_path(SQLITE_INCLUDE_DIR sqlite3.h HINTS ${PKG_SQLITE_INCLUDE_DIRS})
         find_library(SQLITE_LIBRARY sqlite3 HINTS ${PKG_SQLITE_LIBRARY_DIRS})
-        
+
         if(SQLITE_INCLUDE_DIR AND SQLITE_LIBRARY)
             message(STATUS "SQLite: found - ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}")
             set(SQLITE_INCLUDE_DIRS ${SQLITE_INCLUDE_DIR})
@@ -500,8 +495,8 @@ if(RTLSDR)
             PATHS /usr/local/include /usr/include /opt/include /opt/local/include)
 
         if(RTLSDR_STATIC)
-        # Look for static library first
-        find_library(RTLSDR_LIBRARY 
+            # Look for static library first
+            find_library(RTLSDR_LIBRARY
                 NAMES librtlsdr.a rtlsdr.a
                 HINTS ${PKG_RTLSDR_LIBRARY_DIRS} $ENV{RTLSDR_DIR}/lib
                 PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
@@ -817,7 +812,7 @@ if(ZMQ)
 endif()
 
 set(CPP
-    Application/Main.cpp Application/Prometheus.cpp Application/WebViewer.cpp Application/Receiver.cpp Application/Config.cpp Tracking/Ships.cpp Tracking/DB.cpp DBMS/PostgreSQL.cpp Library/StackTracer.cpp
+    Application/Main.cpp Application/Prometheus.cpp Application/WebViewer.cpp Application/Receiver.cpp Application/Config.cpp Tracking/Ships.cpp Tracking/DB.cpp DBMS/PostgreSQL.cpp
     Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/JSONAIS.cpp Library/Keys.cpp Library/Bluetooth.cpp
     Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
     Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp Library/Logger.cpp
