@@ -1,4 +1,5 @@
 #if defined(__linux__) || defined(__linux) || defined(linux)
+#ifdef HASEXECINFO
 
 #include <execinfo.h>
 #include <csignal>
@@ -140,4 +141,5 @@ namespace debugging {
 
 }
 
+#endif
 #endif

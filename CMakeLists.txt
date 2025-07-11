@@ -81,6 +81,12 @@ endif()
 # Debug symbols and optimization settings for AIS-catcher
 if(UNIX AND NOT APPLE)
     find_library(DL_LIBRARY dl REQUIRED)
+    check_include_file("execinfo.h" HASEXECINFO)
+
+    if(HASEXECINFO)
+        add_definitions(-DHASEXECINFO)
+    endif()
+
     if(ENABLE_DEBUG)
         add_compile_options(
             -g3
