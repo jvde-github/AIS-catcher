@@ -32,9 +32,10 @@ namespace AIS
 	void NMEA::clean(char c, int t)
 	{
 		auto i = queue.begin();
+		uint64_t now = time(nullptr);
 		while (i != queue.end())
 		{
-			if (i->channel == c && i->talkerID == t)
+			if ((i->channel == c && i->talkerID == t) || (i->timestamp + 3 < now))
 				i = queue.erase(i);
 			else
 				i++;
@@ -126,7 +127,7 @@ namespace AIS
 
 		for (auto it = queue.begin(); it != queue.end(); it++)
 		{
-			if (it->channel == aivdm.channel)
+			if (it->channel == aivdm.channel && it->talkerID == aivdm.talkerID && it->count == aivdm.count && it->ID == aivdm.ID)
 			{
 				addline(*it);
 				if (!regenerate)
@@ -180,7 +181,7 @@ namespace AIS
 	float NMEA::GpsToDecimal(const char *nmeaPos, char quadrant, bool &error)
 	{
 		float v = 0;
-		if (strlen(nmeaPos) > 5)
+		if (nmeaPos && strlen(nmeaPos) > 5)
 		{
 			char integerPart[3 + 1];
 			int digitCount = (nmeaPos[4] == '.' ? 2 : 3);
@@ -244,8 +245,18 @@ namespace AIS
 			return false;
 		}
 
-		GPS gps(GpsToDecimal(trim(parts[2]).c_str(), trim(parts[3])[0], error),
-				GpsToDecimal(trim(parts[4]).c_str(), trim(parts[5])[0], error),
+		std::string lat_coord = trim(parts[2]);
+		std::string lat_quad = trim(parts[3]);
+		std::string lon_coord = trim(parts[4]);
+		std::string lon_quad = trim(parts[5]);
+
+		if (lat_quad.empty() || lon_quad.empty())
+		{
+			return false;
+		}
+
+		GPS gps(GpsToDecimal(lat_coord.c_str(), lat_quad[0], error),
+				GpsToDecimal(lon_coord.c_str(), lon_quad[0], error),
 				s, empty);
 
 		if (error)
@@ -266,7 +277,7 @@ namespace AIS
 
 		split(s);
 
-		if (parts.size() != 13 && parts.size() != 12)
+		if ((parts.size() != 13 && parts.size() != 12))
 			return false;
 
 		const std::string &crc = parts[parts.size() - 1];
@@ -282,8 +293,13 @@ namespace AIS
 			}
 		}
 
-		GPS gps(GpsToDecimal(trim(parts[3]).c_str(), trim(parts[4])[0], error),
-				GpsToDecimal(trim(parts[5]).c_str(), trim(parts[6])[0], error), s, empty);
+		std::string lat_quad = trim(parts[3]);
+		std::string lon_quad = trim(parts[5]);
+		if (lat_quad.empty() || lon_quad.empty())
+			return false;
+
+		GPS gps(GpsToDecimal(trim(parts[2]).c_str(), lat_quad[0], error),
+				GpsToDecimal(trim(parts[4]).c_str(), lon_quad[0], error), s, empty);
 
 		if (error)
 			return false;
@@ -320,8 +336,16 @@ namespace AIS
 				return false;
 		}
 
-		float lat = GpsToDecimal(parts[1].c_str(), parts[2][0], error);
-		float lon = GpsToDecimal(parts[3].c_str(), parts[4][0], error);
+		std::string lat_quad = parts[2];
+		std::string lon_quad = parts[4];
+
+		if (lat_quad.empty() || lon_quad.empty())
+		{
+			return false;
+		}
+
+		float lat = GpsToDecimal(parts[1].c_str(), lat_quad[0], error);
+		float lon = GpsToDecimal(parts[3].c_str(), lon_quad[0], error);
 
 		if (error)
 			return false;
@@ -345,40 +369,35 @@ namespace AIS
 		split(nmea);
 		aivdm.reset();
 
-		if (parts.size() != 7)
+		if (parts.size() != 7 || parts[0].size() != 6 || parts[1].size() != 1 || parts[2].size() != 1 || parts[3].size() > 1 || parts[4].size() > 1 || parts[6].size() != 4)
+		{
 			return false;
-
-		if (parts[0].size() != 6)
-			return false;
+		}
 		if (parts[0][0] != '$' && parts[0][0] != '!')
 			return false;
 
+		if (!std::isupper(parts[0][1]) || (!std::isupper(parts[0][2]) && !std::isdigit(parts[0][2])))
+		{
+			return false;
+		}
+
+		if (parts[0][3] != 'V' || parts[0][4] != 'D' || (parts[0][5] != 'M' && parts[0][5] != 'O'))
+		{
+			return false;
+		}
+
 		aivdm.talkerID = ((parts[0][1] << 8) | parts[0][2]);
-		if (parts[1].size() != 1)
-			return false;
-
 		aivdm.count = parts[1][0] - '0';
-		if (parts[2].size() != 1)
-			return false;
-
 		aivdm.number = parts[2][0] - '0';
-		if (parts[3].size() > 1)
-			return false;
-
 		aivdm.ID = parts[3].size() > 0 ? parts[3][0] - '0' : 0;
-		if (parts[4].size() > 1)
-			return false;
-
 		aivdm.channel = parts[4].size() > 0 ? parts[4][0] : '?';
 
 		for (auto c : parts[5])
 			if (!isNMEAchar(c))
 				return false;
 		aivdm.data = parts[5];
-
-		if (parts[6].size() != 4)
-			return false;
 		aivdm.fillbits = parts[6][0] - '0';
+
 		if (!isHEX(parts[6][2]) || !isHEX(parts[6][3]))
 			return false;
 		aivdm.checksum = (fromHEX(parts[6][2]) << 4) | fromHEX(parts[6][3]);
@@ -460,16 +479,6 @@ namespace AIS
 				if (cls == "AIS" && dev == "AIS-catcher" && (uuid.empty() || suuid == uuid))
 				{
 
-					// ------------------------------
-					// temporary check, should be removed
-					volatile float level_check = MIN(LEVEL_UNDEFINED + 1, tag.level);
-					if (level_check > LEVEL_UNDEFINED)
-					{
-						if (warnings)
-							Warning() << "Warning: level check failed for " << s;
-					}
-					// ------------------------------
-
 					for (const auto &p : j->getProperties())
 					{
 						if (p.Key() == AIS::KEY_NMEA)
@@ -478,7 +487,9 @@ namespace AIS
 							{
 								for (const auto &v : p.Get().getArray())
 								{
-									processAIS(v.getString(), tag, t, ssc, sl, thisstation);
+									if(!processAIS(v.getString(), tag, t, ssc, sl, thisstation)) {
+										Warning() << "NMEA: error processing AIS JSON line " << v.getString();
+									}
 								}
 							}
 						}
@@ -634,7 +645,6 @@ namespace AIS
 		{
 			if (warnings)
 				Warning() << "NMEA Receive: " << e.what();
-			std::terminate();
 		}
 	}
 }
