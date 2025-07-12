@@ -391,6 +391,12 @@ int main(int argc, char *argv[])
 						parseSettings(u, argv, ptr + 1, argc);
 				}
 				break;
+			case 'B':
+				Assert(count == 0, param, "requires no parameters.");
+				{
+					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::BluetoothStreamer()));
+				}
+				break;
 			case 'f':
 			{
 				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MessageToFile()));
@@ -626,7 +632,7 @@ int main(int argc, char *argv[])
 					{
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						commm_feed = msg.back().get();
-						commm_feed->Set("HOST", "185.77.96.227").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE","on").Set("INCLUDE_SAMPLE_START","on");
+						commm_feed->Set("HOST", "185.77.96.227").Set("PORT", "4242").Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
 					}
 
 					if (count == 1 && commm_feed)
@@ -747,7 +753,7 @@ int main(int argc, char *argv[])
 			ptr += count + 1;
 		}
 
-		if(show_copyright)
+		if (show_copyright)
 			printVersion();
 
 		/*
@@ -806,7 +812,6 @@ int main(int argc, char *argv[])
 				stat[i].connect(r);
 		}
 
-		DBG("Starting output devices");
 		for (auto &o : msg)
 			o->Start();
 
@@ -815,7 +820,6 @@ int main(int argc, char *argv[])
 
 		screen.start();
 
-		DBG("Starting servers");
 		for (auto &s : servers)
 			if (s->active())
 			{

@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2023-2024 jvde.github@gmail.com
+	Copyright(c) 2021-2025 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 
 #pragma once
 
+#ifdef HASBLUETOOTH
+
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -29,6 +31,8 @@
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <ws2bth.h>
+#include <bluetoothapis.h>
 
 #else
 
@@ -36,6 +40,8 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/rfcomm.h>
 
 #define SOCKET int
 #define SOCKADDR struct sockaddr
@@ -45,15 +51,13 @@
 
 #endif
 
-#ifdef __ANDROID__
-#include <netinet/in.h>
 #endif
 
 #include "Common.h"
 
-namespace TCP
+namespace Bluetooth
 {
-
+#ifdef HASBLUETOOTH
 	class ServerConnection
 	{
 	private:
@@ -97,29 +101,36 @@ namespace TCP
 	public:
 		virtual ~Server();
 
-		bool start(int port);
+		bool start(int channel);
+		bool startAuto();
+		int getChannel();
 		bool SendAll(const std::string &m);
 		bool SendAllDirect(const std::string &m);
 
-		void setReusePort(bool b) { reuse_port = b; }
+		void setReuseChannel(bool b) { reuse_channel = b; }
 		bool setNonBlock(SOCKET sock);
-		void setIP(std::string ip) { IP_BIND = ip; }
+		void setBluetoothAddr(std::string addr) { BT_ADDR = addr; }
 
 	protected:
 		SOCKET sock = -1;
 		int timeout = 30;
-		bool reuse_port = true;
-		std::string IP_BIND;
+		int current_channel = -1;
+		bool reuse_channel = true;
+		std::string BT_ADDR;
 
 		const static int MAX_CONN = 16;
 		std::array<ServerConnection, MAX_CONN> client;
 
 		std::thread run_thread;
-		
-		std::atomic<bool> stop{false};
+
+		bool stop = false;
 
 		void Run();
-		sockaddr_in service;
+#ifdef _WIN32
+		SOCKADDR_BTH service;
+#else
+		struct sockaddr_rc service;
+#endif
 
 		bool Send(ServerConnection &c, const char *data, int len)
 		{
@@ -135,56 +146,39 @@ namespace TCP
 		void cleanUp();
 		void SleepAndWait();
 	};
+#else
 
-	class Client
+	class Server
 	{
 	public:
-		Client() {}
-		~Client() { disconnect(); }
-
-		void disconnect();
-		bool connect(std::string host, std::string port, bool persist, int timeout, bool keep_alive = false, int idle = 300, int interval = 180, int count = 3);
-
-		void setResetTime(int t) { reset_time = t; }
-		int read(void *data, int length, int t = 1, bool wait = false);
-		int send(const void *data, int length);
-		void updateConnection();
-
-		SOCKET getSocket() { return sock; }
-		int numberOfConnects() { return connects; }
-
-		void setVerbosity(bool v) { verbose = v; }
-
-	private:
-		enum State
+		bool start(int channel)
 		{
-			DISCONNECTED,
-			CONNECTING,
-			READY
-		};
-
-		std::string host;
-		std::string port;
-		bool persistent = true;
-		int reset_time = -1;
-		int timeout = 0;
-		int connects = 0;
-
-		int sock = -1;
-		State state = DISCONNECTED;
-		time_t stamp = 0;
-		bool verbose = true;
-
-		void updateState();
-		bool isConnected(int t);
-
-		bool reconnect()
+			Error() << "Bluetooth not supported on this platform.";
+			return false;
+		}
+		bool startAuto()
 		{
-			disconnect();
-			if (connect(host, port, persistent, timeout))
-				return true;
+			Error() << "Bluetooth not supported on this platform.";
+			return false;
+		}
 
+		virtual ~Server() {}
+
+		int getChannel()
+		{
+			Error() << "Bluetooth not supported on this platform.";
+			return -1;
+		}
+		bool SendAll(const std::string &m)
+		{
+			Error() << "Bluetooth not supported on this platform.";
+			return false;
+		}
+		bool SendAllDirect(const std::string &m)
+		{
+			Error() << "Bluetooth not supported on this platform.";
 			return false;
 		}
 	};
+#endif
 }
