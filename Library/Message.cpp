@@ -361,11 +361,14 @@ namespace AIS
 	{
 		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
 
-		if (length < (pos + 1) * 6)
-			length = (pos + 1) * 6;
-		if (length >= MAX_AIS_LENGTH)
-			return;
+		int newlength = MAX((pos+1)*6,length);
 
+		if (newlength >= MAX_AIS_LENGTH) {
+			std::cerr << "Message::setLetter: length exceeds maximum AIS length." << std::endl;
+			return;
+		}
+
+		length = newlength;
 		c = (c >= 96 ? c - 56 : c - 48) & 0b00111111;
 
 		switch (y)

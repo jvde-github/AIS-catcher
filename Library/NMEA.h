@@ -39,9 +39,12 @@ namespace AIS {
 			std::string line;
 			std::string data;
 
+			uint64_t timestamp;
+
 			void reset() {
 				sentence.clear();
 				data.clear();
+				timestamp = time(nullptr);
 			}
 			char channel;
 			int count;
