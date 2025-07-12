@@ -37,6 +37,12 @@
 
 #include "Stream.h"
 
+struct TAG;
+namespace AIS
+{
+	class Message;
+}
+
 namespace Util
 {
 
@@ -308,6 +314,24 @@ namespace Util
 		inline void reset()
 		{
 			value = 0;
+		}
+	};
+
+	class TemplateString
+	{
+		std::string tpl;
+
+	public:
+		TemplateString(const std::string &t) : tpl(t) {}
+		void set(const std::string &t);
+		std::string get(const TAG &tag, const AIS::Message &msg) const;
+		std::string getTemplate() const
+		{
+			return tpl;
+		}
+		bool isTemplate() const
+		{
+			return tpl.find('%') != std::string::npos;
 		}
 	};
 }

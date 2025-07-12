@@ -25,6 +25,7 @@
 #endif
 
 #include "Utilities.h"
+#include "Message.h"
 #include "Logger.h"
 
 namespace Util
@@ -1168,5 +1169,79 @@ namespace Util
 		}
 #endif
 		return files;
+	}
+
+	void TemplateString::set(const std::string &t)
+	{
+		tpl = t;
+	}
+
+	std::string TemplateString::get(const TAG &tag, const AIS::Message &msg) const
+	{
+		std::string out;
+		out.reserve(tpl.size() + 64);
+
+		int i = 0, n = tpl.size();
+
+		while (i < n)
+		{
+			if (tpl[i] != '%')
+			{
+				out.push_back(tpl[i++]);
+			}
+			else
+			{
+				int start = i + 1;
+				int end = tpl.find('%', start);
+				if (end == std::string::npos)
+				{
+					out.push_back('%');
+					i = start;
+				}
+				else
+				{
+					std::string key = tpl.substr(start, end - start);
+					i = end + 1;
+
+					// substitutions:
+					if (key == "mmsi")
+					{
+						out += std::to_string(msg.mmsi());
+					}
+					else if (key == "ppm")
+					{
+						out += std::to_string(tag.ppm);
+					}
+					else if (key == "station")
+					{
+						out += std::to_string(msg.getStation());
+					}
+					else if (key == "type")
+					{
+						out += std::to_string(msg.type());
+					}
+					else if (key == "repeat")
+					{
+						out += std::to_string(msg.repeat());
+					}
+					else if (key == "channel")
+					{
+						out.push_back(msg.getChannel());
+					}
+					else if (key == "rxtimeux")
+					{
+						out += std::to_string(msg.getRxTimeUnix());
+					}
+					else
+					{
+						// unknown key → re-emit literally
+						out.push_back('%');
+						out += key;
+						out.push_back('%');
+					}
+				}
+			}
+		}
+		return out;
 	}
 }

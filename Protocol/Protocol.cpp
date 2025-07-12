@@ -420,6 +420,8 @@ namespace Protocol
 		return total_received;
 	}
 
+#ifdef HASOPENSSL
+
 		// Initialize OpenSSL library (call once globally)
 	void TLS::initializeSSL()
 	{
@@ -735,7 +737,7 @@ namespace Protocol
 			return std::string(buffer);
 		}
 	}
-
+#endif // HASOPENSSL
 	///  ------WebSocket Implementation------
 	void WebSocket::onConnect()
 	{
