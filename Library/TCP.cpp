@@ -165,7 +165,6 @@ namespace TCP
 				out.clear();
 		}
 	}
-
 	bool ServerConnection::Send(const char *data, int length)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
@@ -173,36 +172,10 @@ namespace TCP
 		if (!isConnected())
 			return false;
 
-		bool was_empty = out.empty();
 		if (out.size() + length > MAX_BUFFER_SIZE)
 			return false;
 
 		out.insert(out.end(), data, data + length);
-
-		if (!was_empty)
-			return true;
-
-		int bytes = ::send(sock, out.data(), out.size(), 0);
-		if (bytes < 0)
-		{
-#ifdef _WIN32
-			if (WSAGetLastError() != WSAEWOULDBLOCK)
-			{
-#else
-			if (errno != EWOULDBLOCK && errno != EAGAIN)
-			{
-#endif
-				if (verbose)
-					Error() << "TCP Connection: error message to client: " << strerror(errno);
-
-				CloseUnsafe();
-			}
-		}
-		else if (bytes < out.size())
-			out.erase(out.begin(), out.begin() + bytes);
-		else
-			out.clear();
-
 		return true;
 	}
 
@@ -419,38 +392,33 @@ namespace TCP
 
 	void Server::SleepAndWait()
 	{
-		for (int i = 0; i < 10; i++) // Loop up to 10 times (1 second total)
+		struct timeval tv;
+		fd_set fds, fdw;
+
+		FD_ZERO(&fds);
+		FD_SET(sock, &fds);
+
+		FD_ZERO(&fdw);
+
+		int maxfds = sock;
+
+		for (auto &c : client)
 		{
-			struct timeval tv;
-			fd_set fds, fdw;
-
-			FD_ZERO(&fds);
-			FD_SET(sock, &fds);
-			FD_ZERO(&fdw);
-
-			int maxfds = sock;
-			for (auto &c : client)
+			if (c.isConnected())
 			{
-				if (c.isConnected())
+				FD_SET(c.sock, &fds);
+				if (c.sock > maxfds)
+					maxfds = c.sock;
+
+				if (c.hasSendBuffer())
 				{
-					FD_SET(c.sock, &fds);
-					if (c.sock > maxfds)
-						maxfds = c.sock;
-					if (c.hasSendBuffer())
-					{
-						FD_SET(c.sock, &fdw);
-					}
+					FD_SET(c.sock, &fdw);
 				}
 			}
-
-			tv = {0, 100000}; // 100ms timeout
-			int result = select(maxfds + 1, &fds, &fdw, NULL, &tv);
-
-			if (result != 0 || stop)
-			{
-				return;
-			}
 		}
+
+		tv = {1, 0};
+		select(maxfds + 1, &fds, &fdw, NULL, &tv);
 	}
 
 	bool Server::SendAll(const std::string &m)
@@ -764,7 +732,7 @@ namespace TCP
 				Info() << "TCP (" << host << ":" << port << "): connected.";
 
 			connects++;
-			// if (onConnected)
+			//if (onConnected)
 			//	onConnected();
 
 			return true;
