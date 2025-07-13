@@ -419,33 +419,38 @@ namespace TCP
 
 	void Server::SleepAndWait()
 	{
-		struct timeval tv;
-		fd_set fds, fdw;
-
-		FD_ZERO(&fds);
-		FD_SET(sock, &fds);
-
-		FD_ZERO(&fdw);
-
-		int maxfds = sock;
-
-		for (auto &c : client)
+		for (int i = 0; i < 10; i++) // Loop up to 10 times (1 second total)
 		{
-			if (c.isConnected())
-			{
-				FD_SET(c.sock, &fds);
-				if (c.sock > maxfds)
-					maxfds = c.sock;
+			struct timeval tv;
+			fd_set fds, fdw;
 
-				if (c.hasSendBuffer())
+			FD_ZERO(&fds);
+			FD_SET(sock, &fds);
+			FD_ZERO(&fdw);
+
+			int maxfds = sock;
+			for (auto &c : client)
+			{
+				if (c.isConnected())
 				{
-					FD_SET(c.sock, &fdw);
+					FD_SET(c.sock, &fds);
+					if (c.sock > maxfds)
+						maxfds = c.sock;
+					if (c.hasSendBuffer())
+					{
+						FD_SET(c.sock, &fdw);
+					}
 				}
 			}
-		}
 
-		tv = {1, 0};
-		select(maxfds + 1, &fds, &fdw, NULL, &tv);
+			tv = {0, 100000}; // 100ms timeout
+			int result = select(maxfds + 1, &fds, &fdw, NULL, &tv);
+
+			if (result != 0 || stop)
+			{
+				return;
+			}
+		}
 	}
 
 	bool Server::SendAll(const std::string &m)
