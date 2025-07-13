@@ -809,7 +809,7 @@ namespace IO
 
 				for (const auto &s : data[i].NMEA)
 				{
-					SendAll(s + "\r\n");
+					SendAllDirect(s + "\r\n");
 				}
 			}
 		}
@@ -820,7 +820,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				SendAll((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4) + "\r\n").c_str());
+				SendAllDirect((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4) + "\r\n").c_str());
 			}
 		}
 	}
@@ -833,7 +833,7 @@ namespace IO
 			{
 				json.clear();
 				builder.stringify(data[i], json);
-				SendAll((json + "\r\n").c_str());
+				SendAllDirect((json + "\r\n").c_str());
 			}
 		}
 	}
