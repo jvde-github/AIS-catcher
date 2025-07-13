@@ -27,21 +27,25 @@
 #include "JSON/StringBuilder.h"
 #include "Keys.h"
 
-namespace AIS {
+namespace AIS
+{
 
-	class NMEA : public SimpleStreamInOut<RAW, Message> {
+	class NMEA : public SimpleStreamInOut<RAW, Message>
+	{
 		Message msg;
 		int station = 0;
 		std::string uuid;
 
-		struct AIVDM {
+		struct AIVDM
+		{
 			std::string sentence;
 			std::string line;
 			std::string data;
 
 			uint64_t timestamp;
 
-			void reset() {
+			void reset()
+			{
 				sentence.clear();
 				data.clear();
 				timestamp = time(nullptr);
@@ -55,7 +59,6 @@ namespace AIS {
 			int talkerID;
 		} aivdm;
 
-
 		std::vector<std::string> parts;
 
 		char prev = '\n';
@@ -66,11 +69,11 @@ namespace AIS {
 
 		std::vector<AIVDM> queue;
 
-		void submitAIS(TAG& tag, long int t, uint64_t ssc, uint16_t sl, int thisstation);
-		void addline(const AIVDM& a);
+		void submitAIS(TAG &tag, long int t, uint64_t ssc, uint16_t sl, int thisstation);
+		void addline(const AIVDM &a);
 		void reset(char);
 		void clean(char, int);
-		int search(const AIVDM& a);
+		int search(const AIVDM &a);
 
 		bool isNMEAchar(char c) { return (c >= 40 && c < 88) || (c >= 96 && c <= 56 + 0x3F); }
 		bool isHEX(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
@@ -78,7 +81,7 @@ namespace AIS {
 
 		int NMEAchecksum(std::string s);
 
-		float GpsToDecimal(const char*, char, bool& error);
+		float GpsToDecimal(const char *, char, bool &error);
 
 		bool regenerate = false;
 		bool stamp = true;
@@ -88,24 +91,31 @@ namespace AIS {
 		bool warnings = true;
 		bool includeGPS = true;
 
-		void split(const std::string&);
-		std::string trim(const std::string&);
-		void processJSONsentence(const std::string& s, TAG& tag, long t);
-		bool processAIS(const std::string& s, TAG& tag, long t, uint64_t ssc, uint16_t sl, int thisstation = -1);
-		bool processGGA(const std::string& s, TAG& tag, long t);
-		bool processGLL(const std::string& s, TAG& tag, long t);
-		bool processRMC(const std::string& s, TAG& tag, long t);
+		JSON::Parser parser;
+
+		void split(const std::string &);
+		std::string trim(const std::string &);
+		void processJSONsentence(const std::string &s, TAG &tag, long t);
+		bool processAIS(const std::string &s, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, std::string &error_msg);
+		bool processGGA(const std::string &s, TAG &tag, long t, std::string &error_msg);
+		bool processGLL(const std::string &s, TAG &tag, long t, std::string &error_msg);
+		bool processRMC(const std::string &s, TAG &tag, long t, std::string &error_msg);
 
 	public:
+		NMEA() : parser(&AIS::KeyMap, JSON_DICT_FULL)
+		{
+			parser.setSkipUnknown(true);
+		}
+
 		virtual ~NMEA() {}
-		void Receive(const RAW* data, int len, TAG& tag);
+		void Receive(const RAW *data, int len, TAG &tag);
 
 		void setRegenerate(bool b) { regenerate = b; }
 		bool getRegenerate() { return regenerate; }
 
 		void setVDO(bool b) { VDO = b; }
 		bool getVDO() { return VDO; }
-		void setUUID(const std::string& u) { uuid = u; }
+		void setUUID(const std::string &u) { uuid = u; }
 		std::string getUUID() { return uuid; }
 
 		void setStation(int s) { station = s; }
