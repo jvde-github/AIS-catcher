@@ -24,15 +24,18 @@
 #include "Utilities.h"
 #include "Common.h"
 
-namespace JSON {
+namespace JSON
+{
 
 	class JSON;
 	class Property;
 
 	// JSON value item, 8 bytes (32 bits), 16 bytes (64 bits)
-	class Value {
+	class Value
+	{
 
-		enum class Type {
+		enum class Type
+		{
 			BOOL,
 			INT,
 			FLOAT,
@@ -43,25 +46,25 @@ namespace JSON {
 			EMPTY
 		} type;
 
-		union Data {
+		union Data
+		{
 			bool b;
 			long int i;
 			double f;
-			std::string* s;
-			std::vector<std::string>* as;
-			std::vector<Value>* a;
-			JSON* o;
+			std::string *s;
+			std::vector<std::string> *as;
+			std::vector<Value> *a;
+			JSON *o;
 		} data;
 
-	public:		
+	public:
 		double getFloat(double d = 0.0f) const { return isFloat() ? data.f : (isInt() ? (double)(data.i) : d); }
 		long int getInt(long int d = 0) const { return isInt() ? data.i : d; }
 		bool getBool(bool d = false) const { return isBool() ? data.b : d; }
-		const std::vector<std::string>& getStringArray() const { return *data.as; }
-		const std::vector<Value>& getArray() const { return *data.a; }
+		const std::vector<std::string> &getStringArray() const { return *data.as; }
+		const std::vector<Value> &getArray() const { return *data.a; }
 		const std::string getString() const { return isString() ? *data.s : std::string(""); }
-		const JSON& getObject() const { return *data.o; }
-
+		const JSON &getObject() const { return *data.o; }
 
 		const bool isObject() const { return type == Type::OBJECT; }
 		const bool isBool() const { return type == Type::BOOL; }
@@ -71,89 +74,107 @@ namespace JSON {
 		const bool isFloat() const { return type == Type::FLOAT; }
 		const bool isInt() const { return type == Type::INT; }
 
-		void setFloat(double v) {
+		void setFloat(double v)
+		{
 			data.f = v;
 			type = Type::FLOAT;
 		}
-		void setInt(long int v) {
+		void setInt(long int v)
+		{
 			data.i = v;
 			type = Type::INT;
 		}
-		void setBool(bool v) {
+		void setBool(bool v)
+		{
 			data.b = v;
 			type = Type::BOOL;
 		}
 		void setNull() { type = Type::EMPTY; }
 
-		void setArray(std::vector<Value>* v) {
+		void setArray(std::vector<Value> *v)
+		{
 			data.a = v;
 			type = Type::ARRAY;
 		}
-		void setStringArray(std::vector<std::string>* v) {
+		void setStringArray(std::vector<std::string> *v)
+		{
 			data.as = v;
 			type = Type::ARRAY_STRING;
 		}
-		void setString(std::string* v) {
+		void setString(std::string *v)
+		{
 			data.s = v;
 			type = Type::STRING;
 		}
-		void setObject(JSON* v) {
+		void setObject(JSON *v)
+		{
 			data.o = v;
 			type = Type::OBJECT;
 		}
 
-		void to_string(std::string&) const;
-		std::string to_string() const {
+		void to_string(std::string &) const;
+		std::string to_string() const
+		{
 			std::string str;
 			to_string(str);
 			return str;
 		}
 	};
 
-	class Property {
+	class Property
+	{
 
 		int key;
 		Value value;
 
 	public:
-		Property(int p, Value v) {
+		Property(int p, Value v)
+		{
 			key = p;
 			value = v;
 		}
-		Property(int p, long int v) {
+		Property(int p, long int v)
+		{
 			key = p;
 			value.setInt(v);
 		}
-		Property(int p, double v) {
+		Property(int p, double v)
+		{
 			key = p;
 			value.setFloat(v);
 		}
-		Property(int p, bool v) {
+		Property(int p, bool v)
+		{
 			key = p;
 			value.setBool(v);
 		}
-		Property(int p, std::string* v) {
+		Property(int p, std::string *v)
+		{
 			key = p;
 			value.setString(v);
 		}
-		Property(int p, std::vector<std::string>* v) {
+		Property(int p, std::vector<std::string> *v)
+		{
 			key = p;
 			value.setStringArray(v);
 		}
-		Property(int p, JSON* v) {
+		Property(int p, JSON *v)
+		{
 			key = p;
 			value.setObject(v);
 		}
-		Property(int p) {
+		Property(int p)
+		{
 			key = p;
 			value.setNull();
 		}
 
 		int Key() const { return key; }
-		const Value& Get() const { return value; }
+		const Value &Get() const { return value; }
 	};
 
-	class JSON {
+	class JSON
+	{
 		friend class Parser;
 
 	private:
@@ -166,9 +187,10 @@ namespace JSON {
 		std::vector<std::shared_ptr<std::vector<Value>>> arrays;
 
 	public:
-		void* binary = NULL;
-
-		void clear() {
+		void *binary = NULL;
+		
+		void clear()
+		{
 			properties.clear();
 
 			objects.clear();
@@ -176,54 +198,65 @@ namespace JSON {
 			arrays.clear();
 		}
 
-		const std::vector<Property>& getProperties() const { return properties; }
+		const std::vector<Property> &getProperties() const { return properties; }
 
-		const Value* getValue(int p) const {
-			for (auto& o : properties)
-				if (o.Key() == p) return &o.Get();
+		const Value *getValue(int p) const
+		{
+			for (auto &o : properties)
+				if (o.Key() == p)
+					return &o.Get();
 
 			return nullptr;
 		}
 
-		const Value* operator[](int p) { return getValue(p); }
+		const Value *operator[](int p) { return getValue(p); }
 
-		void Add(int p, int v) {
+		void Add(int p, int v)
+		{
 			properties.push_back(Property(p, (long int)v));
 		}
 
-		void Add(int p, double v) {
+		void Add(int p, double v)
+		{
 			properties.push_back(Property(p, (double)v));
 		}
 
-		void Add(int p, bool v) {
+		void Add(int p, bool v)
+		{
 			properties.push_back(Property(p, (bool)v));
 		}
 
-		void Add(int p, std::shared_ptr<JSON>& v) {
+		void Add(int p, std::shared_ptr<JSON> &v)
+		{
 			objects.push_back(v);
-			properties.push_back(Property(p, (JSON*)v.get()));
+			properties.push_back(Property(p, (JSON *)v.get()));
 		}
 
-		void Add(int p, const std::string& v) {
+		void Add(int p, const std::string &v)
+		{
 			strings.push_back(std::shared_ptr<std::string>(new std::string(v)));
-			properties.push_back(Property(p, (std::string*)strings.back().get()));
+			properties.push_back(Property(p, (std::string *)strings.back().get()));
 		}
 
-		void Add(int p) {
+		void Add(int p)
+		{
 			properties.push_back(Property(p));
 		}
 
-		void Add(int p, Value v) {
+		void Add(int p, Value v)
+		{
 			properties.push_back(Property(p, (Value)v));
 		}
 
 		// for items where memory is managed outside the object
-		void Add(int p, const std::string* v) {
-			properties.push_back(Property(p, (std::string*)v));
+		void Add(int p, const std::string *v)
+		{
+			properties.push_back(Property(p, (std::string *)v));
 		}
 
-		void Add(int p, const std::vector<std::string>* v) {
-			properties.push_back(Property(p, (std::vector<std::string>*)v));
+		void Add(int p, const std::vector<std::string> *v)
+		{
+			properties.push_back(Property(p, (std::vector<std::string> *)v));
 		}
 	};
 }
