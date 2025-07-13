@@ -210,7 +210,7 @@ namespace AIS
 		return v;
 	}
 
-	bool NMEA::processGGA(const std::string &s, TAG &tag, long t)
+	bool NMEA::processGGA(const std::string &s, TAG &tag, long t, std::string &error_msg)
 	{
 
 		if (!includeGPS)
@@ -221,7 +221,10 @@ namespace AIS
 		split(s);
 
 		if (parts.size() != 15)
+		{
+			error_msg = "NMEA: GPGGA does not have 15 parts but " + std::to_string(parts.size());
 			return false;
+		}
 
 		const std::string &crc = parts[14];
 		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
@@ -230,8 +233,8 @@ namespace AIS
 		{
 			if (crc_check)
 			{
-				if (warnings)
-					Warning() << "NMEA: incorrect checksum [" << line << "].";
+
+				error_msg = "NMEA: incorrect checksum.";
 				return false;
 			}
 		}
@@ -240,8 +243,7 @@ namespace AIS
 		int fix = atoi(parts[6].c_str());
 		if (fix != 1 && fix != 2)
 		{
-			if (warnings)
-				Warning() << "NMEA: no fix in GPGGA NMEA:" << parts[6];
+			error_msg = "NMEA: no fix in GPGGA NMEA:" + parts[6];
 			return false;
 		}
 
@@ -260,14 +262,17 @@ namespace AIS
 				s, empty);
 
 		if (error)
+		{
+			error_msg = "NMEA: error in GPGGA coordinates.";
 			return false;
+		}
 
 		outGPS.Send(&gps, 1, tag);
 
 		return true;
 	}
 
-	bool NMEA::processRMC(const std::string &s, TAG &tag, long t)
+	bool NMEA::processRMC(const std::string &s, TAG &tag, long t, std::string &error_msg)
 	{
 
 		if (!includeGPS)
@@ -287,8 +292,7 @@ namespace AIS
 		{
 			if (crc_check)
 			{
-				if (warnings)
-					Warning() << "NMEA: incorrect checksum [" << line << "].";
+				error_msg = "incorrect checksum";
 				return false;
 			}
 		}
@@ -296,20 +300,26 @@ namespace AIS
 		std::string lat_quad = trim(parts[3]);
 		std::string lon_quad = trim(parts[5]);
 		if (lat_quad.empty() || lon_quad.empty())
+		{
+			error_msg = "NMEA: no coordinates in RMC";
 			return false;
+		}
 
 		GPS gps(GpsToDecimal(trim(parts[2]).c_str(), lat_quad[0], error),
 				GpsToDecimal(trim(parts[4]).c_str(), lon_quad[0], error), s, empty);
 
 		if (error)
+		{
+			error_msg = "NMEA: error in RMC coordinates.";
 			return false;
+		}
 
 		outGPS.Send(&gps, 1, tag);
 
 		return true;
 	}
 
-	bool NMEA::processGLL(const std::string &s, TAG &tag, long t)
+	bool NMEA::processGLL(const std::string &s, TAG &tag, long t, std::string &error_msg)
 	{
 
 		if (!includeGPS)
@@ -320,8 +330,7 @@ namespace AIS
 
 		if (parts.size() != 8)
 		{
-			if (warnings)
-				Warning() << "NMEA: GLL does not have 8 parts but " << parts.size();
+			error_msg = "NMEA: GLL does not have 8 parts but " + std::to_string(parts.size());
 			return false;
 		}
 
@@ -330,10 +339,14 @@ namespace AIS
 
 		if (checksum != NMEAchecksum(line))
 		{
-			if (warnings)
+			if (warnings && !crc_check)
 				Warning() << "NMEA: incorrect checksum [" << line << "].";
+
 			if (crc_check)
+			{
+				error_msg = "NMEA: incorrect checksum";
 				return false;
+			}
 		}
 
 		std::string lat_quad = parts[2];
@@ -348,7 +361,10 @@ namespace AIS
 		float lon = GpsToDecimal(parts[3].c_str(), lon_quad[0], error);
 
 		if (error)
+		{
+			error_msg = "NMEA: error in GLL coordinates.";
 			return false;
+		}
 
 		GPS gps(lat, lon, s, empty);
 		outGPS.Send(&gps, 1, tag);
@@ -356,12 +372,12 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processAIS(const std::string &str, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation)
+	bool NMEA::processAIS(const std::string &str, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, std::string &error_msg)
 	{
 		int pos = str.find_first_of("$!");
 		if (pos == std::string::npos)
 		{
-			Warning() << "NMEA: cannot parse " << str;
+			error_msg = "NMEA: no $ or ! in AIS sentence";
 			return false;
 		}
 		std::string nmea = str.substr(pos);
@@ -371,18 +387,24 @@ namespace AIS
 
 		if (parts.size() != 7 || parts[0].size() != 6 || parts[1].size() != 1 || parts[2].size() != 1 || parts[3].size() > 1 || parts[4].size() > 1 || parts[6].size() != 4)
 		{
+			error_msg = "NMEA: AIS sentence does not have 7 parts or has invalid part sizes";
 			return false;
 		}
 		if (parts[0][0] != '$' && parts[0][0] != '!')
+		{
+			error_msg = "NMEA: AIS sentence does not start with $ or !";
 			return false;
+		}
 
 		if (!std::isupper(parts[0][1]) || (!std::isupper(parts[0][2]) && !std::isdigit(parts[0][2])))
 		{
+			error_msg = "NMEA: AIS sentence does not have valid talker ID";
 			return false;
 		}
 
 		if (parts[0][3] != 'V' || parts[0][4] != 'D' || (parts[0][5] != 'M' && parts[0][5] != 'O'))
 		{
+			error_msg = "NMEA: AIS sentence does not have valid VDM or VDO";
 			return false;
 		}
 
@@ -393,13 +415,21 @@ namespace AIS
 		aivdm.channel = parts[4].size() > 0 ? parts[4][0] : '?';
 
 		for (auto c : parts[5])
+		{
 			if (!isNMEAchar(c))
+			{
+				error_msg = "NMEA: AIS sentence contains invalid NMEA character '" + std::string(1, c) + "'";
 				return false;
+			}
+		}
 		aivdm.data = parts[5];
 		aivdm.fillbits = parts[6][0] - '0';
 
 		if (!isHEX(parts[6][2]) || !isHEX(parts[6][3]))
+		{
+			error_msg = "NMEA: AIS sentence does not have valid checksum";
 			return false;
+		}
 		aivdm.checksum = (fromHEX(parts[6][2]) << 4) | fromHEX(parts[6][3]);
 
 		aivdm.sentence = nmea;
@@ -416,8 +446,8 @@ namespace AIS
 		{
 			try
 			{
-				JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
-				parser.setSkipUnknown(true);
+				//JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
+				//parser.setSkipUnknown(true);
 				std::shared_ptr<JSON::JSON> j = parser.parse(s);
 
 				std::string cls = "";
@@ -487,8 +517,10 @@ namespace AIS
 							{
 								for (const auto &v : p.Get().getArray())
 								{
-									if(!processAIS(v.getString(), tag, t, ssc, sl, thisstation)) {
-										Warning() << "NMEA: error processing AIS JSON line " << v.getString();
+									std::string error;
+									if (!processAIS(v.getString(), tag, t, ssc, sl, thisstation, error))
+									{
+										Warning() << "NMEA [" << (tag.ipv4 ? (Util::Convert::IPV4toString(tag.ipv4) + " - ") : "") << thisstation << "] " << error << " (" << v.getString() << ")";
 									}
 								}
 							}
@@ -613,24 +645,28 @@ namespace AIS
 						{
 							std::string type = line.substr(3, 3);
 							bool noerror = true;
+							std::string error = "unspecified error";
 							tag.clear();
 							t = 0;
 
 							if (type == "VDM")
-								noerror &= processAIS(line, tag, 0, 0, t);
+								noerror &= processAIS(line, tag, 0, 0, t, 0, error);
 							if (type == "VDO" && VDO)
-								noerror &= processAIS(line, tag, 0, 0, t);
+								noerror &= processAIS(line, tag, 0, 0, t, 0, error);
 							if (type == "GGA")
-								noerror &= processGGA(line, tag, t);
+								noerror &= processGGA(line, tag, t, error);
 							if (type == "RMC")
-								noerror &= processRMC(line, tag, t);
+								noerror &= processRMC(line, tag, t, error);
 							if (type == "GLL")
-								noerror &= processGLL(line, tag, t);
+								noerror &= processGLL(line, tag, t, error);
 
 							if (!noerror)
 							{
 								if (warnings)
+								{
 									Warning() << "NMEA: error processing NMEA line " << line;
+									Warning() << "NMEA [" << error << " (" << line << ")";
+								}
 							}
 							reset(c);
 						}
