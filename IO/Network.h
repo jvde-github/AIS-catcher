@@ -276,7 +276,7 @@ namespace IO
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
 		void Receive(const AIS::GPS *data, int len, TAG &tag);
 
-		void Start() override;
+		void Start();
 		void Stop() {}
 	};
 }
