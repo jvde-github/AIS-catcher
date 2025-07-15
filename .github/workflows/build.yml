@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        codename: ['bookworm', 'bullseye', 'buster']
+        codename: ['bookworm', 'bullseye'] # 'buster' removed
         arch: ['amd64', 'armhf', 'arm64']
     steps:
     - name: Checkout Repository
