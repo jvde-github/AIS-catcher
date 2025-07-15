@@ -412,7 +412,7 @@ namespace DSP {
 
 		FFT::fft(fft_data);
 
-		if (false) {
+		if (wide) {
 			if (cumsum.size() < N) cumsum.resize(N);
 
 			int M = (int)(12500.0 / 48000.0 * N);
@@ -445,7 +445,7 @@ namespace DSP {
 			}
 		}
 
-		FLOAT32 f = fz / 2.0f / N *0;
+		FLOAT32 f = fz / 2.0f / N;
 		CFLOAT32 rot_step = std::polar(1.0f, (float)(f * 2 * PI));
 
 		for (int i = 0; i < N; i++) {
