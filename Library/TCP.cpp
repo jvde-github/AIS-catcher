@@ -138,7 +138,11 @@ namespace TCP
 	void ServerConnection::SendBuffer()
 	{
 		std::lock_guard<std::mutex> lock(mtx);
-
+		SendBufferUnsafe();
+	}
+	
+	void ServerConnection::SendBufferUnsafe()
+	{
 		if (isConnected() && hasSendBuffer())
 		{
 
@@ -165,9 +169,12 @@ namespace TCP
 				out.clear();
 		}
 	}
+
 	bool ServerConnection::Send(const char *data, int length)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
+
+		bool has_data_at_start = !out.empty();
 
 		if (!isConnected())
 			return false;
@@ -176,6 +183,12 @@ namespace TCP
 			return false;
 
 		out.insert(out.end(), data, data + length);
+
+		if(!has_data_at_start)
+		{
+			SendBufferUnsafe();
+		}
+		
 		return true;
 	}
 

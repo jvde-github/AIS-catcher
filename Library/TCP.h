@@ -85,6 +85,7 @@ namespace TCP
 		bool isConnected() { return sock != -1; }
 		bool hasSendBuffer() { return !out.empty(); }
 		void SendBuffer();
+		void SendBufferUnsafe();
 		bool Send(const char *buffer, int length);
 		bool SendDirect(const char *buffer, int length);
 		bool SendRaw(const char *buffer, int length);
