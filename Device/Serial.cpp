@@ -56,7 +56,7 @@ namespace Device
 
 						if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE))
 						{
-							Error()  << "error reading from serial device: " << GetLastError() << std::endl;
+							Error() << "error reading from serial device: " << GetLastError() << std::endl;
 							lost = true;
 							continue;
 						}
@@ -69,14 +69,14 @@ namespace Device
 					}
 					else if (dwWait != WAIT_TIMEOUT)
 					{
-						Error()  << "Serial: error reading from device: " << GetLastError() << std::endl;
+						Error() << "Serial: error reading from device: " << GetLastError() << std::endl;
 						lost = true;
 						continue;
 					}
 				}
 				else
 				{
-					Error()  << "Serial: read encountered an error: " << GetLastError() << std::endl;
+					Error() << "Serial: read encountered an error: " << GetLastError() << std::endl;
 					lost = true;
 					continue;
 				}
@@ -115,18 +115,18 @@ namespace Device
 				{
 					if (nread == 0)
 					{
-						Error()  << "Serial read encountered an error: unexpected end." << std::endl;
+						Error() << "Serial read encountered an error: unexpected end." << std::endl;
 					}
 					else
 					{
-						Error()  << "Serial read encountered an error: " << strerror(errno) << std::endl;
+						Error() << "Serial read encountered an error: " << strerror(errno) << std::endl;
 					}
 					lost = true;
 				}
 			}
 			else if (rslt < 0)
 			{
-				Error()  << "Serial read encountered an error: " << strerror(errno) << std::endl;
+				Error() << "Serial read encountered an error: " << strerror(errno) << std::endl;
 				lost = true;
 			}
 		}
@@ -303,6 +303,28 @@ namespace Device
 		}
 		else if (option == "PORT")
 		{
+#ifdef _WIN32
+			bool comxx = false;
+
+			if (arg.size() >= 5 && arg.substr(0, 3) == "COM")
+			{
+				comxx = true;
+				for (size_t i = 3; i < arg.size(); i++)
+				{
+					if (!isdigit(arg[i]))
+					{
+						comxx = false;
+						break;
+					}
+				}
+			}
+
+			if (comxx)
+			{
+				arg = "\\\\.\\" + arg; // Windows COM port format
+				Warning() << "Serial: using Windows COM port format: " << arg << std::endl;
+			}
+#endif
 			port = arg;
 		}
 		else if (option == "PRINT")
