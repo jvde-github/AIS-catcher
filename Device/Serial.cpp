@@ -304,22 +304,7 @@ namespace Device
 		else if (option == "PORT")
 		{
 #ifdef _WIN32
-			bool comxx = false;
-
-			if (arg.size() >= 5 && (arg.substr(0, 3) == "COM" || arg.substr(0, 3) == "com"))
-			{
-				comxx = true;
-				for (size_t i = 3; i < arg.size(); i++)
-				{
-					if (!isdigit(arg[i]))
-					{
-						comxx = false;
-						break;
-					}
-				}
-			}
-
-			if (comxx)
+			if (arg.size() == 5 && std::toupper(arg[0]) == 'C' && std::toupper(arg[1]) == 'O' && std::toupper(arg[2]) == 'M' && std::isdigit(arg[3]) && std::isdigit(arg[4]))
 			{
 				arg = "\\\\.\\" + arg; // Windows COM port format
 				Warning() << "Serial: using Windows COM port format: " << arg << std::endl;
