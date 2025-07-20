@@ -306,7 +306,7 @@ namespace Device
 #ifdef _WIN32
 			bool comxx = false;
 
-			if (arg.size() >= 5 && arg.substr(0, 3) == "COM")
+			if (arg.size() >= 5 && (arg.substr(0, 3) == "COM" || arg.substr(0, 3) == "com"))
 			{
 				comxx = true;
 				for (size_t i = 3; i < arg.size(); i++)
