@@ -153,6 +153,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 	std::vector<std::string> parsePath(const std::string &url);
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
+	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
 
 public:
 	WebViewer();

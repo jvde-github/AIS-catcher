@@ -136,6 +136,20 @@ void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
 	}
 }
 
+void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool overlay)
+{
+	auto source = std::make_shared<FileSystemTiles>();
+	if (source->open(directoryPath))
+	{
+		mapSources.push_back(source);
+		plugin_code += source->generatePluginCode(overlay);
+	}
+	else
+	{
+		Error() << "Failed to load FileSystemTiles from: " << directoryPath;
+	}
+}
+
 bool WebViewer::Save()
 {
 	try
@@ -882,6 +896,14 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "MBOVERLAY")
 	{
 		addMBTilesSource(arg, true);
+	}
+	else if (option == "FSTILES")
+	{
+		addFileSystemTilesSource(arg, false);
+	}
+	else if (option == "FSOVERLAY")
+	{
+		addFileSystemTilesSource(arg, true);
 	}
 	else if (option == "BACKUP")
 	{
