@@ -20,13 +20,13 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=9e999ff2e3910c3b06e2157017bcc824" />
+	<link rel="stylesheet" href="style.css?hash=6cd2bf6f4ed8a40d49f26770dbe6a3ed" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
 
 <body>
-	<div id="headerbar" class="header noandroid">
+	<div id="headerbar" class="header noandroid nokiosk">
 		<div onclick="toggleMenu()" class="header-menubutton">
 			<div class="header-menu-box"><i id="header_menu_button" class="menu_icon"></i></div>
 		</div>
@@ -62,7 +62,7 @@
 			<i class="link_icon small-icon"></i>
 		</div>
 	</div>
-	<nav id="menubar">
+	<nav id="menubar" class="nokiosk">
 		<div onclick="activateTab(event,'map')" id="map_tab"><i class="map_icon"></i><span>Map</span></div>
 		<div onclick="activateTab(event,'stat')" id="stat_tab"><i class="business_center_icon"></i><span>Summary</span>
 		</div>
@@ -426,6 +426,7 @@
 				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
 				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
 					Light/Dark mode</li>
+				<li class="settings noandroid" onclick="toggleKioskMode()"><i class="jamboard_kiosk_icon"></i>Toggle Kiosk Mode</li>
 			</ul>
 
 			<div id="dialog-box" class="hidden">
@@ -1039,7 +1040,7 @@
 				<div id="hover-info"></div>
 
 				<div title="Counters"
-					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
+					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box nokiosk"
 					style="top: 10px; border-radius: 17px;">
 					<button type="button" onclick="toggleStatcard();" class="btn btn-primary map-button"
 						style="font-size: 10px; border-radius: 2px; border-top-right-radius: 17px; border-top-left-radius: 17px;">
@@ -1063,7 +1064,7 @@
 				</div>
 
 				<div title="Settings"
-					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
+					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box nokiosk"
 					style=" bottom: 140px; border-radius: 5px;">
 					<button type="button" onclick='showContextMenu(event, "","", ["settings", "center", "ctx-map"]);'
 						class="btn btn-primary map-button color-grey">
@@ -1082,7 +1083,7 @@
 					</button>
 				</div>
 
-				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box"
+				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box nokiosk"
 					style=" bottom: 30px; border-radius: 5px;">
 					<button type="button" id="zoom-in" class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
@@ -1113,7 +1114,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=086c4b9b7466e66137582631531debe4"></script>
+	<script src="script.js?hash=60198af5cb474ef6b2b20f39abb3870a"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

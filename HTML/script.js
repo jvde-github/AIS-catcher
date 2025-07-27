@@ -62,6 +62,7 @@ function restoreDefaultSettings() {
         counter: true,
         fading: false,
         android: false,
+        kiosk: false,
         welcome: true,
         coordinate_format: "decimal",
         icon_scale: 1,
@@ -134,10 +135,11 @@ function applyDefaultSettings() {
     restoreDefaultSettings();
 
     settings.android = android;
+
     if (isAndroid()) settings.dark_mode = darkmode;
 
     updateSortMarkers();
-    setLatLonInDMS(settings.latlon_in_dms);
+    //setLatLonInDMS(settings.latlon_in_dms);
     setDarkMode(settings.dark_mode);
     setMetrics(settings.metric);
     updateMapLayer();
@@ -1039,6 +1041,8 @@ function showContextMenu(event, mmsi, type, context) {
 
     // we might have made non-android items visible in the context menu, so hide non-android items if needed
     updateAndroid();
+    updateKiosk();
+
     if (show_all_tracks) {
         document.querySelectorAll(".ctx-noalltracks").forEach(function (element) {
             element.style.display = "none";
@@ -4873,6 +4877,7 @@ function loadSettings() {
     }
 
     settings.android = false;
+    settings.kiosk = false;
 }
 
 function loadSettingsFromURL() {
@@ -4891,6 +4896,7 @@ function loadSettingsFromURL() {
     settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
     settings.show_range = settings.show_range == "true" || settings.show_range == true;
     settings.show_station = settings.show_station == "true" || settings.show_station == true;
+    settings.kiosk = settings.kiosk == "true" || settings.kiosk == true;
 }
 
 function mapResetViewZoom(z, m) {
@@ -6102,6 +6108,7 @@ document.getElementById('zoom-out').addEventListener('click', function () {
     view.setZoom(zoom - 1);
 });
 
+
 function setDarkMode(b) {
     settings.dark_mode = b;
     updateDarkMode();
@@ -6467,6 +6474,160 @@ function updateAndroid() {
     }
 }
 
+var originalDisplayValues = new Map();
+
+function clearAndHide(element) {
+    if (!originalDisplayValues.has(element)) {
+        // Get computed style to handle cases where display isn't explicitly set
+        var computedStyle = window.getComputedStyle(element);
+        originalDisplayValues.set(element, computedStyle.display);
+    }
+    element.style.display = "none";
+}
+
+function restoreOriginalDisplay(element) {
+    if (originalDisplayValues.has(element)) {
+        element.style.display = originalDisplayValues.get(element);
+    } else {
+        // Fallback: remove the style property to use CSS default
+        element.style.removeProperty('display');
+    }
+}
+
+function updateKiosk() {
+    if (isKiosk()) {
+        startKioskAnimation();
+
+        var nokioskElements = document.querySelectorAll(".nokiosk");
+        var kioskElements = document.querySelectorAll(".kiosk");
+
+        for (var i = 0; i < nokioskElements.length; i++) {
+            clearAndHide(nokioskElements[i]);
+        }
+
+        for (var i = 0; i < kioskElements.length; i++) {
+            restoreOriginalDisplay(kioskElements[i]);
+        }
+    } else {
+        stopKioskAnimation();
+
+        var kioskElements = document.querySelectorAll(".kiosk");
+        var nokioskElements = document.querySelectorAll(".nokiosk");
+
+        for (var i = 0; i < kioskElements.length; i++) {
+            clearAndHide(kioskElements[i]);
+        }
+
+        for (var i = 0; i < nokioskElements.length; i++) {
+            restoreOriginalDisplay(nokioskElements[i]);
+        }
+    }
+}
+
+var kioskAnimationInterval = null;
+
+function selectRandomShipForKiosk() {
+    // Get current map view extent
+    const mapExtent = map.getView().calculateExtent(map.getSize());
+
+    // Get all ships that are visible on screen with valid coordinates
+    const visibleShips = Object.keys(shipsDB).filter(mmsi => {
+        const ship = shipsDB[mmsi].raw;
+        if (!ship.lat || !ship.lon || ship.lat === 0 || ship.lon === 0) {
+            return false;
+        }
+
+        // Convert ship coordinates to map projection and check if within extent
+        const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
+        return ol.extent.containsCoordinate(mapExtent, shipCoords);
+    });
+
+    if (visibleShips.length === 0) {
+        return null;
+    }
+
+    // Remove currently selected ship and currently hovered ship from candidates
+    const candidates = visibleShips.filter(mmsi =>
+        mmsi != card_mmsi && mmsi != hoverMMSI
+    );
+
+    // If all ships are filtered out, use all visible ships
+    const finalCandidates = candidates.length > 0 ? candidates : visibleShips;
+
+    // Create weighted selection based on recency
+    const weights = finalCandidates.map(mmsi => {
+        const ship = shipsDB[mmsi].raw;
+        const timeSinceUpdate = ship.last_signal || 3600;
+
+        // Higher weight for more recently updated ships
+        if (timeSinceUpdate < 60) return 10;
+        if (timeSinceUpdate < 300) return 5;
+        if (timeSinceUpdate < 900) return 2;
+        return 1;
+    });
+
+    // Select random ship based on weights
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    let random = Math.random() * totalWeight;
+
+    for (let i = 0; i < finalCandidates.length; i++) {
+        random -= weights[i];
+        if (random <= 0) {
+            return finalCandidates[i];
+        }
+    }
+
+    return finalCandidates[0];
+}
+
+function showKioskShip(mmsi) {
+    if (!mmsi || !(mmsi in shipsDB)) {
+        console.log("Invalid MMSI or ship not found:", mmsi);
+        return;
+    }
+
+    const ship = shipsDB[mmsi].raw;
+    if (!ship.lat || !ship.lon) {
+        console.log("Ship has no valid coordinates:", mmsi);
+        return;
+    }
+
+    const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
+    const pixel = map.getPixelFromCoordinate(shipCoords);
+    startHover('ship', mmsi, pixel);
+}
+
+function showRandomKioskShip() {
+    const selectedMMSI = selectRandomShipForKiosk();
+    if (selectedMMSI) {
+        showKioskShip(selectedMMSI);
+    }
+}
+
+function startKioskAnimation() {
+    if (kioskAnimationInterval) {
+        clearInterval(kioskAnimationInterval);
+    }
+
+    showRandomKioskShip();
+    kioskAnimationInterval = setInterval(function () {
+        showRandomKioskShip();
+    }, 5000);
+}
+
+function stopKioskAnimation() {
+    if (kioskAnimationInterval) {
+        clearInterval(kioskAnimationInterval);
+        kioskAnimationInterval = null;
+        console.log("Kiosk animation stopped");
+    }
+}
+
+function toggleKioskMode() {
+    settings.kiosk = !settings.kiosk;
+    updateKiosk();
+}
+
 function showAboutDialog() {
     const message = `
         <div style="display: flex; align-items: center; margin-top: 10px;">
@@ -6506,6 +6667,10 @@ function showWelcome() {
 
 function isAndroid() {
     return settings.android === true || settings.android === "true";
+}
+
+function isKiosk() {
+    return settings.kiosk === true || settings.kiosk === "true";
 }
 
 // for overwrite and insert code where needed
@@ -6968,8 +7133,9 @@ console.log("Load settings from URL parameters");
 loadSettingsFromURL();
 updateForLegacySettings();
 
-
 updateAndroid();
+updateKiosk();
+
 applyDynamicStyling();
 
 console.log("Setup tabs");
