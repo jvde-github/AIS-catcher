@@ -4880,6 +4880,24 @@ function loadSettings() {
     settings.kiosk = false;
 }
 
+function convertStringBooleansToActual() {
+    const booleanSettings = [
+        'counter', 'fading', 'android', 'kiosk', 'welcome', 'show_range',
+        'distance_circles', 'table_shiptype_use_icon', 'fix_center',
+        'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
+        'show_station', 'labels_declutter', 'show_track_on_hover',
+        'show_track_on_select', 'shipcard_max'
+    ];
+
+    booleanSettings.forEach(key => {
+        if (settings.hasOwnProperty(key)) {
+            if (typeof settings[key] === 'string') {
+                settings[key] = settings[key] === "true";
+            }
+        }
+    });
+}
+
 function loadSettingsFromURL() {
     for (const [key, value] of urlParams.entries()) {
         if (settings.hasOwnProperty(key)) {
@@ -4892,11 +4910,7 @@ function loadSettingsFromURL() {
         }
     }
 
-    // Convert boolean strings to actual booleans
-    settings.dark_mode = settings.dark_mode == "true" || settings.dark_mode == true;
-    settings.show_range = settings.show_range == "true" || settings.show_range == true;
-    settings.show_station = settings.show_station == "true" || settings.show_station == true;
-    settings.kiosk = settings.kiosk == "true" || settings.kiosk == true;
+    convertStringBooleansToActual();
 }
 
 function mapResetViewZoom(z, m) {
@@ -7134,7 +7148,6 @@ loadSettingsFromURL();
 updateForLegacySettings();
 
 updateAndroid();
-updateKiosk();
 
 applyDynamicStyling();
 
@@ -7170,6 +7183,8 @@ if (typeof log_enabled === "undefined" || log_enabled === false) {
 }
 
 showWelcome();
+updateKiosk();
 
 if (isAndroid()) showMenu();
+
 main();
