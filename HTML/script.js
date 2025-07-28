@@ -6608,7 +6608,9 @@ function showKioskShip(mmsi) {
 
     const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
     const pixel = map.getPixelFromCoordinate(shipCoords);
-    startHover('ship', mmsi, pixel);
+//    startHover('ship', mmsi, pixel);
+    showShipcard('ship', mmsi, pixel);
+
 }
 
 function showRandomKioskShip() {
