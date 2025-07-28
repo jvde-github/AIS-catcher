@@ -232,7 +232,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=0.62~125-g43b0b996
+package_version=0.62~127-ga5b63638
 install_deps=$5
 
 # Install build dependencies
