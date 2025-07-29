@@ -844,6 +844,20 @@ td {
 
 /* Shipcard styling */
 
+.pinned {
+    border-color: #12a5ed;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.opacity-25 {
+    opacity: 0.5;
+}
+
 .mapcard {
     top: 10px;
     left: 10px;

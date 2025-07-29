@@ -111,6 +111,11 @@ function restoreDefaultSettings() {
         map_opacity: 0.5,
         show_track_on_hover: false,
         show_track_on_select: false,
+        shipcard_pinned: false,
+        shipcard_pinned_x: null,
+        shipcard_pinned_y: null,
+        kiosk_rotation_speed: 5,
+        kiosk_pan_map: true,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"]
     };
 }
@@ -1019,11 +1024,12 @@ function showContextMenu(event, mmsi, type, context) {
     document.getElementById("ctx_range").textContent = settings.show_range ? "Hide station range" : "Show station range";
     document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
     document.getElementById("ctx_fireworks").textContent = evtSourceMap == null ? "Start Fireworks Mode" : "Stop Fireworks Mode";
+    document.getElementById("ctx_label_shipcard_pin").textContent = settings.shipcard_pinned ? "Unpin Shipcard position" : "Pin Shipcard position";
 
     context_mmsi = mmsi;
     context_type = type;
 
-    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu"];
+    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard"];
 
     classList.forEach((className) => {
         if (context.includes('object')) {
@@ -4877,7 +4883,7 @@ function loadSettings() {
     }
 
     settings.android = false;
-    settings.kiosk = false;
+    // settings.kiosk = false;
 }
 
 function convertStringBooleansToActual() {
@@ -4886,7 +4892,7 @@ function convertStringBooleansToActual() {
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
         'show_station', 'labels_declutter', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max'
+        'show_track_on_select', 'shipcard_max','kiosk_pan_map' 
     ];
 
     booleanSettings.forEach(key => {
@@ -5413,6 +5419,19 @@ function drawStation() {
     }
 }
 
+function moveMapCenter(px) {
+    let view = map.getView();
+    let currentCenter = view.getCenter();
+    let newCenter = map.getCoordinateFromPixel(px);
+    let centerDiff = [newCenter[0] - currentCenter[0], newCenter[1] - currentCenter[1]];
+
+    stopHover();
+    view.animate({
+        center: [currentCenter[0] + centerDiff[0], currentCenter[1] + centerDiff[1]],
+        duration: 1000
+    });
+}
+
 function adjustMapForShipcard(pixel) {
 
     let lat = null, lon = null;
@@ -5467,28 +5486,73 @@ function adjustMapForShipcard(pixel) {
             }
             newPixel = pixel;
 
-            let currentCenter = view.getCenter();
-            let newCenter = map.getCoordinateFromPixel(newPixel);
-            let centerDiff = [newCenter[0] - currentCenter[0], newCenter[1] - currentCenter[1]];
-
-            stopHover();
-            view.animate({
-                center: [currentCenter[0] + centerDiff[0], currentCenter[1] + centerDiff[1]],
-                duration: 1000
-            });
+            moveMapCenter(newPixel);
         }
+    }
+}
+
+function pinShipcard() {
+    settings.shipcard_pinned = true;
+    settings.shipcard_pinned_x = parseInt(shipcard.style.left) || 0;
+    settings.shipcard_pinned_y = parseInt(shipcard.style.top) || 0;
+
+    applyShipcardPinStyling();
+    showNotification("Shipcard pinned to current position");
+    saveSettings();
+}
+
+function unpinShipcard() {
+    settings.shipcard_pinned = false;
+    settings.shipcard_pinned_x = null;
+    settings.shipcard_pinned_y = null;
+
+    applyShipcardPinStyling();
+
+    showNotification("Shipcard unpinned");
+    saveSettings();
+}
+
+function applyShipcardPinStyling() {
+    const shipcard = document.getElementById("shipcard");
+    if (settings.shipcard_pinned) {
+        shipcard.classList.add("pinned");
+        document.getElementById("shipcard_drag_handle").classList.add("opacity-25");
+    }
+    else {
+        shipcard.classList.remove("pinned");
+        document.getElementById("shipcard_drag_handle").classList.remove("opacity-25");
+    }
+}
+
+function toggleShipcardPin() {
+    if (settings.shipcard_pinned) {
+        unpinShipcard();
+    } else {
+        pinShipcard();
     }
 }
 
 function positionAside(pixel, aside) {
 
     stopHover();
+
+    if (settings.kiosk && settings.kiosk_pan_map && card_type == 'ship' && card_mmsi in shipsDB) {
+        moveMapCenter(pixel);
+        const mapSize = map.getSize();
+        pixel = [mapSize[0] / 2, mapSize[1] / 2];
+    }
+
+    if (settings.shipcard_pinned && settings.shipcard_pinned_x !== null && settings.shipcard_pinned_y !== null) {
+        aside.style.left = `${settings.shipcard_pinned_x}px`;
+        aside.style.top = `${settings.shipcard_pinned_y}px`;
+        return;
+    }
+
     aside.style.left = "";
     aside.style.top = "";
 
     if (pixel) {
         const margin = 35;
-
         let marginRight = document.getElementById("tableside").classList.contains("active") ? 592 : 30;
 
         const mapSize = map.getSize();
@@ -5500,7 +5564,6 @@ function positionAside(pixel, aside) {
         const leftSpace = pixel[0] - (shipCardWidth + margin);
 
         if ((rightSpace > 0 || leftSpace > 0) && mapSize[1] > shipCardHeight + 2 * margin) {
-
             let topPosition = pixel[1] - (shipCardHeight / 2);
             topPosition = Math.max(margin, Math.min(mapSize[1] - shipCardHeight - margin, topPosition));
 
@@ -6248,7 +6311,11 @@ function updateSettingsTab() {
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
     document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
 
-
+    document.getElementById("settings_kiosk_mode").checked = settings.kiosk;
+    document.getElementById("settings_kiosk_rotation_speed").value = settings.kiosk_rotation_speed;
+    document.getElementById("settings_kiosk_pan_map").checked = settings.kiosk_pan_map;
+    
+    updateKioskSpeedDisplay(settings.kiosk_rotation_speed);
 }
 
 class RealtimeViewer {
@@ -6507,6 +6574,30 @@ function restoreOriginalDisplay(element) {
         element.style.removeProperty('display');
     }
 }
+function setKiosk(enabled) {
+    settings.kiosk = enabled;
+    updateKiosk();
+    saveSettings();
+}
+
+function setKioskRotationSpeed(speed) {
+    settings.kiosk_rotation_speed = parseInt(speed);
+    saveSettings();
+
+
+    if (isKiosk() && kioskAnimationInterval) {
+        startKioskAnimation();
+    }
+}
+
+function setKioskPanMap(enabled) {
+    settings.kiosk_pan_map = enabled;
+    saveSettings();
+}
+
+function updateKioskSpeedDisplay(value) {
+    document.getElementById("kiosk_speed_display").textContent = value + "s";
+}
 
 function updateKiosk() {
     if (isKiosk()) {
@@ -6541,17 +6632,14 @@ function updateKiosk() {
 var kioskAnimationInterval = null;
 
 function selectRandomShipForKiosk() {
-    // Get current map view extent
-    const mapExtent = map.getView().calculateExtent(map.getSize());
 
-    // Get all ships that are visible on screen with valid coordinates
+    const mapExtent = map.getView().calculateExtent(map.getSize());
     const visibleShips = Object.keys(shipsDB).filter(mmsi => {
         const ship = shipsDB[mmsi].raw;
         if (!ship.lat || !ship.lon || ship.lat === 0 || ship.lon === 0) {
             return false;
         }
 
-        // Convert ship coordinates to map projection and check if within extent
         const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
         return ol.extent.containsCoordinate(mapExtent, shipCoords);
     });
@@ -6560,15 +6648,12 @@ function selectRandomShipForKiosk() {
         return null;
     }
 
-    // Remove currently selected ship and currently hovered ship from candidates
     const candidates = visibleShips.filter(mmsi =>
         mmsi != card_mmsi && mmsi != hoverMMSI
     );
 
-    // If all ships are filtered out, use all visible ships
     const finalCandidates = candidates.length > 0 ? candidates : visibleShips;
 
-    // Create weighted selection based on recency
     const weights = finalCandidates.map(mmsi => {
         const ship = shipsDB[mmsi].raw;
         const timeSinceUpdate = ship.last_signal || 3600;
@@ -6580,7 +6665,6 @@ function selectRandomShipForKiosk() {
         return 1;
     });
 
-    // Select random ship based on weights
     const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
     let random = Math.random() * totalWeight;
 
@@ -6608,7 +6692,7 @@ function showKioskShip(mmsi) {
 
     const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
     const pixel = map.getPixelFromCoordinate(shipCoords);
-//    startHover('ship', mmsi, pixel);
+    //    startHover('ship', mmsi, pixel);
     showShipcard('ship', mmsi, pixel);
 
 }
@@ -6628,7 +6712,7 @@ function startKioskAnimation() {
     showRandomKioskShip();
     kioskAnimationInterval = setInterval(function () {
         showRandomKioskShip();
-    }, 5000);
+    }, settings.kiosk_rotation_speed * 1000);
 }
 
 function stopKioskAnimation() {
@@ -6883,8 +6967,18 @@ function makeDraggable(dragHandle, dragTarget) {
             }
 
             if (isDragging) {
-                dragTarget.style.left = `${e.clientX - offsetX}px`;
-                dragTarget.style.top = `${e.clientY - offsetY}px`;
+                const newX = e.clientX - offsetX;
+                const newY = e.clientY - offsetY;
+
+                dragTarget.style.left = `${newX}px`;
+                dragTarget.style.top = `${newY}px`;
+
+                // Update pinned position if shipcard is pinned
+                if (settings.shipcard_pinned && dragTarget.id === 'shipcard') {
+                    settings.shipcard_pinned_x = newX;
+                    settings.shipcard_pinned_y = newY;
+                    saveSettings();
+                }
             }
         };
 
@@ -7186,6 +7280,7 @@ if (typeof log_enabled === "undefined" || log_enabled === false) {
 
 showWelcome();
 updateKiosk();
+applyShipcardPinStyling();
 
 if (isAndroid()) showMenu();
 
