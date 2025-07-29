@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=6cd2bf6f4ed8a40d49f26770dbe6a3ed" />
+	<link rel="stylesheet" href="style.css?hash=6c9c0478b684b31a8f13c6150851360e" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -351,12 +351,35 @@
 						</span>
 					</div>
 				</section>
-
+				<header>Kiosk</header>
+				<section>
+					<div>
+						<span>Kiosk Mode</span><span>
+							<input type="checkbox" id="settings_kiosk_mode" onchange="setKiosk(this.checked)">
+						</span>
+					</div>
+					<div>
+						<span>Rotation Speed (seconds)</span><span>
+							<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1"
+								onchange="setKioskRotationSpeed(this.value)"
+								oninput="updateKioskSpeedDisplay(this.value)">
+							<span id="kiosk_speed_display">5s</span>
+						</span>
+					</div>
+					<div>
+						<span>Pan Map</span><span>
+							<input type="checkbox" id="settings_kiosk_pan_map" onchange="setKioskPanMap(this.checked)">
+						</span>
+					</div>
+				</section>
 			</div>
 		</div>
 
 		<div oncontextmenu="showContextMenu(event,0,'',['settings'])" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
+				<li class="ctx-shipcard" onclick="toggleShipcardPin()" id="ctx_shipcard_pin"><i
+						class="push_pin_icon"></i><span id="ctx_label_shipcard_pin">Pin/Unpin Shipcard position</span>
+				</li>
 				<li class="station" onclick="pinStation()"><i class="push_pin_icon"></i>Center map on station</li>
 				<li class="divider station"></li>
 				<li class="copy-text" onclick="copyText(context_mmsi)"><i class="content_copy_icon"></i>Copy to
@@ -426,7 +449,8 @@
 				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
 				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
 					Light/Dark mode</li>
-				<li class="settings noandroid" onclick="toggleKioskMode()"><i class="jamboard_kiosk_icon"></i>Toggle Kiosk Mode</li>
+				<li class="settings noandroid" onclick="toggleKioskMode()"><i class="jamboard_kiosk_icon"></i>Toggle
+					Kiosk Mode</li>
 			</ul>
 
 			<div id="dialog-box" class="hidden">
@@ -872,15 +896,16 @@
 
 				</aside>
 
-				<aside id="shipcard" class="mapcard shipcard-width shipcard-ismax">
+				<aside id="shipcard" class="mapcard shipcard-width shipcard-ismax"
+					oncontextmenu="showContextMenu(event,card_mmsi,card_type,['object', 'object-map','ctx-shipcard'])">
 					<header id="shipcard_header" class="mapcard_header">
 						<span onclick="toggleShipcardSize()" id="shipcard_header_flag"></span>
 						<span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
-						<span class=""><i
+						<span class=""><i id="shipcard_drag_handle"
 								class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
 						<span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button"
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
-						<span><i onclick="showContextMenu(event,card_mmsi,card_type,['object', 'object-map'])"
+						<span><i onclick="showContextMenu(event,card_mmsi,card_type,['object', 'object-map','ctx-shipcard'])"
 								class="mapcard-header-icon more_vert_icon"></i></span>
 						<span><i onclick="showShipcard(null,null)" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
@@ -1114,7 +1139,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=5cc4b2863616cb02fa55064cbceabcf1"></script>
+	<script src="script.js?hash=541de9dc201ec182ba22be5a8d4b218d"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>
