@@ -3486,11 +3486,26 @@ function toggleShipcardSize() {
 
 function setPulseOk() {
     document.getElementById("pulse-id").className = "header-pulse-ok";
+
+    const logoControl = document.getElementById('aiscatcher-logo-control');
+    if (logoControl) {
+        logoControl.classList.remove('connected', 'disconnected');
+        logoControl.classList.add('connected');
+        logoControl.title = `AIS-catcher - Connected`;
+    }
 }
 
 function setPulseError() {
     document.getElementById("pulse-id").className = "header-pulse-error";
+
+    const logoControl = document.getElementById('aiscatcher-logo-control');
+    if (logoControl) {
+        logoControl.classList.remove('connected', 'disconnected');
+        logoControl.classList.add('disconnected');
+        logoControl.title = `AIS-catcher - Disconnected`;
+    }
 }
+
 
 let displayNames;
 function getCountryName(isoCode) {
@@ -4892,7 +4907,7 @@ function convertStringBooleansToActual() {
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
         'show_station', 'labels_declutter', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max','kiosk_pan_map' 
+        'show_track_on_select', 'shipcard_max', 'kiosk_pan_map'
     ];
 
     booleanSettings.forEach(key => {
@@ -6314,7 +6329,7 @@ function updateSettingsTab() {
     document.getElementById("settings_kiosk_mode").checked = settings.kiosk;
     document.getElementById("settings_kiosk_rotation_speed").value = settings.kiosk_rotation_speed;
     document.getElementById("settings_kiosk_pan_map").checked = settings.kiosk_pan_map;
-    
+
     updateKioskSpeedDisplay(settings.kiosk_rotation_speed);
 }
 

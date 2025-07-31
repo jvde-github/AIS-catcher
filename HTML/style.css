@@ -2762,3 +2762,33 @@ td {
     -webkit-mask-size: 100% 100%;
     mask-size: 100% 100%;
 }
+
+.aiscatcher-logo-control {
+    background: rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 50% !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 60px !important;
+    height: 60px !important;
+    padding: 5px !important;
+    display: flex;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.aiscatcher-logo-control:hover {
+    background: rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.aiscatcher-logo-control.disconnected svg path {
+    fill: #ff4444 !important;
+}
+
+.aiscatcher-logo-control.connected svg path {
+    fill: #12a5ed !important;
+}
