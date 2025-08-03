@@ -35,61 +35,29 @@ namespace Device
 		Info() << "Serial: starting thread" << std::endl;
 		DWORD bytesRead;
 
-		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-
 		while (isStreaming())
 		{
-
-			OVERLAPPED overlapped = {0};
-			overlapped.hEvent = hEvent;
-
-			if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, &overlapped))
+			if (ReadFile(serial_handle, buffer, sizeof(buffer), &bytesRead, nullptr))
 			{
-
-				if (GetLastError() == ERROR_IO_PENDING)
+				if (bytesRead > 0)
 				{
-
-					DWORD dwWait = WaitForSingleObject(overlapped.hEvent, 1000);
-
-					if (dwWait == WAIT_OBJECT_0)
-					{
-
-						if (!GetOverlappedResult(serial_handle, &overlapped, &bytesRead, FALSE))
-						{
-							Error() << "error reading from serial device: " << GetLastError() << std::endl;
-							lost = true;
-							continue;
-						}
-						else if (bytesRead)
-						{
-							r.size = bytesRead;
-							Dump(r);
-							Send(&r, 1, tag);
-						}
-					}
-					else if (dwWait != WAIT_TIMEOUT)
-					{
-						Error() << "Serial: error reading from device: " << GetLastError() << std::endl;
-						lost = true;
-						continue;
-					}
+					r.size = bytesRead;
+					Dump(r);
+					Send(&r, 1, tag);
 				}
 				else
 				{
-					Error() << "Serial: read encountered an error: " << GetLastError() << std::endl;
-					lost = true;
-					continue;
+					SleepSystem(100);
 				}
 			}
-			else if (bytesRead)
+			else
 			{
-				r.size = bytesRead;
-				Dump(r);
-				Send(&r, 1, tag);
+				DWORD error = GetLastError();
+				Error() << "Serial read error: " << error << std::endl;
+				lost = true;
+				break;
 			}
 		}
-
-		CloseHandle(hEvent);
 #else
 
 		while (isStreaming())
@@ -174,14 +142,13 @@ namespace Device
 	{
 
 #ifdef _WIN32
-		serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+		serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 		if (serial_handle == INVALID_HANDLE_VALUE)
 		{
 			throw std::runtime_error("Serial: cannot open serial port " + port + ". Error: " + GetLastErrorAsString());
 		}
 
 		DCB dcb;
-
 		if (GetCommState(serial_handle, &dcb))
 		{
 			dcb.BaudRate = baudrate;
@@ -201,18 +168,13 @@ namespace Device
 			throw std::runtime_error("Serial: SetCommState failed. Error: " + GetLastErrorAsString());
 		}
 
-		COMMTIMEOUTS ct;
-
-		if (GetCommTimeouts(serial_handle, &ct))
-		{
-			ct.ReadIntervalTimeout = 2000;
-			ct.ReadTotalTimeoutConstant = 2000;
-			ct.ReadTotalTimeoutMultiplier = 0;
-			ct.WriteTotalTimeoutConstant = 2000;
-			ct.WriteTotalTimeoutMultiplier = 0;
-		}
-		else
-			throw std::runtime_error("Serial: GetCommTimeouts failed. Error: " + GetLastErrorAsString());
+		// CRITICAL FIX: Set timeouts for immediate return with available data
+		COMMTIMEOUTS ct = {0};
+		ct.ReadIntervalTimeout = MAXDWORD; // Return immediately
+		ct.ReadTotalTimeoutMultiplier = 0;
+		ct.ReadTotalTimeoutConstant = 0;
+		ct.WriteTotalTimeoutConstant = 2000; //  write timeout
+		ct.WriteTotalTimeoutMultiplier = 0;
 
 		if (!SetCommTimeouts(serial_handle, &ct))
 			throw std::runtime_error("Serial: SetCommTimeouts failed. Error: " + GetLastErrorAsString());
