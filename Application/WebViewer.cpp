@@ -681,9 +681,55 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		std::string content = ships.getAllPathJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r == "/api/path.geojson")
+	{
+		std::stringstream ss(a);
+		std::string mmsi_str;
+		
+		if (std::getline(ss, mmsi_str))
+		{
+			try
+			{
+				int mmsi = std::stoi(mmsi_str);
+				if (mmsi >= 1 && mmsi <= 999999999)
+				{
+					std::string content = ships.getPathGeoJSON(mmsi);
+					Response(c, "application/json", content, use_zlib & gzip);
+				}
+				else
+				{
+					Response(c, "application/json", "{\"error\":\"Invalid MMSI range\"}", use_zlib & gzip);
+				}
+			}
+			catch (const std::invalid_argument &)
+			{
+				Error() << "Server - path GeoJSON MMSI invalid: " << mmsi_str;
+				Response(c, "application/json", "{\"error\":\"Invalid MMSI format\"}", use_zlib & gzip);
+			}
+			catch (const std::out_of_range &)
+			{
+				Error() << "Server - path GeoJSON MMSI out of range: " << mmsi_str;
+				Response(c, "application/json", "{\"error\":\"MMSI out of range\"}", use_zlib & gzip);
+			}
+		}
+		else
+		{
+			Response(c, "application/json", "{\"error\":\"No MMSI provided\"}", use_zlib & gzip);
+		}
+	}
+	else if (r == "/api/allpath.geojson")
+	{
+		std::string content = ships.getAllPathGeoJSON();
+		Response(c, "application/json", content, use_zlib & gzip);
+	}
 	else if (r == "/geojson" && GeoJSON)
 	{
 		std::string content = ships.getGeoJSON();
+		Response(c, "application/json", content, use_zlib & gzip);
+	}
+	else if (r == "/allpath.geojson" && GeoJSON)
+	{
+		std::string content = ships.getAllPathGeoJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/message")

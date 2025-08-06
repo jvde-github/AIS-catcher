@@ -464,6 +464,38 @@ std::string DB::getSinglePathJSON(int idx)
 	return content;
 }
 
+std::string DB::getSinglePathGeoJSON(int idx)
+{
+	uint32_t mmsi = ships[idx].mmsi;
+	int ptr = ships[idx].path_ptr;
+	int t = ships[idx].count + 1;
+
+	std::string geojson = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[";
+
+	bool hasCoordinates = false;
+	while (isNextPathPoint(ptr, mmsi, t))
+	{
+		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
+		{
+			if (hasCoordinates)
+				geojson += ",";
+			
+			// GeoJSON uses [longitude, latitude] format (note the order!)
+			geojson += "[";
+			geojson += std::to_string(paths[ptr].lon);
+			geojson += ",";
+			geojson += std::to_string(paths[ptr].lat);
+			geojson += "]";
+			hasCoordinates = true;
+		}
+		t = paths[ptr].count;
+		ptr = paths[ptr].next;
+	}
+	
+	geojson += "]},\"properties\":{\"mmsi\":" + std::to_string(mmsi) + "}}";
+	return geojson;
+}
+
 std::string DB::getPathJSON(uint32_t mmsi)
 {
 	std::lock_guard<std::mutex> lock(mtx);
@@ -471,6 +503,43 @@ std::string DB::getPathJSON(uint32_t mmsi)
 	if (idx == -1)
 		return "[]";
 	return getSinglePathJSON(idx);
+}
+
+std::string DB::getPathGeoJSON(uint32_t mmsi)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	int idx = findShip(mmsi);
+	if (idx == -1)
+		return "{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[]},\"properties\":{\"mmsi\":" + std::to_string(mmsi) + "}}";
+	return getSinglePathGeoJSON(idx);
+}
+
+std::string DB::getAllPathGeoJSON()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	std::string content = "{\"type\":\"FeatureCollection\",\"features\":[";
+
+	std::time_t tm = time(nullptr);
+	int ptr = first;
+
+	std::string delim = "";
+	while (ptr != -1)
+	{
+		const Ship &ship = ships[ptr];
+		if (ship.mmsi != 0)
+		{
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
+			if (delta_time > TIME_HISTORY)
+				break;
+
+			content += delim + getSinglePathGeoJSON(ptr);
+			delim = ",";
+		}
+		ptr = ships[ptr].next;
+	}
+	content += "]}\n\n";
+	return content;
 }
 
 std::string DB::getMessage(uint32_t mmsi)
