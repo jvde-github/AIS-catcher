@@ -89,27 +89,27 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, std::string type, const std::string &content, bool gzip, bool cache)
+	void HTTPServer::Response(TCP::ServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(content);
-			ResponseRaw(c, type, (char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(c, type, (const char*)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
 
-		ResponseRaw(c, type, (char *)content.c_str(), content.size(), cache);
+		ResponseRaw(c, type, content.c_str(), content.size(), cache);
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip, bool cache)
+	void HTTPServer::Response(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(data, len);
-			ResponseRaw(c, type, (char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(c, type, (const char*)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
@@ -117,7 +117,7 @@ namespace IO
 		ResponseRaw(c, type, data, len);
 	}
 
-	void HTTPServer::ResponseRaw(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip, bool cache)
+	void HTTPServer::ResponseRaw(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
 	{
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;

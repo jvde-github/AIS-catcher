@@ -95,7 +95,7 @@ public:
 #endif
 	}
 
-	void zip(char* data, int len) {
+	void zip(const char* data, int len) {
 #ifdef HASZLIB
 
 		int idx = 0;
