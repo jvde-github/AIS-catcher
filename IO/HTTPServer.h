@@ -119,9 +119,9 @@ namespace IO
 	public:
 		virtual void Request(TCP::ServerConnection &c, const std::string &msg, bool accept_gzip);
 
-		void Response(TCP::ServerConnection &c, std::string type, const std::string &content, bool gzip = false, bool cache = false);
-		void Response(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip = false, bool cache = false);
-		void ResponseRaw(TCP::ServerConnection &c, std::string type, char *data, int len, bool gzip = false, bool cache = false);
+		void Response(TCP::ServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false);
+		void Response(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
+		void ResponseRaw(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
 
 		void cleanupSSE()
 		{
