@@ -101,7 +101,7 @@ static void Usage()
 	Info() << "\t[-T xx - auto terminate run with SDR after xxx seconds (default: off)]";
 	Info() << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]";
 	Info() << "\t[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]";
-	Info() << "\t[-X connect to AIS community feed at aiscatcher.org (default: off)]";
+	Info() << "\t[-X connect to AIS community feed at www.aiscatcher.org (default: off)]";
 	Info() << "\t[-Q publish data to MQTT server]";
 
 	Info() << "";
