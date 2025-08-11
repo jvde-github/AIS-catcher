@@ -382,6 +382,12 @@ namespace AIS
 		}
 		std::string nmea = str.substr(pos);
 
+		bool isNMEA = nmea.size() > 10 && (nmea[3] == 'V' && nmea[4] == 'D' && (nmea[5] == 'M' || nmea[5] == 'O'));
+		if (!isNMEA)
+		{
+			return true; // no NMEA -> ignore
+		}
+
 		split(nmea);
 		aivdm.reset();
 
@@ -446,8 +452,8 @@ namespace AIS
 		{
 			try
 			{
-				//JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
-				//parser.setSkipUnknown(true);
+				// JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
+				// parser.setSkipUnknown(true);
 				std::shared_ptr<JSON::JSON> j = parser.parse(s);
 
 				std::string cls = "";
@@ -518,9 +524,11 @@ namespace AIS
 								for (const auto &v : p.Get().getArray())
 								{
 									std::string error;
-									if (!processAIS(v.getString(), tag, t, ssc, sl, thisstation, error))
+									const std::string &line = v.getString();
+
+									if (!processAIS(line, tag, t, ssc, sl, thisstation, error))
 									{
-										Warning() << "NMEA [" << (tag.ipv4 ? (Util::Convert::IPV4toString(tag.ipv4) + " - ") : "") << thisstation << "] " << error << " (" << v.getString() << ")";
+										Warning() << "NMEA [" << (tag.ipv4 ? (Util::Convert::IPV4toString(tag.ipv4) + " - ") : "") << thisstation << "] " << error << " (" << line << ")";
 									}
 								}
 							}
