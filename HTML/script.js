@@ -445,7 +445,7 @@ var planeStyle = function (feature) {
         /* Shadow/border layer
         new ol.style.Style({
             image: new ol.style.Icon({
-                src: "https://aiscatcher.org/hub_test/sprites_hub.png",
+                src: "https://www.aiscatcher.org/hub_test/sprites_hub.png",
                 rotation: feature.plane.rot,
                 offset: [feature.plane.cx, feature.plane.cy],
                 size: [feature.plane.imgSize, feature.plane.imgSize],
@@ -812,7 +812,7 @@ function createShipOutlineGeometry(ship) {
 
 function showCommunity() {
     if (!communityFeed) {
-        showDialog("Community feed is not available", "Enable by running with -X which will send your AIS data to aiscatcher.org and enable the options</br>Thank you for supporting AIS-catcher");
+        showDialog("Community feed is not available", "Enable by running with -X which will send your AIS data to www.aiscatcher.org and enable the options</br>Thank you for supporting AIS-catcher");
         return;
     }
 }
@@ -942,7 +942,7 @@ function openGoogleSearch(m) {
 }
 
 function openAIScatcherSite(m) {
-    window.open("https://aiscatcher.org/ship/details/" + m);
+    window.open("https://www.aiscatcher.org/ship/details/" + m);
 }
 
 function openMarineTraffic(m) {
@@ -1346,7 +1346,7 @@ const SARTEPIRB = 5;
 const ATON = 6;
 
 function headerClick() {
-    window.open("https://aiscatcher.org");
+    window.open("https://www.aiscatcher.org");
 }
 
 function updateMapLayer() {
@@ -6748,7 +6748,7 @@ function showAboutDialog() {
         <div style="display: flex; align-items: center; margin-top: 10px;">
         <span style="text-align: center; margin-right: 10px;"><i style="font-size: 40px" class="directions_aiscatcher_icon"></i></span>
         <span>
-        <a href="https://aiscatcher.org"><b style="font-size: 1.6em;">AIS-catcher</b></a>
+        <a href="https://www.aiscatcher.org"><b style="font-size: 1.6em;">AIS-catcher</b></a>
         <br>
         <b style="font-size: 0.8em;">&copy; 2021-2025 jvde.github@gmail.com</b>
         </span>
@@ -7053,7 +7053,7 @@ if (communityFeed) {
     var feederStyle = function (feature) {
         return new ol.style.Style({
             image: new ol.style.Icon({
-                src: "https://aiscatcher.org/hub_test/sprites_hub.png",
+                src: "https://www.aiscatcher.org/hub_test/sprites_hub.png",
                 rotation: feature.ship.rot,
                 offset: [feature.ship.cx, feature.ship.cy],
                 size: [feature.ship.imgSize, feature.ship.imgSize],
@@ -7120,7 +7120,7 @@ if (communityFeed) {
         feedStationVector.clear();
 
         // fetch stations from hub/stations.json
-        fetch("https://aiscatcher.org/hub/stations.json")
+        fetch("https://www.aiscatcher.org/hub/stations.json")
             .then(response => response.json())
             .then(data => {
                 data.forEach(station => {
@@ -7129,7 +7129,7 @@ if (communityFeed) {
                         geometry: point
                     })
                     feature.tooltip = station.station_name
-                    feature.link = 'https://aiscatcher.org/station/' + station.station_id
+                    feature.link = 'https://www.aiscatcher.org/station/' + station.station_id
                     feedStationVector.addFeature(feature)
                 });
             });
@@ -7153,7 +7153,7 @@ if (communityFeed) {
 
             let zoom = map.getView().getZoom();
 
-            response = await fetch("https://aiscatcher.org/hub_test/ships_array.json?" + zoom + "," + minLat + "," + minLon + "," + maxLat + "," + maxLon + "," + -1);
+            response = await fetch("https://www.aiscatcher.org/hub_test/ships_array.json?" + zoom + "," + minLat + "," + minLon + "," + maxLat + "," + maxLon + "," + -1);
         } catch (error) {
             console.log("failed loading ships: " + error);
             return false;
@@ -7238,7 +7238,7 @@ if (communityFeed) {
     addOverlayLayer("Community Stations", feeStationdLayer);
     addOverlayLayer("AIS Ducting Index", new ol.layer.Tile({
         source: new ol.source.XYZ({
-            url: 'https://aiscatcher.org/tiles/ducting/{z}/{x}/{-y}.png',  // Update the tile URL pattern
+            url: 'https://www.aiscatcher.org/tiles/ducting/{z}/{x}/{-y}.png',  // Update the tile URL pattern
             tileSize: [256, 256],
             maxZoom: 5  // Set the maximum zoom level based on your generated tiles
         })
