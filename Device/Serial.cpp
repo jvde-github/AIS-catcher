@@ -159,6 +159,8 @@ namespace Device
 			dcb.fParity = TRUE;
 			dcb.fDtrControl = DTR_CONTROL_ENABLE;
 			dcb.fRtsControl = RTS_CONTROL_ENABLE;
+			dcb.fOutX = FALSE; // Disable XON/XOFF output flow control
+			dcb.fInX = FALSE;  // Disable XON/XOFF input flow control
 		}
 		else
 			throw std::runtime_error("Serial: GetCommState failed. Error: " + GetLastErrorAsString());
@@ -230,6 +232,11 @@ namespace Device
 		tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication
 		tty.c_cflag &= ~CSIZE;	// Clear all bits that set the data size
 		tty.c_cflag |= CS8;		// 8 bits per byte
+
+		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // Raw mode, no echo
+		tty.c_iflag &= ~(IXON | IXOFF | IXANY);			// Disable software flow control
+		tty.c_iflag &= ~(ICRNL | INLCR);				// Disable CR/LF conversion
+		tty.c_oflag &= ~OPOST;							// Raw output
 
 		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0)
 		{
