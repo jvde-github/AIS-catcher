@@ -106,8 +106,8 @@ namespace DSP
 
 					for (int j = 0; j < out.size(); j++)
 					{
-						out[j].Send(&sample[j], 1, tag);
 						tag.sample_idx = sample_idx++;
+						out[j].Send(&sample[j], 1, tag);
 					}
 					level = 0.0f;
 					lastSymbol = 0;
