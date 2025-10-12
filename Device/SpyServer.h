@@ -195,6 +195,7 @@ namespace Device {
 		FIFO fifo;
 
 		bool read(char* data, int len);
+		bool skip(int bytes);
 
 		void applySettings();
 
