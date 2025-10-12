@@ -19,15 +19,18 @@
 
 #include "RTLSDR.h"
 
-namespace Device {
+namespace Device
+{
 
 	//---------------------------------------
 	// Device RTLSDR
 
 #ifdef HASRTLSDR
 
-	void RTLSDR::Open(uint64_t h) {
-		if (rtlsdr_open(&dev, (uint32_t)h) != 0) throw std::runtime_error("RTLSDR: cannot open device.");
+	void RTLSDR::Open(uint64_t h)
+	{
+		if (rtlsdr_open(&dev, (uint32_t)h) != 0)
+			throw std::runtime_error("RTLSDR: cannot open device.");
 
 		Device::Open(h);
 
@@ -40,8 +43,10 @@ namespace Device {
 	}
 
 #ifdef HASRTL_ANDROID
-	void RTLSDR::OpenWithFileDescriptor(int f) {
-		if (rtlsdr_open_file_descriptor(&dev, f) != 0) throw std::runtime_error("RTLSDR: cannot open device.");
+	void RTLSDR::OpenWithFileDescriptor(int f)
+	{
+		if (rtlsdr_open_file_descriptor(&dev, f) != 0)
+			throw std::runtime_error("RTLSDR: cannot open device.");
 
 		Device::Open(f);
 
@@ -54,18 +59,22 @@ namespace Device {
 	}
 #endif
 
-	void RTLSDR::Close() {
+	void RTLSDR::Close()
+	{
 		Device::Close();
 
-		if (dev) {
-			if(bias_tee)
+		if (dev)
+		{
+			if (bias_tee)
 				setBiasTee(0);
+
 			rtlsdr_close(dev);
 			dev = nullptr;
 		}
 	}
 
-	void RTLSDR::Play() {
+	void RTLSDR::Play()
+	{
 		fifo.Init(BUFFER_SIZE, BUFFER_COUNT);
 
 		applySettings();
@@ -81,143 +90,188 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void RTLSDR::Stop() {
-		if (Device::isStreaming()) {
+	void RTLSDR::Stop()
+	{
+		if (Device::isStreaming())
+		{
 			Device::Stop();
 			fifo.Halt();
 
-			if (async_thread.joinable()) {
+			if (async_thread.joinable())
+			{
 				rtlsdr_cancel_async(dev);
 				async_thread.join();
 			}
-			if (run_thread.joinable()) run_thread.join();
+			if (run_thread.joinable())
+				run_thread.join();
 		}
 	}
 
-	void RTLSDR::RunAsync() {
+	void RTLSDR::RunAsync()
+	{
 		rtlsdr_read_async(dev, (rtlsdr_read_async_cb_t) & (RTLSDR::callback_static), this, 0, BUFFER_SIZE);
 
 		// did we terminate too early?
-		if (isStreaming()) {
+		if (isStreaming())
+		{
 			Error() << "RTLSDR: lost device. Terminating.";
 			lost = true;
 		}
 	}
 
-	void RTLSDR::Run() {
-		try {
-			while (isStreaming()) {
-				if (fifo.Wait()) {
-					RAW r = { Format::CU8, fifo.Front(), fifo.BlockSize() };
+	void RTLSDR::Run()
+	{
+		try
+		{
+			while (isStreaming())
+			{
+				if (fifo.Wait())
+				{
+					RAW r = {Format::CU8, fifo.Front(), fifo.BlockSize()};
 
 					Send(&r, 1, tag);
 					fifo.Pop();
 				}
-				else {
-					if (isStreaming()) Error() << "RTLSDR: timeout.";
+				else
+				{
+					if (isStreaming())
+						Error() << "RTLSDR: timeout.";
 				}
 			}
 		}
-		catch (std::exception& e) {
+		catch (std::exception &e)
+		{
 			Error() << "RTLSDR Run: " << e.what();
 			StopRequest();
 		}
 	}
 
-	void RTLSDR::callback(CU8* buf, int len) {
-		if (isStreaming() && !fifo.Push((char*)buf, len)) Error() << "RTLSDR: buffer overrun.";
+	void RTLSDR::callback(CU8 *buf, int len)
+	{
+		if (isStreaming() && !fifo.Push((char *)buf, len))
+			Error() << "RTLSDR: buffer overrun.";
 	}
 
-	void RTLSDR::callback_static(CU8* buf, uint32_t len, void* ctx) {
-		((RTLSDR*)ctx)->callback(buf, len);
+	void RTLSDR::callback_static(CU8 *buf, uint32_t len, void *ctx)
+	{
+		((RTLSDR *)ctx)->callback(buf, len);
 	}
 
-	void RTLSDR::setTuner_GainMode(int a) {
-		if (rtlsdr_set_tuner_gain_mode(dev, a) != 0) throw std::runtime_error("RTLSDR: cannot set gain mode.");
+	void RTLSDR::setTuner_GainMode(int a)
+	{
+		if (rtlsdr_set_tuner_gain_mode(dev, a) != 0)
+			throw std::runtime_error("RTLSDR: cannot set gain mode.");
 	}
 
-	void RTLSDR::setRTL_AGC(int a) {
-		if (rtlsdr_set_agc_mode(dev, a) != 0) throw std::runtime_error("RTLSDR: cannot set RTL AGC.");
+	void RTLSDR::setRTL_AGC(int a)
+	{
+		if (rtlsdr_set_agc_mode(dev, a) != 0)
+			throw std::runtime_error("RTLSDR: cannot set RTL AGC.");
 	}
 
-	void RTLSDR::setBiasTee(int a) {
+	void RTLSDR::setBiasTee(int a)
+	{
 #ifndef HASRTLSDR_BIASTEE
 		throw std::runtime_error("RTLSDR: bias tee not supported in this version of librtlsdr.");
 #else
-		if (rtlsdr_set_bias_tee(dev, a) != 0) throw std::runtime_error("RTLSDR: cannot set bias tee.");
+		if (rtlsdr_set_bias_tee(dev, a) != 0)
+			throw std::runtime_error("RTLSDR: cannot set bias tee.");
 #endif
 	}
 
-	void RTLSDR::setBandwidth(int a) {
+	void RTLSDR::setBandwidth(int a)
+	{
 #ifndef HASRTLSDR_TUNERBW
 		throw std::runtime_error("RTLSDR: setting of bandwidth not supported in this version of librtlsdr.");
 #else
-		if (rtlsdr_set_tuner_bandwidth(dev, a) != 0) throw std::runtime_error("RTLSDR: cannot set bandwidth.");
+		if (rtlsdr_set_tuner_bandwidth(dev, a) != 0)
+			throw std::runtime_error("RTLSDR: cannot set bandwidth.");
 #endif
 	}
 
-	void RTLSDR::setTuner_Gain(FLOAT32 a) {
+	void RTLSDR::setTuner_Gain(FLOAT32 a)
+	{
 		int g = (int)a * 10;
 
-		if (rtlsdr_set_tuner_gain_mode(dev, 1) != 0) throw std::runtime_error("RTLSDR: cannot set gain mode.");
+		if (rtlsdr_set_tuner_gain_mode(dev, 1) != 0)
+			throw std::runtime_error("RTLSDR: cannot set gain mode.");
 
 		int nGains = rtlsdr_get_tuner_gains(dev, nullptr);
-		if (nGains <= 0) throw std::runtime_error("RTLSDR: no gains available");
+		if (nGains <= 0)
+			throw std::runtime_error("RTLSDR: no gains available");
 
 		std::vector<int> gains(nGains);
 		nGains = rtlsdr_get_tuner_gains(dev, gains.data());
 
 		int gain = gains[0];
 
-		for (const auto& h : gains)
-			if (abs(h - g) < abs(g - gain)) gain = h;
+		for (const auto &h : gains)
+			if (abs(h - g) < abs(g - gain))
+				gain = h;
 
-		if (rtlsdr_set_tuner_gain(dev, gain) != 0) throw std::runtime_error("RTLSDR: cannot set tuner gain.");
+		if (rtlsdr_set_tuner_gain(dev, gain) != 0)
+			throw std::runtime_error("RTLSDR: cannot set tuner gain.");
 	}
 
-	void RTLSDR::setFrequencyCorrection(int ppm) {
-		if (ppm != 0 && rtlsdr_set_freq_correction(dev, ppm) < 0) throw std::runtime_error("RTLSDR: cannot set ppm error.");
+	void RTLSDR::setFrequencyCorrection(int ppm)
+	{
+		if (ppm != 0 && rtlsdr_set_freq_correction(dev, ppm) < 0)
+			throw std::runtime_error("RTLSDR: cannot set ppm error.");
 	}
 
-	void RTLSDR::applySettings() {
-		if (rtlsdr_set_center_freq(dev, frequency) < 0) throw std::runtime_error("RTLSDR: cannot set frequency.");
-		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0) throw std::runtime_error("RTLSDR: cannot set sample rate.");
+	void RTLSDR::applySettings()
+	{
+		if (rtlsdr_set_center_freq(dev, frequency) < 0)
+			throw std::runtime_error("RTLSDR: cannot set frequency.");
+		if (rtlsdr_set_sample_rate(dev, sample_rate) < 0)
+			throw std::runtime_error("RTLSDR: cannot set sample rate.");
 
 		setFrequencyCorrection(freq_offset);
 		setTuner_GainMode(tuner_AGC ? 0 : 1);
 
-		if (!tuner_AGC) setTuner_Gain(tuner_Gain);
-		if (RTL_AGC) setRTL_AGC(1);
-		if (bias_tee) setBiasTee(1);
-		if (tuner_bandwidth) setBandwidth(tuner_bandwidth);
+		if (!tuner_AGC)
+			setTuner_Gain(tuner_Gain);
+		if (RTL_AGC)
+			setRTL_AGC(1);
+		if (bias_tee)
+			setBiasTee(1);
+		if (tuner_bandwidth)
+			setBandwidth(tuner_bandwidth);
 	}
 
-	void RTLSDR::getDeviceList(std::vector<Description>& DeviceList) {
+	void RTLSDR::getDeviceList(std::vector<Description> &DeviceList)
+	{
 		char v[256], p[256], s[256];
 
 		int DeviceCount = rtlsdr_get_device_count();
 
-		for (int i = 0; i < DeviceCount; i++) {
+		for (int i = 0; i < DeviceCount; i++)
+		{
 			rtlsdr_get_device_usb_strings(i, v, p, s);
 			DeviceList.push_back(Description(v, p, s, (uint64_t)i, Type::RTLSDR));
 		}
 	}
 
-	Setting& RTLSDR::Set(std::string option, std::string arg) {
+	Setting &RTLSDR::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 
-		if (option == "TUNER") {
+		if (option == "TUNER")
+		{
 			double temp;
 			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, temp);
 			tuner_Gain = (FLOAT32)temp;
 		}
-		else if (option == "BUFFER_COUNT") {
+		else if (option == "BUFFER_COUNT")
+		{
 			BUFFER_COUNT = Util::Parse::Integer(arg, 1, 100);
 		}
-		else if (option == "RTLAGC") {
+		else if (option == "RTLAGC")
+		{
 			RTL_AGC = Util::Parse::Switch(arg);
 		}
-		else if (option == "BIASTEE") {
+		else if (option == "BIASTEE")
+		{
 			bias_tee = Util::Parse::Switch(arg);
 		}
 		else
@@ -226,7 +280,8 @@ namespace Device {
 		return *this;
 	}
 
-	std::string RTLSDR::Get() {
+	std::string RTLSDR::Get()
+	{
 		std::string str = " tuner " + Util::Convert::toString(tuner_AGC, tuner_Gain);
 		str += " rtlagc " + Util::Convert::toString(RTL_AGC) + " biastee " + Util::Convert::toString(bias_tee);
 		str += " buffer_count " + std::to_string(BUFFER_COUNT);
