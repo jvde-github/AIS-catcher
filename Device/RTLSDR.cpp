@@ -58,6 +58,8 @@ namespace Device {
 		Device::Close();
 
 		if (dev) {
+			if(bias_tee)
+				setBiasTee(0);
 			rtlsdr_close(dev);
 			dev = nullptr;
 		}
