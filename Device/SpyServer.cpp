@@ -74,6 +74,12 @@ namespace Device
 				}
 			}
 		}
+		if (_sample_rates.size() == 0)
+		{
+			client.disconnect();
+			throw std::runtime_error("SPYSERVER: no sample rate > 96Khz available. Highest sample rate = " +
+									 std::to_string(device_info.MaximumSampleRate >> device_info.MinimumIQDecimation) + " Hz.");
+		}
 		sample_rate = new_rate;
 	}
 
@@ -156,7 +162,8 @@ namespace Device
 				Error() << "SPYSERVER: invalid device info size.";
 				return false;
 			}
-			if (!read((char *)&device_info, sizeof(DeviceInfo))) {
+			if (!read((char *)&device_info, sizeof(DeviceInfo)))
+			{
 				Error() << "SPYSERVER: failed to read device info.";
 				return false;
 			}
@@ -177,7 +184,8 @@ namespace Device
 				Error() << "SPYSERVER: invalid client sync size.";
 				return false;
 			}
-			if (!read((char *)&client_sync, sizeof(ClientSync))) {
+			if (!read((char *)&client_sync, sizeof(ClientSync)))
+			{
 				Error() << "SPYSERVER: failed to read client sync.";
 				return false;
 			}
