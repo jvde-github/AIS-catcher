@@ -224,7 +224,45 @@ namespace AIS
 		int dac = msg.getUint(72, 10);
 		int fid = msg.getUint(82, 6);
 
-		if (dac == 235 && fid == 10)
+		if (dac == 1 && fid == 0)
+		{
+			// ITU-R M.1371 - Addressed text message
+			B(msg, AIS::KEY_ACK_REQUIRED, 88, 1);
+			U(msg, AIS::KEY_TEXT_SEQUENCE, 89, 11);
+			T(msg, AIS::KEY_TEXT, 100, MIN(906, msg.getLength() - 100), text);
+		}
+		else if (dac == 1 && fid == 2)
+		{
+			// ITU-R M.1371 - Interrogation for a specified FMS
+			U(msg, AIS::KEY_REQUESTED_DAC, 88, 10);
+			U(msg, AIS::KEY_REQUESTED_FID, 98, 6);
+		}
+		else if (dac == 1 && fid == 3)
+		{
+			// ITU-R M.1371 - Interrogation for a specified FMS
+			U(msg, AIS::KEY_REQUESTED_DAC, 88, 10);
+			X(msg, AIS::KEY_SPARE, 98, 6);
+		}
+		else if (dac == 1 && fid == 4)
+		{
+			// ITU-R M.1371 - Capability reply
+			// Convert 128-bit AI available field to bitstring
+			int bits_available = MIN(128, msg.getLength() - 88);
+			datastring.clear();
+
+			for (int i = 0; i < bits_available; i++)
+			{
+				datastring += msg.getUint(88 + i, 1) ? '1' : '0';
+			}
+
+			json.Add(AIS::KEY_AI_AVAILABLE, &datastring);
+		}
+		else if (dac == 1 && (fid == 16 || fid == 40))
+		{
+			// ITU-R M.1371 - Number of persons on board
+			U(msg, AIS::KEY_PERSONS, 88, 13, 8191);
+		}
+		else if (dac == 235 && fid == 10)
 		{
 			UL(msg, AIS::KEY_ANA_INT, 88, 10, 0.05f, 0);
 			UL(msg, AIS::KEY_ANA_EXT1, 98, 10, 0.05f, 0);
@@ -444,7 +482,7 @@ namespace AIS
 			X(msg, AIS::KEY_SPARE, 145, 3);
 			B(msg, AIS::KEY_RAIM, 148, 1);
 
-			ProcessRadio(msg, 149, MAX(MIN(19, msg.getLength() - 149),0));
+			ProcessRadio(msg, 149, MAX(MIN(19, msg.getLength() - 149), 0));
 			break;
 		}
 		case 4:
@@ -463,7 +501,7 @@ namespace AIS
 			X(msg, AIS::KEY_SPARE, 138, 10);
 			B(msg, AIS::KEY_RAIM, 148, 1);
 
-			ProcessRadio(msg, 149, MAX(MIN(19, msg.getLength() - 149),0));
+			ProcessRadio(msg, 149, MAX(MIN(19, msg.getLength() - 149), 0));
 			break;
 		case 5:
 			U(msg, AIS::KEY_AIS_VERSION, 38, 2);
