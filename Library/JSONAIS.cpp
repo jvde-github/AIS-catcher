@@ -401,11 +401,14 @@ namespace AIS
 			}
 			else if (slot_timeout == 1)
 			{
-				unsigned utc_hour = (sub_msg >> 9) & 0x1F;	 // 5 bits (13-9)
-				unsigned utc_minute = (sub_msg >> 2) & 0x7F; // 7 bits (8-2)
+				const int utc_hour = (sub_msg >> 9) & 0x1F;	 // 5 bits (13-9)
+				const int utc_minute = (sub_msg >> 2) & 0x7F; // 7 bits (8-2)
 
-				json.Add(AIS::KEY_UTC_HOUR, (int)utc_hour);
-				json.Add(AIS::KEY_UTC_MINUTE, (int)utc_minute);
+				if (utc_hour < 24 && utc_minute < 60)
+				{
+					json.Add(AIS::KEY_UTC_HOUR, utc_hour);
+					json.Add(AIS::KEY_UTC_MINUTE, utc_minute);
+				}
 			}
 			else if (slot_timeout == 2 || slot_timeout == 4 || slot_timeout == 6)
 			{
