@@ -59,6 +59,8 @@ namespace Device
 			Error() << "RAWFile ReadAsync: " << e.what();
 			std::terminate();
 		}
+
+		fifo.PushFinished();
 		eoi = true;
 	}
 
@@ -99,6 +101,8 @@ namespace Device
 	{
 		Device::Play();
 
+		bool is_stdin = (filename == "." || filename == "stdin");
+
 		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST && getFormat() != Format::RAW1090)
 		{
 			fifo.Init(BUFFER_SIZE, BUFFER_COUNT);
@@ -107,10 +111,14 @@ namespace Device
 		else
 		{
 			fifo.Init(TXT_BLOCK_SIZE, BUFFER_SIZE);
-			buffer.resize(TXT_BLOCK_SIZE);
+
+			if(is_stdin)
+				buffer.resize(TXT_BLOCK_SIZE);
+			else
+				buffer.resize(BUFFER_SIZE);
 		}
 
-		if (filename == "." || filename == "stdin")
+		if (is_stdin)
 		{
 			file = &std::cin;
 		}
