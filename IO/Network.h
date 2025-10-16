@@ -79,7 +79,8 @@ namespace IO
 			AISCATCHER,
 			APRS,
 			LIST,
-			AIRFRAMES
+			AIRFRAMES,
+			NMEA
 		} protocol = PROTOCOL::AISCATCHER;
 		std::string protocol_string = "jsonaiscatcher";
 
@@ -93,11 +94,54 @@ namespace IO
 			{
 				if (filter.include(*(AIS::Message *)data[i].binary))
 				{
-					json.clear();
-					builder.stringify(data[i], json);
+					if (protocol == PROTOCOL::NMEA)
 					{
+						const std::vector<std::string> &nmea = ((AIS::Message *)data[i].binary)->NMEA;
 						const std::lock_guard<std::mutex> lock(queue_mutex);
-						queue.push_back(json);
+
+						for (int j = 0; j < nmea.size(); j++)
+						{
+							queue.push_back(nmea[j]);
+						}
+					}
+					else if (protocol == PROTOCOL::APRS)
+					{
+						json.clear();
+						builder.stringify(data[i], json);
+						json += "\r\n";
+						{
+							const std::lock_guard<std::mutex> lock(queue_mutex);
+							queue.push_back(json);
+						}
+					}
+					else if (protocol == PROTOCOL::LIST)
+					{
+						json.clear();
+						((AIS::Message *)data[i].binary)->buildNMEA(tag);
+						{
+							const std::lock_guard<std::mutex> lock(queue_mutex);
+							for (auto &s : ((AIS::Message *)data[i].binary)->NMEA)
+								queue.push_back(s);
+						}
+					}
+					else if (protocol == PROTOCOL::AIRFRAMES)
+					{
+						json.clear();
+						builder.stringify(data[i], json);
+						json += "\r\n";
+						{
+							const std::lock_guard<std::mutex> lock(queue_mutex);
+							queue.push_back(json);
+						}
+					}
+					else
+					{
+						json.clear();
+						builder.stringify(data[i], json);
+						{
+							const std::lock_guard<std::mutex> lock(queue_mutex);
+							queue.push_back(json);
+						}
 					}
 				}
 			}

@@ -159,12 +159,22 @@ namespace IO
 
 			r = http.Post(msg, gzip, true, "jsonais");
 		}
-		else if (PROTOCOL::LIST == protocol)
+		else if (PROTOCOL::NMEA == protocol)
 		{
 
 			for (auto it = send_list.begin(); it != send_list.end(); ++it)
 			{
 				msg += std::string(*it) + "\n";
+			}
+
+			r = http.Post(msg, gzip, false, "");
+		}
+		else if (PROTOCOL::LIST == protocol)
+		{
+
+			for (auto it = send_list.begin(); it != send_list.end(); ++it)
+			{
+				msg += std::string(*it);
 			}
 
 			r = http.Post(msg, gzip, false, "");
@@ -297,6 +307,10 @@ namespace IO
 				{
 					builder.setMap(JSON_DICT_FULL);
 					protocol = PROTOCOL::LIST;
+				}
+				else if (arg == "NMEA")
+				{
+					protocol = PROTOCOL::NMEA;
 				}
 				else if (arg == "APRS")
 				{
