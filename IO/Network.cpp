@@ -118,26 +118,6 @@ namespace IO
 
 			r = http.Post(msg, gzip, false, "");
 		}
-		else if (PROTOCOL::AIRFRAMES == protocol)
-		{
-			msg += "{\n\t\"app\": {\n\t\t\"name\": \"AIS-Catcher\",\n\t\t\"ver\": \"" VERSION "\"";
-			msg += "\n\t},\n\t\"source\": {\n\t\t\"transport\": \"vhf\",\n\t\t\"protocol\": \"ais\",\n\t\t\"station_id\": ";
-			builder.stringify(stationid, msg);
-			msg += ",\n\t\t\"lat\": " + std::to_string(lat);
-			msg += ",\n\t\t\"lon\": " + std::to_string(lon);
-			msg += "\n\t\t},\n\t\"msgs\": [";
-
-			char delim = ' ';
-			for (auto it = send_list.begin(); it != send_list.end(); ++it)
-			{
-				msg = msg + delim + "\n\t\t" + *it;
-				delim = ',';
-			}
-
-			msg += "\n\t]\n}\n";
-
-			r = http.Post(msg, gzip, false, "");
-		}
 		else if (PROTOCOL::APRS == protocol)
 		{
 			msg += "{\n\t\"protocol\": \"jsonais\",";
@@ -159,22 +139,12 @@ namespace IO
 
 			r = http.Post(msg, gzip, true, "jsonais");
 		}
-		else if (PROTOCOL::NMEA == protocol)
+		else
 		{
 
 			for (auto it = send_list.begin(); it != send_list.end(); ++it)
 			{
 				msg += std::string(*it) + "\n";
-			}
-
-			r = http.Post(msg, gzip, false, "");
-		}
-		else if (PROTOCOL::LIST == protocol)
-		{
-
-			for (auto it = send_list.begin(); it != send_list.end(); ++it)
-			{
-				msg += std::string(*it);
 			}
 
 			r = http.Post(msg, gzip, false, "");
