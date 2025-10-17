@@ -62,15 +62,15 @@ namespace IO
 
 		std::thread run_thread;
 		bool terminate = false, running = false;
-		std::mutex queue_mutex;
 
 		ZIP zip;
 		std::ostringstream oss;
+
 		std::string url, url_json, userpwd;
 		bool gzip = false, show_response = true;
 		int INTERVAL = 60;
 		int TIMEOUT = 10;
-		
+
 		std::string stationid = "null", lat = "null", lon = "null";
 		std::string model = "null", model_setting = "null";
 		std::string product = "null", vendor = "null", serial = "null", device_setting = "null";
@@ -83,48 +83,17 @@ namespace IO
 			AIRFRAMES,
 			NMEA
 		} protocol = PROTOCOL::AISCATCHER;
+
 		std::string protocol_string = "jsonaiscatcher";
 
 		void post();
 		void process();
 
-		void Receive(const JSON::JSON *data, int len, TAG &tag)
-		{
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const AIS::GPS *data, int len, TAG &tag);
 
-			for (int i = 0; i < len; i++)
-			{
-				if (filter.include(*(AIS::Message *)data[i].binary))
-				{
-					if (protocol == PROTOCOL::NMEA)
-					{
-						const std::vector<std::string> &nmea = ((AIS::Message *)data[i].binary)->NMEA;
-						const std::lock_guard<std::mutex> lock(queue_mutex);
-
-						for (int j = 0; j < nmea.size(); j++)
-						{
-							queue.push_back(nmea[j]);
-						}
-					}
-					else
-					{
-						json.clear();
-						builder.stringify(data[i], json);
-						{
-							const std::lock_guard<std::mutex> lock(queue_mutex);
-							queue.push_back(json);
-						}
-					}
-				}
-			}
-		}
-
-		void Receive(const AIS::GPS *data, int len, TAG &tag)
-		{
-			lat = data->getLat();
-			lon = data->getLon();
-		}
-
-		std::list<std::string> queue;
+		std::list<std::string> msg_list;
+		std::mutex msg_list_mutex;
 
 	public:
 		~HTTPStreamer() { Stop(); }
