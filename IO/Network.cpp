@@ -77,77 +77,56 @@ namespace IO
 			send_list.splice(send_list.begin(), queue);
 		}
 
-		msg.clear();
+		oss.str("");
 		HTTPResponse r;
-
-		std::time_t now = std::time(0);
 
 		if (protocol == PROTOCOL::AISCATCHER || protocol == PROTOCOL::AIRFRAMES)
 		{
+			const std::string now = Util::Convert::toTimeStr(std::time(0));
 
-			msg += "{\n\t\"protocol\": \"" + protocol_string + "\",";
-			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			msg += "\n\t\"stationid\": ";
-			builder.stringify(stationid, msg);
-			msg += ",";
-			msg += "\n\t\"station_lat\": " + (lat == 0.0 ? "null" : std::to_string(lat)) + ",";
-			msg += "\n\t\"station_lon\": " + (lon == 0.0 ? "null" : std::to_string(lon)) + ",";
-			msg += "\n\t\"receiver\":\n\t\t{\n\t\t\"description\": \"AIS-catcher " VERSION "\",";
-			msg += "\n\t\t\"version\": " + std::to_string(VERSION_NUMBER) + ",\n\t\t\"engine\": ";
-			builder.stringify(model, msg);
-			msg += ",\n\t\t\"setting\": ";
-			builder.stringify(model_setting, msg);
-			msg += "\n\t\t},\n\t\"device\":\n\t\t{\n\t\t\"product\": ";
-			builder.stringify(product, msg);
-			msg += ",\n\t\t\"vendor\": ";
-			builder.stringify(vendor, msg);
-			msg += ",\n\t\t\"serial\": ";
-			builder.stringify(serial, msg);
-			msg += ",\n\t\t\"setting\": ";
-			builder.stringify(device_setting, msg);
-			msg += "\n\t\t},\n\t\"msgs\": [";
+			oss << "{\"protocol\":\"" << protocol_string << "\"," << "\"encodetime\":\"" << now << "\"," << "\"stationid\":" << stationid << "," << "\"station_lat\":" << lat << ","
+				<< "\"station_lon\":" << lon << "," << "\"receiver\":{\"description\":\"AIS-catcher " VERSION "\"," << "\"version\":" << VERSION_NUMBER << ",\"engine\":" << model 
+				<< ",\"setting\":" << model_setting << "},\"device\":{\"product\":" << product << ",\"vendor\":" << vendor << ",\"serial\":" << serial << ",\"setting\":" << device_setting << "},\"msgs\":[";
 
 			char delim = ' ';
-			for (auto it = send_list.begin(); it != send_list.end(); ++it)
+			for (const auto &m : send_list)
 			{
-				msg = msg + delim + "\n\t\t" + *it;
+				oss << delim << "\n"
+					<< m;
 				delim = ',';
 			}
 
-			msg += "\n\t]\n}\n";
+			oss << "\n]}\n";
 
-			r = http.Post(msg, gzip, false, "");
+			r = http.Post(oss.str(), gzip, false, "");
 		}
 		else if (PROTOCOL::APRS == protocol)
 		{
-			msg += "{\n\t\"protocol\": \"jsonais\",";
-			msg += "\n\t\"encodetime\": \"" + Util::Convert::toTimeStr(now) + "\",";
-			msg += "\n\t\"groups\": [\n\t{\n\t\t\"path\": [{ \"name\": ";
-			builder.stringify(stationid, msg);
-			msg += ", \"url\" : ";
-			builder.stringify(url, msg);
-			msg += " }],\n\t\t\"msgs\": [";
+			const std::string now = Util::Convert::toTimeStr(std::time(0));
+
+			oss << "{\"protocol\":\"jsonais\"," << "\"encodetime\":\"" << now << "\"," << "\"groups\":[{\"path\":[{\"name\":" << stationid << ",\"url\":" << url_json << "}],\"msgs\":[";
 
 			char delim = ' ';
-			for (auto it = send_list.begin(); it != send_list.end(); ++it)
+
+			for (const auto &m : send_list)
 			{
-				msg = msg + delim + "\n\t\t\t" + *it;
+				oss << delim << "\n"
+					<< m;
 				delim = ',';
 			}
 
-			msg += "\n\t\t]\n\t}]\n}";
+			oss << "\n]}]}";
 
-			r = http.Post(msg, gzip, true, "jsonais");
+			r = http.Post(oss.str(), gzip, true, "jsonais");
 		}
 		else
 		{
-
-			for (auto it = send_list.begin(); it != send_list.end(); ++it)
+			for (const auto &m : send_list)
 			{
-				msg += std::string(*it) + "\n";
+				oss << m << "\n";
 			}
 
-			r = http.Post(msg, gzip, false, "");
+			r = http.Post(oss.str(), gzip, false, "");
 		}
 
 		if (r.status < 200 || r.status > 299)
@@ -180,6 +159,7 @@ namespace IO
 		if (option == "URL")
 		{
 			url = arg;
+			url_json = JSON::StringBuilder::stringify(arg);
 			http.setURL(url);
 		}
 		else if (option == "USERPWD")
@@ -189,7 +169,7 @@ namespace IO
 		}
 		else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN")
 		{
-			stationid = arg;
+			stationid = JSON::StringBuilder::stringify(arg);
 		}
 		else if (option == "INTERVAL")
 		{
@@ -201,27 +181,27 @@ namespace IO
 		}
 		else if (option == "MODEL")
 		{
-			model = arg;
+			model = JSON::StringBuilder::stringify(arg);
 		}
 		else if (option == "MODEL_SETTING")
 		{
-			model_setting = arg;
+			model_setting = JSON::StringBuilder::stringify(arg);
 		}
 		else if (option == "PRODUCT")
 		{
-			product = arg;
+			product = JSON::StringBuilder::stringify(arg);
 		}
 		else if (option == "VENDOR")
 		{
-			vendor = arg;
+			vendor = JSON::StringBuilder::stringify(arg);
 		}
 		else if (option == "SERIAL")
 		{
-			serial = arg;
+			serial = JSON::StringBuilder::stringify(arg);
 		}
 		else if (option == "LAT")
 		{
-			lat = Util::Parse::Float(arg);
+			lat = std::to_string(Util::Parse::Float(arg));
 		}
 		else if (option == "GROUPS_IN")
 		{
@@ -230,11 +210,13 @@ namespace IO
 		}
 		else if (option == "LON")
 		{
-			lon = Util::Parse::Float(arg);
+			lon = std::to_string(Util::Parse::Float(arg));
 		}
 		else if (option == "DEVICE_SETTING")
 		{
-			device_setting = arg;
+			device_setting = JSON::StringBuilder::stringify(arg);
+			std::cerr << "HTTP: set device_setting to " << arg << std::endl;
+			std::cerr << "HTTP: set device_setting to " << device_setting << std::endl;
 		}
 		else
 		{
