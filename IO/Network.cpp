@@ -65,16 +65,52 @@ namespace IO
 		}
 	}
 
+	void HTTPStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
+	{
+
+		for (int i = 0; i < len; i++)
+		{
+			if (filter.include(*(AIS::Message *)data[i].binary))
+			{
+				if (protocol == PROTOCOL::NMEA)
+				{
+					const std::vector<std::string> &nmea = ((AIS::Message *)data[i].binary)->NMEA;
+					const std::lock_guard<std::mutex> lock(msg_list_mutex);
+
+					for (int j = 0; j < nmea.size(); j++)
+					{
+						msg_list.push_back(nmea[j]);
+					}
+				}
+				else
+				{
+					json.clear();
+					builder.stringify(data[i], json);
+					{
+						const std::lock_guard<std::mutex> lock(msg_list_mutex);
+						msg_list.push_back(json);
+					}
+				}
+			}
+		}
+	}
+
+	void HTTPStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
+	{
+		lat = std::to_string(data->getLat());
+		lon = std::to_string(data->getLon());
+	}
+
 	void HTTPStreamer::post()
 	{
-		if (!queue.size())
+		if (!msg_list.size())
 			return;
 
 		std::list<std::string> send_list;
 
 		{
-			const std::lock_guard<std::mutex> lock(queue_mutex);
-			send_list.splice(send_list.begin(), queue);
+			const std::lock_guard<std::mutex> lock(msg_list_mutex);
+			send_list.splice(send_list.begin(), msg_list);
 		}
 
 		oss.str("");
@@ -85,7 +121,7 @@ namespace IO
 			const std::string now = Util::Convert::toTimeStr(std::time(0));
 
 			oss << "{\"protocol\":\"" << protocol_string << "\"," << "\"encodetime\":\"" << now << "\"," << "\"stationid\":" << stationid << "," << "\"station_lat\":" << lat << ","
-				<< "\"station_lon\":" << lon << "," << "\"receiver\":{\"description\":\"AIS-catcher " VERSION "\"," << "\"version\":" << VERSION_NUMBER << ",\"engine\":" << model 
+				<< "\"station_lon\":" << lon << "," << "\"receiver\":{\"description\":\"AIS-catcher " VERSION "\"," << "\"version\":" << VERSION_NUMBER << ",\"engine\":" << model
 				<< ",\"setting\":" << model_setting << "},\"device\":{\"product\":" << product << ",\"vendor\":" << vendor << ",\"serial\":" << serial << ",\"setting\":" << device_setting << "},\"msgs\":[";
 
 			char delim = ' ';
