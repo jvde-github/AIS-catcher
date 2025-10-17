@@ -19,6 +19,7 @@
 #include <list>
 #include <thread>
 #include <mutex>
+#include <sstream>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -64,15 +65,15 @@ namespace IO
 		std::mutex queue_mutex;
 
 		ZIP zip;
-		std::string msg, url, userpwd, stationid;
+		std::ostringstream oss;
+		std::string url, url_json, userpwd;
 		bool gzip = false, show_response = true;
-
 		int INTERVAL = 60;
 		int TIMEOUT = 10;
-		float lat = 0.0, lon = 0.0;
-
-		std::string model = "N/A", model_setting = "N/A";
-		std::string product = "N/A", vendor = "N/A", serial = "N/A", device_setting = "N/A";
+		
+		std::string stationid = "null", lat = "null", lon = "null";
+		std::string model = "null", model_setting = "null";
+		std::string product = "null", vendor = "null", serial = "null", device_setting = "null";
 
 		enum class PROTOCOL
 		{

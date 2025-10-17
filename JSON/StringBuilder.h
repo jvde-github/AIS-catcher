@@ -25,25 +25,28 @@
 #include "Common.h"
 #include "JSON.h"
 
-namespace JSON {
+namespace JSON
+{
 
-	class StringBuilder {
+	class StringBuilder
+	{
 	private:
-		const std::vector<std::vector<std::string>>* keymap = nullptr;
+		const std::vector<std::vector<std::string>> *keymap = nullptr;
 		int dict = 0;
 
-
 	public:
-		StringBuilder(const std::vector<std::vector<std::string>>* map, int d) : keymap(map), dict(d) {}
-		StringBuilder(const std::vector<std::vector<std::string>>* map) : keymap(map) {}
+		StringBuilder(const std::vector<std::vector<std::string>> *map, int d) : keymap(map), dict(d) {}
+		StringBuilder(const std::vector<std::vector<std::string>> *map) : keymap(map) {}
 
-		void to_string(std::string& json, const Value& v);
-		void stringify(const JSON& properties, std::string& json);
-		static void stringify(const std::string& str, std::string& json, bool esc = true);
-		std::string stringify(const JSON& properties) {
-			std::string j;
-			stringify(properties, j);
-			return j;
+		void to_string(std::string &json, const Value &v);
+		void stringify(const JSON &properties, std::string &json);
+		static void stringify(const std::string &str, std::string &json, bool esc = true);
+
+		static std::string stringify(const std::string &str, bool esc = true)
+		{
+			std::string s;
+			stringify(str, s, esc);
+			return s;
 		}
 
 		// dictionary to use
