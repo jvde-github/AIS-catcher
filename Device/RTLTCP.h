@@ -40,7 +40,7 @@ namespace Device
 		Protocol::ProtocolBase *session = &tcp;
 
 		const int TRANSFER_SIZE = 16384;
-		static const int BUFFER_SIZE = 32 * 16384;
+		static const int BUFFER_SIZE = 32 * 16384 * 16;
 		std::vector<char> buffer;
 
 		bool lost = false;
