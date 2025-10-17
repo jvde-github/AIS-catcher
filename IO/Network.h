@@ -104,36 +104,6 @@ namespace IO
 							queue.push_back(nmea[j]);
 						}
 					}
-					else if (protocol == PROTOCOL::APRS)
-					{
-						json.clear();
-						builder.stringify(data[i], json);
-						json += "\r\n";
-						{
-							const std::lock_guard<std::mutex> lock(queue_mutex);
-							queue.push_back(json);
-						}
-					}
-					else if (protocol == PROTOCOL::LIST)
-					{
-						json.clear();
-						((AIS::Message *)data[i].binary)->buildNMEA(tag);
-						{
-							const std::lock_guard<std::mutex> lock(queue_mutex);
-							for (auto &s : ((AIS::Message *)data[i].binary)->NMEA)
-								queue.push_back(s);
-						}
-					}
-					else if (protocol == PROTOCOL::AIRFRAMES)
-					{
-						json.clear();
-						builder.stringify(data[i], json);
-						json += "\r\n";
-						{
-							const std::lock_guard<std::mutex> lock(queue_mutex);
-							queue.push_back(json);
-						}
-					}
 					else
 					{
 						json.clear();
