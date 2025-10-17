@@ -262,6 +262,14 @@ namespace AIS
 			// ITU-R M.1371 - Number of persons on board
 			U(msg, AIS::KEY_PERSONS, 88, 13, 8191);
 		}
+		else if (dac == 200 && fid == 55)
+		{
+			// ECE-TRANS-SC.3-176 - Number of persons on board (detailed)
+			// Inland vessels specific message with breakdown by person type
+			U(msg, AIS::KEY_CREW_COUNT, 88, 8, 255);					// Crew members (0-254, 255=unknown)
+			U(msg, AIS::KEY_PASSENGER_COUNT, 96, 13, 8191);			// Passengers (0-8190, 8191=unknown)
+			U(msg, AIS::KEY_SHIPBOARD_PERSONNEL_COUNT, 109, 8, 255);	// Shipboard personnel (0-254, 255=unknown)
+		}
 		else if (dac == 235 && fid == 10)
 		{
 			UL(msg, AIS::KEY_ANA_INT, 88, 10, 0.05f, 0);
