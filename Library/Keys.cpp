@@ -187,6 +187,14 @@ namespace AIS
 		{"ana_int", "", "", ""},
 		{"ana_ext1", "", "", ""},
 		{"ana_ext2", "", "", ""},
+		// IALA ASM (Automatic System Monitoring) for monitoring aids to navigation
+		{"asm_battery_status", "", "", ""},		// KEY_ASM_BATTERY_STATUS
+		{"asm_current_data", "", "", ""},		// KEY_ASM_CURRENT_DATA
+		{"asm_light_status", "", "", ""},		// KEY_ASM_LIGHT_STATUS
+		{"asm_off_position_status", "", "", ""},	// KEY_ASM_OFF_POSITION_STATUS
+		{"asm_power_supply_type", "", "", ""},	// KEY_ASM_POWER_SUPPLY_TYPE
+		{"asm_sub_app_id", "", "", ""},			// KEY_ASM_SUB_APP_ID
+		{"asm_voltage_data", "", "", ""},		// KEY_ASM_VOLTAGE_DATA
 		{"assigned", "", "", ""},
 		{"band", "", "", ""},
 		{"band_a", "", "", ""},
@@ -200,6 +208,12 @@ namespace AIS
 		{"cdir3", "", "", ""},
 		{"channel_a", "", "", ""},
 		{"channel_b", "", "", ""},
+		{"cloud_amount_low", "", "", ""},
+		{"cloud_base_height", "", "", ""},
+		{"cloud_cover_total", "", "", ""},
+		{"cloud_type_high", "", "", ""},
+		{"cloud_type_low", "", "", ""},
+		{"cloud_type_middle", "", "", ""},
 		{"country", "", "", ""},
 		{"country_code", "", "", ""},
 		{"course", "", "", "course"},
@@ -232,6 +246,14 @@ namespace AIS
 		{"hour", "", "", ""},
 		{"humidity", "", "", ""},
 		{"ice", "", "", ""},
+		{"ice_accretion_cause", "", "", ""},
+		{"ice_accretion_rate", "", "", ""},
+		{"ice_bearing", "", "", ""},
+		{"ice_concentration", "", "", ""},
+		{"ice_deposit_thickness", "", "", ""},
+		{"ice_development", "", "", ""},
+		{"ice_situation", "", "", ""},
+		{"ice_type_amount", "", "", ""},
 		{"imo", "", "", ""},
 		{"increment1", "", "", ""},
 		{"increment2", "", "", ""},
@@ -280,6 +302,10 @@ namespace AIS
 		{"persons", "", "", ""},
 		{"power", "", "", ""},
 		{"preciptype", "", "", ""},
+		{"present_weather", "", "", ""},
+		{"past_weather_1", "", "", ""},
+		{"past_weather_2", "", "", ""},
+		{"pressure_characteristic", "", "", ""},
 		{"pressure", "", "", ""},
 		{"pressuretend", "", "", ""},
 		{"quiet", "", "", ""},
@@ -293,6 +319,8 @@ namespace AIS
 		{"retransmit", "", "", ""},
 		{"requested_dac", "", "", ""},
 		{"requested_fid", "", "", ""},
+		{"rel_wind_dir", "", "", ""},
+		{"rel_wind_speed", "", "", ""},
 		{"salinity", "", "", ""},
 		{"seastate", "", "", ""},
 		{"second", "", "", ""},
@@ -309,6 +337,7 @@ namespace AIS
 		{"speed", "", "speed", "speed"},
 		{"speed_q", "", "", ""},
 		{"station_type", "", "", ""},
+		{"station_name", "", "", ""},
 		{"status", "", "status", "status"},
 		{"status_text", "", "status_text", ""},
 		{"stat_ext", "", "status_text", ""},
@@ -336,17 +365,27 @@ namespace AIS
 		{"type1_1", "", "", ""},
 		{"type1_2", "", "", ""},
 		{"type2_1", "", "", ""},
+		{"utc_day", "", "", ""},
 		{"utc_hour", "", "", ""},
 		{"utc_minute", "", "", ""},
 		{"uuid", "", "", ""},
 		{"vendorid", "", "", "vendorid"},
 		{"vin", "", "", ""},
 		{"virtual_aid", "", "", ""},
+		// VTS targets (targets derived by means other than AIS)
+		{"vts_target_id_type", "", "", ""},
+		{"vts_target_id", "", "", ""},
+		{"vts_target_lat", "", "", ""},
+		{"vts_target_lon", "", "", ""},
+		{"vts_target_cog", "", "", ""},
+		{"vts_target_timestamp", "", "", ""},
+		{"vts_target_sog", "", "", ""},
 		{"visgreater", "", "", ""},
 		{"visibility", "", "", ""},
 		{"waterlevel", "", "", ""},
 		{"watertemp", "", "", ""},
 		{"wavedir", "", "", ""},
+		{"weather_report_type", "", "", ""},
 		{"waveheight", "", "", ""},
 		{"waveperiod", "", "", ""},
 		{"wdir", "", "", ""},
@@ -380,6 +419,6 @@ namespace AIS
 		{"raw_message", "raw_message", "raw_message", ""},
 		{"icao", "icao", "icao", ""},
 		{"type_text", "type_text", "type_text", ""},
-		{"wake_vortex", "wake_vortex", "wake_vortex", ""} 						// KEY_WAKE_VORTEX
+		{"wake_vortex", "wake_vortex", "wake_vortex", ""}						// KEY_WAKE_VORTEX
 	};
 }

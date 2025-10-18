@@ -224,7 +224,21 @@ namespace AIS
 		int dac = msg.getUint(72, 10);
 		int fid = msg.getUint(82, 6);
 
-		if (dac == 1 && fid == 0)
+		if (dac == 0 && fid == 0)
+		{
+			// IALA ASM (Automatic System Monitoring) for monitoring aids to navigation
+			// Zeni Lite Buoy Co., Ltd proprietary message format
+			// Message structure based on IALA specification
+			U(msg, AIS::KEY_ASM_SUB_APP_ID, 88, 16);           // Sub-application ID (16 bits)
+			UL(msg, AIS::KEY_ASM_VOLTAGE_DATA, 104, 12, 0.1f, 0); // Voltage data (12 bits, max 409.6V, resolution 0.1V)
+			UL(msg, AIS::KEY_ASM_CURRENT_DATA, 116, 10, 0.1f, 0); // Current data (10 bits, max 102.3A, resolution 0.1A)
+			B(msg, AIS::KEY_ASM_POWER_SUPPLY_TYPE, 126, 1);   // Power supply type (1 bit: 0=AC, 1=DC)
+			B(msg, AIS::KEY_ASM_LIGHT_STATUS, 127, 1);        // Light status (1 bit: 0=Off, 1=On)
+			B(msg, AIS::KEY_ASM_BATTERY_STATUS, 128, 1);      // Battery status (1 bit: 0=Good, 1=Low voltage)
+			B(msg, AIS::KEY_ASM_OFF_POSITION_STATUS, 129, 1); // Off position status (1 bit: 0=On position, 1=Off position)
+			X(msg, AIS::KEY_SPARE, 130, 6);                   // Spare bits (6 bits, for future use)
+		}
+		else if (dac == 1 && fid == 0)
 		{
 			// ITU-R M.1371 - Addressed text message
 			B(msg, AIS::KEY_ACK_REQUIRED, 88, 1);
@@ -270,15 +284,30 @@ namespace AIS
 			U(msg, AIS::KEY_PASSENGER_COUNT, 96, 13, 8191);			// Passengers (0-8190, 8191=unknown)
 			U(msg, AIS::KEY_SHIPBOARD_PERSONNEL_COUNT, 109, 8, 255);	// Shipboard personnel (0-254, 255=unknown)
 		}
-		else if (dac == 235 && fid == 10)
+		else if ((dac == 235 || dac == 250) && fid == 10)
 		{
-			UL(msg, AIS::KEY_ANA_INT, 88, 10, 0.05f, 0);
-			UL(msg, AIS::KEY_ANA_EXT1, 98, 10, 0.05f, 0);
-			UL(msg, AIS::KEY_ANA_EXT2, 108, 10, 0.05f, 0);
-			U(msg, AIS::KEY_RACON, 118, 2);
-			U(msg, AIS::KEY_HEALTH, 122, 1);
-			U(msg, AIS::KEY_STAT_EXT, 123, 8);
-			B(msg, AIS::KEY_OFF_POSITION, 131, 1);
+			// IALA ASM - Aids to Navigation Monitoring Data
+			// DAC=235 (UK & NI) or DAC=250 (ROI), FI=10
+			UL(msg, AIS::KEY_ANA_INT, 88, 10, 0.05f, 0);			// Analogue internal (0.05-36V, 0.05V step)
+			UL(msg, AIS::KEY_ANA_EXT1, 98, 10, 0.05f, 0);			// Analogue external 1 (0.05-36V, 0.05V step)  
+			UL(msg, AIS::KEY_ANA_EXT2, 108, 10, 0.05f, 0);			// Analogue external 2 (0.05-36V, 0.05V step)
+			U(msg, AIS::KEY_RACON, 118, 2);						// RACON status (2 bits)
+			U(msg, AIS::KEY_HEALTH, 122, 1);						// Health status (1 bit: 0=Good, 1=Alarm)
+			U(msg, AIS::KEY_STAT_EXT, 123, 8);						// Status bits external (8 digital inputs)
+			B(msg, AIS::KEY_OFF_POSITION, 131, 1);					// Off position status (1 bit: 0=On position, 1=Off position)
+		}
+		else if (dac == 235 && fid == 20)
+		{
+			// IALA ASM - Buoy Position Monitoring (Trinity House)
+			// DAC=235 (UK & NI area code), FI=20
+			T(msg, AIS::KEY_STATION_NAME, 88, 204, text);			// Station name (204 bits)
+			U(msg, AIS::KEY_UTC_DAY, 292, 5, 0);					// UTC Day 1-31, 0=not available
+			U(msg, AIS::KEY_UTC_HOUR, 297, 5, 24);					// UTC Hour 0-23, 24=not available
+			U(msg, AIS::KEY_UTC_MINUTE, 302, 6, 60);				// UTC Minute 0-59, 60=not available
+			SL(msg, AIS::KEY_LON, 308, 28, 1 / 600000.0f, 0, 1810000);	// Longitude in 1/10000 min, 181°=not available
+			SL(msg, AIS::KEY_LAT, 336, 27, 1 / 600000.0f, 0, 910000);	// Latitude in 1/10000 min, 91°=not available
+			B(msg, AIS::KEY_OFF_POSITION, 363, 1);					// Off position status: 0=on position, 1=off position
+			X(msg, AIS::KEY_SPARE, 364, 4);						// Spare bits (4 bits)
 		}
 		else
 			D(msg, AIS::KEY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
@@ -289,8 +318,43 @@ namespace AIS
 		int dac = msg.getUint(40, 10);
 		int fid = msg.getUint(50, 6);
 
+		if (dac == 1 && fid == 0)
+		{
+			// IALA ASM - Text telegram using 6-bit ASCII (ITU-R M.1371-1)
+			// Broadcast binary message format
+			B(msg, AIS::KEY_ACK_REQUIRED, 56, 1);				// Acknowledge required flag (1 bit)
+			U(msg, AIS::KEY_TEXT_SEQUENCE, 57, 11);			// Message sequence number (11 bits)
+			T(msg, AIS::KEY_TEXT, 68, MIN(924, msg.getLength() - 68), text);	// Text message (up to 924 bits, 6-bit ASCII)
+		}
+		else if (dac == 1 && fid == 16)
+		{
+			// IALA ASM - VTS targets (targets derived by means other than AIS)
+			// Each VTS target is 120 bits, processing first target only
+			// Note: This conflicts with ITU-R M.1371 "persons on board" message
+			if (msg.getLength() >= 176) // Ensure we have at least 120 bits of target data
+			{
+				U(msg, AIS::KEY_VTS_TARGET_ID_TYPE, 56, 2);				// Target identifier type (2 bits)
+				
+				// Target ID (42 bits) - format depends on type
+				unsigned id_type = msg.getUint(56, 2);
+				if (id_type == 2) {
+					// Call sign - use text decoding for 6-bit ASCII (7 characters * 6 bits = 42 bits)
+					T(msg, AIS::KEY_VTS_TARGET_ID, 58, 42, text);
+				} else {
+					// MMSI, IMO, or other numeric identifier
+					U(msg, AIS::KEY_VTS_TARGET_ID, 58, 42);
+				}
+				
+				X(msg, AIS::KEY_SPARE, 100, 4);						// Spare (4 bits)
+				SL(msg, AIS::KEY_VTS_TARGET_LAT, 104, 24, 1 / 60000.0f, 0);	// Latitude (24 bits, 1/1000 min)
+				SL(msg, AIS::KEY_VTS_TARGET_LON, 128, 25, 1 / 60000.0f, 0);	// Longitude (25 bits, 1/1000 min)
+				U(msg, AIS::KEY_VTS_TARGET_COG, 153, 9, 360);			// Course over ground (9 bits, 360=not available)
+				U(msg, AIS::KEY_VTS_TARGET_TIMESTAMP, 162, 6, 60);		// UTC second (6 bits, 60=not available)
+				U(msg, AIS::KEY_VTS_TARGET_SOG, 168, 8, 255);			// Speed over ground (8 bits, 255=not available)
+			}
+		}
 		// ECE/TRANS/SC.3/176
-		if (dac == 200 && fid == 10)
+		else if (dac == 200 && fid == 10)
 		{
 			T(msg, AIS::KEY_VIN, 56, 48, text);
 			UL(msg, AIS::KEY_LENGTH, 104, 13, 0.1f, 0);
@@ -385,6 +449,8 @@ namespace AIS
 			U(msg, AIS::KEY_SALINITY, 335, 9);				// Decode salinity
 			U(msg, AIS::KEY_ICE, 344, 2);					// Decode presence of ice
 		}
+		else
+			D(msg, AIS::KEY_DATA, 56, MIN(952, msg.getLength() - 56), datastring);
 	}
 
 	void JSONAIS::ProcessRadio(const AIS::Message &msg, int start, int len)
