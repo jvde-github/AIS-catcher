@@ -309,6 +309,97 @@ namespace AIS
 			B(msg, AIS::KEY_OFF_POSITION, 363, 1);					// Off position status: 0=on position, 1=off position
 			X(msg, AIS::KEY_SPARE, 364, 4);						// Spare bits (4 bits)
 		}
+		else if ((dac == 316 || dac == 366) && fid == 1)
+		{
+			// Saint Lawrence Seaway Meteorological and Hydrological Messages (Addressed)
+			// DAC=316 (Canada) or DAC=366 (US), FI=1
+			// Message ID indicates specific message type:
+			// 1=Weather Station, 2=Wind Information, 3=Water Level, 6=Water Flow
+			U(msg, AIS::KEY_MESSAGE_ID, 90, 6);				// Message Identifier (6 bits)
+			
+			unsigned message_id = msg.getUint(90, 6);
+			if (message_id == 3) {
+				// Water Level Message - decode first water level report
+				// Each report is 144 bits, starting at bit 96
+				if (msg.getLength() >= 240) { // Ensure we have at least one complete report (96 + 144 = 240 bits)
+					int start_bit = 96;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Water Level Data (21 bits total)
+					U(msg, AIS::KEY_WATER_LEVEL_TYPE, start_bit + 111, 1);					// 0=Relative to datum, 1=Water depth
+					SL(msg, AIS::KEY_WATERLEVEL, start_bit + 112, 16, 0.01f, 0, -32768);	// Water level in cm, -32768=not available
+					U(msg, AIS::KEY_REFERENCE_DATUM, start_bit + 128, 2);					// 0=MLLW, 1=IGLD-85, 2,3=reserved  
+					U(msg, AIS::KEY_READING_TYPE, start_bit + 130, 2);						// 0=average, 1=estimated, 2,3=reserved
+					
+					// Reserved (12 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 132, 12);
+				}
+			}
+			else if (message_id == 6) {
+				// Water Flow Message - decode first water flow report
+				// Each report is 144 bits, starting at bit 96
+				if (msg.getLength() >= 240) { // Ensure we have at least one complete report (96 + 144 = 240 bits)
+					int start_bit = 96;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Water Flow Data (70 bits total)
+					SL(msg, AIS::KEY_SET_DRIFT_SPEED, start_bit + 111, 8, 0.1f, 0, 255);		// Set and drift speed in knots*10, 255=not available
+					U(msg, AIS::KEY_SET_DRIFT_DIRECTION, start_bit + 119, 9, 511);				// Set and drift direction in degrees, 511=not available
+					SL(msg, AIS::KEY_CURRENT_SPEED_1, start_bit + 128, 8, 0.1f, 0, 255);		// Current speed level 1 in knots*10, 255=not available
+					U(msg, AIS::KEY_CURRENT_DIRECTION_1, start_bit + 136, 9, 511);				// Current direction level 1 in degrees, 511=not available
+					SL(msg, AIS::KEY_CURRENT_SPEED_2, start_bit + 145, 8, 0.1f, 0, 255);		// Current speed level 2 in knots*10, 255=not available
+					U(msg, AIS::KEY_CURRENT_DIRECTION_2, start_bit + 153, 9, 511);				// Current direction level 2 in degrees, 511=not available
+					SL(msg, AIS::KEY_CURRENT_SPEED_3, start_bit + 162, 8, 0.1f, 0, 255);		// Current speed level 3 in knots*10, 255=not available
+					U(msg, AIS::KEY_CURRENT_DIRECTION_3, start_bit + 170, 9, 511);				// Current direction level 3 in degrees, 511=not available
+					
+					// Reserved (22 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 179, 22);
+				}
+			}
+			// Further decoding for other message IDs can be added here
+		}
+		else if ((dac == 316 || dac == 366) && fid == 2)
+		{
+			// Saint Lawrence Seaway Vessel/Lock Scheduling Messages (Addressed)
+			// DAC=316 (Canada) or DAC=366 (US), FI=2
+			// Message ID indicates specific message type:
+			// 1=Lockage Order, 2=Estimated Lock Times
+			U(msg, AIS::KEY_MESSAGE_ID, 90, 6);				// Message Identifier (6 bits)
+			// Further decoding based on Message ID can be added here
+		}
+		else if ((dac == 316 || dac == 366) && fid == 32)
+		{
+			// Saint Lawrence Seaway Specific Messages (Addressed)
+			// DAC=316 (Canada) or DAC=366 (US), FI=32
+			// Message ID indicates specific message type:
+			// 1=Version Message
+			U(msg, AIS::KEY_MESSAGE_ID, 90, 6);				// Message Identifier (6 bits)
+			// Further decoding based on Message ID can be added here
+		}
 		else
 			D(msg, AIS::KEY_DATA, 88, MIN(920, msg.getLength() - 88), datastring);
 	}
@@ -448,6 +539,105 @@ namespace AIS
 			U(msg, AIS::KEY_PRECIPTYPE, 332, 3);			// Decode type of precipitation
 			U(msg, AIS::KEY_SALINITY, 335, 9);				// Decode salinity
 			U(msg, AIS::KEY_ICE, 344, 2);					// Decode presence of ice
+		}
+		else if ((dac == 316 || dac == 366) && fid == 1)
+		{
+			// Saint Lawrence Seaway Meteorological and Hydrological Messages (Broadcast)
+			// DAC=316 (Canada) or DAC=366 (US), FI=1
+			// Message ID indicates specific message type:
+			// 1=Weather Station, 2=Wind Information, 3=Water Level, 6=Water Flow
+			U(msg, AIS::KEY_MESSAGE_ID, 58, 6);				// Message Identifier (6 bits)
+			
+			unsigned message_id = msg.getUint(58, 6);
+			if (message_id == 3) {
+				// Water Level Message - decode first water level report
+				// Each report is 144 bits, starting at bit 64
+				if (msg.getLength() >= 208) { // Ensure we have at least one complete report (64 + 144 = 208 bits)
+					int start_bit = 64;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Water Level Data (21 bits total)
+					U(msg, AIS::KEY_WATER_LEVEL_TYPE, start_bit + 111, 1);					// 0=Relative to datum, 1=Water depth
+					SL(msg, AIS::KEY_WATERLEVEL, start_bit + 112, 16, 0.01f, 0, -32768);	// Water level in cm, -32768=not available
+					U(msg, AIS::KEY_REFERENCE_DATUM, start_bit + 128, 2);					// 0=MLLW, 1=IGLD-85, 2,3=reserved  
+					U(msg, AIS::KEY_READING_TYPE, start_bit + 130, 2);						// 0=average, 1=estimated, 2,3=reserved
+					
+					// Reserved (12 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 132, 12);
+				}
+			}
+			else if (message_id == 6) {
+				// Water Flow Message - decode first water flow report
+				// Each report is 144 bits, starting at bit 64
+				if (msg.getLength() >= 208) { // Ensure we have at least one complete report (64 + 144 = 208 bits)
+					int start_bit = 64;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Water Flow Data (70 bits total)
+					SL(msg, AIS::KEY_SET_DRIFT_SPEED, start_bit + 111, 8, 0.1f, 0, 255);		// Set and drift speed in knots*10, 255=not available
+					U(msg, AIS::KEY_SET_DRIFT_DIRECTION, start_bit + 119, 9, 511);				// Set and drift direction in degrees, 511=not available
+					SL(msg, AIS::KEY_CURRENT_SPEED_1, start_bit + 128, 8, 0.1f, 0, 255);		// Current speed level 1 in knots*10, 255=not available
+					U(msg, AIS::KEY_CURRENT_DIRECTION_1, start_bit + 136, 9, 511);				// Current direction level 1 in degrees, 511=not available
+					SL(msg, AIS::KEY_CURRENT_SPEED_2, start_bit + 145, 8, 0.1f, 0, 255);		// Current speed level 2 in knots*10, 255=not available
+					U(msg, AIS::KEY_CURRENT_DIRECTION_2, start_bit + 153, 9, 511);				// Current direction level 2 in degrees, 511=not available
+					SL(msg, AIS::KEY_CURRENT_SPEED_3, start_bit + 162, 8, 0.1f, 0, 255);		// Current speed level 3 in knots*10, 255=not available
+					U(msg, AIS::KEY_CURRENT_DIRECTION_3, start_bit + 170, 9, 511);				// Current direction level 3 in degrees, 511=not available
+					
+					// Reserved (22 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 179, 22);
+				}
+			}
+			// Further decoding for other message IDs can be added here
+		}
+		else if ((dac == 316 || dac == 366) && fid == 2)
+		{
+			// Saint Lawrence Seaway Vessel/Lock Scheduling Messages (Broadcast)
+			// DAC=316 (Canada) or DAC=366 (US), FI=2
+			// Message ID indicates specific message type:
+			// 1=Lockage Order, 2=Estimated Lock Times
+			U(msg, AIS::KEY_MESSAGE_ID, 58, 6);				// Message Identifier (6 bits)
+			// Further decoding based on Message ID can be added here
+		}
+		else if ((dac == 316 || dac == 366) && fid == 32)
+		{
+			// Saint Lawrence Seaway Specific Messages (Broadcast)
+			// DAC=316 (Canada) or DAC=366 (US), FI=32
+			// Message ID indicates specific message type:
+			// 1=Version Message
+			U(msg, AIS::KEY_MESSAGE_ID, 58, 6);				// Message Identifier (6 bits)
+			// Further decoding based on Message ID can be added here
+		}
+		else if (dac == 366 && fid == 1)
+		{
+			// U.S. Coast Guard PAWSS AIS Messages (Broadcast)
+			// DAC=366 (US), FI=1
+			// From Appendix A: Message ID 4=Hydro/Current, 5=Hydro/Salinity Temp, 3=Vessel Procession Order
+			U(msg, AIS::KEY_MESSAGE_ID, 58, 6);				// Message Identifier (6 bits)
+			// Further decoding based on Message ID can be added here
 		}
 		else
 			D(msg, AIS::KEY_DATA, 56, MIN(952, msg.getLength() - 56), datastring);
