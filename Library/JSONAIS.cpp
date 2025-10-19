@@ -318,7 +318,36 @@ namespace AIS
 			U(msg, AIS::KEY_MESSAGE_ID, 90, 6);				// Message Identifier (6 bits)
 			
 			unsigned message_id = msg.getUint(90, 6);
-			if (message_id == 3) {
+			if (message_id == 1) {
+				// Weather Station Message - decode first weather report
+				// Each report is 144 bits, starting at bit 96
+				if (msg.getLength() >= 240) { // Ensure we have at least one complete report (96 + 144 = 240 bits)
+					int start_bit = 96;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Weather Station Data (33 bits total)
+					SL(msg, AIS::KEY_AIR_TEMPERATURE, start_bit + 111, 11, 0.1f, -60.0f, 2047);	// Air temperature in °C*10, 2047=not available
+					U(msg, AIS::KEY_RELATIVE_HUMIDITY, start_bit + 122, 7, 127);					// Relative humidity %, 127=not available
+					U(msg, AIS::KEY_BAROMETRIC_PRESSURE, start_bit + 129, 9, 511);					// Barometric pressure in hPa-800, 511=not available
+					U(msg, AIS::KEY_PRESSURE_TENDENCY, start_bit + 138, 2);							// Pressure tendency: 0=steady, 1=decreasing, 2=increasing, 3=not available
+					
+					// Reserved (4 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 140, 4);
+				}
+			}
+			else if (message_id == 3) {
 				// Water Level Message - decode first water level report
 				// Each report is 144 bits, starting at bit 96
 				if (msg.getLength() >= 240) { // Ensure we have at least one complete report (96 + 144 = 240 bits)
@@ -345,6 +374,35 @@ namespace AIS
 					
 					// Reserved (12 bits) - skip
 					X(msg, AIS::KEY_SPARE, start_bit + 132, 12);
+				}
+			}
+			else if (message_id == 2) {
+				// Wind Information Message - decode first wind report
+				// Each report is 144 bits, starting at bit 96
+				if (msg.getLength() >= 240) { // Ensure we have at least one complete report (96 + 144 = 240 bits)
+					int start_bit = 96;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Wind Information Data (34 bits total)
+					SL(msg, AIS::KEY_WIND_SPEED_AVG, start_bit + 111, 8, 0.1f, 0, 255);		// Average wind speed in knots*10, 255=not available
+					U(msg, AIS::KEY_WIND_DIRECTION_AVG, start_bit + 119, 9, 511);			// Average wind direction in degrees, 511=not available
+					SL(msg, AIS::KEY_WIND_GUST_SPEED, start_bit + 128, 8, 0.1f, 0, 255);	// Wind gust speed in knots*10, 255=not available
+					U(msg, AIS::KEY_WIND_GUST_DIRECTION, start_bit + 136, 9, 511);			// Wind gust direction in degrees, 511=not available
+					
+					// Reserved (9 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 145, 9);
 				}
 			}
 			else if (message_id == 6) {
@@ -549,7 +607,36 @@ namespace AIS
 			U(msg, AIS::KEY_MESSAGE_ID, 58, 6);				// Message Identifier (6 bits)
 			
 			unsigned message_id = msg.getUint(58, 6);
-			if (message_id == 3) {
+			if (message_id == 1) {
+				// Weather Station Message - decode first weather report
+				// Each report is 144 bits, starting at bit 64
+				if (msg.getLength() >= 208) { // Ensure we have at least one complete report (64 + 144 = 208 bits)
+					int start_bit = 64;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Weather Station Data (33 bits total)
+					SL(msg, AIS::KEY_AIR_TEMPERATURE, start_bit + 111, 11, 0.1f, -60.0f, 2047);	// Air temperature in °C*10, 2047=not available
+					U(msg, AIS::KEY_RELATIVE_HUMIDITY, start_bit + 122, 7, 127);					// Relative humidity %, 127=not available
+					U(msg, AIS::KEY_BAROMETRIC_PRESSURE, start_bit + 129, 9, 511);					// Barometric pressure in hPa-800, 511=not available
+					U(msg, AIS::KEY_PRESSURE_TENDENCY, start_bit + 138, 2);							// Pressure tendency: 0=steady, 1=decreasing, 2=increasing, 3=not available
+					
+					// Reserved (4 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 140, 4);
+				}
+			}
+			else if (message_id == 3) {
 				// Water Level Message - decode first water level report
 				// Each report is 144 bits, starting at bit 64
 				if (msg.getLength() >= 208) { // Ensure we have at least one complete report (64 + 144 = 208 bits)
@@ -576,6 +663,35 @@ namespace AIS
 					
 					// Reserved (12 bits) - skip
 					X(msg, AIS::KEY_SPARE, start_bit + 132, 12);
+				}
+			}
+			else if (message_id == 2) {
+				// Wind Information Message - decode first wind report
+				// Each report is 144 bits, starting at bit 64
+				if (msg.getLength() >= 208) { // Ensure we have at least one complete report (64 + 144 = 208 bits)
+					int start_bit = 64;
+					
+					// Timetag (20 bits): Month(4), Day(5), Hours(5), Minutes(6)
+					U(msg, AIS::KEY_MONTH, start_bit, 4, 0);		// Month 1-12, 0=not available
+					U(msg, AIS::KEY_DAY, start_bit + 4, 5, 0);		// Day 1-31, 0=not available  
+					U(msg, AIS::KEY_HOUR, start_bit + 9, 5, 24);	// Hours 0-23, 24=not available
+					U(msg, AIS::KEY_MINUTE, start_bit + 14, 6, 60);	// Minutes 0-59, 60=not available
+					
+					// Station ID (42 bits): Seven 6-bit ASCII characters
+					T(msg, AIS::KEY_STATION_ID, start_bit + 20, 42, text);
+					
+					// Position (49 bits total)
+					SL(msg, AIS::KEY_LON, start_bit + 62, 25, 1 / 60000.0f, 0, 10800000);	// Longitude in 1/1000 min, 181°=not available
+					SL(msg, AIS::KEY_LAT, start_bit + 87, 24, 1 / 60000.0f, 0, 5400000);	// Latitude in 1/1000 min, 91°=not available
+					
+					// Wind Information Data (34 bits total)
+					SL(msg, AIS::KEY_WIND_SPEED_AVG, start_bit + 111, 8, 0.1f, 0, 255);		// Average wind speed in knots*10, 255=not available
+					U(msg, AIS::KEY_WIND_DIRECTION_AVG, start_bit + 119, 9, 511);			// Average wind direction in degrees, 511=not available
+					SL(msg, AIS::KEY_WIND_GUST_SPEED, start_bit + 128, 8, 0.1f, 0, 255);	// Wind gust speed in knots*10, 255=not available
+					U(msg, AIS::KEY_WIND_GUST_DIRECTION, start_bit + 136, 9, 511);			// Wind gust direction in degrees, 511=not available
+					
+					// Reserved (9 bits) - skip
+					X(msg, AIS::KEY_SPARE, start_bit + 145, 9);
 				}
 			}
 			else if (message_id == 6) {
