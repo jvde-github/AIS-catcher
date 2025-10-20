@@ -498,6 +498,12 @@ namespace AIS
 			MMSI_blocked.push_back(Util::Parse::Integer(arg, 0, 999999999));
 			return true;
 		}
+		else if(option == "REMOVE_EMPTY")
+		{
+			Util::Convert::toUpper(arg);
+			remove_empty = Util::Parse::Switch(arg);
+			return true;
+		}
 		return false;
 	}
 
@@ -535,6 +541,12 @@ namespace AIS
 		if (!AIS)
 			return false;
 
+		if(remove_empty)
+		{
+			if(msg.getLength() == 0)
+				return false;
+		}
+		
 		bool ID_ok = true;
 		if (ID_allowed.size())
 		{
