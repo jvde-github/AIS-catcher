@@ -183,6 +183,7 @@ namespace AIS
 		std::string allowed_channels;
 		int downsample_time = 10;
 		long int last_VDO = 0;
+		bool remove_empty = false;
 
 	public:
 		virtual ~Filter() {}
