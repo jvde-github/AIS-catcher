@@ -264,7 +264,12 @@ using namespace std::chrono;
 
 const FLOAT32 PI = 3.14159265358979323846f;
 
+#ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
 
 #include "Logger.h"

@@ -24,6 +24,10 @@
 #include <dirent.h>
 #endif
 
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
+
 #include "Utilities.h"
 #include "Message.h"
 #include "Logger.h"
@@ -999,27 +1003,64 @@ namespace Util
 	std::string Helper::getHardware()
 	{
 #ifdef _WIN32
-		return "";
-#elif ANDROID
-		return "";
+	
+		return "Windows PC";
+
+#elif __ANDROID__
+
+		return "Android Device";
+
 #elif __APPLE__
-		return "";
+
+		return "Mac";
+
 #elif __linux__
 		std::string line, model_name, revision;
 
+		// Try device-tree first (works for Raspberry Pi and other ARM boards)
 		{
 			std::ifstream inFile("/proc/device-tree/model");
-
 			if (inFile.is_open() && std::getline(inFile, line))
+			{
+				// Remove null terminator if present
+				if (!line.empty() && line[line.length() - 1] == '\0')
+					line.resize(line.length() - 1);
 				return line;
+			}
 		}
 
-		// For systems without a device-tree, approximation for the RPI
+		// Try DMI information (works for x86/x64 systems and some ARM systems)
+		{
+			std::ifstream dmiProduct("/sys/class/dmi/id/product_name");
+			if (dmiProduct.is_open())
+			{
+				std::string product;
+				if (std::getline(dmiProduct, product) && !product.empty() &&
+					product != "To be filled by O.E.M." &&
+					product != "System Product Name")
+				{
+					std::ifstream dmiVendor("/sys/class/dmi/id/sys_vendor");
+					if (dmiVendor.is_open())
+					{
+						std::string vendor;
+						if (std::getline(dmiVendor, vendor) && !vendor.empty() &&
+							vendor != "To be filled by O.E.M." &&
+							vendor != "System manufacturer")
+						{
+							return vendor + " " + product;
+						}
+					}
+					return product;
+				}
+			}
+		}
+
+		// Parse cpuinfo for Raspberry Pi revision codes and CPU model
 		{
 			std::ifstream inFile("/proc/cpuinfo");
 			if (inFile.is_open())
 			{
-				while (getline(inFile, line))
+				while (std::getline(inFile, line))
 				{
 					if (line.substr(0, 10) == "model name")
 					{
@@ -1041,93 +1082,70 @@ namespace Util
 			}
 		}
 
-		if (revision == "900021")
-			return "Raspberry Pi A+ 1.1";
-		if (revision == "900032")
-			return "Raspberry Pi B+ 1.2";
-		if (revision == "900092")
-			return "Raspberry Pi Zero 1.2";
-		if (revision == "900093")
-			return "Raspberry Pi Zero 1.3";
-		if (revision == "9000c1")
-			return "Raspberry Pi Zero W 1.1";
-		if (revision == "9020e0")
-			return "Raspberry Pi 3A+ 1.0";
-		if (revision == "920092")
-			return "Raspberry Pi Zero 1.2";
-		if (revision == "920093")
-			return "Raspberry Pi Zero 1.3";
-		if (revision == "900061")
-			return "Raspberry Pi CM1 1.1";
-		if (revision == "a01040")
-			return "Raspberry Pi 2B 1.0";
-		if (revision == "a01041")
-			return "Raspberry Pi 2B 1.1";
-		if (revision == "a02082")
-			return "Raspberry Pi 3B 1.2";
-		if (revision == "a020a0")
-			return "Raspberry Pi CM3 1.0";
-		if (revision == "a020d3")
-			return "Raspberry Pi 3B+ 1.3";
-		if (revision == "a02042")
-			return "Raspberry Pi 2B (with BCM2837) 1.2";
-		if (revision == "a21041")
-			return "Raspberry Pi 2B 1.1";
-		if (revision == "a22042")
-			return "Raspberry Pi 2B (with BCM2837) 1.2";
-		if (revision == "a22082")
-			return "Raspberry Pi 3B 1.2";
-		if (revision == "a220a0")
-			return "Raspberry Pi CM3 1.0";
-		if (revision == "a32082")
-			return "Raspberry Pi 3B 1.2";
-		if (revision == "a52082")
-			return "Raspberry Pi 3B 1.2";
-		if (revision == "a22083")
-			return "Raspberry Pi 3B 1.3";
-		if (revision == "a02100")
-			return "Raspberry Pi CM3+ 1.0";
-		if (revision == "a03111")
-			return "Raspberry Pi 4B 1.1";
-		if (revision == "b03111")
-			return "Raspberry Pi 4B 1.1";
-		if (revision == "b03112")
-			return "Raspberry Pi 4B 1.2";
-		if (revision == "b03114")
-			return "Raspberry Pi 4B 1.4";
-		if (revision == "b03115")
-			return "Raspberry Pi 4B 1.5";
-		if (revision == "c03111")
-			return "Raspberry Pi 4B 1.1";
-		if (revision == "c03112")
-			return "Raspberry Pi 4B 1.2";
-		if (revision == "c03114")
-			return "Raspberry Pi 4B 1.4";
-		if (revision == "c03115")
-			return "Raspberry Pi 4B 1.5";
-		if (revision == "d03114")
-			return "Raspberry Pi 4B 1.4";
-		if (revision == "d03115")
-			return "Raspberry Pi 4B 1.5";
-		if (revision == "c03130")
-			return "Raspberry Pi Pi 400 1.0";
-		if (revision == "a03140")
-			return "Raspberry Pi CM4 1.0";
-		if (revision == "b03140")
-			return "Raspberry Pi CM4 1.0";
-		if (revision == "c03140")
-			return "Raspberry Pi CM4 1.0";
-		if (revision == "d03140")
-			return "Raspberry Pi CM4 1.0";
-		if (revision == "902120")
-			return "Raspberry Pi Zero 2 W 1.0";
-		if (revision == "c04170")
-			return "Raspberry Pi 5";
-		if (revision == "d04170")
-			return "Raspberry Pi 5";
+		// Raspberry Pi revision lookup table
+		if (!revision.empty())
+		{
+			static const std::unordered_map<std::string, std::string> rpi_revisions = {
+				{"900021", "Raspberry Pi A+ 1.1"},
+				{"900032", "Raspberry Pi B+ 1.2"},
+				{"900092", "Raspberry Pi Zero 1.2"},
+				{"900093", "Raspberry Pi Zero 1.3"},
+				{"9000c1", "Raspberry Pi Zero W 1.1"},
+				{"9020e0", "Raspberry Pi 3A+ 1.0"},
+				{"920092", "Raspberry Pi Zero 1.2"},
+				{"920093", "Raspberry Pi Zero 1.3"},
+				{"900061", "Raspberry Pi CM1 1.1"},
+				{"a01040", "Raspberry Pi 2B 1.0"},
+				{"a01041", "Raspberry Pi 2B 1.1"},
+				{"a02082", "Raspberry Pi 3B 1.2"},
+				{"a020a0", "Raspberry Pi CM3 1.0"},
+				{"a020d3", "Raspberry Pi 3B+ 1.3"},
+				{"a02042", "Raspberry Pi 2B (with BCM2837) 1.2"},
+				{"a21041", "Raspberry Pi 2B 1.1"},
+				{"a22042", "Raspberry Pi 2B (with BCM2837) 1.2"},
+				{"a22082", "Raspberry Pi 3B 1.2"},
+				{"a220a0", "Raspberry Pi CM3 1.0"},
+				{"a32082", "Raspberry Pi 3B 1.2"},
+				{"a52082", "Raspberry Pi 3B 1.2"},
+				{"a22083", "Raspberry Pi 3B 1.3"},
+				{"a02100", "Raspberry Pi CM3+ 1.0"},
+				{"a03111", "Raspberry Pi 4B 1.1"},
+				{"b03111", "Raspberry Pi 4B 1.1"},
+				{"b03112", "Raspberry Pi 4B 1.2"},
+				{"b03114", "Raspberry Pi 4B 1.4"},
+				{"b03115", "Raspberry Pi 4B 1.5"},
+				{"c03111", "Raspberry Pi 4B 1.1"},
+				{"c03112", "Raspberry Pi 4B 1.2"},
+				{"c03114", "Raspberry Pi 4B 1.4"},
+				{"c03115", "Raspberry Pi 4B 1.5"},
+				{"d03114", "Raspberry Pi 4B 1.4"},
+				{"d03115", "Raspberry Pi 4B 1.5"},
+				{"c03130", "Raspberry Pi 400 1.0"},
+				{"a03140", "Raspberry Pi CM4 1.0"},
+				{"b03140", "Raspberry Pi CM4 1.0"},
+				{"c03140", "Raspberry Pi CM4 1.0"},
+				{"d03140", "Raspberry Pi CM4 1.0"},
+				{"902120", "Raspberry Pi Zero 2 W 1.0"},
+				{"c04170", "Raspberry Pi 5 8GB"},
+				{"d04170", "Raspberry Pi 5 4GB"},
+				{"c04171", "Raspberry Pi 5 8GB"},
+				{"d04171", "Raspberry Pi 5 4GB"},
+				{"902121", "Raspberry Pi Zero 2 W 1.0"}};
 
-		return model_name;
+			std::unordered_map<std::string, std::string>::const_iterator it = rpi_revisions.find(revision);
+			if (it != rpi_revisions.end())
+			{
+				return it->second;
+			}
+		}
+
+		// Return CPU model name if available
+		if (!model_name.empty())
+			return model_name;
+
+		return "Linux System";
 #endif
+
 		return "";
 	}
 
