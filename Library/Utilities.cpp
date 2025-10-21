@@ -31,6 +31,7 @@
 #include "Utilities.h"
 #include "Message.h"
 #include "Logger.h"
+#include <unordered_map>
 
 namespace Util
 {
