@@ -220,8 +220,6 @@ namespace IO
 		Protocol::WebSocket ws;
 		Protocol::ProtocolBase *session = &tcp;
 
-		MessageFormat fmt = MessageFormat::JSON_FULL;
-
 		std::string json;
 		Util::TemplateString topic_template;
 
