@@ -317,7 +317,9 @@ namespace IO
 		return *this;
 	}
 
-	UDPStreamer::UDPStreamer() {}
+	UDPStreamer::UDPStreamer() {
+		fmt = MessageFormat::NMEA;
+	}
 
 	UDPStreamer::~UDPStreamer()
 	{
@@ -360,7 +362,7 @@ namespace IO
 		{
 			if (filter.includeGPS())
 			{
-				if (!JSON)
+				if (!JSON_NMEA)
 					SendTo((data[i].getNMEA() + "\r\n").c_str());
 				else
 					SendTo((data[i].getJSON() + "\r\n").c_str());
@@ -376,7 +378,7 @@ namespace IO
 		if (sock == -1)
 			return;
 
-		if (!JSON)
+		if (fmt == MessageFormat::NMEA)
 		{
 			for (int i = 0; i < len; i++)
 			{
@@ -422,7 +424,7 @@ namespace IO
 		ss << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
 		if (filter.isOn())
 			ss << ", allowed: {" << filter.getAllowed() << "}";
-		ss << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "");
+		ss << ", msgformat: " << Util::Convert::toString(fmt);
 		if (broadcast)
 			ss << ", broadcast: true";
 		if (reset > 0)
@@ -515,10 +517,6 @@ namespace IO
 		{
 			port = arg;
 		}
-		else if (option == "JSON")
-		{
-			JSON = Util::Parse::Switch(arg);
-		}
 		else if (option == "BROADCAST")
 		{
 			broadcast = Util::Parse::Switch(arg);
@@ -559,7 +557,7 @@ namespace IO
 		if (!filter.includeGPS())
 			return;
 
-		if (!JSON)
+		if (fmt == MessageFormat::NMEA)
 		{
 
 			for (int i = 0; i < len; i++)
@@ -594,7 +592,7 @@ namespace IO
 
 	void TCPClientStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
 	{
-		if (!JSON)
+		if (fmt == MessageFormat::NMEA)
 		{
 			for (int i = 0; i < len; i++)
 			{
@@ -658,12 +656,12 @@ namespace IO
 			ss << ", gps: " << Util::Convert::toString(filter.includeGPS());
 			ss << ", allowed: {" << filter.getAllowed() << "}";
 		}
-		ss << ", PERSIST: " << Util::Convert::toString(persistent);
-		ss << ", KEEP_ALIVE: " << Util::Convert::toString(keep_alive);
+		ss << ", persist: " << Util::Convert::toString(persistent);
+		ss << ", keep_alive: " << Util::Convert::toString(keep_alive);
 		if (!uuid.empty())
-			ss << ", UUID: " << uuid;
+			ss << ", uuid: " << uuid;
 
-		ss << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "") << ", status: ";
+		ss << ", msgformat: " << Util::Convert::toString(fmt) << ", status: ";
 
 		if (tcp.connect(host, port, persistent, 0, keep_alive))
 			ss << "connected\n";
@@ -707,10 +705,6 @@ namespace IO
 		{
 			keep_alive = Util::Parse::Switch(arg);
 		}
-		else if (option == "JSON")
-		{
-			JSON = Util::Parse::Switch(arg);
-		}
 		else if (option == "PERSIST")
 		{
 			persistent = Util::Parse::Switch(arg);
@@ -740,7 +734,7 @@ namespace IO
 		if (filter.isOn())
 			ss << ", allowed: {" << filter.getAllowed() << "}";
 
-		ss << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "") << ".";
+		ss << ", json: " << Util::Convert::toString(fmt) << ".";
 
 		Info() << ss.str();
 		Server::start(port);
@@ -763,10 +757,6 @@ namespace IO
 			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
 			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 		}
-		else if (option == "JSON")
-		{
-			JSON = Util::Parse::Switch(arg);
-		}
 		else if (option == "INCLUDE_SAMPLE_START")
 		{
 			include_sample_start = Util::Parse::Switch(arg);
@@ -784,7 +774,7 @@ namespace IO
 		if (!filter.includeGPS())
 			return;
 
-		if (!JSON)
+		if (fmt == MessageFormat::NMEA)
 		{
 			for (int i = 0; i < len; i++)
 			{
@@ -802,7 +792,7 @@ namespace IO
 
 	void TCPlistenerStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
 	{
-		if (!JSON)
+		if (fmt == MessageFormat::NMEA)
 		{
 			for (int i = 0; i < len; i++)
 			{
@@ -902,7 +892,7 @@ namespace IO
 			if (!filter.include(data[i]))
 				continue;
 
-			if (!JSON_NMEA)
+			if (fmt == MessageFormat::NMEA	)
 			{
 				for (const auto &s : data[i].NMEA)
 				{
@@ -954,29 +944,6 @@ namespace IO
 				Set("USERNAME", username);
 			if (!password.empty())
 				Set("PASSWORD", password);
-		}
-		else if (option == "MSGFORMAT")
-		{
-			if (!Util::Parse::OutputFormat(arg, fmt))
-				throw std::runtime_error("MQTT: unknown message format: " + arg);
-
-			switch (fmt)
-			{
-			case MessageFormat::JSON_FULL:
-				JSON_input = true;
-				break;
-			case MessageFormat::JSON_NMEA:
-				JSON_NMEA = true;
-				JSON_input = false;
-				break;
-			case MessageFormat::NMEA:
-				JSON_input = false;
-				JSON_NMEA = false;
-				break;
-			default:
-				throw std::runtime_error("MQTT: unsupported message format");
-				break;
-			}
 		}
 		else if (option == "PROTOCOL")
 		{

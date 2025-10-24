@@ -132,7 +132,6 @@ namespace IO
 		int reset = -1;
 		long last_reconnect = 0;
 		bool broadcast = false;
-		bool JSON = false;
 		std::string uuid;
 		bool include_sample_start = false;
 
@@ -160,14 +159,11 @@ namespace IO
 		{
 			sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 		}
-		void setJSON(bool b) { JSON = b; }
 	};
 
 	class TCPClientStreamer : public OutputMessage
 	{
 		::TCP::Client tcp;
-		// AIS::Filter filter;
-		bool JSON = false;
 		std::string host, port;
 		bool keep_alive = false;
 		bool persistent = true;
@@ -175,6 +171,8 @@ namespace IO
 		bool include_sample_start = false;
 
 	public:
+		TCPClientStreamer() : OutputMessage() { fmt = MessageFormat::NMEA; }
+
 		Setting &Set(std::string option, std::string arg);
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
@@ -186,20 +184,19 @@ namespace IO
 
 		int SendTo(std::string str)
 		{
-
 			return tcp.send(str.c_str(), (int)str.length());
 		}
-		void setJSON(bool b) { JSON = b; }
 	};
 
 	class TCPlistenerStreamer : public OutputMessage, public TCP::Server
 	{
 		int port = 5010;
 		// AIS::Filter filter;
-		bool JSON = false;
 		bool include_sample_start = false;
 
 	public:
+		TCPlistenerStreamer() : OutputMessage() { fmt = MessageFormat::NMEA; }
+
 		virtual ~TCPlistenerStreamer() {};
 
 		Setting &Set(std::string option, std::string arg);
@@ -227,7 +224,6 @@ namespace IO
 
 		std::string json;
 		Util::TemplateString topic_template;
-		bool JSON_NMEA = false;
 
 	public:
 		MQTTStreamer() : OutputMessage(), topic_template("ais/data")
