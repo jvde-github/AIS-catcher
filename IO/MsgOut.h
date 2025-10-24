@@ -48,10 +48,13 @@ namespace IO
 	{
 	protected:
 		bool JSON_input = false;
+		bool JSON_NMEA = false;
 
 		std::string json;
 		AIS::Filter filter;
 		JSON::StringBuilder builder;
+
+		MessageFormat fmt = MessageFormat::JSON_FULL;
 
 		void ConnectMessage(Receiver &r);
 		void ConnectJSON(Receiver &r);
@@ -69,6 +72,41 @@ namespace IO
 			if (option == "JSON_FULL")
 			{
 				JSON_input = Util::Parse::Switch(arg);
+				if(JSON_input)
+					fmt = MessageFormat::JSON_FULL;
+				return true;
+			}
+			else if(option == "JSON") {
+				JSON_NMEA = Util::Parse::Switch(arg);
+				if(JSON_NMEA) {
+					std::cerr << "JSON NMEA SET" << std::endl;
+					fmt = MessageFormat::JSON_NMEA;
+				}
+				return true;
+			}
+			else if (option == "MSGFORMAT")
+			{
+				if (!Util::Parse::OutputFormat(arg, fmt))
+					throw std::runtime_error("Uknown message format: " + arg);
+
+				switch (fmt)
+				{
+				case MessageFormat::JSON_FULL:
+					JSON_input = true;
+					break;
+				case MessageFormat::JSON_NMEA:
+					JSON_NMEA = true;
+					JSON_input = false;
+					break;
+				case MessageFormat::NMEA:
+					JSON_input = false;
+					JSON_NMEA = false;
+					break;
+				default:
+					throw std::runtime_error("Output channel does not support message format: " + arg);
+					break;
+				}
+
 				return true;
 			}
 			return filter.SetOption(option, arg);
@@ -248,7 +286,6 @@ namespace IO
 		void Receive(const AIS::GPS *data, int len, TAG &tag);
 		void Receive(const Plane::ADSB *data, int len, TAG &tag);
 
-
 		Setting &Set(std::string option, std::string arg)
 		{
 			Util::Convert::toUpper(option);
@@ -258,7 +295,8 @@ namespace IO
 				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else if (option == "INCLUDE_SAMPLE_START") {
+			else if (option == "INCLUDE_SAMPLE_START")
+			{
 				include_sample_start = Util::Parse::Switch(arg);
 			}
 			else if (!filter.SetOption(option, arg))
@@ -293,7 +331,8 @@ namespace IO
 				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
 				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 			}
-			else if (option == "INCLUDE_SAMPLE_START") {
+			else if (option == "INCLUDE_SAMPLE_START")
+			{
 				include_sample_start = Util::Parse::Switch(arg);
 			}
 			else if (!filter.SetOption(option, arg))
