@@ -838,7 +838,7 @@ namespace IO
 	void MQTTStreamer::Start()
 	{
 		std::stringstream ss;
-		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort() << ", filter: " << Util::Convert::toString(filter.isOn());
+		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort() << ", filter: " << Util::Convert::toString(filter.isOn()) << ", msgformat: " << Util::Convert::toString(fmt);
 		tcp.setValue("PERSISTENT", "on");
 
 		switch (Protocol)
