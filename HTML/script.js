@@ -7069,28 +7069,6 @@ if (communityFeed) {
     });
 
 
-    let FeedStationStyle = new ol.style.Style({
-        image: new ol.style.Circle({
-            radius: 4,
-            stroke: new ol.style.Stroke({
-                color: 'white',
-                width: 3
-            }),
-            fill: new ol.style.Fill({
-                color: getComputedStyle(document.documentElement).getPropertyValue('--tertiary-color')
-            }),
-        })
-    });
-
-    var feedStationVector = new ol.source.Vector({
-        features: []
-    });
-
-    var feeStationdLayer = new ol.layer.Vector({
-        source: feedStationVector,
-        style: FeedStationStyle
-    });
-
     function redrawCommunityFeed(db) {
 
         feedVector.clear();
@@ -7114,25 +7092,6 @@ if (communityFeed) {
                 feedVector.addFeature(feature)
             }
         }
-    }
-
-    function redrawCommunityStations() {
-        feedStationVector.clear();
-
-        // fetch stations from hub/stations.json
-        fetch("https://www.aiscatcher.org/hub/stations.json")
-            .then(response => response.json())
-            .then(data => {
-                data.forEach(station => {
-                    const point = new ol.geom.Point(ol.proj.fromLonLat([station.longitude, station.latitude]))
-                    var feature = new ol.Feature({
-                        geometry: point
-                    })
-                    feature.tooltip = station.station_name
-                    feature.link = 'https://www.aiscatcher.org/station/' + station.station_id
-                    feedStationVector.addFeature(feature)
-                });
-            });
     }
 
 
@@ -7220,12 +7179,6 @@ if (communityFeed) {
         }
     });
 
-    feeStationdLayer.on('change:visible', function () {
-        if (feeStationdLayer.getVisible()) {
-            redrawCommunityStations();
-        }
-    });
-
     function updateCommunityFeed() {
         if (!feedLayer.isVisible()) return;
         fetchCommunityShips().then((ok) => {
@@ -7235,14 +7188,6 @@ if (communityFeed) {
         });
     }
     addOverlayLayer("Community Feed", feedLayer);
-    addOverlayLayer("Community Stations", feeStationdLayer);
-    addOverlayLayer("AIS Ducting Index", new ol.layer.Tile({
-        source: new ol.source.XYZ({
-            url: 'https://www.aiscatcher.org/tiles/ducting/{z}/{x}/{-y}.png',  // Update the tile URL pattern
-            tileSize: [256, 256],
-            maxZoom: 5  // Set the maximum zoom level based on your generated tiles
-        })
-    }));
 }
 
 let urlParams = new URLSearchParams(window.location.search);
