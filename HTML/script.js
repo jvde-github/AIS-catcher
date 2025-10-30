@@ -7087,7 +7087,7 @@ if (communityFeed) {
                 })
 
                 feature.ship = ship;
-                feature.link = 'https://www.shipcatcher.com/?zoom=12&mmsi=' + ship.mmsi
+                feature.link = 'https://www.aiscatcher.org/?zoom=12&mmsi=' + ship.mmsi
                 feature.tooltip = ship.shipname || ship.mmsi
                 feedVector.addFeature(feature)
             }
