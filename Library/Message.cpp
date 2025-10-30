@@ -477,7 +477,12 @@ namespace AIS
 		}
 		else if (option == "ID" || option == "SELECT_ID")
 		{
-			ID_allowed.push_back(Util::Parse::Integer(arg, 0, 999999));
+			std::stringstream ss(arg);
+			std::string id_str;
+			while (getline(ss, id_str, ','))
+			{
+				ID_allowed.push_back(Util::Parse::Integer(id_str, 0, 999999));
+			}
 			return true;
 		}
 		else if (option == "ALLOW_CHANNEL" || option == "SELECT_CHANNEL")
@@ -490,12 +495,22 @@ namespace AIS
 		}
 		else if (option == "ALLOW_MMSI" || option == "SELECT_MMSI")
 		{
-			MMSI_allowed.push_back(Util::Parse::Integer(arg, 0, 999999999));
+			std::stringstream ss(arg);
+			std::string mmsi_str;
+			while (getline(ss, mmsi_str, ','))
+			{
+				MMSI_allowed.push_back(Util::Parse::Integer(mmsi_str, 0, 999999999));
+			}
 			return true;
 		}
 		else if (option == "BLOCK_MMSI")
 		{
-			MMSI_blocked.push_back(Util::Parse::Integer(arg, 0, 999999999));
+			std::stringstream ss(arg);
+			std::string mmsi_str;
+			while (getline(ss, mmsi_str, ','))
+			{
+				MMSI_blocked.push_back(Util::Parse::Integer(mmsi_str, 0, 999999999));
+			}
 			return true;
 		}
 		else if(option == "REMOVE_EMPTY")
