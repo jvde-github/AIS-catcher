@@ -79,7 +79,6 @@ namespace IO
 			else if(option == "JSON") {
 				JSON_NMEA = Util::Parse::Switch(arg);
 				if(JSON_NMEA) {
-					std::cerr << "JSON NMEA SET" << std::endl;
 					fmt = MessageFormat::JSON_NMEA;
 				}
 				return true;

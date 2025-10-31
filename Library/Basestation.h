@@ -174,7 +174,7 @@ public:
                         }
                         catch (const std::exception &e)
                         {
-                            std::cerr << "Error processing line: " << line << " " << e.what() << std::endl;
+                            Error() << "Error processing line: " << line << " " << e.what() << std::endl;
                         }
                         line.clear();
                     }

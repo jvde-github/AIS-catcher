@@ -251,8 +251,6 @@ namespace IO
 		else if (option == "DEVICE_SETTING")
 		{
 			device_setting = JSON::StringBuilder::stringify(arg);
-			std::cerr << "HTTP: set device_setting to " << arg << std::endl;
-			std::cerr << "HTTP: set device_setting to " << device_setting << std::endl;
 		}
 		else
 		{
