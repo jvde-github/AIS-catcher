@@ -364,7 +364,7 @@ namespace AIS
 		int newlength = MAX((pos+1)*6,length);
 
 		if (newlength >= MAX_AIS_LENGTH) {
-			std::cerr << "Message::setLetter: length exceeds maximum AIS length." << std::endl;
+			Error() << "Message::setLetter: length exceeds maximum AIS length." << std::endl;
 			return;
 		}
 
