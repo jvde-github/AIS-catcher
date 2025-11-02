@@ -25,6 +25,11 @@
 #include "Common.h"
 #include "JSON.h"
 
+namespace AIS {
+	struct KeyInfo;
+	extern const std::vector<KeyInfo> KeyInfoMap;
+}
+
 namespace JSON
 {
 
@@ -33,12 +38,14 @@ namespace JSON
 	private:
 		const std::vector<std::vector<std::string>> *keymap = nullptr;
 		int dict = 0;
+		bool stringify_enhanced = false;
 
 	public:
 		StringBuilder(const std::vector<std::vector<std::string>> *map, int d) : keymap(map), dict(d) {}
 		StringBuilder(const std::vector<std::vector<std::string>> *map) : keymap(map) {}
 
 		void to_string(std::string &json, const Value &v);
+		void to_string_enhanced(std::string &json, const Value &v, int key_index);
 		void stringify(const JSON &properties, std::string &json);
 		static void stringify(const std::string &str, std::string &json, bool esc = true);
 
@@ -51,5 +58,9 @@ namespace JSON
 
 		// dictionary to use
 		void setMap(int d) { dict = d; }
+		
+		// enable/disable enhanced output with metadata
+		void setStringifyEnhanced(bool enhanced) { stringify_enhanced = enhanced; }
+		bool getStringifyEnhanced() const { return stringify_enhanced; }
 	};
 }

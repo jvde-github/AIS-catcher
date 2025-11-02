@@ -372,6 +372,10 @@ namespace Util
 		{
 			out = MessageFormat::JSON_FULL;
 		}
+		else if (str == "JSON_ANNOTATED" || str == "6")
+		{
+			out = MessageFormat::JSON_ANNOTATED;
+		}
 		else
 			return false;
 
@@ -572,6 +576,8 @@ namespace Util
 			return "JSON_SPARSE";
 		case MessageFormat::JSON_FULL:
 			return "JSON_FULL";
+		case MessageFormat::JSON_ANNOTATED:
+			return "JSON_ANNOTATED";
 		default:
 			break;
 		}
