@@ -43,7 +43,9 @@ namespace AIS
 	extern const std::vector<std::vector<std::string>> KeyMap;
 	extern const std::vector<KeyInfo> KeyInfoMap;
 	extern const std::vector<std::string> LookupTable_aid_types;
+	extern const std::vector<std::string> LookupTable_dte_types;
 	extern const std::vector<std::string> LookupTable_epfd_types;
+	extern const std::vector<std::string> LookupTable_maneuver_types;
 	extern const std::vector<std::string> LookupTable_nav_status;
 	extern const std::vector<std::string> LookupTable_ship_types;
 

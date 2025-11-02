@@ -478,6 +478,11 @@ namespace AIS
 		"Light Vessel / LANBY / Rigs",
 	};
 
+	const std::vector<std::string> LookupTable_dte_types = {
+		"Data Terminal Ready",
+		"Data Terminal Not Ready",
+	};
+
 	const std::vector<std::string> LookupTable_epfd_types = {
 		"Undefined",
 		"GPS",
@@ -488,6 +493,12 @@ namespace AIS
 		"Integrated navigation system",
 		"Surveyed",
 		"Galileo",
+	};
+
+	const std::vector<std::string> LookupTable_maneuver_types = {
+		"Not available (default)",
+		"No special maneuver",
+		"Special maneuver (such as regional passing arrangement)",
 	};
 
 	const std::vector<std::string> LookupTable_nav_status = {
@@ -766,7 +777,7 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_SETTING_QOS
 		KeyInfo("", "", nullptr), // KEY_SETTING_ZLIB
 		KeyInfo("", "", nullptr), // KEY_SETTING_ZMQ
-		KeyInfo("", "", nullptr), // KEY_ACCURACY
+		KeyInfo("", "Fix quality", nullptr), // KEY_ACCURACY
 		KeyInfo("", "", nullptr), // KEY_ACK_REQUIRED
 		KeyInfo("", "", nullptr), // KEY_ADDRESSED
 		KeyInfo("", "", nullptr), // KEY_AI_AVAILABLE
@@ -805,7 +816,7 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_CLOUD_TYPE_MIDDLE
 		KeyInfo("", "", nullptr), // KEY_COUNTRY
 		KeyInfo("", "", nullptr), // KEY_COUNTRY_CODE
-		KeyInfo("degrees", "Course over ground", nullptr), // KEY_COURSE
+		KeyInfo("degrees", "Course over Ground (COG)", nullptr), // KEY_COURSE
 		KeyInfo("", "", nullptr), // KEY_COURSE_Q
 		KeyInfo("", "", nullptr), // KEY_CS
 		KeyInfo("", "", nullptr), // KEY_CSPEED
@@ -814,25 +825,25 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_CREW_COUNT
 		KeyInfo("", "", nullptr), // KEY_DAC
 		KeyInfo("", "", nullptr), // KEY_DATA
-		KeyInfo("", "", nullptr), // KEY_DAY
-		KeyInfo("", "", nullptr), // KEY_DEST_MMSI
+		KeyInfo("", "Day (UTC)", nullptr), // KEY_DAY
+		KeyInfo("", "Destination MMSI", nullptr), // KEY_DEST_MMSI
 		KeyInfo("", "", nullptr), // KEY_DEST1
 		KeyInfo("", "", nullptr), // KEY_DEST2
-		KeyInfo("", "", nullptr), // KEY_DESTINATION
+		KeyInfo("", "Destination", nullptr), // KEY_DESTINATION
 		KeyInfo("", "", nullptr), // KEY_DEWPOINT
 		KeyInfo("", "", nullptr), // KEY_DISPLAY
-		KeyInfo("meters", "Maximum present static draught", nullptr), // KEY_DRAUGHT
+		KeyInfo("meters", "Draught", nullptr), // KEY_DRAUGHT
 		KeyInfo("", "", nullptr), // KEY_DSC
-		KeyInfo("", "", nullptr), // KEY_DTE
+		KeyInfo("", "DTE", &LookupTable_dte_types), // KEY_DTE
 		KeyInfo("", "Electronic Position Fixing Device", &LookupTable_epfd_types), // KEY_EPFD
 		KeyInfo("", "", nullptr), // KEY_EPFD_TEXT
-		KeyInfo("", "", nullptr), // KEY_FID
+		KeyInfo("", "Functional ID", nullptr), // KEY_FID
 		KeyInfo("", "", nullptr), // KEY_GNSS
 		KeyInfo("", "", nullptr), // KEY_HAZARD
-		KeyInfo("degrees", "Vessel heading", nullptr), // KEY_HEADING
+		KeyInfo("degrees", "True Heading (HDG)", nullptr), // KEY_HEADING
 		KeyInfo("", "", nullptr), // KEY_HEADING_Q
 		KeyInfo("", "", nullptr), // KEY_HEALTH
-		KeyInfo("", "", nullptr), // KEY_HOUR
+		KeyInfo("", "Hour (UTC)", nullptr), // KEY_HOUR
 		KeyInfo("", "", nullptr), // KEY_HUMIDITY
 		KeyInfo("", "", nullptr), // KEY_ICE
 		KeyInfo("", "", nullptr), // KEY_ICE_ACCRETION_CAUSE
@@ -849,15 +860,15 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_INCREMENT3
 		KeyInfo("", "", nullptr), // KEY_INCREMENT4
 		KeyInfo("", "", nullptr), // KEY_INTERVAL
-		KeyInfo("degrees", "Latitude coordinate", nullptr), // KEY_LAT
+		KeyInfo("degrees", "Latitude", nullptr), // KEY_LAT
 		KeyInfo("meters", "Overall length of vessel", nullptr), // KEY_LENGTH
 		KeyInfo("", "", nullptr), // KEY_LEVELTREND
 		KeyInfo("", "", nullptr), // KEY_LIGHT
 		KeyInfo("", "", nullptr), // KEY_LOADED
-		KeyInfo("degrees", "Longitude coordinate", nullptr), // KEY_LON
-		KeyInfo("", "", nullptr), // KEY_MANEUVER
-		KeyInfo("", "", nullptr), // KEY_MINUTE
-		KeyInfo("", "", nullptr), // KEY_MMSI
+		KeyInfo("degrees", "Longitude", nullptr), // KEY_LON
+		KeyInfo("", "Maneuver Indicator", &LookupTable_maneuver_types), // KEY_MANEUVER
+		KeyInfo("", "Minute (UTC)", nullptr), // KEY_MINUTE
+		KeyInfo("", "MMSI", nullptr), // KEY_MMSI
 		KeyInfo("", "", nullptr), // KEY_MMSI1
 		KeyInfo("", "", nullptr), // KEY_MMSI2
 		KeyInfo("", "", nullptr), // KEY_MMSI3
@@ -868,7 +879,7 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_MMSISEQ4
 		KeyInfo("", "", nullptr), // KEY_MSSI_TEXT
 		KeyInfo("", "", nullptr), // KEY_MODEL
-		KeyInfo("", "", nullptr), // KEY_MONTH
+		KeyInfo("", "Month (UTC)", nullptr), // KEY_MONTH
 		KeyInfo("", "", nullptr), // KEY_MOTHERSHIP_MMSI
 		KeyInfo("", "", nullptr), // KEY_MSG22
 		KeyInfo("", "", nullptr), // KEY_MESSAGE_ID
@@ -900,27 +911,27 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_PRESSURETEND
 		KeyInfo("", "", nullptr), // KEY_PRECISION
 		KeyInfo("", "", nullptr), // KEY_QUIET
-		KeyInfo("", "", nullptr), // KEY_RADIO
-		KeyInfo("", "", nullptr), // KEY_RAIM
+		KeyInfo("", "SOTDMA state", nullptr), // KEY_RADIO
+		KeyInfo("", "RAIM flag", nullptr), // KEY_RAIM
 		KeyInfo("", "", nullptr), // KEY_RECEIVED_STATIONS
 		KeyInfo("", "", nullptr), // KEY_REGIONAL
-		KeyInfo("", "", nullptr), // KEY_REPEAT
+		KeyInfo("", "Repeat Indicator", nullptr), // KEY_REPEAT
 		KeyInfo("", "", nullptr), // KEY_REPORT_TYPE
 		KeyInfo("", "", nullptr), // KEY_RACON
 		KeyInfo("", "", nullptr), // KEY_RESERVED
-		KeyInfo("", "", nullptr), // KEY_RETRANSMIT
-		KeyInfo("", "", nullptr), // KEY_REQUESTED_DAC
+		KeyInfo("", "Retransmit flag", nullptr), // KEY_RETRANSMIT
+		KeyInfo("", "Designated Area Code", nullptr), // KEY_REQUESTED_DAC
 		KeyInfo("", "", nullptr), // KEY_REQUESTED_FID
 		KeyInfo("", "", nullptr), // KEY_REL_WIND_DIR
 		KeyInfo("", "", nullptr), // KEY_REL_WIND_SPEED
 		KeyInfo("", "", nullptr), // KEY_SALINITY
 		KeyInfo("", "", nullptr), // KEY_SEASTATE
-		KeyInfo("", "", nullptr), // KEY_SECOND
-		KeyInfo("", "", nullptr), // KEY_SEQNO
+		KeyInfo("", "Second (UTC)", nullptr), // KEY_SECOND
+		KeyInfo("", "Sequence Number", nullptr), // KEY_SEQNO
 		KeyInfo("", "", nullptr), // KEY_SERIAL
 		KeyInfo("", "", nullptr), // KEY_SHIP_TYPE
 		KeyInfo("", "", nullptr), // KEY_SHIPNAME
-		KeyInfo("", "Type of ship and cargo", &LookupTable_ship_types), // KEY_SHIPTYPE
+		KeyInfo("", "Ship Type", &LookupTable_ship_types), // KEY_SHIPTYPE
 		KeyInfo("", "", nullptr), // KEY_SHIPBOARD_PERSONNEL_COUNT
 		KeyInfo("", "", nullptr), // KEY_SITE_ID
 		KeyInfo("", "", nullptr), // KEY_SENSOR_DESCRIPTION
@@ -935,11 +946,11 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_SLOT_TIMEOUT
 		KeyInfo("", "", nullptr), // KEY_SLOT_OFFSET
 		KeyInfo("", "", nullptr), // KEY_SPARE
-		KeyInfo("knots", "Vessel speed over ground", nullptr), // KEY_SPEED
+		KeyInfo("knots", "Speed over Ground (SOG)", nullptr), // KEY_SPEED
 		KeyInfo("", "", nullptr), // KEY_SPEED_Q
 		KeyInfo("", "", nullptr), // KEY_STATION_TYPE
 		KeyInfo("", "", nullptr), // KEY_STATION_NAME
-		KeyInfo("", "Navigation status", &LookupTable_nav_status), // KEY_STATUS
+		KeyInfo("", "Navigation Status", &LookupTable_nav_status), // KEY_STATUS
 		KeyInfo("", "", nullptr), // KEY_STATUS_TEXT
 		KeyInfo("", "", nullptr), // KEY_STAT_EXT
 		KeyInfo("", "", nullptr), // KEY_SW_LAT
@@ -955,14 +966,14 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_TIMEOUT3
 		KeyInfo("", "", nullptr), // KEY_TIMEOUT4
 		KeyInfo("", "", nullptr), // KEY_TIMESTAMP
-		KeyInfo("", "", nullptr), // KEY_TO_BOW
-		KeyInfo("", "", nullptr), // KEY_TO_PORT
-		KeyInfo("", "", nullptr), // KEY_TO_STARBOARD
-		KeyInfo("", "", nullptr), // KEY_TO_STERN
-		KeyInfo("", "", nullptr), // KEY_TURN
+		KeyInfo("", "Dimension to Bow", nullptr), // KEY_TO_BOW
+		KeyInfo("", "Dimension to Port", nullptr), // KEY_TO_PORT
+		KeyInfo("", "Dimension to Starboard", nullptr), // KEY_TO_STARBOARD
+		KeyInfo("", "Dimension to Stern", nullptr), // KEY_TO_STERN
+		KeyInfo("", "Rate of Turn (ROT)", nullptr), // KEY_TURN
 		KeyInfo("", "", nullptr), // KEY_TURN_UNSCALED
 		KeyInfo("", "", nullptr), // KEY_TXRX
-		KeyInfo("", "", nullptr), // KEY_TYPE
+		KeyInfo("", "Message Type", nullptr), // KEY_TYPE
 		KeyInfo("", "", nullptr), // KEY_TYPE1_1
 		KeyInfo("", "", nullptr), // KEY_TYPE1_2
 		KeyInfo("", "", nullptr), // KEY_TYPE2_1
@@ -1005,7 +1016,7 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_WGUST
 		KeyInfo("", "", nullptr), // KEY_WGUSTDIR
 		KeyInfo("m/s", "Wind speed", nullptr), // KEY_WSPEED
-		KeyInfo("", "", nullptr), // KEY_YEAR
+		KeyInfo("", "Year (UTC)", nullptr), // KEY_YEAR
 		KeyInfo("", "", nullptr), // KEY_ZONESIZE
 		KeyInfo("", "", nullptr), // KEY_ALT_UNIT
 		KeyInfo("", "", nullptr), // KEY_VELOCITY_TYPE
