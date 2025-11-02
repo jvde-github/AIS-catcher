@@ -812,7 +812,7 @@ endif()
 
 set(CPP
     Application/Main.cpp Application/Prometheus.cpp Application/WebViewer.cpp Application/Receiver.cpp Application/Config.cpp Tracking/Ships.cpp Tracking/DB.cpp DBMS/PostgreSQL.cpp
-    Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp Library/JSONAIS.cpp Library/Keys.cpp Library/Bluetooth.cpp
+    Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp JSONAIS/JSONAIS.cpp JSONAIS/Keys.cpp Library/Bluetooth.cpp
     Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
     Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp Library/Logger.cpp
     Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp Application/WebDB.cpp
@@ -821,11 +821,11 @@ set(CPP
 
 set(HEADER
     Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Application/WebDB.h Library/Logger.h Application/WebViewer.h Application/Receiver.h Tracking/Ships.h Tracking/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h Application/MapTiles.h Library/Beast.h
-    Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h Library/JSONAIS.h JSON/JSON.h Library/Basestation.h Library/ADSB.h Library/Bluetooth.h
-    Device/AIRSPY.h Library/FIFO.h Device/N2KsktCAN.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Tracking/History.h Tracking/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h Library/Keys.h JSON/StringBuilder.h JSON/Parser.h Tracking/PlaneDB.h
+    Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Library/AIS.h Library/Message.h Library/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h JSONAIS/JSONAIS.h JSON/JSON.h Library/Basestation.h Library/ADSB.h Library/Bluetooth.h
+    Device/AIRSPY.h Library/FIFO.h Device/N2KsktCAN.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Tracking/History.h Tracking/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h JSONAIS/Keys.h JSON/StringBuilder.h JSON/Parser.h Tracking/PlaneDB.h
     Device/Serial.h IO/N2KInterface.h Library/N2K.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/MsgOut.h IO/Network.h IO/HTTPServer.h Library/Utilities.h Library/TCP.h Protocol/Protocol.h)
 
-set(APP_INCLUDES . ./Tracking ./DBMS ./Library ./DSP ./Application ./IO ./Protocol)
+set(APP_INCLUDES . ./Tracking ./DBMS ./Library ./DSP ./Application ./IO ./Protocol ./JSONAIS)
 
 # Executable
 

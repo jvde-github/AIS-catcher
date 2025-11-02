@@ -91,6 +91,7 @@ namespace IO
 				switch (fmt)
 				{
 				case MessageFormat::JSON_FULL:
+				case MessageFormat::JSON_ANNOTATED:
 					JSON_input = true;
 					break;
 				case MessageFormat::JSON_NMEA:
@@ -320,6 +321,7 @@ namespace IO
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
 		void Receive(const AIS::GPS *data, int len, TAG &tag);
 		void setMap(int m) { builder.setMap(m); }
+		void setAnnotation(bool a) { builder.setStringifyEnhanced(a); }
 
 		Setting &Set(std::string option, std::string arg)
 		{

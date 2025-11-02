@@ -19,6 +19,7 @@
 #include <cmath>
 
 #include "StringBuilder.h"
+#include "../JSONAIS/Keys.h"
 
 namespace JSON {
 
@@ -45,6 +46,42 @@ namespace JSON {
 			}
 		}
 		if (esc) json += '\"';
+	}
+
+	void StringBuilder::to_string_enhanced(std::string& json, const Value& v, int key_index) {
+		json += '{';
+		
+		// Add value
+		json += "\"value\":";
+		to_string(json, v);
+		
+		// Add metadata if available
+		if (key_index >= 0 && key_index < AIS::KeyInfoMap.size()) {
+			const AIS::KeyInfo& info = AIS::KeyInfoMap[key_index];
+			
+			// Add unit if not empty
+			if (info.unit && strlen(info.unit) > 0) {
+				json += ",\"unit\":";
+				stringify(info.unit, json);
+			}
+			
+			// Add description if not empty
+			if (info.description && strlen(info.description) > 0) {
+				json += ",\"description\":";
+				stringify(info.description, json);
+			}
+			
+			// Add lookup value if available
+			if (info.lookup_table && (v.isInt() || v.isFloat())) {
+				int numeric_value = v.isInt() ? v.getInt() : static_cast<int>(v.getFloat());
+				if (numeric_value >= 0 && numeric_value < info.lookup_table->size()) {
+					json += ",\"text\":";
+					stringify((*info.lookup_table)[numeric_value], json);
+				}
+			}
+		}
+		
+		json += '}';
 	}
 
 	void StringBuilder::to_string(std::string& json, const Value& v) {
@@ -106,7 +143,12 @@ namespace JSON {
 				first = false;
 
 				json += "\"" + key + "\":";
-				to_string(json, p.Get());
+				
+				if (stringify_enhanced) {
+					to_string_enhanced(json, p.Get(), p.Key());
+				} else {
+					to_string(json, p.Get());
+				}
 			}
 		}
 		json += '}';

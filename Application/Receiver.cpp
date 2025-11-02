@@ -391,7 +391,7 @@ void Receiver::stop()
 
 void OutputScreen::setScreen(const std::string &str)
 {
-	switch (Util::Parse::Integer(str, 0, 5))
+	switch (Util::Parse::Integer(str, 0, 6))
 	{
 	case 0:
 		level = MessageFormat::SILENT;
@@ -410,6 +410,9 @@ void OutputScreen::setScreen(const std::string &str)
 		break;
 	case 5:
 		level = MessageFormat::JSON_FULL;
+		break;
+	case 6:
+		level = MessageFormat::JSON_ANNOTATED;
 		break;
 	default:
 		throw std::runtime_error("unknown option for screen output: " + str);
@@ -439,7 +442,7 @@ void OutputScreen::connect(Receiver &r)
 
 		msg2screen.setDetail(level);
 	}
-	else if (level == MessageFormat::JSON_SPARSE || level == MessageFormat::JSON_FULL)
+	else if (level == MessageFormat::JSON_SPARSE || level == MessageFormat::JSON_FULL || level == MessageFormat::JSON_ANNOTATED)
 	{
 		for (int j = 0; j < r.Count(); j++)
 		{
@@ -450,8 +453,11 @@ void OutputScreen::connect(Receiver &r)
 				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&json2screen);
 		}
 
-		if (level == MessageFormat::JSON_SPARSE)
+		if (level == MessageFormat::JSON_SPARSE) 
 			json2screen.setMap(JSON_DICT_SPARSE);
+			
+		if (level == MessageFormat::JSON_ANNOTATED)
+			json2screen.setAnnotation(true);
 	}
 }
 

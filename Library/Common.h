@@ -117,7 +117,8 @@ enum class MessageFormat
 	FULL,
 	JSON_NMEA,
 	JSON_SPARSE,
-	JSON_FULL
+	JSON_FULL,
+	JSON_ANNOTATED
 };
 
 enum ShippingClass

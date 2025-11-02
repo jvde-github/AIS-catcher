@@ -29,7 +29,23 @@
 namespace AIS
 {
 
+	// Structure to hold unit, description and lookup table
+	struct KeyInfo
+	{
+		const char* unit;
+		const char* description;
+		const std::vector<std::string>* lookup_table;
+		
+		KeyInfo(const char* u, const char* d, const std::vector<std::string>* lt = nullptr)
+			: unit(u), description(d), lookup_table(lt) {}
+	};
+
 	extern const std::vector<std::vector<std::string>> KeyMap;
+	extern const std::vector<KeyInfo> KeyInfoMap;
+	extern const std::vector<std::string> LookupTable_aid_types;
+	extern const std::vector<std::string> LookupTable_epfd_types;
+	extern const std::vector<std::string> LookupTable_nav_status;
+	extern const std::vector<std::string> LookupTable_ship_types;
 
 	// JSON keys
 	enum Keys
@@ -53,7 +69,6 @@ namespace AIS
 		KEY_SAMPLE_LENGTH,
 		KEY_STATION_ID,
 		KEY_VERSION,
-		// Settings
 		KEY_SETTING_ABOUT,
 		KEY_SETTING_ADDRESS,
 		KEY_SETTING_ACTIVE,
@@ -188,7 +203,6 @@ namespace AIS
 		KEY_SETTING_QOS,
 		KEY_SETTING_ZLIB,
 		KEY_SETTING_ZMQ,
-		// Copy from ODS spreadsheet
 		KEY_ACCURACY,
 		KEY_ACK_REQUIRED,
 		KEY_ADDRESSED,
@@ -200,7 +214,6 @@ namespace AIS
 		KEY_ANA_INT,
 		KEY_ANA_EXT1,
 		KEY_ANA_EXT2,
-		// IALA ASM (Automatic System Monitoring) for monitoring aids to navigation
 		KEY_ASM_BATTERY_STATUS,
 		KEY_ASM_CURRENT_DATA,
 		KEY_ASM_LIGHT_STATUS,
@@ -397,7 +410,6 @@ namespace AIS
 		KEY_VENDORID,
 		KEY_VIN,
 		KEY_VIRTUAL_AID,
-		// VTS targets (targets derived by means other than AIS)
 		KEY_VTS_TARGET_ID_TYPE,
 		KEY_VTS_TARGET_ID,
 		KEY_VTS_TARGET_LAT,
@@ -432,7 +444,6 @@ namespace AIS
 		KEY_WSPEED,
 		KEY_YEAR,
 		KEY_ZONESIZE,
-		// ADSB
 		KEY_ALT_UNIT,
 		KEY_VELOCITY_TYPE,
 		KEY_GROUND_SPEED,
