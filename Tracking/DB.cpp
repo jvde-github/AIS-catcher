@@ -479,7 +479,7 @@ std::string DB::getSinglePathGeoJSON(int idx)
 		{
 			if (hasCoordinates)
 				geojson += ",";
-			
+
 			// GeoJSON uses [longitude, latitude] format (note the order!)
 			geojson += "[";
 			geojson += std::to_string(paths[ptr].lon);
@@ -491,7 +491,7 @@ std::string DB::getSinglePathGeoJSON(int idx)
 		t = paths[ptr].count;
 		ptr = paths[ptr].next;
 	}
-	
+
 	geojson += "]},\"properties\":{\"mmsi\":" + std::to_string(mmsi) + "}}";
 	return geojson;
 }
@@ -992,4 +992,122 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 		tag.validated = false;
 
 	Send(data, len, tag);
+}
+
+bool DB::Save(std::ofstream &file)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	// Write magic number and version
+	int magic = _DB_MAGIC;
+	int version = _DB_VERSION;
+
+	if (!file.write((const char *)&magic, sizeof(int)))
+		return false;
+	if (!file.write((const char *)&version, sizeof(int)))
+		return false;
+
+	// Write ship count first
+	if (!file.write((const char *)&count, sizeof(int)))
+		return false;
+
+	// Find the position to start writing backwards by counting valid ships
+	int ptr = first;
+	int valid_ships_seen = 0;
+	while (ptr != -1 && valid_ships_seen < count)
+	{
+		if (ships[ptr].mmsi != 0)
+			valid_ships_seen++;
+		if (valid_ships_seen < count)
+			ptr = ships[ptr].next;
+	}
+
+	// Now write ships by traversing backwards from that position
+	int ships_written = 0;
+	while (ptr != -1 && ships_written < count)
+	{
+		if (ships[ptr].mmsi != 0)
+		{
+			if (!file.write((const char *)&ships[ptr], sizeof(Ship)))
+				return false;
+			ships_written++;
+		}
+		ptr = ships[ptr].prev;
+	}
+
+	Info() << "DB: Saved " << ships_written << " ships to backup";
+	return true;
+}
+
+bool DB::Load(std::ifstream &file)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	std::cerr << "Loading ships from backup file." << std::endl;
+
+	int magic = 0, version = 0;
+
+	// Read and verify magic number and version
+	if (!file.read((char *)&magic, sizeof(int)))
+		return false;
+	if (!file.read((char *)&version, sizeof(int)))
+		return false;
+
+	if (magic != _DB_MAGIC || version != _DB_VERSION)
+	{
+		Warning() << "DB: Invalid backup file format. Magic: " << std::hex << magic
+				  << ", Version: " << version;
+		return false;
+	}
+
+	// Read number of active ships
+	int active_ships = 0;
+	if (!file.read((char *)&active_ships, sizeof(int)))
+		return false;
+
+	if (active_ships < 0 || active_ships > Nships)
+	{
+		Warning() << "DB: Invalid ship count in backup file: " << active_ships;
+		return false;
+	}
+
+	// Load ships and validate chronological order (oldest first, then newer)
+	std::time_t previous_signal = 0;
+	for (int i = 0; i < active_ships; i++)
+	{
+		Ship temp_ship;
+		if (!file.read((char *)&temp_ship, sizeof(Ship)))
+		{
+			std::cout << "DB: Failed to read ship " << i << " from backup file." << std::endl;
+			return false;
+		}
+
+		// Validate chronological order - ships should be oldest first
+		if (i > 0 && temp_ship.last_signal < previous_signal)
+		{
+			Warning() << "DB: Ships not in chronological order in backup file. "
+					  << "Ship " << i << " (MMSI " << temp_ship.mmsi << ") "
+					  << "has timestamp " << temp_ship.last_signal
+					  << " which is older than previous ship timestamp " << previous_signal;
+			return false;
+		}
+		previous_signal = temp_ship.last_signal;
+
+		// Find or create ship entry using existing mechanisms
+		int ptr = findShip(temp_ship.mmsi);
+		if (ptr == -1)
+			ptr = createShip();
+
+		moveShipToFront(ptr);
+
+		// Copy ship data while preserving linked list pointers
+		int next_ptr = ships[ptr].next;
+		int prev_ptr = ships[ptr].prev;
+		ships[ptr] = temp_ship;
+		ships[ptr].next = next_ptr;
+		ships[ptr].prev = prev_ptr;
+	}
+
+	Info() << "DB: Restored " << count << " ships from backup";
+	return true;
 }

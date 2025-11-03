@@ -165,6 +165,12 @@ bool WebViewer::Save()
 			return false;
 		if (!hist_day.Save(infile))
 			return false;
+		// Save ship database
+		if (backupDB)
+		{
+			if (!ships.Save(infile))
+				return false;
+		}
 		infile.close();
 	}
 	catch (const std::exception &e)
@@ -207,6 +213,12 @@ bool WebViewer::Load()
 			return false;
 		if (!hist_day.Load(infile))
 			return false;
+		// Load ship database if available
+		if (infile.peek() != EOF && backupDB)
+		{
+			if (!ships.Load(infile))
+				Warning() << "Server: Could not load ship database from backup";
+		}
 
 		infile.close();
 	}
@@ -685,7 +697,7 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	{
 		std::stringstream ss(a);
 		std::string mmsi_str;
-		
+
 		if (std::getline(ss, mmsi_str))
 		{
 			try
@@ -880,6 +892,10 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		dataPrometheus.setCutOff(cutoff);
 		counter.setCutOff(cutoff);
 		counter_session.setCutOff(cutoff);
+	}
+	else if (option == "BACKUP_DB")
+	{
+		backupDB = Util::Parse::Switch(arg);
 	}
 	else if (option == "SHARE_LOC")
 	{

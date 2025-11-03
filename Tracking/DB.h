@@ -162,4 +162,12 @@ public:
 	void setFilterOption(std::string &opt, std::string &arg) { filter.SetOption(opt, arg); }
 
 	std::string getBinaryMessagesJSON() const;
+
+	// Persistence functions for ship database
+	bool Save(std::ofstream& file);
+	bool Load(std::ifstream& file);
+
+private:
+	static const int _DB_MAGIC = 0x41495344; // "AISD" in hex
+	static const int _DB_VERSION = 1;
 };
