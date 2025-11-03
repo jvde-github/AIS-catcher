@@ -1,18 +1,18 @@
 /*
-	Copyright(c) 2021-2025 jvde.github@gmail.com
+    Copyright(c) 2021-2025 jvde.github@gmail.com
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -34,7 +34,8 @@ const int BASESTATION_MASK = (1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 <
 const int SAR_MASK = 1 << 9;
 const int ATON_MASK = 1 << 21;
 
-struct Ship {
+struct Ship
+{
     int prev, next;
     uint32_t mmsi;
     int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, path_ptr;
@@ -52,9 +53,9 @@ struct Ship {
     int getShipTypeClassEri();
     int getShipTypeClass();
     void setType();
-    void Serialize(std::vector<char>& v) const;
-    bool getKML(std::string&) const;
-    bool getGeoJSON(std::string&) const;
+    void Serialize(std::vector<char> &v) const;
+    bool getKML(std::string &) const;
+    bool getGeoJSON(std::string &) const;
 
     // Setters for PackedInt fields
     void setValidated(int val) { flags.set(0, 2, val); }
