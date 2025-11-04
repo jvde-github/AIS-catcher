@@ -893,10 +893,6 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		counter.setCutOff(cutoff);
 		counter_session.setCutOff(cutoff);
 	}
-	else if (option == "BACKUP_DB")
-	{
-		backupDB = Util::Parse::Switch(arg);
-	}
 	else if (option == "SHARE_LOC")
 	{
 		bool b = Util::Parse::Switch(arg);

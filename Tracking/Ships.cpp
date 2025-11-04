@@ -23,7 +23,8 @@
 #include "Utilities.h"
 #include "JSON/StringBuilder.h"
 
-void Ship::reset() {
+void Ship::reset()
+{
 
 	path_ptr = -1;
 
@@ -65,7 +66,8 @@ void Ship::reset() {
 	msg.clear();
 }
 
-void Ship::Serialize(std::vector<char>& v) const {
+void Ship::Serialize(std::vector<char> &v) const
+{
 
 	// Serialize the ship
 	Util::Serialize::Uint32(mmsi, v);
@@ -104,12 +106,13 @@ void Ship::Serialize(std::vector<char>& v) const {
 	Util::Serialize::Uint64(last_signal, v);
 }
 
-
-std::string getSprite(const Ship* ship) {
+std::string getSprite(const Ship *ship)
+{
 	std::string shipofs = (ship->speed != SPEED_UNDEFINED && ship->speed > 0.5) ? "<y>88</y><w>20</w><h>20</h>" : "<y>68</y><w>20</w><h>20</h>";
 	std::string stationofs = "<y>50</y><w>20</w><h>20</h>";
 
-	switch (ship->shipclass) {
+	switch (ship->shipclass)
+	{
 	case CLASS_OTHER:
 		return "<x>120</x>" + shipofs;
 	case CLASS_UNKNOWN:
@@ -142,7 +145,8 @@ std::string getSprite(const Ship* ship) {
 	return "";
 }
 
-bool Ship::getKML(std::string& kmlString) const {
+bool Ship::getKML(std::string &kmlString) const
+{
 	if (lat == LAT_UNDEFINED || lon == LON_UNDEFINED || (lat == 0 && lon == 0))
 		return false;
 
@@ -161,7 +165,8 @@ bool Ship::getKML(std::string& kmlString) const {
 	return true;
 }
 
-bool Ship::getGeoJSON(std::string& s) const {
+bool Ship::getGeoJSON(std::string &s) const
+{
 
 	const std::string coordinates = "[" + std::to_string(lon) + "," + std::to_string(lat) + "]";
 
@@ -227,39 +232,51 @@ bool Ship::getGeoJSON(std::string& s) const {
 	return true;
 }
 
-int Ship::getMMSItype() {
-	if ((mmsi > 111000000 && mmsi < 111999999) || (mmsi > 11100000 && mmsi < 11199999)) {
+int Ship::getMMSItype()
+{
+	if ((mmsi > 111000000 && mmsi < 111999999) || (mmsi > 11100000 && mmsi < 11199999))
+	{
 		return MMSI_SAR;
 	}
-	if (mmsi >= 970000000 && mmsi <= 980000000) {
+	if (mmsi >= 970000000 && mmsi <= 980000000)
+	{
 		return MMSI_SARTEPIRB;
 	}
-	if (msg_type & ATON_MASK || (mmsi >=  990000000 && mmsi <= 999999999)  ) {										  
+	if (msg_type & ATON_MASK || (mmsi >= 990000000 && mmsi <= 999999999))
+	{
 		return MMSI_ATON;
 	}
-	if (msg_type & CLASS_A_MASK) {
+	if (msg_type & CLASS_A_MASK)
+	{
 		return MMSI_CLASS_A;
 	}
-	if (msg_type & CLASS_B_MASK) {
+	if (msg_type & CLASS_B_MASK)
+	{
 		return MMSI_CLASS_B;
 	}
-	if (msg_type & BASESTATION_MASK || (mmsi < 9000000)) {
+	if (msg_type & BASESTATION_MASK || (mmsi < 9000000))
+	{
 		return MMSI_BASESTATION;
 	}
-	if (msg_type & SAR_MASK) {
+	if (msg_type & SAR_MASK)
+	{
 		return MMSI_SAR;
 	}
-	if (msg_type & CLASS_A_STATIC_MASK) {
+	if (msg_type & CLASS_A_STATIC_MASK)
+	{
 		return MMSI_CLASS_A;
 	}
-	if (msg_type & CLASS_B_STATIC_MASK) {
+	if (msg_type & CLASS_B_STATIC_MASK)
+	{
 		return MMSI_CLASS_B;
 	}
 	return MMSI_OTHER;
 }
 
-int Ship::getShipTypeClassEri() {
-	switch (shiptype) {
+int Ship::getShipTypeClassEri()
+{
+	switch (shiptype)
+	{
 	// Cargo cases
 	case 8030:
 	case 8010:
@@ -341,10 +358,12 @@ int Ship::getShipTypeClassEri() {
 	}
 }
 
-int Ship::getShipTypeClass() {
+int Ship::getShipTypeClass()
+{
 	int c = CLASS_UNKNOWN;
 
-	switch (mmsi_type) {
+	switch (mmsi_type)
+	{
 	case MMSI_CLASS_A:
 	case MMSI_CLASS_B:
 		c = (mmsi_type == MMSI_CLASS_B) ? CLASS_B : CLASS_UNKNOWN;
@@ -362,7 +381,8 @@ int Ship::getShipTypeClass() {
 			c = CLASS_SPECIAL;
 		else if (shiptype == 30)
 			c = CLASS_FISHING;
-		else if ((shiptype >= 1500 && shiptype <= 1920) || (shiptype >= 8000 && shiptype <= 8510)) {
+		else if ((shiptype >= 1500 && shiptype <= 1920) || (shiptype >= 8000 && shiptype <= 8510))
+		{
 			c = getShipTypeClassEri();
 		}
 		break;
@@ -372,7 +392,7 @@ int Ship::getShipTypeClass() {
 	case MMSI_SAR:
 		c = CLASS_HELICOPTER;
 		if ((mmsi > 111000000 && mmsi < 111999999 && (mmsi / 100) % 10 == 1) || (mmsi > 11100000 && mmsi < 11199999 && (mmsi / 10) % 10 == 1))
-				c = CLASS_PLANE;
+			c = CLASS_PLANE;
 		break;
 	case MMSI_SARTEPIRB:
 		c = CLASS_SARTEPIRB;
@@ -387,202 +407,205 @@ int Ship::getShipTypeClass() {
 	return c;
 }
 
-void Ship::setType() {
+void Ship::setType()
+{
 	mmsi_type = getMMSItype();
 	shipclass = getShipTypeClass();
 }
 
-bool Ship::Save(std::ofstream& file) const {
+bool Ship::Save(std::ofstream &file) const
+{
 	// Write magic number and version first
 	int magic = _SHIP_MAGIC;
 	int version = _SHIP_VERSION;
-	
-	if (!file.write((const char*)&magic, sizeof(magic)))
+
+	if (!file.write((const char *)&magic, sizeof(magic)))
 		return false;
-	if (!file.write((const char*)&version, sizeof(version)))
+	if (!file.write((const char *)&version, sizeof(version)))
 		return false;
-	
+
 	// Write all ship data except the msg vector
-	if (!file.write((const char*)&mmsi, sizeof(mmsi)))
+	if (!file.write((const char *)&mmsi, sizeof(mmsi)))
 		return false;
-	if (!file.write((const char*)&count, sizeof(count)))
+	if (!file.write((const char *)&count, sizeof(count)))
 		return false;
-	if (!file.write((const char*)&msg_type, sizeof(msg_type)))
+	if (!file.write((const char *)&msg_type, sizeof(msg_type)))
 		return false;
-	if (!file.write((const char*)&shiptype, sizeof(shiptype)))
+	if (!file.write((const char *)&shiptype, sizeof(shiptype)))
 		return false;
-	if (!file.write((const char*)&group_mask, sizeof(group_mask)))
+	if (!file.write((const char *)&group_mask, sizeof(group_mask)))
 		return false;
-	if (!file.write((const char*)&flags, sizeof(flags)))
+	if (!file.write((const char *)&flags, sizeof(flags)))
 		return false;
-	if (!file.write((const char*)&heading, sizeof(heading)))
+	if (!file.write((const char *)&heading, sizeof(heading)))
 		return false;
-	if (!file.write((const char*)&status, sizeof(status)))
+	if (!file.write((const char *)&status, sizeof(status)))
 		return false;
-	if (!file.write((const char*)&to_port, sizeof(to_port)))
+	if (!file.write((const char *)&to_port, sizeof(to_port)))
 		return false;
-	if (!file.write((const char*)&to_bow, sizeof(to_bow)))
+	if (!file.write((const char *)&to_bow, sizeof(to_bow)))
 		return false;
-	if (!file.write((const char*)&to_starboard, sizeof(to_starboard)))
+	if (!file.write((const char *)&to_starboard, sizeof(to_starboard)))
 		return false;
-	if (!file.write((const char*)&to_stern, sizeof(to_stern)))
+	if (!file.write((const char *)&to_stern, sizeof(to_stern)))
 		return false;
-	if (!file.write((const char*)&IMO, sizeof(IMO)))
+	if (!file.write((const char *)&IMO, sizeof(IMO)))
 		return false;
-	if (!file.write((const char*)&angle, sizeof(angle)))
+	if (!file.write((const char *)&angle, sizeof(angle)))
 		return false;
-	if (!file.write((const char*)&month, sizeof(month)))
+	if (!file.write((const char *)&month, sizeof(month)))
 		return false;
-	if (!file.write((const char*)&day, sizeof(day)))
+	if (!file.write((const char *)&day, sizeof(day)))
 		return false;
-	if (!file.write((const char*)&hour, sizeof(hour)))
+	if (!file.write((const char *)&hour, sizeof(hour)))
 		return false;
-	if (!file.write((const char*)&minute, sizeof(minute)))
+	if (!file.write((const char *)&minute, sizeof(minute)))
 		return false;
-	if (!file.write((const char*)&lat, sizeof(lat)))
+	if (!file.write((const char *)&lat, sizeof(lat)))
 		return false;
-	if (!file.write((const char*)&lon, sizeof(lon)))
+	if (!file.write((const char *)&lon, sizeof(lon)))
 		return false;
-	if (!file.write((const char*)&ppm, sizeof(ppm)))
+	if (!file.write((const char *)&ppm, sizeof(ppm)))
 		return false;
-	if (!file.write((const char*)&level, sizeof(level)))
+	if (!file.write((const char *)&level, sizeof(level)))
 		return false;
-	if (!file.write((const char*)&altitude, sizeof(altitude)))
+	if (!file.write((const char *)&altitude, sizeof(altitude)))
 		return false;
-	if (!file.write((const char*)&received_stations, sizeof(received_stations)))
+	if (!file.write((const char *)&received_stations, sizeof(received_stations)))
 		return false;
-	if (!file.write((const char*)&distance, sizeof(distance)))
+	if (!file.write((const char *)&distance, sizeof(distance)))
 		return false;
-	if (!file.write((const char*)&draught, sizeof(draught)))
+	if (!file.write((const char *)&draught, sizeof(draught)))
 		return false;
-	if (!file.write((const char*)&speed, sizeof(speed)))
+	if (!file.write((const char *)&speed, sizeof(speed)))
 		return false;
-	if (!file.write((const char*)&cog, sizeof(cog)))
+	if (!file.write((const char *)&cog, sizeof(cog)))
 		return false;
-	if (!file.write((const char*)&last_signal, sizeof(last_signal)))
+	if (!file.write((const char *)&last_signal, sizeof(last_signal)))
 		return false;
-	if (!file.write((const char*)&last_direct_signal, sizeof(last_direct_signal)))
+	if (!file.write((const char *)&last_direct_signal, sizeof(last_direct_signal)))
 		return false;
-	if (!file.write((const char*)&shipclass, sizeof(shipclass)))
+	if (!file.write((const char *)&shipclass, sizeof(shipclass)))
 		return false;
-	if (!file.write((const char*)&mmsi_type, sizeof(mmsi_type)))
+	if (!file.write((const char *)&mmsi_type, sizeof(mmsi_type)))
 		return false;
-	if (!file.write((const char*)shipname, sizeof(shipname)))
+	if (!file.write((const char *)shipname, sizeof(shipname)))
 		return false;
-	if (!file.write((const char*)destination, sizeof(destination)))
+	if (!file.write((const char *)destination, sizeof(destination)))
 		return false;
-	if (!file.write((const char*)callsign, sizeof(callsign)))
+	if (!file.write((const char *)callsign, sizeof(callsign)))
 		return false;
-	if (!file.write((const char*)country_code, sizeof(country_code)))
+	if (!file.write((const char *)country_code, sizeof(country_code)))
 		return false;
-	if (!file.write((const char*)&last_group, sizeof(last_group)))
+	if (!file.write((const char *)&last_group, sizeof(last_group)))
 		return false;
-	if (!file.write((const char*)&next, sizeof(next)))
+	if (!file.write((const char *)&next, sizeof(next)))
 		return false;
-	if (!file.write((const char*)&prev, sizeof(prev)))
+	if (!file.write((const char *)&prev, sizeof(prev)))
 		return false;
-	if (!file.write((const char*)&path_ptr, sizeof(path_ptr)))
+	if (!file.write((const char *)&path_ptr, sizeof(path_ptr)))
 		return false;
-		
+
 	return true;
 }
 
-bool Ship::Load(std::ifstream& file) {
+bool Ship::Load(std::ifstream &file)
+{
 	// Read magic number and version first
 	int magic = 0, version = 0;
-	
-	if (!file.read((char*)&magic, sizeof(magic)))
+
+	if (!file.read((char *)&magic, sizeof(magic)))
 		return false;
-	if (!file.read((char*)&version, sizeof(version)))
+	if (!file.read((char *)&version, sizeof(version)))
 		return false;
-		
+
 	if (magic != _SHIP_MAGIC || version != _SHIP_VERSION)
 		return false;
-	
+
 	// Read all ship data except the msg vector (which is skipped)
-	if (!file.read((char*)&mmsi, sizeof(mmsi)))
+	if (!file.read((char *)&mmsi, sizeof(mmsi)))
 		return false;
-	if (!file.read((char*)&count, sizeof(count)))
+	if (!file.read((char *)&count, sizeof(count)))
 		return false;
-	if (!file.read((char*)&msg_type, sizeof(msg_type)))
+	if (!file.read((char *)&msg_type, sizeof(msg_type)))
 		return false;
-	if (!file.read((char*)&shiptype, sizeof(shiptype)))
+	if (!file.read((char *)&shiptype, sizeof(shiptype)))
 		return false;
-	if (!file.read((char*)&group_mask, sizeof(group_mask)))
+	if (!file.read((char *)&group_mask, sizeof(group_mask)))
 		return false;
-	if (!file.read((char*)&flags, sizeof(flags)))
+	if (!file.read((char *)&flags, sizeof(flags)))
 		return false;
-	if (!file.read((char*)&heading, sizeof(heading)))
+	if (!file.read((char *)&heading, sizeof(heading)))
 		return false;
-	if (!file.read((char*)&status, sizeof(status)))
+	if (!file.read((char *)&status, sizeof(status)))
 		return false;
-	if (!file.read((char*)&to_port, sizeof(to_port)))
+	if (!file.read((char *)&to_port, sizeof(to_port)))
 		return false;
-	if (!file.read((char*)&to_bow, sizeof(to_bow)))
+	if (!file.read((char *)&to_bow, sizeof(to_bow)))
 		return false;
-	if (!file.read((char*)&to_starboard, sizeof(to_starboard)))
+	if (!file.read((char *)&to_starboard, sizeof(to_starboard)))
 		return false;
-	if (!file.read((char*)&to_stern, sizeof(to_stern)))
+	if (!file.read((char *)&to_stern, sizeof(to_stern)))
 		return false;
-	if (!file.read((char*)&IMO, sizeof(IMO)))
+	if (!file.read((char *)&IMO, sizeof(IMO)))
 		return false;
-	if (!file.read((char*)&angle, sizeof(angle)))
+	if (!file.read((char *)&angle, sizeof(angle)))
 		return false;
-	if (!file.read((char*)&month, sizeof(month)))
+	if (!file.read((char *)&month, sizeof(month)))
 		return false;
-	if (!file.read((char*)&day, sizeof(day)))
+	if (!file.read((char *)&day, sizeof(day)))
 		return false;
-	if (!file.read((char*)&hour, sizeof(hour)))
+	if (!file.read((char *)&hour, sizeof(hour)))
 		return false;
-	if (!file.read((char*)&minute, sizeof(minute)))
+	if (!file.read((char *)&minute, sizeof(minute)))
 		return false;
-	if (!file.read((char*)&lat, sizeof(lat)))
+	if (!file.read((char *)&lat, sizeof(lat)))
 		return false;
-	if (!file.read((char*)&lon, sizeof(lon)))
+	if (!file.read((char *)&lon, sizeof(lon)))
 		return false;
-	if (!file.read((char*)&ppm, sizeof(ppm)))
+	if (!file.read((char *)&ppm, sizeof(ppm)))
 		return false;
-	if (!file.read((char*)&level, sizeof(level)))
+	if (!file.read((char *)&level, sizeof(level)))
 		return false;
-	if (!file.read((char*)&altitude, sizeof(altitude)))
+	if (!file.read((char *)&altitude, sizeof(altitude)))
 		return false;
-	if (!file.read((char*)&received_stations, sizeof(received_stations)))
+	if (!file.read((char *)&received_stations, sizeof(received_stations)))
 		return false;
-	if (!file.read((char*)&distance, sizeof(distance)))
+	if (!file.read((char *)&distance, sizeof(distance)))
 		return false;
-	if (!file.read((char*)&draught, sizeof(draught)))
+	if (!file.read((char *)&draught, sizeof(draught)))
 		return false;
-	if (!file.read((char*)&speed, sizeof(speed)))
+	if (!file.read((char *)&speed, sizeof(speed)))
 		return false;
-	if (!file.read((char*)&cog, sizeof(cog)))
+	if (!file.read((char *)&cog, sizeof(cog)))
 		return false;
-	if (!file.read((char*)&last_signal, sizeof(last_signal)))
+	if (!file.read((char *)&last_signal, sizeof(last_signal)))
 		return false;
-	if (!file.read((char*)&last_direct_signal, sizeof(last_direct_signal)))
+	if (!file.read((char *)&last_direct_signal, sizeof(last_direct_signal)))
 		return false;
-	if (!file.read((char*)&shipclass, sizeof(shipclass)))
+	if (!file.read((char *)&shipclass, sizeof(shipclass)))
 		return false;
-	if (!file.read((char*)&mmsi_type, sizeof(mmsi_type)))
+	if (!file.read((char *)&mmsi_type, sizeof(mmsi_type)))
 		return false;
-	if (!file.read((char*)shipname, sizeof(shipname)))
+	if (!file.read((char *)shipname, sizeof(shipname)))
 		return false;
-	if (!file.read((char*)destination, sizeof(destination)))
+	if (!file.read((char *)destination, sizeof(destination)))
 		return false;
-	if (!file.read((char*)callsign, sizeof(callsign)))
+	if (!file.read((char *)callsign, sizeof(callsign)))
 		return false;
-	if (!file.read((char*)country_code, sizeof(country_code)))
+	if (!file.read((char *)country_code, sizeof(country_code)))
 		return false;
-	if (!file.read((char*)&last_group, sizeof(last_group)))
+	if (!file.read((char *)&last_group, sizeof(last_group)))
 		return false;
-	if (!file.read((char*)&next, sizeof(next)))
+	if (!file.read((char *)&next, sizeof(next)))
 		return false;
-	if (!file.read((char*)&prev, sizeof(prev)))
+	if (!file.read((char *)&prev, sizeof(prev)))
 		return false;
-	if (!file.read((char*)&path_ptr, sizeof(path_ptr)))
+	if (!file.read((char *)&path_ptr, sizeof(path_ptr)))
 		return false;
-	
+
 	// Clear the msg vector as it's not persisted
 	msg.clear();
-	
+
 	return true;
 }
