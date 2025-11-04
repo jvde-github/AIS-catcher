@@ -164,10 +164,10 @@ public:
 	std::string getBinaryMessagesJSON() const;
 
 	// Persistence functions for ship database
-	bool Save(std::ofstream& file);
-	bool Load(std::ifstream& file);
+	bool Save(std::ofstream &file);
+	bool Load(std::ifstream &file);
 
 private:
-	static const int _DB_MAGIC = 0x41495344; // "AISD" in hex
+	static const int _DB_MAGIC = 0x41495345; // "AISE" in hex
 	static const int _DB_VERSION = 1;
 };
