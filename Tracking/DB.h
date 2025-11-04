@@ -168,6 +168,6 @@ public:
 	bool Load(std::ifstream &file);
 
 private:
-	static const int _DB_MAGIC = 0x41495345; // "AISE" in hex
+	static const int _DB_MAGIC = 0x41495346;
 	static const int _DB_VERSION = 1;
 };

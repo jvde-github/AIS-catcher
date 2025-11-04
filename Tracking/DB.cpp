@@ -1074,8 +1074,7 @@ bool DB::Load(std::ifstream &file)
 	for (int i = 0; i < ship_count; i++)
 	{
 		Ship temp_ship;
-		
-		// Use Ship's Load method instead of direct binary read
+
 		if (!temp_ship.Load(file))
 		{
 			std::cout << "DB: Failed to read ship " << i << " from backup file." << std::endl;
@@ -1101,10 +1100,6 @@ bool DB::Load(std::ifstream &file)
 		// Copy ship data while preserving linked list pointers
 		int next_ptr = ships[ptr].next;
 		int prev_ptr = ships[ptr].prev;
-
-		// Clear potentially corrupt linked list pointers from loaded data
-		temp_ship.next = -1;
-		temp_ship.prev = -1;
 
 		ships[ptr] = temp_ship;
 
