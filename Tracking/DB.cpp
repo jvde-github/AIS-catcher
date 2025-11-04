@@ -1011,27 +1011,25 @@ bool DB::Save(std::ofstream &file)
 	if (!file.write((const char *)&count, sizeof(int)))
 		return false;
 
-	// Find the position to start writing backwards by counting valid ships
+	// Find the last ship by going count steps from first
 	int ptr = first;
-	int valid_ships_seen = 0;
-	while (ptr != -1 && valid_ships_seen < count)
+	for (int i = 1; i < count; i++)
 	{
-		if (ships[ptr].mmsi != 0)
-			valid_ships_seen++;
-		if (valid_ships_seen < count)
-			ptr = ships[ptr].next;
+		if (ptr == -1)
+			break;
+		ptr = ships[ptr].next;
 	}
 
-	// Now write ships by traversing backwards from that position
-	int ships_written = 0;
-	while (ptr != -1 && ships_written < count)
+	// Write ships from last ship backwards to first
+	int ships_written;
+	for (ships_written = 0; ships_written < count; ships_written++)
 	{
-		if (ships[ptr].mmsi != 0)
-		{
-			if (!file.write((const char *)&ships[ptr], sizeof(Ship)))
-				return false;
-			ships_written++;
-		}
+		if (ptr == -1)
+			break;
+
+		if (!file.write((const char *)&ships[ptr], sizeof(Ship)))
+			return false;
+
 		ptr = ships[ptr].prev;
 	}
 
@@ -1047,7 +1045,6 @@ bool DB::Load(std::ifstream &file)
 
 	int magic = 0, version = 0;
 
-	// Read and verify magic number and version
 	if (!file.read((char *)&magic, sizeof(int)))
 		return false;
 	if (!file.read((char *)&version, sizeof(int)))
@@ -1060,20 +1057,20 @@ bool DB::Load(std::ifstream &file)
 		return false;
 	}
 
-	// Read number of active ships
-	int active_ships = 0;
-	if (!file.read((char *)&active_ships, sizeof(int)))
+	// Read number of ships in backup
+	int ship_count = 0;
+	if (!file.read((char *)&ship_count, sizeof(int)))
 		return false;
 
-	if (active_ships < 0 || active_ships > Nships)
+	if (ship_count < 0 || ship_count > Nships)
 	{
-		Warning() << "DB: Invalid ship count in backup file: " << active_ships;
+		Warning() << "DB: Invalid ship count in backup file: " << ship_count;
 		return false;
 	}
 
 	// Load ships and validate chronological order (oldest first, then newer)
 	std::time_t previous_signal = 0;
-	for (int i = 0; i < active_ships; i++)
+	for (int i = 0; i < ship_count; i++)
 	{
 		Ship temp_ship;
 		if (!file.read((char *)&temp_ship, sizeof(Ship)))
@@ -1085,12 +1082,10 @@ bool DB::Load(std::ifstream &file)
 		// Validate chronological order - ships should be oldest first
 		if (i > 0 && temp_ship.last_signal < previous_signal)
 		{
-			Warning() << "DB: Ships not in chronological order in backup file. "
-					  << "Ship " << i << " (MMSI " << temp_ship.mmsi << ") "
-					  << "has timestamp " << temp_ship.last_signal
-					  << " which is older than previous ship timestamp " << previous_signal;
+			Error() << "DB: Ships not in chronological order at index " << i;
 			return false;
 		}
+
 		previous_signal = temp_ship.last_signal;
 
 		// Find or create ship entry using existing mechanisms
@@ -1103,11 +1098,13 @@ bool DB::Load(std::ifstream &file)
 		// Copy ship data while preserving linked list pointers
 		int next_ptr = ships[ptr].next;
 		int prev_ptr = ships[ptr].prev;
+
 		ships[ptr] = temp_ship;
+
 		ships[ptr].next = next_ptr;
 		ships[ptr].prev = prev_ptr;
 	}
 
-	Info() << "DB: Restored " << count << " ships from backup";
+	Info() << "DB: Restored " << ship_count << " ships from backup";
 	return true;
 }
