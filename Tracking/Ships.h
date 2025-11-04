@@ -56,6 +56,16 @@ struct Ship
     void Serialize(std::vector<char> &v) const;
     bool getKML(std::string &) const;
     bool getGeoJSON(std::string &) const;
+    
+    // File persistence functions
+    bool Save(std::ofstream& file) const;
+    bool Load(std::ifstream& file);
+    
+private:
+    static const int _SHIP_MAGIC = 0x53484950; // "SHIP" in hex
+    static const int _SHIP_VERSION = 1;
+    
+public:
 
     // Setters for PackedInt fields
     void setValidated(int val) { flags.set(0, 2, val); }

@@ -1027,7 +1027,8 @@ bool DB::Save(std::ofstream &file)
 		if (ptr == -1)
 			break;
 
-		if (!file.write((const char *)&ships[ptr], sizeof(Ship)))
+		// Use Ship's Save method instead of direct binary write
+		if (!ships[ptr].Save(file))
 			return false;
 
 		ptr = ships[ptr].prev;
@@ -1073,7 +1074,9 @@ bool DB::Load(std::ifstream &file)
 	for (int i = 0; i < ship_count; i++)
 	{
 		Ship temp_ship;
-		if (!file.read((char *)&temp_ship, sizeof(Ship)))
+		
+		// Use Ship's Load method instead of direct binary read
+		if (!temp_ship.Load(file))
 		{
 			std::cout << "DB: Failed to read ship " << i << " from backup file." << std::endl;
 			return false;
@@ -1098,6 +1101,10 @@ bool DB::Load(std::ifstream &file)
 		// Copy ship data while preserving linked list pointers
 		int next_ptr = ships[ptr].next;
 		int prev_ptr = ships[ptr].prev;
+
+		// Clear potentially corrupt linked list pointers from loaded data
+		temp_ship.next = -1;
+		temp_ship.prev = -1;
 
 		ships[ptr] = temp_ship;
 
