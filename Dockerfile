@@ -9,7 +9,7 @@ RUN apt-get upgrade -y
 RUN apt-get install git make gcc g++ cmake pkg-config -y
 RUN apt-get install libusb-1.0.0-dev libairspy-dev libhackrf-dev libzmq3-dev libsoxr-dev zlib1g-dev libpq-dev libssl-dev libsqlite3-dev -y
 
-COPY . /root/AIS-catcher
+RUN cd /root && git clone --depth 1 https://github.com/jvde-github/AIS-catcher.git
 
 RUN cd /root/AIS-catcher; git clone https://gitea.osmocom.org/sdr/rtl-sdr.git
 RUN cd /root/AIS-catcher/rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install; 
