@@ -15,31 +15,65 @@ project(AIS-catcher)
 # Get version from git
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    # First try to fetch tags to ensure we have the tag history (like the GitHub Actions workflow)
-    # Use timeout to prevent hanging on Windows or in CI environments
+    # First try to fetch all history and tags (like the GitHub Actions workflow)
+    # Use timeout to prevent hanging on Windows or in CI environments  
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} fetch --tags
+        COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         TIMEOUT 30
         ERROR_QUIET
     )
     
-    # Get git describe output using --tags (same as GitHub Actions workflow)
+    # Try multiple git describe approaches in order of preference
+    set(GIT_VERSION_DESCRIBE "")
+    
+    # 1. Try git describe --tags (preferred, matches GitHub Actions)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --tags
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
-        RESULT_VARIABLE GIT_DESCRIBE_RESULT
+        RESULT_VARIABLE GIT_RESULT
     )
     
-    if(GIT_DESCRIBE_RESULT EQUAL 0 AND GIT_VERSION_DESCRIBE)
+    # 2. If that fails, try git describe --always --long (includes commit hash)
+    if(NOT GIT_RESULT EQUAL 0 OR NOT GIT_VERSION_DESCRIBE)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} describe --always --long
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE GIT_RESULT
+        )
+        # Add v prefix if not present and we got a result
+        if(GIT_RESULT EQUAL 0 AND GIT_VERSION_DESCRIBE AND NOT GIT_VERSION_DESCRIBE MATCHES "^v")
+            set(GIT_VERSION_DESCRIBE "v0.00-0-g${GIT_VERSION_DESCRIBE}")
+        endif()
+    endif()
+    
+    # 3. Final fallback: just get the commit hash
+    if(NOT GIT_RESULT EQUAL 0 OR NOT GIT_VERSION_DESCRIBE)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            OUTPUT_VARIABLE GIT_COMMIT_HASH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE GIT_RESULT
+        )
+        if(GIT_RESULT EQUAL 0 AND GIT_COMMIT_HASH)
+            set(GIT_VERSION_DESCRIBE "v0.00-0-g${GIT_COMMIT_HASH}")
+        endif()
+    endif()
+    
+    if(GIT_VERSION_DESCRIBE)
         set(VERSION_DESCRIBE "${GIT_VERSION_DESCRIBE}")
         message(STATUS "Git version: ${VERSION_DESCRIBE}")
     else()
         set(VERSION_DESCRIBE "v0.00-1-unknown")
-        message(STATUS "Git describe --tags failed, using fallback version: ${VERSION_DESCRIBE}")
+        message(STATUS "All git describe methods failed, using fallback version: ${VERSION_DESCRIBE}")
     endif()
 else()
     set(VERSION_DESCRIBE "v0.00-1-unknown")
