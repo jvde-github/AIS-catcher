@@ -20,3 +20,7 @@
 #define VERSION_NUMBER 62
 #define VERSION		   "v0.62"
 #define COPYRIGHT	   "jvde-github and other contributors"
+
+#ifndef VERSION_DESCRIBE
+#define VERSION_DESCRIBE	"v0.00-1-unknown"
+#endif

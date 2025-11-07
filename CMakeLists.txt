@@ -12,6 +12,43 @@ endif()
 
 project(AIS-catcher)
 
+# Get version from git
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    # First try to fetch tags to ensure we have the tag history (like the GitHub Actions workflow)
+    # Use timeout to prevent hanging on Windows or in CI environments
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} fetch --tags
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        TIMEOUT 30
+        ERROR_QUIET
+    )
+    
+    # Get git describe output using --tags (same as GitHub Actions workflow)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --tags
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE GIT_DESCRIBE_RESULT
+    )
+    
+    if(GIT_DESCRIBE_RESULT EQUAL 0 AND GIT_VERSION_DESCRIBE)
+        set(VERSION_DESCRIBE "${GIT_VERSION_DESCRIBE}")
+        message(STATUS "Git version: ${VERSION_DESCRIBE}")
+    else()
+        set(VERSION_DESCRIBE "v0.00-1-unknown")
+        message(STATUS "Git describe --tags failed, using fallback version: ${VERSION_DESCRIBE}")
+    endif()
+else()
+    set(VERSION_DESCRIBE "v0.00-1-unknown")
+    message(STATUS "Git not found or not a git repository, using fallback version: ${VERSION_DESCRIBE}")
+endif()
+
+# Define the version for compilation
+add_definitions(-DVERSION_DESCRIBE="${VERSION_DESCRIBE}")
+
 option(SOAPYSDR "Include Soapy SDR support" OFF)
 option(RTLSDR "Include RTLSDR support" ON)
 option(RTLSDR_STATIC "Statically link RTLSDR library" OFF)
