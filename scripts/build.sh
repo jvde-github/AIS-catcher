@@ -60,7 +60,8 @@ extract_package_version() {
     exit 1
   fi
   
-  debian_version=$(echo "$version_output" | sed 's/-/~/') 
+  # Remove 'v' prefix and convert first - to ~ for proper Debian versioning
+  debian_version=$(echo "$version_output" | sed 's/^v//' | sed 's/-/~/') 
   
   echo "Extracted version: $version_output" >&2
   echo "Debian version: $debian_version" >&2
