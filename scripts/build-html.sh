@@ -15,10 +15,6 @@ perform_sed() {
     fi
 }
 
-# Update Application/version.h
-#perform_sed "Application/version.h" '/VERSION_DESCRIBE/d' ''
-#echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/version.h
-
 # Generate hashes from actual file content
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS

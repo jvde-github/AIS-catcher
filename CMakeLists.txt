@@ -15,8 +15,7 @@ project(AIS-catcher)
 # Get version from git
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    # First try to fetch all history and tags (like the GitHub Actions workflow)
-    # Use timeout to prevent hanging on Windows or in CI environments  
+
     execute_process(
         COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -24,10 +23,8 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
         ERROR_QUIET
     )
     
-    # Try multiple git describe approaches in order of preference
     set(GIT_VERSION_DESCRIBE "")
     
-    # 1. Try git describe --tags (preferred, matches GitHub Actions)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe fetch --prune --unshallow
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
