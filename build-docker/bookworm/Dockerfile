@@ -8,6 +8,6 @@ RUN apt-get update &&  apt-get dist-upgrade -y && apt-get install -y build-essen
 COPY . /app
 WORKDIR /app
 
-RUN ./scripts/build.sh "cmake build-essential pkg-config git" ais-catcher amd64 1.0 ""
+RUN ./scripts/build.sh "cmake build-essential pkg-config git" ais-catcher amd64 ""
 
 CMD ["cp", "ais-catcher.deb", "/output/"]
