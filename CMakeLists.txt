@@ -14,17 +14,28 @@ project(AIS-catcher)
 
 # Get version from git
 find_package(Git QUIET)
-if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+message(STATUS "DEBUG: Git found: ${GIT_FOUND}")
+message(STATUS "DEBUG: Git executable: ${GIT_EXECUTABLE}")
+message(STATUS "DEBUG: Project source dir: ${PROJECT_SOURCE_DIR}")
 
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    message(STATUS "DEBUG: .git directory exists, attempting git operations")
+
+    message(STATUS "DEBUG: Running git fetch --prune --unshallow")
     execute_process(
         COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        TIMEOUT 30
-        ERROR_QUIET
+        RESULT_VARIABLE FETCH_RESULT
+        ERROR_VARIABLE FETCH_ERROR
     )
+    message(STATUS "DEBUG: Fetch result: ${FETCH_RESULT}")
+    if(FETCH_ERROR)
+        message(STATUS "DEBUG: Fetch error: ${FETCH_ERROR}")
+    endif()
     
     set(GIT_VERSION_DESCRIBE "")
     
+    message(STATUS "DEBUG: Running git describe fetch --prune --unshallow")
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe fetch --prune --unshallow
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -33,15 +44,21 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
         ERROR_QUIET
         RESULT_VARIABLE GIT_RESULT
     )
+    message(STATUS "DEBUG: First describe result: ${GIT_RESULT}, output: '${GIT_VERSION_DESCRIBE}'")
 
+    message(STATUS "DEBUG: Running git describe --tags")
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --tags
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
         RESULT_VARIABLE GIT_RESULT
+        ERROR_VARIABLE GIT_ERROR
     )
+    message(STATUS "DEBUG: Second describe result: ${GIT_RESULT}, output: '${GIT_VERSION_DESCRIBE}'")
+    if(GIT_ERROR)
+        message(STATUS "DEBUG: Describe error: ${GIT_ERROR}")
+    endif()
     
     if(GIT_VERSION_DESCRIBE)
         set(VERSION_DESCRIBE "${GIT_VERSION_DESCRIBE}")
