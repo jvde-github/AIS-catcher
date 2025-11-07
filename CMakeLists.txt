@@ -21,21 +21,6 @@ message(STATUS "DEBUG: Project source dir: ${PROJECT_SOURCE_DIR}")
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     message(STATUS "DEBUG: .git directory exists, attempting git operations")
 
-    message(STATUS "DEBUG: Running git fetch --prune --unshallow")
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        RESULT_VARIABLE FETCH_RESULT
-        ERROR_VARIABLE FETCH_ERROR
-    )
-    message(STATUS "DEBUG: Fetch result: ${FETCH_RESULT}")
-    if(FETCH_ERROR)
-        message(STATUS "DEBUG: Fetch error: ${FETCH_ERROR}")
-    endif()
-    
-    set(GIT_VERSION_DESCRIBE "")
-    
-  
     message(STATUS "DEBUG: Running git describe --tags")
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --tags
