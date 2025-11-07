@@ -29,12 +29,6 @@ jobs:
         git fetch --prune --unshallow
         TAG=$(git describe --tags)
         ./scripts/build-html.sh $TAG
-
-    - name: Update version in build.me
-      run: |
-        TAG=$(git describe --tags)
-        DEBIAN_TAG=$(echo $TAG | sed 's/^v//; s/-/~/')
-        sed -i "s/^package_version=.*/package_version=$DEBIAN_TAG/" scripts/build.sh
         
     - name: Commit and push changes
       run: |

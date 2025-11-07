@@ -45,6 +45,26 @@ build_project() {
 
 # create a Debian package
 
+# Extract version from AIS-catcher binary
+extract_package_version() {
+  if [ ! -f "build/AIS-catcher" ]; then
+    echo "Error: AIS-catcher binary not found in build directory"
+    exit 1
+  fi
+  
+  echo "Extracting version from AIS-catcher binary..."
+  
+  # Get version in build format
+  version_output=$(cd build && ./AIS-catcher -h build 2>/dev/null)
+  if [ $? -ne 0 ] || [ -z "$version_output" ]; then
+    echo "Error: Failed to extract version from AIS-catcher binary"
+    exit 1
+  fi
+  
+  echo "Extracted version: $version_output"
+  echo "$version_output"
+}
+
 # create a Debian package
 
 create_debian_package() {
@@ -232,7 +252,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version=0.62~245-gc4e46115
+package_version_override=$4
 install_deps=$5
 
 # Install build dependencies
@@ -240,6 +260,15 @@ install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev li
 
 # Build the project
 build_project
+
+# Extract or use provided package version
+if [ -n "$package_version_override" ]; then
+  package_version=$package_version_override
+  echo "Using provided package version: $package_version"
+else
+  package_version=$(extract_package_version)
+  echo "Using extracted package version: $package_version"
+fi
 
 # Create Debian package if specified
 create_debian_package "$deb_package" "$package_arch" "$package_version" "$install_deps"
