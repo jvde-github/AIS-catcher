@@ -1,19 +1,5 @@
 #!/bin/bash
 
-# Ensure a tag is provided as an argument or use the current timestamp if not provided
-if [ -z "$1" ]; then
-  TAG=$(date +%s)
-else
-  TAG=$1
-fi
-
-# Create URL-safe version of the tag
-URL_SAFE_TAG=$(echo "$TAG" | sed 's/[.]/_/g' | sed 's/[-]/_/g')
-
-# Output the tag and the URL-safe tag
-echo "Tag: $TAG"
-echo "URL-safe Tag: $URL_SAFE_TAG"
-
 # Function to perform sed replacement based on OS
 perform_sed() {
     local file=$1
