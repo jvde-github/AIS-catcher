@@ -252,8 +252,7 @@ create_debian_package() {
 build_deps=$1
 deb_package=$2
 package_arch=$3
-package_version_override=$4
-install_deps=$5
+install_deps=$4
 
 # Install build dependencies
 install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev libssl-dev zlib1g-dev libsqlite3-dev  libusb-1.0-0-dev libpq-dev $build_deps"
@@ -261,14 +260,9 @@ install_dependencies "libairspy-dev libairspyhf-dev libhackrf-dev libzmq3-dev li
 # Build the project
 build_project
 
-# Extract or use provided package version
-if [ -n "$package_version_override" ]; then
-  package_version=$package_version_override
-  echo "Using provided package version: $package_version"
-else
-  package_version=$(extract_package_version)
-  echo "Using extracted package version: $package_version"
-fi
+# Always extract package version from binary
+package_version=$(extract_package_version)
+echo "Using extracted package version: $package_version"
 
 # Create Debian package if specified
 create_debian_package "$deb_package" "$package_arch" "$package_version" "$install_deps"
