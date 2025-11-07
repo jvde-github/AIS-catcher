@@ -29,6 +29,15 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     
     # 1. Try git describe --tags (preferred, matches GitHub Actions)
     execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe fetch --prune --unshallow
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE GIT_RESULT
+    )
+
+    execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --tags
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
@@ -36,37 +45,6 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
         ERROR_QUIET
         RESULT_VARIABLE GIT_RESULT
     )
-    
-    # 2. If that fails, try git describe --always --long (includes commit hash)
-    if(NOT GIT_RESULT EQUAL 0 OR NOT GIT_VERSION_DESCRIBE)
-        execute_process(
-            COMMAND ${GIT_EXECUTABLE} describe --always --long
-            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-            OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-            RESULT_VARIABLE GIT_RESULT
-        )
-        # Add v prefix if not present and we got a result
-        if(GIT_RESULT EQUAL 0 AND GIT_VERSION_DESCRIBE AND NOT GIT_VERSION_DESCRIBE MATCHES "^v")
-            set(GIT_VERSION_DESCRIBE "v0.00-0-g${GIT_VERSION_DESCRIBE}")
-        endif()
-    endif()
-    
-    # 3. Final fallback: just get the commit hash
-    if(NOT GIT_RESULT EQUAL 0 OR NOT GIT_VERSION_DESCRIBE)
-        execute_process(
-            COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-            OUTPUT_VARIABLE GIT_COMMIT_HASH
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-            RESULT_VARIABLE GIT_RESULT
-        )
-        if(GIT_RESULT EQUAL 0 AND GIT_COMMIT_HASH)
-            set(GIT_VERSION_DESCRIBE "v0.00-0-g${GIT_COMMIT_HASH}")
-        endif()
-    endif()
     
     if(GIT_VERSION_DESCRIBE)
         set(VERSION_DESCRIBE "${GIT_VERSION_DESCRIBE}")
