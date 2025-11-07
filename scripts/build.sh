@@ -54,15 +54,17 @@ extract_package_version() {
   
   echo "Extracting version from AIS-catcher binary..."
   
-  # Get version in build format
   version_output=$(cd build && ./AIS-catcher -h build 2>/dev/null)
   if [ $? -ne 0 ] || [ -z "$version_output" ]; then
     echo "Error: Failed to extract version from AIS-catcher binary"
     exit 1
   fi
   
+  debian_version=$(echo "$version_output" | sed 's/-/~/') 
+  
   echo "Extracted version: $version_output"
-  echo "$version_output"
+  echo "Debian version: $debian_version"
+  echo "$debian_version"
 }
 
 # create a Debian package
