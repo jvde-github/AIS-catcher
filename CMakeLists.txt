@@ -35,17 +35,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     
     set(GIT_VERSION_DESCRIBE "")
     
-    message(STATUS "DEBUG: Running git describe fetch --prune --unshallow")
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} describe fetch --prune --unshallow
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-        RESULT_VARIABLE GIT_RESULT
-    )
-    message(STATUS "DEBUG: First describe result: ${GIT_RESULT}, output: '${GIT_VERSION_DESCRIBE}'")
-
+  
     message(STATUS "DEBUG: Running git describe --tags")
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --tags
