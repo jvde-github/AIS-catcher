@@ -30,10 +30,8 @@ perform_sed() {
 }
 
 # Update Application/version.h
-perform_sed "Application/version.h" '/VERSION_DESCRIBE/d' ''
-echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/version.h
-perform_sed "Application/version.h" '/VERSION_URL_TAG/d' ''
-echo -e "#define VERSION_URL_TAG\t\"$URL_SAFE_TAG\"" >> Application/version.h
+#perform_sed "Application/version.h" '/VERSION_DESCRIBE/d' ''
+#echo -e "#define VERSION_DESCRIBE\t\"$TAG\"" >> Application/version.h
 
 # Generate hashes from actual file content
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -57,6 +55,5 @@ else
     sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' HTML/index.html > HTML/index_local.html
 fi
 
-echo "Updated Application/version.h with VERSION_DESCRIBE and VERSION_URL_TAG"
 echo "Updated index.html with versioned script and style references"
 ./scripts/build-web-db.sh HTML

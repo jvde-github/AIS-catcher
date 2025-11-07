@@ -40,7 +40,6 @@ jobs:
         fi
         git add Application/WebDB.cpp
         git add scripts/build.sh
-        git add Application/version.h
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
         git commit -m "Stamp version and bake index.html in HTML.cpp"

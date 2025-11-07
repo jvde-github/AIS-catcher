@@ -24,7 +24,6 @@
 #include "AIS-catcher.h"
 
 #include "Receiver.h"
-#include "version.h"
 #include "WebViewer.h"
 #include "Config.h"
 #include "JSON/JSON.h"
