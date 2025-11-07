@@ -32,14 +32,17 @@ jobs:
         
     - name: Commit and push changes
       run: |
-        if [[ -z $(git diff) ]]; then
+        # Check which files were actually modified
+        git add -A
+        if git diff --cached --quiet; then
           echo "Nothing to commit, working tree clean"
           exit 0
         else
           echo "There are changes to be committed"
+          echo "Changed files:"
+          git diff --cached --name-only
         fi
-        git add Application/WebDB.cpp
-        git add scripts/build.sh
+        
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
         git commit -m "Stamp version and bake index.html in HTML.cpp"
