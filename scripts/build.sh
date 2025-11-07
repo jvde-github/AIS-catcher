@@ -48,22 +48,22 @@ build_project() {
 # Extract version from AIS-catcher binary
 extract_package_version() {
   if [ ! -f "build/AIS-catcher" ]; then
-    echo "Error: AIS-catcher binary not found in build directory"
+    echo "Error: AIS-catcher binary not found in build directory" >&2
     exit 1
   fi
   
-  echo "Extracting version from AIS-catcher binary..."
+  echo "Extracting version from AIS-catcher binary..." >&2
   
   version_output=$(cd build && ./AIS-catcher -h build 2>/dev/null)
   if [ $? -ne 0 ] || [ -z "$version_output" ]; then
-    echo "Error: Failed to extract version from AIS-catcher binary"
+    echo "Error: Failed to extract version from AIS-catcher binary" >&2
     exit 1
   fi
   
   debian_version=$(echo "$version_output" | sed 's/-/~/') 
   
-  echo "Extracted version: $version_output"
-  echo "Debian version: $debian_version"
+  echo "Extracted version: $version_output" >&2
+  echo "Debian version: $debian_version" >&2
   echo "$debian_version"
 }
 
