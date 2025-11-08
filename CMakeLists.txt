@@ -21,7 +21,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     
     # First try to fetch tags (ignore errors if repo is already complete)
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} fetch --prune --tags
+        COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_FETCH_OUTPUT
         ERROR_VARIABLE GIT_FETCH_ERROR
