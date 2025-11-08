@@ -14,26 +14,23 @@ project(AIS-catcher)
 
 # Get version from git
 find_package(Git QUIET)
-message(STATUS "DEBUG: Git found: ${GIT_FOUND}")
-message(STATUS "DEBUG: Git executable: ${GIT_EXECUTABLE}")
-message(STATUS "DEBUG: Project source dir: ${PROJECT_SOURCE_DIR}")
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
     set(GIT_VERSION_DESCRIBE "")
     
-    message(STATUS "DEBUG: Running git describe fetch --prune --unshallow")
+    # First try to fetch tags (ignore errors if repo is already complete)
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
+        COMMAND ${GIT_EXECUTABLE} fetch --prune --tags
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
+        OUTPUT_VARIABLE GIT_FETCH_OUTPUT
+        ERROR_VARIABLE GIT_FETCH_ERROR
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
-        RESULT_VARIABLE GIT_RESULT
+        RESULT_VARIABLE GIT_FETCH_RESULT
     )
-    message(STATUS "DEBUG: First describe result: ${GIT_RESULT}, output: '${GIT_VERSION_DESCRIBE}'")
 
-    message(STATUS "DEBUG: Running git describe --tags")
+    # Now get the version using git describe
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --tags
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -42,10 +39,6 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
         RESULT_VARIABLE GIT_RESULT
         ERROR_VARIABLE GIT_ERROR
     )
-    message(STATUS "DEBUG: Second describe result: ${GIT_RESULT}, output: '${GIT_VERSION_DESCRIBE}'")
-    if(GIT_ERROR)
-        message(STATUS "DEBUG: Describe error: ${GIT_ERROR}")
-    endif()
     
     if(GIT_VERSION_DESCRIBE)
         set(VERSION_DESCRIBE "${GIT_VERSION_DESCRIBE}")
