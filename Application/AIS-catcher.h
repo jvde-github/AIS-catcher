@@ -24,3 +24,6 @@
 #ifndef VERSION_DESCRIBE
 #define VERSION_DESCRIBE	"v0.00-1-unknown"
 #endif
+
+#define AISCATCHER_URL "185.77.96.227"
+#define AISCATCHER_PORT "4242"

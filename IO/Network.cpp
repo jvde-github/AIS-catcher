@@ -315,7 +315,8 @@ namespace IO
 		return *this;
 	}
 
-	UDPStreamer::UDPStreamer() {
+	UDPStreamer::UDPStreamer()
+	{
 		fmt = MessageFormat::NMEA;
 	}
 
@@ -616,11 +617,13 @@ namespace IO
 					continue;
 
 				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4, uuid) + "\r\n").c_str()) < 0)
+				{
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
+				}
 			}
 		}
 	}
@@ -890,7 +893,7 @@ namespace IO
 			if (!filter.include(data[i]))
 				continue;
 
-			if (fmt == MessageFormat::NMEA	)
+			if (fmt == MessageFormat::NMEA)
 			{
 				for (const auto &s : data[i].NMEA)
 				{
