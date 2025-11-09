@@ -865,7 +865,6 @@ namespace Protocol
 		}
 
 		FLOAT32 freq_offset = 0;
-		int tuner_bandwidth = 0;
 		uint32_t frequency = 0;
 		uint32_t sample_rate = 0;
 		bool tuner_AGC = true;
@@ -874,7 +873,6 @@ namespace Protocol
 
 		void applySettings()
 		{
-
 			std::cerr << "RTLTCP: setting parameters" << std::endl;
 			sendParam(5, freq_offset);
 			sendParam(3, tuner_AGC ? 0 : 1);
@@ -936,31 +934,34 @@ namespace Protocol
 			{
 				RTL_AGC = Util::Parse::Switch(value);
 			}
-			else if (key == "RATE" || key == "SAMPLE_RATE")
-			{
-				sample_rate = ((Util::Parse::Integer(value, 0, 20000000)));
-			}
-			else if (key == "BW" || key == "BANDWIDTH")
-			{
-				tuner_bandwidth = Util::Parse::Integer(value, 0, 1000000);
-			}
-			else if (key == "FREQOFFSET")
-			{
-				freq_offset = Util::Parse::Float(value, -150, 150);
-			}
-			else if (key == "FREQUENCY")
-			{
-				frequency = Util::Parse::Integer(value, 0, 2000000000);
-			}
 			else
+			{
+				if (key == "RATE" || key == "SAMPLE_RATE")
+				{
+					sample_rate = ((Util::Parse::Integer(value, 0, 20000000)));
+				}
+				else if (key == "FREQOFFSET")
+				{
+					freq_offset = Util::Parse::Float(value, -150, 150);
+				}
+				else if (key == "FREQUENCY")
+				{
+					frequency = Util::Parse::Integer(value, 0, 2000000000);
+				}
+
 				return false;
+			}
 
 			return true;
 		}
 
 		std::string getValues() override
 		{
-			return "frequency " + std::to_string(frequency) + " freqoffset " + std::to_string(freq_offset) + " rate " + std::to_string(sample_rate) + " bandwidth " + std::to_string(tuner_bandwidth) + " tuner " + std::to_string(tuner_Gain) + " rtlagc " + Util::Convert::toString(RTL_AGC);
+			std::string str = " tuner " + Util::Convert::toString(tuner_AGC, tuner_Gain);
+			str += " rtlagc " + Util::Convert::toString(RTL_AGC);
+			str += " frequency " + std::to_string(frequency) + " freqoffset " + std::to_string(freq_offset);
+			str += " rate " + std::to_string(sample_rate);
+			return str;
 		}
 	};
 
