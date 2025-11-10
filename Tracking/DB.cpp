@@ -453,6 +453,10 @@ std::string DB::getSinglePathJSON(int idx)
 			content += std::to_string(paths[ptr].lat);
 			content += ",";
 			content += std::to_string(paths[ptr].lon);
+			content += ",";
+			content += std::to_string(paths[ptr].timestamp_start);
+			content += ",";
+			content += std::to_string(paths[ptr].timestamp_end);
 			content += "],";
 		}
 		t = paths[ptr].count;
@@ -471,6 +475,8 @@ std::string DB::getSinglePathGeoJSON(int idx)
 	int t = ships[idx].count + 1;
 
 	std::string geojson = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[";
+	std::string timestamps_start = "\"timestamps_start\":[";
+	std::string timestamps_end = "\"timestamps_end\":[";
 
 	bool hasCoordinates = false;
 	while (isNextPathPoint(ptr, mmsi, t))
@@ -478,7 +484,11 @@ std::string DB::getSinglePathGeoJSON(int idx)
 		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
 		{
 			if (hasCoordinates)
+			{
 				geojson += ",";
+				timestamps_start += ",";
+				timestamps_end += ",";
+			}
 
 			// GeoJSON uses [longitude, latitude] format (note the order!)
 			geojson += "[";
@@ -486,13 +496,19 @@ std::string DB::getSinglePathGeoJSON(int idx)
 			geojson += ",";
 			geojson += std::to_string(paths[ptr].lat);
 			geojson += "]";
+
+			timestamps_start += std::to_string(paths[ptr].timestamp_start);
+			timestamps_end += std::to_string(paths[ptr].timestamp_end);
 			hasCoordinates = true;
 		}
 		t = paths[ptr].count;
 		ptr = paths[ptr].next;
 	}
 
-	geojson += "]},\"properties\":{\"mmsi\":" + std::to_string(mmsi) + "}}";
+	timestamps_start += "]";
+	timestamps_end += "]";
+
+	geojson += "]},\"properties\":{\"mmsi\":" + std::to_string(mmsi) + "," + timestamps_start + "," + timestamps_end + "}}";
 	return geojson;
 }
 
@@ -600,6 +616,7 @@ void DB::addToPath(int ptr)
 	float lon = ships[ptr].lon;
 	int count = ships[ptr].count;
 	uint32_t mmsi = ships[ptr].mmsi;
+	std::time_t timestamp = ships[ptr].last_signal;
 
 	if (isNextPathPoint(idx, mmsi, count))
 	{
@@ -607,9 +624,10 @@ void DB::addToPath(int ptr)
 		if (paths[idx].lat == lat && paths[idx].lon == lon)
 		{
 			paths[idx].count = ships[ptr].count;
+			paths[idx].timestamp_end = timestamp; // Update end time, keep start time
 			return;
 		}
-		// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update path point
+		// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update clustered path point
 		int next = paths[idx].next;
 		if (isNextPathPoint(next, mmsi, paths[idx].count))
 		{
@@ -620,9 +638,11 @@ void DB::addToPath(int ptr)
 
 			if (d < 0.000001)
 			{
+				// Update clustered point: keep start time, update end time and position
 				paths[idx].lat = lat;
 				paths[idx].lon = lon;
 				paths[idx].count = ships[ptr].count;
+				paths[idx].timestamp_end = timestamp; // Keep timestamp_start unchanged
 				return;
 			}
 		}
@@ -634,6 +654,8 @@ void DB::addToPath(int ptr)
 	paths[path_idx].lon = lon;
 	paths[path_idx].mmsi = ships[ptr].mmsi;
 	paths[path_idx].count = ships[ptr].count;
+	paths[path_idx].timestamp_start = timestamp; // New point: start and end are the same initially
+	paths[path_idx].timestamp_end = timestamp;
 
 	ships[ptr].path_ptr = path_idx;
 	path_idx = (path_idx + 1) % Npaths;

@@ -67,6 +67,7 @@ function restoreDefaultSettings() {
         coordinate_format: "decimal",
         icon_scale: 1,
         track_weight: 1,
+        track_dash_threshold: 30,
         show_range: false,
         distance_circles: true,
         distance_circle_color: '#1c71d8',
@@ -399,7 +400,8 @@ var trackStyleFunction = function (feature) {
     return new ol.style.Style({
         stroke: new ol.style.Stroke({
             color: c,
-            width: w
+            width: w,
+            lineDash: feature.isDashed ? [6, 6] : undefined
         })
     });
 }
@@ -6129,15 +6131,53 @@ function redrawMap() {
 
         if (marker_tracks.has(Number(mmsi)) || show_all_tracks) {
             const path = paths[mmsi];
-            const coordinates = [];
-            for (var i = 0; i < Math.min(path.length, 250); i++) {
-                coordinates.push(ol.proj.fromLonLat([path[i][1], path[i][0]]));
-            }
 
-            const lineString = new ol.geom.LineString(coordinates);
-            const feature = new ol.Feature(lineString);
-            feature.mmsi = mmsi;
-            trackVector.addFeature(feature);
+            // Path: [lat, lon, start_time, end_time]
+            if (path.length > 0 && path[0].length >= 4) {
+                let currentSegment = [];
+                let currentDashed = false;
+
+                for (let i = 0; i < Math.min(path.length, 250); i++) {
+                    const point = path[i];
+                    const coord = ol.proj.fromLonLat([point[1], point[0]]);
+
+                    let isDashed = false;
+                    if (i > 0) {
+                        const timeBetweenPoints = path[i - 1][2] - point[3]; // newer start_time - older end_time
+                        isDashed = timeBetweenPoints > settings.track_trash_threshold;
+                    }
+
+                    if (currentSegment.length === 0) {
+                        // First point
+                        currentSegment.push(coord);
+                        currentDashed = false; // First segment is always solid
+                    } else if (currentDashed === isDashed) {
+                        // Continue current segment
+                        currentSegment.push(coord);
+                    } else {
+                        // Create feature for current segment
+                        if (currentSegment.length > 1) {
+                            const lineString = new ol.geom.LineString(currentSegment);
+                            const feature = new ol.Feature(lineString);
+                            feature.mmsi = mmsi;
+                            feature.isDashed = currentDashed;
+                            trackVector.addFeature(feature);
+                        }
+                        // Start new segment
+                        currentSegment = [currentSegment[currentSegment.length - 1], coord];
+                        currentDashed = isDashed;
+                    }
+                }
+
+                // Add final segment
+                if (currentSegment.length > 1) {
+                    const lineString = new ol.geom.LineString(currentSegment);
+                    const feature = new ol.Feature(lineString);
+                    feature.mmsi = mmsi;
+                    feature.isDashed = currentDashed;
+                    trackVector.addFeature(feature);
+                }
+            } 
         }
     }
 
@@ -6212,33 +6252,6 @@ function toggleDarkMode() {
     updateDarkMode();
     saveSettings();
 }
-
-/*
-function refresh_data() {
-    if (!document.hidden && !updateInProgress) {
-        updateInProgress = true;
-
-        (async () => {
-            try {
-                if (settings.tab === "map") {
-                    await updateMap();
-
-                } else if (settings.tab === "stat") {
-                    await updateStatistics();
-                } else if (settings.tab === "plots") {
-                    await updatePlots();
-                } else if (settings.tab === "ships") {
-                    await updateShipTable();
-                }
-            } catch (error) {
-                console.error("Error updating data:", error);
-            } finally {
-                updateInProgress = false;
-            }
-        })();
-    }
-}
-*/
 
 function refresh_data() {
     if (!document.hidden && !updateInProgress) {
@@ -6316,6 +6329,15 @@ function updateSettingsTab() {
     document.getElementById("settings_map_opacity").value = settings.map_opacity;
     document.getElementById("settings_icon_scale").value = settings.icon_scale;
     document.getElementById("settings_track_weight").value = settings.track_weight;
+    document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
+    
+    // Update all slider display values
+    updateIconScaleDisplay(settings.icon_scale);
+    updateMapOpacityDisplay(settings.map_opacity);
+    updateTrackWeightDisplay(settings.track_weight);
+    updateTrackTrashThresholdDisplay(settings.track_trash_threshold);
+    updateTooltipFontSizeDisplay(settings.tooltipLabelFontSize);
+    updateShipoutlineOpacityDisplay(settings.shipoutline_opacity);
 
     document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
     document.getElementById("settings_tooltipLabelShadowColor").value = settings.tooltipLabelShadowColor;
@@ -6611,7 +6633,31 @@ function setKioskPanMap(enabled) {
 }
 
 function updateKioskSpeedDisplay(value) {
-    document.getElementById("kiosk_speed_display").textContent = value + "s";
+    document.getElementById("kiosk_rotation_speed_label").textContent = `Rotation Speed (${value}s)`;
+}
+
+function updateTrackWeightDisplay(value) {
+    document.getElementById("track_weight_label").textContent = `Track Weight (${value})`;
+}
+
+function updateTrackTrashThresholdDisplay(value) {
+    document.getElementById("track_trash_threshold_label").textContent = `Track Dash Threshold (${value}s)`;
+}
+
+function updateIconScaleDisplay(value) {
+    document.getElementById("icon_scale_label").textContent = `Icon Size (${parseFloat(value).toFixed(2)})`;
+}
+
+function updateMapOpacityDisplay(value) {
+    document.getElementById("map_opacity_label").textContent = `Dimming (${parseFloat(value).toFixed(2)})`;
+}
+
+function updateTooltipFontSizeDisplay(value) {
+    document.getElementById("tooltip_font_size_label").textContent = `Font Size (${value})`;
+}
+
+function updateShipoutlineOpacityDisplay(value) {
+    document.getElementById("shipoutline_opacity_label").textContent = `Opacity (${parseFloat(value).toFixed(2)})`;
 }
 
 function updateKiosk() {

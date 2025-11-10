@@ -43,7 +43,7 @@ jobs:
         
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
-        git commit -m "Stamp version and bake index.html in HTML.cpp"
+        git commit -m "Bake HTML files in WebDB.cpp"
         git push origin main
         
   build_debian:

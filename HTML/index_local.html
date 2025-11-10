@@ -155,17 +155,19 @@
 						</span>
 					</div>
 					<div>
-						<span>Icon Size</span>
+						<span id="icon_scale_label">Icon Size (1.0)</span>
 						<span>
 							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
-								onchange="settings.icon_scale = this.value; redrawMap(); saveSettings(); " />
+								onchange="settings.icon_scale = this.value; redrawMap(); saveSettings();"
+								oninput="updateIconScaleDisplay(this.value)" />
 						</span>
 					</div>
 					<div>
-						<span>Dimming</span>
+						<span id="map_opacity_label">Dimming (1.0)</span>
 						<span>
 							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
-								onchange="settings.map_opacity = this.value; setMapOpacity(); saveSettings(); " />
+								onchange="settings.map_opacity = this.value; setMapOpacity(); saveSettings();"
+								oninput="updateMapOpacityDisplay(this.value)" />
 						</span>
 					</div>
 					<div>
@@ -192,10 +194,19 @@
 						</span>
 					</div>
 					<div>
-						<span>Track Weight</span>
+						<span id="track_weight_label">Track Weight (1)</span>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
-								onchange="setMapSetting('track_weight', this.value)" />
+								onchange="setMapSetting('track_weight', this.value)"
+								oninput="updateTrackWeightDisplay(this.value)" />
+						</span>
+					</div>
+					<div>
+						<span id="track_trash_threshold_label">Track Dash Threshold (0s)</span>
+						<span>
+							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
+								onchange="setMapSetting('track_trash_threshold', this.value)"
+								oninput="updateTrackTrashThresholdDisplay(this.value)" />
 						</span>
 					</div>
 					<div>
@@ -223,10 +234,11 @@
 						</span>
 					</div>
 					<div>
-						<span>Font Size</span>
+						<span id="tooltip_font_size_label">Font Size (9)</span>
 						<span>
 							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
-								onchange="setMapSetting('tooltipLabelFontSize', this.value)" />
+								onchange="setMapSetting('tooltipLabelFontSize', this.value)"
+								oninput="updateTooltipFontSizeDisplay(this.value)" />
 						</span>
 					</div>
 					<div>
@@ -279,10 +291,11 @@
 						</span>
 					</div>
 					<div>
-						<span>Opacity</span>
+						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
 						<span>
 							<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
-								onchange="setMapSetting('shipoutline_opacity',this.value)" />
+								onchange="setMapSetting('shipoutline_opacity',this.value)"
+								oninput="updateShipoutlineOpacityDisplay(this.value)" />
 						</span>
 					</div>
 					<div>
@@ -359,11 +372,10 @@
 						</span>
 					</div>
 					<div>
-						<span>Rotation Speed (seconds)</span><span>
+						<span id="kiosk_rotation_speed_label">Rotation Speed (5s)</span><span>
 							<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1"
 								onchange="setKioskRotationSpeed(this.value)"
 								oninput="updateKioskSpeedDisplay(this.value)">
-							<span id="kiosk_speed_display">5s</span>
 						</span>
 					</div>
 					<div>
@@ -1170,7 +1182,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=41fc388ce751b074c00bfde1b8057a20"></script>
+	<script src="script.js?hash=1e10e406850f0584e5208fdd2d419538"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

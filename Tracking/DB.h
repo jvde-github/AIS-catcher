@@ -32,6 +32,8 @@ struct PathPoint
 {
 	float lat, lon;
 	uint32_t mmsi = 0;
+	std::time_t timestamp_start = 0;
+	std::time_t timestamp_end = 0;
 	int count = 0;
 	int next = 0;
 };
