@@ -112,200 +112,168 @@
 			<div class="settings_main stat-panel settings-bg" style="border-radius: 0px;">
 				<header>System</header>
 				<section>
-					<div><span>Settings</span><span style="cursor: pointer" onclick="applyDefaultSettings()"> Reset
-						</span></div>
-					<div class="noandroid">
-						<span>Dark Mode</span><span>
-							<input type="checkbox" id="settings_darkmode" onchange="setDarkMode(this.checked)" />
-						</span>
-					</div>
-					<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" onclick="showPlugins()">
-							Show </span></div>
-					<div>
-						<span>Coordinate Format</span><span>
-							<select id="settings_coordinate_format" onchange="setCoordinateFormat(this.value)">
-								<option value="decimal">Decimal Degrees</option>
-								<option value="ddm">Degrees Decimal Minutes</option>
-								<option value="dms">Degrees Minutes Seconds</option>
-							</select>
-						</span>
-					</div>
-					<div>
-						<span>Units</span><span>
-							<select id="settings_metric" onchange="setMetrics(this.value)">
-								<option value="default">Nautical</option>
-								<option value="metric">Metric</option>
-								<option value="imperial">Imperial</option>
-							</select>
-						</span>
-					</div>
-					<div>
-						<span>Use Icon in Table</span><span>
-							<input type="checkbox" id="settings_table_shiptype_use_icon"
-								onchange="setTableIcon(this.checked)" />
-						</span>
-					</div>
+						<div><span>Settings</span><span style="cursor: pointer" onclick="applyDefaultSettings()"> Reset
+							</span></div>
+						<div class="noandroid">
+							<span>Dark Mode</span><span>
+								<input type="checkbox" id="settings_darkmode" onchange="setDarkMode(this.checked)" />
+							</span>
+						</div>
+						<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" onclick="showPlugins()">
+								Show </span></div>
+						<div>
+							<span>Coordinate Format</span><span>
+								<select id="settings_coordinate_format" onchange="setCoordinateFormat(this.value)">
+									<option value="decimal">Decimal Degrees</option>
+									<option value="ddm">Degrees Decimal Minutes</option>
+									<option value="dms">Degrees Minutes Seconds</option>
+								</select>
+							</span>
+						</div>
+						<div>
+							<span>Units</span><span>
+								<select id="settings_metric" onchange="setMetrics(this.value)">
+									<option value="default">Nautical</option>
+									<option value="metric">Metric</option>
+									<option value="imperial">Imperial</option>
+								</select>
+							</span>
+						</div>
+						<div>
+							<span>Use Icon in Table</span><span>
+								<input type="checkbox" id="settings_table_shiptype_use_icon"
+									onchange="setTableIcon(this.checked)" />
+							</span>
+						</div>
 				</section>
 				<header>Map</header>
 				<section>
-					<div>
-						<span>Show Station Icon</span><span>
-							<input type="checkbox" id="settings_show_station"
-								onchange="setMapSetting('show_station',this.checked)" />
-						</span>
-					</div>
-					<div>
-						<span id="icon_scale_label">Icon Size (1.0)</span>
-						<span>
-							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
-								onchange="settings.icon_scale = this.value; redrawMap(); saveSettings();"
-								oninput="updateIconScaleDisplay(this.value)" />
-						</span>
-					</div>
-					<div>
-						<span id="map_opacity_label">Dimming (1.0)</span>
-						<span>
-							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
-								onchange="settings.map_opacity = this.value; setMapOpacity(); saveSettings();"
-								oninput="updateMapOpacityDisplay(this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Fade icons</span><span>
-							<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)" />
-						</span>
-					</div>
-					<div>
-						<span>Hover Color</span><span>
-							<input type="color" class="color-picker" id="settings_shiphover_color"
-								onchange="setMapSetting('shiphover_color',this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Selection Color</span><span>
-							<input type="color" class="color-picker" id="settings_shipselection_color"
-								onchange="setMapSetting('shipselection_color',this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Track Color</span><span>
-							<input type="color" class="color-picker" id="settings_track_color"
-								onchange="setMapSetting('track_color', this.value)" />
-						</span>
-					</div>
-					<div>
-						<span id="track_weight_label">Track Weight (1)</span>
-						<span>
-							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
-								onchange="setMapSetting('track_weight', this.value)"
-								oninput="updateTrackWeightDisplay(this.value)" />
-						</span>
-					</div>
-					<div>
-						<span id="track_trash_threshold_label">Track Dash Threshold (0s)</span>
-						<span>
-							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
-								onchange="setMapSetting('track_trash_threshold', this.value)"
-								oninput="updateTrackTrashThresholdDisplay(this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Show Track on Selection</span><span>
-							<input type="checkbox" id="settings_show_track_on_select"
-								onchange="settings.show_track_on_select = this.checked; saveSettings()" />
-						</span>
-					</div>
-					<div>
-						<span>Show Track on Hover</span><span>
-							<input type="checkbox" id="settings_show_track_on_hover"
-								onchange="settings.show_track_on_hover = this.checked; saveSettings()" />
-						</span>
-					</div>
-				</section>
+						<div>
+							<span>Show Station Icon</span><span>
+								<input type="checkbox" id="settings_show_station"
+									onchange="setMapSetting('show_station',this.checked)" />
+							</span>
+						</div>
+						<div>
+							<span id="icon_scale_label">Icon Size (1.0)</span>
+							<span>
+								<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
+									onchange="settings.icon_scale = this.value; redrawMap(); saveSettings();"
+									oninput="updateIconScaleDisplay(this.value)" />
+							</span>
+						</div>
+						<div>
+							<span id="map_opacity_label">Dimming (1.0)</span>
+							<span>
+								<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
+									onchange="settings.map_opacity = this.value; setMapOpacity(); saveSettings();"
+									oninput="updateMapOpacityDisplay(this.value)" />
+							</span>
+						</div>
+						<div>
+							<span>Fade icons</span><span>
+								<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)" />
+							</span>
+						</div>
+						<div>
+							<span>Hover Color</span><span>
+								<input type="color" class="color-picker" id="settings_shiphover_color"
+									onchange="setMapSetting('shiphover_color',this.value)" />
+							</span>
+						</div>
+						<div>
+							<span>Selection Color</span><span>
+								<input type="color" class="color-picker" id="settings_shipselection_color"
+									onchange="setMapSetting('shipselection_color',this.value)" />
+							</span>
+						</div>
+
+
+					</section>
 				<header>Ship Labels</header>
 				<section>
-					<div>
-						<span>Show</span><span>
-							<select id="settings_show_labels" onchange="setMapSetting('show_labels',this.value)">
-								<option value="dynamic">Dynamic</option>
-								<option value="never">Never</option>
-								<option value="always">Always</option>
-							</select>
-						</span>
-					</div>
-					<div>
-						<span id="tooltip_font_size_label">Font Size (9)</span>
-						<span>
-							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
-								onchange="setMapSetting('tooltipLabelFontSize', this.value)"
-								oninput="updateTooltipFontSizeDisplay(this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Declutter</span><span>
-							<input type="checkbox" id="settings_labels_declutter"
-								onchange="setMapSetting('labels_declutter',this.checked)" />
-						</span>
-					</div>
-				</section>
-				<section>
-					<div>
-						<span>Color</span><span>
-							<input type="color" class="color-picker" id="settings_tooltipLabelColor"
-								onchange="setMapSetting('tooltipLabelColor',this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Shadow Color</span><span>
-							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
-								onchange="setMapSetting('tooltipLabelShadowColor',this.value)" />
-						</span>
-					</div>
-				</section>
-				<section>
-					<div>
-						<span>Color (Dark)</span><span>
-							<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
-								onchange="setMapSetting('tooltipLabelColorDark',this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Shadow Color (Dark)</span><span>
-							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
-								onchange="setMapSetting('tooltipLabelShadowColorDark',this.value)" />
-						</span>
-					</div>
-				</section>
+						<div>
+							<span>Show</span><span>
+								<select id="settings_show_labels" onchange="setMapSetting('show_labels',this.value)">
+									<option value="dynamic">Dynamic</option>
+									<option value="never">Never</option>
+									<option value="always">Always</option>
+								</select>
+							</span>
+						</div>
+						<div>
+							<span id="tooltip_font_size_label">Font Size (9)</span>
+							<span>
+								<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
+									onchange="setMapSetting('tooltipLabelFontSize', this.value)"
+									oninput="updateTooltipFontSizeDisplay(this.value)" />
+							</span>
+						</div>
+						<div>
+							<span>Declutter</span><span>
+								<input type="checkbox" id="settings_labels_declutter"
+									onchange="setMapSetting('labels_declutter',this.checked)" />
+							</span>
+						</div>
+					</section>
+					<section>
+						<div>
+							<span>Color</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelColor"
+									onchange="setMapSetting('tooltipLabelColor',this.value)" />
+							</span>
+						</div>
+						<div>
+							<span>Shadow Color</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
+									onchange="setMapSetting('tooltipLabelShadowColor',this.value)" />
+							</span>
+						</div>
+					</section>
+					<section>
+						<div>
+							<span>Color (Dark)</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
+									onchange="setMapSetting('tooltipLabelColorDark',this.value)" />
+							</span>
+						</div>
+						<div>
+							<span>Shadow Color (Dark)</span><span>
+								<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
+									onchange="setMapSetting('tooltipLabelShadowColorDark',this.value)" />
+							</span>
+						</div>
+					</section>
 				<header>Ship Outline</header>
 				<section>
-					<div>
-						<span>Border Color</span><span>
-							<input type="color" class="color-picker" id="settings_shipoutline_border"
-								onchange="setMapSetting('shipoutline_border',this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Inner Color</span><span>
-							<input type="color" class="color-picker" id="settings_shipoutline_inner"
-								onchange="setMapSetting('shipoutline_inner',this.value)" />
-						</span>
-					</div>
-					<div>
-						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
-						<span>
-							<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
-								onchange="setMapSetting('shipoutline_opacity',this.value)"
-								oninput="updateShipoutlineOpacityDisplay(this.value)" />
-						</span>
-					</div>
-					<div>
-						<span>Circle Outlines</span>
-						<span>
-							<input type="checkbox" id="settings_show_circle_outline"
-								onchange="setMapSetting('show_circle_outline',this.checked)" />
-						</span>
-					</div>
-				</section>
+						<div>
+							<span>Border Color</span><span>
+								<input type="color" class="color-picker" id="settings_shipoutline_border"
+									onchange="setMapSetting('shipoutline_border',this.value)" />
+							</span>
+						</div>
+						<div>
+							<span>Inner Color</span><span>
+								<input type="color" class="color-picker" id="settings_shipoutline_inner"
+									onchange="setMapSetting('shipoutline_inner',this.value)" />
+							</span>
+						</div>
+						<div>
+							<span id="shipoutline_opacity_label">Opacity (0.9)</span>
+							<span>
+								<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
+									onchange="setMapSetting('shipoutline_opacity',this.value)"
+									oninput="updateShipoutlineOpacityDisplay(this.value)" />
+							</span>
+						</div>
+						<div>
+							<span>Circle Outlines</span>
+							<span>
+								<input type="checkbox" id="settings_show_circle_outline"
+									onchange="setMapSetting('show_circle_outline',this.checked)" />
+							</span>
+						</div>
+					</section>
 				<header>Station Range</header>
 				<section>
 					<div>
@@ -361,6 +329,118 @@
 						<span>Color</span><span>
 							<input type="color" class="color-picker" id="settings_distance_circle_color"
 								onchange="removeDistanceCircles(); setMapSetting('distance_circle_color',this.value)" />
+						</span>
+					</div>
+				</section>
+				<header>Tracks</header>
+				<section>
+					<div>
+						<span id="track_weight_label">Track Weight (1)</span>
+						<span>
+							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
+								onchange="setMapSetting('track_weight', this.value)"
+								oninput="updateTrackWeightDisplay(this.value)" />
+						</span>
+					</div>
+					<div>
+						<span id="track_trash_threshold_label">Track Dash Threshold (0s)</span>
+						<span>
+							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
+								onchange="setMapSetting('track_trash_threshold', this.value)"
+								oninput="updateTrackTrashThresholdDisplay(this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Show Track on Selection</span><span>
+							<input type="checkbox" id="settings_show_track_on_select"
+								onchange="settings.show_track_on_select = this.checked; saveSettings()" />
+						</span>
+					</div>
+					<div>
+						<span>Show Track on Hover</span><span>
+							<input type="checkbox" id="settings_show_track_on_hover"
+								onchange="settings.show_track_on_hover = this.checked; saveSettings()" />
+						</span>
+					</div>
+				</section>
+				<section>
+					<div>
+						<span>Apply Color to All Ships</span><span>
+							<input type="color" class="color-picker" id="settings_apply_all_track_color" value="#12a5ed"
+								onchange="applyColorToAllTracks(this.value)" />
+							<button type="button" onclick="resetTrackColorsToDefault()" style="margin-left: 10px; padding: 2px 8px; font-size: 11px;">Reset</button>
+						</span>
+					</div>
+				</section>
+				<section>
+					<div>
+						<span>Cargo Ships</span><span>
+							<input type="color" class="color-picker" id="settings_track_cargo_color" onchange="setTrackClassColor('CARGO', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Class B Vessels</span><span>
+							<input type="color" class="color-picker" id="settings_track_b_color" onchange="setTrackClassColor('B', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Passenger Ships</span><span>
+							<input type="color" class="color-picker" id="settings_track_passenger_color" onchange="setTrackClassColor('PASSENGER', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Tanker Ships</span><span>
+							<input type="color" class="color-picker" id="settings_track_tanker_color" onchange="setTrackClassColor('TANKER', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Fishing Vessels</span><span>
+							<input type="color" class="color-picker" id="settings_track_fishing_color" onchange="setTrackClassColor('FISHING', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>High Speed Craft</span><span>
+							<input type="color" class="color-picker" id="settings_track_highspeed_color" onchange="setTrackClassColor('HIGHSPEED', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Special Vessels</span><span>
+							<input type="color" class="color-picker" id="settings_track_special_color" onchange="setTrackClassColor('SPECIAL', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Aid-to-Navigation</span><span>
+							<input type="color" class="color-picker" id="settings_track_aton_color" onchange="setTrackClassColor('ATON', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Base Stations</span><span>
+							<input type="color" class="color-picker" id="settings_track_station_color" onchange="setTrackClassColor('STATION', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>SAR/EPIRB</span><span>
+							<input type="color" class="color-picker" id="settings_track_sartepirb_color" onchange="setTrackClassColor('SARTEPIRB', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Aircraft</span><span>
+							<input type="color" class="color-picker" id="settings_track_plane_color" onchange="setTrackClassColor('PLANE', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Helicopters</span><span>
+							<input type="color" class="color-picker" id="settings_track_helicopter_color" onchange="setTrackClassColor('HELICOPTER', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Other Vessels</span><span>
+							<input type="color" class="color-picker" id="settings_track_other_color" onchange="setTrackClassColor('OTHER', this.value)" />
+						</span>
+					</div>
+					<div>
+						<span>Unknown Type</span><span>
+							<input type="color" class="color-picker" id="settings_track_unknown_color" onchange="setTrackClassColor('UNKNOWN', this.value)" />
 						</span>
 					</div>
 				</section>
@@ -1182,7 +1262,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=1e10e406850f0584e5208fdd2d419538"></script>
+	<script src="script.js?hash=a4e05c0ff35ee56adda46bb5d54d61aa"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

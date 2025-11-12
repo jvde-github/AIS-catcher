@@ -57,6 +57,32 @@ let measures = [];
 var settings = {};
 let isFetchingShips = false;
 
+function getDefaultTrackColors() {
+    return {
+        [ShippingClass.CARGO]: '#00ff7f',
+        [ShippingClass.B]: '#ff00ff',
+        [ShippingClass.PASSENGER]: '#0000ff',
+        [ShippingClass.SPECIAL]: '#a52a2a',
+        [ShippingClass.TANKER]: '#ff0000',
+        [ShippingClass.HIGHSPEED]: '#ffff00',
+        [ShippingClass.OTHER]: '#12a5ed',
+        [ShippingClass.UNKNOWN]: '#12a5ed',
+        [ShippingClass.FISHING]: '#ff1493',
+        [ShippingClass.ATON]: '#0000f1',
+        [ShippingClass.STATION]: '#0000f1',
+        [ShippingClass.SARTEPIRB]: '#ff0000',
+        [ShippingClass.PLANE]: '#ff0040',
+        [ShippingClass.HELICOPTER]: '#d01616'
+    };
+}
+
+function resetTrackColorsToDefault() {
+    settings.track_class_colors = getDefaultTrackColors();
+    updateTrackColorInputs();
+    saveSettings();
+    redrawMap();
+}
+
 function restoreDefaultSettings() {
     settings = {
         counter: true,
@@ -67,7 +93,7 @@ function restoreDefaultSettings() {
         coordinate_format: "decimal",
         icon_scale: 1,
         track_weight: 1,
-        track_dash_threshold: 30,
+        track_trash_threshold: 30,
         show_range: false,
         distance_circles: true,
         distance_circle_color: '#1c71d8',
@@ -81,7 +107,6 @@ function restoreDefaultSettings() {
         tableside_column: "shipname",
         tableside_order: "ascending",
         range_timeframe: '24h',
-        track_color: "#12a5ed",
         range_color: "#FFA500",
         range_color_short: "#FFDAB9",
         range_color_dark: "#4B4B4B",
@@ -119,6 +144,9 @@ function restoreDefaultSettings() {
         kiosk_pan_map: true,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"]
     };
+    
+    // Set default track colors
+    settings.track_class_colors = getDefaultTrackColors();
 }
 
 function toggleInfoPanel() {
@@ -384,10 +412,32 @@ var shapeStyleFunction = function (feature) {
     });
 }
 
+const ShippingClass = {
+    OTHER: 0,
+    UNKNOWN: 1,
+    CARGO: 2,
+    B: 3,
+    PASSENGER: 4,
+    SPECIAL: 5,
+    TANKER: 6,
+    HIGHSPEED: 7,
+    FISHING: 8,
+    PLANE: 9,
+    HELICOPTER: 10,
+    STATION: 11,
+    ATON: 12,
+    SARTEPIRB: 13,
+};
+
 var trackStyleFunction = function (feature) {
     var w = Number(settings.track_weight);
-    var c = settings.track_color;
-
+    var c = '#12a5ed'; // Default fallback color
+    
+    // Use shipping class color if available
+    if (feature.shipclass && settings.track_class_colors[feature.shipclass]) {
+        c = settings.track_class_colors[feature.shipclass];
+    }
+    
     if (feature.mmsi == hoverMMSI && hoverType == 'ship') {
         c = settings.shiphover_color;
         w = w + 2;
@@ -396,7 +446,7 @@ var trackStyleFunction = function (feature) {
         c = settings.shipselection_color;
         w = w + 2;
     }
-
+    
     return new ol.style.Style({
         stroke: new ol.style.Stroke({
             color: c,
@@ -405,7 +455,6 @@ var trackStyleFunction = function (feature) {
         })
     });
 }
-
 
 var markerStyle = function (feature) {
 
@@ -1320,23 +1369,6 @@ function getShipTypeVal(s) {
     }
     return "Unknown (" + s + ")";
 }
-
-const ShippingClass = {
-    OTHER: 0,
-    UNKNOWN: 1,
-    CARGO: 2,
-    B: 3,
-    PASSENGER: 4,
-    SPECIAL: 5,
-    TANKER: 6,
-    HIGHSPEED: 7,
-    FISHING: 8,
-    PLANE: 9,
-    HELICOPTER: 10,
-    STATION: 11,
-    ATON: 12,
-    SARTEPIRB: 13,
-};
 
 // MMSI types from AIS-catcher
 const OTHER = 0;
@@ -2940,6 +2972,40 @@ function setMapSetting(a, v) {
     settings[a] = v;
     saveSettings();
     redrawMap();
+}
+
+function setTrackClassColor(shipClass, color) {
+    settings.track_class_colors[ShippingClass[shipClass]] = color;
+    saveSettings();
+    redrawMap();
+}
+
+function applyColorToAllTracks(color) {
+    // Use default blue color if no color provided
+    const colorToApply = color || '#12a5ed';
+    for (let classKey in ShippingClass) {
+        settings.track_class_colors[ShippingClass[classKey]] = colorToApply;
+    }
+    updateTrackColorInputs();
+    saveSettings();
+    redrawMap();
+}
+
+function updateTrackColorInputs() {
+    document.getElementById("settings_track_cargo_color").value = settings.track_class_colors[ShippingClass.CARGO];
+    document.getElementById("settings_track_b_color").value = settings.track_class_colors[ShippingClass.B];
+    document.getElementById("settings_track_passenger_color").value = settings.track_class_colors[ShippingClass.PASSENGER];
+    document.getElementById("settings_track_tanker_color").value = settings.track_class_colors[ShippingClass.TANKER];
+    document.getElementById("settings_track_fishing_color").value = settings.track_class_colors[ShippingClass.FISHING];
+    document.getElementById("settings_track_highspeed_color").value = settings.track_class_colors[ShippingClass.HIGHSPEED];
+    document.getElementById("settings_track_special_color").value = settings.track_class_colors[ShippingClass.SPECIAL];
+    document.getElementById("settings_track_aton_color").value = settings.track_class_colors[ShippingClass.ATON];
+    document.getElementById("settings_track_station_color").value = settings.track_class_colors[ShippingClass.STATION];
+    document.getElementById("settings_track_sartepirb_color").value = settings.track_class_colors[ShippingClass.SARTEPIRB];
+    document.getElementById("settings_track_plane_color").value = settings.track_class_colors[ShippingClass.PLANE];
+    document.getElementById("settings_track_helicopter_color").value = settings.track_class_colors[ShippingClass.HELICOPTER];
+    document.getElementById("settings_track_other_color").value = settings.track_class_colors[ShippingClass.OTHER];
+    document.getElementById("settings_track_unknown_color").value = settings.track_class_colors[ShippingClass.UNKNOWN];
 }
 
 function average(d) {
@@ -6131,6 +6197,8 @@ function redrawMap() {
 
         if (marker_tracks.has(Number(mmsi)) || show_all_tracks) {
             const path = paths[mmsi];
+            const ship = shipsDB[mmsi]?.raw;
+            const shipclass = ship?.shipclass;
 
             // Path: [lat, lon, start_time, end_time]
             if (path.length > 0 && path[0].length >= 4) {
@@ -6161,6 +6229,7 @@ function redrawMap() {
                             const feature = new ol.Feature(lineString);
                             feature.mmsi = mmsi;
                             feature.isDashed = currentDashed;
+                            feature.shipclass = shipclass;
                             trackVector.addFeature(feature);
                         }
                         // Start new segment
@@ -6175,6 +6244,7 @@ function redrawMap() {
                     const feature = new ol.Feature(lineString);
                     feature.mmsi = mmsi;
                     feature.isDashed = currentDashed;
+                    feature.shipclass = shipclass;
                     trackVector.addFeature(feature);
                 }
             } 
@@ -6319,7 +6389,6 @@ function updateSettingsTab() {
     document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
     document.getElementById("settings_show_circle_outline").value = settings.show_circle_outline;
 
-    document.getElementById("settings_track_color").value = settings.track_color;
     document.getElementById("settings_range_color").value = settings.range_color;
     document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
     document.getElementById("settings_range_color_short").value = settings.range_color_short;
@@ -6353,6 +6422,9 @@ function updateSettingsTab() {
     document.getElementById("settings_kiosk_pan_map").checked = settings.kiosk_pan_map;
 
     updateKioskSpeedDisplay(settings.kiosk_rotation_speed);
+    
+    // Update ship class color inputs
+    updateTrackColorInputs();
 }
 
 class RealtimeViewer {
