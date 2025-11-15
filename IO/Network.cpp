@@ -609,6 +609,24 @@ namespace IO
 				}
 			}
 		}
+		else if (fmt == MessageFormat::COMMUNITY_HUB)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (!filter.include(data[i]))
+					continue;
+
+				std::string binary_packet = data[i].getCommunityHub();
+				if (SendTo(binary_packet) < 0)
+				{
+					if (!persistent)
+					{
+						Error() << "TCP feed: requesting termination.";
+						StopRequest();
+					}
+				}
+			}
+		}
 		else
 		{
 			for (int i = 0; i < len; i++)

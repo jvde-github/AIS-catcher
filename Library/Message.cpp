@@ -130,6 +130,67 @@ namespace AIS
 		return ss.str();
 	}
 
+	std::string Message::getCommunityHub() const
+	{
+		std::string packet;
+
+		// Helper lambda to push byte with escaping (C++11 compatible)
+		auto push_escaped = [&](unsigned char byte) -> void
+		{
+			if (byte == '\n')
+			{
+				packet.push_back((char)0xad); // ESC
+				packet.push_back((char)0xae);
+			}
+			else if (byte == '\r')
+			{
+				packet.push_back((char)0xad); // ESC
+				packet.push_back((char)0xaf);
+			}
+			else if (byte == 0xad) // Also escape ESC itself
+			{
+				packet.push_back((char)0xad);
+				packet.push_back((char)0xad);
+			}
+			else
+			{
+				packet.push_back((char)byte);
+			}
+		};
+
+		// Start byte: 0xac
+		push_escaped(0xac);
+
+		// Version: 0
+		push_escaped(0x00);
+
+		// Timestamp: 8 bytes (long long)
+		long long ts = (long long)rxtime;
+		for (int i = 7; i >= 0; i--)
+		{
+			push_escaped((ts >> (i * 8)) & 0xFF);
+		}
+
+		// Channel: 1 byte
+		push_escaped((unsigned char)channel);
+
+		// Length in bits: 2 bytes
+		push_escaped((length >> 8) & 0xFF);
+		push_escaped(length & 0xFF);
+
+		// AIS message data
+		int numBytes = (length + 7) / 8;
+		for (int i = 0; i < numBytes; i++)
+		{
+			push_escaped(data[i]);
+		}
+
+		// End character: \n (not escaped)
+		packet.push_back('\n');
+
+		return packet;
+	}
+
 	bool Message::validate()
 	{
 		if (getLength() == 0)
@@ -361,9 +422,10 @@ namespace AIS
 	{
 		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
 
-		int newlength = MAX((pos+1)*6,length);
+		int newlength = MAX((pos + 1) * 6, length);
 
-		if (newlength >= MAX_AIS_LENGTH) {
+		if (newlength >= MAX_AIS_LENGTH)
+		{
 			Error() << "Message::setLetter: length exceeds maximum AIS length." << std::endl;
 			return;
 		}
@@ -513,7 +575,7 @@ namespace AIS
 			}
 			return true;
 		}
-		else if(option == "REMOVE_EMPTY")
+		else if (option == "REMOVE_EMPTY")
 		{
 			Util::Convert::toUpper(arg);
 			remove_empty = Util::Parse::Switch(arg);
@@ -556,12 +618,12 @@ namespace AIS
 		if (!AIS)
 			return false;
 
-		if(remove_empty)
+		if (remove_empty)
 		{
-			if(msg.getLength() == 0)
+			if (msg.getLength() == 0)
 				return false;
 		}
-		
+
 		bool ID_ok = true;
 		if (ID_allowed.size())
 		{

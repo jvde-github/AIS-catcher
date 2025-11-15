@@ -356,6 +356,10 @@ namespace Util
 		{
 			out = MessageFormat::NMEA_TAG;
 		}
+		else if (str == "COMMUNITY_HUB")
+		{
+			out = MessageFormat::COMMUNITY_HUB;
+		}
 		else if (str == "FULL" || str == "2")
 		{
 			out = MessageFormat::FULL;
@@ -568,6 +572,8 @@ namespace Util
 			return "NMEA";
 		case MessageFormat::NMEA_TAG:
 			return "NMEA_TAG";
+		case MessageFormat::COMMUNITY_HUB:
+			return "COMMUNITY_HUB";
 		case MessageFormat::FULL:
 			return "FULL";
 		case MessageFormat::JSON_NMEA:
@@ -1010,7 +1016,7 @@ namespace Util
 	std::string Helper::getHardware()
 	{
 #ifdef _WIN32
-	
+
 		return "Windows PC";
 
 #elif __ANDROID__

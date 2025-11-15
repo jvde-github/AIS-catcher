@@ -114,6 +114,7 @@ enum class MessageFormat
 	SILENT,
 	NMEA,
 	NMEA_TAG,
+	COMMUNITY_HUB,
 	FULL,
 	JSON_NMEA,
 	JSON_SPARSE,

@@ -72,13 +72,15 @@ namespace IO
 			if (option == "JSON_FULL")
 			{
 				JSON_input = Util::Parse::Switch(arg);
-				if(JSON_input)
+				if (JSON_input)
 					fmt = MessageFormat::JSON_FULL;
 				return true;
 			}
-			else if(option == "JSON") {
+			else if (option == "JSON")
+			{
 				JSON_NMEA = Util::Parse::Switch(arg);
-				if(JSON_NMEA) {
+				if (JSON_NMEA)
+				{
 					fmt = MessageFormat::JSON_NMEA;
 				}
 				return true;
@@ -99,6 +101,10 @@ namespace IO
 					JSON_input = false;
 					break;
 				case MessageFormat::NMEA:
+					JSON_input = false;
+					JSON_NMEA = false;
+					break;
+				case MessageFormat::COMMUNITY_HUB:
 					JSON_input = false;
 					JSON_NMEA = false;
 					break;
