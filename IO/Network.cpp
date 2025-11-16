@@ -624,7 +624,6 @@ namespace IO
 				if (SendTo(binary_packet) < 0)
 				{
 					first_message = true;
-					Error() << "TCP feed: cannot send Community Hub binary packet. Start";
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
