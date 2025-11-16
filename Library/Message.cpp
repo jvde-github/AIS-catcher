@@ -130,7 +130,7 @@ namespace AIS
 		return ss.str();
 	}
 
-	std::string Message::getCommunityHub() const
+	std::string Message::getCommunityHub(float level, float ppm) const
 	{
 		std::string packet;
 
@@ -164,11 +164,40 @@ namespace AIS
 		// Version: 0
 		push_escaped(0x00);
 
+		// Flags byte: bit 0 = has signal/ppm
+		unsigned char flags = 0;
+		bool has_signal = (level != LEVEL_UNDEFINED && ppm != PPM_UNDEFINED);
+		if (has_signal)
+			flags |= 0x01;
+		push_escaped(flags);
+
 		// Timestamp: 8 bytes (long long)
 		long long ts = (long long)rxtime;
 		for (int i = 7; i >= 0; i--)
 		{
 			push_escaped((ts >> (i * 8)) & 0xFF);
+		}
+
+		// Optional: Signal strength (2 bytes, signed, 0.1 dB resolution)
+		// Optional: PPM (1 byte, signed, 0.1 ppm resolution)
+		if (has_signal)
+		{
+			// Signal strength: convert to tenths of dB, clamp to -3276.8 to +3276.7 dB range
+			int signal_tenths = (int)(level * 10.0f);
+			if (signal_tenths < -32768)
+				signal_tenths = -32768;
+			if (signal_tenths > 32767)
+				signal_tenths = 32767;
+			push_escaped((signal_tenths >> 8) & 0xFF);
+			push_escaped(signal_tenths & 0xFF);
+
+			// PPM: convert to tenths of ppm, clamp to -16.0 to +15.9 ppm range
+			int ppm_tenths = (int)(ppm * 10.0f);
+			if (ppm_tenths < -160)
+				ppm_tenths = -160;
+			if (ppm_tenths > 159)
+				ppm_tenths = 159;
+			push_escaped((unsigned char)(int8_t)ppm_tenths);
 		}
 
 		// Channel: 1 byte

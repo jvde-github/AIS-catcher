@@ -616,7 +616,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				std::string binary_packet = data[i].getCommunityHub();
+				std::string binary_packet = data[i].getCommunityHub(tag.level, tag.ppm);
 				if (SendTo(binary_packet) < 0)
 				{
 					if (!persistent)
