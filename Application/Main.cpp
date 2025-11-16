@@ -625,16 +625,24 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'X':
-				Assert(count <= 1, param, "Only one optional parameter [sharing key] allowed.");
+				Assert(count <= 1 || (count == 2 && arg2 == "EXP"), param, "Only one optional parameter [sharing key] allowed.");
 				{
 					if (!commm_feed)
 					{
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						commm_feed = msg.back().get();
-						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("JSON", "on").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY","on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
+						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY","on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
+						if(count == 2) {
+							Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
+							commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
+						}
+						else
+						{
+							commm_feed->Set("MSGFORMAT", "JSON_NMEA");
+						}
 					}
 
-					if (count == 1 && commm_feed)
+					if (count >= 1 && commm_feed)
 						commm_feed->Set("UUID", arg1);
 				}
 				break;

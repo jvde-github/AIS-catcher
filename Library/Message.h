@@ -75,7 +75,7 @@ namespace AIS
 		}
 
 		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ss = false,  uint32_t ipv4 = 0, const std::string &uid = "") const;
-		std::string getCommunityHub(float level = LEVEL_UNDEFINED, float ppm = PPM_UNDEFINED) const;
+		std::string getHubBinaryFormat(float level = LEVEL_UNDEFINED, float ppm = PPM_UNDEFINED) const;
 
 		std::string getRxTime() const
 		{

@@ -169,6 +169,7 @@ namespace IO
 		bool persistent = true;
 		std::string uuid;
 		bool include_sample_start = false;
+		bool first_message = true;
 
 	public:
 		TCPClientStreamer() : OutputMessage() { fmt = MessageFormat::NMEA; }

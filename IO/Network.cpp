@@ -600,31 +600,39 @@ namespace IO
 
 				for (const auto &s : data[i].NMEA)
 				{
-					if (SendTo((s + "\r\n").c_str()) < 0)
+					if (SendTo((s + "\r\n").c_str()) < 0) {
+						first_message = true;
 						if (!persistent)
 						{
 							Error() << "TCP feed: requesting termination.";
 							StopRequest();
 						}
+					}
+					else 
+						first_message = false;
 				}
 			}
 		}
-		else if (fmt == MessageFormat::COMMUNITY_HUB)
+		else if (fmt == MessageFormat::COMMUNITY_HUB && !first_message)
 		{
 			for (int i = 0; i < len; i++)
 			{
 				if (!filter.include(data[i]))
 					continue;
 
-				std::string binary_packet = data[i].getCommunityHub(tag.level, tag.ppm);
+				std::string binary_packet = data[i].getHubBinaryFormat(tag.level, tag.ppm);
 				if (SendTo(binary_packet) < 0)
 				{
+					first_message = true;
+					Error() << "TCP feed: cannot send Community Hub binary packet. Start";
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 				}
+				else 
+					first_message = false;
 			}
 		}
 		else
@@ -636,12 +644,15 @@ namespace IO
 
 				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4, uuid) + "\r\n").c_str()) < 0)
 				{
+					first_message = true;
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 				}
+				else
+					first_message = false;
 			}
 		}
 	}

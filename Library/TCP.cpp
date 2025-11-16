@@ -732,7 +732,7 @@ namespace TCP
 				Info() << "TCP (" << host << ":" << port << "): connected.";
 
 			connects++;
-			//if (onConnected)
+			// if (onConnected)
 			//	onConnected();
 
 			return true;
@@ -806,17 +806,14 @@ namespace TCP
 				if (persistent)
 				{
 					reconnect();
-					return 0;
 				}
-				else
-				{
-					return -1;
-				}
+
+				return -1;
 			}
 			return sent;
 		}
 
-		return 0;
+		return -1;
 	}
 
 	// zero if no input yet or connection being established

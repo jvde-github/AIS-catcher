@@ -130,11 +130,10 @@ namespace AIS
 		return ss.str();
 	}
 
-	std::string Message::getCommunityHub(float level, float ppm) const
+	std::string Message::getHubBinaryFormat(float level, float ppm) const
 	{
 		std::string packet;
 
-		// Helper lambda to push byte with escaping (C++11 compatible)
 		auto push_escaped = [&](unsigned char byte) -> void
 		{
 			if (byte == '\n')
@@ -178,25 +177,17 @@ namespace AIS
 			push_escaped((ts >> (i * 8)) & 0xFF);
 		}
 
-		// Optional: Signal strength (2 bytes, signed, 0.1 dB resolution)
 		// Optional: PPM (1 byte, signed, 0.1 ppm resolution)
 		if (has_signal)
 		{
-			// Signal strength: convert to tenths of dB, clamp to -3276.8 to +3276.7 dB range
+			// Signal strength: convert to tenths of dB
 			int signal_tenths = (int)(level * 10.0f);
-			if (signal_tenths < -32768)
-				signal_tenths = -32768;
-			if (signal_tenths > 32767)
-				signal_tenths = 32767;
+
 			push_escaped((signal_tenths >> 8) & 0xFF);
 			push_escaped(signal_tenths & 0xFF);
 
-			// PPM: convert to tenths of ppm, clamp to -16.0 to +15.9 ppm range
+			// PPM: convert to tenths of ppm
 			int ppm_tenths = (int)(ppm * 10.0f);
-			if (ppm_tenths < -160)
-				ppm_tenths = -160;
-			if (ppm_tenths > 159)
-				ppm_tenths = 159;
 			push_escaped((unsigned char)(int8_t)ppm_tenths);
 		}
 
