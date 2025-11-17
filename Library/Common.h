@@ -115,6 +115,7 @@ enum class MessageFormat
 	NMEA,
 	NMEA_TAG,
 	COMMUNITY_HUB,
+	BINARY_NMEA,
 	FULL,
 	JSON_NMEA,
 	JSON_SPARSE,

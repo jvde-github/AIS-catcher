@@ -613,14 +613,14 @@ namespace IO
 				}
 			}
 		}
-		else if (fmt == MessageFormat::COMMUNITY_HUB && !first_message)
+		else if ((fmt == MessageFormat::COMMUNITY_HUB && !first_message) || fmt == MessageFormat::BINARY_NMEA)
 		{
 			for (int i = 0; i < len; i++)
 			{
 				if (!filter.include(data[i]))
 					continue;
 
-				std::string binary_packet = data[i].getHubBinaryFormat(tag.level, tag.ppm);
+				std::string binary_packet = data[i].geBinaryNMEA(tag);
 				if (SendTo(binary_packet) < 0)
 				{
 					first_message = true;

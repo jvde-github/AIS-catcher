@@ -105,6 +105,7 @@ namespace IO
 					JSON_NMEA = false;
 					break;
 				case MessageFormat::COMMUNITY_HUB:
+				case MessageFormat::BINARY_NMEA:
 					JSON_input = false;
 					JSON_NMEA = false;
 					break;

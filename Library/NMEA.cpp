@@ -16,6 +16,7 @@
 */
 
 #include "NMEA.h"
+#include "Utilities.h"
 
 namespace AIS
 {
@@ -579,6 +580,98 @@ namespace AIS
 			}
 		}
 	}
+
+	bool NMEA::processBinaryPacket(const std::string &packet, TAG &tag, std::string &error_msg)
+	{
+		try
+		{
+			size_t idx = 0;
+			auto getByte = [&]() -> uint8_t
+			{
+				if (idx >= packet.length())
+					throw std::runtime_error("packet too short");
+
+				uint8_t byte = packet[idx++];
+
+				if (byte == 0xad)
+				{
+					if (idx >= packet.length())
+						throw std::runtime_error("packet too short");
+
+					uint8_t next = packet[idx++];
+
+					if (next == 0xae)
+						return '\n';
+					if (next == 0xaf)
+						return '\r';
+					if (next == 0xad)
+						return 0xad;
+					throw std::runtime_error("invalid escape sequence");
+				}
+				return byte;
+			};
+
+			if (getByte() != 0xac)
+				throw std::runtime_error("invalid magic byte");
+			if (getByte() != 0x00)
+				throw std::runtime_error("unsupported version");
+
+			uint8_t flags = getByte();
+
+			long long timestamp = 0;
+
+			for (int i = 0; i < 8; i++)
+				timestamp = (timestamp << 8) | getByte();
+
+			if (flags & 0x01)
+			{
+				tag.level = (int16_t)((getByte() << 8) | getByte()) / 10.0f;
+				tag.ppm = (int8_t)getByte() / 10.0f;
+			}
+
+			char channel = getByte();
+			uint16_t length_bits = (getByte() << 8) | getByte();
+
+			msg.clear();
+			msg.Stamp(timestamp);
+			msg.setOrigin(channel, station, own_mmsi);
+			msg.setStartIdx(0);
+			msg.setEndIdx(0);
+
+			for (int i = 0; i < (length_bits + 7) / 8; i++)
+				msg.setUint(i * 8, 8, getByte());
+
+			msg.setLength(length_bits);
+
+			if (flags & 0x02)
+			{
+				uint16_t calc_crc = Util::Helper::CRC16((const uint8_t *)packet.data(), idx);
+				uint16_t recv_crc = (getByte() << 8) | getByte();
+				if (recv_crc != calc_crc)
+				{
+					if (crc_check)
+						throw std::runtime_error("CRC mismatch");
+					if (warnings)
+						Warning() << "NMEA: binary packet CRC mismatch";
+				}
+			}
+
+			if (!msg.validate())
+			{
+				error_msg = "message validation failed";
+				return false;
+			}
+			msg.buildNMEA(tag);
+			Send(&msg, 1, tag);
+			return true;
+		}
+		catch (const std::exception &e)
+		{
+			error_msg = e.what();
+			return false;
+		}
+	}
+
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW *data, int len, TAG &tag)
 	{
@@ -593,7 +686,7 @@ namespace AIS
 				{
 					char c = ((char *)(data[j].data))[i];
 
-					// state = 0, we are looking for the start of JSON or NMEA
+					// state = 0, we are looking for the start of JSON, NMEA, or binary packet
 					if (state == 0)
 					{
 						if (c == '{' && (prev == '\n' || prev == '\r' || prev == '}'))
@@ -607,17 +700,20 @@ namespace AIS
 							line = c;
 							state = 2;
 						}
+						else if ((unsigned char)c == 0xac)
+						{
+							line = c;
+							state = 3; // Binary packet state
+						}
 						prev = c;
 						continue;
 					}
 
-					bool newline = c == '\r' || c == '\n' || c == '\t' || c == '\0';
+					bool newline = (state == 3) ? (c == '\n') : (c == '\r' || c == '\n' || c == '\t' || c == '\0');
 
 					if (!newline)
 						line += c;
-					prev = c;
-
-					// state = 1 (JSON) or state = 2 (NMEA)
+					prev = c; // state = 1 (JSON) or state = 2 (NMEA)
 					if (state == 1)
 					{
 						// we do not allow nested JSON, so processing until newline character or '}'
@@ -679,7 +775,26 @@ namespace AIS
 							reset(c);
 						}
 					}
-
+					else if (state == 3)
+					{
+						// Binary packet processing - collect until newline
+						if (c == '\n')
+						{
+							std::string error;
+							tag.clear();
+							if (!processBinaryPacket(line, tag, error))
+							{
+								if (warnings)
+								{
+									std::stringstream ss;
+									ss << "NMEA: error processing binary packet: " << error
+									   << " (length: " << line.length() << " bytes)";
+									Warning() << ss.str();
+								}
+							}
+							reset(c);
+						}
+					}
 					if (line.size() > 1024)
 						reset(c);
 				}

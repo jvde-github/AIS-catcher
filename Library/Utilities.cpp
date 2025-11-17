@@ -35,6 +35,22 @@
 
 namespace Util
 {
+	uint16_t Helper::CRC16(const uint8_t* data, size_t length)
+	{
+		uint16_t crc = 0xFFFF;
+		for (size_t i = 0; i < length; i++)
+		{
+			crc ^= data[i];
+			for (int j = 0; j < 8; j++)
+			{
+				if (crc & 1)
+					crc = (crc >> 1) ^ 0xA001;
+				else
+					crc >>= 1;
+			}
+		}
+		return crc;
+	}
 
 	void RealPart::Receive(const CFLOAT32 *data, int len, TAG &tag)
 	{
@@ -360,6 +376,10 @@ namespace Util
 		{
 			out = MessageFormat::COMMUNITY_HUB;
 		}
+		else if (str == "BINARY_NMEA" || str == "NMEA_BINARY")
+		{
+			out = MessageFormat::BINARY_NMEA;
+		}
 		else if (str == "FULL" || str == "2")
 		{
 			out = MessageFormat::FULL;
@@ -574,6 +594,8 @@ namespace Util
 			return "NMEA_TAG";
 		case MessageFormat::COMMUNITY_HUB:
 			return "COMMUNITY_HUB";
+		case MessageFormat::BINARY_NMEA:
+			return "BINARY_NMEA";
 		case MessageFormat::FULL:
 			return "FULL";
 		case MessageFormat::JSON_NMEA:

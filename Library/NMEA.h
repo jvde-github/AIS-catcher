@@ -100,6 +100,7 @@ namespace AIS
 		bool processGGA(const std::string &s, TAG &tag, long t, std::string &error_msg);
 		bool processGLL(const std::string &s, TAG &tag, long t, std::string &error_msg);
 		bool processRMC(const std::string &s, TAG &tag, long t, std::string &error_msg);
+		bool processBinaryPacket(const std::string &packet, TAG &tag, std::string &error_msg);
 
 	public:
 		NMEA() : parser(&AIS::KeyMap, JSON_DICT_FULL)

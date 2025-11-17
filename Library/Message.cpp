@@ -130,7 +130,7 @@ namespace AIS
 		return ss.str();
 	}
 
-	std::string Message::getHubBinaryFormat(float level, float ppm) const
+	std::string Message::geBinaryNMEA(const TAG &tag, bool crc) const
 	{
 		std::string packet;
 
@@ -163,11 +163,14 @@ namespace AIS
 		// Version: 0
 		push_escaped(0x00);
 
-		// Flags byte: bit 0 = has signal/ppm
+		// Flags byte: bit 0 = has signal/ppm, bit 1 = has CRC
 		unsigned char flags = 0;
-		bool has_signal = (level != LEVEL_UNDEFINED && ppm != PPM_UNDEFINED);
-		if (has_signal)
+
+		if (tag.level != LEVEL_UNDEFINED && tag.ppm != PPM_UNDEFINED)
 			flags |= 0x01;
+
+		flags |= crc ? 0x02 : 0x00;
+
 		push_escaped(flags);
 
 		// Timestamp: 8 bytes (long long)
@@ -177,24 +180,19 @@ namespace AIS
 			push_escaped((ts >> (i * 8)) & 0xFF);
 		}
 
-		// Optional: PPM (1 byte, signed, 0.1 ppm resolution)
-		if (has_signal)
+		if (flags & 0x01)
 		{
-			// Signal strength: convert to tenths of dB
-			int signal_tenths = (int)(level * 10.0f);
+			int signal_tenths = (int)(tag.level * 10.0f);
 
 			push_escaped((signal_tenths >> 8) & 0xFF);
 			push_escaped(signal_tenths & 0xFF);
 
-			// PPM: convert to tenths of ppm
-			int ppm_tenths = (int)(ppm * 10.0f);
+			int ppm_tenths = (int)(tag.ppm * 10.0f);
 			push_escaped((unsigned char)(int8_t)ppm_tenths);
 		}
 
-		// Channel: 1 byte
 		push_escaped((unsigned char)channel);
 
-		// Length in bits: 2 bytes
 		push_escaped((length >> 8) & 0xFF);
 		push_escaped(length & 0xFF);
 
@@ -203,6 +201,13 @@ namespace AIS
 		for (int i = 0; i < numBytes; i++)
 		{
 			push_escaped(data[i]);
+		}
+
+		if (crc)
+		{
+			uint16_t crc_value = Util::Helper::CRC16((const uint8_t *)packet.data(), packet.size());
+			push_escaped((crc_value >> 8) & 0xFF);
+			push_escaped(crc_value & 0xFF);
 		}
 
 		// End character: \n (not escaped)
