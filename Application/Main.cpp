@@ -65,7 +65,7 @@ static void printVersion()
 {
 	Info() << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << "\n"
 		   << "(C) Copyright 2021-2025 " << COPYRIGHT << "\n"
-		   << "This is free software; see the source for copying conditions.There is NO" << "\n"
+		   << "This is free software; see the source for copying conditions. There is NO" << "\n"
 		   << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 }
 
