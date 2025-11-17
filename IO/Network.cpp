@@ -388,6 +388,16 @@ namespace IO
 					SendTo((s + "\r\n").c_str());
 			}
 		}
+		else if (fmt == MessageFormat::BINARY_NMEA)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (!filter.include(data[i]))
+					continue;
+
+				SendTo(data[i].geBinaryNMEA(tag));
+			}
+		}
 		else
 		{
 			for (int i = 0; i < len; i++)
@@ -834,6 +844,16 @@ namespace IO
 				}
 			}
 		}
+		else if (fmt == MessageFormat::BINARY_NMEA)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (!filter.include(data[i]))
+					continue;
+
+				SendAllDirect(data[i].geBinaryNMEA(tag));
+			}
+		}
 		else
 		{
 			for (int i = 0; i < len; i++)
@@ -927,6 +947,11 @@ namespace IO
 				{
 					((Protocol::MQTT *)session)->send((s + "\r\n").c_str(), s.length() + 2, topic_template.get(tag, data[0]));
 				}
+			}
+			else if (fmt == MessageFormat::BINARY_NMEA)
+			{
+				std::string binary = data[i].geBinaryNMEA(tag);
+				((Protocol::MQTT *)session)->send(binary.c_str(), binary.length(), topic_template.get(tag, data[0]));
 			}
 			else
 			{
