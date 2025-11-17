@@ -51,7 +51,7 @@ public:
         return tileData;
     };
 
-    virtual std::string generatePluginCode(bool overlay) { return ""; };
+    virtual std::string generatePluginCode(bool overlay) const = 0;
 
     std::string getName() const { return name; }
     std::string getAttribution() const { return attribution; }
@@ -213,7 +213,7 @@ public:
         return tileData;
     }
 
-    virtual std::string generatePluginCode(bool overlay) const
+    virtual std::string generatePluginCode(bool overlay) const override
     {
         if (!db)
             return "";
@@ -519,7 +519,7 @@ public:
         return tileData;
     }
 
-    std::string generatePluginCode(bool overlay) override
+    std::string generatePluginCode(bool overlay) const override
     {
         std::stringstream ss;
 
