@@ -2264,6 +2264,20 @@ td {
     mask-size: 100% 100%;
 }
 
+.decode_icon {
+    display: block;
+    width: 1em;
+    height: 1em;
+    background-color: currentColor;
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M705-128 447-388q-23 8-46 13t-47 5q-97 0-165-67.5T121-602q0-31 8-60.5t23-55.5l145 145 92-86-149-149q26-15 55-23.5t59-8.5q99 0 168.5 69.5T592-602q0 24-5 47t-13 46l259 258q11 11 11 26.5T833-198l-76 70q-11 11-26 11t-26-11Z"/%3E%3C/svg%3E');
+    -webkit-mask-image: var(--svg);
+    mask-image: var(--svg);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+}
+
 .showflex {
     display: flex;
 }
@@ -2791,4 +2805,185 @@ td {
 
 .aiscatcher-logo-control.connected svg path {
     fill: #12a5ed !important;
+}
+
+/* NMEA Decoder Styles */
+.decoder-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.decoder-panel {
+    background: var(--panel-color);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px var(--shadow-color-light);
+}
+
+.decoder-panel h3 {
+    margin-top: 0;
+    color: var(--primary-color);
+    font-size: 1.1em;
+}
+
+.decoder-panel p {
+    color: var(--stat-label-color);
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+
+#decoder_input {
+    width: 100%;
+    min-height: 150px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    border: 2px solid var(--light-gray);
+    border-radius: 4px;
+    resize: vertical;
+    background: var(--settings-bg-color);
+    color: var(--main-font-color);
+    box-sizing: border-box;
+}
+
+#decoder_input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.decoder-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.decoder-btn-primary,
+.decoder-btn-secondary {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.decoder-btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.decoder-btn-primary:hover {
+    background-color: var(--secondary-color);
+}
+
+.decoder-btn-secondary {
+    background-color: var(--light-gray);
+    color: var(--main-font-color);
+}
+
+.decoder-btn-secondary:hover {
+    background-color: #999;
+    color: white;
+}
+
+.decoder-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.decoder-error {
+    color: var(--error-color);
+}
+
+.decoder-success {
+    color: #28a745;
+}
+
+.decoder-warning {
+    color: #ff8c00;
+}
+
+.decoder-info {
+    color: var(--primary-color);
+}
+
+.decoder-output {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.decoder-message {
+    background: var(--panel-color);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px var(--shadow-color-light);
+}
+
+.decoder-message h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--light-gray);
+    padding-bottom: 8px;
+    font-size: 1em;
+}
+
+.decoder-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.decoder-table tr {
+    border-bottom: 1px solid var(--table-border-color);
+}
+
+.decoder-table tr:last-child {
+    border-bottom: none;
+}
+
+.decoder-table td {
+    padding: 6px 10px;
+}
+
+.decoder-field-key {
+    font-weight: 600;
+    color: var(--primary-color);
+    width: 25%;
+    font-family: monospace;
+}
+
+.decoder-field-value {
+    color: var(--main-font-color);
+    font-family: 'Courier New', monospace;
+    width: 35%;
+}
+
+.decoder-field-description {
+    color: var(--stat-label-color);
+    font-style: italic;
+    width: 40%;
+}
+
+@media (max-width: 768px) {
+    .decoder-container {
+        padding: 10px;
+    }
+
+    .decoder-panel,
+    .decoder-message {
+        padding: 15px;
+    }
+
+    .decoder-field-name {
+        width: 50%;
+    }
 }

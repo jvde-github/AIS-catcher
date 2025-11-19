@@ -35,7 +35,6 @@
 #include "Receiver.h"
 #include "MapTiles.h"
 
-
 class SSEStreamer : public StreamIn<JSON::JSON>
 {
 	IO::HTTPServer *server = nullptr;
@@ -100,6 +99,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 	bool use_zlib = true;
 	bool realtime = false;
 	bool showlog = false;
+	bool showdecoder = false;
 	bool KML = false;
 	bool GeoJSON = false;
 	bool supportPrometheus = false;
@@ -155,6 +155,9 @@ class WebViewer : public IO::HTTPServer, public Setting
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
 	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
+
+	// NMEA decoder utility
+	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);
 
 public:
 	WebViewer();

@@ -17,8 +17,62 @@
 
 #include "WebViewer.h"
 #include "Application/WebDB.h"
+#include "Library/NMEA.h"
+#include "JSON/JSONAIS.h"
 
 IO::OutputMessage *commm_feed = nullptr;
+
+std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
+{
+	// Collector class to capture JSON output
+	class JSONCollector : public StreamIn<JSON::JSON>
+	{
+	public:
+		std::vector<JSON::JSON> collected;
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override
+		{
+			for (int i = 0; i < len; i++)
+			{
+				collected.push_back(data[i]);
+			}
+		}
+	};
+
+	// Create decoder chain: NMEA -> Message -> JSON
+	AIS::NMEA nmea_decoder;
+	AIS::JSONAIS json_converter;
+	JSONCollector collector;
+	JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_FULL);
+	builder.setStringifyEnhanced(enhanced);
+
+	// Connect the pipeline: NMEA -> JSONAIS -> Collector
+	nmea_decoder.out.Connect((StreamIn<AIS::Message> *)&json_converter);
+	json_converter.out.Connect(&collector);
+
+	// Prepare RAW input from NMEA text
+	RAW raw;
+	raw.format = Format::TXT;
+	raw.data = (void *)nmea_input.c_str();
+	raw.size = nmea_input.length();
+
+	// Decode NMEA
+	TAG tag;
+	nmea_decoder.Receive(&raw, 1, tag);
+
+	// Build result JSON array
+	std::string result = "[";
+	for (size_t i = 0; i < collector.collected.size(); i++)
+	{
+		if (i > 0)
+			result += ",";
+		std::string json_str;
+		builder.stringify(collector.collected[i], json_str);
+		result += json_str;
+	}
+	result += "]";
+
+	return result;
+}
 
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
@@ -755,6 +809,36 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		else
 			Response(c, "application/text", "Message not availaible");
 	}
+	else if (r == "/api/decode")
+	{
+		// NMEA decoder endpoint - accepts NMEA lines in POST body, returns annotated JSON
+		if (a.empty())
+		{
+			Response(c, "application/json", std::string("{\"error\":\"No NMEA data provided\"}"), use_zlib & gzip);
+			return;
+		}
+
+		try
+		{
+			std::string result = decodeNMEAtoJSON(a, true);
+
+			if (result == "[]")
+			{
+				Response(c, "application/json", std::string("{\"error\":\"No valid AIS messages decoded\"}"), use_zlib & gzip);
+			}
+			else
+			{
+				Response(c, "application/json", result, use_zlib & gzip);
+			}
+		}
+		catch (const std::exception &e)
+		{
+			std::string error = "{\"error\":\"";
+			error += e.what();
+			error += "\"}";
+			Response(c, "application/json", error, use_zlib & gzip);
+		}
+	}
 	else if (r == "/api/vessel")
 	{
 		std::stringstream ss(a);
@@ -981,6 +1065,14 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 			plugins += "log_enabled = true;\n";
 		else
 			plugins += "log_enabled = false;\n";
+	}
+	else if (option == "DECODER")
+	{
+		showdecoder = Util::Parse::Switch(arg);
+		if (showdecoder)
+			plugins += "decoder_enabled = true;\n";
+		else
+			plugins += "decoder_enabled = false;\n";
 	}
 	else if (option == "PLUGIN")
 	{

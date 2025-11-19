@@ -35,19 +35,47 @@ namespace IO
 				std::size_t pos = c.msg.find(EOF_MSG);
 				while (pos != std::string::npos)
 				{
+					// Check if this is a POST request with Content-Length
+					std::size_t content_length = 0;
+					std::size_t cl_pos = c.msg.find("Content-Length:");
+					if (cl_pos == std::string::npos)
+						cl_pos = c.msg.find("content-length:");
+
+					if (cl_pos != std::string::npos && cl_pos < pos)
+					{
+						std::size_t cl_end = c.msg.find("\r\n", cl_pos);
+						if (cl_end != std::string::npos)
+						{
+							std::string cl_value = c.msg.substr(cl_pos + 15, cl_end - cl_pos - 15);
+							// Trim whitespace
+							cl_value.erase(0, cl_value.find_first_not_of(" \t"));
+							content_length = std::stoul(cl_value);
+						}
+					}
+
+					// Calculate how much data we need (headers + body)
+					std::size_t required_length = pos + 4 + content_length;
+
+					// If we don't have all the data yet, wait for more
+					if (c.msg.size() < required_length)
+					{
+						break;
+					}
+
 					std::string request;
 					bool gzip;
-					Parse(c.msg.substr(0, pos + 4), request, gzip);
+					// Pass the entire message including body to Parse
+					Parse(c.msg.substr(0, required_length), request, gzip);
 					if (!request.empty())
 						Request(c, request, gzip);
 
-					c.msg.erase(0, pos + 4);
+					c.msg.erase(0, required_length);
 					pos = c.msg.find(EOF_MSG);
 				}
 
 				if (c.msg.size() > 8192)
 				{
-					Error()<< "Server: closing connection, client flooding server: " << c.sock ;
+					Error() << "Server: closing connection, client flooding server: " << c.sock;
 					c.Close();
 				}
 			}
@@ -69,6 +97,10 @@ namespace IO
 
 		std::istringstream iss(s);
 		std::string line;
+		bool is_post = false;
+		int content_length = 0;
+		std::string url;
+
 		while (std::getline(iss, line) && !line.empty())
 		{
 			std::istringstream line_stream(line);
@@ -81,10 +113,36 @@ namespace IO
 				std::getline(line_stream, value, ' ');
 				get = value;
 			}
+			else if (key == "POST")
+			{
+				std::getline(line_stream, value, ' ');
+				url = value;
+				is_post = true;
+			}
 			else if (key == "ACCEPT-ENCODING:")
 			{
 				std::getline(line_stream, value);
 				accept_gzip = value.find("gzip") != std::string::npos;
+			}
+			else if (key == "CONTENT-LENGTH:")
+			{
+				std::getline(line_stream, value);
+				content_length = std::stoi(value);
+			}
+		}
+
+		if (is_post && content_length > 0)
+		{
+			size_t body_start = s.find("\r\n\r\n");
+			if (body_start != std::string::npos)
+			{
+				body_start += 4;
+				std::string body = s.substr(body_start, content_length);
+				get = url + "?" + body;
+			}
+			else
+			{
+				get = url;
 			}
 		}
 	}
@@ -95,7 +153,7 @@ namespace IO
 		if (gzip)
 		{
 			zip.zip(content);
-			ResponseRaw(c, type, (const char*)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
@@ -109,7 +167,7 @@ namespace IO
 		if (gzip)
 		{
 			zip.zip(data, len);
-			ResponseRaw(c, type, (const char*)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
@@ -132,7 +190,7 @@ namespace IO
 			strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now));
 			header += "\r\nExpires: " + std::string(buf);
 		}
-		else 
+		else
 		{
 			header += "\r\nCache-Control: no-cache";
 		}
@@ -141,13 +199,13 @@ namespace IO
 
 		if (!Send(c, header.c_str(), header.length()))
 		{
-			Error() << "Server: closing client socket." ;
+			Error() << "Server: closing client socket.";
 			c.Close();
 			return;
 		}
 		if (!Send(c, data, len))
 		{
-			Error() << "Server: closing client socket." ;
+			Error() << "Server: closing client socket.";
 			c.Close();
 			return;
 		}

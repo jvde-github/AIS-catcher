@@ -144,9 +144,110 @@ function restoreDefaultSettings() {
         kiosk_pan_map: true,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"]
     };
-    
+
     // Set default track colors
     settings.track_class_colors = getDefaultTrackColors();
+}
+
+
+// NMEA Decoder Functions
+function decodeNMEA() {
+    const input = document.getElementById('decoder_input').value.trim();
+    const statusEl = document.getElementById('decoder_status');
+    const outputEl = document.getElementById('decoder_output');
+
+    if (!input) {
+        statusEl.innerHTML = '<span class="decoder-error">Please enter NMEA sentences to decode.</span>';
+        return;
+    }
+
+    statusEl.innerHTML = '<span class="decoder-info">Decoding...</span>';
+    outputEl.innerHTML = '';
+
+    fetch('api/decode', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/plain'
+        },
+        body: input
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                statusEl.innerHTML = `<span class="decoder-error">Error: ${data.error}</span>`;
+                return;
+            }
+
+            if (Array.isArray(data) && data.length === 0) {
+                statusEl.innerHTML = '<span class="decoder-warning">No valid AIS messages found in input.</span>';
+                return;
+            }
+
+            statusEl.innerHTML = `<span class="decoder-success">Successfully decoded ${data.length} message(s)</span>`;
+
+            // Display decoded messages
+            let html = '';
+            data.forEach((msg, index) => {
+                html += `<div class="decoder-message">`;
+                html += `<h4>Message ${index + 1}</h4>`;
+                html += '<table class="decoder-table">';
+
+                // Fields to exclude from display
+                const excludeFields = ['class', 'device', 'driver', 'hardware', 'version', 'scaled', 'signalpower', 'ppm', 'rxtime'];
+
+                // Use natural ordering from JSON
+                Object.keys(msg).forEach(key => {
+                    // Skip excluded fields
+                    if (excludeFields.includes(key)) {
+                        return;
+                    }
+
+                    const field = msg[key];
+                    if (typeof field === 'object' && field !== null) {
+                        const value = field.value !== undefined ? field.value : '';
+                        const unit = field.unit || '';
+                        const description = field.description || '';
+                        const text = field.text || '';
+
+                        // Column 1: Key with unit if available
+                        let keyCol = key;
+                        if (unit) {
+                            keyCol += ` (${unit})`;
+                        }
+
+                        // Column 2: Value with text in parentheses if available
+                        let valueCol = value;
+                        if (text) {
+                            valueCol += ` (${text})`;
+                        }
+
+                        // Column 3: Description
+                        const descCol = description || '';
+
+                        html += '<tr>';
+                        html += `<td class="decoder-field-key">${keyCol}</td>`;
+                        html += `<td class="decoder-field-value">${valueCol}</td>`;
+                        html += `<td class="decoder-field-description">${descCol}</td>`;
+                        html += '</tr>';
+                    }
+                });
+
+                html += '</table>';
+                html += '</div>';
+            });
+
+            outputEl.innerHTML = html;
+        })
+        .catch(error => {
+            statusEl.innerHTML = `<span class="decoder-error">Network error: ${error.message}</span>`;
+            console.error('Decode error:', error);
+        });
+}
+
+function clearDecoder() {
+    document.getElementById('decoder_input').value = '';
+    document.getElementById('decoder_output').innerHTML = '';
+    document.getElementById('decoder_status').innerHTML = '';
 }
 
 function toggleInfoPanel() {
@@ -432,12 +533,12 @@ const ShippingClass = {
 var trackStyleFunction = function (feature) {
     var w = Number(settings.track_weight);
     var c = '#12a5ed'; // Default fallback color
-    
+
     // Use shipping class color if available
     if (feature.shipclass && settings.track_class_colors[feature.shipclass]) {
         c = settings.track_class_colors[feature.shipclass];
     }
-    
+
     if (feature.mmsi == hoverMMSI && hoverType == 'ship') {
         c = settings.shiphover_color;
         w = w + 2;
@@ -446,7 +547,7 @@ var trackStyleFunction = function (feature) {
         c = settings.shipselection_color;
         w = w + 2;
     }
-    
+
     return new ol.style.Style({
         stroke: new ol.style.Stroke({
             color: c,
@@ -6247,7 +6348,7 @@ function redrawMap() {
                     feature.shipclass = shipclass;
                     trackVector.addFeature(feature);
                 }
-            } 
+            }
         }
     }
 
@@ -6399,7 +6500,7 @@ function updateSettingsTab() {
     document.getElementById("settings_icon_scale").value = settings.icon_scale;
     document.getElementById("settings_track_weight").value = settings.track_weight;
     document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
-    
+
     // Update all slider display values
     updateIconScaleDisplay(settings.icon_scale);
     updateMapOpacityDisplay(settings.map_opacity);
@@ -6422,7 +6523,7 @@ function updateSettingsTab() {
     document.getElementById("settings_kiosk_pan_map").checked = settings.kiosk_pan_map;
 
     updateKioskSpeedDisplay(settings.kiosk_rotation_speed);
-    
+
     // Update ship class color inputs
     updateTrackColorInputs();
 }
@@ -6594,8 +6695,11 @@ function activateTab(b, a) {
     document.getElementById(a).style.display = "block";
     if (a === "map") document.getElementById("tableside").style.display = "flex";
 
-    document.getElementById(a + "_tab").className += " active";
-    document.getElementById(a + "_tab_mini").className += " active";
+    const tabElement = document.getElementById(a + "_tab");
+    if (tabElement) tabElement.className += " active";
+
+    const tabMiniElement = document.getElementById(a + "_tab_mini");
+    if (tabMiniElement) tabMiniElement.className += " active";
 
     settings.tab = a;
     saveSettings();
@@ -6642,7 +6746,18 @@ function selectMapTab(m) {
 function selectTab() {
     if (settings.tab == "settings") settings.tab = "stat";
 
-    if (settings.tab != "realtime" && settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat" && settings.tab != "log") {
+    // Check if requested tab is disabled and redirect to map
+    if (settings.tab == "realtime" && (typeof realtime_enabled === "undefined" || realtime_enabled === false)) {
+        settings.tab = "map";
+    }
+    if (settings.tab == "log" && (typeof log_enabled === "undefined" || log_enabled === false)) {
+        settings.tab = "map";
+    }
+    if (settings.tab == "decoder" && (typeof decoder_enabled === "undefined" || decoder_enabled === false)) {
+        settings.tab = "map";
+    }
+
+    if (settings.tab != "realtime" && settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat" && settings.tab != "log" && settings.tab != "decoder") {
         settings.tab = "stat";
         alert("Invalid tab specified");
     }
@@ -7354,6 +7469,11 @@ if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
 if (typeof log_enabled === "undefined" || log_enabled === false) {
     document.getElementById("log_tab").style.display = "none";
     document.getElementById("log_tab_mini").style.display = "none";
+}
+
+if (typeof decoder_enabled === "undefined" || decoder_enabled === false) {
+    document.getElementById("decoder_tab").style.display = "none";
+    document.getElementById("decoder_tab_mini").style.display = "none";
 }
 
 showWelcome();
