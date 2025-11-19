@@ -261,6 +261,11 @@ public:
         throw std::runtime_error("MBTiles not supported, please compile with SQLITE support.");
     }
 
+    std::string generatePluginCode(bool overlay) const override
+    {
+        return "";
+    }
+
 #endif
 };
 
