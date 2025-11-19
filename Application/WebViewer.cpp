@@ -24,54 +24,49 @@ IO::OutputMessage *commm_feed = nullptr;
 
 std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
 {
-	// Collector class to capture JSON output
-	class JSONCollector : public StreamIn<JSON::JSON>
+	// Decoder class with full pipeline: NMEA -> Message -> JSON -> Array
+	class NMEADecoder : public StreamIn<JSON::JSON>
 	{
 	public:
-		std::vector<JSON::JSON> collected;
+		AIS::NMEA nmea_decoder;
+		AIS::JSONAIS json_converter;
+		JSON::StringBuilder *builder;
+		std::string result;
+		bool first;
+
+		NMEADecoder(JSON::StringBuilder *b) : builder(b), first(true)
+		{
+			// Connect the pipeline: NMEA -> JSONAIS -> this
+			nmea_decoder.out.Connect((StreamIn<AIS::Message> *)&json_converter);
+			json_converter.out.Connect(this);
+			result = "[";
+		}
+
 		void Receive(const JSON::JSON *data, int len, TAG &tag) override
 		{
 			for (int i = 0; i < len; i++)
 			{
-				collected.push_back(data[i]);
+				if (!first)
+					result += ",";
+				first = false;
+				builder->stringify(data[i], result);
 			}
+		}
+
+		std::string decode(const std::string &nmea_input)
+		{
+			RAW raw = {Format::TXT, (void *)nmea_input.c_str(), (int)nmea_input.length()};
+			TAG tag;
+			nmea_decoder.Receive(&raw, 1, tag);
+			result += "]";
+			return result;
 		}
 	};
 
-	// Create decoder chain: NMEA -> Message -> JSON
-	AIS::NMEA nmea_decoder;
-	AIS::JSONAIS json_converter;
-	JSONCollector collector;
 	JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_FULL);
 	builder.setStringifyEnhanced(enhanced);
-
-	// Connect the pipeline: NMEA -> JSONAIS -> Collector
-	nmea_decoder.out.Connect((StreamIn<AIS::Message> *)&json_converter);
-	json_converter.out.Connect(&collector);
-
-	// Prepare RAW input from NMEA text
-	RAW raw;
-	raw.format = Format::TXT;
-	raw.data = (void *)nmea_input.c_str();
-	raw.size = nmea_input.length();
-
-	// Decode NMEA
-	TAG tag;
-	nmea_decoder.Receive(&raw, 1, tag);
-
-	// Build result JSON array
-	std::string result = "[";
-	for (size_t i = 0; i < collector.collected.size(); i++)
-	{
-		if (i > 0)
-			result += ",";
-		std::string json_str;
-		builder.stringify(collector.collected[i], json_str);
-		result += json_str;
-	}
-	result += "]";
-
-	return result;
+	NMEADecoder decoder(&builder);
+	return decoder.decode(nmea_input);
 }
 
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
