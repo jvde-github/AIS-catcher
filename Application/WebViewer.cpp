@@ -177,6 +177,7 @@ bool WebViewer::parseMBTilesURL(const std::string &url, std::string &layerID, in
 
 void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
 {
+#if HASSQLITE
 	auto source = std::make_shared<MBTilesSupport>();
 	if (source->open(filepath))
 	{
@@ -187,6 +188,7 @@ void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
 	{
 		Error() << "Failed to load MBTiles from: " << filepath;
 	}
+#endif
 }
 
 void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool overlay)

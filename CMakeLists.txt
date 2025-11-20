@@ -18,7 +18,7 @@ find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
     set(GIT_VERSION_DESCRIBE "")
-    
+
     # First try to fetch tags (ignore errors if repo is already complete)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
@@ -39,7 +39,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
         RESULT_VARIABLE GIT_RESULT
         ERROR_VARIABLE GIT_ERROR
     )
-    
+
     if(GIT_VERSION_DESCRIBE)
         set(VERSION_DESCRIBE "${GIT_VERSION_DESCRIBE}")
         message(STATUS "Git version: ${VERSION_DESCRIBE}")
@@ -854,13 +854,57 @@ if(ZMQ)
 endif()
 
 set(CPP
-    Application/Main.cpp Application/Prometheus.cpp Application/WebViewer.cpp Application/Receiver.cpp Application/Config.cpp Tracking/Ships.cpp Tracking/DB.cpp DBMS/PostgreSQL.cpp
-    Device/AIRSPYHF.cpp Device/FileWAV.cpp Device/RTLSDR.cpp Device/SDRPLAY.cpp DSP/Demod.cpp DSP/Model.cpp Library/AIS.cpp JSON/JSONAIS.cpp JSON/Keys.cpp Library/Bluetooth.cpp
-    Device/FileRAW.cpp Device/HACKRF.cpp Device/UDP.cpp Device/RTLTCP.cpp Device/ZMQ.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Library/Message.cpp Library/NMEA.cpp
-    Library/Utilities.cpp Library/TCP.cpp JSON/JSON.cpp IO/Network.cpp IO/HTTPServer.cpp JSON/StringBuilder.cpp JSON/Parser.cpp Library/Logger.cpp
-    Device/AIRSPY.cpp Device/Serial.cpp IO/HTTPClient.cpp Application/WebDB.cpp
-    DSP/DSP.cpp Device/N2KsktCAN.cpp Library/Basestation.cpp Library/Beast.cpp Library/ADSB.cpp
-    IO/MsgOut.cpp IO/N2KStream.cpp Library/N2K.cpp IO/N2KInterface.cpp IO/Protocol.cpp)
+    Application/Config.cpp
+    Application/Main.cpp
+    Application/MapTiles.cpp
+    Application/Prometheus.cpp
+    Application/Receiver.cpp
+    Application/WebDB.cpp
+    Application/WebViewer.cpp
+    DBMS/PostgreSQL.cpp
+    Device/AIRSPY.cpp
+    Device/AIRSPYHF.cpp
+    Device/FileRAW.cpp
+    Device/FileWAV.cpp
+    Device/HACKRF.cpp
+    Device/N2KsktCAN.cpp
+    Device/RTLSDR.cpp
+    Device/RTLTCP.cpp
+    Device/SDRPLAY.cpp
+    Device/Serial.cpp
+    Device/SoapySDR.cpp
+    Device/SpyServer.cpp
+    Device/UDP.cpp
+    Device/ZMQ.cpp
+    DSP/Demod.cpp
+    DSP/DSP.cpp
+    DSP/Model.cpp
+    IO/HTTPClient.cpp
+    IO/HTTPServer.cpp
+    IO/MsgOut.cpp
+    IO/N2KInterface.cpp
+    IO/N2KStream.cpp
+    IO/Network.cpp
+    IO/Protocol.cpp
+    JSON/JSON.cpp
+    JSON/JSONAIS.cpp
+    JSON/Keys.cpp
+    JSON/Parser.cpp
+    JSON/StringBuilder.cpp
+    Library/ADSB.cpp
+    Library/AIS.cpp
+    Library/Basestation.cpp
+    Library/Beast.cpp
+    Library/Bluetooth.cpp
+    Library/Logger.cpp
+    Library/Message.cpp
+    Library/N2K.cpp
+    Library/NMEA.cpp
+    Library/TCP.cpp
+    Library/Utilities.cpp
+    Tracking/DB.cpp
+    Tracking/Ships.cpp
+)
 
 set(HEADER
     Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Application/WebDB.h Library/Logger.h Application/WebViewer.h Application/Receiver.h Tracking/Ships.h Tracking/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h Application/MapTiles.h Library/Beast.h
