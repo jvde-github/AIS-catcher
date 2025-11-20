@@ -1,7 +1,5 @@
 #include "MapTiles.h"
 
-#include <string>
-#include <vector>
 #include <utility>
 #include <fstream>
 #include <algorithm>
