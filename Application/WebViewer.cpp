@@ -22,53 +22,6 @@
 
 IO::OutputMessage *commm_feed = nullptr;
 
-std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
-{
-	// Decoder class with full pipeline: NMEA -> Message -> JSON -> Array
-	class NMEADecoder : public StreamIn<JSON::JSON>
-	{
-	public:
-		AIS::NMEA nmea_decoder;
-		AIS::JSONAIS json_converter;
-		JSON::StringBuilder *builder;
-		std::string result;
-		bool first;
-
-		NMEADecoder(JSON::StringBuilder *b) : builder(b), first(true)
-		{
-			// Connect the pipeline: NMEA -> JSONAIS -> this
-			nmea_decoder.out.Connect((StreamIn<AIS::Message> *)&json_converter);
-			json_converter.out.Connect(this);
-			result = "[";
-		}
-
-		void Receive(const JSON::JSON *data, int len, TAG &tag) override
-		{
-			for (int i = 0; i < len; i++)
-			{
-				if (!first)
-					result += ",";
-				first = false;
-				builder->stringify(data[i], result);
-			}
-		}
-
-		std::string decode(const std::string &nmea_input)
-		{
-			RAW raw = {Format::TXT, (void *)nmea_input.c_str(), (int)nmea_input.length()};
-			TAG tag;
-			nmea_decoder.Receive(&raw, 1, tag);
-			result += "]";
-			return result;
-		}
-	};
-
-	JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_FULL);
-	builder.setStringifyEnhanced(enhanced);
-	NMEADecoder decoder(&builder);
-	return decoder.decode(nmea_input);
-}
-
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
 	if (server)
@@ -117,6 +70,61 @@ WebViewer::WebViewer()
 	JSON::StringBuilder::stringify(Util::Helper::getOS(), os);
 	hardware.clear();
 	JSON::StringBuilder::stringify(Util::Helper::getHardware(), hardware);
+}
+
+std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
+{
+	// Decoder class with full pipeline: NMEA -> Message -> JSON -> Array
+	class NMEADecoder : public StreamIn<JSON::JSON>
+	{
+	public:
+		AIS::NMEA nmea_decoder;
+		AIS::JSONAIS json_converter;
+		JSON::StringBuilder *builder;
+		std::string result;
+		bool first;
+		size_t message_count;
+		const size_t MAX_OUTPUT_SIZE;
+
+		NMEADecoder(JSON::StringBuilder *b) : builder(b), first(true), message_count(0), MAX_OUTPUT_SIZE(1024 * 1024)
+		{
+			nmea_decoder >> json_converter;
+			json_converter.out.Connect(this);
+
+			result = "[";
+			result.reserve(4096);
+		}
+
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (result.size() > MAX_OUTPUT_SIZE)
+					throw std::runtime_error("Output size limit exceeded");
+
+				if (!first)
+					result += ",";
+
+				first = false;
+				builder->stringify(data[i], result);
+				message_count++;
+			}
+		}
+
+		std::string decode(const std::string &nmea_input)
+		{
+			RAW raw = {Format::TXT, (void *)nmea_input.c_str(), (int)nmea_input.length()};
+			TAG tag;
+			nmea_decoder.Receive(&raw, 1, tag);
+			result += "]";
+			return result;
+		}
+	};
+
+	JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_FULL);
+	builder.setStringifyEnhanced(enhanced);
+	NMEADecoder decoder(&builder);
+	return decoder.decode(nmea_input);
 }
 
 std::vector<std::string> WebViewer::parsePath(const std::string &url)
@@ -213,12 +221,10 @@ bool WebViewer::Save()
 			return false;
 		if (!hist_day.Save(infile))
 			return false;
-		// Save ship database
-		if (backupDB)
-		{
-			if (!ships.Save(infile))
-				return false;
-		}
+
+		if (!ships.Save(infile))
+			return false;
+
 		infile.close();
 	}
 	catch (const std::exception &e)
@@ -262,7 +268,7 @@ bool WebViewer::Load()
 		if (!hist_day.Load(infile))
 			return false;
 		// Load ship database if available
-		if (infile.peek() != EOF && backupDB)
+		if (infile.peek() != EOF)
 		{
 			if (!ships.Load(infile))
 				Warning() << "Server: Could not load ship database from backup";
@@ -806,15 +812,11 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	}
 	else if (r == "/api/decode")
 	{
-		// NMEA decoder endpoint - accepts NMEA lines in POST body, returns annotated JSON
-		if (a.empty())
-		{
-			Response(c, "application/json", std::string("{\"error\":\"No NMEA data provided\"}"), use_zlib & gzip);
-			return;
-		}
-
 		try
 		{
+			if (a.size() > 1024)
+				throw std::runtime_error("Input too large");
+
 			std::string result = decodeNMEAtoJSON(a, true);
 
 			if (result == "[]")
@@ -828,10 +830,9 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		}
 		catch (const std::exception &e)
 		{
-			std::string error = "{\"error\":\"";
-			error += e.what();
-			error += "\"}";
-			Response(c, "application/json", error, use_zlib & gzip);
+			// Security: Don't expose internal exception details
+			Error() << "Decoder error: " << e.what();
+			Response(c, "application/json", std::string("{\"error\":\"Decoding failed\"}"), use_zlib & gzip);
 		}
 	}
 	else if (r == "/api/vessel")

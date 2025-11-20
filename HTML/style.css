@@ -37,7 +37,7 @@
     --tableheader-header-color: black;
     --tableheader-header-background-color: rgb(240, 240, 240);
     --table-header-background-color: var(--primary-color);
-    --table-border-color: lightgrey;
+    --table-border-color: #e8e8e8;
     --table-background-color: white;
     --table-selection-background-color: #daebfe;
     --table-alternate-background-color: var(--panel-color);
@@ -2826,8 +2826,8 @@ td {
 
 .decoder-panel h3 {
     margin-top: 0;
-    color: var(--primary-color);
-    font-size: 1.1em;
+    color: var(--stat-color);
+    font-size: 0.9em;
 }
 
 .decoder-panel p {
@@ -2841,8 +2841,8 @@ td {
     min-height: 150px;
     padding: 10px;
     font-family: 'Courier New', monospace;
-    font-size: 12px;
-    border: 2px solid var(--light-gray);
+    font-size: 0.9em;
+    border: 1px solid var(--table-border-color);
     border-radius: 4px;
     resize: vertical;
     background: var(--settings-bg-color);
@@ -2852,7 +2852,7 @@ td {
 
 #decoder_input:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--secondary-color);
 }
 
 .decoder-buttons {
@@ -2866,36 +2866,21 @@ td {
     padding: 10px 20px;
     border: none;
     border-radius: 4px;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 0.9em;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: var(--hover-transition);
+    background-color: var(--graph-header-bg-color);
+    color: var(--graph-header-color);
 }
 
-.decoder-btn-primary {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.decoder-btn-primary:hover {
-    background-color: var(--secondary-color);
-}
-
-.decoder-btn-secondary {
-    background-color: var(--light-gray);
-    color: var(--main-font-color);
-}
-
+.decoder-btn-primary:hover,
 .decoder-btn-secondary:hover {
-    background-color: #999;
-    color: white;
+    background-color: var(--menu-background-hover-color);
 }
 
 .decoder-status {
     margin-top: 15px;
-    padding: 10px;
-    border-radius: 4px;
-    font-size: 14px;
+    font-size: 0.9em;
 }
 
 .decoder-error {
@@ -2903,15 +2888,7 @@ td {
 }
 
 .decoder-success {
-    color: #28a745;
-}
-
-.decoder-warning {
-    color: #ff8c00;
-}
-
-.decoder-info {
-    color: var(--primary-color);
+    color: var(--ok-color);
 }
 
 .decoder-output {
@@ -2930,10 +2907,10 @@ td {
 .decoder-message h4 {
     margin-top: 0;
     margin-bottom: 15px;
-    color: var(--primary-color);
-    border-bottom: 2px solid var(--light-gray);
+    color: var(--stat-color);
+    border-bottom: 1px solid var(--stat-divider-color);
     padding-bottom: 8px;
-    font-size: 1em;
+    font-size: 0.9em;
 }
 
 .decoder-table {
@@ -2951,26 +2928,30 @@ td {
 }
 
 .decoder-table td {
-    padding: 6px 10px;
+    padding: 8px 10px;
 }
 
 .decoder-field-key {
-    font-weight: 600;
-    color: var(--primary-color);
+    font-weight: normal;
+    color: var(--stat-label-color);
     width: 25%;
-    font-family: monospace;
+    font-family: inherit;
+    text-align: right;
 }
 
 .decoder-field-value {
-    color: var(--main-font-color);
+    color: var(--stat-color);
     font-family: 'Courier New', monospace;
     width: 35%;
+    border-left: solid 1px var(--stat-divider-color);
+    padding-left: 20px;
 }
 
 .decoder-field-description {
     color: var(--stat-label-color);
-    font-style: italic;
+    font-style: normal;
     width: 40%;
+    padding-left: 15px;
 }
 
 @media (max-width: 768px) {

@@ -66,6 +66,7 @@ namespace AIS
 		{"", "", "", "", "context", ""}, // KEY_SETTING_CONTEXT
 		{"", "", "", "", "crc_check", ""}, // KEY_SETTING_CRC_CHECK
 		{"", "", "", "", "cutoff", ""}, // KEY_SETTING_CUTOFF
+		{"", "", "", "", "decoder", ""}, // KEY_SETTINGS_DECODER
 		{"", "", "", "", "description", ""}, // KEY_SETTING_DESCRIPTION
 		{"", "", "", "", "device", ""}, // KEY_SETTING_DEVICE
 		{"", "", "", "", "droop", ""}, // KEY_SETTING_DROOP
@@ -669,6 +670,7 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_SETTING_CONTEXT
 		KeyInfo("", "", nullptr), // KEY_SETTING_CRC_CHECK
 		KeyInfo("", "", nullptr), // KEY_SETTING_CUTOFF
+		KeyInfo("", "", nullptr), // KEY_SETTINGS_DECODER
 		KeyInfo("", "", nullptr), // KEY_SETTING_DESCRIPTION
 		KeyInfo("", "", nullptr), // KEY_SETTING_DEVICE
 		KeyInfo("", "", nullptr), // KEY_SETTING_DROOP

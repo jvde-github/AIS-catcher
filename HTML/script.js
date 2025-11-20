@@ -6761,7 +6761,7 @@ function selectTab() {
         settings.tab = "stat";
         alert("Invalid tab specified");
     }
-    activateTab(null, settings.tab);
+     activateTab(null, settings.tab);
     //document.getElementById(settings.tab + "_tab").click();
 }
 
