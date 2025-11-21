@@ -28,13 +28,11 @@
 
 #include "FIFO.h"
 
-#include "Stream.h"
 #include "Common.h"
-#include "Utilities/Parse.h"
-#include "Utilities/Convert.h"
+#include "Parse.h"
+#include "Convert.h"
 
 namespace Device {
-
 
 	class Description {
 

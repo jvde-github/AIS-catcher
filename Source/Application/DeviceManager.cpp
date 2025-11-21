@@ -15,10 +15,11 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <iostream>
+
 #include "DeviceManager.h"
 #include "Logger.h"
-#include "Utilities/Parse.h"
-#include <iostream>
+#include "Parse.h"
 
 std::vector<Device::Description> DeviceManager::device_list;
 

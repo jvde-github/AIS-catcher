@@ -18,7 +18,6 @@
 #include <cstring>
 
 #include "ZMQ.h"
-#include "Utilities/Convert.h"
 
 namespace Device {
 

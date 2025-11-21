@@ -24,7 +24,7 @@
 #include <sstream>
 #include <cstring>
 
-#include "Utilities/Convert.h"
+#include "Convert.h"
 
 namespace AIS
 {

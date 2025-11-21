@@ -62,7 +62,8 @@ namespace N2K {
 			return false;
 		}
 
-		strcpy(ifr.ifr_name, iface.c_str());
+		strncpy(ifr.ifr_name, iface.c_str(), IFNAMSIZ - 1);
+		ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
 		if (ioctl(skt, SIOCGIFINDEX, &ifr) < 0) {
 			Error() << "NMEA2000: ioctl failed on " << ifr.ifr_name << endl;

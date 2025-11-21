@@ -22,8 +22,8 @@
 #include <string>
 #include <cassert>
 
-#include "../Library/Common.h"
-#include "../Library/Stream.h"
+#include "Common.h"
+#include "Stream.h"
 
 namespace Util
 {

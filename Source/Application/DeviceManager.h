@@ -18,6 +18,7 @@
 #pragma once
 
 #include "Common.h"
+
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
 #include "Device/RTLSDR.h"

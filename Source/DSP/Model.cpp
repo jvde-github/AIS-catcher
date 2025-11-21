@@ -18,8 +18,8 @@
 #include <cassert>
 
 #include "Model.h"
-#include "Utilities/Parse.h"
-#include "Utilities/Convert.h"
+#include "Parse.h"
+#include "Convert.h"
 
 namespace AIS
 {

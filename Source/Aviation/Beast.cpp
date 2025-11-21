@@ -15,9 +15,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cmath>
+
 #include "Beast.h"
 #include "Logger.h"
-#include <cmath>
 
 // RAW1090 implementation
 void RAW1090::ProcessByte(uint8_t byte, TAG &tag)

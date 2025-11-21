@@ -16,7 +16,7 @@
 */
 
 #include "StreamHelpers.h"
-#include "../Library/Logger.h"
+#include "Logger.h"
 #include "Convert.h"
 #include "Parse.h"
 

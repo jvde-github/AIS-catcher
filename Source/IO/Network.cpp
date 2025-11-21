@@ -19,9 +19,9 @@
 
 #include "AIS-catcher.h"
 #include "Network.h"
-#include "Utilities/Convert.h"
-#include "Utilities/Parse.h"
-#include "Utilities/Helper.h"
+#include "Convert.h"
+#include "Parse.h"
+#include "Helper.h"
 #include "Receiver.h"
 
 namespace IO

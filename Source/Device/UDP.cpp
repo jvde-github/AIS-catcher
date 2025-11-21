@@ -20,7 +20,6 @@
 #include <sys/select.h>
 #endif
 
-#include "Utilities/Convert.h"
 #include "UDP.h"
 
 namespace Device

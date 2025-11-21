@@ -23,8 +23,8 @@
 #include "Stream.h"
 
 #include "JSON/JSON.h"
-#include "JSON/Parser.h"
-#include "JSON/StringBuilder.h"
+#include "Parser.h"
+#include "StringBuilder.h"
 #include "Keys.h"
 
 namespace AIS

@@ -55,8 +55,8 @@
 #include <openssl/err.h>
 #endif
 
-#include "Utilities/Parse.h"
-#include "Utilities/Convert.h"
+#include "Parse.h"
+#include "Convert.h"
 #include "Common.h"
 
 namespace Protocol

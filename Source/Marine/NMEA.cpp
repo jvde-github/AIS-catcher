@@ -16,9 +16,9 @@
 */
 
 #include "NMEA.h"
-#include "Utilities/Parse.h"
-#include "Utilities/Convert.h"
-#include "Utilities/Helper.h"
+#include "Parse.h"
+#include "Convert.h"
+#include "Helper.h"
 
 namespace AIS
 {

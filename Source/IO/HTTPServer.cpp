@@ -21,7 +21,6 @@
 
 namespace IO
 {
-
 	// HTTP Server
 	void HTTPServer::processClients()
 	{

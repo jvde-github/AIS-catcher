@@ -16,11 +16,11 @@
 */
 
 #include "Receiver.h"
-#include "Utilities/Convert.h"
-#include "Utilities/Helper.h"
-#include "JSON/StringBuilder.h"
-
+#include "Convert.h"
+#include "Helper.h"
+#include "StringBuilder.h"
 #include "Statistics.h"
+
 //--------------------------------------------
 
 void Receiver::setTags(const std::string &s)

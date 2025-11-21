@@ -24,8 +24,8 @@
 #include "JSONAIS.h"
 
 #include "Keys.h"
-#include "JSON/JSON.h"
-#include "JSON/StringBuilder.h"
+#include "JSON.h"
+#include "StringBuilder.h"
 #include "Ships.h"
 
 struct PathPoint
