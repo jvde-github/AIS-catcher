@@ -41,7 +41,7 @@
 
 namespace Util
 {
-	uint16_t Helper::CRC16(const uint8_t* data, size_t length)
+	uint16_t Helper::CRC16(const uint8_t *data, size_t length)
 	{
 		uint16_t crc = 0xFFFF;
 		for (size_t i = 0; i < length; i++)
@@ -330,5 +330,66 @@ namespace Util
 		}
 #endif
 		return files;
+	}
+
+	std::vector<std::string> Helper::getFilesInDirectory(const std::string &directory)
+	{
+		std::vector<std::string> files;
+
+#ifdef _WIN32
+		WIN32_FIND_DATAA ffd;
+		HANDLE hFind = INVALID_HANDLE_VALUE;
+		const std::string search_path = directory + "\\*";
+		hFind = FindFirstFileA((LPCSTR)search_path.c_str(), &ffd);
+		if (hFind == INVALID_HANDLE_VALUE)
+			return files;
+
+		do
+		{
+			std::string file_name = std::string((char *)ffd.cFileName);
+			if (file_name != "." && file_name != "..")
+			{
+				files.push_back(file_name);
+			}
+		} while (FindNextFileA(hFind, &ffd) != 0);
+		FindClose(hFind);
+
+#else
+		DIR *dir;
+		struct dirent *ent;
+		if ((dir = opendir(directory.c_str())) != nullptr)
+		{
+			while ((ent = readdir(dir)) != nullptr)
+			{
+				std::string file_name = ent->d_name;
+				if (file_name != "." && file_name != "..")
+				{
+					files.push_back(file_name);
+				}
+			}
+			closedir(dir);
+		}
+#endif
+		return files;
+	}
+
+	bool Helper::isUUID(const std::string &s)
+	{
+		if (s.size() != 36)
+			return false;
+		for (int i = 0; i < 36; i++)
+		{
+			if (i == 8 || i == 13 || i == 18 || i == 23)
+			{
+				if (s[i] != '-')
+					return false;
+			}
+			else
+			{
+				if (!isxdigit(s[i]))
+					return false;
+			}
+		}
+		return true;
 	}
 }

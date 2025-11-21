@@ -29,28 +29,11 @@ namespace Util
 		static std::string readFile(const std::string &filename);
 		static int lsb(uint64_t x);
 		static std::vector<std::string> getFilesWithExtension(const std::string &directory, const std::string &extension);
+		static std::vector<std::string> getFilesInDirectory(const std::string &directory);
 		static long getMemoryConsumption();
 		static std::string getOS();
 		static std::string getHardware();
-		static uint16_t CRC16(const uint8_t* data, size_t length);
-		static bool isUUID(const std::string &s)
-		{
-			if (s.size() != 36)
-				return false;
-			for (int i = 0; i < 36; i++)
-			{
-				if (i == 8 || i == 13 || i == 18 || i == 23)
-				{
-					if (s[i] != '-')
-						return false;
-				}
-				else
-				{
-					if (!isxdigit(s[i]))
-						return false;
-				}
-			}
-			return true;
-		}
+		static uint16_t CRC16(const uint8_t *data, size_t length);
+		static bool isUUID(const std::string &s);
 	};
 }

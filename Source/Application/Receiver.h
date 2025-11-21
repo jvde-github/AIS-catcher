@@ -24,17 +24,15 @@
 #include <mutex>
 
 #include "AIS-catcher.h"
-
 #include "Signals.h"
 #include "Common.h"
 #include "Model.h"
-#include "MsgOut.h"
 #include "StreamCounter.h"
 #include "Network.h"
 #include "AIS.h"
 #include "DB.h"
 #include "History.h"
-#include "JSON/JSON.h"
+#include "JSON.h"
 #include "DeviceManager.h"
 
 class Receiver;

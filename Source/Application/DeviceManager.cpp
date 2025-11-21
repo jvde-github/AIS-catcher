@@ -34,6 +34,7 @@ void DeviceManager::refreshDevices()
 	HACKRF().getDeviceList(device_list);
 	SOAPYSDR().getDeviceList(device_list);
 	N2KSCAN().getDeviceList(device_list);
+	SerialPort().getDeviceList(device_list);
 }
 
 Device::Device *DeviceManager::getDeviceByType(Type type)

@@ -18,12 +18,16 @@
 #include <cstring>
 #ifndef _WIN32
 #include <sys/select.h>
+#include <sys/stat.h>
 #endif
 
 #include "Serial.h"
+#include "Helper.h"
 
 namespace Device
 {
+	// Initialize static member
+	std::vector<std::string> SerialPort::device_list;
 
 	void SerialPort::ReadAsync()
 	{
@@ -136,6 +140,18 @@ namespace Device
 			serial_fd = -1;
 		}
 #endif
+	}
+
+	void SerialPort::Open(uint64_t handle)
+	{
+		if (handle < device_list.size())
+		{
+			port = device_list[handle];
+		}
+		else
+		{
+			throw std::runtime_error("Serial: Invalid device handle " + std::to_string(handle));
+		}
 	}
 
 	void SerialPort::Play()
@@ -294,5 +310,80 @@ namespace Device
 	std::string SerialPort::Get()
 	{
 		return Device::Get() + " baudrate " + std::to_string(baudrate) + " port " + port + " print " + Util::Convert::toString(print);
+	}
+
+	void SerialPort::getDeviceList(std::vector<Description> &DeviceList)
+	{
+		device_list.clear();
+
+#ifdef _WIN32
+		for (int i = 1; i <= 256; i++)
+		{
+			std::string port_name = "\\\\.\\COM" + std::to_string(i);
+			HANDLE h = CreateFileA(port_name.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+			if (h != INVALID_HANDLE_VALUE)
+			{
+				CloseHandle(h);
+				std::string display_name = "COM" + std::to_string(i);
+				uint64_t handle = device_list.size();
+				device_list.push_back(port_name);
+				DeviceList.push_back(Description("Serial", "COM Port", display_name, handle, Type::SERIALPORT));
+			}
+		}
+#else
+		// First, scan /dev/serial/by-id for persistent device names (symlinks)
+		std::vector<std::string> by_id_files = Util::Helper::getFilesInDirectory("/dev/serial/by-id");
+		for (const auto &name : by_id_files)
+		{
+			std::string device_path = "/dev/serial/by-id/" + name;
+
+			uint64_t handle = device_list.size();
+			device_list.push_back(device_path);
+			DeviceList.push_back(Description("Serial", "USB Serial", name, handle, Type::SERIALPORT));
+		}
+
+		std::vector<std::string> dev_files = Util::Helper::getFilesInDirectory("/dev");
+		for (const auto &name : dev_files)
+		{
+			bool is_serial = false;
+
+			if (name.compare(0, 6, "ttyUSB") == 0 || name.compare(0, 6, "ttyACM") == 0 || name.compare(0, 4, "ttyS") == 0)
+			{
+				std::string device_path = "/dev/" + name;
+
+				struct stat st;
+				if (stat(device_path.c_str(), &st) == 0 && S_ISCHR(st.st_mode))
+				{
+					// Only add if not already found via by-id
+					bool already_listed = false;
+					for (const auto &dev : device_list)
+					{
+						char resolved_path[PATH_MAX];
+						if (realpath(dev.c_str(), resolved_path) != nullptr)
+						{
+							if (device_path == std::string(resolved_path))
+							{
+								already_listed = true;
+								break;
+							}
+						}
+					}
+
+					if (!already_listed)
+					{
+						std::string type_str = "Serial Port";
+						if (name.compare(0, 6, "ttyUSB") == 0)
+							type_str = "USB Serial";
+						else if (name.compare(0, 6, "ttyACM") == 0)
+							type_str = "ACM Serial";
+
+						uint64_t handle = device_list.size();
+						device_list.push_back(device_path);
+						DeviceList.push_back(Description("Serial", type_str, name, handle, Type::SERIALPORT));
+					}
+				}
+			}
+		}
+#endif
 	}
 }

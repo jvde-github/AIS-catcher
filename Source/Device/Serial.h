@@ -74,30 +74,31 @@ namespace Device
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 
+		// Static vector to store device paths (handle = vector index)
+		static std::vector<std::string> device_list;
+
 		void ReadAsync();
 		void Dump(RAW &r);
 
 	public:
-		SerialPort() : Device(Format::TXT, 288000, Type::SERIALPORT), port(""), baudrate(38400){};
+		SerialPort() : Device(Format::TXT, 288000, Type::SERIALPORT), port(""), baudrate(38400) {};
 		~SerialPort();
 
-		std::string getRateDescription() { return std::to_string(baudrate) + " baud"; }
-
-		bool isStreaming() { return Device::isStreaming() && !lost; }
-		bool isCallback() { return true; }
-
-		Setting &Set(std::string option, std::string arg);
-		std::string Get();
-
-		std::string getProduct() { return "Serial Port"; }
-		std::string getVendor() { return "Unknown"; }
-		std::string getSerial() { return port; }
-
-		void setFormat(Format f) {}
+		void Open(uint64_t handle) override;
+		std::string getRateDescription() override { return std::to_string(baudrate) + " baud"; }
+		bool isStreaming() override { return Device::isStreaming() && !lost; }
+		bool isCallback() override { return true; }
+		Setting &Set(std::string option, std::string arg) override;
+		std::string Get() override;
+		std::string getProduct() override { return "Serial Port"; }
+		std::string getVendor() override { return "Unknown"; }
+		std::string getSerial() override { return port; }
+		void setFormat(Format f) override {}
 
 		// Control
-		void Close();
-		void Play();
-		void Stop();
+		void Close() override;
+		void Play() override;
+		void Stop() override;
+		void getDeviceList(std::vector<Description> &DeviceList) override;
 	};
 }

@@ -21,7 +21,6 @@
 #include <mutex>
 
 #include "AIS-catcher.h"
-
 #include "JSONAIS.h"
 
 class PromotheusCounter : public StreamIn<JSON::JSON> {
