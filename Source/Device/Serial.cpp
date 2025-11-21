@@ -19,6 +19,7 @@
 #ifndef _WIN32
 #include <sys/select.h>
 #include <sys/stat.h>
+#include <limits.h>
 #endif
 
 #include "Serial.h"
@@ -345,12 +346,10 @@ namespace Device
 		std::vector<std::string> dev_files = Util::Helper::getFilesInDirectory("/dev");
 		for (const auto &name : dev_files)
 		{
-			bool is_serial = false;
-
+			// Check for common serial device patterns
 			if (name.compare(0, 6, "ttyUSB") == 0 || name.compare(0, 6, "ttyACM") == 0 || name.compare(0, 4, "ttyS") == 0)
 			{
 				std::string device_path = "/dev/" + name;
-
 				struct stat st;
 				if (stat(device_path.c_str(), &st) == 0 && S_ISCHR(st.st_mode))
 				{
