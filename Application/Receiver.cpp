@@ -16,26 +16,12 @@
 */
 
 #include "Receiver.h"
-#include "Utilities.h"
+#include "Utilities/Convert.h"
+#include "Utilities/Helper.h"
 #include "JSON/StringBuilder.h"
 
 #include "Statistics.h"
 //--------------------------------------------
-
-std::vector<Device::Description> Receiver::device_list;
-
-void Receiver::refreshDevices(void)
-{
-	device_list.clear();
-
-	RTLSDR().getDeviceList(device_list);
-	AIRSPYHF().getDeviceList(device_list);
-	AIRSPY().getDeviceList(device_list);
-	SDRPLAY().getDeviceList(device_list);
-	HACKRF().getDeviceList(device_list);
-	SOAPYSDR().getDeviceList(device_list);
-	N2KSCAN().getDeviceList(device_list);
-}
 
 void Receiver::setTags(const std::string &s)
 {
@@ -123,126 +109,16 @@ void Receiver::setChannel(std::string mode, std::string NMEA)
 }
 
 // Set up Device
-Device::Device *Receiver::getDeviceByType(Type type)
-{
-	switch (type)
-	{
-	case Type::WAVFILE:
-		return &_WAV;
-	case Type::RAWFILE:
-		return &_RAW;
-	case Type::RTLTCP:
-		return &_RTLTCP;
-	case Type::SPYSERVER:
-		return &_SpyServer;
-	case Type::SERIALPORT:
-		return &_SerialPort;
-	case Type::UDP:
-		return &_UDP;
-#ifdef HASNMEA2000
-	case Type::N2K:
-		return &_N2KSCAN;
-#endif
-#ifdef HASZMQ
-	case Type::ZMQ:
-		return &_ZMQ;
-#endif
-#ifdef HASAIRSPYHF
-	case Type::AIRSPYHF:
-		return &_AIRSPYHF;
-#endif
-#ifdef HASAIRSPY
-	case Type::AIRSPY:
-		return &_AIRSPY;
-#endif
-#ifdef HASSDRPLAY
-	case Type::SDRPLAY:
-		return &_SDRPLAY;
-#endif
-#ifdef HASRTLSDR
-	case Type::RTLSDR:
-		return &_RTLSDR;
-#endif
-#ifdef HASHACKRF
-	case Type::HACKRF:
-		return &_HACKRF;
-#endif
-#ifdef HASSOAPYSDR
-	case Type::SOAPYSDR:
-		return &_SOAPYSDR;
-#endif
-	default:
-		return nullptr;
-	}
-}
-
 void Receiver::setupDevice()
 {
-
-	int idx = device_list.empty() ? -1 : 0;
-	uint64_t handle = device_list.empty() ? 0 : device_list[0].getHandle();
-
-	if (!serial.empty())
-		Info() << "Searching for device with SN " << serial << ".";
-
-	if (!serial.empty() || type != Type::NONE)
-	{
-		idx = -1;
-		for (int i = 0; i < device_list.size(); i++)
-		{
-			bool serial_match = device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType());
-			bool type_match = serial.empty() && (type == device_list[i].getType());
-
-			if (serial_match || type_match)
-			{
-				idx = i;
-				handle = device_list[i].getHandle();
-				break;
-			}
-		}
-		if (idx == -1)
-		{
-
-			if (!serial.empty())
-				throw std::runtime_error("Cannot find device with specified parameters");
-
-			idx = 0;
-			handle = 0;
-		}
-	}
-
-	if (type == Type::NONE && device_list.size() == 0)
-		throw std::runtime_error("No devices available");
-
-	if (type != Type::NONE)
-		device = getDeviceByType(type);
-	else
-		device = getDeviceByType(device_list[idx].getType());
-
-	if (device == 0)
-		throw std::runtime_error("cannot set up device");
-
-	device->Open(handle);
-
-	if (ChannelMode == AIS::Mode::AB)
-		device->setFrequency((int)(162000000));
-	else
-		device->setFrequency((int)(156800000));
-
-	if (sample_rate)
-		device->setSampleRate(sample_rate);
-	if (ppm)
-		device->Set("FREQOFFSET", std::to_string(ppm));
-	if (bandwidth)
-		device->Set("BW", std::to_string(bandwidth));
-
-	tag.hardware = device->getProduct();
-	tag.driver = device->getDriver();
+	int frequency = (ChannelMode == AIS::Mode::AB) ? 162000000 : 156800000;
+	
 	tag.version = VERSION_NUMBER;
 	tag.station_lat = station_lat;
 	tag.station_lon = station_lon;
-
-	device->setTag(tag);
+	
+	if (!deviceManager.openDevice(sample_rate, bandwidth, ppm, frequency, tag))
+		throw std::runtime_error("cannot set up device");
 }
 
 // Set up model
@@ -292,6 +168,7 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 
 void Receiver::setupModel(int &group)
 {
+	auto* device = deviceManager.getDevice();
 	// if nothing defined, create one model
 	if (!models.size())
 	{
@@ -365,6 +242,7 @@ void Receiver::play()
 		}
 	}
 
+	auto* device = deviceManager.getDevice();
 	device->Play();
 
 	if (verbose)
@@ -382,6 +260,7 @@ void Receiver::play()
 
 void Receiver::stop()
 {
+	auto* device = deviceManager.getDevice();
 	if (device)
 		device->Stop();
 }
@@ -389,79 +268,7 @@ void Receiver::stop()
 //-----------------------------------
 // set up screen output
 
-void OutputScreen::setScreen(const std::string &str)
-{
-	switch (Util::Parse::Integer(str, 0, 6))
-	{
-	case 0:
-		level = MessageFormat::SILENT;
-		break;
-	case 1:
-		level = MessageFormat::NMEA;
-		break;
-	case 2:
-		level = MessageFormat::FULL;
-		break;
-	case 3:
-		level = MessageFormat::JSON_NMEA;
-		break;
-	case 4:
-		level = MessageFormat::JSON_SPARSE;
-		break;
-	case 5:
-		level = MessageFormat::JSON_FULL;
-		break;
-	case 6:
-		level = MessageFormat::JSON_ANNOTATED;
-		break;
-	default:
-		throw std::runtime_error("unknown option for screen output: " + str);
-	}
-}
-void OutputScreen::setScreen(MessageFormat o)
-{
-	level = o;
-}
 
-void OutputScreen::connect(Receiver &r)
-{
-
-	if (level == MessageFormat::NMEA || level == MessageFormat::JSON_NMEA || level == MessageFormat::FULL)
-	{
-		for (int j = 0; j < r.Count(); j++)
-		{
-			if (r.Output(j).canConnect(((StreamIn<AIS::Message>)msg2screen).getGroupsIn()))
-				r.Output(j).Connect((StreamIn<AIS::Message> *)&msg2screen);
-
-			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)msg2screen).getGroupsIn()))
-				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&msg2screen);
-
-			if (r.OutputADSB(j).canConnect(((StreamIn<Plane::ADSB>)msg2screen).getGroupsIn()))
-				r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&msg2screen);
-		}
-
-		msg2screen.setDetail(level);
-	}
-	else if (level == MessageFormat::JSON_SPARSE || level == MessageFormat::JSON_FULL || level == MessageFormat::JSON_ANNOTATED)
-	{
-		for (int j = 0; j < r.Count(); j++)
-		{
-			if (r.OutputJSON(j).canConnect(((StreamIn<JSON::JSON>)json2screen).getGroupsIn()))
-				r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&json2screen);
-
-			if (r.OutputGPS(j).canConnect(((StreamIn<AIS::GPS>)json2screen).getGroupsIn()))
-				r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&json2screen);
-		}
-
-		if (level == MessageFormat::JSON_SPARSE) 
-			json2screen.setMap(JSON_DICT_SPARSE);
-			
-		if (level == MessageFormat::JSON_ANNOTATED)
-			json2screen.setAnnotation(true);
-	}
-}
-
-void OutputScreen::start() {}
 //-----------------------------------
 // set up screen counters
 

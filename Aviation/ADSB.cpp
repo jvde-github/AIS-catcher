@@ -15,6 +15,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <iostream>
 #include "ADSB.h"
 
 // References:
@@ -482,69 +483,6 @@ namespace Plane
         position_timestamp = cpr.timestamp;
         updated = true;
         return true;
-    }
-
-    void ADSB::Print() const
-    {
-        std::cout << "RX: " << std::put_time(std::localtime(&rxtime), "%F %T") << std::endl;
-
-        std::cout << "MSG: ";
-        for (int i = 0; i < len; i++)
-        {
-            std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)msg[i];
-        }
-        std::cout << std::dec << std::endl;
-
-        if (crc != CRC_UNDEFINED)
-            std::cout << "CRC: " << std::hex << crc << std::dec << std::endl;
-
-        if (msgtype != MSG_TYPE_UNDEFINED)
-            std::cout << "MSGTYPE: " << msgtype << std::endl;
-
-        if (df != DF_UNDEFINED)
-            std::cout << "DF: " << df << std::endl;
-
-        if (hexident != HEXIDENT_UNDEFINED)
-            std::cout << "HEX: " << std::hex << hexident << std::dec << (hexident_status == HEXINDENT_DIRECT ? " (direct)" : " (crc)") << std::endl;
-
-        if (altitude != ALTITUDE_UNDEFINED)
-            std::cout << "ALT: " << altitude << std::endl;
-
-        if (lat != LAT_UNDEFINED)
-            std::cout << "LAT: " << lat << std::endl;
-
-        if (lon != LON_UNDEFINED)
-            std::cout << "LON: " << lon << std::endl;
-
-        if (speed != SPEED_UNDEFINED)
-            std::cout << "SPD: " << speed << std::endl;
-
-        if (heading != HEADING_UNDEFINED)
-            std::cout << "HDG: " << heading << std::endl;
-
-        if (vertrate != VERT_RATE_UNDEFINED)
-            std::cout << "V/S: " << vertrate << std::endl;
-
-        if (squawk != SQUAWK_UNDEFINED)
-            std::cout << "SQK: " << squawk << std::endl;
-
-        if (airborne != AIRBORNE_UNDEFINED)
-            std::cout << "AIR: " << airborne << std::endl;
-
-        if (callsign[0] != '\0')
-            std::cout << "CSN: " << callsign << std::endl;
-
-        if (odd.lat != CPR_POSITION_UNDEFINED)
-            std::cout << "ODD: " << odd.lat << ", " << odd.lon << std::endl;
-
-        if (even.lat != CPR_POSITION_UNDEFINED)
-            std::cout << "EVEN: " << even.lat << ", " << even.lon << std::endl;
-
-        if (timestamp != TIME_UNDEFINED)
-            std::cout << "TS: " << (long)(timestamp) << std::endl;
-
-        if (signalLevel != LEVEL_UNDEFINED)
-            std::cout << "LVL: " << signalLevel << std::endl;
     }
 
     // Sources: https://github.com/rikgale/ICAOList

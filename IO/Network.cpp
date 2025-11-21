@@ -19,7 +19,9 @@
 
 #include "AIS-catcher.h"
 #include "Network.h"
-#include "Utilities.h"
+#include "Utilities/Convert.h"
+#include "Utilities/Parse.h"
+#include "Utilities/Helper.h"
 #include "Receiver.h"
 
 namespace IO
@@ -361,7 +363,7 @@ namespace IO
 		{
 			if (filter.includeGPS())
 			{
-				if (!JSON_NMEA)
+				if (fmt != MessageFormat::JSON_NMEA)
 					SendTo((data[i].getNMEA() + "\r\n").c_str());
 				else
 					SendTo((data[i].getJSON() + "\r\n").c_str());
@@ -395,7 +397,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				SendTo(data[i].geBinaryNMEA(tag));
+				SendTo(data[i].getBinaryNMEA(tag));
 			}
 		}
 		else
@@ -630,7 +632,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				std::string binary_packet = data[i].geBinaryNMEA(tag);
+				std::string binary_packet = data[i].getBinaryNMEA(tag);
 				if (SendTo(binary_packet) < 0)
 				{
 					first_message = true;
@@ -851,7 +853,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				SendAllDirect(data[i].geBinaryNMEA(tag));
+				SendAllDirect(data[i].getBinaryNMEA(tag));
 			}
 		}
 		else
@@ -950,7 +952,7 @@ namespace IO
 			}
 			else if (fmt == MessageFormat::BINARY_NMEA)
 			{
-				std::string binary = data[i].geBinaryNMEA(tag);
+				std::string binary = data[i].getBinaryNMEA(tag);
 				((Protocol::MQTT *)session)->send(binary.c_str(), binary.length(), topic_template.get(tag, data[0]));
 			}
 			else
@@ -1031,133 +1033,5 @@ namespace IO
 		}
 
 		return *this;
-	}
-
-	void BluetoothStreamer::Start()
-	{
-		std::stringstream ss;
-		ss << "Bluetooth listener: auto-selecting channel, filter: " << Util::Convert::toString(filter.isOn());
-		if (filter.isOn())
-			ss << ", allowed: {" << filter.getAllowed() << "}";
-
-		ss << ", JSON: " << Util::Convert::toString(JSON || JSON_input) << (JSON_input ? " (FULL)" : "") << ".";
-
-		Info() << ss.str();
-
-		if (channel == -1)
-		{
-			// Auto-select available channel
-			if (!Bluetooth::Server::startAuto())
-			{
-				throw std::runtime_error("Bluetooth listener: no available channels found");
-			}
-			channel = getChannel(); // Get the auto-selected channel
-			Info() << "Bluetooth listener: auto-selected channel " << channel;
-		}
-		else
-		{
-			// Use specified channel
-			if (!Bluetooth::Server::start(channel))
-			{
-				throw std::runtime_error("Bluetooth listener: cannot start on channel " + std::to_string(channel));
-			}
-		}
-	}
-
-	Setting &BluetoothStreamer::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-
-		if (option == "CHANNEL")
-		{
-			if (arg == "AUTO")
-			{
-				channel = -1; // Signal to use auto-selection
-			}
-			else
-			{
-				channel = Util::Parse::Integer(arg, 1, 30, option);
-			}
-		}
-		else if (option == "GROUPS_IN")
-		{
-			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
-			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-		}
-		else if (option == "JSON")
-		{
-			JSON = Util::Parse::Switch(arg);
-		}
-		else if (option == "INCLUDE_SAMPLE_START")
-		{
-			include_sample_start = Util::Parse::Switch(arg);
-		}
-		else if (!OutputMessage::setOption(option, arg))
-		{
-			throw std::runtime_error("Bluetooth listener - unknown option: " + option);
-		}
-
-		return *this;
-	}
-
-	void BluetoothStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-		if (!filter.includeGPS())
-			return;
-
-		if (!JSON)
-		{
-			for (int i = 0; i < len; i++)
-			{
-				SendAllDirect(data[i].getNMEA() + "\r\n");
-			}
-		}
-		else
-		{
-			for (int i = 0; i < len; i++)
-			{
-				SendAllDirect((data[i].getJSON() + "\r\n").c_str());
-			}
-		}
-	}
-
-	void BluetoothStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
-	{
-		if (!JSON)
-		{
-			for (int i = 0; i < len; i++)
-			{
-				if (!filter.include(data[i]))
-					continue;
-
-				for (const auto &s : data[i].NMEA)
-				{
-					SendAll(s + "\r\n");
-				}
-			}
-		}
-		else
-		{
-			for (int i = 0; i < len; i++)
-			{
-				if (!filter.include(data[i]))
-					continue;
-
-				SendAll((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4) + "\r\n").c_str());
-			}
-		}
-	}
-
-	void BluetoothStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
-			{
-				json.clear();
-				builder.stringify(data[i], json);
-				SendAll((json + "\r\n").c_str());
-			}
-		}
 	}
 }

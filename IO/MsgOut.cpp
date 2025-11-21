@@ -48,7 +48,7 @@ namespace IO
 	void OutputMessage::Connect(Receiver &r)
 	{
 
-		if (JSON_input)
+		if (fmt == MessageFormat::JSON_FULL || fmt == MessageFormat::JSON_ANNOTATED || fmt == MessageFormat::JSON_SPARSE)
 			ConnectJSON(r);
 		else
 			ConnectMessage(r);
@@ -77,108 +77,4 @@ namespace IO
 		}
 	}
 
-	void MessageToScreen::Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-		if (level == MessageFormat::SILENT)
-			return;
-
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.includeGPS())
-			{
-				switch (level)
-				{
-				case MessageFormat::NMEA:
-				case MessageFormat::NMEA_TAG:
-				case MessageFormat::FULL:
-					std::cout << data[i].getNMEA() << std::endl;
-					break;
-				default:
-					std::cout << data[i].getJSON() << std::endl;
-					break;
-				}
-			}
-		}
-	}
-
-	void MessageToScreen::Receive(const Plane::ADSB *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			//std::cout << "**** ADSB ****" << std::endl;
-			//data[i].Print();
-		}
-	}
-
-	void MessageToScreen::Receive(const AIS::Message *data, int len, TAG &tag)
-	{
-
-		if (level == MessageFormat::SILENT)
-			return;
-
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.include(data[i]))
-			{
-				switch (level)
-				{
-				case MessageFormat::NMEA:
-				case MessageFormat::NMEA_TAG:
-					for (const auto &s : data[i].NMEA)
-						std::cout << s << std::endl;
-					break;
-				case MessageFormat::FULL:
-					for (const auto &s : data[i].NMEA)
-					{
-						
-						std::cout << s << " ( ";
-
-						if(data[i].getLength() > 0)							
-							std::cout << "MSG: " << data[i].type() << ", REPEAT: " << data[i].repeat() << ", MMSI: " << data[i].mmsi();
-						else
-							std::cout << "empty";
-
-						if (tag.mode & 1 && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED)
-							std::cout << ", signalpower: " << tag.level << ", ppm: " << tag.ppm;
-						if (tag.mode & 2)
-							std::cout << ", timestamp: " << data[i].getRxTime();
-						if (data[i].getStation())
-							std::cout << ", ID: " << data[i].getStation();
-
-						std::cout << ")" << std::endl;
-					}
-					break;
-				case MessageFormat::JSON_NMEA:
-					std::cout << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start) << std::endl;
-					break;
-				default:
-					break;
-				}
-			}
-		}
-	}
-
-	void JSONtoScreen::Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.includeGPS())
-			{
-				std::cout << data[i].getJSON() << std::endl;
-			}
-		}
-	}
-
-	void JSONtoScreen::Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
-			{
-				json.clear();
-				builder.stringify(data[i], json);
-				std::cout << json << std::endl;
-			}
-		}
-	}
 }

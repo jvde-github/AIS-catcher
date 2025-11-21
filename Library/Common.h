@@ -110,7 +110,6 @@ enum class Type
 
 enum class MessageFormat
 {
-	UNDEFINED,
 	SILENT,
 	NMEA,
 	NMEA_TAG,

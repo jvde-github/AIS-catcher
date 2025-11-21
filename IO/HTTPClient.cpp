@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include "HTTPClient.h"
+#include "Convert.h"
 
 #ifdef HASOPENSSL
 static class SSLContext {

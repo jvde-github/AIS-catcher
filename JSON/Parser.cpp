@@ -19,6 +19,7 @@
 #include <cmath>
 
 #include "Parser.h"
+#include "Parse.h"
 
 namespace JSON
 {

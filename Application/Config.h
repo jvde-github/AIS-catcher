@@ -29,6 +29,9 @@
 #include "JSON/StringBuilder.h"
 #include "WebViewer.h"
 
+#include "Screen.h"
+#include "File.h"
+
 #include "Device/FileRAW.h"
 #include "Device/FileWAV.h"
 #include "Device/RTLSDR.h"
@@ -48,7 +51,7 @@ class Config {
 	std::vector<std::unique_ptr<IO::OutputMessage>>& _msg;
 	std::vector<std::unique_ptr<IO::OutputJSON>>& _json;
 
-	OutputScreen& _screen;
+	IO::ScreenOutput& _screen;
 	std::vector<std::unique_ptr<WebViewer>>& _server;
 
 	int &_own_mmsi;
@@ -67,7 +70,7 @@ class Config {
 	void setSharing(const std::vector<JSON::Property>& props);
 
 public:
-	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, OutputScreen& s, std::vector<std::unique_ptr<WebViewer>>& v,int &own_mmsi) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v), _own_mmsi(own_mmsi) {}
+	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, IO::ScreenOutput& s, std::vector<std::unique_ptr<WebViewer>>& v,int &own_mmsi) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v), _own_mmsi(own_mmsi) {}
 
 	void read(std::string& file_config);
 	void set(const std::string& str);

@@ -24,6 +24,8 @@
 #include <array>
 #include <vector>
 #include <functional>
+#include <cstring>
+#include <iomanip>
 
 #ifdef _WIN32
 
@@ -53,9 +55,9 @@
 #include <openssl/err.h>
 #endif
 
-#include "Utilities.h"
+#include "Utilities/Parse.h"
+#include "Utilities/Convert.h"
 #include "Common.h"
-#include <iomanip>
 
 namespace Protocol
 {

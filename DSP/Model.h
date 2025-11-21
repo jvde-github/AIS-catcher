@@ -29,6 +29,7 @@
 
 #include "DSP.h"
 #include "Demod.h"
+#include "StreamHelpers.h"
 
 #include "Device/Device.h"
 

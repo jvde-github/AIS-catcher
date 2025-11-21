@@ -21,6 +21,8 @@
 #include <mutex>
 #include <sstream>
 
+#include "TemplateString.h"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -38,7 +40,6 @@
 #include "Stream.h"
 #include "Common.h"
 #include "TCP.h"
-#include "Bluetooth.h"
 #include "Library/ZIP.h"
 #include "HTTPServer.h"
 #include "HTTPClient.h"
@@ -227,7 +228,8 @@ namespace IO
 	public:
 		MQTTStreamer() : OutputMessage(), topic_template("ais/data")
 		{
-			JSON_input = true;
+			//JSON_input = true;
+			fmt = MessageFormat::JSON_FULL;
 		}
 
 		void Start();
@@ -237,25 +239,5 @@ namespace IO
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
 
 		Setting &Set(std::string option, std::string arg);
-	};
-
-	class BluetoothStreamer : public OutputMessage, public Bluetooth::Server
-	{
-		int channel = 1;
-		// AIS::Filter filter;
-		bool JSON = false;
-		bool include_sample_start = false;
-
-	public:
-		virtual ~BluetoothStreamer() {};
-
-		Setting &Set(std::string option, std::string arg);
-
-		void Receive(const AIS::Message *data, int len, TAG &tag);
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
-
-		void Start();
-		void Stop() {}
 	};
 }

@@ -23,7 +23,6 @@
 #include <sstream>
 
 #include "Common.h"
-#include "Utilities.h"
 
 namespace Plane
 {
@@ -245,7 +244,6 @@ namespace Plane
             return (computed == crc);
         }
 
-        void Print() const;
         void Callsign();
         int decodeAC12Field();
         int decodeAC13Field();

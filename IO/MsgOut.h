@@ -23,7 +23,7 @@
 #include "Common.h"
 #include "Stream.h"
 #include "AIS.h"
-#include "Utilities.h"
+#include "Utilities/Parse.h"
 #include "ADSB.h"
 #include "Keys.h"
 #include "JSON/JSON.h"
@@ -47,9 +47,6 @@ namespace IO
 	class OutputMessage : public StreamIn<AIS::Message>, public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting
 	{
 	protected:
-		bool JSON_input = false;
-		bool JSON_NMEA = false;
-
 		std::string json;
 		AIS::Filter filter;
 		JSON::StringBuilder builder;
@@ -67,19 +64,21 @@ namespace IO
 		OutputMessage() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
 		virtual ~OutputMessage() { Stop(); }
 
+
 		bool setOption(std::string option, std::string arg)
 		{
 			if (option == "JSON_FULL")
 			{
-				JSON_input = Util::Parse::Switch(arg);
-				if (JSON_input)
+				Warning() << "JSON_FULL option is deprecated and will be removed in a future release. Use MSGFORMAT instead.";
+				if ( Util::Parse::Switch(arg))
 					fmt = MessageFormat::JSON_FULL;
+
 				return true;
 			}
 			else if (option == "JSON")
 			{
-				JSON_NMEA = Util::Parse::Switch(arg);
-				if (JSON_NMEA)
+				Warning() << "JSON option is deprecated and will be removed in a future release. Use MSGFORMAT instead.";
+				if ( Util::Parse::Switch(arg))
 				{
 					fmt = MessageFormat::JSON_NMEA;
 				}
@@ -90,264 +89,12 @@ namespace IO
 				if (!Util::Parse::OutputFormat(arg, fmt))
 					throw std::runtime_error("Uknown message format: " + arg);
 
-				switch (fmt)
-				{
-				case MessageFormat::JSON_FULL:
-				case MessageFormat::JSON_ANNOTATED:
-					JSON_input = true;
-					break;
-				case MessageFormat::JSON_NMEA:
-					JSON_NMEA = true;
-					JSON_input = false;
-					break;
-				case MessageFormat::NMEA:
-					JSON_input = false;
-					JSON_NMEA = false;
-					break;
-				case MessageFormat::COMMUNITY_HUB:
-				case MessageFormat::BINARY_NMEA:
-					JSON_input = false;
-					JSON_NMEA = false;
-					break;
-				default:
-					throw std::runtime_error("Output channel does not support message format: " + arg);
-					break;
-				}
+				if (fmt == MessageFormat::JSON_ANNOTATED)
+					builder.setStringifyEnhanced(true);
 
 				return true;
 			}
 			return filter.SetOption(option, arg);
-		}
-	};
-
-	class StreamCounter : public StreamIn<AIS::Message>, public StreamIn<Plane::ADSB>
-	{
-		uint64_t count = 0;
-		uint64_t lastcount = 0;
-		float rate = 0.0f;
-
-		high_resolution_clock::time_point time_lastupdate;
-		int msg_count = 0;
-
-	public:
-		StreamCounter() : StreamIn<AIS::Message>()
-		{
-			resetStatistic();
-		}
-
-		virtual ~StreamCounter() {}
-
-		void Receive(const AIS::Message *data, int len, TAG &tag) override
-		{
-			count += len;
-		}
-
-		void Receive(const Plane::ADSB *data, int len, TAG &tag) override
-		{
-			count += len;
-		}
-
-		uint64_t getCount() { return count; }
-
-		void Stamp()
-		{
-			auto timeNow = high_resolution_clock::now();
-			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
-
-			msg_count = count - lastcount;
-			rate += 1.0f * (msg_count / seconds - rate);
-
-			time_lastupdate = timeNow;
-			lastcount = count;
-		}
-
-		float getRate() { return rate; }
-		int getDeltaCount() { return msg_count; }
-
-		void resetStatistic()
-		{
-			count = 0;
-			time_lastupdate = high_resolution_clock::now();
-		}
-	};
-
-	class MessageToFile : public OutputMessage
-	{
-		std::ofstream file;
-		std::string filename;
-
-		bool append_mode = true;
-
-	public:
-		~MessageToFile()
-		{
-			Stop();
-		}
-
-		void Start()
-		{
-			file.open(filename, append_mode ? std::ios::app : std::ios::out);
-
-			if (!file)
-			{
-				throw std::runtime_error("File: failed to open file - " + filename);
-			}
-		}
-
-		void Stop()
-		{
-			if (file.is_open())
-				file.close();
-		}
-
-		void Receive(const AIS::Message *data, int len, TAG &tag)
-		{
-			for (int i = 0; i < len; i++)
-			{
-				if (filter.include(data[i]))
-				{
-					for (const std::string &s : data[0].NMEA)
-					{
-						file << s << std::endl;
-					}
-				}
-			}
-			if (file.fail())
-			{
-				Error() << "File: cannot write to file.";
-				StopRequest();
-			}
-		}
-
-		void Receive(const JSON::JSON *data, int len, TAG &tag)
-		{
-			for (int i = 0; i < len; i++)
-			{
-				if (filter.include(*(AIS::Message *)data[i].binary))
-				{
-					json.clear();
-					builder.stringify(data[i], json);
-					file << json << std::endl;
-				}
-			}
-			if (file.fail())
-			{
-				Error() << "File: cannot write to file.";
-				StopRequest();
-			}
-		}
-
-		Setting &Set(std::string option, std::string arg)
-		{
-			Util::Convert::toUpper(option);
-
-			if (option == "GROUPS_IN")
-			{
-				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
-				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-			}
-			else if (option == "FILE")
-			{
-				filename = arg;
-			}
-			else if (option == "MODE")
-			{
-				Util::Convert::toUpper(arg);
-
-				if (arg != "APPEND" && arg != "APP" && arg != "OUT")
-					throw std::runtime_error("File output - unknown mode: " + arg);
-
-				append_mode = arg == "APPEND" || arg == "APP";
-			}
-			else if (!OutputMessage::setOption(option, arg))
-			{
-				throw std::runtime_error("File output - unknown option: " + option);
-			}
-			return *this;
-		}
-	};
-
-	class StringToScreen : public StreamIn<std::string>
-	{
-	public:
-		void Receive(const std::string *data, int len, TAG &tag)
-		{
-			for (int i = 0; i < len; i++)
-				std::cout << data[i] << std::endl;
-		}
-		virtual ~StringToScreen() {}
-	};
-
-	class MessageToScreen : public StreamIn<AIS::Message>, public StreamIn<AIS::GPS>, public StreamIn<Plane::ADSB>, public Setting
-	{
-	private:
-		MessageFormat level;
-		AIS::Filter filter;
-		bool include_sample_start = false;
-
-	public:
-		virtual ~MessageToScreen() {}
-		void setDetail(MessageFormat l) { level = l; }
-
-		void Receive(const AIS::Message *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
-		void Receive(const Plane::ADSB *data, int len, TAG &tag);
-
-		Setting &Set(std::string option, std::string arg)
-		{
-			Util::Convert::toUpper(option);
-
-			if (option == "GROUPS_IN")
-			{
-				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
-				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-			}
-			else if (option == "INCLUDE_SAMPLE_START")
-			{
-				include_sample_start = Util::Parse::Switch(arg);
-			}
-			else if (!filter.SetOption(option, arg))
-			{
-				throw std::runtime_error("Message output - unknown option: " + option);
-			}
-
-			return *this;
-		}
-	};
-
-	class JSONtoScreen : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting
-	{
-		JSON::StringBuilder builder;
-		std::string json;
-		AIS::Filter filter;
-		bool include_sample_start = false;
-
-	public:
-		JSONtoScreen(const std::vector<std::vector<std::string>> *map, int d) : builder(map, d) {}
-
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
-		void setMap(int m) { builder.setMap(m); }
-		void setAnnotation(bool a) { builder.setStringifyEnhanced(a); }
-
-		Setting &Set(std::string option, std::string arg)
-		{
-			Util::Convert::toUpper(option);
-
-			if (option == "GROUPS_IN")
-			{
-				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
-				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-			}
-			else if (option == "INCLUDE_SAMPLE_START")
-			{
-				include_sample_start = Util::Parse::Switch(arg);
-			}
-			else if (!filter.SetOption(option, arg))
-			{
-				throw std::runtime_error("JSON output - unknown option: " + option);
-			}
-			return *this;
 		}
 	};
 }

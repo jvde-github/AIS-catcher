@@ -23,7 +23,7 @@
 
 #include "Stream.h"
 #include "JSONAIS.h"
-#include "Utilities.h"
+#include "Utilities/Convert.h"
 #include "Message.h"
 
 // ----------------------------

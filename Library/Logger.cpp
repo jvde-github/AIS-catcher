@@ -17,7 +17,7 @@
 #endif
 
 #include "Logger.h"
-#include "Utilities.h"
+#include "Utilities/Convert.h"
 #include "JSON/StringBuilder.h"
 
 std::unique_ptr<Logger> Logger::instance_ = nullptr;

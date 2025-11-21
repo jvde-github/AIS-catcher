@@ -22,8 +22,9 @@
 #include <vector>
 #include <iomanip>
 #include <sstream>
+#include <cstring>
 
-#include "Utilities.h"
+#include "Utilities/Convert.h"
 
 namespace AIS
 {
@@ -74,8 +75,8 @@ namespace AIS
 				setRxTimeUnix(t);
 		}
 
-		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ss = false,  uint32_t ipv4 = 0, const std::string &uid = "") const;
-			std::string geBinaryNMEA(const TAG &tag, bool crc = false) const;
+		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ss = false, uint32_t ipv4 = 0, const std::string &uid = "") const;
+		std::string getBinaryNMEA(const TAG &tag, bool crc = false) const;
 
 		std::string getRxTime() const
 		{

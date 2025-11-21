@@ -1,6 +1,6 @@
-SRC = Tracking/Ships.cpp Library/N2K.cpp IO/N2KInterface.cpp Device/N2KsktCAN.cpp IO/N2KStream.cpp Application/Prometheus.cpp Application/Main.cpp Application/WebViewer.cpp Application/MapTiles.cpp IO/HTTPClient.cpp DBMS/PostgreSQL.cpp Tracking/DB.cpp Application/Config.cpp Application/Receiver.cpp IO/HTTPServer.cpp DSP/DSP.cpp JSON/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp JSON/Keys.cpp Library/AIS.cpp IO/Network.cpp DSP/Model.cpp Library/NMEA.cpp Library/Utilities.cpp DSP/Demod.cpp Library/Message.cpp Device/UDP.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Device/Serial.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp IO/Protocol.cpp IO/MsgOut.cpp Library/Logger.cpp Library/Basestation.cpp  Application/WebDB.cpp Library/Beast.cpp Library/ADSB.cpp
-OBJ = Ships.o Main.o N2KStream.o N2K.o N2KInterface.o N2KsktCAN.o Prometheus.o Receiver.o Config.o WebViewer.o MapTiles.o HTTPClient.o PostgreSQL.o DB.o DSP.o AIS.o Model.o Utilities.o Network.o Demod.o Serial.o RTLSDR.o HTTPServer.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o UDP.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o Protocol.o MsgOut.o Logger.o Basestation.o WebDB.o Beast.o ADSB.o
-INCLUDE = -I. -IJSON/ -IDBMS/ -ITracking/ -ILibrary/ -IDSP/ -IApplication/ -IIO/ 
+SRC = Tracking/Ships.cpp Marine/N2K.cpp IO/N2KInterface.cpp Device/N2KsktCAN.cpp IO/N2KStream.cpp Application/Prometheus.cpp Application/Main.cpp Application/WebViewer.cpp Application/MapTiles.cpp IO/HTTPClient.cpp DBMS/PostgreSQL.cpp Tracking/DB.cpp Application/Config.cpp Application/DeviceManager.cpp Application/Receiver.cpp IO/HTTPServer.cpp DSP/DSP.cpp JSON/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp JSON/Keys.cpp Marine/AIS.cpp IO/Network.cpp DSP/Model.cpp Marine/NMEA.cpp DSP/Demod.cpp Marine/Message.cpp Device/UDP.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Device/Serial.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp IO/Protocol.cpp IO/MsgOut.cpp IO/Screen.cpp Library/Logger.cpp Aviation/Basestation.cpp  Application/WebDB.cpp Aviation/Beast.cpp Aviation/ADSB.cpp Utilities/Parse.cpp Utilities/Convert.cpp Utilities/Helper.cpp Utilities/Serialize.cpp Utilities/TemplateString.cpp Utilities/StreamHelpers.cpp
+OBJ = Ships.o Main.o N2KStream.o N2K.o N2KInterface.o N2KsktCAN.o Prometheus.o DeviceManager.o Receiver.o Config.o WebViewer.o MapTiles.o HTTPClient.o PostgreSQL.o DB.o DSP.o AIS.o Model.o Network.o Demod.o Serial.o RTLSDR.o HTTPServer.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o UDP.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o Protocol.o MsgOut.o Screen.o Logger.o Basestation.o WebDB.o Beast.o ADSB.o UtilParse.o UtilConvert.o UtilHelper.o UtilSerialize.o UtilTemplateString.o UtilStreamHelpers.o
+INCLUDE = -I. -IJSON/ -IDBMS/ -ITracking/ -ILibrary/ -IMarine/ -IAviation/ -IDSP/ -IApplication/ -IIO/ -IUtilities/ 
 CC = clang
 
 override CFLAGS +=  -Ofast -std=c++11 -g -pg -Wno-sign-compare $(INCLUDE)
@@ -95,54 +95,88 @@ endif
 
 # Building AIS-Catcher
 
-all: lib
+all: AIS-catcher
+
+AIS-catcher: $(OBJ)
 	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_ALL)
 
-rtl-only: lib-rtl
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_RTL)
+rtl-only: CFLAGS_ALL = $(CFLAGS_RTL)
+rtl-only: LFLAGS_ALL = $(LFLAGS_RTL)
+rtl-only: AIS-catcher
 
-airspyhf-only: lib-airspyhf
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_AIRSPYHF)
+airspyhf-only: CFLAGS_ALL = $(CFLAGS_AIRSPYHF)
+airspyhf-only: LFLAGS_ALL = $(LFLAGS_AIRSPYHF)
+airspyhf-only: AIS-catcher
 
-airspy-only: lib-airspy
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_AIRSPY)
+airspy-only: CFLAGS_ALL = $(CFLAGS_AIRSPY)
+airspy-only: LFLAGS_ALL = $(LFLAGS_AIRSPY)
+airspy-only: AIS-catcher
 
-sdrplay-only: lib-sdrplay
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_SDRPLAY)
+sdrplay-only: CFLAGS_ALL = $(CFLAGS_SDRPLAY)
+sdrplay-only: LFLAGS_ALL = $(LFLAGS_SDRPLAY)
+sdrplay-only: AIS-catcher
 
-hackrf-only: lib-hackrf
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_HACKRF)
+hackrf-only: CFLAGS_ALL = $(CFLAGS_HACKRF)
+hackrf-only: LFLAGS_ALL = $(LFLAGS_HACKRF)
+hackrf-only: AIS-catcher
 
-zmq-only: lib-zmq
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_ZMQ)
+zmq-only: CFLAGS_ALL = $(CFLAGS_ZMQ)
+zmq-only: LFLAGS_ALL = $(LFLAGS_ZMQ)
+zmq-only: AIS-catcher
 
-soapysdr-only: lib-soapysdr
-	$(CC) $(OBJ) $(LFLAGS) $(LFLAGS_SOAPYSDR)
+soapysdr-only: CFLAGS_ALL = $(CFLAGS_SOAPYSDR)
+soapysdr-only: LFLAGS_ALL = $(LFLAGS_SOAPYSDR)
+soapysdr-only: AIS-catcher
 
-# Creating object-files
-lib:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ALL)
+# Pattern rule for compiling .cpp files to .o files
+%.o: Application/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-lib-rtl:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_RTL)
+%.o: Tracking/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-lib-airspyhf:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPYHF)
+%.o: DBMS/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-lib-airspy:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_AIRSPY)
+%.o: Device/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-lib-sdrplay:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_SDRPLAY)
+%.o: DSP/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-lib-hackrf:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_HACKRF)
+%.o: IO/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-lib-zmq:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_ZMQ)
+%.o: JSON/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-lib-soapysdr:
-	$(CC) -c $(SRC) $(CFLAGS) $(CFLAGS_SOAPYSDR)
+%.o: Library/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+%.o: Marine/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+%.o: Aviation/%.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+# Special rules for Utilities directory to avoid name conflicts
+UtilParse.o: Utilities/Parse.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+UtilConvert.o: Utilities/Convert.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+UtilHelper.o: Utilities/Helper.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+UtilSerialize.o: Utilities/Serialize.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+UtilTemplateString.o: Utilities/TemplateString.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+
+UtilStreamHelpers.o: Utilities/StreamHelpers.cpp
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
 clean:
 	rm *.o

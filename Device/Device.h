@@ -30,7 +30,8 @@
 
 #include "Stream.h"
 #include "Common.h"
-#include "Utilities.h"
+#include "Utilities/Parse.h"
+#include "Utilities/Convert.h"
 
 namespace Device {
 

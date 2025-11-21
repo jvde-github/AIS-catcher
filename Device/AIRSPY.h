@@ -19,7 +19,7 @@
 #pragma once
 
 #include "Device.h"
-#include "Utilities.h"
+#include "Utilities/Convert.h"
 
 #ifdef HASAIRSPY
 #include <airspy.h>

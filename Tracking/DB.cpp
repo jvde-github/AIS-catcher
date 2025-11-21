@@ -17,6 +17,7 @@
 
 #include "AIS-catcher.h"
 #include "DB.h"
+#include <fstream>
 
 //-----------------------------------
 // simple ship database

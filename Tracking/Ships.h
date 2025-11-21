@@ -22,7 +22,8 @@
 #include <ctime>
 
 #include "Common.h"
-#include "Utilities.h"
+#include "Utilities/PackedInt.h"
+#include "Utilities/Serialize.h"
 
 const int CLASS_A_MASK = (1 << 1) | (1 << 2) | (1 << 3);
 const int CLASS_B_MASK = (1 << 18) | (1 << 19);

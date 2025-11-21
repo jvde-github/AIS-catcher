@@ -16,9 +16,10 @@
 */
 
 #include "WebViewer.h"
-#include "Application/WebDB.h"
-#include "Library/NMEA.h"
-#include "JSON/JSONAIS.h"
+#include "WebDB.h"
+#include "NMEA.h"
+#include "JSONAIS.h"
+#include "Helper.h"
 
 IO::OutputMessage *commm_feed = nullptr;
 
@@ -375,16 +376,15 @@ void WebViewer::connect(Receiver &r)
 	for (int j = 0; j < r.Count(); j++)
 		if (r.Output(j).canConnect(groups_in))
 		{
-			if (!rec_details)
-			{
+		if (!rec_details)
+		{
+			auto* device = r.getDeviceManager().getDevice();
 
-				sample_rate += r.device->getRateDescription() + "<br>";
+			sample_rate += device->getRateDescription() + "<br>";
 
-				JSON::StringBuilder::stringify(r.device->getProduct(), product, false);
-				JSON::StringBuilder::stringify(r.device->getVendor().empty() ? "-" : r.device->getVendor(), vendor, false);
-				JSON::StringBuilder::stringify(r.device->getSerial().empty() ? "-" : r.device->getSerial(), serial, false);
-
-				product += newline;
+			JSON::StringBuilder::stringify(device->getProduct(), product, false);
+			JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vendor, false);
+			JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), serial, false);				product += newline;
 				vendor += newline;
 				serial += newline;
 
@@ -396,7 +396,7 @@ void WebViewer::connect(Receiver &r)
 			r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&ships);
 			r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
 
-			*r.device >> raw_counter;
+			*r.getDeviceManager().getDevice() >> raw_counter;
 		}
 }
 

@@ -17,6 +17,7 @@
 
 #include "AIS-catcher.h"
 #include "Config.h"
+#include "Helper.h"
 
 bool Config::isActiveObject(const JSON::Value &pd)
 {
@@ -214,12 +215,12 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 		if (++_nrec > 1)
 			_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 
-		_receivers.back()->Serial() = serial;
+		_receivers.back()->getDeviceManager().SerialNumber() = serial;
 	}
 
 	if (!input.empty())
 	{
-		if (!Util::Parse::DeviceType(input, _receivers.back()->InputType()))
+		if (!Util::Parse::DeviceType(input, _receivers.back()->getDeviceManager().InputType()))
 		{
 			throw std::runtime_error("\"" + input + "\" is unknown input type in config file");
 		}
@@ -245,72 +246,72 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 		case AIS::KEY_SETTING_RTLSDR:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->RTLSDR());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().RTLSDR());
 			break;
 		case AIS::KEY_SETTING_RTLTCP:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->RTLTCP());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().RTLTCP());
 			break;
 		case AIS::KEY_SETTING_AIRSPY:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->AIRSPY());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().AIRSPY());
 			break;
 		case AIS::KEY_SETTING_AIRSPYHF:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->AIRSPYHF());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().AIRSPYHF());
 			break;
 		case AIS::KEY_SETTING_SDRPLAY:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->SDRPLAY());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().SDRPLAY());
 			break;
 		case AIS::KEY_SETTING_WAVFILE:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->WAV());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().WAV());
 			break;
 		case AIS::KEY_SETTING_SERIALPORT:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->SerialPort());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().SerialPort());
 			break;
 		case AIS::KEY_SETTING_HACKRF:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->HACKRF());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().HACKRF());
 			break;
 		case AIS::KEY_SETTING_UDPSERVER:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->UDP());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().UDP());
 			break;
 		case AIS::KEY_SETTING_SOAPYSDR:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->SOAPYSDR());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().SOAPYSDR());
 			break;
 		case AIS::KEY_SETTING_NMEA2000:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->N2KSCAN());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().N2KSCAN());
 			break;
 		case AIS::KEY_SETTING_FILE:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->RAW());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().RAW());
 			break;
 		case AIS::KEY_SETTING_ZMQ:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->ZMQ());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().ZMQ());
 			break;
 		case AIS::KEY_SETTING_SPYSERVER:
 			if (!isActiveObject(p.Get()))
 				continue;
-			setSettingsFromJSON(p.Get(), _receivers.back()->SpyServer());
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().SpyServer());
 			break;
 		default:
 			break;

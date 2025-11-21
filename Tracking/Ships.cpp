@@ -20,7 +20,7 @@
 
 #include "AIS-catcher.h"
 #include "Ships.h"
-#include "Utilities.h"
+#include "Utilities/Serialize.h"
 #include "JSON/StringBuilder.h"
 
 void Ship::reset()

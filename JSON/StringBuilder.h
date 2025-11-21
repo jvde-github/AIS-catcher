@@ -20,8 +20,8 @@
 #include <vector>
 #include <iostream>
 #include <memory>
+#include <cstring>
 
-#include "Utilities.h"
 #include "Common.h"
 #include "JSON.h"
 

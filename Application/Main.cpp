@@ -32,6 +32,9 @@
 #include "PostgreSQL.h"
 #include "Logger.h"
 
+#include "Screen.h"
+#include "File.h"
+
 static std::atomic<bool> stop;
 
 void StopRequest()
@@ -81,7 +84,7 @@ static void Usage()
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
-	Info() << "\t[-G control logging";
+	Info() << "\t[-G control logging]";
 	Info() << "\t[-h display this message and terminate (default: false)]";
 	Info() << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]";
 	Info() << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]";
@@ -102,6 +105,7 @@ static void Usage()
 	Info() << "\t[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]";
 	Info() << "\t[-X connect to AIS community feed at www.aiscatcher.org (default: off)]";
 	Info() << "\t[-Q publish data to MQTT server]";
+	Info() << "\t[-Z lat lon - set receiver location (latitude and longitude in decimal degrees)]";
 
 	Info() << "";
 	Info() << "\tDevice selection:";
@@ -138,34 +142,7 @@ static void Usage()
 	Info() << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DROOP [on/off] ]";
 }
 
-static void printDevices(Receiver &r, bool JSON = false)
-{
-	if (!JSON)
-	{
-		Info() << "Found " << r.device_list.size() << " device(s):";
-
-		for (int i = 0; i < r.device_list.size(); i++)
-		{
-			Info() << i << ": " << r.device_list[i].toString();
-		}
-	}
-	else
-	{
-		std::cout << "{\"devices\":[";
-
-		for (int i = 0; i < r.device_list.size(); i++)
-		{
-			std::string type = Util::Parse::DeviceTypeString(r.device_list[i].getType());
-			std::cout << "{\"input\":\"" + type;
-			std::cout << "\",\"serial\":\"" + r.device_list[i].getSerial();
-			std::cout << "\",\"name\":\"" + type + " [" + r.device_list[i].getSerial() + "]\"";
-
-			std::cout << "}" << (i == r.device_list.size() - 1 ? "" : ",");
-		}
-		std::cout << "]}\n";
-	}
-}
-static void printSupportedDevices()
+static void printBuildConfiguration()
 {
 	std::ostringstream sdr_support;
 	sdr_support << "SDR support: ";
@@ -266,13 +243,10 @@ static void Assert(bool b, std::string &context, std::string msg = "")
 
 int main(int argc, char *argv[])
 {
-
-	// std::string file_config;
-
 	std::vector<std::unique_ptr<Receiver>> _receivers;
 	_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 
-	OutputScreen screen;
+	IO::ScreenOutput screen;
 	std::vector<OutputStatistics> stat;
 	std::vector<int> msg_count;
 
@@ -305,7 +279,7 @@ int main(int argc, char *argv[])
 		signal(SIGPIPE, consoleHandler);
 #endif
 
-		_receivers.back()->refreshDevices();
+		_receivers.back()->getDeviceManager().refreshDevices();
 
 		const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
 		int ptr = 1;
@@ -359,7 +333,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'C':
 				Assert(count == 1, param, "one parameter required: filename");
-				// file_config = arg1;
+
 				if (!arg1.empty())
 				{
 					c.read(arg1);
@@ -390,15 +364,9 @@ int main(int argc, char *argv[])
 						parseSettings(u, argv, ptr + 1, argc);
 				}
 				break;
-			case 'B':
-				Assert(count == 0, param, "requires no parameters.");
-				{
-					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::BluetoothStreamer()));
-				}
-				break;
 			case 'f':
 			{
-				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MessageToFile()));
+				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::FileOutput()));
 				IO::OutputMessage &f = *msg.back();
 				if (count % 2 == 1)
 				{
@@ -426,19 +394,18 @@ int main(int argc, char *argv[])
 				break;
 			case 'q':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				screen.setScreen(MessageFormat::SILENT);
+				screen.setScreen("0");
 				break;
 			case 'n':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				screen.setScreen(MessageFormat::NMEA);
+				screen.setScreen("2");
 				break;
 			case 'o':
 				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter.");
 				screen.setScreen(arg1);
 				if (count > 1)
 				{
-					parseSettings(screen.msg2screen, argv, ptr + 1, argc);
-					parseSettings(screen.json2screen, argv, ptr + 1, argc);
+					parseSettings(screen, argv, ptr + 1, argc);					
 				}
 				break;
 			case 'F':
@@ -452,13 +419,13 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::RTLTCP;
+				_receivers.back()->getDeviceManager().InputType() = Type::RTLTCP;
 				if (count == 1)
-					_receivers.back()->RTLTCP().Set("url", arg1);
+					_receivers.back()->getDeviceManager().RTLTCP().Set("url", arg1);
 				if (count == 2)
-					_receivers.back()->RTLTCP().Set("port", arg2).Set("host", arg1);
+					_receivers.back()->getDeviceManager().RTLTCP().Set("port", arg2).Set("host", arg1);
 				if (count == 3)
-					_receivers.back()->RTLTCP().Set("port", arg3).Set("host", arg2).Set("PROTOCOL", arg1);
+					_receivers.back()->getDeviceManager().RTLTCP().Set("port", arg3).Set("host", arg2).Set("PROTOCOL", arg1);
 				break;
 			case 'x':
 				Assert(count == 2, param, "requires two parameters [server] [port].");
@@ -466,8 +433,8 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::UDP;
-				_receivers.back()->UDP().Set("port", arg2).Set("server", arg1);
+				_receivers.back()->getDeviceManager().InputType() = Type::UDP;
+				_receivers.back()->getDeviceManager().UDP().Set("port", arg2).Set("server", arg1);
 				break;
 			case 'D':
 			{
@@ -493,11 +460,11 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::SPYSERVER;
+				_receivers.back()->getDeviceManager().InputType() = Type::SPYSERVER;
 				if (count == 1)
-					_receivers.back()->SpyServer().Set("url", arg1);
+					_receivers.back()->getDeviceManager().SpyServer().Set("url", arg1);
 				else if (count == 2)
-					_receivers.back()->SpyServer().Set("port", arg2).Set("host", arg1);
+					_receivers.back()->getDeviceManager().SpyServer().Set("port", arg2).Set("host", arg1);
 				break;
 			case 'z':
 				Assert(count <= 2, param, "requires at most two parameters [[format]] [endpoint].");
@@ -505,11 +472,11 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::ZMQ;
+				_receivers.back()->getDeviceManager().InputType() = Type::ZMQ;
 				if (count == 1)
-					_receivers.back()->ZMQ().Set("ENDPOINT", arg1);
+					_receivers.back()->getDeviceManager().ZMQ().Set("ENDPOINT", arg1);
 				if (count == 2)
-					_receivers.back()->ZMQ().Set("FORMAT", arg1).Set("ENDPOINT", arg2);
+					_receivers.back()->getDeviceManager().ZMQ().Set("FORMAT", arg1).Set("ENDPOINT", arg2);
 				break;
 			case 'b':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
@@ -521,9 +488,9 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::N2K;
+				_receivers.back()->getDeviceManager().InputType() = Type::N2K;
 				if (count == 1)
-					_receivers.back()->N2KSCAN().Set("INTERFACE", arg1);
+					_receivers.back()->getDeviceManager().N2KSCAN().Set("INTERFACE", arg1);
 				break;
 
 			case 'w':
@@ -532,9 +499,9 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::WAVFILE;
+				_receivers.back()->getDeviceManager().InputType() = Type::WAVFILE;
 				if (count == 1)
-					_receivers.back()->WAV().Set("FILE", arg1);
+					_receivers.back()->getDeviceManager().WAV().Set("FILE", arg1);
 				break;
 			case 'r':
 				Assert(count <= 2, param, "requires at most two parameters [[format]] [filename].");
@@ -542,11 +509,11 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::RAWFILE;
+				_receivers.back()->getDeviceManager().InputType() = Type::RAWFILE;
 				if (count == 1)
-					_receivers.back()->RAW().Set("FILE", arg1);
+					_receivers.back()->getDeviceManager().RAW().Set("FILE", arg1);
 				if (count == 2)
-					_receivers.back()->RAW().Set("FORMAT", arg1).Set("FILE", arg2);
+					_receivers.back()->getDeviceManager().RAW().Set("FORMAT", arg1).Set("FILE", arg2);
 				break;
 			case 'e':
 				Assert(count == 2, param, "requires two parameters [baudrate] [portname].");
@@ -554,8 +521,8 @@ int main(int argc, char *argv[])
 				{
 					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 				}
-				_receivers.back()->InputType() = Type::SERIALPORT;
-				_receivers.back()->SerialPort().Set("BAUDRATE", arg1).Set("PORT", arg2);
+				_receivers.back()->getDeviceManager().InputType() = Type::SERIALPORT;
+				_receivers.back()->getDeviceManager().SerialPort().Set("BAUDRATE", arg1).Set("PORT", arg2);
 				break;
 			case 'l':
 				Assert(count == 0 || count == 2, param, MSG_NO_PARAMETER);
@@ -580,14 +547,13 @@ int main(int argc, char *argv[])
 				{
 					Assert(count == 0, param, MSG_NO_PARAMETER);
 					int n = param[3] - '0';
-					Assert(n >= 0 && n < receiver.device_list.size(), param, "device does not exist");
-					_receivers.back()->Serial() = receiver.device_list[n].getSerial();
+					_receivers.back()->getDeviceManager().selectDeviceByIndex(n);
 				}
 				else
 				{
 					Assert(param.length() == 2, param, "syntax error in device setting");
 					Assert(count == 1, param, "device setting requires one parameter [serial number]");
-					_receivers.back()->Serial() = arg1;
+					_receivers.back()->getDeviceManager().SerialNumber() = arg1;
 				}
 				break;
 			case 'u':
@@ -631,9 +597,10 @@ int main(int argc, char *argv[])
 					{
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						commm_feed = msg.back().get();
-						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY","on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
-						if(count == 2 || true) {
-							//Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
+						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
+						if (count == 2 || true)
+						{
+							// Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
 							commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
 						}
 						else
@@ -662,8 +629,10 @@ int main(int argc, char *argv[])
 				receiver.setLatLon(Util::Parse::Float(arg1), Util::Parse::Float(arg2));
 				break;
 			case 'A':
-			case 'I':
 			case 'E':
+				throw std::runtime_error("Option -" + std::string(1, param[1]) + " is obsolete. Please use -I instead.");
+				break;
+			case 'I':
 			{
 #ifdef HASNMEA2000
 				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
@@ -709,44 +678,44 @@ int main(int argc, char *argv[])
 				switch (param[2])
 				{
 				case 'e':
-					parseSettings(receiver.SerialPort(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().SerialPort(), argv, ptr, argc);
 					break;
 				case 'm':
-					parseSettings(receiver.AIRSPY(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().AIRSPY(), argv, ptr, argc);
 					break;
 				case 'r':
-					parseSettings(receiver.RTLSDR(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().RTLSDR(), argv, ptr, argc);
 					break;
 				case 'h':
-					parseSettings(receiver.AIRSPYHF(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().AIRSPYHF(), argv, ptr, argc);
 					break;
 				case 's':
-					parseSettings(receiver.SDRPLAY(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().SDRPLAY(), argv, ptr, argc);
 					break;
 				case 'a':
-					parseSettings(receiver.RAW(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().RAW(), argv, ptr, argc);
 					break;
 				case 'w':
-					parseSettings(receiver.WAV(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().WAV(), argv, ptr, argc);
 					break;
 				case 't':
-					parseSettings(receiver.RTLTCP(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().RTLTCP(), argv, ptr, argc);
 					break;
 				case 'y':
-					parseSettings(receiver.SpyServer(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().SpyServer(), argv, ptr, argc);
 					break;
 				case 'f':
-					parseSettings(receiver.HACKRF(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().HACKRF(), argv, ptr, argc);
 					break;
 				case 'u':
-					parseSettings(receiver.SOAPYSDR(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().SOAPYSDR(), argv, ptr, argc);
 					break;
 				case 'z':
-					parseSettings(receiver.ZMQ(), argv, ptr, argc);
+					parseSettings(receiver.getDeviceManager().ZMQ(), argv, ptr, argc);
 					break;
 				case 'o':
 					if (receiver.Count() == 0)
-						receiver.addModel(receiver.isTXTformatSet() ? 5 : 2);
+						receiver.addModel(receiver.getDeviceManager().isTXTformatSet() ? 5 : 2);
 					parseSettings(*receiver.Model(receiver.Count() - 1), argv, ptr, argc);
 					break;
 				default:
@@ -774,9 +743,9 @@ int main(int argc, char *argv[])
 		}
 		*/
 		if (list_devices)
-			printDevices(*_receivers.back(), list_devices_JSON);
+			_receivers.back()->getDeviceManager().printAvailableDevices(list_devices_JSON);
 		if (list_support)
-			printSupportedDevices();
+			printBuildConfiguration();
 		if (list_options)
 			Usage();
 		if (list_devices || list_support || list_options || no_run)
@@ -809,7 +778,7 @@ int main(int argc, char *argv[])
 			for (auto &j : json)
 				j->Connect(r);
 
-			screen.connect(r);
+			screen.Connect(r);
 
 			for (auto &s : servers)
 				if (s->active())
@@ -825,7 +794,7 @@ int main(int argc, char *argv[])
 		for (auto &j : json)
 			j->Start();
 
-		screen.start();
+
 
 		for (auto &s : servers)
 			if (s->active())
@@ -856,14 +825,14 @@ int main(int argc, char *argv[])
 		for (auto &r : _receivers)
 		{
 			oneverbose |= r->verbose;
-			iscallback &= r->device->isCallback();
+			iscallback &= r->getDeviceManager().getDevice()->isCallback();
 		}
 
 		DBG("Entering main loop");
 		while (!stop)
 		{
 			for (auto &r : _receivers)
-				stop = stop || !(r->device->isStreaming());
+				stop = stop || !(r->getDeviceManager().getDevice()->isStreaming());
 
 			if (iscallback) // don't go to sleep in case we are reading from a file
 				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));

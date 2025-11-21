@@ -53,6 +53,7 @@
 #endif
 
 #include <errno.h>
+#include <algorithm>
 
 namespace Protocol
 {

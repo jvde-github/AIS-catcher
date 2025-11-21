@@ -16,6 +16,8 @@
 */
 
 #include "Message.h"
+#include "Parse.h"
+#include "Helper.h"
 
 namespace AIS
 {
@@ -130,7 +132,7 @@ namespace AIS
 		return ss.str();
 	}
 
-	std::string Message::geBinaryNMEA(const TAG &tag, bool crc) const
+	std::string Message::getBinaryNMEA(const TAG &tag, bool crc) const
 	{
 		std::string packet;
 
