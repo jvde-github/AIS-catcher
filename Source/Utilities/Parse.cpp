@@ -18,6 +18,7 @@
 #include <string>
 #include <stdexcept>
 #include <sstream>
+#include <iomanip>
 
 #include "Parse.h"
 #include "Convert.h"

@@ -837,72 +837,72 @@ if(ZMQ)
 endif()
 
 set(CPP
-    Application/Config.cpp
-    Application/DeviceManager.cpp
-    Application/Main.cpp
-    Application/MapTiles.cpp
-    Application/Prometheus.cpp
-    Application/Receiver.cpp
-    Application/WebDB.cpp
-    Application/WebViewer.cpp
-    DBMS/PostgreSQL.cpp
-    Device/AIRSPY.cpp
-    Device/AIRSPYHF.cpp
-    Device/FileRAW.cpp
-    Device/FileWAV.cpp
-    Device/HACKRF.cpp
-    Device/N2KsktCAN.cpp
-    Device/RTLSDR.cpp
-    Device/RTLTCP.cpp
-    Device/SDRPLAY.cpp
-    Device/Serial.cpp
-    Device/SoapySDR.cpp
-    Device/SpyServer.cpp
-    Device/UDP.cpp
-    Device/ZMQ.cpp
-    DSP/Demod.cpp
-    DSP/DSP.cpp
-    DSP/Model.cpp
-    IO/HTTPClient.cpp
-    IO/HTTPServer.cpp
-    IO/MsgOut.cpp
-    IO/Screen.cpp
-    IO/N2KInterface.cpp
-    IO/N2KStream.cpp
-    IO/Network.cpp
-    IO/Protocol.cpp
-    JSON/JSON.cpp
-    JSON/JSONAIS.cpp
-    JSON/Keys.cpp
-    JSON/Parser.cpp
-    JSON/StringBuilder.cpp
-    Aviation/ADSB.cpp
-    Aviation/Basestation.cpp
-    Aviation/Beast.cpp
-    Marine/AIS.cpp
-    Marine/Message.cpp
-    Marine/N2K.cpp
-    Marine/NMEA.cpp
-    Library/Logger.cpp
-    Library/TCP.cpp
-    Tracking/DB.cpp
-    Tracking/Ships.cpp
-    Utilities/Parse.cpp
-    Utilities/Convert.cpp
-    Utilities/Helper.cpp
-    Utilities/Serialize.cpp
-    Utilities/TemplateString.cpp
-    Utilities/StreamHelpers.cpp
+    Source/Application/Config.cpp
+    Source/Application/DeviceManager.cpp
+    Source/Application/Main.cpp
+    Source/Application/MapTiles.cpp
+    Source/Application/Prometheus.cpp
+    Source/Application/Receiver.cpp
+    Source/Application/WebDB.cpp
+    Source/Application/WebViewer.cpp
+    Source/DBMS/PostgreSQL.cpp
+    Source/Device/AIRSPY.cpp
+    Source/Device/AIRSPYHF.cpp
+    Source/Device/FileRAW.cpp
+    Source/Device/FileWAV.cpp
+    Source/Device/HACKRF.cpp
+    Source/Device/N2KsktCAN.cpp
+    Source/Device/RTLSDR.cpp
+    Source/Device/RTLTCP.cpp
+    Source/Device/SDRPLAY.cpp
+    Source/Device/Serial.cpp
+    Source/Device/SoapySDR.cpp
+    Source/Device/SpyServer.cpp
+    Source/Device/UDP.cpp
+    Source/Device/ZMQ.cpp
+    Source/DSP/Demod.cpp
+    Source/DSP/DSP.cpp
+    Source/DSP/Model.cpp
+    Source/IO/HTTPClient.cpp
+    Source/IO/HTTPServer.cpp
+    Source/IO/MsgOut.cpp
+    Source/IO/Screen.cpp
+    Source/IO/N2KInterface.cpp
+    Source/IO/N2KStream.cpp
+    Source/IO/Network.cpp
+    Source/IO/Protocol.cpp
+    Source/JSON/JSON.cpp
+    Source/JSON/JSONAIS.cpp
+    Source/JSON/Keys.cpp
+    Source/JSON/Parser.cpp
+    Source/JSON/StringBuilder.cpp
+    Source/Aviation/ADSB.cpp
+    Source/Aviation/Basestation.cpp
+    Source/Aviation/Beast.cpp
+    Source/Marine/AIS.cpp
+    Source/Marine/Message.cpp
+    Source/Marine/N2K.cpp
+    Source/Marine/NMEA.cpp
+    Source/Library/Logger.cpp
+    Source/Library/TCP.cpp
+    Source/Tracking/DB.cpp
+    Source/Tracking/Ships.cpp
+    Source/Utilities/Parse.cpp
+    Source/Utilities/Convert.cpp
+    Source/Utilities/Helper.cpp
+    Source/Utilities/Serialize.cpp
+    Source/Utilities/TemplateString.cpp
+    Source/Utilities/StreamHelpers.cpp
 )
 
 set(HEADER
-    Application/AIS-catcher.h Application/Prometheus.h Application/Config.h Application/DeviceManager.h Application/WebDB.h Library/Logger.h Application/WebViewer.h Application/Receiver.h Tracking/Ships.h Tracking/DB.h DBMS/PostgreSQL.h IO/HTTPClient.h Application/MapTiles.h Aviation/Beast.h
-    Device/Device.h Device/FileWAV.h Device/RTLTCP.h Device/UDP.h DSP/Demod.h DSP/Filters.h Marine/AIS.h Marine/Message.h Marine/NMEA.h Library/ZIP.h Library/Signals.h Device/SoapySDR.h JSON/JSONAIS.h JSON/JSON.h Aviation/Basestation.h Aviation/ADSB.h
-    Device/AIRSPY.h Library/FIFO.h Device/N2KsktCAN.h Device/HACKRF.h Device/SDRPLAY.h DSP/DSP.h DSP/Model.h Tracking/History.h Tracking/Statistics.h Library/Common.h Library/Stream.h Device/SpyServer.h JSON/Keys.h JSON/StringBuilder.h JSON/Parser.h Tracking/PlaneDB.h
-    Device/Serial.h IO/N2KInterface.h Marine/N2K.h IO/N2KStream.h Device/AIRSPYHF.h Device/FileRAW.h Device/RTLSDR.h Device/ZMQ.h DSP/FFT.h IO/MsgOut.h IO/Screen.h IO/File.h IO/StreamCounter.h IO/Network.h IO/HTTPServer.h Utilities/StreamHelpers.h Library/TCP.h IO/Protocol.h
-    Utilities/Parse.h Utilities/Convert.h Utilities/Helper.h Utilities/Serialize.h Utilities/PackedInt.h Utilities/TemplateString.h)
+    Source/Application/AIS-catcher.h Source/Application/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Application/WebDB.h Source/Library/Logger.h Source/Application/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/DBMS/PostgreSQL.h Source/IO/HTTPClient.h Source/Application/MapTiles.h Source/Aviation/Beast.h
+    Source/Device/Device.h Source/Device/FileWAV.h Source/Device/RTLTCP.h Source/Device/UDP.h Source/DSP/Demod.h Source/DSP/Filters.h Source/Marine/AIS.h Source/Marine/Message.h Source/Marine/NMEA.h Source/Library/ZIP.h Source/Library/Signals.h Source/Device/SoapySDR.h Source/JSON/JSONAIS.h Source/JSON/JSON.h Source/Aviation/Basestation.h Source/Aviation/ADSB.h
+    Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/StringBuilder.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
+    Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/Library/TCP.h Source/IO/Protocol.h
+    Source/Utilities/Parse.h Source/Utilities/Convert.h Source/Utilities/Helper.h Source/Utilities/Serialize.h Source/Utilities/PackedInt.h Source/Utilities/TemplateString.h)
 
-set(APP_INCLUDES . ./Tracking ./DBMS ./Library ./Marine ./Aviation ./DSP ./Application ./IO ./JSON ./Utilities)
+set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./Source/Marine ./Source/Aviation ./Source/DSP ./Source/Application ./Source/IO ./Source/JSON ./Source/Utilities)
 
 # Executable
 

@@ -1,2 +1,6 @@
 /NMEA2000/
 /build/
+*.o
+AIS-catcher
+gmon.out
+.vscode/

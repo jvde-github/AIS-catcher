@@ -1,6 +1,6 @@
 SRC = Tracking/Ships.cpp Marine/N2K.cpp IO/N2KInterface.cpp Device/N2KsktCAN.cpp IO/N2KStream.cpp Application/Prometheus.cpp Application/Main.cpp Application/WebViewer.cpp Application/MapTiles.cpp IO/HTTPClient.cpp DBMS/PostgreSQL.cpp Tracking/DB.cpp Application/Config.cpp Application/DeviceManager.cpp Application/Receiver.cpp IO/HTTPServer.cpp DSP/DSP.cpp JSON/JSONAIS.cpp JSON/Parser.cpp JSON/StringBuilder.cpp JSON/Keys.cpp Marine/AIS.cpp IO/Network.cpp DSP/Model.cpp Marine/NMEA.cpp DSP/Demod.cpp Marine/Message.cpp Device/UDP.cpp Device/ZMQ.cpp Device/RTLSDR.cpp Device/AIRSPYHF.cpp Device/SoapySDR.cpp Device/AIRSPY.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/SDRPLAY.cpp Device/RTLTCP.cpp Device/HACKRF.cpp Device/Serial.cpp Library/TCP.cpp Device/SpyServer.cpp JSON/JSON.cpp IO/Protocol.cpp IO/MsgOut.cpp IO/Screen.cpp Library/Logger.cpp Aviation/Basestation.cpp  Application/WebDB.cpp Aviation/Beast.cpp Aviation/ADSB.cpp Utilities/Parse.cpp Utilities/Convert.cpp Utilities/Helper.cpp Utilities/Serialize.cpp Utilities/TemplateString.cpp Utilities/StreamHelpers.cpp
 OBJ = Ships.o Main.o N2KStream.o N2K.o N2KInterface.o N2KsktCAN.o Prometheus.o DeviceManager.o Receiver.o Config.o WebViewer.o MapTiles.o HTTPClient.o PostgreSQL.o DB.o DSP.o AIS.o Model.o Network.o Demod.o Serial.o RTLSDR.o HTTPServer.o AIRSPYHF.o Keys.o AIRSPY.o Parser.o StringBuilder.o FileRAW.o FileWAV.o SDRPLAY.o NMEA.o RTLTCP.o HACKRF.o ZMQ.o UDP.o SoapySDR.o TCP.o Message.o SpyServer.o JSON.o JSONAIS.o Protocol.o MsgOut.o Screen.o Logger.o Basestation.o WebDB.o Beast.o ADSB.o UtilParse.o UtilConvert.o UtilHelper.o UtilSerialize.o UtilTemplateString.o UtilStreamHelpers.o
-INCLUDE = -I. -IJSON/ -IDBMS/ -ITracking/ -ILibrary/ -IMarine/ -IAviation/ -IDSP/ -IApplication/ -IIO/ -IUtilities/ 
+INCLUDE = -I. -ISource -ISource/JSON/ -ISource/DBMS/ -ISource/Tracking/ -ISource/Library/ -ISource/Marine/ -ISource/Aviation/ -ISource/DSP/ -ISource/Application/ -ISource/IO/ -ISource/Utilities/ 
 CC = clang
 
 override CFLAGS +=  -Ofast -std=c++11 -g -pg -Wno-sign-compare $(INCLUDE)
@@ -129,53 +129,53 @@ soapysdr-only: LFLAGS_ALL = $(LFLAGS_SOAPYSDR)
 soapysdr-only: AIS-catcher
 
 # Pattern rule for compiling .cpp files to .o files
-%.o: Application/%.cpp
+%.o: Source/Application/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: Tracking/%.cpp
+%.o: Source/Tracking/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: DBMS/%.cpp
+%.o: Source/DBMS/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: Device/%.cpp
+%.o: Source/Device/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: DSP/%.cpp
+%.o: Source/DSP/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: IO/%.cpp
+%.o: Source/IO/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: JSON/%.cpp
+%.o: Source/JSON/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: Library/%.cpp
+%.o: Source/Library/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: Marine/%.cpp
+%.o: Source/Marine/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-%.o: Aviation/%.cpp
+%.o: Source/Aviation/%.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
 # Special rules for Utilities directory to avoid name conflicts
-UtilParse.o: Utilities/Parse.cpp
+UtilParse.o: Source/Utilities/Parse.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-UtilConvert.o: Utilities/Convert.cpp
+UtilConvert.o: Source/Utilities/Convert.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-UtilHelper.o: Utilities/Helper.cpp
+UtilHelper.o: Source/Utilities/Helper.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-UtilSerialize.o: Utilities/Serialize.cpp
+UtilSerialize.o: Source/Utilities/Serialize.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-UtilTemplateString.o: Utilities/TemplateString.cpp
+UtilTemplateString.o: Source/Utilities/TemplateString.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
-UtilStreamHelpers.o: Utilities/StreamHelpers.cpp
+UtilStreamHelpers.o: Source/Utilities/StreamHelpers.cpp
 	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
 
 clean:

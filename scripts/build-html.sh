@@ -18,24 +18,24 @@ perform_sed() {
 # Generate hashes from actual file content
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
-    CSS_HASH=$(md5 -q HTML/style.css)
-    JS_HASH=$(md5 -q HTML/script.js)
+    CSS_HASH=$(md5 -q Source/HTML/style.css)
+    JS_HASH=$(md5 -q Source/HTML/script.js)
 else
     # Linux
-    CSS_HASH=$(md5sum HTML/style.css | cut -d' ' -f1)
-    JS_HASH=$(md5sum HTML/script.js | cut -d' ' -f1)
+    CSS_HASH=$(md5sum Source/HTML/style.css | cut -d' ' -f1)
+    JS_HASH=$(md5sum Source/HTML/script.js | cut -d' ' -f1)
 fi
 
 # Update the hashes in index.html
-perform_sed "HTML/index.html" "s|style\.css?hash=[^\"]*|style.css?hash=${CSS_HASH}|g" ''
-perform_sed "HTML/index.html" "s|script\.js?hash=[^\"]*|script.js?hash=${JS_HASH}|g" ''
+perform_sed "Source/HTML/index.html" "s|style\.css?hash=[^\"]*|style.css?hash=${CSS_HASH}|g" ''
+perform_sed "Source/HTML/index.html" "s|script\.js?hash=[^\"]*|script.js?hash=${JS_HASH}|g" ''
 
 # Create a local version and perform the same replacement
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' HTML/index.html > HTML/index_local.html
+    sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' Source/HTML/index.html > Source/HTML/index_local.html
 else
-    sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' HTML/index.html > HTML/index_local.html
+    sed -e 's|https://cdn.jsdelivr.net/|cdn/|g' -e 's|https://unpkg.com/|cdn/|g' Source/HTML/index.html > Source/HTML/index_local.html
 fi
 
 echo "Updated index.html with versioned script and style references"
-./scripts/build-web-db.sh HTML
+./scripts/build-web-db.sh Source/HTML
