@@ -30,6 +30,8 @@ namespace IO
 		bool append_mode = true;
 
 	public:
+		FileOutput() : OutputMessage() { fmt = MessageFormat::NMEA; }
+
 		~FileOutput()
 		{
 			Stop();
@@ -53,16 +55,41 @@ namespace IO
 
 		void Receive(const AIS::Message *data, int len, TAG &tag)
 		{
-			for (int i = 0; i < len; i++)
+			if (fmt == MessageFormat::NMEA)
 			{
-				if (filter.include(data[i]))
+				for (int i = 0; i < len; i++)
 				{
-					for (const std::string &s : data[0].NMEA)
+					if (!filter.include(data[i]))
+						continue;
+
+					for (const auto &s : data[i].NMEA)
 					{
 						file << s << std::endl;
 					}
 				}
 			}
+			else if (fmt == MessageFormat::BINARY_NMEA)
+			{
+				for (int i = 0; i < len; i++)
+				{
+					if (!filter.include(data[i]))
+						continue;
+
+					std::string binary_packet = data[i].getBinaryNMEA(tag);
+					file.write(binary_packet.c_str(), binary_packet.length());
+				}
+			}
+			else
+			{
+				for (int i = 0; i < len; i++)
+				{
+					if (!filter.include(data[i]))
+						continue;
+
+					file << data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, false, tag.ipv4, "") << std::endl;
+				}
+			}
+
 			if (file.fail())
 			{
 				Error() << "File: cannot write to file.";
