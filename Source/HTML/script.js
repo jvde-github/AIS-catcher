@@ -6769,12 +6769,12 @@ function updateAndroid() {
     if (isAndroid()) {
         var elements = document.querySelectorAll(".noandroid");
         for (var i = 0; i < elements.length; i++) {
-            elements[i].style.display = "none";
+            elements[i].style.setProperty("display", "none", "important");
         }
     } else {
         var elements = document.querySelectorAll(".android");
         for (var i = 0; i < elements.length; i++) {
-            elements[i].style.display = "none";
+            elements[i].style.setProperty("display", "none", "important");
         }
     }
 }
@@ -7436,8 +7436,6 @@ console.log("Load settings from URL parameters");
 loadSettingsFromURL();
 updateForLegacySettings();
 
-updateAndroid();
-
 applyDynamicStyling();
 
 console.log("Setup tabs");
@@ -7478,7 +7476,8 @@ if (typeof decoder_enabled === "undefined" || decoder_enabled === false) {
 
 showWelcome();
 updateKiosk();
-applyShipcardPinStyling();
+applyShipcardPinStyling()
+updateAndroid();
 
 if (isAndroid()) showMenu();
 
