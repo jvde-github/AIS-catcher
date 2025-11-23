@@ -61,6 +61,7 @@ namespace TCP
 {
 
 	const int TCP::Server::MAX_CONN;
+	std::vector<int> Server::active_ports;
 	// TO DO: create a BaseSocket class and clean up between files Network (AC streamers) and TCP (low level TCP connections)
 
 	void ServerConnection::Lock()
@@ -261,6 +262,19 @@ namespace TCP
 			run_thread.join();
 		if (sock != -1)
 			closesocket(sock);
+
+		// Remove port from active_ports
+		if (listening_port != -1)
+		{
+			for (auto it = active_ports.begin(); it != active_ports.end(); ++it)
+			{
+				if (*it == listening_port)
+				{
+					active_ports.erase(it);
+					break;
+				}
+			}
+		}
 	}
 
 	int Server::numberOfClients()
@@ -473,6 +487,15 @@ namespace TCP
 
 	bool Server::start(int port)
 	{
+		// Check if port is already in use
+		for (const auto& p : active_ports)
+		{
+			if (p == port)
+			{
+				Error() << "TCP Server: port " << port << " is already in use by another server instance";
+				return false;
+			}
+		}
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);
 		if (sock < 0)
@@ -527,6 +550,9 @@ namespace TCP
 			Info() << "TCP Server: start thread at port " << port;
 		else
 			Info() << "TCP Server: start thread at IP " << IP_BIND << " port " << port;
+
+		listening_port = port;
+		active_ports.push_back(port);
 
 		run_thread = std::thread(&Server::Run, this);
 

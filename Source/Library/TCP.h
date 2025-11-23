@@ -110,6 +110,9 @@ namespace TCP
 		int timeout = 30;
 		bool reuse_port = true;
 		std::string IP_BIND;
+		int listening_port = -1;
+
+		static std::vector<int> active_ports;
 
 		const static int MAX_CONN = 16;
 		std::array<ServerConnection, MAX_CONN> client;

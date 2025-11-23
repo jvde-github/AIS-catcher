@@ -612,7 +612,8 @@ namespace IO
 
 				for (const auto &s : data[i].NMEA)
 				{
-					if (SendTo((s + "\r\n").c_str()) < 0) {
+					if (SendTo((s + "\r\n").c_str()) < 0)
+					{
 						first_message = true;
 						if (!persistent)
 						{
@@ -620,7 +621,7 @@ namespace IO
 							StopRequest();
 						}
 					}
-					else 
+					else
 						first_message = false;
 				}
 			}
@@ -642,7 +643,7 @@ namespace IO
 						StopRequest();
 					}
 				}
-				else 
+				else
 					first_message = false;
 			}
 		}
@@ -778,7 +779,11 @@ namespace IO
 		ss << ", json: " << Util::Convert::toString(fmt) << ".";
 
 		Info() << ss.str();
-		Server::start(port);
+
+		if (!Server::start(port))
+		{
+			throw std::runtime_error("TCP listener: cannot start server at port " + std::to_string(port) + ".");
+		}
 	}
 
 	Setting &TCPlistenerStreamer::Set(std::string option, std::string arg)
