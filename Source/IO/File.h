@@ -68,6 +68,16 @@ namespace IO
 					}
 				}
 			}
+			else if (fmt == MessageFormat::NMEA_TAG)
+			{
+				for (int i = 0; i < len; i++)
+				{
+					if (!filter.include(data[i]))
+						continue;
+
+					file << data[i].getNMEATagBlock();
+				}
+			}
 			else if (fmt == MessageFormat::BINARY_NMEA)
 			{
 				for (int i = 0; i < len; i++)

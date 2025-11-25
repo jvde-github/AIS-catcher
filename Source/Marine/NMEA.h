@@ -36,6 +36,15 @@ namespace AIS
 		int station = 0;
 		std::string uuid;
 
+		enum class ParseState
+		{
+			IDLE,
+			JSON,
+			NMEA,
+			BINARY,
+			TAG_BLOCK
+		};
+
 		struct AIVDM
 		{
 			std::string sentence;
@@ -43,12 +52,14 @@ namespace AIS
 			std::string data;
 
 			uint64_t timestamp;
+			int groupId = 0; // NMEA 4.0 tag block group ID
 
 			void reset()
 			{
 				sentence.clear();
 				data.clear();
 				timestamp = time(nullptr);
+				groupId = 0;
 			}
 			char channel;
 			int count;
@@ -62,7 +73,7 @@ namespace AIS
 		std::vector<std::string> parts;
 
 		char prev = '\n';
-		int state = 0;
+		ParseState state = ParseState::IDLE;
 		std::string line;
 		int count;
 		int own_mmsi = -1;
@@ -72,7 +83,7 @@ namespace AIS
 		void submitAIS(TAG &tag, long int t, uint64_t ssc, uint16_t sl, int thisstation);
 		void addline(const AIVDM &a);
 		void reset(char);
-		void clean(char, int);
+		void clean(char, int, int groupId = 0);
 		int search(const AIVDM &a);
 
 		bool isNMEAchar(char c) { return (c >= 40 && c < 88) || (c >= 96 && c <= 56 + 0x3F); }
@@ -96,11 +107,15 @@ namespace AIS
 		void split(const std::string &);
 		std::string trim(const std::string &);
 		void processJSONsentence(const std::string &s, TAG &tag, long t);
-		bool processAIS(const std::string &s, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, std::string &error_msg);
+		bool processAIS(const std::string &s, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, int groupId, std::string &error_msg);
 		bool processGGA(const std::string &s, TAG &tag, long t, std::string &error_msg);
 		bool processGLL(const std::string &s, TAG &tag, long t, std::string &error_msg);
 		bool processRMC(const std::string &s, TAG &tag, long t, std::string &error_msg);
 		bool processBinaryPacket(const std::string &packet, TAG &tag, std::string &error_msg);
+		bool parseTagBlock(const std::string &s, std::string &nmea, long &timestamp, int &thisstation, int &groupId, std::string &error_msg);
+		bool processTagBlock(const std::string &s, TAG &tag, long &t, std::string &error_msg);
+		bool processNMEAline(const std::string &s, TAG &tag, long t, int thisstation, int groupId, std::string &error_msg);
+		bool isCompleteNMEA(const std::string &s, bool newline);
 
 	public:
 		NMEA() : parser(&AIS::KeyMap, JSON_DICT_FULL)

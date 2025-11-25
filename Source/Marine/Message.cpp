@@ -132,6 +132,39 @@ namespace AIS
 		return ss.str();
 	}
 
+	std::string Message::getNMEATagBlock() const
+	{
+		static int groupId = 0;
+		groupId = (groupId % 9999) + 1;  // Recycle 1-9999
+
+		std::string result;
+		int total = NMEA.size();
+		int seq = 1;
+
+		// Use station ID with 's' prefix as source
+		std::string src = "s" + std::to_string(station);
+
+		for (const auto &nmea : NMEA)
+		{
+			std::stringstream tb;
+			tb << "s:" << src << ",c:" << rxtime << ",g:" << seq << "-" << total << "-" << groupId;
+
+			// Calculate checksum for tag block
+			std::string tbs = tb.str();
+			int check = 0;
+			for (char c : tbs)
+				check ^= c;
+
+			std::stringstream ss;
+			ss << "\\" << tbs << "*" << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << check << "\\" << nmea << "\r\n";
+
+			result += ss.str();
+			seq++;
+		}
+
+		return result;
+	}
+
 	std::string Message::getBinaryNMEA(const TAG &tag, bool crc) const
 	{
 		std::string packet;

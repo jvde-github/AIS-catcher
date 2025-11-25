@@ -27,18 +27,21 @@ namespace AIS
 
 	void NMEA::reset(char c)
 	{
-		state = 0;
+		state = ParseState::IDLE;
 		line.clear();
 		prev = c;
 	}
 
-	void NMEA::clean(char c, int t)
+	void NMEA::clean(char c, int t, int groupId)
 	{
 		auto i = queue.begin();
 		uint64_t now = time(nullptr);
 		while (i != queue.end())
 		{
-			if ((i->channel == c && i->talkerID == t) || (i->timestamp + 3 < now))
+			// Match by groupId if available, otherwise by channel+talkerID
+			bool match = (groupId != 0 && i->groupId == groupId) ||
+						 (groupId == 0 && i->channel == c && i->talkerID == t);
+			if (match || (i->timestamp + 3 < now))
 				i = queue.erase(i);
 			else
 				i++;
@@ -47,13 +50,15 @@ namespace AIS
 
 	int NMEA::search(const AIVDM &a)
 	{
-		// multiline message, firstly check whether we can find previous lines with the same ID, channel and line count
-		// we run backwards to find the previous addition
+		// multiline message, find previous lines with matching group
 		// return: 0 = Not Found, -1: Found but inconsistent with input, >0: number of previous message
 		int lastNumber = 0;
 		for (auto it = queue.rbegin(); it != queue.rend(); it++)
 		{
-			if (it->channel == aivdm.channel && it->talkerID == aivdm.talkerID)
+			// Match by groupId if available, otherwise by channel+talkerID
+			bool match = (aivdm.groupId != 0 && it->groupId == aivdm.groupId) ||
+						 (aivdm.groupId == 0 && it->channel == aivdm.channel && it->talkerID == aivdm.talkerID);
+			if (match)
 			{
 				if (it->count != aivdm.count || it->ID != aivdm.ID)
 					lastNumber = -1;
@@ -68,8 +73,11 @@ namespace AIS
 	int NMEA::NMEAchecksum(std::string s)
 	{
 		int c = 0;
-		for (int i = 1; i < s.length() - 3; i++)
-			c ^= s[i];
+		if (s.length() > 4) // Need at least "$X*XX" format
+		{
+			for (size_t i = 1; i < s.length() - 3; i++)
+				c ^= s[i];
+		}
 		return c;
 	}
 
@@ -111,7 +119,7 @@ namespace AIS
 
 		if (aivdm.number != result + 1 || result == -1)
 		{
-			clean(aivdm.channel, aivdm.talkerID);
+			clean(aivdm.channel, aivdm.talkerID, aivdm.groupId);
 			if (aivdm.number != 1)
 			{
 				return;
@@ -130,7 +138,10 @@ namespace AIS
 
 		for (auto it = queue.begin(); it != queue.end(); it++)
 		{
-			if (it->channel == aivdm.channel && it->talkerID == aivdm.talkerID && it->count == aivdm.count && it->ID == aivdm.ID)
+			// Match by groupId if available, otherwise by channel+talkerID
+			bool match = (aivdm.groupId != 0 && it->groupId == aivdm.groupId) ||
+						 (aivdm.groupId == 0 && it->channel == aivdm.channel && it->talkerID == aivdm.talkerID);
+			if (match && it->count == aivdm.count && it->ID == aivdm.ID)
 			{
 				addline(*it);
 				if (!regenerate)
@@ -148,7 +159,7 @@ namespace AIS
 		else if (warnings)
 			Warning() << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength();
 
-		clean(aivdm.channel, aivdm.talkerID);
+		clean(aivdm.channel, aivdm.talkerID, aivdm.groupId);
 	}
 
 	void NMEA::addline(const AIVDM &a)
@@ -375,7 +386,7 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processAIS(const std::string &str, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, std::string &error_msg)
+	bool NMEA::processAIS(const std::string &str, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, int groupId, std::string &error_msg)
 	{
 		int pos = str.find_first_of("$!");
 		if (pos == std::string::npos)
@@ -442,6 +453,7 @@ namespace AIS
 		aivdm.checksum = (fromHEX(parts[6][2]) << 4) | fromHEX(parts[6][3]);
 
 		aivdm.sentence = nmea;
+		aivdm.groupId = groupId;
 
 		submitAIS(tag, t, ssc, sl, thisstation);
 
@@ -529,7 +541,7 @@ namespace AIS
 									std::string error;
 									const std::string &line = v.getString();
 
-									if (!processAIS(line, tag, t, ssc, sl, thisstation, error))
+									if (!processAIS(line, tag, t, ssc, sl, thisstation, 0, error))
 									{
 										Warning() << "NMEA [" << (tag.ipv4 ? (Util::Convert::IPV4toString(tag.ipv4) + " - ") : "") << thisstation << "] " << error << " (" << line << ")";
 									}
@@ -674,10 +686,156 @@ namespace AIS
 		}
 	}
 
+	bool NMEA::parseTagBlock(const std::string &s, std::string &nmea, long &timestamp, int &thisstation, int &groupId, std::string &error_msg)
+	{
+		// Format: \s:source,c:timestamp,g:seq-total-id*checksum\!AIVDM,...
+		// Find the second backslash that ends the tag block
+		size_t tagEnd = s.find('\\', 1);
+		if (tagEnd == std::string::npos)
+		{
+			error_msg = "tag block: no closing backslash";
+			return false;
+		}
+
+		std::string tagBlock = s.substr(1, tagEnd - 1); // Extract content between backslashes
+		nmea = s.substr(tagEnd + 1);					// NMEA sentence after tag block
+
+		if (nmea.empty())
+		{
+			error_msg = "tag block: no NMEA sentence after tag block";
+			return false;
+		}
+
+		// Remove checksum from tag block if present
+		size_t checksumPos = tagBlock.find('*');
+		if (checksumPos != std::string::npos)
+		{
+			// Verify checksum - need at least 2 hex chars after '*'
+			int expectedChecksum = 0;
+			if (checksumPos + 2 < tagBlock.size())
+			{
+				expectedChecksum = (fromHEX(tagBlock[checksumPos + 1]) << 4) | fromHEX(tagBlock[checksumPos + 2]);
+			}
+			int actualChecksum = 0;
+			for (size_t i = 0; i < checksumPos; i++)
+				actualChecksum ^= tagBlock[i];
+
+			if (expectedChecksum != actualChecksum && crc_check)
+			{
+				error_msg = "tag block: checksum mismatch";
+				return false;
+			}
+			tagBlock = tagBlock.substr(0, checksumPos);
+		}
+
+		// Parse individual fields
+		std::stringstream ss(tagBlock);
+		std::string field;
+		while (std::getline(ss, field, ','))
+		{
+			if (field.size() < 2 || field[1] != ':')
+				continue;
+
+			char key = field[0];
+			std::string value = field.substr(2);
+
+			switch (key)
+			{
+			case 's': // Source - if starts with 's' followed by digits, extract station ID
+				if (!value.empty() && value[0] == 's')
+				{
+					try
+					{
+						thisstation = std::stoi(value.substr(1));
+					}
+					catch (...)
+					{
+					}
+				}
+				break;
+			case 'c': // Unix timestamp
+				try
+				{
+					timestamp = std::stol(value);
+				}
+				catch (...)
+				{
+				}
+				break;
+			case 'g': // Group: seq-total-groupId (e.g., "1-2-1234")
+			{
+				size_t dash1 = value.find('-');
+				size_t dash2 = value.find('-', dash1 + 1);
+				if (dash1 != std::string::npos && dash2 != std::string::npos)
+				{
+					try
+					{
+						groupId = std::stoi(value.substr(dash2 + 1));
+					}
+					catch (...)
+					{
+					}
+				}
+			}
+			break;
+			}
+		}
+
+		return true;
+	}
+
+	bool NMEA::isCompleteNMEA(const std::string &s, bool newline)
+	{
+		if (s.size() < 7)
+			return false;
+
+		// Check for VDM/VDO with valid checksum pattern
+		bool isVDx = s.size() > 10 && (s[3] == 'V' && s[4] == 'D' && (s[5] == 'M' || s[5] == 'O'));
+		if (isVDx)
+		{
+			bool hasChecksum = isHEX(s[s.size() - 1]) && isHEX(s[s.size() - 2]) && s[s.size() - 3] == '*' &&
+							   ((isdigit(s[s.size() - 4]) && s[s.size() - 5] == ',') || (s[s.size() - 4] == ','));
+			if (hasChecksum)
+				return true;
+		}
+
+		// For other NMEA types or incomplete VDM/VDO, require newline
+		return newline;
+	}
+
+	bool NMEA::processNMEAline(const std::string &s, TAG &tag, long t, int thisstation, int groupId, std::string &error_msg)
+	{
+		std::string type = s.size() > 5 ? s.substr(3, 3) : "";
+
+		if (type == "VDM")
+			return processAIS(s, tag, t, 0, 0, thisstation, groupId, error_msg);
+		if (type == "VDO" && VDO)
+			return processAIS(s, tag, t, 0, 0, thisstation, groupId, error_msg);
+		if (type == "GGA")
+			return processGGA(s, tag, t, error_msg);
+		if (type == "RMC")
+			return processRMC(s, tag, t, error_msg);
+		if (type == "GLL")
+			return processGLL(s, tag, t, error_msg);
+
+		return true; // Unknown type, ignore
+	}
+
+	bool NMEA::processTagBlock(const std::string &s, TAG &tag, long &t, std::string &error_msg)
+	{
+		std::string nmea;
+		int thisstation = -1;
+		int groupId = 0;
+
+		if (!parseTagBlock(s, nmea, t, thisstation, groupId, error_msg))
+			return false;
+
+		return processNMEAline(nmea, tag, t, thisstation, groupId, error_msg);
+	}
+
 	// continue collection of full NMEA line in `sentence` and store location of commas in 'locs'
 	void NMEA::Receive(const RAW *data, int len, TAG &tag)
 	{
-
 		try
 		{
 			long t = 0;
@@ -688,35 +846,39 @@ namespace AIS
 				{
 					char c = ((char *)(data[j].data))[i];
 
-					// state = 0, we are looking for the start of JSON, NMEA, or binary packet
-					if (state == 0)
+					if (state == ParseState::IDLE)
 					{
 						if (c == '{' && (prev == '\n' || prev == '\r' || prev == '}'))
 						{
 							line = c;
-							state = 1;
+							state = ParseState::JSON;
 							count = 1;
+						}
+						else if (c == '\\' && (prev == '\n' || prev == '\r'))
+						{
+							line = c;
+							state = ParseState::TAG_BLOCK;
 						}
 						else if (c == '$' || c == '!')
 						{
 							line = c;
-							state = 2;
+							state = ParseState::NMEA;
 						}
 						else if ((unsigned char)c == 0xac)
 						{
 							line = c;
-							state = 3; // Binary packet state
+							state = ParseState::BINARY;
 						}
 						prev = c;
 						continue;
 					}
 
-					bool newline = (state == 3) ? (c == '\n') : (c == '\r' || c == '\n' || c == '\t' || c == '\0');
+					bool newline = (state == ParseState::BINARY) ? (c == '\n') : (c == '\r' || c == '\n' || c == '\t' || c == '\0');
 
 					if (!newline)
 						line += c;
-					prev = c; // state = 1 (JSON) or state = 2 (NMEA)
-					if (state == 1)
+					prev = c;
+					if (state == ParseState::JSON)
 					{
 						// we do not allow nested JSON, so processing until newline character or '}'
 						if (c == '{')
@@ -740,33 +902,15 @@ namespace AIS
 							reset(c);
 						}
 					}
-					else if (state == 2)
+					else if (state == ParseState::NMEA)
 					{
-						// end of line if we find a checksum or a newline character
-						bool isNMEA = line.size() > 10 && (line[3] == 'V' && line[4] == 'D' && (line[5] == 'M' || line[5] == 'O'));
-						bool checksum = isNMEA && (isHEX(line[line.size() - 1]) && isHEX(line[line.size() - 2]) && line[line.size() - 3] == '*' &&
-												   ((isdigit(line[line.size() - 4]) && line[line.size() - 5] == ',') || (line[line.size() - 4] == ',')));
-
-						if (((isNMEA && checksum) || newline) && line.size() > 6)
+						if (isCompleteNMEA(line, newline))
 						{
-							std::string type = line.substr(3, 3);
-							bool noerror = true;
 							std::string error = "unspecified error";
 							tag.clear();
 							t = 0;
 
-							if (type == "VDM")
-								noerror &= processAIS(line, tag, 0, 0, t, 0, error);
-							if (type == "VDO" && VDO)
-								noerror &= processAIS(line, tag, 0, 0, t, 0, error);
-							if (type == "GGA")
-								noerror &= processGGA(line, tag, t, error);
-							if (type == "RMC")
-								noerror &= processRMC(line, tag, t, error);
-							if (type == "GLL")
-								noerror &= processGLL(line, tag, t, error);
-
-							if (!noerror)
+							if (!processNMEAline(line, tag, t, -1, 0, error))
 							{
 								if (warnings)
 								{
@@ -777,7 +921,7 @@ namespace AIS
 							reset(c);
 						}
 					}
-					else if (state == 3)
+					else if (state == ParseState::BINARY)
 					{
 						// Binary packet processing - collect until newline
 						if (c == '\n')
@@ -793,6 +937,27 @@ namespace AIS
 									   << " (length: " << line.length() << " bytes)";
 									Warning() << ss.str();
 								}
+							}
+							reset(c);
+						}
+					}
+					else if (state == ParseState::TAG_BLOCK)
+					{
+						// Tag block processing - format: \s:source,c:timestamp,g:seq-total-id*checksum\NMEA
+						// Find NMEA part after tag block to check for completion
+						size_t tagEnd = line.find('\\', 1);
+						std::string nmeaPart = (tagEnd != std::string::npos) ? line.substr(tagEnd + 1) : "";
+						if (isCompleteNMEA(nmeaPart, newline))
+						{
+							// Parse complete tag block line
+							std::string error;
+							tag.clear();
+							t = 0;
+
+							if (!processTagBlock(line, tag, t, error))
+							{
+								if (warnings)
+									Warning() << "NMEA: " << error;
 							}
 							reset(c);
 						}

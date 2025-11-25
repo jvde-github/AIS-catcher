@@ -56,9 +56,11 @@ namespace IO
 				switch (fmt)
 				{
 				case MessageFormat::NMEA:
-				case MessageFormat::NMEA_TAG:
 					for (const auto &s : data[i].NMEA)
 						std::cout << s << std::endl;
+					break;
+				case MessageFormat::NMEA_TAG:
+					std::cout << data[i].getNMEATagBlock();
 					break;
 				case MessageFormat::FULL:
 					for (const auto &s : data[i].NMEA)

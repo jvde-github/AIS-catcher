@@ -315,7 +315,7 @@ namespace Util
 		{
 			out = MessageFormat::NMEA;
 		}
-		else if (str == "NMEA_TAG")
+		else if (str == "NMEA_TAG" || str == "7")
 		{
 			out = MessageFormat::NMEA_TAG;
 		}

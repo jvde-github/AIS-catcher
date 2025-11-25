@@ -390,6 +390,16 @@ namespace IO
 					SendTo((s + "\r\n").c_str());
 			}
 		}
+		else if (fmt == MessageFormat::NMEA_TAG)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (!filter.include(data[i]))
+					continue;
+
+				SendTo(data[i].getNMEATagBlock());
+			}
+		}
 		else if (fmt == MessageFormat::BINARY_NMEA)
 		{
 			for (int i = 0; i < len; i++)
@@ -626,6 +636,26 @@ namespace IO
 				}
 			}
 		}
+		else if (fmt == MessageFormat::NMEA_TAG)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (!filter.include(data[i]))
+					continue;
+
+				if (SendTo(data[i].getNMEATagBlock()) < 0)
+				{
+					first_message = true;
+					if (!persistent)
+					{
+						Error() << "TCP feed: requesting termination.";
+						StopRequest();
+					}
+				}
+				else
+					first_message = false;
+			}
+		}
 		else if ((fmt == MessageFormat::COMMUNITY_HUB && !first_message) || fmt == MessageFormat::BINARY_NMEA)
 		{
 			for (int i = 0; i < len; i++)
@@ -849,6 +879,16 @@ namespace IO
 				{
 					SendAllDirect(s + "\r\n");
 				}
+			}
+		}
+		else if (fmt == MessageFormat::NMEA_TAG)
+		{
+			for (int i = 0; i < len; i++)
+			{
+				if (!filter.include(data[i]))
+					continue;
+
+				SendAllDirect(data[i].getNMEATagBlock());
 			}
 		}
 		else if (fmt == MessageFormat::BINARY_NMEA)
