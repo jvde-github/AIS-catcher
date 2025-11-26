@@ -514,7 +514,7 @@ void WebViewer::close()
 	}
 }
 
-void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, bool gzip)
+void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
 {
 
 	std::string r;

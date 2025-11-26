@@ -23,22 +23,22 @@
 #ifdef HASZLIB
 #include <zlib.h>
 
-
-#define windowBits	  15
+#define windowBits 15
 #define GZIP_ENCODING 16
 #endif
 
-class ZIP {
+class ZIP
+{
 
 #ifdef HASZLIB
-	const int CHUNKSIZE = 0x1000;
 	z_stream strm;
 #endif
 
 	std::vector<unsigned char> output;
 
 public:
-	static bool installed() {
+	static bool installed()
+	{
 #ifdef HASZLIB
 		return true;
 #else
@@ -46,82 +46,52 @@ public:
 #endif
 	}
 
-	int getOutputLength() { return output.size(); }
-	void* getOutputPtr() { return output.data(); }
+	size_t getOutputLength() const { return output.size(); }
+	const char *getOutputPtr() const { return (const char *)output.data(); }
 
-#ifdef HASZLIB
-	void init() {
-
-		strm.zalloc = Z_NULL;
-		strm.zfree = Z_NULL;
-		strm.opaque = Z_NULL;
-
-		if (deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) < 0) {
-			throw std::runtime_error("ZLIB: error cannot initiate stream.");
-		}
+	bool zip(const std::string &input)
+	{
+		return zip(input.c_str(), input.length());
 	}
 
-	void end() {
-		deflateEnd(&strm);
-	}
-#endif
-	void zip(const std::string& input) {
+	bool zip(const char *data, int len)
+	{
 #ifdef HASZLIB
 
-		int idx = 0;
-		bool done = false;
+		try
+		{
+			strm.zalloc = Z_NULL;
+			strm.zfree = Z_NULL;
+			strm.opaque = Z_NULL;
 
-		init();
+			if (deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) < 0)
+				return false;
 
-		strm.next_in = (unsigned char*)input.c_str();
-		strm.avail_in = input.length();
+			strm.next_in = (unsigned char *)data;
+			strm.avail_in = len;
 
-		while (!done) {
+			uLong bound = deflateBound(&strm, len);
+			output.resize(bound);
 
-			if (output.size() < idx + CHUNKSIZE) output.resize(idx + CHUNKSIZE);
+			strm.avail_out = bound;
+			strm.next_out = (unsigned char *)output.data();
 
-			strm.avail_out = CHUNKSIZE;
-			strm.next_out = (unsigned char*)(output.data() + idx);
-			if (deflate(&strm, Z_FINISH) < 0)
-				throw std::runtime_error("ZLIB: unexpected problem with ZLIB");
+			int result = deflate(&strm, Z_FINISH);
+			deflateEnd(&strm);
 
-			done = strm.avail_out != 0;
-			idx += CHUNKSIZE;
+			if (result != Z_STREAM_END)
+				throw std::runtime_error("ZLIB: deflate did not complete");
+
+			output.resize(strm.total_out);
+			return true;
 		}
-
-		end();
-
-		output.resize(strm.total_out);
-#endif
-	}
-
-	void zip(const char* data, int len) {
-#ifdef HASZLIB
-
-		int idx = 0;
-		bool done = false;
-
-		init();
-
-		strm.next_in = (unsigned char*)data;
-		strm.avail_in = len;
-
-		while (!done) {
-
-			if (output.size() < idx + CHUNKSIZE) output.resize(idx + CHUNKSIZE);
-
-			strm.avail_out = CHUNKSIZE;
-			strm.next_out = (unsigned char*)(output.data() + idx);
-			if (deflate(&strm, Z_FINISH) < 0)
-				throw std::runtime_error("ZLIB: unexpected problem with ZLIB");
-
-			done = strm.avail_out != 0;
-			idx += CHUNKSIZE;
+		catch (...)
+		{
+			output.clear();
+			return false;
 		}
-
-		end();
-
-		output.resize(strm.total_out);
+#else
+		return false;
 #endif
 	}
 };

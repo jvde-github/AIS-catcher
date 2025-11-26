@@ -81,7 +81,7 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Request(TCP::ServerConnection &c, const std::string &, bool)
+	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &, bool)
 	{
 		std::string r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 15\r\nConnection: close\r\n\r\nPage not found.";
 		Send(c, r.c_str(), r.length());
@@ -146,7 +146,7 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
@@ -160,7 +160,7 @@ namespace IO
 		ResponseRaw(c, type, content.c_str(), content.size(), cache);
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
@@ -174,7 +174,7 @@ namespace IO
 		ResponseRaw(c, type, data, len);
 	}
 
-	void HTTPServer::ResponseRaw(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
 	{
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;

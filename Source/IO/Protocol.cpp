@@ -401,8 +401,9 @@ namespace Protocol
 				bool would_block = (error_code == EAGAIN || error_code == EWOULDBLOCK);
 #endif
 
-				if (would_block) {
-					if(timeout)
+				if (would_block)
+				{
+					if (timeout)
 						continue;
 					else
 						break;
@@ -423,7 +424,7 @@ namespace Protocol
 
 #ifdef HASOPENSSL
 
-		// Initialize OpenSSL library (call once globally)
+	// Initialize OpenSSL library (call once globally)
 	void TLS::initializeSSL()
 	{
 		if (!ssl_initialized)

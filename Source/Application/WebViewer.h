@@ -185,7 +185,7 @@ public:
 
 	bool isPortSet() { return port_set; }
 	// HTTP callbacks
-	void Request(TCP::ServerConnection &c, const std::string &r, bool gzip);
+	void Request(IO::TCPServerConnection &c, const std::string &r, bool gzip);
 
 	Setting &Set(std::string option, std::string arg);
 	std::string Get() { return ""; }

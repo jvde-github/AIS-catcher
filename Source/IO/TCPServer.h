@@ -51,10 +51,10 @@
 
 #include "Common.h"
 
-namespace TCP
+namespace IO
 {
 
-	class ServerConnection
+	class TCPServerConnection
 	{
 	private:
 		std::mutex mtx;
@@ -63,7 +63,7 @@ namespace TCP
 		bool verbose = true;
 
 	public:
-		~ServerConnection() { Close(); }
+		~TCPServerConnection() { Close(); }
 
 		SOCKET sock = -1;
 
@@ -92,10 +92,10 @@ namespace TCP
 		void setVerbosity(bool v) { verbose = v; }
 	};
 
-	class Server
+	class TCPServer
 	{
 	public:
-		virtual ~Server();
+		virtual ~TCPServer();
 
 		bool start(int port);
 		bool SendAll(const std::string &m);
@@ -115,7 +115,7 @@ namespace TCP
 		static std::vector<int> active_ports;
 
 		const static int MAX_CONN = 16;
-		std::array<ServerConnection, MAX_CONN> client;
+		std::array<TCPServerConnection, MAX_CONN> client;
 
 		std::thread run_thread;
 		
@@ -124,7 +124,7 @@ namespace TCP
 		void Run();
 		sockaddr_in service;
 
-		bool Send(ServerConnection &c, const char *data, int len)
+		bool Send(TCPServerConnection &c, const char *data, int len)
 		{
 			return c.Send(data, len);
 		}
