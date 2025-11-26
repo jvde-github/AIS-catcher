@@ -475,7 +475,11 @@ namespace Protocol
 		{
 			Error() << "TLS: Failed to create SSL object for " << getHost() << ":" << getPort();
 			disconnect();
+			return;
 		}
+
+		// Set SNI (Server Name Indication) hostname
+		SSL_set_tlsext_host_name(ssl, getHost().c_str());
 
 		// Create custom BIO that uses our TCP connection
 		BIO *bio = BIO_new(BIO_s_socket());
@@ -699,6 +703,29 @@ namespace Protocol
 			return false;
 
 		case SSL_ERROR_SYSCALL:
+		{
+			Error() << "TLS (" << getHost() << ":" << getPort() << "): Handshake failed: " << getSSLErrorString(error);
+
+			// Print detailed SSL error
+			unsigned long ssl_err = ERR_get_error();
+			if (ssl_err != 0)
+			{
+				char err_buf[256];
+				ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): SSL Error details: " << err_buf;
+			}
+			else if (result == 0)
+			{
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer during handshake";
+			}
+			else if (result == -1)
+			{
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): System error during handshake: " << strerror(errno);
+			}
+
+			disconnect();
+			return false;
+		}
 		case SSL_ERROR_SSL:
 		default:
 			Error() << "TLS (" << getHost() << ":" << getPort() << "): Handshake failed: " << getSSLErrorString(error);

@@ -171,16 +171,28 @@ namespace IO
 		// Read response - read until connection closes or timeout
 		message.clear();
 		int totalBytes = 0;
-		while (true)
+		int emptyReads = 0;
+		while (emptyReads < 5)
 		{
-			int bytes_read = connection->read(&buffer[0], buffer.size(), 2, false);
-			if (bytes_read <= 0)
-				break;
-			message.append(buffer.data(), bytes_read);
-			totalBytes += bytes_read;
-			if (totalBytes > 1 * 1024 * 1024)
+			int bytes_read = connection->read(&buffer[0], buffer.size(), 1, true);
+			if (bytes_read > 0)
 			{
-				Error() << "HTTP Client [" << host << "]: response too large";
+				message.append(buffer.data(), bytes_read);
+				totalBytes += bytes_read;
+				emptyReads = 0;
+				if (totalBytes > 1 * 1024 * 1024)
+				{
+					Error() << "HTTP Client [" << host << "]: response too large";
+					break;
+				}
+			}
+			else if (bytes_read == 0)
+			{
+				emptyReads++;
+			}
+			else
+			{
+				// Error or connection closed
 				break;
 			}
 		}
