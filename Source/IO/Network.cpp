@@ -815,7 +815,7 @@ namespace IO
 		if (filter.isOn())
 			ss << ", allowed: {" << filter.getAllowed() << "}";
 
-		ss << ", json: " << Util::Convert::toString(fmt) << ".";
+		ss << ", msgformat: " << Util::Convert::toString(fmt) << ".";
 
 		Info() << ss.str();
 

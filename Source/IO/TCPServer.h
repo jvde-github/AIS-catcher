@@ -118,7 +118,7 @@ namespace IO
 		std::array<TCPServerConnection, MAX_CONN> client;
 
 		std::thread run_thread;
-		
+
 		std::atomic<bool> stop{false};
 
 		void Run();
