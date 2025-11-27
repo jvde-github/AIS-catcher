@@ -197,11 +197,11 @@ namespace Device
 			throw std::runtime_error("RTLSDR: cannot set gain mode.");
 
 		int nGains = rtlsdr_get_tuner_gains(dev, nullptr);
-		if (nGains <= 0)
-			throw std::runtime_error("RTLSDR: no gains available");
+		if (nGains <= 0 || nGains > 1000)
+			throw std::runtime_error("RTLSDR: cannot get tuner gains.");
 
 		std::vector<int> gains(nGains);
-		nGains = rtlsdr_get_tuner_gains(dev, gains.data());
+		rtlsdr_get_tuner_gains(dev, gains.data());
 
 		int gain = gains[0];
 

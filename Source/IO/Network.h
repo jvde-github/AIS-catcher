@@ -39,7 +39,7 @@
 
 #include "Stream.h"
 #include "Common.h"
-#include "TCP.h"
+#include "TCPServer.h"
 #include "Library/ZIP.h"
 #include "HTTPServer.h"
 #include "HTTPClient.h"
@@ -164,7 +164,8 @@ namespace IO
 
 	class TCPClientStreamer : public OutputMessage
 	{
-		::TCP::Client tcp;
+		Protocol::TCP tcp;
+		Protocol::ProtocolBase *connection = nullptr;
 		std::string host, port;
 		bool keep_alive = false;
 		bool persistent = true;
@@ -186,11 +187,20 @@ namespace IO
 
 		int SendTo(std::string str)
 		{
-			return tcp.send(str.c_str(), (int)str.length());
+			if (connection)
+				return connection->send(str.c_str(), (int)str.length());
+			return -1;
+		}
+
+		int SendTo(const char *str)
+		{
+			if (connection)
+				return connection->send(str, strlen(str));
+			return -1;
 		}
 	};
 
-	class TCPlistenerStreamer : public OutputMessage, public TCP::Server
+	class TCPlistenerStreamer : public OutputMessage, public IO::TCPServer
 	{
 		int port = 5010;
 		// AIS::Filter filter;
@@ -228,7 +238,7 @@ namespace IO
 	public:
 		MQTTStreamer() : OutputMessage(), topic_template("ais/data")
 		{
-			//JSON_input = true;
+			// JSON_input = true;
 			fmt = MessageFormat::JSON_FULL;
 		}
 

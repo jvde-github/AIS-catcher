@@ -16,28 +16,22 @@ project(AIS-catcher)
 find_package(Git QUIET)
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-
-    set(GIT_VERSION_DESCRIBE "")
-
-    # First try to fetch tags (ignore errors if repo is already complete)
+    # For shallow clones, fetch enough history to reach a tag
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
+        COMMAND ${GIT_EXECUTABLE} fetch --deepen=200 --tags
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_FETCH_OUTPUT
-        ERROR_VARIABLE GIT_FETCH_ERROR
-        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_QUIET
         ERROR_QUIET
-        RESULT_VARIABLE GIT_FETCH_RESULT
     )
-
-    # Now get the version using git describe
+    
+    # Get the version using git describe
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} describe --tags
+        COMMAND ${GIT_EXECUTABLE} describe --tags --always --dirty
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
         OUTPUT_STRIP_TRAILING_WHITESPACE
         RESULT_VARIABLE GIT_RESULT
-        ERROR_VARIABLE GIT_ERROR
+        ERROR_QUIET
     )
 
     if(GIT_VERSION_DESCRIBE)
@@ -45,7 +39,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
         message(STATUS "Git version: ${VERSION_DESCRIBE}")
     else()
         set(VERSION_DESCRIBE "v0.00-1-unknown")
-        message(STATUS "All git describe methods failed, using fallback version: ${VERSION_DESCRIBE}")
+        message(STATUS "Git describe failed, using fallback version: ${VERSION_DESCRIBE}")
     endif()
 else()
     set(VERSION_DESCRIBE "v0.00-1-unknown")
@@ -159,7 +153,6 @@ endif()
 
 if(NOT MSVC AND NMEA2000)
 
-
     check_include_file("linux/can.h" HAVE_CAN_HEADER)
     check_include_file("linux/can/raw.h" HAVE_RAW_CAN_HEADER)
 
@@ -244,7 +237,6 @@ if(OPENSSL)
 
     endif()
 endif()
-
 
 # Find libcurl
 if(CURL)
@@ -884,7 +876,7 @@ set(CPP
     Source/Marine/N2K.cpp
     Source/Marine/NMEA.cpp
     Source/Library/Logger.cpp
-    Source/Library/TCP.cpp
+    Source/IO/TCPServer.cpp
     Source/Tracking/DB.cpp
     Source/Tracking/Ships.cpp
     Source/Utilities/Parse.cpp
@@ -899,7 +891,7 @@ set(HEADER
     Source/Application/AIS-catcher.h Source/Application/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Application/WebDB.h Source/Library/Logger.h Source/Application/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/DBMS/PostgreSQL.h Source/IO/HTTPClient.h Source/Application/MapTiles.h Source/Aviation/Beast.h
     Source/Device/Device.h Source/Device/FileWAV.h Source/Device/RTLTCP.h Source/Device/UDP.h Source/DSP/Demod.h Source/DSP/Filters.h Source/Marine/AIS.h Source/Marine/Message.h Source/Marine/NMEA.h Source/Library/ZIP.h Source/Library/Signals.h Source/Device/SoapySDR.h Source/JSON/JSONAIS.h Source/JSON/JSON.h Source/Aviation/Basestation.h Source/Aviation/ADSB.h
     Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/StringBuilder.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
-    Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/Library/TCP.h Source/IO/Protocol.h
+    Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
     Source/Utilities/Parse.h Source/Utilities/Convert.h Source/Utilities/Helper.h Source/Utilities/Serialize.h Source/Utilities/PackedInt.h Source/Utilities/TemplateString.h)
 
 set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./Source/Marine ./Source/Aviation ./Source/DSP ./Source/Application ./Source/IO ./Source/JSON ./Source/Utilities)

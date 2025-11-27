@@ -39,21 +39,21 @@
 #include "Common.h"
 #include "AIS.h"
 #include "Keys.h"
-#include "TCP.h"
+#include "TCPServer.h"
 #include "Library/ZIP.h"
 
 namespace IO
 {
 
-	class SSEConnection
+class SSEConnection
 	{
 	protected:
 		bool running = false;
-		TCP::ServerConnection *connection;
+		IO::TCPServerConnection *connection;
 		int _id = 0;
 
 	public:
-		SSEConnection(TCP::ServerConnection *c, int id) : connection(c), _id(id) { c->setVerbosity(false); }
+		SSEConnection(IO::TCPServerConnection *c, int id) : connection(c), _id(id) { c->setVerbosity(false); }
 		~SSEConnection() { Close(); }
 
 		int getID()
@@ -111,16 +111,16 @@ namespace IO
 		}
 	};
 
-	class HTTPServer : public TCP::Server
+	class HTTPServer : public IO::TCPServer
 	{
 		std::array<std::string, 4> sse_topic = {"aiscatcher", "nmea", "nmea", "log"};
 
 	public:
-		virtual void Request(TCP::ServerConnection &c, const std::string &msg, bool accept_gzip);
+		virtual void Request(IO::TCPServerConnection &c, const std::string &msg, bool accept_gzip);
 
-		void Response(TCP::ServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false);
-		void Response(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
-		void ResponseRaw(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
+		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false);
+		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
+		void ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
 
 		void cleanupSSE()
 		{
@@ -138,7 +138,7 @@ namespace IO
 			}
 		}
 
-		IO::SSEConnection *upgradeSSE(TCP::ServerConnection &c, int id)
+		IO::SSEConnection *upgradeSSE(IO::TCPServerConnection &c, int id)
 		{
 			cleanupSSE();
 

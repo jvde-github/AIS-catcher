@@ -59,8 +59,7 @@ namespace Protocol
 {
 
 #ifdef HASOPENSSL
-	bool TLS::ssl_initialized = false;
-	int TLS::ssl_ref_count = 0;
+	std::once_flag TLS::ssl_init_flag;
 #endif
 
 	void TCP::disconnect()
@@ -401,8 +400,9 @@ namespace Protocol
 				bool would_block = (error_code == EAGAIN || error_code == EWOULDBLOCK);
 #endif
 
-				if (would_block) {
-					if(timeout)
+				if (would_block)
+				{
+					if (timeout)
 						continue;
 					else
 						break;
@@ -423,29 +423,23 @@ namespace Protocol
 
 #ifdef HASOPENSSL
 
-		// Initialize OpenSSL library (call once globally)
+	// Initialize OpenSSL library exactly once (thread-safe)
+	// Note: OpenSSL 1.1.0+ handles initialization automatically.
+	// No cleanup needed - OS handles it at process exit.
 	void TLS::initializeSSL()
 	{
-		if (!ssl_initialized)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
+		std::call_once(ssl_init_flag, []()
 		{
+			// OpenSSL < 1.1.0 requires manual initialization
 			SSL_load_error_strings();
 			SSL_library_init();
 			OpenSSL_add_all_algorithms();
-			ssl_initialized = true;
-		}
-		ssl_ref_count++;
-	}
 
-	// Cleanup OpenSSL library
-	void TLS::cleanupSSL()
-	{
-		ssl_ref_count--;
-		if (ssl_ref_count <= 0 && ssl_initialized)
-		{
-			EVP_cleanup();
-			ERR_free_strings();
-			ssl_initialized = false;
-		}
+			// OpenSSL 1.1.0+ initializes automatically, no action needed
+		});
+#endif
 	}
 
 	void TLS::onConnect()
@@ -474,7 +468,11 @@ namespace Protocol
 		{
 			Error() << "TLS: Failed to create SSL object for " << getHost() << ":" << getPort();
 			disconnect();
+			return;
 		}
+
+		// Set SNI (Server Name Indication) hostname
+		SSL_set_tlsext_host_name(ssl, getHost().c_str());
 
 		// Create custom BIO that uses our TCP connection
 		BIO *bio = BIO_new(BIO_s_socket());
@@ -577,6 +575,12 @@ namespace Protocol
 		}
 
 		SOCKET sock = getSocket();
+		if (sock < 0)
+		{
+			disconnect();
+			return -1;
+		}
+
 		int time = 0;
 		int total_received = 0;
 		char *buf_ptr = (char *)data;
@@ -698,6 +702,29 @@ namespace Protocol
 			return false;
 
 		case SSL_ERROR_SYSCALL:
+		{
+			Error() << "TLS (" << getHost() << ":" << getPort() << "): Handshake failed: " << getSSLErrorString(error);
+
+			// Print detailed SSL error
+			unsigned long ssl_err = ERR_get_error();
+			if (ssl_err != 0)
+			{
+				char err_buf[256];
+				ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): SSL Error details: " << err_buf;
+			}
+			else if (result == 0)
+			{
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer during handshake";
+			}
+			else if (result == -1)
+			{
+				Error() << "TLS (" << getHost() << ":" << getPort() << "): System error during handshake: " << strerror(errno);
+			}
+
+			disconnect();
+			return false;
+		}
 		case SSL_ERROR_SSL:
 		default:
 			Error() << "TLS (" << getHost() << ":" << getPort() << "): Handshake failed: " << getSSLErrorString(error);
@@ -898,14 +925,14 @@ namespace Protocol
 			frame.push_back((length >> 8) & 0xFF);
 			frame.push_back(length & 0xFF);
 		}
-		else
-		{
-			frame.push_back(0x80 | 127);
-			for (int i = 7; i >= 0; --i)
-				frame.push_back((length >> (8 * i)) & 0xFF);
-		}
-
-		// Generate a random masking key
+	else
+	{
+		frame.push_back(0x80 | 127);
+		// Cast to uint64_t to avoid undefined behavior when shifting
+		uint64_t len64 = static_cast<uint64_t>(length);
+		for (int i = 7; i >= 0; --i)
+			frame.push_back((len64 >> (8 * i)) & 0xFF);
+	}		// Generate a random masking key
 		uint8_t masking_key[4];
 		for (int i = 0; i < 4; ++i)
 			masking_key[i] = rand() & 0xFF;

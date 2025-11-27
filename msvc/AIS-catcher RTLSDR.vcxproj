@@ -62,7 +62,7 @@
     <ClCompile Include="..\Aviation\Basestation.cpp" />
     <ClCompile Include="..\Aviation\Beast.cpp" />
     <ClCompile Include="..\Library\Logger.cpp" />
-    <ClCompile Include="..\Library\TCP.cpp" />
+    <ClCompile Include="..\IO\TCPServer.cpp" />
     <ClCompile Include="..\Library\Utilities.cpp" />
     <ClCompile Include="..\IO\Protocol.cpp" />
   </ItemGroup>
@@ -114,7 +114,7 @@
     <ClInclude Include="..\Library\Signals.h" />
     <ClInclude Include="..\Library\Stream.h" />
     <ClInclude Include="..\Marine\NMEA.h" />
-    <ClInclude Include="..\Library\TCP.h" />
+    <ClInclude Include="..\IO\TCPServer.h" />
     <ClInclude Include="..\Aviation\ADSB.h" />
     <ClInclude Include="..\Aviation\Basestation.h" />
     <ClInclude Include="..\Aviation\Beast.h" />

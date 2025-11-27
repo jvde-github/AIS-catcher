@@ -48,14 +48,36 @@ namespace IO
 							std::string cl_value = c.msg.substr(cl_pos + 15, cl_end - cl_pos - 15);
 							// Trim whitespace
 							cl_value.erase(0, cl_value.find_first_not_of(" \t"));
-							content_length = std::stoul(cl_value);
+							try
+							{
+								content_length = std::stoul(cl_value);
+								// Limit maximum content length to 1MB
+								if (content_length > 1024 * 1024)
+								{
+									Error() << "Server: closing connection, Content-Length too large: " << content_length;
+									c.Close();
+									break;
+								}
+							}
+							catch (...)
+							{
+								Error() << "Server: closing connection, invalid Content-Length: " << cl_value;
+								c.Close();
+								break;
+							}
 						}
 					}
 
 					// Calculate how much data we need (headers + body)
-					std::size_t required_length = pos + 4 + content_length;
-
-					// If we don't have all the data yet, wait for more
+					// Check for integer overflow
+					std::size_t required_length = pos + 4;
+					if (required_length > 1024 * 1024 || content_length > 1024 * 1024 - required_length)
+					{
+						Error() << "Server: closing connection, total request size too large";
+						c.Close();
+						break;
+					}
+					required_length += content_length; // If we don't have all the data yet, wait for more
 					if (c.msg.size() < required_length)
 					{
 						break;
@@ -72,16 +94,17 @@ namespace IO
 					pos = c.msg.find(EOF_MSG);
 				}
 
-				if (c.msg.size() > 8192)
+				// Limit accumulated message size to prevent memory exhaustion
+				if (c.msg.size() > 1024 * 1024)
 				{
-					Error() << "Server: closing connection, client flooding server: " << c.sock;
+					Error() << "Server: closing connection, accumulated message too large: " << c.sock;
 					c.Close();
 				}
 			}
 		}
 	}
 
-	void HTTPServer::Request(TCP::ServerConnection &c, const std::string &, bool)
+	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &, bool)
 	{
 		std::string r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 15\r\nConnection: close\r\n\r\nPage not found.";
 		Send(c, r.c_str(), r.length());
@@ -126,7 +149,18 @@ namespace IO
 			else if (key == "CONTENT-LENGTH:")
 			{
 				std::getline(line_stream, value);
-				content_length = std::stoi(value);
+				try
+				{
+					content_length = std::stoi(value);
+					if (content_length < 0 || content_length > 1024 * 1024)
+					{
+						content_length = 0;
+					}
+				}
+				catch (...)
+				{
+					content_length = 0;
+				}
 			}
 		}
 
@@ -146,7 +180,7 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
@@ -160,7 +194,7 @@ namespace IO
 		ResponseRaw(c, type, content.c_str(), content.size(), cache);
 	}
 
-	void HTTPServer::Response(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
 	{
 #ifdef HASZLIB
 		if (gzip)
@@ -174,7 +208,7 @@ namespace IO
 		ResponseRaw(c, type, data, len);
 	}
 
-	void HTTPServer::ResponseRaw(TCP::ServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
 	{
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;

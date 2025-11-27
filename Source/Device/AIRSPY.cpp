@@ -210,7 +210,8 @@ namespace Device
 				for (j = 5; j >= 0; j--)
 					if ((r820t_hf[j] - r820t_lf[i]) <= tuner_bandwidth)
 						break;
-				j++;
+				if (j < 5)
+					j++;
 
 				airspy_r820t_write(dev, 10, 0xB0 | (15 - j));
 				airspy_r820t_write(dev, 11, 0xE0 | (15 - i));

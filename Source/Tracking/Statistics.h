@@ -78,7 +78,7 @@ public:
 		if (new_vessel) _vessels++;
 
 		_msg[m.type() - 1]++;
-		if (m.getChannel() >= 'A' || m.getChannel() <= 'D') _channel[m.getChannel() - 'A']++;
+		if (m.getChannel() >= 'A' && m.getChannel() <= 'D') _channel[m.getChannel() - 'A']++;
 
 		if (tag.level == LEVEL_UNDEFINED || tag.ppm == PPM_UNDEFINED)
 			_exclude++;

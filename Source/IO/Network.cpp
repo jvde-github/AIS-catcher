@@ -116,7 +116,7 @@ namespace IO
 		}
 
 		oss.str("");
-		HTTPResponse r;
+		int r;
 
 		if (protocol == PROTOCOL::AISCATCHER || protocol == PROTOCOL::AIRFRAMES)
 		{
@@ -167,12 +167,11 @@ namespace IO
 			r = http.Post(oss.str(), gzip, false, "");
 		}
 
-		if (r.status < 200 || r.status > 299)
-			Error() << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message;
+		if (r < 200 || r > 299)
+			Error() << "HTTP Client [" << url << "]: return code " << r;
 		else if (show_response)
-			Info() << "HTTP Client [" << url << "]: return code " << r.status << " msg: " << r.message;
+			Info() << "HTTP Client [" << url << "]: return code " << r;
 	}
-
 	void HTTPStreamer::process()
 	{
 
@@ -735,7 +734,16 @@ namespace IO
 
 		ss << ", msgformat: " << Util::Convert::toString(fmt) << ", status: ";
 
-		if (tcp.connect(host, port, persistent, 0, keep_alive))
+		// Set up TCP connection
+		tcp.setValue("HOST", host);
+		tcp.setValue("PORT", port);
+		tcp.setValue("PERSISTENT", Util::Convert::toString(persistent));
+		tcp.setValue("TIMEOUT", "0");
+		tcp.setValue("KEEP_ALIVE", Util::Convert::toString(keep_alive));
+
+		connection = &tcp;
+
+		if (connection->connect())
 			ss << "connected\n";
 		else
 		{
@@ -753,7 +761,8 @@ namespace IO
 
 	void TCPClientStreamer::Stop()
 	{
-		tcp.disconnect();
+		if (connection)
+			connection->disconnect();
 	}
 
 	Setting &TCPClientStreamer::Set(std::string option, std::string arg)
@@ -806,11 +815,11 @@ namespace IO
 		if (filter.isOn())
 			ss << ", allowed: {" << filter.getAllowed() << "}";
 
-		ss << ", json: " << Util::Convert::toString(fmt) << ".";
+		ss << ", msgformat: " << Util::Convert::toString(fmt) << ".";
 
 		Info() << ss.str();
 
-		if (!Server::start(port))
+		if (!TCPServer::start(port))
 		{
 			throw std::runtime_error("TCP listener: cannot start server at port " + std::to_string(port) + ".");
 		}

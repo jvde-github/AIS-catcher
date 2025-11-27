@@ -376,15 +376,16 @@ void WebViewer::connect(Receiver &r)
 	for (int j = 0; j < r.Count(); j++)
 		if (r.Output(j).canConnect(groups_in))
 		{
-		if (!rec_details)
-		{
-			auto* device = r.getDeviceManager().getDevice();
+			if (!rec_details)
+			{
+				auto *device = r.getDeviceManager().getDevice();
 
-			sample_rate += device->getRateDescription() + "<br>";
+				sample_rate += device->getRateDescription() + "<br>";
 
-			JSON::StringBuilder::stringify(device->getProduct(), product, false);
-			JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vendor, false);
-			JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), serial, false);				product += newline;
+				JSON::StringBuilder::stringify(device->getProduct(), product, false);
+				JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vendor, false);
+				JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), serial, false);
+				product += newline;
 				vendor += newline;
 				serial += newline;
 
@@ -514,7 +515,7 @@ void WebViewer::close()
 	}
 }
 
-void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, bool gzip)
+void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
 {
 
 	std::string r;
@@ -718,9 +719,17 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 		std::stringstream ss(a);
 		std::string mmsi_str;
 		std::string content = "{";
+		int count = 0;
+		const int MAX_MMSI_COUNT = 100; // Limit number of MMSIs to prevent DoS
 
 		while (std::getline(ss, mmsi_str, ','))
 		{
+			if (++count > MAX_MMSI_COUNT)
+			{
+				Error() << "Server - path MMSI count exceeds limit: " << MAX_MMSI_COUNT;
+				break;
+			}
+
 			try
 			{
 				int mmsi = std::stoi(mmsi_str);
@@ -816,8 +825,8 @@ void WebViewer::Request(TCP::ServerConnection &c, const std::string &response, b
 	{
 		try
 		{
-			if (a.size() > 1024)
-				throw std::runtime_error("Input too large");
+			if (a.empty() || a.size() > 1024)
+				throw std::runtime_error("Input size limit exceeded");
 
 			std::string result = decodeNMEAtoJSON(a, true);
 
