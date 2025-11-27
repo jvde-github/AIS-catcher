@@ -297,7 +297,7 @@ namespace AIS
 
 	bool Message::setUint(int start, int len, unsigned val)
 	{
-		if (length >= MAX_AIS_LENGTH)
+		if (start + len >= MAX_AIS_LENGTH)
 			return false;
 
 		int x = start >> 3, y = start & 7;
