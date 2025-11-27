@@ -145,13 +145,16 @@ namespace Device
 
 	void SerialPort::Open(uint64_t handle)
 	{
-		if (handle < device_list.size())
+		if (port.empty())
 		{
-			port = device_list[handle];
-		}
-		else
-		{
-			throw std::runtime_error("Serial: Invalid device handle " + std::to_string(handle));
+			if (handle < device_list.size())
+			{
+				port = device_list[handle];
+			}
+			else
+			{
+				throw std::runtime_error("Serial: Invalid device handle " + std::to_string(handle));
+			}
 		}
 	}
 
