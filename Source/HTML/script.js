@@ -1280,6 +1280,39 @@ function showNotification(message) {
     }, 2000);
 }
 
+function checkLatestVersion() {
+    if (typeof build_version === 'undefined' || build_version === 'unknown') {
+        console.log('AIS-catcher: build_version not available, skipping version check');
+        return;
+    }
+
+    fetch('https://api.github.com/repos/jvde-github/AIS-catcher/releases/latest')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch latest release info');
+            }
+            return response.json();
+        })
+        .then(data => {
+            const latestVersion = data.tag_name;
+            if (latestVersion && latestVersion !== build_version) {
+                console.log('AIS-catcher: New version available! Current: ' + build_version + ', Latest: ' + latestVersion);
+                showDialog('Update Available', 
+                    'A new version of AIS-catcher is available!<br><br>' +
+                    'Current version: <b>' + build_version + '</b><br>' +
+                    'Latest version: <b>' + latestVersion + '</b><br><br>' +
+                    'Updating ensures you have the latest features and security updates.<br><br>' +
+                    'Please visit <a href="https://docs.aiscatcher.org" target="_blank">docs.aiscatcher.org</a> for installation instructions or ' +
+                    '<a href="https://github.com/jvde-github/AIS-catcher/releases/latest" target="_blank">GitHub Releases</a> to download the latest version.');
+            } else {
+                console.log('AIS-catcher: You are running the latest version (' + build_version + ')');
+            }
+        })
+        .catch(error => {
+            console.log('AIS-catcher: Could not check for updates - ' + error.message);
+        });
+}
+
 function getStatusVal(ship) {
     const StringFromStatus = [
         "Under way using engine",
@@ -7482,3 +7515,5 @@ updateAndroid();
 if (isAndroid()) showMenu();
 
 main();
+
+checkLatestVersion();

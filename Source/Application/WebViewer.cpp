@@ -64,7 +64,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 WebViewer::WebViewer()
 {
-	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\ncontext='settings';\n\n";
+	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\nbuild_version = '" + std::string(VERSION) + "';\ncontext='settings';\n\n";
 	plugin_code = "\n\nfunction loadPlugins() {\n";
 	plugins = "let plugins = '';\nlet server_message = '';\n";
 	os.clear();
