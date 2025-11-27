@@ -1286,7 +1286,7 @@ function checkLatestVersion() {
         return;
     }
 
-    fetch('https://api.github.com/repos/jvde-github/AIS-catcher/releases/latest')
+    fetch('https://www.aiscatcher.org/api/version')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to fetch latest release info');
