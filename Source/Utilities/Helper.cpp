@@ -65,6 +65,16 @@ namespace Util
 		if (file.fail())
 			throw std::runtime_error("cannot read file \"" + filename + "\"");
 
+		// Get file size first
+		file.seekg(0, std::ios::end);
+		std::streampos fileSize = file.tellg();
+		file.seekg(0, std::ios::beg);
+
+		// Limit file size to 10MB to prevent memory exhaustion
+		const std::streampos MAX_FILE_SIZE = 10 * 1024 * 1024;
+		if (fileSize > MAX_FILE_SIZE)
+			throw std::runtime_error("file too large (>10MB): \"" + filename + "\"");
+
 		std::string str, line;
 		while (std::getline(file, line))
 			str += line + '\n';

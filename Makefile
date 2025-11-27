@@ -4,7 +4,7 @@ INCLUDE = -I. -ISource -ISource/JSON/ -ISource/DBMS/ -ISource/Tracking/ -ISource
 CC = clang
 
 override CFLAGS +=  -Ofast -std=c++11 -g -pg -Wno-sign-compare $(INCLUDE)
-override LFLAGS += -lstdc++ -lpthread -g -pg -lm -o AIS-catcher
+override LFLAGS += -lstdc++ -lpthread -g -pg -lm  -o AIS-catcher
 
 CFLAGS_RTL = -DHASRTLSDR $(shell pkg-config --cflags librtlsdr)
 CFLAGS_AIRSPYHF = -DHASAIRSPYHF $(shell pkg-config --cflags libairspyhf)

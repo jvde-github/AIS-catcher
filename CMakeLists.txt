@@ -16,28 +16,22 @@ project(AIS-catcher)
 find_package(Git QUIET)
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-
-    set(GIT_VERSION_DESCRIBE "")
-
-    # First try to fetch tags (ignore errors if repo is already complete)
+    # For shallow clones, fetch enough history to reach a tag
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} fetch --prune --unshallow
+        COMMAND ${GIT_EXECUTABLE} fetch --deepen=200 --tags
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_FETCH_OUTPUT
-        ERROR_VARIABLE GIT_FETCH_ERROR
-        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_QUIET
         ERROR_QUIET
-        RESULT_VARIABLE GIT_FETCH_RESULT
     )
-
-    # Now get the version using git describe
+    
+    # Get the version using git describe
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} describe --tags
+        COMMAND ${GIT_EXECUTABLE} describe --tags --always --dirty
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
         OUTPUT_STRIP_TRAILING_WHITESPACE
         RESULT_VARIABLE GIT_RESULT
-        ERROR_VARIABLE GIT_ERROR
+        ERROR_QUIET
     )
 
     if(GIT_VERSION_DESCRIBE)
@@ -45,7 +39,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
         message(STATUS "Git version: ${VERSION_DESCRIBE}")
     else()
         set(VERSION_DESCRIBE "v0.00-1-unknown")
-        message(STATUS "All git describe methods failed, using fallback version: ${VERSION_DESCRIBE}")
+        message(STATUS "Git describe failed, using fallback version: ${VERSION_DESCRIBE}")
     endif()
 else()
     set(VERSION_DESCRIBE "v0.00-1-unknown")
@@ -159,7 +153,6 @@ endif()
 
 if(NOT MSVC AND NMEA2000)
 
-
     check_include_file("linux/can.h" HAVE_CAN_HEADER)
     check_include_file("linux/can/raw.h" HAVE_RAW_CAN_HEADER)
 
@@ -244,7 +237,6 @@ if(OPENSSL)
 
     endif()
 endif()
-
 
 # Find libcurl
 if(CURL)

@@ -48,14 +48,36 @@ namespace IO
 							std::string cl_value = c.msg.substr(cl_pos + 15, cl_end - cl_pos - 15);
 							// Trim whitespace
 							cl_value.erase(0, cl_value.find_first_not_of(" \t"));
-							content_length = std::stoul(cl_value);
+							try
+							{
+								content_length = std::stoul(cl_value);
+								// Limit maximum content length to 1MB
+								if (content_length > 1024 * 1024)
+								{
+									Error() << "Server: closing connection, Content-Length too large: " << content_length;
+									c.Close();
+									break;
+								}
+							}
+							catch (...)
+							{
+								Error() << "Server: closing connection, invalid Content-Length: " << cl_value;
+								c.Close();
+								break;
+							}
 						}
 					}
 
 					// Calculate how much data we need (headers + body)
-					std::size_t required_length = pos + 4 + content_length;
-
-					// If we don't have all the data yet, wait for more
+					// Check for integer overflow
+					std::size_t required_length = pos + 4;
+					if (required_length > 1024 * 1024 || content_length > 1024 * 1024 - required_length)
+					{
+						Error() << "Server: closing connection, total request size too large";
+						c.Close();
+						break;
+					}
+					required_length += content_length; // If we don't have all the data yet, wait for more
 					if (c.msg.size() < required_length)
 					{
 						break;
@@ -72,9 +94,10 @@ namespace IO
 					pos = c.msg.find(EOF_MSG);
 				}
 
-				if (c.msg.size() > 8192)
+				// Limit accumulated message size to prevent memory exhaustion
+				if (c.msg.size() > 1024 * 1024)
 				{
-					Error() << "Server: closing connection, client flooding server: " << c.sock;
+					Error() << "Server: closing connection, accumulated message too large: " << c.sock;
 					c.Close();
 				}
 			}
@@ -126,7 +149,18 @@ namespace IO
 			else if (key == "CONTENT-LENGTH:")
 			{
 				std::getline(line_stream, value);
-				content_length = std::stoi(value);
+				try
+				{
+					content_length = std::stoi(value);
+					if (content_length < 0 || content_length > 1024 * 1024)
+					{
+						content_length = 0;
+					}
+				}
+				catch (...)
+				{
+					content_length = 0;
+				}
 			}
 		}
 

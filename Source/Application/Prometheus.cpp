@@ -34,12 +34,14 @@ const std::string ShippingClassNames[] = {
 	"Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
 };
 
-PromotheusCounter::PromotheusCounter() {
+PromotheusCounter::PromotheusCounter()
+{
 	Reset();
 	Clear();
 }
 
-void PromotheusCounter::Clear() {
+void PromotheusCounter::Clear()
+{
 
 	m.lock();
 	std::memset(_msg, 0, sizeof(_msg));
@@ -51,10 +53,13 @@ void PromotheusCounter::Clear() {
 	m.unlock();
 }
 
-void PromotheusCounter::Add(const AIS::Message& m, const TAG& tag, bool new_vessel) {
+void PromotheusCounter::Add(const AIS::Message &m, const TAG &tag, bool new_vessel)
+{
 
-	if (m.type() > 27 || m.type() < 1) return;
-	if (tag.shipclass < 0 || tag.shipclass > 13) return;
+	if (m.type() > 27 || m.type() < 1)
+		return;
+	if (tag.shipclass < 0 || tag.shipclass > 13)
+		return;
 
 	std::string speed = tag.speed < 0 ? "Unknown" : (tag.speed > 0.5 ? "Moving" : "Stationary");
 
@@ -67,19 +72,21 @@ void PromotheusCounter::Add(const AIS::Message& m, const TAG& tag, bool new_vess
 	_count++;
 	_msg[m.type() - 1]++;
 
-
-	if (m.getChannel() >= 'A' || m.getChannel() <= 'D')
+	if (m.getChannel() >= 'A' && m.getChannel() <= 'D')
 		_channel[m.getChannel() - 'A']++;
 
-	if (tag.distance > _distance) {
+	if (tag.distance > _distance)
+	{
 		_distance = tag.distance;
 	}
 }
 
-void PromotheusCounter::Receive(const JSON::JSON* json, int len, TAG& tag) {
-	AIS::Message& data = *((AIS::Message*)json[0].binary);
+void PromotheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
+{
+	AIS::Message &data = *((AIS::Message *)json[0].binary);
 
-	if (ppm.size() > 32768 || level.size() > 32768) {
+	if (ppm.size() > 32768 || level.size() > 32768)
+	{
 		return;
 	}
 
@@ -90,14 +97,16 @@ void PromotheusCounter::Receive(const JSON::JSON* json, int len, TAG& tag) {
 	m.unlock();
 }
 
-void PromotheusCounter::Reset() {
+void PromotheusCounter::Reset()
+{
 	m.lock();
 	ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
 	level = "# HELP ais_msg_level\n# TYPE ais_msg_level gauge\n";
 	m.unlock();
 }
 
-std::string PromotheusCounter::toPrometheus() {
+std::string PromotheusCounter::toPrometheus()
+{
 	m.lock();
 	std::string element;
 
@@ -109,14 +118,16 @@ std::string PromotheusCounter::toPrometheus() {
 	element += "# TYPE ais_stat_distance gauge\n";
 	element += "ais_stat_distance " + std::to_string(_distance) + "\n";
 
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++)
+	{
 		std::string ch(1, i + 'A');
 		element += "# HELP ais_stat_count_channel_" + ch + " Total number of messages on channel " + ch + "\n";
 		element += "# TYPE ais_stat_count_channel_" + ch + " counter\n";
 		element += "ais_stat_count_channel_" + ch + " " + std::to_string(_channel[i]) + "\n";
 	}
 
-	for (int i = 0; i < 27; i++) {
+	for (int i = 0; i < 27; i++)
+	{
 		std::string type = std::to_string(i + 1);
 		element += "# HELP ais_stat_count_type_" + type + " Total number of messages of type " + type + "\n";
 		element += "# TYPE ais_stat_count_type_" + type + " counter\n";

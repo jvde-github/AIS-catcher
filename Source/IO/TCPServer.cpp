@@ -125,17 +125,15 @@ namespace IO
 				if (nread < 0 && verbose)
 					Error() << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock;
 
-				CloseUnsafe();
-			}
-			else if (nread > 0)
-			{
-				msg += std::string(buffer, nread);
-				stamp = std::time(0);
-			}
+			CloseUnsafe();
+		}
+		else if (nread > 0)
+		{
+			msg += std::string(buffer, nread);
+			stamp = std::time(0);
 		}
 	}
-
-	void TCPServerConnection::SendBuffer()
+}	void TCPServerConnection::SendBuffer()
 	{
 		std::lock_guard<std::mutex> lock(mtx);
 
@@ -203,7 +201,6 @@ namespace IO
 				CloseUnsafe();
 				return false;
 			}
-			bytes = 0;
 		}
 		return true;
 	}
@@ -380,27 +377,28 @@ namespace IO
 
 	void TCPServer::Run()
 	{
-		try
+		while (!stop)
 		{
-			while (!stop)
+			try
 			{
 				acceptClients();
 				readClients();
 				processClients();
 				writeClients();
 				cleanUp();
-
-				if (!stop)
-					SleepAndWait();
+			}
+			catch (const std::exception &e)
+			{
+				Error() << "TCP Server: exception in main loop: " << e.what() << ", closing all connections";
+				for (auto &c : client)
+					c.Close();
 			}
 
-			Info() << "TCP Server: thread ending.\n";
+			if (!stop)
+				SleepAndWait();
 		}
-		catch (std::exception &e)
-		{
-			Error() << "Server Run: " << e.what();
-			StopRequest();
-		}
+
+		Info() << "TCP Server: thread ending.\n";
 	}
 
 	void TCPServer::SleepAndWait()

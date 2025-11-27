@@ -331,8 +331,7 @@ namespace Protocol
 		SSL *ssl = nullptr;
 		bool handshake_complete = false;
 
-		static bool ssl_initialized;
-		static int ssl_ref_count;
+		static std::once_flag ssl_init_flag;
 
 		bool verify_certificates = true;
 
@@ -352,11 +351,10 @@ namespace Protocol
 		~TLS()
 		{
 			disconnect();
-			cleanupSSL();
+			// OpenSSL cleanup handled by OS at process exit
 		}
 
 		static void initializeSSL();
-		static void cleanupSSL();
 
 		void onConnect() override;
 		void onDisconnect() override;
