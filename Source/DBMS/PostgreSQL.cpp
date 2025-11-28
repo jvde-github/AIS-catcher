@@ -18,22 +18,27 @@
 #include "AIS-catcher.h"
 #include "DBMS/PostgreSQL.h"
 
-namespace IO {
+namespace IO
+{
 
 #ifdef HASPSQL
-	void PostgreSQL::post() {
+	void PostgreSQL::post()
+	{
 
-		if (PQstatus(con) != CONNECTION_OK) {
-			Warning() << "DBMS: Connection to PostgreSQL lost. Attempting to reset..." ;
+		if (PQstatus(con) != CONNECTION_OK)
+		{
+			Warning() << "DBMS: Connection to PostgreSQL lost. Attempting to reset...";
 			PQreset(con);
 
-			if (PQstatus(con) != CONNECTION_OK) {
-				Error() << "DBMS: Could not reset connection. Aborting post." ;
+			if (PQstatus(con) != CONNECTION_OK)
+			{
+				Error() << "DBMS: Could not reset connection. Aborting post.";
 				conn_fails++;
 				return;
 			}
-			else {
-				Warning() << "DBMS: Connection successfully reset." ;
+			else
+			{
+				Warning() << "DBMS: Connection successfully reset.";
 				conn_fails = 0;
 			}
 		}
@@ -44,57 +49,65 @@ namespace IO {
 			sql.str("");
 		}
 
-		PGresult* res;
+		PGresult *res;
 		res = PQexec(con, sql_trans.c_str());
 
-		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-			Error() << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con) ;
+		if (PQresultStatus(res) != PGRES_COMMAND_OK)
+		{
+			Error() << "DBMS: Error writing PostgreSQL: " << PQerrorMessage(con);
 			conn_fails = 1;
-		}
-		else {
-			// Info() << "DBMS: write completed (" << sql_trans.size() << " bytes)." ;
 		}
 
 		PQclear(res);
 	}
 #endif
-	PostgreSQL::~PostgreSQL() {
+	PostgreSQL::~PostgreSQL()
+	{
 #ifdef HASPSQL
-		if (running) {
+		if (running)
+		{
 
 			running = false;
 			terminate = true;
 			run_thread.join();
 
-			Info() << "DBMS: stop thread and database closed." ;
+			Info() << "DBMS: stop thread and database closed.";
 		}
-		if (con != nullptr) PQfinish(con);
+		if (con != nullptr)
+			PQfinish(con);
 #endif
 	}
 
 #ifdef HASPSQL
 
-	void PostgreSQL::process() {
+	void PostgreSQL::process()
+	{
 
-		while (!terminate) {
+		while (!terminate)
+		{
 
-			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : 2) && sql.tellp() < 32768 * 16; i++) {
+			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : 2) && sql.tellp() < 32768 * 16; i++)
+			{
 				SleepSystem(1000);
 			}
 
-			if (sql.tellp()) post();
+			if (sql.tellp())
+				post();
 
-			if (terminate) break;
+			if (terminate)
+				break;
 
-			if (MAX_FAILS < 1000 && conn_fails > MAX_FAILS) {
-				Error() << "DBMS: max attemtps reached to connect to DBMS. Terminating." ;
+			if (MAX_FAILS < 1000 && conn_fails > MAX_FAILS)
+			{
+				Error() << "DBMS: max attemtps reached to connect to DBMS. Terminating.";
 				StopRequest();
 			}
 		}
 	}
 #endif
 
-	void PostgreSQL::setup() {
+	void PostgreSQL::setup()
+	{
 #ifdef HASPSQL
 
 		db_keys.resize(AIS::KeyMap.size(), -1);
@@ -106,18 +119,22 @@ namespace IO {
 
 		conn_fails = 0;
 
-		PGresult* res = PQexec(con, "SELECT key_id, key_str FROM ais_keys");
-		if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		PGresult *res = PQexec(con, "SELECT key_id, key_str FROM ais_keys");
+		if (PQresultStatus(res) != PGRES_TUPLES_OK)
+		{
 			throw std::runtime_error("DBMS: error fetching ais_keys table: " + std::string(PQerrorMessage(con)));
 		}
 
 		int key_count = 0;
-		for (int row = 0; row < PQntuples(res); row++) {
+		for (int row = 0; row < PQntuples(res); row++)
+		{
 			int id = atoi(PQgetvalue(res, row, 0));
 			std::string name = PQgetvalue(res, row, 1);
 			bool found = false;
-			for (int i = 0; i < db_keys.size(); i++) {
-				if (AIS::KeyMap[i][JSON_DICT_FULL] == name) {
+			for (int i = 0; i < db_keys.size(); i++)
+			{
+				if (AIS::KeyMap[i][JSON_DICT_FULL] == name)
+				{
 					db_keys[i] = id;
 					found = true;
 					key_count++;
@@ -128,12 +145,14 @@ namespace IO {
 				throw std::runtime_error("DBMS: The requested key \"" + name + "\" in ais_keys is not defined.");
 		}
 
-		if (key_count > 0 && !MSGS) {
-			Info() << "DBMS: no messages logged in combination with property logging. MSGS ON auto activated." ;
+		if (key_count > 0 && !MSGS)
+		{
+			Info() << "DBMS: no messages logged in combination with property logging. MSGS ON auto activated.";
 			MSGS = true;
 		}
 
-		if (!running) {
+		if (!running)
+		{
 
 			running = true;
 			terminate = false;
@@ -141,7 +160,8 @@ namespace IO {
 			run_thread = std::thread(&PostgreSQL::process, this);
 
 			Info() << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
-			if (filter.isOn()) Info() << ", Allowed: " << filter.getAllowed();
+			if (filter.isOn())
+				Info() << ", Allowed: " << filter.getAllowed();
 			Info() << ", V " << Util::Convert::toString(VD)
 				   << ", VP " << Util::Convert::toString(VP)
 				   << ", MSGS " << Util::Convert::toString(MSGS)
@@ -157,14 +177,21 @@ namespace IO {
 	}
 
 #ifdef HASPSQL
-	std::string PostgreSQL::addVesselPosition(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
-		if (!VP) return "";
+	std::string PostgreSQL::addVesselPosition(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s)
+	{
+		if (!VP)
+			return "";
 
 		std::string keys = "";
 		std::string values = "";
 
-		for (const auto& p : data[0].getProperties()) {
-			switch (p.Key()) {
+		for (const auto &p : data[0].getProperties())
+		{
+			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+				continue;
+
+			switch (p.Key())
+			{
 			case AIS::KEY_LAT:
 			case AIS::KEY_LON:
 			case AIS::KEY_MMSI:
@@ -186,15 +213,22 @@ namespace IO {
 		return "\tINSERT INTO ais_vessel_pos (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addVessel(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
-		if (!VD) return "";
+	std::string PostgreSQL::addVessel(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s)
+	{
+		if (!VD)
+			return "";
 
 		std::string keys = "";
 		std::string set = "ON CONFLICT (mmsi) DO UPDATE SET ";
 		std::string values = "";
 
-		for (const auto& p : data[0].getProperties()) {
-			switch (p.Key()) {
+		for (const auto &p : data[0].getProperties())
+		{
+			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+				continue;
+
+			switch (p.Key())
+			{
 			case AIS::KEY_MMSI:
 			case AIS::KEY_IMO:
 			case AIS::KEY_SHIPNAME:
@@ -221,7 +255,8 @@ namespace IO {
 				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
 				set += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + "=EXCLUDED." + AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
 
-				if (p.Get().isString()) {
+				if (p.Get().isString())
+				{
 					values += "\'" + escape(p.Get().getString()) + "\'";
 				}
 				else
@@ -232,7 +267,8 @@ namespace IO {
 		}
 		int type = 1 << msg->type();
 		int ch = msg->getChannel() - 'A';
-		if (ch < 0 || ch > 4) ch = 4;
+		if (ch < 0 || ch > 4)
+			ch = 4;
 		ch = 1 << ch;
 
 		keys += "msg_id,station_id,received_at,count,msg_types,channels";
@@ -243,15 +279,20 @@ namespace IO {
 		return "\tINSERT INTO ais_vessel (" + keys + ") VALUES (" + values + ")" + set + "; \n";
 	}
 
-
-	std::string PostgreSQL::addVesselStatic(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
-		if (!VS) return "";
+	std::string PostgreSQL::addVesselStatic(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s)
+	{
+		if (!VS)
+			return "";
 
 		std::string keys = "";
 		std::string values = "";
 
-		for (const auto& p : data[0].getProperties()) {
-			switch (p.Key()) {
+		for (const auto &p : data[0].getProperties())
+		{
+			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+				continue;
+			switch (p.Key())
+			{
 			case AIS::KEY_MMSI:
 			case AIS::KEY_IMO:
 			case AIS::KEY_SHIPNAME:
@@ -265,7 +306,8 @@ namespace IO {
 			case AIS::KEY_DESTINATION:
 			case AIS::KEY_ETA:
 				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
-				if (p.Get().isString()) {
+				if (p.Get().isString())
+				{
 					values += "\'" + escape(p.Get().getString()) + "\'";
 				}
 				else
@@ -281,15 +323,20 @@ namespace IO {
 		return "\tINSERT INTO ais_vessel_static (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-
-	std::string PostgreSQL::addBasestation(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
-		if (!BS) return "";
+	std::string PostgreSQL::addBasestation(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s)
+	{
+		if (!BS)
+			return "";
 
 		std::string keys = "";
 		std::string values = "";
 
-		for (const auto& p : data[0].getProperties()) {
-			switch (p.Key()) {
+		for (const auto &p : data[0].getProperties())
+		{
+			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+				continue;
+			switch (p.Key())
+			{
 			case AIS::KEY_LAT:
 			case AIS::KEY_LON:
 			case AIS::KEY_MMSI:
@@ -306,14 +353,20 @@ namespace IO {
 		return "\tINSERT INTO ais_basestation (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addSARposition(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
-		if (!SAR) return "";
+	std::string PostgreSQL::addSARposition(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s)
+	{
+		if (!SAR)
+			return "";
 
 		std::string keys = "";
 		std::string values = "";
 
-		for (const auto& p : data[0].getProperties()) {
-			switch (p.Key()) {
+		for (const auto &p : data[0].getProperties())
+		{
+			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+				continue;
+			switch (p.Key())
+			{
 			case AIS::KEY_LAT:
 			case AIS::KEY_LON:
 			case AIS::KEY_ALT:
@@ -333,14 +386,20 @@ namespace IO {
 		return "\tINSERT INTO ais_sar_position (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	std::string PostgreSQL::addATON(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s) {
-		if (!ATON) return "";
+	std::string PostgreSQL::addATON(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s)
+	{
+		if (!ATON)
+			return "";
 
 		std::string keys = "";
 		std::string values = "";
 
-		for (const auto& p : data[0].getProperties()) {
-			switch (p.Key()) {
+		for (const auto &p : data[0].getProperties())
+		{
+			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+				continue;
+			switch (p.Key())
+			{
 			case AIS::KEY_LAT:
 			case AIS::KEY_LON:
 			case AIS::KEY_NAME:
@@ -351,7 +410,8 @@ namespace IO {
 			case AIS::KEY_AID_TYPE:
 			case AIS::KEY_MMSI:
 				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
-				if (p.Get().isString()) {
+				if (p.Get().isString())
+				{
 					values += "\'" + escape(p.Get().getString()) + "\'";
 				}
 				else
@@ -367,37 +427,44 @@ namespace IO {
 		return "\tINSERT INTO ais_aton (" + keys + ") VALUES (" + values + ");\n";
 	}
 
-	void PostgreSQL::Receive(const JSON::JSON* data, int len, TAG& tag) {
+	void PostgreSQL::Receive(const JSON::JSON *data, int len, TAG &tag)
+	{
 
 		const std::lock_guard<std::mutex> lock(queue_mutex);
 
-		if (sql.tellp() > 32768 * 24) {
-			Info() << "DBMS: writing to database slow or failed, data lost." ;
+		if (sql.tellp() > 32768 * 24)
+		{
+			Info() << "DBMS: writing to database slow or failed, data lost.";
 			sql.str("");
 		}
 
-		const AIS::Message* msg = (AIS::Message*)data[0].binary;
+		const AIS::Message *msg = (AIS::Message *)data[0].binary;
 
-		if (!filter.include(*msg)) return;
+		if (!filter.include(*msg))
+			return;
 
 		std::string m_id = MSGS ? "m_id" : " NULL";
 		std::string s_id = std::to_string(station_id ? station_id : msg->getStation());
 
-		if (MSGS) {
+		if (MSGS)
+		{
 			sql << "\tINSERT INTO ais_message (mmsi, station_id, type, received_at,channel, signal_level, ppm) "
 				<< "VALUES (" << msg->mmsi() << ',' + s_id << ',' << msg->type() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'"
 				<< (char)msg->getChannel() << "\'," << tag.level << ',' << tag.ppm
 				<< ") RETURNING id INTO m_id;\n";
 		}
 
-		if (NMEA) {
-			for (auto s : msg->NMEA) {
+		if (NMEA)
+		{
+			for (auto s : msg->NMEA)
+			{
 
 				sql << "\tINSERT INTO ais_nmea (msg_id,station_id,mmsi,received_at,nmea) VALUES (" << m_id << ',' << s_id << ',' << msg->mmsi() << ",\'" << Util::Convert::toTimestampStr(msg->getRxTimeUnix()) << "\',\'" << s << "\');\n";
 			}
 		}
 
-		switch (msg->type()) {
+		switch (msg->type())
+		{
 		case 1:
 		case 2:
 		case 3:
@@ -438,12 +505,16 @@ namespace IO {
 			break;
 		}
 		// TO DO: types, etc
-		for (const auto& p : data[0].getProperties()) {
-			if (db_keys[p.Key()] != -1) {
-				if (p.Get().isString()) {
+		for (const auto &p : data[0].getProperties())
+		{
+			if (p.Key() >= 0 && p.Key() < db_keys.size() && db_keys[p.Key()] != -1)
+			{
+				if (p.Get().isString())
+				{
 					sql << "INSERT INTO ais_property (msg_id, key, value) VALUES (" << m_id << "\'" << db_keys[p.Key()] << "\',\'" << escape(p.Get().getString()) << "\');\n";
 				}
-				else {
+				else
+				{
 					std::string temp;
 					builder.to_string(temp, p.Get());
 					temp = temp.substr(0, 20);
@@ -455,7 +526,8 @@ namespace IO {
 	}
 #endif
 
-	Setting& PostgreSQL::Set(std::string option, std::string arg) {
+	Setting &PostgreSQL::Set(std::string option, std::string arg)
+	{
 
 		Util::Convert::toUpper(option);
 
@@ -485,7 +557,8 @@ namespace IO {
 			ATON = Util::Parse::Switch(arg);
 		else if (option == "SAR")
 			SAR = Util::Parse::Switch(arg);
-		else {
+		else
+		{
 			filter.Set(option, arg);
 		}
 		return *this;

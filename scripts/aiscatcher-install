@@ -334,7 +334,7 @@ install_additional_files() {
 
     log "INFO" "Installing DBMS"
     mkdir -p "$DBMS_DIR" || error_exit "Failed to create DBMS directory"
-    cp AIS-catcher/DBMS/create.sql "$DBMS_DIR" || error_exit "Failed to copy DBMS"
+    cp AIS-catcher/Source/DBMS/create.sql "$DBMS_DIR" || error_exit "Failed to copy DBMS"
 
     log "INFO" "Installing README"
     mkdir -p "$README_DIR" || error_exit "Failed to create README directory"

@@ -135,6 +135,9 @@ namespace JSON {
 		json += '{';
 		for (const Property& p : object.getProperties()) {
 
+			// Skip invalid keys to avoid out-of-bounds access
+			if (p.Key() < 0 || p.Key() >= keymap->size()) continue;
+
 			const std::string& key = (*keymap)[p.Key()][dict];
 
 			if (!key.empty()) {

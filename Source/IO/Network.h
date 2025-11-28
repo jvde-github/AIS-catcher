@@ -98,7 +98,7 @@ namespace IO
 
 	public:
 		~HTTPStreamer() { Stop(); }
-		HTTPStreamer() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
+		HTTPStreamer() : builder(&AIS::KeyMap, JSON_DICT_FULL), url("http://127.0.0.1"), userpwd("") {}
 
 		Setting &Set(std::string option, std::string arg);
 
@@ -129,7 +129,8 @@ namespace IO
 	{
 		SOCKET sock = -1;
 		struct addrinfo *address = NULL;
-		std::string host, port;
+		std::string host = "127.0.0.1";
+		std::string port = "10110";
 		int reset = -1;
 		long last_reconnect = 0;
 		bool broadcast = false;
@@ -166,7 +167,8 @@ namespace IO
 	{
 		Protocol::TCP tcp;
 		Protocol::ProtocolBase *connection = nullptr;
-		std::string host, port;
+		std::string host = "127.0.0.1";
+		std::string port = "10110";
 		bool keep_alive = false;
 		bool persistent = true;
 		std::string uuid;
@@ -238,7 +240,6 @@ namespace IO
 	public:
 		MQTTStreamer() : OutputMessage(), topic_template("ais/data")
 		{
-			// JSON_input = true;
 			fmt = MessageFormat::JSON_FULL;
 		}
 

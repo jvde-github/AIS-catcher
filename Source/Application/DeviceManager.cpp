@@ -20,6 +20,7 @@
 #include "DeviceManager.h"
 #include "Logger.h"
 #include "Parse.h"
+#include "StringBuilder.h"
 
 std::vector<Device::Description> DeviceManager::device_list;
 
@@ -170,13 +171,21 @@ void DeviceManager::printAvailableDevices(bool JSON)
 		for (int i = 0; i < device_list.size(); i++)
 		{
 			std::string type = Util::Parse::DeviceTypeString(device_list[i].getType());
-			std::cout << "{\"input\":\"" + type;
-			std::cout << "\",\"serial\":\"" + device_list[i].getSerial();
-			std::cout << "\",\"name\":\"" + type + " [" + device_list[i].getSerial() + "]\"";
+			std::string serial = device_list[i].getSerial();
+			std::string name = type + " [" + serial + "]";
+
+			// Properly escape JSON strings
+			std::string type_escaped = JSON::StringBuilder::stringify(type, false);
+			std::string serial_escaped = JSON::StringBuilder::stringify(serial, false);
+			std::string name_escaped = JSON::StringBuilder::stringify(name, false);
+
+			std::cout << "{\"input\":\"" + type_escaped;
+			std::cout << "\",\"serial\":\"" + serial_escaped;
+			std::cout << "\",\"name\":\"" + name_escaped + "\"";
 
 			std::cout << "}" << (i == device_list.size() - 1 ? "" : ",");
 		}
-		std::cout << "}\n";
+		std::cout << "]}\n";
 	}
 }
 
@@ -184,6 +193,6 @@ void DeviceManager::selectDeviceByIndex(int index)
 {
 	if (index < 0 || index >= device_list.size())
 		throw std::runtime_error("device does not exist");
-	
+
 	serial = device_list[index].getSerial();
 }

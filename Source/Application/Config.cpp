@@ -38,7 +38,11 @@ bool Config::isActiveObject(const JSON::Value &pd)
 void Config::setSettingsFromJSON(const JSON::Value &pd, Setting &s)
 {
 
-	for (const JSON::Property &p : pd.getObject().getProperties()) {
+	for (const JSON::Property &p : pd.getObject().getProperties())
+	{
+		if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+			continue;
+
 		if (p.Key() != AIS::KEY_SETTING_ACTIVE)
 		{
 			s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], p.Get().to_string());
@@ -350,11 +354,10 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 		commm_feed = _msg.back().get();
 
-		commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("MSGFORMAT", "COMMUNITY_HUB").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY","on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
+		commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("MSGFORMAT", "COMMUNITY_HUB").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
 	}
 	if (!uuid.empty() && commm_feed)
 		commm_feed->Set("UUID", uuid);
-	
 }
 
 void Config::set(const std::string &str)
@@ -447,7 +450,10 @@ void Config::set(const std::string &str)
 			_screen.verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
 			break;
 		default:
-			throw std::runtime_error("Config file: field \"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed.");
+			if (p.Key() >= 0 && p.Key() < AIS::KeyMap.size())
+				throw std::runtime_error("Config file: field \"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed.");
+			else
+				throw std::runtime_error("Config file: unknown field in main section is not allowed.");
 		}
 	}
 }
