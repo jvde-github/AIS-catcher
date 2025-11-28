@@ -431,14 +431,14 @@ namespace Protocol
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 		std::call_once(ssl_init_flag, []()
-		{
-			// OpenSSL < 1.1.0 requires manual initialization
-			SSL_load_error_strings();
-			SSL_library_init();
-			OpenSSL_add_all_algorithms();
+					   {
+						   // OpenSSL < 1.1.0 requires manual initialization
+						   SSL_load_error_strings();
+						   SSL_library_init();
+						   OpenSSL_add_all_algorithms();
 
-			// OpenSSL 1.1.0+ initializes automatically, no action needed
-		});
+						   // OpenSSL 1.1.0+ initializes automatically, no action needed
+					   });
 #endif
 	}
 
@@ -766,6 +766,421 @@ namespace Protocol
 		}
 	}
 #endif // HASOPENSSL
+
+	/// -------MQTT Implementation------
+	void MQTT::pushVariableLength(int length)
+	{
+		if (length >= 128 * 128 * 128 * 128)
+		{
+			Error() << "MQTT: Length encoding error: " << length;
+			disconnect();
+			return;
+		}
+
+		do
+		{
+			uint8_t b = length & 127;
+
+			length >>= 7;
+			if (length)
+				b |= 128;
+
+			packet.push_back(b);
+
+		} while (length);
+	}
+
+	void MQTT::pushByte(uint8_t byte)
+	{
+		packet.push_back(byte);
+	}
+
+	void MQTT::pushInt(int length)
+	{
+		packet.push_back(length >> 8);
+		packet.push_back(length & 0xFF);
+	}
+
+	void MQTT::createPacket(PacketType type, uint8_t flags)
+	{
+		packet.resize(0);
+		packet.push_back((uint8_t)type | flags);
+	}
+
+	void MQTT::pushString(const std::string &str)
+	{
+		pushInt(str.length());
+		packet.insert(packet.end(), str.begin(), str.end());
+	}
+
+	void MQTT::subscribePacket()
+	{
+
+		int packet_length = 2 + 2 + topic.length() + 1;
+
+		createPacket(PacketType::SUBSCRIBE, 2);
+		pushVariableLength(packet_length);
+
+		pushInt(packet_id++);
+		pushString(topic);
+		pushByte(qos);
+	}
+
+	void MQTT::connectPacket()
+	{
+		createPacket(PacketType::CONNECT, 0);
+
+		int length = 12 + client_id.length();
+		uint8_t flags = 0x02;
+
+		if (!username.empty())
+		{
+			length += 2 + username.length();
+			flags |= 0x80;
+		}
+		if (!password.empty())
+		{
+			length += 2 + password.length();
+			flags |= 0x40;
+		}
+
+		pushVariableLength(length);
+
+		pushString("MQTT");
+		pushByte(0x04); // MQTT 3.1.1
+		pushByte(flags);
+
+		// keep alive is off
+		pushInt(0);
+
+		pushString(client_id);
+
+		if (!username.empty())
+			pushString(username);
+		if (!password.empty())
+			pushString(password);
+	}
+
+	int MQTT::readRemainingLength()
+	{
+		int length = 0;
+		int shift = 0;
+		uint8_t b;
+
+		do
+		{
+			if (shift >= 28)
+				return -1;
+
+			if (prev->read((char *)&b, 1) != 1)
+				return -1;
+
+			length |= (b & 127) << shift;
+			shift += 7;
+
+		} while ((b & 128) != 0);
+
+		return length;
+	}
+
+	void MQTT::performHandshake()
+	{
+
+		uint8_t b;
+		int length;
+
+		Info() << "MQTT: Starting Handshake with broker " << getHost() << ":" << getPort();
+
+		connected = false;
+
+		if (!prev)
+			return;
+
+		connectPacket();
+
+		if (prev->send(packet.data(), packet.size()) < 0)
+		{
+			Error() << "MQTT: Failed to send CONNECT packet";
+			disconnect();
+			return;
+		}
+		int l = readPacket(b, length);
+		if (!l || packet.size() < 2 || (b & 0xF0) != (uint8_t)(PacketType::CONNACK))
+		{
+			Error() << "MQTT: failed to read CONNACK packet";
+			disconnect();
+			return;
+		}
+
+		if (packet[1] != 0)
+		{
+			switch (packet[1])
+			{
+			case 0x01:
+				Error() << "MQTT: Connection Refused - Unacceptable Protocol Version. Server does not support requested MQTT protocol level.";
+				break;
+			case 0x02:
+				Error() << "MQTT: Connection Refused - Identifier Rejected. Client identifier is valid UTF-8 but not allowed by server.";
+				break;
+			case 0x03:
+				Error() << "MQTT: Connection Refused - Server Unavailable. Network connected but MQTT service unavailable.";
+				break;
+			case 0x04:
+				Error() << "MQTT: Connection Refused - Bad Username or Password. Malformed credentials.";
+				break;
+			case 0x05:
+				Error() << "MQTT: Connection Refused - Not Authorized. Client lacks authorization to connect.";
+				break;
+			default:
+				Error() << "MQTT: Connection Refused - Unknown Return Code: 0x" << std::hex << (int)packet[1];
+			}
+			disconnect();
+			return;
+		}
+
+		if (subscribe)
+		{
+			subscribePacket();
+
+			if (prev->send((char *)packet.data(), packet.size()) < 0)
+			{
+				Error() << "MQTT: Failed to send SUBSCRIBE packet";
+				disconnect();
+				return;
+			}
+		}
+		Info() << "MQTT: Connected to broker " << (subscribe ? "and subscribed" : "");
+		connected = true;
+	}
+
+	bool MQTT::readPacket(uint8_t &type, int &length)
+	{
+		if (prev->read(&type, 1, 5, true) != 1)
+			return false;
+
+		length = readRemainingLength();
+
+		if (length < 0)
+			return false;
+
+		packet.resize(length);
+
+		if (prev->read(packet.data(), length, 5, true) != length)
+			return false;
+
+		return true;
+	}
+
+	void MQTT::onConnect()
+	{
+		buffer_ptr = 0;
+
+		performHandshake();
+
+		ProtocolBase::onConnect();
+	}
+
+	void MQTT::onDisconnect()
+	{
+		ProtocolBase::onDisconnect();
+
+		connected = false;
+	}
+
+	bool MQTT::setValue(const std::string &key, const std::string &value)
+	{
+		if (key == "TOPIC")
+			topic = value;
+		else if (key == "CLIENT_ID")
+			client_id = value;
+		else if (key == "USERNAME")
+			username = value;
+		else if (key == "PASSWORD")
+			password = value;
+		else if (key == "QOS")
+			qos = Util::Parse::Integer(value, 0, 2, key);
+		else if (key == "SUBSCRIBE")
+			subscribe = Util::Parse::Switch(value);
+		else
+			return false;
+
+		return true;
+	}
+
+	bool MQTT::isConnected()
+	{
+		bool prev_connected = prev ? prev->isConnected() : false;
+
+		return prev_connected && connected;
+	}
+
+	int MQTT::send(const void *str, int length, const std::string &tpc)
+	{
+		if (!isConnected())
+			return 0;
+
+		if (length > 2048)
+		{
+			Warning() << "MQTT: message too long, skipped";
+			return -1;
+		}
+
+		createPacket(PacketType::PUBLISH, qos << 1);
+
+		int packet_length = 2 + tpc.length() + length + (qos > 0 ? 2 : 0);
+
+		pushVariableLength(packet_length);
+		pushString(tpc);
+
+		if (qos > 0)
+			pushInt(packet_id++);
+
+		packet.insert(packet.end(), (char *)str, (char *)str + length);
+
+		return prev->send(packet.data(), packet.size());
+	}
+
+	int MQTT::send(const void *str, int length)
+	{
+		return send(str, length, topic);
+	}
+
+	int MQTT::read(void *data, int data_len, int t, bool wait)
+	{
+		if (!isConnected())
+			return 0;
+
+		if (buffer.empty())
+			buffer.resize(16384);
+
+		int len = prev->read((char *)buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
+
+		if (len <= 0)
+			return len;
+
+		buffer_ptr += len;
+
+		while (true)
+		{
+			if (buffer_ptr < 2)
+				return 0;
+
+			int length = 0;
+			int shift = 0;
+
+			int i = 1;
+			do
+			{
+				if (i >= buffer_ptr)
+					return 0;
+
+				if (shift >= 28)
+				{
+					Error() << "MQTT: size of remaining length packet is at most 4 bytes.";
+					disconnect();
+					return -1;
+				}
+
+				length |= (buffer[i] & 127) << shift;
+				shift += 7;
+
+			} while ((buffer[i++] & 128) != 0);
+
+			if (buffer_ptr < length + i)
+				return 0;
+
+			// we have a message
+			int data_returned = 0;
+
+			switch ((PacketType)(buffer[0] & 0xF0))
+			{
+
+			case PacketType::PUBLISH:
+			{
+				if (data_len < length)
+					break;
+
+				// Validate minimum length for topic length field
+				if (length < 2)
+				{
+					Error() << "MQTT: PUBLISH packet too short";
+					disconnect();
+					return -1;
+				}
+
+				int topic_len = (buffer[i] << 8) + buffer[i + 1];
+				int q = (buffer[0] >> 1) & 0x03;
+
+				// Validate topic_len to prevent integer underflow
+				int header_size = 2 + topic_len + (q > 0 ? 2 : 0);
+				if (header_size > length || topic_len < 0)
+				{
+					Error() << "MQTT: Invalid topic length in PUBLISH packet";
+					disconnect();
+					return -1;
+				}
+
+				if (q == 0)
+				{
+					data_returned = length - 2 - topic_len;
+					memcpy(data, buffer.data() + i + 2 + topic_len, data_returned);
+				}
+				else if (q == 1 || q == 2)
+				{
+					uint16_t packet_id = (buffer[i + 2 + topic_len] << 8) + buffer[i + 2 + topic_len + 1];
+					data_returned = length - 4 - topic_len;
+					memcpy(data, buffer.data() + i + 4 + topic_len, data_returned);
+
+					createPacket((q == 1) ? PacketType::PUBACK : PacketType::PUBREC, 0);
+					pushVariableLength(2);
+					pushInt(packet_id);
+					prev->send(packet.data(), packet.size());
+				}
+				break;
+			}
+			case PacketType::PINGREQ:
+				createPacket(PacketType::PINGRESP, 0);
+				pushVariableLength(0);
+				prev->send(packet.data(), packet.size());
+				break;
+			case PacketType::PUBREC:
+				if (length < 2)
+				{
+					Error() << "MQTT: PUBREC packet too short";
+					disconnect();
+					return -1;
+				}
+				createPacket(PacketType::PUBREL, 2);
+				pushVariableLength(2);
+				pushByte(buffer[i]);
+				pushByte(buffer[i + 1]);
+				if (prev->send(packet.data(), packet.size()) != packet.size())
+					return -1;
+
+				break;
+			case PacketType::PUBACK:
+			case PacketType::DISCONNECT:
+			case PacketType::PUBCOMP:
+			case PacketType::SUBACK:
+				break;
+			default:
+				Warning() << "MQTT: packet received: " << ((int)buffer[0] >> 4);
+				break;
+			}
+
+			buffer_ptr -= length + i;
+			memmove(buffer.data(), buffer.data() + length + i, buffer_ptr);
+
+			if (data_returned)
+				return data_returned;
+		}
+	}
+
+	std::string MQTT::getValues()
+	{
+		return "topic " + topic + " client_id " + client_id + " username " + username + " password " + password + " qos " + std::to_string(qos);
+	}
+
 	///  ------WebSocket Implementation------
 	void WebSocket::onConnect()
 	{
@@ -925,14 +1340,14 @@ namespace Protocol
 			frame.push_back((length >> 8) & 0xFF);
 			frame.push_back(length & 0xFF);
 		}
-	else
-	{
-		frame.push_back(0x80 | 127);
-		// Cast to uint64_t to avoid undefined behavior when shifting
-		uint64_t len64 = static_cast<uint64_t>(length);
-		for (int i = 7; i >= 0; --i)
-			frame.push_back((len64 >> (8 * i)) & 0xFF);
-	}		// Generate a random masking key
+		else
+		{
+			frame.push_back(0x80 | 127);
+			// Cast to uint64_t to avoid undefined behavior when shifting
+			uint64_t len64 = static_cast<uint64_t>(length);
+			for (int i = 7; i >= 0; --i)
+				frame.push_back((len64 >> (8 * i)) & 0xFF);
+		} // Generate a random masking key
 		uint8_t masking_key[4];
 		for (int i = 0; i < 4; ++i)
 			masking_key[i] = rand() & 0xFF;
@@ -1033,22 +1448,19 @@ namespace Protocol
 				length = (int)length64;
 			}
 
-			uint8_t masking_key[4];
+			uint8_t masking_key[4] = {0};
+
+			// Validate we have enough data for mask (if present) and payload
+			int required_len = ptr + (mask ? 4 : 0) + length;
+			if (required_len < 0 || buffer_ptr < required_len)
+				return 0;
 
 			if (mask)
 			{
-				if (buffer_ptr < ptr + 4 + length)
-					return 0;
-
 				masking_key[0] = buffer[ptr++];
 				masking_key[1] = buffer[ptr++];
 				masking_key[2] = buffer[ptr++];
 				masking_key[3] = buffer[ptr++];
-			}
-			else
-			{
-				if (buffer_ptr < ptr + length)
-					return 0;
 			}
 
 			switch ((OPCODE)(buffer[0] & 0x0F))
@@ -1078,6 +1490,12 @@ namespace Protocol
 				break;
 			case OPCODE::PING:
 			{
+				// Control frames (like PING/PONG) must have payload <= 125 bytes per RFC 6455
+				if (length > 125)
+				{
+					Warning() << "WebSocket: PING payload too large, ignoring";
+					break;
+				}
 
 				frame.resize(0);
 				frame.push_back(0x80 | (uint8_t)OPCODE::PONG);

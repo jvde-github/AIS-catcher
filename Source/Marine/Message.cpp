@@ -122,11 +122,14 @@ namespace AIS
 
 		if (getLength() > 0)
 			ss << ",\"mmsi\":" << mmsi() << ",\"type\":" << type();
-		ss << ",\"nmea\":[\"" << NMEA[0] << "\"";
 
-		for (int j = 1; j < NMEA.size(); j++)
-			ss << ",\"" << NMEA[j] << "\"";
-
+		ss << ",\"nmea\":[";
+		const char *delim = "";
+		for (const auto &n : NMEA)
+		{
+			ss << delim << "\"" << n << "\"";
+			delim = ",";
+		}
 		ss << "]}";
 
 		return ss.str();
@@ -135,7 +138,7 @@ namespace AIS
 	std::string Message::getNMEATagBlock() const
 	{
 		static int groupId = 0;
-		groupId = (groupId % 9999) + 1;  // Recycle 1-9999
+		groupId = (groupId % 9999) + 1; // Recycle 1-9999
 
 		std::string result;
 		int total = NMEA.size();
