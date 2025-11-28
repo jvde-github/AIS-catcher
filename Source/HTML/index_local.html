@@ -1301,7 +1301,12 @@
 
 	<script>
 		// Load plugins.js with cache-busting timestamp to ensure fresh content
-		document.write('<script src="custom/plugins.js?t=' + Date.now() + '"><\/script>');
+		(function() {
+			var script = document.createElement('script');
+			script.src = 'custom/plugins.js?t=' + Date.now();
+			script.async = false;
+			document.head.appendChild(script);
+		})();
 	</script>
 	<script src="script.js?hash=db83420a4e66f690636b7260066122f3"></script>
 
