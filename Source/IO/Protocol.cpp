@@ -72,7 +72,7 @@ namespace Protocol
 		}
 
 		if (state == READY)
-			Info() << "TCP (" << host << ":" << port << "): Disconnected.";
+			Debug() << "TCP (" << host << ":" << port << "): Disconnected.";
 
 		sock = -1;
 		state = DISCONNECTED;
@@ -206,14 +206,12 @@ namespace Protocol
 		{
 			state = READY;
 
-			Info() << "TCP (" << host << ":" << port << "): connected.";
+			Debug() << "TCP (" << host << ":" << port << "): connected.";
 			onConnect();
 
 			return true;
 		}
-
 #ifndef _WIN32
-
 		if (errno != EINPROGRESS)
 		{
 			disconnect();
@@ -269,7 +267,7 @@ namespace Protocol
 
 			state = READY;
 
-			Info() << "TCP (" << host << ":" << port << "): connected.";
+			Debug() << "TCP (" << host << ":" << port << "): connected.";
 			onConnect();
 
 			return true;
@@ -492,12 +490,11 @@ namespace Protocol
 			if (handshake_complete)
 			{
 				SSL_shutdown(ssl);
-				Info() << "TLS (" + getHost() + ":" + getPort() + "): Disconnected";
+				Debug() << "TLS (" + getHost() + ":" + getPort() + "): Disconnected";
 			}
 			SSL_free(ssl);
 			ssl = nullptr;
 		}
-
 		if (ctx)
 		{
 			SSL_CTX_free(ctx);
@@ -687,12 +684,11 @@ namespace Protocol
 			handshake_complete = true;
 			tls_state = TLS_CONNECTED;
 
-			Info() << "TLS: Connected to " << getHost() << ":" << getPort() << " using " << SSL_get_version(ssl) << " with " << SSL_get_cipher(ssl);
+			Debug() << "TLS: Connected to " << getHost() << ":" << getPort() << " using " << SSL_get_version(ssl) << " with " << SSL_get_cipher(ssl);
 
 			ProtocolBase::onConnect();
 			return true;
 		}
-
 		int error = SSL_get_error(ssl, result);
 
 		switch (error)
@@ -889,10 +885,9 @@ namespace Protocol
 		uint8_t b;
 		int length;
 
-		Info() << "MQTT: Starting Handshake with broker " << getHost() << ":" << getPort();
+		Debug() << "MQTT: Starting Handshake with broker " << getHost() << ":" << getPort();
 
 		connected = false;
-
 		if (!prev)
 			return;
 
@@ -949,10 +944,9 @@ namespace Protocol
 				return;
 			}
 		}
-		Info() << "MQTT: Connected to broker " << (subscribe ? "and subscribed" : "");
+		Debug() << "MQTT: Connected to broker " << (subscribe ? "and subscribed" : "");
 		connected = true;
 	}
-
 	bool MQTT::readPacket(uint8_t &type, int &length)
 	{
 		if (prev->read(&type, 1, 5, true) != 1)
@@ -1195,10 +1189,9 @@ namespace Protocol
 		}
 
 		connected = true;
-		Info() << "WebSocket: Connected to " << getHost() << ":" << getPort() << path;
+		Debug() << "WebSocket: Connected to " << getHost() << ":" << getPort() << path;
 		ProtocolBase::onConnect();
 	}
-
 	bool WebSocket::performHandshake()
 	{
 		if (!prev)

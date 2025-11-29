@@ -82,14 +82,12 @@ namespace Device
 
 		if (bind(sock, address->ai_addr, address->ai_addrlen) != 0)
 		{
-			Info() << "UDP: binding to " << server << " port " << port << ": " << strerror(errno);
+			Debug() << "UDP: binding to " << server << " port " << port << ": " << strerror(errno);
 			throw std::runtime_error("UDP: cannot bind to port.");
 		}
-
 		SleepSystem(100);
-		Info() << "UDP: server opened at port " << port;
+		Debug() << "UDP: server opened at port " << port;
 	}
-
 	void UDP::Close()
 	{
 		Device::Close();
@@ -122,11 +120,10 @@ namespace Device
 
 	void UDP::Run()
 	{
-		Info() << "UDP: starting thread.\n";
+		Debug() << "UDP: starting thread.\n";
 		char buffer[16384];
 		RAW r = {getFormat(), buffer, 0};
 		int nread;
-
 		try
 		{
 			while (isStreaming())
@@ -159,7 +156,7 @@ namespace Device
 			Error() << "UDP Run: " << e.what() << std::endl;
 			std::terminate();
 		}
-		Info() << "UDP: ending thread.\n";
+		Debug() << "UDP: ending thread.\n";
 	}
 
 	void UDP::applySettings()

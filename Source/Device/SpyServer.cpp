@@ -37,7 +37,7 @@ namespace Device
 
 	void SpyServer::Open(uint64_t h)
 	{
-		Info() << "Connecting to SpyServer...";
+		Debug() << "Connecting to SpyServer...";
 		client.setValue("TIMEOUT", std::to_string(timeout));
 
 		if (!client.connect()) // host, port, false, timeout))

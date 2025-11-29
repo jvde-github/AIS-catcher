@@ -71,7 +71,7 @@ namespace IO
 			terminate = true;
 			run_thread.join();
 
-			Info() << "DBMS: stop thread and database closed.";
+			Debug() << "DBMS: stop thread and database closed.";
 		}
 		if (con != nullptr)
 			PQfinish(con);
@@ -111,7 +111,7 @@ namespace IO
 #ifdef HASPSQL
 
 		db_keys.resize(AIS::KeyMap.size(), -1);
-		Info() << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
+		Debug() << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
 		con = PQconnectdb(conn_string.c_str());
 
 		if (con == nullptr || PQstatus(con) != CONNECTION_OK)
@@ -159,17 +159,19 @@ namespace IO
 
 			run_thread = std::thread(&PostgreSQL::process, this);
 
-			Info() << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
+			Debug() << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
+			
 			if (filter.isOn())
-				Info() << ", Allowed: " << filter.getAllowed();
-			Info() << ", V " << Util::Convert::toString(VD)
-				   << ", VP " << Util::Convert::toString(VP)
-				   << ", MSGS " << Util::Convert::toString(MSGS)
-				   << ", VS " << Util::Convert::toString(VS)
-				   << ", BS " << Util::Convert::toString(BS)
-				   << ", SAR " << Util::Convert::toString(SAR)
-				   << ", ATON " << Util::Convert::toString(ATON)
-				   << ", NMEA " << Util::Convert::toString(NMEA);
+				Debug() << ", Allowed: " << filter.getAllowed();
+
+			Debug() << ", V " << Util::Convert::toString(VD)
+					<< ", VP " << Util::Convert::toString(VP)
+					<< ", MSGS " << Util::Convert::toString(MSGS)
+					<< ", VS " << Util::Convert::toString(VS)
+					<< ", BS " << Util::Convert::toString(BS)
+					<< ", SAR " << Util::Convert::toString(SAR)
+					<< ", ATON " << Util::Convert::toString(ATON)
+					<< ", NMEA " << Util::Convert::toString(NMEA);
 		}
 #else
 		throw std::runtime_error("DBMS: no support for PostgeSQL build in.");
@@ -434,10 +436,9 @@ namespace IO
 
 		if (sql.tellp() > 32768 * 24)
 		{
-			Info() << "DBMS: writing to database slow or failed, data lost.";
+			Warning() << "DBMS: writing to database slow or failed, data lost.";
 			sql.str("");
 		}
-
 		const AIS::Message *msg = (AIS::Message *)data[0].binary;
 
 		if (!filter.include(*msg))

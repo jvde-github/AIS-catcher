@@ -398,7 +398,7 @@ namespace IO
 				SleepAndWait();
 		}
 
-		Info() << "TCP Server: thread ending.\n";
+		Debug() << "TCP Server: thread ending.\n";
 	}
 
 	void TCPServer::SleepAndWait()
@@ -544,9 +544,9 @@ namespace IO
 		stop = false;
 
 		if (IP_BIND.empty())
-			Info() << "TCP Server: start thread at port " << port;
+			Debug() << "TCP Server: start thread at port " << port;
 		else
-			Info() << "TCP Server: start thread at IP " << IP_BIND << " port " << port;
+			Debug() << "TCP Server: start thread at IP " << IP_BIND << " port " << port;
 
 		listening_port = port;
 		active_ports.push_back(port);

@@ -50,7 +50,7 @@ namespace IO
 			terminate = false;
 
 			run_thread = std::thread(&HTTPStreamer::process, this);
-			Info() << "HTTP: start thread (" << url << "), filter: " << Util::Convert::toString(filter.isOn()) << (filter.isOn() ? ", Allowed: " + filter.getAllowed() : "");
+			Debug() << "HTTP: start thread (" << url << "), filter: " << Util::Convert::toString(filter.isOn()) << (filter.isOn() ? ", Allowed: " + filter.getAllowed() : "");
 		}
 	}
 
@@ -63,7 +63,7 @@ namespace IO
 			terminate = true;
 			run_thread.join();
 
-			Info() << "HTTP: stop thread (" << url << ").";
+			Debug() << "HTTP: stop thread (" << url << ").";
 		}
 	}
 
@@ -341,10 +341,9 @@ namespace IO
 
 				if (sock == -1)
 				{
-					Error() << "UDP: cannot recreate socket. Requesting termination.";
+					Critical() << "UDP: cannot recreate socket. Requesting termination.";
 					StopRequest();
 				}
-
 				last_reconnect = now;
 			}
 		}
@@ -511,7 +510,7 @@ namespace IO
 
 	void UDPStreamer::Stop()
 	{
-		Info() << "UDP: close socket for host: " << host << ", port: " << port;
+		Debug() << "UDP: close socket for host: " << host << ", port: " << port;
 
 		if (sock != -1)
 		{
@@ -710,7 +709,7 @@ namespace IO
 				if (SendTo((json + "\r\n").c_str()) < 0)
 					if (!persistent)
 					{
-						Error() << "TCP feed: requesting termination.";
+						Critical() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 			}

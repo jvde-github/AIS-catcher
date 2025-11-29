@@ -28,6 +28,7 @@
 
 enum class LogLevel
 {
+    _DEBUG,
     _INFO,
     _WARNING,
     _ERROR,
@@ -71,6 +72,9 @@ public:
 
     void setLogToSystem(std::string ident = "aiscatcher");
 
+    void setMinLevel(LogLevel level) { min_level_ = level; }
+    LogLevel getMinLevel() const { return min_level_; }
+
     Setting &Set(std::string option, std::string arg);
 
 private:
@@ -83,6 +87,7 @@ private:
     std::string getCurrentTime();
 
     std::mutex mutex_;
+    LogLevel min_level_ = LogLevel::_INFO;
 
     static std::unique_ptr<Logger> instance_;
 
@@ -127,6 +132,7 @@ private:
     std::unique_ptr<std::ostringstream> stream_;
 };
 
+LogStream Debug();
 LogStream Info();
 LogStream Warning();
 LogStream Error();

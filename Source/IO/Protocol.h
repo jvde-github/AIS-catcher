@@ -305,11 +305,10 @@ namespace Protocol
 
 		bool reconnect()
 		{
-			std::cerr << "TCP: Reconnecting to " << host << ":" << port << std::endl;
+			Debug() << "TCP: Reconnecting to " << host << ":" << port;
 			disconnect();
 			return connect();
 		}
-
 		int handleNetworkError(const char *operation, int error_code, int partial_bytes_processed)
 		{
 			Error() << "TCP (" << host << ":" << port << "): " << operation << " error " << error_code

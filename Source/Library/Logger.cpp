@@ -82,6 +82,8 @@ std::string LogMessage::levelToString() const
 {
 	switch (level)
 	{
+	case LogLevel::_DEBUG:
+		return "debug";
 	case LogLevel::_INFO:
 		return "info";
 	case LogLevel::_WARNING:
@@ -119,6 +121,22 @@ Setting &Logger::Set(std::string option, std::string arg)
 	if (option == "SYSTEM")
 	{
 		setLogToSystem("aiscatcher");
+	}
+	else if (option == "LEVEL")
+	{
+		Util::Convert::toUpper(arg);
+		if (arg == "DEBUG")
+			min_level_ = LogLevel::_DEBUG;
+		else if (arg == "INFO")
+			min_level_ = LogLevel::_INFO;
+		else if (arg == "WARNING")
+			min_level_ = LogLevel::_WARNING;
+		else if (arg == "ERROR")
+			min_level_ = LogLevel::_ERROR;
+		else if (arg == "CRITICAL")
+			min_level_ = LogLevel::_CRITICAL;
+		else
+			throw std::runtime_error("Invalid log level: " + arg + ". Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL");
 	}
 	else
 	{
@@ -235,6 +253,9 @@ void Logger::notifyListeners(const LogMessage &msg)
 
 void Logger::log(LogLevel level, const std::string &message)
 {
+	if (level < min_level_)
+		return;
+
 	std::string time_str = getCurrentTime();
 	LogMessage log_msg(level, message, time_str);
 
@@ -253,6 +274,11 @@ LogStream::~LogStream()
 }
 
 // Convenience functions
+LogStream Debug()
+{
+	return LogStream(LogLevel::_DEBUG);
+}
+
 LogStream Info()
 {
 	return LogStream(LogLevel::_INFO);

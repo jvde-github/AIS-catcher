@@ -82,7 +82,7 @@ static void Usage()
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
-	Info() << "\t[-G control logging]";
+	Info() << "\t[-G [LEVEL level] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL)]";
 	Info() << "\t[-h display this message and terminate (default: false)]";
 	Info() << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]";
 	Info() << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]";
@@ -301,7 +301,10 @@ int main(int argc, char *argv[])
 			{
 			case 'G':
 				Assert(count % 2 == 0, param, "requires parameters in key/value pairs");
-				if (cb != -1)
+				Util::Convert::toUpper(arg1);
+				Util::Convert::toUpper(arg2);
+
+				if (cb != -1 && arg1 == "SYSTEM" && arg2 == "ON")
 				{
 					Logger::getInstance().removeLogListener(cb);
 					cb = -1;
@@ -403,7 +406,7 @@ int main(int argc, char *argv[])
 				screen.setScreen(arg1);
 				if (count > 1)
 				{
-					parseSettings(screen, argv, ptr + 1, argc);					
+					parseSettings(screen, argv, ptr + 1, argc);
 				}
 				break;
 			case 'F':
@@ -791,8 +794,6 @@ int main(int argc, char *argv[])
 
 		for (auto &j : json)
 			j->Start();
-
-
 
 		for (auto &s : servers)
 			if (s->active())

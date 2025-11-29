@@ -336,7 +336,7 @@ void WebViewer::addPlugin(const std::string &arg)
 	{
 
 		plugins += "// FAILED\n";
-		Info() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
+		Warning() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
 		plugins += "server_message += \"Plugin error (" + arg + ") " + std::string(e.what()) + "\\n\"\n";
 	}
 }
@@ -1100,7 +1100,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		catch (const std::exception &e)
 		{
 			stylesheets += "/* FAILED */\r\n";
-			Info() << "Server: style plugin error - " << e.what();
+			Warning() << "Server: style plugin error - " << e.what();
 			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
 		}
 	}

@@ -37,7 +37,7 @@ namespace Device
 		RAW r = {getFormat(), buffer, 0};
 
 #ifdef _WIN32
-		Info() << "Serial: starting thread" << std::endl;
+		Debug() << "Serial: starting thread" << std::endl;
 		DWORD bytesRead;
 
 		while (isStreaming())
