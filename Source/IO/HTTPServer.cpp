@@ -225,7 +225,8 @@ namespace IO
 		}
 		else
 		{
-			header += "\r\nCache-Control: no-cache";
+			header += "\r\nCache-Control: private, no-store, max-age=0, s-maxage=0";
+			header += "\r\nPragma: no-cache";
 		}
 
 		header += "\r\nConnection: keep-alive\r\nContent-Length: " + std::to_string(len) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
