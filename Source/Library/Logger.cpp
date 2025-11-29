@@ -42,6 +42,9 @@ public:
 		int priority;
 		switch (msg.level)
 		{
+		case LogLevel::_DEBUG:
+			priority = LOG_DEBUG;
+			break;
 		case LogLevel::_ERROR:
 			priority = LOG_ERR;
 			break;
