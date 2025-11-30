@@ -44,12 +44,16 @@ g++ -O3 -c  N2kMsg.cpp  N2kStream.cpp N2kMessages.cpp N2kTimer.cpp  NMEA2000.cpp
 ar rcs libnmea2000.a *.o 
 
 cd ../../build
+
+# Use RUN_NUMBER from environment or default to 0
+RUN_NUM=${RUN_NUMBER:-0}
+
 if [ "$DEBUG_BUILD" = true ]; then
     echo "Configuring AIS-catcher build in debug mode..."
-    cmake .. -DNMEA2000_PATH=.. -DENABLE_DEBUG=ON
+    cmake .. -DNMEA2000_PATH=.. -DENABLE_DEBUG=ON -DRUN_NUMBER=${RUN_NUM}
 else
     echo "Configuring AIS-catcher build in release mode..."
-    cmake .. -DNMEA2000_PATH=..
+    cmake .. -DNMEA2000_PATH=.. -DRUN_NUMBER=${RUN_NUM}
 fi
 
 make

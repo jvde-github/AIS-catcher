@@ -37,7 +37,11 @@ build_project() {
   g++ -O3 -c  N2kMsg.cpp  N2kStream.cpp N2kMessages.cpp   N2kTimer.cpp  NMEA2000.cpp  N2kGroupFunctionDefaultHandlers.cpp  N2kGroupFunction.cpp  -I.
   ar rcs libnmea2000.a *.o 
   cd ../../build; ls ..; 
-  cmake .. -DNMEA2000_PATH=..  -DRTLSDR_STATIC=ON; 
+  
+  # Use RUN_NUMBER from environment or default to 0
+  RUN_NUM=${RUN_NUMBER:-0}
+  
+  cmake .. -DNMEA2000_PATH=.. -DRTLSDR_STATIC=ON -DRUN_NUMBER=${RUN_NUM}
   
   make
   cd ..

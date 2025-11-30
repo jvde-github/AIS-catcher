@@ -12,39 +12,35 @@ endif()
 
 project(AIS-catcher)
 
-# Get version from git
+# Get version from header file
+file(STRINGS "${PROJECT_SOURCE_DIR}/Source/Application/AIS-catcher.h" VERSION_LINE REGEX "^#define VERSION[ \t]+\".*\"")
+string(REGEX REPLACE "^#define VERSION[ \t]+\"(.*)\".*" "\\1" VERSION_BASE "${VERSION_LINE}")
+
+# Run number from GitHub Actions (defaults to 0 for local builds)
+set(RUN_NUMBER "0" CACHE STRING "GitHub Actions run number")
+
+# Get commit hash
 find_package(Git QUIET)
-
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    # For shallow clones, fetch enough history to reach a tag
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} fetch --deepen=200 --tags
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_QUIET
-        ERROR_QUIET
-    )
-    
-    # Get the version using git describe
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} describe --tags --always
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_VERSION_DESCRIBE
+        OUTPUT_VARIABLE COMMIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE GIT_RESULT
         ERROR_QUIET
     )
-
-    if(GIT_VERSION_DESCRIBE)
-        set(VERSION_DESCRIBE "${GIT_VERSION_DESCRIBE}")
-        message(STATUS "Git version: ${VERSION_DESCRIBE}")
-    else()
-        set(VERSION_DESCRIBE "v0.00-1-unknown")
-        message(STATUS "Git describe failed, using fallback version: ${VERSION_DESCRIBE}")
-    endif()
 else()
-    set(VERSION_DESCRIBE "v0.00-1-unknown")
-    message(STATUS "Git not found or not a git repository, using fallback version: ${VERSION_DESCRIBE}")
+    set(COMMIT_HASH "unknown")
 endif()
+
+# Build version string
+if(RUN_NUMBER GREATER 0)
+    set(VERSION_DESCRIBE "${VERSION_BASE}-${RUN_NUMBER}-g${COMMIT_HASH}")
+else()
+    set(VERSION_DESCRIBE "${VERSION_BASE}-0-g${COMMIT_HASH}")
+endif()
+
+message(STATUS "Version: ${VERSION_DESCRIBE} (base: ${VERSION_BASE}, run: ${RUN_NUMBER}, commit: ${COMMIT_HASH})")
 
 # Define the version for compilation
 add_definitions(-DVERSION_DESCRIBE="${VERSION_DESCRIBE}")

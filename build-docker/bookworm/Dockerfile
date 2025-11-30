@@ -1,5 +1,7 @@
 FROM debian:bookworm
 
+ARG RUN_NUMBER=0
+ENV RUN_NUMBER=${RUN_NUMBER}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/New_York
 
