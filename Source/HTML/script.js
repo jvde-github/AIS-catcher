@@ -7516,4 +7516,4 @@ if (isAndroid()) showMenu();
 
 main();
 
-checkLatestVersion();
+//checkLatestVersion();
