@@ -92,8 +92,8 @@ jobs:
         #docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
         #docker build --platform ${{ matrix.arch}} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} .
         #docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
-        docker buildx build --platform linux/${{ matrix.arch }} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} --load .
-        docker run --rm -e RUN_NUMBER=${RUN_NUMBER} -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
+        docker buildx build --build-arg RUN_NUMBER=${RUN_NUMBER} --platform linux/${{ matrix.arch }} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} --load .
+        docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
         cp output/ais-catcher.deb ${{ env.filename }}
         gh release upload 'Edge' ${{ env.filename }} --repo jvde-github/AIS-catcher --clobber
     - name: Upload Debian package as artifact
@@ -127,8 +127,8 @@ jobs:
         cp build-docker/bookworm/Dockerfile .
         sed -i 's/FROM debian:bookworm/FROM ubuntu:${{ matrix.codename }}/g' Dockerfile
         sed -i 's/amd64/${{ matrix.arch }}/g' Dockerfile
-        docker build -t ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }} .
-        docker run --rm -e RUN_NUMBER=${RUN_NUMBER} -v "$(pwd)/output:/output" ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }}
+        docker build --build-arg RUN_NUMBER=${RUN_NUMBER} -t ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }} .
+        docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }}
         cp output/ais-catcher.deb ${{ env.filename }}
         gh release upload 'Edge' ${{ env.filename }} --repo jvde-github/AIS-catcher --clobber
     - name: Upload Ubuntu package as artifact
