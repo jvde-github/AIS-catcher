@@ -153,13 +153,13 @@
 				<header>Map</header>
 				<section>
 					<div>
-						<span>Show Station Icon</span><span>
+						<span>Show station icon</span><span>
 							<input type="checkbox" id="settings_show_station"
 								onchange="setMapSetting('show_station',this.checked)" />
 						</span>
 					</div>
 					<div>
-						<span id="icon_scale_label">Icon Size (1.0)</span>
+						<span id="icon_scale_label">Ship icon size (1.0)</span>
 						<span>
 							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
 								onchange="settings.icon_scale = this.value; redrawMap(); saveSettings();"
@@ -167,7 +167,7 @@
 						</span>
 					</div>
 					<div>
-						<span id="map_opacity_label">Dimming (1.0)</span>
+						<span id="map_opacity_label">Map dimming (50%)</span>
 						<span>
 							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
 								onchange="settings.map_opacity = this.value; setMapOpacity(); saveSettings();"
@@ -175,7 +175,7 @@
 						</span>
 					</div>
 					<div>
-						<span>Fade icons</span><span>
+						<span>Fade inactive ships</span><span>
 							<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)" />
 						</span>
 					</div>
@@ -189,6 +189,14 @@
 						<span>Selection Color</span><span>
 							<input type="color" class="color-picker" id="settings_shipselection_color"
 								onchange="setMapSetting('shipselection_color',this.value)" />
+						</span>
+					</div>
+					<div>
+						<span id="circle_scale_label">Selector line width (6.0)</span>
+						<span>
+							<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
+								onchange="setMapSetting('circle_scale',this.value)"
+								oninput="updateCircleScaleDisplay(this.value)" />
 						</span>
 					</div>
 
@@ -248,6 +256,21 @@
 						</span>
 					</div>
 				</section>
+				<header>Graphs</header>
+				<section>
+					<div>
+						<span>Show signal level graphs</span><span>
+							<input type="checkbox" id="settings_show_signal_graphs"
+								onchange="setGraphVisibility('signal', this.checked)" />
+						</span>
+					</div>
+					<div>
+						<span>Show frequency shift graphs</span><span>
+							<input type="checkbox" id="settings_show_ppm_graphs"
+								onchange="setGraphVisibility('ppm', this.checked)" />
+						</span>
+					</div>
+				</section>
 				<header>Ship Outline</header>
 				<section>
 					<div>
@@ -271,7 +294,7 @@
 						</span>
 					</div>
 					<div>
-						<span>Circle Outlines</span>
+						<span>Ship outline as circle</span>
 						<span>
 							<input type="checkbox" id="settings_show_circle_outline"
 								onchange="setMapSetting('show_circle_outline',this.checked)" />
@@ -562,6 +585,11 @@
 				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
 				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
 					Light/Dark mode</li>
+				<li class="divider ctx-charts"></li>
+				<li class="ctx-charts" onclick="toggleGraphVisibility('signal')"><i class="timeline_icon"></i><span
+						id="ctx_signal_graphs">Show signal level graphs</span></li>
+				<li class="ctx-charts" onclick="toggleGraphVisibility('ppm')"><i class="timeline_icon"></i><span
+						id="ctx_ppm_graphs">Show frequency shift graphs</span></li>
 			</ul>
 
 			<div id="dialog-box" class="hidden">
@@ -830,7 +858,7 @@
 			</div>
 
 			<div class="tabcontent addscrollbar" id="plots" style="display: none;">
-				<div class="graphtab">
+				<div class="graphtab" oncontextmenu='showContextMenu(event, "", "charts", ["settings", "ctx-charts"])'>
 					<div class="graph-panel">
 						<header>Messages per Second</header>
 						<canvas id="chart-seconds"></canvas>
@@ -1300,7 +1328,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=4f04d83abd0e2f5c3584169fd4001169"></script>
+	<script src="script.js?hash=a64aab04979b4b941ceff713c76214fc"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

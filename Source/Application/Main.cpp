@@ -82,7 +82,7 @@ static void Usage()
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
-	Info() << "\t[-G [LEVEL level] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL)]";
+	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
 	Info() << "\t[-h display this message and terminate (default: false)]";
 	Info() << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]";
 	Info() << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]";
@@ -304,13 +304,13 @@ int main(int argc, char *argv[])
 				Util::Convert::toUpper(arg1);
 				Util::Convert::toUpper(arg2);
 
-				if (cb != -1 && arg1 == "SYSTEM" && arg2 == "ON")
-				{
-					Logger::getInstance().removeLogListener(cb);
-					cb = -1;
-				}
-
-				parseSettings(Logger::getInstance(), argv, ptr, argc);
+			if (cb != -1 && arg1 == "SYSTEM" && arg2 == "ON")
+			{
+				Logger::getInstance().removeLogListener(cb);
+				cb = -1;
+				// Enable DEBUG level when switching to system logging for journalctl filtering
+				Logger::getInstance().setMinLevel(LogLevel::_DEBUG);
+			}				parseSettings(Logger::getInstance(), argv, ptr, argc);
 				break;
 			case 's':
 				Assert(count == 1, param, "does require one parameter [sample rate].");

@@ -124,6 +124,7 @@ function restoreDefaultSettings() {
         shipoutline_inner: "#808080",
         shipoutline_opacity: 0.9,
         show_circle_outline: false,
+        circle_scale: 6.0,
         dark_mode: false,
         center_radius: 0,
         show_station: true,
@@ -138,6 +139,8 @@ function restoreDefaultSettings() {
         show_track_on_hover: false,
         show_track_on_select: false,
         shipcard_pinned: false,
+        show_signal_graphs: true,
+        show_ppm_graphs: true,
         shipcard_pinned_x: null,
         shipcard_pinned_y: null,
         kiosk_rotation_speed: 5,
@@ -648,24 +651,30 @@ var labelStyle = function (feature) {
 };
 
 hoverCircleStyleFunction = function (feature) {
+    const iconScale = settings.icon_scale || 1.0;
+    const circleScale = settings.circle_scale || 6.0;
+    const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
     return new ol.style.Style({
         image: new ol.style.Circle({
-            radius: 20,
+            radius: 16 * iconScale * radiusScale,
             stroke: new ol.style.Stroke({
                 color: settings.shiphover_color,
-                width: 8
+                width: circleScale * iconScale
             })
         })
     });
 }
 
 selectCircleStyleFunction = function (feature) {
+    const iconScale = settings.icon_scale || 1.0;
+    const circleScale = settings.circle_scale || 6.0;
+    const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
     return new ol.style.Style({
         image: new ol.style.Circle({
-            radius: 15,
+            radius: 13 * iconScale * radiusScale,
             stroke: new ol.style.Stroke({
                 color: settings.shipselection_color,
-                width: 8
+                width: circleScale * iconScale
             })
         })
     });
@@ -1177,11 +1186,13 @@ function showContextMenu(event, mmsi, type, context) {
     document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
     document.getElementById("ctx_fireworks").textContent = evtSourceMap == null ? "Start Fireworks Mode" : "Stop Fireworks Mode";
     document.getElementById("ctx_label_shipcard_pin").textContent = settings.shipcard_pinned ? "Unpin Shipcard position" : "Pin Shipcard position";
+    document.getElementById("ctx_signal_graphs").textContent = settings.show_signal_graphs ? "Hide signal level graphs" : "Show signal level graphs";
+    document.getElementById("ctx_ppm_graphs").textContent = settings.show_ppm_graphs ? "Hide frequency shift graphs" : "Show frequency shift graphs";
 
     context_mmsi = mmsi;
     context_type = type;
 
-    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard"];
+    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard", "ctx-charts"];
 
     classList.forEach((className) => {
         if (context.includes('object')) {
@@ -2333,6 +2344,37 @@ function setFading(b) {
 
 function toggleFading() {
     settings.fading = !settings.fading;
+}
+
+function setGraphVisibility(type, show, save = true) {
+    if (type === 'signal') {
+        settings.show_signal_graphs = show;
+        // Toggle signal level graphs
+        document.querySelectorAll('.graph-panel').forEach(panel => {
+            const header = panel.querySelector('header');
+            if (header && header.textContent.includes('Signal Level')) {
+                panel.style.display = show ? '' : 'none';
+            }
+        });
+    } else if (type === 'ppm') {
+        settings.show_ppm_graphs = show;
+        // Toggle frequency shift graphs
+        document.querySelectorAll('.graph-panel').forEach(panel => {
+            const header = panel.querySelector('header');
+            if (header && header.textContent.includes('Frequency Shift')) {
+                panel.style.display = show ? '' : 'none';
+            }
+        });
+    }
+    if (save) saveSettings();
+}
+
+function toggleGraphVisibility(type) {
+    if (type === 'signal') {
+        setGraphVisibility('signal', !settings.show_signal_graphs);
+    } else if (type === 'ppm') {
+        setGraphVisibility('ppm', !settings.show_ppm_graphs);
+    }
 }
 
 function showPlugins() {
@@ -5053,6 +5095,10 @@ function saveSettings() {
 
     updateMapURL();
     updateSettingsTab();
+    
+    // Apply graph visibility settings (without saving during initialization)
+    setGraphVisibility('signal', settings.show_signal_graphs, false);
+    setGraphVisibility('ppm', settings.show_ppm_graphs, false);
 }
 
 function updateForLegacySettings() {
@@ -5109,7 +5155,8 @@ function convertStringBooleansToActual() {
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
         'show_station', 'labels_declutter', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max', 'kiosk_pan_map'
+        'show_track_on_select', 'shipcard_max', 'kiosk_pan_map',
+        'show_signal_graphs', 'show_ppm_graphs'
     ];
 
     booleanSettings.forEach(key => {
@@ -6506,6 +6553,8 @@ function updateSettingsTab() {
     document.getElementById("settings_metric").value = getMetrics().toLowerCase();
     document.getElementById("settings_show_station").checked = settings.show_station;
     document.getElementById("settings_fading").checked = settings.fading;
+    document.getElementById("settings_show_signal_graphs").checked = settings.show_signal_graphs;
+    document.getElementById("settings_show_ppm_graphs").checked = settings.show_ppm_graphs;
     document.getElementById("settings_shiphover_color").value = settings.shiphover_color;
     document.getElementById("settings_shipselection_color").value = settings.shipselection_color;
 
@@ -6521,7 +6570,8 @@ function updateSettingsTab() {
     document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
     document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
     document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
-    document.getElementById("settings_show_circle_outline").value = settings.show_circle_outline;
+    document.getElementById("settings_show_circle_outline").checked = settings.show_circle_outline;
+    document.getElementById("settings_circle_scale").value = settings.circle_scale;
 
     document.getElementById("settings_range_color").value = settings.range_color;
     document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
@@ -6541,6 +6591,7 @@ function updateSettingsTab() {
     updateTrackTrashThresholdDisplay(settings.track_trash_threshold);
     updateTooltipFontSizeDisplay(settings.tooltipLabelFontSize);
     updateShipoutlineOpacityDisplay(settings.shipoutline_opacity);
+    updateCircleScaleDisplay(settings.circle_scale || 6.0);
 
     document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
     document.getElementById("settings_tooltipLabelShadowColor").value = settings.tooltipLabelShadowColor;
@@ -6865,11 +6916,12 @@ function updateTrackTrashThresholdDisplay(value) {
 }
 
 function updateIconScaleDisplay(value) {
-    document.getElementById("icon_scale_label").textContent = `Icon Size (${parseFloat(value).toFixed(2)})`;
+    document.getElementById("icon_scale_label").textContent = `Ship icon size (${parseFloat(value).toFixed(2)})`;
 }
 
 function updateMapOpacityDisplay(value) {
-    document.getElementById("map_opacity_label").textContent = `Dimming (${parseFloat(value).toFixed(2)})`;
+    const percentage = Math.round(parseFloat(value) * 100);
+    document.getElementById("map_opacity_label").textContent = `Map dimming (${percentage}%)`;
 }
 
 function updateTooltipFontSizeDisplay(value) {
@@ -6878,6 +6930,10 @@ function updateTooltipFontSizeDisplay(value) {
 
 function updateShipoutlineOpacityDisplay(value) {
     document.getElementById("shipoutline_opacity_label").textContent = `Opacity (${parseFloat(value).toFixed(2)})`;
+}
+
+function updateCircleScaleDisplay(value) {
+    document.getElementById("circle_scale_label").textContent = `Selector line width (${parseFloat(value).toFixed(1)})`;
 }
 
 function updateKiosk() {
