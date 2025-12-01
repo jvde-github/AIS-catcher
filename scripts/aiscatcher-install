@@ -77,7 +77,7 @@ get_system_info() {
 
 # Install dependencies
 install_dependencies() {
-    local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev unzip libusb-1.0-0-dev libsqlite3-dev"
+    local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev curl unzip libusb-1.0-0-dev libsqlite3-dev"
     log "INFO" "Installing build dependencies: $deps"
     apt-get install -y $deps || error_exit "Failed to install dependencies"
 }
@@ -589,6 +589,10 @@ main() {
     
     if [ "$INSTALL_PACKAGE" = true ]; then
         if [ -n "$package" ]; then
+            # Install minimal dependencies for package installation and webassets download
+            log "INFO" "Installing minimal dependencies for package installation"
+            apt-get install -y curl unzip || error_exit "Failed to install minimal dependencies"
+            
             install_from_package "$package"
             log "INFO" "AIS-catcher installation from package completed successfully"
         else
