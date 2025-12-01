@@ -172,6 +172,9 @@ namespace AIS
 	{
 		std::string packet;
 
+		if (length < 0 || length > MAX_AIS_LENGTH)
+			return packet;
+
 		auto push_escaped = [&](unsigned char byte) -> void
 		{
 			if (byte == '\n')
@@ -271,6 +274,9 @@ namespace AIS
 
 	unsigned Message::getUint(int start, int len) const
 	{
+		if (start + len > MAX_AIS_LENGTH || start < 0)
+			return 0;
+
 		// we start 2nd part of first byte and stop first part of last byte
 		int x = start >> 3, y = start & 7;
 		unsigned u = data[x] & (0xFF >> y);
@@ -300,17 +306,19 @@ namespace AIS
 
 	bool Message::setUint(int start, int len, unsigned val)
 	{
-		if (start + len >= MAX_AIS_LENGTH)
+		const int end = start + len;
+
+		if (end > MAX_AIS_LENGTH || start < 0)
 			return false;
 
 		int x = start >> 3, y = start & 7;
 		int remaining = len;
+		length = MAX(end, length);
 
 		if (8 - y >= remaining)
 		{
 			uint8_t bitmask = (0xFF >> (8 - remaining)) << (8 - y - remaining);
 			data[x] = (data[x] & ~bitmask) | ((val << (8 - y - remaining)) & bitmask);
-			length = MAX(start + len, length);
 			return true;
 		}
 
@@ -330,7 +338,6 @@ namespace AIS
 			uint8_t bitmask = 0xFF << (8 - remaining);
 			data[x] = (data[x] & ~bitmask) | ((val << (8 - remaining)) & bitmask);
 		}
-		length = MAX(start + len, length);
 		return true;
 	}
 
@@ -342,6 +349,7 @@ namespace AIS
 		// extend sign bit for the full bit
 		if (u & (1 << (len - 1)))
 			u |= ones << len;
+
 		return (int)u;
 	}
 
@@ -352,9 +360,11 @@ namespace AIS
 
 	void Message::getText(int start, int len, std::string &str) const
 	{
-
-		int end = start + len;
+		const int end = start + len;
 		str.clear();
+
+		if (end >= MAX_AIS_LENGTH || start < 0)
+			return;
 
 		while (start < end)
 		{
@@ -377,9 +387,9 @@ namespace AIS
 
 	void Message::setText(int start, int len, const char *str)
 	{
+		const int end = start + len;
 
-		int end = start + len;
-		if (end >= MAX_AIS_LENGTH)
+		if (end > MAX_AIS_LENGTH || start < 0)
 			return;
 
 		int idx = 0;
@@ -468,32 +478,39 @@ namespace AIS
 
 	char Message::getLetter(int pos) const
 	{
-		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+		const int start = pos * 6;
+		const int end = start + 6;
+
+		if (end > MAX_AIS_LENGTH || start < 0)
+			return 0;
+
+		int x = start >> 3, y = start & 7;
 		uint16_t w = (data[x] << 8) | data[x + 1];
 
 		const int mask = (1 << 6) - 1;
 		int l = (w >> (16 - 6 - y)) & mask;
 
 		// zero for bits not formally set
-		int overrun = pos * 6 + 6 - length;
+		int overrun = end - length;
+
 		if (overrun > 0)
 			l &= 0xFF << overrun;
+
 		return l < 40 ? (char)(l + 48) : (char)(l + 56);
 	}
 
 	void Message::setLetter(int pos, char c)
 	{
-		int x = (pos * 6) >> 3, y = (pos * 6) & 7;
+		const int start = pos * 6;
+		const int end = start + 6;
 
-		int newlength = MAX((pos + 1) * 6, length);
-
-		if (newlength >= MAX_AIS_LENGTH)
-		{
-			Error() << "Message::setLetter: length exceeds maximum AIS length." << std::endl;
+		if (end > MAX_AIS_LENGTH || start < 0)
 			return;
-		}
 
-		length = newlength;
+		int x = start >> 3, y = start & 7;
+
+		length = MAX(end, length);
+
 		c = (c >= 96 ? c - 56 : c - 48) & 0b00111111;
 
 		switch (y)
@@ -523,10 +540,10 @@ namespace AIS
 
 		if (option == "ALLOW_TYPE")
 		{
-
 			std::stringstream ss(arg);
 			std::string type_str;
 			allow = 0;
+
 			while (getline(ss, type_str, ','))
 			{
 				unsigned type = Util::Parse::Integer(type_str, 1, 27);
@@ -547,7 +564,9 @@ namespace AIS
 			return true;
 		}
 		else if (option == "DESC" || option == "DESCRIPTION")
+		{
 			return true;
+		}
 		else if (option == "BLOCK_TYPE")
 		{
 

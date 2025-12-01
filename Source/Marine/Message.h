@@ -29,7 +29,8 @@
 namespace AIS
 {
 
-#define MAX_AIS_LENGTH (128 * 8)
+#define MAX_AIS_BYTES 128
+#define MAX_AIS_LENGTH (MAX_AIS_BYTES * 8)
 
 	class GPS
 	{
@@ -56,7 +57,7 @@ namespace AIS
 		static int ID;
 		std::string line = "!AIVDM,X,X,X,X," + std::string(MAX_NMEA_CHARS, '.') + ",X*XX\n\r"; // longest line
 
-		uint8_t data[128];
+		uint8_t data[MAX_AIS_BYTES + 1];
 		std::time_t rxtime;
 		int length;
 		char channel;
@@ -138,6 +139,9 @@ namespace AIS
 
 		void setBit(int i, bool b)
 		{
+			if (i >= MAX_AIS_LENGTH || i < 0)
+				return;
+
 			if (b)
 				data[i >> 3] |= (1 << (i & 7));
 			else
@@ -146,15 +150,22 @@ namespace AIS
 
 		bool getBit(int i) const
 		{
+			if (i >= MAX_AIS_LENGTH || i < 0)
+				return false;
+
 			return data[i >> 3] & (1 << (i & 7));
 		}
 
 		char getLetter(int pos) const;
 		void setLetter(int pos, char c);
 		void appendLetter(char c) { setLetter(length / 6, c); }
-		void reduceLength(int l) { length -= l; }
+		void reduceLength(int l) { length = MAX(length - l, 0); }
 
-		void setLength(int l) { length = l; }
+		void setLength(int l)
+		{
+			if (l >= 0 && l <= MAX_AIS_LENGTH)
+				length = l;
+		}
 		int getLength() const { return length; }
 
 		void setChannel(char c) { channel = c; }

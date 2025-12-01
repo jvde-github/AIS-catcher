@@ -644,7 +644,12 @@ namespace AIS
 			}
 
 			char channel = getByte();
-			uint16_t length_bits = (getByte() << 8) | getByte();
+			int length_bits = (getByte() << 8) | getByte();
+
+			if (length_bits < 0 || length_bits > MAX_AIS_LENGTH)
+			{
+				throw std::runtime_error("invalid message length: " + std::to_string(length_bits));
+			}
 
 			msg.clear();
 			msg.Stamp(timestamp);
