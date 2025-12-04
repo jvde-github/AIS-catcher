@@ -287,6 +287,9 @@ namespace Protocol
 
 		enum State getState() { return state; }
 
+		unsigned long getBytesSent() { return bytes_sent; }
+		unsigned long getBytesReceived() { return bytes_received; }
+
 	private:
 		std::string host;
 		std::string port;
@@ -295,6 +298,9 @@ namespace Protocol
 		int reset_time = -1;
 		int timeout = 0;
 		bool keep_alive = true;
+
+		unsigned long bytes_sent = 0;
+		unsigned long bytes_received = 0;
 
 		int sock = -1;
 		State state = DISCONNECTED;
@@ -309,14 +315,17 @@ namespace Protocol
 			disconnect();
 			return connect();
 		}
+
 		int handleNetworkError(const char *operation, int error_code, int partial_bytes_processed)
 		{
 			Error() << "TCP (" << host << ":" << port << "): " << operation << " error " << error_code
 					<< " (" << strerror(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
 
-			// if (persistent)
-			//	reconnect();
-			disconnect();
+			if (persistent)
+				reconnect();
+			else
+				disconnect();
+
 			return partial_bytes_processed > 0 ? partial_bytes_processed : (persistent ? 0 : -1);
 		}
 	};

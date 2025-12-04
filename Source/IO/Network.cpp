@@ -622,15 +622,12 @@ namespace IO
 				{
 					if (SendTo((s + "\r\n").c_str()) < 0)
 					{
-						first_message = true;
 						if (!persistent)
 						{
 							Error() << "TCP feed: requesting termination.";
 							StopRequest();
 						}
 					}
-					else
-						first_message = false;
 				}
 			}
 		}
@@ -643,18 +640,15 @@ namespace IO
 
 				if (SendTo(data[i].getNMEATagBlock()) < 0)
 				{
-					first_message = true;
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 				}
-				else
-					first_message = false;
 			}
 		}
-		else if ((fmt == MessageFormat::COMMUNITY_HUB && !first_message) || fmt == MessageFormat::BINARY_NMEA)
+		else if ((fmt == MessageFormat::COMMUNITY_HUB && !isFirstDataSend() && lines_sent % 100 != 0) || fmt == MessageFormat::BINARY_NMEA)
 		{
 			for (int i = 0; i < len; i++)
 			{
@@ -664,15 +658,12 @@ namespace IO
 				std::string binary_packet = data[i].getBinaryNMEA(tag);
 				if (SendTo(binary_packet) < 0)
 				{
-					first_message = true;
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 				}
-				else
-					first_message = false;
 			}
 		}
 		else
@@ -684,15 +675,12 @@ namespace IO
 
 				if (SendTo((data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, include_sample_start, tag.ipv4, uuid) + "\r\n").c_str()) < 0)
 				{
-					first_message = true;
 					if (!persistent)
 					{
 						Error() << "TCP feed: requesting termination.";
 						StopRequest();
 					}
 				}
-				else
-					first_message = false;
 			}
 		}
 	}

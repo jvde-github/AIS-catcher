@@ -76,12 +76,14 @@ namespace Protocol
 
 		sock = -1;
 		state = DISCONNECTED;
+
+		bytes_sent = 0;
+		bytes_received = 0;
 	}
 
 	bool TCP::connect()
 	{
 		state = DISCONNECTED;
-		stamp = time(nullptr);
 
 		int r;
 
@@ -200,6 +202,7 @@ namespace Protocol
 #endif
 		}
 
+		stamp = time(nullptr);
 		r = ::connect(sock, ai.get()->ai_addr, (int)ai.get()->ai_addrlen);
 
 		if (r != -1)
@@ -208,6 +211,9 @@ namespace Protocol
 
 			Debug() << "TCP (" << host << ":" << port << "): connected.";
 			onConnect();
+
+			bytes_sent = 0;
+			bytes_received = 0;
 
 			return true;
 		}
@@ -311,6 +317,7 @@ namespace Protocol
 	int TCP::send(const void *data, int length)
 	{
 		updateState();
+
 		if (state != READY)
 			return persistent ? 0 : -1;
 
@@ -336,12 +343,14 @@ namespace Protocol
 			Warning() << "TCP (" << host << ":" << port << "): partial send " << sent << "/" << length << " bytes.";
 		}
 
+		bytes_sent += sent;
 		return sent;
 	}
 
 	int TCP::read(void *data, int length, int timeout, bool wait)
 	{
 		updateState();
+
 		if (state != READY)
 			return persistent ? 0 : -1;
 
@@ -416,6 +425,7 @@ namespace Protocol
 				break;
 		}
 
+		bytes_received += total_received;
 		return total_received;
 	}
 
