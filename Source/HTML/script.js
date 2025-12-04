@@ -1880,7 +1880,7 @@ function initMap() {
         if (!f)
             showContextMenu(evt, 0, null, ['settings', 'ctx-map']);
         else if ('station' in f) {
-            showContextMenu(evt, null, null, ["station"]);
+            showContextMenu(evt, null, null, ["station", "ctx-map"]);
         }
         else if ('ship' in f)
             showContextMenu(evt, f.ship.mmsi, 'ship', ["ship", "ship-map"]);
