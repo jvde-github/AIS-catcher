@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=1aa0ddb9abf7e0976aa763688d14698e" />
+	<link rel="stylesheet" href="style.css?hash=8e8accac017982afec7474c3b284501e" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -559,6 +559,8 @@
 					Entry</li>
 				<li class="ship noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message
 				</li>
+				<li class="ship ctx-realtime" onclick="openRealtimeForMMSI(context_mmsi)"><i class="comment_icon"></i>Track NMEA
+				</li>
 				<li class="ship" onclick="copyText(context_mmsi)"><i class="content_copy_icon noandroid"></i>Copy MMSI
 				</li>
 				<li class="plane" onclick="copyText(getICAOfromHexIdent(context_mmsi))"><i
@@ -599,7 +601,47 @@
 			</div>
 
 			<div class="tabcontent addscrollbar can-copy" id="realtime">
-				<pre id="realtime_content"></pre>
+				<div class="realtime-viewer">
+					<div class="realtime-tabs">
+						<button class="realtime-tab active" onclick="return switchRealtimeTab('nmea', event)">NMEA</button>
+						<button class="realtime-tab" onclick="return switchRealtimeTab('signals', event)">Signals</button>
+						<div class="realtime-filter-wrapper">
+							<input type="text" id="realtime_mmsi_filter" class="realtime-filter-input" placeholder="Filter MMSI..." oninput="filterRealtimeByMMSI(this.value)">
+							<button id="realtime_clear_filter" class="realtime-clear-btn" onclick="clearRealtimeFilter()" title="Clear filter" style="display: none;"><i class="close_icon"></i></button>
+						</div>
+						<button id="realtime_pause_button" class="realtime-control-btn" onclick="toggleRealtimePause()" title="Pause/Resume stream">
+							<span class="pause_icon"></span>
+						</button>
+					</div>
+					<div id="realtime_content" class="realtime-panel">
+						<table class="signal-table">
+							<thead>
+								<tr>
+									<th>Ch</th>
+									<th>Type</th>
+									<th>Time</th>
+									<th>MMSI</th>
+									<th>NMEA</th>
+								</tr>
+							</thead>
+							<tbody id="realtime_nmea_content"></tbody>
+						</table>
+					</div>
+					<div id="realtime_signals" class="realtime-panel" style="display: none;">
+						<table class="signal-table">
+							<thead>
+								<tr>
+									<th>Time</th>
+									<th>MMSI</th>
+									<th>Channel</th>
+									<th>Latitude</th>
+									<th>Longitude</th>
+								</tr>
+							</thead>
+							<tbody id="realtime_signals_content"></tbody>
+						</table>
+					</div>
+				</div>
 			</div>
 
 			<div class="tabcontent can-copy addscrollbar" id="log">
@@ -1017,14 +1059,15 @@
 					<header class="mapcard_header">
 						<span>
 						</span>
-						<span title="start measurement"
-							onclick="setMeasureMode(); showNotification('Click on start point/object')"
-							class="mapcard-header-icon">
-							<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="24px"
+						<span title="Shift+click on map to measure"
+							onclick="setMeasureMode(); showNotification('Shift+click on start point/object')"
+							class="mapcard-header-icon" style="white-space: nowrap; border: 2px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; margin-right: 12px;">
+							<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px"
 								fill="currentColor">
 								<path
 									d="M440-400h80v-120h120v-80H520v-120h-80v120H320v80h120v120Zm40 214q122-112 181-203.5T720-552q0-109-69.5-178.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186Zm0 106Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 100-79.5 217.5T480-80Zm0-480Z" />
 							</svg>
+							(shift-click)
 						</span>
 						<span><i title="close this window" onclick="toggleMeasurecard()" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
@@ -1192,6 +1235,9 @@
 						<div title="View binary messages" onclick="showBinaryMessageDialog(card_mmsi)"
 							data-context-type="ship" class="noandroid"><i class="mail_icon"></i><span>Messages</span>
 						</div>
+						<div id="shipcard_realtime_option" title="Track NMEA messages for this vessel" onclick="openRealtimeForMMSI(card_mmsi)"
+							data-context-type="ship"><i class="comment_icon"></i><span>Track NMEA</span>
+						</div>
 						<div title="Lookup on commuinity site" onclick="openAIScatcherSite(card_mmsi)"
 							data-context-type="ship" class="noandroid"><i
 								class="info_icon"></i><span>www.aiscatcher.org</span></div>
@@ -1324,7 +1370,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=ada3f53a61d3c81a623d397d88fa2e46"></script>
+	<script src="script.js?hash=cc2d237609c44cf77ee257950bbc2853"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

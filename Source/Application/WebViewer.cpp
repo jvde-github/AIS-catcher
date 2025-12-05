@@ -28,30 +28,52 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 	if (server)
 	{
 		AIS::Message *m = (AIS::Message *)data[0].binary;
-		for (const auto &s : m->NMEA)
+		std::time_t now = std::time(nullptr);
+
+		if (!m->NMEA.empty())
 		{
-			std::string nmea = s;
+			std::string nmea_array = "[";
+			bool first = true;
 
-			int end = nmea.rfind(',');
-			if (end == std::string::npos)
-				continue;
-
-			int start = nmea.rfind(',', end - 1);
-			if (start == std::string::npos)
-				continue;
-
-			int len = end - start - 1;
-
-			if (len == 0)
-				continue;
-
-			for (int i = 0; i < 3; i++)
+			for (const auto &s : m->NMEA)
 			{
-				idx = (idx + 1) % len;
-				nmea[MIN(start + 1 + idx, nmea.length() - 1)] = '*';
-			}
+				std::string nmea = s;
 
-			server->sendSSE(1, "nmea", nmea);
+				int end = nmea.rfind(',');
+				if (end == std::string::npos)
+					continue;
+
+				int start = nmea.rfind(',', end - 1);
+				if (start == std::string::npos)
+					continue;
+
+				int len = end - start - 1;
+
+				if (len == 0)
+					continue;
+
+				if (obfuscate)
+				{
+					for (int i = 0; i < 3; i++)
+					{
+						idx = (idx + 1) % len;
+						nmea[MIN(start + 1 + idx, nmea.length() - 1)] = '*';
+					}
+				}
+
+				if (!first)
+					nmea_array += ",";
+				nmea_array += "\"" + nmea + "\"";
+				first = false;
+			}
+			nmea_array += "]";
+
+			std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) +
+							   ",\"timestamp\":" + std::to_string(now) +
+							   ",\"channel\":\"" + m->getChannel() +
+							   "\",\"type\":" + std::to_string(m->type()) +
+							   ",\"nmea\":" + nmea_array + "}";
+			server->sendSSE(1, "nmea", json);
 		}
 
 		if (tag.lat != 0 && tag.lon != 0)
@@ -823,6 +845,12 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/decode")
 	{
+		if (!showdecoder)
+		{
+			Response(c, "application/json", std::string("{\"error\":\"Decoder is disabled\"}"), use_zlib & gzip);
+			return;
+		}
+
 		try
 		{
 			if (a.empty() || a.size() > 1024)
@@ -1080,6 +1108,8 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 			plugins += "decoder_enabled = true;\n";
 		else
 			plugins += "decoder_enabled = false;\n";
+
+		sse_streamer.setObfuscate(!showdecoder);
 	}
 	else if (option == "PLUGIN")
 	{

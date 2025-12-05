@@ -1308,7 +1308,7 @@ function checkLatestVersion() {
             const latestVersion = data.tag_name;
             if (latestVersion && latestVersion !== build_version) {
                 console.log('AIS-catcher: New version available! Current: ' + build_version + ', Latest: ' + latestVersion);
-                showDialog('Update Available', 
+                showDialog('Update Available',
                     'A new version of AIS-catcher is available!<br><br>' +
                     'Current version: <b>' + build_version + '</b><br>' +
                     'Latest version: <b>' + latestVersion + '</b><br><br>' +
@@ -1683,7 +1683,7 @@ function refreshMeasures() {
         }
         let icon = measure.visible ? 'visibility' : 'visibility_off';
 
-        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
+        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 18px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 18px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
 
         return true;
     });
@@ -1766,7 +1766,7 @@ const handleClick = function (pixel, target, event) {
     let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
     let included_plane = feature && 'plane' in feature && feature.plane.hexident in planesDB;
 
-    if (event.originalEvent.ctrlKey || measureMode || isMeasuring) {
+    if (event.originalEvent.shiftKey || measureMode || isMeasuring) {
         measureMode = false;
 
         if (isMeasuring) {
@@ -3931,29 +3931,6 @@ function updateChartSingle(b, f1, f2, c) {
     }
 }
 
-/*
-function updateChartLevel(b, f1, f2, c) {
-    if (b.hasOwnProperty(f1)) {
-        const source = b[f1];
-
-        var h = [];
-
-        for (let i = 0; i < source.time.length; i++) {
-            h.push({ x: source.time[i], y: source.stat[i].level_min == 0 ? null : source.stat[i].level_min });
-        }
-        c.data.datasets[1].data = h;
-
-        var h = [];
-        for (let i = 0; i < source.time.length; i++) {
-            h.push({ x: source.time[i], y: source.stat[i].level_max == 0 ? null : source.stat[i].level_max });
-        }
-        c.data.datasets[0].data = h;
-
-        c.update();
-    }
-}
-*/
-
 function updateChartLevel(chartData, timeframe, chartName, chart) {
     if (!chartData?.hasOwnProperty(timeframe)) {
         return;
@@ -5095,7 +5072,7 @@ function saveSettings() {
 
     updateMapURL();
     updateSettingsTab();
-    
+
     // Apply graph visibility settings (without saving during initialization)
     setGraphVisibility('signal', settings.show_signal_graphs, false);
     setGraphVisibility('ppm', settings.show_ppm_graphs, false);
@@ -6613,42 +6590,322 @@ function updateSettingsTab() {
 }
 
 class RealtimeViewer {
-    constructor() {
-        this.content = document.getElementById('realtime_content');
+    constructor(filterMMSI = null) {
+        this.nmeaContent = document.getElementById('realtime_nmea_content');
+        this.signalsContent = document.getElementById('realtime_signals_content');
         this.eventSource = null;
-        this.lineCount = 0;
-        this.maxLines = 50;
+        this.signalEventSource = null;
+        this.nmeaCount = 0;
+        this.signalCount = 0;
+        this.maxLines = 100;
+        this.maxSignals = 100;
+        this.isPaused = false;
+        this.filterMMSI = filterMMSI;
+        
+        // Track which sub-tab is currently selected ('nmea' or 'signals')
+        this.activeMode = 'nmea';
+
+        // Bind visibility handler to handle browser minimization/tab switching
+        this.boundVisibilityHandler = this.handleVisibilityChange.bind(this);
+        document.addEventListener('visibilitychange', this.boundVisibilityHandler);
     }
 
-    connect() {
-        if (this.eventSource) return;
+    handleVisibilityChange() {
+        if (document.hidden) {
+            // Browser tab is hidden: Disconnect streams to save bandwidth
+            this.disconnectStreams();
+        } else {
+            // Browser tab is visible: Reconnect the active stream
+            if (this.activeMode === 'nmea') {
+                this.connectNmea();
+            } else if (this.activeMode === 'signals') {
+                this.connectSignals();
+            }
+        }
+    }
+
+    connectNmea() {
+        this.activeMode = 'nmea';
+        
+        // Do not connect if already connected or browser is hidden
+        if (this.eventSource || document.hidden) return;
+
+        // Ensure signals are disconnected first
+        this.disconnectSignals();
+
+        // Connect to NMEA stream
         this.eventSource = new EventSource("api/sse");
 
         this.eventSource.addEventListener('nmea', (event) => {
-            if (this.lineCount > this.maxLines) {
-                this.content.innerHTML = "";
-                this.lineCount = 0;
+            try {
+                if (!this.isPaused) {
+                    const data = JSON.parse(event.data);
+                    this.addNmeaMessage(data);
+                }
+            } catch (error) {
+                console.error('Error parsing NMEA data:', error);
             }
-            this.content.innerText = event.data + "\n" + this.content.innerText;
-            this.lineCount++;
         });
 
         this.eventSource.addEventListener('error', () => {
-            this.content.innerText = "Connection error. Server is not reachable or reverse web proxy not configured for Server-Side Events.";
+            if (this.nmeaContent && !document.hidden) {
+                this.nmeaContent.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Connection error. Server is not reachable or reverse web proxy not configured for Server-Side Events.</td></tr>';
+            }
         });
 
         this.eventSource.addEventListener('open', () => {
-            this.content.innerText = "";
-            //showNotification("Realtime NMEA connection established");
+            if (this.nmeaContent) {
+                this.nmeaContent.innerHTML = '';
+            }
         });
+    }
+
+    connectSignals() {
+        this.activeMode = 'signals';
+
+        // Do not connect if already connected or browser is hidden
+        if (this.signalEventSource || document.hidden) return;
+
+        // Ensure NMEA is disconnected first
+        this.disconnectNmea();
+
+        // Connect to signal stream
+        this.signalEventSource = new EventSource("api/signal");
+
+        this.signalEventSource.addEventListener('nmea', (event) => {
+            try {
+                if (!this.isPaused) {
+                    const data = JSON.parse(event.data);
+                    this.addSignal(data);
+                }
+            } catch (error) {
+                console.error('Error parsing signal data:', error);
+            }
+        });
+
+        this.signalEventSource.addEventListener('error', () => {
+            if (this.signalsContent && !document.hidden) {
+                this.signalsContent.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Connection error. Server is not reachable or realtime mode not enabled.</td></tr>';
+            }
+        });
+
+        this.signalEventSource.addEventListener('open', () => {
+            if (this.signalsContent) {
+                this.signalsContent.innerHTML = '';
+            }
+        });
+    }
+
+    // Helper to close specific stream
+    disconnectNmea() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+        }
+    }
+
+    // Helper to close specific stream
+    disconnectSignals() {
+        if (this.signalEventSource) {
+            this.signalEventSource.close();
+            this.signalEventSource = null;
+        }
+    }
+
+    // Closes streams but keeps visibility listener (for browser minimization)
+    disconnectStreams() {
+        this.disconnectNmea();
+        this.disconnectSignals();
+    }
+
+    // Fully destructs the viewer (called when switching main App tabs)
+    disconnect() {
+        document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
+        this.disconnectStreams();
+    }
+
+    addNmeaMessage(data) {
+        // Filter by MMSI if set
+        if (this.filterMMSI && data.mmsi.toString() !== this.filterMMSI) return;
+
+        if (this.nmeaCount > this.maxLines) {
+            const rows = this.nmeaContent.getElementsByTagName('tr');
+            if (rows.length > 0) {
+                this.nmeaContent.removeChild(rows[rows.length - 1]);
+            }
+        }
+
+        const row = document.createElement('tr');
+        const time = new Date(data.timestamp * 1000).toLocaleTimeString();
+
+        // Create channel indicator boxes
+        const channelIndicator = document.createElement('div');
+        channelIndicator.className = 'channel-indicator';
+        ['A', 'B', 'C', 'D'].forEach(ch => {
+            const box = document.createElement('span');
+            box.className = 'channel-box' + (data.channel === ch ? ' active' : '');
+            box.textContent = ch;
+            channelIndicator.appendChild(box);
+        });
+
+        const channelCell = document.createElement('td');
+        channelCell.appendChild(channelIndicator);
+
+        const timeCell = document.createElement('td');
+        timeCell.textContent = time;
+        timeCell.style.fontSize = '0.85em';
+
+        const mmsiCell = document.createElement('td');
+
+        const nmeaCell = document.createElement('td');
+        const nmeaArray = Array.isArray(data.nmea) ? data.nmea : [data.nmea];
+        const nmeaText = nmeaArray.join('\n');
+
+        // Create wrapper for decoder icon and NMEA text
+        const nmeaCellContent = document.createElement('div');
+        nmeaCellContent.className = 'nmea-cell-content';
+
+        // Add decoder icon if decoder is enabled
+        if (typeof decoder_enabled !== 'undefined' && decoder_enabled) {
+            const decoderIcon = document.createElement('span');
+            decoderIcon.className = 'nmea-decoder-icon';
+            decoderIcon.innerHTML = '<i class="decode_icon"></i>';
+            decoderIcon.title = 'Decode NMEA';
+            decoderIcon.addEventListener('click', function (e) {
+                e.stopPropagation();
+                document.getElementById('decoder_input').value = nmeaText;
+                document.getElementById('decoder_tab').click();
+                decodeNMEA();
+            });
+            nmeaCellContent.appendChild(decoderIcon);
+        }
+
+        // Add NMEA text
+        const nmeaTextSpan = document.createElement('span');
+        nmeaTextSpan.className = 'nmea-text';
+        nmeaTextSpan.textContent = nmeaText;
+        nmeaCellContent.appendChild(nmeaTextSpan);
+
+        nmeaCell.appendChild(nmeaCellContent);
+
+        const mmsi = data.mmsi;
+        const mmsiSpan = document.createElement('span');
+        mmsiSpan.textContent = data.mmsi;
+        mmsiSpan.style.border = '1px solid #d0d0d0';
+        mmsiSpan.style.padding = '2px 6px';
+        mmsiSpan.style.borderRadius = '3px';
+        mmsiSpan.style.display = 'inline-block';
+        mmsiSpan.style.cursor = 'pointer';
+        mmsiSpan.style.fontSize = '0.85em';
+        mmsiCell.appendChild(mmsiSpan);
+
+        mmsiSpan.addEventListener('click', function (e) {
+            e.stopPropagation();
+            selectMapTab(mmsi);
+        });
+
+        mmsiSpan.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e, mmsi, 'ship', ['ship']);
+        });
+
+        const typeCell = document.createElement('td');
+        typeCell.textContent = data.type || '-';
+        typeCell.style.fontSize = '0.85em';
+
+        row.appendChild(channelCell);
+        row.appendChild(typeCell);
+        row.appendChild(timeCell);
+        row.appendChild(mmsiCell);
+        row.appendChild(nmeaCell);
+
+        this.nmeaContent.insertBefore(row, this.nmeaContent.firstChild);
+        this.nmeaCount++;
+    }
+
+    addSignal(data) {
+        // Filter by MMSI if set
+        if (this.filterMMSI && data.mmsi.toString() !== this.filterMMSI) return;
+
+        if (this.signalCount > this.maxSignals) {
+            const rows = this.signalsContent.getElementsByTagName('tr');
+            if (rows.length > 0) this.signalsContent.removeChild(rows[rows.length - 1]);
+        }
+
+        const row = document.createElement('tr');
+        const time = new Date().toLocaleTimeString();
+
+        const timeCell = document.createElement('td');
+        timeCell.textContent = time;
+        timeCell.style.fontSize = '0.85em';
+
+        const mmsiCell = document.createElement('td');
+        const mmsi = data.mmsi;
+        const mmsiSpan = document.createElement('span');
+        mmsiSpan.textContent = data.mmsi;
+        mmsiSpan.style.border = '1px solid #d0d0d0';
+        mmsiSpan.style.padding = '2px 6px';
+        mmsiSpan.style.borderRadius = '3px';
+        mmsiSpan.style.display = 'inline-block';
+        mmsiSpan.style.cursor = 'pointer';
+        mmsiSpan.style.fontSize = '0.85em';
+        mmsiCell.appendChild(mmsiSpan);
+
+        mmsiSpan.addEventListener('click', function (e) {
+            e.stopPropagation();
+            selectMapTab(mmsi);
+        });
+
+        mmsiSpan.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e, mmsi, 'ship', ['ship']);
+        });
+
+        const channelCell = document.createElement('td');
+        channelCell.textContent = data.channel;
+        const latCell = document.createElement('td');
+        latCell.textContent = data.lat.toFixed(6);
+        const lonCell = document.createElement('td');
+        lonCell.textContent = data.lon.toFixed(6);
+
+        row.appendChild(timeCell);
+        row.appendChild(mmsiCell);
+        row.appendChild(channelCell);
+        row.appendChild(latCell);
+        row.appendChild(lonCell);
+
+        this.signalsContent.insertBefore(row, this.signalsContent.firstChild);
+        this.signalCount++;
     }
 
     disconnect() {
         if (this.eventSource) {
             this.eventSource.close();
             this.eventSource = null;
-            //showNotification("Realtime NMEA connection closed");
         }
+        if (this.signalEventSource) {
+            this.signalEventSource.close();
+            this.signalEventSource = null;
+        }
+    }
+
+    pause() {
+        this.isPaused = true;
+    }
+
+    resume() {
+        this.isPaused = false;
+    }
+
+    setFilterMMSI(mmsi) {
+        this.filterMMSI = mmsi;
+        // Clear existing content when filter changes
+        if (this.nmeaContent) this.nmeaContent.innerHTML = '';
+        if (this.signalsContent) this.signalsContent.innerHTML = '';
+        this.nmeaCount = 0;
+        this.signalCount = 0;
     }
 }
 
@@ -6765,8 +7022,121 @@ class LogViewer {
     }
 }
 
+function switchRealtimeTab(tab, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const nmeaContent = document.getElementById('realtime_content');
+    const signalsContent = document.getElementById('realtime_signals');
+    const tabs = document.querySelectorAll('.realtime-tab');
+
+    // Update UI Classes
+    tabs.forEach(t => t.classList.remove('active'));
+
+    if (tab === 'nmea') {
+        nmeaContent.style.display = 'block';
+        signalsContent.style.display = 'none';
+        if (tabs[0]) tabs[0].classList.add('active');
+        
+        // Connect NMEA (this function now handles disconnectSignals implicitly)
+        if (realtimeViewer) {
+            realtimeViewer.connectNmea();
+        }
+    } else {
+        nmeaContent.style.display = 'none';
+        signalsContent.style.display = 'block';
+        if (tabs[1]) tabs[1].classList.add('active');
+        
+        // Connect Signals (this function now handles disconnectNmea implicitly)
+        if (realtimeViewer) {
+            realtimeViewer.connectSignals();
+        }
+    }
+
+    return false;
+}
+
+function toggleRealtimePause() {
+    if (!realtimeViewer) return;
+
+    const button = document.getElementById('realtime_pause_button');
+    const icon = button.querySelector('span');
+
+    if (realtimeViewer.isPaused) {
+        realtimeViewer.resume();
+        icon.className = 'pause_icon';
+        button.title = 'Pause stream';
+    } else {
+        realtimeViewer.pause();
+        icon.className = 'play_arrow_icon';
+        button.title = 'Resume stream';
+    }
+}
+
+function filterRealtimeByMMSI(mmsi) {
+    if (!realtimeViewer) return;
+    const filterValue = mmsi.trim();
+    realtimeViewer.setFilterMMSI(filterValue || null);
+    
+    // Show/hide clear button
+    const clearBtn = document.getElementById('realtime_clear_filter');
+    if (clearBtn) {
+        clearBtn.style.display = filterValue ? 'flex' : 'none';
+    }
+}
+
+function clearRealtimeFilter() {
+    const filterInput = document.getElementById('realtime_mmsi_filter');
+    if (filterInput) {
+        filterInput.value = '';
+        filterRealtimeByMMSI('');
+    }
+}
+
+function openRealtimeForMMSI(mmsi) {
+    // Check if realtime is enabled
+    if (typeof realtime_enabled === "undefined" || !realtime_enabled) {
+        return;
+    }
+    
+    // Disconnect existing viewer if any (recreate from scratch)
+    if (realtimeViewer) {
+        realtimeViewer.disconnect();
+        realtimeViewer = null;
+    }
+    
+    // Switch to realtime tab (this will create a new viewer)
+    document.getElementById('realtime_tab').click();
+    
+    // Apply the filter after viewer is created and tab clears input
+    setTimeout(() => {
+        // Set the filter value
+        const filterInput = document.getElementById('realtime_mmsi_filter');
+        if (filterInput) {
+            filterInput.value = mmsi;
+        }
+        
+        // Show clear button
+        const clearBtn = document.getElementById('realtime_clear_filter');
+        if (clearBtn) {
+            clearBtn.style.display = 'flex';
+        }
+        
+        // Apply the filter to the viewer
+        if (realtimeViewer) {
+            realtimeViewer.setFilterMMSI(mmsi.toString());
+        }
+    }, 50);
+}
 
 function activateTab(b, a) {
+    // Block decoder tab if decoder is disabled
+    if (a === "decoder" && (typeof decoder_enabled === "undefined" || !decoder_enabled)) {
+        return;
+    }
+
     hideMenuifSmall();
 
     Array.from(document.getElementById("menubar").children).forEach((e) => (e.className = e.className.replace(" active", "")));
@@ -6810,8 +7180,30 @@ function activateTab(b, a) {
     }
 
     if (a == "realtime") {
-        realtimeViewer = new RealtimeViewer();
-        realtimeViewer.connect();
+        // Only initialize realtime viewer if realtime is enabled
+        if (typeof realtime_enabled !== "undefined" && realtime_enabled) {
+            realtimeViewer = new RealtimeViewer();
+            // Connect only to the NMEA stream by default (NMEA tab is active by default)
+            realtimeViewer.connectNmea();
+            // Sync button icon with viewer state
+            const button = document.getElementById('realtime_pause_button');
+            if (button) {
+                const icon = button.querySelector('span');
+                if (icon) {
+                    icon.className = realtimeViewer.isPaused ? 'play_arrow_icon' : 'pause_icon';
+                    button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
+                }
+            }
+            // Clear filter input when returning to realtime tab
+            const filterInput = document.getElementById('realtime_mmsi_filter');
+            const clearBtn = document.getElementById('realtime_clear_filter');
+            if (filterInput) {
+                filterInput.value = '';
+            }
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+        }
     }
     if (a != 'realtime' && realtimeViewer) {
         realtimeViewer.disconnect();
@@ -6845,7 +7237,7 @@ function selectTab() {
         settings.tab = "stat";
         alert("Invalid tab specified");
     }
-     activateTab(null, settings.tab);
+    activateTab(null, settings.tab);
     //document.getElementById(settings.tab + "_tab").click();
 }
 
@@ -7551,6 +7943,18 @@ if (aboutMDpresent == false) {
 if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
     document.getElementById("realtime_tab").style.display = "none";
     document.getElementById("realtime_tab_mini").style.display = "none";
+    
+    // Hide realtime context menu items
+    const realtimeMenuItems = document.querySelectorAll('.ctx-realtime');
+    realtimeMenuItems.forEach(item => {
+        item.style.display = 'none';
+    });
+    
+    // Hide realtime option in shipcard
+    const shipcardRealtime = document.getElementById('shipcard_realtime_option');
+    if (shipcardRealtime) {
+        shipcardRealtime.style.display = 'none';
+    }
 }
 
 if (typeof log_enabled === "undefined" || log_enabled === false) {

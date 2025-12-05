@@ -40,12 +40,14 @@ class SSEStreamer : public StreamIn<JSON::JSON>
 	IO::HTTPServer *server = nullptr;
 
 	unsigned idx = 0;
+	bool obfuscate = true;
 
 public:
 	virtual ~SSEStreamer() = default;
 
 	void Receive(const JSON::JSON *data, int len, TAG &tag);
 	void setSSE(IO::HTTPServer *s) { server = s; }
+	void setObfuscate(bool o) { obfuscate = o; }
 };
 
 class WebViewerLogger
