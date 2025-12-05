@@ -7182,6 +7182,11 @@ function activateTab(b, a) {
     if (a == "realtime") {
         // Only initialize realtime viewer if realtime is enabled
         if (typeof realtime_enabled !== "undefined" && realtime_enabled) {
+            // Disconnect existing viewer first to avoid duplicate listeners
+            if (realtimeViewer) {
+                realtimeViewer.disconnect();
+                realtimeViewer = null;
+            }
             realtimeViewer = new RealtimeViewer();
             // Connect only to the NMEA stream by default (NMEA tab is active by default)
             realtimeViewer.connectNmea();
