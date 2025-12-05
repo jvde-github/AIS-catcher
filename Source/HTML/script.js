@@ -6671,12 +6671,6 @@ class RealtimeViewer {
                 this.nmeaContent.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Connection error. Server is not reachable or reverse web proxy not configured for Server-Side Events.</td></tr>';
             }
         });
-
-        this.eventSource.addEventListener('open', () => {
-            if (this.nmeaContent) {
-                this.nmeaContent.innerHTML = '';
-            }
-        });
     }
 
     connectSignals() {
@@ -6713,12 +6707,6 @@ class RealtimeViewer {
         this.signalEventSource.addEventListener('error', () => {
             if (this.signalsContent && !document.hidden) {
                 this.signalsContent.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Connection error. Server is not reachable or realtime mode not enabled.</td></tr>';
-            }
-        });
-
-        this.signalEventSource.addEventListener('open', () => {
-            if (this.signalsContent) {
-                this.signalsContent.innerHTML = '';
             }
         });
     }
@@ -6923,11 +6911,6 @@ class RealtimeViewer {
 
     setFilterMMSI(mmsi) {
         this.filterMMSI = mmsi;
-        // Clear existing content when filter changes
-        if (this.nmeaContent) this.nmeaContent.innerHTML = '';
-        if (this.signalsContent) this.signalsContent.innerHTML = '';
-        this.nmeaCount = 0;
-        this.signalCount = 0;
     }
 }
 
@@ -7129,6 +7112,9 @@ function openRealtimeForMMSI(mmsi) {
         realtimeViewer = null;
     }
     
+    // Clear saved state to ensure fresh start (not paused)
+    window.realtimeViewerState = null;
+    
     // Switch to realtime tab (this will create a new viewer)
     document.getElementById('realtime_tab').click();
     
@@ -7206,9 +7192,25 @@ function activateTab(b, a) {
         if (typeof realtime_enabled !== "undefined" && realtime_enabled) {
             // Only create a new viewer if one doesn't exist
             if (!realtimeViewer) {
-                realtimeViewer = new RealtimeViewer();
-                // Connect only to the NMEA stream by default (NMEA tab is active by default)
-                realtimeViewer.connectNmea();
+                // Restore saved state if available
+                const savedState = window.realtimeViewerState;
+                const filterMMSI = savedState ? savedState.filterMMSI : null;
+                
+                realtimeViewer = new RealtimeViewer(filterMMSI);
+                
+                // Restore pause state
+                if (savedState && savedState.isPaused) {
+                    realtimeViewer.isPaused = true;
+                }
+                
+                // Restore active mode and connect
+                if (savedState && savedState.activeMode === 'signals') {
+                    realtimeViewer.activeMode = 'signals';
+                    realtimeViewer.connectSignals();
+                } else {
+                    realtimeViewer.connectNmea();
+                }
+                
                 // Sync button icon with viewer state
                 const button = document.getElementById('realtime_pause_button');
                 if (button) {
@@ -7218,17 +7220,23 @@ function activateTab(b, a) {
                         button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
                     }
                 }
-                // Clear filter input when creating fresh viewer
+                // Restore filter input from saved state or clear
                 const filterInput = document.getElementById('realtime_mmsi_filter');
                 const clearBtn = document.getElementById('realtime_clear_filter');
                 if (filterInput) {
-                    filterInput.value = '';
+                    filterInput.value = filterMMSI || '';
                 }
                 if (clearBtn) {
-                    clearBtn.style.display = 'none';
+                    clearBtn.style.display = filterMMSI ? 'flex' : 'none';
                 }
             } else {
-                // Viewer already exists - sync input box with viewer's filter
+                // Viewer already exists - reconnect to stream (pause just stops displaying)
+                if (realtimeViewer.activeMode === 'nmea') {
+                    realtimeViewer.connectNmea();
+                } else if (realtimeViewer.activeMode === 'signals') {
+                    realtimeViewer.connectSignals();
+                }
+                // Sync input box with viewer's filter
                 const filterInput = document.getElementById('realtime_mmsi_filter');
                 const clearBtn = document.getElementById('realtime_clear_filter');
                 if (filterInput && realtimeViewer) {
@@ -7237,10 +7245,25 @@ function activateTab(b, a) {
                         clearBtn.style.display = realtimeViewer.filterMMSI ? 'flex' : 'none';
                     }
                 }
+                // Sync button icon
+                const button = document.getElementById('realtime_pause_button');
+                if (button) {
+                    const icon = button.querySelector('span');
+                    if (icon) {
+                        icon.className = realtimeViewer.isPaused ? 'play_arrow_icon' : 'pause_icon';
+                        button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
+                    }
+                }
             }
         }
     }
     if (a != 'realtime' && realtimeViewer) {
+        // Save state before destroying viewer
+        window.realtimeViewerState = {
+            isPaused: realtimeViewer.isPaused,
+            filterMMSI: realtimeViewer.filterMMSI,
+            activeMode: realtimeViewer.activeMode
+        };
         realtimeViewer.disconnect();
         realtimeViewer = null;
     }
