@@ -2937,12 +2937,13 @@ td {
 
 .realtime-panel {
     flex: 1;
-    overflow-y: auto;
+    overflow: auto;
     padding: 1rem;
 }
 
 .signal-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 0.875rem;
 }
@@ -2956,11 +2957,6 @@ td {
     border-bottom: 2px solid var(--menu-border-color);
     font-weight: 600;
     color: var(--menu-font-color);
-}
-
-.signal-table thead th:last-child {
-    width: 100%;
-    max-width: 0;
 }
 
 .signal-table tbody td {
@@ -2981,13 +2977,6 @@ td {
 
 .signal-table tbody td a:hover {
     text-decoration: underline;
-}
-
-.signal-table tbody td:last-child {
-    max-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: normal;
 }
 
 .nmea-cell-content {
@@ -3023,8 +3012,7 @@ td {
     flex: 1;
     font-family: monospace;
     font-size: 0.85em;
-    white-space: pre-wrap;
-    word-break: break-all;
+    white-space: nowrap;
 }
 
 .channel-indicator {
