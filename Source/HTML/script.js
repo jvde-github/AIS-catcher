@@ -6907,17 +6907,6 @@ class RealtimeViewer {
         this.signalCount++;
     }
 
-    disconnect() {
-        if (this.eventSource) {
-            this.eventSource.close();
-            this.eventSource = null;
-        }
-        if (this.signalEventSource) {
-            this.signalEventSource.close();
-            this.signalEventSource = null;
-        }
-    }
-
     pause() {
         this.isPaused = true;
     }
