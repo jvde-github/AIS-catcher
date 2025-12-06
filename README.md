@@ -35,6 +35,7 @@ To join, ensure you're on the latest version, visit [www.aiscatcher.org](https:/
 - Documentation: [here](https://jvde-github.github.io/AIS-catcher-docs/)
 - Installation: [here](https://jvde-github.github.io/AIS-catcher-docs/installation/overview)
 - What is New? [here](https://jvde-github.github.io/AIS-catcher-docs/what-is-new/)
+- Architecture & Code Structure: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Forum: [here](https://github.com/jvde-github/AIS-catcher/discussions)
 - Bug Reports: [here](https://github.com/jvde-github/AIS-catcher/issues)
 
