@@ -32,7 +32,7 @@ These files contain the **`AIS::Decoder`** class, which is responsible for:
 
 These files contain the **`AIS::Message`** class, which represents decoded AIS messages and provides:
 
-- **Binary data storage**: Stores up to 1024 bits (128 bytes) of AIS message data
+- **Binary data storage**: Stores up to MAX_AIS_LENGTH (1024) bits or MAX_AIS_BYTES (128) bytes of AIS message data
 - **Bit-level manipulation**: Methods to get/set individual bits, unsigned integers, signed integers, and text fields
 - **Message validation**: Validates message type and length according to AIS specifications
 - **NMEA sentence generation**: Converts binary messages to NMEA 0183 format (!AIVDM/!AIVDO sentences)
@@ -113,16 +113,18 @@ NMEA Input → AIS::NMEA → AIS::Message → Outputs
 
 ## Message Types
 
-AIS defines 27 message types with varying lengths:
+AIS defines 27 message types with varying minimum lengths (see `Message::validate()` in Message.cpp):
 
-- **Types 1-3**: Position reports (168 bits) - Class A vessels
-- **Type 4**: Base station report (168 bits)
-- **Type 5**: Static voyage data (424 bits) - Ship name, destination, dimensions
-- **Type 8**: Binary broadcast (40-1008 bits) - Application-specific data
-- **Type 18**: Position report (168 bits) - Class B vessels
-- **Type 24**: Static data report (168 bits) - Class B vessel name/MMSI
+- **Types 1-3**: Position reports (149 bits minimum) - Class A vessels
+- **Type 4**: Base station report (168 bits minimum)
+- **Type 5**: Static voyage data (418 bits minimum) - Ship name, destination, dimensions
+- **Type 8**: Binary broadcast (56 bits minimum) - Application-specific data
+- **Type 18**: Position report (168 bits minimum) - Class B vessels
+- **Type 19**: Extended Class B position report (312 bits minimum)
+- **Type 21**: Aid-to-navigation report (271 bits minimum)
+- **Type 24**: Static data report (160 bits minimum) - Class B vessel name/MMSI
 
-See `Message::validate()` in Message.cpp for complete length specifications.
+Complete minimum lengths: [149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96] for types 1-27 respectively.
 
 ## Key Data Structures
 
