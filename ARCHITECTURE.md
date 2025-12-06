@@ -52,7 +52,23 @@ These files contain the **`AIS::Message`** class, which represents decoded AIS m
 - Bits 8-37: MMSI (30 bits)
 - Remaining bits: Type-specific payload
 
-#### 3. Source/JSON/JSONAIS.cpp and Source/JSON/JSONAIS.h
+#### 3. Source/Marine/NMEA.cpp and Source/Marine/NMEA.h
+
+These files contain the **`AIS::NMEA`** class, which provides the reverse operation:
+
+- **Parses NMEA sentences**: Converts AIVDM/AIVDO NMEA text into `AIS::Message` objects
+- **Handles multi-part messages**: Assembles fragmented messages that span multiple NMEA sentences
+- **Supports multiple input formats**: NMEA text, JSON, binary NMEA protocol, and NMEA 4.0 tag blocks
+- **Validates checksums**: Verifies NMEA sentence integrity
+
+This is used when AIS-catcher receives messages from external sources (serial ports, network streams, files) rather than decoding from SDR.
+
+**Key methods:**
+- `Receive()`: Parses incoming raw text/binary data
+- `submitAIS()`: Creates and sends AIS::Message from parsed NMEA data
+- `addline()`: Processes individual NMEA sentences
+
+#### 4. Source/JSON/JSONAIS.cpp and Source/JSON/JSONAIS.h
 
 These files contain the **`AIS::JSONAIS`** class, which:
 
@@ -67,17 +83,33 @@ These files contain the **`AIS::JSONAIS`** class, which:
 
 ## Decoding Flow
 
+### From SDR (Binary Signal Decoding)
+
 ```
 SDR Device → Demodulator → AIS::Decoder → AIS::Message → Outputs
-                             (AIS.cpp)      (Message.cpp)   (NMEA/JSON/etc.)
+              (DSP)          (AIS.cpp)      (Message.cpp)   (NMEA/JSON/etc.)
 ```
 
 1. **Signal Acquisition**: SDR hardware receives 161.975 MHz (Channel A) and 162.025 MHz (Channel B)
-2. **Demodulation**: DSP chain converts RF to baseband and demodulates GMSK
+2. **Demodulation**: DSP chain (Source/DSP/Demod.cpp) converts RF to baseband and demodulates GMSK
 3. **Bit Decoding**: `AIS::Decoder` extracts bits, removes stuffing, validates CRC
 4. **Message Creation**: `AIS::Message` stores validated binary data
 5. **Format Conversion**: Messages are converted to NMEA, JSON, or other formats
 6. **Output**: Data is sent to TCP/UDP sockets, HTTP endpoints, files, or screen
+
+### From NMEA Text (Reverse Direction)
+
+```
+NMEA Input → AIS::NMEA → AIS::Message → Outputs
+  (Serial/      (NMEA.cpp)  (Message.cpp)  (JSON/Binary/etc.)
+   Network/File)
+```
+
+1. **Text Reception**: Receive AIVDM/AIVDO sentences from serial ports, network streams, or files
+2. **NMEA Parsing**: `AIS::NMEA` validates checksums, assembles multi-part messages
+3. **Binary Conversion**: Converts 6-bit ASCII armored payload to binary message data
+4. **Message Storage**: Stores in `AIS::Message` object
+5. **Format Conversion**: Can be forwarded in different formats (JSON, binary NMEA, etc.)
 
 ## Message Types
 
