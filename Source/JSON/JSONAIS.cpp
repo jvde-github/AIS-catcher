@@ -562,59 +562,45 @@ namespace AIS
 			U(msg, AIS::KEY_SALINITY, 339, 9, 510);
 			U(msg, AIS::KEY_ICE, 348, 2, 3);
 		}
-		// New message type with DAC = 001, FI = 11
 		else if (dac == 1 && fid == 11)
 		{
-			SL(msg, AIS::KEY_LAT, 56, 24, 1 / 60000.0f, 0);
-			SL(msg, AIS::KEY_LON, 80, 25, 1 / 60000.0f, 0);
-
-			U(msg, AIS::KEY_DAY, 105, 5);
-			U(msg, AIS::KEY_HOUR, 110, 5);
-			U(msg, AIS::KEY_MINUTE, 115, 6);
-			U(msg, AIS::KEY_WSPEED, 121, 7);
-			U(msg, AIS::KEY_WGUST, 128, 7);
-			U(msg, AIS::KEY_WDIR, 135, 9);
-			U(msg, AIS::KEY_WGUSTDIR, 144, 9);
-
-			// SENSORS: Changed SL -> UL (Unsigned) and added correct "undefined" values
-
-			// AirTemp: Unsigned, 0=-60.0, 2047=N/A
+			SL(msg, AIS::KEY_LAT, 56, 24, 1 / 60000.0f, 0, 8388607);
+			SL(msg, AIS::KEY_LON, 80, 25, 1 / 60000.0f, 0, 16777215);
+			U(msg, AIS::KEY_DAY, 105, 5, 0);
+			U(msg, AIS::KEY_HOUR, 110, 5, 24);
+			U(msg, AIS::KEY_MINUTE, 115, 6, 60);
+			U(msg, AIS::KEY_WSPEED, 121, 7, 127);
+			U(msg, AIS::KEY_WGUST, 128, 7, 127);
+			U(msg, AIS::KEY_WDIR, 135, 9, 511);
+			U(msg, AIS::KEY_WGUSTDIR, 144, 9, 511);
 			UL(msg, AIS::KEY_AIRTEMP, 153, 11, 0.1f, -60.0f, 2047);
-
-			U(msg, AIS::KEY_HUMIDITY, 164, 7);
-
-			// DewPoint: Unsigned, 0=-20.0, 1023=N/A
+			U(msg, AIS::KEY_HUMIDITY, 164, 7, 127);
 			UL(msg, AIS::KEY_DEWPOINT, 171, 10, 0.1f, -20.0f, 1023);
-
-			// Pressure: Unsigned, Add 800, 511=N/A (Note: 511 is raw N/A for 9 bits)
 			US(msg, AIS::KEY_PRESSURE, 181, 9, 800, 511);
-
-			U(msg, AIS::KEY_PRESSURETEND, 190, 2);
-			UL(msg, AIS::KEY_VISIBILITY, 192, 8, 0.1f, 0);
-
-			// WaterLevel: Unsigned, 0=-10.0, 511=N/A
+			U(msg, AIS::KEY_PRESSURETEND, 190, 2, 3);
+			UL(msg, AIS::KEY_VISIBILITY, 192, 8, 0.1f, 0.0f, 255);
 			UL(msg, AIS::KEY_WATERLEVEL, 200, 9, 0.1f, -10.0f, 511);
+			U(msg, AIS::KEY_LEVELTREND, 209, 2, 3);
+			UL(msg, AIS::KEY_CSPEED, 211, 8, 0.1f, 0.0f, 255);
+			U(msg, AIS::KEY_CDIR, 219, 9, 511);
+			UL(msg, AIS::KEY_CSPEED2, 228, 8, 0.1f, 0.0f, 255);
+			U(msg, AIS::KEY_CDIR2, 236, 9, 511);
+			U(msg, AIS::KEY_CDEPTH2, 245, 5, 31);
+			UL(msg, AIS::KEY_CSPEED3, 250, 8, 0.1f, 0.0f, 255);
+			U(msg, AIS::KEY_CDIR3, 258, 9, 511);
+			U(msg, AIS::KEY_CDEPTH3, 267, 5, 31);
+			UL(msg, AIS::KEY_WAVEHEIGHT, 272, 8, 0.1f, 0.0f, 255);
+			U(msg, AIS::KEY_WAVEPERIOD, 280, 6, 63);
+			U(msg, AIS::KEY_WAVEDIR, 286, 9, 511);
 
-			U(msg, AIS::KEY_LEVELTREND, 209, 2);
-			UL(msg, AIS::KEY_CSPEED, 211, 8, 0.1f, 0);
-			U(msg, AIS::KEY_CDIR, 219, 9);
-			UL(msg, AIS::KEY_CSPEED2, 228, 8, 0.1f, 0);
-			U(msg, AIS::KEY_CDIR2, 236, 9);
-			U(msg, AIS::KEY_CDEPTH2, 245, 5);
-			UL(msg, AIS::KEY_CSPEED3, 250, 8, 0.1f, 0);
-			U(msg, AIS::KEY_CDIR3, 258, 9);
-			U(msg, AIS::KEY_CDEPTH3, 267, 5);
-			UL(msg, AIS::KEY_WAVEHEIGHT, 272, 8, 0.1f, 0);
-			U(msg, AIS::KEY_WAVEPERIOD, 280, 6);
-			U(msg, AIS::KEY_WAVEDIR, 286, 9);
-			UL(msg, AIS::KEY_SWELLHEIGHT, 295, 8, 0.1f, 0);
-			U(msg, AIS::KEY_SWELLPERIOD, 303, 6);
-			U(msg, AIS::KEY_SWELLDIR, 309, 9);
-			U(msg, AIS::KEY_SEASTATE, 318, 4);
+			UL(msg, AIS::KEY_SWELLHEIGHT, 295, 8, 0.1f, 0.0f, 255);
+			U(msg, AIS::KEY_SWELLPERIOD, 303, 6, 63);
+			U(msg, AIS::KEY_SWELLDIR, 309, 9, 511);
+			U(msg, AIS::KEY_SEASTATE, 318, 4, 13);
 			UL(msg, AIS::KEY_WATERTEMP, 322, 10, 0.1f, -10.0f, 1023);
-			U(msg, AIS::KEY_PRECIPTYPE, 332, 3);
+			U(msg, AIS::KEY_PRECIPTYPE, 332, 3, 7);
 			UL(msg, AIS::KEY_SALINITY, 335, 9, 0.1f, 0.0f, 511);
-			U(msg, AIS::KEY_ICE, 344, 2);
+			U(msg, AIS::KEY_ICE, 344, 2, 3);
 		}
 		else if ((dac == 316 || dac == 366) && fid == 1)
 		{
