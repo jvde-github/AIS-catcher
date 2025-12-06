@@ -3732,11 +3732,7 @@ function toggleShipcardSize() {
 
 function setPulseOk() {
     const pulseEl = document.getElementById("pulse-id");
-    const hasPulsating = pulseEl.classList.contains('pulsating');
     pulseEl.className = "header-pulse-ok";
-    if (hasPulsating) {
-        pulseEl.classList.add('pulsating');
-    }
 
     const logoControl = document.getElementById('aiscatcher-logo-control');
     if (logoControl) {
@@ -3748,11 +3744,7 @@ function setPulseOk() {
 
 function setPulseError() {
     const pulseEl = document.getElementById("pulse-id");
-    const hasPulsating = pulseEl.classList.contains('pulsating');
     pulseEl.className = "header-pulse-error";
-    if (hasPulsating) {
-        pulseEl.classList.add('pulsating');
-    }
 
     const logoControl = document.getElementById('aiscatcher-logo-control');
     if (logoControl) {
@@ -6680,7 +6672,7 @@ class RealtimeViewer {
 
         this.eventSource.addEventListener('open', (event) => {
             // Add pulsating class when stream opens
-            document.getElementById("pulse-id").classList.add('pulsating');
+            document.getElementById("realtime_tab_mini").classList.add('pulsating');
         });
 
         this.eventSource.addEventListener('nmea', (event) => {
@@ -6718,7 +6710,7 @@ class RealtimeViewer {
             this.eventSource = null;
         }
         // Remove pulsating class when disconnecting
-        document.getElementById("pulse-id").classList.remove('pulsating');
+        document.getElementById("realtime_tab_mini").classList.remove('pulsating');
     }
 
     // Closes stream but keeps visibility listener (for browser minimization)
@@ -6831,6 +6823,12 @@ class RealtimeViewer {
         row.appendChild(timeCell);
         row.appendChild(mmsiCell);
         row.appendChild(nmeaCell);
+        
+        // Add click handler to row for pause/resume (MMSI and decoder clicks will stopPropagation)
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', (e) => {
+            toggleRealtimePause(true);
+        });
 
         this.nmeaContent.insertBefore(row, this.nmeaContent.firstChild);
         this.nmeaCount++;
@@ -6985,20 +6983,26 @@ class LogViewer {
     }
 }
 
-function toggleRealtimePause() {
+function toggleRealtimePause(showMessage = false) {
     if (!realtimeViewer) return;
 
     const button = document.getElementById('realtime_pause_button');
-    const icon = button.querySelector('span');
+    const icon = button?.querySelector('span');
 
     if (realtimeViewer.isPaused) {
         realtimeViewer.resume();
-        icon.className = 'pause_icon';
-        button.title = 'Pause stream';
+        if (showMessage) showNotification("Streaming resumed");
+        if (icon) {
+            icon.className = 'pause_icon';
+            button.title = 'Pause stream';
+        }
     } else {
         realtimeViewer.pause();
-        icon.className = 'play_arrow_icon';
-        button.title = 'Resume stream';
+        if (showMessage) showNotification("Streaming paused");
+        if (icon) {
+            icon.className = 'play_arrow_icon';
+            button.title = 'Resume stream';
+        }
     }
 }
 
@@ -7194,7 +7198,7 @@ function activateTab(b, a) {
                 // Viewer already exists
                 if (realtimeViewer.eventSource && realtimeViewer.eventSource.readyState === EventSource.OPEN) {
                     // Stream is already open, add pulsating class
-                    document.getElementById("pulse-id").classList.add('pulsating');
+                    document.getElementById("realtime_tab_mini").classList.add('pulsating');
                 } else if (!realtimeViewer.isPaused) {
                     // Try to reconnect if not paused
                     realtimeViewer.connectNmea();
@@ -7231,6 +7235,21 @@ function activateTab(b, a) {
     }
     if (a === "about") {
         setupAbout();
+    }
+    
+    // Add keyboard event listener for realtime tab
+    if (a == "realtime") {
+        document.addEventListener('keydown', handleRealtimeKeydown);
+    } else {
+        document.removeEventListener('keydown', handleRealtimeKeydown);
+    }
+}
+
+function handleRealtimeKeydown(event) {
+    // Toggle pause/play with space bar, but not if user is typing in an input field
+    if (event.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+        event.preventDefault();
+        toggleRealtimePause(true);
     }
 }
 
