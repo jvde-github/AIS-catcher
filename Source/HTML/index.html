@@ -20,7 +20,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=e9fa429735f2910339276c43054e3890" />
+	<link rel="stylesheet" href="style.css?hash=4e5b2cde501a5614b6b68d443c7e2559" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -603,15 +603,21 @@
 			<div class="tabcontent addscrollbar can-copy" id="realtime">
 				<div class="realtime-viewer">
 					<div class="realtime-tabs">
-						<button class="realtime-tab active" onclick="return switchRealtimeTab('nmea', event)">NMEA</button>
-						<button class="realtime-tab" onclick="return switchRealtimeTab('signals', event)">Signals</button>
-						<div class="realtime-filter-wrapper">
-							<input type="text" id="realtime_mmsi_filter" class="realtime-filter-input" placeholder="Filter MMSI..." oninput="filterRealtimeByMMSI(this.value)">
-							<button id="realtime_clear_filter" class="realtime-clear-btn" onclick="clearRealtimeFilter()" title="Clear filter" style="display: none;"><i class="close_icon"></i></button>
-						</div>
+						<div class="realtime-spacer"></div>
+						<label class="realtime-background-toggle" title="Keep streaming when tab is hidden">
+							<input type="checkbox" id="realtime_background_streaming" onchange="toggleBackgroundStreaming()">
+							<span>Background</span>
+						</label>
 						<button id="realtime_pause_button" class="realtime-control-btn" onclick="toggleRealtimePause()" title="Pause/Resume stream">
 							<span class="pause_icon"></span>
 						</button>
+						<button class="realtime-control-btn" onclick="clearRealtimeTable()" title="Clear table">
+							<span class="delete_icon"></span>
+						</button>
+					</div>
+					<div class="realtime-filter-bar" id="realtime_filter_display" style="display: none;">
+						<i class="filter_list_icon"></i>
+						<div id="realtime_mmsi_filters" class="filter-chips"></div>
 					</div>
 					<div id="realtime_content" class="realtime-panel">
 						<table class="signal-table">
@@ -625,20 +631,6 @@
 								</tr>
 							</thead>
 							<tbody id="realtime_nmea_content"></tbody>
-						</table>
-					</div>
-					<div id="realtime_signals" class="realtime-panel" style="display: none;">
-						<table class="signal-table">
-							<thead>
-								<tr>
-									<th>Time</th>
-									<th>MMSI</th>
-									<th>Channel</th>
-									<th>Latitude</th>
-									<th>Longitude</th>
-								</tr>
-							</thead>
-							<tbody id="realtime_signals_content"></tbody>
 						</table>
 					</div>
 				</div>
@@ -1370,7 +1362,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=9ab590050cf3cd5e902bae0f100de8d7"></script>
+	<script src="script.js?hash=d38558767cef3d65242156e52d6e5d15"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

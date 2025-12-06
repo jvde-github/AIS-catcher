@@ -2831,39 +2831,69 @@ td {
     align-items: center;
 }
 
-.realtime-filter-wrapper {
-    margin-left: 0.5rem;
+.realtime-filter-bar {
     display: flex;
     align-items: center;
-    position: relative;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--menu-background-color);
+    border-bottom: 1px solid var(--menu-border-color);
+    color: var(--menu-font-color);
+    font-size: 0.875rem;
 }
 
-.realtime-filter-input {
-    padding: 0.35rem 0.6rem;
-    padding-right: 2rem;
+.realtime-filter-bar i.filter_list_icon {
+    font-size: 16px;
+    opacity: 0.7;
+}
+
+.realtime-filter-bar .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--menu-background-color);
     border: 1px solid var(--menu-border-color);
     border-radius: 3px;
-    font-size: 0.875rem;
-    width: 140px;
-    background: var(--menu-background-color);
     color: var(--menu-font-color);
-    transition: border-color 0.2s ease;
+    font-size: 0.85rem;
 }
 
-.realtime-filter-input:focus {
-    outline: none;
-    border-color: #1c71d8;
+.filter-chip button {
+    padding: 0;
+    margin-left: 0.2rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: var(--menu-font-color);
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
 }
 
-.realtime-filter-input::placeholder {
-    color: var(--menu-font-color);
-    opacity: 0.5;
+.filter-chip button:hover {
+    opacity: 1;
+}
+
+.filter-chip button i {
+    font-size: 12px;
+}
+
+.realtime-spacer {
+    flex: 1;
 }
 
 .realtime-clear-btn {
-    position: absolute;
-    right: 2px;
-    padding: 0.2rem;
+    padding: 0;
+    margin-left: 0.2rem;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -2872,8 +2902,8 @@ td {
     justify-content: center;
     color: #e01b24;
     transition: opacity 0.2s ease;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
 }
 
 .realtime-clear-btn:hover {
@@ -2881,11 +2911,10 @@ td {
 }
 
 .realtime-clear-btn i {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .realtime-control-btn {
-    margin-left: auto;
     padding: 0.6rem;
     background: transparent;
     border: none;
@@ -2912,6 +2941,27 @@ td {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.realtime-background-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--menu-font-color);
+    user-select: none;
+}
+
+.realtime-background-toggle input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.realtime-background-toggle:hover {
+    color: #1c71d8;
 }
 
 .realtime-tab {
