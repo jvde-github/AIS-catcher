@@ -274,6 +274,19 @@ a:focus {
     color: var(--error-color);
 }
 
+.pulsating {
+    animation: pulse-streaming 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-streaming {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
 .header-icon:hover {
     cursor: pointer;
     transform: var(--hover-transform);

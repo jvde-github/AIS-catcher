@@ -3731,7 +3731,12 @@ function toggleShipcardSize() {
 }
 
 function setPulseOk() {
-    document.getElementById("pulse-id").className = "header-pulse-ok";
+    const pulseEl = document.getElementById("pulse-id");
+    const hasPulsating = pulseEl.classList.contains('pulsating');
+    pulseEl.className = "header-pulse-ok";
+    if (hasPulsating) {
+        pulseEl.classList.add('pulsating');
+    }
 
     const logoControl = document.getElementById('aiscatcher-logo-control');
     if (logoControl) {
@@ -3742,7 +3747,12 @@ function setPulseOk() {
 }
 
 function setPulseError() {
-    document.getElementById("pulse-id").className = "header-pulse-error";
+    const pulseEl = document.getElementById("pulse-id");
+    const hasPulsating = pulseEl.classList.contains('pulsating');
+    pulseEl.className = "header-pulse-error";
+    if (hasPulsating) {
+        pulseEl.classList.add('pulsating');
+    }
 
     const logoControl = document.getElementById('aiscatcher-logo-control');
     if (logoControl) {
@@ -6668,6 +6678,11 @@ class RealtimeViewer {
         // Connect to NMEA stream
         this.eventSource = new EventSource("api/sse");
 
+        this.eventSource.addEventListener('open', (event) => {
+            // Add pulsating class when stream opens
+            document.getElementById("pulse-id").classList.add('pulsating');
+        });
+
         this.eventSource.addEventListener('nmea', (event) => {
             try {
                 if (!this.isPaused) {
@@ -6702,6 +6717,8 @@ class RealtimeViewer {
             this.eventSource.close();
             this.eventSource = null;
         }
+        // Remove pulsating class when disconnecting
+        document.getElementById("pulse-id").classList.remove('pulsating');
     }
 
     // Closes stream but keeps visibility listener (for browser minimization)
@@ -7173,34 +7190,27 @@ function activateTab(b, a) {
                 
                 // Connect to NMEA stream
                 realtimeViewer.connectNmea();
-                
-                // Update filter display
-                updateFilterDisplay();
-                
-                // Sync button icon with viewer state
-                const button = document.getElementById('realtime_pause_button');
-                if (button) {
-                    const icon = button.querySelector('span');
-                    if (icon) {
-                        icon.className = realtimeViewer.isPaused ? 'play_arrow_icon' : 'pause_icon';
-                        button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
-                    }
-                }
-                // Restore filter display from saved state
-                updateFilterDisplay();
             } else {
-                // Viewer already exists - reconnect to stream (pause just stops displaying)
-                realtimeViewer.connectNmea();
-                // Sync filter display with viewer's filters
-                updateFilterDisplay();
-                // Sync button icon
-                const button = document.getElementById('realtime_pause_button');
-                if (button) {
-                    const icon = button.querySelector('span');
-                    if (icon) {
-                        icon.className = realtimeViewer.isPaused ? 'play_arrow_icon' : 'pause_icon';
-                        button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
-                    }
+                // Viewer already exists
+                if (realtimeViewer.eventSource && realtimeViewer.eventSource.readyState === EventSource.OPEN) {
+                    // Stream is already open, add pulsating class
+                    document.getElementById("pulse-id").classList.add('pulsating');
+                } else if (!realtimeViewer.isPaused) {
+                    // Try to reconnect if not paused
+                    realtimeViewer.connectNmea();
+                }
+            }
+            
+            // Update filter display
+            updateFilterDisplay();
+            
+            // Sync button icon with viewer state
+            const button = document.getElementById('realtime_pause_button');
+            if (button) {
+                const icon = button.querySelector('span');
+                if (icon) {
+                    icon.className = realtimeViewer.isPaused ? 'play_arrow_icon' : 'pause_icon';
+                    button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
                 }
             }
         }
