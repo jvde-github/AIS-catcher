@@ -7022,6 +7022,18 @@ function clearRealtimeTable() {
     }
 }
 
+function promptFilterMMSI() {
+    const mmsiInput = prompt('Enter MMSI to filter:');
+    if (mmsiInput) {
+        const mmsi = parseInt(mmsiInput.trim(), 10);
+        if (!isNaN(mmsi) && mmsi > 0) {
+            addRealtimeFilterMMSI(mmsi);
+        } else {
+            alert('Please enter a valid MMSI number.');
+        }
+    }
+}
+
 function addRealtimeFilterMMSI(mmsi) {
     if (!realtimeViewer) return;
     const filterValue = mmsi ? mmsi.toString().trim() : '';

@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=b21539139e9143a93e927ead6163e210" />
+	<link rel="stylesheet" href="style.css?hash=cdf38175f8d9eede4628a7d457148fc7" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -604,6 +604,9 @@
 				<div class="realtime-viewer">
 					<div class="realtime-tabs">
 						<div class="realtime-spacer"></div>
+						<button class="realtime-control-btn" onclick="promptFilterMMSI()" title="Filter by MMSI">
+							<span class="filter_alt_icon"></span>
+						</button>
 						<label class="realtime-background-toggle" title="Keep streaming when tab is hidden">
 							<input type="checkbox" id="realtime_background_streaming" onchange="toggleBackgroundStreaming()">
 							<span>Background</span>
@@ -1362,7 +1365,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=c0d9fb6c171622fc703566d1b9c6b17b"></script>
+	<script src="script.js?hash=a148338bdfae1d787064e5827ee1abb4"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>
