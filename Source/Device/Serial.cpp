@@ -203,11 +203,18 @@ namespace Device
 
 		if (init_sequence.length())
 		{
+			SleepSystem(100);
+			std::string cmd = init_sequence;
+			if (cmd.back() != '\r' && cmd.back() != '\n')
+				cmd += "\r";
+
 			DWORD bytesWritten;
-			if (!WriteFile(serial_handle, init_sequence.c_str(), init_sequence.length(), &bytesWritten, nullptr))
+			if (!WriteFile(serial_handle, cmd.c_str(), cmd.length(), &bytesWritten, nullptr))
 			{
 				throw std::runtime_error("Serial: failed to send initialization sequence.");
 			}
+
+			Warning() << "Serial: sent initialization sequence: \"" << init_sequence << "\"." << std::endl;
 		}
 #else
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
@@ -278,10 +285,17 @@ namespace Device
 
 		if (init_sequence.length())
 		{
-			if (write(serial_fd, init_sequence.c_str(), init_sequence.length()) < 0)
+			SleepSystem(100);
+			std::string cmd = init_sequence;
+			if (cmd.back() != '\r' && cmd.back() != '\n')
+				cmd += "\r";
+
+			if (write(serial_fd, cmd.c_str(), cmd.length()) < 0)
 			{
 				throw std::runtime_error("Serial: failed to send initialization sequence.");
 			}
+
+			Warning() << "Serial: sent initialization sequence: \"" << init_sequence << "\"." << std::endl;
 		}
 #endif
 
