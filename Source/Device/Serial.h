@@ -71,6 +71,7 @@ namespace Device
 
 		bool lost = false;
 		bool print = false;
+		std::string init_sequence;
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 

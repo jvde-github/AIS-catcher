@@ -200,6 +200,15 @@ namespace Device
 
 		if (!SetCommTimeouts(serial_handle, &ct))
 			throw std::runtime_error("Serial: SetCommTimeouts failed. Error: " + GetLastErrorAsString());
+
+		if (init_sequence.length())
+		{
+			DWORD bytesWritten;
+			if (!WriteFile(serial_handle, init_sequence.c_str(), init_sequence.length(), &bytesWritten, nullptr))
+			{
+				throw std::runtime_error("Serial: failed to send initialization sequence.");
+			}
+		}
 #else
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
 		if (serial_fd == -1)
@@ -266,7 +275,16 @@ namespace Device
 
 		int flags = fcntl(serial_fd, F_GETFL, 0);
 		fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
+
+		if (init_sequence.length())
+		{
+			if (write(serial_fd, init_sequence.c_str(), init_sequence.length()) < 0)
+			{
+				throw std::runtime_error("Serial: failed to send initialization sequence.");
+			}
+		}
 #endif
+
 		Device::Play();
 
 		lost = false;
@@ -304,6 +322,10 @@ namespace Device
 		else if (option == "PRINT")
 		{
 			print = Util::Parse::Switch(arg);
+		}
+		else if (option == "INIT_SEQ")
+		{
+			init_sequence = arg;
 		}
 		else
 			Device::Set(option, arg);
