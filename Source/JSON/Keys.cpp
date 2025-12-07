@@ -964,7 +964,7 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_MESSAGE_ID
 		KeyInfo("", "Name of the Aid to Navigation.", nullptr), // KEY_NAME
 		KeyInfo("degrees", "North East Latitude", nullptr), // KEY_NE_LAT
-		KeyInfo("degrees", "Lortg East Longitude", nullptr), // KEY_NE_LON
+		KeyInfo("degrees", "North East Longitude", nullptr), // KEY_NE_LON
 		KeyInfo("", "", nullptr), // KEY_NUMBER1
 		KeyInfo("", "", nullptr), // KEY_NUMBER2
 		KeyInfo("", "", nullptr), // KEY_NUMBER3
