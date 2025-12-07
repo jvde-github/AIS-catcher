@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2025 jvde.github@gmail.com
+	Copyright(c) 2021-2026 jvde.github@gmail.com
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -45,9 +45,14 @@ namespace AIS
 	extern const std::vector<std::string> LookupTable_aid_types;
 	extern const std::vector<std::string> LookupTable_dte_types;
 	extern const std::vector<std::string> LookupTable_epfd_types;
+	extern const std::vector<std::string> LookupTable_interval_types;
 	extern const std::vector<std::string> LookupTable_maneuver_types;
 	extern const std::vector<std::string> LookupTable_nav_status;
+	extern const std::vector<std::string> LookupTable_precipation_types;
+	extern const std::vector<std::string> LookupTable_seastate_types;
 	extern const std::vector<std::string> LookupTable_ship_types;
+	extern const std::vector<std::string> LookupTable_station_types;
+	extern const std::vector<std::string> LookupTable_txrx_types;
 
 	// JSON keys
 	enum Keys
@@ -97,7 +102,7 @@ namespace AIS
 		KEY_SETTING_CONTEXT,
 		KEY_SETTING_CRC_CHECK,
 		KEY_SETTING_CUTOFF,
-		KEY_SETTINGS_DECODER,
+		KEY_SETTING_DECODER,
 		KEY_SETTING_DESCRIPTION,
 		KEY_SETTING_DEVICE,
 		KEY_SETTING_DROOP,
@@ -172,6 +177,7 @@ namespace AIS
 		KEY_SETTING_SDRPLAY,
 		KEY_SETTING_SENSITIVITY,
 		KEY_SETTING_SERIAL,
+		KEY_SETTING_SERIAL_INIT_SEQUENCE,
 		KEY_SETTING_SERIALPORT,
 		KEY_SETTING_SERVER,
 		KEY_SETTING_SHARE_LOC,
