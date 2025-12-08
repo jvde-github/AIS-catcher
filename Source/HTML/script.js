@@ -5494,7 +5494,7 @@ function populateShipcard() {
     document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
     document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatValFormat(ship) : null;
     document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonValFormat(ship) : null;
-    document.getElementById("shipcard_altitude").innerHTML = ship.altitude;
+    document.getElementById("shipcard_altitude").innerHTML = ship.altitude ? ship.altitude + " m" : null;
 
     document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
     document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
