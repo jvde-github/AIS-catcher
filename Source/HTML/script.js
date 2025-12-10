@@ -2957,6 +2957,7 @@ async function fetchShips(noDoubleFetch = true) {
         s.virtual_aid = (flags >> 4) & 1;
         s.approximate = (flags >> 5) & 1;
         s.channels2 = (flags >> 6) & 0b1111;
+        s.cs_unit = (flags >> 10) & 3; // 0=unknown, 1=SOTDMA, 2=Carrier Sense
 
         // Check for discrepancies and show error
         if (s.validated !== s.validated2) {
@@ -4481,9 +4482,12 @@ function getTooltipContentPlane(plane) {
 function getTypeVal(ship) {
     switch (ship.mmsi_type) {
         case CLASS_A:
-            return "Ship (Class A)";
+            return "Class A";
         case CLASS_B:
-            return "Ship (Class B)";
+            let classB = "Class B";
+            if (ship.cs_unit === 1) classB += " (SO)"; // SOTDMA - 5 watts
+            else if (ship.cs_unit === 2) classB += " (CS)"; // CSTDMA - 2 watts
+            return classB;
         case BASESTATION:
             return "Base Station";
         case SAR:
@@ -4491,7 +4495,7 @@ function getTypeVal(ship) {
         case SARTEPIRB:
             return "AIS SART/EPIRB";
         case ATON:
-            return "Aid-to-Navigation";
+            return "AtoN";
     }
     return "Unknown";
 }

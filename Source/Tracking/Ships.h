@@ -73,6 +73,7 @@ public:
     void setVirtualAid(int val) { flags.set(4, 1, val); }
     void setApproximate(int val) { flags.set(5, 1, val); }
     void orOpChannels(int val) { flags.orOp(6, 4, val); }
+    void setCSUnit(int val) { flags.set(10, 2, val); } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
 
     // Getters for PackedInt fields
     int getValidated() const { return flags.get(0, 2); }
@@ -80,4 +81,5 @@ public:
     int getVirtualAid() const { return flags.get(4, 1); }
     int getApproximate() const { return flags.get(5, 1); }
     int getChannels() const { return flags.get(6, 4); }
+    int getCSUnit() const { return flags.get(10, 2); } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
 };

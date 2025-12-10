@@ -749,6 +749,9 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 	case AIS::KEY_VIRTUAL_AID:
 		v.setVirtualAid(p.Get().getBool());
 		break;
+	case AIS::KEY_CS:
+		v.setCSUnit(p.Get().getBool() ? 2 : 1); // 1=SOTDMA (false), 2=Carrier Sense (true)
+		break;
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
 		std::strncpy(v.shipname, p.Get().getString().c_str(), 20);
