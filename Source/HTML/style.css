@@ -1099,6 +1099,16 @@ td {
     content: "-";
 }
 
+.shipcard-tech-icon {
+    font-size: 14px !important;
+    cursor: help;
+    opacity: 0.6;
+    display: inline-block !important;
+    vertical-align: text-top;
+    margin-left: 2px;
+    line-height: 1;
+}
+
 .shipcard-min-only {
     display: none;
 }
@@ -1115,6 +1125,42 @@ td {
     background-color: var(--shipcard-selection-color);
     display: flex;
     flex-direction: row;
+}
+
+/* Technical details popover */
+.tech-popover {
+    position: absolute;
+    background: var(--menu-background-color);
+    color: var(--menu-font-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    min-width: 200px;
+    max-width: 300px;
+    font-size: 12px;
+    padding: 8px 12px;
+}
+
+.tech-popover > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tech-popover > div:last-child {
+    border-bottom: none;
+}
+
+.tech-popover > div > span:first-child {
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.tech-popover > div > span:last-child {
+    font-weight: bold;
+    margin-left: 12px;
 }
 
 @media only screen and (max-width: 500px) {

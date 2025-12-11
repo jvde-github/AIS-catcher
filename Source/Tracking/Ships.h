@@ -74,6 +74,15 @@ public:
     void setApproximate(int val) { flags.set(5, 1, val); }
     void orOpChannels(int val) { flags.orOp(6, 4, val); }
     void setCSUnit(int val) { flags.set(10, 2, val); } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
+    void setRAIM(int val) { flags.set(12, 2, val); } // 0=unknown, 1=false, 2=true
+    void setDTE(int val) { flags.set(14, 2, val); } // 0=unknown, 1=ready, 2=not ready
+    void setAssigned(int val) { flags.set(16, 2, val); } // 0=unknown, 1=autonomous, 2=assigned
+    void setDisplay(int val) { flags.set(18, 2, val); } // 0=unknown, 1=false, 2=true
+    void setDSC(int val) { flags.set(20, 2, val); } // 0=unknown, 1=false, 2=true
+    void setBand(int val) { flags.set(22, 2, val); } // 0=unknown, 1=false, 2=true
+    void setMsg22(int val) { flags.set(24, 2, val); } // 0=unknown, 1=false, 2=true
+    void setOffPosition(int val) { flags.set(26, 2, val); } // 0=unknown, 1=on position, 2=off position
+    void setManeuver(int val) { flags.set(28, 2, val); } // 0=not available, 1=no special, 2=special
 
     // Getters for PackedInt fields
     int getValidated() const { return flags.get(0, 2); }
@@ -82,4 +91,13 @@ public:
     int getApproximate() const { return flags.get(5, 1); }
     int getChannels() const { return flags.get(6, 4); }
     int getCSUnit() const { return flags.get(10, 2); } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
+    int getRAIM() const { return flags.get(12, 2); } // 0=unknown, 1=false, 2=true
+    int getDTE() const { return flags.get(14, 2); } // 0=unknown, 1=ready, 2=not ready
+    int getAssigned() const { return flags.get(16, 2); } // 0=unknown, 1=autonomous, 2=assigned
+    int getDisplay() const { return flags.get(18, 2); } // 0=unknown, 1=false, 2=true
+    int getDSC() const { return flags.get(20, 2); } // 0=unknown, 1=false, 2=true
+    int getBand() const { return flags.get(22, 2); } // 0=unknown, 1=false, 2=true
+    int getMsg22() const { return flags.get(24, 2); } // 0=unknown, 1=false, 2=true
+    int getOffPosition() const { return flags.get(26, 2); } // 0=unknown, 1=on position, 2=off position
+    int getManeuver() const { return flags.get(28, 2); } // 0=not available, 1=no special, 2=special
 };

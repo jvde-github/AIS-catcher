@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=b735ed7035d87cfdb8231fb26441a5ea" />
+	<link rel="stylesheet" href="style.css?hash=941980d4bca290cfc87ab22a9f0cd5d0" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -1110,14 +1110,25 @@
 							<div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Country</span><span id="shipcard_country"></span></div>
-							<div><span>Sender</span><span id="shipcard_type"></span></div>
-							<div><span>In Range</span><span id="shipcard_received_stations"></span></div>
-						</div>
+					<div onclick="shipcardselect(this)" data-context-type="ship"
+						class="mapcard-content-row shipcard-content-row shipcard-max-only">
+						<div><span>Country</span><span id="shipcard_country"></span></div>
+						<div><span>Sender</span><span id="shipcard_type"></span></div>
+						<div><span>In Range</span><span id="shipcard_received_stations"></span></div>
+					</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+					<!-- Technical details popover -->
+					<div id="tech_popover" class="tech-popover" style="display: none;">
+						<div><span>RAIM:</span><span id="tech_raim">-</span></div>
+						<div><span>DTE:</span><span id="tech_dte">-</span></div>
+						<div><span>Mode:</span><span id="tech_assigned">-</span></div>
+						<div><span>Display:</span><span id="tech_display">-</span></div>
+						<div><span>DSC:</span><span id="tech_dsc">-</span></div>
+						<div><span>Band:</span><span id="tech_band">-</span></div>
+						<div><span>MSG22:</span><span id="tech_msg22">-</span></div>
+						<div><span>Off-Pos:</span><span id="tech_off_position">-</span></div>
+						<div><span>Maneuver:</span><span id="tech_maneuver">-</span></div>
+					</div>						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
 							<div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
@@ -1365,7 +1376,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=88a83b72072a2f18751e67f19682cd5a"></script>
+	<script src="script.js?hash=c2b4382276b602aa8eb20819d0e6c928"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

@@ -752,6 +752,33 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 	case AIS::KEY_CS:
 		v.setCSUnit(p.Get().getBool() ? 2 : 1); // 1=SOTDMA (false), 2=Carrier Sense (true)
 		break;
+	case AIS::KEY_RAIM:
+		v.setRAIM(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+		break;
+	case AIS::KEY_DTE:
+		v.setDTE(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=ready, 2=not ready
+		break;
+	case AIS::KEY_ASSIGNED:
+		v.setAssigned(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=autonomous, 2=assigned
+		break;
+	case AIS::KEY_DISPLAY:
+		v.setDisplay(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+		break;
+	case AIS::KEY_DSC:
+		v.setDSC(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+		break;
+	case AIS::KEY_BAND:
+		v.setBand(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+		break;
+	case AIS::KEY_MSG22:
+		v.setMsg22(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+		break;
+	case AIS::KEY_OFF_POSITION:
+		v.setOffPosition(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=on position, 2=off position
+		break;
+	case AIS::KEY_MANEUVER:
+		v.setManeuver(p.Get().getInt()); // 0=not available, 1=no special, 2=special (direct value)
+		break;
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
 		std::strncpy(v.shipname, p.Get().getString().c_str(), 20);

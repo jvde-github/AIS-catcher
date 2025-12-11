@@ -1210,6 +1210,13 @@ function showContextMenu(event, mmsi, type, context) {
         });
     });
 
+    // Hide realtime menu items if realtime is disabled
+    if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+        document.querySelectorAll('.ctx-realtime').forEach((element) => {
+            element.style.display = "none";
+        });
+    }
+
     // we might have made non-android items visible in the context menu, so hide non-android items if needed
     updateAndroid();
     updateKiosk();
@@ -2019,7 +2026,7 @@ function ToggleFireworks() {
 
 function StartFireworks() {
     if (evtSourceMap == null) {
-        if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+        if (!realtime_enabled) {
             showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
             return;
         }
@@ -2958,6 +2965,15 @@ async function fetchShips(noDoubleFetch = true) {
         s.approximate = (flags >> 5) & 1;
         s.channels2 = (flags >> 6) & 0b1111;
         s.cs_unit = (flags >> 10) & 3; // 0=unknown, 1=SOTDMA, 2=Carrier Sense
+        s.raim = (flags >> 12) & 3; // 0=unknown, 1=false, 2=true
+        s.dte = (flags >> 14) & 3; // 0=unknown, 1=ready, 2=not ready
+        s.assigned = (flags >> 16) & 3; // 0=unknown, 1=autonomous, 2=assigned
+        s.display = (flags >> 18) & 3; // 0=unknown, 1=false, 2=true
+        s.dsc = (flags >> 20) & 3; // 0=unknown, 1=false, 2=true
+        s.band = (flags >> 22) & 3; // 0=unknown, 1=false, 2=true
+        s.msg22 = (flags >> 24) & 3; // 0=unknown, 1=false, 2=true
+        s.off_position = (flags >> 26) & 3; // 0=unknown, 1=on position, 2=off position
+        s.maneuver = (flags >> 28) & 3; // 0=not available, 1=no special, 2=special
 
         // Check for discrepancies and show error
         if (s.validated !== s.validated2) {
@@ -5491,7 +5507,7 @@ function populateShipcard() {
     document.getElementById("shipcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
 
     document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("shipcard_type").innerHTML = getTypeVal(ship);
+    document.getElementById("shipcard_type").innerHTML = getTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" onclick="event.stopPropagation(); toggleTechPopover()" title="Technical details"></i>';
     document.getElementById("shipcard_shiptype").innerHTML = getShipTypeVal(ship.shiptype);
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(ship.last_signal);
@@ -5507,7 +5523,79 @@ function populateShipcard() {
 
     updateShipcardTrackOption(card_mmsi);
     updateMessageButton();
+    updateTechDetails(ship);
 
+}
+
+function updateTechDetails(ship) {
+    // Helper to format flag values
+    const formatFlag = (value, trueText = "Yes", falseText = "No", unknownText = "-") => {
+        if (value === 0) return unknownText;
+        if (value === 1) return falseText;
+        if (value === 2) return trueText;
+        return unknownText;
+    };
+
+    // Update RAIM
+    document.getElementById("tech_raim").textContent = formatFlag(ship.raim);
+    
+    // Update DTE
+    document.getElementById("tech_dte").textContent = formatFlag(ship.dte, "Not Ready", "Ready");
+    
+    // Update Assigned Mode
+    document.getElementById("tech_assigned").textContent = formatFlag(ship.assigned, "Assigned", "Autonomous");
+    
+    // Update Display
+    document.getElementById("tech_display").textContent = formatFlag(ship.display);
+    
+    // Update DSC
+    document.getElementById("tech_dsc").textContent = formatFlag(ship.dsc);
+    
+    // Update Band
+    document.getElementById("tech_band").textContent = formatFlag(ship.band, "Dual", "Single");
+    
+    // Update MSG22
+    document.getElementById("tech_msg22").textContent = formatFlag(ship.msg22);
+    
+    // Update Off Position
+    document.getElementById("tech_off_position").textContent = formatFlag(ship.off_position, "Off", "On");
+    
+    // Update Maneuver
+    const maneuverText = ship.maneuver === 0 ? "-" : ship.maneuver === 1 ? "None" : "Special";
+    document.getElementById("tech_maneuver").textContent = maneuverText;
+}
+
+function toggleTechPopover() {
+    const popover = document.getElementById("tech_popover");
+    const icon = document.getElementById("shipcard_tech_info");
+    
+    if (popover.style.display === "none" || !popover.style.display) {
+        // Position popover near the icon
+        const iconRect = icon.getBoundingClientRect();
+        const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
+        
+        popover.style.display = "block";
+        popover.style.left = (iconRect.left - shipcardRect.left + 20) + "px";
+        popover.style.top = (iconRect.bottom - shipcardRect.top + 5) + "px";
+        
+        // Close popover when clicking outside
+        setTimeout(() => {
+            document.addEventListener("click", closeTechPopover);
+        }, 0);
+    } else {
+        popover.style.display = "none";
+        document.removeEventListener("click", closeTechPopover);
+    }
+}
+
+function closeTechPopover(event) {
+    const popover = document.getElementById("tech_popover");
+    const icon = document.getElementById("shipcard_tech_info");
+    
+    if (!popover.contains(event.target) && event.target !== icon) {
+        popover.style.display = "none";
+        document.removeEventListener("click", closeTechPopover);
+    }
 }
 
 function getCategory(plane) {
@@ -5847,11 +5935,25 @@ function displayShipcardIcons(type) {
             continue;
         }
 
-        // Show if within offset range or is More button
-        const isMoreButton = icon.querySelector('i').classList.contains('more_horiz_icon');
-        const isInRange = idx >= shipcardIconOffset[type] && idx < shipcardIconOffset[type] + shipcardIconMax;
-        icon.style.display = (isInRange || isMoreButton) ? "flex" : "none";
-        idx++;
+        // Check if this is the More button - always show it and don't count it
+        const isMoreButton = icon.querySelector('i')?.classList.contains('more_horiz_icon');
+        if (isMoreButton) {
+            icon.style.display = "flex";
+            continue;
+        }
+
+        // Check if realtime option should be hidden
+        const isRealtimeDisabled = icon.id === 'shipcard_realtime_option' && (typeof realtime_enabled === "undefined" || realtime_enabled === false);
+        
+        if (isRealtimeDisabled) {
+            icon.style.display = "none";
+            // Don't increment idx, effectively removing it from the visible count
+        } else {
+            // Show if within offset range
+            const isInRange = idx >= shipcardIconOffset[type] && idx < shipcardIconOffset[type] + shipcardIconMax;
+            icon.style.display = isInRange ? "flex" : "none";
+            idx++;
+        }
     }
 }
 
@@ -5865,18 +5967,28 @@ function rotateShipcardIcons() {
 
 function prepareShipcard() {
     // Initialize offset/count objects if needed
-    shipcardIconOffset = shipcardIconOffset || { ship: 0, plane: 0 };
+    if (!shipcardIconOffset || typeof shipcardIconOffset !== 'object') {
+        shipcardIconOffset = { ship: 0, plane: 0 };
+    }
     shipcardIconCount = shipcardIconCount || { ship: 0, plane: 0 };
 
     // Count icons for each context
     shipcardIconCount.ship = document.querySelectorAll('#shipcard_footer > div[data-context-type="ship"]').length;
     shipcardIconCount.plane = document.querySelectorAll('#shipcard_footer > div[data-context-type="plane"]').length;
 
+    // Adjust count if realtime is disabled (exclude realtime option from count)
+    if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+        const realtimeOption = document.getElementById('shipcard_realtime_option');
+        if (realtimeOption && realtimeOption.dataset.contextType === 'ship') {
+            shipcardIconCount.ship--;
+        }
+    }
+
     // Add More button for each context if needed
-    if (shipcardIconCount.ship > shipcardIconMax + 1) {
+    if (shipcardIconCount.ship > shipcardIconMax) {
         addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'ship');
     }
-    if (shipcardIconCount.plane > shipcardIconMax + 1) {
+    if (shipcardIconCount.plane > shipcardIconMax) {
         addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'plane');
     }
 
@@ -7105,7 +7217,7 @@ function clearRealtimeFilter() {
 
 function openRealtimeForMMSI(mmsi) {
     // Check if realtime is enabled
-    if (typeof realtime_enabled === "undefined" || !realtime_enabled) {
+    if (!realtime_enabled) {
         return;
     }
     
@@ -7189,7 +7301,7 @@ function activateTab(b, a) {
 
     if (a == "realtime") {
         // Only initialize realtime viewer if realtime is enabled
-        if (typeof realtime_enabled !== "undefined" && realtime_enabled) {
+        if (realtime_enabled) {
             // Only create a new viewer if one doesn't exist
             if (!realtimeViewer) {
                 // Restore saved state if available
@@ -7278,7 +7390,7 @@ function selectTab() {
     if (settings.tab == "settings") settings.tab = "stat";
 
     // Check if requested tab is disabled and redirect to map
-    if (settings.tab == "realtime" && (typeof realtime_enabled === "undefined" || realtime_enabled === false)) {
+    if (settings.tab == "realtime" && !realtime_enabled) {
         settings.tab = "map";
     }
     if (settings.tab == "log" && (typeof log_enabled === "undefined" || log_enabled === false)) {
