@@ -3384,7 +3384,7 @@ const graph_options_level = {
     },
     scales: {
         y: {
-            beginAtZero: true,
+            beginAtZero: false,
             ticks: {
                 display: true,
             },
