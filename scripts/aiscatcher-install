@@ -2,6 +2,12 @@
 
 set -euo pipefail
 
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then
+    echo "Error: This script must be run as root (use sudo)" >&2
+    exit 1
+fi
+
 # Constants
 readonly SCRIPT_NAME=$(basename "$0")
 readonly LOG_FILE="/var/log/${SCRIPT_NAME%.*}.log"
@@ -97,8 +103,10 @@ check_package_availability() {
         "ais-catcher_debian_trixie_armhf.deb"
         "ais-catcher_ubuntu_focal_amd64.deb"
         "ais-catcher_ubuntu_jammy_amd64.deb"
-        "ais-catcher_ubuntu_mantic_amd64.deb"
         "ais-catcher_ubuntu_noble_amd64.deb"
+        "ais-catcher_ubuntu_plucky_amd64.deb"
+        "ais-catcher_ubuntu_questing_amd64.deb"
+        "ais-catcher_ubuntu_resolute_amd64.deb"
     )
 
     for package in "${packages[@]}"; do
