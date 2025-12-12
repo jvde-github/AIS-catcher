@@ -360,12 +360,12 @@ download_webassets() {
     if curl -sL "$webassets_url" -o "$temp_zip"; then
         if [[ -d "$CONFIG_DIR/webassets" ]]; then
             log "INFO" "Removing old webassets"
-            sudo rm -rf "$CONFIG_DIR/webassets"
+            rm -rf "$CONFIG_DIR/webassets"
         fi
         
         log "INFO" "Extracting webassets"
-        sudo unzip -q "$temp_zip" -d "$CONFIG_DIR"
-        sudo mv "$CONFIG_DIR/webassets-main" "$CONFIG_DIR/webassets"
+        unzip -q "$temp_zip" -d "$CONFIG_DIR"
+        mv "$CONFIG_DIR/webassets-main" "$CONFIG_DIR/webassets"
         rm "$temp_zip"
         
         log "INFO" "Webassets updated successfully"
@@ -557,7 +557,7 @@ main() {
     
     trap cleanup EXIT
     
-    sudo apt-get update || error_exit "Failed to update package lists"
+    apt-get update || error_exit "Failed to update package lists"
 
     cd "$TMP_DIR" || error_exit "Failed to change to temporary directory"
 
