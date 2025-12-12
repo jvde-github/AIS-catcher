@@ -779,23 +779,26 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 	case AIS::KEY_MANEUVER:
 		v.setManeuver(p.Get().getInt()); // 0=not available, 1=no special, 2=special (direct value)
 		break;
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wstringop-truncation"
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
-		std::strncpy(v.shipname, p.Get().getString().c_str(), 20);
-		v.shipname[20] = '\0';
+		std::strncpy(v.shipname, p.Get().getString().c_str(), sizeof(v.shipname) - 1);
+		v.shipname[sizeof(v.shipname) - 1] = '\0';
 		break;
 	case AIS::KEY_CALLSIGN:
-		std::strncpy(v.callsign, p.Get().getString().c_str(), 7);
-		v.callsign[7] = '\0';
+		std::strncpy(v.callsign, p.Get().getString().c_str(), sizeof(v.callsign) - 1);
+		v.callsign[sizeof(v.callsign) - 1] = '\0';
 		break;
 	case AIS::KEY_COUNTRY_CODE:
-		std::strncpy(v.country_code, p.Get().getString().c_str(), 2);
-		v.country_code[2] = '\0';
+		std::strncpy(v.country_code, p.Get().getString().c_str(), sizeof(v.country_code) - 1);
+		v.country_code[sizeof(v.country_code) - 1] = '\0';
 		break;
 	case AIS::KEY_DESTINATION:
-		std::strncpy(v.destination, p.Get().getString().c_str(), 20);
-		v.destination[20] = '\0';
+		std::strncpy(v.destination, p.Get().getString().c_str(), sizeof(v.destination) - 1);
+		v.destination[sizeof(v.destination) - 1] = '\0';
 		break;
+	#pragma GCC diagnostic pop
 	}
 	return position_updated;
 }
