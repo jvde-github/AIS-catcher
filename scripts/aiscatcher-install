@@ -1,10 +1,61 @@
 #!/usr/bin/env bash
+#
+# AIS-catcher Installation Script
+#
+# Description:
+#   Automated installation script for AIS-catcher on Debian and Ubuntu systems.
+#   Supports both package-based and source-based installations.
+#
+# Usage:
+#   sudo ./aiscatcher-install [OPTIONS]
+#
+# Options:
+#   -p, --package    Install from pre-built package (faster, recommended)
+#   -d, --debug      Build with debug symbols (source installation only)
+#   -h, --help       Display this help message
+#
+# Requirements:
+#   - Must be run as root (use sudo)
+#   - Debian-based system (Debian/Ubuntu/Raspbian)
+#   - Internet connection for downloading packages/source
+#
+# Author: AIS-catcher Project
+# License: See LICENSE file
+#
 
 set -euo pipefail
 
+# Display usage information
+usage() {
+    cat << EOF
+AIS-catcher Installation Script
+
+Usage: sudo $0 [OPTIONS]
+
+Options:
+  -p, --package    Install from pre-built package (faster, recommended)
+  -d, --debug      Build with debug symbols (source installation only)
+  -h, --help       Display this help message
+
+Examples:
+  sudo $0 --package          # Install from pre-built package
+  sudo $0                    # Build and install from source
+  sudo $0 --debug            # Build from source with debug symbols
+
+For more information, visit: https://docs.aiscatcher.org/
+EOF
+    exit 0
+}
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
-    echo "Error: This script must be run as root (use sudo)" >&2
+    if [[ -t 1 ]]; then
+        echo -e "\033[1;31mError: This script must be run as root\033[0m" >&2
+        echo -e "\033[1;33mPlease run: sudo $0 $*\033[0m" >&2
+    else
+        echo "Error: This script must be run as root" >&2
+        echo "Please run: sudo $0 $*" >&2
+    fi
     exit 1
 fi
 
@@ -30,11 +81,59 @@ DEBUG_BUILD=false
 INSTALL_PACKAGE=false
 SERVICE_STATE=""
 
-# Logger function
+# Color constants (using ANSI escape codes)
+if [[ -t 1 ]]; then
+    readonly COLOR_RESET="\033[0m"
+    readonly COLOR_BOLD="\033[1m"
+    readonly COLOR_RED="\033[0;31m"
+    readonly COLOR_GREEN="\033[0;32m"
+    readonly COLOR_YELLOW="\033[0;33m"
+    readonly COLOR_BLUE="\033[0;34m"
+    readonly COLOR_CYAN="\033[0;36m"
+    readonly COLOR_BOLD_RED="\033[1;31m"
+    readonly COLOR_BOLD_GREEN="\033[1;32m"
+    readonly COLOR_BOLD_YELLOW="\033[1;33m"
+    readonly COLOR_BOLD_BLUE="\033[1;34m"
+else
+    readonly COLOR_RESET=""
+    readonly COLOR_BOLD=""
+    readonly COLOR_RED=""
+    readonly COLOR_GREEN=""
+    readonly COLOR_YELLOW=""
+    readonly COLOR_BLUE=""
+    readonly COLOR_CYAN=""
+    readonly COLOR_BOLD_RED=""
+    readonly COLOR_BOLD_GREEN=""
+    readonly COLOR_BOLD_YELLOW=""
+    readonly COLOR_BOLD_BLUE=""
+fi
+
+# Logger function with color support
 log() {
     local level="$1"
     shift
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [${level}] $*" | tee -a "$LOG_FILE"
+    local color=""
+    local timestamp="$(date +'%Y-%m-%d %H:%M:%S')"
+    
+    case "$level" in
+        ERROR)
+            color="${COLOR_BOLD_RED}"
+            ;;
+        WARN)
+            color="${COLOR_BOLD_YELLOW}"
+            ;;
+        INFO)
+            color="${COLOR_BOLD_GREEN}"
+            ;;
+        *)
+            color="${COLOR_RESET}"
+            ;;
+    esac
+    
+    # Print to terminal with color
+    echo -e "${COLOR_CYAN}[${timestamp}]${COLOR_RESET} ${color}[${level}]${COLOR_RESET} $*"
+    # Log to file without color codes
+    echo "[${timestamp}] [${level}] $*" >> "$LOG_FILE"
 }
 
 # Error handler
@@ -54,15 +153,17 @@ cleanup() {
     rm -rf "$TMP_DIR"
 }
 
+# Check for conflicting existing service
 check_existing_service() {
     if systemctl is-enabled aiscatcher.service &>/dev/null; then
         log "ERROR" "Detected existing aiscatcher.service. Please disable it first with:"
-        log "ERROR" "sudo systemctl disable aiscatcher.service"
-        log "ERROR" "Then try running this script again."
+        log "ERROR" "systemctl disable aiscatcher.service"
+        log "ERROR" "Then run this script again."
         exit 1
     fi
 }
 
+# Detect system information (OS, version, architecture)
 get_system_info() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -88,7 +189,11 @@ install_dependencies() {
     apt-get install -y $deps || error_exit "Failed to install dependencies"
 }
 
-# Function to check if a package is available
+# Check if a pre-built package is available for this system
+# Args:
+#   $1: system_info string (format: os_version_arch)
+# Returns:
+#   0 if package found (prints package name), 1 otherwise
 check_package_availability() {
     local system_info=$1
     local packages=(
@@ -119,7 +224,13 @@ check_package_availability() {
     return 1
 }
 
-# Check for library
+# Check if a library is installed on the system
+# Args:
+#   $1: library name (for pkg-config)
+#   $2: header file name
+#   $3: library file name (without extension)
+# Returns:
+#   0 if library found, 1 otherwise
 check_library() {
     local lib_name="$1"
     local header_name="$2"
@@ -286,7 +397,7 @@ try_legacy_udev_reload() {
 suggest_manual_udev_reload() {
     log "WARN" "Automatic udev reload failed. To activate RTL-SDR udev rules:"
     log "INFO" "  1. Disconnect and reconnect your RTL-SDR device"
-    log "INFO" "  2. Run: sudo udevadm control --reload-rules && sudo udevadm trigger"
+    log "INFO" "  2. Run: udevadm control --reload-rules && udevadm trigger"
     log "INFO" "  3. Or restart the system"
     log "INFO" "  4. Verify with: rtl_test -t (if device is connected)"
 }
@@ -577,18 +688,23 @@ main() {
 
         case $key in
             -d|--debug)
-            DEBUG_BUILD=true
-            log "INFO" "Debug build requested"
-            shift # past argument
-            ;;
+                DEBUG_BUILD=true
+                log "INFO" "Debug build requested"
+                shift
+                ;;
             -p|--package)
-            log "INFO" "Package installation requested"
-            INSTALL_PACKAGE=true
-            shift # past argument
-            ;;
+                log "INFO" "Package installation requested"
+                INSTALL_PACKAGE=true
+                shift
+                ;;
+            -h|--help)
+                usage
+                ;;
             *)
-            shift # past unrecognized argument
-            ;;
+                log "WARN" "Unknown option: $1"
+                log "INFO" "Use --help for usage information"
+                shift
+                ;;
         esac
     done
     
@@ -624,6 +740,92 @@ main() {
     fi
     
     log "INFO" "AIS-catcher installation completed successfully"
+    
+    # Display installation summary
+    display_installation_summary
+}
+
+# Display installation summary with useful information
+display_installation_summary() {
+    local divider="═══════════════════════════════════════════════════════════════════════════════"
+    
+    echo -e "\n${COLOR_BOLD_BLUE}${divider}${COLOR_RESET}"
+    echo -e "${COLOR_BOLD_GREEN}                    AIS-CATCHER INSTALLATION SUMMARY${COLOR_RESET}"
+    echo -e "${COLOR_BOLD_BLUE}${divider}${COLOR_RESET}\n"
+    echo -e "${COLOR_BOLD_GREEN}✓ Installation completed successfully!${COLOR_RESET}\n"
+    
+    echo -e "${COLOR_BOLD}INSTALLED FILES:${COLOR_RESET}"
+    echo "  • Executable:         /usr/bin/AIS-catcher"
+    echo "  • Configuration:      ${CONFIG_DIR}/"
+    echo "    - Main config:      ${CONFIG_FILE}"
+    echo "    - Command options:  ${CMD_FILE}"
+    echo "    - Plugins:          ${PLUGIN_DIR}/"
+    echo "    - Web assets:       ${CONFIG_DIR}/webassets/"
+    echo "    - Database schema:  ${DBMS_DIR}/create.sql"
+    echo "    - Documentation:    ${README_DIR}/README.md"
+    echo "    - License:          ${CONFIG_DIR}/LICENSE"
+    echo "  • Service file:       ${SERVICE_FILE}"
+    echo "  • Log file:           ${LOG_FILE}"
+    echo ""
+    
+    echo -e "${COLOR_BOLD}SYSTEMD SERVICE MANAGEMENT:${COLOR_RESET}"
+    echo "  • View service status:"
+    echo -e "    ${COLOR_YELLOW}systemctl status ${SERVICE_NAME}${COLOR_RESET}"
+    echo ""
+    echo "  • Start the service:"
+    echo -e "    ${COLOR_YELLOW}systemctl start ${SERVICE_NAME}${COLOR_RESET}"
+    echo ""
+    echo "  • Stop the service:"
+    echo -e "    ${COLOR_YELLOW}systemctl stop ${SERVICE_NAME}${COLOR_RESET}"
+    echo ""
+    echo "  • Restart the service:"
+    echo -e "    ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
+    echo ""
+    echo "  • Enable at boot:"
+    echo -e "    ${COLOR_YELLOW}systemctl enable ${SERVICE_NAME}${COLOR_RESET}"
+    echo ""
+    echo "  • Disable at boot:"
+    echo -e "    ${COLOR_YELLOW}systemctl disable ${SERVICE_NAME}${COLOR_RESET}"
+    echo ""
+    echo "  • View service logs:"
+    echo -e "    ${COLOR_YELLOW}journalctl -u ${SERVICE_NAME} -f${COLOR_RESET}"
+    echo ""
+    
+    echo -e "${COLOR_BOLD}CONFIGURATION:${COLOR_RESET}"
+    echo "  • Edit main configuration:"
+    echo -e "    ${COLOR_YELLOW}nano ${CONFIG_FILE}${COLOR_RESET}"
+    echo ""
+    echo "  • Edit command-line options:"
+    echo -e "    ${COLOR_YELLOW}nano ${CMD_FILE}${COLOR_RESET}"
+    echo ""
+    echo "  • After editing, restart the service:"
+    echo -e "    ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
+    echo ""
+    
+    echo -e "${COLOR_BOLD}WEB INTERFACE:${COLOR_RESET}"
+    echo "  • Once running, access the web interface at:"
+    echo -e "    ${COLOR_CYAN}http://localhost:8100${COLOR_RESET}"
+    echo "    (or use your server's IP address)"
+    echo ""
+    echo "  • Enable the web server by editing ${CONFIG_FILE}"
+    echo -e "    and setting ${COLOR_YELLOW}\"active\": true${COLOR_RESET} in the \"server\" section"
+    echo ""
+    
+    echo -e "${COLOR_BOLD}USEFUL COMMANDS:${COLOR_RESET}"
+    echo "  • Run AIS-catcher directly (for testing):"
+    echo -e "    ${COLOR_YELLOW}AIS-catcher -h${COLOR_RESET}"
+    echo ""
+    echo "  • View this installation log:"
+    echo -e "    ${COLOR_YELLOW}cat ${LOG_FILE}${COLOR_RESET}"
+    echo ""
+    
+    echo -e "${COLOR_BOLD}DOCUMENTATION:${COLOR_RESET}"
+    echo -e "  • Online docs:  ${COLOR_CYAN}https://docs.aiscatcher.org/${COLOR_RESET}"
+    echo -e "  • GitHub repo:  ${COLOR_CYAN}https://github.com/jvde-github/AIS-catcher${COLOR_RESET}"
+    echo "  • Local README: ${README_DIR}/README.md"
+    echo ""
+    
+    echo -e "${COLOR_BOLD_BLUE}${divider}${COLOR_RESET}\n"
 }
 
 # Run the script
