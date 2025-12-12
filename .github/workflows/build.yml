@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        codename: ['focal', 'jammy',  'noble']
+        codename: ['focal', 'jammy', 'noble', 'oracular', 'plucky', 'questing']
         arch: ['amd64']
     steps:
     - name: Checkout Repository
