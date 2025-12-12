@@ -782,15 +782,19 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
 		std::strncpy(v.shipname, p.Get().getString().c_str(), 20);
+		v.shipname[20] = '\0';
 		break;
 	case AIS::KEY_CALLSIGN:
 		std::strncpy(v.callsign, p.Get().getString().c_str(), 7);
+		v.callsign[7] = '\0';
 		break;
 	case AIS::KEY_COUNTRY_CODE:
 		std::strncpy(v.country_code, p.Get().getString().c_str(), 2);
+		v.country_code[2] = '\0';
 		break;
 	case AIS::KEY_DESTINATION:
 		std::strncpy(v.destination, p.Get().getString().c_str(), 20);
+		v.destination[20] = '\0';
 		break;
 	}
 	return position_updated;
