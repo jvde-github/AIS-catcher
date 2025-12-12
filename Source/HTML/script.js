@@ -3420,7 +3420,8 @@ const graph_options_distance = {
     },
     scales: {
         y: {
-            beginAtZero: true,
+            type: 'logarithmic',
+            beginAtZero: false,
             ticks: {
                 display: true,
             },
@@ -3692,8 +3693,8 @@ function initPlots() {
             console.error(`Failed to initialize chart ${id}:`, error);
         }
     }
-    chart_level = new Chart(document.getElementById("chart-level"), plot_level);
-    chart_level_hour = new Chart(document.getElementById("chart-level-hour"), plot_level);
+    chart_level = new Chart(document.getElementById("chart-level"), cloneChartConfig(plot_level));
+    chart_level_hour = new Chart(document.getElementById("chart-level-hour"), cloneChartConfig(plot_level));
 }
 
 function shipcardismax() {
@@ -5570,21 +5571,41 @@ function toggleTechPopover() {
     const icon = document.getElementById("shipcard_tech_info");
     
     if (popover.style.display === "none" || !popover.style.display) {
-        // Position popover near the icon
+
         const iconRect = icon.getBoundingClientRect();
         const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
         
         popover.style.display = "block";
-        popover.style.left = (iconRect.left - shipcardRect.left + 20) + "px";
-        popover.style.top = (iconRect.bottom - shipcardRect.top + 5) + "px";
         
-        // Close popover when clicking outside
+        let left = iconRect.left - shipcardRect.left + 20;
+        let top = iconRect.bottom - shipcardRect.top + 5;
+        
+        const popoverRect = popover.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        if (iconRect.left + popoverRect.width + 20 > viewportWidth) {
+            // Position to the left of the icon instead
+            left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
+        }
+        
+        if (iconRect.bottom + popoverRect.height + 5 > viewportHeight) {
+            // Position above the icon instead
+            top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
+        }
+        
+        left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
+        top = Math.max(5, top);
+        
+        popover.style.left = left + "px";
+        popover.style.top = top + "px";
+        
         setTimeout(() => {
-            document.addEventListener("click", closeTechPopover);
+            document.addEventListener("click", closeTechPopover, true);
         }, 0);
     } else {
         popover.style.display = "none";
-        document.removeEventListener("click", closeTechPopover);
+        document.removeEventListener("click", closeTechPopover, true);
     }
 }
 
@@ -5592,9 +5613,14 @@ function closeTechPopover(event) {
     const popover = document.getElementById("tech_popover");
     const icon = document.getElementById("shipcard_tech_info");
     
-    if (!popover.contains(event.target) && event.target !== icon) {
+    // Always stop propagation when popover is open to prevent other handlers
+    event.stopPropagation();
+    event.preventDefault();
+    
+    // Close if clicking outside the popover and not on the icon
+    if (!popover.contains(event.target) && event.target !== icon && !icon?.contains(event.target)) {
         popover.style.display = "none";
-        document.removeEventListener("click", closeTechPopover);
+        document.removeEventListener("click", closeTechPopover, true);
     }
 }
 
