@@ -8180,4 +8180,9 @@ if (isAndroid()) showMenu();
 
 main();
 
+// Ensure chart colors are applied after all stylesheets are loaded (fixes Firefox iframe issue)
+window.addEventListener('load', () => {
+    updateAllChartColors();
+});
+
 //checkLatestVersion();
