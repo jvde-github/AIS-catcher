@@ -3605,7 +3605,10 @@ var plot_radar = {
 };
 
 function cssvar(name) {
-    return getComputedStyle(document.body).getPropertyValue(name);
+    // Read from documentElement (html) instead of body for better iframe compatibility
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    // Fallback to body if empty
+    return value || getComputedStyle(document.body).getPropertyValue(name).trim();
 }
 
 function updateChartColors(c, colorVariables) {
@@ -8180,9 +8183,14 @@ if (isAndroid()) showMenu();
 
 main();
 
-// Ensure chart colors are applied after all stylesheets are loaded (fixes Firefox iframe issue)
+// Ensure chart colors are applied after all stylesheets are loaded and charts are fully rendered (fixes Firefox iframe issue)
 window.addEventListener('load', () => {
-    updateAllChartColors();
+    // Use requestAnimationFrame to ensure charts have completed their initial render
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            updateAllChartColors();
+        });
+    });
 });
 
 //checkLatestVersion();
