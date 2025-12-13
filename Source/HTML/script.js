@@ -6574,35 +6574,45 @@ function redrawMap() {
     //await plotRange();
 
 }
-function updateDarkMode() {
-    document.documentElement.classList.toggle("dark", settings.dark_mode);
-
+function updateAllChartColors() {
     const chartsToUpdateMulti = [chart_minutes, chart_hours, chart_days, chart_seconds];
     const chartsToUpdateLevel = [chart_level, chart_level_hour];
     const chartsToUpdateSingle = [chart_distance_day, chart_distance_hour, chart_ppm, chart_minute_vessel, chart_ppm_minute];
     const chartsToUpdateRadar = [chart_radar_day, chart_radar_hour];
 
     chartsToUpdateMulti.forEach((chart) => {
-        updateColorMulti(chart);
-        chart.update();
+        if (chart) {
+            updateColorMulti(chart);
+            chart.update();
+        }
     });
 
     chartsToUpdateSingle.forEach((chart) => {
-        updateColorSingle(chart);
-        chart.update();
+        if (chart) {
+            updateColorSingle(chart);
+            chart.update();
+        }
     });
 
     chartsToUpdateLevel.forEach((chart) => {
-        const colorVariables = ["--chart1-color", "--chart1-color", "--chart1-color"];
-        updateChartColors(chart, colorVariables);
-        chart.update();
+        if (chart) {
+            const colorVariables = ["--chart1-color", "--chart1-color", "--chart1-color"];
+            updateChartColors(chart, colorVariables);
+            chart.update();
+        }
     });
 
     chartsToUpdateRadar.forEach((chart) => {
-        updateColorRadar(chart);
-        chart.update();
+        if (chart) {
+            updateColorRadar(chart);
+            chart.update();
+        }
     });
+}
 
+function updateDarkMode() {
+    document.documentElement.classList.toggle("dark", settings.dark_mode);
+    updateAllChartColors();
     updateMapLayer();
     redrawMap();
 }
@@ -8115,6 +8125,7 @@ applyDynamicStyling();
 console.log("Setup tabs");
 initFullScreen();
 initPlots();
+updateAllChartColors();
 
 initMap();
 
