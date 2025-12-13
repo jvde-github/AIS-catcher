@@ -168,17 +168,131 @@ namespace Util
 		return "Mac";
 
 #elif __linux__
-		std::string line, model_name, revision;
+		std::string line, model_name;
 
-		// Try device-tree first (works for Raspberry Pi and other ARM boards)
+		// Raspberry Pi: prefer device-tree compatible (recommended by Raspberry Pi docs)
+		// Ref: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#raspberry-pi-revision-codes
 		{
-			std::ifstream inFile("/proc/device-tree/model");
-			if (inFile.is_open() && std::getline(inFile, line))
+			auto normalize_rpi_model = [](const std::string &model) -> std::string
 			{
-				// Remove null terminator if present
-				if (!line.empty() && line[line.length() - 1] == '\0')
-					line.resize(line.length() - 1);
+				// Keep it intentionally simple: map device-tree models into stable product families.
+				if (model == "5-model-b")
+					return "Raspberry Pi 5";
+				if (model == "4-model-b")
+					return "Raspberry Pi 4";
+				if (model == "500")
+					return "Raspberry Pi 500";
+				if (model == "400")
+					return "Raspberry Pi 400";
+				if (model == "3-model-b" || model == "3-model-b-plus" || model == "3-model-a-plus")
+					return "Raspberry Pi 3";
+				if (model == "2-model-b")
+					return "Raspberry Pi 2";
+				// Compute Modules
+				if (model == "compute-module")
+					return "Raspberry Pi Compute Module 1";
+				if (model == "3-compute-module")
+					return "Raspberry Pi Compute Module 3";
+				if (model == "3-plus-compute-module")
+					return "Raspberry Pi Compute Module 3+";
+				if (model == "4-compute-module" || model == "4s-compute-module")
+					return "Raspberry Pi Compute Module 4";
+				if (model == "5-compute-module")
+					return "Raspberry Pi Compute Module 5";
+				// Future-proofing: some distros/DTs may append qualifiers.
+				if (model.find("5-compute-module") == 0)
+				{
+					if (model.find("lite") != std::string::npos)
+						return "Raspberry Pi Compute Module 5 Lite";
+					return "Raspberry Pi Compute Module 5";
+				}
+				if (model == "model-zero" || model == "model-zero-w" || model == "model-zero-2-w")
+					return "Raspberry Pi Zero";
+				if (model == "model-a" || model == "model-a-plus" || model == "model-b" || model == "model-b-plus" ||
+					model == "model-b-rev2")
+					return "Raspberry Pi 1";
+				return "";
+			};
+
+			auto parse_dt_compatible = [&](const std::string &path) -> std::string
+			{
+				std::ifstream inFile(path, std::ios::in | std::ios::binary);
+				if (!inFile.is_open())
+					return "";
+
+				std::string token;
+				while (std::getline(inFile, token, '\0'))
+				{
+					// token looks like: "raspberrypi,5-model-b" or "brcm,bcm2712"
+					static const std::string prefix = "raspberrypi,";
+					if (token.compare(0, prefix.size(), prefix) == 0)
+					{
+						std::string model = token.substr(prefix.size());
+						std::string mapped = normalize_rpi_model(model);
+						if (!mapped.empty())
+							return mapped;
+					}
+				}
+				return "";
+			};
+
+			std::string rpi = parse_dt_compatible("/proc/device-tree/compatible");
+			if (rpi.empty())
+				rpi = parse_dt_compatible("/sys/firmware/devicetree/base/compatible");
+			if (!rpi.empty())
+				return rpi;
+		}
+
+		// Try device-tree model as a fallback (works for Raspberry Pi and other ARM boards)
+		{
+			auto read_model = [&](const std::string &path) -> std::string
+			{
+				std::ifstream inFile(path, std::ios::in | std::ios::binary);
+				if (!inFile.is_open() || !std::getline(inFile, line, '\0'))
+					return "";
+				if (!line.empty() && line.back() == '\0')
+					line.pop_back();
 				return line;
+			};
+
+			std::string model = read_model("/proc/device-tree/model");
+			if (model.empty())
+				model = read_model("/sys/firmware/devicetree/base/model");
+			if (!model.empty())
+			{
+				// Normalize common Raspberry Pi strings to the simple families requested.
+				if (model.find("Raspberry Pi 5") != std::string::npos)
+					return "Raspberry Pi 5";
+				if (model.find("Raspberry Pi 500") != std::string::npos)
+					return "Raspberry Pi 500";
+				if (model.find("Raspberry Pi 400") != std::string::npos)
+					return "Raspberry Pi 400";
+				if (model.find("Raspberry Pi 4") != std::string::npos)
+					return "Raspberry Pi 4";
+				if (model.find("Raspberry Pi 3") != std::string::npos)
+					return "Raspberry Pi 3";
+				if (model.find("Raspberry Pi 2") != std::string::npos)
+					return "Raspberry Pi 2";
+				if (model.find("Compute Module 5") != std::string::npos)
+				{
+					if (model.find("Lite") != std::string::npos || model.find("lite") != std::string::npos)
+						return "Raspberry Pi Compute Module 5 Lite";
+					return "Raspberry Pi Compute Module 5";
+				}
+				if (model.find("Compute Module 4") != std::string::npos)
+					return "Raspberry Pi Compute Module 4";
+				if (model.find("Compute Module 3+") != std::string::npos)
+					return "Raspberry Pi Compute Module 3+";
+				if (model.find("Compute Module 3") != std::string::npos)
+					return "Raspberry Pi Compute Module 3";
+				if (model.find("Compute Module") != std::string::npos)
+					return "Raspberry Pi Compute Module 1";
+				if (model.find("Raspberry Pi Zero") != std::string::npos)
+					return "Raspberry Pi Zero";
+				if (model.find("Raspberry Pi Model") != std::string::npos)
+					return "Raspberry Pi 1";
+
+				return model;
 			}
 		}
 
@@ -208,7 +322,7 @@ namespace Util
 			}
 		}
 
-		// Parse cpuinfo for Raspberry Pi revision codes and CPU model
+		// Parse cpuinfo for CPU model name (best-effort fallback)
 		{
 			std::ifstream inFile("/proc/cpuinfo");
 			if (inFile.is_open())
@@ -219,76 +333,9 @@ namespace Util
 					{
 						std::size_t pos = line.find(": ");
 						if (pos != std::string::npos)
-						{
 							model_name = line.substr(pos + 2);
-						}
-					}
-					else if (line.substr(0, 8) == "Revision")
-					{
-						std::size_t pos = line.find(": ");
-						if (pos != std::string::npos)
-						{
-							revision = line.substr(pos + 2);
-						}
 					}
 				}
-			}
-		}
-
-		// Raspberry Pi revision lookup table
-		if (!revision.empty())
-		{
-			static const std::unordered_map<std::string, std::string> rpi_revisions = {
-				{"900021", "Raspberry Pi A+ 1.1"},
-				{"900032", "Raspberry Pi B+ 1.2"},
-				{"900092", "Raspberry Pi Zero 1.2"},
-				{"900093", "Raspberry Pi Zero 1.3"},
-				{"9000c1", "Raspberry Pi Zero W 1.1"},
-				{"9020e0", "Raspberry Pi 3A+ 1.0"},
-				{"920092", "Raspberry Pi Zero 1.2"},
-				{"920093", "Raspberry Pi Zero 1.3"},
-				{"900061", "Raspberry Pi CM1 1.1"},
-				{"a01040", "Raspberry Pi 2B 1.0"},
-				{"a01041", "Raspberry Pi 2B 1.1"},
-				{"a02082", "Raspberry Pi 3B 1.2"},
-				{"a020a0", "Raspberry Pi CM3 1.0"},
-				{"a020d3", "Raspberry Pi 3B+ 1.3"},
-				{"a02042", "Raspberry Pi 2B (with BCM2837) 1.2"},
-				{"a21041", "Raspberry Pi 2B 1.1"},
-				{"a22042", "Raspberry Pi 2B (with BCM2837) 1.2"},
-				{"a22082", "Raspberry Pi 3B 1.2"},
-				{"a220a0", "Raspberry Pi CM3 1.0"},
-				{"a32082", "Raspberry Pi 3B 1.2"},
-				{"a52082", "Raspberry Pi 3B 1.2"},
-				{"a22083", "Raspberry Pi 3B 1.3"},
-				{"a02100", "Raspberry Pi CM3+ 1.0"},
-				{"a03111", "Raspberry Pi 4B 1.1"},
-				{"b03111", "Raspberry Pi 4B 1.1"},
-				{"b03112", "Raspberry Pi 4B 1.2"},
-				{"b03114", "Raspberry Pi 4B 1.4"},
-				{"b03115", "Raspberry Pi 4B 1.5"},
-				{"c03111", "Raspberry Pi 4B 1.1"},
-				{"c03112", "Raspberry Pi 4B 1.2"},
-				{"c03114", "Raspberry Pi 4B 1.4"},
-				{"c03115", "Raspberry Pi 4B 1.5"},
-				{"d03114", "Raspberry Pi 4B 1.4"},
-				{"d03115", "Raspberry Pi 4B 1.5"},
-				{"c03130", "Raspberry Pi 400 1.0"},
-				{"a03140", "Raspberry Pi CM4 1.0"},
-				{"b03140", "Raspberry Pi CM4 1.0"},
-				{"c03140", "Raspberry Pi CM4 1.0"},
-				{"d03140", "Raspberry Pi CM4 1.0"},
-				{"902120", "Raspberry Pi Zero 2 W 1.0"},
-				{"c04170", "Raspberry Pi 5 8GB"},
-				{"d04170", "Raspberry Pi 5 4GB"},
-				{"c04171", "Raspberry Pi 5 8GB"},
-				{"d04171", "Raspberry Pi 5 4GB"},
-				{"902121", "Raspberry Pi Zero 2 W 1.0"}};
-
-			std::unordered_map<std::string, std::string>::const_iterator it = rpi_revisions.find(revision);
-			if (it != rpi_revisions.end())
-			{
-				return it->second;
 			}
 		}
 
