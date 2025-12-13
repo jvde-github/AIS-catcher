@@ -998,7 +998,7 @@ namespace IO
 			}
 			else
 			{
-				std::string s = data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, tag.ipv4) + "\r\n";
+				std::string s = data[i].getNMEAJSON(tag.mode, tag.level, tag.ppm, tag.status, tag.hardware, tag.version, tag.driver, tag.ipv4) + "\n";
 				((Protocol::MQTT *)session)->send(s.c_str(), s.length(), topic_template.get(tag, data[0]));
 			}
 		}
@@ -1014,7 +1014,7 @@ namespace IO
 			{
 				json.clear();
 				builder.stringify(data[i], json);
-				json += "\r\n";
+				json += "\n";
 				((Protocol::MQTT *)session)->send(json.c_str(), json.length(), topic_template.get(tag, *((AIS::Message *)data[0].binary)));
 			}
 		}
