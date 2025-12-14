@@ -44,10 +44,12 @@
 #include "Device/SoapySDR.h"
 #include "Device/ZMQ.h"
 
+class ApplicationContext;
+
 class Config {
 
 	std::vector<std::unique_ptr<Receiver>>& _receivers;
-	int _nrec;
+	int& _nrec;
 	std::vector<std::unique_ptr<IO::OutputMessage>>& _msg;
 	std::vector<std::unique_ptr<IO::OutputJSON>>& _json;
 
@@ -71,6 +73,9 @@ class Config {
 
 public:
 	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, IO::ScreenOutput& s, std::vector<std::unique_ptr<WebViewer>>& v,int &own_mmsi) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v), _own_mmsi(own_mmsi) {}
+	
+	// Constructor accepting ApplicationContext
+	Config(ApplicationContext& ctx);
 
 	void read(std::string& file_config);
 	void set(const std::string& str);

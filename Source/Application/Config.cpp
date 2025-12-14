@@ -17,7 +17,14 @@
 
 #include "AIS-catcher.h"
 #include "Config.h"
+#include "ApplicationContext.h"
 #include "Helper.h"
+
+Config::Config(ApplicationContext& ctx)
+	: _receivers(ctx.receivers), _nrec(ctx.nrec), _msg(ctx.msg), _json(ctx.json), 
+	  _screen(ctx.screen), _server(ctx.servers), _own_mmsi(ctx.own_mmsi)
+{
+}
 
 bool Config::isActiveObject(const JSON::Value &pd)
 {

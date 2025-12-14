@@ -209,7 +209,7 @@ namespace Plane
 
         bool validateLength()
         {
-            int expected = getMessageLength(df);            
+            int expected = getMessageLength(df);
             return len == expected;
         }
 

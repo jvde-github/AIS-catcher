@@ -26,6 +26,7 @@
 #include "Receiver.h"
 #include "WebViewer.h"
 #include "Config.h"
+#include "ApplicationContext.h"
 #include "JSON.h"
 #include "N2KStream.h"
 #include "PostgreSQL.h"
@@ -33,18 +34,110 @@
 #include "Screen.h"
 #include "File.h"
 
+enum class ApplicationState
+{
+	Busy,	   // Starting or stopping - transitional state
+	Running,   // Actively processing
+	Idle,	   // Stopped
+	Terminated // Final state, exiting
+};
+
 static std::atomic<bool> stop;
+static std::atomic<bool> terminate;
+static std::atomic<bool> paused{false};
+static std::atomic<ApplicationState> app_state{ApplicationState::Busy};
+static int log_callback = -1;
 
 void StopRequest()
 {
 	stop = true;
 }
 
+ApplicationState GetApplicationState()
+{
+	return app_state;
+}
+
+void SetPaused(bool pause)
+{
+	if (pause)
+	{
+		// Request to pause - stop current processing
+		if (app_state == ApplicationState::Running)
+		{
+			Info() << "Pause requested";
+			stop = true;
+			paused = true;
+		}
+	}
+	else
+	{
+		// Request to play/resume
+		if (paused)
+		{
+			Info() << "Resume requested";
+			paused = false;
+		}
+	}
+}
+
+#ifndef _WIN32
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+static struct termios original_termios;
+static bool termios_saved = false;
+
+static void restoreTerminal()
+{
+	if (termios_saved)
+	{
+		tcsetattr(STDIN_FILENO, TCSANOW, &original_termios);
+		termios_saved = false;
+	}
+}
+
+static void keyboardMonitor()
+{
+	// Set terminal to non-canonical mode to read individual keypresses
+	struct termios newt;
+	tcgetattr(STDIN_FILENO, &original_termios);
+	termios_saved = true;
+	newt = original_termios;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+	while (!terminate)
+	{
+		char ch;
+		if (read(STDIN_FILENO, &ch, 1) == 1 && ch == ' ')
+		{
+			if (GetApplicationState() == ApplicationState::Running)
+			{
+				SetPaused(true);
+			}
+			else if (paused)
+			{
+				SetPaused(false);
+			}
+		}
+		SleepSystem(100);
+	}
+
+	// Restore terminal settings
+	restoreTerminal();
+}
+#endif
+
 #ifdef _WIN32
 BOOL WINAPI consoleHandler(DWORD signal)
 {
 	if (signal == CTRL_C_EVENT)
+	{
 		stop = true;
+		terminate = true;
+	}
 	return TRUE;
 }
 #else
@@ -58,7 +151,9 @@ static void consoleHandler(int signal)
 	if (signal != SIGINT)
 		std::cerr << "Termination request: " << signal;
 
+	restoreTerminal();
 	stop = true;
+	terminate = true;
 }
 #endif
 
@@ -239,696 +334,623 @@ static void Assert(bool b, std::string &context, std::string msg = "")
 	}
 }
 
-int main(int argc, char *argv[])
+static void parseCommandLine(ApplicationContext &ctx, int argc, char *argv[])
 {
-	std::vector<std::unique_ptr<Receiver>> _receivers;
-	_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-
-	IO::ScreenOutput screen;
-	std::vector<OutputStatistics> stat;
-	std::vector<int> msg_count;
-
-	std::vector<std::unique_ptr<WebViewer>> servers;
-	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
-	std::vector<std::unique_ptr<IO::OutputJSON>> json;
-
-	bool list_devices = false, list_support = false, list_options = false;
-	int timeout = 0, nrec = 0, exit_code = 0;
-	bool timeout_nomsg = false, list_devices_JSON = false, no_run = false, show_copyright = true;
-	int own_mmsi = -1;
-	int cb = -1;
-
-	Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
 	extern IO::OutputMessage *commm_feed;
 
-	try
+	ctx.receivers.back()->getDeviceManager().refreshDevices();
+
+	const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
+	int ptr = 1;
+
+	while (ptr < argc)
 	{
-		Logger::getInstance().setMaxBufferSize(50);
-		cb = Logger::getInstance().addLogListener([](const LogMessage &msg)
-												  { std::cerr << msg.message << "\n"; });
+		Receiver &receiver = *ctx.receivers.back();
 
-#ifdef _WIN32
-		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
-			throw std::runtime_error("could not set control handler");
-#else
-		signal(SIGINT, consoleHandler);
-		signal(SIGTERM, consoleHandler);
-		signal(SIGHUP, consoleHandler);
-		signal(SIGPIPE, consoleHandler);
-#endif
+		std::string param = std::string(argv[ptr]);
+		Assert(param[0] == '-', param, "setting does not start with \"-\".");
 
-		_receivers.back()->getDeviceManager().refreshDevices();
+		int count = 0;
+		while (ptr + count + 1 < argc && !isOption(argv[ptr + 1 + count]))
+			count++;
 
-		const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
-		int ptr = 1;
+		std::string arg1 = count >= 1 ? std::string(argv[ptr + 1]) : "";
+		std::string arg2 = count >= 2 ? std::string(argv[ptr + 2]) : "";
+		std::string arg3 = count >= 3 ? std::string(argv[ptr + 3]) : "";
 
-		while (ptr < argc)
+		switch (param[1])
 		{
-			Receiver &receiver = *_receivers.back();
+		case 'G':
+			Assert(count % 2 == 0, param, "requires parameters in key/value pairs");
+			Util::Convert::toUpper(arg1);
+			Util::Convert::toUpper(arg2);
 
-			std::string param = std::string(argv[ptr]);
-			Assert(param[0] == '-', param, "setting does not start with \"-\".");
-
-			int count = 0;
-			while (ptr + count + 1 < argc && !isOption(argv[ptr + 1 + count]))
-				count++;
-
-			std::string arg1 = count >= 1 ? std::string(argv[ptr + 1]) : "";
-			std::string arg2 = count >= 2 ? std::string(argv[ptr + 2]) : "";
-			std::string arg3 = count >= 3 ? std::string(argv[ptr + 3]) : "";
-
-			switch (param[1])
+			if (log_callback != -1 && arg1 == "SYSTEM" && arg2 == "ON")
 			{
-			case 'G':
-				Assert(count % 2 == 0, param, "requires parameters in key/value pairs");
-				Util::Convert::toUpper(arg1);
-				Util::Convert::toUpper(arg2);
-
-			if (cb != -1 && arg1 == "SYSTEM" && arg2 == "ON")
-			{
-				Logger::getInstance().removeLogListener(cb);
-				cb = -1;
+				Logger::getInstance().removeLogListener(log_callback);
+				log_callback = -1;
 				// Enable DEBUG level when switching to system logging for journalctl filtering
 				Logger::getInstance().setMinLevel(LogLevel::_DEBUG);
-			}				parseSettings(Logger::getInstance(), argv, ptr, argc);
-				break;
-			case 's':
-				Assert(count == 1, param, "does require one parameter [sample rate].");
-				receiver.setSampleRate(Util::Parse::Integer(arg1, 12500, 12288000));
+			}
+			parseSettings(Logger::getInstance(), argv, ptr, argc);
+			break;
+		case 's':
+			Assert(count == 1, param, "does require one parameter [sample rate].");
+			receiver.setSampleRate(Util::Parse::Integer(arg1, 12500, 12288000));
+			break;
+		case 'm':
+			Assert(count == 1, param, "requires one parameter [model number].");
+			receiver.addModel(Util::Parse::Integer(arg1, 0, 9));
+			break;
+		case 'M':
+			Assert(count <= 1, param, "requires zero or one parameter [DT].");
+			receiver.clearTags();
+			receiver.setTags(arg1);
+			break;
+		case 'c':
+			Assert(count <= 2 && count >= 1, param, "requires one or two parameter [AB/CD]].");
+			if (count == 1)
+				receiver.setChannel(arg1);
+			if (count == 2)
+				receiver.setChannel(arg1, arg2);
+			break;
+		case 'C':
+			Assert(count == 1, param, "one parameter required: filename");
+			if (!arg1.empty())
+				ctx.config_file = arg1;
+			break;
+		case 'N':
+			Assert(count > 0, param, "requires at least one parameter");
+			if (ctx.servers.size() == 0)
+				ctx.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
+
+			if (count % 2 == 1)
+			{
+				// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
+				if (ctx.servers.back()->isPortSet())
+					ctx.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
+				ctx.servers.back()->Set("PORT", arg1);
+			}
+			ctx.servers.back()->active() = true;
+			parseSettings(*ctx.servers.back(), argv, ptr + (count % 2), argc);
+			break;
+		case 'S':
+			Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter [port].");
+			{
+				ctx.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
+				IO::OutputMessage &u = *ctx.msg.back();
+				u.Set("PORT", arg1).Set("TIMEOUT", "0");
+				if (count > 1)
+					parseSettings(u, argv, ptr + 1, argc);
+			}
+			break;
+		case 'f':
+		{
+			ctx.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::FileOutput()));
+			IO::OutputMessage &f = *ctx.msg.back();
+			if (count % 2 == 1)
+			{
+				f.Set("FILE", arg1);
+			}
+			if (count > 1)
+				parseSettings(f, argv, ptr + (count % 2), argc);
+		}
+		break;
+		case 'v':
+			Assert(count <= 1, param);
+			receiver.verbose = true;
+			if (count == 1)
+				ctx.screen.verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
+			break;
+		case 'O':
+			Assert(count == 1, param);
+			ctx.own_mmsi = Util::Parse::Integer(arg1, 1, 999999999);
+			break;
+		case 'T':
+			Assert(count == 1 || (count == 2 && arg2 == "nomsg_only"), param, "timeout requires one parameter with optional \"nomsg_only\".");
+			ctx.timeout = Util::Parse::Integer(arg1, 1, 3600);
+			if (count == 2)
+				ctx.timeout_nomsg = true;
+			break;
+		case 'q':
+			Assert(count == 0, param, MSG_NO_PARAMETER);
+			ctx.screen.setScreen("0");
+			break;
+		case 'n':
+			Assert(count == 0, param, MSG_NO_PARAMETER);
+			ctx.screen.setScreen("2");
+			break;
+		case 'o':
+			Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter.");
+			ctx.screen.setScreen(arg1);
+			if (count > 1)
+			{
+				parseSettings(ctx.screen, argv, ptr + 1, argc);
+			}
+			break;
+		case 'F':
+			Assert(count == 0, param, MSG_NO_PARAMETER);
+			receiver.addModel(2)->Set("FP_DS", "ON").Set("PS_EMA", "ON");
+			receiver.removeTags("DT");
+			break;
+		case 't':
+			Assert(count <= 3, param, "requires one parameter [url], or two or three parameters [[protocol]] [host] [port].");
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::RTLTCP;
+			if (count == 1)
+				ctx.receivers.back()->getDeviceManager().RTLTCP().Set("url", arg1);
+			if (count == 2)
+				ctx.receivers.back()->getDeviceManager().RTLTCP().Set("port", arg2).Set("host", arg1);
+			if (count == 3)
+				ctx.receivers.back()->getDeviceManager().RTLTCP().Set("port", arg3).Set("host", arg2).Set("PROTOCOL", arg1);
+			break;
+		case 'x':
+			Assert(count == 2, param, "requires two parameters [server] [port].");
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::UDP;
+			ctx.receivers.back()->getDeviceManager().UDP().Set("port", arg2).Set("server", arg1);
+			break;
+		case 'D':
+		{
+			ctx.json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::PostgreSQL()));
+			IO::OutputJSON &d = *ctx.json.back();
+
+			if (count % 2 == 1)
+			{
+				d.Set("CONN_STR", arg1);
+				if (count > 1)
+					parseSettings(d, argv, ptr + 1, argc);
+			}
+			else
+			{
+				if (count >= 2)
+					parseSettings(d, argv, ptr, argc);
+			}
+		}
+		break;
+		case 'y':
+			Assert(count <= 2, param, "requires one or two parameters [url] or [host] [port].");
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::SPYSERVER;
+			if (count == 1)
+				ctx.receivers.back()->getDeviceManager().SpyServer().Set("url", arg1);
+			else if (count == 2)
+				ctx.receivers.back()->getDeviceManager().SpyServer().Set("port", arg2).Set("host", arg1);
+			break;
+		case 'z':
+			Assert(count <= 2, param, "requires at most two parameters [[format]] [endpoint].");
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::ZMQ;
+			if (count == 1)
+				ctx.receivers.back()->getDeviceManager().ZMQ().Set("ENDPOINT", arg1);
+			if (count == 2)
+				ctx.receivers.back()->getDeviceManager().ZMQ().Set("FORMAT", arg1).Set("ENDPOINT", arg2);
+			break;
+		case 'b':
+			Assert(count == 0, param, MSG_NO_PARAMETER);
+			receiver.Timing() = true;
+			break;
+		case 'i':
+			Assert(count <= 1, param, "requires at most one option parameter.");
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::N2K;
+			if (count == 1)
+				ctx.receivers.back()->getDeviceManager().N2KSCAN().Set("INTERFACE", arg1);
+			break;
+
+		case 'w':
+			Assert(count <= 1, param);
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::WAVFILE;
+			if (count == 1)
+				ctx.receivers.back()->getDeviceManager().WAV().Set("FILE", arg1);
+			break;
+		case 'r':
+			Assert(count <= 2, param, "requires at most two parameters [[format]] [filename].");
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::RAWFILE;
+			if (count == 1)
+				ctx.receivers.back()->getDeviceManager().RAW().Set("FILE", arg1);
+			if (count == 2)
+				ctx.receivers.back()->getDeviceManager().RAW().Set("FORMAT", arg1).Set("FILE", arg2);
+			break;
+		case 'e':
+			Assert(count == 2, param, "requires two parameters [baudrate] [portname].");
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+			ctx.receivers.back()->getDeviceManager().InputType() = Type::SERIALPORT;
+			ctx.receivers.back()->getDeviceManager().SerialPort().Set("BAUDRATE", arg1).Set("PORT", arg2);
+			break;
+		case 'l':
+			Assert(count == 0 || count == 2, param, MSG_NO_PARAMETER);
+			if (count == 2)
+			{
+				Assert(arg1 == "JSON", param, "requires JSON on/off");
+				ctx.list_devices_JSON = Util::Parse::Switch(arg2);
+			}
+			ctx.list_devices = true;
+			break;
+		case 'L':
+			Assert(count == 0, param, MSG_NO_PARAMETER);
+			ctx.list_support = true;
+			break;
+		case 'd':
+			if (++ctx.nrec > 1)
+			{
+				ctx.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+			}
+
+			if (param.length() == 4 && param[2] == ':')
+			{
+				Assert(count == 0, param, MSG_NO_PARAMETER);
+				int n = param[3] - '0';
+				ctx.receivers.back()->getDeviceManager().selectDeviceByIndex(n);
+			}
+			else
+			{
+				Assert(param.length() == 2, param, "syntax error in device setting");
+				Assert(count == 1, param, "device setting requires one parameter [serial number]");
+				ctx.receivers.back()->getDeviceManager().SerialNumber() = arg1;
+			}
+			break;
+		case 'u':
+			Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
+			{
+				ctx.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::UDPStreamer()));
+				IO::OutputMessage &o = *ctx.msg.back();
+				o.Set("HOST", arg1).Set("PORT", arg2);
+				if (count > 2)
+					parseSettings(o, argv, ptr + 2, argc);
+			}
+			break;
+		case 'P':
+			Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
+			{
+				ctx.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+				IO::OutputMessage &p = *ctx.msg.back();
+				p.Set("HOST", arg1).Set("PORT", arg2);
+				if (count > 2)
+					parseSettings(p, argv, ptr + 2, argc);
+			}
+			break;
+		case 'Q':
+			Assert(count >= 1, param, "invalid number of arguments");
+			{
+				ctx.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MQTTStreamer()));
+				IO::OutputMessage &p = *ctx.msg.back();
+
+				if (count % 2 == 1)
+				{
+					p.Set("URL", arg1);
+				}
+				if (count >= 2)
+					parseSettings(p, argv, ptr + (count % 2), argc);
+			}
+			break;
+		case 'X':
+			Assert(count <= 1 || (count == 2 && arg2 == "EXP"), param, "Only one optional parameter [sharing key] allowed.");
+			{
+				if (!commm_feed)
+				{
+					ctx.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+					commm_feed = ctx.msg.back().get();
+					commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
+					if (count == 2 || true)
+					{
+						// Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
+						commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
+					}
+					else
+					{
+						commm_feed->Set("MSGFORMAT", "JSON_NMEA");
+					}
+				}
+
+				if (count >= 1 && commm_feed)
+					commm_feed->Set("UUID", arg1);
+			}
+			break;
+		case 'H':
+			Assert(count > 0, param);
+			{
+				ctx.json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::HTTPStreamer()));
+				IO::OutputJSON &h = *ctx.json.back();
+				if (count % 2)
+					h.Set("URL", arg1);
+				parseSettings(h, argv, ptr + (count % 2), argc);
+				receiver.setTags("DT");
+			}
+			break;
+		case 'Z':
+			Assert(count == 2, param, "Location Setting requires two parameters (lat/lon)");
+			receiver.setLatLon(Util::Parse::Float(arg1), Util::Parse::Float(arg2));
+			break;
+		case 'A':
+		case 'E':
+			throw std::runtime_error("Option -" + std::string(1, param[1]) + " is obsolete. Please use -I instead.");
+			break;
+		case 'I':
+		{
+#ifdef HASNMEA2000
+			ctx.json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
+			IO::OutputJSON &h = *ctx.json.back();
+			if (count % 2)
+				h.Set("DEVICE", arg1);
+
+			if (count > 1)
+				parseSettings(h, argv, ptr + (count % 2), argc);
+#else
+			throw std::runtime_error("NMEA2000 support not compiled in.");
+#endif
+		}
+		break;
+		case 'h':
+			Assert(count == 0 || count == 1, param, MSG_NO_PARAMETER);
+			if (count == 1)
+			{
+				Util::Convert::toUpper(arg1);
+				Assert(arg1 == "JSON" || arg1 == "BUILD", param, "parameter needs to be JSON or BUILD");
+
+				if (arg1 == "JSON")
+					std::cout << "{\"version\":\"" << VERSION << "\",\"version_describe\":\"" << VERSION_DESCRIBE << "\",\"version_code\":" << VERSION_NUMBER << "}\n";
+				else
+					std::cout << VERSION_DESCRIBE << "\n";
+
+				ctx.no_run = true;
+				ctx.show_copyright = false;
+			}
+			else
+				ctx.list_options = true;
+			break;
+		case 'p':
+			Assert(count == 1, param, "requires one parameter [frequency offset].");
+			receiver.setPPM(Util::Parse::Integer(arg1, -150, 150));
+			break;
+		case 'a':
+			Assert(count == 1, param, "requires one parameter [bandwidth].");
+			receiver.setBandwidth(Util::Parse::Integer(arg1, 0, 20000000));
+			break;
+		case 'g':
+			Assert(count % 2 == 0 && param.length() == 3, param);
+			switch (param[2])
+			{
+			case 'e':
+				parseSettings(receiver.getDeviceManager().SerialPort(), argv, ptr, argc);
 				break;
 			case 'm':
-				Assert(count == 1, param, "requires one parameter [model number].");
-				receiver.addModel(Util::Parse::Integer(arg1, 0, 9));
-				break;
-			case 'M':
-				Assert(count <= 1, param, "requires zero or one parameter [DT].");
-				receiver.clearTags();
-				receiver.setTags(arg1);
-				break;
-			case 'c':
-				Assert(count <= 2 && count >= 1, param, "requires one or two parameter [AB/CD]].");
-				if (count == 1)
-					receiver.setChannel(arg1);
-				if (count == 2)
-					receiver.setChannel(arg1, arg2);
-				break;
-			case 'C':
-				Assert(count == 1, param, "one parameter required: filename");
-
-				if (!arg1.empty())
-				{
-					c.read(arg1);
-				}
-				break;
-			case 'N':
-				Assert(count > 0, param, "requires at least one parameter");
-				if (servers.size() == 0)
-					servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-
-				if (count % 2 == 1)
-				{
-					// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
-					if (servers.back()->isPortSet())
-						servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-					servers.back()->Set("PORT", arg1);
-				}
-				servers.back()->active() = true;
-				parseSettings(*servers.back(), argv, ptr + (count % 2), argc);
-				break;
-			case 'S':
-				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter [port].");
-				{
-					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
-					IO::OutputMessage &u = *msg.back();
-					u.Set("PORT", arg1).Set("TIMEOUT", "0");
-					if (count > 1)
-						parseSettings(u, argv, ptr + 1, argc);
-				}
-				break;
-			case 'f':
-			{
-				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::FileOutput()));
-				IO::OutputMessage &f = *msg.back();
-				if (count % 2 == 1)
-				{
-					f.Set("FILE", arg1);
-				}
-				if (count > 1)
-					parseSettings(f, argv, ptr + (count % 2), argc);
-			}
-			break;
-			case 'v':
-				Assert(count <= 1, param);
-				receiver.verbose = true;
-				if (count == 1)
-					screen.verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
-				break;
-			case 'O':
-				Assert(count == 1, param);
-				own_mmsi = Util::Parse::Integer(arg1, 1, 999999999);
-				break;
-			case 'T':
-				Assert(count == 1 || (count == 2 && arg2 == "nomsg_only"), param, "timeout requires one parameter with optional \"nomsg_only\".");
-				timeout = Util::Parse::Integer(arg1, 1, 3600);
-				if (count == 2)
-					timeout_nomsg = true;
-				break;
-			case 'q':
-				Assert(count == 0, param, MSG_NO_PARAMETER);
-				screen.setScreen("0");
-				break;
-			case 'n':
-				Assert(count == 0, param, MSG_NO_PARAMETER);
-				screen.setScreen("2");
-				break;
-			case 'o':
-				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter.");
-				screen.setScreen(arg1);
-				if (count > 1)
-				{
-					parseSettings(screen, argv, ptr + 1, argc);
-				}
-				break;
-			case 'F':
-				Assert(count == 0, param, MSG_NO_PARAMETER);
-				receiver.addModel(2)->Set("FP_DS", "ON").Set("PS_EMA", "ON");
-				receiver.removeTags("DT");
-				break;
-			case 't':
-				Assert(count <= 3, param, "requires one parameter [url], or two or three parameters [[protocol]] [host] [port].");
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::RTLTCP;
-				if (count == 1)
-					_receivers.back()->getDeviceManager().RTLTCP().Set("url", arg1);
-				if (count == 2)
-					_receivers.back()->getDeviceManager().RTLTCP().Set("port", arg2).Set("host", arg1);
-				if (count == 3)
-					_receivers.back()->getDeviceManager().RTLTCP().Set("port", arg3).Set("host", arg2).Set("PROTOCOL", arg1);
-				break;
-			case 'x':
-				Assert(count == 2, param, "requires two parameters [server] [port].");
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::UDP;
-				_receivers.back()->getDeviceManager().UDP().Set("port", arg2).Set("server", arg1);
-				break;
-			case 'D':
-			{
-				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::PostgreSQL()));
-				IO::OutputJSON &d = *json.back();
-
-				if (count % 2 == 1)
-				{
-					d.Set("CONN_STR", arg1);
-					if (count > 1)
-						parseSettings(d, argv, ptr + 1, argc);
-				}
-				else
-				{
-					if (count >= 2)
-						parseSettings(d, argv, ptr, argc);
-				}
-			}
-			break;
-			case 'y':
-				Assert(count <= 2, param, "requires one or two parameters [url] or [host] [port].");
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::SPYSERVER;
-				if (count == 1)
-					_receivers.back()->getDeviceManager().SpyServer().Set("url", arg1);
-				else if (count == 2)
-					_receivers.back()->getDeviceManager().SpyServer().Set("port", arg2).Set("host", arg1);
-				break;
-			case 'z':
-				Assert(count <= 2, param, "requires at most two parameters [[format]] [endpoint].");
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::ZMQ;
-				if (count == 1)
-					_receivers.back()->getDeviceManager().ZMQ().Set("ENDPOINT", arg1);
-				if (count == 2)
-					_receivers.back()->getDeviceManager().ZMQ().Set("FORMAT", arg1).Set("ENDPOINT", arg2);
-				break;
-			case 'b':
-				Assert(count == 0, param, MSG_NO_PARAMETER);
-				receiver.Timing() = true;
-				break;
-			case 'i':
-				Assert(count <= 1, param, "requires at most one option parameter.");
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::N2K;
-				if (count == 1)
-					_receivers.back()->getDeviceManager().N2KSCAN().Set("INTERFACE", arg1);
-				break;
-
-			case 'w':
-				Assert(count <= 1, param);
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::WAVFILE;
-				if (count == 1)
-					_receivers.back()->getDeviceManager().WAV().Set("FILE", arg1);
+				parseSettings(receiver.getDeviceManager().AIRSPY(), argv, ptr, argc);
 				break;
 			case 'r':
-				Assert(count <= 2, param, "requires at most two parameters [[format]] [filename].");
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::RAWFILE;
-				if (count == 1)
-					_receivers.back()->getDeviceManager().RAW().Set("FILE", arg1);
-				if (count == 2)
-					_receivers.back()->getDeviceManager().RAW().Set("FORMAT", arg1).Set("FILE", arg2);
+				parseSettings(receiver.getDeviceManager().RTLSDR(), argv, ptr, argc);
 				break;
-			case 'e':
-				Assert(count == 2, param, "requires two parameters [baudrate] [portname].");
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-				_receivers.back()->getDeviceManager().InputType() = Type::SERIALPORT;
-				_receivers.back()->getDeviceManager().SerialPort().Set("BAUDRATE", arg1).Set("PORT", arg2);
-				break;
-			case 'l':
-				Assert(count == 0 || count == 2, param, MSG_NO_PARAMETER);
-				if (count == 2)
-				{
-					Assert(arg1 == "JSON", param, "requires JSON on/off");
-					list_devices_JSON = Util::Parse::Switch(arg2);
-				}
-				list_devices = true;
-				break;
-			case 'L':
-				Assert(count == 0, param, MSG_NO_PARAMETER);
-				list_support = true;
-				break;
-			case 'd':
-				if (++nrec > 1)
-				{
-					_receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-				}
-
-				if (param.length() == 4 && param[2] == ':')
-				{
-					Assert(count == 0, param, MSG_NO_PARAMETER);
-					int n = param[3] - '0';
-					_receivers.back()->getDeviceManager().selectDeviceByIndex(n);
-				}
-				else
-				{
-					Assert(param.length() == 2, param, "syntax error in device setting");
-					Assert(count == 1, param, "device setting requires one parameter [serial number]");
-					_receivers.back()->getDeviceManager().SerialNumber() = arg1;
-				}
-				break;
-			case 'u':
-				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
-				{
-					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::UDPStreamer()));
-					IO::OutputMessage &o = *msg.back();
-					o.Set("HOST", arg1).Set("PORT", arg2);
-					if (count > 2)
-						parseSettings(o, argv, ptr + 2, argc);
-				}
-				break;
-			case 'P':
-				Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
-				{
-					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-					IO::OutputMessage &p = *msg.back();
-					p.Set("HOST", arg1).Set("PORT", arg2);
-					if (count > 2)
-						parseSettings(p, argv, ptr + 2, argc);
-				}
-				break;
-			case 'Q':
-				Assert(count >= 1, param, "invalid number of arguments");
-				{
-					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MQTTStreamer()));
-					IO::OutputMessage &p = *msg.back();
-
-					if (count % 2 == 1)
-					{
-						p.Set("URL", arg1);
-					}
-					if (count >= 2)
-						parseSettings(p, argv, ptr + (count % 2), argc);
-				}
-				break;
-			case 'X':
-				Assert(count <= 1 || (count == 2 && arg2 == "EXP"), param, "Only one optional parameter [sharing key] allowed.");
-				{
-					if (!commm_feed)
-					{
-						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-						commm_feed = msg.back().get();
-						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("DOWNSAMPLE", "on").Set("INCLUDE_SAMPLE_START", "on");
-						if (count == 2 || true)
-						{
-							// Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
-							commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
-						}
-						else
-						{
-							commm_feed->Set("MSGFORMAT", "JSON_NMEA");
-						}
-					}
-
-					if (count >= 1 && commm_feed)
-						commm_feed->Set("UUID", arg1);
-				}
-				break;
-			case 'H':
-				Assert(count > 0, param);
-				{
-					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::HTTPStreamer()));
-					IO::OutputJSON &h = *json.back();
-					if (count % 2)
-						h.Set("URL", arg1);
-					parseSettings(h, argv, ptr + (count % 2), argc);
-					receiver.setTags("DT");
-				}
-				break;
-			case 'Z':
-				Assert(count == 2, param, "Location Setting requires two parameters (lat/lon)");
-				receiver.setLatLon(Util::Parse::Float(arg1), Util::Parse::Float(arg2));
-				break;
-			case 'A':
-			case 'E':
-				throw std::runtime_error("Option -" + std::string(1, param[1]) + " is obsolete. Please use -I instead.");
-				break;
-			case 'I':
-			{
-#ifdef HASNMEA2000
-				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
-				IO::OutputJSON &h = *json.back();
-				if (count % 2)
-					h.Set("DEVICE", arg1);
-
-				if (count > 1)
-					parseSettings(h, argv, ptr + (count % 2), argc);
-#else
-				throw std::runtime_error("NMEA2000 support not compiled in.");
-#endif
-			}
-			break;
 			case 'h':
-				Assert(count == 0 || count == 1, param, MSG_NO_PARAMETER);
-				if (count == 1)
-				{
-					Util::Convert::toUpper(arg1);
-					Assert(arg1 == "JSON" || arg1 == "BUILD", param, "parameter needs to be JSON or BUILD");
-
-					if (arg1 == "JSON")
-						std::cout << "{\"version\":\"" << VERSION << "\",\"version_describe\":\"" << VERSION_DESCRIBE << "\",\"version_code\":" << VERSION_NUMBER << "}\n";
-					else
-						std::cout << VERSION_DESCRIBE << "\n";
-
-					no_run = true;
-					show_copyright = false;
-				}
-				else
-					list_options = true;
+				parseSettings(receiver.getDeviceManager().AIRSPYHF(), argv, ptr, argc);
 				break;
-			case 'p':
-				Assert(count == 1, param, "requires one parameter [frequency offset].");
-				receiver.setPPM(Util::Parse::Integer(arg1, -150, 150));
+			case 's':
+				parseSettings(receiver.getDeviceManager().SDRPLAY(), argv, ptr, argc);
 				break;
 			case 'a':
-				Assert(count == 1, param, "requires one parameter [bandwidth].");
-				receiver.setBandwidth(Util::Parse::Integer(arg1, 0, 20000000));
+				parseSettings(receiver.getDeviceManager().RAW(), argv, ptr, argc);
 				break;
-			case 'g':
-				Assert(count % 2 == 0 && param.length() == 3, param);
-				switch (param[2])
-				{
-				case 'e':
-					parseSettings(receiver.getDeviceManager().SerialPort(), argv, ptr, argc);
-					break;
-				case 'm':
-					parseSettings(receiver.getDeviceManager().AIRSPY(), argv, ptr, argc);
-					break;
-				case 'r':
-					parseSettings(receiver.getDeviceManager().RTLSDR(), argv, ptr, argc);
-					break;
-				case 'h':
-					parseSettings(receiver.getDeviceManager().AIRSPYHF(), argv, ptr, argc);
-					break;
-				case 's':
-					parseSettings(receiver.getDeviceManager().SDRPLAY(), argv, ptr, argc);
-					break;
-				case 'a':
-					parseSettings(receiver.getDeviceManager().RAW(), argv, ptr, argc);
-					break;
-				case 'w':
-					parseSettings(receiver.getDeviceManager().WAV(), argv, ptr, argc);
-					break;
-				case 't':
-					parseSettings(receiver.getDeviceManager().RTLTCP(), argv, ptr, argc);
-					break;
-				case 'y':
-					parseSettings(receiver.getDeviceManager().SpyServer(), argv, ptr, argc);
-					break;
-				case 'f':
-					parseSettings(receiver.getDeviceManager().HACKRF(), argv, ptr, argc);
-					break;
-				case 'u':
-					parseSettings(receiver.getDeviceManager().SOAPYSDR(), argv, ptr, argc);
-					break;
-				case 'z':
-					parseSettings(receiver.getDeviceManager().ZMQ(), argv, ptr, argc);
-					break;
-				case 'o':
-					if (receiver.Count() == 0)
-						receiver.addModel(receiver.getDeviceManager().isTXTformatSet() ? 5 : 2);
-					parseSettings(*receiver.Model(receiver.Count() - 1), argv, ptr, argc);
-					break;
-				default:
-					throw std::runtime_error("invalid -g switch on command line");
-				}
+			case 'w':
+				parseSettings(receiver.getDeviceManager().WAV(), argv, ptr, argc);
+				break;
+			case 't':
+				parseSettings(receiver.getDeviceManager().RTLTCP(), argv, ptr, argc);
+				break;
+			case 'y':
+				parseSettings(receiver.getDeviceManager().SpyServer(), argv, ptr, argc);
+				break;
+			case 'f':
+				parseSettings(receiver.getDeviceManager().HACKRF(), argv, ptr, argc);
+				break;
+			case 'u':
+				parseSettings(receiver.getDeviceManager().SOAPYSDR(), argv, ptr, argc);
+				break;
+			case 'z':
+				parseSettings(receiver.getDeviceManager().ZMQ(), argv, ptr, argc);
+				break;
+			case 'o':
+				if (receiver.Count() == 0)
+					receiver.addModel(receiver.getDeviceManager().isTXTformatSet() ? 5 : 2);
+				parseSettings(*receiver.Model(receiver.Count() - 1), argv, ptr, argc);
 				break;
 			default:
-				throw std::runtime_error("unknown option on command line (" + std::string(1, param[1]) + ").");
+				throw std::runtime_error("invalid -g switch on command line");
 			}
-
-			ptr += count + 1;
+			break;
+		default:
+			throw std::runtime_error("unknown option on command line (" + std::string(1, param[1]) + ").");
 		}
 
-		if (show_copyright)
+		ptr += count + 1;
+	}
+}
+
+int main(int argc, char *argv[])
+{
+
+	int exit_code = 0;
+
+#ifdef _WIN32
+	if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
+		throw std::runtime_error("could not set control handler");
+#else
+	signal(SIGINT, consoleHandler);
+	signal(SIGTERM, consoleHandler);
+	signal(SIGHUP, consoleHandler);
+	signal(SIGPIPE, consoleHandler);
+#endif
+
+	Logger::getInstance().setMaxBufferSize(50);
+	log_callback = Logger::getInstance().addLogListener([](const LogMessage &msg)
+														{ std::cerr << msg.message << "\n"; });
+
+	terminate = false;
+
+#ifndef _WIN32
+	// Start keyboard monitor thread for spacebar pause/resume
+	std::thread kbd_thread(keyboardMonitor);
+	kbd_thread.detach();
+#endif
+
+	do
+	{
+		if (paused)
+		{
+			SleepSystem(100);
+			continue;
+		}
+
+		exit_code = 0;
+		app_state = ApplicationState::Busy;
+
+		std::unique_ptr<ApplicationContext> ctx(new ApplicationContext());
+
+		try
+		{
+			parseCommandLine(*ctx, argc, argv);
+
+			if (!ctx->config_file.empty())
+			{
+				Config c(*ctx);
+				c.read(ctx->config_file);
+			}
+		}
+		catch (std::exception const &e)
+		{
+			Error() << e.what();
+			return -1;
+		}
+
+		if (ctx->show_copyright)
 			printVersion();
 
-		/*
-		// -------------
-		// Read config file
+		if (ctx->list_devices)
+			ctx->receivers.back()->getDeviceManager().printAvailableDevices(ctx->list_devices_JSON);
 
-		if (!file_config.empty())
-		{
-			Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
-			c.read(file_config);
-		}
-		*/
-		if (list_devices)
-			_receivers.back()->getDeviceManager().printAvailableDevices(list_devices_JSON);
-		if (list_support)
+		if (ctx->list_support)
 			printBuildConfiguration();
-		if (list_options)
+
+		if (ctx->list_options)
 			Usage();
-		if (list_devices || list_support || list_options || no_run)
-			return 0;
 
-		// -------------
-		// set up the receiver and open the device
+		if (!ctx->shouldRun())
+			break;
 
-		stat.resize(_receivers.size());
-		msg_count.resize(_receivers.size(), 0);
-
-		int group = 0;
-
-		for (int i = 0; i < _receivers.size(); i++)
+		try
 		{
+			// -------------
+			// set up the receiver and open the device
 
-			Receiver &r = *_receivers[i];
-			r.setOwnMMSI(own_mmsi);
+			ctx->Setup();
+			ctx->Start();
 
-			if (servers.size() > 0 && servers[0]->active())
-				r.setTags("DTM");
+			app_state = ApplicationState::Running;
 
-			r.setupDevice();
-			// set up the decoding model(s), group is the last output group used
-			r.setupModel(group);
+			stop = false;
+			const int SLEEP = 50;
+			auto time_start = high_resolution_clock::now();
+			auto time_timeout_start = time_start;
+			auto time_last = time_start;
 
-			// set up all the output and connect to the receiver outputs
-			for (auto &o : msg)
-				o->Connect(r);
-			for (auto &j : json)
-				j->Connect(r);
-
-			screen.Connect(r);
-
-			for (auto &s : servers)
-				if (s->active())
-					s->connect(r);
-
-			if (r.verbose || timeout_nomsg)
-				stat[i].connect(r);
-		}
-
-		for (auto &o : msg)
-			o->Start();
-
-		for (auto &j : json)
-			j->Start();
-
-		for (auto &s : servers)
-			if (s->active())
+			while (!stop)
 			{
-				if (own_mmsi != -1)
+				auto time_now = high_resolution_clock::now();
+
+				for (auto &r : ctx->receivers)
+					stop = stop || !(r->getDeviceManager().getDevice()->isStreaming());
+
+				if (ctx->isAllCallback()) // don't go to sleep in case we are reading from a file
+					std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
+
+				if (!ctx->isAnyVerbose() && !ctx->timeout)
+					continue;
+
+				if (ctx->isAnyVerbose() && duration_cast<seconds>(time_now - time_last).count() >= ctx->screen.verboseUpdateTime)
 				{
-					s->Set("SHARE_LOC", "true");
-					s->Set("OWN_MMSI", std::to_string(own_mmsi));
+					time_last = time_now;
+					ctx->printVerboseStats();
 				}
-				s->start();
-			}
 
-		DBG("Starting statistics");
-		for (auto &s : stat)
-			s.start();
-
-		DBG("Starting receivers");
-		for (auto &r : _receivers)
-			r->play();
-
-		stop = false;
-		const int SLEEP = 50;
-		auto time_start = high_resolution_clock::now();
-		auto time_timeout_start = time_start;
-		auto time_last = time_start;
-		bool oneverbose = false, iscallback = true;
-
-		for (auto &r : _receivers)
-		{
-			oneverbose |= r->verbose;
-			iscallback &= r->getDeviceManager().getDevice()->isCallback();
-		}
-
-		DBG("Entering main loop");
-		while (!stop)
-		{
-			for (auto &r : _receivers)
-				stop = stop || !(r->getDeviceManager().getDevice()->isStreaming());
-
-			if (iscallback) // don't go to sleep in case we are reading from a file
-				std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
-
-			if (!oneverbose && !timeout)
-				continue;
-
-			auto time_now = high_resolution_clock::now();
-
-			if (oneverbose && duration_cast<seconds>(time_now - time_last).count() >= screen.verboseUpdateTime)
-			{
-				time_last = time_now;
-
-				for (int i = 0; i < _receivers.size(); i++)
+				if (ctx->timeout && ctx->timeout_nomsg)
 				{
-					Receiver &r = *_receivers[i];
-					if (r.verbose)
+					bool one_stale = false;
+
+					for (int i = 0; i < ctx->receivers.size(); i++)
 					{
-						for (int j = 0; j < r.Count(); j++)
-						{
-							stat[i].statistics[j].Stamp();
-							std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
-							Info() << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << stat[i].statistics[j].getDeltaCount() << " msgs, total: "
-								   << stat[i].statistics[j].getCount() << " msgs, rate: " << stat[i].statistics[j].getRate() << " msg/s";
-						}
+						if (ctx->stat[i].statistics[0].getCount() == ctx->msg_count[i])
+							one_stale = true;
+
+						ctx->msg_count[i] = ctx->stat[i].statistics[0].getCount();
+					}
+
+					if (!one_stale)
+						time_timeout_start = time_now;
+				}
+
+				if (ctx->timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= ctx->timeout)
+				{
+					stop = true;
+
+					if (ctx->timeout_nomsg)
+						Warning() << "Stop triggered, no messages were received for " << ctx->timeout << " seconds.";
+					else
+					{
+						exit_code = -2;
+						Warning() << "Stop triggered by timeout after " << ctx->timeout << " seconds. (-T " << ctx->timeout << ")";
 					}
 				}
 			}
 
-			if (timeout && timeout_nomsg)
-			{
-				bool one_stale = false;
+			// Save paused state before cleanup
+			app_state = ApplicationState::Busy;
 
-				for (int i = 0; i < _receivers.size(); i++)
-				{
-					if (stat[i].statistics[0].getCount() == msg_count[i])
-						one_stale = true;
+			ctx->Stop();
+			ctx->printFinalStats();
 
-					msg_count[i] = stat[i].statistics[0].getCount();
-				}
+			for (auto &s : ctx->servers)
+				s->close();
 
-				if (!one_stale)
-					time_timeout_start = time_now;
-			}
-
-			if (timeout && duration_cast<seconds>(time_now - time_timeout_start).count() >= timeout)
-			{
-				stop = true;
-				if (timeout_nomsg)
-					Warning() << "Stop triggered, no messages were received for " << timeout << " seconds.";
-				else
-				{
-					exit_code = -2;
-					Warning() << "Stop triggered by timeout after " << timeout << " seconds. (-T " << timeout << ")";
-				}
-			}
+			
+			app_state = ApplicationState::Idle;
 		}
-
-		std::stringstream ss;
-		for (int i = 0; i < _receivers.size(); i++)
+		catch (std::exception const &e)
 		{
-			Receiver &r = *_receivers[i];
-			r.stop();
-
-			// End Main loop
-			// -----------------
-
-			if (r.verbose)
-			{
-				ss << "----------------------\n";
-				for (int j = 0; j < r.Count(); j++)
-				{
-					std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
-					stat[i].statistics[j].Stamp();
-					ss << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << stat[i].statistics[j].getCount() << " msgs" << "\n";
-				}
-			}
-
-			if (r.Timing())
-				for (int j = 0; j < r.Count(); j++)
-				{
-					std::string name = r.Model(j)->getName();
-					ss << "[" << r.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ') << r.Model(j)->getTotalTiming() << " ms" << "\n";
-				}
-			Info() << ss.str();
+			Error() << e.what();
+			exit_code = -1;
+			app_state = ApplicationState::Idle;
+			SleepSystem(2000);
 		}
 
-		for (auto &s : servers)
-			s->close();
-	}
-	catch (std::exception const &e)
-	{
-		Error() << e.what();
-		for (auto &r : _receivers)
-			r->stop();
-		exit_code = -1;
-	}
+	} while (!terminate);
 
+	app_state = ApplicationState::Terminated;
+#ifndef _WIN32
+	restoreTerminal();
+#endif
 	return exit_code;
 }
