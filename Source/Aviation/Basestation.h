@@ -30,6 +30,8 @@
 class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
     std::string line;
+    bool dropping = false;
+    const int MAX_BASESTATION_LINE_LEN = 8192;
 
     void processLine();
 

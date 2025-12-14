@@ -108,11 +108,13 @@ void Beast::Clear()
     state = State::WAIT_ESCAPE;
     buffer.clear();
     msg.clear();
+    bytes_read = 0;
+    inEscape = false;
 }
 
 void Beast::ProcessByte(uint8_t byte, TAG &tag)
 {
-    if (buffer.size() > MAX_MESSAGE_SIZE)
+    if (buffer.size() >= MAX_MESSAGE_SIZE)
     {
         Clear();
         return;
@@ -172,8 +174,15 @@ void Beast::ProcessByte(uint8_t byte, TAG &tag)
         break;
 
     case State::READ_SIGNAL:
-        msg.signalLevel = byte / 255.0f;
-        msg.signalLevel = 2 * 10 * std::log10(msg.signalLevel);
+        if (byte == 0)
+        {
+            msg.signalLevel = LEVEL_UNDEFINED;
+        }
+        else
+        {
+            msg.signalLevel = byte / 255.0f;
+            msg.signalLevel = 20.0f * std::log10(msg.signalLevel);
+        }
         state = State::READ_PAYLOAD;
         bytes_read = 0;
         break;
@@ -186,6 +195,7 @@ void Beast::ProcessByte(uint8_t byte, TAG &tag)
         msg.len = bytes_read;
 
         int expected_len = GetExpectedLength();
+
         if (bytes_read == expected_len)
         {
             if (msg.msgtype == '2' || msg.msgtype == '3')

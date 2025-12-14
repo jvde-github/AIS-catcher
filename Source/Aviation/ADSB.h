@@ -80,7 +80,7 @@ namespace Plane
             struct Plane::CPR cpr;
             bool even;
         } CPR_history[3];
-        
+
         int CPR_history_idx = 0;
 
         uint8_t msg[14]; // Raw message
@@ -184,16 +184,16 @@ namespace Plane
             return ss.str();
         }
 
-        uint32_t getBits(int startBit, int len) const
+        uint32_t getBits(int startBit, int bitLen) const
         {
             uint32_t result = 0;
-            for (int i = 0; i < len; i++)
+            for (int i = 0; i < bitLen; i++)
             {
                 int byteIdx = (startBit + i) / 8;
                 int bitIdx = 7 - ((startBit + i) % 8);
-                if (byteIdx < sizeof(msg) && (msg[byteIdx] & (1 << bitIdx)))
+                if (byteIdx >= 0 && byteIdx < this->len && (msg[byteIdx] & (1 << bitIdx)))
                 {
-                    result |= (1 << (len - 1 - i));
+                    result |= (1U << (bitLen - 1 - i));
                 }
             }
             return result;
@@ -209,7 +209,7 @@ namespace Plane
 
         bool validateLength()
         {
-            int expected = getMessageLength(df);
+            int expected = getMessageLength(df);            
             return len == expected;
         }
 

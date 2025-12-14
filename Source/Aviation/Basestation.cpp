@@ -29,14 +29,13 @@ void Basestation::processLine()
 	std::string field;
 	while (std::getline(ss, field, ','))
 	{
-		if (field[0] == '"')
-			field = field.substr(1, field.length() - 2);
+		if (!field.empty() && field.front() == '"' && field.size() >= 2 && field.back() == '"')
+			field = field.substr(1, field.size() - 2);
 		fields.push_back(field);
 	}
 
 	if (fields.size() < 10 || fields[0] != "MSG")
 		return;
-
 
 	// Message Type (Field 1)
 	int type = std::stoi(fields[1]);
@@ -151,6 +150,13 @@ void Basestation::Receive(const RAW *data, int len, TAG &tag)
 			char c = ((char *)(data[j].data))[i];
 			if (c == '\n')
 			{
+				if (dropping)
+				{
+					dropping = false;
+					line.clear();
+					continue;
+				}
+
 				if (line.length() > 0)
 				{
 					try
@@ -166,8 +172,19 @@ void Basestation::Receive(const RAW *data, int len, TAG &tag)
 			}
 			else
 			{
-				if (c != '\r')
-					line = line + c;
+				if (c == '\r')
+					continue;
+
+				if (dropping)
+					continue;
+
+				if (line.size() >= MAX_BASESTATION_LINE_LEN)
+				{
+					dropping = true;
+					continue;
+				}
+
+				line.push_back(c);
 			}
 		}
 	}
