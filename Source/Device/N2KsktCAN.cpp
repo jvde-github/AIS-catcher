@@ -68,20 +68,6 @@ namespace Device
 		N2K::N2KInterface.Stop();
 	}
 
-	Setting &N2KSCAN::Set(std::string option, std::string arg)
-	{
-		Util::Convert::toUpper(option);
-
-		if (option == "INTERFACE")
-		{
-			_iface = arg;
-		}
-		else
-			Device::Set(option, arg);
-
-		return *this;
-	}
-
 	std::string N2KSCAN::Get()
 	{
 		return Device::Get() + " network " + _iface;
@@ -132,3 +118,19 @@ namespace Device
 }
 
 #endif
+
+Setting &Device::N2KSCAN::Set(std::string option, std::string arg)
+{
+	Util::Convert::toUpper(option);
+
+	if (option == "INTERFACE")
+	{
+#ifdef HASNMEA2000
+		_iface = arg;
+#endif
+	}
+	else
+		Device::Set(option, arg);
+
+	return *this;
+}

@@ -39,7 +39,9 @@ namespace Device {
 		bool lost = false;
 		std::vector<std::string> available_intefaces;
 
+#endif
 	public:
+#ifdef HASNMEA2000
 		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K){};
 		~N2KSCAN();
 
@@ -48,7 +50,6 @@ namespace Device {
 		bool isStreaming() { return !lost; }
 		bool isCallback() { return true; }
 
-		Setting& Set(std::string option, std::string arg);
 		std::string Get();
 
 		std::string getProduct() { return "NMEA2000"; }
@@ -71,5 +72,6 @@ namespace Device {
 		virtual void getDeviceList(std::vector<Description>& DeviceList);
 
 #endif
+		Setting& Set(std::string option, std::string arg);
 	};
 }
