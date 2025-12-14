@@ -252,6 +252,8 @@ namespace Device
 		}
 	}
 
+#endif
+
 	Setting &RTLSDR::Set(std::string option, std::string arg)
 	{
 		Util::Convert::toUpper(option);
@@ -288,5 +290,4 @@ namespace Device
 
 		return Device::Get() + str;
 	}
-#endif
 }

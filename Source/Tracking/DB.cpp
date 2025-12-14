@@ -780,7 +780,9 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 		v.setManeuver(p.Get().getInt()); // 0=not available, 1=no special, 2=special (direct value)
 		break;
 	#pragma GCC diagnostic push
+	#if defined(__GNUC__) && !defined(__clang__)
 	#pragma GCC diagnostic ignored "-Wstringop-truncation"
+	#endif
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
 		std::strncpy(v.shipname, p.Get().getString().c_str(), sizeof(v.shipname) - 1);

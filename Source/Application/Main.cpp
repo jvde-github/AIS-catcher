@@ -215,6 +215,10 @@ static void printBuildConfiguration()
 
 static void parseSettings(Setting &s, char *argv[], int ptr, int argc)
 {
+	std::string flag_context;
+	if (ptr >= 0 && ptr < argc && argv[ptr] != nullptr && argv[ptr][0] == '-')
+		flag_context = argv[ptr];
+
 	ptr++;
 
 	while (ptr < argc - 1 && argv[ptr][0] != '-')
@@ -222,7 +226,17 @@ static void parseSettings(Setting &s, char *argv[], int ptr, int argc)
 		std::string option = argv[ptr++];
 		std::string arg = argv[ptr++];
 
-		s.Set(option, arg);
+		try
+		{
+			s.Set(option, arg);
+		}
+		catch (const std::exception &e)
+		{
+			if (!flag_context.empty())
+				throw std::runtime_error(std::string("Config: ") + e.what() + " (in " + flag_context + " " + option + " " + arg + ")");
+
+			throw;
+		}
 	}
 }
 
@@ -304,13 +318,14 @@ int main(int argc, char *argv[])
 				Util::Convert::toUpper(arg1);
 				Util::Convert::toUpper(arg2);
 
-			if (cb != -1 && arg1 == "SYSTEM" && arg2 == "ON")
-			{
-				Logger::getInstance().removeLogListener(cb);
-				cb = -1;
-				// Enable DEBUG level when switching to system logging for journalctl filtering
-				Logger::getInstance().setMinLevel(LogLevel::_DEBUG);
-			}				parseSettings(Logger::getInstance(), argv, ptr, argc);
+				if (cb != -1 && arg1 == "SYSTEM" && arg2 == "ON")
+				{
+					Logger::getInstance().removeLogListener(cb);
+					cb = -1;
+					// Enable DEBUG level when switching to system logging for journalctl filtering
+					Logger::getInstance().setMinLevel(LogLevel::_DEBUG);
+				}
+				parseSettings(Logger::getInstance(), argv, ptr, argc);
 				break;
 			case 's':
 				Assert(count == 1, param, "does require one parameter [sample rate].");

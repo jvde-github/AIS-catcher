@@ -34,8 +34,10 @@ namespace Device {
 
 	class N2KSCAN : public Device, public Callback<tN2kMsg> {
 		
-#ifdef HASNMEA2000
+		// Device settings (always available)
 		std::string _iface = "";
+
+#ifdef HASNMEA2000
 		bool lost = false;
 		std::vector<std::string> available_intefaces;
 
@@ -47,9 +49,6 @@ namespace Device {
 
 		bool isStreaming() { return !lost; }
 		bool isCallback() { return true; }
-
-		Setting& Set(std::string option, std::string arg);
-		std::string Get();
 
 		std::string getProduct() { return "NMEA2000"; }
 		std::string getVendor() { return "Unknown"; }
@@ -71,5 +70,10 @@ namespace Device {
 		virtual void getDeviceList(std::vector<Description>& DeviceList);
 
 #endif
+
+	public:
+		// Settings (always available)
+		Setting& Set(std::string option, std::string arg);
+		std::string Get();
 	};
 }

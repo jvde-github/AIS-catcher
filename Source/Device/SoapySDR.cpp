@@ -202,45 +202,6 @@ namespace Device {
 		}
 	}
 
-	Setting& SOAPYSDR::Set(std::string option, std::string arg) {
-		Util::Convert::toUpper(option);
-
-		if (option == "DEVICE") {
-			device_args = arg;
-			return *this;
-		}
-		else if (option == "GAIN") {
-			gains_args = SoapySDR::KwargsFromString(arg);
-			return *this;
-		}
-		else if (option == "STREAM") {
-			stream_args = SoapySDR::KwargsFromString(arg);
-			return *this;
-		}
-		else if (option == "SETTING") {
-			setting_args = SoapySDR::KwargsFromString(arg);
-			return *this;
-		}
-		else if (option == "ANTENNA") {
-			antenna = arg;
-			return *this;
-		}
-
-		if (option == "AGC") {
-			AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "PROBE") {
-			print = Util::Parse::Switch(arg);
-		}
-		else if (option == "CH") {
-			channel = Util::Parse::Integer(arg, 0, 32);
-		}
-		else
-			Device::Set(option, arg);
-
-		return *this;
-	}
-
 	void SOAPYSDR::PrintActuals() {
 		std::cerr << std::endl;
 		std::cerr << "Actual device settings:\n"
@@ -276,15 +237,58 @@ namespace Device {
 				  << std::endl;
 	}
 
+#endif
+
+	Setting& SOAPYSDR::Set(std::string option, std::string arg) {
+		Util::Convert::toUpper(option);
+
+		if (option == "DEVICE") {
+			device_args = arg;
+		}
+		else if (option == "GAIN") {
+#ifdef HASSOAPYSDR
+			gains_args = SoapySDR::KwargsFromString(arg);
+#endif
+		}
+		else if (option == "STREAM") {
+#ifdef HASSOAPYSDR
+			stream_args = SoapySDR::KwargsFromString(arg);
+#endif
+		}
+		else if (option == "SETTING") {
+#ifdef HASSOAPYSDR
+			setting_args = SoapySDR::KwargsFromString(arg);
+#endif
+		}
+		else if (option == "ANTENNA") {
+			antenna = arg;
+		}
+		else if (option == "AGC") {
+			AGC = Util::Parse::Switch(arg);
+		}
+		else if (option == "PROBE") {
+			print = Util::Parse::Switch(arg);
+		}
+		else if (option == "CH") {
+			channel = Util::Parse::Integer(arg, 0, 32);
+		}
+		else
+			Device::Set(option, arg);
+
+		return *this;
+	}
+
 	std::string SOAPYSDR::Get() {
 		std::string str;
 
+#ifdef HASSOAPYSDR
 		str += " device \"" + device_args + "\" gain \"" + SoapySDR::KwargsToString(gains_args) + "\"";
 		str += " stream \"" + SoapySDR::KwargsToString(stream_args) + "\" setting \"" + SoapySDR::KwargsToString(setting_args) + "\"";
+#else
+		str += " device \"" + device_args + "\"";
+#endif
 		str += " channel \"" + std::to_string(channel) + "\" agc " + Util::Convert::toString(AGC) + " antenna \"" + antenna + "\"";
 
 		return Device::Get() + str;
 	}
-
-#endif
 }

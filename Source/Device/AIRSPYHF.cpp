@@ -135,6 +135,7 @@ namespace Device {
 		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set sample rate.");
 		if (airspyhf_set_freq(dev, getCorrectedFrequency()) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set frequency.");
 	}
+#endif
 
 	Setting& AIRSPYHF::Set(std::string option, std::string arg) {
 		Util::Convert::toUpper(option);
@@ -157,5 +158,4 @@ namespace Device {
 	std::string AIRSPYHF::Get() {
 		return Device::Get() + " preamp " + Util::Convert::toString(preamp) + " threshold " + (threshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
 	}
-#endif
 }

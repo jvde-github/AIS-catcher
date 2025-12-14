@@ -43,20 +43,23 @@ namespace Device {
 
 
 	class SOAPYSDR : public Device {
+
+		// Device settings (always available)
+		std::string device_args;
+		std::string antenna = "";
+		int channel = 0;
+		bool AGC = true;
+		bool print = false;
+
 #ifdef HASSOAPYSDR
 
 		std::vector<SoapyDevice> dev_list;
 		SoapySDR::Device* dev = NULL;
 
-		std::string device_args;
 		SoapySDR::Kwargs stream_args;
 		SoapySDR::Kwargs setting_args;
 		SoapySDR::Kwargs gains_args;
 
-		std::string antenna = "";
-		int channel = 0;
-		bool AGC = true;
-		bool print = false;
 		bool skip_unmake = false;
 
 		std::thread async_thread;
@@ -78,8 +81,6 @@ namespace Device {
 		int findRate(const std::vector<double>&);
 
 	public:
-		SOAPYSDR() : Device(Format::CF32, 0,Type::SOAPYSDR) {}
-
 		// Control
 		void Open(uint64_t h);
 		void Play();
@@ -91,12 +92,16 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		// Settings
-		Setting& Set(std::string option, std::string arg);
-		std::string Get();
-
-		std::string getProduct() { return "SOAPYSDR"; }
 		void setFormat(Format f) {}
 #endif
+
+	public:
+		SOAPYSDR() : Device(Format::CF32, 0,Type::SOAPYSDR) {}
+
+		std::string getProduct() { return "SOAPYSDR"; }
+
+		// Settings (always available)
+		Setting& Set(std::string option, std::string arg);
+		std::string Get();
 	};
 }

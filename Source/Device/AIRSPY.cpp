@@ -252,6 +252,7 @@ namespace Device
 		if (airspy_set_freq(dev, getCorrectedFrequency()) != AIRSPY_SUCCESS)
 			throw std::runtime_error("AIRSPY: cannot set frequency.");
 	}
+#endif
 
 	Setting &AIRSPY::Set(std::string option, std::string arg)
 	{
@@ -340,5 +341,4 @@ namespace Device
 
 		return Device::Get() + str + " biastee " + Util::Convert::toString(bias_tee) + " ";
 	}
-#endif
 }

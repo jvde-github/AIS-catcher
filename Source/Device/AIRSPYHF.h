@@ -26,15 +26,17 @@
 namespace Device {
 
 	class AIRSPYHF : public Device {
+
+		// Device settings (always available)
+		bool preamp = false;
+		bool threshold_high = false;
+
 #ifdef HASAIRSPYHF
 
 		struct airspyhf_device* dev = NULL;
 		std::vector<uint32_t> rates;
 		bool lost = false;
 		uint64_t serial;
-
-		bool preamp = false;
-		bool threshold_high = false;
 
 		static int callback_static(airspyhf_transfer_t* tf);
 		void callback(CFLOAT32*, int);
@@ -48,8 +50,6 @@ namespace Device {
 		void setDefaultRate();
 
 	public:
-		AIRSPYHF() : Device(Format::CF32, 0, Type::AIRSPYHF) {}
-
 		// Control
 		void Open(uint64_t h);
 #ifdef HASAIRSPYHF_ANDROID
@@ -64,15 +64,19 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		// Settings
-		Setting& Set(std::string option, std::string arg);
-		std::string Get();
-
-		std::string getProduct() { return "AIRSPYHF"; }
-		std::string getVendor() { return "AIRSPY"; }
 		std::string getSerial() { return Util::Convert::toHexString(serial); }
 
 		void setFormat(Format f) {}
 #endif
+
+	public:
+		AIRSPYHF() : Device(Format::CF32, 0, Type::AIRSPYHF) {}
+
+		std::string getProduct() { return "AIRSPYHF"; }
+		std::string getVendor() { return "AIRSPY"; }
+
+		// Settings (always available)
+		Setting& Set(std::string option, std::string arg);
+		std::string Get();
 	};
 }

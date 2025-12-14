@@ -28,13 +28,8 @@ namespace Device {
 
 
 	class AIRSPY : public Device {
-#ifdef HASAIRSPY
 
-		struct airspy_device* dev = nullptr;
-		bool lost = false;
-		std::vector<uint32_t> rates;
-		uint64_t serial;
-
+		// Device settings (always available)
 		enum class AIRSPYGainMode {
 			Free,
 			Sensitivity,
@@ -52,6 +47,13 @@ namespace Device {
 		int VGA_Gain = 10;
 
 		bool bias_tee = false;
+
+#ifdef HASAIRSPY
+
+		struct airspy_device* dev = nullptr;
+		bool lost = false;
+		std::vector<uint32_t> rates;
+		uint64_t serial;
 
 		static int callback_static(airspy_transfer_t* tf);
 		void callback(CFLOAT32*, int);
@@ -73,8 +75,6 @@ namespace Device {
 		void setDefaultRate();
 
 	public:
-		AIRSPY() : Device(Format::CF32, 0, Type::AIRSPY) {}
-
 		// Control
 		void Open(uint64_t h);
 
@@ -91,15 +91,19 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		// Settings
-		Setting& Set(std::string option, std::string arg);
-		std::string Get();
-
-		std::string getProduct() { return "AIRSPY"; }
-		std::string getVendor() { return "AIRSPY"; }
 		std::string getSerial() { return Util::Convert::toHexString(serial); }
 
 		void setFormat(Format f) {}
 #endif
+
+	public:
+		AIRSPY() : Device(Format::CF32, 0, Type::AIRSPY) {}
+
+		std::string getProduct() { return "AIRSPY"; }
+		std::string getVendor() { return "AIRSPY"; }
+
+		// Settings (always available)
+		Setting& Set(std::string option, std::string arg);
+		std::string Get();
 	};
 }
