@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>AIS-catcher Hub</title>
+    <link rel="stylesheet" href="tailwind.css?hash=e5a00adb15bd0cd3df7288866bd259a5">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            touch-action: pan-x pan-y;
+            overscroll-behavior: none;
+            position: fixed;
+            width: 100%;
+        }
+
+        #hub-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
+        }
+
+        #webviewer-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: none;
+            width: 100%;
+            height: 100%;
+            touch-action: pan-x pan-y;
+        }
+
+        #bottom-bar {
+            position: relative;
+            flex-shrink: 0;
+            width: 100%;
+            background: #0f172a;
+            border-top: 1px solid #334155;
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .hub-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 0.75rem;
+            color: white;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            min-width: 70px;
+        }
+
+        .hub-button:hover {
+            background: #1e293b;
+        }
+
+        .hub-button.active {
+            background: #1e293b;
+        }
+
+        .hub-button svg {
+            width: 1.5rem;
+            height: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        #config-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            height: 100dvh;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        #config-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        #config-panel.open {
+            right: 0;
+        }
+
+        #config-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 55;
+        }
+
+        #config-overlay.open {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            #config-panel {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="hub-container">
+        <iframe id="webviewer-frame" src="index.html"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+
+        <div id="config-overlay" onclick="closeConfigPanel()"></div>
+
+        <!-- Config Panel -->
+        <div id="config-panel">
+            <div
+                class="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 id="config-title" class="text-lg font-semibold text-slate-800">Configuration</h3>
+                <button onclick="closeConfigPanel()" class="text-slate-600 hover:text-slate-800 p-1">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="status-message" class="hidden"></div>
+            <div id="config-content" class="p-4">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+        </div>
+
+    </div>
+
+    <nav id="bottom-bar">
+        <div class="flex items-center justify-around sm:justify-center h-16 sm:gap-12">
+            <button class="hub-button" id="nav-pause-btn" data-view="pause" onclick="togglePauseFromNav()">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M6 4h2v12H6V4zm6 0h2v12h-2V4z" />
+                </svg>
+                <span>Pause</span>
+            </button>
+            <button class="hub-button" data-view="input" onclick="openConfig('input')">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path
+                        d="M160-80q-33 0-56.5-23.5T80-160v-480q0-25 13.5-45t36.5-29l506-206 26 66-330 134h468q33 0 56.5 23.5T880-640v480q0 33-23.5 56.5T800-80H160Zm0-80h640v-280H160v280Zm160-40q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29ZM160-520h480v-80h80v80h80v-120H160v120Zm0 360v-280 280Z" />
+                </svg>
+                <span>Input</span>
+            </button>
+            <button class="hub-button" data-view="output" onclick="openConfig('output')">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path
+                        d="M680-80q-50 0-85-35t-35-85q0-6 3-28L282-392q-16 15-37 23.5t-45 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q24 0 45 8.5t37 23.5l281-164q-2-7-2.5-13.5T560-760q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-24 0-45-8.5T598-672L317-508q2-7 2.5-13.5t.5-14.5q0-8-.5-14.5T317-452l281 164q16-15 37-23.5t45-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T720-200q0-17-11.5-28.5T680-240q-17 0-28.5 11.5T640-200q0 17 11.5 28.5T680-160ZM200-440q17 0 28.5-11.5T240-480q0-17-11.5-28.5T200-520q-17 0-28.5 11.5T160-480q0 17 11.5 28.5T200-440Zm480-280q17 0 28.5-11.5T720-760q0-17-11.5-28.5T680-800q-17 0-28.5 11.5T640-760q0 17 11.5 28.5T680-720Zm0 520ZM200-480Zm480-280Z" />
+                </svg>
+                <span>Output</span>
+            </button>
+            <button class="hub-button active" data-view="webviewer" onclick="openWebviewerInNewTab()">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path
+                        d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H560v-80h280v280h-80v-144L388-332Z" />
+                </svg>
+                <span>Webviewer</span>
+            </button>
+        </div>
+    </nav>
+
+    <script src="schema.js?hash=bd7567ef3d814e448e1f1ce456900f7a"></script>
+    <script src="config-manager.js?hash=801f48d67fd41aebcca5346e9b865e9f"></script>
+
+    <script>
+        // Prevent double-tap zoom on mobile
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        // Disable pinch-to-zoom on iOS
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+            document.body.style.transform = 'scale(1)';
+        }, { passive: false });
+
+        document.addEventListener('gesturechange', function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gestureend', function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        const iframe = document.getElementById('webviewer-frame');
+        const configPanel = document.getElementById('config-panel');
+        const configOverlay = document.getElementById('config-overlay');
+        const configContent = document.getElementById('config-content');
+        const configTitle = document.getElementById('config-title');
+        let currentView = 'main';
+        let configData = {};
+
+        function openConfig(type) {
+            // Clear unsaved state when opening
+            if (typeof window.App !== 'undefined' && window.App.setUnsaved) {
+                window.App.setUnsaved(false);
+            }
+            const statusEl = document.getElementById('status-message');
+            if (statusEl) {
+                statusEl.className = 'hidden';
+                statusEl.innerHTML = '';
+            }
+
+            currentView = type;
+
+            // Update button states
+            document.querySelectorAll('.hub-button').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.view === type) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Set title
+            const titles = {
+                input: 'Input Configuration',
+                output: 'Output Configuration'
+            };
+            configTitle.textContent = titles[type] || 'Configuration';
+
+            // Load content based on type
+            if (type === 'input') {
+                loadSourceConfig();
+            } else if (type === 'output') {
+                loadOutputConfig();
+            }
+
+            // Show panel
+            configPanel.classList.add('open');
+            configOverlay.classList.add('open');
+        }
+
+        function closeConfigPanel() {
+            // Check for unsaved changes before closing
+            if (typeof App !== 'undefined' && App.state && App.state.unsaved) {
+                if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+                    return;
+                }
+            }
+
+            // Clear unsaved state when closing
+            if (typeof App !== 'undefined' && App.setUnsaved) {
+                App.setUnsaved(false);
+            }
+
+            // Clear the status message HTML
+            const statusEl = document.getElementById('status-message');
+            if (statusEl) {
+                statusEl.className = 'hidden';
+                statusEl.innerHTML = '';
+            }
+
+            // Reset output type to default
+            currentOutputType = 'sharing';
+            
+            configPanel.classList.remove('open');
+            configOverlay.classList.remove('open');
+            
+            // Reset to webviewer view
+            if (currentView !== 'webviewer') {
+                currentView = 'webviewer';
+                document.querySelectorAll('.hub-button').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.view === 'webviewer') {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+        }
+
+        function loadSourceConfig() {
+                configContent.innerHTML = '<div class="text-center p-8"><div class="animate-spin h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-2"></div><p class="text-sm text-slate-600">Loading...</p></div>';
+
+                fetch('/api/config', { credentials: 'include' })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Failed to fetch configuration');
+                        return res.json();
+                    })
+                    .then(data => {
+                        configData = data;
+                        renderSourceConfig(data);
+                    })
+                    .catch(err => {
+                        console.error('Config load error:', err);
+                        configContent.textContent = '';
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-center p-8';
+                        const p = document.createElement('p');
+                        p.className = 'text-slate-600';
+                        p.textContent = 'Failed to load configuration';
+                        const button = document.createElement('button');
+                        button.onclick = loadSourceConfig;
+                        button.className = 'mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700';
+                        button.textContent = 'Retry';
+                        errorDiv.appendChild(p);
+                        errorDiv.appendChild(button);
+                        configContent.appendChild(errorDiv);
+                    });
+        }
+
+        function renderSourceConfig(data) {
+                configContent.textContent = '';
+                const wrapper = document.createElement('div');
+                wrapper.className = 'space-y-4';
+                const desc = document.createElement('div');
+                desc.className = 'text-sm text-slate-600 mb-4';
+                desc.textContent = 'Configure your AIS receiver source';
+                const container = document.createElement('div');
+                container.id = 'hub-receivers-container';
+                container.className = 'space-y-4';
+                wrapper.appendChild(desc);
+                wrapper.appendChild(container);
+                configContent.appendChild(wrapper);
+
+                // Use createChannelManager to render device configurations
+                console.log('Checking availability:', {
+                    createChannelManager: typeof createChannelManager,
+                    receiverSchema: typeof receiverSchema,
+                    window_createChannelManager: typeof window.createChannelManager,
+                    App: typeof App
+                });
+                if (typeof window.createChannelManager !== 'undefined' && typeof receiverSchema !== 'undefined') {
+                    const receiverManager = window.createChannelManager({
+                        channelType: 'receiver',
+                        schema: receiverSchema,
+                        containerId: 'hub-receivers-container',
+                        addButtonId: null,
+                        saveButtonId: null,
+                        title: 'Receiver'
+                    });
+                    // Clear unsaved state after rendering with longer delay and repeated attempts
+                    setTimeout(() => {
+                        if (typeof App !== 'undefined' && App.setUnsaved) {
+                            App.setUnsaved(false);
+                            const statusEl = document.getElementById('status-message');
+                            if (statusEl) {
+                                statusEl.className = 'hidden';
+                                statusEl.innerHTML = '';
+                            }
+                        }
+                    }, 500);
+                    setTimeout(() => {
+                        if (typeof App !== 'undefined' && App.setUnsaved) {
+                            App.setUnsaved(false);
+                        }
+                    }, 1000);
+                } else {
+                    console.error('createChannelManager or receiverSchema not available');
+                    configContent.innerHTML += '<div class="text-center p-4 text-red-600">Configuration manager not loaded</div>';
+                }
+        }
+
+        function loadOutputConfig() {
+                configContent.innerHTML = '<div class="text-center p-8"><div class="animate-spin h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-2"></div><p class="text-sm text-slate-600">Loading...</p></div>';
+
+                fetch('/api/config', { credentials: 'include' })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Failed to fetch configuration');
+                        return res.json();
+                    })
+                    .then(data => {
+                        configData = data;
+                        renderOutputConfig(data);
+                        // Clear unsaved state after loading with longer delay and repeated attempts
+                        setTimeout(() => {
+                            if (typeof App !== 'undefined' && App.setUnsaved) {
+                                App.setUnsaved(false);
+                                const statusEl = document.getElementById('status-message');
+                                if (statusEl) {
+                                    statusEl.className = 'hidden';
+                                    statusEl.innerHTML = '';
+                                }
+                            }
+                        }, 500);
+                        setTimeout(() => {
+                            if (typeof App !== 'undefined' && App.setUnsaved) {
+                                App.setUnsaved(false);
+                            }
+                        }, 1000);
+                    })
+                    .catch(err => {
+                        console.error('Config load error:', err);
+                        configContent.textContent = '';
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-center p-8';
+                        const p = document.createElement('p');
+                        p.className = 'text-slate-600';
+                        p.textContent = 'Failed to load configuration';
+                        const button = document.createElement('button');
+                        button.onclick = loadOutputConfig;
+                        button.className = 'mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700';
+                        button.textContent = 'Retry';
+                        errorDiv.appendChild(p);
+                        errorDiv.appendChild(button);
+                        configContent.appendChild(errorDiv);
+                    });
+        }
+
+        let currentOutputManager = null;
+        let currentOutputType = 'sharing';
+
+        function renderOutputConfig(data) {
+                configContent.textContent = '';
+                const wrapper = document.createElement('div');
+                wrapper.className = 'space-y-4';
+                const select = document.createElement('select');
+                select.id = 'hub-output-type-selector';
+                select.className = 'w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white mb-4';
+                ['sharing', 'udp', 'http', 'mqtt', 'tcp', 'tcp-server', 'server'].forEach(type => {
+                    const opt = document.createElement('option');
+                    opt.value = type;
+                    if (type === 'sharing') {
+                        opt.textContent = 'Community Sharing';
+                    } else if (type === 'tcp') {
+                        opt.textContent = 'TCP Client';
+                    } else if (type === 'tcp-server') {
+                        opt.textContent = 'TCP Server';
+                    } else if (type === 'server') {
+                        opt.textContent = 'Webviewer';
+                    } else {
+                        opt.textContent = type.toUpperCase();
+                    }
+                    select.appendChild(opt);
+                });
+                const container = document.createElement('div');
+                container.id = 'hub-output-container';
+                container.className = 'space-y-4';
+                wrapper.appendChild(select);
+                wrapper.appendChild(container);
+                configContent.appendChild(wrapper);
+
+                const selector = document.getElementById('hub-output-type-selector');
+                updateOutputView();
+
+                selector.addEventListener('change', () => {
+                    currentOutputType = selector.value;
+                    updateOutputView();
+                });
+        }
+
+        function updateOutputView() {
+                const type = currentOutputType;
+
+                const schemaMap = {
+                    sharing: typeof sharingSchema !== 'undefined' ? sharingSchema : {},
+                    udp: typeof udpSchema !== 'undefined' ? udpSchema : {},
+                    http: typeof httpSchema !== 'undefined' ? httpSchema : {},
+                    mqtt: typeof mqttSchema !== 'undefined' ? mqttSchema : {},
+                    tcp: typeof tcpSchema !== 'undefined' ? tcpSchema : {},
+                    'tcp-server': typeof tcpServerSchema !== 'undefined' ? tcpServerSchema : {},
+                    server: typeof webviewerSchema !== 'undefined' ? webviewerSchema : {}
+                };
+
+                const schema = schemaMap[type];
+
+                if (currentOutputManager) {
+                    currentOutputManager = null;
+                }
+
+                // Sharing uses createSimpleConfigManager, others use createChannelManager
+                if (type === 'sharing' && typeof window.createSimpleConfigManager !== 'undefined') {
+                    currentOutputManager = window.createSimpleConfigManager({
+                        schema: schema,
+                        containerId: 'hub-output-container',
+                        saveButtonId: null
+                    });
+                } else if (typeof window.createChannelManager !== 'undefined') {
+                    // Map display type to actual config field name
+                    const channelTypeMap = {
+                        'tcp-server': 'tcp_listener',
+                        'tcp': 'tcp',
+                        'udp': 'udp',
+                        'http': 'http',
+                        'mqtt': 'mqtt',
+                        'server': 'server'
+                    };
+                    const actualChannelType = channelTypeMap[type] || type;
+
+                    currentOutputManager = window.createChannelManager({
+                        channelType: actualChannelType,
+                        schema: schema,
+                        containerId: 'hub-output-container',
+                        addButtonId: null,
+                        saveButtonId: null,
+                        title: type.charAt(0).toUpperCase() + type.slice(1)
+                    });
+                }
+            }
+
+        function updateNavPauseButton() {
+            const pauseBtn = document.getElementById('nav-pause-btn');
+            if (!pauseBtn) return;
+
+            fetch('/api/state')
+                .then(res => res.json())
+                .then(data => {
+                    pauseBtn.disabled = !data.canControl;
+
+                    if (data.paused) {
+                        pauseBtn.classList.remove('active');
+                        pauseBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg><span>Resume</span>';
+                    } else {
+                        pauseBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 4h2v12H6V4zm6 0h2v12h-2V4z"/></svg><span>Pause</span>';
+                    }
+
+                    if (!data.canControl) {
+                        pauseBtn.style.opacity = '0.5';
+                        pauseBtn.style.cursor = 'not-allowed';
+                    } else {
+                        pauseBtn.style.opacity = '1';
+                        pauseBtn.style.cursor = 'pointer';
+                    }
+                })
+                .catch(err => console.error('Failed to fetch state:', err));
+        }
+
+        function togglePauseFromNav() {
+            const pauseBtn = document.getElementById('nav-pause-btn');
+            if (!pauseBtn || pauseBtn.disabled) return;
+
+            fetch('/api/state')
+                .then(res => res.json())
+                .then(data => {
+                    const newPauseState = !data.paused;
+                    return fetch('/api/state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'pause=' + (newPauseState ? 'true' : 'false')
+                    });
+                })
+                .then(res => res.json())
+                .then(result => {
+                    console.log('Pause toggled:', result);
+                    setTimeout(updateNavPauseButton, 500);
+                })
+                .catch(err => console.error('Failed to toggle pause:', err));
+        }
+
+        // Start polling pause button state on page load
+        updateNavPauseButton();
+        setInterval(updateNavPauseButton, 2000);
+
+        // Iframe loads index.html immediately
+    </script>
+</body>
+</html>
