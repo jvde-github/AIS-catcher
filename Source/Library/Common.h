@@ -39,7 +39,18 @@
 
 class tN2kMsg;
 
+enum class ApplicationState
+{
+	Busy,
+	Running,
+	Idle,
+	Terminated
+};
+
 void StopRequest();
+ApplicationState GetApplicationState();
+bool IsPaused();
+void SetPaused(bool pause);
 
 #define GROUPS_ALL 0xFFFFFFFFFFFFFFFF
 #define GROUP_OUT_UNDEFINED (1ULL << 63)

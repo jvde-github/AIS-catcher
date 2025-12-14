@@ -724,6 +724,112 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		std::string content = ships.getBinaryMessagesJSON();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
+	else if (r == "/api/state")
+	{
+		if (a.empty())
+		{
+			// GET request - return application state for UI controls
+			ApplicationState state = GetApplicationState();
+			bool isPaused = IsPaused();
+			
+			std::string stateStr;
+			bool canControl = true;
+			
+			switch (state)
+			{
+			case ApplicationState::Busy:
+				stateStr = "busy";
+				canControl = false;
+				break;
+			case ApplicationState::Running:
+				stateStr = "running";
+				break;
+			case ApplicationState::Idle:
+				stateStr = "idle";
+				break;
+			case ApplicationState::Terminated:
+				stateStr = "terminated";
+				canControl = false;
+				break;
+			}
+			
+			std::string content = "{\"state\":\"" + stateStr + "\",\"paused\":" + (isPaused ? "true" : "false") + ",\"canControl\":" + (canControl ? "true" : "false") + "}";
+			Response(c, "application/json", content, use_zlib & gzip);
+		}
+		else
+		{
+			// POST request - control pause/play
+			if (a == "pause=true")
+			{
+				SetPaused(true);
+				Response(c, "application/json", "{\"success\":true,\"action\":\"paused\"}", use_zlib & gzip);
+			}
+			else if (a == "pause=false")
+			{
+				SetPaused(false);
+				Response(c, "application/json", "{\"success\":true,\"action\":\"resumed\"}", use_zlib & gzip);
+			}
+			else
+			{
+				Response(c, "application/json", "{\"error\":\"Invalid parameter\"}", use_zlib & gzip);
+			}
+		}
+	}
+	else if (r == "/api/config")
+	{
+		Info() << "Server - webapp config request received.";
+		if (!webapp_mode || webapp_config_file.empty())
+		{
+			Response(c, "application/json", "{\"error\":\"No config file specified\"}", use_zlib & gzip);
+		}
+		else if (a.empty())
+		{
+			// GET request - return config file content
+			try
+			{
+				std::string content = Util::Helper::readFile(webapp_config_file);
+				// Return empty object if file is empty
+				if (content.empty())
+				{
+					content = "{}";
+					Info() << "Server - returning empty config object";
+				}
+				else
+				{
+					Info() << "Server - returning config from " << webapp_config_file << " (" << content.length() << " bytes)";
+				}
+				Response(c, "application/json", content, use_zlib & gzip);
+			}
+			catch (const std::exception &e)
+			{
+				Error() << "Server - error reading webapp config file (" << webapp_config_file << "): " << e.what();
+				// Return empty object if file doesn't exist
+				Info() << "Server - returning empty config object (file not found)";
+				Response(c, "application/json", "{}", use_zlib & gzip);
+			}
+		}
+		else
+		{
+			// POST request - save config file content
+			try
+			{
+				std::ofstream file(webapp_config_file);
+				if (!file.is_open())
+				{
+					throw std::runtime_error("Cannot open file for writing");
+				}
+				file << a;
+				file.close();
+				Info() << "Server - webapp config saved to " << webapp_config_file;
+				Response(c, "text/plain", "Configuration saved successfully", use_zlib & gzip);
+			}
+			catch (const std::exception &e)
+			{
+				Error() << "Server - error saving webapp config file (" << webapp_config_file << "): " << e.what();
+				Response(c, "application/json", "{\"error\":\"Failed to save config\"}", use_zlib & gzip);
+			}
+		}
+	}
 	else if (r == "/custom/plugins.js")
 	{
 		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
@@ -1160,6 +1266,14 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "REUSE_PORT")
 	{
 		setReusePort(Util::Parse::Switch(arg));
+	}
+	else if (option == "WEBAPP")
+	{
+		webapp_mode = Util::Parse::Switch(arg);
+	}
+	else if (option == "WEBAPP_CONFIG")
+	{
+		webapp_config_file = arg;
 	}
 	else if (!filter.SetOption(option, arg))
 	{

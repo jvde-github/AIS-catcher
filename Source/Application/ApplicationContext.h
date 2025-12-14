@@ -70,7 +70,7 @@ public:
 	ApplicationContext(const ApplicationContext&) = delete;
 	ApplicationContext& operator=(const ApplicationContext&) = delete;
 
-	void Setup()
+	void Setup(WebViewer* webapp = nullptr)
 	{
 		stat.resize(receivers.size());
 		msg_count.resize(receivers.size(), 0);
@@ -80,7 +80,7 @@ public:
 			Receiver& r = *receivers[i];
 			r.setOwnMMSI(own_mmsi);
 
-			if (servers.size() > 0 && servers[0]->active())
+			if ((servers.size() > 0 && servers[0]->active()) || webapp)
 				r.setTags("DTM");
 
 			r.setupDevice();
@@ -98,6 +98,10 @@ public:
 			for (auto& s : servers)
 				if (s->active())
 					s->connect(r);
+
+			// Connect to persistent webapp if provided
+			if (webapp && webapp->active())
+				webapp->connect(r);
 
 			if (r.verbose || timeout_nomsg)
 				stat[i].connect(r);

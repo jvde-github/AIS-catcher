@@ -67,18 +67,24 @@ process_file() {
     local identifier=$(make_identifier "$relative_path")
     local mime_type=$(get_mime_type "$file")
 
+    # Create unique temporary file for this process
+    local TEMP_FILE_LOCAL=$(mktemp)
+    
     # Compress the file content
-    gzip -9 -n < "$file" > "$TEMP_FILE"
+    gzip -9 -n < "$file" > "$TEMP_FILE_LOCAL"
 
     # Generate the C array data
     {
         echo "// File: $relative_path"
         echo "static const unsigned char data_${identifier}[] = {"
-        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | head -n -1
+        xxd -i < "$TEMP_FILE_LOCAL" | grep -v "unsigned"
         echo "};"
         echo "static const size_t size_${identifier} = sizeof(data_${identifier});"
         echo
     } >> "$OUTPUT_FILE"
+    
+    # Remove the local temporary file
+    rm -f "$TEMP_FILE_LOCAL"
 }
 
 # Export functions and variables

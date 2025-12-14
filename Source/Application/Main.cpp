@@ -34,14 +34,6 @@
 #include "Screen.h"
 #include "File.h"
 
-enum class ApplicationState
-{
-	Busy,	   // Starting or stopping - transitional state
-	Running,   // Actively processing
-	Idle,	   // Stopped
-	Terminated // Final state, exiting
-};
-
 static std::atomic<bool> stop;
 static std::atomic<bool> terminate;
 static std::atomic<bool> paused{false};
@@ -56,6 +48,11 @@ void StopRequest()
 ApplicationState GetApplicationState()
 {
 	return app_state;
+}
+
+bool IsPaused()
+{
+	return paused;
 }
 
 void SetPaused(bool pause)
@@ -782,6 +779,10 @@ static void parseCommandLine(ApplicationContext &ctx, int argc, char *argv[])
 				throw std::runtime_error("invalid -g switch on command line");
 			}
 			break;
+		case 'W':
+			Assert(count <= 1, param, "requires zero or one parameter [config file]");
+			// Webapp mode flag and config file - already processed early, just skip it here
+			break;
 		default:
 			throw std::runtime_error("unknown option on command line (" + std::string(1, param[1]) + ").");
 		}
@@ -809,13 +810,51 @@ int main(int argc, char *argv[])
 	log_callback = Logger::getInstance().addLogListener([](const LogMessage &msg)
 														{ std::cerr << msg.message << "\n"; });
 
-	terminate = false;
+	// Check for webapp mode flag and optional config file
+	bool webapp_mode = false;
+	std::string webapp_config_file;
+	for (int i = 1; i < argc; i++)
+	{
+		if (std::string(argv[i]) == "-W")
+		{
+			webapp_mode = true;
+			// Check if next argument is a filename (not another option)
+			if (i + 1 < argc && argv[i + 1][0] != '-')
+			{
+				webapp_config_file = argv[i + 1];
+			}
+			break;
+		}
+	}
+
+	terminate = !webapp_mode;
+
+	// Create persistent webviewer for webapp mode
+	std::unique_ptr<WebViewer> webapp_viewer;
+	if (webapp_mode)
+	{
+		webapp_viewer = std::unique_ptr<WebViewer>(new WebViewer());
+		webapp_viewer->Set("PORT", "8101");
+		webapp_viewer->Set("WEBAPP", "on");
+		if (!webapp_config_file.empty())
+		{
+			webapp_viewer->Set("WEBAPP_CONFIG", webapp_config_file);
+		}
+		webapp_viewer->active() = true;
+		webapp_viewer->start();
+		Info() << "Webapp mode enabled with webviewer on port 8101";
+	}
 
 #ifndef _WIN32
-	// Start keyboard monitor thread for spacebar pause/resume
-	std::thread kbd_thread(keyboardMonitor);
-	kbd_thread.detach();
+	// Start keyboard monitor thread for spacebar pause/resume in webapp mode
+	if (webapp_mode)
+	{
+		std::thread kbd_thread(keyboardMonitor);
+		kbd_thread.detach();
+	}
 #endif
+
+	bool first_run = true;
 
 	do
 	{
@@ -829,6 +868,10 @@ int main(int argc, char *argv[])
 		app_state = ApplicationState::Busy;
 
 		std::unique_ptr<ApplicationContext> ctx(new ApplicationContext());
+
+		// Only print copyright on first run
+		if (!first_run)
+			ctx->show_copyright = false;
 
 		try
 		{
@@ -848,6 +891,10 @@ int main(int argc, char *argv[])
 
 		if (ctx->show_copyright)
 			printVersion();
+		else if (!first_run && webapp_mode)
+			Info() << "Restarting...";
+
+		first_run = false;
 
 		if (ctx->list_devices)
 			ctx->receivers.back()->getDeviceManager().printAvailableDevices(ctx->list_devices_JSON);
@@ -866,7 +913,7 @@ int main(int argc, char *argv[])
 			// -------------
 			// set up the receiver and open the device
 
-			ctx->Setup();
+			ctx->Setup(webapp_viewer.get());
 			ctx->Start();
 
 			app_state = ApplicationState::Running;
@@ -935,7 +982,6 @@ int main(int argc, char *argv[])
 			for (auto &s : ctx->servers)
 				s->close();
 
-			
 			app_state = ApplicationState::Idle;
 		}
 		catch (std::exception const &e)
@@ -943,12 +989,20 @@ int main(int argc, char *argv[])
 			Error() << e.what();
 			exit_code = -1;
 			app_state = ApplicationState::Idle;
-			SleepSystem(2000);
+			if (webapp_mode)
+				SleepSystem(2000);
 		}
 
 	} while (!terminate);
 
 	app_state = ApplicationState::Terminated;
+
+	// Close persistent webviewer
+	if (webapp_viewer)
+	{
+		webapp_viewer->close();
+	}
+
 #ifndef _WIN32
 	restoreTerminal();
 #endif
