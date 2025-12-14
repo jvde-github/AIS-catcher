@@ -20,15 +20,18 @@
 
 #include "AIRSPYHF.h"
 
-namespace Device {
+namespace Device
+{
 
 	//---------------------------------------
 	// Device AIRSPYHF
 
 #ifdef HASAIRSPYHF
 
-	void AIRSPYHF::Open(uint64_t h) {
-		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot open device");
+	void AIRSPYHF::Open(uint64_t h)
+	{
+		if (airspyhf_open_sn(&dev, h) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: cannot open device");
 
 		setDefaultRate();
 		Device::Open(h);
@@ -36,26 +39,32 @@ namespace Device {
 	}
 
 #ifdef HASAIRSPYHF_ANDROID
-	void AIRSPYHF::OpenWithFileDescriptor(int fd) {
-		if (airspyhf_open_file_descriptor(&dev, fd) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot open device");
+	void AIRSPYHF::OpenWithFileDescriptor(int fd)
+	{
+		if (airspyhf_open_file_descriptor(&dev, fd) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: cannot open device");
 		setDefaultRate();
 		Device::Open(0);
 	}
 #endif
 
-	void AIRSPYHF::setDefaultRate() {
+	void AIRSPYHF::setDefaultRate()
+	{
 		uint32_t nRates;
 		airspyhf_get_samplerates(dev, &nRates, 0);
-		if (nRates == 0) throw std::runtime_error("AIRSPY: cannot get allowed sample rates.");
+		if (nRates == 0)
+			throw std::runtime_error("AIRSPY: cannot get allowed sample rates.");
 
 		rates.resize(nRates);
 		airspyhf_get_samplerates(dev, rates.data(), nRates);
 
 		int rate = rates[0];
 		int mindelta = rates[0];
-		for (const auto& r : rates) {
+		for (const auto &r : rates)
+		{
 			int delta = abs((int)r - (int)getSampleRate());
-			if (delta < mindelta) {
+			if (delta < mindelta)
+			{
 				rate = r;
 				mindelta = delta;
 			}
@@ -63,91 +72,115 @@ namespace Device {
 		setSampleRate(rate);
 	}
 
-	void AIRSPYHF::Close() {
+	void AIRSPYHF::Close()
+	{
 		Device::Close();
 		airspyhf_close(dev);
 	}
 
-	void AIRSPYHF::Play() {
+	void AIRSPYHF::Play()
+	{
 		applySettings();
 
-		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: Cannot start device");
+		if (airspyhf_start(dev, AIRSPYHF::callback_static, this) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: Cannot start device");
 		Device::Play();
 
 		SleepSystem(10);
 	}
 
-	void AIRSPYHF::Stop() {
-		if (Device::isStreaming()) {
+	void AIRSPYHF::Stop()
+	{
+		if (Device::isStreaming())
+		{
 			Device::Stop();
 			airspyhf_stop(dev);
 		}
 	}
 
-	void AIRSPYHF::callback(CFLOAT32* data, int len) {
-		RAW r = { Format::CF32, data, (int)(len * sizeof(CFLOAT32)) };
+	void AIRSPYHF::callback(CFLOAT32 *data, int len)
+	{
+		RAW r = {Format::CF32, data, (int)(len * sizeof(CFLOAT32))};
 		Send(&r, 1, tag);
 	}
 
-	int AIRSPYHF::callback_static(airspyhf_transfer_t* tf) {
-		((AIRSPYHF*)tf->ctx)->callback((CFLOAT32*)tf->samples, tf->sample_count);
+	int AIRSPYHF::callback_static(airspyhf_transfer_t *tf)
+	{
+		((AIRSPYHF *)tf->ctx)->callback((CFLOAT32 *)tf->samples, tf->sample_count);
 		return 0;
 	}
 
-	void AIRSPYHF::setAGC() {
-		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set AGC to auto.");
+	void AIRSPYHF::setAGC()
+	{
+		if (airspyhf_set_hf_agc(dev, 1) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: cannot set AGC to auto.");
 	}
 
-	void AIRSPYHF::setThreshold(int s) {
-		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set AGC threshold");
+	void AIRSPYHF::setThreshold(int s)
+	{
+		if (airspyhf_set_hf_agc_threshold(dev, s) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: cannot set AGC threshold");
 	}
 
-	void AIRSPYHF::setLNA(int s) {
-		if (airspyhf_set_hf_lna(dev, s) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set LNA");
+	void AIRSPYHF::setLNA(int s)
+	{
+		if (airspyhf_set_hf_lna(dev, s) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: cannot set LNA");
 	}
 
-	void AIRSPYHF::getDeviceList(std::vector<Description>& DeviceList) {
+	void AIRSPYHF::getDeviceList(std::vector<Description> &DeviceList)
+	{
 		std::vector<uint64_t> serials;
 		int device_count = airspyhf_list_devices(0, 0);
 
 		serials.resize(device_count);
 
-		if (airspyhf_list_devices(serials.data(), device_count) > 0) {
+		if (airspyhf_list_devices(serials.data(), device_count) > 0)
+		{
 			for (int i = 0; i < device_count; i++)
 				DeviceList.push_back(Description("AIRSPY", "AIRSPY HF+", Util::Convert::toHexString(serials[i]), serials[i], Type::AIRSPYHF));
 		}
 	}
 
-	bool AIRSPYHF::isStreaming() {
-		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1) {
+	bool AIRSPYHF::isStreaming()
+	{
+		if (Device::isStreaming() && airspyhf_is_streaming(dev) != 1)
+		{
 			lost = true;
-			Warning()  << "AIRSPYHF: device stopped streaming." ;
+			Warning() << "AIRSPYHF: device stopped streaming.";
 		}
 
 		return Device::isStreaming() && airspyhf_is_streaming(dev) == 1;
 	}
 
-	void AIRSPYHF::applySettings() {
+	void AIRSPYHF::applySettings()
+	{
 		setAGC();
 		setThreshold(threshold_high ? 1 : 0);
-		if (preamp) setLNA(1);
+		if (preamp)
+			setLNA(1);
 
-		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set sample rate.");
-		if (airspyhf_set_freq(dev, getCorrectedFrequency()) != AIRSPYHF_SUCCESS) throw std::runtime_error("AIRSPYHF: cannot set frequency.");
+		if (airspyhf_set_samplerate(dev, sample_rate) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: cannot set sample rate.");
+		if (airspyhf_set_freq(dev, getCorrectedFrequency()) != AIRSPYHF_SUCCESS)
+			throw std::runtime_error("AIRSPYHF: cannot set frequency.");
 	}
 #endif
 
-	Setting& AIRSPYHF::Set(std::string option, std::string arg) {
+	Setting &AIRSPYHF::Set(std::string option, std::string arg)
+	{
 		Util::Convert::toUpper(option);
 
-		if (option == "PREAMP") {
+		if (option == "PREAMP")
+		{
 			preamp = Util::Parse::Switch(arg);
 		}
-		else if (option == "TRESHOLD" || option == "THRESHOLD") {
+		else if (option == "TRESHOLD" || option == "THRESHOLD")
+		{
 			threshold_high = Util::Parse::Switch(arg, "HIGH", "LOW");
 
 			if (option == "TRESHOLD")
-				Warning()  << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
+				Warning() << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
 		}
 		else
 			Device::Set(option, arg);
@@ -155,7 +188,8 @@ namespace Device {
 		return *this;
 	}
 
-	std::string AIRSPYHF::Get() {
+	std::string AIRSPYHF::Get()
+	{
 		return Device::Get() + " preamp " + Util::Convert::toString(preamp) + " threshold " + (threshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
 	}
 }

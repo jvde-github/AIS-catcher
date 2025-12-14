@@ -24,13 +24,15 @@
 #include <airspy.h>
 #endif
 
-namespace Device {
+namespace Device
+{
 
-
-	class AIRSPY : public Device {
+	class AIRSPY : public Device
+	{
 
 		// Device settings (always available)
-		enum class AIRSPYGainMode {
+		enum class AIRSPYGainMode
+		{
 			Free,
 			Sensitivity,
 			Linearity
@@ -50,13 +52,13 @@ namespace Device {
 
 #ifdef HASAIRSPY
 
-		struct airspy_device* dev = nullptr;
+		struct airspy_device *dev = nullptr;
 		bool lost = false;
 		std::vector<uint32_t> rates;
 		uint64_t serial;
 
-		static int callback_static(airspy_transfer_t* tf);
-		void callback(CFLOAT32*, int);
+		static int callback_static(airspy_transfer_t *tf);
+		void callback(CFLOAT32 *, int);
 
 		void setBiasTee(bool);
 		void setLNA_AGC(int);
@@ -89,7 +91,7 @@ namespace Device {
 		bool isStreaming();
 		bool isCallback() { return true; }
 
-		void getDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList);
 
 		std::string getSerial() { return Util::Convert::toHexString(serial); }
 
@@ -103,7 +105,7 @@ namespace Device {
 		std::string getVendor() { return "AIRSPY"; }
 
 		// Settings (always available)
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 	};
 }

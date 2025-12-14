@@ -23,9 +23,11 @@
 #include <hackrf.h>
 #endif
 
-namespace Device {
+namespace Device
+{
 
-	class HACKRF : public Device {
+	class HACKRF : public Device
+	{
 
 		// Device settings (always available)
 		int LNA_Gain = 8;
@@ -34,12 +36,12 @@ namespace Device {
 
 #ifdef HASHACKRF
 
-		hackrf_device* device = nullptr;
-		static hackrf_device_list_t* list;
+		hackrf_device *device = nullptr;
+		static hackrf_device_list_t *list;
 		std::string serial;
 
-		static int callback_static(hackrf_transfer* tf);
-		void callback(uint8_t*, int);
+		static int callback_static(hackrf_transfer *tf);
+		void callback(uint8_t *, int);
 
 		void applySettings();
 
@@ -53,22 +55,26 @@ namespace Device {
 		bool isStreaming() { return Device::isStreaming() && hackrf_is_streaming(device) == HACKRF_TRUE; }
 		virtual bool isCallback() { return true; }
 
-		void getDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList);
 
-		std::string getSerial() { return serial; }		
+		std::string getSerial() { return serial; }
 
 		void setFormat(Format f) {}
 #endif
 
 	public:
-		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF) {
+		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF)
+		{
 #ifdef HASHACKRF
-			if (hackrf_init() != HACKRF_SUCCESS) throw std::runtime_error("HACKRF: Cannot open hackrf library");
+			if (hackrf_init() != HACKRF_SUCCESS)
+				throw std::runtime_error("HACKRF: Cannot open hackrf library");
 #endif
 		}
-		~HACKRF() {
+		~HACKRF()
+		{
 #ifdef HASHACKRF
-			if (list) {
+			if (list)
+			{
 				hackrf_device_list_free(list);
 				list = NULL;
 			}
@@ -80,7 +86,7 @@ namespace Device {
 		std::string getVendor() { return "Great Scott Gadgets"; }
 
 		// Settings (always available)
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 	};
 }

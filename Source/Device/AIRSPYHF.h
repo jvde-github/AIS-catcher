@@ -23,9 +23,11 @@
 #include <airspyhf.h>
 #endif
 
-namespace Device {
+namespace Device
+{
 
-	class AIRSPYHF : public Device {
+	class AIRSPYHF : public Device
+	{
 
 		// Device settings (always available)
 		bool preamp = false;
@@ -33,13 +35,13 @@ namespace Device {
 
 #ifdef HASAIRSPYHF
 
-		struct airspyhf_device* dev = NULL;
+		struct airspyhf_device *dev = NULL;
 		std::vector<uint32_t> rates;
 		bool lost = false;
 		uint64_t serial;
 
-		static int callback_static(airspyhf_transfer_t* tf);
-		void callback(CFLOAT32*, int);
+		static int callback_static(airspyhf_transfer_t *tf);
+		void callback(CFLOAT32 *, int);
 
 		void setThreshold(int);
 		void setLNA(int);
@@ -62,7 +64,7 @@ namespace Device {
 		bool isStreaming();
 		bool isCallback() { return true; }
 
-		void getDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList);
 
 		std::string getSerial() { return Util::Convert::toHexString(serial); }
 
@@ -76,7 +78,7 @@ namespace Device {
 		std::string getVendor() { return "AIRSPY"; }
 
 		// Settings (always available)
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 	};
 }

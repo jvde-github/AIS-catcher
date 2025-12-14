@@ -30,10 +30,12 @@
 #include <fcntl.h>
 #endif
 
-namespace Device {
+namespace Device
+{
 
-	class N2KSCAN : public Device, public Callback<tN2kMsg> {
-		
+	class N2KSCAN : public Device, public Callback<tN2kMsg>
+	{
+
 		// Device settings (always available)
 		std::string _iface = "";
 
@@ -42,7 +44,7 @@ namespace Device {
 		std::vector<std::string> available_intefaces;
 
 	public:
-		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K){};
+		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K) {};
 		~N2KSCAN();
 
 		std::string getRateDescription() { return "N/A"; }
@@ -55,9 +57,10 @@ namespace Device {
 		std::string getSerial() { return _iface; }
 
 		void setFormat(Format f) {}
-		
-		void onMsg(const tN2kMsg & msg) {
-			RAW r = { getFormat(), (void*)&msg, 1 };
+
+		void onMsg(const tN2kMsg &msg)
+		{
+			RAW r = {getFormat(), (void *)&msg, 1};
 			Send(&r, 1, tag);
 		}
 
@@ -67,13 +70,13 @@ namespace Device {
 		void Play();
 		void Stop();
 
-		virtual void getDeviceList(std::vector<Description>& DeviceList);
+		virtual void getDeviceList(std::vector<Description> &DeviceList);
 
 #endif
 
 	public:
 		// Settings (always available)
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 		std::string Get();
 	};
 }
