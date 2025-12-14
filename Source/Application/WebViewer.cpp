@@ -557,7 +557,9 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 
 	if (r == "/")
 	{
-		if (cdn.empty())
+		if (webapp_mode)
+			r = "/webapp.html";
+		else if (cdn.empty())
 			r = "/index.html";
 		else
 			r = "/index_local.html";
