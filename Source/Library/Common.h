@@ -197,7 +197,7 @@ struct TAG
 	float sample_lvl = 0;
 	float level = 0;
 	float ppm = 0;
-	uint64_t group = 0;
+	uint64_t group = GROUP_OUT_UNDEFINED;
 
 	// some data flowing from DB downstream
 	int version = VERSION_NUMBER;
@@ -219,10 +219,11 @@ struct TAG
 
 	void clear()
 	{
-		driver = Type::NONE;
-		hardware.clear();
-		version = 0;
-		group = GROUP_OUT_UNDEFINED;
+		// driver = Type::NONE;
+		// hardware.clear();
+		// version = 0;
+		// group = GROUP_OUT_UNDEFINED;
+
 		status = STATUS_OK;
 		sample_lvl = LEVEL_UNDEFINED;
 		level = LEVEL_UNDEFINED;

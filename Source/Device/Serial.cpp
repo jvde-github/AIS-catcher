@@ -204,17 +204,34 @@ namespace Device
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
-			std::string cmd = init_sequence;
-			if (cmd.back() != '\r' && cmd.back() != '\n')
-				cmd += "\r";
 
+			// Send initial carriage return
+			const char *initial_cr = "\r";
 			DWORD bytesWritten;
-			if (!WriteFile(serial_handle, cmd.c_str(), cmd.length(), &bytesWritten, nullptr))
+			if (!WriteFile(serial_handle, initial_cr, 1, &bytesWritten, nullptr))
 			{
-				throw std::runtime_error("Serial: failed to send initialization sequence.");
+				throw std::runtime_error("Serial: failed to send initial carriage return.");
 			}
 
-			Warning() << "Serial: sent initialization sequence: \"" << init_sequence << "\"." << std::endl;
+			// Split by comma and send each command separately
+			std::stringstream ss(init_sequence);
+			std::string cmd;
+
+			while (std::getline(ss, cmd, ','))
+			{
+				SleepSystem(250);
+
+				if (!cmd.empty())
+				{
+					Info() << "Serial: init command sent \"" << cmd << "\"";
+					cmd += "\r";
+					DWORD bytesWritten;
+					if (!WriteFile(serial_handle, cmd.c_str(), cmd.length(), &bytesWritten, nullptr))
+					{
+						throw std::runtime_error("Serial: failed to send initialization command.");
+					}
+				}
+			}
 		}
 #else
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
@@ -286,16 +303,32 @@ namespace Device
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
-			std::string cmd = init_sequence;
-			if (cmd.back() != '\r' && cmd.back() != '\n')
-				cmd += "\r";
 
-			if (write(serial_fd, cmd.c_str(), cmd.length()) < 0)
+			// Send initial carriage return
+			const char *initial_cr = "\r";
+			if (write(serial_fd, initial_cr, 1) < 0)
 			{
-				throw std::runtime_error("Serial: failed to send initialization sequence.");
+				throw std::runtime_error("Serial: failed to send initial carriage return.");
 			}
 
-			Warning() << "Serial: sent initialization sequence: \"" << init_sequence << "\"." << std::endl;
+			// Split by comma and send each command separately
+			std::stringstream ss(init_sequence);
+			std::string cmd;
+
+			while (std::getline(ss, cmd, ','))
+			{
+				SleepSystem(250);
+
+				if (!cmd.empty())
+				{
+					Info() << "Serial: init command sent \"" << cmd << "\"";
+					cmd += "\r";
+					if (write(serial_fd, cmd.c_str(), cmd.length()) < 0)
+					{
+						throw std::runtime_error("Serial: failed to send initialization command.");
+					}
+				}
+			}
 		}
 #endif
 

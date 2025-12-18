@@ -474,6 +474,7 @@ namespace AIS
 				std::string cls = "";
 				std::string dev = "";
 				std::string suuid = "";
+				std::string message = "";
 				int thisstation = -1;
 				uint64_t ssc = 0;
 				uint16_t sl = 0;
@@ -524,6 +525,9 @@ namespace AIS
 					case AIS::KEY_IPV4:
 						tag.ipv4 = p.Get().getInt();
 						break;
+					case AIS::KEY_MESSAGE:
+						message = p.Get().getString();
+						break;
 					}
 				}
 
@@ -548,6 +552,23 @@ namespace AIS
 								}
 							}
 						}
+					}
+				}
+
+				if (dev == "AIS-catcher" && !message.empty())
+				{
+					if (cls == "error")
+					{
+
+						Error() << "[" << Util::Parse::DeviceTypeString(tag.driver) << "]: " << message;
+					}
+					else if (cls == "warning")
+					{
+						Warning() << "[" << Util::Parse::DeviceTypeString(tag.driver) << "]: " << message;
+					}
+					else
+					{
+						Info() << "[" << Util::Parse::DeviceTypeString(tag.driver) << "]: " << message;
 					}
 				}
 

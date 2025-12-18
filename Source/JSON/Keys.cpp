@@ -282,6 +282,7 @@ namespace AIS
 		{"mothership_mmsi", "", "", "", "", ""}, // KEY_MOTHERSHIP_MMSI
 		{"msg22", "", "", "", "", ""}, // KEY_MSG22
 		{"message_id", "", "", "", "", ""}, // KEY_MESSAGE_ID
+		{"message", "message", "message", "", "", ""}, // KEY_MESSAGE
 		{"name", "", "", "", "", ""}, // KEY_NAME
 		{"ne_lat", "", "", "", "", ""}, // KEY_NE_LAT
 		{"ne_lon", "", "", "", "", ""}, // KEY_NE_LON
@@ -962,6 +963,7 @@ namespace AIS
 		KeyInfo("", "MMSI of the mother ship (for auxiliary craft).", nullptr), // KEY_MOTHERSHIP_MMSI
 		KeyInfo("", "Message 22 flag (Unit can accept channel assignment).", nullptr), // KEY_MSG22
 		KeyInfo("", "", nullptr), // KEY_MESSAGE_ID
+		KeyInfo("", "Freeform message string.", nullptr), // KEY_MESSAGE
 		KeyInfo("", "Name of the Aid to Navigation.", nullptr), // KEY_NAME
 		KeyInfo("degrees", "North East Latitude", nullptr), // KEY_NE_LAT
 		KeyInfo("degrees", "North East Longitude", nullptr), // KEY_NE_LON
