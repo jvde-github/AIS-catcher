@@ -281,10 +281,16 @@ namespace Device
 			throw std::runtime_error("Serial: cfsetispeed failed.");
 		}
 
-		tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity
-		tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication
-		tty.c_cflag &= ~CSIZE;	// Clear all bits that set the data size
-		tty.c_cflag |= CS8;		// 8 bits per byte
+		tty.c_cflag &= ~PARENB;		   // Clear parity bit, disabling parity
+		tty.c_cflag &= ~CSTOPB;		   // Clear stop field, only one stop bit used in communication
+		tty.c_cflag &= ~CSIZE;		   // Clear all bits that set the data size
+		tty.c_cflag |= CS8;			   // 8 bits per byte
+		tty.c_cflag |= CREAD | CLOCAL; // Enable receiver, ignore modem control lines
+
+#ifdef __APPLE__
+		// macOS-specific: Disable hardware flow control
+		tty.c_cflag &= ~CRTSCTS;
+#endif
 
 		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // Raw mode, no echo
 		tty.c_iflag &= ~(IXON | IXOFF | IXANY);			// Disable software flow control
@@ -297,19 +303,26 @@ namespace Device
 			throw std::runtime_error("Serial: tcsetattr failed.");
 		}
 
-		int flags = fcntl(serial_fd, F_GETFL, 0);
-		fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
+#ifdef __APPLE__
+		// macOS-specific: Give the port time to stabilize after configuration
+		SleepSystem(200);
+#endif
+
+		// Flush any stale data
+		tcflush(serial_fd, TCIOFLUSH);
 
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
 
-			// Send initial carriage return
+			// Send initial carriage return (before setting non-blocking mode)
 			const char *initial_cr = "\r";
 			if (write(serial_fd, initial_cr, 1) < 0)
 			{
 				throw std::runtime_error("Serial: failed to send initial carriage return.");
 			}
+			// Ensure data is transmitted before continuing
+			tcdrain(serial_fd);
 
 			// Split by comma and send each command separately
 			std::stringstream ss(init_sequence);
@@ -327,9 +340,14 @@ namespace Device
 					{
 						throw std::runtime_error("Serial: failed to send initialization command.");
 					}
+					// Ensure data is transmitted
+					tcdrain(serial_fd);
 				}
 			}
 		}
+
+		int flags = fcntl(serial_fd, F_GETFL, 0);
+		fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
 #endif
 
 		Device::Play();
