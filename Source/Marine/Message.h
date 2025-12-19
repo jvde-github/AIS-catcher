@@ -23,8 +23,10 @@
 #include <iomanip>
 #include <sstream>
 #include <cstring>
+#include <iostream>
 
 #include "Convert.h"
+#include "MessageHistory.h"
 
 namespace AIS
 {
@@ -181,6 +183,35 @@ namespace AIS
 		void setOwnMMSI(int m) { own_mmsi = m; }
 		void buildNMEA(TAG &tag, int id = -1);
 		bool isOwn() const { return own_mmsi == mmsi(); }
+
+		uint64_t getHash() const
+		{
+			uint64_t hash = 0;
+
+			// Bits 0-29: MMSI (30 bits)
+			hash |= (uint64_t)(mmsi() & 0x3FFFFFFF);
+
+			// Bit 30: Channel (1 bit)
+			hash |= ((uint64_t)(channel == 'B' ? 1 : 0)) << 30;
+
+			// Bits 31-35: Type (5 bits)
+			hash |= ((uint64_t)(type() & 0x1F)) << 31;
+
+			// Bits 36-63: Data content hash (28 bits)
+			// Simple FNV-1a-like hash of message data
+
+			uint32_t data_hash = 2166136261u; // FNV offset basis
+			int bytes = (length + 7) / 8;	  // Convert bits to bytes
+
+			for (int i = 0; i < bytes && i < MAX_AIS_BYTES; i++)
+			{
+				data_hash ^= data[i];
+				data_hash *= 16777619u; // FNV prime
+			}
+			hash |= ((uint64_t)(data_hash & 0x0FFFFFFF)) << 36;
+
+			return hash;
+		}
 	};
 
 	class Filter : public Setting
@@ -189,14 +220,22 @@ namespace AIS
 		uint32_t allow = all;
 		uint32_t allow_repeat = all;
 		bool on = false;
-		bool downsample = false;
 		bool GPS = true, AIS = true;
 		std::vector<int> ID_allowed;
 		std::vector<int> MMSI_allowed;
 		std::vector<int> MMSI_blocked;
 		std::string allowed_channels;
-		int downsample_time = 10;
+
+		int own_interval = 0;
 		long int last_VDO = 0;
+
+		unsigned position_interval = 0;
+		unsigned unique_interval = 0;
+
+		// Position downsampling per MMSI
+		PositionHistory position_history;
+		DuplicateHistory duplicate_history;
+
 		bool remove_empty = false;
 
 	public:

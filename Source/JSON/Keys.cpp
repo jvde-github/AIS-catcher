@@ -73,6 +73,9 @@ namespace AIS
 		{"", "", "", "", "endpoint", ""}, // KEY_SETTING_ENDPOINT
 		{"", "", "", "", "file", ""}, // KEY_SETTING_FILE
 		{"", "", "", "", "filter", ""}, // KEY_SETTING_FILTER
+		{"", "", "", "", "own_interval", ""}, // KEY_SETTING_OWN_INTERVAL
+		{"", "", "", "", "position_interval", ""}, // KEY_SETTING_POSITION_INTERVAL
+		{"", "", "", "", "unique", ""}, // KEY_SETTING_UNIQUE
 		{"", "", "", "", "format", ""}, // KEY_SETTING_FORMAT
 		{"", "", "", "", "fp_ds", ""}, // KEY_SETTING_FP_DS
 		{"", "", "", "", "freqoffset", ""}, // KEY_SETTING_FREQOFFSET
@@ -754,6 +757,9 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_SETTING_ENDPOINT
 		KeyInfo("", "", nullptr), // KEY_SETTING_FILE
 		KeyInfo("", "", nullptr), // KEY_SETTING_FILTER
+		KeyInfo("seconds", "Minimum interval for own vessel messages", nullptr), // KEY_SETTING_OWN_INTERVAL
+		KeyInfo("seconds", "Minimum interval for position messages per MMSI", nullptr), // KEY_SETTING_POSITION_INTERVAL
+		KeyInfo("seconds", "Filter duplicate messages within interval", nullptr), // KEY_SETTING_UNIQUE
 		KeyInfo("", "", nullptr), // KEY_SETTING_FORMAT
 		KeyInfo("", "", nullptr), // KEY_SETTING_FP_DS
 		KeyInfo("", "", nullptr), // KEY_SETTING_FREQOFFSET

@@ -441,4 +441,17 @@ namespace Util
 		val = Float(arg, min, max);
 		return false;
 	}
+
+	bool Parse::OptionalInteger(std::string arg, int min, int max, unsigned &val)
+	{
+		Util::Convert::toUpper(arg);
+		if (arg == "OFF" || arg == "FALSE" || arg == "NO")
+		{
+			val = 0;
+			return false;
+		}
+
+		val = (unsigned)Integer(arg, min, max);
+		return true;
+	}
 }

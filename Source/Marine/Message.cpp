@@ -601,10 +601,30 @@ namespace AIS
 			on = Util::Parse::Switch(arg);
 			return true;
 		}
-		else if (option == "DOWNSAMPLE")
+		else if (option == "DOWNSAMPLE" || option == "OWN_INTERVAL")
+		{
+			if (option == "DOWNSAMPLE")
+			{
+				Error() << "Option 'DOWNSAMPLE' is deprecated, please use 'OWN_INTERVAL' instead.";
+			}
+
+			Util::Convert::toUpper(arg);
+			own_interval = Util::Parse::Switch(arg) ? 10 : 0;
+
+			return true;
+		}
+		else if (option == "UNIQUE")
 		{
 			Util::Convert::toUpper(arg);
-			downsample = Util::Parse::Switch(arg);
+			unique_interval = Util::Parse::Switch(arg) ? 3 : 0;
+
+			return true;
+		}
+		else if (option == "POSITION_INTERVAL")
+		{
+			if (!Util::Parse::OptionalInteger(arg, 0, 3600, position_interval))
+				position_interval = 0;
+
 			return true;
 		}
 		else if (option == "GPS")
@@ -683,20 +703,42 @@ namespace AIS
 
 	bool Filter::include(const Message &msg)
 	{
-		if (downsample)
+		if (own_interval && msg.isOwn())
 		{
-			if (msg.isOwn())
+			if (msg.getRxTimeUnix() - last_VDO < own_interval)
 			{
-				if (msg.getRxTimeUnix() - last_VDO < downsample_time)
+				return false;
+			}
+			last_VDO = msg.getRxTimeUnix();
+		}
+
+		// Position downsampling for types 1, 2, 3
+		bool old_position = false;
+
+		if (position_interval > 0)
+		{
+			unsigned msg_type = msg.type();
+			if (msg_type == 1 || msg_type == 2 || msg_type == 3 || msg_type == 18 || msg_type == 27)
+			{
+				if (!position_history.check(msg.mmsi(), (uint32_t)msg.getRxTimeUnix(), position_interval))
 				{
 					return false;
 				}
-				last_VDO = msg.getRxTimeUnix();
+				old_position = true;
+			}
+		}
+
+		if (unique_interval > 0 && !old_position)
+		{
+			if (!duplicate_history.check(msg.getHash(), (uint32_t)msg.getRxTimeUnix(), unique_interval))
+			{
+				return false;
 			}
 		}
 
 		if (!on)
 			return true;
+
 		if (!AIS)
 			return false;
 
@@ -721,7 +763,9 @@ namespace AIS
 			}
 		}
 		if (!ID_ok)
+		{
 			return false;
+		}
 
 		bool CH_ok = true;
 		if (!allowed_channels.empty())
@@ -738,7 +782,9 @@ namespace AIS
 		}
 
 		if (!CH_ok)
+		{
 			return false;
+		}
 
 		bool MMSI_ok = true;
 		if (!MMSI_allowed.empty())
@@ -755,7 +801,9 @@ namespace AIS
 		}
 
 		if (!MMSI_ok)
+		{
 			return false;
+		}
 
 		if (!MMSI_blocked.empty())
 		{
@@ -774,6 +822,11 @@ namespace AIS
 		bool type_ok = ((1U << type) & allow) != 0;
 		bool repeat_ok = ((1U << repeat) & allow_repeat) != 0;
 
-		return type_ok && repeat_ok;
+		if (!(type_ok && repeat_ok))
+		{
+			return false;
+		}
+
+		return true;
 	}
 }
