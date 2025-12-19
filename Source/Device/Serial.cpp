@@ -213,6 +213,9 @@ namespace Device
 				throw std::runtime_error("Serial: failed to send initial carriage return.");
 			}
 
+			// Ensure data is transmitted
+			FlushFileBuffers(serial_handle);
+
 			// Split by comma and send each command separately
 			std::stringstream ss(init_sequence);
 			std::string cmd;
@@ -230,8 +233,14 @@ namespace Device
 					{
 						throw std::runtime_error("Serial: failed to send initialization command.");
 					}
+					// Ensure data is transmitted before continuing
+					FlushFileBuffers(serial_handle);
 				}
 			}
+
+			// Flush any responses from init sequence before starting read thread
+			SleepSystem(100);
+			PurgeComm(serial_handle, PURGE_RXCLEAR);
 		}
 #else
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
