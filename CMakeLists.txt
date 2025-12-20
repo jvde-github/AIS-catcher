@@ -52,6 +52,7 @@ option(AIRSPY "Include Airspy support" ON)
 option(SDRPLAY "Include SDRPLAY support" ON)
 option(AIRSPYHF "Include Airspy HF+ support" ON)
 option(HACKRF "Include HackRF support" ON)
+option(HYDRASDR "Include HydraSDR support" ON)
 option(SOXR "Include SOXR support" ON)
 option(CURL "Include CURL support" OFF)
 option(ZLIB "Include ZLIB support" ON)
@@ -770,6 +771,49 @@ if(HACKRF)
     endif()
 endif()
 
+# Find HydraSDR library.
+if(HYDRASDR)
+    if(NOT MSVC)
+
+        pkg_check_modules(PKG_HYDRASDR libhydrasdr)
+        find_path(HYDRASDR_INCLUDE_DIR hydrasdr.h HINTS ${PKG_HYDRASDR_INCLUDE_DIRS} /usr/include/libhydrasdr)
+        find_library(HYDRASDR_LIBRARY hydrasdr HINTS ${PKG_HYDRASDR_LIBRARY_DIRS})
+
+        if(HYDRASDR_INCLUDE_DIR AND HYDRASDR_LIBRARY)
+
+            message(STATUS "HYDRASDR: found - ${HYDRASDR_INCLUDE_DIR}, ${HYDRASDR_LIBRARY}")
+            add_definitions(-DHASHYDRASDR)
+            set(HYDRASDR_INCLUDE_DIRS ${HYDRASDR_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIR})
+            set(HYDRASDR_LIBRARIES ${HYDRASDR_LIBRARY} ${LIBUSB_LIBRARY})
+
+        else()
+            Message(STATUS "HYDRASDR: not found.")
+        endif()
+
+    elseif(MSVC_VCPKG)
+
+        Message("HYDRASDR: not found (VCPKG)")
+
+    else()
+
+        find_path(HYDRASDR_INCLUDE_DIR hydrasdr.h HINTS ${POTHOSSDR_INCLUDE_DIR} ${POTHOSSDR_INCLUDE_DIR}\\libhydrasdr)
+        find_library(HYDRASDR_LIBRARY hydrasdr.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
+        find_file(HYDRASDR_DLL hydrasdr.dll HINTS ${POTHOSSDR_BINARY_DIR})
+
+        if(HYDRASDR_INCLUDE_DIR AND HYDRASDR_LIBRARY AND HYDRASDR_DLL)
+            Message(STATUS "HYDRASDR: found (PothosSDR) - " ${HYDRASDR_INCLUDE_DIR}, ${HYDRASDR_LIBRARY}, ${HYDRASDR_DLL})
+            set(COPY_HYDRASDR_DLL TRUE)
+            set(COPY_PTHREAD_LIBUSB_DLL TRUE)
+            add_definitions(-DHASHYDRASDR)
+            set(HYDRASDR_INCLUDE_DIRS ${HYDRASDR_INCLUDE_DIR})
+            set(HYDRASDR_LIBRARIES ${HYDRASDR_LIBRARY})
+        else()
+            Message(STATUS "HYDRASDR: not found (PothosSDR)")
+        endif()
+
+    endif()
+endif()
+
 if(ZMQ)
     # Find libzmq
     if(NOT MSVC)
@@ -839,6 +883,7 @@ set(CPP
     Source/Device/FileRAW.cpp
     Source/Device/FileWAV.cpp
     Source/Device/HACKRF.cpp
+    Source/Device/HYDRASDR.cpp
     Source/Device/N2KsktCAN.cpp
     Source/Device/RTLSDR.cpp
     Source/Device/RTLTCP.cpp
@@ -886,7 +931,7 @@ set(CPP
 set(HEADER
     Source/Application/AIS-catcher.h Source/Application/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Application/WebDB.h Source/Library/Logger.h Source/Application/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/DBMS/PostgreSQL.h Source/IO/HTTPClient.h Source/Application/MapTiles.h Source/Aviation/Beast.h
     Source/Device/Device.h Source/Device/FileWAV.h Source/Device/RTLTCP.h Source/Device/UDP.h Source/DSP/Demod.h Source/DSP/Filters.h Source/Marine/AIS.h Source/Marine/Message.h Source/Marine/MessageHistory.h Source/Marine/NMEA.h Source/Library/ZIP.h Source/Library/Signals.h Source/Device/SoapySDR.h Source/JSON/JSONAIS.h Source/JSON/JSON.h Source/Aviation/Basestation.h Source/Aviation/ADSB.h
-    Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/StringBuilder.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
+    Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/HYDRASDR.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/StringBuilder.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
     Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
     Source/Utilities/Parse.h Source/Utilities/Convert.h Source/Utilities/Helper.h Source/Utilities/Serialize.h Source/Utilities/PackedInt.h Source/Utilities/TemplateString.h)
 
@@ -897,10 +942,10 @@ set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./S
 add_executable(AIS-catcher ${CPP} ${HEADER})
 
 include_directories(
-    . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+    . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${HYDRASDR_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 target_link_libraries(AIS-catcher
-    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES} ${SQLITE_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
+    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${HYDRASDR_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES} ${SQLITE_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 
@@ -928,6 +973,10 @@ endif()
 
 if(COPY_HACKRF_DLL)
     add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${HACKRF_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if(COPY_HYDRASDR_DLL)
+    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${HYDRASDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_ZMQ_DLL)

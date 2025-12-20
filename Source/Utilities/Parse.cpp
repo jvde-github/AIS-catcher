@@ -221,6 +221,8 @@ namespace Util
 			type = Type::RTLTCP;
 		else if (str == "HACKRF")
 			type = Type::HACKRF;
+		else if (str == "HYDRASDR")
+			type = Type::HYDRASDR;
 		else if (str == "SOAPYSDR")
 			type = Type::SOAPYSDR;
 		else if (str == "ZMQ")
@@ -375,6 +377,8 @@ namespace Util
 			return "RTLTCP";
 		case Type::HACKRF:
 			return "HACKRF";
+		case Type::HYDRASDR:
+			return "HYDRASDR";
 		case Type::SOAPYSDR:
 			return "SOAPYSDR";
 		case Type::ZMQ:

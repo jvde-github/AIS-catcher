@@ -89,6 +89,7 @@ namespace AIS
 		{"", "", "", "", "history", ""}, // KEY_SETTING_HISTORY
 		{"", "", "", "", "host", ""}, // KEY_SETTING_HOST
 		{"", "", "", "", "http", ""}, // KEY_SETTING_HTTP
+		{"", "", "", "", "hydrasdr", ""}, // KEY_SETTING_HYDRASDR
 		{"", "", "", "", "id", ""}, // KEY_SETTING_ID
 		{"", "", "", "", "input", ""}, // KEY_SETTING_INPUT
 		{"", "", "", "", "interface", ""}, // KEY_SETTING_INTERFACE
@@ -773,6 +774,7 @@ namespace AIS
 		KeyInfo("", "", nullptr), // KEY_SETTING_HISTORY
 		KeyInfo("", "", nullptr), // KEY_SETTING_HOST
 		KeyInfo("", "", nullptr), // KEY_SETTING_HTTP
+		KeyInfo("", "", nullptr), // KEY_SETTING_HYDRASDR
 		KeyInfo("", "", nullptr), // KEY_SETTING_ID
 		KeyInfo("", "", nullptr), // KEY_SETTING_INPUT
 		KeyInfo("", "", nullptr), // KEY_SETTING_INTERFACE

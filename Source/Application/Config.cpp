@@ -287,6 +287,11 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 				continue;
 			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().HACKRF());
 			break;
+		case AIS::KEY_SETTING_HYDRASDR:
+			if (!isActiveObject(p.Get()))
+				continue;
+			setSettingsFromJSON(p.Get(), _receivers.back()->getDeviceManager().HYDRASDR());
+			break;
 		case AIS::KEY_SETTING_UDPSERVER:
 			if (!isActiveObject(p.Get()))
 				continue;
@@ -414,6 +419,7 @@ void Config::set(const std::string &str)
 		case AIS::KEY_SETTING_NMEA2000:
 		case AIS::KEY_SETTING_WAVFILE:
 		case AIS::KEY_SETTING_HACKRF:
+		case AIS::KEY_SETTING_HYDRASDR:
 		case AIS::KEY_SETTING_UDPSERVER:
 		case AIS::KEY_SETTING_SOAPYSDR:
 		case AIS::KEY_SETTING_FILE:
