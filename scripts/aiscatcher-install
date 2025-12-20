@@ -409,6 +409,7 @@ install_sdr_libraries() {
         "libairspy:airspy.h:libairspy"
         "libairspyhf:airspyhf.h:libairspyhf"
         "libhackrf:hackrf.h:libhackrf"
+        "libhydrasdr:hydrasdr.h:libhydrasdr"
     )
 
     for lib_info in "${libraries[@]}"; do
