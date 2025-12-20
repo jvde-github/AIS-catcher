@@ -8,11 +8,17 @@ install_dependencies() {
     apt-get install -y $1
   fi
 
-  echo "Installing rtl-sdr from source"	
+  echo "Installing rtl-sdr from source"
   git clone https://gitea.osmocom.org/sdr/rtl-sdr.git
-  cd rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install; 
+  cd rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install;
   cd ..; cd ..
   cp rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/
+  ldconfig
+
+  echo "Installing libhydrasdr from source"
+  git clone https://github.com/hydrasdr/rfone_host.git
+  cd rfone_host/libhydrasdr; mkdir build; cd build; cmake .. -DCMAKE_INSTALL_PREFIX=/usr; make; make install;
+  cd ../../..
   ldconfig
 }
 
@@ -83,7 +89,7 @@ create_debian_package() {
     # Extract dependencies using ldd and filter the required libraries
     echo "Extracting dependencies using ldd..."
     # dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq|libz|libssl|libusb|libsqlite3' | awk '{print $1}')
-    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libzmq3|libz|libssl|libusb-1\.0|libsqlite3|libpq' | awk '{print $1}')
+    dependencies=$(ldd build/AIS-catcher | grep -E 'libairspy|libairspyhf|librtlsdr|libhackrf|libhydrasdr|libzmq3|libz|libssl|libusb-1\.0|libsqlite3|libpq' | awk '{print $1}')
 
     # Initialize the depends variable
     depends=""
@@ -229,6 +235,10 @@ create_debian_package() {
     echo "case \"\$1\" in" >> debian/DEBIAN/postinst
     echo "    configure)" >> debian/DEBIAN/postinst
     echo "        install_udev_rules" >> debian/DEBIAN/postinst
+    echo "        # Install HydraSDR udev rules" >> debian/DEBIAN/postinst
+    echo "        if [ -f /usr/share/ais-catcher/51-hydrasdr.rules ]; then" >> debian/DEBIAN/postinst
+    echo "            cp /usr/share/ais-catcher/51-hydrasdr.rules /etc/udev/rules.d/ 2>/dev/null && echo \"HydraSDR udev rules installed.\"" >> debian/DEBIAN/postinst
+    echo "        fi" >> debian/DEBIAN/postinst
     echo "        ;;" >> debian/DEBIAN/postinst
     echo "    *)" >> debian/DEBIAN/postinst
     echo "        ;;" >> debian/DEBIAN/postinst
@@ -248,6 +258,7 @@ create_debian_package() {
     # Store udev rules in a proper location within the package
     mkdir -p debian/usr/share/ais-catcher
     cp rtl-sdr/rtl-sdr.rules debian/usr/share/ais-catcher/
+    cp rfone_host/hydrasdr-tools/51-hydrasdr.rules debian/usr/share/ais-catcher/
 
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"

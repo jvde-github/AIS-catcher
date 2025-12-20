@@ -22,6 +22,9 @@ RUN ldconfig
 RUN cd /root/AIS-catcher; git clone https://github.com/airspy/airspyhf.git --depth 1
 RUN cd /root/AIS-catcher/airspyhf && mkdir build && cd build && cmake ../ -DINSTALL_UDEV_RULES=ON && make && make install && ldconfig
 
+RUN cd /root/AIS-catcher; git clone https://github.com/hydrasdr/rfone_host.git --depth 1
+RUN cd /root/AIS-catcher/rfone_host/libhydrasdr && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/usr && make && make install && ldconfig
+
 RUN cd /root/AIS-catcher; git clone https://github.com/ttlappalainen/NMEA2000.git;
 RUN cd /root/AIS-catcher/NMEA2000/src; g++ -O3 -c  N2kMsg.cpp  N2kStream.cpp N2kMessages.cpp   N2kTimer.cpp  NMEA2000.cpp  N2kGroupFunctionDefaultHandlers.cpp  N2kGroupFunction.cpp  -I.
 RUN cd /root/AIS-catcher/NMEA2000/src; ar rcs libnmea2000.a *.o
@@ -47,6 +50,10 @@ RUN ldconfig
 RUN cd /root/; git clone https://github.com/airspy/airspyhf.git --depth 1
 RUN cd /root/airspyhf && mkdir build && cd build && cmake ../ -DINSTALL_UDEV_RULES=ON && make && make install && ldconfig
 RUN rm -rf /root/airspyhf
+
+RUN cd /root/; git clone https://github.com/hydrasdr/rfone_host.git --depth 1
+RUN cd /root/rfone_host/libhydrasdr && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/usr && make && make install && ldconfig
+RUN rm -rf /root/rfone_host
 
 RUN apt-get remove git make gcc g++ cmake pkg-config libusb-1.0-0-dev -y
 RUN apt-get autoremove -y
