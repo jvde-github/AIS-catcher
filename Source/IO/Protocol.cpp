@@ -124,8 +124,6 @@ namespace Protocol
 		if (keep_alive)
 		{
 			int idle = 20;
-			int interval = 5;
-			int count = 2;
 #ifdef _WIN32
 			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (const char *)&yes, sizeof(yes)))
 #else
@@ -143,6 +141,7 @@ namespace Protocol
 			}
 #elif defined(_WIN32)
 			// Windows specific keepalive
+			int interval = 5;
 			struct tcp_keepalive keepalive;
 			keepalive.onoff = 1;
 			keepalive.keepalivetime = idle * 1000;
@@ -155,6 +154,8 @@ namespace Protocol
 			}
 #elif defined(__ANDROID__)
 			// Android uses same config as Linux
+			int interval = 5;
+			int count = 2;
 			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
 				setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
 				setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)))
@@ -163,6 +164,8 @@ namespace Protocol
 				return false;
 			}
 #else
+			int interval = 5;
+			int count = 2;
 			if (setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
 				setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
 				setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
