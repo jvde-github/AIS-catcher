@@ -19,108 +19,138 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Application\Main.cpp" />
-    <ClCompile Include="..\Application\Config.cpp" />
-    <ClCompile Include="..\Application\Receiver.cpp" />
-    <ClCompile Include="..\Application\WebViewer.cpp" />
-    <ClCompile Include="..\Application\Prometheus.cpp" />
-    <ClCompile Include="..\Application\MapTiles.cpp" />
-    <ClCompile Include="..\Application\WebDB.cpp" />
-    <ClCompile Include="..\Device\AIRSPY.cpp" />
-    <ClCompile Include="..\Device\AIRSPYHF.cpp" />
-    <ClCompile Include="..\Device\FileRAW.cpp" />
-    <ClCompile Include="..\Device\FileWAV.cpp" />
-    <ClCompile Include="..\Device\HACKRF.cpp" />
-    <ClCompile Include="..\Device\RTLSDR.cpp" />
-    <ClCompile Include="..\Device\Serial.cpp" />
-    <ClCompile Include="..\Device\RTLTCP.cpp" />
-    <ClCompile Include="..\Device\UDP.cpp" />
-    <ClCompile Include="..\Device\ZMQ.cpp" />
-    <ClCompile Include="..\Device\SDRPLAY.cpp" />
-    <ClCompile Include="..\Device\SoapySDR.cpp" />
-    <ClCompile Include="..\Device\SpyServer.cpp" />
-    <ClCompile Include="..\Tracking\DB.cpp" />
-    <ClCompile Include="..\Tracking\Ships.cpp" />
-    <ClCompile Include="..\DSP\Demod.cpp" />
-    <ClCompile Include="..\DSP\DSP.cpp" />
-    <ClCompile Include="..\DSP\Model.cpp" />
-    <ClCompile Include="..\IO\MsgOut.cpp" />
-    <ClCompile Include="..\IO\N2KStream.cpp" />
-    <ClCompile Include="..\DBMS\PostgreSQL.cpp" />
-    <ClCompile Include="..\JSON\Parser.cpp" />
-    <ClCompile Include="..\JSON\StringBuilder.cpp" />
-    <ClCompile Include="..\IO\Network.cpp" />
-    <ClCompile Include="..\IO\HTTPServer.cpp" />
-    <ClCompile Include="..\IO\HTTPClient.cpp" />
-    <ClCompile Include="..\JSON\JSON.cpp" />
-    <ClCompile Include="..\JSON\Keys.cpp" />
-    <ClCompile Include="..\Marine\AIS.cpp" />
-    <ClCompile Include="..\Aviation\ADSB.cpp" />
-    <ClCompile Include="..\Marine\Message.cpp" />
-    <ClCompile Include="..\JSON\JSONAIS.cpp" />
-    <ClCompile Include="..\Marine\NMEA.cpp" />
-    <ClCompile Include="..\Aviation\Basestation.cpp" />
-    <ClCompile Include="..\Aviation\Beast.cpp" />
-    <ClCompile Include="..\Library\Logger.cpp" />
-    <ClCompile Include="..\IO\TCPServer.cpp" />
-    <ClCompile Include="..\Library\Utilities.cpp" />
-    <ClCompile Include="..\IO\Protocol.cpp" />
+    <ClCompile Include="..\Source\Application\Config.cpp" />
+    <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
+    <ClCompile Include="..\Source\Application\Main.cpp" />
+    <ClCompile Include="..\Source\Application\MapTiles.cpp" />
+    <ClCompile Include="..\Source\Application\Prometheus.cpp" />
+    <ClCompile Include="..\Source\Application\Receiver.cpp" />
+    <ClCompile Include="..\Source\Application\WebDB.cpp" />
+    <ClCompile Include="..\Source\Application\WebViewer.cpp" />
+    <ClCompile Include="..\Source\DBMS\PostgreSQL.cpp" />
+    <ClCompile Include="..\Source\Device\AIRSPY.cpp" />
+    <ClCompile Include="..\Source\Device\AIRSPYHF.cpp" />
+    <ClCompile Include="..\Source\Device\FileRAW.cpp" />
+    <ClCompile Include="..\Source\Device\FileWAV.cpp" />
+    <ClCompile Include="..\Source\Device\HACKRF.cpp" />
+    <ClCompile Include="..\Source\Device\HYDRASDR.cpp" />
+    <ClCompile Include="..\Source\Device\N2KsktCAN.cpp" />
+    <ClCompile Include="..\Source\Device\RTLSDR.cpp" />
+    <ClCompile Include="..\Source\Device\RTLTCP.cpp" />
+    <ClCompile Include="..\Source\Device\SDRPLAY.cpp" />
+    <ClCompile Include="..\Source\Device\Serial.cpp" />
+    <ClCompile Include="..\Source\Device\SoapySDR.cpp" />
+    <ClCompile Include="..\Source\Device\SpyServer.cpp" />
+    <ClCompile Include="..\Source\Device\UDP.cpp" />
+    <ClCompile Include="..\Source\Device\ZMQ.cpp" />
+    <ClCompile Include="..\Source\DSP\Demod.cpp" />
+    <ClCompile Include="..\Source\DSP\DSP.cpp" />
+    <ClCompile Include="..\Source\DSP\Model.cpp" />
+    <ClCompile Include="..\Source\IO\HTTPClient.cpp" />
+    <ClCompile Include="..\Source\IO\HTTPServer.cpp" />
+    <ClCompile Include="..\Source\IO\MsgOut.cpp" />
+    <ClCompile Include="..\Source\IO\Screen.cpp" />
+    <ClCompile Include="..\Source\IO\N2KInterface.cpp" />
+    <ClCompile Include="..\Source\IO\N2KStream.cpp" />
+    <ClCompile Include="..\Source\IO\Network.cpp" />
+    <ClCompile Include="..\Source\IO\Protocol.cpp" />
+    <ClCompile Include="..\Source\JSON\JSON.cpp" />
+    <ClCompile Include="..\Source\JSON\JSONAIS.cpp" />
+    <ClCompile Include="..\Source\JSON\Keys.cpp" />
+    <ClCompile Include="..\Source\JSON\Parser.cpp" />
+    <ClCompile Include="..\Source\JSON\StringBuilder.cpp" />
+    <ClCompile Include="..\Source\Aviation\ADSB.cpp" />
+    <ClCompile Include="..\Source\Aviation\Basestation.cpp" />
+    <ClCompile Include="..\Source\Aviation\Beast.cpp" />
+    <ClCompile Include="..\Source\Marine\AIS.cpp" />
+    <ClCompile Include="..\Source\Marine\Message.cpp" />
+    <ClCompile Include="..\Source\Marine\N2K.cpp" />
+    <ClCompile Include="..\Source\Marine\NMEA.cpp" />
+    <ClCompile Include="..\Source\Library\Logger.cpp" />
+    <ClCompile Include="..\Source\IO\TCPServer.cpp" />
+    <ClCompile Include="..\Source\Tracking\DB.cpp" />
+    <ClCompile Include="..\Source\Tracking\Ships.cpp" />
+    <ClCompile Include="..\Source\Utilities\Parse.cpp" />
+    <ClCompile Include="..\Source\Utilities\Convert.cpp" />
+    <ClCompile Include="..\Source\Utilities\Helper.cpp" />
+    <ClCompile Include="..\Source\Utilities\Serialize.cpp" />
+    <ClCompile Include="..\Source\Utilities\TemplateString.cpp" />
+    <ClCompile Include="..\Source\Utilities\StreamHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Application\AIS-catcher.h" />
-    <ClInclude Include="..\Application\Receiver.h" />
-    <ClInclude Include="..\Application\WebViewer.h" />
-    <ClInclude Include="..\Application\Prometheus.h" />
-    <ClInclude Include="..\Application\WebDB.h" />
-    <ClInclude Include="..\Application\Config.h" />
-    <ClInclude Include="..\Device\AIRSPY.h" />
-    <ClInclude Include="..\Device\AIRSPYHF.h" />
-    <ClInclude Include="..\Device\Device.h" />
-    <ClInclude Include="..\Library\FIFO.h" />
-    <ClInclude Include="..\JSON\JSONAIS.h" />
-    <ClInclude Include="..\JSON\JSON.h" />
-    <ClInclude Include="..\JSON\Parser.h" />
-    <ClInclude Include="..\JSON\StringBuilder.h" />
-    <ClInclude Include="..\Device\FileRAW.h" />
-    <ClInclude Include="..\Device\FileWAV.h" />
-    <ClInclude Include="..\Device\HACKRF.h" />
-    <ClInclude Include="..\Device\RTLSDR.h" />
-    <ClInclude Include="..\Device\RTLTCP.h" />
-    <ClInclude Include="..\Device\UDP.h" />
-    <ClInclude Include="..\Device\ZMQ.h" />
-    <ClInclude Include="..\Device\Serial.h" />
-    <ClInclude Include="..\Device\SDRPLAY.h" />
-    <ClInclude Include="..\Device\SoapySDR.h" />
-    <ClInclude Include="..\Device\SpyServer.h" />
-    <ClInclude Include="..\Tracking\DB.h" />
-    <ClInclude Include="..\Tracking\Statistics.h" />
-    <ClInclude Include="..\Tracking\History.h" />
-    <ClInclude Include="..\Tracking\Ships.h" />
-    <ClInclude Include="..\DSP\Demod.h" />
-    <ClInclude Include="..\DSP\DSP.h" />
-    <ClInclude Include="..\DSP\FFT.h" />
-    <ClInclude Include="..\DSP\Filters.h" />
-    <ClInclude Include="..\DSP\Model.h" />
-    <ClInclude Include="..\JSON\Keys.h" />
-    <ClInclude Include="..\IO\MsgOut.h" />
-    <ClInclude Include="..\IO\N2KStream.h" />
-    <ClInclude Include="..\DBMS\PostgreSQL.h" />
-    <ClInclude Include="..\IO\Network.h" />
-    <ClInclude Include="..\IO\HTTPServer.h" />
-    <ClInclude Include="..\IO\HTTPClient.h" />
-    <ClInclude Include="..\Marine\AIS.h" />
-    <ClInclude Include="..\Marine\Message.h" />
-    <ClInclude Include="..\Library\Common.h" />
-    <ClInclude Include="..\Library\Signals.h" />
-    <ClInclude Include="..\Library\Stream.h" />
-    <ClInclude Include="..\Marine\NMEA.h" />
-    <ClInclude Include="..\IO\TCPServer.h" />
-    <ClInclude Include="..\Aviation\ADSB.h" />
-    <ClInclude Include="..\Aviation\Basestation.h" />
-    <ClInclude Include="..\Aviation\Beast.h" />
-    <ClInclude Include="..\Library\Logger.h" />
-    <ClInclude Include="..\Library\Utilities.h" />
-    <ClInclude Include="..\IO\Protocol.h" />
+    <ClInclude Include="..\Source\Application\AIS-catcher.h" />
+    <ClInclude Include="..\Source\Application\Prometheus.h" />
+    <ClInclude Include="..\Source\Application\Config.h" />
+    <ClInclude Include="..\Source\Application\DeviceManager.h" />
+    <ClInclude Include="..\Source\Application\WebDB.h" />
+    <ClInclude Include="..\Source\Library\Logger.h" />
+    <ClInclude Include="..\Source\Application\WebViewer.h" />
+    <ClInclude Include="..\Source\Application\Receiver.h" />
+    <ClInclude Include="..\Source\Tracking\Ships.h" />
+    <ClInclude Include="..\Source\Tracking\DB.h" />
+    <ClInclude Include="..\Source\DBMS\PostgreSQL.h" />
+    <ClInclude Include="..\Source\IO\HTTPClient.h" />
+    <ClInclude Include="..\Source\Application\MapTiles.h" />
+    <ClInclude Include="..\Source\Aviation\Beast.h" />
+    <ClInclude Include="..\Source\Device\Device.h" />
+    <ClInclude Include="..\Source\Device\FileWAV.h" />
+    <ClInclude Include="..\Source\Device\RTLTCP.h" />
+    <ClInclude Include="..\Source\Device\UDP.h" />
+    <ClInclude Include="..\Source\DSP\Demod.h" />
+    <ClInclude Include="..\Source\DSP\Filters.h" />
+    <ClInclude Include="..\Source\Marine\AIS.h" />
+    <ClInclude Include="..\Source\Marine\Message.h" />
+    <ClInclude Include="..\Source\Marine\MessageHistory.h" />
+    <ClInclude Include="..\Source\Marine\NMEA.h" />
+    <ClInclude Include="..\Source\Library\ZIP.h" />
+    <ClInclude Include="..\Source\Library\Signals.h" />
+    <ClInclude Include="..\Source\Device\SoapySDR.h" />
+    <ClInclude Include="..\Source\JSON\JSONAIS.h" />
+    <ClInclude Include="..\Source\JSON\JSON.h" />
+    <ClInclude Include="..\Source\Aviation\Basestation.h" />
+    <ClInclude Include="..\Source\Aviation\ADSB.h" />
+    <ClInclude Include="..\Source\Device\AIRSPY.h" />
+    <ClInclude Include="..\Source\Library\FIFO.h" />
+    <ClInclude Include="..\Source\Device\N2KsktCAN.h" />
+    <ClInclude Include="..\Source\Device\HACKRF.h" />
+    <ClInclude Include="..\Source\Device\HYDRASDR.h" />
+    <ClInclude Include="..\Source\Device\SDRPLAY.h" />
+    <ClInclude Include="..\Source\DSP\DSP.h" />
+    <ClInclude Include="..\Source\DSP\Model.h" />
+    <ClInclude Include="..\Source\Tracking\History.h" />
+    <ClInclude Include="..\Source\Tracking\Statistics.h" />
+    <ClInclude Include="..\Source\Library\Common.h" />
+    <ClInclude Include="..\Source\Library\Stream.h" />
+    <ClInclude Include="..\Source\Device\SpyServer.h" />
+    <ClInclude Include="..\Source\JSON\Keys.h" />
+    <ClInclude Include="..\Source\JSON\StringBuilder.h" />
+    <ClInclude Include="..\Source\JSON\Parser.h" />
+    <ClInclude Include="..\Source\Tracking\PlaneDB.h" />
+    <ClInclude Include="..\Source\Device\Serial.h" />
+    <ClInclude Include="..\Source\IO\N2KInterface.h" />
+    <ClInclude Include="..\Source\Marine\N2K.h" />
+    <ClInclude Include="..\Source\IO\N2KStream.h" />
+    <ClInclude Include="..\Source\Device\AIRSPYHF.h" />
+    <ClInclude Include="..\Source\Device\FileRAW.h" />
+    <ClInclude Include="..\Source\Device\RTLSDR.h" />
+    <ClInclude Include="..\Source\Device\ZMQ.h" />
+    <ClInclude Include="..\Source\DSP\FFT.h" />
+    <ClInclude Include="..\Source\IO\MsgOut.h" />
+    <ClInclude Include="..\Source\IO\Screen.h" />
+    <ClInclude Include="..\Source\IO\File.h" />
+    <ClInclude Include="..\Source\IO\StreamCounter.h" />
+    <ClInclude Include="..\Source\IO\Network.h" />
+    <ClInclude Include="..\Source\IO\HTTPServer.h" />
+    <ClInclude Include="..\Source\Utilities\StreamHelpers.h" />
+    <ClInclude Include="..\Source\IO\TCPServer.h" />
+    <ClInclude Include="..\Source\IO\Protocol.h" />
+    <ClInclude Include="..\Source\Utilities\Parse.h" />
+    <ClInclude Include="..\Source\Utilities\Convert.h" />
+    <ClInclude Include="..\Source\Utilities\Helper.h" />
+    <ClInclude Include="..\Source\Utilities\Serialize.h" />
+    <ClInclude Include="..\Source\Utilities\PackedInt.h" />
+    <ClInclude Include="..\Source\Utilities\TemplateString.h" />
+    <ClInclude Include="..\Source\Library\TCP.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -176,25 +206,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>../JSON;../DBMS;..;../Source/Application;../Source/Tracking;../Source/Library;../Source/IO;../Source/DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>../JSON;../DBMS;..;../Source/Application;../Source/Tracking;../Source/Library;../Source/Marine;../Source/Aviation;../Source/IO;../Source/DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>../JSON;../DBMS;..;../Source/Application;../Source/Tracking;../Source/Library;../Source/Marine;../Source/Aviation;../Source/IO;../Source/DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>../JSON;../DBMS;..;../Source/Application;../Source/Tracking;../Source/Library;../Source/Marine;../Source/Aviation;../Source/IO;../Source/DSP;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>

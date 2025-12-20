@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
 					Logger::getInstance().removeLogListener(cb);
 					cb = -1;
 					// Enable DEBUG level when switching to system logging for journalctl filtering
-					Logger::getInstance().setMinLevel(LogLevel::_DEBUG);
+					Logger::getInstance().setMinLevel(LogLevel::__DEBUG);
 				}
 				parseSettings(Logger::getInstance(), argv, ptr, argc);
 				break;

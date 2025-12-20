@@ -28,12 +28,12 @@
 
 enum class LogLevel
 {
-    _DEBUG,
-    _INFO,
-    _WARNING,
-    _ERROR,
-    _CRITICAL,
-    _EMPTY
+    __DEBUG,
+    __INFO,
+    __WARNING,
+    __ERROR,
+    __CRITICAL,
+    __EMPTY
 };
 
 struct LogMessage
@@ -42,7 +42,7 @@ struct LogMessage
     std::string message;
     std::string time;
 
-    LogMessage() : level(LogLevel::_EMPTY), message(std::move("")), time(std::move("")) {}
+    LogMessage() : level(LogLevel::__EMPTY), message(std::move("")), time(std::move("")) {}
     LogMessage(LogLevel l, std::string msg, std::string time) : level(l), message(std::move(msg)), time(std::move(time)) {}
 
     std::string levelToString() const;
@@ -87,7 +87,7 @@ private:
     std::string getCurrentTime();
 
     std::mutex mutex_;
-    LogLevel min_level_ = LogLevel::_INFO;
+    LogLevel min_level_ = LogLevel::__INFO;
 
     static std::unique_ptr<Logger> instance_;
 
