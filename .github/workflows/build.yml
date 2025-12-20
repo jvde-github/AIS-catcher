@@ -364,7 +364,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-        bash -c "gh release upload 'Edge' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo jvde-github/AIS-catcher --clobber" 
+        bash -c "gh release upload 'Edge' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo hydrasdr/AIS-catcher --clobber" 
         del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
 
  
