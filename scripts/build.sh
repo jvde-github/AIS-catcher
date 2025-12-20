@@ -48,6 +48,8 @@ build_project() {
   RUN_NUM=${RUN_NUMBER:-0}
   
   cmake .. -DNMEA2000_PATH=.. -DRTLSDR_STATIC=ON -DHYDRASDR_STATIC=ON -DRUN_NUMBER=${RUN_NUM}
+# cmake .. -DNMEA2000_PATH=.. -DRPATH_LIBRARY_DIR=/usr/lib/ais-catcher -DRUN_NUMBER=${RUN_NUM}
+
   
   make
   cd ..
@@ -263,9 +265,9 @@ create_debian_package() {
     # Copy shared libraries for librtlsdr and libhydrasdr to /usr/lib/ais-catcher
     mkdir -p debian/usr/lib/ais-catcher
     echo "Copying librtlsdr.so* to debian/usr/lib/ais-catcher/"
-    cp /usr/lib/librtlsdr.so* debian/usr/lib/ais-catcher/ 2>/dev/null || echo "Warning: Could not copy librtlsdr.so*"
+    cp rtl-sdr/build/src/librtlsdr.so* debian/usr/lib/ais-catcher/ 2>/dev/null || echo "Warning: Could not copy librtlsdr.so*"
     echo "Copying libhydrasdr.so* to debian/usr/lib/ais-catcher/"
-    cp /usr/lib/libhydrasdr.so* debian/usr/lib/ais-catcher/ 2>/dev/null || echo "Warning: Could not copy libhydrasdr.so*"
+    cp rfone_host/libhydrasdr/build/src/libhydrasdr.so* debian/usr/lib/ais-catcher/ 2>/dev/null || echo "Warning: Could not copy libhydrasdr.so*"
 
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
