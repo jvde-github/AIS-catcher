@@ -12,6 +12,7 @@
 # Options:
 #   -p, --package    Install from pre-built package (faster, recommended)
 #   -d, --debug      Build with debug symbols (source installation only)
+#   --no-systemd     Skip systemd service installation (useful for containers)
 #   -h, --help       Display this help message
 #
 # Requirements:
@@ -35,6 +36,7 @@ Usage: sudo $0 [OPTIONS]
 Options:
   -p, --package    Install from pre-built package (faster, recommended)
   -d, --debug      Build with debug symbols (source installation only)
+  --no-systemd     Skip systemd service installation (useful for containers)
   -h, --help       Display this help message
 
 Examples:
@@ -79,6 +81,7 @@ readonly LIBRARY_DIRS=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
 # Global variables
 DEBUG_BUILD=false
 INSTALL_PACKAGE=false
+SKIP_SYSTEMD=false
 SERVICE_STATE=""
 
 # Color constants (using ANSI escape codes)
@@ -330,7 +333,12 @@ install_rtlsdr_udev_rules() {
         # Trigger udev reload
         reload_udev_rules
     else
-        error_exit "Failed to install RTL-SDR udev rules"
+        if [ "$SKIP_SYSTEMD" = true ]; then
+            log "WARN" "Failed to install RTL-SDR udev rules (not critical in container environments)"
+            return 0
+        else
+            error_exit "Failed to install RTL-SDR udev rules"
+        fi
     fi
 }
 
@@ -714,6 +722,11 @@ main() {
                 INSTALL_PACKAGE=true
                 shift
                 ;;
+            --no-systemd)
+                log "INFO" "Skipping systemd service installation"
+                SKIP_SYSTEMD=true
+                shift
+                ;;
             -h|--help)
                 usage
                 ;;
@@ -725,8 +738,10 @@ main() {
         esac
     done
     
-    # Stop and disable service before any installation
-    stop_disable_and_save_service_state
+    # Stop and disable service before any installation (unless skipping systemd)
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        stop_disable_and_save_service_state
+    fi
     
     if [ "$INSTALL_PACKAGE" = true ]; then
         if [ -n "$package" ]; then
@@ -748,12 +763,17 @@ main() {
     fi
 
     setup_configuration
-    setup_systemd_service        
     
-    # Restore service state
-    if ! restore_service_state; then
-        log "ERROR" "Failed to restore service state"
-        exit 1
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        setup_systemd_service        
+        
+        # Restore service state
+        if ! restore_service_state; then
+            log "ERROR" "Failed to restore service state"
+            exit 1
+        fi
+    else
+        log "INFO" "Skipping systemd service installation (--no-systemd flag specified)"
     fi
     
     log "INFO" "AIS-catcher installation completed successfully"
@@ -785,28 +805,30 @@ display_installation_summary() {
     echo "  • Log file:           ${LOG_FILE}"
     echo ""
     
-    echo -e "${COLOR_BOLD}SYSTEMD SERVICE MANAGEMENT:${COLOR_RESET}"
-    echo "  • View service status:"
-    echo -e "    ${COLOR_YELLOW}systemctl status ${SERVICE_NAME}${COLOR_RESET}"
-    echo ""
-    echo "  • Start the service:"
-    echo -e "    ${COLOR_YELLOW}systemctl start ${SERVICE_NAME}${COLOR_RESET}"
-    echo ""
-    echo "  • Stop the service:"
-    echo -e "    ${COLOR_YELLOW}systemctl stop ${SERVICE_NAME}${COLOR_RESET}"
-    echo ""
-    echo "  • Restart the service:"
-    echo -e "    ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
-    echo ""
-    echo "  • Enable at boot:"
-    echo -e "    ${COLOR_YELLOW}systemctl enable ${SERVICE_NAME}${COLOR_RESET}"
-    echo ""
-    echo "  • Disable at boot:"
-    echo -e "    ${COLOR_YELLOW}systemctl disable ${SERVICE_NAME}${COLOR_RESET}"
-    echo ""
-    echo "  • View service logs:"
-    echo -e "    ${COLOR_YELLOW}journalctl -u ${SERVICE_NAME} -f${COLOR_RESET}"
-    echo ""
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        echo -e "${COLOR_BOLD}SYSTEMD SERVICE MANAGEMENT:${COLOR_RESET}"
+        echo "  • View service status:"
+        echo -e "    ${COLOR_YELLOW}systemctl status ${SERVICE_NAME}${COLOR_RESET}"
+        echo ""
+        echo "  • Start the service:"
+        echo -e "    ${COLOR_YELLOW}systemctl start ${SERVICE_NAME}${COLOR_RESET}"
+        echo ""
+        echo "  • Stop the service:"
+        echo -e "    ${COLOR_YELLOW}systemctl stop ${SERVICE_NAME}${COLOR_RESET}"
+        echo ""
+        echo "  • Restart the service:"
+        echo -e "    ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
+        echo ""
+        echo "  • Enable at boot:"
+        echo -e "    ${COLOR_YELLOW}systemctl enable ${SERVICE_NAME}${COLOR_RESET}"
+        echo ""
+        echo "  • Disable at boot:"
+        echo -e "    ${COLOR_YELLOW}systemctl disable ${SERVICE_NAME}${COLOR_RESET}"
+        echo ""
+        echo "  • View service logs:"
+        echo -e "    ${COLOR_YELLOW}journalctl -u ${SERVICE_NAME} -f${COLOR_RESET}"
+        echo ""
+    fi
     
     echo -e "${COLOR_BOLD}CONFIGURATION:${COLOR_RESET}"
     echo "  • Edit main configuration:"
