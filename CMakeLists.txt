@@ -53,6 +53,7 @@ option(SDRPLAY "Include SDRPLAY support" ON)
 option(AIRSPYHF "Include Airspy HF+ support" ON)
 option(HACKRF "Include HackRF support" ON)
 option(HYDRASDR "Include HydraSDR support" ON)
+option(HYDRASDR_STATIC "Statically link HydraSDR library" OFF)
 option(SOXR "Include SOXR support" ON)
 option(CURL "Include CURL support" OFF)
 option(ZLIB "Include ZLIB support" ON)
@@ -776,8 +777,22 @@ if(HYDRASDR)
     if(NOT MSVC)
 
         pkg_check_modules(PKG_HYDRASDR libhydrasdr)
-        find_path(HYDRASDR_INCLUDE_DIR hydrasdr.h HINTS ${PKG_HYDRASDR_INCLUDE_DIRS} /usr/include/libhydrasdr)
-        find_library(HYDRASDR_LIBRARY hydrasdr HINTS ${PKG_HYDRASDR_LIBRARY_DIRS})
+        find_path(HYDRASDR_INCLUDE_DIR hydrasdr.h
+            HINTS ${PKG_HYDRASDR_INCLUDE_DIRS} $ENV{HYDRASDR_DIR}/include
+            PATHS /usr/local/include /usr/include /opt/include /opt/local/include /usr/include/libhydrasdr)
+
+        if(HYDRASDR_STATIC)
+            # Look for static library first
+            find_library(HYDRASDR_LIBRARY
+                NAMES libhydrasdr.a hydrasdr.a
+                HINTS ${PKG_HYDRASDR_LIBRARY_DIRS} $ENV{HYDRASDR_DIR}/lib
+                PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
+        else()
+            # Look for shared library
+            find_library(HYDRASDR_LIBRARY hydrasdr
+                HINTS ${PKG_HYDRASDR_LIBRARY_DIRS} $ENV{HYDRASDR_DIR}/lib
+                PATHS /usr/local/lib /usr/lib /opt/lib /opt/local/lib)
+        endif()
 
         if(HYDRASDR_INCLUDE_DIR AND HYDRASDR_LIBRARY)
 
@@ -785,6 +800,9 @@ if(HYDRASDR)
             add_definitions(-DHASHYDRASDR)
             set(HYDRASDR_INCLUDE_DIRS ${HYDRASDR_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIR})
             set(HYDRASDR_LIBRARIES ${HYDRASDR_LIBRARY} ${LIBUSB_LIBRARY})
+            if(HYDRASDR_STATIC)
+                message(STATUS "HYDRASDR: using static linking")
+            endif()
 
         else()
             Message(STATUS "HYDRASDR: not found.")

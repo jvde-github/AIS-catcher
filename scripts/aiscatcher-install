@@ -402,6 +402,19 @@ suggest_manual_udev_reload() {
     log "INFO" "  4. Verify with: rtl_test -t (if device is connected)"
 }
 
+# Install libhydrasdr from source
+install_libhydrasdr_from_source() {
+    log "INFO" "Installing libhydrasdr from source"
+    git clone https://github.com/hydrasdr/rfone_host.git --depth 1 || error_exit "Failed to clone rfone_host repository"
+    cd rfone_host/libhydrasdr || error_exit "Failed to change directory to rfone_host/libhydrasdr"
+    mkdir build && cd build || error_exit "Failed to create and enter build directory"
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr || error_exit "Failed to run cmake"
+    make || error_exit "Failed to build libhydrasdr"
+    make install || error_exit "Failed to install libhydrasdr"
+    ldconfig || error_exit "Failed to run ldconfig"
+    cd ../../.. || error_exit "Failed to return to parent directory"
+}
+
 # Install SDR libraries
 install_sdr_libraries() {
     local libraries=(
@@ -418,6 +431,9 @@ install_sdr_libraries() {
             case "$lib_name" in
                 librtlsdr)
                     install_librtlsdr_from_source
+                    ;;
+                libhydrasdr)
+                    install_libhydrasdr_from_source
                     ;;
                 *)
                     log "INFO" "Installing ${lib_name}-dev"

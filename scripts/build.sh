@@ -47,7 +47,7 @@ build_project() {
   # Use RUN_NUMBER from environment or default to 0
   RUN_NUM=${RUN_NUMBER:-0}
   
-  cmake .. -DNMEA2000_PATH=.. -DRTLSDR_STATIC=ON -DRUN_NUMBER=${RUN_NUM}
+  cmake .. -DNMEA2000_PATH=.. -DRTLSDR_STATIC=ON -DHYDRASDR_STATIC=ON -DRUN_NUMBER=${RUN_NUM}
   
   make
   cd ..
