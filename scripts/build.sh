@@ -9,14 +9,14 @@ install_dependencies() {
   fi
 
   echo "Installing rtl-sdr from source"
-  git clone https://gitea.osmocom.org/sdr/rtl-sdr.git
+  git clone https://gitea.osmocom.org/sdr/rtl-sdr.git --depth 1
   cd rtl-sdr; mkdir build; cd build; cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON; make; make install;
   cd ..; cd ..
   cp rtl-sdr/rtl-sdr.rules /etc/udev/rules.d/
   ldconfig
 
   echo "Installing libhydrasdr from source"
-  git clone https://github.com/hydrasdr/rfone_host.git
+  git clone https://github.com/jvde-github/rfone_host.git --depth 1
   cd rfone_host/libhydrasdr; mkdir build; cd build; cmake .. -DCMAKE_INSTALL_PREFIX=/usr; make; make install;
   cd ../../..
   ldconfig
@@ -38,7 +38,7 @@ build_project() {
     echo "NMEA2000 library directory deleted."
   fi
 
-  git clone https://github.com/ttlappalainen/NMEA2000.git
+  git clone https://github.com/ttlappalainen/NMEA2000.git --depth 1
   cd NMEA2000; cd src
   g++ -O3 -c  N2kMsg.cpp  N2kStream.cpp N2kMessages.cpp   N2kTimer.cpp  NMEA2000.cpp  N2kGroupFunctionDefaultHandlers.cpp  N2kGroupFunction.cpp  -I.
   ar rcs libnmea2000.a *.o 
