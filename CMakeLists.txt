@@ -67,6 +67,19 @@ option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
 
 set(NMEA2000_PATH "." CACHE PATH "Path to NMEA2000 library")
 
+# RPATH configuration for bundled libraries
+# Set RPATH_LIBRARY_DIR to enable RPATH (e.g., -DRPATH_LIBRARY_DIR=/usr/lib/ais-catcher)
+set(RPATH_LIBRARY_DIR "" CACHE STRING "Directory to add to RPATH for finding shared libraries")
+
+if(RPATH_LIBRARY_DIR)
+    message(STATUS "RPATH enabled: ${RPATH_LIBRARY_DIR}")
+    set(CMAKE_BUILD_RPATH "${RPATH_LIBRARY_DIR}")
+    set(CMAKE_INSTALL_RPATH "${RPATH_LIBRARY_DIR}")
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+else()
+    message(STATUS "RPATH not configured")
+endif()
+
 # Common compiler flags and options.
 
 option(MSVC_VCPKG "For MSVC use VCPKG libraries." OFF)
