@@ -50,12 +50,12 @@ class DeviceManager
     Device::AIRSPY _AIRSPY;
     Device::SDRPLAY _SDRPLAY;
     Device::HACKRF _HACKRF;
+    Device::HYDRASDR _HYDRASDR;
     Device::SOAPYSDR _SOAPYSDR;
     Device::SerialPort _SerialPort;
     Device::ZMQ _ZMQ;
     Device::UDP _UDP;
     Device::N2KSCAN _N2KSCAN;
-    Device::HYDRASDR _HYDRASDR;
 
     Device::Device *getDeviceByType(Type type);
 
