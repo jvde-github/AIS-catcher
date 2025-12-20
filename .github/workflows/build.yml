@@ -292,7 +292,7 @@ jobs:
         cd rfone_host; mkdir build; cd build
         cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
         msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform hydrasdr_all.sln
-        cd ..; cd .. 
+        cd ..; cd ..
         cp rfone_host\build\hydrasdr-tools\src\*.dll release
         cp rfone_host\build\libhydrasdr\src\Release\*.lib lib
         cp rfone_host\libhydrasdr\src\*.h include
