@@ -16,7 +16,7 @@ install_dependencies() {
   ldconfig
 
   echo "Installing libhydrasdr from source"
-  git clone https://github.com/jvde-github/rfone_host.git --depth 1
+  git clone https://github.com/hydrasdr/rfone_host.git --depth 1
   cd rfone_host/libhydrasdr; mkdir build; cd build; cmake .. -DCMAKE_INSTALL_PREFIX=/usr; make; make install;
   cd ../../..
   ldconfig
