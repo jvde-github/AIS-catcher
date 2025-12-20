@@ -237,10 +237,6 @@ namespace Device
 					FlushFileBuffers(serial_handle);
 				}
 			}
-
-			// Flush any responses from init sequence before starting read thread
-			SleepSystem(100);
-			PurgeComm(serial_handle, PURGE_RXCLEAR);
 		}
 #else
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
