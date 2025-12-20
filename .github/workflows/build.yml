@@ -95,7 +95,7 @@ jobs:
         docker buildx build --build-arg RUN_NUMBER=${RUN_NUMBER} --platform linux/${{ matrix.arch }} -t ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }} --load .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-debian-${{ matrix.codename }}-${{ matrix.arch }}
         cp output/ais-catcher.deb ${{ env.filename }}
-        gh release upload 'Edge' ${{ env.filename }} --repo jvde-github/AIS-catcher --clobber
+        gh release upload 'Edge' ${{ env.filename }} --repo ${{ github.repository }} --clobber
     - name: Upload Debian package as artifact
       uses: actions/upload-artifact@v4
       with:
@@ -130,7 +130,7 @@ jobs:
         docker build --build-arg RUN_NUMBER=${RUN_NUMBER} -t ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }} .
         docker run --rm -v "$(pwd)/output:/output" ais-catcher-builder-ubuntu-${{ matrix.codename }}-${{ matrix.arch }}
         cp output/ais-catcher.deb ${{ env.filename }}
-        gh release upload 'Edge' ${{ env.filename }} --repo jvde-github/AIS-catcher --clobber
+        gh release upload 'Edge' ${{ env.filename }} --repo ${{ github.repository }} --clobber
     - name: Upload Ubuntu package as artifact
       uses: actions/upload-artifact@v4
       with:
@@ -320,7 +320,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
-        bash -c "gh release upload 'Edge' './output/AIS-catcher ${{matrix.platform}}.zip' --repo jvde-github/AIS-catcher --clobber" 
+        bash -c "gh release upload 'Edge' './output/AIS-catcher ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
         del "output\AIS-catcher ${{matrix.platform}}.zip"
 
     - name: Download SDRPlay API
@@ -364,7 +364,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-        bash -c "gh release upload 'Edge' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo hydrasdr/AIS-catcher --clobber" 
+        bash -c "gh release upload 'Edge' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber" 
         del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
 
  
