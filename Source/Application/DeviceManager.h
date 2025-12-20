@@ -33,6 +33,7 @@
 #include "Device/ZMQ.h"
 #include "Device/UDP.h"
 #include "Device/N2KsktCAN.h"
+#include "Device/HYDRASDR.h"
 
 class DeviceManager
 {
@@ -54,6 +55,7 @@ class DeviceManager
     Device::ZMQ _ZMQ;
     Device::UDP _UDP;
     Device::N2KSCAN _N2KSCAN;
+    Device::HYDRASDR _HYDRASDR;
 
     Device::Device *getDeviceByType(Type type);
 
@@ -78,6 +80,7 @@ public:
     Device::AIRSPY &AIRSPY() { return _AIRSPY; }
     Device::SDRPLAY &SDRPLAY() { return _SDRPLAY; }
     Device::HACKRF &HACKRF() { return _HACKRF; }
+    Device::HYDRASDR &HYDRASDR() { return _HYDRASDR; }
     Device::SerialPort &SerialPort() { return _SerialPort; }
     Device::SOAPYSDR &SOAPYSDR() { return _SOAPYSDR; }
     Device::ZMQ &ZMQ() { return _ZMQ; }

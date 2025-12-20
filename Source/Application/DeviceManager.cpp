@@ -36,6 +36,7 @@ void DeviceManager::refreshDevices()
 	SOAPYSDR().getDeviceList(device_list);
 	N2KSCAN().getDeviceList(device_list);
 	SerialPort().getDeviceList(device_list);
+	HYDRASDR().getDeviceList(device_list);
 }
 
 Device::Device *DeviceManager::getDeviceByType(Type type)
@@ -81,6 +82,10 @@ Device::Device *DeviceManager::getDeviceByType(Type type)
 #ifdef HASHACKRF
 	case Type::HACKRF:
 		return &_HACKRF;
+#endif
+#ifdef HASHYDRASDR
+	case Type::HYDRASDR:
+		return &_HYDRASDR;
 #endif
 #ifdef HASSOAPYSDR
 	case Type::SOAPYSDR:

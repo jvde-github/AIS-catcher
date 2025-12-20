@@ -43,6 +43,7 @@
 #include "Device/SpyServer.h"
 #include "Device/SoapySDR.h"
 #include "Device/ZMQ.h"
+#include "Device/HYDRASDR.h"
 
 class Config {
 
