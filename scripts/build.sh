@@ -265,9 +265,9 @@ create_debian_package() {
     # Copy shared libraries for librtlsdr and libhydrasdr to /usr/lib/ais-catcher
     mkdir -p debian/usr/lib/ais-catcher
     echo "Copying librtlsdr.so* to debian/usr/lib/ais-catcher/"
-    cp rtl-sdr/build/src/librtlsdr.so* debian/usr/lib/ais-catcher/ 2>/dev/null || echo "Warning: Could not copy librtlsdr.so*"
+    cp -P rtl-sdr/build/src/librtlsdr.so* debian/usr/lib/ais-catcher/
     echo "Copying libhydrasdr.so* to debian/usr/lib/ais-catcher/"
-    cp rfone_host/libhydrasdr/build/src/libhydrasdr.so* debian/usr/lib/ais-catcher/ 2>/dev/null || echo "Warning: Could not copy libhydrasdr.so*"
+    cp -P rfone_host/libhydrasdr/build/src/libhydrasdr.so* debian/usr/lib/ais-catcher/
 
     dpkg-deb --build debian
     mv debian.deb "$package_name.deb"
