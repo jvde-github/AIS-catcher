@@ -123,6 +123,7 @@ static void Usage()
 	Info() << "\tDevice specific settings:";
 	Info() << "";
 	Info() << "\t[-ga RAW file: FILE [filename] FORMAT [CF32/CS16/CU8/CS8] ]";
+	Info() << "\t[-gd HydraSDR: SENSITIVITY [0-21] LINEARITY [0-21] VGA [0-14] LNA [auto/0-14] MIXER [auto/0-14] BIASTEE [on/off] ]";
 	Info() << "\t[-ge Serial Port: PRINT [on/off]";
 	Info() << "\t[-gf HACKRF: LNA [0-40] VGA [0-62] PREAMP [on/off] ]";
 	Info() << "\t[-gh Airspy HF+: TRESHOLD [low/high] PREAMP [on/off] ]";
@@ -149,6 +150,9 @@ static void printBuildConfiguration()
 #endif
 #ifdef HASAIRSPY
 	sdr_support << "AIRSPY ";
+#endif
+#ifdef HASHYDRASDR
+	sdr_support << "HYDRASDR ";
 #endif
 #ifdef HASAIRSPYHF
 	sdr_support << "AIRSPYHF+ ";
@@ -699,6 +703,9 @@ int main(int argc, char *argv[])
 				case 'm':
 					parseSettings(receiver.getDeviceManager().AIRSPY(), argv, ptr, argc);
 					break;
+				case 'd':
+					parseSettings(receiver.getDeviceManager().HYDRASDR(), argv, ptr, argc);
+					break;					
 				case 'r':
 					parseSettings(receiver.getDeviceManager().RTLSDR(), argv, ptr, argc);
 					break;
