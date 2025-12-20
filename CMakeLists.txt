@@ -81,6 +81,7 @@ else()
 endif()
 
 # Common compiler flags and options.
+set(CMAKE_BUILD_TYPE Release)
 
 option(MSVC_VCPKG "For MSVC use VCPKG libraries." OFF)
 
