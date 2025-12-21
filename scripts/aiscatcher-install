@@ -37,12 +37,14 @@ Options:
   -p, --package    Install from pre-built package (faster, recommended)
   -d, --debug      Build with debug symbols (source installation only)
   --no-systemd     Skip systemd service installation (useful for containers)
+  --no-user        Skip user creation and run as root (useful for containers)
   -h, --help       Display this help message
 
 Examples:
-  sudo $0 --package          # Install from pre-built package
-  sudo $0                    # Build and install from source
-  sudo $0 --debug            # Build from source with debug symbols
+  sudo $0 --package                    # Install from pre-built package
+  sudo $0                              # Build and install from source
+  sudo $0 --debug                      # Build from source with debug symbols
+  sudo $0 --no-systemd --no-user       # Docker/container installation
 
 For more information, visit: https://docs.aiscatcher.org/
 EOF
@@ -82,6 +84,7 @@ readonly LIBRARY_DIRS=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
 DEBUG_BUILD=false
 INSTALL_PACKAGE=false
 SKIP_SYSTEMD=false
+SKIP_USER=false
 SERVICE_STATE=""
 
 # Color constants (using ANSI escape codes)
@@ -156,6 +159,10 @@ cleanup() {
     rm -rf "$TMP_DIR"
 }
 
+################################################################################
+# UTILITY FUNCTIONS (Used by both package and source installations)
+################################################################################
+
 # Check for conflicting existing service
 check_existing_service() {
     if systemctl is-enabled aiscatcher.service &>/dev/null; then
@@ -185,56 +192,48 @@ get_system_info() {
     echo "${OS}_${VERSION}_${ARCH}"
 }
 
-# Install dependencies
-install_dependencies() {
+download_webassets_common() {
+    local webassets_url="https://github.com/jvde-github/webassets/archive/refs/heads/main.zip"
+    local temp_zip="/tmp/webassets.zip"
+    
+    log "INFO" "Downloading webassets"
+    if curl -sL "$webassets_url" -o "$temp_zip"; then
+        if [[ -d "$CONFIG_DIR/webassets" ]]; then
+            log "INFO" "Removing old webassets"
+            rm -rf "$CONFIG_DIR/webassets"
+        fi
+        
+        log "INFO" "Extracting webassets"
+        unzip -q "$temp_zip" -d "$CONFIG_DIR"
+        mv "$CONFIG_DIR/webassets-main" "$CONFIG_DIR/webassets"
+        rm "$temp_zip"
+        
+        log "INFO" "Webassets updated successfully"
+    else
+        log "ERROR" "Failed to download webassets"
+        return 1
+    fi
+}
+
+################################################################################
+# SOURCE INSTALLATION FUNCTIONS
+################################################################################
+
+# Install build dependencies for source compilation
+install_source_build_dependencies() {
     local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev curl unzip libusb-1.0-0-dev libsqlite3-dev"
     log "INFO" "Installing build dependencies: $deps"
     apt-get install -y $deps || error_exit "Failed to install dependencies"
 }
 
-# Check if a pre-built package is available for this system
-# Args:
-#   $1: system_info string (format: os_version_arch)
-# Returns:
-#   0 if package found (prints package name), 1 otherwise
-check_package_availability() {
-    local system_info=$1
-    local packages=(
-        "ais-catcher_debian_bookworm_amd64.deb"
-        "ais-catcher_debian_bookworm_arm64.deb"
-        "ais-catcher_debian_bookworm_armhf.deb"
-        "ais-catcher_debian_bullseye_amd64.deb"
-        "ais-catcher_debian_bullseye_arm64.deb"
-        "ais-catcher_debian_bullseye_armhf.deb"
-        "ais-catcher_debian_trixie_amd64.deb"
-        "ais-catcher_debian_trixie_arm64.deb"
-        "ais-catcher_debian_trixie_armhf.deb"
-        "ais-catcher_ubuntu_focal_amd64.deb"
-        "ais-catcher_ubuntu_jammy_amd64.deb"
-        "ais-catcher_ubuntu_noble_amd64.deb"
-        "ais-catcher_ubuntu_plucky_amd64.deb"
-        "ais-catcher_ubuntu_questing_amd64.deb"
-        "ais-catcher_ubuntu_resolute_amd64.deb"
-    )
-
-    for package in "${packages[@]}"; do
-        if [[ $package == *"$system_info"* ]]; then
-            echo "$package"
-            return 0
-        fi
-    done
-
-    return 1
-}
-
-# Check if a library is installed on the system
+# Check if a library is installed on the system (used by source build)
 # Args:
 #   $1: library name (for pkg-config)
 #   $2: header file name
 #   $3: library file name (without extension)
 # Returns:
 #   0 if library found, 1 otherwise
-check_library() {
+check_library_for_source_build() {
     local lib_name="$1"
     local header_name="$2"
     local lib_file="$3"
@@ -423,8 +422,8 @@ install_libhydrasdr_from_source() {
     cd ../../.. || error_exit "Failed to return to parent directory"
 }
 
-# Install SDR libraries
-install_sdr_libraries() {
+# Install SDR libraries from source (only for source build)
+install_sdr_libraries_from_source() {
     local libraries=(
         "librtlsdr:rtl-sdr.h:librtlsdr"
         "libairspy:airspy.h:libairspy"
@@ -435,7 +434,7 @@ install_sdr_libraries() {
 
     for lib_info in "${libraries[@]}"; do
         IFS=':' read -r lib_name header lib_file <<< "$lib_info"
-        if ! check_library "$lib_name" "$header" "$lib_file"; then
+        if ! check_library_for_source_build "$lib_name" "$header" "$lib_file"; then
             case "$lib_name" in
                 librtlsdr)
                     install_librtlsdr_from_source
@@ -452,8 +451,8 @@ install_sdr_libraries() {
     done
 }
 
-# Build AIS-catcher
-build_ais_catcher() {
+# Build AIS-catcher from source
+build_ais_catcher_from_source() {
     log "INFO" "Building AIS-catcher"
 
     git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 || error_exit "Failed to download AIS-catcher"
@@ -471,7 +470,8 @@ build_ais_catcher() {
     cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 }
 
-install_additional_files() {
+# Install additional files (plugins, DBMS, README, LICENSE) from source
+install_source_additional_files() {
     log "INFO" "Installing plugins"
     mkdir -p "$PLUGIN_DIR" || error_exit "Failed to create plugin directory"
     cp AIS-catcher/plugins/* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
@@ -488,69 +488,46 @@ install_additional_files() {
     cp AIS-catcher/LICENSE /etc/AIS-catcher/LICENSE || error_exit "Failed to copy LICENSE"
 }
 
-download_webassets() {
-    local webassets_url="https://github.com/jvde-github/webassets/archive/refs/heads/main.zip"
-    local temp_zip="/tmp/webassets.zip"
-    
-    log "INFO" "Downloading webassets"
-    if curl -sL "$webassets_url" -o "$temp_zip"; then
-        if [[ -d "$CONFIG_DIR/webassets" ]]; then
-            log "INFO" "Removing old webassets"
-            rm -rf "$CONFIG_DIR/webassets"
+################################################################################
+# PACKAGE INSTALLATION FUNCTIONS
+################################################################################
+
+# Check if a pre-built package is available for this system
+# Args:
+#   $1: system_info string (format: os_version_arch)
+# Returns:
+#   0 if package found (prints package name), 1 otherwise
+check_package_availability() {
+    local system_info=$1
+    local packages=(
+        "ais-catcher_debian_bookworm_amd64.deb"
+        "ais-catcher_debian_bookworm_arm64.deb"
+        "ais-catcher_debian_bookworm_armhf.deb"
+        "ais-catcher_debian_bullseye_amd64.deb"
+        "ais-catcher_debian_bullseye_arm64.deb"
+        "ais-catcher_debian_bullseye_armhf.deb"
+        "ais-catcher_debian_trixie_amd64.deb"
+        "ais-catcher_debian_trixie_arm64.deb"
+        "ais-catcher_debian_trixie_armhf.deb"
+        "ais-catcher_ubuntu_focal_amd64.deb"
+        "ais-catcher_ubuntu_jammy_amd64.deb"
+        "ais-catcher_ubuntu_noble_amd64.deb"
+        "ais-catcher_ubuntu_plucky_amd64.deb"
+        "ais-catcher_ubuntu_questing_amd64.deb"
+        "ais-catcher_ubuntu_resolute_amd64.deb"
+    )
+
+    for package in "${packages[@]}"; do
+        if [[ $package == *"$system_info"* ]]; then
+            echo "$package"
+            return 0
         fi
-        
-        log "INFO" "Extracting webassets"
-        unzip -q "$temp_zip" -d "$CONFIG_DIR"
-        mv "$CONFIG_DIR/webassets-main" "$CONFIG_DIR/webassets"
-        rm "$temp_zip"
-        
-        log "INFO" "Webassets updated successfully"
-    else
-        log "ERROR" "Failed to download webassets"
-        return 1
-    fi
+    done
+
+    return 1
 }
 
-# Setup configuration
-setup_configuration() {
-    log "INFO" "Setting up configuration files"
-    mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
-
-    download_webassets || error_exit "Failed to download webassets"
-
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
-    fi
-    
-    if [[ ! -f "$CMD_FILE" ]]; then
-        cat << EOF | tee "$CMD_FILE" > /dev/null || error_exit "Failed to create config.cmd"
-# AIS-catcher configuration
-
-EOF
-    fi
-}
-
-# Setup systemd service
-setup_systemd_service() {
-    log "INFO" "Setting up systemd service"
-    cat << EOF | tee "$SERVICE_FILE" > /dev/null || error_exit "Failed to create service file"
-[Unit]
-Description=AIS-catcher Service
-After=network.target
-
-[Service]
-ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} \$(/bin/grep -v "^#" ${CMD_FILE} | /bin/grep -v "^[[:space:]]*$" | tr -d "\r" | /usr/bin/tr "\n" " ")'
-Restart=always
-RestartSec=10
-StartLimitBurst=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    systemctl daemon-reload || error_exit "Failed to reload systemd"
-}
-
-# FIXED: Improved package installation function
+# Install AIS-catcher from pre-built Debian package
 install_from_package() {
     local package=$1
     local download_url="https://github.com/jvde-github/AIS-catcher/releases/download/Edge/$package"
@@ -599,6 +576,95 @@ install_from_package() {
     fi
 
     log "INFO" "AIS-catcher package installation completed"
+}
+
+################################################################################
+# CONFIGURATION FUNCTIONS (Common to both installation methods)
+################################################################################
+
+# Create and configure aiscatcher system user
+setup_aiscatcher_user() {
+    if [ "$SKIP_USER" = true ]; then
+        log "INFO" "Skipping user creation (--no-user flag specified), will run as root"
+        return 0
+    fi
+    
+    log "INFO" "Setting up aiscatcher system user"
+    
+    # Create system user if it doesn't exist
+    if ! id -u aiscatcher &>/dev/null; then
+        log "INFO" "Creating aiscatcher system user"
+        useradd --system --no-create-home --shell /usr/sbin/nologin aiscatcher || error_exit "Failed to create aiscatcher user"
+    else
+        log "INFO" "User aiscatcher already exists"
+    fi
+    
+    # Add user to necessary groups for SDR device access
+    for group in plugdev dialout; do
+        if getent group "$group" &>/dev/null; then
+            if ! id -nG aiscatcher | grep -qw "$group"; then
+                log "INFO" "Adding aiscatcher to $group group"
+                usermod -a -G "$group" aiscatcher || log "WARN" "Failed to add aiscatcher to $group group"
+            fi
+        else
+            log "WARN" "Group $group does not exist, skipping"
+        fi
+    done
+}
+
+# Setup configuration
+setup_configuration() {
+    log "INFO" "Setting up configuration files"
+    mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
+
+    download_webassets_common || error_exit "Failed to download webassets"
+
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
+    fi
+    
+    if [[ ! -f "$CMD_FILE" ]]; then
+        cat << EOF | tee "$CMD_FILE" > /dev/null || error_exit "Failed to create config.cmd"
+# AIS-catcher configuration
+
+EOF
+    fi
+}
+
+################################################################################
+# SYSTEMD SERVICE FUNCTIONS (Common to both installation methods)
+################################################################################
+
+# Setup systemd service
+setup_systemd_service() {
+    log "INFO" "Setting up systemd service"
+    
+    # Build service file content conditionally based on SKIP_USER flag
+    local service_content="[Unit]
+Description=AIS-catcher Service
+After=network.target
+
+[Service]"
+    
+    # Only add User/Group directives if not skipping user creation
+    if [ "$SKIP_USER" = false ]; then
+        service_content+="
+User=aiscatcher
+Group=aiscatcher
+SupplementaryGroups=plugdev dialout"
+    fi
+    
+    service_content+="
+ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} \$(/bin/grep -v \"^#\" ${CMD_FILE} | /bin/grep -v \"^[[:space:]]*\$\" | tr -d \"\\r\" | /usr/bin/tr \"\\n\" \" \")'
+Restart=always
+RestartSec=10
+StartLimitBurst=0
+
+[Install]
+WantedBy=multi-user.target"
+    
+    echo "$service_content" | tee "$SERVICE_FILE" > /dev/null || error_exit "Failed to create service file"
+    systemctl daemon-reload || error_exit "Failed to reload systemd"
 }
 
 # Function to stop the service and save its state
@@ -685,33 +751,14 @@ restore_service_state() {
     return 0
 }
 
-# Main function
-main() {
-    log "INFO" "Starting AIS-catcher installation script"
-    
-    check_existing_service
-    
-    trap cleanup EXIT
-    
-    apt-get update || error_exit "Failed to update package lists"
+################################################################################
+# INSTALLATION METHOD FUNCTIONS
+################################################################################
 
-    cd "$TMP_DIR" || error_exit "Failed to change to temporary directory"
-
-    local system_info=$(get_system_info)
-    log "INFO" "Detected system: $system_info"
-    
-    local package=$(check_package_availability "$system_info")
-    if [ $? -eq 0 ]; then
-        log "INFO" "Package available: $package"
-    else
-        log "WARN" "No package available for this system"
-    fi
-
-    # Parse command-line arguments
+# Parse command-line arguments
+parse_arguments() {
     while [[ $# -gt 0 ]]; do
-        key="$1"
-
-        case $key in
+        case "$1" in
             -d|--debug)
                 DEBUG_BUILD=true
                 log "INFO" "Debug build requested"
@@ -727,6 +774,11 @@ main() {
                 SKIP_SYSTEMD=true
                 shift
                 ;;
+            --no-user)
+                log "INFO" "Skipping user creation, will run as root"
+                SKIP_USER=true
+                shift
+                ;;
             -h|--help)
                 usage
                 ;;
@@ -737,37 +789,92 @@ main() {
                 ;;
         esac
     done
+}
+
+# Install from pre-built package
+install_from_package_method() {
+    local system_info=$(get_system_info)
+    log "INFO" "Detected system: $system_info"
     
-    # Stop and disable service before any installation (unless skipping systemd)
+    local package=$(check_package_availability "$system_info")
+    
+    if [ -z "$package" ]; then
+        error_exit "Package installation requested but no package available for $system_info. Consider building from source: see https://docs.aiscatcher.org/installation/ubuntu-debian/#install-from-source"
+    fi
+    
+    log "INFO" "Package available: $package"
+    
+    # Install minimal dependencies for package installation and webassets download
+    log "INFO" "Installing minimal dependencies for package installation"
+    apt-get install -y curl unzip || error_exit "Failed to install minimal dependencies"
+    
+    install_from_package "$package"
+    log "INFO" "AIS-catcher installation from package completed successfully"
+}
+
+# Install from source
+install_from_source_method() {
+    log "INFO" "AIS-catcher installation from source"
+    
+    cd "$TMP_DIR" || error_exit "Failed to change to temporary directory"
+    
+    install_source_build_dependencies
+    install_sdr_libraries_from_source
+    build_ais_catcher_from_source
+    install_source_additional_files
+    
+    log "INFO" "AIS-catcher source installation completed successfully"
+}
+
+# Install binary (delegates to package or source method)
+install_binary() {
+    if [ "$INSTALL_PACKAGE" = true ]; then
+        install_from_package_method
+    else
+        install_from_source_method
+    fi
+}
+
+# Configure installation (user, config, permissions)
+configure_installation() {
+    setup_aiscatcher_user
+    setup_configuration
+    
+    # Ensure correct ownership after config files are created (skip if running as root)
+    if [ "$SKIP_USER" = false ]; then
+        log "INFO" "Ensuring correct ownership of configuration directory"
+        chown -R aiscatcher:aiscatcher "$CONFIG_DIR" || log "WARN" "Failed to set ownership of config directory"
+    fi
+}
+
+# Main function
+main() {
+    # Phase 1: Pre-flight checks and setup
+    log "INFO" "Starting AIS-catcher installation script"
+    check_existing_service
+    trap cleanup EXIT
+    
+    # Phase 2: Parse arguments
+    parse_arguments "$@"
+    
+    # Phase 3: System preparation
+    apt-get update || error_exit "Failed to update package lists"
+    
+    # Phase 4: Stop existing service if needed
     if [ "$SKIP_SYSTEMD" = false ]; then
         stop_disable_and_save_service_state
     fi
     
-    if [ "$INSTALL_PACKAGE" = true ]; then
-        if [ -n "$package" ]; then
-            # Install minimal dependencies for package installation and webassets download
-            log "INFO" "Installing minimal dependencies for package installation"
-            apt-get install -y curl unzip || error_exit "Failed to install minimal dependencies"
-            
-            install_from_package "$package"
-            log "INFO" "AIS-catcher installation from package completed successfully"
-        else
-            error_exit "Package installation requested but no package available for this system. Consider building from source: see https://docs.aiscatcher.org/installation/ubuntu-debian/#install-from-source"
-        fi
-    else
-        log "INFO" "AIS-catcher installation from source"
-        install_dependencies
-        install_sdr_libraries
-        build_ais_catcher
-        install_additional_files
-    fi
-
-    setup_configuration
+    # Phase 5: Install binary (package or source)
+    install_binary
     
+    # Phase 6: Post-install configuration
+    configure_installation
+    
+    # Phase 7: Setup and start service
     if [ "$SKIP_SYSTEMD" = false ]; then
-        setup_systemd_service        
+        setup_systemd_service
         
-        # Restore service state
         if ! restore_service_state; then
             log "ERROR" "Failed to restore service state"
             exit 1
@@ -776,9 +883,8 @@ main() {
         log "INFO" "Skipping systemd service installation (--no-systemd flag specified)"
     fi
     
+    # Phase 8: Installation complete
     log "INFO" "AIS-catcher installation completed successfully"
-    
-    # Display installation summary
     display_installation_summary
 }
 
