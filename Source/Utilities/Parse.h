@@ -38,7 +38,7 @@ namespace Util
 		static bool Switch(std::string arg, const std::string &TrueString = "ON", const std::string &FalseString = "OFF");
 		static bool AutoInteger(std::string arg, int min, int max, int &val);
 		static bool AutoFloat(std::string arg, double min, double max, double &val);
-		static bool OptionalInteger(std::string arg, int min, int max, unsigned &val);
+		static bool OptionalInteger(std::string arg, int min, int max, unsigned &val, unsigned default_val = 0);
 		static void HTTP_URL(const std::string &url, std::string &protocol, std::string &host, std::string &port, std::string &path);
 		static void URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path);
 	};

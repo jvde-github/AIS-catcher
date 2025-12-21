@@ -50,7 +50,8 @@ namespace IO
 			terminate = false;
 
 			run_thread = std::thread(&HTTPStreamer::process, this);
-			Debug() << "HTTP: start thread (" << url << "), filter: " << Util::Convert::toString(filter.isOn()) << (filter.isOn() ? ", Allowed: " + filter.getAllowed() : "");
+			std::string filter_str = filter.Get();
+			Debug() << "HTTP: start thread (" << url << ")" << (!filter_str.empty() ? ", " + filter_str : "");
 		}
 	}
 
@@ -440,9 +441,10 @@ namespace IO
 	void UDPStreamer::Start()
 	{
 		std::stringstream ss;
-		ss << "UDP: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
-		if (filter.isOn())
-			ss << ", allowed: {" << filter.getAllowed() << "}";
+		ss << "UDP: open socket for host: " << host << ", port: " << port;
+		std::string filter_str = filter.Get();
+		if (!filter_str.empty())
+			ss << ", " << filter_str;
 		ss << ", msgformat: " << Util::Convert::toString(fmt);
 		if (broadcast)
 			ss << ", broadcast: true";
@@ -708,12 +710,10 @@ namespace IO
 	{
 		std::stringstream ss;
 
-		ss << "TCP feed: open socket for host: " << host << ", port: " << port << ", filter: " << Util::Convert::toString(filter.isOn());
-		if (filter.isOn())
-		{
-			ss << ", gps: " << Util::Convert::toString(filter.includeGPS());
-			ss << ", allowed: {" << filter.getAllowed() << "}";
-		}
+		ss << "TCP feed: open socket for host: " << host << ", port: " << port;
+		std::string filter_str = filter.Get();
+		if (!filter_str.empty())
+			ss << ", " << filter_str;
 		ss << ", persist: " << Util::Convert::toString(persistent);
 		ss << ", keep_alive: " << Util::Convert::toString(keep_alive);
 		if (!uuid.empty())
@@ -798,10 +798,10 @@ namespace IO
 	void TCPlistenerStreamer::Start()
 	{
 		std::stringstream ss;
-		ss << "TCP listener: open at port " << port << ", filter: " << Util::Convert::toString(filter.isOn());
-		if (filter.isOn())
-			ss << ", allowed: {" << filter.getAllowed() << "}";
-
+		ss << "TCP listener: open at port " << port;
+		std::string filter_str = filter.Get();
+		if (!filter_str.empty())
+			ss << ", " << filter_str;
 		ss << ", msgformat: " << Util::Convert::toString(fmt) << ".";
 
 		Info() << ss.str();
@@ -930,7 +930,11 @@ namespace IO
 	void MQTTStreamer::Start()
 	{
 		std::stringstream ss;
-		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort() << ", filter: " << Util::Convert::toString(filter.isOn()) << ", msgformat: " << Util::Convert::toString(fmt);
+		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort();
+		std::string filter_str = filter.Get();
+		if (!filter_str.empty())
+			ss << ", " << filter_str;
+		ss << ", msgformat: " << Util::Convert::toString(fmt);
 		tcp.setValue("PERSISTENT", "on");
 
 		switch (Protocol)

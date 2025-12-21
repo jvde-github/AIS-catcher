@@ -601,18 +601,6 @@ namespace AIS
 			on = Util::Parse::Switch(arg);
 			return true;
 		}
-		else if (option == "DOWNSAMPLE" || option == "OWN_INTERVAL")
-		{
-			if (option == "DOWNSAMPLE")
-			{
-				Error() << "Option 'DOWNSAMPLE' is deprecated, please use 'OWN_INTERVAL' instead.";
-			}
-
-			Util::Convert::toUpper(arg);
-			own_interval = Util::Parse::Switch(arg) ? 10 : 0;
-
-			return true;
-		}
 		else if (option == "UNIQUE")
 		{
 			Util::Convert::toUpper(arg);
@@ -622,8 +610,20 @@ namespace AIS
 		}
 		else if (option == "POSITION_INTERVAL")
 		{
-			if (!Util::Parse::OptionalInteger(arg, 0, 3600, position_interval))
-				position_interval = 0;
+			Util::Parse::OptionalInteger(arg, 0, 3600, position_interval);
+			return true;
+		}
+		else if (option == "OWN_INTERVAL")
+		{
+			Util::Parse::OptionalInteger(arg, 0, 3600, own_interval);
+			return true;
+		}
+		else if (option == "DOWNSAMPLE")
+		{
+			Error() << "Option 'DOWNSAMPLE' is deprecated, please use 'OWN_INTERVAL' instead.";
+
+			Util::Convert::toUpper(arg);
+			own_interval = Util::Parse::Switch(arg) ? 10 : 0;
 
 			return true;
 		}
@@ -698,6 +698,61 @@ namespace AIS
 			if ((allow & (1U << i)) > 0)
 				ret += (!ret.empty() ? std::string(",") : std::string("")) + std::to_string(i);
 		}
+		return ret;
+	}
+
+	std::string Filter::Get()
+	{
+		if (!on)
+			return "";
+
+		std::string ret;
+
+		if (!GPS)
+			ret += "gps OFF";
+
+		if (allow != all)
+		{
+			if (!ret.empty()) ret += ", ";
+			ret += "allowed {" + getAllowed() + "}";
+		}
+
+		if (own_interval > 0)
+		{
+			if (!ret.empty()) ret += ", ";
+			ret += "own_interval " + std::to_string(own_interval);
+		}
+
+		if (position_interval > 0)
+		{
+			if (!ret.empty()) ret += ", ";
+			ret += "position_interval " + std::to_string(position_interval);
+		}
+
+		if (unique_interval > 0)
+		{
+			if (!ret.empty()) ret += ", ";
+			ret += "unique_interval " + std::to_string(unique_interval);
+		}
+
+		if (!MMSI_allowed.empty())
+		{
+			if (!ret.empty()) ret += ", ";
+			ret += "mmsi_filter ON";
+		}
+
+		if (!MMSI_blocked.empty())
+		{
+			if (!ret.empty()) ret += ", ";
+			ret += "mmsi_block ON";
+		}
+
+		if (!allowed_channels.empty())
+		{
+			if (!ret.empty()) ret += ", ";
+			ret += "channel {" + allowed_channels + "}";
+		}
+
 		return ret;
 	}
 

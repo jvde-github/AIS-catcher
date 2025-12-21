@@ -446,12 +446,12 @@ namespace Util
 		return false;
 	}
 
-	bool Parse::OptionalInteger(std::string arg, int min, int max, unsigned &val)
+	bool Parse::OptionalInteger(std::string arg, int min, int max, unsigned &val, unsigned default_val)
 	{
 		Util::Convert::toUpper(arg);
 		if (arg == "OFF" || arg == "FALSE" || arg == "NO")
 		{
-			val = 0;
+			val = default_val;
 			return false;
 		}
 

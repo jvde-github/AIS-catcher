@@ -226,11 +226,11 @@ namespace AIS
 		std::vector<int> MMSI_blocked;
 		std::string allowed_channels;
 
-		int own_interval = 0;
 		long int last_VDO = 0;
 
 		unsigned position_interval = 0;
 		unsigned unique_interval = 0;
+		unsigned own_interval = 0;
 
 		// Position downsampling per MMSI
 		PositionHistory position_history;
@@ -241,6 +241,7 @@ namespace AIS
 	public:
 		virtual ~Filter() {}
 		bool SetOption(std::string option, std::string arg);
+		std::string Get();
 		bool isOn() { return on; }
 		std::string getAllowed();
 		bool includeGPS() { return on ? GPS : true; }
