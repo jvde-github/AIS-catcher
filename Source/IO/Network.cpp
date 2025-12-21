@@ -442,9 +442,6 @@ namespace IO
 	{
 		std::stringstream ss;
 		ss << "UDP: open socket for host: " << host << ", port: " << port;
-		std::string filter_str = filter.Get();
-		if (!filter_str.empty())
-			ss << ", " << filter_str;
 		ss << ", msgformat: " << Util::Convert::toString(fmt);
 		if (broadcast)
 			ss << ", broadcast: true";
@@ -452,6 +449,9 @@ namespace IO
 			ss << ", reset: " << reset;
 		if (!uuid.empty())
 			ss << ", uuid: " << uuid;
+		std::string filter_str = filter.Get();
+		if (!filter_str.empty())
+			ss << ", " << filter_str;
 
 		Info() << ss.str();
 
@@ -711,15 +711,16 @@ namespace IO
 		std::stringstream ss;
 
 		ss << "TCP feed: open socket for host: " << host << ", port: " << port;
-		std::string filter_str = filter.Get();
-		if (!filter_str.empty())
-			ss << ", " << filter_str;
 		ss << ", persist: " << Util::Convert::toString(persistent);
 		ss << ", keep_alive: " << Util::Convert::toString(keep_alive);
 		if (!uuid.empty())
 			ss << ", uuid: " << uuid;
 
-		ss << ", msgformat: " << Util::Convert::toString(fmt) << ", status: ";
+		ss << ", msgformat: " << Util::Convert::toString(fmt);
+		std::string filter_str = filter.Get();
+		if (!filter_str.empty())
+			ss << ", " << filter_str;
+		ss << ", status: ";
 
 		// Set up TCP connection
 		tcp.setValue("HOST", host);
@@ -931,10 +932,10 @@ namespace IO
 	{
 		std::stringstream ss;
 		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort();
+		ss << ", msgformat: " << Util::Convert::toString(fmt);
 		std::string filter_str = filter.Get();
 		if (!filter_str.empty())
 			ss << ", " << filter_str;
-		ss << ", msgformat: " << Util::Convert::toString(fmt);
 		tcp.setValue("PERSISTENT", "on");
 
 		switch (Protocol)
