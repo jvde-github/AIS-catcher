@@ -11,7 +11,6 @@
 #
 # Options:
 #   -p, --package    Install from pre-built package (faster, recommended)
-#   -d, --debug      Build with debug symbols (source installation only)
 #   --no-systemd     Skip systemd service installation (useful for containers)
 #   -h, --help       Display this help message
 #
@@ -35,7 +34,6 @@ Usage: sudo $0 [OPTIONS]
 
 Options:
   -p, --package    Install from pre-built package (faster, recommended)
-  -d, --debug      Build with debug symbols (source installation only)
   --no-systemd     Skip systemd service installation (useful for containers)
   --no-user        Skip user creation and run as root (useful for containers)
   -h, --help       Display this help message
@@ -43,7 +41,6 @@ Options:
 Examples:
   sudo $0 --package                    # Install from pre-built package
   sudo $0                              # Build and install from source
-  sudo $0 --debug                      # Build from source with debug symbols
   sudo $0 --no-systemd --no-user       # Docker/container installation
 
 For more information, visit: https://docs.aiscatcher.org/
@@ -71,17 +68,13 @@ readonly CONFIG_DIR="/etc/AIS-catcher"
 readonly PLUGIN_DIR="${CONFIG_DIR}/plugins"
 readonly DBMS_DIR="${CONFIG_DIR}/DBMS"
 readonly README_DIR="${CONFIG_DIR}/README"
+readonly LIB_DIR="/usr/lib/ais-catcher"
 readonly CONFIG_FILE="${CONFIG_DIR}/config.json"
 readonly CMD_FILE="${CONFIG_DIR}/config.cmd"
 readonly SERVICE_NAME="ais-catcher.service"
 readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 
-# SDR library paths
-readonly INCLUDE_DIRS=("/usr/local/include" "/usr/include" "/opt/include" "/opt/local/include")
-readonly LIBRARY_DIRS=("/usr/local/lib" "/usr/lib" "/opt/lib" "/opt/local/lib")
-
 # Global variables
-DEBUG_BUILD=false
 INSTALL_PACKAGE=false
 SKIP_SYSTEMD=false
 SKIP_USER=false
@@ -221,54 +214,9 @@ download_webassets_common() {
 
 # Install build dependencies for source compilation
 install_source_build_dependencies() {
-    local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev curl unzip libusb-1.0-0-dev libsqlite3-dev"
+    local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev curl unzip libusb-1.0-0-dev libsqlite3-dev libairspy-dev libairspyhf-dev libhackrf-dev"
     log "INFO" "Installing build dependencies: $deps"
     apt-get install -y $deps || error_exit "Failed to install dependencies"
-}
-
-# Check if a library is installed on the system (used by source build)
-# Args:
-#   $1: library name (for pkg-config)
-#   $2: header file name
-#   $3: library file name (without extension)
-# Returns:
-#   0 if library found, 1 otherwise
-check_library_for_source_build() {
-    local lib_name="$1"
-    local header_name="$2"
-    local lib_file="$3"
-
-    log "INFO" "Checking for ${lib_name}"
-
-    if pkg-config --exists "${lib_name}"; then
-        log "INFO" "${lib_name} found via pkg-config"
-        return 0
-    fi
-
-    local header_found=false
-    local library_found=false
-
-    for dir in "${INCLUDE_DIRS[@]}"; do
-        if [[ -f "${dir}/${header_name}" ]]; then
-            header_found=true
-            break
-        fi
-    done
-
-    for dir in "${LIBRARY_DIRS[@]}"; do
-        if [[ -f "${dir}/${lib_file}.so" || -f "${dir}/${lib_file}.a" ]]; then
-            library_found=true
-            break
-        fi
-    done
-
-    if [[ "$header_found" == true && "$library_found" == true ]]; then
-        log "INFO" "${lib_name} found in system directories"
-        return 0
-    else
-        log "WARN" "${lib_name} not found"
-        return 1
-    fi
 }
 
 # Install librtlsdr from source
@@ -277,136 +225,11 @@ install_librtlsdr_from_source() {
     git clone https://gitea.osmocom.org/sdr/rtl-sdr --depth 1 || error_exit "Failed to clone rtl-sdr repository"
     cd rtl-sdr || error_exit "Failed to change directory to rtl-sdr"
     mkdir build && cd build || error_exit "Failed to create and enter build directory"
-    cmake ../ -DDETACH_KERNEL_DRIVER=ON|| error_exit "Failed to run cmake"
+    cmake ../ -DCMAKE_INSTALL_PREFIX="${LIB_DIR}" -DDETACH_KERNEL_DRIVER=ON -DINSTALL_UDEV_RULES=ON || error_exit "Failed to run cmake"
     make || error_exit "Failed to build rtl-sdr"
     make install || error_exit "Failed to install rtl-sdr"
-    
-    # Install udev rules with conflict handling
-    install_rtlsdr_udev_rules "../rtl-sdr.rules"
-    
     ldconfig || error_exit "Failed to run ldconfig"
     cd ../.. || error_exit "Failed to return to parent directory"
-}
-
-# Function to install RTL-SDR udev rules with conflict detection and refresh
-install_rtlsdr_udev_rules() {
-    local source_rules="$1"
-    local target_rules="/etc/udev/rules.d/rtl-sdr.rules"
-    
-    log "INFO" "Installing RTL-SDR udev rules"
-    
-    # Check if source rules file exists
-    if [[ ! -f "$source_rules" ]]; then
-        log "ERROR" "Source udev rules file not found: $source_rules"
-        return 1
-    fi
-    
-    # Check if target rules already exist
-    if [[ -f "$target_rules" ]]; then
-        # Compare checksums to see if files are different
-        if command -v md5sum >/dev/null 2>&1; then
-            local existing_md5=$(md5sum "$target_rules" | cut -d' ' -f1)
-            local new_md5=$(md5sum "$source_rules" | cut -d' ' -f1)
-            
-            if [[ "$existing_md5" = "$new_md5" ]]; then
-                log "INFO" "RTL-SDR udev rules are already up to date"
-                return 0
-            else
-                log "WARN" "Different RTL-SDR udev rules already exist"
-                log "INFO" "Backing up existing rules to ${target_rules}.backup"
-                cp "$target_rules" "${target_rules}.backup" 2>/dev/null || log "WARN" "Failed to backup existing rules"
-            fi
-        else
-            log "WARN" "RTL-SDR udev rules already exist. Backing up..."
-            cp "$target_rules" "${target_rules}.backup" 2>/dev/null || log "WARN" "Failed to backup existing rules"
-        fi
-    fi
-    
-    # Copy the new rules
-    if cp "$source_rules" "$target_rules" 2>/dev/null; then
-        log "INFO" "RTL-SDR udev rules installed successfully"
-        
-        # Set proper permissions
-        chmod 644 "$target_rules" || log "WARN" "Failed to set permissions on udev rules"
-        
-        # Trigger udev reload
-        reload_udev_rules
-    else
-        if [ "$SKIP_SYSTEMD" = true ]; then
-            log "WARN" "Failed to install RTL-SDR udev rules (not critical in container environments)"
-            return 0
-        else
-            error_exit "Failed to install RTL-SDR udev rules"
-        fi
-    fi
-}
-
-# Function to reload udev rules and trigger device refresh
-reload_udev_rules() {
-    log "INFO" "Reloading udev rules"
-    
-    # Try different methods to reload udev rules
-    if command -v udevadm >/dev/null 2>&1; then
-        if udevadm control --reload-rules 2>/dev/null; then
-            log "INFO" "Udev rules reloaded successfully"
-            
-            # Trigger udev to reprocess USB devices
-            if udevadm trigger --subsystem-match=usb 2>/dev/null; then
-                log "INFO" "Udev USB devices retriggered"
-            else
-                log "WARN" "Could not retrigger USB devices automatically"
-                suggest_manual_udev_reload
-            fi
-        else
-            log "WARN" "Failed to reload udev rules using udevadm"
-            try_legacy_udev_reload
-        fi
-    else
-        log "WARN" "udevadm not found, trying legacy methods"
-        try_legacy_udev_reload
-    fi
-}
-
-# Function to try legacy udev reload methods
-try_legacy_udev_reload() {
-    log "INFO" "Attempting legacy udev reload methods"
-    
-    # Try different legacy approaches
-    local reload_success=false
-    
-    # Method 1: Send signal to udevd
-    if killall -USR1 udevd 2>/dev/null; then
-        log "INFO" "Sent reload signal to udevd"
-        reload_success=true
-    elif killall -USR1 systemd-udevd 2>/dev/null; then
-        log "INFO" "Sent reload signal to systemd-udevd"
-        reload_success=true
-    fi
-    
-    # Method 2: Try service restart as last resort
-    if [[ "$reload_success" = false ]]; then
-        if systemctl restart systemd-udevd 2>/dev/null; then
-            log "INFO" "Restarted systemd-udevd service"
-            reload_success=true
-        elif service udev restart 2>/dev/null; then
-            log "INFO" "Restarted udev service"
-            reload_success=true
-        fi
-    fi
-    
-    if [[ "$reload_success" != true ]]; then
-        log "WARN" "All udev reload methods failed"
-        suggest_manual_udev_reload
-    fi
-}
-
-# Function to suggest manual udev reload steps
-suggest_manual_udev_reload() {
-    log "WARN" "Automatic udev reload failed. To activate RTL-SDR udev rules:"
-    log "INFO" "  1. Disconnect and reconnect your RTL-SDR device"
-    log "INFO" "  2. Run: udevadm control --reload-rules && udevadm trigger"
-    log "INFO" "  3. Or restart the system"
-    log "INFO" "  4. Verify with: rtl_test -t (if device is connected)"
 }
 
 # Install libhydrasdr from source
@@ -415,40 +238,38 @@ install_libhydrasdr_from_source() {
     git clone https://github.com/hydrasdr/rfone_host.git --depth 1 || error_exit "Failed to clone rfone_host repository"
     cd rfone_host/libhydrasdr || error_exit "Failed to change directory to rfone_host/libhydrasdr"
     mkdir build && cd build || error_exit "Failed to create and enter build directory"
-    cmake .. -DCMAKE_INSTALL_PREFIX=/usr || error_exit "Failed to run cmake"
+    cmake .. -DCMAKE_INSTALL_PREFIX="${LIB_DIR}" -DINSTALL_UDEV_RULES=ON || error_exit "Failed to run cmake"
     make || error_exit "Failed to build libhydrasdr"
     make install || error_exit "Failed to install libhydrasdr"
     ldconfig || error_exit "Failed to run ldconfig"
     cd ../../.. || error_exit "Failed to return to parent directory"
 }
 
+# Install NMEA2000 library from source
+install_nmea2000_from_source() {
+    log "INFO" "Building NMEA2000 library from source"
+    git clone https://github.com/jvde-github/NMEA2000.git --depth 1 || error_exit "Failed to clone NMEA2000 repository"
+    cd NMEA2000/src || error_exit "Failed to change directory to NMEA2000/src"
+    
+    # Build as static library
+    log "INFO" "Building NMEA2000 as static library"
+    g++ -O3 -c N2kMsg.cpp N2kStream.cpp N2kMessages.cpp N2kTimer.cpp NMEA2000.cpp N2kGroupFunctionDefaultHandlers.cpp N2kGroupFunction.cpp -I. || error_exit "Failed to compile NMEA2000"
+    ar rcs libnmea2000.a *.o || error_exit "Failed to create NMEA2000 static library"
+    
+    cd ../.. || error_exit "Failed to return to parent directory"
+}
+
 # Install SDR libraries from source (only for source build)
 install_sdr_libraries_from_source() {
-    local libraries=(
-        "librtlsdr:rtl-sdr.h:librtlsdr"
-        "libairspy:airspy.h:libairspy"
-        "libairspyhf:airspyhf.h:libairspyhf"
-        "libhackrf:hackrf.h:libhackrf"
-        "libhydrasdr:hydrasdr.h:libhydrasdr"
-    )
-
-    for lib_info in "${libraries[@]}"; do
-        IFS=':' read -r lib_name header lib_file <<< "$lib_info"
-        if ! check_library_for_source_build "$lib_name" "$header" "$lib_file"; then
-            case "$lib_name" in
-                librtlsdr)
-                    install_librtlsdr_from_source
-                    ;;
-                libhydrasdr)
-                    install_libhydrasdr_from_source
-                    ;;
-                *)
-                    log "INFO" "Installing ${lib_name}-dev"
-                    apt-get install -y "${lib_name}-dev" || error_exit "Failed to install ${lib_name}-dev"
-                    ;;
-            esac
-        fi
-    done
+    # Create library directory
+    mkdir -p "${LIB_DIR}" || error_exit "Failed to create library directory"
+    
+    # Install rtlsdr and hydrasdr from source (need custom cmake flags for udev rules)
+    install_librtlsdr_from_source
+    install_libhydrasdr_from_source
+    
+    # Install NMEA2000 library
+    install_nmea2000_from_source
 }
 
 # Build AIS-catcher from source
@@ -458,15 +279,20 @@ build_ais_catcher_from_source() {
     git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 || error_exit "Failed to download AIS-catcher"
     cd AIS-catcher
 
-    if [ "$DEBUG_BUILD" = true ]; then
-        log "INFO" "including debug symbols"
-        ./scripts/build-NMEA2000.sh -d
-    else
-        log "INFO" "excluding debug symbols"
-        ./scripts/build-NMEA2000.sh
-    fi
+    # Set environment variables to find custom libraries
+    export PKG_CONFIG_PATH="${LIB_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+    export CMAKE_PREFIX_PATH="${LIB_DIR}:${CMAKE_PREFIX_PATH:-}"
     
-    cd ..
+    # Build with rpath to custom library directory
+    mkdir -p build && cd build
+    cmake .. -DCMAKE_BUILD_TYPE=Release \
+             -DCMAKE_INSTALL_RPATH="${LIB_DIR}/lib;${LIB_DIR}" \
+             -DCMAKE_BUILD_RPATH="${LIB_DIR}/lib;${LIB_DIR}" \
+             -DNMEA2000_INCLUDE="${TMP_DIR}/NMEA2000/src" \
+             -DNMEA2000_LIB="${TMP_DIR}/NMEA2000/src/libnmea2000.a" || error_exit "Failed to run cmake"
+    make || error_exit "Failed to build AIS-catcher"
+    
+    cd ../..
     cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
 }
 
@@ -759,11 +585,6 @@ restore_service_state() {
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--debug)
-                DEBUG_BUILD=true
-                log "INFO" "Debug build requested"
-                shift
-                ;;
             -p|--package)
                 log "INFO" "Package installation requested"
                 INSTALL_PACKAGE=true
