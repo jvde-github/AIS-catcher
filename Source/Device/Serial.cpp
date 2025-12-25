@@ -326,10 +326,29 @@ namespace Device
 		tty.c_cflag &= ~(PARENB | PARODD); // No parity
 
 		// ===== STEP 8: Flow control =====
-		// Hardware flow control
-		tty.c_cflag &= ~CRTSCTS;
+		if (flowcontrol == FlowControl::HARDWARE)
+		{
+			tty.c_cflag |= CRTSCTS;
+			Info() << "Serial: hardware flow control (RTS/CTS) enabled" << std::endl;
+		}
+		else
+		{
+			tty.c_cflag &= ~CRTSCTS;
+		}
 
-		if (disable_xonxoff)
+		// Software flow control
+		if (flowcontrol == FlowControl::SOFTWARE)
+		{
+			// Enable XON/XOFF
+#ifdef IXANY
+			tty.c_iflag |= (IXON | IXOFF);
+			tty.c_iflag &= ~IXANY; // But not IXANY
+#else
+			tty.c_iflag |= (IXON | IXOFF);
+#endif
+			Info() << "Serial: software flow control (XON/XOFF) enabled" << std::endl;
+		}
+		else if (flowcontrol == FlowControl::NONE)
 		{
 			// Explicitly disable XON/XOFF
 #ifdef IXANY
@@ -337,11 +356,7 @@ namespace Device
 #else
 			tty.c_iflag &= ~(IXON | IXOFF);
 #endif
-			Info() << "Serial: XON/XOFF software flow control explicitly disabled" << std::endl;
-		}
-		else
-		{
-			Info() << "Serial: XON/XOFF software flow control left at system defaults" << std::endl;
+			Info() << "Serial: flow control disabled" << std::endl;
 		}
 
 		// ===== STEP 9: VMIN/VTIME =====
@@ -437,7 +452,19 @@ namespace Device
 		}
 		else if (option == "DISABLE_XONXOFF")
 		{
-			disable_xonxoff = Util::Parse::Switch(arg);
+			throw std::runtime_error("Serial: DISABLE_XONXOFF option is deprecated. Use FLOWCONTROL instead.");
+		}
+		else if (option == "FLOWCONTROL")
+		{
+			Util::Convert::toUpper(arg);
+			if (arg == "NONE" || arg == "0")
+				flowcontrol = FlowControl::NONE;
+			else if (arg == "HARDWARE" || arg == "HW" || arg == "RTSCTS" || arg == "1")
+				flowcontrol = FlowControl::HARDWARE;
+			else if (arg == "SOFTWARE" || arg == "SW" || arg == "XONXOFF" || arg == "2")
+				flowcontrol = FlowControl::SOFTWARE;
+			else
+				throw std::runtime_error("Serial: invalid flowcontrol option: " + arg + ". Valid options are NONE, HARDWARE, SOFTWARE.");
 		}
 		else
 			Device::Set(option, arg);
@@ -447,9 +474,26 @@ namespace Device
 
 	std::string SerialPort::Get()
 	{
-		return Device::Get() + " baudrate " + std::to_string(baudrate) + " disable_xonxoff " + (disable_xonxoff ? "on" : "off") + " port " + port + " print " + Util::Convert::toString(print);
-	}
+		std::string fc_str;
+		switch (flowcontrol)
+		{
+		case FlowControl::NONE:
+			fc_str = "none";
+			break;
+		case FlowControl::HARDWARE:
+			fc_str = "hardware";
+			break;
+		case FlowControl::SOFTWARE:
+			fc_str = "software";
+			break;
+		}
 
+		return Device::Get() +
+			   " baudrate " + std::to_string(baudrate) +
+			   " flowcontrol " + fc_str +
+			   " port " + port +
+			   " print " + Util::Convert::toString(print);
+	}
 	void SerialPort::getDeviceList(std::vector<Description> &DeviceList)
 	{
 		device_list.clear();

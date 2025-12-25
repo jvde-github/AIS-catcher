@@ -36,6 +36,13 @@ namespace Device
 
 	class SerialPort : public Device
 	{
+		enum class FlowControl
+		{
+			NONE,	  // Explicitly disable both hardware and software flow control
+			HARDWARE, // Enable hardware (RTS/CTS), disable software
+			SOFTWARE  // Enable software (XON/XOFF), disable hardware
+		};
+
 #ifdef _WIN32
 		HANDLE serial_handle = INVALID_HANDLE_VALUE;
 
@@ -66,8 +73,8 @@ namespace Device
 
 		std::string port;
 		int baudrate;
-		bool disable_xonxoff = false;
-
+		FlowControl flowcontrol = FlowControl::NONE; // Default
+		
 		std::thread read_thread;
 
 		bool lost = false;
