@@ -220,12 +220,12 @@ namespace Device
 			throw std::runtime_error("Serial: SetCommState failed. Error: " + GetLastErrorAsString());
 		}
 
-		// CRITICAL FIX: Set timeouts for immediate return with available data
+		// Set timeouts for immediate return with available data
 		COMMTIMEOUTS ct = {0};
 		ct.ReadIntervalTimeout = MAXDWORD; // Return immediately
 		ct.ReadTotalTimeoutMultiplier = 0;
 		ct.ReadTotalTimeoutConstant = 0;
-		ct.WriteTotalTimeoutConstant = 2000; //  write timeout
+		ct.WriteTotalTimeoutConstant = 2000; // write timeout
 		ct.WriteTotalTimeoutMultiplier = 0;
 
 		if (!SetCommTimeouts(serial_handle, &ct))
@@ -296,39 +296,43 @@ namespace Device
 			throw std::runtime_error(std::string("Serial: cfsetispeed failed: ") + strerror(errno));
 		}
 
-		// 1. Control Modes (c_cflag)
-		tty.c_cflag &= ~PARENB;		   // No parity bit
-		tty.c_cflag &= ~CSTOPB;		   // 1 stop bit
-		tty.c_cflag &= ~CSIZE;		   // Clear all size bits
-		tty.c_cflag |= CS8;			   // 8 bits per byte
-		tty.c_cflag |= CREAD | CLOCAL; // Enable receiver, ignore modem control lines
-		tty.c_cflag &= ~CRTSCTS;	   // Disable hardware flow control (both Linux and macOS)
+		// Control flags
+		tty.c_cflag |= (CREAD | CLOCAL); // Enable receiver, ignore modem control lines
+		tty.c_cflag &= ~PARENB;			 // No parity bit
+		tty.c_cflag &= ~CSTOPB;			 // 1 stop bit
+		tty.c_cflag &= ~CSIZE;			 // Clear all size bits
+		tty.c_cflag |= CS8;				 // 8 bits per byte
+		tty.c_cflag &= ~CRTSCTS;		 // Disable hardware flow control
 
-		// 2. Local Modes (c_lflag)
-		// Clear IEXTEN to prevent eating special chars like 0x16 (LNEXT)
-		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG | IEXTEN);
+		// Local flags
+		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ISIG | IEXTEN);
 
-		// 3. Input Modes (c_iflag)
-		// Comprehensive clearing for true raw input
-		tty.c_iflag &= ~(IXON | IXOFF | IXANY);										 // Disable software flow control
-		tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable all input processing
+		// Input flags
+		// CRITICAL: Do NOT touch IXON/IXOFF/IXANY - leave at system defaults
+		// This is the key fix for FTDI compatibility
+		tty.c_iflag &= ~(INLCR | IGNCR | ICRNL | IGNBRK);
+#ifdef IUCLC
+		tty.c_iflag &= ~IUCLC;
+#endif
+#ifdef PARMRK
+		tty.c_iflag &= ~PARMRK;
+#endif
 
-		// 4. Output Modes (c_oflag)
 		tty.c_oflag &= ~OPOST; // Raw output - no processing
 
-		// 5. Control Characters (c_cc)
-		// Set for non-blocking behavior (will be overridden by select() in ReadAsync)
 		tty.c_cc[VMIN] = 0;
 		tty.c_cc[VTIME] = 0;
 
 		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0)
 		{
-			throw std::runtime_error(std::string("Serial: tcgetattr failed: ") + strerror(errno));
+			throw std::runtime_error(std::string("Serial: tcsetattr failed: ") + strerror(errno));
 		}
 
+		// Flush buffers and stabilize
 		SleepSystem(200);
 		tcflush(serial_fd, TCIOFLUSH);
 
+		// Set DTR/RTS
 		int status;
 		if (ioctl(serial_fd, TIOCMGET, &status) == 0)
 		{
@@ -337,6 +341,7 @@ namespace Device
 			SleepSystem(100);
 		}
 
+		// Send initialization sequence if provided
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
@@ -349,9 +354,9 @@ namespace Device
 
 			while (std::getline(ss, cmd, ','))
 			{
-				SleepSystem(250);
 				if (!cmd.empty())
 				{
+					SleepSystem(250);
 					Info() << "Serial: init command sent \"" << cmd << "\"";
 					WriteSerialCommand(serial_fd, cmd);
 				}
