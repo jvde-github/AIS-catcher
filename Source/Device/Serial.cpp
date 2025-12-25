@@ -447,7 +447,7 @@ namespace Device
 
 	std::string SerialPort::Get()
 	{
-		return Device::Get() + " baudrate " + std::to_string(baudrate) + " port " + port + " print " + Util::Convert::toString(print);
+		return Device::Get() + " baudrate " + std::to_string(baudrate) + " disable_xonxoff " + (disable_xonxoff ? "on" : "off") + " port " + port + " print " + Util::Convert::toString(print);
 	}
 
 	void SerialPort::getDeviceList(std::vector<Description> &DeviceList)
