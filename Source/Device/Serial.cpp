@@ -261,8 +261,7 @@ namespace Device
 		struct termios tty;
 		if (tcgetattr(serial_fd, &tty) < 0)
 		{
-			perror("tcgetattr");
-			throw std::runtime_error("Serial: tcgetattr failed.");
+			throw std::runtime_error(std::string("Serial: tcgetattr failed: ") + strerror(errno));
 		}
 
 		speed_t brc = B9600;
@@ -289,14 +288,12 @@ namespace Device
 
 		if (cfsetospeed(&tty, brc) < 0)
 		{
-			perror("cfsetospeed");
-			throw std::runtime_error("Serial: cfsetospeed failed.");
+			throw std::runtime_error(std::string("Serial: cfsetospeed failed: ") + strerror(errno));
 		}
 
 		if (cfsetispeed(&tty, brc) < 0)
 		{
-			perror("cfsetispeed");
-			throw std::runtime_error("Serial: cfsetispeed failed.");
+			throw std::runtime_error(std::string("Serial: cfsetispeed failed: ") + strerror(errno));
 		}
 
 		// 1. Control Modes (c_cflag)
@@ -326,8 +323,7 @@ namespace Device
 
 		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0)
 		{
-			perror("tcsetattr");
-			throw std::runtime_error("Serial: tcsetattr failed.");
+			throw std::runtime_error(std::string("Serial: tcgetattr failed: ") + strerror(errno));
 		}
 
 		SleepSystem(200);
