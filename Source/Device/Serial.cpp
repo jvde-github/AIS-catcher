@@ -296,20 +296,16 @@ namespace Device
 			throw std::runtime_error(std::string("Serial: cfsetispeed failed: ") + strerror(errno));
 		}
 
-		// Control flags
+		// ===== STEP 1: Control flags - set CLOCAL and CREAD first =====
 		tty.c_cflag |= (CREAD | CLOCAL); // Enable receiver, ignore modem control lines
-		tty.c_cflag &= ~PARENB;			 // No parity bit
-		tty.c_cflag &= ~CSTOPB;			 // 1 stop bit
-		tty.c_cflag &= ~CSIZE;			 // Clear all size bits
-		tty.c_cflag |= CS8;				 // 8 bits per byte
-		tty.c_cflag &= ~CRTSCTS;		 // Disable hardware flow control
 
-		// Local flags
+		// ===== STEP 2: Local flags  =====
 		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ISIG | IEXTEN);
 
-		// Input flags
-		// CRITICAL: Do NOT touch IXON/IXOFF/IXANY - leave at system defaults
-		// This is the key fix for FTDI compatibility
+		// ===== STEP 3: Output flags =====
+		tty.c_oflag &= ~OPOST; // Raw output - no processing
+
+		// ===== STEP 4: Input flags - initial clearing (NOT ISTRIP/INPCK yet) =====
 		tty.c_iflag &= ~(INLCR | IGNCR | ICRNL | IGNBRK);
 #ifdef IUCLC
 		tty.c_iflag &= ~IUCLC;
@@ -318,17 +314,47 @@ namespace Device
 		tty.c_iflag &= ~PARMRK;
 #endif
 
-		tty.c_oflag &= ~OPOST; // Raw output - no processing
+		// ===== STEP 5: Character size =====
+		tty.c_cflag &= ~CSIZE; // Clear all size bits
+		tty.c_cflag |= CS8;	   // 8 bits per byte
 
+		// ===== STEP 6: Stop bits =====
+		tty.c_cflag &= ~CSTOPB; // 1 stop bit
+
+		// ===== STEP 7: Parity - and clear INPCK/ISTRIP here =====
+		tty.c_iflag &= ~(INPCK | ISTRIP);
+		tty.c_cflag &= ~(PARENB | PARODD); // No parity
+
+		// ===== STEP 8: Flow control =====
+		// Hardware flow control
+		tty.c_cflag &= ~CRTSCTS;
+
+		if (disable_xonxoff)
+		{
+			// Explicitly disable XON/XOFF
+#ifdef IXANY
+			tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+#else
+			tty.c_iflag &= ~(IXON | IXOFF);
+#endif
+			Info() << "Serial: XON/XOFF software flow control explicitly disabled" << std::endl;
+		}
+		else
+		{
+			Info() << "Serial: XON/XOFF software flow control left at system defaults" << std::endl;
+		}
+
+		// ===== STEP 9: VMIN/VTIME =====
 		tty.c_cc[VMIN] = 0;
 		tty.c_cc[VTIME] = 0;
 
+		// ===== STEP 10: Apply settings =====
 		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0)
 		{
 			throw std::runtime_error(std::string("Serial: tcsetattr failed: ") + strerror(errno));
 		}
 
-		// Flush buffers and stabilize
+		// ===== POST-CONFIGURATION: Flush buffers and stabilize =====
 		SleepSystem(200);
 		tcflush(serial_fd, TCIOFLUSH);
 
@@ -373,7 +399,6 @@ namespace Device
 		lost = false;
 		read_thread = std::thread(&SerialPort::ReadAsync, this);
 	}
-
 	void SerialPort::Stop()
 	{
 		lost = true;
@@ -409,6 +434,10 @@ namespace Device
 		else if (option == "INIT_SEQ")
 		{
 			init_sequence = arg;
+		}
+		else if (option == "DISABLE_XONXOFF")
+		{
+			disable_xonxoff = Util::Parse::Switch(arg);
 		}
 		else
 			Device::Set(option, arg);
