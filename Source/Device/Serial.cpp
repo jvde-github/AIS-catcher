@@ -27,6 +27,34 @@
 #include "Serial.h"
 #include "Helper.h"
 
+namespace
+{
+#ifndef _WIN32
+	// Helper for POSIX serial write with CR and drain
+	void WriteSerialCommand(int fd, const std::string &cmd)
+	{
+		std::string out = cmd + "\r";
+		if (write(fd, out.c_str(), out.length()) < 0)
+		{
+			throw std::runtime_error("Serial: failed to send command: '" + cmd + "'.");
+		}
+		tcdrain(fd);
+	}
+#else
+	// Helper for Windows serial write with CR and flush
+	void WriteSerialCommand(HANDLE handle, const std::string &cmd)
+	{
+		std::string out = cmd + "\r";
+		DWORD bytesWritten;
+		if (!WriteFile(handle, out.c_str(), out.length(), &bytesWritten, nullptr))
+		{
+			throw std::runtime_error("Serial: failed to send command: '" + cmd + "'.");
+		}
+		FlushFileBuffers(handle);
+	}
+#endif
+}
+
 namespace Device
 {
 	// Initialize static member
@@ -206,17 +234,8 @@ namespace Device
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
-
-			// Send initial carriage return
-			const char *initial_cr = "\r";
-			DWORD bytesWritten;
-			if (!WriteFile(serial_handle, initial_cr, 1, &bytesWritten, nullptr))
-			{
-				throw std::runtime_error("Serial: failed to send initial carriage return.");
-			}
-
-			// Ensure data is transmitted
-			FlushFileBuffers(serial_handle);
+			// Send initial carriage return (empty command)
+			WriteSerialCommand(serial_handle, "");
 
 			// Split by comma and send each command separately
 			std::stringstream ss(init_sequence);
@@ -225,24 +244,14 @@ namespace Device
 			while (std::getline(ss, cmd, ','))
 			{
 				SleepSystem(250);
-
 				if (!cmd.empty())
 				{
+					WriteSerialCommand(serial_handle, cmd);
 					Info() << "Serial: init command sent \"" << cmd << "\"";
-					cmd += "\r";
-					DWORD bytesWritten;
-					if (!WriteFile(serial_handle, cmd.c_str(), cmd.length(), &bytesWritten, nullptr))
-					{
-						throw std::runtime_error("Serial: failed to send initialization command.");
-					}
-					// Ensure data is transmitted before continuing
-					FlushFileBuffers(serial_handle);
 				}
 			}
 		}
 #else
-		// CRITICAL FIX: Open in BLOCKING mode first for proper initialization
-		// This prevents hanging with CDC ACM devices (like Daisy2+)
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_CLOEXEC);
 		if (serial_fd == -1)
 		{
@@ -335,15 +344,8 @@ namespace Device
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
-
-			// Send initial carriage return
-			const char *initial_cr = "\r";
-			if (write(serial_fd, initial_cr, 1) < 0)
-			{
-				throw std::runtime_error("Serial: failed to send initial carriage return.");
-			}
-			// Ensure data is transmitted before continuing
-			tcdrain(serial_fd);
+			// Send initial carriage return (empty command)
+			WriteSerialCommand(serial_fd, "");
 
 			// Split by comma and send each command separately
 			std::stringstream ss(init_sequence);
@@ -352,17 +354,10 @@ namespace Device
 			while (std::getline(ss, cmd, ','))
 			{
 				SleepSystem(250);
-
 				if (!cmd.empty())
 				{
 					Info() << "Serial: init command sent \"" << cmd << "\"";
-					cmd += "\r";
-					if (write(serial_fd, cmd.c_str(), cmd.length()) < 0)
-					{
-						throw std::runtime_error("Serial: failed to send initialization command.");
-					}
-					// Ensure data is transmitted
-					tcdrain(serial_fd);
+					WriteSerialCommand(serial_fd, cmd);
 				}
 			}
 		}
