@@ -16,9 +16,11 @@
 */
 
 #include <cstring>
+
 #ifndef _WIN32
 #include <sys/select.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <limits.h>
 #endif
 
@@ -239,7 +241,9 @@ namespace Device
 			}
 		}
 #else
-		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
+		// CRITICAL FIX: Open in BLOCKING mode first for proper initialization
+		// This prevents hanging with CDC ACM devices (like Daisy2+)
+		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_CLOEXEC);
 		if (serial_fd == -1)
 		{
 			throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
@@ -286,21 +290,30 @@ namespace Device
 			throw std::runtime_error("Serial: cfsetispeed failed.");
 		}
 
-		tty.c_cflag &= ~PARENB;		   // Clear parity bit, disabling parity
-		tty.c_cflag &= ~CSTOPB;		   // Clear stop field, only one stop bit used in communication
-		tty.c_cflag &= ~CSIZE;		   // Clear all bits that set the data size
+		// 1. Control Modes (c_cflag)
+		tty.c_cflag &= ~PARENB;		   // No parity bit
+		tty.c_cflag &= ~CSTOPB;		   // 1 stop bit
+		tty.c_cflag &= ~CSIZE;		   // Clear all size bits
 		tty.c_cflag |= CS8;			   // 8 bits per byte
 		tty.c_cflag |= CREAD | CLOCAL; // Enable receiver, ignore modem control lines
+		tty.c_cflag &= ~CRTSCTS;	   // Disable hardware flow control (both Linux and macOS)
 
-#ifdef __APPLE__
-		// macOS-specific: Disable hardware flow control
-		tty.c_cflag &= ~CRTSCTS;
-#endif
+		// 2. Local Modes (c_lflag)
+		// Clear IEXTEN to prevent eating special chars like 0x16 (LNEXT)
+		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG | IEXTEN);
 
-		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // Raw mode, no echo
-		tty.c_iflag &= ~(IXON | IXOFF | IXANY);			// Disable software flow control
-		tty.c_iflag &= ~(ICRNL | INLCR);				// Disable CR/LF conversion
-		tty.c_oflag &= ~OPOST;							// Raw output
+		// 3. Input Modes (c_iflag)
+		// Comprehensive clearing for true raw input
+		tty.c_iflag &= ~(IXON | IXOFF | IXANY);										 // Disable software flow control
+		tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable all input processing
+
+		// 4. Output Modes (c_oflag)
+		tty.c_oflag &= ~OPOST; // Raw output - no processing
+
+		// 5. Control Characters (c_cc)
+		// Set for non-blocking behavior (will be overridden by select() in ReadAsync)
+		tty.c_cc[VMIN] = 0;
+		tty.c_cc[VTIME] = 0;
 
 		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0)
 		{
@@ -308,19 +321,22 @@ namespace Device
 			throw std::runtime_error("Serial: tcsetattr failed.");
 		}
 
-#ifdef __APPLE__
-		// macOS-specific: Give the port time to stabilize after configuration
 		SleepSystem(200);
-#endif
-
-		// Flush any stale data
 		tcflush(serial_fd, TCIOFLUSH);
+
+		int status;
+		if (ioctl(serial_fd, TIOCMGET, &status) == 0)
+		{
+			status |= TIOCM_DTR | TIOCM_RTS;
+			ioctl(serial_fd, TIOCMSET, &status);
+			SleepSystem(100);
+		}
 
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
 
-			// Send initial carriage return (before setting non-blocking mode)
+			// Send initial carriage return
 			const char *initial_cr = "\r";
 			if (write(serial_fd, initial_cr, 1) < 0)
 			{
@@ -351,6 +367,7 @@ namespace Device
 			}
 		}
 
+		// Switch to non-blocking mode for async reading
 		int flags = fcntl(serial_fd, F_GETFL, 0);
 		fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
 #endif
