@@ -66,7 +66,7 @@ namespace Device
 
 		std::string port;
 		int baudrate;
-		bool disable_xonxoff = true;
+		bool disable_xonxoff = false;
 
 		std::thread read_thread;
 
