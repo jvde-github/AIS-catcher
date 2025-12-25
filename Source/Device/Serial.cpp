@@ -457,14 +457,14 @@ namespace Device
 		else if (option == "FLOWCONTROL")
 		{
 			Util::Convert::toUpper(arg);
-			if (arg == "NONE" || arg == "0")
+			if (arg == "NONE")
 				flowcontrol = FlowControl::NONE;
-			else if (arg == "HARDWARE" || arg == "HW" || arg == "RTSCTS" || arg == "1")
+			else if (arg == "HARDWARE")
 				flowcontrol = FlowControl::HARDWARE;
-			else if (arg == "SOFTWARE" || arg == "SW" || arg == "XONXOFF" || arg == "2")
+			else if (arg == "SOFTWARE")
 				flowcontrol = FlowControl::SOFTWARE;
 			else
-				throw std::runtime_error("Serial: invalid flowcontrol option: " + arg + ". Valid options are NONE, HARDWARE, SOFTWARE.");
+				throw std::runtime_error("Serial: invalid flowcontrol option: \"" + arg + "\". Valid options are NONE, HARDWARE, SOFTWARE.");
 		}
 		else
 			Device::Set(option, arg);
