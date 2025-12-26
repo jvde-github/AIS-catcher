@@ -405,8 +405,8 @@ namespace Device
 		}
 
 		// Switch to non-blocking mode for async reading
-		int flags = fcntl(serial_fd, F_GETFL, 0);
-		fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
+		// int flags = fcntl(serial_fd, F_GETFL, 0);
+		// fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
 #endif
 
 		Device::Play();
