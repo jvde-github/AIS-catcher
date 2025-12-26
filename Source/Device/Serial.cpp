@@ -360,7 +360,7 @@ namespace Device
 		}
 
 		// ===== STEP 9: VMIN/VTIME =====
-		tty.c_cc[VMIN] = 0;
+		tty.c_cc[VMIN] = 1;
 		tty.c_cc[VTIME] = 0;
 
 		// ===== STEP 10: Apply settings =====
