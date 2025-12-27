@@ -296,17 +296,11 @@ namespace Device
 			throw std::runtime_error(std::string("Serial: cfsetispeed failed: ") + strerror(errno));
 		}
 
-		// ===== STEP 1: Control flags - set CLOCAL and CREAD first =====
-		tty.c_cflag |= (CREAD | CLOCAL); // Enable receiver, ignore modem control lines
-
-		// ===== STEP 2: Local flags  =====
+		// Set 8N1, raw mode
+		tty.c_cflag = (tty.c_cflag & ~(CSIZE | CSTOPB | PARENB | PARODD)) | (CREAD | CLOCAL | CS8);
 		tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ISIG | IEXTEN);
-
-		// ===== STEP 3: Output flags =====
-		tty.c_oflag &= ~OPOST; // Raw output - no processing
-
-		// ===== STEP 4: Input flags - initial clearing (NOT ISTRIP/INPCK yet) =====
-		tty.c_iflag &= ~(INLCR | IGNCR | ICRNL | IGNBRK);
+		tty.c_oflag &= ~OPOST;
+		tty.c_iflag &= ~(INLCR | IGNCR | ICRNL | IGNBRK | INPCK | ISTRIP);
 #ifdef IUCLC
 		tty.c_iflag &= ~IUCLC;
 #endif
@@ -314,66 +308,36 @@ namespace Device
 		tty.c_iflag &= ~PARMRK;
 #endif
 
-		// ===== STEP 5: Character size =====
-		tty.c_cflag &= ~CSIZE; // Clear all size bits
-		tty.c_cflag |= CS8;	   // 8 bits per byte
-
-		// ===== STEP 6: Stop bits =====
-		tty.c_cflag &= ~CSTOPB; // 1 stop bit
-
-		// ===== STEP 7: Parity - and clear INPCK/ISTRIP here =====
-		tty.c_iflag &= ~(INPCK | ISTRIP);
-		tty.c_cflag &= ~(PARENB | PARODD); // No parity
-
-		// ===== STEP 8: Flow control =====
+		// Flow control
 		if (flowcontrol == FlowControl::HARDWARE)
 		{
 			tty.c_cflag |= CRTSCTS;
-			Info() << "Serial: hardware flow control (RTS/CTS) enabled" << std::endl;
+			Info() << "Serial: hardware flow control enabled" << std::endl;
 		}
 		else
 		{
 			tty.c_cflag &= ~CRTSCTS;
 		}
 
-		// Software flow control
+#ifdef IXANY
+		tty.c_iflag = (flowcontrol == FlowControl::SOFTWARE) ? ((tty.c_iflag | (IXON | IXOFF)) & ~IXANY) : (tty.c_iflag & ~(IXON | IXOFF | IXANY));
+#else
+		tty.c_iflag = (flowcontrol == FlowControl::SOFTWARE) ? (tty.c_iflag | (IXON | IXOFF)) : (tty.c_iflag & ~(IXON | IXOFF));
+#endif
 		if (flowcontrol == FlowControl::SOFTWARE)
-		{
-			// Enable XON/XOFF
-#ifdef IXANY
-			tty.c_iflag |= (IXON | IXOFF);
-			tty.c_iflag &= ~IXANY; // But not IXANY
-#else
-			tty.c_iflag |= (IXON | IXOFF);
-#endif
-			Info() << "Serial: software flow control (XON/XOFF) enabled" << std::endl;
-		}
-		else if (flowcontrol == FlowControl::NONE)
-		{
-			// Explicitly disable XON/XOFF
-#ifdef IXANY
-			tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-#else
-			tty.c_iflag &= ~(IXON | IXOFF);
-#endif
-			Info() << "Serial: flow control disabled" << std::endl;
-		}
+			Info() << "Serial: software flow control enabled";
 
-		// ===== STEP 9: VMIN/VTIME =====
 		tty.c_cc[VMIN] = 1;
 		tty.c_cc[VTIME] = 0;
 
-		// ===== STEP 10: Apply settings =====
 		if (tcsetattr(serial_fd, TCSANOW, &tty) < 0)
 		{
 			throw std::runtime_error(std::string("Serial: tcsetattr failed: ") + strerror(errno));
 		}
 
-		// ===== POST-CONFIGURATION: Flush buffers and stabilize =====
 		SleepSystem(200);
 		tcflush(serial_fd, TCIOFLUSH);
 
-		// Set DTR/RTS
 		int status;
 		if (ioctl(serial_fd, TIOCMGET, &status) == 0)
 		{
@@ -382,31 +346,23 @@ namespace Device
 			SleepSystem(100);
 		}
 
-		// Send initialization sequence if provided
 		if (init_sequence.length())
 		{
 			SleepSystem(100);
-			// Send initial carriage return (empty command)
 			WriteSerialCommand(serial_fd, "");
 
-			// Split by comma and send each command separately
 			std::stringstream ss(init_sequence);
 			std::string cmd;
-
 			while (std::getline(ss, cmd, ','))
 			{
 				if (!cmd.empty())
 				{
 					SleepSystem(250);
-					Info() << "Serial: init command sent \"" << cmd << "\"";
+					Info() << "Serial: init command sent \"" << cmd << "\"" << std::endl;
 					WriteSerialCommand(serial_fd, cmd);
 				}
 			}
 		}
-
-		// Switch to non-blocking mode for async reading
-		// int flags = fcntl(serial_fd, F_GETFL, 0);
-		// fcntl(serial_fd, F_SETFL, flags | O_NONBLOCK);
 #endif
 
 		Device::Play();
@@ -437,7 +393,7 @@ namespace Device
 			if (arg.size() == 5 && std::toupper(arg[0]) == 'C' && std::toupper(arg[1]) == 'O' && std::toupper(arg[2]) == 'M' && std::isdigit(arg[3]) && std::isdigit(arg[4]))
 			{
 				arg = "\\\\.\\" + arg; // Windows COM port format
-				Warning() << "Serial: using Windows COM port format: " << arg << std::endl;
+				Warning() << "Serial: using Windows COM port format: " << arg;
 			}
 #endif
 			port = arg;
