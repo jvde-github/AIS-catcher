@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'n':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				screen.setScreen("2");
+				screen.setScreen("1");
 				break;
 			case 'o':
 				Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter.");

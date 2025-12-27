@@ -192,6 +192,10 @@ const int AIRBORNE_UNDEFINED = 2;
 const int CRC_UNDEFINED = -1;
 const int CPR_POSITION_UNDEFINED = -1;
 
+const int MESSAGE_ERROR_NONE = 0;
+const int MESSAGE_ERROR_NOTOK = 1;
+const int MESSAGE_ERROR_NMEA_CHECKSUM = 2;
+
 struct TAG
 {
 	unsigned mode = 3;
@@ -217,6 +221,7 @@ struct TAG
 	long sample_idx = 0;
 	long msg_idx_start, msg_idx_end;
 	uint32_t ipv4 = 0;
+	uint32_t error = MESSAGE_ERROR_NONE;
 
 	void clear()
 	{
@@ -239,6 +244,7 @@ struct TAG
 		previous_signal = (std::time_t)0;
 		shipclass = CLASS_UNKNOWN;
 		ipv4 = 0;
+		error = MESSAGE_ERROR_NONE;
 	}
 };
 

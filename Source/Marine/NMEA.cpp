@@ -83,12 +83,17 @@ namespace AIS
 
 	void NMEA::submitAIS(TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation)
 	{
-		if (aivdm.checksum != NMEAchecksum(aivdm.sentence))
+		bool checksum_error = aivdm.checksum != NMEAchecksum(aivdm.sentence);
+
+		if (checksum_error)
 		{
 			if (warnings)
 				Warning() << "NMEA: incorrect checksum [" << aivdm.sentence << "] from station " << (thisstation == -1 ? station : thisstation) << ".";
+
 			if (crc_check)
 				return;
+
+			tag.error = MESSAGE_ERROR_NMEA_CHECKSUM;
 		}
 
 		if (aivdm.count == 1)
@@ -107,11 +112,14 @@ namespace AIS
 					msg.buildNMEA(tag);
 				else
 					msg.NMEA.push_back(aivdm.sentence);
+
 				Send(&msg, 1, tag);
 			}
 			else if (msg.getLength() > 0)
+
 				if (warnings)
 					Warning() << "NMEA: invalid message of type " << msg.type() << " and length " << msg.getLength() << " from station " << (thisstation == -1 ? station : thisstation) << ".";
+
 			return;
 		}
 
