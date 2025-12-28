@@ -63,13 +63,14 @@ error() { log "ERROR: $*"; exit 1; }
 
 install_build_deps() {
     log "Installing build dependencies..."
+    export DEBIAN_FRONTEND=noninteractive
     
     if [[ $EUID -eq 0 ]]; then
         apt-get update -qq
         apt-get install -y -qq "${BUILD_DEPS[@]}"
     else
-        sudo apt-get update -qq
-        sudo apt-get install -y -qq "${BUILD_DEPS[@]}"
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${BUILD_DEPS[@]}"
     fi
 }
 
