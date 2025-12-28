@@ -2,31 +2,12 @@
 #
 # build-debian.sh - Build AIS-catcher Debian package
 #
-# Description:
-#   Builds AIS-catcher from source and creates a Debian package using
-#   standard Debian packaging tools and best practices.
+# Usage: ./build-debian.sh [-o output_dir] [-j jobs] [--skip-deps]
 #
-# Usage:
-#   ./build-debian.sh [OPTIONS]
+# Environment: RUN_NUMBER - Build number for versioning (default: 0)
 #
-# Options:
-#   -a, --arch ARCH     Target architecture (default: auto-detect)
-#   -j, --jobs N        Parallel build jobs (default: nproc)
-#   -o, --output DIR    Output directory for .deb (default: current dir)
-#   --skip-deps         Skip installing build dependencies (if already installed)
-#   -h, --help          Show this help message
-#
-# Environment:
-#   RUN_NUMBER          Build number for versioning (default: 0)
-#
-# Author: AIS-catcher Project
-# License: GNU GPL v3
 
 set -euo pipefail
-
-################################################################################
-# Configuration
-################################################################################
 
 # Detect project root (look for CMakeLists.txt)
 find_project_root() {
@@ -77,27 +58,8 @@ readonly BUILD_DEPS=(
     libpq-dev
 )
 
-################################################################################
-# Utility Functions
-################################################################################
-
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
-}
-
-error() {
-    log "ERROR: $*"
-    exit 1
-}
-
-usage() {
-    sed -n '/^# Usage:/,/^# Author:/p' "$0" | grep -v '^# Author:' | sed 's/^# //'
-    exit 0
-}
-
-################################################################################
-# Build Functions
-################################################################################
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2; }
+error() { log "ERROR: $*"; exit 1; }
 
 install_build_deps() {
     log "Installing build dependencies..."
@@ -185,16 +147,22 @@ build_aiscatcher() {
 get_version() {
     local binary="${BUILD_DIR}/aiscatcher/AIS-catcher"
     
-    if [[ ! -x "${binary}" ]]; then
+    if [[ ! -f "${binary}" ]]; then
         error "AIS-catcher binary not found at ${binary}"
     fi
     
-    local version
-    version=$("${binary}" -h build 2>/dev/null || true)
-    
-    if [[ -z "${version}" ]]; then
-        error "Failed to extract version from AIS-catcher binary"
+    if [[ ! -x "${binary}" ]]; then
+        error "AIS-catcher binary is not executable: ${binary}"
     fi
+    
+    local version
+    version=$("${binary}" -h build 2>&1) || error "AIS-catcher failed to run: ${version}"
+    
+    if [[ -z "${version}" || "${version}" == *"error"* || "${version}" == *"Error"* ]]; then
+        error "Failed to extract version from AIS-catcher binary. Output: ${version}"
+    fi
+    
+    log "Extracted version: ${version}"
     
     # Convert to Debian version format: remove 'v' prefix, replace first '-' with '~'
     echo "${version}" | sed 's/^v//' | sed 's/-/~/'
@@ -229,10 +197,6 @@ extract_runtime_deps() {
     
     echo "${deps}"
 }
-
-################################################################################
-# Package Creation
-################################################################################
 
 create_debian_structure() {
     log "Creating Debian package structure..."
@@ -378,7 +342,7 @@ build_package() {
     local version arch deps output_file
     
     version=$(get_version)
-    arch="${TARGET_ARCH:-$(dpkg --print-architecture)}"
+    arch="$(dpkg --print-architecture)"
     deps=$(extract_runtime_deps)
     
     log "Package version: ${version}"
@@ -391,8 +355,8 @@ build_package() {
     create_postinst
     create_postrm
     
-    # Build package with fakeroot if available
-    output_file="${OUTPUT_DIR}/${PACKAGE_NAME}_${version}_${arch}.deb"
+    # Fixed output filename - let CI handle renaming
+    output_file="${OUTPUT_DIR}/ais-catcher.deb"
     
     log "Building package: ${output_file}"
     
@@ -409,61 +373,29 @@ build_package() {
     log "Package created: ${output_file}"
 }
 
-################################################################################
-# Main
-################################################################################
-
 main() {
-    local JOBS TARGET_ARCH OUTPUT_DIR SKIP_DEPS
+    local JOBS SKIP_DEPS
     
-    # Defaults
     JOBS=$(nproc)
-    TARGET_ARCH=""
     OUTPUT_DIR="${PROJECT_ROOT}"
     SKIP_DEPS=false
     
-    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -a|--arch)
-                TARGET_ARCH="$2"
-                shift 2
-                ;;
-            -j|--jobs)
-                JOBS="$2"
-                shift 2
-                ;;
-            -o|--output)
-                OUTPUT_DIR="$2"
-                shift 2
-                ;;
-            --skip-deps)
-                SKIP_DEPS=true
-                shift
-                ;;
-            -h|--help)
-                usage
-                ;;
-            *)
-                error "Unknown option: $1"
-                ;;
+            -j|--jobs)     JOBS="$2"; shift 2 ;;
+            -o|--output)   OUTPUT_DIR="$2"; shift 2 ;;
+            --skip-deps)   SKIP_DEPS=true; shift ;;
+            *) error "Unknown option: $1" ;;
         esac
     done
     
-    # Export for subshells
-    export JOBS TARGET_ARCH OUTPUT_DIR
+    export JOBS OUTPUT_DIR
     
-    # Clean and create build directory
     rm -rf "${BUILD_DIR}"
-    mkdir -p "${BUILD_DIR}/local"
-    mkdir -p "${OUTPUT_DIR}"
+    mkdir -p "${BUILD_DIR}/local" "${OUTPUT_DIR}"
     
-    # Install dependencies (requires sudo if not root)
-    if [[ "${SKIP_DEPS}" == false ]]; then
-        install_build_deps
-    fi
+    [[ "${SKIP_DEPS}" == false ]] && install_build_deps
     
-    # Build everything (no root required)
     build_rtlsdr
     build_hydrasdr
     build_nmea2000
