@@ -109,6 +109,46 @@ jobs:
         name: ${{ env.filename }}
         path: ${{ env.filename }}
 
+  build_fedora:
+    needs: bakeHTML
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RUN_NUMBER: ${{ needs.bakeHTML.outputs.run_number }}
+    strategy:
+      matrix:
+        version: ['39', '40', '41']
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: main
+
+    - name: Set filename
+      run: echo "filename=ais-catcher_fedora_${{ matrix.version }}_x86_64.rpm" >> $GITHUB_ENV
+
+    - name: Build package
+      run: |
+        mkdir -p output
+        docker run --rm \
+          -v $(pwd):/src \
+          -v $(pwd)/output:/output \
+          -w /src \
+          -e RUN_NUMBER=${RUN_NUMBER} \
+          fedora:${{ matrix.version }} \
+          bash scripts/build-rpm.sh -o /output
+        mv output/ais-catcher.rpm ${{ env.filename }}
+
+    - name: Upload to release
+      run: gh release upload 'Edge' ${{ env.filename }} --repo ${{ github.repository }} --clobber
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.filename }}
+        path: ${{ env.filename }}
+
   build_ubuntu:
     needs: bakeHTML
     runs-on: ubuntu-latest
