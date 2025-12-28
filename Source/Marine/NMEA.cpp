@@ -93,11 +93,13 @@ namespace AIS
 			if (crc_check)
 				return;
 
-			tag.error = MESSAGE_ERROR_NMEA_CHECKSUM;
+        	aivdm.message_error |= MESSAGE_ERROR_NMEA_CHECKSUM;
 		}
 
 		if (aivdm.count == 1)
 		{
+			tag.error = aivdm.message_error;
+
 			msg.clear();
 			msg.Stamp(stamp ? 0 : t);
 			msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation, own_mmsi);
@@ -151,6 +153,8 @@ namespace AIS
 						 (aivdm.groupId == 0 && it->channel == aivdm.channel && it->talkerID == aivdm.talkerID);
 			if (match && it->count == aivdm.count && it->ID == aivdm.ID)
 			{
+				tag.error |= it->message_error;
+
 				addline(*it);
 				if (!regenerate)
 					msg.NMEA.push_back(it->sentence);

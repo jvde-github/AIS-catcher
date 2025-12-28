@@ -60,6 +60,7 @@ namespace AIS
 				data.clear();
 				timestamp = time(nullptr);
 				groupId = 0;
+				message_error = 0;
 			}
 			char channel;
 			int count;
@@ -68,6 +69,7 @@ namespace AIS
 			int checksum;
 			int fillbits;
 			int talkerID;
+			uint32_t message_error;
 		} aivdm;
 
 		std::vector<std::string> parts;
