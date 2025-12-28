@@ -2,12 +2,31 @@
 #
 # build-debian.sh - Build AIS-catcher Debian package
 #
-# Usage: ./build-debian.sh [-o output_dir] [-j jobs] [--skip-deps]
+# Description:
+#   Builds AIS-catcher from source and creates a Debian package using
+#   standard Debian packaging tools and best practices.
 #
-# Environment: RUN_NUMBER - Build number for versioning (default: 0)
+# Usage:
+#   ./build-debian.sh [OPTIONS]
 #
+# Options:
+#   -a, --arch ARCH     Target architecture (default: auto-detect)
+#   -j, --jobs N        Parallel build jobs (default: nproc)
+#   -o, --output DIR    Output directory for .deb (default: current dir)
+#   --skip-deps         Skip installing build dependencies (if already installed)
+#   -h, --help          Show this help message
+#
+# Environment:
+#   RUN_NUMBER          Build number for versioning (default: 0)
+#
+# Author: AIS-catcher Project
+# License: GNU GPL v3
 
 set -euo pipefail
+
+################################################################################
+# Configuration
+################################################################################
 
 # Detect project root (look for CMakeLists.txt)
 find_project_root() {
@@ -58,8 +77,27 @@ readonly BUILD_DEPS=(
     libpq-dev
 )
 
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2; }
-error() { log "ERROR: $*"; exit 1; }
+################################################################################
+# Utility Functions
+################################################################################
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
+}
+
+error() {
+    log "ERROR: $*"
+    exit 1
+}
+
+usage() {
+    sed -n '/^# Usage:/,/^# Author:/p' "$0" | grep -v '^# Author:' | sed 's/^# //'
+    exit 0
+}
+
+################################################################################
+# Build Functions
+################################################################################
 
 install_build_deps() {
     log "Installing build dependencies..."
@@ -191,6 +229,10 @@ extract_runtime_deps() {
     
     echo "${deps}"
 }
+
+################################################################################
+# Package Creation
+################################################################################
 
 create_debian_structure() {
     log "Creating Debian package structure..."
@@ -336,7 +378,7 @@ build_package() {
     local version arch deps output_file
     
     version=$(get_version)
-    arch="$(dpkg --print-architecture)"
+    arch="${TARGET_ARCH:-$(dpkg --print-architecture)}"
     deps=$(extract_runtime_deps)
     
     log "Package version: ${version}"
@@ -349,8 +391,8 @@ build_package() {
     create_postinst
     create_postrm
     
-    # Fixed output filename - let CI handle renaming
-    output_file="${OUTPUT_DIR}/ais-catcher.deb"
+    # Build package with fakeroot if available
+    output_file="${OUTPUT_DIR}/${PACKAGE_NAME}_${version}_${arch}.deb"
     
     log "Building package: ${output_file}"
     
@@ -367,29 +409,61 @@ build_package() {
     log "Package created: ${output_file}"
 }
 
+################################################################################
+# Main
+################################################################################
+
 main() {
-    local JOBS SKIP_DEPS
+    local JOBS TARGET_ARCH OUTPUT_DIR SKIP_DEPS
     
+    # Defaults
     JOBS=$(nproc)
+    TARGET_ARCH=""
     OUTPUT_DIR="${PROJECT_ROOT}"
     SKIP_DEPS=false
     
+    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -j|--jobs)     JOBS="$2"; shift 2 ;;
-            -o|--output)   OUTPUT_DIR="$2"; shift 2 ;;
-            --skip-deps)   SKIP_DEPS=true; shift ;;
-            *) error "Unknown option: $1" ;;
+            -a|--arch)
+                TARGET_ARCH="$2"
+                shift 2
+                ;;
+            -j|--jobs)
+                JOBS="$2"
+                shift 2
+                ;;
+            -o|--output)
+                OUTPUT_DIR="$2"
+                shift 2
+                ;;
+            --skip-deps)
+                SKIP_DEPS=true
+                shift
+                ;;
+            -h|--help)
+                usage
+                ;;
+            *)
+                error "Unknown option: $1"
+                ;;
         esac
     done
     
-    export JOBS OUTPUT_DIR
+    # Export for subshells
+    export JOBS TARGET_ARCH OUTPUT_DIR
     
+    # Clean and create build directory
     rm -rf "${BUILD_DIR}"
-    mkdir -p "${BUILD_DIR}/local" "${OUTPUT_DIR}"
+    mkdir -p "${BUILD_DIR}/local"
+    mkdir -p "${OUTPUT_DIR}"
     
-    [[ "${SKIP_DEPS}" == false ]] && install_build_deps
+    # Install dependencies (requires sudo if not root)
+    if [[ "${SKIP_DEPS}" == false ]]; then
+        install_build_deps
+    fi
     
+    # Build everything (no root required)
     build_rtlsdr
     build_hydrasdr
     build_nmea2000
