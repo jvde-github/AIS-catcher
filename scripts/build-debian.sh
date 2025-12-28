@@ -284,6 +284,7 @@ install_udev_rules() {
     local target="${UDEV_DIR}/${rules_file}"
     
     [[ ! -f "${source}" ]] && return 0
+    [[ ! -d "${UDEV_DIR}" ]] && return 0
     
     if [[ -f "${target}" ]]; then
         if command -v md5sum &>/dev/null; then
