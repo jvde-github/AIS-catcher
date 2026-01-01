@@ -214,9 +214,20 @@ download_webassets_common() {
 
 # Install build dependencies for source compilation
 install_source_build_dependencies() {
-    local deps="git cmake build-essential pkg-config libzmq3-dev libssl-dev zlib1g-dev libpq-dev curl unzip libusb-1.0-0-dev libsqlite3-dev libairspy-dev libairspyhf-dev libhackrf-dev"
-    log "INFO" "Installing build dependencies: $deps"
-    apt-get install -y $deps || error_exit "Failed to install dependencies"
+    local required_deps="git cmake build-essential pkg-config libssl-dev zlib1g-dev libusb-1.0-0-dev curl unzip"
+    local optional_deps="libzmq3-dev libpq-dev libsqlite3-dev libairspy-dev libairspyhf-dev libhackrf-dev"
+    
+    log "INFO" "Installing required build dependencies: $required_deps"
+    apt-get install -y $required_deps || error_exit "Failed to install required dependencies"
+    
+    log "INFO" "Installing optional dependencies (failures allowed): $optional_deps"
+    for pkg in $optional_deps; do
+        if apt-get install -y "$pkg"; then
+            log "INFO" "Installed $pkg"
+        else
+            log "WARN" "Could not install $pkg - corresponding feature may be unavailable"
+        fi
+    done
 }
 
 # Install librtlsdr from source
