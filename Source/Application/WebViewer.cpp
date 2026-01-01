@@ -505,25 +505,31 @@ void WebViewer::start()
 
 	if (backup_interval > 0)
 	{
-		if (filename.empty())
-			throw std::runtime_error("Server: backup of statistics requested without providing filename.");
-
-		backup_thread = std::thread(&WebViewer::BackupService, this);
-		backup_thread.detach();
-		thread_running = true;
+		if (filename.empty()) {
+			Warning() << "Server: backup of statistics requested without providing filename.";
+		}
+		else {
+			backup_thread = std::thread(&WebViewer::BackupService, this);
+			thread_running = true;
+		}
 	}
 }
 
 void WebViewer::stopThread()
 {
-	if (thread_running)
-	{
-		std::unique_lock<std::mutex> lock(m);
+    if (thread_running)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m);
+            run = false;
+        }
+        cv.notify_all();
 
-		run = false;
-		cv.notify_all();
-		thread_running = false;
-	}
+        if (backup_thread.joinable())
+            backup_thread.join();
+
+        thread_running = false;
+    }
 }
 
 void WebViewer::close()
@@ -1058,7 +1064,8 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "FILE")
 	{
-		filename = arg;
+		if(!filename.empty())
+			filename = arg;
 	}
 	else if (option == "CDN")
 	{
