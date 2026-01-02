@@ -119,7 +119,7 @@ jobs:
       matrix:
         distro: ['ubuntu']
         codename: ['focal', 'jammy', 'noble', 'plucky', 'questing', 'resolute']
-        arch: ['amd64', 'arm64']
+        arch: ['amd64', 'arm64', 'armhf']
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4

@@ -348,16 +348,22 @@ check_package_availability() {
         "ais-catcher_debian_trixie_armhf.deb"
         "ais-catcher_ubuntu_focal_amd64.deb"
         "ais-catcher_ubuntu_focal_arm64.deb"
+        "ais-catcher_ubuntu_focal_armhf.deb"
         "ais-catcher_ubuntu_jammy_amd64.deb"
         "ais-catcher_ubuntu_jammy_arm64.deb"
+        "ais-catcher_ubuntu_jammy_armhf.deb"
         "ais-catcher_ubuntu_noble_amd64.deb"
         "ais-catcher_ubuntu_noble_arm64.deb"
+        "ais-catcher_ubuntu_noble_armhf.deb"
         "ais-catcher_ubuntu_plucky_amd64.deb"
         "ais-catcher_ubuntu_plucky_arm64.deb"
+        "ais-catcher_ubuntu_plucky_armhf.deb"
         "ais-catcher_ubuntu_questing_amd64.deb"
         "ais-catcher_ubuntu_questing_arm64.deb"
+        "ais-catcher_ubuntu_questing_armhf.deb"
         "ais-catcher_ubuntu_resolute_amd64.deb"
         "ais-catcher_ubuntu_resolute_arm64.deb"
+        "ais-catcher_ubuntu_resolute_armhf.deb"
     )
 
     for package in "${packages[@]}"; do
