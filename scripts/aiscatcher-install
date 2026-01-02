@@ -348,7 +348,6 @@ check_package_availability() {
         "ais-catcher_debian_trixie_armhf.deb"
         "ais-catcher_ubuntu_focal_amd64.deb"
         "ais-catcher_ubuntu_focal_arm64.deb"
-        "ais-catcher_ubuntu_focal_armhf.deb"
         "ais-catcher_ubuntu_jammy_amd64.deb"
         "ais-catcher_ubuntu_jammy_arm64.deb"
         "ais-catcher_ubuntu_jammy_armhf.deb"

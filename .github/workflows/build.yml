@@ -120,6 +120,9 @@ jobs:
         distro: ['ubuntu']
         codename: ['focal', 'jammy', 'noble', 'plucky', 'questing', 'resolute']
         arch: ['amd64', 'arm64', 'armhf']
+        exclude:
+          - codename: 'focal'
+            arch: 'armhf'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
