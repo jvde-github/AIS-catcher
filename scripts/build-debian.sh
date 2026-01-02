@@ -98,14 +98,20 @@ build_hydrasdr() {
     
     git clone --depth 1 "${HYDRASDR_REPO}" "${src_dir}"
     
-    # Find libusb library path (handles both x86_64 and arm64)
-    local libusb_lib=$(find /usr/lib -name "libusb-1.0.so" 2>/dev/null | head -n 1)
-    [[ -z "${libusb_lib}" ]] && libusb_lib=$(find /lib -name "libusb-1.0.so" 2>/dev/null | head -n 1)
+    # Use pkg-config to find libusb (more reliable than manual search)
+    local libusb_cflags=$(pkg-config --cflags libusb-1.0 2>/dev/null || true)
+    local libusb_libs=$(pkg-config --libs libusb-1.0 2>/dev/null || true)
+    local libusb_libdir=$(pkg-config --variable=libdir libusb-1.0 2>/dev/null || true)
     
-    cmake -S "${src_dir}/libhydrasdr" -B "${src_dir}/libhydrasdr/build" \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX="${install_dir}" \
-        ${libusb_lib:+-DLIBUSB_LIBRARIES="${libusb_lib}" -DLIBUSB_INCLUDE_DIRS="/usr/include/libusb-1.0"}
+    local cmake_args="-DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${install_dir}"
+    
+    # If pkg-config found libusb, help CMake find it
+    if [[ -n "${libusb_libdir}" ]]; then
+        cmake_args="${cmake_args} -DLIBUSB_LIBRARIES=${libusb_libdir}/libusb-1.0.so"
+        cmake_args="${cmake_args} -DLIBUSB_INCLUDE_DIRS=$(pkg-config --variable=includedir libusb-1.0)/libusb-1.0"
+    fi
+    
+    cmake -S "${src_dir}/libhydrasdr" -B "${src_dir}/libhydrasdr/build" ${cmake_args}
     
     cmake --build "${src_dir}/libhydrasdr/build" -j "${JOBS}"
     cmake --install "${src_dir}/libhydrasdr/build"
