@@ -98,9 +98,14 @@ build_hydrasdr() {
     
     git clone --depth 1 "${HYDRASDR_REPO}" "${src_dir}"
     
+    # Find libusb library path (handles both x86_64 and arm64)
+    local libusb_lib=$(find /usr/lib -name "libusb-1.0.so" 2>/dev/null | head -n 1)
+    [[ -z "${libusb_lib}" ]] && libusb_lib=$(find /lib -name "libusb-1.0.so" 2>/dev/null | head -n 1)
+    
     cmake -S "${src_dir}/libhydrasdr" -B "${src_dir}/libhydrasdr/build" \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX="${install_dir}"
+        -DCMAKE_INSTALL_PREFIX="${install_dir}" \
+        ${libusb_lib:+-DLIBUSB_LIBRARIES="${libusb_lib}" -DLIBUSB_INCLUDE_DIRS="/usr/include/libusb-1.0"}
     
     cmake --build "${src_dir}/libhydrasdr/build" -j "${JOBS}"
     cmake --install "${src_dir}/libhydrasdr/build"
