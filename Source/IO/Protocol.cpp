@@ -54,6 +54,12 @@
 
 #include <errno.h>
 #include <algorithm>
+#include <random>
+
+#ifdef HASOPENSSL
+#include <openssl/sha.h>
+#include <openssl/rand.h>
+#endif
 
 namespace Protocol
 {
@@ -462,6 +468,9 @@ namespace Protocol
 			Error() << "TLS: Failed to create SSL context for " << getHost() << ":" << getPort();
 		}
 
+		// Disable weak SSL/TLS protocols (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
+		SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+
 		if (verify_certificates)
 		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
@@ -484,6 +493,13 @@ namespace Protocol
 
 		// Set SNI (Server Name Indication) hostname
 		SSL_set_tlsext_host_name(ssl, getHost().c_str());
+
+		// Enable hostname verification (protection against MitM attacks)
+		if (verify_certificates)
+		{
+			X509_VERIFY_PARAM *param = SSL_get0_param(ssl);
+			X509_VERIFY_PARAM_set1_host(param, getHost().c_str(), 0);
+		}
 
 		// Create custom BIO that uses our TCP connection
 		BIO *bio = BIO_new(BIO_s_socket());
@@ -970,6 +986,15 @@ namespace Protocol
 		if (length < 0)
 			return false;
 
+		// Protection against DoS via large packet allocation (limit to 1MB)
+		const int MAX_MQTT_PACKET_SIZE = 1024 * 1024;
+		if (length > MAX_MQTT_PACKET_SIZE)
+		{
+			Error() << "MQTT: Packet size " << length << " exceeds maximum " << MAX_MQTT_PACKET_SIZE;
+			disconnect();
+			return false;
+		}
+
 		packet.resize(length);
 
 		if (prev->read(packet.data(), length, 5, true) != length)
@@ -1215,11 +1240,24 @@ namespace Protocol
 
 		// Generate a random Sec-WebSocket-Key
 		std::string key;
-		// std::array<uint8_t, 16> key_bytes;
+		key.resize(16);
+#ifdef HASOPENSSL
+		// Use cryptographically secure random from OpenSSL
+		if (RAND_bytes((unsigned char *)key.data(), 16) != 1)
+		{
+			Error() << "WebSocket: Failed to generate secure random key";
+			return false;
+		}
+#else
+		// Fallback to std::random_device (platform-dependent quality)
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dis(0, 255);
 		for (int i = 0; i < 16; i++)
 		{
-			key += (char)(rand() % 256);
+			key[i] = (char)dis(gen);
 		}
+#endif
 		std::string secWebSocketKey = Util::Convert::BASE64toString(key);
 
 		// Build the handshake request
@@ -1353,10 +1391,20 @@ namespace Protocol
 			uint64_t len64 = static_cast<uint64_t>(length);
 			for (int i = 7; i >= 0; --i)
 				frame.push_back((len64 >> (8 * i)) & 0xFF);
-		} // Generate a random masking key
+		}
+		// Generate a random masking key
 		uint8_t masking_key[4];
+#ifdef HASOPENSSL
+		// Use cryptographically secure random from OpenSSL
+		RAND_bytes(masking_key, 4);
+#else
+		// Fallback to std::random_device
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dis(0, 255);
 		for (int i = 0; i < 4; ++i)
-			masking_key[i] = rand() & 0xFF;
+			masking_key[i] = dis(gen);
+#endif
 
 		frame.insert(frame.end(), masking_key, masking_key + 4);
 
@@ -1576,6 +1624,10 @@ namespace Protocol
 	{
 		unsigned char hash[20];
 
+#ifdef HASOPENSSL
+		SHA1((const unsigned char *)d.data(), d.length(), hash);
+		return std::string(reinterpret_cast<char *>(hash), 20);
+#else
 		uint32_t h0 = 0x67452301;
 		uint32_t h1 = 0xEFCDAB89;
 		uint32_t h2 = 0x98BADCFE;
@@ -1703,5 +1755,6 @@ namespace Protocol
 
 		// Return raw bytes as string
 		return std::string(reinterpret_cast<char *>(hash), 20);
+#endif
 	}
 }
