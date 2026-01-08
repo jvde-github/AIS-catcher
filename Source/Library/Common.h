@@ -54,6 +54,7 @@ typedef std::complex<int16_t> CS16;
 typedef std::complex<uint8_t> CU8;
 typedef std::complex<int8_t> CS8;
 typedef char BIT;
+typedef uint32_t DC16H[3];
 
 enum class Format
 {
@@ -68,7 +69,8 @@ enum class Format
 	RAW1090,
 	S16,
 	UNKNOWN,
-	F32_FS4
+	F32_FS4,
+	DC16H
 };
 
 enum class PROTOCOL

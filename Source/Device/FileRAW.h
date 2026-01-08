@@ -36,7 +36,7 @@ namespace Device {
 
 		FIFO fifo;
 
-		static const uint32_t BUFFER_SIZE = 16 * 16384;
+		static const uint32_t BUFFER_SIZE = 24 * 16 * 16384;
 		uint32_t BUFFER_COUNT = 2;
 		int TXT_BLOCK_SIZE = 1;
 

@@ -115,6 +115,15 @@ namespace Util
 				output[i + 3] = CFLOAT32(0.0f, -((FLOAT32 *)raw->data)[i + 3]);
 			}
 			break;
+
+		case Format::DC16H:
+			// Each DC16H sample is 3 uint32_t (12 bytes)
+			size = raw->size / (3 * sizeof(uint32_t));
+			if (output.size() < size)
+				output.resize(size);
+			Util::Convert::toFloat((DC16H *)raw->data, output.data(), size);
+			break;
+
 		default:
 			return;
 		}

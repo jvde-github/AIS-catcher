@@ -68,6 +68,8 @@ namespace Util
 			return "RAW1090";
 		case Format::F32_FS4:
 			return "F32_FS4";
+		case Format::DC16H:
+			return "DC16H";
 		default:
 			break;
 		}
@@ -206,6 +208,21 @@ namespace Util
 		{
 			out[i].real(data[2 * i] / 32768.0f);
 			out[i].imag(data[2 * i + 1] / 32768.0f);
+		}
+	}
+
+	void Convert::toFloat(DC16H *in, CFLOAT32 *out, int len)
+	{
+		uint32_t *words = (uint32_t *)in;
+
+		for (int i = 0; i < len; i++)
+		{
+			// Extract I and Q as 16-bit signed values from 32-bit words
+			int32_t i_sample = ((int32_t)(words[i * 3] << 16)) >> 16;
+			int32_t q_sample = ((int32_t)(words[i * 3 + 1] << 16)) >> 16;
+
+			out[i].real(i_sample / 32768.0f);
+			out[i].imag(-q_sample / 32768.0f);
 		}
 	}
 }

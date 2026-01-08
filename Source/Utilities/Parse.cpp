@@ -194,6 +194,8 @@ namespace Util
 			format = Format::RAW1090;
 		else if (str == "F32_FS4")
 			format = Format::F32_FS4;
+		else if (str == "DC16H")
+			format = Format::DC16H;
 		else
 			return false;
 

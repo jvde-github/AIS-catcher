@@ -58,5 +58,6 @@ namespace Util
 		static void toFloat(CU8 *in, CFLOAT32 *out, int len);
 		static void toFloat(CS8 *in, CFLOAT32 *out, int len);
 		static void toFloat(CS16 *in, CFLOAT32 *out, int len);
+		static void toFloat(DC16H *in, CFLOAT32 *out, int len);
 	};
 }
