@@ -282,7 +282,6 @@ jobs:
 
         echo "AIRSPY HF+"
         git clone https://github.com/airspy/airspyhf.git
-        git reset --hard b93deddfd05f8350b0adf75d671072e7fa7bec35
         cd airspyhf; mkdir build; cd build
         cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
         msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform airspyhf_all.sln
@@ -290,7 +289,7 @@ jobs:
         cp airspyhf\build\libairspyhf\src\Release\*.dll release
         cp airspyhf\build\libairspyhf\src\Release\*.lib lib
         cp airspyhf\libairspyhf\src\airspyhf.h include
-        cp airspyhf\LICENSE output\Licenses\AIRSPYHF
+        cp airspyhf\LICENSE.BSD output\Licenses\AIRSPYHF
 
         echo "AIRSPY"
         git clone https://github.com/airspy/airspyone_host.git
