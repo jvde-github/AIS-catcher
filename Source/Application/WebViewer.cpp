@@ -235,7 +235,7 @@ bool WebViewer::Save()
 {
 	try
 	{
-		std::ofstream infile(filename, std::ios::binary);
+		std::ofstream infile(backup_filename, std::ios::binary);
 		if (!counter.Save(infile))
 			return false;
 		if (!hist_second.Save(infile))
@@ -274,13 +274,13 @@ void WebViewer::Clear()
 bool WebViewer::Load()
 {
 
-	if (filename.empty())
+	if (backup_filename.empty())
 		return false;
 
-	Info() << "Server: reading statistics from " << filename;
+	Info() << "Server: reading statistics from " << backup_filename;
 	try
 	{
-		std::ifstream infile(filename, std::ios::binary);
+		std::ifstream infile(backup_filename, std::ios::binary);
 
 		if (!counter.Load(infile))
 			return false;
@@ -454,7 +454,7 @@ void WebViewer::start()
 {
 	ships.setup();
 
-	if (filename.empty())
+	if (backup_filename.empty())
 		Clear();
 	else if (!Load())
 	{
@@ -505,8 +505,8 @@ void WebViewer::start()
 
 	if (backup_interval > 0)
 	{
-		if (filename.empty()) {
-			Warning() << "Server: backup of statistics requested without providing filename.";
+		if (backup_filename.empty()) {
+			Warning() << "Server: backup of statistics requested without providing backup filename.";
 		}
 		else {
 			backup_thread = std::thread(&WebViewer::BackupService, this);
@@ -537,7 +537,7 @@ void WebViewer::close()
 
 	stopThread();
 
-	if (!filename.empty() && !Save())
+	if (!backup_filename.empty() && !Save())
 	{
 		Error() << "Statistics - cannot write file.";
 	}
@@ -1064,8 +1064,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "FILE")
 	{
-		if(!filename.empty())
-			filename = arg;
+		backup_filename = arg;
 	}
 	else if (option == "CDN")
 	{

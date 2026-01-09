@@ -135,7 +135,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 
 	std::time_t time_start;
 	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
-	std::string filename = "";
+	std::string backup_filename = "";
 	std::string os, hardware;
 
 	std::mutex m;
