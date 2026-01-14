@@ -1043,6 +1043,7 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 	tag.shipclass = ship.shipclass;
 	tag.speed = ship.speed;
+	std::strcpy(tag.shipname, ship.shipname, sizeof(tag.shipname));
 
 	if (position_updated && isValidCoord(lat_old, lon_old))
 	{

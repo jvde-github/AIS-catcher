@@ -68,10 +68,15 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			}
 			nmea_array += "]";
 
+			std::string shipname_str;
+			std::string shipname_escaped(tag.shipname);
+			JSON::StringBuilder::stringify(shipname_escaped, shipname_str);
+
 			std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) +
 							   ",\"timestamp\":" + std::to_string(now) +
 							   ",\"channel\":\"" + m->getChannel() +
 							   "\",\"type\":" + std::to_string(m->type()) +
+							   ",\"shipname\":" + shipname_str +
 							   ",\"nmea\":" + nmea_array + "}";
 			server->sendSSE(1, "nmea", json);
 		}

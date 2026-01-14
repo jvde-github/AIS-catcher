@@ -6949,7 +6949,16 @@ class RealtimeViewer {
 
         const mmsi = data.mmsi;
         const mmsiSpan = document.createElement('span');
-        mmsiSpan.textContent = data.mmsi;
+        
+        // Show shipname if available and not empty, otherwise show MMSI
+        const hasShipname = data.shipname && data.shipname.trim() !== '';
+        if (hasShipname) {
+            mmsiSpan.textContent = data.shipname;
+            mmsiSpan.title = 'MMSI: ' + data.mmsi;
+        } else {
+            mmsiSpan.textContent = data.mmsi;
+        }
+        
         mmsiSpan.style.border = '1px solid #d0d0d0';
         mmsiSpan.style.padding = '2px 6px';
         mmsiSpan.style.borderRadius = '3px';

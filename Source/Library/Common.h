@@ -205,6 +205,7 @@ struct TAG
 	float level = 0;
 	float ppm = 0;
 	uint64_t group = GROUP_OUT_UNDEFINED;
+	char shipname[21] = {0};
 
 	// some data flowing from DB downstream
 	int version = VERSION_NUMBER;
@@ -247,6 +248,7 @@ struct TAG
 		shipclass = CLASS_UNKNOWN;
 		ipv4 = 0;
 		error = MESSAGE_ERROR_NONE;
+		shipname[0] = 0;
 	}
 };
 
