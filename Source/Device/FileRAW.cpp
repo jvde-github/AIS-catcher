@@ -37,8 +37,13 @@ namespace Device
 				{
 					file->read((char *)buffer.data(), buffer.size());
 					std::streamsize bytesRead = file->gcount();
-					if (bytesRead > 0)
-						fifo.Push(buffer.data(), bytesRead, true);
+
+					if (bytesRead > 0) {
+						if(bytesRead < buffer.size())
+							std::memset(buffer.data() + bytesRead, 0, buffer.size() - bytesRead);
+	
+						fifo.Push(buffer.data(), buffer.size(), true);
+					}
 				}
 				else
 				{
