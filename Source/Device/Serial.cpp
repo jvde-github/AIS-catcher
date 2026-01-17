@@ -21,6 +21,7 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <fcntl.h>
 #include <limits.h>
 #endif
 
@@ -252,10 +253,18 @@ namespace Device
 			}
 		}
 #else
-		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_CLOEXEC);
+		// Open with O_NONBLOCK to avoid blocking on DTR
+		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_CLOEXEC | O_NONBLOCK);
 		if (serial_fd == -1)
 		{
 			throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+		}
+
+		// Clear O_NONBLOCK after opening to allow normal blocking behavior for reads
+		int flags = fcntl(serial_fd, F_GETFL);
+		if (flags != -1)
+		{
+			fcntl(serial_fd, F_SETFL, flags & ~O_NONBLOCK);
 		}
 
 		struct termios tty;
