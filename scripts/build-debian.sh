@@ -142,6 +142,9 @@ build_aiscatcher() {
     local run_num="${RUN_NUMBER:-0}"
     local install_dir="${BUILD_DIR}/local"
     
+    # Allow git to work with mounted directories in Docker
+    git config --global --add safe.directory '*' 2>/dev/null || true
+    
     # Set up environment to find locally built libraries
     export PKG_CONFIG_PATH="${install_dir}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
     export CMAKE_PREFIX_PATH="${install_dir}:${CMAKE_PREFIX_PATH:-}"

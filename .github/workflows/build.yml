@@ -17,8 +17,6 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-      with:
-        ref: main
 
     - name: Set run number for downstream jobs
       id: set_run_number
@@ -68,7 +66,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        ref: main
 
     - name: Set filename
       run: echo "filename=ais-catcher_${{ matrix.distro }}_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
@@ -128,7 +125,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        ref: main
 
     - name: Set filename
       run: echo "filename=ais-catcher_${{ matrix.distro }}_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
@@ -177,7 +173,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
 
       - name: Calculate Container Metadata
         id: meta
@@ -226,7 +221,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        ref: main
     
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
