@@ -10,7 +10,7 @@ The purpose of `AIS-catcher` is to serve as a platform that encourages the perpe
 
 ## License
 
-Copyright (C) 2021 - 2025 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
+Copyright (C) 2021 - 2026 jvde.github at gmail.com. All rights reserved. Licensed under GNU General Public License v3.0.
 
 ## Important Disclaimer
 `AIS-catcher` is created for research and educational purposes under the GNU GPL v3 license. It is a hobby project and has not been tested and designed for reliability and correctness. 

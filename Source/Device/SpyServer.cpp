@@ -1,5 +1,5 @@
 /*
-	Copyright(c) 2021-2025 jvde.github@gmail.com
+	Copyright(c) 2021-2026 jvde.github@gmail.com
 
 	spyserver_client (https://github.com/miweber67/spyserver_client)
 	Copyright(c) miweber67

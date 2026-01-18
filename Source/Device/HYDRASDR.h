@@ -1,6 +1,6 @@
 /*
 	Copyright(c) 2021-2022 gtlittlewing
-	Copyright(c) 2021-2025 jvde.github@gmail.com
+	Copyright(c) 2021-2026 jvde.github@gmail.com
 	Copyright(c) 2025 Benjamin Vernoux <bvernoux@hydrasdr.com>
 
 	This program is free software: you can redistribute it and/or modify
