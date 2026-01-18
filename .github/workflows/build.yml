@@ -65,6 +65,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
+        ref: main
         fetch-depth: 0
 
     - name: Set filename
@@ -124,6 +125,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
+        ref: main
         fetch-depth: 0
 
     - name: Set filename
@@ -172,6 +174,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Calculate Container Metadata
@@ -220,6 +223,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
+        ref: main
         fetch-depth: 0
     
     - name: Add MSBuild to PATH
