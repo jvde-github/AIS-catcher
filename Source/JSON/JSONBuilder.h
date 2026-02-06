@@ -147,10 +147,6 @@ public:
     template<typename T>
     JSONBuilder& valueOrNull(T v, T undef) { return (v == undef) ? valueNull() : value(v); }
 
-    // Raw JSON fragment appending (no key, for manual control)
-    JSONBuilder& write(const char* str) { size_t len = std::strlen(str); ensure(len); writeRaw(str, len); return *this; }
-    JSONBuilder& write(const std::string& str) { ensure(str.size()); writeRaw(str.data(), str.size()); return *this; }
-
     // Nullable logic
     template<size_t N, typename T>
     JSONBuilder& addOrNull(const char (&k)[N], T v, T undef) { return (v == undef) ? add(k, nullptr) : add(k, v); }
