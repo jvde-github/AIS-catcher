@@ -123,41 +123,65 @@ namespace IO
 		{
 			const std::string now = Util::Convert::toTimeStr(std::time(0));
 
-			oss << "{\"protocol\":\"" << protocol_string << "\"," << "\"encodetime\":\"" << now << "\"," << "\"stationid\":" << stationid << "," << "\"station_lat\":" << lat << ","
-				<< "\"station_lon\":" << lon << "," << "\"receiver\":{\"description\":\"AIS-catcher " VERSION "\"," << "\"version\":" << VERSION_NUMBER << ",\"engine\":" << model
-				<< ",\"setting\":" << model_setting << "},\"device\":{\"product\":" << product << ",\"vendor\":" << vendor << ",\"serial\":" << serial << ",\"setting\":" << device_setting << "},\"msgs\":[";
+		JSON::JSONBuilder json;
+		json.start()
+			.add("protocol", protocol_string)
+			.add("encodetime", now)
+			.addRaw("stationid", stationid)
+			.add("station_lat", lat)
+			.add("station_lon", lon)
+			.key("receiver").start()
+			.add("description", "AIS-catcher " VERSION)
+			.add("version", VERSION_NUMBER)
+			.addRaw("engine", model)
+			.addRaw("setting", model_setting)
+			.end()
+			.key("device").start()
+			.addRaw("product", product)
+			.addRaw("vendor", vendor)
+			.addRaw("serial", serial)
+			.addRaw("setting", device_setting)
+			.end()
+			.key("msgs").startArray();
 
-			char delim = ' ';
-			for (const auto &m : send_list)
-			{
-				oss << delim << "\n"
-					<< m;
-				delim = ',';
-			}
-
-			oss << "\n]}\n";
-
-			r = http.Post(oss.str(), gzip, false, "");
-		}
-		else if (PROTOCOL::APRS == protocol)
+		for (const auto &m : send_list)
 		{
-			const std::string now = Util::Convert::toTimeStr(std::time(0));
-
-			oss << "{\"protocol\":\"jsonais\"," << "\"encodetime\":\"" << now << "\"," << "\"groups\":[{\"path\":[{\"name\":" << stationid << ",\"url\":" << url_json << "}],\"msgs\":[";
-
-			char delim = ' ';
-
-			for (const auto &m : send_list)
-			{
-				oss << delim << "\n"
-					<< m;
-				delim = ',';
-			}
-
-			oss << "\n]}]}";
-
-			r = http.Post(oss.str(), gzip, true, "jsonais");
+			json.nl().valueRaw(m);
 		}
+
+		json.nl().endArray().end().nl();
+		oss << json.str();
+
+		r = http.Post(oss.str(), gzip, false, "");
+	}
+	else if (PROTOCOL::APRS == protocol)
+	{
+		const std::string now = Util::Convert::toTimeStr(std::time(0));
+
+		JSON::JSONBuilder json;
+		json.start()
+			.add("protocol", "jsonais")
+			.add("encodetime", now)
+			.key("groups").startArray()
+			.start()
+			.key("path").startArray()
+			.start()
+			.addRaw("name", stationid)
+			.addRaw("url", url_json)
+			.end()
+			.endArray()
+			.key("msgs").startArray();
+
+		for (const auto &m : send_list)
+		{
+			json.nl().valueRaw(m);
+		}
+
+		json.nl().endArray().end().endArray().end();
+		oss << json.str();
+
+		r = http.Post(oss.str(), gzip, true, "jsonais");
+	}
 		else
 		{
 			for (const auto &m : send_list)

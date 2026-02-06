@@ -25,6 +25,7 @@
 #include "JSONAIS.h"
 #include "Convert.h"
 #include "Message.h"
+#include "JSON/JSONBuilder.h"
 
 // ----------------------------
 // Class to log message count stat
@@ -116,34 +117,48 @@ public:
 
 	std::string toJSON(bool empty = false) {
 		std::lock_guard<std::mutex> l{ this->mtx };
-		static const std::string null_str = "null";
-		static const std::string comma = ",";
 
-		std::string element;
-
+		JSON::JSONBuilder json;
 		int c = _count - _exclude;
 
-		element += "{\"count\":" + std::to_string(empty ? 0 : _count) +
-				   ",\"vessels\":" + std::to_string(empty ? 0 : _vessels) +
-				   ",\"level_min\":" + ((empty || !c) ? null_str : Util::Convert::toString(_level_min)) +
-				   ",\"level_max\":" + ((empty || !c) ? null_str : Util::Convert::toString(_level_max)) +
-				   ",\"ppm\":" + (empty || !c ? null_str : std::to_string(_ppm / c)) +
-				   ",\"dist\":" + (empty ? null_str : std::to_string(_distance)) +
-				   ",\"channel\":[";
+		json.start()
+			.add("count", empty ? 0 : _count)
+			.add("vessels", empty ? 0 : _vessels);
 
-		for (int i = 0; i < 4; i++) element += std::to_string(empty ? 0 : _channel[i]) + comma;
-		element.pop_back();
-		element += "],\"radar_a\":[";
-		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarA[i]) + comma;
-		element.pop_back();
-		element += "],\"radar_b\":[";
-		for (int i = 0; i < _RADAR_BUCKETS; i++) element += std::to_string(empty ? 0 : _radarB[i]) + comma;
-		element.pop_back();
-		element += "],\"msg\":[";
-		for (int i = 0; i < 27; i++) element += std::to_string(empty ? 0 : _msg[i]) + comma;
-		element.pop_back();
-		element += "]}";
-		return element;
+		if (empty || !c)
+			json.addNull("level_min").addNull("level_max").addNull("ppm");
+		else
+			json.add("level_min", _level_min)
+				.add("level_max", _level_max)
+				.add("ppm", _ppm / c);
+
+		if (empty)
+			json.addNull("dist");
+		else
+			json.add("dist", _distance);
+
+		json.key("channel").startArray();
+		for (int i = 0; i < 4; i++)
+			json.value(empty ? 0 : _channel[i]);
+
+		json.endArray()
+			.key("radar_a").startArray();
+		for (int i = 0; i < _RADAR_BUCKETS; i++)
+			json.value(empty ? 0 : _radarA[i]);
+
+		json.endArray()
+			.key("radar_b").startArray();
+		for (int i = 0; i < _RADAR_BUCKETS; i++)
+			json.value(empty ? 0 : _radarB[i]);
+
+		json.endArray()
+			.key("msg").startArray();
+		for (int i = 0; i < 27; i++)
+			json.value(empty ? 0 : _msg[i]);
+
+		json.endArray().end();
+
+		return json.str();
 	}
 
 	bool Save(std::ofstream& file) {

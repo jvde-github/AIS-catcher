@@ -20,6 +20,7 @@
 #include "NMEA.h"
 #include "JSONAIS.h"
 #include "Helper.h"
+#include "JSON/JSONBuilder.h"
 
 IO::OutputMessage *commm_feed = nullptr;
 
@@ -29,11 +30,18 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 	{
 		AIS::Message *m = (AIS::Message *)data[0].binary;
 		std::time_t now = std::time(nullptr);
+		JSON::JSONBuilder json;
 
 		if (!m->NMEA.empty())
 		{
-			std::string nmea_array = "[";
-			bool first = true;
+			json.start()
+				.add("mmsi", m->mmsi())
+				.add("timestamp", (long)now)
+				.add("channel", m->getChannel())
+				.add("type", m->type())
+				.add("shipname", tag.shipname)
+				.key("nmea")
+				.startArray();
 
 			for (const auto &s : m->NMEA)
 			{
@@ -61,30 +69,25 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 					}
 				}
 
-				if (!first)
-					nmea_array += ",";
-				nmea_array += "\"" + nmea + "\"";
-				first = false;
+				json.value(nmea);
 			}
-			nmea_array += "]";
 
-			std::string shipname_str;
-			std::string shipname_escaped(tag.shipname);
-			JSON::StringBuilder::stringify(shipname_escaped, shipname_str);
+			json.endArray()
+				.end();
 
-			std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) +
-							   ",\"timestamp\":" + std::to_string(now) +
-							   ",\"channel\":\"" + m->getChannel() +
-							   "\",\"type\":" + std::to_string(m->type()) +
-							   ",\"shipname\":" + shipname_str +
-							   ",\"nmea\":" + nmea_array + "}";
-			server->sendSSE(1, "nmea", json);
+			server->sendSSE(1, "nmea", json.str());
 		}
-
 		if (tag.lat != 0 && tag.lon != 0)
 		{
-			std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) + ",\"channel\":\"" + m->getChannel() + "\",\"lat\":" + std::to_string(tag.lat) + ",\"lon\":" + std::to_string(tag.lon) + "}";
-			server->sendSSE(2, "nmea", json);
+			json.clear();
+			json.start()
+				.add("mmsi", m->mmsi())
+				.add("channel", m->getChannel())
+				.add("lat", tag.lat)
+				.add("lon", tag.lon)
+				.end();
+
+			server->sendSSE(2, "nmea", json.str());
 		}
 	}
 }
@@ -94,10 +97,8 @@ WebViewer::WebViewer()
 	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\nbuild_version = '" + std::string(VERSION) + "';\ncontext='settings';\n\n";
 	plugin_code = "\n\nfunction loadPlugins() {\n";
 	plugins = "let plugins = '';\nlet server_message = '';\n";
-	os.clear();
-	JSON::StringBuilder::stringify(Util::Helper::getOS(), os);
-	hardware.clear();
-	JSON::StringBuilder::stringify(Util::Helper::getHardware(), hardware);
+	os = Util::Helper::getOS();
+	hardware = Util::Helper::getHardware();
 }
 
 std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
@@ -409,12 +410,9 @@ void WebViewer::connect(Receiver &r)
 
 				sample_rate += device->getRateDescription() + "<br>";
 
-				JSON::StringBuilder::stringify(device->getProduct(), product, false);
-				JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vendor, false);
-				JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), serial, false);
-				product += newline;
-				vendor += newline;
-				serial += newline;
+				product += device->getProduct() + newline;
+				vendor += (device->getVendor().empty() ? "-" : device->getVendor()) + newline;
+				serial += (device->getSerial().empty() ? "-" : device->getSerial()) + newline;
 
 				rec_details = true;
 			}
@@ -510,10 +508,12 @@ void WebViewer::start()
 
 	if (backup_interval > 0)
 	{
-		if (backup_filename.empty()) {
+		if (backup_filename.empty())
+		{
 			Warning() << "Server: backup of statistics requested without providing backup filename.";
 		}
-		else {
+		else
+		{
 			backup_thread = std::thread(&WebViewer::BackupService, this);
 			thread_running = true;
 		}
@@ -522,19 +522,19 @@ void WebViewer::start()
 
 void WebViewer::stopThread()
 {
-    if (thread_running)
-    {
-        {
-            std::lock_guard<std::mutex> lock(m);
-            run = false;
-        }
-        cv.notify_all();
+	if (thread_running)
+	{
+		{
+			std::lock_guard<std::mutex> lock(m);
+			run = false;
+		}
+		cv.notify_all();
 
-        if (backup_thread.joinable())
-            backup_thread.join();
+		if (backup_thread.joinable())
+			backup_thread.join();
 
-        thread_running = false;
-    }
+		thread_running = false;
+	}
 }
 
 void WebViewer::close()
@@ -631,39 +631,6 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/stat.json" || r == "/stat.json")
 	{
-
-		std::string content;
-
-		content += "{\"total\":" + counter.toJSON() + ",";
-		content += "\"session\":" + counter_session.toJSON() + ",";
-		content += "\"last_day\":" + hist_day.lastStatToJSON() + ",";
-		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
-		content += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
-		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
-		content += "\"sharing\":" + std::string(commm_feed ? "true" : "false") + ",";
-		if (ships.getShareLatLon() && ships.getLat() != LAT_UNDEFINED && ships.getLon() != LON_UNDEFINED)
-			content += "\"sharing_link\":\"https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(ships.getLat()) + "&lon=" + std::to_string(ships.getLon()) + "\",";
-		else
-			content += "\"sharing_link\":\"https://www.aiscatcher.org\",";
-
-		content += "\"station\":" + station + ",";
-		content += "\"station_link\":" + station_link + ",";
-		content += "\"sample_rate\":\"" + sample_rate + "\",";
-		content += "\"msg_rate\":" + std::to_string(hist_second.getAverage()) + ",";
-		content += "\"vessel_count\":" + std::to_string(ships.getCount()) + ",";
-		content += "\"vessel_max\":" + std::to_string(ships.getMaxCount()) + ",";
-		content += "\"product\":\"" + product + "\",";
-		content += "\"vendor\":\"" + vendor + "\",";
-		content += "\"serial\":\"" + serial + "\",";
-		content += "\"model\":\"" + model + "\",";
-		content += "\"build_date\":\"" + std::string(__DATE__) + "\",";
-		content += "\"build_version\":\"" + std::string(VERSION) + "\",";
-		content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",";
-		content += "\"run_time\":\"" + std::to_string((long int)time(nullptr) - (long int)time_start) + "\",";
-		content += "\"memory\":" + std::to_string(Util::Helper::getMemoryConsumption()) + ",";
-		content += "\"os\":" + os + ",";
-		content += "\"hardware\":" + hardware + ",";
-
 		std::string unit;
 		const uint64_t GB = 1000000000;
 		const uint64_t MB = 1000000;
@@ -682,10 +649,44 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 
 		int d1 = norm / 10;
 		int d2 = norm % 10;
+		std::string received_str = std::to_string(d1) + "." + std::to_string(d2) + unit;
 
-		content += "\"received\":\"" + std::to_string(d1) + "." + std::to_string(d2) + unit + "\"}";
+		JSON::JSONBuilder json;
+		json.start()
+			.addRaw("total", counter.toJSON())
+			.addRaw("session", counter_session.toJSON())
+			.addRaw("last_day", hist_day.lastStatToJSON())
+			.addRaw("last_hour", hist_hour.lastStatToJSON())
+			.addRaw("last_minute", hist_minute.lastStatToJSON())
+			.add("tcp_clients", numberOfClients())
+			.add("sharing", commm_feed ? true : false);
 
-		Response(c, "application/json", content, use_zlib & gzip);
+		if (ships.getShareLatLon() && ships.getLat() != LAT_UNDEFINED && ships.getLon() != LON_UNDEFINED)
+			json.add("sharing_link", "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(ships.getLat()) + "&lon=" + std::to_string(ships.getLon()));
+		else
+			json.add("sharing_link", "https://www.aiscatcher.org");
+
+		json.add("station", station)
+			.add("station_link", station_link)
+			.add("sample_rate", sample_rate)
+			.add("msg_rate", hist_second.getAverage())
+			.add("vessel_count", ships.getCount())
+			.add("vessel_max", ships.getMaxCount())
+			.add("product", product)
+			.add("vendor", vendor)
+			.add("serial", serial)
+			.add("model", model)
+			.add("build_date", std::string(__DATE__))
+			.add("build_version", std::string(VERSION))
+			.add("build_describe", std::string(VERSION_DESCRIBE))
+			.add("run_time", std::to_string((long int)time(nullptr) - (long int)time_start))
+			.add("memory", Util::Helper::getMemoryConsumption())
+			.add("os", os)
+			.add("hardware", hardware)
+			.add("received", received_str)
+			.end();
+
+		Response(c, "application/json", json.str(), use_zlib & gzip);
 	}
 	else if (r == "/api/ships.json" || r == "/ships.json")
 	{
@@ -751,7 +752,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	{
 		std::stringstream ss(a);
 		std::string mmsi_str;
-		std::string content = "{";
+		JSON::JSONBuilder json;
+		json.start();
 		int count = 0;
 		const int MAX_MMSI_COUNT = 100; // Limit number of MMSIs to prevent DoS
 
@@ -768,9 +770,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 				int mmsi = std::stoi(mmsi_str);
 				if (mmsi >= 1 && mmsi <= 999999999)
 				{
-					if (content.length() > 1)
-						content += ",";
-					content += "\"" + std::to_string(mmsi) + "\":" + ships.getPathJSON(mmsi);
+					json.addRaw(std::to_string(mmsi), ships.getPathJSON(mmsi));
 				}
 			}
 			catch (const std::invalid_argument &)
@@ -782,8 +782,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 				Error() << "Server - path MMSI out of range: " << mmsi_str;
 			}
 		}
-		content += "}";
-		Response(c, "application/json", content, use_zlib & gzip);
+		json.end();
+		Response(c, "application/json", json.str(), use_zlib & gzip);
 	}
 	else if (r == "/api/allpath.json")
 	{
@@ -901,19 +901,17 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/history_full.json")
 	{
+		JSON::JSONBuilder json;
+		json.start()
+			.addRaw("second", hist_second.toJSON())
+			.addRaw("minute", hist_minute.toJSON())
+			.addRaw("hour", hist_hour.toJSON())
+			.addRaw("day", hist_day.toJSON())
+			.end()
+			.nl()
+			.nl();
 
-		std::string content = "{";
-		content += "\"second\":";
-		content += hist_second.toJSON();
-		content += ",\"minute\":";
-		content += hist_minute.toJSON();
-		content += ",\"hour\":";
-		content += hist_hour.toJSON();
-		content += ",\"day\":";
-		content += hist_day.toJSON();
-		content += "}\n\n";
-
-		Response(c, "application/json", content, use_zlib & gzip);
+		Response(c, "application/json", json.str(), use_zlib & gzip);
 	}
 	else if (r.substr(0, 6) == "/tiles")
 	{
@@ -998,13 +996,11 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "STATION")
 	{
-		station.clear();
-		JSON::StringBuilder::stringify(arg, station);
+		station = arg;
 	}
 	else if (option == "STATION_LINK")
 	{
-		station_link.clear();
-		JSON::StringBuilder::stringify(arg, station_link);
+		station_link = arg;
 	}
 	else if (option == "LAT")
 	{

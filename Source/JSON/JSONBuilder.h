@@ -79,7 +79,7 @@ class JSONBuilder {
         writeRaw(p, (tmp + 23) - p);
     }
 
-    void writeVal(double v) { ensure(32); cursor += std::snprintf(&buf[cursor], 32, "%.6g", v); }
+    void writeVal(double v) { ensure(32); cursor += std::snprintf(&buf[cursor], 32, "%.8g", v); }
     void writeVal(bool v) { ensure(5); writeRaw(v ? "true" : "false", v ? 4 : 5); }
     void writeVal(const std::string& v) { escapeString(v.data(), v.size()); }
     void writeVal(const char* v) { v ? escapeString(v, std::strlen(v)) : writeRaw("null", 4); }

@@ -47,6 +47,7 @@
 
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
+#include "JSON/JSONBuilder.h"
 #include "MsgOut.h"
 
 namespace IO

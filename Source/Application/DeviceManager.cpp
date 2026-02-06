@@ -21,6 +21,7 @@
 #include "Logger.h"
 #include "Parse.h"
 #include "StringBuilder.h"
+#include "JSON/JSONBuilder.h"
 
 std::vector<Device::Description> DeviceManager::device_list;
 
@@ -171,7 +172,9 @@ void DeviceManager::printAvailableDevices(bool JSON)
 	}
 	else
 	{
-		std::cout << "{\"devices\":[";
+		JSON::JSONBuilder json;
+		json.start()
+			.key("devices").startArray();
 
 		for (int i = 0; i < device_list.size(); i++)
 		{
@@ -179,18 +182,15 @@ void DeviceManager::printAvailableDevices(bool JSON)
 			std::string serial = device_list[i].getSerial();
 			std::string name = type + " [" + serial + "]";
 
-			// Properly escape JSON strings
-			std::string type_escaped = JSON::StringBuilder::stringify(type, false);
-			std::string serial_escaped = JSON::StringBuilder::stringify(serial, false);
-			std::string name_escaped = JSON::StringBuilder::stringify(name, false);
-
-			std::cout << "{\"input\":\"" + type_escaped;
-			std::cout << "\",\"serial\":\"" + serial_escaped;
-			std::cout << "\",\"name\":\"" + name_escaped + "\"";
-
-			std::cout << "}" << (i == device_list.size() - 1 ? "" : ",");
+			json.start()
+				.add("input", type)
+				.add("serial", serial)
+				.add("name", name)
+				.end();
 		}
-		std::cout << "]}\n";
+
+		json.endArray().end().nl();
+		std::cout << json.str();
 	}
 }
 

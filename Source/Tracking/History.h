@@ -22,6 +22,7 @@
 #include <memory>
 
 #include "Statistics.h"
+#include "JSON/JSONBuilder.h"
 
 template <int N, int INTERVAL>
 class History : public StreamIn<JSON::JSON> {
@@ -156,14 +157,16 @@ public:
 	std::string toJSON() {
 		std::lock_guard<std::mutex> l{ this->mtx };
 
-		std::string content;
+		JSON::JSONBuilder json;
 		long int tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
 
-		content += "{\"time\":[";
+		json.start()
+			.key("time").startArray();
+
 		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
 			bool new_tm = history[idx].time >= tm;
 
-			content += std::to_string(i - N) + ",";
+			json.value(i - N);
 
 			if (new_tm) {
 				if (idx == start) break;
@@ -171,12 +174,13 @@ public:
 			}
 			tm--;
 		}
-		if (content[content.size() - 1] == ',') content.pop_back();
-		content += "],\"stat\":[";
+
+		json.endArray()
+			.key("stat").startArray();
 
 		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
 			bool empty = history[idx].time < tm;
-			content += history[idx].stat.toJSON(empty) + ",";
+			json.valueRaw(history[idx].stat.toJSON(empty));
 
 			if (!empty) {
 				if (idx == start) break;
@@ -184,8 +188,10 @@ public:
 			}
 			tm--;
 		}
-		if (content[content.size() - 1] == ',') content.pop_back();
-		content += "]}";
-		return content;
+
+		json.endArray()
+			.end();
+
+		return json.str();
 	}
 };

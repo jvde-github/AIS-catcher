@@ -2,6 +2,7 @@
 
 #include "ADSB.h"
 #include "Stream.h"
+#include "JSON/JSONBuilder.h"
 
 class PlaneDB : public StreamIn<Plane::ADSB>
 {
@@ -439,13 +440,13 @@ public:
     {
         std::lock_guard<std::mutex> lock(mtx);
 
-        const std::string null_str = "null";
-        const std::string comma = ",";
-        std::string content = "{\"count\":" + std::to_string(count) + ",\"values\":[";
-
+        JSON::JSONBuilder json;
         std::time_t now = std::time(nullptr);
         int ptr = first;
-        std::string delim = "";
+
+        json.start()
+            .add("count", count)
+            .key("values").startArray();
 
         while (ptr != -1)
         {
@@ -463,34 +464,51 @@ public:
 
                 if (time_since_update <= 60 || (time_since_update <= 300 && plane.airborne == 0))
                 {
-                    content += delim + "[" +
-                               std::to_string(plane.hexident) + comma +
-                               (plane.lat != LAT_UNDEFINED ? std::to_string(plane.lat) : null_str) + comma +
-                               (plane.lon != LON_UNDEFINED ? std::to_string(plane.lon) : null_str) + comma +
-                               (plane.altitude != ALTITUDE_UNDEFINED ? std::to_string(plane.altitude) : null_str) + comma +
-                               (plane.speed != SPEED_UNDEFINED ? std::to_string(plane.speed) : null_str) + comma +
-                               (plane.heading != HEADING_UNDEFINED ? std::to_string(plane.heading) : null_str) + comma +
-                               (plane.vertrate != VERT_RATE_UNDEFINED ? std::to_string(plane.vertrate) : null_str) + comma +
-                               (plane.squawk != SQUAWK_UNDEFINED ? std::to_string(plane.squawk) : null_str) + comma +
-                               std::string("\"") + plane.callsign + "\"" + comma +
-                               std::to_string(plane.airborne) + comma + std::to_string(plane.nMessages) + comma + std::to_string(time_since_update) + comma +
-                               (plane.category != CATEGORY_UNDEFINED ? std::to_string(plane.category) : null_str) + comma +
-                               (plane.signalLevel != LEVEL_UNDEFINED ? std::to_string(plane.signalLevel) : null_str) + comma +
-                               (plane.country_code[0] != ' ' ? "\"" + std::string(plane.country_code, 2) + "\"" : null_str) + comma +
-                               (plane.distance != DISTANCE_UNDEFINED ? std::to_string(plane.distance) : null_str) + comma +
-                               std::to_string(plane.message_types) + comma + std::to_string(plane.message_subtypes) + comma +
-                               std::to_string(plane.group_mask) + comma + std::to_string(plane.last_group) + comma +
-                               (plane.angle != ANGLE_UNDEFINED ? std::to_string(plane.angle) : null_str) +
-                               "]";
-
-                    delim = comma;
+                    json.startArray()
+                        .value(plane.hexident);
+                    
+                    (plane.lat != LAT_UNDEFINED) ? json.value(plane.lat) : json.valueNull();
+                    (plane.lon != LON_UNDEFINED) ? json.value(plane.lon) : json.valueNull();
+                    (plane.altitude != ALTITUDE_UNDEFINED) ? json.value(plane.altitude) : json.valueNull();
+                    (plane.speed != SPEED_UNDEFINED) ? json.value(plane.speed) : json.valueNull();
+                    (plane.heading != HEADING_UNDEFINED) ? json.value(plane.heading) : json.valueNull();
+                    (plane.vertrate != VERT_RATE_UNDEFINED) ? json.value(plane.vertrate) : json.valueNull();
+                    (plane.squawk != SQUAWK_UNDEFINED) ? json.value(plane.squawk) : json.valueNull();
+                    
+                    json.value(plane.callsign)
+                        .value(plane.airborne)
+                        .value(plane.nMessages)
+                        .value(time_since_update);
+                    
+                    (plane.category != CATEGORY_UNDEFINED) ? json.value(plane.category) : json.valueNull();
+                    (plane.signalLevel != LEVEL_UNDEFINED) ? json.value(plane.signalLevel) : json.valueNull();
+                    
+                    if (plane.country_code[0] != ' ')
+                        json.value(std::string(plane.country_code, 2));
+                    else
+                        json.valueNull();
+                    
+                    (plane.distance != DISTANCE_UNDEFINED) ? json.value(plane.distance) : json.valueNull();
+                    
+                    json.value(plane.message_types)
+                        .value(plane.message_subtypes)
+                        .value(plane.group_mask)
+                        .value(plane.last_group);
+                    
+                    (plane.angle != ANGLE_UNDEFINED) ? json.value(plane.angle) : json.valueNull();
+                    
+                    json.endArray();
                 }
             }
             ptr = items[ptr].time_ll.next;
         }
 
-        content += "],\"error\":false}\n\n";
-        return content;
+        json.endArray()
+            .add("error", false)
+            .end()
+            .nl().nl();
+
+        return json.str();
     }
 
     int getFirst() const { return first; }

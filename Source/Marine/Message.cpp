@@ -18,6 +18,7 @@
 #include "Message.h"
 #include "Parse.h"
 #include "Helper.h"
+#include "JSON/JSONBuilder.h"
 
 namespace AIS
 {
@@ -79,60 +80,53 @@ namespace AIS
 
 	std::string Message::getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ssl, uint32_t ipv4, const std::string &uuid) const
 	{
-		std::stringstream ss;
+		JSON::JSONBuilder json;
 
-		ss << "{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":" << version << ",\"driver\":" << (int)driver << ",\"hardware\":\"" << hardware << "\",\"channel\":\"" << getChannel() << "\",\"repeat\":" << repeat();
+		json.start()
+			.add("class", "AIS")
+			.add("device", "AIS-catcher")
+			.add("version", version)
+			.add("driver", (int)driver)
+			.add("hardware", hardware)
+			.add("channel", std::string(1, getChannel()))
+			.add("repeat", repeat());
 
 		if (include_ssl)
-			ss << ",\"ssc\":" << start_idx << ",\"sl\":" << (end_idx - start_idx);
+			json.add("ssc", start_idx).add("sl", (end_idx - start_idx));
 
 		if (status)
-		{
-			ss << ",\"msg_status\":" << status;
-		}
+			json.add("msg_status", status);
 
 		if (mode & 2)
 		{
-			ss << ",\"rxuxtime\":" << getRxTimeUnix();
-			ss << ",\"rxtime\":\"" << getRxTime() << "\"";
+			json.add("rxuxtime", getRxTimeUnix())
+				.add("rxtime", getRxTime());
 		}
 
 		if (!uuid.empty())
-			ss << ",\"uuid\":\"" << uuid << "\"";
+			json.add("uuid", uuid);
 
 		if (ipv4)
-			ss << ",\"ipv4\":" << ipv4;
+			json.add("ipv4", ipv4);
 
 		if (mode & 1)
 		{
-			ss << ",\"signalpower\":";
-			if (level == LEVEL_UNDEFINED)
-				ss << "null";
-			else
-				ss << level;
-			ss << ",\"ppm\":";
-			if (ppm == PPM_UNDEFINED)
-				ss << "null";
-			else
-				ss << ppm;
+			json.addOrNull("signalpower", level, LEVEL_UNDEFINED)
+				.addOrNull("ppm", ppm, PPM_UNDEFINED);
 		}
 
 		if (getStation())
-			ss << ",\"station_id\":" << getStation();
+			json.add("station_id", getStation());
 
 		if (getLength() > 0)
-			ss << ",\"mmsi\":" << mmsi() << ",\"type\":" << type();
+			json.add("mmsi", mmsi()).add("type", type());
 
-		ss << ",\"nmea\":[";
-		const char *delim = "";
+		json.key("nmea").startArray();
 		for (const auto &n : NMEA)
-		{
-			ss << delim << "\"" << n << "\"";
-			delim = ",";
-		}
-		ss << "]}";
+			json.value(n);
+		json.endArray().end();
 
-		return ss.str();
+		return json.str();
 	}
 
 	std::string Message::getNMEATagBlock() const

@@ -26,6 +26,7 @@
 #include "Keys.h"
 #include "JSON.h"
 #include "StringBuilder.h"
+#include "JSONBuilder.h"
 #include "Ships.h"
 
 struct PathPoint
@@ -97,7 +98,6 @@ class DB : public StreamIn<JSON::JSON>,
 
 	static void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing);
 
-	void getShipJSON(const Ship &ship, std::string &content, long int now);
 	std::string getSinglePathJSON(int);
 	std::string getSinglePathGeoJSON(int);
 	bool isNextPathPoint(int idx, uint32_t mmsi, int count) { return idx != -1 && paths[idx].mmsi == mmsi && paths[idx].count < count; }

@@ -25,6 +25,8 @@
 #include "PackedInt.h"
 #include "Serialize.h"
 
+namespace JSON { class JSONBuilder; }
+
 const int CLASS_A_MASK = (1 << 1) | (1 << 2) | (1 << 3);
 const int CLASS_B_MASK = (1 << 18) | (1 << 19);
 
@@ -56,7 +58,9 @@ struct Ship
     void setType();
     void Serialize(std::vector<char> &v) const;
     bool getKML(std::string &) const;
-    bool getGeoJSON(std::string &) const;
+    void getGeoJSON(JSON::JSONBuilder &json) const;
+    void toJSON(JSON::JSONBuilder &json, long int delta_time, float db_lat = LAT_UNDEFINED, float db_lon = LON_UNDEFINED) const;
+    void toJSONArray(JSON::JSONBuilder &json, long int delta_time, float db_lat = LAT_UNDEFINED, float db_lon = LON_UNDEFINED) const;
 
     // File persistence functions
     bool Save(std::ofstream &file) const;
