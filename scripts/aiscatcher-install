@@ -34,13 +34,15 @@ Usage: sudo $0 [OPTIONS]
 
 Options:
   -p, --package    Install from pre-built package (faster, recommended)
+  -b, --branch     Specify git branch to clone (default: main)
   --no-systemd     Skip systemd service installation (useful for containers)
   --no-user        Skip user creation and run as root (useful for containers)
   -h, --help       Display this help message
 
 Examples:
   sudo $0 --package                    # Install from pre-built package
-  sudo $0                              # Build and install from source
+  sudo $0                              # Build and install from source (main branch)
+  sudo $0 -b develop                   # Build from develop branch
   sudo $0 --no-systemd --no-user       # Docker/container installation
 
 For more information, visit: https://docs.aiscatcher.org/
@@ -78,6 +80,7 @@ readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 INSTALL_PACKAGE=false
 SKIP_SYSTEMD=false
 SKIP_USER=false
+BRANCH="main"
 SERVICE_STATE=""
 
 # Color constants (using ANSI escape codes)
@@ -285,9 +288,9 @@ install_sdr_libraries_from_source() {
 
 # Build AIS-catcher from source
 build_ais_catcher_from_source() {
-    log "INFO" "Building AIS-catcher"
+    log "INFO" "Building AIS-catcher from branch: ${BRANCH}"
 
-    git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 || error_exit "Failed to download AIS-catcher"
+    git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 --branch "${BRANCH}" || error_exit "Failed to download AIS-catcher (branch: ${BRANCH})"
     cd AIS-catcher
 
     # Set environment variables to find custom libraries
@@ -611,6 +614,15 @@ parse_arguments() {
                 log "INFO" "Package installation requested"
                 INSTALL_PACKAGE=true
                 shift
+                ;;
+            -b|--branch)
+                if [[ -n "${2:-}" && "${2:0:1}" != "-" ]]; then
+                    BRANCH="$2"
+                    log "INFO" "Will clone branch: ${BRANCH}"
+                    shift 2
+                else
+                    error_exit "Option -b/--branch requires a branch name argument"
+                fi
                 ;;
             --no-systemd)
                 log "INFO" "Skipping systemd service installation"
