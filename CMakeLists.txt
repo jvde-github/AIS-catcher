@@ -908,7 +908,11 @@ set(CPP
     Source/Application/Prometheus.cpp
     Source/Application/Receiver.cpp
     Source/Application/WebDB.cpp
-    Source/Application/WebViewer.cpp
+    Source/WebViewer/WebViewer.cpp
+    Source/WebViewer/SSEStreamer.cpp
+    Source/WebViewer/Persistence.cpp
+    Source/WebViewer/Configuration.cpp
+    Source/WebViewer/RouteHandlers.cpp
     Source/DBMS/PostgreSQL.cpp
     Source/Device/AIRSPY.cpp
     Source/Device/AIRSPYHF.cpp
@@ -961,13 +965,13 @@ set(CPP
 )
 
 set(HEADER
-    Source/Application/AIS-catcher.h Source/Application/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Application/WebDB.h Source/Library/Logger.h Source/Application/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/DBMS/PostgreSQL.h Source/IO/HTTPClient.h Source/Application/MapTiles.h Source/Aviation/Beast.h Source/JSON/JSONBuilder.h
+    Source/Application/AIS-catcher.h Source/Application/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Application/WebDB.h Source/Library/Logger.h Source/WebViewer/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/DBMS/PostgreSQL.h Source/IO/HTTPClient.h Source/Application/MapTiles.h Source/Aviation/Beast.h Source/JSON/JSONBuilder.h
     Source/Device/Device.h Source/Device/FileWAV.h Source/Device/RTLTCP.h Source/Device/UDP.h Source/DSP/Demod.h Source/DSP/Filters.h Source/Marine/AIS.h Source/Marine/Message.h Source/Marine/MessageHistory.h Source/Marine/NMEA.h Source/Library/ZIP.h Source/Library/Signals.h Source/Device/SoapySDR.h Source/JSON/JSONAIS.h Source/JSON/JSON.h Source/Aviation/Basestation.h Source/Aviation/ADSB.h
     Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/HYDRASDR.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/StringBuilder.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
     Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
     Source/Utilities/Parse.h Source/Utilities/Convert.h Source/Utilities/Helper.h Source/Utilities/Serialize.h Source/Utilities/PackedInt.h Source/Utilities/TemplateString.h)
 
-set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./Source/Marine ./Source/Aviation ./Source/DSP ./Source/Application ./Source/IO ./Source/JSON ./Source/Utilities)
+set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./Source/Marine ./Source/Aviation ./Source/DSP ./Source/Application ./Source/IO ./Source/JSON ./Source/Utilities ./Source/WebViewer)
 
 # Executable
 
