@@ -199,6 +199,9 @@ class WebViewer : public Setting
 	void handleAllPathGeoJSON(IO::TCPServerConnection &c, bool gzip);
 	void handleHistoryFull(IO::TCPServerConnection &c, bool gzip);
 
+	// Helper functions
+	void sendError(IO::TCPServerConnection &c, const std::string &message, bool gzip);
+
 	// NMEA decoder utility
 	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);
 
