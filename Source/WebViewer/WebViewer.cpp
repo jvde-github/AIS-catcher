@@ -90,37 +90,13 @@ std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enha
 	return decoder.decode(nmea_input);
 }
 
-std::vector<std::string> WebViewer::parsePath(const std::string &url)
-{
-	std::vector<std::string> path;
-	static const std::string pattern = "/";
-
-	const auto pos = url.find(pattern);
-	if (pos != 0)
-		return path;
-
-	std::string remainder = url.substr(pattern.length());
-	std::stringstream ss(remainder);
-	std::string segment;
-
-	while (std::getline(ss, segment, '/'))
-	{
-		if (!segment.empty())
-		{
-			path.push_back(segment);
-		}
-	}
-
-	return path;
-}
-
 bool WebViewer::parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y)
 {
 	static const std::string pattern = "/tiles/";
 
 	layerID.clear();
 
-	const std::vector<std::string> segments = parsePath(url);
+	const std::vector<std::string> segments = IO::HTTPServer::parsePath(url);
 
 	if (segments.size() != 5 && segments[0] != "tiles")
 		return false;

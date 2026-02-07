@@ -293,4 +293,28 @@ namespace IO
 	{
 		Response(req, MIME::JSON, "{\"error\":\"" + message + "\"}");
 	}
+
+	std::vector<std::string> HTTPServer::parsePath(const std::string &url)
+	{
+		std::vector<std::string> path;
+		static const std::string pattern = "/";
+
+		const auto pos = url.find(pattern);
+		if (pos != 0)
+			return path;
+
+		std::string remainder = url.substr(pattern.length());
+		std::stringstream ss(remainder);
+		std::string segment;
+
+		while (std::getline(ss, segment, '/'))
+		{
+			if (!segment.empty())
+			{
+				path.push_back(segment);
+			}
+		}
+
+		return path;
+	}
 }

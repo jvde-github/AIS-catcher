@@ -22,8 +22,6 @@
     <ClCompile Include="..\Source\Application\Config.cpp" />
     <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
     <ClCompile Include="..\Source\Application\Main.cpp" />
-    <ClCompile Include="..\Source\Application\MapTiles.cpp" />
-    <ClCompile Include="..\Source\Application\Prometheus.cpp" />
     <ClCompile Include="..\Source\Application\Receiver.cpp" />
     <ClCompile Include="..\Source\Application\WebDB.cpp" />
     <ClCompile Include="..\Source\WebViewer\WebViewer.cpp" />
@@ -31,6 +29,8 @@
     <ClCompile Include="..\Source\WebViewer\Persistence.cpp" />
     <ClCompile Include="..\Source\WebViewer\Configuration.cpp" />
     <ClCompile Include="..\Source\WebViewer\RouteHandlers.cpp" />
+    <ClCompile Include="..\Source\WebViewer\MapTiles.cpp" />
+    <ClCompile Include="..\Source\WebViewer\Prometheus.cpp" />
     <ClCompile Include="..\Source\DBMS\PostgreSQL.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPYHF.cpp" />
@@ -83,7 +83,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Application\AIS-catcher.h" />
-    <ClInclude Include="..\Source\Application\Prometheus.h" />
     <ClInclude Include="..\Source\Application\Config.h" />
     <ClInclude Include="..\Source\Application\DeviceManager.h" />
     <ClInclude Include="..\Source\Application\WebDB.h" />
@@ -91,12 +90,8 @@
     <ClInclude Include="..\Source\WebViewer\WebViewer.h" />
     <ClInclude Include="..\Source\WebViewer\SSEStreamer.h" />
     <ClInclude Include="..\Source\WebViewer\WebViewerLogger.h" />
-    <ClInclude Include="..\Source\Application\Receiver.h" />
-    <ClInclude Include="..\Source\Tracking\Ships.h" />
-    <ClInclude Include="..\Source\Tracking\DB.h" />
-    <ClInclude Include="..\Source\DBMS\PostgreSQL.h" />
-    <ClInclude Include="..\Source\IO\HTTPClient.h" />
-    <ClInclude Include="..\Source\Application\MapTiles.h" />
+    <ClInclude Include="..\Source\WebViewer\Prometheus.h" />
+    <ClInclude Include="..\Source\WebViewer\MapTiles.h" />
     <ClInclude Include="..\Source\Aviation\Beast.h" />
     <ClInclude Include="..\Source\Device\Device.h" />
     <ClInclude Include="..\Source\Device\FileWAV.h" />

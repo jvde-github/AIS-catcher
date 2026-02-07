@@ -91,7 +91,7 @@ void WebViewer::handleRequest(IO::HTTPRequest &req)
 		req.path = cdn.empty() ? "/index.html" : "/index_local.html";
 	}
 
-	// Try router table (O(1) lookup)
+	// Try router table
 	auto it = routeTable.find(req.path);
 	if (it != routeTable.end())
 	{
@@ -112,6 +112,11 @@ void WebViewer::handleRequest(IO::HTTPRequest &req)
 	else if (req.path.rfind("/", 0) == 0)
 	{
 		handleStaticFile(req);
+	}
+	else
+	{
+		// Malformed path
+		server.ResponseBadRequest(req, "Invalid path format");
 	}
 }
 
@@ -386,15 +391,15 @@ void WebViewer::handleStaticFile(IO::HTTPRequest &req)
 		if (!req.accept_gzip)
 		{
 			Error() << "Client requested static file without gzip support: " << filename;
-			server.Response(req, IO::MIME::PLAIN, "Error: This server serves pre-compressed content. Please use a client that supports gzip encoding.");
+			server.ResponseError(req, "This server serves pre-compressed content. Please use a client that supports gzip encoding.");
 			return;
 		}
 		server.ResponseRaw(req, file.mime_type, (char *)file.data, file.size, true, std::string(file.mime_type) != "text/html");
 	}
 	else
 	{
-		Error() << "File not found: " << filename << "\n";
-		server.Request(req.connection, filename, false);
+		Error() << "File not found: " << filename;
+		server.ResponseNotFound(req, "File not found");
 	}
 }
 

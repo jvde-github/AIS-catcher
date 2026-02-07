@@ -166,6 +166,9 @@ class SSEConnection
 		void ResponseBadRequest(HTTPRequest &req, const std::string &message);
 		void ResponseError(HTTPRequest &req, const std::string &message);
 
+		// Utility: Parse URL path into segments
+		static std::vector<std::string> parsePath(const std::string &url);
+
 		void cleanupSSE()
 		{
 			for (auto it = sse.begin(); it != sse.end();)
