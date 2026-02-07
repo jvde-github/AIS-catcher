@@ -126,25 +126,25 @@ namespace Device
 
 	void HYDRASDR::setLNA_AGC(int a)
 	{
-		if (hydrasdr_set_lna_agc(dev, a) != HYDRASDR_SUCCESS)
+		if (hydrasdr_set_gain(dev, HYDRASDR_GAIN_TYPE_LNA_AGC, a) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set LNA AGC.");
 	}
 
 	void HYDRASDR::setMixer_AGC(int a)
 	{
-		if (hydrasdr_set_mixer_agc(dev, a) != HYDRASDR_SUCCESS)
+		if (hydrasdr_set_gain(dev, HYDRASDR_GAIN_TYPE_MIXER_AGC, a) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set MIXER AGC.");
 	}
 
 	void HYDRASDR::setLNA_Gain(int a)
 	{
-		if (hydrasdr_set_lna_gain(dev, a) != HYDRASDR_SUCCESS)
+		if (hydrasdr_set_gain(dev, HYDRASDR_GAIN_TYPE_LNA, a) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set LNA gain.");
 	}
 
 	void HYDRASDR::setMixer_Gain(int a)
 	{
-		if (hydrasdr_set_mixer_gain(dev, a) != HYDRASDR_SUCCESS)
+		if (hydrasdr_set_gain(dev, HYDRASDR_GAIN_TYPE_MIXER, a) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set Mixer gain.");
 	}
 
@@ -156,19 +156,19 @@ namespace Device
 
 	void HYDRASDR::setVGA_Gain(int a)
 	{
-		if (hydrasdr_set_vga_gain(dev, a) != HYDRASDR_SUCCESS)
+		if (hydrasdr_set_gain(dev, HYDRASDR_GAIN_TYPE_VGA, a) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set VGA gain.");
 	}
 
 	void HYDRASDR::setSensitivity_Gain(int a)
 	{
-		if (hydrasdr_set_sensitivity_gain(dev, a) != HYDRASDR_SUCCESS)
+		if (hydrasdr_set_gain(dev, HYDRASDR_GAIN_TYPE_SENSITIVITY, a) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set Sensitivity gain.");
 	}
 
 	void HYDRASDR::setLinearity_Gain(int a)
 	{
-		if (hydrasdr_set_linearity_gain(dev, a) != HYDRASDR_SUCCESS)
+		if (hydrasdr_set_gain(dev, HYDRASDR_GAIN_TYPE_LINEARITY, a) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set Linearity gain.");
 	}
 
@@ -220,10 +220,8 @@ namespace Device
 
 				// Register 10 (0x0A): HPF corner frequency selection
 				// Register 11 (0x0B): LPF corner frequency selection
-				hydrasdr_r82x_write(dev, 10, 0xB0 | (15 - j));
-				hydrasdr_r82x_write(dev, 11, 0xE0 | (15 - i));
-
-				std::cerr << "HYDRASDR: setting tuner bandwidth to " << tuner_bandwidth << " Hz, using HF range " << r82x_hf[j] << " Hz to " << r82x_lf[i] << " Hz." << std::endl;
+			hydrasdr_rf_frontend_write(dev, 10, 0xB0 | (15 - j));
+			hydrasdr_rf_frontend_write(dev, 11, 0xE0 | (15 - i));
 			}
 		}
 	}
