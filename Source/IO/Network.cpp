@@ -116,7 +116,6 @@ namespace IO
 			send_list.splice(send_list.begin(), msg_list);
 		}
 
-		oss.str("");
 		int r;
 
 		if (protocol == PROTOCOL::AISCATCHER || protocol == PROTOCOL::AIRFRAMES)
@@ -150,9 +149,8 @@ namespace IO
 		}
 
 		json.nl().endArray().end().nl();
-		oss << json.str();
 
-		r = http.Post(oss.str(), gzip, false, "");
+		r = http.Post(json.str(), gzip, false, "");
 	}
 	else if (PROTOCOL::APRS == protocol)
 	{
@@ -178,18 +176,18 @@ namespace IO
 		}
 
 		json.nl().endArray().end().endArray().end();
-		oss << json.str();
 
-		r = http.Post(oss.str(), gzip, true, "jsonais");
+		r = http.Post(json.str(), gzip, true, "jsonais");
 	}
 		else
 		{
+			std::string payload;
 			for (const auto &m : send_list)
 			{
-				oss << m << "\n";
+				payload += m + "\n";
 			}
 
-			r = http.Post(oss.str(), gzip, false, "");
+			r = http.Post(payload, gzip, false, "");
 		}
 
 		if (r < 200 || r > 299)
