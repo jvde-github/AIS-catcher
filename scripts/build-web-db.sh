@@ -2,7 +2,7 @@
 
 # Check if directory argument is provided, otherwise use current directory
 BASE_DIR="${1:-.}"
-OUTPUT_FILE="Source/Application/WebDB.cpp"
+OUTPUT_FILE="Source/WebViewer/WebDB.cpp"
 
 # Remove existing output file if it exists
 if [ -f "$OUTPUT_FILE" ]; then
