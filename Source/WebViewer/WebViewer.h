@@ -36,61 +36,8 @@
 #include "History.h"
 #include "Receiver.h"
 #include "MapTiles.h"
-
-class SSEStreamer : public StreamIn<JSON::JSON>
-{
-	IO::HTTPServer *server = nullptr;
-
-	unsigned index = 0;
-	bool obfuscate = true;
-
-	void obfuscateNMEA(std::string &nmea);
-
-public:
-	virtual ~SSEStreamer() = default;
-
-	void Receive(const JSON::JSON *data, int len, TAG &tag);
-	void setSSE(IO::HTTPServer *s) { server = s; }
-	void setObfuscate(bool o) { obfuscate = o; }
-};
-
-class WebViewerLogger
-{
-protected:
-	IO::HTTPServer *server = nullptr;
-	Logger::LogCallback logCallback;
-	int cb = -1;
-
-public:
-	void Start()
-	{
-		logCallback = [this](const LogMessage &msg)
-		{
-			if (server)
-			{
-				server->sendSSE(3, "log", msg.toJSON());
-			}
-		};
-
-		cb = Logger::getInstance().addLogListener(logCallback);
-	}
-
-	void Stop()
-	{
-		if (cb != -1)
-		{
-			Logger::getInstance().removeLogListener(cb);
-			cb = -1;
-		}
-	}
-
-	virtual ~WebViewerLogger() = default;
-
-	void setSSE(IO::HTTPServer *s)
-	{
-		server = s;
-	}
-};
+#include "SSEStreamer.h"
+#include "WebViewerLogger.h"
 
 class WebViewer : public Setting
 {

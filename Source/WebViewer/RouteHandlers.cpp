@@ -36,6 +36,117 @@ static const std::string MIME_PNG = "image/png";
 
 extern IO::OutputMessage *commm_feed;
 
+void WebViewer::sendError(IO::TCPServerConnection &c, const std::string &message, bool gzip)
+{
+	server.Response(c, MIME_JSON, "{\"error\":\"" + message + "\"}", use_zlib & gzip);
+}
+
+void WebViewer::initializeRoutes()
+{
+	// Register all routes in the table for O(1) lookup
+	routeTable["/api/stat.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIStats(c, gzip); };
+	routeTable["/stat.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIStats(c, gzip); };
+	routeTable["/api/ships.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIShips(c, gzip); };
+	routeTable["/ships.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIShips(c, gzip); };
+	routeTable["/api/ships_array.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIShipsArray(c, gzip); };
+	routeTable["/api/planes_array.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIPlanesArray(c, gzip); };
+	routeTable["/sb"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleBinaryShips(c, gzip); };
+	routeTable["/api/ships_full.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIShipsFull(c, gzip); };
+	routeTable["/api/binmsgs.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIBinaryMessages(c, gzip); };
+	routeTable["/custom/plugins.js"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handlePluginsJS(c, gzip); };
+	routeTable["/custom/config.css"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleConfigCSS(c, gzip); };
+	routeTable["/about.md"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAboutMD(c, gzip); };
+	routeTable["/api/path.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIPath(c, args, gzip); };
+	routeTable["/api/allpath.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIAllPath(c, gzip); };
+	routeTable["/api/path.geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIPathGeoJSON(c, args, gzip); };
+	routeTable["/api/allpath.geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIAllPathGeoJSON(c, gzip); };
+	routeTable["/api/message"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIMessage(c, args, gzip); };
+	routeTable["/api/decode"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIDecode(c, args, gzip); };
+	routeTable["/api/vessel"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPIVessel(c, args, gzip); };
+	routeTable["/api/history_full.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleHistoryFull(c, gzip); };
+
+	// Conditional routes - handlers check their enable flags internally
+	routeTable["/kml"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleKML(c, gzip); };
+	routeTable["/metrics"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleMetrics(c, gzip); };
+	routeTable["/api/sse"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPISSE(c, gzip); };
+	routeTable["/api/signal"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPISignal(c, gzip); };
+	routeTable["/api/log"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAPILog(c, gzip); };
+	routeTable["/geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleGeoJSON(c, gzip); };
+	routeTable["/allpath.geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
+	{ handleAllPathGeoJSON(c, gzip); };
+}
+
+void WebViewer::handleRequest(IO::TCPServerConnection &c, const std::string &response, bool gzip)
+{
+	std::string path, args;
+	std::string::size_type pos = response.find('?');
+
+	if (pos != std::string::npos)
+	{
+		path = response.substr(0, pos);
+		args = response.substr(pos + 1);
+	}
+	else
+	{
+		path = response;
+	}
+
+	// Root redirect
+	if (path == "/")
+	{
+		path = cdn.empty() ? "/index.html" : "/index_local.html";
+	}
+
+	// Try router table (O(1) lookup)
+	auto it = routeTable.find(path);
+	if (it != routeTable.end())
+	{
+		it->second(c, args, gzip);
+		return;
+	}
+
+	// Handle prefix-based routes
+	if (!cdn.empty() && path.find("/cdn/") == 0)
+	{
+		handleCDNFile(c, path, gzip);
+	}
+	else if (path.substr(0, 6) == "/tiles")
+	{
+		handleTiles(c, path, gzip);
+	}
+	// Default: static file handler
+	else if (path.rfind("/", 0) == 0)
+	{
+		handleStaticFile(c, path.substr(1), gzip);
+	}
+}
+
 void WebViewer::handleCDNFile(IO::TCPServerConnection &c, const std::string &path, bool gzip)
 {
 	try
@@ -451,4 +562,3 @@ void WebViewer::handleHistoryFull(IO::TCPServerConnection &c, bool gzip)
 		.nl();
 	server.Response(c, "application/json", json.str(), use_zlib & gzip);
 }
-

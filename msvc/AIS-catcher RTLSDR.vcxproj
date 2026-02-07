@@ -89,6 +89,8 @@
     <ClInclude Include="..\Source\Application\WebDB.h" />
     <ClInclude Include="..\Source\Library\Logger.h" />
     <ClInclude Include="..\Source\WebViewer\WebViewer.h" />
+    <ClInclude Include="..\Source\WebViewer\SSEStreamer.h" />
+    <ClInclude Include="..\Source\WebViewer\WebViewerLogger.h" />
     <ClInclude Include="..\Source\Application\Receiver.h" />
     <ClInclude Include="..\Source\Tracking\Ships.h" />
     <ClInclude Include="..\Source\Tracking\DB.h" />
