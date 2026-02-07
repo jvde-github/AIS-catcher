@@ -68,14 +68,14 @@ namespace IO
 		ZIP zip;
 		std::ostringstream oss;
 
-		std::string url, url_json, userpwd;
+		std::string url, userpwd;
 		bool gzip = false, show_response = true;
 		int INTERVAL = 60;
 		int TIMEOUT = 10;
 
-		std::string stationid = "null", lat = "null", lon = "null";
-		std::string model = "null", model_setting = "null";
-		std::string product = "null", vendor = "null", serial = "null", device_setting = "null";
+		std::string stationid, lat, lon;
+		std::string model, model_setting;
+		std::string product, vendor, serial, device_setting;
 
 		enum class PROTOCOL
 		{

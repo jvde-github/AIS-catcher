@@ -126,22 +126,22 @@ namespace IO
 			json.start()
 				.add("protocol", protocol_string)
 				.add("encodetime", now)
-				.addRaw("stationid", stationid)
+				.addStringOrNull("stationid", stationid)
 				.add("station_lat", lat)
 				.add("station_lon", lon)
 				.key("receiver")
 				.start()
 				.add("description", "AIS-catcher " VERSION)
 				.add("version", VERSION_NUMBER)
-				.addRaw("engine", model)
-				.addRaw("setting", model_setting)
+				.addStringOrNull("engine", model)
+				.addStringOrNull("setting", model_setting)
 				.end()
 				.key("device")
 				.start()
-				.addRaw("product", product)
-				.addRaw("vendor", vendor)
-				.addRaw("serial", serial)
-				.addRaw("setting", device_setting)
+				.addStringOrNull("product", product)
+				.addStringOrNull("vendor", vendor)
+				.addStringOrNull("serial", serial)
+				.addStringOrNull("setting", device_setting)
 				.end()
 				.key("msgs")
 				.startArray();
@@ -169,8 +169,8 @@ namespace IO
 				.key("path")
 				.startArray()
 				.start()
-				.addRaw("name", stationid)
-				.addRaw("url", url_json)
+				.addStringOrNull("name", stationid)
+				.addStringOrNull("url", url)
 				.end()
 				.endArray()
 				.key("msgs")
@@ -225,7 +225,6 @@ namespace IO
 		if (option == "URL")
 		{
 			url = arg;
-			url_json = JSON::StringBuilder::stringify(arg);
 			http.setURL(url);
 		}
 		else if (option == "USERPWD")
@@ -235,7 +234,7 @@ namespace IO
 		}
 		else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN")
 		{
-			stationid = JSON::StringBuilder::stringify(arg);
+			stationid = arg;
 		}
 		else if (option == "INTERVAL")
 		{
@@ -247,23 +246,23 @@ namespace IO
 		}
 		else if (option == "MODEL")
 		{
-			model = JSON::StringBuilder::stringify(arg);
+			model = arg;
 		}
 		else if (option == "MODEL_SETTING")
 		{
-			model_setting = JSON::StringBuilder::stringify(arg);
+			model_setting = arg;
 		}
 		else if (option == "PRODUCT")
 		{
-			product = JSON::StringBuilder::stringify(arg);
+			product = arg;
 		}
 		else if (option == "VENDOR")
 		{
-			vendor = JSON::StringBuilder::stringify(arg);
+			vendor = arg;
 		}
 		else if (option == "SERIAL")
 		{
-			serial = JSON::StringBuilder::stringify(arg);
+			serial = arg;
 		}
 		else if (option == "LAT")
 		{
@@ -280,7 +279,7 @@ namespace IO
 		}
 		else if (option == "DEVICE_SETTING")
 		{
-			device_setting = JSON::StringBuilder::stringify(arg);
+			device_setting = arg;
 		}
 		else
 		{

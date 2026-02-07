@@ -23,37 +23,14 @@
 
 namespace JSON {
 
-	// StringBuilder - Build string from JSON object
+	// StringBuilder - Build string from JSON object using JSONBuilder for efficiency
 
-	void StringBuilder::stringify(const std::string& str, std::string& json, bool esc) {
-		if (esc) json += '\"';
-		for (char c : str) {
-			switch (c) {
-			case '\"':
-				json += "\\\"";
-				break;
-			case '\\':
-				json += "\\\\";
-				break;
-			case '\r':			
-			case '\0':				
-				break;
-			case '\n':
-				json += "\\n";
-				break;
-			default:
-				json += c;
-			}
-		}
-		if (esc) json += '\"';
-	}
-
-	void StringBuilder::to_string_enhanced(std::string& json, const Value& v, int key_index) {
-		json += '{';
+	void StringBuilder::to_string_enhanced_internal(const Value& v, int key_index) {
+		builder.start();
 		
 		// Add value
-		json += "\"value\":";
-		to_string(json, v);
+		builder.key("value");
+		to_string_internal(v);
 		
 		// Add metadata if available
 		if (key_index >= 0 && key_index < AIS::KeyInfoMap.size()) {
@@ -61,78 +38,74 @@ namespace JSON {
 			
 			// Add unit if not empty
 			if (info.unit && strlen(info.unit) > 0) {
-				json += ",\"unit\":";
-				stringify(info.unit, json);
+				builder.add("unit", info.unit);
 			}
 			
 			// Add description if not empty
 			if (info.description && strlen(info.description) > 0) {
-				json += ",\"description\":";
-				stringify(info.description, json);
+				builder.add("description", info.description);
 			}
 			
 			// Add lookup value if available
 			if (info.lookup_table && (v.isInt() || v.isFloat())) {
 				int numeric_value = v.isInt() ? v.getInt() : static_cast<int>(v.getFloat());
 				if (numeric_value >= 0 && numeric_value < info.lookup_table->size()) {
-					json += ",\"text\":";
-					stringify((*info.lookup_table)[numeric_value], json);
+					builder.add("text", (*info.lookup_table)[numeric_value]);
 				}
 			}
 		}
 		
-		json += '}';
+		builder.end();
 	}
 
-	void StringBuilder::to_string(std::string& json, const Value& v) {
+	void StringBuilder::to_string_internal(const Value& v) {
 
 		if (v.isString()) {
-			stringify(v.getString(), json);
+			builder.value(v.getString());
 		}
 		else if (v.isObject()) {
-			stringify(v.getObject(), json);
+			stringify_internal(v.getObject());
 		}
 		else if (v.isArrayString()) {
 
 			const std::vector<std::string>& as = v.getStringArray();
-
-			json += '[';
-
-			if (as.size()) {
-				stringify(as[0], json);
-
-				for (int i = 1; i < as.size(); i++) {
-					json += ',';
-					stringify(as[i], json);
-				}
+			builder.startArray();
+			for (const auto& s : as) {
+				builder.value(s);
 			}
-
-			json += ']';
+			builder.endArray();
 		}
 		else if (v.isArray()) {
 
 			const std::vector<Value>& a = v.getArray();
-
-			json += '[';
-
-			bool first = true;
+			builder.startArray();
 			for (const auto& val : a) {
-
-				if (!first) json += ',';
-				first = false;
-
-				to_string(json, val);
+				to_string_internal(val);
 			}
-
-			json += ']';
+			builder.endArray();
 		}
-		else
-			v.to_string(json);
+		else if (v.isInt()) {
+			builder.value(v.getInt());
+		}
+		else if (v.isFloat()) {
+			builder.value(v.getFloat());
+		}
+		else if (v.isBool()) {
+			builder.value(v.getBool());
+		}
+		else {
+			builder.valueNull();
+		}
+	}
+	
+	void StringBuilder::to_string(std::string& json, const Value& v) {
+		builder.clear();
+		to_string_internal(v);
+		json += builder.str();
 	}
 
-	void StringBuilder::stringify(const JSON& object, std::string& json) {
-		bool first = true;
-		json += '{';
+	void StringBuilder::stringify_internal(const JSON& object) {
+		builder.start();
 		for (const Property& p : object.getProperties()) {
 
 			// Skip invalid keys to avoid out-of-bounds access
@@ -141,19 +114,21 @@ namespace JSON {
 			const std::string& key = (*keymap)[p.Key()][dict];
 
 			if (!key.empty()) {
-
-				if (!first) json += ',';
-				first = false;
-
-				json += "\"" + key + "\":";
+				builder.key(key);
 				
 				if (stringify_enhanced) {
-					to_string_enhanced(json, p.Get(), p.Key());
+					to_string_enhanced_internal(p.Get(), p.Key());
 				} else {
-					to_string(json, p.Get());
+					to_string_internal(p.Get());
 				}
 			}
 		}
-		json += '}';
+		builder.end();
+	}
+	
+	void StringBuilder::stringify(const JSON& object, std::string& json) {
+		builder.clear();
+		stringify_internal(object);
+		json += builder.str();
 	}
 }

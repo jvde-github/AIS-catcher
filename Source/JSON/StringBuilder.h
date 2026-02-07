@@ -24,6 +24,7 @@
 
 #include "Common.h"
 #include "JSON.h"
+#include "JSONBuilder.h"
 
 namespace AIS {
 	struct KeyInfo;
@@ -39,28 +40,25 @@ namespace JSON
 		const std::vector<std::vector<std::string>> *keymap = nullptr;
 		int dict = 0;
 		bool stringify_enhanced = false;
+		
+		// Internal builder for efficient string construction
+		JSONBuilder builder;
+		
+		void to_string_internal(const Value &v);
+		void to_string_enhanced_internal(const Value &v, int key_index);
+		void stringify_internal(const JSON &properties);
 
 	public:
 		StringBuilder(const std::vector<std::vector<std::string>> *map, int d) : keymap(map), dict(d) {}
 		StringBuilder(const std::vector<std::vector<std::string>> *map) : keymap(map) {}
 
 		void to_string(std::string &json, const Value &v);
-		void to_string_enhanced(std::string &json, const Value &v, int key_index);
 		void stringify(const JSON &properties, std::string &json);
-		static void stringify(const std::string &str, std::string &json, bool esc = true);
-
-		static std::string stringify(const std::string &str, bool esc = true)
-		{
-			std::string s;
-			stringify(str, s, esc);
-			return s;
-		}
 
 		// dictionary to use
 		void setMap(int d) { dict = d; }
 		
 		// enable/disable enhanced output with metadata
 		void setStringifyEnhanced(bool enhanced) { stringify_enhanced = enhanced; }
-		bool getStringifyEnhanced() const { return stringify_enhanced; }
 	};
 }

@@ -36,7 +36,7 @@
 
 #include "Logger.h"
 #include "Convert.h"
-#include "StringBuilder.h"
+#include "JSONBuilder.h"
 
 std::unique_ptr<Logger> Logger::instance_ = nullptr;
 
@@ -121,10 +121,14 @@ std::string LogMessage::levelToString() const
 
 std::string LogMessage::toJSON() const
 {
-	std::string msg;
-	JSON::StringBuilder::stringify(message, msg);
+	JSON::JSONBuilder json;
+	json.start()
+		.add("level", levelToString())
+		.add("message", message)
+		.add("time", time)
+		.end();
 
-	return "{\"level\":\"" + levelToString() + "\",\"message\":" + msg + ",\"time\":\"" + time + "\"}";
+	return json.str();
 }
 
 Logger &Logger::getInstance()
