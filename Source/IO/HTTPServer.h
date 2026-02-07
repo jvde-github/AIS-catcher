@@ -20,6 +20,7 @@
 #include <thread>
 #include <mutex>
 #include <time.h>
+#include <functional>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -114,8 +115,16 @@ class SSEConnection
 	class HTTPServer : public IO::TCPServer
 	{
 		std::array<std::string, 4> sse_topic = {"aiscatcher", "nmea", "nmea", "log"};
+		std::function<void(IO::TCPServerConnection&, const std::string&, bool)> requestHandler;
 
 	public:
+		void setRequestHandler(std::function<void(IO::TCPServerConnection&, const std::string&, bool)> handler)
+		{
+			requestHandler = std::move(handler);
+		}
+
+		int getNumberOfClients() { return numberOfClients(); }
+
 		virtual void Request(IO::TCPServerConnection &c, const std::string &msg, bool accept_gzip);
 
 		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false);

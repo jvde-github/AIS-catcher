@@ -104,11 +104,18 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &, bool)
+	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &request, bool gzip)
 	{
-		std::string r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 15\r\nConnection: close\r\n\r\nPage not found.";
-		Send(c, r.c_str(), r.length());
-		c.Close();
+		if (requestHandler)
+		{
+			requestHandler(c, request, gzip);
+		}
+		else
+		{
+			std::string r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 15\r\nConnection: close\r\n\r\nPage not found.";
+			Send(c, r.c_str(), r.length());
+			c.Close();
+		}
 	}
 
 	void HTTPServer::Parse(const std::string &s, std::string &get, bool &accept_gzip)

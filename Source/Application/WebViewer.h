@@ -21,6 +21,8 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
+#include <functional>
+#include <unordered_map>
 
 #include "AIS-catcher.h"
 
@@ -88,7 +90,7 @@ public:
 	}
 };
 
-class WebViewer : public IO::HTTPServer, public Setting
+class WebViewer : public Setting
 {
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
 
@@ -142,6 +144,8 @@ class WebViewer : public IO::HTTPServer, public Setting
 	std::condition_variable cv;
 	std::thread backup_thread;
 
+	IO::HTTPServer server;
+
 	void BackupService();
 	void addPlugin(const std::string &str);
 
@@ -156,6 +160,44 @@ class WebViewer : public IO::HTTPServer, public Setting
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
 	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
+
+	// Router table for fast path lookup
+	typedef std::function<void(IO::TCPServerConnection &, const std::string &, bool)> RouteHandler;
+	std::unordered_map<std::string, RouteHandler> routeTable;
+	void initializeRoutes();
+
+	// HTTP request handler
+	void handleRequest(IO::TCPServerConnection &c, const std::string &r, bool gzip);
+	
+	// Route handlers
+	void handleCDNFile(IO::TCPServerConnection &c, const std::string &path, bool gzip);
+	void handleAPIStats(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIShips(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIPath(IO::TCPServerConnection &c, const std::string &args, bool gzip);
+	void handleAPIPathGeoJSON(IO::TCPServerConnection &c, const std::string &args, bool gzip);
+	void handleAPIMessage(IO::TCPServerConnection &c, const std::string &args, bool gzip);
+	void handleAPIDecode(IO::TCPServerConnection &c, const std::string &args, bool gzip);
+	void handleAPIVessel(IO::TCPServerConnection &c, const std::string &args, bool gzip);
+	void handleTiles(IO::TCPServerConnection &c, const std::string &path, bool gzip);
+	void handleStaticFile(IO::TCPServerConnection &c, const std::string &filename, bool gzip);
+	void handleKML(IO::TCPServerConnection &c, bool gzip);
+	void handleMetrics(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIShipsArray(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIPlanesArray(IO::TCPServerConnection &c, bool gzip);
+	void handleBinaryShips(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIShipsFull(IO::TCPServerConnection &c, bool gzip);
+	void handleAPISSE(IO::TCPServerConnection &c, bool gzip);
+	void handleAPISignal(IO::TCPServerConnection &c, bool gzip);
+	void handleAPILog(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIBinaryMessages(IO::TCPServerConnection &c, bool gzip);
+	void handlePluginsJS(IO::TCPServerConnection &c, bool gzip);
+	void handleConfigCSS(IO::TCPServerConnection &c, bool gzip);
+	void handleAboutMD(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIAllPath(IO::TCPServerConnection &c, bool gzip);
+	void handleAPIAllPathGeoJSON(IO::TCPServerConnection &c, bool gzip);
+	void handleGeoJSON(IO::TCPServerConnection &c, bool gzip);
+	void handleAllPathGeoJSON(IO::TCPServerConnection &c, bool gzip);
+	void handleHistoryFull(IO::TCPServerConnection &c, bool gzip);
 
 	// NMEA decoder utility
 	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);
@@ -185,9 +227,9 @@ public:
 		serial = s;
 	}
 
+	IO::HTTPServer& getServer() { return server; }
+
 	bool isPortSet() { return port_set; }
-	// HTTP callbacks
-	void Request(IO::TCPServerConnection &c, const std::string &r, bool gzip);
 
 	Setting &Set(std::string option, std::string arg);
 	std::string Get() { return ""; }

@@ -122,63 +122,69 @@ namespace IO
 		{
 			const std::string now = Util::Convert::toTimeStr(std::time(0));
 
-		JSON::JSONBuilder json;
-		json.start()
-			.add("protocol", protocol_string)
-			.add("encodetime", now)
-			.addRaw("stationid", stationid)
-			.add("station_lat", lat)
-			.add("station_lon", lon)
-			.key("receiver").start()
-			.add("description", "AIS-catcher " VERSION)
-			.add("version", VERSION_NUMBER)
-			.addRaw("engine", model)
-			.addRaw("setting", model_setting)
-			.end()
-			.key("device").start()
-			.addRaw("product", product)
-			.addRaw("vendor", vendor)
-			.addRaw("serial", serial)
-			.addRaw("setting", device_setting)
-			.end()
-			.key("msgs").startArray();
+			JSON::JSONBuilder json;
+			json.start()
+				.add("protocol", protocol_string)
+				.add("encodetime", now)
+				.addRaw("stationid", stationid)
+				.add("station_lat", lat)
+				.add("station_lon", lon)
+				.key("receiver")
+				.start()
+				.add("description", "AIS-catcher " VERSION)
+				.add("version", VERSION_NUMBER)
+				.addRaw("engine", model)
+				.addRaw("setting", model_setting)
+				.end()
+				.key("device")
+				.start()
+				.addRaw("product", product)
+				.addRaw("vendor", vendor)
+				.addRaw("serial", serial)
+				.addRaw("setting", device_setting)
+				.end()
+				.key("msgs")
+				.startArray();
 
-		for (const auto &m : send_list)
-		{
-			json.nl().valueRaw(m);
+			for (const auto &m : send_list)
+			{
+				json.nl().valueRaw(m);
+			}
+
+			json.nl().endArray().end().nl();
+
+			r = http.Post(json.str(), gzip, false, "");
 		}
-
-		json.nl().endArray().end().nl();
-
-		r = http.Post(json.str(), gzip, false, "");
-	}
-	else if (PROTOCOL::APRS == protocol)
-	{
-		const std::string now = Util::Convert::toTimeStr(std::time(0));
-
-		JSON::JSONBuilder json;
-		json.start()
-			.add("protocol", "jsonais")
-			.add("encodetime", now)
-			.key("groups").startArray()
-			.start()
-			.key("path").startArray()
-			.start()
-			.addRaw("name", stationid)
-			.addRaw("url", url_json)
-			.end()
-			.endArray()
-			.key("msgs").startArray();
-
-		for (const auto &m : send_list)
+		else if (PROTOCOL::APRS == protocol)
 		{
-			json.nl().valueRaw(m);
+			const std::string now = Util::Convert::toTimeStr(std::time(0));
+
+			JSON::JSONBuilder json;
+			json.start()
+				.add("protocol", "jsonais")
+				.add("encodetime", now)
+				.key("groups")
+				.startArray()
+				.start()
+				.key("path")
+				.startArray()
+				.start()
+				.addRaw("name", stationid)
+				.addRaw("url", url_json)
+				.end()
+				.endArray()
+				.key("msgs")
+				.startArray();
+
+			for (const auto &m : send_list)
+			{
+				json.nl().valueRaw(m);
+			}
+
+			json.nl().endArray().end().endArray().end();
+
+			r = http.Post(json.str(), gzip, true, "jsonais");
 		}
-
-		json.nl().endArray().end().endArray().end();
-
-		r = http.Post(json.str(), gzip, true, "jsonais");
-	}
 		else
 		{
 			std::string payload;
