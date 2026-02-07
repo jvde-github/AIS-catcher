@@ -86,7 +86,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "ZLIB")
 	{
-		use_zlib = Util::Parse::Switch(arg);
+		Warning() << "ZLIB option is deprecated and ignored. Compression is now automatically negotiated with clients.";
 	}
 	else if (option == "GROUPS_IN")
 	{

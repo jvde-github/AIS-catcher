@@ -49,7 +49,6 @@ class WebViewer : public Setting
 	bool run = false;
 	int backup_interval = -1;
 	bool port_set = false;
-	bool use_zlib = true;
 	bool realtime = false;
 	bool showlog = false;
 	bool showdecoder = false;
@@ -111,45 +110,42 @@ class WebViewer : public Setting
 	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
 
 	// Router table for fast path lookup
-	typedef std::function<void(IO::TCPServerConnection &, const std::string &, bool)> RouteHandler;
+	typedef std::function<void(IO::HTTPRequest &)> RouteHandler;
 	std::unordered_map<std::string, RouteHandler> routeTable;
 	void initializeRoutes();
 
 	// HTTP request handler
-	void handleRequest(IO::TCPServerConnection &c, const std::string &r, bool gzip);
+	void handleRequest(IO::HTTPRequest &req);
 	
 	// Route handlers
-	void handleCDNFile(IO::TCPServerConnection &c, const std::string &path, bool gzip);
-	void handleAPIStats(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIShips(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIPath(IO::TCPServerConnection &c, const std::string &args, bool gzip);
-	void handleAPIPathGeoJSON(IO::TCPServerConnection &c, const std::string &args, bool gzip);
-	void handleAPIMessage(IO::TCPServerConnection &c, const std::string &args, bool gzip);
-	void handleAPIDecode(IO::TCPServerConnection &c, const std::string &args, bool gzip);
-	void handleAPIVessel(IO::TCPServerConnection &c, const std::string &args, bool gzip);
-	void handleTiles(IO::TCPServerConnection &c, const std::string &path, bool gzip);
-	void handleStaticFile(IO::TCPServerConnection &c, const std::string &filename, bool gzip);
-	void handleKML(IO::TCPServerConnection &c, bool gzip);
-	void handleMetrics(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIShipsArray(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIPlanesArray(IO::TCPServerConnection &c, bool gzip);
-	void handleBinaryShips(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIShipsFull(IO::TCPServerConnection &c, bool gzip);
-	void handleAPISSE(IO::TCPServerConnection &c, bool gzip);
-	void handleAPISignal(IO::TCPServerConnection &c, bool gzip);
-	void handleAPILog(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIBinaryMessages(IO::TCPServerConnection &c, bool gzip);
-	void handlePluginsJS(IO::TCPServerConnection &c, bool gzip);
-	void handleConfigCSS(IO::TCPServerConnection &c, bool gzip);
-	void handleAboutMD(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIAllPath(IO::TCPServerConnection &c, bool gzip);
-	void handleAPIAllPathGeoJSON(IO::TCPServerConnection &c, bool gzip);
-	void handleGeoJSON(IO::TCPServerConnection &c, bool gzip);
-	void handleAllPathGeoJSON(IO::TCPServerConnection &c, bool gzip);
-	void handleHistoryFull(IO::TCPServerConnection &c, bool gzip);
-
-	// Helper functions
-	void sendError(IO::TCPServerConnection &c, const std::string &message, bool gzip);
+	void handleCDNFile(IO::HTTPRequest &req);
+	void handleAPIStats(IO::HTTPRequest &req);
+	void handleAPIShips(IO::HTTPRequest &req);
+	void handleAPIPath(IO::HTTPRequest &req);
+	void handleAPIPathGeoJSON(IO::HTTPRequest &req);
+	void handleAPIMessage(IO::HTTPRequest &req);
+	void handleAPIDecode(IO::HTTPRequest &req);
+	void handleAPIVessel(IO::HTTPRequest &req);
+	void handleTiles(IO::HTTPRequest &req);
+	void handleStaticFile(IO::HTTPRequest &req);
+	void handleKML(IO::HTTPRequest &req);
+	void handleMetrics(IO::HTTPRequest &req);
+	void handleAPIShipsArray(IO::HTTPRequest &req);
+	void handleAPIPlanesArray(IO::HTTPRequest &req);
+	void handleBinaryShips(IO::HTTPRequest &req);
+	void handleAPIShipsFull(IO::HTTPRequest &req);
+	void handleAPISSE(IO::HTTPRequest &req);
+	void handleAPISignal(IO::HTTPRequest &req);
+	void handleAPILog(IO::HTTPRequest &req);
+	void handleAPIBinaryMessages(IO::HTTPRequest &req);
+	void handlePluginsJS(IO::HTTPRequest &req);
+	void handleConfigCSS(IO::HTTPRequest &req);
+	void handleAboutMD(IO::HTTPRequest &req);
+	void handleAPIAllPath(IO::HTTPRequest &req);
+	void handleAPIAllPathGeoJSON(IO::HTTPRequest &req);
+	void handleGeoJSON(IO::HTTPRequest &req);
+	void handleAllPathGeoJSON(IO::HTTPRequest &req);
+	void handleHistoryFull(IO::HTTPRequest &req);
 
 	// NMEA decoder utility
 	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);

@@ -22,163 +22,131 @@
 
 extern IO::OutputMessage *commm_feed;
 
-// Common MIME type constants
-static const std::string MIME_JSON = "application/json";
-static const std::string MIME_TEXT = "application/text";
-static const std::string MIME_JAVASCRIPT = "application/javascript";
-static const std::string MIME_CSS = "text/css";
-static const std::string MIME_PLAIN = "text/plain";
-static const std::string MIME_MARKDOWN = "text/markdown";
-static const std::string MIME_OCTET_STREAM = "application/octet-stream";
-static const std::string MIME_KML = "application/vnd.google-earth.kml+xml";
-static const std::string MIME_SVG = "image/svg+xml";
-static const std::string MIME_PNG = "image/png";
-
-extern IO::OutputMessage *commm_feed;
-
-void WebViewer::sendError(IO::TCPServerConnection &c, const std::string &message, bool gzip)
-{
-	server.Response(c, MIME_JSON, "{\"error\":\"" + message + "\"}", use_zlib & gzip);
-}
-
 void WebViewer::initializeRoutes()
 {
 	// Register all routes in the table for O(1) lookup
-	routeTable["/api/stat.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIStats(c, gzip); };
-	routeTable["/stat.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIStats(c, gzip); };
-	routeTable["/api/ships.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIShips(c, gzip); };
-	routeTable["/ships.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIShips(c, gzip); };
-	routeTable["/api/ships_array.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIShipsArray(c, gzip); };
-	routeTable["/api/planes_array.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIPlanesArray(c, gzip); };
-	routeTable["/sb"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleBinaryShips(c, gzip); };
-	routeTable["/api/ships_full.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIShipsFull(c, gzip); };
-	routeTable["/api/binmsgs.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIBinaryMessages(c, gzip); };
-	routeTable["/custom/plugins.js"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handlePluginsJS(c, gzip); };
-	routeTable["/custom/config.css"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleConfigCSS(c, gzip); };
-	routeTable["/about.md"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAboutMD(c, gzip); };
-	routeTable["/api/path.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIPath(c, args, gzip); };
-	routeTable["/api/allpath.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIAllPath(c, gzip); };
-	routeTable["/api/path.geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIPathGeoJSON(c, args, gzip); };
-	routeTable["/api/allpath.geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIAllPathGeoJSON(c, gzip); };
-	routeTable["/api/message"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIMessage(c, args, gzip); };
-	routeTable["/api/decode"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIDecode(c, args, gzip); };
-	routeTable["/api/vessel"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPIVessel(c, args, gzip); };
-	routeTable["/api/history_full.json"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleHistoryFull(c, gzip); };
+	routeTable["/api/stat.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIStats(req); };
+	routeTable["/stat.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIStats(req); };
+	routeTable["/api/ships.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIShips(req); };
+	routeTable["/ships.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIShips(req); };
+	routeTable["/api/ships_array.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIShipsArray(req); };
+	routeTable["/api/planes_array.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIPlanesArray(req); };
+	routeTable["/sb"] = [this](IO::HTTPRequest &req)
+	{ handleBinaryShips(req); };
+	routeTable["/api/ships_full.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIShipsFull(req); };
+	routeTable["/api/binmsgs.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIBinaryMessages(req); };
+	routeTable["/custom/plugins.js"] = [this](IO::HTTPRequest &req)
+	{ handlePluginsJS(req); };
+	routeTable["/custom/config.css"] = [this](IO::HTTPRequest &req)
+	{ handleConfigCSS(req); };
+	routeTable["/about.md"] = [this](IO::HTTPRequest &req)
+	{ handleAboutMD(req); };
+	routeTable["/api/path.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIPath(req); };
+	routeTable["/api/allpath.json"] = [this](IO::HTTPRequest &req)
+	{ handleAPIAllPath(req); };
+	routeTable["/api/path.geojson"] = [this](IO::HTTPRequest &req)
+	{ handleAPIPathGeoJSON(req); };
+	routeTable["/api/allpath.geojson"] = [this](IO::HTTPRequest &req)
+	{ handleAPIAllPathGeoJSON(req); };
+	routeTable["/api/message"] = [this](IO::HTTPRequest &req)
+	{ handleAPIMessage(req); };
+	routeTable["/api/decode"] = [this](IO::HTTPRequest &req)
+	{ handleAPIDecode(req); };
+	routeTable["/api/vessel"] = [this](IO::HTTPRequest &req)
+	{ handleAPIVessel(req); };
+	routeTable["/api/history_full.json"] = [this](IO::HTTPRequest &req)
+	{ handleHistoryFull(req); };
 
 	// Conditional routes - handlers check their enable flags internally
-	routeTable["/kml"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleKML(c, gzip); };
-	routeTable["/metrics"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleMetrics(c, gzip); };
-	routeTable["/api/sse"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPISSE(c, gzip); };
-	routeTable["/api/signal"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPISignal(c, gzip); };
-	routeTable["/api/log"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAPILog(c, gzip); };
-	routeTable["/geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleGeoJSON(c, gzip); };
-	routeTable["/allpath.geojson"] = [this](IO::TCPServerConnection &c, const std::string &args, bool gzip)
-	{ handleAllPathGeoJSON(c, gzip); };
+	routeTable["/kml"] = [this](IO::HTTPRequest &req)
+	{ handleKML(req); };
+	routeTable["/metrics"] = [this](IO::HTTPRequest &req)
+	{ handleMetrics(req); };
+	routeTable["/api/sse"] = [this](IO::HTTPRequest &req)
+	{ handleAPISSE(req); };
+	routeTable["/api/signal"] = [this](IO::HTTPRequest &req)
+	{ handleAPISignal(req); };
+	routeTable["/api/log"] = [this](IO::HTTPRequest &req)
+	{ handleAPILog(req); };
+	routeTable["/geojson"] = [this](IO::HTTPRequest &req)
+	{ handleGeoJSON(req); };
+	routeTable["/allpath.geojson"] = [this](IO::HTTPRequest &req)
+	{ handleAllPathGeoJSON(req); };
 }
 
-void WebViewer::handleRequest(IO::TCPServerConnection &c, const std::string &response, bool gzip)
+void WebViewer::handleRequest(IO::HTTPRequest &req)
 {
-	std::string path, args;
-	std::string::size_type pos = response.find('?');
-
-	if (pos != std::string::npos)
-	{
-		path = response.substr(0, pos);
-		args = response.substr(pos + 1);
-	}
-	else
-	{
-		path = response;
-	}
-
 	// Root redirect
-	if (path == "/")
+	if (req.path == "/")
 	{
-		path = cdn.empty() ? "/index.html" : "/index_local.html";
+		req.path = cdn.empty() ? "/index.html" : "/index_local.html";
 	}
 
 	// Try router table (O(1) lookup)
-	auto it = routeTable.find(path);
+	auto it = routeTable.find(req.path);
 	if (it != routeTable.end())
 	{
-		it->second(c, args, gzip);
+		it->second(req);
 		return;
 	}
 
 	// Handle prefix-based routes
-	if (!cdn.empty() && path.find("/cdn/") == 0)
+	if (!cdn.empty() && req.path.find("/cdn/") == 0)
 	{
-		handleCDNFile(c, path, gzip);
+		handleCDNFile(req);
 	}
-	else if (path.substr(0, 6) == "/tiles")
+	else if (req.path.substr(0, 6) == "/tiles")
 	{
-		handleTiles(c, path, gzip);
+		handleTiles(req);
 	}
 	// Default: static file handler
-	else if (path.rfind("/", 0) == 0)
+	else if (req.path.rfind("/", 0) == 0)
 	{
-		handleStaticFile(c, path.substr(1), gzip);
+		handleStaticFile(req);
 	}
 }
 
-void WebViewer::handleCDNFile(IO::TCPServerConnection &c, const std::string &path, bool gzip)
+void WebViewer::handleCDNFile(IO::HTTPRequest &req)
 {
 	try
 	{
-		if (path.find("..") != std::string::npos || path.find(".") == std::string::npos)
+		if (req.path.find("..") != std::string::npos || req.path.find(".") == std::string::npos)
 			throw std::runtime_error("Blocked, pattern not matching");
 
-		std::string extension = path.substr(path.find_last_of('.') + 1);
+		std::string extension = req.path.substr(req.path.find_last_of('.') + 1);
 		std::string contentType;
 
 		if (extension == "svg")
-			contentType = "image/svg+xml";
+			contentType = IO::MIME::SVG;
 		else if (extension == "js")
-			contentType = "application/javascript";
+			contentType = IO::MIME::JAVASCRIPT;
 		else if (extension == "png")
-			contentType = "image/png";
+			contentType = IO::MIME::PNG;
 		else if (extension == "css")
-			contentType = "text/css";
+			contentType = IO::MIME::CSS;
 		else
 			throw std::runtime_error("Blocked " + extension);
 
-		std::string content = Util::Helper::readFile(cdn + path);
-		server.Response(c, contentType, content, use_zlib & gzip);
+		std::string content = Util::Helper::readFile(cdn + req.path);
+		server.Response(req, contentType.c_str(), content);
 	}
 	catch (const std::exception &e)
 	{
-		Error() << "Server - error returning requested file (" << path << "): " << e.what();
-		server.Response(c, "text/html", std::string(""), true);
+		Error() << "Server - error returning requested file (" << req.path << "): " << e.what();
+		server.Response(req, IO::MIME::HTML, "");
 	}
 }
 
-void WebViewer::handleAPIStats(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIStats(IO::HTTPRequest &req)
 {
 	std::string unit;
 	const uint64_t GB = 1000000000;
@@ -235,20 +203,21 @@ void WebViewer::handleAPIStats(IO::TCPServerConnection &c, bool gzip)
 		.add("received", received_str)
 		.end();
 
-	server.Response(c, "application/json", json.str(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, json.str());
 }
 
-void WebViewer::handleAPIShips(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIShips(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/json", ships.getJSON(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, ships.getJSON());
 }
 
-void WebViewer::handleAPIPath(IO::TCPServerConnection &c, const std::string &args, bool gzip)
+void WebViewer::handleAPIPath(IO::HTTPRequest &req)
 {
-	std::stringstream ss(args);
+	std::stringstream ss(req.args);
 	std::string mmsi_str;
 	JSON::JSONBuilder json;
 	json.start();
+
 	int count = 0;
 	const int MAX_MMSI_COUNT = 100;
 
@@ -278,12 +247,12 @@ void WebViewer::handleAPIPath(IO::TCPServerConnection &c, const std::string &arg
 		}
 	}
 	json.end();
-	server.Response(c, "application/json", json.str(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, json.str());
 }
 
-void WebViewer::handleAPIPathGeoJSON(IO::TCPServerConnection &c, const std::string &args, bool gzip)
+void WebViewer::handleAPIPathGeoJSON(IO::HTTPRequest &req)
 {
-	std::stringstream ss(args);
+	std::stringstream ss(req.args);
 	std::string mmsi_str;
 
 	if (std::getline(ss, mmsi_str))
@@ -293,94 +262,94 @@ void WebViewer::handleAPIPathGeoJSON(IO::TCPServerConnection &c, const std::stri
 			int mmsi = std::stoi(mmsi_str);
 			if (mmsi >= 1 && mmsi <= 999999999)
 			{
-				server.Response(c, "application/json", ships.getPathGeoJSON(mmsi), use_zlib & gzip);
+				server.Response(req, IO::MIME::JSON, ships.getPathGeoJSON(mmsi));
 			}
 			else
 			{
-				server.Response(c, "application/json", "{\"error\":\"Invalid MMSI range\"}", use_zlib & gzip);
+				server.ResponseBadRequest(req, "Invalid MMSI range");
 			}
 		}
 		catch (const std::invalid_argument &)
 		{
 			Error() << "Server - path GeoJSON MMSI invalid: " << mmsi_str;
-			server.Response(c, "application/json", "{\"error\":\"Invalid MMSI format\"}", use_zlib & gzip);
+			server.ResponseBadRequest(req, "Invalid MMSI format");
 		}
 		catch (const std::out_of_range &)
 		{
 			Error() << "Server - path GeoJSON MMSI out of range: " << mmsi_str;
-			server.Response(c, "application/json", "{\"error\":\"MMSI out of range\"}", use_zlib & gzip);
+			server.ResponseBadRequest(req, "MMSI out of range");
 		}
 	}
 	else
 	{
-		server.Response(c, "application/json", "{\"error\":\"No MMSI provided\"}", use_zlib & gzip);
+		server.ResponseBadRequest(req, "No MMSI provided");
 	}
 }
 
-void WebViewer::handleAPIMessage(IO::TCPServerConnection &c, const std::string &args, bool gzip)
+void WebViewer::handleAPIMessage(IO::HTTPRequest &req)
 {
 	int mmsi = -1;
-	std::stringstream ss(args);
+	std::stringstream ss(req.args);
 	if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
 	{
-		server.Response(c, "application/text", ships.getMessage(mmsi), use_zlib & gzip);
+		server.Response(req, IO::MIME::TEXT, ships.getMessage(mmsi));
 	}
 	else
 	{
-		server.Response(c, "application/text", "Message not available");
+		server.ResponseNotFound(req, "Message not available");
 	}
 }
 
-void WebViewer::handleAPIDecode(IO::TCPServerConnection &c, const std::string &args, bool gzip)
+void WebViewer::handleAPIDecode(IO::HTTPRequest &req)
 {
 	if (!showdecoder)
 	{
-		server.Response(c, "application/json", std::string("{\"error\":\"Decoder is disabled\"}"), use_zlib & gzip);
+		server.ResponseForbidden(req, "Decoder is disabled");
 		return;
 	}
 
 	try
 	{
-		if (args.empty() || args.size() > 1024)
+		if (req.args.empty() || req.args.size() > 1024)
 			throw std::runtime_error("Input size limit exceeded");
 
-		std::string result = decodeNMEAtoJSON(args, true);
+		std::string result = decodeNMEAtoJSON(req.args, true);
 
 		if (result == "[]")
 		{
-			server.Response(c, "application/json", std::string("{\"error\":\"No valid AIS messages decoded\"}"), use_zlib & gzip);
+			server.ResponseError(req, "No valid AIS messages decoded");
 		}
 		else
 		{
-			server.Response(c, "application/json", result, use_zlib & gzip);
+			server.Response(req, IO::MIME::JSON, result);
 		}
 	}
 	catch (const std::exception &e)
 	{
 		Error() << "Decoder error: " << e.what();
-		server.Response(c, "application/json", std::string("{\"error\":\"Decoding failed\"}"), use_zlib & gzip);
+		server.ResponseError(req, "Decoding failed");
 	}
 }
 
-void WebViewer::handleAPIVessel(IO::TCPServerConnection &c, const std::string &args, bool gzip)
+void WebViewer::handleAPIVessel(IO::HTTPRequest &req)
 {
-	std::stringstream ss(args);
+	std::stringstream ss(req.args);
 	int mmsi;
 	if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
 	{
-		server.Response(c, "application/text", ships.getShipJSON(mmsi), use_zlib & gzip);
+		server.Response(req, IO::MIME::TEXT, ships.getShipJSON(mmsi));
 	}
 	else
 	{
-		server.Response(c, "application/text", "Vessel not available");
+		server.ResponseNotFound(req, "Vessel not available");
 	}
 }
 
-void WebViewer::handleTiles(IO::TCPServerConnection &c, const std::string &path, bool gzip)
+void WebViewer::handleTiles(IO::HTTPRequest &req)
 {
 	int z, x, y;
 	std::string layer;
-	if (parseMBTilesURL(path, layer, z, x, y))
+	if (parseMBTilesURL(req.path, layer, z, x, y))
 	{
 		for (const auto &source : mapSources)
 		{
@@ -394,104 +363,113 @@ void WebViewer::handleTiles(IO::TCPServerConnection &c, const std::string &path,
 
 				if (!data.empty())
 				{
-					server.Response(c, contentType, (char *)data.data(), data.size(), use_zlib & gzip, true);
+					server.Response(req, contentType.c_str(), (char *)data.data(), data.size(), true);
 					return;
 				}
 			}
 		}
-		server.Response(c, "text/plain", std::string("Tile not found"), false, true);
+		server.ResponseNotFound(req, "Tile not found");
 		return;
 	}
-	server.Response(c, "text/plain", std::string("Invalid Tile Request"), false, true);
+	server.ResponseBadRequest(req, "Invalid tile request");
 }
 
-void WebViewer::handleStaticFile(IO::TCPServerConnection &c, const std::string &filename, bool gzip)
+void WebViewer::handleStaticFile(IO::HTTPRequest &req)
 {
+	// Extract filename from path (remove leading slash)
+	std::string filename = req.path.substr(1);
 	auto it = WebDB::files.find(filename);
 	if (it != WebDB::files.end())
 	{
 		const WebDB::FileData &file = it->second;
-		server.ResponseRaw(c, file.mime_type, (char *)file.data, file.size, true, std::string(file.mime_type) != "text/html");
+		// Static files are pre-compressed and require gzip support
+		if (!req.accept_gzip)
+		{
+			Error() << "Client requested static file without gzip support: " << filename;
+			server.Response(req, IO::MIME::PLAIN, "Error: This server serves pre-compressed content. Please use a client that supports gzip encoding.");
+			return;
+		}
+		server.ResponseRaw(req, file.mime_type, (char *)file.data, file.size, true, std::string(file.mime_type) != "text/html");
 	}
 	else
 	{
 		Error() << "File not found: " << filename << "\n";
-		server.Request(c, filename, false);
+		server.Request(req.connection, filename, false);
 	}
 }
 
-void WebViewer::handleKML(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleKML(IO::HTTPRequest &req)
 {
 	if (!KML)
 	{
-		server.Response(c, "text/plain", std::string("Feature disabled"), false, true);
+		server.ResponseForbidden(req, "Feature disabled");
 		return;
 	}
-	server.Response(c, "application/vnd.google-earth.kml+xml", ships.getKML(), use_zlib & gzip);
+	server.Response(req, IO::MIME::KML, ships.getKML());
 }
 
-void WebViewer::handleMetrics(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleMetrics(IO::HTTPRequest &req)
 {
 	if (!supportPrometheus)
 	{
-		server.Response(c, "text/plain", std::string("Feature disabled"), false, true);
+		server.ResponseForbidden(req, "Feature disabled");
 		return;
 	}
 	std::string content = dataPrometheus.toPrometheus();
-	server.Response(c, "text/plain", content, use_zlib & gzip);
+	server.Response(req, IO::MIME::PLAIN, content);
 	dataPrometheus.Reset();
 }
 
-void WebViewer::handleAPIShipsArray(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIShipsArray(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/json", ships.getJSONcompact(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, ships.getJSONcompact());
 }
 
-void WebViewer::handleAPIPlanesArray(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIPlanesArray(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/json", planes.getCompactArray(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, planes.getCompactArray());
 }
 
-void WebViewer::handleBinaryShips(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleBinaryShips(IO::HTTPRequest &req)
 {
 	binary.clear();
 	ships.getBinary(binary);
-	server.Response(c, "application/octet-stream", binary.data(), binary.size(), use_zlib & gzip);
+	server.Response(req, IO::MIME::OCTET_STREAM, binary.data(), binary.size());
 }
 
-void WebViewer::handleAPIShipsFull(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIShipsFull(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/json", ships.getJSON(true), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, ships.getJSON(true));
 }
 
-void WebViewer::handleAPISSE(IO::TCPServerConnection &c, bool gzip)
-{
-	if (!realtime)
-	{
-		server.Response(c, "text/plain", std::string("Feature disabled"), false, true);
-		return;
-	}
-	server.upgradeSSE(c, 1);
-}
-
-void WebViewer::handleAPISignal(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPISSE(IO::HTTPRequest &req)
 {
 	if (!realtime)
 	{
-		server.Response(c, "text/plain", std::string("Feature disabled"), false, true);
+		server.ResponseForbidden(req, "Feature disabled");
 		return;
 	}
-	server.upgradeSSE(c, 2);
+	server.upgradeSSE(req.connection, 1);
 }
 
-void WebViewer::handleAPILog(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPISignal(IO::HTTPRequest &req)
+{
+	if (!realtime)
+	{
+		server.ResponseForbidden(req, "Feature disabled");
+		return;
+	}
+	server.upgradeSSE(req.connection, 2);
+}
+
+void WebViewer::handleAPILog(IO::HTTPRequest &req)
 {
 	if (!showlog)
 	{
-		server.Response(c, "text/plain", std::string("Feature disabled"), false, true);
+		server.ResponseForbidden(req, "Feature disabled");
 		return;
 	}
-	IO::SSEConnection *s = server.upgradeSSE(c, 3);
+	IO::SSEConnection *s = server.upgradeSSE(req.connection, 3);
 	auto l = Logger::getInstance().getLastMessages(25);
 	for (auto &m : l)
 	{
@@ -499,57 +477,57 @@ void WebViewer::handleAPILog(IO::TCPServerConnection &c, bool gzip)
 	}
 }
 
-void WebViewer::handleAPIBinaryMessages(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIBinaryMessages(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/json", ships.getBinaryMessagesJSON(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, ships.getBinaryMessagesJSON());
 }
 
-void WebViewer::handlePluginsJS(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handlePluginsJS(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
+	server.Response(req, IO::MIME::JAVASCRIPT, params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n");
 }
 
-void WebViewer::handleConfigCSS(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleConfigCSS(IO::HTTPRequest &req)
 {
-	server.Response(c, "text/css", stylesheets, use_zlib & gzip);
+	server.Response(req, IO::MIME::CSS, stylesheets);
 }
 
-void WebViewer::handleAboutMD(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAboutMD(IO::HTTPRequest &req)
 {
-	server.Response(c, "text/markdown", about, use_zlib & gzip);
+	server.Response(req, IO::MIME::MARKDOWN, about);
 }
 
-void WebViewer::handleAPIAllPath(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIAllPath(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/json", ships.getAllPathJSON(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, ships.getAllPathJSON());
 }
 
-void WebViewer::handleAPIAllPathGeoJSON(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAPIAllPathGeoJSON(IO::HTTPRequest &req)
 {
-	server.Response(c, "application/json", ships.getAllPathGeoJSON(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, ships.getAllPathGeoJSON());
 }
 
-void WebViewer::handleGeoJSON(IO::TCPServerConnection &c, bool gzip)
-{
-	if (!GeoJSON)
-	{
-		server.Response(c, "application/json", std::string("{\"error\":\"Feature disabled\"}"), false, true);
-		return;
-	}
-	server.Response(c, "application/json", ships.getGeoJSON(), use_zlib & gzip);
-}
-
-void WebViewer::handleAllPathGeoJSON(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleGeoJSON(IO::HTTPRequest &req)
 {
 	if (!GeoJSON)
 	{
-		server.Response(c, "application/json", std::string("{\"error\":\"Feature disabled\"}"), false, true);
+		server.ResponseForbidden(req, "Feature disabled");
 		return;
 	}
-	server.Response(c, "application/json", ships.getAllPathGeoJSON(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, ships.getGeoJSON());
 }
 
-void WebViewer::handleHistoryFull(IO::TCPServerConnection &c, bool gzip)
+void WebViewer::handleAllPathGeoJSON(IO::HTTPRequest &req)
+{
+	if (!GeoJSON)
+	{
+		server.ResponseForbidden(req, "Feature disabled");
+		return;
+	}
+	server.Response(req, IO::MIME::JSON, ships.getAllPathGeoJSON());
+}
+
+void WebViewer::handleHistoryFull(IO::HTTPRequest &req)
 {
 	JSON::JSONBuilder json;
 	json.start()
@@ -560,5 +538,5 @@ void WebViewer::handleHistoryFull(IO::TCPServerConnection &c, bool gzip)
 		.end()
 		.nl()
 		.nl();
-	server.Response(c, "application/json", json.str(), use_zlib & gzip);
+	server.Response(req, IO::MIME::JSON, json.str());
 }

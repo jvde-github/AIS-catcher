@@ -108,7 +108,22 @@ namespace IO
 	{
 		if (requestHandler)
 		{
-			requestHandler(c, request, gzip);
+			// Parse path and args from request string
+			std::string path, args;
+			std::string::size_type pos = request.find('?');
+			if (pos != std::string::npos)
+			{
+				path = request.substr(0, pos);
+				args = request.substr(pos + 1);
+			}
+			else
+			{
+				path = request;
+			}
+
+			// Create HTTPRequest and call handler
+			HTTPRequest req(c, path, args, gzip);
+			requestHandler(req);
 		}
 		else
 		{
@@ -187,38 +202,44 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache)
+	// Modern HTTPRequest-based Response methods
+	void HTTPServer::Response(HTTPRequest &req, const char *type, const std::string &content, bool cache)
 	{
 #ifdef HASZLIB
-		if (gzip)
+		if (req.accept_gzip)
 		{
 			zip.zip(content);
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(req.connection, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
-
-		ResponseRaw(c, type, content.c_str(), content.size(), cache);
+		ResponseRaw(req.connection, type, content.c_str(), content.size(), false, cache);
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::Response(HTTPRequest &req, const char *type, const char *data, int len, bool cache)
 	{
 #ifdef HASZLIB
-		if (gzip)
+		if (req.accept_gzip)
 		{
 			zip.zip(data, len);
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(req.connection, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
 			return;
 		}
 #endif
-
-		ResponseRaw(c, type, data, len);
+		ResponseRaw(req.connection, type, data, len, false, cache);
 	}
 
-	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::ResponseRaw(HTTPRequest &req, const char *type, const char *data, int len, bool gzip_override, bool cache)
+	{
+		// Use the explicitly provided gzip_override (for pre-compressed static files)
+		ResponseRaw(req.connection, type, data, len, gzip_override, cache);
+	}
+
+	// Internal ResponseRaw - builds and sends HTTP response
+	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const char *type, const char *data, int len, bool gzip, bool cache)
 	{
 
-		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
+		std::string header = std::string("HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: ") + type;
 		if (gzip)
 			header += "\r\nContent-Encoding: gzip";
 
@@ -250,5 +271,26 @@ namespace IO
 			c.Close();
 			return;
 		}
+	}
+
+	// Semantic error response helpers
+	void HTTPServer::ResponseNotFound(HTTPRequest &req, const std::string &message)
+	{
+		Response(req, MIME::JSON, "{\"error\":\"" + message + "\"}");
+	}
+
+	void HTTPServer::ResponseForbidden(HTTPRequest &req, const std::string &message)
+	{
+		Response(req, MIME::JSON, "{\"error\":\"" + message + "\"}");
+	}
+
+	void HTTPServer::ResponseBadRequest(HTTPRequest &req, const std::string &message)
+	{
+		Response(req, MIME::JSON, "{\"error\":\"" + message + "\"}");
+	}
+
+	void HTTPServer::ResponseError(HTTPRequest &req, const std::string &message)
+	{
+		Response(req, MIME::JSON, "{\"error\":\"" + message + "\"}");
 	}
 }

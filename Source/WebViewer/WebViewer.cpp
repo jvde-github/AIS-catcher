@@ -276,8 +276,8 @@ void WebViewer::start()
 		throw std::runtime_error("HTML server ports not specified");
 
 	// Set up request handler
-	server.setRequestHandler([this](IO::TCPServerConnection &c, const std::string &r, bool gzip)
-							 { handleRequest(c, r, gzip); });
+	server.setRequestHandler([this](IO::HTTPRequest &req)
+							 { handleRequest(req); });
 
 	time_start = time(nullptr);
 

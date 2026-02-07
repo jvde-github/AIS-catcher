@@ -45,6 +45,35 @@
 
 namespace IO
 {
+	// Common MIME type constants
+	namespace MIME {
+		constexpr const char* JSON = "application/json";
+		constexpr const char* TEXT = "application/text";
+		constexpr const char* JAVASCRIPT = "application/javascript";
+		constexpr const char* CSS = "text/css";
+		constexpr const char* PLAIN = "text/plain";
+		constexpr const char* MARKDOWN = "text/markdown";
+		constexpr const char* HTML = "text/html";
+		constexpr const char* OCTET_STREAM = "application/octet-stream";
+		constexpr const char* KML = "application/vnd.google-earth.kml+xml";
+		constexpr const char* SVG = "image/svg+xml";
+		constexpr const char* PNG = "image/png";
+	}
+
+	// Forward declarations
+	class HTTPServer;
+
+	// HTTPRequest encapsulates an HTTP request with parsed data
+	struct HTTPRequest
+	{
+		IO::TCPServerConnection &connection;
+		std::string path;
+		std::string args;
+		bool accept_gzip;
+
+		HTTPRequest(IO::TCPServerConnection &c, const std::string &p, const std::string &a, bool gz)
+			: connection(c), path(p), args(a), accept_gzip(gz) {}
+	};
 
 class SSEConnection
 	{
@@ -114,11 +143,10 @@ class SSEConnection
 
 	class HTTPServer : public IO::TCPServer
 	{
-		std::array<std::string, 4> sse_topic = {"aiscatcher", "nmea", "nmea", "log"};
-		std::function<void(IO::TCPServerConnection&, const std::string&, bool)> requestHandler;
+		std::function<void(HTTPRequest&)> requestHandler;
 
 	public:
-		void setRequestHandler(std::function<void(IO::TCPServerConnection&, const std::string&, bool)> handler)
+		void setRequestHandler(std::function<void(HTTPRequest&)> handler)
 		{
 			requestHandler = std::move(handler);
 		}
@@ -127,9 +155,16 @@ class SSEConnection
 
 		virtual void Request(IO::TCPServerConnection &c, const std::string &msg, bool accept_gzip);
 
-		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false);
-		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
-		void ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false);
+		// HTTPRequest-based Response methods
+		void Response(HTTPRequest &req, const char *type, const std::string &content, bool cache = false);
+		void Response(HTTPRequest &req, const char *type, const char *data, int len, bool cache = false);
+		void ResponseRaw(HTTPRequest &req, const char *type, const char *data, int len, bool gzip_override, bool cache = false);
+
+		// Semantic error response helpers
+		void ResponseNotFound(HTTPRequest &req, const std::string &message);
+		void ResponseForbidden(HTTPRequest &req, const std::string &message);
+		void ResponseBadRequest(HTTPRequest &req, const std::string &message);
+		void ResponseError(HTTPRequest &req, const std::string &message);
 
 		void cleanupSSE()
 		{
@@ -163,7 +198,7 @@ class SSEConnection
 			for (auto it = sse.begin(); it != sse.end(); ++it)
 			{
 				if (it->getID() == id)
-					it->SendEvent(sse_topic[MIN(id, 3)], data);
+					it->SendEvent(event, data);
 			}
 			cleanupSSE();
 		}
@@ -174,6 +209,9 @@ class SSEConnection
 
 		void Parse(const std::string &s, std::string &get, bool &accept_gzip);
 		void processClients();
+
+		// Internal raw response method
+		void ResponseRaw(IO::TCPServerConnection &c, const char *type, const char *data, int len, bool gzip = false, bool cache = false);
 
 		ZIP zip;
 	};
