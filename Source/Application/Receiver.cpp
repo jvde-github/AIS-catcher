@@ -112,11 +112,11 @@ void Receiver::setChannel(std::string mode, std::string NMEA)
 void Receiver::setupDevice()
 {
 	int frequency = (ChannelMode == AIS::Mode::AB) ? 162000000 : 156800000;
-	
+
 	tag.version = VERSION_NUMBER;
 	tag.station_lat = station_lat;
 	tag.station_lon = station_lon;
-	
+
 	if (!deviceManager.openDevice(sample_rate, bandwidth, ppm, frequency, tag))
 		throw std::runtime_error("cannot set up device");
 }
@@ -168,7 +168,7 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 
 void Receiver::setupModel(int &group)
 {
-	auto* device = deviceManager.getDevice();
+	auto *device = deviceManager.getDevice();
 	// if nothing defined, create one model
 	if (!models.size())
 	{
@@ -242,7 +242,7 @@ void Receiver::play()
 		}
 	}
 
-	auto* device = deviceManager.getDevice();
+	auto *device = deviceManager.getDevice();
 	device->Play();
 
 	if (verbose)
@@ -260,14 +260,13 @@ void Receiver::play()
 
 void Receiver::stop()
 {
-	auto* device = deviceManager.getDevice();
+	auto *device = deviceManager.getDevice();
 	if (device)
 		device->Stop();
 }
 
 //-----------------------------------
 // set up screen output
-
 
 //-----------------------------------
 // set up screen counters

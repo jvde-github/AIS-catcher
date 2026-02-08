@@ -21,112 +21,139 @@
 #include "StringBuilder.h"
 #include "Keys.h"
 
-namespace JSON {
+namespace JSON
+{
 
 	// StringBuilder - Build string from JSON object using JSONBuilder for efficiency
 
-	void StringBuilder::to_string_enhanced_internal(const Value& v, int key_index) {
+	void StringBuilder::to_string_enhanced_internal(const Value &v, int key_index)
+	{
 		builder.start();
-		
+
 		// Add value
 		builder.key("value");
 		to_string_internal(v);
-		
+
 		// Add metadata if available
-		if (key_index >= 0 && key_index < AIS::KeyInfoMap.size()) {
-			const AIS::KeyInfo& info = AIS::KeyInfoMap[key_index];
-			
+		if (key_index >= 0 && key_index < AIS::KeyInfoMap.size())
+		{
+			const AIS::KeyInfo &info = AIS::KeyInfoMap[key_index];
+
 			// Add unit if not empty
-			if (info.unit && strlen(info.unit) > 0) {
+			if (info.unit && strlen(info.unit) > 0)
+			{
 				builder.add("unit", info.unit);
 			}
-			
+
 			// Add description if not empty
-			if (info.description && strlen(info.description) > 0) {
+			if (info.description && strlen(info.description) > 0)
+			{
 				builder.add("description", info.description);
 			}
-			
+
 			// Add lookup value if available
-			if (info.lookup_table && (v.isInt() || v.isFloat())) {
+			if (info.lookup_table && (v.isInt() || v.isFloat()))
+			{
 				int numeric_value = v.isInt() ? v.getInt() : static_cast<int>(v.getFloat());
-				if (numeric_value >= 0 && numeric_value < info.lookup_table->size()) {
+				if (numeric_value >= 0 && numeric_value < info.lookup_table->size())
+				{
 					builder.add("text", (*info.lookup_table)[numeric_value]);
 				}
 			}
 		}
-		
+
 		builder.end();
 	}
 
-	void StringBuilder::to_string_internal(const Value& v) {
+	void StringBuilder::to_string_internal(const Value &v)
+	{
 
-		if (v.isString()) {
+		if (v.isString())
+		{
 			builder.value(v.getString());
 		}
-		else if (v.isObject()) {
+		else if (v.isObject())
+		{
 			stringify_internal(v.getObject());
 		}
-		else if (v.isArrayString()) {
+		else if (v.isArrayString())
+		{
 
-			const std::vector<std::string>& as = v.getStringArray();
+			const std::vector<std::string> &as = v.getStringArray();
 			builder.startArray();
-			for (const auto& s : as) {
+			for (const auto &s : as)
+			{
 				builder.value(s);
 			}
 			builder.endArray();
 		}
-		else if (v.isArray()) {
+		else if (v.isArray())
+		{
 
-			const std::vector<Value>& a = v.getArray();
+			const std::vector<Value> &a = v.getArray();
 			builder.startArray();
-			for (const auto& val : a) {
+			for (const auto &val : a)
+			{
 				to_string_internal(val);
 			}
 			builder.endArray();
 		}
-		else if (v.isInt()) {
+		else if (v.isInt())
+		{
 			builder.value(v.getInt());
 		}
-		else if (v.isFloat()) {
+		else if (v.isFloat())
+		{
 			builder.value(v.getFloat());
 		}
-		else if (v.isBool()) {
+		else if (v.isBool())
+		{
 			builder.value(v.getBool());
 		}
-		else {
+		else
+		{
 			builder.valueNull();
 		}
 	}
-	
-	void StringBuilder::to_string(std::string& json, const Value& v) {
+
+	void StringBuilder::to_string(std::string &json, const Value &v)
+	{
 		builder.clear();
 		to_string_internal(v);
 		builder.append_to(json);
 	}
 
-	void StringBuilder::stringify_internal(const JSON& object) {
+	void StringBuilder::stringify_internal(const JSON &object)
+	{
 		builder.start();
-		for (const Property& p : object.getProperties()) {
+		for (const Property &p : object.getProperties())
+		{
 
 			// Skip invalid keys to avoid out-of-bounds access
-			if (p.Key() < 0 || p.Key() >= keymap->size()) continue;
+			if (p.Key() < 0 || p.Key() >= keymap->size())
+				continue;
 
-			const std::string& key = (*keymap)[p.Key()][dict];
+			const std::string &key = (*keymap)[p.Key()][dict];
 
-			if (!key.empty()) {
+			if (!key.empty())
+			{
 				builder.key(key);
-				
-				if (stringify_enhanced) {
+
+				if (stringify_enhanced)
+				{
 					to_string_enhanced_internal(p.Get(), p.Key());
-				} else {
+				}
+				else
+				{
 					to_string_internal(p.Get());
 				}
 			}
 		}
 		builder.end();
 	}
-	
-	void StringBuilder::stringify(const JSON& object, std::string& json) {
+
+	void StringBuilder::stringify(const JSON &object, std::string &json)
+	{
 		builder.clear();
 		stringify_internal(object);
 		builder.append_to(json);

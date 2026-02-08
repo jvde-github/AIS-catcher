@@ -22,6 +22,6 @@
 
 namespace JSONConfig
 {
-	void parse(const std::string& filename, ApplicationState& app);
-	void parseString(const std::string& str, ApplicationState& app);
+	void parse(const std::string &filename, ApplicationState &app);
+	void parseString(const std::string &str, ApplicationState &app);
 }

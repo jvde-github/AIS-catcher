@@ -20,10 +20,13 @@
 
 #include "JSON.h"
 
-namespace JSON {
+namespace JSON
+{
 
-	void Value::to_string(std::string& str) const {
-		switch (type) {
+	void Value::to_string(std::string &str) const
+	{
+		switch (type)
+		{
 		case Value::Type::STRING:
 			str += *data.s;
 			break;

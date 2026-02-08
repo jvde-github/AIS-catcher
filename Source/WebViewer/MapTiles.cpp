@@ -1,18 +1,18 @@
 /*
-	Copyright(c) 2021-2026 jvde.github@gmail.com et al.
+    Copyright(c) 2021-2026 jvde.github@gmail.com et al.
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "MapTiles.h"
@@ -181,8 +181,8 @@ const std::vector<unsigned char> &MBTilesSupport::getTile(int z, int x, int y, s
         std::memcpy(tileData.data(), data, size);
 
         contentType = format == "png" ? "image/png" : format == "jpg" || format == "jpeg" ? "image/jpeg"
-                                                    : format == "pbf"                       ? "application/x-protobuf"
-                                                                                            : "application/octet-stream";
+                                                  : format == "pbf"                       ? "application/x-protobuf"
+                                                                                          : "application/octet-stream";
     }
 
     sqlite3_finalize(stmt);
@@ -202,15 +202,15 @@ std::string MBTilesSupport::generatePluginCode(bool overlay) const
         ss << "addTileLayer";
 
     ss << "(\"" << name << "\", new ol.layer.Tile({\n"
-        << "    source: new ol.source.XYZ({\n"
-        << "        url: '/tiles/" << layerID << "/{z}/{x}/{y}',\n"
-        << "        attributions: '" << attribution << "',\n"
-        << "        tileGrid: new ol.tilegrid.TileGrid({\n"
-        << "            extent: ol.proj.get('EPSG:3857').getExtent(),\n"
-        << "            origin: ol.extent.getTopLeft(ol.proj.get('EPSG:3857').getExtent()),\n"
-        << "            minZoom: " << minZoom << ",\n"
-        << "            maxZoom: " << maxZoom << ",\n"
-        << "            resolutions: [\n";
+       << "    source: new ol.source.XYZ({\n"
+       << "        url: '/tiles/" << layerID << "/{z}/{x}/{y}',\n"
+       << "        attributions: '" << attribution << "',\n"
+       << "        tileGrid: new ol.tilegrid.TileGrid({\n"
+       << "            extent: ol.proj.get('EPSG:3857').getExtent(),\n"
+       << "            origin: ol.extent.getTopLeft(ol.proj.get('EPSG:3857').getExtent()),\n"
+       << "            minZoom: " << minZoom << ",\n"
+       << "            maxZoom: " << maxZoom << ",\n"
+       << "            resolutions: [\n";
 
     double baseResolution = 156543.03392804097;
 
@@ -223,10 +223,10 @@ std::string MBTilesSupport::generatePluginCode(bool overlay) const
     }
 
     ss << "            ],\n"
-        << "            tileSize: [256, 256]\n"
-        << "        })\n"
-        << "    })\n"
-        << "}));\n";
+       << "            tileSize: [256, 256]\n"
+       << "        })\n"
+       << "    })\n"
+       << "}));\n";
 
     return ss.str();
 }
@@ -418,7 +418,7 @@ bool FileSystemTiles::isValidTile(int z, int x, int y) const
         return false;
 
     std::string tilePath = basePath + "/" + std::to_string(z) + "/" +
-                            std::to_string(x) + "/" + std::to_string(y);
+                           std::to_string(x) + "/" + std::to_string(y);
 
     // Check for common tile extensions
     std::vector<std::string> extensions;
@@ -444,7 +444,7 @@ const std::vector<unsigned char> &FileSystemTiles::getTile(int z, int x, int y, 
         return tileData;
 
     std::string baseTilePath = basePath + "/" + std::to_string(z) + "/" +
-                                std::to_string(x) + "/" + std::to_string(y);
+                               std::to_string(x) + "/" + std::to_string(y);
 
     // Try different extensions
     std::vector<std::pair<std::string, std::string>> extensions;
@@ -489,13 +489,13 @@ std::string FileSystemTiles::generatePluginCode(bool overlay) const
         ss << "addTileLayer";
 
     ss << "(\"" << name << "\", new ol.layer.Tile({\n"
-        << "    source: new ol.source.XYZ({\n"
-        << "        url: '/tiles/" << layerID << "/{z}/{x}/{y}',\n"
-        << "        attributions: '" << attribution << "',\n"
-        << "        minZoom: " << minZoom << ",\n"
-        << "        maxZoom: " << maxZoom << "\n"
-        << "    })\n"
-        << "}));\n";
+       << "    source: new ol.source.XYZ({\n"
+       << "        url: '/tiles/" << layerID << "/{z}/{x}/{y}',\n"
+       << "        attributions: '" << attribution << "',\n"
+       << "        minZoom: " << minZoom << ",\n"
+       << "        maxZoom: " << maxZoom << "\n"
+       << "    })\n"
+       << "}));\n";
 
     return ss.str();
 }

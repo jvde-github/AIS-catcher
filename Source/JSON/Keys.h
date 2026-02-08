@@ -32,11 +32,11 @@ namespace AIS
 	// Structure to hold unit, description and lookup table
 	struct KeyInfo
 	{
-		const char* unit;
-		const char* description;
-		const std::vector<std::string>* lookup_table;
-		
-		KeyInfo(const char* u, const char* d, const std::vector<std::string>* lt = nullptr)
+		const char *unit;
+		const char *description;
+		const std::vector<std::string> *lookup_table;
+
+		KeyInfo(const char *u, const char *d, const std::vector<std::string> *lt = nullptr)
 			: unit(u), description(d), lookup_table(lt) {}
 	};
 

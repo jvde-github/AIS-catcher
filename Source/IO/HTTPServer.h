@@ -46,18 +46,19 @@
 namespace IO
 {
 	// Common MIME type constants
-	namespace MIME {
-		constexpr const char* JSON = "application/json";
-		constexpr const char* TEXT = "application/text";
-		constexpr const char* JAVASCRIPT = "application/javascript";
-		constexpr const char* CSS = "text/css";
-		constexpr const char* PLAIN = "text/plain";
-		constexpr const char* MARKDOWN = "text/markdown";
-		constexpr const char* HTML = "text/html";
-		constexpr const char* OCTET_STREAM = "application/octet-stream";
-		constexpr const char* KML = "application/vnd.google-earth.kml+xml";
-		constexpr const char* SVG = "image/svg+xml";
-		constexpr const char* PNG = "image/png";
+	namespace MIME
+	{
+		constexpr const char *JSON = "application/json";
+		constexpr const char *TEXT = "application/text";
+		constexpr const char *JAVASCRIPT = "application/javascript";
+		constexpr const char *CSS = "text/css";
+		constexpr const char *PLAIN = "text/plain";
+		constexpr const char *MARKDOWN = "text/markdown";
+		constexpr const char *HTML = "text/html";
+		constexpr const char *OCTET_STREAM = "application/octet-stream";
+		constexpr const char *KML = "application/vnd.google-earth.kml+xml";
+		constexpr const char *SVG = "image/svg+xml";
+		constexpr const char *PNG = "image/png";
 	}
 
 	// Forward declarations
@@ -75,7 +76,7 @@ namespace IO
 			: connection(c), path(p), args(a), accept_gzip(gz) {}
 	};
 
-class SSEConnection
+	class SSEConnection
 	{
 	protected:
 		bool running = false;
@@ -143,10 +144,10 @@ class SSEConnection
 
 	class HTTPServer : public IO::TCPServer
 	{
-		std::function<void(HTTPRequest&)> requestHandler;
+		std::function<void(HTTPRequest &)> requestHandler;
 
 	public:
-		void setRequestHandler(std::function<void(HTTPRequest&)> handler)
+		void setRequestHandler(std::function<void(HTTPRequest &)> handler)
 		{
 			requestHandler = std::move(handler);
 		}

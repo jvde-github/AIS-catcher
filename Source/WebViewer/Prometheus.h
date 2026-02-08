@@ -23,7 +23,8 @@
 #include "AIS-catcher.h"
 #include "JSONAIS.h"
 
-class PromotheusCounter : public StreamIn<JSON::JSON> {
+class PromotheusCounter : public StreamIn<JSON::JSON>
+{
 	std::mutex m;
 
 	int _LONG_RANGE_CUTOFF = 2500;
@@ -37,7 +38,7 @@ class PromotheusCounter : public StreamIn<JSON::JSON> {
 	std::string ppm;
 	std::string level;
 
-	void Add(const AIS::Message& m, const TAG& tag, bool new_vessel = false);
+	void Add(const AIS::Message &m, const TAG &tag, bool new_vessel = false);
 	void Clear();
 
 public:
@@ -51,6 +52,6 @@ public:
 	int getCount() { return _count; }
 	void setCutoff(int cutoff) { _LONG_RANGE_CUTOFF = cutoff; }
 
-	void Receive(const JSON::JSON* json, int len, TAG& tag);
+	void Receive(const JSON::JSON *json, int len, TAG &tag);
 	std::string toPrometheus();
 };

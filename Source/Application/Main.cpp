@@ -71,7 +71,7 @@ static int initializeSystem(ApplicationState &app)
 {
 	Logger::getInstance().setMaxBufferSize(50);
 	app.cb = Logger::getInstance().addLogListener([](const LogMessage &msg)
-											  { std::cerr << msg.message << "\n"; });
+												  { std::cerr << msg.message << "\n"; });
 
 #ifdef _WIN32
 	if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
 	try
 	{
 		initializeSystem(app);
-		
+
 		for (auto &r : app.receivers)
 			r->getDeviceManager().refreshDevices();
 
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 
 		for (auto &s : app.servers)
 			s->close();
-			
+
 		return exit_code;
 	}
 	catch (std::exception const &e)

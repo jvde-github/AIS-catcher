@@ -24,6 +24,6 @@ namespace IO
 	{
 	public:
 		CommunityStreamer();
-		virtual ~CommunityStreamer() = default;
+		virtual ~CommunityStreamer() {}
 	};
-}
+};

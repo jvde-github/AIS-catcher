@@ -75,7 +75,7 @@ public:
 	DeviceManager deviceManager;
 
 public:
-	DeviceManager& getDeviceManager() { return deviceManager; }
+	DeviceManager &getDeviceManager() { return deviceManager; }
 
 	// Model
 	void setChannel(std::string mode) { setChannel(mode, ""); }

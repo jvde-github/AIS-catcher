@@ -174,7 +174,8 @@ void DeviceManager::printAvailableDevices(bool JSON)
 	{
 		JSON::JSONBuilder json;
 		json.start()
-			.key("devices").startArray();
+			.key("devices")
+			.startArray();
 
 		for (int i = 0; i < device_list.size(); i++)
 		{

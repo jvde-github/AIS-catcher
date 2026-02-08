@@ -187,7 +187,7 @@ namespace JSON
 
 	public:
 		void *binary = NULL;
-		
+
 		void clear()
 		{
 			properties.clear();
