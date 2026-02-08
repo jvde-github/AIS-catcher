@@ -24,21 +24,22 @@
 
 namespace JSON
 {
-	// Static helper to build cache
-	std::vector<std::unordered_map<std::string, int>> Parser::build_cache(const std::vector<std::vector<std::string>>* keymap) {
+	// Key cache: static vector of 5 hashmaps (one per dictionary), initialized at startup
+	static std::vector<std::unordered_map<std::string, int>> key_cache = []()
+	{
 		std::vector<std::unordered_map<std::string, int>> cache(5);
-		for (int d = 0; d < 5; d++) {
-			for (int i = 0; i < keymap->size(); i++) {
-				if (d < (*keymap)[i].size() && !(*keymap)[i][d].empty()) {
-					cache[d][(*keymap)[i][d]] = i;
+		for (int d = 0; d < 5; d++)
+		{
+			for (int i = 0; i < AIS::KeyMap.size(); i++)
+			{
+				if (d < AIS::KeyMap[i].size() && !AIS::KeyMap[i][d].empty())
+				{
+					cache[d][AIS::KeyMap[i][d]] = i;
 				}
 			}
 		}
 		return cache;
-	}
-	
-	// Initialize static cache with AIS::KeyMap at startup
-	std::vector<std::unordered_map<std::string, int>> Parser::key_cache = Parser::build_cache(&AIS::KeyMap);
+	}();
 
 	// Parser -- Build JSON object from String
 
@@ -266,7 +267,7 @@ namespace JSON
 		if (idx >= tokens.size())
 			error_parser("unexpected end in input");
 	}
-	
+
 	// search for keyword in "map", returns index in map or -1 if not found
 	int Parser::search(const std::string &s)
 	{
