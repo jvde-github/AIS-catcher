@@ -37,7 +37,7 @@ readonly LIB_INSTALL_DIR="/usr/lib/${PACKAGE_NAME}"
 
 # Source repositories
 readonly RTLSDR_REPO="https://gitea.osmocom.org/sdr/rtl-sdr.git"
-readonly HYDRASDR_REPO="https://github.com/hydrasdr/rfone_host.git"
+readonly HYDRASDR_REPO="https://github.com/hydrasdr/hydrasdr-host.git"
 readonly NMEA2000_REPO="https://github.com/ttlappalainen/NMEA2000.git"
 
 # Build dependencies (for apt-get)
@@ -93,7 +93,7 @@ build_rtlsdr() {
 
 build_hydrasdr() {
     log "Building libhydrasdr library..."
-    local src_dir="${BUILD_DIR}/rfone_host"
+    local src_dir="${BUILD_DIR}/hydrasdr-host"
     local install_dir="${BUILD_DIR}/local"
     
     git clone --depth 1 "${HYDRASDR_REPO}" "${src_dir}"
@@ -236,7 +236,7 @@ create_debian_structure() {
     
     # Install udev rules to share directory (postinst will install them)
     cp "${BUILD_DIR}/rtl-sdr/rtl-sdr.rules" "${pkg_dir}/usr/share/${PACKAGE_NAME}/"
-    cp "${BUILD_DIR}/rfone_host/hydrasdr-tools/51-hydrasdr.rules" "${pkg_dir}/usr/share/${PACKAGE_NAME}/"
+    cp "${BUILD_DIR}/hydrasdr-host/hydrasdr-tools/51-hydrasdr.rules" "${pkg_dir}/usr/share/${PACKAGE_NAME}/"
     
     # Install bundled libraries from local build
     cp -P "${install_dir}/lib/"librtlsdr.so* "${pkg_dir}${LIB_INSTALL_DIR}/"
