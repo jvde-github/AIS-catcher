@@ -15,12 +15,25 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "CommunityStreamer.h"
 
-#define VERSION_NUMBER 66
-#define VERSION		   "v0.66"
-#define COPYRIGHT	   "jvde-github and other contributors"
+// Community feed server configuration
+#define AISCATCHER_URL "185.77.96.227"
+#define AISCATCHER_PORT "4242"
 
-#ifndef VERSION_DESCRIBE
-#define VERSION_DESCRIBE	"v0.00-1-unknown"
-#endif
+namespace IO
+{
+	CommunityStreamer::CommunityStreamer() : TCPClientStreamer()
+	{
+		// Set default configuration for community feed
+		Set("HOST", AISCATCHER_URL);
+		Set("PORT", AISCATCHER_PORT);
+		Set("MSGFORMAT", "COMMUNITY_HUB");
+		Set("FILTER", "on");
+		Set("GPS", "off");
+		Set("REMOVE_EMPTY", "on");
+		Set("KEEP_ALIVE", "on");
+		Set("OWN_INTERVAL", "10");
+		Set("INCLUDE_SAMPLE_START", "on");
+	}
+}

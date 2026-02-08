@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Source\Application\ApplicationState.cpp" />
+    <ClCompile Include="..\Source\Application\CLI.cpp" />
     <ClCompile Include="..\Source\Application\Config.cpp" />
     <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
     <ClCompile Include="..\Source\Application\Main.cpp" />
@@ -57,6 +59,7 @@
     <ClCompile Include="..\Source\IO\N2KInterface.cpp" />
     <ClCompile Include="..\Source\IO\N2KStream.cpp" />
     <ClCompile Include="..\Source\IO\Network.cpp" />
+    <ClCompile Include="..\Source\IO\CommunityStreamer.cpp" />
     <ClCompile Include="..\Source\IO\Protocol.cpp" />
     <ClCompile Include="..\Source\JSON\JSON.cpp" />
     <ClCompile Include="..\Source\JSON\JSONAIS.cpp" />
@@ -84,6 +87,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Application\AIS-catcher.h" />
+    <ClInclude Include="..\Source\Application\ApplicationState.h" />
+    <ClInclude Include="..\Source\Application\CLI.h" />
     <ClInclude Include="..\Source\Application\Config.h" />
     <ClInclude Include="..\Source\Application\DeviceManager.h" />
     <ClInclude Include="..\Source\Application\WebDB.h" />

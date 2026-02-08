@@ -16,11 +16,14 @@
 */
 
 #pragma once
+#include "Network.h"
 
-#define VERSION_NUMBER 66
-#define VERSION		   "v0.66"
-#define COPYRIGHT	   "jvde-github and other contributors"
-
-#ifndef VERSION_DESCRIBE
-#define VERSION_DESCRIBE	"v0.00-1-unknown"
-#endif
+namespace IO
+{
+	class CommunityStreamer : public TCPClientStreamer
+	{
+	public:
+		CommunityStreamer();
+		virtual ~CommunityStreamer() = default;
+	};
+}

@@ -22,8 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Helper.h"
 #include "JSON/JSONBuilder.h"
 
-IO::OutputMessage *commm_feed = nullptr;
-
 WebViewer::WebViewer()
 {
 	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\nbuild_version = '" + std::string(VERSION) + "';\ncontext='settings';\n\n";

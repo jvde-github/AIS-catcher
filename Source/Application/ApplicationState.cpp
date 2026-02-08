@@ -15,12 +15,14 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "ApplicationState.h"
+#include "Receiver.h"
+#include "WebViewer.h"
+#include "MsgOut.h"
 
-#define VERSION_NUMBER 66
-#define VERSION		   "v0.66"
-#define COPYRIGHT	   "jvde-github and other contributors"
+ApplicationState::ApplicationState()
+{
+	receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+}
 
-#ifndef VERSION_DESCRIBE
-#define VERSION_DESCRIBE	"v0.00-1-unknown"
-#endif
+ApplicationState::~ApplicationState() = default;

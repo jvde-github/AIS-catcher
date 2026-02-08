@@ -901,9 +901,11 @@ if(ZMQ)
 endif()
 
 set(CPP
+    Source/Application/ApplicationState.cpp
     Source/Application/Config.cpp
     Source/Application/DeviceManager.cpp
     Source/Application/Main.cpp
+    Source/Application/CLI.cpp
     Source/Application/Receiver.cpp
     Source/WebViewer/WebViewer.cpp
     Source/WebViewer/WebDB.cpp
@@ -939,6 +941,7 @@ set(CPP
     Source/IO/N2KInterface.cpp
     Source/IO/N2KStream.cpp
     Source/IO/Network.cpp
+    Source/IO/CommunityStreamer.cpp
     Source/IO/Protocol.cpp
     Source/JSON/JSON.cpp
     Source/JSON/JSONAIS.cpp

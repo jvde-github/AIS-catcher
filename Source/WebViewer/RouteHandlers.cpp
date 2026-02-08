@@ -20,8 +20,6 @@
 #include "Helper.h"
 #include "JSON/JSONBuilder.h"
 
-extern IO::OutputMessage *commm_feed;
-
 void WebViewer::initializeRoutes()
 {
 	// Register all routes in the table for O(1) lookup
@@ -181,7 +179,7 @@ void WebViewer::handleAPIStats(IO::HTTPRequest &req)
 		.addRaw("last_hour", hist_hour.lastStatToJSON())
 		.addRaw("last_minute", hist_minute.lastStatToJSON())
 		.add("tcp_clients", server.getNumberOfClients())
-		.add("sharing", commm_feed ? true : false);
+		.add("sharing", getCommunityFeed() ? true : false);
 
 	if (ships.getShareLatLon() && ships.getLat() != LAT_UNDEFINED && ships.getLon() != LON_UNDEFINED)
 		json.add("sharing_link", "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(ships.getLat()) + "&lon=" + std::to_string(ships.getLon()));
@@ -489,7 +487,7 @@ void WebViewer::handleAPIBinaryMessages(IO::HTTPRequest &req)
 
 void WebViewer::handlePluginsJS(IO::HTTPRequest &req)
 {
-	server.Response(req, IO::MIME::JAVASCRIPT, params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n");
+	server.Response(req, IO::MIME::JAVASCRIPT, params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (getCommunityFeed() ? "true" : "false") + ";\n");
 }
 
 void WebViewer::handleConfigCSS(IO::HTTPRequest &req)

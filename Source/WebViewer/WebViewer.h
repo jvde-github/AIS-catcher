@@ -104,6 +104,9 @@ class WebViewer : public Setting
 	void stopThread();
 	AIS::Filter filter;
 
+	// Community feed tracking
+	IO::OutputMessage *community_feed = nullptr;
+
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
 	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
@@ -177,6 +180,10 @@ public:
 	IO::HTTPServer& getServer() { return server; }
 
 	bool isPortSet() { return port_set; }
+
+	// Community feed management
+	void setCommunityFeed(IO::OutputMessage *feed) { community_feed = feed; }
+	IO::OutputMessage* getCommunityFeed() const { return community_feed; }
 
 	Setting &Set(std::string option, std::string arg);
 	std::string Get() { return ""; }

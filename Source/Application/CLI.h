@@ -17,10 +17,12 @@
 
 #pragma once
 
-#define VERSION_NUMBER 66
-#define VERSION		   "v0.66"
-#define COPYRIGHT	   "jvde-github and other contributors"
+#include "ApplicationState.h"
 
-#ifndef VERSION_DESCRIBE
-#define VERSION_DESCRIBE	"v0.00-1-unknown"
-#endif
+namespace CLI
+{
+	void printVersion();
+	void printUsage();
+	void printBuildConfiguration();
+	void parseArguments(int argc, char *argv[], ApplicationState &app);
+}
