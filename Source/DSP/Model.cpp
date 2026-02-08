@@ -760,7 +760,8 @@ namespace AIS
 	{
 		setName("NMEA input");
 		device = dev;
-		*device >> nmea >> output;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
+		physical >> nmea >> output;
 		nmea.outGPS >> output_gps;
 
 		nmea.setStation(station);
@@ -816,7 +817,8 @@ namespace AIS
 		setName("N2K input");
 		n2k.setOwnMMSI(own_mmsi);
 		device = dev;
-		*device >> n2k >> output;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
+		physical >> n2k >> output;
 	}
 
 	Setting &ModelN2K::Set(std::string option, std::string arg)
@@ -836,7 +838,8 @@ namespace AIS
 	{
 		setName("ADSB input");
 		device = dev;
-		*device >> model >> outputADSB;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
+		physical >> model >> outputADSB;
 	}
 
 	Setting &ModelBaseStation::Set(std::string option, std::string arg)
@@ -857,7 +860,8 @@ namespace AIS
 	{
 		setName("ADSB input");
 		device = dev;
-		*device >> model >> outputADSB;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
+		physical >> model >> outputADSB;
 	}
 
 	Setting &ModelBeast::Set(std::string option, std::string arg)
@@ -878,7 +882,8 @@ namespace AIS
 	{
 		setName("ADSB input");
 		device = dev;
-		*device >> model >> outputADSB;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
+		physical >> model >> outputADSB;
 	}
 
 	Setting &ModelRAW1090::Set(std::string option, std::string arg)
@@ -908,14 +913,15 @@ namespace AIS
 		return Model::Get();
 	}
 
-	void ModelExport::buildModel(char, char, int sample_rate, bool, Device::Device *dev)
+	void ModelExport::buildModel(char, char, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		setName("Export output");
 		device = dev;
 
 		wav.setValue("rate", std::to_string(sample_rate));
 
-		*device >> wav;
+		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
+		physical >> wav;
 	}
 
 }
