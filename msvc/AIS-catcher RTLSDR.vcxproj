@@ -60,6 +60,7 @@
     <ClCompile Include="..\Source\IO\Protocol.cpp" />
     <ClCompile Include="..\Source\JSON\JSON.cpp" />
     <ClCompile Include="..\Source\JSON\JSONAIS.cpp" />
+    <ClCompile Include="..\Source\JSON\JSONBuilder.cpp" />
     <ClCompile Include="..\Source\JSON\Keys.cpp" />
     <ClCompile Include="..\Source\JSON\Parser.cpp" />
     <ClCompile Include="..\Source\JSON\StringBuilder.cpp" />
