@@ -902,7 +902,7 @@ endif()
 
 set(CPP
     Source/Application/ApplicationState.cpp
-    Source/Application/Config.cpp
+    Source/Application/JSONConfig.cpp
     Source/Application/DeviceManager.cpp
     Source/Application/Main.cpp
     Source/Application/CLI.cpp

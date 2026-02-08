@@ -17,7 +17,7 @@
 
 #include "CLI.h"
 #include "AIS-catcher.h"
-#include "Config.h"
+#include "JSONConfig.h"
 #include "Receiver.h"
 #include "WebViewer.h"
 #include "JSON.h"

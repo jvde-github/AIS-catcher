@@ -16,7 +16,7 @@
 */
 
 #include "AIS-catcher.h"
-#include "Config.h"
+#include "JSONConfig.h"
 #include "CommunityStreamer.h"
 #include "Helper.h"
 #include "Receiver.h"

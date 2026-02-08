@@ -25,7 +25,7 @@
 
 #include "Receiver.h"
 #include "WebViewer.h"
-#include "Config.h"
+#include "JSONConfig.h"
 #include "CLI.h"
 #include "JSON.h"
 #include "N2KStream.h"
