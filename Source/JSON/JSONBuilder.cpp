@@ -67,7 +67,6 @@ namespace JSON
 
             // Handle special cases
             const char *repl = nullptr;
-            size_t repl_len = 2;
 
             if (c == '"')
                 repl = "\\\"";

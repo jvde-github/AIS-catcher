@@ -72,7 +72,16 @@ namespace AIS
 			uint32_t message_error;
 		} aivdm;
 
-		std::vector<std::string> parts;
+		const char *nmea_line;
+		int nmea_line_len;
+		int field_indices[32];
+		int field_count;
+
+		inline const char *field_start(int idx) const { return nmea_line + field_indices[idx] + 1; }
+		inline int field_len(int idx) const
+		{
+			return (idx + 1 < field_count ? field_indices[idx + 1] : nmea_line_len) - field_indices[idx] - 1;
+		}
 
 		char prev = '\n';
 		ParseState state = ParseState::IDLE;
@@ -106,7 +115,7 @@ namespace AIS
 
 		JSON::Parser parser;
 
-		void split(const std::string &);
+		int parse_fields(const char *line);
 		std::string trim(const std::string &);
 		void processJSONsentence(const std::string &s, TAG &tag, long t);
 		bool processAIS(const std::string &s, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, int groupId, std::string &error_msg);

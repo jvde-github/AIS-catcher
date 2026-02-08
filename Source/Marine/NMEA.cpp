@@ -93,7 +93,7 @@ namespace AIS
 			if (crc_check)
 				return;
 
-        	aivdm.message_error |= MESSAGE_ERROR_NMEA_CHECKSUM;
+			aivdm.message_error |= MESSAGE_ERROR_NMEA_CHECKSUM;
 		}
 
 		if (aivdm.count == 1)
@@ -182,16 +182,27 @@ namespace AIS
 			msg.reduceLength(a.fillbits);
 	}
 
-	void NMEA::split(const std::string &s)
+	int NMEA::parse_fields(const char *line)
 	{
-		parts.clear();
-		std::stringstream ss(s);
-		std::string p;
-		while (ss.good())
+		if (!line || (line[0] != '$' && line[0] != '!'))
+			return 0;
+
+		field_count = 0;
+		int idx = 0;
+		nmea_line = line;
+		field_indices[field_count++] = -1; // First field starts at position 0
+
+		while (line[idx] && line[idx] != '\r' && line[idx] != '\n' && line[idx] != '*' && field_count < 32)
 		{
-			getline(ss, p, ',');
-			parts.push_back(p);
+			if (line[idx] == ',')
+			{
+				field_indices[field_count++] = idx;
+			}
+			idx++;
 		}
+
+		nmea_line_len = idx;
+		return field_count;
 	}
 
 	std::string NMEA::trim(const std::string &s)
@@ -244,16 +255,15 @@ namespace AIS
 
 		bool error = false;
 
-		split(s);
-
-		if (parts.size() != 15)
+		if (parse_fields(s.c_str()) != 15)
 		{
-			error_msg = "NMEA: GPGGA does not have 15 parts but " + std::to_string(parts.size());
+			error_msg = "NMEA: GPGGA does not have 15 parts but " + std::to_string(field_count);
 			return false;
 		}
 
-		const std::string &crc = parts[14];
-		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+		const char *crc_field = field_start(14);
+		int crc_len = field_len(14);
+		int checksum = crc_len > 2 ? (fromHEX(crc_field[crc_len - 2]) << 4) | fromHEX(crc_field[crc_len - 1]) : -1;
 
 		if (checksum != NMEAchecksum(line))
 		{
@@ -266,25 +276,25 @@ namespace AIS
 		}
 
 		// no proper fix
-		int fix = atoi(parts[6].c_str());
+		int fix = atoi(field_start(6));
 		if (fix != 1 && fix != 2)
 		{
-			error_msg = "NMEA: no fix in GPGGA NMEA:" + parts[6];
+			error_msg = "NMEA: no fix in GPGGA NMEA:" + std::string(field_start(6), field_len(6));
 			return false;
 		}
 
-		std::string lat_coord = trim(parts[2]);
-		std::string lat_quad = trim(parts[3]);
-		std::string lon_coord = trim(parts[4]);
-		std::string lon_quad = trim(parts[5]);
+		const char *lat_coord = field_start(2);
+		const char *lat_quad = field_start(3);
+		const char *lon_coord = field_start(4);
+		const char *lon_quad = field_start(5);
 
-		if (lat_quad.empty() || lon_quad.empty())
+		if (field_len(3) == 0 || field_len(5) == 0)
 		{
 			return false;
 		}
 
-		GPS gps(GpsToDecimal(lat_coord.c_str(), lat_quad[0], error),
-				GpsToDecimal(lon_coord.c_str(), lon_quad[0], error),
+		GPS gps(GpsToDecimal(lat_coord, lat_quad[0], error),
+				GpsToDecimal(lon_coord, lon_quad[0], error),
 				s, empty);
 
 		if (error)
@@ -306,13 +316,14 @@ namespace AIS
 
 		bool error = false;
 
-		split(s);
+		int nfields = parse_fields(s.c_str());
 
-		if ((parts.size() != 13 && parts.size() != 12))
+		if (nfields != 13 && nfields != 12)
 			return false;
 
-		const std::string &crc = parts[parts.size() - 1];
-		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
+		const char *crc_field = field_start(nfields - 1);
+		int crc_len = field_len(nfields - 1);
+		int checksum = crc_len > 2 ? (fromHEX(crc_field[crc_len - 2]) << 4) | fromHEX(crc_field[crc_len - 1]) : -1;
 
 		if (checksum != NMEAchecksum(line))
 		{
@@ -323,16 +334,16 @@ namespace AIS
 			}
 		}
 
-		std::string lat_quad = trim(parts[3]);
-		std::string lon_quad = trim(parts[5]);
-		if (lat_quad.empty() || lon_quad.empty())
+		const char *lat_quad = field_start(3);
+		const char *lon_quad = field_start(5);
+		if (field_len(3) == 0 || field_len(5) == 0)
 		{
 			error_msg = "NMEA: no coordinates in RMC";
 			return false;
 		}
 
-		GPS gps(GpsToDecimal(trim(parts[2]).c_str(), lat_quad[0], error),
-				GpsToDecimal(trim(parts[4]).c_str(), lon_quad[0], error), s, empty);
+		GPS gps(GpsToDecimal(field_start(2), lat_quad[0], error),
+				GpsToDecimal(field_start(4), lon_quad[0], error), s, empty);
 
 		if (error)
 		{
@@ -352,17 +363,16 @@ namespace AIS
 			return true;
 
 		bool error = false;
-		split(s);
 
-		if (parts.size() != 8)
+		if (parse_fields(s.c_str()) != 8)
 		{
-			error_msg = "NMEA: GLL does not have 8 parts but " + std::to_string(parts.size());
+			error_msg = "NMEA: GLL does not have 8 parts but " + std::to_string(field_count);
 			return false;
 		}
 
-		const std::string &crc = parts[7];
-		int checksum = crc.size() > 2 ? (fromHEX(crc[crc.length() - 2]) << 4) | fromHEX(crc[crc.length() - 1]) : -1;
-
+		const char *crc_field = field_start(7);
+		int crc_len = field_len(7);
+		int checksum = crc_len > 2 ? (fromHEX(crc_field[crc_len - 2]) << 4) | fromHEX(crc_field[crc_len - 1]) : -1;
 		if (checksum != NMEAchecksum(line))
 		{
 			if (warnings && !crc_check)
@@ -375,16 +385,16 @@ namespace AIS
 			}
 		}
 
-		std::string lat_quad = parts[2];
-		std::string lon_quad = parts[4];
+		const char *lat_quad = field_start(2);
+		const char *lon_quad = field_start(4);
 
-		if (lat_quad.empty() || lon_quad.empty())
+		if (field_len(2) == 0 || field_len(4) == 0)
 		{
 			return false;
 		}
 
-		float lat = GpsToDecimal(parts[1].c_str(), lat_quad[0], error);
-		float lon = GpsToDecimal(parts[3].c_str(), lon_quad[0], error);
+		float lat = GpsToDecimal(field_start(1), lat_quad[0], error);
+		float lon = GpsToDecimal(field_start(3), lon_quad[0], error);
 
 		if (error)
 		{
@@ -406,65 +416,82 @@ namespace AIS
 			error_msg = "NMEA: no $ or ! in AIS sentence";
 			return false;
 		}
-		std::string nmea = str.substr(pos);
+		const char *nmea = str.c_str() + pos;
+		//size_t nmea_len = str.size() - pos;
 
-		bool isNMEA = nmea.size() > 10 && (nmea[3] == 'V' && nmea[4] == 'D' && (nmea[5] == 'M' || nmea[5] == 'O'));
+		bool isNMEA = nmea_line_len > 10 && (nmea[3] == 'V' && nmea[4] == 'D' && (nmea[5] == 'M' || nmea[5] == 'O'));
 		if (!isNMEA)
 		{
 			return true; // no NMEA -> ignore
 		}
 
-		split(nmea);
-		aivdm.reset();
-
-		if (parts.size() != 7 || parts[0].size() != 6 || parts[1].size() != 1 || parts[2].size() != 1 || parts[3].size() > 1 || parts[4].size() > 1 || parts[6].size() != 4)
+		if (parse_fields(nmea) != 7)
 		{
-			error_msg = "NMEA: AIS sentence does not have 7 parts or has invalid part sizes";
+			error_msg = "NMEA: AIS sentence does not have 7 parts but " + std::to_string(field_count);
 			return false;
 		}
-		if (parts[0][0] != '$' && parts[0][0] != '!')
+
+		aivdm.reset();
+		const char *f0 = field_start(0);
+		int f0_len = field_len(0);
+		int f1_len = field_len(1);
+		int f2_len = field_len(2);
+		int f3_len = field_len(3);
+		int f4_len = field_len(4);
+		int f6_len = field_len(6);
+
+		if (f0_len != 6 || f1_len != 1 || f2_len != 1 || f3_len > 1 || f4_len > 1 || f6_len != 4)
+		{
+			error_msg = "NMEA: AIS sentence does not have valid part sizes";
+			return false;
+		}
+		if (f0[0] != '$' && f0[0] != '!')
 		{
 			error_msg = "NMEA: AIS sentence does not start with $ or !";
 			return false;
 		}
 
-		if (!std::isupper(parts[0][1]) || (!std::isupper(parts[0][2]) && !std::isdigit(parts[0][2])))
+		if (!std::isupper(f0[1]) || (!std::isupper(f0[2]) && !std::isdigit(f0[2])))
 		{
 			error_msg = "NMEA: AIS sentence does not have valid talker ID";
 			return false;
 		}
 
-		if (parts[0][3] != 'V' || parts[0][4] != 'D' || (parts[0][5] != 'M' && parts[0][5] != 'O'))
+		if (f0[3] != 'V' || f0[4] != 'D' || (f0[5] != 'M' && f0[5] != 'O'))
 		{
 			error_msg = "NMEA: AIS sentence does not have valid VDM or VDO";
 			return false;
 		}
 
-		aivdm.talkerID = ((parts[0][1] << 8) | parts[0][2]);
-		aivdm.count = parts[1][0] - '0';
-		aivdm.number = parts[2][0] - '0';
-		aivdm.ID = parts[3].size() > 0 ? parts[3][0] - '0' : 0;
-		aivdm.channel = parts[4].size() > 0 ? parts[4][0] : '?';
+		aivdm.talkerID = ((f0[1] << 8) | f0[2]);
+		aivdm.count = field_start(1)[0] - '0';
+		aivdm.number = field_start(2)[0] - '0';
+		aivdm.ID = f3_len > 0 ? field_start(3)[0] - '0' : 0;
+		aivdm.channel = f4_len > 0 ? field_start(4)[0] : '?';
 
-		for (auto c : parts[5])
+		const char *f5 = field_start(5);
+		int f5_len = field_len(5);
+		for (int i = 0; i < f5_len; i++)
 		{
-			if (!isNMEAchar(c))
+			if (!isNMEAchar(f5[i]))
 			{
-				error_msg = "NMEA: AIS sentence contains invalid NMEA character '" + std::string(1, c) + "'";
+				error_msg = "NMEA: AIS sentence contains invalid NMEA character '" + std::string(1, f5[i]) + "'";
 				return false;
 			}
 		}
-		aivdm.data = parts[5];
-		aivdm.fillbits = parts[6][0] - '0';
+		aivdm.data.assign(f5, f5_len);
 
-		if (!isHEX(parts[6][2]) || !isHEX(parts[6][3]))
+		const char *f6 = field_start(6);
+		aivdm.fillbits = f6[0] - '0';
+
+		if (!isHEX(f6[2]) || !isHEX(f6[3]))
 		{
 			error_msg = "NMEA: AIS sentence does not have valid checksum";
 			return false;
 		}
-		aivdm.checksum = (fromHEX(parts[6][2]) << 4) | fromHEX(parts[6][3]);
+		aivdm.checksum = (fromHEX(f6[2]) << 4) | fromHEX(f6[3]);
 
-		aivdm.sentence = nmea;
+		aivdm.sentence.assign(nmea, nmea_line_len);
 		aivdm.groupId = groupId;
 
 		submitAIS(tag, t, ssc, sl, thisstation);
