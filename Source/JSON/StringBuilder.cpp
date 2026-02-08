@@ -101,7 +101,7 @@ namespace JSON {
 	void StringBuilder::to_string(std::string& json, const Value& v) {
 		builder.clear();
 		to_string_internal(v);
-		json += builder.str();
+		builder.append_to(json);
 	}
 
 	void StringBuilder::stringify_internal(const JSON& object) {
@@ -129,6 +129,6 @@ namespace JSON {
 	void StringBuilder::stringify(const JSON& object, std::string& json) {
 		builder.clear();
 		stringify_internal(object);
-		json += builder.str();
+		builder.append_to(json);
 	}
 }

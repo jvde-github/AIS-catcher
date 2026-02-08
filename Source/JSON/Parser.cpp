@@ -20,9 +20,25 @@
 
 #include "Parser.h"
 #include "Parse.h"
+#include "Keys.h"
 
 namespace JSON
 {
+	// Static helper to build cache
+	std::vector<std::unordered_map<std::string, int>> Parser::build_cache(const std::vector<std::vector<std::string>>* keymap) {
+		std::vector<std::unordered_map<std::string, int>> cache(5);
+		for (int d = 0; d < 5; d++) {
+			for (int i = 0; i < keymap->size(); i++) {
+				if (d < (*keymap)[i].size() && !(*keymap)[i][d].empty()) {
+					cache[d][(*keymap)[i][d]] = i;
+				}
+			}
+		}
+		return cache;
+	}
+	
+	// Initialize static cache with AIS::KeyMap at startup
+	std::vector<std::unordered_map<std::string, int>> Parser::key_cache = Parser::build_cache(&AIS::KeyMap);
 
 	// Parser -- Build JSON object from String
 
@@ -250,18 +266,12 @@ namespace JSON
 		if (idx >= tokens.size())
 			error_parser("unexpected end in input");
 	}
-
+	
 	// search for keyword in "map", returns index in map or -1 if not found
 	int Parser::search(const std::string &s)
 	{
-		int p = -1;
-		for (int i = 0; i < keymap->size(); i++)
-			if (dict < (*keymap)[i].size() && (*keymap)[i][dict] == s)
-			{
-				p = i;
-				break;
-			}
-		return p;
+		auto it = key_cache[dict].find(s);
+		return (it != key_cache[dict].end()) ? it->second : -1;
 	}
 
 	Value Parser::parse_value(std::shared_ptr<JSON> o)

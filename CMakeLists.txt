@@ -942,6 +942,7 @@ set(CPP
     Source/IO/Protocol.cpp
     Source/JSON/JSON.cpp
     Source/JSON/JSONAIS.cpp
+    Source/JSON/JSONBuilder.cpp
     Source/JSON/Keys.cpp
     Source/JSON/Parser.cpp
     Source/JSON/StringBuilder.cpp

@@ -32,40 +32,18 @@ class JSONBuilder {
     size_t cursor;
     bool need_comma;
 
-    void ensure(size_t len) {
-        if (cursor + len >= buf.size()) {
-            buf.resize(MAX(buf.size() * 2, cursor + len + 64));
-        }
-    }
+    void ensure(size_t len);
+    void writeRaw(const char* data, size_t len);
+    void comma();
+    void escapeString(const char* s, size_t len);
 
-    void writeRaw(const char* data, size_t len) {
-        std::memcpy(&buf[cursor], data, len);
-        cursor += len;
-    }
-
-    void comma() {
-        if (need_comma) { ensure(1); buf[cursor++] = ','; }
-        need_comma = true;
-    }
-
-    void escapeString(const char* s, size_t len) {
-        ensure(len * 2 + 2);
-        buf[cursor++] = '"';
-        for (size_t i = 0; i < len; ++i) {
-            unsigned char c = s[i];
-            const char* repl = nullptr;
-            if (c == '"') repl = "\\\""; else if (c == '\\') repl = "\\\\";
-            else if (c == '\b') repl = "\\b"; else if (c == '\f') repl = "\\f";
-            else if (c == '\n') repl = "\\n"; else if (c == '\r') repl = "\\r";
-            else if (c == '\t') repl = "\\t"; else if (c < 0x20) continue; 
-            
-            if (repl) { writeRaw(repl, 2); } 
-            else { buf[cursor++] = c; }
-        }
-        buf[cursor++] = '"';
-    }
-
-    // Numeric Writers
+    // Numeric Writers - out of line to reduce code bloat
+    void writeValDouble(double v);
+    void writeValBool(bool v);
+    void writeValString(const std::string& v);
+    void writeValCString(const char* v);
+    
+    // Template must stay inline
     template<typename T>
     typename std::enable_if<std::is_integral<T>::value, void>::type writeVal(T v) {
         ensure(24);
@@ -79,39 +57,34 @@ class JSONBuilder {
         writeRaw(p, (tmp + 23) - p);
     }
 
-    void writeVal(double v) { ensure(32); cursor += std::snprintf(&buf[cursor], 32, "%.8g", v); }
-    void writeVal(bool v) { ensure(5); writeRaw(v ? "true" : "false", v ? 4 : 5); }
-    void writeVal(const std::string& v) { escapeString(v.data(), v.size()); }
-    void writeVal(const char* v) { v ? escapeString(v, std::strlen(v)) : writeRaw("null", 4); }
+    void writeVal(double v) { writeValDouble(v); }
+    void writeVal(bool v) { writeValBool(v); }
+    void writeVal(const std::string& v) { writeValString(v); }
+    void writeVal(const char* v) { writeValCString(v); }
 
 public:
     JSONBuilder() : cursor(0), need_comma(false) { buf.resize(1024); }
 
     std::string str() const { return std::string(buf.data(), cursor); }
+    void append_to(std::string& dest) const { dest.append(buf.data(), cursor); }
     size_t size() const { return cursor; }
     void clear() { cursor = 0; need_comma = false; }
     
     JSONBuilder& nl() { ensure(1); buf[cursor++] = '\n'; return *this; }
     JSONBuilder& crlf() { ensure(2); buf[cursor++] = '\r'; buf[cursor++] = '\n'; return *this; }
 
-    // Structure
-    JSONBuilder& start() { comma(); ensure(1); buf[cursor++] = '{'; need_comma = false; return *this; }
-    JSONBuilder& end() { ensure(1); buf[cursor++] = '}'; need_comma = true; return *this; }
-    JSONBuilder& startArray() { comma(); ensure(1); buf[cursor++] = '['; need_comma = false; return *this; }
-    JSONBuilder& endArray() { ensure(1); buf[cursor++] = ']'; need_comma = true; return *this; }
+    // Structure - moved out of line to reduce code bloat
+    JSONBuilder& start();
+    JSONBuilder& end();
+    JSONBuilder& startArray();
+    JSONBuilder& endArray();
     JSONBuilder& startArr() { return startArray(); }
     JSONBuilder& endArr() { return endArray(); }
 
-    // Key Management
-    JSONBuilder& key(const char* k, size_t len) {
-        ensure(len + 4);
-        if (need_comma) buf[cursor++] = ',';
-        buf[cursor++] = '"'; writeRaw(k, len); writeRaw("\":", 2);
-        need_comma = false;
-        return *this;
-    }
-    JSONBuilder& key(const char* k) { return key(k, std::strlen(k)); }
-    JSONBuilder& key(const std::string& k) { return key(k.data(), k.size()); }
+    // Key Management - moved out of line to reduce code bloat
+    JSONBuilder& key(const char* k, size_t len);
+    JSONBuilder& key(const char* k);
+    JSONBuilder& key(const std::string& k);
 
     // Unified Add (Literal Keys - compile-time length)
     template<size_t N, typename T>
@@ -125,7 +98,7 @@ public:
     template<size_t N>
     JSONBuilder& addRaw(const char (&k)[N], const std::string& v) { key(k, N-1); ensure(v.size()); writeRaw(v.data(), v.size()); need_comma = true; return *this; }
 
-    JSONBuilder& addRaw(const std::string& k, const std::string& v) { key(k); ensure(v.size()); writeRaw(v.data(), v.size()); need_comma = true; return *this; }
+    JSONBuilder& addRaw(const std::string& k, const std::string& v);
 
     template<size_t N>
     JSONBuilder& addSafe(const char (&k)[N], const std::string& v) { 
@@ -140,9 +113,8 @@ public:
     template<typename T>
     JSONBuilder& value(T v) { comma(); writeVal(v); return *this; }
     
-    JSONBuilder& valueRaw(const std::string& v) { comma(); ensure(v.size()); writeRaw(v.data(), v.size()); return *this; }
-    
-    JSONBuilder& valueNull() { comma(); ensure(4); writeRaw("null", 4); return *this; }
+    JSONBuilder& valueRaw(const std::string& v);
+    JSONBuilder& valueNull();
     
     template<typename T>
     JSONBuilder& valueOrNull(T v, T undef) { return (v == undef) ? valueNull() : value(v); }

@@ -20,6 +20,7 @@
 #include <vector>
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 #include "JSON.h"
 
@@ -32,6 +33,10 @@ namespace JSON {
 		const std::vector<std::vector<std::string>>* keymap = nullptr;
 		int dict = 0;
 		bool skipUnknownKeys = false;
+		
+		// Key cache: static vector of 5 hashmaps (one per dictionary), shared by all instances
+		static std::vector<std::unordered_map<std::string, int>> key_cache;
+		static std::vector<std::unordered_map<std::string, int>> build_cache(const std::vector<std::vector<std::string>>* keymap);
 
 		std::string json;
 		std::vector<Token> tokens;
@@ -83,7 +88,7 @@ namespace JSON {
 
 	public:
 		Parser(const std::vector<std::vector<std::string>>* map, int d) : keymap(map), dict(d) {}
-		Parser(const std::vector<std::vector<std::string>>* map) : keymap(map) {}
+		Parser(const std::vector<std::vector<std::string>>* map) : keymap(map), dict(0) {}
 
 		std::shared_ptr<JSON> parse(const std::string& j);
 		void setSkipUnknown(bool b) { skipUnknownKeys = b; }
