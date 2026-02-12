@@ -106,8 +106,10 @@ namespace IO
 
 	void HTTPStreamer::post()
 	{
+		/*
 		if (!msg_list.size())
 			return;
+		*/
 
 		std::list<std::string> send_list;
 
