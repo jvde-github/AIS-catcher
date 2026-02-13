@@ -119,10 +119,21 @@ namespace Device {
 
 		virtual std::string Get() {
 
-			std::string str = "rate " + std::to_string(getSampleRate() / 1000) + "K";
-			if (tuner_bandwidth) str += " bw " + std::to_string(tuner_bandwidth / 1000) + "K";
-			if (freq_offset) str += " freqoffset " + std::to_string(freq_offset);
-			str += " format " + Util::Convert::toString(format);
+			std::string str;
+			uint32_t rate = getSampleRate();
+			if (rate != 0) {
+				str = "rate " + std::to_string(rate / 1000) + "K";
+			}
+			if (tuner_bandwidth) {
+				if (!str.empty()) str += " ";
+				str += "bw " + std::to_string(tuner_bandwidth / 1000) + "K";
+			}
+			if (freq_offset) {
+				if (!str.empty()) str += " ";
+				str += "freqoffset " + std::to_string(freq_offset);
+			}
+			if (!str.empty()) str += " ";
+			str += "format " + Util::Convert::toString(format);
 
 			return str;
 		}
