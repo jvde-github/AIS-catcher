@@ -313,15 +313,15 @@ jobs:
         cp hackrf\host\libhackrf\src\*.h include
         cp hackrf\COPYING output\Licenses\HACKRF
 
-        echo "HYDRASDR"
-        git clone https://github.com/hydrasdr/hydrasdr-host.git
-        cd hydrasdr-host; mkdir build; cd build
-        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
-        cmake --build . --config $config
-        cd ..; cd ..
-        cp hydrasdr-host\build\libhydrasdr\src\$config\*.lib lib
-        cp hydrasdr-host\libhydrasdr\src\*.h include
-        cp hydrasdr-host\LICENSE.md output\Licenses\HYDRASDR
+        # echo "HYDRASDR"
+        # git clone https://github.com/hydrasdr/hydrasdr-host.git
+        # cd hydrasdr-host; mkdir build; cd build
+        # cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
+        # cmake --build . --config $config
+        # cd ..; cd ..
+        # cp hydrasdr-host\build\libhydrasdr\src\$config\*.lib lib
+        # cp hydrasdr-host\libhydrasdr\src\*.h include
+        # cp hydrasdr-host\LICENSE.md output\Licenses\HYDRASDR
 
         echo "AIS-catcher"
         mkdir build; cd build
