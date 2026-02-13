@@ -275,6 +275,7 @@ int main(int argc, char *argv[])
 	bool timeout_nomsg = false, list_devices_JSON = false, no_run = false, show_copyright = true;
 	int own_mmsi = -1;
 	int cb = -1;
+	bool verbose = false;
 
 	Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
 	extern IO::OutputMessage *commm_feed;
@@ -398,9 +399,17 @@ int main(int argc, char *argv[])
 			break;
 			case 'v':
 				Assert(count <= 1, param);
-				receiver.verbose = true;
-				if (count == 1)
-					screen.verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
+				if (param.length() == 3 && param[2] == '+') {
+					// -v+ applies to last receiver only, no time parameter
+					Assert(count == 0, param, "no parameters allowed with -v+");
+					receiver.verbose = true;
+				} else {
+					// -v or -v* applies to all receivers (after loop)
+					Assert(param.length() == 2 || (param.length() == 3 && param[2] == '*'), param, "invalid verbose option");
+					verbose = true;
+					if (count == 1)
+						screen.verboseUpdateTime = Util::Parse::Integer(arg1, 1, 3600);
+				}
 				break;
 			case 'O':
 				Assert(count == 1, param);
@@ -752,6 +761,13 @@ int main(int argc, char *argv[])
 			ptr += count + 1;
 		}
 
+		// Apply verbose setting to all receivers
+		if (verbose) {
+			for (auto &r : _receivers) {
+				r->verbose = true;
+			}
+		}
+
 		if (show_copyright)
 			printVersion();
 
@@ -793,7 +809,7 @@ int main(int argc, char *argv[])
 
 			r.setupDevice();
 			// set up the decoding model(s), group is the last output group used
-			r.setupModel(group);
+			r.setupModel(group, i);
 
 			// set up all the output and connect to the receiver outputs
 			for (auto &o : msg)

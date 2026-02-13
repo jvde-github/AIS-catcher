@@ -166,8 +166,9 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 	return models.back();
 }
 
-void Receiver::setupModel(int &group)
+void Receiver::setupModel(int &group, int idx)
 {
+	receiver_index = idx;
 	auto* device = deviceManager.getDevice();
 	// if nothing defined, create one model
 	if (!models.size())
@@ -251,7 +252,7 @@ void Receiver::play()
 		ss << "Device    : " << device->getProduct() << "\n"
 		   << "Settings  : " << device->Get() << "\n";
 		for (int i = 0; i < models.size(); i++)
-			ss << "Model #" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
+			ss << "Model #" + std::to_string(receiver_index) + "-" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
 			   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() << "\n";
 
 		Info() << ss.str();

@@ -54,6 +54,7 @@ class Receiver
 	bool timing = false;
 
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
+	int receiver_index = -1;
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
 
@@ -107,13 +108,13 @@ public:
 	std::unique_ptr<AIS::Model> &Model(int i) { return models[i]; }
 	int Count() { return models.size(); }
 
-	void setup(int &g)
+	void setup(int &g, int idx)
 	{
 		setupDevice();
-		setupModel(g);
+		setupModel(g, idx);
 	}
 	void setupDevice();
-	void setupModel(int &g);
+	void setupModel(int &g, int idx);
 
 	void play();
 	void stop();
