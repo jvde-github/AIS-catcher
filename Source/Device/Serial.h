@@ -19,6 +19,7 @@
 
 #include "Device.h"
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <thread>
 #include <string>
@@ -78,7 +79,9 @@ namespace Device
 		std::thread read_thread;
 
 		bool lost = false;
-		bool print = false;
+		bool dump = false;
+		std::string dump_file;
+		std::ofstream dump_stream;
 		std::string init_sequence;
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;

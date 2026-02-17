@@ -19,6 +19,7 @@
 #include "Parse.h"
 #include "Convert.h"
 #include "Helper.h"
+#include <cmath>
 
 namespace AIS
 {
@@ -81,7 +82,7 @@ namespace AIS
 		return c;
 	}
 
-	void NMEA::submitAIS(TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation)
+	void NMEA::submitAIS(TAG &tag, int64_t t, uint64_t ssc, uint16_t sl, int thisstation)
 	{
 		bool checksum_error = aivdm.checksum != NMEAchecksum(aivdm.sentence);
 
@@ -93,7 +94,7 @@ namespace AIS
 			if (crc_check)
 				return;
 
-        	aivdm.message_error |= MESSAGE_ERROR_NMEA_CHECKSUM;
+			aivdm.message_error |= MESSAGE_ERROR_NMEA_CHECKSUM;
 		}
 
 		if (aivdm.count == 1)
@@ -101,7 +102,10 @@ namespace AIS
 			tag.error = aivdm.message_error;
 
 			msg.clear();
-			msg.Stamp(stamp ? 0 : t);
+			if (stamp || t == 0)
+				msg.Stamp();
+			else
+				msg.setRxTimeMicros(t);
 			msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation, own_mmsi);
 			msg.setStartIdx(ssc);
 			msg.setEndIdx(ssc + sl);
@@ -143,7 +147,10 @@ namespace AIS
 		// multiline messages are now complete and in the right order
 		// we create a message and add the payloads to it
 		msg.clear();
-		msg.Stamp(stamp ? 0 : t);
+		if (stamp || t == 0)
+			msg.Stamp();
+		else
+			msg.setRxTimeMicros(t);
 		msg.setOrigin(aivdm.channel, thisstation == -1 ? station : thisstation, own_mmsi);
 
 		for (auto it = queue.begin(); it != queue.end(); it++)
@@ -236,7 +243,7 @@ namespace AIS
 		return v;
 	}
 
-	bool NMEA::processGGA(const std::string &s, TAG &tag, long t, std::string &error_msg)
+	bool NMEA::processGGA(const std::string &s, TAG &tag, int64_t t, std::string &error_msg)
 	{
 
 		if (!includeGPS)
@@ -298,7 +305,7 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processRMC(const std::string &s, TAG &tag, long t, std::string &error_msg)
+	bool NMEA::processRMC(const std::string &s, TAG &tag, int64_t t, std::string &error_msg)
 	{
 
 		if (!includeGPS)
@@ -345,7 +352,7 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processGLL(const std::string &s, TAG &tag, long t, std::string &error_msg)
+	bool NMEA::processGLL(const std::string &s, TAG &tag, int64_t t, std::string &error_msg)
 	{
 
 		if (!includeGPS)
@@ -398,7 +405,7 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processAIS(const std::string &str, TAG &tag, long t, uint64_t ssc, uint16_t sl, int thisstation, int groupId, std::string &error_msg)
+	bool NMEA::processAIS(const std::string &str, TAG &tag, int64_t t, uint64_t ssc, uint16_t sl, int thisstation, int groupId, std::string &error_msg)
 	{
 		int pos = str.find_first_of("$!");
 		if (pos == std::string::npos)
@@ -472,7 +479,7 @@ namespace AIS
 		return true;
 	}
 
-	void NMEA::processJSONsentence(const std::string &s, TAG &tag, long t)
+	void NMEA::processJSONsentence(const std::string &s, TAG &tag, int64_t t)
 	{
 
 		if (s[0] == '{')
@@ -514,8 +521,11 @@ namespace AIS
 						tag.ppm = p.Get().getFloat(PPM_UNDEFINED);
 						break;
 					case AIS::KEY_RXUXTIME:
-						t = p.Get().getInt();
-						break;
+					{
+						double ts = p.Get().getFloat();
+						t = (int64_t)std::llround(ts * 1000000.0);
+					}
+					break;
 					case AIS::KEY_STATION_ID:
 						thisstation = p.Get().getInt();
 						break;
@@ -684,8 +694,8 @@ namespace AIS
 				throw std::runtime_error("invalid message length: " + std::to_string(length_bits));
 			}
 
-			msg.clear();
-			msg.Stamp(timestamp);
+			msg.clear();			
+			msg.setRxTimeUnix(timestamp);
 			msg.setOrigin(channel, station, own_mmsi);
 			msg.setStartIdx(0);
 			msg.setEndIdx(0);
@@ -724,7 +734,7 @@ namespace AIS
 		}
 	}
 
-	bool NMEA::parseTagBlock(const std::string &s, std::string &nmea, long &timestamp, int &thisstation, int &groupId, std::string &error_msg)
+	bool NMEA::parseTagBlock(const std::string &s, std::string &nmea, int64_t &timestamp, int &thisstation, int &groupId, std::string &error_msg)
 	{
 		// Format: \s:source,c:timestamp,g:seq-total-id*checksum\!AIVDM,...
 		// Find the second backslash that ends the tag block
@@ -794,7 +804,16 @@ namespace AIS
 			case 'c': // Unix timestamp
 				try
 				{
-					timestamp = std::stol(value);
+					if (value.find('.') != std::string::npos)
+					{
+						double ts = std::stod(value);
+						timestamp = (int64_t)std::llround(ts * 1000000.0);
+					}
+					else
+					{
+						int64_t raw = std::stoll(value);
+						timestamp = (raw > 100000000000LL || raw < -100000000000LL) ? raw : (raw * 1000000);
+					}
 				}
 				catch (...)
 				{
@@ -841,7 +860,7 @@ namespace AIS
 		return newline;
 	}
 
-	bool NMEA::processNMEAline(const std::string &s, TAG &tag, long t, int thisstation, int groupId, std::string &error_msg)
+	bool NMEA::processNMEAline(const std::string &s, TAG &tag, int64_t t, int thisstation, int groupId, std::string &error_msg)
 	{
 		std::string type = s.size() > 5 ? s.substr(3, 3) : "";
 
@@ -859,7 +878,7 @@ namespace AIS
 		return true; // Unknown type, ignore
 	}
 
-	bool NMEA::processTagBlock(const std::string &s, TAG &tag, long &t, std::string &error_msg)
+	bool NMEA::processTagBlock(const std::string &s, TAG &tag, int64_t &t, std::string &error_msg)
 	{
 		std::string nmea;
 		int thisstation = -1;
@@ -876,7 +895,7 @@ namespace AIS
 	{
 		try
 		{
-			long t = 0;
+			int64_t t = 0;
 
 			for (int j = 0; j < len; j++)
 			{

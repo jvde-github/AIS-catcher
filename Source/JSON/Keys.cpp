@@ -71,6 +71,8 @@ namespace AIS
 		{"", "", "", "", "description", ""},											// KEY_SETTING_DESCRIPTION
 		{"", "", "", "", "device", ""},													// KEY_SETTING_DEVICE
 		{"", "", "", "", "droop", ""},													// KEY_SETTING_DROOP
+		{"", "", "", "", "dump", ""},													// KEY_SETTING_DUMP
+		{"", "", "", "", "dump_file", ""},												// KEY_SETTING_DUMP_FILE
 		{"", "", "", "", "endpoint", ""},												// KEY_SETTING_ENDPOINT
 		{"", "", "", "", "file", ""},													// KEY_SETTING_FILE
 		{"", "", "", "", "filter", ""},													// KEY_SETTING_FILTER

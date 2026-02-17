@@ -139,8 +139,14 @@ namespace Device
 
 	void SerialPort::Dump(RAW &r)
 	{
-		if (print)
+		if (dump)
 		{
+			if (dump_stream.is_open())
+			{
+				dump_stream.write((const char *)r.data, r.size);
+				return;
+			}
+
 			std::cerr << ">> ";
 			for (int i = 0; i < r.size; i++)
 			{
@@ -159,6 +165,9 @@ namespace Device
 
 	void SerialPort::Close()
 	{
+		if (dump_stream.is_open())
+			dump_stream.close();
+
 #ifdef _WIN32
 		if (serial_handle != INVALID_HANDLE_VALUE)
 		{
@@ -191,6 +200,15 @@ namespace Device
 
 	void SerialPort::Play()
 	{
+		if (dump && !dump_file.empty())
+		{
+			dump_stream.close();
+			dump_stream.open(dump_file, std::ios::out | std::ios::app);
+			if (!dump_stream.is_open())
+			{
+				throw std::runtime_error("Serial: cannot open dump file \"" + dump_file + "\".");
+			}
+		}
 
 #ifdef _WIN32
 		serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
@@ -386,6 +404,9 @@ namespace Device
 		{
 			read_thread.join();
 		}
+
+		if (dump_stream.is_open())
+			dump_stream.close();
 	}
 
 	Setting &SerialPort::Set(std::string option, std::string arg)
@@ -409,7 +430,17 @@ namespace Device
 		}
 		else if (option == "PRINT")
 		{
-			print = Util::Parse::Switch(arg);
+			Warning() << "PRINT option is deprecated and will be removed in a future release. Use DUMP instead.";
+			dump = Util::Parse::Switch(arg);
+		}
+		else if (option == "DUMP")
+		{
+			dump = Util::Parse::Switch(arg);
+		}
+		else if (option == "DUMP_FILE")
+		{
+			dump_file = arg;
+			dump = true;
 		}
 		else if (option == "INIT_SEQ")
 		{
@@ -457,7 +488,8 @@ namespace Device
 			   " baudrate " + std::to_string(baudrate) +
 			   " flowcontrol " + fc_str +
 			   " port " + port +
-			   " print " + Util::Convert::toString(print);
+			   " dump " + Util::Convert::toString(dump) +
+			   (!dump_file.empty() ? (" dump_file " + dump_file) : "");
 	}
 	void SerialPort::getDeviceList(std::vector<Description> &DeviceList)
 	{

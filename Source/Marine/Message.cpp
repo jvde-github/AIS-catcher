@@ -93,7 +93,13 @@ namespace AIS
 
 		if (mode & 2)
 		{
-			ss << ",\"rxuxtime\":" << getRxTimeUnix();
+			std::stringstream ts;
+			if ((rxtime % 1000000) != 0)
+				ts << std::fixed << std::setprecision(6) << ((double)rxtime / 1000000.0);
+			else
+				ts << (rxtime / 1000000);
+
+			ss << ",\"rxuxtime\":\"" << ts.str() << "\"";
 			ss << ",\"rxtime\":\"" << getRxTime() << "\"";
 		}
 

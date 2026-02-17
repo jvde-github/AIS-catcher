@@ -19,6 +19,8 @@
 
 #include <string>
 #include <time.h>
+#include <chrono>
+#include <cstdint>
 #include <vector>
 #include <iomanip>
 #include <sstream>
@@ -60,7 +62,7 @@ namespace AIS
 		std::string line = "!AIVDM,X,X,X,X," + std::string(MAX_NMEA_CHARS, '.') + ",X*XX\n\r"; // longest line
 
 		uint8_t data[MAX_AIS_BYTES + 1];
-		std::time_t rxtime;
+		int64_t rxtime; // microseconds since epoch
 		int length;
 		char channel;
 		long start_idx, end_idx;
@@ -70,12 +72,11 @@ namespace AIS
 	public:
 		std::vector<std::string> NMEA;
 
-		void Stamp(std::time_t t = (std::time_t)0L)
+		void Stamp()
 		{
-			std::time(&rxtime);
-
-			if ((long int)t != 0 && t < rxtime)
-				setRxTimeUnix(t);
+			auto now = std::chrono::system_clock::now();
+			auto us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
+			rxtime = us.count();
 		}
 
 		std::string getNMEAJSON(unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ss = false, uint32_t ipv4 = 0, const std::string &uid = "") const;
@@ -84,15 +85,21 @@ namespace AIS
 
 		std::string getRxTime() const
 		{
-			return Util::Convert::toTimeStr(rxtime);
+			std::time_t t = (std::time_t)(rxtime / 1000000);
+			return Util::Convert::toTimeStr(t);
 		}
 
 		std::time_t getRxTimeUnix() const
 		{
-			return rxtime;
+			return (std::time_t)(rxtime / 1000000);
 		}
 
 		void setRxTimeUnix(std::time_t t)
+		{
+			rxtime = (int64_t)t * 1000000;
+		}
+
+		void setRxTimeMicros(int64_t t)
 		{
 			rxtime = t;
 		}
