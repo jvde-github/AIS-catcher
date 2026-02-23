@@ -58,7 +58,6 @@ namespace IO
 		JSON::StringBuilder builder;
 		HTTPClient http;
 
-		AIS::Filter filter;
 		std::string json;
 
 		std::thread run_thread;

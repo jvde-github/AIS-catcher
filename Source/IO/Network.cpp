@@ -44,7 +44,7 @@ namespace IO
 	void HTTPStreamer::Start()
 	{
 		http.setStats(&stats);
-		
+
 		if (!running)
 		{
 
@@ -177,7 +177,7 @@ namespace IO
 		else if (show_response)
 			Info() << "HTTP Client [" << url << "]: return code " << r;
 	}
-	
+
 	void HTTPStreamer::process()
 	{
 
@@ -259,64 +259,60 @@ namespace IO
 		{
 			device_setting = JSON::StringBuilder::stringify(arg);
 		}
-		else
+		else if (option == "GZIP")
+		{
+			gzip = Util::Parse::Switch(arg);
+			if (gzip && !zip.installed())
+				throw std::runtime_error("HTTP: ZLIB not installed");
+		}
+		else if (option == "RESPONSE")
+		{
+			show_response = Util::Parse::Switch(arg);
+		}
+		else if (option == "PROTOCOL")
 		{
 			Util::Convert::toUpper(arg);
 
-			if (option == "GZIP")
+			if (arg == "AISCATCHER")
 			{
-				gzip = Util::Parse::Switch(arg);
-				if (gzip && !zip.installed())
-					throw std::runtime_error("HTTP: ZLIB not installed");
+				builder.setMap(JSON_DICT_FULL);
+				protocol_string = "jsonaiscatcher";
+				protocol = PROTOCOL::AISCATCHER;
 			}
-			else if (option == "RESPONSE")
+			else if (arg == "MINIMAL")
 			{
-				show_response = Util::Parse::Switch(arg);
+				builder.setMap(JSON_DICT_MINIMAL);
+				protocol_string = "jsonaiscatcher";
+				protocol = PROTOCOL::AISCATCHER;
 			}
-			else if (option == "PROTOCOL")
+			else if (arg == "AIRFRAMES")
 			{
-
-				if (arg == "AISCATCHER")
-				{
-					builder.setMap(JSON_DICT_FULL);
-					protocol_string = "jsonaiscatcher";
-					protocol = PROTOCOL::AISCATCHER;
-				}
-				else if (arg == "MINIMAL")
-				{
-					builder.setMap(JSON_DICT_MINIMAL);
-					protocol_string = "jsonaiscatcher";
-					protocol = PROTOCOL::AISCATCHER;
-				}
-				else if (arg == "AIRFRAMES")
-				{
-					builder.setMap(JSON_DICT_MINIMAL);
-					protocol_string = "airframes";
-					protocol = PROTOCOL::AIRFRAMES;
-					gzip = zip.installed();
-					INTERVAL = 30;
-				}
-				else if (arg == "LIST")
-				{
-					builder.setMap(JSON_DICT_FULL);
-					protocol = PROTOCOL::LIST;
-				}
-				else if (arg == "NMEA")
-				{
-					protocol = PROTOCOL::NMEA;
-				}
-				else if (arg == "APRS")
-				{
-					builder.setMap(JSON_DICT_APRS);
-					protocol = PROTOCOL::APRS;
-				}
-				else
-					throw std::runtime_error("HTTP: error - unknown protocol");
+				builder.setMap(JSON_DICT_MINIMAL);
+				protocol_string = "airframes";
+				protocol = PROTOCOL::AIRFRAMES;
+				gzip = zip.installed();
+				INTERVAL = 30;
 			}
-			else if (!setOption(option,arg) && !filter.SetOption(option, arg))
+			else if (arg == "LIST")
 			{
-				throw std::runtime_error("HTTP output - unknown option: " + option);
+				builder.setMap(JSON_DICT_FULL);
+				protocol = PROTOCOL::LIST;
 			}
+			else if (arg == "NMEA")
+			{
+				protocol = PROTOCOL::NMEA;
+			}
+			else if (arg == "APRS")
+			{
+				builder.setMap(JSON_DICT_APRS);
+				protocol = PROTOCOL::APRS;
+			}
+			else
+				throw std::runtime_error("HTTP: error - unknown protocol");
+		}
+		else if (!setOption(option, arg) && !filter.SetOption(option, arg))
+		{
+			throw std::runtime_error("HTTP output - unknown option: " + option);
 		}
 
 		return *this;
