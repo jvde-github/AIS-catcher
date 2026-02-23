@@ -560,7 +560,7 @@ namespace IO
 			SAR = Util::Parse::Switch(arg);
 		else
 		{
-			filter.Set(option, arg);
+			filter.SetOption(option, arg);
 		}
 		return *this;
 	}
