@@ -781,7 +781,8 @@ int main(int argc, char *argv[])
 		if((!xshare_defined && !c.isSharingDefined()) && (msg.size() > 0 && servers.size() > 0))
 		{
 			Info() << "===============================";
-			Info() << "Note: Option for Community sharing with aiscatcher.org is not defined and will be enabled automatically in future versions. To disable this feature, please explicitly use -X OFF.";
+			Info() << "Note: Option for Community sharing with aiscatcher.org is not defined and will be enabled automatically in";
+			Info() << "future versions to benefit from community overlay in web viewer. To disable this feature, please explicitly use -X OFF.";
 			Info() << "===============================";
 		}
 
