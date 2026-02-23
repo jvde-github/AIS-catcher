@@ -32,9 +32,11 @@
 #include "JSON/StringBuilder.h"
 #include "MsgOut.h"
 
-namespace IO {
+namespace IO
+{
 
-	class PostgreSQL : public OutputJSON {
+	class PostgreSQL : public OutputMessage
+	{
 		JSON::StringBuilder builder;
 		std::string sql_trans;
 		std::stringstream sql;
@@ -45,10 +47,13 @@ namespace IO {
 #endif
 		int MAX_FAILS = 10;
 
-		std::string escape(const std::string& input) {
+		std::string escape(const std::string &input)
+		{
 			std::string output;
-			for (const char c : input) {
-				if (c == '\'') output += c;
+			for (const char c : input)
+			{
+				if (c == '\'')
+					output += c;
 
 				output += c;
 			}
@@ -56,7 +61,7 @@ namespace IO {
 		}
 
 #ifdef HASPSQL
-		PGconn* con = nullptr;
+		PGconn *con = nullptr;
 		std::vector<int> db_keys;
 		bool terminate = false, running = false;
 
@@ -73,20 +78,20 @@ namespace IO {
 		void post();
 #endif
 	public:
-		PostgreSQL() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
+		PostgreSQL() : builder(&AIS::KeyMap, JSON_DICT_FULL) { fmt = MessageFormat::JSON_FULL; }
 		~PostgreSQL();
 
 #ifdef HASPSQL
 		void process();
 
-		std::string addVesselPosition(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s);
-		std::string addVesselStatic(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s);
-		std::string addVessel(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s);
-		std::string addBasestation(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s);
-		std::string addSARposition(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s);
-		std::string addATON(const JSON::JSON* data, const AIS::Message* msg, const std::string& m, const std::string& s);
+		std::string addVesselPosition(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s);
+		std::string addVesselStatic(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s);
+		std::string addVessel(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s);
+		std::string addBasestation(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s);
+		std::string addSARposition(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s);
+		std::string addATON(const JSON::JSON *data, const AIS::Message *msg, const std::string &m, const std::string &s);
 
-		void Receive(const JSON::JSON* data, int len, TAG& tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag);
 #endif
 
 		void setup();
@@ -94,7 +99,6 @@ namespace IO {
 		void Start() { setup(); }
 		void setMap(int m) { builder.setMap(m); }
 
-
-		Setting& Set(std::string option, std::string arg);
+		Setting &Set(std::string option, std::string arg);
 	};
 }

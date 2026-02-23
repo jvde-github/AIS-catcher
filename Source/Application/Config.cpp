@@ -88,8 +88,8 @@ void Config::setHTTPfromJSON(const JSON::Property &pd)
 		if (!isActiveObject(v))
 			continue;
 
-		_json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::HTTPStreamer()));
-		IO::OutputJSON &h = *_json.back();
+		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::HTTPStreamer()));
+		IO::OutputMessage &h = *_msg.back();
 
 		setSettingsFromJSON(v, h);
 		_receivers.back()->setTags("DT");
@@ -349,6 +349,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 		if (p.Key() == AIS::KEY_SETTING_SHARING)
 		{
 			xchange = Util::Parse::Switch(p.Get().to_string());
+			xshare_defined = true;
 		}
 		else if (p.Key() == AIS::KEY_SETTING_SHARING_KEY)
 			uuid = p.Get().to_string();
@@ -359,7 +360,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 		_msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 		commm_feed = _msg.back().get();
 
-		commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("MSGFORMAT", "COMMUNITY_HUB").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+		commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC","Community Feed").Set("MSGFORMAT", "COMMUNITY_HUB").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
 	}
 	if (!uuid.empty() && commm_feed)
 		commm_feed->Set("UUID", uuid);

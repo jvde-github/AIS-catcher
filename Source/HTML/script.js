@@ -3838,12 +3838,19 @@ function updateStat(stat, tf) {
     document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
 }
 
+function formatBytes(b) {
+    if (b >= 1e9) return (b / 1e9).toFixed(1) + " GB";
+    if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
+    if (b >= 1e3) return (b / 1e3).toFixed(1) + " KB";
+    return b + " B";
+}
+
 async function updateStatistics() {
     var stat = await fetchStatistics();
 
     if (stat) {
         // in bulk....
-        ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate", "received"].forEach(
+        ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate"].forEach(
             (e) => (document.getElementById("stat_" + e).innerHTML = stat[e]),
         );
 
@@ -3862,6 +3869,7 @@ async function updateStatistics() {
             updateTitle();
         }
         document.getElementById("stat_memory").innerText = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
+        document.getElementById("stat_received").innerText = formatBytes(stat.received);
         document.getElementById("stat_msg_rate").innerText = Number(stat.msg_rate).toFixed(1) + " msg/s";
         document.getElementById("stat_msg_min_rate").innerText = Number(stat.last_minute.count).toFixed(0) + " msg/min";
         document.getElementById("stat_run_time").innerHTML = getDeltaTimeVal(stat.run_time);
@@ -3874,6 +3882,33 @@ async function updateStatistics() {
 
         document.getElementById("stat_total_vessel_count").innerText = "-";
         document.getElementById("stat_session_vessel_count").innerText = stat.vessel_count;
+
+        let outputSection = document.getElementById("output_stats");
+        if (!outputSection) return;
+
+        if (stat.outputs && stat.outputs.length > 0) {
+            let html = "";
+            for (let i = 0; i < stat.outputs.length; i++) {
+                html += "<section>";
+                const o = stat.outputs[i];
+                const s = o.stats;
+                const showStatus = o.type !== "UDP" && !o.type.startsWith("HTTP");
+
+                html += `<div><span>Output</span><span>${o.description || o.type}</span></div>`;
+                if (showStatus) {
+                    const connected = s.connected ? "Connected" : "Not connected";
+                    const connectedColor = s.connected ? "green" : "red";
+                    html += `<div><span>Status</span><span style="color:${connectedColor}">${connected}</span></div>`;
+                }
+                html += `<div><span>Bytes out / in</span><span>${formatBytes(s.bytes_out)} / ${formatBytes(s.bytes_in)}</span></div>`;
+                if (o.type !== "UDP")
+                    html += `<div><span>Connect ok / fail</span><span>${s.connect_ok} / ${s.connect_fail}</span></div>`;
+                if (s.reconnects > 0)
+                    html += `<div><span>Reconnects</span><span>${s.reconnects}</span></div>`;
+                html += "</section>";
+            }
+            outputSection.innerHTML = html;
+        }
     }
 }
 
@@ -5095,7 +5130,7 @@ function saveSettings() {
 
     settings.shipcard_max = isShipcardMax();
     settings.shipcard_rows = selectedRows;
-    
+
     // Save realtime filter MMSIs and background streaming state
     if (realtimeViewer) {
         settings.realtime_filter_mmsis = realtimeViewer.filterMMSIs;
@@ -5542,28 +5577,28 @@ function updateTechDetails(ship) {
 
     // Update RAIM
     document.getElementById("tech_raim").textContent = formatFlag(ship.raim);
-    
+
     // Update DTE
     document.getElementById("tech_dte").textContent = formatFlag(ship.dte, "Not Ready", "Ready");
-    
+
     // Update Assigned Mode
     document.getElementById("tech_assigned").textContent = formatFlag(ship.assigned, "Assigned", "Autonomous");
-    
+
     // Update Display
     document.getElementById("tech_display").textContent = formatFlag(ship.display);
-    
+
     // Update DSC
     document.getElementById("tech_dsc").textContent = formatFlag(ship.dsc);
-    
+
     // Update Band
     document.getElementById("tech_band").textContent = formatFlag(ship.band, "Dual", "Single");
-    
+
     // Update MSG22
     document.getElementById("tech_msg22").textContent = formatFlag(ship.msg22);
-    
+
     // Update Off Position
     document.getElementById("tech_off_position").textContent = formatFlag(ship.off_position, "Off", "On");
-    
+
     // Update Maneuver
     const maneuverText = ship.maneuver === 0 ? "-" : ship.maneuver === 1 ? "None" : "Special";
     document.getElementById("tech_maneuver").textContent = maneuverText;
@@ -5572,37 +5607,37 @@ function updateTechDetails(ship) {
 function toggleTechPopover() {
     const popover = document.getElementById("tech_popover");
     const icon = document.getElementById("shipcard_tech_info");
-    
+
     if (popover.style.display === "none" || !popover.style.display) {
 
         const iconRect = icon.getBoundingClientRect();
         const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
-        
+
         popover.style.display = "block";
-        
+
         let left = iconRect.left - shipcardRect.left + 20;
         let top = iconRect.bottom - shipcardRect.top + 5;
-        
+
         const popoverRect = popover.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        
+
         if (iconRect.left + popoverRect.width + 20 > viewportWidth) {
             // Position to the left of the icon instead
             left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
         }
-        
+
         if (iconRect.bottom + popoverRect.height + 5 > viewportHeight) {
             // Position above the icon instead
             top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
         }
-        
+
         left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
         top = Math.max(5, top);
-        
+
         popover.style.left = left + "px";
         popover.style.top = top + "px";
-        
+
         setTimeout(() => {
             document.addEventListener("click", closeTechPopover, true);
         }, 0);
@@ -5615,11 +5650,11 @@ function toggleTechPopover() {
 function closeTechPopover(event) {
     const popover = document.getElementById("tech_popover");
     const icon = document.getElementById("shipcard_tech_info");
-    
+
     // Always stop propagation when popover is open to prevent other handlers
     event.stopPropagation();
     event.preventDefault();
-    
+
     // Close if clicking outside the popover and not on the icon
     if (!popover.contains(event.target) && event.target !== icon && !icon?.contains(event.target)) {
         popover.style.display = "none";
@@ -5973,7 +6008,7 @@ function displayShipcardIcons(type) {
 
         // Check if realtime option should be hidden
         const isRealtimeDisabled = icon.id === 'shipcard_realtime_option' && (typeof realtime_enabled === "undefined" || realtime_enabled === false);
-        
+
         if (isRealtimeDisabled) {
             icon.style.display = "none";
             // Don't increment idx, effectively removing it from the visible count
@@ -6762,13 +6797,13 @@ class RealtimeViewer {
         this.maxLines = 100;
         this.isPaused = false;
         this.filterMMSIs = filterMMSI ? [filterMMSI] : [];
-        
+
         // Track which sub-tab is currently selected ('nmea' or 'signals')
         this.activeMode = 'nmea';
-        
+
         // Load background streaming preference from settings (default: false)
         this.backgroundStreaming = settings.realtime_background_streaming === true;
-        
+
         // Initialize checkbox state
         const checkbox = document.getElementById('realtime_background_streaming');
         if (checkbox) {
@@ -6789,15 +6824,15 @@ class RealtimeViewer {
             // If playing and background streaming enabled, keep streams running
         } else {
             // Browser tab is visible: Reconnect only if we're disconnected
-            const isConnected = this.eventSource && 
-                                (this.eventSource.readyState === EventSource.OPEN || 
-                                 this.eventSource.readyState === EventSource.CONNECTING);
-            
+            const isConnected = this.eventSource &&
+                (this.eventSource.readyState === EventSource.OPEN ||
+                    this.eventSource.readyState === EventSource.CONNECTING);
+
             if (!isConnected && !this.isPaused) {
                 // Reconnect if we were paused and disconnected
                 this.connectNmea();
             }
-            
+
             // Sync button icon with current pause state
             const button = document.getElementById('realtime_pause_button');
             if (button) {
@@ -6813,7 +6848,7 @@ class RealtimeViewer {
     connectNmea() {
         // Don't connect if hidden
         if (document.hidden) return;
-        
+
         // Don't connect if already connected or connecting
         if (this.eventSource && (this.eventSource.readyState === EventSource.OPEN || this.eventSource.readyState === EventSource.CONNECTING)) {
             return;
@@ -6949,7 +6984,7 @@ class RealtimeViewer {
 
         const mmsi = data.mmsi;
         const mmsiSpan = document.createElement('span');
-        
+
         // Show shipname if available and not empty, otherwise show MMSI
         const hasShipname = data.shipname && data.shipname.trim() !== '';
         if (hasShipname) {
@@ -6958,7 +6993,7 @@ class RealtimeViewer {
         } else {
             mmsiSpan.textContent = data.mmsi;
         }
-        
+
         mmsiSpan.style.border = '1px solid #d0d0d0';
         mmsiSpan.style.padding = '2px 6px';
         mmsiSpan.style.borderRadius = '3px';
@@ -6987,7 +7022,7 @@ class RealtimeViewer {
         row.appendChild(timeCell);
         row.appendChild(mmsiCell);
         row.appendChild(nmeaCell);
-        
+
         // Add click handler to row for pause/resume (MMSI and decoder clicks will stopPropagation)
         row.style.cursor = 'pointer';
         row.addEventListener('click', (e) => {
@@ -7014,16 +7049,16 @@ class RealtimeViewer {
             this.filterMMSIs.push(mmsiStr);
         }
     }
-    
+
     removeFilterMMSI(mmsi) {
         const mmsiStr = mmsi.toString();
         this.filterMMSIs = this.filterMMSIs.filter(m => m !== mmsiStr);
     }
-    
+
     clearFilters() {
         this.filterMMSIs = [];
     }
-    
+
     // Legacy method for compatibility
     setFilterMMSI(mmsi) {
         if (mmsi) {
@@ -7202,7 +7237,7 @@ function addRealtimeFilterMMSI(mmsi) {
     if (!realtimeViewer) return;
     const filterValue = mmsi ? mmsi.toString().trim() : '';
     if (!filterValue) return;
-    
+
     realtimeViewer.addFilterMMSI(filterValue);
     updateFilterDisplay();
     saveSettings();
@@ -7217,10 +7252,10 @@ function removeRealtimeFilterMMSI(mmsi) {
 
 function updateFilterDisplay() {
     if (!realtimeViewer) return;
-    
+
     const filterDisplay = document.getElementById('realtime_filter_display');
     const filterChips = document.getElementById('realtime_mmsi_filters');
-    
+
     if (filterDisplay && filterChips) {
         if (realtimeViewer.filterMMSIs.length > 0) {
             // Clear and rebuild chips
@@ -7268,28 +7303,28 @@ function openRealtimeForMMSI(mmsi) {
     if (!realtime_enabled) {
         return;
     }
-    
+
     // If already on realtime tab and viewer exists, just add the filter
     if (realtimeViewer && document.getElementById('realtime').style.display === 'block') {
         addRealtimeFilterMMSI(mmsi);
         return;
     }
-    
+
     // Preserve existing filters if viewer exists
     const existingFilters = realtimeViewer ? [...realtimeViewer.filterMMSIs] : [];
-    
+
     // Disconnect existing viewer if any
     if (realtimeViewer) {
         realtimeViewer.disconnect();
         realtimeViewer = null;
     }
-    
+
     // Clear saved state to ensure fresh start (not paused)
     window.realtimeViewerState = null;
-    
+
     // Switch to realtime tab (this will create a new viewer)
     document.getElementById('realtime_tab').click();
-    
+
     // Apply the filters after viewer is created
     setTimeout(() => {
         // Restore previous filters
@@ -7355,19 +7390,19 @@ function activateTab(b, a) {
                 // Restore saved state if available
                 const savedState = window.realtimeViewerState;
                 const filterMMSI = savedState ? savedState.filterMMSI : null;
-                
+
                 realtimeViewer = new RealtimeViewer(filterMMSI);
-                
+
                 // Restore filters from settings
                 if (settings.realtime_filter_mmsis && Array.isArray(settings.realtime_filter_mmsis)) {
                     realtimeViewer.filterMMSIs = [...settings.realtime_filter_mmsis];
                 }
-                
+
                 // Restore pause state
                 if (savedState && savedState.isPaused) {
                     realtimeViewer.isPaused = true;
                 }
-                
+
                 // Connect to NMEA stream
                 realtimeViewer.connectNmea();
             } else {
@@ -7380,10 +7415,10 @@ function activateTab(b, a) {
                     realtimeViewer.connectNmea();
                 }
             }
-            
+
             // Update filter display
             updateFilterDisplay();
-            
+
             // Sync button icon with viewer state
             const button = document.getElementById('realtime_pause_button');
             if (button) {
@@ -7401,7 +7436,7 @@ function activateTab(b, a) {
             isPaused: realtimeViewer.isPaused
         };
         saveSettings(); // Save filters to settings
-        
+
         // Only disconnect if paused or background streaming is disabled
         if (realtimeViewer.isPaused || !realtimeViewer.backgroundStreaming) {
             realtimeViewer.disconnect();
@@ -7412,7 +7447,7 @@ function activateTab(b, a) {
     if (a === "about") {
         setupAbout();
     }
-    
+
     // Add keyboard event listener for realtime tab
     if (a == "realtime") {
         document.addEventListener('keydown', handleRealtimeKeydown);
@@ -8159,13 +8194,13 @@ if (aboutMDpresent == false) {
 if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
     document.getElementById("realtime_tab").style.display = "none";
     document.getElementById("realtime_tab_mini").style.display = "none";
-    
+
     // Hide realtime context menu items
     const realtimeMenuItems = document.querySelectorAll('.ctx-realtime');
     realtimeMenuItems.forEach(item => {
         item.style.display = 'none';
     });
-    
+
     // Hide realtime option in shipcard
     const shipcardRealtime = document.getElementById('shipcard_realtime_option');
     if (shipcardRealtime) {

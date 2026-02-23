@@ -26,6 +26,7 @@
 #include "Parse.h"
 #include "ADSB.h"
 #include "Keys.h"
+#include "OutputStats.h"
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
 
@@ -33,23 +34,15 @@ class Receiver;
 
 namespace IO
 {
-
-	class OutputJSON : public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting
-	{
-	public:
-		virtual void Start() {}
-		virtual void Stop() {}
-		void Connect(Receiver &r);
-
-		virtual ~OutputJSON() { Stop(); }
-	};
-
 	class OutputMessage : public StreamIn<AIS::Message>, public StreamIn<JSON::JSON>, public StreamIn<AIS::GPS>, public Setting
 	{
 	protected:
 		std::string json;
 		AIS::Filter filter;
 		JSON::StringBuilder builder;
+
+		OutputStats stats;
+		std::string description, type;
 
 		MessageFormat fmt = MessageFormat::JSON_FULL;
 
@@ -61,16 +54,22 @@ namespace IO
 		virtual void Stop() {}
 		void Connect(Receiver &r);
 
-		OutputMessage() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
-		virtual ~OutputMessage() { Stop(); }
+		std::string getJSON() const
+		{
+			return "{\"type\":\"" + type + "\"" + ",\"description\":\"" + description + "\"" + ",\"stats\":" + stats.toJSON() + "}";
+		}
 
+		OutputMessage() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
+		OutputMessage(const std::string &d) : builder(&AIS::KeyMap, JSON_DICT_FULL), type(d) {}
+
+		virtual ~OutputMessage() { Stop(); }
 
 		bool setOption(std::string option, std::string arg)
 		{
 			if (option == "JSON_FULL")
 			{
 				Warning() << "JSON_FULL option is deprecated and will be removed in a future release. Use MSGFORMAT instead.";
-				if ( Util::Parse::Switch(arg))
+				if (Util::Parse::Switch(arg))
 					fmt = MessageFormat::JSON_FULL;
 
 				return true;
@@ -78,7 +77,7 @@ namespace IO
 			else if (option == "JSON")
 			{
 				Warning() << "JSON option is deprecated and will be removed in a future release. Use MSGFORMAT instead.";
-				if ( Util::Parse::Switch(arg))
+				if (Util::Parse::Switch(arg))
 				{
 					fmt = MessageFormat::JSON_NMEA;
 				}
@@ -92,6 +91,11 @@ namespace IO
 				if (fmt == MessageFormat::JSON_ANNOTATED)
 					builder.setStringifyEnhanced(true);
 
+				return true;
+			}
+			else if (option == "DESCRIPTION" || option == "DESC")
+			{
+				description = arg;
 				return true;
 			}
 			return filter.SetOption(option, arg);

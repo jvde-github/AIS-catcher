@@ -58,6 +58,7 @@
 #include "Parse.h"
 #include "Convert.h"
 #include "Common.h"
+#include "OutputStats.h"
 
 namespace Protocol
 {
@@ -289,6 +290,7 @@ namespace Protocol
 
 		unsigned long getBytesSent() { return bytes_sent; }
 		unsigned long getBytesReceived() { return bytes_received; }
+		void setStats(IO::OutputStats *s) { stats = s; }
 
 	private:
 		std::string host;
@@ -302,6 +304,8 @@ namespace Protocol
 		unsigned long bytes_sent = 0;
 		unsigned long bytes_received = 0;
 
+		IO::OutputStats *stats = nullptr;
+
 		int sock = -1;
 		State state = DISCONNECTED;
 		time_t stamp = 0;
@@ -311,6 +315,9 @@ namespace Protocol
 
 		bool reconnect()
 		{
+			if (stats)
+				stats->reconnects++;
+
 			Debug() << "TCP: Reconnecting to " << host << ":" << port;
 			disconnect();
 			return connect();
@@ -324,7 +331,11 @@ namespace Protocol
 			if (persistent)
 				reconnect();
 			else
+			{
+				if (stats)
+					stats->connect_fail++;
 				disconnect();
+			}
 
 			return partial_bytes_processed > 0 ? partial_bytes_processed : (persistent ? 0 : -1);
 		}

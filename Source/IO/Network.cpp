@@ -43,6 +43,8 @@ namespace IO
 
 	void HTTPStreamer::Start()
 	{
+		http.setStats(&stats);
+		
 		if (!running)
 		{
 
@@ -175,6 +177,7 @@ namespace IO
 		else if (show_response)
 			Info() << "HTTP Client [" << url << "]: return code " << r;
 	}
+	
 	void HTTPStreamer::process()
 	{
 
@@ -310,18 +313,13 @@ namespace IO
 				else
 					throw std::runtime_error("HTTP: error - unknown protocol");
 			}
-			else if (!filter.SetOption(option, arg))
+			else if (!setOption(option,arg) && !filter.SetOption(option, arg))
 			{
 				throw std::runtime_error("HTTP output - unknown option: " + option);
 			}
 		}
 
 		return *this;
-	}
-
-	UDPStreamer::UDPStreamer()
-	{
-		fmt = MessageFormat::NMEA;
 	}
 
 	UDPStreamer::~UDPStreamer()
@@ -725,6 +723,7 @@ namespace IO
 		ss << ", status: ";
 
 		// Set up TCP connection
+		tcp.setStats(&stats);
 		tcp.setValue("HOST", host);
 		tcp.setValue("PORT", port);
 		tcp.setValue("PERSISTENT", Util::Convert::toString(persistent));
@@ -808,6 +807,8 @@ namespace IO
 		ss << ", msgformat: " << Util::Convert::toString(fmt) << ".";
 
 		Info() << ss.str();
+
+		TCPServer::setStats(&stats);
 
 		if (!TCPServer::start(port))
 		{

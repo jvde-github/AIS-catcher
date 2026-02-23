@@ -52,7 +52,7 @@
 namespace IO
 {
 
-	class HTTPStreamer : public OutputJSON
+	class HTTPStreamer : public OutputMessage
 	{
 
 		JSON::StringBuilder builder;
@@ -98,7 +98,7 @@ namespace IO
 
 	public:
 		~HTTPStreamer() { Stop(); }
-		HTTPStreamer() : builder(&AIS::KeyMap, JSON_DICT_FULL), url("http://127.0.0.1"), userpwd("") {}
+		HTTPStreamer() : OutputMessage("HTTP"), builder(&AIS::KeyMap, JSON_DICT_FULL), url("http://127.0.0.1"), userpwd("") { fmt = MessageFormat::JSON_FULL; }
 
 		Setting &Set(std::string option, std::string arg);
 
@@ -141,7 +141,10 @@ namespace IO
 
 	public:
 		~UDPStreamer();
-		UDPStreamer();
+		UDPStreamer() : OutputMessage("UDP")
+		{
+			fmt = MessageFormat::NMEA;
+		}
 
 		Setting &Set(std::string option, std::string arg);
 
@@ -159,6 +162,7 @@ namespace IO
 		void Stop();
 		void SendTo(std::string str)
 		{
+			stats.bytes_out += str.length();
 			sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 		}
 	};
@@ -176,7 +180,7 @@ namespace IO
 		unsigned long lines_sent = 0;
 
 	public:
-		TCPClientStreamer() : OutputMessage() { fmt = MessageFormat::NMEA; }
+		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
 
 		Setting &Set(std::string option, std::string arg);
 
@@ -217,11 +221,10 @@ namespace IO
 	class TCPlistenerStreamer : public OutputMessage, public IO::TCPServer
 	{
 		int port = 5010;
-		// AIS::Filter filter;
 		bool include_sample_start = false;
 
 	public:
-		TCPlistenerStreamer() : OutputMessage() { fmt = MessageFormat::NMEA; }
+		TCPlistenerStreamer() : OutputMessage("TCP Listener") { fmt = MessageFormat::NMEA; }
 
 		virtual ~TCPlistenerStreamer() {};
 
@@ -250,7 +253,7 @@ namespace IO
 		Util::TemplateString topic_template;
 
 	public:
-		MQTTStreamer() : OutputMessage(), topic_template("ais/data")
+		MQTTStreamer() : OutputMessage("MQTT"), topic_template("ais/data")
 		{
 			fmt = MessageFormat::JSON_FULL;
 		}

@@ -61,20 +61,4 @@ namespace IO
 				r.OutputGPS(j).Connect(ug);
 		}
 	}
-
-	void OutputJSON::Connect(Receiver &r)
-	{
-
-		for (int j = 0; j < r.Count(); j++)
-		{
-			StreamIn<JSON::JSON> *um = (StreamIn<JSON::JSON> *)&*this;
-			if (r.Output(j).canConnect(um->getGroupsIn()))
-				r.OutputJSON(j).Connect(um);
-
-			StreamIn<AIS::GPS> *ug = (StreamIn<AIS::GPS> *)&*this;
-			if (r.OutputGPS(j).canConnect(ug->getGroupsIn()))
-				r.OutputGPS(j).Connect(ug);
-		}
-	}
-
 }

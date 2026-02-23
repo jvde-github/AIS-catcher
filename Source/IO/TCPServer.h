@@ -50,6 +50,7 @@
 #endif
 
 #include "Common.h"
+#include "OutputStats.h"
 
 namespace IO
 {
@@ -126,6 +127,9 @@ namespace IO
 
 		bool Send(TCPServerConnection &c, const char *data, int len)
 		{
+			if (pstats)
+				pstats->bytes_out += len;
+
 			return c.Send(data, len);
 		}
 
@@ -137,5 +141,10 @@ namespace IO
 		virtual void processClients();
 		void cleanUp();
 		void SleepAndWait();
+
+		void setStats(IO::OutputStats *s) { pstats = s; }
+
+	private:
+		IO::OutputStats *pstats = nullptr;
 	};
 }

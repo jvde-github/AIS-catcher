@@ -33,39 +33,43 @@
 #include "MsgOut.h"
 #include "AIS.h"
 
-namespace IO {
+namespace IO
+{
 
-	class N2KStreamer : public IO::OutputJSON {
+	class N2KStreamer : public IO::OutputMessage
+	{
 		AIS::Filter filter;
 		std::string dev = "can0";
 
 #ifdef HASNMEA2000
 
 	public:
+		N2KStreamer() : OutputMessage("NMEA2000") { fmt = MessageFormat::JSON_FULL; }
 		virtual ~N2KStreamer() { Stop(); }
 
 		void Start();
 		void Stop();
 
-		void pushQueue(tN2kMsg* N2kMsg);
-		
-		void sendType123(const AIS::Message& ais, const JSON::JSON* data);
+		void pushQueue(tN2kMsg *N2kMsg);
 
-		void sendType4(const AIS::Message& ais, const JSON::JSON* data);
-		void sendType5(const AIS::Message& ais, const JSON::JSON* data);
-		void sendType9(const AIS::Message& ais, const JSON::JSON* data);
-		void sendType14(const AIS::Message& ais, const JSON::JSON* data);
-		void sendType18(const AIS::Message& ais, const JSON::JSON* data);
-		void sendType19(const AIS::Message& ais, const JSON::JSON* data);
-		void sendType21(const AIS::Message& ais, const JSON::JSON* data);
-		void sendType24(const AIS::Message& ais, const JSON::JSON* data);
+		void sendType123(const AIS::Message &ais, const JSON::JSON *data);
 
-		void Receive(const JSON::JSON* data, int ln, TAG& tag);
-		Setting& Set(std::string option, std::string arg);
+		void sendType4(const AIS::Message &ais, const JSON::JSON *data);
+		void sendType5(const AIS::Message &ais, const JSON::JSON *data);
+		void sendType9(const AIS::Message &ais, const JSON::JSON *data);
+		void sendType14(const AIS::Message &ais, const JSON::JSON *data);
+		void sendType18(const AIS::Message &ais, const JSON::JSON *data);
+		void sendType19(const AIS::Message &ais, const JSON::JSON *data);
+		void sendType21(const AIS::Message &ais, const JSON::JSON *data);
+		void sendType24(const AIS::Message &ais, const JSON::JSON *data);
+
+		void Receive(const JSON::JSON *data, int ln, TAG &tag);
+		Setting &Set(std::string option, std::string arg);
 #else
 	public:
 		void Start() { std::cout << "NMEA2000 support not included in this build." << std::endl; }
-		Setting& Set(std::string option, std::string arg) {
+		Setting &Set(std::string option, std::string arg)
+		{
 			std::cout << "NMEA2000 support not included in this build." << std::endl;
 			return *this;
 		}

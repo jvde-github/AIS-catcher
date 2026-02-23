@@ -160,6 +160,8 @@ class WebViewer : public IO::HTTPServer, public Setting
 	// NMEA decoder utility
 	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);
 
+	const std::vector<std::unique_ptr<IO::OutputMessage>> *msg_channels = nullptr;
+
 public:
 	WebViewer();
 
@@ -183,6 +185,11 @@ public:
 		product = p;
 		vendor = v;
 		serial = s;
+	}
+
+	void setOutputChannels(const std::vector<std::unique_ptr<IO::OutputMessage>> &msg)//, const std::vector<std::unique_ptr<IO::OutputJSON>> &json)
+	{
+		msg_channels = &msg;
 	}
 
 	bool isPortSet() { return port_set; }

@@ -28,6 +28,7 @@
 #include "Library/ZIP.h"
 #include "Protocol.h"
 #include "Parse.h"
+#include "OutputStats.h"
 
 namespace IO
 {
@@ -47,21 +48,21 @@ namespace IO
 		std::string message, header;
 		std::string buffer;
 
-	Protocol::TCP tcp;
-	Protocol::TLS tls;
-	Protocol::ProtocolBase *connection = nullptr;
+		Protocol::TCP tcp;
+		Protocol::TLS tls;
+		Protocol::ProtocolBase *connection = nullptr;
 
-	void createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname);
-	const void* getMessagePtr(bool gzip) const { return gzip ? zip.getOutputPtr() : message.c_str(); }
-	size_t getMessageLength(bool gzip) const { return gzip ? zip.getOutputLength() : message.length(); }
-	void createHeader(bool gzip, bool multipart);
-	int parseResponse();
+		void createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname);
+		const void *getMessagePtr(bool gzip) const { return gzip ? zip.getOutputPtr() : message.c_str(); }
+		size_t getMessageLength(bool gzip) const { return gzip ? zip.getOutputLength() : message.length(); }
+		void createHeader(bool gzip, bool multipart);
+		int parseResponse();
 
 	public:
 		std::string protocol, host, port, path, userpwd;
 		bool secure = false;
 
-		const std::string& getResponse() const { return message; }
+		const std::string &getResponse() const { return message; }
 
 		void setUserPwd(const std::string &up)
 		{
@@ -90,5 +91,7 @@ namespace IO
 		}
 
 		int Post(const std::string &msg, bool gzip = false, bool multipart = false, const std::string &copyname = "");
+
+		void setStats(IO::OutputStats *s) { tcp.setStats(s); }
 	};
 }

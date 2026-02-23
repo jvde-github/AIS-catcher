@@ -268,7 +268,6 @@ int main(int argc, char *argv[])
 
 	std::vector<std::unique_ptr<WebViewer>> servers;
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
-	std::vector<std::unique_ptr<IO::OutputJSON>> json;
 
 	bool list_devices = false, list_support = false, list_options = false;
 	int timeout = 0, nrec = 0, exit_code = 0;
@@ -276,8 +275,9 @@ int main(int argc, char *argv[])
 	int own_mmsi = -1;
 	int cb = -1;
 	bool verbose = false;
+	bool xshare_defined = false; 
 
-	Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
+	Config c(_receivers, nrec, msg, screen, servers, own_mmsi);
 	extern IO::OutputMessage *commm_feed;
 
 	try
@@ -399,11 +399,14 @@ int main(int argc, char *argv[])
 			break;
 			case 'v':
 				Assert(count <= 1, param);
-				if (param.length() == 3 && param[2] == '+') {
+				if (param.length() == 3 && param[2] == '+')
+				{
 					// -v+ applies to last receiver only, no time parameter
 					Assert(count == 0, param, "no parameters allowed with -v+");
 					receiver.verbose = true;
-				} else {
+				}
+				else
+				{
 					// -v or -v* applies to all receivers (after loop)
 					Assert(param.length() == 2 || (param.length() == 3 && param[2] == '*'), param, "invalid verbose option");
 					verbose = true;
@@ -467,8 +470,8 @@ int main(int argc, char *argv[])
 				break;
 			case 'D':
 			{
-				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::PostgreSQL()));
-				IO::OutputJSON &d = *json.back();
+				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::PostgreSQL()));
+				IO::OutputMessage &d = *msg.back();
 
 				if (count % 2 == 1)
 				{
@@ -620,13 +623,15 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'X':
-				Assert(count <= 1 || (count == 2 && arg2 == "EXP"), param, "Only one optional parameter [sharing key] allowed.");
+				Assert(count <= 1 || (count == 2 && arg2 == "OFF"), param, "Only one optional parameter [sharing key] allowed.");
 				{
+					xshare_defined = true;
+
 					if (!commm_feed)
 					{
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						commm_feed = msg.back().get();
-						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC","Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
 						if (count == 2 || true)
 						{
 							// Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
@@ -645,8 +650,8 @@ int main(int argc, char *argv[])
 			case 'H':
 				Assert(count > 0, param);
 				{
-					json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::HTTPStreamer()));
-					IO::OutputJSON &h = *json.back();
+					msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::HTTPStreamer()));
+					IO::OutputMessage &h = *msg.back();
 					if (count % 2)
 						h.Set("URL", arg1);
 					parseSettings(h, argv, ptr + (count % 2), argc);
@@ -664,8 +669,8 @@ int main(int argc, char *argv[])
 			case 'I':
 			{
 #ifdef HASNMEA2000
-				json.push_back(std::unique_ptr<IO::OutputJSON>(new IO::N2KStreamer()));
-				IO::OutputJSON &h = *json.back();
+				msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::N2KStreamer()));
+				IO::OutputMessage &h = *msg.back();
 				if (count % 2)
 					h.Set("DEVICE", arg1);
 
@@ -714,7 +719,7 @@ int main(int argc, char *argv[])
 					break;
 				case 'd':
 					parseSettings(receiver.getDeviceManager().HYDRASDR(), argv, ptr, argc);
-					break;					
+					break;
 				case 'r':
 					parseSettings(receiver.getDeviceManager().RTLSDR(), argv, ptr, argc);
 					break;
@@ -762,8 +767,10 @@ int main(int argc, char *argv[])
 		}
 
 		// Apply verbose setting to all receivers
-		if (verbose) {
-			for (auto &r : _receivers) {
+		if (verbose)
+		{
+			for (auto &r : _receivers)
+			{
 				r->verbose = true;
 			}
 		}
@@ -771,16 +778,13 @@ int main(int argc, char *argv[])
 		if (show_copyright)
 			printVersion();
 
-		/*
-		// -------------
-		// Read config file
-
-		if (!file_config.empty())
+		if((!xshare_defined && !c.isSharingDefined()) && (msg.size() > 0 && servers.size() > 0))
 		{
-			Config c(_receivers, nrec, msg, json, screen, servers, own_mmsi);
-			c.read(file_config);
+			Info() << "===============================";
+			Info() << "Note: Option for Community sharing with aiscatcher.org is not defined and will be enabled automatically in future versions. To disable this feature, please explicitly use -X OFF.";
+			Info() << "===============================";
 		}
-		*/
+
 		if (list_devices)
 			_receivers.back()->getDeviceManager().printAvailableDevices(list_devices_JSON);
 		if (list_support)
@@ -800,7 +804,6 @@ int main(int argc, char *argv[])
 
 		for (int i = 0; i < _receivers.size(); i++)
 		{
-
 			Receiver &r = *_receivers[i];
 			r.setOwnMMSI(own_mmsi);
 
@@ -808,14 +811,13 @@ int main(int argc, char *argv[])
 				r.setTags("DTM");
 
 			r.setupDevice();
+			
 			// set up the decoding model(s), group is the last output group used
 			r.setupModel(group, i);
 
 			// set up all the output and connect to the receiver outputs
 			for (auto &o : msg)
 				o->Connect(r);
-			for (auto &j : json)
-				j->Connect(r);
 
 			screen.Connect(r);
 
@@ -830,12 +832,11 @@ int main(int argc, char *argv[])
 		for (auto &o : msg)
 			o->Start();
 
-		for (auto &j : json)
-			j->Start();
-
 		for (auto &s : servers)
 			if (s->active())
 			{
+				s->setOutputChannels(msg);
+				
 				if (own_mmsi != -1)
 				{
 					s->Set("SHARE_LOC", "true");

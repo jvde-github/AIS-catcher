@@ -45,34 +45,37 @@
 #include "Device/ZMQ.h"
 #include "Device/HYDRASDR.h"
 
-class Config {
+class Config
+{
 
-	std::vector<std::unique_ptr<Receiver>>& _receivers;
+	std::vector<std::unique_ptr<Receiver>> &_receivers;
 	int _nrec;
-	std::vector<std::unique_ptr<IO::OutputMessage>>& _msg;
-	std::vector<std::unique_ptr<IO::OutputJSON>>& _json;
+	std::vector<std::unique_ptr<IO::OutputMessage>> &_msg;
 
-	IO::ScreenOutput& _screen;
-	std::vector<std::unique_ptr<WebViewer>>& _server;
+	IO::ScreenOutput &_screen;
+	std::vector<std::unique_ptr<WebViewer>> &_server;
 
 	int &_own_mmsi;
+	bool xshare_defined = false;
 
-	bool isActiveObject(const JSON::Value& pd);
-	void setSettingsFromJSON(const JSON::Value& pd, Setting& s);
-	void setHTTPfromJSON(const JSON::Property& pd);
-	void setUDPfromJSON(const JSON::Property& pd);
-	void setTCPfromJSON(const JSON::Property& pd);
-	void setMQTTfromJSON(const JSON::Property& pd);
-	void setTCPListenerfromJSON(const JSON::Property& pd);
-	void setModelfromJSON(const JSON::Property& p);
-	void setServerfromJSON(const JSON::Value& pd);
-	void setReceiverfromJSON(const std::vector<JSON::Property>& pd, bool unspecAllowed);
-	void setReceiverFromArray(const JSON::Property& pd);
-	void setSharing(const std::vector<JSON::Property>& props);
+	bool isActiveObject(const JSON::Value &pd);
+	void setSettingsFromJSON(const JSON::Value &pd, Setting &s);
+	void setHTTPfromJSON(const JSON::Property &pd);
+	void setUDPfromJSON(const JSON::Property &pd);
+	void setTCPfromJSON(const JSON::Property &pd);
+	void setMQTTfromJSON(const JSON::Property &pd);
+	void setTCPListenerfromJSON(const JSON::Property &pd);
+	void setModelfromJSON(const JSON::Property &p);
+	void setServerfromJSON(const JSON::Value &pd);
+	void setReceiverfromJSON(const std::vector<JSON::Property> &pd, bool unspecAllowed);
+	void setReceiverFromArray(const JSON::Property &pd);
+	void setSharing(const std::vector<JSON::Property> &props);
 
 public:
-	Config(std::vector<std::unique_ptr<Receiver>>& r, int& nr, std::vector<std::unique_ptr<IO::OutputMessage>>& o, std::vector<std::unique_ptr<IO::OutputJSON>>& j, IO::ScreenOutput& s, std::vector<std::unique_ptr<WebViewer>>& v,int &own_mmsi) : _receivers(r), _nrec(nr), _msg(o), _json(j), _screen(s), _server(v), _own_mmsi(own_mmsi) {}
+	Config(std::vector<std::unique_ptr<Receiver>> &r, int &nr, std::vector<std::unique_ptr<IO::OutputMessage>> &o, IO::ScreenOutput &s, std::vector<std::unique_ptr<WebViewer>> &v, int &own_mmsi) : _receivers(r), _nrec(nr), _msg(o), _screen(s), _server(v), _own_mmsi(own_mmsi) {}
 
-	void read(std::string& file_config);
-	void set(const std::string& str);
+	void read(std::string &file_config);
+	void set(const std::string &str);
+
+	bool isSharingDefined() const { return xshare_defined; }
 };

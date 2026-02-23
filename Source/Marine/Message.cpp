@@ -569,10 +569,6 @@ namespace AIS
 			}
 			return true;
 		}
-		else if (option == "DESC" || option == "DESCRIPTION")
-		{
-			return true;
-		}
 		else if (option == "BLOCK_TYPE")
 		{
 

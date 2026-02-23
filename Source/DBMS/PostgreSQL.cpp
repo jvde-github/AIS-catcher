@@ -558,9 +558,9 @@ namespace IO
 			ATON = Util::Parse::Switch(arg);
 		else if (option == "SAR")
 			SAR = Util::Parse::Switch(arg);
-		else
+		else if(!setOption(option, arg) && !filter.SetOption(option, arg))
 		{
-			filter.SetOption(option, arg);
+			throw std::runtime_error("DBMS: unknown option \"" + option + "\"");
 		}
 		return *this;
 	}

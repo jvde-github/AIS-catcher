@@ -125,15 +125,16 @@ namespace IO
 				if (nread < 0 && verbose)
 					Error() << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock;
 
-			CloseUnsafe();
-		}
-		else if (nread > 0)
-		{
-			msg += std::string(buffer, nread);
-			stamp = std::time(0);
+				CloseUnsafe();
+			}
+			else if (nread > 0)
+			{
+				msg += std::string(buffer, nread);
+				stamp = std::time(0);
+			}
 		}
 	}
-}	void TCPServerConnection::SendBuffer()
+	void TCPServerConnection::SendBuffer()
 	{
 		std::lock_guard<std::mutex> lock(mtx);
 
@@ -386,6 +387,11 @@ namespace IO
 				processClients();
 				writeClients();
 				cleanUp();
+
+				if (pstats)
+				{
+					pstats->connected = numberOfClients();
+				}
 			}
 			catch (const std::exception &e)
 			{
@@ -444,6 +450,9 @@ namespace IO
 					Error() << "TCP listener: client not reading, close connection.";
 					return false;
 				}
+
+				if (pstats)
+					pstats->bytes_out += m.length();
 			}
 		}
 		return true;
@@ -461,6 +470,9 @@ namespace IO
 					Error() << "TCP listener: client not reading, close connection.";
 					return false;
 				}
+
+				if (pstats)
+					pstats->bytes_out += m.length();
 			}
 		}
 		return true;

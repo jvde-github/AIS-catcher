@@ -221,7 +221,7 @@ namespace AIS
 		}
 	};
 
-	class Filter : public Setting
+	class Filter
 	{
 		const uint32_t all = 0xFFFFFFFF;
 		uint32_t allow = all;

@@ -559,7 +559,8 @@
 					Entry</li>
 				<li class="ship noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message
 				</li>
-				<li class="ship ctx-realtime" onclick="openRealtimeForMMSI(context_mmsi)"><i class="comment_icon"></i>Track NMEA
+				<li class="ship ctx-realtime" onclick="openRealtimeForMMSI(context_mmsi)"><i
+						class="comment_icon"></i>Track NMEA
 				</li>
 				<li class="ship" onclick="copyText(context_mmsi)"><i class="content_copy_icon noandroid"></i>Copy MMSI
 				</li>
@@ -608,10 +609,12 @@
 							<span class="filter_alt_icon"></span>
 						</button>
 						<label class="realtime-background-toggle" title="Keep streaming when tab is hidden">
-							<input type="checkbox" id="realtime_background_streaming" onchange="toggleBackgroundStreaming()">
+							<input type="checkbox" id="realtime_background_streaming"
+								onchange="toggleBackgroundStreaming()">
 							<span>Background</span>
 						</label>
-						<button id="realtime_pause_button" class="realtime-control-btn" onclick="toggleRealtimePause()" title="Pause/Resume stream">
+						<button id="realtime_pause_button" class="realtime-control-btn" onclick="toggleRealtimePause()"
+							title="Pause/Resume stream">
 							<span class="pause_icon"></span>
 						</button>
 						<button class="realtime-control-btn" onclick="clearRealtimeTable()" title="Clear table">
@@ -695,15 +698,22 @@
 							<div><span>Engine</span><span id="stat_model"></span></div>
 							<div><span>Memory</span><span id="stat_memory"></span></div>
 						</section>
+
+					</div>
+					<div class="stat-panel">
+						<header>Data Throughput</header>
+
 						<section>
 							<div><span>Device rate</span><span id="stat_sample_rate"></span></div>
-							<div><span>Data processed</span><span id="stat_received"></span></div>
+							<div><span>Bytes received</span><span id="stat_received"></span></div>
 							<div><span>Running time</span><span id="stat_run_time"></span></div>
 							<div><span>Message rate</span><span id="stat_msg_rate"></span></div>
 							<div><span></span><span id="stat_msg_min_rate"></span></div>
-
 						</section>
+
+						<section id="output_stats"></section>
 					</div>
+
 
 					<div class="stat-panel">
 						<header>This Session</header>
@@ -1056,7 +1066,8 @@
 						</span>
 						<span title="Shift+click on map to measure"
 							onclick="setMeasureMode(); showNotification('Shift+click on start point/object')"
-							class="mapcard-header-icon" style="white-space: nowrap; border: 2px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; margin-right: 12px;">
+							class="mapcard-header-icon"
+							style="white-space: nowrap; border: 2px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; margin-right: 12px;">
 							<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px"
 								fill="currentColor">
 								<path
@@ -1110,25 +1121,26 @@
 							<div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
 						</div>
 
-					<div onclick="shipcardselect(this)" data-context-type="ship"
-						class="mapcard-content-row shipcard-content-row shipcard-max-only">
-						<div><span>Country</span><span id="shipcard_country"></span></div>
-						<div><span>Sender</span><span id="shipcard_type"></span></div>
-						<div><span>In Range</span><span id="shipcard_received_stations"></span></div>
-					</div>
+						<div onclick="shipcardselect(this)" data-context-type="ship"
+							class="mapcard-content-row shipcard-content-row shipcard-max-only">
+							<div><span>Country</span><span id="shipcard_country"></span></div>
+							<div><span>Sender</span><span id="shipcard_type"></span></div>
+							<div><span>In Range</span><span id="shipcard_received_stations"></span></div>
+						</div>
 
-					<!-- Technical details popover -->
-					<div id="tech_popover" class="tech-popover" style="display: none;">
-						<div><span>RAIM:</span><span id="tech_raim">-</span></div>
-						<div><span>DTE:</span><span id="tech_dte">-</span></div>
-						<div><span>Mode:</span><span id="tech_assigned">-</span></div>
-						<div><span>Display:</span><span id="tech_display">-</span></div>
-						<div><span>DSC:</span><span id="tech_dsc">-</span></div>
-						<div><span>Band:</span><span id="tech_band">-</span></div>
-						<div><span>MSG22:</span><span id="tech_msg22">-</span></div>
-						<div><span>Off-Pos:</span><span id="tech_off_position">-</span></div>
-						<div><span>Maneuver:</span><span id="tech_maneuver">-</span></div>
-					</div>						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<!-- Technical details popover -->
+						<div id="tech_popover" class="tech-popover" style="display: none;">
+							<div><span>RAIM:</span><span id="tech_raim">-</span></div>
+							<div><span>DTE:</span><span id="tech_dte">-</span></div>
+							<div><span>Mode:</span><span id="tech_assigned">-</span></div>
+							<div><span>Display:</span><span id="tech_display">-</span></div>
+							<div><span>DSC:</span><span id="tech_dsc">-</span></div>
+							<div><span>Band:</span><span id="tech_band">-</span></div>
+							<div><span>MSG22:</span><span id="tech_msg22">-</span></div>
+							<div><span>Off-Pos:</span><span id="tech_off_position">-</span></div>
+							<div><span>Maneuver:</span><span id="tech_maneuver">-</span></div>
+						</div>
+						<div onclick="shipcardselect(this)" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
 							<div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
@@ -1241,8 +1253,9 @@
 						<div title="View binary messages" onclick="showBinaryMessageDialog(card_mmsi)"
 							data-context-type="ship" class="noandroid"><i class="mail_icon"></i><span>Messages</span>
 						</div>
-						<div id="shipcard_realtime_option" title="Track NMEA messages for this vessel" onclick="openRealtimeForMMSI(card_mmsi)"
-							data-context-type="ship"><i class="comment_icon"></i><span>Track NMEA</span>
+						<div id="shipcard_realtime_option" title="Track NMEA messages for this vessel"
+							onclick="openRealtimeForMMSI(card_mmsi)" data-context-type="ship"><i
+								class="comment_icon"></i><span>Track NMEA</span>
 						</div>
 						<div title="Lookup on commuinity site" onclick="openAIScatcherSite(card_mmsi)"
 							data-context-type="ship" class="noandroid"><i
@@ -1376,7 +1389,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=1bbdffa65c455001a68a07abf4453d25"></script>
+	<script src="script.js?hash=994cb4b793a8f189d8c7f9556264402b"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

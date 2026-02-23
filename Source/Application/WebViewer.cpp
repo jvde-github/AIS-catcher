@@ -510,10 +510,12 @@ void WebViewer::start()
 
 	if (backup_interval > 0)
 	{
-		if (backup_filename.empty()) {
+		if (backup_filename.empty())
+		{
 			Warning() << "Server: backup of statistics requested without providing backup filename.";
 		}
-		else {
+		else
+		{
 			backup_thread = std::thread(&WebViewer::BackupService, this);
 			thread_running = true;
 		}
@@ -522,19 +524,19 @@ void WebViewer::start()
 
 void WebViewer::stopThread()
 {
-    if (thread_running)
-    {
-        {
-            std::lock_guard<std::mutex> lock(m);
-            run = false;
-        }
-        cv.notify_all();
+	if (thread_running)
+	{
+		{
+			std::lock_guard<std::mutex> lock(m);
+			run = false;
+		}
+		cv.notify_all();
 
-        if (backup_thread.joinable())
-            backup_thread.join();
+		if (backup_thread.joinable())
+			backup_thread.join();
 
-        thread_running = false;
-    }
+		thread_running = false;
+	}
 }
 
 void WebViewer::close()
@@ -662,28 +664,22 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		content += "\"run_time\":\"" + std::to_string((long int)time(nullptr) - (long int)time_start) + "\",";
 		content += "\"memory\":" + std::to_string(Util::Helper::getMemoryConsumption()) + ",";
 		content += "\"os\":" + os + ",";
-		content += "\"hardware\":" + hardware + ",";
+		content += "\"hardware\":" + hardware;
 
-		std::string unit;
-		const uint64_t GB = 1000000000;
-		const uint64_t MB = 1000000;
-		int norm = 0;
-
-		if (raw_counter.received > GB)
+		content += ",\"outputs\":[";
+		bool first = true;
+		if (msg_channels)
 		{
-			norm = (raw_counter.received + (GB / 20)) / (GB / 10);
-			unit = "GB";
-		}
-		else
-		{
-			norm = (raw_counter.received + (MB / 20)) / (MB / 10);
-			unit = "MB";
-		}
-
-		int d1 = norm / 10;
-		int d2 = norm % 10;
-
-		content += "\"received\":\"" + std::to_string(d1) + "." + std::to_string(d2) + unit + "\"}";
+			for (auto &o : *msg_channels)
+			{
+				if (!first)
+					content += ",";
+				content += o->getJSON();
+				first = false;
+			}
+		}		
+		
+		content += "],\"received\":" + std::to_string(raw_counter.received ) + "}";
 
 		Response(c, "application/json", content, use_zlib & gzip);
 	}

@@ -70,9 +70,11 @@ namespace Protocol
 
 	void TCP::disconnect()
 	{
-
 		if (sock != -1)
 		{
+			if (stats)
+				stats->connected = false;
+
 			onDisconnect();
 			closesocket(sock);
 		}
@@ -107,6 +109,9 @@ namespace Protocol
 		AddressInfo ai(host, port, &h);
 		if (!ai.isSuccess())
 		{
+			if (stats)
+				stats->connect_fail++;
+
 			Error() << "TCP (" << host << ":" << port << "): getaddrinfo failed: " << ai.getErrorMessage();
 			return false;
 		}
@@ -123,6 +128,9 @@ namespace Protocol
 		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *)&yes, sizeof(yes)) == -1)
 #endif
 		{
+			if (stats)
+				stats->connect_fail++;
+
 			disconnect();
 			return false;
 		}
@@ -136,12 +144,18 @@ namespace Protocol
 			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&yes, sizeof(yes)))
 #endif
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				return false;
 			}
 #if defined(__APPLE__)
 			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				return false;
 			}
@@ -155,6 +169,9 @@ namespace Protocol
 			DWORD br;
 			if (WSAIoctl(sock, SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive), NULL, 0, &br, NULL, NULL) == SOCKET_ERROR)
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				return false;
 			}
@@ -166,6 +183,9 @@ namespace Protocol
 				setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
 				setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)))
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				return false;
 			}
@@ -176,6 +196,9 @@ namespace Protocol
 				setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
 				setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				return false;
 			}
@@ -188,6 +211,9 @@ namespace Protocol
 			r = fcntl(sock, F_GETFL, 0);
 			if (r == -1)
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				Error() << "TCP (" << host << ":" << port << "): fcntl F_GETFL failed: " << strerror(errno);
 				return false;
@@ -196,6 +222,9 @@ namespace Protocol
 			r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
 			if (r == -1)
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				Error() << "TCP (" << host << ":" << port << "): fcntl F_SETFL failed: " << strerror(errno);
 				return false;
@@ -204,6 +233,9 @@ namespace Protocol
 			u_long mode = 1; // 1 to enable non-blocking socket
 			if (ioctlsocket(sock, FIONBIO, &mode) != 0)
 			{
+				if (stats)
+					stats->connect_fail++;
+
 				disconnect();
 				Error() << "TCP (" << host << ":" << port << "): ioctlsocket failed. Error code: " << WSAGetLastError();
 				return false;
@@ -219,6 +251,13 @@ namespace Protocol
 			state = READY;
 
 			Debug() << "TCP (" << host << ":" << port << "): connected.";
+
+			if (stats)
+			{
+				stats->connect_ok++;
+				stats->connected = true;
+			}
+
 			onConnect();
 
 			bytes_sent = 0;
@@ -229,12 +268,18 @@ namespace Protocol
 #ifndef _WIN32
 		if (errno != EINPROGRESS)
 		{
+			if (stats)
+				stats->connect_fail++;
+
 			disconnect();
 			return false;
 		}
 #else
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
+			if (stats)
+				stats->connect_fail++;
+				
 			disconnect();
 			return false;
 		}
@@ -283,6 +328,12 @@ namespace Protocol
 			state = READY;
 
 			Debug() << "TCP (" << host << ":" << port << "): connected.";
+
+			if (stats)
+			{
+				stats->connect_ok++;
+				stats->connected = true;
+			}
 			onConnect();
 
 			return true;
@@ -315,6 +366,8 @@ namespace Protocol
 
 			if (!connected && std::difftime(time(nullptr), stamp) > RECONNECT_TIME)
 			{
+				if (stats)
+					stats->connect_fail++;
 				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect.";
 				reconnect();
 
@@ -353,6 +406,10 @@ namespace Protocol
 		}
 
 		bytes_sent += sent;
+
+		if (stats)
+			stats->bytes_out += sent;
+
 		return sent;
 	}
 
@@ -435,6 +492,10 @@ namespace Protocol
 		}
 
 		bytes_received += total_received;
+
+		if (stats)
+			stats->bytes_in += total_received;
+
 		return total_received;
 	}
 
