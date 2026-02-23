@@ -936,6 +936,8 @@ namespace IO
 		if (!filter_str.empty())
 			ss << ", " << filter_str;
 		tcp.setValue("PERSISTENT", "on");
+		tcp.setStats(&stats);
+		tls.setStats(&stats);
 
 		switch (Protocol)
 		{

@@ -92,6 +92,6 @@ namespace IO
 
 		int Post(const std::string &msg, bool gzip = false, bool multipart = false, const std::string &copyname = "");
 
-		void setStats(IO::OutputStats *s) { tcp.setStats(s); }
+		void setStats(IO::OutputStats *s) { tcp.setStats(s); tls.setStats(s); }
 	};
 }

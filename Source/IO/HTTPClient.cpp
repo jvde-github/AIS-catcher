@@ -123,7 +123,6 @@ namespace IO
 
 	int HTTPClient::Post(const std::string &msg, bool gzip, bool multipart, const std::string &copyname)
 	{
-
 		createMessageBody(msg, gzip, multipart, copyname);
 		createHeader(gzip, multipart);
 

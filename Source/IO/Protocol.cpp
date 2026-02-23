@@ -639,6 +639,9 @@ namespace Protocol
 			}
 		}
 
+		if(stats) 
+			stats->bytes_out += sent;
+
 		return sent;
 	}
 
@@ -750,6 +753,9 @@ namespace Protocol
 		}
 
 		// Either we've done `timeout` rounds, or total_received >= length.
+		if(stats)
+			stats->bytes_in += total_received;
+			
 		return total_received;
 	}
 

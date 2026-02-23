@@ -351,6 +351,7 @@ namespace Protocol
 		bool handshake_complete = false;
 
 		static std::once_flag ssl_init_flag;
+		IO::OutputStats *stats = nullptr;
 
 		bool verify_certificates = true;
 
@@ -383,6 +384,7 @@ namespace Protocol
 		int read(void *data, int length, int timeout = 0, bool wait = false) override;
 		void updateState();
 
+		void setStats(IO::OutputStats *s) { stats = s; }
 	private:
 		bool performHandshake();
 		std::string getSSLErrorString(int error);
