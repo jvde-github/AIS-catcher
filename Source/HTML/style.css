@@ -1270,6 +1270,18 @@ td {
     border: none;
 }
 
+#output_stats {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+@media only screen and (max-width: 750px) {
+    #output_stats {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
+
 .settings-bg {
     background-color: var(--settings-bg-color);
 }

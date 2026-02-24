@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 	int own_mmsi = -1;
 	int cb = -1;
 	bool verbose = false;
-	bool xshare_defined = false; 
+	bool xshare_defined = false;
 
 	Config c(_receivers, nrec, msg, screen, servers, own_mmsi);
 	extern IO::OutputMessage *commm_feed;
@@ -623,15 +623,22 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'X':
-				Assert(count <= 1 || (count == 2 && arg2 == "OFF"), param, "Only one optional parameter [sharing key] allowed.");
+				Assert(count <= 1, param, "Only one optional parameter [sharing key] allowed.");
 				{
 					xshare_defined = true;
+			
+					if (count == 1 && (arg1 == "OFF" || arg1 == "off"))
+					{
+						// Explicitly disable sharing if "OFF" is provided as second parameter
+						Info() << "Community feed sharing disabled.";
+						break;
+					}
 
 					if (!commm_feed)
 					{
 						msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 						commm_feed = msg.back().get();
-						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC","Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+						commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC", "Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
 						if (count == 2 || true)
 						{
 							// Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
@@ -778,12 +785,9 @@ int main(int argc, char *argv[])
 		if (show_copyright)
 			printVersion();
 
-		if((!xshare_defined && !c.isSharingDefined()) && (msg.size() > 0 && servers.size() > 0))
+		if ((!xshare_defined && !c.isSharingDefined()) && (msg.size() > 0 && servers.size() > 0))
 		{
-			Info() << "===============================";
-			Info() << "Note: Option for Community sharing with aiscatcher.org is not defined and will be enabled automatically in";
-			Info() << "future versions to benefit from community overlay in web viewer. To disable this feature, please explicitly use -X OFF.";
-			Info() << "===============================";
+			Warning() << "Hint: Use '-X on' to share with aiscatcher.org community (enables community overlay) or '-X off' to disable. Currently off by default.";
 		}
 
 		if (list_devices)
@@ -812,7 +816,7 @@ int main(int argc, char *argv[])
 				r.setTags("DTM");
 
 			r.setupDevice();
-			
+
 			// set up the decoding model(s), group is the last output group used
 			r.setupModel(group, i);
 
@@ -837,7 +841,7 @@ int main(int argc, char *argv[])
 			if (s->active())
 			{
 				s->setOutputChannels(msg);
-				
+
 				if (own_mmsi != -1)
 				{
 					s->Set("SHARE_LOC", "true");

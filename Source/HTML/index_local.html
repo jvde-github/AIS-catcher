@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=941980d4bca290cfc87ab22a9f0cd5d0" />
+	<link rel="stylesheet" href="style.css?hash=c973aa424d5048a4dd5aa7485b0fb1e4" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -699,6 +699,12 @@
 							<div><span>Memory</span><span id="stat_memory"></span></div>
 						</section>
 
+						<section>
+							<div><span>Running time</span><span id="stat_run_time"></span></div>
+							<div><span>Message rate</span><span id="stat_msg_rate"></span></div>
+							<div><span></span><span id="stat_msg_min_rate"></span></div>
+						</section>
+
 					</div>
 					<div class="stat-panel">
 						<header>Data Throughput</header>
@@ -706,12 +712,9 @@
 						<section>
 							<div><span>Device rate</span><span id="stat_sample_rate"></span></div>
 							<div><span>Bytes received</span><span id="stat_received"></span></div>
-							<div><span>Running time</span><span id="stat_run_time"></span></div>
-							<div><span>Message rate</span><span id="stat_msg_rate"></span></div>
-							<div><span></span><span id="stat_msg_min_rate"></span></div>
 						</section>
 
-						<section id="output_stats"></section>
+						<div id="output_stats"></div>
 					</div>
 
 

@@ -780,7 +780,7 @@ namespace IO
 			if (Util::Helper::isUUID(arg))
 				uuid = arg;
 			else
-				throw std::runtime_error("UDP: invalid UUID: " + arg);
+				throw std::runtime_error("TCP client: invalid UUID: " + arg);
 		}
 		else if (option == "INCLUDE_SAMPLE_START")
 		{

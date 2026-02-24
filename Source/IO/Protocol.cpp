@@ -279,7 +279,7 @@ namespace Protocol
 		{
 			if (stats)
 				stats->connect_fail++;
-				
+
 			disconnect();
 			return false;
 		}
@@ -527,6 +527,8 @@ namespace Protocol
 		if (!ctx)
 		{
 			Error() << "TLS: Failed to create SSL context for " << getHost() << ":" << getPort();
+			disconnect();
+			return;
 		}
 
 		// Disable weak SSL/TLS protocols (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
@@ -612,35 +614,36 @@ namespace Protocol
 		if (!isConnected())
 			return 0;
 
+		uint64_t before = BIO_number_written(SSL_get_wbio(ssl));
+
 		int sent = SSL_write(ssl, data, length);
 		if (sent <= 0)
 		{
 			int error = SSL_get_error(ssl, sent);
-
 			switch (error)
 			{
 			case SSL_ERROR_WANT_WRITE:
 			case SSL_ERROR_WANT_READ:
-				// Non-blocking operation would block
 				return 0;
-
 			case SSL_ERROR_ZERO_RETURN:
-				// Connection closed cleanly
 				Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
+				if (stats)
+					stats->bytes_out += BIO_number_written(SSL_get_wbio(ssl)) - before;
 				disconnect();
 				return -1;
-
 			case SSL_ERROR_SYSCALL:
 			case SSL_ERROR_SSL:
 			default:
 				Error() << "TLS (" << getHost() << ":" << getPort() << "): Send error: " << getSSLErrorString(error);
+				if (stats)
+					stats->bytes_out += BIO_number_written(SSL_get_wbio(ssl)) - before;
 				disconnect();
 				return -1;
 			}
 		}
 
-		if(stats) 
-			stats->bytes_out += sent;
+		if (stats)
+			stats->bytes_out += BIO_number_written(SSL_get_wbio(ssl)) - before;
 
 		return sent;
 	}
@@ -650,6 +653,9 @@ namespace Protocol
 		if (!isConnected())
 			return 0;
 
+		uint64_t before = BIO_number_read(SSL_get_rbio(ssl)); // fix: was SSL_get_wbio
+		int result = 0;
+
 		// do not block if we are not waiting
 		if (!wait || timeout <= 0)
 		{
@@ -658,105 +664,100 @@ namespace Protocol
 			{
 				int to_read = MIN(pending, length);
 				int r = SSL_read(ssl, data, to_read);
-				return (r > 0 ? r : 0);
+				result = (r > 0 ? r : 0);
+			}
+		}
+		else
+		{
+			SOCKET sock = getSocket();
+			if (sock < 0)
+			{
+				disconnect();
+				return -1;
 			}
 
-			return 0;
-		}
+			int time = 0;
+			int total_received = 0;
+			char *buf_ptr = (char *)data;
 
-		SOCKET sock = getSocket();
-		if (sock < 0)
-		{
-			disconnect();
-			return -1;
-		}
-
-		int time = 0;
-		int total_received = 0;
-		char *buf_ptr = (char *)data;
-
-		while (time < timeout && total_received < length)
-		{
-			int pending = SSL_pending(ssl);
-			if (pending > 0)
+			while (time < timeout && total_received < length)
 			{
-				int to_read = MIN(pending, length - total_received);
-				int r = SSL_read(ssl, buf_ptr + total_received, to_read);
+				int pending = SSL_pending(ssl);
+				if (pending > 0)
+				{
+					int to_read = MIN(pending, length - total_received);
+					int r = SSL_read(ssl, buf_ptr + total_received, to_read);
+					if (r > 0)
+					{
+						total_received += r;
+						if (total_received >= length)
+							break;
+						continue;
+					}
+				}
+
+				fd_set readfds;
+				FD_ZERO(&readfds);
+				FD_SET(sock, &readfds);
+				struct timeval tv = {1, 0};
+
+				int rv = select(sock + 1, &readfds, nullptr, nullptr, &tv);
+				if (rv < 0)
+				{
+					if (errno == EINTR)
+						continue;
+					perror("TLS select");
+					if (stats)
+						stats->bytes_in += BIO_number_read(SSL_get_rbio(ssl)) - before;
+
+					disconnect();
+					return -1;
+				}
+				if (rv == 0)
+				{
+					time++;
+					continue;
+				}
+
+				int r = SSL_read(ssl, buf_ptr + total_received, length - total_received);
 				if (r > 0)
 				{
 					total_received += r;
 					if (total_received >= length)
-						return total_received;
-
+						break;
+					time++;
 					continue;
 				}
-			}
 
-			// No pending data: wait up to 1 second on the socket for readability.
-			fd_set readfds;
-			FD_ZERO(&readfds);
-			FD_SET(sock, &readfds);
-
-			struct timeval tv;
-			tv.tv_sec = 1;
-			tv.tv_usec = 0;
-
-			int rv = select(sock + 1, &readfds, nullptr, nullptr, &tv);
-			if (rv < 0)
-			{
-				if (errno == EINTR)
-					continue;
-
-				// Fatal select() error:
-				perror("TLS select");
-				disconnect();
-				return -1;
-			}
-			if (rv == 0)
-			{
-				time++;
-				continue;
-			}
-
-			int to_read = length - total_received;
-			int r = SSL_read(ssl, buf_ptr + total_received, to_read);
-			if (r > 0)
-			{
-				total_received += r;
-				if (total_received >= length)
+				int err = SSL_get_error(ssl, r);
+				switch (err)
 				{
-					return total_received;
+				case SSL_ERROR_WANT_READ:
+				case SSL_ERROR_WANT_WRITE:
+					time++;
+					continue;
+				case SSL_ERROR_ZERO_RETURN:
+					if (stats)
+						stats->bytes_in += BIO_number_read(SSL_get_rbio(ssl)) - before;
+					disconnect();
+					return (total_received > 0 ? total_received : -1);
+				case SSL_ERROR_SYSCALL:
+				case SSL_ERROR_SSL:
+				default:
+					std::cerr << "TLS: Read error: " << ERR_error_string(ERR_get_error(), nullptr) << "\n";
+					if (stats)
+						stats->bytes_in += BIO_number_read(SSL_get_rbio(ssl)) - before;
+					disconnect();
+					return -1;
 				}
-				time++;
-				continue;
 			}
-
-			int err = SSL_get_error(ssl, r);
-			switch (err)
-			{
-			case SSL_ERROR_WANT_READ:
-			case SSL_ERROR_WANT_WRITE:
-				time++;
-				continue;
-
-			case SSL_ERROR_ZERO_RETURN:
-				disconnect();
-				return (total_received > 0 ? total_received : -1);
-
-			case SSL_ERROR_SYSCALL:
-			case SSL_ERROR_SSL:
-			default:
-				std::cerr << "TLS: Read error: " << ERR_error_string(ERR_get_error(), nullptr) << "\n";
-				disconnect();
-				return -1;
-			}
+			result = total_received;
 		}
 
-		// Either we've done `timeout` rounds, or total_received >= length.
-		if(stats)
-			stats->bytes_in += total_received;
-			
-		return total_received;
+		if (stats)
+			stats->bytes_in += BIO_number_read(SSL_get_rbio(ssl)) - before;
+
+		return result;
 	}
 
 	void TLS::updateState()
@@ -1197,7 +1198,10 @@ namespace Protocol
 			case PacketType::PUBLISH:
 			{
 				if (data_len < length)
+				{
+					Warning() << "MQTT: Buffer too small for incoming message. Required: " << length << ", provided: " << data_len;
 					break;
+				}
 
 				// Validate minimum length for topic length field
 				if (length < 2)
