@@ -144,11 +144,13 @@ namespace AIS
 	std::string Message::getNMEATagBlock() const
 	{
 		static int groupId = 0;
-		groupId = (groupId % 9999) + 1; // Recycle 1-9999
 
 		std::string result;
 		int total = NMEA.size();
 		int seq = 1;
+
+		if (total > 1)
+			groupId = (groupId % 9999) + 1; // Recycle 1-9999
 
 		// Use station ID with 's' prefix as source
 		std::string src = "s" + std::to_string(station);
@@ -156,7 +158,10 @@ namespace AIS
 		for (const auto &nmea : NMEA)
 		{
 			std::stringstream tb;
-			tb << "s:" << src << ",c:" << rxtime << ",g:" << seq << "-" << total << "-" << groupId;
+			tb << "s:" << src << ",c:" << rxtime;
+
+			if (total > 1)
+				tb << ",g:" << seq << "-" << total << "-" << groupId;
 
 			// Calculate checksum for tag block
 			std::string tbs = tb.str();
@@ -715,43 +720,50 @@ namespace AIS
 
 		if (allow != all)
 		{
-			if (!ret.empty()) ret += ", ";
+			if (!ret.empty())
+				ret += ", ";
 			ret += "allowed {" + getAllowed() + "}";
 		}
 
 		if (own_interval > 0)
 		{
-			if (!ret.empty()) ret += ", ";
+			if (!ret.empty())
+				ret += ", ";
 			ret += "own_interval " + std::to_string(own_interval);
 		}
 
 		if (position_interval > 0)
 		{
-			if (!ret.empty()) ret += ", ";
+			if (!ret.empty())
+				ret += ", ";
 			ret += "position_interval " + std::to_string(position_interval);
 		}
 
 		if (unique_interval > 0)
 		{
-			if (!ret.empty()) ret += ", ";
+			if (!ret.empty())
+				ret += ", ";
 			ret += "unique_interval " + std::to_string(unique_interval);
 		}
 
 		if (!MMSI_allowed.empty())
 		{
-			if (!ret.empty()) ret += ", ";
+			if (!ret.empty())
+				ret += ", ";
 			ret += "mmsi_filter ON";
 		}
 
 		if (!MMSI_blocked.empty())
 		{
-			if (!ret.empty()) ret += ", ";
+			if (!ret.empty())
+				ret += ", ";
 			ret += "mmsi_block ON";
 		}
 
 		if (!allowed_channels.empty())
 		{
-			if (!ret.empty()) ret += ", ";
+			if (!ret.empty())
+				ret += ", ";
 			ret += "channel {" + allowed_channels + "}";
 		}
 
