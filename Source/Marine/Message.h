@@ -94,6 +94,11 @@ namespace AIS
 			return (std::time_t)(rxtime / 1000000);
 		}
 
+		int64_t getRxTimeMicros() const
+  		{
+      		return rxtime;
+  		}
+
 		void setRxTimeUnix(std::time_t t)
 		{
 			rxtime = (int64_t)t * 1000000;

@@ -100,13 +100,14 @@ namespace Device {
 		std::vector<CFLOAT32> input(BUFFER_SIZE);
 		void* buffers[] = { input.data() };
 		long long timeNs = 0;
+		const long timeout_us = 1000000;
 		int flags = 0;
 
 		try {
 			dev->activateStream(stream);
 
 			while (isStreaming()) {
-				int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs);
+				int ret = dev->readStream(stream, buffers, BUFFER_SIZE, flags, timeNs, timeout_us);
 
 				if (ret < 0) {
 					Error()  << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret) << std::endl;
