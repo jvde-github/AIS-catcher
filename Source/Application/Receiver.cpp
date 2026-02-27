@@ -112,11 +112,11 @@ void Receiver::setChannel(std::string mode, std::string NMEA)
 void Receiver::setupDevice()
 {
 	int frequency = (ChannelMode == AIS::Mode::AB) ? 162000000 : 156800000;
-	
+
 	tag.version = VERSION_NUMBER;
 	tag.station_lat = station_lat;
 	tag.station_lon = station_lon;
-	
+
 	if (!deviceManager.openDevice(sample_rate, bandwidth, ppm, frequency, tag))
 		throw std::runtime_error("cannot set up device");
 }
@@ -169,7 +169,7 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 void Receiver::setupModel(int &group, int idx)
 {
 	receiver_index = idx;
-	auto* device = deviceManager.getDevice();
+	auto *device = deviceManager.getDevice();
 	// if nothing defined, create one model
 	if (!models.size())
 	{
@@ -243,32 +243,28 @@ void Receiver::play()
 		}
 	}
 
-	auto* device = deviceManager.getDevice();
+	auto *device = deviceManager.getDevice();
 	device->Play();
 
 	if (verbose)
-	{
-		std::stringstream ss;
-		ss << "Device    : " << device->getProduct() << "\n"
-		   << "Settings  : " << device->Get() << "\n";
+	{		
+		Info() << "Device    : " << device->getProduct();
+		Info() << "Settings  : " << device->Get();
 		for (int i = 0; i < models.size(); i++)
-			ss << "Model #" + std::to_string(receiver_index) + "-" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
-			   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get() << "\n";
-
-		Info() << ss.str();
+			Info() << "Model #" + std::to_string(receiver_index) + "-" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
+				   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] " + models[i]->Get();
 	}
 }
 
 void Receiver::stop()
 {
-	auto* device = deviceManager.getDevice();
+	auto *device = deviceManager.getDevice();
 	if (device)
 		device->Stop();
 }
 
 //-----------------------------------
 // set up screen output
-
 
 //-----------------------------------
 // set up screen counters
