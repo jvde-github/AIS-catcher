@@ -910,8 +910,10 @@ namespace AIS
 		json.Add(AIS::KEY_DRIVER, (int)tag.driver);
 		json.Add(AIS::KEY_HARDWARE, tag.hardware);
 
-		if (tag.mode & 2)
+		if (tag.mode & 2) {
 			json.Add(AIS::KEY_RXTIME, &rxtime);
+			json.Add(AIS::KEY_RXUXTIME, (double)msg.getRxTimeMicros() / 1000000.0);
+		}
 
 		json.Add(AIS::KEY_SCALED, true);
 
