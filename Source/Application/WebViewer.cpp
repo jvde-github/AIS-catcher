@@ -241,6 +241,13 @@ bool WebViewer::Save()
 	try
 	{
 		std::ofstream infile(backup_filename, std::ios::binary);
+
+		if (!infile.is_open()) {
+            Error() << "Server: cannot open backup file for writing: " 
+                    << backup_filename << " (" << std::strerror(errno) << ")";
+            return false;
+        }
+
 		if (!counter.Save(infile))
 			return false;
 		if (!hist_second.Save(infile))
@@ -384,7 +391,7 @@ void WebViewer::BackupService()
 			}
 
 			if (!Save())
-				Error() << "Server failed to write backup.";
+				Error() << "Server failed to write backup:" << backup_filename;
 		}
 	}
 	catch (std::exception &e)
@@ -546,7 +553,7 @@ void WebViewer::close()
 
 	if (!backup_filename.empty() && !Save())
 	{
-		Error() << "Statistics - cannot write file.";
+		Error() << "Statistics - cannot write file: " << backup_filename;
 	}
 }
 
