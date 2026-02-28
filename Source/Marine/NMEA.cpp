@@ -315,7 +315,7 @@ namespace AIS
 
 		split(s);
 
-		if ((parts.size() != 13 && parts.size() != 12))
+		if ((parts.size() < 12 || parts.size() > 14))
 			return false;
 
 		const std::string &crc = parts[parts.size() - 1];
@@ -330,16 +330,18 @@ namespace AIS
 			}
 		}
 
-		std::string lat_quad = trim(parts[3]);
-		std::string lon_quad = trim(parts[5]);
+		std::string lat_quad = trim(parts[4]); // N/S
+		std::string lon_quad = trim(parts[6]); // E/W
+
 		if (lat_quad.empty() || lon_quad.empty())
 		{
 			error_msg = "NMEA: no coordinates in RMC";
 			return false;
 		}
 
-		GPS gps(GpsToDecimal(trim(parts[2]).c_str(), lat_quad[0], error),
-				GpsToDecimal(trim(parts[4]).c_str(), lon_quad[0], error), s, empty);
+		GPS gps(GpsToDecimal(trim(parts[3]).c_str(), lat_quad[0], error), // lat
+				GpsToDecimal(trim(parts[5]).c_str(), lon_quad[0], error), // lon
+				s, empty);
 
 		if (error)
 		{
@@ -694,7 +696,7 @@ namespace AIS
 				throw std::runtime_error("invalid message length: " + std::to_string(length_bits));
 			}
 
-			msg.clear();			
+			msg.clear();
 			msg.setRxTimeUnix(timestamp);
 			msg.setOrigin(channel, station, own_mmsi);
 			msg.setStartIdx(0);
