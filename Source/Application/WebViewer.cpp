@@ -248,6 +248,8 @@ bool WebViewer::Save()
             return false;
         }
 
+		infile.exceptions(std::ios::failbit | std::ios::badbit);  // will throw on write failure
+
 		if (!counter.Save(infile))
 			return false;
 		if (!hist_second.Save(infile))
@@ -264,9 +266,19 @@ bool WebViewer::Save()
 
 		infile.close();
 	}
+	catch (const std::ios_base::failure &e)
+	{
+		Error() << "Server: write error on " << backup_filename << " (" << std::strerror(errno) << ")";
+		return false;
+	}
 	catch (const std::exception &e)
 	{
 		Error() << e.what();
+		return false;
+	}
+	catch (...)
+	{
+		Error() << "Server: unknown error writing " << backup_filename;
 		return false;
 	}
 	return true;
