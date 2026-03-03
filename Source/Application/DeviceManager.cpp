@@ -104,9 +104,6 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 	if (!serial.empty()) {
 		Info() << "Searching for device with SN " << serial << (type != Type::NONE ? " and type " + Util::Parse::DeviceTypeString(type) : "") << ".";
 	}
-	else if (type != Type::NONE) {
-		Info() << "Searching for device of type " << Util::Parse::DeviceTypeString(type) << ".";
-	}
 
 	if (!serial.empty() || type != Type::NONE)
 	{
