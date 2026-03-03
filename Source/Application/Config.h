@@ -49,7 +49,7 @@ class Config
 {
 
 	std::vector<std::unique_ptr<Receiver>> &_receivers;
-	int _nrec;
+	int &_nrec;
 	std::vector<std::unique_ptr<IO::OutputMessage>> &_msg;
 
 	IO::ScreenOutput &_screen;
