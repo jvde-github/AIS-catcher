@@ -118,7 +118,7 @@ void Receiver::setupDevice()
 	tag.station_lon = station_lon;
 
 	if (!deviceManager.openDevice(sample_rate, bandwidth, ppm, frequency, tag))
-		throw std::runtime_error("cannot set up device");
+		throw std::runtime_error("Receiver: cannot set up device.");
 }
 
 // Set up model

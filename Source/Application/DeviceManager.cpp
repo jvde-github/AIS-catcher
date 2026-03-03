@@ -101,8 +101,12 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 	int idx = device_list.empty() ? -1 : 0;
 	uint64_t handle = device_list.empty() ? 0 : device_list[0].getHandle();
 
-	if (!serial.empty())
-		Info() << "Searching for device with SN " << serial << ".";
+	if (!serial.empty()) {
+		Info() << "Searching for device with SN " << serial << (type != Type::NONE ? " and type " + Util::Parse::DeviceTypeString(type) : "") << ".";
+	}
+	else if (type != Type::NONE) {
+		Info() << "Searching for device of type " << Util::Parse::DeviceTypeString(type) << ".";
+	}
 
 	if (!serial.empty() || type != Type::NONE)
 	{
@@ -122,7 +126,11 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 		if (idx == -1)
 		{
 			if (!serial.empty())
-				throw std::runtime_error("Cannot find device with specified parameters");
+			{
+				Error() << "Device Manager: cannot find device with SN " << serial << ".";
+				printAvailableDevices();
+				return false;
+			}
 
 			idx = 0;
 			handle = 0;
@@ -130,7 +138,10 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 	}
 
 	if (type == Type::NONE && device_list.size() == 0)
-		throw std::runtime_error("No devices available");
+	{
+		Error() << "Device Manager: no devices available.";
+		return false;
+	}
 
 	if (type != Type::NONE)
 		device = getDeviceByType(type);
@@ -197,7 +208,8 @@ void DeviceManager::printAvailableDevices(bool JSON)
 void DeviceManager::selectDeviceByIndex(int index)
 {
 	if (index < 0 || index >= device_list.size())
-		throw std::runtime_error("device does not exist");
+		throw std::runtime_error("Device Manager: device does not exist");
 
 	serial = device_list[index].getSerial();
+	type = device_list[index].getType();
 }
