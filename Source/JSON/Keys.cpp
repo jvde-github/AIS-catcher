@@ -21,26 +21,27 @@ namespace AIS
 {
 
 	const std::vector<std::vector<std::string>> KeyMap = {
-		{"class", "class", "class", "", "", ""},										// KEY_CLASS
-		{"device", "device", "device", "", "", ""},										// KEY_DEVICE
-		{"driver", "driver", "driver", "", "", ""},										// KEY_DRIVER
-		{"error", "error", "error", "", "", ""},										// KEY_ERROR
-		{"scaled", "", "scaled", "", "", ""},											// KEY_SCALED
-		{"channel", "channel", "channel", "", "", ""},									// KEY_CHANNEL
-		{"hardware", "hardware", "hardware", "", "", ""},								// KEY_HARDWARE
-		{"ipv4", "ipv4", "ipv4", "", "", ""},											// KEY_IPV4
-		{"signalpower", "signalpower", "signalpower", "", "", ""},						// KEY_SIGNAL_POWER
-		{"ppm", "ppm", "ppm", "", "", ""},												// KEY_PPM
-		{"rxtime", "rxtime", "rxtime", "rxtime", "", ""},								// KEY_RXTIME
-		{"rxuxtime", "rxuxtime", "rxuxtime", "rxuxtime", "", ""},						// KEY_RXUXTIME
-		{"nmea", "nmea", "nmea", "", "", ""},											// KEY_NMEA
-		{"eta", "", "eta", "", "", ""},													// KEY_ETA
-		{"shiptype_text", "", "shiptype_text", "", "", ""},								// KEY_SHIPTYPE_TEXT
-		{"aid_type_text", "", "aid_type_text", "", "", ""},								// KEY_AID_TYPE_TEXT
-		{"ssc", "", "ssc", "", "", ""},													// KEY_SAMPLE_START_COUNT
-		{"sl", "", "sl", "", "", ""},													// KEY_SAMPLE_LENGTH
-		{"station_id", "", "station_id", "", "", ""},									// KEY_STATION_ID
-		{"version", "", "version", "", "", ""},											// KEY_VERSION
+		{"class", "class", "class", "", "", ""},				   // KEY_CLASS
+		{"device", "device", "device", "", "", ""},				   // KEY_DEVICE
+		{"driver", "driver", "driver", "", "", ""},				   // KEY_DRIVER
+		{"error", "error", "error", "", "", ""},				   // KEY_ERROR
+		{"scaled", "", "scaled", "", "", ""},					   // KEY_SCALED
+		{"channel", "channel", "channel", "", "", ""},			   // KEY_CHANNEL
+		{"hardware", "hardware", "hardware", "", "", ""},		   // KEY_HARDWARE
+		{"ipv4", "ipv4", "ipv4", "", "", ""},					   // KEY_IPV4
+		{"signalpower", "signalpower", "signalpower", "", "", ""}, // KEY_SIGNAL_POWER
+		{"ppm", "ppm", "ppm", "", "", ""},						   // KEY_PPM
+		{"rxtime", "rxtime", "rxtime", "rxtime", "", ""},		   // KEY_RXTIME
+		{"rxuxtime", "rxuxtime", "rxuxtime", "rxuxtime", "", ""},  // KEY_RXUXTIME
+		{"nmea", "nmea", "nmea", "", "", ""},					   // KEY_NMEA
+		{"eta", "", "eta", "", "", ""},							   // KEY_ETA
+		{"shiptype_text", "", "shiptype_text", "", "", ""},		   // KEY_SHIPTYPE_TEXT
+		{"aid_type_text", "", "aid_type_text", "", "", ""},		   // KEY_AID_TYPE_TEXT
+		{"ssc", "", "ssc", "", "", ""},							   // KEY_SAMPLE_START_COUNT
+		{"sl", "", "sl", "", "", ""},							   // KEY_SAMPLE_LENGTH
+		{"station_id", "", "station_id", "", "", ""},			   // KEY_STATION_ID
+		{"version", "", "version", "", "", ""},					   // KEY_VERSION
+		{"toa", "", "toa", "", "", ""},							   // KEY_TOA
 		{"", "", "", "", "about", ""},													// KEY_SETTING_ABOUT
 		{"", "", "", "", "address", ""},												// KEY_SETTING_ADDRESS
 		{"", "", "", "", "active", ""},													// KEY_SETTING_ACTIVE

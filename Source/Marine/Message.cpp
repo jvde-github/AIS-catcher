@@ -99,8 +99,19 @@ namespace AIS
 			else
 				ts << (rxtime / 1000000);
 
-			ss << ",\"rxuxtime\":\"" << ts.str() << "\"";
+			ss << ",\"rxuxtime\":" << ts.str();
 			ss << ",\"rxtime\":\"" << getRxTime() << "\"";
+		}
+
+		if (toa != 0)
+		{
+			std::stringstream ts;
+			if ((toa % 1000000) != 0)
+				ts << std::fixed << std::setprecision(6) << ((double)toa / 1000000.0);
+			else
+				ts << (toa / 1000000);
+
+			ss << ",\"toa\":" << ts.str();
 		}
 
 		if (!uuid.empty())
