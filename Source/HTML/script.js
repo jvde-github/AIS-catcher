@@ -8010,129 +8010,128 @@ if (communityFeed) {
     button.classList.remove('fill-red');
     button.classList.add('fill-green');
 
-    var feedVector = new ol.source.Vector({
-        features: []
-    });
+    var feedVector = new ol.source.Vector({ features: [] });
+
+    // Simple style: grey dot for ships, teal for AtoN/base, orange for SAR/heli/plane.
+    // Moving ships with a known direction get a small directional triangle.
+    // type: 0=moving, 1=stationary, 2=AtoN/base, 3=SAR/heli/plane
+    // Derive sprite coordinates from the compact binary flags.
+    // Sprite sheet columns (cx, cy=0 moving / cy=20 stationary, imgSize=20):
+    //   cx=0  → generic ship (first column — no specific type known)
+    //   cx=20 → Class B
+    //   cx=0, cy=40 → AtoN
+    //   cx=20,cy=40 → base station
+    //   cx=0, cy=60, imgSize=25 → SAR / heli / plane
+    function getFeedSprite(ship) {
+        const type = ship.type;      // 0=moving, 1=stationary, 2=AtoN/base, 3=SAR/heli/plane
+        const classB = ship.class_b; // 1 = Class B transponder
+        const dir = ship.direction;  // degrees or null
+
+        switch (type) {
+            case 2: // AtoN / base station
+                return { cx: 0, cy: 40, imgSize: 20, rot: 0 };
+            case 3: // SAR / helicopter / plane
+                return { cx: 0, cy: 60, imgSize: 25, rot: dir != null ? dir * Math.PI / 180 : 0 };
+            default: { // 0 = moving, 1 = stationary
+                const cx = classB ? 20 : 0;
+                const isMoving = type === 0 && dir != null;
+                const cy = isMoving ? 0 : 20;
+                const rot = isMoving ? dir * Math.PI / 180 : 0;
+                return { cx, cy, imgSize: 20, rot };
+            }
+        }
+    }
 
     var feederStyle = function (feature) {
+        const sp = getFeedSprite(feature.ship);
         return new ol.style.Style({
             image: new ol.style.Icon({
-                src: "https://www.aiscatcher.org/hub_test/sprites_hub.png",
-                rotation: feature.ship.rot,
-                offset: [feature.ship.cx, feature.ship.cy],
-                size: [feature.ship.imgSize, feature.ship.imgSize],
+                src: "https://api.aiscatcher.org/community/v1/sprites.png",
+                offset: [sp.cx, sp.cy],
+                size: [sp.imgSize, sp.imgSize],
+                rotation: sp.rot,
                 scale: settings.icon_scale * 0.8,
-                opacity: 1
+                opacity: 0.85
             })
-        })
-    }
+        });
+    };
 
     var feedLayer = new ol.layer.Vector({
         source: feedVector,
         style: feederStyle
     });
 
+    // Decode the compact binary format (big-endian, 12-byte header + 11 bytes/ship)
+    function decodeCompactShips(buffer) {
+        const view = new DataView(buffer);
+        let offset = 0;
 
-    function redrawCommunityFeed(db) {
+        if (view.byteLength < 12) return [];
 
+        // Header: uint64 timestamp (skip) + int32 count
+        offset += 8; // skip timestamp
+        const count = view.getInt32(offset, false); offset += 4;
+
+        const ships = [];
+        for (let i = 0; i < count; i++) {
+            if (offset + 11 > view.byteLength) break;
+
+            const latRaw = view.getInt32(offset, false);  offset += 4;
+            const lonRaw = view.getInt32(offset, false);  offset += 4;
+            const flags  = view.getUint8(offset);         offset += 1;
+            const dirRaw = view.getUint16(offset, false); offset += 2;
+
+            const lat = (latRaw === 0x7FFFFFFF) ? null : latRaw / 600000.0;
+            const lon = (lonRaw === 0x7FFFFFFF) ? null : lonRaw / 600000.0;
+
+            if (lat === null || lon === null) continue;
+
+            ships.push({
+                lat,
+                lon,
+                type:      flags & 0x03,
+                approx:   (flags >> 2) & 1,
+                class_b:  (flags >> 3) & 1,
+                direction: (dirRaw === 0xFFFF) ? null : dirRaw / 10.0
+            });
+        }
+        return ships;
+    }
+
+    function redrawCommunityFeed() {
         feedVector.clear();
-
-        for (let [mmsi, entry] of Object.entries(CshipsDB)) {
-            let ship = entry.raw;
-            if (ship.lat != null && ship.lon != null && ship.lat != 0 && ship.lon != 0 && ship.lat < 90 && ship.lon < 180) {
-                getSprite(ship)
-
-                const lon = ship.lon
-                const lat = ship.lat
-
-                const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
-                var feature = new ol.Feature({
-                    geometry: point
-                })
-
-                feature.ship = ship;
-                feature.link = 'https://www.aiscatcher.org/?zoom=12&mmsi=' + ship.mmsi
-                feature.tooltip = ship.shipname || ship.mmsi
-                feedVector.addFeature(feature)
-            }
+        for (const ship of communityShips) {
+            const feature = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat([ship.lon, ship.lat]))
+            });
+            feature.ship = ship;
+            feature.link = `https://www.aiscatcher.org/livemap?lat=${ship.lat}&lon=${ship.lon}&zoom=16.00`;
+            feedVector.addFeature(feature);
         }
     }
 
+    let communityShips = [];
 
-    let CshipsDB = {}
-
-    async function fetchCommunityShips(noDoubleFetch = true) {
-
-        let ships = {};
-
+    async function fetchCommunityShips() {
         try {
             const extent = map.getView().calculateExtent(map.getSize());
             const extentInLatLon = ol.proj.transformExtent(extent, 'EPSG:3857', 'EPSG:4326');
 
-            let minLon = extentInLatLon[0] - 0.0045;
-            let minLat = extentInLatLon[1] - 0.0045;
-            let maxLon = extentInLatLon[2] + 0.0045;
-            let maxLat = extentInLatLon[3] + 0.0045;
+            const minLon = extentInLatLon[0] - 0.0045;
+            const minLat = extentInLatLon[1] - 0.0045;
+            const maxLon = extentInLatLon[2] + 0.0045;
+            const maxLat = extentInLatLon[3] + 0.0045;
+            const zoom   = map.getView().getZoom();
 
-            let zoom = map.getView().getZoom();
-
-            response = await fetch("https://www.aiscatcher.org/hub_test/ships_array.json?" + zoom + "," + minLat + "," + minLon + "," + maxLat + "," + maxLon + "," + -1);
+            const url = `https://api.aiscatcher.org/community/v1/ships?${zoom},${minLat},${minLon},${maxLat},${maxLon}`;
+            const response = await fetch(url);
+            const buffer = await response.arrayBuffer();
+            communityShips = decodeCompactShips(buffer);
+            return true;
         } catch (error) {
-            console.log("failed loading ships: " + error);
+            console.log("Failed loading community ships: " + error);
             return false;
         }
-
-        ships = await response.json();
-
-
-        const keys = [
-            "mmsi",
-            "lat",
-            "lon",
-            "distance",
-            "bearing",
-            "level",
-            "count",
-            "ppm",
-            "approx",
-            "heading",
-            "cog",
-            "speed",
-            "to_bow",
-            "to_stern",
-            "to_starboard",
-            "to_port",
-            "last_group",
-            "group_mask",
-            "shiptype",
-            "mmsi_type",
-            "shipclass",
-            "validated",
-            "msg_type",
-            "channels",
-            "country",
-            "status",
-            "draught",
-            "eta_month",
-            "eta_day",
-            "eta_hour",
-            "eta_minute",
-            "imo",
-            "callsign",
-            "shipname",
-            "destination",
-            "last_signal",
-        ];
-
-        CshipsDB = {};
-        ships.values.forEach((v) => {
-            const s = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
-            const entry = {};
-            entry.raw = s;
-            CshipsDB[s.mmsi] = entry;
-        });
-
-        return true;
     }
 
     debounceUpdateCommunityFeed = debounce(updateCommunityFeed, 250);
@@ -8146,9 +8145,7 @@ if (communityFeed) {
     function updateCommunityFeed() {
         if (!feedLayer.isVisible()) return;
         fetchCommunityShips().then((ok) => {
-            if (ok) {
-                redrawCommunityFeed(CshipsDB);
-            }
+            if (ok) redrawCommunityFeed();
         });
     }
     addOverlayLayer("Community Feed", feedLayer);
