@@ -167,6 +167,7 @@ namespace AIS
 		{"", "", "", "", "tcp_listener", ""},											// KEY_SETTING_TCP_LISTENER
 		{"", "", "", "", "test", ""},													// KEY_SETTING_TEST
 		{"", "", "", "", "timeout", ""},												// KEY_SETTING_TIMEOUT
+		{"", "", "", "", "timeout_only_when_idle", ""},									// KEY_SETTING_TIMEOUT_NOMSG
 		{"", "", "", "", "threshold", ""},												// KEY_SETTING_THRESHOLD
 		{"", "", "", "", "topic", ""},													// KEY_SETTING_TOPIC
 		{"", "", "", "", "tuner", ""},													// KEY_SETTING_TUNER

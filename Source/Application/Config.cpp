@@ -453,6 +453,12 @@ void Config::set(const std::string &str)
 		case AIS::KEY_SETTING_SCREEN:
 			_screen.setScreen(p.Get().to_string());
 			break;
+		case AIS::KEY_SETTING_TIMEOUT:
+			_timeout = Util::Parse::Integer(p.Get().to_string(), 1, 3600);
+			break;
+		case AIS::KEY_SETTING_TIMEOUT_NOMSG:
+			_timeout_nomsg = Util::Parse::Switch(p.Get().to_string());
+			break;
 		case AIS::KEY_SETTING_VERBOSE_TIME:
 			_screen.verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
 			break;

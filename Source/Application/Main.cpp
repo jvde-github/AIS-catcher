@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
 	bool verbose = false;
 	bool xshare_defined = false;
 
-	Config c(_receivers, nrec, msg, screen, servers, own_mmsi);
+	Config c(_receivers, nrec, msg, screen, servers, own_mmsi, timeout, timeout_nomsg);
 	extern IO::OutputMessage *commm_feed;
 
 	try

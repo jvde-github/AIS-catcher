@@ -56,6 +56,8 @@ class Config
 	std::vector<std::unique_ptr<WebViewer>> &_server;
 
 	int &_own_mmsi;
+	int &_timeout;
+	bool &_timeout_nomsg;
 	bool xshare_defined = false;
 
 	bool isActiveObject(const JSON::Value &pd);
@@ -72,7 +74,7 @@ class Config
 	void setSharing(const std::vector<JSON::Property> &props);
 
 public:
-	Config(std::vector<std::unique_ptr<Receiver>> &r, int &nr, std::vector<std::unique_ptr<IO::OutputMessage>> &o, IO::ScreenOutput &s, std::vector<std::unique_ptr<WebViewer>> &v, int &own_mmsi) : _receivers(r), _nrec(nr), _msg(o), _screen(s), _server(v), _own_mmsi(own_mmsi) {}
+	Config(std::vector<std::unique_ptr<Receiver>> &r, int &nr, std::vector<std::unique_ptr<IO::OutputMessage>> &o, IO::ScreenOutput &s, std::vector<std::unique_ptr<WebViewer>> &v, int &own_mmsi, int &timeout, bool &timeout_nomsg) : _receivers(r), _nrec(nr), _msg(o), _screen(s), _server(v), _own_mmsi(own_mmsi), _timeout(timeout), _timeout_nomsg(timeout_nomsg) {}
 
 	void read(std::string &file_config);
 	void set(const std::string &str);

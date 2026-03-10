@@ -7884,22 +7884,26 @@ async function refreshRainviewerLayers() {
 
         // Update radar layer
         const latestRadar = data.radar.past[data.radar.past.length - 1];
-        const radarSource = new ol.source.XYZ({
+        rainviewerRadar.setSource(new ol.source.XYZ({
             url: `https://tilecache.rainviewer.com/v2/radar/${latestRadar.time}/512/{z}/{x}/{y}/6/1_1.png`,
-            attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>'
-        });
-        rainviewerRadar.setSource(radarSource);
+            attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>',
+            maxZoom: 7,
+        }));
 
         // Update clouds layer
-        const latestClouds = data.satellite.infrared[data.satellite.infrared.length - 1];
-        const cloudsSource = new ol.source.XYZ({
-            url: `https://tilecache.rainviewer.com/${latestClouds.path}/512/{z}/{x}/{y}/0/0_0.png`,
-            attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>'
-        });
-        rainviewerClouds.setSource(cloudsSource);
+        const latestClouds = data.satellite?.infrared?.[data.satellite.infrared.length - 1];
+        if (latestClouds) {
+            rainviewerClouds.setSource(new ol.source.XYZ({
+                url: `https://tilecache.rainviewer.com/${latestClouds.path}/512/{z}/{x}/{y}/0/0_0.png`,
+                attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>',
+                maxZoom: 7,
+            }));
+        }
+        return true;
 
     } catch (error) {
         console.error("Error refreshing RainViewer layers:", error);
+        return false;
     }
 }
 
