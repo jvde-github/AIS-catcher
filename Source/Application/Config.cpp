@@ -454,7 +454,15 @@ void Config::set(const std::string &str)
 			_screen.setScreen(p.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_TIMEOUT:
-			_timeout = Util::Parse::Integer(p.Get().to_string(), 1, 3600);
+			if (p.Get().isBool()) {
+				if (!p.Get().getBool())
+					_timeout = 0;
+				else
+					throw std::runtime_error("Config file: timeout must be false or a number between 1 and 3600.");
+			}
+			else {
+				_timeout = Util::Parse::Integer(p.Get().to_string(), 1, 3600);
+			}
 			break;
 		case AIS::KEY_SETTING_TIMEOUT_NOMSG:
 			_timeout_nomsg = Util::Parse::Switch(p.Get().to_string());
