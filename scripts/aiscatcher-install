@@ -37,8 +37,8 @@ Options:
   -b, --branch               Specify git branch to clone (default: main)
   --no-systemd               Skip systemd service installation (useful for containers)
   --no-user                  Skip user creation and run as root (useful for containers)
-  --set-reboot-on-failure [SEC]  Enable automatic reboot after 3 rapid restarts (default: 1800s)
-  --unset-reboot-on-failure  Disable automatic reboot on repeated failures
+  --set-reboot-on-failure [BURST [SEC]]  Enable reboot watchdog (default: 3 restarts in 1800s)
+  --unset-reboot-on-failure              Disable automatic reboot on repeated failures
   -h, --help                 Display this help message
 
 Examples:
@@ -82,6 +82,7 @@ readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 readonly REBOOT_SERVICE_NAME="ais-catcher-reboot.service"
 readonly REBOOT_SERVICE_FILE="/etc/systemd/system/${REBOOT_SERVICE_NAME}"
 readonly REBOOT_FLAG_FILE="${CONFIG_DIR}/reboot-on-failure"
+readonly REBOOT_BURST_DEFAULT=3
 readonly REBOOT_INTERVAL_DEFAULT=1800
 
 # Global variables
@@ -91,6 +92,7 @@ SKIP_USER=false
 BRANCH="main"
 SERVICE_STATE=""
 SET_REBOOT=""
+REBOOT_BURST="${REBOOT_BURST_DEFAULT}"
 REBOOT_INTERVAL="${REBOOT_INTERVAL_DEFAULT}"
 
 # Color constants (using ANSI escape codes)
@@ -169,16 +171,33 @@ cleanup() {
 # REBOOT-ON-FAILURE TOGGLE (standalone, no reinstall needed)
 ################################################################################
 
-# Set or unset the reboot-on-failure flag file and exit
-# The flag file content is the StartLimitIntervalSec value in seconds
+# Set or unset the reboot-on-failure flag file and update service limits
+# Flag file format: "BURST INTERVAL" (e.g. "3 1800")
 handle_reboot_setting() {
+    if [[ ! -f "$SERVICE_FILE" ]]; then
+        error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
+    fi
+
     if [[ "$SET_REBOOT" == "on" ]]; then
         mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
-        echo "${REBOOT_INTERVAL}" > "$REBOOT_FLAG_FILE" || error_exit "Failed to create reboot flag file"
-        log "INFO" "Reboot on failure enabled (interval: ${REBOOT_INTERVAL}s, file: ${REBOOT_FLAG_FILE})"
+        echo "${REBOOT_BURST} ${REBOOT_INTERVAL}" > "$REBOOT_FLAG_FILE" || error_exit "Failed to create reboot flag file"
+        sed -i "s/^StartLimitBurst=.*/StartLimitBurst=${REBOOT_BURST}/" "$SERVICE_FILE"
+        sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=${REBOOT_INTERVAL}/" "$SERVICE_FILE"
+        log "INFO" "Reboot on failure enabled (burst: ${REBOOT_BURST}, interval: ${REBOOT_INTERVAL}s)"
     else
         rm -f "$REBOOT_FLAG_FILE" || error_exit "Failed to remove reboot flag file"
+        sed -i "s/^StartLimitBurst=.*/StartLimitBurst=0/" "$SERVICE_FILE"
+        sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=0/" "$SERVICE_FILE"
         log "INFO" "Reboot on failure disabled"
+    fi
+
+    systemctl daemon-reload || error_exit "Failed to reload systemd"
+
+    # If unit is in failed/start-limit-hit state, reset it so it can be started again
+    if systemctl is-failed --quiet "$SERVICE_NAME" 2>/dev/null; then
+        log "INFO" "Resetting failed state of ${SERVICE_NAME}"
+        systemctl reset-failed "$SERVICE_NAME" || log "WARN" "Failed to reset failed state"
+        systemctl start "$SERVICE_NAME" || log "WARN" "Failed to start ${SERVICE_NAME} after reset"
     fi
 }
 
@@ -531,13 +550,23 @@ ExecStart=/sbin/reboot
 EOF
     log "INFO" "Reboot watchdog service written to ${REBOOT_SERVICE_FILE}"
 
+    # Restore burst/interval from flag file if watchdog was previously armed
+    local burst=0
+    local interval=0
+    if [[ -f "$REBOOT_FLAG_FILE" ]]; then
+        read -r burst interval < "$REBOOT_FLAG_FILE"
+        burst=${burst:-0}
+        interval=${interval:-0}
+        log "INFO" "Reboot watchdog flag file found, restoring limits: burst=${burst} interval=${interval}s"
+    fi
+
     # Build main service file content
     local service_content="[Unit]
 Description=AIS-catcher Service
 After=network.target
 OnFailure=${REBOOT_SERVICE_NAME}
-StartLimitIntervalSec=1800
-StartLimitBurst=3
+StartLimitIntervalSec=${interval}
+StartLimitBurst=${burst}
 
 [Service]"
 
@@ -680,6 +709,10 @@ parse_arguments() {
             --set-reboot-on-failure)
                 SET_REBOOT="on"
                 if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    REBOOT_BURST="$2"
+                    shift
+                fi
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
                     REBOOT_INTERVAL="$2"
                     shift
                 fi
@@ -749,7 +782,12 @@ install_binary() {
 configure_installation() {
     setup_aiscatcher_user
     setup_configuration
-    
+
+    # Self-install the script so it is available as a management tool after installation
+    log "INFO" "Installing management script to /usr/sbin/aiscatcher-install"
+    cp "$0" /usr/sbin/aiscatcher-install || log "WARN" "Failed to install management script"
+    chmod 755 /usr/sbin/aiscatcher-install || log "WARN" "Failed to set permissions on management script"
+
     # Ensure correct ownership after config files are created (skip if running as root)
     if [ "$SKIP_USER" = false ]; then
         log "INFO" "Ensuring correct ownership of configuration directory"
@@ -828,13 +866,17 @@ display_installation_summary() {
     echo "  • Log file:           ${LOG_FILE}"
     echo ""
     echo -e "${COLOR_BOLD}REBOOT WATCHDOG:${COLOR_RESET}"
-    echo "  • Triggers a system reboot after 3 rapid restarts within 30 minutes"
+    echo "  • Off by default — service restarts indefinitely without rebooting"
+    echo "  • When armed: reboots after N rapid restarts within a time window"
     echo "  • Useful for recovering from unresolvable USB device failures"
-    echo "  • Enable:  echo 1800 > ${REBOOT_FLAG_FILE}  (value = interval in seconds)"
-    echo "  • Disable: rm -f ${REBOOT_FLAG_FILE}"
-    echo "  • Or use the installer flags (no reinstall needed):"
-    echo -e "    ${COLOR_YELLOW}sudo $0 --set-reboot-on-failure${COLOR_RESET}"
-    echo -e "    ${COLOR_YELLOW}sudo $0 --unset-reboot-on-failure${COLOR_RESET}"
+    echo "  • Use the management script to toggle (no reinstall needed):"
+    echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
+    echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
+    echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --unset-reboot-on-failure${COLOR_RESET}        # disable"
+    echo "  • Flag file (readable by other tools): ${REBOOT_FLAG_FILE}"
+    echo "    Format: \"BURST INTERVAL_SEC\"  e.g. \"3 1800\""
+    echo "  • If service locks up after failures, recover with:"
+    echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
     echo ""
     
     if [ "$SKIP_SYSTEMD" = false ]; then
