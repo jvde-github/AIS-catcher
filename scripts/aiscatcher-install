@@ -33,17 +33,21 @@ AIS-catcher Installation Script
 Usage: sudo $0 [OPTIONS]
 
 Options:
-  -p, --package    Install from pre-built package (faster, recommended)
-  -b, --branch     Specify git branch to clone (default: main)
-  --no-systemd     Skip systemd service installation (useful for containers)
-  --no-user        Skip user creation and run as root (useful for containers)
-  -h, --help       Display this help message
+  -p, --package              Install from pre-built package (faster, recommended)
+  -b, --branch               Specify git branch to clone (default: main)
+  --no-systemd               Skip systemd service installation (useful for containers)
+  --no-user                  Skip user creation and run as root (useful for containers)
+  --set-reboot-on-failure [SEC]  Enable automatic reboot after 3 rapid restarts (default: 1800s)
+  --unset-reboot-on-failure  Disable automatic reboot on repeated failures
+  -h, --help                 Display this help message
 
 Examples:
   sudo $0 --package                    # Install from pre-built package
   sudo $0                              # Build and install from source (main branch)
   sudo $0 -b develop                   # Build from develop branch
   sudo $0 --no-systemd --no-user       # Docker/container installation
+  sudo $0 --set-reboot-on-failure      # Enable reboot watchdog (no reinstall needed)
+  sudo $0 --unset-reboot-on-failure    # Disable reboot watchdog (no reinstall needed)
 
 For more information, visit: https://docs.aiscatcher.org/
 EOF
@@ -75,6 +79,10 @@ readonly CONFIG_FILE="${CONFIG_DIR}/config.json"
 readonly CMD_FILE="${CONFIG_DIR}/config.cmd"
 readonly SERVICE_NAME="ais-catcher.service"
 readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
+readonly REBOOT_SERVICE_NAME="ais-catcher-reboot.service"
+readonly REBOOT_SERVICE_FILE="/etc/systemd/system/${REBOOT_SERVICE_NAME}"
+readonly REBOOT_FLAG_FILE="${CONFIG_DIR}/reboot-on-failure"
+readonly REBOOT_INTERVAL_DEFAULT=1800
 
 # Global variables
 INSTALL_PACKAGE=false
@@ -82,6 +90,8 @@ SKIP_SYSTEMD=false
 SKIP_USER=false
 BRANCH="main"
 SERVICE_STATE=""
+SET_REBOOT=""
+REBOOT_INTERVAL="${REBOOT_INTERVAL_DEFAULT}"
 
 # Color constants (using ANSI escape codes)
 if [[ -t 1 ]]; then
@@ -153,6 +163,23 @@ error_exit() {
 cleanup() {
     log "INFO" "Cleaning up temporary directory ${TMP_DIR}"
     rm -rf "$TMP_DIR"
+}
+
+################################################################################
+# REBOOT-ON-FAILURE TOGGLE (standalone, no reinstall needed)
+################################################################################
+
+# Set or unset the reboot-on-failure flag file and exit
+# The flag file content is the StartLimitIntervalSec value in seconds
+handle_reboot_setting() {
+    if [[ "$SET_REBOOT" == "on" ]]; then
+        mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
+        echo "${REBOOT_INTERVAL}" > "$REBOOT_FLAG_FILE" || error_exit "Failed to create reboot flag file"
+        log "INFO" "Reboot on failure enabled (interval: ${REBOOT_INTERVAL}s, file: ${REBOOT_FLAG_FILE})"
+    else
+        rm -f "$REBOOT_FLAG_FILE" || error_exit "Failed to remove reboot flag file"
+        log "INFO" "Reboot on failure disabled"
+    fi
 }
 
 ################################################################################
@@ -489,14 +516,31 @@ EOF
 # Setup systemd service
 setup_systemd_service() {
     log "INFO" "Setting up systemd service"
-    
-    # Build service file content conditionally based on SKIP_USER flag
+
+    # Write the reboot watchdog unit (ConditionPathExists controls whether it fires)
+    cat > "$REBOOT_SERVICE_FILE" << EOF
+[Unit]
+Description=Reboot system due to repeated AIS-catcher failures
+ConditionPathExists=${REBOOT_FLAG_FILE}
+DefaultDependencies=false
+After=final.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/reboot
+EOF
+    log "INFO" "Reboot watchdog service written to ${REBOOT_SERVICE_FILE}"
+
+    # Build main service file content
     local service_content="[Unit]
 Description=AIS-catcher Service
 After=network.target
+OnFailure=${REBOOT_SERVICE_NAME}
+StartLimitIntervalSec=1800
+StartLimitBurst=3
 
 [Service]"
-    
+
     # Only add User/Group directives if not skipping user creation
     if [ "$SKIP_USER" = false ]; then
         service_content+="
@@ -504,16 +548,15 @@ User=aiscatcher
 Group=aiscatcher
 SupplementaryGroups=plugdev dialout"
     fi
-    
+
     service_content+="
 ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} \$(/bin/grep -v \"^#\" ${CMD_FILE} | /bin/grep -v \"^[[:space:]]*\$\" | tr -d \"\\r\" | /usr/bin/tr \"\\n\" \" \")'
 Restart=always
 RestartSec=10
-StartLimitBurst=0
 
 [Install]
 WantedBy=multi-user.target"
-    
+
     echo "$service_content" | tee "$SERVICE_FILE" > /dev/null || error_exit "Failed to create service file"
     systemctl daemon-reload || error_exit "Failed to reload systemd"
 }
@@ -634,6 +677,18 @@ parse_arguments() {
                 SKIP_USER=true
                 shift
                 ;;
+            --set-reboot-on-failure)
+                SET_REBOOT="on"
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    REBOOT_INTERVAL="$2"
+                    shift
+                fi
+                shift
+                ;;
+            --unset-reboot-on-failure)
+                SET_REBOOT="off"
+                shift
+                ;;
             -h|--help)
                 usage
                 ;;
@@ -711,7 +766,13 @@ main() {
     
     # Phase 2: Parse arguments
     parse_arguments "$@"
-    
+
+    # Phase 2b: Handle reboot toggle (standalone, no reinstall needed)
+    if [[ -n "$SET_REBOOT" ]]; then
+        handle_reboot_setting
+        exit 0
+    fi
+
     # Phase 3: System preparation
     apt-get update || error_exit "Failed to update package lists"
     
@@ -763,7 +824,17 @@ display_installation_summary() {
     echo "    - Documentation:    ${README_DIR}/README.md"
     echo "    - License:          ${CONFIG_DIR}/LICENSE"
     echo "  • Service file:       ${SERVICE_FILE}"
+    echo "  • Reboot watchdog:    ${REBOOT_SERVICE_FILE}"
     echo "  • Log file:           ${LOG_FILE}"
+    echo ""
+    echo -e "${COLOR_BOLD}REBOOT WATCHDOG:${COLOR_RESET}"
+    echo "  • Triggers a system reboot after 3 rapid restarts within 30 minutes"
+    echo "  • Useful for recovering from unresolvable USB device failures"
+    echo "  • Enable:  echo 1800 > ${REBOOT_FLAG_FILE}  (value = interval in seconds)"
+    echo "  • Disable: rm -f ${REBOOT_FLAG_FILE}"
+    echo "  • Or use the installer flags (no reinstall needed):"
+    echo -e "    ${COLOR_YELLOW}sudo $0 --set-reboot-on-failure${COLOR_RESET}"
+    echo -e "    ${COLOR_YELLOW}sudo $0 --unset-reboot-on-failure${COLOR_RESET}"
     echo ""
     
     if [ "$SKIP_SYSTEMD" = false ]; then
