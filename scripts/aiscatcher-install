@@ -81,7 +81,6 @@ readonly SERVICE_NAME="ais-catcher.service"
 readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 readonly REBOOT_SERVICE_NAME="ais-catcher-reboot.service"
 readonly REBOOT_SERVICE_FILE="/etc/systemd/system/${REBOOT_SERVICE_NAME}"
-readonly REBOOT_FLAG_FILE="${CONFIG_DIR}/reboot-on-failure"
 readonly REBOOT_BURST_DEFAULT=3
 readonly REBOOT_INTERVAL_DEFAULT=1800
 
@@ -171,21 +170,17 @@ cleanup() {
 # REBOOT-ON-FAILURE TOGGLE (standalone, no reinstall needed)
 ################################################################################
 
-# Set or unset the reboot-on-failure flag file and update service limits
-# Flag file format: "BURST INTERVAL" (e.g. "3 1800")
+# Enable or disable the reboot watchdog by updating StartLimitBurst/Interval in the service file
 handle_reboot_setting() {
     if [[ ! -f "$SERVICE_FILE" ]]; then
         error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
     fi
 
     if [[ "$SET_REBOOT" == "on" ]]; then
-        mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
-        echo "${REBOOT_BURST} ${REBOOT_INTERVAL}" > "$REBOOT_FLAG_FILE" || error_exit "Failed to create reboot flag file"
         sed -i "s/^StartLimitBurst=.*/StartLimitBurst=${REBOOT_BURST}/" "$SERVICE_FILE"
         sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=${REBOOT_INTERVAL}/" "$SERVICE_FILE"
         log "INFO" "Reboot on failure enabled (burst: ${REBOOT_BURST}, interval: ${REBOOT_INTERVAL}s)"
     else
-        rm -f "$REBOOT_FLAG_FILE" || error_exit "Failed to remove reboot flag file"
         sed -i "s/^StartLimitBurst=.*/StartLimitBurst=0/" "$SERVICE_FILE"
         sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=0/" "$SERVICE_FILE"
         log "INFO" "Reboot on failure disabled"
@@ -536,11 +531,10 @@ EOF
 setup_systemd_service() {
     log "INFO" "Setting up systemd service"
 
-    # Write the reboot watchdog unit (ConditionPathExists controls whether it fires)
+    # Write the reboot watchdog unit — fires only when OnFailure is triggered (StartLimitBurst > 0)
     cat > "$REBOOT_SERVICE_FILE" << EOF
 [Unit]
 Description=Reboot system due to repeated AIS-catcher failures
-ConditionPathExists=${REBOOT_FLAG_FILE}
 DefaultDependencies=false
 After=final.target
 
@@ -550,14 +544,15 @@ ExecStart=/sbin/reboot
 EOF
     log "INFO" "Reboot watchdog service written to ${REBOOT_SERVICE_FILE}"
 
-    # Restore burst/interval from flag file if watchdog was previously armed
+    # Preserve existing burst/interval from current service file if present
     local burst=0
     local interval=0
-    if [[ -f "$REBOOT_FLAG_FILE" ]]; then
-        read -r burst interval < "$REBOOT_FLAG_FILE"
+    if [[ -f "$SERVICE_FILE" ]]; then
+        burst=$(grep "^StartLimitBurst=" "$SERVICE_FILE" | cut -d= -f2 || echo 0)
+        interval=$(grep "^StartLimitIntervalSec=" "$SERVICE_FILE" | cut -d= -f2 || echo 0)
         burst=${burst:-0}
         interval=${interval:-0}
-        log "INFO" "Reboot watchdog flag file found, restoring limits: burst=${burst} interval=${interval}s"
+        log "INFO" "Preserving existing service limits: burst=${burst} interval=${interval}s"
     fi
 
     # Build main service file content
@@ -873,8 +868,7 @@ display_installation_summary() {
     echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
     echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
     echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --unset-reboot-on-failure${COLOR_RESET}        # disable"
-    echo "  • Flag file (readable by other tools): ${REBOOT_FLAG_FILE}"
-    echo "    Format: \"BURST INTERVAL_SEC\"  e.g. \"3 1800\""
+    echo "  • Settings stored directly in the service file: ${SERVICE_FILE}"
     echo "  • If service locks up after failures, recover with:"
     echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
     echo ""
