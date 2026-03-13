@@ -400,6 +400,8 @@ namespace Protocol
 			Error() << "TLS: OpenSSL support not available. Cannot connect.";
 			return false;
 		}
+
+		void setStats(IO::OutputStats *s) {}
 	};
 #endif
 
