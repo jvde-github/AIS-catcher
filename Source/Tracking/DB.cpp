@@ -426,7 +426,7 @@ std::string DB::getAllPathJSON()
 			if (delta_time > TIME_HISTORY)
 				break;
 
-			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSON(ptr);
+			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSONCompact(ptr, tm, TIME_HISTORY);
 			delim = ",";
 		}
 		ptr = ships[ptr].next;
@@ -468,6 +468,40 @@ std::string DB::getSinglePathJSON(int idx)
 		content.pop_back();
 	content += "]";
 	return content;
+}
+
+std::string DB::getSinglePathJSONCompact(int idx, std::time_t tm, int time_history)
+{
+	uint32_t mmsi = ships[idx].mmsi;
+	int ptr = ships[idx].path_ptr;
+	int t = ships[idx].count + 1;
+
+	std::string result = "[";
+
+	while (isNextPathPoint(ptr, mmsi, t))
+	{
+		if ((long int)tm - (long int)paths[ptr].timestamp_end > time_history)
+			break;
+
+		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
+		{
+			result += "[";
+			result += std::to_string(paths[ptr].lat);
+			result += ",";
+			result += std::to_string(paths[ptr].lon);
+			result += ",";
+			result += std::to_string(paths[ptr].timestamp_start);
+			result += ",";
+			result += std::to_string(paths[ptr].timestamp_end);
+			result += "],";
+		}
+		t = paths[ptr].count;
+		ptr = paths[ptr].next;
+	}
+	if (result != "[")
+		result.pop_back();
+	result += "]";
+	return result;
 }
 
 std::string DB::getSinglePathGeoJSON(int idx)
@@ -779,10 +813,10 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 	case AIS::KEY_MANEUVER:
 		v.setManeuver(p.Get().getInt()); // 0=not available, 1=no special, 2=special (direct value)
 		break;
-	#pragma GCC diagnostic push
-	#if defined(__GNUC__) && !defined(__clang__)
-	#pragma GCC diagnostic ignored "-Wstringop-truncation"
-	#endif
+#pragma GCC diagnostic push
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
 		std::strncpy(v.shipname, p.Get().getString().c_str(), sizeof(v.shipname) - 1);
@@ -800,7 +834,7 @@ bool DB::updateFields(const JSON::Property &p, const AIS::Message *msg, Ship &v,
 		std::strncpy(v.destination, p.Get().getString().c_str(), sizeof(v.destination) - 1);
 		v.destination[sizeof(v.destination) - 1] = '\0';
 		break;
-	#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 	}
 	return position_updated;
 }

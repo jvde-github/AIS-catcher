@@ -99,6 +99,7 @@ class DB : public StreamIn<JSON::JSON>,
 
 	void getShipJSON(const Ship &ship, std::string &content, long int now);
 	std::string getSinglePathJSON(int);
+	std::string getSinglePathJSONCompact(int, std::time_t, int);
 	std::string getSinglePathGeoJSON(int);
 	bool isNextPathPoint(int idx, uint32_t mmsi, int count) { return idx != -1 && paths[idx].mmsi == mmsi && paths[idx].count < count; }
 
