@@ -806,9 +806,14 @@ configure_installation() {
     setup_configuration
 
     # Self-install the script so it is available as a management tool after installation
-    log "INFO" "Installing management script to /usr/sbin/aiscatcher-install"
-    cp "$0" /usr/sbin/aiscatcher-install || log "WARN" "Failed to install management script"
-    chmod 755 /usr/sbin/aiscatcher-install || log "WARN" "Failed to set permissions on management script"
+    # (allows "sudo aiscatcher-install --set-reboot-on-failure" without re-downloading)
+    if [[ -f "${BASH_SOURCE[0]}" ]]; then
+        log "INFO" "Installing management script to /usr/bin/aiscatcher-install"
+        cp "${BASH_SOURCE[0]}" /usr/bin/aiscatcher-install || log "WARN" "Failed to install management script"
+        chmod 755 /usr/bin/aiscatcher-install || log "WARN" "Failed to set permissions on management script"
+    else
+        log "WARN" "Script not installed as management tool (run from a file to enable this)"
+    fi
 
     # Ensure correct ownership after config files are created (skip if running as root)
     if [ "$SKIP_USER" = false ]; then
@@ -893,9 +898,9 @@ display_installation_summary() {
     echo "  • When armed: reboots after N rapid restarts within a time window"
     echo "  • Useful for recovering from unresolvable USB device failures"
     echo "  • Use the management script to toggle (no reinstall needed):"
-    echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
-    echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
-    echo -e "    ${COLOR_YELLOW}sudo /usr/sbin/aiscatcher-install --unset-reboot-on-failure${COLOR_RESET}        # disable"
+    echo -e "    ${COLOR_YELLOW}sudo /usr/bin/aiscatcher-install --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
+    echo -e "    ${COLOR_YELLOW}sudo /usr/bin/aiscatcher-install --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
+    echo -e "    ${COLOR_YELLOW}sudo /usr/bin/aiscatcher-install --unset-reboot-on-failure${COLOR_RESET}        # disable"
     echo "  • Settings stored directly in the service file: ${SERVICE_FILE}"
     echo "  • If service locks up after failures, recover with:"
     echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
