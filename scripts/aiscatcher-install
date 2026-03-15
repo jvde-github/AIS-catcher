@@ -527,9 +527,36 @@ EOF
 # SYSTEMD SERVICE FUNCTIONS (Common to both installation methods)
 ################################################################################
 
+# Install the reboot watchdog poll script
+install_reboot_script() {
+    local script_path="${LIB_DIR}/wait-and-reboot.sh"
+
+    mkdir -p "$LIB_DIR" || error_exit "Failed to create lib directory"
+
+    cat > "$script_path" << 'SCRIPT'
+#!/bin/bash
+# Wait up to 5 minutes for AIS-catcher to recover before rebooting.
+# Checks every 10 seconds; aborts if the service comes back active
+# (e.g. after manual "systemctl reset-failed + start" intervention).
+# To cancel a pending reboot: systemctl stop ais-catcher-reboot.service
+for i in $(seq 30); do
+    sleep 10
+    if systemctl is-active --quiet ais-catcher.service; then
+        exit 0
+    fi
+done
+/sbin/reboot
+SCRIPT
+
+    chmod 755 "$script_path" || error_exit "Failed to set permissions on reboot script"
+    log "INFO" "Reboot watchdog script installed to ${script_path}"
+}
+
 # Setup systemd service
 setup_systemd_service() {
     log "INFO" "Setting up systemd service"
+
+    install_reboot_script
 
     # Write the reboot watchdog unit — fires only when OnFailure is triggered (StartLimitBurst > 0)
     cat > "$REBOOT_SERVICE_FILE" << EOF
@@ -540,7 +567,7 @@ After=final.target
 
 [Service]
 Type=oneshot
-ExecStart=/sbin/reboot
+ExecStart=${LIB_DIR}/wait-and-reboot.sh
 EOF
     log "INFO" "Reboot watchdog service written to ${REBOOT_SERVICE_FILE}"
 
@@ -858,6 +885,7 @@ display_installation_summary() {
     echo "    - License:          ${CONFIG_DIR}/LICENSE"
     echo "  • Service file:       ${SERVICE_FILE}"
     echo "  • Reboot watchdog:    ${REBOOT_SERVICE_FILE}"
+    echo "  • Reboot script:      ${LIB_DIR}/wait-and-reboot.sh"
     echo "  • Log file:           ${LOG_FILE}"
     echo ""
     echo -e "${COLOR_BOLD}REBOOT WATCHDOG:${COLOR_RESET}"
@@ -871,6 +899,8 @@ display_installation_summary() {
     echo "  • Settings stored directly in the service file: ${SERVICE_FILE}"
     echo "  • If service locks up after failures, recover with:"
     echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
+    echo "  • To abort a pending reboot (during the 5-minute wait):"
+    echo -e "    ${COLOR_YELLOW}systemctl stop ${REBOOT_SERVICE_NAME}${COLOR_RESET}"
     echo ""
     
     if [ "$SKIP_SYSTEMD" = false ]; then
