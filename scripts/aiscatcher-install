@@ -172,6 +172,14 @@ cleanup() {
     rm -rf "$TMP_DIR"
 }
 
+# Cancel any pending reboot and stop the watchdog service.
+# Safe to call unconditionally — harmless if nothing is pending or running.
+cancel_reboot_watchdog() {
+    shutdown -c 2>/dev/null || true
+    systemctl stop "$REBOOT_SERVICE_NAME" 2>/dev/null || true
+    log "INFO" "Reboot watchdog cancelled (pending shutdown cleared, service stopped)"
+}
+
 ################################################################################
 # REBOOT-ON-FAILURE TOGGLE (standalone, no reinstall needed)
 ################################################################################
@@ -182,16 +190,11 @@ handle_reboot_setting() {
         error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
     fi
 
-    # Cancel any pending scheduled reboot left by a previous watchdog invocation
-    if shutdown -c 2>/dev/null; then
-        log "INFO" "Cancelled pending scheduled shutdown"
-    fi
+    cancel_reboot_watchdog
 
-    # Stop the reboot watchdog service if it is currently running
-    if systemctl is-active --quiet "$REBOOT_SERVICE_NAME" 2>/dev/null; then
-        log "INFO" "Stopping reboot watchdog service ${REBOOT_SERVICE_NAME}"
-        systemctl stop "$REBOOT_SERVICE_NAME" || log "WARN" "Failed to stop ${REBOOT_SERVICE_NAME}"
-    fi
+    # Remember whether the service was running before we touch anything
+    local was_active=false
+    systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null && was_active=true
 
     # Helper: replace a directive if present, otherwise insert it under its section header
     _sed_replace_or_insert() {
@@ -221,16 +224,16 @@ handle_reboot_setting() {
 
     systemctl daemon-reload || error_exit "Failed to reload systemd"
 
-    # Always reset the failure/restart counter so the service starts from a clean slate
+    # Reset the failure/restart counter so the new limits take effect from a clean slate
     log "INFO" "Resetting failure counter for ${SERVICE_NAME}"
     systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || log "WARN" "Failed to reset failure counter"
 
-    # Ensure the service is running; start it if it is not currently active
-    if ! systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
-        log "INFO" "Starting ${SERVICE_NAME}"
-        systemctl start "$SERVICE_NAME" || log "WARN" "Failed to start ${SERVICE_NAME}"
+    # No restart needed: Restart=, StartLimitBurst=, OnFailure= are systemd policy directives
+    # that take effect on the next crash/start — daemon-reload is sufficient.
+    if [[ "$was_active" == true ]]; then
+        log "INFO" "${SERVICE_NAME} is running — new watchdog settings will apply from the next restart"
     else
-        log "INFO" "${SERVICE_NAME} is already running"
+        log "INFO" "${SERVICE_NAME} was not running — configuration updated"
     fi
 }
 
@@ -244,16 +247,11 @@ handle_auto_restart_setting() {
         error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
     fi
 
-    # Cancel any pending scheduled reboot left by a previous watchdog invocation
-    if shutdown -c 2>/dev/null; then
-        log "INFO" "Cancelled pending scheduled shutdown"
-    fi
+    cancel_reboot_watchdog
 
-    # Stop the reboot watchdog service if it is currently running
-    if systemctl is-active --quiet "$REBOOT_SERVICE_NAME" 2>/dev/null; then
-        log "INFO" "Stopping reboot watchdog service ${REBOOT_SERVICE_NAME}"
-        systemctl stop "$REBOOT_SERVICE_NAME" || log "WARN" "Failed to stop ${REBOOT_SERVICE_NAME}"
-    fi
+    # Remember whether the service was running before we touch anything
+    local was_active=false
+    systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null && was_active=true
 
     if [[ "$SET_AUTO_RESTART" == "on" ]]; then
         if grep -q "^Restart=" "$SERVICE_FILE"; then
@@ -273,16 +271,16 @@ handle_auto_restart_setting() {
 
     systemctl daemon-reload || error_exit "Failed to reload systemd"
 
-    # Always reset the failure/restart counter so the service starts from a clean slate
+    # Reset the failure/restart counter so the new policy takes effect from a clean slate
     log "INFO" "Resetting failure counter for ${SERVICE_NAME}"
     systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || log "WARN" "Failed to reset failure counter"
 
-    # Ensure the service is running; start it if it is not currently active
-    if ! systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
-        log "INFO" "Starting ${SERVICE_NAME}"
-        systemctl start "$SERVICE_NAME" || log "WARN" "Failed to start ${SERVICE_NAME}"
+    # No restart needed: Restart= is a systemd policy directive that takes effect on the
+    # next crash/start — daemon-reload is sufficient and avoids unnecessary interruption.
+    if [[ "$was_active" == true ]]; then
+        log "INFO" "${SERVICE_NAME} is running — new restart policy will apply from the next restart"
     else
-        log "INFO" "${SERVICE_NAME} is already running"
+        log "INFO" "${SERVICE_NAME} was not running — configuration updated"
     fi
 }
 
@@ -737,16 +735,7 @@ stop_disable_and_save_service_state() {
     local was_active=false
     local was_enabled=false
 
-    # Cancel any pending scheduled reboot left by a previous watchdog invocation
-    if shutdown -c 2>/dev/null; then
-        log "INFO" "Cancelled pending scheduled shutdown"
-    fi
-
-    # Stop the reboot watchdog if it is running (it may hold a shutdown -r in flight)
-    if systemctl is-active --quiet "$REBOOT_SERVICE_NAME" 2>/dev/null; then
-        log "INFO" "Stopping reboot watchdog service ${REBOOT_SERVICE_NAME}"
-        systemctl stop "$REBOOT_SERVICE_NAME" || log "WARN" "Failed to stop ${REBOOT_SERVICE_NAME}"
-    fi
+    cancel_reboot_watchdog
 
     # Check if the service is active
     if systemctl is-active --quiet "$SERVICE_NAME"; then
