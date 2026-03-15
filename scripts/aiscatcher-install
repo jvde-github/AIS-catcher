@@ -39,6 +39,8 @@ Options:
   --no-user                  Skip user creation and run as root (useful for containers)
   --set-reboot-on-failure [BURST [SEC]]  Enable reboot watchdog (default: 3 restarts in 1800s)
   --unset-reboot-on-failure              Disable automatic reboot on repeated failures
+  --set-auto-restart                     Enable automatic service restart on crash (Restart=always)
+  --unset-auto-restart                   Disable automatic service restart on crash (Restart=no)
   -h, --help                 Display this help message
 
 Examples:
@@ -48,6 +50,8 @@ Examples:
   sudo $0 --no-systemd --no-user       # Docker/container installation
   sudo $0 --set-reboot-on-failure      # Enable reboot watchdog (no reinstall needed)
   sudo $0 --unset-reboot-on-failure    # Disable reboot watchdog (no reinstall needed)
+  sudo $0 --set-auto-restart           # Enable auto-restart on crash (no reinstall needed)
+  sudo $0 --unset-auto-restart         # Disable auto-restart on crash (no reinstall needed)
 
 For more information, visit: https://docs.aiscatcher.org/
 EOF
@@ -93,6 +97,8 @@ SERVICE_STATE=""
 SET_REBOOT=""
 REBOOT_BURST="${REBOOT_BURST_DEFAULT}"
 REBOOT_INTERVAL="${REBOOT_INTERVAL_DEFAULT}"
+SET_AUTO_RESTART=""
+EXPLICIT_INSTALL=false
 
 # Color constants (using ANSI escape codes)
 if [[ -t 1 ]]; then
@@ -187,20 +193,82 @@ handle_reboot_setting() {
         systemctl stop "$REBOOT_SERVICE_NAME" || log "WARN" "Failed to stop ${REBOOT_SERVICE_NAME}"
     fi
 
+    # Helper: replace a directive if present, otherwise insert it under its section header
+    _sed_replace_or_insert() {
+        local key="$1" val="$2" section="$3" file="$4"
+        if grep -q "^${key}=" "$file"; then
+            sed -i "s/^${key}=.*/${key}=${val}/" "$file"
+        else
+            sed -i "/^\[${section}\]/a ${key}=${val}" "$file"
+        fi
+    }
+
     if [[ "$SET_REBOOT" == "on" ]]; then
-        sed -i "s/^StartLimitBurst=.*/StartLimitBurst=${REBOOT_BURST}/" "$SERVICE_FILE"
-        sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=${REBOOT_INTERVAL}/" "$SERVICE_FILE"
+        _sed_replace_or_insert StartLimitBurst    "${REBOOT_BURST}"    Unit "$SERVICE_FILE"
+        _sed_replace_or_insert StartLimitIntervalSec "${REBOOT_INTERVAL}" Unit "$SERVICE_FILE"
         # Add OnFailure= if not already present
         if ! grep -q "^OnFailure=" "$SERVICE_FILE"; then
             sed -i "/^After=network.target/a OnFailure=${REBOOT_SERVICE_NAME}" "$SERVICE_FILE"
         fi
         log "INFO" "Reboot on failure enabled (burst: ${REBOOT_BURST}, interval: ${REBOOT_INTERVAL}s)"
     else
-        sed -i "s/^StartLimitBurst=.*/StartLimitBurst=0/" "$SERVICE_FILE"
-        sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=0/" "$SERVICE_FILE"
+        _sed_replace_or_insert StartLimitBurst    0 Unit "$SERVICE_FILE"
+        _sed_replace_or_insert StartLimitIntervalSec 0 Unit "$SERVICE_FILE"
         # Remove OnFailure= line — with burst=0 it fires on every crash, not just limit-hit
         sed -i "/^OnFailure=/d" "$SERVICE_FILE"
         log "INFO" "Reboot on failure disabled"
+    fi
+
+    systemctl daemon-reload || error_exit "Failed to reload systemd"
+
+    # Always reset the failure/restart counter so the service starts from a clean slate
+    log "INFO" "Resetting failure counter for ${SERVICE_NAME}"
+    systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || log "WARN" "Failed to reset failure counter"
+
+    # Ensure the service is running; start it if it is not currently active
+    if ! systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        log "INFO" "Starting ${SERVICE_NAME}"
+        systemctl start "$SERVICE_NAME" || log "WARN" "Failed to start ${SERVICE_NAME}"
+    else
+        log "INFO" "${SERVICE_NAME} is already running"
+    fi
+}
+
+################################################################################
+# AUTO-RESTART TOGGLE (standalone, no reinstall needed)
+################################################################################
+
+# Enable or disable automatic service restart by updating Restart= in the service file
+handle_auto_restart_setting() {
+    if [[ ! -f "$SERVICE_FILE" ]]; then
+        error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
+    fi
+
+    # Cancel any pending scheduled reboot left by a previous watchdog invocation
+    if shutdown -c 2>/dev/null; then
+        log "INFO" "Cancelled pending scheduled shutdown"
+    fi
+
+    # Stop the reboot watchdog service if it is currently running
+    if systemctl is-active --quiet "$REBOOT_SERVICE_NAME" 2>/dev/null; then
+        log "INFO" "Stopping reboot watchdog service ${REBOOT_SERVICE_NAME}"
+        systemctl stop "$REBOOT_SERVICE_NAME" || log "WARN" "Failed to stop ${REBOOT_SERVICE_NAME}"
+    fi
+
+    if [[ "$SET_AUTO_RESTART" == "on" ]]; then
+        if grep -q "^Restart=" "$SERVICE_FILE"; then
+            sed -i "s/^Restart=.*/Restart=always/" "$SERVICE_FILE"
+        else
+            sed -i "/^\[Service\]/a Restart=always" "$SERVICE_FILE"
+        fi
+        log "INFO" "Auto-restart enabled (Restart=always)"
+    else
+        if grep -q "^Restart=" "$SERVICE_FILE"; then
+            sed -i "s/^Restart=.*/Restart=no/" "$SERVICE_FILE"
+        else
+            sed -i "/^\[Service\]/a Restart=no" "$SERVICE_FILE"
+        fi
+        log "INFO" "Auto-restart disabled (Restart=no)"
     fi
 
     systemctl daemon-reload || error_exit "Failed to reload systemd"
@@ -305,7 +373,8 @@ install_librtlsdr_from_source() {
     cmake ../ -DCMAKE_INSTALL_PREFIX="${LIB_DIR}" -DDETACH_KERNEL_DRIVER=ON -DINSTALL_UDEV_RULES=ON || error_exit "Failed to run cmake"
     make || error_exit "Failed to build rtl-sdr"
     make install || error_exit "Failed to install rtl-sdr"
-    ldconfig || error_exit "Failed to run ldconfig"
+    # ldconfig not needed: libraries are in a custom prefix and the RPATH in the AIS-catcher
+    # binary points directly to ${LIB_DIR}/lib, so the dynamic linker finds them without it.
     cd ../.. || error_exit "Failed to return to parent directory"
 }
 
@@ -318,7 +387,6 @@ install_libhydrasdr_from_source() {
     cmake .. -DCMAKE_INSTALL_PREFIX="${LIB_DIR}" -DINSTALL_UDEV_RULES=ON || error_exit "Failed to run cmake"
     make || error_exit "Failed to build libhydrasdr"
     make install || error_exit "Failed to install libhydrasdr"
-    ldconfig || error_exit "Failed to run ldconfig"
     cd ../../.. || error_exit "Failed to return to parent directory"
 }
 
@@ -583,27 +651,49 @@ setup_systemd_service() {
     install_reboot_script
 
     # Write the reboot watchdog unit — fires only when OnFailure is triggered (StartLimitBurst > 0)
+    # Type=simple: systemd spawns the script and does not wait for it to exit, which avoids
+    # hitting TimeoutStartSec (90s default) during the 5-minute cancellation window.
     cat > "$REBOOT_SERVICE_FILE" << EOF
 [Unit]
 Description=Reboot system due to repeated AIS-catcher failures
-DefaultDependencies=false
-After=final.target
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=${LIB_DIR}/wait-and-reboot.sh
 EOF
     log "INFO" "Reboot watchdog service written to ${REBOOT_SERVICE_FILE}"
 
-    # Preserve existing burst/interval from current service file if present
+    # Preserve existing burst/interval/restart from current service file if present
     local burst=0
     local interval=0
+    local restart_policy="always"
     if [[ -f "$SERVICE_FILE" ]]; then
         burst=$(grep "^StartLimitBurst=" "$SERVICE_FILE" | cut -d= -f2 || echo 0)
         interval=$(grep "^StartLimitIntervalSec=" "$SERVICE_FILE" | cut -d= -f2 || echo 0)
+        local existing_restart
+        existing_restart=$(grep "^Restart=" "$SERVICE_FILE" | cut -d= -f2 || true)
         burst=${burst:-0}
         interval=${interval:-0}
-        log "INFO" "Preserving existing service limits: burst=${burst} interval=${interval}s"
+        restart_policy=${existing_restart:-always}
+        log "INFO" "Preserving existing service limits: burst=${burst} interval=${interval}s restart=${restart_policy}"
+    fi
+
+    # Apply explicitly requested toggle overrides when combined with an installation
+    if [[ "$SET_REBOOT" == "on" ]]; then
+        burst="$REBOOT_BURST"
+        interval="$REBOOT_INTERVAL"
+        log "INFO" "Overriding watchdog settings: burst=${burst} interval=${interval}s"
+    elif [[ "$SET_REBOOT" == "off" ]]; then
+        burst=0
+        interval=0
+        log "INFO" "Disabling watchdog as requested"
+    fi
+    if [[ "$SET_AUTO_RESTART" == "on" ]]; then
+        restart_policy="always"
+        log "INFO" "Overriding auto-restart: always"
+    elif [[ "$SET_AUTO_RESTART" == "off" ]]; then
+        restart_policy="no"
+        log "INFO" "Disabling auto-restart as requested"
     fi
 
     # Build main service file content
@@ -630,8 +720,8 @@ SupplementaryGroups=plugdev dialout"
     fi
 
     service_content+="
-ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} \$(/bin/grep -v \"^#\" ${CMD_FILE} | /bin/grep -v \"^[[:space:]]*\$\" | tr -d \"\\r\" | /usr/bin/tr \"\\n\" \" \")'
-Restart=always
+ExecStart=/bin/bash -c '/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} \$\$(/bin/grep -v \"^#\" ${CMD_FILE} | /bin/grep -v \"^[[:space:]]*\$\$\" | tr -d \"\\r\" | /usr/bin/tr \"\\n\" \" \")'
+Restart=${restart_policy}
 RestartSec=10
 
 [Install]
@@ -754,11 +844,13 @@ parse_arguments() {
             -p|--package)
                 log "INFO" "Package installation requested"
                 INSTALL_PACKAGE=true
+                EXPLICIT_INSTALL=true
                 shift
                 ;;
             -b|--branch)
                 if [[ -n "${2:-}" && "${2:0:1}" != "-" ]]; then
                     BRANCH="$2"
+                    EXPLICIT_INSTALL=true
                     log "INFO" "Will clone branch: ${BRANCH}"
                     shift 2
                 else
@@ -789,6 +881,14 @@ parse_arguments() {
                 ;;
             --unset-reboot-on-failure)
                 SET_REBOOT="off"
+                shift
+                ;;
+            --set-auto-restart)
+                SET_AUTO_RESTART="on"
+                shift
+                ;;
+            --unset-auto-restart)
+                SET_AUTO_RESTART="off"
                 shift
                 ;;
             -h|--help)
@@ -869,9 +969,16 @@ main() {
     # Phase 2: Parse arguments
     parse_arguments "$@"
 
-    # Phase 2b: Handle reboot toggle (standalone, no reinstall needed)
-    if [[ -n "$SET_REBOOT" ]]; then
+    # Phase 2b: Handle standalone toggles (no reinstall needed).
+    # If -p or -b was also passed, skip early-exit and let setup_systemd_service() apply
+    # the overrides inline during the installation instead.
+    if [[ -n "$SET_REBOOT" && "$EXPLICIT_INSTALL" == "false" ]]; then
         handle_reboot_setting
+        exit 0
+    fi
+
+    if [[ -n "$SET_AUTO_RESTART" && "$EXPLICIT_INSTALL" == "false" ]]; then
+        handle_auto_restart_setting
         exit 0
     fi
 
@@ -939,6 +1046,13 @@ display_installation_summary() {
     echo -e "    ${COLOR_YELLOW}sudo $0 --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
     echo -e "    ${COLOR_YELLOW}sudo $0 --unset-reboot-on-failure${COLOR_RESET}        # disable"
     echo "  • Settings stored directly in the service file: ${SERVICE_FILE}"
+    echo ""
+    echo -e "${COLOR_BOLD}AUTO-RESTART:${COLOR_RESET}"
+    echo "  • On by default — service restarts automatically after any crash (Restart=always)"
+    echo "  • Disable to prevent restart loops during troubleshooting"
+    echo "  • Re-run this script to toggle (no reinstall needed):"
+    echo -e "    ${COLOR_YELLOW}sudo $0 --set-auto-restart${COLOR_RESET}                # enable Restart=always"
+    echo -e "    ${COLOR_YELLOW}sudo $0 --unset-auto-restart${COLOR_RESET}              # disable Restart=no"
     echo "  • If service locks up after failures, recover with:"
     echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
     echo "  • To abort a pending reboot (during the 5-minute wait):"
