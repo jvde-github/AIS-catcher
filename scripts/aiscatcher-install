@@ -176,6 +176,17 @@ handle_reboot_setting() {
         error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
     fi
 
+    # Cancel any pending scheduled reboot left by a previous watchdog invocation
+    if shutdown -c 2>/dev/null; then
+        log "INFO" "Cancelled pending scheduled shutdown"
+    fi
+
+    # Stop the reboot watchdog service if it is currently running
+    if systemctl is-active --quiet "$REBOOT_SERVICE_NAME" 2>/dev/null; then
+        log "INFO" "Stopping reboot watchdog service ${REBOOT_SERVICE_NAME}"
+        systemctl stop "$REBOOT_SERVICE_NAME" || log "WARN" "Failed to stop ${REBOOT_SERVICE_NAME}"
+    fi
+
     if [[ "$SET_REBOOT" == "on" ]]; then
         sed -i "s/^StartLimitBurst=.*/StartLimitBurst=${REBOOT_BURST}/" "$SERVICE_FILE"
         sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=${REBOOT_INTERVAL}/" "$SERVICE_FILE"
@@ -194,11 +205,16 @@ handle_reboot_setting() {
 
     systemctl daemon-reload || error_exit "Failed to reload systemd"
 
-    # If unit is in failed/start-limit-hit state, reset it so it can be started again
-    if systemctl is-failed --quiet "$SERVICE_NAME" 2>/dev/null; then
-        log "INFO" "Resetting failed state of ${SERVICE_NAME}"
-        systemctl reset-failed "$SERVICE_NAME" || log "WARN" "Failed to reset failed state"
-        systemctl start "$SERVICE_NAME" || log "WARN" "Failed to start ${SERVICE_NAME} after reset"
+    # Always reset the failure/restart counter so the service starts from a clean slate
+    log "INFO" "Resetting failure counter for ${SERVICE_NAME}"
+    systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || log "WARN" "Failed to reset failure counter"
+
+    # Ensure the service is running; start it if it is not currently active
+    if ! systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        log "INFO" "Starting ${SERVICE_NAME}"
+        systemctl start "$SERVICE_NAME" || log "WARN" "Failed to start ${SERVICE_NAME}"
+    else
+        log "INFO" "${SERVICE_NAME} is already running"
     fi
 }
 
