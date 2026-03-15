@@ -631,6 +631,17 @@ stop_disable_and_save_service_state() {
     local was_active=false
     local was_enabled=false
 
+    # Cancel any pending scheduled reboot left by a previous watchdog invocation
+    if shutdown -c 2>/dev/null; then
+        log "INFO" "Cancelled pending scheduled shutdown"
+    fi
+
+    # Stop the reboot watchdog if it is running (it may hold a shutdown -r in flight)
+    if systemctl is-active --quiet "$REBOOT_SERVICE_NAME" 2>/dev/null; then
+        log "INFO" "Stopping reboot watchdog service ${REBOOT_SERVICE_NAME}"
+        systemctl stop "$REBOOT_SERVICE_NAME" || log "WARN" "Failed to stop ${REBOOT_SERVICE_NAME}"
+    fi
+
     # Check if the service is active
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         was_active=true
@@ -640,6 +651,11 @@ stop_disable_and_save_service_state() {
         else
             log "WARN" "Failed to stop $SERVICE_NAME"
         fi
+    elif systemctl is-failed --quiet "$SERVICE_NAME" 2>/dev/null; then
+        # Service is in a failed/crash-loop state — it was intended to be running
+        was_active=true
+        log "INFO" "$SERVICE_NAME is in failed state, resetting before update"
+        systemctl reset-failed "$SERVICE_NAME" || log "WARN" "Failed to reset failed state"
     else
         log "INFO" "$SERVICE_NAME is not active, no need to stop"
     fi
@@ -687,6 +703,8 @@ restore_service_state() {
     
     # Then start if it was active
     if [[ "$was_active" == true ]]; then
+        # Clear any stale failed state from before the update so start isn't blocked
+        systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || true
         if systemctl start "$SERVICE_NAME"; then
             log "INFO" "$SERVICE_NAME started successfully"
             # Give service a moment to start and check status
@@ -818,16 +836,6 @@ configure_installation() {
     setup_aiscatcher_user
     setup_configuration
 
-    # Self-install the script so it is available as a management tool after installation
-    # (allows "sudo aiscatcher-install --set-reboot-on-failure" without re-downloading)
-    if [[ -f "${BASH_SOURCE[0]}" ]]; then
-        log "INFO" "Installing management script to /usr/bin/aiscatcher-install"
-        cp "${BASH_SOURCE[0]}" /usr/bin/aiscatcher-install || log "WARN" "Failed to install management script"
-        chmod 755 /usr/bin/aiscatcher-install || log "WARN" "Failed to set permissions on management script"
-    else
-        log "WARN" "Script not installed as management tool (run from a file to enable this)"
-    fi
-
     # Ensure correct ownership after config files are created (skip if running as root)
     if [ "$SKIP_USER" = false ]; then
         log "INFO" "Ensuring correct ownership of configuration directory"
@@ -910,15 +918,15 @@ display_installation_summary() {
     echo "  • Off by default — service restarts indefinitely without rebooting"
     echo "  • When armed: reboots after N rapid restarts within a time window"
     echo "  • Useful for recovering from unresolvable USB device failures"
-    echo "  • Use the management script to toggle (no reinstall needed):"
-    echo -e "    ${COLOR_YELLOW}sudo /usr/bin/aiscatcher-install --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
-    echo -e "    ${COLOR_YELLOW}sudo /usr/bin/aiscatcher-install --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
-    echo -e "    ${COLOR_YELLOW}sudo /usr/bin/aiscatcher-install --unset-reboot-on-failure${COLOR_RESET}        # disable"
+    echo "  • Re-run this script to toggle (no reinstall needed):"
+    echo -e "    ${COLOR_YELLOW}sudo $0 --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
+    echo -e "    ${COLOR_YELLOW}sudo $0 --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
+    echo -e "    ${COLOR_YELLOW}sudo $0 --unset-reboot-on-failure${COLOR_RESET}        # disable"
     echo "  • Settings stored directly in the service file: ${SERVICE_FILE}"
     echo "  • If service locks up after failures, recover with:"
     echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
     echo "  • To abort a pending reboot (during the 5-minute wait):"
-    echo -e "    ${COLOR_YELLOW}systemctl stop ${REBOOT_SERVICE_NAME}${COLOR_RESET}"
+    echo -e "    ${COLOR_YELLOW}shutdown -c${COLOR_RESET}"
     echo ""
     
     if [ "$SKIP_SYSTEMD" = false ]; then
