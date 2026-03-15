@@ -98,7 +98,7 @@ SET_REBOOT=""
 REBOOT_BURST="${REBOOT_BURST_DEFAULT}"
 REBOOT_INTERVAL="${REBOOT_INTERVAL_DEFAULT}"
 SET_AUTO_RESTART=""
-EXPLICIT_INSTALL=false
+INSTALL_REQUESTED=false
 
 # Color constants (using ANSI escape codes)
 if [[ -t 1 ]]; then
@@ -206,7 +206,7 @@ handle_reboot_setting() {
         fi
     }
 
-    if [[ "$SET_REBOOT" == "on" ]]; then
+    if [[ "$SET_REBOOT" == "true" ]]; then
         _sed_replace_or_insert StartLimitBurst    "${REBOOT_BURST}"    Unit "$SERVICE_FILE"
         _sed_replace_or_insert StartLimitIntervalSec "${REBOOT_INTERVAL}" Unit "$SERVICE_FILE"
         # Add OnFailure= if not already present
@@ -253,7 +253,7 @@ handle_auto_restart_setting() {
     local was_active=false
     systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null && was_active=true
 
-    if [[ "$SET_AUTO_RESTART" == "on" ]]; then
+    if [[ "$SET_AUTO_RESTART" == "true" ]]; then
         if grep -q "^Restart=" "$SERVICE_FILE"; then
             sed -i "s/^Restart=.*/Restart=always/" "$SERVICE_FILE"
         else
@@ -300,21 +300,24 @@ check_existing_service() {
 
 # Detect system information (OS, version, architecture)
 get_system_info() {
+    local os version arch
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        if [ "$ID" = "raspbian" ]; then
-            OS="debian"
+        if [ "${ID:-}" = "raspbian" ]; then
+            os="debian"
         else
-            OS="$ID"
+            os="${ID:-}"
         fi
-        VERSION="$VERSION_CODENAME"
+        version="${VERSION_CODENAME:-}"
+        [[ -z "$os" ]]      && error_exit "Could not determine OS ID from /etc/os-release"
+        [[ -z "$version" ]] && error_exit "Could not determine VERSION_CODENAME from /etc/os-release"
     else
-        OS=$(uname -s)
-        VERSION=$(uname -r)
+        os=$(uname -s)  || error_exit "Failed to determine OS name (uname -s)"
+        version=$(uname -r) || error_exit "Failed to determine OS version (uname -r)"
     fi
-    ARCH=$(dpkg --print-architecture)
-    
-    echo "${OS}_${VERSION}_${ARCH}"
+    arch=$(dpkg --print-architecture) || error_exit "Failed to determine system architecture (dpkg --print-architecture)"
+
+    echo "${os}_${version}_${arch}"
 }
 
 download_webassets_common() {
@@ -441,6 +444,10 @@ build_ais_catcher_from_source() {
 
 # Install additional files (plugins, DBMS, README, LICENSE) from source
 install_source_additional_files() {
+    # Ensure the config directory exists before copying files into it.
+    # Do not rely on mkdir -p "$PLUGIN_DIR" creating the parent as a side-effect.
+    mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
+
     log "INFO" "Installing plugins"
     mkdir -p "$PLUGIN_DIR" || error_exit "Failed to create plugin directory"
     cp AIS-catcher/plugins/* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
@@ -507,8 +514,10 @@ check_package_availability() {
     return 1
 }
 
-# Install AIS-catcher from pre-built Debian package
-install_from_package() {
+# Download and install a pre-built Debian package by filename.
+# Separated from install_package_method so the download/install logic can be
+# tested or reused independently of the method-selection layer.
+download_and_install_deb() {
     local package=$1
     local download_url="https://github.com/jvde-github/AIS-catcher/releases/download/Edge/$package"
    
@@ -556,6 +565,30 @@ install_from_package() {
     fi
 
     log "INFO" "AIS-catcher package installation completed"
+}
+
+# Resolve which .deb package to use for this system and drive download_and_install_deb.
+install_package_method() {
+    local system_info
+    system_info=$(get_system_info)
+    log "INFO" "Detected system: $system_info"
+
+    # Declare separately so the assignment exit-code is not masked by 'local'.
+    local package
+    package=$(check_package_availability "$system_info") || true
+
+    if [ -z "$package" ]; then
+        error_exit "Package installation requested but no package available for $system_info. Consider building from source: see https://docs.aiscatcher.org/installation/ubuntu-debian/#install-from-source"
+    fi
+
+    log "INFO" "Package available: $package"
+
+    # Install minimal dependencies for package installation and webassets download
+    log "INFO" "Installing minimal dependencies for package installation"
+    apt-get install -y curl unzip || error_exit "Failed to install minimal dependencies"
+
+    download_and_install_deb "$package"
+    log "INFO" "AIS-catcher installation from package completed successfully"
 }
 
 ################################################################################
@@ -677,19 +710,19 @@ EOF
     fi
 
     # Apply explicitly requested toggle overrides when combined with an installation
-    if [[ "$SET_REBOOT" == "on" ]]; then
+    if [[ "$SET_REBOOT" == "true" ]]; then
         burst="$REBOOT_BURST"
         interval="$REBOOT_INTERVAL"
         log "INFO" "Overriding watchdog settings: burst=${burst} interval=${interval}s"
-    elif [[ "$SET_REBOOT" == "off" ]]; then
+    elif [[ "$SET_REBOOT" == "false" ]]; then
         burst=0
         interval=0
         log "INFO" "Disabling watchdog as requested"
     fi
-    if [[ "$SET_AUTO_RESTART" == "on" ]]; then
+    if [[ "$SET_AUTO_RESTART" == "true" ]]; then
         restart_policy="always"
         log "INFO" "Overriding auto-restart: always"
-    elif [[ "$SET_AUTO_RESTART" == "off" ]]; then
+    elif [[ "$SET_AUTO_RESTART" == "false" ]]; then
         restart_policy="no"
         log "INFO" "Disabling auto-restart as requested"
     fi
@@ -699,12 +732,12 @@ EOF
     # restarts indefinitely via Restart=always and OnFailure would fire on every crash.
     local on_failure_line=""
     if [[ "${burst}" -gt 0 ]]; then
-        on_failure_line="OnFailure=${REBOOT_SERVICE_NAME}"$'\n'
+        on_failure_line="OnFailure=${REBOOT_SERVICE_NAME}"
     fi
     local service_content="[Unit]
 Description=AIS-catcher Service
 After=network.target
-${on_failure_line}StartLimitIntervalSec=${interval}
+${on_failure_line:+${on_failure_line}$'\n'}StartLimitIntervalSec=${interval}
 StartLimitBurst=${burst}
 
 [Service]"
@@ -735,6 +768,10 @@ stop_disable_and_save_service_state() {
     local was_active=false
     local was_enabled=false
 
+    # cancel_reboot_watchdog is also called at the top of handle_reboot_setting and
+    # handle_auto_restart_setting for the standalone-toggle path. Calling it here too
+    # is intentional: during a full install the pending shutdown must be cleared before
+    # the service is stopped, since the watchdog script may be mid-countdown.
     cancel_reboot_watchdog
 
     # Check if the service is active
@@ -833,13 +870,13 @@ parse_arguments() {
             -p|--package)
                 log "INFO" "Package installation requested"
                 INSTALL_PACKAGE=true
-                EXPLICIT_INSTALL=true
+                INSTALL_REQUESTED=true
                 shift
                 ;;
             -b|--branch)
                 if [[ -n "${2:-}" && "${2:0:1}" != "-" ]]; then
                     BRANCH="$2"
-                    EXPLICIT_INSTALL=true
+                    INSTALL_REQUESTED=true
                     log "INFO" "Will clone branch: ${BRANCH}"
                     shift 2
                 else
@@ -857,7 +894,7 @@ parse_arguments() {
                 shift
                 ;;
             --set-reboot-on-failure)
-                SET_REBOOT="on"
+                SET_REBOOT="true"
                 if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
                     REBOOT_BURST="$2"
                     shift
@@ -869,15 +906,15 @@ parse_arguments() {
                 shift
                 ;;
             --unset-reboot-on-failure)
-                SET_REBOOT="off"
+                SET_REBOOT="false"
                 shift
                 ;;
             --set-auto-restart)
-                SET_AUTO_RESTART="on"
+                SET_AUTO_RESTART="true"
                 shift
                 ;;
             --unset-auto-restart)
-                SET_AUTO_RESTART="off"
+                SET_AUTO_RESTART="false"
                 shift
                 ;;
             -h|--help)
@@ -890,28 +927,14 @@ parse_arguments() {
                 ;;
         esac
     done
+
+    # Warn if --branch is ignored because --package was also specified
+    if [[ "$INSTALL_PACKAGE" == true && "$BRANCH" != "main" ]]; then
+        log "WARN" "--branch is ignored when --package is used (pre-built packages are always Edge)"
+    fi
 }
 
-# Install from pre-built package
-install_from_package_method() {
-    local system_info=$(get_system_info)
-    log "INFO" "Detected system: $system_info"
-    
-    local package=$(check_package_availability "$system_info")
-    
-    if [ -z "$package" ]; then
-        error_exit "Package installation requested but no package available for $system_info. Consider building from source: see https://docs.aiscatcher.org/installation/ubuntu-debian/#install-from-source"
-    fi
-    
-    log "INFO" "Package available: $package"
-    
-    # Install minimal dependencies for package installation and webassets download
-    log "INFO" "Installing minimal dependencies for package installation"
-    apt-get install -y curl unzip || error_exit "Failed to install minimal dependencies"
-    
-    install_from_package "$package"
-    log "INFO" "AIS-catcher installation from package completed successfully"
-}
+
 
 # Install from source
 install_from_source_method() {
@@ -930,7 +953,7 @@ install_from_source_method() {
 # Install binary (delegates to package or source method)
 install_binary() {
     if [ "$INSTALL_PACKAGE" = true ]; then
-        install_from_package_method
+        install_package_method
     else
         install_from_source_method
     fi
@@ -950,45 +973,48 @@ configure_installation() {
 
 # Main function
 main() {
-    # Phase 1: Pre-flight checks and setup
+    # Phase 1: Logging and cleanup trap (TMP_DIR is created at script startup)
     log "INFO" "Starting AIS-catcher installation script"
-    check_existing_service
     trap cleanup EXIT
-    
-    # Phase 2: Parse arguments
+
+    # Phase 2: Parse arguments first — ensures --help exits cleanly and standalone
+    # toggle flags don't hit the installation pre-flight checks unnecessarily.
     parse_arguments "$@"
 
-    # Phase 2b: Handle standalone toggles (no reinstall needed).
-    # If -p or -b was also passed, skip early-exit and let setup_systemd_service() apply
-    # the overrides inline during the installation instead.
-    if [[ -n "$SET_REBOOT" && "$EXPLICIT_INSTALL" == "false" ]]; then
+    # Phase 3: Handle standalone toggles (no reinstall needed).
+    # If -p or -b was also passed (INSTALL_REQUESTED=true), skip early-exit and let
+    # setup_systemd_service() apply the overrides inline during the installation instead.
+    if [[ -n "$SET_REBOOT" && "$INSTALL_REQUESTED" == "false" ]]; then
         handle_reboot_setting
         exit 0
     fi
 
-    if [[ -n "$SET_AUTO_RESTART" && "$EXPLICIT_INSTALL" == "false" ]]; then
+    if [[ -n "$SET_AUTO_RESTART" && "$INSTALL_REQUESTED" == "false" ]]; then
         handle_auto_restart_setting
         exit 0
     fi
 
-    # Phase 3: System preparation
+    # Phase 4: Pre-flight checks (only reached for actual installations)
+    check_existing_service
+
+    # Phase 5: System preparation
     apt-get update || error_exit "Failed to update package lists"
-    
-    # Phase 4: Stop existing service if needed
+
+    # Phase 6: Stop existing service if needed
     if [ "$SKIP_SYSTEMD" = false ]; then
         stop_disable_and_save_service_state
     fi
-    
-    # Phase 5: Install binary (package or source)
+
+    # Phase 7: Install binary (package or source)
     install_binary
-    
-    # Phase 6: Post-install configuration
+
+    # Phase 8: Post-install configuration
     configure_installation
-    
-    # Phase 7: Setup and start service
+
+    # Phase 9: Setup and start service
     if [ "$SKIP_SYSTEMD" = false ]; then
         setup_systemd_service
-        
+
         if ! restore_service_state; then
             log "ERROR" "Failed to restore service state"
             exit 1
@@ -996,8 +1022,8 @@ main() {
     else
         log "INFO" "Skipping systemd service installation (--no-systemd flag specified)"
     fi
-    
-    # Phase 8: Installation complete
+
+    # Phase 10: Installation complete
     log "INFO" "AIS-catcher installation completed successfully"
     display_installation_summary
 }
