@@ -179,10 +179,16 @@ handle_reboot_setting() {
     if [[ "$SET_REBOOT" == "on" ]]; then
         sed -i "s/^StartLimitBurst=.*/StartLimitBurst=${REBOOT_BURST}/" "$SERVICE_FILE"
         sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=${REBOOT_INTERVAL}/" "$SERVICE_FILE"
+        # Add OnFailure= if not already present
+        if ! grep -q "^OnFailure=" "$SERVICE_FILE"; then
+            sed -i "/^After=network.target/a OnFailure=${REBOOT_SERVICE_NAME}" "$SERVICE_FILE"
+        fi
         log "INFO" "Reboot on failure enabled (burst: ${REBOOT_BURST}, interval: ${REBOOT_INTERVAL}s)"
     else
         sed -i "s/^StartLimitBurst=.*/StartLimitBurst=0/" "$SERVICE_FILE"
         sed -i "s/^StartLimitIntervalSec=.*/StartLimitIntervalSec=0/" "$SERVICE_FILE"
+        # Remove OnFailure= line — with burst=0 it fires on every crash, not just limit-hit
+        sed -i "/^OnFailure=/d" "$SERVICE_FILE"
         log "INFO" "Reboot on failure disabled"
     fi
 
@@ -585,11 +591,16 @@ EOF
     fi
 
     # Build main service file content
+    # OnFailure= is only meaningful when StartLimitBurst > 0; with burst=0 the service
+    # restarts indefinitely via Restart=always and OnFailure would fire on every crash.
+    local on_failure_line=""
+    if [[ "${burst}" -gt 0 ]]; then
+        on_failure_line="OnFailure=${REBOOT_SERVICE_NAME}"$'\n'
+    fi
     local service_content="[Unit]
 Description=AIS-catcher Service
 After=network.target
-OnFailure=${REBOOT_SERVICE_NAME}
-StartLimitIntervalSec=${interval}
+${on_failure_line}StartLimitIntervalSec=${interval}
 StartLimitBurst=${burst}
 
 [Service]"
