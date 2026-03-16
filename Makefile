@@ -20,7 +20,7 @@ CFLAGS_SOAPYSDR = -DHASSOAPYSDR
 CFLAGS_ZLIB = -DHASZLIB ${shell pkg-config --cflags zlib}
 CFLAGS_PSQL  = -DHASPSQL ${shell pkg-config --cflags libpq}
 
-LFLAGS_RTL = $(shell pkg-config --libs-only-l librtlsdr)
+LFLAGS_RTL = $(shell pkg-config --libs librtlsdr)
 LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
 LFLAGS_AIRSPY = $(shell pkg-config --libs libairspy)
 LFLAGS_SDRPLAY = -lsdrplay_api
