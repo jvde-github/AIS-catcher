@@ -48,10 +48,10 @@ Examples:
   sudo $0                              # Build and install from source (main branch)
   sudo $0 -b develop                   # Build from develop branch
   sudo $0 --no-systemd --no-user       # Docker/container installation
-  sudo $0 --set-reboot-on-failure      # Enable reboot watchdog (no reinstall needed)
-  sudo $0 --unset-reboot-on-failure    # Disable reboot watchdog (no reinstall needed)
-  sudo $0 --set-auto-restart           # Enable auto-restart on crash (no reinstall needed)
-  sudo $0 --unset-auto-restart         # Disable auto-restart on crash (no reinstall needed)
+  sudo $SCRIPT_NAME --set-reboot-on-failure      # Enable reboot watchdog (no reinstall needed)
+  sudo $SCRIPT_NAME --unset-reboot-on-failure    # Disable reboot watchdog (no reinstall needed)
+  sudo $SCRIPT_NAME --set-auto-restart           # Enable auto-restart on crash (no reinstall needed)
+  sudo $SCRIPT_NAME --unset-auto-restart         # Disable auto-restart on crash (no reinstall needed)
 
 For more information, visit: https://docs.aiscatcher.org/
 EOF
@@ -60,20 +60,24 @@ EOF
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
+    _hint_args=$(printf '%q ' "$@")
     if [[ -t 1 ]]; then
         echo -e "\033[1;31mError: This script must be run as root\033[0m" >&2
-        echo -e "\033[1;33mPlease run: sudo $0 $*\033[0m" >&2
+        echo -e "\033[1;33mPlease run: sudo $0 ${_hint_args% }\033[0m" >&2
     else
         echo "Error: This script must be run as root" >&2
-        echo "Please run: sudo $0 $*" >&2
+        echo "Please run: sudo $0 ${_hint_args% }" >&2
     fi
     exit 1
 fi
 
 # Constants
-readonly SCRIPT_NAME=$(basename "$0")
-readonly LOG_FILE="/var/log/${SCRIPT_NAME%.*}.log"
-readonly TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
+SCRIPT_NAME=$(basename "$0")
+readonly SCRIPT_NAME
+LOG_FILE="/var/log/${SCRIPT_NAME%.*}.log"
+readonly LOG_FILE
+TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
+readonly TMP_DIR
 readonly CONFIG_DIR="/etc/AIS-catcher"
 readonly PLUGIN_DIR="${CONFIG_DIR}/plugins"
 readonly DBMS_DIR="${CONFIG_DIR}/DBMS"
@@ -149,10 +153,10 @@ log() {
             ;;
     esac
     
-    # Print to terminal with color
-    echo -e "${COLOR_CYAN}[${timestamp}]${COLOR_RESET} ${color}[${level}]${COLOR_RESET} $*"
+    # Print to terminal with color; %s ensures backslashes in message text are not interpreted
+    printf "${COLOR_CYAN}[${timestamp}]${COLOR_RESET} ${color}[${level}]${COLOR_RESET} %s\n" "$*"
     # Log to file without color codes
-    echo "[${timestamp}] [${level}] $*" >> "$LOG_FILE"
+    printf '[%s] [%s] %s\n' "${timestamp}" "${level}" "$*" >> "$LOG_FILE"
 }
 
 # Error handler
@@ -180,6 +184,34 @@ cancel_reboot_watchdog() {
     log "INFO" "Reboot watchdog cancelled (pending shutdown cleared, service stopped)"
 }
 
+# Replace a directive if present in FILE, otherwise insert it under its section header.
+sed_replace_or_insert() {
+    local key="$1" val="$2" section="$3" file="$4"
+    if grep -q "^${key}=" "$file"; then
+        sed -i "s/^${key}=.*/${key}=${val}/" "$file"
+    else
+        sed -i "/^\[${section}\]/a ${key}=${val}" "$file"
+    fi
+}
+
+# Reload systemd and reset the service failure counter.
+reload_and_reset_service() {
+    systemctl daemon-reload || error_exit "Failed to reload systemd"
+    log "INFO" "Resetting failure counter for ${SERVICE_NAME}"
+    systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || log "WARN" "Failed to reset failure counter"
+}
+
+# Log whether new policy settings will take effect now or at next restart.
+# Neither toggle handler restarts the service, so we just check current state for messaging.
+log_service_policy_notice() {
+    local policy_desc="$1"
+    if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        log "INFO" "${SERVICE_NAME} is running — ${policy_desc} will apply from the next restart"
+    else
+        log "INFO" "${SERVICE_NAME} was not running — configuration updated"
+    fi
+}
+
 ################################################################################
 # REBOOT-ON-FAILURE TOGGLE (standalone, no reinstall needed)
 ################################################################################
@@ -190,51 +222,27 @@ handle_reboot_setting() {
         error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
     fi
 
-    cancel_reboot_watchdog
-
-    # Remember whether the service was running before we touch anything
-    local was_active=false
-    systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null && was_active=true
-
-    # Helper: replace a directive if present, otherwise insert it under its section header
-    _sed_replace_or_insert() {
-        local key="$1" val="$2" section="$3" file="$4"
-        if grep -q "^${key}=" "$file"; then
-            sed -i "s/^${key}=.*/${key}=${val}/" "$file"
-        else
-            sed -i "/^\[${section}\]/a ${key}=${val}" "$file"
-        fi
-    }
-
     if [[ "$SET_REBOOT" == "true" ]]; then
-        _sed_replace_or_insert StartLimitBurst    "${REBOOT_BURST}"    Unit "$SERVICE_FILE"
-        _sed_replace_or_insert StartLimitIntervalSec "${REBOOT_INTERVAL}" Unit "$SERVICE_FILE"
+        sed_replace_or_insert StartLimitBurst    "${REBOOT_BURST}"    Unit "$SERVICE_FILE"
+        sed_replace_or_insert StartLimitIntervalSec "${REBOOT_INTERVAL}" Unit "$SERVICE_FILE"
         # Add OnFailure= if not already present
         if ! grep -q "^OnFailure=" "$SERVICE_FILE"; then
             sed -i "/^After=network.target/a OnFailure=${REBOOT_SERVICE_NAME}" "$SERVICE_FILE"
         fi
         log "INFO" "Reboot on failure enabled (burst: ${REBOOT_BURST}, interval: ${REBOOT_INTERVAL}s)"
     else
-        _sed_replace_or_insert StartLimitBurst    0 Unit "$SERVICE_FILE"
-        _sed_replace_or_insert StartLimitIntervalSec 0 Unit "$SERVICE_FILE"
+        sed_replace_or_insert StartLimitBurst    0 Unit "$SERVICE_FILE"
+        sed_replace_or_insert StartLimitIntervalSec 0 Unit "$SERVICE_FILE"
         # Remove OnFailure= line — with burst=0 it fires on every crash, not just limit-hit
         sed -i "/^OnFailure=/d" "$SERVICE_FILE"
         log "INFO" "Reboot on failure disabled"
     fi
 
-    systemctl daemon-reload || error_exit "Failed to reload systemd"
-
-    # Reset the failure/restart counter so the new limits take effect from a clean slate
-    log "INFO" "Resetting failure counter for ${SERVICE_NAME}"
-    systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || log "WARN" "Failed to reset failure counter"
+    reload_and_reset_service
 
     # No restart needed: Restart=, StartLimitBurst=, OnFailure= are systemd policy directives
     # that take effect on the next crash/start — daemon-reload is sufficient.
-    if [[ "$was_active" == true ]]; then
-        log "INFO" "${SERVICE_NAME} is running — new watchdog settings will apply from the next restart"
-    else
-        log "INFO" "${SERVICE_NAME} was not running — configuration updated"
-    fi
+    log_service_policy_notice "new watchdog settings"
 }
 
 ################################################################################
@@ -247,41 +255,19 @@ handle_auto_restart_setting() {
         error_exit "Service file not found at ${SERVICE_FILE} — is AIS-catcher installed?"
     fi
 
-    cancel_reboot_watchdog
-
-    # Remember whether the service was running before we touch anything
-    local was_active=false
-    systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null && was_active=true
-
     if [[ "$SET_AUTO_RESTART" == "true" ]]; then
-        if grep -q "^Restart=" "$SERVICE_FILE"; then
-            sed -i "s/^Restart=.*/Restart=always/" "$SERVICE_FILE"
-        else
-            sed -i "/^\[Service\]/a Restart=always" "$SERVICE_FILE"
-        fi
+        sed_replace_or_insert Restart always Service "$SERVICE_FILE"
         log "INFO" "Auto-restart enabled (Restart=always)"
     else
-        if grep -q "^Restart=" "$SERVICE_FILE"; then
-            sed -i "s/^Restart=.*/Restart=no/" "$SERVICE_FILE"
-        else
-            sed -i "/^\[Service\]/a Restart=no" "$SERVICE_FILE"
-        fi
+        sed_replace_or_insert Restart no Service "$SERVICE_FILE"
         log "INFO" "Auto-restart disabled (Restart=no)"
     fi
 
-    systemctl daemon-reload || error_exit "Failed to reload systemd"
-
-    # Reset the failure/restart counter so the new policy takes effect from a clean slate
-    log "INFO" "Resetting failure counter for ${SERVICE_NAME}"
-    systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || log "WARN" "Failed to reset failure counter"
+    reload_and_reset_service
 
     # No restart needed: Restart= is a systemd policy directive that takes effect on the
     # next crash/start — daemon-reload is sufficient and avoids unnecessary interruption.
-    if [[ "$was_active" == true ]]; then
-        log "INFO" "${SERVICE_NAME} is running — new restart policy will apply from the next restart"
-    else
-        log "INFO" "${SERVICE_NAME} was not running — configuration updated"
-    fi
+    log_service_policy_notice "new restart policy"
 }
 
 ################################################################################
@@ -322,10 +308,11 @@ get_system_info() {
 
 download_webassets_common() {
     local webassets_url="https://github.com/jvde-github/webassets/archive/refs/heads/main.zip"
-    local temp_zip="/tmp/webassets.zip"
-    
+    local temp_zip
+    temp_zip=$(mktemp --suffix=.zip)
+
     log "INFO" "Downloading webassets"
-    if curl -sL "$webassets_url" -o "$temp_zip"; then
+    if curl -fsL "$webassets_url" -o "$temp_zip"; then
         if [[ -d "$CONFIG_DIR/webassets" ]]; then
             log "INFO" "Removing old webassets"
             rm -rf "$CONFIG_DIR/webassets"
@@ -450,18 +437,18 @@ install_source_additional_files() {
 
     log "INFO" "Installing plugins"
     mkdir -p "$PLUGIN_DIR" || error_exit "Failed to create plugin directory"
-    cp AIS-catcher/plugins/* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
+    cp "${TMP_DIR}/AIS-catcher/plugins/"* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
 
     log "INFO" "Installing DBMS"
     mkdir -p "$DBMS_DIR" || error_exit "Failed to create DBMS directory"
-    cp AIS-catcher/Source/DBMS/create.sql "$DBMS_DIR" || error_exit "Failed to copy DBMS"
+    cp "${TMP_DIR}/AIS-catcher/Source/DBMS/create.sql" "$DBMS_DIR" || error_exit "Failed to copy DBMS"
 
     log "INFO" "Installing README"
     mkdir -p "$README_DIR" || error_exit "Failed to create README directory"
-    cp AIS-catcher/README.md "$README_DIR" || error_exit "Failed to copy README"
+    cp "${TMP_DIR}/AIS-catcher/README.md" "$README_DIR" || error_exit "Failed to copy README"
 
     log "INFO" "Copying LICENSE"
-    cp AIS-catcher/LICENSE /etc/AIS-catcher/LICENSE || error_exit "Failed to copy LICENSE"
+    cp "${TMP_DIR}/AIS-catcher/LICENSE" /etc/AIS-catcher/LICENSE || error_exit "Failed to copy LICENSE"
 }
 
 ################################################################################
@@ -529,7 +516,7 @@ download_and_install_deb() {
 
     # Download the package
     log "INFO" "Downloading package..."
-    if ! curl -sL -o "$temp_dir/$(basename "$download_url")" "$download_url"; then
+    if ! curl -fsL -o "$temp_dir/$(basename "$download_url")" "$download_url"; then
         rm -rf "$temp_dir"
         error_exit "Failed to download package"
     fi
@@ -537,16 +524,10 @@ download_and_install_deb() {
     # Ensure the downloaded file has correct permissions
     chmod 644 "$temp_dir/$package"
 
-    # Install the package and dependencies using apt with proper flags
-    log "INFO" "Installing package and dependencies..."
-    if ! apt-get update; then
-        rm -rf "$temp_dir"
-        error_exit "Failed to update package lists"
-    fi
-
     # Use --allow-downgrades to handle version conflicts and better error handling
+    log "INFO" "Installing package and dependencies..."
     local install_success=false
-    if apt-get install -y --allow-downgrades "$temp_dir/$package" 2>/dev/null; then
+    if apt-get install -y --allow-downgrades "$temp_dir/$package"; then
         install_success=true
         log "INFO" "Package installed successfully"
     else
@@ -705,6 +686,8 @@ EOF
         existing_restart=$(grep "^Restart=" "$SERVICE_FILE" | cut -d= -f2 || true)
         burst=${burst:-0}
         interval=${interval:-0}
+        [[ "$burst" =~ ^[0-9]+$ ]] || burst=0
+        [[ "$interval" =~ ^[0-9]+$ ]] || interval=0
         restart_policy=${existing_restart:-always}
         log "INFO" "Preserving existing service limits: burst=${burst} interval=${interval}s restart=${restart_policy}"
     fi
@@ -767,12 +750,6 @@ stop_disable_and_save_service_state() {
     log "INFO" "Checking AIS-catcher service state, stopping if active, and disabling"
     local was_active=false
     local was_enabled=false
-
-    # cancel_reboot_watchdog is also called at the top of handle_reboot_setting and
-    # handle_auto_restart_setting for the standalone-toggle path. Calling it here too
-    # is intentional: during a full install the pending shutdown must be cleared before
-    # the service is stopped, since the watchdog script may be mid-countdown.
-    cancel_reboot_watchdog
 
     # Check if the service is active
     if systemctl is-active --quiet "$SERVICE_NAME"; then
@@ -839,9 +816,12 @@ restore_service_state() {
         systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || true
         if systemctl start "$SERVICE_NAME"; then
             log "INFO" "$SERVICE_NAME started successfully"
-            # Give service a moment to start and check status
-            sleep 2
-            if systemctl is-active --quiet "$SERVICE_NAME"; then
+            local started=false
+            for i in {1..10}; do
+                systemctl is-active --quiet "$SERVICE_NAME" && { started=true; break; }
+                sleep 1
+            done
+            if [[ "$started" == true ]]; then
                 log "INFO" "$SERVICE_NAME is running properly"
             else
                 log "WARN" "$SERVICE_NAME may have failed to start properly"
@@ -921,9 +901,9 @@ parse_arguments() {
                 usage
                 ;;
             *)
-                log "WARN" "Unknown option: $1"
+                log "ERROR" "Unknown option: $1"
                 log "INFO" "Use --help for usage information"
-                shift
+                exit 1
                 ;;
         esac
     done
@@ -981,7 +961,13 @@ main() {
     # toggle flags don't hit the installation pre-flight checks unnecessarily.
     parse_arguments "$@"
 
-    # Phase 3: Handle standalone toggles (no reinstall needed).
+    # Phase 3: Cancel any pending watchdog — must happen before any service state change,
+    # whether we're on the standalone-toggle path or the full-install path.
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        cancel_reboot_watchdog
+    fi
+
+    # Phase 4: Handle standalone toggles (no reinstall needed).
     # If -p or -b was also passed (INSTALL_REQUESTED=true), skip early-exit and let
     # setup_systemd_service() apply the overrides inline during the installation instead.
     if [[ -n "$SET_REBOOT" && "$INSTALL_REQUESTED" == "false" ]]; then
@@ -994,24 +980,25 @@ main() {
         exit 0
     fi
 
-    # Phase 4: Pre-flight checks (only reached for actual installations)
+    # Phase 5: Pre-flight checks (only reached for actual installations)
     check_existing_service
 
-    # Phase 5: System preparation
+    # Phase 6: System preparation
     apt-get update || error_exit "Failed to update package lists"
 
-    # Phase 6: Stop existing service if needed
+    # Phase 7: Stop existing service if needed
     if [ "$SKIP_SYSTEMD" = false ]; then
         stop_disable_and_save_service_state
     fi
 
-    # Phase 7: Install binary (package or source)
+    # Phase 8: Install binary (package or source)
     install_binary
+    [[ -x /usr/bin/AIS-catcher ]] || error_exit "AIS-catcher binary not found after installation"
 
-    # Phase 8: Post-install configuration
+    # Phase 9: Post-install configuration
     configure_installation
 
-    # Phase 9: Setup and start service
+    # Phase 10: Setup and start service
     if [ "$SKIP_SYSTEMD" = false ]; then
         setup_systemd_service
 
@@ -1023,7 +1010,7 @@ main() {
         log "INFO" "Skipping systemd service installation (--no-systemd flag specified)"
     fi
 
-    # Phase 10: Installation complete
+    # Phase 11: Installation complete
     log "INFO" "AIS-catcher installation completed successfully"
     display_installation_summary
 }
@@ -1047,32 +1034,36 @@ display_installation_summary() {
     echo "    - Database schema:  ${DBMS_DIR}/create.sql"
     echo "    - Documentation:    ${README_DIR}/README.md"
     echo "    - License:          ${CONFIG_DIR}/LICENSE"
-    echo "  • Service file:       ${SERVICE_FILE}"
-    echo "  • Reboot watchdog:    ${REBOOT_SERVICE_FILE}"
-    echo "  • Reboot script:      ${LIB_DIR}/wait-and-reboot.sh"
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        echo "  • Service file:       ${SERVICE_FILE}"
+        echo "  • Reboot watchdog:    ${REBOOT_SERVICE_FILE}"
+        echo "  • Reboot script:      ${LIB_DIR}/wait-and-reboot.sh"
+    fi
     echo "  • Log file:           ${LOG_FILE}"
     echo ""
-    echo -e "${COLOR_BOLD}REBOOT WATCHDOG:${COLOR_RESET}"
-    echo "  • Off by default — service restarts indefinitely without rebooting"
-    echo "  • When armed: reboots after N rapid restarts within a time window"
-    echo "  • Useful for recovering from unresolvable USB device failures"
-    echo "  • Re-run this script to toggle (no reinstall needed):"
-    echo -e "    ${COLOR_YELLOW}sudo $0 --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
-    echo -e "    ${COLOR_YELLOW}sudo $0 --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
-    echo -e "    ${COLOR_YELLOW}sudo $0 --unset-reboot-on-failure${COLOR_RESET}        # disable"
-    echo "  • Settings stored directly in the service file: ${SERVICE_FILE}"
-    echo ""
-    echo -e "${COLOR_BOLD}AUTO-RESTART:${COLOR_RESET}"
-    echo "  • On by default — service restarts automatically after any crash (Restart=always)"
-    echo "  • Disable to prevent restart loops during troubleshooting"
-    echo "  • Re-run this script to toggle (no reinstall needed):"
-    echo -e "    ${COLOR_YELLOW}sudo $0 --set-auto-restart${COLOR_RESET}                # enable Restart=always"
-    echo -e "    ${COLOR_YELLOW}sudo $0 --unset-auto-restart${COLOR_RESET}              # disable Restart=no"
-    echo "  • If service locks up after failures, recover with:"
-    echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
-    echo "  • To abort a pending reboot (during the 5-minute wait):"
-    echo -e "    ${COLOR_YELLOW}shutdown -c${COLOR_RESET}"
-    echo ""
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        echo -e "${COLOR_BOLD}REBOOT WATCHDOG:${COLOR_RESET}"
+        echo "  • Off by default — service restarts indefinitely without rebooting"
+        echo "  • When armed: reboots after N rapid restarts within a time window"
+        echo "  • Useful for recovering from unresolvable USB device failures"
+        echo "  • Re-run this script to toggle (no reinstall needed):"
+        echo -e "    ${COLOR_YELLOW}sudo $SCRIPT_NAME --set-reboot-on-failure${COLOR_RESET}           # 3 restarts in 30 min"
+        echo -e "    ${COLOR_YELLOW}sudo $SCRIPT_NAME --set-reboot-on-failure 5 3600${COLOR_RESET}   # 5 restarts in 60 min"
+        echo -e "    ${COLOR_YELLOW}sudo $SCRIPT_NAME --unset-reboot-on-failure${COLOR_RESET}        # disable"
+        echo "  • Settings stored directly in the service file: ${SERVICE_FILE}"
+        echo ""
+        echo -e "${COLOR_BOLD}AUTO-RESTART:${COLOR_RESET}"
+        echo "  • On by default — service restarts automatically after any crash (Restart=always)"
+        echo "  • Disable to prevent restart loops during troubleshooting"
+        echo "  • Re-run this script to toggle (no reinstall needed):"
+        echo -e "    ${COLOR_YELLOW}sudo $SCRIPT_NAME --set-auto-restart${COLOR_RESET}                # enable Restart=always"
+        echo -e "    ${COLOR_YELLOW}sudo $SCRIPT_NAME --unset-auto-restart${COLOR_RESET}              # disable Restart=no"
+        echo "  • If service locks up after failures, recover with:"
+        echo -e "    ${COLOR_YELLOW}systemctl reset-failed ${SERVICE_NAME} && systemctl start ${SERVICE_NAME}${COLOR_RESET}"
+        echo "  • To abort a pending reboot (during the 5-minute wait):"
+        echo -e "    ${COLOR_YELLOW}shutdown -c${COLOR_RESET}"
+        echo ""
+    fi
     
     if [ "$SKIP_SYSTEMD" = false ]; then
         echo -e "${COLOR_BOLD}SYSTEMD SERVICE MANAGEMENT:${COLOR_RESET}"
