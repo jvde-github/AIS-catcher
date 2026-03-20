@@ -1,0 +1,62 @@
+{
+  "name": "zstddec",
+  "version": "0.2.0",
+  "description": "ZSTD (Zstandard) decoder for Web and Node.js, using WebAssembly",
+  "repository": "github:donmccurdy/zstddec",
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/zstddec.d.ts",
+  "main": "./dist/zstddec.cjs",
+  "module": "./dist/zstddec.esm.js",
+  "exports": {
+    ".": {
+      "types": "./dist/zstddec.d.ts",
+      "require": "./dist/zstddec.cjs",
+      "default": "./dist/zstddec.modern.js"
+    },
+    "./stream": {
+      "types": "./dist/zstddec-stream.d.ts",
+      "require": "./dist/zstddec-stream.cjs",
+      "default": "./dist/zstddec-stream.modern.js"
+    }
+  },
+  "scripts": {
+    "build": "microbundle src/{zstddec,zstddec-stream}.ts --format modern,esm,cjs --no-compress",
+    "watch": "microbundle watch src/{zstddec,zstddec-stream}.ts --format modern,esm,cjs --no-compress",
+    "test": "yarn test:node && yarn test:browser",
+    "test:node": "tape test/*.test.cjs | tap-spec",
+    "test:browser": "browserify test/*.test.cjs | tape-run | tap-spec",
+    "lint": "biome check src/**/*.ts test/**/*.cjs biome.json .github/**/*.yml",
+    "lint:ci": "biome ci src/**/*.ts test/**/*.cjs biome.json .github/**/*.yml",
+    "clean": "rm -rf dist/* || true",
+    "release": "yarn postversion:commit && yarn npm publish && yarn postversion:push",
+    "prerelease": "yarn postversion:commit && yarn npm publish --tag alpha && yarn postversion:push",
+    "postversion:commit": "git add -u && git commit -m \"chore(release): v$npm_package_version\" && git tag -a v$npm_package_version -m v$npm_package_version",
+    "postversion:push": "git push && git push --tags",
+    "prepublish": "yarn lint && yarn test",
+    "prepack": "yarn clean && yarn build"
+  },
+  "keywords": [
+    "zstd",
+    "zstandard",
+    "compression"
+  ],
+  "author": "Don McCurdy <dm@donmccurdy.com>",
+  "license": "MIT AND BSD-3-Clause",
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.11",
+    "browserify": "^17.0.1",
+    "microbundle": "^0.15.1",
+    "tap-spec": "^5.0.0",
+    "tape": "^5.9.0",
+    "tape-run": "^11.0.0"
+  },
+  "files": [
+    "dist/",
+    "*.ts",
+    "README.md",
+    "package.json",
+    "package-lock.json"
+  ],
+  "packageManager": "yarn@4.9.2"
+}

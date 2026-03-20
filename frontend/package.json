@@ -1,0 +1,17 @@
+{
+  "name": "ais-catcher-frontend",
+  "private": true,
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "chart.js": "^4.0.0",
+    "chartjs-plugin-annotation": "^3.0.0",
+    "flag-icons": "^6.6.6",
+    "ol": "^10.0.0",
+    "tabulator-tables": "^5.4.4"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

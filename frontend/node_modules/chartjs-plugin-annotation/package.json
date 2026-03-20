@@ -1,0 +1,90 @@
+{
+  "name": "chartjs-plugin-annotation",
+  "homepage": "https://www.chartjs.org/chartjs-plugin-annotation/index",
+  "description": "Annotations for Chart.js",
+  "version": "3.1.0",
+  "author": "Evert Timberg <evert.timberg@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/chartjs-plugin-annotation.cjs",
+  "module": "dist/chartjs-plugin-annotation.esm.js",
+  "types": "types/index.d.ts",
+  "jsdelivr": "dist/chartjs-plugin-annotation.min.js",
+  "unpkg": "dist/chartjs-plugin-annotation.min.js",
+  "exports": {
+    "types": "./types/index.d.ts",
+    "import": "./dist/chartjs-plugin-annotation.esm.js",
+    "require": "./dist/chartjs-plugin-annotation.cjs",
+    "script": "./dist/chartjs-plugin-annotation.min.js"
+  },
+  "sideEffects": [
+    "dist/chartjs-plugin-annotation.cjs",
+    "dist/chartjs-plugin-annotation.min.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chartjs/chartjs-plugin-annotation.git"
+  },
+  "files": [
+    "dist/*",
+    "!dist/docs/**",
+    "types/*.d.ts"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "karma start ./karma.conf.cjs --auto-watch --no-single-run --browsers chrome",
+    "dev:ff": "karma start ./karma.conf.cjs --auto-watch --no-single-run --browsers firefox",
+    "docs": "npm run build && vuepress build docs --no-cache",
+    "docs:dev": "npm run build && vuepress dev docs --no-cache",
+    "lint": "concurrently --group \"npm:lint-*\"",
+    "lint-js": "eslint \"test/**/*.js\" \"src/**/*.js\"",
+    "lint-md": "eslint \"**/*.md\"",
+    "lint-types": "eslint \"types/**/*.ts\" && tsc -p types/tests/",
+    "test": "cross-env NODE_ENV=test concurrently --group \"npm:test-*\"",
+    "test-karma": "karma start ./karma.conf.cjs --auto-watch --single-run",
+    "test-lint": "npm run lint",
+    "test-types": "tsc -p types/tests/",
+    "test-integration": "mocha --full-trace test/integration/*-test.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-json": "^6.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-terser": "^0.4.0",
+    "@simonbrunel/vuepress-plugin-versions": "^0.2.0",
+    "@typescript-eslint/eslint-plugin": "^5.51.0",
+    "@typescript-eslint/parser": "^5.51.0",
+    "chart.js": "^4.3.0",
+    "chartjs-test-utils": "^0.5.0",
+    "concurrently": "^7.6.0",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.33.0",
+    "eslint-config-chartjs": "^0.3.0",
+    "eslint-plugin-es": "^4.1.0",
+    "eslint-plugin-html": "^7.1.0",
+    "eslint-plugin-markdown": "^3.0.0",
+    "fs-extra": "^11.1.0",
+    "karma": "^6.4.1",
+    "karma-chrome-launcher": "^3.1.1",
+    "karma-coverage": "^2.2.0",
+    "karma-firefox-launcher": "^2.1.2",
+    "karma-jasmine": "^5.1.0",
+    "karma-jasmine-html-reporter": "^2.0.0",
+    "karma-rollup-preprocessor": "7.0.7",
+    "markdown-it-include": "^2.0.0",
+    "mocha": "^10.2.0",
+    "pixelmatch": "^5.3.0",
+    "rollup": "^3.14.0",
+    "rollup-plugin-istanbul": "^4.0.0",
+    "typedoc": "^0.23.24",
+    "typedoc-plugin-markdown": "^3.14.0",
+    "typescript": "^4.2.4",
+    "vuepress": "^1.9.7",
+    "vuepress-plugin-flexsearch": "^0.3.0",
+    "vuepress-plugin-redirect": "^1.2.5",
+    "vuepress-plugin-typedoc": "^0.10.0",
+    "vuepress-theme-chartjs": "^0.2.0"
+  },
+  "peerDependencies": {
+    "chart.js": ">=4.0.0"
+  }
+}

@@ -25,19 +25,21 @@ make_identifier() {
     echo "$1" | sed 's/[^a-zA-Z0-9]/_/g' | sed 's/^[0-9]/_&/'
 }
 
-# Function to get MIME type based on extension
+# Function to get MIME type based on extension (portable: no ${ext,,})
 get_mime_type() {
     local file="$1"
     local ext="${file##*.}"
-    case "${ext,,}" in
+    local ext_lower
+    ext_lower=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+    case "$ext_lower" in
         "html"|"htm") echo "text/html" ;;
-        "css")        echo "text/css" ;;
-        "js")         echo "application/javascript" ;;
-        "json")       echo "application/json" ;;
-        "txt")        echo "text/plain" ;;
-        "md")         echo "text/markdown" ;;
-        "xml")        echo "application/xml" ;;
-        "svg")        echo "image/svg+xml" ;;
+        "css")        echo "text/css; charset=utf-8" ;;
+        "js")         echo "application/javascript; charset=utf-8" ;;
+        "json")       echo "application/json; charset=utf-8" ;;
+        "txt")        echo "text/plain; charset=utf-8" ;;
+        "md")         echo "text/markdown; charset=utf-8" ;;
+        "xml")        echo "application/xml; charset=utf-8" ;;
+        "svg")        echo "image/svg+xml; charset=utf-8" ;;
         "jpg"|"jpeg") echo "image/jpeg" ;;
         "png")        echo "image/png" ;;
         "gif")        echo "image/gif" ;;
@@ -47,34 +49,41 @@ get_mime_type() {
     esac
 }
 
+# Portable relative path: strip BASE_DIR prefix from absolute file path
+relative_to_base() {
+    echo "${1#$BASE_DIR/}"
+}
+
 # Create a temporary file for the compressed content
 TEMP_FILE=$(mktemp)
 
 # Process each file
 process_file() {
     local file="$1"
-    # Calculate relative path from BASE_DIR
-    local relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
-    
-    # Skip the output file itself and files outside BASE_DIR
-    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
+    local relative_path
+    relative_path=$(relative_to_base "$file")
+
+    # Skip the output file itself and files that didn't strip (outside BASE_DIR)
+    if [ "$relative_path" = "$file" ] || [ "$relative_path" = "$OUTPUT_FILE" ]; then
         return
     fi
 
     echo "Processing: $relative_path"
-    
+
     # Create C-friendly identifier
-    local identifier=$(make_identifier "$relative_path")
-    local mime_type=$(get_mime_type "$file")
+    local identifier
+    identifier=$(make_identifier "$relative_path")
+    local mime_type
+    mime_type=$(get_mime_type "$file")
 
     # Compress the file content
     gzip -9 -n < "$file" > "$TEMP_FILE"
 
-    # Generate the C array data
+    # Generate the C array data (sed '$d' removes last line, portable alternative to head -n -1)
     {
         echo "// File: $relative_path"
         echo "static const unsigned char data_${identifier}[] = {"
-        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | head -n -1
+        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | grep -v "^};"
         echo "};"
         echo "static const size_t size_${identifier} = sizeof(data_${identifier});"
         echo
@@ -85,12 +94,13 @@ process_file() {
 export -f process_file
 export -f make_identifier
 export -f get_mime_type
+export -f relative_to_base
 export OUTPUT_FILE
 export BASE_DIR
 export TEMP_FILE
 
-# Resolve BASE_DIR to absolute path
-BASE_DIR=$(realpath "$BASE_DIR")
+# Resolve BASE_DIR to absolute path (portable: use pwd -P fallback if realpath unavailable)
+BASE_DIR=$(cd "$BASE_DIR" && pwd -P)
 echo "Using base directory: $BASE_DIR"
 
 # Find all files recursively and process them
@@ -107,9 +117,9 @@ EOF
 
 # Add each file to the map
 find "$BASE_DIR" -type f | while read -r file; do
-    relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
+    relative_path=$(relative_to_base "$file")
     # Skip output file and files outside BASE_DIR
-    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
+    if [ "$relative_path" = "$file" ] || [ "$relative_path" = "$OUTPUT_FILE" ]; then
         continue
     fi
     identifier=$(make_identifier "$relative_path")

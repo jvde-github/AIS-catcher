@@ -1,0 +1,22 @@
+* text eol=lf
+
+*.md text
+*.css text
+*.js text
+*.html text
+
+*.jpeg binary
+*.dds binary
+*.wasm binary
+*.tga binary
+*.glb binary
+*.bin binary
+*.psd binary
+*.afdesign binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.eot binary
+*.ttf binary
+*.woff binary
+*.zip binary

@@ -1,0 +1,31 @@
+{
+  "name": "reference-spec-reader",
+  "version": "0.2.0",
+  "author": "manzt <trevor.j.manz@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.26.2",
+    "nunjucks": "^3.2.4",
+    "prettier": "^3.0.1",
+    "typescript": "^5.1.6",
+    "uvu": "^0.5.6"
+  },
+  "scripts": {
+    "test:ci": "npm run lint && tsc && npm test",
+    "test": "uvu test",
+    "typecheck": "tsc --noEmit",
+    "fmt": "prettier --use-tabs --write src/**/* test/**/*",
+    "lint": "prettier --use-tabs --check src/**/* test/**/*"
+  }
+}

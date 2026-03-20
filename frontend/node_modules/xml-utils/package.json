@@ -1,0 +1,120 @@
+{
+  "name": "xml-utils",
+  "version": "1.10.2",
+  "description": "Parse XML without Blowing Up Your Bundle Size",
+  "main": "index.js",
+  "module": "index.mjs",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs"
+    },
+    "./index": {
+      "require": "./index.js",
+      "import": "./index.mjs"
+    },
+    "./index.js": "./index.js",
+    "./index.mjs": "./index.mjs",
+    "./find-tag-by-name": {
+      "require": "./find-tag-by-name.js",
+      "import": "./find-tag-by-name.mjs"
+    },
+    "./find-tag-by-name.js": "./find-tag-by-name.js",
+    "./find-tag-by-name.mjs": "./find-tag-by-name.mjs",
+    "./find-tag-by-path": {
+      "require": "./find-tag-by-path.js",
+      "import": "./find-tag-by-path.mjs"
+    },
+    "./find-tag-by-path.js": "./find-tag-by-path.js",
+    "./find-tag-by-path.mjs": "./find-tag-by-path.mjs",
+    "./find-tags-by-name": {
+      "require": "./find-tags-by-name.js",
+      "import": "./find-tags-by-name.mjs"
+    },
+    "./find-tags-by-name.js": "./find-tags-by-name.js",
+    "./find-tags-by-name.mjs": "./find-tags-by-name.mjs",
+    "./find-tags-by-path": {
+      "require": "./find-tags-by-path.js",
+      "import": "./find-tags-by-path.mjs"
+    },
+    "./find-tags-by-path.js": "./find-tags-by-path.js",
+    "./find-tags-by-path.mjs": "./find-tags-by-path.mjs",
+    "./get-attribute": {
+      "require": "./get-attribute.js",
+      "import": "./get-attribute.mjs"
+    },
+    "./get-attribute.js": "./get-attribute.js",
+    "./get-attribute.mjs": "./get-attribute.mjs",
+    "./remove-comments": {
+      "require": "./remove-comments.js",
+      "import": "./remove-comments.mjs"
+    },
+    "./remove-comments.js": "./remove-comments.js",
+    "./remove-comments.mjs": "./remove-comments.mjs",
+    "./remove-tags-by-name": {
+      "require": "./remove-tags-by-name.js",
+      "import": "./remove-tags-by-name.mjs"
+    },
+    "./remove-tags-by-name.js": "./remove-tags-by-name.js",
+    "./remove-tags-by-name.mjs": "./remove-tags-by-name.mjs"
+  },
+  "files": [
+    "index.d.ts",
+    "index.js",
+    "index.mjs",
+    "count-substring.js",
+    "find-tag-by-name.js",
+    "find-tag-by-path.js",
+    "find-tags-by-name.js",
+    "find-tags-by-path.js",
+    "get-attribute.js",
+    "index-of-match.js",
+    "index-of-match-end.js",
+    "remove-comments.js",
+    "remove-tags-by-name.js",
+    "count-substring.mjs",
+    "find-tag-by-name.mjs",
+    "find-tag-by-path.mjs",
+    "find-tags-by-name.mjs",
+    "find-tags-by-path.mjs",
+    "get-attribute.mjs",
+    "index-of-match.mjs",
+    "index-of-match-end.mjs",
+    "remove-comments.mjs",
+    "remove-tags-by-name.mjs"
+  ],
+  "scripts": {
+    "f": "npm run format",
+    "format": "npx prettier --arrow-parens=avoid --print-width=140 --trailing-comma=none --write *.js *.mjs */*.js */*.mjs */*.ts",
+    "setup": "cd test/data && bash setup.sh",
+    "test": "npm run test:js && npm run test:ts && npm run test:tsc && npm run test:esm",
+    "test:js": "node ./test/test.js",
+    "test:esm": "node ./test/test.mjs",
+    "test:ts": "npx ts-node ./test/test.ts",
+    "test:tsc": "tsc --noEmit ./test/test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanielJDufour/xml-utils.git"
+  },
+  "keywords": [
+    "fast",
+    "mrf",
+    "xml",
+    "tag",
+    "lite",
+    "utils",
+    "parse"
+  ],
+  "author": "Daniel J. Dufour",
+  "license": "CC0-1.0",
+  "bugs": {
+    "url": "https://github.com/DanielJDufour/xml-utils/issues"
+  },
+  "homepage": "https://github.com/DanielJDufour/xml-utils#readme",
+  "devDependencies": {
+    "flug": "^2.8.2",
+    "typescript": "5.4.2"
+  }
+}

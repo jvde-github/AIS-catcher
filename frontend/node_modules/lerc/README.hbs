@@ -1,0 +1,60 @@
+[![npm version][npm-img]][npm-url]
+
+[npm-img]: https://img.shields.io/npm/v/lerc.svg?style=flat-square
+[npm-url]: https://www.npmjs.com/package/lerc
+
+# Lerc JS
+
+> Rapid decoding of Lerc compressed raster data for any standard pixel type, not just rgb or byte
+
+## Browser
+
+```html
+<script type="text/javascript" src="https://unpkg.com/lerc"></script>
+```
+```js
+Lerc.decode(xhrResponse, {
+  inputOffset: 10, // start from the 10th byte (default is 0)
+  pixelType: "U8", // only needed for lerc1 (default is F32)
+  returnPixelInterleavedDims: false // only applicable to n-dim lerc2 blobs (default is false)
+});
+```
+
+## Node
+
+```js
+npm install lerc && npm install node-fetch
+```
+```js
+const fetch = require('node-fetch');
+const Lerc = require('lerc');
+
+fetch('http://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer/tile/0/0/0')
+  .then(response => response.arrayBuffer())
+  .then(body => {
+    const image = Lerc.decode(body);
+    image.width // 257
+  });
+```
+
+## API Reference
+
+{{>main}}
+* * *
+
+## Licensing
+
+Copyright &copy; 2017-2021 Esri
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and limitations under the License.
+
+A local copy of the license and additional notices are located with the source distribution at:
+
+http://github.com/Esri/lerc/

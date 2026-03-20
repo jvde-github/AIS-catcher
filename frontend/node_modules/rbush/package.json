@@ -1,0 +1,52 @@
+{
+  "name": "rbush",
+  "version": "4.0.1",
+  "description": "High-performance 2D spatial index for rectangles (based on R*-tree with bulk loading and bulk insertion algorithms)",
+  "homepage": "https://github.com/mourner/rbush",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mourner/rbush.git"
+  },
+  "keywords": [
+    "spatial",
+    "tree",
+    "search",
+    "rectangle",
+    "index",
+    "math"
+  ],
+  "author": "Volodymyr Agafonkin",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./index.js",
+  "main": "index.js",
+  "module": "index.js",
+  "browser": "rbush.min.js",
+  "jsdelivr": "rbush.min.js",
+  "unpkg": "rbush.min.js",
+  "devDependencies": {
+    "@rollup/plugin-buble": "^1.0.3",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "benchmark": "^2.1.4",
+    "eslint": "^9.9.0",
+    "eslint-config-mourner": "^4.0.2",
+    "rollup": "^4.21.0"
+  },
+  "scripts": {
+    "pretest": "eslint index.js test/test.js bench/*.js",
+    "test": "node --test",
+    "perf": "node ./bench/perf.js",
+    "cov": "node --test --experimental-test-coverage",
+    "build": "rollup -c",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "files": [
+    "index.js",
+    "rbush.js",
+    "rbush.min.js"
+  ],
+  "dependencies": {
+    "quickselect": "^3.0.0"
+  }
+}
