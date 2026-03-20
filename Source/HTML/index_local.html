@@ -20,7 +20,7 @@
 	<script src="cdn/npm/ol@v10.0.0/dist/ol.js"></script>
 	<link rel="stylesheet" href="cdn/npm/ol@v10.0.0/ol.css">
 
-	<link rel="stylesheet" href="style.css?hash=c973aa424d5048a4dd5aa7485b0fb1e4" />
+	<link rel="stylesheet" href="style.css?hash=0effe668d9fe762237a65569eb811e3e" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -45,6 +45,7 @@
 				<i id="decoder_tab_mini" title="NMEA Decoder" onclick="activateTab(event,'decoder')"
 					class="decode_icon"></i>
 				<i id="about_tab_mini" title="About" onclick="activateTab(event,'about')" class="info_icon"></i>
+				<i id="webcontrol_tab_mini" title="Web Control" onclick="openWebControl()" class="play_circle_icon"></i>
 			</div>
 		</div>
 
@@ -77,6 +78,7 @@
 		<div onclick="activateTab(event,'decoder')" id="decoder_tab"><i class="decode_icon"></i><span>Decoder</span>
 		</div>
 		<div onclick="activateTab(event,'about')" id="about_tab"><i class="info_icon"></i><span>About</span></div>
+		<div onclick="openWebControl()" id="webcontrol_tab"><i class="play_circle_icon"></i><span>Control</span></div>
 	</nav>
 
 	<div class="mainspace-container">
@@ -1392,7 +1394,7 @@
 	<div class="bottombar"></div>
 
 	<script src="custom/plugins.js"></script>
-	<script src="script.js?hash=2ef45f5d6ad4fe81aec5f7b08d37d952"></script>
+	<script src="script.js?hash=a6f986751a515b341de3fb66c3a13de8"></script>
 
 
 	<div class="overlay" onclick="toggleInfoPanel()"></div>

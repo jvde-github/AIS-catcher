@@ -1537,6 +1537,12 @@ function headerClick() {
     window.open("https://www.aiscatcher.org");
 }
 
+function openWebControl() {
+    if (typeof webcontrol_http !== "undefined" && webcontrol_http) {
+        window.open(webcontrol_http, '_blank');
+    }
+}
+
 function updateMapLayer() {
 
     if (activeTileLayer) {
@@ -8217,6 +8223,11 @@ if (typeof log_enabled === "undefined" || log_enabled === false) {
 if (typeof decoder_enabled === "undefined" || decoder_enabled === false) {
     document.getElementById("decoder_tab").style.display = "none";
     document.getElementById("decoder_tab_mini").style.display = "none";
+}
+
+if (typeof webcontrol_http === "undefined" || !webcontrol_http) {
+    document.getElementById("webcontrol_tab").style.display = "none";
+    document.getElementById("webcontrol_tab_mini").style.display = "none";
 }
 
 showWelcome();

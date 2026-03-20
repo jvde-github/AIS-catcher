@@ -182,6 +182,7 @@ namespace AIS
 		{"", "", "", "", "version", ""},												// KEY_SETTING_VERSION
 		{"", "", "", "", "vga", ""},													// KEY_SETTING_VGA
 		{"", "", "", "", "wavfile", ""},												// KEY_SETTING_WAVFILE
+		{"", "", "", "", "webcontrol_http", ""},										// KEY_SETTING_WEBCONTROL_HTTP
 		{"", "", "", "", "qos", ""},													// KEY_SETTING_QOS
 		{"", "", "", "", "zlib", ""},													// KEY_SETTING_ZLIB
 		{"", "", "", "", "zmq", ""},													// KEY_SETTING_ZMQ
@@ -736,6 +737,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SAMPLE_LENGTH
 		KeyInfo("", "", nullptr),																							// KEY_STATION_ID
 		KeyInfo("", "", nullptr),																							// KEY_VERSION
+		KeyInfo("", "", nullptr),																							// KEY_TOA
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ABOUT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ADDRESS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ACTIVE
@@ -766,6 +768,8 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DESCRIPTION
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DEVICE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DROOP
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_DUMP
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_DUMP_FILE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ENDPOINT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_FILE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_FILTER
@@ -859,6 +863,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TCP_LISTENER
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TEST
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TIMEOUT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_TIMEOUT_NOMSG
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_THRESHOLD
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TOPIC
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TUNER
@@ -873,6 +878,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_VERSION
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_VGA
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_WAVFILE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_WEBCONTROL_HTTP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_QOS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZLIB
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZMQ

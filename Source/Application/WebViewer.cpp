@@ -1021,6 +1021,10 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		station_link.clear();
 		JSON::StringBuilder::stringify(arg, station_link);
 	}
+	else if (option == "WEBCONTROL_HTTP")
+	{
+		plugins += "webcontrol_http = '" + arg + "';\n";
+	}
 	else if (option == "LAT")
 	{
 		ships.setLat(Util::Parse::Float(arg));
