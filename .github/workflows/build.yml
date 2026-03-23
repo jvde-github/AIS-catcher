@@ -27,24 +27,31 @@ jobs:
     - name: Install required tools
       run: |
         sudo apt-get update
-        sudo apt-get install gzip xxd minify -y
+        sudo apt-get install -y gzip xxd
 
-    - name: Run bake script
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Build frontend
       run: |
-        ./scripts/build-html.sh 
-        
+        cd frontend
+        npm ci
+        npm run build
+
+    - name: Generate WebDB.cpp
+      run: bash scripts/build-web-db.sh
+
     - name: Commit and push changes
       run: |
-        git add -A
+        git add frontend/dist/ Source/Application/WebDB.cpp
         if git diff --cached --quiet; then
           echo "Nothing to commit, working tree clean"
           exit 0
-        else
-          echo "There are changes to be committed"
-          echo "Changed files:"
-          git diff --cached --name-only
         fi
-        
+        echo "Changed files:"
+        git diff --cached --name-only
         git config --local user.email "action@github.com"
         git config --local user.name "Github Action"
         git commit -m "Bake HTML files in WebDB.cpp"

@@ -1,16 +1,40 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Generates Source/Application/WebDB.cpp from files in Source/HTML/.
+# Usage: bash scripts/build-web-db.sh [repo-root]
+set -euo pipefail
 
-# Check if directory argument is provided, otherwise use current directory
-BASE_DIR="${1:-.}"
-OUTPUT_FILE="Source/Application/WebDB.cpp"
+REPO_ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
+HTML_DIR="$REPO_ROOT/frontend/dist"
+OUTPUT="$REPO_ROOT/Source/Application/WebDB.cpp"
 
-# Remove existing output file if it exists
-if [ -f "$OUTPUT_FILE" ]; then
-    rm "$OUTPUT_FILE"
+if [ ! -d "$HTML_DIR" ]; then
+    echo "Error: $HTML_DIR not found. Run 'cd frontend && npm run build' first." >&2
+    exit 1
 fi
 
-# Write header includes
-cat > "$OUTPUT_FILE" << 'EOF'
+TEMP=$(mktemp)
+trap 'rm -f "$TEMP"' EXIT
+
+# Convert filename to valid C identifier
+make_id() { echo "$1" | sed 's/[^a-zA-Z0-9]/_/g' | sed 's/^[0-9]/_&/'; }
+
+# MIME type from file extension (portable lowercase via tr)
+mime_type() {
+    local ext
+    ext=$(echo "${1##*.}" | tr '[:upper:]' '[:lower:]')
+    case "$ext" in
+        html|htm) echo "text/html" ;;
+        css)      echo "text/css; charset=utf-8" ;;
+        js)       echo "application/javascript; charset=utf-8" ;;
+        json)     echo "application/json; charset=utf-8" ;;
+        svg)      echo "image/svg+xml; charset=utf-8" ;;
+        png)      echo "image/png" ;;
+        ico)      echo "image/x-icon" ;;
+        *)        echo "application/octet-stream" ;;
+    esac
+}
+
+cat > "$OUTPUT" <<'EOF'
 #include "WebDB.h"
 
 namespace WebDB
@@ -20,119 +44,47 @@ namespace WebDB
 
 EOF
 
-# Function to convert filename to valid C identifier
-make_identifier() {
-    echo "$1" | sed 's/[^a-zA-Z0-9]/_/g' | sed 's/^[0-9]/_&/'
-}
+# Collect all files, sorted for deterministic output (portable: no mapfile)
+FILES_LIST=$(find "$HTML_DIR" -type f | sort)
 
-# Function to get MIME type based on extension
-get_mime_type() {
-    local file="$1"
-    local ext="${file##*.}"
-    case "${ext,,}" in
-        "html"|"htm") echo "text/html" ;;
-        "css")        echo "text/css" ;;
-        "js")         echo "application/javascript" ;;
-        "json")       echo "application/json" ;;
-        "txt")        echo "text/plain" ;;
-        "md")         echo "text/markdown" ;;
-        "xml")        echo "application/xml" ;;
-        "svg")        echo "image/svg+xml" ;;
-        "jpg"|"jpeg") echo "image/jpeg" ;;
-        "png")        echo "image/png" ;;
-        "gif")        echo "image/gif" ;;
-        "ico")        echo "image/x-icon" ;;
-        "webp")       echo "image/webp" ;;
-        *)            echo "application/octet-stream" ;;
-    esac
-}
+while IFS= read -r FILE; do
+    REL="${FILE#$HTML_DIR/}"
+    ID=$(make_id "$REL")
+    MIME=$(mime_type "$FILE")
 
-# Create a temporary file for the compressed content
-TEMP_FILE=$(mktemp)
+    gzip -9 -n < "$FILE" > "$TEMP"
 
-# Process each file
-process_file() {
-    local file="$1"
-    # Calculate relative path from BASE_DIR
-    local relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
-    
-    # Skip the output file itself and files outside BASE_DIR
-    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
-        return
-    fi
-
-    echo "Processing: $relative_path"
-    
-    # Create C-friendly identifier
-    local identifier=$(make_identifier "$relative_path")
-    local mime_type=$(get_mime_type "$file")
-
-    # Compress the file content
-    gzip -9 -n < "$file" > "$TEMP_FILE"
-
-    # Generate the C array data
     {
-        echo "// File: $relative_path"
-        echo "static const unsigned char data_${identifier}[] = {"
-        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | head -n -1
+        echo "// File: $REL"
+        echo "static const unsigned char data_${ID}[] = {"
+        xxd -i < "$TEMP" | grep -v "^unsigned" | grep -v "^};"
         echo "};"
-        echo "static const size_t size_${identifier} = sizeof(data_${identifier});"
+        echo "static const size_t size_${ID} = sizeof(data_${ID});"
         echo
-    } >> "$OUTPUT_FILE"
-}
+    } >> "$OUTPUT"
+done <<< "$FILES_LIST"
 
-# Export functions and variables
-export -f process_file
-export -f make_identifier
-export -f get_mime_type
-export OUTPUT_FILE
-export BASE_DIR
-export TEMP_FILE
-
-# Resolve BASE_DIR to absolute path
-BASE_DIR=$(realpath "$BASE_DIR")
-echo "Using base directory: $BASE_DIR"
-
-# Find all files recursively and process them
-find "$BASE_DIR" -type f -exec bash -c 'process_file "$0"' {} \;
-
-# Remove temporary file
-rm -f "$TEMP_FILE"
-
-# Write the initialization function
-cat >> "$OUTPUT_FILE" << 'EOF'
+cat >> "$OUTPUT" <<'EOF'
 
 void initialize() {
 EOF
 
-# Add each file to the map
-find "$BASE_DIR" -type f | while read -r file; do
-    relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
-    # Skip output file and files outside BASE_DIR
-    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
-        continue
-    fi
-    identifier=$(make_identifier "$relative_path")
-    mime_type=$(get_mime_type "$file")
-    echo "    files.emplace(\"${relative_path}\", FileData(data_${identifier}, size_${identifier}, \"${mime_type}\"));" >> "$OUTPUT_FILE"
-done
+while IFS= read -r FILE; do
+    REL="${FILE#$HTML_DIR/}"
+    ID=$(make_id "$REL")
+    MIME=$(mime_type "$FILE")
+    echo "    files.emplace(\"${REL}\", FileData(data_${ID}, size_${ID}, \"${MIME}\"));" >> "$OUTPUT"
+done <<< "$FILES_LIST"
 
-# Close the initialization function and namespace
-cat >> "$OUTPUT_FILE" << 'EOF'
+cat >> "$OUTPUT" <<'EOF'
 }
 
 struct Init {
-    Init() {
-        initialize();
-    }
+    Init() { initialize(); }
 } init;
 
 } // namespace WebDB
 EOF
 
-echo "Header file generated successfully at $OUTPUT_FILE"
-
-# Print some statistics
-echo "Statistics:"
-echo "Total files processed: $(find "$BASE_DIR" -type f | wc -l)"
-echo "Output file size: $(stat -f %z "$OUTPUT_FILE" 2>/dev/null || stat -c %s "$OUTPUT_FILE") bytes"
+FILE_COUNT=$(echo "$FILES_LIST" | grep -c .)
+echo "Generated $OUTPUT ($(wc -c < "$OUTPUT") bytes, $FILE_COUNT files)"

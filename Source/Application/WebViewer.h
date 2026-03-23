@@ -179,7 +179,6 @@ class WebViewer : public IO::HTTPServer, public Setting
 	std::string plugin_code;
 	std::string plugins;
 	std::string stylesheets;
-	std::string cdn;
 	std::string about = "This content can be set by the station owner";
 
 	// All receiver states. Index 0 = aggregate "All", index 1..N = per-receiver (only when N > 1).
