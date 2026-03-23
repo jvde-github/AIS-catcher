@@ -45,7 +45,7 @@ jobs:
 
     - name: Commit and push changes
       run: |
-        git add frontend/dist/ Source/Application/WebDB.cpp
+        git add Source/Application/WebDB.cpp
         if git diff --cached --quiet; then
           echo "Nothing to commit, working tree clean"
           exit 0
