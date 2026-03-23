@@ -115,7 +115,6 @@ class WebViewer : public IO::HTTPServer, public Setting
 	std::string plugin_code;
 	std::string plugins;
 	std::string stylesheets;
-	std::string cdn;
 	std::string about = "This content can be set by the station owner";
 
 	DB ships;

@@ -588,55 +588,9 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 
 	if (r == "/")
-	{
-		if (cdn.empty())
-			r = "/index.html";
-		else
-			r = "/index_local.html";
-	}
+		r = "/index.html";
 
-	if (!cdn.empty() && r.find("/cdn/") == 0)
-	{
-		try
-		{
-
-			if (r.find("..") != std::string::npos || r.find(".") == std::string::npos)
-				throw std::runtime_error("Blocked, pattern not matching");
-
-			std::string extension = r.substr(r.find_last_of('.') + 1);
-			std::string contentType;
-
-			if (extension == "svg")
-			{
-				contentType = "image/svg+xml";
-			}
-			else if (extension == "js")
-			{
-				contentType = "application/javascript";
-			}
-			else if (extension == "png")
-			{
-				contentType = "image/png";
-			}
-			else if (extension == "css")
-			{
-				contentType = "text/css";
-			}
-			else
-			{
-				throw std::runtime_error("Blocked " + extension);
-			}
-
-			std::string content = Util::Helper::readFile(cdn + r);
-			Response(c, contentType, content, use_zlib & gzip);
-		}
-		catch (const std::exception &e)
-		{
-			Error() << "Server - error returning requested file (" << r << "): " << e.what();
-			Response(c, "text/html", std::string(""), true);
-		}
-	}
-	else if (r == "/kml" && KML)
+	if (r == "/kml" && KML)
 	{
 		std::string content = ships.getKML();
 		Response(c, "application/vnd.google-earth.kml+xml", content, use_zlib & gzip);
@@ -1092,8 +1046,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "CDN")
 	{
-		cdn = arg;
-		Info() << "Fetch Web Libraries locally at " << arg;
+		Warning() << "CDN option is deprecated — web libraries are now bundled into the binary.";
 	}
 	else if (option == "MBTILES")
 	{

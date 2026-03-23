@@ -5,16 +5,21 @@ export default defineConfig({
     outDir: '../Source/HTML',
     emptyOutDir: false,
     assetsInlineLimit: 0,
-    minify: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: true,
+      mangle: true,
+      format: { comments: false },
+    },
     lib: {
       entry: 'src/vendor.js',
-      name: 'vendor',
-      fileName: () => 'vendor.js',
+      name: 'libs',
+      fileName: () => 'libs.js',
       formats: ['iife'],
     },
     rollupOptions: {
       output: {
-        assetFileNames: 'vendor.css',
+        assetFileNames: 'style.css',
       },
     },
   },

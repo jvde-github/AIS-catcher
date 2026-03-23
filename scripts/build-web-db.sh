@@ -145,4 +145,4 @@ echo "Header file generated successfully at $OUTPUT_FILE"
 # Print some statistics
 echo "Statistics:"
 echo "Total files processed: $(find "$BASE_DIR" -type f | wc -l)"
-echo "Output file size: $(stat -f %z "$OUTPUT_FILE" 2>/dev/null || stat -c %s "$OUTPUT_FILE") bytes"
+echo "Output file size: $(wc -c < "$OUTPUT_FILE") bytes"

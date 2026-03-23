@@ -2,7 +2,7 @@
   "name": "ais-catcher-frontend",
   "private": true,
   "scripts": {
-    "build": "vite build"
+    "build": "vite build && vite build --config vite.config.app.js"
   },
   "dependencies": {
     "chart.js": "^4.0.0",
@@ -12,6 +12,7 @@
     "tabulator-tables": "^5.4.4"
   },
   "devDependencies": {
+    "terser": "^5.46.1",
     "vite": "^5.0.0"
   }
 }
