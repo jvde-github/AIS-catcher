@@ -1,4 +1,6 @@
 
+"use strict";
+
 var interval,
     activeReceiver = 0,
     paths = {},
@@ -45,9 +47,9 @@ var hover_enabled_track = false,
 
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
-    communityFeed = false;
-    aboutMDpresent = false;
-    context = "aiscatcher";
+    var communityFeed = false;
+    var aboutMDpresent = false;
+    var context = "aiscatcher";
 }
 
 const hover_info = document.getElementById('hover-info');
@@ -7591,14 +7593,8 @@ function setupAbout() {
 
     fetchAbout()
         .then((s) => {
-            var scriptElement = document.createElement("script");
-            scriptElement.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
-            document.head.appendChild(scriptElement);
-
-            scriptElement.onload = function () {
-                document.getElementById("about_content").innerHTML = marked.parse(s);
-                aboutContentLoaded = true;
-            };
+            document.getElementById("about_content").innerHTML = marked.parse(s);
+            aboutContentLoaded = true;
         })
         .catch((error) => {
             alert("Error loading about.md: " + error);

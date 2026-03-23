@@ -46,5 +46,9 @@ window.Chart = Chart;
 import { TabulatorFull as Tabulator } from 'tabulator-tables';
 window.Tabulator = Tabulator;
 
+// marked (Markdown parser — also used by dynamically loaded plugins)
+import { marked } from 'marked';
+window.marked = marked;
+
 // CSS is imported via vendor.css and extracted by Vite to style.css
 import './vendor.css';
