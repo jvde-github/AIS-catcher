@@ -306,30 +306,6 @@ get_system_info() {
     echo "${os}_${version}_${arch}"
 }
 
-download_webassets_common() {
-    local webassets_url="https://github.com/jvde-github/webassets/archive/refs/heads/main.zip"
-    local temp_zip
-    temp_zip=$(mktemp --suffix=.zip)
-
-    log "INFO" "Downloading webassets"
-    if curl -fsL "$webassets_url" -o "$temp_zip"; then
-        if [[ -d "$CONFIG_DIR/webassets" ]]; then
-            log "INFO" "Removing old webassets"
-            rm -rf "$CONFIG_DIR/webassets"
-        fi
-        
-        log "INFO" "Extracting webassets"
-        unzip -q "$temp_zip" -d "$CONFIG_DIR"
-        mv "$CONFIG_DIR/webassets-main" "$CONFIG_DIR/webassets"
-        rm "$temp_zip"
-        
-        log "INFO" "Webassets updated successfully"
-    else
-        log "ERROR" "Failed to download webassets"
-        return 1
-    fi
-}
-
 ################################################################################
 # SOURCE INSTALLATION FUNCTIONS
 ################################################################################
@@ -610,8 +586,6 @@ setup_aiscatcher_user() {
 setup_configuration() {
     log "INFO" "Setting up configuration files"
     mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
-
-    download_webassets_common || error_exit "Failed to download webassets"
 
     if [[ ! -f "$CONFIG_FILE" ]]; then
         echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
@@ -1030,7 +1004,6 @@ display_installation_summary() {
     echo "    - Main config:      ${CONFIG_FILE}"
     echo "    - Command options:  ${CMD_FILE}"
     echo "    - Plugins:          ${PLUGIN_DIR}/"
-    echo "    - Web assets:       ${CONFIG_DIR}/webassets/"
     echo "    - Database schema:  ${DBMS_DIR}/create.sql"
     echo "    - Documentation:    ${README_DIR}/README.md"
     echo "    - License:          ${CONFIG_DIR}/LICENSE"
