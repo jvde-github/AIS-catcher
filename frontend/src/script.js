@@ -1,5 +1,5 @@
 
-"use strict";
+//"use strict";
 
 var interval,
     activeReceiver = 0,
