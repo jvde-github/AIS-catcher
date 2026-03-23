@@ -88,6 +88,71 @@ public:
 	}
 };
 
+// Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
+// states[0] is always "All" (aggregate). states[1..N] are per-receiver when N > 1.
+struct ReceiverState
+{
+private:
+	DB ships;
+	Counter counter, counter_session;
+	History<60, 1> hist_second;
+	History<60, 60> hist_minute;
+	History<24, 3600> hist_hour;
+	History<90, 86400> hist_day;
+
+public:
+	std::string label;
+	std::string product, vendor, serial, model_name, sample_rate;
+
+	// Device metadata
+	void setDevice(Device::Device *device);
+	void appendDevice(Device::Device *device, const std::string &newline);
+
+	// Config
+	void applyConfig(float lat, float lon, bool latlon_share, bool server_mode,
+					 bool msg_save, bool use_GPS, uint32_t own_mmsi,
+					 int time_history, int cutoff, const AIS::Filter &f);
+
+	// Lifecycle
+	void setup();
+	void clear();
+	void reset();
+	bool save(std::ofstream &f);
+	bool load(std::ifstream &f);
+
+	// Wire internal streams (ships → hist_* → counters)
+	void wireStreams();
+
+	// Connect incoming data sources (ships as sink)
+	void connectJSON(Connection<JSON::JSON> &c) { c.Connect((StreamIn<JSON::JSON> *)&ships); }
+	void connectGPS(Connection<AIS::GPS> &c) { c.Connect((StreamIn<AIS::GPS> *)&ships); }
+
+	// Connect outgoing sinks (ships as source)
+	template <typename T>
+	void connectSink(T &sink) { ships >> sink; }
+
+	// JSON output
+	std::string toHistoryJSON();
+	std::string toCountersJSON();
+
+	// Ship data queries
+	int getCount() { return ships.getCount(); }
+	int getMaxCount() { return ships.getMaxCount(); }
+	float getMsgRate() { return hist_second.getAverage(); }
+
+	std::string getShipsJSON(bool full = false) { return ships.getJSON(full); }
+	std::string getShipsJSONcompact() { return ships.getJSONcompact(); }
+	std::string getBinaryMessagesJSON() { return ships.getBinaryMessagesJSON(); }
+	std::string getKML() { return ships.getKML(); }
+	std::string getGeoJSON() { return ships.getGeoJSON(); }
+	std::string getAllPathJSON() { return ships.getAllPathJSON(); }
+	std::string getAllPathGeoJSON() { return ships.getAllPathGeoJSON(); }
+	std::string getPathJSON(uint32_t mmsi) { return ships.getPathJSON(mmsi); }
+	std::string getPathGeoJSON(uint32_t mmsi) { return ships.getPathGeoJSON(mmsi); }
+	std::string getMessage(uint32_t mmsi) { return ships.getMessage(mmsi); }
+	std::string getShipJSON(uint32_t mmsi) { return ships.getShipJSON(mmsi); }
+};
+
 class WebViewer : public IO::HTTPServer, public Setting
 {
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
@@ -108,7 +173,6 @@ class WebViewer : public IO::HTTPServer, public Setting
 	bool thread_running = false;
 	bool aboutPresent = false;
 
-	std::vector<char> binary;
 	std::vector<std::shared_ptr<MapTiles>> mapSources;
 
 	std::string params;
@@ -118,25 +182,30 @@ class WebViewer : public IO::HTTPServer, public Setting
 	std::string cdn;
 	std::string about = "This content can be set by the station owner";
 
-	DB ships;
+	// All receiver states. Index 0 = aggregate "All", index 1..N = per-receiver (only when N > 1).
+	std::vector<std::unique_ptr<ReceiverState>> states;
+
 	PlaneDB planes;
 
-	// history of 180 minutes and 180 seconds
-	History<60, 60> hist_minute;
-	History<60, 1> hist_second;
-	History<24, 3600> hist_hour;
-	History<90, 86400> hist_day;
-
-	Counter counter, counter_session;
 	SSEStreamer sse_streamer;
 	WebViewerLogger logger;
 	PromotheusCounter dataPrometheus;
 	ByteCounter raw_counter;
 
 	std::time_t time_start;
-	std::string sample_rate, product, vendor, model, serial, station = "\"\"", station_link = "\"\"";
+	std::string station = "\"\"", station_link = "\"\"";
 	std::string backup_filename = "";
 	std::string os, hardware;
+
+	// DB / stats config accumulated during Set(), applied to all states in connect().
+	float cfg_lat = LAT_UNDEFINED, cfg_lon = LON_UNDEFINED;
+	bool cfg_latlon_share = false;
+	bool cfg_server_mode = false;
+	bool cfg_msg_save = false;
+	bool cfg_use_GPS = true;
+	uint32_t cfg_own_mmsi = 0;
+	int cfg_time_history = 30 * 60;
+	int cfg_cutoff = 0;
 
 	std::mutex m;
 	std::condition_variable cv;
@@ -162,6 +231,11 @@ class WebViewer : public IO::HTTPServer, public Setting
 
 	const std::vector<std::unique_ptr<IO::OutputMessage>> *msg_channels = nullptr;
 
+	// Parse ?receiver=N from query string; returns 0 on missing/invalid.
+	int parseReceiver(const std::string &query);
+	// Return state at idx, clamped to states[0] on out-of-range.
+	ReceiverState *getState(int idx);
+
 public:
 	WebViewer();
 
@@ -174,20 +248,13 @@ public:
 	}
 
 	bool &active() { return run; }
-	void connect(Receiver &r);
+	void connect(const std::vector<std::unique_ptr<Receiver>> &receivers);
 	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
 	void start();
 	void close();
 	void Reset();
 
-	void setDeviceDescription(std::string p, std::string v, std::string s)
-	{
-		product = p;
-		vendor = v;
-		serial = s;
-	}
-
-	void setOutputChannels(const std::vector<std::unique_ptr<IO::OutputMessage>> &msg)//, const std::vector<std::unique_ptr<IO::OutputJSON>> &json)
+	void setOutputChannels(const std::vector<std::unique_ptr<IO::OutputMessage>> &msg)
 	{
 		msg_channels = &msg;
 	}

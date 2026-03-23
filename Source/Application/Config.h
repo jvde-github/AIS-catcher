@@ -22,14 +22,12 @@
 
 #include "AIS-catcher.h"
 
-#include "Receiver.h"
+#include "RunState.h"
 
 #include "JSON/JSON.h"
 #include "JSON/Parser.h"
 #include "JSON/StringBuilder.h"
-#include "WebViewer.h"
 
-#include "Screen.h"
 #include "File.h"
 
 #include "Device/FileRAW.h"
@@ -47,18 +45,7 @@
 
 class Config
 {
-
-	std::vector<std::unique_ptr<Receiver>> &_receivers;
-	int &_nrec;
-	std::vector<std::unique_ptr<IO::OutputMessage>> &_msg;
-
-	IO::ScreenOutput &_screen;
-	std::vector<std::unique_ptr<WebViewer>> &_server;
-
-	int &_own_mmsi;
-	int &_timeout;
-	bool &_timeout_nomsg;
-	bool xshare_defined = false;
+	RunState &_state;
 
 	bool isActiveObject(const JSON::Value &pd);
 	void setSettingsFromJSON(const JSON::Value &pd, Setting &s);
@@ -74,10 +61,10 @@ class Config
 	void setSharing(const std::vector<JSON::Property> &props);
 
 public:
-	Config(std::vector<std::unique_ptr<Receiver>> &r, int &nr, std::vector<std::unique_ptr<IO::OutputMessage>> &o, IO::ScreenOutput &s, std::vector<std::unique_ptr<WebViewer>> &v, int &own_mmsi, int &timeout, bool &timeout_nomsg) : _receivers(r), _nrec(nr), _msg(o), _screen(s), _server(v), _own_mmsi(own_mmsi), _timeout(timeout), _timeout_nomsg(timeout_nomsg) {}
+	Config(RunState &state) : _state(state) {}
 
 	void read(std::string &file_config);
 	void set(const std::string &str);
 
-	bool isSharingDefined() const { return xshare_defined; }
+	bool isSharingDefined() const { return _state.xshare_defined; }
 };

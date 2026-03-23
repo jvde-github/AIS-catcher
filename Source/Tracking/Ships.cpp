@@ -20,7 +20,6 @@
 
 #include "AIS-catcher.h"
 #include "Ships.h"
-#include "Serialize.h"
 #include "StringBuilder.h"
 
 void Ship::reset()
@@ -64,46 +63,6 @@ void Ship::reset()
 	last_group = GROUP_OUT_UNDEFINED;
 
 	msg.clear();
-}
-
-void Ship::Serialize(std::vector<char> &v) const
-{
-
-	// Serialize the ship
-	Util::Serialize::Uint32(mmsi, v);
-	Util::Serialize::LatLon(lat, lon, v);
-	Util::Serialize::FloatLow(distance, v);
-	Util::Serialize::FloatLow(angle, v);
-	Util::Serialize::FloatLow(level, v);
-	Util::Serialize::Int16(count, v);
-	Util::Serialize::FloatLow(ppm, v);
-	Util::Serialize::Int8((getApproximate()) + (getValidated()), v);
-	Util::Serialize::FloatLow(heading, v);
-	Util::Serialize::FloatLow(cog, v);
-	Util::Serialize::FloatLow(speed, v);
-	Util::Serialize::Int16(to_bow, v);
-	Util::Serialize::Int16(to_stern, v);
-	Util::Serialize::Int16(to_starboard, v);
-	Util::Serialize::Int16(to_port, v);
-	Util::Serialize::Uint64(last_group, v);
-	Util::Serialize::Uint64(group_mask, v);
-	Util::Serialize::Int16(shiptype, v);
-	Util::Serialize::Int8((shipclass << 4) + mmsi_type, v);
-	Util::Serialize::Uint32(msg_type, v);
-	Util::Serialize::Int8(getChannels(), v);
-	Util::Serialize::Int8(country_code[0], v);
-	Util::Serialize::Int8(country_code[1], v);
-	Util::Serialize::Int8(status, v);
-	Util::Serialize::FloatLow(draught, v);
-	Util::Serialize::Int8(month, v);
-	Util::Serialize::Int8(day, v);
-	Util::Serialize::Int8(hour, v);
-	Util::Serialize::Int8(minute, v);
-	Util::Serialize::Int32(IMO, v);
-	Util::Serialize::String(std::string(callsign), v);
-	Util::Serialize::String(std::string(shipname) + (getVirtualAid() ? std::string(" [V]") : std::string("")), v);
-	Util::Serialize::String(std::string(destination), v);
-	Util::Serialize::Uint64(last_signal, v);
 }
 
 std::string getSprite(const Ship *ship)

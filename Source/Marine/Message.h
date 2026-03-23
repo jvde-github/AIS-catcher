@@ -240,7 +240,7 @@ namespace AIS
 
 	class Filter
 	{
-		const uint32_t all = 0xFFFFFFFF;
+		static const uint32_t all = 0xFFFFFFFF;
 		uint32_t allow = all;
 		uint32_t allow_repeat = all;
 		bool on = false;
@@ -267,6 +267,7 @@ namespace AIS
 		bool SetOption(std::string option, std::string arg);
 		std::string Get();
 		bool isOn() { return on; }
+		bool hasIDFilter() const { return !ID_allowed.empty() || !MMSI_allowed.empty(); }
 		std::string getAllowed();
 		bool includeGPS() { return on ? GPS : true; }
 		bool include(const Message &msg);

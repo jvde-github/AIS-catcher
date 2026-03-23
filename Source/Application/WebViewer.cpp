@@ -242,26 +242,16 @@ bool WebViewer::Save()
 	{
 		std::ofstream infile(backup_filename, std::ios::binary);
 
-		if (!infile.is_open()) {
-            Error() << "Server: cannot open backup file for writing: " 
-                    << backup_filename << " (" << std::strerror(errno) << ")";
-            return false;
-        }
+		if (!infile.is_open())
+		{
+			Error() << "Server: cannot open backup file for writing: "
+					<< backup_filename << " (" << std::strerror(errno) << ")";
+			return false;
+		}
 
-		infile.exceptions(std::ios::failbit | std::ios::badbit);  // will throw on write failure
+		infile.exceptions(std::ios::failbit | std::ios::badbit); // will throw on write failure
 
-		if (!counter.Save(infile))
-			return false;
-		if (!hist_second.Save(infile))
-			return false;
-		if (!hist_minute.Save(infile))
-			return false;
-		if (!hist_hour.Save(infile))
-			return false;
-		if (!hist_day.Save(infile))
-			return false;
-
-		if (!ships.Save(infile))
+		if (!states[0]->save(infile))
 			return false;
 
 		infile.close();
@@ -286,13 +276,9 @@ bool WebViewer::Save()
 
 void WebViewer::Clear()
 {
-	counter.Clear();
-	counter_session.Clear();
-
-	hist_second.Clear();
-	hist_minute.Clear();
-	hist_hour.Clear();
-	hist_day.Clear();
+	if (states.empty())
+		return;
+	states[0]->clear();
 }
 
 bool WebViewer::Load()
@@ -306,21 +292,10 @@ bool WebViewer::Load()
 	{
 		std::ifstream infile(backup_filename, std::ios::binary);
 
-		if (!counter.Load(infile))
-			return false;
-		if (!hist_second.Load(infile))
-			return false;
-		if (!hist_minute.Load(infile))
-			return false;
-		if (!hist_hour.Load(infile))
-			return false;
-		if (!hist_day.Load(infile))
-			return false;
-		// Load ship database if available
-		if (infile.peek() != EOF)
+		if (!states[0]->load(infile))
 		{
-			if (!ships.Load(infile))
-				Warning() << "Server: Could not load ship database from backup";
+			Warning() << "Server: Could not load statistics from backup";
+			return false;
 		}
 
 		infile.close();
@@ -415,68 +390,278 @@ void WebViewer::BackupService()
 	Info() << "Server: stopping backup service.";
 }
 
-void WebViewer::connect(Receiver &r)
+void ReceiverState::applyConfig(float lat, float lon, bool latlon_share, bool server_mode,
+								bool msg_save, bool use_GPS, uint32_t own_mmsi,
+								int time_history, int cutoff, const AIS::Filter &f)
 {
-	bool rec_details = false;
-	const std::string newline = "<br>";
-	for (int j = 0; j < r.Count(); j++)
-		if (r.Output(j).canConnect(groups_in))
-		{
-			if (!rec_details)
-			{
-				auto *device = r.getDeviceManager().getDevice();
-
-				sample_rate += device->getRateDescription() + "<br>";
-
-				JSON::StringBuilder::stringify(device->getProduct(), product, false);
-				JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vendor, false);
-				JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), serial, false);
-				product += newline;
-				vendor += newline;
-				serial += newline;
-
-				rec_details = true;
-			}
-			model += r.Model(j)->getName() + newline;
-
-			r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&ships);
-			r.OutputGPS(j).Connect((StreamIn<AIS::GPS> *)&ships);
-			r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
-
-			*r.getDeviceManager().getDevice() >> raw_counter;
-		}
+	ships.setLat(lat);
+	ships.setLon(lon);
+	ships.setShareLatLon(latlon_share);
+	ships.setServerMode(server_mode);
+	ships.setMsgSave(msg_save);
+	ships.setUseGPS(use_GPS);
+	ships.setOwnMMSI(own_mmsi);
+	ships.setTimeHistory(time_history);
+	ships.setFilter(f);
+	hist_second.setCutoff(cutoff);
+	hist_minute.setCutoff(cutoff);
+	hist_hour.setCutoff(cutoff);
+	hist_day.setCutoff(cutoff);
+	counter.setCutOff(cutoff);
+	counter_session.setCutOff(cutoff);
 }
 
-void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Device &device)
+void ReceiverState::setup()
 {
-	if (m.Output().out.canConnect(groups_in))
-	{
-
-		json.Connect((StreamIn<JSON::JSON> *)&ships);
-		device >> raw_counter;
-
-		sample_rate = device.getRateDescription();
-		setDeviceDescription(device.getProduct(), device.getVendor().empty() ? "-" : device.getVendor(), device.getSerial().empty() ? "-" : device.getSerial());
-		model = m.getName();
-	}
+	ships.setup();
 }
 
-void WebViewer::Reset()
+void ReceiverState::wireStreams()
+{
+	ships >> hist_day;
+	ships >> hist_hour;
+	ships >> hist_minute;
+	ships >> hist_second;
+	ships >> counter;
+	ships >> counter_session;
+}
+
+void ReceiverState::clear()
+{
+	counter.Clear();
+	counter_session.Clear();
+	hist_second.Clear();
+	hist_minute.Clear();
+	hist_hour.Clear();
+	hist_day.Clear();
+}
+
+void ReceiverState::reset()
 {
 	counter_session.Clear();
 	hist_second.Clear();
 	hist_minute.Clear();
 	hist_hour.Clear();
 	hist_day.Clear();
-
-	raw_counter.Reset();
 	ships.setup();
+}
+
+bool ReceiverState::save(std::ofstream &f)
+{
+	if (!counter.Save(f))
+		return false;
+	if (!hist_second.Save(f))
+		return false;
+	if (!hist_minute.Save(f))
+		return false;
+	if (!hist_hour.Save(f))
+		return false;
+	if (!hist_day.Save(f))
+		return false;
+	if (!ships.Save(f))
+		return false;
+	return true;
+}
+
+bool ReceiverState::load(std::ifstream &f)
+{
+	if (!counter.Load(f))
+		return false;
+	if (!hist_second.Load(f))
+		return false;
+	if (!hist_minute.Load(f))
+		return false;
+	if (!hist_hour.Load(f))
+		return false;
+	if (!hist_day.Load(f))
+		return false;
+	if (f.peek() != EOF)
+		if (!ships.Load(f))
+			return false;
+	return true;
+}
+
+std::string ReceiverState::toHistoryJSON()
+{
+	std::string j = "{";
+	j += "\"second\":" + hist_second.toJSON();
+	j += ",\"minute\":" + hist_minute.toJSON();
+	j += ",\"hour\":" + hist_hour.toJSON();
+	j += ",\"day\":" + hist_day.toJSON();
+	j += "}";
+	return j;
+}
+
+std::string ReceiverState::toCountersJSON()
+{
+	std::string j;
+	j += "\"total\":" + counter.toJSON() + ",";
+	j += "\"session\":" + counter_session.toJSON() + ",";
+	j += "\"last_day\":" + hist_day.lastStatToJSON() + ",";
+	j += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
+	j += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
+	j += "\"msg_rate\":" + std::to_string(hist_second.getAverage()) + ",";
+	j += "\"vessel_count\":" + std::to_string(ships.getCount()) + ",";
+	j += "\"vessel_max\":" + std::to_string(ships.getMaxCount());
+	return j;
+}
+
+void ReceiverState::setDevice(Device::Device *device)
+{
+	JSON::StringBuilder::stringify(device->getProduct(), product, false);
+	JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vendor, false);
+	JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), serial, false);
+	sample_rate = device->getRateDescription();
+
+	if (serial == ".")
+		label = "Console";
+	else
+	{
+		label = device->getProduct();
+		if (serial != "-")
+			label += " " + serial;
+	}
+}
+
+void ReceiverState::appendDevice(Device::Device *device, const std::string &newline)
+{
+	std::string prod, vnd, ser;
+	JSON::StringBuilder::stringify(device->getProduct(), prod, false);
+	JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vnd, false);
+	JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), ser, false);
+
+	product += prod + newline;
+	vendor += vnd + newline;
+	serial += ser + newline;
+	sample_rate += device->getRateDescription() + newline;
+}
+
+int WebViewer::parseReceiver(const std::string &query)
+{
+	auto pos = query.find("receiver=");
+	if (pos == std::string::npos)
+		return 0;
+	try
+	{
+		return std::stoi(query.substr(pos + 9));
+	}
+	catch (...)
+	{
+		return 0;
+	}
+}
+
+ReceiverState *WebViewer::getState(int idx)
+{
+	if (states.empty())
+		return nullptr;
+	if (idx < 0 || idx >= (int)states.size())
+		return states[0].get();
+	return states[idx].get();
+}
+
+void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
+{
+	const std::string newline = "<br>";
+
+	bool multi = receivers.size() > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
+
+	states.push_back(std::unique_ptr<ReceiverState>(new ReceiverState()));
+	states[0]->label = "All";
+
+	for (int k = 0; k < (int)receivers.size(); k++)
+	{
+		Receiver &r = *receivers[k];
+		ReceiverState *per = nullptr;
+
+		if (multi)
+		{
+			states.push_back(std::unique_ptr<ReceiverState>(new ReceiverState()));
+			per = states.back().get();
+		}
+
+		bool rec_details = false;
+		for (int j = 0; j < r.Count(); j++)
+		{
+			if (r.Output(j).canConnect(groups_in))
+			{
+				if (!rec_details)
+				{
+					auto *device = r.getDeviceManager().getDevice();
+
+					if (per)
+						per->setDevice(device);
+
+					states[0]->appendDevice(device, newline);
+				}
+
+				states[0]->model_name += r.Model(j)->getName() + newline;
+				if (per)
+					per->model_name += r.Model(j)->getName() + newline;
+
+				states[0]->connectJSON(r.OutputJSON(j));
+				if (per)
+					per->connectJSON(r.OutputJSON(j));
+
+				states[0]->connectGPS(r.OutputGPS(j));
+				r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
+
+				*r.getDeviceManager().getDevice() >> raw_counter;
+			}
+		}
+	}
+
+	for (auto &s : states)
+		s->applyConfig(cfg_lat, cfg_lon, cfg_latlon_share, cfg_server_mode,
+					   cfg_msg_save, cfg_use_GPS, cfg_own_mmsi,
+					   cfg_time_history, cfg_cutoff, filter);
+
+	if (states.size() > 1)
+	{
+		Info() << "Server: tracking " << states.size() - 1 << " receiver(s) with separate states:";
+		for (int i = 0; i < (int)states.size(); i++)
+			Info() << "  [" << i << "] " << states[i]->label;
+	}
+}
+
+void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Device &device)
+{
+	if (m.Output().out.canConnect(groups_in))
+	{
+		if (states.empty())
+		{
+			states.push_back(std::unique_ptr<ReceiverState>(new ReceiverState()));
+			states[0]->label = "All";
+			states[0]->applyConfig(cfg_lat, cfg_lon, cfg_latlon_share, cfg_server_mode,
+								   cfg_msg_save, cfg_use_GPS, cfg_own_mmsi,
+								   cfg_time_history, cfg_cutoff, filter);
+		}
+
+		states[0]->connectJSON(json);
+		device >> raw_counter;
+
+		states[0]->sample_rate = device.getRateDescription();
+		JSON::StringBuilder::stringify(device.getProduct(), states[0]->product, false);
+		JSON::StringBuilder::stringify(device.getVendor().empty() ? "-" : device.getVendor(), states[0]->vendor, false);
+		JSON::StringBuilder::stringify(device.getSerial().empty() ? "-" : device.getSerial(), states[0]->serial, false);
+		states[0]->model_name = m.getName();
+	}
+}
+
+void WebViewer::Reset()
+{
+	for (auto &s : states)
+	{
+		s->reset();
+	}
+	raw_counter.Reset();
 	time_start = time(nullptr);
 }
 
 void WebViewer::start()
 {
-	ships.setup();
+	for (auto &s : states)
+		s->setup();
 
 	if (backup_filename.empty())
 		Clear();
@@ -488,7 +673,8 @@ void WebViewer::start()
 
 	if (realtime)
 	{
-		ships >> sse_streamer;
+		if (!states.empty())
+			states[0]->connectSink(sse_streamer);
 		sse_streamer.setSSE(this);
 	}
 
@@ -498,16 +684,13 @@ void WebViewer::start()
 		logger.Start();
 	}
 
-	ships >> hist_day;
-	ships >> hist_hour;
-	ships >> hist_minute;
-	ships >> hist_second;
+	for (auto &s : states)
+	{
+		s->wireStreams();
+	}
 
-	ships >> counter;
-	ships >> counter_session;
-
-	if (supportPrometheus)
-		ships >> dataPrometheus;
+	if (supportPrometheus && !states.empty())
+		states[0]->connectSink(dataPrometheus);
 
 	if (firstport && lastport)
 	{
@@ -524,6 +707,25 @@ void WebViewer::start()
 		throw std::runtime_error("HTML server ports not specified");
 
 	time_start = time(nullptr);
+
+	// Embed static receiver list into plugins.js
+	if (states.size() > 1)
+	{
+		params += "var server_receivers = [";
+		for (int i = 0; i < (int)states.size(); i++)
+		{
+			if (i)
+				params += ",";
+			params += "{\"idx\":" + std::to_string(i) + ",\"label\":";
+			JSON::StringBuilder::stringify(states[i]->label, params);
+			params += "}";
+		}
+		params += "];\n";
+	}
+	else
+	{
+		params += "var server_receivers = null;\n";
+	}
 
 	run = true;
 
@@ -638,7 +840,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/kml" && KML)
 	{
-		std::string content = ships.getKML();
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getKML() : "";
 		Response(c, "application/vnd.google-earth.kml+xml", content, use_zlib & gzip);
 	}
 	else if (r == "/metrics")
@@ -652,31 +855,33 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/stat.json" || r == "/stat.json")
 	{
+		ReceiverState *s = getState(parseReceiver(a));
+		if (!s)
+		{
+			Response(c, "application/json", "{}", use_zlib & gzip);
+			return;
+		}
 
 		std::string content;
 
-		content += "{\"total\":" + counter.toJSON() + ",";
-		content += "\"session\":" + counter_session.toJSON() + ",";
-		content += "\"last_day\":" + hist_day.lastStatToJSON() + ",";
-		content += "\"last_hour\":" + hist_hour.lastStatToJSON() + ",";
-		content += "\"last_minute\":" + hist_minute.lastStatToJSON() + ",";
+		content += "{" + s->toCountersJSON() + ",";
 		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
 		content += "\"sharing\":" + std::string(commm_feed ? "true" : "false") + ",";
-		if (ships.getShareLatLon() && ships.getLat() != LAT_UNDEFINED && ships.getLon() != LON_UNDEFINED)
-			content += "\"sharing_link\":\"https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(ships.getLat()) + "&lon=" + std::to_string(ships.getLon()) + "\",";
+		if (cfg_latlon_share && cfg_lat != LAT_UNDEFINED && cfg_lon != LON_UNDEFINED)
+			content += "\"sharing_link\":\"https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(cfg_lat) + "&lon=" + std::to_string(cfg_lon) + "\",";
 		else
 			content += "\"sharing_link\":\"https://www.aiscatcher.org\",";
 
 		content += "\"station\":" + station + ",";
 		content += "\"station_link\":" + station_link + ",";
-		content += "\"sample_rate\":\"" + sample_rate + "\",";
-		content += "\"msg_rate\":" + std::to_string(hist_second.getAverage()) + ",";
-		content += "\"vessel_count\":" + std::to_string(ships.getCount()) + ",";
-		content += "\"vessel_max\":" + std::to_string(ships.getMaxCount()) + ",";
-		content += "\"product\":\"" + product + "\",";
-		content += "\"vendor\":\"" + vendor + "\",";
-		content += "\"serial\":\"" + serial + "\",";
-		content += "\"model\":\"" + model + "\",";
+		content += "\"sample_rate\":\"" + s->sample_rate + "\",";
+		content += "\"msg_rate\":" + std::to_string(s->getMsgRate()) + ",";
+		content += "\"vessel_count\":" + std::to_string(s->getCount()) + ",";
+		content += "\"vessel_max\":" + std::to_string(s->getMaxCount()) + ",";
+		content += "\"product\":\"" + s->product + "\",";
+		content += "\"vendor\":\"" + s->vendor + "\",";
+		content += "\"serial\":\"" + s->serial + "\",";
+		content += "\"model\":\"" + s->model_name + "\",";
 		content += "\"build_date\":\"" + std::string(__DATE__) + "\",";
 		content += "\"build_version\":\"" + std::string(VERSION) + "\",";
 		content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",";
@@ -696,20 +901,21 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 				content += o->getJSON();
 				first = false;
 			}
-		}		
-		
-		content += "],\"received\":" + std::to_string(raw_counter.received ) + "}";
+		}
+		content += "],\"received\":" + std::to_string(raw_counter.received) + "}";
 
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/ships.json" || r == "/ships.json")
 	{
-		std::string content = ships.getJSON();
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getShipsJSON() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/ships_array.json")
 	{
-		std::string content = ships.getJSONcompact();
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getShipsJSONcompact() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/planes_array.json")
@@ -717,15 +923,10 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		std::string content = planes.getCompactArray();
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
-	else if (r == "/sb")
-	{
-		binary.clear();
-		ships.getBinary(binary);
-		Response(c, "application/octet-stream", binary.data(), binary.size(), use_zlib & gzip);
-	}
 	else if (r == "/api/ships_full.json")
 	{
-		std::string content = ships.getJSON(true);
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getShipsJSON(true) : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/sse" && realtime)
@@ -747,7 +948,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/binmsgs.json")
 	{
-		std::string content = ships.getBinaryMessagesJSON();
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getBinaryMessagesJSON() : "[]";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/custom/plugins.js")
@@ -764,6 +966,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/path.json")
 	{
+		ReceiverState *s = getState(parseReceiver(a));
 		std::stringstream ss(a);
 		std::string mmsi_str;
 		std::string content = "{";
@@ -785,7 +988,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 				{
 					if (content.length() > 1)
 						content += ",";
-					content += "\"" + std::to_string(mmsi) + "\":" + ships.getPathJSON(mmsi);
+					content += "\"" + std::to_string(mmsi) + "\":" + (s ? s->getPathJSON(mmsi) : "{}");
 				}
 			}
 			catch (const std::invalid_argument &)
@@ -802,8 +1005,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/allpath.json")
 	{
-
-		std::string content = ships.getAllPathJSON();
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getAllPathJSON() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/path.geojson")
@@ -818,7 +1021,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 				int mmsi = std::stoi(mmsi_str);
 				if (mmsi >= 1 && mmsi <= 999999999)
 				{
-					std::string content = ships.getPathGeoJSON(mmsi);
+					ReceiverState *s = getState(parseReceiver(a));
+					std::string content = s ? s->getPathGeoJSON(mmsi) : "{}";
 					Response(c, "application/json", content, use_zlib & gzip);
 				}
 				else
@@ -842,19 +1046,16 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 			Response(c, "application/json", "{\"error\":\"No MMSI provided\"}", use_zlib & gzip);
 		}
 	}
-	else if (r == "/api/allpath.geojson")
+	else if (r == "/api/allpath.geojson" || (r == "/allpath.geojson" && GeoJSON))
 	{
-		std::string content = ships.getAllPathGeoJSON();
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getAllPathGeoJSON() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/geojson" && GeoJSON)
 	{
-		std::string content = ships.getGeoJSON();
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/allpath.geojson" && GeoJSON)
-	{
-		std::string content = ships.getAllPathGeoJSON();
+		ReceiverState *s = getState(parseReceiver(a));
+		std::string content = s ? s->getGeoJSON() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/message")
@@ -863,7 +1064,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		std::stringstream ss(a);
 		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
 		{
-			std::string content = ships.getMessage(mmsi);
+			ReceiverState *s = getState(parseReceiver(a));
+			std::string content = s ? s->getMessage(mmsi) : "";
 			Response(c, "application/text", content, use_zlib & gzip);
 		}
 		else
@@ -906,7 +1108,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		int mmsi;
 		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
 		{
-			std::string content = ships.getShipJSON(mmsi);
+			ReceiverState *s = getState(parseReceiver(a));
+			std::string content = s ? s->getShipJSON(mmsi) : "{}";
 			Response(c, "application/text", content, use_zlib & gzip);
 		}
 		else
@@ -916,17 +1119,14 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/history_full.json")
 	{
+		ReceiverState *s = getState(parseReceiver(a));
+		if (!s)
+		{
+			Response(c, "application/json", "{}", use_zlib & gzip);
+			return;
+		}
 
-		std::string content = "{";
-		content += "\"second\":";
-		content += hist_second.toJSON();
-		content += ",\"minute\":";
-		content += hist_minute.toJSON();
-		content += ",\"hour\":";
-		content += hist_hour.toJSON();
-		content += ",\"day\":";
-		content += hist_day.toJSON();
-		content += "}\n\n";
+		std::string content = s->toHistoryJSON() + "\n\n";
 
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
@@ -988,8 +1188,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "SERVER_MODE")
 	{
-		bool b = Util::Parse::Switch(arg);
-		ships.setServerMode(b);
+		cfg_server_mode = Util::Parse::Switch(arg);
 	}
 	else if (option == "ZLIB")
 	{
@@ -1027,25 +1226,18 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "LAT")
 	{
-		ships.setLat(Util::Parse::Float(arg));
-		planes.setLat(Util::Parse::Float(arg));
+		cfg_lat = Util::Parse::Float(arg);
+		planes.setLat(cfg_lat);
 	}
 	else if (option == "CUTOFF")
 	{
-		int cutoff = Util::Parse::Integer(arg, 0, 10000, option);
-		hist_minute.setCutoff(cutoff);
-		hist_second.setCutoff(cutoff);
-		hist_hour.setCutoff(cutoff);
-		hist_day.setCutoff(cutoff);
-		dataPrometheus.setCutOff(cutoff);
-		counter.setCutOff(cutoff);
-		counter_session.setCutOff(cutoff);
+		cfg_cutoff = Util::Parse::Integer(arg, 0, 10000, option);
+		dataPrometheus.setCutOff(cfg_cutoff);
 	}
 	else if (option == "SHARE_LOC")
 	{
-		bool b = Util::Parse::Switch(arg);
-		ships.setShareLatLon(b);
-		plugins += "param_share_loc=" + (b ? std::string("true;\n") : std::string("false;\n"));
+		cfg_latlon_share = Util::Parse::Switch(arg);
+		plugins += "param_share_loc=" + (cfg_latlon_share ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "IP_BIND")
 	{
@@ -1057,18 +1249,17 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "MESSAGE" || option == "MSG")
 	{
-		bool b = Util::Parse::Switch(arg);
-		ships.setMsgSave(b);
-		plugins += "message_save=" + (b ? std::string("true;\n") : std::string("false;\n"));
+		cfg_msg_save = Util::Parse::Switch(arg);
+		plugins += "message_save=" + (cfg_msg_save ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "LON")
 	{
-		ships.setLon(Util::Parse::Float(arg));
-		planes.setLon(Util::Parse::Float(arg));
+		cfg_lon = Util::Parse::Float(arg);
+		planes.setLon(cfg_lon);
 	}
 	else if (option == "USE_GPS")
 	{
-		ships.setUseGPS(Util::Parse::Switch(arg));
+		cfg_use_GPS = Util::Parse::Switch(arg);
 	}
 	else if (option == "KML")
 	{
@@ -1080,11 +1271,11 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "OWN_MMSI")
 	{
-		ships.setOwnMMSI(Util::Parse::Integer(arg, 0, 999999999, option));
+		cfg_own_mmsi = Util::Parse::Integer(arg, 0, 999999999, option);
 	}
 	else if (option == "HISTORY")
 	{
-		ships.setTimeHistory(Util::Parse::Integer(arg, 5, 12 * 3600, option));
+		cfg_time_history = Util::Parse::Integer(arg, 5, 12 * 3600, option);
 	}
 	else if (option == "FILE")
 	{
@@ -1197,7 +1388,6 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else
 	{
-		ships.setFilterOption(option, arg);
 		raw_counter.setFilterOption(option, arg);
 	}
 

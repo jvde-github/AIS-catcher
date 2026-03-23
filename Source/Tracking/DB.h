@@ -145,7 +145,6 @@ public:
 		}
 	}
 
-	void getBinary(std::vector<char> &);
 	std::string getShipJSON(int mmsi);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false);
@@ -163,6 +162,7 @@ public:
 	void setServerMode(bool b) { server_mode = b; }
 	void setMsgSave(bool b) { msg_save = b; }
 	void setFilterOption(std::string &opt, std::string &arg) { filter.SetOption(opt, arg); }
+	void setFilter(const AIS::Filter &f) { filter = f; }
 
 	std::string getBinaryMessagesJSON() const;
 

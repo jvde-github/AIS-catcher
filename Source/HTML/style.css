@@ -189,6 +189,7 @@ a:focus {
     display: flex;
     justify-content: stretch;
     color: white;
+    position: relative;
 }
 
 .header-title {
@@ -198,6 +199,7 @@ a:focus {
     border-bottom-right-radius: 25% 50%;
     display: flex;
     flex-direction: row;
+    padding-right: 14px;
 }
 
 .header-title span {
@@ -253,9 +255,7 @@ a:focus {
     color: var(--secondary-color);
 }
 
-.header-icon,
-.header-pulse-ok,
-.header-pulse-error {
+.header-icon {
     width: 35px;
     border-radius: 50%;
     display: flex;
@@ -266,12 +266,37 @@ a:focus {
     line-height: 15px;
 }
 
-.header-pulse-ok {
-    color: var(--ok-color);
+.receiver-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--menu-background-color);
+    border: 1px solid var(--menu-divider-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    z-index: 10010;
+    min-width: 140px;
+    padding: 4px 0;
+    white-space: nowrap;
 }
 
-.header-pulse-error {
-    color: var(--error-color);
+.receiver-dropdown-item {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--menu-font-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.receiver-dropdown-item:hover {
+    background: var(--menu-background-hover-color);
+}
+
+.receiver-dropdown-item.active {
+    color: var(--primary-color);
+    font-weight: 600;
 }
 
 .pulsating {
@@ -293,6 +318,10 @@ a:focus {
 .header-icon:hover {
     cursor: pointer;
     transform: var(--hover-transform);
+}
+
+.header-icon.active {
+    color: var(--ok-color);
 }
 
 .header-menubutton {
@@ -2455,7 +2484,7 @@ td {
     top: 55px;
     right: 0px;
     position: fixed;
-    z-index: 10003;
+    z-index: 9999;
     border: 1px solid var(--settings-header-bg-color);
     padding: 0px;
     margin: 0px;
@@ -2478,7 +2507,7 @@ td {
     top: 55px;
     left: 0px;
     position: fixed;
-    z-index: 10003;
+    z-index: 9999;
     border: 1px solid var(--settings-header-bg-color);
     border-radius: 5px;
     padding: 0px;
@@ -2525,9 +2554,16 @@ td {
     background-color: var(--settings-header-bg-color);
     display: flex;
     align-items: center;
-    padding-left: 15px;
+    padding: 6px 10px;
     border-radius: 0px;
     font-size: 16px;
+}
+
+.settings_header .search-box {
+    font-size: 12px;
+    height: auto;
+    padding: 5px 10px;
+    margin: 0;
 }
 
 .settings_header div:nth-child(n + 3) {
@@ -2545,6 +2581,13 @@ td {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
+    padding-left: 12px;
+    padding-right: 8px;
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: 100%;
+    overflow: visible;
 }
 
 .search-box {
@@ -2552,7 +2595,6 @@ td {
     height: 28px;
     padding: 5px 10px;
     margin: 2px;
-    font-size: 16px;
     border-radius: 15px;
     border: solid 1px var(--menu-font-color);
     color: var(--menu-font-color);
@@ -2567,34 +2609,42 @@ td {
 .ship-table-column-controls {
     display: flex;
     align-items: center;
+    gap: 0;
+    border: 1px solid var(--menu-border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .ship-table-column-dropdown {
     position: relative;
-    margin-right: 10px;
 }
 
 .ship-table-column-dropdown-toggle {
-    padding: 10px;
+    padding: 4px 6px;
     font-size: 16px;
     color: var(--menu-font-color);
     background-color: var(--menu-background-color);
     cursor: pointer;
     border: none;
+    border-right: 1px solid var(--menu-border-color);
+    display: flex;
+    align-items: center;
 }
 
 .ship-table-column-dropdown-menu {
     display: none;
-    position: absolute;
-    right: 0;
+    position: fixed;
     background-color: var(--menu-background-color);
     color: var(--menu-font-color);
+    font-size: 0.8em;
     min-width: 200px;
-    max-height: 200px;
+    max-height: 300px;
     overflow-y: auto;
     box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
     padding: 12px;
-    z-index: 1;
+    z-index: 9999;
 }
 
 .ship-table-column-dropdown-item {
@@ -2612,12 +2662,14 @@ td {
 }
 
 .ship-table-column-reset {
-    padding: 10px;
+    padding: 4px 6px;
     font-size: 16px;
     color: var(--menu-font-color);
     background-color: var(--menu-background-color);
     cursor: pointer;
     border: none;
+    display: flex;
+    align-items: center;
 }
 
 .info-panel {
@@ -2911,6 +2963,20 @@ td {
     height: 1em;
     background-color: currentColor;
     --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M440-160q-17 0-28.5-11.5T400-200v-240L161-745q-14-17-4-36t31-19h584q21 0 31 19t-4 36L560-440v240q0 17-11.5 28.5T520-160h-80Z"/%3E%3C/svg%3E');
+    -webkit-mask-image: var(--svg);
+    mask-image: var(--svg);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+}
+
+.radio_icon {
+    display: block;
+    width: 1em;
+    height: 1em;
+    background-color: currentColor;
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"%3E%3Cpath d="M160-80q-33 0-56.5-23.5T80-160v-480q0-25 13.5-45t36.5-29l506-206 26 66-330 134h468q33 0 56.5 23.5T880-640v480q0 33-23.5 56.5T800-80H160Zm0-80h640v-280H160v280Zm231-69q29-29 29-71t-29-71q-29-29-71-29t-71 29q-29 29-29 71t29 71q29 29 71 29t71-29ZM160-520h480v-80h80v80h80v-120H160v120Zm0 360v-280 280Z"/%3E%3C/svg%3E');
     -webkit-mask-image: var(--svg);
     mask-image: var(--svg);
     -webkit-mask-repeat: no-repeat;

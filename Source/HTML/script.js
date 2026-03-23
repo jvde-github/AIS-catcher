@@ -1,5 +1,6 @@
 
 var interval,
+    activeReceiver = 0,
     paths = {},
     map,
     basemaps = {},
@@ -279,7 +280,6 @@ function applyDefaultSettings() {
     if (isAndroid()) settings.dark_mode = darkmode;
 
     updateSortMarkers();
-    //setLatLonInDMS(settings.latlon_in_dms);
     setDarkMode(settings.dark_mode);
     setMetrics(settings.metric);
     updateMapLayer();
@@ -1863,24 +1863,29 @@ function initMap() {
 
     triggerMapLayer();
 
+    let mapMoving = false;
+
+    map.on('movestart', function () {
+        mapMoving = true;
+        stopHover();
+    });
+
+    map.on('moveend', function (evt) {
+        mapMoving = false;
+        debouncedSaveSettings();
+        debouncedDrawMap();
+        if (communityFeed)
+            debounceUpdateCommunityFeed();
+    });
+
     map.on('pointermove', function (evt) {
-        if (evt.dragging) {
-            stopHover();
-            return;
-        }
+        if (evt.dragging || mapMoving) return;
         const pixel = map.getEventPixel(evt.originalEvent);
         handlePointerMove(pixel, evt.originalEvent.target);
     });
 
     map.on('click', function (evt) {
         handleClick(evt.pixel, evt.originalEvent.target, evt);
-    });
-
-    map.on('moveend', function (evt) {
-        debouncedSaveSettings();
-        debouncedDrawMap();
-        if (communityFeed)
-            debounceUpdateCommunityFeed();
     });
 
 
@@ -2032,7 +2037,7 @@ function ToggleFireworks() {
 
 function StartFireworks() {
     if (evtSourceMap == null) {
-        if (!realtime_enabled) {
+        if (typeof realtime_enabled === "undefined" || !realtime_enabled) {
             showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
             return;
         }
@@ -2207,53 +2212,47 @@ function updateTablecard() {
 
     var filter = document.getElementById('shipSearchSide').value.toLowerCase();
 
+    const rows = [];
     let addedRows = 0;
 
-    for (let i = 0; i < shipKeys.length; i++) {
-        if (addedRows > 100) break;
+    for (let i = 0; i < shipKeys.length && addedRows < 200; i++) {
+        const key = shipKeys[i];
+        if (!(key in shipsDB)) continue;
+        const ship = shipsDB[key].raw;
+        const shipName = String(getShipName(ship) || ship.mmsi);
+        if (filter && !shipName.toLowerCase().includes(filter)) continue;
 
-        let key = shipKeys[i];
-        if (key in shipsDB) {
-            let ship = shipsDB[key].raw;
-            let shipName = String(getShipName(ship) || ship.mmsi);
-            if (!filter || shipName.toLowerCase().includes(filter)) {
-                var row = tableBody.insertRow();
+        const dist = ship.distance ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : "";
+        const distTitle = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "") : "";
+        const spd = ship.speed != null ? getSpeedVal(ship.speed) : "";
+        const spdTitle = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
 
-                row.addEventListener("mouseover", function (e) {
-                    startHover('ship', ship.mmsi);
-                });
-                row.addEventListener("mouseout", function (e) {
-                    stopHover();
-                });
-                row.addEventListener("click", function (e) {
-                    showShipcard('ship', ship.mmsi);
-                });
-                row.addEventListener("contextmenu", function (e) {
-                    showContextMenu(event, ship.mmsi, "ship", ["object", "object-map"]);
-                });
-
-                var cell1 = row.insertCell(0);
-                cell1.innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 16px;")
-
-                var cell2 = row.insertCell(1);
-                cell2.innerText = shipName;
-
-                var cell3 = row.insertCell(2);
-                cell3.innerHTML = ship.distance ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : null
-                cell3.title = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "") : "";
-
-                var cell4 = row.insertCell(3);
-                cell4.innerHTML = ship.speed != null ? getSpeedVal(ship.speed) : "";
-                cell4.title = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
-
-                var cell5 = row.insertCell(4);
-                cell5.innerHTML = getTableShiptype(ship);
-
-                var cell6 = row.insertCell(5);
-                cell6.innerHTML = getDeltaTimeVal(ship.last_signal);
-            }
-        }
+        rows.push(`<tr data-mmsi="${ship.mmsi}">` +
+            `<td>${getFlagStyled(ship.country, "padding:0;margin:0;box-shadow:1px 1px 2px rgba(0,0,0,0.2);font-size:16px;")}</td>` +
+            `<td>${shipName}</td>` +
+            `<td title="${distTitle}">${dist}</td>` +
+            `<td title="${spdTitle}">${spd}</td>` +
+            `<td>${getTableShiptype(ship)}</td>` +
+            `<td>${getDeltaTimeVal(ship.last_signal)}</td>` +
+            `</tr>`);
+        addedRows++;
     }
+
+    tableBody.innerHTML = rows.join('');
+
+    tableBody.onmouseover = function(e) {
+        const tr = e.target.closest('tr[data-mmsi]');
+        if (tr) startHover('ship', parseInt(tr.dataset.mmsi));
+    };
+    tableBody.onmouseout = function(e) { stopHover(); };
+    tableBody.onclick = function(e) {
+        const tr = e.target.closest('tr[data-mmsi]');
+        if (tr) showShipcard('ship', parseInt(tr.dataset.mmsi));
+    };
+    tableBody.oncontextmenu = function(e) {
+        const tr = e.target.closest('tr[data-mmsi]');
+        if (tr) showContextMenu(e, parseInt(tr.dataset.mmsi), "ship", ["object", "object-map"]);
+    };
 }
 
 function flashNumber(id, newValue) {
@@ -2426,15 +2425,15 @@ async function fetchRange(forcefetch = false) {
     range_update_time = now;
 
     try {
-        response = await fetch("api/history_full.json");
+        response = await fetch("api/history_full.json?receiver=" + activeReceiver);
         h = await response.json();
     } catch (error) {
         settings.show_range = false;
-        setPulseError();
+
         return;
     }
 
-    setPulseOk();
+
 
     range_outline = [];
     range_outline_short = [];
@@ -2630,208 +2629,6 @@ function updateDistanceCircles() {
     }
 }
 
-/*
-let view_offset = 0;
- 
-function readUint8(view) {
-const val = view.getUint8(view_offset);
-view_offset += 1;
-return val;
-}
- 
-function readUint16(view) {
-const val = view.getUint16(view_offset);
-view_offset += 2;
-return val;
-}
- 
-function readUint32(view) {
-const val = view.getUint32(view_offset);
-view_offset += 4;
-return val;
-}
- 
-function readUint64(view) {
-const high = readUint32(view);
-const low = readUint32(view);
-return high * 2 ** 32 + low;
-}
- 
-function readInt8(view) {
-const val = view.getInt8(view_offset);
-view_offset += 1;
-return val;
-}
- 
-function readInt16(view) {
-const val = view.getInt16(view_offset);
-view_offset += 2;
-return val;
-}
- 
-function readInt32(view) {
-const val = view.getInt32(view_offset);
-view_offset += 4;
-return val;
-}
- 
-function readInt64(view) {
-const high = readInt32(view);
-const low = readUint32(view);
-return high * 2 ** 32 + low;
-}
- 
-function readString(view) {
-const length = readUint8(view);
-let str = "";
-for (let i = 0; i < length; i++) {
-    str += String.fromCharCode(readUint8(view));
-}
-return str;
-}
- 
-function readFloat(view) {
-return readInt16(view) / 1000.0;
-}
- 
-function readFloatLow(view) {
-return readInt16(view) / 10.0;
-}
- 
-function readLatLon(view) {
-const lat = readInt32(view) / 6000000.0;
-const lon = readInt32(view) / 6000000.0;
-return { lat, lon };
-}
- 
-function deserialize(view, time) {
-function setNullIf(value, condition) {
-    if (value == condition) return null;
-    return value;
-}
- 
-function setNullIfLess(value, condition) {
-    if (value < condition) return null;
-    return value;
-}
- 
-function setNullIfGreater(value, condition) {
-    if (value > condition) return null;
-    return value;
-}
- 
-// Now, deserialize the Ship structure
-const ship = {};
-ship.mmsi = readUint32(view);
-const latLon = readLatLon(view);
-ship.lat = setNullIfGreater(latLon.lat, 90);
-ship.lon = setNullIfGreater(latLon.lon, 180);
-ship.distance = setNullIfLess(readFloatLow(view), 0);
-ship.bearing = setNullIfLess(readFloatLow(view), 0);
-ship.level = setNullIfGreater(readFloatLow(view), 1023);
-ship.count = readInt16(view);
-ship.ppm = setNullIfGreater(readFloatLow(view), 1023);
- 
-let approx_validated = readInt8(view);
-ship.approx = (approx_validated & 1) == 1;
-ship.validated = (approx_validated >> 1) & (1 == 1);
- 
-ship.heading = setNullIfGreater(readFloatLow(view), 510);
-ship.cog = setNullIfGreater(readFloatLow(view), 359.9);
-ship.speed = setNullIfLess(readFloatLow(view), 0);
-ship.to_bow = setNullIf(readInt16(view), -1);
-ship.to_stern = setNullIf(readInt16(view), -1);
-ship.to_starboard = setNullIf(readInt16(view), -1);
-ship.to_port = setNullIf(readInt16(view), -1);
-ship.last_group = readUint64(view);
-ship.group_mask = readUint64(view);
-ship.shiptype = readInt16(view);
- 
-let shipclass_mmsitype = readUint8(view);
-ship.shipclass = shipclass_mmsitype >> 4;
-ship.mmsi_type = shipclass_mmsitype & 15;
- 
-ship.msg_type = readUint32(view);
-ship.channels = readInt8(view);
-ship.country = String.fromCharCode(readInt8(view), readInt8(view));
-ship.status = readInt8(view);
-ship.draught = setNullIfLess(readFloatLow(view), 0);
- 
-ship.eta_month = setNullIf(readInt8(view), 0);
-ship.eta_day = setNullIf(readInt8(view), 0);
-ship.eta_hour = setNullIf(readInt8(view), 24);
-ship.eta_minute = setNullIf(readInt8(view), 60);
- 
-ship.imo = setNullIf(readInt32(view), 0);
-ship.callsign = readString(view);
-ship.shipname = readString(view);
-ship.destination = readString(view);
-ship.received = readUint64(view);
-ship.last_signal = time - ship.received;
- 
-return ship;
-}
- 
-async function fetchShipsBinary(noDoubleFetch = true) {
-if (isFetchingShips && noDoubleFetch) {
-    console.log("A fetch operation is already running.");
-    return false;
-}
- 
-let ships = {};
-station = {};
-let arrayBuffer;
- 
-isFetchingShips = true;
-try {
-    response = await fetch("sb");
-    const blob = await response.blob();
-    arrayBuffer = await blob.arrayBuffer();
-} catch (error) {
-    setPulseError();
-    console.log("failed loading ships: " + error);
-    return false;
-} finally {
-    isFetchingShips = false;
-}
- 
-center = {};
- 
-setPulseOk();
- 
-shipsDB2 = {};
-let view = new DataView(arrayBuffer);
-view_offset = 0;
- 
-let time = readUint64(view);
-let count = readInt32(view);
- 
-let hasstation = readInt8(view) == 1;
-if (hasstation) {
-    station = readLatLon(view);
-    let own_mmsi = readUint32(view);
-}
- 
-while (view_offset < view.byteLength) {
-    const ship = deserialize(view, time);
-    if (includeShip(ship)) {
-        const entry = {};
-        entry.raw = ship;
-        shipsDB2[ship.mmsi] = entry;
-    }
-}
- 
-if (String(settings.center_point).toUpperCase() == "STATION") {
-    center = station;
-} else if (settings.center_point in shipsDB) {
-    let ship = shipsDB[settings.center_point].raw;
-    center = { lat: ship.lat, lon: ship.lon };
-}
- 
-return true;
-}
-*/
-
 function sanitizeString(input) {
     const map = {
         '&': '&amp;',
@@ -2856,7 +2653,7 @@ async function fetchBinary() {
     standaloneBinaryMessages = []; // For messages not at ship locations
 
     try {
-        response = await fetch("api/binmsgs.json");
+        response = await fetch("api/binmsgs.json?receiver=" + activeReceiver);
         const messages = await response.json();
 
         // Group messages by MMSI
@@ -2883,10 +2680,10 @@ async function fetchBinary() {
             }
         });
 
-        setPulseOk();
+    
         return true;
     } catch (error) {
-        setPulseError();
+
         console.log("Failed loading binary:", error);
         return false;
     }
@@ -2902,9 +2699,9 @@ async function fetchShips(noDoubleFetch = true) {
 
     isFetchingShips = true;
     try {
-        response = await fetch("api/ships_array.json");
+        response = await fetch("api/ships_array.json?receiver=" + activeReceiver);
     } catch (error) {
-        setPulseError();
+
         console.log("failed loading ships: " + error);
         return false;
     } finally {
@@ -2912,7 +2709,7 @@ async function fetchShips(noDoubleFetch = true) {
     }
     ships = await response.json();
 
-    setPulseOk();
+
 
     const keys = [
         "mmsi",
@@ -2981,14 +2778,6 @@ async function fetchShips(noDoubleFetch = true) {
         s.off_position = (flags >> 26) & 3; // 0=unknown, 1=on position, 2=off position
         s.maneuver = (flags >> 28) & 3; // 0=not available, 1=no special, 2=special
 
-        // Check for discrepancies and show error
-        if (s.validated !== s.validated2) {
-            console.log(`Mismatch in validated: ${s.validated} != ${s.validated2}`);
-        }
-        if (s.channels !== s.channels2) {
-            console.log(`Mismatch in channels: ${s.channels} != ${s.channels2}`);
-        }
-
         if (includeShip(s)) {
             s.shipname = sanitizeString(s.shipname);
             s.callsign = sanitizeString(s.callsign);
@@ -3022,14 +2811,14 @@ async function fetchPlanes() {
     try {
         response = await fetch("api/planes_array.json");
     } catch (error) {
-        setPulseError();
+
         console.log("failed loading planes: " + error);
         return false;
     } finally {
     }
 
     planes = await response.json();
-    setPulseOk();
+
 
     const keys = [
         "hexident",
@@ -3680,10 +3469,11 @@ function initPlots() {
         { varName: "chart_days", id: "chart-days", config: plot_count, clone: true },
         { varName: "chart_ppm", id: "chart-ppm", config: plot_single, clone: true },
         { varName: "chart_ppm_minute", id: "chart-ppm-minute", config: plot_single, clone: true },
-        //{ varName: "chart_level", id: "chart-level", config: plot_level, clone: false },
         { varName: "chart_distance_hour", id: "chart-distance-hour", config: plot_distance, clone: false },
         { varName: "chart_distance_day", id: "chart-distance-day", config: plot_distance, clone: false },
-        { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single, clone: false }
+        { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single, clone: false },
+        { varName: "chart_hour_vessel", id: "chart-vessels-hour", config: plot_single, clone: false },
+        { varName: "chart_day_vessel", id: "chart-vessels-day", config: plot_single, clone: false }
     ];
 
     for (const { varName, id, ctx, config, clone } of chartConfigs) {
@@ -3757,29 +3547,54 @@ function toggleShipcardSize() {
     }
 }
 
-function setPulseOk() {
-    const pulseEl = document.getElementById("pulse-id");
-    pulseEl.className = "header-pulse-ok";
-
-    const logoControl = document.getElementById('aiscatcher-logo-control');
-    if (logoControl) {
-        logoControl.classList.remove('connected', 'disconnected');
-        logoControl.classList.add('connected');
-        logoControl.title = `AIS-catcher - Connected`;
+function updateReceiverSelect(receivers) {
+    const wrap = document.getElementById("receiver-btn-wrap");
+    if (!wrap) return;
+    if (!receivers || receivers.length <= 1) {
+        wrap.style.display = "none";
+        return;
+    }
+    wrap.style.display = "flex";
+    const btn = document.getElementById("receiver-btn");
+    if (btn) btn.classList.toggle("active", activeReceiver !== 0);
+    const dd = document.getElementById("receiver-dropdown");
+    if (!dd) return;
+    if (dd.children.length !== receivers.length) {
+        dd.innerHTML = "";
+        for (const r of receivers) {
+            const item = document.createElement("div");
+            item.className = "receiver-dropdown-item" + (r.idx === activeReceiver ? " active" : "");
+            item.dataset.idx = r.idx;
+            item.textContent = r.label;
+            item.onclick = () => { onReceiverChange(r.idx); closeReceiverDropdown(); };
+            dd.appendChild(item);
+        }
+    } else {
+        for (const item of dd.children) {
+            item.classList.toggle("active", parseInt(item.dataset.idx) === activeReceiver);
+        }
     }
 }
 
-function setPulseError() {
-    const pulseEl = document.getElementById("pulse-id");
-    pulseEl.className = "header-pulse-error";
-
-    const logoControl = document.getElementById('aiscatcher-logo-control');
-    if (logoControl) {
-        logoControl.classList.remove('connected', 'disconnected');
-        logoControl.classList.add('disconnected');
-        logoControl.title = `AIS-catcher - Disconnected`;
-    }
+function toggleReceiverDropdown(event) {
+    event.stopPropagation();
+    const dd = document.getElementById("receiver-dropdown");
+    if (!dd) return;
+    dd.style.display = dd.style.display === "none" ? "block" : "none";
 }
+
+function closeReceiverDropdown() {
+    const dd = document.getElementById("receiver-dropdown");
+    if (dd) dd.style.display = "none";
+}
+
+function onReceiverChange(idx) {
+    activeReceiver = parseInt(idx, 10) || 0;
+    const btn = document.getElementById("receiver-btn");
+    if (btn) btn.classList.toggle("active", activeReceiver !== 0);
+    refresh_data();
+}
+
 
 
 let displayNames;
@@ -3811,13 +3626,13 @@ function getFlagStyled(country, style) {
 // fetches main statistics from the server
 async function fetchStatistics() {
     try {
-        response = await fetch("api/stat.json");
+        response = await fetch("api/stat.json?receiver=" + activeReceiver);
     } catch (error) {
-        setPulseError();
+
         return;
     }
     statistics = await response.json();
-    setPulseOk();
+
     return statistics;
 }
 
@@ -4056,15 +3871,15 @@ async function updatePlots() {
 
     if (true) {
         try {
-            response = await fetch("api/history_full.json");
+            response = await fetch("api/history_full.json?receiver=" + activeReceiver);
         } catch (error) {
-            setPulseError();
+    
         }
         b = await response.json();
     } else {
         b = JSON.parse(chart_json);
     }
-    setPulseOk();
+
 
     updateChartMulti(b, "second", chart_seconds);
     updateChartMulti(b, "minute", chart_minutes);
@@ -4076,7 +3891,8 @@ async function updatePlots() {
     updateChartLevel(b, "minute", "level", chart_level);
     updateChartLevel(b, "hour", "level", chart_level_hour);
     updateChartSingle(b, "minute", "vessels", chart_minute_vessel);
-
+    updateChartSingle(b, "hour", "vessels", chart_hour_vessel);
+    updateChartSingle(b, "day", "vessels", chart_day_vessel);
     //plot_radar.options.ticks.scale.max = 200;
     updateChartDistance(b, "hour", chart_distance_hour);
     updateChartDistance(b, "day", chart_distance_day);
@@ -4146,7 +3962,8 @@ async function updateShipTable() {
                 row.getElement().style.borderLeft = `10px solid ${borderColor}`;
             },
             data: data,
-            persistence: true,
+            layout: "fitDataTable",
+            persistence: { sort: true },
             pagination: "local",
             paginationSize: 50,
             rowHeight: 37,
@@ -4399,20 +4216,10 @@ async function updateShipTable() {
                 setShipTableColumns();
                 tableFirstTime = false;
             }
-
-            populateShipTableColumnVisibilityMenu();
         });
     } else {
-        if (data.length == 0) {
-            table.clearData();
-            return;
-        }
-        table.updateOrAddData(data);
-        table.getRows().forEach((row) => {
-            const mmsi = row.getData().mmsi;
-            if (!(mmsi in shipsDB)) row.delete();
-        });
         var sorters = table.getSorters();
+        table.replaceData(data);
         table.setSort(sorters);
     }
 }
@@ -4479,12 +4286,21 @@ function setShipTableColumns() {
     populateShipTableColumnVisibilityMenu();
 }
 
-document.getElementById("shipTableColumnDropdownToggle").addEventListener("click", populateShipTableColumnVisibilityMenu);
 const dropdownToggle = document.getElementById('shipTableColumnDropdownToggle');
 const dropdownMenu = document.getElementById('shipTableColumnVisibilityMenu');
+document.body.appendChild(dropdownMenu);
 
 function toggleDropdown() {
-    dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+    const isOpen = dropdownMenu.style.display === 'block';
+    if (isOpen) {
+        dropdownMenu.style.display = 'none';
+        return;
+    }
+    if (table) populateShipTableColumnVisibilityMenu();
+    const rect = dropdownToggle.getBoundingClientRect();
+    dropdownMenu.style.top = (rect.bottom + window.scrollY) + 'px';
+    dropdownMenu.style.right = (window.innerWidth - rect.right) + 'px';
+    dropdownMenu.style.display = 'block';
 }
 
 dropdownToggle.addEventListener('click', function (event) {
@@ -4495,6 +4311,10 @@ dropdownToggle.addEventListener('click', function (event) {
 document.addEventListener('click', function (event) {
     if (!dropdownMenu.contains(event.target) && event.target !== dropdownToggle) {
         dropdownMenu.style.display = 'none';
+    }
+    const wrap = document.getElementById('receiver-btn-wrap');
+    if (wrap && !wrap.contains(event.target)) {
+        closeReceiverDropdown();
     }
 });
 
@@ -5136,6 +4956,7 @@ function saveSettings() {
 
     settings.shipcard_max = isShipcardMax();
     settings.shipcard_rows = selectedRows;
+    settings.activeReceiver = activeReceiver;
 
     // Save realtime filter MMSIs and background streaming state
     if (realtimeViewer) {
@@ -5180,6 +5001,7 @@ function loadSettings() {
             return;
         }
     }
+    if (settings.activeReceiver) activeReceiver = settings.activeReceiver;
     if (!shipcardismax()) toggleShipcardSize();
 
     if (settings.shipcard_rows && settings.shipcard_rows.length > 0) {
@@ -5198,7 +5020,6 @@ function loadSettings() {
     }
 
     settings.android = false;
-    // settings.kiosk = false;
 }
 
 function convertStringBooleansToActual() {
@@ -5360,7 +5181,7 @@ async function fetchTracks() {
     if (marker_tracks.size == 0 && show_all_tracks == false) return true;
 
     try {
-        if (show_all_tracks) a = await fetch("api/allpath.json");
+        if (show_all_tracks) a = await fetch("api/allpath.json?receiver=" + activeReceiver);
         else {
 
             for (var mmsi of marker_tracks) {
@@ -5370,7 +5191,7 @@ async function fetchTracks() {
             }
 
             var mmsi_str = Array.from(marker_tracks).join(",");
-            a = await fetch("api/path.json?" + mmsi_str);
+            a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + activeReceiver);
         }
         paths = await a.json();
     } catch (error) {
@@ -6615,13 +6436,11 @@ function redrawMap() {
     drawStation(station);
     updateDistanceCircles();
 
-    //await plotRange();
-
 }
 function updateAllChartColors() {
     const chartsToUpdateMulti = [chart_minutes, chart_hours, chart_days, chart_seconds];
     const chartsToUpdateLevel = [chart_level, chart_level_hour];
-    const chartsToUpdateSingle = [chart_distance_day, chart_distance_hour, chart_ppm, chart_minute_vessel, chart_ppm_minute];
+    const chartsToUpdateSingle = [chart_distance_day, chart_distance_hour, chart_ppm, chart_minute_vessel, chart_ppm_minute, chart_hour_vessel, chart_day_vessel];
     const chartsToUpdateRadar = [chart_radar_day, chart_radar_hour];
 
     chartsToUpdateMulti.forEach((chart) => {
@@ -6727,7 +6546,6 @@ async function openFocus(m, z) {
     if (z) mapResetView(z);
     else mapResetView(14);
 
-    //showTrack(m);
 }
 
 function updateSettingsTab() {
@@ -8168,6 +7986,7 @@ console.log("Plugin loading completed");
 
 console.log("Load settings");
 loadSettings();
+if (typeof server_receivers !== 'undefined') updateReceiverSelect(server_receivers);
 
 console.log("Load settings from URL parameters");
 
