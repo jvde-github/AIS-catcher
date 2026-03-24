@@ -38,6 +38,7 @@ let shipcardIconOffset = 0;
 const plugins_main = [];
 let card_mmsi = null,
     card_type = null;
+    
 // Wrappers so HTML onclick handlers don't reference globals directly
 function cardOpenADSBExchange()        { openADSBExchange(card_mmsi); }
 function cardOpenAIScatcherSite()      { openAIScatcherSite(card_mmsi); }
@@ -64,6 +65,51 @@ function ctxShowShipcard()         { showShipcard('ship', context_mmsi); }
 function ctxShowPlanecard()        { showShipcard('plane', context_mmsi); }
 function ctxShowVesselDetail()     { showVesselDetail(context_mmsi); }
 function ctxToggleTrack()          { toggleTrack(context_mmsi); }
+
+// Wrappers for multi-arg / compound onclick patterns
+function showSettingsMenu(e)      { showContextMenu(e, '', '', ['settings', 'center']); }
+function showMapSettingsMenu(e)   { showContextMenu(e, '', '', ['settings', 'center', 'ctx-map']); }
+function showMainContextMenu(e)   { showContextMenu(e, 0, '', ['settings']); }
+function showChartsContextMenu(e) { showContextMenu(e, '', 'charts', ['settings', 'ctx-charts']); }
+function activateMeasureMode()    { setMeasureMode(); showNotification('Shift+click on start point/object'); }
+function showAboutAndInfo()       { toggleInfoPanel(); showAboutDialog(); }
+function closeShipcard()          { showShipcard(null, null); }
+function toggleSignalGraph()      { toggleGraphVisibility('signal'); }
+function togglePPMGraph()         { toggleGraphVisibility('ppm'); }
+
+// Wrappers for compound / reversed-arg settings handlers
+function applyIconScale(v)           { settings.icon_scale = v; redrawMap(); saveSettings(); }
+function applyMapOpacity(v)          { settings.map_opacity = v; setMapOpacity(); saveSettings(); }
+function applyTrackOnSelect(v)       { settings.show_track_on_select = v; saveSettings(); }
+function applyTrackOnHover(v)        { settings.show_track_on_hover = v; saveSettings(); }
+function applyDistanceCircleColor(v) { removeDistanceCircles(); setMapSetting('distance_circle_color', v); }
+function applyRangeColor(key, val)   { setRangeColor(val, key); }
+
+// Global event dispatchers — HTML uses data-action / data-tab / data-contextaction /
+// data-change [data-arg] / data-input.
+// Capture phase (true) so stopPropagation() in map/library handlers doesn't block us.
+document.addEventListener('click', e => {
+    const el = e.target.closest('[data-action],[data-tab]');
+    if (!el) return;
+    if (el.dataset.tab !== undefined) { activateTab(e, el.dataset.tab); return; }
+    window[el.dataset.action]?.call(el, e);
+}, true);
+document.addEventListener('contextmenu', e => {
+    const el = e.target.closest('[data-contextaction]');
+    if (el) window[el.dataset.contextaction]?.call(el, e);
+}, true);
+document.addEventListener('change', e => {
+    const el = e.target;
+    if (!el.dataset.change) return;
+    const fn = window[el.dataset.change];
+    if (!fn) return;
+    const val = el.type === 'checkbox' ? el.checked : el.value;
+    el.dataset.arg !== undefined ? fn(el.dataset.arg, val) : fn(val);
+}, true);
+document.addEventListener('input', e => {
+    const el = e.target;
+    if (el.dataset.input) window[el.dataset.input]?.(el.value);
+}, true);
 
 const refreshIntervalMs = 2500;
 let range_update_time = null;
@@ -3539,10 +3585,10 @@ function shipcardismax() {
     return document.getElementById("shipcard").classList.contains("shipcard-ismax");
 }
 
-function shipcardselect(e) {
+function shipcardselect() {
     if (shipcardismax()) {
-        e.classList.toggle("shipcard-max-only");
-        e.classList.toggle("shipcard-row-selected");
+        this.classList.toggle("shipcard-max-only");
+        this.classList.toggle("shipcard-row-selected");
     } else toggleShipcardSize();
 
     saveSettings();

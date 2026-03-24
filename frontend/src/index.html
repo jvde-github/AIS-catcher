@@ -18,61 +18,61 @@
 
 <body>
 	<div id="headerbar" class="header noandroid nokiosk">
-		<div onclick="toggleMenu()" class="header-menubutton">
+		<div data-action="toggleMenu" class="header-menubutton">
 			<div class="header-menu-box"><i id="header_menu_button" class="menu_icon"></i></div>
 		</div>
 		<div class="header-title">
-			<span onclick="headerClick()">AIS-catcher</span>
+			<span data-action="headerClick">AIS-catcher</span>
 
 			<div id="menubar_mini" class="showflex">
-				<i id="map_tab_mini" title="Map" onclick="activateTab(event,'map')" class="map_icon"></i>
-				<i id="stat_tab_mini" title="Statistics" onclick="activateTab(event,'stat')"
+				<i id="map_tab_mini" title="Map" data-tab="map" class="map_icon"></i>
+				<i id="stat_tab_mini" title="Statistics" data-tab="stat"
 					class="business_center_icon"></i>
-				<i id="plots_tab_mini" title="Plots" onclick="activateTab(event,'plots')" class="leaderboard_icon"></i>
-				<i id="ships_tab_mini" title="Ships" onclick="activateTab(event,'ships')" class="table_icon"></i>
-				<i id="realtime_tab_mini" title="NMEA realtime" onclick="activateTab(event,'realtime')"
+				<i id="plots_tab_mini" title="Plots" data-tab="plots" class="leaderboard_icon"></i>
+				<i id="ships_tab_mini" title="Ships" data-tab="ships" class="table_icon"></i>
+				<i id="realtime_tab_mini" title="NMEA realtime" data-tab="realtime"
 					class="comment_icon"></i>
-				<i id="log_tab_mini" title="NMEA realtime" onclick="activateTab(event,'log')" class="terminal_icon"></i>
-				<i id="decoder_tab_mini" title="NMEA Decoder" onclick="activateTab(event,'decoder')"
+				<i id="log_tab_mini" title="NMEA realtime" data-tab="log" class="terminal_icon"></i>
+				<i id="decoder_tab_mini" title="NMEA Decoder" data-tab="decoder"
 					class="decode_icon"></i>
-				<i id="about_tab_mini" title="About" onclick="activateTab(event,'about')" class="info_icon"></i>
-				<i id="webcontrol_tab_mini" title="Web Control" onclick="openWebControl()" class="play_circle_icon"></i>
+				<i id="about_tab_mini" title="About" data-tab="about" class="info_icon"></i>
+				<i id="webcontrol_tab_mini" title="Web Control" data-action="openWebControl" class="play_circle_icon"></i>
 			</div>
 		</div>
 
-		<div title="About" onclick="toggleInfoPanel()" class="header-icon">
+		<div title="About" data-action="toggleInfoPanel" class="header-icon">
 			<i class="info_icon small-icon"></i>
 		</div>
 
-		<div title="Settings" onclick="showContextMenu(event, '','', ['settings', 'center'])" class="header-icon">
+		<div title="Settings" data-action="showSettingsMenu" class="header-icon">
 			<i class="settings_icon small-icon"></i>
 		</div>
 
-		<div title="Toggle full screen mode" onclick="toggleScreenSize()" class="header-icon">
+		<div title="Toggle full screen mode" data-action="toggleScreenSize" class="header-icon">
 			<i id="screentoggle-id" class="fullscreen_icon" small-icon></i>
 		</div>
 
 		<div id="receiver-btn-wrap" style="display:none; position:relative; align-items:center;">
-			<div id="receiver-btn" class="header-icon" title="Select receiver" onclick="toggleReceiverDropdown(event)">
+			<div id="receiver-btn" class="header-icon" title="Select receiver" data-action="toggleReceiverDropdown">
 				<i class="radio_icon small-icon"></i>
 			</div>
 			<div id="receiver-dropdown" class="receiver-dropdown" style="display:none"></div>
 		</div>
 	</div>
 	<nav id="menubar" class="nokiosk">
-		<div onclick="activateTab(event,'map')" id="map_tab"><i class="map_icon"></i><span>Map</span></div>
-		<div onclick="activateTab(event,'stat')" id="stat_tab"><i class="business_center_icon"></i><span>Summary</span>
+		<div data-tab="map" id="map_tab"><i class="map_icon"></i><span>Map</span></div>
+		<div data-tab="stat" id="stat_tab"><i class="business_center_icon"></i><span>Summary</span>
 		</div>
-		<div onclick="activateTab(event,'plots')" id="plots_tab"><i class="leaderboard_icon"></i><span>Plots</span>
+		<div data-tab="plots" id="plots_tab"><i class="leaderboard_icon"></i><span>Plots</span>
 		</div>
-		<div onclick="activateTab(event,'ships')" id="ships_tab"><i class="table_icon"></i><span>Ships</span></div>
-		<div onclick="activateTab(event,'realtime')" id="realtime_tab"><i class="comment_icon"></i><span>NMEA</span>
+		<div data-tab="ships" id="ships_tab"><i class="table_icon"></i><span>Ships</span></div>
+		<div data-tab="realtime" id="realtime_tab"><i class="comment_icon"></i><span>NMEA</span>
 		</div>
-		<div onclick="activateTab(event,'log')" id="log_tab"><i class="terminal_icon"></i><span>Log</span></div>
-		<div onclick="activateTab(event,'decoder')" id="decoder_tab"><i class="decode_icon"></i><span>Decoder</span>
+		<div data-tab="log" id="log_tab"><i class="terminal_icon"></i><span>Log</span></div>
+		<div data-tab="decoder" id="decoder_tab"><i class="decode_icon"></i><span>Decoder</span>
 		</div>
-		<div onclick="activateTab(event,'about')" id="about_tab"><i class="info_icon"></i><span>About</span></div>
-		<div onclick="openWebControl()" id="webcontrol_tab"><i class="play_circle_icon"></i><span>Control</span></div>
+		<div data-tab="about" id="about_tab"><i class="info_icon"></i><span>About</span></div>
+		<div data-action="openWebControl" id="webcontrol_tab"><i class="play_circle_icon"></i><span>Control</span></div>
 	</nav>
 
 	<div class="mainspace-container">
@@ -84,18 +84,18 @@
 				<div class="">
 					<input type="text" class="search-box" id="shipSearchSide" placeholder="Search for ships...">
 				</div>
-				<div onclick="hideTablecard()" class="close_icon"></div>
+				<div data-action="hideTablecard" class="close_icon"></div>
 			</div>
 			<div class="settings-bg tablecard_inner addscrollbar">
 				<table class="mytable">
 					<thead>
 						<tr>
-							<th data-column="flag" class="sort-icon" onclick="updateTableSort(event)">Flag</th>
-							<th data-column="shipname" class="sort-icon" onclick="updateTableSort(event)">Name</th>
-							<th data-column="distance" class="sort-icon" onclick="updateTableSort(event)">Dist</th>
-							<th data-column="speed" class="sort-icon" onclick="updateTableSort(event)">Spd</th>
-							<th data-column="type" class="sort-icon" onclick="updateTableSort(event)">Type</th>
-							<th data-column="last_signal" class="sort-icon" onclick="updateTableSort(event)">Last</th>
+							<th data-column="flag" class="sort-icon" data-action="updateTableSort">Flag</th>
+							<th data-column="shipname" class="sort-icon" data-action="updateTableSort">Name</th>
+							<th data-column="distance" class="sort-icon" data-action="updateTableSort">Dist</th>
+							<th data-column="speed" class="sort-icon" data-action="updateTableSort">Spd</th>
+							<th data-column="type" class="sort-icon" data-action="updateTableSort">Type</th>
+							<th data-column="last_signal" class="sort-icon" data-action="updateTableSort">Last</th>
 						</tr>
 					</thead>
 					<tbody class="addscrollbar" id="tablecardBody"></tbody>
@@ -107,23 +107,23 @@
 			<div class="settings_header">
 				<div></div>
 				<div></div>
-				<div onclick="closeSettings()" class="close_icon"></div>
+				<div data-action="closeSettings" class="close_icon"></div>
 			</div>
 			<div class="settings_main stat-panel settings-bg" style="border-radius: 0px;">
 				<header>System</header>
 				<section>
-					<div><span>Settings</span><span style="cursor: pointer" onclick="applyDefaultSettings()"> Reset
+					<div><span>Settings</span><span style="cursor: pointer" data-action="applyDefaultSettings"> Reset
 						</span></div>
 					<div class="noandroid">
 						<span>Dark Mode</span><span>
-							<input type="checkbox" id="settings_darkmode" onchange="setDarkMode(this.checked)" />
+							<input type="checkbox" id="settings_darkmode" data-change="setDarkMode" />
 						</span>
 					</div>
-					<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" onclick="showPlugins()">
+					<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">
 							Show </span></div>
 					<div>
 						<span>Coordinate Format</span><span>
-							<select id="settings_coordinate_format" onchange="setCoordinateFormat(this.value)">
+							<select id="settings_coordinate_format" data-change="setCoordinateFormat">
 								<option value="decimal">Decimal Degrees</option>
 								<option value="ddm">Degrees Decimal Minutes</option>
 								<option value="dms">Degrees Minutes Seconds</option>
@@ -132,7 +132,7 @@
 					</div>
 					<div>
 						<span>Units</span><span>
-							<select id="settings_metric" onchange="setMetrics(this.value)">
+							<select id="settings_metric" data-change="setMetrics">
 								<option value="default">Nautical</option>
 								<option value="metric">Metric</option>
 								<option value="imperial">Imperial</option>
@@ -142,7 +142,7 @@
 					<div>
 						<span>Use Icon in Table</span><span>
 							<input type="checkbox" id="settings_table_shiptype_use_icon"
-								onchange="setTableIcon(this.checked)" />
+								data-change="setTableIcon" />
 						</span>
 					</div>
 				</section>
@@ -151,48 +151,48 @@
 					<div>
 						<span>Show station icon</span><span>
 							<input type="checkbox" id="settings_show_station"
-								onchange="setMapSetting('show_station',this.checked)" />
+								data-change="setMapSetting" data-arg="show_station" />
 						</span>
 					</div>
 					<div>
 						<span id="icon_scale_label">Ship icon size (1.0)</span>
 						<span>
 							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
-								onchange="settings.icon_scale = this.value; redrawMap(); saveSettings();"
-								oninput="updateIconScaleDisplay(this.value)" />
+								data-change="applyIconScale"
+								data-input="updateIconScaleDisplay" />
 						</span>
 					</div>
 					<div>
 						<span id="map_opacity_label">Map dimming (50%)</span>
 						<span>
 							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
-								onchange="settings.map_opacity = this.value; setMapOpacity(); saveSettings();"
-								oninput="updateMapOpacityDisplay(this.value)" />
+								data-change="applyMapOpacity"
+								data-input="updateMapOpacityDisplay" />
 						</span>
 					</div>
 					<div>
 						<span>Fade inactive ships</span><span>
-							<input type="checkbox" id="settings_fading" onchange="setFading(this.checked)" />
+							<input type="checkbox" id="settings_fading" data-change="setFading" />
 						</span>
 					</div>
 					<div>
 						<span>Hover Color</span><span>
 							<input type="color" class="color-picker" id="settings_shiphover_color"
-								onchange="setMapSetting('shiphover_color',this.value)" />
+								data-change="setMapSetting" data-arg="shiphover_color" />
 						</span>
 					</div>
 					<div>
 						<span>Selection Color</span><span>
 							<input type="color" class="color-picker" id="settings_shipselection_color"
-								onchange="setMapSetting('shipselection_color',this.value)" />
+								data-change="setMapSetting" data-arg="shipselection_color" />
 						</span>
 					</div>
 					<div>
 						<span id="circle_scale_label">Selector line width (6.0)</span>
 						<span>
 							<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
-								onchange="setMapSetting('circle_scale',this.value)"
-								oninput="updateCircleScaleDisplay(this.value)" />
+								data-change="setMapSetting" data-arg="circle_scale"
+								data-input="updateCircleScaleDisplay" />
 						</span>
 					</div>
 
@@ -202,7 +202,7 @@
 				<section>
 					<div>
 						<span>Show</span><span>
-							<select id="settings_show_labels" onchange="setMapSetting('show_labels',this.value)">
+							<select id="settings_show_labels" data-change="setMapSetting" data-arg="show_labels">
 								<option value="dynamic">Dynamic</option>
 								<option value="never">Never</option>
 								<option value="always">Always</option>
@@ -213,14 +213,14 @@
 						<span id="tooltip_font_size_label">Font Size (9)</span>
 						<span>
 							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
-								onchange="setMapSetting('tooltipLabelFontSize', this.value)"
-								oninput="updateTooltipFontSizeDisplay(this.value)" />
+								data-change="setMapSetting" data-arg="tooltipLabelFontSize"
+								data-input="updateTooltipFontSizeDisplay" />
 						</span>
 					</div>
 					<div>
 						<span>Declutter</span><span>
 							<input type="checkbox" id="settings_labels_declutter"
-								onchange="setMapSetting('labels_declutter',this.checked)" />
+								data-change="setMapSetting" data-arg="labels_declutter" />
 						</span>
 					</div>
 				</section>
@@ -228,13 +228,13 @@
 					<div>
 						<span>Color</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColor"
-								onchange="setMapSetting('tooltipLabelColor',this.value)" />
+								data-change="setMapSetting" data-arg="tooltipLabelColor" />
 						</span>
 					</div>
 					<div>
 						<span>Shadow Color</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
-								onchange="setMapSetting('tooltipLabelShadowColor',this.value)" />
+								data-change="setMapSetting" data-arg="tooltipLabelShadowColor" />
 						</span>
 					</div>
 				</section>
@@ -242,13 +242,13 @@
 					<div>
 						<span>Color (Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
-								onchange="setMapSetting('tooltipLabelColorDark',this.value)" />
+								data-change="setMapSetting" data-arg="tooltipLabelColorDark" />
 						</span>
 					</div>
 					<div>
 						<span>Shadow Color (Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
-								onchange="setMapSetting('tooltipLabelShadowColorDark',this.value)" />
+								data-change="setMapSetting" data-arg="tooltipLabelShadowColorDark" />
 						</span>
 					</div>
 				</section>
@@ -257,13 +257,13 @@
 					<div>
 						<span>Show signal level graphs</span><span>
 							<input type="checkbox" id="settings_show_signal_graphs"
-								onchange="setGraphVisibility('signal', this.checked)" />
+								data-change="setGraphVisibility" data-arg="signal" />
 						</span>
 					</div>
 					<div>
 						<span>Show frequency shift graphs</span><span>
 							<input type="checkbox" id="settings_show_ppm_graphs"
-								onchange="setGraphVisibility('ppm', this.checked)" />
+								data-change="setGraphVisibility" data-arg="ppm" />
 						</span>
 					</div>
 				</section>
@@ -272,28 +272,28 @@
 					<div>
 						<span>Border Color</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_border"
-								onchange="setMapSetting('shipoutline_border',this.value)" />
+								data-change="setMapSetting" data-arg="shipoutline_border" />
 						</span>
 					</div>
 					<div>
 						<span>Inner Color</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_inner"
-								onchange="setMapSetting('shipoutline_inner',this.value)" />
+								data-change="setMapSetting" data-arg="shipoutline_inner" />
 						</span>
 					</div>
 					<div>
 						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
 						<span>
 							<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
-								onchange="setMapSetting('shipoutline_opacity',this.value)"
-								oninput="updateShipoutlineOpacityDisplay(this.value)" />
+								data-change="setMapSetting" data-arg="shipoutline_opacity"
+								data-input="updateShipoutlineOpacityDisplay" />
 						</span>
 					</div>
 					<div>
 						<span>Ship outline as circle</span>
 						<span>
 							<input type="checkbox" id="settings_show_circle_outline"
-								onchange="setMapSetting('show_circle_outline',this.checked)" />
+								data-change="setMapSetting" data-arg="show_circle_outline" />
 						</span>
 					</div>
 				</section>
@@ -301,13 +301,13 @@
 				<section>
 					<div>
 						<span>Station Range</span><span>
-							<input type="checkbox" id="settings_show_range" onchange="setRangeSwitch(this.checked)" />
+							<input type="checkbox" id="settings_show_range" data-change="setRangeSwitch" />
 						</span>
 					</div>
 					<div>
 						<span>Time Period</span>
 						<span>
-							<select id="settings_range_timeframe" onchange="setRangeTimePeriod(this.value)">
+							<select id="settings_range_timeframe" data-change="setRangeTimePeriod">
 								<option value="24h">Last 24 Hours</option>
 								<option value="7d">Last 7 Days</option>
 								<option value="30d">Last 30 Days</option>
@@ -317,13 +317,13 @@
 					<div>
 						<span>Color</span><span>
 							<input type="color" class="color-picker" id="settings_range_color"
-								onchange="setRangeColor(this.value,'range_color')" />
+								data-change="applyRangeColor" data-arg="range_color" />
 						</span>
 					</div>
 					<div>
 						<span>Color (Short)</span><span>
 							<input type="color" class="color-picker" id="settings_range_color_short"
-								onchange="setRangeColor(this.value,'range_color_short')" />
+								data-change="applyRangeColor" data-arg="range_color_short" />
 						</span>
 					</div>
 				</section>
@@ -331,13 +331,13 @@
 					<div>
 						<span>Color (Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_range_color_dark"
-								onchange="setRangeColor(this.value,'range_color_dark')" />
+								data-change="applyRangeColor" data-arg="range_color_dark" />
 						</span>
 					</div>
 					<div>
 						<span>Color (Short, Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_range_color_dark_short"
-								onchange="setRangeColor(this.value,'range_color_dark_short')" />
+								data-change="applyRangeColor" data-arg="range_color_dark_short" />
 						</span>
 					</div>
 				</section>
@@ -345,13 +345,13 @@
 					<div>
 						<span>Range Rings</span><span>
 							<input type="checkbox" id="settings_distance_circles"
-								onchange="setMapSetting('distance_circles',this.checked)" />
+								data-change="setMapSetting" data-arg="distance_circles" />
 						</span>
 					</div>
 					<div>
 						<span>Color</span><span>
 							<input type="color" class="color-picker" id="settings_distance_circle_color"
-								onchange="removeDistanceCircles(); setMapSetting('distance_circle_color',this.value)" />
+								data-change="applyDistanceCircleColor" />
 						</span>
 					</div>
 				</section>
@@ -361,28 +361,28 @@
 						<span id="track_weight_label">Track Weight (1)</span>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
-								onchange="setMapSetting('track_weight', this.value)"
-								oninput="updateTrackWeightDisplay(this.value)" />
+								data-change="setMapSetting" data-arg="track_weight"
+								data-input="updateTrackWeightDisplay" />
 						</span>
 					</div>
 					<div>
 						<span id="track_trash_threshold_label">Track Dash Threshold (0s)</span>
 						<span>
 							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
-								onchange="setMapSetting('track_trash_threshold', this.value)"
-								oninput="updateTrackTrashThresholdDisplay(this.value)" />
+								data-change="setMapSetting" data-arg="track_trash_threshold"
+								data-input="updateTrackTrashThresholdDisplay" />
 						</span>
 					</div>
 					<div>
 						<span>Show Track on Selection</span><span>
 							<input type="checkbox" id="settings_show_track_on_select"
-								onchange="settings.show_track_on_select = this.checked; saveSettings()" />
+								data-change="applyTrackOnSelect" />
 						</span>
 					</div>
 					<div>
 						<span>Show Track on Hover</span><span>
 							<input type="checkbox" id="settings_show_track_on_hover"
-								onchange="settings.show_track_on_hover = this.checked; saveSettings()" />
+								data-change="applyTrackOnHover" />
 						</span>
 					</div>
 				</section>
@@ -390,8 +390,8 @@
 					<div>
 						<span>Apply Color to All Ships</span><span>
 							<input type="color" class="color-picker" id="settings_apply_all_track_color" value="#12a5ed"
-								onchange="applyColorToAllTracks(this.value)" />
-							<button type="button" onclick="resetTrackColorsToDefault()"
+								data-change="applyColorToAllTracks" />
+							<button type="button" data-action="resetTrackColorsToDefault"
 								style="margin-left: 10px; padding: 2px 8px; font-size: 11px;">Reset</button>
 						</span>
 					</div>
@@ -400,85 +400,85 @@
 					<div>
 						<span>Cargo Ships</span><span>
 							<input type="color" class="color-picker" id="settings_track_cargo_color"
-								onchange="setTrackClassColor('CARGO', this.value)" />
+								data-change="setTrackClassColor" data-arg="CARGO" />
 						</span>
 					</div>
 					<div>
 						<span>Class B Vessels</span><span>
 							<input type="color" class="color-picker" id="settings_track_b_color"
-								onchange="setTrackClassColor('B', this.value)" />
+								data-change="setTrackClassColor" data-arg="B" />
 						</span>
 					</div>
 					<div>
 						<span>Passenger Ships</span><span>
 							<input type="color" class="color-picker" id="settings_track_passenger_color"
-								onchange="setTrackClassColor('PASSENGER', this.value)" />
+								data-change="setTrackClassColor" data-arg="PASSENGER" />
 						</span>
 					</div>
 					<div>
 						<span>Tanker Ships</span><span>
 							<input type="color" class="color-picker" id="settings_track_tanker_color"
-								onchange="setTrackClassColor('TANKER', this.value)" />
+								data-change="setTrackClassColor" data-arg="TANKER" />
 						</span>
 					</div>
 					<div>
 						<span>Fishing Vessels</span><span>
 							<input type="color" class="color-picker" id="settings_track_fishing_color"
-								onchange="setTrackClassColor('FISHING', this.value)" />
+								data-change="setTrackClassColor" data-arg="FISHING" />
 						</span>
 					</div>
 					<div>
 						<span>High Speed Craft</span><span>
 							<input type="color" class="color-picker" id="settings_track_highspeed_color"
-								onchange="setTrackClassColor('HIGHSPEED', this.value)" />
+								data-change="setTrackClassColor" data-arg="HIGHSPEED" />
 						</span>
 					</div>
 					<div>
 						<span>Special Vessels</span><span>
 							<input type="color" class="color-picker" id="settings_track_special_color"
-								onchange="setTrackClassColor('SPECIAL', this.value)" />
+								data-change="setTrackClassColor" data-arg="SPECIAL" />
 						</span>
 					</div>
 					<div>
 						<span>Aid-to-Navigation</span><span>
 							<input type="color" class="color-picker" id="settings_track_aton_color"
-								onchange="setTrackClassColor('ATON', this.value)" />
+								data-change="setTrackClassColor" data-arg="ATON" />
 						</span>
 					</div>
 					<div>
 						<span>Base Stations</span><span>
 							<input type="color" class="color-picker" id="settings_track_station_color"
-								onchange="setTrackClassColor('STATION', this.value)" />
+								data-change="setTrackClassColor" data-arg="STATION" />
 						</span>
 					</div>
 					<div>
 						<span>SAR/EPIRB</span><span>
 							<input type="color" class="color-picker" id="settings_track_sartepirb_color"
-								onchange="setTrackClassColor('SARTEPIRB', this.value)" />
+								data-change="setTrackClassColor" data-arg="SARTEPIRB" />
 						</span>
 					</div>
 					<div>
 						<span>Aircraft</span><span>
 							<input type="color" class="color-picker" id="settings_track_plane_color"
-								onchange="setTrackClassColor('PLANE', this.value)" />
+								data-change="setTrackClassColor" data-arg="PLANE" />
 						</span>
 					</div>
 					<div>
 						<span>Helicopters</span><span>
 							<input type="color" class="color-picker" id="settings_track_helicopter_color"
-								onchange="setTrackClassColor('HELICOPTER', this.value)" />
+								data-change="setTrackClassColor" data-arg="HELICOPTER" />
 						</span>
 					</div>
 					<div>
 						<span>Other Vessels</span><span>
 							<input type="color" class="color-picker" id="settings_track_other_color"
-								onchange="setTrackClassColor('OTHER', this.value)" />
+								data-change="setTrackClassColor" data-arg="OTHER" />
 						</span>
 					</div>
 					<div>
 						<span>Unknown Type</span><span>
 							<input type="color" class="color-picker" id="settings_track_unknown_color"
-								onchange="setTrackClassColor('UNKNOWN', this.value)" />
+								data-change="setTrackClassColor" data-arg="UNKNOWN" />
 						</span>
 					</div>
 				</section>
@@ -486,111 +486,111 @@
 				<section>
 					<div>
 						<span>Kiosk Mode</span><span>
-							<input type="checkbox" id="settings_kiosk_mode" onchange="setKiosk(this.checked)">
+							<input type="checkbox" id="settings_kiosk_mode" data-change="setKiosk">
 						</span>
 					</div>
 					<div>
 						<span id="kiosk_rotation_speed_label">Rotation Speed (5s)</span><span>
 							<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1"
-								onchange="setKioskRotationSpeed(this.value)"
-								oninput="updateKioskSpeedDisplay(this.value)">
+								data-change="setKioskRotationSpeed"
+								data-input="updateKioskSpeedDisplay">
 						</span>
 					</div>
 					<div>
 						<span>Pan Map</span><span>
-							<input type="checkbox" id="settings_kiosk_pan_map" onchange="setKioskPanMap(this.checked)">
+							<input type="checkbox" id="settings_kiosk_pan_map" data-change="setKioskPanMap">
 						</span>
 					</div>
 				</section>
 			</div>
 		</div>
 
-		<div oncontextmenu="showContextMenu(event,0,'',['settings'])" class="mainspace">
+		<div data-contextaction="showMainContextMenu" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
-				<li class="ctx-shipcard" onclick="toggleShipcardPin()" id="ctx_shipcard_pin"><i
+				<li class="ctx-shipcard" data-action="toggleShipcardPin" id="ctx_shipcard_pin"><i
 						class="push_pin_icon"></i><span id="ctx_label_shipcard_pin">Pin/Unpin Shipcard position</span>
 				</li>
-				<li class="station" onclick="pinStation()"><i class="push_pin_icon"></i>Center map on station</li>
+				<li class="station" data-action="pinStation"><i class="push_pin_icon"></i>Center map on station</li>
 				<li class="divider station"></li>
-				<li class="copy-text" onclick="ctxCopyText()"><i class="content_copy_icon"></i>Copy to
+				<li class="copy-text" data-action="ctxCopyText"><i class="content_copy_icon"></i>Copy to
 					Clipboard</li>
 				<li class="divider copy-text"></li>
-				<li class="table-menu" onclick="downloadCSV()"><i class="cloud_download_icon"></i>Download CSV</li>
+				<li class="table-menu" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
 				<li class="divider table-menu"></li>
-				<li class="ctx-map" onclick="unpinCenter()" id="ctx_menu_unpin"><i class="undo_icon"></i><span
+				<li class="ctx-map" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span
 						id="ctx_unpin">Release map center</span></li>
-				<li class="ctx-map ctx-noalltracks" onclick="showAllTracks();"><i class="timeline_icon"></i>Show all
+				<li class="ctx-map ctx-noalltracks" data-action="showAllTracks"><i class="timeline_icon"></i>Show all
 					tracks</li>
-				<li class="ctx-map ctx-removealltracks" onclick="deleteAllTracks();"><i
+				<li class="ctx-map ctx-removealltracks" data-action="deleteAllTracks"><i
 						class="remove_circle_outline_icon"></i>Hide all tracks</li>
-				<li class="ctx-map" onclick="ToggleFireworks()"><i class="explosion_icon"></i><span
+				<li class="ctx-map" data-action="ToggleFireworks"><i class="explosion_icon"></i><span
 						id="ctx_fireworks"></span></li>
-				<li class="ctx-map" onclick="toggleLabel()"><i class="label_icon"></i><span id="ctx_labelswitch"></span>
+				<li class="ctx-map" data-action="toggleLabel"><i class="label_icon"></i><span id="ctx_labelswitch"></span>
 				</li>
-				<li class="ctx-map" onclick="toggleKioskMode()"><i class="jamboard_kiosk_icon"></i>Toggle Kiosk Mode
+				<li class="ctx-map" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Toggle Kiosk Mode
 				</li>
 				<li class="divider ctx-map"></li>
-				<li class="ctx-map" onclick="toggleFading()"><i class="directions_boat_icon"></i><span
+				<li class="ctx-map" data-action="toggleFading"><i class="directions_boat_icon"></i><span
 						id="ctx_fading"></span></li>
-				<li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span
+				<li class="ctx-map" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i><span
 						id="ctx_range"></span></li>
 				<li class="divider ctx-map"></li>
-				<li class="ship-map ctx-noalltracks" onclick="ctxToggleTrack()"><i
+				<li class="ship-map ctx-noalltracks" data-action="ctxToggleTrack"><i
 						class="timeline_icon"></i><span id="ctx_track"></span></li>
-				<li class="ship-map" onclick="ctxPinVessel()"><i class="push_pin_icon"></i>Center map on vessel
+				<li class="ship-map" data-action="ctxPinVessel"><i class="push_pin_icon"></i>Center map on vessel
 				</li>
-				<li class="ship-map" onclick="ctxZoomIn()"><i class="zoom_in_icon"></i>Zoom in on
+				<li class="ship-map" data-action="ctxZoomIn"><i class="zoom_in_icon"></i>Zoom in on
 					vessel</li>
-				<li class="ship-map" onclick="ctxShowShipcard()"><i
+				<li class="ship-map" data-action="ctxShowShipcard"><i
 						class="directions_boat_icon"></i>Show
 					Ship Card</li>
-				<li class="plane-map" onclick="ctxShowPlanecard()"><i
+				<li class="plane-map" data-action="ctxShowPlanecard"><i
 						class="directions_boat_icon"></i>Show
 					Plane Card</li>
 				<li class="divider ship-map plane-map"></li>
-				<li class="ship" onclick="ctxOpenAIScatcherSite()"><i class="directions_boat_icon"></i>View on
+				<li class="ship" data-action="ctxOpenAIScatcherSite"><i class="directions_boat_icon"></i>View on
 					www.aiscatcher.org
 				</li>
-				<li class="ship" onclick="ctxShowVesselDetail()"><i class="dns_icon"></i>Show Vessel Database
+				<li class="ship" data-action="ctxShowVesselDetail"><i class="dns_icon"></i>Show Vessel Database
 					Entry</li>
-				<li class="ship noandroid" onclick="ctxShowNMEA()"><i class="mail_icon"></i>Show Last Message
+				<li class="ship noandroid" data-action="ctxShowNMEA"><i class="mail_icon"></i>Show Last Message
 				</li>
-				<li class="ship ctx-realtime" onclick="ctxOpenRealtime()"><i
+				<li class="ship ctx-realtime" data-action="ctxOpenRealtime"><i
 						class="comment_icon"></i>Track NMEA
 				</li>
-				<li class="ship" onclick="ctxCopyText()"><i class="content_copy_icon noandroid"></i>Copy MMSI
+				<li class="ship" data-action="ctxCopyText"><i class="content_copy_icon noandroid"></i>Copy MMSI
 				</li>
-				<li class="plane" onclick="ctxCopyICAOText()"><i
+				<li class="plane" data-action="ctxCopyICAOText"><i
 						class="content_copy_icon noandroid"></i>Copy ICAO
 				</li>
-				<li class="ship" onclick="ctxCopyCoordinates()"><i
+				<li class="ship" data-action="ctxCopyCoordinates"><i
 						class="content_paste_icon noandroid"></i>Copy Coordinates</li>
 				<li class="divider ship plane"></li>
-				<li class="plane noandroid" onclick="ctxOpenGoogleSearchICAO()"><i
+				<li class="plane noandroid" data-action="ctxOpenGoogleSearchICAO"><i
 						class="search_icon"></i>Search on
 					Google</li>
-				<li class="ship noandroid" onclick="ctxOpenGoogleSearch()"><i class="search_icon"></i>Search on
+				<li class="ship noandroid" data-action="ctxOpenGoogleSearch"><i class="search_icon"></i>Search on
 					Google</li>
-				<li class="ship noandroid" onclick="ctxOpenVesselFinder()"><i class="public_icon"></i>Find on
+				<li class="ship noandroid" data-action="ctxOpenVesselFinder"><i class="public_icon"></i>Find on
 					VesselFinder</li>
-				<li class="ship noandroid" onclick="ctxOpenAISHub()"><i class="public_icon"></i>Find on AISHub
+				<li class="ship noandroid" data-action="ctxOpenAISHub"><i class="public_icon"></i>Find on AISHub
 				</li>
 				<li class="divider ship plane noandroid"></li>
-				<li class="settings" onclick="showServerErrors()"><i class="label_icon"></i>Show Server Errors</li>
-				<li class="settings" onclick="openSettings()"><i class="build_icon"></i>Settings...</li>
-				<li class="settings noandroid" onclick="toggleDarkMode()"><i class="brightness_4_icon"></i>Toggle
+				<li class="settings" data-action="showServerErrors"><i class="label_icon"></i>Show Server Errors</li>
+				<li class="settings" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
+				<li class="settings noandroid" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Toggle
 					Light/Dark mode</li>
 				<li class="divider ctx-charts"></li>
-				<li class="ctx-charts" onclick="toggleGraphVisibility('signal')"><i class="timeline_icon"></i><span
+				<li class="ctx-charts" data-action="toggleSignalGraph"><i class="timeline_icon"></i><span
 						id="ctx_signal_graphs">Show signal level graphs</span></li>
-				<li class="ctx-charts" onclick="toggleGraphVisibility('ppm')"><i class="timeline_icon"></i><span
+				<li class="ctx-charts" data-action="togglePPMGraph"><i class="timeline_icon"></i><span
 						id="ctx_ppm_graphs">Show frequency shift graphs</span></li>
 			</ul>
 
 			<div id="dialog-box" class="hidden">
 				<div class="dialog-title">Dialog Title</div>
 				<div class="dialog-message">This is the message area.</div>
-				<button class="dialog-close" onclick="closeDialog()">Close</button>
+				<button class="dialog-close" data-action="closeDialog">Close</button>
 			</div>
 
 			<div class="tabcontent addscrollbar" id="about">
@@ -601,19 +601,19 @@
 				<div class="realtime-viewer">
 					<div class="realtime-tabs">
 						<div class="realtime-spacer"></div>
-						<button class="realtime-control-btn" onclick="promptFilterMMSI()" title="Filter by MMSI">
+						<button class="realtime-control-btn" data-action="promptFilterMMSI" title="Filter by MMSI">
 							<span class="filter_alt_icon"></span>
 						</button>
 						<label class="realtime-background-toggle" title="Keep streaming when tab is hidden">
 							<input type="checkbox" id="realtime_background_streaming"
-								onchange="toggleBackgroundStreaming()">
+								data-change="toggleBackgroundStreaming">
 							<span>Background</span>
 						</label>
-						<button id="realtime_pause_button" class="realtime-control-btn" onclick="toggleRealtimePause()"
+						<button id="realtime_pause_button" class="realtime-control-btn" data-action="toggleRealtimePause"
 							title="Pause/Resume stream">
 							<span class="pause_icon"></span>
 						</button>
-						<button class="realtime-control-btn" onclick="clearRealtimeTable()" title="Clear table">
+						<button class="realtime-control-btn" data-action="clearRealtimeTable" title="Clear table">
 							<span class="delete_icon"></span>
 						</button>
 					</div>
@@ -657,8 +657,8 @@
 							placeholder="!AIVDM,1,1,,A,13HOI:0P0000VOHLCnHQKwvL05Ip,0*23&#10;!AIVDM,1,1,,B,15MwkT0P00G?q0`Hgd@1g?v428D;,0*7B"
 							rows="6"></textarea>
 						<div class="decoder-buttons">
-							<button onclick="decodeNMEA()" class="decoder-btn-primary">Decode</button>
-							<button onclick="clearDecoder()" class="decoder-btn-secondary">Clear</button>
+							<button data-action="decodeNMEA" class="decoder-btn-primary">Decode</button>
+							<button data-action="clearDecoder" class="decoder-btn-secondary">Clear</button>
 						</div>
 						<div id="decoder_status" class="decoder-status"></div>
 					</div>
@@ -900,7 +900,7 @@
 			</div>
 
 			<div class="tabcontent addscrollbar" id="plots" style="display: none;">
-				<div class="graphtab" oncontextmenu='showContextMenu(event, "", "charts", ["settings", "ctx-charts"])'>
+				<div class="graphtab" data-contextaction="showChartsContextMenu">
 					<div class="graph-panel">
 						<header>Messages per Second</header>
 						<canvas id="chart-seconds"></canvas>
@@ -1072,7 +1072,7 @@
 						<span>
 						</span>
 						<span title="Shift+click on map to measure"
-							onclick="setMeasureMode(); showNotification('Shift+click on start point/object')"
+							data-action="activateMeasureMode"
 							class="mapcard-header-icon"
 							style="white-space: nowrap; border: 2px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; margin-right: 12px;">
 							<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px"
@@ -1082,7 +1082,7 @@
 							</svg>
 							(shift-click)
 						</span>
-						<span><i title="close this window" onclick="toggleMeasurecard()" style="color: red"
+						<span><i title="close this window" data-action="toggleMeasurecard" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
 
@@ -1107,28 +1107,28 @@
 				</aside>
 
 				<aside id="shipcard" class="mapcard shipcard-width shipcard-ismax"
-					oncontextmenu="cardShowContextMenu(event)">
+					data-contextaction="cardShowContextMenu">
 					<header id="shipcard_header" class="mapcard_header">
-						<span onclick="toggleShipcardSize()" id="shipcard_header_flag"></span>
-						<span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
+						<span data-action="toggleShipcardSize" id="shipcard_header_flag"></span>
+						<span data-action="toggleShipcardSize" id="shipcard_header_title"></span>
 						<span class=""><i id="shipcard_drag_handle"
 								class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
-						<span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button"
+						<span><i data-action="toggleShipcardSize" id="shipcard_minmax_button"
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
-						<span><i onclick="cardShowContextMenu(event)"
+						<span><i data-action="cardShowContextMenu"
 								class="mapcard-header-icon more_vert_icon"></i></span>
-						<span><i onclick="showShipcard(null,null)" style="color: red"
+						<span><i data-action="closeShipcard" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
 
 					<div id="shipcard_content" class="mapcard_content">
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Status</span><span id="shipcard_status"></span></div>
 							<div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Country</span><span id="shipcard_country"></span></div>
 							<div><span>Sender</span><span id="shipcard_type"></span></div>
@@ -1147,55 +1147,55 @@
 							<div><span>Off-Pos:</span><span id="tech_off_position">-</span></div>
 							<div><span>Maneuver:</span><span id="tech_maneuver">-</span></div>
 						</div>
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
 							<div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
 							<div><span>IMO</span><span id="shipcard_imo">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
 							<div><span>Speed</span><span id="shipcard_speed">-</span></div>
 							<div><span>Heading</span><span id="shipcard_heading">-</span></div>
 							<div><span>Altitude</span><span id="shipcard_altitude">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Latitude</span><span id="shipcard_lat">-</span></div>
 							<div><span>Longitude</span><span id="shipcard_lon">-</span></div>
 							<div><span>Course</span><span id="shipcard_cog">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Destination</span><span id="shipcard_destination"></span></div>
 							<div><span>ETA</span><span id="shipcard_eta"></span></div>
 							<div><span>Distance</span><span id="shipcard_distance">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
 							<div><span>Draught</span><span id="shipcard_draught">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>last signal</span><span id="shipcard_last_signal"></span></div>
 							<div><span>Receiver</span><span id="shipcard_last_group"></span></div>
 							<div><span>Count</span><span id="shipcard_count">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>RSSI</span><span id="shipcard_level">-</span></div>
 							<div><span>Drift</span><span id="shipcard_ppm">-</span></div>
 							<div><span>Sources</span><span id="shipcard_sources">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="ship"
+						<div data-action="shipcardselect" data-context-type="ship"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
 							<div><span>Channels</span><span id="shipcard_channels">-</span></div>
@@ -1203,84 +1203,84 @@
 						</div>
 
 						<!-- Plane Content -->
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Callsign</span><span id="shipcard_plane_callsign">-</span></div>
 							<div><span>Country</span><span id="shipcard_plane_country"></span></div>
 							<div><span>ICAO</span><span id="shipcard_plane_hexident">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Category</span><span id="shipcard_plane_category">-</span></div>
 							<div><span>Squawk</span><span id="shipcard_plane_squawk">-</span></div>
 							<div><span>Sender</span><span id="shipcard_plane_type">ADSB</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
 							<div><span>Speed</span><span id="shipcard_plane_speed">-</span></div>
 							<div><span>Heading</span><span id="shipcard_plane_heading">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Latitude</span><span id="shipcard_plane_lat">-</span></div>
 							<div><span>Longitude</span><span id="shipcard_plane_lon">-</span></div>
 							<div><span>Distance</span><span id="shipcard_plane_distance">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
 							<div><span>Vert Rate</span><span id="shipcard_plane_vertrate">-</span></div>
 							<div><span>Altitude</span><span id="shipcard_plane_altitude">-</span></div>
 							<div><span>Bearing</span><span id="shipcard_plane_bearing">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-max-only">
 							<div><span>Last Signal</span><span id="shipcard_plane_last_signal">-</span></div>
 							<div><span>Messages</span><span id="shipcard_plane_messages">-</span></div>
 							<div><span>Receiver</span><span id="shipcard_plane_last_group"></span></div>
 						</div>
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
 							<div><span>Downlink</span><span id="shipcard_plane_downlink">-</span></div>
 							<div><span>TC</span><span id="shipcard_plane_TC">-</span></div>
 							<div><span>RSSI</span><span id="shipcard_plane_level">-</span></div>
 						</div>
 
-						<div onclick="shipcardselect(this)" data-context-type="plane"
+						<div data-action="shipcardselect" data-context-type="plane"
 							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
 							<div><span>Sources</span><span id="shipcard_plane_sources">-</span></div>
 						</div>
 
 					</div>
 					<footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
-						<div title="View binary messages" onclick="cardShowBinaryMessageDialog()"
+						<div title="View binary messages" data-action="cardShowBinaryMessageDialog"
 							data-context-type="ship" class="noandroid"><i class="mail_icon"></i><span>Messages</span>
 						</div>
 						<div id="shipcard_realtime_option" title="Track NMEA messages for this vessel"
-							onclick="cardOpenRealtime()" data-context-type="ship"><i
+							data-action="cardOpenRealtime" data-context-type="ship"><i
 								class="comment_icon"></i><span>Track NMEA</span>
 						</div>
-						<div title="Lookup on commuinity site" onclick="cardOpenAIScatcherSite()"
+						<div title="Lookup on commuinity site" data-action="cardOpenAIScatcherSite"
 							data-context-type="ship" class="noandroid"><i
 								class="info_icon"></i><span>www.aiscatcher.org</span></div>
 						<div id="shipcard_track_option" title="Track of current vessel" data-context-type="ship"
-							onclick="cardToggleTrack()"><i id="shipcard_track_icon" class="timeline_icon"></i><span
+							data-action="cardToggleTrack"><i id="shipcard_track_icon" class="timeline_icon"></i><span
 								id="shipcard_track">Track</span></div>
 
-						<div title="Search on FlightAware" onclick="cardOpenFlightAware()"
+						<div title="Search on FlightAware" data-action="cardOpenFlightAware"
 							data-context-type="plane">
 							<i class="search_icon"></i><span>FlightAware</span>
 						</div>
 
-						<div title="Search on PlaneSpotters" onclick="cardOpenPlaneSpotters()"
+						<div title="Search on PlaneSpotters" data-action="cardOpenPlaneSpotters"
 							data-context-type="plane">
 							<i class="search_icon"></i><span>PlaneSpotters</span>
 						</div>
-						<div title="Search on ADS-B Exchange" onclick="cardOpenADSBExchange()"
+						<div title="Search on ADS-B Exchange" data-action="cardOpenADSBExchange"
 							data-context-type="plane">
 							<i class="search_icon"></i><span>ADS-B Exchange</span>
 						</div>
@@ -1295,18 +1295,18 @@
 				<div title="Counters"
 					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box nokiosk"
 					style="top: 10px; border-radius: 17px;">
-					<button type="button" onclick="toggleStatcard();" class="btn btn-primary map-button"
+					<button type="button" data-action="toggleStatcard" class="btn btn-primary map-button"
 						style="font-size: 10px; border-radius: 2px; border-top-right-radius: 17px; border-top-left-radius: 17px;">
 						<span id="markerCount">0</span>
 					</button>
-					<button type="button" onclick="toggleTablecard();" class="btn btn-primary map-button"
+					<button type="button" data-action="toggleTablecard" class="btn btn-primary map-button"
 						style="border-radius: 2px;">
 						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
 							<path
 								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
 						</svg>
 					</button>
-					<button type="button" onclick="toggleMeasurecard();" class="btn btn-primary map-button"
+					<button type="button" data-action="toggleMeasurecard" class="btn btn-primary map-button"
 						style="border-radius: 2px; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px;">
 						<svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px">
 							<path
@@ -1319,7 +1319,7 @@
 				<div id="aiscatcher-logo-control"
 					class="ol-control ol-unselectable ol-control-custom aiscatcher-logo-control aiscatcher-logo-svg kiosk"
 					style="position: absolute; bottom: 10px; left: 10px; z-index: 1000;"
-					title="AIS-catcher - Connection Status" onclick="toggleKioskMode()">
+					title="AIS-catcher - Connection Status" data-action="toggleKioskMode">
 					<svg width="50" height="50" viewBox="0 0 106.63 101.41" xmlns="http://www.w3.org/2000/svg">
 
 						<g transform="translate(-2.8209 -5.1046)">
@@ -1348,14 +1348,14 @@
 				<div title="Settings"
 					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box nokiosk"
 					style=" bottom: 140px; border-radius: 5px;">
-					<button type="button" onclick='showContextMenu(event, "","", ["settings", "center", "ctx-map"]);'
+					<button type="button" data-action="showMapSettingsMenu"
 						class="btn btn-primary map-button color-grey">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
 								d="M240-400q-33 0-56.5-23.5T160-480q0-33 23.5-56.5T240-560q33 0 56.5 23.5T320-480q0 33-23.5 56.5T240-400Zm240 0q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm240 0q-33 0-56.5-23.5T640-480q0-33 23.5-56.5T720-560q33 0 56.5 23.5T800-480q0 33-23.5 56.5T720-400Z" />
 						</svg>
 					</button>
-					<button title="Community feeding status" type="button" id="xchange" onclick="showCommunity()"
+					<button title="Community feeding status" type="button" id="xchange" data-action="showCommunity"
 						class="noandroid btn btn-primary map-button fill-red">
 
 						<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20">
@@ -1377,7 +1377,7 @@
 							<path d="M200-440v-80h560v80H200Z" />
 						</svg>
 					</button>
-					<button title="Map selection and overlays" type="button" onclick='showMapMenu(event)'
+					<button title="Map selection and overlays" type="button" data-action="showMapMenu"
 						class="btn btn-primary map-button color-grey">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
@@ -1399,10 +1399,10 @@
 	<script src="script.js"></script>
 
 
-	<div class="overlay" onclick="toggleInfoPanel()"></div>
+	<div class="overlay" data-action="toggleInfoPanel"></div>
 	<div class="info-panel">
 		<div class="header-info-panel">
-			<button class="close_icon" style="font-size: 20px;" onclick="toggleInfoPanel()"></button>
+			<button class="close_icon" style="font-size: 20px;" data-action="toggleInfoPanel"></button>
 		</div>
 
 		<div class="content">
@@ -1430,7 +1430,7 @@
 							fill="#24292f" />
 					</svg> <span>GitHub</span>
 				</a>
-				<a onclick="toggleInfoPanel(); showAboutDialog();" class="quick-link">
+				<a data-action="showAboutAndInfo" class="quick-link">
 					<svg xmlns="http://www.w3.org/2000/svg" height="32px" viewBox="0 -960 960 960" width="32px"
 						fill="#5f6368">
 						<path
