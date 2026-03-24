@@ -195,6 +195,7 @@ class WebViewer : public IO::HTTPServer, public Setting
 	std::string station = "\"\"", station_link = "\"\"";
 	std::string backup_filename = "";
 	std::string os, hardware;
+	std::string js_context = "settings";
 
 	// DB / stats config accumulated during Set(), applied to all states in connect().
 	float cfg_lat = LAT_UNDEFINED, cfg_lon = LON_UNDEFINED;

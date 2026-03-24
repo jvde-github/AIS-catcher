@@ -91,7 +91,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 WebViewer::WebViewer()
 {
-	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\nbuild_version = '" + std::string(VERSION) + "';\ncontext='settings';\n\n";
+	params = "const build_string = '" + std::string(VERSION_DESCRIBE) + "';\nconst build_version = '" + std::string(VERSION) + "';\n\n";
 	plugin_code = "\n\nfunction loadPlugins() {\n";
 	plugins = "let plugins = '';\nlet server_message = '';\n";
 	os.clear();
@@ -711,7 +711,7 @@ void WebViewer::start()
 	// Embed static receiver list into plugins.js
 	if (states.size() > 1)
 	{
-		params += "var server_receivers = [";
+		params += "const server_receivers = [";
 		for (int i = 0; i < (int)states.size(); i++)
 		{
 			if (i)
@@ -724,7 +724,7 @@ void WebViewer::start()
 	}
 	else
 	{
-		params += "var server_receivers = null;\n";
+		params += "const server_receivers = null;\n";
 	}
 
 	run = true;
@@ -908,7 +908,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/custom/plugins.js")
 	{
-		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
+		Response(c, "application/javascript", params + plugins + plugin_code + "}\nconst server_version = false;\nconst context = '" + js_context + "';\nconst aboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\nconst communityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
 	}
 	else if (r == "/custom/config.css")
 	{
@@ -1176,7 +1176,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "WEBCONTROL_HTTP")
 	{
-		plugins += "webcontrol_http = '" + arg + "';\n";
+		plugins += "const webcontrol_http = '" + arg + "';\n";
 	}
 	else if (option == "LAT")
 	{
@@ -1191,7 +1191,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "SHARE_LOC")
 	{
 		cfg_latlon_share = Util::Parse::Switch(arg);
-		plugins += "param_share_loc=" + (cfg_latlon_share ? std::string("true;\n") : std::string("false;\n"));
+		plugins += "const param_share_loc=" + (cfg_latlon_share ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "IP_BIND")
 	{
@@ -1199,12 +1199,12 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "CONTEXT")
 	{
-		plugins += "context='" + arg + "';\n";
+		js_context = arg;
 	}
 	else if (option == "MESSAGE" || option == "MSG")
 	{
 		cfg_msg_save = Util::Parse::Switch(arg);
-		plugins += "message_save=" + (cfg_msg_save ? std::string("true;\n") : std::string("false;\n"));
+		plugins += "const message_save=" + (cfg_msg_save ? std::string("true;\n") : std::string("false;\n"));
 	}
 	else if (option == "LON")
 	{
@@ -1263,25 +1263,25 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	{
 		realtime = Util::Parse::Switch(arg);
 		if (realtime)
-			plugins += "realtime_enabled = true;\n";
+			plugins += "const realtime_enabled = true;\n";
 		else
-			plugins += "realtime_enabled = false;\n";
+			plugins += "const realtime_enabled = false;\n";
 	}
 	else if (option == "LOG")
 	{
 		showlog = Util::Parse::Switch(arg);
 		if (showlog)
-			plugins += "log_enabled = true;\n";
+			plugins += "const log_enabled = true;\n";
 		else
-			plugins += "log_enabled = false;\n";
+			plugins += "const log_enabled = false;\n";
 	}
 	else if (option == "DECODER")
 	{
 		showdecoder = Util::Parse::Switch(arg);
 		if (showdecoder)
-			plugins += "decoder_enabled = true;\n";
+			plugins += "const decoder_enabled = true;\n";
 		else
-			plugins += "decoder_enabled = false;\n";
+			plugins += "const decoder_enabled = false;\n";
 
 		sse_streamer.setObfuscate(!showdecoder);
 	}

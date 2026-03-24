@@ -1,7 +1,7 @@
 
-//"use strict";
+"use strict";
 
-var interval,
+let interval,
     activeReceiver = 0,
     paths = {},
     map,
@@ -11,7 +11,6 @@ var interval,
     shipsDB = {},
     binaryDB = {},
     planesDB = {},
-    fetch_binary = false,
     hover_feature = undefined,
     show_all_tracks = false,
     evtSourceMap = null,
@@ -21,35 +20,73 @@ var interval,
     range_outline_short = undefined,
     tab_title_station = "",
     tab_title_count = null,
-    context_mmsi = null,
-    context_type = null,
-    aboutContentLoaded = false,
-    tab_title = "AIS-catcher";
+    aboutContentLoaded = false;
+
+
+const tab_title = "AIS-catcher";
+
+let context_mmsi = null,
+    context_type = null;
+
+let center;
 
 const baseMapSelector = document.getElementById("baseMapSelector");
 
-var rtCount = 0;
-var shipcardIconCount = undefined;
-var shipcardIconMax = 3;
-var shipcardIconOffset = 0;
-var plugins_main = [];
-var card_mmsi = null,
-    card_type = null,
-    hover_mmsi = null,
-    build_string = "unknown";
-var refreshIntervalMs = 2500;
-var range_update_time = null;
+let shipcardIconCount = undefined;
+const shipcardIconMax = 3;
+let shipcardIconOffset = 0;
+const plugins_main = [];
+let card_mmsi = null,
+    card_type = null;
+// Wrappers so HTML onclick handlers don't reference globals directly
+function cardOpenADSBExchange()        { openADSBExchange(card_mmsi); }
+function cardOpenAIScatcherSite()      { openAIScatcherSite(card_mmsi); }
+function cardOpenFlightAware()         { openFlightAware(card_mmsi); }
+function cardOpenPlaneSpotters()       { openPlaneSpotters(card_mmsi); }
+function cardOpenRealtime()            { openRealtimeForMMSI(card_mmsi); }
+function cardShowBinaryMessageDialog() { showBinaryMessageDialog(card_mmsi); }
+function cardShowContextMenu(event)    { showContextMenu(event, card_mmsi, card_type, ['object', 'object-map', 'ctx-shipcard']); }
+function cardToggleTrack()             { toggleTrack(card_mmsi); }
+
+function ctxCopyCoordinates()      { copyCoordinates(context_mmsi); }
+function ctxCopyText()             { copyText(context_mmsi); }
+function ctxCopyICAOText()         { copyText(getICAOfromHexIdent(context_mmsi)); }
+function ctxZoomIn()               { mapResetViewZoom(13, context_mmsi); }
+function ctxOpenAISHub()           { openAISHub(context_mmsi); }
+function ctxOpenAIScatcherSite()   { openAIScatcherSite(context_mmsi); }
+function ctxOpenGoogleSearch()     { openGoogleSearch(context_mmsi); }
+function ctxOpenGoogleSearchICAO() { openGoogleSearch(getICAOfromHexIdent(context_mmsi)); }
+function ctxOpenRealtime()         { openRealtimeForMMSI(context_mmsi); }
+function ctxOpenVesselFinder()     { openVesselFinder(context_mmsi); }
+function ctxPinVessel()            { pinVessel(context_mmsi); }
+function ctxShowNMEA()             { showNMEA(context_mmsi); }
+function ctxShowShipcard()         { showShipcard('ship', context_mmsi); }
+function ctxShowPlanecard()        { showShipcard('plane', context_mmsi); }
+function ctxShowVesselDetail()     { showVesselDetail(context_mmsi); }
+function ctxToggleTrack()          { toggleTrack(context_mmsi); }
+
+const refreshIntervalMs = 2500;
+let range_update_time = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
-var hover_enabled_track = false,
+let standaloneBinaryMessages = [];
+let debounceUpdateCommunityFeed;
+let chart_seconds, chart_minutes, chart_hours, chart_days;
+let chart_ppm, chart_ppm_minute;
+let chart_minute_vessel, chart_hour_vessel, chart_day_vessel;
+let chart_distance_hour, chart_distance_day;
+let chart_radar_hour, chart_radar_day;
+let chart_level, chart_level_hour;
+
+let hover_enabled_track = false,
     select_enabled_track = false,
     marker_tracks = new Set();
 
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
-    var communityFeed = false;
-    var aboutMDpresent = false;
-    var context = "aiscatcher";
+    const communityFeed = false;
+    const aboutMDpresent = false;
+    const context = "aiscatcher";
 }
 
 const hover_info = document.getElementById('hover-info');
@@ -57,7 +94,7 @@ const hover_info = document.getElementById('hover-info');
 let measures = [];
 
 // default settings
-var settings = {};
+let settings = {};
 let isFetchingShips = false;
 
 function getDefaultTrackColors() {
@@ -273,8 +310,8 @@ function updateTitle() {
 function applyDefaultSettings() {
     const t = settings.tab;
 
-    let android = settings.android;
-    let darkmode = settings.dark_mode;
+    const android = settings.android;
+    const darkmode = settings.dark_mode;
     restoreDefaultSettings();
 
     settings.android = android;
@@ -321,41 +358,40 @@ function addControlToMap(c) {
 }
 
 function decimalToDMS(l, isLatitude) {
-    var degrees = Math.floor(Math.abs(l));
-    var minutes = Math.floor((Math.abs(l) - degrees) * 60);
-    var seconds = Number(((Math.abs(l) - degrees) * 60 - minutes) * 60).toFixed(1);
-    var direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
+    const degrees = Math.floor(Math.abs(l));
+    const minutes = Math.floor((Math.abs(l) - degrees) * 60);
+    const seconds = Number(((Math.abs(l) - degrees) * 60 - minutes) * 60).toFixed(1);
+    const direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
     return degrees + "&deg" + minutes + "'" + seconds + '"' + direction;
 }
 
 function decimalToDDM(l, isLatitude) {
-    var degrees = Math.floor(Math.abs(l));
-    var minutes = ((Math.abs(l) - degrees) * 60).toFixed(2);
-    var direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
+    const degrees = Math.floor(Math.abs(l));
+    const minutes = ((Math.abs(l) - degrees) * 60).toFixed(2);
+    const direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
     return degrees + "&deg;" + minutes + "'" + direction;
 }
 
-// transformations - for overwrite
-getDimVal = (c) => {
+const getDimVal = (c) => {
     return settings.metric === "DEFAULT" || settings.metric === "SI" ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0);
 };
 
-getDimUnit = () => {
+const getDimUnit = () => {
     return settings.metric === "DEFAULT" || settings.metric === "SI" ? "m" : "ft";
 };
 
-getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
-getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
-getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
-getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
-getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
-getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
+const getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
+const getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
+const getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
+const getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
+const getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
+const getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
     ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
     : null
 
 
 
-getLatValFormat = (ship) => {
+const getLatValFormat = (ship) => {
     const prefix = ship.approx ? "<i>" : "";
     const suffix = ship.approx ? "</i>" : "";
     let content = "";
@@ -375,7 +411,7 @@ getLatValFormat = (ship) => {
     return prefix + content + suffix;
 };
 
-getLonValFormat = (ship) => {
+const getLonValFormat = (ship) => {
     const prefix = ship.approx ? "<i>" : "";
     const suffix = ship.approx ? "</i>" : "";
     let content = "";
@@ -395,12 +431,12 @@ getLonValFormat = (ship) => {
     return prefix + content + suffix;
 };
 
-getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
-getShipName = (ship) => ship.shipname;
-getCallSign = (ship) => ship.callsign;
-getICAOfromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
-getICAO = (plane) => getICAOfromHexIdent(plane.hexident)
-includeShip = (ship) => true;
+const getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
+const getShipName = (ship) => ship.shipname;
+const getCallSign = (ship) => ship.callsign;
+const getICAOfromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
+const getICAO = (plane) => getICAOfromHexIdent(plane.hexident)
+const includeShip = (ship) => true;
 
 const getDeltaTimeVal = (s) => {
     const days = Math.floor(s / (24 * 3600));
@@ -487,7 +523,7 @@ function copyCoordinates(m) {
 let hoverMMSI = undefined;
 let hoverType = undefined;
 
-var rangeStyleFunction = function (feature) {
+const rangeStyleFunction = function (feature) {
     let clr = undefined;
 
     if (feature.short) {
@@ -504,7 +540,7 @@ var rangeStyleFunction = function (feature) {
     });
 }
 
-var shapeStyleFunction = function (feature) {
+const shapeStyleFunction = function (feature) {
 
     const c = settings.shipoutline_inner;
     const o = settings.shipoutline_opacity;
@@ -537,9 +573,9 @@ const ShippingClass = {
     SARTEPIRB: 13,
 };
 
-var trackStyleFunction = function (feature) {
-    var w = Number(settings.track_weight);
-    var c = '#12a5ed'; // Default fallback color
+const trackStyleFunction = function (feature) {
+    let w = Number(settings.track_weight);
+    let c = '#12a5ed'; // Default fallback color
 
     // Use shipping class color if available
     if (feature.shipclass && settings.track_class_colors[feature.shipclass]) {
@@ -564,10 +600,10 @@ var trackStyleFunction = function (feature) {
     });
 }
 
-var markerStyle = function (feature) {
+const markerStyle = function (feature) {
 
-    var length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
-    var mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+    const length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
+    const mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
 
     return new ol.style.Style({
         image: new ol.style.Icon({
@@ -582,7 +618,7 @@ var markerStyle = function (feature) {
 };
 
 
-var planeStyleOld = function (feature) {
+const planeStyleOld = function (feature) {
 
     return new ol.style.Style({
         image: new ol.style.Icon({
@@ -596,7 +632,7 @@ var planeStyleOld = function (feature) {
     });
 };
 
-var planeStyle = function (feature) {
+const planeStyle = function (feature) {
     const altitude = feature.plane.altitude || 0;
     const shadowScale = Math.min(Math.max(altitude / 40000, 0.1), 1); // 0.1-1 scale based on height up to 40000ft
 
@@ -632,7 +668,7 @@ function decodeHTMLEntities(text) {
     return textArea.value;
 }
 
-var labelStyle = function (feature) {
+const labelStyle = function (feature) {
     const font = settings.tooltipLabelFontSize + "px Arial";
     return new ol.style.Style({
         text: new ol.style.Text({
@@ -654,7 +690,7 @@ var labelStyle = function (feature) {
     });
 };
 
-hoverCircleStyleFunction = function (feature) {
+const hoverCircleStyleFunction = function (feature) {
     const iconScale = settings.icon_scale || 1.0;
     const circleScale = settings.circle_scale || 6.0;
     const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
@@ -669,7 +705,7 @@ hoverCircleStyleFunction = function (feature) {
     });
 }
 
-selectCircleStyleFunction = function (feature) {
+const selectCircleStyleFunction = function (feature) {
     const iconScale = settings.icon_scale || 1.0;
     const circleScale = settings.circle_scale || 6.0;
     const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
@@ -766,75 +802,75 @@ const binaryStyle = function (feature) {
 };
 
 
-var markerVector = new ol.source.Vector({
+const markerVector = new ol.source.Vector({
     features: []
 })
 
-var binaryVector = new ol.source.Vector({
+const binaryVector = new ol.source.Vector({
     features: []
 })
 
 
-var rangeVector = new ol.source.Vector({
+const rangeVector = new ol.source.Vector({
     features: []
 })
 
-var shapeVector = new ol.source.Vector({
+const shapeVector = new ol.source.Vector({
     features: []
 });
 
-var extraVector = new ol.source.Vector({
+const extraVector = new ol.source.Vector({
     features: []
 });
 
-var trackVector = new ol.source.Vector({
+const trackVector = new ol.source.Vector({
     features: []
 });
 
-var labelVector = new ol.source.Vector({
+const labelVector = new ol.source.Vector({
     features: []
 });
 
-var planeVector = new ol.source.Vector({
+const planeVector = new ol.source.Vector({
     features: []
 });
 
-var markerLayer = new ol.layer.Vector({
+const markerLayer = new ol.layer.Vector({
     source: markerVector,
     style: markerStyle
 })
 
-var binaryLayer = new ol.layer.Vector({
+const binaryLayer = new ol.layer.Vector({
     source: binaryVector,
     style: binaryStyle
 })
 
-var planeLayer = new ol.layer.Vector({
+const planeLayer = new ol.layer.Vector({
     source: planeVector,
     style: planeStyle,
     visible: false
 })
 
-var shapeLayer = new ol.layer.Vector({
+const shapeLayer = new ol.layer.Vector({
     source: shapeVector,
     style: shapeStyleFunction
 });
 
-var extraLayer = new ol.layer.Vector({
+const extraLayer = new ol.layer.Vector({
     source: extraVector
 });
 
-var trackLayer = new ol.layer.Vector({
+const trackLayer = new ol.layer.Vector({
     source: trackVector,
     style: trackStyleFunction
 });
 
-var rangeLayer = new ol.layer.Vector({
+const rangeLayer = new ol.layer.Vector({
     source: rangeVector,
     style: rangeStyleFunction
 });
 
-var labelLayer = new ol.layer.Vector({
+const labelLayer = new ol.layer.Vector({
     source: labelVector,
     style: labelStyle,
     declutter: settings.labels_declutter || true
@@ -925,19 +961,21 @@ function measureStyleFunction(feature) {
 
 let shapeFeatures = {};
 let markerFeatures = {};
-let planeFeatures = {};
+const planeFeatures = {};
 
 let stationFeature = undefined;
 let hoverCircleFeature = undefined;
-let measureCircleFeature = undefined;
+const measureCircleFeature = undefined;
 let selectCircleFeature = undefined;
 
 
 async function fetchJSON(l, m) {
+    let response;
     try {
         response = await fetch(l + "?" + m);
     } catch (error) {
-        showialog("Error", error);
+        showDialog("Error", error);
+        return null;
     }
     return response.text();
 }
@@ -949,7 +987,7 @@ function createShipOutlineGeometry(ship) {
     const coordinate = [ship.lon, ship.lat];
 
     let heading = ship.heading;
-    let { to_bow, to_stern, to_port, to_starboard } = ship;
+    const { to_bow, to_stern, to_port, to_starboard } = ship;
 
     if (to_bow == null || to_stern == null || to_port == null || to_starboard == null) return null;
 
@@ -971,7 +1009,7 @@ function createShipOutlineGeometry(ship) {
     const D = calcMove(Dmid, deltaBow, 0.2 * (to_bow + to_stern));
     const E = calcMove(C, deltaStarboard, to_starboard + to_port);
 
-    let shipOutlineCoords = [A, B, C, D, E, A].map(coord => ol.proj.fromLonLat(coord));
+    const shipOutlineCoords = [A, B, C, D, E, A].map(coord => ol.proj.fromLonLat(coord));
     return new ol.geom.Polygon([shipOutlineCoords]);
 }
 
@@ -988,7 +1026,7 @@ async function showNMEA(m) {
         const obj = JSON.parse(s);
 
         let tableHtml = '<table class="mytable">';
-        for (let key in obj) {
+        for (const key in obj) {
             let value = obj[key];
             if (Array.isArray(value)) {
                 value = JSON.stringify(value).replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "\\'").replace(/"/g, '\\"');
@@ -1004,11 +1042,11 @@ async function showNMEA(m) {
 }
 
 async function showVesselDetail(m) {
-    s = await fetchJSON("api/vessel", m);
-    let obj = JSON.parse(s);
+    const s = await fetchJSON("api/vessel", m);
+    const obj = JSON.parse(s);
 
     let tableHtml = '<table class="mytable">';
-    for (let key in obj) {
+    for (const key in obj) {
         tableHtml += "<tr><td>" + key + "</td><td>" + obj[key] + "</td></tr>";
     }
     tableHtml += "</table>";
@@ -1253,15 +1291,15 @@ function showContextMenu(event, mmsi, type, context) {
         contextMenu.style.top = event.pageY + 5 + "px";
         contextMenu.style.transform = "none";
 
-        var contextMenuRect = contextMenu.getBoundingClientRect();
-        var viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
-        var viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
+        const contextMenuRect = contextMenu.getBoundingClientRect();
+        const viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
+        const viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
 
-        var maxX = viewportWidth - contextMenuRect.width;
-        var maxY = viewportHeight - contextMenuRect.height;
+        const maxX = viewportWidth - contextMenuRect.width;
+        const maxY = viewportHeight - contextMenuRect.height;
 
-        var adjustedX = Math.max(0, Math.min(event.pageX + 5, maxX));
-        var adjustedY = Math.max(0, Math.min(event.pageY + 5, maxY));
+        const adjustedX = Math.max(0, Math.min(event.pageX + 5, maxX));
+        const adjustedY = Math.max(0, Math.min(event.pageY + 5, maxY));
 
         contextMenu.style.left = adjustedX + "px";
         contextMenu.style.top = adjustedY + "px";
@@ -1273,9 +1311,9 @@ function showContextMenu(event, mmsi, type, context) {
 }
 
 function showDialog(title, message) {
-    var dialogBox = document.getElementById("dialog-box");
-    var dialogTitle = dialogBox.querySelector(".dialog-title");
-    var dialogMessage = dialogBox.querySelector(".dialog-message");
+    const dialogBox = document.getElementById("dialog-box");
+    const dialogTitle = dialogBox.querySelector(".dialog-title");
+    const dialogMessage = dialogBox.querySelector(".dialog-message");
 
     dialogTitle.innerText = title;
     dialogMessage.innerHTML = message;
@@ -1283,7 +1321,7 @@ function showDialog(title, message) {
 }
 
 function closeDialog() {
-    var dialogBox = document.getElementById("dialog-box");
+    const dialogBox = document.getElementById("dialog-box");
     dialogBox.classList.add("hidden");
 }
 
@@ -1549,7 +1587,7 @@ function updateMapLayer() {
 
     if (activeTileLayer) {
 
-        overlays = JSON.parse(JSON.stringify(settings.map_overlay));
+        const overlays = JSON.parse(JSON.stringify(settings.map_overlay));
         settings.map_overlay = JSON.parse(JSON.stringify(overlays));
 
         setMapOpacity();
@@ -1588,10 +1626,10 @@ function triggerMapLayer() {
         }
     }
 
-    var attributions = activeTileLayer.getSource().getAttributions();
-    var mapAttributions = document.getElementById("map_attributions");
+    const attributions = activeTileLayer.getSource().getAttributions();
+    const mapAttributions = document.getElementById("map_attributions");
     if (typeof attributions === 'function') {
-        var currentAttributions = attributions();
+        const currentAttributions = attributions();
         mapAttributions.innerHTML = currentAttributions.join(', ');
     } else if (Array.isArray(attributions)) {
         mapAttributions.innerHTML = attributions.join(', ');
@@ -1599,7 +1637,7 @@ function triggerMapLayer() {
 
 }
 
-var dynamicStyle = document.createElement("style");
+const dynamicStyle = document.createElement("style");
 document.head.appendChild(dynamicStyle);
 
 function applyDynamicStyling() {
@@ -1627,17 +1665,17 @@ function applyDynamicStyling() {
 }
 
 function setMapOpacity() {
-    for (let key in basemaps)
+    for (const key in basemaps)
         basemaps[key].setOpacity(Number(settings.map_opacity));
 
-    for (let key in overlapmaps) {
+    for (const key in overlapmaps) {
         if (key !== "Aircraft") {
             overlapmaps[key].setOpacity(Number(settings.map_opacity));
         }
     }
 }
 
-var clickTimeout = undefined;
+let clickTimeout = undefined;
 let isMeasuring = false;
 let measureMode = false;
 
@@ -1698,7 +1736,7 @@ function refreshMeasures() {
                 feature.measureBearing = bearing;
             }
         }
-        let icon = measure.visible ? 'visibility' : 'visibility_off';
+        const icon = measure.visible ? 'visibility' : 'visibility_off';
 
         content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 18px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 18px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
 
@@ -1780,8 +1818,8 @@ const handleClick = function (pixel, target, event) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
         function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
 
-    let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
-    let included_plane = feature && 'plane' in feature && feature.plane.hexident in planesDB;
+    const included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
+    const included_plane = feature && 'plane' in feature && feature.plane.hexident in planesDB;
 
     if (event.originalEvent.shiftKey || measureMode || isMeasuring) {
         measureMode = false;
@@ -1849,12 +1887,12 @@ function initMap() {
         controls: []
     })
 
-    for (let [key, value] of Object.entries(basemaps)) {
+    for (const [key, value] of Object.entries(basemaps)) {
         map.addLayer(value);
         value.setVisible(false);
     }
 
-    for (let [key, value] of Object.entries(overlapmaps)) {
+    for (const [key, value] of Object.entries(overlapmaps)) {
         map.addLayer(value);
         value.setVisible(false);
     }
@@ -2000,13 +2038,13 @@ function getMetrics() {
 }
 
 function addMarker(lat, lon, ch) {
-    var latlon = ol.proj.fromLonLat([lon, lat]);
-    var color = 'grey'; // Default color
+    const latlon = ol.proj.fromLonLat([lon, lat]);
+    let color = 'grey'; // Default color
 
     if (ch === "A") color = 'blue';
     if (ch === "B") color = 'red';
 
-    var style = new ol.style.Style({
+    const style = new ol.style.Style({
         image: new ol.style.Circle({
             radius: 30,
             stroke: new ol.style.Stroke({
@@ -2019,7 +2057,7 @@ function addMarker(lat, lon, ch) {
         })
     });
 
-    var marker = new ol.Feature({
+    const marker = new ol.Feature({
         geometry: new ol.geom.Point(latlon),
     });
 
@@ -2049,7 +2087,7 @@ function StartFireworks() {
         evtSourceMap.addEventListener(
             "nmea",
             function (e) {
-                var jsonData = JSON.parse(e.data);
+                const jsonData = JSON.parse(e.data);
 
                 if (jsonData.hasOwnProperty("channel") ** jsonData.hasOwnProperty("lat") && jsonData.hasOwnProperty("lon")) {
                     addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
@@ -2096,9 +2134,9 @@ function updateMarkerCountTooltip() {
         cHeli = 0,
         cSarte = 0;
 
-    for (let [key, m] of Object.entries(shipsDB)) {
+    for (const [key, m] of Object.entries(shipsDB)) {
         if (key in shipsDB) {
-            let ship = shipsDB[key].raw;
+            const ship = shipsDB[key].raw;
             switch (ship.shipclass) {
                 case ShippingClass.ATON:
                     cAton++;
@@ -2186,15 +2224,15 @@ document.getElementById('shipSearchSide').addEventListener('input', updateTablec
 function updateTablecard() {
     if (!document.getElementById("tableside").classList.contains("active")) return;
 
-    var tableBody = document.getElementById("tablecardBody");
+    const tableBody = document.getElementById("tablecardBody");
     tableBody.innerHTML = "";
 
     if (shipsDB == null) return;
 
-    let shipKeys = Object.keys(shipsDB);
+    const shipKeys = Object.keys(shipsDB);
 
-    column = settings.tableside_column;
-    order = settings.tableside_order;
+    const column = settings.tableside_column;
+    const order = settings.tableside_order;
 
     const sortFunctions = {
         flag: (a, b) => compareString(shipsDB[a].raw.country, shipsDB[b].raw.country),
@@ -2212,7 +2250,7 @@ function updateTablecard() {
         });
     }
 
-    var filter = document.getElementById('shipSearchSide').value.toLowerCase();
+    const filter = document.getElementById('shipSearchSide').value.toLowerCase();
 
     const rows = [];
     let addedRows = 0;
@@ -2242,16 +2280,16 @@ function updateTablecard() {
 
     tableBody.innerHTML = rows.join('');
 
-    tableBody.onmouseover = function(e) {
+    tableBody.onmouseover = function (e) {
         const tr = e.target.closest('tr[data-mmsi]');
         if (tr) startHover('ship', parseInt(tr.dataset.mmsi));
     };
-    tableBody.onmouseout = function(e) { stopHover(); };
-    tableBody.onclick = function(e) {
+    tableBody.onmouseout = function (e) { stopHover(); };
+    tableBody.onclick = function (e) {
         const tr = e.target.closest('tr[data-mmsi]');
         if (tr) showShipcard('ship', parseInt(tr.dataset.mmsi));
     };
-    tableBody.oncontextmenu = function(e) {
+    tableBody.oncontextmenu = function (e) {
         const tr = e.target.closest('tr[data-mmsi]');
         if (tr) showContextMenu(e, parseInt(tr.dataset.mmsi), "ship", ["object", "object-map"]);
     };
@@ -2307,7 +2345,7 @@ function toggleTablecard() {
     }
 
     document.getElementById("tableside").classList.toggle("active");
-    var elements = document.querySelectorAll(".map-button-box");
+    const elements = document.querySelectorAll(".map-button-box");
     elements.forEach(function (element) {
         element.classList.toggle("active");
     });
@@ -2402,6 +2440,7 @@ function showServerErrors() {
 }
 
 async function fetchAbout() {
+    let response;
     try {
         response = await fetch("about.md");
     } catch (error) {
@@ -2426,6 +2465,8 @@ async function fetchRange(forcefetch = false) {
 
     range_update_time = now;
 
+    let response;
+    let h;
     try {
         response = await fetch("api/history_full.json?receiver=" + activeReceiver);
         h = await response.json();
@@ -2447,21 +2488,21 @@ async function fetchRange(forcefetch = false) {
 
     for (let i = 0; i < N; i++) {
         let m = 0;
-        for (j = 0; j < h.minute.stat.length; j++) {
+        for (let j = 0; j < h.minute.stat.length; j++) {
             m = Math.max(m, h.minute.stat[j].radar_a[i]);
             m = Math.max(m, h.minute.stat[j].radar_b[i]);
         }
 
         range_short.push(m);
 
-        for (j = 0; j < h.hour.stat.length; j++) {
+        for (let j = 0; j < h.hour.stat.length; j++) {
             m = Math.max(m, h.hour.stat[j].radar_a[i]);
             m = Math.max(m, h.hour.stat[j].radar_b[i]);
         }
 
         const additionalDays = settings.range_timeframe == "7d" ? 7 : settings.range_timeframe == "30d" ? 30 : 0;
 
-        for (j = 0; j < Math.min(additionalDays, h.day.stat.length); j++) {
+        for (let j = 0; j < Math.min(additionalDays, h.day.stat.length); j++) {
             m = Math.max(m, h.day.stat[j].radar_a[i]);
             m = Math.max(m, h.day.stat[j].radar_b[i]);
         }
@@ -2537,14 +2578,14 @@ function drawRange() {
     }
 }
 
-var distanceFeatures = undefined;
-var distanceLat = undefined;
-var distanceLon = undefined;
-var distanceMetric = undefined;
+let distanceFeatures = undefined;
+let distanceLat = undefined;
+let distanceLon = undefined;
+let distanceMetric = undefined;
 
 function removeDistanceCircles() {
     if (distanceFeatures) {
-        for (var i = 0; i < distanceFeatures.length; i++)
+        for (let i = 0; i < distanceFeatures.length; i++)
             rangeVector.removeFeature(distanceFeatures[i]);
     }
     distanceFeatures = undefined;
@@ -2616,9 +2657,9 @@ function updateDistanceCircles() {
 
         const range = [5000, 10000, 25000, 50000, 100000];
 
-        for (var i = 0; i < range.length; i++) {
+        for (let i = 0; i < range.length; i++) {
 
-            let distanceCircle = new ol.Feature({
+            const distanceCircle = new ol.Feature({
                 geometry: createDistanceGeometry(lat, lon, range[i] * conv)
             });
 
@@ -2654,6 +2695,7 @@ async function fetchBinary() {
     binaryDB = {};
     standaloneBinaryMessages = []; // For messages not at ship locations
 
+    let response;
     try {
         response = await fetch("api/binmsgs.json?receiver=" + activeReceiver);
         const messages = await response.json();
@@ -2682,7 +2724,7 @@ async function fetchBinary() {
             }
         });
 
-    
+
         return true;
     } catch (error) {
 
@@ -2700,6 +2742,7 @@ async function fetchShips(noDoubleFetch = true) {
     let ships = {};
 
     isFetchingShips = true;
+    let response;
     try {
         response = await fetch("api/ships_array.json?receiver=" + activeReceiver);
     } catch (error) {
@@ -2796,7 +2839,7 @@ async function fetchShips(noDoubleFetch = true) {
     if (String(settings.center_point).toUpperCase() == "STATION") {
         center = station;
     } else if (settings.center_point in shipsDB) {
-        let ship = shipsDB[settings.center_point].raw;
+        const ship = shipsDB[settings.center_point].raw;
         center = { lat: ship.lat, lon: ship.lon };
     }
 
@@ -2810,6 +2853,7 @@ async function fetchPlanes() {
 
     let planes = {};
 
+    let response;
     try {
         response = await fetch("api/planes_array.json");
     } catch (error) {
@@ -2867,11 +2911,11 @@ async function fetchPlanes() {
 }
 
 function toggleScreenSize() {
-    var doc = window.document;
-    var docEl = doc.documentElement;
+    const doc = window.document;
+    const docEl = doc.documentElement;
 
-    var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen || docEl.webkitEnterFullscreen;
-    var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen || doc.webkitExitFullscreen;
+    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen || docEl.webkitEnterFullscreen;
+    const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen || doc.webkitExitFullscreen;
 
     if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
         requestFullScreen.call(docEl);
@@ -2913,7 +2957,7 @@ function toggleMenu() {
     document.getElementById("menubar_mini").classList.toggle("showflex");
     document.getElementById("menubar_mini").classList.toggle("hide");
 
-    var menuButton = document.getElementById("header_menu_button");
+    const menuButton = document.getElementById("header_menu_button");
     menuButton.classList.toggle("menu_icon");
     menuButton.classList.toggle("close_icon");
 }
@@ -2926,7 +2970,7 @@ function initFullScreen() {
 }
 
 function handleFullScreenChange() {
-    var icon = document.getElementById("screentoggle-id");
+    const icon = document.getElementById("screentoggle-id");
     if (document.fullscreenElement) {
         icon.innerHTML = "fullscreen_exit";
     } else {
@@ -2949,9 +2993,9 @@ function calcOffset1M(coordinate, heading) {
     const sinLat = Math.sin(lat);
     const cosLat = Math.cos(lat);
 
-    let sinLat2 = sinLat * cos100R + cosLat * sin100R * Math.cos(rheading);
-    let lat2 = Math.asin(sinLat2);
-    let deltaLon = Math.atan2(Math.sin(rheading) * sin100R * cosLat, cos100R - sinLat * sinLat2);
+    const sinLat2 = sinLat * cos100R + cosLat * sin100R * Math.cos(rheading);
+    const lat2 = Math.asin(sinLat2);
+    const deltaLon = Math.atan2(Math.sin(rheading) * sin100R * cosLat, cos100R - sinLat * sinLat2);
 
     return [(lat2 * radInv - coordinate[1]) / 100, (deltaLon * radInv) / 100];
 }
@@ -2975,7 +3019,7 @@ function setTrackClassColor(shipClass, color) {
 function applyColorToAllTracks(color) {
     // Use default blue color if no color provided
     const colorToApply = color || '#12a5ed';
-    for (let classKey in ShippingClass) {
+    for (const classKey in ShippingClass) {
         settings.track_class_colors[ShippingClass[classKey]] = colorToApply;
     }
     updateTrackColorInputs();
@@ -3007,11 +3051,11 @@ function average(d) {
     let start = 0;
     if (d.chart.data.datasets.length > 1) start = 1;
 
-    var c = 0;
+    let c = 0;
 
-    for (a = 0; a < b.length; a++) {
+    for (let a = 0; a < b.length; a++) {
         if (b[a].x != 0) {
-            for (i = start; i < d.chart.data.datasets.length; i++) {
+            for (let i = start; i < d.chart.data.datasets.length; i++) {
                 if (!d.chart.getDatasetMeta(i).hidden) {
                     c += d.chart.data.datasets[i].data[a].y;
                 }
@@ -3231,7 +3275,7 @@ const graph_options_distance = {
     },
 };
 
-plot_count = {
+const plot_count = {
     type: "scatter",
     data: {
         datasets: [
@@ -3282,7 +3326,7 @@ plot_count = {
     options: graph_options_count,
 };
 
-plot_distance = {
+const plot_distance = {
     type: "scatter",
     data: {
         datasets: [
@@ -3328,7 +3372,7 @@ plot_distance = {
     options: graph_options_distance,
 };
 
-plot_single = {
+const plot_single = {
     type: "scatter",
     data: {
         datasets: [
@@ -3344,7 +3388,7 @@ plot_single = {
     options: graph_options_single,
 };
 
-plot_level = {
+const plot_level = {
     type: "scatter",
     data: {
         datasets: [
@@ -3368,7 +3412,7 @@ plot_level = {
     options: graph_options_level,
 };
 
-var plot_radar = {
+const plot_radar = {
     type: "polarArea",
     animation: false,
     responsive: true,
@@ -3462,40 +3506,33 @@ function cloneChartConfig(config) {
 function initPlots() {
     if (typeof Chart === "undefined") return;
 
-    const chartConfigs = [
-        { varName: "chart_radar_hour", id: "chart-radar-hour", ctx: "2d", config: plot_radar, clone: true },
-        { varName: "chart_radar_day", id: "chart-radar-day", ctx: "2d", config: plot_radar, clone: true },
-        { varName: "chart_seconds", id: "chart-seconds", config: plot_count, clone: true },
-        { varName: "chart_minutes", id: "chart-minutes", config: plot_count, clone: true },
-        { varName: "chart_hours", id: "chart-hours", config: plot_count, clone: true },
-        { varName: "chart_days", id: "chart-days", config: plot_count, clone: true },
-        { varName: "chart_ppm", id: "chart-ppm", config: plot_single, clone: true },
-        { varName: "chart_ppm_minute", id: "chart-ppm-minute", config: plot_single, clone: true },
-        { varName: "chart_distance_hour", id: "chart-distance-hour", config: plot_distance, clone: false },
-        { varName: "chart_distance_day", id: "chart-distance-day", config: plot_distance, clone: false },
-        { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single, clone: false },
-        { varName: "chart_hour_vessel", id: "chart-vessels-hour", config: plot_single, clone: false },
-        { varName: "chart_day_vessel", id: "chart-vessels-day", config: plot_single, clone: false }
-    ];
-
-    for (const { varName, id, ctx, config, clone } of chartConfigs) {
+    function makeChart(id, config, clone, ctx) {
         try {
             const canvas = document.getElementById(id);
-            if (!canvas) {
-                console.warn(`Canvas element not found: ${id}`);
-                continue;
-            }
-
+            if (!canvas) { console.warn(`Canvas element not found: ${id}`); return null; }
             const context = ctx === "2d" ? canvas.getContext("2d") : canvas;
-            const chartConfig = clone ? cloneChartConfig(config) : config;
-
-            window[varName] = new Chart(context, chartConfig);
+            return new Chart(context, clone ? cloneChartConfig(config) : config);
         } catch (error) {
             console.error(`Failed to initialize chart ${id}:`, error);
+            return null;
         }
     }
-    chart_level = new Chart(document.getElementById("chart-level"), cloneChartConfig(plot_level));
-    chart_level_hour = new Chart(document.getElementById("chart-level-hour"), cloneChartConfig(plot_level));
+
+    chart_radar_hour    = makeChart("chart-radar-hour",      plot_radar,    true,  "2d");
+    chart_radar_day     = makeChart("chart-radar-day",       plot_radar,    true,  "2d");
+    chart_seconds       = makeChart("chart-seconds",         plot_count,    true);
+    chart_minutes       = makeChart("chart-minutes",         plot_count,    true);
+    chart_hours         = makeChart("chart-hours",           plot_count,    true);
+    chart_days          = makeChart("chart-days",            plot_count,    true);
+    chart_ppm           = makeChart("chart-ppm",             plot_single,   true);
+    chart_ppm_minute    = makeChart("chart-ppm-minute",      plot_single,   true);
+    chart_distance_hour = makeChart("chart-distance-hour",   plot_distance, false);
+    chart_distance_day  = makeChart("chart-distance-day",    plot_distance, false);
+    chart_minute_vessel = makeChart("chart-vessels-minute",  plot_single,   false);
+    chart_hour_vessel   = makeChart("chart-vessels-hour",    plot_single,   false);
+    chart_day_vessel    = makeChart("chart-vessels-day",     plot_single,   false);
+    chart_level         = makeChart("chart-level",           plot_level,    true);
+    chart_level_hour    = makeChart("chart-level-hour",      plot_level,    true);
 }
 
 function shipcardismax() {
@@ -3519,7 +3556,7 @@ function toggleShipcardSize() {
     document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_down_icon");
     document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_up_icon");
 
-    var e = document.getElementById("shipcard_content").children;
+    const e = document.getElementById("shipcard_content").children;
 
     if (shipcardismax()) {
         for (let i = 0; i < e.length; i++) {
@@ -3533,11 +3570,11 @@ function toggleShipcardSize() {
             if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
 
                 if (card_mmsi in shipsDB && card_type == "ship") {
-                    let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]));
+                    const pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]));
                     positionAside(pixel, aside);
                 }
                 else if (card_mmsi in planesDB && card_type == "plane") {
-                    let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]));
+                    const pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]));
                     positionAside(pixel, aside);
                 }
             }
@@ -3594,6 +3631,7 @@ function onReceiverChange(idx) {
     activeReceiver = parseInt(idx, 10) || 0;
     const btn = document.getElementById("receiver-btn");
     if (btn) btn.classList.toggle("active", activeReceiver !== 0);
+    saveSettings();
     refresh_data();
 }
 
@@ -3627,13 +3665,14 @@ function getFlagStyled(country, style) {
 
 // fetches main statistics from the server
 async function fetchStatistics() {
+    let response;
     try {
         response = await fetch("api/stat.json?receiver=" + activeReceiver);
     } catch (error) {
 
         return;
     }
-    statistics = await response.json();
+    const statistics = await response.json();
 
     return statistics;
 }
@@ -3656,7 +3695,7 @@ function updateStat(stat, tf) {
     document.getElementById("stat_" + tf + "_msg21").innerText = stat[tf].msg[20].toLocaleString();
     document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26].toLocaleString();
 
-    var count_other = 0;
+    let count_other = 0;
     [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26].forEach((i) => (count_other += stat[tf].msg[i - 1]));
     document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
 }
@@ -3669,7 +3708,7 @@ function formatBytes(b) {
 }
 
 async function updateStatistics() {
-    var stat = await fetchStatistics();
+    const stat = await fetchStatistics();
 
     if (stat) {
         // in bulk....
@@ -3679,14 +3718,14 @@ async function updateStatistics() {
 
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
-        var statSharingElement = document.getElementById("stat_sharing");
+        const statSharingElement = document.getElementById("stat_sharing");
 
         statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank">${stat.sharing ? 'Yes' : 'No'}</a>`;
         statSharingElement.style.color = stat.sharing ? "green" : "red";
 
 
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
-        var title = document.getElementById("stat_station").textContent;
+        const title = document.getElementById("stat_station").textContent;
         if (title != "" && title != null) {
             tab_title_station = title;
             updateTitle();
@@ -3706,7 +3745,7 @@ async function updateStatistics() {
         document.getElementById("stat_total_vessel_count").innerText = "-";
         document.getElementById("stat_session_vessel_count").innerText = stat.vessel_count;
 
-        let outputSection = document.getElementById("output_stats");
+        const outputSection = document.getElementById("output_stats");
         if (!outputSection) return;
 
         if (stat.outputs && stat.outputs.length > 0) {
@@ -3736,25 +3775,26 @@ async function updateStatistics() {
 }
 
 function updateChartMulti(b, f, c) {
+    if (!c) return;
     if (b.hasOwnProperty(f)) {
-        var hA = [];
-        var hB = [];
-        var hT = [];
-        var hS = [];
-        var hV = [];
+        const hA = [];
+        const hB = [];
+        const hT = [];
+        const hS = [];
+        const hV = [];
 
 
         const source = b[f];
         for (let i = 0; i < source.time.length; i++) {
-            let cA = source.stat[i].msg[0] + source.stat[i].msg[1] + source.stat[i].msg[2] + source.stat[i].msg[4];
+            const cA = source.stat[i].msg[0] + source.stat[i].msg[1] + source.stat[i].msg[2] + source.stat[i].msg[4];
             hA.push({ x: source.time[i], y: cA });
-            let cB = source.stat[i].msg[17] + source.stat[i].msg[18] + source.stat[i].msg[23];
+            const cB = source.stat[i].msg[17] + source.stat[i].msg[18] + source.stat[i].msg[23];
             hB.push({ x: source.time[i], y: cB });
-            let cS = source.stat[i].msg[3];
+            const cS = source.stat[i].msg[3];
             hS.push({ x: source.time[i], y: cS });
-            let cT = source.stat[i].count - cA - cB - cS;
+            const cT = source.stat[i].count - cA - cB - cS;
             hT.push({ x: source.time[i], y: cT });
-            let cV = source.stat[i].vessels;
+            const cV = source.stat[i].vessels;
             hV.push({ x: source.time[i], y: cV });
         }
 
@@ -3769,20 +3809,21 @@ function updateChartMulti(b, f, c) {
 }
 
 function updateChartDistance(b, f, c) {
+    if (!c) return;
     if (b.hasOwnProperty(f)) {
-        var hNE = [];
-        var hSE = [];
-        var hSW = [];
-        var hNW = [];
-        var hM = [];
+        const hNE = [];
+        const hSE = [];
+        const hSW = [];
+        const hNW = [];
+        const hM = [];
 
-        let source = b[f];
+        const source = b[f];
 
         if (source.stat[0].radar_a.length == 0) return;
-        let N = source.stat[0].radar_a.length;
-        let N4 = N / 4;
+        const N = source.stat[0].radar_a.length;
+        const N4 = N / 4;
         for (let i = 0; i < source.time.length; i++) {
-            let count = [0, 0, 0, 0];
+            const count = [0, 0, 0, 0];
             for (let j = 0; j < N; j++) count[Math.floor(j / N4)] = Math.max(count[Math.floor(j / N4)], source.stat[i].radar_a[j]);
 
             hNE.push({ x: source.time[i], y: getDistanceConversion(count[0]) }); // source.stat[i].radar[0]
@@ -3802,8 +3843,9 @@ function updateChartDistance(b, f, c) {
 }
 
 function updateChartSingle(b, f1, f2, c) {
+    if (!c) return;
     if (b.hasOwnProperty(f1)) {
-        var h = [];
+        const h = [];
 
         const source = b[f1];
         for (let i = 0; i < source.time.length; i++) {
@@ -3843,13 +3885,14 @@ function updateChartLevel(chartData, timeframe, chartName, chart) {
 }
 
 function updateRadar(b, f, c) {
+    if (!c) return;
     if (b.hasOwnProperty(f)) {
-        var data_a = [],
+        const data_a = [],
             data_b = [];
         let idx = 0;
         if (b[f].stat.length > 1) idx = 1;
-        let N = b[f].stat[idx].radar_a.length;
-        for (var i = 0; i < N; i++) {
+        const N = b[f].stat[idx].radar_a.length;
+        for (let i = 0; i < N; i++) {
             data_a.push({
                 r: getDistanceConversion(b[f].stat[idx].radar_a[i]),
                 theta: (i * 360) / N,
@@ -3871,17 +3914,13 @@ async function updatePlots() {
         u.textContent = unit;
     });
 
-    if (true) {
-        try {
-            response = await fetch("api/history_full.json?receiver=" + activeReceiver);
-        } catch (error) {
-    
-        }
-        b = await response.json();
-    } else {
-        b = JSON.parse(chart_json);
+    let response;
+    try {
+        response = await fetch("api/history_full.json?receiver=" + activeReceiver);
+    } catch (error) {
+        return;
     }
-
+    const b = await response.json();
 
     updateChartMulti(b, "second", chart_seconds);
     updateChartMulti(b, "minute", chart_minutes);
@@ -3904,13 +3943,13 @@ async function updatePlots() {
 }
 
 function tableRowClick(m) {
-    ship = shipsDB[m].raw;
+    const ship = shipsDB[m].raw;
     if (ship.lat == null || ship.lon == null) return;
 
     selectMapTab(m);
 }
 
-var table = null;
+let table = null;
 
 function downloadCSV() {
     if (table) table.download("csv", "data.csv");
@@ -4220,7 +4259,7 @@ async function updateShipTable() {
             }
         });
     } else {
-        var sorters = table.getSorters();
+        const sorters = table.getSorters();
         table.replaceData(data);
         table.setSort(sorters);
     }
@@ -4386,15 +4425,14 @@ function getTypeVal(ship) {
 function getShipOpacity(ship) {
     if (settings.fading == false) return 1;
 
-    let opacity = 1 - (ship.last_signal / 1800) * 0.8;
+    const opacity = 1 - (ship.last_signal / 1800) * 0.8;
     return Math.max(0.2, Math.min(1, opacity));
 }
 
 
-function getShipCSSClassAndStyle(ship, opacity = 1) {
+function getShipCSSClassAndStyle(ship, opacity = 1, scale = settings.icon_scale) {
     getSprite(ship);
     let style = `opacity: ${opacity};`;
-    let scale = settings.icon_scale;
 
     style += `background-position: -${ship.cx - 0}px -${ship.cy - 0}px; width: 20px; height: 20px; transform: rotate(${ship.rot}rad) scale(${scale});`;
 
@@ -4475,8 +4513,8 @@ const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
             const rad = (a + 45) * Math.PI / 180;
             const s = Math.sin(rad);
             const c = -Math.cos(rad);
-            let x = pixel[0] + dist * s + (s < 0 ? -tw : 0);
-            let y = pixel[1] + dist * c + (c < 0 ? -th : 0);
+            const x = pixel[0] + dist * s + (s < 0 ? -tw : 0);
+            const y = pixel[1] + dist * c + (c < 0 ? -th : 0);
             return { x, y };
         };
 
@@ -4503,7 +4541,7 @@ const stopHover = function () {
 
     if (!hoverMMSI) return;
 
-    let hover_mmsi = hoverMMSI;
+    const hover_mmsi = hoverMMSI;
 
     debounceShowHoverTrack.cancel();
 
@@ -4733,7 +4771,7 @@ const startHover = function (type, mmsi, pixel, feature) {
         hover_feature = feature;
 
         if (type == 'ship' && (mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
-            let tooltip = shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi;
+            const tooltip = shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi;
             showTooltipShip(hover_info, tooltip, pixel, 15, shipsDB[mmsi].raw.cog);
             if (settings.show_track_on_hover && pixel) {
                 debounceShowHoverTrack(mmsi);
@@ -4931,17 +4969,17 @@ const debounceShowHoverTrack = debounce(showHoverTrack, 250);
 function updateMapURL() {
     if (isAndroid()) return;
 
-    let view = map.getView();
-    let center = ol.proj.toLonLat(view.getCenter()); // Converts the center coordinates to [lon, lat]
-    let newURL = window.location.href.split("?")[0] + "?lat=" + center[1].toFixed(4) + "&lon=" + center[0].toFixed(4) + "&zoom=" + view.getZoom().toFixed(2) + "&tab=" + settings.tab;
+    const view = map.getView();
+    const center = ol.proj.toLonLat(view.getCenter()); // Converts the center coordinates to [lon, lat]
+    const newURL = window.location.href.split("?")[0] + "?lat=" + center[1].toFixed(4) + "&lon=" + center[0].toFixed(4) + "&zoom=" + view.getZoom().toFixed(2) + "&tab=" + settings.tab;
     history.replaceState(null, null, newURL);
 }
 
 
 function saveSettings() {
     if (map !== undefined) {
-        var view = map.getView();
-        var center = ol.proj.toLonLat(view.getCenter()); // Convert the center coordinate to longitude and latitude
+        const view = map.getView();
+        const center = ol.proj.toLonLat(view.getCenter()); // Convert the center coordinate to longitude and latitude
         settings.lat = center[1]; // Latitude
         settings.lon = center[0]; // Longitude
         settings.zoom = view.getZoom(); // Zoom level
@@ -5060,8 +5098,8 @@ function loadSettingsFromURL() {
 
 function mapResetViewZoom(z, m) {
     if (m && m in shipsDB) {
-        let ship = shipsDB[m].raw;
-        let view = map.getView();
+        const ship = shipsDB[m].raw;
+        const view = map.getView();
         view.setCenter(ol.proj.fromLonLat([ship.lon, ship.lat]));
         view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
     }
@@ -5071,7 +5109,7 @@ function mapResetViewZoom(z, m) {
 
 function mapResetView(z) {
 
-    let view = map.getView();
+    const view = map.getView();
     view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
     shipcardMinIfMaxonMobile();
 }
@@ -5162,7 +5200,7 @@ async function showAllTracks() {
 function deleteAllTracks() {
     show_all_tracks = false;
     marker_tracks = new Set();
-    let p = {};
+    const p = {};
 
     if (card_type == 'ship' && card_mmsi && settings.show_track_on_select) {
         marker_tracks.add(Number(card_mmsi));
@@ -5183,16 +5221,17 @@ async function fetchTracks() {
     if (marker_tracks.size == 0 && show_all_tracks == false) return true;
 
     try {
+        let a;
         if (show_all_tracks) a = await fetch("api/allpath.json?receiver=" + activeReceiver);
         else {
 
-            for (var mmsi of marker_tracks) {
+            for (const mmsi of marker_tracks) {
                 if (!(mmsi in shipsDB)) {
                     ToggleTrackOnMap(mmsi);
                 }
             }
 
-            var mmsi_str = Array.from(marker_tracks).join(",");
+            const mmsi_str = Array.from(marker_tracks).join(",");
             a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + activeReceiver);
         }
         paths = await a.json();
@@ -5202,7 +5241,7 @@ async function fetchTracks() {
         return false;
     }
 
-    for (var mmsi in paths) {
+    for (const mmsi in paths) {
         if (paths.hasOwnProperty(mmsi)) {
             if (mmsi in shipsDB && paths[mmsi].length > 0) {
                 shipsDB[mmsi].raw.lat = paths[mmsi][0][0];
@@ -5239,14 +5278,14 @@ function updateShipcardTrackOption() {
 }
 
 function isShipcardMax() {
-    var e = document.getElementById("shipcard").classList;
+    const e = document.getElementById("shipcard").classList;
     return e.contains("shipcard-ismax");
 }
 
 function getStringfromMsgType(m) {
     let s = "";
     let delim = "";
-    for (i = 1; i <= 27; i++)
+    for (let i = 1; i <= 27; i++)
         if ((m & (1 << i)) != 0) {
             s += delim + Number(i).toFixed(0);
             delim = ", ";
@@ -5259,8 +5298,8 @@ function getStringfromGroup(m) {
     let delim = "";
     let count = 0;
 
-    for (i = 0; i < 32; i++) {
-        let mask = 1 << i;
+    for (let i = 0; i < 32; i++) {
+        const mask = 1 << i;
         if ((m & mask) !== 0) {
             if (count == 4) {
                 s += delim + "...";
@@ -5277,7 +5316,7 @@ function getStringfromGroup(m) {
 function getStringfromChannels(m) {
     let s = "";
     let delim = "";
-    for (i = 0; i <= 3; i++)
+    for (let i = 0; i <= 3; i++)
         if ((m & (1 << i)) != 0) {
             s += delim + String.fromCharCode(65 + i);
             delim = ", ";
@@ -5348,7 +5387,7 @@ function populateShipcard() {
         return;
     }
 
-    let ship = shipsDB[card_mmsi].raw;
+    const ship = shipsDB[card_mmsi].raw;
 
     document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;");
     document.getElementById("shipcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
@@ -5537,7 +5576,7 @@ function populatePlanecard() {
         return;
     }
 
-    let plane = planesDB[card_mmsi].raw;
+    const plane = planesDB[card_mmsi].raw;
 
     setShipcardValidation(plane.validated);
 
@@ -5596,7 +5635,7 @@ function drawStation() {
     }
 
     const radius = 10;
-    let svgIconStyle = new ol.style.Style({
+    const svgIconStyle = new ol.style.Style({
         image: new ol.style.Icon({
             anchor: [0.5, 0.5],
             scale: 0.3,
@@ -5605,7 +5644,7 @@ function drawStation() {
         })
     });
 
-    let CircleStyle = new ol.style.Style({
+    const CircleStyle = new ol.style.Style({
         image: new ol.style.Circle({
             radius: radius,
             stroke: new ol.style.Stroke({
@@ -5638,7 +5677,7 @@ function drawStation() {
     } else {
         center = {};
         if (hasMMSIcenter) {
-            let ship = shipsDB[settings.center_point].raw;
+            const ship = shipsDB[settings.center_point].raw;
             if (ship.lat != null && ship.lon != null) {
                 center = { lat: ship.lat, lon: ship.lon };
             }
@@ -5647,7 +5686,7 @@ function drawStation() {
 
     if (settings.fix_center && center != null && center.hasOwnProperty("lat") && center.hasOwnProperty("lon")) {
 
-        let view = map.getView();
+        const view = map.getView();
         view.setCenter(ol.proj.fromLonLat([center.lon, center.lat]));
 
         settings.lat = center.lat;
@@ -5656,10 +5695,10 @@ function drawStation() {
 }
 
 function moveMapCenter(px) {
-    let view = map.getView();
-    let currentCenter = view.getCenter();
-    let newCenter = map.getCoordinateFromPixel(px);
-    let centerDiff = [newCenter[0] - currentCenter[0], newCenter[1] - currentCenter[1]];
+    const view = map.getView();
+    const currentCenter = view.getCenter();
+    const newCenter = map.getCoordinateFromPixel(px);
+    const centerDiff = [newCenter[0] - currentCenter[0], newCenter[1] - currentCenter[1]];
 
     stopHover();
     view.animate({
@@ -5680,10 +5719,10 @@ function adjustMapForShipcard(pixel) {
     }
 
     if (lat && lon) {
-        let view = map.getView();
+        const view = map.getView();
 
-        let currentExtent = view.calculateExtent(map.getSize());
-        let shipCoords = ol.proj.fromLonLat([lon, lat]);
+        const currentExtent = view.calculateExtent(map.getSize());
+        const shipCoords = ol.proj.fromLonLat([lon, lat]);
 
         if (!ol.extent.containsCoordinate(currentExtent, shipCoords)) {
             view.animate({
@@ -5698,12 +5737,12 @@ function adjustMapForShipcard(pixel) {
             pixel = map.getPixelFromCoordinate(shipCoords);
         }
 
-        let shipcard = document.getElementById("shipcard");
-        let shipcardRect = shipcard.getBoundingClientRect();
-        let mapElement = map.getTargetElement();
-        let mapRect = mapElement.getBoundingClientRect();
+        const shipcard = document.getElementById("shipcard");
+        const shipcardRect = shipcard.getBoundingClientRect();
+        const mapElement = map.getTargetElement();
+        const mapRect = mapElement.getBoundingClientRect();
 
-        let isUnderShipcard = (
+        const isUnderShipcard = (
             pixel[0] + mapRect.left >= shipcardRect.left &&
             pixel[0] + mapRect.left <= shipcardRect.right &&
             pixel[1] + mapRect.top >= shipcardRect.top &&
@@ -5712,7 +5751,7 @@ function adjustMapForShipcard(pixel) {
 
         if (isUnderShipcard) {
             let newPixel = [...pixel];
-            let margin = 10; // Margin in pixels
+            const margin = 10; // Margin in pixels
 
             if (shipcardRect.bottom + margin + 20 <= mapRect.bottom) { // 20 is an approximate marker height
                 newPixel[1] = shipcardRect.bottom + margin;
@@ -5728,6 +5767,7 @@ function adjustMapForShipcard(pixel) {
 }
 
 function pinShipcard() {
+    const shipcard = document.getElementById("shipcard");
     settings.shipcard_pinned = true;
     settings.shipcard_pinned_x = parseInt(shipcard.style.left) || 0;
     settings.shipcard_pinned_y = parseInt(shipcard.style.top) || 0;
@@ -5789,7 +5829,7 @@ function positionAside(pixel, aside) {
 
     if (pixel) {
         const margin = 35;
-        let marginRight = document.getElementById("tableside").classList.contains("active") ? 592 : 30;
+        const marginRight = document.getElementById("tableside").classList.contains("active") ? 592 : 30;
 
         const mapSize = map.getSize();
         const shipCardRect = aside.getBoundingClientRect();
@@ -5818,10 +5858,10 @@ function positionAside(pixel, aside) {
 }
 
 function displayShipcardIcons(type) {
-    let icons = document.querySelectorAll('#shipcard_footer > div');
+    const icons = document.querySelectorAll('#shipcard_footer > div');
     let idx = 0;
 
-    for (let icon of icons) {
+    for (const icon of icons) {
         // Hide icons that don't match current context type
         if (icon.dataset.contextType !== type && icon.dataset.contextType) {
             icon.style.display = "none";
@@ -5892,8 +5932,8 @@ function showShipcard(type, m, pixel = undefined) {
     const aside = document.getElementById("shipcard");
     const visible = shipcardVisible();
 
-    let ship = m in shipsDB ? shipsDB[m].raw : null;
-    let ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
+    const ship = m in shipsDB ? shipsDB[m].raw : null;
+    const ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
 
 
     if (select_enabled_track && (card_mmsi != m || m == null)) {
@@ -6027,8 +6067,8 @@ const shippingMappings = {
 }
 
 function getSprite(ship) {
-    let shipClass = ship.shipclass;
-    let sprite = shippingMappings[shipClass] || {
+    const shipClass = ship.shipclass;
+    const sprite = shippingMappings[shipClass] || {
         cx: 120,
         cy: 20,
         imgSize: 20,
@@ -6103,7 +6143,7 @@ function getPlaneSprite(plane) {
     return sprite;
 }
 
-var SpritesAll =
+const SpritesAll =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABuCAYAAACgLRjpAAAAwnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjabVBbDgMhCPznFD2CPHTxOG7XJr1Bj18UbHbbkjgMj4wA9NfzAbdhhAKSNy21lGQmVSo1I5rc2kRMMvGUmvElD6VHgSzF5tlDLdG/8vgRcNeM5ZOQ3qOwXwtVQl+/hMgdj4kGP0KohhCTFzAEWuxQqm7nFfa1wTL1BwNEr2P/xJtd78j2DxN1Rk6GzOoD8HgZuBlBQwtoMDWOLIZ5tqIf5N+dlsEbcl5ZgI6o50sAAAGEaUNDUElDQyBwcm9maWxlAAB4nH2RPUjDUBSFT1ulIhUFC1pxyFCd7KIijrUKRagQaoVWHUxe+gdNGpIUF0fBteDgz2LVwcVZVwdXQRD8AXEXnBRdpMT7kkKLGC883sd59xzeuw/wNypMNbvigKpZRjqZELK5VSH4Ch8iGMAQIhIz9TlRTMGzvu6pm+ouxrO8+/6sPiVvMsAnEMeZbljEG8Qzm5bOeZ84zEqSQnxOPGHQBYkfuS67/Ma56LCfZ4aNTHqeOEwsFDtY7mBWMlTiaeKoomqU78+6rHDe4qxWaqx1T/7CUF5bWeY6rVEksYgliBAgo4YyKrAQo10jxUSazhMe/hHHL5JLJlcZjBwLqEKF5PjB/+D3bM3C1KSbFEoA3S+2/TEGBHeBZt22v49tu3kCBJ6BK63trzaA2U/S620tegT0bwMX121N3gMud4DhJ10yJEcK0PIXCsD7GX1TDhi8BXrX3Lm1znH6AGRoVqkb4OAQGC9S9rrHu3s65/ZvT2t+P4Ewcqz7/a75AAANemlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNC40LjAtRXhpdjIiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iCiAgICB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIgogICAgeG1sbnM6R0lNUD0iaHR0cDovL3d3dy5naW1wLm9yZy94bXAvIgogICAgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIgogICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgIHhtcE1NOkRvY3VtZW50SUQ9ImdpbXA6ZG9jaWQ6Z2ltcDpiNGQ1NGU4Ny1jZGQyLTQ0M2YtOWU2Mi1mYjJkYjFmOWNjOTkiCiAgIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6YWI4MDQ0MzItMTE2My00NGQ0LWE0MGUtNzUxMzE1YjZlMzZiIgogICB4bXBNTTpPcmlnaW5hbERvY3VtZW50SUQ9InhtcC5kaWQ6YjNhMDI1MzEtNmQ0OS00ZTE5LWE1NGYtOTE2OTE3MGYyMTMzIgogICBHSU1QOkFQST0iMi4wIgogICBHSU1QOlBsYXRmb3JtPSJNYWMgT1MiCiAgIEdJTVA6VGltZVN0YW1wPSIxNzM3ODI1Mjk4OTUwMzkxIgogICBHSU1QOlZlcnNpb249IjIuMTAuMzgiCiAgIGRjOkZvcm1hdD0iaW1hZ2UvcG5nIgogICB0aWZmOk9yaWVudGF0aW9uPSIxIgogICB4bXA6Q3JlYXRvclRvb2w9IkdJTVAgMi4xMCIKICAgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNTowMToyNVQxODoxNDo1OCswMTowMCIKICAgeG1wOk1vZGlmeURhdGU9IjIwMjU6MDE6MjVUMTg6MTQ6NTgrMDE6MDAiPgogICA8eG1wTU06SGlzdG9yeT4KICAgIDxyZGY6U2VxPgogICAgIDxyZGY6bGkKICAgICAgc3RFdnQ6YWN0aW9uPSJzYXZlZCIKICAgICAgc3RFdnQ6Y2hhbmdlZD0iLyIKICAgICAgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDoxNTViZGM3Ny05OGRiLTRlZDctODU1MC1jYTMyZjgyZTk0ZGUiCiAgICAgIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkdpbXAgMi4xMCAoTWFjIE9TKSIKICAgICAgc3RFdnQ6d2hlbj0iMjAyNS0wMS0yNVQxODoxNDo1OCswMTowMCIvPgogICAgPC9yZGY6U2VxPgogICA8L3htcE1NOkhpc3Rvcnk+CiAgPC9yZGY6RGVzY3JpcHRpb24+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgCjw/eHBhY2tldCBlbmQ9InciPz5Kov3CAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH6QEZEQ46qIXsNAAAIABJREFUeNrtnXtc1HW+/1/f69xnALkoAgoIchGVi2IB4jVXs1TKy8nMbtbeitPpt8efpzrbXn5nz+a27W6P2lUPa7ZZbZpmaVtrZa1QkqgpCoiaCWIwIDAw1+98v9/P+YOJgJlhvjDDOdVvXo/HPHDm85nn6/Oe72s+3+t8BcIK65su00aT1rTRpA8V777Yu7T3xd4VMt74xE3a8YmbQsYrzmG0xTlMyHhlGoO2TGMIGW9+iUo7v0QVMp42o1CrzSgMGW+5Oke7XJ2jiEcrItLMFtDM5lANkAa9hQa9OXRfEXoLQsijgC0UEDIeA2xhQshjWWxh2dDxQLNbQLMhrJfewihcHpSC2U/jXrOoCQC4195LsuyyOIKc/TS3udY2AcDrqr8mVZhfDIo3PnGTxuVc1QQAKvX+pNbmHUHxinMYzRwS2wQAxyhzUmWtFBSvTGPQ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'
 
 async function updateMap() {
@@ -6128,7 +6168,7 @@ async function updateMap() {
     if (settings.setcoord == "true" || settings.setcoord == true) {
         if (station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon")) {
             settings.setcoord = false;
-            let view = map.getView();
+            const view = map.getView();
             view.setCenter(ol.proj.fromLonLat([station.lon, station.lat]));
             saveSettings();
         }
@@ -6308,8 +6348,8 @@ function redrawMap() {
 
     const includeLabels = (settings.show_labels === "dynamic" && (map.getView().getZoom() > 11.5)) || settings.show_labels === "always";
 
-    for (let [mmsi, entry] of Object.entries(shipsDB)) {
-        let ship = entry.raw;
+    for (const [mmsi, entry] of Object.entries(shipsDB)) {
+        const ship = entry.raw;
         if (ship.lat != null && ship.lon != null && ship.lat != 0 && ship.lon != 0 && ship.lat < 90 && ship.lon < 180) {
             getSprite(ship)
 
@@ -6317,7 +6357,7 @@ function redrawMap() {
             const lat = ship.lat
 
             const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
-            var feature = new ol.Feature({
+            const feature = new ol.Feature({
                 geometry: point
             })
 
@@ -6330,7 +6370,7 @@ function redrawMap() {
                 labelVector.addFeature(feature)
 
             if (map.getView().getZoom() > 11.5 && (ship.heading != null || settings.show_circle_outline)) {
-                var shapeFeature = new ol.Feature({
+                const shapeFeature = new ol.Feature({
                     geometry: createShipOutlineGeometry(ship)
                 })
                 shapeFeature.ship = ship
@@ -6346,8 +6386,8 @@ function redrawMap() {
 
     if (planeLayer.isVisible()) {
 
-        for (let [hexident, entry] of Object.entries(planesDB)) {
-            let plane = entry.raw;
+        for (const [hexident, entry] of Object.entries(planesDB)) {
+            const plane = entry.raw;
             if (plane.lat != null && plane.lon != null && plane.lat != 0 && plane.lon != 0 && plane.lat < 90 && plane.lon < 180) {
                 getPlaneSprite(plane)
 
@@ -6355,7 +6395,7 @@ function redrawMap() {
                 const lat = plane.lat
 
                 const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
-                var feature = new ol.Feature({
+                const feature = new ol.Feature({
                     geometry: point
                 })
 
@@ -6370,7 +6410,7 @@ function redrawMap() {
         }
     }
 
-    for (let [mmsi, entry] of Object.entries(paths)) {
+    for (const [mmsi, entry] of Object.entries(paths)) {
 
         if (marker_tracks.has(Number(mmsi)) || show_all_tracks) {
             const path = paths[mmsi];
@@ -6484,14 +6524,14 @@ function updateDarkMode() {
 
 
 document.getElementById('zoom-in').addEventListener('click', function () {
-    var view = map.getView();
-    var zoom = view.getZoom();
+    const view = map.getView();
+    const zoom = view.getZoom();
     view.setZoom(zoom + 1);
 });
 
 document.getElementById('zoom-out').addEventListener('click', function () {
-    var view = map.getView();
-    var zoom = view.getZoom();
+    const view = map.getView();
+    const zoom = view.getZoom();
     view.setZoom(zoom - 1);
 });
 
@@ -6538,10 +6578,10 @@ async function openFocus(m, z) {
 
     selectMapTab(m);
 
-    let ship = shipsDB[m].raw;
+    const ship = shipsDB[m].raw;
     if (ship && ship.lon && ship.lat) {
-        let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
-        let view = map.getView();
+        const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
+        const view = map.getView();
         view.setCenter(shipCoords);
     }
 
@@ -7171,9 +7211,9 @@ function activateTab(b, a) {
     Array.from(document.getElementById("menubar").children).forEach((e) => (e.className = e.className.replace(" active", "")));
     Array.from(document.getElementById("menubar_mini").children).forEach((e) => (e.className = e.className.replace(" active", "")));
 
-    tabcontent = document.getElementsByClassName("tabcontent");
+    const tabcontent = document.getElementsByClassName("tabcontent");
 
-    for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+    for (let i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
 
     document.getElementById(a).style.display = "block";
     if (a === "map") document.getElementById("tableside").style.display = "flex";
@@ -7319,24 +7359,24 @@ function selectTab() {
 
 function updateAndroid() {
     if (isAndroid()) {
-        var elements = document.querySelectorAll(".noandroid");
-        for (var i = 0; i < elements.length; i++) {
+        const elements = document.querySelectorAll(".noandroid");
+        for (let i = 0; i < elements.length; i++) {
             elements[i].style.setProperty("display", "none", "important");
         }
     } else {
-        var elements = document.querySelectorAll(".android");
-        for (var i = 0; i < elements.length; i++) {
+        const elements = document.querySelectorAll(".android");
+        for (let i = 0; i < elements.length; i++) {
             elements[i].style.setProperty("display", "none", "important");
         }
     }
 }
 
-var originalDisplayValues = new Map();
+const originalDisplayValues = new Map();
 
 function clearAndHide(element) {
     if (!originalDisplayValues.has(element)) {
         // Get computed style to handle cases where display isn't explicitly set
-        var computedStyle = window.getComputedStyle(element);
+        const computedStyle = window.getComputedStyle(element);
         originalDisplayValues.set(element, computedStyle.display);
     }
     element.style.display = "none";
@@ -7408,33 +7448,33 @@ function updateKiosk() {
     if (isKiosk()) {
         startKioskAnimation();
 
-        var nokioskElements = document.querySelectorAll(".nokiosk");
-        var kioskElements = document.querySelectorAll(".kiosk");
+        const nokioskElements = document.querySelectorAll(".nokiosk");
+        const kioskElements = document.querySelectorAll(".kiosk");
 
-        for (var i = 0; i < nokioskElements.length; i++) {
+        for (let i = 0; i < nokioskElements.length; i++) {
             clearAndHide(nokioskElements[i]);
         }
 
-        for (var i = 0; i < kioskElements.length; i++) {
+        for (let i = 0; i < kioskElements.length; i++) {
             restoreOriginalDisplay(kioskElements[i]);
         }
     } else {
         stopKioskAnimation();
 
-        var kioskElements = document.querySelectorAll(".kiosk");
-        var nokioskElements = document.querySelectorAll(".nokiosk");
+        const kioskElements = document.querySelectorAll(".kiosk");
+        const nokioskElements = document.querySelectorAll(".nokiosk");
 
-        for (var i = 0; i < kioskElements.length; i++) {
+        for (let i = 0; i < kioskElements.length; i++) {
             clearAndHide(kioskElements[i]);
         }
 
-        for (var i = 0; i < nokioskElements.length; i++) {
+        for (let i = 0; i < nokioskElements.length; i++) {
             restoreOriginalDisplay(nokioskElements[i]);
         }
     }
 }
 
-var kioskAnimationInterval = null;
+let kioskAnimationInterval = null;
 
 function selectRandomShipForKiosk() {
 
@@ -7683,14 +7723,14 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
-let rainviewerRadar = new ol.layer.Tile({
+const rainviewerRadar = new ol.layer.Tile({
     name: 'rainviewer_radar',
     title: 'RainViewer Radar',
     type: 'overlay',
     opacity: 0.7,
 });
 
-let rainviewerClouds = new ol.layer.Tile({
+const rainviewerClouds = new ol.layer.Tile({
     name: 'rainviewer_clouds',
     title: 'RainViewer Clouds',
     type: 'overlay',
@@ -7820,21 +7860,21 @@ else {
 addOverlayLayer("Aircraft", planeLayer);
 
 
-let mdabout = "This content can be defined by the owner of the station";
+const mdabout = "This content can be defined by the owner of the station";
 
 console.log("Starting plugin code");
 
 
 loadPlugins && loadPlugins();
 
-var button = document.getElementById('xchange'); // Get the button by its ID
+const button = document.getElementById('xchange'); // Get the button by its ID
 
 
 if (communityFeed) {
     button.classList.remove('fill-red');
     button.classList.add('fill-green');
 
-    var feedVector = new ol.source.Vector({ features: [] });
+    const feedVector = new ol.source.Vector({ features: [] });
 
     // Simple style: grey dot for ships, teal for AtoN/base, orange for SAR/heli/plane.
     // Moving ships with a known direction get a small directional triangle.
@@ -7866,7 +7906,7 @@ if (communityFeed) {
         }
     }
 
-    var feederStyle = function (feature) {
+    const feederStyle = function (feature) {
         const sp = getFeedSprite(feature.ship);
         return new ol.style.Style({
             image: new ol.style.Icon({
@@ -7880,7 +7920,7 @@ if (communityFeed) {
         });
     };
 
-    var feedLayer = new ol.layer.Vector({
+    const feedLayer = new ol.layer.Vector({
         source: feedVector,
         style: feederStyle
     });
@@ -7900,9 +7940,9 @@ if (communityFeed) {
         for (let i = 0; i < count; i++) {
             if (offset + 11 > view.byteLength) break;
 
-            const latRaw = view.getInt32(offset, false);  offset += 4;
-            const lonRaw = view.getInt32(offset, false);  offset += 4;
-            const flags  = view.getUint8(offset);         offset += 1;
+            const latRaw = view.getInt32(offset, false); offset += 4;
+            const lonRaw = view.getInt32(offset, false); offset += 4;
+            const flags = view.getUint8(offset); offset += 1;
             const dirRaw = view.getUint16(offset, false); offset += 2;
 
             const lat = (latRaw === 0x7FFFFFFF) ? null : latRaw / 600000.0;
@@ -7913,9 +7953,9 @@ if (communityFeed) {
             ships.push({
                 lat,
                 lon,
-                type:      flags & 0x03,
-                approx:   (flags >> 2) & 1,
-                class_b:  (flags >> 3) & 1,
+                type: flags & 0x03,
+                approx: (flags >> 2) & 1,
+                class_b: (flags >> 3) & 1,
                 direction: (dirRaw === 0xFFFF) ? null : dirRaw / 10.0
             });
         }
@@ -7945,7 +7985,7 @@ if (communityFeed) {
             const minLat = extentInLatLon[1] - 0.0045;
             const maxLon = extentInLatLon[2] + 0.0045;
             const maxLat = extentInLatLon[3] + 0.0045;
-            const zoom   = map.getView().getZoom();
+            const zoom = map.getView().getZoom();
 
             const url = `https://api.aiscatcher.org/community/v1/ships?${zoom},${minLat},${minLon},${maxLat},${maxLon}`;
             const response = await fetch(url);
@@ -7975,7 +8015,7 @@ if (communityFeed) {
     addOverlayLayer("Community Feed", feedLayer);
 }
 
-let urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(window.location.search);
 restoreDefaultSettings();
 
 console.log("Plugin loading completed");

@@ -628,7 +628,7 @@ td {
 }
 
 .map-button-box.active {
-    transform: translateX(-555px);
+    transform: translateX(-460px);
 }
 
 .map-button {
@@ -798,9 +798,11 @@ td {
 
 .tablecard_inner table {
     font-size: 10px;
+    line-height: 1.2;
     margin: 5px;
     color: var(--menu-font-color);
     border: 1px solid var(--settings-header-bg-color);
+    table-layout: fixed;
 }
 
 .tablecard_inner table thead {
@@ -810,7 +812,7 @@ td {
 
 .tablecard_inner table thead>tr>th {
     text-align: left;
-    padding: 10px 10px;
+    padding: 4px 3px;
     border-collapse: collapse;
 }
 
@@ -818,7 +820,14 @@ td {
 .tablecard_inner table>tbody>td {
     border: none;
     margin: 0px;
-    padding: 0px;
+    padding: 1px 0;
+    overflow: hidden;
+}
+
+.tablecard_inner table>tbody>td .sprites {
+    zoom: 0.8;
+    display: block;
+    overflow: hidden;
 }
 
 .tablecard_inner table>tbody>tr:nth-child(even) {
@@ -837,25 +846,30 @@ td {
 
 .tablecard_inner table td:nth-child(1) {
     /* Flag */
-    font-size: 10px;
+    font-size: 8px;
 }
 
 .tablecard_inner table th:nth-child(2),
 .tablecard_inner table td:nth-child(2) {
-    /* Name */
-    width: 260px;
+    /* Name — fits 24 chars */
+    width: 24ch;
+    max-width: 24ch;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tablecard_inner table th:nth-child(3),
 .tablecard_inner table td:nth-child(3) {
-    /* Distance */
-    width: 70px;
+    /* Distance — fits 8 chars */
+    width: 8ch;
+    white-space: nowrap;
 }
 
 .tablecard_inner table th:nth-child(4),
 .tablecard_inner table td:nth-child(4) {
     /* Speed */
-    width: 70px;
+    width: 55px;
 }
 
 .tablecard_inner table th:nth-child(5),
@@ -867,7 +881,7 @@ td {
 .tablecard_inner table th:nth-child(6),
 .tablecard_inner table td:nth-child(6) {
     /* Last */
-    width: 80px;
+    width: 60px;
 }
 
 .sort-icon::after {
@@ -2479,7 +2493,7 @@ td {
     display: flex;
     flex-direction: column;
     background-color: var(--settings-bg-color);
-    width: 560px;
+    width: 450px;
     height: calc(100% - 55px);
     top: 55px;
     right: 0px;
@@ -2488,10 +2502,9 @@ td {
     border: 1px solid var(--settings-header-bg-color);
     padding: 0px;
     margin: 0px;
-    transform: translateX(562px);
+    transform: translateX(452px);
     transition: transform 0.3s ease-out;
     filter: box-shadow(-10px 0 15px -5px var(--shadow-color));
-
 }
 
 .tableside_window.active {
@@ -2529,7 +2542,7 @@ td {
 }
 
 .settings_main {
-    flex: 0 0 1;
+    flex: 1;
     overflow: auto;
 }
 

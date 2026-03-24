@@ -512,7 +512,7 @@
 				</li>
 				<li class="station" onclick="pinStation()"><i class="push_pin_icon"></i>Center map on station</li>
 				<li class="divider station"></li>
-				<li class="copy-text" onclick="copyText(context_mmsi)"><i class="content_copy_icon"></i>Copy to
+				<li class="copy-text" onclick="ctxCopyText()"><i class="content_copy_icon"></i>Copy to
 					Clipboard</li>
 				<li class="divider copy-text"></li>
 				<li class="table-menu" onclick="downloadCSV()"><i class="cloud_download_icon"></i>Download CSV</li>
@@ -535,45 +535,45 @@
 				<li class="ctx-map" onclick="toggleRange()"><i class="signal_cellular_alt_icon"></i><span
 						id="ctx_range"></span></li>
 				<li class="divider ctx-map"></li>
-				<li class="ship-map ctx-noalltracks" onclick="toggleTrack(context_mmsi)"><i
+				<li class="ship-map ctx-noalltracks" onclick="ctxToggleTrack()"><i
 						class="timeline_icon"></i><span id="ctx_track"></span></li>
-				<li class="ship-map" onclick="pinVessel(context_mmsi)"><i class="push_pin_icon"></i>Center map on vessel
+				<li class="ship-map" onclick="ctxPinVessel()"><i class="push_pin_icon"></i>Center map on vessel
 				</li>
-				<li class="ship-map" onclick="mapResetViewZoom(13,context_mmsi)"><i class="zoom_in_icon"></i>Zoom in on
+				<li class="ship-map" onclick="ctxZoomIn()"><i class="zoom_in_icon"></i>Zoom in on
 					vessel</li>
-				<li class="ship-map" onclick="showShipcard('ship',context_mmsi)"><i
+				<li class="ship-map" onclick="ctxShowShipcard()"><i
 						class="directions_boat_icon"></i>Show
 					Ship Card</li>
-				<li class="plane-map" onclick="showShipcard('plane',context_mmsi)"><i
+				<li class="plane-map" onclick="ctxShowPlanecard()"><i
 						class="directions_boat_icon"></i>Show
 					Plane Card</li>
 				<li class="divider ship-map plane-map"></li>
-				<li class="ship" onclick="openAIScatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on
+				<li class="ship" onclick="ctxOpenAIScatcherSite()"><i class="directions_boat_icon"></i>View on
 					www.aiscatcher.org
 				</li>
-				<li class="ship" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database
+				<li class="ship" onclick="ctxShowVesselDetail()"><i class="dns_icon"></i>Show Vessel Database
 					Entry</li>
-				<li class="ship noandroid" onclick="showNMEA(context_mmsi)"><i class="mail_icon"></i>Show Last Message
+				<li class="ship noandroid" onclick="ctxShowNMEA()"><i class="mail_icon"></i>Show Last Message
 				</li>
-				<li class="ship ctx-realtime" onclick="openRealtimeForMMSI(context_mmsi)"><i
+				<li class="ship ctx-realtime" onclick="ctxOpenRealtime()"><i
 						class="comment_icon"></i>Track NMEA
 				</li>
-				<li class="ship" onclick="copyText(context_mmsi)"><i class="content_copy_icon noandroid"></i>Copy MMSI
+				<li class="ship" onclick="ctxCopyText()"><i class="content_copy_icon noandroid"></i>Copy MMSI
 				</li>
-				<li class="plane" onclick="copyText(getICAOfromHexIdent(context_mmsi))"><i
+				<li class="plane" onclick="ctxCopyICAOText()"><i
 						class="content_copy_icon noandroid"></i>Copy ICAO
 				</li>
-				<li class="ship" onclick="copyCoordinates(context_mmsi)"><i
+				<li class="ship" onclick="ctxCopyCoordinates()"><i
 						class="content_paste_icon noandroid"></i>Copy Coordinates</li>
 				<li class="divider ship plane"></li>
-				<li class="plane noandroid" onclick="openGoogleSearch(getICAOfromHexIdent(context_mmsi))"><i
+				<li class="plane noandroid" onclick="ctxOpenGoogleSearchICAO()"><i
 						class="search_icon"></i>Search on
 					Google</li>
-				<li class="ship noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="search_icon"></i>Search on
+				<li class="ship noandroid" onclick="ctxOpenGoogleSearch()"><i class="search_icon"></i>Search on
 					Google</li>
-				<li class="ship noandroid" onclick="openVesselFinder(context_mmsi)"><i class="public_icon"></i>Find on
+				<li class="ship noandroid" onclick="ctxOpenVesselFinder()"><i class="public_icon"></i>Find on
 					VesselFinder</li>
-				<li class="ship noandroid" onclick="openAISHub(context_mmsi)"><i class="public_icon"></i>Find on AISHub
+				<li class="ship noandroid" onclick="ctxOpenAISHub()"><i class="public_icon"></i>Find on AISHub
 				</li>
 				<li class="divider ship plane noandroid"></li>
 				<li class="settings" onclick="showServerErrors()"><i class="label_icon"></i>Show Server Errors</li>
@@ -1107,7 +1107,7 @@
 				</aside>
 
 				<aside id="shipcard" class="mapcard shipcard-width shipcard-ismax"
-					oncontextmenu="showContextMenu(event,card_mmsi,card_type,['object', 'object-map','ctx-shipcard'])">
+					oncontextmenu="cardShowContextMenu(event)">
 					<header id="shipcard_header" class="mapcard_header">
 						<span onclick="toggleShipcardSize()" id="shipcard_header_flag"></span>
 						<span onclick="toggleShipcardSize()" id="shipcard_header_title"></span>
@@ -1115,7 +1115,7 @@
 								class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
 						<span><i onclick="toggleShipcardSize()" id="shipcard_minmax_button"
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
-						<span><i onclick="showContextMenu(event,card_mmsi,card_type,['object', 'object-map','ctx-shipcard'])"
+						<span><i onclick="cardShowContextMenu(event)"
 								class="mapcard-header-icon more_vert_icon"></i></span>
 						<span><i onclick="showShipcard(null,null)" style="color: red"
 								class="mapcard-header-icon close_icon"></i></span>
@@ -1257,30 +1257,30 @@
 
 					</div>
 					<footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
-						<div title="View binary messages" onclick="showBinaryMessageDialog(card_mmsi)"
+						<div title="View binary messages" onclick="cardShowBinaryMessageDialog()"
 							data-context-type="ship" class="noandroid"><i class="mail_icon"></i><span>Messages</span>
 						</div>
 						<div id="shipcard_realtime_option" title="Track NMEA messages for this vessel"
-							onclick="openRealtimeForMMSI(card_mmsi)" data-context-type="ship"><i
+							onclick="cardOpenRealtime()" data-context-type="ship"><i
 								class="comment_icon"></i><span>Track NMEA</span>
 						</div>
-						<div title="Lookup on commuinity site" onclick="openAIScatcherSite(card_mmsi)"
+						<div title="Lookup on commuinity site" onclick="cardOpenAIScatcherSite()"
 							data-context-type="ship" class="noandroid"><i
 								class="info_icon"></i><span>www.aiscatcher.org</span></div>
 						<div id="shipcard_track_option" title="Track of current vessel" data-context-type="ship"
-							onclick="toggleTrack(card_mmsi)"><i id="shipcard_track_icon" class="timeline_icon"></i><span
+							onclick="cardToggleTrack()"><i id="shipcard_track_icon" class="timeline_icon"></i><span
 								id="shipcard_track">Track</span></div>
 
-						<div title="Search on FlightAware" onclick="openFlightAware(card_mmsi)"
+						<div title="Search on FlightAware" onclick="cardOpenFlightAware()"
 							data-context-type="plane">
 							<i class="search_icon"></i><span>FlightAware</span>
 						</div>
 
-						<div title="Search on PlaneSpotters" onclick="openPlaneSpotters(card_mmsi)"
+						<div title="Search on PlaneSpotters" onclick="cardOpenPlaneSpotters()"
 							data-context-type="plane">
 							<i class="search_icon"></i><span>PlaneSpotters</span>
 						</div>
-						<div title="Search on ADS-B Exchange" onclick="openADSBExchange(card_mmsi)"
+						<div title="Search on ADS-B Exchange" onclick="cardOpenADSBExchange()"
 							data-context-type="plane">
 							<i class="search_icon"></i><span>ADS-B Exchange</span>
 						</div>
