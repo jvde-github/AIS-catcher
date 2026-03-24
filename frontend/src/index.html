@@ -12,7 +12,9 @@
 	<link rel="stylesheet" href="bundle.css" />
 	<link rel="stylesheet" href="flags/flag-icons.min.css" />
 	<link rel="stylesheet" href="custom/config.css" />
-	<script src="libs.js"></script>
+	<script src="libs.js" defer></script>
+	<script src="custom/plugins.js" defer></script>
+	<script src="script.js" defer></script>
 
 </head>
 
@@ -115,14 +117,14 @@
 					<div><span>Settings</span><span style="cursor: pointer" data-action="applyDefaultSettings"> Reset
 						</span></div>
 					<div class="noandroid">
-						<span>Dark Mode</span><span>
+						<label for="settings_darkmode">Dark Mode</label><span>
 							<input type="checkbox" id="settings_darkmode" data-change="setDarkMode" />
 						</span>
 					</div>
 					<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">
 							Show </span></div>
 					<div>
-						<span>Coordinate Format</span><span>
+						<label for="settings_coordinate_format">Coordinate Format</label><span>
 							<select id="settings_coordinate_format" data-change="setCoordinateFormat">
 								<option value="decimal">Decimal Degrees</option>
 								<option value="ddm">Degrees Decimal Minutes</option>
@@ -131,7 +133,7 @@
 						</span>
 					</div>
 					<div>
-						<span>Units</span><span>
+						<label for="settings_metric">Units</label><span>
 							<select id="settings_metric" data-change="setMetrics">
 								<option value="default">Nautical</option>
 								<option value="metric">Metric</option>
@@ -140,7 +142,7 @@
 						</span>
 					</div>
 					<div>
-						<span>Use Icon in Table</span><span>
+						<label for="settings_table_shiptype_use_icon">Use Icon in Table</label><span>
 							<input type="checkbox" id="settings_table_shiptype_use_icon"
 								data-change="setTableIcon" />
 						</span>
@@ -149,13 +151,13 @@
 				<header>Map</header>
 				<section>
 					<div>
-						<span>Show station icon</span><span>
+						<label for="settings_show_station">Show station icon</label><span>
 							<input type="checkbox" id="settings_show_station"
 								data-change="setMapSetting" data-arg="show_station" />
 						</span>
 					</div>
 					<div>
-						<span id="icon_scale_label">Ship icon size (1.0)</span>
+						<label for="settings_icon_scale" id="icon_scale_label">Ship icon size (1.0)</label>
 						<span>
 							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
 								data-change="applyIconScale"
@@ -163,7 +165,7 @@
 						</span>
 					</div>
 					<div>
-						<span id="map_opacity_label">Map dimming (50%)</span>
+						<label for="settings_map_opacity" id="map_opacity_label">Map dimming (50%)</label>
 						<span>
 							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
 								data-change="applyMapOpacity"
@@ -171,24 +173,24 @@
 						</span>
 					</div>
 					<div>
-						<span>Fade inactive ships</span><span>
+						<label for="settings_fading">Fade inactive ships</label><span>
 							<input type="checkbox" id="settings_fading" data-change="setFading" />
 						</span>
 					</div>
 					<div>
-						<span>Hover Color</span><span>
+						<label for="settings_shiphover_color">Hover Color</label><span>
 							<input type="color" class="color-picker" id="settings_shiphover_color"
 								data-change="setMapSetting" data-arg="shiphover_color" />
 						</span>
 					</div>
 					<div>
-						<span>Selection Color</span><span>
+						<label for="settings_shipselection_color">Selection Color</label><span>
 							<input type="color" class="color-picker" id="settings_shipselection_color"
 								data-change="setMapSetting" data-arg="shipselection_color" />
 						</span>
 					</div>
 					<div>
-						<span id="circle_scale_label">Selector line width (6.0)</span>
+						<label for="settings_circle_scale" id="circle_scale_label">Selector line width (6.0)</label>
 						<span>
 							<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
 								data-change="setMapSetting" data-arg="circle_scale"
@@ -201,7 +203,7 @@
 				<header>Ship Labels</header>
 				<section>
 					<div>
-						<span>Show</span><span>
+						<label for="settings_show_labels">Show</label><span>
 							<select id="settings_show_labels" data-change="setMapSetting" data-arg="show_labels">
 								<option value="dynamic">Dynamic</option>
 								<option value="never">Never</option>
@@ -210,7 +212,7 @@
 						</span>
 					</div>
 					<div>
-						<span id="tooltip_font_size_label">Font Size (9)</span>
+						<label for="settings_tooltipLabelFontsize" id="tooltip_font_size_label">Font Size (9)</label>
 						<span>
 							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
 								data-change="setMapSetting" data-arg="tooltipLabelFontSize"
@@ -218,7 +220,7 @@
 						</span>
 					</div>
 					<div>
-						<span>Declutter</span><span>
+						<label for="settings_labels_declutter">Declutter</label><span>
 							<input type="checkbox" id="settings_labels_declutter"
 								data-change="setMapSetting" data-arg="labels_declutter" />
 						</span>
@@ -226,13 +228,13 @@
 				</section>
 				<section>
 					<div>
-						<span>Color</span><span>
+						<label for="settings_tooltipLabelColor">Color</label><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColor"
 								data-change="setMapSetting" data-arg="tooltipLabelColor" />
 						</span>
 					</div>
 					<div>
-						<span>Shadow Color</span><span>
+						<label for="settings_tooltipLabelShadowColor">Shadow Color</label><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
 								data-change="setMapSetting" data-arg="tooltipLabelShadowColor" />
 						</span>
@@ -240,13 +242,13 @@
 				</section>
 				<section>
 					<div>
-						<span>Color (Dark)</span><span>
+						<label for="settings_tooltipLabelColorDark">Color (Dark)</label><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
 								data-change="setMapSetting" data-arg="tooltipLabelColorDark" />
 						</span>
 					</div>
 					<div>
-						<span>Shadow Color (Dark)</span><span>
+						<label for="settings_tooltipLabelShadowColorDark">Shadow Color (Dark)</label><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
 								data-change="setMapSetting" data-arg="tooltipLabelShadowColorDark" />
 						</span>
@@ -255,13 +257,13 @@
 				<header>Graphs</header>
 				<section>
 					<div>
-						<span>Show signal level graphs</span><span>
+						<label for="settings_show_signal_graphs">Show signal level graphs</label><span>
 							<input type="checkbox" id="settings_show_signal_graphs"
 								data-change="setGraphVisibility" data-arg="signal" />
 						</span>
 					</div>
 					<div>
-						<span>Show frequency shift graphs</span><span>
+						<label for="settings_show_ppm_graphs">Show frequency shift graphs</label><span>
 							<input type="checkbox" id="settings_show_ppm_graphs"
 								data-change="setGraphVisibility" data-arg="ppm" />
 						</span>
@@ -270,19 +272,19 @@
 				<header>Ship Outline</header>
 				<section>
 					<div>
-						<span>Border Color</span><span>
+						<label for="settings_shipoutline_border">Border Color</label><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_border"
 								data-change="setMapSetting" data-arg="shipoutline_border" />
 						</span>
 					</div>
 					<div>
-						<span>Inner Color</span><span>
+						<label for="settings_shipoutline_inner">Inner Color</label><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_inner"
 								data-change="setMapSetting" data-arg="shipoutline_inner" />
 						</span>
 					</div>
 					<div>
-						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
+						<label for="settings_shipoutline_opacity" id="shipoutline_opacity_label">Opacity (0.9)</label>
 						<span>
 							<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
 								data-change="setMapSetting" data-arg="shipoutline_opacity"
@@ -290,7 +292,7 @@
 						</span>
 					</div>
 					<div>
-						<span>Ship outline as circle</span>
+						<label for="settings_show_circle_outline">Ship outline as circle</label>
 						<span>
 							<input type="checkbox" id="settings_show_circle_outline"
 								data-change="setMapSetting" data-arg="show_circle_outline" />
@@ -300,12 +302,12 @@
 				<header>Station Range</header>
 				<section>
 					<div>
-						<span>Station Range</span><span>
+						<label for="settings_show_range">Station Range</label><span>
 							<input type="checkbox" id="settings_show_range" data-change="setRangeSwitch" />
 						</span>
 					</div>
 					<div>
-						<span>Time Period</span>
+						<label for="settings_range_timeframe">Time Period</label>
 						<span>
 							<select id="settings_range_timeframe" data-change="setRangeTimePeriod">
 								<option value="24h">Last 24 Hours</option>
@@ -315,13 +317,13 @@
 						</span>
 					</div>
 					<div>
-						<span>Color</span><span>
+						<label for="settings_range_color">Color</label><span>
 							<input type="color" class="color-picker" id="settings_range_color"
 								data-change="applyRangeColor" data-arg="range_color" />
 						</span>
 					</div>
 					<div>
-						<span>Color (Short)</span><span>
+						<label for="settings_range_color_short">Color (Short)</label><span>
 							<input type="color" class="color-picker" id="settings_range_color_short"
 								data-change="applyRangeColor" data-arg="range_color_short" />
 						</span>
@@ -329,13 +331,13 @@
 				</section>
 				<section>
 					<div>
-						<span>Color (Dark)</span><span>
+						<label for="settings_range_color_dark">Color (Dark)</label><span>
 							<input type="color" class="color-picker" id="settings_range_color_dark"
 								data-change="applyRangeColor" data-arg="range_color_dark" />
 						</span>
 					</div>
 					<div>
-						<span>Color (Short, Dark)</span><span>
+						<label for="settings_range_color_dark_short">Color (Short, Dark)</label><span>
 							<input type="color" class="color-picker" id="settings_range_color_dark_short"
 								data-change="applyRangeColor" data-arg="range_color_dark_short" />
 						</span>
@@ -343,13 +345,13 @@
 				</section>
 				<section>
 					<div>
-						<span>Range Rings</span><span>
+						<label for="settings_distance_circles">Range Rings</label><span>
 							<input type="checkbox" id="settings_distance_circles"
 								data-change="setMapSetting" data-arg="distance_circles" />
 						</span>
 					</div>
 					<div>
-						<span>Color</span><span>
+						<label for="settings_distance_circle_color">Color</label><span>
 							<input type="color" class="color-picker" id="settings_distance_circle_color"
 								data-change="applyDistanceCircleColor" />
 						</span>
@@ -358,7 +360,7 @@
 				<header>Tracks</header>
 				<section>
 					<div>
-						<span id="track_weight_label">Track Weight (1)</span>
+						<label for="settings_track_weight" id="track_weight_label">Track Weight (1)</label>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
 								data-change="setMapSetting" data-arg="track_weight"
@@ -366,7 +368,7 @@
 						</span>
 					</div>
 					<div>
-						<span id="track_trash_threshold_label">Track Dash Threshold (0s)</span>
+						<label for="settings_track_trash_threshold" id="track_trash_threshold_label">Track Dash Threshold (0s)</label>
 						<span>
 							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
 								data-change="setMapSetting" data-arg="track_trash_threshold"
@@ -374,13 +376,13 @@
 						</span>
 					</div>
 					<div>
-						<span>Show Track on Selection</span><span>
+						<label for="settings_show_track_on_select">Show Track on Selection</label><span>
 							<input type="checkbox" id="settings_show_track_on_select"
 								data-change="applyTrackOnSelect" />
 						</span>
 					</div>
 					<div>
-						<span>Show Track on Hover</span><span>
+						<label for="settings_show_track_on_hover">Show Track on Hover</label><span>
 							<input type="checkbox" id="settings_show_track_on_hover"
 								data-change="applyTrackOnHover" />
 						</span>
@@ -388,7 +390,7 @@
 				</section>
 				<section>
 					<div>
-						<span>Apply Color to All Ships</span><span>
+						<label for="settings_apply_all_track_color">Apply Color to All Ships</label><span>
 							<input type="color" class="color-picker" id="settings_apply_all_track_color" value="#12a5ed"
 								data-change="applyColorToAllTracks" />
 							<button type="button" data-action="resetTrackColorsToDefault"
@@ -398,85 +400,85 @@
 				</section>
 				<section>
 					<div>
-						<span>Cargo Ships</span><span>
+						<label for="settings_track_cargo_color">Cargo Ships</label><span>
 							<input type="color" class="color-picker" id="settings_track_cargo_color"
 								data-change="setTrackClassColor" data-arg="CARGO" />
 						</span>
 					</div>
 					<div>
-						<span>Class B Vessels</span><span>
+						<label for="settings_track_b_color">Class B Vessels</label><span>
 							<input type="color" class="color-picker" id="settings_track_b_color"
 								data-change="setTrackClassColor" data-arg="B" />
 						</span>
 					</div>
 					<div>
-						<span>Passenger Ships</span><span>
+						<label for="settings_track_passenger_color">Passenger Ships</label><span>
 							<input type="color" class="color-picker" id="settings_track_passenger_color"
 								data-change="setTrackClassColor" data-arg="PASSENGER" />
 						</span>
 					</div>
 					<div>
-						<span>Tanker Ships</span><span>
+						<label for="settings_track_tanker_color">Tanker Ships</label><span>
 							<input type="color" class="color-picker" id="settings_track_tanker_color"
 								data-change="setTrackClassColor" data-arg="TANKER" />
 						</span>
 					</div>
 					<div>
-						<span>Fishing Vessels</span><span>
+						<label for="settings_track_fishing_color">Fishing Vessels</label><span>
 							<input type="color" class="color-picker" id="settings_track_fishing_color"
 								data-change="setTrackClassColor" data-arg="FISHING" />
 						</span>
 					</div>
 					<div>
-						<span>High Speed Craft</span><span>
+						<label for="settings_track_highspeed_color">High Speed Craft</label><span>
 							<input type="color" class="color-picker" id="settings_track_highspeed_color"
 								data-change="setTrackClassColor" data-arg="HIGHSPEED" />
 						</span>
 					</div>
 					<div>
-						<span>Special Vessels</span><span>
+						<label for="settings_track_special_color">Special Vessels</label><span>
 							<input type="color" class="color-picker" id="settings_track_special_color"
 								data-change="setTrackClassColor" data-arg="SPECIAL" />
 						</span>
 					</div>
 					<div>
-						<span>Aid-to-Navigation</span><span>
+						<label for="settings_track_aton_color">Aid-to-Navigation</label><span>
 							<input type="color" class="color-picker" id="settings_track_aton_color"
 								data-change="setTrackClassColor" data-arg="ATON" />
 						</span>
 					</div>
 					<div>
-						<span>Base Stations</span><span>
+						<label for="settings_track_station_color">Base Stations</label><span>
 							<input type="color" class="color-picker" id="settings_track_station_color"
 								data-change="setTrackClassColor" data-arg="STATION" />
 						</span>
 					</div>
 					<div>
-						<span>SAR/EPIRB</span><span>
+						<label for="settings_track_sartepirb_color">SAR/EPIRB</label><span>
 							<input type="color" class="color-picker" id="settings_track_sartepirb_color"
 								data-change="setTrackClassColor" data-arg="SARTEPIRB" />
 						</span>
 					</div>
 					<div>
-						<span>Aircraft</span><span>
+						<label for="settings_track_plane_color">Aircraft</label><span>
 							<input type="color" class="color-picker" id="settings_track_plane_color"
 								data-change="setTrackClassColor" data-arg="PLANE" />
 						</span>
 					</div>
 					<div>
-						<span>Helicopters</span><span>
+						<label for="settings_track_helicopter_color">Helicopters</label><span>
 							<input type="color" class="color-picker" id="settings_track_helicopter_color"
 								data-change="setTrackClassColor" data-arg="HELICOPTER" />
 						</span>
 					</div>
 					<div>
-						<span>Other Vessels</span><span>
+						<label for="settings_track_other_color">Other Vessels</label><span>
 							<input type="color" class="color-picker" id="settings_track_other_color"
 								data-change="setTrackClassColor" data-arg="OTHER" />
 						</span>
 					</div>
 					<div>
-						<span>Unknown Type</span><span>
+						<label for="settings_track_unknown_color">Unknown Type</label><span>
 							<input type="color" class="color-picker" id="settings_track_unknown_color"
 								data-change="setTrackClassColor" data-arg="UNKNOWN" />
 						</span>
@@ -485,19 +487,19 @@
 				<header>Kiosk</header>
 				<section>
 					<div>
-						<span>Kiosk Mode</span><span>
+						<label for="settings_kiosk_mode">Kiosk Mode</label><span>
 							<input type="checkbox" id="settings_kiosk_mode" data-change="setKiosk">
 						</span>
 					</div>
 					<div>
-						<span id="kiosk_rotation_speed_label">Rotation Speed (5s)</span><span>
+						<label for="settings_kiosk_rotation_speed" id="kiosk_rotation_speed_label">Rotation Speed (5s)</label><span>
 							<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1"
 								data-change="setKioskRotationSpeed"
 								data-input="updateKioskSpeedDisplay">
 						</span>
 					</div>
 					<div>
-						<span>Pan Map</span><span>
+						<label for="settings_kiosk_pan_map">Pan Map</label><span>
 							<input type="checkbox" id="settings_kiosk_pan_map" data-change="setKioskPanMap">
 						</span>
 					</div>
@@ -1395,8 +1397,6 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="custom/plugins.js"></script>
-	<script src="script.js"></script>
 
 
 	<div class="overlay" data-action="toggleInfoPanel"></div>

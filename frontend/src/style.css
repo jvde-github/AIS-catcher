@@ -1355,13 +1355,15 @@ td {
     display: flex;
 }
 
-.stat-panel section div span:first-child {
+.stat-panel section div span:first-child,
+.stat-panel section div > label {
     flex: 1 1 150px;
     text-align: right;
     color: var(--stat-label-color);
     padding: 5px 20px 5px 20px;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
 }
 
 .margin-bottom-zero {
