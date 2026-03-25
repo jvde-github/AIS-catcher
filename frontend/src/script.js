@@ -2492,8 +2492,7 @@ async function fetchAbout() {
     } catch (error) {
         return;
     }
-    aboutmd = await response.text();
-    return aboutmd;
+    return await response.text();
 }
 
 async function fetchRange(forcefetch = false) {
@@ -7684,7 +7683,6 @@ function setupAbout() {
         })
         .catch((error) => {
             alert("Error loading about.md: " + error);
-            aboutMDpresent = false;
         });
 }
 
