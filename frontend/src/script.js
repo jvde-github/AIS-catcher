@@ -1,5 +1,51 @@
 
-"use strict";
+import { registerActions, registerContextActions, registerChanges, registerInputs, initEvents } from './events.js';
+import { settings, restoreDefaultSettings, persist, onSettingsChange, notifyChange, init as initSettings } from './settings.js';
+import { init as initDecoder } from './tabs/decoder.js';
+import { init as initRealtime, onActivate as onRealtimeActivate, onDeactivate as onRealtimeDeactivate, openRealtimeForMMSI, getRealtimeState } from './tabs/realtime.js';
+import { init as initCharts, updateStatistics, updatePlots, updateAllChartColors, setGraphVisibility } from './tabs/charts.js';
+import {
+    init as initSettings_tab, updateSettingsTab, updateDarkMode, closeSettings,
+} from './tabs/settings.js';
+import { init as initTable, update as updateShipTable, refreshTable } from './tabs/table.js';
+import { init as initLog, onActivate as onLogActivate, onDeactivate as onLogDeactivate } from './tabs/log.js';
+import {
+    shipsDB, planesDB, binaryDB, station, center, getShipCount,
+    fetchShips, fetchPlanes, fetchBinary, fetchJSON,
+} from './tabs/map/state.js';
+import {
+    init as initTableside,
+    updateTableSort, updateSortMarkers, updateMarkerCount,
+    updateTablecard, toggleTablecard, hideTablecard, toggleStatcard, closeTableSide,
+} from './tabs/map/tableside.js';
+import {
+    init as initShipcard,
+    card_mmsi, card_type,
+    showShipcard, closeShipcard, populateShipcard, populatePlanecard,
+    updateFocusMarker, updateShipcardTrackOption,
+    shipcardVisible, isShipcardMax, shipcardMinIfMaxonMobile,
+    toggleShipcardSize, displayShipcardIcons, rotateShipcardIcons,
+    toggleMeasurecard, measurecardVisible,
+    showBinaryMessageDialog, addShipcardItem,
+    toggleShipcardPin, trackOptionString,
+} from './tabs/map/shipcard.js';
+import {
+    getDistanceVal, getDistanceUnit,
+    getSpeedVal, getSpeedUnit,
+    getShipName, getICAOfromHexIdent, getICAO,
+    getDeltaTimeVal,
+} from './format.js';
+import {
+    init as initUI,
+    showNotification, showDialog, closeDialog,
+    showContextMenu, hideContextMenu,
+    isAndroid, isKiosk, updateAndroid,
+    showAboutDialog, showWelcome,
+    toggleMenu, hideMenu, showMenu, hideMenuifSmall,
+    toggleScreenSize, toggleInfoPanel, initFullScreen,
+    copyText, copyClipboard,
+    getContextMMSI, getContextType,
+} from './ui.js';
 
 let interval,
     activeReceiver = 0,
@@ -7,15 +53,10 @@ let interval,
     map,
     basemaps = {},
     overlapmaps = {},
-    station = {},
-    shipsDB = {},
-    binaryDB = {},
-    planesDB = {},
     hover_feature = undefined,
     show_all_tracks = false,
     evtSourceMap = null,
-    logViewer = null,
-    realtimeViewer = null,
+
     range_outline = undefined,
     range_outline_short = undefined,
     tab_title_station = "",
@@ -25,19 +66,9 @@ let interval,
 
 const tab_title = "AIS-catcher";
 
-let context_mmsi = null,
-    context_type = null;
-
-let center;
-
 const baseMapSelector = document.getElementById("baseMapSelector");
 
-let shipcardIconCount = undefined;
-const shipcardIconMax = 3;
-let shipcardIconOffset = 0;
 const plugins_main = [];
-let card_mmsi = null,
-    card_type = null;
     
 // Wrappers so HTML onclick handlers don't reference globals directly
 function cardOpenADSBExchange()        { openADSBExchange(card_mmsi); }
@@ -49,22 +80,22 @@ function cardShowBinaryMessageDialog() { showBinaryMessageDialog(card_mmsi); }
 function cardShowContextMenu(event)    { showContextMenu(event, card_mmsi, card_type, ['object', 'object-map', 'ctx-shipcard']); }
 function cardToggleTrack()             { toggleTrack(card_mmsi); }
 
-function ctxCopyCoordinates()      { copyCoordinates(context_mmsi); }
-function ctxCopyText()             { copyText(context_mmsi); }
-function ctxCopyICAOText()         { copyText(getICAOfromHexIdent(context_mmsi)); }
-function ctxZoomIn()               { mapResetViewZoom(13, context_mmsi); }
-function ctxOpenAISHub()           { openAISHub(context_mmsi); }
-function ctxOpenAIScatcherSite()   { openAIScatcherSite(context_mmsi); }
-function ctxOpenGoogleSearch()     { openGoogleSearch(context_mmsi); }
-function ctxOpenGoogleSearchICAO() { openGoogleSearch(getICAOfromHexIdent(context_mmsi)); }
-function ctxOpenRealtime()         { openRealtimeForMMSI(context_mmsi); }
-function ctxOpenVesselFinder()     { openVesselFinder(context_mmsi); }
-function ctxPinVessel()            { pinVessel(context_mmsi); }
-function ctxShowNMEA()             { showNMEA(context_mmsi); }
-function ctxShowShipcard()         { showShipcard('ship', context_mmsi); }
-function ctxShowPlanecard()        { showShipcard('plane', context_mmsi); }
-function ctxShowVesselDetail()     { showVesselDetail(context_mmsi); }
-function ctxToggleTrack()          { toggleTrack(context_mmsi); }
+function ctxCopyCoordinates()      { copyCoordinates(getContextMMSI()); }
+function ctxCopyText()             { copyText(getContextMMSI()); }
+function ctxCopyICAOText()         { copyText(getICAOfromHexIdent(getContextMMSI())); }
+function ctxZoomIn()               { mapResetViewZoom(13, getContextMMSI()); }
+function ctxOpenAISHub()           { openAISHub(getContextMMSI()); }
+function ctxOpenAIScatcherSite()   { openAIScatcherSite(getContextMMSI()); }
+function ctxOpenGoogleSearch()     { openGoogleSearch(getContextMMSI()); }
+function ctxOpenGoogleSearchICAO() { openGoogleSearch(getICAOfromHexIdent(getContextMMSI())); }
+function ctxOpenRealtime()         { openRealtimeForMMSI(getContextMMSI()); }
+function ctxOpenVesselFinder()     { openVesselFinder(getContextMMSI()); }
+function ctxPinVessel()            { pinVessel(getContextMMSI()); }
+function ctxShowNMEA()             { showNMEA(getContextMMSI()); }
+function ctxShowShipcard()         { showShipcard('ship', getContextMMSI()); }
+function ctxShowPlanecard()        { showShipcard('plane', getContextMMSI()); }
+function ctxShowVesselDetail()     { showVesselDetail(getContextMMSI()); }
+function ctxToggleTrack()          { toggleTrack(getContextMMSI()); }
 
 // Wrappers for multi-arg / compound onclick patterns
 function showSettingsMenu(e)      { showContextMenu(e, '', '', ['settings', 'center']); }
@@ -74,74 +105,35 @@ function showChartsContextMenu(e) { showContextMenu(e, '', 'charts', ['settings'
 function activateMeasureMode()    { setMeasureMode(); showNotification('Shift+click on start point/object'); }
 function showAboutAndInfo()       { toggleInfoPanel(); showAboutDialog(); }
 function closeShipcard()          { showShipcard(null, null); }
-function toggleSignalGraph()      { toggleGraphVisibility('signal'); }
-function togglePPMGraph()         { toggleGraphVisibility('ppm'); }
 
-// Wrappers for compound / reversed-arg settings handlers
-function applyIconScale(v)           { settings.icon_scale = v; redrawMap(); saveSettings(); }
-function applyMapOpacity(v)          { settings.map_opacity = v; setMapOpacity(); saveSettings(); }
-function applyTrackOnSelect(v)       { settings.show_track_on_select = v; saveSettings(); }
-function applyTrackOnHover(v)        { settings.show_track_on_hover = v; saveSettings(); }
-function applyDistanceCircleColor(v) { removeDistanceCircles(); setMapSetting('distance_circle_color', v); }
-function applyRangeColor(key, val)   { setRangeColor(val, key); }
 
-// Global event dispatchers — HTML uses data-action / data-tab / data-contextaction /
-// data-change [data-arg] / data-input.
-// Capture phase (true) so stopPropagation() in map/library handlers doesn't block us.
-document.addEventListener('click', e => {
-    const el = e.target.closest('[data-action],[data-tab]');
-    if (!el) return;
-    if (el.dataset.tab !== undefined) { activateTab(e, el.dataset.tab); return; }
-    window[el.dataset.action]?.call(el, e);
-}, true);
-document.addEventListener('contextmenu', e => {
-    const el = e.target.closest('[data-contextaction]');
-    if (el) window[el.dataset.contextaction]?.call(el, e);
-}, true);
-document.addEventListener('change', e => {
-    const el = e.target;
-    if (!el.dataset.change) return;
-    const fn = window[el.dataset.change];
-    if (!fn) return;
-    const val = el.type === 'checkbox' ? el.checked : el.value;
-    el.dataset.arg !== undefined ? fn(el.dataset.arg, val) : fn(val);
-}, true);
-document.addEventListener('input', e => {
-    const el = e.target;
-    if (el.dataset.input) window[el.dataset.input]?.(el.value);
-}, true);
+
+// DOM event dispatch is handled by events.js — see initEvents() call in the init section below.
 
 const refreshIntervalMs = 2500;
 let range_update_time = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
-let standaloneBinaryMessages = [];
 let debounceUpdateCommunityFeed;
-let chart_seconds, chart_minutes, chart_hours, chart_days;
-let chart_ppm, chart_ppm_minute;
-let chart_minute_vessel, chart_hour_vessel, chart_day_vessel;
-let chart_distance_hour, chart_distance_day;
-let chart_radar_hour, chart_radar_day;
-let chart_level, chart_level_hour;
 
 let hover_enabled_track = false,
     select_enabled_track = false,
     marker_tracks = new Set();
 
+// Defaults — plugins.js used to override these before script.js ran.
+// Now declared at module scope so all code below can reference them.
+let communityFeed = false;
+let aboutMDpresent = false;
+let context = "aiscatcher";
+
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
-    const communityFeed = false;
-    const aboutMDpresent = false;
-    const context = "aiscatcher";
 }
 
 const hover_info = document.getElementById('hover-info');
 
 let measures = [];
 
-// default settings
-let settings = {};
-let isFetchingShips = false;
 
 function getDefaultTrackColors() {
     return {
@@ -162,221 +154,10 @@ function getDefaultTrackColors() {
     };
 }
 
-function resetTrackColorsToDefault() {
-    settings.track_class_colors = getDefaultTrackColors();
-    updateTrackColorInputs();
-    saveSettings();
-    redrawMap();
-}
-
-function restoreDefaultSettings() {
-    settings = {
-        counter: true,
-        fading: false,
-        android: false,
-        kiosk: false,
-        welcome: true,
-        coordinate_format: "decimal",
-        icon_scale: 1,
-        track_weight: 1,
-        track_trash_threshold: 30,
-        show_range: false,
-        distance_circles: true,
-        distance_circle_color: '#1c71d8',
-        map_day: "OpenStreetMap",
-        map_overlay: [],
-        map_night: "Dark Matter (no labels)",
-        zoom: 3,
-        lat: 0,
-        lon: 0,
-        table_shiptype_use_icon: true,
-        tableside_column: "shipname",
-        tableside_order: "ascending",
-        range_timeframe: '24h',
-        range_color: "#FFA500",
-        range_color_short: "#FFDAB9",
-        range_color_dark: "#4B4B4B",
-        range_color_dark_short: "#303030",
-        fix_center: false,
-        center_point: "station",
-        tooltipLabelColor: "#ffffff",
-        tooltipLabelColorDark: "#ffffff",
-        tooltipLabelShadowColor: "#000000",
-        tooltipLabelShadowColorDark: "#000000",
-        tooltipLabelFontSize: 9,
-        shiphover_color: "#FFA500",
-        shipselection_color: "#943b3e",
-        shipoutline_border: "#A9A9A9",
-        shipoutline_inner: "#808080",
-        shipoutline_opacity: 0.9,
-        show_circle_outline: false,
-        circle_scale: 6.0,
-        dark_mode: false,
-        center_radius: 0,
-        show_station: true,
-        metric: "DEFAULT",
-        setcoord: true,
-        tab: "map",
-        show_labels: "never",
-        labels_declutter: true,
-        eri: true,
-        loadURL: true,
-        map_opacity: 0.5,
-        show_track_on_hover: false,
-        show_track_on_select: false,
-        shipcard_pinned: false,
-        show_signal_graphs: true,
-        show_ppm_graphs: true,
-        shipcard_pinned_x: null,
-        shipcard_pinned_y: null,
-        kiosk_rotation_speed: 5,
-        kiosk_pan_map: true,
-        shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
-        realtime_background_streaming: false,
-        realtime_filter_mmsis: []
-    };
-
-    // Set default track colors
-    settings.track_class_colors = getDefaultTrackColors();
-}
-
-
-// NMEA Decoder Functions
-function decodeNMEA() {
-    const input = document.getElementById('decoder_input').value.trim();
-    const statusEl = document.getElementById('decoder_status');
-    const outputEl = document.getElementById('decoder_output');
-
-    if (!input) {
-        statusEl.innerHTML = '<span class="decoder-error">Please enter NMEA sentences to decode.</span>';
-        return;
-    }
-
-    statusEl.innerHTML = '<span class="decoder-info">Decoding...</span>';
-    outputEl.innerHTML = '';
-
-    fetch('api/decode', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'text/plain'
-        },
-        body: input
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                statusEl.innerHTML = `<span class="decoder-error">Error: ${data.error}</span>`;
-                return;
-            }
-
-            if (Array.isArray(data) && data.length === 0) {
-                statusEl.innerHTML = '<span class="decoder-warning">No valid AIS messages found in input.</span>';
-                return;
-            }
-
-            statusEl.innerHTML = `<span class="decoder-success">Successfully decoded ${data.length} message(s)</span>`;
-
-            // Display decoded messages
-            let html = '';
-            data.forEach((msg, index) => {
-                html += `<div class="decoder-message">`;
-                html += `<h4>Message ${index + 1}</h4>`;
-                html += '<table class="decoder-table">';
-
-                // Fields to exclude from display
-                const excludeFields = ['class', 'device', 'driver', 'hardware', 'version', 'scaled', 'signalpower', 'ppm', 'rxtime'];
-
-                // Use natural ordering from JSON
-                Object.keys(msg).forEach(key => {
-                    // Skip excluded fields
-                    if (excludeFields.includes(key)) {
-                        return;
-                    }
-
-                    const field = msg[key];
-                    if (typeof field === 'object' && field !== null) {
-                        const value = field.value !== undefined ? field.value : '';
-                        const unit = field.unit || '';
-                        const description = field.description || '';
-                        const text = field.text || '';
-
-                        // Column 1: Key with unit if available
-                        let keyCol = key;
-                        if (unit) {
-                            keyCol += ` (${unit})`;
-                        }
-
-                        // Column 2: Value with text in parentheses if available
-                        let valueCol = value;
-                        if (text) {
-                            valueCol += ` (${text})`;
-                        }
-
-                        // Column 3: Description
-                        const descCol = description || '';
-
-                        html += '<tr>';
-                        html += `<td class="decoder-field-key">${keyCol}</td>`;
-                        html += `<td class="decoder-field-value">${valueCol}</td>`;
-                        html += `<td class="decoder-field-description">${descCol}</td>`;
-                        html += '</tr>';
-                    }
-                });
-
-                html += '</table>';
-                html += '</div>';
-            });
-
-            outputEl.innerHTML = html;
-        })
-        .catch(error => {
-            statusEl.innerHTML = `<span class="decoder-error">Network error: ${error.message}</span>`;
-            console.error('Decode error:', error);
-        });
-}
-
-function clearDecoder() {
-    document.getElementById('decoder_input').value = '';
-    document.getElementById('decoder_output').innerHTML = '';
-    document.getElementById('decoder_status').innerHTML = '';
-}
-
-function toggleInfoPanel() {
-    const overlay = document.querySelector('.overlay');
-    const infoPanel = document.querySelector('.info-panel');
-
-    overlay.classList.toggle('active');
-    infoPanel.classList.toggle('active');
-}
+// NMEA Decoder — moved to tabs/decoder.js
 
 function updateTitle() {
     document.title = (tab_title_count ? " (" + tab_title_count + ") " : "") + tab_title + " " + tab_title_station;
-}
-
-function applyDefaultSettings() {
-    const t = settings.tab;
-
-    const android = settings.android;
-    const darkmode = settings.dark_mode;
-    restoreDefaultSettings();
-
-    settings.android = android;
-
-    if (isAndroid()) settings.dark_mode = darkmode;
-
-    updateSortMarkers();
-    setDarkMode(settings.dark_mode);
-    setMetrics(settings.metric);
-    updateMapLayer();
-    setFading(settings.fading);
-
-    updateFocusMarker();
-    removeDistanceCircles();
-
-    settings.tab = t;
-    settings.welcome = false;
-
-    redrawMap();
 }
 
 // some functions useful in plugins
@@ -403,160 +184,6 @@ function addControlToMap(c) {
     c.addTo(map);
 }
 
-function decimalToDMS(l, isLatitude) {
-    const degrees = Math.floor(Math.abs(l));
-    const minutes = Math.floor((Math.abs(l) - degrees) * 60);
-    const seconds = Number(((Math.abs(l) - degrees) * 60 - minutes) * 60).toFixed(1);
-    const direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
-    return degrees + "&deg" + minutes + "'" + seconds + '"' + direction;
-}
-
-function decimalToDDM(l, isLatitude) {
-    const degrees = Math.floor(Math.abs(l));
-    const minutes = ((Math.abs(l) - degrees) * 60).toFixed(2);
-    const direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
-    return degrees + "&deg;" + minutes + "'" + direction;
-}
-
-const getDimVal = (c) => {
-    return settings.metric === "DEFAULT" || settings.metric === "SI" ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0);
-};
-
-const getDimUnit = () => {
-    return settings.metric === "DEFAULT" || settings.metric === "SI" ? "m" : "ft";
-};
-
-const getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
-const getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
-const getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
-const getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
-const getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
-const getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
-    ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
-    : null
-
-
-
-const getLatValFormat = (ship) => {
-    const prefix = ship.approx ? "<i>" : "";
-    const suffix = ship.approx ? "</i>" : "";
-    let content = "";
-
-    switch (settings.coordinate_format) {
-        case "dms":
-            content = decimalToDMS(ship.lat, true);
-            break;
-        case "ddm":
-            content = decimalToDDM(ship.lat, true);
-            break;
-        default: // decimal
-            content = Number(ship.lat).toFixed(5);
-            break;
-    }
-
-    return prefix + content + suffix;
-};
-
-const getLonValFormat = (ship) => {
-    const prefix = ship.approx ? "<i>" : "";
-    const suffix = ship.approx ? "</i>" : "";
-    let content = "";
-
-    switch (settings.coordinate_format) {
-        case "dms":
-            content = decimalToDMS(ship.lon, false);
-            break;
-        case "ddm":
-            content = decimalToDDM(ship.lon, false);
-            break;
-        default: // decimal
-            content = Number(ship.lon).toFixed(5);
-            break;
-    }
-
-    return prefix + content + suffix;
-};
-
-const getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
-const getShipName = (ship) => ship.shipname;
-const getCallSign = (ship) => ship.callsign;
-const getICAOfromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
-const getICAO = (plane) => getICAOfromHexIdent(plane.hexident)
-const includeShip = (ship) => true;
-
-const getDeltaTimeVal = (s) => {
-    const days = Math.floor(s / (24 * 3600));
-    const hours = Math.floor((s % (24 * 3600)) / 3600);
-    const minutes = Math.floor((s % 3600) / 60);
-    const seconds = s % 60;
-
-    let result = '';
-    if (days > 0) result += `${days}d `;
-    if (hours > 0 || days > 0) result += `${hours}h `;
-    if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}m `;
-    if (seconds > 0 || (days === 0 && hours === 0 && minutes === 0)) result += `${seconds}s`;
-
-    return result.trim();
-};
-
-const notificationContainer = document.getElementById("notification-container");
-
-// https://stackoverflow.com/questions/51805395/navigator-clipboard-is-undefined
-async function copyClipboard(t) {
-    try {
-        await copyToClipboard(t);
-    } catch (error) {
-        showDialog("Action", "No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
-        return false;
-    }
-    return true;
-}
-
-async function copyToClipboard(textToCopy) {
-    // Navigator clipboard api needs a secure context (https)
-    if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(textToCopy);
-    } else {
-        // Use the 'out of viewport hidden text area' trick
-        const textArea = document.createElement("textarea");
-        textArea.value = textToCopy;
-
-        // Move textarea out of the viewport so it's not visible
-        textArea.style.position = "absolute";
-        textArea.style.left = "-999999px";
-
-        document.body.prepend(textArea);
-        textArea.select();
-
-        try {
-            document.execCommand("copy");
-        } catch (error) {
-            console.error(error);
-        } finally {
-            textArea.remove();
-        }
-    }
-}
-
-function openSettings() {
-    document.querySelector(".settings_window").classList.add("active");
-}
-
-function closeSettings() {
-    document.querySelector(".settings_window").classList.remove("active");
-}
-
-function closeTableSide() {
-    document.querySelector(".tableside_window").classList.remove("active");
-}
-
-function setCoordinateFormat(format) {
-    settings.coordinate_format = format;
-    saveSettings();
-
-    refresh_data();
-    if (table != null) table = null;
-}
 
 
 function copyCoordinates(m) {
@@ -751,20 +378,6 @@ const hoverCircleStyleFunction = function (feature) {
     });
 }
 
-const selectCircleStyleFunction = function (feature) {
-    const iconScale = settings.icon_scale || 1.0;
-    const circleScale = settings.circle_scale || 6.0;
-    const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
-    return new ol.style.Style({
-        image: new ol.style.Circle({
-            radius: 13 * iconScale * radiusScale,
-            stroke: new ol.style.Stroke({
-                color: settings.shipselection_color,
-                width: circleScale * iconScale
-            })
-        })
-    });
-}
 
 const binaryStyle = function (feature) {
     const count = feature.get('binary_count') || feature.binary_count || 1;
@@ -1012,19 +625,6 @@ const planeFeatures = {};
 let stationFeature = undefined;
 let hoverCircleFeature = undefined;
 const measureCircleFeature = undefined;
-let selectCircleFeature = undefined;
-
-
-async function fetchJSON(l, m) {
-    let response;
-    try {
-        response = await fetch(l + "?" + m);
-    } catch (error) {
-        showDialog("Error", error);
-        return null;
-    }
-    return response.text();
-}
 
 
 // Function to create ship outline geometry in OpenLayers
@@ -1100,92 +700,6 @@ async function showVesselDetail(m) {
     showDialog("Vessel " + m, tableHtml);
 }
 
-function showBinaryMessageDialog(featureOrMmsi) {
-    let title, content;
-
-    if (typeof featureOrMmsi === 'object') {
-        if (!featureOrMmsi.binary_messages || featureOrMmsi.binary_messages.length === 0) {
-            showDialog("Binary Message", "No message content available");
-            return;
-        }
-
-        title = "Binary Messages";
-        content = getBinaryMessageList(featureOrMmsi.binary_messages);
-
-    } else if (typeof featureOrMmsi === 'number' || typeof featureOrMmsi === 'string') {
-        const mmsi = Number(featureOrMmsi);
-
-        if (!binaryDB[mmsi] || !binaryDB[mmsi].ship_messages || binaryDB[mmsi].ship_messages.length === 0) {
-            showDialog("Binary Messages", "No binary messages available for this vessel");
-            return;
-        }
-
-        const shipName = mmsi in shipsDB ? (shipsDB[mmsi].raw.shipname || `MMSI ${mmsi}`) : `MMSI ${mmsi}`;
-        title = `Binary Messages for ${shipName}`;
-        content = getBinaryMessageList(binaryDB[mmsi].ship_messages);
-    }
-
-    showDialog(title, content);
-}
-
-function getBinaryMessageList(messages) {
-    if (!messages || messages.length === 0) {
-        return "<p>No messages available</p>";
-    }
-
-    const sortedMessages = [...messages].sort((a, b) => b.timestamp - a.timestamp);
-
-    let content = '<div class="binary-messages-list">';
-
-    content += `<div class="binary-message-count">${sortedMessages.length} message${sortedMessages.length > 1 ? 's' : ''} available</div>`;
-
-    sortedMessages.forEach((msg, index) => {
-        if (index > 0) {
-            content += '<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">';
-        }
-
-        content += '<div class="binary-message-item">';
-
-        content += `<div class="binary-message-header">
-                      <span class="binary-message-time">${msg.formattedTime || new Date(msg.timestamp * 1000).toLocaleTimeString()}</span>`;
-
-        if (msg.message && msg.message.mmsi) {
-            const shipName = msg.message.mmsi in shipsDB ?
-                (shipsDB[msg.message.mmsi].raw.shipname || `MMSI ${msg.message.mmsi}`) :
-                `MMSI ${msg.message.mmsi}`;
-
-            content += `<span class="binary-message-source"> from ${shipName}</span>`;
-        }
-
-        content += '</div>';
-
-        if (msg.message && msg.message.dac == 1 && (msg.message.fid == 31 || msg.message.fi == 31)) {
-            content += getBinaryMessageContent(msg, false);
-        } else {
-            content += '<div class="binary-message-details">';
-            content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
-
-            // Add a collapsible section for raw data
-            content += `<details class="binary-raw-data">
-                          <summary>Show Raw Data</summary>
-                          <pre>${JSON.stringify(msg.message, null, 2)}</pre>
-                        </details>`;
-
-            content += '</div>';
-        }
-
-        content += '</div>';
-    });
-
-    content += '</div>';
-
-    return content;
-}
-
-function copyText(m) {
-    if (copyClipboard(m)) showNotification("Content copied to clipboard");
-}
-
 function openGoogleSearch(m) {
     window.open("https://www.google.com/search?q=" + m);
 }
@@ -1251,139 +765,6 @@ function showMapMenu(event) {
     document.addEventListener("click", function (event) {
         hideMapMenu(event);
     });
-}
-
-const contextMenu = document.getElementById("context-menu");
-
-function hideContextMenu(event) {
-    contextMenu.style.display = "none";
-    document.removeEventListener("click", hideContextMenu);
-}
-
-function showContextMenu(event, mmsi, type, context) {
-
-    if (event && event.preventDefault) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    hideMapMenu(event);
-
-    document.getElementById("ctx_labelswitch").textContent = settings.show_labels != "never" ? "Hide ship labels" : "Show ship labels";
-    document.getElementById("ctx_range").textContent = settings.show_range ? "Hide station range" : "Show station range";
-    document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
-    document.getElementById("ctx_fireworks").textContent = evtSourceMap == null ? "Start Fireworks Mode" : "Stop Fireworks Mode";
-    document.getElementById("ctx_label_shipcard_pin").textContent = settings.shipcard_pinned ? "Unpin Shipcard position" : "Pin Shipcard position";
-    document.getElementById("ctx_signal_graphs").textContent = settings.show_signal_graphs ? "Hide signal level graphs" : "Show signal level graphs";
-    document.getElementById("ctx_ppm_graphs").textContent = settings.show_ppm_graphs ? "Hide frequency shift graphs" : "Show frequency shift graphs";
-
-    context_mmsi = mmsi;
-    context_type = type;
-
-    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard", "ctx-charts"];
-
-    classList.forEach((className) => {
-        if (context.includes('object')) {
-            context.push(type);
-        }
-        if (context.includes('object-map')) {
-            context.push(type + "-map");
-        }
-        const shouldDisplay = context.includes(className);
-        const elements = document.querySelectorAll("." + className);
-        elements.forEach((element) => {
-            element.style.display = shouldDisplay ? "flex" : "none";
-        });
-    });
-
-    // Hide realtime menu items if realtime is disabled
-    if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
-        document.querySelectorAll('.ctx-realtime').forEach((element) => {
-            element.style.display = "none";
-        });
-    }
-
-    // we might have made non-android items visible in the context menu, so hide non-android items if needed
-    updateAndroid();
-    updateKiosk();
-
-    if (show_all_tracks) {
-        document.querySelectorAll(".ctx-noalltracks").forEach(function (element) {
-            element.style.display = "none";
-        });
-    }
-
-    if (show_all_tracks || marker_tracks.size > 0) {
-        document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
-            element.style.display = "flex";
-        });
-    } else {
-        document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
-            element.style.display = "none";
-        });
-    }
-
-    document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
-    document.getElementById("ctx_track").innerText = trackOptionString(context_mmsi);
-
-    contextMenu.style.display = "block";
-
-    if (context.includes("center")) {
-        contextMenu.style.left = "50%";
-        contextMenu.style.top = "50%";
-        contextMenu.style.transform = "translate(-50%, -50%)";
-    } else {
-        contextMenu.style.left = event.pageX + 5 + "px";
-        contextMenu.style.top = event.pageY + 5 + "px";
-        contextMenu.style.transform = "none";
-
-        const contextMenuRect = contextMenu.getBoundingClientRect();
-        const viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
-        const viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
-
-        const maxX = viewportWidth - contextMenuRect.width;
-        const maxY = viewportHeight - contextMenuRect.height;
-
-        const adjustedX = Math.max(0, Math.min(event.pageX + 5, maxX));
-        const adjustedY = Math.max(0, Math.min(event.pageY + 5, maxY));
-
-        contextMenu.style.left = adjustedX + "px";
-        contextMenu.style.top = adjustedY + "px";
-    }
-
-    document.addEventListener("click", function (event) {
-        hideContextMenu();
-    });
-}
-
-function showDialog(title, message) {
-    const dialogBox = document.getElementById("dialog-box");
-    const dialogTitle = dialogBox.querySelector(".dialog-title");
-    const dialogMessage = dialogBox.querySelector(".dialog-message");
-
-    dialogTitle.innerText = title;
-    dialogMessage.innerHTML = message;
-    dialogBox.classList.remove("hidden");
-}
-
-function closeDialog() {
-    const dialogBox = document.getElementById("dialog-box");
-    dialogBox.classList.add("hidden");
-}
-
-function showNotification(message) {
-    const notificationElement = document.createElement("div");
-    notificationElement.classList.add("notification");
-    notificationElement.textContent = message;
-
-    notificationContainer.appendChild(notificationElement);
-
-    setTimeout(() => {
-        notificationElement.style.opacity = 0;
-        setTimeout(() => {
-            notificationContainer.removeChild(notificationElement);
-        }, 500);
-    }, 2000);
 }
 
 function checkLatestVersion() {
@@ -2055,34 +1436,6 @@ function toggleLabel() {
     redrawMap();
 }
 
-function setMetrics(s) {
-    if (s.toUpperCase() == "DEFAULT") settings.metric = "DEFAULT";
-    else if (s.toUpperCase() == "METRIC") settings.metric = "SI";
-    else if (s.toUpperCase() == "IMPERIAL") settings.metric = "IMPERIAL";
-    else settings.metric = "DEFAULT";
-
-    showNotification("Switched units to " + s);
-    saveSettings();
-
-    refresh_data();
-    if (table != null) table = null;
-}
-
-function setTableIcon(s) {
-    settings.table_shiptype_use_icon = s;
-    saveSettings();
-
-    refresh_data();
-    if (table != null) table = null;
-}
-
-function getMetrics() {
-    if (settings.metric == "DEFAULT") return "Default";
-    if (settings.metric == "SI") return "Metric";
-    if (settings.metric == "IMPERIAL") return "Imperial";
-    return "Default";
-}
-
 function addMarker(lat, lon, ch) {
     const latlon = ol.proj.fromLonLat([lon, lat]);
     let color = 'grey'; // Default color
@@ -2162,264 +1515,10 @@ function StopFireworks() {
     }
 }
 
-function updateMarkerCountTooltip() {
-    if (shipsDB == null) {
-        ["statcard_stationary", "statcard_moving", "statcard_class_b_stationary", "statcard_class_b_moving", "statcard_station", "statcard_aton", "statcard_heli", "statcard_sarte"].forEach(function (id) {
-            document.getElementById(id).innerHTML = "";
-        });
-
-        return;
-    }
-
-    let cStationary = 0,
-        cMoving = 0,
-        cClassBstationary = 0,
-        cClassBmoving = 0,
-        cStation = 0,
-        cAton = 0,
-        cHeli = 0,
-        cSarte = 0;
-
-    for (const [key, m] of Object.entries(shipsDB)) {
-        if (key in shipsDB) {
-            const ship = shipsDB[key].raw;
-            switch (ship.shipclass) {
-                case ShippingClass.ATON:
-                    cAton++;
-                    break;
-                case ShippingClass.PLANE:
-                    cHeli++;
-                    break;
-                case ShippingClass.HELICOPTER:
-                    cHeli++;
-                    break;
-                case ShippingClass.STATION:
-                    cStation++;
-                    break;
-                case ShippingClass.SARTEPIRB:
-                    cSarte++;
-                    break;
-                case ShippingClass.B:
-                    if (ship.speed != null && ship.speed > 0.5) cClassBmoving++;
-                    else cClassBstationary++;
-                    break;
-                default:
-                    if (ship.speed != null && ship.speed > 0.5) cMoving++;
-                    else cStationary++;
-                    break;
-            }
-        }
-    }
-
-    flashNumber("statcard_stationary", cStationary);
-    flashNumber("statcard_moving", cMoving);
-    flashNumber("statcard_station", cStation);
-    flashNumber("statcard_aton", cAton);
-    flashNumber("statcard_heli", cHeli);
-    flashNumber("statcard_sarte", cSarte);
-    flashNumber("statcard_class_b_stationary", cClassBstationary);
-    flashNumber("statcard_class_b_moving", cClassBmoving);
-}
-
-function updateTableSort(event) {
-    const header = event.currentTarget;
-
-    const column = header.getAttribute("data-column");
-    const currentOrder = header.classList.contains("ascending") ? "ascending" : "descending";
-
-    const newOrder = currentOrder === "descending" ? "ascending" : "descending";
-
-    settings.tableside_column = column;
-    settings.tableside_order = newOrder;
-
-    saveSettings();
-    updateSortMarkers();
-    updateTablecard();
-}
-
-function updateSortMarkers() {
-    const allHeaders = document.querySelectorAll("[data-column]");
-
-    allHeaders.forEach((otherHeader) => {
-        otherHeader.classList.remove("ascending");
-        otherHeader.classList.remove("descending");
-
-        if (otherHeader.getAttribute("data-column") === settings.tableside_column) {
-            otherHeader.classList.add(settings.tableside_order);
-        }
-    });
-}
-
-function compareNumber(valueA, valueB) {
-    if (valueA == null && valueB == null) return settings.tableside_order === "ascending" ? 1 : -1;
-    if (valueA == null) return settings.tableside_order === "ascending" ? 1 : -1;
-    if (valueB == null) return settings.tableside_order === "ascending" ? -1 : 1;
-    return valueA - valueB;
-}
-
-function compareString(valueA, valueB) {
-    if (valueA == null && valueB == null) return 0;
-    if (valueA == null) return 1;
-    if (valueB == null) return -1;
-
-    return (valueA + "").localeCompare(valueB + "");
-}
-
-document.getElementById('shipSearchSide').addEventListener('input', updateTablecard);
-
-function updateTablecard() {
-    if (!document.getElementById("tableside").classList.contains("active")) return;
-
-    const tableBody = document.getElementById("tablecardBody");
-    tableBody.innerHTML = "";
-
-    if (shipsDB == null) return;
-
-    const shipKeys = Object.keys(shipsDB);
-
-    const column = settings.tableside_column;
-    const order = settings.tableside_order;
-
-    const sortFunctions = {
-        flag: (a, b) => compareString(shipsDB[a].raw.country, shipsDB[b].raw.country),
-        shipname: (a, b) => compareString(getShipName(shipsDB[a].raw), getShipName(shipsDB[b].raw)),
-        distance: (a, b) => compareNumber(shipsDB[a].raw.distance, shipsDB[b].raw.distance),
-        speed: (a, b) => compareNumber(shipsDB[a].raw.speed, shipsDB[b].raw.speed),
-        type: (a, b) => compareNumber(shipsDB[a].raw.shipclass, shipsDB[b].raw.shipclass),
-        last_signal: (a, b) => compareNumber(shipsDB[a].raw.last_signal, shipsDB[b].raw.last_signal),
-    };
-
-    if (column in sortFunctions) {
-        shipKeys.sort((keyA, keyB) => {
-            const comparisonResult = sortFunctions[column](keyA, keyB);
-            return order === "ascending" ? comparisonResult : -comparisonResult;
-        });
-    }
-
-    const filter = document.getElementById('shipSearchSide').value.toLowerCase();
-
-    const rows = [];
-    let addedRows = 0;
-
-    for (let i = 0; i < shipKeys.length && addedRows < 200; i++) {
-        const key = shipKeys[i];
-        if (!(key in shipsDB)) continue;
-        const ship = shipsDB[key].raw;
-        const shipName = String(getShipName(ship) || ship.mmsi);
-        if (filter && !shipName.toLowerCase().includes(filter)) continue;
-
-        const dist = ship.distance ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : "";
-        const distTitle = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "") : "";
-        const spd = ship.speed != null ? getSpeedVal(ship.speed) : "";
-        const spdTitle = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
-
-        rows.push(`<tr data-mmsi="${ship.mmsi}">` +
-            `<td>${getFlagStyled(ship.country, "padding:0;margin:0;box-shadow:1px 1px 2px rgba(0,0,0,0.2);font-size:16px;")}</td>` +
-            `<td>${shipName}</td>` +
-            `<td title="${distTitle}">${dist}</td>` +
-            `<td title="${spdTitle}">${spd}</td>` +
-            `<td>${getTableShiptype(ship)}</td>` +
-            `<td>${getDeltaTimeVal(ship.last_signal)}</td>` +
-            `</tr>`);
-        addedRows++;
-    }
-
-    tableBody.innerHTML = rows.join('');
-
-    tableBody.onmouseover = function (e) {
-        const tr = e.target.closest('tr[data-mmsi]');
-        if (tr) startHover('ship', parseInt(tr.dataset.mmsi));
-    };
-    tableBody.onmouseout = function (e) { stopHover(); };
-    tableBody.onclick = function (e) {
-        const tr = e.target.closest('tr[data-mmsi]');
-        if (tr) showShipcard('ship', parseInt(tr.dataset.mmsi));
-    };
-    tableBody.oncontextmenu = function (e) {
-        const tr = e.target.closest('tr[data-mmsi]');
-        if (tr) showContextMenu(e, parseInt(tr.dataset.mmsi), "ship", ["object", "object-map"]);
-    };
-}
-
-function flashNumber(id, newValue) {
-
-    const element = document.getElementById(id);
-    const oldValue = parseInt(element.innerText) || 0;
-
-    if (newValue != oldValue) {
-        element.classList.add("flash-up");
-    }
-
-    element.innerText = newValue;
-
-    setTimeout(() => {
-        element.classList.remove("flash-up");
-    }, 500);
-}
-
-function updateMarkerCount() {
-
-    let count = 0;
-    if (shipsDB != null) {
-        count = Object.keys(shipsDB).length;
-    }
-
-    flashNumber("markerCount", count);
-
-    if (document.getElementById("statcard").style.display == "block") updateMarkerCountTooltip();
-}
-
-function toggleStatcard() {
-    if (document.getElementById("statcard").style.display == "block") hideStatcard();
-    else showStatcard();
-}
-
-function showStatcard() {
-    updateMarkerCountTooltip();
-    document.getElementById("statcard").style.display = "block";
-}
-
-function hideStatcard() {
-    document.getElementById("statcard").style.display = "none";
-}
-
-function toggleTablecard() {
-    if (!document.getElementById("tableside").classList.contains("active") && window.innerWidth < 800) {
-        settings.tab = "ships";
-        selectTab();
-        return;
-    }
-
-    document.getElementById("tableside").classList.toggle("active");
-    const elements = document.querySelectorAll(".map-button-box");
-    elements.forEach(function (element) {
-        element.classList.toggle("active");
-    });
-
-    updateTablecard();
-}
-
-function hideTablecard() {
-    if (document.getElementById("tableside").classList.contains("active")) {
-        toggleTablecard();
-    }
-}
-
-function setRangeSwitch(b) {
-    if (b != settings.show_range) {
-        toggleRange();
-    }
-}
 
 function setRangeColor(v, f) {
     settings[f] = v;
     redrawMap();
-}
-
-function setRangeTimePeriod(v) {
-    settings.range_timeframe = v;
-    saveSettings();
-    fetchRange(true).then(() => drawRange());
 }
 
 async function toggleRange() {
@@ -2436,54 +1535,10 @@ async function toggleRange() {
     drawRange();
 }
 
-function setFading(b) {
-    if (b != settings.fading) {
-        toggleFading();
-    }
-}
-
 function toggleFading() {
     settings.fading = !settings.fading;
 }
 
-function setGraphVisibility(type, show, save = true) {
-    if (type === 'signal') {
-        settings.show_signal_graphs = show;
-        // Toggle signal level graphs
-        document.querySelectorAll('.graph-panel').forEach(panel => {
-            const header = panel.querySelector('header');
-            if (header && header.textContent.includes('Signal Level')) {
-                panel.style.display = show ? '' : 'none';
-            }
-        });
-    } else if (type === 'ppm') {
-        settings.show_ppm_graphs = show;
-        // Toggle frequency shift graphs
-        document.querySelectorAll('.graph-panel').forEach(panel => {
-            const header = panel.querySelector('header');
-            if (header && header.textContent.includes('Frequency Shift')) {
-                panel.style.display = show ? '' : 'none';
-            }
-        });
-    }
-    if (save) saveSettings();
-}
-
-function toggleGraphVisibility(type) {
-    if (type === 'signal') {
-        setGraphVisibility('signal', !settings.show_signal_graphs);
-    } else if (type === 'ppm') {
-        setGraphVisibility('ppm', !settings.show_ppm_graphs);
-    }
-}
-
-function showPlugins() {
-    showDialog("Plugins", "<pre>Loaded plugins:\n" + plugins + "</pre>");
-}
-
-function showServerErrors() {
-    showDialog("Server Errors", server_message == "" ? "None" : ("<pre>" + server_message + "</pre>"));
-}
 
 async function fetchAbout() {
     let response;
@@ -2717,311 +1772,8 @@ function updateDistanceCircles() {
     }
 }
 
-function sanitizeString(input) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;',
-        '`': '&#96;'
-    };
-    return input.replace(/[&<>"'`]/g, function (match) {
-        return map[match];
-    });
-}
-
-function formatTime(timestamp) {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-async function fetchBinary() {
-    binaryDB = {};
-    standaloneBinaryMessages = []; // For messages not at ship locations
-
-    let response;
-    try {
-        response = await fetch("api/binmsgs.json?receiver=" + activeReceiver);
-        const messages = await response.json();
-
-        // Group messages by MMSI
-        messages.forEach((msg, index) => {
-            if (msg.message && msg.message.mmsi && msg.message.lat && msg.message.lon) {
-                const mmsi = msg.message.mmsi;
-
-                if (!binaryDB[mmsi]) {
-                    binaryDB[mmsi] = {
-                        ship_messages: [], // Messages to show at ship location
-                        standalone_messages: [] // Messages to show at their own locations
-                    };
-                }
-
-                msg.formattedTime = formatTime(msg.timestamp);
-                msg.index = index + 1;
-
-                // Store the message's own coordinates 
-                msg.message_lat = msg.message.lat;
-                msg.message_lon = msg.message.lon;
-
-                // We'll categorize messages later when drawing them
-                binaryDB[mmsi].ship_messages.push(msg);
-            }
-        });
 
 
-        return true;
-    } catch (error) {
-
-        console.log("Failed loading binary:", error);
-        return false;
-    }
-}
-
-async function fetchShips(noDoubleFetch = true) {
-    if (isFetchingShips && noDoubleFetch) {
-        console.log("A fetch operation is already running.");
-        return false;
-    }
-
-    let ships = {};
-
-    isFetchingShips = true;
-    let response;
-    try {
-        response = await fetch("api/ships_array.json?receiver=" + activeReceiver);
-    } catch (error) {
-
-        console.log("failed loading ships: " + error);
-        return false;
-    } finally {
-        isFetchingShips = false;
-    }
-    ships = await response.json();
-
-
-
-    const keys = [
-        "mmsi",
-        "lat",
-        "lon",
-        "distance",
-        "bearing",
-        "level",
-        "count",
-        "ppm",
-        "approx",
-        "heading",
-        "cog",
-        "speed",
-        "to_bow",
-        "to_stern",
-        "to_starboard",
-        "to_port",
-        "last_group",
-        "group_mask",
-        "shiptype",
-        "mmsi_type",
-        "shipclass",
-        "msg_type",
-        "country",
-        "status",
-        "draught",
-        "eta_month",
-        "eta_day",
-        "eta_hour",
-        "eta_minute",
-        "imo",
-        "callsign",
-        "shipname",
-        "destination",
-        "last_signal",
-        "flags",
-        "validated",
-        "channels",
-        "altitude",
-        "received_stations"
-    ];
-
-    shipsDB = {};
-    station = {};
-
-    ships.values.forEach((v) => {
-        const s = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
-
-        const flags = s.flags;
-        s.validated2 = (flags & 3) == 2 ? -1 : flags & 3;
-
-
-        s.repeat = (flags >> 2) & 3;
-        s.virtual_aid = (flags >> 4) & 1;
-        s.approximate = (flags >> 5) & 1;
-        s.channels2 = (flags >> 6) & 0b1111;
-        s.cs_unit = (flags >> 10) & 3; // 0=unknown, 1=SOTDMA, 2=Carrier Sense
-        s.raim = (flags >> 12) & 3; // 0=unknown, 1=false, 2=true
-        s.dte = (flags >> 14) & 3; // 0=unknown, 1=ready, 2=not ready
-        s.assigned = (flags >> 16) & 3; // 0=unknown, 1=autonomous, 2=assigned
-        s.display = (flags >> 18) & 3; // 0=unknown, 1=false, 2=true
-        s.dsc = (flags >> 20) & 3; // 0=unknown, 1=false, 2=true
-        s.band = (flags >> 22) & 3; // 0=unknown, 1=false, 2=true
-        s.msg22 = (flags >> 24) & 3; // 0=unknown, 1=false, 2=true
-        s.off_position = (flags >> 26) & 3; // 0=unknown, 1=on position, 2=off position
-        s.maneuver = (flags >> 28) & 3; // 0=not available, 1=no special, 2=special
-
-        if (includeShip(s)) {
-            s.shipname = sanitizeString(s.shipname);
-            s.callsign = sanitizeString(s.callsign);
-
-            const entry = {};
-            entry.raw = s;
-            shipsDB[s.mmsi] = entry;
-        }
-    });
-
-    if (ships.hasOwnProperty("station")) station = ships.station;
-
-    center = {};
-    if (String(settings.center_point).toUpperCase() == "STATION") {
-        center = station;
-    } else if (settings.center_point in shipsDB) {
-        const ship = shipsDB[settings.center_point].raw;
-        center = { lat: ship.lat, lon: ship.lon };
-    }
-
-    tab_title_count = ships.values.length;
-    updateTitle();
-
-    return true;
-}
-
-async function fetchPlanes() {
-
-    let planes = {};
-
-    let response;
-    try {
-        response = await fetch("api/planes_array.json");
-    } catch (error) {
-
-        console.log("failed loading planes: " + error);
-        return false;
-    } finally {
-    }
-
-    planes = await response.json();
-
-
-    const keys = [
-        "hexident",
-        "lat",
-        "lon",
-        "altitude",
-        "speed",
-        "heading",
-        "vertrate",
-        "squawk",
-        "callsign",
-        "airborne",
-        "nMessages",
-        "last_signal",
-        "category",
-        "level",
-        "country",
-        "distance",
-        "message_types",
-        "message_subtypes",
-        "group_mask",
-        "last_group",
-        "bearing"
-    ];
-
-    planesDB = {};
-
-    planes.values.forEach((v) => {
-        const p = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
-
-        p.shipclass = ShippingClass.PLANE;
-
-        p.validated = 1;
-        p.name = p.callsign || p.hexident;
-
-        // Store in database 
-        const entry = {};
-        entry.raw = p;
-        planesDB[p.hexident] = entry;
-    });
-
-
-    return true;
-}
-
-function toggleScreenSize() {
-    const doc = window.document;
-    const docEl = doc.documentElement;
-
-    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen || docEl.webkitEnterFullscreen;
-    const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen || doc.webkitExitFullscreen;
-
-    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-        requestFullScreen.call(docEl);
-    } else {
-        cancelFullScreen.call(doc);
-    }
-}
-
-function addShipcardItem(icon, txt, title, onclick, contextType = 'ship') {
-    const div = document.createElement("div");
-    div.title = title;
-    div.setAttribute("data-context-type", contextType);
-    if (icon.startsWith("fa")) {
-        icon = "question_mark";
-    }
-    div.innerHTML = '<i class="' + icon + '_icon"></i><span>' + txt + "</span>";
-    div.setAttribute("onclick", onclick);
-    document.getElementById("shipcard_footer").appendChild(div);
-}
-
-function hideMenu() {
-    if (document.getElementById("menubar").classList.contains("visible") && !isAndroid()) {
-        toggleMenu();
-    }
-}
-
-function showMenu() {
-    if (!document.getElementById("menubar").classList.contains("visible")) {
-        toggleMenu();
-    }
-}
-
-function hideMenuifSmall() {
-    hideMenu();
-}
-
-function toggleMenu() {
-    document.getElementById("menubar").classList.toggle("visible");
-    document.getElementById("menubar_mini").classList.toggle("showflex");
-    document.getElementById("menubar_mini").classList.toggle("hide");
-
-    const menuButton = document.getElementById("header_menu_button");
-    menuButton.classList.toggle("menu_icon");
-    menuButton.classList.toggle("close_icon");
-}
-
-function initFullScreen() {
-    document.addEventListener("fullscreenchange", handleFullScreenChange);
-    document.addEventListener("mozfullscreenchange", handleFullScreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullScreenChange);
-    document.addEventListener("msfullscreenchange", handleFullScreenChange);
-}
-
-function handleFullScreenChange() {
-    const icon = document.getElementById("screentoggle-id");
-    if (document.fullscreenElement) {
-        icon.innerHTML = "fullscreen_exit";
-    } else {
-        icon.innerHTML = "fullscreen";
-    }
-}
 
 // we calculate the lat/lon for 1m move in direction of heading
 // underlying calculation uses an offset of 100m and then scales down to 1.
@@ -3047,588 +1799,6 @@ function calcOffset1M(coordinate, heading) {
 
 function calcMove(coordinate, delta, distance) {
     return [coordinate[0] + delta[1] * distance, coordinate[1] + delta[0] * distance];
-}
-
-function setMapSetting(a, v) {
-    settings[a] = v;
-    saveSettings();
-    redrawMap();
-}
-
-function setTrackClassColor(shipClass, color) {
-    settings.track_class_colors[ShippingClass[shipClass]] = color;
-    saveSettings();
-    redrawMap();
-}
-
-function applyColorToAllTracks(color) {
-    // Use default blue color if no color provided
-    const colorToApply = color || '#12a5ed';
-    for (const classKey in ShippingClass) {
-        settings.track_class_colors[ShippingClass[classKey]] = colorToApply;
-    }
-    updateTrackColorInputs();
-    saveSettings();
-    redrawMap();
-}
-
-function updateTrackColorInputs() {
-    document.getElementById("settings_track_cargo_color").value = settings.track_class_colors[ShippingClass.CARGO];
-    document.getElementById("settings_track_b_color").value = settings.track_class_colors[ShippingClass.B];
-    document.getElementById("settings_track_passenger_color").value = settings.track_class_colors[ShippingClass.PASSENGER];
-    document.getElementById("settings_track_tanker_color").value = settings.track_class_colors[ShippingClass.TANKER];
-    document.getElementById("settings_track_fishing_color").value = settings.track_class_colors[ShippingClass.FISHING];
-    document.getElementById("settings_track_highspeed_color").value = settings.track_class_colors[ShippingClass.HIGHSPEED];
-    document.getElementById("settings_track_special_color").value = settings.track_class_colors[ShippingClass.SPECIAL];
-    document.getElementById("settings_track_aton_color").value = settings.track_class_colors[ShippingClass.ATON];
-    document.getElementById("settings_track_station_color").value = settings.track_class_colors[ShippingClass.STATION];
-    document.getElementById("settings_track_sartepirb_color").value = settings.track_class_colors[ShippingClass.SARTEPIRB];
-    document.getElementById("settings_track_plane_color").value = settings.track_class_colors[ShippingClass.PLANE];
-    document.getElementById("settings_track_helicopter_color").value = settings.track_class_colors[ShippingClass.HELICOPTER];
-    document.getElementById("settings_track_other_color").value = settings.track_class_colors[ShippingClass.OTHER];
-    document.getElementById("settings_track_unknown_color").value = settings.track_class_colors[ShippingClass.UNKNOWN];
-}
-
-function average(d) {
-    const b = d.chart.data.datasets[0].data;
-    if (b.length == 1) return b[0].y;
-
-    let start = 0;
-    if (d.chart.data.datasets.length > 1) start = 1;
-
-    let c = 0;
-
-    for (let a = 0; a < b.length; a++) {
-        if (b[a].x != 0) {
-            for (let i = start; i < d.chart.data.datasets.length; i++) {
-                if (!d.chart.getDatasetMeta(i).hidden) {
-                    c += d.chart.data.datasets[i].data[a].y;
-                }
-            }
-        }
-    }
-
-    return c / (b.length - 1);
-}
-
-
-const graph_annotation = {
-    type: "line",
-    borderColor: "rgba(12,118,170)",
-    borderDash: [6, 6],
-    borderDashOffset: 0,
-    borderWidth: 3,
-    scaleID: "y",
-    value: (a) => average(a),
-};
-
-const graph_options_count = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: true,
-        },
-        annotation: {
-            annotations: {
-                graph_annotation,
-            },
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: {
-                display: true,
-                align: 'center'  // Aligns tick labels
-            },
-            grid: {
-                display: true,  // Only the primary axis should display grid lines
-            },
-            title: {
-                display: true,
-                text: 'Message Count',
-                font: {
-                    size: 12
-                },
-                color: '#666'
-            }
-        },
-        y_right: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: {
-                display: true,
-                align: 'center'  // Aligns tick labels
-            },
-            grid: {
-                display: false,  // Disable grid lines on the secondary axis
-            },
-            position: 'right',
-            title: {
-                display: true,
-                text: 'Vessel Count',
-                font: {
-                    size: 12
-                },
-                color: '#666'
-            }
-        },
-        x: {
-            ticks: {
-                display: true
-            },
-            title: {
-                display: true,
-                text: 'Time',
-                font: {
-                    size: 16
-                },
-                color: '#666'
-            }
-        },
-    }
-
-};
-
-const graph_options_single = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: false,
-        },
-        annotation: {
-            annotations: {
-                graph_annotation,
-            },
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: {
-                display: true,
-            },
-        },
-        x: {
-            ticks: {
-                display: true,
-            },
-        },
-    },
-};
-
-const graph_options_level = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: false,
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            beginAtZero: false,
-            ticks: {
-                display: true,
-            },
-        },
-        x: {
-            ticks: {
-                display: true,
-            },
-        },
-    },
-};
-
-const graph_options_distance = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: true,
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            type: 'logarithmic',
-            beginAtZero: false,
-            ticks: {
-                display: true,
-            },
-        },
-        x: {
-            ticks: {
-                display: true,
-            },
-        },
-    },
-};
-
-const plot_count = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "Vessel Count",
-                data: [],
-                type: "line",
-                showLine: true,
-                fill: false,
-                pointStyle: false,
-                borderWidth: 2,
-                yAxisID: 'y_right', // correctly reference the right y-axis
-            },
-            {
-                label: "Class A",
-                data: [],
-                showLine: true,
-                fill: "origin",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-            {
-                label: "Class B",
-                data: [],
-                showLine: true,
-                fill: "-1",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-            {
-                label: "Base Station",
-                data: [],
-                showLine: true,
-                fill: "-1",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-            {
-                label: "Other",
-                data: [],
-                showLine: true,
-                fill: "-1",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-        ],
-    },
-    options: graph_options_count,
-};
-
-const plot_distance = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "NE",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "SE",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "SW",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "NW",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "Max",
-                data: [],
-                showLine: true,
-                backgroundColor: "rgb(211,211,211,0.9)",
-                fill: true,
-                pointStyle: false,
-                borderWidth: 0,
-            },
-        ],
-    },
-    options: graph_options_distance,
-};
-
-const plot_single = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "Data",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-        ],
-    },
-    options: graph_options_single,
-};
-
-const plot_level = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "Max",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 1,
-            },
-            {
-                label: "Min",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 1,
-                fill: "-1",
-            },
-        ],
-    },
-    options: graph_options_level,
-};
-
-const plot_radar = {
-    type: "polarArea",
-    animation: false,
-    responsive: true,
-    plugins: {
-        legend: {
-            display: true,
-        },
-    },
-    data: {
-        datasets: [
-            {
-                label: "Class B",
-                borderWidth: 1,
-            },
-            {
-                label: "Class A",
-                borderWidth: 1,
-            },
-        ],
-    },
-    options: {
-        legend: {
-            display: false,
-        },
-        scale: {
-            ticks: {
-                min: 0,
-            },
-        },
-    },
-};
-
-function cssvar(name) {
-    // Read from documentElement (html) instead of body for better iframe compatibility
-    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    // Fallback to body if empty
-    return value || getComputedStyle(document.body).getPropertyValue(name).trim();
-}
-
-function updateChartColors(c, colorVariables) {
-    c.data.datasets.forEach((dataset, index) => {
-        const color = cssvar(colorVariables[index]);
-
-        dataset.backgroundColor = color;
-        dataset.borderColor = color;
-    });
-
-    c.options.scales.x.ticks.color = cssvar("--chart-color");
-    c.options.scales.x.grid.color = cssvar("--chart-grid-color");
-
-    c.options.scales.y.ticks.color = cssvar("--chart-color");
-    c.options.scales.y.grid.color = cssvar("--chart-grid-color");
-
-    c.options.plugins.legend.labels.color = cssvar("--chart-color");
-}
-
-function updateColorMulti(c) {
-    const colorVariables = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
-    updateChartColors(c, colorVariables);
-}
-
-function updateColorSingle(c) {
-    const colorVariables = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
-    updateChartColors(c, colorVariables);
-}
-
-function updateColorRadar(c) {
-    const colorVariables = ["--chart2-color", "--chart4-color", "--chart2-color", "--chart5-color", "--chart4-color"];
-    c.data.datasets.forEach((dataset, index) => {
-        const color = cssvar(colorVariables[index]);
-
-        dataset.backgroundColor = color;
-        dataset.borderColor = color;
-    });
-
-    c.options.scales.r.grid.color = cssvar("--chart-grid-color");
-    c.options.scales.r.ticks.color = cssvar("--chart-color");
-    c.options.scales.r.ticks.backdropColor = cssvar("--panel-color");
-}
-
-function cloneChartConfig(config) {
-    const clone = JSON.parse(JSON.stringify(config));
-
-    if (clone.options?.plugins?.annotation?.annotations?.graph_annotation) {
-        clone.options.plugins.annotation.annotations.graph_annotation.value =
-            (a) => average(a);
-    }
-    return clone;
-}
-
-function initPlots() {
-    if (typeof Chart === "undefined") return;
-
-    function makeChart(id, config, clone, ctx) {
-        try {
-            const canvas = document.getElementById(id);
-            if (!canvas) { console.warn(`Canvas element not found: ${id}`); return null; }
-            const context = ctx === "2d" ? canvas.getContext("2d") : canvas;
-            return new Chart(context, clone ? cloneChartConfig(config) : config);
-        } catch (error) {
-            console.error(`Failed to initialize chart ${id}:`, error);
-            return null;
-        }
-    }
-
-    chart_radar_hour    = makeChart("chart-radar-hour",      plot_radar,    true,  "2d");
-    chart_radar_day     = makeChart("chart-radar-day",       plot_radar,    true,  "2d");
-    chart_seconds       = makeChart("chart-seconds",         plot_count,    true);
-    chart_minutes       = makeChart("chart-minutes",         plot_count,    true);
-    chart_hours         = makeChart("chart-hours",           plot_count,    true);
-    chart_days          = makeChart("chart-days",            plot_count,    true);
-    chart_ppm           = makeChart("chart-ppm",             plot_single,   true);
-    chart_ppm_minute    = makeChart("chart-ppm-minute",      plot_single,   true);
-    chart_distance_hour = makeChart("chart-distance-hour",   plot_distance, false);
-    chart_distance_day  = makeChart("chart-distance-day",    plot_distance, false);
-    chart_minute_vessel = makeChart("chart-vessels-minute",  plot_single,   false);
-    chart_hour_vessel   = makeChart("chart-vessels-hour",    plot_single,   false);
-    chart_day_vessel    = makeChart("chart-vessels-day",     plot_single,   false);
-    chart_level         = makeChart("chart-level",           plot_level,    true);
-    chart_level_hour    = makeChart("chart-level-hour",      plot_level,    true);
-}
-
-function shipcardismax() {
-    return document.getElementById("shipcard").classList.contains("shipcard-ismax");
-}
-
-function shipcardselect() {
-    if (shipcardismax()) {
-        this.classList.toggle("shipcard-max-only");
-        this.classList.toggle("shipcard-row-selected");
-    } else toggleShipcardSize();
-
-    saveSettings();
-}
-
-function toggleShipcardSize() {
-    Array.from(document.getElementsByClassName("shipcard-min-only")).forEach((e) => e.classList.toggle("visible"));
-    Array.from(document.getElementsByClassName("shipcard-max-only")).forEach((e) => e.classList.toggle("hide"));
-
-    document.getElementById("shipcard").classList.toggle("shipcard-ismax");
-    document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_down_icon");
-    document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_up_icon");
-
-    const e = document.getElementById("shipcard_content").children;
-
-    if (shipcardismax()) {
-        for (let i = 0; i < e.length; i++) {
-            if (
-                (e[i].classList.contains("shipcard-max-only") && e[i].classList.contains("shipcard-row-selected")) ||
-                (!e[i].classList.contains("shipcard-max-only") && !e[i].classList.contains("shipcard-row-selected"))
-            )
-                e[i].classList.toggle("shipcard-row-selected");
-
-            const aside = document.getElementById("shipcard");
-            if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
-
-                if (card_mmsi in shipsDB && card_type == "ship") {
-                    const pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]));
-                    positionAside(pixel, aside);
-                }
-                else if (card_mmsi in planesDB && card_type == "plane") {
-                    const pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]));
-                    positionAside(pixel, aside);
-                }
-            }
-        }
-    } else {
-        for (let i = 0; i < e.length; i++) {
-            if (e[i].classList.contains("shipcard-row-selected")) e[i].classList.toggle("shipcard-row-selected");
-        }
-    }
 }
 
 function updateReceiverSelect(receivers) {
@@ -3680,14 +1850,11 @@ function onReceiverChange(idx) {
     refresh_data();
 }
 
-
-
 let displayNames;
 function getCountryName(isoCode) {
     if (!displayNames && typeof Intl !== "undefined" && typeof Intl.DisplayNames === "function") {
         displayNames = new Intl.DisplayNames(["en"], { type: "region" });
     }
-
     if (displayNames) {
         try {
             const countryName = displayNames.of(isoCode);
@@ -3708,705 +1875,11 @@ function getFlagStyled(country, style) {
     return country ? `<span style="` + style + `" title="` + getCountryName(country) + `" class="fi fi-${country.toLowerCase()}"></span> ` : "<span></span>";
 }
 
-// fetches main statistics from the server
-async function fetchStatistics() {
-    let response;
-    try {
-        response = await fetch("api/stat.json?receiver=" + activeReceiver);
-    } catch (error) {
-
-        return;
-    }
-    const statistics = await response.json();
-
-    return statistics;
-}
-
-function updateStat(stat, tf) {
-    [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e].toLocaleString()));
-
-    document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count.toLocaleString();
-    document.getElementById("stat_" + tf + "_dist").innerText = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
-    document.getElementById("stat_" + tf + "_vessel_count").innerText = stat[tf].vessels.toLocaleString();
-    document.getElementById("stat_" + tf + "_msg123").innerText = (stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg5").innerText = stat[tf].msg[4].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg18").innerText = stat[tf].msg[17].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg19").innerText = stat[tf].msg[18].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg68").innerText = (stat[tf].msg[5] + stat[tf].msg[7]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg1214").innerText = (stat[tf].msg[11] + stat[tf].msg[13]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg24").innerText = stat[tf].msg[23].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg4").innerText = stat[tf].msg[3].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg9").innerText = stat[tf].msg[8].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg21").innerText = stat[tf].msg[20].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26].toLocaleString();
-
-    let count_other = 0;
-    [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26].forEach((i) => (count_other += stat[tf].msg[i - 1]));
-    document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
-}
-
-function formatBytes(b) {
-    if (b >= 1e9) return (b / 1e9).toFixed(1) + " GB";
-    if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
-    if (b >= 1e3) return (b / 1e3).toFixed(1) + " KB";
-    return b + " B";
-}
-
-async function updateStatistics() {
-    const stat = await fetchStatistics();
-
-    if (stat) {
-        // in bulk....
-        ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate"].forEach(
-            (e) => (document.getElementById("stat_" + e).innerHTML = stat[e]),
-        );
-
-        if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
-
-        const statSharingElement = document.getElementById("stat_sharing");
-
-        statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank">${stat.sharing ? 'Yes' : 'No'}</a>`;
-        statSharingElement.style.color = stat.sharing ? "green" : "red";
-
-
-        document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
-        const title = document.getElementById("stat_station").textContent;
-        if (title != "" && title != null) {
-            tab_title_station = title;
-            updateTitle();
-        }
-        document.getElementById("stat_memory").innerText = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
-        document.getElementById("stat_received").innerText = formatBytes(stat.received);
-        document.getElementById("stat_msg_rate").innerText = Number(stat.msg_rate).toFixed(1) + " msg/s";
-        document.getElementById("stat_msg_min_rate").innerText = Number(stat.last_minute.count).toFixed(0) + " msg/min";
-        document.getElementById("stat_run_time").innerHTML = getDeltaTimeVal(stat.run_time);
-
-        updateStat(stat, "total");
-        updateStat(stat, "session");
-        updateStat(stat, "last_minute");
-        updateStat(stat, "last_hour");
-        updateStat(stat, "last_day");
-
-        document.getElementById("stat_total_vessel_count").innerText = "-";
-        document.getElementById("stat_session_vessel_count").innerText = stat.vessel_count;
-
-        const outputSection = document.getElementById("output_stats");
-        if (!outputSection) return;
-
-        if (stat.outputs && stat.outputs.length > 0) {
-            let html = "";
-            for (let i = 0; i < stat.outputs.length; i++) {
-                html += "<section>";
-                const o = stat.outputs[i];
-                const s = o.stats;
-                const showStatus = o.type !== "UDP" && !o.type.startsWith("HTTP");
-
-                html += `<div><span>Output</span><span>${o.description || o.type}</span></div>`;
-                if (showStatus) {
-                    const connected = s.connected ? "Connected" : "Not connected";
-                    const connectedColor = s.connected ? "green" : "red";
-                    html += `<div><span>Status</span><span style="color:${connectedColor}">${connected}</span></div>`;
-                }
-                html += `<div><span>Bytes out / in</span><span>${formatBytes(s.bytes_out)} / ${formatBytes(s.bytes_in)}</span></div>`;
-                if (o.type !== "UDP")
-                    html += `<div><span>Connect ok / fail</span><span>${s.connect_ok} / ${s.connect_fail}</span></div>`;
-                if (s.reconnects > 0)
-                    html += `<div><span>Reconnects</span><span>${s.reconnects}</span></div>`;
-                html += "</section>";
-            }
-            outputSection.innerHTML = html;
-        }
-    }
-}
-
-function updateChartMulti(b, f, c) {
-    if (!c) return;
-    if (b.hasOwnProperty(f)) {
-        const hA = [];
-        const hB = [];
-        const hT = [];
-        const hS = [];
-        const hV = [];
-
-
-        const source = b[f];
-        for (let i = 0; i < source.time.length; i++) {
-            const cA = source.stat[i].msg[0] + source.stat[i].msg[1] + source.stat[i].msg[2] + source.stat[i].msg[4];
-            hA.push({ x: source.time[i], y: cA });
-            const cB = source.stat[i].msg[17] + source.stat[i].msg[18] + source.stat[i].msg[23];
-            hB.push({ x: source.time[i], y: cB });
-            const cS = source.stat[i].msg[3];
-            hS.push({ x: source.time[i], y: cS });
-            const cT = source.stat[i].count - cA - cB - cS;
-            hT.push({ x: source.time[i], y: cT });
-            const cV = source.stat[i].vessels;
-            hV.push({ x: source.time[i], y: cV });
-        }
-
-        c.data.datasets[0].data = hV;
-        c.data.datasets[1].data = hA;
-        c.data.datasets[2].data = hB;
-        c.data.datasets[3].data = hS;
-        c.data.datasets[4].data = hT;
-
-        c.update();
-    }
-}
-
-function updateChartDistance(b, f, c) {
-    if (!c) return;
-    if (b.hasOwnProperty(f)) {
-        const hNE = [];
-        const hSE = [];
-        const hSW = [];
-        const hNW = [];
-        const hM = [];
-
-        const source = b[f];
-
-        if (source.stat[0].radar_a.length == 0) return;
-        const N = source.stat[0].radar_a.length;
-        const N4 = N / 4;
-        for (let i = 0; i < source.time.length; i++) {
-            const count = [0, 0, 0, 0];
-            for (let j = 0; j < N; j++) count[Math.floor(j / N4)] = Math.max(count[Math.floor(j / N4)], source.stat[i].radar_a[j]);
-
-            hNE.push({ x: source.time[i], y: getDistanceConversion(count[0]) }); // source.stat[i].radar[0]
-            hSE.push({ x: source.time[i], y: getDistanceConversion(count[1]) });
-            hSW.push({ x: source.time[i], y: getDistanceConversion(count[2]) });
-            hNW.push({ x: source.time[i], y: getDistanceConversion(count[3]) });
-            hM.push({ x: source.time[i], y: getDistanceConversion(source.stat[i].dist) });
-        }
-        c.data.datasets[0].data = hNE;
-        c.data.datasets[1].data = hSE;
-        c.data.datasets[2].data = hSW;
-        c.data.datasets[3].data = hNW;
-        c.data.datasets[4].data = hM;
-
-        c.update();
-    }
-}
-
-function updateChartSingle(b, f1, f2, c) {
-    if (!c) return;
-    if (b.hasOwnProperty(f1)) {
-        const h = [];
-
-        const source = b[f1];
-        for (let i = 0; i < source.time.length; i++) {
-            h.push({ x: source.time[i], y: source.stat[i][f2] });
-        }
-        c.data.datasets[0].data = h;
-        c.update();
-    }
-}
-
-function updateChartLevel(chartData, timeframe, chartName, chart) {
-    if (!chartData?.hasOwnProperty(timeframe)) {
-        return;
-    }
-
-    const timeSeriesData = chartData[timeframe];
-
-    const minLevelData = [];
-    for (let i = 0; i < timeSeriesData.time.length; i++) {
-        minLevelData.push({
-            x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_min === 0 ? null : timeSeriesData.stat[i].level_min
-        });
-    }
-    chart.data.datasets[1].data = minLevelData;
-
-    const maxLevelData = [];
-    for (let i = 0; i < timeSeriesData.time.length; i++) {
-        maxLevelData.push({
-            x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_max === 0 ? null : timeSeriesData.stat[i].level_max
-        });
-    }
-    chart.data.datasets[0].data = maxLevelData;
-
-    chart.update();
-}
-
-function updateRadar(b, f, c) {
-    if (!c) return;
-    if (b.hasOwnProperty(f)) {
-        const data_a = [],
-            data_b = [];
-        let idx = 0;
-        if (b[f].stat.length > 1) idx = 1;
-        const N = b[f].stat[idx].radar_a.length;
-        for (let i = 0; i < N; i++) {
-            data_a.push({
-                r: getDistanceConversion(b[f].stat[idx].radar_a[i]),
-                theta: (i * 360) / N,
-            });
-            data_b.push({
-                r: getDistanceConversion(b[f].stat[idx].radar_b[i]),
-                theta: (i * 360) / N,
-            });
-        }
-        c.data.datasets[0].data = data_b;
-        c.data.datasets[1].data = data_a;
-        c.update();
-    }
-}
-
-async function updatePlots() {
-    const unit = getDistanceUnit().toUpperCase();
-    document.querySelectorAll(".distunit").forEach((u) => {
-        u.textContent = unit;
-    });
-
-    let response;
-    try {
-        response = await fetch("api/history_full.json?receiver=" + activeReceiver);
-    } catch (error) {
-        return;
-    }
-    const b = await response.json();
-
-    updateChartMulti(b, "second", chart_seconds);
-    updateChartMulti(b, "minute", chart_minutes);
-    updateChartMulti(b, "hour", chart_hours);
-    updateChartMulti(b, "day", chart_days);
-
-    updateChartSingle(b, "minute", "ppm", chart_ppm_minute);
-    updateChartSingle(b, "hour", "ppm", chart_ppm);
-    updateChartLevel(b, "minute", "level", chart_level);
-    updateChartLevel(b, "hour", "level", chart_level_hour);
-    updateChartSingle(b, "minute", "vessels", chart_minute_vessel);
-    updateChartSingle(b, "hour", "vessels", chart_hour_vessel);
-    updateChartSingle(b, "day", "vessels", chart_day_vessel);
-    //plot_radar.options.ticks.scale.max = 200;
-    updateChartDistance(b, "hour", chart_distance_hour);
-    updateChartDistance(b, "day", chart_distance_day);
-
-    updateRadar(b, "hour", chart_radar_hour);
-    updateRadar(b, "day", chart_radar_day);
-}
-
-function tableRowClick(m) {
-    const ship = shipsDB[m].raw;
-    if (ship.lat == null || ship.lon == null) return;
-
-    selectMapTab(m);
-}
-
-let table = null;
-
-function downloadCSV() {
-    if (table) table.download("csv", "data.csv");
-}
-
-document.getElementById("shipSearch").addEventListener("input", function (e) {
-    const query = e.target.value;
-    searchShips(query);
-});
-
-function searchShips(query) {
-    if (table) {
-        table.setFilter(customShipFilter, { query: query });
-    }
-}
-
-function customShipFilter(data, filterParams) {
-    const query = filterParams.query.toLowerCase();
-    return data.shipname.toLowerCase().includes(query) ||
-        data.mmsi.toString().includes(query) ||
-        data.callsign.toLowerCase().includes(query) ||
-        data.shipclass.toString().includes(query) ||
-        (data.last_signal != null && getDeltaTimeVal(data.last_signal).includes(query)) ||
-        (data.count != null && data.count.toString().includes(query)) ||
-        (data.ppm != null && data.ppm.toString().includes(query)) ||
-        (data.level != null && data.level.toString().includes(query)) ||
-        (data.distance != null && getDistanceVal(data.distance).includes(query)) ||
-        (data.bearing != null && data.bearing.toString().includes(query)) ||
-        (data.lat != null && getLatValFormat(data).includes(query)) ||
-        (data.lon != null && getLonValFormat(data).includes(query)) ||
-        (data.speed != null && getSpeedVal(data.speed).toString().includes(query)) ||
-        (data.validated != null && (data.validated == 1 ? "yes" : data.validated == -1 ? "no" : "pending").includes(query)) ||
-        (data.channels != null && getStringfromChannels(data.channels).includes(query)) ||
-        (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
-}
-
-let tableFirstTime = true;
-
-async function updateShipTable() {
-    const ok = await fetchShips();
-    if (!ok) return;
-
-    const data = Object.values(shipsDB).map((ship) => ship.raw);
-
-    if (table == null) {
-        table = new Tabulator("#shipTable", {
-            index: "mmsi",
-            rowFormatter: function (row) {
-                const ship = row.getData();
-                const borderColor = ship.validated == 1 ? "#7CFC00" : ship.validated == -1 ? "red" : "lightgrey";
-                row.getElement().style.borderLeft = `10px solid ${borderColor}`;
-            },
-            data: data,
-            layout: "fitDataTable",
-            persistence: { sort: true },
-            pagination: "local",
-            paginationSize: 50,
-            rowHeight: 37,
-            paginationSizeSelector: [20, 50, 100],
-            columns: [
-                {
-                    title: "Shipname",
-                    field: "shipname",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return getFlag(ship.country) + getShipName(ship);
-                    },
-                },
-                { title: "MMSI", field: "mmsi", sorter: "number" },
-                { title: "IMO", field: "imo", sorter: "number" },
-                { title: "Dest", field: "destination", sorter: "string" },
-                {
-                    title: "ETA",
-                    field: "eta",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-                    },
-                },
-                {
-                    title: "Callsign",
-                    field: "callsign",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship != null ? getCallSign(ship) : "";
-                    },
-                },
-                {
-                    title: "Flag",
-                    field: "country",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship != null ? getCountryName(ship.country) : "";
-                    },
-                },
-                {
-                    title: "Status",
-                    field: "status",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship != null ? getStatusVal(ship) : "";
-                    },
-                },
-                {
-                    title: "Type",
-                    field: "shipclass",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return getTableShiptype(ship);
-                    },
-                },
-                {
-                    title: "Class",
-                    field: "class",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return getTypeVal(ship);
-                    },
-                },
-                {
-                    title: "Dim",
-                    field: "dimension",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship ? getShipDimension(ship) || "" : "";
-                    },
-                },
-                {
-                    title: "Draught",
-                    field: "draught",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
-                    },
-                },
-                {
-                    title: "Last",
-                    field: "last_signal",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? getDeltaTimeVal(value) : "";
-                    },
-                },
-                { title: "Count", field: "count", sorter: "number" },
-                {
-                    title: "PPM",
-                    field: "ppm",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? Number(value).toFixed(1) : "";
-                    },
-                },
-                {
-                    title: "RSSI",
-                    field: "level",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? Number(value).toFixed(1) : "";
-                    },
-                },
-                {
-                    title: "Dist",
-                    field: "distance",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return (ship != null && ship.distance != null)
-                            ? getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")
-                            : "";
-                    },
-                },
-                {
-                    title: "Brg",
-                    field: "bearing",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? Number(value).toFixed(0) + "&deg;" : "";
-                    },
-                },
-                {
-                    title: "Lat",
-                    field: "lat",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-                        return "<div style='color:" + color + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
-                    },
-                },
-                {
-                    title: "Lon",
-                    field: "lon",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-                        return "<div style='color:" + color + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
-                    },
-                },
-                {
-                    title: "Spd",
-                    field: "speed",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value ? getSpeedVal(value) + " " + getSpeedUnit() : null;
-                    },
-                },
-                {
-                    title: "Valid",
-                    field: "validated",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        const txt = value == 1 ? "Yes" : value == -1 ? "No" : "Pending";
-                        return txt;
-                    },
-                },
-                {
-                    title: "Repeated",
-                    field: "repeat",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value == 1 ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "Ch",
-                    field: "channels",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return getStringfromChannels(value);
-                    },
-                },
-                {
-                    title: "Msg Type",
-                    field: "msg_type",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return getStringfromMsgType(value);
-                    },
-                },
-                {
-                    title: "MSG6",
-                    field: "MSG6",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value & (1 << 6) ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "MSG8",
-                    field: "MSG8",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value & (1 << 8) ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "MSG27",
-                    field: "MSG27",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value & (1 << 27) ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "Src",
-                    field: "group_mask",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return getStringfromGroup(value);
-                    },
-                },
-            ],
-        });
-        table.on("rowContext", function (e, row) {
-            showContextMenu(e, row.getData().mmsi, "ship", ["settings", "ship", "table-menu"]);
-        });
-        table.on("rowClick", function (e, row) {
-            tableRowClick(row.getData().mmsi);
-        });
-        table.on("tableBuilt", function () {
-            if (tableFirstTime) {
-                setShipTableColumns();
-                tableFirstTime = false;
-            }
-        });
-    } else {
-        const sorters = table.getSorters();
-        table.replaceData(data);
-        table.setSort(sorters);
-    }
-}
-
-function populateShipTableColumnVisibilityMenu() {
-    const shipTableColumnVisibilityMenu = document.getElementById("shipTableColumnVisibilityMenu");
-    shipTableColumnVisibilityMenu.innerHTML = "";
-
-    table.getColumns().forEach((column) => {
-        const checkboxId = `checkbox-${column.getField()}`;
-        const checkboxLabel = column.getDefinition().title;
-
-        const checkboxItem = document.createElement("div");
-        checkboxItem.classList.add("ship-table-column-dropdown-item");
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = checkboxId;
-        checkbox.value = column.getField();
-        checkbox.checked = column.isVisible();
-        checkbox.addEventListener("change", updateShipTableColumnVisibility);
-
-        const label = document.createElement("label");
-        label.setAttribute("for", checkboxId);
-        label.textContent = checkboxLabel;
-
-        checkboxItem.appendChild(checkbox);
-        checkboxItem.appendChild(label);
-
-        shipTableColumnVisibilityMenu.appendChild(checkboxItem);
-    });
-}
-
-function updateShipTableColumnVisibility() {
-    const checkboxes = document.querySelectorAll("#shipTableColumnVisibilityMenu input[type='checkbox']");
-
-    settings.shiptable_columns = Array.from(checkboxes)
-        .filter((checkbox) => checkbox.checked)
-        .map((checkbox) => checkbox.value);
-
-    setShipTableColumns();
-}
-
-function resetShipTableColumns() {
-    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
-    setShipTableColumns();
-}
-
-function setShipTableColumns() {
-
-    saveSettings();
-
-    const allColumns = table.getColumns();
-
-    const updatedColumns = allColumns.map(column => {
-        const field = column.getField();
-        return {
-            ...column.getDefinition(),
-            visible: settings.shiptable_columns.includes(field)
-        };
-    });
-
-    table.setColumns(updatedColumns);
-    populateShipTableColumnVisibilityMenu();
-}
-
-const dropdownToggle = document.getElementById('shipTableColumnDropdownToggle');
-const dropdownMenu = document.getElementById('shipTableColumnVisibilityMenu');
-document.body.appendChild(dropdownMenu);
-
-function toggleDropdown() {
-    const isOpen = dropdownMenu.style.display === 'block';
-    if (isOpen) {
-        dropdownMenu.style.display = 'none';
-        return;
-    }
-    if (table) populateShipTableColumnVisibilityMenu();
-    const rect = dropdownToggle.getBoundingClientRect();
-    dropdownMenu.style.top = (rect.bottom + window.scrollY) + 'px';
-    dropdownMenu.style.right = (window.innerWidth - rect.right) + 'px';
-    dropdownMenu.style.display = 'block';
-}
-
-dropdownToggle.addEventListener('click', function (event) {
-    event.stopPropagation();
-    toggleDropdown();
-});
+// Tabulator ships tab → tabs/table.js
 
 document.addEventListener('click', function (event) {
-    if (!dropdownMenu.contains(event.target) && event.target !== dropdownToggle) {
-        dropdownMenu.style.display = 'none';
-    }
     const wrap = document.getElementById('receiver-btn-wrap');
-    if (wrap && !wrap.contains(event.target)) {
-        closeReceiverDropdown();
-    }
-});
-
-const resetButton = document.getElementById('shipTableColumnReset');
-resetButton.addEventListener('click', function (event) {
-    resetShipTableColumns();
+    if (wrap && !wrap.contains(event.target)) closeReceiverDropdown();
 });
 
 function getTooltipContent(ship) {
@@ -4507,42 +1980,6 @@ function notImplemented() {
 
 
 
-function updateFocusMarker() {
-    if (selectCircleFeature) {
-        if (card_type == 'ship' && card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
-            const center = ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]);
-            selectCircleFeature.setGeometry(new ol.geom.Point(center));
-            return;
-        }
-        else if (card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
-            const center = ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]);
-            selectCircleFeature.setGeometry(new ol.geom.Point(center));
-            return;
-        }
-        else {
-            extraVector.removeFeature(selectCircleFeature);
-            selectCircleFeature = undefined;
-            return;
-        }
-    }
-
-    if (card_type == 'ship' && card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
-
-        const center = ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]);
-        selectCircleFeature = new ol.Feature(new ol.geom.Point(center));
-        selectCircleFeature.setStyle(selectCircleStyleFunction);
-        selectCircleFeature.mmsi = card_mmsi;
-        extraVector.addFeature(selectCircleFeature);
-    }
-    else if (card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
-
-        const center = ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]);
-        selectCircleFeature = new ol.Feature(new ol.geom.Point(center));
-        selectCircleFeature.setStyle(selectCircleStyleFunction);
-        selectCircleFeature.mmsi = card_mmsi;
-        extraVector.addFeature(selectCircleFeature);
-    }
-}
 
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
@@ -4661,148 +2098,6 @@ function getTooltipContentBinary(mmsiOrBinary) {
     return getBinaryMessageContent(mmsiOrBinary);
 }
 
-function getBinaryMessageContent(binary, showMultiple = false) {
-    const messages = Array.isArray(binary) ? binary : [binary];
-
-    if (messages.length === 0) return '';
-
-    messages.sort((a, b) => b.timestamp - a.timestamp);
-
-    const messagesToShow = showMultiple ? Math.min(messages.length, 3) : 1;
-
-    let content = '<div class="meteo-tooltip" style="max-width: 320px;">';
-
-    for (let i = 0; i < messagesToShow; i++) {
-        const msg = messages[i].message;
-
-        if (i > 0) {
-            content += '<hr style="margin: 10px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.3);">';
-        }
-
-        // Determine if it's just meteo or also has hydro data
-        const hasHydroData =
-            ('watercurrent' in msg && msg.watercurrent !== undefined && msg.watercurrent !== null) ||
-            ('currentspeed' in msg && msg.currentspeed !== undefined && msg.currentspeed !== null) ||
-            ('currentdir' in msg && msg.currentdir !== undefined && msg.currentdir !== null) ||
-            ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) ||
-            ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null);
-
-        content += `<h4 style="margin: 5px 0; font-size: 12px; color: #eee;">${messages[i].formattedTime} - ${hasHydroData ? 'Meteo & Hydro' : 'Meteo'}`;
-        if (messagesToShow > 1) {
-            content += ` (${i + 1}/${messagesToShow})`;
-        }
-        content += '</h4>';
-
-        content += '<div style="display: grid; grid-template-columns: 1fr 1fr; grid-gap: 5px;">';
-
-        // Wind data
-        if ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Wind:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.wspeed.toFixed(1) + ' knots';
-            if ('wdir' in msg && msg.wdir !== undefined && msg.wdir !== null && msg.wdir !== 360) {
-                content += ' from ' + msg.wdir + '&deg';
-            }
-            content += '</div></div>';
-        }
-
-        // Air temperature
-        if ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Air Temp:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.airtemp.toFixed(1) + '&deg C</div>';
-            content += '</div>';
-        }
-
-        // Air pressure
-        if ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Pressure:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.pressure.toFixed(1) + ' hPa';
-            if ('pressuretend' in msg && msg.pressuretend !== undefined && msg.pressuretend !== null) {
-                content += ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')';
-            }
-            content += '</div></div>';
-        }
-
-        // Water current speed and direction
-        const currentSpeed = msg.watercurrent || msg.currentspeed;
-        const currentDir = msg.currentdir || msg.currentdirection;
-
-        if (currentSpeed !== undefined && currentSpeed !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Current:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + currentSpeed.toFixed(1) + ' knots';
-            if (currentDir !== undefined && currentDir !== null && currentDir !== 360) {
-                content += ' to ' + currentDir + '&deg';
-            }
-            content += '</div></div>';
-        }
-
-        // Water level
-        if ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Water Level:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.waterlevel.toFixed(2) + ' m</div>';
-            content += '</div>';
-        }
-
-        // Water temperature
-        if ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Water Temp:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.watertemp.toFixed(1) + '&deg C</div>';
-            content += '</div>';
-        }
-
-        // Wave data
-        if ('waveheight' in msg && msg.waveheight !== undefined && msg.waveheight !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Wave:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.waveheight.toFixed(1) + ' m';
-            if ('wavedir' in msg && msg.wavedir !== undefined && msg.wavedir !== null && msg.wavedir !== 360) {
-                content += ' from ' + msg.wavedir + '&deg';
-            }
-            if ('waveperiod' in msg && msg.waveperiod !== undefined && msg.waveperiod !== null) {
-                content += ', ' + msg.waveperiod + 's';
-            }
-            content += '</div></div>';
-        }
-
-        // Swell data
-        if ('swellheight' in msg && msg.swellheight !== undefined && msg.swellheight !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Swell:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.swellheight.toFixed(1) + ' m';
-            if ('swelldir' in msg && msg.swelldir !== undefined && msg.swelldir !== null && msg.swelldir !== 360) {
-                content += ' from ' + msg.swelldir + '&deg';
-            }
-            if ('swellperiod' in msg && msg.swellperiod !== undefined && msg.swellperiod !== null) {
-                content += ', ' + msg.swellperiod + 's';
-            }
-            content += '</div></div>';
-        }
-
-        // Visibility
-        if ('visibility' in msg && msg.visibility !== undefined && msg.visibility !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Visibility:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.visibility.toFixed(1) + ' nm</div>';
-            content += '</div>';
-        }
-
-        // End grid
-        content += '</div>';
-    }
-
-    // If there are more messages than we show
-    if (messages.length > messagesToShow) {
-        content += `<div style="text-align: center; font-size: 10px; margin-top: 5px; font-style: italic; color: #ccc;"></div>`;
-    }
-
-    content += '</div>';
-    return content;
-}
 
 const startHover = function (type, mmsi, pixel, feature) {
 
@@ -5044,19 +2339,14 @@ function saveSettings() {
     settings.activeReceiver = activeReceiver;
 
     // Save realtime filter MMSIs and background streaming state
-    if (realtimeViewer) {
-        settings.realtime_filter_mmsis = realtimeViewer.filterMMSIs;
-        settings.realtime_background_streaming = realtimeViewer.backgroundStreaming;
+    const rtState = getRealtimeState();
+    if (rtState) {
+        settings.realtime_filter_mmsis = rtState.filterMMSIs;
+        settings.realtime_background_streaming = rtState.backgroundStreaming;
     }
 
-    localStorage[context] = JSON.stringify(settings);
-
-    updateMapURL();
-    updateSettingsTab();
-
-    // Apply graph visibility settings (without saving during initialization)
-    setGraphVisibility('signal', settings.show_signal_graphs, false);
-    setGraphVisibility('ppm', settings.show_ppm_graphs, false);
+    persist();
+    notifyChange();
 }
 
 function updateForLegacySettings() {
@@ -5079,7 +2369,7 @@ function loadSettings() {
             const localStorageSettings = localStorage.getItem(context);
             if (localStorageSettings !== null) {
                 const ls = JSON.parse(localStorageSettings);
-                settings = { ...settings, ...ls };
+                Object.assign(settings, ls);
             }
         } catch (error) {
             console.log(error);
@@ -5159,18 +2449,6 @@ function mapResetView(z) {
     shipcardMinIfMaxonMobile();
 }
 
-function shipcardVisible() {
-    return document.getElementById("shipcard").classList.contains("visible");
-}
-
-function measurecardVisible() {
-    return document.getElementById("measurecard").classList.contains("visible");
-}
-
-function toggleMeasurecard() {
-    if (shipcardVisible() && !measurecardVisible()) showShipcard(null, null);
-    document.getElementById("measurecard").classList.toggle("visible");
-}
 
 async function ToggleTrackOnMap(m) {
 
@@ -5297,375 +2575,6 @@ async function fetchTracks() {
     return true;
 }
 
-function trackOptionString(mmsi) {
-    const hover_track = mmsi == hoverType == 'ship' && hoverMMSI && hover_enabled_track;
-    const select_track = card_type == 'ship' && mmsi == card_mmsi && select_enabled_track;
-    const track_shown = marker_tracks.has(Number(mmsi));
-
-    if (hover_track || select_track) return "Show Track";
-    return track_shown ? "Hide Track" : "Show Track";
-}
-
-function updateShipcardTrackOption() {
-    const trackOptionElement = document.getElementById("shipcard_track_option");
-
-    if (show_all_tracks || card_type == 'plane') {
-        trackOptionElement.style.opacity = "0.5";
-        trackOptionElement.style.pointerEvents = "none";
-    } else {
-        trackOptionElement.style.opacity = "1";
-        trackOptionElement.style.pointerEvents = "auto";
-    }
-
-    if (card_mmsi && card_type == 'ship') {
-        document.getElementById("shipcard_track").innerText = trackOptionString(card_mmsi);
-    }
-}
-
-function isShipcardMax() {
-    const e = document.getElementById("shipcard").classList;
-    return e.contains("shipcard-ismax");
-}
-
-function getStringfromMsgType(m) {
-    let s = "";
-    let delim = "";
-    for (let i = 1; i <= 27; i++)
-        if ((m & (1 << i)) != 0) {
-            s += delim + Number(i).toFixed(0);
-            delim = ", ";
-        }
-    return s;
-}
-
-function getStringfromGroup(m) {
-    let s = "";
-    let delim = "";
-    let count = 0;
-
-    for (let i = 0; i < 32; i++) {
-        const mask = 1 << i;
-        if ((m & mask) !== 0) {
-            if (count == 4) {
-                s += delim + "...";
-                break;
-            }
-            s += delim + Number(i + 1).toFixed(0);
-            delim = ", ";
-            count++;
-        }
-    }
-    return s;
-}
-
-function getStringfromChannels(m) {
-    let s = "";
-    let delim = "";
-    for (let i = 0; i <= 3; i++)
-        if ((m & (1 << i)) != 0) {
-            s += delim + String.fromCharCode(65 + i);
-            delim = ", ";
-        }
-    return s;
-}
-
-function setShipcardValidation(v) {
-    document.getElementById("shipcard_header").classList.remove("shipcard-validated", "shipcard-not-validated", "shipcard-dubious");
-
-    switch (v) {
-        case 1:
-            document.getElementById("shipcard_header").classList.add("shipcard-validated");
-            break;
-        case -1:
-            document.getElementById("shipcard_header").classList.add("shipcard-dubious");
-            break;
-        default:
-            document.getElementById("shipcard_header").classList.add("shipcard-not-validated");
-    }
-}
-
-function updateMessageButton() {
-    const messageButton = document.querySelector('#shipcard_footer [onclick="showBinaryMessageDialog(card_mmsi)"]');
-    if (!messageButton) return;
-
-    const iconElement = messageButton.querySelector('i.mail_icon');
-    if (!iconElement) return;
-
-    const hasBinaryMsgs = card_mmsi &&
-        binaryDB &&
-        card_mmsi in binaryDB &&
-        binaryDB[card_mmsi].ship_messages &&
-        binaryDB[card_mmsi].ship_messages.length > 0;
-
-    const existingBadge = iconElement.querySelector('.message-badge');
-    if (existingBadge) {
-        existingBadge.remove();
-    }
-
-    if (hasBinaryMsgs) {
-        const count = binaryDB[card_mmsi].ship_messages.length;
-        messageButton.style.display = '';
-
-        const badge = document.createElement('span');
-        badge.className = 'message-badge';
-        badge.textContent = count;
-        iconElement.appendChild(badge);
-    } else {
-        messageButton.style.display = 'none';
-    }
-}
-
-function populateShipcard() {
-
-    if (card_type != 'ship') return;
-
-    if (!(card_mmsi in shipsDB)) {
-        document
-            .getElementById("shipcard_content")
-            .querySelectorAll("span:nth-child(2)")
-            .forEach((e) => (e.innerHTML = null));
-        document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
-        document.getElementById("shipcard_header_flag").innerHTML = "";
-        document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
-
-        updateFocusMarker();
-        return;
-    }
-
-    const ship = shipsDB[card_mmsi].raw;
-
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;");
-    document.getElementById("shipcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
-
-    setShipcardValidation(ship.validated);
-
-    // verbatim copies
-    ["destination", "mmsi", "count", "imo", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e]));
-
-    // round and add units
-    [
-        { id: "cog", u: "&deg", d: 0 },
-        { id: "bearing", u: "&deg", d: 0 },
-        { id: "heading", u: "&deg", d: 0 },
-        { id: "level", u: "dB", d: 1 },
-        { id: "ppm", u: "ppm", d: 1 },
-    ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = ship[el.id] ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
-
-    document.getElementById("shipcard_country").innerHTML = getCountryName(ship.country);
-    document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
-    document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
-
-    document.getElementById("shipcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
-    document.getElementById("shipcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
-
-    document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("shipcard_type").innerHTML = getTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" onclick="event.stopPropagation(); toggleTechPopover()" title="Technical details"></i>';
-    document.getElementById("shipcard_shiptype").innerHTML = getShipTypeVal(ship.shiptype);
-    document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
-    document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(ship.last_signal);
-    document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-    document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatValFormat(ship) : null;
-    document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonValFormat(ship) : null;
-    document.getElementById("shipcard_altitude").innerHTML = ship.altitude ? ship.altitude + " m" : null;
-
-    document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
-    document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
-    document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
-    document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
-
-    updateShipcardTrackOption(card_mmsi);
-    updateMessageButton();
-    updateTechDetails(ship);
-
-}
-
-function updateTechDetails(ship) {
-    // Helper to format flag values
-    const formatFlag = (value, trueText = "Yes", falseText = "No", unknownText = "-") => {
-        if (value === 0) return unknownText;
-        if (value === 1) return falseText;
-        if (value === 2) return trueText;
-        return unknownText;
-    };
-
-    // Update RAIM
-    document.getElementById("tech_raim").textContent = formatFlag(ship.raim);
-
-    // Update DTE
-    document.getElementById("tech_dte").textContent = formatFlag(ship.dte, "Not Ready", "Ready");
-
-    // Update Assigned Mode
-    document.getElementById("tech_assigned").textContent = formatFlag(ship.assigned, "Assigned", "Autonomous");
-
-    // Update Display
-    document.getElementById("tech_display").textContent = formatFlag(ship.display);
-
-    // Update DSC
-    document.getElementById("tech_dsc").textContent = formatFlag(ship.dsc);
-
-    // Update Band
-    document.getElementById("tech_band").textContent = formatFlag(ship.band, "Dual", "Single");
-
-    // Update MSG22
-    document.getElementById("tech_msg22").textContent = formatFlag(ship.msg22);
-
-    // Update Off Position
-    document.getElementById("tech_off_position").textContent = formatFlag(ship.off_position, "Off", "On");
-
-    // Update Maneuver
-    const maneuverText = ship.maneuver === 0 ? "-" : ship.maneuver === 1 ? "None" : "Special";
-    document.getElementById("tech_maneuver").textContent = maneuverText;
-}
-
-function toggleTechPopover() {
-    const popover = document.getElementById("tech_popover");
-    const icon = document.getElementById("shipcard_tech_info");
-
-    if (popover.style.display === "none" || !popover.style.display) {
-
-        const iconRect = icon.getBoundingClientRect();
-        const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
-
-        popover.style.display = "block";
-
-        let left = iconRect.left - shipcardRect.left + 20;
-        let top = iconRect.bottom - shipcardRect.top + 5;
-
-        const popoverRect = popover.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        if (iconRect.left + popoverRect.width + 20 > viewportWidth) {
-            // Position to the left of the icon instead
-            left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
-        }
-
-        if (iconRect.bottom + popoverRect.height + 5 > viewportHeight) {
-            // Position above the icon instead
-            top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
-        }
-
-        left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
-        top = Math.max(5, top);
-
-        popover.style.left = left + "px";
-        popover.style.top = top + "px";
-
-        setTimeout(() => {
-            document.addEventListener("click", closeTechPopover, true);
-        }, 0);
-    } else {
-        popover.style.display = "none";
-        document.removeEventListener("click", closeTechPopover, true);
-    }
-}
-
-function closeTechPopover(event) {
-    const popover = document.getElementById("tech_popover");
-    const icon = document.getElementById("shipcard_tech_info");
-
-    // Always stop propagation when popover is open to prevent other handlers
-    event.stopPropagation();
-    event.preventDefault();
-
-    // Close if clicking outside the popover and not on the icon
-    if (!popover.contains(event.target) && event.target !== icon && !icon?.contains(event.target)) {
-        popover.style.display = "none";
-        document.removeEventListener("click", closeTechPopover, true);
-    }
-}
-
-function getCategory(plane) {
-    if (!plane || !plane.category) return "-";
-
-    const categories = {
-        41: "< 7 MT",
-        42: "7 - 34 MT",
-        43: "34 - 136 MT",
-        44: "High vortex",
-        45: "> 136 MT",
-        46: "High perf",
-        47: "Rotorcraft",
-        31: "Glider",
-        32: "LTA",
-        33: "Parachutist",
-        34: "Ultralight",
-        36: "UAV",
-        37: "Space",
-        21: "Emergency",
-        23: "Service"
-    };
-
-    return categories[plane.category] || plane.category.toString() || "-";
-}
-
-function populatePlanecard() {
-
-    if (card_type != 'plane') return;
-
-    document
-        .getElementById("shipcard_content")
-        .querySelectorAll("span:nth-child(2)")
-        .forEach((e) => (e.innerHTML = null));
-
-    if (!(card_mmsi in planesDB)) {
-        document
-            .getElementById("shipcard_content")
-            .querySelectorAll("span:nth-child(2)")
-            .forEach((e) => (e.innerHTML = null));
-        document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
-        document.getElementById("shipcard_header_flag").innerHTML = "";
-        document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
-
-        updateFocusMarker();
-        return;
-    }
-
-    const plane = planesDB[card_mmsi].raw;
-
-    setShipcardValidation(plane.validated);
-
-    // Set header
-    document.getElementById("shipcard_header_title").textContent = (plane.callsign || getICAO(plane));
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;");
-
-    // Populate plane fields
-    document.getElementById("shipcard_plane_country").innerHTML = getCountryName(plane.country);
-    document.getElementById("shipcard_plane_type").innerHTML = "ADSB";
-    document.getElementById("shipcard_plane_callsign").textContent = plane.callsign || "-";
-    document.getElementById("shipcard_plane_hexident").textContent = getICAO(plane);
-    document.getElementById("shipcard_plane_category").textContent = getCategory(plane);
-    document.getElementById("shipcard_plane_squawk").textContent = plane.squawk || "-";
-    document.getElementById("shipcard_plane_speed").innerHTML = plane.speed ? getSpeedVal(plane.speed) + " " + getSpeedUnit() : null;
-
-    document.getElementById("shipcard_plane_altitude").textContent = plane.airborne == 1 ? (plane.altitude ? `${plane.altitude} ft` : "-") : "on ground";
-    document.getElementById("shipcard_plane_lat").innerHTML = plane.lat ? getLatValFormat(plane) : null;
-    document.getElementById("shipcard_plane_lon").innerHTML = plane.lon ? getLonValFormat(plane) : null;
-    document.getElementById("shipcard_plane_vertrate").textContent = plane.vertrate ? `${plane.vertrate} ft/min` : "-";
-    document.getElementById("shipcard_plane_last_signal").textContent = getDeltaTimeVal(plane.last_signal);;
-    document.getElementById("shipcard_plane_messages").textContent = plane.nMessages || "-";
-    document.getElementById("shipcard_plane_downlink").textContent = getStringfromMsgType(plane.message_types);
-    document.getElementById("shipcard_plane_TC").textContent = getStringfromMsgType(plane.message_subtypes);
-    document.getElementById("shipcard_plane_distance").innerHTML = plane.distance ? (getDistanceVal(plane.distance) + " " + getDistanceUnit()) : null;
-
-    document.getElementById("shipcard_plane_last_group").innerHTML = getStringfromGroup(plane.last_group);
-    document.getElementById("shipcard_plane_sources").innerHTML = getStringfromGroup(plane.group_mask);
-
-    [
-        { id: "heading", u: "&deg", d: 0 },
-        { id: "level", u: "dB", d: 1 },
-        { id: "bearing", u: "&deg", d: 0 }
-    ].forEach((el) => (document.getElementById("shipcard_plane_" + el.id).innerHTML = plane[el.id] ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
-
-    updateShipcardTrackOption(card_mmsi);
-}
-
-function shipcardMinIfMaxonMobile() {
-    if (shipcardVisible() && window.matchMedia("(max-height: 1000px) and (max-width: 500px)").matches && isShipcardMax()) {
-        toggleShipcardSize();
-    }
-}
-
 function drawStation() {
     const hasNoStation = settings.show_station == false || station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
     const hasMMSIcenter = settings.center_point && settings.center_point != "STATION" && settings.center_point in shipsDB;
@@ -5717,15 +2626,13 @@ function drawStation() {
         settings.fix_center = false;
     }
 
+    for (const k in center) delete center[k];
     if (settings.center_point == "STATION") {
-        center = station;
-    } else {
-        center = {};
-        if (hasMMSIcenter) {
-            const ship = shipsDB[settings.center_point].raw;
-            if (ship.lat != null && ship.lon != null) {
-                center = { lat: ship.lat, lon: ship.lon };
-            }
+        Object.assign(center, station);
+    } else if (hasMMSIcenter) {
+        const ship = shipsDB[settings.center_point].raw;
+        if (ship.lat != null && ship.lon != null) {
+            Object.assign(center, { lat: ship.lat, lon: ship.lon });
         }
     }
 
@@ -5752,302 +2659,6 @@ function moveMapCenter(px) {
     });
 }
 
-function adjustMapForShipcard(pixel) {
-
-    let lat = null, lon = null;
-    if (card_type == 'ship' && card_mmsi in shipsDB) {
-        lat = shipsDB[card_mmsi].raw.lat;
-        lon = shipsDB[card_mmsi].raw.lon;
-    } else if (card_type == 'plane' && card_mmsi in planesDB) {
-        lat = planesDB[card_mmsi].raw.lat;
-        lon = planesDB[card_mmsi].raw.lon;
-    }
-
-    if (lat && lon) {
-        const view = map.getView();
-
-        const currentExtent = view.calculateExtent(map.getSize());
-        const shipCoords = ol.proj.fromLonLat([lon, lat]);
-
-        if (!ol.extent.containsCoordinate(currentExtent, shipCoords)) {
-            view.animate({
-                center: shipCoords,
-                duration: 1000
-            });
-            return;
-        }
-
-        // Use the provided pixel if defined, otherwise calculate it
-        if (!pixel) {
-            pixel = map.getPixelFromCoordinate(shipCoords);
-        }
-
-        const shipcard = document.getElementById("shipcard");
-        const shipcardRect = shipcard.getBoundingClientRect();
-        const mapElement = map.getTargetElement();
-        const mapRect = mapElement.getBoundingClientRect();
-
-        const isUnderShipcard = (
-            pixel[0] + mapRect.left >= shipcardRect.left &&
-            pixel[0] + mapRect.left <= shipcardRect.right &&
-            pixel[1] + mapRect.top >= shipcardRect.top &&
-            pixel[1] + mapRect.top <= shipcardRect.bottom
-        );
-
-        if (isUnderShipcard) {
-            let newPixel = [...pixel];
-            const margin = 10; // Margin in pixels
-
-            if (shipcardRect.bottom + margin + 20 <= mapRect.bottom) { // 20 is an approximate marker height
-                newPixel[1] = shipcardRect.bottom + margin;
-            }
-            else if (shipcardRect.right + margin + 20 <= mapRect.right) { // 20 is an approximate marker width
-                newPixel[0] = shipcardRect.right + margin;
-            }
-            newPixel = pixel;
-
-            moveMapCenter(newPixel);
-        }
-    }
-}
-
-function pinShipcard() {
-    const shipcard = document.getElementById("shipcard");
-    settings.shipcard_pinned = true;
-    settings.shipcard_pinned_x = parseInt(shipcard.style.left) || 0;
-    settings.shipcard_pinned_y = parseInt(shipcard.style.top) || 0;
-
-    applyShipcardPinStyling();
-    showNotification("Shipcard pinned to current position");
-    saveSettings();
-}
-
-function unpinShipcard() {
-    settings.shipcard_pinned = false;
-    settings.shipcard_pinned_x = null;
-    settings.shipcard_pinned_y = null;
-
-    applyShipcardPinStyling();
-
-    showNotification("Shipcard unpinned");
-    saveSettings();
-}
-
-function applyShipcardPinStyling() {
-    const shipcard = document.getElementById("shipcard");
-    if (settings.shipcard_pinned) {
-        shipcard.classList.add("pinned");
-        document.getElementById("shipcard_drag_handle").classList.add("opacity-25");
-    }
-    else {
-        shipcard.classList.remove("pinned");
-        document.getElementById("shipcard_drag_handle").classList.remove("opacity-25");
-    }
-}
-
-function toggleShipcardPin() {
-    if (settings.shipcard_pinned) {
-        unpinShipcard();
-    } else {
-        pinShipcard();
-    }
-}
-
-function positionAside(pixel, aside) {
-
-    stopHover();
-
-    if (settings.kiosk && settings.kiosk_pan_map && card_type == 'ship' && card_mmsi in shipsDB) {
-        moveMapCenter(pixel);
-        const mapSize = map.getSize();
-        pixel = [mapSize[0] / 2, mapSize[1] / 2];
-    }
-
-    if (settings.shipcard_pinned && settings.shipcard_pinned_x !== null && settings.shipcard_pinned_y !== null) {
-        aside.style.left = `${settings.shipcard_pinned_x}px`;
-        aside.style.top = `${settings.shipcard_pinned_y}px`;
-        return;
-    }
-
-    aside.style.left = "";
-    aside.style.top = "";
-
-    if (pixel) {
-        const margin = 35;
-        const marginRight = document.getElementById("tableside").classList.contains("active") ? 592 : 30;
-
-        const mapSize = map.getSize();
-        const shipCardRect = aside.getBoundingClientRect();
-        const shipCardWidth = shipCardRect.width;
-        const shipCardHeight = shipCardRect.height;
-
-        const rightSpace = mapSize[0] - (pixel[0] + shipCardWidth + margin + marginRight);
-        const leftSpace = pixel[0] - (shipCardWidth + margin);
-
-        if ((rightSpace > 0 || leftSpace > 0) && mapSize[1] > shipCardHeight + 2 * margin) {
-            let topPosition = pixel[1] - (shipCardHeight / 2);
-            topPosition = Math.max(margin, Math.min(mapSize[1] - shipCardHeight - margin, topPosition));
-
-            aside.style.top = `${topPosition}px`;
-
-            if (rightSpace >= 0) {
-                aside.style.left = `${pixel[0] + margin}px`;
-            } else if (leftSpace >= 0) {
-                aside.style.left = `${pixel[0] - shipCardWidth - margin}px`;
-            } else {
-                aside.style.left = `${(mapSize[0] - shipCardWidth) / 2}px`;
-            }
-        }
-    }
-    adjustMapForShipcard(pixel);
-}
-
-function displayShipcardIcons(type) {
-    const icons = document.querySelectorAll('#shipcard_footer > div');
-    let idx = 0;
-
-    for (const icon of icons) {
-        // Hide icons that don't match current context type
-        if (icon.dataset.contextType !== type && icon.dataset.contextType) {
-            icon.style.display = "none";
-            continue;
-        }
-
-        // Check if this is the More button - always show it and don't count it
-        const isMoreButton = icon.querySelector('i')?.classList.contains('more_horiz_icon');
-        if (isMoreButton) {
-            icon.style.display = "flex";
-            continue;
-        }
-
-        // Check if realtime option should be hidden
-        const isRealtimeDisabled = icon.id === 'shipcard_realtime_option' && (typeof realtime_enabled === "undefined" || realtime_enabled === false);
-
-        if (isRealtimeDisabled) {
-            icon.style.display = "none";
-            // Don't increment idx, effectively removing it from the visible count
-        } else {
-            // Show if within offset range
-            const isInRange = idx >= shipcardIconOffset[type] && idx < shipcardIconOffset[type] + shipcardIconMax;
-            icon.style.display = isInRange ? "flex" : "none";
-            idx++;
-        }
-    }
-}
-
-function rotateShipcardIcons() {
-    shipcardIconOffset[card_type] += shipcardIconMax;
-    if (shipcardIconOffset[card_type] >= shipcardIconCount[card_type]) {
-        shipcardIconOffset[card_type] = 0;
-    }
-    displayShipcardIcons(card_type);
-}
-
-function prepareShipcard() {
-    // Initialize offset/count objects if needed
-    if (!shipcardIconOffset || typeof shipcardIconOffset !== 'object') {
-        shipcardIconOffset = { ship: 0, plane: 0 };
-    }
-    shipcardIconCount = shipcardIconCount || { ship: 0, plane: 0 };
-
-    // Count icons for each context
-    shipcardIconCount.ship = document.querySelectorAll('#shipcard_footer > div[data-context-type="ship"]').length;
-    shipcardIconCount.plane = document.querySelectorAll('#shipcard_footer > div[data-context-type="plane"]').length;
-
-    // Adjust count if realtime is disabled (exclude realtime option from count)
-    if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
-        const realtimeOption = document.getElementById('shipcard_realtime_option');
-        if (realtimeOption && realtimeOption.dataset.contextType === 'ship') {
-            shipcardIconCount.ship--;
-        }
-    }
-
-    // Add More button for each context if needed
-    if (shipcardIconCount.ship > shipcardIconMax) {
-        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'ship');
-    }
-    if (shipcardIconCount.plane > shipcardIconMax) {
-        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'plane');
-    }
-
-    displayShipcardIcons('ship');
-}
-
-function showShipcard(type, m, pixel = undefined) {
-    const aside = document.getElementById("shipcard");
-    const visible = shipcardVisible();
-
-    const ship = m in shipsDB ? shipsDB[m].raw : null;
-    const ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
-
-
-    if (select_enabled_track && (card_mmsi != m || m == null)) {
-        select_enabled_track = false;
-
-        if (!(card_mmsi == hoverMMSI && hover_enabled_track && hoverType == 'ship')) {
-            hideTrack(card_mmsi);
-        }
-    }
-
-    if (m != null && !visible) {
-        if (measurecardVisible()) toggleMeasurecard();
-        aside.classList.toggle("visible");
-
-        select_enabled_track = false;
-
-
-    } else if (visible && m == null) {
-        aside.classList.toggle("visible");
-    }
-
-
-    if (type !== card_type) {
-        document.querySelectorAll('#shipcard_content [data-context-type]').forEach(element => {
-            if (element.dataset.contextType === type) {
-                element.style.display = '';
-            } else {
-                element.style.display = 'none';
-            }
-        });
-
-        displayShipcardIcons(type);
-    }
-
-    card_mmsi = m;
-    card_type = type;
-
-
-    if (shipcardVisible()) {
-        if (settings.show_track_on_select && card_type == 'ship') {
-            if (hoverMMSI === m && hover_enabled_track && hoverType == 'ship') {
-                hover_enabled_track = false;
-                select_enabled_track = true;
-            }
-            else if (!trackIsShown(m)) {
-                select_enabled_track = true;
-                showTrack(m);
-            }
-        }
-
-
-        if (isShipcardMax()) {
-            toggleShipcardSize();
-        }
-        if (!visible) shipcardMinIfMaxonMobile();
-        positionAside(pixel, aside);
-
-        if (card_type == 'ship') populateShipcard();
-        else if (card_type == 'plane') populatePlanecard();
-
-        // trigger reflow for iPad Safari
-        aside.style.display = 'none';
-        aside.offsetHeight;
-        aside.style.display = '';
-    }
-
-    trackLayer.changed();
-    updateFocusMarker();
-}
 
 const shippingMappings = {
     [ShippingClass.OTHER]: { cx: 120, cy: 20, hint: 'Other', imgSize: 20 },
@@ -6194,7 +2805,7 @@ const SpritesAll =
 async function updateMap() {
     let ok = false;
 
-    ok = await fetchShips();
+    ok = await fetchShips(activeReceiver);
     if (!ok) return;
 
     ok = await fetchTracks();
@@ -6206,7 +2817,7 @@ async function updateMap() {
     }
 
     if (binaryLayer.isVisible()) {
-        ok = await fetchBinary();
+        ok = await fetchBinary(activeReceiver);
         if (!ok) return;
     }
 
@@ -6524,49 +3135,6 @@ function redrawMap() {
     updateDistanceCircles();
 
 }
-function updateAllChartColors() {
-    const chartsToUpdateMulti = [chart_minutes, chart_hours, chart_days, chart_seconds];
-    const chartsToUpdateLevel = [chart_level, chart_level_hour];
-    const chartsToUpdateSingle = [chart_distance_day, chart_distance_hour, chart_ppm, chart_minute_vessel, chart_ppm_minute, chart_hour_vessel, chart_day_vessel];
-    const chartsToUpdateRadar = [chart_radar_day, chart_radar_hour];
-
-    chartsToUpdateMulti.forEach((chart) => {
-        if (chart) {
-            updateColorMulti(chart);
-            chart.update();
-        }
-    });
-
-    chartsToUpdateSingle.forEach((chart) => {
-        if (chart) {
-            updateColorSingle(chart);
-            chart.update();
-        }
-    });
-
-    chartsToUpdateLevel.forEach((chart) => {
-        if (chart) {
-            const colorVariables = ["--chart1-color", "--chart1-color", "--chart1-color"];
-            updateChartColors(chart, colorVariables);
-            chart.update();
-        }
-    });
-
-    chartsToUpdateRadar.forEach((chart) => {
-        if (chart) {
-            updateColorRadar(chart);
-            chart.update();
-        }
-    });
-}
-
-function updateDarkMode() {
-    document.documentElement.classList.toggle("dark", settings.dark_mode);
-    updateAllChartColors();
-    updateMapLayer();
-    redrawMap();
-}
-
 
 document.getElementById('zoom-in').addEventListener('click', function () {
     const view = map.getView();
@@ -6580,18 +3148,6 @@ document.getElementById('zoom-out').addEventListener('click', function () {
     view.setZoom(zoom - 1);
 });
 
-
-function setDarkMode(b) {
-    settings.dark_mode = b;
-    updateDarkMode();
-    saveSettings();
-}
-
-function toggleDarkMode() {
-    settings.dark_mode = !settings.dark_mode;
-    updateDarkMode();
-    saveSettings();
-}
 
 function refresh_data() {
     if (!document.hidden && !updateInProgress) {
@@ -6619,7 +3175,7 @@ function refresh_data() {
 }
 
 async function openFocus(m, z) {
-    await fetchShips(false);
+    await fetchShips(activeReceiver, false);
 
     selectMapTab(m);
 
@@ -6635,615 +3191,8 @@ async function openFocus(m, z) {
 
 }
 
-function updateSettingsTab() {
-    document.getElementById("settings_darkmode").checked = settings.dark_mode;
-    document.getElementById("settings_coordinate_format").value = settings.coordinate_format;
-    document.getElementById("settings_metric").value = getMetrics().toLowerCase();
-    document.getElementById("settings_show_station").checked = settings.show_station;
-    document.getElementById("settings_fading").checked = settings.fading;
-    document.getElementById("settings_show_signal_graphs").checked = settings.show_signal_graphs;
-    document.getElementById("settings_show_ppm_graphs").checked = settings.show_ppm_graphs;
-    document.getElementById("settings_shiphover_color").value = settings.shiphover_color;
-    document.getElementById("settings_shipselection_color").value = settings.shipselection_color;
-
-    document.getElementById("settings_show_range").checked = settings.show_range;
-    document.getElementById("settings_distance_circles").checked = settings.distance_circles;
-    document.getElementById("settings_distance_circle_color").value = settings.distance_circle_color;
-
-    document.getElementById("settings_labels_declutter").checked = settings.labels_declutter;
-    document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
-
-    document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
-
-    document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
-    document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
-    document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
-    document.getElementById("settings_show_circle_outline").checked = settings.show_circle_outline;
-    document.getElementById("settings_circle_scale").value = settings.circle_scale;
-
-    document.getElementById("settings_range_color").value = settings.range_color;
-    document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
-    document.getElementById("settings_range_color_short").value = settings.range_color_short;
-    document.getElementById("settings_range_color_dark").value = settings.range_color_dark;
-    document.getElementById("settings_range_color_dark_short").value = settings.range_color_dark_short;
-
-    document.getElementById("settings_map_opacity").value = settings.map_opacity;
-    document.getElementById("settings_icon_scale").value = settings.icon_scale;
-    document.getElementById("settings_track_weight").value = settings.track_weight;
-    document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
-
-    // Update all slider display values
-    updateIconScaleDisplay(settings.icon_scale);
-    updateMapOpacityDisplay(settings.map_opacity);
-    updateTrackWeightDisplay(settings.track_weight);
-    updateTrackTrashThresholdDisplay(settings.track_trash_threshold);
-    updateTooltipFontSizeDisplay(settings.tooltipLabelFontSize);
-    updateShipoutlineOpacityDisplay(settings.shipoutline_opacity);
-    updateCircleScaleDisplay(settings.circle_scale || 6.0);
-
-    document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
-    document.getElementById("settings_tooltipLabelShadowColor").value = settings.tooltipLabelShadowColor;
-
-    document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
-    document.getElementById("settings_tooltipLabelShadowColorDark").value = settings.tooltipLabelShadowColorDark;
-    document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
-    document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
-    document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
-
-    document.getElementById("settings_kiosk_mode").checked = settings.kiosk;
-    document.getElementById("settings_kiosk_rotation_speed").value = settings.kiosk_rotation_speed;
-    document.getElementById("settings_kiosk_pan_map").checked = settings.kiosk_pan_map;
-
-    updateKioskSpeedDisplay(settings.kiosk_rotation_speed);
-
-    // Update ship class color inputs
-    updateTrackColorInputs();
-}
-
-class RealtimeViewer {
-    constructor(filterMMSI = null) {
-        this.nmeaContent = document.getElementById('realtime_nmea_content');
-        this.eventSource = null;
-        this.nmeaCount = 0;
-        this.maxLines = 100;
-        this.isPaused = false;
-        this.filterMMSIs = filterMMSI ? [filterMMSI] : [];
-
-        // Track which sub-tab is currently selected ('nmea' or 'signals')
-        this.activeMode = 'nmea';
-
-        // Load background streaming preference from settings (default: false)
-        this.backgroundStreaming = settings.realtime_background_streaming === true;
-
-        // Initialize checkbox state
-        const checkbox = document.getElementById('realtime_background_streaming');
-        if (checkbox) {
-            checkbox.checked = this.backgroundStreaming;
-        }
-
-        // Bind visibility handler to handle browser minimization/tab switching
-        this.boundVisibilityHandler = this.handleVisibilityChange.bind(this);
-        document.addEventListener('visibilitychange', this.boundVisibilityHandler);
-    }
-
-    handleVisibilityChange() {
-        if (document.hidden) {
-            // Browser tab is hidden: Disconnect unless background streaming is enabled and playing
-            if (this.isPaused || !this.backgroundStreaming) {
-                this.disconnectStreams();
-            }
-            // If playing and background streaming enabled, keep streams running
-        } else {
-            // Browser tab is visible: Reconnect only if we're disconnected
-            const isConnected = this.eventSource &&
-                (this.eventSource.readyState === EventSource.OPEN ||
-                    this.eventSource.readyState === EventSource.CONNECTING);
-
-            if (!isConnected && !this.isPaused) {
-                // Reconnect if we were paused and disconnected
-                this.connectNmea();
-            }
-
-            // Sync button icon with current pause state
-            const button = document.getElementById('realtime_pause_button');
-            if (button) {
-                const icon = button.querySelector('span');
-                if (icon) {
-                    icon.className = this.isPaused ? 'play_arrow_icon' : 'pause_icon';
-                    button.title = this.isPaused ? 'Resume stream' : 'Pause stream';
-                }
-            }
-        }
-    }
-
-    connectNmea() {
-        // Don't connect if hidden
-        if (document.hidden) return;
-
-        // Don't connect if already connected or connecting
-        if (this.eventSource && (this.eventSource.readyState === EventSource.OPEN || this.eventSource.readyState === EventSource.CONNECTING)) {
-            return;
-        }
-
-        // Ensure stream is disconnected first
-        this.disconnectNmea();
-
-        // Connect to NMEA stream
-        this.eventSource = new EventSource("api/sse");
-
-        this.eventSource.addEventListener('open', (event) => {
-            // Add pulsating class when stream opens
-            document.getElementById("realtime_tab_mini").classList.add('pulsating');
-        });
-
-        this.eventSource.addEventListener('nmea', (event) => {
-            try {
-                if (!this.isPaused) {
-                    const data = JSON.parse(event.data);
-                    this.addNmeaMessage(data);
-                }
-            } catch (error) {
-                console.error('Error parsing NMEA data:', error);
-            }
-        });
-
-        this.eventSource.addEventListener('error', (e) => {
-            if (this.nmeaContent && !document.hidden) {
-                this.nmeaContent.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Connection error. Reconnecting...</td></tr>';
-            }
-            // Auto-reconnect after 3 seconds if not paused and (tab visible or background streaming enabled)
-            if (!this.isPaused && (!document.hidden || this.backgroundStreaming)) {
-                if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
-                this.reconnectTimeout = setTimeout(() => {
-                    if (!this.isPaused) {
-                        this.disconnectNmea();
-                        this.connectNmea();
-                    }
-                }, 3000);
-            }
-        });
-    }
-
-    // Helper to close stream stream
-    disconnectNmea() {
-        if (this.eventSource) {
-            this.eventSource.close();
-            this.eventSource = null;
-        }
-        // Remove pulsating class when disconnecting
-        document.getElementById("realtime_tab_mini").classList.remove('pulsating');
-    }
-
-    // Closes stream but keeps visibility listener (for browser minimization)
-    disconnectStreams() {
-        if (this.reconnectTimeout) {
-            clearTimeout(this.reconnectTimeout);
-            this.reconnectTimeout = null;
-        }
-        this.disconnectNmea();
-    }
-
-    // Fully destructs the viewer (called when switching main App tabs)
-    disconnect() {
-        document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
-        this.disconnectStreams();
-    }
-
-    addNmeaMessage(data) {
-        // Filter by MMSI array if set
-        if (this.filterMMSIs.length > 0 && !this.filterMMSIs.includes(data.mmsi.toString())) return;
-
-        if (this.nmeaCount > this.maxLines) {
-            const rows = this.nmeaContent.getElementsByTagName('tr');
-            if (rows.length > 0) {
-                this.nmeaContent.removeChild(rows[rows.length - 1]);
-            }
-        }
-
-        const row = document.createElement('tr');
-        const time = new Date(data.timestamp * 1000).toLocaleTimeString();
-
-        // Create channel indicator boxes
-        const channelIndicator = document.createElement('div');
-        channelIndicator.className = 'channel-indicator';
-        ['A', 'B', 'C', 'D'].forEach(ch => {
-            const box = document.createElement('span');
-            box.className = 'channel-box' + (data.channel === ch ? ' active' : '');
-            box.textContent = ch;
-            channelIndicator.appendChild(box);
-        });
-
-        const channelCell = document.createElement('td');
-        channelCell.appendChild(channelIndicator);
-
-        const timeCell = document.createElement('td');
-        timeCell.textContent = time;
-        timeCell.style.fontSize = '0.85em';
-
-        const mmsiCell = document.createElement('td');
-
-        const nmeaCell = document.createElement('td');
-        const nmeaArray = Array.isArray(data.nmea) ? data.nmea : [data.nmea];
-        const nmeaText = nmeaArray.join('\n');
-
-        // Create wrapper for decoder icon and NMEA text
-        const nmeaCellContent = document.createElement('div');
-        nmeaCellContent.className = 'nmea-cell-content';
-
-        // Add decoder icon if decoder is enabled
-        if (typeof decoder_enabled !== 'undefined' && decoder_enabled) {
-            const decoderIcon = document.createElement('span');
-            decoderIcon.className = 'nmea-decoder-icon';
-            decoderIcon.innerHTML = '<i class="decode_icon"></i>';
-            decoderIcon.title = 'Decode NMEA';
-            decoderIcon.addEventListener('click', function (e) {
-                e.stopPropagation();
-                document.getElementById('decoder_input').value = nmeaText;
-                document.getElementById('decoder_tab').click();
-                decodeNMEA();
-            });
-            nmeaCellContent.appendChild(decoderIcon);
-        }
-
-        // Add NMEA text
-        const nmeaTextSpan = document.createElement('span');
-        nmeaTextSpan.className = 'nmea-text';
-        nmeaTextSpan.textContent = nmeaText;
-        nmeaCellContent.appendChild(nmeaTextSpan);
-
-        nmeaCell.appendChild(nmeaCellContent);
-
-        const mmsi = data.mmsi;
-        const mmsiSpan = document.createElement('span');
-
-        // Show shipname if available and not empty, otherwise show MMSI
-        const hasShipname = data.shipname && data.shipname.trim() !== '';
-        if (hasShipname) {
-            mmsiSpan.textContent = data.shipname;
-            mmsiSpan.title = 'MMSI: ' + data.mmsi;
-        } else {
-            mmsiSpan.textContent = data.mmsi;
-        }
-
-        mmsiSpan.style.border = '1px solid #d0d0d0';
-        mmsiSpan.style.padding = '2px 6px';
-        mmsiSpan.style.borderRadius = '3px';
-        mmsiSpan.style.display = 'inline-block';
-        mmsiSpan.style.cursor = 'pointer';
-        mmsiSpan.style.fontSize = '0.85em';
-        mmsiCell.appendChild(mmsiSpan);
-
-        mmsiSpan.addEventListener('click', function (e) {
-            e.stopPropagation();
-            selectMapTab(mmsi);
-        });
-
-        mmsiSpan.addEventListener('contextmenu', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            showContextMenu(e, mmsi, 'ship', ['ship']);
-        });
-
-        const typeCell = document.createElement('td');
-        typeCell.textContent = data.type || '-';
-        typeCell.style.fontSize = '0.85em';
-
-        row.appendChild(channelCell);
-        row.appendChild(typeCell);
-        row.appendChild(timeCell);
-        row.appendChild(mmsiCell);
-        row.appendChild(nmeaCell);
-
-        // Add click handler to row for pause/resume (MMSI and decoder clicks will stopPropagation)
-        row.style.cursor = 'pointer';
-        row.addEventListener('click', (e) => {
-            toggleRealtimePause(true);
-        });
-
-        this.nmeaContent.insertBefore(row, this.nmeaContent.firstChild);
-        this.nmeaCount++;
-    }
-
-    pause() {
-        this.isPaused = true;
-    }
-
-    resume() {
-        this.isPaused = false;
-        // Ensure we're connected when resuming
-        this.connectNmea();
-    }
-
-    addFilterMMSI(mmsi) {
-        const mmsiStr = mmsi.toString();
-        if (!this.filterMMSIs.includes(mmsiStr)) {
-            this.filterMMSIs.push(mmsiStr);
-        }
-    }
-
-    removeFilterMMSI(mmsi) {
-        const mmsiStr = mmsi.toString();
-        this.filterMMSIs = this.filterMMSIs.filter(m => m !== mmsiStr);
-    }
-
-    clearFilters() {
-        this.filterMMSIs = [];
-    }
-
-    // Legacy method for compatibility
-    setFilterMMSI(mmsi) {
-        if (mmsi) {
-            this.filterMMSIs = [mmsi.toString()];
-        } else {
-            this.filterMMSIs = [];
-        }
-    }
-}
-
-class LogViewer {
-    constructor() {
-        this.logState = document.getElementById('log_state');
-        this.logScroll = document.getElementById('log_scroll');
-        this.logContent = document.getElementById('log_content');
-        this.eventSource = null;
-    }
-
-    connect() {
-        if (this.eventSource) return;
-        this.eventSource = new EventSource("api/log");
-
-        this.eventSource.addEventListener('log', (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                this.appendFormattedLog(data);
-                this.scrollToBottom();
-            } catch (error) {
-                console.error('Error handling log event:', error);
-                this.appendRawLog(event.data);
-            }
-        });
-
-        this.eventSource.addEventListener('open', () => {
-            this.updateConnectionState(true);
-        });
-
-        this.eventSource.addEventListener('error', () => {
-            this.updateConnectionState(false);
-        });
-
-        this.logContent.innerHTML = '';
-    }
-
-    appendFormattedLog(data) {
-        const logEntry = document.createElement('div');
-        logEntry.className = 'log-entry ' + (data.level || 'info');
-
-        const icon = document.createElement('span');
-        switch (data.level) {
-            case 'error':
-                icon.className = 'error_od_icon';
-                break;
-            case 'warning':
-                icon.className = 'warning_od_icon';
-                break;
-            default:
-                icon.className = '';
-        }
-        icon.style.flexShrink = '0';
-        icon.style.marginTop = '0.2rem';
-        icon.style.width = '1.2em';
-        icon.style.height = '1.2em';
-
-        const content = document.createElement('div');
-        content.style.flex = '1';
-
-        const timestamp = document.createElement('div');
-        timestamp.className = 'timestamp';
-        timestamp.textContent = data.time;
-        timestamp.style.fontSize = '0.75rem';
-        timestamp.style.marginBottom = '0.05rem';
-
-        const message = document.createElement('div');
-        message.textContent = data.message.replace(/^"|"$/g, '');
-
-        content.appendChild(timestamp);
-        content.appendChild(message);
-        logEntry.appendChild(icon);
-        logEntry.appendChild(content);
-
-        this.logContent.appendChild(logEntry);
-    }
-
-    appendRawLog(message) {
-        const logEntry = document.createElement('div');
-        logEntry.textContent = message + '\n';
-        this.logContent.appendChild(logEntry);
-    }
-
-    disconnect() {
-        if (this.eventSource) {
-            this.eventSource.close();
-            this.eventSource = null;
-        }
-        this.updateConnectionState(false);
-    }
-
-    scrollToBottom() {
-        requestAnimationFrame(() => {
-            this.logScroll.scrollTop = this.logScroll.scrollHeight;
-        });
-    }
-
-    updateConnectionState(connected) {
-        const stateIcon = document.createElement('span');
-        stateIcon.className = connected ? 'info_od_icon' : 'error_od_icon';
-        stateIcon.style.display = 'inline-block';
-        stateIcon.style.verticalAlign = 'middle';
-        stateIcon.style.marginRight = '0.5em';
-        stateIcon.style.width = '1em';
-        stateIcon.style.height = '1em';
-
-        const status = connected ? 'Connected' : 'Disconnected';
-        this.logState.innerHTML = '';
-        this.logState.display = 'none';
-        if (!connected) {
-            this.logState.appendChild(stateIcon);
-            this.logState.appendChild(document.createTextNode(`Status: ${status}`));
-        }
-    }
-}
-
-function toggleRealtimePause(showMessage = false) {
-    if (!realtimeViewer) return;
-
-    const button = document.getElementById('realtime_pause_button');
-    const icon = button?.querySelector('span');
-
-    if (realtimeViewer.isPaused) {
-        realtimeViewer.resume();
-        if (showMessage) showNotification("Streaming resumed");
-        if (icon) {
-            icon.className = 'pause_icon';
-            button.title = 'Pause stream';
-        }
-    } else {
-        realtimeViewer.pause();
-        if (showMessage) showNotification("Streaming paused");
-        if (icon) {
-            icon.className = 'play_arrow_icon';
-            button.title = 'Resume stream';
-        }
-    }
-}
-
-function toggleBackgroundStreaming() {
-    const checkbox = document.getElementById('realtime_background_streaming');
-    if (checkbox && realtimeViewer) {
-        realtimeViewer.backgroundStreaming = checkbox.checked;
-        settings.realtime_background_streaming = checkbox.checked;
-        saveSettings();
-    }
-}
-
-function clearRealtimeTable() {
-    if (realtimeViewer && realtimeViewer.nmeaContent) {
-        realtimeViewer.nmeaContent.innerHTML = '';
-        realtimeViewer.nmeaCount = 0;
-    }
-}
-
-function promptFilterMMSI() {
-    const mmsiInput = prompt('Enter MMSI to filter:');
-    if (mmsiInput) {
-        const mmsi = parseInt(mmsiInput.trim(), 10);
-        if (!isNaN(mmsi) && mmsi > 0) {
-            addRealtimeFilterMMSI(mmsi);
-        } else {
-            alert('Please enter a valid MMSI number.');
-        }
-    }
-}
-
-function addRealtimeFilterMMSI(mmsi) {
-    if (!realtimeViewer) return;
-    const filterValue = mmsi ? mmsi.toString().trim() : '';
-    if (!filterValue) return;
-
-    realtimeViewer.addFilterMMSI(filterValue);
-    updateFilterDisplay();
-    saveSettings();
-}
-
-function removeRealtimeFilterMMSI(mmsi) {
-    if (!realtimeViewer) return;
-    realtimeViewer.removeFilterMMSI(mmsi);
-    updateFilterDisplay();
-    saveSettings();
-}
-
-function updateFilterDisplay() {
-    if (!realtimeViewer) return;
-
-    const filterDisplay = document.getElementById('realtime_filter_display');
-    const filterChips = document.getElementById('realtime_mmsi_filters');
-
-    if (filterDisplay && filterChips) {
-        if (realtimeViewer.filterMMSIs.length > 0) {
-            // Clear and rebuild chips
-            filterChips.innerHTML = '';
-            realtimeViewer.filterMMSIs.forEach(mmsi => {
-                const chip = document.createElement('div');
-                chip.className = 'filter-chip';
-                chip.innerHTML = `
-                    <span>${mmsi}</span>
-                    <button onclick="removeRealtimeFilterMMSI('${mmsi}')" title="Remove filter">
-                        <i class="close_icon"></i>
-                    </button>
-                `;
-                filterChips.appendChild(chip);
-            });
-            filterDisplay.style.display = 'flex';
-        } else {
-            filterDisplay.style.display = 'none';
-        }
-    }
-}
-
-// Legacy function for compatibility
-function filterRealtimeByMMSI(mmsi) {
-    if (!realtimeViewer) return;
-    const filterValue = mmsi ? mmsi.toString().trim() : '';
-    realtimeViewer.setFilterMMSI(filterValue || null);
-    updateFilterDisplay();
-}
-
-function clearAllRealtimeFilters() {
-    if (!realtimeViewer) return;
-    realtimeViewer.clearFilters();
-    updateFilterDisplay();
-    saveSettings();
-}
-
-// Legacy function
-function clearRealtimeFilter() {
-    clearAllRealtimeFilters();
-}
-
-function openRealtimeForMMSI(mmsi) {
-    // Check if realtime is enabled
-    if (!realtime_enabled) {
-        return;
-    }
-
-    // If already on realtime tab and viewer exists, just add the filter
-    if (realtimeViewer && document.getElementById('realtime').style.display === 'block') {
-        addRealtimeFilterMMSI(mmsi);
-        return;
-    }
-
-    // Preserve existing filters if viewer exists
-    const existingFilters = realtimeViewer ? [...realtimeViewer.filterMMSIs] : [];
-
-    // Disconnect existing viewer if any
-    if (realtimeViewer) {
-        realtimeViewer.disconnect();
-        realtimeViewer = null;
-    }
-
-    // Clear saved state to ensure fresh start (not paused)
-    window.realtimeViewerState = null;
-
-    // Switch to realtime tab (this will create a new viewer)
-    document.getElementById('realtime_tab').click();
-
-    // Apply the filters after viewer is created
-    setTimeout(() => {
-        // Restore previous filters
-        existingFilters.forEach(filter => addRealtimeFilterMMSI(filter));
-        // Add the new filter
-        addRealtimeFilterMMSI(mmsi);
-    }, 50);
-}
+// RealtimeViewer — moved to tabs/realtime.js
+// LogViewer — moved to tabs/log.js
 
 function activateTab(b, a) {
     // Block decoder tab if decoder is disabled
@@ -7283,96 +3232,13 @@ function activateTab(b, a) {
     if (a != "map") StopFireworks();
     if (a == "settings") updateSettingsTab();
 
-    if (a == "log") {
+    if (a === 'log') onLogActivate();
+    else onLogDeactivate();
 
-        logViewer = new LogViewer();
-        logViewer.connect();
-    }
-    if (a != 'log' && logViewer) {
-        logViewer.disconnect();
-        logViewer = null;
-    }
+    if (a == "realtime") onRealtimeActivate();
+    else onRealtimeDeactivate();
 
-    if (a == "realtime") {
-        // Only initialize realtime viewer if realtime is enabled
-        if (realtime_enabled) {
-            // Only create a new viewer if one doesn't exist
-            if (!realtimeViewer) {
-                // Restore saved state if available
-                const savedState = window.realtimeViewerState;
-                const filterMMSI = savedState ? savedState.filterMMSI : null;
-
-                realtimeViewer = new RealtimeViewer(filterMMSI);
-
-                // Restore filters from settings
-                if (settings.realtime_filter_mmsis && Array.isArray(settings.realtime_filter_mmsis)) {
-                    realtimeViewer.filterMMSIs = [...settings.realtime_filter_mmsis];
-                }
-
-                // Restore pause state
-                if (savedState && savedState.isPaused) {
-                    realtimeViewer.isPaused = true;
-                }
-
-                // Connect to NMEA stream
-                realtimeViewer.connectNmea();
-            } else {
-                // Viewer already exists
-                if (realtimeViewer.eventSource && realtimeViewer.eventSource.readyState === EventSource.OPEN) {
-                    // Stream is already open, add pulsating class
-                    document.getElementById("realtime_tab_mini").classList.add('pulsating');
-                } else if (!realtimeViewer.isPaused) {
-                    // Try to reconnect if not paused
-                    realtimeViewer.connectNmea();
-                }
-            }
-
-            // Update filter display
-            updateFilterDisplay();
-
-            // Sync button icon with viewer state
-            const button = document.getElementById('realtime_pause_button');
-            if (button) {
-                const icon = button.querySelector('span');
-                if (icon) {
-                    icon.className = realtimeViewer.isPaused ? 'play_arrow_icon' : 'pause_icon';
-                    button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
-                }
-            }
-        }
-    }
-    if (a != 'realtime' && realtimeViewer) {
-        // Save state before potentially destroying viewer
-        window.realtimeViewerState = {
-            isPaused: realtimeViewer.isPaused
-        };
-        saveSettings(); // Save filters to settings
-
-        // Only disconnect if paused or background streaming is disabled
-        if (realtimeViewer.isPaused || !realtimeViewer.backgroundStreaming) {
-            realtimeViewer.disconnect();
-            realtimeViewer = null;
-        }
-        // else: keep viewer alive and streaming in background
-    }
-    if (a === "about") {
-        setupAbout();
-    }
-
-    // Add keyboard event listener for realtime tab
-    if (a == "realtime") {
-        document.addEventListener('keydown', handleRealtimeKeydown);
-    } else {
-        document.removeEventListener('keydown', handleRealtimeKeydown);
-    }
-}
-
-function handleRealtimeKeydown(event) {
-    // Toggle pause/play with space bar, but not if user is typing in an input field
-    if (event.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
-        event.preventDefault();
-        toggleRealtimePause(true);
-    }
+    if (a === "about") setupAbout();
 }
 
 function selectMapTab(m) {
@@ -7402,20 +3268,6 @@ function selectTab() {
     //document.getElementById(settings.tab + "_tab").click();
 }
 
-function updateAndroid() {
-    if (isAndroid()) {
-        const elements = document.querySelectorAll(".noandroid");
-        for (let i = 0; i < elements.length; i++) {
-            elements[i].style.setProperty("display", "none", "important");
-        }
-    } else {
-        const elements = document.querySelectorAll(".android");
-        for (let i = 0; i < elements.length; i++) {
-            elements[i].style.setProperty("display", "none", "important");
-        }
-    }
-}
-
 const originalDisplayValues = new Map();
 
 function clearAndHide(element) {
@@ -7435,60 +3287,6 @@ function restoreOriginalDisplay(element) {
         element.style.removeProperty('display');
     }
 }
-function setKiosk(enabled) {
-    settings.kiosk = enabled;
-    updateKiosk();
-    saveSettings();
-}
-
-function setKioskRotationSpeed(speed) {
-    settings.kiosk_rotation_speed = parseInt(speed);
-    saveSettings();
-
-
-    if (isKiosk() && kioskAnimationInterval) {
-        startKioskAnimation();
-    }
-}
-
-function setKioskPanMap(enabled) {
-    settings.kiosk_pan_map = enabled;
-    saveSettings();
-}
-
-function updateKioskSpeedDisplay(value) {
-    document.getElementById("kiosk_rotation_speed_label").textContent = `Rotation Speed (${value}s)`;
-}
-
-function updateTrackWeightDisplay(value) {
-    document.getElementById("track_weight_label").textContent = `Track Weight (${value})`;
-}
-
-function updateTrackTrashThresholdDisplay(value) {
-    document.getElementById("track_trash_threshold_label").textContent = `Track Dash Threshold (${value}s)`;
-}
-
-function updateIconScaleDisplay(value) {
-    document.getElementById("icon_scale_label").textContent = `Ship icon size (${parseFloat(value).toFixed(2)})`;
-}
-
-function updateMapOpacityDisplay(value) {
-    const percentage = Math.round(parseFloat(value) * 100);
-    document.getElementById("map_opacity_label").textContent = `Map dimming (${percentage}%)`;
-}
-
-function updateTooltipFontSizeDisplay(value) {
-    document.getElementById("tooltip_font_size_label").textContent = `Font Size (${value})`;
-}
-
-function updateShipoutlineOpacityDisplay(value) {
-    document.getElementById("shipoutline_opacity_label").textContent = `Opacity (${parseFloat(value).toFixed(2)})`;
-}
-
-function updateCircleScaleDisplay(value) {
-    document.getElementById("circle_scale_label").textContent = `Selector line width (${parseFloat(value).toFixed(1)})`;
-}
-
 function updateKiosk() {
     if (isKiosk()) {
         startKioskAnimation();
@@ -7616,51 +3414,6 @@ function stopKioskAnimation() {
 function toggleKioskMode() {
     settings.kiosk = !settings.kiosk;
     updateKiosk();
-}
-
-function showAboutDialog() {
-    const message = `
-        <div style="display: flex; align-items: center; margin-top: 10px;">
-        <span style="text-align: center; margin-right: 10px;"><i style="font-size: 40px" class="directions_aiscatcher_icon"></i></span>
-        <span>
-        <a href="https://www.aiscatcher.org"><b style="font-size: 1.6em;">AIS-catcher</b></a>
-        <br>
-        <b style="font-size: 0.8em;">&copy; 2021-2026 jvde.github@gmail.com</b>
-        </span>
-        </div>
-        <p>
-        AIS-catcher is a research and educational tool, provided under the
-        <a href="https://github.com/jvde-github/AIS-catcher/blob/e66a4481e62d8f1775700e5f51fb7ad9ea569a12/LICENSE">GNU GPL v3 license</a>.
-        It is not reliable for navigation and safety of life or property.
-        Radio reception and handling regulations vary by region, so check your local administration's rules. Illegal use is strictly prohibited.
-        </p>
-        <p>
-        The web-interface gratefully uses the following libraries:
-        <a href="https://www.chartjs.org/docs/latest/charts/line.html" rel="nofollow">chart.js</a>,
-        <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" rel="nofollow">chart.js annotation plugin</a>,
-        <a href="https://openlayers.org/" rel="nofollow">openlayers</a>,
-        <a href="https://fonts.google.com/icons?selected=Material+Icons" rel="nofollow">Material Design Icons</a>,
-        <a href="https://tabulator.info/" rel="nofollow">tabulator</a>,
-        <a href="https://github.com/markedjs/marked">marked</a>, and
-        <a href="https://github.com/lipis/flag-icons">flag-icons</a>. Please consult the links for the respective licenses.
-        </p>`;
-
-    showDialog("About...", message);
-}
-
-function showWelcome() {
-    if (settings.welcome == true || (settings.welcome == "true" && !isAndroid())) showAboutDialog();
-
-    settings.welcome = false;
-    saveSettings();
-}
-
-function isAndroid() {
-    return settings.android === true || settings.android === "true";
-}
-
-function isKiosk() {
-    return settings.kiosk === true || settings.kiosk === "true";
 }
 
 // for overwrite and insert code where needed
@@ -8059,8 +3812,91 @@ if (communityFeed) {
     addOverlayLayer("Community Feed", feedLayer);
 }
 
+// Register all HTML-callable actions with the event dispatcher.
+registerActions({
+    // Global UI / header — toggleMenu, toggleInfoPanel, toggleScreenSize, closeDialog, showAboutAndInfo, showSettingsMenu, showMapSettingsMenu registered by initUI()
+    headerClick, openWebControl, toggleReceiverDropdown,
+    // Settings panel — applyDefaultSettings, showPlugins, resetTrackColorsToDefault, openSettings, closeSettings, toggleDarkMode, showServerErrors registered by initSettings_tab()
+    // Table tab — downloadCSV, resetShipTableColumns registered by initTable()
+    hideTablecard, updateTableSort,
+    // Map controls
+    unpinCenter, showAllTracks, deleteAllTracks, ToggleFireworks,
+    toggleLabel, toggleKioskMode, toggleFading, toggleRange,
+    toggleStatcard, toggleTablecard, showCommunity, showMapMenu,
+    activateMeasureMode, toggleMeasurecard,
+    // Shipcard
+    toggleShipcardSize, cardShowContextMenu, closeShipcard, shipcardselect,
+    cardShowBinaryMessageDialog, cardOpenRealtime, cardOpenAIScatcherSite,
+    cardToggleTrack, cardOpenFlightAware, cardOpenPlaneSpotters, cardOpenADSBExchange,
+    // Context menu items (via data-action on list items)
+    toggleShipcardPin, pinStation, ctxCopyText, ctxCopyICAOText, ctxCopyCoordinates,
+    ctxToggleTrack, ctxPinVessel, ctxZoomIn, ctxShowShipcard, ctxShowPlanecard,
+    ctxOpenAIScatcherSite, ctxShowVesselDetail, ctxShowNMEA, ctxOpenRealtime,
+    ctxOpenGoogleSearch, ctxOpenGoogleSearchICAO, ctxOpenVesselFinder, ctxOpenAISHub,
+    // Charts — toggleSignalGraph/togglePPMGraph registered by initCharts()
+    // Realtime tab — registered by initRealtime()
+    // Decoder tab — registered by initDecoder()
+});
+
+// showMainContextMenu, showChartsContextMenu, cardShowContextMenu registered by initUI()
+
+// registerChanges/registerInputs for settings — handled by initSettings_tab()
+// registerChanges for charts — handled by initCharts()
+// registerChanges for realtime — handled by initRealtime()
+
+initSettings(context);
+initDecoder();
+initLog();
+initUI({
+    getEvtSourceMap:      () => evtSourceMap,
+    isShowAllTracks:      () => show_all_tracks,
+    hasMarkerTracks:      () => marker_tracks.size > 0,
+    hideMapMenu,
+    trackOptionString,
+    updateKiosk,
+    getCardMMSI:          () => card_mmsi,
+    getCardType:          () => card_type,
+    saveSettings,
+});
+initSettings_tab({
+    // Map functions
+    redrawMap, updateMapLayer, setMapOpacity,
+    removeDistanceCircles, setRangeColor, fetchRange, drawRange,
+    toggleRange, toggleFading, updateFocusMarker, updateSortMarkers,
+    // State
+    ShippingClass,
+    getDefaultTrackColors,
+    isAndroid,
+    resetTable:          refreshTable,
+    isKioskAnimating:    () => !!kioskAnimationInterval,
+    startKioskAnimation, updateKiosk,
+    getPlugins:          () => plugins,
+    getServerMessage:    () => server_message,
+    // Coordinator
+    saveSettings, refresh_data,
+});
+initRealtime({ selectMapTab });
+initTable({
+    getActiveReceiver: () => activeReceiver,
+    selectMapTab,
+    saveSettings,
+});
+initCharts({
+    getActiveReceiver:    () => activeReceiver,
+    getRefreshIntervalMs: () => refreshIntervalMs,
+    setStationTitle:      (title) => { tab_title_station = title; updateTitle(); },
+    saveSettings,
+});
+initEvents(activateTab);
+
+// Script.js listener: map URL + dark-mode redraws on settings change.
+// (updateSettingsTab is now registered by initSettings_tab via onSettingsChange)
+onSettingsChange(() => {
+    updateMapURL();
+});
+
 const urlParams = new URLSearchParams(window.location.search);
-restoreDefaultSettings();
+restoreDefaultSettings(getDefaultTrackColors());
 
 console.log("Plugin loading completed");
 
@@ -8076,11 +3912,34 @@ updateForLegacySettings();
 applyDynamicStyling();
 
 console.log("Setup tabs");
-initFullScreen();
-initPlots();
 updateAllChartColors();
 
 initMap();
+
+initShipcard({
+    map,
+    extraVector,
+    trackLayer,
+    toggleTrack, showTrack, hideTrack, trackIsShown,
+    isShowAllTracks:        () => show_all_tracks,
+    isSelectTrackEnabled:   () => select_enabled_track,
+    setSelectTrackEnabled:  v => { select_enabled_track = v; },
+    isHoverTrackEnabled:    () => hover_enabled_track,
+    setHoverTrackEnabled:   v => { hover_enabled_track = v; },
+    getHoverMMSI:           () => hoverMMSI,
+    getHoverType:           () => hoverType,
+    stopHover,
+    moveMapCenter,
+    saveSettings,
+});
+
+initTableside({
+    showShipcard,
+    startHover,
+    stopHover,
+    saveSettings,
+    selectTab,
+});
 
 updateDarkMode();
 
@@ -8090,39 +3949,15 @@ selectTab();
 if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"));
 updateSortMarkers();
 saveSettings();
-prepareShipcard();
 
 if (aboutMDpresent == false) {
     document.getElementById("about_tab").style.display = "none";
     document.getElementById("about_tab_mini").style.display = "none";
 }
 
-if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
-    document.getElementById("realtime_tab").style.display = "none";
-    document.getElementById("realtime_tab_mini").style.display = "none";
-
-    // Hide realtime context menu items
-    const realtimeMenuItems = document.querySelectorAll('.ctx-realtime');
-    realtimeMenuItems.forEach(item => {
-        item.style.display = 'none';
-    });
-
-    // Hide realtime option in shipcard
-    const shipcardRealtime = document.getElementById('shipcard_realtime_option');
-    if (shipcardRealtime) {
-        shipcardRealtime.style.display = 'none';
-    }
-}
-
-if (typeof log_enabled === "undefined" || log_enabled === false) {
-    document.getElementById("log_tab").style.display = "none";
-    document.getElementById("log_tab_mini").style.display = "none";
-}
-
-if (typeof decoder_enabled === "undefined" || decoder_enabled === false) {
-    document.getElementById("decoder_tab").style.display = "none";
-    document.getElementById("decoder_tab_mini").style.display = "none";
-}
+// realtime tab visibility handled by tabs/realtime.js init()
+// log tab visibility handled by tabs/log.js init()
+// decoder tab visibility handled by tabs/decoder.js init()
 
 if (typeof webcontrol_http === "undefined" || !webcontrol_http) {
     document.getElementById("webcontrol_tab").style.display = "none";
@@ -8131,7 +3966,6 @@ if (typeof webcontrol_http === "undefined" || !webcontrol_http) {
 
 showWelcome();
 updateKiosk();
-applyShipcardPinStyling()
 updateAndroid();
 
 if (isAndroid()) showMenu();

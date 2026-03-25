@@ -13,12 +13,8 @@ mkdir -p "$OUT/flags"
 echo "==> Building vendor bundle (libs.js + bundle.css)..."
 ./node_modules/.bin/vite build
 
-echo "==> Minifying script.js (global scope preserved)..."
-# terser without module wrapping so var/function declarations stay global
-# (required for onclick="..." handlers in index.html)
-./node_modules/.bin/terser "$SRC/script.js" \
-    --compress --mangle \
-    --output "$OUT/script.js"
+echo "==> Building app bundle (script.js ES module)..."
+./node_modules/.bin/vite build --config vite.config.app.js
 
 echo "==> Adding content hashes..."
 LIBS_HASH=$(hash8 "$OUT/libs.js")
