@@ -260,6 +260,8 @@ static void Assert(bool b, std::string &context, std::string msg = "")
 
 static void run(RunState &state)
 {
+	extern IO::OutputMessage *commm_feed;
+
 	// -------------
 	// set up the receiver and open the device
 
@@ -285,6 +287,26 @@ static void run(RunState &state)
 
 		// set up the decoding model(s), group is the last output group used
 		r.setupModel(group, i);
+	}
+
+	// for community feed, restrict to live (non-file) receivers
+	if (commm_feed && !state.xshare_defined)
+	{
+		uint64_t live_groups = 0;
+		for (const auto &r : state.receivers)
+		{
+			Type t = r->getDeviceManager().InputType();
+			if (t != Type::WAVFILE && t != Type::RAWFILE)
+				live_groups |= r->getGroupMask();
+		}
+
+		if (live_groups)
+			commm_feed->Set("GROUPS_IN", std::to_string(live_groups));
+	}
+
+	for (int i = 0; i < (int)state.receivers.size(); i++)
+	{
+		Receiver &r = *state.receivers[i];
 
 		// set up all the output and connect to the receiver outputs
 		for (auto &o : state.msg)
@@ -920,9 +942,17 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 	if (state.show_copyright)
 		printVersion();
 
-	if ((!state.xshare_defined && !c.isSharingDefined()) && (state.msg.size() > 0 && state.servers.size() > 0))
+	if ((!state.xshare_defined && !c.isSharingDefined()) && (state.msg.size() > 0 || state.servers.size() > 0))
 	{
-		Warning() << "Hint: Use '-X on' to share with aiscatcher.org community (enables community overlay) or '-X off' to disable. Currently off by default.";
+		Warning() << "Hint: Use '-X on' to share with aiscatcher.org community (enables community overlay) or '-X off' to disable. Currently ON by default.";
+
+		if (!commm_feed)
+		{
+			state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+			commm_feed = state.msg.back().get();
+			commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC", "Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+			commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
+		}
 	}
 
 	if (state.list_devices)

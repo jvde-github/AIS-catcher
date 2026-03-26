@@ -765,6 +765,7 @@ namespace IO
 		else if (option == "GROUPS_IN")
 		{
 			StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
+			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
 			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
 		}
 		else if (option == "KEEP_ALIVE")

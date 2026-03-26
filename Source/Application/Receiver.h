@@ -107,6 +107,12 @@ public:
 	std::unique_ptr<AIS::Model> &addModel(int m);
 	std::unique_ptr<AIS::Model> &Model(int i) { return models[i]; }
 	int Count() { return models.size(); }
+	uint32_t getGroupMask() const {
+		uint32_t mask = 0;
+		for (int i = 0; i < (int)jsonais.size(); i++)
+			mask |= jsonais[i].out.getGroupOut();
+		return mask;
+	}
 
 	void setup(int &g, int idx)
 	{
