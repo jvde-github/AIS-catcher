@@ -69,21 +69,14 @@ run_test() {
 
 should_run() {
     local distro=$1 codename=$2 arch=$3
-    [[ "${SKIP_ARMHF}" == "true" && "${arch}" == "armhf" ]] && return 1
     [[ -n "${FILTER_DISTRO}"   && "${FILTER_DISTRO}"   != "${distro}"   ]] && return 1
     [[ -n "${FILTER_CODENAME}" && "${FILTER_CODENAME}" != "${codename}" ]] && return 1
     [[ -n "${FILTER_ARCH}"     && "${FILTER_ARCH}"     != "${arch}"     ]] && return 1
     return 0
 }
 
-# On Apple Silicon, arm/v7 (armhf) cannot run — the CPU dropped 32-bit support.
-SKIP_ARMHF=false
-if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
-    echo "Note: Apple Silicon detected — skipping armhf (32-bit ARM not supported)"
-    SKIP_ARMHF=true
-fi
-
-# Setup QEMU for non-native arches (Linux hosts only)
+# Setup QEMU for non-native arches.
+# On Linux hosts this is required; Docker Desktop on Mac manages it automatically.
 if [[ "$(uname -s)" == "Linux" ]]; then
     echo "Setting up QEMU..."
     docker run --rm --privileged multiarch/qemu-user-static --reset -p yes > /dev/null 2>&1 || true
