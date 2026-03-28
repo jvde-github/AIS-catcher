@@ -187,38 +187,25 @@ extract_runtime_deps() {
     log "Extracting runtime dependencies..."
     local binary="${BUILD_DIR}/aiscatcher/AIS-catcher"
     local deps=""
-    
-    # Libraries we package ourselves (exclude from deps)
-    local bundled_pattern='librtlsdr|libhydrasdr'
-    
-    # Libraries we want as dependencies
+
+    # Only consider libraries we want as explicit dependencies.
+    # Locally-built libs (rtlsdr, hydrasdr) live under /usr/lib/ais-catcher and
+    # are not registered in the dpkg database, so dpkg -S returns nothing for
+    # them — they are naturally excluded without an explicit filter.
     local dep_pattern='libairspy|libairspyhf|libhackrf|libzmq|libz\.|libssl|libusb-1\.0|libsqlite3|libpq'
-    
-    while read -r lib; do
-        [[ -z "${lib}" ]] && continue
-        
-        # Extract library name and version for Debian package format
-        local lib_name lib_version
-        lib_name=$(echo "${lib}" | sed 's/\.so.*//')
-        lib_version=$(echo "${lib}" | sed 's/.*\.so\.//')
-        
-        # Handle libraries that end with a digit (need hyphen before version)
-        local dep_entry
-        if [[ "${lib_name}" =~ [0-9]$ ]]; then
-            dep_entry="${lib_name}-${lib_version}"
-        else
-            dep_entry="${lib_name}${lib_version}"
-        fi
 
-        # Handle Debian t64 transition: libssl3 was renamed to libssl3t64 on some
-        # architectures (e.g. armhf trixie). Accept either name.
-        if [[ "${dep_entry}" == "libssl3" ]]; then
-            dep_entry="libssl3 | libssl3t64"
-        fi
+    while read -r lib_path; do
+        local pkg
+        pkg=$(dpkg -S "${lib_path}" 2>/dev/null | cut -d: -f1) || continue
+        [[ -z "${pkg}" ]] && continue
+        # skip duplicates
+        [[ ",${deps}," == *",${pkg},"* ]] && continue
+        deps="${deps}${deps:+, }${pkg}"
+    done < <(ldd "${binary}" 2>/dev/null \
+        | grep -E "${dep_pattern}" \
+        | grep "=> /" \
+        | awk '{print $3}')
 
-        deps="${deps}${deps:+, }${dep_entry}"
-    done < <(ldd "${binary}" 2>/dev/null | grep -E "${dep_pattern}" | grep -vE "${bundled_pattern}" | awk '{print $1}')
-    
     echo "${deps}"
 }
 
