@@ -195,8 +195,16 @@ extract_runtime_deps() {
     local dep_pattern='libairspy|libairspyhf|libhackrf|libzmq|libz\.|libssl|libusb-1\.0|libsqlite3|libpq'
 
     while read -r lib_path; do
+        # Try the symlink path first, then the resolved real path as fallback.
+        # On some Debian versions dpkg tracks the versioned file but not the
+        # .so.N symlink, so readlink -f is needed.
         local pkg
-        pkg=$(dpkg -S "${lib_path}" 2>/dev/null | cut -d: -f1) || continue
+        pkg=$(dpkg -S "${lib_path}" 2>/dev/null | cut -d: -f1)
+        if [[ -z "${pkg}" ]]; then
+            local real_path
+            real_path=$(readlink -f "${lib_path}" 2>/dev/null)
+            [[ -n "${real_path}" ]] && pkg=$(dpkg -S "${real_path}" 2>/dev/null | cut -d: -f1)
+        fi
         [[ -z "${pkg}" ]] && continue
         # skip duplicates
         [[ ",${deps}," == *",${pkg},"* ]] && continue
@@ -256,7 +264,7 @@ Description: ${DESCRIPTION}
 Homepage: ${HOMEPAGE}
 Section: hamradio
 Priority: optional
-Depends: ${deps}
+${deps:+Depends: ${deps}}
 EOF
 }
 
