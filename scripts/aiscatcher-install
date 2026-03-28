@@ -426,7 +426,7 @@ build_ais_catcher_from_source() {
     make || error_exit "Failed to build AIS-catcher"
     
     cd ../..
-    cp AIS-catcher/build/AIS-catcher /usr/bin || error_exit "Failed to copy AIS-catcher executable"
+    install -m 755 AIS-catcher/build/AIS-catcher /usr/bin/AIS-catcher || error_exit "Failed to install AIS-catcher executable"
 }
 
 # Install additional files (plugins, DBMS, README, LICENSE) from source
@@ -518,7 +518,8 @@ download_and_install_deb() {
     log "INFO" "Downloading package..."
     if ! curl -fsL -o "$temp_dir/$(basename "$download_url")" "$download_url"; then
         rm -rf "$temp_dir"
-        error_exit "Failed to download package"
+        log "WARN" "Failed to download package"
+        return 1
     fi
 
     # Ensure the downloaded file has correct permissions
@@ -542,7 +543,8 @@ download_and_install_deb() {
     rm -rf "$temp_dir" || log "WARN" "Failed to remove temporary directory: $temp_dir"
 
     if [[ "$install_success" != true ]]; then
-        error_exit "Failed to install package after all attempts"
+        log "WARN" "Failed to install package after all attempts"
+        return 1
     fi
 
     log "INFO" "AIS-catcher package installation completed"
@@ -559,7 +561,8 @@ install_package_method() {
     package=$(check_package_availability "$system_info") || true
 
     if [ -z "$package" ]; then
-        error_exit "Package installation requested but no package available for $system_info. Consider building from source: see https://docs.aiscatcher.org/installation/ubuntu-debian/#install-from-source"
+        log "WARN" "No pre-built package available for $system_info"
+        return 1
     fi
 
     log "INFO" "Package available: $package"
@@ -568,7 +571,7 @@ install_package_method() {
     log "INFO" "Installing minimal dependencies for package installation"
     apt-get install -y curl unzip || error_exit "Failed to install minimal dependencies"
 
-    download_and_install_deb "$package"
+    download_and_install_deb "$package" || return 1
     log "INFO" "AIS-catcher installation from package completed successfully"
 }
 
@@ -930,13 +933,15 @@ install_from_source_method() {
     log "INFO" "AIS-catcher source installation completed successfully"
 }
 
-# Install binary (delegates to package or source method)
+# Install binary (delegates to package or source method, with source fallback)
 install_binary() {
     if [ "$INSTALL_PACKAGE" = true ]; then
-        install_package_method
-    else
-        install_from_source_method
+        if install_package_method; then
+            return 0
+        fi
+        log "WARN" "Package installation failed, falling back to source build..."
     fi
+    install_from_source_method
 }
 
 # Configure installation (user, config, permissions)

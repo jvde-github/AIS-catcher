@@ -203,11 +203,20 @@ extract_runtime_deps() {
         lib_version=$(echo "${lib}" | sed 's/.*\.so\.//')
         
         # Handle libraries that end with a digit (need hyphen before version)
+        local dep_entry
         if [[ "${lib_name}" =~ [0-9]$ ]]; then
-            deps="${deps}${deps:+, }${lib_name}-${lib_version}"
+            dep_entry="${lib_name}-${lib_version}"
         else
-            deps="${deps}${deps:+, }${lib_name}${lib_version}"
+            dep_entry="${lib_name}${lib_version}"
         fi
+
+        # Handle Debian t64 transition: libssl3 was renamed to libssl3t64 on some
+        # architectures (e.g. armhf trixie). Accept either name.
+        if [[ "${dep_entry}" == "libssl3" ]]; then
+            dep_entry="libssl3 | libssl3t64"
+        fi
+
+        deps="${deps}${deps:+, }${dep_entry}"
     done < <(ldd "${binary}" 2>/dev/null | grep -E "${dep_pattern}" | grep -vE "${bundled_pattern}" | awk '{print $1}')
     
     echo "${deps}"
