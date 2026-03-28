@@ -167,6 +167,61 @@ jobs:
         name: ${{ env.filename }}
         path: ${{ env.filename }}
 
+  test_install:
+    runs-on: ubuntu-latest
+    needs: [build_debian, build_ubuntu]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { distro: debian,  codename: bullseye,  arch: amd64  }
+          - { distro: debian,  codename: bullseye,  arch: arm64  }
+          - { distro: debian,  codename: bullseye,  arch: armhf  }
+          - { distro: debian,  codename: bookworm,  arch: amd64  }
+          - { distro: debian,  codename: bookworm,  arch: arm64  }
+          - { distro: debian,  codename: bookworm,  arch: armhf  }
+          - { distro: debian,  codename: trixie,    arch: amd64  }
+          - { distro: debian,  codename: trixie,    arch: arm64  }
+          - { distro: debian,  codename: trixie,    arch: armhf  }
+          - { distro: ubuntu,  codename: focal,     arch: amd64  }
+          - { distro: ubuntu,  codename: focal,     arch: arm64  }
+          - { distro: ubuntu,  codename: jammy,     arch: amd64  }
+          - { distro: ubuntu,  codename: jammy,     arch: arm64  }
+          - { distro: ubuntu,  codename: jammy,     arch: armhf  }
+          - { distro: ubuntu,  codename: noble,     arch: amd64  }
+          - { distro: ubuntu,  codename: noble,     arch: arm64  }
+          - { distro: ubuntu,  codename: noble,     arch: armhf  }
+          - { distro: ubuntu,  codename: plucky,    arch: amd64  }
+          - { distro: ubuntu,  codename: plucky,    arch: arm64  }
+          - { distro: ubuntu,  codename: plucky,    arch: armhf  }
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Map architecture to platform
+      id: arch
+      run: |
+        case "${{ matrix.arch }}" in
+          armhf) echo "platform=linux/arm/v7" >> $GITHUB_OUTPUT ;;
+          *)     echo "platform=linux/${{ matrix.arch }}" >> $GITHUB_OUTPUT ;;
+        esac
+
+    - name: Test package install and run
+      run: |
+        docker run --rm \
+          --platform ${{ steps.arch.outputs.platform }} \
+          ${{ matrix.distro }}:${{ matrix.codename }} \
+          bash -c "
+            set -e
+            apt-get update -qq
+            apt-get install -y -qq curl
+            bash <(curl -fsSL https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install) --package --no-systemd --no-user
+            AIS-catcher -l
+          "
+
   Docker:
     runs-on: ubuntu-latest
     needs: build_debian
