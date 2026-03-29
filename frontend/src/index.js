@@ -1,3 +1,4 @@
+import { marked } from 'marked';
 import Chart from 'chart.js/auto';
 import Annotation from 'chartjs-plugin-annotation';
 import { TabulatorFull as Tabulator } from 'tabulator-tables';
@@ -14,6 +15,7 @@ import 'ol/ol.css';
 
 Chart.register(Annotation);
 
+window.marked = marked;
 window.Chart = Chart;
 window.Tabulator = Tabulator;
 window.ol = {

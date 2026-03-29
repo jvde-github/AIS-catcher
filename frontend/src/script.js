@@ -7590,14 +7590,8 @@ function setupAbout() {
 
     fetchAbout()
         .then((s) => {
-            var scriptElement = document.createElement("script");
-            scriptElement.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
-            document.head.appendChild(scriptElement);
-
-            scriptElement.onload = function () {
-                document.getElementById("about_content").innerHTML = marked.parse(s);
-                aboutContentLoaded = true;
-            };
+            document.getElementById("about_content").innerHTML = marked.parse(s);
+            aboutContentLoaded = true;
         })
         .catch((error) => {
             alert("Error loading about.md: " + error);
