@@ -1,0 +1,14 @@
+#!/bin/bash
+cat << 'NOTICE' >&2
+*******************************************************************
+*                                                                 *
+* AIS-catcher is distributed under the GNU GPL v3 license.        *
+* This software is research and experimental software.            *
+* It is not intended for mission-critical use.                    *
+* Use it at your own risk and responsibility.                     *
+* It is your responsibility to ensure the legality of using       *
+* this software in your region.                                   *
+*                                                                 *
+*******************************************************************
+NOTICE
+exit 0

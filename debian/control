@@ -1,0 +1,14 @@
+Source: ais-catcher
+Section: hamradio
+Priority: optional
+Maintainer: jvde-github <jvde-github@gmail.com>
+Homepage: https://github.com/jvde-github/AIS-catcher
+Build-Depends: debhelper-compat (= 13)
+
+Package: ais-catcher
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: AIS-catcher - A multi-platform AIS receiver
+ AIS-catcher is a lightweight AIS receiver for RTL-SDR and other
+ SDR hardware. It supports various output formats and can feed
+ data to multiple destinations.

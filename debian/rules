@@ -1,0 +1,37 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_configure:
+override_dh_auto_build:
+override_dh_auto_clean:
+override_dh_auto_test:
+
+override_dh_auto_install:
+	# Binary (built externally by build-debian.sh before dpkg-buildpackage)
+	install -D -m 755 $(CURDIR)/build/aiscatcher/AIS-catcher \
+	    debian/ais-catcher/usr/bin/AIS-catcher
+
+	# Plugins
+	if [ -d $(CURDIR)/plugins ]; then \
+	    find $(CURDIR)/plugins -maxdepth 1 -type f \
+	        -exec install -D -m 644 {} debian/ais-catcher/etc/AIS-catcher/plugins/{} \; ; \
+	fi
+
+	# Udev rules (postinst will copy to /etc/udev/rules.d)
+	install -D -m 644 $(CURDIR)/build/rtl-sdr/rtl-sdr.rules \
+	    debian/ais-catcher/usr/share/ais-catcher/rtl-sdr.rules
+	install -D -m 644 $(CURDIR)/build/hydrasdr-host/hydrasdr-tools/51-hydrasdr.rules \
+	    debian/ais-catcher/usr/share/ais-catcher/51-hydrasdr.rules
+
+	# Bundled libraries (rtlsdr, hydrasdr — built from source, not in distro repos)
+	find $(CURDIR)/build/local/lib -name 'librtlsdr.so*' -o -name 'libhydrasdr.so*' | \
+	    while read f; do \
+	        install -D -m 755 "$$f" \
+	            debian/ais-catcher/usr/lib/ais-catcher/$$(basename "$$f"); \
+	    done
+
+override_dh_shlibdeps:
+	# Exclude bundled libs from shlibs lookup — they live under /usr/lib/ais-catcher
+	dh_shlibdeps -l$(CURDIR)/build/local/lib \
+	    -Xlibrtlsdr -Xlibhydrasdr

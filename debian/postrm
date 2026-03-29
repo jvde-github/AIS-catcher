@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    purge)
+        rm -f /etc/udev/rules.d/rtl-sdr.rules
+        rm -f /etc/udev/rules.d/51-hydrasdr.rules
+        rm -rf /etc/AIS-catcher
+        ;;
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+esac
+
+exit 0

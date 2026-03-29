@@ -4,3 +4,9 @@
 AIS-catcher
 gmon.out
 .vscode/
+debian/ais-catcher.debhelper.log
+debian/ais-catcher.substvars
+debian/changelog
+debian/debhelper-build-stamp
+debian/files
+debian/ais-catcher/

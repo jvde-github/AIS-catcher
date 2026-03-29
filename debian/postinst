@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+SHARE_DIR="/usr/share/ais-catcher"
+UDEV_DIR="/etc/udev/rules.d"
+
+install_udev_rules() {
+    local rules_file="$1"
+    local source="${SHARE_DIR}/${rules_file}"
+    local target="${UDEV_DIR}/${rules_file}"
+
+    [[ ! -f "${source}" ]] && return 0
+    [[ ! -d "${UDEV_DIR}" ]] && return 0
+
+    if [[ -f "${target}" ]]; then
+        if command -v md5sum &>/dev/null; then
+            local src_md5 tgt_md5
+            src_md5=$(md5sum "${source}" | cut -d' ' -f1)
+            tgt_md5=$(md5sum "${target}" | cut -d' ' -f1)
+            [[ "${src_md5}" == "${tgt_md5}" ]] && return 0
+        fi
+        cp "${target}" "${target}.backup" 2>/dev/null || true
+    fi
+
+    cp "${source}" "${target}"
+}
+
+reload_udev() {
+    if command -v udevadm &>/dev/null; then
+        udevadm control --reload-rules 2>/dev/null || true
+        udevadm trigger --subsystem-match=usb 2>/dev/null || true
+    fi
+}
+
+case "$1" in
+    configure)
+        install_udev_rules "rtl-sdr.rules"
+        install_udev_rules "51-hydrasdr.rules"
+        reload_udev
+        ldconfig
+        ;;
+esac
+
+exit 0
