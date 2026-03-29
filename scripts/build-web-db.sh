@@ -28,8 +28,9 @@ make_identifier() {
 # Function to get MIME type based on extension
 get_mime_type() {
     local file="$1"
-    local ext="${file##*.}"
-    case "${ext,,}" in
+    local ext
+    ext=$(echo "${file##*.}" | tr '[:upper:]' '[:lower:]')
+    case "$ext" in
         "html"|"htm") echo "text/html" ;;
         "css")        echo "text/css" ;;
         "js")         echo "application/javascript" ;;
@@ -53,19 +54,20 @@ TEMP_FILE=$(mktemp)
 # Process each file
 process_file() {
     local file="$1"
-    # Calculate relative path from BASE_DIR
-    local relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
-    
-    # Skip the output file itself and files outside BASE_DIR
-    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
+    local relative_path="${file#$BASE_DIR/}"
+
+    # Skip files outside BASE_DIR (path unchanged = no prefix stripped)
+    if [ "$relative_path" = "$file" ]; then
         return
     fi
 
     echo "Processing: $relative_path"
-    
+
     # Create C-friendly identifier
-    local identifier=$(make_identifier "$relative_path")
-    local mime_type=$(get_mime_type "$file")
+    local identifier
+    identifier=$(make_identifier "$relative_path")
+    local mime_type
+    mime_type=$(get_mime_type "$file")
 
     # Compress the file content
     gzip -9 -n < "$file" > "$TEMP_FILE"
@@ -74,7 +76,7 @@ process_file() {
     {
         echo "// File: $relative_path"
         echo "static const unsigned char data_${identifier}[] = {"
-        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | head -n -1
+        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | sed '$d'
         echo "};"
         echo "static const size_t size_${identifier} = sizeof(data_${identifier});"
         echo
@@ -90,11 +92,11 @@ export BASE_DIR
 export TEMP_FILE
 
 # Resolve BASE_DIR to absolute path
-BASE_DIR=$(realpath "$BASE_DIR")
+BASE_DIR=$(cd "$BASE_DIR" && pwd)
 echo "Using base directory: $BASE_DIR"
 
-# Find all files recursively and process them
-find "$BASE_DIR" -type f -exec bash -c 'process_file "$0"' {} \;
+# Find all files recursively (excluding the lib/ build directory) and process them
+find "$BASE_DIR" -type f -not -path "*/lib/*" -exec bash -c 'process_file "$0"' {} \;
 
 # Remove temporary file
 rm -f "$TEMP_FILE"
@@ -106,10 +108,10 @@ void initialize() {
 EOF
 
 # Add each file to the map
-find "$BASE_DIR" -type f | while read -r file; do
-    relative_path=$(realpath --relative-to="$BASE_DIR" "$file")
-    # Skip output file and files outside BASE_DIR
-    if [ "$relative_path" = "$OUTPUT_FILE" ] || [[ $relative_path == ../* ]]; then
+find "$BASE_DIR" -type f -not -path "*/lib/*" | while read -r file; do
+    relative_path="${file#$BASE_DIR/}"
+    # Skip files outside BASE_DIR
+    if [ "$relative_path" = "$file" ]; then
         continue
     fi
     identifier=$(make_identifier "$relative_path")
@@ -134,5 +136,5 @@ echo "Header file generated successfully at $OUTPUT_FILE"
 
 # Print some statistics
 echo "Statistics:"
-echo "Total files processed: $(find "$BASE_DIR" -type f | wc -l)"
+echo "Total files processed: $(find "$BASE_DIR" -type f -not -path "*/lib/*" | wc -l)"
 echo "Output file size: $(stat -f %z "$OUTPUT_FILE" 2>/dev/null || stat -c %s "$OUTPUT_FILE") bytes"
