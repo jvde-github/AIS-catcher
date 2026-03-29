@@ -4518,7 +4518,7 @@ const stopHover = function () {
     if (hover_enabled_track) hideTrack(hoverMMSI);
 
     const dc = hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature);
-    const sf = hoverMMSI in shapeFeatures;
+    const sf = hoverType == 'ship' && hoverMMSI in shapeFeatures;
 
     hoverMMSI = undefined;
     hoverType = undefined;
@@ -4527,7 +4527,7 @@ const stopHover = function () {
 
     if (dc) rangeLayer.changed();
 
-    if (hoverType == 'ship' && sf)
+    if (sf)
         shapeLayer.changed();
 
     updateHoverMarker();
