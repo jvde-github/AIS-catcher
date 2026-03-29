@@ -43,6 +43,7 @@ var hover_enabled_track = false,
     select_enabled_track = false,
     marker_tracks = new Set();
 
+var communityFeed, aboutMDpresent, context, center, shipcard;
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
     communityFeed = false;
@@ -334,26 +335,26 @@ function decimalToDDM(l, isLatitude) {
 }
 
 // transformations - for overwrite
-getDimVal = (c) => {
+var getDimVal = (c) => {
     return settings.metric === "DEFAULT" || settings.metric === "SI" ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0);
 };
 
-getDimUnit = () => {
+var getDimUnit = () => {
     return settings.metric === "DEFAULT" || settings.metric === "SI" ? "m" : "ft";
 };
 
-getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
-getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
-getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
-getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
-getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
-getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
+var getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
+var getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
+var getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
+var getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
+var getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
+var getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
     ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
     : null
 
 
 
-getLatValFormat = (ship) => {
+var getLatValFormat = (ship) => {
     const prefix = ship.approx ? "<i>" : "";
     const suffix = ship.approx ? "</i>" : "";
     let content = "";
@@ -373,7 +374,7 @@ getLatValFormat = (ship) => {
     return prefix + content + suffix;
 };
 
-getLonValFormat = (ship) => {
+var getLonValFormat = (ship) => {
     const prefix = ship.approx ? "<i>" : "";
     const suffix = ship.approx ? "</i>" : "";
     let content = "";
@@ -393,12 +394,12 @@ getLonValFormat = (ship) => {
     return prefix + content + suffix;
 };
 
-getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
-getShipName = (ship) => ship.shipname;
-getCallSign = (ship) => ship.callsign;
-getICAOfromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
-getICAO = (plane) => getICAOfromHexIdent(plane.hexident)
-includeShip = (ship) => true;
+var getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
+var getShipName = (ship) => ship.shipname;
+var getCallSign = (ship) => ship.callsign;
+var getICAOfromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
+var getICAO = (plane) => getICAOfromHexIdent(plane.hexident)
+var includeShip = (ship) => true;
 
 const getDeltaTimeVal = (s) => {
     const days = Math.floor(s / (24 * 3600));
@@ -652,7 +653,7 @@ var labelStyle = function (feature) {
     });
 };
 
-hoverCircleStyleFunction = function (feature) {
+var hoverCircleStyleFunction = function (feature) {
     const iconScale = settings.icon_scale || 1.0;
     const circleScale = settings.circle_scale || 6.0;
     const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
@@ -667,7 +668,7 @@ hoverCircleStyleFunction = function (feature) {
     });
 }
 
-selectCircleStyleFunction = function (feature) {
+var selectCircleStyleFunction = function (feature) {
     const iconScale = settings.icon_scale || 1.0;
     const circleScale = settings.circle_scale || 6.0;
     const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
@@ -932,10 +933,11 @@ let selectCircleFeature = undefined;
 
 
 async function fetchJSON(l, m) {
+    let response;
     try {
         response = await fetch(l + "?" + m);
     } catch (error) {
-        showialog("Error", error);
+        showDialog("Error", error);
     }
     return response.text();
 }
@@ -1002,7 +1004,7 @@ async function showNMEA(m) {
 }
 
 async function showVesselDetail(m) {
-    s = await fetchJSON("api/vessel", m);
+    let s = await fetchJSON("api/vessel", m);
     let obj = JSON.parse(s);
 
     let tableHtml = '<table class="mytable">';
@@ -1547,7 +1549,7 @@ function updateMapLayer() {
 
     if (activeTileLayer) {
 
-        overlays = JSON.parse(JSON.stringify(settings.map_overlay));
+        var overlays = JSON.parse(JSON.stringify(settings.map_overlay));
         settings.map_overlay = JSON.parse(JSON.stringify(overlays));
 
         setMapOpacity();
@@ -2191,8 +2193,8 @@ function updateTablecard() {
 
     let shipKeys = Object.keys(shipsDB);
 
-    column = settings.tableside_column;
-    order = settings.tableside_order;
+    let column = settings.tableside_column;
+    let order = settings.tableside_order;
 
     const sortFunctions = {
         flag: (a, b) => compareString(shipsDB[a].raw.country, shipsDB[b].raw.country),
@@ -2400,12 +2402,13 @@ function showServerErrors() {
 }
 
 async function fetchAbout() {
+    let response;
     try {
         response = await fetch("about.md");
     } catch (error) {
         return;
     }
-    aboutmd = await response.text();
+    let aboutmd = await response.text();
     return aboutmd;
 }
 
@@ -2424,6 +2427,7 @@ async function fetchRange(forcefetch = false) {
 
     range_update_time = now;
 
+    let response, h;
     try {
         response = await fetch("api/history_full.json?receiver=" + activeReceiver);
         h = await response.json();
@@ -2445,21 +2449,21 @@ async function fetchRange(forcefetch = false) {
 
     for (let i = 0; i < N; i++) {
         let m = 0;
-        for (j = 0; j < h.minute.stat.length; j++) {
+        for (let j = 0; j < h.minute.stat.length; j++) {
             m = Math.max(m, h.minute.stat[j].radar_a[i]);
             m = Math.max(m, h.minute.stat[j].radar_b[i]);
         }
 
         range_short.push(m);
 
-        for (j = 0; j < h.hour.stat.length; j++) {
+        for (let j = 0; j < h.hour.stat.length; j++) {
             m = Math.max(m, h.hour.stat[j].radar_a[i]);
             m = Math.max(m, h.hour.stat[j].radar_b[i]);
         }
 
         const additionalDays = settings.range_timeframe == "7d" ? 7 : settings.range_timeframe == "30d" ? 30 : 0;
 
-        for (j = 0; j < Math.min(additionalDays, h.day.stat.length); j++) {
+        for (let j = 0; j < Math.min(additionalDays, h.day.stat.length); j++) {
             m = Math.max(m, h.day.stat[j].radar_a[i]);
             m = Math.max(m, h.day.stat[j].radar_b[i]);
         }
@@ -2649,9 +2653,11 @@ function formatTime(timestamp) {
 }
 
 async function fetchBinary() {
+    var standaloneBinaryMessages;
     binaryDB = {};
     standaloneBinaryMessages = []; // For messages not at ship locations
 
+    let response;
     try {
         response = await fetch("api/binmsgs.json?receiver=" + activeReceiver);
         const messages = await response.json();
@@ -2698,6 +2704,7 @@ async function fetchShips(noDoubleFetch = true) {
     let ships = {};
 
     isFetchingShips = true;
+    let response;
     try {
         response = await fetch("api/ships_array.json?receiver=" + activeReceiver);
     } catch (error) {
@@ -2808,6 +2815,7 @@ async function fetchPlanes() {
 
     let planes = {};
 
+    let response;
     try {
         response = await fetch("api/planes_array.json");
     } catch (error) {
@@ -3007,9 +3015,9 @@ function average(d) {
 
     var c = 0;
 
-    for (a = 0; a < b.length; a++) {
+    for (var a = 0; a < b.length; a++) {
         if (b[a].x != 0) {
-            for (i = start; i < d.chart.data.datasets.length; i++) {
+            for (var i = start; i < d.chart.data.datasets.length; i++) {
                 if (!d.chart.getDatasetMeta(i).hidden) {
                     c += d.chart.data.datasets[i].data[a].y;
                 }
@@ -3229,7 +3237,7 @@ const graph_options_distance = {
     },
 };
 
-plot_count = {
+var plot_count = {
     type: "scatter",
     data: {
         datasets: [
@@ -3280,7 +3288,7 @@ plot_count = {
     options: graph_options_count,
 };
 
-plot_distance = {
+var plot_distance = {
     type: "scatter",
     data: {
         datasets: [
@@ -3326,7 +3334,7 @@ plot_distance = {
     options: graph_options_distance,
 };
 
-plot_single = {
+var plot_single = {
     type: "scatter",
     data: {
         datasets: [
@@ -3342,7 +3350,7 @@ plot_single = {
     options: graph_options_single,
 };
 
-plot_level = {
+var plot_level = {
     type: "scatter",
     data: {
         datasets: [
@@ -3492,8 +3500,8 @@ function initPlots() {
             console.error(`Failed to initialize chart ${id}:`, error);
         }
     }
-    chart_level = new Chart(document.getElementById("chart-level"), cloneChartConfig(plot_level));
-    chart_level_hour = new Chart(document.getElementById("chart-level-hour"), cloneChartConfig(plot_level));
+    window.chart_level = new Chart(document.getElementById("chart-level"), cloneChartConfig(plot_level));
+    window.chart_level_hour = new Chart(document.getElementById("chart-level-hour"), cloneChartConfig(plot_level));
 }
 
 function shipcardismax() {
@@ -3625,13 +3633,14 @@ function getFlagStyled(country, style) {
 
 // fetches main statistics from the server
 async function fetchStatistics() {
+    let response;
     try {
         response = await fetch("api/stat.json?receiver=" + activeReceiver);
     } catch (error) {
 
         return;
     }
-    statistics = await response.json();
+    let statistics = await response.json();
 
     return statistics;
 }
@@ -3869,6 +3878,7 @@ async function updatePlots() {
         u.textContent = unit;
     });
 
+    let response, b;
     if (true) {
         try {
             response = await fetch("api/history_full.json?receiver=" + activeReceiver);
@@ -3902,7 +3912,7 @@ async function updatePlots() {
 }
 
 function tableRowClick(m) {
-    ship = shipsDB[m].raw;
+    let ship = shipsDB[m].raw;
     if (ship.lat == null || ship.lon == null) return;
 
     selectMapTab(m);
@@ -4411,10 +4421,6 @@ function getTableShiptype(ship, opacity = 1) {
     return settings.table_shiptype_use_icon ? `<span class="${classValue}" style="${style}" title="${hint}"></span>` : hint;
 }
 
-function getIcon(ship) {
-    const { class: classValue, style } = getShipCSSClassAndStyle(ship);
-    return L.divIcon({ html: `<div class="${classValue}" style="${style}"></div>`, className: "undefined" });
-}
 
 function notImplemented() {
     showDialog("Warning", "Not implemented yet");
@@ -5180,6 +5186,7 @@ function deleteAllTracks() {
 async function fetchTracks() {
     if (marker_tracks.size == 0 && show_all_tracks == false) return true;
 
+    let a;
     try {
         if (show_all_tracks) a = await fetch("api/allpath.json?receiver=" + activeReceiver);
         else {
@@ -5244,7 +5251,7 @@ function isShipcardMax() {
 function getStringfromMsgType(m) {
     let s = "";
     let delim = "";
-    for (i = 1; i <= 27; i++)
+    for (let i = 1; i <= 27; i++)
         if ((m & (1 << i)) != 0) {
             s += delim + Number(i).toFixed(0);
             delim = ", ";
@@ -5257,7 +5264,7 @@ function getStringfromGroup(m) {
     let delim = "";
     let count = 0;
 
-    for (i = 0; i < 32; i++) {
+    for (let i = 0; i < 32; i++) {
         let mask = 1 << i;
         if ((m & mask) !== 0) {
             if (count == 4) {
@@ -5275,7 +5282,7 @@ function getStringfromGroup(m) {
 function getStringfromChannels(m) {
     let s = "";
     let delim = "";
-    for (i = 0; i <= 3; i++)
+    for (let i = 0; i <= 3; i++)
         if ((m & (1 << i)) != 0) {
             s += delim + String.fromCharCode(65 + i);
             delim = ", ";
@@ -7168,9 +7175,9 @@ function activateTab(b, a) {
     Array.from(document.getElementById("menubar").children).forEach((e) => (e.className = e.className.replace(" active", "")));
     Array.from(document.getElementById("menubar_mini").children).forEach((e) => (e.className = e.className.replace(" active", "")));
 
-    tabcontent = document.getElementsByClassName("tabcontent");
+    var tabcontent = document.getElementsByClassName("tabcontent");
 
-    for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+    for (var i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
 
     document.getElementById(a).style.display = "block";
     if (a === "map") document.getElementById("tableside").style.display = "flex";
@@ -7955,7 +7962,7 @@ if (communityFeed) {
         }
     }
 
-    debounceUpdateCommunityFeed = debounce(updateCommunityFeed, 250);
+    var debounceUpdateCommunityFeed = debounce(updateCommunityFeed, 250);
 
     feedLayer.on('change:visible', function () {
         if (feedLayer.getVisible()) {
