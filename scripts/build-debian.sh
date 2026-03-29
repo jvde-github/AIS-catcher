@@ -202,7 +202,8 @@ build_package() {
 
     log "Building package with debhelper..."
     cd "${PROJECT_ROOT}"
-    dpkg-buildpackage -b --no-sign
+    # -d: skip build-dep check — deps are installed by install_build_deps() above
+    dpkg-buildpackage -b --no-sign -d
 
     # dpkg-buildpackage writes the .deb one level above the source tree
     local deb_file="${PROJECT_ROOT}/../ais-catcher_${version}_${arch}.deb"
