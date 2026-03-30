@@ -289,14 +289,16 @@ static void run(RunState &state)
 		r.setupModel(group, i);
 	}
 
-	// for community feed, restrict to live (non-file) receivers
+	// for community feed, restrict to local SDR hardware only
 	if (commm_feed && !state.xshare_defined)
 	{
 		uint64_t live_groups = 0;
 		for (const auto &r : state.receivers)
 		{
 			Type t = r->getDeviceManager().InputType();
-			if (t != Type::WAVFILE && t != Type::RAWFILE)
+			if (t == Type::RTLSDR || t == Type::AIRSPY || t == Type::AIRSPYHF ||
+				t == Type::HACKRF || t == Type::SDRPLAY || t == Type::HYDRASDR ||
+				t == Type::SOAPYSDR)
 				live_groups |= r->getGroupMask();
 		}
 
