@@ -122,12 +122,13 @@ public:
 		std::string element;
 
 		int c = _count - _exclude;
+		bool has_level = c > 0 && _level_min <= _level_max;
 
 		element += "{\"count\":" + std::to_string(empty ? 0 : _count) +
 				   ",\"vessels\":" + std::to_string(empty ? 0 : _vessels) +
-				   ",\"level_min\":" + ((empty || !c) ? null_str : Util::Convert::toString(_level_min)) +
-				   ",\"level_max\":" + ((empty || !c) ? null_str : Util::Convert::toString(_level_max)) +
-				   ",\"ppm\":" + (empty || !c ? null_str : std::to_string(_ppm / c)) +
+				   ",\"level_min\":" + ((empty || !has_level) ? null_str : Util::Convert::toString(_level_min)) +
+				   ",\"level_max\":" + ((empty || !has_level) ? null_str : Util::Convert::toString(_level_max)) +
+				   ",\"ppm\":" + (empty || !has_level ? null_str : std::to_string(_ppm / c)) +
 				   ",\"dist\":" + (empty ? null_str : std::to_string(_distance)) +
 				   ",\"channel\":[";
 

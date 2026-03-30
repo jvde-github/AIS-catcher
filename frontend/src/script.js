@@ -3832,7 +3832,7 @@ function updateChartLevel(chartData, timeframe, chartName, chart) {
     for (let i = 0; i < timeSeriesData.time.length; i++) {
         minLevelData.push({
             x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_min === 0 ? null : timeSeriesData.stat[i].level_min
+            y: timeSeriesData.stat[i].level_min == null ? null : timeSeriesData.stat[i].level_min
         });
     }
     chart.data.datasets[1].data = minLevelData;
@@ -3841,7 +3841,7 @@ function updateChartLevel(chartData, timeframe, chartName, chart) {
     for (let i = 0; i < timeSeriesData.time.length; i++) {
         maxLevelData.push({
             x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_max === 0 ? null : timeSeriesData.stat[i].level_max
+            y: timeSeriesData.stat[i].level_max == null ? null : timeSeriesData.stat[i].level_max
         });
     }
     chart.data.datasets[0].data = maxLevelData;
