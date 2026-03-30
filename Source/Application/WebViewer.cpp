@@ -551,6 +551,21 @@ int WebViewer::parseReceiver(const std::string &query)
 	}
 }
 
+std::time_t WebViewer::parseSinceParam(const std::string &query)
+{
+	auto pos = query.find("since=");
+	if (pos == std::string::npos)
+		return 0;
+	try
+	{
+		return (std::time_t)std::stoll(query.substr(pos + 6));
+	}
+	catch (...)
+	{
+		return 0;
+	}
+}
+
 ReceiverState *WebViewer::getState(int idx)
 {
 	if (states.empty())
@@ -960,7 +975,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	else if (r == "/api/allpath.json")
 	{
 		ReceiverState *s = getState(parseReceiver(a));
-		std::string content = s ? s->getAllPathJSON() : "{}";
+		std::time_t since = parseSinceParam(a);
+		std::string content = s ? (since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON()) : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/path.geojson")

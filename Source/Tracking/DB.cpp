@@ -472,6 +472,68 @@ std::string DB::getSinglePathJSONCompact(int idx, std::time_t tm, int time_histo
 	return result;
 }
 
+std::string DB::getSinglePathJSONCompactSince(int idx, std::time_t, std::time_t since)
+{
+	uint32_t mmsi = ships[idx].mmsi;
+	int ptr = ships[idx].path_ptr;
+	int t = ships[idx].count + 1;
+
+	std::string result = "[";
+
+	while (isNextPathPoint(ptr, mmsi, t))
+	{
+		if ((long int)paths[ptr].timestamp_end < (long int)since)
+			break;
+
+		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
+		{
+			result += "[";
+			result += std::to_string(paths[ptr].lat);
+			result += ",";
+			result += std::to_string(paths[ptr].lon);
+			result += ",";
+			result += std::to_string(paths[ptr].timestamp_start);
+			result += ",";
+			result += std::to_string(paths[ptr].timestamp_end);
+			result += "],";
+		}
+		t = paths[ptr].count;
+		ptr = paths[ptr].next;
+	}
+	if (result != "[")
+		result.pop_back();
+	result += "]";
+	return result;
+}
+
+std::string DB::getAllPathJSONSince(std::time_t since)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	std::string content = "{";
+
+	std::time_t tm = time(nullptr);
+	int ptr = first;
+
+	delim = "";
+	while (ptr != -1)
+	{
+		const Ship &ship = ships[ptr];
+		if (ship.mmsi != 0)
+		{
+			std::string seg = getSinglePathJSONCompactSince(ptr, tm, since);
+			if (seg != "[]")
+			{
+				content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + seg;
+				delim = ",";
+			}
+		}
+		ptr = ships[ptr].next;
+	}
+	content += "}\n\n";
+	return content;
+}
+
 std::string DB::getSinglePathGeoJSON(int idx)
 {
 	uint32_t mmsi = ships[idx].mmsi;

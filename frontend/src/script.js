@@ -1,6 +1,7 @@
 
 var interval,
     activeReceiver = 0,
+    lastPathFetch = 0,
     paths = {},
     map,
     basemaps = {},
@@ -5157,6 +5158,7 @@ function unpinCenter() {
 
 async function showAllTracks() {
     show_all_tracks = true;
+    lastPathFetch = 0;
     select_enabled_track = hover_enabled_track = false;
     await fetchTracks();
     redrawMap();
@@ -5165,6 +5167,7 @@ async function showAllTracks() {
 
 function deleteAllTracks() {
     show_all_tracks = false;
+    lastPathFetch = 0;
     marker_tracks = new Set();
     let p = {};
 
@@ -5187,23 +5190,58 @@ async function fetchTracks() {
     if (marker_tracks.size == 0 && show_all_tracks == false) return true;
 
     let a;
+    let isDelta = false;
     try {
-        if (show_all_tracks) a = await fetch("api/allpath.json?receiver=" + activeReceiver);
-        else {
-
+        if (show_all_tracks) {
+            const sinceParam = lastPathFetch > 0 ? "&since=" + lastPathFetch : "";
+            isDelta = sinceParam !== "";
+            a = await fetch("api/allpath.json?receiver=" + activeReceiver + sinceParam);
+        } else {
             for (var mmsi of marker_tracks) {
                 if (!(mmsi in shipsDB)) {
                     ToggleTrackOnMap(mmsi);
                 }
             }
-
             var mmsi_str = Array.from(marker_tracks).join(",");
             a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + activeReceiver);
         }
-        paths = await a.json();
+
+        const newPaths = await a.json();
+
+        let maxTs = lastPathFetch;
+        for (const mmsi in newPaths)
+            for (const pt of newPaths[mmsi])
+                if (pt[3] > maxTs) maxTs = pt[3];
+        if (maxTs > lastPathFetch) lastPathFetch = maxTs;
+
+        if (!isDelta) {
+            paths = newPaths;
+        } else {
+            for (const mmsi in newPaths) {
+                if (!paths[mmsi]) {
+                    paths[mmsi] = newPaths[mmsi];
+                } else {
+                    for (const pt of newPaths[mmsi]) {
+                        const ts_start = pt[2];
+                        const idx = paths[mmsi].findIndex(p => p[2] === ts_start);
+                        if (idx >= 0) {
+                            paths[mmsi][idx][3] = pt[3];
+                        } else {
+                            paths[mmsi].unshift(pt);
+                        }
+                    }
+                }
+            }
+            const cutoff = lastPathFetch - 1800;
+            for (const mmsi in paths) {
+                paths[mmsi] = paths[mmsi].filter(pt => pt[3] >= cutoff);
+                if (paths[mmsi].length === 0) delete paths[mmsi];
+            }
+        }
     } catch (error) {
         console.log("Error loading path: " + error);
-        paths = {};
+        if (!isDelta) paths = {};
+        lastPathFetch = 0;
         return false;
     }
 

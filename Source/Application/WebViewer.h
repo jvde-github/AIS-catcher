@@ -146,6 +146,7 @@ public:
 	std::string getKML() { return ships.getKML(); }
 	std::string getGeoJSON() { return ships.getGeoJSON(); }
 	std::string getAllPathJSON() { return ships.getAllPathJSON(); }
+	std::string getAllPathJSONSince(std::time_t since) { return ships.getAllPathJSONSince(since); }
 	std::string getAllPathGeoJSON() { return ships.getAllPathGeoJSON(); }
 	std::string getPathJSON(uint32_t mmsi) { return ships.getPathJSON(mmsi); }
 	std::string getPathGeoJSON(uint32_t mmsi) { return ships.getPathGeoJSON(mmsi); }
@@ -232,6 +233,8 @@ class WebViewer : public IO::HTTPServer, public Setting
 
 	// Parse ?receiver=N from query string; returns 0 on missing/invalid.
 	int parseReceiver(const std::string &query);
+	// Parse ?since=T from query string; returns 0 on missing/invalid.
+	std::time_t parseSinceParam(const std::string &query);
 	// Return state at idx, clamped to states[0] on out-of-range.
 	ReceiverState *getState(int idx);
 
