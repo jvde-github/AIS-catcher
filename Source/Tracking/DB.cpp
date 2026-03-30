@@ -391,10 +391,10 @@ std::string DB::getAllPathJSON()
 		if (ship.mmsi != 0)
 		{
 			long int delta_time = (long int)tm - (long int)ship.last_signal;
-			if (delta_time > TIME_HISTORY)
+			if (delta_time > 5 * 60 * 60)
 				break;
 
-			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSONCompact(ptr, tm, TIME_HISTORY);
+			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSONCompact(ptr, tm, 5 * 60 * 60);
 			delim = ",";
 		}
 		ptr = ships[ptr].next;
