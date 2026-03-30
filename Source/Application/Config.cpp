@@ -235,6 +235,9 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 		case AIS::KEY_SETTING_VERBOSE:
 			_state.receivers.back()->verbose = Util::Parse::Switch(p.Get().to_string());
 			break;
+		case AIS::KEY_SETTING_CHANNEL:
+			_state.receivers.back()->setChannel(p.Get().to_string());
+			break;
 		case AIS::KEY_SETTING_MODEL:
 			setModelfromJSON(p);
 			break;
