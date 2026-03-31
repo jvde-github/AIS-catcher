@@ -140,10 +140,10 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 		return false;
 	}
 
-	if (type != Type::NONE)
-		device = getDeviceByType(type);
-	else
-		device = getDeviceByType(device_list[idx].getType());
+	if (type == Type::NONE)
+		type = device_list[idx].getType();
+
+	device = getDeviceByType(type);
 
 	if (device == 0)
 		return false;

@@ -460,4 +460,20 @@ namespace Util
 		val = (unsigned)Integer(arg, min, max);
 		return true;
 	}
+
+	void Parse::Split(const std::string &s, char delim, std::vector<std::string> &out)
+	{
+		out.clear();
+		std::stringstream ss(s);
+		std::string tok;
+		while (std::getline(ss, tok, delim))
+		{
+			tok.erase(0, tok.find_first_not_of(" \t"));
+			auto last = tok.find_last_not_of(" \t");
+			if (last != std::string::npos)
+				tok.erase(last + 1);
+			if (!tok.empty())
+				out.push_back(tok);
+		}
+	}
 }

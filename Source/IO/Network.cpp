@@ -448,6 +448,7 @@ namespace IO
 		std::string filter_str = filter.Get();
 		if (!filter_str.empty())
 			ss << ", " << filter_str;
+		ss << ", " << getSourcesStr();
 
 		Info() << ss.str();
 
@@ -716,6 +717,7 @@ namespace IO
 		std::string filter_str = filter.Get();
 		if (!filter_str.empty())
 			ss << ", " << filter_str;
+		ss << ", " << getSourcesStr();
 		ss << ", status: ";
 
 		// Set up TCP connection

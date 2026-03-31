@@ -155,6 +155,7 @@ namespace AIS
 		{"", "", "", "", "share_loc", ""},												// KEY_SETTING_SHARE_LOC
 		{"", "", "", "", "sharing", ""},												// KEY_SETTING_SHARING
 		{"", "", "", "", "sharing_key", ""},											// KEY_SETTING_SHARING_KEY
+		{"", "", "", "", "sharing_zone", ""},											// KEY_SETTING_SHARING_ZONE
 		{"", "", "", "", "soapysdr", ""},												// KEY_SETTING_SOAPYSDR
 		{"", "", "", "", "soxr", ""},													// KEY_SETTING_SOXR
 		{"", "", "", "", "spyserver", ""},												// KEY_SETTING_SPYSERVER
@@ -186,6 +187,7 @@ namespace AIS
 		{"", "", "", "", "qos", ""},													// KEY_SETTING_QOS
 		{"", "", "", "", "zlib", ""},													// KEY_SETTING_ZLIB
 		{"", "", "", "", "zmq", ""},													// KEY_SETTING_ZMQ
+		{"", "", "", "", "zone", ""},													// KEY_SETTING_ZONE
 		{"accuracy", "", "accuracy", "", "", ""},										// KEY_ACCURACY
 		{"ack_required", "", "ack_required", "", "", ""},								// KEY_ACK_REQUIRED
 		{"addressed", "", "", "", "", ""},												// KEY_ADDRESSED
@@ -851,6 +853,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SHARE_LOC
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SHARING
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SHARING_KEY
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SHARING_ZONE		
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SOAPYSDR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SOXR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SPYSERVER
@@ -882,6 +885,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_QOS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZLIB
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZMQ
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZONE
 		KeyInfo("", "Position Accuracy; 1 indicates DGPS-quality (< 10m), 0 indicates unaugmented GNSS (> 10m).", nullptr), // KEY_ACCURACY
 		KeyInfo("", "", nullptr),																							// KEY_ACK_REQUIRED
 		KeyInfo("", "", nullptr),																							// KEY_ADDRESSED

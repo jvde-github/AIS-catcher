@@ -1168,6 +1168,10 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	{
 		groups_in = Util::Parse::Integer(arg);
 	}
+	else if (option == "ZONE")
+	{
+		Util::Parse::Split(arg, ',', zones);
+	}
 	else if (option == "PORT_MIN")
 	{
 		port_set = true;

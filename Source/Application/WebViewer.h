@@ -158,6 +158,11 @@ class WebViewer : public IO::HTTPServer, public Setting
 {
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
 
+public:
+	std::vector<std::string> zones;
+
+private:
+
 	int port = 0;
 	int firstport = 0;
 	int lastport = 0;

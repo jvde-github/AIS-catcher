@@ -18,6 +18,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <time.h>
 
 #include "Stream.h"
@@ -41,5 +42,6 @@ namespace Util
 		static bool OptionalInteger(std::string arg, int min, int max, unsigned &val, unsigned default_val = 0);
 		static void HTTP_URL(const std::string &url, std::string &protocol, std::string &host, std::string &port, std::string &path);
 		static void URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path);
+		static void Split(const std::string &s, char delim, std::vector<std::string> &out);
 	};
 }

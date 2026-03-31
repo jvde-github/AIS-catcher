@@ -45,7 +45,21 @@ void Config::setSettingsFromJSON(const JSON::Value &pd, Setting &s)
 
 		if (p.Key() != AIS::KEY_SETTING_ACTIVE)
 		{
-			s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], p.Get().to_string());
+			if (p.Get().isArrayString())
+			{
+				std::string joined;
+				for (const auto &v : p.Get().getArray())
+					joined += (joined.empty() ? "" : ",") + v.to_string();
+				s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], joined);
+			}
+			else if (p.Get().isArray())
+			{
+				throw std::runtime_error("\"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" must be an array of strings");
+			}
+			else
+			{
+				s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], p.Get().to_string());
+			}
 		}
 	}
 }
@@ -232,6 +246,12 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 	{
 		switch (p.Key())
 		{
+		case AIS::KEY_SETTING_ZONE:
+			if (!p.Get().isArrayString())
+				throw std::runtime_error("\"zone\" must be an array of strings");
+			for (const auto &v : p.Get().getArray())
+				_state.receivers.back()->zones.push_back(v.to_string());
+			break;
 		case AIS::KEY_SETTING_VERBOSE:
 			_state.receivers.back()->verbose = Util::Parse::Switch(p.Get().to_string());
 			break;
@@ -342,6 +362,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 
 	bool xchange = false;
 	std::string uuid;
+	std::vector<std::string> zones;
 	extern IO::OutputMessage *commm_feed;
 
 	for (const JSON::Property &p : props)
@@ -353,6 +374,13 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 		}
 		else if (p.Key() == AIS::KEY_SETTING_SHARING_KEY)
 			uuid = p.Get().to_string();
+		else if (p.Key() == AIS::KEY_SETTING_SHARING_ZONE)
+		{
+			if (!p.Get().isArrayString())
+				throw std::runtime_error("\"sharing_zone\" must be an array of strings");
+			for (const auto &v : p.Get().getArray())
+				zones.push_back(v.to_string());
+		}
 	}
 
 	if (xchange && !commm_feed)
@@ -364,6 +392,8 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 	}
 	if (!uuid.empty() && commm_feed)
 		commm_feed->Set("UUID", uuid);
+	if (!zones.empty() && commm_feed)
+		commm_feed->zones = zones;
 }
 
 void Config::set(const std::string &str)

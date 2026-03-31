@@ -44,6 +44,9 @@ namespace IO
 		OutputStats stats;
 		std::string description, type;
 
+	public:
+		std::vector<std::string> zones;
+
 		MessageFormat fmt = MessageFormat::JSON_FULL;
 
 		void ConnectMessage(Receiver &r);
@@ -57,6 +60,18 @@ namespace IO
 		std::string getJSON() const
 		{
 			return "{\"type\":\"" + type + "\"" + ",\"description\":\"" + description + "\"" + ",\"stats\":" + stats.toJSON() + "}";
+		}
+
+		std::string getSourcesStr()
+		{
+			uint64_t gi = StreamIn<AIS::Message>::getGroupsIn();
+			if (gi == GROUPS_ALL) return "sources: ALL";
+			if (gi == 0) return "sources: NONE";
+			std::string s;
+			for (int i = 0; i < 32; i++)
+				if (gi & (1ULL << i))
+					s += (s.empty() ? "" : ",") + std::to_string(i + 1);
+			return "sources: " + s;
 		}
 
 		OutputMessage() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
@@ -96,6 +111,11 @@ namespace IO
 			else if (option == "DESCRIPTION" || option == "DESC")
 			{
 				description = arg;
+				return true;
+			}
+			else if (option == "ZONE")
+			{
+				Util::Parse::Split(arg, ',', zones);
 				return true;
 			}
 			return filter.SetOption(option, arg);

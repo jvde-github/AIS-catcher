@@ -71,6 +71,7 @@ class Receiver
 
 public:
 	bool verbose = false;
+	std::vector<std::string> zones;
 
 	// Device manager
 	DeviceManager deviceManager;

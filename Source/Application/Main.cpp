@@ -302,8 +302,36 @@ static void run(RunState &state)
 				live_groups |= r->getGroupMask();
 		}
 
-		if (live_groups)
-			commm_feed->Set("GROUPS_IN", std::to_string(live_groups));
+		commm_feed->Set("GROUPS_IN", std::to_string(live_groups));
+	}
+
+	// Resolve zone-based output filtering: compute GROUPS_IN from zone overlap
+	auto resolveZones = [&](const std::vector<std::string> &zones) -> uint64_t {
+		uint64_t mask = 0;
+		for (const auto &r : state.receivers)
+			for (const auto &rz : r->zones)
+				for (const auto &oz : zones)
+					if (rz == oz) { mask |= r->getGroupMask(); goto next_r; }
+		next_r:;
+		return mask;
+	};
+
+	for (auto &o : state.msg)
+	{
+		if (o->zones.empty()) continue;
+		uint64_t mask = resolveZones(o->zones);
+		if (!mask)
+			Warning() << "Output has zone filter but no matching receivers — will receive nothing";
+		o->Set("GROUPS_IN", std::to_string(mask));
+	}
+
+	for (auto &s : state.servers)
+	{
+		if (s->zones.empty()) continue;
+		uint64_t mask = resolveZones(s->zones);
+		if (!mask)
+			Warning() << "Server has zone filter but no matching receivers — will receive nothing";
+		s->Set("GROUPS_IN", std::to_string(mask));
 	}
 
 	for (int i = 0; i < (int)state.receivers.size(); i++)
