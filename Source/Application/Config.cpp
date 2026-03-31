@@ -45,16 +45,19 @@ void Config::setSettingsFromJSON(const JSON::Value &pd, Setting &s)
 
 		if (p.Key() != AIS::KEY_SETTING_ACTIVE)
 		{
-			if (p.Get().isArrayString())
+			if (p.Get().isArray())
 			{
 				std::string joined;
 				for (const auto &v : p.Get().getArray())
 					joined += (joined.empty() ? "" : ",") + v.to_string();
 				s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], joined);
 			}
-			else if (p.Get().isArray())
+			else if (p.Get().isArrayString())
 			{
-				throw std::runtime_error("\"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" must be an array of strings");
+				std::string joined;
+				for (const auto &v : p.Get().getStringArray())
+					joined += (joined.empty() ? "" : ",") + v;
+				s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], joined);
 			}
 			else
 			{
@@ -247,7 +250,7 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 		switch (p.Key())
 		{
 		case AIS::KEY_SETTING_ZONE:
-			if (!p.Get().isArrayString())
+			if (!p.Get().isArray())
 				throw std::runtime_error("\"zone\" must be an array of strings");
 			for (const auto &v : p.Get().getArray())
 				_state.receivers.back()->zones.push_back(v.to_string());
@@ -376,7 +379,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 			uuid = p.Get().to_string();
 		else if (p.Key() == AIS::KEY_SETTING_SHARING_ZONE)
 		{
-			if (!p.Get().isArrayString())
+			if (!p.Get().isArray())
 				throw std::runtime_error("\"sharing_zone\" must be an array of strings");
 			for (const auto &v : p.Get().getArray())
 				zones.push_back(v.to_string());
@@ -465,6 +468,7 @@ void Config::set(const std::string &str)
 		case AIS::KEY_SETTING_SPYSERVER:
 		case AIS::KEY_SETTING_SHARING:
 		case AIS::KEY_SETTING_SHARING_KEY:
+		case AIS::KEY_SETTING_SHARING_ZONE:
 			break;
 		case AIS::KEY_SETTING_UDP:
 			setUDPfromJSON(p);
