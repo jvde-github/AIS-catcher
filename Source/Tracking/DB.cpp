@@ -394,7 +394,7 @@ std::string DB::getAllPathJSON()
 			if (delta_time > 5 * 60 * 60)
 				break;
 
-			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSONCompact(ptr, tm, 5 * 60 * 60);
+			content += delim + "\"" + std::to_string(ship.mmsi) + "\":" + getSinglePathJSONCompact(ptr);
 			delim = ",";
 		}
 		ptr = ships[ptr].next;
@@ -438,17 +438,18 @@ std::string DB::getSinglePathJSON(int idx)
 	return content;
 }
 
-std::string DB::getSinglePathJSONCompact(int idx, std::time_t tm, int time_history)
+std::string DB::getSinglePathJSONCompact(int idx)
 {
 	uint32_t mmsi = ships[idx].mmsi;
 	int ptr = ships[idx].path_ptr;
 	int t = ships[idx].count + 1;
+	int count = 0;
 
 	std::string result = "[";
 
 	while (isNextPathPoint(ptr, mmsi, t))
 	{
-		if ((long int)tm - (long int)paths[ptr].timestamp_end > time_history)
+		if (count >= 250)
 			break;
 
 		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
@@ -462,6 +463,7 @@ std::string DB::getSinglePathJSONCompact(int idx, std::time_t tm, int time_histo
 			result += ",";
 			result += std::to_string(paths[ptr].timestamp_end);
 			result += "],";
+			count++;
 		}
 		t = paths[ptr].count;
 		ptr = paths[ptr].next;
@@ -584,7 +586,7 @@ std::string DB::getPathJSON(uint32_t mmsi)
 	int idx = findShip(mmsi);
 	if (idx == -1)
 		return "[]";
-	return getSinglePathJSON(idx);
+	return getSinglePathJSONCompact(idx);
 }
 
 std::string DB::getPathGeoJSON(uint32_t mmsi)

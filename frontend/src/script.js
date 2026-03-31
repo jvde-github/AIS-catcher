@@ -5232,10 +5232,9 @@ async function fetchTracks() {
                     }
                 }
             }
-            const cutoff = lastPathFetch - 1800;
             for (const mmsi in paths) {
-                paths[mmsi] = paths[mmsi].filter(pt => pt[3] >= cutoff);
-                if (paths[mmsi].length === 0) delete paths[mmsi];
+                if (!(mmsi in shipsDB)) delete paths[mmsi];
+                else if (paths[mmsi].length > 250) paths[mmsi] = paths[mmsi].slice(0, 250);
             }
         }
     } catch (error) {
