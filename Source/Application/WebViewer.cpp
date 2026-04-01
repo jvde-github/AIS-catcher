@@ -403,12 +403,16 @@ void ReceiverState::applyConfig(float lat, float lon, bool latlon_share, bool se
 	ships.setOwnMMSI(own_mmsi);
 	ships.setTimeHistory(time_history);
 	ships.setFilter(f);
-	hist_second.setCutoff(cutoff);
-	hist_minute.setCutoff(cutoff);
-	hist_hour.setCutoff(cutoff);
-	hist_day.setCutoff(cutoff);
-	counter.setCutOff(cutoff);
-	counter_session.setCutOff(cutoff);
+
+	if (cutoff > 0)
+	{
+		hist_second.setCutoff(cutoff);
+		hist_minute.setCutoff(cutoff);
+		hist_hour.setCutoff(cutoff);
+		hist_day.setCutoff(cutoff);
+		counter.setCutOff(cutoff);
+		counter_session.setCutOff(cutoff);
+	}
 }
 
 void ReceiverState::setup()
