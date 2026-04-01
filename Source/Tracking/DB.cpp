@@ -878,10 +878,14 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	// determine whether we accept msg 27 to update lat/lon
 	bool allowApproxLatLon = false, positionUpdated = false;
 
-	if (msg->type() == 27)
+	int type = msg->type();
+	int repeat = msg->repeat();
+
+	if (type == 27)
 	{
 		int timeout = 10 * 60;
-
+		repeat = 0;
+		
 		if (ship.speed != SPEED_UNDEFINED && ship.speed != 0)
 			timeout = MAX(10, MIN(timeout, (int)(0.25f / ship.speed * 3600.0f)));
 
@@ -896,7 +900,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 
 	ship.last_signal = msg->getRxTimeUnix();
 
-	if (msg->repeat() == 0)
+	if (repeat == 0)
 	{
 		ship.last_direct_signal = ship.last_signal;
 		ship.setRepeat(0);
@@ -911,7 +915,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
-	ship.msg_type |= 1 << msg->type();
+	ship.msg_type |= 1 << type;
 
 	if (msg->getChannel() >= 'A' && msg->getChannel() <= 'D')
 		ship.orOpChannels(1 << (msg->getChannel() - 'A'));
@@ -923,7 +927,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 
 	if (positionUpdated)
 	{
-		ship.setApproximate(msg->type() == 27);
+		ship.setApproximate(type == 27);
 
 		if (ship.mmsi == own_mmsi)
 		{

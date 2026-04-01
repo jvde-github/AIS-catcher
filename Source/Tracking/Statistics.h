@@ -91,7 +91,7 @@ public:
 		// for range we ignore atons
 		if (m.type() == 21) return;
 
-		if (!tag.validated || tag.distance > _LONG_RANGE_CUTOFF || m.repeat() > 0)
+		if (!tag.validated || tag.distance > _LONG_RANGE_CUTOFF || (m.repeat() > 0 && m.type() != 27))
 			return;
 
 		if (tag.distance > _distance) {
