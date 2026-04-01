@@ -309,10 +309,16 @@ static void run(RunState &state)
 	auto resolveZones = [&](const std::vector<std::string> &zones) -> uint64_t {
 		uint64_t mask = 0;
 		for (const auto &r : state.receivers)
+		{
+			bool matched = false;
 			for (const auto &rz : r->zones)
+			{
 				for (const auto &oz : zones)
-					if (rz == oz) { mask |= r->getGroupMask(); goto next_r; }
-		next_r:;
+					if (rz == oz) { matched = true; break; }
+				if (matched) break;
+			}
+			if (matched) mask |= r->getGroupMask();
+		}
 		return mask;
 	};
 
@@ -416,7 +422,7 @@ static void run(RunState &state)
 					{
 						state.stat[i].statistics[j].Stamp();
 						std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
-						Info() << "[" << name << "] " << std::string(37 - name.length(), ' ') << "received: " << state.stat[i].statistics[j].getDeltaCount() << " msgs, total: "
+						Info() << "[" << name << "] " << std::string(name.length() < 37 ? 37 - name.length() : 0, ' ') << "received: " << state.stat[i].statistics[j].getDeltaCount() << " msgs, total: "
 							   << state.stat[i].statistics[j].getCount() << " msgs, rate: " << state.stat[i].statistics[j].getRate() << " msg/s";
 					}
 				}
@@ -465,7 +471,7 @@ static void run(RunState &state)
 			{
 				std::string name = r.Model(j)->getName() + " #" + std::to_string(i) + "-" + std::to_string(j);
 				state.stat[i].statistics[j].Stamp();
-				ss << "[" << name << "] " << std::string(37 - name.length(), ' ') << "total: " << state.stat[i].statistics[j].getCount() << " msgs" << "\n";
+				ss << "[" << name << "] " << std::string(name.length() < 37 ? 37 - name.length() : 0, ' ') << "total: " << state.stat[i].statistics[j].getCount() << " msgs" << "\n";
 			}
 		}
 
@@ -473,7 +479,7 @@ static void run(RunState &state)
 			for (int j = 0; j < r.Count(); j++)
 			{
 				std::string name = r.Model(j)->getName();
-				ss << "[" << r.Model(j)->getName() << "]: " << std::string(37 - name.length(), ' ') << r.Model(j)->getTotalTiming() << " ms" << "\n";
+				ss << "[" << r.Model(j)->getName() << "]: " << std::string(name.length() < 37 ? 37 - name.length() : 0, ' ') << r.Model(j)->getTotalTiming() << " ms" << "\n";
 			}
 		Info() << ss.str();
 	}
@@ -827,15 +833,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 					state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 					commm_feed = state.msg.back().get();
 					commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC", "Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
-					if (count == 2 || true)
-					{
-						// Warning() << "Experimental feature - using COMMUNITY_HUB message format.";
-						commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
-					}
-					else
-					{
-						commm_feed->Set("MSGFORMAT", "JSON_NMEA");
-					}
+					commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
 				}
 
 				if (count >= 1 && commm_feed)

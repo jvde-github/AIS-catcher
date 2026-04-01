@@ -191,7 +191,7 @@ namespace IO
 		}
 #endif
 
-		ResponseRaw(c, type, content.c_str(), content.size(), cache);
+		ResponseRaw(c, type, content.c_str(), content.size(), false, cache);
 	}
 
 	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
@@ -205,7 +205,7 @@ namespace IO
 		}
 #endif
 
-		ResponseRaw(c, type, data, len);
+		ResponseRaw(c, type, data, len, false, cache);
 	}
 
 	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)

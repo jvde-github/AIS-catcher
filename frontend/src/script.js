@@ -278,8 +278,7 @@ function applyDefaultSettings() {
     restoreDefaultSettings();
 
     settings.android = android;
-
-    if (isAndroid()) settings.dark_mode = darkmode;
+    settings.dark_mode = darkmode;
 
     updateSortMarkers();
     setDarkMode(settings.dark_mode);
@@ -1165,9 +1164,7 @@ function showMapMenu(event) {
     mapMenu.style.top = "50%";
     mapMenu.style.transform = "translate(-50%, -50%)";
 
-    document.addEventListener("click", function (event) {
-        hideMapMenu(event);
-    });
+    document.addEventListener("click", hideMapMenu);
 }
 
 const contextMenu = document.getElementById("context-menu");
@@ -1268,9 +1265,7 @@ function showContextMenu(event, mmsi, type, context) {
         contextMenu.style.top = adjustedY + "px";
     }
 
-    document.addEventListener("click", function (event) {
-        hideContextMenu();
-    });
+    document.addEventListener("click", hideContextMenu);
 }
 
 function showDialog(title, message) {
@@ -2052,7 +2047,7 @@ function StartFireworks() {
             function (e) {
                 var jsonData = JSON.parse(e.data);
 
-                if (jsonData.hasOwnProperty("channel") ** jsonData.hasOwnProperty("lat") && jsonData.hasOwnProperty("lon")) {
+                if (jsonData.hasOwnProperty("channel") && jsonData.hasOwnProperty("lat") && jsonData.hasOwnProperty("lon")) {
                     addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
                 }
             },
@@ -2097,10 +2092,9 @@ function updateMarkerCountTooltip() {
         cHeli = 0,
         cSarte = 0;
 
-    for (let [key, m] of Object.entries(shipsDB)) {
-        if (key in shipsDB) {
-            let ship = shipsDB[key].raw;
-            switch (ship.shipclass) {
+    for (let key of Object.keys(shipsDB)) {
+        let ship = shipsDB[key].raw;
+        switch (ship.shipclass) {
                 case ShippingClass.ATON:
                     cAton++;
                     break;
@@ -2125,7 +2119,6 @@ function updateMarkerCountTooltip() {
                     else cStationary++;
                     break;
             }
-        }
     }
 
     flashNumber("statcard_stationary", cStationary);
@@ -2498,7 +2491,7 @@ async function fetchRange(forcefetch = false) {
     }
 
     range_outline = range_outline.map(point => ol.proj.fromLonLat(point));
-    range_outline_short = range_outline_short.map(point => 0 * ol.proj.fromLonLat(point));
+    range_outline_short = range_outline_short.map(point => ol.proj.fromLonLat(point));
 }
 
 let rangeFeature = undefined;
@@ -7771,19 +7764,25 @@ async function refreshRainviewerLayers() {
 addOverlayLayer("RainViewer Radar", rainviewerRadar);
 addOverlayLayer("RainViewer Clouds", rainviewerClouds);
 
-rainviewerRadar.on('change:visible', function (evt) {
-    if (evt.target.getVisible()) {
-        refreshRainviewerLayers();
-        window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000);
-    }
-});
+let rainviewerIntervalId = null;
 
-rainviewerClouds.on('change:visible', function (evt) {
-    if (evt.target.getVisible()) {
+function onRainviewerVisibilityChange() {
+    const anyVisible = rainviewerRadar.getVisible() || rainviewerClouds.getVisible();
+    if (anyVisible) {
         refreshRainviewerLayers();
-        window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000);
+        if (rainviewerIntervalId === null) {
+            rainviewerIntervalId = window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000);
+        }
+    } else {
+        if (rainviewerIntervalId !== null) {
+            window.clearInterval(rainviewerIntervalId);
+            rainviewerIntervalId = null;
+        }
     }
-});
+}
+
+rainviewerRadar.on('change:visible', onRainviewerVisibilityChange);
+rainviewerClouds.on('change:visible', onRainviewerVisibilityChange);
 
 function makeDraggable(dragHandle, dragTarget) {
     const moveThreshold = 15;

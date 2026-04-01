@@ -46,7 +46,7 @@ namespace Demod {
 		static const int nSearch = 2;
 
 		FLOAT32 memory[nPhases][maxHistory];
-		char bits[nPhases];
+		uint8_t bits[nPhases];
 
 		int max_idx = 0;
 		int rot = 0;
@@ -73,7 +73,7 @@ namespace Demod {
 		FLOAT32 weight = 0.85f;
 
 		FLOAT32 ma[nPhases] = { 0 };
-		char bits[nPhases] = { 0 };
+		uint8_t bits[nPhases] = { 0 };
 
 		int max_idx = 0, rot = 0;
 

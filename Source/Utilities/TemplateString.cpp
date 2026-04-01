@@ -30,7 +30,7 @@ namespace Util
 		std::string out;
 		out.reserve(tpl.size() + 64);
 
-		int i = 0, n = tpl.size();
+		std::string::size_type i = 0, n = tpl.size();
 
 		while (i < n)
 		{
@@ -40,8 +40,8 @@ namespace Util
 			}
 			else
 			{
-				int start = i + 1;
-				int end = tpl.find('%', start);
+				std::string::size_type start = i + 1;
+				std::string::size_type end = tpl.find('%', start);
 				if (end == std::string::npos)
 				{
 					out.push_back('%');

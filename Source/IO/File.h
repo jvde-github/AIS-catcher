@@ -129,12 +129,7 @@ namespace IO
 		{
 			Util::Convert::toUpper(option);
 
-			if (option == "GROUPS_IN")
-			{
-				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
-				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-			}
-			else if (option == "FILE")
+			if (option == "FILE")
 			{
 				filename = arg;
 			}

@@ -811,12 +811,7 @@ namespace IO
 	{
 		Util::Convert::toUpper(option);
 
-		if (option == "GROUPS_IN")
-		{
-			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
-			StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-		}
-		else if (option == "DEVICE")
+		if (option == "DEVICE")
 		{
 			dev = arg;
 		}

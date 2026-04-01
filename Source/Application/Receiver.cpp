@@ -219,11 +219,12 @@ void Receiver::setupModel(int &group, int idx)
 	jsonais.resize(models.size());
 
 	// assign the output of each individual model to a seperate group
-	assert(group + models.size() < 32);
+	if (group + (int)models.size() >= 32)
+		throw std::runtime_error("Receiver: too many models/receivers, group bit limit exceeded.");
 
 	for (int i = 0; i < models.size(); i++)
 	{
-		uint32_t mask = 1 << group;
+		uint32_t mask = 1u << group;
 		jsonais[i].out.setGroupOut(mask);
 		models[i]->Output().out.setGroupOut(mask);
 		models[i]->OutputADSB().out.setGroupOut(mask);

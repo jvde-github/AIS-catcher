@@ -118,6 +118,14 @@ namespace IO
 				Util::Parse::Split(arg, ',', zones);
 				return true;
 			}
+			else if (option == "GROUPS_IN")
+			{
+				uint64_t g = Util::Parse::Integer(arg);
+				StreamIn<AIS::Message>::setGroupsIn(g);
+				StreamIn<JSON::JSON>::setGroupsIn(g);
+				StreamIn<AIS::GPS>::setGroupsIn(g);
+				return true;
+			}
 			return filter.SetOption(option, arg);
 		}
 	};

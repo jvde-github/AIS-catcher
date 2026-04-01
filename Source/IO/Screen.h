@@ -45,13 +45,7 @@ namespace IO
 		{
 			Util::Convert::toUpper(option);
 
-			if (option == "GROUPS_IN")
-			{
-				StreamIn<AIS::Message>::setGroupsIn(Util::Parse::Integer(arg));
-				StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
-				StreamIn<AIS::GPS>::setGroupsIn(Util::Parse::Integer(arg));
-			}
-			else if (option == "INCLUDE_SAMPLE_START")
+			if (option == "INCLUDE_SAMPLE_START")
 			{
 				include_sample_start = Util::Parse::Switch(arg);
 			}

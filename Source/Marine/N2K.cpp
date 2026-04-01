@@ -218,7 +218,7 @@ namespace AIS
 		channel = N2kMsg.GetByte(idx) & 0x1f;
 
 		hour = (int)nSeconds / 3600;
-		minute = (int)nSeconds % 60;
+		minute = ((int)nSeconds % 3600) / 60;
 
 		time_t e = 24 * 3600 * (long int)nDays;
 		struct tm *timeInfo = gmtime(&e);
@@ -740,7 +740,7 @@ namespace AIS
 		U(msg, bow_stern - to_bow, 141, 9);
 		U(msg, port_starboard - to_starboard, 150, 6);
 		U(msg, to_starboard, 156, 6);
-		U(msg, mothership_mmsi, 162, 6);
+		U(msg, mothership_mmsi, 162, 30);
 		msg.Stamp();
 		msg.setChannel(channel ? 'B' : 'A');
 		msg.buildNMEA(tag);

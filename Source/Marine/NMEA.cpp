@@ -536,6 +536,7 @@ namespace AIS
 						double ts = p.Get().getFloat();
 						toa = (int64_t)std::llround(ts * 1000000.0);
 					}
+					break;
 					case AIS::KEY_STATION_ID:
 						thisstation = p.Get().getInt();
 						break;

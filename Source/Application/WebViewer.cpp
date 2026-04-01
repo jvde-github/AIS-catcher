@@ -39,15 +39,15 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			{
 				std::string nmea = s;
 
-				int end = nmea.rfind(',');
+				std::string::size_type end = nmea.rfind(',');
 				if (end == std::string::npos)
 					continue;
 
-				int start = nmea.rfind(',', end - 1);
+				std::string::size_type start = nmea.rfind(',', end - 1);
 				if (start == std::string::npos)
 					continue;
 
-				int len = end - start - 1;
+				std::string::size_type len = end - start - 1;
 
 				if (len == 0)
 					continue;
@@ -188,7 +188,7 @@ bool WebViewer::parseMBTilesURL(const std::string &url, std::string &layerID, in
 	std::string segment;
 	std::vector<std::string> segments = parsePath(url);
 
-	if (segments.size() != 5 && segments[0] != "tiles")
+	if (segments.size() != 5 || segments[0] != "tiles")
 		return false;
 
 	try
@@ -240,21 +240,21 @@ bool WebViewer::Save()
 {
 	try
 	{
-		std::ofstream infile(backup_filename, std::ios::binary);
+		std::ofstream outfile(backup_filename, std::ios::binary);
 
-		if (!infile.is_open())
+		if (!outfile.is_open())
 		{
 			Error() << "Server: cannot open backup file for writing: "
 					<< backup_filename << " (" << std::strerror(errno) << ")";
 			return false;
 		}
 
-		infile.exceptions(std::ios::failbit | std::ios::badbit); // will throw on write failure
+		outfile.exceptions(std::ios::failbit | std::ios::badbit); // will throw on write failure
 
-		if (!states[0]->save(infile))
+		if (!states[0]->save(outfile))
 			return false;
 
-		infile.close();
+		outfile.close();
 	}
 	catch (const std::ios_base::failure &e)
 	{
@@ -292,6 +292,13 @@ bool WebViewer::Load()
 	{
 		std::ifstream infile(backup_filename, std::ios::binary);
 
+		if (!infile.is_open())
+		{
+			Warning() << "Server: cannot open backup file for reading: "
+					  << backup_filename << " (" << std::strerror(errno) << ")";
+			return false;
+		}
+
 		if (!states[0]->load(infile))
 		{
 			Warning() << "Server: Could not load statistics from backup";
@@ -313,9 +320,11 @@ void WebViewer::addPlugin(const std::string &arg)
 {
 	int version = 0;
 	std::string author, description;
+	std::string safe_arg;
+	JSON::StringBuilder::stringify(arg, safe_arg); // produces a quoted, escaped JS string literal
 
-	plugins += "console.log('plugin:" + arg + "');";
-	plugins += "plugins += 'JS: " + arg + "\\n';";
+	plugins += "console.log('plugin:' + " + safe_arg + ");";
+	plugins += "plugins += 'JS: ' + " + safe_arg + " + '\\n';";
 	plugins += "\n\n//=============\n//" + arg + "\n\n";
 	try
 	{
@@ -358,7 +367,9 @@ void WebViewer::addPlugin(const std::string &arg)
 
 		plugins += "// FAILED\n";
 		Warning() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
-		plugins += "server_message += \"Plugin error (" + arg + ") " + std::string(e.what()) + "\\n\"\n";
+		std::string safe_err;
+		JSON::StringBuilder::stringify(std::string(e.what()), safe_err);
+		plugins += "server_message += 'Plugin error: ' + " + safe_arg + " + ': ' + " + safe_err + " + '\\n';\n";
 	}
 }
 
@@ -612,6 +623,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 						per->setDevice(device);
 
 					states[0]->appendDevice(device, newline);
+				rec_details = true;
 				}
 
 				states[0]->model_name += r.Model(j)->getName() + newline;
@@ -836,6 +848,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		}
 
 		std::string content;
+		content.reserve(2048);
 
 		content += "{" + s->toCountersJSON() + ",";
 		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
@@ -1342,7 +1355,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 		for (auto f : files_ss)
 			Set("STYLE", f);
 
-		if (!files_ss.size() && !files_js.size())
+		if (files_ss.empty() && files_js.empty())
 			Info() << "Server: no plugin files found in directory.";
 	}
 	else if (option == "ABOUT")

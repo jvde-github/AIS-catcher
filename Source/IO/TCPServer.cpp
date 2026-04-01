@@ -239,7 +239,7 @@ namespace IO
 		}
 
 		if (bytes < length)
-			out.insert(out.end(), data + bytes, data + length - bytes);
+			out.insert(out.end(), data + bytes, data + length);
 
 		return true;
 	}
@@ -301,7 +301,7 @@ namespace IO
 		if (conn_socket == SOCKET_ERROR)
 		{
 			if (WSAGetLastError() != WSAEWOULDBLOCK)
-				Error() << "TCP listener: error accepting connection. " << strerror(WSAGetLastError());
+				Error() << "TCP listener: error accepting connection. Error code: " << WSAGetLastError();
 			return;
 		}
 #else
@@ -440,6 +440,7 @@ namespace IO
 
 	bool TCPServer::SendAll(const std::string &m)
 	{
+		bool success = true;
 		for (auto &c : client)
 		{
 			if (c.isConnected())
@@ -448,18 +449,18 @@ namespace IO
 				{
 					c.Close();
 					Error() << "TCP listener: client not reading, close connection.";
-					return false;
+					success = false;
 				}
-
-				if (pstats)
+				else if (pstats)
 					pstats->bytes_out += m.length();
 			}
 		}
-		return true;
+		return success;
 	}
 
 	bool TCPServer::SendAllDirect(const std::string &m)
 	{
+		bool success = true;
 		for (auto &c : client)
 		{
 			if (c.isConnected())
@@ -468,14 +469,13 @@ namespace IO
 				{
 					c.Close();
 					Error() << "TCP listener: client not reading, close connection.";
-					return false;
+					success = false;
 				}
-
-				if (pstats)
+				else if (pstats)
 					pstats->bytes_out += m.length();
 			}
 		}
-		return true;
+		return success;
 	}
 
 	bool TCPServer::setNonBlock(SOCKET s)
@@ -483,8 +483,10 @@ namespace IO
 
 #ifndef _WIN32
 		int r = fcntl(s, F_GETFL, 0);
-		r = fcntl(s, F_SETFL, r | O_NONBLOCK);
+		if (r == -1)
+			return false;
 
+		r = fcntl(s, F_SETFL, r | O_NONBLOCK);
 		if (r == -1)
 			return false;
 #else
@@ -541,7 +543,11 @@ namespace IO
 		}
 
 		if (listen(sock, 511) < 0)
+		{
+			closesocket(sock);
+			sock = -1;
 			return false;
+		}
 
 		for (auto &c : client)
 		{

@@ -246,7 +246,7 @@ void DB::getShipJSON(const Ship &ship, std::string &content, long int delta_time
 	content += "\"country\":\"" + std::string(ship.country_code) + "\",";
 	content += "\"status\":" + std::to_string(ship.status) + ",";
 
-	content += "\"draught\":" + ((ship.to_port == DRAUGHT_UNDEFINED) ? null_str : std::to_string(ship.draught)) + ",";
+	content += "\"draught\":" + ((ship.draught == DRAUGHT_UNDEFINED) ? null_str : std::to_string(ship.draught)) + ",";
 
 	content += "\"eta_month\":" + ((ship.month == ETA_MONTH_UNDEFINED) ? null_str : std::to_string(ship.month)) + ",";
 	content += "\"eta_day\":" + ((ship.day == ETA_DAY_UNDEFINED) ? null_str : std::to_string(ship.day)) + ",";
@@ -992,12 +992,6 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 			binmsg.lon = loc_lon;
 
 			// switch off approximation of mmsi location
-			if (false && !isValidCoord(ship.lat, ship.lon))
-			{
-				position_updated = true;
-				ship.lat = loc_lat;
-				ship.lon = loc_lon;
-			}
 		}
 		binmsg.timestamp = msg->getRxTimeUnix();
 		binaryMsgIndex = (binaryMsgIndex + 1) % MAX_BINARY_MESSAGES;
