@@ -7733,14 +7733,15 @@ let rainviewerClouds = new ol.layer.Tile({
 async function refreshRainviewerLayers() {
     try {
         // Get latest timestamps from RainViewer API
-        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json?_=" + Date.now());
         const data = await response.json();
 
         // Update radar layer
         const latestRadar = data.radar.past[data.radar.past.length - 1];
         rainviewerRadar.setSource(new ol.source.XYZ({
-            url: `https://tilecache.rainviewer.com/v2/radar/${latestRadar.time}/512/{z}/{x}/{y}/6/1_1.png`,
+            url: `https://tilecache.rainviewer.com${latestRadar.path}/512/{z}/{x}/{y}/6/1_1.png`,
             attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>',
+            crossOrigin: 'anonymous',
             maxZoom: 7,
         }));
 
@@ -7750,6 +7751,7 @@ async function refreshRainviewerLayers() {
             rainviewerClouds.setSource(new ol.source.XYZ({
                 url: `https://tilecache.rainviewer.com/${latestClouds.path}/512/{z}/{x}/{y}/0/0_0.png`,
                 attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>',
+                crossOrigin: 'anonymous',
                 maxZoom: 7,
             }));
         }
