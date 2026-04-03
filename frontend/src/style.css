@@ -658,7 +658,7 @@ td {
     width: auto;
     z-index: 100;
     font-size: 12px;
-    background-color: rgba(0, 0, 0, 0.3) !important;
+    background-color: rgba(0, 0, 0, 0.75) !important;
     color: white !important;
     text-align: center;
     border-radius: 4px;
