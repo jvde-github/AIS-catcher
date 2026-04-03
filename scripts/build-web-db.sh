@@ -76,7 +76,7 @@ process_file() {
     {
         echo "// File: $relative_path"
         echo "static const unsigned char data_${identifier}[] = {"
-        xxd -i < "$TEMP_FILE" | grep -v "unsigned" | sed '$d'
+        xxd -i < "$TEMP_FILE"
         echo "};"
         echo "static const size_t size_${identifier} = sizeof(data_${identifier});"
         echo
