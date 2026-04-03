@@ -647,12 +647,6 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 					   cfg_msg_save, cfg_use_GPS, cfg_own_mmsi,
 					   cfg_time_history, cfg_cutoff, filter);
 
-	if (states.size() > 1)
-	{
-		Info() << "Server: tracking " << states.size() - 1 << " receiver(s) with separate states:";
-		for (int i = 0; i < (int)states.size(); i++)
-			Info() << "  [" << i << "] " << states[i]->label;
-	}
 }
 
 void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Device &device)

@@ -1465,45 +1465,18 @@ td {
     display: none;
 }
 
-/* Improved Binary Message Tooltip Styling */
+/* Meteo Tooltip Styling */
 .meteo-tooltip {
-    margin-top: 5px;
-    padding: 8px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-radius: 4px;
-    max-width: 300px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    margin-top: 0;
+    padding: 4px 8px 6px;
+    max-width: 280px;
+    color: inherit;
+    border-top: 1px solid currentColor;
+    border-top-color: rgba(128, 128, 128, 0.3);
+}
+
+#hover-info .meteo-tooltip {
     color: rgba(255, 255, 255, 0.95);
-    /* Ensure text is always visible on dark background */
-}
-
-.meteo-tooltip h4 {
-    margin: 0 0 8px 0;
-    color: #FFA500;
-    /* Orange always works well on dark backgrounds */
-    font-size: 0.9em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding-bottom: 4px;
-}
-
-.meteo-section {
-    margin-bottom: 4px;
-    font-size: 0.85em;
-    display: flex;
-    justify-content: space-between;
-}
-
-.meteo-label {
-    color: rgba(255, 255, 255, 0.8);
-    /* Light text for dark background */
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-.meteo-value {
-    color: rgba(255, 255, 255, 0.95);
-    /* Brighter text for values */
-    font-weight: normal;
 }
 
 /* Improved Dialog Box Styling - Preserving Original Structure */

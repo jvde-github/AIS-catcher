@@ -1042,6 +1042,7 @@ function showBinaryMessageDialog(featureOrMmsi) {
     }
 
     showDialog(title, content);
+    document.getElementById("dialog-box").style.maxWidth = "500px";
 }
 
 function getBinaryMessageList(messages) {
@@ -1281,6 +1282,7 @@ function showDialog(title, message) {
 function closeDialog() {
     var dialogBox = document.getElementById("dialog-box");
     dialogBox.classList.add("hidden");
+    dialogBox.style.maxWidth = "";
 }
 
 function showNotification(message) {
@@ -4345,7 +4347,7 @@ function getTooltipContent(ship) {
         );
 
         if (meteoMessages.length > 0) {
-            content += getBinaryMessageContent(meteoMessages, true);
+            content += getBinaryMessageContent(meteoMessages);
         }
     }
 
@@ -4576,143 +4578,94 @@ function getTooltipContentBinary(mmsiOrBinary) {
     return getBinaryMessageContent(mmsiOrBinary);
 }
 
-function getBinaryMessageContent(binary, showMultiple = false) {
+function getBinaryMessageContent(binary) {
     const messages = Array.isArray(binary) ? binary : [binary];
 
     if (messages.length === 0) return '';
 
     messages.sort((a, b) => b.timestamp - a.timestamp);
 
-    const messagesToShow = showMultiple ? Math.min(messages.length, 3) : 1;
+    const msg = messages[0].message;
 
-    let content = '<div class="meteo-tooltip" style="max-width: 320px;">';
+    const hasHydroData =
+        ('watercurrent' in msg && msg.watercurrent != null) ||
+        ('currentspeed' in msg && msg.currentspeed != null) ||
+        ('currentdir' in msg && msg.currentdir != null) ||
+        ('watertemp' in msg && msg.watertemp != null) ||
+        ('waterlevel' in msg && msg.waterlevel != null);
 
-    for (let i = 0; i < messagesToShow; i++) {
-        const msg = messages[i].message;
+    let content = '<div class="meteo-tooltip">';
+    content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">`;
+    content += `<span style="font-size: 11px;">${messages[0].formattedTime} - ${hasHydroData ? 'Meteo & Hydro' : 'Meteo'}</span>`;
+    if (messages.length > 1) {
+        content += `<span style="font-size: 10px; opacity: 0.5; font-style: italic;">+${messages.length - 1} more</span>`;
+    }
+    content += '</div>';
 
-        if (i > 0) {
-            content += '<hr style="margin: 10px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.3);">';
-        }
+    const row = (label, value) =>
+        `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
+        `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
+        `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
 
-        // Determine if it's just meteo or also has hydro data
-        const hasHydroData =
-            ('watercurrent' in msg && msg.watercurrent !== undefined && msg.watercurrent !== null) ||
-            ('currentspeed' in msg && msg.currentspeed !== undefined && msg.currentspeed !== null) ||
-            ('currentdir' in msg && msg.currentdir !== undefined && msg.currentdir !== null) ||
-            ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) ||
-            ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null);
-
-        content += `<h4 style="margin: 5px 0; font-size: 12px; color: #eee;">${messages[i].formattedTime} - ${hasHydroData ? 'Meteo & Hydro' : 'Meteo'}`;
-        if (messagesToShow > 1) {
-            content += ` (${i + 1}/${messagesToShow})`;
-        }
-        content += '</h4>';
-
-        content += '<div style="display: grid; grid-template-columns: 1fr 1fr; grid-gap: 5px;">';
-
-        // Wind data
-        if ('wspeed' in msg && msg.wspeed !== undefined && msg.wspeed !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Wind:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.wspeed.toFixed(1) + ' knots';
-            if ('wdir' in msg && msg.wdir !== undefined && msg.wdir !== null && msg.wdir !== 360) {
-                content += ' from ' + msg.wdir + '&deg';
-            }
-            content += '</div></div>';
-        }
-
-        // Air temperature
-        if ('airtemp' in msg && msg.airtemp !== undefined && msg.airtemp !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Air Temp:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.airtemp.toFixed(1) + '&deg C</div>';
-            content += '</div>';
-        }
-
-        // Air pressure
-        if ('pressure' in msg && msg.pressure !== undefined && msg.pressure !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Pressure:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.pressure.toFixed(1) + ' hPa';
-            if ('pressuretend' in msg && msg.pressuretend !== undefined && msg.pressuretend !== null) {
-                content += ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')';
-            }
-            content += '</div></div>';
-        }
-
-        // Water current speed and direction
-        const currentSpeed = msg.watercurrent || msg.currentspeed;
-        const currentDir = msg.currentdir || msg.currentdirection;
-
-        if (currentSpeed !== undefined && currentSpeed !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Current:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + currentSpeed.toFixed(1) + ' knots';
-            if (currentDir !== undefined && currentDir !== null && currentDir !== 360) {
-                content += ' to ' + currentDir + '&deg';
-            }
-            content += '</div></div>';
-        }
-
-        // Water level
-        if ('waterlevel' in msg && msg.waterlevel !== undefined && msg.waterlevel !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Water Level:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.waterlevel.toFixed(2) + ' m</div>';
-            content += '</div>';
-        }
-
-        // Water temperature
-        if ('watertemp' in msg && msg.watertemp !== undefined && msg.watertemp !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Water Temp:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.watertemp.toFixed(1) + '&deg C</div>';
-            content += '</div>';
-        }
-
-        // Wave data
-        if ('waveheight' in msg && msg.waveheight !== undefined && msg.waveheight !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Wave:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.waveheight.toFixed(1) + ' m';
-            if ('wavedir' in msg && msg.wavedir !== undefined && msg.wavedir !== null && msg.wavedir !== 360) {
-                content += ' from ' + msg.wavedir + '&deg';
-            }
-            if ('waveperiod' in msg && msg.waveperiod !== undefined && msg.waveperiod !== null) {
-                content += ', ' + msg.waveperiod + 's';
-            }
-            content += '</div></div>';
-        }
-
-        // Swell data
-        if ('swellheight' in msg && msg.swellheight !== undefined && msg.swellheight !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Swell:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.swellheight.toFixed(1) + ' m';
-            if ('swelldir' in msg && msg.swelldir !== undefined && msg.swelldir !== null && msg.swelldir !== 360) {
-                content += ' from ' + msg.swelldir + '&deg';
-            }
-            if ('swellperiod' in msg && msg.swellperiod !== undefined && msg.swellperiod !== null) {
-                content += ', ' + msg.swellperiod + 's';
-            }
-            content += '</div></div>';
-        }
-
-        // Visibility
-        if ('visibility' in msg && msg.visibility !== undefined && msg.visibility !== null) {
-            content += '<div style="display: flex; justify-content: space-between; padding: 3px;">';
-            content += '<div style="font-size: 11px; color: #ccc;">Visibility:</div>';
-            content += '<div style="font-size: 11px; font-weight: bold;">' + msg.visibility.toFixed(1) + ' nm</div>';
-            content += '</div>';
-        }
-
-        // End grid
-        content += '</div>';
+    // Wind
+    if ('wspeed' in msg && msg.wspeed != null) {
+        let val = msg.wspeed.toFixed(1) + ' kts';
+        if ('wdir' in msg && msg.wdir != null && msg.wdir !== 360) val += ' / ' + msg.wdir + '&deg;';
+        content += row('Wind', val);
     }
 
-    // If there are more messages than we show
-    if (messages.length > messagesToShow) {
-        content += `<div style="text-align: center; font-size: 10px; margin-top: 5px; font-style: italic; color: #ccc;"></div>`;
+    // Air temperature
+    if ('airtemp' in msg && msg.airtemp != null) {
+        content += row('Air', msg.airtemp.toFixed(1) + '&deg;C');
+    }
+
+    // Pressure
+    if ('pressure' in msg && msg.pressure != null) {
+        let val = msg.pressure.toFixed(1) + ' hPa';
+        if ('pressuretend' in msg && msg.pressuretend != null) {
+            val += ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')';
+        }
+        content += row('Pressure', val);
+    }
+
+    // Water current
+    const currentSpeed = msg.watercurrent || msg.currentspeed;
+    const currentDir = msg.currentdir || msg.currentdirection;
+    if (currentSpeed != null) {
+        let val = currentSpeed.toFixed(1) + ' kts';
+        if (currentDir != null && currentDir !== 360) val += ' / ' + currentDir + '&deg;';
+        content += row('Current', val);
+    }
+
+    // Water level
+    if ('waterlevel' in msg && msg.waterlevel != null) {
+        content += row('Water Level', msg.waterlevel.toFixed(2) + ' m');
+    }
+
+    // Water temperature
+    if ('watertemp' in msg && msg.watertemp != null) {
+        content += row('Water', msg.watertemp.toFixed(1) + '&deg;C');
+    }
+
+    // Waves
+    if ('waveheight' in msg && msg.waveheight != null) {
+        let val = msg.waveheight.toFixed(1) + ' m';
+        if ('wavedir' in msg && msg.wavedir != null && msg.wavedir !== 360) val += ' / ' + msg.wavedir + '&deg;';
+        if ('waveperiod' in msg && msg.waveperiod != null) val += ', ' + msg.waveperiod + 's';
+        content += row('Wave', val);
+    }
+
+    // Swell
+    if ('swellheight' in msg && msg.swellheight != null) {
+        let val = msg.swellheight.toFixed(1) + ' m';
+        if ('swelldir' in msg && msg.swelldir != null && msg.swelldir !== 360) val += ' / ' + msg.swelldir + '&deg;';
+        if ('swellperiod' in msg && msg.swellperiod != null) val += ', ' + msg.swellperiod + 's';
+        content += row('Swell', val);
+    }
+
+    // Visibility
+    if ('visibility' in msg && msg.visibility != null) {
+        content += row('Visibility', msg.visibility.toFixed(1) + ' nm');
     }
 
     content += '</div>';
@@ -4873,7 +4826,7 @@ const handlePointerMove = function (pixel, target) {
             );
 
             if (meteoMessages.length > 0) {
-                tooltipContent += getBinaryMessageContent(meteoMessages, true);
+                tooltipContent += getBinaryMessageContent(meteoMessages);
             }
 
             startHover('tooltip', tooltipContent, pixel, feature);
