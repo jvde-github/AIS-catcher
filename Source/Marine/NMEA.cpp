@@ -30,6 +30,7 @@ namespace AIS
 	{
 		state = ParseState::IDLE;
 		line.clear();
+		hasStar = false;
 		prev = c;
 	}
 
@@ -194,13 +195,14 @@ namespace AIS
 	void NMEA::split(const std::string &s)
 	{
 		parts.clear();
-		std::stringstream ss(s);
-		std::string p;
-		while (ss.good())
+		size_t start = 0;
+		size_t pos;
+		while ((pos = s.find(',', start)) != std::string::npos)
 		{
-			getline(ss, p, ',');
-			parts.push_back(p);
+			parts.emplace_back(s, start, pos - start);
+			start = pos + 1;
 		}
+		parts.emplace_back(s, start);
 	}
 
 	std::string NMEA::trim(const std::string &s)
@@ -945,8 +947,10 @@ namespace AIS
 
 					bool newline = (state == ParseState::BINARY) ? (c == '\n') : (c == '\r' || c == '\n' || c == '\t' || c == '\0');
 
-					if (!newline)
+					if (!newline) {
 						line += c;
+						if (c == '*') hasStar = true;
+					}
 					prev = c;
 					if (state == ParseState::JSON)
 					{
@@ -974,7 +978,7 @@ namespace AIS
 					}
 					else if (state == ParseState::NMEA)
 					{
-						if (isCompleteNMEA(line, newline))
+						if ((hasStar || newline) && isCompleteNMEA(line, newline))
 						{
 							std::string error = "unspecified error";
 							tag.clear();
@@ -1017,7 +1021,7 @@ namespace AIS
 						// Find NMEA part after tag block to check for completion
 						size_t tagEnd = line.find('\\', 1);
 						std::string nmeaPart = (tagEnd != std::string::npos) ? line.substr(tagEnd + 1) : "";
-						if (isCompleteNMEA(nmeaPart, newline))
+						if ((hasStar || newline) && isCompleteNMEA(nmeaPart, newline))
 						{
 							// Parse complete tag block line
 							std::string error;

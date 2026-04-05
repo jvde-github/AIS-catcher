@@ -78,6 +78,7 @@ namespace AIS
 		char prev = '\n';
 		ParseState state = ParseState::IDLE;
 		std::string line;
+		bool hasStar = false;
 		int count;
 		int own_mmsi = -1;
 
