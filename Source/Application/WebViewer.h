@@ -19,8 +19,12 @@
 #include <iostream>
 #include <string.h>
 #include <thread>
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <vector>
+#include <memory>
+#include <fstream>
 
 #include "AIS-catcher.h"
 
@@ -207,7 +211,7 @@ class BackupManager
 	std::atomic<bool> running{false};
 	int interval = -1;
 	std::string filename;
-	std::function<bool()> save_fn;
+	ReceiverTracker *tracker = nullptr;
 
 	void run();
 
@@ -215,10 +219,12 @@ public:
 	void setInterval(int minutes) { interval = minutes; }
 	void setFilename(const std::string &f) { filename = f; }
 	const std::string &getFilename() const { return filename; }
+	void setTracker(ReceiverTracker *t) { tracker = t; }
 
-	void start(std::function<bool()> save);
+	void start();
 	void stop();
 	bool save();
+	bool load();
 
 	~BackupManager() { stop(); }
 };
@@ -256,7 +262,7 @@ private:
 
 	SSEStreamer sse_streamer;
 	WebViewerLogger logger;
-	PromotheusCounter dataPrometheus;
+	PrometheusCounter dataPrometheus;
 	ByteCounter raw_counter;
 
 	std::time_t time_start;
@@ -265,8 +271,6 @@ private:
 
 	BackupManager backup;
 
-	bool Load();
-	bool Save();
 	void Clear();
 
 	AIS::Filter filter;
@@ -275,6 +279,23 @@ private:
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
 	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
+
+	// Route table
+	typedef std::string (*RouteHandler)(WebViewer *, ReceiverTracker *, const std::string &);
+
+	struct Route {
+		const char *path;
+		bool WebViewer::*flag;
+		const char *content_type;
+		RouteHandler handler;
+	};
+
+	static const Route routes[];
+	static int parseMMSI(const std::string &query);
+
+	// JSON builders for complex endpoints
+	std::string buildStatJSON(ReceiverTracker *s);
+	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
 
 	// NMEA decoder utility
 	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);

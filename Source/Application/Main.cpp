@@ -260,7 +260,7 @@ static void Assert(bool b, std::string &context, std::string msg = "")
 
 static void run(RunState &state)
 {
-	extern IO::OutputMessage *commm_feed;
+	extern IO::OutputMessage *comm_feed;
 
 	// -------------
 	// set up the receiver and open the device
@@ -290,7 +290,7 @@ static void run(RunState &state)
 	}
 
 	// for community feed, restrict to local SDR hardware only
-	if (commm_feed && !state.xshare_defined)
+	if (comm_feed && !state.xshare_defined)
 	{
 		uint64_t live_groups = 0;
 		for (const auto &r : state.receivers)
@@ -302,7 +302,7 @@ static void run(RunState &state)
 				live_groups |= r->getGroupMask();
 		}
 
-		commm_feed->Set("GROUPS_IN", std::to_string(live_groups));
+		comm_feed->Set("GROUPS_IN", std::to_string(live_groups));
 	}
 
 	// Resolve zone-based output filtering: compute GROUPS_IN from zone overlap
@@ -490,7 +490,7 @@ static void run(RunState &state)
 
 static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb)
 {
-	extern IO::OutputMessage *commm_feed;
+	extern IO::OutputMessage *comm_feed;
 
 	const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
 	int ptr = 1;
@@ -828,16 +828,16 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 					break;
 				}
 
-				if (!commm_feed)
+				if (!comm_feed)
 				{
 					state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-					commm_feed = state.msg.back().get();
-					commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC", "Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
-					commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
+					comm_feed = state.msg.back().get();
+					comm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC", "Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+					comm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
 				}
 
-				if (count >= 1 && commm_feed)
-					commm_feed->Set("UUID", arg1);
+				if (count >= 1 && comm_feed)
+					comm_feed->Set("UUID", arg1);
 			}
 			break;
 		case 'H':
@@ -974,12 +974,12 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 	{
 		Warning() << "Hint: Use '-X on' to share with aiscatcher.org community (enables community overlay) or '-X off' to disable. Currently ON by default.";
 
-		if (!commm_feed)
+		if (!comm_feed)
 		{
 			state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-			commm_feed = state.msg.back().get();
-			commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC", "Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
-			commm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
+			comm_feed = state.msg.back().get();
+			comm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC", "Community Feed").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+			comm_feed->Set("MSGFORMAT", "COMMUNITY_HUB");
 		}
 	}
 

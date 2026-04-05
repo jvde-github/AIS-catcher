@@ -21,7 +21,7 @@
 #include "JSONAIS.h"
 #include "Helper.h"
 
-IO::OutputMessage *commm_feed = nullptr;
+IO::OutputMessage *comm_feed = nullptr;
 
 // --- PluginManager ---
 
@@ -401,84 +401,11 @@ void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool 
 	}
 }
 
-bool WebViewer::Save()
-{
-	try
-	{
-		std::ofstream outfile(backup.getFilename(), std::ios::binary);
-
-		if (!outfile.is_open())
-		{
-			Error() << "Server: cannot open backup file for writing: "
-					<< backup.getFilename() << " (" << std::strerror(errno) << ")";
-			return false;
-		}
-
-		outfile.exceptions(std::ios::failbit | std::ios::badbit); // will throw on write failure
-
-		if (!states[0]->save(outfile))
-			return false;
-
-		outfile.close();
-	}
-	catch (const std::ios_base::failure &e)
-	{
-		Error() << "Server: write error on " << backup.getFilename() << " (" << std::strerror(errno) << ")";
-		return false;
-	}
-	catch (const std::exception &e)
-	{
-		Error() << e.what();
-		return false;
-	}
-	catch (...)
-	{
-		Error() << "Server: unknown error writing " << backup.getFilename();
-		return false;
-	}
-	return true;
-}
-
 void WebViewer::Clear()
 {
 	if (states.empty())
 		return;
 	states[0]->clear();
-}
-
-bool WebViewer::Load()
-{
-
-	if (backup.getFilename().empty())
-		return false;
-
-	Info() << "Server: reading statistics from " << backup.getFilename();
-	try
-	{
-		std::ifstream infile(backup.getFilename(), std::ios::binary);
-
-		if (!infile.is_open())
-		{
-			Warning() << "Server: cannot open backup file for reading: "
-					  << backup.getFilename() << " (" << std::strerror(errno) << ")";
-			return false;
-		}
-
-		if (!states[0]->load(infile))
-		{
-			Warning() << "Server: Could not load statistics from backup";
-			return false;
-		}
-
-		infile.close();
-	}
-	catch (const std::exception &e)
-	{
-		Error() << e.what();
-		return false;
-	}
-
-	return true;
 }
 
 // --- BackupManager ---
@@ -492,16 +419,16 @@ void BackupManager::run()
 		std::unique_lock<std::mutex> lock(mtx);
 		cv.wait_for(lock, std::chrono::minutes(interval), [this] { return !running.load(); });
 
-		if (running && !save_fn())
-			Error() << "Server failed to write backup: " << filename;
+		if (running && !save())
+			Error() << "Server: failed to write backup: " << filename;
 	}
 
 	Info() << "Server: stopping backup service.";
 }
 
-void BackupManager::start(std::function<bool()> save)
+void BackupManager::start()
 {
-	if (interval <= 0)
+	if (interval <= 0 || !tracker)
 		return;
 
 	if (filename.empty())
@@ -510,7 +437,6 @@ void BackupManager::start(std::function<bool()> save)
 		return;
 	}
 
-	save_fn = save;
 	running = true;
 	thread = std::thread(&BackupManager::run, this);
 }
@@ -528,9 +454,77 @@ void BackupManager::stop()
 
 bool BackupManager::save()
 {
-	if (filename.empty())
+	if (filename.empty() || !tracker)
 		return false;
-	return save_fn ? save_fn() : false;
+
+	try
+	{
+		std::ofstream outfile(filename, std::ios::binary);
+
+		if (!outfile.is_open())
+		{
+			Error() << "Server: cannot open backup file for writing: "
+					<< filename << " (" << std::strerror(errno) << ")";
+			return false;
+		}
+
+		outfile.exceptions(std::ios::failbit | std::ios::badbit);
+
+		if (!tracker->save(outfile))
+			return false;
+
+		outfile.close();
+	}
+	catch (const std::ios_base::failure &e)
+	{
+		Error() << "Server: write error on " << filename << " (" << std::strerror(errno) << ")";
+		return false;
+	}
+	catch (const std::exception &e)
+	{
+		Error() << e.what();
+		return false;
+	}
+	catch (...)
+	{
+		Error() << "Server: unknown error writing " << filename;
+		return false;
+	}
+	return true;
+}
+
+bool BackupManager::load()
+{
+	if (filename.empty() || !tracker)
+		return false;
+
+	Info() << "Server: reading statistics from " << filename;
+	try
+	{
+		std::ifstream infile(filename, std::ios::binary);
+
+		if (!infile.is_open())
+		{
+			Warning() << "Server: cannot open backup file for reading: "
+					  << filename << " (" << std::strerror(errno) << ")";
+			return false;
+		}
+
+		if (!tracker->load(infile))
+		{
+			Warning() << "Server: Could not load statistics from backup";
+			return false;
+		}
+
+		infile.close();
+	}
+	catch (const std::exception &e)
+	{
+		Error() << e.what();
+		return false;
+	}
+
+	return true;
 }
 
 void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
@@ -593,37 +587,12 @@ void ReceiverTracker::reset()
 
 bool ReceiverTracker::save(std::ofstream &f)
 {
-	if (!counter.Save(f))
-		return false;
-	if (!hist_second.Save(f))
-		return false;
-	if (!hist_minute.Save(f))
-		return false;
-	if (!hist_hour.Save(f))
-		return false;
-	if (!hist_day.Save(f))
-		return false;
-	if (!ships.Save(f))
-		return false;
-	return true;
+	return counter.Save(f) && hist_second.Save(f) && hist_minute.Save(f) && hist_hour.Save(f) && hist_day.Save(f) && ships.Save(f);
 }
 
 bool ReceiverTracker::load(std::ifstream &f)
 {
-	if (!counter.Load(f))
-		return false;
-	if (!hist_second.Load(f))
-		return false;
-	if (!hist_minute.Load(f))
-		return false;
-	if (!hist_hour.Load(f))
-		return false;
-	if (!hist_day.Load(f))
-		return false;
-	if (f.peek() != EOF)
-		if (!ships.Load(f))
-			return false;
-	return true;
+	return counter.Load(f) && hist_second.Load(f) && hist_minute.Load(f) && hist_hour.Load(f) && hist_day.Load(f) && (f.peek() == EOF || ships.Load(f));
 }
 
 std::string ReceiverTracker::toHistoryJSON()
@@ -811,9 +780,11 @@ void WebViewer::start()
 	for (auto &s : states)
 		s->setup();
 
+	backup.setTracker(states[0].get());
+
 	if (backup.getFilename().empty())
 		Clear();
-	else if (!Load())
+	else if (!backup.load())
 	{
 		Error() << "Statistics - cannot read file.";
 		Clear();
@@ -861,7 +832,7 @@ void WebViewer::start()
 
 	run = true;
 
-	backup.start([this]() { return Save(); });
+	backup.start();
 }
 
 void WebViewer::close()
@@ -869,15 +840,209 @@ void WebViewer::close()
 	run = false;
 	backup.stop();
 
-	if (!backup.getFilename().empty() && !Save())
+	if (!backup.getFilename().empty() && !backup.save())
 	{
 		Error() << "Statistics - cannot write file: " << backup.getFilename();
 	}
 }
 
+// --- Route handler functions ---
+
+int WebViewer::parseMMSI(const std::string &query)
+{
+	try
+	{
+		int mmsi = std::stoi(query);
+		return (mmsi >= 1 && mmsi <= 999999999) ? mmsi : -1;
+	}
+	catch (...)
+	{
+		return -1;
+	}
+}
+
+std::string WebViewer::buildStatJSON(ReceiverTracker *s)
+{
+	std::string content;
+	content.reserve(2048);
+
+	content += "{" + s->toCountersJSON() + ",";
+	content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
+	content += "\"sharing\":" + std::string(comm_feed ? "true" : "false") + ",";
+	if (tracking.latlon_share && tracking.lat != LAT_UNDEFINED && tracking.lon != LON_UNDEFINED)
+		content += "\"sharing_link\":\"https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(tracking.lat) + "&lon=" + std::to_string(tracking.lon) + "\",";
+	else
+		content += "\"sharing_link\":\"https://www.aiscatcher.org\",";
+
+	content += "\"station\":" + station + ",";
+	content += "\"station_link\":" + station_link + ",";
+	content += "\"sample_rate\":\"" + s->sample_rate + "\",";
+	content += "\"msg_rate\":" + std::to_string(s->getMsgRate()) + ",";
+	content += "\"vessel_count\":" + std::to_string(s->getCount()) + ",";
+	content += "\"vessel_max\":" + std::to_string(s->getMaxCount()) + ",";
+	content += "\"product\":\"" + s->product + "\",";
+	content += "\"vendor\":\"" + s->vendor + "\",";
+	content += "\"serial\":\"" + s->serial + "\",";
+	content += "\"model\":\"" + s->model_name + "\",";
+	content += "\"build_date\":\"" + std::string(__DATE__) + "\",";
+	content += "\"build_version\":\"" + std::string(VERSION) + "\",";
+	content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",";
+	content += "\"run_time\":\"" + std::to_string((long int)time(nullptr) - (long int)time_start) + "\",";
+	content += "\"memory\":" + std::to_string(Util::Helper::getMemoryConsumption()) + ",";
+	content += "\"os\":" + os + ",";
+	content += "\"hardware\":" + hardware;
+
+	content += ",\"outputs\":[";
+	bool first = true;
+	if (msg_channels)
+	{
+		for (auto &o : *msg_channels)
+		{
+			if (!first)
+				content += ",";
+			content += o->getJSON();
+			first = false;
+		}
+	}
+	content += "],\"received\":" + std::to_string(raw_counter.received) + "}";
+
+	return content;
+}
+
+std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string &query)
+{
+	std::stringstream ss(query);
+	std::string mmsi_str;
+	std::string content = "{";
+	int count = 0;
+	const int MAX_MMSI_COUNT = 100;
+
+	while (std::getline(ss, mmsi_str, ','))
+	{
+		if (++count > MAX_MMSI_COUNT)
+		{
+			Error() << "Server - path MMSI count exceeds limit: " << MAX_MMSI_COUNT;
+			break;
+		}
+
+		try
+		{
+			int mmsi = std::stoi(mmsi_str);
+			if (mmsi >= 1 && mmsi <= 999999999)
+			{
+				if (content.length() > 1)
+					content += ",";
+				content += "\"" + std::to_string(mmsi) + "\":" + (s ? s->getPathJSON(mmsi) : "{}");
+			}
+		}
+		catch (const std::invalid_argument &)
+		{
+			Error() << "Server - path MMSI invalid: " << mmsi_str;
+		}
+		catch (const std::out_of_range &)
+		{
+			Error() << "Server - path MMSI out of range: " << mmsi_str;
+		}
+	}
+	content += "}";
+	return content;
+}
+
+// --- Route table ---
+
+const WebViewer::Route WebViewer::routes[] = {
+	// JSON API routes (application/json)
+	{"/api/ships.json", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSON() : std::string("{}"); }},
+	{"/ships.json", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSON() : std::string("{}"); }},
+	{"/api/ships_full.json", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSON(true) : std::string("{}"); }},
+	{"/api/ships_array.json", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSONcompact() : std::string("{}"); }},
+	{"/api/planes_array.json", nullptr, "application/json",
+		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->planes.getCompactArray(); }},
+	{"/api/binmsgs.json", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getBinaryMessagesJSON() : std::string("[]"); }},
+	{"/api/history_full.json", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->toHistoryJSON() : std::string("{}"); }},
+	{"/api/stat.json", nullptr, "application/json",
+		[](WebViewer *w, ReceiverTracker *s, const std::string &) { return s ? w->buildStatJSON(s) : std::string("{}"); }},
+	{"/stat.json", nullptr, "application/json",
+		[](WebViewer *w, ReceiverTracker *s, const std::string &) { return s ? w->buildStatJSON(s) : std::string("{}"); }},
+	{"/api/path.json", nullptr, "application/json",
+		[](WebViewer *w, ReceiverTracker *s, const std::string &a) { return w->buildMultiPathJSON(s, a); }},
+	{"/api/allpath.json", nullptr, "application/json",
+		[](WebViewer *w, ReceiverTracker *s, const std::string &a) {
+			if (!s) return std::string("{}");
+			std::time_t since = w->parseSinceParam(a);
+			return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
+		}},
+	{"/api/path.geojson", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &a) {
+			if (!s) return std::string("{}");
+			int mmsi = parseMMSI(a);
+			return mmsi > 0 ? s->getPathGeoJSON(mmsi) : std::string("{}");
+		}},
+	{"/api/allpath.geojson", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
+	{"/api/message", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &a) {
+			if (!s) return std::string("{\"error\":\"No data available\"}");
+			int mmsi = parseMMSI(a);
+			if (mmsi <= 0) return std::string("{\"error\":\"Invalid MMSI\"}");
+			std::string msg = s->getMessage(mmsi);
+			return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : msg;
+		}},
+	{"/api/vessel", nullptr, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &a) {
+			if (!s) return std::string("{\"error\":\"No data available\"}");
+			int mmsi = parseMMSI(a);
+			if (mmsi <= 0) return std::string("{\"error\":\"Invalid MMSI\"}");
+			std::string vessel = s->getShipJSON(mmsi);
+			return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
+		}},
+	{"/api/decode", &WebViewer::showdecoder, "application/json",
+		[](WebViewer *, ReceiverTracker *, const std::string &a) {
+			try {
+				if (a.empty() || a.size() > 1024) return std::string("{\"error\":\"Input size limit exceeded\"}");
+				std::string result = decodeNMEAtoJSON(a, true);
+				return result == "[]" ? std::string("{\"error\":\"No valid AIS messages decoded\"}") : result;
+			} catch (const std::exception &e) {
+				Error() << "Decoder error: " << e.what();
+				return std::string("{\"error\":\"Decoding failed\"}");
+			}
+		}},
+
+	// Conditional GeoJSON/KML routes
+	{"/geojson", &WebViewer::GeoJSON, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getGeoJSON() : std::string("{}"); }},
+	{"/allpath.geojson", &WebViewer::GeoJSON, "application/json",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
+	{"/kml", &WebViewer::KML, "application/vnd.google-earth.kml+xml",
+		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getKML() : std::string(); }},
+
+	// Prometheus metrics
+	{"/metrics", &WebViewer::supportPrometheus, "text/plain",
+		[](WebViewer *w, ReceiverTracker *, const std::string &) {
+			std::string r = w->dataPrometheus.toPrometheus();
+			w->dataPrometheus.Reset();
+			return r;
+		}},
+
+	// Frontend assets
+	{"/custom/plugins.js", nullptr, "application/javascript",
+		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->pluginManager.render(comm_feed != nullptr); }},
+	{"/custom/config.css", nullptr, "text/css",
+		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->pluginManager.getStylesheets(); }},
+	{"/about.md", nullptr, "text/markdown",
+		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->pluginManager.getAbout(); }},
+
+	{nullptr, nullptr, nullptr, nullptr}
+};
+
 void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
 {
-
 	std::string r;
 	std::string a;
 
@@ -896,99 +1061,21 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	if (r == "/")
 		r = "/index.html";
 
-	if (r == "/kml" && KML)
+	// Route table lookup
+	for (const Route *rt = routes; rt->path; ++rt)
 	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::string content = s ? s->getKML() : "";
-		Response(c, "application/vnd.google-earth.kml+xml", content, use_zlib & gzip);
-	}
-	else if (r == "/metrics")
-	{
-		if (supportPrometheus)
-		{
-			std::string content = dataPrometheus.toPrometheus();
-			Response(c, "text/plain", content, use_zlib & gzip);
-			dataPrometheus.Reset();
-		}
-	}
-	else if (r == "/api/stat.json" || r == "/stat.json")
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		if (!s)
-		{
-			Response(c, "application/json", "{}", use_zlib & gzip);
-			return;
-		}
+		if (r != rt->path)
+			continue;
+		if (rt->flag && !(this->*(rt->flag)))
+			continue;
 
-		std::string content;
-		content.reserve(2048);
-
-		content += "{" + s->toCountersJSON() + ",";
-		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
-		content += "\"sharing\":" + std::string(commm_feed ? "true" : "false") + ",";
-		if (tracking.latlon_share && tracking.lat != LAT_UNDEFINED && tracking.lon != LON_UNDEFINED)
-			content += "\"sharing_link\":\"https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(tracking.lat) + "&lon=" + std::to_string(tracking.lon) + "\",";
-		else
-			content += "\"sharing_link\":\"https://www.aiscatcher.org\",";
-
-		content += "\"station\":" + station + ",";
-		content += "\"station_link\":" + station_link + ",";
-		content += "\"sample_rate\":\"" + s->sample_rate + "\",";
-		content += "\"msg_rate\":" + std::to_string(s->getMsgRate()) + ",";
-		content += "\"vessel_count\":" + std::to_string(s->getCount()) + ",";
-		content += "\"vessel_max\":" + std::to_string(s->getMaxCount()) + ",";
-		content += "\"product\":\"" + s->product + "\",";
-		content += "\"vendor\":\"" + s->vendor + "\",";
-		content += "\"serial\":\"" + s->serial + "\",";
-		content += "\"model\":\"" + s->model_name + "\",";
-		content += "\"build_date\":\"" + std::string(__DATE__) + "\",";
-		content += "\"build_version\":\"" + std::string(VERSION) + "\",";
-		content += "\"build_describe\":\"" + std::string(VERSION_DESCRIBE) + "\",";
-		content += "\"run_time\":\"" + std::to_string((long int)time(nullptr) - (long int)time_start) + "\",";
-		content += "\"memory\":" + std::to_string(Util::Helper::getMemoryConsumption()) + ",";
-		content += "\"os\":" + os + ",";
-		content += "\"hardware\":" + hardware;
-
-		content += ",\"outputs\":[";
-		bool first = true;
-		if (msg_channels)
-		{
-			for (auto &o : *msg_channels)
-			{
-				if (!first)
-					content += ",";
-				content += o->getJSON();
-				first = false;
-			}
-		}
-		content += "],\"received\":" + std::to_string(raw_counter.received) + "}";
-
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/api/ships.json" || r == "/ships.json")
-	{
 		ReceiverTracker *s = getState(parseReceiver(a));
-		std::string content = s ? s->getShipsJSON() : "{}";
-		Response(c, "application/json", content, use_zlib & gzip);
+		Response(c, rt->content_type, rt->handler(this, s, a), use_zlib & gzip);
+		return;
 	}
-	else if (r == "/api/ships_array.json")
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::string content = s ? s->getShipsJSONcompact() : "{}";
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/api/planes_array.json")
-	{
-		std::string content = planes.getCompactArray();
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/api/ships_full.json")
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::string content = s ? s->getShipsJSON(true) : "{}";
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/api/sse" && realtime)
+
+	// SSE routes (upgrade connection, not a normal response)
+	if (r == "/api/sse" && realtime)
 	{
 		upgradeSSE(c, 1);
 	}
@@ -999,197 +1086,10 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	else if (r == "/api/log" && showlog)
 	{
 		IO::SSEConnection *s = upgradeSSE(c, 3);
-		auto l = Logger::getInstance().getLastMessages(25);
-		for (auto &m : l)
-		{
+		for (auto &m : Logger::getInstance().getLastMessages(25))
 			s->SendEvent("log", m.toJSON());
-		}
 	}
-	else if (r == "/api/binmsgs.json")
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::string content = s ? s->getBinaryMessagesJSON() : "[]";
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/custom/plugins.js")
-	{
-		Response(c, "application/javascript", pluginManager.render(commm_feed != nullptr), use_zlib & gzip);
-	}
-	else if (r == "/custom/config.css")
-	{
-		Response(c, "text/css", pluginManager.getStylesheets(), use_zlib & gzip);
-	}
-	else if (r == "/about.md")
-	{
-		Response(c, "text/markdown", pluginManager.getAbout(), use_zlib & gzip);
-	}
-	else if (r == "/api/path.json")
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::stringstream ss(a);
-		std::string mmsi_str;
-		std::string content = "{";
-		int count = 0;
-		const int MAX_MMSI_COUNT = 100; // Limit number of MMSIs to prevent DoS
-
-		while (std::getline(ss, mmsi_str, ','))
-		{
-			if (++count > MAX_MMSI_COUNT)
-			{
-				Error() << "Server - path MMSI count exceeds limit: " << MAX_MMSI_COUNT;
-				break;
-			}
-
-			try
-			{
-				int mmsi = std::stoi(mmsi_str);
-				if (mmsi >= 1 && mmsi <= 999999999)
-				{
-					if (content.length() > 1)
-						content += ",";
-					content += "\"" + std::to_string(mmsi) + "\":" + (s ? s->getPathJSON(mmsi) : "{}");
-				}
-			}
-			catch (const std::invalid_argument &)
-			{
-				Error() << "Server - path MMSI invalid: " << mmsi_str;
-			}
-			catch (const std::out_of_range &)
-			{
-				Error() << "Server - path MMSI out of range: " << mmsi_str;
-			}
-		}
-		content += "}";
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/api/allpath.json")
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::time_t since = parseSinceParam(a);
-		std::string content = s ? (since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON()) : "{}";
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/api/path.geojson")
-	{
-		std::stringstream ss(a);
-		std::string mmsi_str;
-
-		if (std::getline(ss, mmsi_str))
-		{
-			try
-			{
-				int mmsi = std::stoi(mmsi_str);
-				if (mmsi >= 1 && mmsi <= 999999999)
-				{
-					ReceiverTracker *s = getState(parseReceiver(a));
-					std::string content = s ? s->getPathGeoJSON(mmsi) : "{}";
-					Response(c, "application/json", content, use_zlib & gzip);
-				}
-				else
-				{
-					Response(c, "application/json", "{\"error\":\"Invalid MMSI range\"}", use_zlib & gzip);
-				}
-			}
-			catch (const std::invalid_argument &)
-			{
-				Error() << "Server - path GeoJSON MMSI invalid: " << mmsi_str;
-				Response(c, "application/json", "{\"error\":\"Invalid MMSI format\"}", use_zlib & gzip);
-			}
-			catch (const std::out_of_range &)
-			{
-				Error() << "Server - path GeoJSON MMSI out of range: " << mmsi_str;
-				Response(c, "application/json", "{\"error\":\"MMSI out of range\"}", use_zlib & gzip);
-			}
-		}
-		else
-		{
-			Response(c, "application/json", "{\"error\":\"No MMSI provided\"}", use_zlib & gzip);
-		}
-	}
-	else if (r == "/api/allpath.geojson" || (r == "/allpath.geojson" && GeoJSON))
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::string content = s ? s->getAllPathGeoJSON() : "{}";
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/geojson" && GeoJSON)
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		std::string content = s ? s->getGeoJSON() : "{}";
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
-	else if (r == "/api/message")
-	{
-		int mmsi = -1;
-		std::stringstream ss(a);
-		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
-		{
-			ReceiverTracker *s = getState(parseReceiver(a));
-			std::string content = s ? s->getMessage(mmsi) : "";
-			Response(c, "application/text", content, use_zlib & gzip);
-		}
-		else
-			Response(c, "application/text", "Message not availaible");
-	}
-	else if (r == "/api/decode")
-	{
-		if (!showdecoder)
-		{
-			Response(c, "application/json", std::string("{\"error\":\"Decoder is disabled\"}"), use_zlib & gzip);
-			return;
-		}
-
-		try
-		{
-			if (a.empty() || a.size() > 1024)
-				throw std::runtime_error("Input size limit exceeded");
-
-			std::string result = decodeNMEAtoJSON(a, true);
-
-			if (result == "[]")
-			{
-				Response(c, "application/json", std::string("{\"error\":\"No valid AIS messages decoded\"}"), use_zlib & gzip);
-			}
-			else
-			{
-				Response(c, "application/json", result, use_zlib & gzip);
-			}
-		}
-		catch (const std::exception &e)
-		{
-			// Security: Don't expose internal exception details
-			Error() << "Decoder error: " << e.what();
-			Response(c, "application/json", std::string("{\"error\":\"Decoding failed\"}"), use_zlib & gzip);
-		}
-	}
-	else if (r == "/api/vessel")
-	{
-		std::stringstream ss(a);
-		int mmsi;
-		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
-		{
-			ReceiverTracker *s = getState(parseReceiver(a));
-			std::string content = s ? s->getShipJSON(mmsi) : "{}";
-			Response(c, "application/text", content, use_zlib & gzip);
-		}
-		else
-		{
-			Response(c, "application/text", "Vessel not available");
-		}
-	}
-	else if (r == "/api/history_full.json")
-	{
-		ReceiverTracker *s = getState(parseReceiver(a));
-		if (!s)
-		{
-			Response(c, "application/json", "{}", use_zlib & gzip);
-			return;
-		}
-
-		std::string content = s->toHistoryJSON() + "\n\n";
-
-		Response(c, "application/json", content, use_zlib & gzip);
-	}
+	// Prefix-match routes
 	else if (r.substr(0, 6) == "/tiles")
 	{
 		int z, x, y;
@@ -1219,6 +1119,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		Response(c, "text/plain", std::string("Invalid Tile Request"), false, true);
 		return;
 	}
+	// Static files
 	else if (r.rfind("/", 0) == 0)
 	{
 		std::string filename = r.substr(1);

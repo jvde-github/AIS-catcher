@@ -366,7 +366,7 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 	bool xchange = false;
 	std::string uuid;
 	std::vector<std::string> zones;
-	extern IO::OutputMessage *commm_feed;
+	extern IO::OutputMessage *comm_feed;
 
 	for (const JSON::Property &p : props)
 	{
@@ -386,17 +386,17 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 		}
 	}
 
-	if (xchange && !commm_feed)
+	if (xchange && !comm_feed)
 	{
 		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-		commm_feed = _state.msg.back().get();
+		comm_feed = _state.msg.back().get();
 
-		commm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC","Community Feed").Set("MSGFORMAT", "COMMUNITY_HUB").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+		comm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC","Community Feed").Set("MSGFORMAT", "COMMUNITY_HUB").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
 	}
-	if (!uuid.empty() && commm_feed)
-		commm_feed->Set("UUID", uuid);
-	if (!zones.empty() && commm_feed)
-		commm_feed->zones = zones;
+	if (!uuid.empty() && comm_feed)
+		comm_feed->Set("UUID", uuid);
+	if (!zones.empty() && comm_feed)
+		comm_feed->zones = zones;
 }
 
 void Config::set(const std::string &str)

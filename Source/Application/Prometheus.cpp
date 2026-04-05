@@ -34,13 +34,13 @@ const std::string ShippingClassNames[] = {
 	"Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
 };
 
-PromotheusCounter::PromotheusCounter()
+PrometheusCounter::PrometheusCounter()
 {
 	Reset();
 	Clear();
 }
 
-void PromotheusCounter::Clear()
+void PrometheusCounter::Clear()
 {
 
 	m.lock();
@@ -53,7 +53,7 @@ void PromotheusCounter::Clear()
 	m.unlock();
 }
 
-void PromotheusCounter::Add(const AIS::Message &m, const TAG &tag, bool new_vessel)
+void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag, bool new_vessel)
 {
 
 	if (m.type() > 27 || m.type() < 1)
@@ -81,7 +81,7 @@ void PromotheusCounter::Add(const AIS::Message &m, const TAG &tag, bool new_vess
 	}
 }
 
-void PromotheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
+void PrometheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
 {
 	AIS::Message &data = *((AIS::Message *)json[0].binary);
 
@@ -97,7 +97,7 @@ void PromotheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
 	m.unlock();
 }
 
-void PromotheusCounter::Reset()
+void PrometheusCounter::Reset()
 {
 	m.lock();
 	ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
@@ -105,7 +105,7 @@ void PromotheusCounter::Reset()
 	m.unlock();
 }
 
-std::string PromotheusCounter::toPrometheus()
+std::string PrometheusCounter::toPrometheus()
 {
 	m.lock();
 	std::string element;
