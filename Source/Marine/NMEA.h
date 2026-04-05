@@ -107,6 +107,7 @@ namespace AIS
 		bool includeGPS = true;
 
 		JSON::Parser parser;
+		JSON::JSON jsonBuf;
 
 		void split(const std::string &);
 		std::string trim(const std::string &);

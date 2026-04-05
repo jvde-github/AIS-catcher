@@ -494,7 +494,7 @@ namespace AIS
 			{
 				// JSON::Parser parser(&AIS::KeyMap, JSON_DICT_FULL);
 				// parser.setSkipUnknown(true);
-				std::shared_ptr<JSON::JSON> j = parser.parse(s);
+				parser.parse_into(jsonBuf, s);
 
 				std::string cls = "";
 				std::string dev = "";
@@ -508,7 +508,7 @@ namespace AIS
 				t = 0;
 
 				// phase 1, get the meta data in place
-				for (const auto &p : j->getProperties())
+				for (const auto &p : jsonBuf.getProperties())
 				{
 					switch (p.Key())
 					{
@@ -571,7 +571,7 @@ namespace AIS
 					if (dev == "dAISy-catcher" && toa != 0 && !stamp)
 						t = toa;
 
-					for (const auto &p : j->getProperties())
+					for (const auto &p : jsonBuf.getProperties())
 					{
 						if (p.Key() == AIS::KEY_NMEA)
 						{
@@ -613,7 +613,7 @@ namespace AIS
 				{
 					float lat = 0, lon = 0;
 
-					for (const auto &p : j->getProperties())
+					for (const auto &p : jsonBuf.getProperties())
 					{
 						if (p.Key() == AIS::KEY_LAT)
 						{

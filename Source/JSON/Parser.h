@@ -55,8 +55,18 @@ namespace JSON
 		};
 
 		TokenType currentType = TokenType::End;
-		std::string currentText;
-		int currentPos = 0;
+		int tokenStart = 0;
+		int tokenEnd = 0;
+		bool tokenEscaped = false;
+		std::string escapedText;
+
+		static size_t hashRange(const char *data, int len)
+		{
+			size_t h = 2166136261u;
+			for (int i = 0; i < len; i++)
+				h = (h ^ (unsigned char)data[i]) * 16777619u;
+			return h;
+		}
 
 		void error(const std::string &err, int pos);
 
@@ -68,11 +78,13 @@ namespace JSON
 		void error_parser(const std::string &err);
 		bool is_match(TokenType t);
 		void must_match(TokenType t, const std::string &err);
-		int search(const std::string &s);
+		int search();
+		std::string tokenString() const;
 		std::shared_ptr<JSON> parse_core();
-		Value parse_value(std::shared_ptr<JSON>);
+		void parse_into_core(JSON *o);
+		Value parse_value(JSON *);
 
-		static std::unordered_map<std::string, int> keyLookups[5];
+		static std::unordered_map<size_t, int> keyLookups[5];
 		static bool keyLookupsBuilt[5];
 
 	public:
@@ -84,7 +96,13 @@ namespace JSON
 			{
 				for (int i = 0; i < (int)keymap->size(); i++)
 					if (dict < (int)(*keymap)[i].size() && !(*keymap)[i][dict].empty())
-						keyLookups[dict][(*keymap)[i][dict]] = i;
+					{
+						const std::string &key = (*keymap)[i][dict];
+						size_t h = hashRange(key.data(), key.size());
+						if (keyLookups[dict].count(h))
+							throw std::runtime_error("JSON Parser: hash collision for key \"" + key + "\"");
+						keyLookups[dict][h] = i;
+					}
 			}
 			keyLookupsBuilt[dict] = true;
 		}
@@ -93,6 +111,7 @@ namespace JSON
 		Parser(const std::vector<std::vector<std::string>> *map) : keymap(map) { buildKeyLookup(keymap, dict); }
 
 		std::shared_ptr<JSON> parse(const std::string &j);
+		void parse_into(JSON &target, const std::string &j);
 		void setSkipUnknown(bool b) { skipUnknownKeys = b; }
 		// dictionary to use
 		void setMap(int d)

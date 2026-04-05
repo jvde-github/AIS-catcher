@@ -18,6 +18,7 @@
 #pragma once
 
 #include <vector>
+#include <deque>
 #include <iostream>
 #include <memory>
 
@@ -179,22 +180,23 @@ namespace JSON
 	private:
 		std::vector<Property> properties;
 
-		// memory to pointers containing objects, strings and arrays
-		// Property and Value can therefore only contain pointers and basic data types
+		// deque for pointer stability: push_back never invalidates existing references
 		std::vector<std::shared_ptr<JSON>> objects;
-		std::vector<std::shared_ptr<std::string>> strings;
-		std::vector<std::shared_ptr<std::vector<Value>>> arrays;
+		std::deque<std::string> strings;
+		std::deque<std::vector<Value>> arrays;
+
+		size_t stringCount = 0;
+		size_t arrayCount = 0;
 
 	public:
 		void *binary = NULL;
-		
+
 		void clear()
 		{
 			properties.clear();
-
 			objects.clear();
-			strings.clear();
-			arrays.clear();
+			stringCount = 0;
+			arrayCount = 0;
 		}
 
 		const std::vector<Property> &getProperties() const { return properties; }
@@ -233,8 +235,7 @@ namespace JSON
 
 		void Add(int p, const std::string &v)
 		{
-			strings.push_back(std::shared_ptr<std::string>(new std::string(v)));
-			properties.push_back(Property(p, (std::string *)strings.back().get()));
+			properties.push_back(Property(p, addString(v)));
 		}
 
 		void Add(int p)
@@ -256,6 +257,28 @@ namespace JSON
 		void Add(int p, const std::vector<std::string> *v)
 		{
 			properties.push_back(Property(p, (std::vector<std::string> *)v));
+		}
+
+		std::string *addString(const std::string &v)
+		{
+			if (stringCount < strings.size())
+				strings[stringCount] = v;
+			else
+				strings.push_back(v);
+			return &strings[stringCount++];
+		}
+
+		std::vector<Value> *addArray()
+		{
+			if (arrayCount < arrays.size())
+			{
+				arrays[arrayCount].clear();
+			}
+			else
+			{
+				arrays.push_back(std::vector<Value>());
+			}
+			return &arrays[arrayCount++];
 		}
 	};
 }
