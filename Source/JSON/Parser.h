@@ -20,6 +20,7 @@
 #include <vector>
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 #include "JSON.h"
 
@@ -27,14 +28,12 @@ namespace JSON {
 
 	class Parser {
 	private:
-		struct Token;
-
 		const std::vector<std::vector<std::string>>* keymap = nullptr;
 		int dict = 0;
 		bool skipUnknownKeys = false;
 
 		std::string json;
-		std::vector<Token> tokens;
+		int ptr = 0;
 
 		enum class TokenType {
 			LeftBrace,
@@ -52,42 +51,46 @@ namespace JSON {
 			End
 		};
 
-		struct Token {
-			int pos = 0;
-			TokenType type;
-			std::string text;
-
-			Token(TokenType t, const std::string& x, int p) {
-				pos = p;
-				type = t;
-				text = x;
-			}
-		};
+		TokenType currentType = TokenType::End;
+		std::string currentText;
+		int currentPos = 0;
 
 		void error(const std::string& err, int pos);
 
 		// tokenizer
-		void skip_whitespace(int&);
-		void tokenizer();
+		void skip_whitespace();
+		void next();
 
 		// parser
-		int idx = 0;
-
 		void error_parser(const std::string& err);
 		bool is_match(TokenType t);
 		void must_match(TokenType t, const std::string& err);
 		int search(const std::string& s);
-		void next();
 		std::shared_ptr<JSON> parse_core();
 		Value parse_value(std::shared_ptr<JSON>);
 
+		static std::unordered_map<std::string, int> keyLookups[5];
+		static bool keyLookupsBuilt[5];
+
 	public:
-		Parser(const std::vector<std::vector<std::string>>* map, int d) : keymap(map), dict(d) {}
-		Parser(const std::vector<std::vector<std::string>>* map) : keymap(map) {}
+		static void buildKeyLookup(const std::vector<std::vector<std::string>>* keymap, int dict)
+		{
+			if (dict < 0 || dict >= 5 || keyLookupsBuilt[dict]) return;
+			if (keymap)
+			{
+				for (int i = 0; i < (int)keymap->size(); i++)
+					if (dict < (int)(*keymap)[i].size() && !(*keymap)[i][dict].empty())
+						keyLookups[dict][(*keymap)[i][dict]] = i;
+			}
+			keyLookupsBuilt[dict] = true;
+		}
+
+		Parser(const std::vector<std::vector<std::string>>* map, int d) : keymap(map), dict(d) { buildKeyLookup(keymap, dict); }
+		Parser(const std::vector<std::vector<std::string>>* map) : keymap(map) { buildKeyLookup(keymap, dict); }
 
 		std::shared_ptr<JSON> parse(const std::string& j);
 		void setSkipUnknown(bool b) { skipUnknownKeys = b; }
 		// dictionary to use
-		void setMap(int d) { dict = d; }
+		void setMap(int d) { dict = d; buildKeyLookup(keymap, dict); }
 	};
 }

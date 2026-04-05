@@ -23,6 +23,8 @@
 
 namespace JSON
 {
+	std::unordered_map<std::string, int> Parser::keyLookups[5];
+	bool Parser::keyLookupsBuilt[5] = {false, false, false, false, false};
 
 	// Parser -- Build JSON object from String
 
@@ -45,236 +47,220 @@ namespace JSON
 		throw std::runtime_error("syntax error in JSON: " + err);
 	}
 
-	// Lex analysis
+	// JIT Tokenizer - lexes one token per call
 
-	void Parser::skip_whitespace(int &ptr)
+	void Parser::skip_whitespace()
 	{
-		while (ptr < json.size() && std::isspace(json[ptr]))
+		while (ptr < (int)json.size() && std::isspace(json[ptr]))
 			ptr++;
 	}
 
-	void Parser::tokenizer()
+	void Parser::next()
 	{
+		skip_whitespace();
 
-		tokens.clear();
-		std::string s;
-		int ptr = 0;
-
-		while (ptr < json.size())
+		if (ptr >= (int)json.size())
 		{
-
-			skip_whitespace(ptr);
-			if (ptr == json.size())
-				break;
-
-			char c = json[ptr];
-
-			// number
-			if (std::isdigit(c) || c == '-')
-			{
-				bool floating = false;
-				int start_idx = ptr;
-				bool scientific = false;
-
-				s.clear();
-
-				do
-				{
-					if (json[ptr] == '.')
-					{
-						if (floating || start_idx == ptr || !std::isdigit(json[ptr - 1]))
-							error("malformed number", ptr);
-						else
-							floating = true;
-					}
-					else if ((json[ptr] == 'e' || json[ptr] == 'E') && !scientific)
-					{
-						if (!std::isdigit(json[ptr - 1]) && json[ptr - 1] != '.')
-							error("malformed number", ptr);
-
-						scientific = floating = true;
-
-						s += json[ptr++];
-						if (ptr != json.size() && (json[ptr] == '+' || json[ptr] == '-'))
-						{
-							s += json[ptr++];
-						}
-
-						if (ptr == json.size() || !std::isdigit(json[ptr]))
-							error("malformed number", ptr);
-					}
-
-					s += json[ptr++];
-
-				} while (ptr != json.size() && (std::isdigit(json[ptr]) || json[ptr] == '.' || json[ptr] == 'e' || json[ptr] == 'E'));
-
-				tokens.push_back(Token(floating ? TokenType::FloatingPoint : TokenType::Integer, s, ptr));
-			}
-			// string
-			else if (c == '\"')
-			{
-				s.clear();
-				ptr++;
-
-				while (ptr != json.size() && json[ptr] != '\"' && json[ptr] != '\n' && json[ptr] != '\r')
-				{
-					char c = json[ptr];
-					if (c == '\\')
-					{
-						if (++ptr == json.size())
-							error("line ends in string literal escape sequence", ptr);
-						c = json[ptr];
-						switch (c)
-						{
-						case '\"':
-							break;
-						case '\\':
-							break;
-						case '/':
-							break;
-						case 'b':
-							c = '\b';
-							break;
-						case 'f':
-							c = '\f';
-							break;
-						case 'n':
-							c = '\n';
-							break;
-						case 'r':
-							c = '\r';
-							break;
-						case 't':
-							c = '\t';
-							break;
-						case 'u':
-						{
-							if (ptr + 4 >= json.size())
-								error("line ends in string literal unicode escape sequence", ptr);
-							std::string hex = json.substr(ptr + 1, 4);
-							for (int i = 0; i < 4; i++)
-								if (!std::isxdigit(hex[i]))
-									error("illegal unicode escape sequence", ptr);
-							c = std::stoi(hex, nullptr, 16);
-							ptr += 4;
-							break;
-						}
-						default:
-							error("illegal escape sequence " + std::to_string((int)(c)), ptr);
-						}
-					}
-					s += c;
-					ptr++;
-				};
-
-				if (json.size() == ptr || json[ptr] != '\"')
-					error("line ends in string literal", ptr);
-
-				tokens.push_back(Token(TokenType::String, s, ptr));
-				ptr++;
-			}
-			// keyword
-			else if (isalpha(c))
-			{
-
-				s.clear();
-
-				while (ptr != json.size() && isalpha(json[ptr]))
-					s += json[ptr++];
-
-				if (s == "true")
-					tokens.push_back(Token(TokenType::True, "", ptr));
-				else if (s == "false")
-					tokens.push_back(Token(TokenType::False, "", ptr));
-				else if (s == "null")
-					tokens.push_back(Token(TokenType::Null, "", ptr));
-				else
-					error("illegal identifier : \"" + s + "\"", ptr);
-			}
-			// special characters
-			else
-			{
-				switch (c)
-				{
-				case '{':
-					tokens.push_back(Token(TokenType::LeftBrace, "", ptr));
-					break;
-				case '}':
-					tokens.push_back(Token(TokenType::RightBrace, "", ptr));
-					break;
-				case '[':
-					tokens.push_back(Token(TokenType::LeftBracket, "", ptr));
-					break;
-				case ']':
-					tokens.push_back(Token(TokenType::RightBracket, "", ptr));
-					break;
-				case ':':
-					tokens.push_back(Token(TokenType::Colon, "", ptr));
-					break;
-				case ',':
-					tokens.push_back(Token(TokenType::Comma, "", ptr));
-					break;
-				default:
-					error("illegal character '" + std::string(1, c) + "'", ptr);
-					break;
-				}
-				ptr++;
-			}
+			currentType = TokenType::End;
+			currentText.clear();
+			currentPos = ptr;
+			return;
 		}
-		tokens.push_back(Token(TokenType::End, "", ptr));
+
+		char c = json[ptr];
+
+		// number
+		if (std::isdigit(c) || c == '-')
+		{
+			bool floating = false;
+			int start_idx = ptr;
+			bool scientific = false;
+
+			currentText.clear();
+
+			do
+			{
+				if (json[ptr] == '.')
+				{
+					if (floating || start_idx == ptr || !std::isdigit(json[ptr - 1]))
+						error("malformed number", ptr);
+					else
+						floating = true;
+				}
+				else if ((json[ptr] == 'e' || json[ptr] == 'E') && !scientific)
+				{
+					if (!std::isdigit(json[ptr - 1]) && json[ptr - 1] != '.')
+						error("malformed number", ptr);
+
+					scientific = floating = true;
+
+					currentText += json[ptr++];
+					if (ptr != (int)json.size() && (json[ptr] == '+' || json[ptr] == '-'))
+					{
+						currentText += json[ptr++];
+					}
+
+					if (ptr == (int)json.size() || !std::isdigit(json[ptr]))
+						error("malformed number", ptr);
+				}
+
+				currentText += json[ptr++];
+
+			} while (ptr != (int)json.size() && (std::isdigit(json[ptr]) || json[ptr] == '.' || json[ptr] == 'e' || json[ptr] == 'E'));
+
+			currentType = floating ? TokenType::FloatingPoint : TokenType::Integer;
+			currentPos = ptr;
+		}
+		// string
+		else if (c == '\"')
+		{
+			currentText.clear();
+			ptr++;
+
+			while (ptr != (int)json.size() && json[ptr] != '\"' && json[ptr] != '\n' && json[ptr] != '\r')
+			{
+				char c = json[ptr];
+				if (c == '\\')
+				{
+					if (++ptr == (int)json.size())
+						error("line ends in string literal escape sequence", ptr);
+					c = json[ptr];
+					switch (c)
+					{
+					case '\"':
+						break;
+					case '\\':
+						break;
+					case '/':
+						break;
+					case 'b':
+						c = '\b';
+						break;
+					case 'f':
+						c = '\f';
+						break;
+					case 'n':
+						c = '\n';
+						break;
+					case 'r':
+						c = '\r';
+						break;
+					case 't':
+						c = '\t';
+						break;
+					case 'u':
+					{
+						if (ptr + 4 >= (int)json.size())
+							error("line ends in string literal unicode escape sequence", ptr);
+						std::string hex = json.substr(ptr + 1, 4);
+						for (int i = 0; i < 4; i++)
+							if (!std::isxdigit(hex[i]))
+								error("illegal unicode escape sequence", ptr);
+						c = std::stoi(hex, nullptr, 16);
+						ptr += 4;
+						break;
+					}
+					default:
+						error("illegal escape sequence " + std::to_string((int)(c)), ptr);
+					}
+				}
+				currentText += c;
+				ptr++;
+			};
+
+			if ((int)json.size() == ptr || json[ptr] != '\"')
+				error("line ends in string literal", ptr);
+
+			currentType = TokenType::String;
+			currentPos = ptr;
+			ptr++;
+		}
+		// keyword
+		else if (isalpha(c))
+		{
+			currentText.clear();
+
+			while (ptr != (int)json.size() && isalpha(json[ptr]))
+				currentText += json[ptr++];
+
+			if (currentText == "true")
+				currentType = TokenType::True;
+			else if (currentText == "false")
+				currentType = TokenType::False;
+			else if (currentText == "null")
+				currentType = TokenType::Null;
+			else
+				error("illegal identifier : \"" + currentText + "\"", ptr);
+
+			currentPos = ptr;
+		}
+		// special characters
+		else
+		{
+			switch (c)
+			{
+			case '{':
+				currentType = TokenType::LeftBrace;
+				break;
+			case '}':
+				currentType = TokenType::RightBrace;
+				break;
+			case '[':
+				currentType = TokenType::LeftBracket;
+				break;
+			case ']':
+				currentType = TokenType::RightBracket;
+				break;
+			case ':':
+				currentType = TokenType::Colon;
+				break;
+			case ',':
+				currentType = TokenType::Comma;
+				break;
+			default:
+				error("illegal character '" + std::string(1, c) + "'", ptr);
+				break;
+			}
+			currentPos = ptr;
+			ptr++;
+		}
 	}
 
 	// Parsing functions
 
 	void Parser::error_parser(const std::string &err)
 	{
-		error(err, tokens[MIN(tokens.size() - 1, idx)].pos);
+		error(err, currentPos);
 	}
 
 	bool Parser::is_match(TokenType t)
 	{
-		if (idx >= tokens.size())
-			error_parser("unexpected end in input");
-		return tokens[idx].type == t;
+		return currentType == t;
 	}
 
 	void Parser::must_match(TokenType t, const std::string &err)
 	{
-		if (!is_match(t))
+		if (currentType != t)
 			error_parser(err);
 	}
 
-	void Parser::next()
-	{
-		idx++;
-		if (idx >= tokens.size())
-			error_parser("unexpected end in input");
-	}
-
-	// search for keyword in "map", returns index in map or -1 if not found
 	int Parser::search(const std::string &s)
 	{
-		int p = -1;
-		for (int i = 0; i < keymap->size(); i++)
-			if (dict < (*keymap)[i].size() && (*keymap)[i][dict] == s)
-			{
-				p = i;
-				break;
-			}
-		return p;
+		auto it = keyLookups[dict].find(s);
+		return it != keyLookups[dict].end() ? it->second : -1;
 	}
 
 	Value Parser::parse_value(std::shared_ptr<JSON> o)
 	{
 		Value v = Value();
 		v.setNull();
-		switch (tokens[idx].type)
+		switch (currentType)
 		{
 		case TokenType::Integer:
-			v.setInt(Util::Parse::Integer(tokens[idx].text));
+			v.setInt(Util::Parse::Integer(currentText));
 			break;
 		case TokenType::FloatingPoint:
-			v.setFloat(Util::Parse::Float(tokens[idx].text));
+			v.setFloat(Util::Parse::Float(currentText));
 			break;
 		case TokenType::True:
 			v.setBool(true);
@@ -291,7 +277,7 @@ namespace JSON
 			break;
 		case TokenType::String:
 
-			o->strings.push_back(std::shared_ptr<std::string>(new std::string(tokens[idx].text)));
+			o->strings.push_back(std::shared_ptr<std::string>(new std::string(currentText)));
 			v.setString(o->strings.back().get());
 
 			break;
@@ -334,11 +320,11 @@ namespace JSON
 
 		while (is_match(TokenType::String))
 		{
-			int p = search(tokens[idx].text);
+			int p = search(currentText);
 			if (p < 0)
 			{
 				if (!skipUnknownKeys)
-					error_parser("\"" + tokens[idx].text + "\" is not an allowed \"key\"");
+					error_parser("\"" + currentText + "\" is not an allowed \"key\"");
 			}
 			next();
 
@@ -358,11 +344,13 @@ namespace JSON
 		must_match(TokenType::RightBrace, "expected '}'");
 		return o;
 	}
+
 	std::shared_ptr<JSON> Parser::parse(const std::string &j)
 	{
 		json = j;
-		idx = 0;
-		tokenizer();
+		ptr = 0;
+		currentText.reserve(64);
+		next();
 		auto result = parse_core();
 		next();
 		must_match(TokenType::End, "expected END");
