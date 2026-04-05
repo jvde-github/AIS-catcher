@@ -88,7 +88,7 @@ public:
 	}
 };
 
-// Tracking/DB config accumulated during Set(), applied to all ReceiverStates in connect().
+// Tracking/DB config accumulated during Set(), applied to all ReceiverTrackers in connect().
 struct TrackingConfig
 {
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
@@ -103,7 +103,7 @@ struct TrackingConfig
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
 // states[0] is always "All" (aggregate). states[1..N] are per-receiver when N > 1.
-struct ReceiverState
+struct ReceiverTracker
 {
 private:
 	DB ships;
@@ -185,7 +185,7 @@ public:
 	void setRealtime(bool b);
 	void setLog(bool b);
 	void setDecoder(bool b);
-	void setReceivers(const std::vector<std::unique_ptr<ReceiverState>> &states);
+	void setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states);
 	void addPlugin(const std::string &path);
 	void addPluginCode(const std::string &code);
 	void addStyle(const std::string &path);
@@ -197,6 +197,30 @@ public:
 	const std::string &getStylesheets() const { return stylesheets; }
 
 	std::string render(bool communityFeed) const;
+};
+
+class BackupManager
+{
+	std::thread thread;
+	std::mutex mtx;
+	std::condition_variable cv;
+	std::atomic<bool> running{false};
+	int interval = -1;
+	std::string filename;
+	std::function<bool()> save_fn;
+
+	void run();
+
+public:
+	void setInterval(int minutes) { interval = minutes; }
+	void setFilename(const std::string &f) { filename = f; }
+	const std::string &getFilename() const { return filename; }
+
+	void start(std::function<bool()> save);
+	void stop();
+	bool save();
+
+	~BackupManager() { stop(); }
 };
 
 class WebViewer : public IO::HTTPServer, public Setting
@@ -211,7 +235,6 @@ private:
 	int firstport = 0;
 	int lastport = 0;
 	bool run = false;
-	int backup_interval = -1;
 	bool port_set = false;
 	bool use_zlib = true;
 	bool realtime = false;
@@ -220,7 +243,6 @@ private:
 	bool KML = false;
 	bool GeoJSON = false;
 	bool supportPrometheus = false;
-	bool thread_running = false;
 
 	std::vector<std::shared_ptr<MapTiles>> mapSources;
 
@@ -228,7 +250,7 @@ private:
 	TrackingConfig tracking;
 
 	// All receiver states. Index 0 = aggregate "All", index 1..N = per-receiver (only when N > 1).
-	std::vector<std::unique_ptr<ReceiverState>> states;
+	std::vector<std::unique_ptr<ReceiverTracker>> states;
 
 	PlaneDB planes;
 
@@ -239,20 +261,14 @@ private:
 
 	std::time_t time_start;
 	std::string station = "\"\"", station_link = "\"\"";
-	std::string backup_filename = "";
 	std::string os, hardware;
 
-	std::mutex m;
-	std::condition_variable cv;
-	std::thread backup_thread;
-
-	void BackupService();
+	BackupManager backup;
 
 	bool Load();
 	bool Save();
 	void Clear();
 
-	void stopThread();
 	AIS::Filter filter;
 
 	std::vector<std::string> parsePath(const std::string &url);
@@ -270,7 +286,7 @@ private:
 	// Parse ?since=T from query string; returns 0 on missing/invalid.
 	std::time_t parseSinceParam(const std::string &query);
 	// Return state at idx, clamped to states[0] on out-of-range.
-	ReceiverState *getState(int idx);
+	ReceiverTracker *getState(int idx);
 
 public:
 	WebViewer();
@@ -279,8 +295,6 @@ public:
 	{
 		if (showlog)
 			logger.Stop();
-
-		stopThread();
 	}
 
 	bool &active() { return run; }

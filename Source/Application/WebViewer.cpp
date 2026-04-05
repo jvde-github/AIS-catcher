@@ -67,7 +67,7 @@ void PluginManager::setDecoder(bool b)
 	plugin_preamble += "decoder_enabled = " + std::string(b ? "true" : "false") + ";\n";
 }
 
-void PluginManager::setReceivers(const std::vector<std::unique_ptr<ReceiverState>> &states)
+void PluginManager::setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states)
 {
 	if (states.size() > 1)
 	{
@@ -405,12 +405,12 @@ bool WebViewer::Save()
 {
 	try
 	{
-		std::ofstream outfile(backup_filename, std::ios::binary);
+		std::ofstream outfile(backup.getFilename(), std::ios::binary);
 
 		if (!outfile.is_open())
 		{
 			Error() << "Server: cannot open backup file for writing: "
-					<< backup_filename << " (" << std::strerror(errno) << ")";
+					<< backup.getFilename() << " (" << std::strerror(errno) << ")";
 			return false;
 		}
 
@@ -423,7 +423,7 @@ bool WebViewer::Save()
 	}
 	catch (const std::ios_base::failure &e)
 	{
-		Error() << "Server: write error on " << backup_filename << " (" << std::strerror(errno) << ")";
+		Error() << "Server: write error on " << backup.getFilename() << " (" << std::strerror(errno) << ")";
 		return false;
 	}
 	catch (const std::exception &e)
@@ -433,7 +433,7 @@ bool WebViewer::Save()
 	}
 	catch (...)
 	{
-		Error() << "Server: unknown error writing " << backup_filename;
+		Error() << "Server: unknown error writing " << backup.getFilename();
 		return false;
 	}
 	return true;
@@ -449,18 +449,18 @@ void WebViewer::Clear()
 bool WebViewer::Load()
 {
 
-	if (backup_filename.empty())
+	if (backup.getFilename().empty())
 		return false;
 
-	Info() << "Server: reading statistics from " << backup_filename;
+	Info() << "Server: reading statistics from " << backup.getFilename();
 	try
 	{
-		std::ifstream infile(backup_filename, std::ios::binary);
+		std::ifstream infile(backup.getFilename(), std::ios::binary);
 
 		if (!infile.is_open())
 		{
 			Warning() << "Server: cannot open backup file for reading: "
-					  << backup_filename << " (" << std::strerror(errno) << ")";
+					  << backup.getFilename() << " (" << std::strerror(errno) << ")";
 			return false;
 		}
 
@@ -481,35 +481,59 @@ bool WebViewer::Load()
 	return true;
 }
 
-void WebViewer::BackupService()
+// --- BackupManager ---
+
+void BackupManager::run()
 {
-	try
-	{
-		Info() << "Server: starting backup service every " << backup_interval << " minutes.";
-		while (true)
-		{
-			std::unique_lock<std::mutex> lock(m);
+	Info() << "Server: starting backup service every " << interval << " minutes.";
 
-			if (cv.wait_for(lock, std::chrono::minutes(backup_interval), [&]
-							{ return !run; }))
-			{
-				break;
-			}
-
-			if (!Save())
-				Error() << "Server failed to write backup:" << backup_filename;
-		}
-	}
-	catch (std::exception &e)
+	while (running)
 	{
-		Error() << "WebClient BackupService: " << e.what();
-		StopRequest();
+		std::unique_lock<std::mutex> lock(mtx);
+		cv.wait_for(lock, std::chrono::minutes(interval), [this] { return !running.load(); });
+
+		if (running && !save_fn())
+			Error() << "Server failed to write backup: " << filename;
 	}
 
 	Info() << "Server: stopping backup service.";
 }
 
-void ReceiverState::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
+void BackupManager::start(std::function<bool()> save)
+{
+	if (interval <= 0)
+		return;
+
+	if (filename.empty())
+	{
+		Warning() << "Server: backup of statistics requested without providing backup filename.";
+		return;
+	}
+
+	save_fn = save;
+	running = true;
+	thread = std::thread(&BackupManager::run, this);
+}
+
+void BackupManager::stop()
+{
+	if (running.load())
+	{
+		running = false;
+		cv.notify_all();
+		if (thread.joinable())
+			thread.join();
+	}
+}
+
+bool BackupManager::save()
+{
+	if (filename.empty())
+		return false;
+	return save_fn ? save_fn() : false;
+}
+
+void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
 {
 	ships.setLat(cfg.lat);
 	ships.setLon(cfg.lon);
@@ -532,12 +556,12 @@ void ReceiverState::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
 	}
 }
 
-void ReceiverState::setup()
+void ReceiverTracker::setup()
 {
 	ships.setup();
 }
 
-void ReceiverState::wireStreams()
+void ReceiverTracker::wireStreams()
 {
 	ships >> hist_day;
 	ships >> hist_hour;
@@ -547,7 +571,7 @@ void ReceiverState::wireStreams()
 	ships >> counter_session;
 }
 
-void ReceiverState::clear()
+void ReceiverTracker::clear()
 {
 	counter.Clear();
 	counter_session.Clear();
@@ -557,7 +581,7 @@ void ReceiverState::clear()
 	hist_day.Clear();
 }
 
-void ReceiverState::reset()
+void ReceiverTracker::reset()
 {
 	counter_session.Clear();
 	hist_second.Clear();
@@ -567,7 +591,7 @@ void ReceiverState::reset()
 	ships.setup();
 }
 
-bool ReceiverState::save(std::ofstream &f)
+bool ReceiverTracker::save(std::ofstream &f)
 {
 	if (!counter.Save(f))
 		return false;
@@ -584,7 +608,7 @@ bool ReceiverState::save(std::ofstream &f)
 	return true;
 }
 
-bool ReceiverState::load(std::ifstream &f)
+bool ReceiverTracker::load(std::ifstream &f)
 {
 	if (!counter.Load(f))
 		return false;
@@ -602,7 +626,7 @@ bool ReceiverState::load(std::ifstream &f)
 	return true;
 }
 
-std::string ReceiverState::toHistoryJSON()
+std::string ReceiverTracker::toHistoryJSON()
 {
 	std::string j = "{";
 	j += "\"second\":" + hist_second.toJSON();
@@ -613,7 +637,7 @@ std::string ReceiverState::toHistoryJSON()
 	return j;
 }
 
-std::string ReceiverState::toCountersJSON()
+std::string ReceiverTracker::toCountersJSON()
 {
 	std::string j;
 	j += "\"total\":" + counter.toJSON() + ",";
@@ -627,7 +651,7 @@ std::string ReceiverState::toCountersJSON()
 	return j;
 }
 
-void ReceiverState::setDevice(Device::Device *device)
+void ReceiverTracker::setDevice(Device::Device *device)
 {
 	product = JSON::StringBuilder::stringify(device->getProduct(), false);
 	vendor = JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), false);
@@ -644,7 +668,7 @@ void ReceiverState::setDevice(Device::Device *device)
 	}
 }
 
-void ReceiverState::appendDevice(Device::Device *device, const std::string &newline)
+void ReceiverTracker::appendDevice(Device::Device *device, const std::string &newline)
 {
 	product += JSON::StringBuilder::stringify(device->getProduct(), false) + newline;
 	vendor += JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), false) + newline;
@@ -682,7 +706,7 @@ std::time_t WebViewer::parseSinceParam(const std::string &query)
 	}
 }
 
-ReceiverState *WebViewer::getState(int idx)
+ReceiverTracker *WebViewer::getState(int idx)
 {
 	if (states.empty())
 		return nullptr;
@@ -697,17 +721,17 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 
 	bool multi = receivers.size() > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
 
-	states.push_back(std::unique_ptr<ReceiverState>(new ReceiverState()));
+	states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
 	states[0]->label = "All";
 
 	for (int k = 0; k < (int)receivers.size(); k++)
 	{
 		Receiver &r = *receivers[k];
-		ReceiverState *per = nullptr;
+		ReceiverTracker *per = nullptr;
 
 		if (multi)
 		{
-			states.push_back(std::unique_ptr<ReceiverState>(new ReceiverState()));
+			states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
 			per = states.back().get();
 		}
 
@@ -756,7 +780,7 @@ void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Dev
 	{
 		if (states.empty())
 		{
-			states.push_back(std::unique_ptr<ReceiverState>(new ReceiverState()));
+			states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
 			states[0]->label = "All";
 			states[0]->applyConfig(tracking, filter);
 		}
@@ -787,7 +811,7 @@ void WebViewer::start()
 	for (auto &s : states)
 		s->setup();
 
-	if (backup_filename.empty())
+	if (backup.getFilename().empty())
 		Clear();
 	else if (!Load())
 	{
@@ -837,45 +861,17 @@ void WebViewer::start()
 
 	run = true;
 
-	if (backup_interval > 0)
-	{
-		if (backup_filename.empty())
-		{
-			Warning() << "Server: backup of statistics requested without providing backup filename.";
-		}
-		else
-		{
-			backup_thread = std::thread(&WebViewer::BackupService, this);
-			thread_running = true;
-		}
-	}
-}
-
-void WebViewer::stopThread()
-{
-	if (thread_running)
-	{
-		{
-			std::lock_guard<std::mutex> lock(m);
-			run = false;
-		}
-		cv.notify_all();
-
-		if (backup_thread.joinable())
-			backup_thread.join();
-
-		thread_running = false;
-	}
+	backup.start([this]() { return Save(); });
 }
 
 void WebViewer::close()
 {
+	run = false;
+	backup.stop();
 
-	stopThread();
-
-	if (!backup_filename.empty() && !Save())
+	if (!backup.getFilename().empty() && !Save())
 	{
-		Error() << "Statistics - cannot write file: " << backup_filename;
+		Error() << "Statistics - cannot write file: " << backup.getFilename();
 	}
 }
 
@@ -902,7 +898,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 
 	if (r == "/kml" && KML)
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::string content = s ? s->getKML() : "";
 		Response(c, "application/vnd.google-earth.kml+xml", content, use_zlib & gzip);
 	}
@@ -917,7 +913,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/stat.json" || r == "/stat.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		if (!s)
 		{
 			Response(c, "application/json", "{}", use_zlib & gzip);
@@ -971,13 +967,13 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/ships.json" || r == "/ships.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::string content = s ? s->getShipsJSON() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/api/ships_array.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::string content = s ? s->getShipsJSONcompact() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
@@ -988,7 +984,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/ships_full.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::string content = s ? s->getShipsJSON(true) : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
@@ -1011,7 +1007,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/binmsgs.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::string content = s ? s->getBinaryMessagesJSON() : "[]";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
@@ -1029,7 +1025,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/path.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::stringstream ss(a);
 		std::string mmsi_str;
 		std::string content = "{";
@@ -1068,7 +1064,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/allpath.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::time_t since = parseSinceParam(a);
 		std::string content = s ? (since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON()) : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
@@ -1085,7 +1081,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 				int mmsi = std::stoi(mmsi_str);
 				if (mmsi >= 1 && mmsi <= 999999999)
 				{
-					ReceiverState *s = getState(parseReceiver(a));
+					ReceiverTracker *s = getState(parseReceiver(a));
 					std::string content = s ? s->getPathGeoJSON(mmsi) : "{}";
 					Response(c, "application/json", content, use_zlib & gzip);
 				}
@@ -1112,13 +1108,13 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/allpath.geojson" || (r == "/allpath.geojson" && GeoJSON))
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::string content = s ? s->getAllPathGeoJSON() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
 	else if (r == "/geojson" && GeoJSON)
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		std::string content = s ? s->getGeoJSON() : "{}";
 		Response(c, "application/json", content, use_zlib & gzip);
 	}
@@ -1128,7 +1124,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		std::stringstream ss(a);
 		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
 		{
-			ReceiverState *s = getState(parseReceiver(a));
+			ReceiverTracker *s = getState(parseReceiver(a));
 			std::string content = s ? s->getMessage(mmsi) : "";
 			Response(c, "application/text", content, use_zlib & gzip);
 		}
@@ -1172,7 +1168,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		int mmsi;
 		if (ss >> mmsi && mmsi >= 1 && mmsi <= 999999999)
 		{
-			ReceiverState *s = getState(parseReceiver(a));
+			ReceiverTracker *s = getState(parseReceiver(a));
 			std::string content = s ? s->getShipJSON(mmsi) : "{}";
 			Response(c, "application/text", content, use_zlib & gzip);
 		}
@@ -1183,7 +1179,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/history_full.json")
 	{
-		ReceiverState *s = getState(parseReceiver(a));
+		ReceiverTracker *s = getState(parseReceiver(a));
 		if (!s)
 		{
 			Response(c, "application/json", "{}", use_zlib & gzip);
@@ -1345,7 +1341,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "FILE")
 	{
-		backup_filename = arg;
+		backup.setFilename(arg);
 	}
 	else if (option == "CDN")
 	{
@@ -1369,7 +1365,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "BACKUP")
 	{
-		backup_interval = Util::Parse::Integer(arg, 5, 2 * 24 * 60, option);
+		backup.setInterval(Util::Parse::Integer(arg, 5, 2 * 24 * 60, option));
 	}
 	else if (option == "REALTIME")
 	{
