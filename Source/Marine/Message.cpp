@@ -152,6 +152,177 @@ namespace AIS
 		return ss.str();
 	}
 
+	int Message::getNMEAJSON(char *buf, int len, unsigned mode, float level, float ppm, int status, const std::string &hardware, int version, Type driver, bool include_ssl, uint32_t ipv4, const std::string &uuid, const char *suffix) const
+	{
+		char *ptr = buf;
+		char *end = buf + len - 1;
+
+		auto ap = [&](char c)
+		{ if (ptr < end) *ptr++ = c; };
+		auto aps = [&](const char *s)
+		{ while (*s && ptr < end) *ptr++ = *s++; };
+		auto apm = [&](const char *s, int n)
+		{ int a = end - ptr; if (n < a) a = n; memcpy(ptr, s, a); ptr += a; };
+		auto api = [&](long long v)
+		{
+			if (v < 0)
+			{
+				ap('-');
+				v = -v;
+			}
+			char tmp[20];
+			int tl = 0;
+			do
+			{
+				tmp[tl++] = '0' + (int)(v % 10);
+				v /= 10;
+			} while (v);
+			if (ptr + tl <= end)
+				for (int i = tl - 1; i >= 0; i--)
+					*ptr++ = tmp[i];
+		};
+		auto apf6 = [&](double v)
+		{
+			if (v < 0)
+			{
+				ap('-');
+				v = -v;
+			}
+			long long scaled = (long long)(v * 1000000.0 + 0.5);
+			long long whole = scaled / 1000000;
+			int frac = (int)(scaled % 1000000);
+			api(whole);
+			if (ptr + 7 <= end)
+			{
+				*ptr++ = '.';
+				ptr[5] = '0' + frac % 10;
+				frac /= 10;
+				ptr[4] = '0' + frac % 10;
+				frac /= 10;
+				ptr[3] = '0' + frac % 10;
+				frac /= 10;
+				ptr[2] = '0' + frac % 10;
+				frac /= 10;
+				ptr[1] = '0' + frac % 10;
+				frac /= 10;
+				ptr[0] = '0' + frac;
+				ptr += 6;
+			}
+		};
+		auto apstr = [&](const std::string &s)
+		{ apm(s.data(), s.size()); };
+
+		aps("{\"class\":\"AIS\",\"device\":\"AIS-catcher\",\"version\":");
+		api(version);
+		aps(",\"driver\":");
+		api((int)driver);
+		aps(",\"hardware\":\"");
+		apstr(hardware);
+		aps("\",\"channel\":\"");
+		ap(getChannel());
+		aps("\",\"repeat\":");
+		api(repeat());
+
+		if (include_ssl)
+		{
+			aps(",\"ssc\":");
+			api(start_idx);
+			aps(",\"sl\":");
+			api(end_idx - start_idx);
+		}
+
+		if (status)
+		{
+			aps(",\"msg_status\":");
+			api(status);
+		}
+
+		if (mode & 2)
+		{
+			aps(",\"rxuxtime\":");
+			if ((rxtime % 1000000) != 0)
+				apf6((double)rxtime / 1000000.0);
+			else
+				api(rxtime / 1000000);
+
+			aps(",\"rxtime\":\"");
+			{
+				std::time_t t = (std::time_t)(rxtime / 1000000);
+				std::tm *now_tm = std::gmtime(&t);
+				char ts[16];
+				std::strftime(ts, 16, "%Y%m%d%H%M%S", now_tm);
+				aps(ts);
+			}
+			ap('"');
+		}
+
+		if (toa != 0)
+		{
+			aps(",\"toa\":");
+			if ((toa % 1000000) != 0)
+				apf6((double)toa / 1000000.0);
+			else
+				api(toa / 1000000);
+		}
+
+		if (!uuid.empty())
+		{
+			aps(",\"uuid\":\"");
+			apstr(uuid);
+			ap('"');
+		}
+
+		if (ipv4)
+		{
+			aps(",\"ipv4\":");
+			api(ipv4);
+		}
+
+		if (mode & 1)
+		{
+			aps(",\"signalpower\":");
+			if (level == LEVEL_UNDEFINED)
+				aps("null");
+			else
+				apf6(level);
+			aps(",\"ppm\":");
+			if (ppm == PPM_UNDEFINED)
+				aps("null");
+			else
+				apf6(ppm);
+		}
+
+		if (getStation())
+		{
+			aps(",\"station_id\":");
+			api(getStation());
+		}
+
+		if (getLength() > 0)
+		{
+			aps(",\"mmsi\":");
+			api(mmsi());
+			aps(",\"type\":");
+			api(type());
+		}
+
+		aps(",\"nmea\":[");
+		for (int i = 0; i < (int)NMEA.size(); i++)
+		{
+			if (i > 0)
+				ap(',');
+			ap('"');
+			apstr(NMEA[i]);
+			ap('"');
+		}
+		aps("]}");
+		if (suffix)
+			aps(suffix);
+
+		*ptr = '\0';
+		return ptr - buf;
+	}
+
 	std::string Message::getNMEATagBlock() const
 	{
 		static int groupId = 0;
@@ -188,6 +359,151 @@ namespace AIS
 		}
 
 		return result;
+	}
+
+	int Message::getNMEATagBlock(char *buf, int len, const char *suffix) const
+	{
+		static int groupId = 0;
+
+		char *ptr = buf;
+		char *end = buf + len - 1;
+
+		int total = NMEA.size();
+		int seq = 1;
+
+		if (total > 1)
+			groupId = (groupId % 9999) + 1;
+
+		auto ap = [&](char c)
+		{ if (ptr < end) *ptr++ = c; };
+		auto aps = [&](const char *s)
+		{ while (*s && ptr < end) *ptr++ = *s++; };
+		auto apm = [&](const char *s, int n)
+		{ int a = end - ptr; if (n > a) n = a; memcpy(ptr, s, n); ptr += n; };
+		auto api = [&](int v)
+		{
+			char tmp[12];
+			int n = 0;
+			if (v < 0)
+			{
+				ap('-');
+				v = -v;
+			}
+			do
+			{
+				tmp[n++] = '0' + v % 10;
+				v /= 10;
+			} while (v);
+			if (ptr + n <= end)
+				for (int i = n - 1; i >= 0; i--)
+					*ptr++ = tmp[i];
+		};
+		auto apf6 = [&](double v)
+		{
+			if (v < 0)
+			{
+				ap('-');
+				v = -v;
+			}
+			long long scaled = (long long)(v * 1000000.0 + 0.5);
+			long long whole = scaled / 1000000;
+			int frac = (int)(scaled % 1000000);
+			// write whole part
+			char tmp[20];
+			int n = 0;
+			do
+			{
+				tmp[n++] = '0' + (int)(whole % 10);
+				whole /= 10;
+			} while (whole);
+			if (ptr + n <= end)
+				for (int i = n - 1; i >= 0; i--)
+					*ptr++ = tmp[i];
+			// write fractional part
+			if (ptr + 7 <= end)
+			{
+				*ptr++ = '.';
+				ptr[5] = '0' + frac % 10;
+				frac /= 10;
+				ptr[4] = '0' + frac % 10;
+				frac /= 10;
+				ptr[3] = '0' + frac % 10;
+				frac /= 10;
+				ptr[2] = '0' + frac % 10;
+				frac /= 10;
+				ptr[1] = '0' + frac % 10;
+				frac /= 10;
+				ptr[0] = '0' + frac;
+				ptr += 6;
+			}
+		};
+
+		// source string: "s" + station number
+		char src[16];
+		char *sp = src;
+		*sp++ = 's';
+		{
+			char tmp[12];
+			int n = 0;
+			int v = station;
+			if (v < 0)
+			{
+				*sp++ = '-';
+				v = -v;
+			}
+			do
+			{
+				tmp[n++] = '0' + v % 10;
+				v /= 10;
+			} while (v);
+			for (int i = n - 1; i >= 0; i--)
+				*sp++ = tmp[i];
+		}
+		int srcLen = sp - src;
+
+		for (const auto &nmea : NMEA)
+		{
+			ap('\\');
+			char *cs_start = ptr; // checksum starts after backslash
+
+			aps("s:");
+			apm(src, srcLen);
+			aps(",c:");
+			apf6((double)rxtime / 1000000.0);
+
+			if (total > 1)
+			{
+				aps(",g:");
+				api(seq);
+				ap('-');
+				api(total);
+				ap('-');
+				api(groupId);
+			}
+
+			// Calculate checksum over tag block content (between backslashes)
+			int check = 0;
+			for (char *p = cs_start; p < ptr; p++)
+				check ^= *p;
+
+			ap('*');
+			// Two hex digits uppercase
+			static const char hex[] = "0123456789ABCDEF";
+			ap(hex[(check >> 4) & 0xF]);
+			ap(hex[check & 0xF]);
+			ap('\\');
+
+			apm(nmea.data(), nmea.size());
+			if (suffix)
+				aps(suffix);
+			else
+				aps("\r\n");
+
+			seq++;
+		}
+
+		*ptr = '\0';
+		return ptr - buf;
 	}
 
 	std::string Message::getBinaryNMEA(const TAG &tag, bool crc) const
@@ -277,6 +593,86 @@ namespace AIS
 		packet.push_back('\n');
 
 		return packet;
+	}
+
+	int Message::getBinaryNMEA(char *buf, int len, const TAG &tag, bool crc, const char *suffix) const
+	{
+		char *ptr = buf;
+		char *end = buf + len;
+
+		if (length < 0 || length > MAX_AIS_LENGTH)
+			return 0;
+
+		auto push_escaped = [&](unsigned char byte)
+		{
+			if (ptr + 2 > end)
+				return;
+			if (byte == '\n')
+			{
+				*ptr++ = (char)0xad;
+				*ptr++ = (char)0xae;
+			}
+			else if (byte == '\r')
+			{
+				*ptr++ = (char)0xad;
+				*ptr++ = (char)0xaf;
+			}
+			else if (byte == 0xad)
+			{
+				*ptr++ = (char)0xad;
+				*ptr++ = (char)0xad;
+			}
+			else
+			{
+				*ptr++ = (char)byte;
+			}
+		};
+
+		push_escaped(0xac);
+		push_escaped(0x00);
+
+		unsigned char flags = 0;
+		if (tag.level != LEVEL_UNDEFINED && tag.ppm != PPM_UNDEFINED)
+			flags |= 0x01;
+		flags |= crc ? 0x02 : 0x00;
+		push_escaped(flags);
+
+		long long ts = (long long)rxtime;
+		for (int i = 7; i >= 0; i--)
+			push_escaped((ts >> (i * 8)) & 0xFF);
+
+		if (flags & 0x01)
+		{
+			int signal_tenths = (int)(tag.level * 10.0f);
+			push_escaped((signal_tenths >> 8) & 0xFF);
+			push_escaped(signal_tenths & 0xFF);
+
+			int ppm_tenths = (int)(tag.ppm * 10.0f);
+			push_escaped((unsigned char)(int8_t)ppm_tenths);
+		}
+
+		push_escaped((unsigned char)channel);
+		push_escaped((length >> 8) & 0xFF);
+		push_escaped(length & 0xFF);
+
+		int numBytes = (length + 7) / 8;
+		for (int i = 0; i < numBytes; i++)
+			push_escaped(data[i]);
+
+		if (crc)
+		{
+			uint16_t crc_value = Util::Helper::CRC16((const uint8_t *)buf, ptr - buf);
+			push_escaped((crc_value >> 8) & 0xFF);
+			push_escaped(crc_value & 0xFF);
+		}
+
+		if (suffix)
+			while (*suffix && ptr < end)
+				*ptr++ = *suffix++;
+		else if (ptr < end)
+			*ptr++ = '\n';
+
+		return ptr - buf;
 	}
 
 	bool Message::validate()

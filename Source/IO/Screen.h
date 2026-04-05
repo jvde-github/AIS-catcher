@@ -26,15 +26,16 @@ namespace IO
 	{
 	private:
 		bool include_sample_start = false;
+		char jsonBuf[4096];
 
 	public:
 		int verboseUpdateTime = 3;
 		ScreenOutput() : OutputMessage("Screen") { fmt = MessageFormat::FULL; }
 		virtual ~ScreenOutput() {}
-		
+
 		void setScreen(const std::string &str)
 		{
-            setOptionKey(AIS::KEY_SETTING_MSGFORMAT, str);
+			setOptionKey(AIS::KEY_SETTING_MSGFORMAT, str);
 		}
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);

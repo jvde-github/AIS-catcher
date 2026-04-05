@@ -174,6 +174,11 @@ namespace IO
 			stats.bytes_out += str.length();
 			sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
 		}
+		void SendTo(const char *data, int len)
+		{
+			stats.bytes_out += len;
+			sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen);
+		}
 	};
 
 	class TCPClientStreamer : public OutputMessage
@@ -217,6 +222,16 @@ namespace IO
 			{
 				lines_sent++;
 				return connection->send(str, strlen(str));
+			}
+			return -1;
+		}
+
+		int SendTo(const char *data, int len)
+		{
+			if (connection)
+			{
+				lines_sent++;
+				return connection->send(data, len);
 			}
 			return -1;
 		}

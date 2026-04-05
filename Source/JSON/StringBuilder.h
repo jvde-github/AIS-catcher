@@ -21,11 +21,13 @@
 #include <iostream>
 #include <memory>
 #include <cstring>
+#include <cstdio>
 
 #include "Common.h"
 #include "JSON.h"
 
-namespace AIS {
+namespace AIS
+{
 	struct KeyInfo;
 	extern const std::vector<KeyInfo> KeyInfoMap;
 }
@@ -58,9 +60,231 @@ namespace JSON
 
 		// dictionary to use
 		void setMap(int d) { dict = d; }
-		
+
 		// enable/disable enhanced output with metadata
 		void setStringifyEnhanced(bool enhanced) { stringify_enhanced = enhanced; }
 		bool getStringifyEnhanced() const { return stringify_enhanced; }
+	};
+
+	class StringBuilderArray
+	{
+	private:
+		const std::vector<std::vector<std::string>> *keymap = nullptr;
+		int dict = 0;
+
+		char *buf = nullptr;
+		char *ptr = nullptr;
+		char *end = nullptr;
+
+		void append(char c)
+		{
+			if (ptr < end)
+				*ptr++ = c;
+		}
+
+		void append(const char *s)
+		{
+			while (*s && ptr < end)
+				*ptr++ = *s++;
+		}
+
+		void append(const char *s, int len)
+		{
+			int avail = end - ptr;
+			int n = len < avail ? len : avail;
+			memcpy(ptr, s, n);
+			ptr += n;
+		}
+
+		void append(const std::string &s)
+		{
+			append(s.data(), s.size());
+		}
+
+		void append_uint(unsigned long long v)
+		{
+			char tmp[20];
+			int len = 0;
+			do
+			{
+				tmp[len++] = '0' + (int)(v % 10);
+				v /= 10;
+			} while (v);
+			if (ptr + len <= end)
+				for (int i = len - 1; i >= 0; i--)
+					*ptr++ = tmp[i];
+		}
+
+		void append_int(long int v)
+		{
+			if (v < 0)
+			{
+				append('-');
+				v = -v;
+			}
+			append_uint((unsigned long long)v);
+		}
+
+		void append_float(double v)
+		{
+			if (v != v)
+			{
+				append("null");
+				return;
+			}
+
+			if (v < 0)
+			{
+				append('-');
+				v = -v;
+			}
+
+			long long scaled = (long long)(v * 1000000.0 + 0.5);
+			long long whole = scaled / 1000000;
+			int frac = (int)(scaled % 1000000);
+
+			append_uint((unsigned long long)whole);
+
+			if (ptr + 7 <= end)
+			{
+				*ptr++ = '.';
+				ptr[5] = '0' + frac % 10;
+				frac /= 10;
+				ptr[4] = '0' + frac % 10;
+				frac /= 10;
+				ptr[3] = '0' + frac % 10;
+				frac /= 10;
+				ptr[2] = '0' + frac % 10;
+				frac /= 10;
+				ptr[1] = '0' + frac % 10;
+				frac /= 10;
+				ptr[0] = '0' + frac;
+				ptr += 6;
+			}
+		}
+
+		void append_string_escaped(const std::string &str)
+		{
+			append('"');
+			for (char c : str)
+			{
+				switch (c)
+				{
+				case '\"':
+					append("\\\"");
+					break;
+				case '\\':
+					append("\\\\");
+					break;
+				case '\r':
+				case '\0':
+					break;
+				case '\n':
+					append("\\n");
+					break;
+				default:
+					append(c);
+				}
+			}
+			append('"');
+		}
+
+		void write_value(const Value &v)
+		{
+			if (v.isString())
+			{
+				append_string_escaped(v.getString());
+			}
+			else if (v.isObject())
+			{
+				write_object(v.getObject());
+			}
+			else if (v.isArrayString())
+			{
+				const std::vector<std::string> &as = v.getStringArray();
+				append('[');
+				for (int i = 0; i < (int)as.size(); i++)
+				{
+					if (i > 0)
+						append(',');
+					append_string_escaped(as[i]);
+				}
+				append(']');
+			}
+			else if (v.isArray())
+			{
+				const std::vector<Value> &a = v.getArray();
+				append('[');
+				for (int i = 0; i < (int)a.size(); i++)
+				{
+					if (i > 0)
+						append(',');
+					write_value(a[i]);
+				}
+				append(']');
+			}
+			else if (v.isInt())
+			{
+				append_int(v.getInt());
+			}
+			else if (v.isFloat())
+			{
+				append_float(v.getFloat());
+			}
+			else if (v.isBool())
+			{
+				append(v.getBool() ? "true" : "false");
+			}
+			else
+			{
+				append("null");
+			}
+		}
+
+		void write_object(const JSON &object)
+		{
+			bool first = true;
+			append('{');
+			for (const Property &p : object.getProperties())
+			{
+				if (p.Key() < 0 || p.Key() >= (int)keymap->size())
+					continue;
+
+				const std::string &key = (*keymap)[p.Key()][dict];
+				if (key.empty())
+					continue;
+
+				if (!first)
+					append(',');
+				first = false;
+
+				append('"');
+				append(key);
+				append("\":");
+				write_value(p.Get());
+			}
+			append('}');
+		}
+
+	public:
+		StringBuilderArray(const std::vector<std::vector<std::string>> *map, int d) : keymap(map), dict(d) {}
+		StringBuilderArray(const std::vector<std::vector<std::string>> *map) : keymap(map) {}
+
+		int stringify(const JSON &object, char *buffer, int length, const char *suffix = nullptr)
+		{
+			buf = buffer;
+			ptr = buffer;
+			end = buffer + length - 1;
+
+			write_object(object);
+
+			if (suffix)
+				append(suffix);
+
+			*ptr = '\0';
+			return ptr - buf;
+		}
+
+		void setMap(int d) { dict = d; }
 	};
 }

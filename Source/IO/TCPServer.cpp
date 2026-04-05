@@ -460,19 +460,24 @@ namespace IO
 
 	bool TCPServer::SendAllDirect(const std::string &m)
 	{
+		return SendAllDirect(m.c_str(), m.length());
+	}
+
+	bool TCPServer::SendAllDirect(const char *data, int len)
+	{
 		bool success = true;
 		for (auto &c : client)
 		{
 			if (c.isConnected())
 			{
-				if (!c.SendRaw(m.c_str(), m.length()))
+				if (!c.SendRaw(data, len))
 				{
 					c.Close();
 					Error() << "TCP listener: client not reading, close connection.";
 					success = false;
 				}
 				else if (pstats)
-					pstats->bytes_out += m.length();
+					pstats->bytes_out += len;
 			}
 		}
 		return success;

@@ -38,8 +38,10 @@ namespace IO
 	{
 	protected:
 		std::string json;
+		char jsonBuf[4096];
 		AIS::Filter filter;
 		JSON::StringBuilder builder;
+		JSON::StringBuilderArray fastBuilder{&AIS::KeyMap, JSON_DICT_FULL};
 
 		OutputStats stats;
 		std::string description, type;
@@ -65,8 +67,10 @@ namespace IO
 		std::string getSourcesStr()
 		{
 			uint64_t gi = StreamIn<AIS::Message>::getGroupsIn();
-			if (gi == GROUPS_ALL) return "sources: ALL";
-			if (gi == 0) return "sources: NONE";
+			if (gi == GROUPS_ALL)
+				return "sources: ALL";
+			if (gi == 0)
+				return "sources: NONE";
 			std::string s;
 			for (int i = 0; i < 32; i++)
 				if (gi & (1ULL << i))

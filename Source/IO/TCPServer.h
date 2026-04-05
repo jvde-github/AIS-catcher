@@ -101,6 +101,7 @@ namespace IO
 		bool start(int port);
 		bool SendAll(const std::string &m);
 		bool SendAllDirect(const std::string &m);
+		bool SendAllDirect(const char *data, int len);
 
 		void setReusePort(bool b) { reuse_port = b; }
 		bool setNonBlock(SOCKET sock);
