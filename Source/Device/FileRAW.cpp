@@ -62,7 +62,7 @@ namespace Device
 		catch (std::exception &e)
 		{
 			Error() << "RAWFile ReadAsync: " << e.what();
-			std::terminate();
+			StopRequest();
 		}
 
 		fifo.PushFinished();
@@ -98,7 +98,7 @@ namespace Device
 		catch (std::exception &e)
 		{
 			Error() << "RAWFile Run: " << e.what();
-			std::terminate();
+			StopRequest();
 		}
 	}
 

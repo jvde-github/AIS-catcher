@@ -88,6 +88,19 @@ public:
 	}
 };
 
+// Tracking/DB config accumulated during Set(), applied to all ReceiverStates in connect().
+struct TrackingConfig
+{
+	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+	bool latlon_share = false;
+	bool server_mode = false;
+	bool msg_save = false;
+	bool use_GPS = true;
+	uint32_t own_mmsi = 0;
+	int time_history = 30 * 60;
+	int cutoff = 0;
+};
+
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
 // states[0] is always "All" (aggregate). states[1..N] are per-receiver when N > 1.
 struct ReceiverState
@@ -109,9 +122,7 @@ public:
 	void appendDevice(Device::Device *device, const std::string &newline);
 
 	// Config
-	void applyConfig(float lat, float lon, bool latlon_share, bool server_mode,
-					 bool msg_save, bool use_GPS, uint32_t own_mmsi,
-					 int time_history, int cutoff, const AIS::Filter &f);
+	void applyConfig(const TrackingConfig &cfg, const AIS::Filter &f);
 
 	// Lifecycle
 	void setup();
@@ -154,6 +165,40 @@ public:
 	std::string getShipJSON(uint32_t mmsi) { return ships.getShipJSON(mmsi); }
 };
 
+// Manages JS/CSS plugin content and frontend configuration variables.
+class PluginManager
+{
+	std::string params;
+	std::string plugin_code;
+	std::string plugin_preamble;
+	std::string stylesheets;
+	std::string about = "This content can be set by the station owner";
+	bool aboutPresent = false;
+
+public:
+	PluginManager();
+
+	void setContext(const std::string &ctx);
+	void setWebControl(const std::string &url);
+	void setShareLoc(bool b);
+	void setMsgSave(bool b);
+	void setRealtime(bool b);
+	void setLog(bool b);
+	void setDecoder(bool b);
+	void setReceivers(const std::vector<std::unique_ptr<ReceiverState>> &states);
+	void addPlugin(const std::string &path);
+	void addPluginCode(const std::string &code);
+	void addStyle(const std::string &path);
+	void addPluginDir(const std::string &dir);
+	void setAbout(const std::string &path);
+
+	bool isAboutPresent() const { return aboutPresent; }
+	const std::string &getAbout() const { return about; }
+	const std::string &getStylesheets() const { return stylesheets; }
+
+	std::string render(bool communityFeed) const;
+};
+
 class WebViewer : public IO::HTTPServer, public Setting
 {
 	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
@@ -163,7 +208,6 @@ public:
 
 private:
 
-	int port = 0;
 	int firstport = 0;
 	int lastport = 0;
 	bool run = false;
@@ -177,15 +221,11 @@ private:
 	bool GeoJSON = false;
 	bool supportPrometheus = false;
 	bool thread_running = false;
-	bool aboutPresent = false;
 
 	std::vector<std::shared_ptr<MapTiles>> mapSources;
 
-	std::string params;
-	std::string plugin_code;
-	std::string plugins;
-	std::string stylesheets;
-	std::string about = "This content can be set by the station owner";
+	PluginManager pluginManager;
+	TrackingConfig tracking;
 
 	// All receiver states. Index 0 = aggregate "All", index 1..N = per-receiver (only when N > 1).
 	std::vector<std::unique_ptr<ReceiverState>> states;
@@ -202,22 +242,11 @@ private:
 	std::string backup_filename = "";
 	std::string os, hardware;
 
-	// DB / stats config accumulated during Set(), applied to all states in connect().
-	float cfg_lat = LAT_UNDEFINED, cfg_lon = LON_UNDEFINED;
-	bool cfg_latlon_share = false;
-	bool cfg_server_mode = false;
-	bool cfg_msg_save = false;
-	bool cfg_use_GPS = true;
-	uint32_t cfg_own_mmsi = 0;
-	int cfg_time_history = 30 * 60;
-	int cfg_cutoff = 0;
-
 	std::mutex m;
 	std::condition_variable cv;
 	std::thread backup_thread;
 
 	void BackupService();
-	void addPlugin(const std::string &str);
 
 	bool Load();
 	bool Save();

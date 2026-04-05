@@ -23,6 +23,180 @@
 
 IO::OutputMessage *commm_feed = nullptr;
 
+// --- PluginManager ---
+
+PluginManager::PluginManager()
+{
+	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\nbuild_version = '" + std::string(VERSION) + "';\ncontext='settings';\n\n";
+	plugin_code = "\n\nfunction loadPlugins() {\n";
+	plugin_preamble = "let plugins = '';\nlet server_message = '';\n";
+}
+
+void PluginManager::setContext(const std::string &ctx)
+{
+	plugin_preamble += "context=" + JSON::StringBuilder::stringify(ctx) + ";\n";
+}
+
+void PluginManager::setWebControl(const std::string &url)
+{
+	plugin_preamble += "webcontrol_http = " + JSON::StringBuilder::stringify(url) + ";\n";
+}
+
+void PluginManager::setShareLoc(bool b)
+{
+	plugin_preamble += "param_share_loc=" + std::string(b ? "true" : "false") + ";\n";
+}
+
+void PluginManager::setMsgSave(bool b)
+{
+	plugin_preamble += "message_save=" + std::string(b ? "true" : "false") + ";\n";
+}
+
+void PluginManager::setRealtime(bool b)
+{
+	plugin_preamble += "realtime_enabled = " + std::string(b ? "true" : "false") + ";\n";
+}
+
+void PluginManager::setLog(bool b)
+{
+	plugin_preamble += "log_enabled = " + std::string(b ? "true" : "false") + ";\n";
+}
+
+void PluginManager::setDecoder(bool b)
+{
+	plugin_preamble += "decoder_enabled = " + std::string(b ? "true" : "false") + ";\n";
+}
+
+void PluginManager::setReceivers(const std::vector<std::unique_ptr<ReceiverState>> &states)
+{
+	if (states.size() > 1)
+	{
+		params += "var server_receivers = [";
+		for (int i = 0; i < (int)states.size(); i++)
+		{
+			if (i)
+				params += ",";
+			params += "{\"idx\":" + std::to_string(i) + ",\"label\":";
+			JSON::StringBuilder::stringify(states[i]->label, params);
+			params += "}";
+		}
+		params += "];\n";
+	}
+	else
+	{
+		params += "var server_receivers = null;\n";
+	}
+}
+
+void PluginManager::addPlugin(const std::string &arg)
+{
+	int version = 0;
+	std::string author, description;
+	std::string safe_arg = JSON::StringBuilder::stringify(arg);
+
+	plugin_preamble += "console.log('plugin:' + " + safe_arg + ");";
+	plugin_preamble += "plugins += 'JS: ' + " + safe_arg + " + '\\n';";
+	plugin_preamble += "\n\n//=============\n//" + arg + "\n\n";
+	try
+	{
+		std::string s = Util::Helper::readFile(arg);
+
+		JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
+		std::string firstline = s.substr(0, s.find('\n'));
+		if (firstline.length() > 2 && firstline[0] == '/' && firstline[1] == '/')
+			firstline = firstline.substr(2);
+		else
+			throw std::runtime_error("Plugin does not start with // followed by JSON description.");
+
+		std::shared_ptr<JSON::JSON> j = parser.parse(firstline);
+
+		for (const auto &p : j->getProperties())
+		{
+			switch (p.Key())
+			{
+			case AIS::KEY_SETTING_VERSION:
+				version = p.Get().getInt();
+				break;
+			case AIS::KEY_SETTING_AUTHOR:
+				author = p.Get().getString();
+				break;
+			case AIS::KEY_SETTING_DESCRIPTION:
+				description = p.Get().getString();
+				break;
+			default:
+				throw std::runtime_error("Unknown key in plugin JSON field");
+				break;
+			}
+		}
+		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version;
+		if (version != 3)
+			throw std::runtime_error("Version not supported, expected 3, got " + std::to_string(version));
+		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin \" + " + safe_arg + ", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
+	}
+	catch (const std::exception &e)
+	{
+		plugin_preamble += "// FAILED\n";
+		Warning() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
+		plugin_preamble += "server_message += 'Plugin error: ' + " + safe_arg + " + ': ' + " + JSON::StringBuilder::stringify(std::string(e.what())) + " + '\\n';\n";
+	}
+}
+
+void PluginManager::addPluginCode(const std::string &code)
+{
+	plugin_code += code;
+}
+
+void PluginManager::addStyle(const std::string &arg)
+{
+	Info() << "Server: adding plugin (CSS): " << arg;
+	std::string safe_arg = JSON::StringBuilder::stringify(arg);
+	plugin_preamble += "console.log('css:' + " + safe_arg + ");";
+	plugin_preamble += "plugins += 'CSS: ' + " + safe_arg + " + '\\n';";
+
+	stylesheets += "/* ================ */\n";
+	stylesheets += "/* CSS plugin: " + arg + "*/\n";
+	try
+	{
+		stylesheets += Util::Helper::readFile(arg) + "\n";
+	}
+	catch (const std::exception &e)
+	{
+		stylesheets += "/* FAILED */\r\n";
+		Warning() << "Server: style plugin error - " << e.what();
+		plugin_preamble += "server_message += 'Plugin error: ' + " + safe_arg + " + ': ' + " + JSON::StringBuilder::stringify(std::string(e.what())) + " + '\\n';\n";
+	}
+}
+
+void PluginManager::addPluginDir(const std::string &dir)
+{
+	const std::vector<std::string> &files_js = Util::Helper::getFilesWithExtension(dir, ".pjs");
+	for (const auto &f : files_js)
+		addPlugin(f);
+
+	const std::vector<std::string> &files_ss = Util::Helper::getFilesWithExtension(dir, ".pss");
+	for (const auto &f : files_ss)
+		addStyle(f);
+
+	if (files_ss.empty() && files_js.empty())
+		Info() << "Server: no plugin files found in directory.";
+}
+
+void PluginManager::setAbout(const std::string &path)
+{
+	Info() << "Server: about context from " << path;
+	about = Util::Helper::readFile(path);
+	aboutPresent = true;
+}
+
+std::string PluginManager::render(bool communityFeed) const
+{
+	return params + plugin_preamble + plugin_code + "}\nserver_version = false;\naboutMDpresent = " +
+		   (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " +
+		   (communityFeed ? "true" : "false") + ";\n";
+}
+
+// --- SSEStreamer ---
+
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
 	if (server)
@@ -68,15 +242,11 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			}
 			nmea_array += "]";
 
-			std::string shipname_str;
-			std::string shipname_escaped(tag.shipname);
-			JSON::StringBuilder::stringify(shipname_escaped, shipname_str);
-
 			std::string json = "{\"mmsi\":" + std::to_string(m->mmsi()) +
 							   ",\"timestamp\":" + std::to_string(now) +
 							   ",\"channel\":\"" + m->getChannel() +
 							   "\",\"type\":" + std::to_string(m->type()) +
-							   ",\"shipname\":" + shipname_str +
+							   ",\"shipname\":" + JSON::StringBuilder::stringify(std::string(tag.shipname)) +
 							   ",\"nmea\":" + nmea_array + "}";
 			server->sendSSE(1, "nmea", json);
 		}
@@ -91,13 +261,8 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 WebViewer::WebViewer()
 {
-	params = "build_string = '" + std::string(VERSION_DESCRIBE) + "';\nbuild_version = '" + std::string(VERSION) + "';\ncontext='settings';\n\n";
-	plugin_code = "\n\nfunction loadPlugins() {\n";
-	plugins = "let plugins = '';\nlet server_message = '';\n";
-	os.clear();
-	JSON::StringBuilder::stringify(Util::Helper::getOS(), os);
-	hardware.clear();
-	JSON::StringBuilder::stringify(Util::Helper::getHardware(), hardware);
+	os = JSON::StringBuilder::stringify(Util::Helper::getOS());
+	hardware = JSON::StringBuilder::stringify(Util::Helper::getHardware());
 }
 
 std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
@@ -213,7 +378,7 @@ void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
 	if (source->open(filepath))
 	{
 		mapSources.push_back(source);
-		plugin_code += source->generatePluginCode(overlay);
+		pluginManager.addPluginCode(source->generatePluginCode(overlay));
 	}
 	else
 	{
@@ -228,7 +393,7 @@ void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool 
 	if (source->open(directoryPath))
 	{
 		mapSources.push_back(source);
-		plugin_code += source->generatePluginCode(overlay);
+		pluginManager.addPluginCode(source->generatePluginCode(overlay));
 	}
 	else
 	{
@@ -316,63 +481,6 @@ bool WebViewer::Load()
 	return true;
 }
 
-void WebViewer::addPlugin(const std::string &arg)
-{
-	int version = 0;
-	std::string author, description;
-	std::string safe_arg;
-	JSON::StringBuilder::stringify(arg, safe_arg); // produces a quoted, escaped JS string literal
-
-	plugins += "console.log('plugin:' + " + safe_arg + ");";
-	plugins += "plugins += 'JS: ' + " + safe_arg + " + '\\n';";
-	plugins += "\n\n//=============\n//" + arg + "\n\n";
-	try
-	{
-		std::string s = Util::Helper::readFile(arg);
-
-		JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
-		std::string firstline = s.substr(0, s.find('\n'));
-		if (firstline.length() > 2 && firstline[0] == '/' && firstline[1] == '/')
-			firstline = firstline.substr(2);
-		else
-			throw std::runtime_error("Plugin does not start with // followed by JSON description.");
-
-		std::shared_ptr<JSON::JSON> j = parser.parse(firstline);
-
-		for (const auto &p : j->getProperties())
-		{
-			switch (p.Key())
-			{
-			case AIS::KEY_SETTING_VERSION:
-				version = p.Get().getInt();
-				break;
-			case AIS::KEY_SETTING_AUTHOR:
-				author = p.Get().getString();
-				break;
-			case AIS::KEY_SETTING_DESCRIPTION:
-				description = p.Get().getString();
-				break;
-			default:
-				throw std::runtime_error("Unknown key in plugin JSON field");
-				break;
-			}
-		}
-		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version;
-		if (version != 3)
-			throw std::runtime_error("Version not supported, expected 3, got " + std::to_string(version));
-		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin " + arg + "\", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
-	}
-	catch (const std::exception &e)
-	{
-
-		plugins += "// FAILED\n";
-		Warning() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
-		std::string safe_err;
-		JSON::StringBuilder::stringify(std::string(e.what()), safe_err);
-		plugins += "server_message += 'Plugin error: ' + " + safe_arg + " + ': ' + " + safe_err + " + '\\n';\n";
-	}
-}
-
 void WebViewer::BackupService()
 {
 	try
@@ -395,34 +503,32 @@ void WebViewer::BackupService()
 	catch (std::exception &e)
 	{
 		Error() << "WebClient BackupService: " << e.what();
-		std::terminate();
+		StopRequest();
 	}
 
 	Info() << "Server: stopping backup service.";
 }
 
-void ReceiverState::applyConfig(float lat, float lon, bool latlon_share, bool server_mode,
-								bool msg_save, bool use_GPS, uint32_t own_mmsi,
-								int time_history, int cutoff, const AIS::Filter &f)
+void ReceiverState::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
 {
-	ships.setLat(lat);
-	ships.setLon(lon);
-	ships.setShareLatLon(latlon_share);
-	ships.setServerMode(server_mode);
-	ships.setMsgSave(msg_save);
-	ships.setUseGPS(use_GPS);
-	ships.setOwnMMSI(own_mmsi);
-	ships.setTimeHistory(time_history);
+	ships.setLat(cfg.lat);
+	ships.setLon(cfg.lon);
+	ships.setShareLatLon(cfg.latlon_share);
+	ships.setServerMode(cfg.server_mode);
+	ships.setMsgSave(cfg.msg_save);
+	ships.setUseGPS(cfg.use_GPS);
+	ships.setOwnMMSI(cfg.own_mmsi);
+	ships.setTimeHistory(cfg.time_history);
 	ships.setFilter(f);
 
-	if (cutoff > 0)
+	if (cfg.cutoff > 0)
 	{
-		hist_second.setCutoff(cutoff);
-		hist_minute.setCutoff(cutoff);
-		hist_hour.setCutoff(cutoff);
-		hist_day.setCutoff(cutoff);
-		counter.setCutOff(cutoff);
-		counter_session.setCutOff(cutoff);
+		hist_second.setCutoff(cfg.cutoff);
+		hist_minute.setCutoff(cfg.cutoff);
+		hist_hour.setCutoff(cfg.cutoff);
+		hist_day.setCutoff(cfg.cutoff);
+		counter.setCutOff(cfg.cutoff);
+		counter_session.setCutOff(cfg.cutoff);
 	}
 }
 
@@ -523,9 +629,9 @@ std::string ReceiverState::toCountersJSON()
 
 void ReceiverState::setDevice(Device::Device *device)
 {
-	JSON::StringBuilder::stringify(device->getProduct(), product, false);
-	JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vendor, false);
-	JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), serial, false);
+	product = JSON::StringBuilder::stringify(device->getProduct(), false);
+	vendor = JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), false);
+	serial = JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), false);
 	sample_rate = device->getRateDescription();
 
 	if (serial == ".")
@@ -540,14 +646,9 @@ void ReceiverState::setDevice(Device::Device *device)
 
 void ReceiverState::appendDevice(Device::Device *device, const std::string &newline)
 {
-	std::string prod, vnd, ser;
-	JSON::StringBuilder::stringify(device->getProduct(), prod, false);
-	JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), vnd, false);
-	JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), ser, false);
-
-	product += prod + newline;
-	vendor += vnd + newline;
-	serial += ser + newline;
+	product += JSON::StringBuilder::stringify(device->getProduct(), false) + newline;
+	vendor += JSON::StringBuilder::stringify(device->getVendor().empty() ? "-" : device->getVendor(), false) + newline;
+	serial += JSON::StringBuilder::stringify(device->getSerial().empty() ? "-" : device->getSerial(), false) + newline;
 	sample_rate += device->getRateDescription() + newline;
 }
 
@@ -635,6 +736,8 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 					per->connectJSON(r.OutputJSON(j));
 
 				states[0]->connectGPS(r.OutputGPS(j));
+				if (per)
+					per->connectGPS(r.OutputGPS(j));
 				r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
 
 				*r.getDeviceManager().getDevice() >> raw_counter;
@@ -643,9 +746,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	}
 
 	for (auto &s : states)
-		s->applyConfig(cfg_lat, cfg_lon, cfg_latlon_share, cfg_server_mode,
-					   cfg_msg_save, cfg_use_GPS, cfg_own_mmsi,
-					   cfg_time_history, cfg_cutoff, filter);
+		s->applyConfig(tracking, filter);
 
 }
 
@@ -657,18 +758,16 @@ void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Dev
 		{
 			states.push_back(std::unique_ptr<ReceiverState>(new ReceiverState()));
 			states[0]->label = "All";
-			states[0]->applyConfig(cfg_lat, cfg_lon, cfg_latlon_share, cfg_server_mode,
-								   cfg_msg_save, cfg_use_GPS, cfg_own_mmsi,
-								   cfg_time_history, cfg_cutoff, filter);
+			states[0]->applyConfig(tracking, filter);
 		}
 
 		states[0]->connectJSON(json);
 		device >> raw_counter;
 
 		states[0]->sample_rate = device.getRateDescription();
-		JSON::StringBuilder::stringify(device.getProduct(), states[0]->product, false);
-		JSON::StringBuilder::stringify(device.getVendor().empty() ? "-" : device.getVendor(), states[0]->vendor, false);
-		JSON::StringBuilder::stringify(device.getSerial().empty() ? "-" : device.getSerial(), states[0]->serial, false);
+		states[0]->product = JSON::StringBuilder::stringify(device.getProduct(), false);
+		states[0]->vendor = JSON::StringBuilder::stringify(device.getVendor().empty() ? "-" : device.getVendor(), false);
+		states[0]->serial = JSON::StringBuilder::stringify(device.getSerial().empty() ? "-" : device.getSerial(), false);
 		states[0]->model_name = m.getName();
 	}
 }
@@ -719,6 +818,7 @@ void WebViewer::start()
 
 	if (firstport && lastport)
 	{
+		int port;
 		for (port = firstport; port <= lastport; port++)
 			if (HTTPServer::start(port))
 				break;
@@ -733,24 +833,7 @@ void WebViewer::start()
 
 	time_start = time(nullptr);
 
-	// Embed static receiver list into plugins.js
-	if (states.size() > 1)
-	{
-		params += "var server_receivers = [";
-		for (int i = 0; i < (int)states.size(); i++)
-		{
-			if (i)
-				params += ",";
-			params += "{\"idx\":" + std::to_string(i) + ",\"label\":";
-			JSON::StringBuilder::stringify(states[i]->label, params);
-			params += "}";
-		}
-		params += "];\n";
-	}
-	else
-	{
-		params += "var server_receivers = null;\n";
-	}
+	pluginManager.setReceivers(states);
 
 	run = true;
 
@@ -847,8 +930,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		content += "{" + s->toCountersJSON() + ",";
 		content += "\"tcp_clients\":" + std::to_string(numberOfClients()) + ",";
 		content += "\"sharing\":" + std::string(commm_feed ? "true" : "false") + ",";
-		if (cfg_latlon_share && cfg_lat != LAT_UNDEFINED && cfg_lon != LON_UNDEFINED)
-			content += "\"sharing_link\":\"https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(cfg_lat) + "&lon=" + std::to_string(cfg_lon) + "\",";
+		if (tracking.latlon_share && tracking.lat != LAT_UNDEFINED && tracking.lon != LON_UNDEFINED)
+			content += "\"sharing_link\":\"https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(tracking.lat) + "&lon=" + std::to_string(tracking.lon) + "\",";
 		else
 			content += "\"sharing_link\":\"https://www.aiscatcher.org\",";
 
@@ -934,15 +1017,15 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/custom/plugins.js")
 	{
-		Response(c, "application/javascript", params + plugins + plugin_code + "}\nserver_version = false;\naboutMDpresent = " + (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " + (commm_feed ? "true" : "false") + ";\n", use_zlib & gzip);
+		Response(c, "application/javascript", pluginManager.render(commm_feed != nullptr), use_zlib & gzip);
 	}
 	else if (r == "/custom/config.css")
 	{
-		Response(c, "text/css", stylesheets, use_zlib & gzip);
+		Response(c, "text/css", pluginManager.getStylesheets(), use_zlib & gzip);
 	}
 	else if (r == "/about.md")
 	{
-		Response(c, "text/markdown", about, use_zlib & gzip);
+		Response(c, "text/markdown", pluginManager.getAbout(), use_zlib & gzip);
 	}
 	else if (r == "/api/path.json")
 	{
@@ -1169,7 +1252,7 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "SERVER_MODE")
 	{
-		cfg_server_mode = Util::Parse::Switch(arg);
+		tracking.server_mode = Util::Parse::Switch(arg);
 	}
 	else if (option == "ZLIB")
 	{
@@ -1197,32 +1280,30 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "STATION")
 	{
-		station.clear();
-		JSON::StringBuilder::stringify(arg, station);
+		station = JSON::StringBuilder::stringify(arg);
 	}
 	else if (option == "STATION_LINK")
 	{
-		station_link.clear();
-		JSON::StringBuilder::stringify(arg, station_link);
+		station_link = JSON::StringBuilder::stringify(arg);
 	}
 	else if (option == "WEBCONTROL_HTTP")
 	{
-		plugins += "webcontrol_http = '" + arg + "';\n";
+		pluginManager.setWebControl(arg);
 	}
 	else if (option == "LAT")
 	{
-		cfg_lat = Util::Parse::Float(arg);
-		planes.setLat(cfg_lat);
+		tracking.lat = Util::Parse::Float(arg);
+		planes.setLat(tracking.lat);
 	}
 	else if (option == "CUTOFF")
 	{
-		cfg_cutoff = Util::Parse::Integer(arg, 0, 10000, option);
-		dataPrometheus.setCutOff(cfg_cutoff);
+		tracking.cutoff = Util::Parse::Integer(arg, 0, 10000, option);
+		dataPrometheus.setCutOff(tracking.cutoff);
 	}
 	else if (option == "SHARE_LOC")
 	{
-		cfg_latlon_share = Util::Parse::Switch(arg);
-		plugins += "param_share_loc=" + (cfg_latlon_share ? std::string("true;\n") : std::string("false;\n"));
+		tracking.latlon_share = Util::Parse::Switch(arg);
+		pluginManager.setShareLoc(tracking.latlon_share);
 	}
 	else if (option == "IP_BIND")
 	{
@@ -1230,21 +1311,21 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "CONTEXT")
 	{
-		plugins += "context='" + arg + "';\n";
+		pluginManager.setContext(arg);
 	}
 	else if (option == "MESSAGE" || option == "MSG")
 	{
-		cfg_msg_save = Util::Parse::Switch(arg);
-		plugins += "message_save=" + (cfg_msg_save ? std::string("true;\n") : std::string("false;\n"));
+		tracking.msg_save = Util::Parse::Switch(arg);
+		pluginManager.setMsgSave(tracking.msg_save);
 	}
 	else if (option == "LON")
 	{
-		cfg_lon = Util::Parse::Float(arg);
-		planes.setLon(cfg_lon);
+		tracking.lon = Util::Parse::Float(arg);
+		planes.setLon(tracking.lon);
 	}
 	else if (option == "USE_GPS")
 	{
-		cfg_use_GPS = Util::Parse::Switch(arg);
+		tracking.use_GPS = Util::Parse::Switch(arg);
 	}
 	else if (option == "KML")
 	{
@@ -1256,11 +1337,11 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	}
 	else if (option == "OWN_MMSI")
 	{
-		cfg_own_mmsi = Util::Parse::Integer(arg, 0, 999999999, option);
+		tracking.own_mmsi = Util::Parse::Integer(arg, 0, 999999999, option);
 	}
 	else if (option == "HISTORY")
 	{
-		cfg_time_history = Util::Parse::Integer(arg, 5, 12 * 3600, option);
+		tracking.time_history = Util::Parse::Integer(arg, 5, 12 * 3600, option);
 	}
 	else if (option == "FILE")
 	{
@@ -1293,70 +1374,34 @@ Setting &WebViewer::Set(std::string option, std::string arg)
 	else if (option == "REALTIME")
 	{
 		realtime = Util::Parse::Switch(arg);
-		if (realtime)
-			plugins += "realtime_enabled = true;\n";
-		else
-			plugins += "realtime_enabled = false;\n";
+		pluginManager.setRealtime(realtime);
 	}
 	else if (option == "LOG")
 	{
 		showlog = Util::Parse::Switch(arg);
-		if (showlog)
-			plugins += "log_enabled = true;\n";
-		else
-			plugins += "log_enabled = false;\n";
+		pluginManager.setLog(showlog);
 	}
 	else if (option == "DECODER")
 	{
 		showdecoder = Util::Parse::Switch(arg);
-		if (showdecoder)
-			plugins += "decoder_enabled = true;\n";
-		else
-			plugins += "decoder_enabled = false;\n";
-
+		pluginManager.setDecoder(showdecoder);
 		sse_streamer.setObfuscate(!showdecoder);
 	}
 	else if (option == "PLUGIN")
 	{
-		addPlugin(arg);
+		pluginManager.addPlugin(arg);
 	}
 	else if (option == "STYLE")
 	{
-		Info() << "Server: adding plugin (CSS): " << arg;
-		plugins += "console.log('css:" + arg + "');";
-		plugins += "plugins += 'CSS: " + arg + "\\n';";
-
-		stylesheets += "/* ================ */\n";
-		stylesheets += "/* CSS plugin: " + arg + "*/\n";
-		try
-		{
-			stylesheets += Util::Helper::readFile(arg) + "\n";
-		}
-		catch (const std::exception &e)
-		{
-			stylesheets += "/* FAILED */\r\n";
-			Warning() << "Server: style plugin error - " << e.what();
-			plugins += "server_message += \"Plugin error: " + std::string(e.what()) + "\\n\"\n";
-		}
+		pluginManager.addStyle(arg);
 	}
 	else if (option == "PLUGIN_DIR")
 	{
-		const std::vector<std::string> &files_js = Util::Helper::getFilesWithExtension(arg, ".pjs");
-		for (auto f : files_js)
-			Set("PLUGIN", f);
-
-		const std::vector<std::string> &files_ss = Util::Helper::getFilesWithExtension(arg, ".pss");
-		for (auto f : files_ss)
-			Set("STYLE", f);
-
-		if (files_ss.empty() && files_js.empty())
-			Info() << "Server: no plugin files found in directory.";
+		pluginManager.addPluginDir(arg);
 	}
 	else if (option == "ABOUT")
 	{
-		Info() << "Server: about context from " << arg;
-		about = Util::Helper::readFile(arg);
-		aboutPresent = true;
+		pluginManager.setAbout(arg);
 	}
 	else if (option == "PROME")
 	{

@@ -124,37 +124,27 @@ namespace Device
 		char buffer[16384];
 		RAW r = {getFormat(), buffer, 0};
 		int nread;
-		try
+		while (isStreaming())
 		{
-			while (isStreaming())
+			do
 			{
-				do
+				nread = recv(sock, buffer, sizeof(buffer), 0);
+
+				if (nread > 0)
 				{
-					nread = recv(sock, buffer, sizeof(buffer), 0);
+					r.size = nread;
+					Send(&r, 1, tag);
+				}
+			} while (nread > 0);
 
-					if (nread > 0)
-					{
-						r.size = nread;
-						Send(&r, 1, tag);
-					}
-				} while (nread > 0);
+			struct timeval tv;
+			fd_set fds;
 
-				struct timeval tv;
-				fd_set fds;
+			FD_ZERO(&fds);
+			FD_SET(sock, &fds);
 
-				FD_ZERO(&fds);
-				FD_SET(sock, &fds);
-
-				tv = {1, 0};
-				select(sock + 1, &fds, nullptr, nullptr, &tv);
-
-				// SleepSystem(100);
-			}
-		}
-		catch (std::exception &e)
-		{
-			Error() << "UDP Run: " << e.what() << std::endl;
-			std::terminate();
+			tv = {1, 0};
+			select(sock + 1, &fds, nullptr, nullptr, &tv);
 		}
 		Debug() << "UDP: ending thread.\n";
 	}
