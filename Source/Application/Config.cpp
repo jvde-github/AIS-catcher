@@ -233,15 +233,10 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 		if (++_state.nrec > 1)
 			_state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 
-		_state.receivers.back()->getDeviceManager().SerialNumber() = serial;
-	}
-
-	if (!input.empty())
-	{
-		if (!Util::Parse::DeviceType(input, _state.receivers.back()->getDeviceManager().InputType()))
-		{
-			throw std::runtime_error("\"" + input + "\" is unknown input type in config file");
-		}
+		if (!serial.empty())
+			_state.receivers.back()->SetKey(AIS::KEY_SETTING_SERIAL, serial);
+		if (!input.empty())
+			_state.receivers.back()->SetKey(AIS::KEY_SETTING_INPUT, input);
 	}
 
 	// pass 2
@@ -256,16 +251,12 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Property> &props, bool 
 				_state.receivers.back()->zones.push_back(v.to_string());
 			break;
 		case AIS::KEY_SETTING_VERBOSE:
-			_state.receivers.back()->verbose = Util::Parse::Switch(p.Get().to_string());
-			break;
 		case AIS::KEY_SETTING_CHANNEL:
-			_state.receivers.back()->setChannel(p.Get().to_string());
+		case AIS::KEY_SETTING_META:
+			_state.receivers.back()->SetKey((AIS::Keys)p.Key(), p.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_MODEL:
 			setModelfromJSON(p);
-			break;
-		case AIS::KEY_SETTING_META:
-			_state.receivers.back()->setTags(p.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_OWN_MMSI:
 			_state.own_mmsi = p.Get().getInt();

@@ -308,7 +308,7 @@ static void run(RunState &state)
 	for (int i = 0; i < (int)state.receivers.size(); i++)
 	{
 		Receiver &r = *state.receivers[i];
-		r.setOwnMMSI(state.own_mmsi);
+		r.SetKey(AIS::KEY_SETTING_OWN_MMSI, std::to_string(state.own_mmsi));
 
 		if (has_server) r.setTags("DTM");
 		if (has_http)   r.setTags("DT");
@@ -558,7 +558,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			break;
 		case 's':
 			Assert(count == 1, param, "does require one parameter [sample rate].");
-			receiver.setSampleRate(Util::Parse::Integer(arg1, 12500, 12288000));
+			receiver.SetKey(AIS::KEY_SETTING_SAMPLE_RATE, arg1);
 			break;
 		case 'm':
 			Assert(count == 1, param, "requires one parameter [model number].");
@@ -567,12 +567,12 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 		case 'M':
 			Assert(count <= 1, param, "requires zero or one parameter [DT].");
 			receiver.clearTags();
-			receiver.setTags(arg1);
+			receiver.SetKey(AIS::KEY_SETTING_META, arg1);
 			break;
 		case 'c':
 			Assert(count <= 2 && count >= 1, param, "requires one or two parameter [AB/CD]].");
 			if (count == 1)
-				receiver.setChannel(arg1);
+				receiver.SetKey(AIS::KEY_SETTING_CHANNEL, arg1);
 			if (count == 2)
 				receiver.setChannel(arg1, arg2);
 			break;
@@ -882,7 +882,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			break;
 		case 'Z':
 			Assert(count == 2, param, "Location Setting requires two parameters (lat/lon)");
-			receiver.setLatLon(Util::Parse::Float(arg1), Util::Parse::Float(arg2));
+			receiver.SetKey(AIS::KEY_SETTING_LAT, arg1).SetKey(AIS::KEY_SETTING_LON, arg2);
 			break;
 		case 'A':
 		case 'E':
@@ -923,11 +923,11 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			break;
 		case 'p':
 			Assert(count == 1, param, "requires one parameter [frequency offset].");
-			receiver.setPPM(Util::Parse::Integer(arg1, -150, 150));
+			receiver.SetKey(AIS::KEY_SETTING_FREQOFFSET, arg1);
 			break;
 		case 'a':
 			Assert(count == 1, param, "requires one parameter [bandwidth].");
-			receiver.setBandwidth(Util::Parse::Integer(arg1, 0, 20000000));
+			receiver.SetKey(AIS::KEY_SETTING_BANDWIDTH, arg1);
 			break;
 		case 'g':
 			Assert(count % 2 == 0 && param.length() == 3, param);
@@ -993,7 +993,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 	{
 		for (auto &r : state.receivers)
 		{
-			r->verbose = true;
+			r->SetKey(AIS::KEY_SETTING_VERBOSE, "on");
 		}
 	}
 
